@@ -26,7 +26,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <pgp/pgp.h>
 
 /**
  *  Public exponent to use for key generation.
@@ -663,7 +662,7 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 		return NULL;
 	}
 	
-	mpz_init(t);	
+	mpz_init(t);
 	mpz_init(n);
 	mpz_init(d);
 	mpz_init(exp1);
@@ -724,48 +723,11 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 }
 
 /**
- * ASN.1 definition of a PKCS#1 RSA private key
+ * load private key from a RSA components
  */
-static const asn1Object_t privkeyObjects[] = {
-	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
-												   ASN1_LOOP }, /* 10 */
-	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }, /* 15 */
-	{ 0, "exit",				ASN1_EOC,          ASN1_EXIT }
-};
-#define PRIV_KEY_VERSION		 1
-#define PRIV_KEY_MODULUS		 2
-#define PRIV_KEY_PUB_EXP		 3
-#define PRIV_KEY_PRIV_EXP		 4
-#define PRIV_KEY_PRIME1			 5
-#define PRIV_KEY_PRIME2			 6
-#define PRIV_KEY_EXP1			 7
-#define PRIV_KEY_EXP2			 8
-#define PRIV_KEY_COEFF			 9
-
-/**
- * load private key from a ASN1 encoded blob
- */
-static gmp_rsa_private_key_t *load_asn1_der(chunk_t blob)
+static gmp_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
+				chunk_t p, chunk_t q, chunk_t exp1, chunk_t exp2, chunk_t coeff)
 {
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID ;
-	bool success = FALSE;
-
 	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
 	
 	mpz_init(this->n);
@@ -777,60 +739,31 @@ static gmp_rsa_private_key_t *load_asn1_der(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 	
-	parser = asn1_parser_create(privkeyObjects, blob);
-	parser->set_flags(parser, FALSE, TRUE);
-	
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		switch (objectID)
-		{
-			case PRIV_KEY_VERSION:
-				if (object.len > 0 && *object.ptr != 0)
-				{
-					DBG1("PKCS#1 private key format is not version 1");
-					goto end;
-				}
-				break;
-			case PRIV_KEY_MODULUS:
-				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PUB_EXP:
-				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIV_EXP:
-				mpz_import(this->d, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIME1:
-				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIME2:
-				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_EXP1:
-				mpz_import(this->exp1, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_EXP2:
-				mpz_import(this->exp2, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_COEFF:
-				mpz_import(this->coeff, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-		}
+	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
+	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
+	mpz_import(this->d, d.len, 1, 1, 1, 0, d.ptr);
+	mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
+	mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
+	mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
+	if (!exp1.len)
+	{	/* exp1 missing in key, recalculate: exp1 = d mod (p-1) */
+		mpz_sub_ui(this->exp1, this->p, 1);
+		mpz_mod(this->exp1, this->d, this->exp1);
 	}
-	success = parser->success(parser);
-
-end:
-	parser->destroy(parser);
-	chunk_clear(&blob);
-
-	if (!success)
+	else
 	{
-		destroy(this);
-		return NULL;
+		mpz_import(this->exp1, exp1.len, 1, 1, 1, 0, exp1.ptr);
 	}
-	
+	if (!exp2.len)
+	{	/* exp2 missing in key, recalculate: exp2 = d mod (q-1) */
+		mpz_sub_ui(this->exp2, this->q, 1);
+		mpz_mod(this->exp2, this->d, this->exp2);
+	}
+	else
+	{
+		mpz_import(this->exp2, exp2.len, 1, 1, 1, 0, exp2.ptr);
+	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
-
 	if (!gmp_rsa_public_key_build_id(this->n, this->e,
 									 &this->keyid, &this->keyid_info))
 	{
@@ -843,138 +776,6 @@ end:
 		return NULL;
 	}
 	return &this->public;
-}
-
-/**
- * load private key from an OpenPGP blob coded according to section 
- */
-static gmp_rsa_private_key_t *load_pgp(chunk_t blob)
-{
-	mpz_t u;
-	int objectID;
-	chunk_t packet = blob;
-	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
-	
-	mpz_init(this->n);
-	mpz_init(this->e);
-	mpz_init(this->p);
-	mpz_init(this->q);
-	mpz_init(this->d);
-	mpz_init(this->exp1);
-	mpz_init(this->exp2);
-	mpz_init(this->coeff);
-
-	for (objectID = PRIV_KEY_MODULUS; objectID <= PRIV_KEY_COEFF; objectID++)
-	{
-		chunk_t object;	
-
-		switch (objectID)
-		{
-			case PRIV_KEY_PRIV_EXP:
-			{
-				pgp_sym_alg_t s2k;
-
-				/* string-to-key usage */
-				s2k = pgp_length(&packet, 1);
-				DBG2("L3 - string-to-key:  %d", s2k);
-
-				if (s2k == 255 || s2k == 254)
-				{
-					DBG1("string-to-key specifiers not supported");
-					goto end;
-				}
-				DBG2("  %N", pgp_sym_alg_names, s2k);
-
-				if (s2k != PGP_SYM_ALG_PLAIN)
-				{
-					DBG1("%N encryption not supported",  pgp_sym_alg_names, s2k);
-					goto end;
-				}
-				break;
-			}
-			case PRIV_KEY_EXP1:
-			case PRIV_KEY_EXP2:
-				/* not contained in OpenPGP secret key payload */
-				continue;
-			default:
-				break;
-		}		
-
-		DBG2("L3 - %s:", privkeyObjects[objectID].name);
-		object.len = pgp_length(&packet, 2);
-
-		if (object.len == PGP_INVALID_LENGTH)
-		{
-			DBG1("OpenPGP length is invalid");
-			goto end;
-		}
-		object.len = (object.len + 7) / BITS_PER_BYTE;
-		if (object.len > packet.len)
-		{
-			DBG1("OpenPGP field is too short");
-			goto end;
-		}
-		object.ptr = packet.ptr;
-		packet.ptr += object.len;
-		packet.len -= object.len;
-		DBG4("%B", &object);
-
-		switch (objectID)
-		{
-			case PRIV_KEY_MODULUS:
-				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PUB_EXP:
-				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIV_EXP:
-				mpz_import(this->d, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIME1:
-				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_PRIME2:
-				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PRIV_KEY_COEFF:
-				mpz_import(this->coeff, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-		}
-	}
-
-	/* auxiliary variable */
-	mpz_init(u);
-
-	/* exp1 = d mod (p-1) */
-	mpz_sub_ui(u, this->p, 1);
-	mpz_mod(this->exp1, this->d, u);
-
-	/* exp2 = d mod (q-1) */
-	mpz_sub_ui(u, this->q, 1);
-	mpz_mod(this->exp2, this->d, u);
-
-	mpz_clear(u);
-	chunk_clear(&blob);
-
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
-
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	if (check(this) != SUCCESS)
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-
-end:
-	chunk_clear(&blob);
-	destroy(this);
-	return NULL;
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -984,8 +785,10 @@ typedef struct private_builder_t private_builder_t;
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded/generated private key */
-	gmp_rsa_private_key_t *key;
+	/** key size, if generating */
+	u_int key_size;
+	/** rsa key parameters */
+	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 };
 
 /**
@@ -993,8 +796,17 @@ struct private_builder_t {
  */
 static gmp_rsa_private_key_t *build(private_builder_t *this)
 {
-	gmp_rsa_private_key_t *key = this->key;
+	gmp_rsa_private_key_t *key = NULL;
 	
+	if (this->key_size)
+	{
+		key = generate(this->key_size);
+	}
+	else
+	{
+		key = load(this->n, this->e, this->d, this->p, this->q,
+				   this->exp1, this->exp2, this->coeff);
+	}
 	free(this);
 	return key;
 }
@@ -1004,45 +816,43 @@ static gmp_rsa_private_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	if (!this->key)
-	{
-		va_list args;
-		chunk_t chunk;
+	va_list args;
 	
-		switch (part)
-		{
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load_asn1_der(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}		
-			case BUILD_BLOB_PGP:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load_pgp(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}		
-			case BUILD_KEY_SIZE:
-			{
-				va_start(args, part);
-				this->key = generate(va_arg(args, u_int));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
-	}
-	if (this->key)
+	va_start(args, part);
+	switch (part)
 	{
-		destroy((private_gmp_rsa_private_key_t*)this->key);
+		case BUILD_KEY_SIZE:
+			this->key_size = va_arg(args, u_int);
+			return;
+		case BUILD_RSA_MODULUS:
+			this->n = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PUB_EXP:
+			this->e = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIV_EXP:
+			this->d = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIME1:
+			this->p = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PRIME2:
+			this->q = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_EXP1:
+			this->exp1 = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_EXP2:
+			this->exp1 = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_COEFF:
+			this->coeff = va_arg(args, chunk_t);
+			break;
+		default:
+			builder_cancel(&this->public);
+			break;
 	}
-	builder_cancel(&this->public);
+	va_end(args);
 }
 
 /**
@@ -1059,7 +869,9 @@ builder_t *gmp_rsa_private_key_builder(key_type_t type)
 	
 	this = malloc_thing(private_builder_t);
 	
-	this->key = NULL;
+	this->n = this->e = this->d = this->p = this->q = chunk_empty;
+	this->exp1 = this->exp2 = this->coeff = chunk_empty;
+	this->key_size = 0;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,7 +27,6 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <crypto/hashers/hasher.h>
-#include <pgp/pgp.h>
 
 typedef struct private_gmp_rsa_public_key_t private_gmp_rsa_public_key_t;
 
@@ -590,59 +589,19 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e)
 }
 
 /**
- * ASN.1 definition of RSApublicKey
+ * Load a public key from n and e
  */
-static const asn1Object_t pubkeyObjects[] = {
-	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,	ASN1_OBJ  }, /*  0 */
-	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  2 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-#define PUB_KEY_RSA_PUBLIC_KEY		0
-#define PUB_KEY_MODULUS				1
-#define PUB_KEY_EXPONENT			2
-
-/**
- * Load a public key from an ASN.1 encoded blob
- */
-static gmp_rsa_public_key_t *load_asn1_der(chunk_t blob)
+static gmp_rsa_public_key_t *load(chunk_t n, chunk_t e)
 {
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool success = FALSE;
-
 	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
-
+	
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	parser = asn1_parser_create(pubkeyObjects, blob);
-	
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		switch (objectID)
-		{
-			case PUB_KEY_MODULUS:
-				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PUB_KEY_EXPONENT:
-				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-		}
-	}
-	success = parser->success(parser);
-	free(blob.ptr);
-	parser->destroy(parser);
-
-	if (!success)
-	{
-		destroy(this);
-		return NULL;
-	}
+	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
+	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
-
 	if (!gmp_rsa_public_key_build_id(this->n, this->e,
 									 &this->keyid, &this->keyid_info))
 	{
@@ -650,144 +609,18 @@ static gmp_rsa_public_key_t *load_asn1_der(chunk_t blob)
 		return NULL;
 	}
 	return &this->public;
-}
-
-/**
- * Load a public key from an OpenPGP blob
- */
-static gmp_rsa_public_key_t* load_pgp(chunk_t blob)
-{
-	int objectID;
-	chunk_t packet = blob;
-	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
-
-	mpz_init(this->n);
-	mpz_init(this->e);
-	
-	for (objectID = PUB_KEY_MODULUS; objectID <= PUB_KEY_EXPONENT; objectID++)
-	{
-		chunk_t object;	
-
-		DBG2("L3 - %s:", pubkeyObjects[objectID].name);
-		object.len = pgp_length(&packet, 2);
-
-		if (object.len == PGP_INVALID_LENGTH)
-		{
-			DBG1("OpenPGP length is invalid");
-			goto end;
-		}
-		object.len = (object.len + 7) / BITS_PER_BYTE;
-		if (object.len > packet.len)
-		{
-			DBG1("OpenPGP field is too short");
-			goto end;
-		}
-		object.ptr = packet.ptr;
-		packet.ptr += object.len;
-		packet.len -= object.len;
-		DBG4("%B", &object);
-
-		switch (objectID)
-		{
-			case PUB_KEY_MODULUS:
-				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-			case PUB_KEY_EXPONENT:
-				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
-				break;
-		}
-	}
-
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
-	free(blob.ptr);
-
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-
-end:
-	free(blob.ptr);
-	destroy(this);
-	return NULL;
-}
-
-/**
- * Load a public key from an RFC 3110 encoded blob
- */
-static gmp_rsa_public_key_t *load_rfc_3110(chunk_t blob)
-{
-	chunk_t exponent, modulus;
-	u_char *pos = blob.ptr;
-	size_t len  = blob.len;
-	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
-	
-	mpz_init(this->n);
-	mpz_init(this->e);
-
-	if (blob.len < 3)
-	{
-		DBG1("RFC 3110 public key blob too short for exponent length");
-		goto end;
-	}
-	if (pos[0] != 0x00)
-	{
-		exponent = chunk_create(pos + 1, pos[0]);
-		pos++;
-		len--;
-	}
-	else
-	{
-		exponent = chunk_create(pos + 3, 256*pos[1] + pos[2]);
-		pos += 3;
-		len -= 3;
-	}
-	if (exponent.len > len)
-	{
-		DBG1("RFC 3110 public key blob too short for exponent");
-		goto end;
-	}
-	pos += exponent.len;
-	len -= exponent.len;
-
-	if (len == 0)
-	{
-		DBG1("RFC 3110 public key blob has zero length modulus");
-		goto end;
-	}	
-	modulus = chunk_create(pos, len);
-
-	mpz_import(this->n, modulus.len,  1, 1, 1, 0, modulus.ptr);
-	mpz_import(this->e, exponent.len, 1, 1, 1, 0, exponent.ptr);
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
-	free(blob.ptr);
-
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-
-end:
-	free(blob.ptr);
-	destroy(this);
-	return NULL;
 }
 
 typedef struct private_builder_t private_builder_t;
+
 /**
  * Builder implementation for key loading
  */
 struct private_builder_t {
 	/** implements the builder interface */
 	builder_t public;
-	/** loaded public key */
-	gmp_rsa_public_key_t *key;
+	/** rsa key parameters */
+	chunk_t n, e;
 };
 
 /**
@@ -795,8 +628,9 @@ struct private_builder_t {
  */
 static gmp_rsa_public_key_t *build(private_builder_t *this)
 {
-	gmp_rsa_public_key_t *key = this->key;
+	gmp_rsa_public_key_t *key;
 	
+	key = load(this->n, this->e);
 	free(this);
 	return key;
 }
@@ -806,46 +640,22 @@ static gmp_rsa_public_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	if (!this->key)
-	{
-		va_list args;
-		chunk_t chunk;
+	va_list args;
 	
-		switch (part)
-		{
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load_asn1_der(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}
-			case BUILD_BLOB_PGP:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load_pgp(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}
-			case BUILD_BLOB_DNSKEY:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load_rfc_3110(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
-	}
-	if (this->key)
+	va_start(args, part);
+	switch (part)
 	{
-		destroy((private_gmp_rsa_public_key_t*)this->key);
+		case BUILD_RSA_MODULUS:
+			this->n = va_arg(args, chunk_t);
+			break;
+		case BUILD_RSA_PUB_EXP:
+			this->e = va_arg(args, chunk_t);
+			break;
+		default:
+			builder_cancel(&this->public);
+			break;
 	}
-	builder_cancel(&this->public);
+	va_end(args);
 }
 
 /**
@@ -862,7 +672,7 @@ builder_t *gmp_rsa_public_key_builder(key_type_t type)
 	
 	this = malloc_thing(private_builder_t);
 	
-	this->key = NULL;
+	this->n = this->e = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	
