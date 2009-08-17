@@ -69,6 +69,10 @@ int main(int argc, char* argv[])
 			name = strdup("libstrongswan\",");
 			sname = "library_init";
 		}
+		else if (strstr(path, "pool"))
+		{
+			name = strdup("pool\",");
+		}
 		else if (strstr(path, "charon"))
 		{
 			name = strdup("charon\",");
