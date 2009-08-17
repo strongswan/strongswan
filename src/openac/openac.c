@@ -218,15 +218,16 @@ static void openac_dbg(int level, char *fmt, ...)
 	
 	if (level <= debug_level)
 	{
-		va_start(args, fmt);
-
 		if (!stderr_quiet)
 		{
+			va_start(args, fmt);
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
+			va_end(args);
 		}
 
 		/* write in memory buffer first */
+		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
 

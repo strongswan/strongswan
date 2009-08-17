@@ -68,21 +68,23 @@ static void scepclient_dbg(int level, char *fmt, ...)
 
 	if (level <= debug_level)
 	{
-		va_start(args, fmt);
-
 		if (log_to_stderr)
 		{
 			if (level > 1)
 			{
 				fprintf(stderr, "| ");
 			}
+			va_start(args, fmt);
 			vfprintf(stderr, fmt, args);
+			va_end(args);
 			fprintf(stderr, "\n");
 		}
 		if (log_to_syslog)
 		{
 			/* write in memory buffer first */
+			va_start(args, fmt);
 			vsnprintf(buffer, sizeof(buffer), fmt, args);
+			va_end(args);
 
 			/* do a syslog with every line */
 			while (current)
@@ -96,7 +98,6 @@ static void scepclient_dbg(int level, char *fmt, ...)
 				current = next;
 			}
 		}
-		va_end(args);
 	}
 }
 
