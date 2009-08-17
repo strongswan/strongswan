@@ -96,9 +96,9 @@ enum builder_part_t {
 	BUILD_RSA_PUB_EXP,
 	/** private exponent (d) of a RSA key, chunk_t */
 	BUILD_RSA_PRIV_EXP,
-	/** prime 1 (p) of a RSA key, chunk_t */
+	/** prime 1 (p) of a RSA key (p < q), chunk_t */
 	BUILD_RSA_PRIME1,
-	/** prime 2 (q) of a RSA key, chunk_t */
+	/** prime 2 (q) of a RSA key (p < q), chunk_t */
 	BUILD_RSA_PRIME2,
 	/** exponent 1 (exp1) of a RSA key, chunk_t */
 	BUILD_RSA_EXP1,

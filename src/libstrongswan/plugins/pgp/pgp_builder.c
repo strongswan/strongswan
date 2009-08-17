@@ -202,10 +202,11 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 			return NULL;
 		}
 	}
+	/* PGP has uses p < q, but we use p > q */
 	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
 						BUILD_RSA_MODULUS, mpi[0], BUILD_RSA_PUB_EXP, mpi[1],
-						BUILD_RSA_PRIV_EXP, mpi[2], BUILD_RSA_PRIME1, mpi[3],
-						BUILD_RSA_PRIME2, mpi[4], BUILD_RSA_COEFF, mpi[5],
+						BUILD_RSA_PRIV_EXP, mpi[2], BUILD_RSA_PRIME2, mpi[3],
+						BUILD_RSA_PRIME1, mpi[4], BUILD_RSA_COEFF, mpi[5],
 						BUILD_END);
 }
 
