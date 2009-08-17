@@ -172,36 +172,17 @@ static bool parse_pgp_pubkey_version_validity(chunk_t *packet, pgpcert_t *cert)
 static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 {
 	chunk_t pubkey_packet = *packet;
- 	pgp_pubkey_alg_t pubkey_alg;
 
 	if (!parse_pgp_pubkey_version_validity(packet, cert))
 	{
 		return FALSE;
 	}
 
-	/* public key algorithm - 1 byte */
-	pubkey_alg = pgp_length(packet, 1);
-	DBG(DBG_PARSING,
-		DBG_log("L3 - public key algorithm:");
-		DBG_log("  %N", pgp_pubkey_alg_names, pubkey_alg)
-	)
-	
-	switch (pubkey_alg)
+	cert->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+										  BUILD_BLOB_PGP, *packet, BUILD_END);
+	if (cert->public_key == NULL)
 	{
-		case PGP_PUBKEY_ALG_RSA:
-		case PGP_PUBKEY_ALG_RSA_SIGN_ONLY:
-			cert->public_key = lib->creds->create(lib->creds,
-									CRED_PUBLIC_KEY, KEY_RSA,
-									BUILD_BLOB_PGP, *packet,
-									BUILD_END);
-			if (cert->public_key == NULL)
-			{
-				return FALSE;
-			}
-			break;
-	 	default:
-			plog("  non RSA public keys not supported");
-			return FALSE;
+		return FALSE;
 	}
 
 	/* compute V4 or V3 fingerprint according to section 12.2 of RFC 4880 */
