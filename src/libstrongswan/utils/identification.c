@@ -85,9 +85,9 @@ static const x501rdn_t x501rdns[] = {
 	{"ID", 				OID_UNIQUE_IDENTIFIER,		ASN1_PRINTABLESTRING},
 	{"EN", 				OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
 	{"employeeNumber",	OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
-	{"E", 				OID_PKCS9_EMAIL,			ASN1_IA5STRING},
-	{"Email", 			OID_PKCS9_EMAIL,			ASN1_IA5STRING},
-	{"emailAddress",	OID_PKCS9_EMAIL,			ASN1_IA5STRING},
+	{"E", 				OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
+	{"Email", 			OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
+	{"emailAddress",	OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
 	{"UN", 				OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
 	{"unstructuredName",OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
 	{"TCGID", 			OID_TCGID,					ASN1_PRINTABLESTRING}
@@ -605,8 +605,7 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 			if (t_type == o_type &&
 				(t_type == ASN1_PRINTABLESTRING ||
 				 (t_type == ASN1_IA5STRING &&
-				  (asn1_known_oid(t_oid) == OID_PKCS9_EMAIL ||
-				   asn1_known_oid(t_oid) == OID_EMAIL_ADDRESS))))
+				  asn1_known_oid(t_oid) == OID_EMAIL_ADDRESS)))
 			{	/* ignore case for printableStrings and email RDNs */
 				if (strncasecmp(t_data.ptr, o_data.ptr, t_data.len) != 0)
 				{

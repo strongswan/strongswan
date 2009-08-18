@@ -845,7 +845,7 @@ bool same_dn(chunk_t a, chunk_t b)
 
 		/* printableStrings and email RDNs require uppercase comparison */
 		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-		   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_EMAIL_ADDRESS)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{
@@ -923,7 +923,7 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 
 		/* printableStrings and email RDNs require uppercase comparison */
 		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-		   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		   (type_a == ASN1_IA5STRING && asn1_known_oid(oid_a) == OID_EMAIL_ADDRESS)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
 			{

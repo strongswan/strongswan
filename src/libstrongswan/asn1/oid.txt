@@ -91,8 +91,8 @@
                 0x05         "digestedData"				OID_PKCS7_DIGESTED_DATA
                 0x06         "encryptedData"			OID_PKCS7_ENCRYPTED_DATA
               0x09           "PKCS-9"
-                0x01         "E"						OID_PKCS9_EMAIL
-                0x02         "unstructuredName"
+                0x01         "E"						OID_EMAIL_ADDRESS
+                0x02         "unstructuredName"			OID_UNSTRUCTURED_NAME
                 0x03         "contentType"				OID_PKCS9_CONTENT_TYPE
                 0x04         "messageDigest"			OID_PKCS9_MESSAGE_DIGEST
                 0x05         "signingTime"				OID_PKCS9_SIGNING_TIME
@@ -293,10 +293,4 @@
                   0x06       "recipientNonce"			OID_PKI_RECIPIENT_NONCE
                   0x07       "transID"					OID_PKI_TRANS_ID
                   0x08       "extensionReq"
-      0x86                   "old-netscape"
-        0xF7                 ""
-          0x0D               ""
-            0x01             ""
-              0x09           ""
-                0x01         "emailAddress"				OID_EMAIL_ADDRESS
-                0x02         "unstructuredName"			OID_UNSTRUCTURED_NAME
+
