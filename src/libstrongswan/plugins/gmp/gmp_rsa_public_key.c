@@ -569,26 +569,6 @@ bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
 }
 
 /**
- * Create a public key from mpz values, used in gmp_rsa_private_key
- */
-gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e)
-{
-	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
-
-	mpz_init_set(this->n, n);
-	mpz_init_set(this->e, e);
-	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-}
-
-/**
  * Load a public key from n and e
  */
 static gmp_rsa_public_key_t *load(chunk_t n, chunk_t e)

@@ -115,7 +115,6 @@ struct private_gmp_rsa_private_key_t {
 extern bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, 
 										identification_t **keyid,
 										identification_t **keyid_info);
-extern gmp_rsa_public_key_t *gmp_rsa_public_key_create_from_n_e(mpz_t n, mpz_t e);
 
 /**
  * Auxiliary function overwriting private key material with zero bytes
@@ -382,11 +381,46 @@ static identification_t* get_id(private_gmp_rsa_private_key_t *this,
 }
 
 /**
+ * Convert a MP integer into a chunk_t
+ */
+chunk_t gmp_mpz_to_chunk(const mpz_t value)
+{
+	chunk_t n;
+	
+	n.len = 1 + mpz_sizeinbase(value, 2) / BITS_PER_BYTE;
+	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
+	if (n.ptr == NULL)
+	{	/* if we have zero in "value", gmp returns NULL */
+		n.len = 0;
+	}
+	return n;
+}
+
+/**
+ * Convert a MP integer into a DER coded ASN.1 object
+ */
+chunk_t gmp_mpz_to_asn1(const mpz_t value)
+{
+	return asn1_wrap(ASN1_INTEGER, "m", gmp_mpz_to_chunk(value));
+}
+
+/**
  * Implementation of gmp_rsa_private_key.get_public_key.
  */
-static gmp_rsa_public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
+static public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
 {
-	return gmp_rsa_public_key_create_from_n_e(this->n, this->e);
+	chunk_t n, e;
+	public_key_t *public;
+	
+	n = gmp_mpz_to_chunk(this->n);
+	e = gmp_mpz_to_chunk(this->e);
+	
+	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	
+	return public;
 }
 
 /**
@@ -439,30 +473,6 @@ static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public
 		return TRUE;
 	}
 	return FALSE;
-}
-
-/**
- * Convert a MP integer into a chunk_t
- */
-chunk_t gmp_mpz_to_chunk(const mpz_t value)
-{
-	chunk_t n;
-	
-	n.len = 1 + mpz_sizeinbase(value, 2) / BITS_PER_BYTE;
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
-	if (n.ptr == NULL)
-	{	/* if we have zero in "value", gmp returns NULL */
-		n.len = 0;
-	}
-	return n;
-}
-
-/**
- * Convert a MP integer into a DER coded ASN.1 object
- */
-chunk_t gmp_mpz_to_asn1(const mpz_t value)
-{
-	return asn1_wrap(ASN1_INTEGER, "m", gmp_mpz_to_chunk(value));
 }
 
 /**
