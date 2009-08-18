@@ -24,6 +24,7 @@ crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
+credentials/keys/key_encoding.c credentials/keys/key_encoding.h \
 credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \

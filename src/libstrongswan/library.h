@@ -62,6 +62,7 @@
 #include <fetcher/fetcher_manager.h>
 #include <database/database_factory.h>
 #include <credentials/credential_factory.h>
+#include <credentials/keys/key_encoding.h>
 
 typedef struct library_t library_t;
 
@@ -84,6 +85,11 @@ struct library_t {
 	 * credential constructor registry and factory
 	 */
 	credential_factory_t *creds;
+	
+	/**
+	 * key encoding registry and factory
+	 */
+	key_encoding_t *encoding;
 	
 	/**
 	 * URL fetching facility
