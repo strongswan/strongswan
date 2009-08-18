@@ -56,11 +56,6 @@ struct private_gcrypt_rsa_private_key_t {
 };
 
 /**
- * Implemented in gcrypt_rsa_public_key.c
- */
-public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key);
-
-/**
  * find a token in a S-expression. If a key is given, its length is used to
  * pad the output to a given length.
  */
@@ -320,7 +315,18 @@ static identification_t* get_id(private_gcrypt_rsa_private_key_t *this,
  */
 static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
 {
-	return gcrypt_rsa_public_key_create_from_sexp(this->key);
+	chunk_t n, e;
+	public_key_t *public;
+	
+	n = gcrypt_rsa_find_token(this->key, "n", NULL);
+	e = gcrypt_rsa_find_token(this->key, "e", NULL);
+	
+	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	
+	return public;
 }
 
 /**

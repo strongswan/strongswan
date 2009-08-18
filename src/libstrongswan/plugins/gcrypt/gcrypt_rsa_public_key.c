@@ -344,37 +344,6 @@ static private_gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_create_empty()
 }
 
 /**
- * Create a public key from a S-expression, used in gcrypt_rsa_private_key
- */
-public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key)
-{
-	private_gcrypt_rsa_public_key_t *this;
-	gcry_error_t err;
-	chunk_t n, e;
-	
-	this = gcrypt_rsa_public_key_create_empty();
-	n = gcrypt_rsa_find_token(key, "n", NULL);
-	e = gcrypt_rsa_find_token(key, "e", NULL);
-	
-	err = gcry_sexp_build(&this->key, NULL, "(public-key(rsa(n %b)(e %b)))",
-						  n.len, n.ptr, e.len, e.ptr);
-	chunk_free(&n);
-	chunk_free(&e);
-	if (err)
-	{
-		DBG1("loading public key failed: %s", gpg_strerror(err));
-		free(this);
-		return NULL;
-	}
-	if (!gcrypt_rsa_build_keyids(this->key, &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public.interface;
-}
-
-/**
  * Load a public key from components
  */
 static gcrypt_rsa_public_key_t *load(chunk_t n, chunk_t e)
