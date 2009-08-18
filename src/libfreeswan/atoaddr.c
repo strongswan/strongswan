@@ -108,7 +108,8 @@ struct in_addr *addrp;
 	}
 	else
 	{
-		memcpy(&addrp->s_addr, res->ai_addr->sa_data, sizeof(addrp->s_addr));
+		struct sockaddr_in *in = (struct sockaddr_in*)res->ai_addr;
+		memcpy(&addrp->s_addr, &in->sin_addr.s_addr, sizeof(addrp->s_addr));
 		freeaddrinfo(res);
 	}
 

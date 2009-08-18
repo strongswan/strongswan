@@ -202,8 +202,35 @@ ip_address *dst;
 	}
 	else
 	{
-		addr = res->ai_addr->sa_data;
-		err = initaddr(addr, res->ai_addrlen, af, dst);
+		struct addrinfo *r = res;
+		while (r)
+		{
+			size_t addr_len;
+			switch (r->ai_family)
+			{
+				case AF_INET:
+				{
+					struct sockaddr_in *in = (struct sockaddr_in*)r->ai_addr;
+					addr_len = 4;
+					addr = (unsigned char*)&in->sin_addr.s_addr;
+					break;
+				}
+				case AF_INET6:
+				{
+					struct sockaddr_in6 *in6 = (struct sockaddr_in6*)r->ai_addr;
+					addr_len = 16;
+					addr = (unsigned char*)&in6->sin6_addr.s6_addr;
+					break;
+				}
+				default:
+				{	/* unknown family, try next result */
+					r = r->ai_next;
+					continue;
+				}
+			}
+			err = initaddr(addr, addr_len, r->ai_family, dst);
+			break;
+		}
 		freeaddrinfo(res);
 	}
 
