@@ -72,6 +72,7 @@ size_t chunk_length(const char* mode, ...)
 		{
 			case 'm':
 			case 'c':
+			case 's':
 			{
 				chunk_t ch = va_arg(chunks, chunk_t);
 				length += ch.len;
@@ -97,25 +98,31 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
 	va_start(chunks, mode);
 	while (TRUE)
 	{
-		bool free_chunk = FALSE;
+		bool free_chunk = FALSE, clear_chunk = FALSE;
+		chunk_t ch;
+		
 		switch (*mode++)
 		{
+			case 's':
+				clear_chunk = TRUE;
+				/* FALL */
 			case 'm':
-			{
 				free_chunk = TRUE;
-			}
+				/* FALL */
 			case 'c':
-			{
-				chunk_t ch = va_arg(chunks, chunk_t);
+				ch = va_arg(chunks, chunk_t);
 				memcpy(ptr, ch.ptr, ch.len); 
 				ptr += ch.len;
 				construct.len += ch.len;
-				if (free_chunk)
+				if (clear_chunk)
+				{
+					chunk_clear(&ch);
+				}
+				else if (free_chunk)
 				{
 					free(ch.ptr);
 				}
 				continue;
-			}
 			default:
 				break;
 		}

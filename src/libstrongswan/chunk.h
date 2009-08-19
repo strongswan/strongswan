@@ -69,9 +69,11 @@ chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk);
 size_t chunk_length(const char *mode, ...);
 
 /**
- * Concatenate chunks into a chunk pointing to "ptr",
- * "mode" is a string of "c" (copy) and "m" (move), which says
- * how to handle the chunks in "..."
+ * Concatenate chunks into a chunk pointing to "ptr".
+ *
+ * The mode string specifies the number of chunks, and how to handle each of
+ * them with a single character: 'c' for copy (allocate new chunk), 'm' for move
+ * (free given chunk) or 's' for sensitive-move (clear given chunk, then free).
  */
 chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...);
 
