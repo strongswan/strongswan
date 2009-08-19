@@ -250,8 +250,12 @@ chunk_t asn1_integer(const char *mode, chunk_t content);
 /**
  * Build an ASN.1 object from a variable number of individual chunks
  *
+ * The mode string specifies the number of chunks, and how to handle each of
+ * them with a single character: 'c' for copy (allocate new chunk), 'm' for move
+ * (free given chunk) or 's' for sensitive-copy (clear given chunk, then free).
+ *
  * @param type		ASN.1 type to be created
- * @param mode		for each list member: 'c' for copy or 'm' for move
+ * @param mode		for each list member: 'c', 'm' or 's'
  * @return			chunk containing the ASN.1 coded object
  */
 chunk_t asn1_wrap(asn1_t type, const char *mode, ...);

@@ -832,9 +832,16 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 		memcpy(pos, ch.ptr, ch.len);
 		pos += ch.len;
 
-		if (*mode++ == 'm')
+		switch (*mode++)
 		{
-			free(ch.ptr);
+			case 's':
+				chunk_clear(&ch);
+				break;
+			case 'm':
+				free(ch.ptr);
+				break;
+			default:
+				break;
 		}
 	}
 	va_end(chunks);
