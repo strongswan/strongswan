@@ -195,10 +195,11 @@ static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this
 	}
 	if (id)
 	{
-		identification_t *keyid;
+		chunk_t keyid;
 		
-		keyid = this->private->get_id(this->private, id->get_type(id));
-		if (!keyid || !keyid->equals(keyid, id))
+		if (!this->private->get_fingerprint(this->private,
+											KEY_ID_PUBKEY_SHA1, &keyid) ||
+			!chunk_equals(keyid, id->get_encoding(id)))
 		{
 			return NULL;
 		}
@@ -217,7 +218,7 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 	public_key_t *peer_key, *ca_key;
 	u_int32_t serial;
 	time_t now;
-	identification_t *keyid = NULL;
+	chunk_t keyid;
 	
 	if (this->ca == NULL)
 	{
@@ -231,18 +232,25 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 	{
 		return NULL;
 	}
-	ca_key = this->ca->get_public_key(this->ca);
-	if (ca_key && id)
+	if (!id)
 	{
-		keyid = ca_key->get_id(ca_key, id->get_type(id));
-	}
-	if (!id || this->ca->has_subject(this->ca, id) ||
-		(keyid && id->equals(id, keyid)))
-	{	/* ca certificate */
-		DESTROY_IF(ca_key);
 		return enumerator_create_single(this->ca, NULL);
 	}
-	DESTROY_IF(ca_key);
+	ca_key = this->ca->get_public_key(this->ca);
+	if (ca_key)
+	{
+		if (ca_key->get_fingerprint(ca_key, KEY_ID_PUBKEY_SHA1, &keyid) &&
+			chunk_equals(keyid, id->get_encoding(id)))
+		{
+			ca_key->destroy(ca_key);
+			return enumerator_create_single(this->ca, NULL);
+		}
+		ca_key->destroy(ca_key);
+	}
+	if (this->ca->has_subject(this->ca, id))
+	{
+		return enumerator_create_single(this->ca, NULL);
+	}
 	if (!trusted)
 	{
 		/* peer certificate, generate on demand */
