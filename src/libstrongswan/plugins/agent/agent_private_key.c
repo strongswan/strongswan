@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 #include <library.h>
 #include <chunk.h>
 #include <debug.h>
-#include <asn1/asn1.h>
-#include <asn1/oid.h>
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 108
@@ -61,19 +59,9 @@ struct private_agent_private_key_t {
 	size_t key_size;
 	
 	/**
-	 * Keyid formed as a SHA-1 hash of a publicKey object
-	 */
-	identification_t* keyid;
-
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
-	 */
-	identification_t* keyid_info;
-	
-	/**
 	 * reference count
 	 */
-	refcount_t ref;	
+	refcount_t ref;
 };
 
 /**
@@ -166,43 +154,6 @@ static int open_connection(char *path)
 	return s;
 }
 
-/**
- * check if the ssh agent key blob matches to our public key
- */
-static bool matches_pubkey(chunk_t key, public_key_t *pubkey)
-{
-	chunk_t pubkeydata, hash, n, e;
-	hasher_t *hasher;
-	identification_t *id;
-	bool match;
-	
-	if (!pubkey)
-	{
-		return TRUE;
-	}
-	read_string(&key);
-	e = read_string(&key);
-	n = read_string(&key);
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		return FALSE;
-	}
-	pubkeydata = asn1_wrap(ASN1_SEQUENCE, "mm", 
-						asn1_integer("c", n),
-						asn1_integer("c", e));
-	hasher->allocate_hash(hasher, pubkeydata, &hash);
-	free(pubkeydata.ptr);
-	id = pubkey->get_id(pubkey, ID_PUBKEY_SHA1);
-	if (!id)
-	{
-		return FALSE;
-	}
-	match = chunk_equals(id->get_encoding(id), hash);
-	free(hash.ptr);
-	return match;
-}
-
 /** 
  * Get the first usable key from the agent
  */
@@ -210,7 +161,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 {
 	int len, count;
 	char buf[2048];
-	chunk_t blob = chunk_from_buf(buf), key, type, tmp;
+	chunk_t blob = chunk_from_buf(buf), key, type, n;
 	
 	len = htonl(1);
 	buf[0] = SSH_AGENT_ID_REQUEST;
@@ -235,27 +186,35 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	while (blob.len)
 	{
 		key = read_string(&blob);
-		if (key.len)
+		if (!key.len)
 		{
-			tmp = key;
-			type = read_string(&tmp);
-			read_string(&tmp);
-			tmp = read_string(&tmp);
-			if (type.len && strneq("ssh-rsa", type.ptr, type.len) &&
-				tmp.len >= 512/8 && matches_pubkey(key, pubkey))
-			{
-				this->key = chunk_clone(key);
-				this->key_size = tmp.len;
-				if (tmp.ptr[0] == 0)
-				{
-					this->key_size--;
-				}
-				return TRUE;
-			}
+			break;
+		}
+		this->key = key;
+		type = read_string(&key);
+		if (!type.len || !strneq("ssh-rsa", type.ptr, type.len))
+		{
+			break;
+		}
+		read_string(&key);
+		n = read_string(&key);
+		if (n.len <= 512/8)
+		{
+			break;;
+		}
+		if (pubkey && !private_key_belongs_to(&this->public.interface, pubkey))
+		{
 			continue;
 		}
-		break;
+		this->key_size = n.len;
+		if (n.ptr[0] == 0)
+		{
+			this->key_size--;
+		}
+		this->key = chunk_clone(this->key);
+		return TRUE;
 	}
+	this->key = chunk_empty;
 	return FALSE;
 }
 
@@ -358,112 +317,49 @@ static size_t get_keysize(private_agent_private_key_t *this)
 }
 
 /**
- * Implementation of agent_private_key.destroy.
- */
-static identification_t* get_id(private_agent_private_key_t *this,
-								id_type_t type)
-{
-	switch (type)
-	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		default:
-			return NULL;
-	}
-}
-
-/**
  * Implementation of agent_private_key.get_public_key.
  */
 static public_key_t* get_public_key(private_agent_private_key_t *this)
 {
-	chunk_t key, n, e, encoded;
-	public_key_t *public;
+	chunk_t key, n, e;
 	
 	key = this->key;
 	read_string(&key);
 	e = read_string(&key);
 	n = read_string(&key);
-	encoded = asn1_wrap(ASN1_SEQUENCE, "mm", 
-					asn1_integer("c", n),
-					asn1_integer("c", e));
-
-	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, 
-								BUILD_BLOB_ASN1_DER, encoded, BUILD_END);
-	free(encoded.ptr);
-	return public;
+	
+	return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 }
 
 /**
- * Implementation of agent_private_key.belongs_to.
+ * Implementation of private_key_t.get_encoding
  */
-static bool belongs_to(private_agent_private_key_t *this, public_key_t *public)
+static bool get_encoding(private_agent_private_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	identification_t *keyid;
-
-	if (public->get_type(public) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
 	return FALSE;
 }
 
 /**
- * Build the RSA key identifier from n and e using SHA1 hashed publicKey(Info).
+ * Implementation of private_key_t.get_fingerprint
  */
-static bool build_ids(private_agent_private_key_t *this)
+static bool get_fingerprint(private_agent_private_key_t *this,
+							key_encoding_type_t type, chunk_t *fp)
 {
-	chunk_t publicKeyInfo, publicKey, hash, key, n, e;
-	hasher_t *hasher;
+	chunk_t n, e, key;
 	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
+	{
+		return TRUE;
+	}
 	key = this->key;
 	read_string(&key);
 	e = read_string(&key);
 	n = read_string(&key);
 	
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1("SHA1 hash algorithm not supported, unable to use RSA");
-		return FALSE;
-	}
-	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm", 
-					asn1_integer("c", n),
-					asn1_integer("c", e));
-	hasher->allocate_hash(hasher, publicKey, &hash);
-	this->keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
-	chunk_free(&hash);
-	
-	publicKeyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						asn1_bitstring("m", publicKey));
-	hasher->allocate_hash(hasher, publicKeyInfo, &hash);
-	this->keyid_info = identification_create_from_encoding(ID_PUBKEY_INFO_SHA1, hash);
-	chunk_free(&hash);
-	
-	hasher->destroy(hasher);
-	chunk_free(&publicKeyInfo);
-	return TRUE;
-}
-
-/**
- * Implementation of private_key_t.get_encoding.
- */
-static chunk_t get_encoding(private_agent_private_key_t *this)
-{
-	return chunk_empty;
+	return lib->encoding->encode(lib->encoding, type, this, fp,
+				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
 }
 
 /**
@@ -483,9 +379,8 @@ static void destroy(private_agent_private_key_t *this)
 	if (ref_put(&this->ref))
 	{
 		close(this->socket);
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
 		free(this->key.ptr);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -502,10 +397,11 @@ static agent_private_key_t *agent_private_key_create(char *path,
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
 	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t *this,id_type_t))get_id;
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.belongs_to = (bool (*) (private_key_t *this, public_key_t *public))belongs_to;
-	this->public.interface.get_encoding = (chunk_t(*)(private_key_t*))get_encoding;
+	this->public.interface.belongs_to = private_key_belongs_to;
+	this->public.interface.equals = private_key_equals;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 	
@@ -516,10 +412,9 @@ static agent_private_key_t *agent_private_key_create(char *path,
 		return NULL;
 	}
 	this->key = chunk_empty;
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
-	if (!read_key(this, pubkey) || !build_ids(this))
+	
+	if (!read_key(this, pubkey))
 	{
 		destroy(this);
 		return NULL;
@@ -528,6 +423,7 @@ static agent_private_key_t *agent_private_key_create(char *path,
 }
 
 typedef struct private_builder_t private_builder_t;
+
 /**
  * Builder implementation for key loading/generation
  */
