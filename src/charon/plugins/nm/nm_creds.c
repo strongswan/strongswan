@@ -155,10 +155,11 @@ static enumerator_t* create_private_enumerator(private_nm_creds_t *this,
 	}
 	if (id && id->get_type(id) != ID_ANY)
 	{
-		identification_t *keyid;
+		chunk_t keyid;
 		
-		keyid = this->key->get_id(this->key, id->get_type(id));
-		if (!keyid || !keyid->equals(keyid, id))
+		if (id->get_type(id) != ID_KEY_ID ||
+			!this->key->get_fingerprint(this->key, KEY_ID_PUBKEY_SHA1, &keyid) ||
+			!chunk_equals(keyid, id->get_encoding(id)))
 		{
 			return NULL;
 		}
