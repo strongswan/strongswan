@@ -138,7 +138,7 @@ struct private_x509_cert_t {
 	/**
 	 * Authority Key Identifier
 	 */
-	identification_t *authKeyIdentifier;
+	chunk_t authKeyIdentifier;
 	
 	/**
 	 * Authority Key Serial Number
@@ -421,13 +421,13 @@ static const asn1Object_t authKeyIdentifierObjects[] = {
 /**
  * Extracts an authoritykeyIdentifier
  */
-identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
+chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 												chunk_t *authKeySerialNumber)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	identification_t *authKeyIdentifier = NULL;
+	chunk_t authKeyIdentifier = chunk_empty;
 	
 	*authKeySerialNumber = chunk_empty;
 	
@@ -439,8 +439,7 @@ identification_t* x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 		switch (objectID) 
 		{
 			case AUTH_KEY_ID_KEY_ID:
-				authKeyIdentifier = identification_create_from_encoding(
-												ID_PUBKEY_SHA1, object); 
+				authKeyIdentifier = chunk_clone(object);
 				break;
 			case AUTH_KEY_ID_CERT_ISSUER:
 				/* TODO: x509_parse_generalNames(object, level+1, TRUE); */
@@ -847,10 +846,12 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	enumerator_t *enumerator;
 	id_match_t match, best;
 	
-	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_CERT_DER_SHA1 &&
-		chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
+	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_KEY_ID)
 	{
-		return ID_MATCH_PERFECT;
+		if (chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
+		{
+			return ID_MATCH_PERFECT;
+		}
 	}
 	
 	best = this->subject->matches(this->subject, subject);
@@ -860,11 +861,11 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 		match = current->matches(current, subject);
 		if (match > best)
 		{
-			best = match;	
+			best = match;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return best;	
+	return best;
 }
 
 /**
@@ -1040,7 +1041,7 @@ static chunk_t get_serial(private_x509_cert_t *this)
 /**
  * Implementation of x509_t.get_authKeyIdentifier.
  */
-static identification_t *get_authKeyIdentifier(private_x509_cert_t *this)
+static chunk_t get_authKeyIdentifier(private_x509_cert_t *this)
 {
 	return this->authKeyIdentifier;
 }
@@ -1083,7 +1084,7 @@ static void destroy(private_x509_cert_t *this)
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
-		DESTROY_IF(this->authKeyIdentifier);
+		chunk_free(&this->authKeyIdentifier);
 		chunk_free(&this->encoding);
 		chunk_free(&this->encoding_hash);
 		if (!this->parsed)
@@ -1118,7 +1119,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
 	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
-	this->public.interface.get_authKeyIdentifier = (identification_t* (*)(x509_t*))get_authKeyIdentifier;
+	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(x509_t*))get_authKeyIdentifier;
 	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
@@ -1137,7 +1138,7 @@ static private_x509_cert_t* create_empty(void)
 	this->crl_uris = linked_list_create();
 	this->ocsp_uris = linked_list_create();
 	this->subjectKeyID = chunk_empty;
-	this->authKeyIdentifier = NULL;
+	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->algorithm = 0;
 	this->signature = chunk_empty;
@@ -1253,10 +1254,14 @@ static bool generate(private_builder_t *this)
 	switch (this->cert->public_key->get_type(this->cert->public_key))
 	{
 		case KEY_RSA:
-			key = this->cert->public_key->get_encoding(this->cert->public_key);
+			if (!this->cert->public_key->get_encoding(this->cert->public_key,
+													  KEY_PUB_ASN1_DER, &key))
+			{
+				return FALSE;
+			}
 			key_info = asn1_wrap(ASN1_SEQUENCE, "cm",
-							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
-							asn1_bitstring("m", key));	
+							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+							asn1_bitstring("m", key));
 			break;
 		default:
 			return FALSE;

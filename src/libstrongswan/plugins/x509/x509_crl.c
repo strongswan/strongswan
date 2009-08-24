@@ -101,7 +101,7 @@ struct private_x509_crl_t {
 	/**
 	 * Authority Key Identifier
 	 */
-	identification_t *authKeyIdentifier;
+	chunk_t authKeyIdentifier;
 
 	/**
 	 * Authority Key Serial Number
@@ -127,7 +127,7 @@ struct private_x509_crl_t {
 /**
  * from x509_cert
  */
-extern identification_t* x509_parse_authorityKeyIdentifier(
+extern chunk_t x509_parse_authorityKeyIdentifier(
 								chunk_t blob, int level0, 
 								chunk_t *authKeySerialNumber);
 
@@ -337,10 +337,11 @@ static chunk_t get_serial(private_x509_crl_t *this)
 /**
  * Implementation of crl_t.get_authKeyIdentifier.
  */
-static identification_t* get_authKeyIdentifier(private_x509_crl_t *this)
+static chunk_t get_authKeyIdentifier(private_x509_crl_t *this)
 {
 	return this->authKeyIdentifier;
 }
+
 /**
  * Implementation of crl_t.create_enumerator.
  */
@@ -372,24 +373,12 @@ static identification_t* get_issuer(private_x509_crl_t *this)
  */
 static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
 {
-	id_match_t match;
-
-	if (issuer->get_type(issuer) == ID_PUBKEY_SHA1)
+	if (issuer->get_type(issuer) == ID_KEY_ID && this->authKeyIdentifier.ptr &&
+		chunk_equals(this->authKeyIdentifier, issuer->get_encoding(issuer)))
 	{
-		if (this->authKeyIdentifier)
-		{
-			match = issuer->matches(issuer, this->authKeyIdentifier);
-		}
-		else
-		{
-			match = ID_MATCH_NONE;
-		}
+		return ID_MATCH_PERFECT;
 	}
-	else
-	{
-		match = this->issuer->matches(this->issuer, issuer);
-	}
-	return match;
+	return this->issuer->matches(this->issuer, issuer);
 }
 
 /**
@@ -416,12 +405,12 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 	key = issuer->get_public_key(issuer);
 
 	/* compare keyIdentifiers if available, otherwise use DNs */
-	if (this->authKeyIdentifier && key)
+	if (this->authKeyIdentifier.ptr && key)
 	{
-		identification_t *subjectKeyIdentifier = key->get_id(key, ID_PUBKEY_SHA1);
-
-		if (!subjectKeyIdentifier->equals(subjectKeyIdentifier,
-										  this->authKeyIdentifier))
+		chunk_t fingerprint;
+		
+		if (!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
 			return FALSE;
 		}
@@ -433,10 +422,10 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 			return FALSE;
 		}
 	}
-
+	
 	/* determine signature scheme */
 	scheme = signature_scheme_from_oid(this->algorithm);
-
+	
 	if (scheme == SIGN_UNKNOWN || key == NULL)
 	{
 		return FALSE;
@@ -562,7 +551,7 @@ static void destroy(private_x509_crl_t *this)
 	{
 		this->revoked->destroy_function(this->revoked, free);
 		DESTROY_IF(this->issuer);
-		DESTROY_IF(this->authKeyIdentifier);
+		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
 		free(this);
 	}
@@ -576,7 +565,7 @@ static private_x509_crl_t* create_empty(void)
 	private_x509_crl_t *this = malloc_thing(private_x509_crl_t);
 	
 	this->public.crl.get_serial = (chunk_t (*)(crl_t*))get_serial;
-	this->public.crl.get_authKeyIdentifier = (identification_t* (*)(crl_t*))get_authKeyIdentifier;
+	this->public.crl.get_authKeyIdentifier = (chunk_t (*)(crl_t*))get_authKeyIdentifier;
 	this->public.crl.create_enumerator = (enumerator_t* (*)(crl_t*))create_enumerator;
 	this->public.crl.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.crl.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -597,7 +586,7 @@ static private_x509_crl_t* create_empty(void)
 	this->issuer = NULL;
 	this->crlNumber = chunk_empty;
 	this->revoked = linked_list_create();
-	this->authKeyIdentifier = NULL;
+	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->ref = 1;
 	

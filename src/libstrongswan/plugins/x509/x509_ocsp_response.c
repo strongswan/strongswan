@@ -173,7 +173,8 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 	{
 		hasher_t *hasher;
 		identification_t *id;
-		chunk_t hash;
+		key_encoding_type_t type;
+		chunk_t hash, fingerprint;
 		
 		/* check serial first, is cheaper */
 		if (!chunk_equals(subject->get_serial(subject), response->serialNumber))
@@ -191,15 +192,16 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 				continue;
 			}
 			switch (response->hashAlgorithm)
-			{	/* TODO: generic mapper function */
+			{
 				case OID_SHA1:
-					id = public->get_id(public, ID_PUBKEY_SHA1);
+					type = KEY_ID_PUBKEY_SHA1;
 					break;
 				default:
 					public->destroy(public);
 					continue;
 			}
-			if (!chunk_equals(response->issuerKeyHash, id->get_encoding(id)))
+			if (!public->get_fingerprint(public, type, &fingerprint) ||
+				!chunk_equals(response->issuerKeyHash, fingerprint))
 			{
 				public->destroy(public);
 				continue;
@@ -525,7 +527,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				break;
 			case BASIC_RESPONSE_ID_BY_KEY:
 				this->responderId = identification_create_from_encoding(
-													ID_PUBKEY_INFO_SHA1, object);
+													ID_KEY_ID, object);
 				DBG2("  '%Y'", this->responderId);
 				break;
 			case BASIC_RESPONSE_PRODUCED_AT:
@@ -694,29 +696,27 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 	{
 		return FALSE;
 	}
-	if (this->responderId->get_type(this->responderId) == ID_DER_ASN1_DN)
+	if (this->responderId->get_type(this->responderId) == ID_KEY_ID)
+	{
+		chunk_t fingerprint;
+		
+		key = issuer->get_public_key(issuer);
+		if (!key ||
+			!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+			!chunk_equals(fingerprint,
+						  this->responderId->get_encoding(this->responderId)))
+		{
+			DESTROY_IF(key);
+			return FALSE;
+		}
+		key->destroy(key);
+	}
+	else 
 	{
 		if (!this->responderId->equals(this->responderId,
 									   issuer->get_subject(issuer)))
 		{
 			return FALSE;
-		}
-	}
-	else
-	{
-		bool equal;
-		public_key_t *public = issuer->get_public_key(issuer);
-
-		if (public == NULL)
-		{
-			return FALSE;
-		}
-		equal = this->responderId->equals(this->responderId,
-										  public->get_id(public, ID_PUBKEY_SHA1));
-		public->destroy(public);
-		if (!equal)
-		{
-				return FALSE;
 		}
 	}
 	if (!(x509->get_flags(x509) & X509_OCSP_SIGNER) &&
