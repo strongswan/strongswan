@@ -1432,7 +1432,7 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
 		{
 			keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 			private = get_private_by_keyid(this, type, keyid);

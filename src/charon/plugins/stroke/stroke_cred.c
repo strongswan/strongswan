@@ -105,7 +105,6 @@ static void id_data_destroy(id_data_t *data)
 static bool private_filter(id_data_t *data,
 						   private_key_t **in, private_key_t **out)
 {
-	key_encoding_type_t type;
 	private_key_t *key;
 	chunk_t keyid;
 	
@@ -115,14 +114,11 @@ static bool private_filter(id_data_t *data,
 		*out = key;
 		return TRUE;
 	}
-	for (type = KEY_ID_PUBKEY_INFO_SHA1; type < KEY_ID_PUBKEY_SHA1; type++)
+	if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid) &&
+		chunk_equals(keyid, data->id->get_encoding(data->id)))
 	{
-		if (key->get_fingerprint(key, type, &keyid) &&
-			chunk_equals(keyid, data->id->get_encoding(data->id)))
-		{
-			*out = key;
-			return TRUE;
-		}
+		*out = key;
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -150,7 +146,6 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
  */
 static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **out)
 {
-	key_encoding_type_t type;
 	public_key_t *public;
 	certificate_t *cert = *in;
 	chunk_t keyid;
@@ -169,15 +164,12 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		for (type = KEY_ID_PUBKEY_INFO_SHA1; type < KEY_ID_PUBKEY_SHA1; type++)
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
+			chunk_equals(keyid, data->id->get_encoding(data->id)))
 		{
-			if (public->get_fingerprint(public, type, &keyid) &&
-				chunk_equals(keyid, data->id->get_encoding(data->id)))
-			{
-				public->destroy(public);
-				*out = *in;
-				return TRUE;
-			}
+			public->destroy(public);
+			*out = *in;
+			return TRUE;
 		}
 		public->destroy(public);
 	}
