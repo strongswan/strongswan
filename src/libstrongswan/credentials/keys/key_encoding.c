@@ -111,6 +111,28 @@ static bool equals(void *key1, void *key2)
 }
 
 /**
+ * Implementation of key_encoding_t.get_cache
+ */
+static bool get_cache(private_key_encoding_t *this, key_encoding_type_t type,
+					  void *cache, chunk_t *encoding)
+{
+	chunk_t *chunk;
+	
+	if (type >= KEY_ENCODING_MAX || type < 0)
+	{
+		return FALSE;
+	}
+	this->lock->read_lock(this->lock);
+	chunk = this->cache[type]->get(this->cache[type], cache);
+	if (chunk)
+	{
+		*encoding = *chunk;
+	}
+	this->lock->unlock(this->lock);
+	return !!chunk;
+}
+
+/**
  * Implementation of key_encoding_t.encode
  */
 static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
@@ -239,6 +261,7 @@ key_encoding_t *key_encoding_create()
 	key_encoding_type_t type;
 	
 	this->public.encode = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
+	this->public.get_cache = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
 	this->public.clear_cache = (void(*)(key_encoding_t*, void *cache))clear_cache;
 	this->public.add_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))add_encoder;
 	this->public.remove_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))remove_encoder;

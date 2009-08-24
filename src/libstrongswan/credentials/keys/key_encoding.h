@@ -137,6 +137,17 @@ struct key_encoding_t {
 	void (*clear_cache)(key_encoding_t *this, void *cache);
 	
 	/**
+	 * Check for a cached encoding.
+	 *
+	 * @param type			format of the key encoding
+	 * @param cache			key to use for caching, as given to encode()
+	 * @encoding			encoding result, internal data
+	 * @return				TRUE if cache entry found
+	 */
+	bool (*get_cache)(key_encoding_t *this, key_encoding_type_t type,
+					  void *cache, chunk_t *encoding);
+	
+	/**
 	 * Register a key encoder function.
 	 *
 	 * @param encoder		key encoder function to add
