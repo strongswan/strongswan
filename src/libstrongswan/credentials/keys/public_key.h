@@ -137,23 +137,26 @@ struct public_key_t {
 	 * @return			strength of the key in bytes
 	 */
 	size_t (*get_keysize) (public_key_t *this);
-
-	/**
-	 * Get a unique key identifier, such as a hash over the key.
-	 * 
-	 * @param type		type of the key ID to get
-	 * @return			unique ID of the key as identification_t, or NULL
-	 */
-	identification_t* (*get_id) (public_key_t *this, id_type_t type);
 	
 	/**
-	 * Get an encoded form of the key.
+	 * Get the fingerprint of the key.
 	 *
-	 * @todo Do we need a encoding type specification?
-	 *
-	 * @return			allocated chunk containing encoded key
+	 * @param type		type of fingerprint, one of KEY_ID_*
+	 * @param fp		fingerprint, points to internal data
+	 * @return			TRUE if fingerprint type supported
 	 */
-	chunk_t (*get_encoding)(public_key_t *this);	
+	bool (*get_fingerprint)(public_key_t *this, key_encoding_type_t type,
+							chunk_t *fp);
+	
+	/**
+	 * Get the key in an encoded form as a chunk.
+	 *
+	 * @param type		type of the encoding, one of KEY_PRIV_*
+	 * @param encoding	encoding of the key, allocated
+	 * @return			TRUE if encoding supported
+	 */
+	bool (*get_encoding)(public_key_t *this, key_encoding_type_t type,
+						 chunk_t *encoding);
 	
 	/**
 	 * Increase the refcount of the key.

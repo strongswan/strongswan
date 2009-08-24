@@ -23,21 +23,20 @@
 
 typedef struct private_key_t private_key_t;
 
-#include <utils/identification.h>
 #include <credentials/keys/public_key.h>
 
 /**
  * Abstract private key interface.
  */
 struct private_key_t {
-
+	
 	/**
 	 * Get the key type.
 	 *
 	 * @return			type of the key
 	 */
 	key_type_t (*get_type)(private_key_t *this);
-
+	
 	/**
 	 * Create a signature over a chunk of data.
 	 *
@@ -63,14 +62,6 @@ struct private_key_t {
 	 * @return			strength of the key in bytes
 	 */
 	size_t (*get_keysize) (private_key_t *this);
-
-	/**
-	 * Get a unique key identifier, such as a hash over the public key.
-	 * 
-	 * @param type		type of the key ID to get
-	 * @return			unique ID of the key as identification_t, or NULL
-	 */
-	identification_t* (*get_id) (private_key_t *this, id_type_t type);
 	
 	/**
 	 * Get the public part from the private key.
@@ -86,7 +77,7 @@ struct private_key_t {
 	 * @return			TRUE, if equality
 	 */
 	bool (*equals) (private_key_t *this, private_key_t *other);
-
+	
 	/**
 	 * Check if a private key belongs to a public key.
 	 * 
@@ -96,13 +87,24 @@ struct private_key_t {
 	bool (*belongs_to) (private_key_t *this, public_key_t *public);
 	
 	/**
-	 * Get an encoded form of the private key.
+	 * Get the fingerprint of the key.
 	 *
-	 * @todo Do we need a encoding type specification?
-	 *
-	 * @return			allocated chunk containing encoded private key
+	 * @param type		type of fingerprint, one of KEY_ID_*
+	 * @param fp		fingerprint, points to internal data
+	 * @return			TRUE if fingerprint type supported
 	 */
-	chunk_t (*get_encoding)(private_key_t *this);	
+	bool (*get_fingerprint)(private_key_t *this, key_encoding_type_t type,
+							chunk_t *fp);
+	
+	/**
+	 * Get the key in an encoded form as a chunk.
+	 *
+	 * @param type		type of the encoding, one of KEY_PRIV_*
+	 * @param encoding	encoding of the key, allocated
+	 * @return			TRUE if encoding supported
+	 */
+	bool (*get_encoding)(private_key_t *this, key_encoding_type_t type,
+						 chunk_t *encoding);
 	
 	/**
 	 * Increase the refcount to this private key.
