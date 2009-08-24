@@ -55,16 +55,6 @@ struct private_gmp_rsa_public_key_t {
 	size_t k;
 	
 	/**
-	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
-	 */
-	identification_t *keyid_info;
-	
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKey object
-	 */
-	identification_t *keyid;
-	
-	/**
 	 * reference counter
 	 */
 	refcount_t ref;
@@ -74,7 +64,6 @@ struct private_gmp_rsa_public_key_t {
  * Shared functions defined in gmp_rsa_private_key.c
  */
 extern chunk_t gmp_mpz_to_chunk(const mpz_t value);
-extern chunk_t gmp_mpz_to_asn1(const mpz_t value);
 
 /**
  * RSAEP algorithm specified in PKCS#1.
@@ -314,7 +303,7 @@ static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme
 	}
 }
 
-#define MIN_PS_PADDING		8	
+#define MIN_PS_PADDING 8
 
 /**
  * Implementation of public_key_t.encrypt.
@@ -384,27 +373,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
  */
 static bool equals(private_gmp_rsa_public_key_t *this, public_key_t *other)
 {
-	identification_t *keyid;
-
-	if (&this->public.interface == other)
-	{
-		return TRUE;
-	}
-	if (other->get_type(other) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return public_key_equals(&this->public.interface, other);
 }
 
 /**
@@ -416,72 +385,47 @@ static size_t get_keysize(private_gmp_rsa_public_key_t *this)
 }
 
 /**
- * Build the PGP version 3 RSA key identifier from n and e using
- * MD5 hashed modulus and exponent.
+ * Implementation of public_key_t.get_encoding
  */
-static identification_t* gmp_rsa_build_pgp_v3_keyid(mpz_t n, mpz_t e)
+static bool get_encoding(private_gmp_rsa_public_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	identification_t *keyid;
-	chunk_t modulus, mod, exponent, exp, hash;
-	hasher_t *hasher;
+	chunk_t n, e;
+	bool success;
 	
-	hasher= lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	if (hasher == NULL)
-	{
-		DBG1("computation of PGP V3 keyid failed, no MD5 hasher is available");
-		return NULL;
-	}
-	mod = modulus  = gmp_mpz_to_chunk(n);
-	exp = exponent = gmp_mpz_to_chunk(e);
-
-	/* remove leading zero bytes before hashing modulus and exponent */
-	while (mod.len > 0 && *mod.ptr == 0x00)
-	{
-		mod.ptr++;
-		mod.len--;
-	} 
-	while (exp.len > 0 && *exp.ptr == 0x00)
-	{
-		exp.ptr++;
-		exp.len--;
-	} 
-	hasher->allocate_hash(hasher, mod, NULL);
-	hasher->allocate_hash(hasher, exp, &hash);
-	hasher->destroy(hasher);
-	keyid = identification_create_from_encoding(ID_KEY_ID, hash);
-	free(hash.ptr);
-	free(modulus.ptr);
-	free(exponent.ptr);
-	return keyid;
+	n = gmp_mpz_to_chunk(this->n);
+	e = gmp_mpz_to_chunk(this->e);
+	
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding, 
+				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	
+	return success;
 }
 
 /**
- * Implementation of public_key_t.get_id.
+ * Implementation of public_key_t.get_fingerprint
  */
-static identification_t *get_id(private_gmp_rsa_public_key_t *this,
-								id_type_t type)
+static bool get_fingerprint(private_gmp_rsa_public_key_t *this,
+							key_encoding_type_t type, chunk_t *fp)
 {
-	switch (type)
+	chunk_t n, e;
+	bool success;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
 	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		case ID_KEY_ID:
-			return gmp_rsa_build_pgp_v3_keyid(this->n, this->e);
-		default:
-			return NULL;
+		return TRUE;
 	}
-}
-
-/*
- * Implementation of public_key_t.get_encoding.
- */
-static chunk_t get_encoding(private_gmp_rsa_public_key_t *this)
-{
-	return asn1_wrap(ASN1_SEQUENCE, "mm",
-					 gmp_mpz_to_asn1(this->n),
-					 gmp_mpz_to_asn1(this->e));
+	n = gmp_mpz_to_chunk(this->n);
+	e = gmp_mpz_to_chunk(this->e);
+	
+	success = lib->encoding->encode(lib->encoding, type, this, fp,
+				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	
+	return success;
 }
 
 /**
@@ -502,8 +446,7 @@ static void destroy(private_gmp_rsa_public_key_t *this)
 	{
 		mpz_clear(this->n);
 		mpz_clear(this->e);
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -520,52 +463,14 @@ static private_gmp_rsa_public_key_t *gmp_rsa_public_key_create_empty()
 	this->public.interface.encrypt = (bool (*) (public_key_t*, chunk_t, chunk_t*))encrypt_;
 	this->public.interface.equals = (bool (*) (public_key_t*, public_key_t*))equals;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t*))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (public_key_t*, id_type_t))get_id;
-	this->public.interface.get_encoding = (chunk_t(*) (public_key_t*))get_encoding;
+	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*) (public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*) (public_key_t *this))destroy;
 	
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
 	
 	return this;
-}
-
-/**
- * Build the RSA key identifier from n and e using SHA1 hashed publicKey(Info).
- * Also used in rsa_private_key.c.
- */
-bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, identification_t **keyid,
-								 identification_t **keyid_info)
-{
-	chunk_t publicKeyInfo, publicKey, hash;
-	hasher_t *hasher;
-	
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1("SHA1 hash algorithm not supported, unable to use RSA");
-		return FALSE;
-	}
-	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
-					gmp_mpz_to_asn1(n),
-					gmp_mpz_to_asn1(e));
-	hasher->allocate_hash(hasher, publicKey, &hash);
-	*keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
-	chunk_free(&hash);
-	
-	publicKeyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						asn1_bitstring("m", publicKey));
-	hasher->allocate_hash(hasher, publicKeyInfo, &hash);
-	*keyid_info = identification_create_from_encoding(ID_PUBKEY_INFO_SHA1, hash);
-	chunk_free(&hash);
-	
-	hasher->destroy(hasher);
-	chunk_free(&publicKeyInfo);
-	
-	return TRUE;
 }
 
 /**
@@ -581,13 +486,8 @@ static gmp_rsa_public_key_t *load(chunk_t n, chunk_t e)
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
 	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) /  BITS_PER_BYTE;
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+	
 	return &this->public;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -42,11 +42,6 @@ struct private_gmp_rsa_private_key_t {
 	 * Public interface for this signer.
 	 */
 	gmp_rsa_private_key_t public;
-	
-	/**
-	 * Version of key, as encoded in PKCS#1
-	 */
-	u_int version;
 	
 	/**
 	 * Public modulus.
@@ -92,34 +87,33 @@ struct private_gmp_rsa_private_key_t {
 	 * Keysize in bytes.
 	 */
 	size_t k;
-
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKey object
-	 */
-	identification_t* keyid;
-
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
-	 */
-	identification_t* keyid_info;
 	
 	/**
 	 * reference count
 	 */
-	refcount_t ref;	
+	refcount_t ref;
 };
 
 /**
- * Shared functions defined in gmp_rsa_public_key.c
+ * Convert a MP integer into a chunk_t
  */
-extern bool gmp_rsa_public_key_build_id(mpz_t n, mpz_t e, 
-										identification_t **keyid,
-										identification_t **keyid_info);
+chunk_t gmp_mpz_to_chunk(const mpz_t value)
+{
+	chunk_t n;
+	
+	n.len = 1 + mpz_sizeinbase(value, 2) / BITS_PER_BYTE;
+	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
+	if (n.ptr == NULL)
+	{	/* if we have zero in "value", gmp returns NULL */
+		n.len = 0;
+	}
+	return n;
+}
 
 /**
  * Auxiliary function overwriting private key material with zero bytes
  */
-static void mpz_clear_randomized(mpz_t z)
+static void mpz_clear_sensitive(mpz_t z)
 {
 	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
 	u_int8_t *random = alloca(len);
@@ -194,8 +188,8 @@ static chunk_t rsadp(private_gmp_rsa_private_key_t *this, chunk_t data)
 		decrypted.len = 0;
 	}
 	
-	mpz_clear_randomized(t1);
-	mpz_clear_randomized(t2);
+	mpz_clear_sensitive(t1);
+	mpz_clear_sensitive(t2);
 	
 	return decrypted;
 }
@@ -364,47 +358,6 @@ static size_t get_keysize(private_gmp_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gmp_rsa_private_key.get_id.
- */
-static identification_t* get_id(private_gmp_rsa_private_key_t *this,
-								id_type_t type)
-{
-	switch (type)
-	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		default:
-			return NULL;
-	}
-}
-
-/**
- * Convert a MP integer into a chunk_t
- */
-chunk_t gmp_mpz_to_chunk(const mpz_t value)
-{
-	chunk_t n;
-	
-	n.len = 1 + mpz_sizeinbase(value, 2) / BITS_PER_BYTE;
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
-	if (n.ptr == NULL)
-	{	/* if we have zero in "value", gmp returns NULL */
-		n.len = 0;
-	}
-	return n;
-}
-
-/**
- * Convert a MP integer into a DER coded ASN.1 object
- */
-chunk_t gmp_mpz_to_asn1(const mpz_t value)
-{
-	return asn1_wrap(ASN1_INTEGER, "m", gmp_mpz_to_chunk(value));
-}
-
-/**
  * Implementation of gmp_rsa_private_key.get_public_key.
  */
 static public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
@@ -428,27 +381,7 @@ static public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
  */
 static bool equals(private_gmp_rsa_private_key_t *this, private_key_t *other)
 {
-	identification_t *keyid;
-
-	if (&this->public.interface == other)
-	{
-		return TRUE;
-	}
-	if (other->get_type(other) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return private_key_equals(&this->public.interface, other);
 }
 
 /**
@@ -456,40 +389,67 @@ static bool equals(private_gmp_rsa_private_key_t *this, private_key_t *other)
  */
 static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public)
 {
-	identification_t *keyid;
-
-	if (public->get_type(public) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return private_key_belongs_to(&this->public.interface, public);
 }
 
 /**
- * Implementation of private_key_t.get_encoding.
+ * Implementation of private_key_t.get_encoding
  */
-static chunk_t get_encoding(private_gmp_rsa_private_key_t *this)
+static bool get_encoding(private_gmp_rsa_private_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm",
-					 ASN1_INTEGER_0,
-					 gmp_mpz_to_asn1(this->n),
-					 gmp_mpz_to_asn1(this->e),
-					 gmp_mpz_to_asn1(this->d),
-					 gmp_mpz_to_asn1(this->p),
-					 gmp_mpz_to_asn1(this->q),
-					 gmp_mpz_to_asn1(this->exp1),
-					 gmp_mpz_to_asn1(this->exp2),
-					 gmp_mpz_to_asn1(this->coeff));
+	chunk_t n, e, d, p, q, exp1, exp2, coeff;
+	bool success;
+	
+	n = gmp_mpz_to_chunk(this->n);
+	e = gmp_mpz_to_chunk(this->e);
+	d = gmp_mpz_to_chunk(this->d);
+	p = gmp_mpz_to_chunk(this->p);
+	q = gmp_mpz_to_chunk(this->q);
+	exp1 = gmp_mpz_to_chunk(this->exp1);
+	exp2 = gmp_mpz_to_chunk(this->exp2);
+	coeff = gmp_mpz_to_chunk(this->coeff);
+	
+	success = lib->encoding->encode(lib->encoding,
+							type, NULL, encoding, KEY_PART_RSA_MODULUS, n,
+							KEY_PART_RSA_PUB_EXP, e, KEY_PART_RSA_PRIV_EXP, d,
+							KEY_PART_RSA_PRIME1, p, KEY_PART_RSA_PRIME2, q,
+							KEY_PART_RSA_EXP1, exp1, KEY_PART_RSA_EXP2, exp2,
+							KEY_PART_RSA_COEFF, coeff, KEY_PART_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	chunk_clear(&d);
+	chunk_clear(&p);
+	chunk_clear(&q);
+	chunk_clear(&exp1);
+	chunk_clear(&exp2);
+	chunk_clear(&coeff);
+	
+	return success;
+}
+
+/**
+ * Implementation of private_key_t.get_fingerprint
+ */
+static bool get_fingerprint(private_gmp_rsa_private_key_t *this,
+							key_encoding_type_t type, chunk_t *fp)
+{
+	chunk_t n, e;
+	bool success;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
+	{
+		return TRUE;
+	}
+	n = gmp_mpz_to_chunk(this->n);
+	e = gmp_mpz_to_chunk(this->e);
+	
+	success = lib->encoding->encode(lib->encoding, type, this, fp,
+				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	
+	return success;
 }
 
 /**
@@ -499,7 +459,6 @@ static private_gmp_rsa_private_key_t* get_ref(private_gmp_rsa_private_key_t *thi
 {
 	ref_get(&this->ref);
 	return this;
-
 }
 
 /**
@@ -509,16 +468,15 @@ static void destroy(private_gmp_rsa_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
-		mpz_clear_randomized(this->n);
-		mpz_clear_randomized(this->e);
-		mpz_clear_randomized(this->p);
-		mpz_clear_randomized(this->q);
-		mpz_clear_randomized(this->d);
-		mpz_clear_randomized(this->exp1);
-		mpz_clear_randomized(this->exp2);
-		mpz_clear_randomized(this->coeff);
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
+		mpz_clear_sensitive(this->n);
+		mpz_clear_sensitive(this->e);
+		mpz_clear_sensitive(this->p);
+		mpz_clear_sensitive(this->q);
+		mpz_clear_sensitive(this->d);
+		mpz_clear_sensitive(this->exp1);
+		mpz_clear_sensitive(this->exp2);
+		mpz_clear_sensitive(this->coeff);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -612,9 +570,9 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 		status = FAILED;
 	}
 	
-	mpz_clear_randomized(t);
-	mpz_clear_randomized(u);
-	mpz_clear_randomized(q1);
+	mpz_clear_sensitive(t);
+	mpz_clear_sensitive(u);
+	mpz_clear_sensitive(q1);
 	if (status != SUCCESS)
 	{
 		DBG1("key integrity tests failed");
@@ -633,16 +591,14 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
 	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
 	this->public.interface.get_keysize = (size_t (*) (private_key_t*))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t*, id_type_t))get_id;
 	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
 	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
 	this->public.interface.belongs_to = (bool (*) (private_key_t*, public_key_t*))belongs_to;
-	this->public.interface.get_encoding = (chunk_t (*) (private_key_t*))get_encoding;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
 	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
 	
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
 	
 	return this;
@@ -712,9 +668,9 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 		mpz_add(coeff, coeff, p);
 	}
 
-	mpz_clear_randomized(q1);
-	mpz_clear_randomized(m);
-	mpz_clear_randomized(t);
+	mpz_clear_sensitive(q1);
+	mpz_clear_sensitive(m);
+	mpz_clear_sensitive(t);
 
 	/* apply values */
 	*(this->p) = *p;
@@ -774,12 +730,6 @@ static gmp_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
 		mpz_import(this->exp2, exp2.len, 1, 1, 1, 0, exp2.ptr);
 	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
-	if (!gmp_rsa_public_key_build_id(this->n, this->e,
-									 &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
 	if (check(this) != SUCCESS)
 	{
 		destroy(this);
@@ -853,7 +803,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->exp1 = va_arg(args, chunk_t);
 			break;
 		case BUILD_RSA_EXP2:
-			this->exp1 = va_arg(args, chunk_t);
+			this->exp2 = va_arg(args, chunk_t);
 			break;
 		case BUILD_RSA_COEFF:
 			this->coeff = va_arg(args, chunk_t);
