@@ -40,16 +40,6 @@ struct private_gcrypt_rsa_private_key_t {
 	gcry_sexp_t key;
 	
 	/**
-	 * Keyid formed as a SHA-1 hash of a publicKey object
-	 */
-	identification_t* keyid;
-	
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
-	 */
-	identification_t* keyid_info;
-	
-	/**
 	 * reference count
 	 */
 	refcount_t ref;
@@ -294,23 +284,6 @@ static size_t get_keysize(private_gcrypt_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gcrypt_rsa_private_key.destroy.
- */
-static identification_t* get_id(private_gcrypt_rsa_private_key_t *this,
-								id_type_t type)
-{
-	switch (type)
-	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		default:
-			return NULL;
-	}
-}
-
-/**
  * Implementation of gcrypt_rsa_private_key.get_public_key.
  */
 static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
@@ -330,66 +303,15 @@ static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
 }
 
 /**
- * Implementation of gcrypt_rsa_private_key.equals.
+ * Implementation of private_key_t.get_encoding
  */
-static bool equals(private_gcrypt_rsa_private_key_t *this, private_key_t *other)
+static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	identification_t *keyid;
-
-	if (&this->public.interface == other)
-	{
-		return TRUE;
-	}
-	if (other->get_type(other) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * Implementation of gcrypt_rsa_private_key.belongs_to.
- */
-static bool belongs_to(private_gcrypt_rsa_private_key_t *this,
-					   public_key_t *public)
-{
-	identification_t *keyid;
-	
-	if (public->get_type(public) != KEY_RSA)
-	{
-		return FALSE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
-	{
-		return TRUE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * Implementation of private_key_t.get_encoding.
- */
-static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
-{
-	chunk_t cp, cq, cd, cexp1 = chunk_empty, cexp2 = chunk_empty;
+	chunk_t cn, ce, cp, cq, cd, cu, cexp1 = chunk_empty, cexp2 = chunk_empty;
 	gcry_mpi_t p = NULL, q = NULL, d = NULL, exp1, exp2;
 	gcry_error_t err;
+	bool success;
 	
 	/* p and q are swapped, gcrypt expects p < q */
 	cp = gcrypt_rsa_find_token(this->key, "q", NULL);
@@ -408,7 +330,7 @@ static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
 		chunk_clear(&cq);
 		chunk_clear(&cd);
 		DBG1("scanning mpi for export failed: %s", gpg_strerror(err));
-		return chunk_empty;
+		return FALSE;
 	}
 	
 	gcry_mpi_sub_ui(p, p, 1);
@@ -436,18 +358,53 @@ static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
 		chunk_clear(&cd);
 		chunk_clear(&cexp1);
 		chunk_clear(&cexp2);
-		return chunk_empty;
+		return FALSE;
 	}
 	
-	return asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm", ASN1_INTEGER_0,
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n", NULL)),
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e", NULL)),
-			asn1_integer("m", cd),
-			asn1_integer("m", cp),
-			asn1_integer("m", cq),
-			asn1_integer("m", cexp1),
-			asn1_integer("m", cexp2),
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "u", NULL)));
+	cn = gcrypt_rsa_find_token(this->key, "n", NULL);
+	ce = gcrypt_rsa_find_token(this->key, "e", NULL);
+	cu = gcrypt_rsa_find_token(this->key, "u", NULL);
+	
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+							KEY_PART_RSA_MODULUS, cn,
+							KEY_PART_RSA_PUB_EXP, ce, KEY_PART_RSA_PRIV_EXP, cd,
+							KEY_PART_RSA_PRIME1, cp, KEY_PART_RSA_PRIME2, cq,
+							KEY_PART_RSA_EXP1, cexp1, KEY_PART_RSA_EXP2, cexp2,
+							KEY_PART_RSA_COEFF, cu, KEY_PART_END);
+	chunk_free(&cn);
+	chunk_free(&ce);
+	chunk_clear(&cd);
+	chunk_clear(&cp);
+	chunk_clear(&cq);
+	chunk_clear(&cexp1);
+	chunk_clear(&cexp2);
+	chunk_clear(&cu);
+	
+	return success;
+}
+
+/**
+ * Implementation of private_key_t.get_fingerprint
+ */
+static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
+							key_encoding_type_t type, chunk_t *fp)
+{
+	chunk_t n, e;
+	bool success;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
+	{
+		return TRUE;
+	}
+	n = gcrypt_rsa_find_token(this->key, "n", NULL);
+	e = gcrypt_rsa_find_token(this->key, "e", NULL);
+	
+	success = lib->encoding->encode(lib->encoding,
+								type, this, fp, KEY_PART_RSA_MODULUS, n,
+								KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+	chunk_free(&n);
+	chunk_free(&e);
+	return success;
 }
 
 /**
@@ -466,9 +423,8 @@ static void destroy(private_gcrypt_rsa_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
 		gcry_sexp_release(this->key);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -484,55 +440,18 @@ static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
 	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t *this,id_type_t))get_id;
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
-	this->public.interface.belongs_to = (bool (*) (private_key_t *this, public_key_t *public))belongs_to;
-	this->public.interface.get_encoding = (chunk_t(*)(private_key_t*))get_encoding;
+	this->public.interface.equals = private_key_equals;
+	this->public.interface.belongs_to = private_key_belongs_to;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 	
 	this->key = NULL;
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
 	
 	return this;
-}
-
-/**
- * build the keyids of a private/public key
- */
-bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
-							 identification_t **keyid_info)
-{
-	chunk_t publicKeyInfo, publicKey, hash;
-	hasher_t *hasher;
-	
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher)
-	{
-		DBG1("SHA1 hash algorithm not supported, unable to use RSA");
-		return FALSE;
-	}
-	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
-				 asn1_integer("m", gcrypt_rsa_find_token(key, "n", NULL)),
-				 asn1_integer("m", gcrypt_rsa_find_token(key, "e", NULL)));
-	hasher->allocate_hash(hasher, publicKey, &hash);
-	*keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
-	chunk_free(&hash);
-	
-	publicKeyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						asn1_bitstring("m", publicKey));
-	hasher->allocate_hash(hasher, publicKeyInfo, &hash);
-	*keyid_info = identification_create_from_encoding(ID_PUBKEY_INFO_SHA1, hash);
-	chunk_free(&hash);
-	
-	hasher->destroy(hasher);
-	chunk_free(&publicKeyInfo);
-	
-	return TRUE;
 }
 
 /**
@@ -561,12 +480,6 @@ static gcrypt_rsa_private_key_t *generate(size_t key_size)
 	this = gcrypt_rsa_private_key_create_empty();
 	this->key = key;
 	
-	if (!gcrypt_rsa_build_keyids(this->key, &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	
 	return &this->public;
 }
 
@@ -593,11 +506,6 @@ static gcrypt_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
 	if (err)
 	{
 		DBG1("private key sanity check failed: %s", gpg_strerror(err));
-		destroy(this);
-		return NULL;
-	}
-	if (!gcrypt_rsa_build_keyids(this->key, &this->keyid, &this->keyid_info))
-	{
 		destroy(this);
 		return NULL;
 	}
