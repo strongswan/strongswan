@@ -287,16 +287,16 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 {
 	char digest_buf[HASH_SIZE_MD5];
 	chunk_t digest = chunk_from_buf(digest_buf);
-	chunk_t keyEncoding, keyInfo;
+	chunk_t keyEncoding = chunk_empty, keyInfo;
 	hasher_t *hasher;
 	bool msb_set;
 	u_char *pos;
 	
-	keyEncoding = key->get_encoding(key);
-
+	key->get_encoding(key, KEY_PUB_ASN1_DER, &keyEncoding);
+	
 	keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
 						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
-						asn1_bitstring("m", keyEncoding));	
+						asn1_bitstring("m", keyEncoding));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	hasher->get_hash(hasher, keyInfo, digest_buf);

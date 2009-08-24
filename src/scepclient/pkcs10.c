@@ -157,11 +157,13 @@ build_req_info_attributes(pkcs10_t* pkcs10)
 static chunk_t
 pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 {
-	chunk_t key = pkcs10->public_key->get_encoding(pkcs10->public_key);
-
+	chunk_t key = chunk_empty;
+	
+	pkcs10->public_key->get_encoding(pkcs10->public_key, KEY_PUB_ASN1_DER, &key);
+	
 	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
 							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
-							asn1_bitstring("m", key));	
+							asn1_bitstring("m", key));
 
 	chunk_t cert_req_info = asn1_wrap(ASN1_SEQUENCE, "ccmm",
 								ASN1_INTEGER_0,

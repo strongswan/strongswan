@@ -896,9 +896,8 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs1 object:")
 		)
-		pkcs1 = private_key->get_encoding(private_key);
-
-		if (!chunk_write(pkcs1, path, "pkcs1", 0066, force))
+		if (!private_key->get_encoding(private_key, KEY_PRIV_ASN1_DER, &pkcs1) ||
+			!chunk_write(pkcs1, path, "pkcs1", 0066, force))
 			exit_scepclient("could not write pkcs1 file '%s'", path);
 
 		filetype_out &= ~PKCS1;   /* delete PKCS1 flag */
