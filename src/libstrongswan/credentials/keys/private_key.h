@@ -112,9 +112,27 @@ struct private_key_t {
 	private_key_t* (*get_ref)(private_key_t *this);
 		
 	/**
-     * Decrease refcount, destroy private_key if no more references.
-     */
-    void (*destroy)(private_key_t *this);
+	 * Decrease refcount, destroy private_key if no more references.
+	 */
+	void (*destroy)(private_key_t *this);
 };
+
+/**
+ * Generic private key equals() implementation, usable by implementors.
+ *
+ * @param this			first key to compare
+ * @param other			second key to compare
+ * @return				TRUE if this is equal to other
+ */
+bool private_key_equals(private_key_t *this, private_key_t *other);
+
+/**
+ * Generic private key belongs_to() implementation, usable by implementors.
+ *
+ * @param this			first key to compare
+ * @param other			second key to compare
+ * @return				TRUE if this is equal to other
+ */
+bool private_key_belongs_to(private_key_t *private, public_key_t *public);
 
 #endif /** PRIVATE_KEY_H_ @}*/
