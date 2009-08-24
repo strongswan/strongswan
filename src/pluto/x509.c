@@ -1121,14 +1121,14 @@ static chunk_t build_tbs_x509cert(x509cert_t *cert, public_key_t *rsa)
 {
 	/* version is always X.509v3 */
 	chunk_t version = asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2);
-
+	chunk_t key = chunk_empty;
 	chunk_t extensions = chunk_empty;
 
-	chunk_t key = rsa->get_encoding(rsa);
+	rsa->get_encoding(rsa, KEY_PUB_ASN1_DER, &key);
 
 	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
 							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
-							asn1_bitstring("m", key));	
+							asn1_bitstring("m", key));
 
 	if (cert->subjectAltName != NULL)
 	{
@@ -1398,17 +1398,15 @@ void gntoid(struct id *id, const generalName_t *gn)
  */
 bool compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID)
 {
-	identification_t *keyid;
-	chunk_t encoding;
-
-	keyid = cert->public_key->get_id(cert->public_key, ID_PUBKEY_SHA1);
-	if (keyid == NULL)
+	chunk_t fingerprint;
+	
+	if (!cert->public_key->get_fingerprint(cert->public_key, KEY_ID_PUBKEY_SHA1,
+										   &fingerprint))
 	{
 		plog("  unable to compute subjectKeyID");
 		return FALSE;
 	}
-	encoding = keyid->get_encoding(keyid);
-	memcpy(subjectKeyID.ptr, encoding.ptr, subjectKeyID.len);
+	memcpy(subjectKeyID.ptr, fingerprint.ptr, subjectKeyID.len);
 	return TRUE;
 }
 
@@ -2070,6 +2068,7 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 		{
 			u_char buf[BUF_LEN];
 			public_key_t *key = cert->public_key;
+			chunk_t keyid;
 			cert_t c;
 
 			c.type = CERT_X509_SIGNATURE;
@@ -2103,8 +2102,10 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 				key->get_keysize(key) * BITS_PER_BYTE,				
 				cert->smartcard ? ", on smartcard" :
 				(has_private_key(c)? ", has private key" : ""));
-			whack_log(RC_COMMENT, "       keyid:     %Y",
-				key->get_id(key, ID_PUBKEY_INFO_SHA1));
+			if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+			{
+				whack_log(RC_COMMENT, "       keyid:     %#B", &keyid);
+			}
 			if (cert->subjectKeyID.ptr != NULL)
 			{
 				datatot(cert->subjectKeyID.ptr, cert->subjectKeyID.len, ':',

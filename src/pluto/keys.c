@@ -1433,7 +1433,7 @@ void list_public_keys(bool utc)
 	{
 		pubkey_t *key = p->key;
 		public_key_t *public = key->public_key;
-		identification_t *keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
+		chunk_t keyid;
 		char buf[BUF_LEN];
 
 		idtoa(&key->id, buf, BUF_LEN);
@@ -1443,7 +1443,10 @@ void list_public_keys(bool utc)
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
-		whack_log(RC_COMMENT,"       keyid:   %Y", keyid);
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+		{
+			whack_log(RC_COMMENT,"       keyid:   %#B", &keyid);
+		}
 		if (key->issuer.len > 0)
 		{
 			dntoa(buf, BUF_LEN, key->issuer);

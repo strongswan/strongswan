@@ -1495,17 +1495,18 @@ struct tac_state {
 static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 {
 	public_key_t *pub_key = kr->public_key;
-	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
+	chunk_t keyid = chunk_empty;
 	signature_scheme_t scheme;
 
 	s->tried_cnt++;
 	scheme = oakley_to_signature_scheme(s->st->st_oakley.auth);
+	pub_key->get_fingerprint(pub_key, KEY_ID_PUBKEY_INFO_SHA1, &keyid);
 
 	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
 		DBG(DBG_CRYPT | DBG_CONTROL,
-			DBG_log("%s check passed with keyid %Y",
-					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
+			DBG_log("%s check passed with keyid %#B",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), &keyid)
 		)
 		unreference_key(&s->st->st_peer_pubkey);
 		s->st->st_peer_pubkey = reference_key(kr);
@@ -1514,8 +1515,8 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 	else
 	{
 		DBG(DBG_CRYPT,
-			DBG_log("%s check failed with keyid %Y",
-					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
+			DBG_log("%s check failed with keyid %#B",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), &keyid)
 		)
 		return FALSE;
 	}
@@ -4491,14 +4492,12 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 		next_step = vos_done;
 		{
 			public_key_t *pub_key;
-			identification_t *p1st_keyid;
 			struct gw_info *gwp;
 		
 			/* check that the public key that authenticated
 			 * the ISAKMP SA (p1st) will do for this gateway.
 			 */
 			pub_key = p1st->st_peer_pubkey->public_key;
-			p1st_keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
 
 			ugh = "peer's client does not delegate to peer";
 			for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
@@ -4510,9 +4509,8 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 				 * it implies fetching a KEY from the same
 				 * place we must have gotten it.
 				 */
-				if (!gwp->gw_key_present || p1st_keyid->equals(p1st_keyid,
-					 gwp->key->public_key->get_id(gwp->key->public_key,
-												  ID_PUBKEY_INFO_SHA1))
+				if (!gwp->gw_key_present ||
+					pub_key->equals(pub_key, gwp->key->public_key)
 				   )
 				{
 					ugh = NULL; /* good! */

@@ -282,12 +282,15 @@ static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	}
 	else
 	{
+		chunk_t fp;
+		
 		/* V3 fingerprint is computed by public_key_t class */
-		cert->fingerprint = cert->public_key->get_id(cert->public_key, ID_KEY_ID);
-		if (cert->fingerprint == NULL)
+		if (!cert->public_key->get_fingerprint(cert->public_key, KEY_ID_PGPV3,
+											   &fp))
 		{
 			return FALSE;
 		}
+		cert->fingerprint = identification_create_from_encoding(ID_KEY_ID, fp);
 	}
 	return TRUE;
 }
@@ -484,6 +487,7 @@ void list_pgp_end_certs(bool utc)
 	while (cert != NULL)
 	{
 		public_key_t *key = cert->public_key;
+		chunk_t keyid;
 		cert_t c;
 
 		c.type = CERT_PGP;
@@ -496,10 +500,12 @@ void list_pgp_end_certs(bool utc)
 				check_expiry(cert->until, CA_CERT_WARNING_INTERVAL, TRUE));
 		whack_log(RC_COMMENT, "       pubkey:   %N %4d bits%s",
 				key_type_names, key->get_type(key),
-				key->get_keysize(key) * BITS_PER_BYTE,				
+				key->get_keysize(key) * BITS_PER_BYTE,
 				has_private_key(c)? ", has private key" : "");
-		whack_log(RC_COMMENT, "       keyid:    %Y",
-				key->get_id(key, ID_PUBKEY_INFO_SHA1));
+		if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+		{
+			whack_log(RC_COMMENT, "       keyid:    %#B", &keyid);
+		}
 		cert = cert->next;
 	}
 }

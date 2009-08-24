@@ -464,18 +464,18 @@ process_txt_rr_body(u_char *str
 			{
 				char cidb[BUF_LEN];
 				char gwidb[BUF_LEN];
-				identification_t *keyid;
-				public_key_t *pub_key;
+				chunk_t keyid;
+				public_key_t *key;
 
 				idtoa(client_id, cidb, sizeof(cidb));
 				idtoa(&gi.gw_id, gwidb, sizeof(gwidb));
-				pub_key = gi.key->public_key;
-				keyid = pub_key->get_id(pub_key, ID_PUBKEY_SHA1);
+				key = gi.key->public_key;
 
-				if (gi.gw_key_present)
+				if (gi.gw_key_present &&
+					key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
 				{
-					DBG_log("gateway for %s is %s with key %Y"
-						, cidb, gwidb, keyid);
+					DBG_log("gateway for %s is %s with key %#B"
+						, cidb, gwidb, &keyid);
 				}
 				else
 				{
