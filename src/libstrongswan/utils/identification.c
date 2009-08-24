@@ -48,12 +48,11 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_CERT_DER_SHA1, ID_KEY_ID,
-	"ID_DER_ASN1_GN_URI",
-	"ID_PUBKEY_INFO_SHA1",
-	"ID_PUBKEY_SHA1",
-	"ID_CERT_DER_SHA1");
-ENUM_END(id_type_names, ID_CERT_DER_SHA1);
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_MYID, ID_KEY_ID,
+	"ID_DER_ASN1_GN_URI"
+	"ID_IETF_ATTR_STRING"
+	"ID_MYID");
+ENUM_END(id_type_names, ID_MYID);
 
 /**
  * coding of X.501 distinguished name 
@@ -809,7 +808,8 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 			snprintf(buf, sizeof(buf), "(ASN.1 general Name");
 			break;
 		case ID_KEY_ID:
-			if (chunk_printable(this->encoded, NULL, '?'))
+			if (chunk_printable(this->encoded, NULL, '?') &&
+				this->encoded.len != HASH_SIZE_SHA1)
 			{	/* fully printable, use ascii version */
 				snprintf(buf, sizeof(buf), "%.*s",
 						 this->encoded.len, this->encoded.ptr);
@@ -818,11 +818,6 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 			{	/* not printable, hex dump */
 				snprintf(buf, sizeof(buf), "%#B", &this->encoded);
 			}
-			break;
-		case ID_PUBKEY_INFO_SHA1:
-		case ID_PUBKEY_SHA1:
-		case ID_CERT_DER_SHA1:
-			snprintf(buf, sizeof(buf), "%#B", &this->encoded);
 			break;
 		default:
 			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);

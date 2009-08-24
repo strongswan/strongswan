@@ -56,24 +56,24 @@ extern enum_name_t *id_match_names;
  * ID Types in a ID payload.
  */
 enum id_type_t {
-
+	
 	/**
 	 * private type which matches any other id.
 	 */
 	ID_ANY = 0,
-
+	
 	/**
 	 * ID data is a single four (4) octet IPv4 address.
 	 */
 	ID_IPV4_ADDR = 1,
-
+	
 	/**
 	 * ID data is a fully-qualified domain name string.
 	 * An example of a ID_FQDN is "example.com".
 	 * The string MUST not contain any terminators (e.g., NULL, CR, etc.).
 	 */
 	ID_FQDN = 2,
-
+	
 	/**
 	 * ID data is a fully-qualified RFC822 email address string.
 	 * An example of an ID_RFC822_ADDR is "jsmith@example.com".
@@ -81,78 +81,63 @@ enum id_type_t {
 	 */
 	ID_USER_FQDN   = 3,    /* IKEv1 only */
 	ID_RFC822_ADDR = 3,    /* IKEv2 only */
-
+	
 	/**
 	 * ID data is an IPv4 subnet (IKEv1 only)
 	 */
 	ID_IPV4_ADDR_SUBNET = 4,
-
+	
 	/**
 	 * ID data is a single sixteen (16) octet IPv6 address.
 	 */
 	ID_IPV6_ADDR = 5,
-
+	
 	/**
 	 * ID data is an IPv6 subnet (IKEv1 only)
 	 */
 	ID_IPV6_ADDR_SUBNET = 6,
-
+	
 	/**
 	 * ID data is an IPv4 address range (IKEv1 only)
 	 */
 	ID_IPV4_ADDR_RANGE = 7,
-
+	
 	/**
 	 * ID data is an IPv6 address range (IKEv1 only)
 	 */
 	ID_IPV6_ADDR_RANGE = 8,
-
+	
 	/**
 	 * ID data is the binary DER encoding of an ASN.1 X.501 Distinguished Name
 	 */
 	ID_DER_ASN1_DN = 9,
-
+	
 	/**
 	 * ID data is the binary DER encoding of an ASN.1 X.509 GeneralName
 	 */
 	ID_DER_ASN1_GN = 10,
-
+	
 	/**
 	 * ID data is an opaque octet stream which may be used to pass vendor-
 	 * specific information necessary to do certain proprietary
 	 * types of identification.
 	 */
 	ID_KEY_ID = 11,
-
+	
 	/**
 	 * private type which represents a GeneralName of type URI
 	 */
 	ID_DER_ASN1_GN_URI = 201,
 	
 	/**
-	 * SHA1 hash over PKCS#1 subjectPublicKeyInfo
-	 */
-	ID_PUBKEY_INFO_SHA1 = 202,
-	
-	/**
-	 * SHA1 hash over PKCS#1 subjectPublicKey
-	 */
-	ID_PUBKEY_SHA1 = 203,
-	
-	/**
-	 * SHA1 hash of the binary DER encoding of a certificate
-	 */
-	ID_CERT_DER_SHA1 = 204,
-
-	/**
 	 * IETF Attribute Syntax String (RFC 3281)
 	 */
-	ID_IETF_ATTR_STRING = 205,
-
+	ID_IETF_ATTR_STRING = 202,
+	
 	/**
 	 * Private ID used by the pluto daemon for opportunistic encryption
 	 */
-	ID_MYID = 206,
+	ID_MYID = 203,
 };
 
 /**
