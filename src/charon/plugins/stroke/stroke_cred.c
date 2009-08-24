@@ -105,26 +105,24 @@ static void id_data_destroy(id_data_t *data)
 static bool private_filter(id_data_t *data,
 						   private_key_t **in, private_key_t **out)
 {
-	identification_t *candidate;
-	id_type_t type;
+	key_encoding_type_t type;
+	private_key_t *key;
+	chunk_t keyid;
 	
+	key = *in;
 	if (data->id == NULL)
 	{
-		*out = *in;
+		*out = key;
 		return TRUE;
 	}
-	type = data->id->get_type(data->id);
-	if (type == ID_KEY_ID)
-	{	/* handle ID_KEY_ID as a ID_PUBKEY_SHA1 */
-		type = ID_PUBKEY_SHA1;
-	}
-	candidate = (*in)->get_id(*in, type);
-	if (candidate &&
-		chunk_equals(candidate->get_encoding(candidate),
-					 data->id->get_encoding(data->id)))
+	for (type = KEY_ID_PUBKEY_INFO_SHA1; type < KEY_ID_PUBKEY_SHA1; type++)
 	{
-		*out = *in;
-		return TRUE;
+		if (key->get_fingerprint(key, type, &keyid) &&
+			chunk_equals(keyid, data->id->get_encoding(data->id)))
+		{
+			*out = key;
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -152,31 +150,34 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
  */
 static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **out)
 {
+	key_encoding_type_t type;
 	public_key_t *public;
-	identification_t *candidate;
 	certificate_t *cert = *in;
-	certificate_type_t type = cert->get_type(cert);
-
-	if (type == CERT_X509_CRL || type == CERT_X509_AC)
+	chunk_t keyid;
+	
+	if (cert->get_type(cert) == CERT_X509_CRL ||
+		cert->get_type(cert) == CERT_X509_AC)
 	{
 		return FALSE;
 	}
-
 	if (data->id == NULL || cert->has_subject(cert, data->id))
 	{
 		*out = *in;
 		return TRUE;
 	}
 	
-	public = (cert)->get_public_key(cert);
+	public = cert->get_public_key(cert);
 	if (public)
 	{
-		candidate = public->get_id(public, data->id->get_type(data->id));
-		if (candidate && data->id->equals(data->id, candidate))
+		for (type = KEY_ID_PUBKEY_INFO_SHA1; type < KEY_ID_PUBKEY_SHA1; type++)
 		{
-			public->destroy(public);
-			*out = *in;
-			return TRUE;
+			if (public->get_fingerprint(public, type, &keyid) &&
+				chunk_equals(keyid, data->id->get_encoding(data->id)))
+			{
+				public->destroy(public);
+				*out = *in;
+				return TRUE;
+			}
 		}
 		public->destroy(public);
 	}
@@ -416,12 +417,11 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 		if (current->get_type(current) == CERT_X509_CRL)
 		{
 			crl_t *crl_c = (crl_t*)current;
-			identification_t *authkey = crl->get_authKeyIdentifier(crl);
-			identification_t *authkey_c = crl_c->get_authKeyIdentifier(crl_c);
-
+			chunk_t authkey = crl->get_authKeyIdentifier(crl);
+			chunk_t authkey_c = crl_c->get_authKeyIdentifier(crl_c);
+			
 			/* if compare authorityKeyIdentifiers if available */
-			if (authkey != NULL && authkey_c != NULL &&
-				authkey->equals(authkey, authkey_c))
+			if (authkey.ptr && authkey_c.ptr && chunk_equals(authkey, authkey_c))
 			{
 				found = TRUE;
 			}
@@ -429,7 +429,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 			{
 				identification_t *issuer = cert->get_issuer(cert);
 				identification_t *issuer_c = current->get_issuer(current);
-
+				
 				/* otherwise compare issuer distinguished names */
 				if (issuer->equals(issuer, issuer_c))
 				{
@@ -452,7 +452,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 		}
 	}
 	enumerator->destroy(enumerator);
-
+	
 	if (new)
 	{
 		this->certs->insert_last(this->certs, cert);
@@ -637,16 +637,14 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 	{
 		/* CRLs get written to /etc/ipsec.d/crls/<authkeyId>.crl */
 		crl_t *crl = (crl_t*)cert;
-	
+		
 		cert->get_ref(cert);
 		if (add_crl(this, crl))
 		{
 			char buf[BUF_LEN];
 			chunk_t chunk, hex;
-			identification_t *id;
 			
-			id = crl->get_authKeyIdentifier(crl);
-			chunk = id->get_encoding(id);
+			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
 			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
 			free(hex.ptr);

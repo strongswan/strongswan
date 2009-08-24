@@ -569,24 +569,52 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 }
 
 /**
+ * Print a single public key.
+ */
+static void list_public_key(public_key_t *public, FILE *out)
+{
+	private_key_t *private = NULL;
+	chunk_t keyid;
+	identification_t *id;
+	
+	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	{
+		id = identification_create_from_encoding(ID_KEY_ID, keyid);
+		private = charon->credentials->get_private(charon->credentials,
+									public->get_type(public), id, NULL);
+		id->destroy(id);
+	}
+	fprintf(out, "  pubkey:    %N %d bits%s\n",
+			key_type_names, public->get_type(public),
+			public->get_keysize(public) * 8,
+			private ? ", has private key" : "");
+	if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+	{
+		fprintf(out, "  keyid:     %#B\n", &keyid);
+	}
+	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	{
+		fprintf(out, "  subjkey:   %#B\n", &keyid);
+	}
+	DESTROY_IF(private);
+}
+
+/**
  * list all raw public keys
  */
 static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 {
 	bool first = TRUE;
-
+	
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-
+	
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		public_key_t *public = cert->get_public_key(cert);
-
+		
 		if (public)
 		{
-			private_key_t *private = NULL;
-			identification_t *id, *keyid;
-			
 			if (first)
 			{
 				fprintf(out, "\n");
@@ -594,21 +622,8 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 				first = FALSE;
 			}
 			fprintf(out, "\n");
-
-			/* list public key information */
-			id    = public->get_id(public, ID_PUBKEY_SHA1);
-			keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-
-			private = charon->credentials->get_private(
-								charon->credentials, 
-								public->get_type(public), keyid, NULL);
-			fprintf(out, "  pubkey:    %N %d bits%s\n",
-					key_type_names, public->get_type(public),
-					public->get_keysize(public) * 8,
-					private ? ", has private key" : "");
-			fprintf(out, "  keyid:     %Y\n", keyid);
-			fprintf(out, "  subjkey:   %Y\n", id);
-			DESTROY_IF(private);
+			
+			list_public_key(public, out);
 			public->destroy(public);
 		}
 	}
@@ -630,18 +645,17 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 	{
 		x509_t *x509 = (x509_t*)cert;
 		x509_flag_t x509_flags = x509->get_flags(x509);
-
+		
 		/* list only if flag is set, or flags == 0 (ignoring self-signed) */
 		if ((x509_flags & flags) || (flags == (x509_flags & ~X509_SELF_SIGNED)))
 		{
 			enumerator_t *enumerator;
 			identification_t *altName;
 			bool first_altName = TRUE;
-			chunk_t serial = x509->get_serial(x509);
-			identification_t *authkey = x509->get_authKeyIdentifier(x509);
+			chunk_t serial, authkey;
 			time_t notBefore, notAfter;
-			public_key_t *public = cert->get_public_key(cert);
-
+			public_key_t *public;
+			
 			if (first)
 			{
 				fprintf(out, "\n");
@@ -649,7 +663,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				first = FALSE;
 			}
 			fprintf(out, "\n");
-
+			
 			/* list subjectAltNames */
 			enumerator = x509->create_subjectAltName_enumerator(x509);
 			while (enumerator->enumerate(enumerator, (void**)&altName))
@@ -670,11 +684,12 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				fprintf(out, "\n");
 			}
 			enumerator->destroy(enumerator);
-
+			
 			fprintf(out, "  subject:  \"%Y\"\n", cert->get_subject(cert));
 			fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
+			serial = x509->get_serial(x509);
 			fprintf(out, "  serial:    %#B\n", &serial);
-
+			
 			/* list validity */
 			cert->get_validity(cert, &now, &notBefore, &notAfter);
 			fprintf(out, "  validity:  not before %T, ", &notBefore, utc);
@@ -700,33 +715,19 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				}
 				fprintf(out, " \n");
 			}
-	
-			/* list public key information */
+			
+			public = cert->get_public_key(cert);
 			if (public)
 			{
-				private_key_t *private = NULL;
-				identification_t *id, *keyid;
-			
-				id    = public->get_id(public, ID_PUBKEY_SHA1);
-				keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-
-				private = charon->credentials->get_private(
-									charon->credentials, 
-									public->get_type(public), keyid, NULL);
-				fprintf(out, "  pubkey:    %N %d bits%s\n",
-						key_type_names, public->get_type(public),
-						public->get_keysize(public) * 8,
-						private ? ", has private key" : "");
-				fprintf(out, "  keyid:     %Y\n", keyid);
-				fprintf(out, "  subjkey:   %Y\n", id);
-				DESTROY_IF(private);
+				list_public_key(public, out);
 				public->destroy(public);
 			}
-	
+			
 			/* list optional authorityKeyIdentifier */
-			if (authkey)
+			authkey = x509->get_authKeyIdentifier(x509);
+			if (authkey.ptr)
 			{
-				fprintf(out, "  authkey:   %Y\n", authkey);
+				fprintf(out, "  authkey:   %#B\n", &authkey);
 			}
 		}
 	}
@@ -746,12 +747,9 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		ac_t *ac = (ac_t*)cert;
-		chunk_t serial  = ac->get_serial(ac);
-		chunk_t holderSerial = ac->get_holderSerial(ac);
-		identification_t *holderIssuer = ac->get_holderIssuer(ac);
-		identification_t *authkey = ac->get_authKeyIdentifier(ac);
-		identification_t *entityName = cert->get_subject(cert);
-
+		identification_t *id;
+		chunk_t chunk;
+		
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -759,21 +757,25 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-
-		if (entityName)
+		
+		id = cert->get_subject(cert);
+		if (id)
 		{
-			fprintf(out, "  holder:   \"%Y\"\n", entityName);
+			fprintf(out, "  holder:   \"%Y\"\n", id);
 		}
-		if (holderIssuer)
+		id = ac->get_holderIssuer(ac);
+		if (id)
 		{
-			fprintf(out, "  hissuer:  \"%Y\"\n", holderIssuer);
+			fprintf(out, "  hissuer:  \"%Y\"\n", id);
 		}
-		if (holderSerial.ptr)
+		chunk = ac->get_holderSerial(ac);
+		if (chunk.ptr)
 		{
-			fprintf(out, "  hserial:   %#B\n", &holderSerial);
+			fprintf(out, "  hserial:   %#B\n", &chunk);
 		}
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
-		fprintf(out, "  serial:    %#B\n", &serial);
+		chunk  = ac->get_serial(ac);
+		fprintf(out, "  serial:    %#B\n", &chunk);
 
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
@@ -792,11 +794,12 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, " \n");
 		}
-
+		
 		/* list optional authorityKeyIdentifier */
-		if (authkey)
+		chunk = ac->get_authKeyIdentifier(ac);
+		if (chunk.ptr)
 		{
-			fprintf(out, "  authkey:   %Y\n", authkey);
+			fprintf(out, "  authkey:   %#B\n", &chunk);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -815,9 +818,8 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		crl_t *crl = (crl_t*)cert;
-		chunk_t serial  = crl->get_serial(crl);
-		identification_t *authkey = crl->get_authKeyIdentifier(crl);
-
+		chunk_t chunk;
+		
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -825,20 +827,21 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-
+		
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
-
+		
 		/* list optional crlNumber */
-		if (serial.ptr)
+		chunk = crl->get_serial(crl);
+		if (chunk.ptr)
 		{
-			fprintf(out, "  serial:    %#B\n", &serial);
+			fprintf(out, "  serial:    %#B\n", &chunk);
 		}
-
+		
 		/* count the number of revoked certificates */
 		{
 			int count = 0;
 			enumerator_t *enumerator = crl->create_enumerator(crl);
-
+			
 			while (enumerator->enumerate(enumerator, NULL, NULL, NULL))
 			{
 				count++;
@@ -847,7 +850,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 							(count == 1)? "" : "s");
 			enumerator->destroy(enumerator);
 		}
-
+		
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
 		fprintf(out, "  updates:   this %T\n",  &thisUpdate, utc);
@@ -865,11 +868,12 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, " \n");
 		}
-
+		
 		/* list optional authorityKeyIdentifier */
-		if (authkey)
+		chunk = crl->get_authKeyIdentifier(crl);
+		if (chunk.ptr)
 		{
-			fprintf(out, "  authkey:   %Y\n", authkey);
+			fprintf(out, "  authkey:   %#B\n", chunk);
 		}
 	}
 	enumerator->destroy(enumerator);

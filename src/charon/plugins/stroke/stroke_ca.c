@@ -142,7 +142,7 @@ static void cdp_data_destroy(cdp_data_t *data)
 static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 {
 	public_key_t *public;
-	identification_t *keyid;
+	chunk_t keyid;
 	enumerator_t *enumerator = NULL;
 	linked_list_t *list;
 	
@@ -154,7 +154,7 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 	{
 		list = section->crl;
 	}
-
+	
 	public = section->cert->get_public_key(section->cert);
 	if (public)
 	{
@@ -164,10 +164,10 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 		}
 		else
 		{
-			keyid = public->get_id(public, data->id->get_type(data->id));
-			if (keyid && keyid->matches(keyid, data->id))
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
+				chunk_equals(keyid, data->id->get_encoding(data->id)))
 			{
-				enumerator = list->create_enumerator(list);		
+				enumerator = list->create_enumerator(list);
 			}
 		}
 		public->destroy(public);
@@ -361,7 +361,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 			chunk_t hash, encoded = cert->get_encoding(cert);
 			hasher->allocate_hash(hasher, encoded, &hash);
 			section->hashes->insert_last(section->hashes,
-					identification_create_from_encoding(ID_CERT_DER_SHA1, hash));
+					identification_create_from_encoding(ID_KEY_ID, hash));
 			chunk_free(&hash);
 			chunk_free(&encoded);
 			break;
@@ -388,7 +388,8 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 	{
 		certificate_t *cert = section->cert;
 		public_key_t *public = cert->get_public_key(cert);
-
+		chunk_t chunk;
+		
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -397,14 +398,18 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 		}
 		fprintf(out, "\n");
 		fprintf(out, "  authname:    \"%Y\"\n", cert->get_subject(cert));
-
+		
 		/* list authkey and keyid */
 		if (public)
 		{
-			fprintf(out, "  authkey:      %Y\n",
-					public->get_id(public, ID_PUBKEY_SHA1));
-			fprintf(out, "  keyid:        %Y\n",
-					public->get_id(public, ID_PUBKEY_INFO_SHA1));
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+			{
+				fprintf(out, "  authkey:      %#B\n", &chunk);
+			}
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+			{
+				fprintf(out, "  keyid:        %#B\n", &chunk);
+			}
 			public->destroy(public);
 		}
 		list_uris(section->crl, "  crluris:     ", out);
