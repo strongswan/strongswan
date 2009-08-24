@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,6 +19,7 @@
 #include <debug.h>
 
 #include <openssl/evp.h>
+#include <openssl/x509.h>
 
 /**
  * Described in header.
@@ -121,3 +123,102 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b)
 	
 	return TRUE;
 }
+
+/**
+ * Build fingerprints of a private/public RSA key.
+ */
+static bool build_fingerprint(chunk_t key, key_encoding_type_t type, int nid,
+							  chunk_t *fingerprint)
+{
+	hasher_t *hasher;
+	
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher)
+	{
+		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		return FALSE;
+	}
+	if (type == KEY_ID_PUBKEY_INFO_SHA1)
+	{
+		X509_PUBKEY *pubkey;
+		chunk_t enc;
+		u_char *p;
+		
+		/* wrap publicKey in subjectPublicKeyInfo */
+		pubkey = X509_PUBKEY_new();
+		ASN1_OBJECT_free(pubkey->algor->algorithm);
+		pubkey->algor->algorithm = OBJ_nid2obj(nid);
+	
+		if (pubkey->algor->parameter == NULL ||
+			pubkey->algor->parameter->type != V_ASN1_NULL)
+		{
+			ASN1_TYPE_free(pubkey->algor->parameter);
+			pubkey->algor->parameter = ASN1_TYPE_new();
+			pubkey->algor->parameter->type = V_ASN1_NULL;
+		}
+		M_ASN1_BIT_STRING_set(pubkey->public_key, enc.ptr, enc.len);
+		
+		enc = chunk_alloc(i2d_X509_PUBKEY(pubkey, NULL));
+		p = enc.ptr;
+		i2d_X509_PUBKEY(pubkey, &p);
+		X509_PUBKEY_free(pubkey);
+		
+		hasher->allocate_hash(hasher, enc, fingerprint);
+		chunk_free(&enc);
+	}
+	else
+	{
+		hasher->allocate_hash(hasher, key, fingerprint);
+	}
+	hasher->destroy(hasher);
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+bool openssl_encode(key_encoding_type_t type, chunk_t *encoding, va_list args)
+{
+	chunk_t key;
+	
+	switch (type)
+	{
+		case KEY_PUB_ASN1_DER:
+			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER, &key,
+								  KEY_PART_END) ||
+				key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER, &key,
+								  KEY_PART_END))
+			{
+				*encoding = chunk_clone(key);
+				return TRUE;
+			}
+			return FALSE;
+		case KEY_PRIV_ASN1_DER:
+			if (key_encoding_args(args, KEY_PART_RSA_PRIV_ASN1_DER, &key,
+								  KEY_PART_END) ||
+				key_encoding_args(args, KEY_PART_ECDSA_PRIV_ASN1_DER, &key,
+								  KEY_PART_END))
+			{
+				*encoding = chunk_clone(key);
+				return TRUE;
+			}
+			return FALSE;
+		case KEY_ID_PUBKEY_SHA1:
+		case KEY_ID_PUBKEY_INFO_SHA1:
+			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER, &key,
+								  KEY_PART_END))
+			{
+				return build_fingerprint(key, type, NID_rsaEncryption, encoding);
+			}
+			else if (key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER, &key,
+									   KEY_PART_END))
+			{
+				return build_fingerprint(key, type, NID_X9_62_id_ecPublicKey,
+										 encoding);
+			}
+			return FALSE;
+		default:
+			return FALSE;
+	}
+}
+

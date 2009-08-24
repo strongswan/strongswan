@@ -65,4 +65,14 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
  */
 bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
 
+
+/**
+ * Fingerprinting/encdoing of PKCS#1/ASN.1 encoded keys.
+ *
+ * @param type		type of the fingerprint/encoding to create.
+ * @param encoding	receives fingerprint/encoding, allocated
+ * @param args		variable argument list of encoding parts
+ */
+bool openssl_encode(key_encoding_type_t type, chunk_t *encoding, va_list args);
+
 #endif /** OPENSSL_UTIL_H_ @}*/

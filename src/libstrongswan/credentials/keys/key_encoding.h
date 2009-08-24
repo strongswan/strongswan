@@ -102,6 +102,14 @@ enum key_encoding_part_t {
 	KEY_PART_RSA_EXP2,
 	/** coefficient of RSA key, coeff */
 	KEY_PART_RSA_COEFF,
+	/** a DER encoded RSA public key */
+	KEY_PART_RSA_PUB_ASN1_DER,
+	/** a DER encoded RSA private key */
+	KEY_PART_RSA_PRIV_ASN1_DER,
+	/** a DER encoded ECDSA public key */
+	KEY_PART_ECDSA_PUB_ASN1_DER,
+	/** a DER encoded ECDSA private key */
+	KEY_PART_ECDSA_PRIV_ASN1_DER,
 	
 	KEY_PART_END,
 };

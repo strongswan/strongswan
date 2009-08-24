@@ -24,6 +24,7 @@
 
 #include <library.h>
 #include <utils/mutex.h>
+#include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
 #include "openssl_diffie_hellman.h"
@@ -182,6 +183,8 @@ static void destroy(private_openssl_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 					(builder_constructor_t)openssl_ec_public_key_builder);
 	
+	lib->encoding->remove_encoder(lib->encoding, openssl_encode);
+	
 	ENGINE_cleanup();
 	EVP_cleanup();
 	CONF_modules_free();
@@ -290,6 +293,9 @@ plugin_t *plugin_create()
 						(builder_constructor_t)openssl_ec_private_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
 						(builder_constructor_t)openssl_ec_public_key_builder);
+	
+	/* fingerprinting/encoding */
+	lib->encoding->add_encoder(lib->encoding, openssl_encode);
 	
 	return &this->public.plugin;
 }

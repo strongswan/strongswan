@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,6 +22,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/ecdsa.h>
+#include <openssl/x509.h>
 
 typedef struct private_openssl_ec_private_key_t private_openssl_ec_private_key_t;
 
@@ -37,16 +39,6 @@ struct private_openssl_ec_private_key_t {
 	 * EC key object
 	 */
 	EC_KEY *ec;
-
-	/**
-	 * Keyid formed as a SHA-1 hash of a privateKey object
-	 */
-	identification_t* keyid;
-
-	/**
-	 * Keyid formed as a SHA-1 hash of a privateKeyInfo object
-	 */
-	identification_t* keyid_info;
 	
 	/**
 	 * reference count
@@ -107,15 +99,6 @@ static bool lookup_scheme(int scheme, int *hash, int *curve)
 }
 
 /**
- * shared functions, implemented in openssl_ec_public_key.c
- */
-bool openssl_ec_public_key_build_id(EC_KEY *ec, identification_t **keyid,
-								 identification_t **keyid_info);
-
-openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec);
-
-
-/**
  * Convert an ECDSA_SIG to a chunk by concatenating r and s.
  * This function allocates memory for the chunk.
  */
@@ -130,9 +113,10 @@ static bool sig2chunk(const EC_GROUP *group, ECDSA_SIG *sig, chunk_t *chunk)
 static bool build_signature(private_openssl_ec_private_key_t *this,
 							chunk_t hash, chunk_t *signature)
 {
-	ECDSA_SIG *sig = ECDSA_do_sign(hash.ptr, hash.len, this->ec);
+	ECDSA_SIG *sig;
 	bool success;
-
+	
+	sig = ECDSA_do_sign(hash.ptr, hash.len, this->ec);
 	if (!sig)
 	{
 		return FALSE;
@@ -157,7 +141,7 @@ static bool sign(private_openssl_ec_private_key_t *this, signature_scheme_t sche
 				 chunk_t data, chunk_t *signature)
 {
 	bool success;
-
+	
 	if (scheme == SIGN_ECDSA_WITH_NULL)
 	{
 		success = build_signature(this, data, signature);
@@ -168,14 +152,14 @@ static bool sign(private_openssl_ec_private_key_t *this, signature_scheme_t sche
 		const EC_GROUP *my_group;
 		chunk_t hash = chunk_empty;
 		int hash_type, curve;
-
+		
 		if (!lookup_scheme(scheme, &hash_type, &curve))
 		{
 			DBG1("signature scheme %N not supported in EC",
 					 signature_scheme_names, scheme);
 			return FALSE;
 		}
-	
+		
 		req_group = EC_GROUP_new_by_curve_name(curve);
 		if (!req_group)
 		{
@@ -183,7 +167,7 @@ static bool sign(private_openssl_ec_private_key_t *this, signature_scheme_t sche
 					 signature_scheme_names, scheme);
 			return FALSE;
 		}
-	
+		
 		my_group = EC_KEY_get0_group(this->ec);
 		if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
 		{
@@ -192,7 +176,7 @@ static bool sign(private_openssl_ec_private_key_t *this, signature_scheme_t sche
 			return FALSE;
 		}
 		EC_GROUP_free(req_group);
-
+		
 		if (!openssl_hash_chunk(hash_type, data, &hash))
 		{
 			return FALSE;
@@ -222,73 +206,73 @@ static size_t get_keysize(private_openssl_ec_private_key_t *this)
 }
 
 /**
- * Implementation of private_key_t.get_id.
- */
-static identification_t* get_id(private_openssl_ec_private_key_t *this,
-								id_type_t type)
-{
-	switch (type)
-	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		default:
-			return NULL;
-	}
-}
-
-/**
  * Implementation of private_key_t.get_public_key.
  */
-static openssl_ec_public_key_t* get_public_key(private_openssl_ec_private_key_t *this)
+static public_key_t* get_public_key(private_openssl_ec_private_key_t *this)
 {
-	return openssl_ec_public_key_create_from_private_key(this->ec);
+	public_key_t *public;
+	chunk_t key;
+	u_char *p;
+	
+	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
+	p = key.ptr;
+	i2d_EC_PUBKEY(this->ec, &p);
+	
+	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
+								BUILD_BLOB_ASN1_DER, key, BUILD_END);
+	free(key.ptr);
+	return public;
 }
 
 /**
- * Implementation of private_key_t.belongs_to.
+ * Implementation of private_key_t.get_fingerprint.
  */
-static bool belongs_to(private_openssl_ec_private_key_t *this, public_key_t *public)
+static bool get_fingerprint(private_openssl_ec_private_key_t *this,
+							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	identification_t *keyid;
-
-	if (public->get_type(public) != KEY_ECDSA)
-	{
-		return FALSE;
-	}
-	keyid = public->get_id(public, ID_PUBKEY_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid))
+	chunk_t key;
+	u_char *p;
+	bool success;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
 	{
 		return TRUE;
 	}
-	keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-	if (keyid && keyid->equals(keyid, this->keyid_info))
-	{
-		return TRUE;
-	}
-	return FALSE;
+	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
+	p = key.ptr;
+	i2d_EC_PUBKEY(this->ec, &p);
+	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
+								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
+	free(key.ptr);
+	return success;
 }
 
 /**
  * Implementation of private_key_t.get_encoding.
  */
-static chunk_t get_encoding(private_openssl_ec_private_key_t *this)
+static bool get_encoding(private_openssl_ec_private_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t enc = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
-	u_char *p = enc.ptr;
+	chunk_t key;
+	u_char *p;
+	bool success;
+	
+	key = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
+	p = key.ptr;
 	i2d_ECPrivateKey(this->ec, &p);
-	return enc;
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+							KEY_PART_ECDSA_PRIV_ASN1_DER, key, KEY_PART_END);
+	free(key.ptr);
+	return success;
 }
 
 /**
  * Implementation of private_key_t.get_ref.
  */
-static private_openssl_ec_private_key_t* get_ref(private_openssl_ec_private_key_t *this)
+static private_key_t* get_ref(private_openssl_ec_private_key_t *this)
 {
 	ref_get(&this->ref);
-	return this;
-
+	return &this->public.interface;
 }
 
 /**
@@ -302,8 +286,7 @@ static void destroy(private_openssl_ec_private_key_t *this)
 		{
 			EC_KEY_free(this->ec);
 		}
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -311,7 +294,7 @@ static void destroy(private_openssl_ec_private_key_t *this)
 /**
  * Internal generic constructor
  */
-static private_openssl_ec_private_key_t *openssl_ec_private_key_create_empty(void)
+static private_openssl_ec_private_key_t *create_empty(void)
 {
 	private_openssl_ec_private_key_t *this = malloc_thing(private_openssl_ec_private_key_t);
 	
@@ -319,16 +302,15 @@ static private_openssl_ec_private_key_t *openssl_ec_private_key_create_empty(voi
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
 	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (private_key_t *this,id_type_t))get_id;
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.belongs_to = (bool (*) (private_key_t *this, public_key_t *public))belongs_to;
-	this->public.interface.get_encoding = (chunk_t(*)(private_key_t*))get_encoding;
+	this->public.interface.equals = private_key_equals;
+	this->public.interface.belongs_to = private_key_belongs_to;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 	
 	this->ec = NULL;
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
 	
 	return this;
@@ -340,34 +322,25 @@ static private_openssl_ec_private_key_t *openssl_ec_private_key_create_empty(voi
 static openssl_ec_private_key_t *load(chunk_t blob)
 {
 	u_char *p = blob.ptr;
-	private_openssl_ec_private_key_t *this = openssl_ec_private_key_create_empty();
+	private_openssl_ec_private_key_t *this = create_empty();
 	
 	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&p, blob.len);
 	
-	chunk_clear(&blob);
-
 	if (!this->ec)
 	{
 		destroy(this);
 		return NULL;
 	}
-	
-	if (!openssl_ec_public_key_build_id(this->ec, &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	
 	if (!EC_KEY_check_key(this->ec))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
 	return &this->public;
 }
 
 typedef struct private_builder_t private_builder_t;
+
 /**
  * Builder implementation for key loading/generation
  */
@@ -397,15 +370,13 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		chunk_t chunk;
 		
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
 			{
 				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load(chunk_clone(chunk));
+				this->key = load(va_arg(args, chunk_t));
 				va_end(args);
 				return;
 			}

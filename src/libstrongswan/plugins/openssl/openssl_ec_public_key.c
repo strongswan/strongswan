@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -37,16 +38,6 @@ struct private_openssl_ec_public_key_t {
 	 * EC key object
 	 */
 	EC_KEY *ec;
-	
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
-	 */
-	identification_t *keyid_info;
-	
-	/**
-	 * Keyid formed as a SHA-1 hash of a publicKey object
-	 */
-	identification_t *keyid;
 	
 	/**
 	 * reference counter
@@ -187,7 +178,8 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 /**
  * Implementation of public_key_t.get_keysize.
  */
-static bool encrypt_(private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
+static bool encrypt_(private_openssl_ec_public_key_t *this,
+					 chunk_t crypto, chunk_t *plain)
 {
 	DBG1("EC public key encryption not implemented");
 	return FALSE;
@@ -202,64 +194,54 @@ static size_t get_keysize(private_openssl_ec_public_key_t *this)
 }
 
 /**
- * Implementation of public_key_t.get_id.
+ * Implementation of private_key_t.get_fingerprint.
  */
-static identification_t *get_id(private_openssl_ec_public_key_t *this,
-								id_type_t type)
+static bool get_fingerprint(private_openssl_ec_public_key_t *this,
+							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	switch (type)
+	chunk_t key;
+	u_char *p;
+	bool success;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
 	{
-		case ID_PUBKEY_INFO_SHA1:
-			return this->keyid_info;
-		case ID_PUBKEY_SHA1:
-			return this->keyid;
-		default:
-			return NULL;
+		return TRUE;
 	}
+	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
+	p = key.ptr;
+	i2d_EC_PUBKEY(this->ec, &p);
+	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
+								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
+	free(key.ptr);
+	return success;
 }
 
 /**
- * Encodes the public key
- */ 
-static chunk_t get_encoding_raw(EC_KEY *ec)
-{
-	/* since the points can be stored in three different forms this may not
-	 * be correct for all cases */
-	const EC_GROUP *group = EC_KEY_get0_group(ec);
-	const EC_POINT *pub = EC_KEY_get0_public_key(ec);
-	chunk_t enc = chunk_alloc(EC_POINT_point2oct(group, pub,
-						POINT_CONVERSION_UNCOMPRESSED, NULL, 0, NULL));
-	EC_POINT_point2oct(group, pub, POINT_CONVERSION_UNCOMPRESSED,
-						enc.ptr, enc.len, NULL);
-	return enc;	
-}
-
-/**
- * Encodes the public key info (public key with ec parameters)
- */ 
-static chunk_t get_encoding_full(EC_KEY *ec)
-{
-	chunk_t enc = chunk_alloc(i2d_EC_PUBKEY(ec, NULL));
-	u_char *p = enc.ptr;
-	i2d_EC_PUBKEY(ec, &p);
-	return enc;
-}
-
-/*
- * Implementation of public_key_t.get_encoding.
+ * Implementation of private_key_t.get_encoding.
  */
-static chunk_t get_encoding(private_openssl_ec_public_key_t *this)
+static bool get_encoding(private_openssl_ec_public_key_t *this,
+						 key_encoding_type_t type, chunk_t *encoding)
 {
-	return get_encoding_full(this->ec);
+	chunk_t key;
+	u_char *p;
+	bool success;
+	
+	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
+	p = key.ptr;
+	i2d_EC_PUBKEY(this->ec, &p);
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
+	free(key.ptr);
+	return success;
 }
 
 /**
  * Implementation of public_key_t.get_ref.
  */
-static private_openssl_ec_public_key_t* get_ref(private_openssl_ec_public_key_t *this)
+static public_key_t* get_ref(private_openssl_ec_public_key_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface;
 }
 
 /**
@@ -273,8 +255,7 @@ static void destroy(private_openssl_ec_public_key_t *this)
 		{
 			EC_KEY_free(this->ec);
 		}
-		DESTROY_IF(this->keyid);
-		DESTROY_IF(this->keyid_info);
+		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -282,7 +263,7 @@ static void destroy(private_openssl_ec_public_key_t *this)
 /**
  * Generic private constructor
  */
-static private_openssl_ec_public_key_t *openssl_ec_public_key_create_empty()
+static private_openssl_ec_public_key_t *create_empty()
 {
 	private_openssl_ec_public_key_t *this = malloc_thing(private_openssl_ec_public_key_t);
 	
@@ -290,53 +271,16 @@ static private_openssl_ec_public_key_t *openssl_ec_public_key_create_empty()
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
-	this->public.interface.get_id = (identification_t* (*) (public_key_t *this,id_type_t))get_id;
-	this->public.interface.get_encoding = (chunk_t(*)(public_key_t*))get_encoding;
+	this->public.interface.equals = public_key_equals;
+	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
 	
 	this->ec = NULL;
-	this->keyid = NULL;
-	this->keyid_info = NULL;
 	this->ref = 1;
 	
 	return this;
-}
-
-/**
- * Build key identifier from the public key using SHA1 hashed publicKey(Info).
- * Also used in openssl_ec_private_key.c.
- */
-bool openssl_ec_public_key_build_id(EC_KEY *ec, identification_t **keyid,
-								 identification_t **keyid_info)
-{
-	chunk_t publicKeyInfo, publicKey, hash;
-	hasher_t *hasher;
-	
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1("SHA1 hash algorithm not supported, unable to use EC");
-		return FALSE;
-	}
-	
-	publicKey = get_encoding_raw(ec);
-	
-	hasher->allocate_hash(hasher, publicKey, &hash);
-	*keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
-	chunk_free(&hash);
-	
-	publicKeyInfo = get_encoding_full(ec);
-	
-	hasher->allocate_hash(hasher, publicKeyInfo, &hash);
-	*keyid_info = identification_create_from_encoding(ID_PUBKEY_INFO_SHA1, hash);
-	chunk_free(&hash);
-	
-	hasher->destroy(hasher);
-	chunk_free(&publicKeyInfo);
-	chunk_free(&publicKey);
-	
-	return TRUE;
 }
 
 /**
@@ -344,20 +288,12 @@ bool openssl_ec_public_key_build_id(EC_KEY *ec, identification_t **keyid,
  */
 static openssl_ec_public_key_t *load(chunk_t blob)
 {
+	private_openssl_ec_public_key_t *this = create_empty();
 	u_char *p = blob.ptr;
-	private_openssl_ec_public_key_t *this = openssl_ec_public_key_create_empty();
 	
 	this->ec = d2i_EC_PUBKEY(NULL, (const u_char**)&p, blob.len);
 	
-	chunk_clear(&blob);
-	
 	if (!this->ec)
-	{
-		destroy(this);
-		return NULL;
-	}
-	
-	if (!openssl_ec_public_key_build_id(this->ec, &this->keyid, &this->keyid_info))
 	{
 		destroy(this);
 		return NULL;
@@ -365,15 +301,8 @@ static openssl_ec_public_key_t *load(chunk_t blob)
 	return &this->public;
 }
 
-/**
- * Create a public key from BIGNUM values, used in openssl_ec_private_key.c
- */
-openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec)
-{
-	return (openssl_ec_public_key_t*)load(get_encoding_full(ec));
-}
-
 typedef struct private_builder_t private_builder_t;
+
 /**
  * Builder implementation for key loading
  */
@@ -403,15 +332,13 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		chunk_t chunk;
-	
+		
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
 			{
 				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->key = load(chunk_clone(chunk));
+				this->key = load(va_arg(args, chunk_t));
 				va_end(args);
 				return;
 			}
