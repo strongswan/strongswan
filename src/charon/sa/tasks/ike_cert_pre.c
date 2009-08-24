@@ -70,7 +70,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		switch(payload->get_type(payload))
+		switch (payload->get_type(payload))
 		{
 			case CERTIFICATE_REQUEST:
 			{
@@ -92,8 +92,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 					identification_t *id;
 					certificate_t *cert;
 					
-					id = identification_create_from_encoding(
-											ID_PUBKEY_INFO_SHA1, keyid);
+					id = identification_create_from_encoding(ID_KEY_ID, keyid);
 					cert = charon->credentials->get_cert(charon->credentials, 
 											CERT_X509, KEY_ANY, id, TRUE);
 					if (cert)
@@ -156,7 +155,7 @@ static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 				/* invalid "Hash and URL" data (logged elsewhere) */
 				break;
 			}
-			id = identification_create_from_encoding(ID_CERT_DER_SHA1, hash);
+			id = identification_create_from_encoding(ID_KEY_ID, hash);
 			cert = charon->credentials->get_cert(charon->credentials, 
 												 CERT_X509, KEY_ANY, id, FALSE);
 			id->destroy(id);
@@ -284,7 +283,7 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 		case CERT_X509:
 		{
 			public_key_t *public;
-			identification_t *keyid;
+			chunk_t keyid;
 			x509_t *x509 = (x509_t*)cert;
 			
 			if (!(x509->get_flags(x509) & X509_CA))
@@ -300,11 +299,13 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 			{
 				*req = certreq_payload_create_type(CERT_X509);
 			}
-			keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-			(*req)->add_keyid(*req, keyid->get_encoding(keyid));
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+			{
+				(*req)->add_keyid(*req, keyid);
+				DBG1(DBG_IKE, "sending cert request for \"%Y\"",
+					 cert->get_subject(cert));
+			}
 			public->destroy(public);
-			DBG1(DBG_IKE, "sending cert request for \"%Y\"",
-				 cert->get_subject(cert));
 			break;
 		}
 		default:

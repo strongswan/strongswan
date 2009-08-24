@@ -294,7 +294,7 @@ static enumerator_t* create_private_enumerator(
  * Implementation of credential_manager_t.get_private_by_keyid.
  */   
 static private_key_t *get_private_by_keyid(private_credential_manager_t *this,
-										   key_type_t key, identification_t *keyid)
+										key_type_t key, identification_t *keyid)
 {
 	private_key_t *found = NULL;
 	enumerator_t *enumerator;
@@ -630,8 +630,9 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 	certificate_t *best = NULL, *current;
 	identification_t *keyid = NULL;
 	public_key_t *public;
+	chunk_t chunk;
 	char *uri = NULL;
-
+	
 	/** lookup cache for valid OCSP responses */
 	enumerator = create_cert_enumerator(this, CERT_X509_OCSP_RESPONSE,
 										KEY_ANY, NULL, FALSE);
@@ -647,13 +648,13 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-
+	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
 	current = &issuer->interface;
 	public = current->get_public_key(current);
-	if (public)
+	if (public && public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
 	{
-		keyid = public->get_id(public, ID_PUBKEY_SHA1);
+		keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 	}
 	/** fetch from configured OCSP responder URLs */
 	if (keyid && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
@@ -676,6 +677,7 @@ static cert_validation_t check_ocsp(private_credential_manager_t *this,
 		enumerator->destroy(enumerator);
 	}
 	DESTROY_IF(public);
+	DESTROY_IF(keyid);
 
 	/* fallback to URL fetching from subject certificate's URIs */
 	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
@@ -844,19 +846,17 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 	certificate_t *current;
 	public_key_t *public;
 	enumerator_t *enumerator;
+	chunk_t chunk;
 	char *uri = NULL;
 	
 	/* derive the authorityKeyIdentifier from the issuer's public key */
 	current = &issuer->interface;
 	public = current->get_public_key(current);
-	if (public)
+	if (public && public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
 	{
-		keyid = public->get_id(public, ID_PUBKEY_SHA1);
-	}
-	
-	/* find a cached crl by authorityKeyIdentifier */
-	if (keyid)
-	{
+		keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
+		
+		/* find a cached crl by authorityKeyIdentifier */
 		enumerator = create_cert_enumerator(this, CERT_X509_CRL, KEY_ANY, 
 											keyid, FALSE);
 		while (enumerator->enumerate(enumerator, &current))
@@ -871,35 +871,36 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 			}
 		}
 		enumerator->destroy(enumerator);
-	}
-
-	/* fallback to fetching crls from credential sets cdps */
-	if (keyid && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
-	{
-		enumerator = create_cdp_enumerator(this, CERT_X509_CRL, keyid);
-
-		while (enumerator->enumerate(enumerator, &uri))
+		
+		/* fallback to fetching crls from credential sets cdps */
+		if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 		{
-			current = fetch_crl(this, uri);
-			if (current)
+			enumerator = create_cdp_enumerator(this, CERT_X509_CRL, keyid);
+			
+			while (enumerator->enumerate(enumerator, &uri))
 			{
-				best = get_better_crl(this, current, best, subject, issuer,
-									  &valid, TRUE);
-				if (best && valid != VALIDATION_STALE)
+				current = fetch_crl(this, uri);
+				if (current)
 				{
-					break;
+					best = get_better_crl(this, current, best, subject, issuer,
+										  &valid, TRUE);
+					if (best && valid != VALIDATION_STALE)
+					{
+						break;
+					}
 				}
 			}
+			enumerator->destroy(enumerator);
 		}
-		enumerator->destroy(enumerator);
+		keyid->destroy(keyid);
 	}
 	DESTROY_IF(public);
-
+	
 	/* fallback to fetching crls from cdps from subject's certificate */
 	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
 		enumerator = subject->create_crl_uri_enumerator(subject);
-
+		
 		while (enumerator->enumerate(enumerator, &uri))
 		{
 			current = fetch_crl(this, uri);
@@ -1424,16 +1425,18 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 										  certificate_t *cert, key_type_t type)
 {
 	private_key_t *private = NULL;
-	identification_t* keyid;
+	identification_t *keyid;
+	chunk_t chunk;
 	public_key_t *public;
-
+	
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-		if (keyid)
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
 		{
+			keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 			private = get_private_by_keyid(this, type, keyid);
+			keyid->destroy(keyid);
 		}
 		public->destroy(public);
 	}
@@ -1453,19 +1456,11 @@ static private_key_t *get_private(private_credential_manager_t *this,
 	auth_cfg_t *trustchain;
 	
 	/* check if this is a lookup by key ID, and do it if so */
-	if (id)
+	if (id && id->get_type(id) == ID_KEY_ID)
 	{
-		switch (id->get_type(id))
-		{
-			case ID_PUBKEY_SHA1:
-			case ID_PUBKEY_INFO_SHA1:
-			case ID_KEY_ID:
-				return get_private_by_keyid(this, type, id);
-			default:
-				break;
-		}
+		return get_private_by_keyid(this, type, id);
 	}
-
+	
 	/* if a specific certificate is preferred, check for a matching key */
 	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
@@ -1482,7 +1477,7 @@ static private_key_t *get_private(private_credential_manager_t *this,
 			return private;
 		}
 	}
-			
+	
 	/* try to build a trust chain for each certificate found */
 	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
 	while (enumerator->enumerate(enumerator, &cert))
@@ -1502,7 +1497,7 @@ static private_key_t *get_private(private_credential_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-
+	
 	/* if no valid trustchain was found, fall back to the first usable cert */
 	if (!private)
 	{
