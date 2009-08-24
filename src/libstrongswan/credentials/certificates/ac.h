@@ -55,21 +55,21 @@ struct ac_t {
 	 * @return			chunk pointing to serialNumber
 	 */
 	chunk_t (*get_holderSerial)(ac_t *this);
-
+	
 	/**
 	 * Get the issuer of the holder certificate.
 	 *
 	 * @return			holderIssuer as identification_t*
 	 */
 	identification_t* (*get_holderIssuer)(ac_t *this);
-
+	
 	/**
 	 * Get the thauthorityKeyIdentifier.
 	 *
-	 * @return			authKeyIdentifier as identification_t*
+	 * @return			authKeyIdentifier as chunk_t, to internal data
 	 */
-	identification_t* (*get_authKeyIdentifier)(ac_t *this);
-
+	chunk_t (*get_authKeyIdentifier)(ac_t *this);
+	
 	/**
 	 * @brief Checks if two attribute certificates belong to the same holder
 	 *

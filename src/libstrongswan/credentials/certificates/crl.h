@@ -67,9 +67,9 @@ struct crl_t {
 	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
-	 * @return			authKeyIdentifier as identification_t*
+	 * @return			authKeyIdentifier chunk, point to internal data
 	 */
-	identification_t* (*get_authKeyIdentifier)(crl_t *this);
+	chunk_t (*get_authKeyIdentifier)(crl_t *this);
 	
 	/**
 	 * Create an enumerator over all revoked certificates.

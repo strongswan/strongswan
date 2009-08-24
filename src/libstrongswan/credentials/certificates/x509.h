@@ -76,9 +76,9 @@ struct x509_t {
 	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
-	 * @return			authKeyIdentifier as identification_t*
+	 * @return			authKeyIdentifier as chunk_t, internal data
 	 */
-	identification_t* (*get_authKeyIdentifier)(x509_t *this);
+	chunk_t (*get_authKeyIdentifier)(x509_t *this);
 	
 	/**
 	 * Create an enumerator over all subjectAltNames.
