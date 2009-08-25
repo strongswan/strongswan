@@ -282,9 +282,9 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
-	msg.add_conn.mobike = !!(conn->policy & POLICY_MOBIKE);
-	msg.add_conn.force_encap = !!(conn->policy & POLICY_FORCE_ENCAP);
-	msg.add_conn.ipcomp = !!(conn->policy & POLICY_COMPRESS);
+	msg.add_conn.mobike = (conn->policy & POLICY_MOBIKE) != 0;
+	msg.add_conn.force_encap = (conn->policy & POLICY_FORCE_ENCAP) != 0;
+	msg.add_conn.ipcomp = (conn->policy & POLICY_COMPRESS) != 0;
 	msg.add_conn.install_policy = conn->install_policy;
 	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
 	msg.add_conn.unique = cfg->setup.uniqueids;
