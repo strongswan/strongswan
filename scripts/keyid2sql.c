@@ -2,10 +2,8 @@
 #include <stdio.h>
 #include <library.h>
 #include <debug.h>
-#include <utils/identification.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
-
 
 /**
  * print the keyids of a private or public key in sql format
@@ -14,7 +12,6 @@ int main(int argc, char *argv[])
 {
 	public_key_t *public;
 	private_key_t *private;
-	identification_t *keyid;
 	chunk_t chunk;
 	char buf[8096];
 	int read, n;
@@ -37,15 +34,15 @@ int main(int argc, char *argv[])
 								 BUILD_END);
 	if (private)
 	{
-		keyid = private->get_id(private, ID_PUBKEY_INFO_SHA1);
-		chunk = keyid->get_encoding(keyid);
-
-		printf("%d, X'", ID_PUBKEY_INFO_SHA1);
-		for (n = 0; n < chunk.len; n++)
+		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &chunk))
 		{
-			printf("%.2x", chunk.ptr[n]);
+			printf("%d, X'", ID_KEY_ID);
+			for (n = 0; n < chunk.len; n++)
+			{
+				printf("%.2x", chunk.ptr[n]);
+			}
+			printf("'\n");
 		}
-		printf("'\n");
 		private->destroy(private);
 		return 0;
 	}
@@ -61,15 +58,15 @@ int main(int argc, char *argv[])
 	}
 	if (public)
 	{
-		keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-		chunk = keyid->get_encoding(keyid);
-
-		printf("%d, X'", ID_PUBKEY_INFO_SHA1);
-		for (n = 0; n < chunk.len; n++)
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
 		{
-			printf("%.2x", chunk.ptr[n]);
+			printf("%d, X'", ID_KEY_ID);
+			for (n = 0; n < chunk.len; n++)
+			{
+				printf("%.2x", chunk.ptr[n]);
+			}
+			printf("'\n");
 		}
-		printf("'\n");
 		public->destroy(public);
 		return 0;
 	}
