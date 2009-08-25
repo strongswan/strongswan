@@ -819,6 +819,12 @@ static void destroy(private_child_sa_t *this)
 	/* delete SAs in the kernel, if they are set up */
 	if (this->my_spi)
 	{
+		/* if CHILD was not established, use PROTO_ESP used during alloc_spi().
+		 * TODO: For AH support, we have to store protocol specific SPI.s */
+		if (this->protocol == PROTO_NONE)
+		{
+			this->protocol = PROTO_ESP;
+		}
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
 					this->protocol, this->my_cpi);
