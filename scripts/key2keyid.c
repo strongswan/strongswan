@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 	chunk = chunk_create(buf, read);
 	
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-								 BUILD_BLOB_ASN1_DER, chunk_clone(chunk),
+								 BUILD_BLOB_PEM, chunk_clone(chunk),
 								 BUILD_END);
 	if (private)
 	{
@@ -54,12 +54,12 @@ int main(int argc, char *argv[])
 	}
 	
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-								BUILD_BLOB_ASN1_DER, chunk_clone(chunk),
+								BUILD_BLOB_PEM, chunk_clone(chunk),
 								BUILD_END);
 	if (!public)
 	{
 		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-									BUILD_BLOB_ASN1_DER, chunk_clone(chunk),
+									BUILD_BLOB_PEM, chunk_clone(chunk),
 									BUILD_END);
 	}
 	if (public)
