@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_shared.h"
@@ -1956,6 +1957,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 {
 	private_kernel_netlink_ipsec_t *this = malloc_thing(private_kernel_netlink_ipsec_t);
 	struct sockaddr_nl addr;
+	int fd;
 	
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
@@ -1975,6 +1977,14 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);
+	
+	/* disable lifetimes for allocated SPIs in kernel */
+	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
+	if (fd)
+	{
+		ignore_result(write(fd, "0", 1));
+		close(fd);
+	}
 	
 	/* add bypass policies on the sockets used by charon */
 	if (!add_bypass_policies())
