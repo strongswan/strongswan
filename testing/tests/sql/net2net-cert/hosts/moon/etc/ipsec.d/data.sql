@@ -9,7 +9,7 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
-  202, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
+  11, X'5da7dd700651327ee7b66db3b5e5e060ea2e4def'
  );
 
 INSERT INTO identities (
@@ -27,7 +27,7 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' */
-  202, X'd70dbd46d5133519064f12f100525ead0802ca95'
+  11, X'e5e410876c2ac4bead854942a6de7658303a9fc1'
  );
 
 /* Certificates */

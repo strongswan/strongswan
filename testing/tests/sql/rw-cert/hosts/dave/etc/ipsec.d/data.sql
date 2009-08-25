@@ -9,7 +9,7 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
-  202, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
+  11, X'5da7dd700651327ee7b66db3b5e5e060ea2e4def'
  );
 
 INSERT INTO identities (
@@ -21,7 +21,7 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=dave@strongswan.org' */
-  202, X'f651b7ea33148cc5a76a622f1c1eb16c6bbdea25'
+  11, X'de90b5d11c6c643c7450d36af8886ca31938fb72'
  );
 
 INSERT INTO identities (

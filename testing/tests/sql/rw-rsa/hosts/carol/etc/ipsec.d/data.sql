@@ -15,13 +15,13 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of carol@strongswan.org */
-  202, X'985c23660cd9b9a7554da6a4aa31ea02230fd482'
+  11, X'5535eca6eba279baef887f18438fd227b16746d1'
  );
 
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of moon.strongswan.org */
-  202, X'd70dbd46d5133519064f12f100525ead0802ca95'
+  11, X'e5e410876c2ac4bead854942a6de7658303a9fc1'
  );
 
 /* Certificates */

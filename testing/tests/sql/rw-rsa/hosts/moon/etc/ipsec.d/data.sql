@@ -27,19 +27,19 @@ INSERT INTO identities (
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of moon.strongswan.org */
-  202, X'd70dbd46d5133519064f12f100525ead0802ca95'
+  11, X'e5e410876c2ac4bead854942a6de7658303a9fc1'
  );
 
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of carol@strongswan.org */
-  202, X'985c23660cd9b9a7554da6a4aa31ea02230fd482'
+  11, X'5535eca6eba279baef887f18438fd227b16746d1'
  );
 
 INSERT INTO identities (
   type, data
 ) VALUES ( /* keyid of dave@strongswan.org */
-  202, X'f651b7ea33148cc5a76a622f1c1eb16c6bbdea25'
+  11, X'de90b5d11c6c643c7450d36af8886ca31938fb72'
  );
 
 /* Raw RSA public keys */
