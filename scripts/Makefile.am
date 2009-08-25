@@ -1,6 +1,7 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DPLUGINS="\"${libstrongswan_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql \
