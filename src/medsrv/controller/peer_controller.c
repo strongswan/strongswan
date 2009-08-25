@@ -121,8 +121,7 @@ static bool parse_public_key(private_peer_controller_t *this,
 							 chunk_t *encoding, chunk_t *keyid)
 {
 	public_key_t *public;
-	identification_t *id;
-	chunk_t blob;
+	chunk_t blob, id;
 		
 	if (!public_key || *public_key == '\0')
 	{
@@ -140,11 +139,16 @@ static bool parse_public_key(private_peer_controller_t *this,
 		return FALSE;
 	}
 	/* TODO: use get_encoding() with an encoding type */
+	if (!public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id) ||
+		!public->get_encoding(public, KEY_PUB_ASN1_DER, &blob))
+	{
+		request->setf(request, "error=Encoding public key failed.");
+		return FALSE;
+	}
+	*keyid = chunk_clone(id);
 	*encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
 						  asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						  asn1_bitstring("m", public->get_encoding(public)));
-	id = public->get_id(public, ID_PUBKEY_SHA1);
-	*keyid = chunk_clone(id->get_encoding(id));
+						  asn1_bitstring("m", blob));
 	public->destroy(public);
 	return TRUE;
 }
