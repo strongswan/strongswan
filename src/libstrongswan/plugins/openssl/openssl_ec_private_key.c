@@ -317,6 +317,41 @@ static private_openssl_ec_private_key_t *create_empty(void)
 }
 
 /**
+ * Generate an ECDSA key of specified key size
+ */
+static openssl_ec_private_key_t *generate(size_t key_size)
+{
+	private_openssl_ec_private_key_t *this = create_empty();
+	
+	switch (key_size)
+	{
+		case 256:
+			this->ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+			break;
+		case 384:
+			this->ec = EC_KEY_new_by_curve_name(NID_secp384r1);
+			break;
+		case 521:
+			this->ec = EC_KEY_new_by_curve_name(NID_secp521r1);
+			break;
+		default:
+			DBG1("EC private key size %d not supported", key_size);
+			destroy(this);
+			return NULL;
+	}
+	if (EC_KEY_generate_key(this->ec) != 1)
+	{
+		DBG1("EC private key generation failed", key_size);
+		destroy(this);
+		return NULL;
+	}
+	/* encode as a named curve key (no parameters), uncompressed public key */
+	EC_KEY_set_asn1_flag(this->ec, OPENSSL_EC_NAMED_CURVE);
+	EC_KEY_set_conv_form(this->ec, POINT_CONVERSION_UNCOMPRESSED);
+	return &this->public;
+}
+
+/**
  * load private key from an ASN1 encoded blob
  */
 static openssl_ec_private_key_t *load(chunk_t blob)
@@ -373,6 +408,13 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		
 		switch (part)
 		{
+			case BUILD_KEY_SIZE:
+			{
+				va_start(args, part);
+				this->key = generate(va_arg(args, u_int));
+				va_end(args);
+				return;
+			}
 			case BUILD_BLOB_ASN1_DER:
 			{
 				va_start(args, part);
