@@ -29,7 +29,6 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <time.h>
-#include <gmp.h>
 
 #include <library.h>
 #include <debug.h>
@@ -78,55 +77,24 @@ static void usage(const char *message)
 	);
 }
 
-
-/**
- * convert a chunk into a multi-precision integer
- */
-static void chunk_to_mpz(chunk_t chunk, mpz_t number)
-{
-	mpz_import(number, chunk.len, 1, 1, 1, 0, chunk.ptr);
-}
-
-/**
- * convert a multi-precision integer into a chunk
- */
-static chunk_t mpz_to_chunk(mpz_t number)
-{
-	chunk_t chunk;
-
-	chunk.len = 1 + mpz_sizeinbase(number, 2)/BITS_PER_BYTE;
-	chunk.ptr = mpz_export(NULL, NULL, 1, chunk.len, 1, 0, number);
-	if (chunk.ptr == NULL)
-	{
-		chunk.len = 0;
-	}
-	return chunk;
-}
-
 /**
  * read the last serial number from file
  */
 static chunk_t read_serial(void)
 {
-	mpz_t number;
-
-	char buf[BUF_LEN], buf1[BUF_LEN];
-	chunk_t hex_serial  = { buf, BUF_LEN };
-	chunk_t last_serial = { buf1, BUF_LEN };
-	chunk_t serial;
-
-	FILE *fd = fopen(OPENAC_SERIAL, "r");
-
-	/* last serial number defaults to 0 */
-	*last_serial.ptr = 0x00;
-	last_serial.len = 1;
-
+	chunk_t hex, serial = chunk_empty;
+	char one[] = {0x01};
+	FILE *fd;
+	
+	fd = fopen(OPENAC_SERIAL, "r");
 	if (fd)
 	{
-		if (fscanf(fd, "%s", hex_serial.ptr))
+		hex = chunk_alloca(64);
+		hex.len = fread(hex.ptr, 1, hex.len, fd);
+		if (hex.len)
 		{
-			hex_serial.len = strlen(hex_serial.ptr);
-			last_serial = chunk_from_hex(hex_serial, last_serial.ptr);
+			serial = chunk_alloca((hex.len / 2) + (hex.len % 2));
+			serial = chunk_from_hex(hex, serial.ptr);
 		}
 		fclose(fd);
 	}
@@ -134,19 +102,15 @@ static chunk_t read_serial(void)
 	{
 		DBG1("  file '%s' does not exist yet - serial number set to 01", OPENAC_SERIAL);
 	}
-
-	/**
-	 * conversion of read serial number to a multiprecision integer
-	 * and incrementing it by one
-	 * and representing it as a two's complement octet string
-	 */
-	mpz_init(number);
-	chunk_to_mpz(last_serial, number);
-	mpz_add_ui(number, number, 0x01);
-	serial = mpz_to_chunk(number);
-	mpz_clear(number);
-
-	return serial;
+	if (!serial.len)
+	{
+		return chunk_clone(chunk_create(one, 1));
+	}
+	if (chunk_increment(serial))
+	{	/* overflow, prepend 0x01 */
+		return chunk_cat("cc", chunk_create(one, 1), serial);
+	}
+	return chunk_clone(serial);
 }
 
 /**

@@ -862,10 +862,6 @@ if test x$fips_prf = xtrue; then
 	sha1=true;
 fi
 
-if test x$tools = xtrue; then
-	gmp=true;
-fi
-
 if test x$smp = xtrue; then
 	xml=true
 fi
