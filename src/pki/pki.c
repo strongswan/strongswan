@@ -43,7 +43,7 @@ static int usage(char *error)
 	fprintf(out, "      show this usage information\n");
 	fprintf(out, "  pki --gen [--type rsa|ecdsa] [--size bits] [--form der|pem|pgp]\n");
 	fprintf(out, "      generate a new private key\n");
-	fprintf(out, "  pki --pub [--type rsa|ecdsa|x509] [--form der|pem|pgp]\n");
+	fprintf(out, "  pki --pub [--in file] [--type rsa|ecdsa|x509] [--form der|pem|pgp]\n");
 	fprintf(out, "      extract the public key from a private key/certificate\n");
 	return !!error;
 }
@@ -55,7 +55,8 @@ static bool get_form(char *form, key_encoding_type_t *type, bool pub)
 {
 	if (streq(form, "der"))
 	{
-		*type = pub ? KEY_PUB_ASN1_DER : KEY_PRIV_ASN1_DER;
+		/* der encoded keys usually contain the complete SubjectPublicKeyInfo */
+		*type = pub ? KEY_PUB_SPKI_ASN1_DER : KEY_PRIV_ASN1_DER;
 	}
 	else if (streq(form, "pem"))
 	{
@@ -171,17 +172,20 @@ static int gen(int argc, char *argv[])
  */
 static int pub(int argc, char *argv[])
 {
-	key_encoding_type_t form = KEY_PUB_ASN1_DER;
+	key_encoding_type_t form = KEY_PUB_SPKI_ASN1_DER;
 	credential_type_t type = CRED_PRIVATE_KEY;
 	int subtype = KEY_RSA;
 	certificate_t *cert;
 	private_key_t *private;
 	public_key_t *public;
 	chunk_t encoding;
+	char *file = NULL;
+	void *cred;
 	
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
 		{ "form", required_argument, NULL, 'f' },
+		{ "in", required_argument, NULL, 'i' },
 		{ 0,0,0,0 }
 	};
 	while (TRUE)
@@ -215,6 +219,9 @@ static int pub(int argc, char *argv[])
 					return usage("invalid output format");
 				}
 				continue;
+			case 'i':
+				file = optarg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -222,13 +229,23 @@ static int pub(int argc, char *argv[])
 		}
 		break;
 	}
+	if (file)
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
+									 BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
+									 BUILD_FROM_FD, 0, BUILD_END);
+	}
+	
 	if (type == CRED_PRIVATE_KEY)
 	{
-		private = lib->creds->create(lib->creds, type, subtype,
-									 BUILD_FROM_FD, 0, BUILD_END);
+		private = cred;
 		if (!private)
 		{
-			fprintf(stderr, "parsing private key failed");
+			fprintf(stderr, "parsing private key failed\n");
 			return 1;
 		}
 		public = private->get_public_key(private);
@@ -236,11 +253,10 @@ static int pub(int argc, char *argv[])
 	}
 	else
 	{
-		cert = lib->creds->create(lib->creds, type, subtype,
-								  BUILD_FROM_FD, 0, BUILD_END);
+		cert = cred;
 		if (!cert)
 		{
-			fprintf(stderr, "parsing certificate failed");
+			fprintf(stderr, "parsing certificate failed\n");
 			return 1;
 		}
 		public = cert->get_public_key(cert);

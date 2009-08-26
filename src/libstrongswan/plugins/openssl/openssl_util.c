@@ -125,9 +125,39 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b)
 }
 
 /**
+ * wrap publicKey in subjectPublicKeyInfo
+ */
+static chunk_t build_info(chunk_t key)
+{
+	X509_PUBKEY *pubkey;
+	chunk_t enc;
+	u_char *p;
+	
+	pubkey = X509_PUBKEY_new();
+	ASN1_OBJECT_free(pubkey->algor->algorithm);
+	pubkey->algor->algorithm = OBJ_nid2obj(NID_rsaEncryption);
+
+	if (pubkey->algor->parameter == NULL ||
+		pubkey->algor->parameter->type != V_ASN1_NULL)
+	{
+		ASN1_TYPE_free(pubkey->algor->parameter);
+		pubkey->algor->parameter = ASN1_TYPE_new();
+		pubkey->algor->parameter->type = V_ASN1_NULL;
+	}
+	M_ASN1_BIT_STRING_set(pubkey->public_key, key.ptr, key.len);
+	
+	enc = chunk_alloc(i2d_X509_PUBKEY(pubkey, NULL));
+	p = enc.ptr;
+	i2d_X509_PUBKEY(pubkey, &p);
+	X509_PUBKEY_free(pubkey);
+	
+	return enc;
+}
+
+/**
  * Build fingerprints of a private/public RSA key.
  */
-static bool build_fingerprint(chunk_t key, key_encoding_type_t type, int nid,
+static bool build_fingerprint(chunk_t key, key_encoding_type_t type,
 							  chunk_t *fingerprint)
 {
 	hasher_t *hasher;
@@ -140,29 +170,9 @@ static bool build_fingerprint(chunk_t key, key_encoding_type_t type, int nid,
 	}
 	if (type == KEY_ID_PUBKEY_INFO_SHA1)
 	{
-		X509_PUBKEY *pubkey;
 		chunk_t enc;
-		u_char *p;
 		
-		/* wrap publicKey in subjectPublicKeyInfo */
-		pubkey = X509_PUBKEY_new();
-		ASN1_OBJECT_free(pubkey->algor->algorithm);
-		pubkey->algor->algorithm = OBJ_nid2obj(nid);
-	
-		if (pubkey->algor->parameter == NULL ||
-			pubkey->algor->parameter->type != V_ASN1_NULL)
-		{
-			ASN1_TYPE_free(pubkey->algor->parameter);
-			pubkey->algor->parameter = ASN1_TYPE_new();
-			pubkey->algor->parameter->type = V_ASN1_NULL;
-		}
-		M_ASN1_BIT_STRING_set(pubkey->public_key, enc.ptr, enc.len);
-		
-		enc = chunk_alloc(i2d_X509_PUBKEY(pubkey, NULL));
-		p = enc.ptr;
-		i2d_X509_PUBKEY(pubkey, &p);
-		X509_PUBKEY_free(pubkey);
-		
+		enc = build_info(key);
 		hasher->allocate_hash(hasher, enc, fingerprint);
 		chunk_free(&enc);
 	}
@@ -184,11 +194,27 @@ bool openssl_encode(key_encoding_type_t type, chunk_t *encoding, va_list args)
 	switch (type)
 	{
 		case KEY_PUB_ASN1_DER:
+			/* this encoding is currently not supported for ECDSA keys */
 			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER, &key,
-								  KEY_PART_END) ||
-				key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER, &key,
 								  KEY_PART_END))
 			{
+				*encoding = chunk_clone(key);
+				return TRUE;
+			}
+			return FALSE;
+		case KEY_PUB_SPKI_ASN1_DER:
+			/* key encoding, wrapped in a subjectPublicKeyInfo field */
+			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER, &key,
+								  KEY_PART_END))
+			{
+				*encoding = build_info(key);
+				return TRUE;
+			}
+			else if (key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER, &key,
+									   KEY_PART_END))
+			{
+				/* ECDSA keys are already wrapped in the publickeyInfo field,
+				 * they are incomplete without */
 				*encoding = chunk_clone(key);
 				return TRUE;
 			}
@@ -208,13 +234,13 @@ bool openssl_encode(key_encoding_type_t type, chunk_t *encoding, va_list args)
 			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER, &key,
 								  KEY_PART_END))
 			{
-				return build_fingerprint(key, type, NID_rsaEncryption, encoding);
+				return build_fingerprint(key, type, encoding);
 			}
 			else if (key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER, &key,
 									   KEY_PART_END))
 			{
-				return build_fingerprint(key, type, NID_X9_62_id_ecPublicKey,
-										 encoding);
+				/* for ECDSA the two keyids are currently the same */
+				return build_fingerprint(key, KEY_ID_PUBKEY_SHA1, encoding);
 			}
 			return FALSE;
 		default:

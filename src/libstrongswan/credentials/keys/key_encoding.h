@@ -72,9 +72,11 @@ enum key_encoding_type_t {
 	/** PGPv4 fingerprint */
 	KEY_ID_PGPV4,
 	
-	/** PKCS#1/ASN.1 key encoding */
+	/** PKCS#1 and similar ASN.1 key encoding */
 	KEY_PUB_ASN1_DER,
 	KEY_PRIV_ASN1_DER,
+	/** subjectPublicKeyInfo encoding */
+	KEY_PUB_SPKI_ASN1_DER,
 	/** PEM oncoded PKCS#1 key */
 	KEY_PUB_PEM,
 	KEY_PRIV_PEM,
