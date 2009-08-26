@@ -232,7 +232,7 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 	bool success;
 	u_char *p;
 	
-	if (!this->engine)
+	if (this->engine)
 	{
 		return FALSE;
 	}
@@ -240,7 +240,7 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 	p = enc.ptr;
 	i2d_RSAPrivateKey(this->rsa, &p);
 	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_RSA_PUB_ASN1_DER, enc, KEY_PART_END);
+							KEY_PART_RSA_PRIV_ASN1_DER, enc, KEY_PART_END);
 	free(enc.ptr);
 	return success;
 }
@@ -427,7 +427,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				this->key = load(va_arg(args, chunk_t));
 				va_end(args);
 				return;
-			}		
+			}
 			case BUILD_KEY_SIZE:
 			{
 				va_start(args, part);
