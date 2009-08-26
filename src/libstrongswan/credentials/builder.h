@@ -38,8 +38,10 @@ typedef builder_t* (*builder_constructor_t)(int subtype);
  * Parts to build credentials from.
  */
 enum builder_part_t {
-	/** path to a file containing an ASN.1 blob, char* */
+	/** path to a file encoded in any format, char* */
 	BUILD_FROM_FILE,
+	/** file descriptor to read data, encoded in any format, int */
+	BUILD_FROM_FD,
 	/** unix socket of a ssh/pgp agent, char* */
 	BUILD_AGENT_SOCKET,
 	/** DER encoded ASN.1 blob, chunk_t */

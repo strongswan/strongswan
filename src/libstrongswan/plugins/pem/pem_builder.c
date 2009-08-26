@@ -50,6 +50,8 @@ struct private_builder_t {
 	int subtype;
 	/** path to file, if we are reading from a file */
 	char *file;
+	/** file description, if we are reading from a fd */
+	int fd;
 	/** PEM encoding of the credential */
 	chunk_t pem;
 	/** PEM decryption passphrase, if given */
@@ -439,6 +441,37 @@ static void *build_from_file(private_builder_t *this, char *file)
 }
 
 /**
+ * build the credential from a file
+ */
+static void *build_from_fd(private_builder_t *this, int fd)
+{
+	char buf[8096];
+	char *pos = buf;
+	ssize_t len, total = 0;
+	
+	while (TRUE)
+	{
+		len = read(fd, pos, buf + sizeof(buf) - pos);
+		if (len < 0)
+		{
+			DBG1("reading from file descriptor failed: %s", strerror(errno));
+			return NULL;
+		}
+		if (len == 0)
+		{
+			break;
+		}
+		total += len;
+		if (total == sizeof(buf))
+		{
+			DBG1("buffer too small to read from file descriptor");
+			return NULL;
+		}
+	}
+	return build_from_blob(this, chunk_create(buf, total));
+}
+
+/**
  * Implementation of builder_t.build
  */
 static void *build(private_builder_t *this)
@@ -452,6 +485,10 @@ static void *build(private_builder_t *this)
 	else if (this->file)
 	{
 		cred = build_from_file(this, this->file);
+	}
+	else if (this->fd != -1)
+	{
+		cred = build_from_fd(this, this->fd);
 	}
 	free(this);
 	return cred;
@@ -481,6 +518,11 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		case BUILD_FROM_FILE:
 			va_start(args, part);
 			this->file = va_arg(args, char*);
+			va_end(args);
+			break;
+		case BUILD_FROM_FD:
+			va_start(args, part);
+			this->fd = va_arg(args, int);
 			va_end(args);
 			break;
 		case BUILD_BLOB_PEM:
@@ -528,6 +570,7 @@ static builder_t *pem_builder(credential_type_t type, int subtype)
 	this->type = type;
 	this->subtype = subtype;
 	this->file = NULL;
+	this->fd = -1;
 	this->pem = chunk_empty;
 	this->passphrase = chunk_empty;
 	this->cb = NULL;

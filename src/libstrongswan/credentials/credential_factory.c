@@ -183,6 +183,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 					builder->add(builder, part, va_arg(args, x509_flag_t));
 					continue;
 				case BUILD_KEY_SIZE:
+				case BUILD_FROM_FD:
 					builder->add(builder, part, va_arg(args, u_int));
 					continue;
 				case BUILD_NOT_BEFORE_TIME:
