@@ -75,6 +75,9 @@ enum key_encoding_type_t {
 	/** PKCS#1/ASN.1 key encoding */
 	KEY_PUB_ASN1_DER,
 	KEY_PRIV_ASN1_DER,
+	/** PEM oncoded PKCS#1 key */
+	KEY_PUB_PEM,
+	KEY_PRIV_PEM,
 	/** PGP key encoding */
 	KEY_PUB_PGP,
 	KEY_PRIV_PGP,

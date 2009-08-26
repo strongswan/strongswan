@@ -673,7 +673,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[tools],
-	AS_HELP_STRING([--disable-tools],[disable additional utilities (openac and scepclient). (default is NO).]),
+	AS_HELP_STRING([--disable-tools],[disable additional utilities (openac, scepclient and pki). (default is NO).]),
 	[if test x$enableval = xyes; then
 		tools=true
 	 else
@@ -1444,6 +1444,7 @@ AC_OUTPUT(
 	src/_copyright/Makefile
 	src/openac/Makefile
 	src/scepclient/Makefile
+	src/pki/Makefile
 	src/dumm/Makefile
 	src/dumm/ext/extconf.rb
 	src/libfast/Makefile

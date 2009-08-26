@@ -89,6 +89,10 @@ int main(int argc, char* argv[])
 		{
 			name = strdup("scepclient\",");
 		}
+		else if (strstr(path, "pki"))
+		{
+			name = strdup("pki\",");
+		}
 		else
 		{
 			fprintf(stderr, "don't know how to handle '%s', ignored", path);
