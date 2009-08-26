@@ -289,7 +289,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[pkcs1],
-	AS_HELP_STRING([--disable-pkcs],[disable PKCS1 key decoding plugin. (default is NO).]),
+	AS_HELP_STRING([--disable-pkcs1],[disable PKCS1 key decoding plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
 		pkcs1=true
 	 else
@@ -300,7 +300,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[pgp],
-	AS_HELP_STRING([--disable-pkcs],[disable PGP key decoding plugin. (default is NO).]),
+	AS_HELP_STRING([--disable-pgp],[disable PGP key decoding plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
 		pgp=true
 	 else
