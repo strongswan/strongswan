@@ -184,7 +184,7 @@ static int pub(int argc, char *argv[])
 	
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
-		{ "form", required_argument, NULL, 'f' },
+		{ "outform", required_argument, NULL, 'f' },
 		{ "in", required_argument, NULL, 'i' },
 		{ 0,0,0,0 }
 	};
