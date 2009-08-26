@@ -132,9 +132,14 @@ enum auth_rule_t {
 };
 
 /**
- * enum name for auth_rule_t.
+ * Names for auth_rule_t (upper case).
  */
 extern enum_name_t *auth_rule_names;
+
+/**
+ * Names for auth_rule_t (lower case, without "rule_" or "helper_" prefix).
+ */
+extern enum_name_t *auth_rule_names_lower;
 
 /**
  * Authentication/Authorization round.
