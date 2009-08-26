@@ -174,22 +174,6 @@ static void status(void)
 }
 
 /**
- * increment a chunk, as it would reprensent a network order integer
- */
-static void increment_chunk(chunk_t chunk)
-{
-	int i;
-	
-	for (i = chunk.len - 1; i >= 0; i--)
-	{
-		if (++chunk.ptr[i] != 0)
-		{
-			return;
-		}
-	}
-}
-
-/**
  * ipsec pool --add - add a new pool
  */
 static void add(char *name, host_t *start, host_t *end, int timeout)
@@ -233,7 +217,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		{
 			break;
 		}
-		increment_chunk(cur_addr);
+		chunk_increment(cur_addr);
 	}
 	if (db->get_driver(db) == DB_SQLITE)
 	{
@@ -331,7 +315,7 @@ static void resize(char *name, host_t *end)
 	}
 	while (count-- > 0)
 	{
-		increment_chunk(cur_addr);
+		chunk_increment(cur_addr);
 		db->execute(db, NULL,
 			"INSERT INTO addresses (pool, address, identity, acquired, released) "
 			"VALUES (?, ?, ?, ?, ?)",

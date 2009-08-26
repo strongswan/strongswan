@@ -449,6 +449,24 @@ int chunk_compare(chunk_t a, chunk_t b)
 	return memcmp(a.ptr, b.ptr, len);
 };
 
+
+/**
+ * Described in header.
+ */
+bool chunk_increment(chunk_t chunk)
+{
+	int i;
+	
+	for (i = chunk.len - 1; i >= 0; i--)
+	{
+		if (++chunk.ptr[i] != 0)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /**
  * Remove non-printable characters from a chunk.
  */
