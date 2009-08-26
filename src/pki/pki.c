@@ -41,9 +41,9 @@ static int usage(char *error)
 	fprintf(out, "usage:\n");
 	fprintf(out, "  pki --help\n");
 	fprintf(out, "      show this usage information\n");
-	fprintf(out, "  pki --gen [--type rsa|ecdsa] [--size bits] [--form der|pem|pgp]\n");
+	fprintf(out, "  pki --gen [--type rsa|ecdsa] [--size bits] [--outform der|pem|pgp]\n");
 	fprintf(out, "      generate a new private key\n");
-	fprintf(out, "  pki --pub [--in file] [--type rsa|ecdsa|x509] [--form der|pem|pgp]\n");
+	fprintf(out, "  pki --pub [--in file] [--type rsa|ecdsa|x509] [--outform der|pem|pgp]\n");
 	fprintf(out, "      extract the public key from a private key/certificate\n");
 	return !!error;
 }
