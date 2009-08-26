@@ -109,7 +109,7 @@ chunk_t whack_pass_cb(prompt_pass_t *pass, int try)
 }
 
 /**
- *  Loads a PKCS#1 or PGP privatekey file
+ *  Loads a PKCS#1 or PGP private key file
  */
 private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 								key_type_t type)
