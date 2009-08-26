@@ -25,6 +25,7 @@ endif
 
 if USE_TOOLS
   libs += $(top_builddir)/src/openac/.libs/openac
+  libs += $(top_builddir)/src/pki/.libs/pki
   libs += $(top_builddir)/src/scepclient/.libs/scepclient
 endif
 
