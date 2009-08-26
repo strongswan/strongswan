@@ -1,5 +1,5 @@
-moon::cat /var/log/auth.log::loaded crl file::YES
-carol::cat /var/log/auth.log::loaded crl file::YES
+moon::cat /var/log/auth.log::loaded crl from::YES
+carol::cat /var/log/auth.log::loaded crl from::YES
 moon::cat /var/log/auth.log::X.509 certificate rejected::NO
 carol::cat /var/log/auth.log::X.509 certificate rejected::NO
 moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES

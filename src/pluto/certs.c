@@ -144,7 +144,7 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 	}
 	if (key)
 	{
-		plog("  loaded private key from file '%s'", filename);
+		plog("  loaded private key from '%s'", filename);
 	}
 	else
 	{
@@ -165,7 +165,7 @@ bool load_cert(char *filename, const char *label, cert_t *out)
 	if (cert)
 	{
 		/* the API passes an empty cert_t, we move over and free the built one */
-		plog(" loaded '%s' certificate from '%s'", label, filename);
+		plog("  loaded %s certificate from '%s'", label, filename);
 		*out = *cert;
 		free(cert);
 		return TRUE;
@@ -180,7 +180,7 @@ bool load_host_cert(char *filename, cert_t *cert)
 {
 	char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
-	return load_cert(path, "host cert", cert);
+	return load_cert(path, "host", cert);
 }
 
 /**
@@ -190,7 +190,7 @@ bool load_ca_cert(char *filename, cert_t *cert)
 {
 	char *path = concatenate_paths(CA_CERT_PATH, filename);
 
-	return load_cert(path, "CA cert", cert);
+	return load_cert(path, "CA", cert);
 }
 
 /**

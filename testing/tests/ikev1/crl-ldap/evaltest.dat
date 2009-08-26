@@ -1,5 +1,5 @@
-moon::cat /var/log/auth.log::loaded crl file::YES
-carol::cat /var/log/auth.log::loaded crl file::YES
+moon::cat /var/log/auth.log::loaded crl from::YES
+carol::cat /var/log/auth.log::loaded crl from::YES
 moon::cat /var/log/auth.log::crl update is overdue::YES
 carol::cat /var/log/auth.log::crl update is overdue::YES
 moon::cat /var/log/auth.log::X.509 certificate rejected::YES

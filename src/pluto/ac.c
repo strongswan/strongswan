@@ -820,13 +820,15 @@ void load_acerts(void)
 		{
 			while (n--)
 			{
+				char *filename = filelist[n]->d_name;
 				x509acert_t *ac;
 				
 				ac = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-							CERT_PLUTO_AC, BUILD_FROM_FILE, filelist[n]->d_name,
+							CERT_PLUTO_AC, BUILD_FROM_FILE, filename,
 							BUILD_END);
 				if (ac)
 				{
+					plog("  loaded attribute certificate from '%s'", filename);
 					add_acert(ac);
 				}
 				free(filelist[n]);

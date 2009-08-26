@@ -350,6 +350,7 @@ void load_crls(void)
 				{
 					chunk_t crl_uri;
 
+					plog("  loaded crl from '%s'", filename);
 					crl_uri.len = 7 + sizeof(CRL_PATH) + strlen(filename);
 					crl_uri.ptr = malloc(crl_uri.len + 1);
 
