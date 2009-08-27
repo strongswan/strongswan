@@ -214,18 +214,14 @@ struct child_cfg_t {
 	bool (*get_hostaccess) (child_cfg_t *this);
 
 	/**
-	 * Get the lifetime of a CHILD_SA.
+	 * Get the lifetime configuration of a CHILD_SA.
 	 *
-	 * If "rekey" is set to TRUE, a lifetime is returned before the first
-	 * rekeying should be started. If it is FALSE, the actual lifetime is
-	 * returned when the CHILD_SA must be deleted.
-	 * The rekey time automatically contains a jitter to avoid simlutaneous
-	 * rekeying.
-	 * 
-	 * @param rekey			TRUE to get rekey time
-	 * @return				lifetime in seconds
+	 * The rekey limits automatically contain a jitter to avoid simultaneous
+	 * rekeying. These values will change with each call to this function.
+	 *
+	 * @return				lifetime_cfg_t (has to be freed)
 	 */
-	u_int32_t (*get_lifetime) (child_cfg_t *this, bool rekey);
+	lifetime_cfg_t* (*get_lifetime) (child_cfg_t *this);
 	
 	/**
 	 * Get the mode to use for the CHILD_SA.
@@ -311,16 +307,15 @@ struct child_cfg_t {
  * Create a configuration template for CHILD_SA setup.
  * 
  * The "name" string gets cloned.
- * Lifetimes are in seconds. To prevent to peers to start rekeying at the
- * same time, a jitter may be specified. Rekeying of an SA starts at
- * (rekeytime - random(0, jitter)). You should specify
- * lifetime > rekeytime > jitter.
+ *
+ * The lifetime_cfg_t object gets adopted by this config.
+ * To prevent two peers to start rekeying at the same time, a jitter may be
+ * specified. Rekeying of an SA starts at (rekey_xxx - random(0, jitter_xxx)).
+ *
  * After a call to create, a reference is obtained (refcount = 1).
  * 
  * @param name				name of the child_cfg
- * @param lifetime			lifetime after CHILD_SA expires and gets deleted
- * @param rekeytime			time when rekeying should be initiated
- * @param jitter			range of randomization time to remove from rekeytime
+ * @param lifetime			lifetime_cfg_t for this child_cfg
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
@@ -329,9 +324,9 @@ struct child_cfg_t {
  * @param ipcomp			use IPComp, if peer supports it
  * @return 					child_cfg_t object
  */
-child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
-							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, ipsec_mode_t mode,
-							  action_t dpd_action, action_t close_action, bool ipcomp);
+child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
+							  char *updown, bool hostaccess,
+							  ipsec_mode_t mode, action_t dpd_action,
+							  action_t close_action, bool ipcomp);
 
 #endif /** CHILD_CFG_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -97,20 +97,9 @@ struct private_child_cfg_t {
 	action_t close_action;
 	
 	/**
-	 * Time before an SA gets invalid
+	 * CHILD_SA lifetime config
 	 */
-	u_int32_t lifetime;
-	
-	/**
-	 * Time before an SA gets rekeyed
-	 */
-	u_int32_t rekeytime;
-	
-	/**
-	 * Time, which specifies the range of a random value
-	 * substracted from rekeytime.
-	 */
-	u_int32_t jitter;
+	lifetime_cfg_t *lifetime;
 	
 	/**
 	 * enable IPComp
@@ -361,19 +350,32 @@ static bool get_hostaccess(private_child_cfg_t *this)
 }
 
 /**
+ * Applies jitter to the rekey value. Returns the new rekey value.
+ * Note: The distribution of random values is not perfect, but it
+ * should get the job done.
+ */
+static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
+{
+	if (jitter == 0)
+	{
+		return rekey;
+	}
+	jitter = (jitter == UINT64_MAX) ? jitter : jitter + 1;
+	return rekey - jitter * (random() / (RAND_MAX + 1.0));
+}
+#define APPLY_JITTER(l, f) l->rekey_##f = apply_jitter(l->rekey_##f, l->jitter_##f)
+
+/**
  * Implementation of child_cfg_t.get_lifetime.
  */
-static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
+static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
 {
-	if (rekey)
-	{
-		if (this->jitter == 0)
-		{
-			return this->rekeytime;
-		}
-		return this->rekeytime - (random() % this->jitter);
-	}
-	return this->lifetime;
+	lifetime_cfg_t *lft = malloc_thing(lifetime_cfg_t);
+	memcpy(lft, this->lifetime, sizeof(lifetime_cfg_t));
+	APPLY_JITTER(lft, time);
+	APPLY_JITTER(lft, bytes);
+	APPLY_JITTER(lft, packets);
+	return lft;
 }
 
 /**
@@ -478,6 +480,7 @@ static void destroy(private_child_cfg_t *this)
 		{
 			free(this->updown);
 		}
+		free(this->lifetime);
 		free(this->name);
 		free(this);
 	}
@@ -486,10 +489,10 @@ static void destroy(private_child_cfg_t *this)
 /*
  * Described in header-file
  */
-child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
-							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, ipsec_mode_t mode,
-							  action_t dpd_action, action_t close_action, bool ipcomp)
+child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
+							  char *updown, bool hostaccess,
+							  ipsec_mode_t mode, action_t dpd_action,
+							  action_t close_action, bool ipcomp)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -504,7 +507,7 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_mode = (ipsec_mode_t (*) (child_cfg_t *))get_mode;
 	this->public.get_dpd_action = (action_t (*) (child_cfg_t *))get_dpd_action;
 	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
-	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
+	this->public.get_lifetime = (lifetime_cfg_t* (*) (child_cfg_t *))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
 	this->public.set_mipv6_options = (void (*) (child_cfg_t*,bool,bool))set_mipv6_options;
 	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
@@ -515,8 +518,6 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	
 	this->name = strdup(name);
 	this->lifetime = lifetime;
-	this->rekeytime = rekeytime;
-	this->jitter = jitter;
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
