@@ -20,6 +20,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/x509.h>
 
 typedef struct private_openssl_rsa_public_key_t private_openssl_rsa_public_key_t;
 
@@ -169,27 +170,53 @@ static size_t get_keysize(private_openssl_rsa_public_key_t *this)
 }
 
 /**
+ * Calculate fingerprint from a RSA key, also used in rsa private key.
+ */
+bool openssl_rsa_fingerprint(RSA *rsa, key_encoding_type_t type, chunk_t *fp)
+{
+	hasher_t *hasher;
+	chunk_t key;
+	u_char *p;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, rsa, fp))
+	{
+		return TRUE;
+	}
+	switch (type)
+	{
+		case KEY_ID_PUBKEY_SHA1:
+			key = chunk_alloc(i2d_RSAPublicKey(rsa, NULL));
+			p = key.ptr;
+			i2d_RSAPublicKey(rsa, &p);
+			break;
+		case KEY_ID_PUBKEY_INFO_SHA1:
+			key = chunk_alloc(i2d_RSA_PUBKEY(rsa, NULL));
+			p = key.ptr;
+			i2d_RSA_PUBKEY(rsa, &p);
+			break;
+		default:
+			return FALSE;
+	}
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher)
+	{
+		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		free(key.ptr);
+		return FALSE;
+	}
+	hasher->allocate_hash(hasher, key, fp);
+	hasher->destroy(hasher);
+	lib->encoding->cache(lib->encoding, type, rsa, *fp);
+	return TRUE;
+}
+
+/**
  * Implementation of public_key_t.get_fingerprint.
  */
 static bool get_fingerprint(private_openssl_rsa_public_key_t *this,
 							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	chunk_t enc;
-	bool success;
-	u_char *p;
-	
-	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
-	{
-		return TRUE;
-	}
-	enc = chunk_alloc(i2d_RSAPublicKey(this->rsa, NULL));
-	p = enc.ptr;
-	i2d_RSAPublicKey(this->rsa, &p);
-	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
-							KEY_PART_RSA_PUB_ASN1_DER, enc, KEY_PART_END);
-	free(enc.ptr);
-	
-	return success;
+	return openssl_rsa_fingerprint(this->rsa, type, fingerprint);
 }
 
 /*
@@ -198,17 +225,27 @@ static bool get_fingerprint(private_openssl_rsa_public_key_t *this,
 static bool get_encoding(private_openssl_rsa_public_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t enc;
-	bool success;
 	u_char *p;
 	
-	enc = chunk_alloc(i2d_RSAPublicKey(this->rsa, NULL));
-	p = enc.ptr;
-	i2d_RSAPublicKey(this->rsa, &p);
-	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_RSA_PUB_ASN1_DER, enc, KEY_PART_END);
-	free(enc.ptr);
-	return success;
+	switch (type)
+	{
+		case KEY_PUB_SPKI_ASN1_DER:
+		{
+			*encoding = chunk_alloc(i2d_RSA_PUBKEY(this->rsa, NULL));
+			p = encoding->ptr;
+			i2d_RSA_PUBKEY(this->rsa, &p);
+			return TRUE;
+		}
+		case KEY_PUB_ASN1_DER:
+		{
+			*encoding = chunk_alloc(i2d_RSAPublicKey(this->rsa, NULL));
+			p = encoding->ptr;
+			i2d_RSAPublicKey(this->rsa, &p);
+			return TRUE;
+		}
+		default:
+			return FALSE;
+	}
 }
 
 /**
@@ -229,9 +266,9 @@ static void destroy(private_openssl_rsa_public_key_t *this)
 	{
 		if (this->rsa)
 		{
+			lib->encoding->clear_cache(lib->encoding, this->rsa);
 			RSA_free(this->rsa);
 		}
-		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }

@@ -98,6 +98,9 @@ static bool lookup_scheme(int scheme, int *hash, int *curve)
 	return FALSE;
 }
 
+/* from ec public key */
+bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp);
+
 /**
  * Convert an ECDSA_SIG to a chunk by concatenating r and s.
  * This function allocates memory for the chunk.
@@ -230,21 +233,7 @@ static public_key_t* get_public_key(private_openssl_ec_private_key_t *this)
 static bool get_fingerprint(private_openssl_ec_private_key_t *this,
 							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	chunk_t key;
-	u_char *p;
-	bool success;
-	
-	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
-	{
-		return TRUE;
-	}
-	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
-	p = key.ptr;
-	i2d_EC_PUBKEY(this->ec, &p);
-	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
-								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
-	free(key.ptr);
-	return success;
+	return openssl_ec_fingerprint(this->ec, type, fingerprint);
 }
 
 /**
@@ -253,17 +242,20 @@ static bool get_fingerprint(private_openssl_ec_private_key_t *this,
 static bool get_encoding(private_openssl_ec_private_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t key;
 	u_char *p;
-	bool success;
 	
-	key = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
-	p = key.ptr;
-	i2d_ECPrivateKey(this->ec, &p);
-	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_ECDSA_PRIV_ASN1_DER, key, KEY_PART_END);
-	free(key.ptr);
-	return success;
+	switch (type)
+	{
+		case KEY_PRIV_ASN1_DER:
+		{
+			*encoding = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
+			p = encoding->ptr;
+			i2d_ECPrivateKey(this->ec, &p);
+			return TRUE;
+		}
+		default:
+			return FALSE;
+	}
 }
 
 /**
@@ -284,9 +276,9 @@ static void destroy(private_openssl_ec_private_key_t *this)
 	{
 		if (this->ec)
 		{
+			lib->encoding->clear_cache(lib->encoding, this->ec);
 			EC_KEY_free(this->ec);
 		}
-		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
@@ -356,10 +348,9 @@ static openssl_ec_private_key_t *generate(size_t key_size)
  */
 static openssl_ec_private_key_t *load(chunk_t blob)
 {
-	u_char *p = blob.ptr;
 	private_openssl_ec_private_key_t *this = create_empty();
 	
-	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&p, blob.len);
+	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
 	
 	if (!this->ec)
 	{

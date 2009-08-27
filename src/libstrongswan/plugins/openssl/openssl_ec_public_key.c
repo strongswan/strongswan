@@ -194,26 +194,53 @@ static size_t get_keysize(private_openssl_ec_public_key_t *this)
 }
 
 /**
+ * Calculate fingerprint from a EC_KEY, also used in ec private key.
+ */
+bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
+{
+	hasher_t *hasher;
+	chunk_t key;
+	u_char *p;
+	
+	if (lib->encoding->get_cache(lib->encoding, type, ec, fp))
+	{
+		return TRUE;
+	}
+	switch (type)
+	{
+		case KEY_ID_PUBKEY_SHA1:
+			key = chunk_alloc(i2o_ECPublicKey(ec, NULL));
+			p = key.ptr;
+			i2o_ECPublicKey(ec, &p);
+			break;
+		case KEY_ID_PUBKEY_INFO_SHA1:
+			key = chunk_alloc(i2d_EC_PUBKEY(ec, NULL));
+			p = key.ptr;
+			i2d_EC_PUBKEY(ec, &p);
+			break;
+		default:
+			return FALSE;
+	}
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher)
+	{
+		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		free(key.ptr);
+		return FALSE;
+	}
+	hasher->allocate_hash(hasher, key, fp);
+	hasher->destroy(hasher);
+	lib->encoding->cache(lib->encoding, type, ec, *fp);
+	return TRUE;
+}
+
+/**
  * Implementation of private_key_t.get_fingerprint.
  */
 static bool get_fingerprint(private_openssl_ec_public_key_t *this,
 							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	chunk_t key;
-	u_char *p;
-	bool success;
-	
-	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
-	{
-		return TRUE;
-	}
-	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
-	p = key.ptr;
-	i2d_EC_PUBKEY(this->ec, &p);
-	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
-								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
-	free(key.ptr);
-	return success;
+	return openssl_ec_fingerprint(this->ec, type, fingerprint);
 }
 
 /**
@@ -222,17 +249,20 @@ static bool get_fingerprint(private_openssl_ec_public_key_t *this,
 static bool get_encoding(private_openssl_ec_public_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t key;
 	u_char *p;
-	bool success;
 	
-	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
-	p = key.ptr;
-	i2d_EC_PUBKEY(this->ec, &p);
-	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-								KEY_PART_ECDSA_PUB_ASN1_DER, key, KEY_PART_END);
-	free(key.ptr);
-	return success;
+	switch (type)
+	{
+		case KEY_PUB_SPKI_ASN1_DER:
+		{
+			*encoding = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
+			p = encoding->ptr;
+			i2d_EC_PUBKEY(this->ec, &p);
+			return TRUE;
+		}
+		default:
+			return FALSE;
+	}
 }
 
 /**
@@ -253,9 +283,9 @@ static void destroy(private_openssl_ec_public_key_t *this)
 	{
 		if (this->ec)
 		{
+			lib->encoding->clear_cache(lib->encoding, this->ec);
 			EC_KEY_free(this->ec);
 		}
-		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }

@@ -55,6 +55,9 @@ struct private_openssl_rsa_private_key_t {
 	refcount_t ref;
 };
 
+/* implemented in rsa public key */
+bool openssl_rsa_fingerprint(RSA *rsa, key_encoding_type_t type, chunk_t *fp);
+
 /**
  * Build an EMPSA PKCS1 signature described in PKCS#1
  */
@@ -205,21 +208,7 @@ static public_key_t* get_public_key(private_openssl_rsa_private_key_t *this)
 static bool get_fingerprint(private_openssl_rsa_private_key_t *this,
 							key_encoding_type_t type, chunk_t *fingerprint)
 {
-	chunk_t enc;
-	bool success;
-	u_char *p;
-	
-	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
-	{
-		return TRUE;
-	}
-	enc = chunk_alloc(i2d_RSAPublicKey(this->rsa, NULL));
-	p = enc.ptr;
-	i2d_RSAPublicKey(this->rsa, &p);
-	success = lib->encoding->encode(lib->encoding, type, this, fingerprint,
-							KEY_PART_RSA_PUB_ASN1_DER, enc, KEY_PART_END);
-	free(enc.ptr);
-	return success;
+	return openssl_rsa_fingerprint(this->rsa, type, fingerprint);
 }
 
 /*
@@ -228,21 +217,24 @@ static bool get_fingerprint(private_openssl_rsa_private_key_t *this,
 static bool get_encoding(private_openssl_rsa_private_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t enc;
-	bool success;
 	u_char *p;
 	
 	if (this->engine)
 	{
 		return FALSE;
 	}
-	enc = chunk_alloc(i2d_RSAPrivateKey(this->rsa, NULL));
-	p = enc.ptr;
-	i2d_RSAPrivateKey(this->rsa, &p);
-	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_RSA_PRIV_ASN1_DER, enc, KEY_PART_END);
-	free(enc.ptr);
-	return success;
+	switch (type)
+	{
+		case KEY_PRIV_ASN1_DER:
+		{
+			*encoding = chunk_alloc(i2d_RSAPrivateKey(this->rsa, NULL));
+			p = encoding->ptr;
+			i2d_RSAPrivateKey(this->rsa, &p);
+			return TRUE;
+		}
+		default:
+			return FALSE;
+	}
 }
 
 /**
@@ -263,9 +255,9 @@ static void destroy(private_openssl_rsa_private_key_t *this)
 	{
 		if (this->rsa)
 		{
+			lib->encoding->clear_cache(lib->encoding, this->rsa);
 			RSA_free(this->rsa);
 		}
-		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
 }
