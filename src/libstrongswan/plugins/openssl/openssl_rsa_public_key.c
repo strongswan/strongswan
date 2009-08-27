@@ -205,6 +205,7 @@ bool openssl_rsa_fingerprint(RSA *rsa, key_encoding_type_t type, chunk_t *fp)
 		return FALSE;
 	}
 	hasher->allocate_hash(hasher, key, fp);
+	free(key.ptr);
 	hasher->destroy(hasher);
 	lib->encoding->cache(lib->encoding, type, rsa, *fp);
 	return TRUE;

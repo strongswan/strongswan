@@ -230,6 +230,7 @@ bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
 	}
 	hasher->allocate_hash(hasher, key, fp);
 	hasher->destroy(hasher);
+	free(key.ptr);
 	lib->encoding->cache(lib->encoding, type, ec, *fp);
 	return TRUE;
 }
