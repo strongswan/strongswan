@@ -43,8 +43,18 @@ static int usage(char *error)
 	fprintf(out, "      show this usage information\n");
 	fprintf(out, "  pki --gen [--type rsa|ecdsa] [--size bits] [--outform der|pem|pgp]\n");
 	fprintf(out, "      generate a new private key\n");
+	fprintf(out, "        --type     type of key, default: rsa\n");
+	fprintf(out, "        --size     keylength in bits, default: rsa 2048, ecdsa 384\n");
+	fprintf(out, "        --outform  encoding of generated private key\n");
 	fprintf(out, "  pki --pub [--in file] [--type rsa|ecdsa|x509] [--outform der|pem|pgp]\n");
 	fprintf(out, "      extract the public key from a private key/certificate\n");
+	fprintf(out, "        --in       input file, default: stdin\n");
+	fprintf(out, "        --type     type of credential, default: rsa\n");
+	fprintf(out, "        --outform  encoding of extracted public key\n");
+	fprintf(out, "  pki --keyid [--in file] [--type rsa-priv|ecdsa-priv|pub|x509]\n");
+	fprintf(out, "      calculate key identifiers of a key/certificate\n");
+	fprintf(out, "        --in       input file, default: stdin\n");
+	fprintf(out, "        --type     type of key, default: rsa-priv\n");
 	return !!error;
 }
 
@@ -285,6 +295,130 @@ static int pub(int argc, char *argv[])
 }
 
 /**
+ * Calculate the keyid of a key/certificate
+ */
+static int keyid(int argc, char *argv[])
+{
+	credential_type_t type = CRED_PRIVATE_KEY;
+	int subtype = KEY_RSA;
+	certificate_t *cert;
+	private_key_t *private;
+	public_key_t *public;
+	char *file = NULL;
+	void *cred;
+	chunk_t id;
+	
+	struct option long_opts[] = {
+		{ "type", required_argument, NULL, 't' },
+		{ "in", required_argument, NULL, 'i' },
+		{ 0,0,0,0 }
+	};
+	while (TRUE)
+	{
+		switch (getopt_long(argc, argv, "", long_opts, NULL))
+		{
+			case 't':
+				if (streq(optarg, "rsa-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_RSA;
+				}
+				else if (streq(optarg, "ecdsa-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_ECDSA;
+				}
+				else if (streq(optarg, "pub"))
+				{
+					type = CRED_PUBLIC_KEY;
+					subtype = KEY_ANY;
+				}
+				else if (streq(optarg, "x509"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_X509;
+				}
+				else
+				{
+					return usage("invalid input type");
+				}
+				continue;
+			case 'i':
+				file = optarg;
+				continue;
+			case EOF:
+				break;
+			default:
+				return usage("invalid --keyid option");
+		}
+		break;
+	}
+	if (file)
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
+								  BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
+								  BUILD_FROM_FD, 0, BUILD_END);
+	}
+	if (!cred)
+	{
+		fprintf(stderr, "parsing input failed\n");
+		return 1;
+	}
+	
+	if (type == CRED_PRIVATE_KEY)
+	{
+		private = cred;
+		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &id))
+		{
+			printf("subject key identifier:    %#B\n", &id);
+		}
+		if (private->get_fingerprint(private, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		{
+			printf("subjectPublicKeyInfo hash: %#B\n", &id);
+		}
+		private->destroy(private);
+	}
+	else if (type == CRED_PUBLIC_KEY)
+	{
+		public = cred;
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
+		{
+			printf("subject key identifier:    %#B\n", &id);
+		}
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		{
+			printf("subjectPublicKeyInfo hash: %#B\n", &id);
+		}
+		public->destroy(public);
+	}
+	else
+	{
+		cert = cred;
+		public = cert->get_public_key(cert);
+		if (!public)
+		{
+			fprintf(stderr, "extracting public key from certificate failed");
+			return 1;
+		}
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
+		{
+			printf("subject key identifier:    %#B\n", &id);
+		}
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		{
+			printf("subjectPublicKeyInfo hash: %#B\n", &id);
+		}
+		public->destroy(public);
+		cert->destroy(cert);
+	}
+	return 0;
+}
+
+/**
  * Library initialization and operation parsing
  */
 int main(int argc, char *argv[])
@@ -293,6 +427,7 @@ int main(int argc, char *argv[])
 		{ "help", no_argument, NULL, 'h' },
 		{ "gen", no_argument, NULL, 'g' },
 		{ "pub", no_argument, NULL, 'p' },
+		{ "keyid", no_argument, NULL, 'k' },
 		{ 0,0,0,0 }
 	};
 	
@@ -318,6 +453,8 @@ int main(int argc, char *argv[])
 			return gen(argc, argv);
 		case 'p':
 			return pub(argc, argv);
+		case 'k':
+			return keyid(argc, argv);
 		default:
 			return usage("invalid operation");
 	}
