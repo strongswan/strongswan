@@ -133,7 +133,7 @@ static chunk_t build_Request(private_x509_ocsp_request_t *this,
 							 chunk_t serialNumber)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-				asn1_wrap(ASN1_SEQUENCE, "cmmm",
+				asn1_wrap(ASN1_SEQUENCE, "mmmm",
 					asn1_algorithmIdentifier(OID_SHA1),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerNameHash),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerKeyHash),

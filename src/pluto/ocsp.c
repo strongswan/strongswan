@@ -762,7 +762,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 	/* according to PKCS#1 v2.1 digest must be packaged into
 	 * an ASN.1 structure for encryption
 	 */
-	digest_info = asn1_wrap(ASN1_SEQUENCE, "cm"
+	digest_info = asn1_wrap(ASN1_SEQUENCE, "mm"
 		, asn1_algorithmIdentifier(OID_SHA1)
 		, asn1_simple_object(ASN1_OCTET_STRING, digest));
 
@@ -811,7 +811,7 @@ static chunk_t build_signature(chunk_t tbsRequest)
 
 	/* build signature comprising algorithm, signature and cert */
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m"
-				, asn1_wrap(ASN1_SEQUENCE, "cmm"
+				, asn1_wrap(ASN1_SEQUENCE, "mmm"
 					, asn1_algorithmIdentifier(OID_SHA1_WITH_RSA)
 					, sigdata
 					, certs
@@ -825,7 +825,7 @@ static chunk_t build_signature(chunk_t tbsRequest)
  */
 static chunk_t build_request(ocsp_location_t *location, ocsp_certinfo_t *certinfo)
 {
-	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm"
+	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "mmmm"
 				, asn1_algorithmIdentifier(OID_SHA1)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authNameID)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authKeyID)

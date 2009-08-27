@@ -1259,7 +1259,7 @@ static bool generate(private_builder_t *this)
 			{
 				return FALSE;
 			}
-			key_info = asn1_wrap(ASN1_SEQUENCE, "cm",
+			key_info = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 							asn1_bitstring("m", key));
 			break;
@@ -1272,7 +1272,7 @@ static bool generate(private_builder_t *this)
 		/* TODO: encode subjectAltNames */
 	}
 	
-	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmccmcmm", 
+	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm", 
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
 		asn1_integer("c", this->cert->serialNumber),
 		asn1_algorithmIdentifier(this->cert->algorithm),
@@ -1288,7 +1288,7 @@ static bool generate(private_builder_t *this)
 	{
 		return FALSE;
 	}
-	this->cert->encoding = asn1_wrap(ASN1_SEQUENCE, "ccm",
+	this->cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
 								this->cert->tbsCertificate,
 								asn1_algorithmIdentifier(this->cert->algorithm),
 								asn1_bitstring("c", this->cert->signature));

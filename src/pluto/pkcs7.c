@@ -673,8 +673,6 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 	contentInfo_t pkcs7Data, signedData;
 	chunk_t authenticatedAttributes, encryptedDigest, signerInfo, cInfo;
 
-	chunk_t digestAlgorithm = asn1_algorithmIdentifier(digest_alg);
-
 	if (attributes.ptr != NULL)
 	{
 		encryptedDigest = x509_build_signature(attributes, digest_alg, key,
@@ -689,10 +687,10 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 		authenticatedAttributes = chunk_empty;
 	}
 
-	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmcmcm"
+	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm"
 				, ASN1_INTEGER_1
 				, pkcs7_build_issuerAndSerialNumber(cert)
-				, digestAlgorithm
+				, asn1_algorithmIdentifier(digest_alg)
 				, authenticatedAttributes
 				, asn1_algorithmIdentifier(OID_RSA_ENCRYPTION)
 				, encryptedDigest);
@@ -704,7 +702,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 	signedData.type = OID_PKCS7_SIGNED_DATA;
 	signedData.content = asn1_wrap(ASN1_SEQUENCE, "cmmmm"
 				, ASN1_INTEGER_1
-				, asn1_simple_object(ASN1_SET, digestAlgorithm)
+				, asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_alg))
 				, pkcs7_build_contentInfo(&pkcs7Data)
 				, asn1_simple_object(ASN1_CONTEXT_C_0, cert->certificate)
 				, asn1_wrap(ASN1_SET, "m", signerInfo));
@@ -792,7 +790,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 		chunk_t encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m"
 					, protectedKey);
 
-		chunk_t recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmcm"
+		chunk_t recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmmm"
 					, ASN1_INTEGER_0
 					, pkcs7_build_issuerAndSerialNumber(cert)
 					, asn1_algorithmIdentifier(OID_RSA_ENCRYPTION)

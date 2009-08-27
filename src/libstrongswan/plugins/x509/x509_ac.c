@@ -616,7 +616,7 @@ static chunk_t build_extensions(private_x509_ac_t *this)
  */
 static chunk_t build_attr_cert_info(private_x509_ac_t *this)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cmmcmmmm",
+	return asn1_wrap(ASN1_SEQUENCE, "cmmmmmmm",
 				ASN1_INTEGER_1,
 				build_holder(this),
 				build_v2_form(this),
@@ -641,7 +641,7 @@ static chunk_t build_ac(private_x509_ac_t *this)
 	this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
 						  attributeCertificateInfo, &signatureValue);
 
-	return asn1_wrap(ASN1_SEQUENCE, "mcm",
+	return asn1_wrap(ASN1_SEQUENCE, "mmm",
 				attributeCertificateInfo,
 				asn1_algorithmIdentifier(OID_SHA1_WITH_RSA),
 				asn1_bitstring("m", signatureValue));

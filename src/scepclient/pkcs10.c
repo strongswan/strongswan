@@ -161,7 +161,7 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 	
 	pkcs10->public_key->get_encoding(pkcs10->public_key, KEY_PUB_ASN1_DER, &key);
 	
-	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
 							asn1_bitstring("m", key));
 
@@ -174,7 +174,7 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 	chunk_t signature = x509_build_signature(cert_req_info, signature_alg,
 											 pkcs10->private_key, TRUE);
 
-	return asn1_wrap(ASN1_SEQUENCE, "mcm",
+	return asn1_wrap(ASN1_SEQUENCE, "mmm",
 				cert_req_info,
 				asn1_algorithmIdentifier(signature_alg),
 				signature);

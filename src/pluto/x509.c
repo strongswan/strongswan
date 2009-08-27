@@ -1126,7 +1126,7 @@ static chunk_t build_tbs_x509cert(x509cert_t *cert, public_key_t *rsa)
 
 	rsa->get_encoding(rsa, KEY_PUB_ASN1_DER, &key);
 
-	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
 							asn1_bitstring("m", key));
 
@@ -1137,7 +1137,7 @@ static chunk_t build_tbs_x509cert(x509cert_t *cert, public_key_t *rsa)
 				, build_subjectAltNames(cert->subjectAltName)));
 	}
 
-	return asn1_wrap(ASN1_SEQUENCE, "mmccmcmm"
+	return asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm"
 				, version
 				, asn1_integer("c", cert->serialNumber)
 				, asn1_algorithmIdentifier(cert->sigAlg)
@@ -1163,7 +1163,7 @@ void build_x509cert(x509cert_t *cert, public_key_t *cert_key,
 	chunk_t signature = x509_build_signature(tbs_cert, cert->sigAlg
 								, signer_key, TRUE);
 
-	cert->certificate = asn1_wrap(ASN1_SEQUENCE, "mcm"
+	cert->certificate = asn1_wrap(ASN1_SEQUENCE, "mmm"
 								, tbs_cert
 								, asn1_algorithmIdentifier(cert->sigAlg)
 								, signature);

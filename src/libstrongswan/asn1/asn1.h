@@ -92,10 +92,10 @@ extern const chunk_t ASN1_INTEGER_2;
 /** Some ASN.1 analysis functions */
 
 /**
- * Returns some popular algorithmIdentifiers
+ * Build an algorithmIdentifier from a known OID.
  *
  * @param oid		known OID index
- * @return			body of the corresponding OID
+ * @return			body of the corresponding OID, allocated
  */
 chunk_t asn1_algorithmIdentifier(int oid);
 

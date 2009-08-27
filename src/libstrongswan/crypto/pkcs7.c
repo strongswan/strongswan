@@ -828,7 +828,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 
 		encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m", wrappedKey);
 
-		recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmcm",
+		recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmmm",
 					ASN1_INTEGER_0,
 					pkcs7_build_issuerAndSerialNumber(cert),
 					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
@@ -910,7 +910,7 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 		encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", encryptedDigest);
 	}
 
-	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmcmcm",
+	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm",
 					ASN1_INTEGER_1,
 					pkcs7_build_issuerAndSerialNumber(cert),
 					asn1_algorithmIdentifier(signature_oid),
@@ -931,7 +931,7 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 
 	this->content = asn1_wrap(ASN1_SEQUENCE, "cmcmm",
 			ASN1_INTEGER_1,
-			asn1_simple_object(ASN1_SET, asn1_algorithmIdentifier(signature_oid)),
+			asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(signature_oid)),
 			this->data,
 			asn1_simple_object(ASN1_CONTEXT_C_0, cert->get_certificate(cert)),
 			asn1_wrap(ASN1_SET, "m", signerInfo));

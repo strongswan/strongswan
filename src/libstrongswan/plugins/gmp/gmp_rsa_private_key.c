@@ -232,7 +232,7 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 		hasher->destroy(hasher);
 	
 		/* build DER-encoded digestInfo */
-		digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+		digestInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_algorithmIdentifier(hash_oid),
 						asn1_simple_object(ASN1_OCTET_STRING, hash)
 					  );
