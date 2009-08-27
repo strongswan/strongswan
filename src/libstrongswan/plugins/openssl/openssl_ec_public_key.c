@@ -49,7 +49,7 @@ struct private_openssl_ec_public_key_t {
  * Verification of a signature as in RFC 4754
  */
 static bool verify_signature(private_openssl_ec_public_key_t *this,
-							 chunk_t data, chunk_t signature)
+							 chunk_t hash, chunk_t signature)
 {
 	bool valid = FALSE;
 	ECDSA_SIG *sig;
@@ -60,7 +60,7 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 		/* split the signature chunk in r and s */
 		if (openssl_bn_split(signature, sig->r, sig->s))
 		{
-			valid = (ECDSA_do_verify(data.ptr, data.len, sig, this->ec) == 1);
+			valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
 		}
 		ECDSA_SIG_free(sig);
 	}
@@ -98,7 +98,7 @@ static bool verify_curve_signature(private_openssl_ec_public_key_t *this,
 	{
 		return FALSE;
 	}
-	valid = verify_signature(this, data, signature);
+	valid = verify_signature(this, hash, signature);
 	chunk_free(&hash);
 	return valid;
 }
