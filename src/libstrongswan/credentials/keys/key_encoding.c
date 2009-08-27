@@ -186,6 +186,31 @@ static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
 }
 
 /**
+ * Implementation of key_encoding_t.cache
+ */
+static void cache(private_key_encoding_t *this, key_encoding_type_t type,
+				  void *cache, chunk_t encoding)
+{
+	chunk_t *chunk;
+	
+	if (type >= KEY_ENCODING_MAX || type < 0)
+	{
+		return free(encoding.ptr);
+	}
+	chunk = malloc_thing(chunk_t);
+	*chunk = encoding;
+	this->lock->write_lock(this->lock);
+	chunk = this->cache[type]->put(this->cache[type], cache, chunk);
+	this->lock->unlock(this->lock);
+	/* free an encoding already associated to the cache */
+	if (chunk)
+	{
+		free(chunk->ptr);
+		free(chunk);
+	}
+}
+
+/**
  * Implementation of key_encoding_t.clear_cache
  */
 static void clear_cache(private_key_encoding_t *this, void *cache)
@@ -262,6 +287,7 @@ key_encoding_t *key_encoding_create()
 	
 	this->public.encode = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
 	this->public.get_cache = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
+	this->public.cache = (void(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t encoding))cache;
 	this->public.clear_cache = (void(*)(key_encoding_t*, void *cache))clear_cache;
 	this->public.add_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))add_encoder;
 	this->public.remove_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))remove_encoder;

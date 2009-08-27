@@ -154,11 +154,24 @@ struct key_encoding_t {
 	 *
 	 * @param type			format of the key encoding
 	 * @param cache			key to use for caching, as given to encode()
-	 * @encoding			encoding result, internal data
+	 * @param encoding		encoding result, internal data
 	 * @return				TRUE if cache entry found
 	 */
 	bool (*get_cache)(key_encoding_t *this, key_encoding_type_t type,
 					  void *cache, chunk_t *encoding);
+	
+	/**
+	 * Cache a key encoding created externally.
+	 *
+	 * After calling cache(), the passed encoding is owned by the key encoding
+	 * facility.
+	 *
+	 * @param type			format of the key encoding
+	 * @param cache			key to use for caching, as given to encode()
+	 * @param encoding		encoding to cache, gets owned by this
+	 */
+	void (*cache)(key_encoding_t *this, key_encoding_type_t type, void *cache,
+				  chunk_t encoding);
 	
 	/**
 	 * Register a key encoder function.
