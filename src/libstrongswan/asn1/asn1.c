@@ -43,23 +43,24 @@ const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
  */
 chunk_t asn1_algorithmIdentifier(int oid)
 {
-	chunk_t null;
+	chunk_t parameters;
 	
-	/* some algorithmIdentifiers have an appended NULL */
+	/* some algorithmIdentifiers have a NULL parameters field and some do not */
 	switch (oid)
 	{
+		case OID_EC_PUBLICKEY:
 		case OID_ECDSA_WITH_SHA1:
 		case OID_ECDSA_WITH_SHA224:
 		case OID_ECDSA_WITH_SHA256:
 		case OID_ECDSA_WITH_SHA384:
 		case OID_ECDSA_WITH_SHA512:
-			null = chunk_empty;
+			parameters = chunk_empty;
 			break;
 		default:
-			null = asn1_wrap(ASN1_NULL, "");;
+			parameters = asn1_simple_object(ASN1_NULL, chunk_empty);
 			break;
 	}
-	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), null);
+	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), parameters);
 }
 
 /*
