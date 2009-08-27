@@ -100,7 +100,7 @@ static bool build_curve_signature(private_openssl_ec_private_key_t *this,
 	{
 		return FALSE;
 	}
-	built = build_signature(this, data, signature);
+	built = build_signature(this, hash, signature);
 	chunk_free(&hash);
 	return built;
 }
