@@ -237,6 +237,10 @@ struct stroke_msg_t {
 				time_t ipsec_lifetime;
 				time_t ike_lifetime;
 				time_t margin;
+				u_int64_t life_bytes;
+				u_int64_t margin_bytes;
+				u_int64_t life_packets;
+				u_int64_t margin_packets;
 				unsigned long tries;
 				unsigned long fuzz;
 			} rekey;

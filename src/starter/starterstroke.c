@@ -279,6 +279,10 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
 		msg.add_conn.rekey.ike_lifetime = conn->sa_ike_life_seconds;
 		msg.add_conn.rekey.margin = conn->sa_rekey_margin;
+		msg.add_conn.rekey.life_bytes = conn->sa_ipsec_life_bytes;
+		msg.add_conn.rekey.margin_bytes = conn->sa_ipsec_margin_bytes;
+		msg.add_conn.rekey.life_packets = conn->sa_ipsec_life_packets;
+		msg.add_conn.rekey.margin_packets = conn->sa_ipsec_margin_packets;
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}

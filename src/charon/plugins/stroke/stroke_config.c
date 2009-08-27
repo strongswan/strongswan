@@ -772,6 +772,14 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.rekey.ipsec_lifetime,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
+	LIFETIME_CFG_SET(lifetime, bytes,
+		msg->add_conn.rekey.life_bytes,
+		msg->add_conn.rekey.life_bytes - msg->add_conn.rekey.margin_bytes,
+		msg->add_conn.rekey.margin_bytes * msg->add_conn.rekey.fuzz / 100);
+	LIFETIME_CFG_SET(lifetime, packets,
+		msg->add_conn.rekey.life_packets,
+		msg->add_conn.rekey.life_packets - msg->add_conn.rekey.margin_packets,
+		msg->add_conn.rekey.margin_packets * msg->add_conn.rekey.fuzz / 100);
 	
 	child_cfg = child_cfg_create(
 				msg->add_conn.name, lifetime,

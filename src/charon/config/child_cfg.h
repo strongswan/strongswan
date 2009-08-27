@@ -93,6 +93,16 @@ struct lifetime_cfg_t {
 };
 
 /**
+ * Helper macro to easily set all three values of a specified limit (time,
+ * bytes, packets).
+ */
+#define LIFETIME_CFG_SET(l, limit, life, rekey, jitter) do { \
+	(l)->life_##limit = (life); \
+	(l)->rekey_##limit = (rekey); \
+	(l)->jitter_##limit = (jitter); \
+} while(0)
+
+/**
  * Create a new lifetime_cfg_t object.
  */
 static inline lifetime_cfg_t* lifetime_cfg_create() {
@@ -108,9 +118,7 @@ static inline lifetime_cfg_t* lifetime_cfg_create_time(u_int64_t life,
 									  u_int64_t rekey, u_int64_t jitter)
 {
 	lifetime_cfg_t *this = lifetime_cfg_create();
-	this->life_time = life;
-	this->rekey_time = rekey;
-	this->jitter_time = jitter;
+	LIFETIME_CFG_SET(this, time, life, rekey, jitter);
 	return this;
 }
 
