@@ -256,20 +256,14 @@ static void remove_encoder(private_key_encoding_t *this, key_encoder_t encoder)
  */
 static void destroy(private_key_encoding_t *this)
 {
-	enumerator_t *enumerator;
 	key_encoding_type_t type;
-	chunk_t *chunk;
-	void *key;
 	
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
-		enumerator = this->cache[type]->create_enumerator(this->cache[type]);
-		while (enumerator->enumerate(enumerator, &key, &chunk))
-		{
-			chunk_free(chunk);
-			free(chunk);
-		}
-		enumerator->destroy(enumerator);
+		/* We explicitly do not free remaining encodings. All keys should
+		 * have gone now, and they are responsible for cleaning out their
+		 * cache entries. Not flushing here allows the leak detective to
+		 * complain if a key did not flush cached encodings. */
 		this->cache[type]->destroy(this->cache[type]);
 	}
 	this->encoders->destroy(this->encoders);
