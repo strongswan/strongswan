@@ -65,6 +65,11 @@
 #define PRIO_HIGH 2000
 
 /**
+ * map the limit for bytes and packets to XFRM_INF per default
+ */
+#define XFRM_LIMIT(x) ((x) == 0 ? XFRM_INF : (x))
+
+/**
  * Create ORable bitfield of XFRM NL groups
  */
 #define XFRMNLGRP(x) (1<<(XFRMNLGRP_##x-1))
@@ -788,6 +793,7 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 				process_mapping(this, hdr);
 				break;
 			default:
+				DBG1(DBG_KNL, "received unknown event from xfrm event socket: %d", hdr->nlmsg_type);
 				break;
 		}
 		hdr = NLMSG_NEXT(hdr, len);
@@ -965,11 +971,10 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
-	/* we currently do not expire SAs by volume/packet count */
-	sa->lft.soft_byte_limit = XFRM_INF;
-	sa->lft.hard_byte_limit = XFRM_INF;
-	sa->lft.soft_packet_limit = XFRM_INF;
-	sa->lft.hard_packet_limit = XFRM_INF;
+	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->rekey_bytes);
+	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->life_bytes);
+	sa->lft.soft_packet_limit = XFRM_LIMIT(lifetime->rekey_packets);
+	sa->lft.hard_packet_limit = XFRM_LIMIT(lifetime->life_packets);
 	/* we use lifetimes since added, not since used */
 	sa->lft.soft_add_expires_seconds = lifetime->rekey_time;
 	sa->lft.hard_add_expires_seconds = lifetime->life_time;
