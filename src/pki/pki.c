@@ -388,7 +388,7 @@ static int keyid(int argc, char *argv[])
 		private = cred;
 		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &id))
 		{
-			printf("subject key identifier:    %#B\n", &id);
+			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
 		if (private->get_fingerprint(private, KEY_ID_PUBKEY_INFO_SHA1, &id))
 		{
@@ -401,7 +401,7 @@ static int keyid(int argc, char *argv[])
 		public = cred;
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
 		{
-			printf("subject key identifier:    %#B\n", &id);
+			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
 		{
@@ -420,7 +420,7 @@ static int keyid(int argc, char *argv[])
 		}
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
 		{
-			printf("subject key identifier:    %#B\n", &id);
+			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
 		{
