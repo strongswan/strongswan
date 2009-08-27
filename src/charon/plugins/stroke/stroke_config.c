@@ -752,6 +752,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 									stroke_msg_t *msg)
 {
 	child_cfg_t *child_cfg;
+	lifetime_cfg_t *lifetime;
 	action_t dpd;
 	
 	switch (msg->add_conn.dpd.action)
@@ -766,10 +767,14 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 			dpd = ACTION_NONE;
 			break;
 	}
-	child_cfg = child_cfg_create(
-				msg->add_conn.name, msg->add_conn.rekey.ipsec_lifetime,
+
+	lifetime = lifetime_cfg_create_time(
+				msg->add_conn.rekey.ipsec_lifetime,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
-				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
+				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
+	
+	child_cfg = child_cfg_create(
+				msg->add_conn.name, lifetime,
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
 				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp);
 	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,

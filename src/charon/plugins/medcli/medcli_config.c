@@ -99,6 +99,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	chunk_t me, other;
+	lifetime_cfg_t *lifetime;
 	char *address, *local_net, *remote_net;
 	
 	/* query mediation server config:
@@ -173,8 +174,10 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 	
-	child_cfg = child_cfg_create(name, this->rekey*60 + this->rekey,
-							  this->rekey*60, this->rekey, NULL, TRUE,
+	lifetime = lifetime_cfg_create_time(this->rekey * 60 + this->rekey,
+										this->rekey, this->rekey);
+	
+	child_cfg = child_cfg_create(name, lifetime, NULL, TRUE,
 							  MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
@@ -217,6 +220,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	chunk_t me, other;
 	child_cfg_t *child_cfg;
 	auth_cfg_t *auth;
+	lifetime_cfg_t *lifetime;
 	
 	DESTROY_IF(this->current);
 	if (!this->inner->enumerate(this->inner, &name, &me, &other,
@@ -245,10 +249,11 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	this->current->add_auth_cfg(this->current, auth, FALSE);
 	
-	child_cfg = child_cfg_create(
-				name, this->rekey*60 + this->rekey,
-				this->rekey*60, this->rekey, NULL, TRUE,
-				MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
+	lifetime = lifetime_cfg_create_time(this->rekey * 60 + this->rekey,
+										this->rekey, this->rekey);
+	
+	child_cfg = child_cfg_create(name, lifetime, NULL, TRUE, MODE_TUNNEL,
+								 ACTION_NONE, ACTION_NONE, FALSE);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
