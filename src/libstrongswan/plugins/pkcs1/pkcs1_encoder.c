@@ -20,71 +20,6 @@
 #include <asn1/oid.h>
 
 /**
- * Build the SHA1 hash of pubkey(info) ASN.1 data
- */
-static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
-{
-	hasher_t *hasher;
-	
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		chunk_free(&pubkey);
-		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
-		return FALSE;
-	}
-	hasher->allocate_hash(hasher, pubkey, hash);
-	hasher->destroy(hasher);
-	chunk_free(&pubkey);
-	return TRUE;
-}
-
-/**
- * build the fingerprint of the subjectPublicKeyInfo object
- */
-static bool build_info_sha1(chunk_t *encoding, va_list args)
-{
-	chunk_t n, e, pubkey;
-	
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
-	{
-		pubkey = asn1_wrap(ASN1_SEQUENCE, "cm",
-					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-					asn1_bitstring("m",
-						asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_wrap(ASN1_INTEGER, "c", n),
-							asn1_wrap(ASN1_INTEGER, "c", e))));
-	}
-	else
-	{
-		return FALSE;
-	}
-	return hash_pubkey(pubkey, encoding);
-}
-
-/**
- * build the fingerprint of the subjectPublicKey object
- */
-static bool build_sha1(chunk_t *encoding, va_list args)
-{
-	chunk_t n, e, pubkey;
-	
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
-	{
-		pubkey = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_wrap(ASN1_INTEGER, "c", n),
-					asn1_wrap(ASN1_INTEGER, "c", e));
-	}
-	else
-	{
-		return FALSE;
-	}
-	return hash_pubkey(pubkey, encoding);
-}
-
-/**
  * Encode a public key in PKCS#1/ASN.1 DER
  */
 bool build_pub(chunk_t *encoding, va_list args)
@@ -97,6 +32,27 @@ bool build_pub(chunk_t *encoding, va_list args)
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_wrap(ASN1_INTEGER, "c", n),
 						asn1_wrap(ASN1_INTEGER, "c", e));
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Encode a public key in PKCS#1/ASN.1 DER, contained in subjectPublicKeyInfo
+ */
+bool build_pub_info(chunk_t *encoding, va_list args)
+{
+	chunk_t n, e;
+	
+	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
+						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+	{
+		*encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
+						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+						asn1_bitstring("m",
+							asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_wrap(ASN1_INTEGER, "c", n),
+								asn1_wrap(ASN1_INTEGER, "c", e))));
 		return TRUE;
 	}
 	return FALSE;
@@ -131,6 +87,54 @@ bool build_priv(chunk_t *encoding, va_list args)
 }
 
 /**
+ * Build the SHA1 hash of pubkey(info) ASN.1 data
+ */
+static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
+{
+	hasher_t *hasher;
+	
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (hasher == NULL)
+	{
+		chunk_free(&pubkey);
+		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		return FALSE;
+	}
+	hasher->allocate_hash(hasher, pubkey, hash);
+	hasher->destroy(hasher);
+	chunk_free(&pubkey);
+	return TRUE;
+}
+
+/**
+ * build the fingerprint of the subjectPublicKeyInfo object
+ */
+static bool build_info_sha1(chunk_t *encoding, va_list args)
+{
+	chunk_t pubkey;
+	
+	if (build_pub_info(&pubkey, args))
+	{
+		return hash_pubkey(pubkey, encoding);
+	}
+	return FALSE;
+}
+
+/**
+ * build the fingerprint of the subjectPublicKey object
+ */
+static bool build_sha1(chunk_t *encoding, va_list args)
+{
+	chunk_t pubkey;
+	
+	if (build_pub(&pubkey, args))
+	{
+		return hash_pubkey(pubkey, encoding);
+	}
+	return FALSE;
+}
+
+/**
  * See header.
  */
 bool pkcs1_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
@@ -144,6 +148,8 @@ bool pkcs1_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 			return build_sha1(encoding, args);
 		case KEY_PUB_ASN1_DER:
 			return build_pub(encoding, args);
+		case KEY_PUB_SPKI_ASN1_DER:
+			return build_pub_info(encoding, args);
 		case KEY_PRIV_ASN1_DER:
 			return build_priv(encoding, args);
 		default:
