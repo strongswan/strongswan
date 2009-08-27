@@ -36,6 +36,7 @@ typedef enum {
 	ARG_UINT,
 	ARG_TIME,
 	ARG_ULNG,
+	ARG_ULLI,
 	ARG_PCNT,
 	ARG_STR,
 	ARG_LST,
@@ -429,6 +430,20 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 		}
 		break;
+	case ARG_ULLI:
+		{
+			char *endptr;
+			unsigned long long *ll = (unsigned long long *)p;
+
+			*ll = strtoull(kw->value, &endptr, 10);
+
+			if (*endptr != '\0')
+			{
+				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				return FALSE;
+			}
+		}
+		break;
 	case ARG_TIME:
 		{
 			char *endptr;
@@ -654,6 +669,17 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				unsigned long *l2 = (unsigned long *)p2;
 
 				if (*l1 != *l2)
+				{
+					return FALSE;
+				}
+			}
+			break;
+		case ARG_ULLI:
+			{
+				unsigned long long *ll1 = (unsigned long long *)p1;
+				unsigned long long *ll2 = (unsigned long long *)p2;
+
+				if (*ll1 != *ll2)
 				{
 					return FALSE;
 				}
