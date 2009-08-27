@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -547,7 +547,8 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 						u_int32_t spi, u_int16_t cpi, bool inbound)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
-	u_int32_t soft, hard, now;
+	time_t now;
+	lifetime_cfg_t *lifetime;
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
@@ -585,23 +586,30 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	this->proposal->get_algorithm(this->proposal, INTEGRITY_ALGORITHM,
 								  &int_alg, &size);
 	
-	soft = this->config->get_lifetime(this->config, TRUE);
-	hard = this->config->get_lifetime(this->config, FALSE);
-	
-	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-				src, dst, spi, this->protocol, this->reqid,
-				inbound ? soft : 0, hard, enc_alg, encr, int_alg, integ,
-				this->mode, this->ipcomp, cpi, this->encap, update);
+	lifetime = this->config->get_lifetime(this->config);
 	
 	now = time_monotonic(NULL);
-	if (soft)
+	if (lifetime->rekey_time)
 	{
-		this->rekey_time = now + soft;
+		this->rekey_time = now + lifetime->rekey_time;
 	}
-	if (hard)
+	if (lifetime->life_time)
 	{
-		this->expire_time = now + hard;
+		this->expire_time = now + lifetime->life_time;
 	}
+	
+	if (!lifetime->jitter_time && !inbound)
+	{	/* avoid triggering multiple rekey events */
+		lifetime->rekey_time = 0;
+	}
+	
+	status = charon->kernel_interface->add_sa(charon->kernel_interface,
+				src, dst, spi, this->protocol, this->reqid, lifetime,
+				enc_alg, encr, int_alg, integ, this->mode, this->ipcomp, cpi,
+				this->encap, update);
+	
+	free(lifetime);
+	
 	return status;
 }
 
