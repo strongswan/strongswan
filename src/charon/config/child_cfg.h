@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -25,6 +25,7 @@
 
 typedef enum action_t action_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
+typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -64,6 +65,54 @@ enum ipcomp_transform_t {
  * enum strings for ipcomp_transform_t.
  */
 extern enum_name_t *ipcomp_transform_names;
+
+/**
+ * A lifetime_cfg_t defines the lifetime limits of a CHILD_SA.
+ *
+ * Set any of these values to 0 to ignore.
+ */
+struct lifetime_cfg_t {
+	/** Time in seconds before the CHILD_SA gets invalid. */
+	u_int64_t	life_time;
+	/** Number of bytes transmitted before the CHILD_SA gets invalid. */
+	u_int64_t	life_bytes;
+	/** Number of packets transmitted before the CHILD_SA gets invalid. */
+	u_int64_t	life_packets;
+	/** Time in seconds before the CHILD_SA gets rekeyed. */
+	u_int64_t	rekey_time;
+	/** Number of bytes transmitted before the CHILD_SA gets rekeyed. */
+	u_int64_t	rekey_bytes;
+	/** Number of packets transmitted before the CHILD_SA gets rekeyed. */
+	u_int64_t	rekey_packets;
+	/** The range of a random value subtracted from rekey_time */
+	u_int64_t	jitter_time;
+	/** The range of a random value subtracted from rekey_bytes */
+	u_int64_t	jitter_bytes;
+	/** The range of a random value subtracted from rekey_packets */
+	u_int64_t	jitter_packets;
+};
+
+/**
+ * Create a new lifetime_cfg_t object.
+ */
+static inline lifetime_cfg_t* lifetime_cfg_create() {
+	lifetime_cfg_t *this = malloc_thing(lifetime_cfg_t);
+	memset(this, 0, sizeof(lifetime_cfg_t));
+	return this;
+}
+
+/**
+ * Special constructor for the (currently) most common case.
+ */
+static inline lifetime_cfg_t* lifetime_cfg_create_time(u_int64_t life,
+									  u_int64_t rekey, u_int64_t jitter)
+{
+	lifetime_cfg_t *this = lifetime_cfg_create();
+	this->life_time = life;
+	this->rekey_time = rekey;
+	this->jitter_time = jitter;
+	return this;
+}
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
