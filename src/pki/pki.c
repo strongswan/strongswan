@@ -23,10 +23,12 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 
 #include <library.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/certificates/x509.h>
 
 static int usage(char *error)
 {
@@ -55,6 +57,14 @@ static int usage(char *error)
 	fprintf(out, "      calculate key identifiers of a key/certificate\n");
 	fprintf(out, "        --in       input file, default: stdin\n");
 	fprintf(out, "        --type     type of key, default: rsa-priv\n");
+	fprintf(out, "  pki --self [--in file] [--type rsa|ecdsa] --dn distinguished-name\n");
+	fprintf(out, "             [--lifetime days] [--serial hex]\n");
+	fprintf(out, "      create a self signed certificate\n");
+	fprintf(out, "        --in       private key input file, default: stdin\n");
+	fprintf(out, "        --type     type of input key, default: rsa\n");
+	fprintf(out, "        --dn       subject and issuer distinguished name\n");
+	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
+	fprintf(out, "        --serial   serial number in hex, default: random\n");
 	return !!error;
 }
 
@@ -419,6 +429,159 @@ static int keyid(int argc, char *argv[])
 }
 
 /**
+ * Create a self signed certificate.
+ */
+static int self(int argc, char *argv[])
+{
+	key_type_t type = KEY_RSA;
+	certificate_t *cert;
+	private_key_t *private;
+	public_key_t *public;
+	char *file = NULL, *dn = NULL, *hex = NULL;
+	identification_t *id;
+	int lifetime = 1080;
+	chunk_t serial, encoding;
+	time_t not_before, not_after;
+	
+	struct option long_opts[] = {
+		{ "type", required_argument, NULL, 't' },
+		{ "in", required_argument, NULL, 'i' },
+		{ "dn", required_argument, NULL, 'd' },
+		{ "lifetime", required_argument, NULL, 'l' },
+		{ "serial", required_argument, NULL, 's' },
+		{ 0,0,0,0 }
+	};
+	
+	while (TRUE)
+	{
+		switch (getopt_long(argc, argv, "", long_opts, NULL))
+		{
+			case 't':
+				if (streq(optarg, "rsa"))
+				{
+					type = KEY_RSA;
+				}
+				else if (streq(optarg, "ecdsa"))
+				{
+					type = KEY_ECDSA;
+				}
+				else
+				{
+					return usage("invalid input type");
+				}
+				continue;
+			case 'i':
+				file = optarg;
+				continue;
+			case 'd':
+				dn = optarg;
+				continue;
+			case 'l':
+				lifetime = atoi(optarg);
+				if (!lifetime)
+				{
+					return usage("invalid --lifetime value");
+				}
+				continue;
+			case 's':
+				hex = optarg;
+				continue;
+			case EOF:
+				break;
+			default:
+				return usage("invalid --self option");
+		}
+		break;
+	}
+	
+	if (!dn)
+	{
+		return usage("--dn is required");
+	}
+	id = identification_create_from_string(dn);
+	if (id->get_type(id) != ID_DER_ASN1_DN)
+	{
+		id->destroy(id);
+		fprintf(stderr, "supplied --dn is not a distinguished name\n");
+		return 1;
+	}
+	if (file)
+	{
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+									 BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else
+	{
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+									 BUILD_FROM_FD, 0, BUILD_END);
+	}
+	if (!private)
+	{
+		id->destroy(id);
+		fprintf(stderr, "parsing private key failed\n");
+		return 1;
+	}
+	public = private->get_public_key(private);
+	if (!public)
+	{
+		private->destroy(private);
+		id->destroy(id);
+		fprintf(stderr, "extracting public key failed\n");
+		return 1;
+	}
+	if (hex)
+	{
+		serial = chunk_from_hex(chunk_create(hex, strlen(hex)), NULL);
+	}
+	else
+	{
+		rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		if (!rng)
+		{
+			id->destroy(id);
+			private->destroy(private);
+			public->destroy(public);
+			fprintf(stderr, "no random number generator found\n");
+			return 1;
+		}
+		rng->allocate_bytes(rng, 8, &serial);
+		rng->destroy(rng);
+	}
+	not_before = time(NULL);
+	not_after = not_before + lifetime * 24 * 60 * 60;
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+						BUILD_SIGNING_KEY, private, BUILD_PUBLIC_KEY, public,
+						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
+						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
+						BUILD_END);
+	private->destroy(private);
+	public->destroy(public);
+	id->destroy(id);
+	free(serial.ptr);
+	if (!cert)
+	{
+		fprintf(stderr, "generating certificate failed\n");
+		return 1;
+	}
+	encoding = cert->get_encoding(cert);
+	if (!encoding.ptr)
+	{
+		cert->destroy(cert);
+		fprintf(stderr, "encoding certificate failed\n");
+		return 1;
+	}
+	cert->destroy(cert);
+	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
+	{
+		fprintf(stderr, "writing certificate key failed\n");
+		free(encoding.ptr);
+		return 1;
+	}
+	free(encoding.ptr);
+	return 0;
+}
+
+/**
  * Library initialization and operation parsing
  */
 int main(int argc, char *argv[])
@@ -428,6 +591,7 @@ int main(int argc, char *argv[])
 		{ "gen", no_argument, NULL, 'g' },
 		{ "pub", no_argument, NULL, 'p' },
 		{ "keyid", no_argument, NULL, 'k' },
+		{ "self", no_argument, NULL, 's' },
 		{ 0,0,0,0 }
 	};
 	
@@ -455,6 +619,8 @@ int main(int argc, char *argv[])
 			return pub(argc, argv);
 		case 'k':
 			return keyid(argc, argv);
+		case 's':
+			return self(argc, argv);
 		default:
 			return usage("invalid operation");
 	}
