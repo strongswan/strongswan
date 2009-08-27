@@ -46,51 +46,31 @@ struct private_openssl_ec_public_key_t {
 };
 
 /**
- * Convert a chunk to an ECDSA_SIG (which must already exist). r and s
- * of the signature have to be concatenated in the chunk.
- */
-static bool chunk2sig(const EC_GROUP *group, chunk_t chunk, ECDSA_SIG *sig)
-{
-	return openssl_bn_split(chunk, sig->r, sig->s);
-}
-
-/**
  * Verification of a signature as in RFC 4754
  */
 static bool verify_signature(private_openssl_ec_public_key_t *this,
-								int hash_type, chunk_t data, chunk_t signature)
+							 int hash_type, chunk_t data, chunk_t signature)
 {
-	chunk_t hash = chunk_empty;
-	ECDSA_SIG *sig;
 	bool valid = FALSE;
+	ECDSA_SIG *sig;
+	chunk_t hash;
 	
-	if (hash_type == NID_undef)
-	{
-		hash = data;
-	}
-	else
+	hash = data;
+	if (hash_type != NID_undef)
 	{
 		if (!openssl_hash_chunk(hash_type, data, &hash))
 		{
 			return FALSE;
 		}
 	}
-	
 	sig = ECDSA_SIG_new();
-	if (!sig)
-	{
-		goto error;
-	}
-	
-	if (!chunk2sig(EC_KEY_get0_group(this->ec), signature, sig))
-	{
-		goto error;
-	}
-	valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
-	
-error:
 	if (sig)
 	{
+		/* split the signature chunk in r and s */
+		if (openssl_bn_split(signature, sig->r, sig->s))
+		{
+			valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
+		}
 		ECDSA_SIG_free(sig);
 	}
 	if (hash_type != NID_undef)
@@ -100,45 +80,26 @@ error:
 	return valid;
 }
 
-
 /**
- * Verification of the default signature using SHA-1
+ * Verification of a DER encoded signature as in RFC 3279
  */
-static bool verify_default_signature(private_openssl_ec_public_key_t *this,
-								chunk_t data, chunk_t signature)
+static bool verify_der_signature(private_openssl_ec_public_key_t *this,
+								 int nid, chunk_t data, chunk_t signature)
 {
+	chunk_t hash;
 	bool valid = FALSE;
-	chunk_t hash = chunk_empty;
-	u_char *p;
-	ECDSA_SIG *sig;
 	
 	/* remove any preceding 0-bytes from signature */
-	while (signature.len && *(signature.ptr) == 0x00)
+	while (signature.len && signature.ptr[0] == 0x00)
 	{
-		signature.len -= 1;
-		signature.ptr++;
+		signature = chunk_skip(signature, 1);
 	}
-	
-	p = signature.ptr;
-	sig = d2i_ECDSA_SIG(NULL, (const u_char**)&p, signature.len);
-	if (!sig)
+	if (openssl_hash_chunk(nid, data, &hash))
 	{
-		return FALSE;
+		valid = ECDSA_verify(0, hash.ptr, hash.len,
+							 signature.ptr, signature.len, this->ec);
+		free(hash.ptr);
 	}
-	
-	if (!openssl_hash_chunk(NID_sha1, data, &hash))
-	{
-		goto error;
-	}
-	
-	valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
-
-error:
-	if (sig)
-	{
-		ECDSA_SIG_free(sig);
-	}
-	chunk_free(&hash);
 	return valid;
 }
 
@@ -158,10 +119,16 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 {
 	switch (scheme)
 	{
+		case SIGN_ECDSA_WITH_SHA1_DER:
+			return verify_der_signature(this, NID_sha1, data, signature);
+		case SIGN_ECDSA_WITH_SHA256_DER:
+			return verify_der_signature(this, NID_sha256, data, signature);
+		case SIGN_ECDSA_WITH_SHA384_DER:
+			return verify_der_signature(this, NID_sha384, data, signature);
+		case SIGN_ECDSA_WITH_SHA512_DER:
+			return verify_der_signature(this, NID_sha512, data, signature);
 		case SIGN_ECDSA_WITH_NULL:
 			return verify_signature(this, NID_undef, data, signature);
-		case SIGN_ECDSA_WITH_SHA1:
-			return verify_default_signature(this, data, signature);
 		case SIGN_ECDSA_256:
 			return verify_signature(this, NID_sha256, data, signature);
 		case SIGN_ECDSA_384:

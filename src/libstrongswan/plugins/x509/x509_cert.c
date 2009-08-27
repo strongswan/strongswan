@@ -1249,7 +1249,7 @@ static bool generate(private_builder_t *this)
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
 		case KEY_ECDSA:
-			scheme = SIGN_ECDSA_WITH_SHA1;
+			scheme = SIGN_ECDSA_WITH_SHA1_DER;
 			this->cert->algorithm = OID_ECDSA_WITH_SHA1;
 			break;
 		default:

@@ -54,8 +54,7 @@ extern enum_name_t *key_type_names;
  *
  * EMSA-PKCS1 signatures are defined in PKCS#1 standard.
  * A prepended ASN.1 encoded digestInfo field contains the 
- * OID of the used hash algorithm. The ASN.1 type of the PKCS#7
- * variants is OCTET_STRING instead of the default BIT_STRING.
+ * OID of the used hash algorithm.
  */
 enum signature_scheme_t {
 	/** Unknown signature scheme                                       */
@@ -74,10 +73,16 @@ enum signature_scheme_t {
 	SIGN_RSA_EMSA_PKCS1_SHA384,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-512   */
 	SIGN_RSA_EMSA_PKCS1_SHA512,
-	/** ECDSA over precomputed digest                                  */
+	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
+	SIGN_ECDSA_WITH_SHA1_DER,
+	/** ECDSA with SHA-256 using DER encoding as in RFC 3279           */
+	SIGN_ECDSA_WITH_SHA256_DER,
+	/** ECDSA with SHA-384 using DER encoding as in RFC 3279           */
+	SIGN_ECDSA_WITH_SHA384_DER,
+	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
+	SIGN_ECDSA_WITH_SHA512_DER,
+	/** ECDSA over precomputed digest, signature as in RFC 4754        */
 	SIGN_ECDSA_WITH_NULL,
-	/** ECDSA with SHA-1                                               */
-	SIGN_ECDSA_WITH_SHA1,
 	/** ECDSA on the P-256 curve with SHA-256 as in RFC 4754           */
 	SIGN_ECDSA_256,
 	/** ECDSA on the P-384 curve with SHA-384 as in RFC 4754           */
