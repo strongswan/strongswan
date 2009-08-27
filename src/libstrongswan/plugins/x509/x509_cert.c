@@ -1208,7 +1208,7 @@ static bool generate(private_builder_t *this)
 {
 	chunk_t extensions = chunk_empty;
 	identification_t *issuer, *subject;
-	chunk_t key_info, key;
+	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
 	
@@ -1241,32 +1241,25 @@ static bool generate(private_builder_t *this)
 	}
 	this->cert->flags = this->flags;
 	
+	/* select signature scheme. TODO: support other hashes. */
 	switch (this->sign_key->get_type(this->sign_key))
 	{
 		case KEY_RSA:
 			this->cert->algorithm = OID_SHA1_WITH_RSA;
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
-		default:
-			return FALSE;
-	}
-	
-	switch (this->cert->public_key->get_type(this->cert->public_key))
-	{
-		case KEY_RSA:
-			if (!this->cert->public_key->get_encoding(this->cert->public_key,
-													  KEY_PUB_ASN1_DER, &key))
-			{
-				return FALSE;
-			}
-			key_info = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-							asn1_bitstring("m", key));
+		case KEY_ECDSA:
+			scheme = SIGN_ECDSA_WITH_SHA1;
+			this->cert->algorithm = OID_ECDSA_WITH_SHA1;
 			break;
 		default:
 			return FALSE;
 	}
-	
+	if (!this->cert->public_key->get_encoding(this->cert->public_key,
+											  KEY_PUB_SPKI_ASN1_DER, &key_info))
+	{
+		return FALSE;
+	}
 	if (this->cert->subjectAltNames->get_count(this->cert->subjectAltNames))
 	{
 		/* TODO: encode subjectAltNames */
