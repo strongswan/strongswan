@@ -48,7 +48,6 @@ chunk_t asn1_algorithmIdentifier(int oid)
 	/* some algorithmIdentifiers have a NULL parameters field and some do not */
 	switch (oid)
 	{
-		case OID_EC_PUBLICKEY:
 		case OID_ECDSA_WITH_SHA1:
 		case OID_ECDSA_WITH_SHA224:
 		case OID_ECDSA_WITH_SHA256:
