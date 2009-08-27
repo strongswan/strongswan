@@ -507,7 +507,7 @@ static void get_usestats(private_child_sa_t *this, bool inbound,
 /**
  * Implementation of child_sa_t.get_lifetime
  */
-static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
+static time_t get_lifetime(private_child_sa_t *this, bool hard)
 {
 	return hard ? this->expire_time : this->rekey_time;
 }
@@ -895,7 +895,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_mode = (void(*)(child_sa_t*, ipsec_mode_t mode))set_mode;
 	this->public.get_proposal = (proposal_t*(*)(child_sa_t*))get_proposal;
 	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
-	this->public.get_lifetime = (u_int32_t(*)(child_sa_t*, bool))get_lifetime;
+	this->public.get_lifetime = (time_t(*)(child_sa_t*, bool))get_lifetime;
 	this->public.get_usestats = (void(*)(child_sa_t*,bool,time_t*,u_int64_t*))get_usestats;
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;

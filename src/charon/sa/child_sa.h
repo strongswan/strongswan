@@ -229,12 +229,12 @@ struct child_sa_t {
 	bool (*has_encap)(child_sa_t *this);
 	
 	/**
-	 * Get the lifetime of the CHILD_SA.
+	 * Get the absolute time when the CHILD_SA expires or gets rekeyed.
 	 *
 	 * @param hard		TRUE for hard lifetime, FALSE for soft (rekey) lifetime
-	 * @return			lifetime in seconds
+	 * @return			absolute time
 	 */
-	u_int32_t (*get_lifetime)(child_sa_t *this, bool hard);
+	time_t (*get_lifetime)(child_sa_t *this, bool hard);
 	
 	/**
 	 * Get last use time and the number of bytes processed.
