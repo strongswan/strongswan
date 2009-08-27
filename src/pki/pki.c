@@ -658,6 +658,7 @@ static int verify(int argc, char *argv[])
 				if (ca->get_validity(ca, NULL, NULL, NULL))
 				{
 					printf("signature good, certificates valid\n");
+					good = TRUE;
 				}
 				else
 				{
