@@ -1226,7 +1226,7 @@ static status_t get_cpi(private_kernel_pfkey_ipsec_t *this,
 static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
-					   u_int64_t expire_soft, u_int64_t expire_hard,
+					   lifetime_cfg_t *lifetime,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
@@ -1287,13 +1287,13 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_SOFT;
 	lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
-	lft->sadb_lifetime_addtime = expire_soft;
+	lft->sadb_lifetime_addtime = lifetime->rekey_time;
 	PFKEY_EXT_ADD(msg, lft);
 	
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_HARD;
 	lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
-	lft->sadb_lifetime_addtime = expire_hard;
+	lft->sadb_lifetime_addtime = lifetime->life_time;
 	PFKEY_EXT_ADD(msg, lft);
 	
 	if (enc_alg != ENCR_UNDEFINED)
@@ -2153,7 +2153,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;

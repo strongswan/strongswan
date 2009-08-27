@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -78,22 +78,19 @@ struct kernel_interface_t {
 	
 	/**
 	 * Add an SA to the SAD.
-	 * 
+	 *
 	 * add_sa() may update an already allocated
 	 * SPI (via get_spi). In this case, the replace
 	 * flag must be set.
 	 * This function does install a single SA for a
-	 * single protocol in one direction. The kernel-interface
-	 * gets the keys itself from the PRF, as we don't know
-	 * his algorithms and key sizes.
-	 * 
+	 * single protocol in one direction.
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param reqid			unique ID for this SA
-	 * @param expire_soft	lifetime in seconds before rekeying
-	 * @param expire_hard	lifetime in seconds before delete
+	 * @param lifetime		lifetime_cfg_t for this SA
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param enc_key		key to use for encryption
 	 * @param int_alg		Algorithm to use for integrity protection
@@ -108,9 +105,9 @@ struct kernel_interface_t {
 	status_t (*add_sa) (kernel_interface_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol, u_int32_t reqid,
-						u_int64_t expire_soft, u_int64_t expire_hard,
-					    u_int16_t enc_alg, chunk_t enc_key,
-					    u_int16_t int_alg, chunk_t int_key,
+						lifetime_cfg_t *lifetime,
+						u_int16_t enc_alg, chunk_t enc_key,
+						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 						bool encap, bool inbound);
 	

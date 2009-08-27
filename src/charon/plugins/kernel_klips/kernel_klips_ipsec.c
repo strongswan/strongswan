@@ -1700,7 +1700,7 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 static status_t add_sa(private_kernel_klips_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
-					   u_int64_t expire_soft, u_int64_t expire_hard,
+					   lifetime_cfg_t *lifetime,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
@@ -1844,14 +1844,14 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	/* Although KLIPS supports SADB_EXT_LIFETIME_SOFT/HARD, we handle the lifetime
 	 * of SAs manually in the plugin. Refer to the comments in receive_events()
 	 * for details. */
-	if (expire_soft)
+	if (lifetime->rekey_time)
 	{
-		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_SOFT, expire_soft);
+		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_SOFT, lifetime->rekey_time);
 	}
 	
-	if (expire_hard)
+	if (lifetime->life_time)
 	{
-		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_HARD, expire_hard);
+		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_HARD, lifetime->life_time);
 	}
 		
 	return SUCCESS;
@@ -2617,7 +2617,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -919,7 +919,7 @@ static status_t get_cpi(private_kernel_netlink_ipsec_t *this,
 static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
-					   u_int64_t expire_soft, u_int64_t expire_hard,
+					   lifetime_cfg_t *lifetime,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
@@ -935,7 +935,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	 * we are in the recursive call below */
 	if (ipcomp != IPCOMP_NONE && cpi != 0)
 	{
-		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, 0, 0,
+		lifetime_cfg_t lft = { 0,0,0,0,0,0,0,0,0 };
+		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, &lft,
  			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
  			   mode, ipcomp, 0, FALSE, inbound);
 		ipcomp = IPCOMP_NONE;
@@ -970,8 +971,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	sa->lft.soft_packet_limit = XFRM_INF;
 	sa->lft.hard_packet_limit = XFRM_INF;
 	/* we use lifetimes since added, not since used */
-	sa->lft.soft_add_expires_seconds = expire_soft;
-	sa->lft.hard_add_expires_seconds = expire_hard;
+	sa->lft.soft_add_expires_seconds = lifetime->rekey_time;
+	sa->lft.hard_add_expires_seconds = lifetime->life_time;
 	sa->lft.soft_use_expires_seconds = 0;
 	sa->lft.hard_use_expires_seconds = 0;
 	
@@ -1970,7 +1971,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
