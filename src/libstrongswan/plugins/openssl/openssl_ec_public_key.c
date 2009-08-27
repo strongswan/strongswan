@@ -49,34 +49,57 @@ struct private_openssl_ec_public_key_t {
  * Verification of a signature as in RFC 4754
  */
 static bool verify_signature(private_openssl_ec_public_key_t *this,
-							 int hash_type, chunk_t data, chunk_t signature)
+							 chunk_t data, chunk_t signature)
 {
 	bool valid = FALSE;
 	ECDSA_SIG *sig;
-	chunk_t hash;
 	
-	hash = data;
-	if (hash_type != NID_undef)
-	{
-		if (!openssl_hash_chunk(hash_type, data, &hash))
-		{
-			return FALSE;
-		}
-	}
 	sig = ECDSA_SIG_new();
 	if (sig)
 	{
 		/* split the signature chunk in r and s */
 		if (openssl_bn_split(signature, sig->r, sig->s))
 		{
-			valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
+			valid = (ECDSA_do_verify(data.ptr, data.len, sig, this->ec) == 1);
 		}
 		ECDSA_SIG_free(sig);
 	}
-	if (hash_type != NID_undef)
+	return valid;
+}
+
+/**
+ * Verify a RFC 4754 signature for a specified curve and hash algorithm
+ */
+static bool verify_curve_signature(private_openssl_ec_public_key_t *this,
+								signature_scheme_t scheme, int nid_hash,
+								int nid_curve, chunk_t data, chunk_t signature)
+{
+	const EC_GROUP *my_group;
+	EC_GROUP *req_group;
+	chunk_t hash;
+	bool valid;
+	
+	req_group = EC_GROUP_new_by_curve_name(nid_curve);
+	if (!req_group)
 	{
-		chunk_free(&hash);
+		DBG1("signature scheme %N not supported in EC (required curve "
+			 "not supported)", signature_scheme_names, scheme);
+		return FALSE;
 	}
+	my_group = EC_KEY_get0_group(this->ec);
+	if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
+	{
+		DBG1("signature scheme %N not supported by private key",
+			 signature_scheme_names, scheme);
+		return FALSE;
+	}
+	EC_GROUP_free(req_group);
+	if (!openssl_hash_chunk(nid_hash, data, &hash))
+	{
+		return FALSE;
+	}
+	valid = verify_signature(this, data, signature);
+	chunk_free(&hash);
 	return valid;
 }
 
@@ -84,7 +107,7 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
  * Verification of a DER encoded signature as in RFC 3279
  */
 static bool verify_der_signature(private_openssl_ec_public_key_t *this,
-								 int nid, chunk_t data, chunk_t signature)
+								 int nid_hash, chunk_t data, chunk_t signature)
 {
 	chunk_t hash;
 	bool valid = FALSE;
@@ -94,7 +117,7 @@ static bool verify_der_signature(private_openssl_ec_public_key_t *this,
 	{
 		signature = chunk_skip(signature, 1);
 	}
-	if (openssl_hash_chunk(nid, data, &hash))
+	if (openssl_hash_chunk(nid_hash, data, &hash))
 	{
 		valid = ECDSA_verify(0, hash.ptr, hash.len,
 							 signature.ptr, signature.len, this->ec);
@@ -114,8 +137,8 @@ static key_type_t get_type(private_openssl_ec_public_key_t *this)
 /**
  * Implementation of public_key_t.verify.
  */
-static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t scheme, 
-				   chunk_t data, chunk_t signature)
+static bool verify(private_openssl_ec_public_key_t *this,
+				   signature_scheme_t scheme, chunk_t data, chunk_t signature)
 {
 	switch (scheme)
 	{
@@ -128,13 +151,16 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return verify_der_signature(this, NID_sha512, data, signature);
 		case SIGN_ECDSA_WITH_NULL:
-			return verify_signature(this, NID_undef, data, signature);
+			return verify_signature(this, data, signature);
 		case SIGN_ECDSA_256:
-			return verify_signature(this, NID_sha256, data, signature);
+			return verify_curve_signature(this, scheme, NID_X9_62_prime256v1,
+										  NID_sha256, data, signature);
 		case SIGN_ECDSA_384:
-			return verify_signature(this, NID_sha384, data, signature);
+			return verify_curve_signature(this, scheme, NID_secp384r1,
+										  NID_sha384, data, signature);
 		case SIGN_ECDSA_521:
-			return verify_signature(this, NID_sha512, data, signature);
+			return verify_curve_signature(this, scheme, NID_secp521r1,
+										  NID_sha512, data, signature);
 		default:
 			DBG1("signature scheme %N not supported in EC",
 				 signature_scheme_names, scheme);
