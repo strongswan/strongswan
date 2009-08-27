@@ -65,6 +65,10 @@ static int usage(char *error)
 	fprintf(out, "        --dn       subject and issuer distinguished name\n");
 	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
+	fprintf(out, "  pki --verify [--in file] [--ca file]\n");
+	fprintf(out, "      verify a certificate using the CA certificate\n");
+	fprintf(out, "        --in       x509 certifcate to verify, default: stdin\n");
+	fprintf(out, "        --ca       CA certificate, default: verify self signed\n");
 	return !!error;
 }
 
@@ -582,6 +586,109 @@ static int self(int argc, char *argv[])
 }
 
 /**
+ * Verify a certificate signature
+ */
+static int verify(int argc, char *argv[])
+{
+	certificate_t *cert, *ca;
+	char *file = NULL, *cafile = NULL;
+	bool good = FALSE;
+	
+	struct option long_opts[] = {
+		{ "in", required_argument, NULL, 'i' },
+		{ "ca", required_argument, NULL, 'c' },
+		{ 0,0,0,0 }
+	};
+	
+	while (TRUE)
+	{
+		switch (getopt_long(argc, argv, "", long_opts, NULL))
+		{
+			case 'i':
+				file = optarg;
+				continue;
+			case 'c':
+				cafile = optarg;
+				continue;
+			case EOF:
+				break;
+			default:
+				return usage("invalid --self option");
+		}
+		break;
+	}
+	
+	if (file)
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FD, 0, BUILD_END);
+	}
+	if (!cert)
+	{
+		fprintf(stderr, "parsing certificate failed\n");
+		return 1;
+	}
+	if (cafile)
+	{
+		ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								BUILD_FROM_FILE, cafile,
+								BUILD_X509_FLAG, X509_CA,
+								BUILD_END);
+		if (!ca)
+		{
+			fprintf(stderr, "parsing CA certificate failed\n");
+			return 1;
+		}
+	}
+	else
+	{
+		ca = cert;
+	}
+	if (cert->issued_by(cert, ca))
+	{
+		if (cert->get_validity(cert, NULL, NULL, NULL))
+		{
+			if (cafile)
+			{
+				if (ca->get_validity(ca, NULL, NULL, NULL))
+				{
+					printf("signature good, certificates valid\n");
+				}
+				else
+				{
+					printf("signature good, CA certificates not valid now\n");
+				}
+			}
+			else
+			{
+				printf("signature good, certificate valid\n");
+				good = TRUE;
+			}
+		}
+		else
+		{
+			printf("certificate not valid now\n");
+		}
+	}
+	else
+	{
+		printf("signature invalid\n");
+	}
+	if (cafile)
+	{
+		ca->destroy(ca);
+	}
+	cert->destroy(cert);
+	
+	return good ? 0 : 2;
+}
+
+/**
  * Library initialization and operation parsing
  */
 int main(int argc, char *argv[])
@@ -592,6 +699,7 @@ int main(int argc, char *argv[])
 		{ "pub", no_argument, NULL, 'p' },
 		{ "keyid", no_argument, NULL, 'k' },
 		{ "self", no_argument, NULL, 's' },
+		{ "verify", no_argument, NULL, 'v' },
 		{ 0,0,0,0 }
 	};
 	
@@ -621,6 +729,8 @@ int main(int argc, char *argv[])
 			return keyid(argc, argv);
 		case 's':
 			return self(argc, argv);
+		case 'v':
+			return verify(argc, argv);
 		default:
 			return usage("invalid operation");
 	}
