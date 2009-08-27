@@ -153,14 +153,14 @@ static bool verify(private_openssl_ec_public_key_t *this,
 		case SIGN_ECDSA_WITH_NULL:
 			return verify_signature(this, data, signature);
 		case SIGN_ECDSA_256:
-			return verify_curve_signature(this, scheme, NID_X9_62_prime256v1,
-										  NID_sha256, data, signature);
+			return verify_curve_signature(this, scheme, NID_sha256,
+										  NID_X9_62_prime256v1, data, signature);
 		case SIGN_ECDSA_384:
-			return verify_curve_signature(this, scheme, NID_secp384r1,
-										  NID_sha384, data, signature);
+			return verify_curve_signature(this, scheme, NID_sha384,
+										  NID_secp384r1, data, signature);
 		case SIGN_ECDSA_521:
-			return verify_curve_signature(this, scheme, NID_secp521r1,
-										  NID_sha512, data, signature);
+			return verify_curve_signature(this, scheme, NID_sha512,
+										  NID_secp521r1, data, signature);
 		default:
 			DBG1("signature scheme %N not supported in EC",
 				 signature_scheme_names, scheme);
