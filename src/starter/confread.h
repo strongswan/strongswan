@@ -112,6 +112,10 @@ struct starter_conn {
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
 		time_t          sa_rekey_margin;
+		u_int64_t	sa_ipsec_life_bytes;
+		u_int64_t	sa_ipsec_margin_bytes;
+		u_int64_t	sa_ipsec_life_packets;
+		u_int64_t	sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
 		sa_family_t     addr_family;
