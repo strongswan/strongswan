@@ -73,10 +73,11 @@ typedef struct {
  * Signature schemes
  */
 static openssl_ecdsa_scheme_t ecdsa_schemes[] = {
-	{SIGN_ECDSA_256, NID_sha256, NID_X9_62_prime256v1},
-	{SIGN_ECDSA_384, NID_sha384, NID_secp384r1},
-	{SIGN_ECDSA_521, NID_sha512, NID_secp521r1},
-	{END_OF_LIST,    0,          0},
+	{SIGN_ECDSA_WITH_SHA1,	NID_sha1,	-1},
+	{SIGN_ECDSA_256,		NID_sha256,	NID_X9_62_prime256v1},
+	{SIGN_ECDSA_384,		NID_sha384,	NID_secp384r1},
+	{SIGN_ECDSA_521,		NID_sha512,	NID_secp521r1},
+	{END_OF_LIST,			0,			0},
 };
 
 /**
@@ -163,23 +164,24 @@ static bool sign(private_openssl_ec_private_key_t *this, signature_scheme_t sche
 			return FALSE;
 		}
 		
-		req_group = EC_GROUP_new_by_curve_name(curve);
-		if (!req_group)
+		if (curve != -1)
 		{
-			DBG1("signature scheme %N not supported in EC (required curve not supported)",
+			req_group = EC_GROUP_new_by_curve_name(curve);
+			if (!req_group)
+			{
+				DBG1("signature scheme %N not supported in EC (required curve "
+					 "not supported)", signature_scheme_names, scheme);
+				return FALSE;
+			}
+			my_group = EC_KEY_get0_group(this->ec);
+			if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
+			{
+				DBG1("signature scheme %N not supported by private key",
 					 signature_scheme_names, scheme);
-			return FALSE;
+				return FALSE;
+			}
+			EC_GROUP_free(req_group);
 		}
-		
-		my_group = EC_KEY_get0_group(this->ec);
-		if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
-		{
-			DBG1("signature scheme %N not supported by private key",
-					 signature_scheme_names, scheme);
-			return FALSE;
-		}
-		EC_GROUP_free(req_group);
-		
 		if (!openssl_hash_chunk(hash_type, data, &hash))
 		{
 			return FALSE;
