@@ -269,8 +269,15 @@ static status_t build_i(private_child_delete_t *this, message_t *message)
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 										  this->spi, TRUE);
 	if (!child_sa)
-	{	/* child does not exist anymore */
-		return SUCCESS;
+	{	/* check if it is an outbound sa */
+		child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
+											  this->spi, FALSE);
+		if (!child_sa)
+		{	/* child does not exist anymore */
+			return SUCCESS;
+		}
+		/* we work only with the inbound SPI */
+		this->spi = child_sa->get_spi(child_sa, TRUE);
 	}
 	this->child_sas->insert_last(this->child_sas, child_sa);
 	if (child_sa->get_state(child_sa) == CHILD_REKEYING)

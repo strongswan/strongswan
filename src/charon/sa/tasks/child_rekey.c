@@ -144,8 +144,15 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 	this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 												this->spi, TRUE);
 	if (!this->child_sa)
-	{	/* CHILD_SA is gone, unable to rekey */
-		return SUCCESS;
+	{	/* check if it is an outbound CHILD_SA */
+		this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
+													this->spi, FALSE);
+		if (!this->child_sa)
+		{	/* CHILD_SA is gone, unable to rekey */
+			return SUCCESS;
+		}
+		/* we work only with the inbound SPI */
+		this->spi = this->child_sa->get_spi(this->child_sa, TRUE);
 	}
 	config = this->child_sa->get_config(this->child_sa);
 	
