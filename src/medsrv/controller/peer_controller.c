@@ -140,15 +140,12 @@ static bool parse_public_key(private_peer_controller_t *this,
 	}
 	/* TODO: use get_encoding() with an encoding type */
 	if (!public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id) ||
-		!public->get_encoding(public, KEY_PUB_ASN1_DER, &blob))
+		!public->get_encoding(public, KEY_PUB_SPKI_ASN1_DER, encoding))
 	{
 		request->setf(request, "error=Encoding public key failed.");
 		return FALSE;
 	}
 	*keyid = chunk_clone(id);
-	*encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
-						  asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						  asn1_bitstring("m", blob));
 	public->destroy(public);
 	return TRUE;
 }
