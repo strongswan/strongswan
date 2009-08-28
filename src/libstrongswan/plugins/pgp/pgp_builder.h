@@ -32,9 +32,9 @@
 builder_t *pgp_public_key_builder(key_type_t type);
 
 /**
- * Create the builder for a RSA private key using PGP decoding.
+ * Create the builder for a generic or RSA private key using PGP decoding.
  *
- * @param type		type of the key, KEY_RSA
+ * @param type		type of the key, either KEY_ANY or KEY_RSA
  * @return 			builder instance
  */
 builder_t *pgp_private_key_builder(key_type_t type);

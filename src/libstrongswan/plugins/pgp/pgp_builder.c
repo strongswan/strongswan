@@ -106,6 +106,28 @@ static bool read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
 }
 
 /**
+ * Read length of an PGP old packet length encoding
+ */
+static bool old_packet_length(chunk_t *blob, u_int32_t *length)
+{
+	/* bits 0 and 1 define the packet length type */
+	u_char type;
+	
+	if (!blob->len)
+	{
+		return FALSE;
+	}
+	type = 0x03 & blob->ptr[0];
+	*blob = chunk_skip(*blob, 1);
+	
+	if (type > 2)
+	{
+		return FALSE;
+	}
+	return read_scalar(blob, type == 0 ? 1 : type * 2, length);
+}
+
+/**
  * Read a PGP MPI, advance blob
  */
 static bool read_mpi(chunk_t *blob, chunk_t *mpi)
@@ -120,7 +142,7 @@ static bool read_mpi(chunk_t *blob, chunk_t *mpi)
 	bytes = (bits + 7) / 8;
 	if (bytes > blob->len)
 	{
-		DBG1("PGP data too short to %d byte MPI", bytes);
+		DBG1("PGP data too short to read %d byte MPI", bytes);
 		return FALSE;
 	}
 	*mpi = chunk_create(blob->ptr, bytes);
@@ -213,12 +235,127 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 			return NULL;
 		}
 	}
+	
 	/* PGP has uses p < q, but we use p > q */
 	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
 						BUILD_RSA_MODULUS, mpi[0], BUILD_RSA_PUB_EXP, mpi[1],
 						BUILD_RSA_PRIV_EXP, mpi[2], BUILD_RSA_PRIME2, mpi[3],
 						BUILD_RSA_PRIME1, mpi[4], BUILD_RSA_COEFF, mpi[5],
 						BUILD_END);
+}
+
+/**
+ * Implementation of private_key_t.sign for encryption-only keys
+ */
+static bool sign_not_allowed(private_key_t *this, signature_scheme_t scheme,
+							 chunk_t data, chunk_t *signature)
+{
+	DBG1("signing failed - decryption only key");
+	return FALSE;
+}
+
+/**
+ * Implementation of private_key_t.decrypt for signature-only keys
+ */
+static bool decrypt_not_allowed(private_key_t *this,
+								chunk_t crypto, chunk_t *plain)
+{
+	DBG1("decryption failed - signature only key");
+	return FALSE;
+}
+
+/**
+ * Load a generic private key from a PGP packet
+ */
+static private_key_t *parse_private_key(chunk_t blob)
+{
+	chunk_t packet;
+	u_char tag, type;
+	u_int32_t len, version, created, days, alg;
+	private_key_t *key;
+	
+	tag = blob.ptr[0];
+	
+	/* bit 7 must be set */
+	if (!(tag & 0x80))
+	{
+		DBG1("invalid packet tag");
+		return NULL;
+	}
+	/* bit 6 set defines new packet format */
+	if (tag & 0x40)
+	{
+		DBG1("new PGP packet format not supported");
+		return NULL;
+	}
+	
+	type = (tag & 0x3C) >> 2;
+	if (!old_packet_length(&blob, &len) || len > blob.len)
+	{
+		DBG1("invalid packet length");
+		return NULL;
+	}
+	packet.len = len;
+	packet.ptr = blob.ptr;
+	blob = chunk_skip(blob, len);
+	
+	if (!read_scalar(&packet, 1, &version))
+	{
+		return NULL;
+	}
+	if (version < 3 || version > 4)
+	{
+		DBG1("OpenPGP packet version V%d not supported", version);
+		return NULL;
+	}
+	if (!read_scalar(&packet, 4, &created))
+	{
+		return NULL;
+	}
+	if (version == 3)
+	{
+		if (!read_scalar(&packet, 2, &days))
+		{
+			return NULL;
+		}
+	}
+	if (!read_scalar(&packet, 1, &alg))
+	{
+		return NULL;
+	}
+	switch (alg)
+	{
+		case PGP_PUBKEY_ALG_RSA:
+			POS;
+			return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									  BUILD_BLOB_PGP, packet, BUILD_END);
+		case PGP_PUBKEY_ALG_RSA_ENC_ONLY:
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									  BUILD_BLOB_PGP, packet, BUILD_END);
+			if (key)
+			{
+				key->sign = sign_not_allowed;
+			}
+			return key;
+		case PGP_PUBKEY_ALG_RSA_SIGN_ONLY:
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									  BUILD_BLOB_PGP, packet, BUILD_END);
+			if (key)
+			{
+				key->decrypt = decrypt_not_allowed;
+			}
+			return key;
+		case PGP_PUBKEY_ALG_ECDSA:
+			return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+									  BUILD_BLOB_PGP, packet, BUILD_END);
+		case PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY:
+		case PGP_PUBKEY_ALG_DSA:
+		case PGP_PUBKEY_ALG_ECC:
+		case PGP_PUBKEY_ALG_ELGAMAL:
+		case PGP_PUBKEY_ALG_DIFFIE_HELLMAN:
+		default:
+			return NULL;
+	}
 }
 
 typedef struct private_builder_t private_builder_t;
@@ -266,7 +403,7 @@ static void add_public(private_builder_t *this, builder_part_t part, ...)
 	
 	switch (part)
 	{
-		case BUILD_BLOB_PEM:
+		case BUILD_BLOB_PGP:
 		{
 			va_start(args, part);
 			this->blob = va_arg(args, chunk_t);
@@ -306,9 +443,19 @@ builder_t *pgp_public_key_builder(key_type_t type)
  */
 static private_key_t *build_private(private_builder_t *this)
 {
-	private_key_t *key;
+	private_key_t *key = NULL;
 	
-	key = parse_rsa_private_key(this->blob);
+	switch (this->type)
+	{
+		case KEY_ANY:
+			key = parse_private_key(this->blob);
+			break;
+		case KEY_RSA:
+			key = parse_rsa_private_key(this->blob);
+			break;
+		default:
+			break;
+	}
 	free(this);
 	return key;
 }
@@ -342,7 +489,7 @@ builder_t *pgp_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
 	
-	if (type != KEY_RSA)
+	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
 	}

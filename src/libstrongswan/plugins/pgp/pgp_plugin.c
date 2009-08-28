@@ -60,6 +60,8 @@ plugin_t *plugin_create()
 							(builder_constructor_t)pgp_public_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 							(builder_constructor_t)pgp_public_key_builder);
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+							(builder_constructor_t)pgp_private_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							(builder_constructor_t)pgp_private_key_builder);
 	
