@@ -392,6 +392,13 @@ static void *build_from_blob(private_builder_t *this, chunk_t blob)
 			chunk_clear(&blob);
 			return NULL;
 		}
+		if (pgp && this->type == CRED_PRIVATE_KEY)
+		{
+			/* PGP encoded keys are parsed with a KEY_ANY key type, as it
+			 * can contain any type of key. However, ipsec.secrets uses
+			 * RSA for PGP keys, which is actually wrong. */
+			this->subtype = KEY_ANY;
+		}
 	}
 	cred = lib->creds->create(lib->creds, this->type, this->subtype,
 							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,
