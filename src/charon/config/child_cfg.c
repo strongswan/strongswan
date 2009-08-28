@@ -99,7 +99,7 @@ struct private_child_cfg_t {
 	/**
 	 * CHILD_SA lifetime config
 	 */
-	lifetime_cfg_t *lifetime;
+	lifetime_cfg_t lifetime;
 	
 	/**
 	 * enable IPComp
@@ -363,7 +363,7 @@ static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
 	jitter = (jitter == UINT64_MAX) ? jitter : jitter + 1;
 	return rekey - jitter * (random() / (RAND_MAX + 1.0));
 }
-#define APPLY_JITTER(l, f) l->rekey_##f = apply_jitter(l->rekey_##f, l->jitter_##f)
+#define APPLY_JITTER(l) l.rekey = apply_jitter(l.rekey, l.jitter)
 
 /**
  * Implementation of child_cfg_t.get_lifetime.
@@ -371,10 +371,10 @@ static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
 static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
 {
 	lifetime_cfg_t *lft = malloc_thing(lifetime_cfg_t);
-	memcpy(lft, this->lifetime, sizeof(lifetime_cfg_t));
-	APPLY_JITTER(lft, time);
-	APPLY_JITTER(lft, bytes);
-	APPLY_JITTER(lft, packets);
+	memcpy(lft, &this->lifetime, sizeof(lifetime_cfg_t));
+	APPLY_JITTER(lft->time);
+	APPLY_JITTER(lft->bytes);
+	APPLY_JITTER(lft->packets);
 	return lft;
 }
 
@@ -480,7 +480,6 @@ static void destroy(private_child_cfg_t *this)
 		{
 			free(this->updown);
 		}
-		free(this->lifetime);
 		free(this->name);
 		free(this);
 	}
@@ -517,7 +516,6 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
 	this->name = strdup(name);
-	this->lifetime = lifetime;
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
@@ -530,6 +528,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
+	memcpy(&this->lifetime, lifetime, sizeof(lifetime_cfg_t));
 
 	return &this->public;
 }

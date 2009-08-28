@@ -1287,18 +1287,18 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_SOFT;
 	lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
-	lft->sadb_lifetime_allocations = lifetime->rekey_packets;
-	lft->sadb_lifetime_bytes = lifetime->rekey_bytes;
-	lft->sadb_lifetime_addtime = lifetime->rekey_time;
+	lft->sadb_lifetime_allocations = lifetime->packets.rekey;
+	lft->sadb_lifetime_bytes = lifetime->bytes.rekey;
+	lft->sadb_lifetime_addtime = lifetime->time.rekey;
 	lft->sadb_lifetime_usetime = 0; /* we only use addtime */
 	PFKEY_EXT_ADD(msg, lft);
 	
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_HARD;
 	lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
-	lft->sadb_lifetime_allocations = lifetime->life_packets;
-	lft->sadb_lifetime_bytes = lifetime->life_bytes;
-	lft->sadb_lifetime_addtime = lifetime->life_time;
+	lft->sadb_lifetime_allocations = lifetime->packets.life;
+	lft->sadb_lifetime_bytes = lifetime->bytes.life;
+	lft->sadb_lifetime_addtime = lifetime->time.life;
 	lft->sadb_lifetime_usetime = 0; /* we only use addtime */
 	PFKEY_EXT_ADD(msg, lft);
 	

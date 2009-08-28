@@ -72,55 +72,15 @@ extern enum_name_t *ipcomp_transform_names;
  * Set any of these values to 0 to ignore.
  */
 struct lifetime_cfg_t {
-	/** Time in seconds before the CHILD_SA gets invalid. */
-	u_int64_t	life_time;
-	/** Number of bytes transmitted before the CHILD_SA gets invalid. */
-	u_int64_t	life_bytes;
-	/** Number of packets transmitted before the CHILD_SA gets invalid. */
-	u_int64_t	life_packets;
-	/** Time in seconds before the CHILD_SA gets rekeyed. */
-	u_int64_t	rekey_time;
-	/** Number of bytes transmitted before the CHILD_SA gets rekeyed. */
-	u_int64_t	rekey_bytes;
-	/** Number of packets transmitted before the CHILD_SA gets rekeyed. */
-	u_int64_t	rekey_packets;
-	/** The range of a random value subtracted from rekey_time */
-	u_int64_t	jitter_time;
-	/** The range of a random value subtracted from rekey_bytes */
-	u_int64_t	jitter_bytes;
-	/** The range of a random value subtracted from rekey_packets */
-	u_int64_t	jitter_packets;
+	struct {
+		/** Limit before the CHILD_SA gets invalid. */
+		u_int64_t	life;
+		/** Limit before the CHILD_SA gets rekeyed. */
+		u_int64_t	rekey;
+		/** The range of a random value subtracted from rekey. */
+		u_int64_t	jitter;
+	} time, bytes, packets;
 };
-
-/**
- * Helper macro to easily set all three values of a specified limit (time,
- * bytes, packets).
- */
-#define LIFETIME_CFG_SET(l, limit, life, rekey, jitter) do { \
-	(l)->life_##limit = (life); \
-	(l)->rekey_##limit = (rekey); \
-	(l)->jitter_##limit = (jitter); \
-} while(0)
-
-/**
- * Create a new lifetime_cfg_t object.
- */
-static inline lifetime_cfg_t* lifetime_cfg_create() {
-	lifetime_cfg_t *this = malloc_thing(lifetime_cfg_t);
-	memset(this, 0, sizeof(lifetime_cfg_t));
-	return this;
-}
-
-/**
- * Special constructor for the (currently) most common case.
- */
-static inline lifetime_cfg_t* lifetime_cfg_create_time(u_int64_t life,
-									  u_int64_t rekey, u_int64_t jitter)
-{
-	lifetime_cfg_t *this = lifetime_cfg_create();
-	LIFETIME_CFG_SET(this, time, life, rekey, jitter);
-	return this;
-}
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
@@ -316,9 +276,9 @@ struct child_cfg_t {
  * 
  * The "name" string gets cloned.
  *
- * The lifetime_cfg_t object gets adopted by this config.
+ * The lifetime_cfg_t object gets cloned.
  * To prevent two peers to start rekeying at the same time, a jitter may be
- * specified. Rekeying of an SA starts at (rekey_xxx - random(0, jitter_xxx)).
+ * specified. Rekeying of an SA starts at (x.rekey - random(0, x.jitter)).
  *
  * After a call to create, a reference is obtained (refcount = 1).
  * 

@@ -142,9 +142,15 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	char *local_id, *local_addr, *local_net;
 	char *remote_id, *remote_addr, *remote_net;
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t *lifetime;
 	ike_cfg_t *ike_cfg;
 	auth_cfg_t *auth;
+	lifetime_cfg_t lifetime = {
+		.time = {
+			.life = create_rekey(esp_rekey) + 300,
+			.rekey = create_rekey(esp_rekey)
+			.jitter = 300
+		}
+	};
 	
 	/* defaults */
 	name = "unnamed";
@@ -187,9 +193,8 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 					  identification_create_from_string(remote_id));
 		}
 		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, FALSE);
-		lifetime = lifetime_cfg_create_time(create_rekey(esp_rekey) + 300,
-											create_rekey(esp_rekey), 300);
-		child_cfg = child_cfg_create(name, lifetime, NULL, TRUE, MODE_TUNNEL,
+		
+		child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
 									 ACTION_NONE, ACTION_NONE, FALSE);
 		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_ESP));
 		child_cfg->add_traffic_selector(child_cfg, TRUE, create_ts(local_net));

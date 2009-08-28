@@ -218,7 +218,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t *lifetime;
 	traffic_selector_t *ts;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
@@ -226,6 +225,13 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	certificate_t *cert = NULL;
 	x509_t *x509;
 	bool agent = FALSE;
+	lifetime_cfg_t lifetime = {
+		.time = {
+			.life = 10800 /* 3h */,
+			.rekey = 10200 /* 2h50min */,
+			.jitter = 300 /* 5min */
+		}
+	};
 	
 	/**
 	 * Read parameters
@@ -427,10 +433,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 	
-	lifetime = lifetime_cfg_create_time(10800 /* 3h */, 10200 /* 2h50min */,
-										300 /* 5min */);
-	
-	child_cfg = child_cfg_create(priv->name, lifetime,
+	child_cfg = child_cfg_create(priv->name, &lifetime,
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
 								 ACTION_NONE, ACTION_NONE, ipcomp);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));

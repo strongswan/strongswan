@@ -589,18 +589,18 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	lifetime = this->config->get_lifetime(this->config);
 	
 	now = time_monotonic(NULL);
-	if (lifetime->rekey_time)
+	if (lifetime->time.rekey)
 	{
-		this->rekey_time = now + lifetime->rekey_time;
+		this->rekey_time = now + lifetime->time.rekey;
 	}
-	if (lifetime->life_time)
+	if (lifetime->time.life)
 	{
-		this->expire_time = now + lifetime->life_time;
+		this->expire_time = now + lifetime->time.life;
 	}
 	
-	if (!lifetime->jitter_time && !inbound)
+	if (!lifetime->time.jitter && !inbound)
 	{	/* avoid triggering multiple rekey events */
-		lifetime->rekey_time = 0;
+		lifetime->time.rekey = 0;
 	}
 	
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,

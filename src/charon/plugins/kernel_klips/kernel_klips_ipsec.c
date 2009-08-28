@@ -1844,14 +1844,14 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	/* Although KLIPS supports SADB_EXT_LIFETIME_SOFT/HARD, we handle the lifetime
 	 * of SAs manually in the plugin. Refer to the comments in receive_events()
 	 * for details. */
-	if (lifetime->rekey_time)
+	if (lifetime->time.rekey)
 	{
-		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_SOFT, lifetime->rekey_time);
+		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_SOFT, lifetime->time.rekey);
 	}
 	
-	if (lifetime->life_time)
+	if (lifetime->time.life)
 	{
-		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_HARD, lifetime->life_time);
+		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_HARD, lifetime->time.life);
 	}
 		
 	return SUCCESS;

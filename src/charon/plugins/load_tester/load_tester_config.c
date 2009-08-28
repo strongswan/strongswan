@@ -178,10 +178,16 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 {
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t *lifetime;
 	peer_cfg_t *peer_cfg;
 	traffic_selector_t *ts;
 	proposal_t *proposal;
+	lifetime_cfg_t lifetime = {
+		.time = {
+			.life = this->child_rekey * 2,
+			.rekey = this->child_rekey,
+			.jitter = 0
+		}
+	};
 	
 	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
@@ -203,10 +209,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		generate_auth_cfg(this, this->initiator_auth, peer_cfg, FALSE, num);
 	}
 	
-	lifetime = lifetime_cfg_create_time(this->child_rekey * 2,
-										this->child_rekey, 0);
-
-	child_cfg = child_cfg_create("load-test", lifetime, NULL, TRUE,
+	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE,
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);

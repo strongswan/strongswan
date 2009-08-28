@@ -941,7 +941,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	 * we are in the recursive call below */
 	if (ipcomp != IPCOMP_NONE && cpi != 0)
 	{
-		lifetime_cfg_t lft = { 0,0,0,0,0,0,0,0,0 };
+		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, &lft,
  			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
  			   mode, ipcomp, 0, FALSE, inbound);
@@ -971,13 +971,13 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
-	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->rekey_bytes);
-	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->life_bytes);
-	sa->lft.soft_packet_limit = XFRM_LIMIT(lifetime->rekey_packets);
-	sa->lft.hard_packet_limit = XFRM_LIMIT(lifetime->life_packets);
+	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->bytes.rekey);
+	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->bytes.life);
+	sa->lft.soft_packet_limit = XFRM_LIMIT(lifetime->packets.rekey);
+	sa->lft.hard_packet_limit = XFRM_LIMIT(lifetime->packets.life);
 	/* we use lifetimes since added, not since used */
-	sa->lft.soft_add_expires_seconds = lifetime->rekey_time;
-	sa->lft.hard_add_expires_seconds = lifetime->life_time;
+	sa->lft.soft_add_expires_seconds = lifetime->time.rekey;
+	sa->lft.hard_add_expires_seconds = lifetime->time.life;
 	sa->lft.soft_use_expires_seconds = 0;
 	sa->lft.hard_use_expires_seconds = 0;
 	
