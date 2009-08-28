@@ -438,6 +438,7 @@ static int keyid(int argc, char *argv[])
 static int self(int argc, char *argv[])
 {
 	key_type_t type = KEY_RSA;
+	hash_algorithm_t digest = HASH_SHA1;
 	certificate_t *cert;
 	private_key_t *private;
 	public_key_t *public;
@@ -453,6 +454,7 @@ static int self(int argc, char *argv[])
 		{ "dn", required_argument, NULL, 'd' },
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
+		{ "digest", required_argument, NULL, 'h' },
 		{ 0,0,0,0 }
 	};
 	
@@ -472,6 +474,36 @@ static int self(int argc, char *argv[])
 				else
 				{
 					return usage("invalid input type");
+				}
+				continue;
+			case 'h':
+				if (streq(optarg, "md5"))
+				{
+					digest = HASH_MD5;
+				}
+				else if (streq(optarg, "sha1"))
+				{
+					digest = HASH_SHA1;
+				}
+				else if (streq(optarg, "sha224"))
+				{
+					digest = HASH_SHA224;
+				}
+				else if (streq(optarg, "sha256"))
+				{
+					digest = HASH_SHA256;
+				}
+				else if (streq(optarg, "sha384"))
+				{
+					digest = HASH_SHA384;
+				}
+				else if (streq(optarg, "sha512"))
+				{
+					digest = HASH_SHA512;
+				}
+				else
+				{
+					return usage("invalid --digest type");
 				}
 				continue;
 			case 'i':
@@ -557,7 +589,7 @@ static int self(int argc, char *argv[])
 						BUILD_SIGNING_KEY, private, BUILD_PUBLIC_KEY, public,
 						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
-						BUILD_END);
+						BUILD_DIGEST_ALG, digest, BUILD_END);
 	private->destroy(private);
 	public->destroy(public);
 	id->destroy(id);

@@ -80,6 +80,8 @@ enum builder_part_t {
 	BUILD_NOT_AFTER_TIME,
 	/** a serial number in binary form, chunk_t */
 	BUILD_SERIAL,
+	/** digest algorithm to be used for signature, int */
+	BUILD_DIGEST_ALG,
 	/** a comma-separated list of ietf group attributes, char* */
 	BUILD_IETF_GROUP_ATTR,
 	/** a ca certificate, certificate_t* */

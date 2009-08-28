@@ -198,6 +198,9 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_FROM_FD:
 					builder->add(builder, part, va_arg(args, u_int));
 					continue;
+				case BUILD_DIGEST_ALG:
+					builder->add(builder, part, va_arg(args, int));
+					continue;
 				case BUILD_NOT_BEFORE_TIME:
 				case BUILD_NOT_AFTER_TIME:
 					builder->add(builder, part, va_arg(args, time_t));

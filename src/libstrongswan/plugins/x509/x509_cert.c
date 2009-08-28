@@ -1199,6 +1199,8 @@ struct private_builder_t {
 	certificate_t *sign_cert;
 	/** private key to sign, if we generate a new cert */
 	private_key_t *sign_key;
+	/** digest algorithm to be used for signature */
+	hash_algorithm_t digest_alg;
 };
 
 /**
@@ -1236,7 +1238,7 @@ static bool generate(private_builder_t *this)
 		this->cert->notBefore = time(NULL);
 	}
 	if (!this->cert->notAfter)
-	{	/* defaults to 1 years from now on */
+	{	/* defaults to 1 year from now */
 		this->cert->notAfter = this->cert->notBefore + 60 * 60 * 24 * 365;
 	}
 	this->cert->flags = this->flags;
@@ -1245,16 +1247,54 @@ static bool generate(private_builder_t *this)
 	switch (this->sign_key->get_type(this->sign_key))
 	{
 		case KEY_RSA:
-			this->cert->algorithm = OID_SHA1_WITH_RSA;
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			switch (this->digest_alg)
+			{
+				case HASH_MD5:
+					this->cert->algorithm = OID_MD5_WITH_RSA;
+					break;
+				case HASH_SHA1:
+					this->cert->algorithm = OID_SHA1_WITH_RSA;
+					break;
+				case HASH_SHA224:
+					this->cert->algorithm = OID_SHA224_WITH_RSA;
+					break;
+				case HASH_SHA256:
+					this->cert->algorithm = OID_SHA256_WITH_RSA;
+					break;
+				case HASH_SHA384:
+					this->cert->algorithm = OID_SHA384_WITH_RSA;
+					break;
+				case HASH_SHA512:
+					this->cert->algorithm = OID_SHA512_WITH_RSA;
+					break;
+				default:
+					return FALSE;
+			}
 			break;
 		case KEY_ECDSA:
-			scheme = SIGN_ECDSA_WITH_SHA1_DER;
-			this->cert->algorithm = OID_ECDSA_WITH_SHA1;
+			switch (this->digest_alg)
+			{
+				case HASH_SHA1:
+					this->cert->algorithm = OID_ECDSA_WITH_SHA1;
+					break;
+				case HASH_SHA256:
+					this->cert->algorithm = OID_ECDSA_WITH_SHA256;
+					break;
+				case HASH_SHA384:
+					this->cert->algorithm = OID_ECDSA_WITH_SHA384;
+					break;
+				case HASH_SHA512:
+					this->cert->algorithm = OID_ECDSA_WITH_SHA512;
+					break;
+				default:
+					return FALSE;
+			}
 			break;
 		default:
 			return FALSE;
 	}
+	scheme = signature_scheme_from_oid(this->cert->algorithm);
+
 	if (!this->cert->public_key->get_encoding(this->cert->public_key,
 											  KEY_PUB_SPKI_ASN1_DER, &key_info))
 	{
@@ -1395,6 +1435,9 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->cert->serialNumber = chunk_clone(serial);
 			break;
 		}
+		case BUILD_DIGEST_ALG:
+			this->digest_alg = va_arg(args, int);
+			break;
 		default:
 			/* abort if unsupported option */
 			if (this->cert)
@@ -1425,6 +1468,7 @@ builder_t *x509_cert_builder(certificate_type_t type)
 	this->flags = 0;
 	this->sign_cert = NULL;
 	this->sign_key = NULL;
+	this->digest_alg = HASH_SHA1;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	
