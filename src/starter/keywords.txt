@@ -64,6 +64,8 @@ auth,              KW_AUTH
 authby,            KW_AUTHBY
 keylife,           KW_KEYLIFE
 rekeymargin,       KW_REKEYMARGIN
+lifetime,          KW_KEYLIFE
+margintime,        KW_REKEYMARGIN
 lifebytes,         KW_LIFEBYTES
 marginbytes,       KW_MARGINBYTES
 lifepackets,       KW_LIFEPACKETS
