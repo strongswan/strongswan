@@ -47,7 +47,7 @@ bool build_pub_info(chunk_t *encoding, va_list args)
 	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
 						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
 	{
-		*encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
+		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 						asn1_bitstring("m",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
