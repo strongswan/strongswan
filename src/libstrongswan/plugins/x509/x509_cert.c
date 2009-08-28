@@ -1243,6 +1243,7 @@ static bool generate(private_builder_t *this)
 	}
 	this->cert->flags = this->flags;
 	
+	/* select signature scheme */
 	switch (this->sign_key->get_type(this->sign_key))
 	{
 		case KEY_RSA:
