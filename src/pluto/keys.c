@@ -484,7 +484,7 @@ end:
 	/* clean up and return */
 	for (p = RSA_PART_MODULUS ; p < part; p++)
 	{
-		free(rsa_chunk[p].ptr);
+		chunk_clear(&rsa_chunk[p]);
 	}
 	return ugh;	
 }
