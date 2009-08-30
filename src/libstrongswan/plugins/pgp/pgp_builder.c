@@ -326,7 +326,6 @@ static private_key_t *parse_private_key(chunk_t blob)
 	switch (alg)
 	{
 		case PGP_PUBKEY_ALG_RSA:
-			POS;
 			return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 									  BUILD_BLOB_PGP, packet, BUILD_END);
 		case PGP_PUBKEY_ALG_RSA_ENC_ONLY:
