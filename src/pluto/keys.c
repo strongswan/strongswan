@@ -408,20 +408,17 @@ const char *rsa_private_key_part_names[] = {
 /**
  * Parse fields of an RSA private key in BIND 8.2's representation
  * consistiong of a braced list of keyword and value pairs in required order.
- * Conversion into ASN.1 DER encoded PKCS#1 representation.
  */
 static err_t process_rsa_secret(private_key_t **key)
 {
-	chunk_t asn1_chunk[countof(rsa_private_key_part_names)];
-	chunk_t pkcs1_chunk;
+	chunk_t rsa_chunk[countof(rsa_private_key_part_names)];
 	u_char buf[RSA_MAX_ENCODING_BYTES];   /* limit on size of binary representation of key */
 	rsa_private_key_part_t part, p;
-	size_t sz, len = 0;
+	size_t sz;
 	err_t ugh;
 
 	for (part = RSA_PART_MODULUS; part <= RSA_PART_COEFFICIENT; part++)
 	{
-		chunk_t rsa_private_key_part;
 		const char *keyword = rsa_private_key_part_names[part];
 
 		if (!shift())
@@ -448,9 +445,8 @@ static err_t process_rsa_secret(private_key_t **key)
 			part++;
 			goto end;
 		}
-		rsa_private_key_part = chunk_create(buf, sz);
-		asn1_chunk[part] = asn1_integer("c", rsa_private_key_part);
-		len += asn1_chunk[part].len;
+		rsa_chunk[part] = chunk_create(buf, sz);
+		rsa_chunk[part] = chunk_clone(rsa_chunk[part]);
 	}
 
 	/* We require an (indented) '}' and the end of the record.
@@ -468,21 +464,17 @@ static err_t process_rsa_secret(private_key_t **key)
 		goto end;
 	}
 
-	pkcs1_chunk = asn1_wrap(ASN1_SEQUENCE, "ccccccccc",
-					 		ASN1_INTEGER_0,
-							asn1_chunk[RSA_PART_MODULUS],
-							asn1_chunk[RSA_PART_PUBLIC_EXPONENT],
-							asn1_chunk[RSA_PART_PRIVATE_EXPONENT],
-							asn1_chunk[RSA_PART_PRIME1],
-							asn1_chunk[RSA_PART_PRIME2],
-							asn1_chunk[RSA_PART_EXPONENT1],
-							asn1_chunk[RSA_PART_EXPONENT2],
-							asn1_chunk[RSA_PART_COEFFICIENT]);
+	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
+					BUILD_RSA_MODULUS,  rsa_chunk[RSA_PART_MODULUS],
+					BUILD_RSA_PUB_EXP,  rsa_chunk[RSA_PART_PUBLIC_EXPONENT],
+					BUILD_RSA_PRIV_EXP, rsa_chunk[RSA_PART_PRIVATE_EXPONENT],
+					BUILD_RSA_PRIME1,   rsa_chunk[RSA_PART_PRIME1],
+					BUILD_RSA_PRIME2,   rsa_chunk[RSA_PART_PRIME2],
+					BUILD_RSA_EXP1,     rsa_chunk[RSA_PART_EXPONENT1], 
+					BUILD_RSA_EXP2,     rsa_chunk[RSA_PART_EXPONENT2],
+					BUILD_RSA_COEFF,    rsa_chunk[RSA_PART_COEFFICIENT],
+					BUILD_END);
 
-	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-										  BUILD_BLOB_ASN1_DER, pkcs1_chunk,
-										  BUILD_END);
-	free(pkcs1_chunk.ptr);
 	if (*key == NULL)
 	{
 		ugh = "parsing of RSA private key failed";
@@ -492,7 +484,7 @@ end:
 	/* clean up and return */
 	for (p = RSA_PART_MODULUS ; p < part; p++)
 	{
-		free(asn1_chunk[p].ptr);
+		free(rsa_chunk[p].ptr);
 	}
 	return ugh;	
 }
