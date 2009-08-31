@@ -15,6 +15,8 @@
 
 #include "constants.h"
 
+#include <credentials/certificates/crl.h>
+
 /* constants */
 
 #define OCSP_BASIC_RESPONSE_VERSION     1

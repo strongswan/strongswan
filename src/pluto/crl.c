@@ -374,7 +374,7 @@ void load_crls(void)
  */
 static crl_reason_t parse_crl_reasonCode(chunk_t object)
 {
-	crl_reason_t reason = REASON_UNSPECIFIED;
+	crl_reason_t reason = CRL_UNSPECIFIED;
 
 	if (*object.ptr == ASN1_ENUMERATED
 	&&  asn1_length(&object) == 1)
@@ -448,7 +448,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
 				revokedCert_t *revokedCert = malloc_thing(revokedCert_t);
 				revokedCert->userCertificate = userCertificate;
 				revokedCert->revocationDate = asn1_parse_time(object, level);
-				revokedCert->revocationReason = REASON_UNSPECIFIED;
+				revokedCert->revocationReason = CRL_UNSPECIFIED;
 				revokedCert->next = crl->revokedCertificates;
 				crl->revokedCertificates = revokedCert;
 			}
@@ -519,7 +519,7 @@ check_revocation(const x509crl_t *crl, chunk_t serial
 	revokedCert_t *revokedCert = crl->revokedCertificates;
 
 	*revocationDate = UNDEFINED_TIME;
-	*revocationReason = REASON_UNSPECIFIED;
+	*revocationReason = CRL_UNSPECIFIED;
 	
 	DBG(DBG_CONTROL,
 		DBG_dump_chunk("serial number:", serial)
@@ -594,7 +594,7 @@ verify_by_crl(const x509cert_t *cert, time_t *until, time_t *revocationDate
 	generalName_t *crluri = (ca == NULL)? NULL : ca->crluri;
 
 	*revocationDate = UNDEFINED_TIME;
-	*revocationReason = REASON_UNSPECIFIED;
+	*revocationReason = CRL_UNSPECIFIED;
 
 	lock_crl_list("verify_by_crl");
 	crl = get_x509crl(cert->issuer, cert->authKeySerialNumber, cert->authKeyID);

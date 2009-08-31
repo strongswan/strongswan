@@ -14,6 +14,8 @@
 
 #include "constants.h"
 
+#include <credentials/certificates/crl.h>
+
 /* access structure for a revoked serial number */
 
 typedef struct revokedCert revokedCert_t;
