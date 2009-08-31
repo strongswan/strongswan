@@ -228,13 +228,14 @@ struct kernel_ipsec_t {
 	/**
 	 * Query the use time of a policy.
 	 *
-	 * The use time of a policy is the time the policy was used
-	 * for the last time.
+	 * The use time of a policy is the time the policy was used for the last
+	 * time. It is not the system time, but a monotonic timestamp as returned
+	 * by time_monotonic.
 	 * 
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
-	 * @param[out] use_time	the time of this SA's last use
+	 * @param[out] use_time	the monotonic timestamp of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_ipsec_t *this,

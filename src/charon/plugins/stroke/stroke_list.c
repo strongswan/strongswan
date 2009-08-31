@@ -58,7 +58,7 @@ struct private_stroke_list_t {
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-	time_t now = time(NULL);
+	time_t now = time_monotonic(NULL);
 	
 	fprintf(out, "%12s[%d]: %N",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -146,10 +146,11 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
  */
 static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
-	time_t use_in, use_out, rekey, now = time(NULL);
+	time_t use_in, use_out, rekey, now;
 	u_int64_t bytes_in, bytes_out;
 	proposal_t *proposal;
 	child_cfg_t *config = child_sa->get_config(child_sa);
+	
 	
 	fprintf(out, "%12s{%d}:  %N, %N%s", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
@@ -205,7 +206,8 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					}
 				}
 			}
-
+			
+			now = time_monotonic(NULL);
 			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
 			fprintf(out, ", %llu bytes_i", bytes_in);
 			if (use_in)
@@ -367,11 +369,14 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		char *plugin, *pool;
 		host_t *host;
 		u_int32_t dpd;
-		time_t now = time(NULL);
+		time_t since, now;
 		u_int size, online, offline;
 		
+		now = time_monotonic(NULL);
+		since = time(NULL) - (now - this->uptime);
+		
 		fprintf(out, "Status of IKEv2 charon daemon (strongSwan "VERSION"):\n");
-		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &this->uptime, FALSE);
+		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
@@ -1113,7 +1118,7 @@ stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 	this->public.leases = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))leases;
 	this->public.destroy = (void(*)(stroke_list_t*))destroy;
 	
-	this->uptime = time(NULL);
+	this->uptime = time_monotonic(NULL);
 	this->attribute = attribute;
 	
 	return &this->public;

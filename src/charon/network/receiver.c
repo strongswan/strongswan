@@ -168,7 +168,7 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	chunk_t reference;
 	chunk_t secret;
 	
-	now = time(NULL);
+	now = time_monotonic(NULL);
 	t = *(u_int32_t*)cookie.ptr;
 	
 	if (cookie.len != sizeof(u_int32_t) +
@@ -296,9 +296,9 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		/* check for cookies */
 		if (this->cookie_threshold && cookie_required(this, message))
 		{
-			u_int32_t now = time(NULL);
+			u_int32_t now = time_monotonic(NULL);
 			chunk_t cookie = cookie_build(this, message, now - this->secret_offset,
-										  chunk_from_thing(this->secret));	
+										  chunk_from_thing(this->secret));
 			
 			DBG2(DBG_NET, "received packet from: %#H to %#H",
 				 message->get_source(message),
@@ -352,7 +352,7 @@ static void destroy(private_receiver_t *this)
 receiver_t *receiver_create()
 {
 	private_receiver_t *this = malloc_thing(private_receiver_t);
-	u_int32_t now = time(NULL);
+	u_int32_t now = time_monotonic(NULL);
 	
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	

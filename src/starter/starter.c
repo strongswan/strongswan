@@ -353,7 +353,7 @@ int main (int argc, char **argv)
 		}
 	}
 
-	last_reload = time(NULL);
+	last_reload = time_monotonic(NULL);
 
 	if (stat(STARTER_PID_FILE, &stb) == 0)
 	{
@@ -582,7 +582,7 @@ int main (int argc, char **argv)
 				}
 			}
 			_action_ &= ~FLAG_ACTION_UPDATE;
-			last_reload = time(NULL);
+			last_reload = time_monotonic(NULL);
 		}
 
 		/*
@@ -736,7 +736,7 @@ int main (int argc, char **argv)
 		 */
 		if (auto_update)
 		{
-			time_t now = time(NULL);
+			time_t now = time_monotonic(NULL);
 
 			tv.tv_sec = (now < last_reload + auto_update)
 					? (last_reload + auto_update-now) : 0;

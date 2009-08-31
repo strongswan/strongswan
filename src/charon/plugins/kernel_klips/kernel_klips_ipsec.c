@@ -2382,7 +2382,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 				break;
 			}
 			
-			*use_time = time(NULL) - idle_time;
+			*use_time = time_monotonic(NULL) - idle_time;
 			status = SUCCESS;
 			break;
 		}

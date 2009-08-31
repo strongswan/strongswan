@@ -126,7 +126,7 @@ static status_t query_policy(private_load_tester_ipsec_t *this,
 							 traffic_selector_t *dst_ts,
 							 policy_dir_t direction, u_int32_t *use_time)
 {
-	*use_time = time(NULL);
+	*use_time = time_monotonic(NULL);
 	return SUCCESS;
 }
 

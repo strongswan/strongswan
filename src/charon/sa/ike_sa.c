@@ -428,7 +428,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	}
 	
 	last_out = get_use_time(this, FALSE);
-	now = time(NULL);
+	now = time_monotonic(NULL);
 	
 	diff = now - last_out;
 	
@@ -570,7 +570,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 		/* check if there was any inbound traffic */
 		time_t last_in, now;
 		last_in = get_use_time(this, TRUE);
-		now = time(NULL);
+		now = time_monotonic(NULL);
 		diff = now - last_in;
 		if (diff >= delay)
 		{
@@ -632,7 +632,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				u_int32_t t;
 			
 				/* calculate rekey, reauth and lifetime */
-				this->stats[STAT_ESTABLISHED] = time(NULL);
+				this->stats[STAT_ESTABLISHED] = time_monotonic(NULL);
 				
 				/* schedule rekeying if we have a time which is smaller than
 				 * an already scheduled rekeying */
@@ -895,7 +895,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 static status_t generate_message(private_ike_sa_t *this, message_t *message,
 								 packet_t **packet)
 {
-	this->stats[STAT_OUTBOUND] = time(NULL);
+	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	return message->generate(message,
 				this->keymat->get_crypter(this->keymat, FALSE),
@@ -1290,7 +1290,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			charon->scheduler->schedule_job(charon->scheduler, job,
 											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
-		this->stats[STAT_INBOUND] = time(NULL);
+		this->stats[STAT_INBOUND] = time_monotonic(NULL);
 		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
@@ -1514,7 +1514,7 @@ static status_t reauth(private_ike_sa_t *this)
 #endif /* ME */
 			)
 		{
-			time_t now = time(NULL);
+			time_t now = time_monotonic(NULL);
 			
 			DBG1(DBG_IKE, "IKE_SA will timeout in %V",
 				 &now, &this->stats[STAT_DELETE]);
@@ -1668,7 +1668,7 @@ static status_t reestablish(private_ike_sa_t *this)
  */
 static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 {
-	this->stats[STAT_OUTBOUND] = time(NULL);
+	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
 		/* send a proper signal to brief interested bus listeners */
@@ -1710,7 +1710,7 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 {
 	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
-	u_int32_t reauth_time = time(NULL) + lifetime - reduction;
+	u_int32_t reauth_time = time_monotonic(NULL) + lifetime - reduction;
 
 	if (lifetime < reduction)
 	{
@@ -1731,8 +1731,9 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 	}
 	else
 	{
-		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, reauthentication already "
-			 "scheduled in %ds", lifetime, this->stats[STAT_REAUTH] - time(NULL));
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, "
+			 "reauthentication already scheduled in %ds", lifetime,
+			 this->stats[STAT_REAUTH] - time_monotonic(NULL));
 	}
 }
 
@@ -1923,7 +1924,7 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	/* reauthentication timeout survives a rekeying */
 	if (other->stats[STAT_REAUTH])
 	{
-		time_t reauth, delete, now = time(NULL);
+		time_t reauth, delete, now = time_monotonic(NULL);
 	
 		this->stats[STAT_REAUTH] = other->stats[STAT_REAUTH];
 		reauth = this->stats[STAT_REAUTH] - now;
@@ -2113,7 +2114,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL);
 	memset(this->stats, 0, sizeof(this->stats));
-	this->stats[STAT_INBOUND] = this->stats[STAT_OUTBOUND] = time(NULL);
+	this->stats[STAT_INBOUND] = this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;
 	this->my_auth = auth_cfg_create();

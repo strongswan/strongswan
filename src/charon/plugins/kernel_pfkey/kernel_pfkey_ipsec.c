@@ -1911,9 +1911,16 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
-	
-	*use_time = response.lft_current->sadb_lifetime_usetime;
-	
+	/* we need the monotonic time, but the kernel returns system time. */
+	if (response.lft_current->sadb_lifetime_usetime)
+	{
+		*use_time = time_monotonic(NULL) -
+					(time(NULL) - response.lft_current->sadb_lifetime_usetime);
+	}
+	else
+	{
+		*use_time = 0;
+	}
 	free(out);
 	
 	return SUCCESS;

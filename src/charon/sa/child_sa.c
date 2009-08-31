@@ -593,7 +593,7 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 				inbound ? soft : 0, hard, enc_alg, encr, int_alg, integ,
 				this->mode, this->ipcomp, cpi, this->encap, update);
 	
-	now = time(NULL);
+	now = time_monotonic(NULL);
 	if (soft)
 	{
 		this->rekey_time = now + soft;

@@ -174,7 +174,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 	entry->closed = FALSE;
 	pthread_cond_init(&entry->cond, NULL);
 	entry->session = load_session(this);
-	entry->used = time(NULL);
+	entry->used = time_monotonic(NULL);
 	entry->host = strdup(host);
 	
 	return entry;
@@ -237,7 +237,7 @@ static void dispatch(private_dispatcher_t *this)
 			continue;
 		}
 		sid = request->get_cookie(request, "SID");
-		now = time(NULL);
+		now = time_monotonic(NULL);
 		
 		/* find session */
 		pthread_mutex_lock(&this->mutex);
@@ -281,7 +281,7 @@ static void dispatch(private_dispatcher_t *this)
 	
 		/* start processing */
 		found->session->process(found->session, request);
-		found->used = time(NULL);
+		found->used = time_monotonic(NULL);
 		
 		/* release session */
 		pthread_mutex_lock(&this->mutex);

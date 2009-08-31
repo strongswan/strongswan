@@ -1774,7 +1774,16 @@ static status_t query_policy(private_kernel_netlink_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
-	*use_time = (time_t)policy->curlft.use_time;
+	
+	if (policy->curlft.use_time)
+	{
+		/* we need the monotonic time, but the kernel returns system time. */
+		*use_time = time_monotonic(NULL) - (time(NULL) - policy->curlft.use_time);
+	}
+	else
+	{
+		*use_time = 0;
+	}
 	
 	free(out);
 	return SUCCESS;

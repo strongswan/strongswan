@@ -50,7 +50,7 @@ static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *mess
 	lifetime = this->ike_sa->get_statistic(this->ike_sa, STAT_REAUTH);
 	if (lifetime)
 	{
-		lifetime -= time(NULL);
+		lifetime -= time_monotonic(NULL);
 		chunk = chunk_from_thing(lifetime);
 		*(u_int32_t*)chunk.ptr = htonl(lifetime);
 		message->add_notify(message, FALSE, AUTH_LIFETIME, chunk);

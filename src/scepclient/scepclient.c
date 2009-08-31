@@ -1006,7 +1006,7 @@ int main(int argc, char **argv)
 	{
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
 		cert_t cert;
-		time_t poll_start;
+		time_t poll_start = 0;
 
 		x509cert_t       *certs         = NULL;
 		chunk_t           envelopedData = chunk_empty;
@@ -1035,7 +1035,7 @@ int main(int argc, char **argv)
 		{
 			plog("  scep request pending, polling every %d seconds"
 				, poll_interval);
-			time(&poll_start);
+			poll_start = time_monotonic(NULL);
 			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc"
 								   , x509_ca_sig->subject
 								   , subject);
@@ -1043,7 +1043,7 @@ int main(int argc, char **argv)
 		while (attrs.pkiStatus == SCEP_PENDING)
 		{
 			if (max_poll_time > 0
-			&& (time(NULL) - poll_start >= max_poll_time))
+			&& (time_monotonic(NULL) - poll_start >= max_poll_time))
 			{
 				exit_scepclient("maximum poll time reached: %d seconds"
 							   , max_poll_time);
