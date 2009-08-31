@@ -47,7 +47,7 @@ struct lock_profile_t {
 	/**
 	 * how long threads have waited for the lock in this mutex so far
 	 */
-	struct timeval waited;
+	timeval_t waited;
 	
 	/**
 	 * backtrace where mutex has been created
@@ -81,10 +81,10 @@ static void profiler_init(lock_profile_t *profile)
 
 #define profiler_start(profile) { \
 	struct timeval _start, _end, _diff; \
-	gettimeofday(&_start, NULL);
+	time_monotonic(&_start);
 	
 #define profiler_end(profile) \
-	gettimeofday(&_end, NULL); \
+	time_monotonic(&_end); \
 	timersub(&_end, &_start, &_diff); \
 	timeradd(&(profile)->waited, &_diff, &(profile)->waited); }
 
@@ -368,7 +368,7 @@ static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
 	timeval_t tv;
 	u_int s, ms;
 	
-	gettimeofday(&tv, NULL);
+	time_monotonic(&tv);
 	
 	s = timeout / 1000;
 	ms = timeout % 1000;
@@ -419,17 +419,23 @@ condvar_t *condvar_create(condvar_type_t type)
 		case CONDVAR_TYPE_DEFAULT:
 		default:
 		{
+			pthread_condattr_t condattr;
 			private_condvar_t *this = malloc_thing(private_condvar_t);
-		
+			
 			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))_wait;
 			this->public.timed_wait = (bool(*)(condvar_t*, mutex_t *mutex, u_int timeout))timed_wait;
 			this->public.timed_wait_abs = (bool(*)(condvar_t*, mutex_t *mutex, timeval_t time))timed_wait_abs;
 			this->public.signal = (void(*)(condvar_t*))_signal;
 			this->public.broadcast = (void(*)(condvar_t*))broadcast;
 			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
-		
-			pthread_cond_init(&this->condvar, NULL);
-		
+			
+			pthread_condattr_init(&condattr);
+#ifdef HAVE_CONDATTR_CLOCK_MONOTONIC
+			pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+#endif
+			pthread_cond_init(&this->condvar, &condattr);
+			pthread_condattr_destroy(&condattr);
+			
 			return &this->public;
 		}
 	}

@@ -101,6 +101,9 @@ struct scheduler_t {
 	/**
 	 * Adds a event to the queue, using an absolut time.
 	 *
+	 * The passed timeval should be calculated based on the time_monotonic()
+	 * function.
+	 *
 	 * @param job 			job to schedule
 	 * @param time 			absolut time to schedule job
 	 */

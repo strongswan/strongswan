@@ -167,7 +167,9 @@ bool mkdir_p(const char *path, mode_t mode)
  */
 time_t time_monotonic(timeval_t *tv)
 {
-#if defined(HAVE_CLOCK_GETTIME)
+#if defined(HAVE_CLOCK_GETTIME) && defined(HAVE_CONDATTR_CLOCK_MONOTONIC)
+	/* as we use time_monotonic() for condvar operations, we use the
+	 * monotonic time source only if it is also supported by pthread. */
 	timespec_t ts;
 	
 	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
@@ -179,11 +181,12 @@ time_t time_monotonic(timeval_t *tv)
 		}
 		return ts.tv_sec;
 	}
-#endif /* HAVE_CLOCK_MONOTONIC */
+#endif /* HAVE_CLOCK_MONOTONIC && HAVE_CONDATTR_CLOCK_MONOTONIC */
 	/* Fallback to non-monotonic timestamps:
 	 * On MAC OS X, creating monotonic timestamps is rather difficult. We
 	 * could use mach_absolute_time() and catch sleep/wakeup notifications.
-	 * We stick to the simpler (non-monotonic) gettimeofday() for now. */
+	 * We stick to the simpler (non-monotonic) gettimeofday() for now.
+	 * But keep in mind: we need the same time source here as in condvar! */
 	if (!tv)
 	{
 		return time(NULL);

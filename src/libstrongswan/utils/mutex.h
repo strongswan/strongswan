@@ -98,11 +98,11 @@ struct mutex_t {
 	 * Release the lock on the mutex.
 	 */
 	void (*unlock)(mutex_t *this);
-			
+	
 	/**
-     * Destroy a mutex instance.
-     */
-    void (*destroy)(mutex_t *this);
+	 * Destroy a mutex instance.
+	 */
+	void (*destroy)(mutex_t *this);
 };
 
 /**
@@ -128,12 +128,15 @@ struct condvar_t {
 	
 	/**
 	 * Wait on a condvar until it gets signalized, or times out.
-	 * 
+	 *
+	 * The passed timeval should be calculated based on the time_monotonic()
+	 * function.
+	 *
 	 * @param mutex			mutex to release while waiting
-	 * @param time			absolute time until timeout
+	 * @param tv			absolute time until timeout
 	 * @return				TRUE if timed out, FALSE otherwise
 	 */
-	bool (*timed_wait_abs)(condvar_t *this, mutex_t *mutex, timeval_t timeout);
+	bool (*timed_wait_abs)(condvar_t *this, mutex_t *mutex, timeval_t tv);
 	
 	/**
 	 * Wake up a single thread in a condvar.

@@ -927,6 +927,20 @@ AC_TRY_COMPILE(
 	[AC_MSG_RESULT([no])]
 )
 
+dnl check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
+saved_LIBS=$LIBS
+LIBS="-lpthread"
+AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONE)])
+AC_TRY_RUN(
+	[#include <pthread.h>
+	 int main() { pthread_condattr_t attr;
+		pthread_condattr_init(&attr);
+		return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])],
+	[AC_MSG_RESULT([no])]
+)
+LIBS=$saved_LIBS
+
 AC_CHECK_FUNCS(prctl)
 
 AC_CHECK_HEADERS(sys/sockio.h)

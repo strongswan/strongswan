@@ -190,7 +190,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	
 	this->mutex->lock(this->mutex);
 	
-	gettimeofday(&now, NULL);
+	time_monotonic(&now);
 	
 	if ((event = peek_event(this)) != NULL)
 	{
@@ -290,7 +290,7 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t s)
 {
 	timeval_t tv;
 	
-	gettimeofday(&tv, NULL);
+	time_monotonic(&tv);
 	tv.tv_sec += s;
 	
 	schedule_job_tv(this, job, tv);
@@ -303,7 +303,7 @@ static void schedule_job_ms(private_scheduler_t *this, job_t *job, u_int32_t ms)
 {
 	timeval_t tv, add;
 	
-	gettimeofday(&tv, NULL);
+	time_monotonic(&tv);
 	add.tv_sec = ms / 1000;
 	add.tv_usec = (ms % 1000) * 1000;
 	
