@@ -105,16 +105,16 @@ struct single_response {
 };
 
 const single_response_t empty_single_response = {
-	  NULL            , /* *next */
-	OID_UNKNOWN       , /* hash_algorithm */
-	{ NULL, 0 }       , /* issuer_name_hash */
-	{ NULL, 0 }       , /* issuer_key_hash */
-	{ NULL, 0 }       , /* serial_number */
-	CERT_UNDEFINED    , /* status */
-	UNDEFINED_TIME    , /* revocationTime */
-	CRL_UNSPECIFIED   , /* revocationReason */
-	UNDEFINED_TIME    , /* this_update */
-	UNDEFINED_TIME      /* next_update */
+	  NULL                , /* *next */
+	OID_UNKNOWN           , /* hash_algorithm */
+	{ NULL, 0 }           , /* issuer_name_hash */
+	{ NULL, 0 }           , /* issuer_key_hash */
+	{ NULL, 0 }           , /* serial_number */
+	CERT_UNDEFINED        , /* status */
+	UNDEFINED_TIME        , /* revocationTime */
+	CRL_REASON_UNSPECIFIED, /* revocationReason */
+	UNDEFINED_TIME        , /* this_update */
+	UNDEFINED_TIME          /* next_update */
 };
 
 
@@ -425,7 +425,7 @@ cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
 	time_t nextUpdate = 0;
 
 	*revocationDate = UNDEFINED_TIME;
-	*revocationReason = CRL_UNSPECIFIED;
+	*revocationReason = CRL_REASON_UNSPECIFIED;
 	
 	/* is an ocsp location defined? */
 	if (!build_ocsp_location(cert, &location))
@@ -1292,7 +1292,7 @@ static bool parse_ocsp_single_response(chunk_t blob, int level0,
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
 			sres->revocationReason = (object.len == 1)
-				? *object.ptr : CRL_UNSPECIFIED;
+				? *object.ptr : CRL_REASON_UNSPECIFIED;
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
 			sres->status = CERT_UNKNOWN;

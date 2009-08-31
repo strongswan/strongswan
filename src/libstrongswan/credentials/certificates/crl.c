@@ -16,7 +16,7 @@
 
 #include "crl.h"
 
-ENUM(crl_reason_names, CRL_UNSPECIFIED, CRL_REMOVE_FROM_CRL,
+ENUM(crl_reason_names, CRL_REASON_UNSPECIFIED, CRL_REASON_REMOVE_FROM_CRL,
 	"unspecified",
 	"key compromise",
 	"ca compromise",

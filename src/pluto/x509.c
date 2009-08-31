@@ -1986,7 +1986,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		{
 			time_t nextUpdate = *until;
 			time_t revocationDate = UNDEFINED_TIME;
-			crl_reason_t revocationReason = CRL_UNSPECIFIED;
+			crl_reason_t revocationReason = CRL_REASON_UNSPECIFIED;
 
 			/* first check certificate revocation using ocsp */
 			cert_status_t status = verify_by_ocsp(cert, &nextUpdate

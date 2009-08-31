@@ -320,7 +320,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	response->serialNumber = chunk_empty;
 	response->status = VALIDATION_FAILED;
 	response->revocationTime = 0;
-	response->revocationReason = CRL_UNSPECIFIED;
+	response->revocationReason = CRL_REASON_UNSPECIFIED;
 	response->thisUpdate = UNDEFINED_TIME;
 	/* if nextUpdate is missing, we give it a short lifetime */
 	response->nextUpdate = this->producedAt + OCSP_DEFAULT_LIFETIME;

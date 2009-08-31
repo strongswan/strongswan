@@ -238,7 +238,7 @@ static bool parse(private_x509_crl_t *this)
 				revoked = malloc_thing(revoked_t);
 				revoked->serial = userCertificate;
 				revoked->date = asn1_parse_time(object, level);
-				revoked->reason = CRL_UNSPECIFIED;
+				revoked->reason = CRL_REASON_UNSPECIFIED;
 				this->revoked->insert_last(this->revoked, (void *)revoked);
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_ID:
