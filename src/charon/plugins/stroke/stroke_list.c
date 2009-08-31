@@ -873,7 +873,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		chunk = crl->get_authKeyIdentifier(crl);
 		if (chunk.ptr)
 		{
-			fprintf(out, "  authkey:   %#B\n", chunk);
+			fprintf(out, "  authkey:   %#B\n", &chunk);
 		}
 	}
 	enumerator->destroy(enumerator);
