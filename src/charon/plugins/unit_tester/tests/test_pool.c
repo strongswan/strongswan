@@ -13,7 +13,6 @@
  * for more details.
  */
 
-#include <sys/time.h>
 #include <time.h>
 #include <pthread.h>
 

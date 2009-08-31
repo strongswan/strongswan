@@ -16,7 +16,6 @@
  * for more details.
  */
 
-#include <sys/time.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>

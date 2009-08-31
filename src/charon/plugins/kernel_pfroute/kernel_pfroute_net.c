@@ -147,7 +147,7 @@ struct private_kernel_pfroute_net_t
 	/**
 	 * time of last roam job
 	 */
-	struct timeval last_roam;
+	timeval_t last_roam;
 };
 
 /**
@@ -156,22 +156,20 @@ struct private_kernel_pfroute_net_t
  */
 static void fire_roam_job(private_kernel_pfroute_net_t *this, bool address)
 {
-	struct timeval now;
+	timeval_t now;
 	
-	if (gettimeofday(&now, NULL) == 0)
+	time_monotonic(&now);
+	if (timercmp(&now, &this->last_roam, >))
 	{
-		if (timercmp(&now, &this->last_roam, >))
+		now.tv_usec += ROAM_DELAY * 1000;
+		while (now.tv_usec > 1000000)
 		{
-			now.tv_usec += ROAM_DELAY * 1000;
-			while (now.tv_usec > 1000000)
-			{
-				now.tv_sec++;
-				now.tv_usec -= 1000000;
-			}
-			this->last_roam = now;
-			charon->scheduler->schedule_job_ms(charon->scheduler,
-				(job_t*)roam_job_create(address), ROAM_DELAY);
+			now.tv_sec++;
+			now.tv_usec -= 1000000;
 		}
+		this->last_roam = now;
+		charon->scheduler->schedule_job_ms(charon->scheduler,
+			(job_t*)roam_job_create(address), ROAM_DELAY);
 	}
 }
 

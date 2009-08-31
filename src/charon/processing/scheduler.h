@@ -25,8 +25,6 @@
 
 typedef struct scheduler_t scheduler_t;
 
-#include <sys/time.h>
-
 #include <library.h>
 #include <processing/jobs/job.h>
 

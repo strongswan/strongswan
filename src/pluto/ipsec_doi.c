@@ -25,7 +25,6 @@
 #include <resolv.h>
 #include <arpa/nameser.h>       /* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
-#include <sys/time.h>           /* for gettimeofday */
 
 #include <freeswan.h>
 

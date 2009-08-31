@@ -16,7 +16,6 @@
 
 #define _GNU_SOURCE
 #include <pthread.h>
-#include <sys/time.h>
 #include <stdint.h>
 #include <time.h>
 #include <errno.h>

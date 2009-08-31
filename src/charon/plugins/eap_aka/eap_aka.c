@@ -36,8 +36,6 @@
 #include <limits.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/time.h>
-#include <time.h>
 #include <gmp.h>
 
 #include "eap_aka.h"
@@ -272,7 +270,8 @@ static chunk_t peer_sqn = chunk_from_buf(peer_sqn_buf);
 static void update_sqn(u_int8_t *sqn, time_t offset)
 {
 	timeval_t time;
-	gettimeofday(&time, NULL);
+	
+	time_monotonic(&time);
 	/* set sqb_sqn to an integer containing seconds followed by most
 	 * significant useconds */
 	time.tv_sec = htonl(time.tv_sec + offset);
