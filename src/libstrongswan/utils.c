@@ -163,6 +163,39 @@ bool mkdir_p(const char *path, mode_t mode)
 }
 
 /**
+ * Return monotonic time
+ */
+time_t time_monotonic(timeval_t *tv)
+{
+#if defined(HAVE_CLOCK_GETTIME)
+	timespec_t ts;
+	
+	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+	{
+		if (tv)
+		{
+			tv->tv_sec = ts.tv_sec;
+			tv->tv_usec = ts.tv_nsec / 1000;
+		}
+		return ts.tv_sec;
+	}
+#endif /* HAVE_CLOCK_MONOTONIC */
+	/* Fallback to non-monotonic timestamps:
+	 * On MAC OS X, creating monotonic timestamps is rather difficult. We
+	 * could use mach_absolute_time() and catch sleep/wakeup notifications.
+	 * We stick to the simpler (non-monotonic) gettimeofday() for now. */
+	if (!tv)
+	{
+		return time(NULL);
+	}
+	if (gettimeofday(tv, NULL) != 0)
+	{	/* should actually never fail if passed pointers are valid */
+		return -1;
+	}
+	return tv->tv_sec;
+}
+
+/**
  * return null
  */
 void *return_null()

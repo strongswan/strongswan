@@ -908,6 +908,12 @@ AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
 )
 AC_SUBST(SOCKLIB)
 
+dnl FreeBSD has clock_gettime in libc, Linux needs librt
+LIBS=""
+AC_SEARCH_LIBS(clock_gettime, rt, [RTLIB=$LIBS])
+AC_CHECK_FUNCS(clock_gettime)
+AC_SUBST(RTLIB)
+
 LIBS=$saved_LIBS
 dnl ======================
 

@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <sys/time.h>
 
 #include <enum.h>
 
@@ -269,11 +270,23 @@ void *memstr(const void *haystack, const char *needle, size_t n);
 /**
  * Creates a directory and all required parent directories. 
  *
- * @param	path	path to the new directory
- * @param	mode	permissions of the new directory/directories 
+ * @param path		path to the new directory
+ * @param mode		permissions of the new directory/directories 
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
+
+/**
+ * Get a timestamp from a monotonic time source.
+ *
+ * While the time()/gettimeofday() functions are affected by leap seconds
+ * and system time changes, this function returns ever increasing monotonic
+ * time stamps.
+ *
+ * @param tv		timeval struct receiving monotonic timestamps, or NULL
+ * @return			monotonic timestamp in seconds
+ */
+time_t time_monotonic(timeval_t *tv);
 
 /**
  * returns null
