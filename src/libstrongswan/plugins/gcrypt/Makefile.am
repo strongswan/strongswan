@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic $(LIBGCRYPT_CFLAGS)
+AM_CFLAGS = -rdynamic
 
 plugin_LTLIBRARIES = libstrongswan-gcrypt.la
 
@@ -14,4 +14,4 @@ libstrongswan_gcrypt_la_SOURCES = gcrypt_plugin.h gcrypt_plugin.c \
 	gcrypt_hasher.h gcrypt_hasher.c
 
 libstrongswan_gcrypt_la_LDFLAGS = -module -avoid-version
-libstrongswan_gcrypt_la_LIBADD  = $(LIBGCRYPT_LIBS)
+libstrongswan_gcrypt_la_LIBADD  = -lgcrypt
