@@ -61,20 +61,6 @@ enum_names version_names =
 		ISAKMP_MAJOR_VERSION<<ISA_MAJ_SHIFT | ISAKMP_MINOR_VERSION,
 		version_name, NULL };
 
-/* RFC 2459 CRL reason codes */
-
-ENUM(crl_reason_names, REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL,
-	"unspecified",
-	"key compromise",
-	"ca compromise",
-	"affiliation changed",
-	"superseded",
-	"cessation of operation",
-	"certificate hold",
-	"reason #7",
-	"remove from crl"
-);
-
 /* RFC 3706 Dead Peer Detection */
 
 ENUM(dpd_action_names, DPD_ACTION_NONE, DPD_ACTION_RESTART,
