@@ -421,30 +421,8 @@ means 'never give up'.
 Relevant only locally, other end need not agree on it.
 .TP
 .B keylife
-how long a particular instance of a connection
-(a set of encryption/authentication keys for user packets) should last,
-from successful negotiation to expiry;
-acceptable values are an integer optionally followed by
-.BR s
-(a time in seconds)
-or a decimal number followed by
-.BR m ,
-.BR h ,
-or
-.B d
-(a time
-in minutes, hours, or days respectively)
-(default
-.BR 1h ,
-maximum
-.BR 24h ).
-Normally, the connection is renegotiated (via the keying channel)
-before it expires.
-The two ends need not exactly agree on
-.BR keylife ,
-although if they do not,
-there will be some clutter of superseded connections on the end
-which thinks the lifetime is longer.
+synonym for
+.BR lifetime .
 .TP
 .B left
 (required)
@@ -724,6 +702,61 @@ Relevant only locally, other end need not agree on it. IKEv2 uses the updown
 script to insert firewall rules only. Routing is not support and will be
 implemented directly into Charon.
 .TP
+.B lifebytes
+the number of bytes transmitted over an IPsec SA before it expires (IKEv2
+only).
+.TP
+.B lifepackets
+the number of packets transmitted over an IPsec SA before it expires (IKEv2
+only).
+.TP
+.B lifetime
+how long a particular instance of a connection
+(a set of encryption/authentication keys for user packets) should last,
+from successful negotiation to expiry;
+acceptable values are an integer optionally followed by
+.BR s
+(a time in seconds)
+or a decimal number followed by
+.BR m ,
+.BR h ,
+or
+.B d
+(a time
+in minutes, hours, or days respectively)
+(default
+.BR 1h ,
+maximum
+.BR 24h ).
+Normally, the connection is renegotiated (via the keying channel)
+before it expires (see
+.BR margintime ).
+The two ends need not exactly agree on
+.BR lifetime ,
+although if they do not,
+there will be some clutter of superseded connections on the end
+which thinks the lifetime is longer.
+.TP
+.B marginbytes
+how many bytes before IPsec SA expiry (see
+.BR lifebytes )
+should attempts to negotiate a replacement begin (IKEv2 only).
+.TP
+.B marginpackets
+how many packets before IPsec SA expiry (see
+.BR lifepackets )
+should attempts to negotiate a replacement begin (IKEv2 only).
+.TP
+.B margintime
+how long before connection expiry or keying-channel expiry
+should attempts to
+negotiate a replacement
+begin; acceptable values as for
+.B lifetime
+(default
+.BR 9m ).
+Relevant only locally, other end need not agree on it.
+.TP
 .B mobike
 enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
 .B yes
@@ -789,35 +822,35 @@ will be largely ineffective unless both ends agree on it.
 .TP
 .B rekeyfuzz
 maximum percentage by which
-.B rekeymargin
+.BR marginbytes ,
+.B marginpackets
+and
+.B margintime
 should be randomly increased to randomize rekeying intervals
 (important for hosts with many connections);
 acceptable values are an integer,
 which may exceed 100,
 followed by a `%'
-(default set by
-.IR pluto (8),
-currently
+(defaults to
 .BR 100% ).
 The value of
-.BR rekeymargin ,
+.BR marginTYPE ,
 after this random increase,
 must not exceed
-.BR keylife .
+.B lifeTYPE
+(where TYPE is one of
+.IR bytes ,
+.I packets
+or
+.IR time ).
 The value
 .B 0%
-will suppress time randomization.
+will suppress randomization.
 Relevant only locally, other end need not agree on it.
 .TP
 .B rekeymargin
-how long before connection expiry or keying-channel expiry
-should attempts to
-negotiate a replacement
-begin; acceptable values as for
-.B keylife
-(default
-.BR 9m ).
-Relevant only locally, other end need not agree on it.
+synonym for
+.BR margintime .
 .TP
 .B type
 the type of the connection; currently the accepted values
