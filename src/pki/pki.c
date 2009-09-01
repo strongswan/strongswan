@@ -747,8 +747,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "integrity check of pki failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	lib->plugins->load(lib->plugins, PLUGINDIR,
-		lib->settings->get_str(lib->settings, "pki.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, PLUGINDIR,
+			lib->settings->get_str(lib->settings, "pki.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 	
 	switch (getopt_long(argc, argv, "", long_opts, NULL))
 	{

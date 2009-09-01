@@ -220,20 +220,22 @@ int main(int argc, char **argv)
 	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* initialize library */
+	atexit(library_deinit);
 	if (!library_init(STRONGSWAN_CONF))
 	{
-		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
 	if (lib->integrity &&
 		!lib->integrity->check_file(lib->integrity, "openac", argv[0]))
 	{
 		fprintf(stderr, "integrity check of openac failed\n");
-		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+			lib->settings->get_str(lib->settings, "openac.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 
 	/* initialize optionsfrom */
 	options_t *options = options_create();

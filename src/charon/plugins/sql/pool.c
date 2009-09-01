@@ -634,20 +634,23 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "integrity check of pool failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
-		lib->settings->get_str(lib->settings, "pool.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+			lib->settings->get_str(lib->settings, "pool.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 	
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)
 	{
 		fprintf(stderr, "database URI charon.plugins.sql.database not set.\n");
-		exit(-1);
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	db = lib->db->create(lib->db, uri);
 	if (!db)
 	{
 		fprintf(stderr, "opening database failed.\n");
-		exit(-1);
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(cleanup);
 	
@@ -677,7 +680,7 @@ int main(int argc, char *argv[])
 		switch (c)
 		{
 			case EOF:
-	    		break;
+				break;
 			case 'h':
 				break;
 			case 'w':

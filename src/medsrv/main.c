@@ -34,8 +34,11 @@ int main(int arc, char *argv[])
 	int timeout, threads;
 	
 	library_init(STRONGSWAN_CONF);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
-	    lib->settings->get_str(lib->settings, "medsrv.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+			lib->settings->get_str(lib->settings, "medsrv.load", PLUGINS)))
+	{
+		return 1;
+	}
 	
 	socket = lib->settings->get_str(lib->settings, "medsrv.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "medsrv.debug", FALSE);
