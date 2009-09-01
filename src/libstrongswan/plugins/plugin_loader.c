@@ -110,26 +110,45 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 /**
  * Implementation of plugin_loader_t.load_plugins.
  */
-static int load(private_plugin_loader_t *this, char *path, char *list)
+static bool load(private_plugin_loader_t *this, char *path, char *list)
 {
-	plugin_t *plugin;
 	enumerator_t *enumerator;
 	char *token;
-	int count = 0;
+	bool critical_failed = FALSE;
 	
 	enumerator = enumerator_create_token(list, " ", " ");
-	while (enumerator->enumerate(enumerator, &token))
+	while (!critical_failed && enumerator->enumerate(enumerator, &token))
 	{
+		plugin_t *plugin;
+		bool critical = FALSE;
+		int len;
+		
+		token = strdup(token);
+		len = strlen(token);
+		if (token[len-1] == '!')
+		{
+			critical = TRUE;
+			token[len-1] = '\0';
+		}
 		plugin = load_plugin(this, path, token);
 		if (plugin)
-		{	/* insert in front to destroy them in reverse order */
+		{
+			/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
-			this->names->insert_last(this->names, strdup(token));
-			count++;
+			this->names->insert_last(this->names, token);
+		}
+		else
+		{
+			if (critical)
+			{
+				critical_failed = TRUE;
+				DBG1("loading critical plugin '%s' failed", token);
+			}
+			free(token);
 		}
 	}
 	enumerator->destroy(enumerator);
-	return count;
+	return !critical_failed;
 }
 
 /**
@@ -176,7 +195,7 @@ plugin_loader_t *plugin_loader_create()
 {
 	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
 	
-	this->public.load = (int(*)(plugin_loader_t*, char *path, char *prefix))load;
+	this->public.load = (bool(*)(plugin_loader_t*, char *path, char *prefix))load;
 	this->public.unload = (void(*)(plugin_loader_t*))unload;
 	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
 	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
