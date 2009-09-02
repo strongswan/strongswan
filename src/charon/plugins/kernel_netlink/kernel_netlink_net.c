@@ -729,12 +729,15 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 {
 	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
 	int byte = 0;
-
+	
+	if (net_len == 0)
+	{	/* any address matches a /0 network */
+		return TRUE;
+	}
 	if (addr.len != net.len || net_len > 8 * net.len )
 	{
 		return FALSE;
 	}
-
 	/* scan through all bytes in network order */
 	while (net_len > 0)
 	{
@@ -780,14 +783,13 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_family = dest->get_family(dest);
-	
-	chunk = dest->get_address(dest);
-	netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
 	if (candidate)
 	{
 		chunk = candidate->get_address(candidate);
 		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
 	}
+	chunk = dest->get_address(dest);
+	netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
 	
 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
 	{
@@ -808,9 +810,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				size_t rtasize;
 				chunk_t rta_gtw, rta_src, rta_dst;
 				u_int32_t rta_oif = 0;
-				enumerator_t *ifaces, *addrs;
-				iface_entry_t *iface;
-				addr_entry_t *addr;
+				host_t *new_src, *new_gtw;
 				
 				rta_gtw = rta_src = rta_dst = chunk_empty;
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
@@ -838,8 +838,8 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
-				if (rta_oif && !is_interface_up(this, rta_oif))
-				{	/* interface is down */
+				if (msg->rtm_dst_len <= best)
+				{	/* not better than a previous one */
 					goto next;
 				}
 				if (this->routing_table != 0 &&
@@ -847,60 +847,55 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* route is from our own ipsec routing table */
 					goto next;
 				}
-				if (msg->rtm_dst_len <= best)
-				{	/* not better than a previous one */
+				if (rta_oif && !is_interface_up(this, rta_oif))
+				{	/* interface is down */
 					goto next;
 				}
-				if (msg->rtm_dst_len != 0 &&
-					(!rta_dst.ptr ||
-					 !addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len)))
-				{	/* is not the default route and not contained in our dst */
+				if (!addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))
+				{	/* route destination does not contain dest */
 					goto next;
 				}
 				
-				best = msg->rtm_dst_len;
 				if (nexthop)
 				{
-					DESTROY_IF(gtw);
-					gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+					/* nexthop lookup, return gateway */
+					if (rta_gtw.ptr)
+					{
+						DESTROY_IF(gtw);
+						gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+						best = msg->rtm_dst_len;
+					}
 					goto next;
 				}
 				if (rta_src.ptr)
 				{
-					DESTROY_IF(src);
-					src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
+					/* got a source address */
+					new_src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
 					if (get_vip_refcount(this, src))
 					{	/* skip source address if it is installed by us */
+						new_src->destroy(new_src);
+					}
+					else
+					{
 						DESTROY_IF(src);
-						src = NULL;
+						src = new_src;
+						best = msg->rtm_dst_len;
 					}
 					goto next;
 				}
-				/* no source addr, get one from the interfaces */
-				ifaces = this->ifaces->create_enumerator(this->ifaces);
-				while (ifaces->enumerate(ifaces, &iface))
-				{
-					if (iface->ifindex == rta_oif && 
-						iface->flags & IFF_UP)
+				if (rta_gtw.ptr)
+				{	/* no source, but a gateway. Lookup source to reach gtw. */
+					new_gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+					new_src = get_route(this, new_gtw, FALSE, candidate);
+					new_gtw->destroy(new_gtw);
+					if (new_src)
 					{
-						addrs = iface->addrs->create_enumerator(iface->addrs);
-						while (addrs->enumerate(addrs, &addr))
-						{
-							chunk_t ip = addr->ip->get_address(addr->ip);
-							if ((msg->rtm_dst_len == 0 && 
-								 addr->ip->get_family(addr->ip) ==
-								 	dest->get_family(dest)) ||
-								addr_in_subnet(ip, rta_dst, msg->rtm_dst_len))
-							{
-								DESTROY_IF(src);
-								src = addr->ip->clone(addr->ip);
-								break;
-							}
-						}
-						addrs->destroy(addrs);
+						DESTROY_IF(src);
+						src = new_src;
+						best = msg->rtm_dst_len;
 					}
+					goto next;
 				}
-				ifaces->destroy(ifaces);
 				goto next;
 			}
 			default:
@@ -1367,7 +1362,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	/* private members */
 	this->ifaces = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	timerclear(&this->last_roam);
 	this->routing_table = lib->settings->get_int(lib->settings,
