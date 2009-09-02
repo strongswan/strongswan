@@ -793,9 +793,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	fclose(fd);
 	src = chunk;
 
-	this->lock->write_lock(this->lock);
 	if (level == 0)
 	{
+		this->lock->write_lock(this->lock);
+
 		/* flush secrets on non-recursive invocation */
 		while (this->shared->remove_last(this->shared,
 										 (void**)&shared) == SUCCESS)
@@ -1106,7 +1107,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		}
 	}
 error:
-	this->lock->unlock(this->lock);
+	if (level == 0)
+	{
+		this->lock->unlock(this->lock);
+	}
 	chunk_clear(&chunk);
 }
 
