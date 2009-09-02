@@ -226,7 +226,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = this->rekey * 60 + this->rekey,
-			.rekey = this->rekey
+			.rekey = this->rekey,
 			.jitter = this->rekey
 		}
 	};

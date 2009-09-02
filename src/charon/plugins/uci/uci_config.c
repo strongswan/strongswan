@@ -147,7 +147,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = create_rekey(esp_rekey) + 300,
-			.rekey = create_rekey(esp_rekey)
+			.rekey = create_rekey(esp_rekey),
 			.jitter = 300
 		}
 	};
