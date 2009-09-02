@@ -94,11 +94,11 @@ enum exchange_type_t{
 extern enum_name_t *exchange_type_names;
 
 /**
- * An object of this type represents an IKEv2 header and is used to 
+ * An object of this type represents an IKEv2 header and is used to
  * generate and parse IKEv2 headers.
- * 
- * The header format of an IKEv2-Message is compatible to the 
- * ISAKMP-Header format to allow implementations supporting 
+ *
+ * The header format of an IKEv2-Message is compatible to the
+ * ISAKMP-Header format to allow implementations supporting
  * both versions of the IKE-protocol.
  */
 struct ike_header_t {
@@ -160,7 +160,6 @@ struct ike_header_t {
 	 * Set the response flag-
 	 *
 	 * @param response		response flag
-	 * 
 	 */
 	void (*set_response_flag) (ike_header_t *this, bool response);
 	/**
@@ -220,7 +219,7 @@ struct ike_header_t {
 
 /**
  * Create an ike_header_t object
- * 
+ *
  * @return ike_header_t object
  */
 ike_header_t *ike_header_create(void);

@@ -144,7 +144,7 @@ struct private_peer_cfg_t {
 	 */
 	linked_list_t *remote_auth;
 	
-#ifdef ME	
+#ifdef ME
 	/**
 	 * Is this a mediation connection?
 	 */
@@ -567,7 +567,7 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		(this->virtual_ip == other->virtual_ip ||
 		 (this->virtual_ip && other->virtual_ip &&
 		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
-		(this->pool == other->pool || 
+		(this->pool == other->pool ||
 		 (this->pool && other->pool && streq(this->pool, other->pool))) &&
 		auth_cfg_equal(this, other)
 #ifdef ME
@@ -630,8 +630,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	private_peer_cfg_t *this = malloc_thing(private_peer_cfg_t);
 
 	/* public functions */
-	this->public.get_name = (char* (*) (peer_cfg_t *))get_name;	
-	this->public.get_ike_version = (u_int(*) (peer_cfg_t *))get_ike_version;	
+	this->public.get_name = (char* (*) (peer_cfg_t *))get_name;
+	this->public.get_ike_version = (u_int(*) (peer_cfg_t *))get_ike_version;
 	this->public.get_ike_cfg = (ike_cfg_t* (*) (peer_cfg_t *))get_ike_cfg;
 	this->public.add_child_cfg = (void (*) (peer_cfg_t *, child_cfg_t*))add_child_cfg;
 	this->public.remove_child_cfg = (void(*)(peer_cfg_t*, enumerator_t*))remove_child_cfg;

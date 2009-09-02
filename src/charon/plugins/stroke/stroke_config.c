@@ -236,7 +236,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 							 msg->add_conn.me.address,
 							 msg->add_conn.other.address);
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
-	return ike_cfg;					 
+	return ike_cfg;
 }
 
 /**
@@ -380,7 +380,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			{
 				this->ca->check_for_hash_and_url(this->ca, certificate);
 			}
-			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate); 
+			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
 			if (identity->get_type(identity) == ID_ANY ||
 				!certificate->has_subject(certificate, identity))
 			{
@@ -533,8 +533,8 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 #ifdef ME
 	if (msg->add_conn.ikeme.mediation && msg->add_conn.ikeme.mediated_by)
 	{
-		DBG1(DBG_CFG, "a mediation connection cannot be a"
-				" mediated connection at the same time, aborting");
+		DBG1(DBG_CFG, "a mediation connection cannot be a mediated connection "
+			 "at the same time, aborting");
 		return NULL;
 	}
 	
@@ -547,19 +547,18 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	if (msg->add_conn.ikeme.mediated_by)
 	{
 		mediated_by = charon->backends->get_peer_cfg_by_name(charon->backends,
-												msg->add_conn.ikeme.mediated_by);
+											msg->add_conn.ikeme.mediated_by);
 		if (!mediated_by)
 		{
 			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
 				 msg->add_conn.ikeme.mediated_by);
 			return NULL;
 		}
-		
 		if (!mediated_by->is_mediation(mediated_by))
 		{
-			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is"
-				 "no mediation connection, aborting", 
-				msg->add_conn.ikeme.mediated_by, msg->add_conn.name);
+			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is "
+				 "no mediation connection, aborting",
+				 msg->add_conn.ikeme.mediated_by, msg->add_conn.name);
 			mediated_by->destroy(mediated_by);
 			return NULL;
 		}
@@ -583,7 +582,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	else
 	{
 		rekey = msg->add_conn.rekey.ike_lifetime - over;
-	}	
+	}
 	if (msg->add_conn.me.sourceip_size)
 	{
 		if (msg->add_conn.me.sourceip)
@@ -639,7 +638,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * uses to serve pool addresses. */
 	peer_cfg = peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg,
-		msg->add_conn.me.sendcert, unique, 
+		msg->add_conn.me.sendcert, unique,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip_size ?

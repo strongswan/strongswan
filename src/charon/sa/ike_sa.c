@@ -148,7 +148,7 @@ struct private_ike_sa_t {
 	 */
 	chunk_t connect_id;
 #endif /* ME */
-		
+	
 	/**
 	 * Identification used for us
 	 */
@@ -637,7 +637,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				/* schedule rekeying if we have a time which is smaller than
 				 * an already scheduled rekeying */
 				t = this->peer_cfg->get_rekey_time(this->peer_cfg);
-				if (t && (this->stats[STAT_REKEY] == 0 || 
+				if (t && (this->stats[STAT_REKEY] == 0 ||
 					(this->stats[STAT_REKEY] > t + this->stats[STAT_ESTABLISHED])))
 				{
 					this->stats[STAT_REKEY] = t + this->stats[STAT_ESTABLISHED];
@@ -646,7 +646,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
 				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
-				if (t && (this->stats[STAT_REAUTH] == 0 || 
+				if (t && (this->stats[STAT_REAUTH] == 0 ||
 					(this->stats[STAT_REAUTH] > t + this->stats[STAT_ESTABLISHED])))
 				{
 					this->stats[STAT_REAUTH] = t + this->stats[STAT_ESTABLISHED];
@@ -686,7 +686,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->scheduler->schedule_job(charon->scheduler, job, 
+			charon->scheduler->schedule_job(charon->scheduler, job,
 											HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
@@ -988,7 +988,7 @@ static chunk_t get_connect_id(private_ike_sa_t *this)
  * Implementation of ike_sa_t.respond
  */
 static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
-		chunk_t connect_id)
+						chunk_t connect_id)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->respond(task, peer_id, connect_id);
@@ -1011,7 +1011,8 @@ static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
  * Implementation of ike_sa_t.relay
  */
 static status_t relay(private_ike_sa_t *this, identification_t *requester,
-			chunk_t connect_id, chunk_t connect_key, linked_list_t *endpoints, bool response)
+					  chunk_t connect_id, chunk_t connect_key,
+					  linked_list_t *endpoints, bool response)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->relay(task, requester, connect_id, connect_key, endpoints, response);
@@ -1022,7 +1023,8 @@ static status_t relay(private_ike_sa_t *this, identification_t *requester,
 /**
  * Implementation of ike_sa_t.initiate_mediation
  */
-static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_cfg)
+static status_t initiate_mediation(private_ike_sa_t *this,
+								   peer_cfg_t *mediated_cfg)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->connect(task, mediated_cfg->get_peer_id(mediated_cfg));
@@ -1033,14 +1035,13 @@ static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_
 /**
  * Implementation of ike_sa_t.initiate_mediated
  */
-static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
-		chunk_t connect_id)
+static status_t initiate_mediated(private_ike_sa_t *this, host_t *me,
+								  host_t *other, chunk_t connect_id)
 {
 	set_my_host(this, me->clone(me));
 	set_other_host(this, other->clone(other));
 	chunk_free(&this->connect_id);
 	this->connect_id = chunk_clone(connect_id);
-	
 	return this->task_manager->initiate(this->task_manager);
 }
 #endif /* ME */
@@ -1158,8 +1159,8 @@ static status_t initiate(private_ike_sa_t *this,
 	{
 		if (this->state == IKE_ESTABLISHED)
 		{
-			/* mediation connection is already established, retrigger state change
-			 * to notify bus listeners */
+			/* mediation connection is already established, retrigger state
+			 * change to notify bus listeners */
 			DBG1(DBG_IKE, "mediation connection is already up");
 			set_state(this, IKE_ESTABLISHED);
 		}
@@ -1509,7 +1510,7 @@ static status_t reauth(private_ike_sa_t *this)
 		if (this->other_virtual_ip != NULL ||
 			has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
-			/* if we are mediation server we too cannot reauth the IKE_SA */
+			/* as mediation server we too cannot reauth the IKE_SA */
 			|| this->is_mediation_server
 #endif /* ME */
 			)
@@ -1545,7 +1546,7 @@ static status_t reestablish(private_ike_sa_t *this)
 	bool required = FALSE;
 	status_t status = FAILED;
 	
-	/* check if we have children to keep up at all*/
+	/* check if we have children to keep up at all */
 	iterator = create_child_sa_iterator(this);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
@@ -1569,7 +1570,7 @@ static status_t reestablish(private_ike_sa_t *this)
 	}
 	iterator->destroy(iterator);
 #ifdef ME
-	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
+	/* mediation connections have no children, keep them up anyway */
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
 		required = TRUE;
@@ -1720,7 +1721,7 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 		 			(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||
-			 this->stats[STAT_REAUTH] > reauth_time) 
+			 this->stats[STAT_REAUTH] > reauth_time)
 	{
 		this->stats[STAT_REAUTH] = reauth_time;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
@@ -1886,7 +1887,7 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	}
 	
 	/* ... and configuration attributes */
-	while (other->attributes->remove_last(other->attributes, 
+	while (other->attributes->remove_last(other->attributes,
 										  (void**)&entry) == SUCCESS)
 	{
 		this->attributes->insert_first(this->attributes, entry);
@@ -1932,9 +1933,9 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
-		charon->scheduler->schedule_job(charon->scheduler, 
+		charon->scheduler->schedule_job(charon->scheduler,
 				(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE), reauth);
-		charon->scheduler->schedule_job(charon->scheduler, 
+		charon->scheduler->schedule_job(charon->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
 	/* we have to initate here, there may be new tasks to handle */
@@ -1953,7 +1954,7 @@ static void destroy(private_ike_sa_t *this)
 	set_state(this, IKE_DESTROYING);
 	
 	/* remove attributes first, as we pass the IKE_SA to the handler */
-	while (this->attributes->remove_last(this->attributes, 
+	while (this->attributes->remove_last(this->attributes,
 										 (void**)&entry) == SUCCESS)
 	{
 		charon->attributes->release(charon->attributes, entry->handler,
@@ -1992,7 +1993,8 @@ static void destroy(private_ike_sa_t *this)
 #ifdef ME
 	if (this->is_mediation_server)
 	{
-		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
+		charon->mediation_manager->remove(charon->mediation_manager,
+										  this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);
 	chunk_free(&this->connect_id);

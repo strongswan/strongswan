@@ -47,7 +47,7 @@ typedef struct payload_rule_t payload_rule_t;
 
 /**
  * A payload rule defines the rules for a payload
- * in a specific message rule. It defines if and how 
+ * in a specific message rule. It defines if and how
  * many times a payload must/can occur in a message
  * and if it must be encrypted.
  */
@@ -74,7 +74,7 @@ struct payload_rule_t {
 	 
 	 /**
 	  * If this payload occurs, the message rule is
-	  * fullfilled in any case. This applies e.g. to 
+	  * fullfilled in any case. This applies e.g. to
 	  * notify_payloads.
 	  */
 	 bool sufficient;
@@ -88,11 +88,11 @@ typedef struct payload_order_t payload_order_t;
 struct payload_order_t {
 
 	/**
-	 * payload type 
+	 * payload type
 	 */
 	payload_type_t type;
 	
-	/** 
+	/**
 	 * notify type, if payload == NOTIFY
 	 */
 	notify_type_t notify;
@@ -516,7 +516,7 @@ static message_rule_t message_rules[] = {
 		(sizeof(me_connect_r_payload_order)/sizeof(payload_order_t)),
 		me_connect_r_payload_order,
 	},
-#endif /* ME */	
+#endif /* ME */
 };
 
 
@@ -791,7 +791,7 @@ static void add_payload(private_message_t *this, payload_t *payload)
 /**
  * Implementation of message_t.add_notify.
  */
-static void add_notify(private_message_t *this, bool flush, notify_type_t type, 
+static void add_notify(private_message_t *this, bool flush, notify_type_t type,
 					   chunk_t data)
 {
 	notify_payload_t *notify;
@@ -799,7 +799,7 @@ static void add_notify(private_message_t *this, bool flush, notify_type_t type,
 	
 	if (flush)
 	{
-		while (this->payloads->remove_last(this->payloads, 
+		while (this->payloads->remove_last(this->payloads,
 												(void**)&payload) == SUCCESS)
 		{
 			payload->destroy(payload);
@@ -912,7 +912,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	len--;
 	
 	written = snprintf(pos, len, "%N %s %d [",
-					   exchange_type_names, this->exchange_type, 
+					   exchange_type_names, this->exchange_type,
 					   this->is_request ? "request" : "response",
 					   this->message_id);
 	if (written >= len || written < 0)
@@ -992,7 +992,7 @@ static void order_payloads(private_message_t *this)
 					list->remove_at(list, enumerator);
 					add_payload(this, payload);
 				}
-			} 
+			}
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -1056,7 +1056,7 @@ static status_t encrypt_payloads(private_message_t *this,
 		
 		status = get_payload_rule(this,
 					current_payload->get_type(current_payload),&payload_rule);
-		/* for payload types which are not found in supported payload list, 
+		/* for payload types which are not found in supported payload list,
 		 * it is presumed that they don't have to be encrypted */
 		if ((status == SUCCESS) && (payload_rule->encrypted))
 		{
@@ -1119,7 +1119,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 	}
 	
 	if (this->packet->get_source(this->packet) == NULL ||
-		this->packet->get_destination(this->packet) == NULL) 
+		this->packet->get_destination(this->packet) == NULL)
 	{
 		DBG1(DBG_ENC, "%s not defined",
 			 !this->packet->get_source(this->packet) ? "source" : "destination");
@@ -1391,7 +1391,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			}
 			
 			/* encryption payload is processed, payloads are moved. Destroy it. */
-			encryption_payload->destroy(encryption_payload);	
+			encryption_payload->destroy(encryption_payload);
 		}
 
 		/* we allow unknown payloads of any type and don't bother if it was encrypted. Not our problem. */
@@ -1465,7 +1465,7 @@ static status_t verify(private_message_t *this)
 					DBG1(DBG_ENC, "%N is not supported, but its critical!",
 						 payload_type_names, current_payload_type);
 					enumerator->destroy(enumerator);
-					return NOT_SUPPORTED;	
+					return NOT_SUPPORTED;
 				}
 			}
 			else if (current_payload_type == rule->payload_type)
@@ -1475,7 +1475,7 @@ static status_t verify(private_message_t *this)
 				DBG2(DBG_ENC, "found payload of type %N", payload_type_names,
 					 rule->payload_type);
 				
-				/* as soon as ohe payload occures more then specified, 
+				/* as soon as ohe payload occures more then specified,
 				 * the verification fails */
 				if (found_payloads >
 					rule->max_occurence)
@@ -1502,7 +1502,7 @@ static status_t verify(private_message_t *this)
 			this->payloads->get_count(this->payloads) == total_found_payloads)
 		{
 			enumerator->destroy(enumerator);
-			return SUCCESS;	
+			return SUCCESS;
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -1518,7 +1518,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	payload_type_t current_payload_type;
 	char str[256];
 		
-	current_payload_type = this->first_payload;	
+	current_payload_type = this->first_payload;
 		
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
 		 payload_type_names, current_payload_type);
@@ -1528,7 +1528,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	{
 		payload_t *current_payload;
 		
-		DBG2(DBG_ENC, "starting parsing a %N payload", 
+		DBG2(DBG_ENC, "starting parsing a %N payload",
 			 payload_type_names, current_payload_type);
 		
 		/* parse current payload */
@@ -1652,7 +1652,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	/* private values */
 	if (packet == NULL)
 	{
-		packet = packet_create();	
+		packet = packet_create();
 	}
 	this->message_rule = NULL;
 	this->packet = packet;

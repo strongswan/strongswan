@@ -79,7 +79,7 @@ extern enum_name_t *task_type_names;
  *
  * A task is an elemantary operation. It may be handled by a single or by
  * multiple exchanges. An exchange may even complete multiple tasks.
- * A task has a build() and an process() operation. The build() operation 
+ * A task has a build() and an process() operation. The build() operation
  * creates payloads and adds it to the message. The process() operation
  * inspects a message and handles its payloads. An initiator of an exchange
  * first calls build() to build the request, and processes the response message
@@ -97,7 +97,7 @@ struct task_t {
 
 	/**
 	 * Build a request or response message for this task.
-	 * 
+	 *
 	 * @param message		message to add payloads to
 	 * @return
 	 *						- FAILED if a critical error occured
@@ -109,7 +109,7 @@ struct task_t {
 
 	/**
 	 * Process a request or response message for this task.
-	 * 
+	 *
 	 * @param message		message to read payloads from
 	 * @return
 	 * 						- FAILED if a critical error occured

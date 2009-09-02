@@ -70,7 +70,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	if (iterator->get_count(iterator) == 0
 #ifdef ME
-		/* we allow a peer to reauth a mediation connection (without CHILD_SA) */
+		/* we allow peers to reauth mediation connections (without children) */
 		&& !peer_cfg->is_mediation(peer_cfg)
 #endif /* ME */
 		)

@@ -43,7 +43,7 @@ typedef struct peer_cfg_t peer_cfg_t;
  * requests when using this definition for the other peer. If
  * it is CERT_NEVER_SEND, a certreq is omitted, otherwise its
  * included.
- * 
+ *
  * @warning These definitions must be the same as in pluto/starter,
  * as they are sent over the stroke socket.
  */
@@ -108,7 +108,7 @@ extern enum_name_t *unique_policy_names;
  * Each peer_cfg has two lists of authentication config attached. Local
  * authentication configs define how to authenticate ourself against the remote
  * peer. Each config is enforced using the multiple authentication extension
- * (RFC4739). 
+ * (RFC4739).
  * The remote authentication configs are handled as constraints. The peer has
  * to fullfill each of these rules (using multiple authentication, in any order)
  * to gain access to the configuration.
@@ -117,9 +117,9 @@ struct peer_cfg_t {
 	
 	/**
 	 * Get the name of the peer_cfg.
-	 * 
+	 *
 	 * Returned object is not getting cloned.
-	 * 
+	 *
 	 * @return				peer_cfg's name
 	 */
 	char* (*get_name) (peer_cfg_t *this);
@@ -133,14 +133,14 @@ struct peer_cfg_t {
 	
 	/**
 	 * Get the IKE config to use for initiaton.
-	 * 
+	 *
 	 * @return				the IKE config to use
 	 */
 	ike_cfg_t* (*get_ike_cfg) (peer_cfg_t *this);
 	
 	/**
 	 * Attach a CHILD config.
-	 * 
+	 *
 	 * @param child_cfg		CHILD config to add
 	 */
 	void (*add_child_cfg) (peer_cfg_t *this, child_cfg_t *child_cfg);
@@ -154,14 +154,14 @@ struct peer_cfg_t {
 	
 	/**
 	 * Create an enumerator for all attached CHILD configs.
-	 * 
+	 *
 	 * @return				an enumerator over all CHILD configs.
 	 */
 	enumerator_t* (*create_child_cfg_enumerator) (peer_cfg_t *this);
 	
 	/**
 	 * Select a CHILD config from traffic selectors.
-	 * 
+	 *
 	 * @param my_ts			TS for local side
 	 * @param other_ts		TS for remote side
 	 * @param my_host		host to narrow down dynamic TS for local side
@@ -232,14 +232,14 @@ struct peer_cfg_t {
 	
 	/**
 	 * Use MOBIKE (RFC4555) if peer supports it?
-	 * 
+	 *
 	 * @return			TRUE to enable MOBIKE support
 	 */
 	bool (*use_mobike) (peer_cfg_t *this);
 	
 	/**
 	 * Get the DPD check interval.
-	 * 
+	 *
 	 * @return			dpd_delay in seconds
 	 */
 	u_int32_t (*get_dpd) (peer_cfg_t *this);
@@ -266,26 +266,26 @@ struct peer_cfg_t {
 #ifdef ME
 	/**
 	 * Is this a mediation connection?
-	 * 
+	 *
 	 * @return				TRUE, if this is a mediation connection
 	 */
 	bool (*is_mediation) (peer_cfg_t *this);
 	
 	/**
 	 * Get peer_cfg of the connection this one is mediated through.
-	 * 
+	 *
 	 * @return				the peer_cfg of the mediation connection
 	 */
 	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
 	
 	/**
 	 * Get the id of the other peer at the mediation server.
-	 * 
+	 *
 	 * This is the leftid of the peer's connection with the mediation server.
-	 * 
+	 *
 	 * If it is not configured, it is assumed to be the same as the right id
-	 * of this connection. 
-	 * 
+	 * of this connection.
+	 *
 	 * @return				the id of the other peer
 	 */
 	identification_t* (*get_peer_id) (peer_cfg_t *this);
@@ -319,14 +319,14 @@ struct peer_cfg_t {
 
 /**
  * Create a configuration object for IKE_AUTH and later.
- * 
+ *
  * name-string gets cloned, ID's not.
  * Virtual IPs are used if they are != NULL. A %any host means the virtual
  * IP should be obtained from the other peer.
  * Lifetimes are in seconds. To prevent to peers to start rekeying at the
  * same time, a jitter may be specified. Rekeying of an SA starts at
- * (rekeylifetime - random(0, jitter)). 
- * 
+ * (rekeylifetime - random(0, jitter)).
+ *
  * @param name				name of the peer_cfg
  * @param ike_version		which IKE version we sould use for this peer
  * @param ike_cfg			IKE config to use when acting as initiator

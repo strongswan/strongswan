@@ -52,7 +52,7 @@ static void execute(private_process_message_job_t *this)
 	ike_sa_t *ike_sa;
 	
 #ifdef ME
-	/* if this is an unencrypted INFORMATIONAL exchange it is likely a 
+	/* if this is an unencrypted INFORMATIONAL exchange it is likely a
 	 * connectivity check. */
 	if (this->message->get_exchange_type(this->message) == INFORMATIONAL &&
 		this->message->get_first_payload_type(this->message) != ENCRYPTED)

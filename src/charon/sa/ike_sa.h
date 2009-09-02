@@ -164,7 +164,7 @@ enum statistic_t {
                  ¦   SA_CREATED   ¦
                  +----------------+
                          ¦
-    on initiate()--->    ¦   <----- on IKE_SA_INIT received 
+    on initiate()--->    ¦   <----- on IKE_SA_INIT received
                          V
                  +----------------+
                  ¦ SA_CONNECTING  ¦
@@ -246,7 +246,7 @@ struct ike_sa_t {
 
 	/**
 	 * Get the id of the SA.
-	 * 
+	 *
 	 * Returned ike_sa_id_t object is not getting cloned!
 	 *
 	 * @return 				ike_sa's ike_sa_id_t
@@ -291,28 +291,28 @@ struct ike_sa_t {
 	
 	/**
 	 * Get the own host address.
-	 * 
+	 *
 	 * @return				host address
 	 */
 	host_t* (*get_my_host) (ike_sa_t *this);
 	
 	/**
 	 * Set the own host address.
-	 * 
+	 *
 	 * @param me			host address
 	 */
 	void (*set_my_host) (ike_sa_t *this, host_t *me);
 	
 	/**
 	 * Get the other peers host address.
-	 * 
+	 *
 	 * @return				host address
 	 */
 	host_t* (*get_other_host) (ike_sa_t *this);
 	
 	/**
 	 * Set the others host address.
-	 * 
+	 *
 	 * @param other			host address
 	 */
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
@@ -329,28 +329,28 @@ struct ike_sa_t {
 	
 	/**
 	 * Get the own identification.
-	 * 
+	 *
 	 * @return				identification
 	 */
 	identification_t* (*get_my_id) (ike_sa_t *this);
 	
 	/**
 	 * Set the own identification.
-	 * 
+	 *
 	 * @param me			identification
 	 */
 	void (*set_my_id) (ike_sa_t *this, identification_t *me);
 	
 	/**
 	 * Get the other peer's identification.
-	 * 
+	 *
 	 * @return				identification
 	 */
 	identification_t* (*get_other_id) (ike_sa_t *this);
 	
 	/**
 	 * Set the other peer's identification.
-	 * 
+	 *
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
@@ -359,42 +359,42 @@ struct ike_sa_t {
 	 * Get the peers EAP identity.
 	 *
 	 * The EAP identity is exchanged in a EAP-Identity exchange.
-	 * 
+	 *
 	 * @return				identification, NULL if none set
 	 */
 	identification_t* (*get_eap_identity) (ike_sa_t *this);
 	
 	/**
 	 * Set the peer's EAP identity.
-	 * 
+	 *
 	 * @param id			identification
 	 */
 	void (*set_eap_identity) (ike_sa_t *this, identification_t *id);
 	
 	/**
 	 * Get the config used to setup this IKE_SA.
-	 * 
+	 *
 	 * @return				ike_config
 	 */
 	ike_cfg_t* (*get_ike_cfg) (ike_sa_t *this);
 	
 	/**
 	 * Set the config to setup this IKE_SA.
-	 * 
+	 *
 	 * @param config		ike_config to use
 	 */
 	void (*set_ike_cfg) (ike_sa_t *this, ike_cfg_t* config);
 
 	/**
 	 * Get the peer config used by this IKE_SA.
-	 * 
+	 *
 	 * @return				peer_config
 	 */
 	peer_cfg_t* (*get_peer_cfg) (ike_sa_t *this);
 	
 	/**
 	 * Set the peer config to use with this IKE_SA.
-	 * 
+	 *
 	 * @param config		peer_config to use
 	 */
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
@@ -515,91 +515,93 @@ struct ike_sa_t {
 	
 	/**
 	 * Get the server reflexive host.
-	 * 
+	 *
 	 * @return				server reflexive host
 	 */
 	host_t* (*get_server_reflexive_host) (ike_sa_t *this);
 	
 	/**
 	 * Set the server reflexive host.
-	 * 
+	 *
 	 * @param host			server reflexive host
 	 */
 	void (*set_server_reflexive_host) (ike_sa_t *this, host_t *host);
 	
 	/**
 	 * Get the connect ID.
-	 * 
+	 *
 	 * @return				connect ID
 	 */
 	chunk_t (*get_connect_id) (ike_sa_t *this);
 	
 	/**
 	 * Initiate the mediation of a mediated connection (i.e. initiate a
-	 * ME_CONNECT exchange).
-	 * 
-	 * @param mediated_cfg		peer_cfg of the mediated connection
-	 * @return				
-	 * 							- SUCCESS if initialization started
-	 * 							- DESTROY_ME if initialization failed
+	 * ME_CONNECT exchange to a mediation server).
+	 *
+	 * @param mediated_cfg	peer_cfg of the mediated connection
+	 * @return
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediation) (ike_sa_t *this, peer_cfg_t *mediated_cfg);
 	
 	/**
 	 * Initiate the mediated connection
-	 * 
-	 * @param me				local endpoint (gets cloned)
-	 * @param other				remote endpoint (gets cloned)
-	 * @param connect_id		connect ID (gets cloned)
-	 * @return				
-	 * 							- SUCCESS if initialization started
-	 * 							- DESTROY_ME if initialization failed
+	 *
+	 * @param me			local endpoint (gets cloned)
+	 * @param other			remote endpoint (gets cloned)
+	 * @param connect_id	connect ID (gets cloned)
+	 * @return
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
-			chunk_t connect_id);
+								   chunk_t connect_id);
 	
 	/**
-	 * Relay data from one peer to another (i.e. initiate a
-	 * ME_CONNECT exchange).
+	 * Relay data from one peer to another (i.e. initiate a ME_CONNECT exchange
+	 * to a peer).
 	 *
 	 * Data is cloned.
-	 * 
-	 * @param requester			ID of the requesting peer
-	 * @param connect_id		data of the ME_CONNECTID payload
-	 * @param connect_key		data of the ME_CONNECTKEY payload
-	 * @param endpoints			endpoints
-	 * @param response			TRUE if this is a response
-	 * @return				
-	 * 							- SUCCESS if relay started
-	 * 							- DESTROY_ME if relay failed
+	 *
+	 * @param requester		ID of the requesting peer
+	 * @param connect_id	data of the ME_CONNECTID payload
+	 * @param connect_key	data of the ME_CONNECTKEY payload
+	 * @param endpoints		endpoints
+	 * @param response		TRUE if this is a response
+	 * @return
+	 * 						- SUCCESS if relay started
+	 * 						- DESTROY_ME if relay failed
 	 */
-	status_t (*relay) (ike_sa_t *this, identification_t *requester, chunk_t connect_id,
-			chunk_t connect_key, linked_list_t *endpoints, bool response);
+	status_t (*relay) (ike_sa_t *this, identification_t *requester,
+					   chunk_t connect_id, chunk_t connect_key,
+					   linked_list_t *endpoints, bool response);
 	
 	/**
 	 * Send a callback to a peer.
-	 * 
+	 *
 	 * Data is cloned.
-	 * 
-	 * @param peer_id			ID of the other peer
+	 *
+	 * @param peer_id		ID of the other peer
 	 * @return
-	 * 							- SUCCESS if response started
-	 * 							- DESTROY_ME if response failed
+	 * 						- SUCCESS if response started
+	 * 						- DESTROY_ME if response failed
 	 */
 	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
 	
 	/**
 	 * Respond to a ME_CONNECT request.
-	 * 
+	 *
 	 * Data is cloned.
-	 * 
-	 * @param peer_id			ID of the other peer
-	 * @param connect_id		the connect ID supplied by the initiator
+	 *
+	 * @param peer_id		ID of the other peer
+	 * @param connect_id	the connect ID supplied by the initiator
 	 * @return
-	 * 							- SUCCESS if response started
-	 * 							- DESTROY_ME if response failed
+	 * 						- SUCCESS if response started
+	 * 						- DESTROY_ME if response failed
 	 */
-	status_t (*respond) (ike_sa_t *this, identification_t *peer_id, chunk_t connect_id);
+	status_t (*respond) (ike_sa_t *this, identification_t *peer_id,
+						 chunk_t connect_id);
 #endif /* ME */
 	
 	/**
@@ -608,12 +610,12 @@ struct ike_sa_t {
 	 * The configs are owned by the IKE_SA after the call. If the initiate
 	 * is triggered by a packet, traffic selectors of the packet can be added
 	 * to the CHILD_SA.
-	 * 
+	 *
 	 * @param child_cfg		child config to create CHILD from
 	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
 	 * @param tsi			source of triggering packet
 	 * @param tsr			destination of triggering packet.
-	 * @return				
+	 * @return
 	 * 						- SUCCESS if initialization started
 	 * 						- DESTROY_ME if initialization failed
 	 */
@@ -623,14 +625,14 @@ struct ike_sa_t {
 	
 	/**
 	 * Initiates the deletion of an IKE_SA.
-	 * 
+	 *
 	 * Sends a delete message to the remote peer and waits for
 	 * its response. If the response comes in, or a timeout occurs,
 	 * the IKE SA gets deleted.
-	 * 
+	 *
 	 * @return
 	 * 						- SUCCESS if deletion is initialized
-	 * 						- DESTROY_ME, if the IKE_SA is not in 
+	 * 						- DESTROY_ME, if the IKE_SA is not in
 	 * 						  an established state and can not be
 	 * 						  deleted (but destroyed).
 	 */
@@ -653,12 +655,12 @@ struct ike_sa_t {
 	/**
 	 * Processes a incoming IKEv2-Message.
 	 *
-	 * Message processing may fail. If a critical failure occurs, 
-	 * process_message() return DESTROY_ME. Then the caller must 
+	 * Message processing may fail. If a critical failure occurs,
+	 * process_message() return DESTROY_ME. Then the caller must
 	 * destroy the IKE_SA immediatly, as it is unusable.
-	 * 
+	 *
 	 * @param message 		message to process
-	 * @return 				
+	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED
 	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
@@ -667,13 +669,13 @@ struct ike_sa_t {
 	
 	/**
 	 * Generate a IKE message to send it to the peer.
-	 * 
+	 *
 	 * This method generates all payloads in the message and encrypts/signs
 	 * the packet.
-	 * 
+	 *
 	 * @param message 		message to generate
 	 * @param packet		generated output packet
-	 * @return 				
+	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED
 	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
@@ -683,7 +685,7 @@ struct ike_sa_t {
 	
 	/**
 	 * Retransmits a request.
-	 * 
+	 *
 	 * @param message_id	ID of the request to retransmit
 	 * @return
 	 * 						- SUCCESS
@@ -697,7 +699,7 @@ struct ike_sa_t {
 	 * To check if a peer is still alive, periodic
 	 * empty INFORMATIONAL messages are sent if no
 	 * other traffic was received.
-	 * 
+	 *
 	 * @return
 	 * 						- SUCCESS
 	 * 						- DESTROY_ME, if peer did not respond
@@ -723,25 +725,25 @@ struct ike_sa_t {
 	
 	/**
 	 * Associates a child SA to this IKE SA
-	 * 
+	 *
 	 * @param child_sa		child_sa to add
 	 */
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
 	
 	/**
 	 * Get a CHILD_SA identified by protocol and SPI.
-	 * 
+	 *
 	 * @param protocol		protocol of the SA
 	 * @param spi			SPI of the CHILD_SA
 	 * @param inbound		TRUE if SPI is inbound, FALSE if outbound
 	 * @return				child_sa, or NULL if none found
 	 */
-	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol, 
+	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol,
 								 u_int32_t spi, bool inbound);
 	
 	/**
 	 * Create an iterator over all CHILD_SAs.
-	 * 
+	 *
 	 * @return				iterator
 	 */
 	iterator_t* (*create_child_sa_iterator) (ike_sa_t *this);

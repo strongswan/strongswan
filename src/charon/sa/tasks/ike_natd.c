@@ -137,7 +137,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 											notify_type_t type, host_t *host)
 {
 	chunk_t hash;
-	notify_payload_t *notify;	
+	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
 	ike_cfg_t *config;
 	
@@ -245,12 +245,12 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE,
 									!this->dst_matched);
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE,
-									!this->src_matched);	
+									!this->src_matched);
 		config = this->ike_sa->get_ike_cfg(this->ike_sa);
 		if (this->dst_matched && this->src_matched &&
 			config->force_encap(config))
 		{
-			this->ike_sa->set_condition(this->ike_sa, COND_NAT_FAKE, TRUE);	
+			this->ike_sa->set_condition(this->ike_sa, COND_NAT_FAKE, TRUE);
 		}
 	}
 }
@@ -278,7 +278,7 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 		
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
 #ifdef ME
-			/* if we are on a mediation connection we swith to port 4500 even
+			/* if we are on a mediation connection we switch to port 4500 even
 			 * if no NAT is detected. */
 			peer_cfg->is_mediation(peer_cfg) ||
 #endif /* ME */
@@ -406,7 +406,7 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
  * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_natd_t *this, message_t *message)
-{	
+{
 	process_payloads(this, message);
 	
 	return NEED_MORE;

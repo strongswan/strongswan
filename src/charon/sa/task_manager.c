@@ -133,7 +133,7 @@ struct private_task_manager_t {
 	linked_list_t *passive_tasks;
 	
 	/**
-	 * the task manager has been reset 
+	 * the task manager has been reset
 	 */
 	bool reset;
 };
@@ -143,7 +143,7 @@ struct private_task_manager_t {
  */
 static void flush(private_task_manager_t *this)
 {
-	this->queued_tasks->destroy_offset(this->queued_tasks, 
+	this->queued_tasks->destroy_offset(this->queued_tasks,
 										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
@@ -521,7 +521,7 @@ static status_t process_response(private_task_manager_t *this,
 			this->reset = FALSE;
 			iterator->destroy(iterator);
 			return build_request(this);
-		}	
+		}
 	}
 	iterator->destroy(iterator);
 	
@@ -688,7 +688,7 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-#ifdef ME			
+#ifdef ME
 				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 #endif /* ME */

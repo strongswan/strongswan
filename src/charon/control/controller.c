@@ -92,17 +92,17 @@ struct interface_listener_t {
 
 typedef struct interface_job_t interface_job_t;
 
-/** 
+/**
  * job for asynchronous listen operations
  */
 struct interface_job_t {
-	/** 
-	 * job interface 
+	/**
+	 * job interface
 	 */
 	job_t public;
 	
-	/** 
-	 * associated listener 
+	/**
+	 * associated listener
 	 */
 	interface_listener_t listener;
 };
@@ -295,7 +295,7 @@ static status_t terminate_ike_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.terminate_ike.
  */
-static status_t terminate_ike(controller_t *this, u_int32_t unique_id, 
+static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
 							  controller_cb_t callback, void *param)
 {
 	ike_sa_t *ike_sa;
@@ -357,7 +357,7 @@ static status_t terminate_child_execute(interface_job_t *job)
 /**
  * Implementation of controller_t.terminate_child.
  */
-static status_t terminate_child(controller_t *this, u_int32_t reqid, 
+static status_t terminate_child(controller_t *this, u_int32_t reqid,
 								controller_cb_t callback, void *param)
 {
 	ike_sa_t *ike_sa;
@@ -382,7 +382,7 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 	};
 	
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);							
+													reqid, TRUE);
 	if (ike_sa == NULL)
 	{
 		DBG1(DBG_IKE, "unable to terminate, CHILD_SA with ID %d not found",

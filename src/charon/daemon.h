@@ -21,7 +21,7 @@
  *
  * @defgroup bus bus
  * @ingroup charon
- * 
+ *
  * @defgroup listeners listeners
  * @ingroup bus
  *
@@ -84,13 +84,13 @@
  * from the processor. Work is delegated to the processor by queueing jobs
  * to it.
    @verbatim
-   
+
       +---------------------------------+       +----------------------------+
       |           controller            |       |          config            |
-      +---------------------------------+       +----------------------------+  
-               |      |      |                           ^     ^    ^           
-               V      V      V                           |     |    |           
-                                                                                
+      +---------------------------------+       +----------------------------+
+               |      |      |                           ^     ^    ^
+               V      V      V                           |     |    |
+
        +----------+  +-----------+   +------+            +----------+    +----+
        | receiver |  |           |   |      |  +------+  | CHILD_SA |    | K  |
        +---+------+  | Scheduler |   | IKE- |  | IKE- |--+----------+    | e  |
@@ -100,43 +100,43 @@
     +------+---+     +-----------+   | ager |  +------+  +----------+    | l  |
            |         |           |   |      |  | IKE- |--| CHILD_SA |    | -  |
        +---+------+  | Processor |---|      |--| SA   |  +----------+    | I  |
-       |  sender  |  |           |   |      |  +------+                  | f  |    
+       |  sender  |  |           |   |      |  +------+                  | f  |
        +----------+  +-----------+   +------+                            +----+
-                                                                                
-               |      |      |                        |      |      |           
-               V      V      V                        V      V      V           
-      +---------------------------------+       +----------------------------+  
-      |               Bus               |       |         credentials        |  
-      +---------------------------------+       +----------------------------+                                                              
+
+               |      |      |                        |      |      |
+               V      V      V                        V      V      V
+      +---------------------------------+       +----------------------------+
+      |               Bus               |       |         credentials        |
+      +---------------------------------+       +----------------------------+
 
    @endverbatim
- * The scheduler is responsible to execute timed events. Jobs may be queued to 
- * the scheduler to get executed at a defined time (e.g. rekeying). The 
+ * The scheduler is responsible to execute timed events. Jobs may be queued to
+ * the scheduler to get executed at a defined time (e.g. rekeying). The
  * scheduler does not execute the jobs itself, it queues them to the processor.
- * 
- * The IKE_SA manager managers all IKE_SA. It further handles the 
+ *
+ * The IKE_SA manager managers all IKE_SA. It further handles the
  * synchronization:
- * Each IKE_SA must be checked out strictly and checked in again after use. The 
- * manager guarantees that only one thread may check out a single IKE_SA. This 
+ * Each IKE_SA must be checked out strictly and checked in again after use. The
+ * manager guarantees that only one thread may check out a single IKE_SA. This
  * allows us to write the (complex) IKE_SAs routines non-threadsave.
- * The IKE_SA contain the state and the logic of each IKE_SA and handle the 
+ * The IKE_SA contain the state and the logic of each IKE_SA and handle the
  * messages.
- * 
+ *
  * The CHILD_SA contains state about a IPsec security association and manages
- * them. An IKE_SA may have multiple CHILD_SAs. Communication to the kernel 
+ * them. An IKE_SA may have multiple CHILD_SAs. Communication to the kernel
  * takes place here through the kernel interface.
- * 
+ *
  * The kernel interface installs IPsec security associations, policies, routes
- * and virtual addresses. It further provides methods to enumerate interfaces 
+ * and virtual addresses. It further provides methods to enumerate interfaces
  * and may notify the daemon about state changes at lower layers.
- * 
- * The bus receives signals from the different threads and relais them to interested 
- * listeners. Debugging signals, but also important state changes or error 
- * messages are sent over the bus. 
- * It's listeners are not only for logging, but also to track the state of an
+ *
+ * The bus receives signals from the different threads and relays them to
+ * interested listeners. Debugging signals, but also important state changes or
+ * error messages are sent over the bus.
+ * Its listeners are not only for logging, but also to track the state of an
  * IKE_SA.
  *
- * The controller, credential_manager, bus and backend_manager (config) are 
+ * The controller, credential_manager, bus and backend_manager (config) are
  * places where a plugin ca register itself to privide information or observe
  * and control the daemon.
  */
@@ -307,7 +307,7 @@ struct daemon_t {
 	 */
 	gid_t gid;
 	
-	/** 
+	/**
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
@@ -323,7 +323,7 @@ struct daemon_t {
 	
 	/**
 	 * Shut down the daemon.
-	 * 
+	 *
 	 * @param reason		describtion why it will be killed
 	 */
 	void (*kill) (daemon_t *this, char *reason);

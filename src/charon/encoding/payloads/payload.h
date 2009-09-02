@@ -33,7 +33,7 @@ typedef struct payload_t payload_t;
 /**
  * Payload-Types of a IKEv2-Message.
  *
- * Header and substructures are also defined as 
+ * Header and substructures are also defined as
  * payload types with values from PRIVATE USE space.
  */
 enum payload_type_t{
@@ -126,63 +126,63 @@ enum payload_type_t{
 #ifdef ME
 	/**
 	 * Identification payload for peers has a value from
-	 * the PRIVATE USE space. 
+	 * the PRIVATE USE space.
 	 */
 	ID_PEER = 128,
 #endif /* ME */
 	
 	/**
 	 * Header has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
 	HEADER = 140,
 	
 	/**
 	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a proposal substructure like a payload.
 	 */
 	PROPOSAL_SUBSTRUCTURE = 141,
 
 	/**
 	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform substructure like a payload.
 	 */
 	TRANSFORM_SUBSTRUCTURE = 142,
 	
 	/**
 	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	TRANSFORM_ATTRIBUTE = 143,
 
 	/**
 	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform selector like a payload.
-	 */	
+	 */
 	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
 	
 	/**
 	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 145,
 	
 	/**
 	 * A unknown payload has a value of PRIVATE USE space.
-	 * 
-	 * This payload type is not sent over wire and just 
+	 *
+	 * This payload type is not sent over wire and just
 	 * used internally to handle a unknown payload.
 	 */
 	UNKNOWN_PAYLOAD = 146,
@@ -201,7 +201,7 @@ extern enum_name_t *payload_type_short_names;
 
 /**
  * Generic interface for all payload types (incl.header and substructures).
- * 
+ *
  * To handle all kinds of payloads on a generic way, this interface must
  * be implemented by every payload. This allows parser_t/generator_t a simple
  * handling of all payloads.
@@ -259,11 +259,11 @@ struct payload_t {
 
 /**
  * Create an empty payload.
- * 
+ *
  * Useful for the parser, who wants a generic constructor for all payloads.
- * It supports all payload_t methods. If a payload type is not known, 
+ * It supports all payload_t methods. If a payload type is not known,
  * an unknwon_paylod is created with the chunk of data in it.
- * 
+ *
  * @param type		type of the payload to create
  * @return			payload_t object
  */

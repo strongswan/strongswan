@@ -123,7 +123,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	{
 		proposal_list = this->config->get_proposals(this->config);
 		if (this->old_sa)
-		{	
+		{
 			/* include SPI of new IKE_SA when we are rekeying */
 			iterator = proposal_list->create_iterator(proposal_list, TRUE);
 			while (iterator->iterate(iterator, (void**)&proposal))
@@ -184,7 +184,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				proposal_list = sa_payload->get_proposals(sa_payload);
 				this->proposal = this->config->select_proposal(this->config,
 															   proposal_list);
-				proposal_list->destroy_offset(proposal_list, 
+				proposal_list->destroy_offset(proposal_list,
 											  offsetof(proposal_t, destroy));
 				break;
 			}
@@ -217,7 +217,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				vendor_id_payload_t *vendor_id = (vendor_id_payload_t*)payload;
 				chunk_t vid = vendor_id->get_data(vendor_id);
 
-				DBG1(DBG_ENC, "received vendor id: %#B", &vid);					
+				DBG1(DBG_ENC, "received vendor id: %#B", &vid);
 			}
 			default:
 				break;
@@ -296,7 +296,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
  * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_init_t *this, message_t *message)
-{	
+{
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
@@ -513,7 +513,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						enumerator->destroy(enumerator);
-						return FAILED;	
+						return FAILED;
 					}
 					DBG2(DBG_IKE, "received %N notify",
 						notify_type_names, type);

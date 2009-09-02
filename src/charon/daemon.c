@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -120,8 +120,8 @@ static void run(private_daemon_t *this)
 	
 	/* handle SIGINT, SIGHUP ans SIGTERM in this handler */
 	sigemptyset(&set);
-	sigaddset(&set, SIGINT); 
-	sigaddset(&set, SIGHUP); 
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGHUP);
 	sigaddset(&set, SIGTERM);
 	
 	while (TRUE)
@@ -251,11 +251,11 @@ static void drop_capabilities(private_daemon_t *this)
 
 	if (setgid(charon->gid) != 0)
 	{
-		kill_daemon(this, "change to unprivileged group failed");	
+		kill_daemon(this, "change to unprivileged group failed");
 	}
 	if (setuid(charon->uid) != 0)
 	{
-		kill_daemon(this, "change to unprivileged user failed");	
+		kill_daemon(this, "change to unprivileged user failed");
 	}
 	
 #ifdef CAPABILITIES
@@ -279,7 +279,7 @@ static void keep_cap(private_daemon_t *this, u_int cap)
 }
 
 /**
- * lookup UID and GID 
+ * lookup UID and GID
  */
 static void lookup_uid_gid(private_daemon_t *this)
 {
@@ -491,7 +491,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.traps = trap_manager_create();
 	
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
 	{
 		return FALSE;
@@ -543,7 +543,7 @@ static void segv_handler(int signal)
  * Create the daemon.
  */
 private_daemon_t *daemon_create(void)
-{	
+{
 	struct sigaction action;
 	private_daemon_t *this = malloc_thing(private_daemon_t);
 		
@@ -607,7 +607,7 @@ private_daemon_t *daemon_create(void)
 }
 
 /**
- * Check/create PID file, return TRUE if already running 
+ * Check/create PID file, return TRUE if already running
  */
 static bool check_pidfile()
 {
