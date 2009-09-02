@@ -314,50 +314,13 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 	
 #ifdef ME
 	{
-		chunk_t connect_id = chunk_empty;
-		enumerator_t *enumerator;
-		payload_t *payload;
-		
-		/* check for a ME_CONNECTID notify */
-		enumerator = message->create_payload_enumerator(message);
-		while (enumerator->enumerate(enumerator, &payload))
+		notify_payload_t *notify = message->get_notify(message, ME_CONNECTID);
+		if (notify)
 		{
-			if (payload->get_type(payload) == NOTIFY)
-			{
-				notify_payload_t *notify = (notify_payload_t*)payload;
-				notify_type_t type = notify->get_notify_type(notify);
-			
-				switch (type)
-				{
-					case ME_CONNECTID:
-					{
-						chunk_free(&connect_id);
-						connect_id = chunk_clone(notify->get_notification_data(notify));
-						DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
-						break;
-					}
-					default:
-					{
-						if (type < 16383)
-						{
-							DBG1(DBG_IKE, "received %N notify error",
-								notify_type_names, type);
-							break;	
-						}
-						DBG2(DBG_IKE, "received %N notify",
-							notify_type_names, type);
-						break;
-					}
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
-		
-		if (connect_id.ptr)
-		{
+			chunk_t connect_id = notify->get_notification_data(notify);
+			DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
 			charon->connect_manager->stop_checks(charon->connect_manager,
-				connect_id);
-			chunk_free(&connect_id);
+												 connect_id);
 		}
 	}
 #endif /* ME */
