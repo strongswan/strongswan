@@ -101,35 +101,22 @@ static status_t process_i_delete(private_child_rekey_t *this, message_t *message
  */
 static void find_child(private_child_rekey_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
+	notify_payload_t *notify;
+	protocol_id_t protocol;
+	u_int32_t spi;
 	
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	notify = message->get_notify(message, REKEY_SA);
+	if (notify)
 	{
-		notify_payload_t *notify;
-		u_int32_t spi;
-		protocol_id_t protocol;
-		
-		if (payload->get_type(payload) != NOTIFY)
-		{
-			continue;
-		}
-		
-		notify = (notify_payload_t*)payload;
 		protocol = notify->get_protocol_id(notify);
 		spi = notify->get_spi(notify);
 		
-		if (protocol != PROTO_ESP && protocol != PROTO_AH)
+		if (protocol == PROTO_ESP || protocol == PROTO_AH)
 		{
-			continue;
+			this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
+														spi, FALSE);
 		}
-		this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
-													spi, FALSE);
-		break;
-			
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**
@@ -230,33 +217,20 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	protocol_id_t protocol;
 	u_int32_t spi;
 	child_sa_t *to_delete;
-	enumerator_t *enumerator;
-	payload_t *payload;
 	
-	/* handle NO_ADDITIONAL_SAS notify */
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
-		if (payload->get_type(payload) == NOTIFY)
-		{
-			notify_payload_t *notify = (notify_payload_t*)payload;
-			
-			if (notify->get_notify_type(notify) == NO_ADDITIONAL_SAS)
-			{
-				DBG1(DBG_IKE, "peer seems to not support CHILD_SA rekeying, "
-					 "starting reauthentication");
-				this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-				charon->processor->queue_job(charon->processor,
-						(job_t*)rekey_ike_sa_job_create(
-									this->ike_sa->get_id(this->ike_sa), TRUE));
-				enumerator->destroy(enumerator);
-				return SUCCESS;
-			}
-		}
+		DBG1(DBG_IKE, "peer seems to not support CHILD_SA rekeying, "
+			 "starting reauthentication");
+		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+		charon->processor->queue_job(charon->processor,
+				(job_t*)rekey_ike_sa_job_create(
+							this->ike_sa->get_id(this->ike_sa), TRUE));
+		return SUCCESS;
 	}
-	enumerator->destroy(enumerator);
 	
-	if (this->child_create->task.process(&this->child_create->task, message) == NEED_MORE)
+	if (this->child_create->task.process(&this->child_create->task,
+										 message) == NEED_MORE)
 	{
 		/* bad DH group while rekeying, try again */
 		this->child_create->task.migrate(&this->child_create->task, this->ike_sa);

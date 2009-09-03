@@ -62,31 +62,17 @@ static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *mess
  */
 static void process_payloads(private_ike_auth_lifetime_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
 	notify_payload_t *notify;
+	chunk_t data;
+	u_int32_t lifetime;
 	
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	notify = message->get_notify(message, AUTH_LIFETIME);
+	if (notify)
 	{
-		if (payload->get_type(payload) == NOTIFY)
-		{
-			notify = (notify_payload_t*)payload;
-			switch (notify->get_notify_type(notify))
-			{
-				case AUTH_LIFETIME:					
-				{
-					chunk_t data = notify->get_notification_data(notify);
-					u_int32_t lifetime = ntohl(*(u_int32_t*)data.ptr);
-					this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
-					break;
-				}
-				default:
-					break;
-			}
-		}
+		data = notify->get_notification_data(notify);
+		lifetime = ntohl(*(u_int32_t*)data.ptr);
+		this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**

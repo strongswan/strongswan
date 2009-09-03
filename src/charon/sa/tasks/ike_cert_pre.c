@@ -397,29 +397,15 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
  */
 static bool final_auth(message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
-	notify_payload_t *notify;
-	
 	/* we check for an AUTH payload without a ANOTHER_AUTH_FOLLOWS notify */
 	if (message->get_payload(message, AUTHENTICATION) == NULL)
 	{
 		return FALSE;
 	}
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	if (message->get_notify(message, ANOTHER_AUTH_FOLLOWS))
 	{
-		if (payload->get_type(payload) == NOTIFY)
-		{
-			notify = (notify_payload_t*)payload;
-			if (notify->get_notify_type(notify) == ANOTHER_AUTH_FOLLOWS)
-			{
-				enumerator->destroy(enumerator);
-				return FALSE;
-			}
-		}
+		return FALSE;
 	}
-	enumerator->destroy(enumerator);
 	return TRUE;
 }
 

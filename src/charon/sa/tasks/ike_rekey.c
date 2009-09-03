@@ -191,31 +191,16 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
  */
 static status_t process_i(private_ike_rekey_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
-	
-	/* handle NO_ADDITIONAL_SAS notify */
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
-		if (payload->get_type(payload) == NOTIFY)
-		{
-			notify_payload_t *notify = (notify_payload_t*)payload;
-			
-			if (notify->get_notify_type(notify) == NO_ADDITIONAL_SAS)
-			{
-				DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
-					 "starting reauthentication");
-				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				charon->processor->queue_job(charon->processor,
-						(job_t*)rekey_ike_sa_job_create(
-									this->ike_sa->get_id(this->ike_sa), TRUE));
-				enumerator->destroy(enumerator);
-				return SUCCESS;
-			}
-		}
+		DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
+			 "starting reauthentication");
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		charon->processor->queue_job(charon->processor,
+				(job_t*)rekey_ike_sa_job_create(
+							this->ike_sa->get_id(this->ike_sa), TRUE));
+		return SUCCESS;
 	}
-	enumerator->destroy(enumerator);
 	
 	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
