@@ -506,7 +506,7 @@ bool is_asn1(chunk_t blob)
 	u_int len;
 	u_char tag = *blob.ptr;
 
-	if (tag != ASN1_SEQUENCE && tag != ASN1_SET)
+	if (tag != ASN1_SEQUENCE && tag != ASN1_SET && tag != ASN1_OCTET_STRING)
 	{
 		DBG2("  file content is not binary ASN.1");
 		return FALSE;
