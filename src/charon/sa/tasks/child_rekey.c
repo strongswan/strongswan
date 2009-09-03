@@ -135,7 +135,9 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 		this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 													this->spi, FALSE);
 		if (!this->child_sa)
-		{	/* CHILD_SA is gone, unable to rekey */
+		{	/* CHILD_SA is gone, unable to rekey. As an empty CREATE_CHILD_SA
+			 * exchange is invalid, we fall back to an INFORMATIONAL exchange.*/
+			message->set_exchange_type(message, INFORMATIONAL);
 			return SUCCESS;
 		}
 		/* we work only with the inbound SPI */
