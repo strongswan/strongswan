@@ -329,6 +329,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 		if (rekey == NULL || rekey->child_sa != this->child_sa)
 		{
 			/* not the same child => no collision */
+			other->destroy(other);
 			return;
 		}
 	}
@@ -338,12 +339,14 @@ static void collide(private_child_rekey_t *this, task_t *other)
 		if (del == NULL || del->get_child(del) != this->child_sa)
 		{
 			/* not the same child => no collision */ 
+			other->destroy(other);
 			return;
 		}
 	}
 	else
 	{
 		/* any other task is not critical for collisisions, ignore */
+		other->destroy(other);
 		return;
 	}
 	DESTROY_IF(this->collision);
