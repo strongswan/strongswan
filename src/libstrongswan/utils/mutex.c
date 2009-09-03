@@ -186,10 +186,13 @@ struct private_rwlock_t {
  */
 static void lock(private_mutex_t *this)
 {
+	int err;
+	
 	profiler_start(&this->profile);
-	if (pthread_mutex_lock(&this->mutex))
+	err = pthread_mutex_lock(&this->mutex);
+	if (err)
 	{
-		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "");
+		DBG1("!!! MUTEX LOCK ERROR: %s !!!", strerror(err));
 	}
 	profiler_end(&this->profile);
 }
@@ -199,9 +202,12 @@ static void lock(private_mutex_t *this)
  */
 static void unlock(private_mutex_t *this)
 {
-	if (pthread_mutex_unlock(&this->mutex))
+	int err;
+	
+	err = pthread_mutex_unlock(&this->mutex);
+	if (err)
 	{
-		DBG1("!!!! MUTEX %sLOCK ERROR, your code is buggy !!!", "UN");
+		DBG1("!!! MUTEX UNLOCK ERROR: %s !!!", strerror(err));
 	}
 }
 
@@ -445,8 +451,14 @@ condvar_t *condvar_create(condvar_type_t type)
  */
 static void read_lock(private_rwlock_t *this)
 {
+	int err;
+	
 	profiler_start(&this->profile);
-	pthread_rwlock_rdlock(&this->rwlock);
+	err = pthread_rwlock_rdlock(&this->rwlock);
+	if (err != 0)
+	{
+		DBG1("!!! RWLOCK READ LOCK ERROR: %s !!!", strerror(err));
+	}
 	profiler_end(&this->profile);
 }
 
@@ -455,8 +467,14 @@ static void read_lock(private_rwlock_t *this)
  */
 static void write_lock(private_rwlock_t *this)
 {
+	int err;
+	
 	profiler_start(&this->profile);
-	pthread_rwlock_wrlock(&this->rwlock);
+	err = pthread_rwlock_wrlock(&this->rwlock);
+	if (err != 0)
+	{
+		DBG1("!!! RWLOCK WRITE LOCK ERROR: %s !!!", strerror(err));
+	}
 	profiler_end(&this->profile);
 }
 
@@ -473,7 +491,13 @@ static bool try_write_lock(private_rwlock_t *this)
  */
 static void rw_unlock(private_rwlock_t *this)
 {
-	pthread_rwlock_unlock(&this->rwlock);
+	int err;
+	
+	err = pthread_rwlock_unlock(&this->rwlock);
+	if (err != 0)
+	{
+		DBG1("!!! RWLOCK UNLOCK ERROR: %s !!!", strerror(err));
+	}
 }
 
 /**
