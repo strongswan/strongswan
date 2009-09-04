@@ -60,7 +60,7 @@ struct processor_t {
 	 *
 	 * This function is non blocking and adds a job_t to the queue.
 	 *
- 	 * @param job 			job to add to the queue
+	 * @param job 			job to add to the queue
 	 */
 	void (*queue_job) (processor_t *this, job_t *job);
 

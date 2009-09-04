@@ -61,11 +61,11 @@ struct private_eap_payload_t {
  *
  */
 encoding_rule_t eap_payload_encodings[] = {
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_eap_payload_t, next_payload) 	},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_eap_payload_t, critical) 		},
- 	/* 7 Bit reserved bits, nowhere stored */
+	/* 7 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},

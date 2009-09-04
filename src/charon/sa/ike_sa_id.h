@@ -70,8 +70,8 @@ struct ike_sa_id_t {
 	 *
 	 * Two ike_sa_id_t objects are equal if both SPI values and the role matches.
 	 *
- 	 * @param other 			ike_sa_id_t object to check if equal
- 	 * @return 					TRUE if given ike_sa_id_t are equal, FALSE otherwise
+	 * @param other 			ike_sa_id_t object to check if equal
+	 * @return 					TRUE if given ike_sa_id_t are equal, FALSE otherwise
 	 */
 	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
@@ -81,7 +81,7 @@ struct ike_sa_id_t {
 	 *
 	 * After calling this function, both objects are equal.
 	 *
- 	 * @param other 			ike_sa_id_t object from which values will be taken
+	 * @param other 			ike_sa_id_t object from which values will be taken
 	 */
 	void (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
 

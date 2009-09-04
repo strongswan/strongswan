@@ -131,7 +131,7 @@ static void threading_init()
 	int i, num_locks;
 
 	CRYPTO_set_id_callback(id_function);
- 	CRYPTO_set_locking_callback(locking_function);
+	CRYPTO_set_locking_callback(locking_function);
 
 	CRYPTO_set_dynlock_create_callback(create_function);
 	CRYPTO_set_dynlock_lock_callback(lock_function);

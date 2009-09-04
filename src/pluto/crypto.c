@@ -491,7 +491,7 @@ int oakley_from_encryption_algorithm(encryption_algorithm_t alg)
 			return OAKLEY_CAMELLIA_CBC;
 		case ENCR_SERPENT_CBC:
 			return OAKLEY_SERPENT_CBC;
-    	case ENCR_TWOFISH_CBC:
+	case ENCR_TWOFISH_CBC:
 			return OAKLEY_TWOFISH_CBC;
 		default:
 			return 0;
@@ -561,7 +561,7 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 			return ESP_CAMELLIA;
 		case ENCR_SERPENT_CBC:
 			return ESP_SERPENT;
-    	case ENCR_TWOFISH_CBC:
+	case ENCR_TWOFISH_CBC:
 			return ESP_TWOFISH;
 		default:
 			return 0;

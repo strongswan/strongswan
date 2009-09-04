@@ -45,7 +45,7 @@ struct udp_sock {
 	struct inet_sock inet;
 	int		 pending;	/* Any pending frames ? */
 	unsigned int	 corkflag;	/* Cork is required */
-  	__u16		 encap_type;	/* Is this an Encapsulation socket? */
+	__u16		 encap_type;	/* Is this an Encapsulation socket? */
 	/*
 	 * Following member retains the infomation to create a UDP header
 	 * when the socket is uncorked.

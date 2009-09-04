@@ -129,7 +129,7 @@ static void usage(const char *mess)
 			" [--debug-private]"
 			" [--debug-natt]"
 #endif
- 		    " \\\n\t"
+		    " \\\n\t"
 			"[--nat_traversal] [--keep_alive <delay_sec>]"
 			" \\\n\t"
 			"[--force_keepalive] [--disable_port_floating]"

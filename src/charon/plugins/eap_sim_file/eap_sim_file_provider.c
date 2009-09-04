@@ -28,8 +28,8 @@ struct private_eap_sim_file_provider_t {
 	eap_sim_file_provider_t public;
 
 	/**
- 	 * source of triplets
- 	 */
+	 * source of triplets
+	 */
 	eap_sim_file_triplets_t *triplets;
 };
 

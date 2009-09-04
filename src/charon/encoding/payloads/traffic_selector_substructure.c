@@ -76,15 +76,15 @@ struct private_traffic_selector_substructure_t {
  *
  */
 encoding_rule_t traffic_selector_substructure_encodings[] = {
- 	/* 1 Byte next ts type*/
+	/* 1 Byte next ts type*/
 	{ TS_TYPE,			offsetof(private_traffic_selector_substructure_t, ts_type) 			},
- 	/* 1 Byte IP protocol id*/
+	/* 1 Byte IP protocol id*/
 	{ U_INT_8,			offsetof(private_traffic_selector_substructure_t, ip_protocol_id) 	},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_traffic_selector_substructure_t, payload_length)		},
- 	/* 2 Byte start port*/
+	/* 2 Byte start port*/
 	{ U_INT_16,		offsetof(private_traffic_selector_substructure_t, start_port)			},
- 	/* 2 Byte end port*/
+	/* 2 Byte end port*/
 	{ U_INT_16,		offsetof(private_traffic_selector_substructure_t, end_port)			},
 	/* starting address is either 4 or 16 byte */
 	{ ADDRESS,			offsetof(private_traffic_selector_substructure_t, starting_address)	},

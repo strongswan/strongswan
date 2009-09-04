@@ -116,32 +116,32 @@ ENUM_END(exchange_type_names, INFORMATIONAL);
  * ike_header_t.
  */
 encoding_rule_t ike_header_encodings[] = {
- 	/* 8 Byte SPI, stored in the field initiator_spi */
+	/* 8 Byte SPI, stored in the field initiator_spi */
 	{ IKE_SPI,		offsetof(private_ike_header_t, initiator_spi)	},
- 	/* 8 Byte SPI, stored in the field responder_spi */
+	/* 8 Byte SPI, stored in the field responder_spi */
 	{ IKE_SPI,		offsetof(private_ike_header_t, responder_spi) 	},
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,		offsetof(private_ike_header_t, next_payload) 	},
- 	/* 4 Bit major version, stored in the field maj_version */
+	/* 4 Bit major version, stored in the field maj_version */
 	{ U_INT_4,		offsetof(private_ike_header_t, maj_version) 	},
- 	/* 4 Bit minor version, stored in the field min_version */
+	/* 4 Bit minor version, stored in the field min_version */
 	{ U_INT_4,		offsetof(private_ike_header_t, min_version) 	},
 	/* 8 Bit for the exchange type */
 	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type) 	},
- 	/* 2 Bit reserved bits, nowhere stored */
+	/* 2 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 										},
 	{ RESERVED_BIT,	0 										},
- 	/* 3 Bit flags, stored in the fields response, version and initiator */
+	/* 3 Bit flags, stored in the fields response, version and initiator */
 	{ FLAG,			offsetof(private_ike_header_t, flags.response) 	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.version) 	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.initiator) },
- 	/* 3 Bit reserved bits, nowhere stored */
+	/* 3 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 										},
 	{ RESERVED_BIT,	0 										},
 	{ RESERVED_BIT,	0 										},
- 	/* 4 Byte message id, stored in the field message_id */
+	/* 4 Byte message id, stored in the field message_id */
 	{ U_INT_32,		offsetof(private_ike_header_t, message_id) 		},
- 	/* 4 Byte length fied, stored in the field length */
+	/* 4 Byte length fied, stored in the field length */
 	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length) 			}
 };
 

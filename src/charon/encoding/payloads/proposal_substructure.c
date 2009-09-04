@@ -66,21 +66,21 @@ struct private_proposal_substructure_t {
 	/**
 	 * SPI size of the following SPI.
 	 */
- 	u_int8_t  spi_size;
+	u_int8_t  spi_size;
 
 	/**
 	 * Number of transforms.
 	 */
- 	u_int8_t  transforms_count;
+	u_int8_t  transforms_count;
 
- 	/**
- 	 * SPI is stored as chunk.
- 	 */
- 	chunk_t spi;
+	/**
+	 * SPI is stored as chunk.
+	 */
+	chunk_t spi;
 
- 	/**
- 	 * Transforms are stored in a linked_list_t.
- 	 */
+	/**
+	 * Transforms are stored in a linked_list_t.
+	 */
 	linked_list_t * transforms;
 };
 
@@ -91,7 +91,7 @@ struct private_proposal_substructure_t {
  * private_proposal_substructure_t.
  */
 encoding_rule_t proposal_substructure_encodings[] = {
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload) 		},
 	/* Reserved Byte is skipped */
 	{ RESERVED_BYTE,		0															},

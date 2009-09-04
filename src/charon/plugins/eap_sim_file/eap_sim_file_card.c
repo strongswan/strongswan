@@ -33,8 +33,8 @@ struct private_eap_sim_file_card_t {
 	identification_t *imsi;
 
 	/**
- 	 * source of triplets
- 	 */
+	 * source of triplets
+	 */
 	eap_sim_file_triplets_t *triplets;
 };
 

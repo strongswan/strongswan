@@ -1059,14 +1059,14 @@ static void queue_triggered_check(private_connect_manager_t *this,
 		check_list_t *checklist, endpoint_pair_t *pair)
 {
 	DBG2(DBG_IKE, "queueing triggered check for pair '%d'", pair->id);
- 	pair->state = CHECK_WAITING;
- 	checklist->triggered->insert_last(checklist->triggered, pair);
+	pair->state = CHECK_WAITING;
+	checklist->triggered->insert_last(checklist->triggered, pair);
 
- 	if (!checklist->sender)
- 	{
- 		/* if the sender is not running we restart it */
- 		schedule_checks(this, checklist, ME_INTERVAL);
- 	}
+	if (!checklist->sender)
+	{
+		/* if the sender is not running we restart it */
+		schedule_checks(this, checklist, ME_INTERVAL);
+	}
 }
 
 /**

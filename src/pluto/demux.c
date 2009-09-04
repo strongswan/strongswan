@@ -1827,7 +1827,7 @@ process_packet(struct msg_digest **mdp)
 			crypter->decrypt(crypter, data, iv, NULL);
 			crypter->destroy(crypter);
 
-    		memcpy(st->st_new_iv, new_iv, crypter_block_size);
+		memcpy(st->st_new_iv, new_iv, crypter_block_size);
 			if (restore_iv)
 			{
 				memcpy(st->st_new_iv, new_iv, new_iv_len);

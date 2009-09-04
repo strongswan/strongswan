@@ -232,7 +232,7 @@ struct daemon_t {
 
 	/**
 	 * The Sender-Thread.
- 	 */
+	 */
 	sender_t *sender;
 
 	/**

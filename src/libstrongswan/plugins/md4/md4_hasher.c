@@ -119,7 +119,7 @@ static void Decode(u_int32_t *output, u_int8_t *input, size_t len)
 
 	for (i = 0, j = 0; j < len; i++, j += 4)
 	{
- 		output[i] = ((u_int32_t)input[j]) | (((u_int32_t)input[j+1]) << 8) |
+		output[i] = ((u_int32_t)input[j]) | (((u_int32_t)input[j+1]) << 8) |
 		(((u_int32_t)input[j+2]) << 16) | (((u_int32_t)input[j+3]) << 24);
 	}
 }

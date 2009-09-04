@@ -77,8 +77,8 @@ struct section_t {
 struct kv_t {
 
 	/**
- 	 * key string, relative
- 	 */
+	 * key string, relative
+	 */
 	char *key;
 
 	/**

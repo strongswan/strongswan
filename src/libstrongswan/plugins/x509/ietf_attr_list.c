@@ -189,7 +189,7 @@ bool ietfAttr_list_equals(linked_list_t *list_a, linked_list_t *list_b)
 				result = FALSE;
 				break;
 			}
-  		}
+		}
 		iterator_a->destroy(iterator_a);
 		iterator_b->destroy(iterator_b);
 	}
@@ -238,7 +238,7 @@ void ietfAttr_list_list(linked_list_t *list, FILE *out)
 				break;
 			default:
 				break;
-  		}
+		}
 	}
 	iterator->destroy(iterator);
 }

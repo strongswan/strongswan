@@ -846,8 +846,8 @@ static void host2ext(host_t *host, struct sadb_address *ext)
 {
 	sockaddr_t *host_addr = host->get_sockaddr(host);
 	socklen_t *len = host->get_sockaddr_len(host);
- 	memcpy((char*)(ext + 1), host_addr, *len);
- 	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
+	memcpy((char*)(ext + 1), host_addr, *len);
+	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
 }
 
 /**
@@ -872,7 +872,7 @@ static void add_anyaddr_ext(struct sadb_msg *msg, int family, u_int8_t type)
 	addr->sadb_address_exttype = type;
 	sockaddr_t *saddr = (sockaddr_t*)(addr + 1);
 	saddr->sa_family = family;
- 	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
+	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
 	PFKEY_EXT_ADD(msg, addr);
 }
 

@@ -65,11 +65,11 @@ struct private_auth_payload_t {
  * private_auth_payload_t.
  */
 encoding_rule_t auth_payload_encodings[] = {
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload) 	},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_auth_payload_t, critical) 		},
- 	/* 7 Bit reserved bits, nowhere stored */
+	/* 7 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,		0 												},
 	{ RESERVED_BIT,		0 												},
 	{ RESERVED_BIT,		0 												},
@@ -79,7 +79,7 @@ encoding_rule_t auth_payload_encodings[] = {
 	{ RESERVED_BIT,		0 												},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)},
- 	/* 1 Byte AUTH type*/
+	/* 1 Byte AUTH type*/
 	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)	},
 	/* 3 reserved bytes */
 	{ RESERVED_BYTE,	0 												},

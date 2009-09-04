@@ -75,7 +75,7 @@ enum encoding_type_t {
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
- 	 * The current write position is moved 16 bit forward afterwards.
+	 * The current write position is moved 16 bit forward afterwards.
 	 *
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
@@ -140,7 +140,7 @@ enum encoding_type_t {
 	/**
 	 * Representating a length field of a payload.
 	 *
- 	 * When generating it must be changed from host to network order.
+	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
 	 * The current write position is moved 16 bit forward afterwards.
 	 *
@@ -153,7 +153,7 @@ enum encoding_type_t {
 	/**
 	 * Representating a length field of a header.
 	 *
- 	 * When generating it must be changed from host to network order.
+	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
 	 * The current write position is moved 32 bit forward afterwards.
 	 *
@@ -166,7 +166,7 @@ enum encoding_type_t {
 	/**
 	 * Representating a spi size field.
 	 *
- 	 * When generating it must be changed from host to network order.
+	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
 	 * The current write position is moved 8 bit forward afterwards.
 	 *
@@ -179,8 +179,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a spi field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
 	 */
@@ -189,8 +189,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a Key Exchange Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
@@ -199,8 +199,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a Notification field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - spi size - 8) bytes are read and written into the chunk pointing to.
 	 */
@@ -260,8 +260,8 @@ enum encoding_type_t {
 
 	/**
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
@@ -286,7 +286,7 @@ enum encoding_type_t {
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
- 	 * The current write position is moved 15 bit forward afterwards.
+	 * The current write position is moved 15 bit forward afterwards.
 	 *
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
@@ -301,7 +301,7 @@ enum encoding_type_t {
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
- 	 * The current write position is moved 16 bit forward afterwards.
+	 * The current write position is moved 16 bit forward afterwards.
 	 *
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
@@ -315,7 +315,7 @@ enum encoding_type_t {
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
- 	 * The current write position is moved 16 bit forward afterwards.
+	 * The current write position is moved 16 bit forward afterwards.
 	 *
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
@@ -328,8 +328,8 @@ enum encoding_type_t {
 	 * this field is available or missing and so parsed/generated
 	 * or not parsed/not generated.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
 	 */
@@ -353,7 +353,7 @@ enum encoding_type_t {
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
- 	 * The current write position is moved 16 bit forward afterwards.
+	 * The current write position is moved 16 bit forward afterwards.
 	 *
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
@@ -367,8 +367,8 @@ enum encoding_type_t {
 	 * Depending on the last field of type TS_TYPE
 	 * this field is either 4 or 16 byte long.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing 4 or 16 bytes are read and written into the chunk pointing to.
 	 */
@@ -377,8 +377,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a Nonce Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
@@ -387,8 +387,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a ID Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
@@ -397,8 +397,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a AUTH Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
@@ -407,8 +407,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a CERT Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
 	 */
@@ -417,8 +417,8 @@ enum encoding_type_t {
 	/**
 	 * Representating a CERTREQ Data field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
 	 */
@@ -427,8 +427,8 @@ enum encoding_type_t {
 	/**
 	 * Representating an EAP message field.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
@@ -437,8 +437,8 @@ enum encoding_type_t {
 	/**
 	 * Representating the SPIS field in a DELETE payload.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
@@ -447,8 +447,8 @@ enum encoding_type_t {
 	/**
 	 * Representating the VID DATA field in a VENDOR ID payload.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
@@ -457,8 +457,8 @@ enum encoding_type_t {
 	/**
 	 * Representating the DATA of an unknown payload.
 	 *
- 	 * When generating the content of the chunkt pointing to
- 	 * is written.
+	 * When generating the content of the chunkt pointing to
+	 * is written.
 	 *
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
@@ -467,8 +467,8 @@ enum encoding_type_t {
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
 	 *
- 	 * When generating the value of the u_int64_t pointing to
- 	 * is written (host and networ order is not changed).
+	 * When generating the value of the u_int64_t pointing to
+	 * is written (host and networ order is not changed).
 	 *
 	 * When parsing 8 bytes are read and written into the u_int64_t pointing to.
 	 */

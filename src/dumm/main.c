@@ -496,7 +496,7 @@ int main(int argc, char *argv[])
 
 	/* Dumm menu */
 	menu = gtk_menu_new();
-  	dummMenu = gtk_menu_item_new_with_mnemonic("_Dumm");
+	dummMenu = gtk_menu_item_new_with_mnemonic("_Dumm");
 	gtk_menu_bar_append(GTK_MENU_BAR(menubar), dummMenu);
 	gtk_widget_show(dummMenu);
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(dummMenu), menu);
@@ -510,7 +510,7 @@ int main(int argc, char *argv[])
 
 	/* Guest menu */
 	menu = gtk_menu_new();
-  	guestMenu = gtk_menu_item_new_with_mnemonic("_Guest");
+	guestMenu = gtk_menu_item_new_with_mnemonic("_Guest");
 	gtk_menu_bar_append(GTK_MENU_BAR(menubar), guestMenu);
 	gtk_widget_show(guestMenu);
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(guestMenu), menu);
@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
 
 	/* Switch menu */
 	menu = gtk_menu_new();
-  	switchMenu = gtk_menu_item_new_with_mnemonic("_Switch");
+	switchMenu = gtk_menu_item_new_with_mnemonic("_Switch");
 	gtk_menu_bar_append(GTK_MENU_BAR(menubar), switchMenu);
 	gtk_widget_show(switchMenu);
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(switchMenu), menu);
@@ -595,7 +595,7 @@ int main(int argc, char *argv[])
 	gtk_widget_set_sensitive(menuitem, FALSE);
 	gtk_widget_show(menuitem);
 
-  	/* show widgets */
+	/* show widgets */
 	gtk_widget_show(menubar);
 	gtk_widget_show(notebook);
 	gtk_widget_show(vbox);

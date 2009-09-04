@@ -39,9 +39,9 @@
 	dispatcher_t *dispatcher;
 	your_global_context_implementation_t *global;
 
- 	global = initialize_your_global_context();
+	global = initialize_your_global_context();
 
- 	dispatcher = dispatcher_create(NULL, FALSE, 180,
+	dispatcher = dispatcher_create(NULL, FALSE, 180,
 			(context_constructor_t)your_session_context_create, global);
 	dispatcher->add_controller(dispatcher, your_controller1_create, param1);
 	dispatcher->add_controller(dispatcher, your_controller2_create, param2);

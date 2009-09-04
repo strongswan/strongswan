@@ -50,8 +50,8 @@ struct private_load_tester_config_t {
 	char *pool;
 
 	/**
- 	 * IKE proposal
- 	 */
+	 * IKE proposal
+	 */
 	proposal_t *proposal;
 
 	/**

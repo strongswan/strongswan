@@ -801,7 +801,7 @@ int main(int argc, char **argv)
 	{
 		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 										 BUILD_KEY_SIZE, rsa_keylength,
- 										 BUILD_END);
+										 BUILD_END);
 	}
 	if (private_key == NULL)
 	{

@@ -1107,7 +1107,7 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 			}
 			rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
 			rng->destroy(rng);
- 			break;
+			break;
 		default:
 			free(this);
 			return NULL;

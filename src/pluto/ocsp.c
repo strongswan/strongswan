@@ -318,7 +318,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 	{
 		return FALSE;
 	}
- 	hasher->get_hash(hasher, cert->issuer, digest);
+	hasher->get_hash(hasher, cert->issuer, digest);
 	hasher->destroy(hasher);
 
 	location->next = NULL;
@@ -756,7 +756,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 	{
 		return chunk_empty;
 	}
- 	hasher->get_hash(hasher, tbs, digest_buf);
+	hasher->get_hash(hasher, tbs, digest_buf);
 	hasher->destroy(hasher);
 
 	/* according to PKCS#1 v2.1 digest must be packaged into

@@ -37,17 +37,17 @@ typedef struct settings_t settings_t;
  *
  * E.g.:
  * @code
-  	a = b
-  	section-one {
-  		somevalue = asdf
-  		subsection {
-  			othervalue = xxx
-  		}
-  		yetanother = zz
-  	}
-  	section-two {
-  	}
-  	@endcode
+	a = b
+	section-one {
+		somevalue = asdf
+		subsection {
+			othervalue = xxx
+		}
+		yetanother = zz
+	}
+	section-two {
+	}
+	@endcode
  *
  * The values are accesses using the get() functions using dotted keys, e.g.
  *   section-one.subsection.othervalue

@@ -31,9 +31,9 @@ struct private_keymat_t {
 	keymat_t public;
 
 	/**
- 	 * IKE_SA Role, initiator or responder
- 	 */
- 	bool initiator;
+	 * IKE_SA Role, initiator or responder
+	 */
+	bool initiator;
 
 	/**
 	 * inbound signer (verify)

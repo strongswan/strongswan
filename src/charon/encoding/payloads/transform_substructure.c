@@ -59,7 +59,7 @@ struct private_transform_substructure_t {
 	 */
 	u_int16_t transform_id;
 
- 	/**
+	/**
 	 * Transforms Attributes are stored in a linked_list_t.
 	 */
 	linked_list_t *attributes;
@@ -74,7 +74,7 @@ struct private_transform_substructure_t {
  *
  */
 encoding_rule_t transform_substructure_encodings[] = {
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_transform_substructure_t, next_payload) 		},
 	/* Reserved Byte is skipped */
 	{ RESERVED_BYTE,		0																},

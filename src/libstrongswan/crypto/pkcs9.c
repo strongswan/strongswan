@@ -250,7 +250,7 @@ static void build_encoding(private_pkcs9_t *this)
 		{
 			memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
 			pos += attribute->encoding.len;
- 		}
+		}
 		iterator->destroy(iterator);
 	}
 }

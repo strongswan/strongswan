@@ -64,7 +64,7 @@ struct x509cert {
 	chunk_t            serialNumber;
 				  /*   signature */
 	int                  sigAlg;
-  	chunk_t            issuer;
+	chunk_t            issuer;
 				  /*   validity */
 	time_t               notBefore;
 	time_t               notAfter;

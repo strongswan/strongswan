@@ -128,9 +128,9 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 
 	/**
- 	 * selected proposal
- 	 */
- 	proposal_t *proposal;
+	 * selected proposal
+	 */
+	proposal_t *proposal;
 
 	/**
 	 * config used to create this child

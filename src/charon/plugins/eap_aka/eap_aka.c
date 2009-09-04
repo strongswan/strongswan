@@ -1341,15 +1341,15 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 						DBG1(DBG_IKE, "received AKA notification 'general "
 							 "failure' (%d)", code);
 						return FAILED;
-   					case 32768:
+					case 32768:
 						DBG1(DBG_IKE, "received AKA notification 'successfully "
 							 "authenticated' (%d)", code);
 						continue;
-   					case 1026:
+					case 1026:
 						DBG1(DBG_IKE, "received AKA notification 'access "
 							 "temporarily denied' (%d)", code);
 						return FAILED;
-   					case 1031:
+					case 1031:
 						DBG1(DBG_IKE, "received AKA notification 'not "
 							 "subscribed to service' (%d)", code);
 						return FAILED;

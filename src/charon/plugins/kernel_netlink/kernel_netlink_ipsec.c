@@ -943,8 +943,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	{
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, &lft,
- 			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
- 			   mode, ipcomp, 0, FALSE, inbound);
+			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
+			   mode, ipcomp, 0, FALSE, inbound);
 		ipcomp = IPCOMP_NONE;
 	}
 

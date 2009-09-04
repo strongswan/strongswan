@@ -36,9 +36,9 @@ struct private_nm_creds_t {
 	certificate_t *cert;
 
 	/**
- 	 * User name
- 	 */
- 	identification_t *user;
+	 * User name
+	 */
+	identification_t *user;
 
 	/**
 	 * User password

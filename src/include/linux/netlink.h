@@ -29,7 +29,7 @@ struct sockaddr_nl
 	sa_family_t	nl_family;	/* AF_NETLINK	*/
 	unsigned short	nl_pad;		/* zero		*/
 	__u32		nl_pid;		/* process pid	*/
-       	__u32		nl_groups;	/* multicast groups mask */
+	__u32		nl_groups;	/* multicast groups mask */
 };
 
 struct nlmsghdr

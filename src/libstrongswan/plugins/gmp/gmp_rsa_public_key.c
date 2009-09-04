@@ -314,7 +314,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 	chunk_t em;
 	u_char *pos;
 	int padding, i;
- 	rng_t *rng;
+	rng_t *rng;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng == NULL)
@@ -325,7 +325,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 
 	/* number of pseudo-random padding octets */
 	padding = this->k - plain.len - 3;
- 	if (padding < MIN_PS_PADDING)
+	if (padding < MIN_PS_PADDING)
 	{
 		DBG1("pseudo-random padding must be at least %d octets", MIN_PS_PADDING);
 		return FALSE;

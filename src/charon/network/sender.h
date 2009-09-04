@@ -39,7 +39,7 @@ struct sender_t {
 	 * Whenever the sender thread thinks it's good to send the packet,
 	 * it'll do so.
 	 *
- 	 * @param packet	packet to send
+	 * @param packet	packet to send
 	 */
 	void (*send) (sender_t *this, packet_t *packet);
 
