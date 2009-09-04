@@ -274,7 +274,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
  * printf hook function for chunk_t.
  *
  * Arguments are:
- *    chunk_t *chunk
+ *	chunk_t *chunk
  * Use #-modifier to print a compact version
  */
 int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,

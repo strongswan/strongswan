@@ -79,8 +79,8 @@ enum id_type_t {
 	 * An example of an ID_RFC822_ADDR is "jsmith@example.com".
 	 * The string MUST NOT contain any terminators.
 	 */
-	ID_USER_FQDN   = 3,    /* IKEv1 only */
-	ID_RFC822_ADDR = 3,    /* IKEv2 only */
+	ID_USER_FQDN   = 3,	/* IKEv1 only */
+	ID_RFC822_ADDR = 3,	/* IKEv2 only */
 
 	/**
 	 * ID data is an IPv4 subnet (IKEv1 only)
@@ -326,7 +326,7 @@ identification_t * identification_create_from_encoding(id_type_t type, chunk_t e
  * printf hook function for identification_t.
  *
  * Arguments are:
- *    identification_t *identification
+ *	identification_t *identification
  */
 int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 							   const void *const *args);

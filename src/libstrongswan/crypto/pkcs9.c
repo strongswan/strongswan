@@ -249,7 +249,7 @@ static void build_encoding(private_pkcs9_t *this)
 		while (iterator->iterate(iterator, (void**)&attribute))
 		{
 			memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
-            pos += attribute->encoding.len;
+			pos += attribute->encoding.len;
  		}
 		iterator->destroy(iterator);
 	}
@@ -428,7 +428,7 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 
 					if (type != ASN1_EOC)
 					{
-				    	if (!asn1_parse_simple_object(&object, type,
+						if (!asn1_parse_simple_object(&object, type,
 										parser->get_level(parser)+1,
 										oid_names[oid].name))
 						{

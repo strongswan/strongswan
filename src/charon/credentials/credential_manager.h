@@ -190,9 +190,9 @@ struct credential_manager_t {
 	void (*remove_set)(credential_manager_t *this, credential_set_t *set);
 
 	/**
-     * Destroy a credential_manager instance.
-     */
-    void (*destroy)(credential_manager_t *this);
+	 * Destroy a credential_manager instance.
+	 */
+	void (*destroy)(credential_manager_t *this);
 };
 
 /**

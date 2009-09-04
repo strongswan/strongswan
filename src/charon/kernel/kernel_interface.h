@@ -129,7 +129,7 @@ struct kernel_interface_t {
 	 * @param encap			current use of UDP encapsulation
 	 * @param new_encap		new use of UDP encapsulation
 	 * @return				SUCCESS if operation completed, NOT_SUPPORTED if
-	 *                      the kernel interface can't update the SA
+	 *					  the kernel interface can't update the SA
 	 */
 	status_t (*update_sa)(kernel_interface_t *this,
 						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,

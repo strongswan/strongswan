@@ -117,8 +117,8 @@ static status_t verify(private_configuration_attribute_t *this)
 
 	switch (this->attribute_type)
 	{
-         case INTERNAL_IP4_ADDRESS:
-         case INTERNAL_IP4_NETMASK:
+		 case INTERNAL_IP4_ADDRESS:
+		 case INTERNAL_IP4_NETMASK:
 		 case INTERNAL_IP4_DNS:
 		 case INTERNAL_IP4_NBNS:
 		 case INTERNAL_ADDRESS_EXPIRY:

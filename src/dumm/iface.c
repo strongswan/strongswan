@@ -241,11 +241,11 @@ static char* create_tap(private_iface_t *this)
 	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
 		ioctl(tap, TUNSETPERSIST, 1) < 0 ||
 		ioctl(tap, TUNSETOWNER, 0))
-    {
+	{
 		DBG1("creating new tap device failed: %m");
 		close(tap);
 		return NULL;
-    }
+	}
 	close(tap);
 	return strdup(ifr.ifr_name);
 }

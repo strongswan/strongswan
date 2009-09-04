@@ -110,7 +110,7 @@ struct enum_name_t {
  * printf hook function for enum_names_t.
  *
  * Arguments are:
- *    enum_names_t *names, int value
+ *	enum_names_t *names, int value
  */
 int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					 const void *const *args);

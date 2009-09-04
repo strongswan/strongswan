@@ -28,13 +28,13 @@ typedef struct peer_t peer_t;
  */
 struct peer_t {
 	/** id of the peer */
-    identification_t *id;
+	identification_t *id;
 
 	/** sa id of the peer, NULL if offline */
-    ike_sa_id_t *ike_sa_id;
+	ike_sa_id_t *ike_sa_id;
 
-    /** list of peer ids that reuested this peer */
-    linked_list_t *requested_by;
+	/** list of peer ids that reuested this peer */
+	linked_list_t *requested_by;
 };
 
 /**
@@ -43,8 +43,8 @@ struct peer_t {
 static void peer_destroy(peer_t *this)
 {
 	DESTROY_IF(this->id);
-    DESTROY_IF(this->ike_sa_id);
-    this->requested_by->destroy_offset(this->requested_by, offsetof(identification_t, destroy));
+	DESTROY_IF(this->ike_sa_id);
+	this->requested_by->destroy_offset(this->requested_by, offsetof(identification_t, destroy));
 	free(this);
 }
 
@@ -57,8 +57,8 @@ static peer_t *peer_create(identification_t *id, ike_sa_id_t* ike_sa_id)
 
 	/* clone everything */
 	this->id = id->clone(id);
-    this->ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL;
-    this->requested_by = linked_list_create();
+	this->ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL;
+	this->requested_by = linked_list_create();
 
 	return this;
 }

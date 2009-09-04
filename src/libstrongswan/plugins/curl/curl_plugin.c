@@ -66,12 +66,12 @@ plugin_t *plugin_create()
 						(fetcher_constructor_t)curl_fetcher_create, "https://");
 		lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)curl_fetcher_create, "ftp://");
-    }
-    else
-    {
-    	DBG1("global libcurl initializing failed: %s, curl disabled",
+	}
+	else
+	{
+		DBG1("global libcurl initializing failed: %s, curl disabled",
 			 curl_easy_strerror(res));
-    }
+	}
 	return &this->public.plugin;
 }
 

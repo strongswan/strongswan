@@ -52,9 +52,9 @@ struct storage_t {
 	enumerator_t* (*create_gateway_enumerator)(storage_t *this, int user);
 
 	/**
-     * Destroy a storage instance.
-     */
-    void (*destroy)(storage_t *this);
+	 * Destroy a storage instance.
+	 */
+	void (*destroy)(storage_t *this);
 };
 
 /**

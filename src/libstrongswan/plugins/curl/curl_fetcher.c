@@ -40,7 +40,7 @@ struct private_curl_fetcher_t {
 	CURL* curl;
 
 	/**
-     * Optional HTTP headers
+	 * Optional HTTP headers
 	 */
 	struct curl_slist *headers;
 };

@@ -359,7 +359,7 @@ static void destroy(private_request_t *this)
 static void init(void)
 {
 	cgiwrap_init_emu(NULL, read_cb, writef_cb, write_cb,
-	                 getenv_cb, putenv_cb, iterenv_cb);
+					 getenv_cb, putenv_cb, iterenv_cb);
 	pthread_key_create(&this_key, NULL);
 }
 

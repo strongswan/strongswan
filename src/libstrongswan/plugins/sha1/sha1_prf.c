@@ -34,8 +34,8 @@ struct private_sha1_hasher_t {
 	 * State of the hasher. From sha1_hasher.c, do not change it!
 	 */
 	u_int32_t state[5];
-    u_int32_t count[2];
-    u_int8_t buffer[64];
+	u_int32_t count[2];
+	u_int8_t buffer[64];
 };
 
 /**

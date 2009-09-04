@@ -61,9 +61,9 @@ struct fetcher_manager_t {
 						   fetcher_constructor_t constructor);
 
 	/**
-     * Destroy a fetcher_manager instance.
-     */
-    void (*destroy)(fetcher_manager_t *this);
+	 * Destroy a fetcher_manager instance.
+	 */
+	void (*destroy)(fetcher_manager_t *this);
 };
 
 /**

@@ -37,9 +37,9 @@ struct ocsp_response_wrapper_t {
 	credential_set_t set;
 
 	/**
-     * Destroy a ocsp_response_wrapper instance.
-     */
-    void (*destroy)(ocsp_response_wrapper_t *this);
+	 * Destroy a ocsp_response_wrapper instance.
+	 */
+	void (*destroy)(ocsp_response_wrapper_t *this);
 };
 
 /**

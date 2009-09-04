@@ -98,19 +98,19 @@ struct endpoint_pair_t {
 	u_int64_t priority;
 
 	/** local endpoint */
-    host_t *local;
+	host_t *local;
 
-    /** remote endpoint */
-    host_t *remote;
+	/** remote endpoint */
+	host_t *remote;
 
-    /** state */
-    check_state_t state;
+	/** state */
+	check_state_t state;
 
-    /** number of retransmissions */
-    u_int32_t retransmitted;
+	/** number of retransmissions */
+	u_int32_t retransmitted;
 
-    /** the generated packet */
-    packet_t *packet;
+	/** the generated packet */
+	packet_t *packet;
 };
 
 /**
@@ -119,8 +119,8 @@ struct endpoint_pair_t {
 static void endpoint_pair_destroy(endpoint_pair_t *this)
 {
 	DESTROY_IF(this->local);
-    DESTROY_IF(this->remote);
-    DESTROY_IF(this->packet);
+	DESTROY_IF(this->remote);
+	DESTROY_IF(this->packet);
 	free(this);
 }
 
@@ -183,16 +183,16 @@ struct check_list_t {
 	/** connect id */
 	chunk_t connect_id;
 
-    /** list of endpoint pairs */
-    linked_list_t *pairs;
+	/** list of endpoint pairs */
+	linked_list_t *pairs;
 
-    /** pairs queued for triggered checks */
-    linked_list_t *triggered;
+	/** pairs queued for triggered checks */
+	linked_list_t *triggered;
 
-    /** state */
-    check_state_t state;
+	/** state */
+	check_state_t state;
 
-    /** TRUE if this is the initiator */
+	/** TRUE if this is the initiator */
 	bool is_initiator;
 
 	/** TRUE if the initiator is finishing the checks */
@@ -242,13 +242,13 @@ static check_list_t *check_list_create(identification_t *initiator, identificati
 
 	this->responder.id = responder->clone(responder);
 	this->responder.key = chunk_empty;
-    this->responder.endpoints = NULL;
+	this->responder.endpoints = NULL;
 
-    this->pairs = linked_list_create();
-    this->triggered = linked_list_create();
-    this->state = CHECK_NONE;
-    this->is_initiator = is_initiator;
-    this->is_finishing = FALSE;
+	this->pairs = linked_list_create();
+	this->triggered = linked_list_create();
+	this->state = CHECK_NONE;
+	this->is_initiator = is_initiator;
+	this->is_finishing = FALSE;
 
 	return this;
 }
@@ -319,8 +319,8 @@ struct check_t {
 	/** raw endpoint payload (to verify the signature) */
 	chunk_t endpoint_raw;
 
-    /** connect auth */
-    chunk_t auth;
+	/** connect auth */
+	chunk_t auth;
 };
 
 /**

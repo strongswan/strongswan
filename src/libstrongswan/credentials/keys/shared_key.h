@@ -78,9 +78,9 @@ struct shared_key_t {
 	shared_key_t* (*get_ref)(shared_key_t *this);
 
 	/**
-     * Destroy a shared_key instance if all references are gone.
-     */
-    void (*destroy)(shared_key_t *this);
+	 * Destroy a shared_key instance if all references are gone.
+	 */
+	void (*destroy)(shared_key_t *this);
 };
 
 /**

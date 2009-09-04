@@ -83,7 +83,7 @@ static status_t initiate_peer(private_eap_gtc_t *this, eap_payload_t **out)
  * PAM conv callback function
  */
 static int auth_conv(int num_msg, const struct pam_message **msg,
-                	 struct pam_response **resp, char *password)
+					 struct pam_response **resp, char *password)
 {
 	struct pam_response *response;
 
@@ -103,9 +103,9 @@ static int auth_conv(int num_msg, const struct pam_message **msg,
  */
 static bool authenticate(char *service, char *user, char *password)
 {
-    pam_handle_t *pamh = NULL;
+	pam_handle_t *pamh = NULL;
 	static struct pam_conv conv;
-    int ret;
+	int ret;
 
 	conv.conv = (void*)auth_conv;
 	conv.appdata_ptr = password;

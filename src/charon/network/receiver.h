@@ -41,7 +41,7 @@ typedef struct receiver_t receiver_t;
  * find out wich key was used for cookie creation. Further, we can set a
  * lifetime for the cookie, which allows us to reuse the secret for a longer
  * time.
- *         COOKIE = time | sha1( IPi | SPIi | time | secret )
+ *		 COOKIE = time | sha1( IPi | SPIi | time | secret )
  *
  * The secret is changed after a certain amount of cookies sent. The old
  * secret is stored to allow a clean migration between secret changes.

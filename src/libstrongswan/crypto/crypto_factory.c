@@ -116,7 +116,7 @@ static crypter_t* create_crypter(private_crypto_factory_t *this,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_crypter(this->tester, algo, key_size,
-										    entry->create_crypter))
+											entry->create_crypter))
 			{
 				continue;
 			}

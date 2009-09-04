@@ -34,9 +34,9 @@ struct curl_fetcher_t {
 	fetcher_t interface;
 
 	/**
-     * Destroy a curl_fetcher instance.
-     */
-    void (*destroy)(curl_fetcher_t *this);
+	 * Destroy a curl_fetcher instance.
+	 */
+	void (*destroy)(curl_fetcher_t *this);
 };
 
 /**

@@ -110,9 +110,9 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (!str || !strlen (str)) {
 		g_set_error (error,
-		             STRONGSWAN_PLUGIN_UI_ERROR,
-		             STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
-		             "address");
+					 STRONGSWAN_PLUGIN_UI_ERROR,
+					 STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
+					 "address");
 		return FALSE;
 	}
 	return TRUE;
@@ -275,8 +275,8 @@ get_widget (NMVpnPluginUiWidgetInterface *iface)
 
 static gboolean
 update_connection (NMVpnPluginUiWidgetInterface *iface,
-                   NMConnection *connection,
-                   GError **error)
+				   NMConnection *connection,
+				   GError **error)
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (iface);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
@@ -358,7 +358,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 
 static gboolean
 save_secrets (NMVpnPluginUiWidgetInterface *iface,
-              NMConnection *connection, GError **error)
+			  NMConnection *connection, GError **error)
 {
 	/* no secrets to save */
 	return TRUE;
@@ -386,7 +386,7 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 	priv->xml = glade_xml_new (glade_file, "strongswan-vbox", GETTEXT_PACKAGE);
 	if (priv->xml == NULL) {
 		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0,
-		             "could not load required resources at %s", glade_file);
+					 "could not load required resources at %s", glade_file);
 		g_free (glade_file);
 		g_object_unref (object);
 		return NULL;

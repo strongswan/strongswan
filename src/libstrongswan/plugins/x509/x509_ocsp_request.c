@@ -230,7 +230,7 @@ static chunk_t build_acceptableResponses(private_x509_ocsp_request_t *this)
  */
 static chunk_t build_requestExtensions(private_x509_ocsp_request_t *this)
 {
-    return asn1_wrap(ASN1_CONTEXT_C_2, "m",
+	return asn1_wrap(ASN1_CONTEXT_C_2, "m",
 				asn1_wrap(ASN1_SEQUENCE, "mm",
 					build_nonce(this),
 					build_acceptableResponses(this)));

@@ -75,7 +75,7 @@ int asn1_known_oid(chunk_t object)
 		{
 			if (--object.len == 0 || oid_names[oid].down == 0)
 			{
-				return oid;          /* found terminal symbol */
+				return oid;		  /* found terminal symbol */
 			}
 			else
 			{
@@ -455,11 +455,11 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
  * ASN.1 definition of an algorithmIdentifier
  */
 static const asn1Object_t algorithmIdentifierObjects[] = {
-	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE         }, /* 0 */
-	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY         }, /* 1 */
+	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE		 }, /* 0 */
+	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY		 }, /* 1 */
 	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW|ASN1_OPT }, /* 2 */
-	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  	      }, /* 3 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT         }
+	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  		  }, /* 3 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT		 }
 };
 #define ALGORITHM_ID_ALG			1
 #define ALGORITHM_ID_PARAMETERS		2

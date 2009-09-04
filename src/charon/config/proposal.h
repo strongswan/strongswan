@@ -201,7 +201,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol);
  *
  * The string is in the same form as a in the ipsec.conf file.
  * E.g.:	aes128-sha2_256-modp2048
- *          3des-md5
+ *		  3des-md5
  * An additional '!' at the end of the string forces this proposal,
  * without it the peer may choose another algorithm we support.
  *
@@ -215,9 +215,9 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
  * printf hook function for proposal_t.
  *
  * Arguments are:
- *    proposal_t *proposal
+ *	proposal_t *proposal
  * With the #-specifier, arguments are:
- *    linked_list_t *list containing proposal_t*
+ *	linked_list_t *list containing proposal_t*
  */
 int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 						 const void *const *args);

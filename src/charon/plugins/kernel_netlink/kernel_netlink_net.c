@@ -952,17 +952,17 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 	chunk = ip->get_address(ip);
 
-    hdr = (struct nlmsghdr*)request;
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
 	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 
 	msg = (struct ifaddrmsg*)NLMSG_DATA(hdr);
-    msg->ifa_family = ip->get_family(ip);
-    msg->ifa_flags = 0;
-    msg->ifa_prefixlen = 8 * chunk.len;
-    msg->ifa_scope = RT_SCOPE_UNIVERSE;
-    msg->ifa_index = if_index;
+	msg->ifa_family = ip->get_family(ip);
+	msg->ifa_flags = 0;
+	msg->ifa_prefixlen = 8 * chunk.len;
+	msg->ifa_scope = RT_SCOPE_UNIVERSE;
+	msg->ifa_index = if_index;
 
 	netlink_add_attribute(hdr, IFA_LOCAL, chunk, sizeof(request));
 

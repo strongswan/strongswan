@@ -53,9 +53,9 @@ struct stroke_config_t {
 	void (*del)(stroke_config_t *this, stroke_msg_t *msg);
 
 	/**
-     * Destroy a stroke_config instance.
-     */
-    void (*destroy)(stroke_config_t *this);
+	 * Destroy a stroke_config instance.
+	 */
+	void (*destroy)(stroke_config_t *this);
 };
 
 /**

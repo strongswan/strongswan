@@ -75,6 +75,6 @@ int main (int arc, char *argv[])
 
 	library_deinit();
 
-    return 0;
+	return 0;
 }
 

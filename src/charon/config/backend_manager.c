@@ -52,7 +52,7 @@ struct private_backend_manager_t {
 typedef enum ike_cfg_match_t {
 	MATCH_NONE  = 0x00,
 	MATCH_ANY   = 0x01,
-	MATCH_ME    = 0x04,
+	MATCH_ME	= 0x04,
 	MATCH_OTHER = 0x08,
 } ike_cfg_match_t;
 

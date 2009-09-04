@@ -742,7 +742,7 @@ int main(int argc, char *argv[])
 		switch (c)
 		{
 			case EOF:
-	    		break;
+				break;
 			case 'h':
 				usage(NULL);
 				break;

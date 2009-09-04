@@ -60,9 +60,9 @@ struct database_factory_t {
 	void (*remove_database)(database_factory_t *this, database_constructor_t create);
 
 	/**
-     * Destroy a database_factory instance.
-     */
-    void (*destroy)(database_factory_t *this);
+	 * Destroy a database_factory instance.
+	 */
+	void (*destroy)(database_factory_t *this);
 };
 
 /**

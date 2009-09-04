@@ -727,7 +727,7 @@ chunk_t pkcs7_build_issuerAndSerialNumber(x509_t *cert)
 {
 	identification_t *issuer = cert->get_issuer(cert);
 
-    return asn1_wrap(ASN1_SEQUENCE, "cm",
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
 			issuer->get_encoding(issuer),
 			asn1_simple_object(ASN1_INTEGER, cert->get_serialNumber(cert)));
 }
@@ -806,7 +806,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
 	chunk_clear(&in);
-    DBG3("  encrypted data: %B", &out);
+	DBG3("  encrypted data: %B", &out);
 
 	/* build pkcs7 enveloped data object */
 	{
@@ -839,7 +839,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 					asn1_wrap(ASN1_SET, "m", recipientInfo),
 					encryptedContentInfo);
 		this->type = OID_PKCS7_ENVELOPED_DATA;
-    }
+	}
 	return TRUE;
 }
 

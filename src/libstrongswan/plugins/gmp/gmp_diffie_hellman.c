@@ -443,11 +443,11 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 static void get_my_public_value(private_gmp_diffie_hellman_t *this,chunk_t *value)
 {
 	value->len = this->p_len;
-    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
-    if (value->ptr == NULL)
-    {
-    	value->len = 0;
-    }
+	value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
+	if (value->ptr == NULL)
+	{
+		value->len = 0;
+	}
 }
 
 /**

@@ -69,9 +69,9 @@ struct eap_manager_t {
 									 identification_t *peer);
 
 	/**
-     * Destroy a eap_manager instance.
-     */
-    void (*destroy)(eap_manager_t *this);
+	 * Destroy a eap_manager instance.
+	 */
+	void (*destroy)(eap_manager_t *this);
 };
 
 /**

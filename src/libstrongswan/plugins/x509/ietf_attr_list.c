@@ -87,11 +87,11 @@ static int ietfAttr_compare(const ietfAttr_t *this ,const ietfAttr_t *other)
 		return 1;
 	}
 
-    cmp_len = this->value.len - other->value.len;
-    len = (cmp_len < 0)? this->value.len : other->value.len;
-    cmp_value = memcmp(this->value.ptr, other->value.ptr, len);
+	cmp_len = this->value.len - other->value.len;
+	len = (cmp_len < 0)? this->value.len : other->value.len;
+	cmp_value = memcmp(this->value.ptr, other->value.ptr, len);
 
-    return (cmp_value == 0)? cmp_len : cmp_value;
+	return (cmp_value == 0)? cmp_len : cmp_value;
 }
 
 /**
@@ -235,9 +235,9 @@ void ietfAttr_list_list(linked_list_t *list, FILE *out)
 						fprintf(out, "%s", oid_names[oid]);
 					}
 				}
-	    		break;
+				break;
 			default:
-	    		break;
+				break;
   		}
 	}
 	iterator->destroy(iterator);

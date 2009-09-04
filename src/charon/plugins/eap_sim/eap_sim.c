@@ -709,7 +709,7 @@ static status_t peer_process_challenge(private_eap_sim_t *this,
  * process an EAP-SIM/Response/Challenge message
  */
 static status_t server_process_challenge(private_eap_sim_t *this,
-									     eap_payload_t *in, eap_payload_t **out)
+										 eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t message, data;
 	sim_attribute_t attribute;

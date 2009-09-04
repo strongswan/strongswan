@@ -67,9 +67,9 @@ struct stroke_ca_t {
 	void (*check_for_hash_and_url)(stroke_ca_t *this, certificate_t* cert);
 
 	/**
-     * Destroy a stroke_ca instance.
-     */
-    void (*destroy)(stroke_ca_t *this);
+	 * Destroy a stroke_ca instance.
+	 */
+	void (*destroy)(stroke_ca_t *this);
 };
 
 /**

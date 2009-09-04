@@ -109,7 +109,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 		}
 		else
 		{
-			this->loopAddr[obj.level] = 0;         /* exit loop or option*/
+			this->loopAddr[obj.level] = 0;		 /* exit loop or option*/
 			goto end;
 		}
 	}

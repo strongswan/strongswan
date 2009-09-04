@@ -937,7 +937,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
-	    config->use_proxy_mode(config))
+		config->use_proxy_mode(config))
 	{
 		ts_type_t type;
 		int family;

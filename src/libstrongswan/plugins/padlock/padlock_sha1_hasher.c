@@ -45,7 +45,7 @@ struct private_padlock_sha1_hasher_t {
 static void padlock_sha1(int len, u_char *in, u_char *out)
 {
 	/* rep xsha1 */
-    asm volatile (
+	asm volatile (
 		".byte 0xf3, 0x0f, 0xa6, 0xc8"
 		: "+S"(in), "+D"(out)
 		: "c"(len), "a"(0));

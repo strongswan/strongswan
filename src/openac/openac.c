@@ -292,11 +292,11 @@ int main(int argc, char **argv)
 
 					if (*optarg == '/')	/* absolute pathname */
 					{
-		    			strncpy(path, optarg, BUF_LEN);
+						strncpy(path, optarg, BUF_LEN);
 					}
 					else			/* relative pathname */
 					{
-		    			snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
+						snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
 					}
 					if (!options->from(options, path, &argc, &argv, optind))
 					{

@@ -69,25 +69,25 @@ struct asn1_parser_t {
 	 * @return 			- FALSE if end of object syntax definition was reached
 	 *							or a parsing error occurred
 	 *					- TRUE	otherwise
-     */
+	 */
 	bool (*iterate)(asn1_parser_t *this, int *objectID, chunk_t *object);
 
 	/**
-     * Get the current parsing level
+	 * Get the current parsing level
 	 *
 	 * @return 			current level
 	 */
 	u_int (*get_level)(asn1_parser_t *this);
 
 	/**
-     * Set the top-most level
+	 * Set the top-most level
 	 *
 	 * @param level		top-most level
 	 */
 	void (*set_top_level)(asn1_parser_t *this, u_int level0);
 
 	/**
-     * Set implicit and private flags
+	 * Set implicit and private flags
 	 *
 	 * @param implicit	top-most type of object is implicit
 	 * @param private	object data is private (use debug level 4)
@@ -95,7 +95,7 @@ struct asn1_parser_t {
 	void (*set_flags)(asn1_parser_t *this, bool implicit, bool private);
 
 	/**
-     * Show final parsing status
+	 * Show final parsing status
 	 *
 	 * @return			TRUE if parsing was successful, FALSE otherwise
 	 */

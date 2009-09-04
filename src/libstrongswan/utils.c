@@ -369,7 +369,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 			ascii_buffer[i] = '\0';
 
 			written += print_in_hook(dst, dstlen, "\n%4d: %s  %s",
-								     line_start, buffer, ascii_buffer);
+									 line_start, buffer, ascii_buffer);
 
 			buffer_pos = buffer;
 			line_start += BYTES_PER_LINE;

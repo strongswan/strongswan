@@ -34,9 +34,9 @@ typedef struct leak_detective_t leak_detective_t;
 struct leak_detective_t {
 
 	/**
-     * Destroy a leak_detective instance.
-     */
-    void (*destroy)(leak_detective_t *this);
+	 * Destroy a leak_detective instance.
+	 */
+	void (*destroy)(leak_detective_t *this);
 };
 
 /**

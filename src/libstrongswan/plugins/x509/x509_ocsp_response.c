@@ -359,7 +359,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				{
 					response->revocationReason = *object.ptr;
 				}
-	    		break;
+				break;
 			case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
 				response->status = VALIDATION_FAILED;
 				break;
@@ -372,7 +372,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				{
 					this->usableUntil = response->nextUpdate;
 				}
-	    		break;
+				break;
 		}
 	}
 	success = parser->success(parser);
@@ -624,15 +624,15 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 			case OCSP_RESPONSE_STATUS:
 				status = (ocsp_status_t)*object.ptr;
 				switch (status)
-	    		{
-	    			case OCSP_SUCCESSFUL:
+				{
+					case OCSP_SUCCESSFUL:
 						break;
 					default:
 						DBG1("  ocsp response status: %N",
 							 ocsp_status_names, status);
 						goto end;
 				}
-	    		break;
+				break;
 			case OCSP_RESPONSE_TYPE:
 				responseType = asn1_known_oid(object);
 				break;

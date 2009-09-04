@@ -354,7 +354,7 @@ bool ref_put(refcount_t *ref);
  * printf hook for time_t.
  *
  * Arguments are:
- *    time_t* time, bool utc
+ *	time_t* time, bool utc
  */
 int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					 const void *const *args);
@@ -363,7 +363,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  * printf hook for time_t deltas.
  *
  * Arguments are:
- *    time_t* begin, time_t* end
+ *	time_t* begin, time_t* end
  */
 int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 						   const void *const *args);
@@ -372,7 +372,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  * printf hook for memory areas.
  *
  * Arguments are:
- *    u_char *ptr, int len
+ *	u_char *ptr, int len
  */
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					const void *const *args);

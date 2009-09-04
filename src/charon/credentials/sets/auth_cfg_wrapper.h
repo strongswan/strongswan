@@ -37,9 +37,9 @@ struct auth_cfg_wrapper_t {
 	credential_set_t set;
 
 	/**
-     * Destroy a auth_cfg_wrapper instance.
-     */
-    void (*destroy)(auth_cfg_wrapper_t *this);
+	 * Destroy a auth_cfg_wrapper instance.
+	 */
+	void (*destroy)(auth_cfg_wrapper_t *this);
 };
 
 /**

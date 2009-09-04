@@ -73,16 +73,16 @@ struct mconsole_reply {
 typedef struct mconsole_notify mconsole_notify;
 /** mconsole notify message */
 struct mconsole_notify {
-    u_int32_t magic;
-    u_int32_t version;
-    enum {
+	u_int32_t magic;
+	u_int32_t version;
+	enum {
 		MCONSOLE_SOCKET,
 		MCONSOLE_PANIC,
 		MCONSOLE_HANG,
 		MCONSOLE_USER_NOTIFY,
-    } type;
-    u_int32_t len;
-    char data[MCONSOLE_MAX_DATA];
+	} type;
+	u_int32_t len;
+	char data[MCONSOLE_MAX_DATA];
 };
 
 /**

@@ -101,7 +101,7 @@ static char* get_connection_type(char *uuid)
 	if (found)
 	{
 		key = g_strdup_printf ("%s/%s/%s", found,
-			                   NM_SETTING_VPN_SETTING_NAME, "method");
+							   NM_SETTING_VPN_SETTING_NAME, "method");
 		method = gconf_client_get_string(client, key, NULL);
 		g_free(found);
 		g_free(key);

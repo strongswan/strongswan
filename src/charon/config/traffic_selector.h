@@ -36,19 +36,19 @@ enum ts_type_t {
 
 	/**
 	 * A range of IPv4 addresses, represented by two four (4) octet
-     * values.  The first value is the beginning IPv4 address
-     * (inclusive) and the second value is the ending IPv4 address
-     * (inclusive). All addresses falling between the two specified
-     * addresses are considered to be within the list.
-     */
+	 * values.  The first value is the beginning IPv4 address
+	 * (inclusive) and the second value is the ending IPv4 address
+	 * (inclusive). All addresses falling between the two specified
+	 * addresses are considered to be within the list.
+	 */
 	TS_IPV4_ADDR_RANGE = 7,
 
 	/**
 	 * A range of IPv6 addresses, represented by two sixteen (16)
-     * octet values.  The first value is the beginning IPv6 address
-     * (inclusive) and the second value is the ending IPv6 address
-     * (inclusive). All addresses falling between the two specified
-     *  addresses are considered to be within the list.
+	 * octet values.  The first value is the beginning IPv6 address
+	 * (inclusive) and the second value is the ending IPv6 address
+	 * (inclusive). All addresses falling between the two specified
+	 *  addresses are considered to be within the list.
 	 */
 	TS_IPV6_ADDR_RANGE = 8
 };
@@ -294,9 +294,9 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
  * printf hook function for traffic_selector_t.
  *
  * Arguments are:
- *    traffic_selector_t *ts
+ *	traffic_selector_t *ts
  * With the #-specifier, arguments are:
- *    linked_list_t *list containing traffic_selector_t*
+ *	linked_list_t *list containing traffic_selector_t*
  */
 int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 								 const void *const *args);

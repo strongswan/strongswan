@@ -36,9 +36,9 @@ struct sql_attribute_t {
 	attribute_provider_t provider;
 
 	/**
-     * Destroy a sql_attribute instance.
-     */
-    void (*destroy)(sql_attribute_t *this);
+	 * Destroy a sql_attribute instance.
+	 */
+	void (*destroy)(sql_attribute_t *this);
 };
 
 /**

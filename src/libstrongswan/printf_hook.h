@@ -139,9 +139,9 @@ struct printf_hook_t {
 						printf_hook_function_t hook, ...);
 
 	/**
-     * Destroy a printf_hook instance.
-     */
-    void (*destroy)(printf_hook_t *this);
+	 * Destroy a printf_hook instance.
+	 */
+	void (*destroy)(printf_hook_t *this);
 };
 
 /**

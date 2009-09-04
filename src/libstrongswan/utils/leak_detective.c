@@ -303,12 +303,12 @@ void *malloc_hook(size_t bytes, const void *caller)
 	memory_header_t *hdr;
 	memory_tail_t *tail;
 	pthread_t thread_id = pthread_self();
-    int oldpolicy;
-    struct sched_param oldparams, params;
+	int oldpolicy;
+	struct sched_param oldparams, params;
 
-    pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
 
-    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
 	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
 
 	count_malloc++;
@@ -346,10 +346,10 @@ void free_hook(void *ptr, const void *caller)
 {
 	memory_header_t *hdr;
 	memory_tail_t *tail;
-    backtrace_t *backtrace;
+	backtrace_t *backtrace;
 	pthread_t thread_id = pthread_self();
-    int oldpolicy;
-    struct sched_param oldparams, params;
+	int oldpolicy;
+	struct sched_param oldparams, params;
 
 	/* allow freeing of NULL */
 	if (ptr == NULL)
@@ -361,7 +361,7 @@ void free_hook(void *ptr, const void *caller)
 
 	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
 
-    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
 	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
 
 	count_free++;
@@ -405,8 +405,8 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	memory_tail_t *tail;
 	backtrace_t *backtrace;
 	pthread_t thread_id = pthread_self();
-    int oldpolicy;
-    struct sched_param oldparams, params;
+	int oldpolicy;
+	struct sched_param oldparams, params;
 
 	/* allow reallocation of NULL */
 	if (old == NULL)

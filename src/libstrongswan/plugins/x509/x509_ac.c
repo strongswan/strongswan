@@ -634,7 +634,7 @@ static chunk_t build_attr_cert_info(private_x509_ac_t *this)
 static chunk_t build_ac(private_x509_ac_t *this)
 {
 	chunk_t signatureValue;
-    chunk_t attributeCertificateInfo;
+	chunk_t attributeCertificateInfo;
 
 	attributeCertificateInfo = build_attr_cert_info(this);
 

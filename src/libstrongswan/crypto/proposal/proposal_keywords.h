@@ -21,10 +21,10 @@
 typedef struct proposal_token proposal_token_t;
 
 struct proposal_token {
-    char             *name;
-    transform_type_t  type;
+	char             *name;
+	transform_type_t  type;
 	u_int16_t         algorithm;
-    u_int16_t         keysize;
+	u_int16_t         keysize;
 };
 
 extern const proposal_token_t* proposal_get_token(register const char *str,

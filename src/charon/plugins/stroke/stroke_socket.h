@@ -29,9 +29,9 @@ typedef struct stroke_socket_t stroke_socket_t;
 struct stroke_socket_t {
 
 	/**
-     * Destroy a stroke_socket instance.
-     */
-    void (*destroy)(stroke_socket_t *this);
+	 * Destroy a stroke_socket instance.
+	 */
+	void (*destroy)(stroke_socket_t *this);
 };
 
 /**

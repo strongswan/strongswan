@@ -56,9 +56,9 @@ enum encryption_algorithm_t {
 	ENCR_CAMELLIA_CCM_ICV12 = 26,
 	ENCR_CAMELLIA_CCM_ICV16 = 27,
 	ENCR_UNDEFINED =        1024,
-    ENCR_DES_ECB =          1025,
+	ENCR_DES_ECB =          1025,
 	ENCR_SERPENT_CBC =      1026,
-    ENCR_TWOFISH_CBC =      1027
+	ENCR_TWOFISH_CBC =      1027
 };
 
 #define DES_BLOCK_SIZE			 8

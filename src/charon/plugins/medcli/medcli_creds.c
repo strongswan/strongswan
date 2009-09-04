@@ -218,7 +218,7 @@ static enumerator_t* create_cert_enumerator(private_medcli_creds_t *this,
  */
 static void destroy(private_medcli_creds_t *this)
 {
-    free(this);
+	free(this);
 }
 
 /**

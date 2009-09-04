@@ -54,8 +54,8 @@ struct private_mysql_database_t {
 	mutex_t *mutex;
 
 	/**
- 	 * hostname to connect to
- 	 */
+	 * hostname to connect to
+	 */
 	char *host;
 
 	/**
@@ -235,14 +235,14 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 	stmt = mysql_stmt_init(mysql);
 	if (stmt == NULL)
 	{
-    	DBG1("creating MySQL statement failed: %s", mysql_error(mysql));
+		DBG1("creating MySQL statement failed: %s", mysql_error(mysql));
 		return NULL;
 	}
 	if (mysql_stmt_prepare(stmt, sql, strlen(sql)))
 	{
-    	DBG1("preparing MySQL statement failed: %s", mysql_stmt_error(stmt));
-    	mysql_stmt_close(stmt);
-    	return NULL;
+		DBG1("preparing MySQL statement failed: %s", mysql_stmt_error(stmt));
+		mysql_stmt_close(stmt);
+		return NULL;
 	}
 	params = mysql_stmt_param_count(stmt);
 	if (params > 0)
@@ -300,28 +300,28 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 					bind[i].buffer_length = sizeof(double);
 					break;
 				}
-    			case DB_NULL:
+				case DB_NULL:
 				{
 					bind[i].buffer_type = MYSQL_TYPE_NULL;
 					break;
 				}
 				default:
-    				DBG1("invalid data type supplied");
-    				mysql_stmt_close(stmt);
-    				return NULL;
+					DBG1("invalid data type supplied");
+					mysql_stmt_close(stmt);
+					return NULL;
 			}
 		}
 		if (mysql_stmt_bind_param(stmt, bind))
 		{
-    		DBG1("binding MySQL param failed: %s", mysql_stmt_error(stmt));
-    		mysql_stmt_close(stmt);
+			DBG1("binding MySQL param failed: %s", mysql_stmt_error(stmt));
+			mysql_stmt_close(stmt);
 			return NULL;
 		}
 	}
 	if (mysql_stmt_execute(stmt))
 	{
-    	DBG1("executing MySQL statement failed: %s", mysql_stmt_error(stmt));
-    	mysql_stmt_close(stmt);
+		DBG1("executing MySQL statement failed: %s", mysql_stmt_error(stmt));
+		mysql_stmt_close(stmt);
 		return NULL;
 	}
 	return stmt;
@@ -445,9 +445,9 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 				this->bind[i].buffer = malloc(this->length[i]+1);
 				this->bind[i].buffer_length = this->length[i];
 				*value = this->bind[i].buffer;
-	  			mysql_stmt_fetch_column(this->stmt, &this->bind[i], i, 0);
-	  			((char*)this->bind[i].buffer)[this->length[i]] = '\0';
-	  			break;
+				mysql_stmt_fetch_column(this->stmt, &this->bind[i], i, 0);
+				((char*)this->bind[i].buffer)[this->length[i]] = '\0';
+				break;
 			}
 			case MYSQL_TYPE_BLOB:
 			{
@@ -456,8 +456,8 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 				this->bind[i].buffer_length = this->length[i];
 				value->ptr = this->bind[i].buffer;
 				value->len = this->length[i];
-	  			mysql_stmt_fetch_column(this->stmt, &this->bind[i], i, 0);
-	  			break;
+				mysql_stmt_fetch_column(this->stmt, &this->bind[i], i, 0);
+				break;
 			}
 			case MYSQL_TYPE_DOUBLE:
 			{
@@ -539,17 +539,17 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 					break;
 				}
 				default:
-    				DBG1("invalid result data type supplied");
-    				mysql_enumerator_destroy(enumerator);
-    				va_end(args);
-    				return NULL;
+					DBG1("invalid result data type supplied");
+					mysql_enumerator_destroy(enumerator);
+					va_end(args);
+					return NULL;
 			}
 		}
 		if (mysql_stmt_bind_result(stmt, enumerator->bind))
 		{
 			DBG1("binding MySQL result failed: %s", mysql_stmt_error(stmt));
-    		mysql_enumerator_destroy(enumerator);
-    		enumerator = NULL;
+			mysql_enumerator_destroy(enumerator);
+			enumerator = NULL;
 		}
 	}
 	else
@@ -693,8 +693,8 @@ mysql_database_t *mysql_database_create(char *uri)
 	conn = conn_get(this);
 	if (!conn)
 	{
-    	destroy(this);
-    	return NULL;
+		destroy(this);
+		return NULL;
 	}
 	conn_release(conn);
 	return &this->public;

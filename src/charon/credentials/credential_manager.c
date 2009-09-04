@@ -276,7 +276,7 @@ static enumerator_t *create_private(credential_set_t *set, private_data_t *data)
  */
 static enumerator_t* create_private_enumerator(
 									private_credential_manager_t *this,
-								    key_type_t key, identification_t *keyid)
+									key_type_t key, identification_t *keyid)
 {
 	private_data_t *data;
 
@@ -529,7 +529,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 		if (this->cache->issued_by(this->cache, subject, issuer))
 		{
 			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-						     issuer->get_subject(issuer));
+							 issuer->get_subject(issuer));
 			verified = TRUE;
 			break;
 		}
@@ -622,8 +622,8 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
  * validate a x509 certificate using OCSP
  */
 static cert_validation_t check_ocsp(private_credential_manager_t *this,
-								    x509_t *subject, x509_t *issuer,
-								    auth_cfg_t *auth)
+									x509_t *subject, x509_t *issuer,
+									auth_cfg_t *auth)
 {
 	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;

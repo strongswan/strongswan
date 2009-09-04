@@ -42,9 +42,9 @@ struct enumerator_t {
 	bool (*enumerate)(enumerator_t *this, ...);
 
 	/**
-     * Destroy a enumerator instance.
-     */
-    void (*destroy)(enumerator_t *this);
+	 * Destroy a enumerator instance.
+	 */
+	void (*destroy)(enumerator_t *this);
 };
 
 /**

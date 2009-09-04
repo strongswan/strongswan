@@ -173,7 +173,7 @@ static void quit()
 		}
 	}
 	enumerator->destroy(enumerator);
-    gtk_main_quit();
+	gtk_main_quit();
 }
 
 static void error_dialog(char *msg)
@@ -492,7 +492,7 @@ int main(int argc, char *argv[])
 	notebook = gtk_notebook_new();
 	g_object_set(G_OBJECT(notebook), "homogeneous", TRUE, NULL);
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_BOTTOM);
-    gtk_container_add(GTK_CONTAINER(vbox), notebook);
+	gtk_container_add(GTK_CONTAINER(vbox), notebook);
 
 	/* Dumm menu */
 	menu = gtk_menu_new();

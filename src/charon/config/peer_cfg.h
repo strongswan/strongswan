@@ -49,11 +49,11 @@ typedef struct peer_cfg_t peer_cfg_t;
  */
 enum cert_policy_t {
 	/** always send certificates, even when not requested */
-	CERT_ALWAYS_SEND   = 0,
+	CERT_ALWAYS_SEND =		0,
 	/** send certificate upon cert request */
-	CERT_SEND_IF_ASKED = 1,
+	CERT_SEND_IF_ASKED =	1,
 	/** never send a certificate, even when requested */
-	CERT_NEVER_SEND    = 2,
+	CERT_NEVER_SEND =		2,
 };
 
 /**

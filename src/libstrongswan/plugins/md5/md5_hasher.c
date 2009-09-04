@@ -103,8 +103,8 @@ struct private_md5_hasher_t {
 	 * State of the hasher.
 	 */
 	u_int32_t state[5];
-    u_int32_t count[2];
-    u_int8_t buffer[64];
+	u_int32_t count[2];
+	u_int8_t buffer[64];
 };
 
 
@@ -260,7 +260,7 @@ static void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputL
 
 		for (i = partLen; i + 63 < inputLen; i += 64)
 		{
-	    	MD5Transform (this->state, &input[i]);
+			MD5Transform (this->state, &input[i]);
 		}
 		index = 0;
 	}

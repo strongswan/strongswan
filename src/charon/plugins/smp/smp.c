@@ -508,8 +508,8 @@ static void request_query(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 {
 	/* <query> */
 	xmlTextWriterStartElement(writer, "query");
-    while (xmlTextReaderRead(reader))
-    {
+	while (xmlTextReaderRead(reader))
+	{
 		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
 		{
 			if (streq(xmlTextReaderConstName(reader), "ikesalist"))
@@ -535,8 +535,8 @@ static void request_control(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
 {
 	/* <control> */
 	xmlTextWriterStartElement(writer, "control");
-    while (xmlTextReaderRead(reader))
-    {
+	while (xmlTextReaderRead(reader))
+	{
 		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
 		{
 			if (streq(xmlTextReaderConstName(reader), "ikesaterminate"))
@@ -649,8 +649,8 @@ static job_requeue_t process(int *fdp)
 	}
 
 	/* read message type and id */
-    while (xmlTextReaderRead(reader))
-    {
+	while (xmlTextReaderRead(reader))
+	{
 		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT &&
 			streq(xmlTextReaderConstName(reader), "message"))
 		{
@@ -658,20 +658,20 @@ static job_requeue_t process(int *fdp)
 			type = xmlTextReaderGetAttribute(reader, "type");
 			break;
 		}
-    }
+	}
 
-    /* process message */
-    if (id && type)
+	/* process message */
+	if (id && type)
 	{
-	    if (streq(type, "request"))
-	    {
-	    	request(reader, id, fd);
-	    }
-	    else
-	    {
-	    	/* response(reader, id) */
-	    }
-    }
+		if (streq(type, "request"))
+		{
+			request(reader, id, fd);
+		}
+		else
+		{
+			/* response(reader, id) */
+		}
+	}
 	xmlFreeTextReader(reader);
 	return JOB_REQUEUE_FAIR;;
 }

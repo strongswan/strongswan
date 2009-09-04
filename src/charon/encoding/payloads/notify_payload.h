@@ -87,7 +87,7 @@ enum notify_type_t {
 	NO_NATS_ALLOWED = 16402,
 	/* repeated authentication extension, RFC4478 */
 	AUTH_LIFETIME = 16403,
-    /* multiple authentication exchanges, RFC 4739 */
+	/* multiple authentication exchanges, RFC 4739 */
 	MULTIPLE_AUTH_SUPPORTED = 16404,
 	ANOTHER_AUTH_FOLLOWS = 16405,
 	/* draft-eronen-ipsec-ikev2-eap-auth, not assigned by IANA yet */

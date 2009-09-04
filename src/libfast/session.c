@@ -144,7 +144,7 @@ static void process(private_session_t *this, request_t *request)
 		param[i] = strdupa(start);
 
 		if (run_filter(this, request, param[0], param[1], param[2], param[3],
-					    param[4], param[5]))
+						param[4], param[5]))
 		{
 			enumerator = this->controllers->create_enumerator(this->controllers);
 			while (enumerator->enumerate(enumerator, &current))

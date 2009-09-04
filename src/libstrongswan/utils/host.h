@@ -201,7 +201,7 @@ host_t *host_create_any(int family);
  * printf hook function for host_t.
  *
  * Arguments are:
- *    host_t *host
+ *	host_t *host
  * Use #-modifier to include port number
  */
 int host_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,

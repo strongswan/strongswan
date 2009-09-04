@@ -192,9 +192,9 @@ struct certificate_t {
 	certificate_t* (*get_ref)(certificate_t *this);
 
 	/**
-     * Destroy a certificate.
-     */
-    void (*destroy)(certificate_t *this);
+	 * Destroy a certificate.
+	 */
+	void (*destroy)(certificate_t *this);
 };
 
 #endif /** CERTIFICATE_H_ @}*/

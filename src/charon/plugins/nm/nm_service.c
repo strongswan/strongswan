@@ -254,7 +254,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	if (!address || !*address)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "Gateway address missing.");
+					"Gateway address missing.");
 		return FALSE;
 	}
 	str = nm_setting_vpn_get_data_item(vpn, "virtual");
@@ -297,7 +297,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	if (!cert)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-				    "Loading gateway certificate failed.");
+					"Loading gateway certificate failed.");
 		return FALSE;
 	}
 	x509 = (x509_t*)cert;
@@ -476,7 +476,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
-				    "Initiating failed.");
+					"Initiating failed.");
 		return FALSE;
 	}
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);

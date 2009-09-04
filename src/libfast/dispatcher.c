@@ -366,15 +366,15 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	this->context_constructor = constructor;
 	pthread_mutex_init(&this->mutex, NULL);
 	this->param = param;
-    this->fd = 0;
-    this->timeout = timeout;
-    this->debug = debug;
-    this->threads = NULL;
+	this->fd = 0;
+	this->timeout = timeout;
+	this->debug = debug;
+	this->threads = NULL;
 
-    FCGX_Init();
+	FCGX_Init();
 
-    if (socket)
-    {
+	if (socket)
+	{
 		unlink(socket);
 		this->fd = FCGX_OpenSocket(socket, 10);
 	}
