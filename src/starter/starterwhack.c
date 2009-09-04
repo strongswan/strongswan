@@ -153,7 +153,7 @@ connection_name(starter_conn_t *conn)
 
 static void
 set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
-{   
+{
 	if (end->srcip && end->srcip[0] != '%')
 	{
 		int len = 0;
@@ -170,9 +170,9 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 	}
 	else
 	{
-		anyaddr(AF_INET, &w->host_srcip);       
+		anyaddr(AF_INET, &w->host_srcip);
 	}
-	
+
 	w->id                  = end->id;
 	w->cert                = end->cert;
 	w->ca                  = end->ca;

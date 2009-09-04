@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include "eap_radius.h"
 
 #include "radius_message.h"
@@ -26,47 +26,47 @@ typedef struct private_eap_radius_t private_eap_radius_t;
  * Private data of an eap_radius_t object.
  */
 struct private_eap_radius_t {
-	
+
 	/**
 	 * Public authenticator_t interface.
 	 */
 	eap_radius_t public;
-	
+
 	/**
 	 * ID of the server
 	 */
 	identification_t *server;
-	
+
 	/**
 	 * ID of the peer
 	 */
 	identification_t *peer;
-	
+
 	/**
 	 * EAP method type we are proxying
 	 */
 	eap_type_t type;
-	
+
 	/**
 	 * EAP vendor, if any
 	 */
 	u_int32_t vendor;
-	
+
 	/**
 	 * EAP MSK, if method established one
 	 */
 	chunk_t msk;
-	
+
 	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
-	
+
 	/**
 	 * TRUE to use EAP-Start, FALSE to send EAP-Identity Response directly
 	 */
 	bool eap_start;
-	
+
 	/**
 	 * Prefix to prepend to EAP identity
 	 */
@@ -93,11 +93,11 @@ static void add_eap_identity(private_eap_radius_t *this,
 	} __attribute__((__packed__)) *hdr;
 	chunk_t id, prefix;
 	size_t len;
-	
+
 	id = this->peer->get_encoding(this->peer);
 	prefix = chunk_create(this->id_prefix, strlen(this->id_prefix));
 	len = sizeof(*hdr) + prefix.len + id.len;
-	
+
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
 	hdr->identifier = 0;
@@ -105,7 +105,7 @@ static void add_eap_identity(private_eap_radius_t *this,
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, prefix.ptr, prefix.len);
 	memcpy(hdr->data + prefix.len, id.ptr, id.len);
-	
+
 	request->add(request, RAT_EAP_MESSAGE, chunk_create((u_char*)hdr, len));
 }
 
@@ -119,7 +119,7 @@ static bool radius2ike(private_eap_radius_t *this,
 	eap_payload_t *payload;
 	chunk_t data;
 	int type;
-	
+
 	enumerator = msg->create_enumerator(msg);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -144,12 +144,12 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 	radius_message_t *request, *response;
 	status_t status = FAILED;
 	chunk_t username;
-	
+
 	request = radius_message_create_request();
 	username = chunk_create(this->id_prefix, strlen(this->id_prefix));
 	username = chunk_cata("cc", username, this->peer->get_encoding(this->peer));
 	request->add(request, RAT_USER_NAME, username);
-	
+
 	if (this->eap_start)
 	{
 		request->add(request, RAT_EAP_MESSAGE, chunk_empty);
@@ -158,7 +158,7 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 	{
 		add_eap_identity(this, request);
 	}
-	
+
 	response = this->client->request(this->client, request);
 	if (response)
 	{
@@ -180,11 +180,11 @@ static status_t process(private_eap_radius_t *this,
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
-	
+
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
 	request->add(request, RAT_EAP_MESSAGE, in->get_data(in));
-	
+
 	response = this->client->request(this->client, request);
 	if (response)
 	{
@@ -271,14 +271,14 @@ static void destroy(private_eap_radius_t *this)
 eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer)
 {
 	private_eap_radius_t *this = malloc_thing(private_eap_radius_t);
-	
+
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
 	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-	
+
 	this->client = radius_client_create();
 	if (!this->client)
 	{
@@ -291,7 +291,7 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->type = EAP_RADIUS;
 	this->vendor = 0;
 	this->msk = chunk_empty;
-	this->eap_start = lib->settings->get_bool(lib->settings, 
+	this->eap_start = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap_radius.eap_start", FALSE);
 	this->id_prefix = lib->settings->get_str(lib->settings,
 								"charon.plugins.eap_radius.id_prefix", "");

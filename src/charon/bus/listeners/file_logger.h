@@ -29,12 +29,12 @@ typedef struct file_logger_t file_logger_t;
  * Logger to files which implements listener_t.
  */
 struct file_logger_t {
-	
+
 	/**
 	 * Implements the listener_t interface.
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * Set the loglevel for a debug group.
 	 *
@@ -42,7 +42,7 @@ struct file_logger_t {
 	 * @param level		max level to log (0..4)
 	 */
 	void (*set_level) (file_logger_t *this, debug_t group, level_t level);
-	
+
 	/**
 	 * Destroys a file_logger_t object.
 	 */

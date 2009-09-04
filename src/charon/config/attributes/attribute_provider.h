@@ -41,7 +41,7 @@ struct attribute_provider_t {
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_provider_t *this,
-							   char *pool, identification_t *id, 
+							   char *pool, identification_t *id,
 							   host_t *requested);
 	/**
 	 * Release a previously acquired address.
@@ -53,7 +53,7 @@ struct attribute_provider_t {
 	 */
 	bool (*release_address)(attribute_provider_t *this,
 							char *pool, host_t *address, identification_t *id);
-	
+
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *

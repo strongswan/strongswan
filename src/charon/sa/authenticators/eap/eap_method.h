@@ -107,7 +107,7 @@ extern enum_name_t *eap_code_names;
  * EAP-Identity exchange always uses identifier 0.
  */
 struct eap_method_t {
-	
+
 	/**
 	 * Initiate the EAP exchange.
 	 *
@@ -121,7 +121,7 @@ struct eap_method_t {
 	 * 					- FAILED, if unable to create eap request payload
 	 */
 	status_t (*initiate) (eap_method_t *this, eap_payload_t **out);
-	
+
 	/**
 	 * Process a received EAP message.
 	 *
@@ -136,7 +136,7 @@ struct eap_method_t {
 	 */
 	status_t (*process) (eap_method_t *this, eap_payload_t *in,
 						 eap_payload_t **out);
-	
+
 	/**
 	 * Get the EAP type implemented in this method.
 	 *
@@ -144,17 +144,17 @@ struct eap_method_t {
 	 * @return			type of the EAP method
 	 */
 	eap_type_t (*get_type) (eap_method_t *this, u_int32_t *vendor);
-	
+
 	/**
 	 * Check if this EAP method authenticates the server.
 	 *
-	 * Some EAP methods provide mutual authentication and 
+	 * Some EAP methods provide mutual authentication and
 	 * allow authentication using only EAP, if the peer supports it.
 	 *
 	 * @return			TRUE if methods provides mutual authentication
 	 */
 	bool (*is_mutual) (eap_method_t *this);
-	
+
 	/**
 	 * Get the MSK established by this EAP method.
 	 *
@@ -167,7 +167,7 @@ struct eap_method_t {
 	 * 					- FAILED, if MSK not established (yet)
 	 */
 	status_t (*get_msk) (eap_method_t *this, chunk_t *msk);
-	
+
 	/**
 	 * Destroys a eap_method_t object.
 	 */

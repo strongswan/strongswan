@@ -37,11 +37,11 @@ struct uci_creds_t {
 	 * Implements credential set interface.
 	 */
 	credential_set_t credential_set;
-	
+
 	/**
 	 * Destroy the backend.
 	 */
-	void (*destroy)(uci_creds_t *this);	
+	void (*destroy)(uci_creds_t *this);
 };
 
 /**

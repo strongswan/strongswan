@@ -30,7 +30,7 @@ struct private_medsrv_creds_t {
 	 * Public part
 	 */
 	medsrv_creds_t public;
-	
+
 	/**
 	 * underlying database handle
 	 */
@@ -109,13 +109,13 @@ static enumerator_t* create_cert_enumerator(private_medsrv_creds_t *this,
 										identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
-	
+
 	if ((cert != CERT_TRUSTED_PUBKEY && cert != CERT_ANY) ||
 		id == NULL || id->get_type(id) != ID_KEY_ID)
 	{
 		return NULL;
 	}
-	
+
 	e = malloc_thing(cert_enumerator_t);
 	e->current = NULL;
 	e->type = key;
@@ -155,9 +155,9 @@ medsrv_creds_t *medsrv_creds_create(database_t *db)
 	this->public.set.cache_cert = (void*)nop;
 
 	this->public.destroy = (void (*)(medsrv_creds_t*))destroy;
-	
+
 	this->db = db;
-	
+
 	return &this->public;
 }
 

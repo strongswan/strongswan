@@ -24,7 +24,7 @@ static bool build_v3_fingerprint(chunk_t *encoding, va_list args)
 {
 	hasher_t *hasher;
 	chunk_t n, e;
-	
+
 	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
 						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
 	{

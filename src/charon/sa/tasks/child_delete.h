@@ -37,7 +37,7 @@ struct child_delete_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Get the CHILD_SA to delete by this task.
 	 *

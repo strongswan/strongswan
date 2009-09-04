@@ -31,7 +31,7 @@ typedef struct load_tester_plugin_t load_tester_plugin_t;
 /**
  * Load tester plugin to inspect system core under high load.
  *
- * This plugin 
+ * This plugin
  */
 struct load_tester_plugin_t {
 

@@ -158,7 +158,7 @@ static struct vid_struct _vid_tab[] = {
 		{ VID_CISCO3K, VID_KEEP | VID_SUBSTRING_MATCH, NULL, "Cisco VPN 3000 Series" ,
 		  { "\x1f\x07\xf7\x0e\xaa\x65\x14\xd3\xb0\xfa\x96\x54\x2a\x50", 14 } },
 
-		{ VID_CISCO_IOS, VID_KEEP | VID_SUBSTRING_MATCH, 
+		{ VID_CISCO_IOS, VID_KEEP | VID_SUBSTRING_MATCH,
 		  NULL, "Cisco IOS Device", { "\x3e\x98\x40\x48", 4 } },
 
 		/*
@@ -297,7 +297,7 @@ static struct vid_struct _vid_tab[] = {
 		DEC_MD5_VID(NATT_RFC, "RFC 3947")
 
 		/* misc */
-		
+
 		{ VID_MISC_XAUTH, VID_KEEP, NULL, "XAUTH",
 			{ "\x09\x00\x26\x89\xdf\xd6\xb7\x12", 8 } },
 
@@ -305,7 +305,7 @@ static struct vid_struct _vid_tab[] = {
 			{ "\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00", 16 } },
 
 		DEC_MD5_VID(MISC_FRAGMENTATION, "FRAGMENTATION")
-		
+
 		DEC_MD5_VID(INITIAL_CONTACT, "Vid-Initial-Contact")
 
 		/**
@@ -339,7 +339,7 @@ void init_vendorid(void)
 		else if (vid->flags & VID_MD5HASH)
 		{
 			chunk_t vid_data = { (u_char *)vid->data, strlen(vid->data) };
-			
+
 			/** VendorID is a string to hash with MD5 **/
 		 	hasher->allocate_hash(hasher, vid_data, &vid->vid);
 		}

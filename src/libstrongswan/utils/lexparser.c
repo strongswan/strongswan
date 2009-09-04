@@ -40,31 +40,31 @@ bool match(const char *pattern, const chunk_t *ch)
 bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 {
 	u_char *eot = memchr(src->ptr, termination, src->len);
-	
+
 	if (termination == ' ')
 	{
 		u_char *eot_tab = memchr(src->ptr, '\t', src->len);
-		
+
 		/* check if a tab instead of a space terminates the token */
 		eot = ( eot_tab == NULL || (eot && eot < eot_tab) ) ? eot : eot_tab;
 	}
-	
+
 	/* initialize empty token */
 	*token = chunk_empty;
-	
+
 	if (eot == NULL) /* termination symbol not found */
 	{
 		return FALSE;
 	}
-	
+
 	/* extract token */
 	token->ptr = src->ptr;
 	token->len = (u_int)(eot - src->ptr);
-	
+
 	/* advance src pointer after termination symbol */
 	src->ptr = eot + 1;
 	src->len -= (token->len + 1);
-	
+
 	return TRUE;
 }
 
@@ -75,23 +75,23 @@ bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src)
 {
 	u_char *eot = memstr(src->ptr, termination, src->len);
 	size_t l = strlen(termination);
-	
+
 	/* initialize empty token */
 	*token = chunk_empty;
-	
+
 	if (eot == NULL) /* termination string not found */
 	{
 		return FALSE;
 	}
-	
+
 	/* extract token */
 	token->ptr = src->ptr;
 	token->len = (u_int)(eot - src->ptr);
-	
+
 	/* advance src pointer after termination string */
 	src->ptr = eot + l;
 	src->len -= (token->len + l);
-	
+
 	return TRUE;
 }
 

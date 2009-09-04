@@ -35,11 +35,11 @@ struct medsrv_config_t {
 	 * Implements backend_t interface
 	 */
 	backend_t backend;
-	
+
 	/**
 	 * Destroy the backend.
 	 */
-	void (*destroy)(medsrv_config_t *this);	
+	void (*destroy)(medsrv_config_t *this);
 };
 
 /**

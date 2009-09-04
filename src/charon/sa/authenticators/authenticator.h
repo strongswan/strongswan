@@ -36,34 +36,34 @@ typedef struct authenticator_t authenticator_t;
  */
 enum auth_method_t {
 	/**
-	 * Computed as specified in section 2.15 of RFC using 
+	 * Computed as specified in section 2.15 of RFC using
 	 * an RSA private key over a PKCS#1 padded hash.
 	 */
 	AUTH_RSA = 1,
-	
+
 	/**
-	 * Computed as specified in section 2.15 of RFC using the 
-	 * shared key associated with the identity in the ID payload 
+	 * Computed as specified in section 2.15 of RFC using the
+	 * shared key associated with the identity in the ID payload
 	 * and the negotiated prf function
 	 */
 	AUTH_PSK = 2,
-	
+
 	/**
-	 * Computed as specified in section 2.15 of RFC using a 
+	 * Computed as specified in section 2.15 of RFC using a
 	 * DSS private key over a SHA-1 hash.
 	 */
 	AUTH_DSS = 3,
-	
+
 	/**
 	 * ECDSA with SHA-256 on the P-256 curve as specified in RFC 4754
 	 */
 	AUTH_ECDSA_256 = 9,
-	
+
 	/**
 	 * ECDSA with SHA-384 on the P-384 curve as specified in RFC 4754
 	 */
 	AUTH_ECDSA_384 = 10,
-	
+
 	/**
 	 * ECDSA with SHA-512 on the P-521 curve as specified in RFC 4754
 	 */
@@ -115,7 +115,7 @@ struct authenticator_t {
 	 *						- NEED_MORE if another exchange required
 	 */
 	status_t (*process)(authenticator_t *this, message_t *message);
-	
+
 	/**
 	 * Attach authentication data to an outgoing message.
 	 *
@@ -126,7 +126,7 @@ struct authenticator_t {
 	 *						- NEED_MORE if another exchange required
 	 */
 	status_t (*build)(authenticator_t *this, message_t *message);
-	
+
 	/**
 	 * Destroy authenticator instance.
 	 */
@@ -151,7 +151,7 @@ authenticator_t *authenticator_create_builder(
 
 /**
  * Create an authenticator to verify signatures.
- * 
+ *
  * @param ike_sa			associated ike_sa
  * @param message			message containing authentication data
  * @param received_nonce	nonce received in IKE_SA_INIT

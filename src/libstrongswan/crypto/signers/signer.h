@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup signer signer
  * @{ @ingroup crypto
@@ -80,53 +80,53 @@ struct signer_t {
 	 *
 	 * If buffer is NULL, data is processed and prepended to a next call until
 	 * buffer is a valid pointer.
-	 * 
+	 *
 	 * @param data		a chunk containing the data to sign
 	 * @param buffer	pointer where the signature will be written
 	 */
 	void (*get_signature) (signer_t *this, chunk_t data, u_int8_t *buffer);
-	
+
 	/**
 	 * Generate a signature and allocate space for it.
 	 *
 	 * If chunk is NULL, data is processed and prepended to a next call until
 	 * chunk is a valid chunk pointer.
-	 * 
+	 *
 	 * @param data		a chunk containing the data to sign
 	 * @param chunk		chunk which will hold the allocated signature
 	 */
 	void (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
-	
+
 	/**
 	 * Verify a signature.
-	 * 
+	 *
 	 * @param data		a chunk containing the data to verify
 	 * @param signature	a chunk containing the signature
 	 * @return			TRUE, if signature is valid, FALSE otherwise
 	 */
 	bool (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature);
-	
+
 	/**
 	 * Get the block size of this signature algorithm.
-	 * 
+	 *
 	 * @return			block size in bytes
 	 */
 	size_t (*get_block_size) (signer_t *this);
-	
+
 	/**
 	 * Get the key size of the signature algorithm.
-	 * 
+	 *
 	 * @return			key size in bytes
 	 */
 	size_t (*get_key_size) (signer_t *this);
-	
+
 	/**
 	 * Set the key for this object.
-	 * 
+	 *
 	 * @param key		key to set
 	 */
 	void (*set_key) (signer_t *this, chunk_t key);
-	
+
 	/**
 	 * Destroys a signer_t object.
 	 */

@@ -31,9 +31,9 @@
 
 /**
  * Creates a hash of a given type of a chunk of data.
- * 
+ *
  * Note: this function allocates memory for the hash
- * 
+ *
  * @param hash_type	NID of the hash
  * @param data		the chunk of data to hash
  * @param hash		chunk that contains the hash
@@ -44,9 +44,9 @@ bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash);
 /**
  * Concatenates two bignums into a chunk, thereby enfocing the length of
  * a single BIGNUM, if necessary, by pre-pending it with zeros.
- * 
+ *
  * Note: this function allocates memory for the chunk
- * 
+ *
  * @param len		the length of a single BIGNUM
  * @param a			first BIGNUM
  * @param b			second BIGNUM
@@ -57,7 +57,7 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
 
 /**
  * Splits a chunk into two bignums of equal binary length.
- * 
+ *
  * @param chunk		a chunk that contains the two BIGNUMs
  * @param a			first BIGNUM
  * @param b			second BIGNUM

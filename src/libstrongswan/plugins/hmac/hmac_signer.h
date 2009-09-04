@@ -32,7 +32,7 @@ typedef struct hmac_signer_t hmac_signer_t;
  * HMAC uses a standard hash function implemented in a hasher_t to build a MAC.
  */
 struct hmac_signer_t {
-	
+
 	/**
 	 * generic signer_t interface for this signer
 	 */

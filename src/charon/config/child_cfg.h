@@ -88,68 +88,68 @@ struct lifetime_cfg_t {
  * After creation, proposals and traffic selectors may be added to the config.
  * A child_cfg object is referenced multiple times, and is not thread save.
  * Reading from the object is save, adding things is not allowed while other
- * threads may access the object. 
+ * threads may access the object.
  * A reference counter handles the number of references hold to this config.
  *
  * @see peer_cfg_t to get an overview over the configurations.
  */
 struct child_cfg_t {
-	
+
 	/**
 	 * Get the name of the child_cfg.
-	 * 
+	 *
 	 * @return				child_cfg's name
 	 */
 	char *(*get_name) (child_cfg_t *this);
-	
+
 	/**
-	 * Add a proposal to the list. 
-	 * 
+	 * Add a proposal to the list.
+	 *
 	 * The proposals are stored by priority, first added
 	 * is the most prefered.
 	 * After add, proposal is owned by child_cfg.
-	 * 
+	 *
 	 * @param proposal		proposal to add
 	 */
 	void (*add_proposal) (child_cfg_t *this, proposal_t *proposal);
-	
+
 	/**
 	 * Get the list of proposals for the CHILD_SA.
 	 *
 	 * Resulting list and all of its proposals must be freed after use.
-	 * 
+	 *
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				list of proposals
 	 */
 	linked_list_t* (*get_proposals)(child_cfg_t *this, bool strip_dh);
-	
+
 	/**
 	 * Select a proposal from a supplied list.
 	 *
 	 * Returned propsal is newly created and must be destroyed after usage.
-	 * 
+	 *
 	 * @param proposals		list from from wich proposals are selected
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				selected proposal, or NULL if nothing matches
 	 */
 	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals,
 								   bool strip_dh);
-	
+
 	/**
 	 * Add a traffic selector to the config.
-	 * 
+	 *
 	 * Use the "local" parameter to add it for the local or the remote side.
 	 * After add, traffic selector is owned by child_cfg.
-	 * 
+	 *
 	 * @param local			TRUE for local side, FALSE for remote
 	 * @param ts			traffic_selector to add
 	 */
 	void (*add_traffic_selector)(child_cfg_t *this, bool local,
 								 traffic_selector_t *ts);
-	
+
 	/**
 	 * Get a list of traffic selectors to use for the CHILD_SA.
-	 * 
+	 *
 	 * The config contains two set of traffic selectors, one for the local
 	 * side, one for the remote side.
 	 * If a list with traffic selectors is supplied, these are used to narrow
@@ -158,7 +158,7 @@ struct child_cfg_t {
 	 * to a specific address (host-to-host or virtual-IP setups). Use
 	 * the "host" parameter to narrow such traffic selectors to that address.
 	 * Resulted list and its traffic selectors must be destroyed after use.
-	 * 
+	 *
 	 * @param local			TRUE for TS on local side, FALSE for remote
 	 * @param supplied		list with TS to select from, or NULL
 	 * @param host			address to use for narrowing "dynamic" TS', or NULL
@@ -169,14 +169,14 @@ struct child_cfg_t {
 											host_t *host);
 	/**
 	 * Get the updown script to run for the CHILD_SA.
-	 * 
+	 *
 	 * @return				path to updown script
 	 */
 	char* (*get_updown)(child_cfg_t *this);
-	
+
 	/**
 	 * Should we allow access to the local host (gateway)?
-	 * 
+	 *
 	 * @return				value of hostaccess flag
 	 */
 	bool (*get_hostaccess) (child_cfg_t *this);
@@ -190,41 +190,41 @@ struct child_cfg_t {
 	 * @return				lifetime_cfg_t (has to be freed)
 	 */
 	lifetime_cfg_t* (*get_lifetime) (child_cfg_t *this);
-	
+
 	/**
 	 * Get the mode to use for the CHILD_SA.
 	 *
 	 * The mode is either tunnel, transport or BEET. The peer must agree
 	 * on the method, fallback is tunnel mode.
-	 * 
+	 *
 	 * @return				ipsec mode
 	 */
 	ipsec_mode_t (*get_mode) (child_cfg_t *this);
-	
+
 	/**
 	 * Action to take on DPD.
 	 *
 	 * @return				DPD action
-	 */	
+	 */
 	action_t (*get_dpd_action) (child_cfg_t *this);
-	
+
 	/**
 	 * Action to take if CHILD_SA gets closed.
 	 *
 	 * @return				close action
-	 */	
+	 */
 	action_t (*get_close_action) (child_cfg_t *this);
-	
+
 	/**
 	 * Get the DH group to use for CHILD_SA setup.
-	 * 
+	 *
 	 * @return				dh group to use
 	 */
 	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
-	
+
 	/**
 	 * Check whether IPComp should be used, if the other peer supports it.
-	 * 
+	 *
 	 * @return				TRUE, if IPComp should be used
 	 * 						FALSE, otherwise
 	 */
@@ -232,7 +232,7 @@ struct child_cfg_t {
 
 	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
-	 * 
+	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
 	 * @param install_policy install IPsec kernel policies (default TRUE)
 	 */
@@ -241,27 +241,27 @@ struct child_cfg_t {
 
 	/**
 	 * Check whether IPsec transport SA should be set up in proxy mode
-	 * 
+	 *
 	 * @return				TRUE, if proxy mode should be used
 	 * 						FALSE, otherwise
 	 */
 	bool (*use_proxy_mode)(child_cfg_t *this);
-	
+
 	/**
 	 * Check whether IPsec policies should be installed in the kernel
-	 * 
+	 *
 	 * @return				TRUE, if IPsec kernel policies should be installed
 	 * 						FALSE, otherwise
 	 */
 	bool (*install_policy)(child_cfg_t *this);
-	
+
 	/**
 	 * Increase the reference count.
 	 *
 	 * @return				reference to this
 	 */
 	child_cfg_t* (*get_ref) (child_cfg_t *this);
-	
+
 	/**
 	 * Destroys the child_cfg object.
 	 *
@@ -273,7 +273,7 @@ struct child_cfg_t {
 
 /**
  * Create a configuration template for CHILD_SA setup.
- * 
+ *
  * The "name" string gets cloned.
  *
  * The lifetime_cfg_t object gets cloned.
@@ -281,7 +281,7 @@ struct child_cfg_t {
  * specified. Rekeying of an SA starts at (x.rekey - random(0, x.jitter)).
  *
  * After a call to create, a reference is obtained (refcount = 1).
- * 
+ *
  * @param name				name of the child_cfg
  * @param lifetime			lifetime_cfg_t for this child_cfg
  * @param updown			updown script to execute on up/down event

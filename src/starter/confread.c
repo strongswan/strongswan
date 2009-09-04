@@ -119,7 +119,7 @@ load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 		bool assigned = FALSE;
 
 		kw_token_t token = kw->entry->token;
- 
+
 		if (token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
 		{
 			plog("# unsupported keyword '%s' in config setup", kw->entry->name);
@@ -165,10 +165,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			ip_subnet net;
 			char *pos;
 			int len = 0;
-			
+
 			end->has_client = TRUE;
 			conn->tunnel_addr_family = ip_version(value);
-			
+
 			pos = strchr(value, ',');
 			if (pos)
 			{
@@ -199,7 +199,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		{
 			ip_address addr;
 			ip_subnet net;
-		
+
 			conn->tunnel_addr_family = ip_version(value);
 			if (strchr(value, '/'))
 			{	/* CIDR notation, address pool */
@@ -323,7 +323,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	case KW_SUBNETWITHIN:
 	{
 		ip_subnet net;
-		
+
 		end->has_client = TRUE;
 		end->has_client_wildcard = TRUE;
 		conn->tunnel_addr_family = ip_version(value);
@@ -350,7 +350,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		if (streq(value, "%defaultroute"))
 		{
 			char buf[64];
-		
+
 			if (cfg->defaultroute.defined)
 			{
 				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
@@ -365,7 +365,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		else
 		{
 			ip_address addr;
-			
+
 			conn->tunnel_addr_family = ip_version(value);
 			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 			if (ugh != NULL)
@@ -510,8 +510,8 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			}
 			else if (streq(kw->value, "transport_proxy"))
 			{
-				conn->policy |= POLICY_PROXY;			
-			}	
+				conn->policy |= POLICY_PROXY;
+			}
 			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
 			{
 				conn->policy |= POLICY_SHUNT_PASS;
@@ -535,10 +535,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		case KW_COMPRESS:
 			KW_POLICY_FLAG("yes", "no", POLICY_COMPRESS)
-			break; 
+			break;
 		case KW_AUTH:
 			KW_POLICY_FLAG("ah", "esp", POLICY_AUTHENTICATE)
-			break; 
+			break;
 		case KW_AUTHBY:
 			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
 
@@ -591,7 +591,7 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_EAP:
 		{
 			char *sep;
-		
+
 			/* check for vendor-type format */
 			sep = strchr(kw->value, '-');
 			if (sep)
@@ -922,7 +922,7 @@ confread_free_ca(starter_ca_t *ca)
 /*
  * free the memory used by a starter_config_t object
  */
-void 
+void
 confread_free(starter_config_t *cfg)
 {
 	starter_conn_t *conn = cfg->conn_first;
@@ -1046,7 +1046,7 @@ confread_load(const char *file)
 	for (ca = cfg->ca_first; ca; ca = ca->next)
 	{
 		also_t *also = ca->also;
-	
+
 		while (also != NULL)
 		{
 			kw_list_t *kw = find_also_ca(also->name, cfg->ca_first, cfg);
@@ -1080,7 +1080,7 @@ confread_load(const char *file)
 	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
 	{
 		u_int previous_err;
-		
+
 		/* skip %default conn section */
 		if (streq(sconn->name, "%default"))
 			continue;
@@ -1093,7 +1093,7 @@ confread_load(const char *file)
 		conn_default(sconn->name, conn, &cfg->conn_default);
 		conn->kw =  sconn->kw;
 		conn->next = NULL;
-		
+
 		previous_err = cfg->err;
 		load_conn(conn, conn->kw, cfg);
 		if (cfg->err > previous_err)

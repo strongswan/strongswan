@@ -25,9 +25,9 @@ bool test_id_parts()
 	id_part_t part;
 	chunk_t data;
 	int i = 0;
-	
+
 	id = identification_create_from_string("C=CH, O=strongSwan, CN=tester");
-	
+
 	enumerator = id->create_part_enumerator(id);
 	while (enumerator->enumerate(enumerator, &part, &data))
 	{
@@ -75,7 +75,7 @@ static bool test_id_wildcards_has(char *string)
 {
 	identification_t *id;
 	bool contains;
-	
+
 	id = identification_create_from_string(string);
 	contains = id->contains_wildcards(id);
 	id->destroy(id);
@@ -115,7 +115,7 @@ static bool test_id_equals_one(identification_t *a, char *b_str)
 {
 	identification_t *b;
 	bool equals;
-	
+
 	b = identification_create_from_string(b_str);
 	equals = a->equals(a, b);
 	b->destroy(b);
@@ -127,10 +127,10 @@ bool test_id_equals()
 	identification_t *a;
 	chunk_t encoding, fuzzed;
 	int i;
-	
+
 	a = identification_create_from_string(
 							   "C=CH, E=martin@strongswan.org, CN=martin");
-	
+
 	if (!test_id_equals_one(a, "C=CH, E=martin@strongswan.org, CN=martin"))
 	{
 		return FALSE;
@@ -153,7 +153,7 @@ bool test_id_equals()
 	}
 	encoding = chunk_clone(a->get_encoding(a));
 	a->destroy(a);
-	
+
 	/* simple fuzzing, increment each byte of encoding */
 	for (i = 0; i < encoding.len; i++)
 	{
@@ -171,7 +171,7 @@ bool test_id_equals()
 		a->destroy(a);
 		free(fuzzed.ptr);
 	}
-	
+
 	/* and decrement each byte of encoding */
 	for (i = 0; i < encoding.len; i++)
 	{
@@ -201,7 +201,7 @@ static id_match_t test_id_matches_one(identification_t *a, char *b_str)
 {
 	identification_t *b;
 	id_match_t match;
-	
+
 	b = identification_create_from_string(b_str);
 	match = a->matches(a, b);
 	b->destroy(b);
@@ -211,10 +211,10 @@ static id_match_t test_id_matches_one(identification_t *a, char *b_str)
 bool test_id_matches()
 {
 	identification_t *a;
-	
+
 	a = identification_create_from_string(
 							   "C=CH, E=martin@strongswan.org, CN=martin");
-	
+
 	if (test_id_matches_one(a, "C=CH, E=martin@strongswan.org, CN=martin")
 															!= ID_MATCH_PERFECT)
 	{

@@ -30,7 +30,7 @@ typedef struct mediation_job_t mediation_job_t;
 
 /**
  * Class representing a MEDIATION Job.
- * 
+ *
  * This job handles the mediation on the mediation server.
  */
 struct mediation_job_t {
@@ -42,9 +42,9 @@ struct mediation_job_t {
 
 /**
  * Creates a job of type MEDIATION.
- * 
+ *
  * Parameters get cloned.
- * 
+ *
  * @param peer_id		ID of the requested peer
  * @param requester		ID of the requesting peer
  * @param connect_id	content of ME_CONNECTID (could be NULL)
@@ -61,9 +61,9 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
 /**
  * Creates a special job of type MEDIATION that is used to send a callback
  * notification to a peer.
- * 
+ *
  * Parameters get cloned.
- * 
+ *
  * @param requester		ID of the waiting peer
  * @param peer_id		ID of the requested peer
  * @return				job object

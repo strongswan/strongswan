@@ -28,7 +28,7 @@ struct private_gcrypt_rng_t {
 	 * Public gcrypt_rng_t interface.
 	 */
 	gcrypt_rng_t public;
-	
+
 	/**
 	 * RNG quality of this instance
 	 */
@@ -79,7 +79,7 @@ static void destroy(private_gcrypt_rng_t *this)
 gcrypt_rng_t *gcrypt_rng_create(rng_quality_t quality)
 {
 	private_gcrypt_rng_t *this;
-	
+
 	switch (quality)
 	{
 		case RNG_WEAK:
@@ -89,15 +89,15 @@ gcrypt_rng_t *gcrypt_rng_create(rng_quality_t quality)
 		default:
 			return NULL;
 	}
-	
+
 	this = malloc_thing(private_gcrypt_rng_t);
-	
+
 	this->public.rng.get_bytes = (void (*) (rng_t *, size_t, u_int8_t*)) get_bytes;
 	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
 	this->public.rng.destroy = (void (*) (rng_t *))destroy;
-	
+
 	this->quality = quality;
-	
+
 	return &this->public;
 }
 

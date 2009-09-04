@@ -38,42 +38,42 @@ struct stroke_control_t {
 	 * @param msg		stroke message
 	 */
 	void (*initiate)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Terminate a connection.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*terminate)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Terminate a connection by peers virtual IP.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*terminate_srcip)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Delete IKE_SAs without a CHILD_SA.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*purge_ike)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Route a connection.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*route)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Unroute a connection.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*unroute)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Destroy a stroke_control instance.
 	 */

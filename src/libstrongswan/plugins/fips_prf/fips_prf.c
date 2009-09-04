@@ -29,22 +29,22 @@ struct private_fips_prf_t {
 	 * Public fips_prf_t interface.
 	 */
 	fips_prf_t public;
-	
+
 	/**
 	 * key of prf function, "b" long
 	 */
 	u_int8_t *key;
-	
+
 	/**
 	 * size of "b" in bytes
 	 */
 	size_t b;
-	
+
 	/**
 	 * Keyed SHA1 prf: It does not use SHA1Final operation
 	 */
 	prf_t *keyed_prf;
-	
+
 	/**
 	 * G function, either SHA1 or DES
 	 */
@@ -57,11 +57,11 @@ struct private_fips_prf_t {
 static void add_mod(size_t length, u_int8_t a[], u_int8_t b[], u_int8_t sum[])
 {
 	int i, c = 0;
-	
+
 	for(i = length - 1; i >= 0; i--)
 	{
 		u_int32_t tmp;
-		
+
 		tmp = a[i] + b[i] + c;
 		sum[i] = 0xff & tmp;
 		c = tmp >> 8;
@@ -115,13 +115,13 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 	u_int8_t *xkey = this->key;
 	u_int8_t one[this->b];
 	chunk_t xval_chunk = chunk_from_buf(xval);
-	
+
 	memset(one, 0, this->b);
 	one[this->b - 1] = 0x01;
-	
+
 	/* 3.1 */
 	chunk_mod(this->b, seed, xseed);
-	
+
 	/* 3.2 */
 	for (i = 0; i < 2; i++) /* twice */
 	{
@@ -136,7 +136,7 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 		add_mod(this->b, sum, one, xkey);
 		DBG3("XKEY %b", xkey, this->b);
 	}
-	
+
 	/* 3.3 done already, mod q not used */
 }
 
@@ -179,7 +179,7 @@ static void set_key(private_fips_prf_t *this, chunk_t key)
 void g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
 {
 	u_int8_t buf[64];
-	
+
 	if (c.len < sizeof(buf))
 	{
 		/* pad c with zeros */
@@ -193,7 +193,7 @@ void g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
 		/* not more than 512 bits can be G()-ed */
 		c.len = sizeof(buf);
 	}
-	
+
 	/* use the keyed hasher, but use an empty key to use SHA1 IV */
 	this->keyed_prf->set_key(this->keyed_prf, chunk_empty);
 	this->keyed_prf->get_bytes(this->keyed_prf, c, res);
@@ -215,14 +215,14 @@ static void destroy(private_fips_prf_t *this)
 fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 {
 	private_fips_prf_t *this = malloc_thing(private_fips_prf_t);
-	
+
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
 	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
 	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
 	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
-	
+
 	switch (algo)
 	{
 		case PRF_FIPS_SHA1_160:
@@ -244,7 +244,7 @@ fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 			return NULL;
 	}
 	this->key = malloc(this->b);
-	
+
 	return &this->public;
 }
 

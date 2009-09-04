@@ -43,21 +43,21 @@ struct delete_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Get the protocol ID.
 	 *
 	 * @return				protocol ID
 	 */
 	protocol_id_t (*get_protocol_id) (delete_payload_t *this);
-	
+
 	/**
 	 * Add an SPI to the list of deleted SAs.
 	 *
 	 * @param spi			spi to add
 	 */
 	void (*add_spi) (delete_payload_t *this, u_int32_t spi);
-	
+
 	/**
 	 * Get an iterator over the SPIs.
 	 *
@@ -66,7 +66,7 @@ struct delete_payload_t {
 	 * @return				iterator over SPIs
 	 */
 	iterator_t *(*create_spi_iterator) (delete_payload_t *this);
-	
+
 	/**
 	 * Destroys an delete_payload_t object.
 	 */
@@ -75,7 +75,7 @@ struct delete_payload_t {
 
 /**
  * Creates an empty delete_payload_t object.
- * 
+ *
  * @param protocol_id	protocol, such as AH|ESP
  * @return 				delete_payload_t object
  */

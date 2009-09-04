@@ -28,7 +28,7 @@ struct private_stroke_shared_key_t {
 	 * implements shared_key_t
 	 */
 	stroke_shared_key_t public;
-	
+
 	/**
 	 * type of this key
 	 */
@@ -43,7 +43,7 @@ struct private_stroke_shared_key_t {
 	 * list of key owners, as identification_t
 	 */
 	linked_list_t *owners;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -73,8 +73,8 @@ static private_stroke_shared_key_t* get_ref(private_stroke_shared_key_t *this)
 static chunk_t get_key(private_stroke_shared_key_t *this)
 {
 	return this->key;
-}	
-	
+}
+
 /**
  * Implementation of stroke_shared_key_t.has_owner.
  */
@@ -83,7 +83,7 @@ static id_match_t has_owner(private_stroke_shared_key_t *this, identification_t 
 	enumerator_t *enumerator;
 	id_match_t match, best = ID_MATCH_NONE;
 	identification_t *current;
-	
+
 	enumerator = this->owners->create_enumerator(this->owners);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -135,6 +135,6 @@ stroke_shared_key_t *stroke_shared_key_create(shared_key_type_t type, chunk_t ke
 	this->type = type;
 	this->key = key;
 	this->ref = 1;
-	
+
 	return &this->public;
 }

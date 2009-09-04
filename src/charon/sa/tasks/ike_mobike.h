@@ -35,7 +35,7 @@ typedef struct ike_mobike_t ike_mobike_t;
  * and IPsec tunnel addresses.
  * This tasks handles the MOBIKE_SUPPORTED notify exchange to detect MOBIKE
  * support, allows the exchange of ADDITIONAL_*_ADDRESS to exchange additional
- * endpoints and handles the UPDATE_SA_ADDRESS notify to finally update 
+ * endpoints and handles the UPDATE_SA_ADDRESS notify to finally update
  * endpoints.
  */
 struct ike_mobike_t {
@@ -44,36 +44,36 @@ struct ike_mobike_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Use the task to roam to other addresses.
 	 *
 	 * @param address		TRUE to include address list update
 	 */
 	void (*roam)(ike_mobike_t *this, bool address);
-	
+
 	/**
 	 * Use the task for a DPD check which detects changes in NAT mappings.
 	 */
 	void (*dpd)(ike_mobike_t *this);
-	
+
 	/**
 	 * Transmision hook, called by task manager.
 	 *
-	 * The task manager calls this hook whenever it transmits a packet. It 
+	 * The task manager calls this hook whenever it transmits a packet. It
 	 * allows the mobike task to send the packet on multiple paths to do path
 	 * probing.
 	 *
 	 * @param packet		the packet to transmit
 	 */
 	void (*transmit)(ike_mobike_t *this, packet_t *packet);
-	
+
 	/**
 	 * Check if this task is probing for routability.
 	 *
 	 * @return				TRUE if task is probing
 	 */
-	bool (*is_probing)(ike_mobike_t *this);	
+	bool (*is_probing)(ike_mobike_t *this);
 };
 
 /**

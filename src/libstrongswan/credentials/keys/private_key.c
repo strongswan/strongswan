@@ -22,12 +22,12 @@ bool private_key_equals(private_key_t *this, private_key_t *other)
 {
 	key_encoding_type_t type;
 	chunk_t a, b;
-	
+
 	if (this == other)
 	{
 		return TRUE;
 	}
-	
+
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
 		if (this->get_fingerprint(this, type, &a) &&
@@ -46,7 +46,7 @@ bool private_key_belongs_to(private_key_t *private, public_key_t *public)
 {
 	key_encoding_type_t type;
 	chunk_t a, b;
-	
+
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
 		if (private->get_fingerprint(private, type, &a) &&

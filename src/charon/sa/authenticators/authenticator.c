@@ -75,7 +75,7 @@ authenticator_t *authenticator_create_verifier(
 									chunk_t received_init, chunk_t sent_init)
 {
 	auth_payload_t *auth_payload;
-	
+
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	if (auth_payload == NULL)
 	{

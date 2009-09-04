@@ -278,7 +278,7 @@ static u_int8_t group18_modulus[] = {
 
 typedef struct modulus_entry_t modulus_entry_t;
 
-/** 
+/**
  * Entry of the modulus list.
  */
 struct modulus_entry_t {
@@ -312,7 +312,7 @@ static modulus_entry_t modulus_entries[] = {
 static modulus_entry_t *find_entry(diffie_hellman_group_t group)
 {
 	int i;
-	
+
 	for (i = 0; i < countof(modulus_entries); i++)
 	{
 		if (modulus_entries[i].group == group)
@@ -329,47 +329,47 @@ typedef struct private_gcrypt_dh_t private_gcrypt_dh_t;
  * Private data of an gcrypt_dh_t object.
  */
 struct private_gcrypt_dh_t {
-	
+
 	/**
 	 * Public gcrypt_dh_t interface
 	 */
 	gcrypt_dh_t public;
-	
+
 	/**
 	 * Diffie Hellman group number
 	 */
 	u_int16_t group;
-	
-	/* 
+
+	/*
 	 * Generator value
-	 */	
+	 */
 	gcry_mpi_t g;
-	
+
 	/**
 	 * Own private value
 	 */
 	gcry_mpi_t xa;
-	
+
 	/**
 	 * Own public value
 	 */
 	gcry_mpi_t ya;
-	
+
 	/**
 	 * Other public value
 	 */
 	gcry_mpi_t yb;
-	
+
 	/**
 	 * Shared secret
 	 */
 	gcry_mpi_t zz;
-	
+
 	/**
 	 * Modulus
 	 */
 	gcry_mpi_t p;
-	
+
 	/**
 	 * Modulus length.
 	 */
@@ -383,7 +383,7 @@ static void set_other_public_value(private_gcrypt_dh_t *this, chunk_t value)
 {
 	gcry_mpi_t p_min_1;
 	gcry_error_t err;
-	
+
 	if (this->yb)
 	{
 		gcry_mpi_release(this->yb);
@@ -395,11 +395,11 @@ static void set_other_public_value(private_gcrypt_dh_t *this, chunk_t value)
 		DBG1("importing mpi yb failed: %s", gpg_strerror(err));
 		return;
 	}
-	
+
 	p_min_1 = gcry_mpi_new(this->p_len * 8);
 	gcry_mpi_sub_ui(p_min_1, this->p, 1);
-	
-	/* check public value: 
+
+	/* check public value:
 	 * 1. 0 or 1 is invalid as 0^a = 0 and 1^a = 1
 	 * 2. a public value larger or equal the modulus is invalid */
 	if (gcry_mpi_cmp_ui(this->yb, 1) > 0 &&
@@ -425,7 +425,7 @@ static chunk_t export_mpi(gcry_mpi_t value, size_t len)
 {
 	chunk_t chunk;
 	size_t written;
-	
+
 	chunk = chunk_alloc(len);
 	gcry_mpi_print(GCRYMPI_FMT_USG, chunk.ptr, chunk.len, &written, value);
 	if (written < len)
@@ -490,21 +490,21 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	chunk_t random;
 	rng_t *rng;
 	size_t len;
-	
+
 	entry = find_entry(group);
 	if (!entry)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_gcrypt_dh_t);
-	
+
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-	
+
 	this->group = group;
 	this->p_len = entry->modulus.len;
 	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG,
@@ -524,7 +524,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	{
 		len = entry->opt_len;
 	}
-	
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (rng)
 	{	/* prefer external randomizer */
@@ -551,14 +551,14 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 		/* achieve bitsof(p)-1 by setting MSB to 0 */
 		gcry_mpi_clear_bit(this->xa, len * 8 - 1);
 	}
-	
+
 	this->g = gcry_mpi_set_ui(NULL, entry->g);
 	this->ya = gcry_mpi_new(this->p_len * 8);
 	this->yb = NULL;
 	this->zz = NULL;
-	
+
 	gcry_mpi_powm(this->ya, this->g, this->xa, this->p);
-	
+
 	return &this->public;
 }
 

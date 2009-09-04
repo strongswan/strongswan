@@ -35,7 +35,7 @@ typedef struct keymat_t keymat_t;
  * Derivation an management of sensitive keying material.
  */
 struct keymat_t {
-	
+
 	/**
 	 * Create a diffie hellman object for key agreement.
 	 *
@@ -47,7 +47,7 @@ struct keymat_t {
 	 * @return				DH object, NULL if group not supported
 	 */
 	diffie_hellman_t* (*create_dh)(keymat_t *this, diffie_hellman_group_t group);
-	
+
 	/**
 	 * Derive keys for the IKE_SA.
 	 *
@@ -86,7 +86,7 @@ struct keymat_t {
 	 * @param integ_r	chunk to write responders integrity key to
 	 * @return			TRUE on success
 	 */
-	bool (*derive_child_keys)(keymat_t *this, 
+	bool (*derive_child_keys)(keymat_t *this,
 							  proposal_t *proposal, diffie_hellman_t *dh,
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,
@@ -98,7 +98,7 @@ struct keymat_t {
 	 * @return			PRF function to derive keymat
 	 */
 	pseudo_random_function_t (*get_skd)(keymat_t *this, chunk_t *skd);
-	
+
 	/**
 	 * Get a signer to sign/verify IKE messages.
 	 *
@@ -106,7 +106,7 @@ struct keymat_t {
 	 * @return			signer
 	 */
 	signer_t* (*get_signer)(keymat_t *this, bool in);
-	
+
 	/*
 	 * Get a crypter to en-/decrypt IKE messages.
 	 *
@@ -114,7 +114,7 @@ struct keymat_t {
 	 * @return			crypter
 	 */
 	crypter_t* (*get_crypter)(keymat_t *this, bool in);
-	
+
 	/**
 	 * Generate octets to use for authentication procedure (RFC4306 2.15).
 	 *

@@ -31,7 +31,7 @@ struct private_uci_creds_t {
 	 * Public part
 	 */
 	uci_creds_t public;
-	
+
 	/**
 	 * UCI parser context
 	 */
@@ -66,7 +66,7 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 		local_id = "%any";
 		remote_id = "%any";
 		psk = NULL;
-		
+
 		if (!this->inner->enumerate(this->inner, NULL,
 									&local_id, &remote_id, &psk))
 		{
@@ -122,23 +122,23 @@ static void shared_enumerator_destroy(shared_enumerator_t *this)
  */
 static enumerator_t* create_shared_enumerator(private_uci_creds_t *this,
 											  shared_key_type_t type,
-											  identification_t *me, 
+											  identification_t *me,
 											  identification_t *other)
 {
 	shared_enumerator_t *e;
-	
+
 	if (type != SHARED_IKE)
 	{
 		return NULL;
 	}
-	
+
 	e = malloc_thing(shared_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)shared_enumerator_enumerate;
 	e->public.destroy = (void*)shared_enumerator_destroy;
 	e->me = me;
 	e->other = other;
-	e->inner = this->parser->create_section_enumerator(this->parser, 
+	e->inner = this->parser->create_section_enumerator(this->parser,
 								"local_id", "remote_id", "psk", NULL);
 	if (!e->inner)
 	{
@@ -166,7 +166,7 @@ uci_creds_t *uci_creds_create(uci_parser_t *parser)
 	this->public.credential_set.create_cdp_enumerator  = (enumerator_t*(*) (credential_set_t *,certificate_type_t, identification_t *))return_null;
 	this->public.credential_set.cache_cert = (void (*)(credential_set_t *, certificate_t *))nop;
 	this->public.destroy = (void(*) (uci_creds_t*))destroy;
-	
+
 	this->parser = parser;
 
 	return &this->public;

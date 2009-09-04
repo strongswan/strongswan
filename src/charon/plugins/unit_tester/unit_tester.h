@@ -28,7 +28,7 @@ typedef struct unit_tester_t unit_tester_t;
 /**
  * Unit testing plugin.
  *
- * The unit testing plugin runs tests on plugin initialization. Tests are 
+ * The unit testing plugin runs tests on plugin initialization. Tests are
  * defined in tests.h using the DEFINE_TEST macro. Implementation of the
  * tests is done in the tests folder. Each test has uses a function which
  * returns TRUE for success or FALSE for failure.

@@ -44,7 +44,7 @@ const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
 chunk_t asn1_algorithmIdentifier(int oid)
 {
 	chunk_t parameters;
-	
+
 	/* some algorithmIdentifiers have a NULL parameters field and some do not */
 	switch (oid)
 	{
@@ -68,7 +68,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 int asn1_known_oid(chunk_t object)
 {
 	int oid = 0;
-	
+
 	while (object.len)
 	{
 		if (oid_names[oid].octet == *object.ptr)
@@ -104,17 +104,17 @@ chunk_t asn1_build_known_oid(int n)
 {
 	chunk_t oid;
 	int i;
-	
+
 	if (n < 0 || n >= OID_MAX)
 	{
 		return chunk_empty;
 	}
-	
+
 	i = oid_names[n].level + 1;
 	oid = chunk_alloc(2 + i);
 	oid.ptr[0] = ASN1_OID;
 	oid.ptr[1] = i;
-	
+
 	do
 	{
 		if (oid_names[n].level >= i)
@@ -125,7 +125,7 @@ chunk_t asn1_build_known_oid(int n)
 		oid.ptr[--i + 2] = oid_names[n--].octet;
 	}
 	while (i > 0);
-	
+
 	return oid;
 }
 
@@ -136,18 +136,18 @@ size_t asn1_length(chunk_t *blob)
 {
 	u_char n;
 	size_t len;
-	
+
 	if (blob->len < 2)
 	{
 		DBG2("insufficient number of octets to parse ASN.1 length");
 		return ASN1_INVALID_LENGTH;
 	}
-	
+
 	/* read length field, skip tag and length */
 	n = blob->ptr[1];
 	*blob = chunk_skip(*blob, 2);
-	
-	if ((n & 0x80) == 0) 
+
+	if ((n & 0x80) == 0)
 	{	/* single length octet */
 		if (n > blob->len)
 		{
@@ -156,25 +156,25 @@ size_t asn1_length(chunk_t *blob)
 		}
 		return n;
 	}
-	
+
 	/* composite length, determine number of length octets */
 	n &= 0x7f;
-	
+
 	if (n == 0 || n > blob->len)
 	{
 		DBG2("number of length octets invalid");
 		return ASN1_INVALID_LENGTH;
 	}
-	
+
 	if (n > sizeof(len))
 	{
-		DBG2("number of length octets is larger than limit of %d octets", 
+		DBG2("number of length octets is larger than limit of %d octets",
 			 (int)sizeof(len));
 		return ASN1_INVALID_LENGTH;
 	}
-	
+
 	len = 0;
-	
+
 	while (n-- > 0)
 	{
 		len = 256*len + *blob->ptr++;
@@ -196,7 +196,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *inner)
 	chunk_t res;
 	u_char len;
 	int type;
-	
+
 	if (blob->len < 2)
 	{
 		return ASN1_INVALID;
@@ -204,7 +204,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *inner)
 	type = blob->ptr[0];
 	len = blob->ptr[1];
 	*blob = chunk_skip(*blob, 2);
-	
+
 	if ((len & 0x80) == 0)
 	{	/* single length octet */
 		res.len = len;
@@ -250,7 +250,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	int tz_hour, tz_min, tz_offset;
 	time_t tm_secs;
 	u_char *eot = NULL;
-	
+
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
 	{
 		tz_offset = 0; /* Zulu time with a zero time zone offset */
@@ -275,19 +275,19 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	{
 		return 0; /* error in time format */
 	}
-	
+
 	/* parse ASN.1 time string */
 	{
 		const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
 													 "%4d%2d%2d%2d%2d";
-	
+
 		if (sscanf(utctime->ptr, format, &tm_year, &tm_mon, &tm_day,
 										 &tm_hour, &tm_min) != 5)
 		{
 			return 0; /* error in [yy]yymmddhhmm time format */
 		}
 	}
-	
+
 	/* is there a seconds field? */
 	if ((eot - utctime->ptr) == ((type == ASN1_UTCTIME)?12:14))
 	{
@@ -300,13 +300,13 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	{
 		tm_sec = 0;
 	}
-	
+
 	/* representation of two-digit years */
 	if (type == ASN1_UTCTIME)
 	{
 		tm_year += (tm_year < 50) ? 2000 : 1900;
 	}
-	
+
 	/* prevent large 32 bit integer overflows */
 	if (sizeof(time_t) == 4 && tm_year > 2038)
 	{
@@ -319,7 +319,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		return 0; /* error in month format */
 	}
 	tm_mon--;
-	
+
 	/* representation of days as 0..30 */
 	tm_day--;
 
@@ -352,7 +352,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	char buf[BUF_LEN];
 	chunk_t formatted_time;
 	struct tm t;
-	
+
 	gmtime_r(time, &t);
 	if (type == ASN1_GENERALIZEDTIME)
 	{
@@ -364,7 +364,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 		format = "%02d%02d%02d%02d%02d%02dZ";
 		offset = (t.tm_year < 100)? 0 : -100;
 	}
-	snprintf(buf, BUF_LEN, format, t.tm_year + offset, 
+	snprintf(buf, BUF_LEN, format, t.tm_year + offset,
 			 t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
 	formatted_time.ptr = buf;
 	formatted_time.len = strlen(buf);
@@ -377,7 +377,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 {
 	int oid;
-	
+
 	switch (type)
 	{
 		case ASN1_OID:
@@ -422,30 +422,30 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name)
 {
 	size_t len;
-	
+
 	/* an ASN.1 object must possess at least a tag and length field */
 	if (object->len < 2)
 	{
 		DBG2("L%d - %s:  ASN.1 object smaller than 2 octets", level, name);
 		return FALSE;
 	}
-	
+
 	if (*object->ptr != type)
 	{
 		DBG2("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
 			 level, name, type, *object->ptr);
 		return FALSE;
 	}
-	
+
 	len = asn1_length(object);
-	
+
 	if (len == ASN1_INVALID_LENGTH || object->len < len)
 	{
 		DBG2("L%d - %s:  length of ASN.1 object invalid or too large",
 			 level, name);
 		return FALSE;
 	}
-	
+
 	DBG2("L%d - %s:", level, name);
 	asn1_debug_simple_object(*object, type, FALSE);
 	return TRUE;
@@ -473,10 +473,10 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 	chunk_t object;
 	int objectID;
 	int alg = OID_UNKNOWN;
-	
+
 	parser = asn1_parser_create(algorithmIdentifierObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -538,7 +538,7 @@ bool asn1_is_printablestring(chunk_t str)
 	const char printablestring_charset[] =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 '()+,-./:=?";
 	u_int i;
-	
+
 	for (i = 0; i < str.len; i++)
 	{
 		if (strchr(printablestring_charset, str.ptr[i]) == NULL)
@@ -588,24 +588,24 @@ u_char* asn1_build_object(chunk_t *object, asn1_t type, size_t datalen)
 	u_char length_buf[4];
 	chunk_t length = { length_buf, 0 };
 	u_char *pos;
-	
+
 	/* code the asn.1 length field */
 	asn1_code_length(datalen, &length);
-	
+
 	/* allocate memory for the asn.1 TLV object */
 	object->len = 1 + length.len + datalen;
 	object->ptr = malloc(object->len);
-	
+
 	/* set position pointer at the start of the object */
 	pos = object->ptr;
-	
+
 	/* copy the asn.1 tag field and advance the pointer */
 	*pos++ = type;
-	
+
 	/* copy the asn.1 length field and advance the pointer */
-	memcpy(pos, length.ptr, length.len); 
+	memcpy(pos, length.ptr, length.len);
 	pos += length.len;
-	
+
 	return pos;
 }
 
@@ -615,11 +615,11 @@ u_char* asn1_build_object(chunk_t *object, asn1_t type, size_t datalen)
 chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 {
 	chunk_t object;
-	
+
 	u_char *pos = asn1_build_object(&object, tag, content.len);
-	memcpy(pos, content.ptr, content.len); 
+	memcpy(pos, content.ptr, content.len);
 	pos += content.len;
-	
+
 	return object;
 }
 
@@ -686,8 +686,8 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 	u_char *pos;
 	int i;
 	int count = strlen(mode);
-	
-	/* sum up lengths of individual chunks */ 
+
+	/* sum up lengths of individual chunks */
 	va_start(chunks, mode);
 	construct.len = 0;
 	for (i = 0; i < count; i++)
@@ -696,16 +696,16 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 		construct.len += ch.len;
 	}
 	va_end(chunks);
-	
+
 	/* allocate needed memory for construct */
 	pos = asn1_build_object(&construct, type, construct.len);
-	
+
 	/* copy or move the chunks */
 	va_start(chunks, mode);
 	for (i = 0; i < count; i++)
 	{
 		chunk_t ch = va_arg(chunks, chunk_t);
-		
+
 		memcpy(pos, ch.ptr, ch.len);
 		pos += ch.len;
 
@@ -722,7 +722,7 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 		}
 	}
 	va_end(chunks);
-	
+
 	return construct;
 }
 
@@ -748,10 +748,10 @@ time_t asn1_parse_time(chunk_t blob, int level0)
 	chunk_t object;
 	int objectID;
 	time_t utc_time = 0;
-	
+
 	parser= asn1_parser_create(timeObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)

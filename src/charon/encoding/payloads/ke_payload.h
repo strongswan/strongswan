@@ -45,38 +45,38 @@ struct ke_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Returns the currently set key exchange data of this KE payload.
-	 * 	
+	 *
 	 * @warning Returned data are not copied.
-	 * 
+	 *
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_key_exchange_data) (ke_payload_t *this);
-	
+
 	/**
 	 * Sets the key exchange data of this KE payload.
-	 * 	
+	 *
 	 * Value is getting copied.
-	 * 
+	 *
 	 * @param key_exchange_data chunk_t pointing to the value to set
 	 */
 	void (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
 
 	/**
 	 * Gets the Diffie-Hellman Group Number of this KE payload.
-	 * 	
+	 *
 	 * @return 					DH Group Number of this payload
 	 */
 	diffie_hellman_group_t (*get_dh_group_number) (ke_payload_t *this);
 
 	/**
 	 * Sets the Diffie-Hellman Group Number of this KE payload.
-	 * 	
+	 *
 	 * @param dh_group_number	DH Group to set
 	 */
-	void (*set_dh_group_number) (ke_payload_t *this, 
+	void (*set_dh_group_number) (ke_payload_t *this,
 								 diffie_hellman_group_t dh_group_number);
 
 	/**
@@ -87,14 +87,14 @@ struct ke_payload_t {
 
 /**
  * Creates an empty ke_payload_t object
- * 
+ *
  * @return ke_payload_t object
  */
 ke_payload_t *ke_payload_create(void);
 
 /**
  * Creates a ke_payload_t from a diffie_hellman_t
- * 
+ *
  * @param diffie_hellman	diffie hellman object containing group and key
  * @return 					ke_payload_t object
  */

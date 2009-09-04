@@ -44,17 +44,17 @@ struct private_printf_hook_t {
  * struct with information about a registered handler
  */
 struct printf_hook_handler_t {
-	
+
 	/**
 	 * callback function
 	 */
 	printf_hook_function_t hook;
-	
+
 	/**
 	 * number of arguments
 	 */
 	int numargs;
-	
+
 	/**
 	 * types of the arguments
 	 */
@@ -89,11 +89,11 @@ static int custom_print(FILE *stream, const struct printf_info *info,
 	char buf[PRINTF_BUF_LEN];
 	printf_hook_spec_t spec;
 	printf_hook_handler_t *handler = printf_hooks[SPEC_TO_INDEX(info->spec)];
-	
+
 	spec.hash = info->alt;
 	spec.minus = info->left;
 	spec.width = info->width;
-	
+
 	written = handler->hook(buf, sizeof(buf), &spec, args);
 	if (written > 0)
 	{
@@ -110,7 +110,7 @@ static int custom_arginfo(const struct printf_info *info, size_t n, int *argtype
 {
 	int i;
 	printf_hook_handler_t *handler = printf_hooks[SPEC_TO_INDEX(info->spec)];
-	
+
 	if (handler->numargs <= n)
 	{
 		for (i = 0; i < handler->numargs; ++i)
@@ -136,7 +136,7 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 	const void *args[ARGS_MAX];
 	printf_hook_spec_t spec;
 	printf_hook_handler_t *handler = printf_hooks[SPEC_TO_INDEX(fmt_spec->name[0])];
-	
+
 	for (i = 0; i < handler->numargs; i++)
 	{
 		switch(handler->argtypes[i])
@@ -149,11 +149,11 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 				break;
 		}
 	}
-	
+
 	spec.hash = fmt_spec->fmt_hash;
 	spec.minus = fmt_spec->fmt_minus;
 	spec.width = fmt_spec->fmt_field_width;
-	
+
 	written = handler->hook(buf, sizeof(buf), &spec, args);
 	if (written > 0)
 	{
@@ -331,16 +331,16 @@ static void add_handler(private_printf_hook_t *this, char spec,
 	printf_hook_handler_t *handler;
 	printf_hook_argtype_t argtype;
 	va_list args;
-	
+
 	if (!IS_VALID_SPEC(spec))
 	{
 		DBG1("'%c' is not a valid printf hook specifier, not registered!", spec);
 		return;
 	}
-	
+
 	handler = malloc_thing(printf_hook_handler_t);
 	handler->hook = hook;
-	
+
 	va_start(args, hook);
 	while ((argtype = va_arg(args, printf_hook_argtype_t)) != PRINTF_HOOK_ARGTYPE_END)
 	{
@@ -354,9 +354,9 @@ static void add_handler(private_printf_hook_t *this, char spec,
 		handler->argtypes[i] = argtype;
 	}
 	va_end(args);
-	
+
 	handler->numargs = i + 1;
-	
+
 	if (handler->numargs > 0)
 	{
 #if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
@@ -385,7 +385,7 @@ static void destroy(private_printf_hook_t *this)
 #ifdef USE_VSTR
 	Vstr_conf *conf = get_vstr_conf();
 #endif
-	
+
 	for (i = 0; i < NUM_HANDLERS; ++i)
 	{
 		printf_hook_handler_t *handler = printf_hooks[i];
@@ -398,7 +398,7 @@ static void destroy(private_printf_hook_t *this)
 			free(handler);
 		}
 	}
-	
+
 #ifdef USE_VSTR
 	/* freeing the Vstr_conf of the main thread */
 	pthread_key_delete(vstr_conf_key);
@@ -414,12 +414,12 @@ static void destroy(private_printf_hook_t *this)
 printf_hook_t *printf_hook_create()
 {
 	private_printf_hook_t *this = malloc_thing(private_printf_hook_t);
-	
+
 	this->public.add_handler = (void(*)(printf_hook_t*, char, printf_hook_function_t, ...))add_handler;
 	this->public.destroy = (void(*)(printf_hook_t*))destroy;
-	
+
 	memset(printf_hooks, 0, sizeof(printf_hooks));
-	
+
 #ifdef USE_VSTR
 	if (!vstr_init())
 	{
@@ -428,7 +428,7 @@ printf_hook_t *printf_hook_create()
 		return NULL;
 	}
 #endif
-	
+
 	return &this->public;
 }
 

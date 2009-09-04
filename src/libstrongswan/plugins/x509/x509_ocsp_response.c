@@ -45,42 +45,42 @@ struct private_x509_ocsp_response_t {
 	 * Public interface for this ocsp object.
 	 */
 	x509_ocsp_response_t public;
-	
+
 	/**
 	 * complete encoded OCSP response
 	 */
 	chunk_t encoding;
-	
+
 	/**
 	 * data for signature verficiation
 	 */
 	chunk_t tbsResponseData;
-	
+
 	/**
 	 * signature algorithm (OID)
 	 */
 	int signatureAlgorithm;
-	
+
 	/**
 	 * signature
 	 */
 	chunk_t signature;
-	
+
 	/**
 	 * name or keyid of the responder
 	 */
 	identification_t *responderId;
-	
+
 	/**
 	 * time of response production
 	 */
 	time_t producedAt;
-	
+
 	/**
 	 * latest nextUpdate in this OCSP response
 	 */
 	time_t usableUntil;
-	
+
 	/**
 	 * list of included certificates
 	 */
@@ -95,7 +95,7 @@ struct private_x509_ocsp_response_t {
 	 * Nonce required for ocsp request and response
 	 */
 	chunk_t nonce;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -167,7 +167,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 	single_response_t *response;
 	cert_validation_t status = VALIDATION_FAILED;
 	certificate_t *issuercert = &issuer->interface;
-	
+
 	enumerator = this->responses->create_enumerator(this->responses);
 	while (enumerator->enumerate(enumerator, &response))
 	{
@@ -175,7 +175,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 		identification_t *id;
 		key_encoding_type_t type;
 		chunk_t hash, fingerprint;
-		
+
 		/* check serial first, is cheaper */
 		if (!chunk_equals(subject->get_serial(subject), response->serialNumber))
 		{
@@ -185,7 +185,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 		if (response->issuerKeyHash.ptr)
 		{
 			public_key_t *public;
-			
+
 			public = issuercert->get_public_key(issuercert);
 			if (!public)
 			{
@@ -211,7 +211,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 		/* check issuerNameHash, if available */
 		else if (response->issuerNameHash.ptr)
 		{
-			hasher = lib->crypto->create_hasher(lib->crypto, 
+			hasher = lib->crypto->create_hasher(lib->crypto,
 							hasher_algorithm_from_oid(response->hashAlgorithm));
 			if (!hasher)
 			{
@@ -235,7 +235,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 		*revocation_reason = response->revocationReason;
 		*this_update = response->thisUpdate;
 		*next_update = response->nextUpdate;
-		
+
 		break;
 	}
 	enumerator->destroy(enumerator);
@@ -312,7 +312,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	bool success = FALSE;
 
 	single_response_t *response;
-	
+
 	response = malloc_thing(single_response_t);
 	response->hashAlgorithm = OID_UNKNOWN;
 	response->issuerNameHash = chunk_empty;
@@ -402,14 +402,14 @@ static const asn1Object_t responsesObjects[] = {
 /**
  * Parse all responses
  */
-static bool parse_responses(private_x509_ocsp_response_t *this, 
+static bool parse_responses(private_x509_ocsp_response_t *this,
 							chunk_t blob, int level0)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
 	bool success = FALSE;
-	
+
 	parser = asn1_parser_create(responsesObjects, blob);
 	parser->set_top_level(parser, level0);
 
@@ -486,7 +486,7 @@ static const asn1Object_t basicResponseObjects[] = {
 /**
  * Parse a basicOCSPResponse
  */
-static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this, 
+static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 									chunk_t blob, int level0)
 {
 	asn1_parser_t *parser;
@@ -498,7 +498,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 	certificate_t *cert;
 	bool success = FALSE;
 	bool critical;
-	
+
 	parser = asn1_parser_create(basicResponseObjects, blob);
 	parser->set_top_level(parser, level0);
 
@@ -691,7 +691,7 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
-	
+
 	if (issuer->get_type(issuer) != CERT_X509)
 	{
 		return FALSE;
@@ -699,7 +699,7 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 	if (this->responderId->get_type(this->responderId) == ID_KEY_ID)
 	{
 		chunk_t fingerprint;
-		
+
 		key = issuer->get_public_key(issuer);
 		if (!key ||
 			!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
@@ -711,7 +711,7 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 		}
 		key->destroy(key);
 	}
-	else 
+	else
 	{
 		if (!this->responderId->equals(this->responderId,
 									   issuer->get_subject(issuer)))
@@ -791,7 +791,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 				&that_update, FALSE, new ? "replaced":"retained");
 	return new;
 }
-	
+
 /**
  * Implementation of certificate_t.get_encoding.
  */
@@ -807,7 +807,7 @@ static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
-	
+
 	if (this == (private_x509_ocsp_response_t*)other)
 	{
 		return TRUE;
@@ -818,7 +818,7 @@ static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 	}
 	if (other->equals == (void*)equals)
 	{	/* skip allocation if we have the same implementation */
-		return chunk_equals(this->encoding, ((private_x509_ocsp_response_t*)other)->encoding); 
+		return chunk_equals(this->encoding, ((private_x509_ocsp_response_t*)other)->encoding);
 	}
 	encoding = other->get_encoding(other);
 	equal = chunk_equals(this->encoding, encoding);
@@ -856,9 +856,9 @@ static void destroy(private_x509_ocsp_response_t *this)
 static x509_ocsp_response_t *load(chunk_t data)
 {
 	private_x509_ocsp_response_t *this;
-	
+
 	this = malloc_thing(private_x509_ocsp_response_t);
-	
+
 	this->public.interface.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
 	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -874,7 +874,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->public.interface.certificate.destroy = (void (*)(certificate_t *this))destroy;
 	this->public.interface.get_status = (cert_validation_t(*)(ocsp_response_t*, x509_t *subject, x509_t *issuer, time_t *revocation_time,crl_reason_t *revocation_reason,time_t *this_update, time_t *next_update))get_status;
 	this->public.interface.create_cert_enumerator = (enumerator_t*(*)(ocsp_response_t*))create_cert_enumerator;
-	
+
 	this->ref = 1;
 	this->encoding = data;
 	this->tbsResponseData = chunk_empty;
@@ -913,7 +913,7 @@ struct private_builder_t {
 static x509_ocsp_response_t *build(private_builder_t *this)
 {
 	x509_ocsp_response_t *res = this->res;
-	
+
 	free(this);
 	return res;
 }
@@ -927,7 +927,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	{
 		va_list args;
 		chunk_t chunk;
-		
+
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
@@ -955,18 +955,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *x509_ocsp_response_builder(certificate_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != CERT_X509_OCSP_RESPONSE)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->res = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

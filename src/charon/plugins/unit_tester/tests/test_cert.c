@@ -28,10 +28,10 @@ bool test_cert_x509()
 	identification_t *issuer, *subject;
 	u_int32_t serial = htonl(0);
 	chunk_t encoding;
-	
+
 	issuer = identification_create_from_string("CN=CA, OU=Test, O=strongSwan");
 	subject = identification_create_from_string("CN=Peer, OU=Test, O=strongSwan");
-	
+
 	ca_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 						BUILD_KEY_SIZE, 1024, BUILD_END);
 	peer_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
@@ -50,7 +50,7 @@ bool test_cert_x509()
 	{
 		return FALSE;
 	}
-	
+
 	encoding = ca_cert->get_encoding(ca_cert);
 	parsed = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 						BUILD_BLOB_ASN1_DER, encoding,
@@ -65,7 +65,7 @@ bool test_cert_x509()
 		return FALSE;
 	}
 	parsed->destroy(parsed);
-	
+
 	serial = htonl(ntohl(serial) + 1);
 	public = peer_key->get_public_key(peer_key);
 	peer_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -80,7 +80,7 @@ bool test_cert_x509()
 	{
 		return FALSE;
 	}
-	
+
 	encoding = peer_cert->get_encoding(peer_cert);
 	parsed = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 						BUILD_BLOB_ASN1_DER, encoding,
@@ -95,7 +95,7 @@ bool test_cert_x509()
 		return FALSE;
 	}
 	parsed->destroy(parsed);
-	
+
 	ca_cert->destroy(ca_cert);
 	ca_key->destroy(ca_key);
 	peer_cert->destroy(peer_cert);

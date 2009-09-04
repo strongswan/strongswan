@@ -27,14 +27,14 @@ typedef struct private_sa_payload_t private_sa_payload_t;
 
 /**
  * Private data of an sa_payload_t object.
- * 
+ *
  */
 struct private_sa_payload_t {
 	/**
 	 * Public sa_payload_t interface.
 	 */
 	sa_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -44,12 +44,12 @@ struct private_sa_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Proposals in this payload are stored in a linked_list_t.
 	 */
@@ -58,27 +58,27 @@ struct private_sa_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-SA Payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_sa_payload_t.
- * 
+ *
  */
 encoding_rule_t sa_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,		offsetof(private_sa_payload_t, next_payload) 			},
 	/* the critical bit */
-	{ FLAG,			offsetof(private_sa_payload_t, critical) 				},	
+	{ FLAG,			offsetof(private_sa_payload_t, critical) 				},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole SA payload*/
-	{ PAYLOAD_LENGTH,		offsetof(private_sa_payload_t, payload_length) 	},	
-	/* Proposals are stored in a proposal substructure, 
+	{ PAYLOAD_LENGTH,		offsetof(private_sa_payload_t, payload_length) 	},
+	/* Proposals are stored in a proposal substructure,
 	   offset points to a linked_list_t pointer */
 	{ PROPOSALS,		offsetof(private_sa_payload_t, proposals) 				}
 };
@@ -108,12 +108,12 @@ static status_t verify(private_sa_payload_t *this)
 
 	/* check proposal numbering */
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	
+
 	while(iterator->iterate(iterator, (void**)&current_proposal))
 	{
 		current_number = current_proposal->get_proposal_number(current_proposal);
 		if (current_number < expected_number)
-		{			
+		{
 			if (current_number != (expected_number + 1))
 			{
 				DBG1(DBG_ENC, "proposal number is %d, expected %d or %d",
@@ -129,7 +129,7 @@ static status_t verify(private_sa_payload_t *this)
 			status = FAILED;
 			break;
 		}
-		
+
 		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
 		if (status != SUCCESS)
 		{
@@ -139,7 +139,7 @@ static status_t verify(private_sa_payload_t *this)
 		first = FALSE;
 		expected_number = current_number;
 	}
-	
+
 	iterator->destroy(iterator);
 	return status;
 }
@@ -197,14 +197,14 @@ static void compute_length (private_sa_payload_t *this)
 	iterator_t *iterator;
 	payload_t *current_proposal;
 	size_t length = SA_PAYLOAD_HEADER_LENGTH;
-	
+
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	while (iterator->iterate(iterator, (void **)&current_proposal))
 	{
 		length += current_proposal->get_length(current_proposal);
 	}
 	iterator->destroy(iterator);
-	
+
 	this->payload_length = length;
 }
 
@@ -232,7 +232,7 @@ static void add_proposal_substructure(private_sa_payload_t *this,proposal_substr
 {
 	status_t status;
 	u_int proposal_count = this->proposals->get_count(this->proposals);
-	
+
 	if (proposal_count > 0)
 	{
 		proposal_substructure_t *last_proposal;
@@ -252,7 +252,7 @@ static void add_proposal_substructure(private_sa_payload_t *this,proposal_substr
 static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substructure;
-	
+
 	substructure = proposal_substructure_create_from_proposal(proposal);
 	add_proposal_substructure(this, substructure);
 }
@@ -267,10 +267,10 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 	iterator_t *iterator;
 	proposal_substructure_t *proposal_struct;
 	linked_list_t *proposal_list;
-	
+
 	/* this list will hold our proposals */
 	proposal_list = linked_list_create();
-	
+
 	/* we do not support proposals split up to two proposal substructures, as
 	 * AH+ESP bundles are not supported in RFC4301 anymore.
 	 * To handle such structures safely, we just skip proposals with multiple
@@ -280,7 +280,7 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 	while (iterator->iterate(iterator, (void **)&proposal_struct))
 	{
 		proposal_t *proposal;
-		
+
 		/* check if a proposal has a single protocol */
 		if (proposal_struct->get_proposal_number(proposal_struct) == struct_number)
 		{
@@ -310,7 +310,7 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 sa_payload_t *sa_payload_create()
 {
 	private_sa_payload_t *this = malloc_thing(private_sa_payload_t);
-	
+
 	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
@@ -319,14 +319,14 @@ sa_payload_t *sa_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.create_proposal_substructure_iterator = (iterator_t* (*) (sa_payload_t *,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.add_proposal = (void (*) (sa_payload_t*,proposal_t*))add_proposal;
 	this->public.get_proposals = (linked_list_t* (*) (sa_payload_t *)) get_proposals;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -343,7 +343,7 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 	iterator_t *iterator;
 	proposal_t *proposal;
 	sa_payload_t *sa_payload = sa_payload_create();
-	
+
 	/* add every payload from the list */
 	iterator = proposals->create_iterator(proposals, TRUE);
 	while (iterator->iterate(iterator, (void**)&proposal))
@@ -351,7 +351,7 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 		add_proposal((private_sa_payload_t*)sa_payload, proposal);
 	}
 	iterator->destroy(iterator);
-	
+
 	return sa_payload;
 }
 
@@ -361,8 +361,8 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal)
 {
 	sa_payload_t *sa_payload = sa_payload_create();
-	
+
 	add_proposal((private_sa_payload_t*)sa_payload, proposal);
-	
+
 	return sa_payload;
 }

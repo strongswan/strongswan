@@ -1,7 +1,7 @@
 /**
  * @file scep.h
  * @brief SCEP specific functions
- * 
+ *
  * Contains functions to build and parse SCEP requests and replies
  */
 

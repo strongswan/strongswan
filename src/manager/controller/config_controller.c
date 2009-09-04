@@ -33,7 +33,7 @@ struct private_config_controller_t {
 	 * public functions
 	 */
 	config_controller_t public;
-	
+
 	/**
 	 * manager instance
 	 */
@@ -54,7 +54,7 @@ static void process_peerconfig(private_config_controller_t *this,
 	{
 		if (streq(name, "name"))
 		{
-			config = value;	
+			config = value;
 		}
 		else if (streq(name, "ikeconfig"))
 		{
@@ -80,7 +80,7 @@ static void process_peerconfig(private_config_controller_t *this,
 				if (streq(name, "childconfig"))
 				{
 					int num = 0;
-					
+
 					e2 = xml->children(xml);
 					while (e2->enumerate(e2, &xml, &name, &value))
 					{
@@ -199,9 +199,9 @@ controller_t *config_controller_create(context_t *context, void *param)
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-	
+
 	this->manager = (manager_t*)context;
-	
+
 	return &this->public.controller;
 }
 

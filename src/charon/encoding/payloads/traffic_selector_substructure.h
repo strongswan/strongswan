@@ -36,7 +36,7 @@ typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
 /**
  * Class representing an IKEv2 TRAFFIC SELECTOR.
- * 
+ *
  * The TRAFFIC SELECTOR format is described in RFC section 3.13.1.
  */
 struct traffic_selector_substructure_t {
@@ -44,49 +44,49 @@ struct traffic_selector_substructure_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Get the type of Traffic selector.
 	 *
 	 * @return			type of traffic selector
-	 *  
+	 *
 	 */
 	ts_type_t (*get_ts_type) (traffic_selector_substructure_t *this);
-	
+
 	/**
 	 * Set the type of Traffic selector.
 	 *
-	 * @param ts_type	type of traffic selector	
+	 * @param ts_type	type of traffic selector
 	 */
 	void (*set_ts_type) (traffic_selector_substructure_t *this,
 						 ts_type_t ts_type);
-	
+
 	/**
 	 * Get the IP protocol ID of Traffic selector.
 	 *
 	 * @return			type of traffic selector
-	 *  
+	 *
 	 */
 	u_int8_t (*get_protocol_id) (traffic_selector_substructure_t *this);
-	
+
 	/**
 	 * Set the IP protocol ID of Traffic selector
 	 *
-	 * @param protocol_id	protocol ID of traffic selector	
+	 * @param protocol_id	protocol ID of traffic selector
 	 */
 	void (*set_protocol_id) (traffic_selector_substructure_t *this,
 							  u_int8_t protocol_id);
-	
+
 	/**
 	 * Get the start port and address as host_t object.
 	 *
 	 * Returned host_t object has to get destroyed by the caller.
-	 * 
+	 *
 	 * @return			start host as host_t object
-	 *  
+	 *
 	 */
 	host_t *(*get_start_host) (traffic_selector_substructure_t *this);
-	
+
 	/**
 	 * Set the start port and address as host_t object.
 	 *
@@ -94,17 +94,17 @@ struct traffic_selector_substructure_t {
 	 */
 	void (*set_start_host) (traffic_selector_substructure_t *this,
 							host_t *start_host);
-	
+
 	/**
 	 * Get the end port and address as host_t object.
 	 *
 	 * Returned host_t object has to get destroyed by the caller.
-	 * 
+	 *
 	 * @return			end host as host_t object
-	 *  
+	 *
 	 */
 	host_t *(*get_end_host) (traffic_selector_substructure_t *this);
-	
+
 	/**
 	 * Set the end port and address as host_t object.
 	 *
@@ -112,17 +112,17 @@ struct traffic_selector_substructure_t {
 	 */
 	void (*set_end_host) (traffic_selector_substructure_t *this,
 						  host_t *end_host);
-	
+
 	/**
 	 * Get a traffic_selector_t from this substructure.
 	 *
 	 * @warning traffic_selector_t must be destroyed after usage.
-	 * 
+	 *
 	 * @return			contained traffic_selector_t
 	 */
 	traffic_selector_t *(*get_traffic_selector) (
 										traffic_selector_substructure_t *this);
-	
+
 	/**
 	 * Destroys an traffic_selector_substructure_t object.
 	 */
@@ -133,7 +133,7 @@ struct traffic_selector_substructure_t {
  * Creates an empty traffic_selector_substructure_t object.
  *
  * TS type is set to default TS_IPV4_ADDR_RANGE!
- *  
+ *
  * @return 					traffic_selector_substructure_t object
  */
 traffic_selector_substructure_t *traffic_selector_substructure_create(void);
@@ -141,7 +141,7 @@ traffic_selector_substructure_t *traffic_selector_substructure_create(void);
 /**
  * Creates an initialized traffif selector substructure using
  * the values from a traffic_selector_t.
- * 
+ *
  * @param traffic_selector	traffic_selector_t to use for initialization
  * @return					traffic_selector_substructure_t object
  */

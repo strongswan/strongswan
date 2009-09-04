@@ -283,7 +283,7 @@ static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	else
 	{
 		chunk_t fp;
-		
+
 		/* V3 fingerprint is computed by public_key_t class */
 		if (!cert->public_key->get_fingerprint(cert->public_key, KEY_ID_PGPV3,
 											   &fp))
@@ -307,7 +307,7 @@ bool parse_pgp(chunk_t blob, pgpcert_t *cert)
 		/* should not occur, nothing to parse */
 		return FALSE;
 	}
-	
+
 	/* parse a PGP certificate file */
 	cert->certificate = blob;
 	time(&cert->installed);

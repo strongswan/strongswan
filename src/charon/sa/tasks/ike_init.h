@@ -38,7 +38,7 @@ struct ike_init_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.
 	 *

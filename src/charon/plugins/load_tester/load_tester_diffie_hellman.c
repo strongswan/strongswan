@@ -49,19 +49,19 @@ load_tester_diffie_hellman_t *load_tester_diffie_hellman_create(
 												diffie_hellman_group_t group)
 {
 	load_tester_diffie_hellman_t *this;
-	
+
 	if (group != MODP_NULL)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(load_tester_diffie_hellman_t);
-	
+
 	this->dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *))get_shared_secret;
 	this->dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t ))nop;
 	this->dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *))get_my_public_value;
 	this->dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *))get_dh_group;
 	this->dh.destroy = (void (*)(diffie_hellman_t *))free;
-	
+
 	return this;
 }

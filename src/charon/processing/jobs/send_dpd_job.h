@@ -29,7 +29,7 @@ typedef struct send_dpd_job_t send_dpd_job_t;
 
 /**
  * Class representing a SEND_DPD Job.
- * 
+ *
  * Job to periodically send a Dead Peer Detection (DPD) request,
  * ie. an IKE request with no payloads other than the encrypted payload
  * required by the syntax.
@@ -43,7 +43,7 @@ struct send_dpd_job_t {
 
 /**
  * Creates a job of type SEND_DPD.
- * 
+ *
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				initiate_ike_sa_job_t object
  */

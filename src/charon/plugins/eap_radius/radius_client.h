@@ -33,11 +33,11 @@ typedef struct radius_client_t radius_client_t;
  * a socket during request() and releases it afterwards.
  */
 struct radius_client_t {
-	
+
 	/**
 	 * Send a RADIUS request and wait for the response.
 	 *
-	 * The client fills in RADIUS Message identifier, NAS-Identifier, 
+	 * The client fills in RADIUS Message identifier, NAS-Identifier,
 	 * NAS-Port-Type, builds a Request-Authenticator and calculates the
 	 * Message-Authenticator attribute.
 	 * The received response gets verified using the Response-Identifier
@@ -47,7 +47,7 @@ struct radius_client_t {
 	 * @return				response, NULL if timed out/verification failed
 	 */
 	radius_message_t* (*request)(radius_client_t *this, radius_message_t *msg);
-	
+
 	/**
 	 * Decrypt the MSK encoded in a messages MS-MPPE-Send/Recv-Key.
 	 *
@@ -57,7 +57,7 @@ struct radius_client_t {
 	 */
 	chunk_t (*decrypt_msk)(radius_client_t *this, radius_message_t *response,
 						   radius_message_t *request);
-	
+
 	/**
 	 * Destroy the client, release the socket.
 	 */

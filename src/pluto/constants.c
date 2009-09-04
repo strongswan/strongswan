@@ -68,8 +68,8 @@ ENUM(dpd_action_names, DPD_ACTION_NONE, DPD_ACTION_RESTART,
 	"clear",
 	"hold",
 	"restart"
-);	
-	
+);
+
 /* Timer events */
 
 ENUM(timer_event_names, EVENT_NULL, EVENT_LOG_DAILY,
@@ -274,7 +274,7 @@ const char *const payload_name_nat_d[] = {
 
 static enum_names payload_names_nat_d =
 	{ ISAKMP_NEXT_NATD_DRAFTS, ISAKMP_NEXT_NATOA_DRAFTS, payload_name_nat_d, NULL };
-		
+
 enum_names payload_names =
 	{ ISAKMP_NEXT_NONE, ISAKMP_NEXT_NATOA_RFC, payload_name, &payload_names_nat_d };
 
@@ -845,7 +845,7 @@ static const char *const oakley_auth_name1[] = {
 	"ECDSA signature",
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
-	"ECDSA-521-signature",   
+	"ECDSA-521-signature",
 };
 
 static const char *const oakley_auth_name2[] = {
@@ -922,7 +922,7 @@ enum_names oakley_group_names_rfc3526 =
 			oakley_group_name_rfc3526, &oakley_group_names_rfc4753 };
 
 enum_names oakley_group_names =
-	{ MODP_768_BIT, MODP_1536_BIT, 
+	{ MODP_768_BIT, MODP_1536_BIT,
 			oakley_group_name, &oakley_group_names_rfc3526 };
 
 /* Oakley Group Type attribute */
@@ -1153,7 +1153,7 @@ const char *const natt_type_bitnames[] = {
 	"4",   "5",   "6",   "7",
 	"8",   "9",   "10",  "11",
 	"12",  "13",  "14",  "15",
-	"16",  "17",  "18",  "19", 
+	"16",  "17",  "18",  "19",
 	"20",  "21",  "22",  "23",
 	"24",  "25",  "26",  "27",
 	"28",  "29",
@@ -1196,8 +1196,8 @@ enum_show(enum_names *ed, unsigned long val)
 
 static char bitnamesbuf[200];   /* only one!  I hope that it is big enough! */
 
-int 
-enum_search(enum_names *ed, const char *str) 
+int
+enum_search(enum_names *ed, const char *str)
 {
 	enum_names  *p;
 	const char *ptr;

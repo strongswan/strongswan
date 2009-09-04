@@ -32,19 +32,19 @@ typedef struct private_encryption_payload_t private_encryption_payload_t;
 
 /**
  * Private data of an encryption_payload_t' Object.
- * 
+ *
  */
 struct private_encryption_payload_t {
-	
+
 	/**
 	 * Public encryption_payload_t interface.
 	 */
 	encryption_payload_t public;
-	
+
 	/**
-	 * There is no next payload for an encryption payload, 
+	 * There is no next payload for an encryption payload,
 	 * since encryption payload MUST be the last one.
-	 * next_payload means here the first payload of the 
+	 * next_payload means here the first payload of the
 	 * contained, encrypted payload.
 	 */
 	u_int8_t next_payload;
@@ -53,33 +53,33 @@ struct private_encryption_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Chunk containing the iv, data, padding,
 	 * and (an eventually not calculated) signature.
 	 */
 	chunk_t encrypted;
-	
+
 	/**
 	 * Chunk containing the data in decrypted (unpadded) form.
 	 */
 	chunk_t decrypted;
-	
+
 	/**
 	 * Signer set by set_signer.
 	 */
 	signer_t *signer;
-	
+
 	/**
 	 * Crypter, supplied by encrypt/decrypt
 	 */
 	crypter_t *crypter;
-	
+
 	/**
 	 * Contained payloads of this encrpytion_payload.
 	 */
@@ -88,10 +88,10 @@ struct private_encryption_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-Encryption Payload.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_encryption_payload_t.
- * 
+ *
  */
 encoding_rule_t encryption_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -170,7 +170,7 @@ static payload_type_t get_next_type(private_encryption_payload_t *this)
  */
 static void set_next_type(private_encryption_payload_t *this, payload_type_t type)
 {
-	/* set next type is not allowed, since this payload MUST be the last one 
+	/* set next type is not allowed, since this payload MUST be the last one
 	 * and so nothing is done in here*/
 }
 
@@ -190,7 +190,7 @@ static void compute_length(private_encryption_payload_t *this)
 		length += current_payload->get_length(current_payload);
 	}
 	iterator->destroy(iterator);
-	
+
 	if (this->crypter && this->signer)
 	{
 		/* append one byte for padding length */
@@ -268,13 +268,13 @@ static void generate(private_encryption_payload_t *this)
 	payload_t *current_payload, *next_payload;
 	generator_t *generator;
 	iterator_t *iterator;
-	
+
 	/* recalculate length before generating */
 	compute_length(this);
-	
+
 	/* create iterator */
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	
+
 	/* get first payload */
 	if (iterator->iterate(iterator, (void**)&current_payload))
 	{
@@ -289,9 +289,9 @@ static void generate(private_encryption_payload_t *this)
 		iterator->destroy(iterator);
 		return;
 	}
-	
+
 	generator = generator_create();
-	
+
 	/* build all payload, except last */
 	while(iterator->iterate(iterator, (void**)&next_payload))
 	{
@@ -300,14 +300,14 @@ static void generate(private_encryption_payload_t *this)
 		current_payload = next_payload;
 	}
 	iterator->destroy(iterator);
-	
+
 	/* build last payload */
 	current_payload->set_next_type(current_payload, NO_PAYLOAD);
 	generator->generate_payload(generator, current_payload);
-	
+
 	/* free already generated data */
 	free(this->decrypted.ptr);
-	
+
 	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
 	DBG2(DBG_ENC, "successfully generated content in encryption payload");
@@ -321,13 +321,13 @@ static status_t encrypt(private_encryption_payload_t *this)
 	chunk_t iv, padding, to_crypt, result;
 	rng_t *rng;
 	size_t block_size;
-	
+
 	if (this->signer == NULL || this->crypter == NULL)
 	{
 		DBG1(DBG_ENC, "could not encrypt, signer/crypter not set");
 		return INVALID_STATE;
 	}
-	
+
 	/* for random data in iv and padding */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
@@ -337,15 +337,15 @@ static status_t encrypt(private_encryption_payload_t *this)
 	}
 	/* build payload chunk */
 	generate(this);
-	
+
 	DBG2(DBG_ENC, "encrypting payloads");
 	DBG3(DBG_ENC, "data to encrypt %B", &this->decrypted);
-	
+
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
 	padding.len = block_size - ((this->decrypted.len + 1) %  block_size);
 	rng->allocate_bytes(rng, padding.len, &padding);
-	
+
 	/* concatenate payload data, padding, padding len */
 	to_crypt.len = this->decrypted.len + padding.len + 1;
 	to_crypt.ptr = malloc(to_crypt.len);
@@ -353,36 +353,36 @@ static status_t encrypt(private_encryption_payload_t *this)
 	memcpy(to_crypt.ptr, this->decrypted.ptr, this->decrypted.len);
 	memcpy(to_crypt.ptr + this->decrypted.len, padding.ptr, padding.len);
 	*(to_crypt.ptr + to_crypt.len - 1) = padding.len;
-		
+
 	/* build iv */
 	iv.len = block_size;
 	rng->allocate_bytes(rng, iv.len, &iv);
 	rng->destroy(rng);
-	
+
 	DBG3(DBG_ENC, "data before encryption with padding %B", &to_crypt);
-	
+
 	/* encrypt to_crypt chunk */
 	free(this->encrypted.ptr);
 	this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
 	free(padding.ptr);
 	free(to_crypt.ptr);
-	
+
 	DBG3(DBG_ENC, "data after encryption %B", &result);
-	
+
 	/* build encrypted result with iv and signature */
 	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
 	free(this->encrypted.ptr);
 	this->encrypted.ptr = malloc(this->encrypted.len);
-	
+
 	/* fill in result, signature is left out */
 	memcpy(this->encrypted.ptr, iv.ptr, iv.len);
 	memcpy(this->encrypted.ptr + iv.len, result.ptr, result.len);
-	
+
 	free(result.ptr);
 	free(iv.ptr);
 	DBG3(DBG_ENC, "data after encryption with IV and (invalid) signature %B",
 		 &this->encrypted);
-	
+
 	return SUCCESS;
 }
 
@@ -394,16 +394,16 @@ static status_t parse(private_encryption_payload_t *this)
 	parser_t *parser;
 	status_t status;
 	payload_type_t current_payload_type;
-	
+
 	/* build a parser on the decrypted data */
 	parser = parser_create(this->decrypted);
-	
+
 	current_payload_type = this->next_payload;
 	/* parse all payloads */
 	while (current_payload_type != NO_PAYLOAD)
 	{
-		payload_t *current_payload;	
-		
+		payload_t *current_payload;
+
 		status = parser->parse_payload(parser, current_payload_type, (payload_t**)&current_payload);
 		if (status != SUCCESS)
 		{
@@ -423,7 +423,7 @@ static status_t parse(private_encryption_payload_t *this)
 
 		/* get next payload type */
 		current_payload_type = current_payload->get_next_type(current_payload);
-		
+
 		this->payloads->insert_last(this->payloads,current_payload);
 	}
 	parser->destroy(parser);
@@ -438,50 +438,50 @@ static status_t decrypt(private_encryption_payload_t *this)
 {
 	chunk_t iv, concatenated;
 	u_int8_t padding_length;
-	
+
 	DBG2(DBG_ENC, "decrypting encryption payload");
 	DBG3(DBG_ENC, "data before decryption with IV and (invalid) signature %B",
 		 &this->encrypted);
-	
+
 	if (this->signer == NULL || this->crypter == NULL)
 	{
 		DBG1(DBG_ENC, "could not decrypt, no crypter/signer set");
 		return INVALID_STATE;
 	}
-	
+
 	/* get IV */
 	iv.len = this->crypter->get_block_size(this->crypter);
-	
+
 	iv.ptr = this->encrypted.ptr;
-	
+
 	/* point concatenated to data + padding + padding_length*/
 	concatenated.ptr = this->encrypted.ptr + iv.len;
 	concatenated.len = this->encrypted.len - iv.len -
 								this->signer->get_block_size(this->signer);
-		
+
 	/* concatenated must be a multiple of block_size of crypter */
 	if (concatenated.len < iv.len || concatenated.len % iv.len)
 	{
 		DBG1(DBG_ENC, "could not decrypt, invalid input");
 		return FAILED;
 	}
-	
+
 	/* free previus data, if any */
 	free(this->decrypted.ptr);
-	
+
 	DBG3(DBG_ENC, "data before decryption %B", &concatenated);
-	
+
 	this->crypter->decrypt(this->crypter, concatenated, iv, &this->decrypted);
 
 	DBG3(DBG_ENC, "data after decryption with padding %B", &this->decrypted);
-	
+
 	/* get padding length, sits just bevore signature */
 	padding_length = *(this->decrypted.ptr + this->decrypted.len - 1);
-	/* add one byte to the padding length, since the padding_length field is 
+	/* add one byte to the padding length, since the padding_length field is
 	 * not included */
 	padding_length++;
 	this->decrypted.len -= padding_length;
-	
+
 	/* check size again */
 	if (padding_length > concatenated.len || this->decrypted.len < 0)
 	{
@@ -489,7 +489,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 		/* decryption failed :-/ */
 		return FAILED;
 	}
-	
+
 	/* free padding */
 	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
 	DBG3(DBG_ENC, "data after decryption without padding %B", &this->decrypted);
@@ -513,13 +513,13 @@ static status_t build_signature(private_encryption_payload_t *this, chunk_t data
 {
 	chunk_t data_without_sig = data;
 	chunk_t sig;
-	
+
 	if (this->signer == NULL)
 	{
 		DBG1(DBG_ENC, "unable to build signature, no signer set");
 		return INVALID_STATE;
 	}
-	
+
 	sig.len = this->signer->get_block_size(this->signer);
 	data_without_sig.len -= sig.len;
 	sig.ptr = data.ptr + data_without_sig.len;
@@ -535,7 +535,7 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 {
 	chunk_t sig, data_without_sig;
 	bool valid;
-	
+
 	if (this->signer == NULL)
 	{
 		DBG1(DBG_ENC, "unable to verify signature, no signer set");
@@ -549,18 +549,18 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 		return FAILED;
 	}
 	sig.ptr = data.ptr + data.len - sig.len;
-	
+
 	/* verify it */
 	data_without_sig.len = data.len - sig.len;
 	data_without_sig.ptr = data.ptr;
 	valid = this->signer->verify_signature(this->signer, data_without_sig, sig);
-	
+
 	if (!valid)
 	{
 		DBG1(DBG_ENC, "signature verification failed");
 		return FAILED;
 	}
-	
+
 	DBG2(DBG_ENC, "signature verification successful");
 	return SUCCESS;
 }
@@ -582,7 +582,7 @@ static void destroy(private_encryption_payload_t *this)
 encryption_payload_t *encryption_payload_create()
 {
 	private_encryption_payload_t *this = malloc_thing(private_encryption_payload_t);
-	
+
 	/* payload_t interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
@@ -591,20 +591,20 @@ encryption_payload_t *encryption_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.create_payload_iterator = (iterator_t * (*) (encryption_payload_t *,bool)) create_payload_iterator;
 	this->public.add_payload = (void (*) (encryption_payload_t *,payload_t *)) add_payload;
 	this->public.remove_first_payload = (status_t (*)(encryption_payload_t*, payload_t **)) remove_first_payload;
 	this->public.get_payload_count = (size_t (*)(encryption_payload_t*)) get_payload_count;
-	
+
 	this->public.encrypt = (status_t (*) (encryption_payload_t *)) encrypt;
 	this->public.decrypt = (status_t (*) (encryption_payload_t *)) decrypt;
 	this->public.set_transforms = (void (*) (encryption_payload_t*,crypter_t*,signer_t*)) set_transforms;
 	this->public.build_signature = (status_t (*) (encryption_payload_t*, chunk_t)) build_signature;
 	this->public.verify_signature = (status_t (*) (encryption_payload_t*, chunk_t)) verify_signature;
 	this->public.destroy = (void (*) (encryption_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -614,6 +614,6 @@ encryption_payload_t *encryption_payload_create()
 	this->signer = NULL;
 	this->crypter = NULL;
 	this->payloads = linked_list_create();
-	
+
 	return (&(this->public));
 }

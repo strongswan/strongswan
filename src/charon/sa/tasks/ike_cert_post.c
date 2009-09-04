@@ -30,17 +30,17 @@ typedef struct private_ike_cert_post_t private_ike_cert_post_t;
  * Private members of a ike_cert_post_t task.
  */
 struct private_ike_cert_post_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_cert_post_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
@@ -58,23 +58,23 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	chunk_t hash, encoded ;
 	enumerator_t *enumerator;
 	char *url;
-	
+
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
 	{
 		return cert_payload_create_from_cert(cert);
 	}
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
 		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
 		return cert_payload_create_from_cert(cert);
 	}
-	
+
 	encoded = cert->get_encoding(cert);
 	hasher->allocate_hash(hasher, encoded, &hash);
 	id = identification_create_from_encoding(ID_KEY_ID, hash);
-	
+
 	enumerator = charon->credentials->create_cdp_enumerator(
 										charon->credentials, CERT_X509, id);
 	if (!enumerator->enumerate(enumerator, &url))
@@ -82,7 +82,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 		url = NULL;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	id->destroy(id);
 	chunk_free(&hash);
 	chunk_free(&encoded);
@@ -101,14 +101,14 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	auth_payload_t *payload;
-	
+
 	payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (!peer_cfg || !payload || payload->get_auth_method(payload) == AUTH_PSK)
 	{	/* no CERT payload for EAP/PSK */
 		return;
 	}
-	
+
 	switch (peer_cfg->get_cert_policy(peer_cfg))
 	{
 		case CERT_NEVER_SEND:
@@ -126,9 +126,9 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			certificate_t *cert;
 			auth_rule_t type;
 			auth_cfg_t *auth;
-			
+
 			auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-			
+
 			/* get subject cert first, then issuing certificates */
 			cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 			if (!cert)
@@ -143,7 +143,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			DBG1(DBG_IKE, "sending end entity cert \"%Y\"",
 				 cert->get_subject(cert));
 			message->add_payload(message, (payload_t*)payload);
-			
+
 			enumerator = auth->create_enumerator(auth);
 			while (enumerator->enumerate(enumerator, &type, &cert))
 			{
@@ -159,7 +159,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 				}
 			}
 			enumerator->destroy(enumerator);
-		}	
+		}
 	}
 }
 
@@ -169,7 +169,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 static status_t build_i(private_ike_cert_post_t *this, message_t *message)
 {
 	build_certs(this, message);
-	
+
 	return NEED_MORE;
 }
 
@@ -177,7 +177,7 @@ static status_t build_i(private_ike_cert_post_t *this, message_t *message)
  * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_cert_post_t *this, message_t *message)
-{	
+{
 	return NEED_MORE;
 }
 
@@ -187,7 +187,7 @@ static status_t process_r(private_ike_cert_post_t *this, message_t *message)
 static status_t build_r(private_ike_cert_post_t *this, message_t *message)
 {
 	build_certs(this, message);
-	
+
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
@@ -241,7 +241,7 @@ ike_cert_post_t *ike_cert_post_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -252,10 +252,10 @@ ike_cert_post_t *ike_cert_post_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
-	
+
 	return &this->public;
 }
 

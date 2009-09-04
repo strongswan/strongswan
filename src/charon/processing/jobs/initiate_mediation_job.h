@@ -28,7 +28,7 @@ typedef struct initiate_mediation_job_t initiate_mediation_job_t;
 
 /**
  * Class representing a INITIATE_MEDIATION Job.
- * 
+ *
  * This job will initiate a mediation on behalf of a mediated connection.
  * If required the mediation connection is established.
  */
@@ -41,7 +41,7 @@ struct initiate_mediation_job_t {
 
 /**
  * Creates a job of type INITIATE_MEDIATION.
- * 
+ *
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				job object
  */
@@ -50,7 +50,7 @@ initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id);
 /**
  * Creates a special job of type INITIATE_MEDIATION that reinitiates a
  * specific connection.
- * 
+ *
  * @param mediation_sa_id		identification of the mediation sa (gets cloned)
  * @param mediated_sa_id		identification of the mediated sa (gets cloned)
  * @return						job object

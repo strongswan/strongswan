@@ -32,7 +32,7 @@ typedef struct attr_plugin_t attr_plugin_t;
  * Plugin providing configuration attribute through strongswan.conf.
  */
 struct attr_plugin_t {
-	
+
 	/**
 	 * implements plugin interface
 	 */

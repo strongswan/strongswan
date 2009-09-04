@@ -20,7 +20,7 @@
  * @defgroup stroke_plugin stroke_plugin
  * @{ @ingroup stroke
  */
- 
+
 #ifndef STROKE_PLUGIN_H_
 #define STROKE_PLUGIN_H_
 

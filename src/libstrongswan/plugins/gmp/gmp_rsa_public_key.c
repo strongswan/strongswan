@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <gmp.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -38,22 +38,22 @@ struct private_gmp_rsa_public_key_t {
 	 * Public interface for this signer.
 	 */
 	gmp_rsa_public_key_t public;
-	
+
 	/**
 	 * Public modulus.
 	 */
 	mpz_t n;
-	
+
 	/**
 	 * Public exponent.
 	 */
 	mpz_t e;
-	
+
 	/**
 	 * Keysize in bytes.
 	 */
 	size_t k;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -72,12 +72,12 @@ static chunk_t rsaep(private_gmp_rsa_public_key_t *this, chunk_t data)
 {
 	mpz_t m, c;
 	chunk_t encrypted;
-	
+
 	mpz_init(c);
 	mpz_init(m);
-	
+
 	mpz_import(m, data.len, 1, 1, 1, 0, data.ptr);
-	
+
 	mpz_powm(c, m, this->e, this->n);
 
 	encrypted.len = this->k;
@@ -86,10 +86,10 @@ static chunk_t rsaep(private_gmp_rsa_public_key_t *this, chunk_t data)
 	{
 		encrypted.len = 0;
 	}
-	
+
 	mpz_clear(c);
 	mpz_clear(m);
-	
+
 	return encrypted;
 }
 
@@ -123,34 +123,34 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 {
 	chunk_t em_ori, em;
 	bool success = FALSE;
-	
+
 	/* remove any preceding 0-bytes from signature */
 	while (signature.len && *(signature.ptr) == 0x00)
 	{
 		signature = chunk_skip(signature, 1);
 	}
-	
+
 	if (signature.len == 0 || signature.len > this->k)
 	{
 		return INVALID_ARG;
 	}
-	
+
 	/* unpack signature */
 	em_ori = em = rsavp1(this, signature);
-	
+
 	/* result should look like this:
-	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
+	 * EM = 0x00 || 0x01 || PS || 0x00 || T.
 	 * PS = 0xFF padding, with length to fill em
 	 * T = oid || hash
 	 */
-	
+
 	/* check magic bytes */
 	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
 	{
 		goto end;
 	}
 	em = chunk_skip(em, 2);
-	
+
 	/* find magic 0x00 */
 	while (em.len > 0)
 	{
@@ -227,7 +227,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 				{
 					chunk_t hash;
 					hasher_t *hasher;
-					
+
 					hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
 					if (hasher == NULL)
 					{
@@ -277,7 +277,7 @@ static key_type_t get_type(private_gmp_rsa_public_key_t *this)
 /**
  * Implementation of public_key_t.verify.
  */
-static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme, 
+static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme,
 				   chunk_t data, chunk_t signature)
 {
 	switch (scheme)
@@ -333,9 +333,9 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 
 	/* padding according to PKCS#1 7.2.1 (RSAES-PKCS1-v1.5-ENCRYPT) */
 	DBG2("padding %u bytes of data to the rsa modulus size of %u bytes",
-		 plain.len, this->k); 
+		 plain.len, this->k);
 	em.len = this->k;
-	em.ptr = malloc(em.len); 
+	em.ptr = malloc(em.len);
 	pos = em.ptr;
 	*pos++ = 0x00;
 	*pos++ = 0x02;
@@ -360,7 +360,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 	/* now add the data */
 	memcpy(pos, plain.ptr, plain.len);
 	DBG3("padded data before rsa encryption: %B", &em);
-	
+
 	/* rsa encryption using PKCS#1 RSAEP */
 	*crypto = rsaep(this, em);
 	DBG3("rsa encrypted data: %B", crypto);
@@ -392,15 +392,15 @@ static bool get_encoding(private_gmp_rsa_public_key_t *this,
 {
 	chunk_t n, e;
 	bool success;
-	
+
 	n = gmp_mpz_to_chunk(this->n);
 	e = gmp_mpz_to_chunk(this->e);
-	
-	success = lib->encoding->encode(lib->encoding, type, NULL, encoding, 
+
+	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
 				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
-	
+
 	return success;
 }
 
@@ -412,19 +412,19 @@ static bool get_fingerprint(private_gmp_rsa_public_key_t *this,
 {
 	chunk_t n, e;
 	bool success;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
 	{
 		return TRUE;
 	}
 	n = gmp_mpz_to_chunk(this->n);
 	e = gmp_mpz_to_chunk(this->e);
-	
+
 	success = lib->encoding->encode(lib->encoding, type, this, fp,
 				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
-	
+
 	return success;
 }
 
@@ -457,7 +457,7 @@ static void destroy(private_gmp_rsa_public_key_t *this)
 static private_gmp_rsa_public_key_t *gmp_rsa_public_key_create_empty()
 {
 	private_gmp_rsa_public_key_t *this = malloc_thing(private_gmp_rsa_public_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*) (public_key_t*))get_type;
 	this->public.interface.verify = (bool (*) (public_key_t*, signature_scheme_t, chunk_t, chunk_t))verify;
 	this->public.interface.encrypt = (bool (*) (public_key_t*, chunk_t, chunk_t*))encrypt_;
@@ -467,9 +467,9 @@ static private_gmp_rsa_public_key_t *gmp_rsa_public_key_create_empty()
 	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*) (public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*) (public_key_t *this))destroy;
-	
+
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -479,15 +479,15 @@ static private_gmp_rsa_public_key_t *gmp_rsa_public_key_create_empty()
 static gmp_rsa_public_key_t *load(chunk_t n, chunk_t e)
 {
 	private_gmp_rsa_public_key_t *this = gmp_rsa_public_key_create_empty();
-	
+
 	mpz_init(this->n);
 	mpz_init(this->e);
-	
+
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
-	
+
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
-	
+
 	return &this->public;
 }
 
@@ -509,7 +509,7 @@ struct private_builder_t {
 static gmp_rsa_public_key_t *build(private_builder_t *this)
 {
 	gmp_rsa_public_key_t *key;
-	
+
 	key = load(this->n, this->e);
 	free(this);
 	return key;
@@ -521,7 +521,7 @@ static gmp_rsa_public_key_t *build(private_builder_t *this)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	va_start(args, part);
 	switch (part)
 	{
@@ -544,18 +544,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *gmp_rsa_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->n = this->e = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

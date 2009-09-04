@@ -45,7 +45,7 @@ typedef kernel_net_t* (*kernel_net_constructor_t)(void);
 
 /**
  * Manager and wrapper for different kernel interfaces.
- * 
+ *
  * The kernel interface handles the communication with the kernel
  * for SA and policy management and interface and IP address management.
  */
@@ -61,21 +61,21 @@ struct kernel_interface_t {
 	 * @param spi		allocated spi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
-	
+
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
-	 * 
+	 *
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param reqid		unique ID for the corresponding SA
 	 * @param cpi		allocated cpi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_cpi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+	status_t (*get_cpi)(kernel_interface_t *this, host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi);
-	
+
 	/**
 	 * Add an SA to the SAD.
 	 *
@@ -110,7 +110,7 @@ struct kernel_interface_t {
 						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 						bool encap, bool inbound);
-	
+
 	/**
 	 * Update the hosts on an installed SA.
 	 *
@@ -133,13 +133,13 @@ struct kernel_interface_t {
 	 */
 	status_t (*update_sa)(kernel_interface_t *this,
 						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
-						  host_t *src, host_t *dst, 
+						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
 						  bool encap, bool new_encap);
-	
+
 	/**
 	 * Query the number of bytes processed by an SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -149,10 +149,10 @@ struct kernel_interface_t {
 	 */
 	status_t (*query_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes);
-	
+
 	/**
 	 * Delete a previously installed SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -162,13 +162,13 @@ struct kernel_interface_t {
 	 */
 	status_t (*del_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
 						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
-	
+
 	/**
 	 * Add a policy to the SPD.
-	 * 
+	 *
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
-	 * 
+	 *
 	 * @param src			source address of SA
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
@@ -191,13 +191,13 @@ struct kernel_interface_t {
 							protocol_id_t protocol, u_int32_t reqid,
 							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 							bool routed);
-	
+
 	/**
 	 * Query the use time of a policy.
 	 *
 	 * The use time of a policy is the time the policy was used
 	 * for the last time.
-	 * 
+	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
@@ -205,10 +205,10 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_interface_t *this,
-							  traffic_selector_t *src_ts, 
+							  traffic_selector_t *src_ts,
 							  traffic_selector_t *dst_ts,
 							  policy_dir_t direction, u_int32_t *use_time);
-	
+
 	/**
 	 * Remove a policy from the SPD.
 	 *
@@ -224,11 +224,11 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_interface_t *this,
-							traffic_selector_t *src_ts, 
+							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction,
 							bool unrouted);
-	
+
 	/**
 	 * Get our outgoing source address for a destination.
 	 *
@@ -243,7 +243,7 @@ struct kernel_interface_t {
 	 */
 	host_t* (*get_source_addr)(kernel_interface_t *this,
 							   host_t *dest, host_t *src);
-	
+
 	/**
 	 * Get the next hop for a destination.
 	 *
@@ -254,7 +254,7 @@ struct kernel_interface_t {
 	 * @return				next hop address, NULL if unreachable
 	 */
 	host_t* (*get_nexthop)(kernel_interface_t *this, host_t *dest);
-	
+
 	/**
 	 * Get the interface name of a local address.
 	 *
@@ -262,21 +262,21 @@ struct kernel_interface_t {
 	 * @return 				allocated interface name, or NULL if not found
 	 */
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
-	
+
 	/**
 	 * Creates an enumerator over all local addresses.
-	 * 
+	 *
 	 * This function blocks an internal cached address list until the
 	 * enumerator gets destroyed.
 	 * The hosts are read-only, do not modify of free.
-	 * 
+	 *
 	 * @param include_down_ifaces	TRUE to enumerate addresses from down interfaces
 	 * @param include_virtual_ips	TRUE to enumerate virtual ip addresses
 	 * @return						enumerator over host_t's
 	 */
 	enumerator_t *(*create_address_enumerator) (kernel_interface_t *this,
 						bool include_down_ifaces, bool include_virtual_ips);
-	
+
 	/**
 	 * Add a virtual IP to an interface.
 	 *
@@ -291,7 +291,7 @@ struct kernel_interface_t {
 	 */
 	status_t (*add_ip) (kernel_interface_t *this, host_t *virtual_ip,
 						host_t *iface_ip);
-	
+
 	/**
 	 * Remove a virtual IP from an interface.
 	 *
@@ -301,10 +301,10 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
-	
+
 	/**
 	 * Add a route.
-	 * 
+	 *
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
@@ -315,10 +315,10 @@ struct kernel_interface_t {
 	 */
 	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
 								host_t *gateway, host_t *src_ip, char *if_name);
-	
+
 	/**
 	 * Delete a route.
-	 * 
+	 *
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
@@ -328,50 +328,50 @@ struct kernel_interface_t {
 	 */
 	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
 								host_t *gateway, host_t *src_ip, char *if_name);
-	
+
 	/**
 	 * manager methods
 	 */
-	
+
 	/**
 	 * Tries to find an ip address of a local interface that is included in the
 	 * supplied traffic selector.
-	 * 
+	 *
 	 * @param ts			traffic selector
 	 * @param ip			returned ip (has to be destroyed)
 	 * @return				SUCCESS if address found
 	 */
 	status_t (*get_address_by_ts) (kernel_interface_t *this,
 										traffic_selector_t *ts, host_t **ip);
-	
+
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.
 	 *
 	 * @param create			constructor to register
 	 */
 	void (*add_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
-	
+
 	/**
 	 * Unregister an ipsec kernel interface constructor.
 	 *
 	 * @param create			constructor to unregister
 	 */
 	void (*remove_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
-	
+
 	/**
 	 * Register a network kernel interface constructor on the manager.
 	 *
 	 * @param create			constructor to register
 	 */
 	void (*add_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
-	
+
 	/**
 	 * Unregister a network kernel interface constructor.
 	 *
 	 * @param create			constructor to unregister
 	 */
 	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
-	
+
 	/**
 	 * Destroys a kernel_interface_manager_t object.
 	 */

@@ -6,7 +6,7 @@
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -83,7 +83,7 @@ bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
 		DBG1("optionsfrom called %d times by \"%s\" - looping?", this->nuses + 1, (*argvp)[0]);
 		return FALSE;
 	}
-	
+
 	fd = fopen(filename, "r");
 	if (fd == NULL)
 	{

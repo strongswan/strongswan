@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup linked_list linked_list
  * @{ @ingroup utils
@@ -56,24 +56,24 @@ struct linked_list_t {
 
 	/**
 	 * Gets the count of items in the list.
-	 * 
+	 *
 	 * @return 			number of items in list
 	 */
 	int (*get_count) (linked_list_t *this);
-	
+
 	/**
 	 * Creates a iterator for the given list.
-	 * 
+	 *
 	 * @warning Created iterator_t object has to get destroyed by the caller.
 	 *
 	 * @deprecated Iterator is obsolete and will disappear, it is too
 	 * complicated to implement. Use enumerator instead.
-	 * 
+	 *
 	 * @param forward 	iterator direction (TRUE: front to end)
 	 * @return			new iterator_t object
 	 */
 	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
-	
+
 	/**
 	 * Create an enumerator over the list.
 	 *
@@ -83,7 +83,7 @@ struct linked_list_t {
 	 * @return			enumerator over list items
 	 */
 	enumerator_t* (*create_enumerator)(linked_list_t *this);
-	
+
 	/**
 	 * Inserts a new item at the beginning of the list.
 	 *
@@ -93,22 +93,22 @@ struct linked_list_t {
 
 	/**
 	 * Removes the first item in the list and returns its value.
-	 * 
+	 *
 	 * @param item 		returned value of first item, or NULL
 	 * @return			SUCCESS, or NOT_FOUND if list is empty
 	 */
 	status_t (*remove_first) (linked_list_t *this, void **item);
-	
+
 	/**
 	 * Remove an item from the list where the enumerator points to.
 	 *
 	 * @param enumerator enumerator with position
 	 */
 	void (*remove_at)(linked_list_t *this, enumerator_t *enumerator);
-	
+
 	/**
 	 * Remove items from the list matching item.
-	 * 
+	 *
 	 * If a compare function is given, it is called for each item, where
 	 * the first parameter is the current list item and the second parameter
 	 * is the supplied item parameter.
@@ -119,10 +119,10 @@ struct linked_list_t {
 	 * @return			number of removed items
 	 */
 	int (*remove)(linked_list_t *this, void *item, bool (*compare)(void *,void*));
-	
+
 	/**
 	 * Returns the value of the first list item without removing it.
-	 * 
+	 *
 	 * @param this	 	calling object
 	 * @param item		returned value of first item
 	 * @return			SUCCESS, NOT_FOUND if list is empty
@@ -131,14 +131,14 @@ struct linked_list_t {
 
 	/**
 	 * Inserts a new item at the end of the list.
-	 * 
+	 *
 	 * @param item 		value to insert into list
 	 */
 	void (*insert_last) (linked_list_t *this, void *item);
 
 	/**
 	 * Removes the last item in the list and returns its value.
-	 * 
+	 *
 	 * @param this	 	calling object
 	 * @param item		returned value of last item, or NULL
 	 * @return			SUCCESS, NOT_FOUND if list is empty
@@ -147,15 +147,15 @@ struct linked_list_t {
 
 	/**
 	 * Returns the value of the last list item without removing it.
-	 * 
+	 *
 	 * @param this 		calling object
 	 * @param item		returned value of last item
 	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
 	status_t (*get_last) (linked_list_t *this, void **item);
-	
+
 	/** Find the first matching element in the list.
-	 * 
+	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
 	 * If the supplied function returns TRUE this function returns SUCCESS, and
@@ -163,7 +163,7 @@ struct linked_list_t {
 	 * the next item is checked.
 	 *
 	 * If match is NULL, *item and the current object are compared.
-	 * 
+	 *
 	 * @warning Only use pointers as user supplied data.
 	 *
 	 * @param match			comparison function to call on each object, or NULL
@@ -173,17 +173,17 @@ struct linked_list_t {
 	 */
 	status_t (*find_first) (linked_list_t *this, linked_list_match_t match,
 							void **item, ...);
-	
+
 	/** Find the last matching element in the list.
-	 * 
+	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
 	 * If the supplied function returns TRUE this function returns SUCCESS, and
 	 * the current object is returned in the third parameter, otherwise,
 	 * the next item is checked.
-	 * 
+	 *
 	 * If match is NULL, *item and the current object are compared.
-	 * 
+	 *
 	 * @warning Only use pointers as user supplied data.
 	 *
 	 * @param match			comparison function to call on each object, or NULL
@@ -193,7 +193,7 @@ struct linked_list_t {
 	 */
 	status_t (*find_last) (linked_list_t *this, linked_list_match_t match,
 						   void **item, ...);
-	
+
 	/**
 	 * Invoke a method on all of the contained objects.
 	 *
@@ -202,41 +202,41 @@ struct linked_list_t {
 	 * method is specified by an offset of the function pointer,
 	 * which can be evalutated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
-	 * 
+	 *
 	 * @param offset	offset of the method to invoke on objects
 	 * @param ...		user data to supply to called function (limited to 5 arguments)
 	 */
 	void (*invoke_offset) (linked_list_t *this, size_t offset, ...);
-	
+
 	/**
 	 * Invoke a function on all of the contained objects.
-	 * 
+	 *
 	 * @param function	offset of the method to invoke on objects
 	 * @param ...		user data to supply to called function (limited to 5 arguments)
 	 */
 	void (*invoke_function) (linked_list_t *this, linked_list_invoke_t function, ...);
-	
+
 	/**
 	 * Clones a list and its objects using the objects' clone method.
-	 * 
+	 *
 	 * @param offset	offset ot the objects clone function
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
-	
+
 	/**
 	 * Clones a list and its objects using a given function.
-	 * 
+	 *
 	 * @param function	function that clones an object
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_function) (linked_list_t *this, void*(*)(void*));
-	
+
 	/**
 	 * Destroys a linked_list object.
 	 */
 	void (*destroy) (linked_list_t *this);
-	
+
 	/**
 	 * Destroys a list and its objects using the destructor.
 	 *
@@ -248,10 +248,10 @@ struct linked_list_t {
 	 * @param offset	offset of the objects destructor
 	 */
 	void (*destroy_offset) (linked_list_t *this, size_t offset);
-	
+
 	/**
 	 * Destroys a list and its contents using a a cleanup function.
-	 * 
+	 *
 	 * If a linked list and its contents should get destroyed using a specific
 	 * cleanup function, use destroy_function. This is useful when the
 	 * list contains malloc()-ed blocks which should get freed,
@@ -264,7 +264,7 @@ struct linked_list_t {
 
 /**
  * Creates an empty linked list object.
- * 
+ *
  * @return 		linked_list_t object.
  */
 linked_list_t *linked_list_create(void);

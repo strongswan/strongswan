@@ -396,7 +396,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 	case ARG_UINT:
 		{
 			char *endptr;
-			u_int *u = (u_int *)p; 
+			u_int *u = (u_int *)p;
 
 			*u = strtoul(kw->value, &endptr, 10);
 
@@ -509,12 +509,12 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			{
 				char ** lst;
 
-				for (lst = *listp; lst && *lst; lst++) 
+				for (lst = *listp; lst && *lst; lst++)
 				{
 					bool match = FALSE;
 
 					list = token_info[token].list;
-				
+
 					while (*list != NULL && !match)
 					{
 						match = streq(*lst, *list++);

@@ -47,10 +47,10 @@ static void destroy(private_kernel_klips_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_kernel_klips_plugin_t *this = malloc_thing(private_kernel_klips_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_klips_ipsec_create);
-	
+
 	return &this->public.plugin;
 }

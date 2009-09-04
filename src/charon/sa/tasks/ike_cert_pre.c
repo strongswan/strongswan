@@ -29,27 +29,27 @@ typedef struct private_ike_cert_pre_t private_ike_cert_pre_t;
  * Private members of a ike_cert_pre_t task.
  */
 struct private_ike_cert_pre_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_cert_pre_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * Do we accept HTTP certificate lookup requests
 	 */
 	bool do_http_lookup;
-	
+
 	/**
 	 * wheter this is the final authentication round
 	 */
@@ -57,16 +57,16 @@ struct private_ike_cert_pre_t {
 };
 
 /**
- * read certificate requests 
+ * read certificate requests
  */
 static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
 	auth_cfg_t *auth;
-	
+
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -77,9 +77,9 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				certreq_payload_t *certreq = (certreq_payload_t*)payload;
 				enumerator_t *enumerator;
 				chunk_t keyid;
-				
+
 				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
-				
+
 				if (certreq->get_cert_type(certreq) != CERT_X509)
 				{
 					DBG1(DBG_IKE, "cert payload %N not supported - ignored",
@@ -91,9 +91,9 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				{
 					identification_t *id;
 					certificate_t *cert;
-					
+
 					id = identification_create_from_encoding(ID_KEY_ID, keyid);
-					cert = charon->credentials->get_cert(charon->credentials, 
+					cert = charon->credentials->get_cert(charon->credentials,
 											CERT_X509, KEY_ANY, id, TRUE);
 					if (cert)
 					{
@@ -114,7 +114,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 			case NOTIFY:
 			{
 				notify_payload_t *notify = (notify_payload_t*)payload;
-				
+
 				/* we only handle one type of notify here */
 				if (notify->get_notify_type(notify) == HTTP_CERT_LOOKUP_SUPPORTED)
 				{
@@ -134,11 +134,11 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
  * tries to extract a certificate from the cert payload or the credential
  * manager (based on the hash of a "Hash and URL" encoded cert).
  * Note: the returned certificate (if any) has to be destroyed
- */ 
+ */
 static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 {
 	certificate_t *cert = NULL;
-	
+
 	switch (cert_payload->get_cert_encoding(cert_payload))
 	{
 		case ENC_X509_SIGNATURE:
@@ -156,7 +156,7 @@ static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 				break;
 			}
 			id = identification_create_from_encoding(ID_KEY_ID, hash);
-			cert = charon->credentials->get_cert(charon->credentials, 
+			cert = charon->credentials->get_cert(charon->credentials,
 												 CERT_X509, KEY_ANY, id, FALSE);
 			id->destroy(id);
 			break;
@@ -178,9 +178,9 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 	payload_t *payload;
 	auth_cfg_t *auth;
 	bool first = TRUE;
-	
+
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -190,10 +190,10 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 			cert_encoding_t encoding;
 			certificate_t *cert;
 			char *url;
-			
+
 			cert_payload = (cert_payload_t*)payload;
 			encoding = cert_payload->get_cert_encoding(cert_payload);
-			
+
 			switch (encoding)
 			{
 				case ENC_X509_HASH_AND_URL:
@@ -285,7 +285,7 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 			public_key_t *public;
 			chunk_t keyid;
 			x509_t *x509 = (x509_t*)cert;
-			
+
 			if (!(x509->get_flags(x509) & X509_CA))
 			{	/* no CA cert, skip */
 				break;
@@ -321,7 +321,7 @@ static void add_certreqs(certreq_payload_t **req, auth_cfg_t *auth)
 	enumerator_t *enumerator;
 	auth_rule_t type;
 	void *value;
-	
+
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
@@ -348,13 +348,13 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	certificate_t *cert;
 	auth_cfg_t *auth;
 	certreq_payload_t *req = NULL;
-	
+
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (!ike_cfg->send_certreq(ike_cfg))
 	{
 		return;
 	}
-	
+
 	/* check if we require a specific CA for that peer */
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg)
@@ -366,7 +366,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	if (!req)
 	{
 		/* otherwise add all trusted CA certificates */
@@ -378,11 +378,11 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	if (req)
 	{
 		message->add_payload(message, (payload_t*)req);
-		
+
 		if (lib->settings->get_bool(lib->settings, "charon.hash_and_url", FALSE))
 		{
 			message->add_notify(message, FALSE, HTTP_CERT_LOOKUP_SUPPORTED,
@@ -413,7 +413,7 @@ static bool final_auth(message_t *message)
  * Implementation of task_t.process for initiator
  */
 static status_t build_i(private_ike_cert_pre_t *this, message_t *message)
-{	
+{
 	if (message->get_message_id(message) == 1)
 	{	/* initiator sends CERTREQs in first IKE_AUTH */
 		build_certreqs(this, message);
@@ -461,7 +461,7 @@ static status_t process_i(private_ike_cert_pre_t *this, message_t *message)
 		process_certreqs(this, message);
 	}
 	process_certs(this, message);
-	
+
 	if (final_auth(message))
 	{
 		return SUCCESS;
@@ -503,7 +503,7 @@ ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -514,11 +514,11 @@ ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->do_http_lookup = FALSE;
 	this->final = FALSE;
-	
+
 	return &this->public;
 }

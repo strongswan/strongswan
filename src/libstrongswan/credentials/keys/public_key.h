@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup public_key public_key
  * @{ @ingroup keys
@@ -53,7 +53,7 @@ extern enum_name_t *key_type_names;
  * Signature scheme for signature creation
  *
  * EMSA-PKCS1 signatures are defined in PKCS#1 standard.
- * A prepended ASN.1 encoded digestInfo field contains the 
+ * A prepended ASN.1 encoded digestInfo field contains the
  * OID of the used hash algorithm.
  */
 enum signature_scheme_t {
@@ -107,7 +107,7 @@ struct public_key_t {
 	 * @return			type of the key
 	 */
 	key_type_t (*get_type)(public_key_t *this);
-	
+
 	/**
 	 * Verifies a signature against a chunk of data.
 	 *
@@ -116,9 +116,9 @@ struct public_key_t {
 	 * @param signature	signature to check
 	 * @return			TRUE if signature matches
 	 */
-	bool (*verify)(public_key_t *this, signature_scheme_t scheme, 
+	bool (*verify)(public_key_t *this, signature_scheme_t scheme,
 				   chunk_t data, chunk_t signature);
-	
+
 	/**
 	 * Encrypt a chunk of data.
 	 *
@@ -127,10 +127,10 @@ struct public_key_t {
 	 * @return 			TRUE if data successfully encrypted
 	 */
 	bool (*encrypt)(public_key_t *this, chunk_t plain, chunk_t *crypto);
-	
+
 	/**
 	 * Check if two public keys are equal.
-	 * 
+	 *
 	 * @param other		other public key
 	 * @return			TRUE, if equality
 	 */
@@ -138,11 +138,11 @@ struct public_key_t {
 
 	/**
 	 * Get the strength of the key in bytes.
-	 * 
+	 *
 	 * @return			strength of the key in bytes
 	 */
 	size_t (*get_keysize) (public_key_t *this);
-	
+
 	/**
 	 * Get the fingerprint of the key.
 	 *
@@ -152,7 +152,7 @@ struct public_key_t {
 	 */
 	bool (*get_fingerprint)(public_key_t *this, key_encoding_type_t type,
 							chunk_t *fp);
-	
+
 	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
@@ -162,14 +162,14 @@ struct public_key_t {
 	 */
 	bool (*get_encoding)(public_key_t *this, key_encoding_type_t type,
 						 chunk_t *encoding);
-	
+
 	/**
 	 * Increase the refcount of the key.
 	 *
 	 * @return			this with an increased refcount
 	 */
 	public_key_t* (*get_ref)(public_key_t *this);
-	
+
 	/**
 	 * Destroy a public_key instance.
 	 */
@@ -187,7 +187,7 @@ bool public_key_equals(public_key_t *this, public_key_t *other);
 
 /**
  * Conversion of ASN.1 signature or hash OID to signature scheme.
- * 
+ *
  * @param oid			ASN.1 OID
  * @return				signature_scheme, SIGN_UNKNOWN if OID is unsupported
  */

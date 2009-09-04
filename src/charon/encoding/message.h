@@ -58,7 +58,7 @@ struct message_t {
 	 * @return				major version of the message
 	 */
 	u_int8_t (*get_major_version) (message_t *this);
-	
+
 	/**
 	 * Sets the IKE minor version of the message.
 	 *
@@ -86,7 +86,7 @@ struct message_t {
 	 * @return				message_id type of the message
 	 */
 	u_int32_t (*get_message_id) (message_t *this);
-	
+
 	/**
 	 * Gets the initiator SPI of the message.
 	 *
@@ -103,7 +103,7 @@ struct message_t {
 
 	/**
 	 * Sets the IKE_SA ID of the message.
-	 * 
+	 *
 	 * ike_sa_id gets cloned.
 	 *
 	 * @param ike_sa_id		ike_sa_id to set
@@ -132,10 +132,10 @@ struct message_t {
 	 * @return				exchange type of the message
 	 */
 	exchange_type_t (*get_exchange_type) (message_t *this);
-	
+
 	/**
 	 * Gets the payload type of the first payload.
-	 * 
+	 *
 	 * @return				payload type of the first payload
 	 */
 	payload_type_t (*get_first_payload_type) (message_t *this);
@@ -156,20 +156,20 @@ struct message_t {
 
 	/**
 	 * Append a payload to the message.
-	 * 
+	 *
 	 * If the payload must be encrypted is not specified here. Encryption
 	 * of payloads is evaluated via internal rules for the messages and
 	 * is done before generation. The order of payloads may change, since
-	 * all payloads to encrypt are added to the encryption payload, which is 
+	 * all payloads to encrypt are added to the encryption payload, which is
 	 * always the last one.
 	 *
 	 * @param payload 		payload to append
-	 */	
+	 */
 	void (*add_payload) (message_t *this, payload_t *payload);
 
 	/**
 	 * Build a notify payload and add it to the message.
-	 * 
+	 *
 	 * This is a helper method to create notify messages or add
 	 * notify payload to messages. The flush parameter specifies if existing
 	 * payloads should get removed before appending the notify.
@@ -177,13 +177,13 @@ struct message_t {
 	 * @param flush			TRUE to remove existing payloads
 	 * @param type			type of the notify
 	 * @param data			a chunk of data to add to the notify, gets cloned
-	 */	
-	void (*add_notify) (message_t *this, bool flush, notify_type_t type, 
+	 */
+	void (*add_notify) (message_t *this, bool flush, notify_type_t type,
 						chunk_t data);
 
 	/**
 	 * Parses header of message.
-	 * 
+	 *
 	 * Begins parisng of a message created via message_create_from_packet().
 	 * The parsing context is stored, so a subsequent call to parse_body()
 	 * will continue the parsing process.
@@ -194,17 +194,17 @@ struct message_t {
 	 * 					- FAILED if consistence check of header failed
 	 */
 	status_t (*parse_header) (message_t *this);
-	
+
 	/**
 	 * Parses body of message.
-	 * 
-	 * The body gets not only parsed, but rather it gets verified. 
-	 * All payloads are verified if they are allowed to exist in the message 
-	 * of this type and if their own structure is ok. 
-	 * If there are encrypted payloads, they get decrypted via the supplied 
+	 *
+	 * The body gets not only parsed, but rather it gets verified.
+	 * All payloads are verified if they are allowed to exist in the message
+	 * of this type and if their own structure is ok.
+	 * If there are encrypted payloads, they get decrypted via the supplied
 	 * crypter. Also the message integrity gets verified with the supplied
 	 * signer.
-	 * Crypter/signer can be omitted (by passing NULL) when no encryption 
+	 * Crypter/signer can be omitted (by passing NULL) when no encryption
 	 * payload is expected.
 	 *
 	 * @param crypter	crypter to decrypt encryption payloads
@@ -222,13 +222,13 @@ struct message_t {
 
 	/**
 	 * Generates the UDP packet of specific message.
-	 * 
+	 *
 	 * Payloads which must be encrypted are generated first and added to
-	 * an encryption payload. This encryption payload will get encrypted via 
+	 * an encryption payload. This encryption payload will get encrypted via
 	 * the supplied crypter. Then all other payloads and the header get generated.
-	 * After that, the checksum is added to the encryption payload over the full 
+	 * After that, the checksum is added to the encryption payload over the full
 	 * message.
-	 * Crypter/signer can be omitted (by passing NULL) when no encryption 
+	 * Crypter/signer can be omitted (by passing NULL) when no encryption
 	 * payload is expected.
 	 * Generation is only done once, multiple calls will just return a packet copy.
 	 *
@@ -240,66 +240,66 @@ struct message_t {
 	 * 					- INVALID_STATE if exchange type is currently not set
 	 * 					- NOT_FOUND if no rules found for message generation
 	 * 					- INVALID_STATE if crypter/signer not supplied but needed.
-	 */	
+	 */
 	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
 
 	/**
-	 * Gets the source host informations. 
-	 * 
-	 * @warning Returned host_t object is not getting cloned, 
+	 * Gets the source host informations.
+	 *
+	 * @warning Returned host_t object is not getting cloned,
 	 * do not destroy nor modify.
 	 *
 	 * @return			host_t object representing source host
-	 */	
+	 */
 	host_t * (*get_source) (message_t *this);
-	
+
 	/**
-	 * Sets the source host informations. 
-	 * 
+	 * Sets the source host informations.
+	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 * 			message_t.destroy or next call of message_t.set_source.
 	 *
 	 * @param host		host_t object representing source host
-	 */	
+	 */
 	void (*set_source) (message_t *this, host_t *host);
 
 	/**
-	 * Gets the destination host informations. 
-	 * 
-	 * @warning Returned host_t object is not getting cloned, 
+	 * Gets the destination host informations.
+	 *
+	 * @warning Returned host_t object is not getting cloned,
 	 * do not destroy nor modify.
 	 *
 	 * @return			host_t object representing destination host
-	 */	
+	 */
 	host_t * (*get_destination) (message_t *this);
 
 	/**
-	 * Sets the destination host informations. 
-	 * 
+	 * Sets the destination host informations.
+	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 * 			message_t.destroy or next call of message_t.set_destination.
 	 *
 	 * @param host		host_t object representing destination host
-	 */	
+	 */
 	void (*set_destination) (message_t *this, host_t *host);
-	
+
 	/**
 	 * Create an enumerator over all payloads.
 	 *
 	 * @return			enumerator over payload_t
-	 */	
+	 */
 	enumerator_t * (*create_payload_enumerator) (message_t *this);
-	
+
 	/**
 	 * Find a payload of a specific type.
-	 * 
-	 * Returns the first occurance. 
+	 *
+	 * Returns the first occurance.
 	 *
 	 * @param type		type of the payload to find
 	 * @return			payload, or NULL if no such payload found
-	 */	
+	 */
 	payload_t* (*get_payload) (message_t *this, payload_type_t type);
-	
+
 	/**
 	 * Get the first notify payload of a specific type.
 	 *
@@ -307,21 +307,21 @@ struct message_t {
 	 * @return			notify payload, NULL if no such notify found
 	 */
 	notify_payload_t* (*get_notify)(message_t *this, notify_type_t type);
-	
+
 	/**
 	 * Returns a clone of the internal stored packet_t object.
 	 *
 	 * @return			packet_t object as clone of internal one
-	 */	
+	 */
 	packet_t * (*get_packet) (message_t *this);
-	
+
 	/**
 	 * Returns a clone of the internal stored packet_t data.
 	 *
 	 * @return			clone of the internal stored packet_t data.
-	 */	
+	 */
 	chunk_t (*get_packet_data) (message_t *this);
-	
+
 	/**
 	 * Destroys a message and all including objects.
 	 */
@@ -330,16 +330,16 @@ struct message_t {
 
 /**
  * Creates an message_t object from a incoming UDP Packet.
- * 
- * @warning the given packet_t object is not copied and gets 
+ *
+ * @warning the given packet_t object is not copied and gets
  *			destroyed in message_t's destroy call.
- * 
+ *
  * - exchange_type is set to NOT_SET
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
  * Call message_t.parse_header afterwards.
- * 
- * @param packet		packet_t object which is assigned to message	
+ *
+ * @param packet		packet_t object which is assigned to message
  * @return 				message_t object
  */
 message_t * message_create_from_packet(packet_t *packet);
@@ -351,7 +351,7 @@ message_t * message_create_from_packet(packet_t *packet);
  * - exchange_type is set to NOT_SET
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
- * 
+ *
  * @return message_t object
  */
 message_t * message_create(void);

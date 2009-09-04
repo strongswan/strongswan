@@ -27,19 +27,19 @@ typedef struct private_id_payload_t private_id_payload_t;
 
 /**
  * Private data of an id_payload_t object.
- * 
+ *
  */
 struct private_id_payload_t {
 	/**
 	 * Public id_payload_t interface.
 	 */
 	id_payload_t public;
-	
+
 	/**
 	 * one of ID_INITIATOR, ID_RESPONDER
 	 */
 	payload_type_t payload_type;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -49,17 +49,17 @@ struct private_id_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Type of the ID Data.
 	 */
 	u_int8_t id_type;
-	
+
 	/**
 	 * The contained id data value.
 	 */
@@ -68,10 +68,10 @@ struct private_id_payload_t {
 
 /**
  * Encoding rules to parse or generate a ID payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_id_payload_t.
- * 
+ *
  */
 encoding_rule_t id_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -126,7 +126,7 @@ static status_t verify(private_id_payload_t *this)
 		DBG1(DBG_ENC, "received ID with reserved type %d", this->id_type);
 		return FAILED;
 	}
-		
+
 	return SUCCESS;
 }
 
@@ -242,7 +242,7 @@ static void destroy(private_id_payload_t *this)
 	{
 		chunk_free(&(this->id_data));
 	}
-	free(this);	
+	free(this);
 }
 
 /*
@@ -260,7 +260,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (id_payload_t *)) destroy;
 	this->public.set_id_type = (void (*) (id_payload_t *,id_type_t)) set_id_type;
@@ -268,7 +268,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 	this->public.set_data = (void (*) (id_payload_t *,chunk_t)) set_data;
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
 	this->public.get_data_clone = (chunk_t (*) (id_payload_t *)) get_data_clone;
-	
+
 	this->public.get_identification = (identification_t * (*) (id_payload_t *this)) get_identification;
 
 	/* private variables */

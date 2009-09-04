@@ -30,7 +30,7 @@ typedef struct blowfish_crypter_t blowfish_crypter_t;
  * Class implementing the Blowfish encryption algorithm.
  */
 struct blowfish_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -39,7 +39,7 @@ struct blowfish_crypter_t {
 
 /**
  * Constructor to create blowfish_crypter_t objects.
- * 
+ *
  * @param key_size		key size in bytes
  * @param algo			algorithm to implement
  * @return				blowfish_crypter_t object, NULL if not supported

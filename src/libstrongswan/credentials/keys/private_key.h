@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup private_key private_key
  * @{ @ingroup keys
@@ -29,14 +29,14 @@ typedef struct private_key_t private_key_t;
  * Abstract private key interface.
  */
 struct private_key_t {
-	
+
 	/**
 	 * Get the key type.
 	 *
 	 * @return			type of the key
 	 */
 	key_type_t (*get_type)(private_key_t *this);
-	
+
 	/**
 	 * Create a signature over a chunk of data.
 	 *
@@ -45,7 +45,7 @@ struct private_key_t {
 	 * @param signature	where to allocate created signature
 	 * @return			TRUE if signature created
 	 */
-	bool (*sign)(private_key_t *this, signature_scheme_t scheme, 
+	bool (*sign)(private_key_t *this, signature_scheme_t scheme,
 				 chunk_t data, chunk_t *signature);
 	/**
 	 * Decrypt a chunk of data.
@@ -55,37 +55,37 @@ struct private_key_t {
 	 * @return			TRUE if data decrypted and plaintext allocated
 	 */
 	bool (*decrypt)(private_key_t *this, chunk_t crypto, chunk_t *plain);
-	
+
 	/**
 	 * Get the strength of the key in bytes.
-	 * 
+	 *
 	 * @return			strength of the key in bytes
 	 */
 	size_t (*get_keysize) (private_key_t *this);
-	
+
 	/**
 	 * Get the public part from the private key.
 	 *
 	 * @return			public key
 	 */
 	public_key_t* (*get_public_key)(private_key_t *this);
-	
+
 	/**
 	 * Check if two private keys are equal.
-	 * 
+	 *
 	 * @param other		other private key
 	 * @return			TRUE, if equality
 	 */
 	bool (*equals) (private_key_t *this, private_key_t *other);
-	
+
 	/**
 	 * Check if a private key belongs to a public key.
-	 * 
+	 *
 	 * @param public	public key
 	 * @return			TRUE, if keys belong together
 	 */
 	bool (*belongs_to) (private_key_t *this, public_key_t *public);
-	
+
 	/**
 	 * Get the fingerprint of the key.
 	 *
@@ -95,7 +95,7 @@ struct private_key_t {
 	 */
 	bool (*get_fingerprint)(private_key_t *this, key_encoding_type_t type,
 							chunk_t *fp);
-	
+
 	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
@@ -105,14 +105,14 @@ struct private_key_t {
 	 */
 	bool (*get_encoding)(private_key_t *this, key_encoding_type_t type,
 						 chunk_t *encoding);
-	
+
 	/**
 	 * Increase the refcount to this private key.
 	 *
 	 * @return			this, with an increased refcount
 	 */
 	private_key_t* (*get_ref)(private_key_t *this);
-		
+
 	/**
 	 * Decrease refcount, destroy private_key if no more references.
 	 */

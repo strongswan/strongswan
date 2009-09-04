@@ -38,17 +38,17 @@ struct private_openssl_rsa_private_key_t {
 	 * Public interface for this signer.
 	 */
 	openssl_rsa_private_key_t public;
-	
+
 	/**
 	 * RSA object from OpenSSL
 	 */
 	RSA *rsa;
-	
+
 	/**
 	 * TRUE if the key is from an OpenSSL ENGINE and might not be readable
 	 */
 	bool engine;
-	
+
 	/**
 	 * reference count
 	 */
@@ -82,13 +82,13 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 		EVP_PKEY *key;
 		const EVP_MD *hasher;
 		u_int len;
-		
+
 		hasher = EVP_get_digestbynid(type);
 		if (!hasher)
 		{
 			return FALSE;
 		}
-		
+
 		ctx = EVP_MD_CTX_create();
 		key = EVP_PKEY_new();
 		if (!ctx || !key)
@@ -111,7 +111,7 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 		{
 			success = TRUE;
 		}
-	
+
 error:
 		if (key)
 		{
@@ -140,7 +140,7 @@ static key_type_t get_type(private_openssl_rsa_private_key_t *this)
 /**
  * Implementation of openssl_rsa_private_key.sign.
  */
-static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t scheme, 
+static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t scheme,
 				 chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
@@ -192,7 +192,7 @@ static public_key_t* get_public_key(private_openssl_rsa_private_key_t *this)
 	chunk_t enc;
 	public_key_t *key;
 	u_char *p;
-	
+
 	enc = chunk_alloc(i2d_RSAPublicKey(this->rsa, NULL));
 	p = enc.ptr;
 	i2d_RSAPublicKey(this->rsa, &p);
@@ -218,7 +218,7 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
-	
+
 	if (this->engine)
 	{
 		return FALSE;
@@ -268,7 +268,7 @@ static void destroy(private_openssl_rsa_private_key_t *this)
 static private_openssl_rsa_private_key_t *create_empty(void)
 {
 	private_openssl_rsa_private_key_t *this = malloc_thing(private_openssl_rsa_private_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*) (private_key_t*))get_type;
 	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
 	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
@@ -280,10 +280,10 @@ static private_openssl_rsa_private_key_t *create_empty(void)
 	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
 	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
-	
+
 	this->engine = FALSE;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -293,9 +293,9 @@ static private_openssl_rsa_private_key_t *create_empty(void)
 static openssl_rsa_private_key_t *generate(size_t key_size)
 {
 	private_openssl_rsa_private_key_t *this = create_empty();
-	
+
 	this->rsa = RSA_generate_key(key_size, PUBLIC_EXPONENT, NULL, NULL);
-	
+
 	return &this->public;
 }
 
@@ -306,7 +306,7 @@ static openssl_rsa_private_key_t *load(chunk_t blob)
 {
 	u_char *p = blob.ptr;
 	private_openssl_rsa_private_key_t *this = create_empty();
-	
+
 	this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&p, blob.len);
 	if (!this->rsa)
 	{
@@ -330,28 +330,28 @@ static openssl_rsa_private_key_t *load_from_smartcard(char *keyid, char *pin)
 	EVP_PKEY *key;
 	char *engine_id = lib->settings->get_str(lib->settings,
 								"library.plugins.openssl.engine_id", "pkcs11");
-	
+
 	ENGINE *engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
 		DBG1("engine '%s' is not available", engine_id);
 		return NULL;
 	}
-	
+
 	if (!ENGINE_init(engine))
 	{
 		DBG1("failed to initialize engine '%s'", engine_id);
 		goto error;
 	}
-	
+
 	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
 	{
 		DBG1("failed to set PIN on engine '%s'", engine_id);
 		goto error;
 	}
-	
+
 	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
-	
+
 	if (!key)
 	{
 		DBG1("failed to load private key with ID '%s' from engine '%s'", keyid,
@@ -359,13 +359,13 @@ static openssl_rsa_private_key_t *load_from_smartcard(char *keyid, char *pin)
 		goto error;
 	}
 	ENGINE_free(engine);
-	
+
 	this = create_empty();
 	this->rsa = EVP_PKEY_get1_RSA(key);
 	this->engine = TRUE;
-	
+
 	return &this->public;
-	
+
 error:
 	ENGINE_free(engine);
 	return NULL;
@@ -393,7 +393,7 @@ struct private_builder_t {
 static openssl_rsa_private_key_t *build(private_builder_t *this)
 {
 	openssl_rsa_private_key_t *key = this->key;
-	
+
 	if (this->keyid && this->pin)
 	{
 		key = load_from_smartcard(this->keyid, this->pin);
@@ -410,7 +410,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		
+
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
@@ -458,20 +458,20 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *openssl_rsa_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->key = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
 	this->keyid = NULL;
 	this->pin = NULL;
-	
+
 	return &this->public;
 }
 

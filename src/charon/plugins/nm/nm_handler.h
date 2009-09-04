@@ -29,12 +29,12 @@ typedef struct nm_handler_t nm_handler_t;
  * Handles DNS/NBNS attributes to pass to NM.
  */
 struct nm_handler_t {
-	
+
 	/**
 	 * Implements attribute handler interface
 	 */
 	attribute_handler_t handler;
-	
+
 	/**
 	 * Create an enumerator over received attributes of a given kind.
 	 *
@@ -47,7 +47,7 @@ struct nm_handler_t {
 	 * Reset state, flush all received attributes.
 	 */
 	void (*reset)(nm_handler_t *this);
-	
+
 	/**
 	 * Destroy a nm_handler_t.
 	 */

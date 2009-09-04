@@ -28,17 +28,17 @@ typedef struct private_eap_sim_file_triplets_t private_eap_sim_file_triplets_t;
  * Private data of an eap_sim_file_triplets_t object.
  */
 struct private_eap_sim_file_triplets_t {
-	
+
 	/**
 	 * Public eap_sim_file_triplets_t interface.
 	 */
 	eap_sim_file_triplets_t public;
-	
+
 	/**
 	 * List of triplets, as triplet_t
 	 */
 	linked_list_t *triplets;
-	
+
 	/**
 	 * mutex to lock triplets list
 	 */
@@ -103,7 +103,7 @@ static bool enumerator_enumerate(triplet_enumerator_t *e, identification_t **ims
 								 char **rand, char **sres, char **kc)
 {
 	triplet_t *triplet;
-	
+
 	if (e->inner->enumerate(e->inner, &triplet))
 	{
 		e->current = triplet;
@@ -123,14 +123,14 @@ static bool enumerator_enumerate(triplet_enumerator_t *e, identification_t **ims
 static enumerator_t* create_enumerator(private_eap_sim_file_triplets_t *this)
 {
 	triplet_enumerator_t *enumerator = malloc_thing(triplet_enumerator_t);
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator->public.enumerate = (void*)enumerator_enumerate;
 	enumerator->public.destroy = (void*)enumerator_destroy;
 	enumerator->inner = this->triplets->create_enumerator(this->triplets);
 	enumerator->current = NULL;
 	enumerator->this = this;
-	
+
 	return &enumerator->public;
 }
 
@@ -140,7 +140,7 @@ static enumerator_t* create_enumerator(private_eap_sim_file_triplets_t *this)
 static void parse_token(char *to, char *from, size_t len)
 {
 	chunk_t chunk;
-	
+
 	chunk = chunk_create(from, min(strlen(from), len * 2));
 	chunk = chunk_from_hex(chunk, NULL);
 	memset(to, 0, len);
@@ -156,22 +156,22 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 	char line[512];
 	FILE *file;
 	int i, nr = 0;
-	
+
 	file = fopen(path, "r");
 	if (file == NULL)
 	{
-		DBG1(DBG_CFG, "opening triplet file %s failed: %s", 
+		DBG1(DBG_CFG, "opening triplet file %s failed: %s",
 			 path, strerror(errno));
 		return;
 	}
-	
+
 	/* read line by line */
 	while (fgets(line, sizeof(line), file))
 	{
 		triplet_t *triplet;
 		enumerator_t *enumerator;
 		char *token;
-		
+
 		nr++;
 		/* skip comments, empty lines */
 		switch (line[0])
@@ -186,7 +186,7 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 		}
 		triplet = malloc_thing(triplet_t);
 		memset(triplet, 0, sizeof(triplet_t));
-		
+
 		i = 0;
 		enumerator = enumerator_create_token(line, ",", " \n\r#");
 		while (enumerator->enumerate(enumerator, &token))
@@ -217,15 +217,15 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 			triplet_destroy(triplet);
 			continue;
 		}
-		
+
 		DBG2(DBG_CFG, "triplet: imsi %Y\nrand %b\nsres %b\nkc %b",
 			 triplet->imsi, triplet->rand, RAND_LEN,
 			 triplet->sres, SRES_LEN, triplet->kc, KC_LEN);
-			 
+
 		this->triplets->insert_last(this->triplets, triplet);
 	}
 	fclose(file);
-	
+
 	DBG1(DBG_CFG, "read %d triplets from %s",
 		 this->triplets->get_count(this->triplets), path);
 }
@@ -246,15 +246,15 @@ static void destroy(private_eap_sim_file_triplets_t *this)
 eap_sim_file_triplets_t *eap_sim_file_triplets_create(char *file)
 {
 	private_eap_sim_file_triplets_t *this = malloc_thing(private_eap_sim_file_triplets_t);
-	
+
 	this->public.create_enumerator = (enumerator_t*(*)(eap_sim_file_triplets_t*))create_enumerator;
 	this->public.destroy = (void(*)(eap_sim_file_triplets_t*))destroy;
-	
+
 	this->triplets = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	
+
 	read_triplets(this, file);
-	
+
 	return &this->public;
 }
 

@@ -95,7 +95,7 @@ struct controller_t {
 	 * Terminate an IKE_SA and all of its CHILD_SAs.
 	 *
 	 * The terminate() function is synchronous and thus blocks until the
-	 * IKE_SA is properly deleted, or the delete timed out. 
+	 * IKE_SA is properly deleted, or the delete timed out.
 	 * The terminate() function contains a thread cancellation point.
 	 *
 	 * @param unique_id		unique id of the IKE_SA to terminate.
@@ -106,9 +106,9 @@ struct controller_t {
 	 *						- NOT_FOUND, if no such CHILD_SA found
 	 *						- NEED_MORE, if callback returned FALSE
 	 */
-	status_t (*terminate_ike)(controller_t *this, u_int32_t unique_id, 
+	status_t (*terminate_ike)(controller_t *this, u_int32_t unique_id,
 							  controller_cb_t callback, void *param);
-	
+
 	/**
 	 * Terminate a CHILD_SA.
 	 *
@@ -120,9 +120,9 @@ struct controller_t {
 	 *						- NOT_FOUND, if no such CHILD_SA found
 	 *						- NEED_MORE, if callback returned FALSE
 	 */
-	status_t (*terminate_child)(controller_t *this, u_int32_t reqid, 
+	status_t (*terminate_child)(controller_t *this, u_int32_t reqid,
 								controller_cb_t callback, void *param);
-	
+
 	/**
 	 * Destroy a controller_t instance.
 	 */
@@ -132,7 +132,7 @@ struct controller_t {
 
 /**
  * Creates a controller instance.
- * 
+ *
  * @return 			controller_t object
  */
 controller_t *controller_create(void);

@@ -27,14 +27,14 @@ typedef struct private_certreq_payload_t private_certreq_payload_t;
 
 /**
  * Private data of an certreq_payload_t object.
- * 
+ *
  */
 struct private_certreq_payload_t {
 	/**
 	 * Public certreq_payload_t interface.
 	 */
 	certreq_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -44,17 +44,17 @@ struct private_certreq_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Encoding of the CERT Data.
 	 */
 	u_int8_t encoding;
-	
+
 	/**
 	 * The contained certreq data value.
 	 */
@@ -63,10 +63,10 @@ struct private_certreq_payload_t {
 
 /**
  * Encoding rules to parse or generate a CERTREQ payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_certreq_payload_t.
- * 
+ *
  */
 encoding_rule_t certreq_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -160,7 +160,7 @@ static size_t get_length(private_certreq_payload_t *this)
 {
 	return this->payload_length;
 }
-	
+
 /**
  * Implementation of certreq_payload_t.add_keyid.
  */
@@ -240,7 +240,7 @@ static certificate_type_t get_cert_type(private_certreq_payload_t *this)
 static void destroy(private_certreq_payload_t *this)
 {
 	chunk_free(&this->data);
-	free(this);	
+	free(this);
 }
 
 /*
@@ -258,13 +258,13 @@ certreq_payload_t *certreq_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t*,payload_type_t))set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t*))get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t*))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (certreq_payload_t*)) destroy;
 	this->public.create_keyid_enumerator = (enumerator_t*(*)(certreq_payload_t*))create_keyid_enumerator;
 		this->public.get_cert_type = (certificate_type_t(*)(certreq_payload_t*))get_cert_type;
 	this->public.add_keyid = (void(*)(certreq_payload_t*, chunk_t keyid))add_keyid;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -281,7 +281,7 @@ certreq_payload_t *certreq_payload_create()
 certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 {
 	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create();
-	
+
 	switch (type)
 	{
 		case CERT_X509:

@@ -47,14 +47,14 @@ static void destroy(private_random_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_random_plugin_t *this = malloc_thing(private_random_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
-	lib->crypto->add_rng(lib->crypto, RNG_STRONG, 
+
+	lib->crypto->add_rng(lib->crypto, RNG_STRONG,
 						 (rng_constructor_t)random_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_TRUE, 
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE,
 						 (rng_constructor_t)random_rng_create);
-	
+
 	return &this->public.plugin;
 }
 

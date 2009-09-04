@@ -32,12 +32,12 @@ struct private_sqlite_database_t {
 	 * public functions
 	 */
 	sqlite_database_t public;
-	
+
 	/**
 	 * sqlite database connection
 	 */
 	sqlite3 *db;
-	
+
 	/**
 	 * mutex used to lock execute()
 	 */
@@ -220,12 +220,12 @@ static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
 	va_list args;
 	sqlite_enumerator_t *enumerator = NULL;
 	int i;
-	
+
 #if SQLITE_VERSION_NUMBER < 3005000
 	/* sqlite connections prior to 3.5 may be used by a single thread only, */
 	this->mutex->lock(this->mutex);
 #endif
-	
+
 	va_start(args, sql);
 	stmt = run(this, sql, &args);
 	if (stmt)
@@ -254,7 +254,7 @@ static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
 	sqlite3_stmt *stmt;
 	int affected = -1;
 	va_list args;
-	
+
 	/* we need a lock to get our rowid/changes correctly */
 	this->mutex->lock(this->mutex);
 	va_start(args, sql);
@@ -316,7 +316,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 {
 	char *file;
 	private_sqlite_database_t *this;
-	
+
 	/**
 	 * parse sqlite:///path/to/file.db uri
 	 */
@@ -325,16 +325,16 @@ sqlite_database_t *sqlite_database_create(char *uri)
 		return NULL;
 	}
 	file = uri + 9;
-	
+
 	this = malloc_thing(private_sqlite_database_t);
-	
+
 	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
 	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
-	
+
 	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	
+
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
 		DBG1("opening SQLite database '%s' failed: %s",
@@ -342,9 +342,9 @@ sqlite_database_t *sqlite_database_create(char *uri)
 		destroy(this);
 		return NULL;
 	}
-	
+
 	sqlite3_busy_handler(this->db, (void*)busy_handler, this);
-	
+
 	return &this->public;
 }
 

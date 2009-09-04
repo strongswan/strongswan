@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup asn1_parser asn1_parser
  * @{ @ingroup asn1
@@ -57,7 +57,7 @@ struct asn1Object_t{
 typedef struct asn1_parser_t asn1_parser_t;
 
 /**
- * Public interface of an ASN.1 parser 
+ * Public interface of an ASN.1 parser
  */
 struct asn1_parser_t {
 
@@ -106,7 +106,7 @@ struct asn1_parser_t {
 	 */
 	void (*destroy)(asn1_parser_t *this);
 };
- 
+
 /**
  * Create an ASN.1 parser
  *

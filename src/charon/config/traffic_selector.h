@@ -33,7 +33,7 @@ typedef struct traffic_selector_t traffic_selector_t;
  * Traffic selector types.
  */
 enum ts_type_t {
-	
+
 	/**
 	 * A range of IPv4 addresses, represented by two four (4) octet
      * values.  The first value is the beginning IPv4 address
@@ -42,7 +42,7 @@ enum ts_type_t {
      * addresses are considered to be within the list.
      */
 	TS_IPV4_ADDR_RANGE = 7,
-	
+
 	/**
 	 * A range of IPv6 addresses, represented by two sixteen (16)
      * octet values.  The first value is the beginning IPv6 address
@@ -65,7 +65,7 @@ extern enum_name_t *ts_type_name;
  * and a range of ports. IPv6 is not fully supported yet.
  */
 struct traffic_selector_t {
-	
+
 	/**
 	 * Compare two traffic selectors, and create a new one
 	 * which is the largest subset of both (subnet & port).
@@ -77,16 +77,16 @@ struct traffic_selector_t {
 	 * 					- created subset of them
 	 * 					- or NULL if no match between this and other
 	 */
-	traffic_selector_t *(*get_subset)  (traffic_selector_t *this, 
+	traffic_selector_t *(*get_subset)  (traffic_selector_t *this,
 										traffic_selector_t *other);
-	
+
 	/**
 	 * Clone a traffic selector.
 	 *
 	 * @return			clone of it
 	 */
 	traffic_selector_t *(*clone) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get starting address of this ts as a chunk.
 	 *
@@ -95,7 +95,7 @@ struct traffic_selector_t {
 	 * @return			chunk containing the address
 	 */
 	chunk_t (*get_from_address) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get ending address of this ts as a chunk.
 	 *
@@ -104,17 +104,17 @@ struct traffic_selector_t {
 	 * @return			chunk containing the address
 	 */
 	chunk_t (*get_to_address) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get starting port of this ts.
-	 * 
+	 *
 	 * Port is in host order, since the parser converts it.
 	 * Size depends on protocol.
-	 *  
+	 *
 	 * @return			port
 	 */
 	u_int16_t (*get_from_port) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get ending port of this ts.
 	 *
@@ -124,21 +124,21 @@ struct traffic_selector_t {
 	 * @return			port
 	 */
 	u_int16_t (*get_to_port) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get the type of the traffic selector.
 	 *
 	 * @return			ts_type_t specifying the type
 	 */
 	ts_type_t (*get_type) (traffic_selector_t *this);
-	
+
 	/**
 	 * Get the protocol id of this ts.
 	 *
 	 * @return			protocol id
 	 */
 	u_int8_t (*get_protocol) (traffic_selector_t *this);
-	
+
 	/**
 	 * Check if the traffic selector is for a single host.
 	 *
@@ -151,14 +151,14 @@ struct traffic_selector_t {
 	 * @param host		host_t specifying the address range
 	 */
 	bool (*is_host) (traffic_selector_t *this, host_t* host);
-	
+
 	/**
 	 * Check if a traffic selector has been created by create_dynamic().
 	 *
 	 * @return			TRUE if TS is dynamic
 	 */
 	bool (*is_dynamic)(traffic_selector_t *this);
-	
+
 	/**
 	 * Update the address of a traffic selector.
 	 *
@@ -168,15 +168,15 @@ struct traffic_selector_t {
 	 * @param host		host_t specifying the address
 	 */
 	void (*set_address) (traffic_selector_t *this, host_t* host);
-	
+
 	/**
 	 * Compare two traffic selectors for equality.
-	 * 
+	 *
 	 * @param other		ts to compare with this
 	 * @return 			TRUE if equal, FALSE otherwise
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
-	
+
 	/**
 	 * Check if a traffic selector is contained completly in another.
 	 *
@@ -188,24 +188,24 @@ struct traffic_selector_t {
 	bool (*is_contained_in) (traffic_selector_t *this, traffic_selector_t *other);
 
 	/**
-	 * Check if a specific host is included in the address range of 
+	 * Check if a specific host is included in the address range of
 	 * this traffic selector.
 	 *
 	 * @param host		the host to check
 	 */
 	bool (*includes) (traffic_selector_t *this, host_t *host);
-	
+
 	/**
 	 * Convert a traffic selector address range to a subnet
 	 * and its net mask.
 	 * If from and to ports of this traffic selector are equal,
 	 * the port of the returned host_t is set to that port.
-	 * 
+	 *
 	 * @param net		converted subnet (has to be freed)
 	 * @param mask		converted net mask
 	 */
 	void (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
-	
+
 	/**
 	 * Destroys the ts object
 	 */
@@ -214,7 +214,7 @@ struct traffic_selector_t {
 
 /**
  * Create a new traffic selector using human readable params.
- * 
+ *
  * @param protocol 		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
  * @param from_addr		start of address range as string
@@ -232,11 +232,11 @@ traffic_selector_t *traffic_selector_create_from_string(
 
 /**
  * Create a new traffic selector using data read from the net.
- * 
+ *
  * There exists a mix of network and host order in the params.
  * But the parser gives us this data in this format, so we
  * don't have to convert twice.
- * 
+ *
  * @param protocol 		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
  * @param from_address	start of address range, network order
@@ -252,14 +252,14 @@ traffic_selector_t *traffic_selector_create_from_bytes(
 
 /**
  * Create a new traffic selector defining a whole subnet.
- * 
+ *
  * In most cases, definition of a traffic selector for full subnets
  * is sufficient. This constructor creates a traffic selector for
  * all protocols, all ports and the address range specified by the
  * subnet.
  * Additionally, a protocol and a port may be specified. Port ranges
  * are not supported via this constructor.
- * 
+ *
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
  * @param protocol 		protocol for this ts, such as TCP or UDP
@@ -269,17 +269,17 @@ traffic_selector_t *traffic_selector_create_from_bytes(
  * 						- NULL if address family of net not supported
  */
 traffic_selector_t *traffic_selector_create_from_subnet(
-									host_t *net, u_int8_t netbits, 
+									host_t *net, u_int8_t netbits,
 									u_int8_t protocol, u_int16_t port);
 
 /**
  * Create a traffic selector for host-to-host cases.
- * 
+ *
  * For host2host or virtual IP setups, the traffic selectors gets
  * created at runtime using the external/virtual IP. Using this constructor,
  * a call to set_address() sets this traffic selector to the supplied host.
- * 
- * 
+ *
+ *
  * @param protocol		upper layer protocl to allow
  * @param from_port		start of allowed port range
  * @param to_port		end of range
@@ -293,7 +293,7 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 /**
  * printf hook function for traffic_selector_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    traffic_selector_t *ts
  * With the #-specifier, arguments are:
  *    linked_list_t *list containing traffic_selector_t*

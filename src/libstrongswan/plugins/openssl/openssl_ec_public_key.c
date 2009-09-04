@@ -33,12 +33,12 @@ struct private_openssl_ec_public_key_t {
 	 * Public interface for this signer.
 	 */
 	openssl_ec_public_key_t public;
-	
+
 	/**
 	 * EC key object
 	 */
 	EC_KEY *ec;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -53,7 +53,7 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 {
 	bool valid = FALSE;
 	ECDSA_SIG *sig;
-	
+
 	sig = ECDSA_SIG_new();
 	if (sig)
 	{
@@ -78,7 +78,7 @@ static bool verify_curve_signature(private_openssl_ec_public_key_t *this,
 	EC_GROUP *req_group;
 	chunk_t hash;
 	bool valid;
-	
+
 	req_group = EC_GROUP_new_by_curve_name(nid_curve);
 	if (!req_group)
 	{
@@ -111,7 +111,7 @@ static bool verify_der_signature(private_openssl_ec_public_key_t *this,
 {
 	chunk_t hash;
 	bool valid = FALSE;
-	
+
 	/* remove any preceding 0-bytes from signature */
 	while (signature.len && signature.ptr[0] == 0x00)
 	{
@@ -194,7 +194,7 @@ bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
 	hasher_t *hasher;
 	chunk_t key;
 	u_char *p;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, ec, fp))
 	{
 		return TRUE;
@@ -244,7 +244,7 @@ static bool get_encoding(private_openssl_ec_public_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
-	
+
 	switch (type)
 	{
 		case KEY_PUB_SPKI_ASN1_DER:
@@ -290,7 +290,7 @@ static void destroy(private_openssl_ec_public_key_t *this)
 static private_openssl_ec_public_key_t *create_empty()
 {
 	private_openssl_ec_public_key_t *this = malloc_thing(private_openssl_ec_public_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
@@ -300,10 +300,10 @@ static private_openssl_ec_public_key_t *create_empty()
 	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
-	
+
 	this->ec = NULL;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -314,9 +314,9 @@ static openssl_ec_public_key_t *load(chunk_t blob)
 {
 	private_openssl_ec_public_key_t *this = create_empty();
 	u_char *p = blob.ptr;
-	
+
 	this->ec = d2i_EC_PUBKEY(NULL, (const u_char**)&p, blob.len);
-	
+
 	if (!this->ec)
 	{
 		destroy(this);
@@ -343,7 +343,7 @@ struct private_builder_t {
 static openssl_ec_public_key_t *build(private_builder_t *this)
 {
 	openssl_ec_public_key_t *key = this->key;
-	
+
 	free(this);
 	return key;
 }
@@ -356,7 +356,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		
+
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
@@ -383,18 +383,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *openssl_ec_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ECDSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->key = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

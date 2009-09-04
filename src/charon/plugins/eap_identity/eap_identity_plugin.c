@@ -37,14 +37,14 @@ static void destroy(eap_identity_plugin_t *this)
 plugin_t *plugin_create()
 {
 	eap_identity_plugin_t *this = malloc_thing(eap_identity_plugin_t);
-	
+
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_SERVER,
 							(eap_constructor_t)eap_identity_create_server);
 	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_PEER,
 							(eap_constructor_t)eap_identity_create_peer);
-	
+
 	return &this->plugin;
 }
 

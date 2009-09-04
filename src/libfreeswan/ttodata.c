@@ -1,12 +1,12 @@
 /*
  * convert from text form of arbitrary data (e.g., keys) to binary
  * Copyright (C) 2000  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -125,7 +125,7 @@ unsigned int flags;
 			else if (!(skipSpace && (*src == ' ' || *src == '\t')))
 				stage[sl++] = *src;
 		}
-		
+
 		nbytes = (*decode)(stage, buf, sizeof(buf));
 		switch (nbytes) {
 		case BADCH0:
@@ -229,7 +229,7 @@ size_t dstlen;		/* not large enough is a failure */
 
 	if (dstlen < 1)
 		return SHORT;
-	
+
 	p = strchr(hex, *src);
 	if (p == NULL)
 		p = strchr(hex, tolower(*src));
@@ -659,7 +659,7 @@ char *pgm;
 				break;
 			}
 		}
-		
+
 		if (base >= IGNORESPACE_BIAS) {
 			base = base - IGNORESPACE_BIAS;
 			check(r, buf, n, ttodatav(r->ascii, 0, base, buf, sizeof(buf), &n, NULL, 0, TTODATAV_IGNORESPACE), &status);

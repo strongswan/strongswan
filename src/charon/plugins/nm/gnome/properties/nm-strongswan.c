@@ -158,7 +158,7 @@ settings_changed_cb (GtkWidget *widget, gpointer user_data)
 {
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (user_data);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	
+
 	if (widget == glade_xml_get_widget (priv->xml, "method-combo"))
 	{
 		update_layout(glade_xml_get_widget (priv->xml, "method-combo"), priv);
@@ -173,7 +173,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	NMSettingVPN *settings;
 	GtkWidget *widget;
 	const char *value;
-	
+
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 	widget = glade_xml_get_widget (priv->xml, "address-entry");
 	value = nm_setting_vpn_get_data_item (settings, "address");
@@ -218,7 +218,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	}
 	update_layout (widget, priv);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "usercert-label");
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "usercert-button");
@@ -227,7 +227,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "userkey-label");
 	gtk_widget_set_no_show_all (widget, TRUE);
 	widget = glade_xml_get_widget (priv->xml, "userkey-button");
@@ -236,7 +236,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	value = nm_setting_vpn_get_data_item (settings, "virtual");
 	if (value && strcmp(value, "yes") == 0)
@@ -244,7 +244,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
 	value = nm_setting_vpn_get_data_item (settings, "encap");
 	if (value && strcmp(value, "yes") == 0)
@@ -252,7 +252,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
 	value = nm_setting_vpn_get_data_item (settings, "ipcomp");
 	if (value && strcmp(value, "yes") == 0)
@@ -288,7 +288,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	if (!check_validity (self, error))
 		return FALSE;
 	settings = NM_SETTING_VPN (nm_setting_vpn_new ());
-	
+
 	g_object_set (settings, NM_SETTING_VPN_SERVICE_TYPE,
 				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
 
@@ -303,7 +303,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	if (str) {
 		nm_setting_vpn_add_data_item (settings, "certificate", str);
 	}
-	
+
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
@@ -339,15 +339,15 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			break;
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
-	
+
 	widget = glade_xml_get_widget (priv->xml, "virtual-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "virtual", active ? "yes" : "no");
-	                     
+
 	widget = glade_xml_get_widget (priv->xml, "encap-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "encap", active ? "yes" : "no");
-	                     
+
 	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");

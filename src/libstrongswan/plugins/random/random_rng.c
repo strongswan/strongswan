@@ -43,12 +43,12 @@ struct private_random_rng_t {
 	 * Public random_rng_t interface.
 	 */
 	random_rng_t public;
-	
+
 	/**
 	 * random device, depends on quality
 	 */
 	int dev;
-	
+
 	/**
 	 * file we read random bytes from
 	 */
@@ -63,9 +63,9 @@ static void get_bytes(private_random_rng_t *this, size_t bytes,
 {
 	size_t done;
 	ssize_t got;
-	
+
 	done = 0;
-	
+
 	while (done < bytes)
 	{
 		got = read(this->dev, buffer + done, bytes - done);
@@ -120,7 +120,7 @@ random_rng_t *random_rng_create(rng_quality_t quality)
 	{
 		this->file = DEV_URANDOM;
 	}
-	
+
 	this->dev = open(this->file, 0);
 	if (this->dev < 0)
 	{

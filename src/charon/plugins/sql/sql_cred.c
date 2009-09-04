@@ -30,7 +30,7 @@ struct private_sql_cred_t {
 	 * Public part
 	 */
 	sql_cred_t public;
-	
+
 	/**
 	 * database connection
 	 */
@@ -92,7 +92,7 @@ static enumerator_t* create_private_enumerator(private_sql_cred_t *this,
 											   identification_t *id)
 {
 	private_enumerator_t *e;
-	
+
 	e = malloc_thing(private_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)private_enumerator_enumerate;
@@ -178,7 +178,7 @@ static enumerator_t* create_cert_enumerator(private_sql_cred_t *this,
 										identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
-	
+
 	e = malloc_thing(cert_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)cert_enumerator_enumerate;
@@ -275,11 +275,11 @@ static void shared_enumerator_destroy(shared_enumerator_t *this)
  * Implementation of credential_set_t.create_shared_enumerator.
  */
 static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
-								  shared_key_type_t type, 
+								  shared_key_type_t type,
 								  identification_t *me, identification_t *other)
 {
 	shared_enumerator_t *e;
-	
+
 	e = malloc_thing(shared_enumerator_t);
 	e->me = me;
 	e->other = other;
@@ -306,12 +306,12 @@ static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
 				DB_INT, me->get_type(me), DB_BLOB, me->get_encoding(me),
 				DB_INT, other->get_type(other), DB_BLOB, other->get_encoding(other),
 				DB_INT, type == SHARED_ANY, DB_INT, type,
-				DB_INT, DB_BLOB);				
+				DB_INT, DB_BLOB);
 	}
 	else
 	{
 		identification_t *id = me ? me : other;
-		
+
 		e->inner = this->db->query(this->db,
 				"SELECT s.type, s.data FROM shared_secrets AS s "
 				"JOIN shared_secret_identity AS si ON s.id = si.shared_secret "
@@ -350,16 +350,16 @@ static void destroy(private_sql_cred_t *this)
 sql_cred_t *sql_cred_create(database_t *db)
 {
 	private_sql_cred_t *this = malloc_thing(private_sql_cred_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.destroy = (void(*)(sql_cred_t*))destroy;
-	
+
 	this->db = db;
-	
+
 	return &this->public;
 }
 

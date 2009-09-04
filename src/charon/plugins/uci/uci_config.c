@@ -34,7 +34,7 @@ struct private_uci_config_t {
 	 * Public part
 	 */
 	uci_config_t public;
-	
+
 	/**
 	 * UCI parser context
 	 */
@@ -59,7 +59,7 @@ typedef struct {
 static proposal_t *create_proposal(char *string, protocol_id_t proto)
 {
 	proposal_t *proposal = NULL;
-	
+
 	if (string)
 	{
 		proposal = proposal_create_from_string(proto, string);
@@ -68,12 +68,12 @@ static proposal_t *create_proposal(char *string, protocol_id_t proto)
 	{	/* UCI default is aes/sha1 only */
 		if (proto == PROTO_IKE)
 		{
-			proposal = proposal_create_from_string(proto, 
+			proposal = proposal_create_from_string(proto,
 								"aes128-aes192-aes256-sha1-modp1536-modp2048");
 		}
 		else
 		{
-			proposal = proposal_create_from_string(proto, 
+			proposal = proposal_create_from_string(proto,
 								"aes128-aes192-aes256-sha1");
 		}
 	}
@@ -90,7 +90,7 @@ static traffic_selector_t *create_ts(char *string)
 		int netbits = 32;
 		host_t *net;
 		char *pos;
-		
+
 		string = strdupa(string);
 		pos = strchr(string, '/');
 		if (pos)
@@ -120,7 +120,7 @@ static traffic_selector_t *create_ts(char *string)
 static u_int create_rekey(char *string)
 {
 	u_int rekey = 0;
-	
+
 	if (string)
 	{
 		rekey = atoi(string);
@@ -151,7 +151,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 			.jitter = 300
 		}
 	};
-	
+
 	/* defaults */
 	name = "unnamed";
 	local_id = NULL;
@@ -164,7 +164,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	esp_proposal = NULL;
 	ike_rekey = NULL;
 	esp_rekey = NULL;
-	
+
 	if (this->inner->enumerate(this->inner, &name, &local_id, &remote_id,
 			&local_addr, &remote_addr, &local_net, &remote_net,
 			&ike_proposal, &esp_proposal, &ike_rekey, &esp_rekey))
@@ -184,7 +184,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 		auth->add(auth, AUTH_RULE_IDENTITY,
 				  identification_create_from_string(local_id));
 		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, TRUE);
-		
+
 		auth = auth_cfg_create();
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
 		if (remote_id)
@@ -193,7 +193,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 					  identification_create_from_string(remote_id));
 		}
 		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, FALSE);
-		
+
 		child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
 									 ACTION_NONE, ACTION_NONE, FALSE);
 		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_ESP));
@@ -220,15 +220,15 @@ static void peer_enumerator_destroy(peer_enumerator_t *this)
  * Implementation of backend_t.create_peer_cfg_enumerator.
  */
 static enumerator_t* create_peer_cfg_enumerator(private_uci_config_t *this,
-												identification_t *me, 
+												identification_t *me,
 												identification_t *other)
 {
 	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
-	
+
 	e->public.enumerate = (void*)peer_enumerator_enumerate;
 	e->public.destroy = (void*)peer_enumerator_destroy;
 	e->peer_cfg = NULL;
-	e->inner = this->parser->create_section_enumerator(this->parser, 
+	e->inner = this->parser->create_section_enumerator(this->parser,
 					"local_id", "remote_id", "local_addr", "remote_addr",
 					"local_net", "remote_net", "ike_proposal", "esp_proposal",
 					"ike_rekey", "esp_rekey", NULL);
@@ -258,12 +258,12 @@ typedef struct {
 static bool ike_enumerator_enumerate(ike_enumerator_t *this, ike_cfg_t **cfg)
 {
 	char *local_addr, *remote_addr, *ike_proposal;
-	
+
 	/* defaults */
 	local_addr = "0.0.0.0";
 	remote_addr = "0.0.0.0";
 	ike_proposal = NULL;
-	
+
 	if (this->inner->enumerate(this->inner, NULL,
 							   &local_addr, &remote_addr, &ike_proposal))
 	{
@@ -295,11 +295,11 @@ static enumerator_t* create_ike_cfg_enumerator(private_uci_config_t *this,
 											   host_t *me, host_t *other)
 {
 	ike_enumerator_t *e = malloc_thing(ike_enumerator_t);
-	
+
 	e->public.enumerate = (void*)ike_enumerator_enumerate;
 	e->public.destroy = (void*)ike_enumerator_destroy;
 	e->ike_cfg = NULL;
-	e->inner = this->parser->create_section_enumerator(this->parser, 
+	e->inner = this->parser->create_section_enumerator(this->parser,
 							"local_addr", "remote_addr", "ike_proposal", NULL);
 	if (!e->inner)
 	{
@@ -316,7 +316,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_uci_config_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *current, *found = NULL;
-		
+
 	enumerator = create_peer_cfg_enumerator(this, NULL, NULL);
 	if (enumerator)
 	{

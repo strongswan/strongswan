@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil 
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,19 +23,19 @@ typedef struct private_openssl_hasher_t private_openssl_hasher_t;
  * Private data of openssl_hasher_t
  */
 struct private_openssl_hasher_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	openssl_hasher_t public;
-	
+
 	/**
 	 * the hasher to use
 	 */
 	const EVP_MD *hasher;
-	
+
 	/**
-	 * the current digest context 
+	 * the current digest context
 	 */
 	EVP_MD_CTX *ctx;
 };
@@ -49,7 +49,7 @@ typedef struct {
 	 * Identifier specified in IKEv2
 	 */
 	int ikev2_id;
-	
+
 	/**
 	 * Name of the algorithm, as used in OpenSSL
 	 */
@@ -76,7 +76,7 @@ static openssl_algorithm_t integrity_algs[] = {
 /**
  * Look up an OpenSSL algorithm name
  */
-static char* lookup_algorithm(openssl_algorithm_t *openssl_algo, 
+static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 					   u_int16_t ikev2_algo)
 {
 	while (openssl_algo->ikev2_id != END_OF_LIST)
@@ -133,7 +133,7 @@ static void allocate_hash(private_openssl_hasher_t *this, chunk_t chunk,
 	}
 	else
 	{
-		get_hash(this, chunk, NULL);	
+		get_hash(this, chunk, NULL);
 	}
 }
 
@@ -152,7 +152,7 @@ static void destroy (private_openssl_hasher_t *this)
 openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 {
 	private_openssl_hasher_t *this;
-	
+
 	char* name = lookup_algorithm(integrity_algs, algo);
 	if (!name)
 	{
@@ -161,7 +161,7 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 	}
 
 	this = malloc_thing(private_openssl_hasher_t);
-	
+
 	this->hasher = EVP_get_digestbyname(name);
 	if (!this->hasher)
 	{
@@ -169,17 +169,17 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 		free(this);
 		return NULL;
 	}
-	
+
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
-	
+
 	this->ctx = EVP_MD_CTX_create();
-	
+
 	/* initialization */
 	reset(this);
-	
+
 	return &this->public;
 }

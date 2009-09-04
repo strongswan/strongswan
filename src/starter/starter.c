@@ -163,7 +163,7 @@ static void fsig(int signal)
 static void generate_selfcert()
 {
 	struct stat stb;
-	
+
 		/* if ipsec.secrets file is missing then generate RSA default key pair */
 		if (stat(SECRETS_FILE, &stb) != 0)
 		{
@@ -176,7 +176,7 @@ static void generate_selfcert()
 			{
 				char buf[1024];
 				struct group group, *grp;
-				
+
 				if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&	grp)
 				{
 					gid = grp->gr_gid;
@@ -187,7 +187,7 @@ static void generate_selfcert()
 			{
 				char buf[1024];
 				struct passwd passwd, *pwp;
-				
+
 				if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&	pwp)
 				{
 					uid = pwp->pw_uid;
@@ -360,7 +360,7 @@ int main (int argc, char **argv)
 		plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
 		exit(LSB_RC_SUCCESS);
 	}
-	
+
 	generate_selfcert();
 
 	/* fork if we're not debugging stuff */
@@ -381,7 +381,7 @@ int main (int argc, char **argv)
 					dup2(fnull, STDERR_FILENO);
 					close(fnull);
 				}
-				setsid(); 
+				setsid();
 			}
 			break;
 			case -1:
@@ -491,7 +491,7 @@ int main (int argc, char **argv)
 					_action_ |= FLAG_ACTION_LISTEN;
 				}
 
-				if (!starter_cmp_pluto(cfg, new_cfg)) 
+				if (!starter_cmp_pluto(cfg, new_cfg))
 				{
 					plog("Pluto has changed");
 					if (starter_pluto_pid())
@@ -620,7 +620,7 @@ int main (int argc, char **argv)
 					conn->state = STATE_TO_ADD;
 			}
 		}
-		
+
 		/*
 		 * Start charon
 		 */

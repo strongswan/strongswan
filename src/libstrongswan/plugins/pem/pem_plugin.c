@@ -51,9 +51,9 @@ static void destroy(private_pem_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_pem_plugin_t *this = malloc_thing(private_pem_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	/* register private key PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
 							(builder_constructor_t)private_key_pem_builder);
@@ -63,7 +63,7 @@ plugin_t *plugin_create()
 							(builder_constructor_t)private_key_pem_builder);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_DSA,
 							(builder_constructor_t)private_key_pem_builder);
-	
+
 	/* register public key PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 							(builder_constructor_t)public_key_pem_builder);
@@ -73,7 +73,7 @@ plugin_t *plugin_create()
 							(builder_constructor_t)public_key_pem_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_DSA,
 							(builder_constructor_t)public_key_pem_builder);
-	
+
 	/* register certificate PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_ANY,
 							(builder_constructor_t)certificate_pem_builder);
@@ -91,7 +91,7 @@ plugin_t *plugin_create()
 							(builder_constructor_t)certificate_pem_builder);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG,
 							(builder_constructor_t)certificate_pem_builder);
-	
+
 	/* register pluto specific certificate formats */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
 							(builder_constructor_t)certificate_pem_builder);
@@ -99,7 +99,7 @@ plugin_t *plugin_create()
 							(builder_constructor_t)certificate_pem_builder);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
 							(builder_constructor_t)certificate_pem_builder);
-	
+
 	return &this->public.plugin;
 }
 

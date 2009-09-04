@@ -23,7 +23,7 @@ typedef struct private_hmac_t private_hmac_t;
 
 /**
  * Private data of a hmac_t object.
- * 
+ *
  * The variable names are the same as in the RFC.
  */
 struct private_hmac_t {
@@ -31,22 +31,22 @@ struct private_hmac_t {
 	 * Public hmac_t interface.
 	 */
 	hmac_t hmac;
-	
+
 	/**
 	 * Block size, as in RFC.
 	 */
 	u_int8_t b;
-	
+
 	/**
 	 * Hash function.
 	 */
 	hasher_t *h;
-	
+
 	/**
 	 * Previously xor'ed key using opad.
 	 */
 	chunk_t opaded_key;
-	
+
 	/**
 	 * Previously xor'ed key using ipad.
 	 */
@@ -58,16 +58,16 @@ struct private_hmac_t {
  */
 static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
-	/* H(K XOR opad, H(K XOR ipad, text)) 
-	 * 
+	/* H(K XOR opad, H(K XOR ipad, text))
+	 *
 	 * if out is NULL, we append text to the inner hash.
 	 * else, we complete the inner and do the outer.
-	 * 
+	 *
 	 */
-	
+
 	u_int8_t buffer[this->h->get_hash_size(this->h)];
 	chunk_t inner;
-	
+
 	if (out == NULL)
 	{
 		/* append data to inner */
@@ -78,14 +78,14 @@ static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 		/* append and do outer hash */
 		inner.ptr = buffer;
 		inner.len = this->h->get_hash_size(this->h);
-		
+
 		/* complete inner */
 		this->h->get_hash(this->h, data, buffer);
-		
+
 		/* do outer */
 		this->h->get_hash(this->h, this->opaded_key, NULL);
 		this->h->get_hash(this->h, inner, out);
-		
+
 		/* reinit for next call */
 		this->h->get_hash(this->h, this->ipaded_key, NULL);
 	}
@@ -109,7 +109,7 @@ static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 		this->hmac.get_mac(&(this->hmac), data, out->ptr);
 	}
 }
-	
+
 /**
  * Implementation of hmac_t.get_block_size.
  */
@@ -125,27 +125,27 @@ static void set_key(private_hmac_t *this, chunk_t key)
 {
 	int i;
 	u_int8_t buffer[this->b];
-	
+
 	memset(buffer, 0, this->b);
-	
+
 	if (key.len > this->b)
-	{	
+	{
 		/* if key is too long, it will be hashed */
 		this->h->get_hash(this->h, key, buffer);
 	}
 	else
-	{	
+	{
 		/* if not, just copy it in our pre-padded k */
-		memcpy(buffer, key.ptr, key.len);	
+		memcpy(buffer, key.ptr, key.len);
 	}
-			
+
 	/* apply ipad and opad to key */
 	for (i = 0; i < this->b; i++)
 	{
 		this->ipaded_key.ptr[i] = buffer[i] ^ 0x36;
 		this->opaded_key.ptr[i] = buffer[i] ^ 0x5C;
 	}
-	
+
 	/* begin hashing of inner pad */
 	this->h->reset(this->h);
 	this->h->get_hash(this->h, this->ipaded_key, NULL);
@@ -175,7 +175,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	this->hmac.get_block_size = (size_t (*)(hmac_t *))get_block_size;
 	this->hmac.set_key = (void (*)(hmac_t *,chunk_t))set_key;
 	this->hmac.destroy = (void (*)(hmac_t *))destroy;
-	
+
 	/* set b, according to hasher */
 	switch (hash_algorithm)
 	{
@@ -190,15 +190,15 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 			break;
 		default:
 			free(this);
-			return NULL;	
+			return NULL;
 	}
-	
+
 	/* build the hasher */
 	this->h = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
 	if (this->h == NULL)
 	{
 		free(this);
-		return NULL;	
+		return NULL;
 	}
 
 	/* build ipad and opad */

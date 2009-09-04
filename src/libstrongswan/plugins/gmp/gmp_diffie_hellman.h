@@ -30,7 +30,7 @@ typedef struct gmp_diffie_hellman_t gmp_diffie_hellman_t;
  * Implementation of the Diffie-Hellman algorithm, as in RFC2631. Uses libgmp.
  */
 struct gmp_diffie_hellman_t {
-	
+
 	/**
 	 * Implements diffie_hellman_t interface.
 	 */
@@ -39,7 +39,7 @@ struct gmp_diffie_hellman_t {
 
 /**
  * Creates a new gmp_diffie_hellman_t object.
- * 
+ *
  * @param group			Diffie Hellman group number to use
  * @return				gmp_diffie_hellman_t object, NULL if not supported
  */

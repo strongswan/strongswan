@@ -40,12 +40,12 @@ struct private_stroke_list_t {
 	 * public functions
 	 */
 	stroke_list_t public;
-	
+
 	/**
 	 * timestamp of daemon start
 	 */
 	time_t uptime;
-	
+
 	/**
 	 * strokes attribute provider
 	 */
@@ -59,44 +59,44 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
 	time_t now = time_monotonic(NULL);
-	
+
 	fprintf(out, "%12s[%d]: %N",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 			ike_sa_state_names, ike_sa->get_state(ike_sa));
-	
+
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
 		time_t established;
-		
+
 		established = ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
 		fprintf(out, " %V ago", &now, &established);
 	}
-	
+
 	fprintf(out, ", %H[%Y]...%H[%Y]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
-	
+
 	if (all)
 	{
 		proposal_t *ike_proposal;
-		
+
 		ike_proposal = ike_sa->get_proposal(ike_sa);
-		
+
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
-		
-		
+
+
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
 			time_t rekey, reauth;
 			peer_cfg_t *peer_cfg;
-			
+
 			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
 			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
 			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-			
+
 			if (rekey)
 			{
 				fprintf(out, ", rekeying in %V", &rekey, &now);
@@ -106,7 +106,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 				bool first = TRUE;
 				enumerator_t *enumerator;
 				auth_cfg_t *auth;
-				
+
 				fprintf(out, ", ");
 				enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, TRUE);
 				while (enumerator->enumerate(enumerator, &auth))
@@ -128,11 +128,11 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 		}
 		fprintf(out, "\n");
-		
+
 		if (ike_proposal)
 		{
 			char buf[BUF_LEN];
-			
+
 			snprintf(buf, BUF_LEN, "%P", ike_proposal);
 			fprintf(out, "%12s[%d]: IKE proposal: %s\n",
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -150,14 +150,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	u_int64_t bytes_in, bytes_out;
 	proposal_t *proposal;
 	child_cfg_t *config = child_sa->get_config(child_sa);
-	
-	
-	fprintf(out, "%12s{%d}:  %N, %N%s", 
+
+
+	fprintf(out, "%12s{%d}:  %N, %N%s",
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
 			ipsec_mode_names, child_sa->get_mode(child_sa),
 			config->use_proxy_mode(config) ? "_PROXY" : "");
-	
+
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
 		fprintf(out, ", %N%s SPIs: %.8x_i %.8x_o",
@@ -165,30 +165,30 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				child_sa->has_encap(child_sa) ? " in UDP" : "",
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
-		
+
 		if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
 		{
 			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",
 					ntohs(child_sa->get_cpi(child_sa, TRUE)),
 					ntohs(child_sa->get_cpi(child_sa, FALSE)));
 		}
-		
+
 		if (all)
 		{
-			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
+			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa),
 					child_sa->get_reqid(child_sa));
-			
+
 			proposal = child_sa->get_proposal(child_sa);
 			if (proposal)
 			{
 				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
 				u_int16_t encr_size = 0, int_size = 0;
-				
+
 				proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 										&encr_alg, &encr_size);
 				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
 										&int_alg, &int_size);
-				
+
 				if (encr_alg != ENCR_UNDEFINED)
 				{
 					fprintf(out, "%N", encryption_algorithm_names, encr_alg);
@@ -206,7 +206,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					}
 				}
 			}
-			
+
 			now = time_monotonic(NULL);
 			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
 			fprintf(out, ", %llu bytes_i", bytes_in);
@@ -222,7 +222,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				fprintf(out, " (%ds ago)", now - use_out);
 			}
 			fprintf(out, ", rekeying ");
-			
+
 			rekey = child_sa->get_lifetime(child_sa, FALSE);
 			if (rekey)
 			{
@@ -239,10 +239,10 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				fprintf(out, "disabled");
 			}
-			
+
 		}
 	}
-	
+
 	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa->get_traffic_selectors(child_sa, TRUE),
@@ -262,9 +262,9 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 	certificate_t *cert;
 	cert_validation_t valid;
 	char *name;
-	
+
 	name = peer_cfg->get_name(peer_cfg);
-	
+
 	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
 	while (enumerator->enumerate(enumerator, &auth))
 	{
@@ -329,7 +329,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 			fprintf(out, "%12s:    ocsp:  status must be GOOD%s\n", name,
 					(valid == VALIDATION_SKIPPED) ? " or SKIPPED" : "");
 		}
-		
+
 		valid = (uintptr_t)auth->get(auth, AUTH_RULE_CRL_VALIDATION);
 		if (valid != VALIDATION_FAILED)
 		{
@@ -362,7 +362,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	ike_sa_t *ike_sa;
 	bool first, found = FALSE;
 	char *name = msg->status.name;
-	
+
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
@@ -371,10 +371,10 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		u_int32_t dpd;
 		time_t since, now;
 		u_int size, online, offline;
-		
+
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
-		
+
 		fprintf(out, "Status of IKEv2 charon daemon (strongSwan "VERSION"):\n");
 		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
@@ -392,7 +392,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
-		
+
 		first = TRUE;
 		enumerator = this->attribute->create_pool_enumerator(this->attribute);
 		while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
@@ -409,7 +409,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			fprintf(out, "  %s: %u/%u/%u\n", pool, size, online, offline);
 		}
 		enumerator->destroy(enumerator);
-		
+
 		enumerator = charon->kernel_interface->create_address_enumerator(
 								charon->kernel_interface, FALSE, FALSE);
 		fprintf(out, "Listening IP addresses:\n");
@@ -418,7 +418,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			fprintf(out, "  %H\n", host);
 		}
 		enumerator->destroy(enumerator);
-	
+
 		fprintf(out, "Connections:\n");
 		enumerator = charon->backends->create_peer_cfg_enumerator(
 									charon->backends, NULL, NULL, NULL, NULL);
@@ -429,33 +429,33 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 			{
 				continue;
 			}
-			
+
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 			fprintf(out, "%12s:  %s...%s", peer_cfg->get_name(peer_cfg),
 				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg));
-			
+
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
 			{
 				fprintf(out, ", dpddelay=%us", dpd);
 			}
 			fprintf(out, "\n");
-			
+
 			log_auth_cfgs(out, peer_cfg, TRUE);
 			log_auth_cfgs(out, peer_cfg, FALSE);
-			
+
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
 				linked_list_t *my_ts, *other_ts;
-				
+
 				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
 				fprintf(out, "%12s:   child:  %#R=== %#R", child_cfg->get_name(child_cfg),
 						my_ts, other_ts);
 				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 				other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
-				
+
 				if (dpd)
 				{
 					fprintf(out, ", dpdaction=%N", action_names,
@@ -468,7 +468,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		enumerator->destroy(enumerator);
 	}
 
-	first = TRUE;	
+	first = TRUE;
 	enumerator = charon->traps->create_enumerator(charon->traps);
 	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
@@ -480,14 +480,14 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		log_child_sa(out, child_sa, all);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	fprintf(out, "Security Associations:\n");
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;
 		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
-		
+
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
 			log_ike_sa(out, ike_sa, all);
@@ -506,12 +506,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 					ike_printed = TRUE;
 				}
 				log_child_sa(out, child_sa, all);
-			}	
+			}
 		}
 		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (!found)
 	{
 		if (name)
@@ -536,14 +536,14 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 									charon->credentials, type, KEY_ANY,
 									NULL, FALSE);
 	certificate_t *cert;
-	
+
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		iterator_t *iterator = list->create_iterator(list, TRUE);
 		identification_t *issuer = cert->get_issuer(cert);
 		bool previous_same, same = FALSE, last = TRUE;
 		certificate_t *list_cert;
-		
+
 		while (iterator->iterate(iterator, (void**)&list_cert))
 		{
 			/* exit if we have a duplicate? */
@@ -581,7 +581,7 @@ static void list_public_key(public_key_t *public, FILE *out)
 	private_key_t *private = NULL;
 	chunk_t keyid;
 	identification_t *id;
-	
+
 	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
@@ -610,14 +610,14 @@ static void list_public_key(public_key_t *public, FILE *out)
 static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 {
 	bool first = TRUE;
-	
+
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-	
+
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		public_key_t *public = cert->get_public_key(cert);
-		
+
 		if (public)
 		{
 			if (first)
@@ -627,7 +627,7 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 				first = FALSE;
 			}
 			fprintf(out, "\n");
-			
+
 			list_public_key(public, out);
 			public->destroy(public);
 		}
@@ -638,7 +638,7 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 /**
  * list all X.509 certificates matching the flags
  */
-static void stroke_list_certs(linked_list_t *list, char *label, 
+static void stroke_list_certs(linked_list_t *list, char *label,
 							  x509_flag_t flags, bool utc, FILE *out)
 {
 	bool first = TRUE;
@@ -650,7 +650,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 	{
 		x509_t *x509 = (x509_t*)cert;
 		x509_flag_t x509_flags = x509->get_flags(x509);
-		
+
 		/* list only if flag is set, or flags == 0 (ignoring self-signed) */
 		if ((x509_flags & flags) || (flags == (x509_flags & ~X509_SELF_SIGNED)))
 		{
@@ -660,7 +660,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			chunk_t serial, authkey;
 			time_t notBefore, notAfter;
 			public_key_t *public;
-			
+
 			if (first)
 			{
 				fprintf(out, "\n");
@@ -668,7 +668,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				first = FALSE;
 			}
 			fprintf(out, "\n");
-			
+
 			/* list subjectAltNames */
 			enumerator = x509->create_subjectAltName_enumerator(x509);
 			while (enumerator->enumerate(enumerator, (void**)&altName))
@@ -689,12 +689,12 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				fprintf(out, "\n");
 			}
 			enumerator->destroy(enumerator);
-			
+
 			fprintf(out, "  subject:  \"%Y\"\n", cert->get_subject(cert));
 			fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 			serial = x509->get_serial(x509);
 			fprintf(out, "  serial:    %#B\n", &serial);
-			
+
 			/* list validity */
 			cert->get_validity(cert, &now, &notBefore, &notAfter);
 			fprintf(out, "  validity:  not before %T, ", &notBefore, utc);
@@ -720,14 +720,14 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				}
 				fprintf(out, " \n");
 			}
-			
+
 			public = cert->get_public_key(cert);
 			if (public)
 			{
 				list_public_key(public, out);
 				public->destroy(public);
 			}
-			
+
 			/* list optional authorityKeyIdentifier */
 			authkey = x509->get_authKeyIdentifier(x509);
 			if (authkey.ptr)
@@ -754,7 +754,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		ac_t *ac = (ac_t*)cert;
 		identification_t *id;
 		chunk_t chunk;
-		
+
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -762,7 +762,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		
+
 		id = cert->get_subject(cert);
 		if (id)
 		{
@@ -799,7 +799,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, " \n");
 		}
-		
+
 		/* list optional authorityKeyIdentifier */
 		chunk = ac->get_authKeyIdentifier(ac);
 		if (chunk.ptr)
@@ -819,12 +819,12 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 	time_t thisUpdate, nextUpdate, now = time(NULL);
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-	
+
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		crl_t *crl = (crl_t*)cert;
 		chunk_t chunk;
-		
+
 		if (first)
 		{
 			fprintf(out, "\n");
@@ -832,21 +832,21 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 			first = FALSE;
 		}
 		fprintf(out, "\n");
-		
+
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
-		
+
 		/* list optional crlNumber */
 		chunk = crl->get_serial(crl);
 		if (chunk.ptr)
 		{
 			fprintf(out, "  serial:    %#B\n", &chunk);
 		}
-		
+
 		/* count the number of revoked certificates */
 		{
 			int count = 0;
 			enumerator_t *enumerator = crl->create_enumerator(crl);
-			
+
 			while (enumerator->enumerate(enumerator, NULL, NULL, NULL))
 			{
 				count++;
@@ -855,7 +855,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 							(count == 1)? "" : "s");
 			enumerator->destroy(enumerator);
 		}
-		
+
 		/* list validity */
 		cert->get_validity(cert, &now, &thisUpdate, &nextUpdate);
 		fprintf(out, "  updates:   this %T\n",  &thisUpdate, utc);
@@ -873,7 +873,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, " \n");
 		}
-		
+
 		/* list optional authorityKeyIdentifier */
 		chunk = crl->get_authKeyIdentifier(crl);
 		if (chunk.ptr)
@@ -892,7 +892,7 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 	bool first = TRUE;
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
-	
+
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		if (first)
@@ -919,7 +919,7 @@ static void list_algs(FILE *out)
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
-	
+
 	fprintf(out, "\n");
 	fprintf(out, "List of registered IKEv2 Algorithms:\n");
 	fprintf(out, "\n  encryption: ");
@@ -972,7 +972,7 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 		linked_list_t *pubkey_list = create_unique_cert_list(CERT_TRUSTED_PUBKEY);
 
 		stroke_list_pubkeys(pubkey_list, msg->list.utc, out);
-		pubkey_list->destroy_offset(pubkey_list, offsetof(certificate_t, destroy)); 
+		pubkey_list->destroy_offset(pubkey_list, offsetof(certificate_t, destroy));
 	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
@@ -1003,22 +1003,22 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 		linked_list_t *ac_list = create_unique_cert_list(CERT_X509_AC);
 
 		stroke_list_acerts(ac_list, msg->list.utc, out);
-		ac_list->destroy_offset(ac_list, offsetof(certificate_t, destroy)); 
+		ac_list->destroy_offset(ac_list, offsetof(certificate_t, destroy));
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
 		linked_list_t *crl_list = create_unique_cert_list(CERT_X509_CRL);
 
 		stroke_list_crls(crl_list, msg->list.utc, out);
-		crl_list->destroy_offset(crl_list, offsetof(certificate_t, destroy)); 
+		crl_list->destroy_offset(crl_list, offsetof(certificate_t, destroy));
 	}
 	if (msg->list.flags & LIST_OCSP)
 	{
 		linked_list_t *ocsp_list = create_unique_cert_list(CERT_X509_OCSP_RESPONSE);
 
 		stroke_list_ocsp(ocsp_list, msg->list.utc, out);
-		
-		ocsp_list->destroy_offset(ocsp_list, offsetof(certificate_t, destroy)); 
+
+		ocsp_list->destroy_offset(ocsp_list, offsetof(certificate_t, destroy));
 	}
 	if (msg->list.flags & LIST_ALGS)
 	{
@@ -1038,7 +1038,7 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	host_t *lease;
 	bool on;
 	int found = 0;
-	
+
 	fprintf(out, "Leases in pool '%s', usage: %lu/%lu, %lu online\n",
 			pool, online + offline, size, online);
 	enumerator = this->attribute->create_lease_enumerator(this->attribute, pool);
@@ -1068,12 +1068,12 @@ static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	host_t *address = NULL;
 	char *pool;
 	int found = 0;
-	
+
 	if (msg->leases.address)
 	{
 		address = host_create_from_string(msg->leases.address, 0);
 	}
-	
+
 	enumerator = this->attribute->create_pool_enumerator(this->attribute);
 	while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
 	{
@@ -1112,15 +1112,15 @@ static void destroy(private_stroke_list_t *this)
 stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 {
 	private_stroke_list_t *this = malloc_thing(private_stroke_list_t);
-	
+
 	this->public.list = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))list;
 	this->public.status = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out,bool))status;
 	this->public.leases = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))leases;
 	this->public.destroy = (void(*)(stroke_list_t*))destroy;
-	
+
 	this->uptime = time_monotonic(NULL);
 	this->attribute = attribute;
-	
+
 	return &this->public;
 }
 

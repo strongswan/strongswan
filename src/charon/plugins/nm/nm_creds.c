@@ -29,32 +29,32 @@ struct private_nm_creds_t {
 	 * public functions
 	 */
 	nm_creds_t public;
-	
+
 	/**
 	 * gateway certificate
 	 */
 	certificate_t *cert;
-	
+
 	/**
  	 * User name
  	 */
  	identification_t *user;
-	
+
 	/**
 	 * User password
 	 */
 	char *pass;
-	
+
 	/**
 	 * users certificate
 	 */
 	certificate_t *usercert;
-	
+
 	/**
 	 * users private key
 	 */
 	private_key_t *key;
-	
+
 	/**
 	 * read/write lock
 	 */
@@ -68,13 +68,13 @@ static enumerator_t *create_usercert_enumerator(private_nm_creds_t *this,
 							certificate_type_t cert, key_type_t key)
 {
 	public_key_t *public;
-	
+
 	if (cert != CERT_ANY && cert != this->usercert->get_type(this->usercert))
 	{
 		return NULL;
 	}
 	if (key != KEY_ANY)
-	{	
+	{
 		public = this->usercert->get_public_key(this->usercert);
 		if (!public)
 		{
@@ -121,7 +121,7 @@ static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
 	if (key != KEY_ANY)
 	{
 		public_key_t *public;
-	
+
 		public = this->cert->get_public_key(this->cert);
 		if (!public)
 		{
@@ -156,7 +156,7 @@ static enumerator_t* create_private_enumerator(private_nm_creds_t *this,
 	if (id && id->get_type(id) != ID_ANY)
 	{
 		chunk_t keyid;
-		
+
 		if (id->get_type(id) != ID_KEY_ID ||
 			!this->key->get_fingerprint(this->key, KEY_ID_PUBKEY_SHA1, &keyid) ||
 			!chunk_equals(keyid, id->get_encoding(id)))
@@ -208,7 +208,7 @@ static void shared_destroy(shared_enumerator_t *this)
 /**
  * Implements credential_set_t.create_cert_enumerator
  */
-static enumerator_t* create_shared_enumerator(private_nm_creds_t *this, 
+static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
@@ -226,7 +226,7 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 	{
 		return NULL;
 	}
-	
+
 	enumerator = malloc_thing(shared_enumerator_t);
 	enumerator->public.enumerate = (void*)shared_enumerate;
 	enumerator->public.destroy = (void*)shared_destroy;
@@ -267,7 +267,7 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 /**
  * Implementation of nm_creds_t.set_cert_and_key
  */
-static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,	
+static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,
 							 private_key_t *key)
 {
 	this->lock->write_lock(this->lock);
@@ -276,7 +276,7 @@ static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,
 	this->key = key;
 	this->usercert = cert;
 	this->lock->unlock(this->lock);
-}	
+}
 
 /**
  * Implementation of nm_creds_t.clear
@@ -311,7 +311,7 @@ static void destroy(private_nm_creds_t *this)
 nm_creds_t *nm_creds_create()
 {
 	private_nm_creds_t *this = malloc_thing(private_nm_creds_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
@@ -322,15 +322,15 @@ nm_creds_t *nm_creds_create()
 	this->public.set_cert_and_key = (void(*)(nm_creds_t*, certificate_t *cert, private_key_t *key))set_cert_and_key;
 	this->public.clear = (void(*)(nm_creds_t*))clear;
 	this->public.destroy = (void(*)(nm_creds_t*))destroy;
-	
+
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	this->cert = NULL;
 	this->user = NULL;
 	this->pass = NULL;
 	this->usercert = NULL;
 	this->key = NULL;
-	
+
 	return &this->public;
 }
 

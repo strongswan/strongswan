@@ -25,17 +25,17 @@ typedef struct private_ike_reauth_t private_ike_reauth_t;
  * Private members of a ike_reauth_t task.
  */
 struct private_ike_reauth_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_reauth_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * reused ike_delete task
 	 */
@@ -60,12 +60,12 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	peer_cfg_t *peer_cfg;
-	
+
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	
+
 	/* reauthenticate only if we have children */
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	if (iterator->get_count(iterator) == 0
@@ -79,9 +79,9 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		iterator->destroy(iterator);
 		return FAILED;
 	}
-	
+
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
-	
+
 	new->set_peer_cfg(new, peer_cfg);
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	new->set_other_host(new, host->clone(host));
@@ -93,7 +93,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	{
 		new->set_virtual_ip(new, TRUE, host);
 	}
-	
+
 #ifdef ME
 	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
 	if (peer_cfg->is_mediation(peer_cfg))
@@ -109,7 +109,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		}
 	}
 #endif /* ME */
-	
+
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		switch (child_sa->get_state(child_sa))
@@ -144,7 +144,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 	/* set threads active IKE_SA after checkin */
 	charon->bus->set_sa(charon->bus, this->ike_sa);
-	
+
 	/* we always return failed to delete the obsolete IKE_SA */
 	return FAILED;
 }
@@ -187,10 +187,10 @@ ike_reauth_t *ike_reauth_create(ike_sa_t *ike_sa)
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
-	
+
 	this->ike_sa = ike_sa;
 	this->ike_delete = ike_delete_create(ike_sa, TRUE);
-	
+
 	return &this->public;
 }
 

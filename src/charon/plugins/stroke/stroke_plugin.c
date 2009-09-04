@@ -29,7 +29,7 @@ struct private_stroke_plugin_t {
 	 * public functions
 	 */
 	stroke_plugin_t public;
-	
+
 	/**
 	 * stroke socket, receives strokes
 	 */
@@ -51,9 +51,9 @@ static void destroy(private_stroke_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_stroke_plugin_t *this = malloc_thing(private_stroke_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->socket = stroke_socket_create();
 	if (this->socket == NULL)
 	{

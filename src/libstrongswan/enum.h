@@ -98,7 +98,7 @@ struct enum_name_t {
  *
  * This is a convenience macro to use when a enum_name list contains only
  * one range, and is equal as defining ENUM_BEGIN followed by ENUM_END.
- * 
+ *
  * @param name	name of the enum_name list
  * @param first	enum value of the first enum string
  * @param last	enum value of the last enum string
@@ -109,7 +109,7 @@ struct enum_name_t {
 /**
  * printf hook function for enum_names_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    enum_names_t *names, int value
  */
 int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,

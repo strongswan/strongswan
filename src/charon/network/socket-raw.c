@@ -85,12 +85,12 @@ struct private_socket_t{
 	  * port used for nat-t
 	  */
 	 int natt_port;
-	 
+
 	 /**
 	  * raw receiver socket for IPv4
 	  */
 	 int recv4;
-	 
+
 	 /**
 	  * raw receiver socket for IPv6
 	  */
@@ -132,7 +132,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	fd_set rfds;
 
 	FD_ZERO(&rfds);
-	
+
 	if (this->recv4)
 	{
 		FD_SET(this->recv4, &rfds);
@@ -141,9 +141,9 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	{
 		FD_SET(this->recv6, &rfds);
 	}
-	
+
 	DBG2(DBG_NET, "waiting for data on raw sockets");
-	
+
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	if (select(max(this->recv4, this->recv6) + 1, &rfds, NULL, NULL, NULL) <= 0)
 	{
@@ -151,14 +151,14 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		return FAILED;
 	}
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (this->recv4 && FD_ISSET(this->recv4, &rfds))
 	{
 		/* IPv4 raw sockets return the IP header. We read src/dest
 		 * information directly from the raw header */
 		struct iphdr *ip;
 		struct sockaddr_in src, dst;
-		
+
 		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
 		if (bytes_read < 0)
 		{
@@ -166,7 +166,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
-		
+
 		/* read source/dest from raw IP/UDP header */
 		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
 		{
@@ -184,13 +184,13 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		dst.sin_port = udp->dest;
 		source = host_create_from_sockaddr((sockaddr_t*)&src);
 		dest = host_create_from_sockaddr((sockaddr_t*)&dst);
-		
+
 		pkt = packet_create();
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
-		/* remove non esp marker */	
+		/* remove non esp marker */
 		if (dest->get_port(dest) == IKEV2_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
@@ -210,7 +210,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		struct sockaddr_in6 src, dst;
 		struct iovec iov;
 		char ancillary[64];
-		
+
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
@@ -220,7 +220,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		msg.msg_control = ancillary;
 		msg.msg_controllen = sizeof(ancillary);
 		msg.msg_flags = 0;
-		
+
 		bytes_read = recvmsg(this->recv6, &msg, 0);
 		if (bytes_read < 0)
 		{
@@ -228,14 +228,14 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
-		
+
 		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
 		{
 			DBG3(DBG_NET, "received IPv6 packet too short (%d bytes)",
 				 bytes_read);
 			return FAILED;
 		}
-		
+
 		/* read ancillary data to get destination address */
 		for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL;
 			 cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
@@ -244,13 +244,13 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			{
 				DBG1(DBG_NET, "error reading IPv6 ancillary data");
 				return FAILED;
-			}	
+			}
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
 				cmsgptr->cmsg_type == IPV6_2292PKTINFO)
 			{
 				struct in6_pktinfo *pktinfo;
 				pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsgptr);
-				
+
 				memset(&dst, 0, sizeof(dst));
 				memcpy(&dst.sin6_addr, &pktinfo->ipi6_addr, sizeof(dst.sin6_addr));
 				dst.sin6_family = AF_INET6;
@@ -266,15 +266,15 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			DBG1(DBG_NET, "error reading IPv6 packet header");
 			return FAILED;
 		}
-		
+
 		source = host_create_from_sockaddr((sockaddr_t*)&src);
-		
+
 		pkt = packet_create();
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
-		/* remove non esp marker */	
+		/* remove non esp marker */
 		if (dest->get_port(dest) == IKEV2_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
@@ -290,7 +290,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		/* oops, shouldn't happen */
 		return FAILED;
 	}
-	
+
 	/* return packet */
 	*packet = pkt;
 	return SUCCESS;
@@ -308,13 +308,13 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	struct iovec iov;
-	
+
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
 	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
-	
+
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
@@ -362,7 +362,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 		DBG1(DBG_NET, "unable to locate a send socket for port %d", sport);
 		return FAILED;
 	}
-	
+
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_name = dst->get_sockaddr(dst);;
 	msg.msg_namelen = *dst->get_sockaddr_len(dst);
@@ -371,7 +371,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_flags = 0;
-	
+
 	if (!src->is_anyaddr(src))
 	{
 		if (family == AF_INET)
@@ -379,7 +379,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
 			struct in_pktinfo *pktinfo;
 			struct sockaddr_in *sin;
-			
+
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
@@ -396,7 +396,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 			struct in6_pktinfo *pktinfo;
 			struct sockaddr_in6 *sin;
-			
+
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
@@ -409,7 +409,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
 		}
 	}
-	
+
 	bytes_sent = sendmsg(skt, &msg, 0);
 
 	if (bytes_sent != data.len)
@@ -430,7 +430,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	struct sockaddr_storage addr;
 	u_int sol;
 	int skt;
-	
+
 	memset(&addr, 0, sizeof(addr));
 	/* precalculate constants depending on address family */
 	switch (family)
@@ -456,14 +456,14 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		default:
 			return 0;
 	}
-	
+
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
 		DBG1(DBG_NET, "could not open send socket: %s", strerror(errno));
 		return 0;
 	}
-	
+
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
 		DBG1(DBG_NET, "unable to set SO_REUSEADDR on send socket: %s",
@@ -471,7 +471,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		close(skt);
 		return 0;
 	}
-	
+
 	/* bind the send socket */
 	if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
@@ -480,7 +480,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		close(skt);
 		return 0;
 	}
-	
+
 	if (family == AF_INET)
 	{
 		/* enable UDP decapsulation globally, only for one socket needed */
@@ -490,7 +490,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 				 strerror(errno));
 		}
 	}
-	
+
 	return skt;
 }
 
@@ -502,7 +502,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	int skt;
 	int on = TRUE;
 	u_int proto_offset, ip_len, sol, udp_header, ike_header;
-	
+
 	/* precalculate constants depending on address family */
 	switch (family)
 	{
@@ -521,7 +521,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	}
 	udp_header = ip_len;
 	ike_header = ip_len + UDP_LEN;
-	
+
 	/* This filter code filters out all non-IKEv2 traffic on
 	 * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
 	 * IKE versions is done in pluto.
@@ -560,7 +560,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 		sizeof(ikev2_filter_code) / sizeof(struct sock_filter),
 		ikev2_filter_code
 	};
-	
+
 	/* set up a raw socket */
 	skt = socket(family, SOCK_RAW, IPPROTO_UDP);
 	if (skt < 0)
@@ -568,7 +568,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 		DBG1(DBG_NET, "unable to create raw socket: %s", strerror(errno));
 		return 0;
 	}
-	
+
 	if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER,
 				   &ikev2_filter, sizeof(ikev2_filter)) < 0)
 	{
@@ -577,7 +577,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 		close(skt);
 		return 0;
 	}
-	
+
 	if (family == AF_INET6 &&
 		/* we use IPV6_2292PKTINFO, as IPV6_PKTINFO is defined as
 		 * 2 or 50 depending on kernel header version */
@@ -588,7 +588,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 		close(skt);
 		return 0;
 	}
-	
+
 	return skt;
 }
 
@@ -621,7 +621,7 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 		{ offsetof(private_socket_t, send4_natt), AF_INET, IKEV2_NATT_PORT },
 		{ offsetof(private_socket_t, send6_natt), AF_INET6, IKEV2_NATT_PORT }
 	};
-	
+
 	while(++this->index < countof(sockets))
 	{
 		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
@@ -643,7 +643,7 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 static enumerator_t *create_enumerator(private_socket_t *this)
 {
 	socket_enumerator_t *enumerator;
-	
+
 	enumerator = malloc_thing(socket_enumerator_t);
 	enumerator->index = -1;
 	enumerator->socket = this;
@@ -690,20 +690,20 @@ static void destroy(private_socket_t *this)
 socket_t *socket_create()
 {
 	private_socket_t *this = malloc_thing(private_socket_t);
-	
+
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
 	this->public.create_enumerator = (enumerator_t*(*)(socket_t*))create_enumerator;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
-	
+
 	this->recv4 = 0;
 	this->recv6 = 0;
 	this->send4 = 0;
 	this->send6 = 0;
 	this->send4_natt = 0;
 	this->send6_natt = 0;
-	
+
 	this->recv4 = open_recv_socket(this, AF_INET);
 	if (this->recv4 == 0)
 	{
@@ -726,7 +726,7 @@ socket_t *socket_create()
 			}
 		}
 	}
-	
+
 	this->recv6 = open_recv_socket(this, AF_INET6);
 	if (this->recv6 == 0)
 	{
@@ -749,13 +749,13 @@ socket_t *socket_create()
 			}
 		}
 	}
-	
+
 	if (!(this->send4 || this->send6) || !(this->recv4 || this->recv6))
 	{
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
 		charon->kill(charon, "socket initialization failed");
 	}
-	
+
 	return (socket_t*)this;
 }

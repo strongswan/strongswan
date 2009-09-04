@@ -47,11 +47,11 @@ static void destroy(private_fips_prf_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_fips_prf_plugin_t *this = malloc_thing(private_fips_prf_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160,
 						 (prf_constructor_t)fips_prf_create);
-	
+
 	return &this->public.plugin;
 }

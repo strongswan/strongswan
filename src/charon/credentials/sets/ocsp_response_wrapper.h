@@ -35,7 +35,7 @@ struct ocsp_response_wrapper_t {
 	 * implements credential_set_t
 	 */
 	credential_set_t set;
-		
+
 	/**
      * Destroy a ocsp_response_wrapper instance.
      */

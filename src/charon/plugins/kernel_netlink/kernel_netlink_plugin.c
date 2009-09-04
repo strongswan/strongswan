@@ -49,11 +49,11 @@ static void destroy(private_kernel_netlink_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_kernel_netlink_plugin_t *this = malloc_thing(private_kernel_netlink_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
 	charon->kernel_interface->add_net_interface(charon->kernel_interface, (kernel_net_constructor_t)kernel_netlink_net_create);
-	
+
 	return &this->public.plugin;
 }

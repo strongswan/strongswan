@@ -29,7 +29,7 @@ typedef struct listener_t listener_t;
  * Listener interface, listens to events if registered to the bus.
  */
 struct listener_t {
-	
+
 	/**
 	 * Log a debugging message.
 	 *
@@ -48,7 +48,7 @@ struct listener_t {
 	 */
 	bool (*log)(listener_t *this, debug_t group, level_t level, int thread,
 				ike_sa_t *ike_sa, char* format, va_list args);
-	
+
 	/**
 	 * Hook called if a critical alert is risen.
 	 *
@@ -59,7 +59,7 @@ struct listener_t {
 	 */
 	bool (*alert)(listener_t *this, ike_sa_t *ike_sa,
 				  alert_t alert, va_list args);
-	
+
 	/**
 	 * Handle state changes in an IKE_SA.
 	 *
@@ -69,7 +69,7 @@ struct listener_t {
 	 */
 	bool (*ike_state_change)(listener_t *this, ike_sa_t *ike_sa,
 							 ike_sa_state_t state);
-	
+
 	/**
 	 * Handle state changes in a CHILD_SA.
 	 *
@@ -80,7 +80,7 @@ struct listener_t {
 	 */
 	bool (*child_state_change)(listener_t *this, ike_sa_t *ike_sa,
 							   child_sa_t *child_sa, child_sa_state_t state);
-	
+
 	/**
 	 * Hook called for received/sent messages of an IKE_SA.
 	 *
@@ -91,7 +91,7 @@ struct listener_t {
 	 */
 	bool (*message)(listener_t *this, ike_sa_t *ike_sa, message_t *message,
 					bool incoming);
-	
+
 	/**
 	 * Hook called with IKE_SA key material.
 	 *
@@ -104,7 +104,7 @@ struct listener_t {
 	 */
 	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
 					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
-	
+
 	/**
 	 * Hook called with CHILD_SA key material.
 	 *
@@ -117,7 +117,7 @@ struct listener_t {
 	 */
 	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
-	
+
 	/**
 	 * Hook called if an IKE_SA gets up or down.
 	 *
@@ -126,7 +126,7 @@ struct listener_t {
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*ike_updown)(listener_t *this, ike_sa_t *ike_sa, bool up);
-	
+
 	/**
 	 * Hook called when an IKE_SA gets rekeyed.
 	 *
@@ -135,7 +135,7 @@ struct listener_t {
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*ike_rekey)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
-	
+
 	/**
 	 * Hook called when a CHILD_SA gets up or down.
 	 *
@@ -146,7 +146,7 @@ struct listener_t {
 	 */
 	bool (*child_updown)(listener_t *this, ike_sa_t *ike_sa,
 						 child_sa_t *child_sa, bool up);
-	
+
 	/**
 	 * Hook called when an CHILD_SA gets rekeyed.
 	 *
@@ -157,7 +157,7 @@ struct listener_t {
 	 */
 	bool (*child_rekey)(listener_t *this, ike_sa_t *ike_sa,
 						child_sa_t *old, child_sa_t *new);
-	
+
 	/**
 	 * Hook called to invoke additional authorization rules.
 	 *

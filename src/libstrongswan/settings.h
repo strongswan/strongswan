@@ -63,7 +63,7 @@ struct settings_t {
 	 * @return			value pointing to internal string
 	 */
 	char* (*get_str)(settings_t *this, char *key, char *def, ...);
-	
+
 	/**
 	 * Get a boolean yes|no, true|false value.
 	 *
@@ -73,7 +73,7 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	bool (*get_bool)(settings_t *this, char *key, bool def, ...);
-	
+
 	/**
 	 * Get an integer value.
 	 *
@@ -83,7 +83,7 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	int (*get_int)(settings_t *this, char *key, int def, ...);
-	
+
 	/**
 	 * Get a time value.
 	 *
@@ -93,7 +93,7 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
-	
+
 	/**
 	 * Create an enumerator over subsection names of a section.
 	 *

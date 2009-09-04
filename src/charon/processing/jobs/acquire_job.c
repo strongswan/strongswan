@@ -28,17 +28,17 @@ struct private_acquire_job_t {
 	 * Public acquire_job_t interface.
 	 */
 	acquire_job_t public;
-	
+
 	/**
 	 * reqid of the child to rekey
 	 */
 	u_int32_t reqid;
-	
+
 	/**
 	 * acquired source traffic selector
 	 */
 	traffic_selector_t *src_ts;
-	
+
 	/**
 	 * acquired destination traffic selector
 	 */
@@ -73,14 +73,14 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 								  traffic_selector_t *dst_ts)
 {
 	private_acquire_job_t *this = malloc_thing(private_acquire_job_t);
-	
+
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-	
+
 	this->reqid = reqid;
 	this->src_ts = src_ts;
 	this->dst_ts = dst_ts;
-	
+
 	return &this->public;
 }
 

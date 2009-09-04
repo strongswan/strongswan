@@ -29,7 +29,7 @@ typedef struct xcbc_signer_t xcbc_signer_t;
  * Implementation of signer_t based on CBC symmetric cypher. XCBC, RFC3566.
  */
 struct xcbc_signer_t {
-	
+
 	/**
 	 * generic signer_t interface for this signer
 	 */

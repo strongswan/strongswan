@@ -109,7 +109,7 @@ find_host_pair(const ip_address *myaddr, u_int16_t myport
 	/* default hisaddr to an appropriate any */
 	if (hisaddr == NULL)
 		hisaddr = aftoinfo(addrtypeof(myaddr))->any;
-		
+
 	if (nat_traversal_enabled)
 	{
 		/**
@@ -1011,7 +1011,7 @@ add_connection(const whack_message_t *wm)
 				loglog(RC_LOG_SERIOUS, "esp string error");
 			}
 		}
-		
+
 		if (wm->ike)
 		{
 			DBG(DBG_CONTROL,
@@ -1038,7 +1038,7 @@ add_connection(const whack_message_t *wm)
 				loglog(RC_LOG_SERIOUS, "ike string error:");
 			}
 		}
-		
+
 		c->sa_ike_life_seconds = wm->sa_ike_life_seconds;
 		c->sa_ipsec_life_seconds = wm->sa_ipsec_life_seconds;
 		c->sa_rekey_margin = wm->sa_rekey_margin;
@@ -1213,7 +1213,7 @@ add_group_instance(struct connection *group, const ip_subnet *target)
 		if (t->spd.that.virt)
 		{
 			DBG_log("virtual_ip not supported in group instance");
-			t->spd.that.virt = NULL;    
+			t->spd.that.virt = NULL;
 		}
 
 		/* add to connections list */
@@ -2356,7 +2356,7 @@ initiate_opportunistic_body(struct find_oppo_bundle *b
 		DBG(DBG_CONTROL, DBG_log("creating new instance from \"%s\"%s"
 								 , c->name
 								 , (fmt_conn_instance(c, cib), cib)));
-								
+
 
 		idtoa(&sr->this.id, mycredentialstr, sizeof(mycredentialstr));
 
@@ -3012,7 +3012,7 @@ ISAKMP_SA_established(struct connection *c, so_serial_t serial)
 	 */
 	if (!isanyaddr(&c->spd.that.host_srcip) && !c->spd.that.has_natip)
 		c->spd.that.modecfg = TRUE;
-		
+
 	if (uniqueIDs)
 	{
 		/* for all connections: if the same Phase 1 IDs are used
@@ -4037,7 +4037,7 @@ show_connections_status(bool all, const char *name)
 			if (c->spd.that.groups != NULL)
 			{
 				char buf[BUF_LEN];
-		
+
 				format_groups(c->spd.that.groups, buf, BUF_LEN);
 				whack_log(RC_COMMENT
 					, "\"%s\"%s:   groups: %s"
@@ -4058,7 +4058,7 @@ show_connections_status(bool all, const char *name)
 				, (unsigned long) c->sa_keying_tries);
 
 			/* show DPD parameters if defined */
-		
+
 			if (c->dpd_action != DPD_ACTION_NONE)
 				whack_log(RC_COMMENT
 					, "\"%s\"%s:   dpd_action: %N;"
@@ -4095,7 +4095,7 @@ show_connections_status(bool all, const char *name)
 			, instance
 			, c->newest_isakmp_sa
 			, c->newest_ipsec_sa);
-			
+
 		if (all)
 		{
 			ike_alg_show_connection(c, instance);

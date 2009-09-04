@@ -25,14 +25,14 @@ typedef struct private_ke_payload_t private_ke_payload_t;
 
 /**
  * Private data of an ke_payload_t object.
- * 
+ *
  */
 struct private_ke_payload_t {
 	/**
 	 * Public ke_payload_t interface.
 	 */
 	ke_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -42,17 +42,17 @@ struct private_ke_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-		
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * DH Group Number.
 	 */
 	u_int16_t dh_group_number;
-	
+
 	/**
 	 * Key Exchange Data of this KE payload.
 	 */
@@ -61,30 +61,30 @@ struct private_ke_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-KE Payload.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_ke_payload_t.
- * 
+ *
  */
 encoding_rule_t ke_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_ke_payload_t, next_payload) 		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_ke_payload_t, critical) 			},	
+	{ FLAG,				offsetof(private_ke_payload_t, critical) 			},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_ke_payload_t, payload_length) 		},	
+	{ PAYLOAD_LENGTH,	offsetof(private_ke_payload_t, payload_length) 		},
 	/* DH Group number as 16 bit field*/
 	{ U_INT_16,			offsetof(private_ke_payload_t, dh_group_number) 	},
-	{ RESERVED_BYTE,	0 													}, 
-	{ RESERVED_BYTE,	0 													}, 
+	{ RESERVED_BYTE,	0 													},
+	{ RESERVED_BYTE,	0 													},
 	/* Key Exchange Data is from variable size */
 	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data)}
 };
@@ -166,7 +166,7 @@ static void compute_length(private_ke_payload_t *this)
 	if (this->key_exchange_data.ptr != NULL)
 	{
 		length += this->key_exchange_data.len;
-	}	
+	}
 	this->payload_length = length;
 }
 
@@ -199,9 +199,9 @@ static void set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchan
 		free(this->key_exchange_data.ptr);
 		this->key_exchange_data.ptr = NULL;
 		this->key_exchange_data.len = 0;
-		
+
 	}
-	
+
 	this->key_exchange_data = chunk_clone(key_exchange_data);
 	compute_length(this);
 }
@@ -244,7 +244,7 @@ ke_payload_t *ke_payload_create()
 	this->public.get_dh_group_number = (diffie_hellman_group_t (*) (ke_payload_t *)) get_dh_group_number;
 	this->public.set_dh_group_number =(void (*) (ke_payload_t *,diffie_hellman_group_t)) set_dh_group_number;
 	this->public.destroy = (void (*) (ke_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -261,10 +261,10 @@ ke_payload_t *ke_payload_create()
 ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *dh)
 {
 	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create();
-	
+
 	dh->get_my_public_value(dh, &this->key_exchange_data);
 	this->dh_group_number = dh->get_dh_group(dh);
 	compute_length(this);
-	
+
 	return &this->public;
 }

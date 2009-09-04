@@ -44,21 +44,21 @@ struct database_factory_t {
 	 * @return			database_t instance, NULL if not supported/failed
 	 */
 	database_t* (*create)(database_factory_t *this, char *uri);
-	
+
 	/**
 	 * Register a database constructor.
 	 *
 	 * @param create	database constructor to register
 	 */
 	void (*add_database)(database_factory_t *this, database_constructor_t create);
-	
+
 	/**
 	 * Unregister a previously registered database constructor.
 	 *
 	 * @param create	database constructor to unregister
 	 */
 	void (*remove_database)(database_factory_t *this, database_constructor_t create);
-	
+
 	/**
      * Destroy a database_factory instance.
      */

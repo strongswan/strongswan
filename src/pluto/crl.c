@@ -56,7 +56,7 @@ static const asn1Object_t crlObjects[] = {
 	{ 2,     "version",					ASN1_INTEGER,      ASN1_OPT |
 														   ASN1_BODY }, /*  2 */
 	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /*  3 */
-	{ 2,     "signature",				ASN1_EOC,          ASN1_RAW  }, /*  4 */	
+	{ 2,     "signature",				ASN1_EOC,          ASN1_RAW  }, /*  4 */
 	{ 2,     "issuer",					ASN1_SEQUENCE,     ASN1_OBJ  }, /*  5 */
 	{ 2,     "thisUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  6 */
 	{ 2,     "nextUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  7 */
@@ -292,7 +292,7 @@ bool insert_crl(x509crl_t *crl, chunk_t crl_uri, bool cache_crl)
 		char digest_buf[HASH_SIZE_SHA1];
 		chunk_t subjectKeyID = chunk_from_buf(digest_buf);
 		bool has_keyID;
-		
+
 		if (issuer_cert->subjectKeyID.ptr == NULL)
 		{
 			has_keyID = compute_subjectKeyID(issuer_cert, subjectKeyID);
@@ -343,7 +343,7 @@ void load_crls(void)
 			{
 				char *filename = filelist[n]->d_name;
 				x509crl_t *crl;
-				
+
 				crl = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 						CERT_PLUTO_CRL, BUILD_FROM_FILE, filename, BUILD_END);
 				if (crl)
@@ -520,7 +520,7 @@ check_revocation(const x509crl_t *crl, chunk_t serial
 
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
-	
+
 	DBG(DBG_CONTROL,
 		DBG_dump_chunk("serial number:", serial)
 	)
@@ -649,7 +649,7 @@ verify_by_crl(const x509cert_t *cert, time_t *until, time_t *revocationDate
 				, crl->authKeyID, AUTH_CA);
 		valid = x509_check_signature(crl->tbsCertList, crl->signature,
 									 crl->algorithm, issuer_cert);
-		
+
 		unlock_authcert_list("verify_by_crl");
 
 		if (valid)

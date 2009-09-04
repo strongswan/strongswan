@@ -33,7 +33,7 @@ struct job_t {
 
 	/**
 	 * Execute a job.
-	 * 
+	 *
 	 * The processing facility executes a job using this method. Jobs are
 	 * one-shot, they destroy themself after execution, so don't use a job
 	 * once it has been executed.

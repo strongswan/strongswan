@@ -127,7 +127,7 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 	};
-	
+
 	if (attach_gdb)
 	{
 		argc = 0;
@@ -163,7 +163,7 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			{
 				break;
 			}
-		
+
 			/* get next */
 			pos = strchr(pos, ',');
 			if (pos)

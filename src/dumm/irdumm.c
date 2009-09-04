@@ -26,10 +26,10 @@ int main(int argc, char *argv[])
 {
 	int state, i;
 	char buf[512];
-	
+
 	ruby_init();
 	ruby_init_loadpath();
-	
+
 	rb_eval_string_protect("require 'dumm' and include Dumm", &state);
 	if (state)
 	{
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 	{
 		rb_p(ruby_errinfo);
 	}
-	
+
 	ruby_finalize();
 	return 0;
 }

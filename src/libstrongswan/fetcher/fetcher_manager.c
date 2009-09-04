@@ -30,12 +30,12 @@ struct private_fetcher_manager_t {
 	 * public functions
 	 */
 	fetcher_manager_t public;
-	
+
 	/**
 	 * list of registered fetchers, as entry_t
 	 */
 	linked_list_t *fetchers;
-	
+
 	/**
 	 * read write lock to list
 	 */
@@ -68,7 +68,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 	status_t status = NOT_SUPPORTED;
 	entry_t *entry;
 	bool capable = FALSE;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->fetchers->create_enumerator(this->fetchers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -119,7 +119,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 			fetcher->destroy(fetcher);
 			continue;
 		}
-		
+
 		status = fetcher->fetch(fetcher, url, response);
 		fetcher->destroy(fetcher);
 		/* try another fetcher only if this one does not support that URL */
@@ -142,11 +142,11 @@ static status_t fetch(private_fetcher_manager_t *this,
 /**
  * Implementation of fetcher_manager_t.add_fetcher.
  */
-static void add_fetcher(private_fetcher_manager_t *this,	
+static void add_fetcher(private_fetcher_manager_t *this,
 						fetcher_constructor_t create, char *url)
 {
 	entry_t *entry = malloc_thing(entry_t);
-	
+
 	entry->url = strdup(url);
 	entry->create = create;
 
@@ -163,7 +163,7 @@ static void remove_fetcher(private_fetcher_manager_t *this,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->fetchers->create_enumerator(this->fetchers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -194,15 +194,15 @@ static void destroy(private_fetcher_manager_t *this)
 fetcher_manager_t *fetcher_manager_create()
 {
 	private_fetcher_manager_t *this = malloc_thing(private_fetcher_manager_t);
-	
+
 	this->public.fetch = (status_t(*)(fetcher_manager_t*, char *url, chunk_t *response, ...))fetch;
 	this->public.add_fetcher = (void(*)(fetcher_manager_t*, fetcher_constructor_t,char*))add_fetcher;
 	this->public.remove_fetcher = (void(*)(fetcher_manager_t*, fetcher_constructor_t))remove_fetcher;
 	this->public.destroy = (void(*)(fetcher_manager_t*))destroy;
-	
+
 	this->fetchers = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

@@ -52,7 +52,7 @@ extern enum_name_t *config_type_names;
 
 /**
  * Class representing an IKEv2-CP Payload.
- * 
+ *
  * The CP Payload format is described in RFC section 3.15.
  */
 struct cp_payload_t {
@@ -60,41 +60,41 @@ struct cp_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Creates an iterator of stored configuration_attribute_t objects.
-	 * 
+	 *
 	 * When deleting an attribute using this iterator, the length of this
 	 * configuration_attribute_t has to be refreshed by calling get_length()!
 	 *
 	 * @return				created iterator_t object
 	 */
 	iterator_t *(*create_attribute_iterator) (cp_payload_t *this);
-	
+
 	/**
 	 * Adds a configuration_attribute_t object to this object.
-	 * 
+	 *
 	 * The added configuration_attribute_t object is getting destroyed in
 	 * destroy function of cp_payload_t.
 	 *
 	 * @param attribute		configuration_attribute_t object to add
 	 */
 	void (*add_configuration_attribute) (cp_payload_t *this, configuration_attribute_t *attribute);
-	
+
 	/**
 	 * Set the config type.
 	 *
 	 * @param config_type	config_type_t to set
 	 */
 	void (*set_config_type) (cp_payload_t *this,config_type_t config_type);
-	
+
 	/**
 	 * Get the config type.
 	 *
 	 * @return				config_type_t
 	 */
 	config_type_t (*get_config_type) (cp_payload_t *this);
-	
+
 	/**
 	 * Destroys an cp_payload_t object.
 	 */
@@ -103,7 +103,7 @@ struct cp_payload_t {
 
 /**
  * Creates an empty cp_payload_t object
- * 
+ *
  * @return cp_payload_t object
  */
 cp_payload_t *cp_payload_create(void);

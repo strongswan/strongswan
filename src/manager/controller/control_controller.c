@@ -33,7 +33,7 @@ struct private_control_controller_t {
 	 * public functions
 	 */
 	control_controller_t public;
-	
+
 	/**
 	 * manager instance
 	 */
@@ -50,7 +50,7 @@ static void handle_result(private_control_controller_t *this, request_t *r,
 	xml_t *xml;
 	char *name, *value;
 	int num = 0;
-	
+
 	if (e)
 	{
 		while (e->enumerate(e, &xml, &name, &value))
@@ -113,7 +113,7 @@ static void terminate(private_control_controller_t *this, request_t *r,
 {
 	gateway_t *gateway;
 	enumerator_t *e;
-	
+
 	r->setf(r, "title=Terminate %s SA %d", ike ? "IKE" : "CHILD", id);
 	gateway = this->manager->select_gateway(this->manager, 0);
 	e = gateway->terminate(gateway, ike, id);
@@ -145,7 +145,7 @@ static void handle(private_control_controller_t *this,
 	if (action)
 	{
 		u_int32_t id;
-	
+
 		if (streq(action, "terminateike"))
 		{
 			if (str && (id = atoi(str)))
@@ -196,9 +196,9 @@ controller_t *control_controller_create(context_t *context, void *param)
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-	
+
 	this->manager = (manager_t*)context;
-	
+
 	return &this->public.controller;
 }
 

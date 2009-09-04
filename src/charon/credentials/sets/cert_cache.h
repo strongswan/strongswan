@@ -39,7 +39,7 @@ struct cert_cache_t {
 	 * Implements credential_set_t.
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Caching wrapper around certificate_t.issued_by.
 	 *
@@ -49,14 +49,14 @@ struct cert_cache_t {
 	 */
 	bool (*issued_by)(cert_cache_t *this,
 					  certificate_t *subject, certificate_t *issuer);
-	
+
 	/**
 	 * Flush the certificate cache.
 	 *
 	 * @param type			type of certificate to flush, or CERT_ANY
 	 */
 	void (*flush)(cert_cache_t *this, certificate_type_t type);
-		
+
 	/**
 	 * Destroy a cert_cache instance.
 	 */

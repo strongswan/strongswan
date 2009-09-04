@@ -50,12 +50,12 @@ static void destroy(private_xcbc_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_xcbc_plugin_t *this = malloc_thing(private_xcbc_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
-	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC, 
+
+	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,
 						 (prf_constructor_t)xcbc_prf_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96, 
+	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96,
 							(signer_constructor_t)xcbc_signer_create);
 
 	return &this->public.plugin;

@@ -114,7 +114,7 @@ extern enum_name_t *unique_policy_names;
  * to gain access to the configuration.
  */
 struct peer_cfg_t {
-	
+
 	/**
 	 * Get the name of the peer_cfg.
 	 *
@@ -123,42 +123,42 @@ struct peer_cfg_t {
 	 * @return				peer_cfg's name
 	 */
 	char* (*get_name) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get the IKE version to use for initiating.
 	 *
 	 * @return 				IKE major version
 	 */
 	u_int (*get_ike_version)(peer_cfg_t *this);
-	
+
 	/**
 	 * Get the IKE config to use for initiaton.
 	 *
 	 * @return				the IKE config to use
 	 */
 	ike_cfg_t* (*get_ike_cfg) (peer_cfg_t *this);
-	
+
 	/**
 	 * Attach a CHILD config.
 	 *
 	 * @param child_cfg		CHILD config to add
 	 */
 	void (*add_child_cfg) (peer_cfg_t *this, child_cfg_t *child_cfg);
-	
+
 	/**
 	 * Detach a CHILD config, pointed to by an enumerator.
 	 *
 	 * @param enumerator	enumerator indicating element position
 	 */
 	void (*remove_child_cfg)(peer_cfg_t *this, enumerator_t *enumerator);
-	
+
 	/**
 	 * Create an enumerator for all attached CHILD configs.
 	 *
 	 * @return				an enumerator over all CHILD configs.
 	 */
 	enumerator_t* (*create_child_cfg_enumerator) (peer_cfg_t *this);
-	
+
 	/**
 	 * Select a CHILD config from traffic selectors.
 	 *
@@ -171,7 +171,7 @@ struct peer_cfg_t {
 	child_cfg_t* (*select_child_cfg) (peer_cfg_t *this, linked_list_t *my_ts,
 									  linked_list_t *other_ts, host_t *my_host,
 									  host_t *other_host);
-	
+
 	/**
 	 * Add an authentication config to the peer configuration.
 	 *
@@ -179,7 +179,7 @@ struct peer_cfg_t {
 	 * @param local			TRUE for local rules, FALSE for remote constraints
 	 */
 	void (*add_auth_cfg)(peer_cfg_t *this, auth_cfg_t *cfg, bool local);
-	
+
 	/**
 	 * Create an enumerator over registered authentication configs.
 	 *
@@ -201,49 +201,49 @@ struct peer_cfg_t {
 	 * @return			unique policy
 	 */
 	unique_policy_t (*get_unique_policy) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get the max number of retries after timeout.
 	 *
 	 * @return			max number retries
 	 */
 	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get a time to start rekeying (is randomized with jitter).
 	 *
 	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
 	u_int32_t (*get_rekey_time)(peer_cfg_t *this);
-	
+
 	/**
 	 * Get a time to start reauthentication (is randomized with jitter).
 	 *
 	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
 	u_int32_t (*get_reauth_time)(peer_cfg_t *this);
-	
+
 	/**
 	 * Get the timeout of a rekeying/reauthenticating SA.
 	 *
 	 * @return			timeout in s
 	 */
 	u_int32_t (*get_over_time)(peer_cfg_t *this);
-	
+
 	/**
 	 * Use MOBIKE (RFC4555) if peer supports it?
 	 *
 	 * @return			TRUE to enable MOBIKE support
 	 */
 	bool (*use_mobike) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get the DPD check interval.
 	 *
 	 * @return			dpd_delay in seconds
 	 */
 	u_int32_t (*get_dpd) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get a virtual IP for the local peer.
 	 *
@@ -255,14 +255,14 @@ struct peer_cfg_t {
 	 * @return				virtual IP, %any or NULL
 	 */
 	host_t* (*get_virtual_ip) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get the name of the pool to acquire configuration attributes from.
 	 *
 	 * @return				pool name, NULL if none defined
 	 */
 	char* (*get_pool)(peer_cfg_t *this);
-	
+
 #ifdef ME
 	/**
 	 * Is this a mediation connection?
@@ -270,14 +270,14 @@ struct peer_cfg_t {
 	 * @return				TRUE, if this is a mediation connection
 	 */
 	bool (*is_mediation) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get peer_cfg of the connection this one is mediated through.
 	 *
 	 * @return				the peer_cfg of the mediation connection
 	 */
 	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
-	
+
 	/**
 	 * Get the id of the other peer at the mediation server.
 	 *
@@ -300,14 +300,14 @@ struct peer_cfg_t {
 	 * @return				TRUE if peer_cfg and ike_cfg are equal
 	 */
 	bool (*equals)(peer_cfg_t *this, peer_cfg_t *other);
-	
+
 	/**
 	 * Increase reference count.
 	 *
 	 * @return				reference to this
 	 */
 	peer_cfg_t* (*get_ref) (peer_cfg_t *this);
-	
+
 	/**
 	 * Destroys the peer_cfg object.
 	 *

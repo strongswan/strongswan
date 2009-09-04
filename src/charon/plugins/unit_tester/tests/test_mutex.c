@@ -46,7 +46,7 @@ static void* run(void* null)
 		if (locked > 1)
 		{
 			failed = TRUE;
-		}	
+		}
 		locked--;
 		mutex->unlock(mutex);
 		mutex->unlock(mutex);
@@ -64,9 +64,9 @@ bool test_mutex()
 {
 	int i;
 	pthread_t threads[THREADS];
-	
+
 	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	
+
 	for (i = 0; i < 10; i++)
 	{
 		mutex->lock(mutex);
@@ -80,9 +80,9 @@ bool test_mutex()
 	{
 		mutex->unlock(mutex);
 	}
-	
+
 	pthread_barrier_init(&barrier, NULL, THREADS);
-	
+
 	for (i = 0; i < THREADS; i++)
 	{
 		pthread_create(&threads[i], NULL, run, NULL);
@@ -92,9 +92,9 @@ bool test_mutex()
 		pthread_join(threads[i], NULL);
 	}
 	pthread_barrier_destroy(&barrier);
-	
+
 	mutex->destroy(mutex);
-	
+
 	return !failed;
 }
 

@@ -32,14 +32,14 @@ typedef struct private_cp_payload_t private_cp_payload_t;
 
 /**
  * Private data of an cp_payload_t object.
- * 
+ *
  */
 struct private_cp_payload_t {
 	/**
 	 * Public cp_payload_t interface.
 	 */
 	cp_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -49,17 +49,17 @@ struct private_cp_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Configuration Attributes in this payload are stored in a linked_list_t.
 	 */
 	linked_list_t * attributes;
-	
+
 	/**
 	 * Config Type.
 	 */
@@ -68,32 +68,32 @@ struct private_cp_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-CP Payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_cp_payload_t.
- * 
+ *
  */
 encoding_rule_t cp_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,		offsetof(private_cp_payload_t, next_payload) 			},
 	/* the critical bit */
-	{ FLAG,			offsetof(private_cp_payload_t, critical) 				},	
+	{ FLAG,			offsetof(private_cp_payload_t, critical) 				},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole CP payload*/
-	{ PAYLOAD_LENGTH,		offsetof(private_cp_payload_t, payload_length) 	},	
-	/* Proposals are stored in a proposal substructure, 
+	{ PAYLOAD_LENGTH,		offsetof(private_cp_payload_t, payload_length) 	},
+	/* Proposals are stored in a proposal substructure,
 	   offset points to a linked_list_t pointer */
 	{ U_INT_8,		offsetof(private_cp_payload_t, config_type)				},
-	{ RESERVED_BYTE,0 														}, 
-	{ RESERVED_BYTE,0														}, 
-	{ RESERVED_BYTE,0														}, 	
+	{ RESERVED_BYTE,0 														},
+	{ RESERVED_BYTE,0														},
+	{ RESERVED_BYTE,0														},
 	{ CONFIGURATION_ATTRIBUTES,	offsetof(private_cp_payload_t, attributes)	}
 };
 
@@ -119,7 +119,7 @@ static status_t verify(private_cp_payload_t *this)
 	status_t status = SUCCESS;
 	iterator_t *iterator;
 	configuration_attribute_t *attribute;
-	
+
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
 	while(iterator->iterate(iterator, (void**)&attribute))
 	{
@@ -174,14 +174,14 @@ static void compute_length(private_cp_payload_t *this)
 	iterator_t *iterator;
 	payload_t *current_attribute;
 	size_t length = CP_PAYLOAD_HEADER_LENGTH;
-	
+
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
 	while (iterator->iterate(iterator, (void**)&current_attribute))
 	{
 		length += current_attribute->get_length(current_attribute);
 	}
 	iterator->destroy(iterator);
-	
+
 	this->payload_length = length;
 }
 
@@ -243,7 +243,7 @@ static void destroy(private_cp_payload_t *this)
 cp_payload_t *cp_payload_create()
 {
 	private_cp_payload_t *this = malloc_thing(private_cp_payload_t);
-	
+
 	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
@@ -252,14 +252,14 @@ cp_payload_t *cp_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.create_attribute_iterator = (iterator_t* (*) (cp_payload_t *)) create_attribute_iterator;
 	this->public.add_configuration_attribute = (void (*) (cp_payload_t *,configuration_attribute_t *)) add_configuration_attribute;
 	this->public.set_config_type = (void (*) (cp_payload_t *, config_type_t)) set_config_type;
 	this->public.get_config_type = (config_type_t (*) (cp_payload_t *)) get_config_type;
 	this->public.destroy = (void (*) (cp_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;

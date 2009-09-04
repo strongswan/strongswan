@@ -33,14 +33,14 @@ struct element_t {
 
 	/**
 	 * Previous list element.
-	 * 
+	 *
 	 * NULL if first element in list.
 	 */
 	element_t *previous;
-	
+
 	/**
 	 * Next list element.
-	 * 
+	 *
 	 * NULL if last element in list.
 	 */
 	element_t *next;
@@ -52,11 +52,11 @@ struct element_t {
 element_t *element_create(void *value)
 {
 	element_t *this = malloc_thing(element_t);
-	
+
 	this->previous = NULL;
 	this->next = NULL;
 	this->value = value;
-	
+
 	return (this);
 }
 
@@ -83,7 +83,7 @@ struct private_linked_list_t {
 	 * NULL if no elements in list.
 	 */
 	element_t *first;
-	
+
 	/**
 	 * Last element in list.
 	 * NULL if no elements in list.
@@ -130,12 +130,12 @@ struct private_enumerator_t {
 	 * implements enumerator interface
 	 */
 	enumerator_t enumerator;
-	
+
 	/**
 	 * associated linked list
 	 */
 	private_linked_list_t *list;
-	
+
 	/**
 	 * current item
 	 */
@@ -173,12 +173,12 @@ static bool enumerate(private_enumerator_t *this, void **item)
 static enumerator_t* create_enumerator(private_linked_list_t *this)
 {
 	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
-	
+
 	enumerator->enumerator.enumerate = (void*)enumerate;
 	enumerator->enumerator.destroy = (void*)free;
 	enumerator->list = this;
 	enumerator->current = NULL;
-	
+
 	return &enumerator->enumerator;
 }
 
@@ -273,7 +273,7 @@ static status_t iterator_remove(private_iterator_t *this)
 		this->current->previous->next = this->current->next;
 		this->current->next->previous = this->current->previous;
 	}
-	
+
 	this->list->count--;
 	free(this->current);
 	/* set the new iterator position */
@@ -290,7 +290,7 @@ static void insert_before(private_iterator_t * iterator, void *item)
 	{
 		iterator->list->public.insert_first(&(iterator->list->public), item);
 	}
-	
+
 	element_t *element = element_create(item);
 	if (iterator->current->previous == NULL)
 	{
@@ -322,7 +322,7 @@ static status_t replace(private_iterator_t *this, void **old_item, void *new_ite
 		*old_item = this->current->value;
 	}
 	this->current->value = new_item;
-	
+
 	return SUCCESS;
 }
 
@@ -336,7 +336,7 @@ static void insert_after(private_iterator_t *iterator, void *item)
 		iterator->list->public.insert_first(&(iterator->list->public),item);
 		return;
 	}
-	
+
 	element_t *element = element_create(item);
 	if (iterator->current->next == NULL)
 	{
@@ -376,7 +376,7 @@ static int get_count(private_linked_list_t *this)
 static void insert_first(private_linked_list_t *this, void *item)
 {
 	element_t *element;
-	
+
 	element = element_create(item);
 	if (this->count == 0)
 	{
@@ -407,7 +407,7 @@ static element_t* remove_element(private_linked_list_t *this, element_t *element
 	next = element->next;
 	previous = element->previous;
 	free(element);
-	if (next) 
+	if (next)
 	{
 		next->previous = previous;
 	}
@@ -463,7 +463,7 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 static void insert_last(private_linked_list_t *this, void *item)
 {
 	element_t *element = element_create(item);
-	
+
 	if (this->count == 0)
 	{
 		/* first entry in list */
@@ -508,7 +508,7 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 	}
 	return NOT_FOUND;
 }
-	
+
 /**
  * Implementation of linked_list_t.remove.
  */
@@ -517,7 +517,7 @@ static int remove_(private_linked_list_t *this, void *item,
 {
 	element_t *current = this->first;
 	int removed = 0;
-	
+
 	while (current)
 	{
 		if ((compare && compare(current->value, item)) ||
@@ -556,7 +556,7 @@ static status_t find_first(private_linked_list_t *this, linked_list_match_t matc
 		void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
-	
+
 	while (current)
 	{
 		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
@@ -580,7 +580,7 @@ static status_t find_last(private_linked_list_t *this, linked_list_match_t match
 		void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->last;
-	
+
 	while (current)
 	{
 		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
@@ -604,7 +604,7 @@ static void invoke_offset(private_linked_list_t *this, size_t offset,
 		void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
-	
+
 	while (current)
 	{
 		linked_list_invoke_t *method = current->value + offset;
@@ -620,7 +620,7 @@ static void invoke_function(private_linked_list_t *this, linked_list_invoke_t fn
 		void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
-	
+
 	while (current)
 	{
 		fn(current->value, d1, d2, d3, d4, d5);
@@ -635,14 +635,14 @@ static linked_list_t *clone_offset(private_linked_list_t *this, size_t offset)
 {
 	linked_list_t *clone = linked_list_create();
 	element_t *current = this->first;
-	
+
 	while (current)
 	{
 		void* (**method)(void*) = current->value + offset;
 		clone->insert_last(clone, (*method)(current->value));
 		current = current->next;
 	}
-	
+
 	return clone;
 }
 
@@ -653,13 +653,13 @@ static linked_list_t *clone_function(private_linked_list_t *this, void* (*fn)(vo
 {
 	linked_list_t *clone = linked_list_create();
 	element_t *current = this->first;
-	
+
 	while (current)
 	{
 		clone->insert_last(clone, fn(current->value));
 		current = current->next;
 	}
-	
+
 	return clone;
 }
 
@@ -684,7 +684,7 @@ static void destroy(private_linked_list_t *this)
 static void destroy_offset(private_linked_list_t *this, size_t offset)
 {
 	element_t *current = this->first, *next;
-	
+
 	while (current)
 	{
 		void (**method)(void*) = current->value + offset;
@@ -702,7 +702,7 @@ static void destroy_offset(private_linked_list_t *this, size_t offset)
 static void destroy_function(private_linked_list_t *this, void (*fn)(void*))
 {
 	element_t *current = this->first, *next;
-	
+
 	while (current)
 	{
 		fn(current->value);
@@ -719,7 +719,7 @@ static void destroy_function(private_linked_list_t *this, void (*fn)(void*))
 static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forward)
 {
 	private_iterator_t *this = malloc_thing(private_iterator_t);
-	
+
 	this->public.get_count = (int (*) (iterator_t*)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t*, void **value)) iterate;
 	this->public.insert_before = (void (*) (iterator_t*, void *item)) insert_before;
@@ -728,11 +728,11 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	this->public.remove = (status_t (*) (iterator_t*)) iterator_remove;
 	this->public.reset = (void (*) (iterator_t*)) iterator_reset;
 	this->public.destroy = (void (*) (iterator_t*)) iterator_destroy;
-	
+
 	this->forward = forward;
 	this->current = NULL;
 	this->list = linked_list;
-	
+
 	return &this->public;
 }
 

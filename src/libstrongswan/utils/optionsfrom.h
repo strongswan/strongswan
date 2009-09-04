@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup optionsfrom optionsfrom
  * @{ @ingroup utils
@@ -28,7 +28,7 @@ typedef struct options_t options_t;
  * Reads additional command line arguments from a file
  */
 struct options_t {
-	
+
 	/**
 	 * Check if the PKCS#7 contentType is data
 	 *

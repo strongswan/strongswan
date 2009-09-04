@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup pkcs7 pkcs7
  * @{ @ingroup crypto
@@ -38,35 +38,35 @@ typedef struct pkcs7_t pkcs7_t;
 struct pkcs7_t {
 	/**
 	 * Check if the PKCS#7 contentType is data
-	 * 
+	 *
 	 * @return				TRUE if the contentType is data
 	 */
 	bool (*is_data) (pkcs7_t *this);
 
 	/**
 	 * Check if the PKCS#7 contentType is signedData
-	 * 
+	 *
 	 * @return				TRUE if the contentType is signedData
 	 */
 	bool (*is_signedData) (pkcs7_t *this);
 
 	/**
 	 * Check if the PKCS#7 contentType is envelopedData
-	 * 
+	 *
 	 * @return				TRUE if the contentType is envelopedData
 	 */
 	bool (*is_envelopedData) (pkcs7_t *this);
 
 	/**
 	 * Parse a PKCS#7 data content.
-	 * 
+	 *
 	 * @return				TRUE if parsing was successful
 	 */
 	bool (*parse_data) (pkcs7_t *this);
 
 	/**
 	 * Parse a PKCS#7 signedData content.
-	 * 
+	 *
 	 * @param cacert		cacert used to verify the signature
 	 * @return				TRUE if parsing was successful
 	 */
@@ -74,7 +74,7 @@ struct pkcs7_t {
 
 	/**
 	 * Parse a PKCS#7 envelopedData content.
-	 * 
+	 *
 	 * @param serialNumber	serialNumber of the request
 	 * @param key			private key used to decrypt the symmetric key
 	 * @return				TRUE if parsing was successful
@@ -97,21 +97,21 @@ struct pkcs7_t {
 
 	/**
 	 * Create an iterator for the certificates.
-	 * 
+	 *
 	 * @return				iterator for the certificates
 	 */
 	iterator_t *(*create_certificate_iterator) (pkcs7_t *this);
 
 	/**
 	 * Add a certificate.
-	 * 
+	 *
 	 * @param cert			certificate to be included
 	 */
 	void (*set_certificate) (pkcs7_t *this, x509_t *cert);
 
 	/**
 	 * Add authenticated attributes.
-	 * 
+	 *
 	 * @param attributes	attributes to be included
 	 */
 	void (*set_attributes) (pkcs7_t *this, pkcs9_t *attributes);
@@ -151,7 +151,7 @@ struct pkcs7_t {
 
 /**
  * Read a PKCS#7 contentInfo object from a DER encoded chunk.
- * 
+ *
  * @param chunk		chunk containing DER encoded data
  * @param level		ASN.1 parsing start level
  * @return 			created pkcs7_contentInfo object, or NULL if invalid.
@@ -160,7 +160,7 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
 
 /**
  * Create a PKCS#7 contentInfo object
- * 
+ *
  * @param data			chunk containing data
  * @return 				created pkcs7_contentInfo object.
  */

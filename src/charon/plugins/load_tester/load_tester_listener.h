@@ -34,11 +34,11 @@ struct load_tester_listener_t {
 	 * Implements listener set interface.
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * Destroy the backend.
 	 */
-	void (*destroy)(load_tester_listener_t *this);	
+	void (*destroy)(load_tester_listener_t *this);
 };
 
 /**

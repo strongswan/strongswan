@@ -34,12 +34,12 @@ struct private_openssl_ec_private_key_t {
 	 * Public interface for this signer.
 	 */
 	openssl_ec_private_key_t public;
-	
+
 	/**
 	 * EC key object
 	 */
 	EC_KEY *ec;
-	
+
 	/**
 	 * reference count
 	 */
@@ -57,7 +57,7 @@ static bool build_signature(private_openssl_ec_private_key_t *this,
 {
 	bool built = FALSE;
 	ECDSA_SIG *sig;
-	
+
 	sig = ECDSA_do_sign(hash.ptr, hash.len, this->ec);
 	if (sig)
 	{
@@ -80,7 +80,7 @@ static bool build_curve_signature(private_openssl_ec_private_key_t *this,
 	EC_GROUP *req_group;
 	chunk_t hash;
 	bool built;
-	
+
 	req_group = EC_GROUP_new_by_curve_name(nid_curve);
 	if (!req_group)
 	{
@@ -114,7 +114,7 @@ static bool build_der_signature(private_openssl_ec_private_key_t *this,
 	chunk_t hash, sig;
 	int siglen = 0;
 	bool built;
-	
+
 	if (!openssl_hash_chunk(hash_nid, data, &hash))
 	{
 		return FALSE;
@@ -153,7 +153,7 @@ static bool sign(private_openssl_ec_private_key_t *this,
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return build_der_signature(this, NID_sha512, data, signature);
 		case SIGN_ECDSA_256:
-			return build_curve_signature(this, scheme, NID_sha256, 
+			return build_curve_signature(this, scheme, NID_sha256,
 										 NID_X9_62_prime256v1, data, signature);
 		case SIGN_ECDSA_384:
 			return build_curve_signature(this, scheme, NID_sha384,
@@ -202,11 +202,11 @@ static public_key_t* get_public_key(private_openssl_ec_private_key_t *this)
 	public_key_t *public;
 	chunk_t key;
 	u_char *p;
-	
+
 	key = chunk_alloc(i2d_EC_PUBKEY(this->ec, NULL));
 	p = key.ptr;
 	i2d_EC_PUBKEY(this->ec, &p);
-	
+
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
 								BUILD_BLOB_ASN1_DER, key, BUILD_END);
 	free(key.ptr);
@@ -229,7 +229,7 @@ static bool get_encoding(private_openssl_ec_private_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
-	
+
 	switch (type)
 	{
 		case KEY_PRIV_ASN1_DER:
@@ -275,7 +275,7 @@ static void destroy(private_openssl_ec_private_key_t *this)
 static private_openssl_ec_private_key_t *create_empty(void)
 {
 	private_openssl_ec_private_key_t *this = malloc_thing(private_openssl_ec_private_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
@@ -287,10 +287,10 @@ static private_openssl_ec_private_key_t *create_empty(void)
 	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
-	
+
 	this->ec = NULL;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -300,7 +300,7 @@ static private_openssl_ec_private_key_t *create_empty(void)
 static openssl_ec_private_key_t *generate(size_t key_size)
 {
 	private_openssl_ec_private_key_t *this = create_empty();
-	
+
 	switch (key_size)
 	{
 		case 256:
@@ -335,9 +335,9 @@ static openssl_ec_private_key_t *generate(size_t key_size)
 static openssl_ec_private_key_t *load(chunk_t blob)
 {
 	private_openssl_ec_private_key_t *this = create_empty();
-	
+
 	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-	
+
 	if (!this->ec)
 	{
 		destroy(this);
@@ -369,7 +369,7 @@ struct private_builder_t {
 static openssl_ec_private_key_t *build(private_builder_t *this)
 {
 	openssl_ec_private_key_t *key = this->key;
-	
+
 	free(this);
 	return key;
 }
@@ -382,7 +382,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		
+
 		switch (part)
 		{
 			case BUILD_KEY_SIZE:
@@ -416,18 +416,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *openssl_ec_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ECDSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->key = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

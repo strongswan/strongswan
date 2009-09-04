@@ -23,7 +23,7 @@ bool test_list_remove()
 {
 	void *a = (void*)1, *b = (void*)2;
 	linked_list_t *list;
-	
+
 	list = linked_list_create();
 	list->insert_last(list, a);
 	if (list->remove(list, a, NULL) != 1)
@@ -67,15 +67,15 @@ bool test_enumerate()
 	void *a = (void*)4, *b = (void*)3, *c = (void*)2, *d = (void*)5, *e = (void*)1;
 	linked_list_t *list;
 	enumerator_t *enumerator;
-	
+
 	list = linked_list_create();
-	
+
 	list->insert_last(list, a);
 	list->insert_first(list, b);
 	list->insert_first(list, c);
 	list->insert_last(list, d);
 	list->insert_first(list, e);
-	
+
 	round = 1;
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &x))
@@ -87,7 +87,7 @@ bool test_enumerate()
 		round++;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	list->destroy(list);
 	return TRUE;
 }
@@ -122,7 +122,7 @@ bool test_enumerate_nested()
 	void *a = (void*)1, *b = (void*)2, *c = (void*)3, *d = (void*)4, *e = (void*)5;
 	linked_list_t *list, *l1, *l2, *l3;
 	enumerator_t *enumerator;
-	
+
 	bad_data = FALSE;
 	list = linked_list_create();
 	l1 = linked_list_create();
@@ -131,13 +131,13 @@ bool test_enumerate_nested()
 	list->insert_last(list, l1);
 	list->insert_last(list, l2);
 	list->insert_last(list, l3);
-	
+
 	l1->insert_last(l1, a);
 	l1->insert_last(l1, b);
 	l3->insert_last(l3, c);
 	l3->insert_last(l3, d);
 	l3->insert_last(l3, e);
-	
+
 	round = 1;
 	enumerator = enumerator_create_nested(list->create_enumerator(list),
 					(void*)create_inner, (void*)101, destroy_data);
@@ -150,7 +150,7 @@ bool test_enumerate_nested()
 		round++;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	list->destroy(list);
 	l1->destroy(l1);
 	l2->destroy(l2);
@@ -185,16 +185,16 @@ bool test_enumerate_filtered()
 	void *a = (void*)1, *b = (void*)2, *c = (void*)3, *d = (void*)4, *e = (void*)5;
 	linked_list_t *list;
 	enumerator_t *enumerator;
-	
+
 	bad_data = FALSE;
 	list = linked_list_create();
-	
+
 	list->insert_last(list, a);
 	list->insert_last(list, b);
 	list->insert_last(list, c);
 	list->insert_last(list, d);
 	list->insert_last(list, e);
-	
+
 	round = 1;
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
 									(void*)filter, (void*)101, destroy_data);
@@ -208,7 +208,7 @@ bool test_enumerate_filtered()
 		round++;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	list->destroy(list);
 	return !bad_data;
 }
@@ -216,7 +216,7 @@ bool test_enumerate_filtered()
 /*******************************************************************************
  * token parser test
  ******************************************************************************/
- 
+
 bool test_enumerate_token()
 {
 	enumerator_t *enumerator;
@@ -240,7 +240,7 @@ bool test_enumerate_token()
 		{"a.b,c", ",.", ""},
 		{"  a   b  c  ", " ", " "},
 	};
-	
+
 	for (num = 0; num < countof(tests1); num++)
 	{
 		i = 0;
@@ -270,7 +270,7 @@ bool test_enumerate_token()
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	for (num = 0; num < countof(tests2); num++)
 	{
 		i = 0;
@@ -300,7 +300,7 @@ bool test_enumerate_token()
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	return TRUE;
 }
 

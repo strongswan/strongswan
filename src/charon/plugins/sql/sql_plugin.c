@@ -32,27 +32,27 @@ struct private_sql_plugin_t {
 	 * implements plugin interface
 	 */
 	sql_plugin_t public;
-	
+
 	/**
 	 * database connection instance
 	 */
 	database_t *db;
-	
+
 	/**
 	 * configuration backend
 	 */
 	sql_config_t *config;
-	
+
 	/**
 	 * credential set
 	 */
 	sql_cred_t *cred;
-	
+
 	/**
 	 * CFG attributes
 	 */
 	sql_attribute_t *attribute;
-	
+
 	/**
 	 * bus listener/logger
 	 */
@@ -83,18 +83,18 @@ plugin_t *plugin_create()
 {
 	char *uri;
 	private_sql_plugin_t *this;
-	
+
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "sql plugin: database URI not set");
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_sql_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->db = lib->db->create(lib->db, uri);
 	if (!this->db)
 	{
@@ -106,12 +106,12 @@ plugin_t *plugin_create()
 	this->cred = sql_cred_create(this->db);
 	this->attribute = sql_attribute_create(this->db);
 	this->logger = sql_logger_create(this->db);
-	
+
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
 	charon->attributes->add_provider(charon->attributes, &this->attribute->provider);
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
-	
+
 	return &this->public.plugin;
 }
 

@@ -46,67 +46,67 @@ struct private_child_sa_t {
 	 * Public interface of child_sa_t.
 	 */
 	child_sa_t public;
-	
+
 	/**
 	 * address of us
 	 */
 	host_t *my_addr;
-	
+
 	/**
 	 * address of remote
 	 */
 	host_t *other_addr;
-	
+
 	/**
 	 * our actually used SPI, 0 if unused
 	 */
 	u_int32_t my_spi;
-	
+
 	/**
 	 * others used SPI, 0 if unused
 	 */
 	u_int32_t other_spi;
-	
+
 	/**
 	 * our Compression Parameter Index (CPI) used, 0 if unused
 	 */
 	u_int16_t my_cpi;
-	
+
 	/**
 	 * others Compression Parameter Index (CPI) used, 0 if unused
 	 */
 	u_int16_t other_cpi;
-	
+
 	/**
 	 * List for local traffic selectors
 	 */
 	linked_list_t *my_ts;
-	
+
 	/**
 	 * List for remote traffic selectors
 	 */
 	linked_list_t *other_ts;
-	
+
 	/**
 	 * Protocol used to protect this SA, ESP|AH
 	 */
 	protocol_id_t protocol;
-	
+
 	/**
 	 * reqid used for this child_sa
 	 */
 	u_int32_t reqid;
-	
+
 	/**
 	 * absolute time when rekeying is scheduled
 	 */
 	time_t rekey_time;
-	
+
 	/**
 	 * absolute time when the SA expires
 	 */
 	time_t expire_time;
-	
+
 	/**
 	 * state of the CHILD_SA
 	 */
@@ -116,22 +116,22 @@ struct private_child_sa_t {
 	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
 	bool encap;
-	
+
 	/**
 	 * Specifies the IPComp transform used (IPCOMP_NONE if disabled)
 	 */
 	ipcomp_transform_t ipcomp;
-	
+
 	/**
 	 * mode this SA uses, tunnel/transport
 	 */
 	ipsec_mode_t mode;
-	
+
 	/**
  	 * selected proposal
  	 */
  	proposal_t *proposal;
-	
+
 	/**
 	 * config used to create this child
 	 */
@@ -320,7 +320,7 @@ static bool policy_enumerate(policy_enumerator_t *this,
 				 traffic_selector_t **my_out, traffic_selector_t **other_out)
 {
 	traffic_selector_t *other_ts;
-	
+
 	while (this->ts || this->mine->enumerate(this->mine, &this->ts))
 	{
 		if (!this->other->enumerate(this->other, &other_ts))
@@ -363,14 +363,14 @@ static void policy_destroy(policy_enumerator_t *this)
 static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
 {
 	policy_enumerator_t *e = malloc_thing(policy_enumerator_t);
-	
+
 	e->public.enumerate = (void*)policy_enumerate;
 	e->public.destroy = (void*)policy_destroy;
 	e->mine = this->my_ts->create_enumerator(this->my_ts);
 	e->other = this->other_ts->create_enumerator(this->other_ts);
 	e->list = this->other_ts;
 	e->ts = NULL;
-	
+
 	return &e->public;
 }
 
@@ -384,7 +384,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
 	u_int64_t bytes;
-	
+
 	if (inbound)
 	{
 		if (this->my_spi)
@@ -434,12 +434,12 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	u_int32_t last_use = 0;
-	
+
 	enumerator = create_policy_enumerator(this);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		u_int32_t in, out, fwd;
-		
+
 		if (inbound)
 		{
 			if (charon->kernel_interface->query_policy(charon->kernel_interface,
@@ -552,7 +552,7 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
-	
+
 	/* now we have to decide which spi to use. Use self allocated, if "in",
 	 * or the one in the proposal, if not "in" (others). Additionally,
 	 * source and dest host switch depending on the role */
@@ -574,20 +574,20 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 		this->other_spi = spi;
 		this->other_cpi = cpi;
 	}
-	
+
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",
 		 protocol_id_names, this->protocol);
-	
+
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
-	
+
 	this->proposal->get_algorithm(this->proposal, ENCRYPTION_ALGORITHM,
 								  &enc_alg, &size);
 	this->proposal->get_algorithm(this->proposal, INTEGRITY_ALGORITHM,
 								  &int_alg, &size);
-	
+
 	lifetime = this->config->get_lifetime(this->config);
-	
+
 	now = time_monotonic(NULL);
 	if (lifetime->time.rekey)
 	{
@@ -597,19 +597,19 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	{
 		this->expire_time = now + lifetime->time.life;
 	}
-	
+
 	if (!lifetime->time.jitter && !inbound)
 	{	/* avoid triggering multiple rekey events */
 		lifetime->time.rekey = 0;
 	}
-	
+
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid, lifetime,
 				enc_alg, encr, int_alg, integ, this->mode, this->ipcomp, cpi,
 				this->encap, update);
-	
+
 	free(lifetime);
-	
+
 	return status;
 }
 
@@ -623,7 +623,7 @@ static status_t add_policies(private_child_sa_t *this,
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
 	bool routed = (this->state == CHILD_CREATED);
-	
+
 	/* apply traffic selectors */
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
 	while (enumerator->enumerate(enumerator, &my_ts))
@@ -637,7 +637,7 @@ static status_t add_policies(private_child_sa_t *this,
 		this->other_ts->insert_last(this->other_ts, other_ts->clone(other_ts));
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (this->config->install_policy(this->config))
 	{
 		/* enumerate pairs of traffic selectors */
@@ -649,7 +649,7 @@ static status_t add_policies(private_child_sa_t *this,
 					this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
 					this->other_spi, this->protocol, this->reqid, this->mode,
 					this->ipcomp, this->other_cpi, routed);
-			
+
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
 					this->my_spi, this->protocol, this->reqid, this->mode,
@@ -661,7 +661,7 @@ static status_t add_policies(private_child_sa_t *this,
 					this->my_spi, this->protocol, this->reqid, this->mode,
 					this->ipcomp, this->my_cpi, routed);
 			}
-			
+
 			if (status != SUCCESS)
 			{
 				break;
@@ -669,7 +669,7 @@ static status_t add_policies(private_child_sa_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	if (status == SUCCESS && this->state == CHILD_CREATED)
 	{	/* switch to routed state if no SAD entry set up */
 		set_state(this, CHILD_ROUTED);
@@ -685,19 +685,19 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 {
 	child_sa_state_t old;
 	bool transport_proxy_mode;
-	
+
 	/* anything changed at all? */
 	if (me->equals(me, this->my_addr) &&
 		other->equals(other, this->other_addr) && this->encap == encap)
 	{
 		return SUCCESS;
 	}
-	
+
 	old = this->state;
 	set_state(this, CHILD_UPDATING);
 	transport_proxy_mode = this->config->use_proxy_mode(this->config) &&
 						   this->mode == MODE_TRANSPORT;
-	
+
 	if (!transport_proxy_mode)
 	{
 		/* update our (initator) SA */
@@ -712,7 +712,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 				return NOT_SUPPORTED;
 			}
 		}
-		
+
 		/* update his (responder) SA */
 		if (this->other_spi)
 		{
@@ -726,7 +726,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 			}
 		}
 	}
-	
+
 	if (this->config->install_policy(this->config))
 	{
 		/* update policies */
@@ -735,7 +735,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 		{
 			enumerator_t *enumerator;
 			traffic_selector_t *my_ts, *other_ts;
-			
+
 			/* always use high priorities, as hosts getting updated are INSTALLED */
 			enumerator = create_policy_enumerator(this);
 			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -750,7 +750,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 					charon->kernel_interface->del_policy(charon->kernel_interface,
 											other_ts, my_ts, POLICY_FWD, FALSE);
 				}
-				
+
 				/* check whether we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
 					my_ts->is_host(my_ts, this->my_addr))
@@ -762,7 +762,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 				{
 					other_ts->set_address(other_ts, other);
 				}
-				
+
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
 				if (vip)
@@ -770,7 +770,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 					charon->kernel_interface->del_ip(charon->kernel_interface, vip);
 					charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
 				}
-				
+
 				/* reinstall updated policies */
 				charon->kernel_interface->add_policy(charon->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
@@ -821,9 +821,9 @@ static void destroy(private_child_sa_t *this)
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	bool unrouted = (this->state == CHILD_ROUTED);
-	
+
 	set_state(this, CHILD_DESTROYING);
-	
+
 	/* delete SAs in the kernel, if they are set up */
 	if (this->my_spi)
 	{
@@ -843,7 +843,7 @@ static void destroy(private_child_sa_t *this)
 					this->my_addr, this->other_addr, this->other_spi,
 					this->protocol, this->other_cpi);
 	}
-	
+
 	if (this->config->install_policy(this->config))
 	{
 		/* delete all policies in the kernel */
@@ -862,7 +862,7 @@ static void destroy(private_child_sa_t *this)
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 	this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 	this->my_addr->destroy(this->my_addr);
@@ -908,7 +908,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.create_policy_enumerator = (enumerator_t*(*)(child_sa_t*))create_policy_enumerator;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
-	
+
 	/* private data */
 	this->my_addr = me->clone(me);
 	this->other_addr = other->clone(other);
@@ -934,7 +934,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->expire_time = 0;
 	this->config = config;
 	config->get_ref(config);
-	
+
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
 	    config->use_proxy_mode(config))
@@ -946,9 +946,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		enumerator_t *enumerator;
 		linked_list_t *my_ts_list, *other_ts_list;
 		traffic_selector_t *my_ts, *other_ts;
-		
+
 		this->mode = MODE_TRANSPORT;
-		
+
 		my_ts_list = config->get_traffic_selectors(config, TRUE, NULL, me);
 		enumerator = my_ts_list->create_enumerator(my_ts_list);
 		if (enumerator->enumerate(enumerator, &my_ts))
@@ -969,7 +969,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		}
 		enumerator->destroy(enumerator);
 		my_ts_list->destroy_offset(my_ts_list, offsetof(traffic_selector_t, destroy));
-		
+
 		other_ts_list = config->get_traffic_selectors(config, FALSE, NULL, other);
 		enumerator = other_ts_list->create_enumerator(other_ts_list);
 		if (enumerator->enumerate(enumerator, &other_ts))
@@ -991,6 +991,6 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		enumerator->destroy(enumerator);
 		other_ts_list->destroy_offset(other_ts_list, offsetof(traffic_selector_t, destroy));
 	}
-	
+
 	return &this->public;
 }

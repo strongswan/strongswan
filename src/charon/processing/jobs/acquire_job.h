@@ -29,7 +29,7 @@ typedef struct acquire_job_t acquire_job_t;
 
 /**
  * Class representing an ACQUIRE Job.
- * 
+ *
  * This job initiates a CHILD SA on kernel request.
  */
 struct acquire_job_t {

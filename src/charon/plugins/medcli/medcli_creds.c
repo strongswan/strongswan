@@ -30,7 +30,7 @@ struct private_medcli_creds_t {
 	 * Public part
 	 */
 	medcli_creds_t public;
-	
+
 	/**
 	 * underlying database handle
 	 */
@@ -90,21 +90,21 @@ static enumerator_t* create_private_enumerator(private_medcli_creds_t *this,
 										key_type_t type, identification_t *id)
 {
 	private_enumerator_t *e;
-	
+
 	if ((type != KEY_RSA && type != KEY_ANY) ||
 		id == NULL || id->get_type(id) != ID_KEY_ID)
 	{
 		DBG1(DBG_CFG, "%N - %Y", key_type_names, type, id);
 		return NULL;
 	}
-	
+
 	e = malloc_thing(private_enumerator_t);
 	e->current = NULL;
 	e->public.enumerate = (void*)private_enumerator_enumerate;
 	e->public.destroy = (void*)private_enumerator_destroy;
 	e->inner = this->db->query(this->db,
 						"SELECT PrivateKey FROM ClientConfig WHERE KeyId = ?",
-						DB_BLOB, id->get_encoding(id), 
+						DB_BLOB, id->get_encoding(id),
 						DB_BLOB);
 	if (!e->inner)
 	{
@@ -185,13 +185,13 @@ static enumerator_t* create_cert_enumerator(private_medcli_creds_t *this,
 										identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
-	
+
 	if ((cert != CERT_TRUSTED_PUBKEY && cert != CERT_ANY) ||
 		id == NULL || id->get_type(id) != ID_KEY_ID)
 	{
 		return NULL;
 	}
-	
+
 	e = malloc_thing(cert_enumerator_t);
 	e->current = NULL;
 	e->type = key;
@@ -235,9 +235,9 @@ medcli_creds_t *medcli_creds_create(database_t *db)
 	this->public.set.cache_cert = (void*)nop;
 
 	this->public.destroy = (void (*)(medcli_creds_t*))destroy;
-	
+
 	this->db = db;
-	
+
 	return &this->public;
 }
 

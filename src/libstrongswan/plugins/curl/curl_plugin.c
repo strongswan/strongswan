@@ -52,24 +52,24 @@ plugin_t *plugin_create()
 {
 	CURLcode res;
 	private_curl_plugin_t *this = malloc_thing(private_curl_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	res = curl_global_init(CURL_GLOBAL_NOTHING);
 	if (res == CURLE_OK)
 	{
 		lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)curl_fetcher_create, "file://");
-		lib->fetcher->add_fetcher(lib->fetcher, 
+		lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)curl_fetcher_create, "http://");
 		lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)curl_fetcher_create, "https://");
-		lib->fetcher->add_fetcher(lib->fetcher, 
+		lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)curl_fetcher_create, "ftp://");
     }
     else
     {
-    	DBG1("global libcurl initializing failed: %s, curl disabled", 
+    	DBG1("global libcurl initializing failed: %s, curl disabled",
 			 curl_easy_strerror(res));
     }
 	return &this->public.plugin;

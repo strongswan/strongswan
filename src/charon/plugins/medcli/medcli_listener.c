@@ -39,7 +39,7 @@ struct private_medcli_listener_t {
 	 * Public part
 	 */
 	medcli_listener_t public;
-	
+
 	/**
 	 * underlying database handle
 	 */
@@ -117,17 +117,17 @@ static void destroy(private_medcli_listener_t *this)
 medcli_listener_t *medcli_listener_create(database_t *db)
 {
 	private_medcli_listener_t *this = malloc_thing(private_medcli_listener_t);
-	
+
 	memset(&this->public.listener, 0, sizeof(listener_t));
-	
+
 	this->public.listener.ike_state_change = (void*)ike_state_change;
 	this->public.listener.child_state_change = (void*)child_state_change;
 	this->public.destroy = (void (*)(medcli_listener_t*))destroy;
-	
+
 	this->db = db;
 	db->execute(db, NULL, "UPDATE Connection SET Status = ?",
 				DB_UINT, STATE_DOWN);
-	
+
 	return &this->public;
 }
 

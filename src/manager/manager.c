@@ -30,23 +30,23 @@ struct private_manager_t {
 	 * public functions
 	 */
 	manager_t public;
-	
+
 	/**
 	 * underlying storage database
 	 */
 	storage_t *store;
-	
+
 	/**
 	 * user id, if we are logged in
 	 */
 	int user;
-	
+
 	/**
 	 * selected gateway
 	 */
 	gateway_t *gateway;
-};	
-	
+};
+
 /**
  * Implementation of manager_t.create_gateway_enumerator.
  */
@@ -66,10 +66,10 @@ static gateway_t* select_gateway(private_manager_t *this, int select_id)
 		int id, port;
 		char *name, *address;
 		host_t *host;
-		
+
 		if (this->gateway) this->gateway->destroy(this->gateway);
 		this->gateway = NULL;
-		
+
 		enumerator = this->store->create_gateway_enumerator(this->store, this->user);
 		while (enumerator->enumerate(enumerator, &id, &name, &port, &address))
 		{
@@ -143,18 +143,18 @@ static void destroy(private_manager_t *this)
 manager_t *manager_create(storage_t *storage)
 {
 	private_manager_t *this = malloc_thing(private_manager_t);
-	
+
 	this->public.login = (bool(*)(manager_t*, char *username, char *password))login;
 	this->public.logged_in = (bool(*)(manager_t*))logged_in;
 	this->public.logout = (void(*)(manager_t*))logout;
 	this->public.create_gateway_enumerator = (enumerator_t*(*)(manager_t*))create_gateway_enumerator;
 	this->public.select_gateway = (gateway_t*(*)(manager_t*, int id))select_gateway;
 	this->public.context.destroy = (void(*)(context_t*))destroy;
-	
+
 	this->user = 0;
 	this->store = storage;
 	this->gateway = NULL;
-	
+
 	return &this->public;
 }
 

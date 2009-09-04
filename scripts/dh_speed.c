@@ -38,7 +38,7 @@ static void start_timing(struct timespec *start)
 static double end_timing(struct timespec *start)
 {
 	struct timespec end;
-	
+
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	return (end.tv_nsec - start->tv_nsec) / 1000000000.0 +
 			(end.tv_sec - start->tv_sec) * 1.0;
@@ -50,7 +50,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	chunk_t chunk;
 	struct timespec timing;
 	int round;
-	
+
 	r = lib->crypto->create_dh(lib->crypto, group);
 	if (!r)
 	{
@@ -58,24 +58,24 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 				diffie_hellman_group_names, group);
 		return;
 	}
-	
+
 	printf("%N:\t",
 			diffie_hellman_group_names, group);
-	
+
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{
 		l[round] = lib->crypto->create_dh(lib->crypto, group);
 	}
 	printf("A = g^a/s: %8.1f", rounds / end_timing(&timing));
-	
+
 	for (round = 0; round < rounds; round++)
 	{
 		l[round]->get_my_public_value(l[round], &chunk);
 		r->set_other_public_value(r, chunk);
 		chunk_free(&chunk);
 	}
-	
+
 	r->get_my_public_value(r, &chunk);
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
@@ -84,7 +84,7 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 	}
 	printf(" | S = B^a/s: %8.1f\n", rounds / end_timing(&timing));
 	chunk_free(&chunk);
-	
+
 	for (round = 0; round < rounds; round++)
 	{
 		l[round]->destroy(l[round]);
@@ -95,22 +95,22 @@ static void run_test(diffie_hellman_group_t group, int rounds)
 int main(int argc, char *argv[])
 {
 	int rounds, i, j;
-	
+
 	if (argc < 4)
 	{
 		usage();
 	}
-	
+
 	library_init(STRONGSWAN_CONF);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, argv[1]);
 	atexit(library_deinit);
-	
+
 	rounds = atoi(argv[2]);
-	
+
 	for (i = 3; i < argc; i++)
 	{
 		bool found = FALSE;
-		
+
 		for (j = 0; j < countof(groups); j++)
 		{
 			if (streq(groups[j].name, argv[i]))

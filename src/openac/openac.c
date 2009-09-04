@@ -1,8 +1,8 @@
 /**
  * @file openac.c
- * 
+ *
  * @brief Generation of X.509 attribute certificates.
- * 
+ *
  */
 
 /*
@@ -85,7 +85,7 @@ static chunk_t read_serial(void)
 	chunk_t hex, serial = chunk_empty;
 	char one[] = {0x01};
 	FILE *fd;
-	
+
 	fd = fopen(OPENAC_SERIAL, "r");
 	if (fd)
 	{
@@ -152,7 +152,7 @@ static void openac_dbg(int level, char *fmt, ...)
 	char buffer[8192];
 	char *current = buffer, *next;
 	va_list args;
-	
+
 	if (level <= debug_level)
 	{
 		if (!stderr_quiet)
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
 	chunk_t attr_chunk = chunk_empty;
 
 	int status = 1;
-	
+
 	/* enable openac debugging hook */
 	dbg = openac_dbg;
 
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "integrity check of openac failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "openac.load", PLUGINS)))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
 			{ "debug", required_argument, NULL, 'd' },
 			{ 0,0,0,0 }
 		};
-	
+
 		int c = getopt_long(argc, argv, "hv+:qc:k:p;u:g:D:H:S:E:o:d:", long_opts, NULL);
 
 		/* Note: "breaking" from case terminates loop */
@@ -495,7 +495,7 @@ int main(int argc, char **argv)
 		{
 			goto end;
 		}
-	
+
 		/* write the attribute certificate to file */
 		attr_chunk = attr_cert->get_encoding(attr_cert);
 		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))

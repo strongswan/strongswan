@@ -279,7 +279,7 @@ static void print_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
+
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
@@ -544,7 +544,7 @@ int main(int argc, char **argv)
 				}
 				continue;
 			}
-		
+
 		case 'f':       /* --force */
 			force = TRUE;
 			continue;
@@ -626,7 +626,7 @@ int main(int argc, char **argv)
 				}
 
 				if (strcaseeq("email", optarg))
-				{       
+				{
 					kind = GN_RFC822_NAME;
 				}
 				else if (strcaseeq("dns", optarg))
@@ -748,7 +748,7 @@ int main(int argc, char **argv)
 			base_debugging |= DBG_PRIVATE;
 			continue;
 #endif
-		default: 
+		default:
 			usage("unknown option");
 		}
 		/* break from loop */
@@ -759,7 +759,7 @@ int main(int argc, char **argv)
 	init_log("scepclient");
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS)))
 	{
 		exit_scepclient("plugin loading failed");
@@ -790,7 +790,7 @@ int main(int argc, char **argv)
 	/*
 	 * input of PKCS#1 file
 	 */
-	if (filetype_in & PKCS1)    /* load an RSA key pair from file */ 
+	if (filetype_in & PKCS1)    /* load an RSA key pair from file */
 	{
 		prompt_pass_t pass = { "", FALSE, STDIN_FILENO };
 		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
@@ -871,7 +871,7 @@ int main(int argc, char **argv)
 		plog("  fingerprint:    %s", fingerprint.ptr);
 	}
 
-	/* 
+	/*
 	 * output of PKCS#10 file
 	 */
 	if (filetype_out & PKCS10)
@@ -960,7 +960,7 @@ int main(int argc, char **argv)
 		x509_ca_enc = cert.u.x509;
 	}
 
-	/* 
+	/*
 	 * input of PKCS#7 file
 	 */
 	if (filetype_in & PKCS7)

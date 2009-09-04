@@ -24,19 +24,19 @@ typedef struct private_traffic_selector_substructure_t private_traffic_selector_
 
 /**
  * Private data of an traffic_selector_substructure_t object.
- * 
+ *
  */
 struct private_traffic_selector_substructure_t {
 	/**
 	 * Public traffic_selector_substructure_t interface.
 	 */
 	traffic_selector_substructure_t public;
-	
+
 	/**
 	 * Type of traffic selector.
 	 */
 	u_int8_t ts_type;
-	
+
 	/**
 	 * IP Protocol ID.
 	 */
@@ -46,7 +46,7 @@ struct private_traffic_selector_substructure_t {
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Start port number.
 	 */
@@ -56,7 +56,7 @@ struct private_traffic_selector_substructure_t {
 	 * End port number.
 	 */
 	u_int16_t end_port;
-	
+
 	/**
 	 * Starting address.
 	 */
@@ -70,17 +70,17 @@ struct private_traffic_selector_substructure_t {
 
 /**
  * Encoding rules to parse or generate a TS payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_traffic_selector_substructure_t.
- * 
+ *
  */
 encoding_rule_t traffic_selector_substructure_encodings[] = {
  	/* 1 Byte next ts type*/
 	{ TS_TYPE,			offsetof(private_traffic_selector_substructure_t, ts_type) 			},
  	/* 1 Byte IP protocol id*/
 	{ U_INT_8,			offsetof(private_traffic_selector_substructure_t, ip_protocol_id) 	},
-	/* Length of the whole payload*/	
+	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_traffic_selector_substructure_t, payload_length)		},
  	/* 2 Byte start port*/
 	{ U_INT_16,		offsetof(private_traffic_selector_substructure_t, start_port)			},
@@ -124,7 +124,7 @@ static status_t verify(private_traffic_selector_substructure_t *this)
 	{
 		case TS_IPV4_ADDR_RANGE:
 		{
-			if ((this->starting_address.len != 4) || 
+			if ((this->starting_address.len != 4) ||
 				(this->ending_address.len != 4))
 			{
 				/* ipv4 address must be 4 bytes long */
@@ -148,7 +148,7 @@ static status_t verify(private_traffic_selector_substructure_t *this)
 			return FAILED;
 		}
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -182,7 +182,7 @@ static payload_type_t get_next_type(private_traffic_selector_substructure_t *thi
  */
 static void set_next_type(private_traffic_selector_substructure_t *this,payload_type_t type)
 {
-	
+
 }
 
 /**
@@ -199,8 +199,8 @@ static size_t get_length(private_traffic_selector_substructure_t *this)
 static traffic_selector_t *get_traffic_selector(private_traffic_selector_substructure_t *this)
 {
 	traffic_selector_t *ts;
-	ts = traffic_selector_create_from_bytes(this->ip_protocol_id, this->ts_type, 
-											this->starting_address, this->start_port, 
+	ts = traffic_selector_create_from_bytes(this->ip_protocol_id, this->ts_type,
+											this->starting_address, this->start_port,
 											this->ending_address, this->end_port);
 	return ts;
 }
@@ -221,7 +221,7 @@ static void destroy(private_traffic_selector_substructure_t *this)
 {
 	free(this->starting_address.ptr);
 	free(this->ending_address.ptr);
-	free(this);	
+	free(this);
 }
 
 /*
@@ -239,11 +239,11 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.get_traffic_selector = (traffic_selector_t* (*)(traffic_selector_substructure_t*))get_traffic_selector;
 	this->public.destroy = (void (*) (traffic_selector_substructure_t *)) destroy;
-	
+
 	/* private variables */
 	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH;
 	this->start_port = 0;
@@ -269,8 +269,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->end_port = traffic_selector->get_to_port(traffic_selector);
 	this->starting_address = chunk_clone(traffic_selector->get_from_address(traffic_selector));
 	this->ending_address = chunk_clone(traffic_selector->get_to_address(traffic_selector));
-	
+
 	compute_length(this);
-	
+
 	return &(this->public);
 }

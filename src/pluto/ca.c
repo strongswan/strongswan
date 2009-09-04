@@ -103,7 +103,7 @@ trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 		/* go one level up in the CA chain */
 		a = cacert->issuer;
 	}
-	
+
 	unlock_authcert_list("trusted_ca");
 	return match;
 }
@@ -539,7 +539,7 @@ add_ca_info(const whack_message_t *msg)
 		/* does the authname already exist? */
 		ca = get_ca_info(cacert->subject, cacert->serialNumber
 				, cacert->subjectKeyID);
-		
+
 		if (ca != NULL)
 		{
 			/* ca_info is already present */
@@ -557,7 +557,7 @@ add_ca_info(const whack_message_t *msg)
 
 		/* name */
 		ca->name = clone_str(msg->name);
-			
+
 		/* authName */
 		ca->authName = chunk_clone(cacert->subject);
 		dntoa(buf, BUF_LEN, ca->authName);
@@ -621,7 +621,7 @@ add_ca_info(const whack_message_t *msg)
 		ca->next = ca_infos;
 		ca_infos = ca;
 		ca->installed = time(NULL);
-		
+
 		unlock_ca_info_list("add_ca_info");
 
 		/* add cacert to list of authcerts */
@@ -644,7 +644,7 @@ void
 list_ca_infos(bool utc)
 {
 	ca_info_t *ca = ca_infos;
-	
+
 	if (ca != NULL)
 	{
 		whack_log(RC_COMMENT, " ");

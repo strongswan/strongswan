@@ -282,7 +282,7 @@ static u_int8_t group18_modulus[] = {
 
 typedef struct modulus_entry_t modulus_entry_t;
 
-/** 
+/**
  * Entry of the modulus list.
  */
 struct modulus_entry_t {
@@ -290,25 +290,25 @@ struct modulus_entry_t {
 	 * Group number as it is defined in file transform_substructure.h.
 	 */
 	diffie_hellman_group_t group;
-	
+
 	/**
 	 * Pointer to first byte of modulus (network order).
 	 */
 	u_int8_t *modulus;
-	
-	/* 
+
+	/*
 	 * Length of modulus in bytes.
-	 */	
+	 */
 	size_t modulus_len;
-	
-	/* 
+
+	/*
 	 * Optimum length of exponent in bytes.
-	 */	
+	 */
 	size_t opt_exponent_len;
 
-	/* 
+	/*
 	 * Generator value.
-	 */	
+	 */
 	u_int16_t generator;
 };
 
@@ -336,47 +336,47 @@ struct private_gmp_diffie_hellman_t {
 	 * Public gmp_diffie_hellman_t interface.
 	 */
 	gmp_diffie_hellman_t public;
-	
+
 	/**
 	 * Diffie Hellman group number.
 	 */
 	u_int16_t group;
-	
-	/* 
+
+	/*
 	 * Generator value.
-	 */	
+	 */
 	mpz_t g;
-	
+
 	/**
 	 * My private value.
 	 */
 	mpz_t xa;
-	
+
 	/**
 	 * My public value.
 	 */
 	mpz_t ya;
-	
+
 	/**
 	 * Other public value.
-	 */	
+	 */
 	mpz_t yb;
-	
+
 	/**
 	 * Shared secret.
-	 */	
+	 */
 	mpz_t zz;
 
 	/**
 	 * Modulus.
 	 */
 	mpz_t p;
-	
+
 	/**
 	 * Modulus length.
 	 */
 	size_t p_len;
-	
+
 	/**
 	 * Optimal exponent length.
 	 */
@@ -394,13 +394,13 @@ struct private_gmp_diffie_hellman_t {
 static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t value)
 {
 	mpz_t p_min_1;
-	
+
 	mpz_init(p_min_1);
 	mpz_sub_ui(p_min_1, this->p, 1);
-	
+
 	mpz_import(this->yb, value.len, 1, 1, 1, 0, value.ptr);
-	
-	/* check public value: 
+
+	/* check public value:
 	 * 1. 0 or 1 is invalid as 0^a = 0 and 1^a = 1
 	 * 2. a public value larger or equal the modulus is invalid */
 	if (mpz_cmp_ui(this->yb, 1) > 0 &&
@@ -409,7 +409,7 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 #ifdef EXTENDED_DH_TEST
 		/* 3. test if y ^ q mod p = 1, where q = (p - 1)/2. */
 		mpz_t q, one;
-		
+
 		mpz_init(q);
 		mpz_init(one);
 		mpz_fdiv_q_2exp(q, p_min_1, 1);
@@ -483,7 +483,7 @@ static status_t set_modulus(private_gmp_diffie_hellman_t *this)
 {
 	int i;
 	status_t status = NOT_FOUND;
-	
+
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{
 		if (modulus_entries[i].group == this->group)
@@ -533,7 +533,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-	
+
 	/* private variables */
 	this->group = group;
 	mpz_init(this->p);
@@ -542,10 +542,10 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	mpz_init(this->xa);
 	mpz_init(this->zz);
 	mpz_init(this->g);
-	
+
 	this->computed = FALSE;
-		
-	/* find a modulus according to group */	
+
+	/* find a modulus according to group */
 	if (set_modulus(this) != SUCCESS)
 	{
 		destroy(this);
@@ -561,7 +561,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 
 	ansi_x9_42 = lib->settings->get_int(lib->settings,
 					 "libstrongswan.dh_exponent_ansi_x9_42", TRUE);
-	exponent_len = (ansi_x9_42) ? this->p_len : this->opt_exponent_len;	
+	exponent_len = (ansi_x9_42) ? this->p_len : this->opt_exponent_len;
 	rng->allocate_bytes(rng, exponent_len, &random);
 	rng->destroy(rng);
 
@@ -575,7 +575,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	DBG2("size of DH secret exponent: %u bits", mpz_sizeinbase(this->xa, 2));
 
 	mpz_powm(this->ya, this->g, this->xa, this->p);
-	
+
 	return &this->public;
 }
 

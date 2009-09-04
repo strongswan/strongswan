@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup crypter crypter
  * @{ @ingroup crypto
@@ -76,7 +76,7 @@ extern enum_name_t *encryption_algorithm_names;
  * Generic interface for symmetric encryption algorithms.
  */
 struct crypter_t {
-	
+
 	/**
 	 * Encrypt a chunk of data and allocate space for the encrypted value.
 	 *
@@ -90,14 +90,14 @@ struct crypter_t {
 	 */
 	void (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *encrypted);
-	
+
 	/**
 	 * Decrypt a chunk of data and allocate space for the decrypted value.
 	 *
 	 * The length of the iv must equal to get_block_size(), while the length
 	 * of data must be a multiple it.
 	 * If decrpyted is NULL, the encryption is done in-place (overwriting data).
-	 * 
+	 *
 	 * @param data			data to decrypt
 	 * @param iv			initializing vector
 	 * @param encrypted		chunk to allocate decrypted data, or NULL
@@ -107,18 +107,18 @@ struct crypter_t {
 
 	/**
 	 * Get the block size of the crypto algorithm.
-	 * 
+	 *
 	 * @return					block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 
 	/**
 	 * Get the key size of the crypto algorithm.
-	 * 
+	 *
 	 * @return					key size in bytes
 	 */
 	size_t (*get_key_size) (crypter_t *this);
-	
+
 	/**
 	 * Set the key.
 	 *
@@ -127,7 +127,7 @@ struct crypter_t {
 	 * @param key				key to set
 	 */
 	void (*set_key) (crypter_t *this, chunk_t key);
-	
+
 	/**
 	 * Destroys a crypter_t object.
 	 */
@@ -136,7 +136,7 @@ struct crypter_t {
 
 /**
  * Conversion of ASN.1 OID to encryption algorithm.
- * 
+ *
  * @param oid			ASN.1 OID
  * @param key_size		returns size of encryption key in bits
  * @return				encryption algorithm, ENCR_UNDEFINED if OID unsupported
@@ -145,7 +145,7 @@ encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size);
 
 /**
  * Conversion of encryption algorithm to ASN.1 OID.
- * 
+ *
  * @param alg			encryption algorithm
  * @param key_size		size of encryption key in bits
  * @return				ASN.1 OID, OID_UNKNOWN if OID is unknown

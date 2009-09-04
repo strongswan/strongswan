@@ -41,17 +41,17 @@ struct private_credential_factory_t {
 	 * public functions
 	 */
 	credential_factory_t public;
-	
+
 	/**
 	 * list with entry_t
 	 */
 	linked_list_t *constructors;
-	
+
 	/**
 	 * Thread specific recursiveness counter
 	 */
 	pthread_key_t recursive;
-	
+
 	/**
 	 * lock access to builders
 	 */
@@ -74,7 +74,7 @@ struct entry_t {
 static bool builder_filter(entry_t *data, entry_t **in, builder_t **out)
 {
 	builder_t *builder;
-	
+
 	if (data->type == (*in)->type &&
 		data->subtype == (*in)->subtype)
 	{
@@ -95,15 +95,15 @@ static enumerator_t* create_builder_enumerator(
 		private_credential_factory_t *this,	credential_type_t type, int subtype)
 {
 	entry_t *data = malloc_thing(entry_t);
-	
+
 	data->type = type;
 	data->subtype = subtype;
-	
+
 	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(
 				enumerator_create_filter(
 					this->constructors->create_enumerator(this->constructors),
-					(void*)builder_filter, data, free), 
+					(void*)builder_filter, data, free),
 				(void*)this->lock->unlock, this->lock);
 }
 
@@ -115,7 +115,7 @@ static void add_builder(private_credential_factory_t *this,
 						builder_constructor_t constructor)
 {
 	entry_t *entry = malloc_thing(entry_t);
-	
+
 	entry->type = type;
 	entry->subtype = subtype;
 	entry->constructor = constructor;
@@ -132,7 +132,7 @@ static void remove_builder(private_credential_factory_t *this,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->constructors->create_enumerator(this->constructors);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -160,10 +160,10 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	void* construct = NULL, *fn, *data;
 	int failures = 0;
 	uintptr_t level;
-	
+
 	level = (uintptr_t)pthread_getspecific(this->recursive);
 	pthread_setspecific(this->recursive, (void*)level + 1);
-	
+
 	enumerator = create_builder_enumerator(this, type, subtype);
 	while (enumerator->enumerate(enumerator, &builder))
 	{
@@ -231,7 +231,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 			break;
 		}
 		va_end(args);
-		
+
 		construct = builder->build(builder);
 		if (construct)
 		{
@@ -243,7 +243,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	if (!construct && !level)
 	{
 		enum_name_t *names = key_type_names;
-		
+
 		if (type == CRED_CERTIFICATE)
 		{
 			names = certificate_type_names;
@@ -278,11 +278,11 @@ credential_factory_t *credential_factory_create()
 	this->public.add_builder = (void(*)(credential_factory_t*,credential_type_t type, int subtype, builder_constructor_t constructor))add_builder;
 	this->public.remove_builder = (void(*)(credential_factory_t*,builder_constructor_t constructor))remove_builder;
 	this->public.destroy = (void(*)(credential_factory_t*))destroy;
-	
+
 	this->constructors = linked_list_create();
 	pthread_key_create(&this->recursive, NULL);
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

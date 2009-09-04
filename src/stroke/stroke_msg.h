@@ -194,7 +194,7 @@ struct stroke_msg_t {
 		STR_LEASES,
 		/* more to come */
 	} type;
-	
+
 	/* verbosity of output returned from charon (-from -1=silent to 4=private)*/
 	int output_verbosity;
 
@@ -203,7 +203,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 		} initiate, route, unroute, terminate, status, del_conn, del_ca;
-		
+
 		/* data for STR_TERMINATE_SRCIP */
 		struct {
 			char *start;
@@ -272,7 +272,7 @@ struct stroke_msg_t {
 			char *type;
 			int level;
 		} loglevel;
-		
+
 		/* data for STR_CONFIG */
 		struct {
 			int cachecrl;

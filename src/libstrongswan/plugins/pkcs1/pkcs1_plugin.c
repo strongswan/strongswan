@@ -41,9 +41,9 @@ static void destroy(private_pkcs1_plugin_t *this)
 							(builder_constructor_t)pkcs1_public_key_builder);
 	lib->creds->remove_builder(lib->creds,
 							(builder_constructor_t)pkcs1_private_key_builder);
-	
+
 	lib->encoding->remove_encoder(lib->encoding, pkcs1_encoder_encode);
-	
+
 	free(this);
 }
 
@@ -53,18 +53,18 @@ static void destroy(private_pkcs1_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_pkcs1_plugin_t *this = malloc_thing(private_pkcs1_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 							(builder_constructor_t)pkcs1_public_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 							(builder_constructor_t)pkcs1_public_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							(builder_constructor_t)pkcs1_private_key_builder);
-	
+
 	lib->encoding->add_encoder(lib->encoding, pkcs1_encoder_encode);
-	
+
 	return &this->public.plugin;
 }
 

@@ -39,7 +39,7 @@ struct storage_t {
 	 * @return					user ID if login good, 0 otherwise
 	 */
 	int (*login)(storage_t *this, char *username, char *password);
-	
+
 	/**
 	 * Create an iterator over the gateways.
 	 *
@@ -49,7 +49,7 @@ struct storage_t {
 	 * @param user				user Id
 	 * @return					enumerator
 	 */
-	enumerator_t* (*create_gateway_enumerator)(storage_t *this, int user);	
+	enumerator_t* (*create_gateway_enumerator)(storage_t *this, int user);
 
 	/**
      * Destroy a storage instance.

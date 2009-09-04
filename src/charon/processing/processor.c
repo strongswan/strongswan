@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
@@ -41,12 +41,12 @@ struct private_processor_t {
 	 * Number of running threads
 	 */
 	u_int total_threads;
-	
+
 	/**
 	 * Desired number of threads
 	 */
 	u_int desired_threads;
-	
+
 	/**
 	 * Number of threads waiting for work
 	 */
@@ -56,7 +56,7 @@ struct private_processor_t {
 	 * The jobs are stored in a linked list
 	 */
 	linked_list_t *list;
-	
+
 	/**
 	 * access to linked_list is locked through this mutex
 	 */
@@ -66,7 +66,7 @@ struct private_processor_t {
 	 * Condvar to wait for new jobs
 	 */
 	condvar_t *job_added;
-	
+
 	/**
 	 * Condvar to wait for terminated threads
 	 */
@@ -81,7 +81,7 @@ static void process_jobs(private_processor_t *this);
 static void restart(private_processor_t *this)
 {
 	pthread_t thread;
-	
+
 	/* respawn thread if required */
 	if (this->desired_threads == 0 ||
 		pthread_create(&thread, NULL, (void*)process_jobs, this) != 0)
@@ -99,16 +99,16 @@ static void restart(private_processor_t *this)
 static void process_jobs(private_processor_t *this)
 {
 	int oldstate;
-	
+
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-	
+
 	DBG2(DBG_JOB, "started worker thread, thread_ID: %06u", (int)pthread_self());
-	
+
 	this->mutex->lock(this->mutex);
 	while (this->desired_threads >= this->total_threads)
 	{
 		job_t *job;
-		
+
 		if (this->list->get_count(this->list) == 0)
 		{
 			this->idle_threads++;
@@ -136,7 +136,7 @@ static u_int get_total_threads(private_processor_t *this)
 {
 	u_int count;
 	this->mutex->lock(this->mutex);
-	count = this->total_threads; 
+	count = this->total_threads;
 	this->mutex->unlock(this->mutex);
 	return count;
 }
@@ -175,7 +175,7 @@ static void queue_job(private_processor_t *this, job_t *job)
 	this->job_added->signal(this->job_added);
 	this->mutex->unlock(this->mutex);
 }
-	
+
 /**
  * Implementation of processor_t.set_threads.
  */
@@ -186,7 +186,7 @@ static void set_threads(private_processor_t *this, u_int count)
 	{	/* increase thread count */
 		int i;
 		pthread_t current;
-		
+
 		this->desired_threads = count;
 		DBG1(DBG_JOB, "spawning %d worker threads", count - this->total_threads);
 		for (i = this->total_threads; i < count; i++)
@@ -231,14 +231,14 @@ static void destroy(private_processor_t *this)
 processor_t *processor_create(size_t pool_size)
 {
 	private_processor_t *this = malloc_thing(private_processor_t);
-	
+
 	this->public.get_total_threads = (u_int(*)(processor_t*))get_total_threads;
 	this->public.get_idle_threads = (u_int(*)(processor_t*))get_idle_threads;
 	this->public.get_job_load = (u_int(*)(processor_t*))get_job_load;
 	this->public.queue_job = (void(*)(processor_t*, job_t*))queue_job;
 	this->public.set_threads = (void(*)(processor_t*, u_int))set_threads;
 	this->public.destroy = (void(*)(processor_t*))destroy;
-	
+
 	this->list = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->job_added = condvar_create(CONDVAR_TYPE_DEFAULT);
@@ -246,7 +246,7 @@ processor_t *processor_create(size_t pool_size)
 	this->total_threads = 0;
 	this->desired_threads = 0;
 	this->idle_threads = 0;
-	
+
 	return &this->public;
 }
 

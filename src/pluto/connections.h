@@ -292,7 +292,7 @@ find_connection_for_clients(struct spd_route **srp
 
 extern chunk_t get_peer_ca_and_groups(struct connection *c
 	, const ietfAttrList_t **peer_list);
-	
+
 /* instantiating routines
  * Note: connection_discard() is in state.h because all its work
  * is looking through state objects.

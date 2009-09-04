@@ -37,71 +37,71 @@ typedef struct ike_cfg_t ike_cfg_t;
  * @see peer_cfg_t to get an overview over the configurations.
  */
 struct ike_cfg_t {
-	
+
 	/**
 	 * Get own address.
-	 * 
+	 *
 	 * @return		string of address/DNS name
 	 */
 	char* (*get_my_addr) (ike_cfg_t *this);
 
 	/**
 	 * Get peers address.
-	 * 
+	 *
 	 * @return		string of address/DNS name
 	 */
 	char* (*get_other_addr) (ike_cfg_t *this);
-	
+
 	/**
 	 * Adds a proposal to the list.
-	 * 
+	 *
 	 * The first added proposal has the highest priority, the last
 	 * added the lowest.
-	 * 
+	 *
 	 * @param proposal	proposal to add
 	 */
 	void (*add_proposal) (ike_cfg_t *this, proposal_t *proposal);
-	
+
 	/**
 	 * Returns a list of all supported proposals.
-	 * 
+	 *
 	 * Returned list and its proposals must be destroyed after use.
-	 * 
+	 *
 	 * @return 			list containing all the proposals
 	 */
 	linked_list_t* (*get_proposals) (ike_cfg_t *this);
-	
+
 	/**
 	 * Select a proposed from suggested proposals.
-	 * 
+	 *
 	 * Returned proposal must be destroyed after use.
-	 * 
+	 *
 	 * @param proposals	list of proposals to select from
 	 * @return			selected proposal, or NULL if none matches.
 	 */
 	proposal_t *(*select_proposal) (ike_cfg_t *this, linked_list_t *proposals);
-	
+
 	/**
 	 * Should we send a certificate request in IKE_SA_INIT?
 	 *
 	 * @return			certificate request sending policy
 	 */
 	bool (*send_certreq) (ike_cfg_t *this);
-	
+
 	/**
 	 * Enforce UDP encapsulation by faking NATD notifies?
-	 * 
+	 *
 	 * @return			TRUE to enfoce UDP encapsulation
 	 */
 	bool (*force_encap) (ike_cfg_t *this);
-	
+
 	/**
 	 * Get the DH group to use for IKE_SA setup.
-	 * 
+	 *
 	 * @return			dh group to use for initialization
 	 */
 	diffie_hellman_group_t (*get_dh_group)(ike_cfg_t *this);
-	
+
 	/**
 	 * Check if two IKE configs are equal.
 	 *
@@ -109,17 +109,17 @@ struct ike_cfg_t {
 	 * @return			TRUE if other equal to this
 	 */
 	bool (*equals)(ike_cfg_t *this, ike_cfg_t *other);
-	
+
 	/**
 	 * Increase reference count.
 	 *
 	 * @return			reference to this
 	 */
 	ike_cfg_t* (*get_ref) (ike_cfg_t *this);
-	
+
 	/**
 	 * Destroys a ike_cfg_t object.
-	 * 
+	 *
 	 * Decrements the internal reference counter and
 	 * destroys the ike_cfg when it reaches zero.
 	 */
@@ -137,7 +137,7 @@ struct ike_cfg_t {
  * @param other			address/DNS name of remote peer
  * @return 				ike_cfg_t object.
  */
-ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap, 
+ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 						  char *me, char *other);
 
 #endif /** IKE_CFG_H_ @}*/

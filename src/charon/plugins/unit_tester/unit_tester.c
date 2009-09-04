@@ -33,17 +33,17 @@ struct private_unit_tester_t {
 };
 
 struct unit_test_t {
-	
+
 	/**
 	 * name of the test
 	 */
 	char *name;
-	
+
 	/**
 	 * test function
 	 */
 	bool (*test)(void);
-	
+
 	/**
 	 * run the test?
 	 */
@@ -62,10 +62,10 @@ static unit_test_t tests[] = {
 static void run_tests(private_unit_tester_t *this)
 {
 	int i, run = 0, failed = 0, success = 0, skipped = 0;
-	
+
 	DBG1(DBG_CFG, "running unit tests, %d tests registered",
 		 sizeof(tests)/sizeof(unit_test_t));
-	
+
 	for (i = 0; i < sizeof(tests)/sizeof(unit_test_t); i++)
 	{
 		if (tests[i].enabled)
@@ -106,11 +106,11 @@ static void destroy(private_unit_tester_t *this)
 plugin_t *plugin_create()
 {
 	private_unit_tester_t *this = malloc_thing(private_unit_tester_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	run_tests(this);
-	
+
 	return &this->public.plugin;
 }
 

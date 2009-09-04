@@ -36,19 +36,19 @@ static void destroy(eap_radius_plugin_t *this)
 plugin_t *plugin_create()
 {
 	eap_radius_plugin_t *this;
-	
+
 	if (!radius_client_init())
 	{
 		DBG1(DBG_CFG, "RADIUS plugin initialization failed");
 		return NULL;
 	}
-	
+
 	this = malloc_thing(eap_radius_plugin_t);
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->eap->add_method(charon->eap, EAP_RADIUS, 0,
 							EAP_SERVER, (eap_constructor_t)eap_radius_create);
-	
+
 	return &this->plugin;
 }
 

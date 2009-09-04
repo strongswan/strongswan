@@ -38,7 +38,7 @@ struct private_host_t {
 	 * Public data
 	 */
 	host_t public;
-	
+
 	/**
 	 * low-lewel structure, wich stores the address
 	 */
@@ -111,7 +111,7 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
 	char buffer[INET6_ADDRSTRLEN + 16];
-	
+
 	if (this == NULL)
 	{
 		snprintf(buffer, sizeof(buffer), "(null)");
@@ -126,10 +126,10 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 		void *address;
 		u_int16_t port;
 		int len;
-		
+
 		address = &this->address6.sin6_addr;
 		port = this->address6.sin6_port;
-		
+
 		switch (this->address.sa_family)
 		{
 			case AF_INET:
@@ -137,7 +137,7 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 				port = this->address4.sin_port;
 				/* fall */
 			case AF_INET6:
-	
+
 				if (inet_ntop(this->address.sa_family, address,
 							  buffer, sizeof(buffer)) == NULL)
 				{
@@ -169,7 +169,7 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 static chunk_t get_address(private_host_t *this)
 {
 	chunk_t address = chunk_empty;
-	
+
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
@@ -252,7 +252,7 @@ static void set_port(private_host_t *this, u_int16_t port)
 static private_host_t *clone_(private_host_t *this)
 {
 	private_host_t *new = malloc_thing(private_host_t);
-	
+
 	memcpy(new, this, sizeof(private_host_t));
 	return new;
 }
@@ -267,7 +267,7 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 		/* 0.0.0.0 and 0::0 are equal */
 		return (is_anyaddr(this) && is_anyaddr(other));
 	}
-	
+
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
@@ -292,7 +292,7 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 static host_diff_t get_differences(host_t *this, host_t *other)
 {
 	host_diff_t ret = HOST_DIFF_NONE;
-	
+
 	if (!this->ip_equals(this, other))
 	{
 		ret |= HOST_DIFF_ADDR;
@@ -302,7 +302,7 @@ static host_diff_t get_differences(host_t *this, host_t *other)
 	{
 		ret |= HOST_DIFF_PORT;
 	}
-	
+
 	return ret;
 }
 
@@ -315,7 +315,7 @@ static bool equals(private_host_t *this, private_host_t *other)
 	{
 		return FALSE;
 	}
-	
+
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
@@ -346,7 +346,7 @@ static void destroy(private_host_t *this)
 static private_host_t *host_create_empty(void)
 {
 	private_host_t *this = malloc_thing(private_host_t);
-	
+
 	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
 	this->public.clone = (host_t* (*) (host_t*))clone_;
@@ -359,7 +359,7 @@ static private_host_t *host_create_empty(void)
 	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
 	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
 	this->public.destroy = (void (*) (host_t*))destroy;
-	
+
 	return this;
 }
 
@@ -369,7 +369,7 @@ static private_host_t *host_create_empty(void)
 static host_t *host_create_any_port(int family, u_int16_t port)
 {
 	host_t *this;
-	
+
 	this = host_create_any(family);
 	this->set_port(this, port);
 	return this;
@@ -381,7 +381,7 @@ static host_t *host_create_any_port(int family, u_int16_t port)
 host_t *host_create_from_string(char *string, u_int16_t port)
 {
 	private_host_t *this;
-	
+
 	if (streq(string, "%any"))
 	{
 		return host_create_any_port(AF_INET, port);
@@ -390,7 +390,7 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	{
 		return host_create_any_port(AF_INET6, port);
 	}
-	
+
 	this = host_create_empty();
 	if (strchr(string, '.'))
 	{
@@ -437,7 +437,7 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 {
 	private_host_t *this = host_create_empty();
-	
+
 	switch (sockaddr->sa_family)
 	{
 		case AF_INET:
@@ -467,7 +467,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	private_host_t *this;
 	struct addrinfo hints, *result;
 	int error;
-	
+
 	if (streq(string, "%any"))
 	{
 		return host_create_any_port(af ? af : AF_INET, port);
@@ -476,7 +476,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	{
 		return host_create_any_port(af ? af : AF_INET6, port);
 	}
-	
+
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = af;
 	error = getaddrinfo(string, NULL, &hints, &result);
@@ -510,7 +510,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 {
 	private_host_t *this;
-	
+
 	switch (family)
 	{
 		case AF_INET:
@@ -567,10 +567,10 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 host_t *host_create_any(int family)
 {
 	private_host_t *this = host_create_empty();
-	
+
 	memset(&this->address_max, 0, sizeof(struct sockaddr_storage));
 	this->address.sa_family = family;
-	
+
 	switch (family)
 	{
 		case AF_INET:

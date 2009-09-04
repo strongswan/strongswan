@@ -1,12 +1,12 @@
 /*
  * minor utilities for subnet-mask manipulation
  * Copyright (C) 1998, 1999  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -17,7 +17,7 @@
 
 /*
  - goodmask - is this a good (^1*0*$) subnet mask?
- * You are not expected to understand this.  See Henry S. Warren Jr, 
+ * You are not expected to understand this.  See Henry S. Warren Jr,
  * "Functions realizable with word-parallel logical and two's-complement
  * addition instructions", CACM 20.6 (June 1977), p.439.
  */

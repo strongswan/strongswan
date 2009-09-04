@@ -32,7 +32,7 @@ struct private_ike_cfg_t {
 	 * Public part
 	 */
 	ike_cfg_t public;
-	
+
 	/**
 	 * Number of references hold by others to this ike_cfg
 	 */
@@ -45,19 +45,19 @@ struct private_ike_cfg_t {
 
 	/**
 	 * Address of remote host
-	 */	
+	 */
 	char *other;
-	
+
 	/**
 	 * should we send a certificate request?
 	 */
 	bool certreq;
-	
+
 	/**
 	 * enforce UDP encapsulation
 	 */
 	bool force_encap;
-	
+
 	/**
 	 * List of proposals to use
 	 */
@@ -71,7 +71,7 @@ static bool send_certreq(private_ike_cfg_t *this)
 {
 	return this->certreq;
 }
-	
+
 /**
  * Implementation of ike_cfg_t.force_encap.
  */
@@ -112,7 +112,7 @@ static linked_list_t* get_proposals(private_ike_cfg_t *this)
 	iterator_t *iterator;
 	proposal_t *current;
 	linked_list_t *proposals = linked_list_create();
-	
+
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
@@ -120,10 +120,10 @@ static linked_list_t* get_proposals(private_ike_cfg_t *this)
 		proposals->insert_last(proposals, (void*)current);
 	}
 	iterator->destroy(iterator);
-	
+
 	return proposals;
 }
-	
+
 /**
  * Implementation of ike_cfg_t.select_proposal.
  */
@@ -132,16 +132,16 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 {
 	iterator_t *stored_iter, *supplied_iter;
 	proposal_t *stored, *supplied, *selected;
-	
+
 	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
-	
-	
+
+
 	/* compare all stored proposals with all supplied. Stored ones are preferred.*/
 	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
 		supplied_iter->reset(supplied_iter);
-		
+
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
 			selected = stored->select(stored, supplied);
@@ -162,7 +162,7 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	supplied_iter->destroy(supplied_iter);
 	DBG1(DBG_CFG, "received proposals: %#P", proposals);
 	DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
-	
+
 	return NULL;
 }
 
@@ -174,7 +174,7 @@ static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 	u_int16_t dh_group = MODP_NONE;
-	
+
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
@@ -195,7 +195,7 @@ static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
 	enumerator_t *e1, *e2;
 	proposal_t *p1, *p2;
 	bool eq = TRUE;
-	
+
 	if (this == other)
 	{
 		return TRUE;
@@ -260,7 +260,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 						  char *me, char *other)
 {
 	private_ike_cfg_t *this = malloc_thing(private_ike_cfg_t);
-	
+
 	/* public functions */
 	this->public.send_certreq = (bool(*)(ike_cfg_t*))send_certreq;
 	this->public.force_encap = (bool (*) (ike_cfg_t *))force_encap_meth;
@@ -273,7 +273,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
 	this->public.get_ref = (ike_cfg_t*(*)(ike_cfg_t*))get_ref;
 	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
-	
+
 	/* private variables */
 	this->refcount = 1;
 	this->certreq = certreq;
@@ -281,6 +281,6 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->me = strdup(me);
 	this->other = strdup(other);
 	this->proposals = linked_list_create();
-	
+
 	return &this->public;
 }

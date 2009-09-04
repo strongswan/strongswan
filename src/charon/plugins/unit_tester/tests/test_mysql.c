@@ -31,7 +31,7 @@ bool test_mysql()
 	char *qtxt;
 	bool good = FALSE;
 	enumerator_t *enumerator;
-	
+
 	db = lib->db->create(lib->db, "mysql://testuser:testpass@localhost/test");
 	if (!db)
 	{

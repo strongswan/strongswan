@@ -35,11 +35,11 @@ struct medcli_creds_t {
 	 * Implements credential_set_t interface
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Destroy the credentials databse.
 	 */
-	void (*destroy)(medcli_creds_t *this);	
+	void (*destroy)(medcli_creds_t *this);
 };
 
 /**

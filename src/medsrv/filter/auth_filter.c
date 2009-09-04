@@ -33,7 +33,7 @@ struct private_auth_filter_t {
 	 * user session
 	 */
 	user_t *user;
-	
+
 	/**
 	 * database connection
 	 */
@@ -50,7 +50,7 @@ static bool run(private_auth_filter_t *this, request_t *request,
 	{
 		enumerator_t *query;
 		char *login;
-	
+
 		query = this->db->query(this->db, "SELECT login FROM user WHERE id = ?",
 								DB_INT, this->user->get_user(this->user),
 								DB_TEXT);

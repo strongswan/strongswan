@@ -31,12 +31,12 @@ struct private_gateway_controller_t {
 	 * public functions
 	 */
 	gateway_controller_t public;
-	
+
 	/**
 	 * manager instance
 	 */
 	manager_t *manager;
-	
+
 };
 
 static void list(private_gateway_controller_t *this, request_t *request)
@@ -44,7 +44,7 @@ static void list(private_gateway_controller_t *this, request_t *request)
 	enumerator_t *enumerator;
 	char *name, *address;
 	int id, port;
-	
+
 	enumerator = this->manager->create_gateway_enumerator(this->manager);
 	while (enumerator->enumerate(enumerator, &id, &name, &port, &address))
 	{
@@ -69,7 +69,7 @@ static void list(private_gateway_controller_t *this, request_t *request)
 static void _select(private_gateway_controller_t *this, request_t *request)
 {
 	char *id;
-	
+
 	id = request->get_query_data(request, "gateway");
 	if (id)
 	{
@@ -106,7 +106,7 @@ static void handle(private_gateway_controller_t *this,
 		{
 			return list(this, request);
 		}
-		else if (streq(action, "select")) 
+		else if (streq(action, "select"))
 		{
 			return _select(this, request);
 		}
@@ -133,9 +133,9 @@ controller_t *gateway_controller_create(context_t *context, void *param)
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-	
+
 	this->manager = (manager_t*)context;
-	
+
 	return &this->public.controller;
 }
 

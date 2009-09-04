@@ -29,12 +29,12 @@ struct private_xcbc_signer_t {
 	 * Public interface of xcbc_signer_t.
 	 */
 	xcbc_signer_t public;
-	
+
 	/**
 	 * Assigned xcbc function.
 	 */
 	xcbc_t *xcbc;
-	
+
 	/**
 	 * Block size (truncation of XCBC MAC)
 	 */
@@ -54,7 +54,7 @@ static void get_signature(private_xcbc_signer_t *this,
 	else
 	{
 		u_int8_t mac[this->xcbc->get_block_size(this->xcbc)];
-		
+
 		this->xcbc->get_mac(this->xcbc, data, mac);
 		memcpy(buffer, mac, this->block_size);
 	}
@@ -73,12 +73,12 @@ static void allocate_signature (private_xcbc_signer_t *this,
 	else
 	{
 		u_int8_t mac[this->xcbc->get_block_size(this->xcbc)];
-		
+
 		this->xcbc->get_mac(this->xcbc, data, mac);
 
 		chunk->ptr = malloc(this->block_size);
 		chunk->len = this->block_size;
-		
+
 		memcpy(chunk->ptr, mac, this->block_size);
 	}
 }
@@ -90,12 +90,12 @@ static bool verify_signature(private_xcbc_signer_t *this,
 							 chunk_t data, chunk_t signature)
 {
 	u_int8_t mac[this->xcbc->get_block_size(this->xcbc)];
-	
+
 	if (signature.len != this->block_size)
 	{
 		return FALSE;
 	}
-	
+
 	this->xcbc->get_mac(this->xcbc, data, mac);
 	return memeq(signature.ptr, mac, this->block_size);
 }
@@ -142,7 +142,7 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 	private_xcbc_signer_t *this;
 	size_t trunc;
 	xcbc_t *xcbc;
-	
+
 	switch (algo)
 	{
 		case AUTH_AES_XCBC_96:
@@ -156,11 +156,11 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_xcbc_signer_t);
 	this->xcbc = xcbc;
 	this->block_size = min(trunc, xcbc->get_block_size(xcbc));
-	
+
 	/* interface functions */
 	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
 	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
@@ -169,7 +169,7 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
 	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;
 	this->public.signer_interface.destroy = (void (*) (signer_t*))destroy;
-	
+
 	return &this->public;
 }
 

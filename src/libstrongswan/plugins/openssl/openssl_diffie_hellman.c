@@ -22,7 +22,7 @@
 
 typedef struct modulus_entry_t modulus_entry_t;
 
-/** 
+/**
  * Entry of the modulus list.
  */
 struct modulus_entry_t {
@@ -30,20 +30,20 @@ struct modulus_entry_t {
 	 * Group number as it is defined in file transform_substructure.h.
 	 */
 	diffie_hellman_group_t group;
-	
+
 	/**
 	 * Pointer to the function to get the modulus.
 	 */
 	BIGNUM *(*get_prime)(BIGNUM *bn);
-	
-	/* 
+
+	/*
 	 * Optimum length of exponent in bits.
-	 */	
+	 */
 	long opt_exponent_len;
-	
-	/* 
+
+	/*
 	 * Generator value.
-	 */	
+	 */
 	u_int16_t generator;
 };
 
@@ -71,27 +71,27 @@ struct private_openssl_diffie_hellman_t {
 	 * Public openssl_diffie_hellman_t interface.
 	 */
 	openssl_diffie_hellman_t public;
-	
+
 	/**
 	 * Diffie Hellman group number.
 	 */
 	u_int16_t group;
-	
+
 	/**
 	 * Diffie Hellman object
 	 */
 	DH *dh;
-	
+
 	/**
 	 * Other public value
 	 */
 	BIGNUM *pub_key;
-	
+
 	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-	
+
 	/**
 	 * True if shared secret is computed
 	 */
@@ -123,7 +123,7 @@ static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
 	/* shared secret should requires a len according the DH group */
 	*secret = chunk_alloc(DH_size(this->dh));
 	memset(secret->ptr, 0, secret->len);
-	memcpy(secret->ptr + secret->len - this->shared_secret.len, 
+	memcpy(secret->ptr + secret->len - this->shared_secret.len,
 		   this->shared_secret.ptr, this->shared_secret.len);
 
 	return SUCCESS;
@@ -137,7 +137,7 @@ static void set_other_public_value(private_openssl_diffie_hellman_t *this,
 								   chunk_t value)
 {
 	int len;
-	
+
 	BN_bin2bn(value.ptr, value.len, this->pub_key);
 	chunk_clear(&this->shared_secret);
 	this->shared_secret.ptr = malloc(DH_size(this->dh));
@@ -167,10 +167,10 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 {
 	int i;
 	bool ansi_x9_42;
-	
+
 	ansi_x9_42 = lib->settings->get_bool(lib->settings,
 										 "libstrongswan.dh_exponent_ansi_x9_42", TRUE);
-	
+
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{
 		if (modulus_entries[i].group == this->group)
@@ -205,32 +205,32 @@ static void destroy(private_openssl_diffie_hellman_t *this)
 openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_openssl_diffie_hellman_t *this = malloc_thing(private_openssl_diffie_hellman_t);
-	
+
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-	
+
 	this->dh = DH_new();
 	if (!this->dh)
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	this->group = group;
 	this->computed = FALSE;
 	this->pub_key = BN_new();
 	this->shared_secret = chunk_empty;
-	
+
 	/* find a modulus according to group */
 	if (set_modulus(this) != SUCCESS)
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	/* generate my public and private values */
 	if (!DH_generate_key(this->dh))
 	{
@@ -238,6 +238,6 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		return NULL;
 	}
 	DBG2("size of DH secret exponent: %d bits", BN_num_bits(this->dh->priv_key));
-	
+
 	return &this->public;
 }

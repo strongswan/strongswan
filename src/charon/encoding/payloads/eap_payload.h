@@ -39,12 +39,12 @@ typedef struct eap_payload_t eap_payload_t;
  * The EAP payload format is described in RFC section 3.16.
  */
 struct eap_payload_t {
-	
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Set the contained EAP data.
 	 *
@@ -54,7 +54,7 @@ struct eap_payload_t {
 	 * @param message	EAP data
 	 */
 	void (*set_data) (eap_payload_t *this, chunk_t data);
-	
+
 	/**
 	 * Get the contained EAP data.
 	 *
@@ -63,21 +63,21 @@ struct eap_payload_t {
 	 * @return			EAP data (pointer to internal data)
 	 */
 	chunk_t (*get_data) (eap_payload_t *this);
-	
+
 	/**
 	 * Get the EAP code.
 	 *
 	 * @return			EAP message as chunk_t
 	 */
 	eap_code_t (*get_code) (eap_payload_t *this);
-	
+
 	/**
 	 * Get the EAP identifier.
 	 *
 	 * @return			unique identifier
 	 */
 	u_int8_t (*get_identifier) (eap_payload_t *this);
-	
+
 	/**
 	 * Get the EAP method type.
 	 *
@@ -85,7 +85,7 @@ struct eap_payload_t {
 	 * @return			EAP method type, vendor specific if vendor != 0
 	 */
 	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
-	
+
 	/**
 	 * Destroys an eap_payload_t object.
 	 */
@@ -109,7 +109,7 @@ eap_payload_t *eap_payload_create_data(chunk_t data);
 /**
  * Creates an eap_payload_t object with a code.
  *
- * Could should be either EAP_SUCCESS/EAP_FAILURE, use 
+ * Could should be either EAP_SUCCESS/EAP_FAILURE, use
  * constructor above otherwise.
  *
  * @param code			EAP status code

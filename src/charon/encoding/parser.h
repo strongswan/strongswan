@@ -36,32 +36,32 @@ typedef struct parser_t parser_t;
  * The parser remains the state until destroyed.
  */
 struct parser_t {
-	
+
 	/**
 	 * Parses the next payload.
-	 * 
+	 *
 	 * @warning Caller is responsible for freeing allocated payload.
-	 * 
+	 *
 	 * Rules for parsing are described in the payload definition.
 	 *
 	 * @param payload_type	payload type to parse
 	 * @param payload		pointer where parsed payload was allocated
-	 * @return 			
+	 * @return
 	 * 						- SUCCESSFUL if succeeded,
 	 * 						- PARSE_ERROR if corrupted/invalid data found
 	 */
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
-	
+
 	/**
 	 * Gets the remaining byte count which is not currently parsed.
 	 */
 	int (*get_remaining_byte_count) (parser_t *this);
-	
+
 	/**
 	 * Resets the current parser context.
 	 */
 	void (*reset_context) (parser_t *this);
-	
+
 	/**
 	 * Destroys a parser_t object.
 	 */
@@ -70,7 +70,7 @@ struct parser_t {
 
 /**
  * Constructor to create a parser_t object.
- * 
+ *
  * @param data		chunk of data to parse with this parser_t object
  * @return 			parser_t object
  */

@@ -48,113 +48,113 @@ struct private_peer_cfg_t {
 	 * Public part
 	 */
 	peer_cfg_t public;
-	
+
 	/**
 	 * Number of references hold by others to this peer_cfg
 	 */
 	refcount_t refcount;
-	
+
 	/**
 	 * Name of the peer_cfg, used to query it
 	 */
 	char *name;
-	
+
 	/**
 	 * IKE version to use for initiation
 	 */
 	u_int ike_version;
-	
+
 	/**
 	 * IKE config associated to this peer config
 	 */
 	ike_cfg_t *ike_cfg;
-	
+
 	/**
 	 * list of child configs associated to this peer config
 	 */
 	linked_list_t *child_cfgs;
-	
+
 	/**
 	 * mutex to lock access to list of child_cfgs
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * should we send a certificate
 	 */
 	cert_policy_t cert_policy;
-	
+
 	/**
 	 * uniqueness of an IKE_SA
 	 */
 	unique_policy_t unique;
-	
+
 	/**
 	 * number of tries after giving up if peer does not respond
 	 */
 	u_int32_t keyingtries;
-	
+
 	/**
 	 * enable support for MOBIKE
 	 */
 	bool use_mobike;
-	
+
 	/**
 	 * Time before starting rekeying
 	 */
 	u_int32_t rekey_time;
-	
+
 	/**
 	 * Time before starting reauthentication
 	 */
 	u_int32_t reauth_time;
-	
+
 	/**
 	 * Time, which specifies the range of a random value substracted from above.
 	 */
 	u_int32_t jitter_time;
-	
+
 	/**
 	 * Delay before deleting a rekeying/reauthenticating SA
 	 */
 	u_int32_t over_time;
-	
+
 	/**
 	 * DPD check intervall
 	 */
 	u_int32_t dpd;
-	
+
 	/**
 	 * virtual IP to use locally
 	 */
 	host_t *virtual_ip;
-	
+
 	/**
 	 * pool to acquire configuration attributes from
 	 */
 	char *pool;
-	
+
 	/**
 	 * local authentication configs (rulesets)
 	 */
 	linked_list_t *local_auth;
-	
+
 	/**
 	 * remote authentication configs (constraints)
 	 */
 	linked_list_t *remote_auth;
-	
+
 #ifdef ME
 	/**
 	 * Is this a mediation connection?
 	 */
 	bool mediation;
-	
+
 	/**
 	 * Name of the mediation connection to mediate through
 	 */
 	peer_cfg_t *mediated_by;
-	
+
 	/**
 	 * ID of our peer at the mediation server (= leftid of the peer's conn with
 	 * the mediation server)
@@ -239,12 +239,12 @@ static bool child_cfg_enumerate(child_cfg_enumerator_t *this, child_cfg_t **chd)
 static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
 {
 	child_cfg_enumerator_t *enumerator = malloc_thing(child_cfg_enumerator_t);
-	
+
 	enumerator->public.enumerate = (void*)child_cfg_enumerate;
 	enumerator->public.destroy = (void*)child_cfg_enumerator_destroy;
 	enumerator->mutex = this->mutex;
 	enumerator->wrapped = this->child_cfgs->create_enumerator(this->child_cfgs);
-	
+
 	this->mutex->lock(this->mutex);
 	return &enumerator->public;
 }
@@ -259,13 +259,13 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 	enumerator_t *sup_enum, *cfg_enum;
 	traffic_selector_t *sup_ts, *cfg_ts;
 	int match = 0, round;
-	
+
 	/* fetch configured TS list, narrowing dynamic TS */
 	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, host);
-	
+
 	/* use a round counter to rate leading TS with higher priority */
 	round = sup_list->get_count(sup_list);
-	
+
 	sup_enum = sup_list->create_enumerator(sup_list);
 	while (sup_enum->enumerate(sup_enum, &sup_ts))
 	{
@@ -286,9 +286,9 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 		round--;
 	}
 	sup_enum->destroy(sup_enum);
-	
+
 	cfg_list->destroy_offset(cfg_list, offsetof(traffic_selector_t, destroy));
-	
+
 	return match;
 }
 
@@ -303,16 +303,16 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
 	int best = 0;
-	
+
 	DBG2(DBG_CFG, "looking for a child config for %#R=== %#R", my_ts, other_ts);
 	enumerator = create_child_cfg_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		int my_prio, other_prio;
-		
+
 		my_prio = get_ts_match(current, TRUE, my_ts, my_host);
 		other_prio = get_ts_match(current, FALSE, other_ts, other_host);
-		
+
 		if (my_prio && other_prio)
 		{
 			DBG2(DBG_CFG, "  candidate \"%s\" with prio %d+%d",
@@ -421,7 +421,7 @@ static host_t* get_virtual_ip(private_peer_cfg_t *this)
 {
 	return this->virtual_ip;
 }
-	
+
 /**
  * Implementation of peer_cfg_t.get_pool.
  */
@@ -493,7 +493,7 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	enumerator_t *e1, *e2;
 	auth_cfg_t *cfg1, *cfg2;
 	bool equal = TRUE;
-	
+
 	if (this->local_auth->get_count(this->local_auth) !=
 		other->local_auth->get_count(other->local_auth))
 	{
@@ -504,7 +504,7 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	{
 		return FALSE;
 	}
-	
+
 	e1 = this->local_auth->create_enumerator(this->local_auth);
 	e2 = other->local_auth->create_enumerator(other->local_auth);
 	while (e1->enumerate(e1, &cfg1) && e2->enumerate(e2, &cfg2))
@@ -517,12 +517,12 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	}
 	e1->destroy(e1);
 	e2->destroy(e2);
-	
+
 	if (!equal)
 	{
 		return FALSE;
 	}
-	
+
 	e1 = this->remote_auth->create_enumerator(this->remote_auth);
 	e2 = other->remote_auth->create_enumerator(other->remote_auth);
 	while (e1->enumerate(e1, &cfg1) && e2->enumerate(e2, &cfg2))
@@ -535,7 +535,7 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	}
 	e1->destroy(e1);
 	e2->destroy(e2);
-	
+
 	return equal;
 }
 
@@ -552,7 +552,7 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	{
 		return FALSE;
 	}
-	
+
 	return (
 		this->ike_version == other->ike_version &&
 		this->cert_policy == other->cert_policy &&
@@ -657,7 +657,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_mediated_by = (peer_cfg_t* (*) (peer_cfg_t *))get_mediated_by;
 	this->public.get_peer_id = (identification_t* (*) (peer_cfg_t *))get_peer_id;
 #endif /* ME */
-	
+
 	/* apply init values */
 	this->name = strdup(name);
 	this->ike_version = ike_version;

@@ -29,12 +29,12 @@ struct private_hmac_signer_t {
 	 * Public interface of hmac_signer_t.
 	 */
 	hmac_signer_t public;
-	
+
 	/**
 	 * Assigned hmac function.
 	 */
 	hmac_t *hmac;
-	
+
 	/**
 	 * Block size (truncation of HMAC Hash)
 	 */
@@ -54,7 +54,7 @@ static void get_signature(private_hmac_signer_t *this,
 	else
 	{
 		u_int8_t mac[this->hmac->get_block_size(this->hmac)];
-		
+
 		this->hmac->get_mac(this->hmac, data, mac);
 		memcpy(buffer, mac, this->block_size);
 	}
@@ -73,12 +73,12 @@ static void allocate_signature (private_hmac_signer_t *this,
 	else
 	{
 		u_int8_t mac[this->hmac->get_block_size(this->hmac)];
-		
+
 		this->hmac->get_mac(this->hmac, data, mac);
 
 		chunk->ptr = malloc(this->block_size);
 		chunk->len = this->block_size;
-		
+
 		memcpy(chunk->ptr, mac, this->block_size);
 	}
 }
@@ -90,9 +90,9 @@ static bool verify_signature(private_hmac_signer_t *this,
 							 chunk_t data, chunk_t signature)
 {
 	u_int8_t mac[this->hmac->get_block_size(this->hmac)];
-	
+
 	this->hmac->get_mac(this->hmac, data, mac);
-	
+
 	if (signature.len != this->block_size)
 	{
 		return FALSE;
@@ -142,7 +142,7 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 	private_hmac_signer_t *this;
 	size_t trunc;
 	hash_algorithm_t hash;
-	
+
 	switch (algo)
 	{
 		case AUTH_HMAC_SHA1_96:
@@ -180,7 +180,7 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 		default:
 			return NULL;
 	}
-	
+
 	this = malloc_thing(private_hmac_signer_t);
 	this->hmac = hmac_create(hash);
 	if (this->hmac == NULL)
@@ -190,7 +190,7 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 	}
 	/* prevent invalid truncation */
 	this->block_size = min(trunc, this->hmac->get_block_size(this->hmac));
-	
+
 	/* interface functions */
 	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
 	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
@@ -199,7 +199,7 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
 	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;
 	this->public.signer_interface.destroy = (void (*) (signer_t*))destroy;
-	
+
 	return &(this->public);
 }
 

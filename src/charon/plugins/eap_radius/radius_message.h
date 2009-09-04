@@ -181,14 +181,14 @@ extern enum_name_t *radius_attribute_type_names;
  * A RADIUS message, contains attributes.
  */
 struct radius_message_t {
-	
+
 	/**
 	 * Create an enumerator over contained RADIUS attributes.
 	 *
 	 * @return				enumerator over (int type, chunk_t data)
 	 */
 	enumerator_t* (*create_enumerator)(radius_message_t *this);
-	
+
 	/**
 	 * Add a RADIUS attribute to the message.
 	 *
@@ -197,42 +197,42 @@ struct radius_message_t {
 	 */
 	void (*add)(radius_message_t *this, radius_attribute_type_t type,
 				chunk_t data);
-	
+
 	/**
 	 * Get the message type (code).
 	 *
 	 * @return				message code
 	 */
 	radius_message_code_t (*get_code)(radius_message_t *this);
-	
+
 	/**
 	 * Get the message identifier.
 	 *
 	 * @return				message identifier
 	 */
 	u_int8_t (*get_identifier)(radius_message_t *this);
-	
+
 	/**
 	 * Set the message identifier.
 	 *
 	 * @param identifier	message identifier
 	 */
 	void (*set_identifier)(radius_message_t *this, u_int8_t identifier);
-	
+
 	/**
 	 * Get the 16 byte authenticator.
 	 *
 	 * @return				pointer to the Authenticator field
 	 */
 	u_int8_t* (*get_authenticator)(radius_message_t *this);
-	
+
 	/**
 	 * Get the RADIUS message in its encoded form.
 	 *
 	 * @return				chunk pointing to internal RADIUS message.
 	 */
 	chunk_t (*get_encoding)(radius_message_t *this);
-	
+
 	/**
 	 * Calculate and add the Message-Authenticator attribute to the message.
 	 *
@@ -240,7 +240,7 @@ struct radius_message_t {
 	 * @param signer		HMAC-MD5 signer with secret set
 	 */
 	void (*sign)(radius_message_t *this, rng_t *rng, signer_t *signer);
-	
+
 	/**
 	 * Verify the integrity of a received RADIUS response.
 	 *
@@ -251,7 +251,7 @@ struct radius_message_t {
 	 */
 	bool (*verify)(radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
 				   hasher_t *hasher, signer_t *signer);
-	
+
 	/**
 	 * Destroy the message.
 	 */

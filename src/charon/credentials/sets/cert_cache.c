@@ -35,22 +35,22 @@ typedef struct relation_t relation_t;
  * A trusted relation between subject and issuer
  */
 struct relation_t {
-	
+
 	/**
 	 * subject of this relation
 	 */
 	certificate_t *subject;
-	
+
 	/**
 	 * issuer of this relation
 	 */
 	certificate_t *issuer;
-	
+
 	/**
 	 * Cache hits
 	 */
 	u_int hits;
-	
+
 	/**
 	 * Lock for this relation
 	 */
@@ -61,12 +61,12 @@ struct relation_t {
  * private data of cert_cache
  */
 struct private_cert_cache_t {
-	
+
 	/**
 	 * public functions
 	 */
 	cert_cache_t public;
-	
+
 	/**
 	 * array of trusted subject-issuer relations
 	 */
@@ -82,12 +82,12 @@ static void cache(private_cert_cache_t *this,
 	relation_t *rel;
 	int i, offset, try;
 	u_int total_hits = 0;
-	
+
 	/* check for a unused relation slot first */
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		rel = &this->relations[i];
-		
+
 		if (!rel->subject && rel->lock->try_write_lock(rel->lock))
 		{
 			/* double-check having lock */
@@ -109,7 +109,7 @@ static void cache(private_cert_cache_t *this,
 		for (i = 0; i < CACHE_SIZE; i++)
 		{
 			rel = &this->relations[(i + offset) % CACHE_SIZE];
-			
+
 			if (rel->hits > total_hits / CACHE_SIZE)
 			{	/* skip often used slots */
 				continue;
@@ -140,11 +140,11 @@ static bool issued_by(private_cert_cache_t *this,
 {
 	relation_t *found = NULL, *current;
 	int i;
-	
+
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		current = &this->relations[i];
-		
+
 		current->lock->read_lock(current->lock);
 		if (current->subject)
 		{
@@ -203,14 +203,14 @@ static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
 {
 	public_key_t *public;
 	relation_t *rel;
-	
+
 	if (this->locked >= 0)
 	{
 		rel = &this->relations[this->locked];
 		rel->lock->unlock(rel->lock);
 		this->locked = -1;
 	}
-	
+
 	while (++this->index < CACHE_SIZE)
 	{
 		rel = &this->relations[this->index];
@@ -219,7 +219,7 @@ static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
 		if (rel->subject)
 		{
 			/* CRL lookup is done using issuer/authkeyidentifier */
-			if (this->key == KEY_ANY && this->id && 
+			if (this->key == KEY_ANY && this->id &&
 				(this->cert == CERT_ANY || this->cert == CERT_X509_CRL) &&
 				rel->subject->get_type(rel->subject) == CERT_X509_CRL &&
 				rel->subject->has_issuer(rel->subject, this->id))
@@ -261,7 +261,7 @@ static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
 static void cert_enumerator_destroy(cert_enumerator_t *this)
 {
 	relation_t *rel;
-	
+
 	if (this->locked >= 0)
 	{
 		rel = &this->relations[this->locked];
@@ -274,11 +274,11 @@ static void cert_enumerator_destroy(cert_enumerator_t *this)
  * implementation of credential_set_t.create_cert_enumerator
  */
 static enumerator_t *create_enumerator(private_cert_cache_t *this,
-									   certificate_type_t cert, key_type_t key, 
+									   certificate_type_t cert, key_type_t key,
 									   identification_t *id, bool trusted)
 {
 	cert_enumerator_t *enumerator;
-	
+
 	if (trusted)
 	{
 		return NULL;
@@ -292,7 +292,7 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 	enumerator->relations = this->relations;
 	enumerator->index = -1;
 	enumerator->locked = -1;
-	
+
 	return &enumerator->public;
 }
 
@@ -303,7 +303,7 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 {
 	relation_t *rel;
 	int i;
-	
+
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		rel = &this->relations[i];
@@ -346,7 +346,7 @@ static void destroy(private_cert_cache_t *this)
 {
 	relation_t *rel;
 	int i;
-	
+
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		rel = &this->relations[i];
@@ -367,7 +367,7 @@ cert_cache_t *cert_cache_create()
 {
 	private_cert_cache_t *this;
 	int i;
-	
+
 	this = malloc_thing(private_cert_cache_t);
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
@@ -377,7 +377,7 @@ cert_cache_t *cert_cache_create()
 	this->public.issued_by = (bool(*)(cert_cache_t*, certificate_t *subject, certificate_t *issuer))issued_by;
 	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
 	this->public.destroy = (void(*)(cert_cache_t*))destroy;
-	
+
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
 		this->relations[i].subject = NULL;

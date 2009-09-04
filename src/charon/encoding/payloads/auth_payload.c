@@ -23,15 +23,15 @@ typedef struct private_auth_payload_t private_auth_payload_t;
 
 /**
  * Private data of an auth_payload_t object.
- * 
+ *
  */
 struct private_auth_payload_t {
-	
+
 	/**
 	 * Public auth_payload_t interface.
 	 */
 	auth_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -41,17 +41,17 @@ struct private_auth_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Method of the AUTH Data.
 	 */
 	u_int8_t auth_method;
-	
+
 	/**
 	 * The contained auth data value.
 	 */
@@ -60,8 +60,8 @@ struct private_auth_payload_t {
 
 /**
  * Encoding rules to parse or generate a AUTH payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_auth_payload_t.
  */
 encoding_rule_t auth_payload_encodings[] = {
@@ -221,8 +221,8 @@ static void destroy(private_auth_payload_t *this)
 	{
 		chunk_free(&(this->auth_data));
 	}
-	
-	free(this);	
+
+	free(this);
 }
 
 /*
@@ -240,7 +240,7 @@ auth_payload_t *auth_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (auth_payload_t *)) destroy;
 	this->public.set_auth_method = (void (*) (auth_payload_t *,auth_method_t)) set_auth_method;
@@ -248,7 +248,7 @@ auth_payload_t *auth_payload_create()
 	this->public.set_data = (void (*) (auth_payload_t *,chunk_t)) set_data;
 	this->public.get_data_clone = (chunk_t (*) (auth_payload_t *)) get_data_clone;
 	this->public.get_data = (chunk_t (*) (auth_payload_t *)) get_data;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;

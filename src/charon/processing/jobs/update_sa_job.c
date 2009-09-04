@@ -31,12 +31,12 @@ struct private_update_sa_job_t {
 	 * public update_sa_job_t interface
 	 */
 	update_sa_job_t public;
-	
+
 	/**
 	 * reqid of the CHILD_SA
 	 */
 	u_int32_t reqid;
-	
+
 	/**
 	 * New SA address and port
 	 */
@@ -53,12 +53,12 @@ static void destroy(private_update_sa_job_t *this)
 }
 
 /**
- * Implementation of job_t.execute. 
- */ 
+ * Implementation of job_t.execute.
+ */
 static void execute(private_update_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													this->reqid, TRUE);
 	if (ike_sa == NULL)
@@ -84,10 +84,10 @@ static void execute(private_update_sa_job_t *this)
 update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new)
 {
 	private_update_sa_job_t *this = malloc_thing(private_update_sa_job_t);
-	
+
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
+
 	this->reqid = reqid;
 	this->new = new;
 

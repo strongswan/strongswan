@@ -56,10 +56,10 @@ extern enum_name_t *guest_state_names;
  * @param guest		guest to start
  * @param args		args to use for guest invocation, args[0] is kernel
  * @param argc		number of elements in args
- * @param idle		
+ * @param idle
  * @return			PID of child, 0 if failed
  */
-typedef pid_t (*invoke_function_t)(void *data, guest_t *guest, 
+typedef pid_t (*invoke_function_t)(void *data, guest_t *guest,
 								   char *args[], int argc);
 
 /**
@@ -71,28 +71,28 @@ typedef void (*idle_function_t)(void);
  * A guest is a UML instance running on the host.
  **/
 struct guest_t {
-	
+
 	/**
 	 * Get the name of this guest.
 	 *
 	 * @return		name of the guest
 	 */
 	char* (*get_name) (guest_t *this);
-	
+
 	/**
 	 * Get the process ID of the guest child process.
 	 *
 	 * @return		name of the guest
 	 */
 	pid_t (*get_pid) (guest_t *this);
-	
+
 	/**
 	 * Get the state of the guest (stopped, started, etc.).
 	 *
 	 * @return		guests state
 	 */
-	guest_state_t (*get_state)(guest_t *this);	
-	
+	guest_state_t (*get_state)(guest_t *this);
+
 	/**
 	 * Start the guest.
 	 *
@@ -103,14 +103,14 @@ struct guest_t {
 	 */
 	bool (*start) (guest_t *this, invoke_function_t invoke, void *data,
 				   idle_function_t idle);
-	
+
 	/**
 	 * Kill the guest.
 	 *
 	 * @param idle		idle function to call while waiting to termination
 	 */
 	void (*stop) (guest_t *this, idle_function_t idle);
-	
+
 	/**
 	 * Create a new interface in the current scenario.
 	 *
@@ -118,21 +118,21 @@ struct guest_t {
 	 * @return		created interface, or NULL if failed
 	 */
 	iface_t* (*create_iface)(guest_t *this, char *name);
-	
+
 	/**
 	 * Destroy an interface on guest.
 	 *
 	 * @param iface	interface to destroy
 	 */
 	void (*destroy_iface)(guest_t *this, iface_t *iface);
-	
+
 	/**
 	 * Create an enumerator over all guest interfaces.
 	 *
 	 * @return		enumerator over iface_t's
 	 */
 	enumerator_t* (*create_iface_enumerator)(guest_t *this);
-	
+
 	/**
 	 * Set the template COWFS overlay to use.
 	 *
@@ -140,7 +140,7 @@ struct guest_t {
 	 * @return			FALSE if failed
 	 */
 	bool (*load_template)(guest_t *this, char *parent);
-	
+
 	/**
 	 * Execute a command on the guests mconsole.
 	 *
@@ -152,15 +152,15 @@ struct guest_t {
 	 */
 	int (*exec)(guest_t *this, void(*cb)(void*,char*,size_t), void *data,
 				char *cmd, ...);
-	
+
 	/**
 	 * Execute a command on the guests mconsole, with output formatter.
-	 * 
+	 *
 	 * If lines is TRUE, callback is invoked for each output line. Otherwise
 	 * the full result is returned in one callback invocation.
-	 * 
+	 *
 	 * @note This function does not work with binary output.
-	 * 
+	 *
 	 * @param cb		callback to call for each line or for the complete output
 	 * @param lines		TRUE if the callback should be called for each line
 	 * @param data		data to pass to callback
@@ -170,15 +170,15 @@ struct guest_t {
 	 */
 	int (*exec_str)(guest_t *this, void(*cb)(void*,char*), bool lines,
 					void *data, char *cmd, ...);
-	
+
 	/**
 	 * Called whenever a SIGCHILD for the guests PID is received.
 	 */
 	void (*sigchild)(guest_t *this);
-	
+
 	/**
 	 * Close and destroy a guest with all interfaces
-	 */	
+	 */
 	void (*destroy) (guest_t *this);
 };
 

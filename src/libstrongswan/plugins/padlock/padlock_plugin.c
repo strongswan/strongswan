@@ -55,7 +55,7 @@ struct private_padlock_plugin_t {
 	 * public functions
 	 */
 	padlock_plugin_t public;
-	
+
 	/**
 	 * features supported by Padlock
 	 */
@@ -81,11 +81,11 @@ static padlock_feature_t get_padlock_features()
 {
 	char vendor[3 * sizeof(int) + 1];
 	int a, b, c, d;
-	
+
 	cpuid(0, a, b, c, d);
 	/* VendorID string is in b-d-c (yes, in this order) */
 	snprintf(vendor, sizeof(vendor), "%.4s%.4s%.4s", &b, &d, &c);
-	
+
 	/* check if we have a VIA chip */
 	if (streq(vendor, "CentaurHauls"))
 	{
@@ -134,9 +134,9 @@ static void destroy(private_padlock_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_padlock_plugin_t *this = malloc_thing(private_padlock_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->features = get_padlock_features();
 	if (!this->features)
 	{
@@ -154,7 +154,7 @@ plugin_t *plugin_create()
 		 this->features & PADLOCK_ACE2_ENABLED ? " ACE2" : "",
 		 this->features & PADLOCK_PHE_ENABLED ? " PHE" : "",
 		 this->features & PADLOCK_PMM_ENABLED ? " PMM" : "");
-	
+
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
 		lib->crypto->add_rng(lib->crypto, RNG_TRUE,

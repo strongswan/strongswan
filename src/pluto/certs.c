@@ -116,7 +116,7 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 {
 	private_key_t *key = NULL;
 	char *path;
-	
+
 	path = concatenate_paths(PRIVATE_KEY_PATH, filename);
 	if (pass && pass->prompt && pass->fd != NULL_FD)
 	{	/* use passphrase callback */
@@ -140,7 +140,7 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 	{	/* no passphrase */
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 								 BUILD_FROM_FILE, path, BUILD_END);
-		
+
 	}
 	if (key)
 	{

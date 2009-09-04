@@ -31,8 +31,8 @@ typedef struct migrate_job_t migrate_job_t;
 
 /**
  * Class representing a MIGRATE Job.
- * 
- * This job sets a routed CHILD_SA for an existing IPsec policy. 
+ *
+ * This job sets a routed CHILD_SA for an existing IPsec policy.
  */
 struct migrate_job_t {
 	/**

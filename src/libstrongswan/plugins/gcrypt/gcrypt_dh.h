@@ -29,7 +29,7 @@ typedef struct gcrypt_dh_t gcrypt_dh_t;
  * Implementation of the Diffie-Hellman algorithm using libgcrypt mpi.
  */
 struct gcrypt_dh_t {
-	
+
 	/**
 	 * Implements diffie_hellman_t interface.
 	 */
@@ -38,7 +38,7 @@ struct gcrypt_dh_t {
 
 /**
  * Creates a new gcrypt_dh_t object.
- * 
+ *
  * @param group			Diffie Hellman group number to use
  * @return				gcrypt_dh_t object, NULL if not supported
  */

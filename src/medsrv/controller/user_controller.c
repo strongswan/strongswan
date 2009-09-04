@@ -37,12 +37,12 @@ struct private_user_controller_t {
 	 * database connection
 	 */
 	database_t *db;
-	
+
 	/**
 	 * user session
 	 */
 	user_t *user;
-	
+
 	/**
 	 * minimum required password lenght
 	 */
@@ -56,7 +56,7 @@ static chunk_t hash_password(char *login, char *password)
 {
 	hasher_t *hasher;
 	chunk_t hash, data;
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
@@ -77,16 +77,16 @@ static void login(private_user_controller_t *this, request_t *request)
 	if (request->get_query_data(request, "submit"))
 	{
 		char *login, *password;
-		
+
 		login = request->get_query_data(request, "login");
 		password = request->get_query_data(request, "password");
-		
+
 		if (login && password)
 		{
 			enumerator_t *query;
 			u_int id = 0;
 			chunk_t hash;
-			
+
 			hash = hash_password(login, password);
 			query = this->db->query(this->db,
 						"SELECT id FROM user WHERE login = ? AND password = ?",
@@ -126,7 +126,7 @@ static bool verify_login(private_user_controller_t *this, request_t *request,
 	if (!login || *login == '\0')
 	{
 		request->setf(request, "error=Username is missing.");
-		return FALSE;	
+		return FALSE;
 	}
 	while (*login != '\0')
 	{
@@ -190,13 +190,13 @@ static void add(private_user_controller_t *this, request_t *request)
 		login = request->get_query_data(request, "new_login");
 		password = request->get_query_data(request, "new_password");
 		confirm = request->get_query_data(request, "confirm_password");
-		
+
 		if (!verify_login(this, request, login) ||
 			!verify_password(this, request, password, confirm))
 		{
 			break;
 		}
-		
+
 		hash = hash_password(login, password);
 		if (!hash.ptr || this->db->execute(this->db, &id,
 							"INSERT INTO user (login, password) VALUES (?, ?)",
@@ -222,7 +222,7 @@ static void edit(private_user_controller_t *this, request_t *request)
 {
 	enumerator_t *query;
 	char *old_login;
-	
+
 	/* lookup old login */
 	query = this->db->query(this->db, "SELECT login FROM user WHERE id = ?",
 							DB_INT, this->user->get_user(this->user),
@@ -256,12 +256,12 @@ static void edit(private_user_controller_t *this, request_t *request)
 	{
 		char *new_login, *old_pass, *new_pass, *confirm;
 		chunk_t old_hash, new_hash;
-		
+
 		new_login = request->get_query_data(request, "old_login");
 		old_pass = request->get_query_data(request, "old_password");
 		new_pass = request->get_query_data(request, "new_password");
 		confirm = request->get_query_data(request, "confirm_password");
-		
+
 		if (!verify_login(this, request, new_login) ||
 			!verify_password(this, request, new_pass, confirm))
 		{
@@ -270,7 +270,7 @@ static void edit(private_user_controller_t *this, request_t *request)
 		}
 		old_hash = hash_password(old_login, old_pass);
 		new_hash = hash_password(new_login, new_pass);
-		
+
 		if (this->db->execute(this->db, NULL,
 			"UPDATE user SET login = ?, password = ? "
 			"WHERE id = ? AND password = ?",

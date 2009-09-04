@@ -35,32 +35,32 @@ struct private_request_t {
 	 * public functions
 	 */
 	request_t public;
-	
+
 	/**
 	 * FastCGI request object
 	 */
 	FCGX_Request req;
-	
+
 	/**
 	 * length of the req.envp array
 	 */
 	int req_env_len;
-	
+
 	/**
 	 * ClearSilver CGI Kit context
 	 */
 	CGI *cgi;
-	
+
 	/**
 	 * ClearSilver HDF dataset for this request
 	 */
 	HDF *hdf;
-	
-	/** 
+
+	/**
 	 * close the session?
 	 */
 	bool closed;
-	
+
 	/**
 	 * reference count
 	 */
@@ -85,7 +85,7 @@ pthread_once_t once = PTHREAD_ONCE_INIT;
 static int read_cb(void *null, char *buf, int size)
 {
 	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
-	
+
 	return FCGX_GetStr(buf, size, this->req.in);
 }
 
@@ -95,7 +95,7 @@ static int read_cb(void *null, char *buf, int size)
 static int writef_cb(void *null, const char *format, va_list args)
 {
 	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
-	
+
 	FCGX_VFPrintF(this->req.out, format, args);
 	return 0;
 }
@@ -105,7 +105,7 @@ static int writef_cb(void *null, const char *format, va_list args)
 static int write_cb(void *null, const char *buf, int size)
 {
 	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
-	
+
 	return FCGX_PutStr(buf, size, this->req.out);
 }
 
@@ -116,7 +116,7 @@ static char *getenv_cb(void *null, const char *key)
 {
 	char *value;
 	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
-	
+
 	value = FCGX_GetParam(key, this->req.envp);
 	return value ? strdup(value) : NULL;
 }
@@ -157,7 +157,7 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 	}
 	return 0;
 }
-	
+
 /**
  * Implementation of request_t.get_cookie.
  */
@@ -165,7 +165,7 @@ static char* get_cookie(private_request_t *this, char *name)
 {
 	return hdf_get_valuef(this->hdf, "Cookie.%s", name);
 }
-	
+
 /**
  * Implementation of request_t.get_path.
  */
@@ -211,7 +211,7 @@ static void add_cookie(private_request_t *this, char *name, char *value)
 					FCGX_GetParam("SCRIPT_NAME", this->req.envp),
 					NULL, NULL, 0, 0);
 }
-	
+
 /**
  * Implementation of request_t.redirect.
  */
@@ -246,7 +246,7 @@ static char* get_base(private_request_t *this)
 {
 	return FCGX_GetParam("SCRIPT_NAME", this->req.envp);
 }
-	
+
 /**
  * Implementation of request_t.session_closed.
  */
@@ -279,7 +279,7 @@ static void serve(private_request_t *this, char *headers, chunk_t chunk)
 static void render(private_request_t *this, char *template)
 {
 	NEOERR* err;
-	
+
 	pthread_setspecific(this_key, this);
 	err = cgi_display(this->cgi, template);
 	if (err)
@@ -327,8 +327,8 @@ static void setf(private_request_t *this, char *format, ...)
 	va_start(args, format);
 	hdf_set_valuevf(this->hdf, format, args);
 	va_end(args);
-}	
-	
+}
+
 /**
  * Implementation of request_t.get_ref.
  */
@@ -371,7 +371,7 @@ request_t *request_create(int fd, bool debug)
 	NEOERR* err;
 	private_request_t *this = malloc_thing(private_request_t);
 	bool failed = FALSE;
-	
+
 	pthread_cleanup_push(free, this);
 	if (FCGX_InitRequest(&this->req, fd, 0) != 0 ||
 		FCGX_Accept_r(&this->req) != 0)
@@ -402,18 +402,18 @@ request_t *request_create(int fd, bool debug)
 	this->public.setf = (void(*)(request_t*, char *format, ...))setf;
 	this->public.get_ref = (request_t*(*)(request_t*))get_ref;
 	this->public.destroy = (void(*)(request_t*))destroy;
-	
+
 	pthread_once(&once, init);
 	pthread_setspecific(this_key, this);
-	
+
 	this->ref = 1;
 	this->closed = FALSE;
-	this->req_env_len = 0;	
+	this->req_env_len = 0;
 	while (this->req.envp[this->req_env_len] != NULL)
 	{
 		this->req_env_len++;
 	}
-	
+
 	err = hdf_init(&this->hdf);
 	if (!err)
 	{
@@ -425,7 +425,7 @@ request_t *request_create(int fd, bool debug)
 			hdf_set_value(this->hdf, "Config.CompressionEnabled", "1");
 			hdf_set_value(this->hdf, "Config.WhiteSpaceStrip", "2");
 		}
-	
+
 		err = cgi_init(&this->cgi, this->hdf);
 		if (!err)
 		{

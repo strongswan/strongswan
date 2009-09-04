@@ -30,7 +30,7 @@ struct private_auth_controller_t {
 	 * public functions
 	 */
 	auth_controller_t public;
-	
+
 	/**
 	 * manager instance
 	 */
@@ -47,7 +47,7 @@ static void login(private_auth_controller_t *this, request_t *request)
 static void check(private_auth_controller_t *this, request_t *request)
 {
 	char *username, *password;
-	
+
 	username = request->get_query_data(request, "username");
 	password = request->get_query_data(request, "password");
 	if (username && password &&
@@ -87,11 +87,11 @@ static void handle(private_auth_controller_t *this,
 		{
 			return login(this, request);
 		}
-		else if (streq(action, "check")) 
+		else if (streq(action, "check"))
 		{
 			return check(this, request);
 		}
-		else if (streq(action, "logout")) 
+		else if (streq(action, "logout"))
 		{
 			return logout(this, request);
 		}
@@ -117,9 +117,9 @@ controller_t *auth_controller_create(context_t *context, void *param)
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-	
+
 	this->manager = (manager_t*)context;
-	
+
 	return &this->public.controller;
 }
 

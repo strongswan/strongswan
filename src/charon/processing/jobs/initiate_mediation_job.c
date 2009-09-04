@@ -29,12 +29,12 @@ struct private_initiate_mediation_job_t {
 	 * public initiate_mediation_job_t interface
 	 */
 	initiate_mediation_job_t public;
-	
+
 	/**
 	 * ID of the IKE_SA of the mediated connection.
 	 */
 	ike_sa_id_t *mediated_sa_id;
-	
+
 	/**
 	 * ID of the IKE_SA of the mediation connection.
 	 */
@@ -68,26 +68,26 @@ static bool initiate_callback(private_initiate_mediation_job_t *this,
 
 /**
  * Implementation of job_t.execute.
- */ 
+ */
 static void initiate(private_initiate_mediation_job_t *this)
 {
 	ike_sa_t *mediated_sa, *mediation_sa;
 	peer_cfg_t *mediated_cfg, *mediation_cfg;
 	enumerator_t *enumerator;
 	auth_cfg_t *auth_cfg;
-	
+
 	mediated_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 												   this->mediated_sa_id);
 	if (mediated_sa)
 	{
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
-		mediated_cfg->get_ref(mediated_cfg); 
-		
+		mediated_cfg->get_ref(mediated_cfg);
+
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
-		
+
 		mediation_cfg = mediated_cfg->get_mediated_by(mediated_cfg);
 		mediation_cfg->get_ref(mediation_cfg);
-		
+
 		enumerator = mediation_cfg->create_auth_cfg_enumerator(mediation_cfg,
 															   TRUE);
 		if (!enumerator->enumerate(enumerator, &auth_cfg) ||
@@ -99,7 +99,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 			destroy(this);
 			return;
 		}
-		
+
 		if (charon->connect_manager->check_and_register(charon->connect_manager,
 				auth_cfg->get(auth_cfg, AUTH_RULE_IDENTITY),
 				mediated_cfg->get_peer_id(mediated_cfg),
@@ -107,7 +107,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 		{
 			mediated_cfg->destroy(mediated_cfg);
 			mediation_cfg->destroy(mediation_cfg);
-			
+
 			mediated_sa = charon->ike_sa_manager->checkout(
 								charon->ike_sa_manager, this->mediated_sa_id);
 			if (mediated_sa)
@@ -121,7 +121,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 			return;
 		}
 		/* we need an additional reference because initiate consumes one */
-		mediation_cfg->get_ref(mediation_cfg); 
+		mediation_cfg->get_ref(mediation_cfg);
 
 		if (charon->controller->initiate(charon->controller, mediation_cfg,
 					NULL, (controller_cb_t)initiate_callback, this) != SUCCESS)
@@ -143,7 +143,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 
 		mediation_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 				this->mediation_sa_id);
-		
+
 		if (mediation_sa)
 		{
 			if (mediation_sa->initiate_mediation(mediation_sa,
@@ -163,10 +163,10 @@ static void initiate(private_initiate_mediation_job_t *this)
 				destroy(this);
 				return;
 			}
-			
+
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediation_sa);
 		}
-		
+
 		mediated_cfg->destroy(mediated_cfg);
 	}
 	destroy(this);
@@ -174,12 +174,12 @@ static void initiate(private_initiate_mediation_job_t *this)
 
 /**
  * Implementation of job_t.execute.
- */ 
+ */
 static void reinitiate(private_initiate_mediation_job_t *this)
 {
 	ike_sa_t *mediated_sa, *mediation_sa;
 	peer_cfg_t *mediated_cfg;
-	
+
 	mediated_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->mediated_sa_id);
 	if (mediated_sa)
@@ -187,7 +187,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
 		mediated_cfg->get_ref(mediated_cfg);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
-		
+
 		mediation_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 				this->mediation_sa_id);
 		if (mediation_sa)
@@ -211,7 +211,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediation_sa);
 		}
-		
+
 		mediated_cfg->destroy(mediated_cfg);
 	}
 	destroy(this);
@@ -223,10 +223,10 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 static private_initiate_mediation_job_t *initiate_mediation_job_create_empty()
 {
 	private_initiate_mediation_job_t *this = malloc_thing(private_initiate_mediation_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
+
 	/* private variables */
 	this->mediation_sa_id = NULL;
 	this->mediated_sa_id = NULL;
@@ -240,9 +240,9 @@ static private_initiate_mediation_job_t *initiate_mediation_job_create_empty()
 initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id)
 {
 	private_initiate_mediation_job_t *this = initiate_mediation_job_create_empty();
-	
+
 	this->public.job_interface.execute = (void (*) (job_t *)) initiate;
-	
+
 	this->mediated_sa_id = ike_sa_id->clone(ike_sa_id);
 
 	return &this->public;
@@ -255,11 +255,11 @@ initiate_mediation_job_t *reinitiate_mediation_job_create(ike_sa_id_t *mediation
 		ike_sa_id_t *mediated_sa_id)
 {
 	private_initiate_mediation_job_t *this = initiate_mediation_job_create_empty();
-	
+
 	this->public.job_interface.execute = (void (*) (job_t *)) reinitiate;
-	
+
 	this->mediation_sa_id = mediation_sa_id->clone(mediation_sa_id);
 	this->mediated_sa_id = mediated_sa_id->clone(mediated_sa_id);
-	
-	return &this->public; 
+
+	return &this->public;
 }

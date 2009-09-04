@@ -44,7 +44,7 @@ struct retransmit_job_t {
 
 /**
  * Creates a job of type retransmit.
- * 
+ *
  * @param message_id		message_id of the request to resend
  * @param ike_sa_id			identification of the ike_sa as ike_sa_id_t
  * @return					retransmit_job_t object

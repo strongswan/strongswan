@@ -25,17 +25,17 @@ typedef struct private_file_logger_t private_file_logger_t;
  * Private data of a file_logger_t object
  */
 struct private_file_logger_t {
-	
+
 	/**
 	 * Public data.
 	 */
 	file_logger_t public;
-	
+
 	/**
 	 * output file
 	 */
 	FILE *out;
-	
+
 	/**
 	 * Maximum level to log, for each group
 	 */
@@ -52,10 +52,10 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 	{
 		char buffer[8192];
 		char *current = buffer, *next;
-		
+
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
-		
+
 		/* prepend a prefix in front of every line */
 		while (current)
 		{
@@ -109,17 +109,17 @@ static void destroy(private_file_logger_t *this)
 file_logger_t *file_logger_create(FILE *out)
 {
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
-	
+
 	/* public functions */
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
 	this->public.set_level = (void(*)(file_logger_t*,debug_t,level_t))set_level;
 	this->public.destroy = (void(*)(file_logger_t*))destroy;
-	
+
 	/* private variables */
 	this->out = out;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
-	
+
 	return &this->public;
 }
 

@@ -689,7 +689,7 @@ extern enum_name_t *cert_policy_names;
 
 typedef enum certpolicy {
 	CERT_ALWAYS_SEND   = 0,
-	CERT_SEND_IF_ASKED = 1, 
+	CERT_SEND_IF_ASKED = 1,
 	CERT_NEVER_SEND    = 2,
 
  	CERT_YES_SEND      = 3,       /* synonym for CERT_ALWAYS_SEND */

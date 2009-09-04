@@ -50,9 +50,9 @@ void *clalloc(void * pointer, size_t size)
 {
 	void *data;
 	data = malloc(size);
-	
+
 	memcpy(data, pointer, size);
-	
+
 	return (data);
 }
 
@@ -62,7 +62,7 @@ void *clalloc(void * pointer, size_t size)
 void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 {
 	int m, i;
-	
+
 	/* byte wise XOR until dst aligned */
 	for (i = 0; (uintptr_t)&dst[i] % sizeof(long); i++)
 	{
@@ -171,7 +171,7 @@ time_t time_monotonic(timeval_t *tv)
 	/* as we use time_monotonic() for condvar operations, we use the
 	 * monotonic time source only if it is also supported by pthread. */
 	timespec_t ts;
-	
+
 	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
 	{
 		if (tv)
@@ -233,7 +233,7 @@ void nop()
 #include <pthread.h>
 
 /**
- * We use a single mutex for all refcount variables. 
+ * We use a single mutex for all refcount variables.
  */
 static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -253,7 +253,7 @@ void ref_get(refcount_t *ref)
 bool ref_put(refcount_t *ref)
 {
 	bool more_refs;
-	
+
 	pthread_mutex_lock(&ref_mutex);
 	more_refs = --(*ref);
 	pthread_mutex_unlock(&ref_mutex);
@@ -274,7 +274,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	time_t *time = *((time_t**)(args[0]));
 	bool utc = *((bool*)(args[1]));;
 	struct tm t;
-	
+
 	if (time == UNDEFINED_TIME)
 	{
 		return print_in_hook(dst, len, "--- -- --:--:--%s----",
@@ -303,7 +303,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	time_t *arg1 = *((time_t**)(args[0]));
 	time_t *arg2 = *((time_t**)(args[1]));
 	time_t delta = abs(*arg1 - *arg2);
-	
+
 	if (delta > 2 * 60 * 60 * 24)
 	{
 		delta /= 60 * 60 * 24;
@@ -337,7 +337,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 {
 	char *bytes = *((void**)(args[0]));
 	int len = *((size_t*)(args[1]));
-	
+
 	char buffer[BYTES_PER_LINE * 3];
 	char ascii_buffer[BYTES_PER_LINE + 1];
 	char *buffer_pos = buffer;
@@ -346,9 +346,9 @@ int mem_printf_hook(char *dst, size_t dstlen,
 	int line_start = 0;
 	int i = 0;
 	int written = 0;
-	
+
 	written += print_in_hook(dst, dstlen, "=> %d bytes @ %p", len, bytes);
-	
+
 	while (bytes_pos < bytes_roof)
 	{
 		*buffer_pos++ = hexdig_upper[(*bytes_pos >> 4) & 0xF];
@@ -357,20 +357,20 @@ int mem_printf_hook(char *dst, size_t dstlen,
 		ascii_buffer[i++] =
 				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
 
-		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
+		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE)
 		{
 			int padding = 3 * (BYTES_PER_LINE - i);
-			
+
 			while (padding--)
 			{
 				*buffer_pos++ = ' ';
 			}
 			*buffer_pos++ = '\0';
 			ascii_buffer[i] = '\0';
-			
+
 			written += print_in_hook(dst, dstlen, "\n%4d: %s  %s",
 								     line_start, buffer, ascii_buffer);
-			
+
 			buffer_pos = buffer;
 			line_start += BYTES_PER_LINE;
 			i = 0;

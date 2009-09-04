@@ -32,14 +32,14 @@ int main(int arc, char *argv[])
 	bool debug;
 	char *uri;
 	int timeout, threads;
-	
+
 	library_init(STRONGSWAN_CONF);
 	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "medsrv.load", PLUGINS)))
 	{
 		return 1;
 	}
-	
+
 	socket = lib->settings->get_str(lib->settings, "medsrv.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "medsrv.debug", FALSE);
 	timeout = lib->settings->get_time(lib->settings, "medsrv.timeout", 900);
@@ -50,14 +50,14 @@ int main(int arc, char *argv[])
 		fprintf(stderr, "database URI medsrv.database not defined.\n");
 		return 1;
 	}
-	
+
 	db = lib->db->create(lib->db, uri);
 	if (db == NULL)
 	{
 		fprintf(stderr, "opening database failed.\n");
 		return 1;
 	}
-	
+
 	dispatcher = dispatcher_create(socket, debug, timeout,
 								   (context_constructor_t)user_create, db);
 	dispatcher->add_filter(dispatcher,
@@ -66,13 +66,13 @@ int main(int arc, char *argv[])
 						(controller_constructor_t)user_controller_create, db);
 	dispatcher->add_controller(dispatcher,
 						(controller_constructor_t)peer_controller_create, db);
-	
+
 	dispatcher->run(dispatcher, threads);
-	
+
 	dispatcher->waitsignal(dispatcher);
 	dispatcher->destroy(dispatcher);
 	db->destroy(db);
-	
+
 	library_deinit();
 	return 0;
 }

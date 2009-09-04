@@ -27,8 +27,8 @@ struct private_xcbc_prf_t {
 	/**
 	 * Public xcbc_prf_t interface.
 	 */
-	xcbc_prf_t public;	
-	
+	xcbc_prf_t public;
+
 	/**
 	 * xcbc to use for generation.
 	 */
@@ -100,7 +100,7 @@ xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo)
 {
 	private_xcbc_prf_t *this;
 	xcbc_t *xcbc;
-	
+
 	switch (algo)
 	{
 		case PRF_AES128_XCBC:
@@ -113,17 +113,17 @@ xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_xcbc_prf_t);
 	this->xcbc = xcbc;
-	
+
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
 	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
 	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
 	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
-	
+
 	return &this->public;
 }
 

@@ -26,32 +26,32 @@ typedef struct private_transform_attribute_t private_transform_attribute_t;
 
 /**
  * Private data of an transform_attribute_t object.
- * 
+ *
  */
 struct private_transform_attribute_t {
 	/**
 	 * Public transform_attribute_t interface.
 	 */
 	transform_attribute_t public;
-	
+
 	/**
 	 * Attribute Format Flag.
-	 * 
+	 *
 	 * - TRUE means value is stored in attribute_length_or_value
 	 * - FALSE means value is stored in attribute_value
 	 */
 	bool attribute_format;
-	
+
 	/**
 	 * Type of the attribute.
 	 */
 	u_int16_t attribute_type;
-	
+
 	/**
 	 * Attribute Length if attribute_format is 0, attribute Value otherwise.
 	 */
 	u_int16_t attribute_length_or_value;
-	
+
 	/**
 	 * Attribute value as chunk if attribute_format is 0 (FALSE).
 	 */
@@ -67,16 +67,16 @@ ENUM_END(transform_attribute_type_name, KEY_LENGTH);
 
 /**
  * Encoding rules to parse or generate a Transform attribute.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_transform_attribute_t.
- * 
+ *
  */
 encoding_rule_t transform_attribute_encodings[] = {
 	/* Flag defining the format of this payload */
 	{ ATTRIBUTE_FORMAT,			offsetof(private_transform_attribute_t, attribute_format) 			},
 	/* type of the attribute as 15 bit unsigned integer */
-	{ ATTRIBUTE_TYPE,			offsetof(private_transform_attribute_t, attribute_type)				},	
+	{ ATTRIBUTE_TYPE,			offsetof(private_transform_attribute_t, attribute_type)				},
 	/* Length or value, depending on the attribute format flag */
 	{ ATTRIBUTE_LENGTH_OR_VALUE,	offsetof(private_transform_attribute_t, attribute_length_or_value)	},
 	/* Value of attribute if attribute format flag is zero */
@@ -104,7 +104,7 @@ static status_t verify(private_transform_attribute_t *this)
 	{
 		return FAILED;
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -164,16 +164,16 @@ static void set_value_chunk(private_transform_attribute_t *this, chunk_t value)
 		free(this->attribute_value.ptr);
 		this->attribute_value.ptr = NULL;
 		this->attribute_value.len = 0;
-		
+
 	}
-	
+
 	if (value.len > 2)
 	{
 		this->attribute_value.ptr = clalloc(value.ptr,value.len);
 		this->attribute_value.len = value.len;
 		this->attribute_length_or_value = value.len;
 		/* attribute has not a fixed length */
-		this->attribute_format = FALSE;		
+		this->attribute_format = FALSE;
 	}
 	else
 	{
@@ -192,7 +192,7 @@ static void set_value(private_transform_attribute_t *this, u_int16_t value)
 		free(this->attribute_value.ptr);
 		this->attribute_value.ptr = NULL;
 		this->attribute_value.len = 0;
-		
+
 	}
 	this->attribute_length_or_value = value;
 }
@@ -207,14 +207,14 @@ static chunk_t get_value_chunk (private_transform_attribute_t *this)
 	if (this->attribute_format == FALSE)
 	{
 		value.ptr = this->attribute_value.ptr;
-		value.len = this->attribute_value.len;		
+		value.len = this->attribute_value.len;
 	}
 	else
 	{
 		value.ptr = (void *) &(this->attribute_length_or_value);
 		value.len = 2;
 	}
-	
+
 	return value;
 }
 
@@ -249,19 +249,19 @@ static u_int16_t get_attribute_type (private_transform_attribute_t *this)
 static transform_attribute_t * _clone(private_transform_attribute_t *this)
 {
 	private_transform_attribute_t *new_clone;
-	
+
 	new_clone = (private_transform_attribute_t *) transform_attribute_create();
-	
+
 	new_clone->attribute_format = this->attribute_format;
 	new_clone->attribute_type = this->attribute_type;
 	new_clone->attribute_length_or_value = this->attribute_length_or_value;
-	
+
 	if (!new_clone->attribute_format)
 	{
-		new_clone->attribute_value.ptr = clalloc(this->attribute_value.ptr,this->attribute_value.len);		
+		new_clone->attribute_value.ptr = clalloc(this->attribute_value.ptr,this->attribute_value.len);
 		new_clone->attribute_value.len = this->attribute_value.len;
 	}
-	
+
 	return (transform_attribute_t *) new_clone;
 }
 
@@ -273,7 +273,7 @@ static void destroy(private_transform_attribute_t *this)
 	if (this->attribute_value.ptr != NULL)
 	{
 		free(this->attribute_value.ptr);
-	}	
+	}
 	free(this);
 }
 
@@ -292,7 +292,7 @@ transform_attribute_t *transform_attribute_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.set_value_chunk = (void (*) (transform_attribute_t *,chunk_t)) set_value_chunk;
 	this->public.set_value = (void (*) (transform_attribute_t *,u_int16_t)) set_value;
@@ -302,7 +302,7 @@ transform_attribute_t *transform_attribute_create()
 	this->public.get_attribute_type = (u_int16_t (*) (transform_attribute_t *)) get_attribute_type;
 	this->public.clone = (transform_attribute_t * (*) (transform_attribute_t *)) _clone;
 	this->public.destroy = (void (*) (transform_attribute_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->attribute_format = TRUE;
 	this->attribute_type = 0;

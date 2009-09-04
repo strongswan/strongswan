@@ -34,12 +34,12 @@ struct private_backend_manager_t {
 	 * Public part of backend_manager_t object.
 	 */
 	backend_manager_t public;
-	
+
 	/**
 	 * list of registered backends
 	 */
 	linked_list_t *backends;
-	
+
 	/**
 	 * rwlock for backends
 	 */
@@ -80,7 +80,7 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 {
 	host_t *me_cand, *other_cand;
 	ike_cfg_match_t match = MATCH_NONE;
-	
+
 	if (me)
 	{
 		me_cand = host_create_from_dns(cand->get_my_addr(cand),
@@ -103,7 +103,7 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 	{
 		match += MATCH_ANY;
 	}
-	
+
 	if (other)
 	{
 		other_cand = host_create_from_dns(cand->get_other_addr(cand),
@@ -132,21 +132,21 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 /**
  * implements backend_manager_t.get_ike_cfg.
  */
-static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this, 
+static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 							  host_t *me, host_t *other)
 {
 	ike_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
 	ike_cfg_match_t match, best = MATCH_ANY;
 	ike_data_t *data;
-	
+
 	data = malloc_thing(ike_data_t);
 	data->this = this;
 	data->me = me;
 	data->other = other;
-	
+
 	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
@@ -154,11 +154,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		match = get_ike_match(current, me, other);
-		
+
 		if (match)
 		{
-			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
-				 current->get_my_addr(current), 
+			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d",
+				 current->get_my_addr(current),
 				 current->get_other_addr(current), match);
 			if (match > best)
 			{
@@ -173,7 +173,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	this->lock->unlock(this->lock);
 	if (found)
 	{
-		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d", 
+		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d",
 			 found->get_my_addr(found), found->get_other_addr(found), best);
 	}
 	return found;
@@ -189,12 +189,12 @@ static id_match_t get_peer_match(identification_t *id,
 	auth_cfg_t *auth;
 	identification_t *candidate;
 	id_match_t match = ID_MATCH_NONE;
-	
+
 	if (!id)
 	{
 		return ID_MATCH_ANY;
 	}
-	
+
 	/* compare first auth config only */
 	enumerator = cfg->create_auth_cfg_enumerator(cfg, local);
 	if (enumerator->enumerate(enumerator, &auth))
@@ -269,7 +269,7 @@ static bool peer_enum_filter(linked_list_t *configs,
 static void peer_enum_filter_destroy(linked_list_t *configs)
 {
 	match_entry_t *entry;
-	
+
 	while (configs->remove_last(configs, (void**)&entry) == SUCCESS)
 	{
 		entry->cfg->destroy(entry->cfg);
@@ -285,7 +285,7 @@ static void insert_sorted(match_entry_t *entry, linked_list_t *list,
 						  linked_list_t *helper)
 {
 	match_entry_t *current;
-	
+
 	while (list->remove_first(list, (void**)&current) == SUCCESS)
 	{
 		helper->insert_last(helper, current);
@@ -311,7 +311,7 @@ static void insert_sorted(match_entry_t *entry, linked_list_t *list,
 
 /**
  * Implements backend_manager_t.create_peer_cfg_enumerator.
- */			
+ */
 static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 							host_t *me, host_t *other, identification_t *my_id,
 							identification_t *other_id)
@@ -320,26 +320,26 @@ static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 	peer_data_t *data;
 	peer_cfg_t *cfg;
 	linked_list_t *configs, *helper;
-	
+
 	data = malloc_thing(peer_data_t);
 	data->lock = this->lock;
 	data->me = my_id;
 	data->other = other_id;
-	
+
 	/* create a sorted list with all matches */
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 					this->backends->create_enumerator(this->backends),
 					(void*)peer_enum_create, data, (void*)peer_enum_destroy);
-	
+
 	if (!me && !other && !my_id && !other_id)
 	{	/* shortcut if we are doing a "listall" */
 		return enumerator;
 	}
-	
+
 	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
 		 me, my_id, other, other_id);
-	
+
 	configs = linked_list_create();
 	/* only once allocated helper list for sorting */
 	helper = linked_list_create();
@@ -348,16 +348,16 @@ static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 		id_match_t match_peer_me, match_peer_other;
 		ike_cfg_match_t match_ike;
 		match_entry_t *entry;
-		
+
 		match_peer_me = get_peer_match(my_id, cfg, TRUE);
 		match_peer_other = get_peer_match(other_id, cfg, FALSE);
 		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other);
-		
+
 		if (match_peer_me && match_peer_other && match_ike)
 		{
 			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d (me/other/ike)",
 				 cfg->get_name(cfg), match_peer_me, match_peer_other, match_ike);
-			
+
 			entry = malloc_thing(match_entry_t);
 			entry->match_peer = match_peer_me + match_peer_other;
 			entry->match_ike = match_ike;
@@ -367,7 +367,7 @@ static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	helper->destroy(helper);
-	
+
 	return enumerator_create_filter(configs->create_enumerator(configs),
 									(void*)peer_enum_filter, configs,
 									(void*)peer_enum_filter_destroy);
@@ -375,13 +375,13 @@ static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
 
 /**
  * implements backend_manager_t.get_peer_cfg_by_name.
- */			
+ */
 static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *name)
 {
 	backend_t *backend;
 	peer_cfg_t *config = NULL;
 	enumerator_t *enumerator;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->backends->create_enumerator(this->backends);
 	while (config == NULL && enumerator->enumerate(enumerator, (void**)&backend))
@@ -429,17 +429,17 @@ static void destroy(private_backend_manager_t *this)
 backend_manager_t *backend_manager_create()
 {
 	private_backend_manager_t *this = malloc_thing(private_backend_manager_t);
-	
+
 	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
 	this->public.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_manager_t*,char*))get_peer_cfg_by_name;
 	this->public.create_peer_cfg_enumerator = (enumerator_t* (*)(backend_manager_t*,host_t*,host_t*,identification_t*,identification_t*))create_peer_cfg_enumerator;
 	this->public.add_backend = (void(*)(backend_manager_t*, backend_t *backend))add_backend;
 	this->public.remove_backend = (void(*)(backend_manager_t*, backend_t *backend))remove_backend;
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;
-	
+
 	this->backends = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

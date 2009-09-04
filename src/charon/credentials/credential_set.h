@@ -43,12 +43,12 @@ typedef struct credential_set_t credential_set_t;
  * enumerator is alive, so it is save to use a write lock there.
  */
 struct credential_set_t {
-	
+
 	/**
 	 * Create an enumerator over private keys (private_key_t).
 	 *
 	 * The id is either a key identifier of the requested key, or an identity
-	 * of the key owner. 
+	 * of the key owner.
 	 *
 	 * @param type		type of requested private key
 	 * @param id		key identifier/owner
@@ -80,10 +80,10 @@ struct credential_set_t {
 	 * @param other		other identity who owns that secret
 	 * @return			enumerator as described above
 	 */
-	enumerator_t *(*create_shared_enumerator)(credential_set_t *this, 
+	enumerator_t *(*create_shared_enumerator)(credential_set_t *this,
 						shared_key_type_t type,
 						identification_t *me, identification_t *other);
-	
+
 	/**
 	 * Create an enumerator over certificate distribution points.
 	 *
@@ -93,7 +93,7 @@ struct credential_set_t {
 	 */
 	enumerator_t *(*create_cdp_enumerator)(credential_set_t *this,
 						certificate_type_t type, identification_t *id);
-	
+
 	/**
 	 * Cache a certificate in the credential set.
 	 *
@@ -102,7 +102,7 @@ struct credential_set_t {
 	 *
 	 * @param cert		certificate to cache
 	 */
-	void (*cache_cert)(credential_set_t *this, certificate_t *cert);	
+	void (*cache_cert)(credential_set_t *this, certificate_t *cert);
 };
 
 #endif /** CREDENTIAL_SET_H_ @}*/

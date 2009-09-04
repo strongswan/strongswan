@@ -49,16 +49,16 @@ static void destroy(private_mysql_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_mysql_plugin_t *this;
-	
+
 	if (!mysql_database_init())
 	{
 		DBG1("MySQL client library initialization failed");
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_mysql_plugin_t);
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->db->add_database(lib->db,
 						  (database_constructor_t)mysql_database_create);
 

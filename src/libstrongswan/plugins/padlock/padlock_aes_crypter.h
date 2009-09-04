@@ -30,7 +30,7 @@ typedef struct padlock_aes_crypter_t padlock_aes_crypter_t;
  * Implementation of AES-128 using VIA Padlock.
  */
 struct padlock_aes_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -39,7 +39,7 @@ struct padlock_aes_crypter_t {
 
 /**
  * Constructor to create padlock_aes_crypter_t.
- * 
+ *
  * @param key_size		key size in bytes, currently supports only 16.
  * @param algo			algorithm to implement, must be ENCR_AES_CBC
  * @return				padlock_aes_crypter_t, NULL if not supported

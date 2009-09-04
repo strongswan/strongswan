@@ -38,7 +38,7 @@ struct private_ldap_fetcher_t {
 	 * Public data
 	 */
 	ldap_fetcher_t public;
-	
+
 	/**
 	 * timeout to use for fetches
 	 */
@@ -79,7 +79,7 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 			}
 			else
 			{
-				DBG1("getting LDAP values failed: %s", 
+				DBG1("getting LDAP values failed: %s",
 					 ldap_err2string(ldap_result2error(ldap, entry, 0)));
 			}
 			ldap_memfree(attr);
@@ -110,7 +110,7 @@ static status_t fetch(private_ldap_fetcher_t *this, char *url,
 	int ldap_version = LDAP_VERSION3;
 	struct timeval timeout;
 	status_t status = FAILED;
-	
+
 	if (!strneq(url, "ldap", 4))
 	{
 		return NOT_SUPPORTED;
@@ -126,7 +126,7 @@ static status_t fetch(private_ldap_fetcher_t *this, char *url,
 		ldap_free_urldesc(lurl);
 		return FAILED;
 	}
-	
+
 	timeout.tv_sec = this->timeout;
 	timeout.tv_usec = 0;
 
@@ -171,7 +171,7 @@ static status_t fetch(private_ldap_fetcher_t *this, char *url,
 static bool set_option(private_ldap_fetcher_t *this, fetcher_option_t option, ...)
 {
 	va_list args;
-	
+
 	va_start(args, option);
 	switch (option)
 	{
@@ -203,9 +203,9 @@ ldap_fetcher_t *ldap_fetcher_create()
 	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
 	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
 	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-	
+
 	this->timeout = DEFAULT_TIMEOUT;
-	
+
 	return &this->public;
 }
 

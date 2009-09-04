@@ -29,7 +29,7 @@ typedef struct send_keepalive_job_t send_keepalive_job_t;
 
 /**
  * Class representing a SEND_KEEPALIVE Job.
- * 
+ *
  * This job will send a NAT keepalive packet if the IKE SA is still alive,
  * and reinsert itself into the event queue.
  */
@@ -42,7 +42,7 @@ struct send_keepalive_job_t {
 
 /**
  * Creates a job of type SEND_KEEPALIVE.
- * 
+ *
  * @param ike_sa_id		identification of the ike_sa as ike_sa_id_t object (gets cloned)
  * @return				initiate_ike_sa_job_t object
  */

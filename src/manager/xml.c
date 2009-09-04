@@ -32,22 +32,22 @@ struct private_xml_t {
 	 * public functions
 	 */
 	xml_t public;
-	
+
 	/**
 	 * root node of this xml (part)
 	 */
 	xmlNode *node;
-	
+
 	/**
 	 * document, only for root xml_t
 	 */
 	xmlDoc *doc;
-	
+
 	/**
 	 * Root xml_t*
 	 */
 	private_xml_t *root;
-	
+
 	/**
 	 * number of enumerator instances
 	 */
@@ -79,10 +79,10 @@ static bool child_enumerate(child_enum_t *e, private_xml_t **child,
 	if (e->node)
 	{
 		xmlNode *text;
-		
+
 		text = e->node->children;
 		*value = NULL;
-		
+
 		while (text && text->type != XML_TEXT_NODE)
 		{
 			text = text->next;
@@ -109,7 +109,7 @@ static char* get_attribute(private_xml_t *this, char *name)
 }
 
 /**
- * destroy enumerator, and complete tree if this was the last enumerator 
+ * destroy enumerator, and complete tree if this was the last enumerator
  */
 static void child_destroy(child_enum_t *this)
 {
@@ -145,10 +145,10 @@ static enumerator_t* children(private_xml_t *this)
 xml_t *xml_create(char *xml)
 {
 	private_xml_t *this = malloc_thing(private_xml_t);
-	
+
 	this->public.get_attribute = (char*(*)(xml_t*,char*))get_attribute;
 	this->public.children = (enumerator_t*(*)(xml_t*))children;
-	
+
 	this->doc = xmlReadMemory(xml, strlen(xml), NULL, NULL, 0);
 	if (this->doc == NULL)
 	{
@@ -158,7 +158,7 @@ xml_t *xml_create(char *xml)
 	this->node = xmlDocGetRootElement(this->doc);
 	this->root = this;
 	this->enums = 0;
-	
+
 	return &this->public;
 }
 

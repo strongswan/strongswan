@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008 Thomas Kallenberg
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil 
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,12 +26,12 @@ typedef struct private_padlock_aes_crypter_t private_padlock_aes_crypter_t;
  * Private data of padlock_aes_crypter_t
  */
 struct private_padlock_aes_crypter_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	padlock_aes_crypter_t public;
-	
+
 	/*
 	 * the key
 	 */
@@ -56,7 +56,7 @@ typedef struct {
 /**
  * Invoke the actual de/encryption
  */
-static void padlock_crypt(void *key, void *ctrl, void *src, void *dst, 
+static void padlock_crypt(void *key, void *ctrl, void *src, void *dst,
 						  int count, void *iv)
 {
 	asm volatile(
@@ -81,7 +81,7 @@ static void padlock_crypt(void *key, void *ctrl, void *src, void *dst,
 /*
  * Implementation of crypter_t.crypt
  */
-static void crypt(private_padlock_aes_crypter_t *this, char *iv, 
+static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 				  chunk_t src, chunk_t *dst, bool enc)
 {
 	cword cword PADLOCK_ALIGN;
@@ -110,7 +110,7 @@ static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 /**
  * Implementation of crypter_t.decrypt.
  */
-static void decrypt(private_padlock_aes_crypter_t *this, chunk_t data, 
+static void decrypt(private_padlock_aes_crypter_t *this, chunk_t data,
 						chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, TRUE);
@@ -120,7 +120,7 @@ static void decrypt(private_padlock_aes_crypter_t *this, chunk_t data,
 /**
  * Implementation of crypter_t.encrypt.
  */
-static void encrypt (private_padlock_aes_crypter_t *this, chunk_t data, 
+static void encrypt (private_padlock_aes_crypter_t *this, chunk_t data,
 							chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, FALSE);
@@ -162,18 +162,18 @@ static void destroy (private_padlock_aes_crypter_t *this)
 /*
  * Described in header
  */
-padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo, 
+padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 												  size_t key_size)
 {
 	private_padlock_aes_crypter_t *this;
-	
+
 	if (algo != ENCR_AES_CBC)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_padlock_aes_crypter_t);
-	
+
 	switch (key_size)
 	{
 		case 16:        /* AES 128 */
@@ -185,15 +185,15 @@ padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 			free(this);
 			return NULL;
 	}
-	
+
 	this->key = chunk_alloc(key_size);
-	
+
 	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
 	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
 	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
 	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
+
 	return &this->public;
 }

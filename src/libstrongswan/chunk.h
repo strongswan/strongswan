@@ -92,7 +92,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
  *
  * @param chunk			contents to write to file
  * @param path			path where file is written to
- * @param label			label specifying file type 
+ * @param label			label specifying file type
  * @param mask			file mode creation mask
  * @param force			overwrite existing file by force
  * @return				TRUE if write operation was successful
@@ -273,7 +273,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
 /**
  * printf hook function for chunk_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    chunk_t *chunk
  * Use #-modifier to print a compact version
  */

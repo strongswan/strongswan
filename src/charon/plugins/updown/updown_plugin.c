@@ -29,7 +29,7 @@ struct private_updown_plugin_t {
 	 * implements plugin interface
 	 */
 	updown_plugin_t public;
-	
+
 	/**
 	 * Listener interface, listens to CHILD_SA state changes
 	 */
@@ -52,12 +52,12 @@ static void destroy(private_updown_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_updown_plugin_t *this = malloc_thing(private_updown_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->listener = updown_listener_create();
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
-	
+
 	return &this->public.plugin;
 }
 

@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup tests tests 
+ * @defgroup tests tests
  * @{ @ingroup unit_tester
  */
 

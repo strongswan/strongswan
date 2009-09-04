@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 		printf("%02x", (unsigned int)byte);
-	}	
+	}
 	printf("'\n");
 	return 0;
 }

@@ -27,22 +27,22 @@ typedef struct private_key_encoding_t private_key_encoding_t;
  * Private data of an key_encoding_t object.
  */
 struct private_key_encoding_t {
-	
+
 	/**
 	 * Public key_encoding_t interface.
 	 */
 	key_encoding_t public;
-	
+
 	/**
 	 * cached encodings, a table for each encoding_type_t, containing chunk_t*
 	 */
 	hashtable_t *cache[KEY_ENCODING_MAX];
-	
+
 	/**
 	 * Registered encoding fuctions, key_encoder_t
 	 */
 	linked_list_t *encoders;
-	
+
 	/**
 	 * lock to access cache/encoders
 	 */
@@ -56,14 +56,14 @@ bool key_encoding_args(va_list args, ...)
 {
 	va_list parts, copy;
 	bool failed = FALSE;
-	
+
 	va_start(parts, args);
-	
+
 	while (!failed)
 	{
 		key_encoding_part_t current, target;
 		chunk_t *out, data;
-		
+
 		/* get the part we are looking for */
 		target = va_arg(parts, key_encoding_part_t);
 		if (target == KEY_PART_END)
@@ -71,7 +71,7 @@ bool key_encoding_args(va_list args, ...)
 			break;
 		}
 		out = va_arg(parts, chunk_t*);
-		
+
 		va_copy(copy, args);
 		while (!failed)
 		{
@@ -117,7 +117,7 @@ static bool get_cache(private_key_encoding_t *this, key_encoding_type_t type,
 					  void *cache, chunk_t *encoding)
 {
 	chunk_t *chunk;
-	
+
 	if (type >= KEY_ENCODING_MAX || type < 0)
 	{
 		return FALSE;
@@ -143,7 +143,7 @@ static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
 	key_encoder_t encode;
 	bool success = FALSE;
 	chunk_t *chunk;
-	
+
 	if (type >= KEY_ENCODING_MAX || type < 0)
 	{
 		return FALSE;
@@ -192,7 +192,7 @@ static void cache(private_key_encoding_t *this, key_encoding_type_t type,
 				  void *cache, chunk_t encoding)
 {
 	chunk_t *chunk;
-	
+
 	if (type >= KEY_ENCODING_MAX || type < 0)
 	{
 		return free(encoding.ptr);
@@ -217,7 +217,7 @@ static void clear_cache(private_key_encoding_t *this, void *cache)
 {
 	key_encoding_type_t type;
 	chunk_t *chunk;
-	
+
 	this->lock->write_lock(this->lock);
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
@@ -257,7 +257,7 @@ static void remove_encoder(private_key_encoding_t *this, key_encoder_t encoder)
 static void destroy(private_key_encoding_t *this)
 {
 	key_encoding_type_t type;
-	
+
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
 		/* We explicitly do not free remaining encodings. All keys should
@@ -278,7 +278,7 @@ key_encoding_t *key_encoding_create()
 {
 	private_key_encoding_t *this = malloc_thing(private_key_encoding_t);
 	key_encoding_type_t type;
-	
+
 	this->public.encode = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
 	this->public.get_cache = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
 	this->public.cache = (void(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t encoding))cache;
@@ -286,14 +286,14 @@ key_encoding_t *key_encoding_create()
 	this->public.add_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))add_encoder;
 	this->public.remove_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))remove_encoder;
 	this->public.destroy = (void(*)(key_encoding_t*))destroy;
-	
+
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
 		this->cache[type] = hashtable_create(hash, equals, 8);
 	}
 	this->encoders = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

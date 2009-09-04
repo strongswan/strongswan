@@ -1817,7 +1817,7 @@ static void
 recover_adns_die(void)
 {
 	struct adns_continuation *cr = NULL;
-	
+
 	adns_pid = 0;
 	if(adns_restart_count < ADNS_RESTART_MAX) {
 		adns_restart_count++;
@@ -1834,7 +1834,7 @@ recover_adns_die(void)
 		if(continuations != NULL) {
 			for (; cr->previous != NULL; cr = cr->previous);
 		}
-			
+
 		next_query = cr;
 
 		if(next_query != NULL) {

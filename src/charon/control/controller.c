@@ -47,42 +47,42 @@ struct interface_listener_t {
 	 * public bus listener interface
 	 */
 	listener_t public;
-	
+
 	/**
 	 * status of the operation, return to method callers
 	 */
 	status_t status;
-	
+
 	/**
 	 *  interface callback (listener gets redirected to here)
 	 */
 	controller_cb_t callback;
-	
+
 	/**
 	 * user parameter to pass to callback
 	 */
 	void *param;
-	
+
 	/**
 	 * child configuration, used for initiate
 	 */
 	child_cfg_t *child_cfg;
-	
+
 	/**
 	 * peer configuration, used for initiate
 	 */
 	peer_cfg_t *peer_cfg;
-	
+
 	/**
 	 * IKE_SA to handle
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * CHILD_SA to handle
 	 */
 	child_sa_t *child_sa;
-	
+
 	/**
 	 * unique ID, used for various methods
 	 */
@@ -100,7 +100,7 @@ struct interface_job_t {
 	 * job interface
 	 */
 	job_t public;
-	
+
 	/**
 	 * associated listener
 	 */
@@ -138,7 +138,7 @@ static bool listener_ike_state(interface_listener_t *this, ike_sa_t *ike_sa,
 			case IKE_ESTABLISHED:
 			{	/* mediation connections are complete without CHILD_SA */
 				peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-				
+
 				if (peer_cfg->is_mediation(peer_cfg))
 				{
 					this->status = SUCCESS;
@@ -219,17 +219,17 @@ static status_t initiate_execute(interface_job_t *job)
 	ike_sa_t *ike_sa;
 	interface_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
 	listener->ike_sa = ike_sa;
-	
+
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 	}
 	peer_cfg->destroy(peer_cfg);
-	
+
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, 0, NULL, NULL) == SUCCESS)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -279,9 +279,9 @@ static status_t terminate_ike_execute(interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
 	ike_sa_t *ike_sa = listener->ike_sa;
-	
+
 	charon->bus->set_sa(charon->bus, ike_sa);
-	
+
 	if (ike_sa->delete(ike_sa) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -316,7 +316,7 @@ static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
 			.destroy = (void*)recheckin,
 		},
 	};
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													unique_id, FALSE);
 	if (ike_sa == NULL)
@@ -325,7 +325,7 @@ static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
 		return NOT_FOUND;
 	}
 	job.listener.ike_sa = ike_sa;
-	
+
 	if (callback == NULL)
 	{
 		return terminate_ike_execute(&job);
@@ -342,7 +342,7 @@ static status_t terminate_child_execute(interface_job_t *job)
 	interface_listener_t *listener = &job->listener;
 	ike_sa_t *ike_sa = listener->ike_sa;
 	child_sa_t *child_sa = listener->child_sa;
-	
+
 	charon->bus->set_sa(charon->bus, ike_sa);
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 								child_sa->get_spi(child_sa, TRUE)) != DESTROY_ME)
@@ -380,7 +380,7 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 			.destroy = (void*)recheckin,
 		},
 	};
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													reqid, TRUE);
 	if (ike_sa == NULL)
@@ -390,7 +390,7 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 		return NOT_FOUND;
 	}
 	job.listener.ike_sa = ike_sa;
-	
+
 	iterator = ike_sa->create_child_sa_iterator(ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
@@ -402,7 +402,7 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 		child_sa = NULL;
 	}
 	iterator->destroy(iterator);
-	
+
 	if (child_sa == NULL)
 	{
 		DBG1(DBG_IKE, "unable to terminate, established "
@@ -443,13 +443,13 @@ static void destroy(private_controller_t *this)
 controller_t *controller_create(void)
 {
 	private_controller_t *this = malloc_thing(private_controller_t);
-	
+
 	this->public.create_ike_sa_enumerator = (enumerator_t*(*)(controller_t*))create_ike_sa_enumerator;
 	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,controller_cb_t,void*))initiate;
 	this->public.terminate_ike = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void*))terminate_ike;
 	this->public.terminate_child = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void *param))terminate_child;
 	this->public.destroy = (void (*)(controller_t*))destroy;
-	
+
 	return &this->public;
 }
 

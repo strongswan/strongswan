@@ -38,20 +38,20 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * by the owning thread.
  */
 struct ike_sa_manager_t {
-	
+
 	/**
 	 * Checkout an existing IKE_SA.
-	 * 
+	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
-	 * @returns 					
+	 * @returns
 	 * 							- checked out IKE_SA if found
 	 * 							- NULL, if specified IKE_SA is not found.
 	 */
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
-	
+
 	/**
 	 * Create and check out a new IKE_SA.
-	 * 
+	 *
 	 * @note If initiator equals FALSE, the returned IKE_SA is not registered
 	 * in the manager.
 	 *
@@ -59,30 +59,30 @@ struct ike_sa_manager_t {
 	 * @returns 				created and checked out IKE_SA
 	 */
 	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
-	
+
 	/**
 	 * Checkout an IKE_SA by a message.
-	 * 
+	 *
 	 * In some situations, it is necessary that the manager knows the
 	 * message to use for the checkout. This has the following reasons:
-	 * 
+	 *
 	 * 1. If the targeted IKE_SA is already processing a message, we do not
 	 *    check it out if the message ID is the same.
-	 * 2. If it is an IKE_SA_INIT request, we have to check if it is a 
+	 * 2. If it is an IKE_SA_INIT request, we have to check if it is a
 	 *    retransmission. If so, we have to drop the message, we would
 	 *    create another unneeded IKE_SA for each retransmitted packet.
 	 *
 	 * A call to checkout_by_message() returns a (maybe new created) IKE_SA.
 	 * If processing the message does not make sense (for the reasons above),
 	 * NULL is returned.
-	 * 
+	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
-	 * @returns 					
+	 * @returns
 	 * 							- checked out/created IKE_SA
 	 * 							- NULL to not process message further
 	 */
 	ike_sa_t* (*checkout_by_message) (ike_sa_manager_t* this, message_t *message);
-	
+
 	/**
 	 * Checkout an IKE_SA for initiation by a peer_config.
 	 *
@@ -98,26 +98,26 @@ struct ike_sa_manager_t {
 	 */
 	ike_sa_t* (*checkout_by_config) (ike_sa_manager_t* this,
 								 	 peer_cfg_t *peer_cfg);
-	
+
 	/**
 	 * Check for duplicates of the given IKE_SA.
-	 * 
+	 *
 	 * Measures are taken according to the uniqueness policy of the IKE_SA.
 	 * The return value indicates whether duplicates have been found and if
 	 * further measures should be taken (e.g. cancelling an IKE_AUTH exchange).
 	 * check_uniqueness() must be called before the IKE_SA is complete,
 	 * deadlocks occur otherwise.
-	 * 
+	 *
 	 * @param ike_sa			ike_sa to check
 	 * @return					TRUE, if the given IKE_SA has duplicates and
 	 * 							should be deleted
 	 */
 	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
-	
+
 	/**
 	 * Check out an IKE_SA a unique ID.
 	 *
-	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID. 
+	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID.
 	 * These checkout function uses, depending
 	 * on the child parameter, the unique ID of the IKE_SA or the reqid
 	 * of one of a IKE_SAs CHILD_SA.
@@ -130,7 +130,7 @@ struct ike_sa_manager_t {
 	 */
 	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this, u_int32_t id,
 								 bool child);
-	
+
 	/**
 	 * Check out an IKE_SA by the policy/connection name.
 	 *
@@ -145,7 +145,7 @@ struct ike_sa_manager_t {
 	 */
 	ike_sa_t* (*checkout_by_name) (ike_sa_manager_t* this, char *name,
 								   bool child);
-	
+
 	/**
 	 * Create an enumerator over all stored IKE_SAs.
 	 *
@@ -155,7 +155,7 @@ struct ike_sa_manager_t {
 	 * @return					enumerator over all IKE_SAs.
 	 */
 	enumerator_t *(*create_enumerator) (ike_sa_manager_t* this);
-	
+
 	/**
 	 * Checkin the SA after usage.
 	 *
@@ -165,7 +165,7 @@ struct ike_sa_manager_t {
 	 * @param ike_sa			checked out SA
 	 */
 	void (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
-	
+
 	/**
 	 * Destroy a checked out SA.
 	 *
@@ -179,7 +179,7 @@ struct ike_sa_manager_t {
 	 * @param ike_sa			SA to delete
 	 */
 	void (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
-	
+
 	/**
 	 * Get the number of IKE_SAs which are in the connecting state.
 	 *
@@ -189,19 +189,19 @@ struct ike_sa_manager_t {
 	 * If a host is supplied, only the number of half open IKE_SAs initiated
 	 * from this IP are counted.
 	 * Only SAs for which we are the responder are counted.
-	 * 
+	 *
 	 * @param ip				NULL for all, IP for half open IKE_SAs with IP
 	 * @return					number of half open IKE_SAs
 	 */
 	int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
-	
+
 	/**
 	 * Delete all existing IKE_SAs and destroy them immediately.
-	 * 
+	 *
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
 	 */
 	void (*flush)(ike_sa_manager_t *this);
-	
+
 	/**
 	 * Destroys the manager with all associated SAs.
 	 *
@@ -212,7 +212,7 @@ struct ike_sa_manager_t {
 
 /**
  * Create the IKE_SA manager.
- * 
+ *
  * @returns 	ike_sa_manager_t object, NULL if initialization fails
  */
 ike_sa_manager_t *ike_sa_manager_create(void);

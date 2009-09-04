@@ -38,7 +38,7 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 
 /**
  * Class representing an IKEv2-PROPOSAL SUBSTRUCTURE.
- * 
+ *
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
  */
 struct proposal_substructure_t {
@@ -55,7 +55,7 @@ struct proposal_substructure_t {
 	 */
 	iterator_t *(*create_transform_substructure_iterator) (
 								proposal_substructure_t *this, bool forward);
-	
+
 	/**
 	 * Adds a transform_substructure_t object to this object.
 	 *
@@ -63,7 +63,7 @@ struct proposal_substructure_t {
 	 */
 	void (*add_transform_substructure) (proposal_substructure_t *this,
 										transform_substructure_t *transform);
-	
+
 	/**
 	 * Sets the proposal number of current proposal.
 	 *
@@ -71,24 +71,24 @@ struct proposal_substructure_t {
 	 */
 	void (*set_proposal_number) (proposal_substructure_t *this,
 								 u_int8_t proposal_number);
-	
+
 	/**
 	 * get proposal number of current proposal.
-	 * 
+	 *
 	 * @return 			proposal number of current proposal substructure.
 	 */
 	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
 
 	/**
 	 * get the number of transforms in current proposal.
-	 * 
+	 *
 	 * @return 			transform count in current proposal
 	 */
 	size_t (*get_transform_count) (proposal_substructure_t *this);
 
 	/**
 	 * get size of the set spi in bytes.
-	 * 
+	 *
 	 * @return 			size of the spi in bytes
 	 */
 	size_t (*get_spi_size) (proposal_substructure_t *this);
@@ -100,43 +100,43 @@ struct proposal_substructure_t {
 	 */
 	void (*set_protocol_id) (proposal_substructure_t *this,
 							 u_int8_t protocol_id);
-	
+
 	/**
 	 * get protocol id of current proposal.
-	 * 
+	 *
 	 * @return 			protocol id of current proposal substructure.
 	 */
 	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
-	
+
 	/**
 	 * Sets the next_payload field of this substructure
-	 * 
+	 *
 	 * If this is the last proposal, next payload field is set to 0,
 	 * otherwise to 2
 	 *
 	 * @param is_last	When TRUE, next payload field is set to 0, otherwise to 2
 	 */
 	void (*set_is_last_proposal) (proposal_substructure_t *this, bool is_last);
-	
+
 	/**
 	 * Returns the currently set SPI of this proposal.
 	 *
 	 * @return 			chunk_t pointing to the value
 	 */
 	chunk_t (*get_spi) (proposal_substructure_t *this);
-	
+
 	/**
 	 * Sets the SPI of the current proposal.
-	 * 	
+	 *
 	 * @warning SPI is getting copied
-	 * 
+	 *
 	 * @param spi		chunk_t pointing to the value to set
 	 */
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
-	
+
 	/**
 	 * Get a proposal_t from the propsal_substructure_t.
-	 * 
+	 *
 	 * @return			proposal_t
 	 */
 	proposal_t * (*get_proposal) (proposal_substructure_t *this);
@@ -156,7 +156,7 @@ struct proposal_substructure_t {
 
 /**
  * Creates an empty proposal_substructure_t object
- * 
+ *
  * @return proposal_substructure_t object
  */
 proposal_substructure_t *proposal_substructure_create(void);

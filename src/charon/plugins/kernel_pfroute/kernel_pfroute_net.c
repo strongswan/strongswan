@@ -47,13 +47,13 @@ typedef struct addr_entry_t addr_entry_t;
  * IP address in an inface_entry_t
  */
 struct addr_entry_t {
-	
+
 	/** The ip address */
 	host_t *ip;
-	
+
 	/** virtual IP managed by us */
 	bool virtual;
-	
+
 	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
@@ -73,16 +73,16 @@ typedef struct iface_entry_t iface_entry_t;
  * A network interface on this system, containing addr_entry_t's
  */
 struct iface_entry_t {
-	
+
 	/** interface index */
 	int ifindex;
-	
+
 	/** name of the interface */
 	char ifname[IFNAMSIZ];
-	
+
 	/** interface flags, as in netdevice(7) SIOCGIFFLAGS */
 	u_int flags;
-	
+
 	/** list of addresses as host_t */
 	linked_list_t *addrs;
 };
@@ -108,42 +108,42 @@ struct private_kernel_pfroute_net_t
 	 * Public part of the kernel_pfroute_t object.
 	 */
 	kernel_pfroute_net_t public;
-	
+
 	/**
 	 * mutex to lock access to various lists
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * Cached list of interfaces and their addresses (iface_entry_t)
 	 */
 	linked_list_t *ifaces;
-	
+
 	/**
 	 * job receiving PF_ROUTE events
 	 */
 	callback_job_t *job;
-	
+
 	/**
 	 * mutex to lock access to the PF_ROUTE socket
 	 */
 	mutex_t *mutex_pfroute;
-	
+
 	/**
 	 * PF_ROUTE socket to communicate with the kernel
 	 */
 	int socket;
-	
+
 	/**
 	 * PF_ROUTE socket to receive events
 	 */
 	int socket_events;
-	
+
 	/**
 	 * sequence number for messages sent to the kernel
 	 */
 	int seq;
-	
+
 	/**
 	 * time of last roam job
 	 */
@@ -157,7 +157,7 @@ struct private_kernel_pfroute_net_t
 static void fire_roam_job(private_kernel_pfroute_net_t *this, bool address)
 {
 	timeval_t now;
-	
+
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_roam, >))
 	{
@@ -187,7 +187,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	addr_entry_t *addr;
 	bool found = FALSE, changed = FALSE, roam = FALSE;
 	int i;
-	
+
 	for (i = 1; i < (1 << RTAX_MAX); i <<= 1)
 	{
 		if (ifa->ifam_addrs & i)
@@ -200,12 +200,12 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 			sockaddr = (sockaddr_t*)((char*)sockaddr + sockaddr->sa_len);
 		}
 	}
-	
+
 	if (!host)
 	{
 		return;
 	}
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -236,7 +236,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 				}
 			}
 			addrs->destroy(addrs);
-			
+
 			if (!found && ifa->ifam_type == RTM_NEWADDR)
 			{
 				changed = TRUE;
@@ -247,7 +247,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 				iface->addrs->insert_last(iface->addrs, addr);
 				DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
 			}
-			
+
 			if (changed && (iface->flags & IFF_UP))
 			{
 				roam = TRUE;
@@ -258,7 +258,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
 	host->destroy(host);
-	
+
 	if (roam)
 	{
 		fire_roam_job(this, TRUE);
@@ -275,12 +275,12 @@ static void process_link(private_kernel_pfroute_net_t *this,
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
 	bool roam = FALSE;
-	
+
 	if (msg->ifm_flags & IFF_LOOPBACK)
 	{	/* ignore loopback interfaces */
 		return;
 	}
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
 	while (enumerator->enumerate(enumerator, &iface))
@@ -303,7 +303,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-	
+
 	if (roam)
 	{
 		fire_roam_job(this, TRUE);
@@ -327,11 +327,11 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 	unsigned char buf[PFROUTE_BUFFER_SIZE];
 	struct rt_msghdr *msg = (struct rt_msghdr*)buf;
 	int len, oldstate;
-	
+
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (len < 0)
 	{
 		switch (errno)
@@ -348,14 +348,14 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 				return JOB_REQUEUE_FAIR;
 		}
 	}
-	
+
 	if (len < sizeof(msg->rtm_msglen) || len < msg->rtm_msglen ||
 		msg->rtm_version != RTM_VERSION)
 	{
 		DBG2(DBG_KNL, "received corrupted PF_ROUTE message");
 		return JOB_REQUEUE_DIRECT;
 	}
-	
+
 	switch (msg->rtm_type)
 	{
 		case RTM_NEWADDR:
@@ -372,7 +372,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		default:
 			break;
 	}
-	
+
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -491,7 +491,7 @@ static char *get_interface_name(private_kernel_pfroute_net_t *this, host_t* ip)
 	}
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
-	
+
 	if (name)
 	{
 		DBG2(DBG_KNL, "%H is on interface %s", ip, name);
@@ -564,15 +564,15 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 	iface_entry_t *iface, *current;
 	addr_entry_t *addr;
 	enumerator_t *ifaces, *addrs;
-	
+
 	DBG1(DBG_KNL, "listening on interfaces:");
-	
+
 	if (getifaddrs(&ifap) < 0)
 	{
 		DBG1(DBG_KNL, "  failed to get interfaces!");
 		return FAILED;
 	}
-	
+
 	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
 	{
 		if (ifa->ifa_addr == NULL)
@@ -589,7 +589,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 				{	/* ignore loopback interfaces */
 					continue;
 				}
-				
+
 				iface = NULL;
 				ifaces = this->ifaces->create_enumerator(this->ifaces);
 				while (ifaces->enumerate(ifaces, &current))
@@ -601,7 +601,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 					}
 				}
 				ifaces->destroy(ifaces);
-				
+
 				if (!iface)
 				{
 					iface = malloc_thing(iface_entry_t);
@@ -611,7 +611,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 					iface->addrs = linked_list_create();
 					this->ifaces->insert_last(this->ifaces, iface);
 				}
-				
+
 				if (ifa->ifa_addr->sa_family != AF_LINK)
 				{
 					addr = malloc_thing(addr_entry_t);
@@ -624,7 +624,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 		}
 	}
 	freeifaddrs(ifap);
-	
+
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -640,7 +640,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 		}
 	}
 	ifaces->destroy(ifaces);
-	
+
 	return SUCCESS;
 }
 
@@ -664,7 +664,7 @@ static void destroy(private_kernel_pfroute_net_t *this)
 kernel_pfroute_net_t *kernel_pfroute_net_create()
 {
 	private_kernel_pfroute_net_t *this = malloc_thing(private_kernel_pfroute_net_t);
-	
+
 	/* public functions */
 	this->public.interface.get_interface = (char*(*)(kernel_net_t*,host_t*))get_interface_name;
 	this->public.interface.create_address_enumerator = (enumerator_t*(*)(kernel_net_t*,bool,bool))create_address_enumerator;
@@ -674,38 +674,38 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 	this->public.interface.del_ip = (status_t(*)(kernel_net_t*,host_t*)) del_ip;
 	this->public.interface.add_route = (status_t(*)(kernel_net_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) add_route;
 	this->public.interface.del_route = (status_t(*)(kernel_net_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) del_route;
-	
+
 	this->public.interface.destroy = (void(*)(kernel_net_t*)) destroy;
-	
+
 	/* private members */
 	this->ifaces = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT);
-	
+
 	this->seq = 0;
-	
+
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
 	if (this->socket <= 0)
 	{
 		charon->kill(charon, "unable to create PF_ROUTE socket");
 	}
-	
+
 	/* create a PF_ROUTE socket to receive events */
 	this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
 	if (this->socket_events <= 0)
 	{
 		charon->kill(charon, "unable to create PF_ROUTE event socket");
 	}
-	
+
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
-	
+
 	if (init_address_list(this) != SUCCESS)
 	{
 		charon->kill(charon, "unable to get interface list");
 	}
-	
+
 	return &this->public;
 }

@@ -234,8 +234,8 @@ static void print_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
-	buf[0] = '\0';	
+
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
@@ -652,7 +652,7 @@ int main(int argc, char **argv)
 	}
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "pluto.load", PLUGINS)))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
@@ -678,7 +678,7 @@ int main(int argc, char **argv)
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
-		
+
 #ifdef IPSEC_GROUP
 	{
 		struct group group, *grp;

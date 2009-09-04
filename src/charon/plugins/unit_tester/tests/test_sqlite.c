@@ -36,7 +36,7 @@ bool test_sqlite()
 	char *qtxt;
 	bool good = FALSE;
 	enumerator_t *enumerator;
-	
+
 	db = lib->db->create(lib->db, "sqlite://" DBFILE);
 	if (!db)
 	{

@@ -29,37 +29,37 @@ struct private_mediation_job_t {
 	 * public mediation_job_t interface
 	 */
 	mediation_job_t public;
-	
+
 	/**
 	 * ID of target peer.
 	 */
 	identification_t *target;
-	
+
 	/**
 	 * ID of the source peer.
 	 */
 	identification_t *source;
-	
+
 	/**
 	 * ME_CONNECTID
 	 */
 	chunk_t connect_id;
-	
+
 	/**
 	 * ME_CONNECTKEY
 	 */
 	chunk_t connect_key;
-	
+
 	/**
 	 * Submitted endpoints
 	 */
 	linked_list_t *endpoints;
-	
+
 	/**
 	 * Is this a callback job?
 	 */
 	bool callback;
-	
+
 	/**
 	 * Is this a response?
 	 */
@@ -81,13 +81,13 @@ static void destroy(private_mediation_job_t *this)
 
 /**
  * Implementation of job_t.execute.
- */ 
+ */
 static void execute(private_mediation_job_t *this)
 {
 	ike_sa_id_t *target_sa_id;
-	
+
 	target_sa_id = charon->mediation_manager->check(charon->mediation_manager, this->target);
-	
+
 	if (target_sa_id)
 	{
 		ike_sa_t *target_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
@@ -120,7 +120,7 @@ static void execute(private_mediation_job_t *this)
 					return;
 				}
 			}
-			
+
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, target_sa);
 		}
 		else
@@ -143,11 +143,11 @@ static void execute(private_mediation_job_t *this)
 static private_mediation_job_t *mediation_job_create_empty()
 {
 	private_mediation_job_t *this = malloc_thing(private_mediation_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
+
 	/* private variables */
 	this->target = NULL;
 	this->source = NULL;
@@ -156,7 +156,7 @@ static private_mediation_job_t *mediation_job_create_empty()
 	this->connect_key = chunk_empty;
 	this->endpoints = NULL;
 	this->response = FALSE;
-	
+
 	return this;
 }
 
@@ -175,7 +175,7 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
 	this->connect_key = chunk_clone(connect_key);
 	this->endpoints = endpoints->clone_offset(endpoints, offsetof(endpoint_notify_t, clone));
 	this->response = response;
-	
+
 	return &this->public;
 }
 
@@ -186,10 +186,10 @@ mediation_job_t *mediation_callback_job_create(identification_t *requester,
 		identification_t *peer_id)
 {
 	private_mediation_job_t *this = mediation_job_create_empty();
-	
+
 	this->target = requester->clone(requester);
 	this->source = peer_id->clone(peer_id);
 	this->callback = TRUE;
-	
+
 	return &this->public;
 }

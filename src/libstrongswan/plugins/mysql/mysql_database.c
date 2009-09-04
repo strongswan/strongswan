@@ -42,37 +42,37 @@ struct private_mysql_database_t {
 	 * public functions
 	 */
 	mysql_database_t public;
-	
+
 	/**
 	 * connection pool, contains conn_t
 	 */
 	linked_list_t *pool;
-	
+
 	/**
 	 * mutex to lock pool
 	 */
 	mutex_t *mutex;
-	
+
 	/**
  	 * hostname to connect to
  	 */
 	char *host;
-	
+
 	/**
 	 * username to use
 	 */
 	char *username;
-	
+
 	/**
 	 * password
 	 */
 	char *password;
-	
+
 	/**
 	 * database name
 	 */
 	char *database;
-	
+
 	/**
 	 * tcp port
 	 */
@@ -85,12 +85,12 @@ typedef struct conn_t conn_t;
  * connection pool entry
  */
 struct conn_t {
-	
+
 	/**
 	 * MySQL database connection
 	 */
 	MYSQL *mysql;
-	
+
 	/**
 	 * connection in use?
 	 */
@@ -164,9 +164,9 @@ static conn_t *conn_get(private_mysql_database_t *this)
 {
 	conn_t *current, *found = NULL;
 	enumerator_t *enumerator;
-	
+
 	thread_initialize();
-	
+
 	while (TRUE)
 	{
 		this->mutex->lock(this->mutex);
@@ -231,7 +231,7 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 {
 	MYSQL_STMT *stmt;
 	int params;
-	
+
 	stmt = mysql_stmt_init(mysql);
 	if (stmt == NULL)
 	{
@@ -249,10 +249,10 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 	{
 		int i;
 		MYSQL_BIND *bind;
-	
+
 		bind = alloca(sizeof(MYSQL_BIND) * params);
 		memset(bind, 0, sizeof(MYSQL_BIND) * params);
-		
+
 		for (i = 0; i < params; i++)
 		{
 			switch (va_arg(*args, db_type_t))
@@ -285,7 +285,7 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 					break;
 				}
 				case DB_BLOB:
-				{	
+				{
 					chunk_t chunk = va_arg(*args, chunk_t);
 					bind[i].buffer_type = MYSQL_TYPE_BLOB;
 					bind[i].buffer = chunk.ptr;
@@ -353,9 +353,9 @@ typedef struct {
 static void mysql_enumerator_destroy(mysql_enumerator_t *this)
 {
 	int columns, i;
-	
+
 	columns = mysql_stmt_field_count(this->stmt);
-	
+
 	for (i = 0; i < columns; i++)
 	{
 		switch (this->bind[i].buffer_type)
@@ -385,9 +385,9 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 {
 	int i, columns;
 	va_list args;
-	
+
 	columns = mysql_stmt_field_count(this->stmt);
-	
+
 	/* free/reset data set of previous call */
 	for (i = 0; i < columns; i++)
 	{
@@ -419,7 +419,7 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 			DBG1("fetching MySQL row failed: %s", mysql_stmt_error(this->stmt));
 			return FALSE;
 	}
-	
+
 	va_start(args, this);
 	for (i = 0; i < columns; i++)
 	{
@@ -481,7 +481,7 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 	va_list args;
 	mysql_enumerator_t *enumerator = NULL;
 	conn_t *conn;
-	
+
 	conn = conn_get(this);
 	if (!conn)
 	{
@@ -493,7 +493,7 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 	if (stmt)
 	{
 		int columns, i;
-		
+
 		enumerator = malloc_thing(mysql_enumerator_t);
 		enumerator->public.enumerate = (void*)mysql_enumerator_enumerate;
 		enumerator->public.destroy = (void*)mysql_enumerator_destroy;
@@ -527,7 +527,7 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 					break;
 				}
 				case DB_BLOB:
-				{	
+				{
 					enumerator->bind[i].buffer_type = MYSQL_TYPE_BLOB;
 					enumerator->bind[i].length = &enumerator->length[i];
 					break;
@@ -569,7 +569,7 @@ static int execute(private_mysql_database_t *this, int *rowid, char *sql, ...)
 	va_list args;
 	conn_t *conn;
 	int affected = -1;
-	
+
 	conn = conn_get(this);
 	if (!conn)
 	{
@@ -590,7 +590,7 @@ static int execute(private_mysql_database_t *this, int *rowid, char *sql, ...)
 	conn_release(conn);
 	return affected;
 }
-	
+
 /**
  * Implementation of database_t.get_driver
  */
@@ -646,7 +646,7 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 			{
 				*pos = '\0';
 				database = pos + 1;
-	
+
 				this->host = strdup(host);
 				this->username = strdup(username);
 				this->password = strdup(password);
@@ -668,19 +668,19 @@ mysql_database_t *mysql_database_create(char *uri)
 {
 	conn_t *conn;
 	private_mysql_database_t *this;
-	
+
 	if (!strneq(uri, "mysql://", 8))
 	{
 		return NULL;
 	}
 
 	this = malloc_thing(private_mysql_database_t);
-	
+
 	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
 	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
 	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
 	this->public.db.destroy = (void(*)(database_t*))destroy;
-	
+
 	if (!parse_uri(this, uri))
 	{
 		free(this);
@@ -688,7 +688,7 @@ mysql_database_t *mysql_database_create(char *uri)
 	}
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->pool = linked_list_create();
-	
+
 	/* check connectivity */
 	conn = conn_get(this);
 	if (!conn)

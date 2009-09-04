@@ -30,17 +30,17 @@ struct private_attribute_manager_t {
 	 * public functions
 	 */
 	attribute_manager_t public;
-	
+
 	/**
 	 * list of registered providers
 	 */
 	linked_list_t *providers;
-	
+
 	/**
 	 * list of registered handlers
 	 */
 	linked_list_t *handlers;
-	
+
 	/**
 	 * rwlock provider list
 	 */
@@ -57,7 +57,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
 	host_t *host = NULL;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
@@ -70,7 +70,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	if (!host)
 	{
 		DBG1(DBG_CFG, "acquiring address from pool '%s' failed", pool);
@@ -87,7 +87,7 @@ static void release_address(private_attribute_manager_t *this,
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
 	bool found = FALSE;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
@@ -100,7 +100,7 @@ static void release_address(private_attribute_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	if (!found)
 	{
 		DBG1(DBG_CFG, "releasing address to pool '%s' failed", pool);
@@ -161,7 +161,7 @@ static attribute_handler_t* handle(private_attribute_manager_t *this,
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current, *handled = NULL;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &current))
@@ -174,7 +174,7 @@ static attribute_handler_t* handle(private_attribute_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	if (!handled)
 	{
 		DBG1(DBG_CFG, "handling %N attribute failed",
@@ -192,7 +192,7 @@ static void release(private_attribute_manager_t *this,
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &current))
@@ -246,7 +246,7 @@ static void destroy(private_attribute_manager_t *this)
 attribute_manager_t *attribute_manager_create()
 {
 	private_attribute_manager_t *this = malloc_thing(private_attribute_manager_t);
-	
+
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,host_t*))acquire_address;
 	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
 	this->public.create_attribute_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t *id))create_attribute_enumerator;
@@ -257,11 +257,11 @@ attribute_manager_t *attribute_manager_create()
 	this->public.add_handler = (void(*)(attribute_manager_t*, attribute_handler_t *handler))add_handler;
 	this->public.remove_handler = (void(*)(attribute_manager_t*, attribute_handler_t *handler))remove_handler;
 	this->public.destroy = (void(*)(attribute_manager_t*))destroy;
-	
+
 	this->providers = linked_list_create();
 	this->handlers = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

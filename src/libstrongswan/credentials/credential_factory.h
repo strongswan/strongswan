@@ -47,7 +47,7 @@ extern enum_name_t *credential_type_names;
  * Manages credential construction functions and creates instances.
  */
 struct credential_factory_t {
-	
+
 	/**
 	 * Create a credential using a list of builder_part_t's.
 	 *
@@ -64,12 +64,12 @@ struct credential_factory_t {
 	 */
 	void* (*create)(credential_factory_t *this, credential_type_t type,
 					int subtype, ...);
-	
+
 	/**
 	 * Create an enumerator for a builder type.
 	 *
-	 * The build() method has to be called on each enumerated builder to 
-	 * cleanup associated ressources. 
+	 * The build() method has to be called on each enumerated builder to
+	 * cleanup associated ressources.
 	 *
 	 * @param type			type of credentials the builder creates
 	 * @param subtype		type specific subtype, such as certificate_type_t
@@ -77,7 +77,7 @@ struct credential_factory_t {
 	 */
 	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this,
 										credential_type_t type, int subtype);
-	
+
 	/**
 	 * Register a builder_t constructor function.
 	 *
@@ -85,16 +85,16 @@ struct credential_factory_t {
 	 * @param constructor	builder constructor function to register
 	 */
 	void (*add_builder)(credential_factory_t *this,
-						credential_type_t type, int subtype, 
+						credential_type_t type, int subtype,
 						builder_constructor_t constructor);
 	/**
 	 * Unregister a builder_t constructor function.
 	 *
 	 * @param constructor	constructor function to unregister.
 	 */
-	void (*remove_builder)(credential_factory_t *this, 
+	void (*remove_builder)(credential_factory_t *this,
 						   builder_constructor_t constructor);
-	
+
 	/**
 	 * Destroy a credential_factory instance.
 	 */

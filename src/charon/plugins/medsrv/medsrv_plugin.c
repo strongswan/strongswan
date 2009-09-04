@@ -31,17 +31,17 @@ struct private_medsrv_plugin_t {
 	 * implements plugin interface
 	 */
 	medsrv_plugin_t public;
-	
+
 	/**
 	 * database connection instance
 	 */
 	database_t *db;
-	
+
 	/**
 	 * medsrv credential set instance
 	 */
 	medsrv_creds_t *creds;
-	
+
 	/**
 	 * medsrv config database
 	 */
@@ -68,9 +68,9 @@ plugin_t *plugin_create()
 {
 	char *uri;
 	private_medsrv_plugin_t *this = malloc_thing(private_medsrv_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	uri = lib->settings->get_str(lib->settings,
 								 "medsrv.database", NULL);
 	if (!uri)
@@ -79,7 +79,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	
+
 	this->db = lib->db->create(lib->db, uri);
 	if (this->db == NULL)
 	{
@@ -87,13 +87,13 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	
+
 	this->creds = medsrv_creds_create(this->db);
 	this->config = medsrv_config_create(this->db);
-	
+
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	
+
 	return &this->public.plugin;
 }
 

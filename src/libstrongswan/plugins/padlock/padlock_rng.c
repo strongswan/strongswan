@@ -36,12 +36,12 @@ enum padlock_quality_factor_t {
  * Private data of an padlock_rng_t object.
  */
 struct private_padlock_rng_t {
-	
+
 	/**
 	 * Public padlock_rng_t interface.
 	 */
 	padlock_rng_t public;
-	
+
 	/**
 	 * Padlock quality factor
 	 */
@@ -56,14 +56,14 @@ static void rng(char *buf, int len, int quality)
 	while (len > 0)
 	{
 		int status;
-		
+
 		/* run XSTORE until we have all bytes needed. We do not use REP, as
 		 * this should not be performance critical and it's easier this way. */
 		asm volatile (
 			".byte 0x0F,0xA7,0xC0 \n\t"
 			: "=D"(buf), "=a"(status)
 			: "d"(quality), "D"(buf));
-		
+
 		/* bits[0..4] of status word contains the number of bytes read */
 		len -= status & 0x1F;
 	}
@@ -78,7 +78,7 @@ static void allocate_bytes(private_padlock_rng_t *this, size_t bytes,
 	chunk->len = bytes;
 	/* padlock requires some additional bytes */
 	chunk->ptr = malloc(bytes + 7);
-	
+
 	rng(chunk->ptr, chunk->len, this->quality);
 }
 
@@ -89,7 +89,7 @@ static void get_bytes(private_padlock_rng_t *this, size_t bytes,
 					  u_int8_t *buffer)
 {
 	chunk_t chunk;
-	
+
 	/* Padlock needs a larger buffer than "bytes", we need a new buffer */
 	allocate_bytes(this, bytes, &chunk);
 	memcpy(buffer, chunk.ptr, bytes);
@@ -110,11 +110,11 @@ static void destroy(private_padlock_rng_t *this)
 padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 {
 	private_padlock_rng_t *this = malloc_thing(private_padlock_rng_t);
-	
+
 	this->public.rng.get_bytes = (void (*) (rng_t *, size_t, u_int8_t*)) get_bytes;
 	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
 	this->public.rng.destroy = (void (*) (rng_t *))destroy;
-	
+
 	/* map RNG quality to Padlock quality factor */
 	switch (quality)
 	{
@@ -128,7 +128,7 @@ padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 			this->quality = PADLOCK_QF3;
 			break;
 	}
-	
+
 	return &this->public;
 }
 

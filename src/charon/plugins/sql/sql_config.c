@@ -30,7 +30,7 @@ struct private_sql_config_t {
 	 * Public part
 	 */
 	sql_config_t public;
-	
+
 	/**
 	 * database connection
 	 */
@@ -58,7 +58,7 @@ static traffic_selector_t *build_traffic_selector(private_sql_config_t *this,
 		TS_LOCAL_DYNAMIC = 2,
 		TS_REMOTE_DYNAMIC = 3,
 	} kind;
-	
+
 	while (e->enumerate(e, &kind, &type, &protocol,
 						&start_addr, &end_addr, &start_port, &end_port))
 	{
@@ -99,7 +99,7 @@ static void add_traffic_selectors(private_sql_config_t *this,
 	enumerator_t *e;
 	traffic_selector_t *ts;
 	bool local;
-	
+
 	e = this->db->query(this->db,
 			"SELECT kind, type, protocol, "
 			"start_addr, end_addr, start_port, end_port "
@@ -126,8 +126,8 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 	int id, lifetime, rekeytime, jitter, hostaccess, mode, dpd, close, ipcomp;
 	char *name, *updown;
 	child_cfg_t *child_cfg;
-	
-	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, 
+
+	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter,
 						&updown, &hostaccess, &mode, &dpd, &close, &ipcomp))
 	{
 		lifetime_cfg_t lft = {
@@ -150,7 +150,7 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 {
 	enumerator_t *e;
 	child_cfg_t *child_cfg;
-	
+
 	e = this->db->query(this->db,
 			"SELECT id, name, lifetime, rekeytime, jitter, "
 			"updown, hostaccess, mode, dpd_action, close_action, ipcomp "
@@ -177,11 +177,11 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 {
 	int certreq, force_encap;
 	char *local, *remote;
-	
+
 	while (e->enumerate(e, &certreq, &force_encap, &local, &remote))
 	{
 		ike_cfg_t *ike_cfg;
-		
+
 		ike_cfg = ike_cfg_create(certreq, force_encap, local, remote);
 		/* TODO: read proposal from db */
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
@@ -197,7 +197,7 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 {
 	enumerator_t *e;
 	ike_cfg_t *ike_cfg = NULL;
-	
+
 	e = this->db->query(this->db,
 			"SELECT certreq, force_encap, local, remote "
 			"FROM ike_configs WHERE id = ?",
@@ -218,7 +218,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
-	
+
 	e = this->db->query(this->db,
 			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
 			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
@@ -232,8 +232,8 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			"WHERE id = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, 
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, 
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_TEXT, DB_TEXT,
 			DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
@@ -256,11 +256,11 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		mediation, mediated_by, p_type;
 	chunk_t l_data, r_data, p_data;
 	char *name, *virtual, *pool;
-	
+
 	while (e->enumerate(e,
 			&id, &name, &ike_cfg, &l_type, &l_data, &r_type, &r_data,
 			&cert_policy, &uniqueid, &auth_method, &eap_type, &eap_vendor,
-			&keyingtries, &rekeytime, &reauthtime, &jitter, &overtime, &mobike, 
+			&keyingtries, &rekeytime, &reauthtime, &jitter, &overtime, &mobike,
 			&dpd_delay,	&virtual, &pool,
 			&mediation, &mediated_by, &p_type, &p_data))
 	{
@@ -269,7 +269,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		ike_cfg_t *ike;
 		host_t *vip = NULL;
 		auth_cfg_t *auth;
-		
+
 		local_id = identification_create_from_encoding(l_type, l_data);
 		remote_id = identification_create_from_encoding(r_type, r_data);
 		if ((me && !me->matches(me, local_id)) ||
@@ -331,7 +331,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_sql_config_t *this, char *name)
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
-	
+
 	e = this->db->query(this->db,
 			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
 			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
@@ -404,14 +404,14 @@ static enumerator_t* create_ike_cfg_enumerator(private_sql_config_t *this,
 											   host_t *me, host_t *other)
 {
 	ike_enumerator_t *e = malloc_thing(ike_enumerator_t);
-	
+
 	e->this = this;
 	e->me = me;
 	e->other = other;
 	e->current = NULL;
 	e->public.enumerate = (void*)ike_enumerator_enumerate;
 	e->public.destroy = (void*)ike_enumerator_destroy;
-	
+
 	e->inner = this->db->query(this->db,
 			"SELECT certreq, force_encap, local, remote "
 			"FROM ike_configs",
@@ -473,7 +473,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
 												identification_t *other)
 {
 	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
-	
+
 	e->this = this;
 	e->me = me;
 	e->other = other;
@@ -526,9 +526,9 @@ sql_config_t *sql_config_create(database_t *db)
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(sql_config_t*))destroy;
-	
+
 	this->db = db;
-	
+
 	return &this->public;
 }
 

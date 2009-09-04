@@ -42,7 +42,7 @@ enum payload_type_t{
 	 * End of payload list in next_payload
 	 */
 	NO_PAYLOAD = 0,
-	
+
 	/**
 	 * The security association (SA) payload containing proposals.
 	 */
@@ -122,7 +122,7 @@ enum payload_type_t{
 	 * Extensible authentication payload (EAP).
 	 */
 	EXTENSIBLE_AUTHENTICATION = 48,
-	
+
 #ifdef ME
 	/**
 	 * Identification payload for peers has a value from
@@ -130,7 +130,7 @@ enum payload_type_t{
 	 */
 	ID_PEER = 128,
 #endif /* ME */
-	
+
 	/**
 	 * Header has a value of PRIVATE USE space.
 	 *
@@ -138,7 +138,7 @@ enum payload_type_t{
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
 	HEADER = 140,
-	
+
 	/**
 	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
 	 *
@@ -154,7 +154,7 @@ enum payload_type_t{
 	 * used internally to handle a transform substructure like a payload.
 	 */
 	TRANSFORM_SUBSTRUCTURE = 142,
-	
+
 	/**
 	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
 	 *
@@ -170,7 +170,7 @@ enum payload_type_t{
 	 * used internally to handle a transform selector like a payload.
 	 */
 	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
-	
+
 	/**
 	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
 	 *
@@ -178,7 +178,7 @@ enum payload_type_t{
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 145,
-	
+
 	/**
 	 * A unknown payload has a value of PRIVATE USE space.
 	 *
@@ -207,7 +207,7 @@ extern enum_name_t *payload_type_short_names;
  * handling of all payloads.
  */
 struct payload_t {
-	
+
 	/**
 	 * Get encoding rules for this payload.
 	 *
@@ -229,7 +229,7 @@ struct payload_t {
 	 * @return 				type of next payload
 	 */
 	payload_type_t (*get_next_type) (payload_t *this);
-	
+
 	/**
 	 * Set type of next payload.
 	 *
@@ -243,14 +243,14 @@ struct payload_t {
 	 * @return 				length of this payload
 	 */
 	size_t (*get_length) (payload_t *this);
-	
+
 	/**
 	 * Verifies payload structure and makes consistence check.
 	 *
 	 * @return 				SUCCESS,  FAILED if consistence not given
 	 */
 	status_t (*verify) (payload_t *this);
-	
+
 	/**
 	 * Destroys a payload and all included substructures.
 	 */

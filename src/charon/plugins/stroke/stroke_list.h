@@ -40,7 +40,7 @@ struct stroke_list_t {
 	 * @param out		stroke console stream
 	 */
 	void (*list)(stroke_list_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Log status information to stroke console.
 	 *
@@ -49,7 +49,7 @@ struct stroke_list_t {
 	 * @param all		TRUE for "statusall"
 	 */
 	void (*status)(stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all);
-	
+
 	/**
 	 * Log pool leases to stroke console.
 	 *
@@ -57,7 +57,7 @@ struct stroke_list_t {
 	 * @param out		stroke console stream
 	 */
 	void (*leases)(stroke_list_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Destroy a stroke_list instance.
 	 */

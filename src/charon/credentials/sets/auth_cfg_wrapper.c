@@ -29,7 +29,7 @@ struct private_auth_cfg_wrapper_t {
 	 * public functions
 	 */
 	auth_cfg_wrapper_t public;
-	
+
 	/**
 	 * wrapped auth info
 	 */
@@ -67,10 +67,10 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 		/* fetching the certificate previously failed */
 		return FALSE;
 	}
-	
+
 	chunk_t data;
 	certificate_t *cert;
-	
+
 	DBG1(DBG_CFG, "  fetching certificate from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &data, FETCH_END) != SUCCESS)
 	{
@@ -80,11 +80,11 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 								  *rule, NULL);
 		return FALSE;
 	}
-	
+
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB_ASN1_DER, data, BUILD_END);
 	free(data.ptr);
-	
+
 	if (!cert)
 	{
 		DBG1(DBG_CFG, "  parsing fetched certificate failed");
@@ -93,10 +93,10 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 								  *rule, NULL);
 		return FALSE;
 	}
-	
+
 	DBG1(DBG_CFG, "  fetched certificate \"%Y\"", cert->get_subject(cert));
 	charon->credentials->cache_cert(charon->credentials, cert);
-	
+
 	if (*rule == AUTH_HELPER_IM_HASH_URL)
 	{
 		*rule = AUTH_HELPER_IM_CERT;
@@ -174,11 +174,11 @@ static void wrapper_enumerator_destroy(wrapper_enumerator_t *this)
  * implementation of auth_cfg_wrapper_t.set.create_cert_enumerator
  */
 static enumerator_t *create_enumerator(private_auth_cfg_wrapper_t *this,
-									   certificate_type_t cert, key_type_t key, 
+									   certificate_type_t cert, key_type_t key,
 									   identification_t *id, bool trusted)
 {
 	wrapper_enumerator_t *enumerator;
-	
+
 	if (trusted)
 	{
 		return NULL;
@@ -208,16 +208,16 @@ static void destroy(private_auth_cfg_wrapper_t *this)
 auth_cfg_wrapper_t *auth_cfg_wrapper_create(auth_cfg_t *auth)
 {
 	private_auth_cfg_wrapper_t *this = malloc_thing(private_auth_cfg_wrapper_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)nop;
 	this->public.destroy = (void(*)(auth_cfg_wrapper_t*))destroy;
-	
+
 	this->auth = auth;
-	
+
 	return &this->public;
 }
 

@@ -56,21 +56,21 @@ struct crl_t {
 	 * Implements (parts of) the certificate_t interface
 	 */
 	certificate_t certificate;
-	
+
 	/**
 	 * Get the CRL serial number.
 	 *
 	 * @return			chunk pointing to internal crlNumber
 	 */
 	chunk_t (*get_serial)(crl_t *this);
-	
+
 	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
 	 * @return			authKeyIdentifier chunk, point to internal data
 	 */
 	chunk_t (*get_authKeyIdentifier)(crl_t *this);
-	
+
 	/**
 	 * Create an enumerator over all revoked certificates.
 	 *
@@ -80,7 +80,7 @@ struct crl_t {
 	 * @return			enumerator over revoked certificates.
 	 */
 	enumerator_t* (*create_enumerator)(crl_t *this);
-	
+
 };
 
 #endif /** CRL_H_ @}*/

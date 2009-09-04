@@ -34,7 +34,7 @@ struct sql_attribute_t {
 	 * Implements attribute provider interface
 	 */
 	attribute_provider_t provider;
-	
+
 	/**
      * Destroy a sql_attribute instance.
      */

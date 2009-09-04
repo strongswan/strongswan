@@ -35,11 +35,11 @@ struct sql_config_t {
 	 * Implements backend_t interface
 	 */
 	backend_t backend;
-	
+
 	/**
 	 * Destry the backend.
 	 */
-	void (*destroy)(sql_config_t *this);	
+	void (*destroy)(sql_config_t *this);
 };
 
 /**

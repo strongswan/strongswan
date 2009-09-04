@@ -27,7 +27,7 @@ typedef struct stroke_socket_t stroke_socket_t;
  * Stroke socket, opens UNIX communication socket, reads and dispatches.
  */
 struct stroke_socket_t {
-		
+
 	/**
      * Destroy a stroke_socket instance.
      */

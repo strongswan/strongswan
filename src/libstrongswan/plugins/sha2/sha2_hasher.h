@@ -32,7 +32,7 @@ typedef struct sha2_hasher_t sha2_hasher_t;
  * the SHA hash algorithm.
  */
 struct sha2_hasher_t {
-	
+
 	/**
 	 * Generic hasher_t interface for this hasher.
 	 */
@@ -41,7 +41,7 @@ struct sha2_hasher_t {
 
 /**
  * Creates a new sha2_hasher_t.
- * 
+ *
  * @param	algorithm	HASH_SHA256, HASH_SHA384 or HASH_SHA512
  * @return				sha2_hasher_t object, NULL if not supported
  */

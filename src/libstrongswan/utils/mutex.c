@@ -47,7 +47,7 @@ struct lock_profile_t {
 	 * how long threads have waited for the lock in this mutex so far
 	 */
 	timeval_t waited;
-	
+
 	/**
 	 * backtrace where mutex has been created
 	 */
@@ -81,7 +81,7 @@ static void profiler_init(lock_profile_t *profile)
 #define profiler_start(profile) { \
 	struct timeval _start, _end, _diff; \
 	time_monotonic(&_start);
-	
+
 #define profiler_end(profile) \
 	time_monotonic(&_end); \
 	timersub(&_end, &_start, &_diff); \
@@ -106,17 +106,17 @@ struct private_mutex_t {
 	 * public functions
 	 */
 	mutex_t public;
-	
+
 	/**
 	 * wrapped pthread mutex
 	 */
 	pthread_mutex_t mutex;
-	
+
 	/**
 	 * is this a recursiv emutex, implementing private_r_mutex_t?
 	 */
 	bool recursive;
-	
+
 	/**
 	 * profiling info, if enabled
 	 */
@@ -132,12 +132,12 @@ struct private_r_mutex_t {
 	 * Extends private_mutex_t
 	 */
 	private_mutex_t generic;
-	
+
 	/**
 	 * thread which currently owns mutex
 	 */
 	pthread_t thread;
-	
+
 	/**
 	 * times we have locked the lock, stored per thread
 	 */
@@ -153,7 +153,7 @@ struct private_condvar_t {
 	 * public functions
 	 */
 	condvar_t public;
-	
+
 	/**
 	 * wrapped pthread condvar
 	 */
@@ -169,12 +169,12 @@ struct private_rwlock_t {
 	 * public functions
 	 */
 	rwlock_t public;
-	
+
 	/**
 	 * wrapped pthread rwlock
 	 */
 	pthread_rwlock_t rwlock;
-	
+
 	/**
 	 * profiling info, if enabled
 	 */
@@ -187,7 +187,7 @@ struct private_rwlock_t {
 static void lock(private_mutex_t *this)
 {
 	int err;
-	
+
 	profiler_start(&this->profile);
 	err = pthread_mutex_lock(&this->mutex);
 	if (err)
@@ -203,7 +203,7 @@ static void lock(private_mutex_t *this)
 static void unlock(private_mutex_t *this)
 {
 	int err;
-	
+
 	err = pthread_mutex_unlock(&this->mutex);
 	if (err)
 	{
@@ -221,7 +221,7 @@ static void lock_r(private_r_mutex_t *this)
 	if (this->thread == self)
 	{
 		uintptr_t times;
-		
+
 		/* times++ */
 		times = (uintptr_t)pthread_getspecific(this->times);
 		pthread_setspecific(this->times, (void*)times + 1);
@@ -245,7 +245,7 @@ static void unlock_r(private_r_mutex_t *this)
 	/* times-- */
 	times = (uintptr_t)pthread_getspecific(this->times);
 	pthread_setspecific(this->times, (void*)--times);
-	
+
 	if (times == 0)
 	{
 		this->thread = 0;
@@ -284,32 +284,32 @@ mutex_t *mutex_create(mutex_type_t type)
 		case MUTEX_TYPE_RECURSIVE:
 		{
 			private_r_mutex_t *this = malloc_thing(private_r_mutex_t);
-			
+
 			this->generic.public.lock = (void(*)(mutex_t*))lock_r;
 			this->generic.public.unlock = (void(*)(mutex_t*))unlock_r;
-			this->generic.public.destroy = (void(*)(mutex_t*))mutex_destroy_r;	
-			
+			this->generic.public.destroy = (void(*)(mutex_t*))mutex_destroy_r;
+
 			pthread_mutex_init(&this->generic.mutex, NULL);
 			pthread_key_create(&this->times, NULL);
 			this->generic.recursive = TRUE;
 			profiler_init(&this->generic.profile);
 			this->thread = 0;
-			
+
 			return &this->generic.public;
 		}
 		case MUTEX_TYPE_DEFAULT:
 		default:
 		{
 			private_mutex_t *this = malloc_thing(private_mutex_t);
-		
+
 			this->public.lock = (void(*)(mutex_t*))lock;
 			this->public.unlock = (void(*)(mutex_t*))unlock;
 			this->public.destroy = (void(*)(mutex_t*))mutex_destroy;
-			
+
 			pthread_mutex_init(&this->mutex, NULL);
 			this->recursive = FALSE;
 			profiler_init(&this->profile);
-			
+
 			return &this->public;
 		}
 	}
@@ -323,7 +323,7 @@ static void _wait(private_condvar_t *this, private_mutex_t *mutex)
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
-		
+
 		/* mutex owner gets cleared during condvar wait */
 		recursive->thread = 0;
 		pthread_cond_wait(&this->condvar, &mutex->mutex);
@@ -343,14 +343,14 @@ static bool timed_wait_abs(private_condvar_t *this, private_mutex_t *mutex,
 {
 	struct timespec ts;
 	bool timed_out;
-	
+
 	ts.tv_sec = time.tv_sec;
 	ts.tv_nsec = time.tv_usec * 1000;
-	
+
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
-		
+
 		recursive->thread = 0;
 		timed_out = pthread_cond_timedwait(&this->condvar, &mutex->mutex,
 										   &ts) == ETIMEDOUT;
@@ -372,15 +372,15 @@ static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
 {
 	timeval_t tv;
 	u_int s, ms;
-	
+
 	time_monotonic(&tv);
-	
+
 	s = timeout / 1000;
 	ms = timeout % 1000;
-	
+
 	tv.tv_sec += s;
 	tv.tv_usec += ms * 1000;
-	
+
 	if (tv.tv_usec > 1000000 /* 1s */)
 	{
 		tv.tv_usec -= 1000000;
@@ -426,21 +426,21 @@ condvar_t *condvar_create(condvar_type_t type)
 		{
 			pthread_condattr_t condattr;
 			private_condvar_t *this = malloc_thing(private_condvar_t);
-			
+
 			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))_wait;
 			this->public.timed_wait = (bool(*)(condvar_t*, mutex_t *mutex, u_int timeout))timed_wait;
 			this->public.timed_wait_abs = (bool(*)(condvar_t*, mutex_t *mutex, timeval_t time))timed_wait_abs;
 			this->public.signal = (void(*)(condvar_t*))_signal;
 			this->public.broadcast = (void(*)(condvar_t*))broadcast;
 			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
-			
+
 			pthread_condattr_init(&condattr);
 #ifdef HAVE_CONDATTR_CLOCK_MONOTONIC
 			pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
 #endif
 			pthread_cond_init(&this->condvar, &condattr);
 			pthread_condattr_destroy(&condattr);
-			
+
 			return &this->public;
 		}
 	}
@@ -452,7 +452,7 @@ condvar_t *condvar_create(condvar_type_t type)
 static void read_lock(private_rwlock_t *this)
 {
 	int err;
-	
+
 	profiler_start(&this->profile);
 	err = pthread_rwlock_rdlock(&this->rwlock);
 	if (err != 0)
@@ -468,7 +468,7 @@ static void read_lock(private_rwlock_t *this)
 static void write_lock(private_rwlock_t *this)
 {
 	int err;
-	
+
 	profiler_start(&this->profile);
 	err = pthread_rwlock_wrlock(&this->rwlock);
 	if (err != 0)
@@ -492,7 +492,7 @@ static bool try_write_lock(private_rwlock_t *this)
 static void rw_unlock(private_rwlock_t *this)
 {
 	int err;
-	
+
 	err = pthread_rwlock_unlock(&this->rwlock);
 	if (err != 0)
 	{
@@ -521,16 +521,16 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 		default:
 		{
 			private_rwlock_t *this = malloc_thing(private_rwlock_t);
-			
+
 			this->public.read_lock = (void(*)(rwlock_t*))read_lock;
 			this->public.write_lock = (void(*)(rwlock_t*))write_lock;
 			this->public.try_write_lock = (bool(*)(rwlock_t*))try_write_lock;
 			this->public.unlock = (void(*)(rwlock_t*))rw_unlock;
 			this->public.destroy = (void(*)(rwlock_t*))rw_destroy;
-			
+
 			pthread_rwlock_init(&this->rwlock, NULL);
 			profiler_init(&this->profile);
-			
+
 			return &this->public;
 		}
 	}

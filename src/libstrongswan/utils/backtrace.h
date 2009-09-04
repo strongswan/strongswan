@@ -31,12 +31,12 @@ typedef struct backtrace_t backtrace_t;
  * A backtrace registers the frames on the stack during creation.
  */
 struct backtrace_t {
-	
+
 	/**
 	 * Log the backtrace to a FILE stream.
 	 */
 	void (*log)(backtrace_t *this, FILE *file);
-	
+
 	/**
 	 * Check if the backtrace contains a frame in a specific function.
 	 *
@@ -44,7 +44,7 @@ struct backtrace_t {
 	 * @return		TRUE if function is in the stack
 	 */
 	bool (*contains_function)(backtrace_t *this, char *function);
-	
+
 	/**
 	 * Destroy a backtrace instance.
 	 */

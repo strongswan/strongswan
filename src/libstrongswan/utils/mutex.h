@@ -93,12 +93,12 @@ struct mutex_t {
 	 * Acquire the lock to the mutex.
 	 */
 	void (*lock)(mutex_t *this);
-	
+
 	/**
 	 * Release the lock on the mutex.
 	 */
 	void (*unlock)(mutex_t *this);
-	
+
 	/**
 	 * Destroy a mutex instance.
 	 */
@@ -116,7 +116,7 @@ struct condvar_t {
 	 * @param mutex			mutex to release while waiting
 	 */
 	void (*wait)(condvar_t *this, mutex_t *mutex);
-	
+
 	/**
 	 * Wait on a condvar until it gets signalized, or times out.
 	 *
@@ -125,7 +125,7 @@ struct condvar_t {
 	 * @return				TRUE if timed out, FALSE otherwise
 	 */
 	bool (*timed_wait)(condvar_t *this, mutex_t *mutex, u_int timeout);
-	
+
 	/**
 	 * Wait on a condvar until it gets signalized, or times out.
 	 *
@@ -137,17 +137,17 @@ struct condvar_t {
 	 * @return				TRUE if timed out, FALSE otherwise
 	 */
 	bool (*timed_wait_abs)(condvar_t *this, mutex_t *mutex, timeval_t tv);
-	
+
 	/**
 	 * Wake up a single thread in a condvar.
 	 */
 	void (*signal)(condvar_t *this);
-	
+
 	/**
 	 * Wake up all threads in a condvar.
 	 */
 	void (*broadcast)(condvar_t *this);
-	
+
 	/**
 	 * Destroy a condvar and free its resources.
 	 */
@@ -163,12 +163,12 @@ struct rwlock_t {
 	 * Acquire the read lock.
 	 */
 	void (*read_lock)(rwlock_t *this);
-	
+
 	/**
 	 * Acquire the write lock.
 	 */
 	void (*write_lock)(rwlock_t *this);
-	
+
 	/**
 	 * Try to acquire the write lock.
 	 *
@@ -176,13 +176,13 @@ struct rwlock_t {
 	 *
 	 * @return		TRUE if lock acquired
 	 */
-	bool (*try_write_lock)(rwlock_t *this);	
-	
+	bool (*try_write_lock)(rwlock_t *this);
+
 	/**
 	 * Release any acquired lock.
 	 */
 	void (*unlock)(rwlock_t *this);
-	
+
 	/**
 	 * Destroy the read-write lock.
 	 */

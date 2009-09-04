@@ -44,7 +44,7 @@ struct manager_t {
 	 * implements context_t interface
 	 */
 	context_t context;
-	
+
 	/**
 	 * Create an iterator over all configured gateways.
 	 *
@@ -54,7 +54,7 @@ struct manager_t {
 	 * @return			enumerator
 	 */
 	enumerator_t* (*create_gateway_enumerator)(manager_t *this);
-	
+
 	/**
 	 * Select a gateway.
 	 *
@@ -65,7 +65,7 @@ struct manager_t {
 	 * @return			selected gateway, or NULL
 	 */
 	gateway_t* (*select_gateway)(manager_t *this, int id);
-	
+
 	/**
 	 * Try to log in.
 	 *
@@ -74,14 +74,14 @@ struct manager_t {
 	 * @return			TRUE if login successful
 	 */
 	bool (*login)(manager_t *this, char *username, char *password);
-	
+
 	/**
 	 * Check if user logged in.
 	 *
 	 * @return			TRUE if logged in
 	 */
 	bool (*logged_in)(manager_t *this);
-	
+
 	/**
 	 * Log out.
 	 */

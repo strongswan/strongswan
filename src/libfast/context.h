@@ -32,7 +32,7 @@ typedef context_t *(*context_constructor_t)(void *param);
  * User specific session context, to extend.
  */
 struct context_t {
-	
+
 	/**
 	 * Destroy the context_t.
 	 */

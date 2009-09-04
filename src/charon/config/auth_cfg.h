@@ -41,7 +41,7 @@ typedef enum auth_rule_t auth_rule_t;
  * to transport credentials during the authentication process.
  */
 enum auth_rule_t {
-	
+
 	/** identity to use for IKEv2 authentication exchange, identification_t* */
 	AUTH_RULE_IDENTITY,
 	/** authentication class, auth_class_t */
@@ -64,7 +64,7 @@ enum auth_rule_t {
 	AUTH_RULE_OCSP_VALIDATION,
 	/** subject is in attribute certificate group, identification_t* */
 	AUTH_RULE_AC_GROUP,
-	
+
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,
 	/** subject certificate, certificate_t* */
@@ -86,7 +86,7 @@ extern enum_name_t *auth_rule_names;
  * RFC4739 defines multiple authentication rounds. This class defines such
  * a round from a configuration perspective, either for the local or the remote
  * peer. Local config are called "rulesets", as they define how we authenticate.
- * Remote peer configs are called "constraits", they define what is needed to 
+ * Remote peer configs are called "constraits", they define what is needed to
  * complete the authentication round successfully.
  *
  * @verbatim
@@ -122,7 +122,7 @@ struct auth_cfg_t {
 	 * @param ...		associated value to rule
 	 */
 	void (*add)(auth_cfg_t *this, auth_rule_t rule, ...);
-	
+
 	/**
 	 * Get an rule value.
 	 *
@@ -130,14 +130,14 @@ struct auth_cfg_t {
 	 * @return			bool if item has been found
 	 */
 	void* (*get)(auth_cfg_t *this, auth_rule_t rule);
-	
+
 	/**
 	 * Create an enumerator over added rules.
 	 *
 	 * @return			enumerator over (auth_rule_t, union{void*,uintpr_t})
 	 */
 	enumerator_t* (*create_enumerator)(auth_cfg_t *this);
-	
+
 	/**
 	 * Replace an rule at enumerator position.
 	 *
@@ -147,7 +147,7 @@ struct auth_cfg_t {
 	 */
 	void (*replace)(auth_cfg_t *this, enumerator_t *pos,
 					auth_rule_t rule, ...);
-	
+
 	/**
 	 * Check if a used config fulfills a set of configured constraints.
 	 *
@@ -156,7 +156,7 @@ struct auth_cfg_t {
 	 * @return				TRUE if this complies with constraints
 	 */
 	bool (*complies)(auth_cfg_t *this, auth_cfg_t *constraints, bool log_error);
-	
+
 	/**
 	 * Merge items from other into this.
 	 *
@@ -164,14 +164,14 @@ struct auth_cfg_t {
 	 * @param copy		TRUE to copy items, FALSE to move them
 	 */
 	void (*merge)(auth_cfg_t *this, auth_cfg_t *other, bool copy);
-	
+
 	/**
 	 * Purge all rules in a config.
 	 *
 	 * @param keep_ca	wheter to keep AUTH_RULE_CA_CERT entries
 	 */
 	void (*purge)(auth_cfg_t *this, bool keep_ca);
-	
+
 	/**
 	 * Check two configs for equality.
 	 *
@@ -179,14 +179,14 @@ struct auth_cfg_t {
 	 * @return			TRUE if auth infos identical
 	 */
 	bool (*equals)(auth_cfg_t *this, auth_cfg_t *other);
-	
+
 	/**
 	 * Clone a authentication config, including all rules.
 	 *
 	 * @return			cloned configuration
 	 */
 	auth_cfg_t* (*clone)(auth_cfg_t *this);
-	
+
 	/**
 	 * Destroy a config with all associated rules/values.
 	 */

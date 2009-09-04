@@ -69,7 +69,7 @@ typedef struct task_manager_t task_manager_t;
  * For the initial IKE_SA setup, several tasks are queued: One for the
  * unauthenticated IKE_SA setup, one for authentication, one for CHILD_SA setup
  * and maybe one for virtual IP assignement.
- * The task manager is also responsible for retransmission. It uses a backoff 
+ * The task manager is also responsible for retransmission. It uses a backoff
  * algorithm. The timeout is calculated using
  * RETRANSMIT_TIMEOUT * (RETRANSMIT_BASE ** try).
  * When try reaches RETRANSMIT_TRIES, retransmission is given up.
@@ -84,7 +84,7 @@ typedef struct task_manager_t task_manager_t;
    4s * (1.8 ** 3) =   23s        47s
    4s * (1.8 ** 4) =   42s        89s
    4s * (1.8 ** 5) =   76s       165s
- 
+
    @endverbatim
  * The peer is considered dead after 2min 45s when no reply comes in.
  */
@@ -92,7 +92,7 @@ struct task_manager_t {
 
 	/**
 	 * Process an incoming message.
-	 * 
+	 *
 	 * @param message		message to add payloads to
 	 * @return
 	 * 						- DESTROY_ME if IKE_SA must be closed
@@ -118,24 +118,24 @@ struct task_manager_t {
 	 * A return value of INVALID_STATE means that the message was already
 	 * acknowledged and has not to be retransmitted. A return value of SUCCESS
 	 * means retransmission was required and the message has been resent.
-	 * 
+	 *
 	 * @param message_id	ID of the message to retransmit
 	 * @return
 	 * 						- INVALID_STATE if retransmission not required
 	 *						- SUCCESS if retransmission sent
 	 */
 	status_t (*retransmit) (task_manager_t *this, u_int32_t message_id);
-	
+
 	/**
 	 * Migrate all tasks from other to this.
 	 *
 	 * To rekey or reestablish an IKE_SA completely, all queued or active
 	 * tasks should get migrated to the new IKE_SA.
-	 * 
+	 *
 	 * @param other			manager which gives away its tasks
 	 */
 	void (*adopt_tasks) (task_manager_t *this, task_manager_t *other);
-	
+
 	/**
 	 * Reset message ID counters of the task manager.
 	 *
@@ -149,14 +149,14 @@ struct task_manager_t {
 	 * @param respond		message ID to respond to exchanges (expect)
 	 */
 	void (*reset) (task_manager_t *this, u_int32_t initiate, u_int32_t respond);
-	
+
 	/**
 	 * Check if we are currently waiting for a reply.
 	 *
 	 * @return				TRUE if we are waiting, FALSE otherwise
 	 */
 	bool (*busy) (task_manager_t *this);
-	
+
 	/**
 	 * Destroy the task_manager_t.
 	 */

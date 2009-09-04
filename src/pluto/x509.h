@@ -69,7 +69,7 @@ struct x509cert {
 	time_t               notBefore;
 	time_t               notAfter;
 	chunk_t            subject;
-	public_key_t       *public_key;  
+	public_key_t       *public_key;
 				  /*   issuerUniqueID */
 				  /*   subjectUniqueID */
 				  /*   v3 extensions */

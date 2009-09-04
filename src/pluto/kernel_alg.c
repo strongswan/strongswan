@@ -90,7 +90,7 @@ static struct sadb_alg* sadb_alg_ptr (int satype, int exttype, int alg_id,
 	default:
 		return NULL;
 	}
-	
+
 	return alg_p;
 }
 
@@ -154,7 +154,7 @@ bool kernel_alg_esp_enc_ok(u_int alg_id, u_int key_len,
 	if (!ret) goto out;
 
 	alg_p = &esp_ealg[alg_id];
-	
+
 	/*
 	 * test #2: if key_len specified, it must be in range
 	 */
@@ -195,8 +195,8 @@ out:
 	return ret;
 }
 
-/* 
- * ML: make F_STRICT logic consider enc,auth algorithms 
+/*
+ * ML: make F_STRICT logic consider enc,auth algorithms
  */
 bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 							 struct alg_info_esp *alg_info)
@@ -252,7 +252,7 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 	return TRUE;
 }
 
-/**      
+/**
  * Load kernel_alg arrays from /proc used in manual mode from klips/utils/spi.c
  */
 int kernel_alg_proc_read(void)
@@ -312,7 +312,7 @@ int kernel_alg_proc_read(void)
 	return 0;
 }
 
-/**     
+/**
  * Load kernel_alg arrays pluto's SADB_REGISTER user by pluto/kernel.c
  */
 void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
@@ -422,7 +422,7 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 			break;
 	}
 
-none:   
+none:
 	DBG(DBG_KLIPS,
 		DBG_log("kernel_alg_esp_enc_keylen(): alg_id=%d, keylen=%d",
 				alg_id, keylen)
@@ -471,7 +471,7 @@ void kernel_alg_list(void)
 		}
 	}
 	whack_log(RC_COMMENT, "  encryption:%s", buf);
-	
+
 	pos = buf;
 	*pos = '\0';
 	len = BUF_LEN;
@@ -507,7 +507,7 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 
 		pfsgroup_name = (c->policy & POLICY_PFS) ?
 						(c->alg_info_esp->esp_pfsgroup) ?
-							enum_show(&oakley_group_names, 
+							enum_show(&oakley_group_names,
 										  c->alg_info_esp->esp_pfsgroup) :
 							"<Phase1>" : "<N/A>";
 
@@ -634,7 +634,7 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 		DBG_log("kernel_alg_db_add() kernel enc ealg_id=%d not present", ealg_id);
 		return FALSE;
 	}
-	
+
 	if (!(policy & POLICY_AUTHENTICATE) &&    /* skip ESP auth attrs for AH */
 		esp_info->esp_aalg_id != AUTH_ALGORITHM_NONE)
 	{
@@ -666,11 +666,11 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 	{
 		db_attr_add_values(db_ctx, KEY_LENGTH, esp_info->esp_ealg_keylen);
 	}
-		
+
 	return TRUE;
 }
 
-/*      
+/*
  *      Create proposal with runtime kernel algos, merging
  *      with passed proposal if not NULL
  *
@@ -713,7 +713,7 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 	else
 	{
 		u_int ealg_id;
-		
+
 		ESP_EALG_FOR_EACH_UPDOWN(ealg_id)
 		{
 			u_int aalg_id;

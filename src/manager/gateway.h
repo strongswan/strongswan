@@ -30,7 +30,7 @@ typedef struct gateway_t gateway_t;
  * A connection to a gateway.
  */
 struct gateway_t {
-	
+
 	/**
 	 * Send an XML request to the gateway.
 	 *
@@ -38,21 +38,21 @@ struct gateway_t {
 	 * @return			allocated xml response string
 	 */
 	char* (*request)(gateway_t *this, char *xml);
-	
+
 	/**
 	 * Query the list of IKE_SAs and all its children.
 	 *
 	 * @return			enumerator over ikesa XML elements
 	 */
 	enumerator_t* (*query_ikesalist)(gateway_t *this);
-	
+
 	/**
 	 * Query the list of peer configs and its subconfigs.
 	 *
 	 * @return			enumerator over peerconfig XML elements
 	 */
 	enumerator_t* (*query_configlist)(gateway_t *this);
-	
+
 	/**
 	 * Terminate an IKE or a CHILD SA.
 	 *
@@ -61,7 +61,7 @@ struct gateway_t {
 	 * @return			enumerator over control response XML children
 	 */
 	enumerator_t* (*terminate)(gateway_t *this, bool ike, u_int32_t id);
-	
+
 	/**
 	 * Initiate an IKE or a CHILD SA.
 	 *
@@ -70,7 +70,7 @@ struct gateway_t {
 	 * @return			enumerator over control response XML children
 	 */
 	enumerator_t* (*initiate)(gateway_t *this, bool ike, char *name);
-	
+
 	/**
 	 * Destroy a gateway instance.
 	 */

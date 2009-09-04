@@ -29,7 +29,7 @@ typedef struct roam_job_t roam_job_t;
 
 /**
  * A job to inform IKE_SAs about changed local address setup.
- * 
+ *
  * If a local address appears or disappears, the kernel fires this job to
  * update all IKE_SAs.
  */
@@ -43,7 +43,7 @@ struct roam_job_t {
 
 /**
  * Creates a job to inform IKE_SAs about an updated address list.
- * 
+ *
  * @param address		TRUE if address list changed, FALSE if routing changed
  * @return				initiate_ike_sa_job_t object
  */

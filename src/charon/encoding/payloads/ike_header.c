@@ -33,7 +33,7 @@ struct private_ike_header_t {
 	 * Public interface.
 	 */
 	ike_header_t public;
-	
+
 	/**
 	 * SPI of the initiator.
 	 */
@@ -62,7 +62,7 @@ struct private_ike_header_t {
 	 * Exchange type .
 	 */
 	u_int8_t  exchange_type;
-	
+
 	/**
 	 * Flags of the Message.
 	 */
@@ -87,7 +87,7 @@ struct private_ike_header_t {
 	 * Associated Message-ID.
 	 */
 	u_int32_t message_id;
-	
+
 	/**
 	 * Length of the whole IKEv2-Message (header and all payloads).
 	 */
@@ -111,7 +111,7 @@ ENUM_END(exchange_type_names, INFORMATIONAL);
 
 /**
  * Encoding rules to parse or generate a IKEv2-Header.
- * 
+ *
  * The defined offsets are the positions in a object of type
  * ike_header_t.
  */
@@ -191,9 +191,9 @@ static status_t verify(private_ike_header_t *this)
 		/* initiator spi not set */
 		return FAILED;
 	}
-	
+
 	/* verification of version is not done in here */
-	
+
 	return SUCCESS;
 }
 
@@ -372,7 +372,7 @@ static size_t get_length(payload_t *this)
 ike_header_t *ike_header_create()
 {
 	private_ike_header_t *this = malloc_thing(private_ike_header_t);
-	
+
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = get_encoding_rules;
 	this->public.payload_interface.get_length = get_length;
@@ -381,7 +381,7 @@ ike_header_t *ike_header_create()
 	this->public.payload_interface.get_type = get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	this->public.destroy = destroy;
-	
+
 	this->public.get_initiator_spi = (u_int64_t (*) (ike_header_t*))get_initiator_spi;
 	this->public.set_initiator_spi = (void (*) (ike_header_t*,u_int64_t))set_initiator_spi;
 	this->public.get_responder_spi = (u_int64_t (*) (ike_header_t*))get_responder_spi;
@@ -397,7 +397,7 @@ ike_header_t *ike_header_create()
 	this->public.set_exchange_type = (void (*) (ike_header_t*,u_int8_t))set_exchange_type;
 	this->public.get_message_id = (u_int32_t (*) (ike_header_t*))get_message_id;
 	this->public.set_message_id = (void (*) (ike_header_t*,u_int32_t))set_message_id;
-	
+
 	/* set default values of the fields */
 	this->initiator_spi = 0;
 	this->responder_spi = 0;
@@ -410,6 +410,6 @@ ike_header_t *ike_header_create()
 	this->flags.response = FALSE;
 	this->message_id = 0;
 	this->length = IKE_HEADER_LENGTH;
-	
+
 	return (ike_header_t*)this;
 }

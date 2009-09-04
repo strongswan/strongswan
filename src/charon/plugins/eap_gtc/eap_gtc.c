@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include "eap_gtc.h"
 
 #include <daemon.h>
@@ -30,22 +30,22 @@ typedef struct private_eap_gtc_t private_eap_gtc_t;
  * Private data of an eap_gtc_t object.
  */
 struct private_eap_gtc_t {
-	
+
 	/**
 	 * Public authenticator_t interface.
 	 */
 	eap_gtc_t public;
-	
+
 	/**
 	 * ID of the server
 	 */
 	identification_t *server;
-	
+
 	/**
 	 * ID of the peer
 	 */
 	identification_t *peer;
-	
+
 	/**
 	 * EAP message identififier
 	 */
@@ -86,7 +86,7 @@ static int auth_conv(int num_msg, const struct pam_message **msg,
                 	 struct pam_response **resp, char *password)
 {
 	struct pam_response *response;
-	
+
 	if (num_msg != 1)
 	{
 		return PAM_CONV_ERR;
@@ -106,10 +106,10 @@ static bool authenticate(char *service, char *user, char *password)
     pam_handle_t *pamh = NULL;
 	static struct pam_conv conv;
     int ret;
-	
+
 	conv.conv = (void*)auth_conv;
 	conv.appdata_ptr = password;
-	
+
 	ret = pam_start(service, user, &conv, &pamh);
 	if (ret != PAM_SUCCESS)
 	{
@@ -143,7 +143,7 @@ static status_t initiate_server(private_eap_gtc_t *this, eap_payload_t **out)
 {
 	eap_gtc_header_t *req;
 	size_t len;
-	
+
 	len = strlen(GTC_REQUEST_MSG);
 	req = alloca(sizeof(eap_gtc_header_t) + len);
 	req->length = htons(sizeof(eap_gtc_header_t) + len);
@@ -151,7 +151,7 @@ static status_t initiate_server(private_eap_gtc_t *this, eap_payload_t **out)
 	req->identifier = this->identifier;
 	req->type = EAP_GTC;
 	memcpy(req->data, GTC_REQUEST_MSG, len);
-	
+
 	*out = eap_payload_create_data(chunk_create((void*)req,
 								   sizeof(eap_gtc_header_t) + len));
 	return NEED_MORE;
@@ -178,7 +178,7 @@ static status_t process_peer(private_eap_gtc_t *this,
 	}
 	key = shared->get_key(shared);
 	len = key.len;
-	
+
 	/* TODO: According to the draft we should "SASLprep" password, RFC4013. */
 
 	res = alloca(sizeof(eap_gtc_header_t) + len);
@@ -187,9 +187,9 @@ static status_t process_peer(private_eap_gtc_t *this,
 	res->identifier = in->get_identifier(in);
 	res->type = EAP_GTC;
 	memcpy(res->data, key.ptr, len);
-	
+
 	shared->destroy(shared);
-	
+
 	*out = eap_payload_create_data(chunk_create((void*)res,
 								   sizeof(eap_gtc_header_t) + len));
 	return NEED_MORE;
@@ -203,14 +203,14 @@ static status_t process_server(private_eap_gtc_t *this,
 {
 	chunk_t data, encoding;
 	char *user, *password, *service, *pos;
-	
+
 	data = chunk_skip(in->get_data(in), 5);
 	if (this->identifier != in->get_identifier(in) || !data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-GTC message");
 		return FAILED;
 	}
-	
+
 	encoding = this->peer->get_encoding(this->peer);
 	/* if a RFC822_ADDR id is provided, we use the username part only */
 	pos = memchr(encoding.ptr, '@', encoding.len);
@@ -221,14 +221,14 @@ static status_t process_server(private_eap_gtc_t *this,
 	user = alloca(encoding.len + 1);
 	memcpy(user, encoding.ptr, encoding.len);
 	user[encoding.len] = '\0';
-	
+
 	password = alloca(data.len + 1);
 	memcpy(password, data.ptr, data.len);
 	password[data.len] = '\0';
-	
+
 	service = lib->settings->get_str(lib->settings,
 						"charon.plugins.eap_gtc.pam_service", GTC_PAM_SERVICE);
-	
+
 	if (!authenticate(service, user, password))
 	{
 		return FAILED;
@@ -278,19 +278,19 @@ static private_eap_gtc_t *eap_gtc_create_generic(identification_t *server,
 												 identification_t *peer)
 {
 	private_eap_gtc_t *this = malloc_thing(private_eap_gtc_t);
-	
+
 	this->public.eap_method_interface.initiate = NULL;
 	this->public.eap_method_interface.process = NULL;
 	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-	
+
 	/* private data */
 	this->peer = peer->clone(peer);
 	this->server = server->clone(server);
 	this->identifier = 0;
-	
+
 	return this;
 }
 
@@ -300,7 +300,7 @@ static private_eap_gtc_t *eap_gtc_create_generic(identification_t *server,
 eap_gtc_t *eap_gtc_create_server(identification_t *server, identification_t *peer)
 {
 	private_eap_gtc_t *this = eap_gtc_create_generic(server, peer);
-	
+
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_server;
 
@@ -318,7 +318,7 @@ eap_gtc_t *eap_gtc_create_server(identification_t *server, identification_t *pee
 eap_gtc_t *eap_gtc_create_peer(identification_t *server, identification_t *peer)
 {
 	private_eap_gtc_t *this = eap_gtc_create_generic(server, peer);
-	
+
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_peer;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_peer;
 

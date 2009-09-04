@@ -46,7 +46,7 @@ starter_klips_init(void)
 			return FALSE;
 		}
 	}
-	
+
 	/* load crypto algorithm modules */
 	ignore_result(system("modprobe -qv ipsec_aes"));
 	ignore_result(system("modprobe -qv ipsec_blowfish"));
@@ -55,7 +55,7 @@ starter_klips_init(void)
 	DBG(DBG_CONTROL,
 		DBG_log("Found KLIPS IPsec stack")
 	)
-	
+
 	return TRUE;
 }
 

@@ -25,14 +25,14 @@
 bool test_curl_get()
 {
 	chunk_t chunk;
-	
+
 	if (lib->fetcher->fetch(lib->fetcher, "http://www.strongswan.org",
 							&chunk, FETCH_END) != SUCCESS)
 	{
 		return FALSE;
 	}
 	free(chunk.ptr);
-	
+
 	if (lib->fetcher->fetch(lib->fetcher, "http://www.google.com",
 							&chunk, FETCH_END) != SUCCESS)
 	{

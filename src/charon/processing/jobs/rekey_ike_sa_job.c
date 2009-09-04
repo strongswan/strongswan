@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include "rekey_ike_sa_job.h"
 
 #include <daemon.h>
@@ -27,12 +27,12 @@ struct private_rekey_ike_sa_job_t {
 	 * Public rekey_ike_sa_job_t interface.
 	 */
 	rekey_ike_sa_job_t public;
-	
+
 	/**
 	 * ID of the IKE_SA to rekey
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
+
 	/**
 	 * force reauthentication of the peer (full IKE_SA setup)
 	 */
@@ -55,7 +55,7 @@ static void execute(private_rekey_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status = SUCCESS;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
 	if (ike_sa == NULL)
@@ -72,7 +72,7 @@ static void execute(private_rekey_ike_sa_job_t *this)
 		{
 			status = ike_sa->rekey(ike_sa);
 		}
-		
+
 		if (status == DESTROY_ME)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
@@ -91,14 +91,14 @@ static void execute(private_rekey_ike_sa_job_t *this)
 rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth)
 {
 	private_rekey_ike_sa_job_t *this = malloc_thing(private_rekey_ike_sa_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-		
+
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->reauth = reauth;
-	
+
 	return &(this->public);
 }

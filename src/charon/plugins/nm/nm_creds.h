@@ -35,14 +35,14 @@ struct nm_creds_t {
 	 * Implements credential_set_t
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Set the trusted gateway certificate to serve by this set.
 	 *
 	 * @param cert		certificate to serve
 	 */
 	void (*set_certificate)(nm_creds_t *this, certificate_t *cert);
-	
+
 	/**
 	 * Set the username/password for authentication.
 	 *

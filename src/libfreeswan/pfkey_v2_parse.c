@@ -1,12 +1,12 @@
 /*
  * RFC2367 PF_KEYv2 Key management API message parser
  * Copyright (C) 1999, 2000, 2001  Richard Guy Briggs.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -107,7 +107,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 #if 0
 	struct sadb_sa sav2;
 #endif
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 		  "pfkey_sa_parse: entry\n");
 	/* sanity checks... */
@@ -117,7 +117,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  "NULL pointer passed in.\n");
 		SENDERR(EINVAL);
 	}
-	
+
 #if 0
 	/* check if this structure is short, and if so, fix it up.
 	 * XXX this is NOT the way to do things.
@@ -129,7 +129,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 		memcpy(&sav2, pfkey_sa, sizeof(struct sadb_sa_v1));
 		sav2.sadb_x_sa_ref=-1;
 		sav2.sadb_sa_len = sizeof(struct sadb_sa) / IPSEC_PFKEYv2_ALIGN;
-		
+
 		pfkey_sa = &sav2;
 	}
 #endif
@@ -143,7 +143,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  (int)sizeof(struct sadb_sa));
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_sa->sadb_sa_encrypt > SADB_EALG_MAX) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_sa_parse: "
@@ -152,7 +152,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  SADB_EALG_MAX);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_sa->sadb_sa_auth > SADB_AALG_MAX) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_sa_parse: "
@@ -161,7 +161,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  SADB_AALG_MAX);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_sa->sadb_sa_state > SADB_SASTATE_MAX) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_sa_parse: "
@@ -170,7 +170,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  SADB_SASTATE_MAX);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_sa->sadb_sa_state == SADB_SASTATE_DEAD) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_sa_parse: "
@@ -179,7 +179,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  SADB_SASTATE_DEAD);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_sa->sadb_sa_replay > 64) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_sa_parse: "
@@ -187,7 +187,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  pfkey_sa->sadb_sa_replay);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(! ((pfkey_sa->sadb_sa_exttype ==  SADB_EXT_SA) ||
 	      (pfkey_sa->sadb_sa_exttype ==  SADB_X_EXT_SA2)))
 	{
@@ -209,7 +209,7 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 			  IPSEC_SA_REF_TABLE_NUM_ENTRIES);
 		SENDERR(EINVAL);
 	}
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 		  "pfkey_sa_parse: "
 		  "successfully found len=%d exttype=%d(%s) spi=%08lx replay=%d state=%d auth=%d encrypt=%d flags=%d ref=%d.\n",
@@ -223,10 +223,10 @@ pfkey_sa_parse(struct sadb_ext *pfkey_ext)
 		  pfkey_sa->sadb_sa_encrypt,
 		  pfkey_sa->sadb_sa_flags,
 		  pfkey_sa->sadb_x_sa_ref);
-	
+
  errlab:
 	return error;
-}	
+}
 
 DEBUG_NO_STATIC int
 pfkey_lifetime_parse(struct sadb_ext  *pfkey_ext)
@@ -259,21 +259,21 @@ pfkey_lifetime_parse(struct sadb_ext  *pfkey_ext)
 	   (pfkey_lifetime->sadb_lifetime_exttype != SADB_EXT_LIFETIME_CURRENT)) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_lifetime_parse: "
-			  "unexpected ext_type=%d.\n", 
-			  pfkey_lifetime->sadb_lifetime_exttype); 
+			  "unexpected ext_type=%d.\n",
+			  pfkey_lifetime->sadb_lifetime_exttype);
 		SENDERR(EINVAL);
 	}
 
 	DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 		  "pfkey_lifetime_parse: "
-		  "life_type=%d(%s) alloc=%u bytes=%u add=%u use=%u pkts=%u.\n", 
+		  "life_type=%d(%s) alloc=%u bytes=%u add=%u use=%u pkts=%u.\n",
 		  pfkey_lifetime->sadb_lifetime_exttype,
 		  pfkey_v2_sadb_ext_string(pfkey_lifetime->sadb_lifetime_exttype),
 		  pfkey_lifetime->sadb_lifetime_allocations,
 		  (unsigned)pfkey_lifetime->sadb_lifetime_bytes,
 		  (unsigned)pfkey_lifetime->sadb_lifetime_addtime,
 		  (unsigned)pfkey_lifetime->sadb_lifetime_usetime,
-		  pfkey_lifetime->sadb_x_lifetime_packets); 
+		  pfkey_lifetime->sadb_x_lifetime_packets);
 errlab:
 	return error;
 }
@@ -286,7 +286,7 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 	struct sadb_address *pfkey_address = (struct sadb_address *)pfkey_ext;
 	struct sockaddr* s = (struct sockaddr*)((char*)pfkey_address + sizeof(*pfkey_address));
 	char ipaddr_txt[ADDRTOT_BUF];
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 		"pfkey_address_parse:enter\n");
 	/* sanity checks... */
@@ -296,7 +296,7 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 			"NULL pointer passed in.\n");
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_address->sadb_address_len <
 	   (sizeof(struct sadb_address) + sizeof(struct sockaddr))/
 	   IPSEC_PFKEYv2_ALIGN) {
@@ -308,7 +308,7 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 			  (int)sizeof(struct sockaddr));
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_address->sadb_address_reserved) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_address_parse: "
@@ -316,8 +316,8 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 			  pfkey_address->sadb_address_reserved);
 		SENDERR(EINVAL);
 	}
-	
-	switch(pfkey_address->sadb_address_exttype) {	
+
+	switch(pfkey_address->sadb_address_exttype) {
 	case SADB_EXT_ADDRESS_SRC:
 	case SADB_EXT_ADDRESS_DST:
 	case SADB_EXT_ADDRESS_PROXY:
@@ -329,7 +329,7 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 	case SADB_X_EXT_NAT_T_OA:
 		break;
 	default:
-		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM, 
+		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_address_parse: "
 			"unexpected ext_type=%d.\n",
 			pfkey_address->sadb_address_exttype);
@@ -382,7 +382,7 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 			s->sa_family);
 		SENDERR(EPFNOSUPPORT);
 	}
-	
+
 	if(pfkey_address->sadb_address_len !=
 	   DIVUP(sizeof(struct sadb_address) + saddr_len, IPSEC_PFKEYv2_ALIGN)) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
@@ -393,16 +393,16 @@ pfkey_address_parse(struct sadb_ext *pfkey_ext)
 			  saddr_len);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_address->sadb_address_prefixlen != 0) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_address_parse: "
 			"address prefixes not supported yet.\n");
 		SENDERR(EAFNOSUPPORT); /* not supported yet */
 	}
-	
+
 	/* XXX check if port!=0 */
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 		"pfkey_address_parse: successful.\n");
  errlab:
@@ -452,7 +452,7 @@ pfkey_key_parse(struct sadb_ext *pfkey_ext)
 			pfkey_key->sadb_key_len);
 		SENDERR(EINVAL);
 	}
-	
+
 	if(pfkey_key->sadb_key_reserved) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_key_parse: "
@@ -527,7 +527,7 @@ pfkey_ident_parse(struct sadb_ext *pfkey_ext)
 			SENDERR(EINVAL);
 		}
 	}
-	
+
 	if( ! ((pfkey_ident->sadb_ident_exttype == SADB_EXT_IDENTITY_SRC) ||
 	       (pfkey_ident->sadb_ident_exttype == SADB_EXT_IDENTITY_DST))) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
@@ -578,7 +578,7 @@ pfkey_prop_parse(struct sadb_ext *pfkey_ext)
 	struct sadb_comb *pfkey_comb = (struct sadb_comb *)((char*)pfkey_ext + sizeof(struct sadb_prop));
 
 	/* sanity checks... */
-	if((pfkey_prop->sadb_prop_len < sizeof(struct sadb_prop) / IPSEC_PFKEYv2_ALIGN) || 
+	if((pfkey_prop->sadb_prop_len < sizeof(struct sadb_prop) / IPSEC_PFKEYv2_ALIGN) ||
 	   (((pfkey_prop->sadb_prop_len * IPSEC_PFKEYv2_ALIGN) - sizeof(struct sadb_prop)) % sizeof(struct sadb_comb))) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_prop_parse: "
@@ -596,7 +596,7 @@ pfkey_prop_parse(struct sadb_ext *pfkey_ext)
 			pfkey_prop->sadb_prop_replay);
 		SENDERR(EINVAL);
 	}
-	
+
 	for(i=0; i<3; i++) {
 		if(pfkey_prop->sadb_prop_reserved[i]) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
@@ -869,7 +869,7 @@ pfkey_supported_parse(struct sadb_ext *pfkey_ext)
 		}
 		pfkey_alg++;
 	}
-	
+
  errlab:
 	return error;
 }
@@ -879,7 +879,7 @@ pfkey_spirange_parse(struct sadb_ext *pfkey_ext)
 {
 	int error = 0;
 	struct sadb_spirange *pfkey_spirange = (struct sadb_spirange *)pfkey_ext;
-	
+
 	/* sanity checks... */
         if(pfkey_spirange->sadb_spirange_len !=
 	   sizeof(struct sadb_spirange) / IPSEC_PFKEYv2_ALIGN) {
@@ -890,7 +890,7 @@ pfkey_spirange_parse(struct sadb_ext *pfkey_ext)
 			  (int)sizeof(struct sadb_spirange));
                 SENDERR(EINVAL);
         }
-	
+
         if(pfkey_spirange->sadb_spirange_reserved) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_spirange_parse: "
@@ -898,7 +898,7 @@ pfkey_spirange_parse(struct sadb_ext *pfkey_ext)
 			pfkey_spirange->sadb_spirange_reserved);
                 SENDERR(EINVAL);
         }
-	
+
         if(ntohl(pfkey_spirange->sadb_spirange_max) < ntohl(pfkey_spirange->sadb_spirange_min)) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_spirange_parse: "
@@ -907,7 +907,7 @@ pfkey_spirange_parse(struct sadb_ext *pfkey_ext)
 			ntohl(pfkey_spirange->sadb_spirange_max));
                 SENDERR(EINVAL);
         }
-	
+
 	if(ntohl(pfkey_spirange->sadb_spirange_min) <= 255) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_spirange_parse: "
@@ -915,7 +915,7 @@ pfkey_spirange_parse(struct sadb_ext *pfkey_ext)
 			ntohl(pfkey_spirange->sadb_spirange_min));
 		SENDERR(EEXIST);
 	}
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 		  "pfkey_spirange_parse: "
 		  "ext_len=%u ext_type=%u(%s) min=%u max=%u res=%u.\n",
@@ -983,7 +983,7 @@ pfkey_x_satype_parse(struct sadb_ext *pfkey_ext)
 			  (int)sizeof(struct sadb_x_satype));
 		SENDERR(EINVAL);
 	}
-	
+
 	if(!pfkey_x_satype->sadb_x_satype_satype) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_x_satype_parse: "
@@ -994,7 +994,7 @@ pfkey_x_satype_parse(struct sadb_ext *pfkey_ext)
 	if(pfkey_x_satype->sadb_x_satype_satype > SADB_SATYPE_MAX) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_x_satype_parse: "
-			"satype %d > max %d, invalid.\n", 
+			"satype %d > max %d, invalid.\n",
 			pfkey_x_satype->sadb_x_satype_satype, SADB_SATYPE_MAX);
 		SENDERR(EINVAL);
 	}
@@ -1016,7 +1016,7 @@ pfkey_x_satype_parse(struct sadb_ext *pfkey_ext)
 			SENDERR(EINVAL);
 		}
 	}
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 		  "pfkey_x_satype_parse: "
 		  "len=%u ext=%u(%s) satype=%u(%s) res=%u,%u,%u.\n",
@@ -1051,7 +1051,7 @@ pfkey_x_ext_debug_parse(struct sadb_ext *pfkey_ext)
 			  (int)sizeof(struct sadb_x_debug));
 		SENDERR(EINVAL);
 	}
-	
+
 	for(i = 0; i < 4; i++) {
 		if(pfkey_x_debug->sadb_x_debug_reserved[i]) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
@@ -1061,7 +1061,7 @@ pfkey_x_ext_debug_parse(struct sadb_ext *pfkey_ext)
 			SENDERR(EINVAL);
 		}
 	}
-	
+
 errlab:
 	return error;
 }
@@ -1071,17 +1071,17 @@ pfkey_x_ext_protocol_parse(struct sadb_ext *pfkey_ext)
 {
 	int error = 0;
 	struct sadb_protocol *p = (struct sadb_protocol *)pfkey_ext;
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM, "pfkey_x_protocol_parse:\n");
 	/* sanity checks... */
-	
+
 	if (p->sadb_protocol_len != sizeof(*p)/IPSEC_PFKEYv2_ALIGN) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_x_protocol_parse: size wrong ext_len=%d, key_ext_len=%d.\n",
 			  p->sadb_protocol_len, (int)sizeof(*p));
 		SENDERR(EINVAL);
 	}
-	
+
 	if (p->sadb_protocol_reserved2 != 0) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			  "pfkey_protocol_parse: res=%d, must be zero.\n",
@@ -1168,10 +1168,10 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 	int remain;
 	struct sadb_ext *pfkey_ext;
 	int extensions_seen = 0;
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_STRUCT,
 		  "pfkey_msg_parse: "
-		  "parsing message ver=%d, type=%d(%s), errno=%d, satype=%d(%s), len=%d, res=%d, seq=%d, pid=%d.\n", 
+		  "parsing message ver=%d, type=%d(%s), errno=%d, satype=%d(%s), len=%d, res=%d, seq=%d, pid=%d.\n",
 		  pfkey_msg->sadb_msg_version,
 		  pfkey_msg->sadb_msg_type,
 		  pfkey_v2_sadb_type_string(pfkey_msg->sadb_msg_type),
@@ -1182,20 +1182,20 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 		  pfkey_msg->sadb_msg_reserved,
 		  pfkey_msg->sadb_msg_seq,
 		  pfkey_msg->sadb_msg_pid);
-	
+
 	if(ext_parsers == NULL) ext_parsers = ext_default_parsers;
-	
+
 	pfkey_extensions_init(extensions);
-	
+
 	remain = pfkey_msg->sadb_msg_len;
 	remain -= sizeof(struct sadb_msg) / IPSEC_PFKEYv2_ALIGN;
-	
+
 	pfkey_ext = (struct sadb_ext*)((char*)pfkey_msg +
 				       sizeof(struct sadb_msg));
-	
+
 	extensions[0] = (struct sadb_ext *) pfkey_msg;
-	
-	
+
+
 	if(pfkey_msg->sadb_msg_version != PF_KEY_V2) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_msg_parse: "
@@ -1261,7 +1261,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 	default:
 		break;
 	}
-	
+
 	/* errno must not be set in downward messages */
 	/* this is not entirely true... a response to an ACQUIRE could return an error */
 	if((dir == EXT_BITS_IN) && (pfkey_msg->sadb_msg_type != SADB_ACQUIRE) && pfkey_msg->sadb_msg_errno) {
@@ -1274,54 +1274,54 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 
 	DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 		  "pfkey_msg_parse: "
-		  "remain=%d, ext_type=%d(%s), ext_len=%d.\n", 
+		  "remain=%d, ext_type=%d(%s), ext_len=%d.\n",
 		  remain,
 		  pfkey_ext->sadb_ext_type,
 		  pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type),
 		  pfkey_ext->sadb_ext_len);
-	
+
 	DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 		"pfkey_msg_parse: "
 		"extensions permitted=%08x, required=%08x.\n",
 		extensions_bitmaps[dir][EXT_BITS_PERM][pfkey_msg->sadb_msg_type],
 		extensions_bitmaps[dir][EXT_BITS_REQ][pfkey_msg->sadb_msg_type]);
-	
+
 	extensions_seen = 1;
-	
+
 	while( (remain * IPSEC_PFKEYv2_ALIGN) >= sizeof(struct sadb_ext) ) {
 		/* Is there enough message left to support another extension header? */
 		if(remain < pfkey_ext->sadb_ext_len) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 				"pfkey_msg_parse: "
-				"remain %d less than ext len %d.\n", 
+				"remain %d less than ext len %d.\n",
 				remain, pfkey_ext->sadb_ext_len);
 			SENDERR(EINVAL);
 		}
-		
+
 		DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
 			"pfkey_msg_parse: "
 			"parsing ext type=%d(%s) remain=%d.\n",
 			pfkey_ext->sadb_ext_type,
 			pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type),
 			remain);
-		
+
 		/* Is the extension header type valid? */
 		if((pfkey_ext->sadb_ext_type > SADB_EXT_MAX) || (!pfkey_ext->sadb_ext_type)) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 				"pfkey_msg_parse: "
-				"ext type %d(%s) invalid, SADB_EXT_MAX=%d.\n", 
+				"ext type %d(%s) invalid, SADB_EXT_MAX=%d.\n",
 				pfkey_ext->sadb_ext_type,
 				pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type),
 				SADB_EXT_MAX);
 			SENDERR(EINVAL);
 		}
-		
+
 		/* Have we already seen this type of extension? */
 		if((extensions_seen & ( 1 << pfkey_ext->sadb_ext_type )) != 0)
 		{
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 				"pfkey_msg_parse: "
-				"ext type %d(%s) already seen.\n", 
+				"ext type %d(%s) already seen.\n",
 				pfkey_ext->sadb_ext_type,
 				pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type));
 			SENDERR(EINVAL);
@@ -1331,7 +1331,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 		if(ext_parsers[pfkey_ext->sadb_ext_type]==NULL) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 				"pfkey_msg_parse: "
-				"ext type %d(%s) unknown, ignoring.\n", 
+				"ext type %d(%s) unknown, ignoring.\n",
 				pfkey_ext->sadb_ext_type,
 				pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type));
 			goto next_ext;
@@ -1342,8 +1342,8 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 		     1<<pfkey_ext->sadb_ext_type)) {
 			DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 				"pfkey_msg_parse: "
-				"ext type %d(%s) not permitted, exts_perm_in=%08x, 1<<type=%08x\n", 
-				pfkey_ext->sadb_ext_type, 
+				"ext type %d(%s) not permitted, exts_perm_in=%08x, 1<<type=%08x\n",
+				pfkey_ext->sadb_ext_type,
 				pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type),
 				extensions_bitmaps[dir][EXT_BITS_PERM][pfkey_msg->sadb_msg_type],
 				1<<pfkey_ext->sadb_ext_type);
@@ -1359,7 +1359,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 			  pfkey_ext->sadb_ext_len,
 			  pfkey_ext,
 			  ext_parsers[pfkey_ext->sadb_ext_type]->parser_name);
-		
+
 		/* Parse the extension */
 		if((error =
 		    (*ext_parsers[pfkey_ext->sadb_ext_type]->parser)(pfkey_ext))) {
@@ -1368,7 +1368,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 				"extension parsing for type %d(%s) failed with error %d.\n",
 				pfkey_ext->sadb_ext_type,
 				pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type),
-				error); 
+				error);
 			SENDERR(-error);
 		}
 		DEBUGGING(PF_KEY_DEBUG_PARSE_FLOW,
@@ -1376,12 +1376,12 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 			"Extension %d(%s) parsed.\n",
 			pfkey_ext->sadb_ext_type,
 			pfkey_v2_sadb_ext_string(pfkey_ext->sadb_ext_type));
-		
+
 		/* Mark that we have seen this extension and remember the header location */
 		extensions_seen |= ( 1 << pfkey_ext->sadb_ext_type );
 		extensions[pfkey_ext->sadb_ext_type] = pfkey_ext;
 
-	next_ext:		
+	next_ext:
 		/* Calculate how much message remains */
 		remain -= pfkey_ext->sadb_ext_len;
 
@@ -1396,7 +1396,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 	if(remain) {
 		DEBUGGING(PF_KEY_DEBUG_PARSE_PROBLEM,
 			"pfkey_msg_parse: "
-			"unexpected remainder of %d.\n", 
+			"unexpected remainder of %d.\n",
 			remain);
 		/* why is there still something remaining? */
 		SENDERR(EINVAL);
@@ -1427,7 +1427,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 			 extensions_bitmaps[dir][EXT_BITS_REQ][pfkey_msg->sadb_msg_type]));
 		SENDERR(EINVAL);
 	}
-	
+
 	if((dir == EXT_BITS_IN) && (pfkey_msg->sadb_msg_type == SADB_X_DELFLOW)
 	   && ((extensions_seen	& SADB_X_EXT_ADDRESS_DELFLOW)
 	       != SADB_X_EXT_ADDRESS_DELFLOW)
@@ -1443,7 +1443,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 			(1<<SADB_EXT_SA) - (extensions_seen & (1<<SADB_EXT_SA)));
 		SENDERR(EINVAL);
 	}
-	
+
 	switch(pfkey_msg->sadb_msg_type) {
 	case SADB_ADD:
 	case SADB_UPDATE:
@@ -1457,7 +1457,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 				SADB_SASTATE_MATURE);
 			SENDERR(EINVAL);
 		}
-		
+
 		/* check AH and ESP */
 		switch(((struct sadb_msg*)extensions[SADB_EXT_RESERVED])->sadb_msg_satype) {
 		case SADB_SATYPE_AH:
@@ -1529,7 +1529,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 				ntohl(((struct sadb_sa*)(extensions[SADB_EXT_SA]))->sadb_sa_spi));
 			SENDERR(EINVAL);
 		}
-	default:	
+	default:
 		break;
 	}
 errlab:

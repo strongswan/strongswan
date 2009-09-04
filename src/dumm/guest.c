@@ -97,13 +97,13 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	iface_t *iface;
-	
+
 	if (this->state != GUEST_RUNNING)
 	{
 		DBG1("guest '%s' not running, unable to add interface", this->name);
 		return NULL;
 	}
-	
+
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
 	while (enumerator->enumerate(enumerator, (void**)&iface))
 	{
@@ -131,7 +131,7 @@ static void destroy_iface(private_guest_t *this, iface_t *iface)
 {
 	enumerator_t *enumerator;
 	iface_t *current;
-	
+
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
@@ -152,7 +152,7 @@ static enumerator_t* create_iface_enumerator(private_guest_t *this)
 {
 	return this->ifaces->create_enumerator(this->ifaces);
 }
-	
+
 /**
  * Implementation of guest_t.get_state.
  */
@@ -224,7 +224,7 @@ static void stop(private_guest_t *this, idle_function_t idle)
 void savepid(private_guest_t *this)
 {
 	FILE *file;
-	
+
 	file = fdopen(openat(this->dir, PID_FILE, O_RDWR | O_CREAT | O_TRUNC,
 						 PERM), "w");
 	if (file)
@@ -246,18 +246,18 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	char *args[32];
 	int i = 0;
 	size_t left = sizeof(buf);
-	
+
 	memset(args, 0, sizeof(args));
-	
+
 	if (this->state != GUEST_STOPPED)
 	{
 		DBG1("unable to start guest in state %N", guest_state_names, this->state);
 		return FALSE;
 	}
 	this->state = GUEST_STARTING;
-	
+
 	notify = write_arg(&pos, &left, "%s/%s", this->dirname, NOTIFY_FILE);
-	
+
 	args[i++] = write_arg(&pos, &left, "nice");
 	args[i++] = write_arg(&pos, &left, "%s/%s", this->dirname, KERNEL_FILE);
 	args[i++] = write_arg(&pos, &left, "root=/dev/root");
@@ -271,7 +271,7 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	{
 		args[i++] = this->args;
 	}
-	  
+
 	this->pid = invoke(data, &this->public, args, i);
 	if (!this->pid)
 	{
@@ -279,7 +279,7 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 		return FALSE;
 	}
 	savepid(this);
-	
+
 	/* open mconsole */
 	this->mconsole = mconsole_create(notify, idle);
 	if (this->mconsole == NULL)
@@ -288,11 +288,11 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 		stop(this, NULL);
 		return FALSE;
 	}
-	
+
 	this->state = GUEST_RUNNING;
 	return TRUE;
-}	
-	
+}
+
 /**
  * Implementation of guest_t.load_template.
  */
@@ -300,12 +300,12 @@ static bool load_template(private_guest_t *this, char *path)
 {
 	char dir[PATH_MAX];
 	size_t len;
-	
+
 	if (path == NULL)
 	{
-		return this->cowfs->set_overlay(this->cowfs, NULL);	
+		return this->cowfs->set_overlay(this->cowfs, NULL);
 	}
-	
+
 	len = snprintf(dir, sizeof(dir), "%s/%s", path, this->name);
 	if (len < 0 || len >= sizeof(dir))
 	{
@@ -334,11 +334,11 @@ static int vexec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *dat
 {
 	char buf[1024];
 	size_t len;
-	
+
 	if (this->mconsole)
 	{
 		len = vsnprintf(buf, sizeof(buf), cmd, args);
-		
+
 		if (len > 0 && len < sizeof(buf))
 		{
 			return this->mconsole->exec(this->mconsole, cb, data, buf);
@@ -389,7 +389,7 @@ static void exec_str_cb(exec_str_t *data, char *buf, size_t len)
 		}
 		strncat(data->buf.ptr, buf, len);
 	}
-	
+
 	if (data->cb)
 	{
 		char *nl;
@@ -477,7 +477,7 @@ static bool mount_unionfs(private_guest_t *this)
 		snprintf(master, sizeof(master), "%s/%s", this->dirname, MASTER_DIR);
 		snprintf(diff, sizeof(diff), "%s/%s", this->dirname, DIFF_DIR);
 		snprintf(mount, sizeof(mount), "%s/%s", this->dirname, UNION_DIR);
-		
+
 		this->cowfs = cowfs_create(master, diff, mount);
 		if (this->cowfs)
 		{
@@ -494,7 +494,7 @@ char *loadargs(private_guest_t *this)
 {
 	FILE *file;
 	char buf[512], *args = NULL;
-	
+
 	file = fdopen(openat(this->dir, ARGS_FILE, O_RDONLY, PERM), "r");
 	if (file)
 	{
@@ -514,7 +514,7 @@ bool saveargs(private_guest_t *this, char *args)
 {
 	FILE *file;
 	bool retval = FALSE;
-	
+
 	file = fdopen(openat(this->dir, ARGS_FILE, O_RDWR | O_CREAT | O_TRUNC,
 						 PERM), "w");
 	if (file)
@@ -554,7 +554,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 {
 	char cwd[PATH_MAX];
 	private_guest_t *this = malloc_thing(private_guest_t);
-	
+
 	this->public.get_name = (void*)get_name;
 	this->public.get_pid = (pid_t(*)(guest_t*))get_pid;
 	this->public.get_state = (guest_state_t(*)(guest_t*))get_state;
@@ -568,7 +568,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.exec_str = (int(*)(guest_t*, void(*cb)(void*,char*),bool,void*,char*,...))exec_str;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
-		
+
 	if (*parent == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
 		if (asprintf(&this->dirname, "%s/%s", parent, name) < 0)
@@ -607,7 +607,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->args = NULL;
 	this->name = strdup(name);
 	this->cowfs = NULL;
-	
+
 	return this;
 }
 
@@ -618,7 +618,7 @@ static bool make_symlink(private_guest_t *this, char *old, char *new)
 {
 	char cwd[PATH_MAX];
 	char buf[PATH_MAX];
-	
+
 	if (*old == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
 		snprintf(buf, sizeof(buf), "%s", old);
@@ -632,18 +632,18 @@ static bool make_symlink(private_guest_t *this, char *old, char *new)
 
 
 /**
- * create the guest instance, including required dirs and mounts 
+ * create the guest instance, including required dirs and mounts
  */
 guest_t *guest_create(char *parent, char *name, char *kernel,
 					  char *master, char *args)
 {
 	private_guest_t *this = guest_create_generic(parent, name, TRUE);
-	
+
 	if (this == NULL)
 	{
 		return NULL;
 	}
-	
+
 	if (!make_symlink(this, master, MASTER_DIR) ||
 		!make_symlink(this, kernel, KERNEL_FILE))
 	{
@@ -651,22 +651,22 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 		destroy(this);
 		return NULL;
 	}
-	
-	if (mkdirat(this->dir, UNION_DIR, PERME) != 0 || 
+
+	if (mkdirat(this->dir, UNION_DIR, PERME) != 0 ||
 		mkdirat(this->dir, DIFF_DIR, PERME) != 0)
 	{
 		DBG1("unable to create directories for '%s': %m", name);
 		destroy(this);
 		return NULL;
 	}
-	
+
 	this->args = args;
 	if (args && !saveargs(this, args))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	if (!mount_unionfs(this))
 	{
 		destroy(this);
@@ -682,20 +682,20 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 guest_t *guest_load(char *parent, char *name)
 {
 	private_guest_t *this = guest_create_generic(parent, name, FALSE);
-	
+
 	if (this == NULL)
 	{
 		return NULL;
 	}
-	
+
 	this->args = loadargs(this);
-	
+
 	if (!mount_unionfs(this))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	return &this->public;
 }
 

@@ -29,7 +29,7 @@ typedef struct sha1_prf_t sha1_prf_t;
  * Implementation of prf_t interface using keyed SHA1 algorithm (used for EAP-AKA).
  */
 struct sha1_prf_t {
-	
+
 	/**
 	 * Implements prf_t interface.
 	 */

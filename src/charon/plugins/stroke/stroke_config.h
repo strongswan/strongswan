@@ -37,21 +37,21 @@ struct stroke_config_t {
 	 * Implements the backend_t interface
 	 */
 	backend_t backend;
-	
+
 	/**
 	 * Add a configuration to the backend.
 	 *
 	 * @param msg		received stroke message containing config
 	 */
 	void (*add)(stroke_config_t *this, stroke_msg_t *msg);
-	
+
 	/**
 	 * Remove a configuration from the backend.
 	 *
 	 * @param msg		received stroke message containing config name
 	 */
 	void (*del)(stroke_config_t *this, stroke_msg_t *msg);
-	
+
 	/**
      * Destroy a stroke_config instance.
      */

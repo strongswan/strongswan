@@ -1,12 +1,12 @@
 /*
  * convert from binary form of SA ID to text
  * Copyright (C) 2000, 2001  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -91,7 +91,7 @@ size_t dstlen;
 							PASSTHROUGH6NAME);
 		len = strlen(buf);
 	}
-	
+
 	if (sa->proto == SA_INT && addrtypeof(&sa->dst) == AF_INET &&
 						isunspecaddr(&sa->dst)) {
 		switch (ntohl(sa->spi)) {

@@ -34,7 +34,7 @@ struct private_netlink_socket_t {
 	 * public part of the netlink_socket_t object.
 	 */
 	netlink_socket_t public;
-	
+
 	/**
 	 * mutex to lock access to netlink socket
 	 */
@@ -46,12 +46,12 @@ struct private_netlink_socket_t {
 	int seq;
 
 	/**
-	 * netlink socket protocol 
+	 * netlink socket protocol
 	 */
 	int protocol;
 
 	/**
-	 * netlink socket 
+	 * netlink socket
 	 */
 	int socket;
 };
@@ -71,12 +71,12 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	struct sockaddr_nl addr;
 	chunk_t result = chunk_empty, tmp;
 	struct nlmsghdr *msg, peek;
-	
+
 	this->mutex->lock(this->mutex);
-	
+
 	in->nlmsg_seq = ++this->seq;
 	in->nlmsg_pid = getpid();
-	
+
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
@@ -91,11 +91,11 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 
 	while (TRUE)
 	{
-		len = sendto(this->socket, in, in->nlmsg_len, 0, 
+		len = sendto(this->socket, in, in->nlmsg_len, 0,
 					 (struct sockaddr*)&addr, sizeof(addr));
-		
+
 		if (len != in->nlmsg_len)
-		{	
+		{
 			if (errno == EINTR)
 			{
 				/* interrupted, try again */
@@ -107,23 +107,23 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 		}
 		break;
 	}
-	
+
 	while (TRUE)
-	{	
+	{
 		char buf[4096];
 		tmp.len = sizeof(buf);
 		tmp.ptr = buf;
 		msg = (struct nlmsghdr*)tmp.ptr;
-		
+
 		memset(&addr, 0, sizeof(addr));
 		addr.nl_family = AF_NETLINK;
 		addr.nl_pid = getpid();
 		addr.nl_groups = 0;
 		addr_len = sizeof(addr);
-		
+
 		len = recvfrom(this->socket, tmp.ptr, tmp.len, 0,
 					   (struct sockaddr*)&addr, &addr_len);
-		
+
 		if (len < 0)
 		{
 			if (errno == EINTR)
@@ -155,17 +155,17 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 			free(result.ptr);
 			return FAILED;
 		}
-		
+
 		tmp.len = len;
 		result.ptr = realloc(result.ptr, result.len + tmp.len);
 		memcpy(result.ptr + result.len, tmp.ptr, tmp.len);
 		result.len += tmp.len;
-		
+
 		/* NLM_F_MULTI flag does not seem to be set correctly, we use sequence
 		 * numbers to detect multi header messages */
 		len = recvfrom(this->socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT,
 					   (struct sockaddr*)&addr, &addr_len);
-		
+
 		if (len == sizeof(peek) && peek.nlmsg_seq == this->seq)
 		{
 			/* seems to be multipart */
@@ -173,12 +173,12 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 		}
 		break;
 	}
-	
+
 	*out_len = result.len;
 	*out = (struct nlmsghdr*)result.ptr;
-	
+
 	this->mutex->unlock(this->mutex);
-	
+
 	return SUCCESS;
 }
 
@@ -202,7 +202,7 @@ static status_t netlink_send_ack(private_netlink_socket_t *this, struct nlmsghdr
 			case NLMSG_ERROR:
 			{
 				struct nlmsgerr* err = (struct nlmsgerr*)NLMSG_DATA(hdr);
-				
+
 				if (err->error)
 				{
 					if (-err->error == EEXIST)
@@ -247,7 +247,7 @@ static void destroy(private_netlink_socket_t *this)
 netlink_socket_t *netlink_socket_create(int protocol) {
 	private_netlink_socket_t *this = malloc_thing(private_netlink_socket_t);
 	struct sockaddr_nl addr;
-	
+
 	/* public functions */
 	this->public.send = (status_t(*)(netlink_socket_t*,struct nlmsghdr*, struct nlmsghdr**, size_t*))netlink_send;
 	this->public.send_ack = (status_t(*)(netlink_socket_t*,struct nlmsghdr*))netlink_send_ack;
@@ -256,23 +256,23 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 	/* private members */
 	this->seq = 200;
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	
+
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
-	
+
 	this->protocol = protocol;
 	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if (this->socket <= 0)
 	{
 		charon->kill(charon, "unable to create netlink socket");
 	}
-	
+
 	addr.nl_groups = 0;
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind netlink socket");
 	}
-	
+
 	return &this->public;
 }
 
@@ -283,13 +283,13 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 						  size_t buflen)
 {
 	struct rtattr *rta;
-	
+
 	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(data.len) > buflen)
 	{
 		DBG1(DBG_KNL, "unable to add attribute, buffer too small");
 		return;
 	}
-	
+
 	rta = (struct rtattr*)(((char*)hdr) + NLMSG_ALIGN(hdr->nlmsg_len));
 	rta->rta_type = rta_type;
 	rta->rta_len = RTA_LENGTH(data.len);

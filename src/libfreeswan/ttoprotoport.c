@@ -72,7 +72,7 @@ bool *has_port_wildcard;	/* set if port is %any */
 
     /* is there a port wildcard? */
     *has_port_wildcard = (strcmp(service_name, "%any") == 0);
-   
+
     if (*has_port_wildcard)
     {
 	*port = 0;

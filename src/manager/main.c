@@ -40,7 +40,7 @@ int main (int arc, char *argv[])
 	{
 		return 1;
 	}
-	
+
 	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);
 	timeout = lib->settings->get_time(lib->settings, "manager.timeout", 900);
@@ -51,13 +51,13 @@ int main (int arc, char *argv[])
 		DBG1("database URI undefined, set manager.database in strongswan.conf");
 		return 1;
 	}
-	
+
 	storage = storage_create(database);
 	if (storage == NULL)
 	{
 		return 1;
 	}
-	
+
 	dispatcher = dispatcher_create(socket, debug, timeout,
 						(context_constructor_t)manager_create, storage);
 	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
@@ -65,14 +65,14 @@ int main (int arc, char *argv[])
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, control_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, config_controller_create, NULL);
-	
+
 	dispatcher->run(dispatcher, threads);
-	
+
 	dispatcher->waitsignal(dispatcher);
-	
+
 	dispatcher->destroy(dispatcher);
 	storage->destroy(storage);
-	
+
 	library_deinit();
 
     return 0;

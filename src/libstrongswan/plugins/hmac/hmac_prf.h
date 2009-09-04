@@ -28,12 +28,12 @@ typedef struct hmac_prf_t hmac_prf_t;
 
 /**
  * Implementation of prf_t interface using the HMAC algorithm.
- * 
+ *
  * This simply wraps a hmac_t in a prf_t. More a question of
  * interface matching.
  */
 struct hmac_prf_t {
-	
+
 	/**
 	 * Generic prf_t interface for this hmac_prf_t class.
 	 */
@@ -42,7 +42,7 @@ struct hmac_prf_t {
 
 /**
  * Creates a new hmac_prf_t object.
- * 
+ *
  * @param algo		algorithm to implement
  * @return			hmac_prf_t object, NULL if hash not supported
  */

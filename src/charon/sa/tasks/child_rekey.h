@@ -37,7 +37,7 @@ struct child_rekey_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Register a rekeying task which collides with this one
 	 *

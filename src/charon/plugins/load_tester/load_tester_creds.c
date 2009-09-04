@@ -32,27 +32,27 @@ struct private_load_tester_creds_t {
 	 * Public part
 	 */
 	load_tester_creds_t public;
-	
+
 	/**
 	 * Private key to create signatures
 	 */
 	private_key_t *private;
-	
+
 	/**
 	 * CA certificate, to issue/verify peer certificates
 	 */
 	certificate_t *ca;
-	
+
 	/**
 	 * serial number to issue certificates
 	 */
 	u_int32_t serial;
-	
+
 	/**
 	 * Preshared key
 	 */
 	shared_key_t *shared;
-	
+
 	/**
 	 * Identification for shared key
 	 */
@@ -196,7 +196,7 @@ static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this
 	if (id)
 	{
 		chunk_t keyid;
-		
+
 		if (!this->private->get_fingerprint(this->private,
 											KEY_ID_PUBKEY_SHA1, &keyid) ||
 			!chunk_equals(keyid, id->get_encoding(id)))
@@ -219,7 +219,7 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 	u_int32_t serial;
 	time_t now;
 	chunk_t keyid;
-	
+
 	if (this->ca == NULL)
 	{
 		return NULL;
@@ -278,7 +278,7 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 /**
  * Implements credential_set_t.create_shared_enumerator
  */
-static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this, 
+static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
@@ -319,17 +319,17 @@ load_tester_creds_t *load_tester_creds_create()
 	this->public.credential_set.create_cdp_enumerator  = (enumerator_t*(*) (credential_set_t *,certificate_type_t, identification_t *))return_null;
 	this->public.credential_set.cache_cert = (void (*)(credential_set_t *, certificate_t *))nop;
 	this->public.destroy = (void(*) (load_tester_creds_t*))destroy;
-	
+
 	this->private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 				BUILD_BLOB_ASN1_DER, chunk_create(private, sizeof(private)),
 				BUILD_END);
-	
+
 	this->ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 				BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)),
 				BUILD_X509_FLAG, X509_CA,
 				BUILD_END);
-	
-	this->shared = shared_key_create(SHARED_IKE, 
+
+	this->shared = shared_key_create(SHARED_IKE,
 									 chunk_clone(chunk_create(psk, sizeof(psk))));
 	this->id = identification_create_from_string("CN=*, OU=load-test, O=strongSwan");
 	this->serial = 0;

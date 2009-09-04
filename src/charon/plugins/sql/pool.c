@@ -43,7 +43,7 @@ static u_int get_pool_size(chunk_t start, chunk_t end)
 
 	if (start.len < sizeof(u_int) || end.len < sizeof(u_int))
 	{
-		return 0;	
+		return 0;
 	}
 	start_ptr = (u_int*)(start.ptr + start.len - sizeof(u_int));
 	end_ptr = (u_int*)(end.ptr + end.len - sizeof(u_int));
@@ -103,7 +103,7 @@ static void status(void)
 {
 	enumerator_t *pool, *lease;
 	bool found = FALSE;
-	
+
 	pool = db->query(db, "SELECT id, name, start, end, timeout FROM pools",
 					 DB_INT, DB_TEXT, DB_BLOB, DB_BLOB, DB_UINT);
 	if (pool)
@@ -112,7 +112,7 @@ static void status(void)
 		chunk_t start_chunk, end_chunk;
 		host_t *start, *end;
 		u_int id, timeout, online = 0, used = 0, size = 0;
-	
+
 		while (pool->enumerate(pool, &id, &name,
 							   &start_chunk, &end_chunk, &timeout))
 		{
@@ -122,7 +122,7 @@ static void status(void)
 					   "end", "timeout", "size", "online", "usage");
 				found = TRUE;
 			}
-			
+
 			start = host_create_from_chunk(AF_UNSPEC, start_chunk, 0);
 			end = host_create_from_chunk(AF_UNSPEC, end_chunk, 0);
 			size = get_pool_size(start_chunk, end_chunk);
@@ -159,7 +159,7 @@ static void status(void)
 				lease->destroy(lease);
 			}
 			printf("%5d (%2d%%) ", used, used*100/size);
-			
+
 			printf("\n");
 			DESTROY_IF(start);
 			DESTROY_IF(end);
@@ -180,7 +180,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 {
 	chunk_t start_addr, end_addr, cur_addr;
 	u_int id, count;
-	
+
 	start_addr = start->get_address(start);
 	end_addr = end->get_address(end);
 	cur_addr = chunk_clonea(start_addr);
@@ -224,7 +224,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		db->execute(db, NULL, "END TRANSACTION");
 	}
 	printf("done.\n", count);
-	
+
 	exit(0);
 }
 
@@ -236,7 +236,7 @@ static void del(char *name)
 	enumerator_t *query;
 	u_int id;
 	bool found = FALSE;
-	
+
 	query = db->query(db, "SELECT id FROM pools WHERE name = ?",
 					  DB_TEXT, name, DB_UINT);
 	if (!query)
@@ -277,9 +277,9 @@ static void resize(char *name, host_t *end)
 	enumerator_t *query;
 	chunk_t old_addr, new_addr, cur_addr;
 	u_int id, count;
-	
+
 	new_addr = end->get_address(end);
-	
+
 	query = db->query(db, "SELECT id, end FROM pools WHERE name = ?",
 					  DB_TEXT, name, DB_UINT, DB_BLOB);
 	if (!query || !query->enumerate(query, &id, &old_addr))
@@ -306,7 +306,7 @@ static void resize(char *name, host_t *end)
 		fprintf(stderr, "pool '%s' not found.\n", name);
 		exit(-1);
 	}
-	
+
 	printf("allocating %d new addresses... ", count);
 	fflush(stdout);
 	if (db->get_driver(db) == DB_SQLITE)
@@ -326,7 +326,7 @@ static void resize(char *name, host_t *end)
 		db->execute(db, NULL, "END TRANSACTION");
 	}
 	printf("done.\n", count);
-	
+
 	exit(0);
 }
 
@@ -356,7 +356,7 @@ static enumerator_t *create_lease_query(char *filter)
 		[FIL_STATE] = "status",
 		NULL
 	};
-	
+
 	/* if the filter string contains a distinguished name as a ID, we replace
 	 * ", " by "/ " in order to not confuse the getsubopt parser */
 	pos = filter;
@@ -368,7 +368,7 @@ static enumerator_t *create_lease_query(char *filter)
 		}
 		pos++;
 	}
-	
+
 	while (filter && *filter != '\0')
 	{
 		switch (getsubopt(&filter, token, &value))
@@ -493,7 +493,7 @@ static void leases(char *filter, bool utc)
 	host_t *address;
 	identification_t *identity;
 	bool found = FALSE;
-	
+
 	query = create_lease_query(filter);
 	if (!query)
 	{
@@ -513,7 +513,7 @@ static void leases(char *filter, bool utc)
 		}
 		address = host_create_from_chunk(AF_UNSPEC, address_chunk, 0);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
-		
+
 		printf("%-8s %-15H ", name, address);
 		if (released == 0)
 		{
@@ -531,7 +531,7 @@ static void leases(char *filter, bool utc)
 		{
 			printf("%-7s ", "expired");
 		}
-		
+
 		printf(" %T  ", &acquired, utc);
 		if (released)
 		{
@@ -564,7 +564,7 @@ static void leases(char *filter, bool utc)
 static void purge(char *name)
 {
 	int purged = 0;
-	
+
 	purged = db->execute(db, NULL,
 				"DELETE FROM leases WHERE address IN ("
 				" SELECT id FROM addresses WHERE pool IN ("
@@ -595,7 +595,7 @@ static void cleanup(void)
 static void dbg_stderr(int level, char *fmt, ...)
 {
 	va_list args;
-	
+
 	if (level <= 1)
 	{
 		va_start(args, fmt);
@@ -639,7 +639,7 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	
+
 	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
 	if (!uri)
 	{
@@ -653,14 +653,14 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(cleanup);
-	
+
 	while (TRUE)
 	{
 		int c;
-		
+
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
-		
+
 			{ "utc", no_argument, NULL, 'u' },
 			{ "status", no_argument, NULL, 'w' },
 			{ "add", required_argument, NULL, 'a' },
@@ -668,14 +668,14 @@ int main(int argc, char *argv[])
 			{ "resize", required_argument, NULL, 'r' },
 			{ "leases", no_argument, NULL, 'l' },
 			{ "purge", required_argument, NULL, 'p' },
-			
+
 			{ "start", required_argument, NULL, 's' },
 			{ "end", required_argument, NULL, 'e' },
 			{ "timeout", required_argument, NULL, 't' },
 			{ "filter", required_argument, NULL, 'f' },
 			{ 0,0,0,0 }
 		};
-		
+
 		c = getopt_long(argc, argv, "", long_opts, NULL);
 		switch (c)
 		{
@@ -744,7 +744,7 @@ int main(int argc, char *argv[])
 		}
 		break;
 	}
-	
+
 	switch (operation)
 	{
 		case OP_USAGE:

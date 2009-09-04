@@ -58,7 +58,7 @@ struct private_daemon_t {
 	 * Public members of daemon_t.
 	 */
 	daemon_t public;
-	
+
 	/**
 	 * Signal set used for signal handling.
 	 */
@@ -88,7 +88,7 @@ extern void (*dbg) (int level, char *fmt, ...);
 static void dbg_bus(int level, char *fmt, ...)
 {
 	va_list args;
-	
+
 	va_start(args, fmt);
 	charon->bus->vlog(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
@@ -100,7 +100,7 @@ static void dbg_bus(int level, char *fmt, ...)
 static void dbg_stderr(int level, char *fmt, ...)
 {
 	va_list args;
-	
+
 	if (level <= 1)
 	{
 		va_start(args, fmt);
@@ -117,18 +117,18 @@ static void dbg_stderr(int level, char *fmt, ...)
 static void run(private_daemon_t *this)
 {
 	sigset_t set;
-	
+
 	/* handle SIGINT, SIGHUP ans SIGTERM in this handler */
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGHUP);
 	sigaddset(&set, SIGTERM);
-	
+
 	while (TRUE)
 	{
 		int sig;
 		int error;
-		
+
 		error = sigwait(&set, &sig);
 		if (error)
 		{
@@ -200,7 +200,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.socket);
 	/* wait until all threads are gone */
 	DESTROY_IF(this->public.processor);
-	
+
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_stderr;
 	DESTROY_IF(this->public.bus);
@@ -257,7 +257,7 @@ static void drop_capabilities(private_daemon_t *this)
 	{
 		kill_daemon(this, "change to unprivileged user failed");
 	}
-	
+
 #ifdef CAPABILITIES
 	if (cap_set_proc(this->caps) != 0)
 	{
@@ -287,7 +287,7 @@ static void lookup_uid_gid(private_daemon_t *this)
 	{
 		char buf[1024];
 		struct passwd passwd, *pwp;
-	
+
 		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
 			pwp == NULL)
 		{
@@ -300,7 +300,7 @@ static void lookup_uid_gid(private_daemon_t *this)
 	{
 		char buf[1024];
 		struct group group, *grp;
-	
+
 		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
 			grp == NULL)
 		{
@@ -319,7 +319,7 @@ static void print_plugins()
 	char buf[512], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
+
 	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
@@ -345,7 +345,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	level_t  def;
 	bool append;
 	FILE *file;
-	
+
 	/* setup sysloggers */
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
 														  "charon.syslog");
@@ -378,7 +378,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	/* and file loggers */
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
 														  "charon.filelog");
@@ -418,10 +418,10 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-	
+
 	}
 	enumerator->destroy(enumerator);
-	
+
 	/* set up legacy style default loggers provided via command-line */
 	if (!loggers_defined)
 	{
@@ -443,7 +443,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 				file_logger->set_level(file_logger, group, levels[group]);
 			}
 		}
-		
+
 		/* set up default auth sys_logger */
 		sys_logger = sys_logger_create(LOG_AUTHPRIV);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
@@ -460,14 +460,14 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
-	
+
 	/* setup bus and it's listeners first to enable log output */
 	this->public.bus = bus_create();
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg = dbg_bus;
-	
+
 	initialize_loggers(this, !syslog, levels);
-	
+
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	if (lib->integrity)
@@ -489,14 +489,14 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
 	this->public.traps = trap_manager_create();
-	
+
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
 	{
 		return FALSE;
 	}
-	
+
 	print_plugins();
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
@@ -510,7 +510,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	{
 		return FALSE;
 	}
-	
+
 #ifdef ME
 	this->public.connect_manager = connect_manager_create();
 	if (this->public.connect_manager == NULL)
@@ -519,7 +519,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	}
 	this->public.mediation_manager = mediation_manager_create();
 #endif /* ME */
-	
+
 	return TRUE;
 }
 
@@ -529,12 +529,12 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 static void segv_handler(int signal)
 {
 	backtrace_t *backtrace;
-	
+
 	DBG1(DBG_DMN, "thread %u received %d", pthread_self(), signal);
 	backtrace = backtrace_create(2);
 	backtrace->log(backtrace, stderr);
 	backtrace->destroy(backtrace);
-	
+
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	raise(SIGKILL);
 }
@@ -546,11 +546,11 @@ private_daemon_t *daemon_create(void)
 {
 	struct sigaction action;
 	private_daemon_t *this = malloc_thing(private_daemon_t);
-		
+
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	this->public.keep_cap = (void(*)(daemon_t*, u_int cap))keep_cap;
-	
+
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
 	this->public.ike_sa_manager = NULL;
@@ -575,7 +575,7 @@ private_daemon_t *daemon_create(void)
 #endif /* ME */
 	this->public.uid = 0;
 	this->public.gid = 0;
-	
+
 	this->public.main_thread_id = pthread_self();
 #ifdef CAPABILITIES
 	this->caps = cap_init();
@@ -585,7 +585,7 @@ private_daemon_t *daemon_create(void)
 		keep_cap(this, CAP_SYS_NICE);
 	}
 #endif /* CAPABILITIES */
-	
+
 	/* add handler for SEGV and ILL,
 	 * add handler for USR1 (cancellation).
 	 * INT, TERM and HUP are handled by sigwait() in run() */
@@ -600,9 +600,9 @@ private_daemon_t *daemon_create(void)
 	sigaction(SIGBUS, &action, NULL);
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
-	
+
 	pthread_sigmask(SIG_SETMASK, &action.sa_mask, 0);
-	
+
 	return this;
 }
 
@@ -613,7 +613,7 @@ static bool check_pidfile()
 {
 	struct stat stb;
 	FILE *file;
-	
+
 	if (stat(PID_FILE, &stb) == 0)
 	{
 		file = fopen(PID_FILE, "r");
@@ -621,7 +621,7 @@ static bool check_pidfile()
 		{
 			char buf[64];
 			pid_t pid = 0;
-			
+
 			memset(buf, 0, sizeof(buf));
 			if (fread(buf, 1, sizeof(buf), file))
 			{
@@ -636,7 +636,7 @@ static bool check_pidfile()
 		DBG1(DBG_DMN, "removing pidfile '"PID_FILE"', process not running");
 		unlink(PID_FILE);
 	}
-	
+
 	/* create new pidfile */
 	file = fopen(PID_FILE, "w");
 	if (file)
@@ -679,17 +679,17 @@ int main(int argc, char *argv[])
 	private_daemon_t *private_charon;
 	level_t levels[DBG_MAX];
 	int group;
-	
+
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
-	
+
 	/* initialize library */
 	if (!library_init(STRONGSWAN_CONF))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
-	
+
 	if (lib->integrity &&
 		!lib->integrity->check_file(lib->integrity, "charon", argv[0]))
 	{
@@ -697,7 +697,7 @@ int main(int argc, char *argv[])
 		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	
+
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,
@@ -708,15 +708,15 @@ int main(int argc, char *argv[])
 								  PRINTF_HOOK_ARGTYPE_END);
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
-	
+
 	lookup_uid_gid(private_charon);
-	
+
 	/* use CTRL loglevel for default */
 	for (group = 0; group < DBG_MAX; group++)
 	{
 		levels[group] = LEVEL_CTRL;
 	}
-	
+
 	/* handle arguments */
 	for (;;)
 	{
@@ -737,7 +737,7 @@ int main(int argc, char *argv[])
 			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }
 		};
-		
+
 		int c = getopt_long(argc, argv, "", long_opts, NULL);
 		switch (c)
 		{
@@ -762,7 +762,7 @@ int main(int argc, char *argv[])
 		}
 		break;
 	}
-	
+
 	/* initialize daemon */
 	if (!initialize(private_charon, use_syslog, levels))
 	{
@@ -770,31 +770,31 @@ int main(int argc, char *argv[])
 		destroy(private_charon);
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	
+
 	if (check_pidfile())
 	{
 		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		destroy(private_charon);
 		exit(-1);
 	}
-	
+
 	/* drop the capabilities we won't need */
 	drop_capabilities(private_charon);
-	
+
 	/* start the engine, go multithreaded */
 	charon->processor->set_threads(charon->processor,
 						lib->settings->get_int(lib->settings, "charon.threads",
 											   DEFAULT_THREADS));
-	
+
 	/* run daemon */
 	run(private_charon);
-	
+
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);
-	
+
 	library_deinit();
-	
+
 	return 0;
 }
 

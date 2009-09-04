@@ -94,7 +94,7 @@ starter_stop_pluto (void)
 		/* be more and more aggressive */
 		for (i = 0; i < 20 && (pid = _pluto_pid) != 0; i++)
 		{
-			
+
 			if (i < 10)
 			{
 				kill(pid, SIGTERM);
@@ -103,7 +103,7 @@ starter_stop_pluto (void)
 			{
 				kill(pid, SIGKILL);
 				plog("starter_stop_pluto(): pluto does not respond, sending KILL");
-			}           
+			}
 			else
 			{
 				kill(pid, SIGKILL);
@@ -147,7 +147,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		};
 
 	printf ("starter_start_pluto entered\n");
-	
+
 	if (attach_gdb)
 	{
 		argc = 0;

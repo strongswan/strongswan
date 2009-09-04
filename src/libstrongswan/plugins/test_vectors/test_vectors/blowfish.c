@@ -30,7 +30,7 @@ crypter_test_vector_t blowfish1 = {
 };
 
 /**
- * Test vector by Chilkat Software 
+ * Test vector by Chilkat Software
  * (www.chilkatsoft.com/p/php_blowfish.asp)
  */
 crypter_test_vector_t blowfish2 = {

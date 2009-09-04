@@ -34,71 +34,71 @@ struct packet_t {
 
 	/**
 	 * Set the source address.
-	 * 
+	 *
 	 * Set host_t is now owned by packet_t, it will destroy
 	 * it if necessary.
-	 * 
+	 *
 	 * @param source	address to set as source
 	 */
 	void (*set_source) (packet_t *packet, host_t *source);
-	
+
 	/**
 	 * Set the destination address.
-	 * 
+	 *
 	 * Set host_t is now owned by packet_t, it will destroy
 	 * it if necessary.
-	 * 
+	 *
 	 * @param source	address to set as destination
 	 */
 	void (*set_destination) (packet_t *packet, host_t *destination);
-	
+
 	/**
 	 * Get the source address.
-	 * 
+	 *
 	 * Set host_t is still owned by packet_t, clone it
 	 * if needed.
-	 * 
+	 *
 	 * @return			source address
 	 */
 	host_t *(*get_source) (packet_t *packet);
-	
+
 	/**
 	 * Get the destination address.
-	 * 
+	 *
 	 * Set host_t is still owned by packet_t, clone it
 	 * if needed.
-	 * 
+	 *
 	 * @return			destination address
 	 */
 	host_t *(*get_destination) (packet_t *packet);
-	
+
 	/**
 	 * Get the data from the packet.
-	 * 
-	 * The data pointed by the chunk is still owned 
+	 *
+	 * The data pointed by the chunk is still owned
 	 * by the packet. Clone it if needed.
-	 * 
+	 *
 	 * @return			chunk containing the data
 	 */
 	chunk_t (*get_data) (packet_t *packet);
-	
+
 	/**
 	 * Set the data in the packet.
-	 * 
-	 * Supplied chunk data is now owned by the 
+	 *
+	 * Supplied chunk data is now owned by the
 	 * packet. It will free it.
-	 * 
+	 *
 	 * @param data		chunk with data to set
 	 */
 	void (*set_data) (packet_t *packet, chunk_t data);
-	
+
 	/**
 	 * Clones a packet_t object.
-	 *  
+	 *
 	 * @param clone		clone of the packet
 	 */
 	packet_t* (*clone) (packet_t *packet);
-	
+
 	/**
 	 * Destroy the packet, freeing contained data.
 	 */
@@ -107,7 +107,7 @@ struct packet_t {
 
 /**
  * create an empty packet
- *  
+ *
  * @return packet_t object
  */
 packet_t *packet_create(void);

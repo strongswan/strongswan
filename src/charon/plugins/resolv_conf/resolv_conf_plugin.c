@@ -29,7 +29,7 @@ struct private_resolv_conf_plugin_t {
 	 * implements plugin interface
 	 */
 	resolv_conf_plugin_t public;
-	
+
 	/**
 	 * The registerd DNS attribute handler
 	 */
@@ -53,12 +53,12 @@ static void destroy(private_resolv_conf_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_resolv_conf_plugin_t *this = malloc_thing(private_resolv_conf_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->handler = resolv_conf_handler_create();
 	charon->attributes->add_handler(charon->attributes, &this->handler->handler);
-	
+
 	return &this->public.plugin;
 }
 

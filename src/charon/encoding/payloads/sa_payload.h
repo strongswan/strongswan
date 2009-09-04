@@ -44,12 +44,12 @@ struct sa_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Creates an iterator of stored proposal_substructure_t objects.
-	 * 
-	 * When deleting an proposal using this iterator, 
-	 * the length of this transform substructure has to be refreshed 
+	 *
+	 * When deleting an proposal using this iterator,
+	 * the length of this transform substructure has to be refreshed
 	 * by calling get_length()!
 	 *
 	 * @param forward 		iterator direction (TRUE: front to end)
@@ -57,7 +57,7 @@ struct sa_payload_t {
 	 */
 	iterator_t *(*create_proposal_substructure_iterator) (sa_payload_t *this,
 														  bool forward);
-	
+
 	/**
 	 * Adds a proposal_substructure_t object to this object.
 	 *
@@ -68,18 +68,18 @@ struct sa_payload_t {
 
 	/**
 	 * Gets the proposals in this payload as a list.
-	 * 
+	 *
 	 * @return					a list containing proposal_t s
 	 */
 	linked_list_t *(*get_proposals) (sa_payload_t *this);
-	
+
 	/**
 	 * Add a child proposal (AH/ESP) to the payload.
-	 * 
+	 *
 	 * @param proposal			child proposal to add to the payload
 	 */
 	void (*add_proposal) (sa_payload_t *this, proposal_t *proposal);
-	
+
 	/**
 	 * Destroys an sa_payload_t object.
 	 */
@@ -88,14 +88,14 @@ struct sa_payload_t {
 
 /**
  * Creates an empty sa_payload_t object
- * 
+ *
  * @return					created sa_payload_t object
  */
 sa_payload_t *sa_payload_create(void);
 
 /**
  * Creates a sa_payload_t object from a list of proposals.
- * 
+ *
  * @param proposals			list of proposals to build the payload from
  * @return					sa_payload_t object
  */
@@ -103,10 +103,10 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
 
 /**
  * Creates a sa_payload_t object from a single proposal.
- * 
+ *
  * This is only for convenience. Use sa_payload_create_from_proposal_list
  * if you want to add more than one proposal.
- * 
+ *
  * @param proposal			proposal from which the payload should be built.
  * @return					sa_payload_t object
  */

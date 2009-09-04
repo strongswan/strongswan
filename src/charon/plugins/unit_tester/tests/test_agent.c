@@ -25,14 +25,14 @@ bool test_agent()
 	chunk_t sig, data = chunk_from_buf(buf);
 	private_key_t *private;
 	public_key_t *public;
-	
+
 	path = getenv("SSH_AUTH_SOCK");
 	if (!path)
 	{
 		DBG1(DBG_CFG, "ssh-agent not found.");
 		return FALSE;
 	}
-	
+
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 								 BUILD_AGENT_SOCKET, path, BUILD_END);
 	if (!private)
@@ -58,10 +58,10 @@ bool test_agent()
 	{
 		return FALSE;
 	}
-	
+
 	private->destroy(private);
 	public->destroy(public);
-	
+
 	return TRUE;
 }
 

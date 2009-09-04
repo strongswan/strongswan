@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup pkcs9 pkcs9
  * @{ @ingroup crypto
@@ -29,7 +29,7 @@ typedef struct pkcs9_t pkcs9_t;
  * PKCS#9 attributes.
  */
 struct pkcs9_t {
-	
+
 	/**
 	 * Generate ASN.1 encoding of attribute list
 	 */
@@ -54,7 +54,7 @@ struct pkcs9_t {
 	 * Adds a PKCS#9 attribute
 	 *
 	 * @param oid			OID of the attribute
-	 * @param value			ASN.1 encoded value of the attribute 
+	 * @param value			ASN.1 encoded value of the attribute
 	 */
 	void (*set_attribute) (pkcs9_t *this, int oid, chunk_t value);
 
@@ -68,7 +68,7 @@ struct pkcs9_t {
 	/**
 	 * Add a PKCS#9 messageDigest attribute
 	 *
-	 * @param value			messageDigest 
+	 * @param value			messageDigest
 	 */
 	void (*set_messageDigest) (pkcs9_t *this, chunk_t value);
 
@@ -80,7 +80,7 @@ struct pkcs9_t {
 
 /**
  * Read a PKCS#9 attribute list from a DER encoded chunk.
- * 
+ *
  * @param chunk		chunk containing DER encoded data
  * @param level		ASN.1 parsing start level
  * @return 			created pkcs9 attribute list, or NULL if invalid.
@@ -89,7 +89,7 @@ pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level);
 
 /**
  * Create an empty PKCS#9 attribute list
- * 
+ *
  * @return 				created pkcs9 attribute list.
  */
 pkcs9_t *pkcs9_create(void);

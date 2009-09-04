@@ -175,57 +175,57 @@ enum status_t {
 	 * Call succeeded.
 	 */
 	SUCCESS,
-	
+
 	/**
 	 * Call failed.
 	 */
 	FAILED,
-	
+
 	/**
 	 * Out of resources.
 	 */
 	OUT_OF_RES,
-	
+
 	/**
 	 * The suggested operation is already done
 	 */
 	ALREADY_DONE,
-	
+
 	/**
 	 * Not supported.
 	 */
 	NOT_SUPPORTED,
-	
+
 	/**
 	 * One of the arguments is invalid.
 	 */
 	INVALID_ARG,
-	
+
 	/**
 	 * Something could not be found.
 	 */
 	NOT_FOUND,
-	
+
 	/**
 	 * Error while parsing.
 	 */
 	PARSE_ERROR,
-	
+
 	/**
 	 * Error while verifying.
 	 */
 	VERIFY_ERROR,
-	
+
 	/**
 	 * Object in invalid state.
 	 */
 	INVALID_STATE,
-	
+
 	/**
 	 * Destroy object which called method belongs to.
 	 */
 	DESTROY_ME,
-	
+
 	/**
 	 * Another call to the method is required.
 	 */
@@ -275,10 +275,10 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 void *memstr(const void *haystack, const char *needle, size_t n);
 
 /**
- * Creates a directory and all required parent directories. 
+ * Creates a directory and all required parent directories.
  *
  * @param path		path to the new directory
- * @param mode		permissions of the new directory/directories 
+ * @param mode		permissions of the new directory/directories
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
@@ -340,7 +340,7 @@ void ref_get(refcount_t *ref);
 /**
  * Put back a unused reference.
  *
- * Decrements the reference counter atomic and 
+ * Decrements the reference counter atomic and
  * says if more references available.
  *
  * @param ref	pointer to ref counter
@@ -353,7 +353,7 @@ bool ref_put(refcount_t *ref);
 /**
  * printf hook for time_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    time_t* time, bool utc
  */
 int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
@@ -362,7 +362,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 /**
  * printf hook for time_t deltas.
  *
- * Arguments are: 
+ * Arguments are:
  *    time_t* begin, time_t* end
  */
 int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
@@ -371,7 +371,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 /**
  * printf hook for memory areas.
  *
- * Arguments are: 
+ * Arguments are:
  *    u_char *ptr, int len
  */
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,

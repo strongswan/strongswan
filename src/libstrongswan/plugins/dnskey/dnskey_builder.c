@@ -49,14 +49,14 @@ enum dnskey_algorithm_t {
 static public_key_t *parse_public_key(chunk_t blob)
 {
 	dnskey_rr_t *rr = (dnskey_rr_t*)blob.ptr;
-	
+
 	if (blob.len < sizeof(dnskey_rr_t))
 	{
 		DBG1("DNSKEY too short");
 		return NULL;
 	}
 	blob = chunk_skip(blob, sizeof(dnskey_rr_t));
-	
+
 	switch (rr->algorithm)
 	{
 		case DNSKEY_ALG_RSA_SHA1:
@@ -74,13 +74,13 @@ static public_key_t *parse_public_key(chunk_t blob)
 static public_key_t *parse_rsa_public_key(chunk_t blob)
 {
 	chunk_t n, e;
-	
+
 	if (blob.len < 3)
 	{
 		DBG1("RFC 3110 public key blob too short for exponent length");
 		return NULL;
 	}
-	
+
 	if (blob.ptr[0])
 	{
 		e.len = blob.ptr[0];
@@ -98,7 +98,7 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 		return NULL;
 	}
 	n = chunk_skip(blob, e.len);
-	
+
 	return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e,
 						BUILD_END);
@@ -124,7 +124,7 @@ struct private_builder_t {
 static public_key_t *build_public(private_builder_t *this)
 {
 	public_key_t *key = NULL;
-	
+
 	switch (this->type)
 	{
 		case KEY_ANY:
@@ -146,7 +146,7 @@ static public_key_t *build_public(private_builder_t *this)
 static void add_public(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_DNSKEY:
@@ -168,19 +168,19 @@ static void add_public(private_builder_t *this, builder_part_t part, ...)
 builder_t *dnskey_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->blob = chunk_empty;
 	this->type = type;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_public;
 	this->public.build = (void*(*)(builder_t *this))build_public;
-	
+
 	return &this->public;
 }
 

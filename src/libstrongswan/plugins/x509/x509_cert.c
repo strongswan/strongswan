@@ -64,17 +64,17 @@ struct private_x509_cert_t {
 	 * Public interface for this certificate.
 	 */
 	x509_cert_t public;
-	
+
 	/**
 	 * X.509 certificate encoding in ASN.1 DER format
 	 */
 	chunk_t encoding;
-	
+
 	/**
 	 * SHA1 hash of the DER encoding of this X.509 certificate
 	 */
 	chunk_t encoding_hash;
-	
+
 	/**
 	 * X.509 certificate body over which signature is computed
 	 */
@@ -84,87 +84,87 @@ struct private_x509_cert_t {
 	 * Version of the X.509 certificate
 	 */
 	u_int version;
-	
+
 	/**
 	 * Serial number of the X.509 certificate
 	 */
 	chunk_t serialNumber;
-	
+
 	/**
 	 * ID representing the certificate issuer
 	 */
 	identification_t *issuer;
-	
+
 	/**
 	 * Start time of certificate validity
 	 */
 	time_t notBefore;
-	
+
 	/**
 	 * End time of certificate validity
 	 */
 	time_t notAfter;
-	
+
 	/**
 	 * ID representing the certificate subject
 	 */
 	identification_t *subject;
-	
+
 	/**
 	 * List of subjectAltNames as identification_t
 	 */
 	linked_list_t *subjectAltNames;
-	
+
 	/**
 	 * List of crlDistributionPoints as allocated char*
 	 */
 	linked_list_t *crl_uris;
-	
+
 	/**
 	 * List ocspAccessLocations as identification_t
 	 */
 	linked_list_t *ocsp_uris;
-	
+
 	/**
 	 * certificates embedded public key
 	 */
 	public_key_t *public_key;
-	
+
 	/**
 	 * Subject Key Identifier
 	 */
 	chunk_t subjectKeyID;
-	
+
 	/**
 	 * Authority Key Identifier
 	 */
 	chunk_t authKeyIdentifier;
-	
+
 	/**
 	 * Authority Key Serial Number
 	 */
 	chunk_t authKeySerialNumber;
-	
+
 	/**
 	 * x509 constraints and other flags
 	 */
 	x509_flag_t flags;
-	
+
 	/**
 	 * Signature algorithm
 	 */
 	int algorithm;
-	
+
 	/**
 	 * Signature
 	 */
 	chunk_t signature;
-	
+
 	/**
 	 * Certificate parsed from blob/file?
 	 */
 	bool parsed;
-	
+
 	/**
 	 * reference count
 	 */
@@ -177,7 +177,7 @@ static u_char ASN1_sAN_oid_buf[] = {
 static const chunk_t ASN1_subjectAltName_oid = chunk_from_buf(ASN1_sAN_oid_buf);
 
 /**
- * ASN.1 definition of a basicConstraints extension 
+ * ASN.1 definition of a basicConstraints extension
  */
 static const asn1Object_t basicConstraintsObjects[] = {
 	{ 0, "basicConstraints",	ASN1_SEQUENCE,	ASN1_NONE			}, /*  0 */
@@ -215,7 +215,7 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 }
 
 /**
- * ASN.1 definition of otherName 
+ * ASN.1 definition of otherName
  */
 static const asn1Object_t otherNameObjects[] = {
 	{0, "type-id",	ASN1_OID,			ASN1_BODY	}, /* 0 */
@@ -261,14 +261,14 @@ static bool parse_otherName(chunk_t blob, int level0)
 		}
 	}
 	success = parser->success(parser);
-	
+
 end:
 	parser->destroy(parser);
 	return success;
 }
 
 /**
- * ASN.1 definition of generalName 
+ * ASN.1 definition of generalName
  */
 static const asn1Object_t generalNameObjects[] = {
 	{ 0, "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
@@ -309,16 +309,16 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID ;
-	
+
 	identification_t *gn = NULL;
-	
+
 	parser = asn1_parser_create(generalNameObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		id_type_t id_type = ID_ANY;
-		
+
 		switch (objectID)
 		{
 			case GN_OBJ_RFC822_NAME:
@@ -355,14 +355,14 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 			goto end;
 		}
 	}
-	
+
 end:
 	parser->destroy(parser);
 	return gn;
 }
 
 /**
- * ASN.1 definition of generalNames 
+ * ASN.1 definition of generalNames
  */
 static const asn1Object_t generalNamesObjects[] = {
 	{ 0, "generalNames",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
@@ -380,18 +380,18 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	
+
 	parser = asn1_parser_create(generalNamesObjects, blob);
 	parser->set_top_level(parser, level0);
 	parser->set_flags(parser, implicit, FALSE);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		if (objectID == GENERAL_NAMES_GN)
 		{
 			identification_t *gn = parse_generalName(object,
 											parser->get_level(parser)+1);
-			
+
 			if (gn)
 			{
 				list->insert_last(list, (void *)gn);
@@ -402,7 +402,7 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
 }
 
 /**
- * ASN.1 definition of a authorityKeyIdentifier extension 
+ * ASN.1 definition of a authorityKeyIdentifier extension
  */
 static const asn1Object_t authKeyIdentifierObjects[] = {
 	{ 0, "authorityKeyIdentifier",		ASN1_SEQUENCE,		ASN1_NONE 			}, /* 0 */
@@ -428,15 +428,15 @@ chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 	chunk_t object;
 	int objectID;
 	chunk_t authKeyIdentifier = chunk_empty;
-	
+
 	*authKeySerialNumber = chunk_empty;
-	
+
 	parser = asn1_parser_create(authKeyIdentifierObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
-		switch (objectID) 
+		switch (objectID)
 		{
 			case AUTH_KEY_ID_KEY_ID:
 				authKeyIdentifier = chunk_clone(object);
@@ -456,7 +456,7 @@ chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 }
 
 /**
- * ASN.1 definition of a authorityInfoAccess extension 
+ * ASN.1 definition of a authorityInfoAccess extension
  */
 static const asn1Object_t authInfoAccessObjects[] = {
 	{ 0, "authorityInfoAccess",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
@@ -479,13 +479,13 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 	chunk_t object;
 	int objectID;
 	int accessMethod = OID_UNKNOWN;
-	
+
 	parser = asn1_parser_create(authInfoAccessObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
-		switch (objectID) 
+		switch (objectID)
 		{
 			case AUTH_INFO_ACCESS_METHOD:
 				accessMethod = asn1_known_oid(object);
@@ -499,7 +499,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 						{
 							identification_t *id;
 							char *uri;
-							
+
 							id = parse_generalName(object,
 											parser->get_level(parser)+1);
 							if (id == NULL)
@@ -526,7 +526,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 				break;
 		}
 	}
-	
+
 end:
 	parser->destroy(parser);
 }
@@ -551,13 +551,13 @@ static bool parse_extendedKeyUsage(chunk_t blob, int level0)
 	chunk_t object;
 	int objectID;
 	bool ocsp_signing = FALSE;
-	
+
 	parser = asn1_parser_create(extendedKeyUsageObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (objectID == EXT_KEY_USAGE_PURPOSE_ID && 
+		if (objectID == EXT_KEY_USAGE_PURPOSE_ID &&
 			asn1_known_oid(object) == OID_OCSP_SIGNING)
 		{
 			ocsp_signing = TRUE;
@@ -598,24 +598,24 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 	chunk_t object;
 	int objectID;
 	linked_list_t *list = linked_list_create();
-	
+
 	parser = asn1_parser_create(crlDistributionPointsObjects, blob);
 	parser->set_top_level(parser, level0);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		if (objectID == CRL_DIST_POINTS_FULLNAME)
 		{
 			identification_t *id;
-			
+
 			/* append extracted generalNames to existing chained list */
 			x509_parse_generalNames(object, parser->get_level(parser)+1,
 									TRUE, list);
-	
+
 			while (list->remove_last(list, (void**)&id) == SUCCESS)
 			{
 				char *uri;
-				
+
 				if (asprintf(&uri, "%Y", id) > 0)
 				{
 					this->crl_uris->insert_last(this->crl_uris, uri);
@@ -687,13 +687,13 @@ static bool parse_certificate(private_x509_cert_t *this)
 	int sig_alg  = OID_UNKNOWN;
 	bool success = FALSE;
 	bool critical;
-	
+
 	parser = asn1_parser_create(certObjects, this->encoding);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		u_int level = parser->get_level(parser)+1;
-		
+
 		switch (objectID)
 		{
 			case X509_OBJ_TBS_CERTIFICATE:
@@ -780,7 +780,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 					case OID_NS_CA_REVOCATION_URL:
 					case OID_NS_CA_POLICY_URL:
 					case OID_NS_COMMENT:
-						if (!asn1_parse_simple_object(&object, ASN1_IA5STRING, 
+						if (!asn1_parse_simple_object(&object, ASN1_IA5STRING,
 											level, oid_names[extn_oid].name))
 						{
 							goto end;
@@ -807,7 +807,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 		}
 	}
 	success = parser->success(parser);
-	
+
 end:
 	parser->destroy(parser);
 	return success;
@@ -845,7 +845,7 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
-	
+
 	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_KEY_ID)
 	{
 		if (chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
@@ -853,7 +853,7 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 			return ID_MATCH_PERFECT;
 		}
 	}
-	
+
 	best = this->subject->matches(this->subject, subject);
 	enumerator = this->subjectAltNames->create_enumerator(this->subjectAltNames);
 	while (enumerator->enumerate(enumerator, &current))
@@ -886,7 +886,7 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
-	
+
 	if (&this->public.interface.interface == issuer)
 	{
 		if (this->flags & X509_SELF_SIGNED)
@@ -959,7 +959,7 @@ static bool get_validity(private_x509_cert_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
 	time_t t;
-	
+
 	if (when)
 	{
 		t = *when;
@@ -986,7 +986,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 {
 	time_t this_update, that_update, now = time(NULL);
 	bool new;
-	
+
 	this->get_validity(this, &now, &this_update, NULL);
 	that->get_validity(that, &now, &that_update, NULL);
 	new = this_update > that_update;
@@ -995,7 +995,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 				&that_update, FALSE, new ? "replaced":"retained");
 	return new;
 }
-	
+
 /**
  * Implementation of certificate_t.get_encoding.
  */
@@ -1011,7 +1011,7 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
-	
+
 	if (this == (private_x509_cert_t*)other)
 	{
 		return TRUE;
@@ -1022,7 +1022,7 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 	}
 	if (other->equals == (void*)equals)
 	{	/* skip allocation if we have the same implementation */
-		return chunk_equals(this->encoding, ((private_x509_cert_t*)other)->encoding); 
+		return chunk_equals(this->encoding, ((private_x509_cert_t*)other)->encoding);
 	}
 	encoding = other->get_encoding(other);
 	equal = chunk_equals(this->encoding, encoding);
@@ -1103,7 +1103,7 @@ static void destroy(private_x509_cert_t *this)
 static private_x509_cert_t* create_empty(void)
 {
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
-	
+
 	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
 	this->public.interface.interface.get_subject = (identification_t* (*) (certificate_t*))get_subject;
 	this->public.interface.interface.get_issuer = (identification_t* (*) (certificate_t*))get_issuer;
@@ -1123,12 +1123,12 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
-	
+
 	this->encoding = chunk_empty;
 	this->encoding_hash = chunk_empty;
 	this->tbsCertificate = chunk_empty;
 	this->version = 3;
-	this->serialNumber = chunk_empty;	
+	this->serialNumber = chunk_empty;
 	this->notBefore = 0;
 	this->notAfter = 0;
 	this->public_key = NULL;
@@ -1145,7 +1145,7 @@ static private_x509_cert_t* create_empty(void)
 	this->flags = 0;
 	this->ref = 1;
 	this->parsed = FALSE;
-	
+
 	return this;
 }
 
@@ -1156,7 +1156,7 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 {
 	hasher_t *hasher;
 	private_x509_cert_t *this = create_empty();
-	
+
 	this->encoding = chunk;
 	this->parsed = TRUE;
 	if (!parse_certificate(this))
@@ -1164,23 +1164,23 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 		destroy(this);
 		return NULL;
 	}
-	
+
 	/* check if the certificate is self-signed */
 	if (issued_by(this, &this->public.interface.interface))
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (hasher == NULL)
 	{
-		DBG1("  unable to create hash of certificate, SHA1 not supported");	
+		DBG1("  unable to create hash of certificate, SHA1 not supported");
 		destroy(this);
-		return NULL;	
+		return NULL;
 	}
 	hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
 	hasher->destroy(hasher);
-	
+
 	return this;
 }
 
@@ -1213,7 +1213,7 @@ static bool generate(private_builder_t *this)
 	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
-	
+
 	subject = this->cert->subject;
 	if (this->sign_cert)
 	{
@@ -1242,7 +1242,7 @@ static bool generate(private_builder_t *this)
 		this->cert->notAfter = this->cert->notBefore + 60 * 60 * 24 * 365;
 	}
 	this->cert->flags = this->flags;
-	
+
 	/* select signature scheme */
 	switch (this->sign_key->get_type(this->sign_key))
 	{
@@ -1304,8 +1304,8 @@ static bool generate(private_builder_t *this)
 	{
 		/* TODO: encode subjectAltNames */
 	}
-	
-	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm", 
+
+	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
 		asn1_integer("c", this->cert->serialNumber),
 		asn1_algorithmIdentifier(this->cert->algorithm),
@@ -1315,8 +1315,8 @@ static bool generate(private_builder_t *this)
 			asn1_from_time(&this->cert->notAfter, ASN1_UTCTIME)),
 		subject->get_encoding(subject),
 		key_info, extensions);
-	
-	if (!this->sign_key->sign(this->sign_key, scheme, 
+
+	if (!this->sign_key->sign(this->sign_key, scheme,
 							this->cert->tbsCertificate, &this->cert->signature))
 	{
 		return FALSE;
@@ -1325,7 +1325,7 @@ static bool generate(private_builder_t *this)
 								this->cert->tbsCertificate,
 								asn1_algorithmIdentifier(this->cert->algorithm),
 								asn1_bitstring("c", this->cert->signature));
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
@@ -1343,7 +1343,7 @@ static bool generate(private_builder_t *this)
 static private_x509_cert_t *build(private_builder_t *this)
 {
 	private_x509_cert_t *cert;
-	
+
 	if (this->cert)
 	{
 		this->cert->flags |= this->flags;
@@ -1370,7 +1370,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	va_list args;
 	chunk_t chunk;
 	bool handled = TRUE;
-	
+
 	va_start(args, part);
 	switch (part)
 	{
@@ -1401,7 +1401,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 		va_end(args);
 		return;
 	}
-	
+
 	switch (part)
 	{
 		case BUILD_PUBLIC_KEY:
@@ -1456,14 +1456,14 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *x509_cert_builder(certificate_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != CERT_X509)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->cert = NULL;
 	this->flags = 0;
 	this->sign_cert = NULL;
@@ -1471,7 +1471,7 @@ builder_t *x509_cert_builder(certificate_type_t type)
 	this->digest_alg = HASH_SHA1;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

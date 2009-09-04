@@ -30,12 +30,12 @@ typedef struct stroke_attribute_t stroke_attribute_t;
  * Stroke IKEv2 cfg attribute provider
  */
 struct stroke_attribute_t {
-	
+
 	/**
 	 * Implements attribute provider interface
 	 */
 	attribute_provider_t provider;
-	
+
 	/**
 	 * Add a virtual IP address.
 	 *
@@ -43,24 +43,24 @@ struct stroke_attribute_t {
 	 * @param end		end of stroke message that contains virtual IP.
 	 */
 	void (*add_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
-	
+
 	/**
 	 * Remove a virtual IP address.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*del_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
-	
+
 	/**
 	 * Create an enumerator over installed pools.
 	 *
-	 * Enumerator enumerates over 
+	 * Enumerator enumerates over
 	 * char *pool, u_int size, u_int offline, u_int online.
 	 *
 	 * @return			enumerator
 	 */
 	enumerator_t* (*create_pool_enumerator)(stroke_attribute_t *this);
-	
+
 	/**
 	 * Create an enumerator over the leases of a pool.
 	 *

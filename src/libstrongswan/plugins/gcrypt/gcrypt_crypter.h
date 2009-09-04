@@ -29,7 +29,7 @@ typedef struct gcrypt_crypter_t gcrypt_crypter_t;
  * Implementation of crypters using gcrypt.
  */
 struct gcrypt_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -38,7 +38,7 @@ struct gcrypt_crypter_t {
 
 /**
  * Constructor to create gcrypt_crypter_t.
- * 
+ *
  * @param algo			algorithm to implement
  * @param key_size		key size in bytes
  * @return				gcrypt_crypter_t, NULL if not supported

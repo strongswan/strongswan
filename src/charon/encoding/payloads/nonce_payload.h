@@ -39,7 +39,7 @@ typedef struct nonce_payload_t nonce_payload_t;
 
 /**
  * Object representing an IKEv2 Nonce payload.
- * 
+ *
  * The Nonce payload format is described in RFC section 3.3.
  */
 struct nonce_payload_t {
@@ -54,14 +54,14 @@ struct nonce_payload_t {
 	 * @param nonce	  		chunk containing the nonce, will be cloned
 	 */
 	void (*set_nonce) (nonce_payload_t *this, chunk_t nonce);
-	
+
 	/**
 	 * Get the nonce value.
 	 *
 	 * @return				a chunk containing the cloned nonce
 	 */
 	chunk_t (*get_nonce) (nonce_payload_t *this);
-	
+
 	/**
 	 * Destroys an nonce_payload_t object.
 	 */
@@ -70,7 +70,7 @@ struct nonce_payload_t {
 
 /**
  * Creates an empty nonce_payload_t object
- * 
+ *
  * @return nonce_payload_t object
  */
 nonce_payload_t *nonce_payload_create(void);

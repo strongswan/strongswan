@@ -1,7 +1,7 @@
 /**
  * @file scep.c
  * @brief SCEP specific functions
- * 
+ *
  * Contains functions to build SCEP request's and to parse SCEP reply's.
  */
 
@@ -239,7 +239,7 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 	DBG(DBG_CONTROL | DBG_PARSING,
 		DBG_log("parsing attributes")
 	)
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -255,14 +255,14 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 		}
 	}
 	success = parser->success(parser);
-	
+
 end:
 	parser->destroy(parser);
 	return success;
 }
 
 /**
- * Generates a unique fingerprint of the pkcs10 request 
+ * Generates a unique fingerprint of the pkcs10 request
  * by computing an MD5 hash over it
  */
 chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
@@ -291,11 +291,11 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	hasher_t *hasher;
 	bool msb_set;
 	u_char *pos;
-	
+
 	key->get_encoding(key, KEY_PUB_ASN1_DER, &keyEncoding);
-	
+
 	keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
+						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 						asn1_bitstring("m", keyEncoding));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
@@ -497,7 +497,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 			free(escaped_req);
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
-										 FETCH_HTTP_VERSION_1_0, 
+										 FETCH_HTTP_VERSION_1_0,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
@@ -510,7 +510,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 			complete_url = malloc(len);
 			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
-			status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_REQUEST_DATA, pkcs7,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
@@ -527,7 +527,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier"
 				, url, operation);
 
-		status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_END);
 	}
 

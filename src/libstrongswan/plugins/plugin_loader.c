@@ -37,12 +37,12 @@ struct private_plugin_loader_t {
 	 * public functions
 	 */
 	plugin_loader_t public;
-	
+
 	/**
 	 * list of loaded plugins
 	 */
 	linked_list_t *plugins;
-	
+
 	/**
 	 * names of loaded plugins
 	 */
@@ -59,9 +59,9 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	void *handle;
 	plugin_t *plugin;
 	plugin_constructor_t constructor;
-	
+
 	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
-	
+
 	if (lib->integrity)
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
@@ -101,7 +101,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 		return NULL;
 	}
 	DBG2("plugin '%s': loaded successfully", name);
-	
+
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
 	return plugin;
@@ -115,14 +115,14 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 	enumerator_t *enumerator;
 	char *token;
 	bool critical_failed = FALSE;
-	
+
 	enumerator = enumerator_create_token(list, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
 	{
 		plugin_t *plugin;
 		bool critical = FALSE;
 		int len;
-		
+
 		token = strdup(token);
 		len = strlen(token);
 		if (token[len-1] == '!')
@@ -158,7 +158,7 @@ static void unload(private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
 	char *name;
-	
+
 	while (this->plugins->remove_first(this->plugins,
 									   (void**)&plugin) == SUCCESS)
 	{
@@ -176,7 +176,7 @@ static void unload(private_plugin_loader_t *this)
 static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
 {
 	return this->names->create_enumerator(this->names);
-}	 
+}
 
 /**
  * Implementation of plugin_loader_t.destroy
@@ -194,15 +194,15 @@ static void destroy(private_plugin_loader_t *this)
 plugin_loader_t *plugin_loader_create()
 {
 	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
-	
+
 	this->public.load = (bool(*)(plugin_loader_t*, char *path, char *prefix))load;
 	this->public.unload = (void(*)(plugin_loader_t*))unload;
 	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
 	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
-	
+
 	this->plugins = linked_list_create();
 	this->names = linked_list_create();
-	
+
 	return &this->public;
 }
 

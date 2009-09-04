@@ -23,17 +23,17 @@ typedef struct private_sim_manager_t private_sim_manager_t;
  * Private data of an sim_manager_t object.
  */
 struct private_sim_manager_t {
-	
+
 	/**
 	 * Public sim_manager_t interface.
 	 */
 	sim_manager_t public;
-	
+
 	/**
 	 * list of added cards
 	 */
 	linked_list_t *cards;
-	
+
 	/**
 	 * list of added provider
 	 */
@@ -106,7 +106,7 @@ static void destroy(private_sim_manager_t *this)
 sim_manager_t *sim_manager_create()
 {
 	private_sim_manager_t *this = malloc_thing(private_sim_manager_t);
-	
+
 	this->public.add_card = (void(*)(sim_manager_t*, sim_card_t *card))add_card;
 	this->public.remove_card = (void(*)(sim_manager_t*, sim_card_t *card))remove_card;
 	this->public.create_card_enumerator = (enumerator_t*(*)(sim_manager_t*))create_card_enumerator;
@@ -114,10 +114,10 @@ sim_manager_t *sim_manager_create()
 	this->public.remove_provider = (void(*)(sim_manager_t*, sim_provider_t *provider))remove_provider;
 	this->public.create_provider_enumerator = (enumerator_t*(*)(sim_manager_t*))create_provider_enumerator;
 	this->public.destroy = (void(*)(sim_manager_t*))destroy;
-	
+
 	this->cards = linked_list_create();
 	this->provider = linked_list_create();
-	
+
 	return &this->public;
 }
 

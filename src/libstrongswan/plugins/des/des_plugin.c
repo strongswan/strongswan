@@ -47,16 +47,16 @@ static void destroy(private_des_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_des_plugin_t *this = malloc_thing(private_des_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
 							 (crypter_constructor_t)des_crypter_create);
-	
+
 	return &this->public.plugin;
 }
 

@@ -36,7 +36,7 @@ struct private_bridge_t {
  * defined in iface.c
  */
 bool iface_control(char *name, bool up);
-	
+
 /**
  * Implementation of bridge_t.get_name.
  */
@@ -149,7 +149,7 @@ static void destroy(private_bridge_t *this)
 bridge_t *bridge_create(char *name)
 {
 	private_bridge_t *this;
-	
+
 	if (instances == 0)
 	{
 		if (br_init() != 0)
@@ -158,7 +158,7 @@ bridge_t *bridge_create(char *name)
 			return NULL;
 		}
 	}
-	
+
 	this = malloc_thing(private_bridge_t);
 	this->public.get_name = (char*(*)(bridge_t*))get_name;
 	this->public.create_iface_enumerator = (enumerator_t*(*)(bridge_t*))create_iface_enumerator;

@@ -35,12 +35,12 @@ struct private_psk_authenticator_t {
 	 * Assigned IKE_SA
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * nonce to include in AUTH calculation
 	 */
 	chunk_t nonce;
-	
+
 	/**
 	 * IKE_SA_INIT message data to include in AUTH calculation
 	 */
@@ -57,7 +57,7 @@ static status_t build(private_psk_authenticator_t *this, message_t *message)
 	shared_key_t *key;
 	chunk_t auth_data;
 	keymat_t *keymat;
-	
+
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -79,7 +79,7 @@ static status_t build(private_psk_authenticator_t *this, message_t *message)
 	auth_payload->set_data(auth_payload, auth_data);
 	chunk_free(&auth_data);
 	message->add_payload(message, (payload_t*)auth_payload);
-	
+
 	return SUCCESS;
 }
 
@@ -97,7 +97,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 	bool authenticated = FALSE;
 	int keys_found = 0;
 	keymat_t *keymat;
-	
+
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	if (!auth_payload)
 	{
@@ -112,7 +112,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 	while (!authenticated && enumerator->enumerate(enumerator, &key, NULL, NULL))
 	{
 		keys_found++;
-		
+
 		auth_data = keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init,
 									this->nonce, key->get_key(key), other_id);
 		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
@@ -124,7 +124,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 		chunk_free(&auth_data);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (!authenticated)
 	{
 		if (keys_found == 0)
@@ -136,7 +136,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 			 keys_found, keys_found == 1 ? "" : "s", my_id, other_id);
 		return FAILED;
 	}
-	
+
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
 	return SUCCESS;
@@ -166,15 +166,15 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_init)
 {
 	private_psk_authenticator_t *this = malloc_thing(private_psk_authenticator_t);
-	
+
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))return_failed;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = sent_init;
 	this->nonce = received_nonce;
-	
+
 	return &this->public;
 }
 
@@ -185,15 +185,15 @@ psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
 									chunk_t sent_nonce, chunk_t received_init)
 {
 	private_psk_authenticator_t *this = malloc_thing(private_psk_authenticator_t);
-	
+
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *messageh))return_failed;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = received_init;
 	this->nonce = sent_nonce;
-	
+
 	return &this->public;
 }
 

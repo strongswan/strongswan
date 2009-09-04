@@ -90,7 +90,7 @@ ENUM(pgp_sym_alg_names, PGP_SYM_ALG_PLAIN, PGP_SYM_ALG_TWOFISH,
 static bool read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
 {
 	u_int32_t res = 0;
-	
+
 	if (bytes > blob->len)
 	{
 		DBG1("PGP data too short to read %d byte scalar", bytes);
@@ -112,14 +112,14 @@ static bool old_packet_length(chunk_t *blob, u_int32_t *length)
 {
 	/* bits 0 and 1 define the packet length type */
 	u_char type;
-	
+
 	if (!blob->len)
 	{
 		return FALSE;
 	}
 	type = 0x03 & blob->ptr[0];
 	*blob = chunk_skip(*blob, 1);
-	
+
 	if (type > 2)
 	{
 		return FALSE;
@@ -133,7 +133,7 @@ static bool old_packet_length(chunk_t *blob, u_int32_t *length)
 static bool read_mpi(chunk_t *blob, chunk_t *mpi)
 {
 	u_int32_t bits, bytes;
-	
+
 	if (!read_scalar(blob, 2, &bits))
 	{
 		DBG1("PGP data too short to read MPI length");
@@ -157,7 +157,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 {
 	u_int32_t alg;
 	public_key_t *key;
-	
+
 	if (!read_scalar(&blob, 1, &alg))
 	{
 		return NULL;
@@ -184,7 +184,7 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 {
 	chunk_t mpi[2];
 	int i;
-	
+
 	for (i = 0; i < 2; i++)
 	{
 		if (!read_mpi(&blob, &mpi[i]))
@@ -205,7 +205,7 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 	chunk_t mpi[6];
 	u_int32_t s2k;
 	int i;
-	
+
 	for (i = 0; i < 2; i++)
 	{
 		if (!read_mpi(&blob, &mpi[i]))
@@ -227,7 +227,7 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 		DBG1("%N private key encryption not supported", pgp_sym_alg_names, s2k);
 		return NULL;
 	}
-	
+
 	for (i = 2; i < 6; i++)
 	{
 		if (!read_mpi(&blob, &mpi[i]))
@@ -235,9 +235,9 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 			return NULL;
 		}
 	}
-	
+
 	/* PGP has uses p < q, but we use p > q */
-	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
+	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 						BUILD_RSA_MODULUS, mpi[0], BUILD_RSA_PUB_EXP, mpi[1],
 						BUILD_RSA_PRIV_EXP, mpi[2], BUILD_RSA_PRIME2, mpi[3],
 						BUILD_RSA_PRIME1, mpi[4], BUILD_RSA_COEFF, mpi[5],
@@ -273,9 +273,9 @@ static private_key_t *parse_private_key(chunk_t blob)
 	u_char tag, type;
 	u_int32_t len, version, created, days, alg;
 	private_key_t *key;
-	
+
 	tag = blob.ptr[0];
-	
+
 	/* bit 7 must be set */
 	if (!(tag & 0x80))
 	{
@@ -288,7 +288,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 		DBG1("new PGP packet format not supported");
 		return NULL;
 	}
-	
+
 	type = (tag & 0x3C) >> 2;
 	if (!old_packet_length(&blob, &len) || len > blob.len)
 	{
@@ -298,7 +298,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 	packet.len = len;
 	packet.ptr = blob.ptr;
 	blob = chunk_skip(blob, len);
-	
+
 	if (!read_scalar(&packet, 1, &version))
 	{
 		return NULL;
@@ -377,7 +377,7 @@ struct private_builder_t {
 static public_key_t *build_public(private_builder_t *this)
 {
 	public_key_t *key = NULL;
-	
+
 	switch (this->type)
 	{
 		case KEY_ANY:
@@ -399,7 +399,7 @@ static public_key_t *build_public(private_builder_t *this)
 static void add_public(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_PGP:
@@ -421,19 +421,19 @@ static void add_public(private_builder_t *this, builder_part_t part, ...)
 builder_t *pgp_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->blob = chunk_empty;
 	this->type = type;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_public;
 	this->public.build = (void*(*)(builder_t *this))build_public;
-	
+
 	return &this->public;
 }
 
@@ -443,7 +443,7 @@ builder_t *pgp_public_key_builder(key_type_t type)
 static private_key_t *build_private(private_builder_t *this)
 {
 	private_key_t *key = NULL;
-	
+
 	switch (this->type)
 	{
 		case KEY_ANY:
@@ -465,7 +465,7 @@ static private_key_t *build_private(private_builder_t *this)
 static void add_private(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_PGP:
@@ -487,19 +487,19 @@ static void add_private(private_builder_t *this, builder_part_t part, ...)
 builder_t *pgp_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->blob = chunk_empty;
 	this->type = type;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_private;
 	this->public.build = (void*(*)(builder_t *this))build_private;
-	
+
 	return &this->public;
 }
 

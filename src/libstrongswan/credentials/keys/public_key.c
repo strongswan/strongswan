@@ -49,12 +49,12 @@ bool public_key_equals(public_key_t *this, public_key_t *other)
 {
 	key_encoding_type_t type;
 	chunk_t a, b;
-	
+
 	if (this == other)
 	{
 		return TRUE;
 	}
-	
+
 	for (type = 0; type < KEY_ENCODING_MAX; type++)
 	{
 		if (this->get_fingerprint(this, type, &a) &&

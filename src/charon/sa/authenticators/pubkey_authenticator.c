@@ -26,22 +26,22 @@ typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
  * Private data of an pubkey_authenticator_t object.
  */
 struct private_pubkey_authenticator_t {
-	
+
 	/**
 	 * Public authenticator_t interface.
 	 */
 	pubkey_authenticator_t public;
-	
+
 	/**
 	 * Assigned IKE_SA
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * nonce to include in AUTH calculation
 	 */
 	chunk_t nonce;
-	
+
 	/**
 	 * IKE_SA_INIT message data to include in AUTH calculation
 	 */
@@ -72,11 +72,11 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 		DBG1(DBG_IKE, "no private key found for '%Y'", id);
 		return NOT_FOUND;
 	}
-	
+
 	switch (private->get_type(private))
 	{
 		case KEY_RSA:
-			/* we currently use always SHA1 for signatures, 
+			/* we currently use always SHA1 for signatures,
 			 * TODO: support other hashes depending on configuration/auth */
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			auth_method = AUTH_RSA;
@@ -86,7 +86,7 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 			switch (private->get_keysize(private))
 			{
 				case 32:
-					scheme = SIGN_ECDSA_256; 
+					scheme = SIGN_ECDSA_256;
 					auth_method = AUTH_ECDSA_256;
 					break;
 				case 48:
@@ -121,11 +121,11 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 		status = SUCCESS;
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 auth_method_names, auth_method, 
+		 auth_method_names, auth_method,
 		 (status == SUCCESS)? "successful":"failed");
 	chunk_free(&octets);
 	private->destroy(private);
-	
+
 	return status;
 }
 
@@ -145,7 +145,7 @@ static status_t process(private_pubkey_authenticator_t *this, message_t *message
 	signature_scheme_t scheme;
 	status_t status = NOT_FOUND;
 	keymat_t *keymat;
-	
+
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	if (!auth_payload)
 	{
@@ -231,15 +231,15 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_init)
 {
 	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
-	
+
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))return_failed;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = sent_init;
 	this->nonce = received_nonce;
-	
+
 	return &this->public;
 }
 
@@ -250,14 +250,14 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 									chunk_t sent_nonce, chunk_t received_init)
 {
 	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
-	
+
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))return_failed;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = received_init;
 	this->nonce = sent_nonce;
-	
+
 	return &this->public;
 }

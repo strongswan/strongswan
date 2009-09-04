@@ -36,7 +36,7 @@ bool test_med_db()
 	public_key_t *public;
 	auth_cfg_t *auth;
 	bool good = FALSE;
-	
+
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);
 	enumerator = charon->credentials->create_public_enumerator(
 									charon->credentials, KEY_ANY, id, NULL);

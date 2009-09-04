@@ -55,7 +55,7 @@ ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_MYID, ID_KEY_ID,
 ENUM_END(id_type_names, ID_MYID);
 
 /**
- * coding of X.501 distinguished name 
+ * coding of X.501 distinguished name
  */
 typedef struct {
 	const u_char *name;
@@ -108,12 +108,12 @@ struct private_identification_t {
 	 * Public interface.
 	 */
 	identification_t public;
-	
+
 	/**
 	 * Encoded representation of this ID.
 	 */
 	chunk_t encoded;
-	
+
 	/**
 	 * Type of this ID.
 	 */
@@ -139,7 +139,7 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
 						  u_char *type, chunk_t *data)
 {
 	chunk_t rdn;
-	
+
 	/* a DN contains one or more SET, each containing one or more SEQUENCES,
 	 * each containing a OID/value RDN */
 	if (!this->seqs.len)
@@ -154,7 +154,7 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
 		asn1_unwrap(&rdn, oid) == ASN1_OID)
 	{
 		int t = asn1_unwrap(&rdn, data);
-		
+
 		if (t != ASN1_INVALID)
 		{
 			*type = t;
@@ -170,10 +170,10 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
 static enumerator_t* create_rdn_enumerator(chunk_t dn)
 {
 	rdn_enumerator_t *e = malloc_thing(rdn_enumerator_t);
-	
+
 	e->public.enumerate = (void*)rdn_enumerate;
 	e->public.destroy = (void*)free;
-	
+
 	/* a DN is a SEQUENCE, get the first SET of it */
 	if (asn1_unwrap(&dn, &e->sets) == ASN1_SEQUENCE)
 	{
@@ -223,7 +223,7 @@ static bool rdn_part_enumerate(rdn_part_enumerator_t *this,
 		{OID_EMAIL_ADDRESS,		ID_PART_RDN_E},
 		{OID_EMPLOYEE_NUMBER,	ID_PART_RDN_EN},
 	};
-	
+
 	while (this->inner->enumerate(this->inner, &oid, &strtype, &inner_data))
 	{
 		known_oid = asn1_known_oid(oid);
@@ -259,11 +259,11 @@ static enumerator_t* create_part_enumerator(private_identification_t *this)
 		case ID_DER_ASN1_DN:
 		{
 			rdn_part_enumerator_t *e = malloc_thing(rdn_part_enumerator_t);
-			
+
 			e->inner = create_rdn_enumerator(this->encoded);
 			e->public.enumerate = (void*)rdn_part_enumerate;
 			e->public.destroy = (void*)rdn_part_enumerator_destroy;
-			
+
 			return &e->public;
 		}
 		case ID_RFC822_ADDR:
@@ -285,12 +285,12 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 	u_char type;
 	int oid, written;
 	bool finished = FALSE;
-	
+
 	e = create_rdn_enumerator(dn);
 	while (e->enumerate(e, &oid_data, &type, &data))
 	{
 		oid = asn1_known_oid(oid_data);
-		
+
 		if (oid == OID_UNKNOWN)
 		{
 			written = snprintf(buf, len, "%#B=", &oid_data);
@@ -301,7 +301,7 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		}
 		buf += written;
 		len -= written;
-		
+
 		if (chunk_printable(data, NULL, '?'))
 		{
 			written = snprintf(buf, len, "%.*s", data.len, data.ptr);
@@ -312,7 +312,7 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		}
 		buf += written;
 		len -= written;
-		
+
 		if (data.ptr + data.len != dn.ptr + dn.len)
 		{
 			written = snprintf(buf, len, ", ");
@@ -346,7 +346,7 @@ static status_t atodn(char *src, chunk_t *dn)
 		READ_NAME =		3,
 		UNKNOWN_OID =	4
 	} state_t;
-	
+
 	chunk_t oid  = chunk_empty;
 	chunk_t name = chunk_empty;
 	chunk_t rdns[RDN_MAX];
@@ -357,7 +357,7 @@ static status_t atodn(char *src, chunk_t *dn)
 	asn1_t rdn_type;
 	state_t state = SEARCH_OID;
 	status_t status = SUCCESS;
-	
+
 	do
 	{
 		switch (state)
@@ -378,7 +378,7 @@ static status_t atodn(char *src, chunk_t *dn)
 				else
 				{
 					bool found = FALSE;
-					
+
 					for (i = 0; i < countof(x501rdns); i++)
 					{
 						if (strlen(x501rdns[i].name) == oid.len &&
@@ -423,15 +423,15 @@ static status_t atodn(char *src, chunk_t *dn)
 					rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
 								&& !asn1_is_printablestring(name))
 								? ASN1_T61STRING : x501rdns[i].type;
-					
+
 					if (rdn_count < RDN_MAX)
 					{
 						chunk_t rdn_oid;
-						
+
 						rdn_oid = asn1_build_known_oid(x501rdns[i].oid);
 						if (rdn_oid.len)
 						{
-							rdns[rdn_count] = 
+							rdns[rdn_count] =
 									asn1_wrap(ASN1_SET, "m",
 										asn1_wrap(ASN1_SEQUENCE, "mm",
 											rdn_oid,
@@ -458,20 +458,20 @@ static status_t atodn(char *src, chunk_t *dn)
 				break;
 		}
 	} while (*src++ != '\0');
-	
+
 	/* build the distinguished name sequence */
 	{
 		int i;
 		u_char *pos = asn1_build_object(dn, ASN1_SEQUENCE, dn_len);
-		
+
 		for (i = 0; i < rdn_count; i++)
 		{
-			memcpy(pos, rdns[i].ptr, rdns[i].len); 
+			memcpy(pos, rdns[i].ptr, rdns[i].len);
 			pos += rdns[i].len;
 			free(rdns[i].ptr);
 		}
 	}
-	
+
 	if (status != SUCCESS)
 	{
 		free(dn->ptr);
@@ -505,7 +505,7 @@ static bool contains_wildcards_dn(private_identification_t *this)
 	bool contains = FALSE;
 	id_part_t type;
 	chunk_t data;
-	
+
 	enumerator = create_part_enumerator(this);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -553,7 +553,7 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 	chunk_t t_oid, o_oid, t_data, o_data;
 	u_char t_type, o_type;
 	bool t_next, o_next, finished = FALSE;
-	
+
 	if (wc)
 	{
 		*wc = 0;
@@ -570,14 +570,14 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 	{
 		return TRUE;
 	}
-	
+
 	t = create_rdn_enumerator(t_dn);
 	o = create_rdn_enumerator(o_dn);
 	while (TRUE)
 	{
 		t_next = t->enumerate(t, &t_oid, &t_type, &t_data);
 		o_next = o->enumerate(o, &o_oid, &o_type, &o_data);
-		
+
 		if (!o_next && !t_next)
 		{
 			break;
@@ -647,7 +647,7 @@ static bool equals_dn(private_identification_t *this,
 static bool equals_strcasecmp(private_identification_t *this,
 							  private_identification_t *other)
 {
-	/* we do some extra sanity checks to check for invalid IDs with a 
+	/* we do some extra sanity checks to check for invalid IDs with a
 	 * terminating null in it. */
 	if (this->encoded.len == other->encoded.len &&
 		memchr(this->encoded.ptr, 0, this->encoded.len) == NULL &&
@@ -662,14 +662,14 @@ static bool equals_strcasecmp(private_identification_t *this,
 /**
  * Default implementation of identification_t.matches.
  */
-static id_match_t matches_binary(private_identification_t *this, 
+static id_match_t matches_binary(private_identification_t *this,
 						   private_identification_t *other)
 {
 	if (other->type == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
-	if (this->type == other->type && 
+	if (this->type == other->type &&
 		chunk_equals(this->encoded, other->encoded))
 	{
 		return ID_MATCH_PERFECT;
@@ -685,7 +685,7 @@ static id_match_t matches_string(private_identification_t *this,
 								 private_identification_t *other)
 {
 	u_int len = other->encoded.len;
-	
+
 	if (other->type == ID_ANY)
 	{
 		return ID_MATCH_ANY;
@@ -712,7 +712,7 @@ static id_match_t matches_string(private_identification_t *this,
 		{	/* not better than ID_ANY */
 			return ID_MATCH_ANY;
 		}
-		if (strncasecmp(this->encoded.ptr + this->encoded.len - len, 
+		if (strncasecmp(this->encoded.ptr + this->encoded.len - len,
 						other->encoded.ptr + 1, len) == 0)
 		{
 			return ID_MATCH_ONE_WILDCARD;
@@ -742,12 +742,12 @@ static id_match_t matches_dn(private_identification_t *this,
 							 private_identification_t *other)
 {
 	int wc;
-	
+
 	if (other->type == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
-	
+
 	if (this->type == other->type)
 	{
 		if (compare_dn(this->encoded, other->encoded, &wc))
@@ -768,12 +768,12 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	chunk_t proper;
 	char buf[512];
-	
+
 	if (this == NULL)
 	{
 		return print_in_hook(dst, len, "%*s", spec->width, "(null)");
 	}
-	
+
 	switch (this->type)
 	{
 		case ID_ANY:
@@ -835,7 +835,7 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 static identification_t *clone_(private_identification_t *this)
 {
 	private_identification_t *clone = malloc_thing(private_identification_t);
-	
+
 	memcpy(clone, this, sizeof(private_identification_t));
 	if (this->encoded.len)
 	{
@@ -859,13 +859,13 @@ static void destroy(private_identification_t *this)
 static private_identification_t *identification_create(id_type_t type)
 {
 	private_identification_t *this = malloc_thing(private_identification_t);
-	
+
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.create_part_enumerator = (enumerator_t*(*)(identification_t*))create_part_enumerator;
 	this->public.clone = (identification_t* (*) (identification_t*))clone_;
 	this->public.destroy = (void (*) (identification_t*))destroy;
-	
+
 	switch (type)
 	{
 		case ID_ANY:
@@ -890,10 +890,10 @@ static private_identification_t *identification_create(id_type_t type)
 			this->public.contains_wildcards = (bool (*) (identification_t *this))return_false;
 			break;
 	}
-	
+
 	this->type = type;
 	this->encoded = chunk_empty;
-	
+
 	return this;
 }
 
@@ -904,7 +904,7 @@ identification_t *identification_create_from_string(char *string)
 {
 	private_identification_t *this;
 	chunk_t encoded;
-	
+
 	if (string == NULL)
 	{
 		string = "%any";
@@ -945,7 +945,7 @@ identification_t *identification_create_from_string(char *string)
 			{
 				struct in_addr address;
 				chunk_t chunk = {(void*)&address, sizeof(address)};
-				
+
 				if (inet_pton(AF_INET, string, &address) > 0)
 				{	/* is IPv4 */
 					this = identification_create(ID_IPV4_ADDR);
@@ -962,7 +962,7 @@ identification_t *identification_create_from_string(char *string)
 			{
 				struct in6_addr address;
 				chunk_t chunk = {(void*)&address, sizeof(address)};
-				
+
 				if (inet_pton(AF_INET6, string, &address) > 0)
 				{	/* is IPv6 */
 					this = identification_create(ID_IPV6_ADDR);
@@ -1013,7 +1013,7 @@ identification_t *identification_create_from_encoding(id_type_t type,
 													  chunk_t encoded)
 {
 	private_identification_t *this = identification_create(type);
-	
+
 	/* apply encoded chunk */
 	if (type != ID_ANY)
 	{

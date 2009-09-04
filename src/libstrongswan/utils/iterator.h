@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup iterator iterator
  * @{ @ingroup utils
@@ -39,45 +39,45 @@ struct iterator_t {
 
 	/**
 	 * Return number of list items.
-	 * 
+	 *
 	 * @return				number of list items
 	 */
 	int (*get_count) (iterator_t *this);
-	
+
 	/**
 	 * Iterate over all items.
-	 * 
+	 *
 	 * The easy way to iterate over items.
-	 * 
+	 *
 	 * @param value 	item
 	 * @return			TRUE, if there was an element available, FALSE otherwise
 	 */
 	bool (*iterate) (iterator_t *this, void** value);
-	
+
 	/**
 	 * Inserts a new item before the given iterator position.
-	 * 
+	 *
 	 * The iterator position is not changed after inserting
-	 * 
+	 *
 	 * @param item 		value to insert in list
 	 */
 	void (*insert_before) (iterator_t *this, void *item);
 
 	/**
 	 * Inserts a new item after the given iterator position.
-	 * 
+	 *
 	 * The iterator position is not changed after inserting.
-	 * 
+	 *
 	 * @param this 		calling iterator
 	 * @param item 		value to insert in list
 	 */
 	void (*insert_after) (iterator_t *this, void *item);
-	
+
 	/**
 	 * Replace the current item at current iterator position.
-	 * 
+	 *
 	 * The iterator position is not changed after replacing.
-	 * 
+	 *
 	 * @param this 		calling iterator
 	 * @param old		old value will be written here(can be NULL)
 	 * @param new		new value
@@ -87,18 +87,18 @@ struct iterator_t {
 
 	/**
 	 * Removes an element from list at the given iterator position.
-	 * 
+	 *
 	 * The iterator is set the the following position:
 	 * - to the item before, if available
 	 * - it gets reseted, otherwise
-	 * 
+	 *
 	 * @return 				SUCCESS, FAILED if iterator is on an invalid position
 	 */
 	status_t (*remove) (iterator_t *this);
-	
+
 	/**
 	 * Resets the iterator position.
-	 * 
+	 *
 	 * After reset, the iterator_t objects doesn't point to an element.
 	 * A call to iterator_t.has_next is necessary to do any other operations
 	 * with the resetted iterator.

@@ -30,22 +30,22 @@ struct private_stroke_config_t {
 	 * public functions
 	 */
 	stroke_config_t public;
-	
+
 	/**
 	 * list of peer_cfg_t
 	 */
 	linked_list_t *list;
-	
+
 	/**
 	 * mutex to lock config list
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * ca sections
 	 */
 	stroke_ca_t *ca;
-	
+
 	/**
 	 * credentials
 	 */
@@ -93,7 +93,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_stroke_config_t *this, char *nam
 	enumerator_t *e1, *e2;
 	peer_cfg_t *current, *found = NULL;
 	child_cfg_t *child;
-	
+
 	this->mutex->lock(this->mutex);
 	e1 = this->list->create_enumerator(this->list);
 	while (e1->enumerate(e1, &current))
@@ -139,7 +139,7 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 		char *strict;
 		proposal_t *proposal;
 		protocol_id_t proto = PROTO_ESP;
-		
+
 		if (ike_cfg)
 		{
 			proto = PROTO_IKE;
@@ -195,7 +195,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	ike_cfg_t *ike_cfg;
 	char *interface;
 	host_t *host;
-	
+
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
 	{
@@ -227,7 +227,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 				{
 					free(interface);
 				}
-				
+
 			}
 		}
 	}
@@ -275,7 +275,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
 	char eap_buf[32];
-	
+
 	/* select strings */
 	if (local)
 	{
@@ -317,7 +317,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			ca = other_end->ca2;
 		}
 	}
-	
+
 	if (!auth)
 	{
 		if (primary)
@@ -366,9 +366,9 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			return NULL;
 		}
 	}
-	
+
 	cfg = auth_cfg_create();
-	
+
 	/* add identity and peer certifcate */
 	identity = identification_create_from_string(id);
 	if (cert)
@@ -394,7 +394,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 	}
 	cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
-	
+
 	/* CA constraint */
 	if (ca)
 	{
@@ -412,13 +412,13 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 				 "constraint", ca);
 		}
 	}
-	
+
 	/* AC groups */
 	if (end->groups)
 	{
 		enumerator_t *enumerator;
 		char *group;
-		
+
 		enumerator = enumerator_create_token(end->groups, ",", " ");
 		while (enumerator->enumerate(enumerator, &group))
 		{
@@ -428,7 +428,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 		enumerator->destroy(enumerator);
 	}
-	
+
 	/* authentication metod (class, actually) */
 	if (streq(auth, "pubkey") ||
 		streq(auth, "rsasig") || streq(auth, "rsa") ||
@@ -446,9 +446,9 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator_t *enumerator;
 		char *str;
 		int i = 0, type = 0, vendor;
-		
+
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
-		
+
 		/* parse EAP string, format: eap[-type[-vendor]] */
 		enumerator = enumerator_create_token(auth, "-", " ");
 		while (enumerator->enumerate(enumerator, &str))
@@ -488,7 +488,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			i++;
 		}
 		enumerator->destroy(enumerator);
-		
+
 		if (msg->add_conn.eap_identity)
 		{
 			if (streq(msg->add_conn.eap_identity, "%identity"))
@@ -529,7 +529,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	u_int32_t rekey = 0, reauth = 0, over, jitter;
 	peer_cfg_t *peer_cfg;
 	auth_cfg_t *auth_cfg;
-	
+
 #ifdef ME
 	if (msg->add_conn.ikeme.mediation && msg->add_conn.ikeme.mediated_by)
 	{
@@ -537,13 +537,13 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 			 "at the same time, aborting");
 		return NULL;
 	}
-	
+
 	if (msg->add_conn.ikeme.mediation)
 	{
 		/* force unique connections for mediation connections */
 		msg->add_conn.unique = 1;
 	}
-	
+
 	if (msg->add_conn.ikeme.mediated_by)
 	{
 		mediated_by = charon->backends->get_peer_cfg_by_name(charon->backends,
@@ -572,7 +572,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		}
 	}
 #endif /* ME */
-	
+
 	jitter = msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100;
 	over = msg->add_conn.rekey.margin;
 	if (msg->add_conn.rekey.reauth)
@@ -632,7 +632,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	{	/* dpdaction=none disables DPD */
 		msg->add_conn.dpd.delay = 0;
 	}
-	
+
 	/* other.sourceip is managed in stroke_attributes. If it is set, we define
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
@@ -644,7 +644,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		vip, msg->add_conn.other.sourceip_size ?
 							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
-	
+
 	/* build leftauth= */
 	auth_cfg = build_auth_cfg(this, msg, TRUE, TRUE);
 	if (auth_cfg)
@@ -684,7 +684,7 @@ static void add_ts(private_stroke_config_t *this,
 				   stroke_end_t *end, child_cfg_t *child_cfg, bool local)
 {
 	traffic_selector_t *ts;
-	
+
 	if (end->tohost)
 	{
 		ts = traffic_selector_create_dynamic(end->protocol,
@@ -694,7 +694,7 @@ static void add_ts(private_stroke_config_t *this,
 	else
 	{
 		host_t *net;
-		
+
 		if (!end->subnets)
 		{
 			net = host_create_from_string(end->address, IKEV2_UDP_PORT);
@@ -708,12 +708,12 @@ static void add_ts(private_stroke_config_t *this,
 		else
 		{
 			char *del, *start, *bits;
-			
+
 			start = end->subnets;
 			do
 			{
 				int intbits = 0;
-				
+
 				del = strchr(start, ',');
 				if (del)
 				{
@@ -725,7 +725,7 @@ static void add_ts(private_stroke_config_t *this,
 					*bits = '\0';
 					intbits = atoi(bits + 1);
 				}
-				
+
 				net = host_create_from_string(start, IKEV2_UDP_PORT);
 				if (net)
 				{
@@ -769,7 +769,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 			.jitter = msg->add_conn.rekey.margin_packets * msg->add_conn.rekey.fuzz / 100
 		}
 	};
-	
+
 	switch (msg->add_conn.dpd.action)
 	{	/* map startes magic values to our action type */
 		case 2: /* =hold */
@@ -782,7 +782,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 			dpd = ACTION_NONE;
 			break;
 	}
-	
+
 	child_cfg = child_cfg_create(
 				msg->add_conn.name, &lifetime,
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
@@ -791,9 +791,9 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
-	
+
 	add_proposals(this, msg->add_conn.algorithms.esp, NULL, child_cfg);
-	
+
 	return child_cfg;
 }
 
@@ -819,7 +819,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 		ike_cfg->destroy(ike_cfg);
 		return;
 	}
-	
+
 	enumerator = create_peer_cfg_enumerator(this, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &existing))
 	{
@@ -837,7 +837,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	child_cfg = build_child_cfg(this, msg);
 	if (!child_cfg)
 	{
@@ -845,7 +845,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 		return;
 	}
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
-	
+
 	if (use_existing)
 	{
 		peer_cfg->destroy(peer_cfg);
@@ -869,13 +869,13 @@ static void del(private_stroke_config_t *this, stroke_msg_t *msg)
 	peer_cfg_t *peer;
 	child_cfg_t *child;
 	bool deleted = FALSE;
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, (void**)&peer))
 	{
 		bool keep = FALSE;
-		
+
 		/* remove any child with such a name */
 		children = peer->create_child_cfg_enumerator(peer);
 		while (children->enumerate(children, &child))
@@ -892,7 +892,7 @@ static void del(private_stroke_config_t *this, stroke_msg_t *msg)
 			}
 		}
 		children->destroy(children);
-		
+
 		/* if peer config matches, or has no children anymore, remove it */
 		if (!keep || streq(peer->get_name(peer), msg->del_conn.name))
 		{
@@ -903,7 +903,7 @@ static void del(private_stroke_config_t *this, stroke_msg_t *msg)
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-	
+
 	if (deleted)
 	{
 		DBG1(DBG_CFG, "deleted connection '%s'", msg->del_conn.name);
@@ -930,19 +930,19 @@ static void destroy(private_stroke_config_t *this)
 stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 {
 	private_stroke_config_t *this = malloc_thing(private_stroke_config_t);
-	
+
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.add = (void(*)(stroke_config_t*, stroke_msg_t *msg))add;
 	this->public.del = (void(*)(stroke_config_t*, stroke_msg_t *msg))del;
 	this->public.destroy = (void(*)(stroke_config_t*))destroy;
-	
+
 	this->list = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	this->ca = ca;
 	this->cred = cred;
-	
+
 	return &this->public;
 }
 

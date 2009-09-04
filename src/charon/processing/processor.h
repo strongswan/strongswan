@@ -33,21 +33,21 @@ typedef struct processor_t processor_t;
  * The processor uses threads to process queued jobs.
  */
 struct processor_t {
-	
+
 	/**
 	 * Get the total number of threads used by the processor.
-	 *	
+	 *
 	 * @return				size of thread pool
 	 */
 	u_int (*get_total_threads) (processor_t *this);
-	
+
 	/**
 	 * Get the number of threads currently waiting.
-	 *	
+	 *
 	 * @return				number of idle threads
 	 */
 	u_int (*get_idle_threads) (processor_t *this);
-	
+
 	/**
 	 * Get the number of queued jobs.
 	 *
@@ -63,7 +63,7 @@ struct processor_t {
  	 * @param job 			job to add to the queue
 	 */
 	void (*queue_job) (processor_t *this, job_t *job);
-	
+
 	/**
 	 * Set the number of threads to use in the processor.
 	 *
@@ -75,7 +75,7 @@ struct processor_t {
 	 * @param count			number of threads to allocate
 	 */
 	void (*set_threads)(processor_t *this, u_int count);
-	
+
 	/**
 	 * Destroy a processor object.
 	 */

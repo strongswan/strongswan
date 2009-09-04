@@ -57,14 +57,14 @@ enum configuration_attribute_type_t {
 	INTERNAL_IP6_SERVER = 23457
 };
 
-/** 
+/**
  * enum names for configuration_attribute_type_t.
  */
 extern enum_name_t *configuration_attribute_type_names;
 
 /**
  * Class representing an IKEv2-CONFIGURATION Attribute.
- * 
+ *
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
  */
 struct configuration_attribute_t {
@@ -75,43 +75,43 @@ struct configuration_attribute_t {
 
 	/**
 	 * Returns the currently set value of the attribute.
-	 * 	
+	 *
 	 * @warning Returned data are not copied.
-	 * 
+	 *
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_value) (configuration_attribute_t *this);
-	
+
 	/**
 	 * Sets the value of the attribute.
-	 * 	
+	 *
 	 * Value is getting copied.
-	 * 
+	 *
 	 * @param value chunk_t pointing to the value to set
 	 */
 	void (*set_value) (configuration_attribute_t *this, chunk_t value);
 
 	/**
 	 * Sets the type of the attribute.
-	 * 	
+	 *
 	 * @param type	type to set (most significant bit is set to zero)
 	 */
 	void (*set_type) (configuration_attribute_t *this, u_int16_t type);
-	
+
 	/**
 	 * get the type of the attribute.
-	 * 	
+	 *
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_type) (configuration_attribute_t *this);
-	
+
 	/**
 	 * get the length of an attribute.
-	 * 	
+	 *
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_length) (configuration_attribute_t *this);
-	
+
 	/**
 	 * Destroys an configuration_attribute_t object.
 	 */
@@ -120,7 +120,7 @@ struct configuration_attribute_t {
 
 /**
  * Creates an empty configuration_attribute_t object.
- * 
+ *
  * @return			created configuration_attribute_t object
  */
 configuration_attribute_t *configuration_attribute_create(void);

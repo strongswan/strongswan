@@ -53,7 +53,7 @@ eap_type_t eap_type_from_string(char *name)
 		{"mschapv2",	EAP_MSCHAPV2},
 		{"radius",		EAP_RADIUS},
 	};
-	
+
 	for (i = 0; i < countof(types); i++)
 	{
 		if (strcaseeq(name, types[i].name))

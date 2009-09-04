@@ -32,7 +32,7 @@ struct private_uci_parser_t {
 	 * Public part
 	 */
 	uci_parser_t public;
-	
+
 	/**
 	 * UCI package name this parser reads
 	 */
@@ -66,12 +66,12 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 	char **value;
 	va_list args;
 	int i;
-	
+
 	if (&this->current->list == this->list)
 	{
 		return FALSE;
 	}
-	
+
 	va_start(args, this);
 
 	value = va_arg(args, char**);
@@ -87,7 +87,7 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 			*value = uci_to_section(this->current)->type;
 		}
 	}
-	
+
 	/* followed by keyword parameters */
 	for (i = 0; this->keywords[i]; i++)
 	{
@@ -99,7 +99,7 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 		}
 	}
 	va_end(args);
-	
+
 	this->current = list_to_element(this->current->list.next);
 	return TRUE;
 }
@@ -121,7 +121,7 @@ static enumerator_t* create_section_enumerator(private_uci_parser_t *this, ...)
 	section_enumerator_t *e;
 	va_list args;
 	int i;
-	
+
 	/* allocate enumerator large enought to hold keyword pointers */
 	i = 1;
 	va_start(args, this);
@@ -133,16 +133,16 @@ static enumerator_t* create_section_enumerator(private_uci_parser_t *this, ...)
 	e = malloc(sizeof(section_enumerator_t) + sizeof(char*) * i);
 	i = 0;
 	va_start(args, this);
-	do 
+	do
 	{
 		e->keywords[i] = va_arg(args, char*);
 	}
 	while (e->keywords[i++]);
 	va_end(args);
-	
+
 	e->public.enumerate = (void*)section_enumerator_enumerate;
 	e->public.destroy = (void*)section_enumerator_destroy;
-	
+
 	/* load uci context */
 	e->ctx = uci_alloc_context();
 	if (uci_load(e->ctx, this->package, &e->package) != UCI_OK)
@@ -178,9 +178,9 @@ uci_parser_t *uci_parser_create(char *package)
 
 	this->public.create_section_enumerator = (enumerator_t*(*)(uci_parser_t*, ...))create_section_enumerator;
 	this->public.destroy = (void(*)(uci_parser_t*))destroy;
-	
+
 	this->package = strdup(package);
-	
+
 	return &this->public;
 }
 

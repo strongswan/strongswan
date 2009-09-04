@@ -26,12 +26,12 @@ typedef struct private_unknown_payload_t private_unknown_payload_t;
  * Private data of an unknown_payload_t object.
  */
 struct private_unknown_payload_t {
-	
+
 	/**
 	 * Public unknown_payload_t interface.
 	 */
 	unknown_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -41,12 +41,12 @@ struct private_unknown_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * The contained data.
 	 */
@@ -55,10 +55,10 @@ struct private_unknown_payload_t {
 
 /**
  * Encoding rules to parse an payload which is not further specified.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_unknown_payload_t.
- * 
+ *
  */
 encoding_rule_t unknown_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -146,7 +146,7 @@ static size_t get_length(private_unknown_payload_t *this)
  */
 static bool is_critical(private_unknown_payload_t *this)
 {
-	return this->critical;	
+	return this->critical;
 }
 
 /**
@@ -166,8 +166,8 @@ static void destroy(private_unknown_payload_t *this)
 	{
 		chunk_free(&(this->data));
 	}
-	
-	free(this);	
+
+	free(this);
 }
 
 /*
@@ -185,12 +185,12 @@ unknown_payload_t *unknown_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (unknown_payload_t *)) destroy;
 	this->public.is_critical = (bool (*) (unknown_payload_t *)) is_critical;
 	this->public.get_data = (chunk_t (*) (unknown_payload_t *)) get_data;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;

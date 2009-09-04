@@ -30,12 +30,12 @@ struct private_sql_attribute_t {
 	 * public functions
 	 */
 	sql_attribute_t public;
-	
+
 	/**
 	 * database connection
 	 */
 	database_t *db;
-	
+
 	/**
 	 * wheter to record lease history in lease table
 	 */
@@ -49,13 +49,13 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 {
 	enumerator_t *e;
 	u_int row;
-	
+
 	/* look for peer identity in the identities table */
 	e = this->db->query(this->db,
 						"SELECT id FROM identities WHERE type = ? AND data = ?",
 						DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
 						DB_UINT);
-						
+
 	if (e && e->enumerate(e, &row))
 	{
 		e->destroy(e);
@@ -111,7 +111,7 @@ static host_t* check_lease(private_sql_attribute_t *this, char *name,
 		if (!e || !e->enumerate(e, &id, &address))
 		{
 			DESTROY_IF(e);
-			break;	
+			break;
 		}
 		address = chunk_clonea(address);
 		e->destroy(e);
@@ -172,11 +172,11 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 		if (!e || !e->enumerate(e, &id, &address))
 		{
 			DESTROY_IF(e);
-			break;	
+			break;
 		}
 		address = chunk_clonea(address);
 		e->destroy(e);
-			
+
 		if (timeout)
 		{
 			hits = this->db->execute(this->db, NULL,
@@ -290,12 +290,12 @@ static bool release_address(private_sql_attribute_t *this,
 	enumerator_t *enumerator;
 	bool found = FALSE;
 	time_t now = time(NULL);
-	
+
 	enumerator = enumerator_create_token(name, ",", " ");
 	while (enumerator->enumerate(enumerator, &name))
 	{
 		u_int pool, timeout;
-		
+
 		pool = get_pool(this, name, &timeout);
 		if (pool)
 		{
@@ -337,16 +337,16 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 {
 	private_sql_attribute_t *this = malloc_thing(private_sql_attribute_t);
 	time_t now = time(NULL);
-	
+
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
 	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
-	
+
 	this->db = db;
 	this->history = lib->settings->get_bool(lib->settings,
 									"charon.plugins.sql.lease_history", TRUE);
-	
+
 	/* close any "online" leases in the case we crashed */
 	if (this->history)
 	{

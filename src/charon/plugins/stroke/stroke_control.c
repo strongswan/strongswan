@@ -43,7 +43,7 @@ struct stroke_log_info_t {
 	 * level to log up to
 	 */
 	level_t level;
-	
+
 	/**
 	 * where to write log
 	 */
@@ -75,7 +75,7 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 {
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
-	
+
 	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -98,7 +98,7 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	stroke_log_info_t info;
-	
+
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->initiate.name);
 	if (peer_cfg == NULL)
@@ -113,7 +113,7 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
-	
+
 	child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 	if (child_cfg == NULL)
 	{
@@ -121,7 +121,7 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
-	
+
 	if (msg->output_verbosity < 0)
 	{
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
@@ -150,9 +150,9 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	linked_list_t *ike_list, *child_list;
 	stroke_log_info_t info;
 	uintptr_t del;
-	
+
 	string = msg->terminate.name;
-	
+
 	len = strlen(string);
 	if (len < 1)
 	{
@@ -174,7 +174,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 			child = FALSE;
 			break;
 	}
-	
+
 	if (name)
 	{
 		/* is a single name */
@@ -202,10 +202,10 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 			}
 		}
 	}
-	
+
 	info.out = out;
 	info.level = msg->output_verbosity;
-	
+
 	if (id)
 	{
 		if (child)
@@ -220,7 +220,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		}
 		return;
 	}
-	
+
 	ike_list = linked_list_create();
 	child_list = linked_list_create();
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
@@ -228,7 +228,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	{
 		child_sa_t *child_sa;
 		iterator_t *children;
-		
+
 		if (child)
 		{
 			children = ike_sa->create_child_sa_iterator(ike_sa);
@@ -261,7 +261,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	enumerator = child_list->create_enumerator(child_list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
@@ -269,7 +269,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 									(controller_cb_t)stroke_log, &info);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	enumerator = ike_list->create_enumerator(ike_list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
@@ -277,7 +277,7 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 									(controller_cb_t)stroke_log, &info);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (child_list->get_count(child_list) == 0 &&
 		ike_list->get_count(ike_list) == 0)
 	{
@@ -298,7 +298,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 	ike_sa_t *ike_sa;
 	host_t *start = NULL, *end = NULL, *vip;
 	chunk_t chunk_start, chunk_end = chunk_empty, chunk_vip;
-	
+
 	if (msg->terminate_srcip.start)
 	{
 		start = host_create_from_string(msg->terminate_srcip.start, 0);
@@ -320,7 +320,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 		}
 		chunk_end = end->get_address(end);
 	}
-	
+
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
@@ -369,10 +369,10 @@ static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	linked_list_t *list;
 	uintptr_t del;
 	stroke_log_info_t info;
-	
+
 	info.out = out;
 	info.level = msg->output_verbosity;
-	
+
 	list = linked_list_create();
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
@@ -386,7 +386,7 @@ static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		iterator->destroy(iterator);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
@@ -404,7 +404,7 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	
+
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->route.name);
 	if (peer_cfg == NULL)
@@ -417,7 +417,7 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
-	
+
 	child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
 	if (child_cfg == NULL)
 	{
@@ -425,7 +425,7 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 		peer_cfg->destroy(peer_cfg);
 		return;
 	}
-	
+
 	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
 	{
 		fprintf(out, "configuration '%s' routed\n", msg->route.name);
@@ -446,7 +446,7 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
 	u_int32_t id;
-	
+
 	enumerator = charon->traps->create_enumerator(charon->traps);
 	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
@@ -477,7 +477,7 @@ static void destroy(private_stroke_control_t *this)
 stroke_control_t *stroke_control_create()
 {
 	private_stroke_control_t *this = malloc_thing(private_stroke_control_t);
-	
+
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
 	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
 	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
@@ -485,7 +485,7 @@ stroke_control_t *stroke_control_create()
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
 	this->public.destroy = (void(*)(stroke_control_t*))destroy;
-	
+
 	return &this->public;
 }
 

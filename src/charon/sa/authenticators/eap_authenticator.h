@@ -83,7 +83,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 
 /**
  * Create an authenticator to authenticate EAP clients.
- * 
+ *
  * @param ike_sa			associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT

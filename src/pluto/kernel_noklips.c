@@ -107,7 +107,7 @@ noklips_del_sa(const struct kernel_sa *sa UNUSED)
 const struct kernel_ops noklips_kernel_ops = {
 		type: KERNEL_TYPE_NONE,
 		async_fdp: NULL,
-		
+
 		init: init_noklips,
 		pfkey_register: noklips_register,
 		pfkey_register_response: noklips_register_response,

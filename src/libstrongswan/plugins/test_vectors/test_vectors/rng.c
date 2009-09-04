@@ -33,7 +33,7 @@ monobit_t monobit_all = {
 static bool test_monobit(monobit_t *param, chunk_t data)
 {
 	int i, j, bits = 0;
-	
+
 	for (i = 0; i < data.len; i++)
 	{
 		for (j = 0; j < 8; j++)
@@ -87,15 +87,15 @@ static bool test_poker(poker_t *param, chunk_t data)
 {
 	int i, counter[16];
 	double sum = 0.0;
-	
+
 	memset(counter, 0, sizeof(counter));
-	
+
 	for (i = 0; i < data.len; i++)
 	{
 		counter[data.ptr[i] & 0x0F]++;
 		counter[(data.ptr[i] & 0xF0) >> 4]++;
 	}
-	
+
 	for (i = 0; i < countof(counter); i++)
 	{
 		sum += (counter[i] * counter[i]) / 5000.0 * 16.0;
@@ -145,10 +145,10 @@ runs_t runs_all = {
 static bool test_runs(runs_t *param, chunk_t data)
 {
 	int i, j, zero_runs[7], one_runs[7], zero = 0, one = 0, longrun = 0;
-	
+
 	memset(one_runs, 0, sizeof(zero_runs));
 	memset(zero_runs, 0, sizeof(one_runs));
-	
+
 	for (i = 0; i < data.len; i++)
 	{
 		for (j = 0; j < 8; j++)
@@ -189,7 +189,7 @@ static bool test_runs(runs_t *param, chunk_t data)
 			}
 		}
 	}
-	
+
 	DBG2("  Runs: zero: %d/%d/%d/%d/%d/%d, one: %d/%d/%d/%d/%d/%d, "
 		 "longruns: %d",
 		 zero_runs[1], zero_runs[2], zero_runs[3],
@@ -197,12 +197,12 @@ static bool test_runs(runs_t *param, chunk_t data)
 		 one_runs[1], one_runs[2], one_runs[3],
 		 one_runs[4], one_runs[5], one_runs[6],
 		 longrun);
-	
+
 	if (longrun)
 	{
 		return FALSE;
 	}
-	
+
 	for (i = 1; i < countof(zero_runs); i++)
 	{
 		if (zero_runs[i] <= param->lower[i] ||

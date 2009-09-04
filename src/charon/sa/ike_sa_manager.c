@@ -41,67 +41,67 @@ typedef struct entry_t entry_t;
  * An entry in the linked list, contains IKE_SA, locking and lookup data.
  */
 struct entry_t {
-	
+
 	/**
 	 * Number of threads waiting for this ike_sa_t object.
 	 */
 	int waiting_threads;
-	
+
 	/**
 	 * Condvar where threads can wait until ike_sa_t object is free for use again.
 	 */
 	condvar_t *condvar;
-	
+
 	/**
 	 * Is this ike_sa currently checked out?
 	 */
 	bool checked_out;
-	
+
 	/**
 	 * Does this SA drives out new threads?
 	 */
 	bool driveout_new_threads;
-	
+
 	/**
 	 * Does this SA drives out waiting threads?
 	 */
 	bool driveout_waiting_threads;
-	
+
 	/**
 	 * Identification of an IKE_SA (SPIs).
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
+
 	/**
 	 * The contained ike_sa_t object.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * hash of the IKE_SA_INIT message, used to detect retransmissions
 	 */
 	chunk_t init_hash;
-	
+
 	/**
 	 * remote host address, required for DoS detection
 	 */
 	host_t *other;
-	
+
 	/**
 	 * As responder: Is this SA half-open?
 	 */
 	bool half_open;
-		
+
 	/**
 	 * own identity, required for duplicate checking
 	 */
 	identification_t *my_id;
-	
+
 	/**
 	 * remote identity, required for duplicate checking
 	 */
 	identification_t *other_id;
-	
+
 	/**
 	 * message ID currently processing, if any
 	 */
@@ -131,10 +131,10 @@ static status_t entry_destroy(entry_t *this)
 static entry_t *entry_create()
 {
 	entry_t *this = malloc_thing(entry_t);
-	
+
 	this->waiting_threads = 0;
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	
+
 	/* we set checkout flag when we really give it out */
 	this->checked_out = FALSE;
 	this->driveout_new_threads = FALSE;
@@ -147,7 +147,7 @@ static entry_t *entry_create()
 	this->other_id = NULL;
 	this->ike_sa_id = NULL;
 	this->ike_sa = NULL;
-	
+
 	return this;
 }
 
@@ -171,7 +171,7 @@ static bool entry_match_by_id(entry_t *entry, ike_sa_id_t *id)
 	if (id->equals(id, entry->ike_sa_id))
 	{
 		return TRUE;
-	}	
+	}
 	if ((id->get_responder_spi(id) == 0 ||
 		 entry->ike_sa_id->get_responder_spi(entry->ike_sa_id) == 0) &&
 		id->is_initiator(id) == entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
@@ -208,7 +208,7 @@ typedef struct half_open_t half_open_t;
 struct half_open_t {
 	/** chunk of remote host address */
 	chunk_t other;
-	
+
 	/** the number of half-open IKE_SAs with that host */
 	u_int count;
 };
@@ -235,10 +235,10 @@ typedef struct connected_peers_t connected_peers_t;
 struct connected_peers_t {
 	/** own identity */
 	identification_t *my_id;
-	
+
 	/** remote identity */
 	identification_t *other_id;
-	
+
 	/** list of ike_sa_id_t objects of IKE_SAs between the two identities */
 	linked_list_t *sas;
 };
@@ -269,7 +269,7 @@ typedef struct segment_t segment_t;
 struct segment_t {
 	/** mutex to access a segment exclusively */
 	mutex_t *mutex;
-	
+
 	/** the number of entries in this segment */
 	u_int count;
 };
@@ -282,7 +282,7 @@ typedef struct shareable_segment_t shareable_segment_t;
 struct shareable_segment_t {
 	/** rwlock to access a segment non-/exclusively */
 	rwlock_t *lock;
-	
+
 	/** the number of entries in this segment - in case of the "half-open table"
 	 * it's the sum of all half_open_t.count in a segment. */
 	u_int count;
@@ -298,67 +298,67 @@ struct private_ike_sa_manager_t {
 	 * Public interface of ike_sa_manager_t.
 	 */
 	 ike_sa_manager_t public;
-	
+
 	 /**
 	  * Hash table with entries for the ike_sa_t objects.
 	  */
 	 linked_list_t **ike_sa_table;
-	 
+
 	 /**
 	  * The size of the hash table.
 	  */
 	 u_int table_size;
-	 
+
 	 /**
 	  * Mask to map the hashes to table rows.
 	  */
 	 u_int table_mask;
-	 
+
 	 /**
 	  * Segments of the hash table.
 	  */
 	 segment_t *segments;
-	 
+
 	 /**
 	  * The number of segments.
 	  */
 	 u_int segment_count;
-	 
+
 	 /**
 	  * Mask to map a table row to a segment.
 	  */
 	 u_int segment_mask;
-	 
+
 	 /**
 	  * Hash table with half_open_t objects.
 	  */
 	 linked_list_t **half_open_table;
-	 
+
 	 /**
 	  * Segments of the "half-open" hash table.
 	  */
 	 shareable_segment_t *half_open_segments;
-	 
+
 	 /**
 	  * Hash table with connected_peers_t objects.
 	  */
 	 linked_list_t **connected_peers_table;
-	 
+
 	 /**
 	  * Segments of the "connected peers" hash table.
 	  */
 	 shareable_segment_t *connected_peers_segments;
-	 
+
 	 /**
 	  * RNG to get random SPIs for our side
 	  */
 	 rng_t *rng;
-	 
+
 	 /**
 	  * SHA1 hasher for IKE_SA_INIT retransmit detection
 	  */
 	 hasher_t *hasher;
-	
+
 	/**
 	 * reuse existing IKE_SAs in checkout_by_config
 	 */
@@ -372,7 +372,7 @@ struct private_ike_sa_manager_t {
 static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-	
+
 	lock->lock(lock);
 }
 
@@ -383,7 +383,7 @@ static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-	
+
 	lock->unlock(lock);
 }
 
@@ -393,7 +393,7 @@ static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
 static void lock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
-	
+
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->lock(this->segments[i].mutex);
@@ -406,7 +406,7 @@ static void lock_all_segments(private_ike_sa_manager_t *this)
 static void unlock_all_segments(private_ike_sa_manager_t *this)
 {
 	u_int i;
-	
+
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex->unlock(this->segments[i].mutex);
@@ -424,27 +424,27 @@ struct private_enumerator_t {
 	 * implements enumerator interface
 	 */
 	enumerator_t enumerator;
-	
+
 	/**
 	 * associated ike_sa_manager_t
 	 */
 	private_ike_sa_manager_t *manager;
-	
+
 	/**
 	 * current segment index
 	 */
 	u_int segment;
-	
+
 	/**
 	 * currently enumerating entry
 	 */
 	entry_t *entry;
-	
+
 	/**
 	 * current table row index
 	 */
 	u_int row;
-	
+
 	/**
 	 * enumerator for the current table row
 	 */
@@ -468,7 +468,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			if (this->current)
 			{
 				entry_t *item;
-				
+
 				if (this->current->enumerate(this->current, &item))
 				{
 					*entry = this->entry = item;
@@ -482,7 +482,7 @@ static bool enumerate(private_enumerator_t *this, entry_t **entry, u_int *segmen
 			else
 			{
 				linked_list_t *list;
-				
+
 				lock_single_segment(this->manager, this->segment);
 				if ((list = this->manager->ike_sa_table[this->row]) != NULL &&
 					 list->get_count(list))
@@ -523,7 +523,7 @@ static void enumerator_destroy(private_enumerator_t *this)
 static enumerator_t* create_table_enumerator(private_ike_sa_manager_t *this)
 {
 	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
-	
+
 	enumerator->enumerator.enumerate = (void*)enumerate;
 	enumerator->enumerator.destroy = (void*)enumerator_destroy;
 	enumerator->manager = this;
@@ -531,7 +531,7 @@ static enumerator_t* create_table_enumerator(private_ike_sa_manager_t *this)
 	enumerator->entry = NULL;
 	enumerator->row = 0;
 	enumerator->current = NULL;
-	
+
 	return &enumerator->enumerator;
 }
 
@@ -544,7 +544,7 @@ static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
 	linked_list_t *list;
 	u_int row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	lock_single_segment(this, segment);
 	if ((list = this->ike_sa_table[row]) == NULL)
 	{
@@ -564,7 +564,7 @@ static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 	linked_list_t *list;
 	u_int row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	if ((list = this->ike_sa_table[row]) != NULL)
 	{
 		entry_t *current;
@@ -609,7 +609,7 @@ static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
 	linked_list_t *list;
 	u_int row = ike_sa_id_hash(ike_sa_id) & this->table_mask;
 	u_int seg = row & this->segment_mask;
-	
+
 	lock_single_segment(this, seg);
 	if ((list = this->ike_sa_table[row]) != NULL)
 	{
@@ -632,7 +632,7 @@ static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
 static status_t get_entry_by_id(private_ike_sa_manager_t *this,
 						ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment)
 {
-	return get_entry_by_match_function(this, ike_sa_id, entry, segment, 
+	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
 				(linked_list_match_t)entry_match_by_id, ike_sa_id, NULL);
 }
 
@@ -670,7 +670,7 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry,
 		/* we are not allowed to get this */
 		return FALSE;
 	}
-	while (entry->checked_out && !entry->driveout_waiting_threads)	
+	while (entry->checked_out && !entry->driveout_waiting_threads)
 	{
 		/* so wait until we can get it for us.
 		 * we register us as waiting. */
@@ -698,7 +698,7 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	chunk_t addr = entry->other->get_address(entry->other);
 	u_int row = chunk_hash(addr) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	rwlock_t *lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->half_open_table[row]) == NULL)
@@ -716,7 +716,7 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 			this->half_open_segments[segment].count++;
 		}
 	}
-	
+
 	if (!half_open)
 	{
 		half_open = malloc_thing(half_open_t);
@@ -737,7 +737,7 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 	chunk_t addr = entry->other->get_address(entry->other);
 	u_int row = chunk_hash(addr) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	rwlock_t *lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->half_open_table[row]) != NULL)
@@ -773,7 +773,7 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 			other_id = entry->other_id->get_encoding(entry->other_id);
 	u_int row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	rwlock_t *lock = this->connected_peers_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->connected_peers_table[row]) == NULL)
@@ -796,7 +796,7 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 			}
 		}
 	}
-	
+
 	if (!connected_peers)
 	{
 		connected_peers = malloc_thing(connected_peers_t);
@@ -821,7 +821,7 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 			other_id = entry->other_id->get_encoding(entry->other_id);
 	u_int row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
 	u_int segment = row & this->segment_mask;
-	
+
 	rwlock_t *lock = this->connected_peers_segments[segment].lock;
 	lock->write_lock(lock);
 	if ((list = this->connected_peers_table[row]) != NULL)
@@ -864,7 +864,7 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
 	u_int64_t spi;
-	
+
 	this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi);
 	return spi;
 }
@@ -877,9 +877,9 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	ike_sa_t *ike_sa = NULL;
 	entry_t *entry;
 	u_int segment;
-	
+
 	DBG2(DBG_MGR, "checkout IKE_SA");
-	
+
 	if (get_entry_by_id(this, ike_sa_id, &entry, &segment) == SUCCESS)
 	{
 		if (wait_for_entry(this, entry, segment))
@@ -903,7 +903,7 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	ike_sa_t *ike_sa;
 	entry_t *entry;
 	u_int segment;
-	
+
 	if (initiator)
 	{
 		ike_sa_id = ike_sa_id_create(get_next_spi(this), 0, TRUE);
@@ -913,15 +913,15 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 		ike_sa_id = ike_sa_id_create(0, get_next_spi(this), FALSE);
 	}
 	ike_sa = ike_sa_create(ike_sa_id);
-	
+
 	DBG2(DBG_MGR, "created IKE_SA");
-	
+
 	if (!initiator)
 	{
 		ike_sa_id->destroy(ike_sa_id);
 		return ike_sa;
 	}
-	
+
 	entry = entry_create();
 	entry->ike_sa_id = ike_sa_id;
 	entry->ike_sa = ike_sa;
@@ -944,19 +944,19 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 
 	id = id->clone(id);
 	id->switch_initiator(id);
-	
+
 	DBG2(DBG_MGR, "checkout IKE_SA by message");
-	
+
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
 		chunk_t data, hash;
-			
+
 		data = message->get_packet_data(message);
 		this->hasher->allocate_hash(this->hasher, data, &hash);
 		chunk_free(&data);
-		
+
 		if (get_entry_by_hash(this, id, hash, &entry, &segment) == SUCCESS)
 		{
 			if (entry->message_id == 0)
@@ -976,7 +976,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 			unlock_single_segment(this, segment);
 		}
-		
+
 		if (ike_sa == NULL)
 		{
 			if (id->get_responder_spi(id) == 0 &&
@@ -987,15 +987,15 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				entry = entry_create();
 				entry->ike_sa = ike_sa_create(id);
 				entry->ike_sa_id = id->clone(id);
-				
+
 				segment = put_entry(this, entry);
 				entry->checked_out = TRUE;
 				unlock_single_segment(this, segment);
-				
-				entry->message_id = message->get_message_id(message);				
+
+				entry->message_id = message->get_message_id(message);
 				entry->init_hash = hash;
 				ike_sa = entry->ike_sa;
-				
+
 				DBG2(DBG_MGR, "created IKE_SA");
 			}
 			else
@@ -1012,7 +1012,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		charon->bus->set_sa(charon->bus, ike_sa);
 		return ike_sa;
 	}
-	
+
 	if (get_entry_by_id(this, id, &entry, &segment) == SUCCESS)
 	{
 		/* only check out if we are not processing this request */
@@ -1053,14 +1053,14 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	peer_cfg_t *current_peer;
 	ike_cfg_t *current_ike;
 	u_int segment;
-	
+
 	if (!this->reuse_ikesa)
 	{	/* IKE_SA reuse disable by config */
-		ike_sa = checkout_new(this, TRUE);	
+		ike_sa = checkout_new(this, TRUE);
 		charon->bus->set_sa(charon->bus, ike_sa);
 		return ike_sa;
 	}
-	
+
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
@@ -1072,7 +1072,7 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 		{	/* skip IKE_SAs which are not usable */
 			continue;
 		}
-		
+
 		current_peer = entry->ike_sa->get_peer_cfg(entry->ike_sa);
 		if (current_peer && current_peer->equals(current_peer, peer_cfg))
 		{
@@ -1088,10 +1088,10 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (!ike_sa)
 	{	/* no IKE_SA using such a config, hand out a new */
-		ike_sa = checkout_new(this, TRUE);	
+		ike_sa = checkout_new(this, TRUE);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
@@ -1109,7 +1109,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	u_int segment;
-	
+
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
@@ -1125,7 +1125,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 					{
 						ike_sa = entry->ike_sa;
 						break;
-					}		
+					}
 				}
 				children->destroy(children);
 			}
@@ -1145,7 +1145,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
@@ -1162,7 +1162,7 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	u_int segment;
-	
+
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
@@ -1178,7 +1178,7 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 					{
 						ike_sa = entry->ike_sa;
 						break;
-					}		
+					}
 				}
 				children->destroy(children);
 			}
@@ -1198,13 +1198,13 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
 
 /**
- * enumerator filter function 
+ * enumerator filter function
  */
 static bool enumerator_filter(private_ike_sa_manager_t *this,
 							  entry_t **in, ike_sa_t **out, u_int *segment)
@@ -1243,14 +1243,14 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	host_t *other;
 	identification_t *my_id, *other_id;
 	u_int segment;
-	
+
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	my_id = ike_sa->get_my_id(ike_sa);
 	other_id = ike_sa->get_other_id(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
-	
+
 	DBG2(DBG_MGR, "checkin IKE_SA");
-	
+
 	/* look for the entry */
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
@@ -1293,7 +1293,7 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa = ike_sa;
 		segment = put_entry(this, entry);
 	}
-	
+
 	/* apply identities for duplicate test (only as responder) */
 	if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
 		ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
@@ -1303,9 +1303,9 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->other_id = other_id->clone(other_id);
 		put_connected_peers(this, entry);
 	}
-	
+
 	unlock_single_segment(this, segment);
-	
+
 	charon->bus->set_sa(charon->bus, NULL);
 }
 
@@ -1322,11 +1322,11 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
 	u_int segment;
-	
+
 	ike_sa_id = ike_sa->get_id(ike_sa);
-	
+
 	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
-	
+
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
 		/* drive out waiting threads, as we are in hurry */
@@ -1343,7 +1343,7 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		}
 		remove_entry(this, entry);
 		unlock_single_segment(this, segment);
-		
+
 		if (entry->half_open)
 		{
 			remove_half_open(this, entry);
@@ -1353,9 +1353,9 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		{
 			remove_connected_peers(this, entry);
 		}
-		
+
 		entry_destroy(entry);
-		
+
 		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
 	}
 	else
@@ -1366,7 +1366,7 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	charon->bus->set_sa(charon->bus, NULL);
 }
 
-	
+
 /**
  * Implementation of ike_sa_manager_t.check_uniqueness.
  */
@@ -1381,27 +1381,27 @@ static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	identification_t *me, *other;
 	u_int row, segment;
 	rwlock_t *lock;
-	
+
 	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 	policy = peer_cfg->get_unique_policy(peer_cfg);
 	if (policy == UNIQUE_NO)
 	{
 		return FALSE;
 	}
-	
+
 	me = ike_sa->get_my_id(ike_sa);
 	other = ike_sa->get_other_id(ike_sa);
-	
+
 	row = chunk_hash_inc(other->get_encoding(other),
 						 chunk_hash(me->get_encoding(me))) & this->table_mask;
 	segment = row & this->segment_mask;
-	
+
 	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
 	lock->read_lock(lock);
 	if ((list = this->connected_peers_table[row]) != NULL)
 	{
 		connected_peers_t *current;
-		
+
 		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
 							 (void**)&current, me, other) == SUCCESS)
 		{
@@ -1411,18 +1411,18 @@ static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		}
 	}
 	lock->unlock(lock);
-	
+
 	if (!duplicate_ids)
 	{
 		return FALSE;
 	}
-	
+
 	enumerator = duplicate_ids->create_enumerator(duplicate_ids);
 	while (enumerator->enumerate(enumerator, &duplicate_id))
 	{
 		status_t status = SUCCESS;
 		ike_sa_t *duplicate;
-		
+
 		duplicate = checkout(this, duplicate_id);
 		if (!duplicate)
 		{
@@ -1485,13 +1485,13 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 		chunk_t addr = ip->get_address(ip);
 		u_int row = chunk_hash(addr) & this->table_mask;
 		u_int segment = row & this->segment_mask;
-		
+
 		rwlock_t *lock = this->half_open_segments[segment & this->segment_mask].lock;
 		lock->read_lock(lock);
 		if ((list = this->half_open_table[row]) != NULL)
 		{
 			half_open_t *current;
-			
+
 			if (list->find_first(list, (linked_list_match_t)half_open_match,
 								 (void**)&current, &addr) == SUCCESS)
 			{
@@ -1503,7 +1503,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 	else
 	{
 		u_int segment;
-		
+
 		for (segment = 0; segment < this->segment_count; ++segment)
 		{
 			rwlock_t *lock;
@@ -1513,7 +1513,7 @@ static int get_half_open_count(private_ike_sa_manager_t *this, host_t *ip)
 			lock->unlock(lock);
 		}
 	}
-	
+
 	return count;
 }
 
@@ -1526,7 +1526,7 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator_t *enumerator;
 	entry_t *entry;
 	u_int segment;
-	
+
 	lock_all_segments(this);
 	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
@@ -1536,7 +1536,7 @@ static void flush(private_ike_sa_manager_t *this)
 	{
 		/* do not accept new threads, drive out waiting threads */
 		entry->driveout_new_threads = TRUE;
-		entry->driveout_waiting_threads = TRUE;	
+		entry->driveout_waiting_threads = TRUE;
 	}
 	enumerator->destroy(enumerator);
 	DBG2(DBG_MGR, "wait for all threads to leave IKE_SA's");
@@ -1573,7 +1573,7 @@ static void flush(private_ike_sa_manager_t *this)
 		entry->ike_sa->delete(entry->ike_sa);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
 	enumerator = create_table_enumerator(this);
@@ -1633,7 +1633,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	free(this->segments);
 	free(this->half_open_segments);
 	free(this->connected_peers_segments);
-	
+
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	free(this);
@@ -1648,7 +1648,7 @@ static void destroy(private_ike_sa_manager_t *this)
 static u_int get_nearest_powerof2(u_int n)
 {
 	u_int i;
-	
+
 	--n;
 	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
 	{
@@ -1679,7 +1679,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkin = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.checkin_and_destroy = (void(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
 	this->public.get_half_open_count = (int(*)(ike_sa_manager_t*,host_t*))get_half_open_count;
-	
+
 	/* initialize private variables */
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (this->hasher == NULL)
@@ -1700,21 +1700,21 @@ ike_sa_manager_t *ike_sa_manager_create()
 						"charon.ikesa_table_size", DEFAULT_HASHTABLE_SIZE));
 	this->table_size = max(1, min(this->table_size, MAX_HASHTABLE_SIZE));
 	this->table_mask = this->table_size - 1;
-	
+
 	this->segment_count = get_nearest_powerof2(lib->settings->get_int(lib->settings,
 						"charon.ikesa_table_segments", DEFAULT_SEGMENT_COUNT));
 	this->segment_count = max(1, min(this->segment_count, this->table_size));
 	this->segment_mask = this->segment_count - 1;
-	
+
 	this->ike_sa_table = calloc(this->table_size, sizeof(linked_list_t*));
-	
+
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
 		this->segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 		this->segments[i].count = 0;
 	}
-	
+
 	/* we use the same table parameters for the table to track half-open SAs */
 	this->half_open_table = calloc(this->table_size, sizeof(linked_list_t*));
 	this->half_open_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
@@ -1723,7 +1723,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		this->half_open_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->half_open_segments[i].count = 0;
 	}
-	
+
 	/* also for the hash table used for duplicate tests */
 	this->connected_peers_table = calloc(this->table_size, sizeof(linked_list_t*));
 	this->connected_peers_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
@@ -1732,7 +1732,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->connected_peers_segments[i].count = 0;
 	}
-	
+
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
 												"charon.reuse_ikesa", TRUE);
 	return &this->public;

@@ -47,14 +47,14 @@ static void destroy(private_dnskey_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_dnskey_plugin_t *this = malloc_thing(private_dnskey_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 							(builder_constructor_t)dnskey_public_key_builder);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 							(builder_constructor_t)dnskey_public_key_builder);
-	
+
 	return &this->public.plugin;
 }
 

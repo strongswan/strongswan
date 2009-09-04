@@ -36,17 +36,17 @@ struct private_uci_plugin_t {
 	 * implements plugin interface
 	 */
 	uci_plugin_t public;
-	
+
 	/**
 	 * UCI configuration backend
 	 */
 	uci_config_t *config;
-	
+
 	/**
 	 * UCI credential set implementation
 	 */
 	uci_creds_t *creds;
-	
+
 	/**
 	 * UCI parser wrapper
 	 */
@@ -78,16 +78,16 @@ static void destroy(private_uci_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_uci_plugin_t *this = malloc_thing(private_uci_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->parser = uci_parser_create(UCI_PACKAGE);
 	this->config = uci_config_create(this->parser);
 	this->creds = uci_creds_create(this->parser);
 	this->control = uci_control_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
-	
+
 	return &this->public.plugin;
 }
 

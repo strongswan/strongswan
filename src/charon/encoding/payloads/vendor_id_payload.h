@@ -46,31 +46,31 @@ struct vendor_id_payload_t {
 
 	/**
 	 * Set the VID data.
-	 * 
+	 *
 	 * Data are getting cloned.
 	 *
 	 * @param data			VID data as chunk_t
 	 */
 	void (*set_data) (vendor_id_payload_t *this, chunk_t data);
-	
+
 	/**
 	 * Get the VID data.
-	 * 
+	 *
 	 * Returned data are a copy of the internal one.
 	 *
 	 * @return				VID data as chunk_t
 	 */
 	chunk_t (*get_data_clone) (vendor_id_payload_t *this);
-	
+
 	/**
 	 * Get the VID data.
-	 * 
+	 *
 	 * Returned data are NOT copied.
 	 *
 	 * @return				VID data as chunk_t
 	 */
 	chunk_t (*get_data) (vendor_id_payload_t *this);
-	
+
 	/**
 	 * Destroys an vendor_id_payload_t object.
 	 */
@@ -79,7 +79,7 @@ struct vendor_id_payload_t {
 
 /**
  * Creates an empty vendor_id_payload_t object.
- * 
+ *
  * @return vendor_id_payload_t object
  */
 vendor_id_payload_t *vendor_id_payload_create(void);

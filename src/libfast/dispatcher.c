@@ -37,57 +37,57 @@ struct private_dispatcher_t {
 	 * public functions
 	 */
 	dispatcher_t public;
-	
+
 	/**
 	 * fcgi socket fd
 	 */
 	int fd;
-	
+
 	/**
 	 * thread list
 	 */
 	pthread_t *threads;
-	
+
 	/**
 	 * number of threads in "threads"
 	 */
 	int thread_count;
-	
+
 	/**
 	 * session locking mutex
 	 */
 	pthread_mutex_t mutex;
-	
+
 	/**
 	 * List of sessions
 	 */
 	linked_list_t *sessions;
-	
+
 	/**
 	 * session timeout
 	 */
 	time_t timeout;
-	
+
 	/**
 	 * running in debug mode?
 	 */
 	bool debug;
-	
+
 	/**
 	 * List of controllers controller_constructor_t
 	 */
 	linked_list_t *controllers;
-	
+
 	/**
 	 * List of filters filter_constructor_t
 	 */
 	linked_list_t *filters;
-	
-	/** 
+
+	/**
 	 * constructor function to create session context (in controller_entry_t)
 	 */
 	context_constructor_t context_constructor;
-	
+
 	/**
 	 * user param to context constructor
 	 */
@@ -135,13 +135,13 @@ static session_t* load_session(private_dispatcher_t *this)
 	context_t *context = NULL;
 	controller_t *controller;
 	filter_t *filter;
-	
+
 	if (this->context_constructor)
 	{
 		context = this->context_constructor(this->param);
 	}
 	session = session_create(context);
-	
+
 	iterator = this->controllers->create_iterator(this->controllers, TRUE);
 	while (iterator->iterate(iterator, (void**)&centry))
 	{
@@ -149,7 +149,7 @@ static session_t* load_session(private_dispatcher_t *this)
 		session->add_controller(session, controller);
 	}
 	iterator->destroy(iterator);
-	
+
 	iterator = this->filters->create_iterator(this->filters, TRUE);
 	while (iterator->iterate(iterator, (void**)&fentry))
 	{
@@ -157,7 +157,7 @@ static session_t* load_session(private_dispatcher_t *this)
 		session->add_filter(session, filter);
 	}
 	iterator->destroy(iterator);
-	
+
 	return session;
 }
 
@@ -168,7 +168,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 											 char *host)
 {
 	session_entry_t *entry;
-	
+
 	entry = malloc_thing(session_entry_t);
 	entry->in_use = FALSE;
 	entry->closed = FALSE;
@@ -176,7 +176,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 	entry->session = load_session(this);
 	entry->used = time_monotonic(NULL);
 	entry->host = strdup(host);
-	
+
 	return entry;
 }
 
@@ -194,7 +194,7 @@ static void add_controller(private_dispatcher_t *this,
 						   controller_constructor_t constructor, void *param)
 {
 	controller_entry_t *entry = malloc_thing(controller_entry_t);
-	
+
 	entry->constructor = constructor;
 	entry->param = param;
 	this->controllers->insert_last(this->controllers, entry);
@@ -207,14 +207,14 @@ static void add_filter(private_dispatcher_t *this,
 					   filter_constructor_t constructor, void *param)
 {
 	filter_entry_t *entry = malloc_thing(filter_entry_t);
-	
+
 	entry->constructor = constructor;
 	entry->param = param;
 	this->filters->insert_last(this->filters, entry);
 }
 
 /**
- * Actual dispatching code 
+ * Actual dispatching code
  */
 static void dispatch(private_dispatcher_t *this)
 {
@@ -227,7 +227,7 @@ static void dispatch(private_dispatcher_t *this)
 		iterator_t *iterator;
 		time_t now;
 		char *sid;
-		
+
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 		request = request_create(this->fd, this->debug);
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
@@ -238,13 +238,13 @@ static void dispatch(private_dispatcher_t *this)
 		}
 		sid = request->get_cookie(request, "SID");
 		now = time_monotonic(NULL);
-		
+
 		/* find session */
 		pthread_mutex_lock(&this->mutex);
 		iterator = this->sessions->create_iterator(this->sessions, TRUE);
 		while (iterator->iterate(iterator, (void**)&current))
 		{
-			/* check all sessions for timeout or close flag 
+			/* check all sessions for timeout or close flag
 			 * TODO: use a seperate cleanup thread */
 			if (!current->in_use &&
 				(current->used < now - this->timeout || current->closed))
@@ -262,7 +262,7 @@ static void dispatch(private_dispatcher_t *this)
 			}
 		}
 		iterator->destroy(iterator);
-		
+
 		if (found)
 		{
 			/* wait until session is unused */
@@ -278,18 +278,18 @@ static void dispatch(private_dispatcher_t *this)
 		}
 		found->in_use = TRUE;
 		pthread_mutex_unlock(&this->mutex);
-	
+
 		/* start processing */
 		found->session->process(found->session, request);
 		found->used = time_monotonic(NULL);
-		
+
 		/* release session */
 		pthread_mutex_lock(&this->mutex);
 		found->in_use = FALSE;
 		found->closed = request->session_closed(request);
 		pthread_cond_signal(&found->cond);
 		pthread_mutex_unlock(&this->mutex);
-		
+
 		/* cleanup */
 		request->destroy(request);
 	}
@@ -319,7 +319,7 @@ static void waitsignal(private_dispatcher_t *this)
 {
 	sigset_t set;
 	int sig;
-	
+
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGTERM);
@@ -359,7 +359,7 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	this->public.run = (void(*)(dispatcher_t*, int threads))run;
 	this->public.waitsignal = (void(*)(dispatcher_t*))waitsignal;
 	this->public.destroy = (void(*)(dispatcher_t*))destroy;
-	
+
 	this->sessions = linked_list_create();
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
@@ -370,9 +370,9 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
     this->timeout = timeout;
     this->debug = debug;
     this->threads = NULL;
-	
+
     FCGX_Init();
-    
+
     if (socket)
     {
 		unlink(socket);

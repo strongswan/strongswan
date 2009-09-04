@@ -81,7 +81,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 	ctl_addr.sun_family = AF_UNIX;
 	strcpy(ctl_addr.sun_path, CHARON_CTL_FILE);
-	
+
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
 
@@ -173,7 +173,7 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {
 	char buffer[INET6_ADDRSTRLEN];
-	
+
 	msg_end->auth = push_string(msg, conn_end->auth);
 	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
@@ -237,7 +237,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
-	
+
 	/* PUBKEY is preferred to PSK and EAP */
 	if (conn->policy & POLICY_PUBKEY)
 	{
@@ -254,7 +254,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
 	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
-	
+
 	if (conn->policy & POLICY_TUNNEL)
 	{
 		msg.add_conn.mode = MODE_TUNNEL;
@@ -267,7 +267,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	{
 		msg.add_conn.mode = MODE_TRANSPORT;
 		msg.add_conn.proxy_mode = TRUE;
-	} 
+	}
 	else
 	{
 		msg.add_conn.mode = MODE_TRANSPORT;
@@ -365,7 +365,7 @@ int starter_stroke_del_ca(starter_ca_t *ca)
 int starter_stroke_configure(starter_config_t *cfg)
 {
 	stroke_msg_t msg;
-    
+
 	if (cfg->setup.cachecrls)
 	{
 		msg.type = STR_CONFIG;

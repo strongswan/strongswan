@@ -32,22 +32,22 @@ struct private_medcli_config_t {
 	 * Public part
 	 */
 	medcli_config_t public;
-	
+
 	/**
 	 * database connection
 	 */
 	database_t *db;
-	
+
 	/**
 	 * rekey time
 	 */
 	int rekey;
-	
+
 	/**
 	 * dpd delay
 	 */
 	int dpd;
-	
+
 	/**
 	 * default ike config
 	 */
@@ -64,7 +64,7 @@ static traffic_selector_t *ts_from_string(char *str)
 		int netbits = 32;
 		host_t *net;
 		char *pos;
-		
+
 		str = strdupa(str);
 		pos = strchr(str, '/');
 		if (pos)
@@ -107,9 +107,9 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 			.jitter = this->rekey
 		}
 	};
-	
+
 	/* query mediation server config:
-	 * - build ike_cfg/peer_cfg for mediation connection on-the-fly 
+	 * - build ike_cfg/peer_cfg for mediation connection on-the-fly
 	 */
 	e = this->db->query(this->db,
 			"SELECT Address, ClientConfig.KeyId, MediationServerConfig.KeyId "
@@ -124,14 +124,14 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
-		CERT_NEVER_SEND, UNIQUE_REPLACE, 
+		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 		TRUE, this->dpd, 				/* mobike, dpddelay */
 		NULL, NULL, 					/* vip, pool */
 		TRUE, NULL, NULL); 				/* mediation, med by, peer id */
 	e->destroy(e);
-	
+
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	auth->add(auth, AUTH_RULE_IDENTITY,
@@ -142,7 +142,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	auth->add(auth, AUTH_RULE_IDENTITY,
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	med_cfg->add_auth_cfg(med_cfg, auth, FALSE);
-	
+
 	/* query mediated config:
 	 * - use any-any ike_cfg
 	 * - build peer_cfg on-the-fly using med_cfg
@@ -161,14 +161,14 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	}
 	peer_cfg = peer_cfg_create(
 		name, 2, this->ike->get_ref(this->ike),
-		CERT_NEVER_SEND, UNIQUE_REPLACE, 
+		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 		TRUE, this->dpd, 				/* mobike, dpddelay */
 		NULL, NULL, 					/* vip, pool */
 		FALSE, med_cfg,				 	/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
-	
+
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	auth->add(auth, AUTH_RULE_IDENTITY,
@@ -179,7 +179,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	auth->add(auth, AUTH_RULE_IDENTITY,
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
-	
+
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE,
 							  MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
@@ -240,13 +240,13 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	}
 	this->current = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
-				CERT_NEVER_SEND, UNIQUE_REPLACE, 
+				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 				TRUE, this->dpd, 				/* mobike, dpddelay */
 				NULL, NULL, 					/* vip, pool */
 				FALSE, NULL, NULL); 			/* mediation, med by, peer id */
-	
+
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	auth->add(auth, AUTH_RULE_IDENTITY,
@@ -257,7 +257,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	auth->add(auth, AUTH_RULE_IDENTITY,
 			  identification_create_from_encoding(ID_KEY_ID, other));
 	this->current->add_auth_cfg(this->current, auth, FALSE);
-	
+
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
 								 ACTION_NONE, ACTION_NONE, FALSE);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
@@ -286,7 +286,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medcli_config_t *this,
 												identification_t *other)
 {
 	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
-	
+
 	e->current = NULL;
 	e->ike = this->ike;
 	e->rekey = this->rekey;
@@ -300,12 +300,12 @@ static enumerator_t* create_peer_cfg_enumerator(private_medcli_config_t *this,
 			"Connection.LocalSubnet, Connection.RemoteSubnet "
 			"FROM ClientConfig JOIN Connection "
 			"WHERE Active AND "
-			"(? OR ClientConfig.KeyId = ?) AND (? OR Connection.KeyId = ?)", 
-			DB_INT, me == NULL || me->get_type(me) == ID_ANY, 
-			DB_BLOB, me && me->get_type(me) == ID_KEY_ID ? 
+			"(? OR ClientConfig.KeyId = ?) AND (? OR Connection.KeyId = ?)",
+			DB_INT, me == NULL || me->get_type(me) == ID_ANY,
+			DB_BLOB, me && me->get_type(me) == ID_KEY_ID ?
 				me->get_encoding(me) : chunk_empty,
-			DB_INT, other == NULL || other->get_type(other) == ID_ANY, 
-			DB_BLOB, other && other->get_type(other) == ID_KEY_ID ? 
+			DB_INT, other == NULL || other->get_type(other) == ID_ANY,
+			DB_BLOB, other && other->get_type(other) == ID_KEY_ID ?
 				other->get_encoding(other) : chunk_empty,
 			DB_TEXT, DB_BLOB, DB_BLOB, DB_TEXT, DB_TEXT);
 	if (!e->inner)
@@ -323,7 +323,7 @@ static job_requeue_t initiate_config(peer_cfg_t *peer_cfg)
 {
 	enumerator_t *enumerator;
 	child_cfg_t *child_cfg = NULL;;
-	
+
 	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 	enumerator->enumerate(enumerator, &child_cfg);
 	if (child_cfg)
@@ -348,7 +348,7 @@ static void schedule_autoinit(private_medcli_config_t *this)
 {
 	enumerator_t *e;
 	char *name;
-	
+
 	e = this->db->query(this->db, "SELECT Alias FROM Connection WHERE Active",
 						DB_TEXT);
 	if (e)
@@ -356,7 +356,7 @@ static void schedule_autoinit(private_medcli_config_t *this)
 		while (e->enumerate(e, &name))
 		{
 			peer_cfg_t *peer_cfg;
-			
+
 			peer_cfg = get_peer_cfg_by_name(this, name);
 			if (peer_cfg)
 			{
@@ -391,15 +391,15 @@ medcli_config_t *medcli_config_create(database_t *db)
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(medcli_config_t*))destroy;
-	
+
 	this->db = db;
 	this->rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200);
 	this->dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
-	
+
 	schedule_autoinit(this);
-	
+
 	return &this->public;
 }
 

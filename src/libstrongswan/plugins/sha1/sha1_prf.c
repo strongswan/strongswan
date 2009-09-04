@@ -29,7 +29,7 @@ struct private_sha1_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	sha1_hasher_t public;
-	
+
 	/*
 	 * State of the hasher. From sha1_hasher.c, do not change it!
 	 */
@@ -107,7 +107,7 @@ static void set_key(private_sha1_prf_t *this, chunk_t key)
 {
 	int i, rounds;
 	u_int32_t *iv = (u_int32_t*)key.ptr;
-	
+
 	this->hasher->public.hasher_interface.reset(&this->hasher->public.hasher_interface);
 	rounds = min(key.len/sizeof(u_int32_t), sizeof(this->hasher->state));
 	for (i = 0; i < rounds; i++)
@@ -142,9 +142,9 @@ sha1_prf_t *sha1_prf_create(pseudo_random_function_t algo)
 	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
-	
+
 	this->hasher = (private_sha1_hasher_t*)sha1_hasher_create(HASH_SHA1);
-	
+
 	return &this->public;
 }
 

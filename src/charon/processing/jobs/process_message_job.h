@@ -40,7 +40,7 @@ struct process_message_job_t {
 
 /**
  * Creates a job of type PROCESS_MESSAGE.
- * 
+ *
  * @param message		message to process
  * @return				created process_message_job_t object
  */

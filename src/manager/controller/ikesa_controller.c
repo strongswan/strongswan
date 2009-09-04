@@ -33,7 +33,7 @@ struct private_ikesa_controller_t {
 	 * public functions
 	 */
 	ikesa_controller_t public;
-	
+
 	/**
 	 * manager instance
 	 */
@@ -50,7 +50,7 @@ static void process_childsa(private_ikesa_controller_t *this, char *id,
 	enumerator_t *e1, *e2;
 	char *name, *value, *reqid = "", *section = "";
 	int num = 0;
-	
+
 	while (e->enumerate(e, &xml, &name, &value))
 	{
 		if (streq(name, "reqid"))
@@ -106,7 +106,7 @@ static void process_ikesa(private_ikesa_controller_t *this,
 	{
 		if (streq(name, "id"))
 		{
-			id = value;	
+			id = value;
 		}
 		else if (streq(name, "local") || streq(name, "remote"))
 		{
@@ -223,9 +223,9 @@ controller_t *ikesa_controller_create(context_t *context, void *param)
 	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
 	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
 	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-	
+
 	this->manager = (manager_t*)context;
-	
+
 	return &this->public.controller;
 }
 

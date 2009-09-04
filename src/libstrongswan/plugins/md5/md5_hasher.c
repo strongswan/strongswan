@@ -2,9 +2,9 @@
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
- * Copyright (C) 1991-1992, RSA Data Security, Inc. Created 1991. 
+ * Copyright (C) 1991-1992, RSA Data Security, Inc. Created 1991.
  * All rights reserved.
- * 
+ *
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
  * Ported to fulfill hasher_t interface.
  *
@@ -50,7 +50,7 @@ static u_int8_t PADDING[64] = {
 
 /*
  * ugly macro stuff
- */ 
+ */
 /* F, G, H and I are basic MD5 functions.
  */
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
@@ -98,7 +98,7 @@ struct private_md5_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	md5_hasher_t public;
-	
+
 	/*
 	 * State of the hasher.
 	 */
@@ -117,7 +117,7 @@ static void Encode (u_int8_t *output, u_int32_t *input, size_t len)
 {
 	size_t i, j;
 
-	for (i = 0, j = 0; j < len; i++, j += 4) 
+	for (i = 0, j = 0; j < len; i++, j += 4)
 	{
 		output[j] = (u_int8_t)(input[i] & 0xff);
 		output[j+1] = (u_int8_t)((input[i] >> 8) & 0xff);
@@ -253,7 +253,7 @@ static void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputL
 	partLen = 64 - index;
 
 	/* Transform as many times as possible. */
-	if (inputLen >= partLen) 
+	if (inputLen >= partLen)
 	{
 		memcpy(&this->buffer[index], input, partLen);
 		MD5Transform (this->state, this->buffer);
@@ -321,7 +321,7 @@ static void get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer
 static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	
+
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
@@ -330,11 +330,11 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
 
 		MD5Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
-		
+
 		*hash = allocated_hash;
 	}
 }
-	
+
 /**
  * Implementation of hasher_t.get_hash_size.
  */
@@ -370,21 +370,21 @@ static void destroy(private_md5_hasher_t *this)
 md5_hasher_t *md5_hasher_create(hash_algorithm_t algo)
 {
 	private_md5_hasher_t *this;
-	
+
 	if (algo != HASH_MD5)
 	{
 		return NULL;
 	}
 	this = malloc_thing(private_md5_hasher_t);
-	
+
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
-	
+
 	/* initialize */
 	reset(this);
-	
+
 	return &(this->public);
 }

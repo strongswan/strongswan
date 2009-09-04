@@ -41,11 +41,11 @@ struct uci_parser_t {
 	 * @return			enumerator over sections
 	 */
 	enumerator_t* (*create_section_enumerator)(uci_parser_t *this, ...);
-	
+
 	/**
 	 * Destroy the parser.
 	 */
-	void (*destroy)(uci_parser_t *this);	
+	void (*destroy)(uci_parser_t *this);
 };
 
 /**

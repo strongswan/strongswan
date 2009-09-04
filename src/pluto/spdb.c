@@ -607,7 +607,7 @@ static u_int32_t decode_long_duration(pb_stream *pbs)
 }
 
 /* Preparse the body of an ISAKMP SA Payload and
- * return body of ISAKMP Proposal Payload 
+ * return body of ISAKMP Proposal Payload
  *
  * Only IPsec DOI is accepted (what is the ISAKMP DOI?).
  * Error response is rudimentary.
@@ -1114,7 +1114,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
 										, (long) val
 										, OAKLEY_ISAKMP_SA_LIFETIME_MAXIMUM);
 #endif
-					}   
+					}
 					ta.life_seconds = val;
 					break;
 				case OAKLEY_LIFE_KILOBYTES:
@@ -2138,7 +2138,7 @@ parse_ipsec_sa_body(
 			}
 			if (tn == esp_proposal.isap_notrans)
 				continue;       /* we didn't find a nice one */
-			
+
 			esp_attrs.spi = esp_spi;
 			inner_proto = IPPROTO_ESP;
 			if (esp_attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL)

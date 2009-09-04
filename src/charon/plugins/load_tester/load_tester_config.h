@@ -34,11 +34,11 @@ struct load_tester_config_t {
 	 * Implements backend_t interface
 	 */
 	backend_t backend;
-	
+
 	/**
 	 * Destroy the backend.
 	 */
-	void (*destroy)(load_tester_config_t *this);	
+	void (*destroy)(load_tester_config_t *this);
 };
 
 /**

@@ -47,7 +47,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 	key_type_t type = KEY_ANY;
 
 	parser = asn1_parser_create(pkinfoObjects, blob);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -56,7 +56,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 			{
 				int oid = asn1_parse_algorithmIdentifier(object,
 										parser->get_level(parser)+1, NULL);
-				
+
 				if (oid == OID_RSA_ENCRYPTION)
 				{
 					type = KEY_RSA;
@@ -64,7 +64,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 				else if (oid == OID_EC_PUBLICKEY)
 				{
 					/* we need the whole subjectPublicKeyInfo for EC public keys */
-					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, 
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 								KEY_ECDSA, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 					goto end;
 				}
@@ -85,11 +85,11 @@ static public_key_t *parse_public_key(chunk_t blob)
 										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				break;
 		}
-	} 
-	
+	}
+
 end:
 	parser->destroy(parser);
-	return key; 
+	return key;
 }
 
 /**
@@ -115,9 +115,9 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 	chunk_t object;
 	int objectID;
 	bool success = FALSE;
-	
+
 	parser = asn1_parser_create(pubkeyObjects, blob);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -184,10 +184,10 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 	chunk_t object;
 	int objectID ;
 	bool success = FALSE;
-	
+
 	parser = asn1_parser_create(privkeyObjects, blob);
 	parser->set_flags(parser, FALSE, TRUE);
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -233,9 +233,9 @@ end:
 	{
 		return NULL;
 	}
-	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
+	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 			BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_RSA_PRIV_EXP, d,
-			BUILD_RSA_PRIME1, p,  BUILD_RSA_PRIME2, q, BUILD_RSA_EXP1, exp1, 
+			BUILD_RSA_PRIME1, p,  BUILD_RSA_PRIME2, q, BUILD_RSA_EXP1, exp1,
 			BUILD_RSA_EXP2, exp2, BUILD_RSA_COEFF, coeff, BUILD_END);
 }
 
@@ -259,7 +259,7 @@ struct private_builder_t {
 static public_key_t *build_public(private_builder_t *this)
 {
 	public_key_t *key = NULL;
-	
+
 	switch (this->type)
 	{
 		case KEY_ANY:
@@ -281,7 +281,7 @@ static public_key_t *build_public(private_builder_t *this)
 static void add_public(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_ASN1_DER:
@@ -303,19 +303,19 @@ static void add_public(private_builder_t *this, builder_part_t part, ...)
 builder_t *pkcs1_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_ANY && type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->blob = chunk_empty;
 	this->type = type;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_public;
 	this->public.build = (void*(*)(builder_t *this))build_public;
-	
+
 	return &this->public;
 }
 
@@ -325,7 +325,7 @@ builder_t *pkcs1_public_key_builder(key_type_t type)
 static private_key_t *build_private(private_builder_t *this)
 {
 	private_key_t *key;
-	
+
 	key = parse_rsa_private_key(this->blob);
 	free(this);
 	return key;
@@ -337,7 +337,7 @@ static private_key_t *build_private(private_builder_t *this)
 static void add_private(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_ASN1_DER:
@@ -359,19 +359,19 @@ static void add_private(private_builder_t *this, builder_part_t part, ...)
 builder_t *pkcs1_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->blob = chunk_empty;
 	this->type = type;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_private;
 	this->public.build = (void*(*)(builder_t *this))build_private;
-	
+
 	return &this->public;
 }
 

@@ -45,12 +45,12 @@ typedef struct private_auth_cfg_t private_auth_cfg_t;
  * private data of item_set
  */
 struct private_auth_cfg_t {
-	
+
 	/**
 	 * public functions
 	 */
 	auth_cfg_t public;
-	
+
 	/**
 	 * list of entry_t
 	 */
@@ -84,7 +84,7 @@ typedef struct {
 static bool enumerate(entry_enumerator_t *this, auth_rule_t *type, void **value)
 {
 	entry_t *entry;
-	
+
 	if (this->inner->enumerate(this->inner, &entry))
 	{
 		this->current = entry;
@@ -110,7 +110,7 @@ static void entry_enumerator_destroy(entry_enumerator_t *this)
 static enumerator_t* create_enumerator(private_auth_cfg_t *this)
 {
 	entry_enumerator_t *enumerator;
-	
+
 	enumerator = malloc_thing(entry_enumerator_t);
 	enumerator->inner = this->entries->create_enumerator(this->entries);
 	enumerator->public.enumerate = (void*)enumerate;
@@ -168,9 +168,9 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 	if (enumerator->current)
 	{
 		va_list args;
-		
+
 		va_start(args, type);
-		
+
 		destroy_entry_value(enumerator->current);
 		enumerator->current->type = type;
 		switch (type)
@@ -210,7 +210,7 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 	void *current_value, *best_value = NULL;
 	auth_rule_t current_type;
 	bool found = FALSE;
-	
+
 	enumerator = create_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current_type, &current_value))
 	{
@@ -270,7 +270,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 {
 	entry_t *entry = malloc_thing(entry_t);
 	va_list args;
-	
+
 	va_start(args, type);
 	entry->type = type;
 	switch (type)
@@ -311,7 +311,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 	bool success = TRUE;
 	auth_rule_t t1, t2;
 	void *value;
-	
+
 	e1 = constraints->create_enumerator(constraints);
 	while (e1->enumerate(e1, &t1, &value))
 	{
@@ -321,9 +321,9 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_IM_CERT:
 			{
 				certificate_t *c1, *c2;
-				
+
 				c1 = (certificate_t*)value;
-				
+
 				success = FALSE;
 				e2 = create_enumerator(this);
 				while (e2->enumerate(e2, &t2, &c2))
@@ -345,7 +345,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_SUBJECT_CERT:
 			{
 				certificate_t *c1, *c2;
-				
+
 				c1 = (certificate_t*)value;
 				c2 = get(this, AUTH_RULE_SUBJECT_CERT);
 				if (!c2 || !c1->equals(c1, c2))
@@ -364,7 +364,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_OCSP_VALIDATION:
 			{
 				cert_validation_t validated, required;
-				
+
 				required = (uintptr_t)value;
 				validated = (uintptr_t)get(this, t1);
 				switch (required)
@@ -401,7 +401,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_EAP_IDENTITY:
 			{
 				identification_t *id1, *id2;
-				
+
 				id1 = (identification_t*)value;
 				id2 = get(this, t1);
 				if (!id2 || !id2->matches(id2, id1))
@@ -499,7 +499,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 		enumerator_t *enumerator;
 		auth_rule_t type;
 		void *value;
-		
+
 		enumerator = create_enumerator(other);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
@@ -512,7 +512,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_HELPER_SUBJECT_CERT:
 				{
 					certificate_t *cert = (certificate_t*)value;
-					
+
 					add(this, type, cert->get_ref(cert));
 					break;
 				}
@@ -530,7 +530,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_AC_GROUP:
 				{
 					identification_t *id = (identification_t*)value;
-					
+
 					add(this, type, id->clone(id));
 					break;
 				}
@@ -547,7 +547,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 	else
 	{
 		entry_t *entry;
-		
+
 		while (other->entries->remove_first(other->entries,
 											(void**)&entry) == SUCCESS)
 		{
@@ -564,7 +564,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 	enumerator_t *e1, *e2;
 	entry_t *i1, *i2;
 	bool equal = TRUE, found;
-	
+
 	if (this->entries->get_count(this->entries) !=
 		other->entries->get_count(other->entries))
 	{
@@ -601,10 +601,10 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_HELPER_SUBJECT_CERT:
 					{
 						certificate_t *c1, *c2;
-						
+
 						c1 = (certificate_t*)i1->value;
 						c2 = (certificate_t*)i2->value;
-						
+
 						if (c1->equals(c1, c2))
 						{
 							found = TRUE;
@@ -617,10 +617,10 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_AC_GROUP:
 					{
 						identification_t *id1, *id2;
-						
+
 						id1 = (identification_t*)i1->value;
 						id2 = (identification_t*)i2->value;
-						
+
 						if (id1->equals(id1, id2))
 						{
 							found = TRUE;
@@ -660,7 +660,7 @@ static void purge(private_auth_cfg_t *this, bool keep_ca)
 {
 	entry_t *entry;
 	linked_list_t *cas;
-	
+
 	cas = linked_list_create();
 	while (this->entries->remove_last(this->entries, (void**)&entry) == SUCCESS)
 	{
@@ -689,7 +689,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 	enumerator_t *enumerator;
 	auth_cfg_t *clone;
 	entry_t *entry;
-	
+
 	clone = auth_cfg_create();
 	enumerator = this->entries->create_enumerator(this->entries);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -749,7 +749,7 @@ static void destroy(private_auth_cfg_t *this)
 auth_cfg_t *auth_cfg_create()
 {
 	private_auth_cfg_t *this = malloc_thing(private_auth_cfg_t);
-	
+
 	this->public.add = (void(*)(auth_cfg_t*, auth_rule_t type, ...))add;
 	this->public.get = (void*(*)(auth_cfg_t*, auth_rule_t type))get;
 	this->public.create_enumerator = (enumerator_t*(*)(auth_cfg_t*))create_enumerator;
@@ -760,9 +760,9 @@ auth_cfg_t *auth_cfg_create()
 	this->public.equals = (bool(*)(auth_cfg_t*, auth_cfg_t *other))equals;
 	this->public.clone = (auth_cfg_t*(*)(auth_cfg_t*))clone_;
 	this->public.destroy = (void(*)(auth_cfg_t*))destroy;
-	
+
 	this->entries = linked_list_create();
-	
+
 	return &this->public;
 }
 

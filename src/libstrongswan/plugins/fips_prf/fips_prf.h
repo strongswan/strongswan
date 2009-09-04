@@ -37,7 +37,7 @@ typedef struct fips_prf_t fips_prf_t;
  * The FIPS PRF is stateful; the key changes every time when bytes are acquired.
  */
 struct fips_prf_t {
-	
+
 	/**
 	 * Generic prf_t interface for this fips_prf_t class.
 	 */
@@ -46,7 +46,7 @@ struct fips_prf_t {
 
 /**
  * Creates a new fips_prf_t object.
- * 
+ *
  * FIPS 186-2 defines G() functions used in the PRF function. It can
  * be implemented either based on SHA1 or DES.
  * The G() function is selected using the algo parameter.

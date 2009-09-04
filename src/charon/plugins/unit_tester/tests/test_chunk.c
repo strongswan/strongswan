@@ -31,12 +31,12 @@ bool test_chunk_base64()
 	 * BASE64("fooba") = "Zm9vYmE="
 	 * BASE64("foobar") = "Zm9vYmFy"
 	 */
-	
+
 	typedef struct {
 		char *in;
 		char *out;
 	} testdata_t;
-	
+
 	testdata_t test[] = {
 		{"", ""},
 		{"f", "Zg=="},
@@ -47,31 +47,31 @@ bool test_chunk_base64()
 		{"foobar", "Zm9vYmFy"},
 	};
 	int i;
-	
+
 	for (i = 0; i < countof(test); i++)
 	{
 		chunk_t out;
-		
+
 		out = chunk_to_base64(chunk_create(test[i].in, strlen(test[i].in)), NULL);
-		
+
 		if (!streq(out.ptr, test[i].out))
 		{
-			DBG1(DBG_CFG, "base64 conversion error - should %s, is %s", 
+			DBG1(DBG_CFG, "base64 conversion error - should %s, is %s",
 				test[i].out, out.ptr);
 			return FALSE;
 		}
 		free(out.ptr);
 	}
-	
+
 	for (i = 0; i < countof(test); i++)
 	{
 		chunk_t out;
-		
+
 		out = chunk_from_base64(chunk_create(test[i].out, strlen(test[i].out)), NULL);
-		
+
 		if (!strneq(out.ptr, test[i].in, out.len))
 		{
-			DBG1(DBG_CFG, "base64 conversion error - should %s, is %#B", 
+			DBG1(DBG_CFG, "base64 conversion error - should %s, is %#B",
 				test[i].in, &out);
 			return FALSE;
 		}

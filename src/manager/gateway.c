@@ -35,22 +35,22 @@ struct private_gateway_t {
 	 * public functions
 	 */
 	gateway_t public;
-	
+
 	/**
 	 * name of the gateway
 	 */
 	char *name;
-	
+
 	/**
 	 * host to connect using tcp
 	 */
 	host_t *host;
-	
+
 	/**
 	 * socket file descriptor, > 0 if connected
 	 */
 	int fd;
-	
+
 	/**
 	 * unique id assigned to each xml message
 	 */
@@ -83,7 +83,7 @@ static bool connect_(private_gateway_t *this)
 		addr = (struct sockaddr*)&unix_addr;
 		len = sizeof(unix_addr);
 	}
-	
+
 	this->fd = socket(family, SOCK_STREAM, 0);
 	if (this->fd < 0)
 	{
@@ -115,7 +115,7 @@ static char* request(private_gateway_t *this, char *xml, ...)
 		char buf[8096];
 		ssize_t len;
 		va_list args;
-		
+
 		va_start(args, xml);
 		len = vsnprintf(buf, sizeof(buf), xml, args);
 		va_end(args);
@@ -153,7 +153,7 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	char *str, *name, *value;
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3, *e4 = NULL;
-	
+
 	str = request(this,	"<message type=\"request\" id=\"%d\">"
 							"<query>"
 								"<ikesalist/>"
@@ -168,7 +168,7 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	{
 		return NULL;
 	}
-	
+
 	e1 = xml->children(xml);
 	free(str);
 	while (e1->enumerate(e1, &xml, &name, &value))
@@ -202,7 +202,7 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	return NULL;
 }
 
-	
+
 /**
  * Implementation of gateway_t.query_configlist.
  */
@@ -211,7 +211,7 @@ static enumerator_t* query_configlist(private_gateway_t *this)
 	char *str, *name, *value;
 	xml_t *xml;
 	enumerator_t *e1, *e2, *e3, *e4 = NULL;
-	
+
 	str = request(this,	"<message type=\"request\" id=\"%d\">"
 							"<query>"
 								"<configlist/>"
@@ -226,7 +226,7 @@ static enumerator_t* query_configlist(private_gateway_t *this)
 	{
 		return NULL;
 	}
-	
+
 	e1 = xml->children(xml);
 	free(str);
 	while (e1->enumerate(e1, &xml, &name, &value))
@@ -308,7 +308,7 @@ static enumerator_t* read_result(private_gateway_t *this, char *res)
 static enumerator_t* initiate(private_gateway_t *this, bool ike, char *name)
 {
 	char *str, *kind;
-	
+
 	if (ike)
 	{
 		kind = "ike";
@@ -331,7 +331,7 @@ static enumerator_t* initiate(private_gateway_t *this, bool ike, char *name)
 static enumerator_t* terminate(private_gateway_t *this, bool ike, u_int32_t id)
 {
 	char *str, *kind;
-	
+
 	if (ike)
 	{
 		kind = "ike";
@@ -368,19 +368,19 @@ static void destroy(private_gateway_t *this)
 static private_gateway_t *gateway_create(char *name)
 {
 	private_gateway_t *this = malloc_thing(private_gateway_t);
-	
+
 	this->public.request = (char*(*)(gateway_t*, char *xml))request;
 	this->public.query_ikesalist = (enumerator_t*(*)(gateway_t*))query_ikesalist;
 	this->public.query_configlist = (enumerator_t*(*)(gateway_t*))query_configlist;
 	this->public.initiate = (enumerator_t*(*)(gateway_t*, bool ike, char *name))initiate;
 	this->public.terminate = (enumerator_t*(*)(gateway_t*, bool ike, u_int32_t id))terminate;
 	this->public.destroy = (void(*)(gateway_t*))destroy;
-	
+
 	this->name = strdup(name);
 	this->host = NULL;
 	this->fd = -1;
 	this->xmlid = 1;
-	
+
 	return this;
 }
 
@@ -390,9 +390,9 @@ static private_gateway_t *gateway_create(char *name)
 gateway_t *gateway_create_tcp(char *name, host_t *host)
 {
 	private_gateway_t *this = gateway_create(name);
-	
+
 	this->host = host;
-	
+
 	return &this->public;
 }
 
@@ -402,7 +402,7 @@ gateway_t *gateway_create_tcp(char *name, host_t *host)
 gateway_t *gateway_create_unix(char *name)
 {
 	private_gateway_t *this = gateway_create(name);
-	
+
 	return &this->public;
 }
 

@@ -29,7 +29,7 @@ typedef struct gcrypt_hasher_t gcrypt_hasher_t;
  * Implementation of hashers using libgcrypt.
  */
 struct gcrypt_hasher_t {
-	
+
 	/**
 	 * The hasher_t interface.
 	 */
@@ -38,7 +38,7 @@ struct gcrypt_hasher_t {
 
 /**
  * Constructor to create gcrypt_hasher_t.
- * 
+ *
  * @param algo			algorithm
  * @return				gcrypt_hasher_t, NULL if not supported
  */

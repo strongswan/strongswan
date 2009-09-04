@@ -31,7 +31,7 @@ struct private_roam_job_t {
 	 * public roam_job_t interface
 	 */
 	roam_job_t public;
-	
+
 	/**
 	 * has the address list changed, or the routing only?
 	 */
@@ -47,16 +47,16 @@ static void destroy(private_roam_job_t *this)
 }
 
 /**
- * Implementation of job_t.execute. 
- */ 
+ * Implementation of job_t.execute.
+ */
 static void execute(private_roam_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	linked_list_t *list;
 	ike_sa_id_t *id;
 	enumerator_t *enumerator;
-	
-	/* enumerator over all IKE_SAs gives us no way to checkin_and_destroy 
+
+	/* enumerator over all IKE_SAs gives us no way to checkin_and_destroy
 	 * after a DESTROY_ME, so we check out each available IKE_SA by hand. */
 	list = linked_list_create();
 	enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
@@ -66,7 +66,7 @@ static void execute(private_roam_job_t *this)
 		list->insert_last(list, id->clone(id));
 	}
 	enumerator->destroy(enumerator);
-	
+
 	while (list->remove_last(list, (void**)&id) == SUCCESS)
 	{
 		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
@@ -95,10 +95,10 @@ static void execute(private_roam_job_t *this)
 roam_job_t *roam_job_create(bool address)
 {
 	private_roam_job_t *this = malloc_thing(private_roam_job_t);
-	
+
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
+
 	this->address = address;
 
 	return &this->public;

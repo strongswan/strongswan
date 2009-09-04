@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	chunk_t chunk;
 	char buf[8096];
 	int read;
-	
+
 	library_init(NULL);
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, PLUGINS);
 	atexit(library_deinit);
@@ -26,9 +26,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "reading key failed.\n");
 		return -1;
 	}
-	
+
 	chunk = chunk_create(buf, read);
-	
+
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 								 BUILD_BLOB_PEM, chunk_clone(chunk),
 								 BUILD_END);
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 		private->destroy(private);
 		return 0;
 	}
-	
+
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 								BUILD_BLOB_PEM, chunk_clone(chunk),
 								BUILD_END);
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 		public->destroy(public);
 		return 0;
 	}
-	
+
 	fprintf(stderr, "unable to parse input key.\n");
 	return -1;
 }

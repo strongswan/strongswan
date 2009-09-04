@@ -29,17 +29,17 @@ struct private_delete_child_sa_job_t {
 	 * Public delete_child_sa_job_t interface.
 	 */
 	delete_child_sa_job_t public;
-	
+
 	/**
 	 * reqid of the CHILD_SA
 	 */
 	u_int32_t reqid;
-	
+
 	/**
 	 * protocol of the CHILD_SA (ESP/AH)
 	 */
 	protocol_id_t protocol;
-	
+
 	/**
 	 * inbound SPI of the CHILD_SA
 	 */
@@ -60,7 +60,7 @@ static void destroy(private_delete_child_sa_job_t *this)
 static void execute(private_delete_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													this->reqid, TRUE);
 	if (ike_sa == NULL)
@@ -71,7 +71,7 @@ static void execute(private_delete_child_sa_job_t *this)
 	else
 	{
 		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
-		
+
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	destroy(this);
@@ -80,21 +80,21 @@ static void execute(private_delete_child_sa_job_t *this)
 /*
  * Described in header
  */
-delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid, 
-												  protocol_id_t protocol, 
+delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
+												  protocol_id_t protocol,
 												  u_int32_t spi)
 {
 	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-	
+
 	/* private variables */
 	this->reqid = reqid;
 	this->protocol = protocol;
 	this->spi = spi;
-	
+
 	return &this->public;
 }
 

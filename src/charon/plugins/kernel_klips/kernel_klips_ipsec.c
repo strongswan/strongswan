@@ -78,7 +78,7 @@
 /** the prefix of the name of KLIPS ipsec devices */
 #define IPSEC_DEV_PREFIX "ipsec"
 /** this is the default number of ipsec devices */
-#define DEFAULT_IPSEC_DEV_COUNT 4 
+#define DEFAULT_IPSEC_DEV_COUNT 4
 /** TRUE if the given name matches an ipsec device */
 #define IS_IPSEC_DEV(name) (strneq((name), IPSEC_DEV_PREFIX, sizeof(IPSEC_DEV_PREFIX) - 1))
 
@@ -108,62 +108,62 @@ struct private_kernel_klips_ipsec_t
 	 * Public part of the kernel_klips_t object.
 	 */
 	kernel_klips_ipsec_t public;
-	
+
 	/**
 	 * mutex to lock access to various lists
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * List of installed policies (policy_entry_t)
 	 */
 	linked_list_t *policies;
-	
+
 	/**
 	 * List of allocated SPIs without installed SA (sa_entry_t)
 	 */
 	linked_list_t *allocated_spis;
-	
+
 	/**
 	 * List of installed SAs (sa_entry_t)
 	 */
 	linked_list_t *installed_sas;
-	
+
 	/**
 	 * whether to install routes along policies
 	 */
 	bool install_routes;
-	
+
 	/**
 	 * List of ipsec devices (ipsec_dev_t)
 	 */
 	linked_list_t *ipsec_devices;
-	
+
 	/**
 	 * job receiving PF_KEY events
 	 */
 	callback_job_t *job;
-	
+
 	/**
 	 * mutex to lock access to the PF_KEY socket
 	 */
 	mutex_t *mutex_pfkey;
-	
+
 	/**
 	 * PF_KEY socket to communicate with the kernel
 	 */
 	int socket;
-	
+
 	/**
 	 * PF_KEY socket to receive acquire and expire events
 	 */
 	int socket_events;
-	
+
 	/**
 	 * sequence number for messages sent to the kernel
 	 */
 	int seq;
-	
+
 };
 
 
@@ -175,10 +175,10 @@ typedef struct ipsec_dev_t ipsec_dev_t;
 struct ipsec_dev_t {
 	/** name of the virtual ipsec interface */
 	char name[IFNAMSIZ];
-	
+
 	/** name of the physical interface */
 	char phys_name[IFNAMSIZ];
-	
+
 	/** by how many CHILD_SA's this ipsec device is used */
 	u_int refcount;
 };
@@ -229,14 +229,14 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 	struct ipsectunnelconf *itc = (struct ipsectunnelconf*)&req.ifr_data;
 	short phys_flags;
 	int mtu;
-	
+
 	DBG2(DBG_KNL, "attaching virtual interface %s to %s", name, phys_name);
-	
+
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) <= 0)
 	{
 		return FAILED;
 	}
-	
+
 	strncpy(req.ifr_name, phys_name, IFNAMSIZ);
 	if (ioctl(sock, SIOCGIFFLAGS, &req) < 0)
 	{
@@ -251,18 +251,18 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 		close(sock);
 		return FAILED;
 	}
-	
+
 	if (req.ifr_flags & IFF_UP)
 	{
 		/* if it's already up, it is already attached, detach it first */
 		ioctl(sock, IPSEC_DEL_DEV, &req);
 	}
-	
+
 	/* attach it */
 	strncpy(req.ifr_name, name, IFNAMSIZ);
 	strncpy(itc->cf_name, phys_name, sizeof(itc->cf_name));
 	ioctl(sock, IPSEC_SET_DEV, &req);
-	
+
 	/* copy address from physical to virtual */
 	strncpy(req.ifr_name, phys_name, IFNAMSIZ);
 	if (ioctl(sock, SIOCGIFADDR, &req) == 0)
@@ -270,7 +270,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 		strncpy(req.ifr_name, name, IFNAMSIZ);
 		ioctl(sock, SIOCSIFADDR, &req);
 	}
-	
+
 	/* copy net mask from physical to virtual */
 	strncpy(req.ifr_name, phys_name, IFNAMSIZ);
 	if (ioctl(sock, SIOCGIFNETMASK, &req) == 0)
@@ -278,7 +278,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 		strncpy(req.ifr_name, name, IFNAMSIZ);
 		ioctl(sock, SIOCSIFNETMASK, &req);
 	}
-	
+
 	/* copy other flags and addresses */
 	strncpy(req.ifr_name, name, IFNAMSIZ);
 	if (ioctl(sock, SIOCGIFFLAGS, &req) == 0)
@@ -288,7 +288,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 			req.ifr_flags |= IFF_POINTOPOINT;
 			req.ifr_flags &= ~IFF_BROADCAST;
 			ioctl(sock, SIOCSIFFLAGS, &req);
-			
+
 			strncpy(req.ifr_name, phys_name, IFNAMSIZ);
 			if (ioctl(sock, SIOCGIFDSTADDR, &req) == 0)
 			{
@@ -301,7 +301,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 			req.ifr_flags &= ~IFF_POINTOPOINT;
 			req.ifr_flags |= IFF_BROADCAST;
 			ioctl(sock, SIOCSIFFLAGS, &req);
-			
+
 			strncpy(req.ifr_name, phys_name, IFNAMSIZ);
 			if (ioctl(sock, SIOCGIFBRDADDR, &req)==0)
 			{
@@ -324,7 +324,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 		/* guess MTU as physical MTU - ESP overhead [- NAT-T overhead]
 		 * ESP overhead      : 73 bytes
 		 * NAT-T overhead    :  8 bytes ==> 81 bytes
-		 * 
+		 *
 		 * assuming tunnel mode with AES encryption and integrity
 		 * outer IP header  : 20 bytes
 		 * (NAT-T UDP header:  8 bytes)
@@ -338,19 +338,19 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 		ioctl(sock, SIOCGIFMTU, &req);
 		mtu = req.ifr_mtu - 81;
 	}
-	
+
 	/* set MTU */
 	strncpy(req.ifr_name, name, IFNAMSIZ);
 	req.ifr_mtu = mtu;
 	ioctl(sock, SIOCSIFMTU, &req);
-	
+
 	/* bring ipsec device UP */
 	if (ioctl(sock, SIOCGIFFLAGS, &req) == 0)
 	{
 		req.ifr_flags |= IFF_UP;
 		ioctl(sock, SIOCSIFFLAGS, &req);
 	}
-	
+
 	close(sock);
 	return SUCCESS;
 }
@@ -362,37 +362,37 @@ static status_t detach_ipsec_dev(char* name, char *phys_name)
 {
 	int sock;
 	struct ifreq req;
-	
+
 	DBG2(DBG_KNL, "detaching virtual interface %s from %s", name,
 			strlen(phys_name) ? phys_name : "any physical interface");
-	
+
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) <= 0)
 	{
 		return FAILED;
 	}
-	
+
 	strncpy(req.ifr_name, name, IFNAMSIZ);
 	if (ioctl(sock, SIOCGIFFLAGS, &req) < 0)
 	{
 		close(sock);
 		return FAILED;
 	}
-	
+
 	/* shutting interface down */
 	if (req.ifr_flags & IFF_UP)
 	{
 		req.ifr_flags &= ~IFF_UP;
 		ioctl(sock, SIOCSIFFLAGS, &req);
 	}
-	
+
 	/* unset address */
 	memset(&req.ifr_addr, 0, sizeof(req.ifr_addr));
 	req.ifr_addr.sa_family = AF_INET;
 	ioctl(sock, SIOCSIFADDR, &req);
-	
+
 	/* detach interface */
 	ioctl(sock, IPSEC_DEL_DEV, &req);
-	
+
 	close(sock);
 	return SUCCESS;
 }
@@ -415,10 +415,10 @@ typedef struct route_entry_t route_entry_t;
 struct route_entry_t {
 	/** Name of the interface the route is bound to */
 	char *if_name;
-	
+
 	/** Source ip of the route */
 	host_t *src_ip;
-	
+
 	/** Gateway for this route */
 	host_t *gateway;
 
@@ -447,13 +447,13 @@ typedef struct policy_entry_t policy_entry_t;
  * installed kernel policy.
  */
 struct policy_entry_t {
-	
+
 	/** reqid of this policy, if setup as trap */
 	u_int32_t reqid;
-	
+
 	/** direction of this policy: in, out, forward */
 	u_int8_t direction;
-	
+
 	/** parameters of installed policy */
 	struct {
 		/** subnet and port */
@@ -463,13 +463,13 @@ struct policy_entry_t {
 		/** protocol */
 		u_int8_t proto;
 	} src, dst;
-	
+
 	/** associated route installed for this policy */
 	route_entry_t *route;
-	
+
 	/** by how many CHILD_SA's this policy is actively used */
 	u_int activecount;
-	
+
 	/** by how many CHILD_SA's this policy is trapped */
 	u_int trapcount;
 };
@@ -499,22 +499,22 @@ static bool is_host_in_net(host_t *host, host_t *net, u_int8_t mask)
 	static const u_char bitmask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
 	chunk_t host_chunk, net_chunk;
 	int bytes = mask / 8, bits = mask % 8;
-	
+
 	host_chunk = host->get_address(host);
 	net_chunk = net->get_address(net);
-	
+
 	if (host_chunk.len != net_chunk.len)
 	{
 		return FALSE;
 	}
-	
+
 	if (memeq(host_chunk.ptr, net_chunk.ptr, bytes))
 	{
 		return (bits == 0) ||
-			   (host_chunk.ptr[bytes] & bitmask[bits]) == 
+			   (host_chunk.ptr[bytes] & bitmask[bits]) ==
 				   (net_chunk.ptr[bytes] & bitmask[bits]);
 	}
-	
+
 	return FALSE;
 }
 
@@ -530,15 +530,15 @@ static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 	policy->route = NULL;
 	policy->activecount = 0;
 	policy->trapcount = 0;
-	
+
 	src_ts->to_subnet(src_ts, &policy->src.net, &policy->src.mask);
 	dst_ts->to_subnet(dst_ts, &policy->dst.net, &policy->dst.mask);
-	
+
 	/* src or dest proto may be "any" (0), use more restrictive one */
 	policy->src.proto = max(src_ts->get_protocol(src_ts), dst_ts->get_protocol(dst_ts));
-	policy->src.proto = policy->src.proto ? policy->src.proto : 0; 
+	policy->src.proto = policy->src.proto ? policy->src.proto : 0;
 	policy->dst.proto = policy->src.proto;
-	
+
 	return policy;
 }
 
@@ -585,25 +585,25 @@ typedef struct sa_entry_t sa_entry_t;
  * - installed inbound SAs with enabled UDP encapsulation
  */
 struct sa_entry_t {
-	
+
 	/** protocol of this SA */
 	protocol_id_t protocol;
-	
+
 	/** reqid of this SA */
 	u_int32_t reqid;
-	
+
 	/** SPI of this SA */
 	u_int32_t spi;
-	
+
 	/** src address of this SA */
 	host_t *src;
-	
+
 	/** dst address of this SA */
 	host_t *dst;
-	
+
 	/** TRUE if this SA uses UDP encapsulation */
 	bool encap;
-	
+
 	/** TRUE if this SA is inbound */
 	bool inbound;
 };
@@ -672,8 +672,8 @@ struct pfkey_msg_t
 	 * PF_KEY message base
 	 */
 	struct sadb_msg *msg;
-	
-	
+
+
 	/**
 	 * PF_KEY message extensions
 	 */
@@ -761,7 +761,7 @@ struct kernel_algorithm_t {
 	 * Identifier specified in IKEv2
 	 */
 	int ikev2;
-	
+
 	/**
 	 * Identifier as defined in pfkeyv2.h
 	 */
@@ -884,7 +884,7 @@ static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst,
 {
 	struct sadb_x_nat_t_type* nat_type;
 	struct sadb_x_nat_t_port* nat_port;
-	
+
 	if (!ports_only)
 	{
 		nat_type = (struct sadb_x_nat_t_type*)PFKEY_EXT_ADD_NEXT(msg);
@@ -893,13 +893,13 @@ static void add_encap_ext(struct sadb_msg *msg, host_t *src, host_t *dst,
 		nat_type->sadb_x_nat_t_type_type = UDP_ENCAP_ESPINUDP;
 		PFKEY_EXT_ADD(msg, nat_type);
 	}
-	
+
 	nat_port = (struct sadb_x_nat_t_port*)PFKEY_EXT_ADD_NEXT(msg);
 	nat_port->sadb_x_nat_t_port_exttype = SADB_X_EXT_NAT_T_SPORT;
 	nat_port->sadb_x_nat_t_port_len = PFKEY_LEN(sizeof(struct sadb_x_nat_t_port));
 	nat_port->sadb_x_nat_t_port_port = src->get_port(src);
 	PFKEY_EXT_ADD(msg, nat_port);
-	
+
 	nat_port = (struct sadb_x_nat_t_port*)PFKEY_EXT_ADD_NEXT(msg);
 	nat_port->sadb_x_nat_t_port_exttype = SADB_X_EXT_NAT_T_DPORT;
 	nat_port->sadb_x_nat_t_port_len = PFKEY_LEN(sizeof(struct sadb_x_nat_t_port));
@@ -917,19 +917,19 @@ static void build_addflow(struct sadb_msg *msg, u_int8_t satype, u_int32_t spi,
 	struct sadb_sa *sa;
 	struct sadb_protocol *proto;
 	host_t *host;
-	
+
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_X_ADDFLOW;
 	msg->sadb_msg_satype = satype;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_flags = replace ? SADB_X_SAFLAGS_REPLACEFLOW : 0;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	if (!src)
 	{
 		add_anyaddr_ext(msg, src_net->get_family(src_net), SADB_EXT_ADDRESS_SRC);
@@ -938,7 +938,7 @@ static void build_addflow(struct sadb_msg *msg, u_int8_t satype, u_int32_t spi,
 	{
 		add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC);
 	}
-	
+
 	if (!dst)
 	{
 		add_anyaddr_ext(msg, dst_net->get_family(dst_net), SADB_EXT_ADDRESS_DST);
@@ -947,18 +947,18 @@ static void build_addflow(struct sadb_msg *msg, u_int8_t satype, u_int32_t spi,
 	{
 		add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
 	}
-	
+
 	add_addr_ext(msg, src_net, SADB_X_EXT_ADDRESS_SRC_FLOW);
 	add_addr_ext(msg, dst_net, SADB_X_EXT_ADDRESS_DST_FLOW);
-	
+
 	host = mask2host(src_net->get_family(src_net), src_mask);
 	add_addr_ext(msg, host, SADB_X_EXT_ADDRESS_SRC_MASK);
 	host->destroy(host);
-	
+
 	host = mask2host(dst_net->get_family(dst_net), dst_mask);
 	add_addr_ext(msg, host, SADB_X_EXT_ADDRESS_DST_MASK);
 	host->destroy(host);
-	
+
 	proto = (struct sadb_protocol*)PFKEY_EXT_ADD_NEXT(msg);
 	proto->sadb_protocol_exttype = SADB_X_EXT_PROTOCOL;
 	proto->sadb_protocol_len = PFKEY_LEN(sizeof(struct sadb_protocol));
@@ -975,25 +975,25 @@ static void build_delflow(struct sadb_msg *msg, u_int8_t satype,
 {
 	struct sadb_protocol *proto;
 	host_t *host;
-	
+
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_X_DELFLOW;
 	msg->sadb_msg_satype = satype;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	add_addr_ext(msg, src_net, SADB_X_EXT_ADDRESS_SRC_FLOW);
 	add_addr_ext(msg, dst_net, SADB_X_EXT_ADDRESS_DST_FLOW);
-	
+
 	host = mask2host(src_net->get_family(src_net),
 					 src_mask);
 	add_addr_ext(msg, host, SADB_X_EXT_ADDRESS_SRC_MASK);
 	host->destroy(host);
-	
+
 	host = mask2host(dst_net->get_family(dst_net),
 					 dst_mask);
 	add_addr_ext(msg, host, SADB_X_EXT_ADDRESS_DST_MASK);
 	host->destroy(host);
-	
+
 	proto = (struct sadb_protocol*)PFKEY_EXT_ADD_NEXT(msg);
 	proto->sadb_protocol_exttype = SADB_X_EXT_PROTOCOL;
 	proto->sadb_protocol_len = PFKEY_LEN(sizeof(struct sadb_protocol));
@@ -1008,15 +1008,15 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 {
 	struct sadb_ext* ext;
 	size_t len;
-	
+
 	memset(out, 0, sizeof(pfkey_msg_t));
 	out->msg = msg;
-	
+
 	len = msg->sadb_msg_len;
 	len -= PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	ext = (struct sadb_ext*)(((char*)msg) + sizeof(struct sadb_msg));
-	
+
 	while (len >= PFKEY_LEN(sizeof(struct sadb_ext)))
 	{
 		if (ext->sadb_ext_len < PFKEY_LEN(sizeof(struct sadb_ext)) ||
@@ -1025,19 +1025,19 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 			DBG1(DBG_KNL, "length of PF_KEY extension (%d) is invalid", ext->sadb_ext_type);
 			break;
 		}
-		
+
 		if ((ext->sadb_ext_type > SADB_EXT_MAX) || (!ext->sadb_ext_type))
 		{
 			DBG1(DBG_KNL, "type of PF_KEY extension (%d) is invalid", ext->sadb_ext_type);
 			break;
 		}
-		
+
 		if (out->ext[ext->sadb_ext_type])
 		{
-			DBG1(DBG_KNL, "duplicate PF_KEY extension of type (%d)", ext->sadb_ext_type);			
+			DBG1(DBG_KNL, "duplicate PF_KEY extension of type (%d)", ext->sadb_ext_type);
 			break;
 		}
-		
+
 		out->ext[ext->sadb_ext_type] = ext;
 		ext = PFKEY_EXT_NEXT_LEN(ext, len);
 	}
@@ -1047,7 +1047,7 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 		DBG1(DBG_KNL, "PF_KEY message length is invalid");
 		return FAILED;
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -1060,7 +1060,7 @@ static status_t pfkey_send_socket(private_kernel_klips_ipsec_t *this, int socket
 	unsigned char buf[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg;
 	int in_len, len;
-	
+
 	this->mutex_pfkey->lock(this->mutex_pfkey);
 
 	in->sadb_msg_seq = ++this->seq;
@@ -1093,13 +1093,13 @@ static status_t pfkey_send_socket(private_kernel_klips_ipsec_t *this, int socket
 		}
 		break;
 	}
-	
+
 	while (TRUE)
-	{	
+	{
 		msg = (struct sadb_msg*)buf;
-		
+
 		len = recv(socket, buf, sizeof(buf), 0);
-		
+
 		if (len < 0)
 		{
 			if (errno == EINTR)
@@ -1149,13 +1149,13 @@ static status_t pfkey_send_socket(private_kernel_klips_ipsec_t *this, int socket
 		}
 		break;
 	}
-	
+
 	*out_len = len;
 	*out = (struct sadb_msg*)malloc(len);
 	memcpy(*out, buf, len);
-		
+
 	this->mutex_pfkey->unlock(this->mutex_pfkey);
-	
+
 	return SUCCESS;
 }
 
@@ -1175,7 +1175,7 @@ static status_t pfkey_send_ack(private_kernel_klips_ipsec_t *this, struct sadb_m
 {
 	struct sadb_msg *out;
 	size_t len;
-	
+
 	if (pfkey_send(this, in, &out, &len) != SUCCESS)
 	{
 		return FAILED;
@@ -1200,12 +1200,12 @@ static status_t add_eroute(private_kernel_klips_ipsec_t *this, u_int8_t satype,
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)request;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	build_addflow(msg, satype, spi, src, dst, src_net, src_mask,
 			dst_net, dst_mask, protocol, replace);
-	
+
 	return pfkey_send_ack(this, msg);
 }
 
@@ -1218,11 +1218,11 @@ static status_t del_eroute(private_kernel_klips_ipsec_t *this, u_int8_t satype,
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)request;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	build_delflow(msg, satype, src_net, src_mask, dst_net, dst_mask, protocol);
-	
+
 	return pfkey_send_ack(this, msg);
 }
 
@@ -1237,7 +1237,7 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 	u_int8_t proto;
 	policy_entry_t *policy;
 	job_t *job;
-	
+
 	switch (msg->sadb_msg_satype)
 	{
 		case SADB_SATYPE_UNSPEC:
@@ -1248,13 +1248,13 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 			/* acquire for AH/ESP only */
 			return;
 	}
-	
+
 	if (parse_pfkey_message(msg, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "parsing SADB_ACQUIRE from kernel failed");
 		return;
 	}
-	
+
 	/* KLIPS provides us only with the source and destination address,
 	 * and the transport protocol of the packet that triggered the policy.
 	 * we use this information to find a matching policy in our cache.
@@ -1269,7 +1269,7 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 		DBG1(DBG_KNL, "received an SADB_ACQUIRE with invalid hosts");
 		return;
 	}
-	
+
 	DBG2(DBG_KNL, "received an SADB_ACQUIRE for %H == %H : %d", src, dst, proto);
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
@@ -1286,17 +1286,17 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 		DBG1(DBG_KNL, "received an SADB_ACQUIRE, but policy is not routed anymore");
 		return;
 	}
-	
+
 	/* add a broad %hold eroute that replaces the %trap eroute */
 	add_eroute(this, SADB_X_SATYPE_INT, htonl(SPI_HOLD), NULL, NULL,
 			policy->src.net, policy->src.mask, policy->dst.net, policy->dst.mask,
 			policy->src.proto, TRUE);
-	
+
 	/* remove the narrow %hold eroute installed by KLIPS */
 	del_eroute(this, SADB_X_SATYPE_INT, src, 32, dst, 32, proto);
-	
+
 	this->mutex->unlock(this->mutex);
-	
+
 	DBG2(DBG_KNL, "received an SADB_ACQUIRE");
 	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
 	job = (job_t*)acquire_job_create(reqid, NULL, NULL);
@@ -1312,23 +1312,23 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 	u_int32_t spi, reqid;
 	host_t *old_src, *new_src;
 	job_t *job;
-	
+
 	DBG2(DBG_KNL, "received an SADB_X_NAT_T_NEW_MAPPING");
-	
+
 	if (parse_pfkey_message(msg, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "parsing SADB_X_NAT_T_NEW_MAPPING from kernel failed");
 		return;
 	}
-	
+
 	spi = response.sa->sadb_sa_spi;
-	
+
 	if (proto_satype2ike(msg->sadb_msg_satype) == PROTO_ESP)
 	{
 		sa_entry_t *sa;
 		sockaddr_t *addr = (sockaddr_t*)(response.src + 1);
 		old_src = host_create_from_sockaddr(addr);
-		
+
 		this->mutex->lock(this->mutex);
 		if (!old_src || this->installed_sas->find_first(this->installed_sas,
 				(linked_list_match_t)sa_entry_match_encapbysrc,
@@ -1340,7 +1340,7 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 		}
 		reqid = sa->reqid;
 		this->mutex->unlock(this->mutex);
-		
+
 		addr = (sockaddr_t*)(response.dst + 1);
 		switch (addr->sa_family)
 		{
@@ -1352,7 +1352,7 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 			case AF_INET6:
 			{
 				struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)addr;
-				sin6->sin6_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);				
+				sin6->sin6_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);
 			}
 			default:
 				break;
@@ -1376,11 +1376,11 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 	unsigned char buf[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)buf;
 	int len, oldstate;
-	
+
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	len = recv(this->socket_events, buf, sizeof(buf), 0);
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (len < 0)
 	{
 		switch (errno)
@@ -1397,7 +1397,7 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 				return JOB_REQUEUE_FAIR;
 		}
 	}
-	
+
 	if (len < sizeof(struct sadb_msg) ||
 		msg->sadb_msg_len < PFKEY_LEN(sizeof(struct sadb_msg)))
 	{
@@ -1413,7 +1413,7 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 		DBG1(DBG_KNL, "buffer was too small to receive the complete PF_KEY message");
 		return JOB_REQUEUE_DIRECT;
 	}
-	
+
 	switch (msg->sadb_msg_type)
 	{
 		case SADB_ACQUIRE:
@@ -1433,7 +1433,7 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 		default:
 			break;
 	}
-	
+
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -1473,11 +1473,11 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	sa_entry_t *cached_sa;
 	linked_list_t *list;
 	job_t *job;
-	
+
 	/* for an expired SPI we first check whether the CHILD_SA got installed
 	 * in the meantime, for expired SAs we check whether they are still installed */
 	list = expire->type == EXPIRE_TYPE_SPI ? this->allocated_spis : this->installed_sas;
-	
+
 	this->mutex->lock(this->mutex);
 	if (list->find_first(list, (linked_list_match_t)sa_entry_match_byid,
 			(void**)&cached_sa, &protocol, &spi, &reqid) != SUCCESS)
@@ -1494,10 +1494,10 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 		sa_entry_destroy(cached_sa);
 	}
 	this->mutex->unlock(this->mutex);
-	
+
 	DBG2(DBG_KNL, "%N CHILD_SA with SPI %.8x and reqid {%d} expired",
 			protocol_id_names, protocol, ntohl(spi), reqid);
-	
+
 	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%d}",
 		 hard ? "delete" : "rekey",  protocol_id_names,
 		 protocol, ntohl(spi), reqid);
@@ -1514,7 +1514,7 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 }
 
 /**
- * Schedule an expire job for an SA. Time is in seconds. 
+ * Schedule an expire job for an SA. Time is in seconds.
  */
 static void schedule_expire(private_kernel_klips_ipsec_t *this,
 							protocol_id_t protocol, u_int32_t spi,
@@ -1534,8 +1534,8 @@ static void schedule_expire(private_kernel_klips_ipsec_t *this,
 /**
  * Implementation of kernel_interface_t.get_spi.
  */
-static status_t get_spi(private_kernel_klips_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_spi(private_kernel_klips_ipsec_t *this,
+						host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
@@ -1545,7 +1545,7 @@ static status_t get_spi(private_kernel_klips_ipsec_t *this,
 	 */
 	rng_t *rng;
 	u_int32_t spi_gen;
-	
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
@@ -1554,29 +1554,29 @@ static status_t get_spi(private_kernel_klips_ipsec_t *this,
 	}
 	rng->get_bytes(rng, sizeof(spi_gen), (void*)&spi_gen);
 	rng->destroy(rng);
-	
+
 	/* charon's SPIs lie within the range from 0xc0000000 to 0xcFFFFFFF */
 	spi_gen = 0xc0000000 | (spi_gen & 0x0FFFFFFF);
-	
+
 	DBG2(DBG_KNL, "allocated SPI %.8x for %N SA between %#H..%#H",
 			spi_gen, protocol_id_names, protocol, src, dst);
-	
+
 	*spi = htonl(spi_gen);
-	
+
 	this->mutex->lock(this->mutex);
 	this->allocated_spis->insert_last(this->allocated_spis,
 			create_sa_entry(protocol, *spi, reqid, NULL, NULL, FALSE, TRUE));
 	this->mutex->unlock(this->mutex);
 	schedule_expire(this, protocol, *spi, reqid, EXPIRE_TYPE_SPI, SPI_TIMEOUT);
-	
+
 	return SUCCESS;
 }
 
 /**
  * Implementation of kernel_interface_t.get_cpi.
  */
-static status_t get_cpi(private_kernel_klips_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_cpi(private_kernel_klips_ipsec_t *this,
+						host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi)
 {
 	return FAILED;
@@ -1592,27 +1592,27 @@ static status_t add_ipip_sa(private_kernel_klips_ipsec_t *this,
 	struct sadb_msg *msg, *out;
 	struct sadb_sa *sa;
 	size_t len;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	DBG2(DBG_KNL, "adding pseudo IPIP SA with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_ADD;
 	msg->sadb_msg_satype = SADB_X_SATYPE_IPIP;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add pseudo IPIP SA with SPI %.8x", ntohl(spi));
@@ -1625,7 +1625,7 @@ static status_t add_ipip_sa(private_kernel_klips_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
-	
+
 	free(out);
 	return SUCCESS;
 }
@@ -1642,41 +1642,41 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 	struct sadb_sa *sa;
 	struct sadb_x_satype *satype;
 	size_t len;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	DBG2(DBG_KNL, "grouping SAs with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_X_GRPSA;
 	msg->sadb_msg_satype = SADB_X_SATYPE_IPIP;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
-	
+
 	satype = (struct sadb_x_satype*)PFKEY_EXT_ADD_NEXT(msg);
 	satype->sadb_x_satype_exttype = SADB_X_EXT_SATYPE2;
 	satype->sadb_x_satype_len = PFKEY_LEN(sizeof(struct sadb_x_satype));
 	satype->sadb_x_satype_satype = proto_ike2satype(protocol);
 	PFKEY_EXT_ADD(msg, satype);
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_X_EXT_SA2;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	add_addr_ext(msg, dst, SADB_X_EXT_ADDRESS_DST2);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to group SAs with SPI %.8x", ntohl(spi));
@@ -1689,7 +1689,7 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
-	
+
 	free(out);
 	return SUCCESS;
 }
@@ -1711,7 +1711,7 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	struct sadb_sa *sa;
 	struct sadb_key *key;
 	size_t len;
-	
+
 	if (inbound)
 	{
 		/* for inbound SAs we allocated an SPI via get_spi, so we first check
@@ -1733,17 +1733,17 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 		}
 		this->mutex->unlock(this->mutex);
 	}
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%d}", ntohl(spi), reqid);
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_ADD;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
@@ -1753,10 +1753,10 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, int_alg);
 	sa->sadb_sa_encrypt = lookup_algorithm(encryption_algs, enc_alg);
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
-	
+
 	if (enc_alg != ENCR_UNDEFINED)
 	{
 		if (!sa->sadb_sa_encrypt)
@@ -1767,16 +1767,16 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 		}
 		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 			 encryption_algorithm_names, enc_alg, enc_key.len * 8);
-		
+
 		key = (struct sadb_key*)PFKEY_EXT_ADD_NEXT(msg);
 		key->sadb_key_exttype = SADB_EXT_KEY_ENCRYPT;
 		key->sadb_key_bits = enc_key.len * 8;
 		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + enc_key.len);
 		memcpy(key + 1, enc_key.ptr, enc_key.len);
-		
+
 		PFKEY_EXT_ADD(msg, key);
 	}
-	
+
 	if (int_alg != AUTH_UNDEFINED)
 	{
 		if (!sa->sadb_sa_auth)
@@ -1787,26 +1787,26 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg, int_key.len * 8);
-		
+
 		key = (struct sadb_key*)PFKEY_EXT_ADD_NEXT(msg);
 		key->sadb_key_exttype = SADB_EXT_KEY_AUTH;
 		key->sadb_key_bits = int_key.len * 8;
 		key->sadb_key_len = PFKEY_LEN(sizeof(struct sadb_key) + int_key.len);
 		memcpy(key + 1, int_key.ptr, int_key.len);
-		
+
 		PFKEY_EXT_ADD(msg, key);
 	}
-	
+
 	if (ipcomp != IPCOMP_NONE)
 	{
 		/*TODO*/
 	}
-	
+
 	if (encap)
 	{
 		add_encap_ext(msg, src, dst, FALSE);
 	}
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
@@ -1820,7 +1820,7 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 		return FAILED;
 	}
 	free(out);
-	
+
 	/* for tunnel mode SAs we have to install an additional IPIP SA and
 	 * group the two SAs together */
 	if (mode == MODE_TUNNEL)
@@ -1832,7 +1832,7 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 			return FAILED;
 		}
 	}
-	
+
 	this->mutex->lock(this->mutex);
 	/* we cache this SA for two reasons:
 	 * - in case an SADB_X_NAT_T_MAPPING_NEW event occurs (we need to find the reqid then)
@@ -1840,7 +1840,7 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	this->installed_sas->insert_last(this->installed_sas,
 				create_sa_entry(protocol, spi, reqid, src, dst, encap, inbound));
 	this->mutex->unlock(this->mutex);
-	
+
 	/* Although KLIPS supports SADB_EXT_LIFETIME_SOFT/HARD, we handle the lifetime
 	 * of SAs manually in the plugin. Refer to the comments in receive_events()
 	 * for details. */
@@ -1848,12 +1848,12 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 	{
 		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_SOFT, lifetime->time.rekey);
 	}
-	
+
 	if (lifetime->time.life)
 	{
 		schedule_expire(this, protocol, spi, reqid, EXPIRE_TYPE_HARD, lifetime->time.life);
 	}
-		
+
 	return SUCCESS;
 }
 
@@ -1870,7 +1870,7 @@ static status_t update_sa(private_kernel_klips_ipsec_t *this,
 	struct sadb_msg *msg, *out;
 	struct sadb_sa *sa;
 	size_t len;
-	
+
 	/* we can't update the SA if any of the ip addresses have changed.
 	 * that's because we can't use SADB_UPDATE and by deleting and readding the
 	 * SA the sequence numbers would get lost */
@@ -1881,7 +1881,7 @@ static status_t update_sa(private_kernel_klips_ipsec_t *this,
 				" are not supported", ntohl(spi));
 		return NOT_SUPPORTED;
 	}
-	
+
 	/* because KLIPS does not allow us to change the NAT-T type in an SADB_UPDATE,
 	 * we can't update the SA if the encap flag has changed since installing it */
 	if (encap != new_encap)
@@ -1890,18 +1890,18 @@ static status_t update_sa(private_kernel_klips_ipsec_t *this,
 				" encapsulation is not supported", ntohl(spi));
 		return NOT_SUPPORTED;
 	}
-	
+
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 		 ntohl(spi), src, dst, new_src, new_dst);
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_UPDATE;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
@@ -1910,12 +1910,12 @@ static status_t update_sa(private_kernel_klips_ipsec_t *this,
 	sa->sadb_sa_auth = SADB_AALG_SHA1HMAC; /* ignored */
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
-			
+
 	add_encap_ext(msg, new_src, new_dst, TRUE);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
@@ -1929,7 +1929,7 @@ static status_t update_sa(private_kernel_klips_ipsec_t *this,
 		return FAILED;
 	}
 	free(out);
-	
+
 	return SUCCESS;
 }
 
@@ -1955,13 +1955,13 @@ static status_t del_sa(private_kernel_klips_ipsec_t *this, host_t *src,
 	struct sadb_sa *sa;
 	sa_entry_t *cached_sa;
 	size_t len;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	/* all grouped SAs are automatically deleted by KLIPS as soon as
 	 * one of them is deleted, therefore we delete only the main one */
 	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x", ntohl(spi));
-	
+
 	this->mutex->lock(this->mutex);
 	/* this should not fail, but we don't care if it does, let the kernel decide
 	 * whether this SA exists or not */
@@ -1973,24 +1973,24 @@ static status_t del_sa(private_kernel_klips_ipsec_t *this, host_t *src,
 		sa_entry_destroy(cached_sa);
 	}
 	this->mutex->unlock(this->mutex);
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_DELETE;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
 	sa->sadb_sa_exttype = SADB_EXT_SA;
 	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
 	sa->sadb_sa_spi = spi;
 	PFKEY_EXT_ADD(msg, sa);
-	
+
 	/* the kernel wants an SADB_EXT_ADDRESS_SRC to be present even though
 	 * it is not used for anything. */
 	add_anyaddr_ext(msg, dst->get_family(dst), SADB_EXT_ADDRESS_SRC);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x", ntohl(spi));
@@ -2003,7 +2003,7 @@ static status_t del_sa(private_kernel_klips_ipsec_t *this, host_t *src,
 		free(out);
 		return FAILED;
 	}
-	
+
 	DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x", ntohl(spi));
 	free(out);
 	return SUCCESS;
@@ -2012,7 +2012,7 @@ static status_t del_sa(private_kernel_klips_ipsec_t *this, host_t *src,
 /**
  * Implementation of kernel_interface_t.add_policy.
  */
-static status_t add_policy(private_kernel_klips_ipsec_t *this, 
+static status_t add_policy(private_kernel_klips_ipsec_t *this,
 						   host_t *src, host_t *dst,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
@@ -2025,21 +2025,21 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 	struct sadb_msg *msg, *out;
 	policy_entry_t *policy, *found = NULL;
 	u_int8_t satype;
-	size_t len;	
-	
+	size_t len;
+
 	if (direction == POLICY_FWD)
 	{
 		/* no forward policies for KLIPS */
 		return SUCCESS;
 	}
-	
+
 	/* tunnel mode policies direct the packets into the pseudo IPIP SA */
 	satype = (mode == MODE_TUNNEL) ? SADB_X_SATYPE_IPIP :
 									 proto_ike2satype(protocol);
-	
+
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction);
-	
+
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
@@ -2057,21 +2057,21 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 		/* apply the new one, if we have no such policy */
 		this->policies->insert_last(this->policies, policy);
 	}
-		
+
 	if (routed)
 	{
 		/* we install this as a %trap eroute in the kernel, later to be
 		 * triggered by packets matching the policy (-> ACQUIRE). */
 		spi = htonl(SPI_TRAP);
 		satype = SADB_X_SATYPE_INT;
-		
+
 		/* the reqid is always set to the latest child SA that trapped this
 		 * policy. we will need this reqid upon receiving an acquire. */
 		policy->reqid = reqid;
-		
+
 		/* increase the trap counter */
 		policy->trapcount++;
-		
+
 		if (policy->activecount)
 		{
 			/* we do not replace the current policy in the kernel while a
@@ -2085,21 +2085,21 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 		/* increase the reference counter */
 		policy->activecount++;
 	}
-	
+
 	DBG2(DBG_KNL, "adding policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	msg = (struct sadb_msg*)request;
-	
+
 	/* FIXME: SADB_X_SAFLAGS_INFLOW may be required, if we add an inbound policy for an IPIP SA */
 	build_addflow(msg, satype, spi, routed ? NULL : src, routed ? NULL : dst,
 			policy->src.net, policy->src.mask, policy->dst.net, policy->dst.mask,
 			policy->src.proto, found != NULL);
-	
+
 	this->mutex->unlock(this->mutex);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add policy %R === %R %N", src_ts, dst_ts,
@@ -2115,9 +2115,9 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 		return FAILED;
 	}
 	free(out);
-	
+
 	this->mutex->lock(this->mutex);
-	
+
 	/* we try to find the policy again and install the route if needed */
 	if (this->policies->find_last(this->policies, NULL, (void**)&policy) != SUCCESS)
 	{
@@ -2126,7 +2126,7 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 				src_ts, dst_ts, policy_dir_names, direction);
 		return SUCCESS;
 	}
-	
+
 	/* KLIPS requires a special route that directs traffic that matches this
 	 * policy to one of the virtual ipsec interfaces. The virtual interface
 	 * has to be attached to the physical one the traffic runs over.
@@ -2144,19 +2144,19 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 		ipsec_dev_t *dev;
 		route_entry_t *route = malloc_thing(route_entry_t);
 		route->src_ip = NULL;
-		
+
 		if (mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
 			this->install_routes)
 		{
 			charon->kernel_interface->get_address_by_ts(charon->kernel_interface,
 						src_ts, &route->src_ip);
 		}
-		
+
 		if (!route->src_ip)
 		{
 			route->src_ip = host_create_any(src->get_family(src));
 		}
-		
+
 		/* find the virtual interface */
 		iface = charon->kernel_interface->get_interface(charon->kernel_interface,
 														src);
@@ -2203,13 +2203,13 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 		}
 		free(iface);
 		route->if_name = strdup(dev->name);
-		
+
 		/* get the nexthop to dst */
 		route->gateway = charon->kernel_interface->get_nexthop(
 										charon->kernel_interface, dst);
 		route->dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net));
 		route->prefixlen = policy->dst.mask;
-		
+
 		switch (charon->kernel_interface->add_route(charon->kernel_interface,
 				route->dst_net, route->prefixlen, route->gateway,
 				route->src_ip, route->if_name))
@@ -2227,10 +2227,10 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
 				policy->route = route;
 				break;
 		}
-	}	
-	
-	this->mutex->unlock(this->mutex);	
-	
+	}
+
+	this->mutex->unlock(this->mutex);
+
 	return SUCCESS;
 }
 
@@ -2238,7 +2238,7 @@ static status_t add_policy(private_kernel_klips_ipsec_t *this,
  * Implementation of kernel_interface_t.query_policy.
  */
 static status_t query_policy(private_kernel_klips_ipsec_t *this,
-							 traffic_selector_t *src_ts, 
+							 traffic_selector_t *src_ts,
 							 traffic_selector_t *dst_ts,
 							 policy_dir_t direction, u_int32_t *use_time)
 {
@@ -2250,19 +2250,19 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 	char *said = NULL, *pos;
 	policy_entry_t *policy, *found = NULL;
 	status_t status = FAILED;
-	
+
 	if (direction == POLICY_FWD)
 	{
 		/* we do not install forward policies */
 		return FAILED;
 	}
-	
+
 	DBG2(DBG_KNL, "querying policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
-	
+
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction);
-	
+
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
@@ -2276,7 +2276,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 	}
 	policy_entry_destroy(policy);
 	policy = found;
-	
+
 	/* src and dst selectors in KLIPS are of the form NET_ADDR/NETBITS:PROTO */
 	snprintf(src, sizeof(src), "%H/%d:%d", policy->src.net, policy->src.mask,
 			policy->src.proto);
@@ -2284,9 +2284,9 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 	snprintf(dst, sizeof(dst), "%H/%d:%d", policy->dst.net, policy->dst.mask,
 			policy->dst.proto);
 	dst[sizeof(dst) - 1] = '\0';
-	
+
 	this->mutex->unlock(this->mutex);
-	
+
 	/* we try to find the matching eroute first */
 	file = fopen(path_eroute, "r");
 	if (file == NULL)
@@ -2295,7 +2295,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 				dst_ts, policy_dir_names, direction, strerror(errno), errno);
 		return FAILED;
 	}
-	
+
 	/* read line by line where each line looks like:
 	 * packets  src  ->  dst  =>  said */
 	while (fgets(line, sizeof(line), file))
@@ -2303,7 +2303,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 		enumerator_t *enumerator;
 		char *token;
 		int i = 0;
-		
+
 		enumerator = enumerator_create_token(line, " \t", " \t\n");
 		while (enumerator->enumerate(enumerator, &token))
 		{
@@ -2334,7 +2334,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 			break;
 		}
 		enumerator->destroy(enumerator);
-		
+
 		if (i == 5)
 		{
 			/* eroute matched */
@@ -2342,19 +2342,19 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 		}
 	}
 	fclose(file);
-	
+
 	if (said == NULL)
 	{
 		DBG1(DBG_KNL, "unable to query policy %R === %R %N: found no matching"
 				" eroute", src_ts, dst_ts, policy_dir_names, direction);
 		return FAILED;
 	}
-	
+
 	/* compared with the one in the spi entry the SA ID from the eroute entry
 	 * has an additional ":PROTO" appended, which we need to cut off */
 	pos = strrchr(said, ':');
 	*pos = '\0';
-	
+
 	/* now we try to find the matching spi entry */
 	file = fopen(path_spi, "r");
 	if (file == NULL)
@@ -2363,7 +2363,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 				dst_ts, policy_dir_names, direction, strerror(errno), errno);
 		return FAILED;
 	}
-	
+
 	while (fgets(line, sizeof(line), file))
 	{
 		if (strneq(line, said, strlen(said)))
@@ -2381,7 +2381,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 				/* idle time not valid */
 				break;
 			}
-			
+
 			*use_time = time_monotonic(NULL) - idle_time;
 			status = SUCCESS;
 			break;
@@ -2389,7 +2389,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
 	}
 	fclose(file);
 	free(said);
-	
+
 	return status;
 }
 
@@ -2397,7 +2397,7 @@ static status_t query_policy(private_kernel_klips_ipsec_t *this,
  * Implementation of kernel_interface_t.del_policy.
  */
 static status_t del_policy(private_kernel_klips_ipsec_t *this,
-						   traffic_selector_t *src_ts, 
+						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, bool unrouted)
 {
@@ -2406,19 +2406,19 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 	policy_entry_t *policy, *found = NULL;
 	route_entry_t *route;
 	size_t len;
-	
+
 	if (direction == POLICY_FWD)
 	{
 		/* no forward policies for KLIPS */
 		return SUCCESS;
 	}
-	
+
 	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
-	
+
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction);
-	
+
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
@@ -2431,10 +2431,10 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 		return NOT_FOUND;
 	}
 	policy_entry_destroy(policy);
-	
+
 	/* decrease appropriate counter */
 	unrouted ? found->trapcount-- : found->activecount--;
-	
+
 	if (found->trapcount == 0)
 	{
 		/* if this policy is finally unrouted, we reset the reqid because it
@@ -2442,7 +2442,7 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 		 * this policy. */
 		found->reqid = 0;
 	}
-	
+
 	if (found->activecount > 0)
 	{
 		/* is still used by SAs, keep in kernel */
@@ -2462,22 +2462,22 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 		this->mutex->unlock(this->mutex);
 		return pfkey_send_ack(this, msg);
 	}
-	
+
 	/* remove if last reference */
 	this->policies->remove(this->policies, found, NULL);
 	policy = found;
-	
+
 	this->mutex->unlock(this->mutex);
-		
+
 	memset(&request, 0, sizeof(request));
-	
+
 	build_delflow(msg, 0, policy->src.net, policy->src.mask, policy->dst.net,
 			policy->dst.mask, policy->src.proto);
-	
+
 	route = policy->route;
 	policy->route = NULL;
 	policy_entry_destroy(policy);
-	
+
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete policy %R === %R %N", src_ts, dst_ts,
@@ -2493,11 +2493,11 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 		return FAILED;
 	}
 	free(out);
-	
+
 	if (route)
 	{
 		ipsec_dev_t *dev;
-		
+
 		if (charon->kernel_interface->del_route(charon->kernel_interface,
 				route->dst_net, route->prefixlen, route->gateway,
 				route->src_ip, route->if_name) != SUCCESS)
@@ -2506,11 +2506,11 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 						  " policy %R === %R %N", src_ts, dst_ts,
 						   policy_dir_names, direction);
 		}
-		
+
 		/* we have to detach the ipsec interface from the physical one over which
 		 * this SA ran (if it is not used by any other) */
 		this->mutex->lock(this->mutex);
-		
+
 		if (find_ipsec_dev(this, route->if_name, &dev) == SUCCESS)
 		{
 			/* fine, we found a matching device object, let's check if we have
@@ -2525,12 +2525,12 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 				dev->phys_name[0] = '\0';
 			}
 		}
-		
+
 		this->mutex->unlock(this->mutex);
-		
+
 		route_entry_destroy(route);
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -2542,7 +2542,7 @@ static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 	int i, count = lib->settings->get_int(lib->settings,
 						"charon.plugins.kernel_klips.ipsec_dev_count",
 						DEFAULT_IPSEC_DEV_COUNT);
-	
+
 	for (i = 0; i < count; ++i)
 	{
 		ipsec_dev_t *dev = malloc_thing(ipsec_dev_t);
@@ -2551,7 +2551,7 @@ static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 		dev->phys_name[0] = '\0';
 		dev->refcount = 0;
 		this->ipsec_devices->insert_last(this->ipsec_devices, dev);
-		
+
 		/* detach any previously attached ipsec device */
 		detach_ipsec_dev(dev->name, dev->phys_name);
 	}
@@ -2565,15 +2565,15 @@ static status_t register_pfkey_socket(private_kernel_klips_ipsec_t *this, u_int8
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	size_t len;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_REGISTER;
 	msg->sadb_msg_satype = satype;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
+
 	if (pfkey_send_socket(this, this->socket_events, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to register PF_KEY socket");
@@ -2613,7 +2613,7 @@ static void destroy(private_kernel_klips_ipsec_t *this)
 kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 {
 	private_kernel_klips_ipsec_t *this = malloc_thing(private_kernel_klips_ipsec_t);
-	
+
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
@@ -2624,7 +2624,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
-	
+
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
 
 	/* private members */
@@ -2636,34 +2636,34 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	this->mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings, "charon.install_routes", TRUE);
 	this->seq = 0;
-	
+
 	/* initialize ipsec devices */
 	init_ipsec_devices(this);
-	
+
 	/* create a PF_KEY socket to communicate with the kernel */
 	this->socket = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
 	if (this->socket <= 0)
 	{
 		charon->kill(charon, "unable to create PF_KEY socket");
 	}
-	
+
 	/* create a PF_KEY socket for ACQUIRE & EXPIRE */
 	this->socket_events = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
 	if (this->socket_events <= 0)
 	{
 		charon->kill(charon, "unable to create PF_KEY event socket");
 	}
-	
+
 	/* register the event socket */
 	if (register_pfkey_socket(this, SADB_SATYPE_ESP) != SUCCESS ||
 		register_pfkey_socket(this, SADB_SATYPE_AH) != SUCCESS)
 	{
 		charon->kill(charon, "unable to register PF_KEY event socket");
 	}
-	
+
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
-	
+
 	return &this->public;
 }

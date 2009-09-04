@@ -37,20 +37,20 @@ struct netlink_socket_t {
 
 	/**
 	 * Send a netlink message and wait for a reply.
-	 * 
+	 *
 	 * @param	in		netlink message to send
 	 * @param	out 	received netlink message
 	 * @param	out_len	length of the received message
 	 */
 	status_t (*send)(netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out, size_t *out_len);
-	
+
 	/**
 	 * Send a netlink message and wait for its acknowledge.
-	 * 
+	 *
 	 * @param	in		netlink message to send
 	 */
 	status_t (*send_ack)(netlink_socket_t *this, struct nlmsghdr *in);
-	
+
 	/**
 	 * Destroy the socket.
 	 */
@@ -59,14 +59,14 @@ struct netlink_socket_t {
 
 /**
  * Create a netlink_socket_t object.
- * 
+ *
  * @param	protocol	protocol type (e.g. NETLINK_XFRM or NETLINK_ROUTE)
  */
 netlink_socket_t *netlink_socket_create(int protocol);
 
 /**
  * Creates an rtattr and adds it to the given netlink message.
- * 
+ *
  * @param	hdr			netlink message
  * @param	rta_type	type of the rtattr
  * @param	data		data to add to the rtattr

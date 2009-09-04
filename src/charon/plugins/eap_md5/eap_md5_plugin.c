@@ -37,14 +37,14 @@ static void destroy(eap_md5_plugin_t *this)
 plugin_t *plugin_create()
 {
 	eap_md5_plugin_t *this = malloc_thing(eap_md5_plugin_t);
-	
+
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->eap->add_method(charon->eap, EAP_MD5, 0, EAP_SERVER,
 							(eap_constructor_t)eap_md5_create_server);
 	charon->eap->add_method(charon->eap, EAP_MD5, 0, EAP_PEER,
 							(eap_constructor_t)eap_md5_create_peer);
-	
+
 	return &this->plugin;
 }
 

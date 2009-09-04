@@ -25,27 +25,27 @@ typedef struct private_ike_delete_t private_ike_delete_t;
  * Private members of a ike_delete_t task.
  */
 struct private_ike_delete_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_delete_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * are we deleting a rekeyed SA?
 	 */
 	bool rekeyed;
-	
+
 	/**
 	 * are we responding to a delete, but have initated our own?
 	 */
@@ -69,7 +69,7 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 
 	delete_payload = delete_payload_create(PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
-	
+
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
 	{
 		this->rekeyed = TRUE;
@@ -189,7 +189,7 @@ ike_delete_t *ike_delete_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -200,11 +200,11 @@ ike_delete_t *ike_delete_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->rekeyed = FALSE;
 	this->simultaneous = FALSE;
-	
+
 	return &this->public;
 }

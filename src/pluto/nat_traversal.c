@@ -147,7 +147,7 @@ static void _natd_hash(const struct hash_desc *oakley_hasher, char *hash,
 				addr_chunk = chunk_from_thing(ip->u.v6.sin6_addr.s6_addr);
 				break;
 			default:
-				addr_chunk = chunk_empty; /* should never occur */ 
+				addr_chunk = chunk_empty; /* should never occur */
 		}
 		hasher->get_hash(hasher, addr_chunk, NULL);
 		hasher->get_hash(hasher, port_chunk, hash);
@@ -310,7 +310,7 @@ bool nat_traversal_add_natd(u_int8_t np, pb_stream *outs,
 	DBG(DBG_EMITTING,
 		DBG_log("sending NATD payloads")
 	)
-		
+
 	/*
 	 * First one with sender IP & port
 	 */
@@ -348,7 +348,7 @@ bool nat_traversal_add_natd(u_int8_t np, pb_stream *outs,
 
 /*
  * nat_traversal_natoa_lookup()
- * 
+ *
  * Look for NAT-OA in message
  */
 void nat_traversal_natoa_lookup(struct msg_digest *md)
@@ -435,7 +435,7 @@ void nat_traversal_natoa_lookup(struct msg_digest *md)
 		{
 			char ip_t[ADDRTOT_BUF];
 			addrtot(&ip, 0, ip_t, sizeof(ip_t));
-		
+
 			DBG_log("received NAT-OA: %s", ip_t);
 		}
 	)
@@ -514,7 +514,7 @@ void nat_traversal_show_result (u_int32_t nt, u_int16_t sport)
 		mth = natt_type_bitnames[2];
 		break;
 	}
-	
+
 	switch (nt & NAT_T_DETECTED)
 	{
 	case 0:

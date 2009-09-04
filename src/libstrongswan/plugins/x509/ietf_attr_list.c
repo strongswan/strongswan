@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2007 Andreas Steffen, Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ struct ietfAttr_t {
 
 	/**
 	 * Compares two ietfAttributes
-	 *	
+	 *
 	 * return -1 if this is earlier in the alphabet than other
 	 * return  0 if this equals other
 	 * return +1 if this is later in the alphabet than other
@@ -64,7 +64,7 @@ struct ietfAttr_t {
 
 	/**
 	 * Destroys the ietfAttr_t object.
-	 * 
+	 *
 	 * @param this			ietfAttr_t to destroy
 	 */
 	void (*destroy) (ietfAttr_t *this);
@@ -86,7 +86,7 @@ static int ietfAttr_compare(const ietfAttr_t *this ,const ietfAttr_t *other)
 	{
 		return 1;
 	}
-	
+
     cmp_len = this->value.len - other->value.len;
     len = (cmp_len < 0)? this->value.len : other->value.len;
     cmp_value = memcmp(this->value.ptr, other->value.ptr, len);
@@ -271,7 +271,7 @@ void ietfAttr_list_create_from_string(char *msg, linked_list_t *list)
 		if (group.len > 0)
 		{
 			ietfAttr_t *attr = ietfAttr_create(IETF_ATTRIBUTE_STRING, group);
-		
+
 			ietfAttr_add(list, attr);
 		}
 	}
@@ -378,7 +378,7 @@ chunk_t ietfAttr_list_encode(linked_list_t *list)
 		ietfAttribute = asn1_simple_object(type, attr->value);
 
 		/* copy ietfAttribute into ietfAttributes chunk */
-		memcpy(pos, ietfAttribute.ptr, ietfAttribute.len); 
+		memcpy(pos, ietfAttribute.ptr, ietfAttribute.len);
 		pos += ietfAttribute.len;
 		free(ietfAttribute.ptr);
 	}

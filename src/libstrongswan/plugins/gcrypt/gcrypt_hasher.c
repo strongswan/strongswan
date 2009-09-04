@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil 
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,12 +25,12 @@ typedef struct private_gcrypt_hasher_t private_gcrypt_hasher_t;
  * Private data of gcrypt_hasher_t
  */
 struct private_gcrypt_hasher_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	gcrypt_hasher_t public;
-	
+
 	/**
 	 * gcrypt hasher context
 	 */
@@ -101,7 +101,7 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 	private_gcrypt_hasher_t *this;
 	int gcrypt_alg;
 	gcry_error_t err;
-	
+
 	switch (algo)
 	{
 		case HASH_MD2:
@@ -131,9 +131,9 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 		default:
 			return NULL;
 	}
-	
+
 	this = malloc_thing(private_gcrypt_hasher_t);
-	
+
 	err = gcry_md_open(&this->hd, gcrypt_alg, 0);
 	if (err)
 	{
@@ -142,13 +142,13 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 		free(this);
 		return NULL;
 	}
-	
+
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
-	
+
 	return &this->public;
 }
 

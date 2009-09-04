@@ -32,22 +32,22 @@ struct private_medcli_plugin_t {
 	 * implements plugin interface
 	 */
 	medcli_plugin_t public;
-	
+
 	/**
 	 * database connection instance
 	 */
 	database_t *db;
-	
+
 	/**
 	 * medcli credential set instance
 	 */
 	medcli_creds_t *creds;
-	
+
 	/**
 	 * medcli config database
 	 */
 	medcli_config_t *config;
-	
+
 	/**
 	 * Listener to update database connection state
 	 */
@@ -76,9 +76,9 @@ plugin_t *plugin_create()
 {
 	char *uri;
 	private_medcli_plugin_t *this = malloc_thing(private_medcli_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	uri = lib->settings->get_str(lib->settings,
 								 "medcli.database", NULL);
 	if (!uri)
@@ -87,7 +87,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	
+
 	this->db = lib->db->create(lib->db, uri);
 	if (this->db == NULL)
 	{
@@ -95,15 +95,15 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	
+
 	this->creds = medcli_creds_create(this->db);
 	this->config = medcli_config_create(this->db);
 	this->listener = medcli_listener_create(this->db);
-	
+
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
-	
+
 	return &this->public.plugin;
 }
 

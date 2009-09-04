@@ -28,7 +28,7 @@ typedef struct ocsp_response_t ocsp_response_t;
 typedef enum ocsp_status_t ocsp_status_t;
 
 /**
- * OCSP response status 
+ * OCSP response status
  */
 enum ocsp_status_t {
 	OCSP_SUCCESSFUL 		= 0,
@@ -53,7 +53,7 @@ struct ocsp_response_t {
 	 * Implements certificiate_t interface
 	 */
 	certificate_t certificate;
-	
+
 	/**
 	 * Check the status of a certificate by this OCSP response.
 	 *
@@ -65,18 +65,18 @@ struct ocsp_response_t {
 	 * @param next_update		exptected time of next revocation list
 	 * @return					certificate revocation status
 	 */
-	cert_validation_t (*get_status)(ocsp_response_t *this, 
+	cert_validation_t (*get_status)(ocsp_response_t *this,
 									x509_t *subject, x509_t *issuer,
 									time_t *revocation_time,
 									crl_reason_t *revocation_reason,
 									time_t *this_update, time_t *next_update);
-	
+
 	/**
 	 * Create an enumerator over the contained certificates.
 	 *
 	 * @return					enumerator over certificate_t*
 	 */
-	enumerator_t* (*create_cert_enumerator)(ocsp_response_t *this);	
+	enumerator_t* (*create_cert_enumerator)(ocsp_response_t *this);
 };
 
 #endif /** OCSP_RESPONSE_H_ @}*/

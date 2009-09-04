@@ -140,7 +140,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 		c->spd.that.client.addr     = ia->ipaddr;
 		c->spd.that.client.maskbits = 32;
 		c->spd.that.has_client      = TRUE;
-		
+
 		ia->attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 					 | LELEM(INTERNAL_IP4_NETMASK);
 	}
@@ -165,7 +165,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 			}
 			plog("assigning DNS server %s to peer", dns_str);
 
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
 			ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
 			dns_idx++;
 		}
@@ -191,7 +191,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 			}
 			plog("assigning NBNS server %s to peer", nbns_str);
 
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
 			ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
 			nbns_idx++;
 		}
@@ -227,7 +227,7 @@ set_internal_addr(struct connection *c, internal_addr_t *ia)
 			plog("replacing virtual IP source address %s by %s"
 				, old_srcip, new_srcip);
 		}
-		
+
 		/* setting srcip */
 		c->spd.this.host_srcip = ia->ipaddr;
 
@@ -263,12 +263,12 @@ static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
 	DBG(DBG_CRYPT,
 		DBG_log("ModeCfg HASH computed:");
 		DBG_dump("", dest, prf_block_size)
-	) 
+	)
 	return prf_block_size;
 }
 
 
-/* 
+/*
  * Generate an IKE message containing ModeCfg information (eg: IP, DNS, WINS)
  */
 static stf_status
@@ -322,7 +322,7 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 					is_unity_attr_set = FALSE;
 				}
 			}
-		
+
 			dont_advance = FALSE;
 
 			if (attr_set & 1)
@@ -384,7 +384,7 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 								mask[t] = 0xff;
 							m -= 8;
 						}
-#endif                              
+#endif
 						if (st->st_connection->spd.this.client.maskbits == 0)
 						{
 							mask = 0;
@@ -735,7 +735,7 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	return STF_OK;
 }
 
-/* 
+/*
  * Parse a ModeCfg message
  */
 static stf_status
@@ -859,7 +859,7 @@ modecfg_inR0(struct msg_digest *md)
 /* STATE_MODE_CFG_I1:
  * HDR*, HASH, ATTR(REPLY=IP)
  *
- * used in ModeCfg pull mode, on the client (initiator) 
+ * used in ModeCfg pull mode, on the client (initiator)
  */
 stf_status
 modecfg_inI1(struct msg_digest *md)
@@ -1148,7 +1148,7 @@ xauth_inR1(struct msg_digest *md)
 		plog("user password attribute is missing in XAUTH reply");
 		st->st_xauth.status = FALSE;
 	}
-	else 
+	else
 	{
 		xauth_peer_t peer;
 

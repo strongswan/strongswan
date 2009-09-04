@@ -54,12 +54,12 @@ struct rattr_t {
  * Private data of an radius_message_t object.
  */
 struct private_radius_message_t {
-	
+
 	/**
 	 * Public radius_message_t interface.
 	 */
 	radius_message_t public;
-	
+
 	/**
 	 * message data, allocated
 	 */
@@ -247,12 +247,12 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 static enumerator_t* create_enumerator(private_radius_message_t *this)
 {
 	attribute_enumerator_t *e;
-	
+
 	if (ntohs(this->msg->length) < sizeof(rmsg_t) + sizeof(rattr_t))
 	{
 		return enumerator_create_empty();
 	}
-	
+
 	e = malloc_thing(attribute_enumerator_t);
 	e->public.enumerate = (void*)attribute_enumerate;
 	e->public.destroy = (void*)free;
@@ -268,7 +268,7 @@ static void add(private_radius_message_t *this, radius_attribute_type_t type,
 				chunk_t data)
 {
 	rattr_t *attribute;
-	
+
 	this->msg = realloc(this->msg,
 						ntohs(this->msg->length) + sizeof(rattr_t) + data.len);
 	attribute = ((void*)this->msg) + ntohs(this->msg->length);
@@ -284,10 +284,10 @@ static void add(private_radius_message_t *this, radius_attribute_type_t type,
 static void sign(private_radius_message_t *this, rng_t *rng, signer_t *signer)
 {
 	char buf[HASH_SIZE_MD5];
-	
+
 	/* build Request-Authenticator */
 	rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
-	
+
 	/* build Message-Authenticator attribute, using 16 null bytes */
 	memset(buf, 0, sizeof(buf));
 	add(this, RAT_MESSAGE_AUTHENTICATOR, chunk_create(buf, sizeof(buf)));
@@ -307,12 +307,12 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 	int type;
 	chunk_t data, msg;
 	bool has_eap = FALSE, has_auth = FALSE;
-	
+
 	/* replace Response by Request Authenticator for verification */
 	memcpy(res_auth, this->msg->authenticator, HASH_SIZE_MD5);
 	memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
 	msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
-	
+
 	/* verify Response-Authenticator */
 	hasher->get_hash(hasher, msg, NULL);
 	hasher->get_hash(hasher, secret, buf);
@@ -321,7 +321,7 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 		DBG1(DBG_CFG, "RADIUS Response-Authenticator verification failed");
 		return FALSE;
 	}
-	
+
 	/* verify Message-Authenticator attribute */
 	enumerator = create_enumerator(this);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -359,7 +359,7 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 	enumerator->destroy(enumerator);
 	/* restore Response-Authenticator */
 	memcpy(this->msg->authenticator, res_auth, HASH_SIZE_MD5);
-	
+
 	if (has_eap && !has_auth)
 	{	/* Message-Authenticator is required if we have an EAP-Message */
 		DBG1(DBG_CFG, "RADIUS Message-Authenticator attribute missing");
@@ -424,7 +424,7 @@ static void destroy(private_radius_message_t *this)
 static private_radius_message_t *radius_message_create()
 {
 	private_radius_message_t *this = malloc_thing(private_radius_message_t);
-	
+
 	this->public.create_enumerator = (enumerator_t*(*)(radius_message_t*))create_enumerator;
 	this->public.add = (void(*)(radius_message_t*, radius_attribute_type_t,chunk_t))add;
 	this->public.get_code = (radius_message_code_t(*)(radius_message_t*))get_code;
@@ -435,7 +435,7 @@ static private_radius_message_t *radius_message_create()
 	this->public.sign = (void(*)(radius_message_t*, rng_t *rng, signer_t *signer))sign;
 	this->public.verify = (bool(*)(radius_message_t*, u_int8_t *req_auth, chunk_t secret, hasher_t *hasher, signer_t *signer))verify;
 	this->public.destroy = (void(*)(radius_message_t*))destroy;
-	
+
 	return this;
 }
 
@@ -445,12 +445,12 @@ static private_radius_message_t *radius_message_create()
 radius_message_t *radius_message_create_request()
 {
 	private_radius_message_t *this = radius_message_create();
-	
+
 	this->msg = malloc_thing(rmsg_t);
 	this->msg->code = RMC_ACCESS_REQUEST;
 	this->msg->identifier = 0;
 	this->msg->length = htons(sizeof(rmsg_t));
-	
+
 	return &this->public;
 }
 
@@ -460,7 +460,7 @@ radius_message_t *radius_message_create_request()
 radius_message_t *radius_message_parse_response(chunk_t data)
 {
 	private_radius_message_t *this = radius_message_create();
-	
+
 	this->msg = malloc(data.len);
 	memcpy(this->msg, data.ptr, data.len);
 	if (data.len < sizeof(rmsg_t) ||

@@ -27,12 +27,12 @@ typedef struct xcbc_prf_t xcbc_prf_t;
 
 /**
  * Implementation of prf_t on CBC block cipher using XCBC, RFC3664/RFC4434.
- * 
+ *
  * This simply wraps a xcbc_t in a prf_t. More a question of
  * interface matching.
  */
 struct xcbc_prf_t {
-	
+
 	/**
 	 * Generic prf_t interface for this xcbc_prf_t class.
 	 */
@@ -41,7 +41,7 @@ struct xcbc_prf_t {
 
 /**
  * Creates a new xcbc_prf_t object.
- * 
+ *
  * @param algo		algorithm to implement
  * @return			xcbc_prf_t object, NULL if hash not supported
  */

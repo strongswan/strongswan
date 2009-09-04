@@ -71,9 +71,9 @@ extern enum_name_t *policy_dir_names;
 
 /**
  * Interface to the ipsec subsystem of the kernel.
- * 
+ *
  * The kernel ipsec interface handles the communication with the kernel
- * for SA and policy management. It allows setup of these, and provides 
+ * for SA and policy management. It allows setup of these, and provides
  * further the handling of kernel events.
  * Policy information are cached in the interface. This is necessary to do
  * reference counting. The Linux kernel does not allow the same policy
@@ -81,7 +81,7 @@ extern enum_name_t *policy_dir_names;
  * when rekeying. Thats why we do reference counting of policies.
  */
 struct kernel_ipsec_t {
-	
+
 	/**
 	 * Get a SPI from the kernel.
 	 *
@@ -92,21 +92,21 @@ struct kernel_ipsec_t {
 	 * @param spi		allocated spi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
+	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
-	
+
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
-	 * 
+	 *
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param reqid		unique ID for the corresponding SA
 	 * @param cpi		allocated cpi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
+	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi);
-	
+
 	/**
 	 * Add an SA to the SAD.
 	 *
@@ -141,7 +141,7 @@ struct kernel_ipsec_t {
 						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 						bool encap, bool inbound);
-	
+
 	/**
 	 * Update the hosts on an installed SA.
 	 *
@@ -164,13 +164,13 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*update_sa)(kernel_ipsec_t *this,
 						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
-						  host_t *src, host_t *dst, 
+						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
 						  bool encap, bool new_encap);
-	
+
 	/**
 	 * Query the number of bytes processed by an SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -180,10 +180,10 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*query_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes);
-	
+
 	/**
 	 * Delete a previusly installed SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -193,13 +193,13 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*del_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
 						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
-	
+
 	/**
 	 * Add a policy to the SPD.
-	 * 
+	 *
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
-	 * 
+	 *
 	 * @param src			source address of SA
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
@@ -222,14 +222,14 @@ struct kernel_ipsec_t {
 							protocol_id_t protocol, u_int32_t reqid,
 							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 							bool routed);
-	
+
 	/**
 	 * Query the use time of a policy.
 	 *
 	 * The use time of a policy is the time the policy was used for the last
 	 * time. It is not the system time, but a monotonic timestamp as returned
 	 * by time_monotonic.
-	 * 
+	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
@@ -237,10 +237,10 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_ipsec_t *this,
-							  traffic_selector_t *src_ts, 
+							  traffic_selector_t *src_ts,
 							  traffic_selector_t *dst_ts,
 							  policy_dir_t direction, u_int32_t *use_time);
-	
+
 	/**
 	 * Remove a policy from the SPD.
 	 *
@@ -256,11 +256,11 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_ipsec_t *this,
-							traffic_selector_t *src_ts, 
+							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction,
 							bool unrouted);
-	
+
 	/**
 	 * Destroy the implementation.
 	 */

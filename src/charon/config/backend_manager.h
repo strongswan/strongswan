@@ -46,11 +46,11 @@ typedef struct backend_manager_t backend_manager_t;
    |         |----->|           |     +--------------+         |
    |         |      |           |                              |
    +---------+      +-----------+                              |
-   
+
    @endverbatim
  */
 struct backend_manager_t {
-	
+
 	/**
 	 * Get an ike_config identified by two hosts.
 	 *
@@ -58,9 +58,9 @@ struct backend_manager_t {
 	 * @param other_host		address of remote host
 	 * @return					matching ike_config, or NULL if none found
 	 */
-	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this, 
+	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this,
 							  host_t *my_host, host_t *other_host);
-	
+
 	/**
 	 * Get a peer_config identified by it's name.
 	 *
@@ -68,7 +68,7 @@ struct backend_manager_t {
 	 * @return					matching peer_config, or NULL if none found
 	 */
 	peer_cfg_t* (*get_peer_cfg_by_name)(backend_manager_t *this, char *name);
-	
+
 	/**
 	 * Create an enumerator over all matching peer configs.
 	 *
@@ -90,14 +90,14 @@ struct backend_manager_t {
 	 * @param backend			backend to register
 	 */
 	void (*add_backend)(backend_manager_t *this, backend_t *backend);
-	
+
 	/**
 	 * Unregister a backend.
 	 *
 	 * @param backend			backend to unregister
 	 */
 	void (*remove_backend)(backend_manager_t *this, backend_t *backend);
-	
+
 	/**
 	 * Destroys a backend_manager_t object.
 	 */

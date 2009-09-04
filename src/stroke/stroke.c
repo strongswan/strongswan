@@ -60,9 +60,9 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 	ctl_addr.sun_family = AF_UNIX;
 	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
-	
+
 	msg->output_verbosity = 1; /* CONTROL */
-	
+
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
 	{
@@ -76,7 +76,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 		close(sock);
 		return -1;
 	}
-	
+
 	/* send message */
 	if (write(sock, msg, msg->length) != msg->length)
 	{
@@ -84,12 +84,12 @@ static int send_stroke_msg (stroke_msg_t *msg)
 		close(sock);
 		return -1;
 	}
-	
+
 	while ((byte_count = read(sock, buffer, sizeof(buffer)-1)) > 0)
 	{
 		buffer[byte_count] = '\0';
 		printf("%s", buffer);
-		
+
 		/* we prompt if we receive the "Passphrase:" magic keyword */
 		if (byte_count >= 12 &&
 			strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0)
@@ -104,46 +104,46 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	{
 		fprintf(stderr, "reading from socket failed: %s\n", strerror(errno));
 	}
-	
+
 	close(sock);
 	return 0;
 }
 
 static int add_connection(char *name,
-						  char *my_id, char *other_id, 
+						  char *my_id, char *other_id,
 						  char *my_addr, char *other_addr,
 						  char *my_nets, char *other_nets)
 {
 	stroke_msg_t msg;
-	
+
 	memset(&msg, 0, sizeof(msg));
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.type = STR_ADD_CONN;
-	
+
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.ikev2 = 1;
 	msg.add_conn.auth_method = 2;
 	msg.add_conn.mode = 1;
 	msg.add_conn.mobike = 1;
 	msg.add_conn.dpd.action = 1;
-	
+
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
 	msg.add_conn.me.subnets = push_string(&msg, my_nets);
 	msg.add_conn.me.sendcert = 1;
-	
+
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
 	msg.add_conn.other.subnets = push_string(&msg, other_nets);
 	msg.add_conn.other.sendcert = 1;
-	
+
 	return send_stroke_msg(&msg);
 }
 
 static int del_connection(char *name)
 {
 	stroke_msg_t msg;
-	
+
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.type = STR_DEL_CONN;
 	msg.initiate.name = push_string(&msg, name);
@@ -153,7 +153,7 @@ static int del_connection(char *name)
 static int initiate_connection(char *name)
 {
 	stroke_msg_t msg;
-	
+
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.type = STR_INITIATE;
 	msg.initiate.name = push_string(&msg, name);
@@ -163,7 +163,7 @@ static int initiate_connection(char *name)
 static int terminate_connection(char *name)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_TERMINATE;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.initiate.name = push_string(&msg, name);
@@ -173,7 +173,7 @@ static int terminate_connection(char *name)
 static int terminate_connection_srcip(char *start, char *end)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_TERMINATE_SRCIP;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.terminate_srcip.start = push_string(&msg, start);
@@ -184,7 +184,7 @@ static int terminate_connection_srcip(char *start, char *end)
 static int route_connection(char *name)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_ROUTE;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.route.name = push_string(&msg, name);
@@ -194,7 +194,7 @@ static int route_connection(char *name)
 static int unroute_connection(char *name)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_UNROUTE;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.unroute.name = push_string(&msg, name);
@@ -204,7 +204,7 @@ static int unroute_connection(char *name)
 static int show_status(stroke_keyword_t kw, char *connection)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = (kw == STROKE_STATUS)? STR_STATUS:STR_STATUS_ALL;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.status.name = push_string(&msg, connection);
@@ -229,7 +229,7 @@ static int list_flags[] = {
 static int list(stroke_keyword_t kw, int utc)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_LIST;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.list.utc = utc;
@@ -250,7 +250,7 @@ static int reread_flags[] = {
 static int reread(stroke_keyword_t kw)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_REREAD;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.reread.flags = reread_flags[kw - STROKE_REREAD_FIRST];
@@ -265,7 +265,7 @@ static int purge_flags[] = {
 static int purge(stroke_keyword_t kw)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_PURGE;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.purge.flags = purge_flags[kw - STROKE_PURGE_FIRST];
@@ -276,7 +276,7 @@ static int leases(stroke_keyword_t kw, char *pool, char *address)
 {
 
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_LEASES;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.leases.pool = push_string(&msg, pool);
@@ -287,7 +287,7 @@ static int leases(stroke_keyword_t kw, char *pool, char *address)
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
-	
+
 	msg.type = STR_LOGLEVEL;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.loglevel.type = push_string(&msg, type);
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
 	{
 		exit_usage(NULL);
 	}
-	
+
 	token = in_word_set(argv[1], strlen(argv[1]));
 
 	if (token == NULL)
@@ -375,8 +375,8 @@ int main(int argc, char *argv[])
 				exit_usage("\"add\" needs more parameters...");
 			}
 			res = add_connection(argv[2],
-								 argv[3], argv[4], 
-								 argv[5], argv[6], 
+								 argv[3], argv[4],
+								 argv[5], argv[6],
 								 argv[7], argv[8]);
 			break;
 		case STROKE_DELETE:
@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
 			{
 				exit_usage("\"logtype\" needs more parameters...");
 			}
-			res = set_loglevel(argv[2], atoi(argv[3])); 
+			res = set_loglevel(argv[2], atoi(argv[3]));
 			break;
 		case STROKE_STATUS:
 		case STROKE_STATUSALL:

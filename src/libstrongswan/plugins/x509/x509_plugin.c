@@ -59,7 +59,7 @@ static void destroy(private_x509_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_x509_plugin_t *this = malloc_thing(private_x509_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,

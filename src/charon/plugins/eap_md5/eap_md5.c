@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include "eap_md5.h"
 
 #include <daemon.h>
@@ -25,27 +25,27 @@ typedef struct private_eap_md5_t private_eap_md5_t;
  * Private data of an eap_md5_t object.
  */
 struct private_eap_md5_t {
-	
+
 	/**
 	 * Public authenticator_t interface.
 	 */
 	eap_md5_t public;
-	
+
 	/**
 	 * ID of the server
 	 */
 	identification_t *server;
-	
+
 	/**
 	 * ID of the peer
 	 */
 	identification_t *peer;
-	
+
 	/**
 	 * challenge sent by the server
 	 */
 	chunk_t challenge;
-	
+
 	/**
 	 * EAP message identififier
 	 */
@@ -79,7 +79,7 @@ struct eap_md5_header_t {
  * Hash the challenge string, create response
  */
 static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response)
-{	
+{
 	shared_key_t *shared;
 	chunk_t concat;
 	hasher_t *hasher;
@@ -92,7 +92,7 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response)
 			 this->server, this->peer);
 		return NOT_FOUND;
 	}
-	concat = chunk_cata("ccc", chunk_from_thing(this->identifier),	
+	concat = chunk_cata("ccc", chunk_from_thing(this->identifier),
 						shared->get_key(shared), this->challenge);
 	shared->destroy(shared);
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
@@ -122,7 +122,7 @@ static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
 {
 	rng_t *rng;
 	eap_md5_header_t *req;
-	
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
@@ -130,7 +130,7 @@ static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
 	}
 	rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge);
 	rng->destroy(rng);
-	
+
 	req = alloca(PAYLOAD_LEN);
 	req->length = htons(PAYLOAD_LEN);
 	req->code = EAP_REQUEST;
@@ -138,7 +138,7 @@ static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
 	req->type = EAP_MD5;
 	req->value_size = this->challenge.len;
 	memcpy(req->value, this->challenge.ptr, this->challenge.len);
-	
+
 	*out = eap_payload_create_data(chunk_create((void*)req, PAYLOAD_LEN));
 	return NEED_MORE;
 }
@@ -152,7 +152,7 @@ static status_t process_peer(private_eap_md5_t *this,
 	chunk_t response;
 	chunk_t data;
 	eap_md5_header_t *req;
-	
+
 	this->identifier = in->get_identifier(in);
 	data = in->get_data(in);
 	this->challenge = chunk_clone(chunk_skip(data, 6));
@@ -173,7 +173,7 @@ static status_t process_peer(private_eap_md5_t *this,
 	req->value_size = response.len;
 	memcpy(req->value, response.ptr, response.len);
 	chunk_free(&response);
-	
+
 	*out = eap_payload_create_data(chunk_create((void*)req, PAYLOAD_LEN));
 	return NEED_MORE;
 }
@@ -186,7 +186,7 @@ static status_t process_server(private_eap_md5_t *this,
 {
 	chunk_t response, expected;
 	chunk_t data;
-	
+
 	if (this->identifier != in->get_identifier(in))
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
@@ -198,7 +198,7 @@ static status_t process_server(private_eap_md5_t *this,
 	}
 	data = in->get_data(in);
 	response = chunk_skip(data, 6);
-	
+
 	if (response.len < expected.len ||
 		!memeq(response.ptr, expected.ptr, expected.len))
 	{
@@ -253,20 +253,20 @@ static private_eap_md5_t *eap_md5_create_generic(identification_t *server,
 												 identification_t *peer)
 {
 	private_eap_md5_t *this = malloc_thing(private_eap_md5_t);
-	
+
 	this->public.eap_method_interface.initiate = NULL;
 	this->public.eap_method_interface.process = NULL;
 	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-	
+
 	/* private data */
 	this->peer = peer->clone(peer);
 	this->server = server->clone(server);
 	this->challenge = chunk_empty;
 	this->identifier = 0;
-	
+
 	return this;
 }
 
@@ -276,7 +276,7 @@ static private_eap_md5_t *eap_md5_create_generic(identification_t *server,
 eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *peer)
 {
 	private_eap_md5_t *this = eap_md5_create_generic(server, peer);
-	
+
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_server;
 
@@ -294,7 +294,7 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer)
 {
 	private_eap_md5_t *this = eap_md5_create_generic(server, peer);
-	
+
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_peer;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_peer;
 

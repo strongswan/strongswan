@@ -50,14 +50,14 @@ struct certreq_payload_t {
 	 * @return			enumerator over chunk_t's.
 	 */
 	enumerator_t* (*create_keyid_enumerator)(certreq_payload_t *this);
-	
+
 	/**
 	 * Get the type of contained certificate keyids.
 	 *
 	 * @return			certificate keyid type
 	 */
 	certificate_type_t (*get_cert_type)(certreq_payload_t *this);
-	
+
 	/**
 	 * Add a certificates keyid to the payload.
 	 *
@@ -65,7 +65,7 @@ struct certreq_payload_t {
 	 * @return
 	 */
 	void (*add_keyid)(certreq_payload_t *this, chunk_t keyid);
-	
+
 	/**
 	 * Destroys an certreq_payload_t object.
 	 */
@@ -74,14 +74,14 @@ struct certreq_payload_t {
 
 /**
  * Creates an empty certreq_payload_t object.
- * 
+ *
  * @return 				certreq payload
  */
 certreq_payload_t *certreq_payload_create(void);
 
 /**
  * Creates an empty certreq_payload_t for a kind of certificates.
- * 
+ *
  * @param type			type of the added keyids
  * @return 				certreq payload
  */

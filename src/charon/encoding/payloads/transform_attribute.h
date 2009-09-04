@@ -37,14 +37,14 @@ enum transform_attribute_type_t {
 	KEY_LENGTH = 14
 };
 
-/** 
+/**
  * enum name for transform_attribute_type_t.
  */
 extern enum_name_t *transform_attribute_type_names;
 
 /**
  * Class representing an IKEv2- TRANSFORM Attribute.
- * 
+ *
  * The TRANSFORM ATTRIBUTE format is described in RFC section 3.3.5.
  */
 struct transform_attribute_t {
@@ -55,52 +55,52 @@ struct transform_attribute_t {
 
 	/**
 	 * Returns the currently set value of the attribute.
-	 * 	
+	 *
 	 * Returned data are not copied.
-	 * 
+	 *
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_value_chunk) (transform_attribute_t *this);
-	
+
 	/**
 	 * Returns the currently set value of the attribute.
-	 * 	
+	 *
 	 * Returned data are not copied.
-	 * 
+	 *
 	 * @return 		value
 	 */
 	u_int16_t (*get_value) (transform_attribute_t *this);
-	
+
 	/**
 	 * Sets the value of the attribute.
-	 * 	
+	 *
 	 * Value is getting copied.
-	 * 
+	 *
 	 * @param value chunk_t pointing to the value to set
 	 */
 	void (*set_value_chunk) (transform_attribute_t *this, chunk_t value);
 
 	/**
 	 * Sets the value of the attribute.
-	 * 
+	 *
 	 * @param value value to set
 	 */
 	void (*set_value) (transform_attribute_t *this, u_int16_t value);
 
 	/**
 	 * Sets the type of the attribute.
-	 * 	
+	 *
 	 * @param type	type to set (most significant bit is set to zero)
 	 */
 	void (*set_attribute_type) (transform_attribute_t *this, u_int16_t type);
-	
+
 	/**
 	 * get the type of the attribute.
-	 * 	
+	 *
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_attribute_type) (transform_attribute_t *this);
-	
+
 	/**
 	 * Clones an transform_attribute_t object.
 	 *
@@ -116,14 +116,14 @@ struct transform_attribute_t {
 
 /**
  * Creates an empty transform_attribute_t object.
- * 
+ *
  * @return				transform_attribute_t object
  */
 transform_attribute_t *transform_attribute_create(void);
 
 /**
  * Creates an transform_attribute_t of type KEY_LENGTH.
- * 
+ *
  * @param key_length	key length in bytes
  * @return				transform_attribute_t object
  */

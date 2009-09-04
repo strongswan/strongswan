@@ -30,7 +30,7 @@ struct private_storage_t {
 	 * public functions
 	 */
 	storage_t public;
-	
+
 	/**
 	 * database connection
 	 */
@@ -47,7 +47,7 @@ static int login(private_storage_t *this, char *username, char *password)
 	size_t username_len, password_len;
 	int uid = 0;
 	enumerator_t *enumerator;
-	
+
 	/* hash = SHA1( username | password ) */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (hasher == NULL)
@@ -63,8 +63,8 @@ static int login(private_storage_t *this, char *username, char *password)
 	hasher->get_hash(hasher, data, hash.ptr);
 	hasher->destroy(hasher);
 	hex_str = chunk_to_hex(hash, NULL, FALSE);
-	
-	enumerator = this->db->query(this->db, 
+
+	enumerator = this->db->query(this->db,
 			"SELECT oid FROM users WHERE username = ? AND password = ?;",
 			DB_TEXT, username, DB_TEXT, hex_str.ptr,
 			DB_INT);
@@ -83,8 +83,8 @@ static int login(private_storage_t *this, char *username, char *password)
 static enumerator_t* create_gateway_enumerator(private_storage_t *this, int user)
 {
 	enumerator_t *enumerator;
-	
-	enumerator = this->db->query(this->db, 
+
+	enumerator = this->db->query(this->db,
 			"SELECT gateways.oid AS gid, name, port, address FROM "
 			"gateways, user_gateway AS ug ON gid = ug.gateway WHERE ug.user = ?;",
 			DB_INT, user,
@@ -111,11 +111,11 @@ static void destroy(private_storage_t *this)
 storage_t *storage_create(char *uri)
 {
 	private_storage_t *this = malloc_thing(private_storage_t);
-	
+
 	this->public.login = (int(*)(storage_t*, char *username, char *password))login;
 	this->public.create_gateway_enumerator = (enumerator_t*(*)(storage_t*,int))create_gateway_enumerator;
 	this->public.destroy = (void(*)(storage_t*))destroy;
-	
+
 	this->db = lib->db->create(lib->db, uri);
 	if (this->db == NULL)
 	{

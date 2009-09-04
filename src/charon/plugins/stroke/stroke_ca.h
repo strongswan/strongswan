@@ -37,35 +37,35 @@ struct stroke_ca_t {
 	 * Implements credential_set_t
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Add a CA to the set using a stroke_msg_t.
 	 *
 	 * @param msg		stroke message containing CA info
 	 */
 	void (*add)(stroke_ca_t *this, stroke_msg_t *msg);
-	
+
 	/**
 	 * Remove a CA from the set using a stroke_msg_t.
 	 *
 	 * @param msg		stroke message containing CA info
 	 */
 	void (*del)(stroke_ca_t *this, stroke_msg_t *msg);
-	
+
 	/**
 	 * List CA sections to stroke console.
 	 *
 	 * @param msg		stroke message
 	 */
 	void (*list)(stroke_ca_t *this, stroke_msg_t *msg, FILE *out);
-	
+
 	/**
 	 * Check if a certificate can be made available through hash and URL.
-	 * 
+	 *
 	 * @param cert		peer certificate
 	 */
 	void (*check_for_hash_and_url)(stroke_ca_t *this, certificate_t* cert);
-	
+
 	/**
      * Destroy a stroke_ca instance.
      */

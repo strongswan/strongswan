@@ -169,7 +169,7 @@ struct sadb_x_satype {
   uint8_t sadb_x_satype_satype;
   uint8_t sadb_x_satype_reserved[3];
 };
-  
+
 struct sadb_x_debug {
   uint16_t sadb_x_debug_len;
   uint16_t sadb_x_debug_exttype;
@@ -200,7 +200,7 @@ struct sadb_x_nat_t_port {
   uint16_t sadb_x_nat_t_port_port;
   uint16_t sadb_x_nat_t_port_reserved;
 };
-  
+
 /*
  * A protocol structure for passing through the transport level
  * protocol.  It contains more fields than are actually used/needed

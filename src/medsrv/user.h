@@ -25,17 +25,17 @@ typedef struct user_t user_t;
  * Per session context. Contains user user state and data.
  */
 struct user_t {
-	
+
 	/**
 	 * implements context_t interface
 	 */
 	context_t context;
-	
+
 	/**
 	 * Set the user ID of the logged in user.
 	 */
 	void (*set_user)(user_t *this, u_int id);
-	
+
 	/**
 	 * Get the user ID of the logged in user.
 	 */

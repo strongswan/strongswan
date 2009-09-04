@@ -1,5 +1,5 @@
 /* Analyzes the concurrent use of charon's threads
- * 
+ *
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -52,7 +52,7 @@ static int readline(FILE *fd, char *line)
 			*line = '\0';
 			return 1;
 		}
-		line++;		
+		line++;
 	}
 	*line = '\0';
 	return 0;
@@ -69,14 +69,14 @@ static void printline(state_t *state, char *timestamp)
 	for (th = 1; th <= THREADS; th++)
 	{
 		states[state[th]]++;
-		printf("<td class=\"%s\"></td>", state_names[state[th]]);	
+		printf("<td class=\"%s\"></td>", state_names[state[th]]);
 	}
 	total = states[STATE_INIT] + states[STATE_AUTH] + states[STATE_BUSY] + states[STATE_RETRY];
 	printf("<td class=\"init\">%d</td><td class=\"auth\">%d</td><td class=\"busy\">%d</td>",
 			states[STATE_INIT], states[STATE_AUTH], total);
 	for (th = 10; th <= (THREADS + 2); th += 5)
 	{
-		printf("<td class=\"%s\"></td>", (th <= total + 2)? "busy":"idle");	
+		printf("<td class=\"%s\"></td>", (th <= total + 2)? "busy":"idle");
 	}
 	printf("\n");
 	printf("    </tr>\n");
@@ -91,13 +91,13 @@ int main(int argc, char *argv[])
 	FILE *fd;
 
 	state_t state[THREADS + 1];
-	
+
 	/* threads 1..5 and 9 are always busy */
 	for (th = 1; th <= THREADS; th++)
 	{
 		state[th] = (th <= 7 && th != 3)? STATE_BUSY : STATE_IDLE;
 	}
-  
+
 	/* open the log file */
 	fd = fopen(LOGFILE, "r");
 	if (!fd)
@@ -135,16 +135,16 @@ int main(int argc, char *argv[])
 	printf("      <td class=\"log\">Timestamp</td>");
 	for (th = 1 ; th <= THREADS; th++)
 	{
-		printf("<td>%02d</td>", th);	
+		printf("<td>%02d</td>", th);
 	}
 	printf("<td class=\"init\">I</td><td class=\"auth\">A</td><td class=\"busy\">B</td>");
 	for (th = 10; th <= (THREADS + 2); th += 5)
 	{
-		printf("<td class=\"busy\">%d</td>", (th == 100)? 99:th);	
+		printf("<td class=\"busy\">%d</td>", (th == 100)? 99:th);
 	}
 	printf("\n");
 	printf("    </tr>\n");
-	
+
 	while (readline(fd, line))
 	{
 		char *p_section, *p_charon, *p_thread, *p_log;
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 		{
 			continue;
 		}
-		
+
 		/* determine thread */
 		p_thread = p_charon + 8;
 		th = atol(p_thread);
@@ -268,6 +268,6 @@ int main(int argc, char *argv[])
 	printf("</body>\n");
 	printf("</html>\n");
 
-	fclose(fd);	
+	fclose(fd);
 	return 0;
 }

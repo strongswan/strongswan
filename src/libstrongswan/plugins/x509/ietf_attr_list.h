@@ -31,7 +31,7 @@
  *
  * @param list_a	first alphabetically-sorted list
  * @param list_b	second alphabetically-sorted list
- * @return			TRUE if equal	
+ * @return			TRUE if equal
  */
 bool ietfAttr_list_equals(linked_list_t *list_a, linked_list_t *list_b);
 
@@ -39,7 +39,7 @@ bool ietfAttr_list_equals(linked_list_t *list_a, linked_list_t *list_b);
  * @brief Lists a linked list of ietfAttr_t objects
  *
  * @param list		alphabetically-sorted linked list of attributes
- * @param out		output file	
+ * @param out		output file
  */
 void ietfAttr_list_list(linked_list_t *list, FILE *out);
 

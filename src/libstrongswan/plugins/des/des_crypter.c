@@ -11,17 +11,17 @@
  * This package is an SSL implementation written
  * by Eric Young (eay@cryptsoft.com).
  * The implementation was written so as to conform with Netscapes SSL.
- * 
+ *
  * This library is free for commercial and non-commercial use as long as
  * the following conditions are aheared to.
- * 
+ *
  * Copyright remains Eric Young's, and as such any Copyright notices in
  * the code are not to be removed.
  * If this package is used in a product, Eric Young should be given attribution
  * as the author of the parts of the library used.
  * This can be in the form of a textual message at program startup or
  * in documentation (online or textual) provided with the package.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -36,10 +36,10 @@
  *     Eric Young (eay@cryptsoft.com)"
  *    The word 'cryptographic' can be left out if the rouines from the library
  *    being used are not cryptographic related :-).
- * 4. If you include any Windows specific code (or a derivative thereof) from 
+ * 4. If you include any Windows specific code (or a derivative thereof) from
  *    the apps directory (application code) you must include an acknowledgement:
  *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -73,17 +73,17 @@ typedef struct private_des_crypter_t private_des_crypter_t;
  * Private data for des_crypter_t
  */
 struct private_des_crypter_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	des_crypter_t public;
-	
+
 	/**
 	 * Key size, depends on algoritm...
 	 */
 	size_t key_size;
-	
+
 	union {
 		/** key schedule for single des */
 		des_key_schedule ks;
@@ -141,7 +141,7 @@ YOU SHOULD NOT HAVE BOTH DES_RISC1 AND DES_RISC2 DEFINED!!!!!
    even newer MIPS CPU's, but at the moment one size fits all for
    optimization options.  Older Sparc's work better with only UNROLL, but
    there's no way to tell at compile time what it is you're running on */
- 
+
 #if defined( sun )		/* Newer Sparc's */
 #define DES_PTR
 #define DES_RISC1
@@ -879,7 +879,7 @@ static int des_set_key(des_cblock *key, des_key_schedule *schedule)
 	c2l(in,c);
 	c2l(in,d);
 
-	/* do PC1 in 60 simple operations */ 
+	/* do PC1 in 60 simple operations */
 /*	PERM_OP(d,c,t,4,0x0f0f0f0fL);
 	HPERM_OP(c,t,-2, 0xcccc0000L);
 	HPERM_OP(c,t,-1, 0xaaaa0000L);
@@ -1037,7 +1037,7 @@ static void des_encrypt(DES_LONG *data, des_key_schedule ks, int enc)
 /**
  * DES CBC encrypt decrypt routine
  */
-static void des_cbc_encrypt(des_cblock *input, des_cblock *output, long length, 
+static void des_cbc_encrypt(des_cblock *input, des_cblock *output, long length,
 						    des_key_schedule schedule, des_cblock *ivec, int enc)
 {
 	register DES_LONG tin0,tin1;
@@ -1110,7 +1110,7 @@ static void des_cbc_encrypt(des_cblock *input, des_cblock *output, long length,
 /**
  * DES ECB encrypt decrypt routine
  */
-static void des_ecb_encrypt(des_cblock *input, des_cblock *output, long length, 
+static void des_ecb_encrypt(des_cblock *input, des_cblock *output, long length,
 						    des_key_schedule schedule, int enc)
 {
 	register DES_LONG tin0,tin1;
@@ -1260,7 +1260,7 @@ static void des_encrypt2(DES_LONG *data, des_key_schedule ks, int enc)
 /**
  * Single block 3DES EDE encrypt routine
  */
-static void des_encrypt3(DES_LONG *data, des_key_schedule ks1, 
+static void des_encrypt3(DES_LONG *data, des_key_schedule ks1,
 						 des_key_schedule ks2, des_key_schedule ks3)
 {
 	register DES_LONG l,r;
@@ -1283,7 +1283,7 @@ static void des_encrypt3(DES_LONG *data, des_key_schedule ks1,
 /**
  * Single block 3DES EDE decrypt routine
  */
-static void des_decrypt3(DES_LONG *data, des_key_schedule ks1, 
+static void des_decrypt3(DES_LONG *data, des_key_schedule ks1,
 						 des_key_schedule ks2, des_key_schedule ks3)
 {
 	register DES_LONG l,r;
@@ -1391,7 +1391,7 @@ static void des_ede3_cbc_encrypt(des_cblock *input, des_cblock *output, long len
 		{
 			c2l(in,tin0);
 			c2l(in,tin1);
-			
+
 			t0=tin0;
 			t1=tin1;
 
@@ -1400,7 +1400,7 @@ static void des_ede3_cbc_encrypt(des_cblock *input, des_cblock *output, long len
 			des_decrypt3((DES_LONG *)tin,ks1,ks2,ks3);
 			tout0=tin[0];
 			tout1=tin[1];
-		
+
 			tout0^=xor0;
 			tout1^=xor1;
 			l2cn(tout0,tout1,out,l+8);
@@ -1424,7 +1424,7 @@ static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 {
 	des_cblock ivb;
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (decrypted)
 	{
@@ -1445,7 +1445,7 @@ static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 {
 	des_cblock ivb;
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (encrypted)
 	{
@@ -1464,7 +1464,7 @@ static void decrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 						chunk_t *decrypted)
 {
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (decrypted)
 	{
@@ -1482,7 +1482,7 @@ static void encrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 						chunk_t *encrypted)
 {
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (encrypted)
 	{
@@ -1501,7 +1501,7 @@ static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 {
 	des_cblock ivb;
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (decrypted)
 	{
@@ -1522,7 +1522,7 @@ static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 {
 	des_cblock ivb;
 	u_int8_t *out;
-	
+
 	out = data.ptr;
 	if (encrypted)
 	{
@@ -1563,7 +1563,7 @@ static void set_key(private_des_crypter_t *this, chunk_t key)
  * Implementation of crypter_t.set_key for 3DES.
  */
 static void set_key3(private_des_crypter_t *this, chunk_t key)
-{	
+{
 	des_set_key((des_cblock*)(key.ptr) + 0, &this->ks3[0]);
 	des_set_key((des_cblock*)(key.ptr) + 1, &this->ks3[1]);
 	des_set_key((des_cblock*)(key.ptr) + 2, &this->ks3[2]);
@@ -1583,12 +1583,12 @@ static void destroy(private_des_crypter_t *this)
 des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 {
 	private_des_crypter_t *this = malloc_thing(private_des_crypter_t);
-	
-	/* functions of crypter_t interface */	
+
+	/* functions of crypter_t interface */
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
 	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
+
 	/* use functions depending on algorithm */
 	switch (algo)
 	{

@@ -30,7 +30,7 @@ typedef struct attribute_handler_t attribute_handler_t;
  * Interface to handle configuration payload attributes.
  */
 struct attribute_handler_t {
-	
+
 	/**
 	 * Handle a configuration attribute.
 	 *
@@ -43,7 +43,7 @@ struct attribute_handler_t {
 	 */
 	bool (*handle)(attribute_handler_t *this, ike_sa_t *ike_sa,
 				   configuration_attribute_type_t type, chunk_t data);
-	
+
 	/**
 	 * Release an attribute handled during handle().
 	 *

@@ -56,12 +56,12 @@ static void scepclient_dbg(int level, char *fmt, ...)
 	else if (cur_debugging & DBG_RAW)
 	{
 		debug_level = 3;
-	}	
+	}
 	else if (cur_debugging & DBG_PARSING)
 	{
 		debug_level = 2;
 	}
-	else 
+	else
 	{
 		debug_level = 1;
 	}

@@ -28,8 +28,8 @@ struct private_hmac_prf_t {
 	/**
 	 * Public hmac_prf_t interface.
 	 */
-	hmac_prf_t public;	
-	
+	hmac_prf_t public;
+
 	/**
 	 * Hmac to use for generation.
 	 */
@@ -93,7 +93,7 @@ hmac_prf_t *hmac_prf_create(pseudo_random_function_t algo)
 {
 	private_hmac_prf_t *this;
 	hash_algorithm_t hash;
-	
+
 	switch (algo)
 	{
 		case PRF_HMAC_SHA1:
@@ -114,22 +114,22 @@ hmac_prf_t *hmac_prf_create(pseudo_random_function_t algo)
 		default:
 			return NULL;
 	}
-	
+
 	this = malloc_thing(private_hmac_prf_t);
 	this->hmac = hmac_create(hash);
 	if (this->hmac == NULL)
 	{
 		free(this);
-		return NULL;	
+		return NULL;
 	}
-	
+
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
 	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
 	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
 	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
-	
+
 	return &(this->public);
 }
 

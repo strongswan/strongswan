@@ -50,16 +50,16 @@ static u_char ASN1_extensionRequest_oid_str[] = {
 
 static const chunk_t ASN1_extensionRequest_oid = chunk_from_buf(ASN1_extensionRequest_oid_str);
 
-/** 
+/**
  * @brief Adds a subjectAltName in DER-coded form to a linked list
- * 
+ *
  * @param[in,out]       subjectAltNames head of the linked list of subjectAltNames
  * @param[in]           kind            type of the subjectAltName (which is a generalName)
  * @param[in]           value           value of the subjectAltName as an ASCII string
  */
 void
 pkcs10_add_subjectAltName(generalName_t **subjectAltNames, generalNames_t kind
-, char *value) 
+, char *value)
 {
 	generalName_t *gn;
 	asn1_t asn1_type = ASN1_EOC;
@@ -102,8 +102,8 @@ pkcs10_add_subjectAltName(generalName_t **subjectAltNames, generalNames_t kind
 }
 
 /**
- * @brief Builds the requestInfoAttributes of the certificationRequestInfo-field 
- * 
+ * @brief Builds the requestInfoAttributes of the certificationRequestInfo-field
+ *
  * challenge password ans subjectAltNames are only included,
  * when avaiable in given #pkcs10_t structure
  *
@@ -117,7 +117,7 @@ build_req_info_attributes(pkcs10_t* pkcs10)
 	chunk_t subjectAltNames   = chunk_empty;
 	chunk_t challengePassword = chunk_empty;
 
-	if (pkcs10->subjectAltNames != NULL) 
+	if (pkcs10->subjectAltNames != NULL)
 	{
 
 		subjectAltNames = asn1_wrap(ASN1_SEQUENCE, "cm"
@@ -158,11 +158,11 @@ static chunk_t
 pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 {
 	chunk_t key = chunk_empty;
-	
+
 	pkcs10->public_key->get_encoding(pkcs10->public_key, KEY_PUB_ASN1_DER, &key);
-	
+
 	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
+							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 							asn1_bitstring("m", key));
 
 	chunk_t cert_req_info = asn1_wrap(ASN1_SEQUENCE, "ccmm",

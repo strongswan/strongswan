@@ -31,12 +31,12 @@ typedef struct sys_logger_t sys_logger_t;
  * Logger for syslog which implements listener_t.
  */
 struct sys_logger_t {
-	
+
 	/**
 	 * Implements the listener_t interface.
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * Set the loglevel for a debug group.
 	 *
@@ -44,7 +44,7 @@ struct sys_logger_t {
 	 * @param level		max level to log (0..4)
 	 */
 	void (*set_level) (sys_logger_t *this, debug_t group, level_t level);
-	
+
 	/**
 	 * Destroys a sys_logger_t object.
 	 */

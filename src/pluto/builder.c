@@ -59,7 +59,7 @@ static void cert_add(private_builder_t *this, builder_part_t part, ...)
 	va_start(args, part);
 	blob = va_arg(args, chunk_t);
 	va_end(args);
-	
+
 	switch (part)
 	{
 		case BUILD_BLOB_PGP:
@@ -134,7 +134,7 @@ static void ac_add(private_builder_t *this, builder_part_t part, ...)
 			va_start(args, part);
 			blob = va_arg(args, chunk_t);
 			va_end(args);
-	
+
 			this->ac = malloc_thing(x509acert_t);
 
 			*this->ac = empty_ac;
@@ -200,10 +200,10 @@ static void crl_add(private_builder_t *this, builder_part_t part, ...)
 static void *build(private_builder_t *this)
 {
 	void *cred;
-	
+
 	cred = this->cred;
 	free(this);
-	
+
 	return cred;
 }
 
@@ -213,7 +213,7 @@ static void *build(private_builder_t *this)
 static builder_t *builder(int subtype)
 {
 	private_builder_t *this = malloc_thing(private_builder_t);
-	
+
 	switch (subtype)
 	{
 		case CERT_PLUTO_CERT:
@@ -231,7 +231,7 @@ static builder_t *builder(int subtype)
 	}
 	this->public.build = (void*(*)(builder_t*))build;
 	this->cred = NULL;
-	
+
 	return &this->public;
 }
 

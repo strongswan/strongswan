@@ -3,12 +3,12 @@
  * header file for FreeS/WAN library functions
  * Copyright (C) 1998, 1999, 2000  Henry Spencer.
  * Copyright (C) 1999, 2000, 2001  Richard Guy Briggs
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -391,7 +391,7 @@ extern unsigned int pfkey_lib_debug;  /* bits selecting what to report */
 
 /*
  * pluto and lwdnsq need to know the maximum size of the commands to,
- * and replies from lwdnsq. 
+ * and replies from lwdnsq.
  */
 
 #define LWDNSQ_CMDBUF_LEN      1024

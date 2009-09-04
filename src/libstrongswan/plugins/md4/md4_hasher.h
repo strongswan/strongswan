@@ -30,7 +30,7 @@ typedef struct md4_hasher_t md4_hasher_t;
  * Implementation of hasher_t interface using the MD4 algorithm.
  */
 struct md4_hasher_t {
-	
+
 	/**
 	 * Generic hasher_t interface for this hasher.
 	 */
@@ -39,7 +39,7 @@ struct md4_hasher_t {
 
 /**
  * Creates a new md4_hasher_t.
- * 
+ *
  * @param algo		hash algorithm, must be HASH_MD4
  * @return			md4_hasher_t object, NULL if not supported
  */

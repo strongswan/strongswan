@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil 
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,17 +25,17 @@ typedef struct private_gcrypt_crypter_t private_gcrypt_crypter_t;
  * Private data of gcrypt_crypter_t
  */
 struct private_gcrypt_crypter_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	gcrypt_crypter_t public;
-	
+
 	/**
 	 * gcrypt cipher handle
 	 */
 	gcry_cipher_hd_t h;
-	
+
 	/**
 	 * gcrypt algorithm identifier
 	 */
@@ -49,7 +49,7 @@ static void decrypt(private_gcrypt_crypter_t *this, chunk_t data,
 					chunk_t iv, chunk_t *dst)
 {
 	gcry_cipher_setiv(this->h, iv.ptr, iv.len);
-	
+
 	if (dst)
 	{
 		*dst = chunk_alloc(data.len);
@@ -68,7 +68,7 @@ static void encrypt(private_gcrypt_crypter_t *this, chunk_t data,
 					chunk_t iv, chunk_t *dst)
 {
 	gcry_cipher_setiv(this->h, iv.ptr, iv.len);
-	
+
 	if (dst)
 	{
 		*dst = chunk_alloc(data.len);
@@ -86,7 +86,7 @@ static void encrypt(private_gcrypt_crypter_t *this, chunk_t data,
 static size_t get_block_size(private_gcrypt_crypter_t *this)
 {
 	size_t len = 0;
-	
+
 	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_BLKLEN, NULL, &len);
 	return len;
 }
@@ -97,7 +97,7 @@ static size_t get_block_size(private_gcrypt_crypter_t *this)
 static size_t get_key_size(private_gcrypt_crypter_t *this)
 {
 	size_t len = 0;
-	
+
 	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_KEYLEN, NULL, &len);
 	return len;
 }
@@ -129,7 +129,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 	int gcrypt_alg;
 	int mode = GCRY_CIPHER_MODE_CBC;
 	gcry_error_t err;
-	
+
 	switch (algo)
 	{
 		case ENCR_DES:
@@ -227,9 +227,9 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		default:
 			return NULL;
 	}
-	
+
 	this = malloc_thing(private_gcrypt_crypter_t);
-	
+
 	this->alg = gcrypt_alg;
 	err = gcry_cipher_open(&this->h, gcrypt_alg, mode, 0);
 	if (err)
@@ -239,14 +239,14 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		free(this);
 		return NULL;
 	}
-	
+
 	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *))encrypt;
 	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *))decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *))get_block_size;
 	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *))get_key_size;
 	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t))set_key;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *))destroy;
-	
+
 	return &this->public;
 }
 

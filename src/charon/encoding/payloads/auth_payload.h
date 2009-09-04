@@ -39,7 +39,7 @@ typedef struct auth_payload_t auth_payload_t;
  * The AUTH payload format is described in RFC section 3.8.
  */
 struct auth_payload_t {
-	
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -51,41 +51,41 @@ struct auth_payload_t {
 	 * @param method		auth_method_t to use
 	 */
 	void (*set_auth_method) (auth_payload_t *this, auth_method_t method);
-	
+
 	/**
 	 * Get the AUTH method.
 	 *
 	 * @return				auth_method_t used
 	 */
 	auth_method_t (*get_auth_method) (auth_payload_t *this);
-	
+
 	/**
 	 * Set the AUTH data.
-	 * 
+	 *
 	 * Data gets cloned.
 	 *
 	 * @param data			AUTH data as chunk_t
 	 */
 	void (*set_data) (auth_payload_t *this, chunk_t data);
-	
+
 	/**
 	 * Get the AUTH data.
-	 * 
+	 *
 	 * Returned data are a copy of the internal one.
 	 *
 	 * @return				AUTH data as chunk_t
 	 */
 	chunk_t (*get_data_clone) (auth_payload_t *this);
-	
+
 	/**
 	 * Get the AUTH data.
-	 * 
+	 *
 	 * Returned data are NOT copied
 	 *
 	 * @return				AUTH data as chunk_t
 	 */
 	chunk_t (*get_data) (auth_payload_t *this);
-	
+
 	/**
 	 * Destroys an auth_payload_t object.
 	 */
@@ -94,7 +94,7 @@ struct auth_payload_t {
 
 /**
  * Creates an empty auth_payload_t object.
- * 
+ *
  * @return auth_payload_t object
  */
 auth_payload_t *auth_payload_create(void);

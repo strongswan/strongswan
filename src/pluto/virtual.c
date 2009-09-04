@@ -227,7 +227,7 @@ struct virtual_t
 		}
 		else
 			goto fail;
-		
+
 		str = *next ? next+1 : NULL;
 	}
 
@@ -312,7 +312,7 @@ is_virtual_net_allowed(const struct connection *c, const ip_subnet *peer_net,
 	if (c->spd.that.virt->n_net
 	&&  net_in_list(peer_net, c->spd.that.virt->net, c->spd.that.virt->n_net))
 		return TRUE;
-	
+
 	if (c->spd.that.virt->flags & F_VIRTUAL_ALL)
 	{
 		/** %all must only be used for testing - log it **/

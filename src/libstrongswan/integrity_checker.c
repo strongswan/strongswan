@@ -35,22 +35,22 @@ typedef struct private_integrity_checker_t private_integrity_checker_t;
  * Private data of an integrity_checker_t object.
  */
 struct private_integrity_checker_t {
-	
+
 	/**
 	 * Public integrity_checker_t interface.
 	 */
 	integrity_checker_t public;
-	
+
 	/**
 	 * dlopen handle to checksum library
 	 */
 	void *handle;
-	
+
 	/**
 	 * checksum array
 	 */
 	integrity_checksum_t *checksums;
-	
+
 	/**
 	 * number of checksums in array
 	 */
@@ -68,21 +68,21 @@ static u_int32_t build_file(private_integrity_checker_t *this, char *file,
 	struct stat sb;
 	void *addr;
 	int fd;
-	
+
 	fd = open(file, O_RDONLY);
 	if (fd == -1)
 	{
 		DBG1("  opening '%s' failed: %s", file, strerror(errno));
 		return 0;
 	}
-	
+
 	if (fstat(fd, &sb) == -1)
 	{
 		DBG1("  getting file size of '%s' failed: %s", file, strerror(errno));
 		close(fd);
 		return 0;
 	}
-	
+
 	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
@@ -91,13 +91,13 @@ static u_int32_t build_file(private_integrity_checker_t *this, char *file,
 		return 0;
 	}
 
-	*len = sb.st_size;	
+	*len = sb.st_size;
 	contents = chunk_create(addr, sb.st_size);
 	checksum = chunk_hash(contents);
-	
+
 	munmap(addr, sb.st_size);
 	close(fd);
-	
+
 	return checksum;
 }
 
@@ -116,11 +116,11 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 		dlpi->dlpi_name && *dlpi->dlpi_name)
 	{
 		int i;
-		
+
 		for (i = 0; i < dlpi->dlpi_phnum; i++)
 		{
 			const ElfW(Phdr) *sgmt = &dlpi->dlpi_phdr[i];
-			
+
 			/* we are interested in the executable LOAD segment */
 			if (sgmt->p_type == PT_LOAD && (sgmt->p_flags & PF_X))
 			{
@@ -143,7 +143,7 @@ static u_int32_t build_segment(private_integrity_checker_t *this, void *sym,
 {
 	chunk_t segment;
 	Dl_info dli;
-	
+
 	if (dladdr(sym, &dli) == 0)
 	{
 		DBG1("  unable to locate symbol: %s", dlerror());
@@ -155,7 +155,7 @@ static u_int32_t build_segment(private_integrity_checker_t *this, void *sym,
 		DBG1("  executable section not found");
 		return 0;
 	}
-	
+
 	segment = chunk_create(dli.dli_fbase, dli.dli_saddr - dli.dli_fbase);
 	*len = segment.len;
 	return chunk_hash(segment);
@@ -168,7 +168,7 @@ static integrity_checksum_t *find_checksum(private_integrity_checker_t *this,
 										   char *name)
 {
 	int i;
-	
+
 	for (i = 0; i < this->checksum_count; i++)
 	{
 		if (streq(this->checksums[i].name, name))
@@ -188,7 +188,7 @@ static bool check_file(private_integrity_checker_t *this,
 	integrity_checksum_t *cs;
 	u_int32_t sum;
 	size_t len = 0;
-	
+
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
@@ -225,7 +225,7 @@ static bool check_segment(private_integrity_checker_t *this,
 	integrity_checksum_t *cs;
 	u_int32_t sum;
 	size_t len = 0;
-	
+
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
@@ -259,7 +259,7 @@ static bool check_segment(private_integrity_checker_t *this,
 static bool check(private_integrity_checker_t *this, char *name, void *sym)
 {
 	Dl_info dli;
-	
+
 	if (dladdr(sym, &dli) == 0)
 	{
 		DBG1("unable to locate symbol: %s", dlerror());
@@ -294,14 +294,14 @@ static void destroy(private_integrity_checker_t *this)
 integrity_checker_t *integrity_checker_create(char *checksum_library)
 {
 	private_integrity_checker_t *this = malloc_thing(private_integrity_checker_t);
-	
+
 	this->public.check_file = (bool(*)(integrity_checker_t*, char *name, char *file))check_file;
 	this->public.build_file = (u_int32_t(*)(integrity_checker_t*, char *file, size_t *len))build_file;
 	this->public.check_segment = (bool(*)(integrity_checker_t*, char *name, void *sym))check_segment;
 	this->public.build_segment = (u_int32_t(*)(integrity_checker_t*, void *sym, size_t *len))build_segment;
 	this->public.check = (bool(*)(integrity_checker_t*, char *name, void *sym))check;
 	this->public.destroy = (void(*)(integrity_checker_t*))destroy;
-	
+
 	this->checksum_count = 0;
 	this->handle = NULL;
 	if (checksum_library)
@@ -310,7 +310,7 @@ integrity_checker_t *integrity_checker_create(char *checksum_library)
 		if (this->handle)
 		{
 			int *checksum_count;
-		
+
 			this->checksums = dlsym(this->handle, "checksums");
 			checksum_count = dlsym(this->handle, "checksum_count");
 			if (this->checksums && checksum_count)

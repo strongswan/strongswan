@@ -25,17 +25,17 @@ typedef struct private_sys_logger_t private_sys_logger_t;
  * Private data of a sys_logger_t object
  */
 struct private_sys_logger_t {
-	
+
 	/**
 	 * Public data.
 	 */
 	sys_logger_t public;
-	
+
 	/**
 	 * syslog facility to use
 	 */
 	int facility;
-	
+
 	/**
 	 * Maximum level to log, for each group
 	 */
@@ -52,10 +52,10 @@ static bool log_(private_sys_logger_t *this, debug_t group, level_t level,
 	{
 		char buffer[8192];
 		char *current = buffer, *next;
-		
+
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
-		
+
 		/* do a syslog with every line */
 		while (current)
 		{
@@ -106,16 +106,16 @@ static void destroy(private_sys_logger_t *this)
 sys_logger_t *sys_logger_create(int facility)
 {
 	private_sys_logger_t *this = malloc_thing(private_sys_logger_t);
-	
+
 	/* public functions */
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
 	this->public.set_level = (void(*)(sys_logger_t*,debug_t,level_t))set_level;
 	this->public.destroy = (void(*)(sys_logger_t*))destroy;
-	
+
 	/* private variables */
 	this->facility = facility;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
-	
+
 	return &this->public;
 }

@@ -40,112 +40,112 @@ typedef struct private_x509_ac_t private_x509_ac_t;
  * private data of x509_ac_t object
  */
 struct private_x509_ac_t {
-	
+
 	/**
 	 * public functions
 	 */
 	x509_ac_t public;
-	
+
 	/**
 	 * X.509 attribute certificate encoding in ASN.1 DER format
 	 */
 	chunk_t encoding;
-	
+
 	/**
 	 * X.509 attribute certificate body over which signature is computed
 	 */
 	chunk_t certificateInfo;
-	
+
 	/**
 	 * Version of the X.509 attribute certificate
 	 */
 	u_int version;
-	
+
 	/**
 	 * Serial number of the X.509 attribute certificate
 	 */
 	chunk_t serialNumber;
-	
+
 	/**
 	 * ID representing the issuer of the holder certificate
 	 */
 	identification_t *holderIssuer;
-	
+
 	/**
 	 * Serial number of the holder certificate
 	 */
 	chunk_t holderSerial;
-	
+
 	/**
 	 * ID representing the holder
 	 */
 	identification_t *entityName;
-	
+
 	/**
 	 * ID representing the attribute certificate issuer
 	 */
 	identification_t *issuerName;
-	
+
 	/**
 	 * Start time of certificate validity
 	 */
 	time_t notBefore;
-	
+
 	/**
 	 * End time of certificate validity
 	 */
 	time_t notAfter;
-	
+
 	/**
 	 * List of charging attributes
 	 */
 	linked_list_t *charging;
-	
+
 	/**
 	 * List of groub attributes
 	 */
 	linked_list_t *groups;
-	
+
 	/**
 	 * Authority Key Identifier
 	 */
 	chunk_t authKeyIdentifier;
-	
+
 	/**
 	 * Authority Key Serial Number
 	 */
 	chunk_t authKeySerialNumber;
-	
+
 	/**
 	 * No revocation information available
 	 */
 	bool noRevAvail;
-	
+
 	/**
 	 * Signature algorithm
 	 */
 	int algorithm;
-	
+
 	/**
 	 * Signature
 	 */
 	chunk_t signature;
-	
+
 	/**
 	 * Holder certificate
 	 */
 	certificate_t *holderCert;
-	
+
 	/**
 	 * Signer certificate
 	 */
 	certificate_t *signerCert;
-	
+
 	/**
 	* Signer private key;
 	*/
 	private_key_t *signerKey;
-	
+
 	/**
 	 * reference count
 	 */
@@ -573,7 +573,7 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 	identification_t *issuer;
 	public_key_t *public;
 	x509_t *x509;
-	
+
 	x509 = (x509_t*)this->signerCert;
 	issuer = this->signerCert->get_issuer(this->signerCert);
 	public = this->signerCert->get_public_key(this->signerCert);
@@ -733,7 +733,7 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
-	
+
 	/* check if issuer is an X.509 AA certificate */
 	if (issuer->get_type(issuer) != CERT_X509)
 	{
@@ -743,22 +743,22 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 	{
 		return FALSE;
 	}
-	
+
 	/* get the public key of the issuer */
 	key = issuer->get_public_key(issuer);
-	
+
 	/* compare keyIdentifiers if available, otherwise use DNs */
 	if (this->authKeyIdentifier.ptr && key)
 	{
 		chunk_t fingerprint;
-		
+
 		if (!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
 			return FALSE;
 		}
 	}
-	else 
+	else
 	{
 		if (!this->issuerName->equals(this->issuerName,
 									  issuer->get_subject(issuer)))
@@ -766,10 +766,10 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 			return FALSE;
 		}
 	}
-	
+
 	/* determine signature scheme */
 	scheme = signature_scheme_from_oid(this->algorithm);
-	
+
 	if (scheme == SIGN_UNKNOWN || key == NULL)
 	{
 		return FALSE;
@@ -803,7 +803,7 @@ static bool get_validity(private_x509_ac_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
 	time_t t;
-	
+
 	if (when)
 	{
 		t = *when;
@@ -841,7 +841,7 @@ static bool is_newer(private_x509_ac_t *this, ac_t *that)
 			&that_update, FALSE, new ? "replaced":"retained");
 	return new;
 }
-	
+
 /**
  * Implementation of certificate_t.get_encoding.
  */
@@ -857,14 +857,14 @@ static bool equals(private_x509_ac_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
-	
+
 	if ((certificate_t*)this == other)
 	{
 		return TRUE;
 	}
 	if (other->equals == (void*)equals)
 	{	/* skip allocation if we have the same implementation */
-		return chunk_equals(this->encoding, ((private_x509_ac_t*)other)->encoding); 
+		return chunk_equals(this->encoding, ((private_x509_ac_t*)other)->encoding);
 	}
 	encoding = other->get_encoding(other);
 	equal = chunk_equals(this->encoding, encoding);
@@ -901,7 +901,7 @@ static void destroy(private_x509_ac_t *this)
 static private_x509_ac_t *create_empty(void)
 {
 	private_x509_ac_t *this = malloc_thing(private_x509_ac_t);
-	
+
 	/* public functions */
 	this->public.interface.get_serial = (chunk_t (*)(ac_t*))get_serial;
 	this->public.interface.get_holderSerial = (chunk_t (*)(ac_t*))get_holderSerial;
@@ -972,9 +972,9 @@ struct private_builder_t {
 static private_x509_ac_t* build(private_builder_t *this)
 {
 	private_x509_ac_t *ac = this->ac;
-	
+
 	free(this);
-	
+
 	/* synthesis if encoding does not exist */
 	if (ac && ac->encoding.ptr == NULL)
 	{
@@ -1062,18 +1062,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *x509_ac_builder(certificate_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != CERT_X509_AC)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->ac = create_empty();
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

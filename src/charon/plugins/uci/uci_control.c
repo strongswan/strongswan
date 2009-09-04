@@ -37,14 +37,14 @@ typedef struct private_uci_control_t private_uci_control_t;
  * private data of uci_control_t
  */
 struct private_uci_control_t {
-	
+
 	/**
 	 * Public part
 	 */
 	uci_control_t public;
-	
+
 	/**
-	 * Job 
+	 * Job
 	 */
 	callback_job_t *job;
 };
@@ -56,7 +56,7 @@ static void write_fifo(private_uci_control_t *this, char *format, ...)
 {
 	va_list args;
 	FILE *out;
-	
+
 	out = fopen(FIFO_FILE, "w");
 	if (out)
 	{
@@ -83,7 +83,7 @@ static void status(private_uci_control_t *this, char *name)
 	peer_cfg_t *peer_cfg;
 	char buf[2048];
 	FILE *out = NULL;
-	
+
 	configs = charon->backends->create_peer_cfg_enumerator(charon->backends,
 														NULL, NULL, NULL, NULL);
 	while (configs->enumerate(configs, &peer_cfg))
@@ -109,7 +109,7 @@ static void status(private_uci_control_t *this, char *name)
 			}
 			fprintf(out, "%-8s %-20D %-16H ", ike_sa->get_name(ike_sa),
 				ike_sa->get_other_id(ike_sa), ike_sa->get_other_host(ike_sa));
-			
+
 			children = ike_sa->create_child_sa_iterator(ike_sa);
 			while (children->iterate(children, (void**)&child_sa))
 			{
@@ -141,7 +141,7 @@ static void initiate(private_uci_control_t *this, char *name)
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	enumerator_t *enumerator;
-	
+
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, name);
 	if (peer_cfg)
 	{
@@ -173,7 +173,7 @@ static void terminate(private_uci_control_t *this, char *name)
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	u_int id;
-	
+
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
@@ -197,7 +197,7 @@ static void terminate(private_uci_control_t *this, char *name)
 static void process(private_uci_control_t *this, char *message)
 {
 	enumerator_t* enumerator;
-	
+
 	enumerator = enumerator_create_token(message, " \n", "");
 	if (enumerator->enumerate(enumerator, &message))
 	{
@@ -217,7 +217,7 @@ static void process(private_uci_control_t *this, char *message)
 		{
 			initiate(this, message);
 		}
-		else if (streq(message, "down") && 
+		else if (streq(message, "down") &&
 				 enumerator->enumerate(enumerator, &message))
 		{
 			terminate(this, message);
@@ -239,7 +239,7 @@ static job_requeue_t receive(private_uci_control_t *this)
 	char message[128];
 	int oldstate, len;
 	FILE *in;
-	
+
 	memset(message, 0, sizeof(message));
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	in = fopen(FIFO_FILE, "r");
@@ -280,9 +280,9 @@ static void destroy(private_uci_control_t *this)
 uci_control_t *uci_control_create()
 {
 	private_uci_control_t *this = malloc_thing(private_uci_control_t);
-	
+
 	this->public.destroy = (void(*)(uci_control_t*))destroy;
-	
+
 	unlink(FIFO_FILE);
 	if (mkfifo(FIFO_FILE, S_IRUSR|S_IWUSR) != 0)
 	{

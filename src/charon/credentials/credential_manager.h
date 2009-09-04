@@ -36,11 +36,11 @@ typedef struct credential_manager_t credential_manager_t;
  *
  * The credential manager is the entry point of the credential framework. It
  * uses so called "sets" to access credentials in a modular fashion, these
- * are implemented through the credential_set_t interface. 
+ * are implemented through the credential_set_t interface.
  * The manager additionally does trust chain verification and trust status
  * chaching. A set may call the managers methods if it needs credentials itself,
  * the manager uses recursive locking.
- * 
+ *
  * @verbatim
 
   +-------+        +----------------+
@@ -58,14 +58,14 @@ typedef struct credential_manager_t credential_manager_t;
   |   o   |                    may be recursive
   |   r   |
   +-------+
-    
-   @endverbatim                                       
+
+   @endverbatim
  *
  * The credential manager uses rwlocks for performance reasons, credential
  * sets must be fully thread save.
  */
 struct credential_manager_t {
-	
+
 	/**
 	 * Create an enumerator over all certificates.
 	 *
@@ -90,7 +90,7 @@ struct credential_manager_t {
 	 * @param second	second subject between key is shared
 	 * @return			enumerator over shared keys
 	 */
-	enumerator_t *(*create_shared_enumerator)(credential_manager_t *this, 
+	enumerator_t *(*create_shared_enumerator)(credential_manager_t *this,
 								shared_key_type_t type,
 								identification_t *first, identification_t *second);
 	/**
@@ -121,14 +121,14 @@ struct credential_manager_t {
 	 * @param me		own identity
 	 * @param other		peers identity
 	 * @return			shared_key_t, NULL if none found
-	 */			   
+	 */
 	shared_key_t *(*get_shared)(credential_manager_t *this, shared_key_type_t type,
 								identification_t *me, identification_t *other);
 	/**
 	 * Get a private key to create a signature.
 	 *
 	 * The get_private() method gets a secret private key identified by either
-	 * the keyid itself or an id the key belongs to. 
+	 * the keyid itself or an id the key belongs to.
 	 * The auth parameter contains additional information, such as receipients
 	 * trusted CA certs. Auth gets filled with subject and CA certificates
 	 * needed to validate a created signature.
@@ -140,12 +140,12 @@ struct credential_manager_t {
 	 */
 	private_key_t* (*get_private)(credential_manager_t *this, key_type_t type,
 								  identification_t *id, auth_cfg_t *auth);
-	
+
 	/**
 	 * Create an enumerator over trusted public keys.
 	 *
 	 * This method gets a an enumerator over trusted public keys to verify a
-	 * signature created by id. The auth parameter contains additional 
+	 * signature created by id. The auth parameter contains additional
 	 * authentication infos, e.g. peer and intermediate certificates.
 	 * The resulting enumerator enumerates over public_key_t *, auth_cfg_t *,
 	 * where the auth config helper contains rules for constraint checks.
@@ -157,14 +157,14 @@ struct credential_manager_t {
 	 */
 	enumerator_t* (*create_public_enumerator)(credential_manager_t *this,
 					key_type_t type, identification_t *id, auth_cfg_t *auth);
-	
+
 	/**
 	 * Cache a certificate by invoking cache_cert() on all registerd sets.
 	 *
 	 * @param cert		certificate to cache
 	 */
 	void (*cache_cert)(credential_manager_t *this, certificate_t *cert);
-	
+
 	/**
 	 * Flush the certificate cache.
 	 *
@@ -174,21 +174,21 @@ struct credential_manager_t {
 	 * @param type		type of certificate to flush, or CERT_ANY
 	 */
 	void (*flush_cache)(credential_manager_t *this, certificate_type_t type);
-		
+
 	/**
 	 * Register a credential set to the manager.
 	 *
 	 * @param set		set to register
 	 */
 	void (*add_set)(credential_manager_t *this, credential_set_t *set);
-	
+
 	/**
 	 * Unregister a credential set from the manager.
 	 *
 	 * @param set		set to unregister
 	 */
 	void (*remove_set)(credential_manager_t *this, credential_set_t *set);
-	
+
 	/**
      * Destroy a credential_manager instance.
      */

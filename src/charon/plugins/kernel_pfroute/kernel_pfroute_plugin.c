@@ -48,11 +48,11 @@ static void destroy(private_kernel_pfroute_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_kernel_pfroute_plugin_t *this = malloc_thing(private_kernel_pfroute_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	charon->kernel_interface->add_net_interface(charon->kernel_interface,
 						(kernel_net_constructor_t)kernel_pfroute_net_create);
-	
+
 	return &this->public.plugin;
 }

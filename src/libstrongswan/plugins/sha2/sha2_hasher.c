@@ -31,7 +31,7 @@ struct private_sha512_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	sha2_hasher_t public;
-	
+
 	unsigned char   sha_out[128];   /* results are here, bytes 0..47/0..63 */
 	u_int64_t       sha_H[8];
 	u_int64_t       sha_blocks;
@@ -50,7 +50,7 @@ struct private_sha256_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	sha2_hasher_t public;
-	
+
 	unsigned char   sha_out[64];    /* results are here, bytes 0...31 */
 	u_int32_t       sha_H[8];
 	u_int64_t       sha_blocks;
@@ -60,7 +60,7 @@ struct private_sha256_hasher_t {
 
 static const u_int32_t sha224_hashInit[8] = {
 	0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511,
-	0x64f98fa7, 0xbefa4fa4 
+	0x64f98fa7, 0xbefa4fa4
 };
 
 static const u_int32_t sha256_hashInit[8] = {
@@ -139,7 +139,7 @@ static const u_int64_t sha512_K[80] = {
 /**
  * Single block SHA256 transformation
  */
-static void sha256_transform(private_sha256_hasher_t *ctx, 
+static void sha256_transform(private_sha256_hasher_t *ctx,
 							 const unsigned char *datap)
 {
 	register int    j;
@@ -168,7 +168,7 @@ static void sha256_transform(private_sha256_hasher_t *ctx,
 	j = 0;
 	do
 	{
-		if(j >= 16) 
+		if(j >= 16)
 		{
 			Wm2 = W[j - 2];
 			Wm15 = W[j - 15];
@@ -198,7 +198,7 @@ static void sha256_transform(private_sha256_hasher_t *ctx,
 /**
  * Update SHA256 hash
  */
-static void sha256_write(private_sha256_hasher_t *ctx, 
+static void sha256_write(private_sha256_hasher_t *ctx,
 						 const unsigned char *datap, int length)
 {
 	while(length > 0)
@@ -243,7 +243,7 @@ static void sha256_final(private_sha256_hasher_t *ctx)
 	{
 		sha256_write(ctx, &padByte, 1);
 	}
-	
+
 	/* write bit length, big endian byte order */
 	ctx->sha_out[56] = bitLength >> 56;
 	ctx->sha_out[57] = bitLength >> 48;
@@ -254,7 +254,7 @@ static void sha256_final(private_sha256_hasher_t *ctx)
 	ctx->sha_out[62] = bitLength >> 8;
 	ctx->sha_out[63] = bitLength;
 	sha256_transform(ctx, &ctx->sha_out[0]);
-	
+
 	/* return results in ctx->sha_out[0...31] */
 	datap = &ctx->sha_out[0];
 	j = 0;
@@ -283,7 +283,7 @@ static void sha256_final(private_sha256_hasher_t *ctx)
 /**
  * Single block SHA384/SHA512 transformation
  */
-static void sha512_transform(private_sha512_hasher_t *ctx, 
+static void sha512_transform(private_sha512_hasher_t *ctx,
 							 const unsigned char *datap)
 {
 	register int    j;
@@ -343,14 +343,14 @@ static void sha512_transform(private_sha512_hasher_t *ctx,
 /**
  * Update a SHA384/SHA512 hash
  */
-static void sha512_write(private_sha512_hasher_t *ctx, 
+static void sha512_write(private_sha512_hasher_t *ctx,
 						 const unsigned char *datap, int length)
 {
-	while(length > 0) 
+	while(length > 0)
 	{
-		if(!ctx->sha_bufCnt) 
+		if(!ctx->sha_bufCnt)
 		{
-			while(length >= sizeof(ctx->sha_out)) 
+			while(length >= sizeof(ctx->sha_out))
 			{
 				sha512_transform(ctx, datap);
 				datap += sizeof(ctx->sha_out);
@@ -360,7 +360,7 @@ static void sha512_write(private_sha512_hasher_t *ctx,
 		}
 		ctx->sha_out[ctx->sha_bufCnt] = *datap++;
 		length--;
-		if(++ctx->sha_bufCnt == sizeof(ctx->sha_out)) 
+		if(++ctx->sha_bufCnt == sizeof(ctx->sha_out))
 		{
 			sha512_transform(ctx, &ctx->sha_out[0]);
 			ctx->sha_bufCnt = 0;
@@ -385,7 +385,7 @@ static void sha512_final(private_sha512_hasher_t *ctx)
 
 	/* pad extra space with zeroes */
 	padByte = 0;
-	while(ctx->sha_bufCnt != 112) 
+	while(ctx->sha_bufCnt != 112)
 	{
 		sha512_write(ctx, &padByte, 1);
 	}
@@ -408,7 +408,7 @@ static void sha512_final(private_sha512_hasher_t *ctx)
 	ctx->sha_out[126] = bitLength >> 8;
 	ctx->sha_out[127] = bitLength;
 	sha512_transform(ctx, &ctx->sha_out[0]);
-	
+
 	/* return results in ctx->sha_out[0...63] */
 	datap = &ctx->sha_out[0];
 	j = 0;
@@ -429,7 +429,7 @@ static void sha512_final(private_sha512_hasher_t *ctx)
 /**
  * Implementation of hasher_t.get_hash for SHA224.
  */
-static void get_hash224(private_sha256_hasher_t *this, 
+static void get_hash224(private_sha256_hasher_t *this,
 						chunk_t chunk, u_int8_t *buffer)
 {
 	sha256_write(this, chunk.ptr, chunk.len);
@@ -444,7 +444,7 @@ static void get_hash224(private_sha256_hasher_t *this,
 /**
  * Implementation of hasher_t.get_hash for SHA256.
  */
-static void get_hash256(private_sha256_hasher_t *this, 
+static void get_hash256(private_sha256_hasher_t *this,
 						chunk_t chunk, u_int8_t *buffer)
 {
 	sha256_write(this, chunk.ptr, chunk.len);
@@ -489,11 +489,11 @@ static void get_hash512(private_sha512_hasher_t *this,
 /**
  * Implementation of hasher_t.allocate_hash for SHA224.
  */
-static void allocate_hash224(private_sha256_hasher_t *this, 
+static void allocate_hash224(private_sha256_hasher_t *this,
 							 chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	
+
 	sha256_write(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
@@ -508,11 +508,11 @@ static void allocate_hash224(private_sha256_hasher_t *this,
 /**
  * Implementation of hasher_t.allocate_hash for SHA256.
  */
-static void allocate_hash256(private_sha256_hasher_t *this, 
+static void allocate_hash256(private_sha256_hasher_t *this,
 							 chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	
+
 	sha256_write(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
@@ -527,11 +527,11 @@ static void allocate_hash256(private_sha256_hasher_t *this,
 /**
  * Implementation of hasher_t.allocate_hash for SHA384.
  */
-static void allocate_hash384(private_sha512_hasher_t *this, 
+static void allocate_hash384(private_sha512_hasher_t *this,
 							 chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	
+
 	sha512_write(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
@@ -546,11 +546,11 @@ static void allocate_hash384(private_sha512_hasher_t *this,
 /**
  * Implementation of hasher_t.allocate_hash for SHA512.
  */
-static void allocate_hash512(private_sha512_hasher_t *this, 
+static void allocate_hash512(private_sha512_hasher_t *this,
 							 chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	
+
 	sha512_write(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
@@ -577,7 +577,7 @@ static size_t get_hash_size256(private_sha256_hasher_t *this)
 {
 	return HASH_SIZE_SHA256;
 }
-	
+
 /**
  * Implementation of hasher_t.get_hash_size for SHA384.
  */
@@ -585,7 +585,7 @@ static size_t get_hash_size384(private_sha512_hasher_t *this)
 {
 	return HASH_SIZE_SHA384;
 }
-	
+
 /**
  * Implementation of hasher_t.get_hash_size for SHA512.
  */
@@ -650,7 +650,7 @@ static void destroy(sha2_hasher_t *this)
 sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 {
 	sha2_hasher_t *this;
-	
+
 	switch (algorithm)
 	{
 		case HASH_SHA224:
@@ -686,9 +686,9 @@ sha2_hasher_t *sha2_hasher_create(hash_algorithm_t algorithm)
 			return NULL;
 	}
 	this->hasher_interface.destroy = (void(*)(hasher_t*))destroy;
-	
+
 	/* initialize */
 	this->hasher_interface.reset(&this->hasher_interface);
-	
+
 	return this;
 }

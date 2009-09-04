@@ -27,14 +27,14 @@ typedef struct bridge_t bridge_t;
  * Interface in a guest, connected to a tap device on the host.
  */
 struct bridge_t {
-	
+
 	/**
 	 * Get the name of the bridge.
 	 *
 	 * @return			name of the bridge
 	 */
 	char* (*get_name)(bridge_t *this);
-	
+
 	/**
 	 * Add an interface to a bridge.
 	 *
@@ -42,7 +42,7 @@ struct bridge_t {
 	 * @return			TRUE if interface added
 	 */
 	bool (*connect_iface)(bridge_t *this, iface_t *iface);
-	
+
 	/**
 	 * Remove an interface from a bridge.
 	 *
@@ -50,14 +50,14 @@ struct bridge_t {
 	 * @return			TRUE if interface removed
 	 */
 	bool (*disconnect_iface)(bridge_t *this, iface_t *iface);
-	
+
 	/**
 	 * Create an enumerator over all interfaces.
 	 *
 	 * @return 			enumerator over iface_t's
 	 */
-	enumerator_t* (*create_iface_enumerator)(bridge_t *this);	
-	
+	enumerator_t* (*create_iface_enumerator)(bridge_t *this);
+
 	/**
 	 * Destroy a bridge
 	 */

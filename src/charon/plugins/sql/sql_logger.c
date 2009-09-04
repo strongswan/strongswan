@@ -30,17 +30,17 @@ struct private_sql_logger_t {
 	 * Public part
 	 */
 	sql_logger_t public;
-	
+
 	/**
 	 * database connection
 	 */
 	database_t *db;
-	
+
 	/**
 	 * logging level
 	 */
 	int level;
-	
+
 	/**
 	 * avoid recursive logging
 	 */
@@ -67,7 +67,7 @@ static bool log_(private_sql_logger_t *this, debug_t group, level_t level,
 		identification_t *local_id, *remote_id;
 		u_int64_t ispi, rspi;
 		ike_sa_id_t *id;
-	
+
 		id = ike_sa->get_id(ike_sa);
 		ispi = id->get_initiator_spi(id);
 		rspi = id->get_responder_spi(id);
@@ -86,9 +86,9 @@ static bool log_(private_sql_logger_t *this, debug_t group, level_t level,
 		remote_id = ike_sa->get_other_id(ike_sa);
 		local_host = ike_sa->get_my_host(ike_sa);
 		remote_host = ike_sa->get_other_host(ike_sa);
-		
+
 		vsnprintf(buffer, sizeof(buffer), format, args);
-		
+
 		this->db->execute(this->db, NULL, "REPLACE INTO ike_sas ("
 						  "local_spi, remote_spi, id, initiator, "
 						  "local_id_type, local_id_data, "
@@ -129,17 +129,17 @@ static void destroy(private_sql_logger_t *this)
 sql_logger_t *sql_logger_create(database_t *db)
 {
 	private_sql_logger_t *this = malloc_thing(private_sql_logger_t);
-	
+
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
 	this->public.destroy = (void(*)(sql_logger_t*))destroy;
-	
+
 	this->db = db;
 	this->recursive = FALSE;
-	
+
 	this->level = lib->settings->get_int(lib->settings,
 										 "charon.plugins.sql.loglevel", -1);
-	
+
 	return &this->public;
 }
 

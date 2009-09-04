@@ -24,14 +24,14 @@ typedef struct private_eap_payload_t private_eap_payload_t;
 
 /**
  * Private data of an eap_payload_t object.
- * 
+ *
  */
 struct private_eap_payload_t {
 	/**
 	 * Public eap_payload_t interface.
 	 */
 	eap_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -41,12 +41,12 @@ struct private_eap_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * EAP message data, if available
 	 */
@@ -55,10 +55,10 @@ struct private_eap_payload_t {
 
 /**
  * Encoding rules to parse or generate a EAP payload.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_eap_payload_t.
- * 
+ *
  */
 encoding_rule_t eap_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -98,7 +98,7 @@ static status_t verify(private_eap_payload_t *this)
 {
 	u_int16_t length;
 	u_int8_t code;
-	
+
 	if (this->data.len < 4)
 	{
 		DBG1(DBG_ENC, "EAP payloads EAP message too short (%d)", this->data.len);
@@ -264,7 +264,7 @@ static void destroy(private_eap_payload_t *this)
 eap_payload_t *eap_payload_create()
 {
 	private_eap_payload_t *this = malloc_thing(private_eap_payload_t);
-	
+
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
@@ -273,7 +273,7 @@ eap_payload_t *eap_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (eap_payload_t *)) destroy;
 	this->public.get_data = (chunk_t (*) (eap_payload_t*))get_data;
@@ -281,13 +281,13 @@ eap_payload_t *eap_payload_create()
 	this->public.get_code = (eap_code_t (*) (eap_payload_t*))get_code;
 	this->public.get_identifier = (u_int8_t (*) (eap_payload_t*))get_identifier;
 	this->public.get_type = (eap_type_t (*) (eap_payload_t*,u_int32_t*))get_type;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = EAP_PAYLOAD_HEADER_LENGTH;
 	this->data = chunk_empty;
-	
+
 	return &(this->public);
 }
 
@@ -297,7 +297,7 @@ eap_payload_t *eap_payload_create()
 eap_payload_t *eap_payload_create_data(chunk_t data)
 {
 	eap_payload_t *this = eap_payload_create();
-	
+
 	this->set_data(this, data);
 	return this;
 }
@@ -309,11 +309,11 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
 {
 	eap_payload_t *this = eap_payload_create();
 	chunk_t data = chunk_alloca(4);
-	
+
 	*(data.ptr + 0) = code;
 	*(data.ptr + 1) = identifier;
 	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
-	
+
 	this->set_data(this, data);
 	return this;
 }
@@ -325,12 +325,12 @@ eap_payload_t *eap_payload_create_nak(u_int8_t identifier)
 {
 	eap_payload_t *this = eap_payload_create();
 	chunk_t data = chunk_alloca(5);
-	
+
 	*(data.ptr + 0) = EAP_RESPONSE;
 	*(data.ptr + 1) = identifier;
 	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
 	*(data.ptr + 4) = EAP_NAK;
-	
+
 	this->set_data(this, data);
 	return this;
 }

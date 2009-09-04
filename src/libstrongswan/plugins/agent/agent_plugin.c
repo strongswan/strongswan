@@ -47,9 +47,9 @@ static void destroy(private_agent_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_agent_plugin_t *this = malloc_thing(private_agent_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							(builder_constructor_t)agent_private_key_builder);
 	return &this->public.plugin;

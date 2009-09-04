@@ -16,7 +16,7 @@
 /**
  * @defgroup pem_p pem
  * @ingroup plugins
- * 
+ *
  * @defgroup pem_plugin pem_plugin
  * @{ @ingroup pem_p
  */

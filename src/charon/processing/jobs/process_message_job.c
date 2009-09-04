@@ -28,7 +28,7 @@ struct private_process_message_job_t {
 	 * public process_message_job_t interface
 	 */
 	process_message_job_t public;
-	
+
 	/**
 	 * Message associated with this job
 	 */
@@ -50,7 +50,7 @@ static void destroy(private_process_message_job_t *this)
 static void execute(private_process_message_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	
+
 #ifdef ME
 	/* if this is an unencrypted INFORMATIONAL exchange it is likely a
 	 * connectivity check. */
@@ -67,7 +67,7 @@ static void execute(private_process_message_job_t *this)
 		return;
 	}
 #endif /* ME */
-	
+
 	ike_sa = charon->ike_sa_manager->checkout_by_message(charon->ike_sa_manager,
 														 this->message);
 	if (ike_sa)
@@ -98,9 +98,9 @@ process_message_job_t *process_message_job_create(message_t *message)
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void(*)(job_t*))destroy;
-	
+
 	/* private variables */
 	this->message = message;
-	
+
 	return &(this->public);
 }

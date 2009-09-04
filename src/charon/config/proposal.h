@@ -65,17 +65,17 @@ extern enum_name_t *extended_sequence_numbers_names;
 
 /**
  * Stores a set of algorithms used for an SA.
- * 
- * A proposal stores algorithms for a specific 
+ *
+ * A proposal stores algorithms for a specific
  * protocol. It can store algorithms for one protocol.
  * Proposals with multiple protocols are not supported,
  * as it's not specified in RFC4301 anymore.
  */
 struct proposal_t {
-	
+
 	/**
 	 * Add an algorithm to the proposal.
-	 * 
+	 *
 	 * The algorithms are stored by priority, first added
 	 * is the most preferred.
 	 * Key size is only needed for encryption algorithms
@@ -84,27 +84,27 @@ struct proposal_t {
 	 * The alg parameter accepts encryption_algorithm_t,
 	 * integrity_algorithm_t, dh_group_number_t and
 	 * extended_sequence_numbers_t.
-	 * 
+	 *
 	 * @param type			kind of algorithm
 	 * @param alg			identifier for algorithm
 	 * @param key_size		key size to use
 	 */
 	void (*add_algorithm) (proposal_t *this, transform_type_t type,
 						   u_int16_t alg, u_int16_t key_size);
-	
+
 	/**
 	 * Get an enumerator over algorithms for a specifc algo type.
-	 * 
+	 *
 	 * @param type			kind of algorithm
 	 * @return				enumerator over u_int16_t alg, u_int16_t key_size
 	 */
 	enumerator_t *(*create_enumerator) (proposal_t *this, transform_type_t type);
-	
+
 	/**
 	 * Get the algorithm for a type to use.
-	 * 
+	 *
 	 * If there are multiple algorithms, only the first is returned.
-	 * 
+	 *
 	 * @param type			kind of algorithm
 	 * @param alg			pointer which receives algorithm
 	 * @param key_size		pointer which receives the key size
@@ -112,53 +112,53 @@ struct proposal_t {
 	 */
 	bool (*get_algorithm) (proposal_t *this, transform_type_t type,
 						   u_int16_t *alg, u_int16_t *key_size);
-	
+
 	/**
 	 * Check if the proposal has a specific DH group.
-	 * 
+	 *
 	 * @param group			group to check for
 	 * @return				TRUE if algorithm included
 	 */
 	bool (*has_dh_group) (proposal_t *this, diffie_hellman_group_t group);
-	
+
 	/**
 	 * Strip DH groups from proposal to use it without PFS.
 	 */
-	void (*strip_dh)(proposal_t *this);	
+	void (*strip_dh)(proposal_t *this);
 
 	/**
 	 * Compare two proposal, and select a matching subset.
-	 * 
+	 *
 	 * If the proposals are for the same protocols (AH/ESP), they are
 	 * compared. If they have at least one algorithm of each type
 	 * in common, a resulting proposal of this kind is created.
-	 * 
+	 *
 	 * @param other			proposal to compair agains
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
 	proposal_t *(*select) (proposal_t *this, proposal_t *other);
-	
+
 	/**
 	 * Get the protocol ID of the proposal.
 	 *
 	 * @return				protocol of the proposal
 	 */
 	protocol_id_t (*get_protocol) (proposal_t *this);
-	
+
 	/**
 	 * Get the SPI of the proposal.
-	 * 
+	 *
 	 * @return				spi for proto
 	 */
 	u_int64_t (*get_spi) (proposal_t *this);
-	
+
 	/**
 	 * Set the SPI of the proposal.
-	 * 
+	 *
 	 * @param spi			spi to set for proto
 	 */
 	void (*set_spi) (proposal_t *this, u_int64_t spi);
-	
+
 	/**
 	 * Check for the eqality of two proposals.
 	 *
@@ -166,14 +166,14 @@ struct proposal_t {
 	 * @return				TRUE if other equal to this
 	 */
 	bool (*equals)(proposal_t *this, proposal_t *other);
-	
+
 	/**
 	 * Clone a proposal.
-	 * 
+	 *
 	 * @return				clone of proposal
 	 */
 	proposal_t *(*clone) (proposal_t *this);
-	
+
 	/**
 	 * Destroys the proposal object.
 	 */
@@ -214,7 +214,7 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 /**
  * printf hook function for proposal_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    proposal_t *proposal
  * With the #-specifier, arguments are:
  *    linked_list_t *list containing proposal_t*

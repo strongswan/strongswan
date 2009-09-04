@@ -29,7 +29,7 @@ typedef struct openssl_ec_diffie_hellman_t openssl_ec_diffie_hellman_t;
  * Implementation of the EC Diffie-Hellman algorithm using OpenSSL.
  */
 struct openssl_ec_diffie_hellman_t {
-	
+
 	/**
 	 * Implements diffie_hellman_t interface.
 	 */
@@ -38,7 +38,7 @@ struct openssl_ec_diffie_hellman_t {
 
 /**
  * Creates a new openssl_ec_diffie_hellman_t object.
- * 
+ *
  * @param group			EC Diffie Hellman group number to use
  * @return				openssl_ec_diffie_hellman_t object, NULL if not supported
  */

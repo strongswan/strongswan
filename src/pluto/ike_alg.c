@@ -176,13 +176,13 @@ struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
 					enum_show(&oakley_enc_names, ealg));
 			continue;
 		}
-		if (!ike_alg_get_hasher(halg)) 
+		if (!ike_alg_get_hasher(halg))
 		{
 			plog("ike alg: hasher %s not present",
 					enum_show(&oakley_hash_names, halg));
 			continue;
 		}
-		if (!ike_alg_get_dh_group(modp)) 
+		if (!ike_alg_get_dh_group(modp))
 		{
 			plog("ike alg: dh group %s not present",
 					enum_show(&oakley_group_names, modp));

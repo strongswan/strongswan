@@ -28,22 +28,22 @@ typedef struct private_ike_config_t private_ike_config_t;
  * Private members of a ike_config_t task.
  */
 struct private_ike_config_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_config_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * virtual ip
 	 */
@@ -57,9 +57,9 @@ static void build_vip(private_ike_config_t *this, host_t *vip, cp_payload_t *cp)
 {
 	configuration_attribute_t *ca;
 	chunk_t chunk, prefix;
-	
+
 	ca = configuration_attribute_create();
-	
+
 	if (vip->get_family(vip) == AF_INET)
 	{
 		ca->set_type(ca, INTERNAL_IP4_ADDRESS);
@@ -100,7 +100,7 @@ static void process_attribute(private_ike_config_t *this,
 	host_t *ip;
 	chunk_t addr;
 	int family = AF_INET6;
-	
+
 	switch (ca->get_type(ca))
 	{
 		case INTERNAL_IP4_ADDRESS:
@@ -118,7 +118,7 @@ static void process_attribute(private_ike_config_t *this,
 				/* skip prefix byte in IPv6 payload*/
 				if (family == AF_INET6)
 				{
-					addr.len--; 
+					addr.len--;
 				}
 				ip = host_create_from_chunk(family, addr, 0);
 			}
@@ -150,7 +150,7 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 	enumerator_t *enumerator;
 	iterator_t *attributes;
 	payload_t *payload;
-	
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -172,7 +172,7 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 					break;
 				}
 				default:
-					DBG1(DBG_IKE, "ignoring %N config payload", 
+					DBG1(DBG_IKE, "ignoring %N config payload",
 						 config_type_names, cp->get_config_type(cp));
 					break;
 			}
@@ -190,7 +190,7 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 	{	/* in first IKE_AUTH only */
 		peer_cfg_t *config;
 		host_t *vip;
-		
+
 		/* reuse virtual IP if we already have one */
 		vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 		if (!vip)
@@ -202,12 +202,12 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 		{
 			configuration_attribute_t *ca;
 			cp_payload_t *cp;
-			
+
 			cp = cp_payload_create();
 			cp->set_config_type(cp, CFG_REQUEST);
-			
+
 			build_vip(this, vip, cp);
-			
+
 			/* we currently always add a DNS request if we request an IP */
 			ca = configuration_attribute_create();
 			if (vip->get_family(vip) == AF_INET)
@@ -245,7 +245,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
 		peer_cfg_t *config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		
+
 		if (config && this->virtual_ip)
 		{
 			enumerator_t *enumerator;
@@ -254,11 +254,11 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			chunk_t value;
 			cp_payload_t *cp;
 			host_t *vip = NULL;
-			
+
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
 			{
-				vip = charon->attributes->acquire_address(charon->attributes, 
+				vip = charon->attributes->acquire_address(charon->attributes,
 									config->get_pool(config),
 									this->ike_sa->get_other_id(this->ike_sa),
 									this->virtual_ip);
@@ -273,13 +273,13 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			}
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", vip);
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
-			
+
 			cp = cp_payload_create();
 			cp->set_config_type(cp, CFG_REPLY);
-			
+
 			build_vip(this, vip, cp);
 			vip->destroy(vip);
-			
+
 			/* if we add an IP, we also look for other attributes */
 			enumerator = charon->attributes->create_attribute_enumerator(
 				charon->attributes, this->ike_sa->get_other_id(this->ike_sa));
@@ -291,7 +291,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 				cp->add_configuration_attribute(cp, ca);
 			}
 			enumerator->destroy(enumerator);
-			
+
 			message->add_payload(message, (payload_t*)cp);
 		}
 		return SUCCESS;
@@ -306,9 +306,9 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
-		
+
 		process_payloads(this, message);
-		
+
 		if (this->virtual_ip)
 		{
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
@@ -332,7 +332,7 @@ static task_type_t get_type(private_ike_config_t *this)
 static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->virtual_ip);
-	
+
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
 }
@@ -352,15 +352,15 @@ static void destroy(private_ike_config_t *this)
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 {
 	private_ike_config_t *this = malloc_thing(private_ike_config_t);
-	
+
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	this->initiator = initiator;
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -371,7 +371,7 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	return &this->public;
 }
 

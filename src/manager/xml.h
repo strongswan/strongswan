@@ -43,7 +43,7 @@ struct xml_t {
 	 * @return			enumerator over (xml_t* child, char *name, char *value)
 	 */
 	enumerator_t* (*children)(xml_t *this);
-	
+
 	/**
 	 * Get an attribute value by its name.
 	 *

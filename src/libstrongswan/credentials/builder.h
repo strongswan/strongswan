@@ -130,14 +130,14 @@ struct builder_t {
 	/**
 	 * Add a part to the construct.
 	 *
-	 * Any added parts are cloned/refcounted by the builder implementation, a 
+	 * Any added parts are cloned/refcounted by the builder implementation, a
 	 * caller may need to free the passed ressources themself.
 	 *
 	 * @param part		kind of part
 	 * @param ...		part specific variable argument
 	 */
 	void (*add)(builder_t *this, builder_part_t part, ...);
-	
+
 	/**
 	 * Build the construct with all supplied parts.
 	 *

@@ -32,7 +32,7 @@ typedef struct request_t request_t;
  * The response is also handled through the request object.
  */
 struct request_t {
-	
+
 	/**
 	 * Add a cookie to the reply (Set-Cookie header).
 	 *
@@ -40,7 +40,7 @@ struct request_t {
 	 * @param value		value of the cookie
 	 */
 	void (*add_cookie)(request_t *this, char *name, char *value);
-	
+
 	/**
 	 * Get a cookie the client sent in the request.
 	 *
@@ -48,35 +48,35 @@ struct request_t {
 	 * @return			cookie value, NULL if no such cookie found
 	 */
 	char* (*get_cookie)(request_t *this, char *name);
-	
+
 	/**
 	 * Get the request path relative to the application.
 	 *
 	 * @return			path
 	 */
 	char* (*get_path)(request_t *this);
-	
+
 	/**
 	 * Get the base path of the application.
 	 *
 	 * @return			base path
 	 */
 	char* (*get_base)(request_t *this);
-	
+
 	/**
 	 * Get the remote host address of this request.
 	 *
 	 * @return			host address as string
 	 */
 	char* (*get_host)(request_t *this);
-	
+
 	/**
 	 * Get the user agent string.
 	 *
 	 * @return			user agent string
 	 */
 	char* (*get_user_agent)(request_t *this);
-		
+
 	/**
 	 * Get a post/get variable included in the request.
 	 *
@@ -84,19 +84,19 @@ struct request_t {
 	 * @return			value, NULL if not found
 	 */
 	char* (*get_query_data)(request_t *this, char *name);
-	
+
 	/**
 	 * Close the session and it's context after handling.
 	 */
 	void (*close_session)(request_t *this);
-	
+
 	/**
 	 * Has the session been closed by close_session()?
 	 *
 	 * @return			TRUE if session has been closed
 	 */
 	bool (*session_closed)(request_t *this);
-	
+
 	/**
 	 * Redirect the client to another location.
 	 *
@@ -104,12 +104,12 @@ struct request_t {
 	 * @param ...		variable argument for fmt
 	 */
 	void (*redirect)(request_t *this, char *fmt, ...);
-	
+
 	/**
 	 * Redirect the client to the referer.
 	 */
 	void (*to_referer)(request_t *this);
-		
+
 	/**
 	 * Set a template value.
 	 *
@@ -117,7 +117,7 @@ struct request_t {
 	 * @param value		value to set key to
 	 */
 	void (*set)(request_t *this, char *key, char *value);
-	
+
 	/**
 	 * Set a template value using format strings.
 	 *
@@ -128,7 +128,7 @@ struct request_t {
 	 * @param ...		variable argument list
 	 */
 	void (*setf)(request_t *this, char *format, ...);
-	
+
 	/**
 	 * Render a template.
 	 *
@@ -139,7 +139,7 @@ struct request_t {
 	 * @param template	clearsilver template file location
 	 */
 	void (*render)(request_t *this, char *template);
-	
+
 	/**
 	 * Stream a format string to the client.
 	 *
@@ -151,7 +151,7 @@ struct request_t {
 	 * @return			number of streamed bytes, < 0 if stream closed
 	 */
 	int (*streamf)(request_t *this, char *format, ...);
-	
+
 	/**
 	 * Serve a request with headers and a body.
 	 *
@@ -159,14 +159,14 @@ struct request_t {
 	 * @param chunk		body to write to output
 	 */
 	void (*serve)(request_t *this, char *headers, chunk_t chunk);
-	
+
 	/**
 	 * Increase the reference count to the stream.
 	 *
 	 * @return			this with increased refcount
 	 */
 	request_t* (*get_ref)(request_t *this);
-	
+
 	/**
 	 * Destroy the request_t.
 	 */

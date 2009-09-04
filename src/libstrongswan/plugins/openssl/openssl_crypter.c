@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil 
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,17 +23,17 @@ typedef struct private_openssl_crypter_t private_openssl_crypter_t;
  * Private data of openssl_crypter_t
  */
 struct private_openssl_crypter_t {
-	
+
 	/**
 	 * Public part of this class.
 	 */
 	openssl_crypter_t public;
-	
+
 	/*
 	 * the key
 	 */
 	chunk_t	key;
-	
+
 	/*
 	 * the cipher to use
 	 */
@@ -49,17 +49,17 @@ typedef struct {
 	 * Identifier specified in IKEv2
 	 */
 	int ikev2_id;
-	
+
 	/**
 	 * Name of the algorithm, as used in OpenSSL
 	 */
 	char *name;
-	
+
 	/**
 	 * Minimum valid key length in bytes
 	 */
 	size_t key_size_min;
-	
+
 	/**
 	 * Maximum valid key length in bytes
 	 */
@@ -91,7 +91,7 @@ static openssl_algorithm_t encryption_algs[] = {
 /**
  * Look up an OpenSSL algorithm name and validate its key size
  */
-static char* lookup_algorithm(openssl_algorithm_t *openssl_algo, 
+static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 					   u_int16_t ikev2_algo, size_t *key_size)
 {
 	while (openssl_algo->ikev2_id != END_OF_LIST)
@@ -104,7 +104,7 @@ static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 			{
 				*key_size = openssl_algo->key_size_min;
 			}
-			
+
 			/* validate key size */
 			if (*key_size < openssl_algo->key_size_min ||
 				*key_size > openssl_algo->key_size_max)
@@ -123,7 +123,7 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 {
 	int len;
 	u_char *out;
-	
+
 	out = data.ptr;
 	if (dst)
 	{
@@ -144,7 +144,7 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 /**
  * Implementation of crypter_t.decrypt.
  */
-static void decrypt(private_openssl_crypter_t *this, chunk_t data, 
+static void decrypt(private_openssl_crypter_t *this, chunk_t data,
 						chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 0);
@@ -154,7 +154,7 @@ static void decrypt(private_openssl_crypter_t *this, chunk_t data,
 /**
  * Implementation of crypter_t.encrypt.
  */
-static void encrypt (private_openssl_crypter_t *this, chunk_t data, 
+static void encrypt (private_openssl_crypter_t *this, chunk_t data,
 							chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 1);
@@ -196,13 +196,13 @@ static void destroy (private_openssl_crypter_t *this)
 /*
  * Described in header
  */
-openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo, 
+openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 												  size_t key_size)
 {
 	private_openssl_crypter_t *this;
-	
+
 	this = malloc_thing(private_openssl_crypter_t);
-	
+
 	switch (algo)
 	{
 		case ENCR_NULL:
@@ -218,7 +218,7 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					this->cipher = EVP_get_cipherbyname("aes192");
 					break;
 				case 32:        /* AES-256 */
-					this->cipher = EVP_get_cipherbyname("aes256"); 
+					this->cipher = EVP_get_cipherbyname("aes256");
 					break;
 				default:
 					free(this);
@@ -235,7 +235,7 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					this->cipher = EVP_get_cipherbyname("camellia192");
 					break;
 				case 32:        /* CAMELLIA 256 */
-					this->cipher = EVP_get_cipherbyname("camellia256"); 
+					this->cipher = EVP_get_cipherbyname("camellia256");
 					break;
 				default:
 					free(this);
@@ -258,22 +258,22 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 			break;
 		}
 	}
-	
+
 	if (!this->cipher)
 	{
 		/* OpenSSL does not support the requested algo */
 		free(this);
 		return NULL;
 	}
-	
+
 	this->key = chunk_alloc(key_size);
-	
+
 	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
 	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
 	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
 	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-	
+
 	return &this->public;
 }

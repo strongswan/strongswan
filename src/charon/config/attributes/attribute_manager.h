@@ -35,7 +35,7 @@ typedef struct attribute_manager_t attribute_manager_t;
  * are received on the requesting peer.
  */
 struct attribute_manager_t {
-	
+
 	/**
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
@@ -47,7 +47,7 @@ struct attribute_manager_t {
 	host_t* (*acquire_address)(attribute_manager_t *this,
 							   char *pool, identification_t *id,
 							   host_t *requested);
-	
+
 	/**
 	 * Release a previously acquired address.
 	 *
@@ -57,7 +57,7 @@ struct attribute_manager_t {
 	 */
 	void (*release_address)(attribute_manager_t *this,
 							char *pool, host_t *address, identification_t *id);
-	
+
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
@@ -66,7 +66,7 @@ struct attribute_manager_t {
 	 */
 	enumerator_t* (*create_attribute_enumerator)(attribute_manager_t *this,
 												 identification_t *id);
-	
+
 	/**
 	 * Register an attribute provider to the manager.
 	 *
@@ -81,7 +81,7 @@ struct attribute_manager_t {
 	 */
 	void (*remove_provider)(attribute_manager_t *this,
 							attribute_provider_t *provider);
-	
+
 	/**
 	 * Handle a configuration attribute by passing them to the handlers.
 	 *
@@ -92,7 +92,7 @@ struct attribute_manager_t {
 	 */
 	attribute_handler_t* (*handle)(attribute_manager_t *this, ike_sa_t *ike_sa,
 							configuration_attribute_type_t type, chunk_t data);
-	
+
 	/**
 	 * Release an attribute previously handle()d by a handler.
 	 *
@@ -104,7 +104,7 @@ struct attribute_manager_t {
 	void (*release)(attribute_manager_t *this, attribute_handler_t *handler,
 						ike_sa_t *ike_sa, configuration_attribute_type_t type,
 						chunk_t data);
-	
+
 	/**
 	 * Register an attribute handler to the manager.
 	 *
@@ -112,7 +112,7 @@ struct attribute_manager_t {
 	 */
 	void (*add_handler)(attribute_manager_t *this,
 						attribute_handler_t *handler);
-	
+
 	/**
 	 * Unregister an attribute handler from the manager.
 	 *
@@ -120,7 +120,7 @@ struct attribute_manager_t {
 	 */
 	void (*remove_handler)(attribute_manager_t *this,
 						   attribute_handler_t *handler);
-	
+
 	/**
 	 * Destroy a attribute_manager instance.
 	 */

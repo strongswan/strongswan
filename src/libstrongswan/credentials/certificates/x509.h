@@ -58,42 +58,42 @@ struct x509_t {
 	 * Implements certificate_t.
 	 */
 	certificate_t interface;
-	
+
 	/**
 	 * Get the flags set for this certificate.
 	 *
 	 * @return			set of flags
 	 */
 	x509_flag_t (*get_flags)(x509_t *this);
-	
+
 	/**
 	 * Get the certificate serial number.
 	 *
 	 * @return			chunk pointing to internal serial number
 	 */
 	chunk_t (*get_serial)(x509_t *this);
-	
+
 	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
 	 * @return			authKeyIdentifier as chunk_t, internal data
 	 */
 	chunk_t (*get_authKeyIdentifier)(x509_t *this);
-	
+
 	/**
 	 * Create an enumerator over all subjectAltNames.
 	 *
 	 * @return			enumerator over subjectAltNames as identification_t*
 	 */
 	enumerator_t* (*create_subjectAltName_enumerator)(x509_t *this);
-	
+
 	/**
 	 * Create an enumerator over all CRL URIs.
 	 *
 	 * @return			enumerator over URIs as char*
 	 */
 	enumerator_t* (*create_crl_uri_enumerator)(x509_t *this);
-	
+
 	/**
 	 * Create an enumerator over all OCSP URIs.
 	 *

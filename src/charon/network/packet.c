@@ -27,17 +27,17 @@ struct private_packet_t {
 	 * Public part of a packet_t object.
 	 */
 	packet_t public;
-	
+
 	/**
 	 * source address
 	 */
 	host_t *source;
-		
+
 	/**
 	 * destination address
 	 */
 	host_t *destination;
-	 
+
 	 /**
 	  * message data
 	  */
@@ -77,7 +77,7 @@ static host_t *get_destination(private_packet_t *this)
 {
 	return this->destination;
 }
-	
+
 /**
  * Implements packet_t.get_data
  */
@@ -103,7 +103,7 @@ static void destroy(private_packet_t *this)
 	if (this->source != NULL)
 	{
 		this->source->destroy(this->source);
-	}	
+	}
 	if (this->destination != NULL)
 	{
 		this->destination->destroy(this->destination);
@@ -118,7 +118,7 @@ static void destroy(private_packet_t *this)
 static packet_t *clone_(private_packet_t *this)
 {
 	private_packet_t *other = (private_packet_t*)packet_create();
-	
+
 	if (this->destination != NULL)
 	{
 		other->destination = this->destination->clone(this->destination);
@@ -150,10 +150,10 @@ packet_t *packet_create(void)
 	this->public.get_destination = (host_t*(*) (packet_t *)) get_destination;
 	this->public.clone = (packet_t*(*) (packet_t *))clone_;
 	this->public.destroy = (void(*) (packet_t *)) destroy;
-	
+
 	this->destination = NULL;
 	this->source = NULL;
 	this->data = chunk_empty;
-	
+
 	return &(this->public);
 }

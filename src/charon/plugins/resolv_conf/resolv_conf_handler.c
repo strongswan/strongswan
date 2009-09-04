@@ -26,17 +26,17 @@ typedef struct private_resolv_conf_handler_t private_resolv_conf_handler_t;
  * Private data of an resolv_conf_handler_t object.
  */
 struct private_resolv_conf_handler_t {
-	
+
 	/**
 	 * Public resolv_conf_handler_t interface.
 	 */
 	resolv_conf_handler_t public;
-	
+
 	/**
 	 * resolv.conf file to use
 	 */
 	char *file;
-	
+
 	/**
 	 * Mutex to access file exclusively
 	 */
@@ -55,7 +55,7 @@ static bool handle(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 	int family;
 	size_t len;
 	bool handled = FALSE;
-	
+
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
@@ -67,9 +67,9 @@ static bool handle(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		default:
 			return FALSE;
 	}
-	
+
 	this->mutex->lock(this->mutex);
-	
+
 	in = fopen(this->file, "r");
 	/* allows us to stream from in to out */
 	unlink(this->file);
@@ -82,7 +82,7 @@ static bool handle(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
 		addr->destroy(addr);
 		handled = TRUE;
-		
+
 		/* copy rest of the file */
 		if (in)
 		{
@@ -94,7 +94,7 @@ static bool handle(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		}
 		fclose(out);
 	}
-	
+
 	if (!handled)
 	{
 		DBG1(DBG_IKE, "adding DNS server failed", this->file);
@@ -113,7 +113,7 @@ static void release(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 	char line[1024], matcher[512], *pos;
 	host_t *addr;
 	int family;
-	
+
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
@@ -125,9 +125,9 @@ static void release(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		default:
 			return;
 	}
-	
+
 	this->mutex->lock(this->mutex);
-	
+
 	in = fopen(this->file, "r");
 	if (in)
 	{
@@ -140,7 +140,7 @@ static void release(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 			snprintf(matcher, sizeof(matcher),
 					 "nameserver %H   # by strongSwan, from %Y\n",
 					 addr, ike_sa->get_other_id(ike_sa));
-			
+
 			/* copy all, but matching line */
 			while ((pos = fgets(line, sizeof(line), in)))
 			{
@@ -159,7 +159,7 @@ static void release(private_resolv_conf_handler_t *this, ike_sa_t *ike_sa,
 		}
 		fclose(in);
 	}
-	
+
 	this->mutex->unlock(this->mutex);
 }
 
@@ -178,15 +178,15 @@ static void destroy(private_resolv_conf_handler_t *this)
 resolv_conf_handler_t *resolv_conf_handler_create()
 {
 	private_resolv_conf_handler_t *this = malloc_thing(private_resolv_conf_handler_t);
-	
+
 	this->public.handler.handle = (bool(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))handle;
 	this->public.handler.release = (void(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))release;
 	this->public.destroy = (void(*)(resolv_conf_handler_t*))destroy;
-	
+
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->file = lib->settings->get_str(lib->settings,
 								"charon.plugins.resolv-conf.file", RESOLV_CONF);
-	
+
 	return &this->public;
 }
 

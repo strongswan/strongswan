@@ -35,11 +35,11 @@ struct sql_logger_t {
 	 * Implements bus_listener_t interface
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * Destry the backend.
 	 */
-	void (*destroy)(sql_logger_t *this);	
+	void (*destroy)(sql_logger_t *this);
 };
 
 /**

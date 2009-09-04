@@ -40,7 +40,7 @@ struct update_sa_job_t {
 
 /**
  * Creates a job to update IKE and CHILD_SA addresses.
- * 
+ *
  * @param reqid			reqid of the CHILD_SA
  * @param new			new address and port
  * @return				update_sa_job_t object

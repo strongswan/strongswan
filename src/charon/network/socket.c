@@ -86,22 +86,22 @@ struct private_socket_t {
 	 * public functions
 	 */
 	socket_t public;
-	
+
 	/**
 	 * IPv4 socket (500)
 	 */
 	int ipv4;
-	 
+
 	/**
 	 * IPv4 socket for NATT (4500)
 	 */
 	int ipv4_natt;
-	
+
 	/**
 	 * IPv6 socket (500)
 	 */
 	int ipv6;
-	
+
 	/**
 	 * IPv6 socket for NATT (4500)
 	 */
@@ -122,9 +122,9 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	fd_set rfds;
 	int max_fd = 0, selected = 0;
 	u_int16_t port = 0;
-	
+
 	FD_ZERO(&rfds);
-	
+
 	if (this->ipv4)
 	{
 		FD_SET(this->ipv4, &rfds);
@@ -142,7 +142,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		FD_SET(this->ipv6_natt, &rfds);
 	}
 	max_fd = max(max(this->ipv4, this->ipv4_natt), max(this->ipv6, this->ipv6_natt));
-	
+
 	DBG2(DBG_NET, "waiting for data on sockets");
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	if (select(max_fd + 1, &rfds, NULL, NULL, NULL) <= 0)
@@ -151,7 +151,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		return FAILED;
 	}
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (FD_ISSET(this->ipv4, &rfds))
 	{
 		port = IKEV2_UDP_PORT;
@@ -182,7 +182,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			struct sockaddr_in in4;
 			struct sockaddr_in6 in6;
 		} src;
-		
+
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
@@ -199,14 +199,14 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received packet %b", buffer, bytes_read);
-		
+
 		if (bytes_read < MARKER_LEN)
 		{
 			DBG3(DBG_NET, "received packet too short (%d bytes)",
 				 bytes_read);
 			return FAILED;
 		}
-		
+
 		/* read ancillary data to get destination address */
 		for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL;
 			 cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
@@ -216,14 +216,14 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 				DBG1(DBG_NET, "error reading ancillary data");
 				return FAILED;
 			}
-			
+
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
 				cmsgptr->cmsg_type == IPV6_PKTINFO)
 			{
 				struct in6_pktinfo *pktinfo;
 				pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsgptr);
 				struct sockaddr_in6 dst;
-				
+
 				memset(&dst, 0, sizeof(dst));
 				memcpy(&dst.sin6_addr, &pktinfo->ipi6_addr, sizeof(dst.sin6_addr));
 				dst.sin6_family = AF_INET6;
@@ -252,7 +252,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 #endif
 				memset(&dst, 0, sizeof(dst));
 				memcpy(&dst.sin_addr, addr, sizeof(dst.sin_addr));
-				
+
 				dst.sin_family = AF_INET;
 				dst.sin_port = htons(port);
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
@@ -268,13 +268,13 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			return FAILED;
 		}
 		source = host_create_from_sockaddr((sockaddr_t*)&src);
-		
+
 		pkt = packet_create();
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = 0;
-		/* remove non esp marker */	
+		/* remove non esp marker */
 		if (dest->get_port(dest) == IKEV2_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
@@ -307,13 +307,13 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	struct iovec iov;
-	
+
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
 	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
-	
+
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
@@ -361,7 +361,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 		DBG1(DBG_NET, "unable to locate a send socket for port %d", sport);
 		return FAILED;
 	}
-	
+
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_name = dst->get_sockaddr(dst);;
 	msg.msg_namelen = *dst->get_sockaddr_len(dst);
@@ -370,7 +370,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_flags = 0;
-	
+
 	if (!src->is_anyaddr(src))
 	{
 		if (family == AF_INET)
@@ -408,7 +408,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 			struct in6_pktinfo *pktinfo;
 			struct sockaddr_in6 *sin;
-			
+
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
@@ -421,7 +421,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
 		}
 	}
-	
+
 	bytes_sent = sendmsg(skt, &msg, 0);
 
 	if (bytes_sent != data.len)
@@ -442,7 +442,7 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
 	int skt;
-	
+
 	memset(&addr, 0, sizeof(addr));
 	/* precalculate constants depending on address family */
 	switch (family)
@@ -476,7 +476,7 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 		default:
 			return 0;
 	}
-	
+
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
@@ -489,7 +489,7 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 		close(skt);
 		return 0;
 	}
-	
+
 	/* bind the socket */
 	if (bind(skt, (struct sockaddr *)&addr, addrlen) < 0)
 	{
@@ -497,7 +497,7 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 		close(skt);
 		return 0;
 	}
-	
+
 	/* get additional packet info on receive */
 	if (pktinfo > 0)
 	{
@@ -550,7 +550,7 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 		{ offsetof(private_socket_t, ipv4_natt), AF_INET, IKEV2_NATT_PORT },
 		{ offsetof(private_socket_t, ipv6_natt), AF_INET6, IKEV2_NATT_PORT }
 	};
-	
+
 	while(++this->index < countof(sockets))
 	{
 		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
@@ -572,7 +572,7 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 static enumerator_t *create_enumerator(private_socket_t *this)
 {
 	socket_enumerator_t *enumerator;
-	
+
 	enumerator = malloc_thing(socket_enumerator_t);
 	enumerator->index = -1;
 	enumerator->socket = this;
@@ -617,7 +617,7 @@ socket_t *socket_create()
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
 	this->public.create_enumerator = (enumerator_t*(*)(socket_t*))create_enumerator;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
-	
+
 	this->ipv4 = 0;
 	this->ipv6 = 0;
 	this->ipv4_natt = 0;
@@ -634,7 +634,7 @@ socket_t *socket_create()
 		}
 	}
 #endif
-	
+
 	this->ipv4 = open_socket(this, AF_INET, IKEV2_UDP_PORT);
 	if (this->ipv4 == 0)
 	{
@@ -648,7 +648,7 @@ socket_t *socket_create()
 			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
-	
+
 	this->ipv6 = open_socket(this, AF_INET6, IKEV2_UDP_PORT);
 	if (this->ipv6 == 0)
 	{
@@ -662,13 +662,13 @@ socket_t *socket_create()
 			DBG1(DBG_NET, "could not open IPv6 NAT-T socket");
 		}
 	}
-	
+
 	if (!this->ipv4 && !this->ipv6)
 	{
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
 		charon->kill(charon, "socket initialization failed");
-	}	
+	}
 	return (socket_t*)this;
 }
 

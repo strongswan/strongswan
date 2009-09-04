@@ -30,42 +30,42 @@ typedef struct private_ike_mobike_t private_ike_mobike_t;
  * Private members of a ike_mobike_t task.
  */
 struct private_ike_mobike_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_mobike_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * cookie2 value to verify new addresses
 	 */
 	chunk_t cookie2;
-	
+
 	/**
 	 * NAT discovery reusing the IKE_NATD task
 	 */
 	ike_natd_t *natd;
-	
+
 	/**
 	 * use task to update addresses
 	 */
 	bool update;
-	
+
 	/**
 	 * do routability check
 	 */
 	bool check;
-	
+
 	/**
 	 * include address list update
 	 */
@@ -79,7 +79,7 @@ static void flush_additional_addresses(private_ike_mobike_t *this)
 {
 	iterator_t *iterator;
 	host_t *host;
-	
+
 	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&host))
 	{
@@ -98,7 +98,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 	enumerator_t *enumerator;
 	payload_t *payload;
 	bool first = TRUE;
-	
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -106,7 +106,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 		notify_payload_t *notify;
 		chunk_t data;
 		host_t *host;
-		
+
 		if (payload->get_type(payload) != NOTIFY)
 		{
 			continue;
@@ -117,9 +117,9 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			case MOBIKE_SUPPORTED:
 			{
 				peer_cfg_t *peer_cfg;
-				
+
 				peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-				if (!this->initiator && 
+				if (!this->initiator &&
 					peer_cfg && !peer_cfg->use_mobike(peer_cfg))
 				{
 					DBG1(DBG_IKE, "peer supports MOBIKE, but disabled in config");
@@ -191,7 +191,7 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	host_t *host, *me;
 	notify_type_t type;
 	int added = 0;
-	
+
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	enumerator = charon->kernel_interface->create_address_enumerator(
 										charon->kernel_interface, FALSE, FALSE);
@@ -227,7 +227,7 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 }
 
 /**
- * build a cookie and add it to the message 
+ * build a cookie and add it to the message
  */
 static void build_cookie(private_ike_mobike_t *this, message_t *message)
 {
@@ -250,12 +250,12 @@ static void update_children(private_ike_mobike_t *this)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	
+
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		if (child_sa->update(child_sa,
-				this->ike_sa->get_my_host(this->ike_sa), 
+				this->ike_sa->get_my_host(this->ike_sa),
 				this->ike_sa->get_other_host(this->ike_sa),
 				this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),
 				this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
@@ -276,7 +276,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	host_t *me, *other, *me_old, *other_old;
 	iterator_t *iterator;
 	packet_t *copy;
-	
+
 	if (!this->check)
 	{
 		return;
@@ -284,7 +284,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 
 	me_old = this->ike_sa->get_my_host(this->ike_sa);
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
-	
+
 	me = charon->kernel_interface->get_source_addr(
 									charon->kernel_interface, other_old, NULL);
 	if (me)
@@ -293,7 +293,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 					 me_old->get_port(me_old) : IKEV2_NATT_PORT);
 		packet->set_source(packet, me);
 	}
-	
+
 	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&other))
 	{
@@ -338,8 +338,8 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
 		host_t *old, *new;
-		
-		/* we check if the existing address is still valid */ 
+
+		/* we check if the existing address is still valid */
 		old = message->get_source(message);
 		new = charon->kernel_interface->get_source_addr(charon->kernel_interface,
 										message->get_destination(message), old);
@@ -388,13 +388,13 @@ static status_t process_r(private_ike_mobike_t *this, message_t *message)
 		if (this->update)
 		{
 			host_t *me, *other;
-			
+
 			me = message->get_destination(message);
 			other = message->get_source(message);
 			this->ike_sa->set_my_host(this->ike_sa, me->clone(me));
 			this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
 		}
-		
+
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
@@ -461,7 +461,7 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		if (this->cookie2.ptr)
 		{	/* check cookie if we included one */
 			chunk_t cookie2;
-			
+
 			cookie2 = this->cookie2;
 			this->cookie2 = chunk_empty;
 			process_payloads(this, message);
@@ -496,17 +496,17 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 		if (this->check)
 		{
 			host_t *me_new, *me_old, *other_new, *other_old;
-			
+
 			me_new = message->get_destination(message);
 			other_new = message->get_source(message);
 			me_old = this->ike_sa->get_my_host(this->ike_sa);
 			other_old = this->ike_sa->get_other_host(this->ike_sa);
-			
+
 			if (!me_new->equals(me_new, me_old))
 			{
 				this->update = TRUE;
 				this->ike_sa->set_my_host(this->ike_sa, me_new->clone(me_new));
-			}			
+			}
 			if (!other_new->equals(other_new, other_old))
 			{
 				this->update = TRUE;
@@ -538,7 +538,7 @@ static void roam(private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
 	this->address = address;
-	this->ike_sa->set_pending_updates(this->ike_sa, 
+	this->ike_sa->set_pending_updates(this->ike_sa,
 							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
 
@@ -552,7 +552,7 @@ static void dpd(private_ike_mobike_t *this)
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	}
 	this->address = FALSE;
-	this->ike_sa->set_pending_updates(this->ike_sa, 
+	this->ike_sa->set_pending_updates(this->ike_sa,
 							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
 
@@ -612,7 +612,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -623,7 +623,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->update = FALSE;
@@ -631,7 +631,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 	this->address = TRUE;
 	this->cookie2 = chunk_empty;
 	this->natd = NULL;
-	
+
 	return &this->public;
 }
 

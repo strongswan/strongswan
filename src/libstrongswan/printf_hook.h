@@ -77,7 +77,7 @@ int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format, va_list a
 
 /**
  * Callback function type for printf hooks.
- * 
+ *
  * @param dst		destination buffer
  * @param len		length of the buffer
  * @param spec		format specifier
@@ -111,12 +111,12 @@ struct printf_hook_spec_t {
 	 * TRUE if a '#' was used in the format specifier
 	 */
 	int hash;
-	
+
 	/**
 	 * TRUE if a '-' was used in the format specifier
 	 */
 	int minus;
-	
+
 	/**
 	 * The width as given in the format specifier.
 	 */
@@ -127,7 +127,7 @@ struct printf_hook_spec_t {
  * Printf handler management.
  */
 struct printf_hook_t {
-	
+
 	/**
 	 * Register a printf handler.
 	 *
@@ -137,7 +137,7 @@ struct printf_hook_t {
 	 */
 	void (*add_handler)(printf_hook_t *this, char spec,
 						printf_hook_function_t hook, ...);
-	
+
 	/**
      * Destroy a printf_hook instance.
      */

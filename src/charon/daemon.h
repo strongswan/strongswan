@@ -199,104 +199,104 @@ typedef struct daemon_t daemon_t;
  * Main class of daemon, contains some globals.
  */
 struct daemon_t {
-	
+
 	/**
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-	
+
 	/**
 	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
-	
+
 	/**
 	 * Manager for triggering policies, called traps
 	 */
 	trap_manager_t *traps;
-	
+
 	/**
 	 * Manager for the different configuration backends.
 	 */
 	backend_manager_t *backends;
-	
+
 	/**
 	 * Manager for IKEv2 cfg payload attributes
 	 */
 	attribute_manager_t *attributes;
-	
+
 	/**
 	 * Manager for the credential backends
 	 */
 	credential_manager_t *credentials;
-	
+
 	/**
 	 * The Sender-Thread.
  	 */
 	sender_t *sender;
-	
+
 	/**
 	 * The Receiver-Thread.
 	 */
 	receiver_t *receiver;
-	
+
 	/**
 	 * The Scheduler-Thread.
 	 */
 	scheduler_t *scheduler;
-	
+
 	/**
 	 * Job processing using a thread pool.
 	 */
 	processor_t *processor;
-	
+
 	/**
 	 * The signaling bus.
 	 */
 	bus_t *bus;
-	
+
 	/**
 	 * A list of installed file_logger_t's
 	 */
 	linked_list_t *file_loggers;
-	
+
 	/**
 	 * A list of installed sys_logger_t's
 	 */
 	linked_list_t *sys_loggers;
-	
+
 	/**
 	 * Kernel Interface to communicate with kernel
 	 */
 	kernel_interface_t *kernel_interface;
-	
+
 	/**
 	 * Controller to control the daemon
 	 */
 	controller_t *controller;
-	
+
 	/**
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
-	
+
 	/**
 	 * SIM manager to maintain SIM cards/providers
 	 */
 	sim_manager_t *sim;
-	
+
 #ifdef ME
 	/**
 	 * Connect manager
 	 */
 	connect_manager_t *connect_manager;
-	
+
 	/**
 	 * Mediation manager
 	 */
 	mediation_manager_t *mediation_manager;
 #endif /* ME */
-	
+
 	/**
 	 * User ID the daemon will user after initialization
 	 */
@@ -306,12 +306,12 @@ struct daemon_t {
 	 * Group ID the daemon will use after initialization
 	 */
 	gid_t gid;
-	
+
 	/**
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
-	
+
 	/**
 	 * Do not drop a given capability after initialization.
 	 *
@@ -320,7 +320,7 @@ struct daemon_t {
 	 * drop these.
 	 */
 	void (*keep_cap)(daemon_t *this, u_int cap);
-	
+
 	/**
 	 * Shut down the daemon.
 	 *

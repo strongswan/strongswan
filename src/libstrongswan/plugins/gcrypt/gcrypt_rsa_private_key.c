@@ -28,17 +28,17 @@ typedef struct private_gcrypt_rsa_private_key_t private_gcrypt_rsa_private_key_t
  * Private data of a gcrypt_rsa_private_key_t object.
  */
 struct private_gcrypt_rsa_private_key_t {
-	
+
 	/**
 	 * Public interface
 	 */
 	gcrypt_rsa_private_key_t public;
-	
+
 	/**
 	 * gcrypt S-expression representing an RSA key
 	 */
 	gcry_sexp_t key;
-	
+
 	/**
 	 * reference count
 	 */
@@ -54,7 +54,7 @@ chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name, gcry_sexp_t key)
 	gcry_sexp_t token;
 	chunk_t data = chunk_empty, tmp;
 	size_t len = 0;
-	
+
 	token = gcry_sexp_find_token(sexp, name, 1);
 	if (token)
 	{
@@ -108,7 +108,7 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 	gcry_error_t err;
 	chunk_t em;
 	size_t k;
-	
+
 	/* EM = 0x00 || 0x01 || PS || 0x00 || T
 	 * PS = 0xFF padding, with length to fill em
 	 * T  = data
@@ -124,7 +124,7 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 	em.ptr[1] = 0x01;
 	em.ptr[em.len - data.len - 1] = 0x00;
 	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
-	
+
 	err = gcry_sexp_build(&in, NULL, "(data(flags raw)(value %b))",
 						  em.len, em.ptr);
 	chunk_free(&em);
@@ -157,7 +157,7 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 	gcry_error_t err;
 	gcry_sexp_t in, out;
 	int hash_oid;
-	
+
 	hash_oid = hasher_algorithm_to_oid(hash_algorithm);
 	if (hash_oid == OID_UNKNOWN)
 	{
@@ -170,7 +170,7 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 	}
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
-	
+
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
 						  hash_name, hash.len, hash.ptr);
 	chunk_free(&hash);
@@ -202,7 +202,7 @@ static key_type_t get_type(private_gcrypt_rsa_private_key_t *this)
 /**
  * Implementation of gcrypt_rsa_private_key.destroy.
  */
-static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme, 
+static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme,
 				 chunk_t data, chunk_t *sig)
 {
 	switch (scheme)
@@ -238,7 +238,7 @@ static bool decrypt(private_gcrypt_rsa_private_key_t *this,
 	gcry_sexp_t in, out;
 	chunk_t padded;
 	u_char *pos = NULL;;
-	
+
 	err = gcry_sexp_build(&in, NULL, "(enc-val(flags)(rsa(a %b)))",
 						  encrypted.len, encrypted.ptr);
 	if (err)
@@ -290,15 +290,15 @@ static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
 {
 	chunk_t n, e;
 	public_key_t *public;
-	
+
 	n = gcrypt_rsa_find_token(this->key, "n", NULL);
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
-	
+
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 	chunk_free(&n);
 	chunk_free(&e);
-	
+
 	return public;
 }
 
@@ -312,12 +312,12 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 	gcry_mpi_t p = NULL, q = NULL, d = NULL, exp1, exp2;
 	gcry_error_t err;
 	bool success;
-	
+
 	/* p and q are swapped, gcrypt expects p < q */
 	cp = gcrypt_rsa_find_token(this->key, "q", NULL);
 	cq = gcrypt_rsa_find_token(this->key, "p", NULL);
 	cd = gcrypt_rsa_find_token(this->key, "d", NULL);
-	
+
 	err = gcry_mpi_scan(&p, GCRYMPI_FMT_USG, cp.ptr, cp.len, NULL)
 		| gcry_mpi_scan(&q, GCRYMPI_FMT_USG, cq.ptr, cq.len, NULL)
 		| gcry_mpi_scan(&d, GCRYMPI_FMT_USG, cd.ptr, cd.len, NULL);
@@ -332,24 +332,24 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 		DBG1("scanning mpi for export failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
-	
+
 	gcry_mpi_sub_ui(p, p, 1);
 	exp1 = gcry_mpi_new(gcry_pk_get_nbits(this->key));
 	gcry_mpi_mod(exp1, d, p);
 	gcry_mpi_release(p);
-	
+
 	gcry_mpi_sub_ui(q, q, 1);
 	exp2 = gcry_mpi_new(gcry_pk_get_nbits(this->key));
 	gcry_mpi_mod(exp1, d, q);
 	gcry_mpi_release(q);
-	
+
 	err = gcry_mpi_aprint(GCRYMPI_FMT_USG, &cexp1.ptr, &cexp1.len, exp1)
 		| gcry_mpi_aprint(GCRYMPI_FMT_USG, &cexp2.ptr, &cexp2.len, exp2);
-	
+
 	gcry_mpi_release(d);
 	gcry_mpi_release(exp1);
 	gcry_mpi_release(exp2);
-	
+
 	if (err)
 	{
 		DBG1("printing mpi for export failed: %s", gpg_strerror(err));
@@ -360,11 +360,11 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 		chunk_clear(&cexp2);
 		return FALSE;
 	}
-	
+
 	cn = gcrypt_rsa_find_token(this->key, "n", NULL);
 	ce = gcrypt_rsa_find_token(this->key, "e", NULL);
 	cu = gcrypt_rsa_find_token(this->key, "u", NULL);
-	
+
 	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
 							KEY_PART_RSA_MODULUS, cn,
 							KEY_PART_RSA_PUB_EXP, ce, KEY_PART_RSA_PRIV_EXP, cd,
@@ -379,7 +379,7 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 	chunk_clear(&cexp1);
 	chunk_clear(&cexp2);
 	chunk_clear(&cu);
-	
+
 	return success;
 }
 
@@ -391,14 +391,14 @@ static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
 {
 	chunk_t n, e;
 	bool success;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
 	{
 		return TRUE;
 	}
 	n = gcrypt_rsa_find_token(this->key, "n", NULL);
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
-	
+
 	success = lib->encoding->encode(lib->encoding,
 								type, this, fp, KEY_PART_RSA_MODULUS, n,
 								KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
@@ -435,7 +435,7 @@ static void destroy(private_gcrypt_rsa_private_key_t *this)
 static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 {
 	private_gcrypt_rsa_private_key_t *this = malloc_thing(private_gcrypt_rsa_private_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
@@ -447,10 +447,10 @@ static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
-	
+
 	this->key = NULL;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -462,14 +462,14 @@ static gcrypt_rsa_private_key_t *generate(size_t key_size)
 	private_gcrypt_rsa_private_key_t *this;
 	gcry_sexp_t param, key;
 	gcry_error_t err;
-	
+
 	err = gcry_sexp_build(&param, NULL, "(genkey(rsa(nbits %d)))", key_size);
 	if (err)
 	{
 		DBG1("building S-expression failed: %s", gpg_strerror(err));
 		return NULL;
 	}
-	
+
 	err = gcry_pk_genkey(&key, param);
 	gcry_sexp_release(param);
 	if (err)
@@ -479,7 +479,7 @@ static gcrypt_rsa_private_key_t *generate(size_t key_size)
 	}
 	this = gcrypt_rsa_private_key_create_empty();
 	this->key = key;
-	
+
 	return &this->public;
 }
 
@@ -491,7 +491,7 @@ static gcrypt_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
 {
 	gcry_error_t err;
 	private_gcrypt_rsa_private_key_t *this = gcrypt_rsa_private_key_create_empty();
-	
+
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,
@@ -551,7 +551,7 @@ static gcrypt_rsa_private_key_t *build(private_builder_t *this)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	va_start(args, part);
 	switch (part)
 	{
@@ -594,19 +594,19 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *gcrypt_rsa_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->key_size = 0;
 	this->n = this->e = this->d = this->p = this->q = this->u = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

@@ -28,7 +28,7 @@ typedef enum
 	STRONGSWAN_PLUGIN_UI_ERROR_MISSING_PROPERTY
 } StrongswanPluginUiError;
 
-#define STRONGSWAN_TYPE_PLUGIN_UI_ERROR (strongswan_plugin_ui_error_get_type ()) 
+#define STRONGSWAN_TYPE_PLUGIN_UI_ERROR (strongswan_plugin_ui_error_get_type ())
 GType strongswan_plugin_ui_error_get_type (void);
 
 #define STRONGSWAN_TYPE_PLUGIN_UI            (strongswan_plugin_ui_get_type ())

@@ -392,7 +392,7 @@ enum rsa_private_key_part_t {
 	RSA_PART_EXPONENT1        = 5,
 	RSA_PART_EXPONENT2        = 6,
 	RSA_PART_COEFFICIENT      = 7
-}; 
+};
 
 const char *rsa_private_key_part_names[] = {
 	"Modulus",
@@ -464,13 +464,13 @@ static err_t process_rsa_secret(private_key_t **key)
 		goto end;
 	}
 
-	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, 
+	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 					BUILD_RSA_MODULUS,  rsa_chunk[RSA_PART_MODULUS],
 					BUILD_RSA_PUB_EXP,  rsa_chunk[RSA_PART_PUBLIC_EXPONENT],
 					BUILD_RSA_PRIV_EXP, rsa_chunk[RSA_PART_PRIVATE_EXPONENT],
 					BUILD_RSA_PRIME1,   rsa_chunk[RSA_PART_PRIME1],
 					BUILD_RSA_PRIME2,   rsa_chunk[RSA_PART_PRIME2],
-					BUILD_RSA_EXP1,     rsa_chunk[RSA_PART_EXPONENT1], 
+					BUILD_RSA_EXP1,     rsa_chunk[RSA_PART_EXPONENT1],
 					BUILD_RSA_EXP2,     rsa_chunk[RSA_PART_EXPONENT2],
 					BUILD_RSA_COEFF,    rsa_chunk[RSA_PART_COEFFICIENT],
 					BUILD_END);
@@ -486,7 +486,7 @@ end:
 	{
 		chunk_clear(&rsa_chunk[p]);
 	}
-	return ugh;	
+	return ugh;
 }
 
 /**
@@ -714,7 +714,7 @@ static err_t process_pin(secret_t *s, int whackfd)
 		}
 	}
 	else
-	{   
+	{
 		/* we read the pin directly from ipsec.secrets */
 		err_t ugh = process_psk_secret(&sc->pin);
 		if (ugh != NULL)

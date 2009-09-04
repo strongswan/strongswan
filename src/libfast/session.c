@@ -34,22 +34,22 @@ struct private_session_t {
 	 * public functions
 	 */
 	session_t public;
-	
+
 	/**
 	 * session ID
 	 */
 	char *sid;
-	
+
 	/**
 	 * list of controller instances controller_t
 	 */
 	linked_list_t *controllers;
-	
+
 	/**
 	 * list of filter instances filter_t
 	 */
 	linked_list_t *filters;
-	
+
 	/**
 	 * user defined session context
 	 */
@@ -80,7 +80,7 @@ static void create_sid(private_session_t *this, request_t *request)
 	char buf[16];
 	chunk_t chunk = chunk_from_buf(buf);
 	rng_t *rng;
-	
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng)
 	{
@@ -99,7 +99,7 @@ static bool run_filter(private_session_t *this, request_t *request, char *p0,
 {
 	enumerator_t *enumerator;
 	filter_t *filter;
-	
+
 	enumerator = this->filters->create_enumerator(this->filters);
 	while (enumerator->enumerate(enumerator, &filter))
 	{
@@ -123,12 +123,12 @@ static void process(private_session_t *this, request_t *request)
 	bool handled = FALSE;
 	controller_t *current;
 	int i = 0;
-	
+
 	if (this->sid == NULL)
 	{
 		create_sid(this, request);
 	}
-	
+
 	start = request->get_path(request);
 	if (start)
 	{
@@ -142,15 +142,15 @@ static void process(private_session_t *this, request_t *request)
 			start = pos + 1;
 		}
 		param[i] = strdupa(start);
-		
-		if (run_filter(this, request, param[0], param[1], param[2], param[3], 
+
+		if (run_filter(this, request, param[0], param[1], param[2], param[3],
 					    param[4], param[5]))
 		{
 			enumerator = this->controllers->create_enumerator(this->controllers);
 			while (enumerator->enumerate(enumerator, &current))
 			{
 				if (streq(current->get_name(current), param[0]))
-				{	
+				{
 					current->handle(current, request, param[1], param[2],
 									param[3], param[4], param[5]);
 					handled = TRUE;
@@ -211,7 +211,7 @@ session_t *session_create(context_t *context)
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
 	this->context = context;
-	
+
 	return &this->public;
 }
 

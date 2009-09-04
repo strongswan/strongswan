@@ -30,7 +30,7 @@ typedef struct ike_auth_lifetime_t ike_auth_lifetime_t;
 /**
  * Task of type IKE_AUTH_LIFETIME, implements RFC4478.
  *
- * This task exchanges lifetimes for IKE_AUTH to force a client to 
+ * This task exchanges lifetimes for IKE_AUTH to force a client to
  * reauthenticate before the responders lifetime reaches the limit.
  */
 struct ike_auth_lifetime_t {

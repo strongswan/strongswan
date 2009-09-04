@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
 {
 	int i;
 	integrity_checker_t *integrity;
-	
+
 	/* avoid confusing leak reports in build process */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 0);
 	library_init(NULL);
 	atexit(library_deinit);
-	
+
 	integrity = integrity_checker_create(NULL);
-	
+
 	printf("/**\n");
 	printf(" * checksums of files and loaded code segments.\n");
 	printf(" * created by %s\n", argv[0]);
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 		size_t ssize = 0;
 
 		path = argv[i];
-		
+
 		if ((name = strstr(path, "libstrongswan-")))
 		{
 			name = strdup(name + strlen("libstrongswan-"));
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "don't know how to handle '%s', ignored", path);
 			continue;
 		}
-		
+
 		fsum = integrity->build_file(integrity, path, &fsize);
 		ssum = 0;
 		if (sname)
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 		}
 		printf("\t{\"%-20s%7u, 0x%08x, %6u, 0x%08x},\n",
 			   name, fsize, fsum, ssize, ssum);
-		fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n", 
+		fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n",
 				name, fsize, fsum, ssize, ssum);
 		free(name);
 	}
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
 	printf("int checksum_count = countof(checksums);\n");
 	printf("\n");
 	integrity->destroy(integrity);
-	
+
 	exit(0);
 }
 

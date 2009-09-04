@@ -16,7 +16,7 @@
 /**
  * @defgroup gmp_p gmp
  * @ingroup plugins
- * 
+ *
  * @defgroup gmp_plugin gmp_plugin
  * @{ @ingroup gmp_p
  */

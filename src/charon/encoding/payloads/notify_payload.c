@@ -160,14 +160,14 @@ typedef struct private_notify_payload_t private_notify_payload_t;
 
 /**
  * Private data of an notify_payload_t object.
- * 
+ *
  */
 struct private_notify_payload_t {
 	/**
 	 * Public notify_payload_t interface.
 	 */
 	notify_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -177,27 +177,27 @@ struct private_notify_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-		
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-		
+
 	/**
 	 * Protocol id.
 	 */
 	u_int8_t protocol_id;
-	
+
 	/**
 	 * Spi size.
 	 */
 	u_int8_t spi_size;
-	
+
 	/**
 	 * Notify message type.
 	 */
 	u_int16_t notify_type;
-	
+
 	/**
 	 * Security parameter index (spi).
 	 */
@@ -211,26 +211,26 @@ struct private_notify_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-Notify Payload.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_notify_payload_t.
- * 
+ *
  */
 encoding_rule_t notify_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload) 		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},	
+	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},	
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},
 	/* Protocol ID as 8 bit field*/
 	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id) 			},
 	/* SPI Size as 8 bit field*/
@@ -279,7 +279,7 @@ static status_t verify(private_notify_payload_t *this)
 			DBG1(DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
-	
+
 	switch (this->notify_type)
 	{
 		case INVALID_KE_PAYLOAD:
@@ -567,7 +567,7 @@ notify_payload_t *notify_payload_create()
 	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
 	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
 	this->public.destroy = (void (*) (notify_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -579,7 +579,7 @@ notify_payload_t *notify_payload_create()
 	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
-	
+
 	return &this->public;
 }
 
@@ -592,6 +592,6 @@ notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t pro
 
 	notify->set_notify_type(notify,notify_type);
 	notify->set_protocol_id(notify,protocol_id);
-	
+
 	return notify;
 }

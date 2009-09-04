@@ -42,22 +42,22 @@ struct private_agent_private_key_t {
 	 * Public interface for this signer.
 	 */
 	agent_private_key_t public;
-	
+
 	/**
 	 * ssh-agent unix socket connection
 	 */
 	int socket;
-	
+
 	/**
 	 * key identity blob in ssh format
 	 */
 	chunk_t key;
-	
+
 	/**
 	 * keysize in bytes
 	 */
 	size_t key_size;
-	
+
 	/**
 	 * reference count
 	 */
@@ -115,7 +115,7 @@ static chunk_t read_string(chunk_t *blob)
 {
 	int len;
 	chunk_t str;
-	
+
 	len = read_uint32(blob);
 	if (len > blob->len)
 	{
@@ -140,11 +140,11 @@ static int open_connection(char *path)
 		DBG1("opening ssh-agent socket %s failed: %s:", path, strerror(errno));
 		return -1;
 	}
-	
+
 	addr.sun_family = AF_UNIX;
 	addr.sun_path[UNIX_PATH_MAX - 1] = '\0';
 	strncpy(addr.sun_path, path, UNIX_PATH_MAX - 1);
-	
+
 	if (connect(s, (struct sockaddr*)&addr, SUN_LEN(&addr)) != 0)
 	{
 		DBG1("connecting to ssh-agent socket failed: %s", strerror(errno));
@@ -154,7 +154,7 @@ static int open_connection(char *path)
 	return s;
 }
 
-/** 
+/**
  * Get the first usable key from the agent
  */
 static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
@@ -162,7 +162,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	int len, count;
 	char buf[2048];
 	chunk_t blob = chunk_from_buf(buf), key, type, n;
-	
+
 	len = htonl(1);
 	buf[0] = SSH_AGENT_ID_REQUEST;
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
@@ -171,9 +171,9 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		DBG1("writing to ssh-agent failed");
 		return FALSE;
 	}
-	
+
 	blob.len = read(this->socket, blob.ptr, blob.len);
-	
+
 	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
 		read_uint32(&blob) != blob.len ||
 		read_byte(&blob) != SSH_AGENT_ID_RESPONSE)
@@ -182,7 +182,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		return FALSE;
 	}
 	count = read_uint32(&blob);
-	
+
 	while (blob.len)
 	{
 		key = read_string(&blob);
@@ -221,20 +221,20 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 /**
  * Implementation of agent_private_key.destroy.
  */
-static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme, 
+static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 				 chunk_t data, chunk_t *signature)
 {
 	u_int32_t len, flags;
 	char buf[2048];
 	chunk_t blob = chunk_from_buf(buf);
-	
+
 	if (scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
 	{
 		DBG1("signature scheme %N not supported by ssh-agent",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
-	
+
 	len = htonl(1 + sizeof(u_int32_t) * 3 + this->key.len + data.len);
 	buf[0] = SSH_AGENT_SIGN_REQUEST;
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
@@ -243,7 +243,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 		DBG1("writing to ssh-agent failed");
 		return FALSE;
 	}
-	
+
 	len = htonl(this->key.len);
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, this->key.ptr, this->key.len) != this->key.len)
@@ -251,7 +251,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 		DBG1("writing to ssh-agent failed");
 		return FALSE;
 	}
-	
+
 	len = htonl(data.len);
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, data.ptr, data.len) != data.len)
@@ -259,14 +259,14 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 		DBG1("writing to ssh-agent failed");
 		return FALSE;
 	}
-	
+
 	flags = htonl(0);
 	if (write(this->socket, &flags, sizeof(flags)) != sizeof(flags))
 	{
 		DBG1("writing to ssh-agent failed");
 		return FALSE;
 	}
-	
+
 	blob.len = read(this->socket, blob.ptr, blob.len);
 	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
 		read_uint32(&blob) != blob.len ||
@@ -322,12 +322,12 @@ static size_t get_keysize(private_agent_private_key_t *this)
 static public_key_t* get_public_key(private_agent_private_key_t *this)
 {
 	chunk_t key, n, e;
-	
+
 	key = this->key;
 	read_string(&key);
 	e = read_string(&key);
 	n = read_string(&key);
-	
+
 	return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 }
@@ -348,7 +348,7 @@ static bool get_fingerprint(private_agent_private_key_t *this,
 							key_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e, key;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
 	{
 		return TRUE;
@@ -357,7 +357,7 @@ static bool get_fingerprint(private_agent_private_key_t *this,
 	read_string(&key);
 	e = read_string(&key);
 	n = read_string(&key);
-	
+
 	return lib->encoding->encode(lib->encoding, type, this, fp,
 				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
 }
@@ -392,7 +392,7 @@ static agent_private_key_t *agent_private_key_create(char *path,
 													 public_key_t *pubkey)
 {
 	private_agent_private_key_t *this = malloc_thing(private_agent_private_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
 	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
@@ -404,7 +404,7 @@ static agent_private_key_t *agent_private_key_create(char *path,
 	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
-	
+
 	this->socket = open_connection(path);
 	if (this->socket < 0)
 	{
@@ -413,7 +413,7 @@ static agent_private_key_t *agent_private_key_create(char *path,
 	}
 	this->key = chunk_empty;
 	this->ref = 1;
-	
+
 	if (!read_key(this, pubkey))
 	{
 		destroy(this);
@@ -442,7 +442,7 @@ struct private_builder_t {
 static agent_private_key_t *build(private_builder_t *this)
 {
 	agent_private_key_t *key = NULL;
-	
+
 	if (this->socket)
 	{
 		key = agent_private_key_create(this->socket, this->pubkey);
@@ -457,7 +457,7 @@ static agent_private_key_t *build(private_builder_t *this)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_AGENT_SOCKET:
@@ -486,19 +486,19 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *agent_private_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->pubkey = NULL;
 	this->socket = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

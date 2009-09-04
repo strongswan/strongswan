@@ -30,7 +30,7 @@ typedef struct des_crypter_t des_crypter_t;
  * Class implementing the DES and 3DES encryption algorithms.
  */
 struct des_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -39,7 +39,7 @@ struct des_crypter_t {
 
 /**
  * Constructor to create des_crypter_t objects.
- * 
+ *
  * @param algo		ENCR_DES for single DES, ENCR_3DES for triple DES
  * @return			des_crypter_t object, NULL if algo not supported
  */

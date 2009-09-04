@@ -95,14 +95,14 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 	mconsole_reply reply;
 	int len, flags = 0;
 	va_list args;
-	
+
 	memset(&request, 0, sizeof(request));
 	request.magic = MCONSOLE_MAGIC;
 	request.version = MCONSOLE_VERSION;
 	va_start(args, command);
 	request.len = vsnprintf(request.data, sizeof(request.data), command, args);
 	va_end(args);
-	
+
 	if (this->idle)
 	{
 		flags = MSG_DONTWAIT;
@@ -117,13 +117,13 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 					 (struct sockaddr*)&this->uml, sizeof(this->uml));
 	}
 	while (len < 0 && (errno == EINTR || errno == EAGAIN));
-	
+
 	if (len < 0)
 	{
 		DBG1("sending mconsole command to UML failed: %m");
 		return -1;
 	}
-	do 
+	do
 	{
 		len = recv(this->console, &reply, sizeof(reply), flags);
 		if (len < 0 && (errno == EINTR || errno == EAGAIN))
@@ -157,7 +157,7 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 		}
 	}
 	while (reply.more);
-	
+
 	return reply.err;
 }
 
@@ -174,7 +174,7 @@ static void ignore(void *data, char *buf, size_t len)
 static bool add_iface(private_mconsole_t *this, char *guest, char *host)
 {
 	int tries = 0;
-	
+
 	while (tries++ < 5)
 	{
 		if (request(this, ignore, NULL, "config %s=tuntap,%s", guest, host) == 0)
@@ -190,7 +190,7 @@ static bool add_iface(private_mconsole_t *this, char *guest, char *host)
  * Implementation of mconsole_t.del_iface.
  */
 static bool del_iface(private_mconsole_t *this, char *guest)
-{	
+{
 	if (request(this, NULL, NULL, "remove %s", guest) != 0)
 	{
 		return FALSE;
@@ -270,7 +270,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 		len = recvfrom(this->notify, &notify, sizeof(notify), flags, NULL, 0);
 	}
 	while (len < 0 && (errno == EINTR || errno == EAGAIN));
-	
+
 	if (len < 0 || len >= sizeof(notify))
 	{
 		DBG1("reading from mconsole notify socket failed: %m");
@@ -300,7 +300,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 static bool setup_console(private_mconsole_t *this)
 {
 	struct sockaddr_un addr;
-	
+
 	this->console = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (this->console < 0)
 	{
@@ -326,20 +326,20 @@ static bool setup_console(private_mconsole_t *this)
 mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 {
 	private_mconsole_t *this = malloc_thing(private_mconsole_t);
-	
+
 	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
 	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
 	this->public.exec = (int(*)(mconsole_t*,  void(*cb)(void*,char*,size_t), void *data, char *cmd))exec;
 	this->public.destroy = (void*)destroy;
-	
+
 	this->idle = idle;
-	
+
 	if (!wait_for_notify(this, notify))
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	if (!setup_console(this))
 	{
 		close(this->notify);
@@ -348,9 +348,9 @@ mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 		return NULL;
 	}
 	unlink(notify);
-	
+
 	wait_bootup(this);
-	
+
 	return &this->public;
 }
 

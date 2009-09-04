@@ -18,7 +18,7 @@
  * @defgroup delete_child_sa_job delete_child_sa_job
  * @{ @ingroup jobs
  */
- 
+
 #ifndef DELETE_IKE_SA_JOB_H_
 #define DELETE_IKE_SA_JOB_H_
 
@@ -32,12 +32,12 @@ typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
 /**
  * Class representing an DELETE_IKE_SA Job.
  *
- * This job is responsible for deleting established or half open IKE_SAs. 
+ * This job is responsible for deleting established or half open IKE_SAs.
  * A half open IKE_SA is every IKE_SA which hasn't reache the SA_ESTABLISHED
  * state.
  */
 struct delete_ike_sa_job_t {
-	
+
 	/**
 	 * The job_t interface.
 	 */
@@ -46,7 +46,7 @@ struct delete_ike_sa_job_t {
 
 /**
  * Creates a job of type DELETE_IKE_SA.
- * 
+ *
  * @param ike_sa_id				id of the IKE_SA to delete
  * @param delete_if_established	should the IKE_SA be deleted if it is established?
  * @return						created delete_ike_sa_job_t object

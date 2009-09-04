@@ -29,12 +29,12 @@ typedef struct resolv_conf_handler_t resolv_conf_handler_t;
  * Handle DNS configuration attributes by mangling a resolv.conf file.
  */
 struct resolv_conf_handler_t {
-	
+
 	/**
 	 * Implements the attribute_handler_t interface
 	 */
 	attribute_handler_t handler;
-	
+
 	/**
 	 * Destroy a resolv_conf_handler_t.
 	 */

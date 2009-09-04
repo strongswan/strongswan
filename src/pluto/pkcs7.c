@@ -155,13 +155,13 @@ static char ASN1_pkcs7_encrypted_data_oid_str[] = {
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
 };
 
-static const chunk_t ASN1_pkcs7_data_oid = 
+static const chunk_t ASN1_pkcs7_data_oid =
 						chunk_from_buf(ASN1_pkcs7_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
 static const chunk_t ASN1_pkcs7_enveloped_data_oid =
 						chunk_from_buf(ASN1_pkcs7_enveloped_data_oid_str);
-static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid = 
+static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_enveloped_data_oid_str);
 static const chunk_t ASN1_pkcs7_digested_data_oid =
 						chunk_from_buf(ASN1_pkcs7_digested_data_oid_str);
@@ -180,7 +180,7 @@ static u_char ASN1_des_cbc_oid_str[] = {
 	0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x07
 };
 
-static const chunk_t ASN1_3des_ede_cbc_oid = 
+static const chunk_t ASN1_3des_ede_cbc_oid =
 						chunk_from_buf(ASN1_3des_ede_cbc_oid_str);
 static const chunk_t ASN1_des_cbc_oid =
 						chunk_from_buf(ASN1_des_cbc_oid_str);
@@ -308,7 +308,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 		case PKCS7_SIGNER_INFO:
 			signerInfos++;
 			DBG2("  signer #%d", signerInfos);
-			break;      
+			break;
 		case PKCS7_SIGNED_ISSUER:
 			dntoa(buf, BUF_LEN, object);
 			DBG2("  '%s'",buf);
@@ -444,21 +444,21 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		case PKCS7_ISSUER:
 			dntoa(buf, BUF_LEN, object);
 			DBG2("  '%s'", buf);
-			break;      
+			break;
 		case PKCS7_SERIAL_NUMBER:
 			if (!chunk_equals(serialNumber, object))
 			{
 				DBG1("serial numbers do not match");
 				goto end;
-			}   
-			break;      
+			}
+			break;
 		case PKCS7_ENCRYPTION_ALG:
 			enc_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 			if (enc_alg != OID_RSA_ENCRYPTION)
 			{
 				DBG1("only rsa encryption supported");
 				goto end;
-			} 
+			}
 			break;
 		case PKCS7_ENCRYPTED_KEY:
 			if (!key->decrypt(key, object, &symmetric_key))
@@ -477,7 +477,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			break;
 		case PKCS7_CONTENT_ENC_ALGORITHM:
 			content_enc_alg = asn1_parse_algorithmIdentifier(object, level, &iv);
-	
+
 			if (content_enc_alg == OID_UNKNOWN)
 			{
 				DBG1("unknown content encryption algorithm");
@@ -585,12 +585,12 @@ chunk_t pkcs7_contentType_attribute(void)
 
 /**
  * @brief Builds a messageDigest attribute
- * 
- * 
+ *
+ *
  * @param[in] blob content to create digest of
  * @param[in] digest_alg digest algorithm to be used
  * @return ASN.1 encoded messageDigest attribute
- * 
+ *
  */
 chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg)
 {
@@ -737,7 +737,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 	/* generate a true random symmetric encryption key and a pseudo-random iv */
 	{
 		rng_t *rng;
-		
+
 		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
 		DBG4("symmetric encryption key %B", &symmetricKey);
@@ -775,13 +775,13 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 
 	cert->public_key->encrypt(cert->public_key, symmetricKey, &protectedKey);
 
-	/* build pkcs7 enveloped data object */ 
+	/* build pkcs7 enveloped data object */
 	{
-		
+
 		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "mm"
 					, asn1_build_known_oid(enc_alg)
 					, asn1_simple_object(ASN1_OCTET_STRING, iv));
-		
+
 		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "cmm"
 					, ASN1_pkcs7_data_oid
 					, contentEncryptionAlgorithm

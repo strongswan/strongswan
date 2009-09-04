@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 	identification_t *id;
 	chunk_t enc;
 	int i;
-	
+
 	if (argc < 2)
 	{
 		return -1;
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < enc.len; i++)
 	{
 		printf("%02x", (unsigned int)enc.ptr[i]);
-	}	
+	}
 	printf("'\n");
 	return 0;
 }

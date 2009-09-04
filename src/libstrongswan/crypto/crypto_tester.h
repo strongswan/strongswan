@@ -109,12 +109,12 @@ struct rng_test_vector_t {
  * Cryptographic primitive testing framework.
  */
 struct crypto_tester_t {
-	
+
 	/**
 	 * Test a crypter algorithm, optionally using a specified key size.
 	 *
 	 * @param alg			algorithm to test
-	 * @param key_size		key size to test, 0 for all 
+	 * @param key_size		key size to test, 0 for all
 	 * @param create		constructor function for the crypter
 	 * @return				TRUE if test passed
 	 */
@@ -183,14 +183,14 @@ struct crypto_tester_t {
 	 * @param vector		pointer to test vector
 	 */
 	void (*add_prf_vector)(crypto_tester_t *this, prf_test_vector_t *vector);
-	
+
 	/**
 	 * Add a test vector to test a RNG.
 	 *
 	 * @param vector		pointer to test vector
 	 */
 	void (*add_rng_vector)(crypto_tester_t *this, rng_test_vector_t *vector);
-	
+
 	/**
 	 * Destroy a crypto_tester_t.
 	 */

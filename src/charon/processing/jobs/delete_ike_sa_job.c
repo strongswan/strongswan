@@ -28,12 +28,12 @@ struct private_delete_ike_sa_job_t {
 	 * public delete_ike_sa_job_t interface
 	 */
 	delete_ike_sa_job_t public;
-	
+
 	/**
 	 * ID of the ike_sa to delete
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
+
 	/**
 	 * Should the IKE_SA be deleted if it is in ESTABLISHED state?
 	 */
@@ -56,7 +56,7 @@ static void destroy(private_delete_ike_sa_job_t *this)
 static void execute(private_delete_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
 	if (ike_sa)
@@ -99,18 +99,18 @@ static void execute(private_delete_ike_sa_job_t *this)
 /*
  * Described in header
  */
-delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id, 
+delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 											  bool delete_if_established)
 {
 	private_delete_ike_sa_job_t *this = malloc_thing(private_delete_ike_sa_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t *)) destroy;;
-	
+
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->delete_if_established = delete_if_established;
-	
+
 	return &(this->public);
 }

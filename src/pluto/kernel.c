@@ -868,7 +868,7 @@ static void set_text_said(char *text_said, const ip_address *dst,
  * this allows the entry to be deleted.
  */
 static struct bare_shunt** bare_shunt_ptr(const ip_subnet *ours,
-										  const ip_subnet *his, 
+										  const ip_subnet *his,
 										  int transport_proto)
 {
 	struct bare_shunt *p, **pp;
@@ -1861,7 +1861,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			if (ei == &esp_info[countof(esp_info)])
 			{
 				/* Check for additional kernel alg */
-				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid, 
+				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid,
 										st->st_esp.attrs.auth))!=NULL)
 				{
 					break;
@@ -1906,7 +1906,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		{
 			case ESP_3DES:
 				/* 168 bits in kernel, need 192 bits for keymat_len */
-				if (key_len == 21) 
+				if (key_len == 21)
 				{
 					key_len = 24;
 				}
@@ -1914,7 +1914,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			case ESP_DES:
 				/* 56 bits in kernel, need 64 bits for keymat_len */
 				if (key_len == 7)
-				{ 
+				{
 					key_len = 8;
 				}
 				break;
@@ -1930,7 +1930,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				key_len += 4;
 				break;
 			default:
-				break;			
+				break;
 		}
 
 		/* divide up keying material */
@@ -2032,7 +2032,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		{
 			struct pfkey_proto_info proto_info[4];
 			int i = 0;
-			
+
 			if (st->st_ipcomp.present)
 			{
 				proto_info[i].proto = IPPROTO_COMP;
@@ -2040,7 +2040,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid + 2;
 				i++;
 			}
-			
+
 			if (st->st_esp.present)
 			{
 				proto_info[i].proto = IPPROTO_ESP;
@@ -2048,7 +2048,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid + 1;
 				i++;
 			}
-			
+
 			if (st->st_ah.present)
 			{
 				proto_info[i].proto = IPPROTO_AH;
@@ -2056,9 +2056,9 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid;
 				i++;
 			}
-			
+
 			proto_info[i].proto = 0;
-			
+
 			if (kernel_ops->inbound_eroute
 				&& encapsulation == ENCAPSULATION_MODE_TUNNEL)
 			{
@@ -2068,7 +2068,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 					proto_info[i].encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 				}
 			}
-			
+
 			/* MCR - should be passed a spd_eroute structure here */
 			(void) raw_eroute(&c->spd.that.host_addr, &c->spd.that.client
 							  , &c->spd.this.host_addr, &c->spd.this.client
@@ -2079,11 +2079,11 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	}
 
 	/* If there are multiple SPIs, group them. */
-	
+
 	if (kernel_ops->grp_sa && said_next > &said[1])
 	{
 		struct kernel_sa *s;
-		
+
 		/* group SAs, two at a time, inner to outer (backwards in said[])
 		 * The grouping is by pairs.  So if said[] contains ah esp ipip,
 		 * the grouping would be ipip:esp, esp:ah.
@@ -2095,15 +2095,15 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				text_said1[SATOT_BUF];
 
 			/* group s[1] and s[0], in that order */
-			
+
 			set_text_said(text_said0, s[0].dst, s[0].spi, s[0].proto);
 			set_text_said(text_said1, s[1].dst, s[1].spi, s[1].proto);
-			
+
 			DBG(DBG_KLIPS, DBG_log("grouping %s and %s", text_said1, text_said0));
-			
+
 			s[0].text_said = text_said0;
 			s[1].text_said = text_said1;
-			
+
 			if (!kernel_ops->grp_sa(s + 1, s))
 			{
 				goto fail;
@@ -2438,7 +2438,7 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 				, c->name
 				, (c->policy_next ? c->policy_next->name : "none")
 				, ero ? ero->name : "null"
-				, esr 
+				, esr
 				, ro ? ro->name : "null"
 				, rosr
 				, st ? st->st_serialno : 0));
@@ -2839,7 +2839,7 @@ static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
 	struct connection *c = st->st_connection;
 	char text_said[SATOT_BUF];
-	struct kernel_sa sa;        
+	struct kernel_sa sa;
 	ip_address
 		src = inbound? c->spd.that.host_addr : c->spd.this.host_addr,
 		dst = inbound? c->spd.this.host_addr : c->spd.that.host_addr;
@@ -2924,7 +2924,7 @@ bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 			ret = *idle_time >= idle_max;
 		}
 	}
-	else 
+	else
 	{
 		while (f != NULL)
 		{

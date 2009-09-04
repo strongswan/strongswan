@@ -30,7 +30,7 @@ typedef struct aes_crypter_t aes_crypter_t;
  * Class implementing the AES encryption algorithm.
  */
 struct aes_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -39,7 +39,7 @@ struct aes_crypter_t {
 
 /**
  * Constructor to create aes_crypter_t objects.
- * 
+ *
  * @param key_size		key size in bytes
  * @param algo			algorithm to implement
  * @return				aes_crypter_t object, NULL if not supported

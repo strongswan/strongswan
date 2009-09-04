@@ -33,12 +33,12 @@ struct private_stroke_attribute_t {
 	 * public functions
 	 */
 	stroke_attribute_t public;
-	
+
 	/**
 	 * list of pools, contains pool_t
 	 */
 	linked_list_t *pools;
-	
+
 	/**
 	 * mutex to lock access to pools
 	 */
@@ -85,7 +85,7 @@ static void pool_destroy(pool_t *this)
 {
 	enumerator_t *enumerator;
 	identification_t *id;
-	
+
 	enumerator = this->ids->create_enumerator(this->ids);
 	while (enumerator->enumerate(enumerator, &id, NULL))
 	{
@@ -107,7 +107,7 @@ static pool_t *find_pool(private_stroke_attribute_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	pool_t *current, *found = NULL;
-	
+
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -129,13 +129,13 @@ host_t* offset2host(pool_t *pool, int offset)
 	chunk_t addr;
 	host_t *host;
 	u_int32_t *pos;
-	
+
 	offset--;
 	if (offset > pool->size)
 	{
 		return NULL;
 	}
-	
+
 	addr = chunk_clone(pool->base->get_address(pool->base));
 	if (pool->base->get_family(pool->base) == AF_INET6)
 	{
@@ -158,7 +158,7 @@ int host2offset(pool_t *pool, host_t *addr)
 {
 	chunk_t host, base;
 	u_int32_t hosti, basei;
-	
+
 	if (addr->get_family(addr) != pool->base->get_family(pool->base))
 	{
 		return -1;
@@ -195,7 +195,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 	uintptr_t offset = 0;
 	enumerator_t *enumerator;
 	identification_t *old_id;
-	
+
 	this->mutex->lock(this->mutex);
 	pool = find_pool(this, name);
 	while (pool)
@@ -206,7 +206,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			this->mutex->unlock(this->mutex);
 			return requested->clone(requested);
 		}
-		
+
 		if (!requested->is_anyaddr(requested) &&
 			requested->get_family(requested) !=
 			pool->base->get_family(pool->base))
@@ -214,7 +214,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			DBG1(DBG_CFG, "IP pool address family mismatch");
 			break;
 		}
-		
+
 		/* check for a valid offline lease, refresh */
 		offset = (uintptr_t)pool->offline->remove(pool->offline, id);
 		if (offset)
@@ -227,7 +227,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 				break;
 			}
 		}
-		
+
 		/* check for a valid online lease, reassign */
 		offset = (uintptr_t)pool->online->get(pool->online, id);
 		if (offset && offset == host2offset(pool, requested))
@@ -235,7 +235,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
 			break;
 		}
-		
+
 		if (pool->unused < pool->size)
 		{
 			/* assigning offset, starting by 1. Handling 0 in hashtable
@@ -270,7 +270,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			}
 		}
 		enumerator->destroy(enumerator);
-		
+
 		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address", name);
 		break;
 	}
@@ -291,7 +291,7 @@ static bool release_address(private_stroke_attribute_t *this,
 	pool_t *pool;
 	bool found = FALSE;
 	uintptr_t offset;
-	
+
 	this->mutex->lock(this->mutex);
 	pool = find_pool(this, name);
 	if (pool)
@@ -323,7 +323,7 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 	if (msg->add_conn.other.sourceip_size)
 	{
 		pool_t *pool;
-		
+
 		pool = malloc_thing(pool_t);
 		pool->base = NULL;
 		pool->size = 0;
@@ -335,17 +335,17 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 										(hashtable_equals_t)id_equals, 16);
 		pool->ids = hashtable_create((hashtable_hash_t)id_hash,
 										(hashtable_equals_t)id_equals, 16);
-		
+
 		/* if %config, add an empty pool, otherwise */
 		if (msg->add_conn.other.sourceip)
 		{
 			u_int32_t bits;
 			int family;
-		
-			DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d", 
-				 msg->add_conn.name, msg->add_conn.other.sourceip, 
+
+			DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d",
+				 msg->add_conn.name, msg->add_conn.other.sourceip,
 				 msg->add_conn.other.sourceip_size);
-		
+
 			pool->base = host_create_from_string(msg->add_conn.other.sourceip, 0);
 			if (!pool->base)
 			{
@@ -363,7 +363,7 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 					 (family == AF_INET ? 32 : 128) - bits);
 			}
 			pool->size = 1 << (bits);
-			
+
 			if (pool->size > 2)
 			{	/* do not use first and last addresses of a block */
 				pool->unused++;
@@ -383,7 +383,7 @@ static void del_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
 	pool_t *pool;
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &pool))
@@ -407,7 +407,7 @@ static bool pool_filter(void *mutex, pool_t **poolp, char **name,
 						void *d3, u_int *offline)
 {
 	pool_t *pool = *poolp;
-	
+
 	*name = pool->name;
 	*size = pool->size;
 	*online = pool->online->get_count(pool->online);
@@ -450,10 +450,10 @@ static bool lease_enumerate(lease_enumerator_t *this, identification_t **id_out,
 {
 	identification_t *id;
 	uintptr_t offset;
-	
+
 	DESTROY_IF(this->current);
 	this->current = NULL;
-	
+
 	if (this->inner->enumerate(this->inner, &id, NULL))
 	{
 		offset = (uintptr_t)this->pool->online->get(this->pool->online, id);
@@ -494,7 +494,7 @@ static enumerator_t* create_lease_enumerator(private_stroke_attribute_t *this,
 											 char *pool)
 {
 	lease_enumerator_t *enumerator;
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator = malloc_thing(lease_enumerator_t);
 	enumerator->pool = find_pool(this, pool);
@@ -528,7 +528,7 @@ static void destroy(private_stroke_attribute_t *this)
 stroke_attribute_t *stroke_attribute_create()
 {
 	private_stroke_attribute_t *this = malloc_thing(private_stroke_attribute_t);
-	
+
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
 	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
@@ -537,10 +537,10 @@ stroke_attribute_t *stroke_attribute_create()
 	this->public.create_pool_enumerator = (enumerator_t*(*)(stroke_attribute_t*))create_pool_enumerator;
 	this->public.create_lease_enumerator = (enumerator_t*(*)(stroke_attribute_t*, char *pool))create_lease_enumerator;
 	this->public.destroy = (void(*)(stroke_attribute_t*))destroy;
-	
+
 	this->pools = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	
+
 	return &this->public;
 }
 

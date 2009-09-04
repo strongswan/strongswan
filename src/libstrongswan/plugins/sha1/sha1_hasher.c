@@ -2,7 +2,7 @@
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
- * 
+ *
  * Ported from Steve Reid's <steve@edmweb.com> implementation
  * "SHA1 in C" found in strongSwan.
  *
@@ -24,7 +24,7 @@
 
 /*
  * ugly macro stuff
- */ 
+ */
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -54,7 +54,7 @@ struct private_sha1_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	sha1_hasher_t public;
-	
+
 	/*
 	 * State of the hasher. Shared with sha1_prf.c, do not change it!!!
 	 */
@@ -63,7 +63,7 @@ struct private_sha1_hasher_t {
     u_int8_t buffer[64];
 };
 
-/* 
+/*
  * Hash a single 512-bit block. This is the core of the algorithm. *
  */
 static void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
@@ -129,17 +129,17 @@ void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
     }
     this->count[1] += (len>>29);
     j = (j >> 3) & 63;
-    if ((j + len) > 63) 
+    if ((j + len) > 63)
     {
         memcpy(&this->buffer[j], data, (i = 64-j));
         SHA1Transform(this->state, this->buffer);
-        for ( ; i + 63 < len; i += 64) 
+        for ( ; i + 63 < len; i += 64)
         {
             SHA1Transform(this->state, &data[i]);
         }
         j = 0;
     }
-    else 
+    else
     {
     	i = 0;
     }
@@ -147,8 +147,8 @@ void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
 }
 
 
-/* 
- * Add padding and return the message digest. 
+/*
+ * Add padding and return the message digest.
  */
 static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 {
@@ -156,20 +156,20 @@ static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 	u_int8_t finalcount[8];
 	u_int8_t c;
 
-    for (i = 0; i < 8; i++) 
+    for (i = 0; i < 8; i++)
     {
         finalcount[i] = (u_int8_t)((this->count[(i >= 4 ? 0 : 1)]
          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
     }
     c = 0200;
     SHA1Update(this, &c, 1);
-    while ((this->count[0] & 504) != 448) 
+    while ((this->count[0] & 504) != 448)
     {
 		c = 0000;
         SHA1Update(this, &c, 1);
     }
     SHA1Update(this, finalcount, 8);  /* Should cause a SHA1Transform() */
-    for (i = 0; i < 20; i++) 
+    for (i = 0; i < 20; i++)
     {
         digest[i] = (u_int8_t)((this->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
     }
@@ -209,15 +209,15 @@ static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *h
 {
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
-	{	
+	{
 		hash->ptr = malloc(HASH_SIZE_SHA1);
 		hash->len = HASH_SIZE_SHA1;
-		
+
 		SHA1Final(this, hash->ptr);
 		reset(this);
 	}
 }
-	
+
 /**
  * Implementation of hasher_t.get_hash_size.
  */
@@ -250,10 +250,10 @@ sha1_hasher_t *sha1_hasher_create(hash_algorithm_t algo)
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
-	
+
 	/* initialize */
 	reset(this);
-	
+
 	return &(this->public);
 }
 

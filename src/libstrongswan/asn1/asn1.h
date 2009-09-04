@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup asn1i asn1
  * @{ @ingroup asn1
@@ -103,7 +103,7 @@ chunk_t asn1_algorithmIdentifier(int oid);
  * Converts an ASN.1 OID into a known OID index
  *
  * @param object	body of an OID
- * @return			index into the oid_names[] table or OID_UNKNOWN  
+ * @return			index into the oid_names[] table or OID_UNKNOWN
  */
 int asn1_known_oid(chunk_t object);
 
@@ -139,7 +139,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *content);
  * @param blob		ASN.1 coded blob
  * @param level0	top-most level offset
  * @param params	returns optional [ASN.1 coded] parameters
- * @return			known OID index or OID_UNKNOWN	
+ * @return			known OID index or OID_UNKNOWN
  */
 int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *params);
 
@@ -178,7 +178,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type);
  *
  * @param time		time_t in UTC
  * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
- * @return			body of an ASN.1 code time object			
+ * @return			body of an ASN.1 code time object
  */
 chunk_t asn1_from_time(const time_t *time, asn1_t type);
 
@@ -187,7 +187,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type);
  *
  * @param blob		ASN.1 coded time object
  * @param level0	top-most level offset
- * @return			time_t in UTC 	
+ * @return			time_t in UTC
  */
 time_t asn1_parse_time(chunk_t blob, int level0);
 

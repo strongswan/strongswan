@@ -24,7 +24,7 @@ typedef struct mconsole_t mconsole_t;
  * UML mconsole, change running UML configuration using mconsole.
  */
 struct mconsole_t {
-	
+
 	/**
 	 * Create a guest interface and connect it to tap host interface.
 	 *
@@ -33,7 +33,7 @@ struct mconsole_t {
 	 * @return				TRUE if interface created
 	 */
 	bool (*add_iface)(mconsole_t *this, char *guest, char *host);
-	
+
 	/**
 	 * Delete a guest interface.
 	 *
@@ -41,7 +41,7 @@ struct mconsole_t {
 	 * @return				TRUE if interface deleted
 	 */
 	bool (*del_iface)(mconsole_t *this, char *guest);
-	
+
 	/**
 	 * Execute a command on the mconsole.
 	 *
@@ -52,7 +52,7 @@ struct mconsole_t {
 	 */
 	int (*exec)(mconsole_t *this, void(*cb)(void*,char*,size_t), void *data,
 				char *cmd);
-	
+
 	/**
 	 * Destroy the mconsole instance
 	 */

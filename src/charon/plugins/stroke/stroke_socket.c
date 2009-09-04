@@ -48,42 +48,42 @@ struct private_stroke_socket_t {
 	 * public functions
 	 */
 	stroke_socket_t public;
-		
+
 	/**
 	 * Unix socket to listen for strokes
 	 */
 	int socket;
-	
+
 	/**
 	 * job accepting stroke messages
 	 */
 	callback_job_t *job;
-	
+
 	/**
 	 * configuration backend
 	 */
 	stroke_config_t *config;
-	
+
 	/**
 	 * attribute provider
 	 */
 	stroke_attribute_t *attribute;
-	
+
 	/**
 	 * controller to control daemon
 	 */
 	stroke_control_t *control;
-	
+
 	/**
 	 * credential set
 	 */
 	stroke_cred_t *cred;
-	
+
 	/**
 	 * CA sections
 	 */
 	stroke_ca_t *ca;
-	
+
 	/**
 	 * Status information logging
 	 */
@@ -99,7 +99,7 @@ struct stroke_job_context_t {
 	 * file descriptor to read from
 	 */
 	int fd;
-	
+
 	/**
 	 * global stroke interface
 	 */
@@ -152,7 +152,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
 	pop_string(msg, &end->updown);
-	
+
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
 	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnets);
 	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
@@ -202,7 +202,7 @@ static void stroke_del_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 {
 	pop_string(msg, &msg->del_conn.name);
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
-	
+
 	this->config->del(this->config, msg);
 	this->attribute->del_pool(this->attribute, msg);
 }
@@ -214,7 +214,7 @@ static void stroke_initiate(private_stroke_socket_t *this, stroke_msg_t *msg, FI
 {
 	pop_string(msg, &msg->initiate.name);
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
-	
+
 	this->control->initiate(this->control, msg, out);
 }
 
@@ -227,7 +227,7 @@ static void stroke_terminate(private_stroke_socket_t *this, stroke_msg_t *msg, F
 	DBG1(DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
 
 	this->control->terminate(this->control, msg, out);
-}	
+}
 
 /**
  * terminate a connection by peers virtual IP
@@ -250,7 +250,7 @@ static void stroke_route(private_stroke_socket_t *this, stroke_msg_t *msg, FILE 
 {
 	pop_string(msg, &msg->route.name);
 	DBG1(DBG_CFG, "received stroke: route '%s'", msg->route.name);
-	
+
 	this->control->route(this->control, msg, out);
 }
 
@@ -261,7 +261,7 @@ static void stroke_unroute(private_stroke_socket_t *this, stroke_msg_t *msg, FIL
 {
 	pop_string(msg, &msg->terminate.name);
 	DBG1(DBG_CFG, "received stroke: unroute '%s'", msg->route.name);
-	
+
 	this->control->unroute(this->control, msg, out);
 }
 
@@ -287,7 +287,7 @@ static void stroke_add_ca(private_stroke_socket_t *this,
 	DBG2(DBG_CFG, "  ocspuri=%s",     msg->add_ca.ocspuri);
 	DBG2(DBG_CFG, "  ocspuri2=%s",    msg->add_ca.ocspuri2);
 	DBG2(DBG_CFG, "  certuribase=%s", msg->add_ca.certuribase);
-	
+
 	this->ca->add(this->ca, msg);
 }
 
@@ -299,7 +299,7 @@ static void stroke_del_ca(private_stroke_socket_t *this,
 {
 	pop_string(msg, &msg->del_ca.name);
 	DBG1(DBG_CFG, "received stroke: delete ca '%s'", msg->del_ca.name);
-	
+
 	this->ca->del(this->ca, msg);
 }
 
@@ -311,7 +311,7 @@ static void stroke_status(private_stroke_socket_t *this,
 						  stroke_msg_t *msg, FILE *out, bool all)
 {
 	pop_string(msg, &(msg->status.name));
-	
+
 	this->list->status(this->list, msg, out, all);
 }
 
@@ -361,7 +361,7 @@ static void stroke_leases(private_stroke_socket_t *this,
 {
 	pop_string(msg, &msg->leases.pool);
 	pop_string(msg, &msg->leases.address);
-	
+
 	this->list->leases(this->list, msg, out);
 }
 
@@ -390,11 +390,11 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	sys_logger_t *sys_logger;
 	file_logger_t *file_logger;
 	debug_t group;
-	
+
 	pop_string(msg, &(msg->loglevel.type));
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
-	
+
 	group = get_group_from_name(msg->loglevel.type);
 	if (group < 0)
 	{
@@ -448,7 +448,7 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 	FILE *out;
 	private_stroke_socket_t *this = ctx->this;
 	int strokefd = ctx->fd;
-	
+
 	/* peek the length */
 	bytes_read = recv(strokefd, &msg_length, sizeof(msg_length), MSG_PEEK);
 	if (bytes_read != sizeof(msg_length))
@@ -457,7 +457,7 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			 strerror(errno));
 		return JOB_REQUEUE_NONE;
 	}
-	
+
 	/* read message */
 	msg = alloca(msg_length);
 	bytes_read = recv(strokefd, msg, msg_length, 0);
@@ -466,16 +466,16 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 		DBG1(DBG_CFG, "reading stroke message failed: %s", strerror(errno));
 		return JOB_REQUEUE_NONE;
 	}
-	
+
 	out = fdopen(strokefd, "w+");
 	if (out == NULL)
 	{
 		DBG1(DBG_CFG, "opening stroke output channel failed: %s", strerror(errno));
 		return JOB_REQUEUE_NONE;
 	}
-	
+
 	DBG3(DBG_CFG, "stroke message %b", (void*)msg, msg_length);
-	
+
 	switch (msg->type)
 	{
 		case STR_INITIATE:
@@ -550,24 +550,24 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	int oldstate;
 	callback_job_t *job;
 	stroke_job_context_t *ctx;
-	
+
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	strokefd = accept(this->socket, (struct sockaddr *)&strokeaddr, &strokeaddrlen);
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (strokefd < 0)
 	{
 		DBG1(DBG_CFG, "accepting stroke connection failed: %s", strerror(errno));
 		return JOB_REQUEUE_FAIR;
 	}
-	
+
 	ctx = malloc_thing(stroke_job_context_t);
 	ctx->fd = strokefd;
 	ctx->this = this;
 	job = callback_job_create((callback_job_cb_t)process,
 							  ctx, (void*)stroke_job_context_destroy, this->job);
 	charon->processor->queue_job(charon->processor, (job_t*)job);
-	
+
 	return JOB_REQUEUE_FAIR;
 }
 
@@ -582,7 +582,7 @@ static bool open_socket(private_stroke_socket_t *this)
 
 	socket_addr.sun_family = AF_UNIX;
 	strcpy(socket_addr.sun_path, STROKE_SOCKET);
-	
+
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
@@ -590,7 +590,7 @@ static bool open_socket(private_stroke_socket_t *this)
 		DBG1(DBG_CFG, "could not create stroke socket");
 		return FALSE;
 	}
-	
+
 	unlink(socket_addr.sun_path);
 	old = umask(~(S_IRWXU | S_IRWXG));
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
@@ -605,7 +605,7 @@ static bool open_socket(private_stroke_socket_t *this)
 		DBG1(DBG_CFG, "changing stroke socket permissions failed: %s",
 			 strerror(errno));
 	}
-	
+
 	if (listen(this->socket, 10) < 0)
 	{
 		DBG1(DBG_CFG, "could not listen on stroke socket: %s", strerror(errno));
@@ -641,31 +641,31 @@ static void destroy(private_stroke_socket_t *this)
 stroke_socket_t *stroke_socket_create()
 {
 	private_stroke_socket_t *this = malloc_thing(private_stroke_socket_t);
-	
+
 	this->public.destroy = (void(*)(stroke_socket_t*))destroy;
-	
+
 	if (!open_socket(this))
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	this->cred = stroke_cred_create();
 	this->attribute = stroke_attribute_create();
 	this->ca = stroke_ca_create(this->cred);
 	this->config = stroke_config_create(this->ca, this->cred);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);
-	
+
 	charon->credentials->add_set(charon->credentials, &this->ca->set);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->attributes->add_provider(charon->attributes, &this->attribute->provider);
-	
+
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
-	
+
 	return &this->public;
 }
 

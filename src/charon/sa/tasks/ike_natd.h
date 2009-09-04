@@ -36,7 +36,7 @@ struct ike_natd_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Check if the NAT mapping has changed for our address.
 	 *

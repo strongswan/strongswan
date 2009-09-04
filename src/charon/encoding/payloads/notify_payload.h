@@ -63,7 +63,7 @@ enum notify_type_t {
 	UNEXPECTED_NAT_DETECTED = 41,
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
-	
+
 	/* notify status messages */
 	INITIAL_CONTACT = 16384,
 	SET_WINDOW_SIZE = 16385,
@@ -116,7 +116,7 @@ extern enum_name_t *notify_type_short_names;
 
 /**
  * Class representing an IKEv2-Notify Payload.
- * 
+ *
  * The Notify Payload format is described in Draft section 3.10.
  */
 struct notify_payload_t {
@@ -124,67 +124,67 @@ struct notify_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Gets the protocol id of this payload.
-	 * 	
+	 *
 	 * @return 			protocol id of this payload
 	 */
 	u_int8_t (*get_protocol_id) (notify_payload_t *this);
 
 	/**
 	 * Sets the protocol id of this payload.
-	 * 	
+	 *
 	 * @param protocol_id	protocol id to set
 	 */
 	void (*set_protocol_id) (notify_payload_t *this, u_int8_t protocol_id);
 
 	/**
 	 * Gets the notify message type of this payload.
-	 * 	
+	 *
 	 * @return 			notify message type of this payload
 	 */
 	notify_type_t (*get_notify_type) (notify_payload_t *this);
 
 	/**
 	 * Sets notify message type of this payload.
-	 * 	
+	 *
 	 * @param type		notify message type to set
 	 */
 	void (*set_notify_type) (notify_payload_t *this, notify_type_t type);
 
 	/**
 	 * Returns the currently set spi of this payload.
-	 * 
+	 *
 	 * This is only valid for notifys with protocol AH|ESP
 	 *
 	 * @return 		SPI value
 	 */
 	u_int32_t (*get_spi) (notify_payload_t *this);
-	
+
 	/**
 	 * Sets the spi of this payload.
-	 * 
+	 *
 	 * This is only valid for notifys with protocol AH|ESP
-	 * 
+	 *
 	 * @param spi	SPI value
 	 */
 	void (*set_spi) (notify_payload_t *this, u_int32_t spi);
 
 	/**
 	 * Returns the currently set notification data of payload.
-	 * 	
+	 *
 	 * Returned data are not copied.
-	 * 
+	 *
 	 * @return 		chunk_t pointing to the value
 	 */
 	chunk_t (*get_notification_data) (notify_payload_t *this);
-	
+
 	/**
 	 * Sets the notification data of this payload.
-	 * 	
+	 *
 	 * @warning Value is getting copied.
-	 * 
+	 *
 	 * @param notification_data 	chunk_t pointing to the value to set
 	 */
 	void (*set_notification_data) (notify_payload_t *this,
@@ -198,14 +198,14 @@ struct notify_payload_t {
 
 /**
  * Creates an empty notify_payload_t object
- * 
+ *
  * @return			created notify_payload_t object
  */
 notify_payload_t *notify_payload_create(void);
 
 /**
  * Creates an notify_payload_t object of specific type for specific protocol id.
- * 
+ *
  * @param protocol_id			protocol id (IKE, AH or ESP)
  * @param type					notify type (see notify_type_t)
  * @return						notify_payload_t object

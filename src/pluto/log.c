@@ -99,12 +99,12 @@ static void pluto_dbg(int level, char *fmt, ...)
 	else if (cur_debugging & DBG_RAW)
 	{
 		debug_level = 3;
-	}	
+	}
 	else if (cur_debugging & DBG_PARSING)
 	{
 		debug_level = 2;
 	}
-	else 
+	else
 	{
 		debug_level = 1;
 	}
@@ -835,8 +835,8 @@ static void show_loaded_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
-	buf[0] = '\0';	
+
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{

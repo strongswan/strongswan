@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup gcrypt_rng gcrypt_rng
  * @{ @ingroup gcrypt_p
@@ -29,7 +29,7 @@ typedef struct gcrypt_rng_t gcrypt_rng_t;
  * rng_t implementation using libgcrypt.
  */
 struct gcrypt_rng_t {
-	
+
 	/**
 	 * Implements rng_t.
 	 */
@@ -38,7 +38,7 @@ struct gcrypt_rng_t {
 
 /**
  * Creates an gcrypt_rng_t instance.
- * 
+ *
  * @param quality	required quality of gcryptness
  * @return			created gcrypt_rng_t
  */

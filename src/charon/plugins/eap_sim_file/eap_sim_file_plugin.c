@@ -28,22 +28,22 @@ typedef struct private_eap_sim_file_t private_eap_sim_file_t;
  * Private data of an eap_sim_file_t object.
  */
 struct private_eap_sim_file_t {
-	
+
 	/**
 	 * Public eap_sim_file_plugin_t interface.
 	 */
 	eap_sim_file_plugin_t public;
-	
+
 	/**
 	 * SIM card
 	 */
 	eap_sim_file_card_t *card;
-	
+
 	/**
 	 * SIM provider
 	 */
 	eap_sim_file_provider_t *provider;
-	
+
 	/**
 	 * Triplet source
 	 */
@@ -69,16 +69,16 @@ static void destroy(private_eap_sim_file_t *this)
 plugin_t *plugin_create()
 {
 	private_eap_sim_file_t *this = malloc_thing(private_eap_sim_file_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->triplets = eap_sim_file_triplets_create(TRIPLET_FILE);
 	this->card = eap_sim_file_card_create(this->triplets);
 	this->provider = eap_sim_file_provider_create(this->triplets);
-	
+
 	charon->sim->add_card(charon->sim, &this->card->card);
 	charon->sim->add_provider(charon->sim, &this->provider->provider);
-	
+
 	return &this->public.plugin;
 }
 

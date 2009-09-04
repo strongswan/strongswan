@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /* offsetof macro */
 #include <stddef.h>
 
@@ -26,14 +26,14 @@ typedef struct private_nonce_payload_t private_nonce_payload_t;
 
 /**
  * Private data of an nonce_payload_t object.
- * 
+ *
  */
 struct private_nonce_payload_t {
 	/**
 	 * Public nonce_payload_t interface.
 	 */
 	nonce_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -43,12 +43,12 @@ struct private_nonce_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * The contained nonce value.
 	 */
@@ -57,26 +57,26 @@ struct private_nonce_payload_t {
 
 /**
  * Encoding rules to parse or generate a nonce payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_nonce_payload_t.
- * 
+ *
  */
 encoding_rule_t nonce_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_nonce_payload_t, next_payload) 	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_nonce_payload_t, critical) 		},	
+	{ FLAG,				offsetof(private_nonce_payload_t, critical) 		},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole nonce payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length) 	},	
+	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length) 	},
 	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
 	{ NONCE_DATA,			offsetof(private_nonce_payload_t, nonce) 		}
 };
@@ -102,7 +102,7 @@ static status_t verify(private_nonce_payload_t *this)
 		/* nonce length is wrong */
 		return FAILED;
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -187,8 +187,8 @@ static void destroy(private_nonce_payload_t *this)
 	{
 		free(this->nonce.ptr);
 	}
-	
-	free(this);	
+
+	free(this);
 }
 
 /*
@@ -206,12 +206,12 @@ nonce_payload_t *nonce_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (nonce_payload_t *)) destroy;
 	this->public.set_nonce = (void (*) (nonce_payload_t *,chunk_t)) set_nonce;
 	this->public.get_nonce = (chunk_t (*) (nonce_payload_t *)) get_nonce;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;

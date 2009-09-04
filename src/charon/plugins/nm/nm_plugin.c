@@ -34,22 +34,22 @@ struct private_nm_plugin_t {
 	 * implements plugin interface
 	 */
 	nm_plugin_t public;
-	
+
 	/**
 	 * NetworkManager service (VPNPlugin)
 	 */
 	NMStrongswanPlugin *plugin;
-	
+
 	/**
 	 * Glib main loop for a thread, handles DBUS calls
 	 */
 	GMainLoop *loop;
-	
+
 	/**
 	 * credential set registered at the daemon
 	 */
 	nm_creds_t *creds;
-	
+
 	/**
 	 * attribute handler regeisterd at the daemon
 	 */
@@ -96,16 +96,16 @@ static void destroy(private_nm_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_nm_plugin_t *this = malloc_thing(private_nm_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->loop = NULL;
 	g_type_init ();
 	if (!g_thread_supported())
 	{
 		g_thread_init(NULL);
 	}
-	
+
 	this->creds = nm_creds_create();
 	this->handler = nm_handler_create();
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
@@ -117,13 +117,13 @@ plugin_t *plugin_create()
 		destroy(this);
 		return NULL;
 	}
-	
+
 	/* bypass file permissions to read from users ssh-agent */
 	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
-	
-	charon->processor->queue_job(charon->processor, 
+
+	charon->processor->queue_job(charon->processor,
 		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
-	
+
 	return &this->public.plugin;
 }
 

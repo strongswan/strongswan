@@ -32,7 +32,7 @@ typedef struct resolv_conf_plugin_t resolv_conf_plugin_t;
  * Plugin that writes received DNS servers in a resolv.conf file.
  */
 struct resolv_conf_plugin_t {
-	
+
 	/**
 	 * implements plugin interface
 	 */

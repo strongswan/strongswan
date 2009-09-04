@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup enumerator enumerator
  * @{ @ingroup utils
@@ -33,14 +33,14 @@ struct enumerator_t {
 	/**
 	 * Enumerate collection.
 	 *
-	 * The enumerate function takes a variable argument list containing 
+	 * The enumerate function takes a variable argument list containing
 	 * pointers where the enumerated values get written.
 	 *
 	 * @param ...	variable list of enumerated items, implementation dependant
 	 * @return		TRUE if pointers returned
 	 */
 	bool (*enumerate)(enumerator_t *this, ...);
-		
+
 	/**
      * Destroy a enumerator instance.
      */
@@ -75,7 +75,7 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
 	char *rel, *abs;
 	struct stat st;
 	enumerator_t *e;
-	
+
 	e = enumerator_create_directory("/tmp");
 	if (e)
 	{
@@ -110,7 +110,7 @@ enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
 
 /**
  * Creates an enumerator which enumerates over enumerated enumerators :-).
- * 
+ *
  * The variable argument list of enumeration values is limit to 5.
  *
  * @param outer					outer enumerator

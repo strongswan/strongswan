@@ -224,7 +224,7 @@ static int cmp_ietfAttr(ietfAttr_t *a,ietfAttr_t *b)
 	/* cannot compare OID with STRING or OCTETS attributes */
 	if (a->kind == IETF_ATTRIBUTE_OID && b->kind != IETF_ATTRIBUTE_OID)
 		return 1;
-		
+
 	cmp_len = a->value.len - b->value.len;
 	len = (cmp_len < 0)? a->value.len : b->value.len;
 	cmp_value = memcmp(a->value.ptr, b->value.ptr, len);
@@ -604,7 +604,7 @@ static void release_ietfAttr(ietfAttr_t* attr)
 			list = *plist;
 		}
 		*plist = list->next;
-		
+
 		free(attr->value.ptr);
 		free(attr);
 		free(list);
@@ -654,7 +654,7 @@ static void free_first_acert(void)
  * Free all attribute certificates in the chained list
  */
 void free_acerts(void)
-{ 
+{
 	while (x509acerts != NULL)
 		free_first_acert();
 }
@@ -759,7 +759,7 @@ bool verify_x509acert(x509acert_t *ac, bool strict)
 		dntoa(buf, BUF_LEN, ac->issuerName);
 		DBG_log("issuer: '%s'",buf);
 	)
-	
+
 	ugh = check_ac_validity(ac);
 
 	if (ugh != NULL)
@@ -822,7 +822,7 @@ void load_acerts(void)
 			{
 				char *filename = filelist[n]->d_name;
 				x509acert_t *ac;
-				
+
 				ac = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							CERT_PLUTO_AC, BUILD_FROM_FILE, filename,
 							BUILD_END);
@@ -859,7 +859,7 @@ void format_groups(const ietfAttrList_t *list, char *buf, int len)
 							, (int)attr->value.len, attr->value.ptr);
 
 			first_group = FALSE;
-			
+
 			/* return value of snprintf() up to glibc 2.0.6 */
 			if (written < 0)
 				break;
@@ -949,7 +949,7 @@ void list_acerts(bool utc)
 void list_groups(bool utc)
 {
 	ietfAttrList_t *list = ietfAttributes;
-	
+
 	if (list != NULL)
 	{
 		whack_log(RC_COMMENT, " ");
@@ -962,7 +962,7 @@ void list_groups(bool utc)
 		ietfAttr_t *attr = list->attr;
 
 		whack_log(RC_COMMENT, "%T, count: %d", &attr->installed, utc, attr->count);
-		
+
 		switch (attr->kind)
 		{
 		case IETF_ATTRIBUTE_OCTETS:

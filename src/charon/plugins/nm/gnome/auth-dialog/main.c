@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
- * Copyright (C) 2004 Dan Williams 
+ * Copyright (C) 2004 Dan Williams
  * Red Hat, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ static char *lookup_password(char *name, char *service)
 	for (iter = list; iter; iter = iter->next)
 	{
 		GnomeKeyringNetworkPasswordData *data = iter->data;
-		
+
 		if (strcmp(data->object, "password") == 0 && data->password)
 		{
 			pass = g_strdup(data->password);
@@ -97,7 +97,7 @@ static char* get_connection_type(char *uuid)
 	}
 	g_slist_foreach(list, (GFunc)g_free, NULL);
 	g_slist_free(list);
-	
+
 	if (found)
 	{
 		key = g_strdup_printf ("%s/%s/%s", found,
@@ -139,14 +139,14 @@ int main (int argc, char *argv[])
 								argc, argv,
 								GNOME_PARAM_GOPTION_CONTEXT, context,
 								GNOME_PARAM_NONE);
-	
+
 	if (uuid == NULL || name == NULL || service == NULL)
 	{
 		fprintf (stderr, "Have to supply UUID, name, and service\n");
 		g_object_unref (program);
 		return 1;
 	}
-	
+
 	if (strcmp(service, NM_DBUS_SERVICE_STRONGSWAN) != 0)
 	{
 		fprintf(stderr, "This dialog only works with the '%s' service\n",
@@ -154,7 +154,7 @@ int main (int argc, char *argv[])
 		g_object_unref (program);
 		return 1;
 	}
-	
+
 	type = get_connection_type(uuid);
 	if (!type)
 	{
@@ -221,7 +221,7 @@ int main (int argc, char *argv[])
 		else
 		{
 			dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
-						  GTK_BUTTONS_OK, 
+						  GTK_BUTTONS_OK,
 						  _("Configuration uses ssh-agent for authentication, "
 						  "but ssh-agent is not running!"));
 			gtk_dialog_run (GTK_DIALOG (dialog));

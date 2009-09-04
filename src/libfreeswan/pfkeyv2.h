@@ -182,7 +182,7 @@ struct sadb_x_satype {
   uint8_t sadb_x_satype_satype;
   uint8_t sadb_x_satype_reserved[3];
 };
-  
+
 struct sadb_x_policy {
   uint16_t sadb_x_policy_len;
   uint16_t sadb_x_policy_exttype;
@@ -192,7 +192,7 @@ struct sadb_x_policy {
   uint32_t sadb_x_policy_id;
   uint32_t sadb_x_policy_reserved2;
 };
- 
+
 struct sadb_x_debug {
   uint16_t sadb_x_debug_len;
   uint16_t sadb_x_debug_exttype;

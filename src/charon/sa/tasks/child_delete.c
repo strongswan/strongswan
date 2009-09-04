@@ -25,42 +25,42 @@ typedef struct private_child_delete_t private_child_delete_t;
  * Private members of a child_delete_t task.
  */
 struct private_child_delete_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	child_delete_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * Protocol of CHILD_SA to delete
 	 */
 	protocol_id_t protocol;
-	
+
 	/**
 	 * Inbound SPI of CHILD_SA to delete
 	 */
 	u_int32_t spi;
-	
+
 	/**
 	 * whether to enforce delete action policy
 	 */
 	bool check_delete_action;
-	
+
 	/**
 	 * is this delete exchange following a rekey?
 	 */
 	bool rekeyed;
-	
+
 	/**
 	 * CHILD_SAs which get deleted
 	 */
@@ -75,10 +75,10 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 	delete_payload_t *ah = NULL, *esp = NULL;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	
+
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
-	{	
+	{
 		protocol_id_t protocol = child_sa->get_protocol(child_sa);
 		u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
 
@@ -91,7 +91,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
-				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
 							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			case PROTO_AH:
@@ -101,7 +101,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);
-				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
 							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			default:
@@ -124,7 +124,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	u_int32_t *spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
-	
+
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
 	{
@@ -147,9 +147,9 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
 					continue;
 				}
-				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x", 
+				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
 						protocol_id_names, protocol, ntohl(*spi));
-				
+
 				switch (child_sa->get_state(child_sa))
 				{
 					case CHILD_REKEYING:
@@ -172,7 +172,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 					default:
 						break;
 				}
-				
+
 				this->child_sas->insert_last(this->child_sas, child_sa);
 			}
 			spis->destroy(spis);
@@ -192,7 +192,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	protocol_id_t protocol;
 	u_int32_t spi;
 	status_t status = SUCCESS;
-	
+
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
@@ -215,7 +215,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 					status = this->ike_sa->initiate(this->ike_sa, child_cfg, 0,
 													NULL, NULL);
 					break;
-				case ACTION_ROUTE:	
+				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
 							this->ike_sa->get_peer_cfg(this->ike_sa), child_cfg);
 					break;
@@ -241,13 +241,13 @@ static void log_children(private_child_delete_t *this)
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	u_int64_t bytes_in, bytes_out;
-	
+
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
 		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
-		
+
 		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
 			 "with SPIs %.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
 			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
@@ -265,7 +265,7 @@ static void log_children(private_child_delete_t *this)
 static status_t build_i(private_child_delete_t *this, message_t *message)
 {
 	child_sa_t *child_sa;
-	
+
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 										  this->spi, TRUE);
 	if (!child_sa)
@@ -297,7 +297,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	/* flush the list before adding new SAs */
 	this->child_sas->destroy(this->child_sas);
 	this->child_sas = linked_list_create();
-	
+
 	process_payloads(this, message);
 	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
@@ -321,7 +321,7 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 	/* if we are rekeying, we send an empty informational */
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_REKEYING)
 	{
-		build_payloads(this, message);	
+		build_payloads(this, message);
 	}
 	DBG1(DBG_IKE, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
@@ -352,7 +352,7 @@ static void migrate(private_child_delete_t *this, ike_sa_t *ike_sa)
 {
 	this->check_delete_action = FALSE;
 	this->ike_sa = ike_sa;
-	
+
 	this->child_sas->destroy(this->child_sas);
 	this->child_sas = linked_list_create();
 }
@@ -378,14 +378,14 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->check_delete_action = FALSE;
 	this->child_sas = linked_list_create();
 	this->protocol = protocol;
 	this->spi = spi;
 	this->rekeyed = FALSE;
-	
+
 	if (protocol != PROTO_NONE)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;

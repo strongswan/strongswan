@@ -16,7 +16,7 @@
 /**
  * @defgroup agent_p agent
  * @ingroup plugins
- * 
+ *
  * @defgroup agent_plugin agent_plugin
  * @{ @ingroup agent_p
  */

@@ -76,7 +76,7 @@ struct crypto_factory_t {
 	 */
 	crypter_t* (*create_crypter)(crypto_factory_t *this,
 								 encryption_algorithm_t algo, size_t key_size);
-	
+
 	/**
 	 * Create a symmetric signer instance.
 	 *
@@ -93,7 +93,7 @@ struct crypto_factory_t {
 	 * @return				hasher_t instance, NULL if not supported
 	 */
 	hasher_t* (*create_hasher)(crypto_factory_t *this, hash_algorithm_t algo);
-	
+
 	/**
 	 * Create a pseudo random function instance.
 	 *
@@ -101,7 +101,7 @@ struct crypto_factory_t {
 	 * @return				prf_t instance, NULL if not supported
 	 */
 	prf_t* (*create_prf)(crypto_factory_t *this, pseudo_random_function_t algo);
-	
+
 	/**
 	 * Create a source of randomness.
 	 *
@@ -109,7 +109,7 @@ struct crypto_factory_t {
 	 * @return				rng_t instance, NULL if no RNG with such a quality
 	 */
 	rng_t* (*create_rng)(crypto_factory_t *this, rng_quality_t quality);
-	
+
 	/**
 	 * Create a diffie hellman instance.
 	 *
@@ -118,7 +118,7 @@ struct crypto_factory_t {
 	 */
 	diffie_hellman_t* (*create_dh)(crypto_factory_t *this,
 								   diffie_hellman_group_t group);
-	
+
 	/**
 	 * Register a crypter constructor.
 	 *
@@ -128,14 +128,14 @@ struct crypto_factory_t {
 	 */
 	void (*add_crypter)(crypto_factory_t *this, encryption_algorithm_t algo,
 						crypter_constructor_t create);
-	
+
 	/**
 	 * Unregister a crypter constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_crypter)(crypto_factory_t *this, crypter_constructor_t create);
-	
+
 	/**
 	 * Register a signer constructor.
 	 *
@@ -145,14 +145,14 @@ struct crypto_factory_t {
 	 */
 	void (*add_signer)(crypto_factory_t *this, integrity_algorithm_t algo,
 					   signer_constructor_t create);
-	
+
 	/**
 	 * Unregister a signer constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_signer)(crypto_factory_t *this, signer_constructor_t create);
-	
+
 	/**
 	 * Register a hasher constructor.
 	 *
@@ -165,14 +165,14 @@ struct crypto_factory_t {
 	 */
 	void (*add_hasher)(crypto_factory_t *this, hash_algorithm_t algo,
 					   hasher_constructor_t create);
-	
+
 	/**
 	 * Unregister a hasher constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_hasher)(crypto_factory_t *this, hasher_constructor_t create);
-	
+
 	/**
 	 * Register a prf constructor.
 	 *
@@ -182,14 +182,14 @@ struct crypto_factory_t {
 	 */
 	void (*add_prf)(crypto_factory_t *this, pseudo_random_function_t algo,
 					prf_constructor_t create);
-	
+
 	/**
 	 * Unregister a prf constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_prf)(crypto_factory_t *this, prf_constructor_t create);
-	
+
 	/**
 	 * Register a source of randomness.
 	 *
@@ -197,14 +197,14 @@ struct crypto_factory_t {
 	 * @param create		constructor function for such a quality
 	 */
 	void (*add_rng)(crypto_factory_t *this, rng_quality_t quality, rng_constructor_t create);
-	
+
 	/**
 	 * Unregister a source of randomness.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_rng)(crypto_factory_t *this, rng_constructor_t create);
-	
+
 	/**
 	 * Register a diffie hellman constructor.
 	 *
@@ -214,49 +214,49 @@ struct crypto_factory_t {
 	 */
 	void (*add_dh)(crypto_factory_t *this, diffie_hellman_group_t group,
 				   dh_constructor_t create);
-	
+
 	/**
 	 * Unregister a diffie hellman constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_dh)(crypto_factory_t *this, dh_constructor_t create);
-	
+
 	/**
 	 * Create an enumerator over all registered crypter algorithms.
 	 *
 	 * @return				enumerator over encryption_algorithm_t
 	 */
 	enumerator_t* (*create_crypter_enumerator)(crypto_factory_t *this);
-	
+
 	/**
 	 * Create an enumerator over all registered signer algorithms.
 	 *
 	 * @return				enumerator over integrity_algorithm_t
 	 */
 	enumerator_t* (*create_signer_enumerator)(crypto_factory_t *this);
-	
+
 	/**
 	 * Create an enumerator over all registered hasher algorithms.
 	 *
 	 * @return				enumerator over hash_algorithm_t
 	 */
 	enumerator_t* (*create_hasher_enumerator)(crypto_factory_t *this);
-	
+
 	/**
 	 * Create an enumerator over all registered PRFs.
 	 *
 	 * @return				enumerator over pseudo_random_function_t
 	 */
 	enumerator_t* (*create_prf_enumerator)(crypto_factory_t *this);
-	
+
 	/**
 	 * Create an enumerator over all registered diffie hellman groups.
 	 *
 	 * @return				enumerator over diffie_hellman_group_t
 	 */
 	enumerator_t* (*create_dh_enumerator)(crypto_factory_t *this);
-	
+
 	/**
 	 * Add a test vector to the crypto factory.
 	 *
@@ -264,7 +264,7 @@ struct crypto_factory_t {
 	 * @param ...			pointer to a test vector, defined in crypto_tester.h
 	 */
 	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type, ...);
-	
+
 	/**
 	 * Destroy a crypto_factory instance.
 	 */

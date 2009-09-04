@@ -48,16 +48,16 @@ typedef struct addr_entry_t addr_entry_t;
  * IP address in an inface_entry_t
  */
 struct addr_entry_t {
-	
+
 	/** The ip address */
 	host_t *ip;
-	
+
 	/** virtual IP managed by us */
 	bool virtual;
-	
+
 	/** scope of the address */
 	u_char scope;
-	
+
 	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
@@ -77,16 +77,16 @@ typedef struct iface_entry_t iface_entry_t;
  * A network interface on this system, containing addr_entry_t's
  */
 struct iface_entry_t {
-	
+
 	/** interface index */
 	int ifindex;
-	
+
 	/** name of the interface */
 	char ifname[IFNAMSIZ];
-	
+
 	/** interface flags, as in netdevice(7) SIOCGIFFLAGS */
 	u_int flags;
-	
+
 	/** list of addresses as host_t */
 	linked_list_t *addrs;
 };
@@ -110,57 +110,57 @@ struct private_kernel_netlink_net_t {
 	 * Public part of the kernel_netlink_net_t object.
 	 */
 	kernel_netlink_net_t public;
-	
+
 	/**
 	 * mutex to lock access to various lists
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * condition variable to signal virtual IP add/removal
 	 */
 	condvar_t *condvar;
-	
+
 	/**
 	 * Cached list of interfaces and its addresses (iface_entry_t)
 	 */
 	linked_list_t *ifaces;
-	 
+
 	/**
 	 * job receiving netlink events
 	 */
 	callback_job_t *job;
-	
+
 	/**
 	 * netlink rt socket (routing)
 	 */
 	netlink_socket_t *socket;
-	
+
 	/**
 	 * Netlink rt socket to receive address change events
 	 */
 	int socket_events;
-	
+
 	/**
 	 * time of the last roam_job
 	 */
 	timeval_t last_roam;
-	
+
 	/**
 	 * routing table to install routes
 	 */
 	int routing_table;
-	
+
 	/**
 	 * priority of used routing table
 	 */
 	int routing_table_prio;
-	
+
 	/**
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
 	bool process_route;
-	
+
 	/**
 	 * whether to actually install virtual IPs
 	 */
@@ -176,7 +176,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	int refcount = 0;
-	
+
 	ifaces = this->ifaces->create_iterator(this->ifaces, TRUE);
 	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
@@ -197,7 +197,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 		}
 	}
 	ifaces->destroy(ifaces);
-	
+
 	return refcount;
 }
 
@@ -208,7 +208,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 static void fire_roam_job(private_kernel_netlink_net_t *this, bool address)
 {
 	timeval_t now;
-	
+
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_roam, >))
 	{
@@ -237,7 +237,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 	iface_entry_t *current, *entry = NULL;
 	char *name = NULL;
 	bool update = FALSE;
-	
+
 	while(RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
@@ -252,7 +252,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 	{
 		name = "(unknown)";
 	}
-	
+
 	this->mutex->lock(this->mutex);
 	switch (hdr->nlmsg_type)
 	{
@@ -305,7 +305,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 			{
 				if (current->ifindex == msg->ifi_index)
 				{
-					/* we do not remove it, as an address may be added to a 
+					/* we do not remove it, as an address may be added to a
 					 * "down" interface and we wan't to know that. */
 					current->flags = msg->ifi_flags;
 					break;
@@ -316,7 +316,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 		}
 	}
 	this->mutex->unlock(this->mutex);
-	
+
 	/* send an update to all IKE_SAs */
 	if (update && event)
 	{
@@ -339,7 +339,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	addr_entry_t *addr;
 	chunk_t local = chunk_empty, address = chunk_empty;
 	bool update = FALSE, found = FALSE, changed = FALSE;
-	
+
 	while(RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
@@ -355,7 +355,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
-	
+
 	/* For PPP interfaces, we need the IFA_LOCAL address,
 	 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
 	 * not included in all cases (IPv6?), so fallback to IFA_ADDRESS. */
@@ -367,12 +367,12 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	{
 		host = host_create_from_chunk(msg->ifa_family, address, 0);
 	}
-	
+
 	if (host == NULL)
 	{	/* bad family? */
 		return;
 	}
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -403,7 +403,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				}
 			}
 			addrs->destroy(addrs);
-		
+
 			if (hdr->nlmsg_type == RTM_NEWADDR)
 			{
 				if (!found)
@@ -415,7 +415,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 					addr->virtual = FALSE;
 					addr->refcount = 1;
 					addr->scope = msg->ifa_scope;
-					
+
 					iface->addrs->insert_last(iface->addrs, addr);
 					if (event)
 					{
@@ -433,7 +433,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
 	host->destroy(host);
-	
+
 	/* send an update to all IKE_SAs */
 	if (update && event && changed)
 	{
@@ -450,13 +450,13 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	struct rtattr *rta = RTM_RTA(msg);
 	size_t rtasize = RTM_PAYLOAD(hdr);
 	host_t *host = NULL;
-	
+
 	/* ignore routes added by us */
 	if (msg->rtm_table && msg->rtm_table == this->routing_table)
 	{
 		return;
 	}
-	
+
 	while (RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
@@ -491,11 +491,11 @@ static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
 	socklen_t addr_len = sizeof(addr);
 	int len, oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);	
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	len = recvfrom(this->socket_events, response, sizeof(response), 0,
 				   (struct sockaddr*)&addr, &addr_len);
 	pthread_setcancelstate(oldstate, NULL);
-	
+
 	if (len < 0)
 	{
 		switch (errno)
@@ -512,12 +512,12 @@ static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
 				return JOB_REQUEUE_FAIR;
 		}
 	}
-	
+
 	if (addr.nl_pid != 0)
 	{	/* not from kernel. not interested, try another one */
 		return JOB_REQUEUE_DIRECT;
 	}
-	
+
 	while (NLMSG_OK(hdr, len))
 	{
 		/* looks good so far, dispatch netlink message */
@@ -553,7 +553,7 @@ typedef struct {
 	private_kernel_netlink_net_t* this;
 	/** whether to enumerate down interfaces */
 	bool include_down_ifaces;
-	/** whether to enumerate virtual ip addresses */ 
+	/** whether to enumerate virtual ip addresses */
 	bool include_virtual_ips;
 } address_enumerator_t;
 
@@ -615,7 +615,7 @@ static enumerator_t *create_address_enumerator(private_kernel_netlink_net_t *thi
 	data->this = this;
 	data->include_down_ifaces = include_down_ifaces;
 	data->include_virtual_ips = include_virtual_ips;
-	
+
 	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(
 				enumerator_create_filter(this->ifaces->create_enumerator(this->ifaces),
@@ -632,9 +632,9 @@ static char *get_interface_name(private_kernel_netlink_net_t *this, host_t* ip)
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	char *name = NULL;
-	
+
 	DBG2(DBG_KNL, "getting interface name for %H", ip);
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -656,7 +656,7 @@ static char *get_interface_name(private_kernel_netlink_net_t *this, host_t* ip)
 	}
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
-	
+
 	if (name)
 	{
 		DBG2(DBG_KNL, "%H is on interface %s", ip, name);
@@ -676,9 +676,9 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 	enumerator_t *ifaces;
 	iface_entry_t *iface;
 	int ifindex = 0;
-	
+
 	DBG2(DBG_KNL, "getting iface index for %s", name);
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -708,7 +708,7 @@ static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
 	iface_entry_t *iface;
 	/* default to TRUE for interface we do not monitor (e.g. lo) */
 	bool up = TRUE;
-	
+
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -729,7 +729,7 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 {
 	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
 	int byte = 0;
-	
+
 	if (net_len == 0)
 	{	/* any address matches a /0 network */
 		return TRUE;
@@ -771,9 +771,9 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	size_t len;
 	int best = -1;
 	host_t *src = NULL, *gtw = NULL;
-	
+
 	DBG2(DBG_KNL, "getting address to reach %H", dest);
-	
+
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
@@ -790,7 +790,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	}
 	chunk = dest->get_address(dest);
 	netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
-	
+
 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "getting address to %H failed", dest);
@@ -811,7 +811,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				chunk_t rta_gtw, rta_src, rta_dst;
 				u_int32_t rta_oif = 0;
 				host_t *new_src, *new_gtw;
-				
+
 				rta_gtw = rta_src = rta_dst = chunk_empty;
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
 				rta = RTM_RTA(msg);
@@ -855,7 +855,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* route destination does not contain dest */
 					goto next;
 				}
-				
+
 				if (nexthop)
 				{
 					/* nexthop lookup, return gateway */
@@ -907,7 +907,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	}
 	free(out);
 	this->mutex->unlock(this->mutex);
-	
+
 	if (nexthop)
 	{
 		if (gtw)
@@ -947,23 +947,23 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 	struct nlmsghdr *hdr;
 	struct ifaddrmsg *msg;
 	chunk_t chunk;
-	
+
 	memset(&request, 0, sizeof(request));
-	
+
 	chunk = ip->get_address(ip);
-    
+
     hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | flags;
-	hdr->nlmsg_type = nlmsg_type; 
+	hdr->nlmsg_type = nlmsg_type;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
-	
+
 	msg = (struct ifaddrmsg*)NLMSG_DATA(hdr);
     msg->ifa_family = ip->get_family(ip);
     msg->ifa_flags = 0;
     msg->ifa_prefixlen = 8 * chunk.len;
     msg->ifa_scope = RT_SCOPE_UNIVERSE;
     msg->ifa_index = if_index;
-	
+
 	netlink_add_attribute(hdr, IFA_LOCAL, chunk, sizeof(request));
 
 	return this->socket->send_ack(this->socket, hdr);
@@ -972,27 +972,27 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 /**
  * Implementation of kernel_net_t.add_ip.
  */
-static status_t add_ip(private_kernel_netlink_net_t *this, 
+static status_t add_ip(private_kernel_netlink_net_t *this,
 						host_t *virtual_ip, host_t *iface_ip)
 {
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	enumerator_t *addrs, *ifaces;
 	int ifindex;
-	
+
 	if (!this->install_virtual_ip)
 	{	/* disabled by config */
 		return SUCCESS;
 	}
-	
+
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
 		bool iface_found = FALSE;
-	
+
 		addrs = iface->addrs->create_enumerator(iface->addrs);
 		while (addrs->enumerate(addrs, &addr))
 		{
@@ -1012,7 +1012,7 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 			}
 		}
 		addrs->destroy(addrs);
-		
+
 		if (iface_found)
 		{
 			ifindex = iface->ifindex;
@@ -1022,7 +1022,7 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 			addr->virtual = TRUE;
 			addr->scope = RT_SCOPE_UNIVERSE;
 			iface->addrs->insert_last(iface->addrs, addr);
-			
+
 			if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
 							  ifindex, virtual_ip) == SUCCESS)
 			{
@@ -1042,7 +1042,7 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 	}
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
-	
+
 	DBG1(DBG_KNL, "interface address %H not found, unable to install"
 		 "virtual IP %H", iface_ip, virtual_ip);
 	return FAILED;
@@ -1058,14 +1058,14 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 	enumerator_t *addrs, *ifaces;
 	status_t status;
 	int ifindex;
-	
+
 	if (!this->install_virtual_ip)
 	{	/* disabled by config */
 		return SUCCESS;
 	}
-	
+
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -1108,7 +1108,7 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 	}
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
-	
+
 	DBG2(DBG_KNL, "virtual IP %H not cached, unable to delete", virtual_ip);
 	return FAILED;
 }
@@ -1135,11 +1135,11 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 		chunk_t half_net;
 		u_int8_t half_prefixlen;
 		status_t status;
-		
+
 		half_net = chunk_alloca(dst_net.len);
 		memset(half_net.ptr, 0, half_net.len);
 		half_prefixlen = 1;
-		
+
 		status = manage_srcroute(this, nlmsg_type, flags, half_net, half_prefixlen,
 					gateway, src_ip, if_name);
 		half_net.ptr[0] |= 0x80;
@@ -1147,7 +1147,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 					gateway, src_ip, if_name);
 		return status;
 	}
-	
+
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
@@ -1162,7 +1162,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 	msg->rtm_protocol = RTPROT_STATIC;
 	msg->rtm_type = RTN_UNICAST;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
-	
+
 	netlink_add_attribute(hdr, RTA_DST, dst_net, sizeof(request));
 	chunk = src_ip->get_address(src_ip);
 	netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
@@ -1185,7 +1185,7 @@ static status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 	return manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
 				dst_net, prefixlen, gateway, src_ip, if_name);
 }
-	
+
 /**
  * Implementation of kernel_net_t.del_route.
  */
@@ -1208,9 +1208,9 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
-	
+
 	DBG1(DBG_KNL, "listening on interfaces:");
-	
+
 	memset(&request, 0, sizeof(request));
 
 	in = (struct nlmsghdr*)&request;
@@ -1218,7 +1218,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 	in->nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT;
 	msg = (struct rtgenmsg*)NLMSG_DATA(in);
 	msg->rtgen_family = AF_UNSPEC;
-	
+
 	/* get all links */
 	in->nlmsg_type = RTM_GETLINK;
 	if (this->socket->send(this->socket, in, &out, &len) != SUCCESS)
@@ -1242,7 +1242,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 		break;
 	}
 	free(out);
-	
+
 	/* get all interface addresses */
 	in->nlmsg_type = RTM_GETADDR;
 	if (this->socket->send(this->socket, in, &out, &len) != SUCCESS)
@@ -1266,7 +1266,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 		break;
 	}
 	free(out);
-	
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
@@ -1298,10 +1298,10 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	struct rtmsg *msg;
 	chunk_t chunk;
 
-	memset(&request, 0, sizeof(request));    
+	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = nlmsg_type; 
+	hdr->nlmsg_type = nlmsg_type;
 	if (nlmsg_type == RTM_NEWRULE)
 	{
 		hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_EXCL;
@@ -1348,7 +1348,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 {
 	private_kernel_netlink_net_t *this = malloc_thing(private_kernel_netlink_net_t);
 	struct sockaddr_nl addr;
-	
+
 	/* public functions */
 	this->public.interface.get_interface = (char*(*)(kernel_net_t*,host_t*))get_interface_name;
 	this->public.interface.create_address_enumerator = (enumerator_t*(*)(kernel_net_t*,bool,bool))create_address_enumerator;
@@ -1373,34 +1373,34 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 					"charon.process_route", TRUE);
 	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
 					"charon.install_virtual_ip", TRUE);
-	
+
 	this->socket = netlink_socket_create(NETLINK_ROUTE);
-	
+
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
-	
+
 	/* create and bind RT socket for events (address/interface/route changes) */
 	this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (this->socket_events <= 0)
 	{
 		charon->kill(charon, "unable to create RT event socket");
 	}
-	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | 
+	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
 					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_LINK;
 	if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind RT event socket");
 	}
-	
+
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
-	
+
 	if (init_address_list(this) != SUCCESS)
 	{
 		charon->kill(charon, "unable to get interface list");
 	}
-	
+
 	if (this->routing_table)
 	{
 		if (manage_rule(this, RTM_NEWRULE, this->routing_table,
@@ -1409,6 +1409,6 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 			DBG1(DBG_KNL, "unable to create routing table rule");
 		}
 	}
-	
+
 	return &this->public;
 }

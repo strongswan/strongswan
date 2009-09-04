@@ -1,14 +1,14 @@
 /**
  * @file pkcs10.h
  * @brief Functions to build PKCS#10 Request's
- * 
+ *
  * Contains functions to build DER encoded pkcs#10 certificate requests
  */
 
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -34,9 +34,9 @@ typedef struct pkcs10_struct pkcs10_t;
 /**
  * @brief type representating a pkcs#10 request.
  *
- * A pkcs#10 request contains a distinguished name, an optional 
+ * A pkcs#10 request contains a distinguished name, an optional
  * challenge password, a public key and optional subjectAltNames.
- * 
+ *
  * The RSA private key is needed to compute the signature of the given request
  */
 struct pkcs10_struct {

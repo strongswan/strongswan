@@ -26,7 +26,7 @@ void dbg_default(int level, char *fmt, ...)
 	if (level <= 1)
 	{
 		va_list args;
-	
+
 		va_start(args, fmt);
 		vfprintf(stderr, fmt, args);
 		fprintf(stderr, "\n");

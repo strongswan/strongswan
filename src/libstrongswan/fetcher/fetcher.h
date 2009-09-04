@@ -33,36 +33,36 @@ typedef enum fetcher_option_t fetcher_option_t;
  */
 enum fetcher_option_t {
 
-	/** 
+	/**
 	 * Data to include in fetch request, e.g. on a HTTP post.
 	 * Additional argument is a chunk_t
 	 */
 	FETCH_REQUEST_DATA,
-	
-	/** 
+
+	/**
 	 * Mime-Type of data included in FETCH_REQUEST_DATA.
 	 * Additional argument is a char*.
 	 */
 	FETCH_REQUEST_TYPE,
-	
-	/** 
+
+	/**
 	 * HTTP header to be sent with with the fetch request.
 	 * Additional argument is a char*.
 	 */
 	FETCH_REQUEST_HEADER,
 
-	/** 
+	/**
 	 * Use HTTP Version 1.0 instead of 1.1.
 	 * No additional argument is needed.
 	 */
 	FETCH_HTTP_VERSION_1_0,
 
-	/** 
+	/**
 	 * Timeout to use for fetch, in seconds.
 	 * Additional argument is u_int
 	 */
 	FETCH_TIMEOUT,
-	
+
 	/**
 	 * end of fetching options
 	 */
@@ -96,7 +96,7 @@ struct fetcher_t {
 	 *					- FAILED, NOT_FOUND, PARSE_ERROR on failure
 	 */
 	status_t (*fetch)(fetcher_t *this, char *uri, chunk_t *result);
-	
+
 	/**
 	 * Set a fetcher option, as defined in fetcher_option_t.
 	 *
@@ -107,11 +107,11 @@ struct fetcher_t {
 	 * @return			TRUE if option supported, FALSE otherwise
 	 */
 	bool (*set_option)(fetcher_t *this, fetcher_option_t option, ...);
-	
+
 	/**
 	 * Destroy the fetcher instance.
 	 */
-	void (*destroy)(fetcher_t *this);	
+	void (*destroy)(fetcher_t *this);
 };
 
 #endif /** FETCHER_H_ @}*/

@@ -1399,7 +1399,7 @@ process_packet(struct msg_digest **mdp)
 			{
 				memcpy(st->st_ph1_iv, st->st_new_iv, st->st_new_iv_len);
 				st->st_ph1_iv_len = st->st_new_iv_len;
-				
+
 				/* backup new_iv */
 				new_iv_len = st->st_new_iv_len;
 				passert(new_iv_len <= MAX_DIGEST_LEN)
@@ -1498,7 +1498,7 @@ process_packet(struct msg_digest **mdp)
 		}
 		else
 		{
-			set_cur_state(st);  
+			set_cur_state(st);
 			from_state = st->st_state;
 		}
 
@@ -1681,7 +1681,7 @@ process_packet(struct msg_digest **mdp)
 		default:
 			auth = st->st_oakley.auth;
 		}
-		
+
 		while (!LHAS(smc->flags, auth))
 		{
 			smc++;
@@ -1823,7 +1823,7 @@ process_packet(struct msg_digest **mdp)
 			memcpy(new_iv, data.ptr + data.len - crypter_block_size,
 				   crypter_block_size);
 
-			crypter->set_key(crypter, st->st_enc_key);	
+			crypter->set_key(crypter, st->st_enc_key);
 			crypter->decrypt(crypter, data, iv, NULL);
 			crypter->destroy(crypter);
 
@@ -2310,7 +2310,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 				const char *story = state_story[st->st_state - STATE_MAIN_R0];
 				enum rc_type w = RC_NEW_STATE + st->st_state;
 				char sadetails[128];
-				
+
 				sadetails[0]='\0';
 
 				if (IS_IPSEC_SA_ESTABLISHED(st->st_state))

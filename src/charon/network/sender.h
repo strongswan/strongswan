@@ -31,7 +31,7 @@ typedef struct sender_t sender_t;
  * Thread responsible for sending packets over the socket.
  */
 struct sender_t {
-	
+
 	/**
 	 * Send a packet over the network.
 	 *
@@ -42,7 +42,7 @@ struct sender_t {
  	 * @param packet	packet to send
 	 */
 	void (*send) (sender_t *this, packet_t *packet);
-	
+
 	/**
 	 * Destroys a sender object.
 	 */
@@ -51,10 +51,10 @@ struct sender_t {
 
 /**
  * Create the sender thread.
- * 
+ *
  * The thread will start to work, getting packets
  * from its queue and sends them out.
- * 
+ *
  * @return		created sender object
  */
 sender_t * sender_create(void);

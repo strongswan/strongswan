@@ -41,12 +41,12 @@ enum job_requeue_t {
 	 * Do not requeue job, destroy it
 	 */
 	JOB_REQUEUE_NONE,
-	
+
 	/**
 	 * Reque the job fairly, meaning it has to requeue as any other job
 	 */
 	JOB_REQUEUE_FAIR,
-	
+
 	/**
 	 * Reexecute the job directly, without the need of requeueing it
 	 */
@@ -88,7 +88,7 @@ struct callback_job_t {
 	 * The job_t interface.
 	 */
 	job_t job_interface;
-	
+
 	/**
 	 * Cancel the jobs thread and wait for its termination.
 	 */
@@ -103,7 +103,7 @@ struct callback_job_t {
  * If parent is not NULL, the specified job gets an association. Whenever
  * the parent gets cancelled (or runs out), all of its children are cancelled,
  * too.
- * 
+ *
  * @param cb				callback to call from the processor
  * @param data				user data to supply to callback
  * @param cleanup			destructor for data on destruction, or NULL

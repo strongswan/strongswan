@@ -128,12 +128,12 @@ struct starter_conn {
 		char            *esp;
 		char            *ike;
 		char            *pfsgroup;
-		
+
 		time_t          dpd_delay;
 		time_t          dpd_timeout;
 		dpd_action_t    dpd_action;
 		int             dpd_count;
-		
+
 		bool            me_mediation;
 		char            *me_mediated_by;
 		char            *me_peerid;

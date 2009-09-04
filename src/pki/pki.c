@@ -33,7 +33,7 @@
 static int usage(char *error)
 {
 	FILE *out = stdout;
-	
+
 	if (error)
 	{
 		out = stderr;
@@ -107,7 +107,7 @@ static int gen(int argc, char *argv[])
 	u_int size = 0;
 	private_key_t *key;
 	chunk_t encoding;
-	
+
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
 		{ "size", required_argument, NULL, 's' },
@@ -205,7 +205,7 @@ static int pub(int argc, char *argv[])
 	chunk_t encoding;
 	char *file = NULL;
 	void *cred;
-	
+
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
 		{ "outform", required_argument, NULL, 'f' },
@@ -263,7 +263,7 @@ static int pub(int argc, char *argv[])
 		cred = lib->creds->create(lib->creds, type, subtype,
 									 BUILD_FROM_FD, 0, BUILD_END);
 	}
-	
+
 	if (type == CRED_PRIVATE_KEY)
 	{
 		private = cred;
@@ -321,7 +321,7 @@ static int keyid(int argc, char *argv[])
 	char *file = NULL;
 	void *cred;
 	chunk_t id;
-	
+
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
@@ -382,7 +382,7 @@ static int keyid(int argc, char *argv[])
 		fprintf(stderr, "parsing input failed\n");
 		return 1;
 	}
-	
+
 	if (type == CRED_PRIVATE_KEY)
 	{
 		private = cred;
@@ -447,7 +447,7 @@ static int self(int argc, char *argv[])
 	int lifetime = 1080;
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
-	
+
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
@@ -457,7 +457,7 @@ static int self(int argc, char *argv[])
 		{ "digest", required_argument, NULL, 'h' },
 		{ 0,0,0,0 }
 	};
-	
+
 	while (TRUE)
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
@@ -529,7 +529,7 @@ static int self(int argc, char *argv[])
 		}
 		break;
 	}
-	
+
 	if (!dn)
 	{
 		return usage("--dn is required");
@@ -625,13 +625,13 @@ static int verify(int argc, char *argv[])
 	certificate_t *cert, *ca;
 	char *file = NULL, *cafile = NULL;
 	bool good = FALSE;
-	
+
 	struct option long_opts[] = {
 		{ "in", required_argument, NULL, 'i' },
 		{ "ca", required_argument, NULL, 'c' },
 		{ 0,0,0,0 }
 	};
-	
+
 	while (TRUE)
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
@@ -649,7 +649,7 @@ static int verify(int argc, char *argv[])
 		}
 		break;
 	}
-	
+
 	if (file)
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -717,7 +717,7 @@ static int verify(int argc, char *argv[])
 		ca->destroy(ca);
 	}
 	cert->destroy(cert);
-	
+
 	return good ? 0 : 2;
 }
 
@@ -735,7 +735,7 @@ int main(int argc, char *argv[])
 		{ "verify", no_argument, NULL, 'v' },
 		{ 0,0,0,0 }
 	};
-	
+
 	atexit(library_deinit);
 	if (!library_init(STRONGSWAN_CONF))
 	{
@@ -752,7 +752,7 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	
+
 	switch (getopt_long(argc, argv, "", long_opts, NULL))
 	{
 		case 'h':

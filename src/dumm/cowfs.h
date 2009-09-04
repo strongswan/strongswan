@@ -25,7 +25,7 @@ typedef struct cowfs_t cowfs_t;
  *
  */
 struct cowfs_t {
-	
+
 	/**
 	 * Set an additional copy on write overlay.
 	 *
@@ -33,7 +33,7 @@ struct cowfs_t {
 	 * @return 			FALSE if failed
 	 */
 	bool (*set_overlay)(cowfs_t *this, char *path);
-	
+
 	/**
 	 * Stop, umount and destroy a cowfs FUSE filesystem.
 	 */

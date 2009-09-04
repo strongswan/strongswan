@@ -31,7 +31,7 @@ typedef struct child_create_t child_create_t;
 /**
  * Task of type CHILD_CREATE, established a new CHILD_SA.
  *
- * This task may be included in the IKE_AUTH message or in a separate 
+ * This task may be included in the IKE_AUTH message or in a separate
  * CREATE_CHILD_SA exchange.
  */
 struct child_create_t {
@@ -40,24 +40,24 @@ struct child_create_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Use a specific reqid for the CHILD_SA.
 	 *
 	 * When this task is used for rekeying, the same reqid is used
-	 * for the new CHILD_SA. 
+	 * for the new CHILD_SA.
 	 *
 	 * @param reqid		reqid to use
 	 */
 	void (*use_reqid) (child_create_t *this, u_int32_t reqid);
-	
+
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.
 	 *
 	 * @return			lower nonce
 	 */
 	chunk_t (*get_lower_nonce) (child_create_t *this);
-	
+
 	/**
 	 * Get the CHILD_SA established/establishing by this task.
 	 *

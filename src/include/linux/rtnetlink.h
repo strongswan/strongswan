@@ -104,7 +104,7 @@ enum {
 #define RTM_NR_FAMILIES	(RTM_NR_MSGTYPES >> 2)
 #define RTM_FAM(cmd)	(((cmd) - RTM_BASE) >> 2)
 
-/* 
+/*
    Generic structure for encapsulation of optional route information.
    It is reminiscent of sockaddr, but with sa_family replaced
    with attribute type.
@@ -146,7 +146,7 @@ struct rtmsg
 
 	unsigned char		rtm_table;	/* Routing table id */
 	unsigned char		rtm_protocol;	/* Routing protocol; see below	*/
-	unsigned char		rtm_scope;	/* See below */	
+	unsigned char		rtm_scope;	/* See below */
 	unsigned char		rtm_type;	/* See below	*/
 
 	unsigned		rtm_flags;
@@ -632,7 +632,7 @@ struct ifinfomsg
 };
 
 /********************************************************************
- *		prefix information 
+ *		prefix information
  ****/
 
 struct prefixmsg
@@ -647,7 +647,7 @@ struct prefixmsg
 	unsigned char	prefix_pad3;
 };
 
-enum 
+enum
 {
 	PREFIX_UNSPEC,
 	PREFIX_ADDRESS,
@@ -691,7 +691,7 @@ struct rtnl_link_stats
 	__u32	tx_fifo_errors;
 	__u32	tx_heartbeat_errors;
 	__u32	tx_window_errors;
-	
+
 	/* for cslip etc */
 	__u32	rx_compressed;
 	__u32	tx_compressed;
@@ -902,7 +902,7 @@ struct tcamsg
 };
 #define TA_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct tcamsg))))
 #define TA_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct tcamsg))
-#define TCA_ACT_TAB 1 /* attr type must be >=1 */	
+#define TCA_ACT_TAB 1 /* attr type must be >=1 */
 #define TCAA_MAX 1
 
 /* End of information exported to user level */
@@ -941,7 +941,7 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 #define RTA_PUT(skb, attrtype, attrlen, data) \
 ({	if (unlikely(skb_tailroom(skb) < (int)RTA_SPACE(attrlen))) \
 		 goto rtattr_failure; \
-   	__rta_fill(skb, attrtype, attrlen, data); }) 
+   	__rta_fill(skb, attrtype, attrlen, data); })
 
 #define RTA_APPEND(skb, attrlen, data) \
 ({	if (unlikely(skb_tailroom(skb) < (int)(attrlen))) \
@@ -1021,7 +1021,7 @@ extern void __rta_fill(struct sk_buff *skb, int attrtype, int attrlen, const voi
 
 #define RTA_GET_SECS(rta) ((unsigned long) RTA_GET_U64(rta) * HZ)
 #define RTA_GET_MSECS(rta) (msecs_to_jiffies((unsigned long) RTA_GET_U64(rta)))
-		
+
 static __inline__ struct rtattr *
 __rta_reserve(struct sk_buff *skb, int attrtype, int attrlen)
 {

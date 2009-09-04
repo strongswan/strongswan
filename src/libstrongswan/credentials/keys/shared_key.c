@@ -34,17 +34,17 @@ struct private_shared_key_t {
 	 * public functions
 	 */
 	shared_key_t public;
-	
+
 	/**
 	 * type of this shared key
 	 */
 	shared_key_type_t type;
-	
+
 	/**
 	 * associated shared key data
 	 */
 	chunk_t key;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -94,16 +94,16 @@ static void destroy(private_shared_key_t *this)
 shared_key_t *shared_key_create(shared_key_type_t type, chunk_t key)
 {
 	private_shared_key_t *this = malloc_thing(private_shared_key_t);
-	
+
 	this->public.get_type = (shared_key_type_t (*)(shared_key_t *this))get_type;
 	this->public.get_key = (chunk_t (*)(shared_key_t *this))get_key;
 	this->public.get_ref = (shared_key_t* (*)(shared_key_t *this))get_ref;
 	this->public.destroy = (void(*)(shared_key_t*))destroy;
-	
+
 	this->type = type;
 	this->key = key;
 	this->ref = 1;
-	
+
 	return &this->public;
 }
 

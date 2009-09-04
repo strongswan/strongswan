@@ -26,7 +26,7 @@ bool test_rsa_gen()
 	private_key_t *private;
 	public_key_t *public;
 	u_int key_size;
-	
+
 	for (key_size = 512; key_size <= 2048; key_size *= 2)
 	{
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
@@ -113,7 +113,7 @@ bool test_rsa_load_any()
 {
 	chunk_t chunk = chunk_from_buf(public_any);
 	public_key_t *public;
-	
+
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 								BUILD_BLOB_ASN1_DER, chunk,
 								BUILD_END);

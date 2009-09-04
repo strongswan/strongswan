@@ -83,7 +83,7 @@ bool test_auth_cfg()
 	int round = 0;
 	void *value;
 	auth_rule_t type;
-	
+
 	c1 = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_BLOB_ASN1_DER, certchunk,
 							BUILD_END);
@@ -91,7 +91,7 @@ bool test_auth_cfg()
 	{
 		return FALSE;
 	}
-	
+
 	auth->add(auth, AUTH_RULE_SUBJECT_CERT, c1->get_ref(c1));
 	c2 = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 	if (!c2)
@@ -102,7 +102,7 @@ bool test_auth_cfg()
 	{
 		return FALSE;
 	}
-	
+
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
@@ -114,11 +114,11 @@ bool test_auth_cfg()
 		return FALSE;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	auth2 = auth_cfg_create();
 	auth2->add(auth2, AUTH_RULE_CA_CERT, c1->get_ref(c1));
 	auth2->merge(auth2, auth, FALSE);
-	
+
 	round = 0;
 	enumerator = auth2->create_enumerator(auth2);
 	while (enumerator->enumerate(enumerator, &type, &value))

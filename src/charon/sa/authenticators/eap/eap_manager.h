@@ -45,14 +45,14 @@ struct eap_manager_t {
 	 */
 	void (*add_method)(eap_manager_t *this, eap_type_t type, u_int32_t vendor,
 					   eap_role_t role, eap_constructor_t constructor);
-	
+
 	/**
 	 * Unregister a EAP method implementation using it's constructor.
 	 *
 	 * @param constructor	constructor function to remove, as added in add_method
 	 */
 	void (*remove_method)(eap_manager_t *this, eap_constructor_t constructor);
-	
+
 	/**
 	 * Create a new EAP method instance.
 	 *
@@ -67,7 +67,7 @@ struct eap_manager_t {
 									 u_int32_t vendor, eap_role_t role,
 									 identification_t *server,
 									 identification_t *peer);
-	
+
 	/**
      * Destroy a eap_manager instance.
      */

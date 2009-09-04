@@ -26,7 +26,7 @@ struct private_ocsp_response_wrapper_t {
 	 * public functions
 	 */
 	ocsp_response_wrapper_t public;
-	
+
 	/**
 	 * wrapped OCSP response
 	 */
@@ -98,16 +98,16 @@ static void enumerator_destroy(wrapper_enumerator_t *this)
  * implementation of ocsp_response_wrapper_t.set.create_cert_enumerator
  */
 static enumerator_t *create_enumerator(private_ocsp_response_wrapper_t *this,
-									   certificate_type_t cert, key_type_t key, 
+									   certificate_type_t cert, key_type_t key,
 									   identification_t *id, bool trusted)
 {
 	wrapper_enumerator_t *enumerator;
-	
+
 	if (trusted)
 	{
 		return NULL;
 	}
-	
+
 	enumerator = malloc_thing(wrapper_enumerator_t);
 	enumerator->cert = cert;
 	enumerator->key = key;
@@ -132,16 +132,16 @@ static void destroy(private_ocsp_response_wrapper_t *this)
 ocsp_response_wrapper_t *ocsp_response_wrapper_create(ocsp_response_t *response)
 {
 	private_ocsp_response_wrapper_t *this = malloc_thing(private_ocsp_response_wrapper_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)create_enumerator;
 	this->public.set.create_shared_enumerator = (void*)return_null;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)nop;
 	this->public.destroy = (void(*)(ocsp_response_wrapper_t*))destroy;
-	
+
 	this->response = response;
-	
+
 	return &this->public;
 }
 

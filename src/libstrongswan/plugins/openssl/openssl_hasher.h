@@ -29,7 +29,7 @@ typedef struct openssl_hasher_t openssl_hasher_t;
  * Implementation of hashers using OpenSSL.
  */
 struct openssl_hasher_t {
-	
+
 	/**
 	 * The hasher_t interface.
 	 */
@@ -38,7 +38,7 @@ struct openssl_hasher_t {
 
 /**
  * Constructor to create openssl_hasher_t.
- * 
+ *
  * @param algo			algorithm
  * @return				openssl_hasher_t, NULL if not supported
  */

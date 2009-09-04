@@ -35,11 +35,11 @@ struct sql_cred_t {
 	 * Implements credential_set_t interface
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Destry the backend.
 	 */
-	void (*destroy)(sql_cred_t *this);	
+	void (*destroy)(sql_cred_t *this);
 };
 
 /**

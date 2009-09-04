@@ -67,7 +67,7 @@ struct ike_sa_id_t {
 
 	/**
 	 * Check if two ike_sa_id_t objects are equal.
-	 * 
+	 *
 	 * Two ike_sa_id_t objects are equal if both SPI values and the role matches.
 	 *
  	 * @param other 			ike_sa_id_t object to check if equal
@@ -78,7 +78,7 @@ struct ike_sa_id_t {
 	/**
 	 * Replace all values of a given ike_sa_id_t object with values.
 	 * from another ike_sa_id_t object.
-	 * 
+	 *
 	 * After calling this function, both objects are equal.
 	 *
  	 * @param other 			ike_sa_id_t object from which values will be taken
@@ -94,7 +94,7 @@ struct ike_sa_id_t {
 
 	/**
 	 * Switche the original initiator flag.
-	 * 
+	 *
 	 * @return 					TRUE if we are the original initator after switch, FALSE otherwise
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);

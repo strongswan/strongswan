@@ -29,7 +29,7 @@ typedef struct gcrypt_rsa_private_key_t gcrypt_rsa_private_key_t;
  * Private_key_t implementation of RSA algorithm using libgcrypt.
  */
 struct gcrypt_rsa_private_key_t {
-	
+
 	/**
 	 * Implements private_key_t interface
 	 */

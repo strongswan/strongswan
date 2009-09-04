@@ -46,52 +46,52 @@ struct private_crypto_factory_t {
 	 * public functions
 	 */
 	crypto_factory_t public;
-	
+
 	/**
 	 * registered crypters, as entry_t
 	 */
 	linked_list_t *crypters;
-	
+
 	/**
 	 * registered signers, as entry_t
 	 */
 	linked_list_t *signers;
-	
+
 	/**
 	 * registered hashers, as entry_t
 	 */
 	linked_list_t *hashers;
-	
+
 	/**
 	 * registered prfs, as entry_t
 	 */
 	linked_list_t *prfs;
-	
+
 	/**
 	 * registered rngs, as entry_t
 	 */
 	linked_list_t *rngs;
-	
+
 	/**
 	 * registered diffie hellman, as entry_t
 	 */
 	linked_list_t *dhs;
-	
+
 	/**
 	 * test manager to test crypto algorithms
 	 */
 	crypto_tester_t *tester;
-	
+
 	/**
 	 * whether to test algorithms during registration
 	 */
 	bool test_on_add;
-	
+
 	/**
 	 * whether to test algorithms on each crypto primitive construction
 	 */
 	bool test_on_create;
-	
+
 	/**
 	 * rwlock to lock access to modules
 	 */
@@ -107,7 +107,7 @@ static crypter_t* create_crypter(private_crypto_factory_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	crypter_t *crypter = NULL;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->crypters->create_enumerator(this->crypters);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -141,7 +141,7 @@ static signer_t* create_signer(private_crypto_factory_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	signer_t *signer = NULL;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->signers->create_enumerator(this->signers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -163,7 +163,7 @@ static signer_t* create_signer(private_crypto_factory_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	return signer;
 }
 
@@ -243,7 +243,7 @@ static rng_t* create_rng(private_crypto_factory_t *this, rng_quality_t quality)
 	entry_t *entry;
 	u_int diff = ~0;
 	rng_constructor_t constr = NULL;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->rngs->create_enumerator(this->rngs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -311,7 +311,7 @@ static void add_crypter(private_crypto_factory_t *this,
 		this->tester->test_crypter(this->tester, algo, 0, create))
 	{
 		entry_t *entry = malloc_thing(entry_t);
-		
+
 		entry->algo = algo;
 		entry->create_crypter = create;
 		this->lock->write_lock(this->lock);
@@ -328,7 +328,7 @@ static void remove_crypter(private_crypto_factory_t *this,
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->crypters->create_enumerator(this->crypters);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -353,7 +353,7 @@ static void add_signer(private_crypto_factory_t *this,
 		this->tester->test_signer(this->tester, algo, create))
 	{
 		entry_t *entry = malloc_thing(entry_t);
-		
+
 		entry->algo = algo;
 		entry->create_signer = create;
 		this->lock->write_lock(this->lock);
@@ -370,7 +370,7 @@ static void remove_signer(private_crypto_factory_t *this,
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->signers->create_enumerator(this->signers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -395,7 +395,7 @@ static void add_hasher(private_crypto_factory_t *this, hash_algorithm_t algo,
 		this->tester->test_hasher(this->tester, algo, create))
 	{
 		entry_t *entry = malloc_thing(entry_t);
-		
+
 		entry->algo = algo;
 		entry->create_hasher = create;
 		this->lock->write_lock(this->lock);
@@ -412,7 +412,7 @@ static void remove_hasher(private_crypto_factory_t *this,
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->hashers->create_enumerator(this->hashers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -437,7 +437,7 @@ static void add_prf(private_crypto_factory_t *this,
 		this->tester->test_prf(this->tester, algo, create))
 	{
 		entry_t *entry = malloc_thing(entry_t);
-		
+
 		entry->algo = algo;
 		entry->create_prf = create;
 		this->lock->write_lock(this->lock);
@@ -453,7 +453,7 @@ static void remove_prf(private_crypto_factory_t *this, prf_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->prfs->create_enumerator(this->prfs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -478,7 +478,7 @@ static void add_rng(private_crypto_factory_t *this, rng_quality_t quality,
 		this->tester->test_rng(this->tester, quality, create))
 	{
 		entry_t *entry = malloc_thing(entry_t);
-		
+
 		entry->algo = quality;
 		entry->create_rng = create;
 		this->lock->write_lock(this->lock);
@@ -494,7 +494,7 @@ static void remove_rng(private_crypto_factory_t *this, rng_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->rngs->create_enumerator(this->rngs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -516,7 +516,7 @@ static void add_dh(private_crypto_factory_t *this, diffie_hellman_group_t group,
 				   dh_constructor_t create)
 {
 	entry_t *entry = malloc_thing(entry_t);
-	
+
 	entry->algo = group;
 	entry->create_dh = create;
 	this->lock->write_lock(this->lock);
@@ -531,7 +531,7 @@ static void remove_dh(private_crypto_factory_t *this, dh_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->dhs->create_enumerator(this->dhs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -713,7 +713,7 @@ static void destroy(private_crypto_factory_t *this)
 crypto_factory_t *crypto_factory_create()
 {
 	private_crypto_factory_t *this = malloc_thing(private_crypto_factory_t);
-	
+
 	this->public.create_crypter = (crypter_t*(*)(crypto_factory_t*, encryption_algorithm_t, size_t))create_crypter;
 	this->public.create_signer = (signer_t*(*)(crypto_factory_t*, integrity_algorithm_t))create_signer;
 	this->public.create_hasher = (hasher_t*(*)(crypto_factory_t*, hash_algorithm_t))create_hasher;
@@ -739,7 +739,7 @@ crypto_factory_t *crypto_factory_create()
 	this->public.create_dh_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_dh_enumerator;
 	this->public.add_test_vector = (void(*)(crypto_factory_t*, transform_type_t type, ...))add_test_vector;
 	this->public.destroy = (void(*)(crypto_factory_t*))destroy;
-	
+
 	this->crypters = linked_list_create();
 	this->signers = linked_list_create();
 	this->hashers = linked_list_create();
@@ -752,7 +752,7 @@ crypto_factory_t *crypto_factory_create()
 								"libstrongswan.crypto_test.on_add", FALSE);
 	this->test_on_create = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.on_create", FALSE);
-	
+
 	return &this->public;
 }
 

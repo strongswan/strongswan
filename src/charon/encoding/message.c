@@ -56,7 +56,7 @@ struct payload_rule_t {
 	 * Payload type.
 	 */
 	 payload_type_t payload_type;
-	 
+
 	 /**
 	  * Minimal occurence of this payload.
 	  */
@@ -66,12 +66,12 @@ struct payload_rule_t {
 	  * Max occurence of this payload.
 	  */
 	 size_t max_occurence;
-	 
+
 	 /**
 	  * TRUE if payload must be encrypted
 	  */
 	 bool encrypted;
-	 
+
 	 /**
 	  * If this payload occurs, the message rule is
 	  * fullfilled in any case. This applies e.g. to
@@ -91,7 +91,7 @@ struct payload_order_t {
 	 * payload type
 	 */
 	payload_type_t type;
-	
+
 	/**
 	 * notify type, if payload == NOTIFY
 	 */
@@ -111,7 +111,7 @@ struct message_rule_t {
 	 * Type of message.
 	 */
 	exchange_type_t exchange_type;
-	
+
 	/**
 	 * Is message a request or response.
 	 */
@@ -121,22 +121,22 @@ struct message_rule_t {
 	 * Message contains encrypted content.
 	 */
 	bool encrypted_content;
-	
+
 	/**
 	 * Number of payload rules which will follow
 	 */
 	int payload_rule_count;
-	 
+
 	/**
 	 * Pointer to first payload rule
 	 */
 	payload_rule_t *payload_rules;
-	
+
 	/**
 	 * Number of payload order rules
 	 */
 	int payload_order_count;
-	
+
 	/**
 	 * payload ordering rules
 	 */
@@ -536,12 +536,12 @@ struct private_message_t {
 	 * Minor version of message.
 	 */
 	u_int8_t major_version;
-	
+
 	/**
 	 * Major version of message.
 	 */
 	u_int8_t minor_version;
-	
+
 	/**
 	 * First Payload in message.
 	 */
@@ -556,32 +556,32 @@ struct private_message_t {
 	 * TRUE if message is a request, FALSE if a reply.
 	 */
 	bool is_request;
-	
+
 	/**
 	 * Message ID of this message.
 	 */
 	u_int32_t message_id;
-	
+
 	/**
 	 * ID of assigned IKE_SA.
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
+
 	/**
 	 * Assigned UDP packet, stores incoming packet or last generated one.
 	 */
 	packet_t *packet;
-	 
+
 	/**
 	 * Linked List where payload data are stored in.
 	 */
 	linked_list_t *payloads;
-	
+
 	 /**
 	  * Assigned parser to parse Header and Body of this message.
 	  */
 	parser_t *parser;
-	
+
 	/**
 	 * The message rule for this message instance
 	 */
@@ -594,7 +594,7 @@ struct private_message_t {
 static  status_t set_message_rule(private_message_t *this)
 {
 	int i;
-		
+
 	for (i = 0; i < (sizeof(message_rules) / sizeof(message_rule_t)); i++)
 	{
 		if ((this->exchange_type == message_rules[i].exchange_type) &&
@@ -615,7 +615,7 @@ static  status_t set_message_rule(private_message_t *this)
 static status_t get_payload_rule(private_message_t *this, payload_type_t payload_type, payload_rule_t **payload_rule)
 {
 	int i;
-	
+
 	for (i = 0; i < this->message_rule->payload_rule_count;i++)
 	{
 		if (this->message_rule->payload_rules[i].payload_type == payload_type)
@@ -624,7 +624,7 @@ static status_t get_payload_rule(private_message_t *this, payload_type_t payload
 			return SUCCESS;
 		}
 	}
-	
+
 	*payload_rule = NULL;
 	return NOT_FOUND;
 }
@@ -757,7 +757,7 @@ static exchange_type_t get_request (private_message_t *this)
 static bool is_encoded(private_message_t *this)
 {
 	chunk_t data = this->packet->get_data(this->packet);
-	
+
 	if (data.ptr == NULL)
 	{
 		return FALSE;
@@ -796,7 +796,7 @@ static void add_notify(private_message_t *this, bool flush, notify_type_t type,
 {
 	notify_payload_t *notify;
 	payload_t *payload;
-	
+
 	if (flush)
 	{
 		while (this->payloads->remove_last(this->payloads,
@@ -858,7 +858,7 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
 {
 	payload_t *current, *found = NULL;
 	enumerator_t *enumerator;
-	
+
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -880,7 +880,7 @@ static notify_payload_t* get_notify(private_message_t *this, notify_type_t type)
 	enumerator_t *enumerator;
 	notify_payload_t *notify = NULL;
 	payload_t *payload;
-	
+
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -907,10 +907,10 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	payload_t *payload;
 	int written;
 	char *pos = buf;
-	
+
 	memset(buf, 0, len);
 	len--;
-	
+
 	written = snprintf(pos, len, "%N %s %d [",
 					   exchange_type_names, this->exchange_type,
 					   this->is_request ? "request" : "response",
@@ -921,7 +921,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	}
 	pos += written;
 	len -= written;
-	
+
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -947,7 +947,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	/* remove last space */
 	snprintf(pos, len, " ]");
 	return buf;
@@ -961,7 +961,7 @@ static void order_payloads(private_message_t *this)
 	linked_list_t *list;
 	payload_t *payload;
 	int i;
-	
+
 	/* move to temp list */
 	list = linked_list_create();
 	while (this->payloads->remove_last(this->payloads,
@@ -975,7 +975,7 @@ static void order_payloads(private_message_t *this)
 		enumerator_t *enumerator;
 		notify_payload_t *notify;
 		payload_order_t order = this->message_rule->payload_order[i];
-		
+
 		/* ... find all payload ... */
 		enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &payload))
@@ -984,7 +984,7 @@ static void order_payloads(private_message_t *this)
 			if (payload->get_type(payload) == order.type)
 			{
 				notify = (notify_payload_t*)payload;
-			
+
 				/**... and check notify for type. */
 				if (order.type != NOTIFY || order.notify == 0 ||
 					order.notify == notify->get_notify_type(notify))
@@ -1017,24 +1017,24 @@ static status_t encrypt_payloads(private_message_t *this,
 	encryption_payload_t *encryption_payload = NULL;
 	status_t status;
 	linked_list_t *all_payloads;
-	
+
 	if (!this->message_rule->encrypted_content)
 	{
 		DBG2(DBG_ENC, "message doesn't have to be encrypted");
 		/* message contains no content to encrypt */
 		return SUCCESS;
 	}
-	
+
 	if (!crypter || !signer)
 	{
 		DBG2(DBG_ENC, "no crypter or signer specified, do not encrypt message");
 		/* message contains no content to encrypt */
 		return SUCCESS;
 	}
-	
+
 	DBG2(DBG_ENC, "copy all payloads to a temporary list");
 	all_payloads = linked_list_create();
-	
+
 	/* first copy all payloads in a temporary list */
 	while (this->payloads->get_count(this->payloads) > 0)
 	{
@@ -1042,7 +1042,7 @@ static status_t encrypt_payloads(private_message_t *this,
 		this->payloads->remove_first(this->payloads,&current_payload);
 		all_payloads->insert_last(all_payloads,current_payload);
 	}
-	
+
 	encryption_payload = encryption_payload_create();
 
 	DBG2(DBG_ENC, "check each payloads if they have to get encrypted");
@@ -1051,9 +1051,9 @@ static status_t encrypt_payloads(private_message_t *this,
 		payload_rule_t *payload_rule;
 		payload_t *current_payload;
 		bool to_encrypt = FALSE;
-		
+
 		all_payloads->remove_first(all_payloads,(void **)&current_payload);
-		
+
 		status = get_payload_rule(this,
 					current_payload->get_type(current_payload),&payload_rule);
 		/* for payload types which are not found in supported payload list,
@@ -1064,7 +1064,7 @@ static status_t encrypt_payloads(private_message_t *this,
 				 payload_type_names, current_payload->get_type(current_payload));
 			to_encrypt = TRUE;
 		}
-		
+
 		if (to_encrypt)
 		{
 			DBG2(DBG_ENC, "insert payload %N to encryption payload",
@@ -1085,9 +1085,9 @@ static status_t encrypt_payloads(private_message_t *this,
 	status = encryption_payload->encrypt(encryption_payload);
 	DBG2(DBG_ENC, "add encrypted payload to payload list");
 	add_payload(this, (payload_t*)encryption_payload);
-	
+
 	all_payloads->destroy(all_payloads);
-	
+
 	return status;
 }
 
@@ -1104,20 +1104,20 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 	status_t status;
 	chunk_t packet_data;
 	char str[256];
-	
+
 	if (is_encoded(this))
 	{
 		/* already generated, return a new packet clone */
 		*packet = this->packet->clone(this->packet);
 		return SUCCESS;
 	}
-	
+
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
 		DBG1(DBG_ENC, "exchange type is not defined");
 		return INVALID_STATE;
 	}
-	
+
 	if (this->packet->get_source(this->packet) == NULL ||
 		this->packet->get_destination(this->packet) == NULL)
 	{
@@ -1125,7 +1125,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 			 !this->packet->get_source(this->packet) ? "source" : "destination");
 		return INVALID_STATE;
 	}
-	
+
 	/* set the rules for this messge */
 	status = set_message_rule(this);
 	if (status != SUCCESS)
@@ -1133,11 +1133,11 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 		DBG1(DBG_ENC, "no message rules specified for this message type");
 		return NOT_SUPPORTED;
 	}
-	
+
 	order_payloads(this);
-	
+
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
-	
+
 	/* going to encrypt all content which have to be encrypted */
 	status = encrypt_payloads(this, crypter, signer);
 	if (status != SUCCESS)
@@ -1145,21 +1145,21 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 		DBG1(DBG_ENC, "payload encryption failed");
 		return status;
 	}
-	
+
 	/* build ike header */
 	ike_header = ike_header_create();
-	
+
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
 	ike_header->set_initiator_flag(ike_header, this->ike_sa_id->is_initiator(this->ike_sa_id));
 	ike_header->set_initiator_spi(ike_header, this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header, this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-	
+
 	generator = generator_create();
-	
+
 	payload = (payload_t*)ike_header;
-	
+
 	/* generate every payload expect last one, this is done later*/
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &next_payload))
@@ -1169,18 +1169,18 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 		payload = next_payload;
 	}
 	enumerator->destroy(enumerator);
-	
+
 	/* last payload has no next payload*/
 	payload->set_next_type(payload, NO_PAYLOAD);
 
 	generator->generate_payload(generator, payload);
 
 	ike_header->destroy(ike_header);
-		
+
 	/* build packet */
 	generator->write_to_chunk(generator, &packet_data);
 	generator->destroy(generator);
-	
+
 	/* if last payload is of type encrypted, integrity checksum if necessary */
 	if (payload->get_type(payload) == ENCRYPTED)
 	{
@@ -1192,12 +1192,12 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 			return status;
 		}
 	}
-	
+
 	this->packet->set_data(this->packet, packet_data);
-	
+
 	/* clone packet for caller */
 	*packet = this->packet->clone(this->packet);
-	
+
 	DBG2(DBG_ENC, "message generated successfully");
 	return SUCCESS;
 }
@@ -1233,18 +1233,18 @@ static status_t parse_header(private_message_t *this)
 {
 	ike_header_t *ike_header;
 	status_t status;
-	
+
 	DBG2(DBG_ENC, "parsing header of message");
-	
+
 	this->parser->reset_context(this->parser);
 	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_ENC, "header could not be parsed");
 		return status;
-		
+
 	}
-	
+
 	/* verify payload */
 	status = ike_header->payload_interface.verify(&(ike_header->payload_interface));
 	if (status != SUCCESS)
@@ -1253,12 +1253,12 @@ static status_t parse_header(private_message_t *this)
 		ike_header->destroy(ike_header);
 		return status;
 	}
-	
+
 	if (this->ike_sa_id != NULL)
 	{
 		this->ike_sa_id->destroy(this->ike_sa_id);
 	}
-	
+
 	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),
 									   ike_header->get_responder_spi(ike_header),
 									   ike_header->get_initiator_flag(ike_header));
@@ -1269,12 +1269,12 @@ static status_t parse_header(private_message_t *this)
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
-	
+
 	DBG2(DBG_ENC, "parsed a %N %s", exchange_type_names, this->exchange_type,
 		 this->is_request ? "request" : "response");
-	
+
 	ike_header->destroy(ike_header);
-	
+
 	/* get the rules for this messge */
 	status = set_message_rule(this);
 	if (status != SUCCESS)
@@ -1283,7 +1283,7 @@ static status_t parse_header(private_message_t *this)
 			 exchange_type_names, this->exchange_type,
 			 this->is_request ? "request" : "response");
 	}
-	
+
 	return status;
 }
 
@@ -1306,20 +1306,20 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 	{
 		payload_rule_t *payload_rule;
 		payload_type_t current_payload_type;
-		
+
 		/* needed to check */
 		current_payload_type = current_payload->get_type(current_payload);
-		
+
 		DBG2(DBG_ENC, "process payload of type %N",
 			 payload_type_names, current_payload_type);
-		
+
 		if (current_payload_type == ENCRYPTED)
 		{
 			encryption_payload_t *encryption_payload;
 			payload_t *current_encrypted_payload;
-			
+
 			encryption_payload = (encryption_payload_t*)current_payload;
-			
+
 			DBG2(DBG_ENC, "found an encryption payload");
 
 			if (payload_number != this->payloads->get_count(this->payloads))
@@ -1348,10 +1348,10 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->destroy(iterator);
 				return PARSE_ERROR;
 			}
-			
+
 			/* needed later to find out if a payload was encrypted */
 			current_payload_was_encrypted = TRUE;
-			
+
 			/* check if there are payloads contained in the encryption payload */
 			if (encryption_payload->get_payload_count(encryption_payload) == 0)
 			{
@@ -1368,7 +1368,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->replace(iterator,NULL,(void *) current_encrypted_payload);
 				current_payload_type = current_encrypted_payload->get_type(current_encrypted_payload);
 			}
-			
+
 			/* is the current paylad the first in the message? */
 			if (previous_payload == NULL)
 			{
@@ -1380,7 +1380,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				/* no, set the next_type of the previous payload to the current type */
 				previous_payload->set_next_type(previous_payload, current_payload_type);
 			}
-			
+
 			/* all encrypted payloads are added to the payload list */
 			while (encryption_payload->get_payload_count(encryption_payload) > 0)
 			{
@@ -1389,7 +1389,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 					 payload_type_names, current_encrypted_payload->get_type(current_encrypted_payload));
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}
-			
+
 			/* encryption payload is processed, payloads are moved. Destroy it. */
 			encryption_payload->destroy(encryption_payload);
 		}
@@ -1407,7 +1407,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->destroy(iterator);
 				return VERIFY_ERROR;
 			}
-			
+
 			/* check if the payload was encrypted, and if it should been have encrypted */
 			if (payload_rule->encrypted != current_payload_was_encrypted)
 			{
@@ -1437,24 +1437,24 @@ static status_t verify(private_message_t *this)
 	enumerator_t *enumerator;
 	payload_t *current_payload;
 	size_t total_found_payloads = 0;
-	
+
 	DBG2(DBG_ENC, "verifying message structure");
-	
+
 	/* check for payloads with wrong count*/
 	for (i = 0; i < this->message_rule->payload_rule_count; i++)
 	{
 		size_t found_payloads = 0;
 		payload_rule_t *rule;
-		
+
 		rule = &this->message_rule->payload_rules[i];
 		enumerator = create_payload_enumerator(this);
-		
+
 		/* check all payloads for specific rule */
 		while (enumerator->enumerate(enumerator, &current_payload))
 		{
 			payload_type_t current_payload_type;
 			unknown_payload_t *unknown_payload;
-			
+
 			current_payload_type = current_payload->get_type(current_payload);
 			if (current_payload_type == UNKNOWN_PAYLOAD)
 			{
@@ -1474,7 +1474,7 @@ static status_t verify(private_message_t *this)
 				total_found_payloads++;
 				DBG2(DBG_ENC, "found payload of type %N", payload_type_names,
 					 rule->payload_type);
-				
+
 				/* as soon as ohe payload occures more then specified,
 				 * the verification fails */
 				if (found_payloads >
@@ -1489,7 +1489,7 @@ static status_t verify(private_message_t *this)
 				}
 			}
 		}
-		
+
 		if (found_payloads < rule->min_occurence)
 		{
 			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
@@ -1517,9 +1517,9 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type;
 	char str[256];
-		
+
 	current_payload_type = this->first_payload;
-		
+
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
 		 payload_type_names, current_payload_type);
 
@@ -1527,13 +1527,13 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	while ((current_payload_type != NO_PAYLOAD))
 	{
 		payload_t *current_payload;
-		
+
 		DBG2(DBG_ENC, "starting parsing a %N payload",
 			 payload_type_names, current_payload_type);
-		
+
 		/* parse current payload */
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
-		
+
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_ENC, "payload type %N could not be parsed",
@@ -1543,7 +1543,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 
 		DBG2(DBG_ENC, "verifying payload of type %N",
 			 payload_type_names, current_payload_type);
-		
+
 		/* verify it, stop parsig if its invalid */
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
@@ -1553,11 +1553,11 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 			current_payload->destroy(current_payload);
 			return VERIFY_ERROR;
 		}
-		
+
 		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
 			 payload_type_names, current_payload_type);
 		this->payloads->insert_last(this->payloads,current_payload);
-		
+
 		/* an encryption payload is the last one, so STOP here. decryption is done later */
 		if (current_payload_type == ENCRYPTED)
 		{
@@ -1565,7 +1565,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 				 payload_type_names, current_payload_type);
 			break;
 		}
-		
+
 		/* get next payload type */
 		current_payload_type = current_payload->get_next_type(current_payload);
 	}
@@ -1579,15 +1579,15 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 			return status;
 		}
 	}
-	
+
 	status = verify(this);
 	if (status != SUCCESS)
 	{
 		return status;
 	}
-	
+
 	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
-	
+
 	return SUCCESS;
 }
 
@@ -1641,14 +1641,14 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
 	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
 	this->public.destroy = (void(*)(message_t*))destroy;
-		
+
 	/* private values */
 	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
 	this->is_request = TRUE;
 	this->ike_sa_id = NULL;
 	this->first_payload = NO_PAYLOAD;
 	this->message_id = 0;
-	
+
 	/* private values */
 	if (packet == NULL)
 	{
@@ -1657,10 +1657,10 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->message_rule = NULL;
 	this->packet = packet;
 	this->payloads = linked_list_create();
-	
+
 	/* parser is created from data of packet */
 	this->parser = parser_create(this->packet->get_data(this->packet));
-	
+
 	return (&this->public);
 }
 

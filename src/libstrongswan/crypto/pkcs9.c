@@ -68,7 +68,7 @@ struct attribute_t {
 
 	/**
 	 * Destroys the attribute.
-	 * 
+	 *
 	 * @param this			attribute to destroy
 	 */
 	void (*destroy) (attribute_t *this);
@@ -243,7 +243,7 @@ static void build_encoding(private_pkcs9_t *this)
 	/* allocate memory for the attributes and build the encoding */
 	{
 		u_char *pos = asn1_build_object(&this->encoding, ASN1_SET, attributes_len);
-		
+
 		iterator = this->attributes->create_iterator(this->attributes, TRUE);
 
 		while (iterator->iterate(iterator, (void**)&attribute))
@@ -346,7 +346,7 @@ static void destroy(private_pkcs9_t *this)
 static private_pkcs9_t *pkcs9_create_empty(void)
 {
 	private_pkcs9_t *this = malloc_thing(private_pkcs9_t);
-	
+
 	/* initialize */
 	this->encoding = chunk_empty;
 	this->attributes = linked_list_create();
@@ -452,7 +452,7 @@ end:
 pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level)
 {
 	private_pkcs9_t *this = pkcs9_create_empty();
-	
+
 	this->encoding = chunk_clone(chunk);
 
 	if (!parse_attributes(chunk, level, this))

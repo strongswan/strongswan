@@ -183,7 +183,7 @@ static void init_netlink(void)
  * @param hdr - Data to be sent.
  * @param rbuf - Return Buffer - contains data returned from the send.
  * @param rbuf_len - Length of rbuf
- * @param description - String - user friendly description of what is 
+ * @param description - String - user friendly description of what is
  *                      being attempted.  Used for diagnostics
  * @param text_said - String
  * @return bool True if the message was succesfully sent.
@@ -382,7 +382,7 @@ static bool netlink_policy(struct nlmsghdr *hdr, bool enoent_ok,
  * @param proto int (Currently unused) Contains protocol (u=tcp, 17=udp, etc...)
  * @param transport_proto int (Currently unused) 0=tunnel, 1=transport
  * @param satype int
- * @param proto_info 
+ * @param proto_info
  * @param lifetime (Currently unused)
  * @param ip int
  * @return boolean True if successful
@@ -590,7 +590,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		char data[1024];
 	} req;
 	struct rtattr *attr;
-	u_int16_t icv_size = 64;	
+	u_int16_t icv_size = 64;
 
 	memset(&req, 0, sizeof(req));
 	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -680,13 +680,13 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			attr->rta_type = XFRMA_ALG_AEAD;
 			attr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + sa->enckeylen);
 			req.n.nlmsg_len += attr->rta_len;
-			
+
 			algo = (struct xfrm_algo_aead*)RTA_DATA(attr);
 			algo->alg_key_len = sa->enckeylen * BITS_PER_BYTE;
 			algo->alg_icv_len = icv_size;
 			strcpy(algo->alg_name, name);
 			memcpy(algo->alg_key, sa->enckey, sa->enckeylen);
-			
+
 			attr = (struct rtattr *)((char *)attr + attr->rta_len);
 			break;
 		}
@@ -962,7 +962,7 @@ static void linux_pfkey_register(void)
 
 /** Create ip_address out of xfrm_address_t.
  *
- * @param family 
+ * @param family
  * @param src xfrm formatted IP address
  * @param dst ip_address formatted destination
  * @return err_t NULL if okay, otherwise an error
@@ -1001,7 +1001,7 @@ static err_t xfrm_sel_to_ip_pair(const struct xfrm_selector *sel,
 
 	if ((ugh = xfrm_to_ip_address(family, &sel->saddr, src))
 		|| (ugh = xfrm_to_ip_address(family, &sel->daddr, dst)))
-	{	
+	{
 		return ugh;
 	}
 

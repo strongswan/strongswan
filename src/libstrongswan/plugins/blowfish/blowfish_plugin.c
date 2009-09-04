@@ -48,12 +48,12 @@ static void destroy(private_blowfish_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_blowfish_plugin_t *this = malloc_thing(private_blowfish_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
 							 (crypter_constructor_t)blowfish_crypter_create);
-	
+
 	return &this->public.plugin;
 }
 

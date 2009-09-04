@@ -29,7 +29,7 @@ typedef struct rekey_ike_sa_job_t rekey_ike_sa_job_t;
 
 /**
  * Class representing an REKEY_IKE_SA Job.
- * 
+ *
  * This job initiates the rekeying of an IKE_SA.
  */
 struct rekey_ike_sa_job_t {

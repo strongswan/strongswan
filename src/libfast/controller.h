@@ -42,14 +42,14 @@ typedef controller_t *(*controller_constructor_t)(context_t* context, void *para
  * The controller handle function is called for each incoming request.
  */
 struct controller_t {
-	
+
 	/**
 	 * Get the name of the controller.
 	 *
 	 * @return				name of the controller
 	 */
 	char* (*get_name)(controller_t *this);
-	
+
 	/**
 	 * Handle a HTTP request for that controller.
 	 *
@@ -67,7 +67,7 @@ struct controller_t {
 	 */
 	void (*handle)(controller_t *this, request_t *request,
 				   char *p1, char *p2, char *p3, char *p4, char *p5);
-		
+
 	/**
 	 * Destroy the controller instance.
 	 */

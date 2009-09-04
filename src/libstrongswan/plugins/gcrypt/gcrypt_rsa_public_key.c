@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <gcrypt.h>
 
 #include "gcrypt_rsa_public_key.h"
@@ -29,17 +29,17 @@ typedef struct private_gcrypt_rsa_public_key_t private_gcrypt_rsa_public_key_t;
  * Private data structure with signing context.
  */
 struct private_gcrypt_rsa_public_key_t {
-	
+
 	/**
 	 * Public interface for this signer.
 	 */
 	gcrypt_rsa_public_key_t public;
-	
+
 	/**
 	 * gcrypt S-expression representing an public RSA key
 	 */
 	gcry_sexp_t key;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -61,7 +61,7 @@ static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
 	gcry_error_t err;
 	chunk_t em;
 	size_t k;
-	
+
 	/* EM = 0x00 || 0x01 || PS || 0x00 || T
 	 * PS = 0xFF padding, with length to fill em
 	 * T  = data
@@ -77,7 +77,7 @@ static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
 	em.ptr[1] = 0x01;
 	em.ptr[em.len - data.len - 1] = 0x00;
 	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
-	
+
 	err = gcry_sexp_build(&in, NULL, "(data(flags raw)(value %b))",
 						  em.len, em.ptr);
 	chunk_free(&em);
@@ -116,7 +116,7 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	chunk_t hash;
 	gcry_error_t err;
 	gcry_sexp_t in, sig;
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, algorithm);
 	if (!hasher)
 	{
@@ -124,7 +124,7 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	}
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
-	
+
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
 						  hash_name, hash.len, hash.ptr);
 	chunk_free(&hash);
@@ -133,7 +133,7 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 		DBG1("building data S-expression failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
-	
+
 	err = gcry_sexp_build(&sig, NULL, "(sig-val(rsa(s %b)))",
 						  signature.len, signature.ptr);
 	if (err)
@@ -198,7 +198,7 @@ static bool encrypt_(private_gcrypt_rsa_public_key_t *this, chunk_t plain,
 {
 	gcry_sexp_t in, out;
 	gcry_error_t err;
-	
+
 	/* "pkcs1" uses PKCS 1.5 (section 8.1) block type 2 encryption:
 	 * 00 | 02 | RANDOM | 00 | DATA */
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(value %b))",
@@ -236,7 +236,7 @@ static bool get_encoding(private_gcrypt_rsa_public_key_t *this,
 {
 	chunk_t n, e;
 	bool success;
-	
+
 	n = gcrypt_rsa_find_token(this->key, "n", NULL);
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
 	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
@@ -244,7 +244,7 @@ static bool get_encoding(private_gcrypt_rsa_public_key_t *this,
 							KEY_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
-	
+
 	return success;
 }
 
@@ -256,14 +256,14 @@ static bool get_fingerprint(private_gcrypt_rsa_public_key_t *this,
 {
 	chunk_t n, e;
 	bool success;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
 	{
 		return TRUE;
 	}
 	n = gcrypt_rsa_find_token(this->key, "n", NULL);
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
-	
+
 	success = lib->encoding->encode(lib->encoding,
 								type, this, fp, KEY_PART_RSA_MODULUS, n,
 								KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
@@ -300,7 +300,7 @@ static void destroy(private_gcrypt_rsa_public_key_t *this)
 static private_gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_create_empty()
 {
 	private_gcrypt_rsa_public_key_t *this = malloc_thing(private_gcrypt_rsa_public_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
@@ -310,10 +310,10 @@ static private_gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_create_empty()
 	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
-	
+
 	this->key = NULL;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -324,7 +324,7 @@ static gcrypt_rsa_public_key_t *load(chunk_t n, chunk_t e)
 {
 	private_gcrypt_rsa_public_key_t *this;
 	gcry_error_t err;
-	
+
 	this = gcrypt_rsa_public_key_create_empty();
 	err = gcry_sexp_build(&this->key, NULL, "(public-key(rsa(n %b)(e %b)))",
 						  n.len, n.ptr, e.len, e.ptr);
@@ -355,7 +355,7 @@ struct private_builder_t {
 static gcrypt_rsa_public_key_t *build(private_builder_t *this)
 {
 	gcrypt_rsa_public_key_t *key;
-	
+
 	key = load(this->n, this->e);
 	free(this);
 	return key;
@@ -367,7 +367,7 @@ static gcrypt_rsa_public_key_t *build(private_builder_t *this)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	va_start(args, part);
 	switch (part)
 	{
@@ -390,18 +390,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *gcrypt_rsa_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->n = this->e = chunk_empty;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

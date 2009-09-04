@@ -66,7 +66,7 @@ typedef struct ike_sa_t ike_sa_t;
  * Extensions (or optional features) the peer supports
  */
 enum ike_extension_t {
-	
+
 	/**
 	 * peer supports NAT traversal as specified in RFC4306
 	 */
@@ -76,12 +76,12 @@ enum ike_extension_t {
 	 * peer supports MOBIKE (RFC4555)
 	 */
 	EXT_MOBIKE = (1<<1),
-	
+
 	/**
 	 * peer supports HTTP cert lookups as specified in RFC4306
 	 */
 	EXT_HASH_AND_URL = (1<<2),
-	
+
 	/**
 	 * peer supports multiple authentication exchanges, RFC4739
 	 */
@@ -92,42 +92,42 @@ enum ike_extension_t {
  * Conditions of an IKE_SA, change during its lifetime
  */
 enum ike_condition_t {
-	
+
 	/**
 	 * Connection is natted (or faked) somewhere
 	 */
 	COND_NAT_ANY = (1<<0),
-	
+
 	/**
 	 * we are behind NAT
 	 */
 	COND_NAT_HERE = (1<<1),
-	
+
 	/**
 	 * other is behind NAT
 	 */
 	COND_NAT_THERE = (1<<2),
-	
+
 	/**
 	 * Faking NAT to enforce UDP encapsulation
 	 */
 	COND_NAT_FAKE = (1<<3),
-	
+
 	/**
 	 * peer has been authenticated using EAP at least once
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
-	
+
 	/**
 	 * received a certificate request from the peer
 	 */
 	COND_CERTREQ_SEEN = (1<<5),
-	
+
 	/**
 	 * Local peer is the "original" IKE initiator. Unaffected from rekeying.
 	 */
 	COND_ORIGINAL_INITIATOR = (1<<6),
-	
+
 	/**
 	 * IKE_SA is stale, the peer is currently unreachable (MOBIKE)
 	 */
@@ -150,7 +150,7 @@ enum statistic_t {
 	STAT_INBOUND,
 	/** Timestamp of last outbound IKE packet */
 	STAT_OUTBOUND,
-	
+
 	STAT_MAX
 };
 
@@ -192,37 +192,37 @@ enum statistic_t {
    @endverbatim
  */
 enum ike_sa_state_t {
-	
+
 	/**
 	 * IKE_SA just got created, but is not initiating nor responding yet.
 	 */
 	IKE_CREATED,
-	
+
 	/**
 	 * IKE_SA gets initiated actively or passively
 	 */
 	IKE_CONNECTING,
-	
+
 	/**
 	 * IKE_SA is fully established
 	 */
 	IKE_ESTABLISHED,
-	
+
 	/**
 	 * IKE_SA is managed externally and does not process messages
 	 */
 	IKE_PASSIVE,
-	
+
 	/**
 	 * IKE_SA rekeying in progress
 	 */
 	IKE_REKEYING,
-	
+
 	/**
 	 * IKE_SA is in progress of deletion
 	 */
 	IKE_DELETING,
-	
+
 	/**
 	 * IKE_SA object gets destroyed
 	 */
@@ -252,35 +252,35 @@ struct ike_sa_t {
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
-	
+
 	/**
 	 * Get the numerical ID uniquely defining this IKE_SA.
 	 *
 	 * @return 				unique ID
 	 */
 	u_int32_t (*get_unique_id) (ike_sa_t *this);
-	
+
 	/**
 	 * Get the state of the IKE_SA.
 	 *
 	 * @return				state of the IKE_SA
 	 */
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the state of the IKE_SA.
 	 *
 	 * @param state			state to set for the IKE_SA
 	 */
 	void (*set_state) (ike_sa_t *this, ike_sa_state_t ike_sa);
-	
+
 	/**
 	 * Get the name of the connection this IKE_SA uses.
 	 *
 	 * @return				name
 	 */
 	char* (*get_name) (ike_sa_t *this);
-	
+
 	/**
 	 * Get statistic values from the IKE_SA.
 	 *
@@ -288,35 +288,35 @@ struct ike_sa_t {
 	 * @return				value as integer
 	 */
 	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
-	
+
 	/**
 	 * Get the own host address.
 	 *
 	 * @return				host address
 	 */
 	host_t* (*get_my_host) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the own host address.
 	 *
 	 * @param me			host address
 	 */
 	void (*set_my_host) (ike_sa_t *this, host_t *me);
-	
+
 	/**
 	 * Get the other peers host address.
 	 *
 	 * @return				host address
 	 */
 	host_t* (*get_other_host) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the others host address.
 	 *
 	 * @param other			host address
 	 */
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
-	
+
 	/**
 	 * Update the IKE_SAs host.
 	 *
@@ -326,35 +326,35 @@ struct ike_sa_t {
 	 * @param other			new remote host address, or NULL
 	 */
 	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
-	
+
 	/**
 	 * Get the own identification.
 	 *
 	 * @return				identification
 	 */
 	identification_t* (*get_my_id) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the own identification.
 	 *
 	 * @param me			identification
 	 */
 	void (*set_my_id) (ike_sa_t *this, identification_t *me);
-	
+
 	/**
 	 * Get the other peer's identification.
 	 *
 	 * @return				identification
 	 */
 	identification_t* (*get_other_id) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the other peer's identification.
 	 *
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
-	
+
 	/**
 	 * Get the peers EAP identity.
 	 *
@@ -363,21 +363,21 @@ struct ike_sa_t {
 	 * @return				identification, NULL if none set
 	 */
 	identification_t* (*get_eap_identity) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the peer's EAP identity.
 	 *
 	 * @param id			identification
 	 */
 	void (*set_eap_identity) (ike_sa_t *this, identification_t *id);
-	
+
 	/**
 	 * Get the config used to setup this IKE_SA.
 	 *
 	 * @return				ike_config
 	 */
 	ike_cfg_t* (*get_ike_cfg) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the config to setup this IKE_SA.
 	 *
@@ -391,14 +391,14 @@ struct ike_sa_t {
 	 * @return				peer_config
 	 */
 	peer_cfg_t* (*get_peer_cfg) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the peer config to use with this IKE_SA.
 	 *
 	 * @param config		peer_config to use
 	 */
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
-	
+
 	/**
 	 * Get the authentication config with rules of the current auth round.
 	 *
@@ -406,21 +406,21 @@ struct ike_sa_t {
 	 * @return				current cfg
 	 */
 	auth_cfg_t* (*get_auth_cfg)(ike_sa_t *this, bool local);
-	
+
 	/**
 	 * Get the selected proposal of this IKE_SA.
 	 *
 	 * @return				selected proposal
 	 */
 	proposal_t* (*get_proposal)(ike_sa_t *this);
-	
+
 	/**
 	 * Set the proposal selected for this IKE_SA.
 	 *
 	 * @param				selected proposal
 	 */
 	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
-	
+
 	/**
 	 * Set the message id of the IKE_SA.
 	 *
@@ -431,7 +431,7 @@ struct ike_sa_t {
 	 * @param mid			message id to set
 	 */
 	void (*set_message_id)(ike_sa_t *this, bool initiate, u_int32_t mid);
-	
+
 	/**
 	 * Add an additional address for the peer.
 	 *
@@ -443,14 +443,14 @@ struct ike_sa_t {
 	 * @param host			host to add to list
 	 */
 	void (*add_additional_address)(ike_sa_t *this, host_t *host);
-	
+
 	/**
 	 * Create an iterator over all additional addresses of the peer.
 	 *
 	 * @return 				iterator over addresses
 	 */
 	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
-	
+
 	/**
 	 * Check if mappings have changed on a NAT for our source address.
 	 *
@@ -458,7 +458,7 @@ struct ike_sa_t {
 	 * @return				TRUE if mappings have changed
 	 */
 	bool (*has_mapping_changed)(ike_sa_t *this, chunk_t hash);
-	
+
 	/**
 	 * Enable an extension the peer supports.
 	 *
@@ -468,7 +468,7 @@ struct ike_sa_t {
 	 * @param extension		extension to enable
 	 */
 	void (*enable_extension)(ike_sa_t *this, ike_extension_t extension);
-	
+
 	/**
 	 * Check if the peer supports an extension.
 	 *
@@ -476,7 +476,7 @@ struct ike_sa_t {
 	 * @return				TRUE if peer supports it, FALSE otherwise
 	 */
 	bool (*supports_extension)(ike_sa_t *this, ike_extension_t extension);
-	
+
 	/**
 	 * Enable/disable a condition flag for this IKE_SA.
 	 *
@@ -492,48 +492,48 @@ struct ike_sa_t {
 	 * @return				TRUE if condition flag set, FALSE otherwise
 	 */
 	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
-	
+
 	/**
 	 * Get the number of queued MOBIKE address updates.
 	 *
 	 * @return				number of pending updates
 	 */
 	u_int32_t (*get_pending_updates)(ike_sa_t *this);
-	
+
 	/**
 	 * Set the number of queued MOBIKE address updates.
 	 *
 	 * @param updates		number of pending updates
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
-	
+
 #ifdef ME
 	/**
 	 * Activate mediation server functionality for this IKE_SA.
 	 */
 	void (*act_as_mediation_server) (ike_sa_t *this);
-	
+
 	/**
 	 * Get the server reflexive host.
 	 *
 	 * @return				server reflexive host
 	 */
 	host_t* (*get_server_reflexive_host) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the server reflexive host.
 	 *
 	 * @param host			server reflexive host
 	 */
 	void (*set_server_reflexive_host) (ike_sa_t *this, host_t *host);
-	
+
 	/**
 	 * Get the connect ID.
 	 *
 	 * @return				connect ID
 	 */
 	chunk_t (*get_connect_id) (ike_sa_t *this);
-	
+
 	/**
 	 * Initiate the mediation of a mediated connection (i.e. initiate a
 	 * ME_CONNECT exchange to a mediation server).
@@ -544,7 +544,7 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediation) (ike_sa_t *this, peer_cfg_t *mediated_cfg);
-	
+
 	/**
 	 * Initiate the mediated connection
 	 *
@@ -557,7 +557,7 @@ struct ike_sa_t {
 	 */
 	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
 								   chunk_t connect_id);
-	
+
 	/**
 	 * Relay data from one peer to another (i.e. initiate a ME_CONNECT exchange
 	 * to a peer).
@@ -576,7 +576,7 @@ struct ike_sa_t {
 	status_t (*relay) (ike_sa_t *this, identification_t *requester,
 					   chunk_t connect_id, chunk_t connect_key,
 					   linked_list_t *endpoints, bool response);
-	
+
 	/**
 	 * Send a callback to a peer.
 	 *
@@ -588,7 +588,7 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME if response failed
 	 */
 	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
-	
+
 	/**
 	 * Respond to a ME_CONNECT request.
 	 *
@@ -603,7 +603,7 @@ struct ike_sa_t {
 	status_t (*respond) (ike_sa_t *this, identification_t *peer_id,
 						 chunk_t connect_id);
 #endif /* ME */
-	
+
 	/**
 	 * Initiate a new connection.
 	 *
@@ -622,7 +622,7 @@ struct ike_sa_t {
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
 						  u_int32_t reqid, traffic_selector_t *tsi,
 						  traffic_selector_t *tsr);
-	
+
 	/**
 	 * Initiates the deletion of an IKE_SA.
 	 *
@@ -637,7 +637,7 @@ struct ike_sa_t {
 	 * 						  deleted (but destroyed).
 	 */
 	status_t (*delete) (ike_sa_t *this);
-	
+
 	/**
 	 * Update IKE_SAs after network interfaces have changed.
 	 *
@@ -651,7 +651,7 @@ struct ike_sa_t {
 	 * @return				SUCCESS, FAILED, DESTROY_ME
 	 */
 	status_t (*roam)(ike_sa_t *this, bool address);
-	
+
 	/**
 	 * Processes a incoming IKEv2-Message.
 	 *
@@ -666,7 +666,7 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*process_message) (ike_sa_t *this, message_t *message);
-	
+
 	/**
 	 * Generate a IKE message to send it to the peer.
 	 *
@@ -682,7 +682,7 @@ struct ike_sa_t {
 	 */
 	status_t (*generate_message) (ike_sa_t *this, message_t *message,
 								  packet_t **packet);
-	
+
 	/**
 	 * Retransmits a request.
 	 *
@@ -692,7 +692,7 @@ struct ike_sa_t {
 	 * 						- NOT_FOUND if request doesn't have to be retransmited
 	 */
 	status_t (*retransmit) (ike_sa_t *this, u_int32_t message_id);
-	
+
 	/**
 	 * Sends a DPD request to the peer.
 	 *
@@ -705,7 +705,7 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME, if peer did not respond
 	 */
 	status_t (*send_dpd) (ike_sa_t *this);
-	
+
 	/**
 	 * Sends a keep alive packet.
 	 *
@@ -715,21 +715,21 @@ struct ike_sa_t {
 	 * was sent.
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
-	
+
 	/**
 	 * Get the keying material of this IKE_SA.
 	 *
 	 * @return				per IKE_SA keymat instance
 	 */
 	keymat_t* (*get_keymat)(ike_sa_t *this);
-	
+
 	/**
 	 * Associates a child SA to this IKE SA
 	 *
 	 * @param child_sa		child_sa to add
 	 */
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
-	
+
 	/**
 	 * Get a CHILD_SA identified by protocol and SPI.
 	 *
@@ -740,14 +740,14 @@ struct ike_sa_t {
 	 */
 	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol,
 								 u_int32_t spi, bool inbound);
-	
+
 	/**
 	 * Create an iterator over all CHILD_SAs.
 	 *
 	 * @return				iterator
 	 */
 	iterator_t* (*create_child_sa_iterator) (ike_sa_t *this);
-	
+
 	/**
 	 * Rekey the CHILD SA with the specified reqid.
 	 *
@@ -816,14 +816,14 @@ struct ike_sa_t {
 	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
 	status_t (*reestablish) (ike_sa_t *this);
-	
+
 	/**
 	 * Set the lifetime limit received from a AUTH_LIFETIME notify.
 	 *
 	 * @param lifetime		lifetime in seconds
 	 */
 	void (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
-	
+
 	/**
 	 * Set the virtual IP to use for this IKE_SA and its children.
 	 *
@@ -834,7 +834,7 @@ struct ike_sa_t {
 	 * @param ip			IP to set as virtual IP
 	 */
 	void (*set_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
-	
+
 	/**
 	 * Get the virtual IP configured.
 	 *
@@ -842,7 +842,7 @@ struct ike_sa_t {
 	 * @return				host_t *virtual IP
 	 */
 	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
-	
+
 	/**
 	 * Register a configuration attribute to the IKE_SA.
 	 *
@@ -856,7 +856,7 @@ struct ike_sa_t {
 	 */
 	void (*add_configuration_attribute)(ike_sa_t *this,
 							configuration_attribute_type_t type, chunk_t data);
-	
+
 	/**
 	 * Set local and remote host addresses to be used for IKE.
 	 *
@@ -867,7 +867,7 @@ struct ike_sa_t {
 	 * @param remote		remote kmaddress
 	 */
 	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
-	
+
 	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *
@@ -879,12 +879,12 @@ struct ike_sa_t {
 	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
 	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
-		
+
 	/**
 	 * Reset the IKE_SA, useable when initiating fails
 	 */
 	void (*reset) (ike_sa_t *this);
-	
+
 	/**
 	 * Destroys a ike_sa_t object.
 	 */

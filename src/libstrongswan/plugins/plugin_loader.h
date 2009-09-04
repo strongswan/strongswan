@@ -28,8 +28,8 @@ typedef struct plugin_loader_t plugin_loader_t;
 /**
  * The plugin_loader loads plugins from a directory and initializes them
  */
-struct plugin_loader_t {	
-	
+struct plugin_loader_t {
+
 	/**
 	 * Load a list of plugins from a directory.
 	 *
@@ -42,19 +42,19 @@ struct plugin_loader_t {
 	 * @return				TRUE if all critical plugins loaded successfully
 	 */
 	bool (*load)(plugin_loader_t *this, char *path, char *list);
-	
+
 	/**
 	 * Unload all loaded plugins.
 	 */
 	void (*unload)(plugin_loader_t *this);
-	
+
 	/**
 	 * Create an enumerator over all loaded plugin names.
 	 *
 	 * @return				enumerator over char*
 	 */
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
-	
+
 	/**
 	 * Unload loaded plugins, destroy plugin_loader instance.
 	 */

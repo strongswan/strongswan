@@ -35,21 +35,21 @@ struct stroke_shared_key_t {
 	 * Implements the shared_key_t interface.
 	 */
 	shared_key_t shared;
-	
+
 	/**
 	 * Add an owner to the key.
 	 *
 	 * @param owner		owner to add
 	 */
 	void (*add_owner)(stroke_shared_key_t *this, identification_t *owner);
-	
+
 	/**
 	 * Check if a key has a specific owner.
 	 *
 	 * @param owner		owner to check
 	 * @return			best match found
 	 */
-	id_match_t (*has_owner)(stroke_shared_key_t *this, identification_t *owner);	
+	id_match_t (*has_owner)(stroke_shared_key_t *this, identification_t *owner);
 };
 
 /**

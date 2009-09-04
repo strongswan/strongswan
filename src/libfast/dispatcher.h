@@ -23,33 +23,33 @@
  * the webserver. It is multithreaded and really fast.
  *
  * The application has a global context and a session context. The global
- * context is accessed from all sessions simultaneously and therefore 
+ * context is accessed from all sessions simultaneously and therefore
  * needs to be threadsave. Often a database wrapper is the global context.
  * The session context is instanciated per session. Sessions are managed
  * automatically through session cookies. The session context is kept alive
  * until the session times out. It must implement the context_t interface and
- * a #context_constructor_t is needed to create instances. To each session, 
- * a set of controllers gets instanciated. The controller instances are per 
+ * a #context_constructor_t is needed to create instances. To each session,
+ * a set of controllers gets instanciated. The controller instances are per
  * session, so you can hold private data for each user.
- * Controllers need to implement the controller_t interface and need a 
+ * Controllers need to implement the controller_t interface and need a
  * #controller_constructor_t function to create instances.
  *
  * A small example shows how to set up libfast:
  * @code
 	dispatcher_t *dispatcher;
 	your_global_context_implementation_t *global;
- 
+
  	global = initialize_your_global_context();
- 
+
  	dispatcher = dispatcher_create(NULL, FALSE, 180,
 			(context_constructor_t)your_session_context_create, global);
 	dispatcher->add_controller(dispatcher, your_controller1_create, param1);
 	dispatcher->add_controller(dispatcher, your_controller2_create, param2);
-	
+
 	dispatcher->run(dispatcher, 20);
-	
+
 	dispatcher->waitsignal(dispatcher);
-	
+
 	dispatcher->destroy(dispatcher);
 	global->destroy();
    @endcode
@@ -76,7 +76,7 @@ typedef struct dispatcher_t dispatcher_t;
  * constructor added with add_controller.
  */
 struct dispatcher_t {
-	
+
 	/**
 	 * Register a controller to the dispatcher.
 	 *
@@ -96,8 +96,8 @@ struct dispatcher_t {
 	 * @param param			param to pass to constructor
 	 */
 	void (*add_filter)(dispatcher_t *this,
-					   filter_constructor_t constructor, void *param); 	
-	
+					   filter_constructor_t constructor, void *param);
+
 	/**
 	 * Start with dispatching.
 	 *
@@ -106,13 +106,13 @@ struct dispatcher_t {
 	 * @param threads		number of dispatching threads
 	 */
 	void (*run)(dispatcher_t *this, int threads);
-	
+
 	/**
 	 * Wait for a relevant signal action.
 	 *
 	 */
 	void (*waitsignal)(dispatcher_t *this);
-	
+
 	/**
 	 * Destroy the dispatcher_t.
 	 */

@@ -114,13 +114,13 @@ static char ASN1_pkcs7_encrypted_data_oid_str[] = {
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
 };
 
-static const chunk_t ASN1_pkcs7_data_oid = 
+static const chunk_t ASN1_pkcs7_data_oid =
 						chunk_from_buf(ASN1_pkcs7_data_oid_str);
 static const chunk_t ASN1_pkcs7_signed_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
 static const chunk_t ASN1_pkcs7_enveloped_data_oid =
 						chunk_from_buf(ASN1_pkcs7_enveloped_data_oid_str);
-static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid = 
+static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid =
 						chunk_from_buf(ASN1_pkcs7_signed_enveloped_data_oid_str);
 static const chunk_t ASN1_pkcs7_digested_data_oid =
 						chunk_from_buf(ASN1_pkcs7_digested_data_oid_str);
@@ -140,7 +140,7 @@ static u_char ASN1_des_cbc_oid_str[] = {
 		  0x2B, 0x0E, 0x03, 0x02, 0x07
 };
 
-static const chunk_t ASN1_3des_ede_cbc_oid = 
+static const chunk_t ASN1_3des_ede_cbc_oid =
 						chunk_from_buf(ASN1_3des_ede_cbc_oid_str);
 static const chunk_t ASN1_des_cbc_oid =
 						chunk_from_buf(ASN1_des_cbc_oid_str);
@@ -769,7 +769,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	 */
 	{
 		rng_t *rng;
-		
+
 		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
 		DBG4("  symmetric encryption key: %B", &symmetricKey);
@@ -808,12 +808,12 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	chunk_clear(&in);
     DBG3("  encrypted data: %B", &out);
 
-	/* build pkcs7 enveloped data object */ 
+	/* build pkcs7 enveloped data object */
 	{
 		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "cm",
 					alg_oid,
 					asn1_wrap(ASN1_OCTET_STRING, "m", iv));
-	
+
 		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "cmm",
 					ASN1_pkcs7_data_oid,
 					contentEncryptionAlgorithm,
@@ -866,7 +866,7 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 		if(this->data.ptr != NULL)
 		{
 			hasher_t *hasher;
-		
+
 			hasher = lib->crypto->create_hasher(lib->crypto, alg);
 			if (hasher == NULL)
 			{
@@ -874,13 +874,13 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 					 hash_algorithm_names, alg);
 				return FALSE;
 			}
-		
+
 			/* take the current time as signingTime */
 			time_t now = time(NULL);
 			chunk_t	signingTime = asn1_from_time(&now, ASN1_UTCTIME);
 
 			chunk_t messageDigest, attributes;
-	
+
 			hasher->allocate_hash(hasher, this->data, &messageDigest);
 			hasher->destroy(hasher);
 			this->attributes->set_attribute(this->attributes,
@@ -1008,7 +1008,7 @@ end:
 static private_pkcs7_t *pkcs7_create_empty(void)
 {
 	private_pkcs7_t *this = malloc_thing(private_pkcs7_t);
-	
+
 	/* initialize */
 	this->type = OID_UNKNOWN;
 	this->content = chunk_empty;
@@ -1043,7 +1043,7 @@ static private_pkcs7_t *pkcs7_create_empty(void)
 pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level)
 {
 	private_pkcs7_t *this = pkcs7_create_empty();
-	
+
 	this->level = level + 2;
 	if (!parse_contentInfo(chunk, level, this))
 	{

@@ -297,7 +297,7 @@ static char* complete_uri(chunk_t distPoint, const char *ldaphost)
 	if (symbol != NULL)
 	{
 		size_t type_len = symbol - ptr;
-		
+
 		if (type_len >= 4 && strncasecmp(ptr, "ldap", 4) == 0)
 		{
 			ptr = symbol + 1;
@@ -307,7 +307,7 @@ static char* complete_uri(chunk_t distPoint, const char *ldaphost)
 			{
 				len -= 2;
 				symbol = memchr(ptr, '/', len);
-				
+
 				if (symbol != NULL && symbol - ptr == 0 && ldaphost != NULL)
 				{
 					uri = malloc(distPoint.len + strlen(ldaphost) + 1);
@@ -322,7 +322,7 @@ static char* complete_uri(chunk_t distPoint, const char *ldaphost)
 			}
 		}
 	}
-	
+
 	/* default action:  copy distributionPoint without change */
 	uri = malloc(distPoint.len + 1);
 	sprintf(uri, "%.*s", (int)distPoint.len, distPoint.ptr);
@@ -357,7 +357,7 @@ static void fetch_crls(bool cache_crls)
 		{
 			char *uri = complete_uri(gn->name, ldaphost);
 			x509crl_t *crl;
-			
+
 			crl = fetch_crl(uri);
 			if (crl)
 			{
@@ -413,7 +413,7 @@ static void fetch_ocsp_status(ocsp_location_t* location)
 	*(uri + location->uri.len) = '\0';
 
 	DBG1("  requesting ocsp status from '%s' ...", uri);
-	if (lib->fetcher->fetch(lib->fetcher, uri, &response, 
+	if (lib->fetcher->fetch(lib->fetcher, uri, &response,
 							FETCH_REQUEST_DATA, request,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
 							FETCH_END) == SUCCESS)
@@ -432,7 +432,7 @@ static void fetch_ocsp_status(ocsp_location_t* location)
 	/* increment the trial counter of the unresolved fetch requests */
 	{
 		ocsp_certinfo_t *certinfo = location->certinfo;
-		
+
 		while (certinfo != NULL)
 		{
 			certinfo->trials++;
@@ -562,7 +562,7 @@ void add_distribution_points(const generalName_t *newPoints ,generalName_t **dis
 	{
 		/* skip empty distribution point */
 		if (newPoints->name.len > 0)
-		{       
+		{
 			bool add = TRUE;
 			generalName_t *gn = *distributionPoints;
 

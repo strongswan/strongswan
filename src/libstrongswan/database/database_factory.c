@@ -29,12 +29,12 @@ struct private_database_factory_t {
 	 * public functions
 	 */
 	database_factory_t public;
-	
+
 	/**
 	 * list of registered database_t implementations
 	 */
 	linked_list_t *databases;
-	
+
 	/**
 	 * mutex to lock access to databases
 	 */
@@ -49,7 +49,7 @@ static database_t* create(private_database_factory_t *this, char *uri)
 	enumerator_t *enumerator;
 	database_t *database = NULL;
 	database_constructor_t create;
-	
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->databases->create_enumerator(this->databases);
 	while (enumerator->enumerate(enumerator, &create))
@@ -103,15 +103,15 @@ static void destroy(private_database_factory_t *this)
 database_factory_t *database_factory_create()
 {
 	private_database_factory_t *this = malloc_thing(private_database_factory_t);
-	
+
 	this->public.create = (database_t*(*)(database_factory_t*, char *url))create;
 	this->public.add_database = (void(*)(database_factory_t*, database_constructor_t))add_database;
 	this->public.remove_database = (void(*)(database_factory_t*, database_constructor_t))remove_database;
 	this->public.destroy = (void(*)(database_factory_t*))destroy;
-	
+
 	this->databases = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	
+
 	return &this->public;
 }
 

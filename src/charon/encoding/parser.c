@@ -50,7 +50,7 @@ typedef struct private_parser_t private_parser_t;
 
 /**
  * Private data stored in a context.
- * 
+ *
  * Contains pointers and counters to store current state.
  */
 struct private_parser_t {
@@ -58,27 +58,27 @@ struct private_parser_t {
 	 * Public members, see parser_t.
 	 */
 	parser_t public;
-	
+
 	/**
 	 * Current bit for reading in input data.
 	 */
 	u_int8_t bit_pos;
-	
+
 	/**
 	 * Current byte for reading in input data.
 	 */
 	u_int8_t *byte_pos;
-	
+
 	/**
 	 * Input data to parse.
 	 */
 	u_int8_t *input;
-	
+
 	/**
 	 * Roof of input, used for length-checking.
 	 */
 	u_int8_t *input_roof;
-	
+
 	/**
 	 * Set of encoding rules for this parsing session.
 	 */
@@ -277,11 +277,11 @@ static bool parse_bit(private_parser_t *this, int rule_number,
 		return short_input(this, rule_number);
 	}
 	if (output_pos)
-	{	
+	{
 		u_int8_t mask;
 		mask = 0x01 << (7 - this->bit_pos);
 		*output_pos = *this->byte_pos & mask;
-		
+
 		if (*output_pos)
 		{	/* set to a "clean", comparable true */
 			*output_pos = TRUE;
@@ -303,7 +303,7 @@ static bool parse_list(private_parser_t *this, int rule_number,
 			linked_list_t **output_pos, payload_type_t payload_type, int length)
 {
 	linked_list_t *list = *output_pos;
-	
+
 	if (length < 0)
 	{
 		return short_input(this, rule_number);
@@ -316,10 +316,10 @@ static bool parse_list(private_parser_t *this, int rule_number,
 	{
 		u_int8_t *pos_before = this->byte_pos;
 		payload_t *payload;
-		
+
 		DBG2(DBG_ENC, "  %d bytes left, parsing recursively %N",
 			 length, payload_type_names, payload_type);
-		
+
 		if (parse_payload(this, payload_type, &payload) != SUCCESS)
 		{
 			DBG1(DBG_ENC, "  parsing of a %N substructure failed",
@@ -377,25 +377,25 @@ static status_t parse_payload(private_parser_t *this,
 	bool attribute_format = FALSE;
 	int rule_number;
 	encoding_rule_t *rule;
-	
+
 	/* create instance of the payload to parse */
 	pld = payload_create(payload_type);
-	
+
 	DBG2(DBG_ENC, "parsing %N payload, %d bytes left",
 		 payload_type_names, payload_type, this->input_roof - this->byte_pos);
-	
+
 	DBG3(DBG_ENC, "parsing payload from %b",
 		 this->byte_pos, this->input_roof - this->byte_pos);
-	
+
 	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
 	{
 		DBG1(DBG_ENC, "  payload type %d is unknown, handling as %N",
 			 payload_type, payload_type_names, UNKNOWN_PAYLOAD);
 	}
-	
+
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
-	
+
 	/* parse the payload with its own rulse */
 	pld->get_encoding_rules(pld, &this->rules, &rule_count);
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
@@ -765,7 +765,7 @@ static status_t parse_payload(private_parser_t *this,
 			case ADDRESS:
 			{
 				int address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
-				
+
 				if (!parse_chunk(this, rule_number, output + rule->offset,
 								 address_length))
 				{
@@ -808,7 +808,7 @@ static status_t parse_payload(private_parser_t *this,
 		/* process next rulue */
 		rule++;
 	}
-	
+
 	*payload = pld;
 	DBG2(DBG_ENC, "parsing %N payload finished",
 		 payload_type_names, payload_type);
@@ -846,17 +846,17 @@ static void destroy(private_parser_t *this)
 parser_t *parser_create(chunk_t data)
 {
 	private_parser_t *this = malloc_thing(private_parser_t);
-	
+
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**))parse_payload;
 	this->public.reset_context = (void(*)(parser_t*)) reset_context;
 	this->public.get_remaining_byte_count = (int (*) (parser_t *))get_remaining_byte_count;
 	this->public.destroy = (void(*)(parser_t*)) destroy;
-	
+
 	this->input = data.ptr;
 	this->byte_pos = data.ptr;
 	this->bit_pos = 0;
 	this->input_roof = data.ptr + data.len;
-	
+
 	return &this->public;
 }
 

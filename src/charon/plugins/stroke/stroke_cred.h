@@ -38,7 +38,7 @@ struct stroke_cred_t {
 	 * Implements credential_set_t
 	 */
 	credential_set_t set;
-	
+
 	/**
 	 * Reread secrets from config files.
 	 *
@@ -46,7 +46,7 @@ struct stroke_cred_t {
 	 * @param prompt	I/O channel to prompt for private key passhprase
 	 */
 	void (*reread)(stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt);
-	
+
 	/**
 	 * Load a CA certificate, and serve it through the credential_set.
 	 *
@@ -54,7 +54,7 @@ struct stroke_cred_t {
 	 * @return				reference to loaded certificate, or NULL
 	 */
 	certificate_t* (*load_ca)(stroke_cred_t *this, char *filename);
-	
+
 	/**
 	 * Load a peer certificate and serve it rhrough the credential_set.
 	 *
@@ -62,14 +62,14 @@ struct stroke_cred_t {
 	 * @return				reference to loaded certificate, or NULL
 	 */
 	certificate_t* (*load_peer)(stroke_cred_t *this, char *filename);
-	
+
 	/**
 	 * Enable/Disable CRL caching to disk.
 	 *
 	 * @param enabled		TRUE to enable, FALSE to disable
 	 */
 	void (*cachecrl)(stroke_cred_t *this, bool enabled);
-	
+
 	/**
 	 * Destroy a stroke_cred instance.
 	 */

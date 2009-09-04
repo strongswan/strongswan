@@ -42,7 +42,7 @@ struct sim_card_t {
 	 * @return		identity
 	 */
 	identification_t* (*get_imsi)(sim_card_t *this);
-	
+
 	/**
 	 * Calculate SRES/KC from a RAND.
 	 *
@@ -59,7 +59,7 @@ struct sim_card_t {
  * Interface for a triplet provider (used as EAP server).
  */
 struct sim_provider_t {
-	
+
 	/**
 	 * Get a single triplet to authenticate a EAP client.
 	 *
@@ -77,49 +77,49 @@ struct sim_provider_t {
  * The EAP-SIM manager handles multiple SIM cards and providers.
  */
 struct sim_manager_t {
-	
+
 	/**
 	 * Register a SIM card (client) at the manager.
 	 *
 	 * @param card		sim card to register
 	 */
 	void (*add_card)(sim_manager_t *this, sim_card_t *card);
-	
+
 	/**
 	 * Unregister a previously registered card from the manager.
 	 *
 	 * @param card		sim card to unregister
 	 */
 	void (*remove_card)(sim_manager_t *this, sim_card_t *card);
-	
+
 	/**
 	 * Create an enumerator over all registered cards.
 	 *
 	 * @return			enumerator over sim_card_t's
 	 */
 	enumerator_t* (*create_card_enumerator)(sim_manager_t *this);
-	
+
 	/**
 	 * Register a triplet provider (server) at the manager.
 	 *
 	 * @param card		sim card to register
 	 */
 	void (*add_provider)(sim_manager_t *this, sim_provider_t *provider);
-	
+
 	/**
 	 * Unregister a previously registered provider from the manager.
 	 *
 	 * @param card		sim card to unregister
 	 */
 	void (*remove_provider)(sim_manager_t *this, sim_provider_t *provider);
-	
+
 	/**
 	 * Create an enumerator over all registered provider.
 	 *
 	 * @return			enumerator over sim_provider_t's
 	 */
 	enumerator_t* (*create_provider_enumerator)(sim_manager_t *this);
-	
+
 	/**
 	 * Destroy a manager instance.
 	 */

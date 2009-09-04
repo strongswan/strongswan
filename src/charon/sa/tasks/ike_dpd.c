@@ -24,7 +24,7 @@ typedef struct private_ike_dpd_t private_ike_dpd_t;
  * Private members of a ike_dpd_t task.
  */
 struct private_ike_dpd_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
@@ -83,7 +83,7 @@ ike_dpd_t *ike_dpd_create(bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))return_need_more;
@@ -94,6 +94,6 @@ ike_dpd_t *ike_dpd_create(bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))return_success;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))return_need_more;
 	}
-	
+
 	return &this->public;
 }

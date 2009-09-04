@@ -27,7 +27,7 @@ typedef struct plugin_t plugin_t;
  * Interface definition of a plugin.
  */
 struct plugin_t {
-	
+
 	/**
      * Destroy a plugin instance.
      */

@@ -47,7 +47,7 @@ struct ts_payload_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Get the type of TSpayload (TSi or TSr).
 	 *
@@ -56,16 +56,16 @@ struct ts_payload_t {
 	 * 						- FALSE if this payload is of type TSr
 	 */
 	bool (*get_initiator) (ts_payload_t *this);
-	
+
 	/**
 	 * Set the type of TS payload (TSi or TSr).
 	 *
-	 * @param is_initiator	
+	 * @param is_initiator
 	 * 						- TRUE if this payload is of type TSi
 	 * 						- FALSE if this payload is of type TSr
 	 */
 	void (*set_initiator) (ts_payload_t *this,bool is_initiator);
-	
+
 	/**
 	 * Adds a traffic_selector_substructure_t object to this object.
 	 *
@@ -73,12 +73,12 @@ struct ts_payload_t {
 	 */
 	void (*add_traffic_selector_substructure) (ts_payload_t *this,
 							traffic_selector_substructure_t *traffic_selector);
-	
+
 	/**
 	 * Creates an iterator of stored traffic_selector_substructure_t objects.
-	 * 
-	 * When removing an traffic_selector_substructure_t object 
-	 * using this iterator, the length of this payload 
+	 *
+	 * When removing an traffic_selector_substructure_t object
+	 * using this iterator, the length of this payload
 	 * has to get refreshed by calling payload_t.get_length!
 	 *
 	 * @param forward 		iterator direction (TRUE: front to end)
@@ -86,10 +86,10 @@ struct ts_payload_t {
 	 */
 	iterator_t *(*create_traffic_selector_substructure_iterator) (
 											ts_payload_t *this, bool forward);
-	
+
 	/**
 	 * Get a list of nested traffic selectors as traffic_selector_t.
-	 * 
+	 *
 	 * Resulting list and its traffic selectors must be destroyed after usage
 	 *
 	 * @return				list of traffic selectors
@@ -104,8 +104,8 @@ struct ts_payload_t {
 
 /**
  * Creates an empty ts_payload_t object.
- * 
- * @param is_initiator	
+ *
+ * @param is_initiator
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
  * @return				ts_payload_t object
@@ -114,14 +114,14 @@ ts_payload_t *ts_payload_create(bool is_initiator);
 
 /**
  * Creates ts_payload with a list of traffic_selector_t
- * 
- * @param is_initiator	
+ *
+ * @param is_initiator
  * 							- TRUE if this payload is of type TSi
  * 							- FALSE if this payload is of type TSr
  * @param traffic_selectors	list of traffic selectors to include
  * @return					ts_payload_t object
  */
-ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, 
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator,
 											linked_list_t *traffic_selectors);
 
 #endif /** TS_PAYLOAD_H_ @}*/

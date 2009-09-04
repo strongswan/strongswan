@@ -70,7 +70,7 @@ struct private_builder_t {
 static bool present(char* pattern, chunk_t* ch)
 {
 	u_int len = strlen(pattern);
-	
+
 	if (ch->len >= len && strneq(ch->ptr, pattern, len))
 	{
 		*ch = chunk_skip(*ch, len);
@@ -85,7 +85,7 @@ static bool present(char* pattern, chunk_t* ch)
 static bool find_boundary(char* tag, chunk_t *line)
 {
 	chunk_t name = chunk_empty;
-	
+
 	if (!present("-----", line) ||
 		!present(tag, line) ||
 		*line->ptr != ' ')
@@ -93,7 +93,7 @@ static bool find_boundary(char* tag, chunk_t *line)
 		return FALSE;
 	}
 	*line = chunk_skip(*line, 1);
-	
+
 	/* extract name */
 	name.ptr = line->ptr;
 	while (line->len > 0)
@@ -121,7 +121,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	chunk_t decrypted;
 	chunk_t key = {alloca(key_size), key_size};
 	u_int8_t padding, *last_padding_pos, *first_padding_pos;
-	
+
 	/* build key from passphrase and IV */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (hasher == NULL)
@@ -134,7 +134,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	hasher->get_hash(hasher, passphrase, NULL);
 	hasher->get_hash(hasher, salt, hash.ptr);
 	memcpy(key.ptr, hash.ptr, hash.len);
-	
+
 	if (key.len > hash.len)
 	{
 		hasher->get_hash(hasher, hash, NULL);
@@ -143,7 +143,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
 	}
 	hasher->destroy(hasher);
-	
+
 	/* decrypt blob */
 	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 	if (crypter == NULL)
@@ -153,7 +153,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		return NOT_SUPPORTED;
 	}
 	crypter->set_key(crypter, key);
-	
+
 	if (iv.len != crypter->get_block_size(crypter) ||
 		blob->len % iv.len)
 	{
@@ -165,7 +165,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	crypter->destroy(crypter);
 	memcpy(blob->ptr, decrypted.ptr, blob->len);
 	chunk_free(&decrypted);
-	
+
 	/* determine amount of padding */
 	last_padding_pos = blob->ptr + blob->len - 1;
 	padding = *last_padding_pos;
@@ -204,7 +204,7 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 		PEM_POST   = 4,
 		PEM_ABORT  = 5
 	} state_t;
-	
+
 	encryption_algorithm_t alg = ENCR_UNDEFINED;
 	size_t key_size = 0;
 	bool encrypted = FALSE;
@@ -216,11 +216,11 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 	chunk_t passphrase;
 	int try = 0;
 	u_char iv_buf[HASH_SIZE_MD5];
-	
+
 	dst.len = 0;
 	iv.ptr = iv_buf;
 	iv.len = 0;
-	
+
 	while (fetchline(&src, &line))
 	{
 		if (state == PEM_PRE)
@@ -251,14 +251,14 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 				err_t ugh = NULL;
 				chunk_t name  = chunk_empty;
 				chunk_t value = chunk_empty;
-				
+
 				/* an empty line separates HEADER and BODY */
 				if (line.len == 0)
 				{
 					state = PEM_BODY;
 					continue;
 				}
-				
+
 				/* we are looking for a parameter: value pair */
 				DBG2("  %.*s", (int)line.len, line.ptr);
 				ugh = extract_parameter_value(&name, &value, &line);
@@ -273,7 +273,7 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 				else if (match("DEK-Info", &name))
 				{
 					chunk_t dek;
-					
+
 					if (!extract_token(&dek, ',', &value))
 					{
 						dek = value;
@@ -311,13 +311,13 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 			else /* state is PEM_BODY */
 			{
 				chunk_t data;
-				
+
 				/* remove any trailing whitespace */
 				if (!extract_token(&data ,' ', &line))
 				{
 					data = line;
 				}
-				
+
 				/* check for PGP armor checksum */
 				if (*data.ptr == '=')
 				{
@@ -327,7 +327,7 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 					DBG2("  armor checksum: %.*s", (int)data.len, data.ptr);
 					continue;
 				}
-				
+
 				if (blob->len - dst.len < data.len / 4 * 3)
 				{
 					state = PEM_ABORT;
@@ -383,7 +383,7 @@ static void *build_from_blob(private_builder_t *this, chunk_t blob)
 {
 	void *cred = NULL;
 	bool pgp = FALSE;
-	
+
 	blob = chunk_clone(blob);
 	if (!is_asn1(blob))
 	{
@@ -417,21 +417,21 @@ static void *build_from_file(private_builder_t *this, char *file)
 	struct stat sb;
 	void *addr;
 	int fd;
-	
+
 	fd = open(file, O_RDONLY);
 	if (fd == -1)
 	{
 		DBG1("  opening '%s' failed: %s", file, strerror(errno));
 		return NULL;
 	}
-	
+
 	if (fstat(fd, &sb) == -1)
 	{
 		DBG1("  getting file size of '%s' failed: %s", file, strerror(errno));
 		close(fd);
 		return NULL;
 	}
-	
+
 	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
@@ -439,9 +439,9 @@ static void *build_from_file(private_builder_t *this, char *file)
 		close(fd);
 		return NULL;
 	}
-	
+
 	cred = build_from_blob(this, chunk_create(addr, sb.st_size));
-	
+
 	munmap(addr, sb.st_size);
 	close(fd);
 	return cred;
@@ -455,7 +455,7 @@ static void *build_from_fd(private_builder_t *this, int fd)
 	char buf[8096];
 	char *pos = buf;
 	ssize_t len, total = 0;
-	
+
 	while (TRUE)
 	{
 		len = read(fd, pos, buf + sizeof(buf) - pos);
@@ -484,7 +484,7 @@ static void *build_from_fd(private_builder_t *this, int fd)
 static void *build(private_builder_t *this)
 {
 	void *cred = NULL;
-	
+
 	if (this->pem.ptr)
 	{
 		cred = build_from_blob(this, this->pem);
@@ -519,7 +519,7 @@ static chunk_t given_passphrase_cb(chunk_t *passphrase, int try)
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
 	va_list args;
-	
+
 	switch (part)
 	{
 		case BUILD_FROM_FILE:
@@ -570,10 +570,10 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 static builder_t *pem_builder(credential_type_t type, int subtype)
 {
 	private_builder_t *this = malloc_thing(private_builder_t);
-	
+
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	this->type = type;
 	this->subtype = subtype;
 	this->file = NULL;
@@ -583,7 +583,7 @@ static builder_t *pem_builder(credential_type_t type, int subtype)
 	this->cb = NULL;
 	this->data = NULL;
 	this->flags = 0;
-	
+
 	return &this->public;
 }
 

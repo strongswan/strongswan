@@ -30,7 +30,7 @@ typedef struct sha1_hasher_t sha1_hasher_t;
  * Implementation of hasher_t interface using the SHA1 algorithm.
  */
 struct sha1_hasher_t {
-	
+
 	/**
 	 * Implements hasher_t interface.
 	 */

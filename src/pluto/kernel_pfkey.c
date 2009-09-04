@@ -73,7 +73,7 @@ static sparse_names pfkey_type_names = {
 		NE(SADB_X_DELFLOW),
 		NE(SADB_X_DEBUG),
 		NE(SADB_X_NAT_T_NEW_MAPPING),
-		NE(SADB_MAX),   
+		NE(SADB_MAX),
 		{ 0, sparse_end }
 };
 
@@ -531,7 +531,7 @@ pfkeyext_protocol(int transport_proto
 , const char *text_said
 , struct sadb_ext *extensions[SADB_EXT_MAX + 1])
 {
-	return (transport_proto == 0)? TRUE 
+	return (transport_proto == 0)? TRUE
 		: pfkey_build(
 			pfkey_x_protocol_build(extensions + SADB_X_EXT_PROTOCOL, transport_proto)
 			, description, text_said, extensions);

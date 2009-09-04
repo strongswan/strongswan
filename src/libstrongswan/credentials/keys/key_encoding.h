@@ -71,7 +71,7 @@ enum key_encoding_type_t {
 	KEY_ID_PGPV3,
 	/** PGPv4 fingerprint */
 	KEY_ID_PGPV4,
-	
+
 	/** PKCS#1 and similar ASN.1 key encoding */
 	KEY_PUB_ASN1_DER,
 	KEY_PRIV_ASN1_DER,
@@ -83,7 +83,7 @@ enum key_encoding_type_t {
 	/** PGP key encoding */
 	KEY_PUB_PGP,
 	KEY_PRIV_PGP,
-	
+
 	KEY_ENCODING_MAX,
 };
 
@@ -115,7 +115,7 @@ enum key_encoding_part_t {
 	KEY_PART_ECDSA_PUB_ASN1_DER,
 	/** a DER encoded ECDSA private key */
 	KEY_PART_ECDSA_PRIV_ASN1_DER,
-	
+
 	KEY_PART_END,
 };
 
@@ -141,14 +141,14 @@ struct key_encoding_t {
 	 */
 	bool (*encode)(key_encoding_t *this, key_encoding_type_t type, void *cache,
 				   chunk_t *encoding, ...);
-	
+
 	/**
 	 * Clear all cached encodings of a given cache key.
 	 *
 	 * @param cache			key used in encode() for caching
 	 */
 	void (*clear_cache)(key_encoding_t *this, void *cache);
-	
+
 	/**
 	 * Check for a cached encoding.
 	 *
@@ -159,7 +159,7 @@ struct key_encoding_t {
 	 */
 	bool (*get_cache)(key_encoding_t *this, key_encoding_type_t type,
 					  void *cache, chunk_t *encoding);
-	
+
 	/**
 	 * Cache a key encoding created externally.
 	 *
@@ -172,21 +172,21 @@ struct key_encoding_t {
 	 */
 	void (*cache)(key_encoding_t *this, key_encoding_type_t type, void *cache,
 				  chunk_t encoding);
-	
+
 	/**
 	 * Register a key encoder function.
 	 *
 	 * @param encoder		key encoder function to add
 	 */
 	void (*add_encoder)(key_encoding_t *this, key_encoder_t encoder);
-	
+
 	/**
 	 * Unregister a previously registered key encoder function.
 	 *
 	 * @param encoder		key encoder function to remove
 	 */
 	void (*remove_encoder)(key_encoding_t *this, key_encoder_t encoder);
-	
+
 	/**
 	 * Destroy a key_encoding_t.
 	 */

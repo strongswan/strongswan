@@ -27,7 +27,7 @@ typedef struct uci_control_t uci_control_t;
  * UCI control interface, uses a simple FIFO file
  */
 struct uci_control_t {
-	
+
 	/**
 	 * Destroy the controller
 	 */

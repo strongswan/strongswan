@@ -294,7 +294,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 {
 	hasher_t *hasher;
 	static u_char digest[HASH_SIZE_SHA1];  /* temporary storage */
-	
+
 	location->uri = cert->accessLocation;
 
 	if (location->uri.ptr == NULL)
@@ -310,7 +310,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 			return FALSE;
 		}
 	}
-	
+
 	/* compute authNameID from as SHA-1 hash of issuer DN */
 	location->authNameID = chunk_create(digest, HASH_SIZE_SHA1);
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -325,8 +325,8 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 	location->issuer = cert->issuer;
 	location->authKeyID = cert->authKeyID;
 	location->authKeySerialNumber = cert->authKeySerialNumber;
-	
-	if (cert->authKeyID.ptr == NULL) 
+
+	if (cert->authKeyID.ptr == NULL)
 	{
 		x509cert_t *authcert = get_authcert(cert->issuer
 				, cert->authKeySerialNumber, cert->authKeyID, AUTH_CA);
@@ -426,7 +426,7 @@ cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
 
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
-	
+
 	/* is an ocsp location defined? */
 	if (!build_ocsp_location(cert, &location))
 		return CERT_UNDEFINED;
@@ -457,7 +457,7 @@ void check_ocsp(void)
 
 	lock_ocsp_cache("check_ocsp");
 	location = ocsp_cache;
-	
+
 	while (location != NULL)
 	{
 		char buf[BUF_LEN];
@@ -1039,11 +1039,11 @@ static bool valid_ocsp_response(response_t *res)
 			unlock_authcert_list("valid_ocsp_response");
 			return FALSE;
 		}
-		
+
 		DBG(DBG_CONTROL,
 			DBG_log("certificate is valid")
 		)
-		
+
 		authcert = get_authcert(cert->issuer, cert->authKeySerialNumber
 			, cert->authKeyID, AUTH_CA);
 
@@ -1388,7 +1388,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 		*certinfop = cnew;
 		certinfo = cnew;
 	}
-		
+
 	DBG(DBG_CONTROL,
 		datatot(info->serialNumber.ptr, info->serialNumber.len, ':'
 			, buf, BUF_LEN);
@@ -1403,7 +1403,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 	if (request)
 	{
 		certinfo->status = CERT_UNDEFINED;
-		
+
 		if (cmp != 0)
 		{
 			certinfo->thisUpdate = now;
@@ -1415,7 +1415,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 		certinfo->status = info->status;
 		certinfo->revocationTime = info->revocationTime;
 		certinfo->revocationReason = info->revocationReason;
-		
+
 		certinfo->thisUpdate = (info->thisUpdate != UNDEFINED_TIME)?
 			info->thisUpdate : now;
 
@@ -1446,7 +1446,7 @@ static void process_single_response(ocsp_location_t *location,
 		plog("ocsp single response has wrong issuer");
 		return;
 	}
-	
+
 	/* traverse list of certinfos in increasing order */
 	certinfop = &location->certinfo;
 	certinfo = *certinfop;
@@ -1468,14 +1468,14 @@ static void process_single_response(ocsp_location_t *location,
 
 	/* unlink cert from ocsp fetch request list */
 	*certinfop = certinfo->next;
-	
+
 	/* update certinfo using the single response information */
 	certinfo->thisUpdate = sres->thisUpdate;
 	certinfo->nextUpdate = sres->nextUpdate;
 	certinfo->status = sres->status;
 	certinfo->revocationTime = sres->revocationTime;
 	certinfo->revocationReason = sres->revocationReason;
-	
+
 	/* add or update certinfo in ocsp cache */
 	lock_ocsp_cache("process_single_response");
 	add_certinfo(location, certinfo, &ocsp_cache, FALSE);

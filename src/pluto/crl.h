@@ -71,7 +71,7 @@ extern bool cache_crls;
 
 /*
  * check periodically for expired crls
- */ 
+ */
 extern long crl_check_interval;
 
 /* used for initialization */

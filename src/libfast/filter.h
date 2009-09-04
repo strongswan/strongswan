@@ -39,7 +39,7 @@ typedef filter_t *(*filter_constructor_t)(context_t* context, void *param);
  * Filter interface, to be implemented by users filters.
  */
 struct filter_t {
-	
+
 	/**
 	 * Called before the controller handles the request.
 	 *
@@ -53,7 +53,7 @@ struct filter_t {
 	 */
 	bool (*run)(filter_t *this, request_t *request,
 				char *p0, char *p1, char *p2, char *p3, char *p4, char *p5);
-	
+
 	/**
 	 * Destroy the filter instance.
 	 */

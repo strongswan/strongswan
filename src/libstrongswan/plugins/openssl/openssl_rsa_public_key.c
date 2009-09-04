@@ -32,12 +32,12 @@ struct private_openssl_rsa_public_key_t {
 	 * Public interface for this signer.
 	 */
 	openssl_rsa_public_key_t public;
-	
+
 	/**
 	 * RSA object from OpenSSL
 	 */
 	RSA *rsa;
-	
+
 	/**
 	 * reference counter
 	 */
@@ -100,7 +100,7 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 			goto error;
 		}
 		valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
-	
+
 error:
 		if (key)
 		{
@@ -125,7 +125,7 @@ static key_type_t get_type(private_openssl_rsa_public_key_t *this)
 /**
  * Implementation of public_key_t.verify.
  */
-static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t scheme, 
+static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t scheme,
 				   chunk_t data, chunk_t signature)
 {
 	switch (scheme)
@@ -177,7 +177,7 @@ bool openssl_rsa_fingerprint(RSA *rsa, key_encoding_type_t type, chunk_t *fp)
 	hasher_t *hasher;
 	chunk_t key;
 	u_char *p;
-	
+
 	if (lib->encoding->get_cache(lib->encoding, type, rsa, fp))
 	{
 		return TRUE;
@@ -227,7 +227,7 @@ static bool get_encoding(private_openssl_rsa_public_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
-	
+
 	switch (type)
 	{
 		case KEY_PUB_SPKI_ASN1_DER:
@@ -280,7 +280,7 @@ static void destroy(private_openssl_rsa_public_key_t *this)
 static private_openssl_rsa_public_key_t *create_empty()
 {
 	private_openssl_rsa_public_key_t *this = malloc_thing(private_openssl_rsa_public_key_t);
-	
+
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
@@ -290,10 +290,10 @@ static private_openssl_rsa_public_key_t *create_empty()
 	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
-	
+
 	this->rsa = NULL;
 	this->ref = 1;
-	
+
 	return this;
 }
 
@@ -304,14 +304,14 @@ static openssl_rsa_public_key_t *load(chunk_t blob)
 {
 	u_char *p = blob.ptr;
 	private_openssl_rsa_public_key_t *this = create_empty();
-	
+
 	this->rsa = d2i_RSAPublicKey(NULL, (const u_char**)&p, blob.len);
 	if (!this->rsa)
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	return &this->public;
 }
 
@@ -333,7 +333,7 @@ struct private_builder_t {
 static openssl_rsa_public_key_t *build(private_builder_t *this)
 {
 	openssl_rsa_public_key_t *key = this->key;
-	
+
 	free(this);
 	return key;
 }
@@ -346,7 +346,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 	if (!this->key)
 	{
 		va_list args;
-		
+
 		switch (part)
 		{
 			case BUILD_BLOB_ASN1_DER:
@@ -373,18 +373,18 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 builder_t *openssl_rsa_public_key_builder(key_type_t type)
 {
 	private_builder_t *this;
-	
+
 	if (type != KEY_RSA)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_builder_t);
-	
+
 	this->key = NULL;
 	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
 	this->public.build = (void*(*)(builder_t *this))build;
-	
+
 	return &this->public;
 }
 

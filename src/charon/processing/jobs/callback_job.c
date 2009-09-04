@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include "callback_job.h"
 
 #include <pthread.h>
@@ -30,7 +30,7 @@ struct private_callback_job_t {
 	 * Public callback_job_t interface.
 	 */
 	callback_job_t public;
-	
+
 	/**
 	 * Callback to call on execution
 	 */
@@ -40,27 +40,27 @@ struct private_callback_job_t {
 	 * parameter to supply to callback
 	 */
 	void *data;
-	
+
 	/**
 	 * cleanup function for data
 	 */
 	callback_job_cleanup_t cleanup;
-	
+
 	/**
 	 * thread ID of the job, if running
 	 */
 	pthread_t thread;
-	
+
 	/**
 	 * mutex to access jobs interna
 	 */
 	mutex_t *mutex;
-	
+
 	/**
 	 * list of asociated child jobs
 	 */
 	linked_list_t *children;
-	
+
 	/**
 	 * parent of this job, or NULL
 	 */
@@ -90,7 +90,7 @@ static void unregister(private_callback_job_t *this)
 	{
 		iterator_t *iterator;
 		private_callback_job_t *child;
-		
+
 		this->parent->mutex->lock(this->parent->mutex);
 		iterator = this->parent->children->create_iterator(this->parent->children, TRUE);
 		while (iterator->iterate(iterator, (void**)&child))
@@ -112,14 +112,14 @@ static void unregister(private_callback_job_t *this)
 static void cancel(private_callback_job_t *this)
 {
 	pthread_t thread;
-	
+
 	this->mutex->lock(this->mutex);
 	thread = this->thread;
-	
+
 	/* terminate its children */
 	this->children->invoke_offset(this->children, offsetof(callback_job_t, cancel));
 	this->mutex->unlock(this->mutex);
-	
+
 	/* terminate thread */
 	if (thread)
 	{
@@ -138,7 +138,7 @@ static void execute(private_callback_job_t *this)
 	this->mutex->lock(this->mutex);
 	this->thread = pthread_self();
 	this->mutex->unlock(this->mutex);
-	
+
 	pthread_cleanup_push((void*)destroy, this);
 	while (TRUE)
 	{
@@ -175,7 +175,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_t *parent)
 {
 	private_callback_job_t *this = malloc_thing(private_callback_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
@@ -189,7 +189,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 	this->thread = 0;
 	this->children = linked_list_create();
 	this->parent = (private_callback_job_t*)parent;
-	
+
 	/* register us at parent */
 	if (parent)
 	{
@@ -197,7 +197,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 		this->parent->children->insert_last(this->parent->children, this);
 		this->parent->mutex->unlock(this->parent->mutex);
 	}
-	
+
 	return &this->public;
 }
 

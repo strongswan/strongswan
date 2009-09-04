@@ -40,29 +40,29 @@ typedef struct unknown_payload_t unknown_payload_t;
  * a check for the critical bit in the header.
  */
 struct unknown_payload_t {
-	
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
-	 * Get the raw data of this payload, without 
+	 * Get the raw data of this payload, without
 	 * the generic payload header.
-	 * 
+	 *
 	 * Returned data are NOT copied and must not be freed.
 	 *
 	 * @return				data as chunk_t
 	 */
 	chunk_t (*get_data) (unknown_payload_t *this);
-	
+
 	/**
 	 * Get the critical flag.
 	 *
 	 * @return				TRUE if payload is critical, FALSE if not
 	 */
 	bool (*is_critical) (unknown_payload_t *this);
-	
+
 	/**
 	 * Destroys an unknown_payload_t object.
 	 */
@@ -71,7 +71,7 @@ struct unknown_payload_t {
 
 /**
  * Creates an empty unknown_payload_t object.
- * 
+ *
  * @return unknown_payload_t object
  */
 unknown_payload_t *unknown_payload_create(void);

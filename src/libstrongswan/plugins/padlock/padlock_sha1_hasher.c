@@ -32,7 +32,7 @@ struct private_padlock_sha1_hasher_t {
 	 * Public interface for this hasher.
 	 */
 	padlock_sha1_hasher_t public;
-	
+
 	/**
 	 * data collected to hash
 	 */
@@ -46,7 +46,7 @@ static void padlock_sha1(int len, u_char *in, u_char *out)
 {
 	/* rep xsha1 */
     asm volatile (
-		".byte 0xf3, 0x0f, 0xa6, 0xc8" 
+		".byte 0xf3, 0x0f, 0xa6, 0xc8"
 		: "+S"(in), "+D"(out)
 		: "c"(len), "a"(0));
 }
@@ -57,7 +57,7 @@ static void padlock_sha1(int len, u_char *in, u_char *out)
 static void sha1(chunk_t data, u_int32_t *digest)
 {
 	u_int32_t hash[128] PADLOCK_ALIGN;
- 
+
 	hash[0] = 0x67452301;
 	hash[1] = 0xefcdab89;
 	hash[2] = 0x98badcfe;
@@ -105,14 +105,14 @@ static void get_hash(private_padlock_sha1_hasher_t *this, chunk_t chunk,
 			sha1(this->data, (u_int32_t*)hash);
 		}
 		else
-		{   /* hash directly if no previous data found */   
+		{   /* hash directly if no previous data found */
 			sha1(chunk, (u_int32_t*)hash);
 		}
 		reset(this);
 	}
 	else
 	{
-		append_data(this, chunk);	
+		append_data(this, chunk);
 	}
 }
 
@@ -129,10 +129,10 @@ static void allocate_hash(private_padlock_sha1_hasher_t *this, chunk_t chunk,
 	}
 	else
 	{
-		get_hash(this, chunk, NULL);	
+		get_hash(this, chunk, NULL);
 	}
 }
-	
+
 /**
  * Implementation of hasher_t.get_hash_size.
  */
@@ -156,20 +156,20 @@ static void destroy(private_padlock_sha1_hasher_t *this)
 padlock_sha1_hasher_t *padlock_sha1_hasher_create(hash_algorithm_t algo)
 {
 	private_padlock_sha1_hasher_t *this;
-	
+
 	if (algo != HASH_SHA1)
 	{
 		return NULL;
 	}
-	
+
 	this = malloc_thing(private_padlock_sha1_hasher_t);
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
-	
+
 	this->data = chunk_empty;
-	
+
 	return &(this->public);
 }

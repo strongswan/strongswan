@@ -23,34 +23,34 @@ typedef struct private_endpoint_notify_t private_endpoint_notify_t;
 
 /**
  * Private data of an notify_payload_t object.
- * 
+ *
  */
 struct private_endpoint_notify_t {
 	/**
 	 * Public endpoint_notify_t interface.
 	 */
 	endpoint_notify_t public;
-	
+
 	/**
 	 * Priority
 	 */
 	u_int32_t priority;
-	
+
 	/**
 	 * Family
 	 */
 	me_endpoint_family_t family;
-		
+
 	/**
 	 * Endpoint type
 	 */
 	me_endpoint_type_t type;
-	
+
 	/**
 	 * Endpoint
 	 */
 	host_t *endpoint;
-	
+
 	/**
 	 * Base (used for server reflexive endpoints)
 	 */
@@ -65,7 +65,7 @@ struct private_endpoint_notify_t {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !     Family    !      Type     !              Port             !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      !                       IP Address (variable)                   
+      !                       IP Address (variable)
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
@@ -122,9 +122,9 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 	chunk_t addr;
 	u_int8_t *cur = data.ptr;
 	u_int8_t *top = data.ptr + data.len;
-	
+
 	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
-	
+
 	if (parse_uint32(&cur, top, &this->priority) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid priority");
@@ -136,20 +136,20 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid family");
 		return FAILED;
 	}
-	
+
 	this->family = (me_endpoint_family_t)family;
-	
+
 	if (parse_uint8(&cur, top, &type) != SUCCESS || type >= MAX_TYPE)
 	{
 		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid type");
 		return FAILED;
 	}
-	
+
 	this->type = (me_endpoint_type_t)type;
-	
+
 	addr_family = AF_INET;
 	addr.len = 4;
-	
+
 	switch(this->family)
 	{
 		case IPv6:
@@ -160,24 +160,24 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 			if (parse_uint16(&cur, top, &port) != SUCCESS)
 			{
 				DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid port");
-				return FAILED;	
+				return FAILED;
 			}
-			
+
 			if (cur + addr.len > top)
 			{
 				DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid IP address");
 				return FAILED;
 			}
-			
+
 			addr.ptr = cur;
-			
+
 			this->endpoint = host_create_from_chunk(addr_family, addr, port);
 			break;
 		case NO_FAMILY:
 		default:
 			this->endpoint = NULL;
 			break;
-	}	
+	}
 	return SUCCESS;
 }
 
@@ -192,14 +192,14 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 	u_int32_t prio;
 	u_int16_t port;
 	u_int8_t family, type;
-	
+
 	prio = htonl(this->priority);
 	prio_chunk = chunk_from_thing(prio);
 	family = this->family;
 	family_chunk = chunk_from_thing(family);
 	type = this->type;
 	type_chunk = chunk_from_thing(type);
-	
+
 	if (this->endpoint)
 	{
 		port = htons(this->endpoint->get_port(this->endpoint));
@@ -208,15 +208,15 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 	else
 	{
 		port = 0;
-		addr_chunk = chunk_empty; 
+		addr_chunk = chunk_empty;
 	}
 	port_chunk = chunk_from_thing(port);
-	
+
 	/* data = prio | family | type | port | addr */
 	data = chunk_cat("ccccc", prio_chunk, family_chunk, type_chunk,
 			port_chunk, addr_chunk);
 	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
-	
+
 	return data;
 }
 
@@ -226,14 +226,14 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 static notify_payload_t *build_notify(private_endpoint_notify_t *this)
 {
 	chunk_t data;
-	notify_payload_t *notify;	
-	
+	notify_payload_t *notify;
+
 	notify = notify_payload_create();
 	notify->set_notify_type(notify, ME_ENDPOINT);
 	data = build_notification_data(this);
 	notify->set_notification_data(notify, data);
 	chunk_free(&data);
-	
+
 	return notify;
 }
 
@@ -291,7 +291,7 @@ static host_t *get_base(private_endpoint_notify_t *this)
 static endpoint_notify_t *_clone(private_endpoint_notify_t *this)
 {
 	private_endpoint_notify_t *clone = (private_endpoint_notify_t*)endpoint_notify_create();
-	
+
 	clone->priority = this->priority;
 	clone->type = this->type;
 	clone->family = this->family;
@@ -299,12 +299,12 @@ static endpoint_notify_t *_clone(private_endpoint_notify_t *this)
 	{
 		clone->endpoint = this->endpoint->clone(this->endpoint);
 	}
-	
+
 	if (this->base)
 	{
 		clone->base = this->base->clone(this->base);
 	}
-	
+
 	return &clone->public;
 }
 
@@ -336,14 +336,14 @@ endpoint_notify_t *endpoint_notify_create()
 	this->public.build_notify = (notify_payload_t *(*) (endpoint_notify_t *)) build_notify;
 	this->public.clone = (endpoint_notify_t *(*) (endpoint_notify_t *)) _clone;
 	this->public.destroy = (void (*) (endpoint_notify_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->priority = 0;
 	this->family = NO_FAMILY;
 	this->type = NO_TYPE;
 	this->endpoint = NULL;
 	this->base = NULL;
-	
+
 	return &this->public;
 }
 
@@ -353,34 +353,34 @@ endpoint_notify_t *endpoint_notify_create()
 endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, host_t *host, host_t *base)
 {
 	private_endpoint_notify_t *this = (private_endpoint_notify_t*)endpoint_notify_create();
-	
+
 	this->type = type;
-	
+
 	switch(type)
 	{
 		case HOST:
-			this->priority = pow(2, 16) * ME_PRIO_HOST; 
+			this->priority = pow(2, 16) * ME_PRIO_HOST;
 			break;
 		case PEER_REFLEXIVE:
-			this->priority = pow(2, 16) * ME_PRIO_PEER; 
+			this->priority = pow(2, 16) * ME_PRIO_PEER;
 			break;
 		case SERVER_REFLEXIVE:
-			this->priority = pow(2, 16) * ME_PRIO_SERVER; 
+			this->priority = pow(2, 16) * ME_PRIO_SERVER;
 			break;
 		case RELAYED:
 		default:
-			this->priority = pow(2, 16) * ME_PRIO_RELAY; 
+			this->priority = pow(2, 16) * ME_PRIO_RELAY;
 			break;
 	}
-	
+
 	/* FIXME: if there is more than one ip address we should vary this priority */
 	this->priority += 65535;
-	
+
 	if (!host)
 	{
 		return &this->public;
 	}
-	
+
 	switch(host->get_family(host))
 	{
 		case AF_INET:
@@ -394,14 +394,14 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
 			 * (family is set to NO_FAMILY) */
 			return &this->public;
 	}
-	
+
 	this->endpoint = host->clone(host);
-	
+
 	if (base)
 	{
 		this->base = base->clone(base);
 	}
-	
+
 	return &this->public;
 }
 
@@ -414,7 +414,7 @@ endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify)
 	{
 		return NULL;
 	}
-	
+
 	private_endpoint_notify_t *this = (private_endpoint_notify_t*)endpoint_notify_create();
 	chunk_t data = notify->get_notification_data(notify);
 	if (parse_notification_data(this, data) != SUCCESS)

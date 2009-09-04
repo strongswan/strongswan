@@ -30,22 +30,22 @@ struct private_medsrv_config_t {
 	 * Public part
 	 */
 	medsrv_config_t public;
-	
+
 	/**
 	 * database connection
 	 */
 	database_t *db;
-	
+
 	/**
 	 * rekey time
 	 */
 	int rekey;
-	
+
 	/**
 	 * dpd delay
 	 */
 	int dpd;
-	
+
 	/**
 	 * default ike config
 	 */
@@ -77,7 +77,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 												identification_t *other)
 {
 	enumerator_t *e;
-	
+
 	if (!me || !other || other->get_type(other) != ID_KEY_ID)
 	{
 		return NULL;
@@ -92,7 +92,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 		peer_cfg_t *peer_cfg;
 		auth_cfg_t *auth;
 		char *name;
-		
+
 		if (e->enumerate(e, &name))
 		{
 			peer_cfg = peer_cfg_create(
@@ -104,7 +104,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 				NULL, NULL, 					/* vip, pool */
 				TRUE, NULL, NULL); 				/* mediation, med by, peer id */
 			e->destroy(e);
-			
+
 			auth = auth_cfg_create();
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			auth->add(auth, AUTH_RULE_IDENTITY, me->clone(me));
@@ -113,7 +113,7 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 			auth->add(auth, AUTH_RULE_IDENTITY, other->clone(other));
 			peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
-			
+
 			return enumerator_create_single(peer_cfg, (void*)peer_cfg->destroy);
 		}
 		e->destroy(e);
@@ -141,13 +141,13 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(medsrv_config_t*))destroy;
-	
+
 	this->db = db;
 	this->rekey = lib->settings->get_time(lib->settings, "medsrv.rekey", 1200);
 	this->dpd = lib->settings->get_time(lib->settings, "medsrv.dpd", 300);
 	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
-	
+
 	return &this->public;
 }
 

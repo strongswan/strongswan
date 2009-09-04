@@ -32,21 +32,21 @@ typedef struct iface_t iface_t;
  * Interface in a guest, connected to a tap device on the host.
  */
 struct iface_t {
-	
+
 	/**
 	 * Get the interface name in the guest (e.g. eth0).
 	 *
 	 * @return			guest interface name
 	 */
 	char* (*get_guestif)(iface_t *this);
-	
+
 	/**
 	 * Get the interface name at the host (e.g. tap0).
 	 *
 	 * @return			host interface (tap device) name
 	 */
 	char* (*get_hostif)(iface_t *this);
-	
+
 	/**
 	 * Add an address to the interface.
 	 *
@@ -54,43 +54,43 @@ struct iface_t {
 	 * @return			TRUE if address added
 	 */
 	bool (*add_address)(iface_t *this, host_t *addr);
-	
+
 	/**
 	 * Create an enumerator over all installed addresses.
 	 *
 	 * @return			enumerator over host_t*
 	 */
 	enumerator_t* (*create_address_enumerator)(iface_t *this);
-	
+
 	/**
 	 * Remove an address from an interface.
 	 *
 	 * @param addr		address to remove
 	 * @return			TRUE if address removed
 	 */
-	bool (*delete_address)(iface_t *this, host_t *addr);	
-	
+	bool (*delete_address)(iface_t *this, host_t *addr);
+
 	/**
 	 * Set the bridge this interface is attached to.
 	 *
 	 * @param bridge	assigned bridge, or NULL for none
 	 */
 	void (*set_bridge)(iface_t *this, bridge_t *bridge);
-	
+
 	/**
 	 * Get the bridge this iface is connected, or NULL.
 	 *
 	 * @return			connected bridge, or NULL
 	 */
 	bridge_t* (*get_bridge)(iface_t *this);
-	
+
 	/**
 	 * Get the guest this iface belongs to.
 	 *
 	 * @return			guest of this iface
 	 */
 	guest_t* (*get_guest)(iface_t *this);
-	
+
 	/**
 	 * Destroy an interface
 	 */

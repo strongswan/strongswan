@@ -43,14 +43,14 @@ typedef struct private_cert_payload_t private_cert_payload_t;
 
 /**
  * Private data of an cert_payload_t object.
- * 
+ *
  */
 struct private_cert_payload_t {
 	/**
 	 * Public cert_payload_t interface.
 	 */
 	cert_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -60,22 +60,22 @@ struct private_cert_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Encoding of the CERT Data.
 	 */
 	u_int8_t encoding;
-	
+
 	/**
 	 * The contained cert data value.
 	 */
 	chunk_t data;
-	
+
 	/**
 	 * TRUE if the "Hash and URL" data is invalid
 	 */
@@ -84,10 +84,10 @@ struct private_cert_payload_t {
 
 /**
  * Encoding rules to parse or generate a CERT payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_cert_payload_t.
- * 
+ *
  */
 encoding_rule_t cert_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -139,7 +139,7 @@ static status_t verify(private_cert_payload_t *this)
 			this->invalid_hash_and_url = TRUE;
 			return SUCCESS;
 		}
-		
+
 		int i = 20; /* skipping the hash */
 		for (; i < this->data.len; ++i)
 		{
@@ -156,7 +156,7 @@ static status_t verify(private_cert_payload_t *this)
 				return SUCCESS;
 			}
 		}
-		
+
 		/* URL is not null terminated, correct that */
 		chunk_t data = chunk_alloc(this->data.len + 1);
 		memcpy(data.ptr, this->data.ptr, this->data.len);
@@ -268,7 +268,7 @@ static char *get_url(private_cert_payload_t *this)
 static void destroy(private_cert_payload_t *this)
 {
 	chunk_free(&this->data);
-	free(this);	
+	free(this);
 }
 
 /*
@@ -285,13 +285,13 @@ cert_payload_t *cert_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t*,payload_type_t))set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t*))get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t*))destroy;
-	
+
 	this->public.destroy = (void (*) (cert_payload_t*))destroy;
 	this->public.get_cert = (certificate_t* (*) (cert_payload_t*))get_cert;
 	this->public.get_cert_encoding = (cert_encoding_t (*) (cert_payload_t*))get_cert_encoding;
 	this->public.get_hash = (chunk_t (*) (cert_payload_t*))get_hash;
 	this->public.get_url = (char* (*) (cert_payload_t*))get_url;
-	
+
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH;
@@ -332,12 +332,12 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 {
 	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
 	chunk_t url_chunk;
-	
+
 	this->encoding = ENC_X509_HASH_AND_URL;
-	
+
 	url_chunk.ptr = url;
 	url_chunk.len = strlen(url) + 1;
-	
+
 	this->data = chunk_cat("cc", hash, url_chunk);
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
 	return &this->public;

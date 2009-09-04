@@ -36,7 +36,7 @@ struct eap_sim_file_provider_t {
 	 * Implements sim_provider_t interface.
 	 */
 	sim_provider_t provider;
-	
+
 	/**
 	 * Destroy a eap_sim_file_provider_t.
 	 */

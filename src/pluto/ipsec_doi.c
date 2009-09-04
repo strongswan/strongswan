@@ -405,7 +405,7 @@ static void send_notification(struct state *sndst, u_int16_t type,
 		init_phase2_iv(encst, &msgid);
 		if (!encrypt_message(&r_hdr_pbs, encst))
 			impossible();
-			
+
 		/* restore preserved st_iv and st_new_iv */
 		memcpy(encst->st_iv, old_iv, old_iv_len);
 		memcpy(encst->st_new_iv, new_iv, new_iv_len);
@@ -755,7 +755,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			else
 			{
 				struct connection *oldc;
-				
+
 				oldc = cur_connection;
 				set_cur_connection(dst->st_connection);
 
@@ -791,7 +791,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			{
 				struct connection *rc = dst->st_connection;
 				struct connection *oldc;
-				
+
 				oldc = cur_connection;
 				set_cur_connection(rc);
 
@@ -871,7 +871,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	pb_stream rbody;
 
 	int vids_to_send = 0;
-	
+
 	/* set up new state */
 	st->st_connection = c;
 	set_cur_state(st);  /* we must reset before exit */
@@ -1253,7 +1253,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_d, &st->st_skeyid_d); 
+		prf->allocate_bytes(prf, seed_skeyid_d, &st->st_skeyid_d);
 
 		/* SKEYID_A */
 		free(st->st_skeyid_a.ptr);
@@ -1261,7 +1261,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_a, &st->st_skeyid_a); 
+		prf->allocate_bytes(prf, seed_skeyid_a, &st->st_skeyid_a);
 
 		/* SKEYID_E */
 		free(st->st_skeyid_e.ptr);
@@ -1269,7 +1269,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_e, &st->st_skeyid_e); 
+		prf->allocate_bytes(prf, seed_skeyid_e, &st->st_skeyid_e);
 
 		prf->destroy(prf);
 	}
@@ -1288,7 +1288,7 @@ static bool generate_skeyids_iv(struct state *st)
 			DBG_dump_chunk("DH_i:", st->st_gi);
 			DBG_dump_chunk("DH_r:", st->st_gr);
 		);
-		
+
 		hasher->get_hash(hasher, st->st_gi, NULL);
 		hasher->get_hash(hasher, st->st_gr, st->st_new_iv);
 		hasher->destroy(hasher);
@@ -1301,7 +1301,7 @@ static bool generate_skeyids_iv(struct state *st)
 	 */
 	{
 		size_t keysize = st->st_oakley.enckeylen/BITS_PER_BYTE;
- 
+
 		/* free any existing key */
 		free(st->st_enc_key.ptr);
 
@@ -1318,7 +1318,7 @@ static bool generate_skeyids_iv(struct state *st)
 			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 			prf->set_key(prf, st->st_skeyid_e);
 			prf_block_size = prf->get_block_size(prf);
-			
+
 			for (i = 0;;)
 			{
 				prf->get_bytes(prf, seed, &keytemp[i]);
@@ -1335,7 +1335,7 @@ static bool generate_skeyids_iv(struct state *st)
 		else
 		{
 			st->st_enc_key = chunk_create(st->st_skeyid_e.ptr, keysize);
-		}			
+		}
 		st->st_enc_key = chunk_clone(st->st_enc_key);
 	}
 
@@ -1486,7 +1486,7 @@ static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
  */
 struct tac_state {
 	struct state *st;
-	chunk_t hash;	
+	chunk_t hash;
 	chunk_t sig;
 	int tried_cnt;      /* number of keys tried */
 };
@@ -1723,7 +1723,7 @@ encrypt_message(pb_stream *pbs, struct state *st)
 	crypter->set_key(crypter, st->st_enc_key);
 	crypter->encrypt(crypter, data, iv, NULL);
 	crypter->destroy(crypter);
- 
+
 	new_iv = data.ptr + data.len - crypter_block_size;
 	memcpy(st->st_new_iv, new_iv, crypter_block_size);
 	update_iv(st);
@@ -1755,7 +1755,7 @@ static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
 	if (hash2)
 	{
 		prf->get_bytes(prf, st->st_ni, NULL); /* include Ni_b in the hash */
-	}     
+	}
 	prf->get_bytes(prf, msg_chunk, dest);
 	prf_block_size = prf->get_block_size(prf);
 	prf->destroy(prf);
@@ -1781,7 +1781,7 @@ static size_t quick_mode_hash3(u_char *dest, struct state *st)
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
 	size_t prf_block_size;
-	
+
 	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid_a);
@@ -1814,7 +1814,7 @@ void init_phase2_iv(struct state *st, const msgid_t *msgid)
 
 	st->st_new_iv_len = hasher->get_hash_size(hasher);
 	passert(st->st_new_iv_len <= sizeof(st->st_new_iv));
-		
+
 	hasher->get_hash(hasher, iv_chunk, NULL);
 	hasher->get_hash(hasher, msgid_chunk, st->st_new_iv);
 	hasher->destroy(hasher);
@@ -1878,7 +1878,7 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	bool has_client = c->spd.this.has_client || c->spd.that.has_client ||
 					  c->spd.this.protocol || c->spd.that.protocol ||
 					  c->spd.this.port || c->spd.that.port;
-	
+
 	bool send_natoa = FALSE;
 	u_int8_t np = ISAKMP_NEXT_NONE;
 
@@ -1957,7 +1957,7 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 
 	/* SA out */
 
-	/* 
+	/*
 	 * See if pfs_group has been specified for this conn,
 	 * if not, fallback to old use-same-as-P1 behaviour
 	 */
@@ -2142,7 +2142,7 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
 	{
 		struct isakmp_cr *const cr = &p->payload.cr;
 		chunk_t ca_name;
-		
+
 		ca_name.len = pbs_left(&p->pbs);
 		ca_name.ptr = (ca_name.len > 0)? p->pbs.cur : NULL;
 
@@ -2155,7 +2155,7 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
 			if (ca_name.len > 0)
 			{
 				generalName_t *gn;
-				
+
 				if (!is_asn1(ca_name))
 					continue;
 
@@ -2646,7 +2646,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 			if (needed_len && pi->attrs.key_len)
 			{
 				needed_len = pi->attrs.key_len / BITS_PER_BYTE;
-			}	
+			}
 
 			switch (pi->attrs.transid)
 			{
@@ -2745,7 +2745,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 			char *keymat_i_peer = pi->peer_keymat + i;
 			chunk_t keymat_our  = { keymat_i_our,  prf_block_size };
 			chunk_t keymat_peer = { keymat_i_peer, prf_block_size };
-			
+
 			if (st->st_shared.ptr != NULL)
 			{
 				/* PFS: include the g^xy */
@@ -3611,7 +3611,7 @@ main_id_and_auth(struct msg_digest *md
 #endif /* USE_KEYRR */
 				kc == NULL? NULL : kc->ac.gateways_from_dns
 			);
-	
+
 		if (r == STF_SUSPEND)
 		{
 			/* initiate/resume asynchronous DNS lookup for key */
@@ -3715,7 +3715,7 @@ main_id_and_auth(struct msg_digest *md
  * to find authentication, or we run out of things
  * to try.
  */
-static void key_continue(struct adns_continuation *cr, err_t ugh, 
+static void key_continue(struct adns_continuation *cr, err_t ugh,
 						 key_tail_fn *tail)
 {
 	struct key_continuation *kc = (void *)cr;
@@ -4145,7 +4145,7 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 		if (!decode_net_id(&id_pd->next->payload.ipsec_id, &id_pd->next->pbs
 		, &b.my.net, "our client"))
 			return STF_FAIL + INVALID_ID_INFORMATION;
-		
+
 		b.my.proto = id_pd->next->payload.ipsec_id.isaiid_protoid;
 		b.my.port = id_pd->next->payload.ipsec_id.isaiid_port;
 		b.my.net.addr.u.v4.sin_port = htons(b.my.port);
@@ -4492,7 +4492,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 		{
 			public_key_t *pub_key;
 			struct gw_info *gwp;
-		
+
 			/* check that the public key that authenticated
 			 * the ISAKMP SA (p1st) will do for this gateway.
 			 */
@@ -4888,14 +4888,14 @@ static void dpd_init(struct state *st)
 {
 	struct state *p1st = find_state(st->st_icookie, st->st_rcookie
 								, &st->st_connection->spd.that.host_addr, 0);
-	
+
 	if (p1st == NULL)
 		loglog(RC_LOG_SERIOUS, "could not find phase 1 state for DPD");
 	else if (p1st->st_dpd)
 	{
 		plog("Dead Peer Detection (RFC 3706) enabled");
 		/* randomize the first DPD event */
-		
+
 		event_schedule(EVENT_DPD
 			, (0.5 + rand()/(RAND_MAX + 1.E0)) * st->st_connection->dpd_delay
 			, st);
@@ -4975,10 +4975,10 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	}
 
 	/* check the peer's group attributes */
-	
+
 	{
 		const ietfAttrList_t *peer_list = NULL;
-		
+
 		get_peer_ca_and_groups(st->st_connection, &peer_list);
 
 		if (!group_membership(peer_list, st->st_connection->name
@@ -5041,7 +5041,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 							   , st->st_connection->newest_ipsec_sa
 							   , st->st_connection->spd.eroute_owner));
 	}
-	
+
 	st->st_connection->newest_ipsec_sa = st->st_serialno;
 
 	/* note (presumed) success */
@@ -5114,9 +5114,9 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 	u_char
 		*r_hashval,     /* where in reply to jam hash value */
 		*r_hash_start;  /* start of what is to be hashed */
-		
+
 	msgid = generate_msgid(st);
-	
+
 	init_pbs(&reply, reply_buffer, sizeof(reply_buffer), "ISAKMP notify");
 
 	/* HDR* */
@@ -5144,22 +5144,22 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 		isan.isan_np = ISAKMP_NEXT_NONE;
 		isan.isan_doi = ISAKMP_DOI_IPSEC;
 		isan.isan_protoid = PROTO_ISAKMP;
-		isan.isan_spisize = COOKIE_SIZE * 2;  
+		isan.isan_spisize = COOKIE_SIZE * 2;
 		isan.isan_type = type;
 		if (!out_struct(&isan, &isakmp_notification_desc, &rbody, &notify_pbs))
 			return STF_INTERNAL_ERROR;
 		if (!out_raw(st->st_icookie, COOKIE_SIZE, &notify_pbs, "notify icookie"))
-			return STF_INTERNAL_ERROR;  
+			return STF_INTERNAL_ERROR;
 		if (!out_raw(st->st_rcookie, COOKIE_SIZE, &notify_pbs, "notify rcookie"))
-			return STF_INTERNAL_ERROR;  
+			return STF_INTERNAL_ERROR;
 		if (data != NULL && len > 0)
 			if (!out_raw(data, len, &notify_pbs, "notify data"))
-				return STF_INTERNAL_ERROR;    
+				return STF_INTERNAL_ERROR;
 		close_output_pbs(&notify_pbs);
 	}
-			
+
 	{
-		/* finish computing HASH */     
+		/* finish computing HASH */
 		chunk_t msgid_chunk = chunk_from_thing(msgid);
 		chunk_t msg_chunk = { r_hash_start, rbody.cur-r_hash_start };
 		pseudo_random_function_t prf_alg;
@@ -5195,7 +5195,7 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 		init_phase2_iv(st, &msgid);
 		if (!encrypt_message(&rbody, st))
 			return STF_INTERNAL_ERROR;
-	
+
 		/* restore preserved st_iv and st_new_iv */
 		memcpy(st->st_iv, old_iv, old_iv_len);
 		memcpy(st->st_new_iv, new_iv, new_iv_len);

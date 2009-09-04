@@ -29,12 +29,12 @@ typedef struct updown_listener_t updown_listener_t;
  * Listener which invokes the scripts on CHILD_SA up/down.
  */
 struct updown_listener_t {
-	
+
 	/**
 	 * Implements listener_t.
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * Destroy a updown_listener_t.
 	 */

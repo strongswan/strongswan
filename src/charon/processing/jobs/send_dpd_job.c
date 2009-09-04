@@ -31,7 +31,7 @@ struct private_send_dpd_job_t {
 	 * public send_dpd_job_t interface
 	 */
 	send_dpd_job_t public;
-	
+
 	/**
 	 * ID of the IKE_SA which the message belongs to.
 	 */
@@ -48,12 +48,12 @@ static void destroy(private_send_dpd_job_t *this)
 }
 
 /**
- * Implementation of job_t.execute. 
- */ 
+ * Implementation of job_t.execute.
+ */
 static void execute(private_send_dpd_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	
+
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
 	if (ike_sa)
@@ -76,11 +76,11 @@ static void execute(private_send_dpd_job_t *this)
 send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id)
 {
 	private_send_dpd_job_t *this = malloc_thing(private_send_dpd_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
+
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 

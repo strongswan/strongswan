@@ -31,27 +31,27 @@ struct private_openssl_ec_diffie_hellman_t {
 	 * Public openssl_ec_diffie_hellman_t interface.
 	 */
 	openssl_ec_diffie_hellman_t public;
-	
+
 	/**
 	 * Diffie Hellman group number.
 	 */
 	u_int16_t group;
-	
+
 	/**
 	 * EC private (public) key
 	 */
 	EC_KEY *key;
-	
+
 	/**
 	 * EC group
 	 */
 	const EC_GROUP *ec_group;
-	
+
 	/**
 	 * Other public key
 	 */
 	EC_POINT *pub_key;
-	
+
 	/**
 	 * Shared secret
 	 */
@@ -72,13 +72,13 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EC_POINT *point)
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
 	bool ret = FALSE;
-	
+
 	ctx = BN_CTX_new();
 	if (!ctx)
 	{
 		return FALSE;
 	}
-	
+
 	BN_CTX_start(ctx);
 	x = BN_CTX_get(ctx);
 	y = BN_CTX_get(ctx);
@@ -86,17 +86,17 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EC_POINT *point)
 	{
 		goto error;
 	}
-	
+
 	if (!openssl_bn_split(chunk, x, y))
 	{
 		goto error;
 	}
-	
+
 	if (!EC_POINT_set_affine_coordinates_GFp(group, point, x, y, ctx))
 	{
 		goto error;
 	}
-	
+
 	ret = TRUE;
 error:
 	BN_CTX_end(ctx);
@@ -114,13 +114,13 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
 	bool ret = FALSE;
-	
+
 	ctx = BN_CTX_new();
 	if (!ctx)
 	{
 		return FALSE;
 	}
-	
+
 	BN_CTX_start(ctx);
 	x = BN_CTX_get(ctx);
 	y = BN_CTX_get(ctx);
@@ -128,12 +128,12 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
 	{
 		goto error;
 	}
-	
+
 	if (!EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx))
 	{
 		goto error;
 	}
-	
+
 	if (x_coordinate_only)
 	{
 		y = NULL;
@@ -142,7 +142,7 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
 	{
 		goto error;
 	}
-	
+
 	ret = TRUE;
 error:
 	BN_CTX_end(ctx);
@@ -152,7 +152,7 @@ error:
 
 /**
  * Compute the shared secret.
- * 
+ *
  * We cannot use the function ECDH_compute_key() because that returns only the
  * x coordinate of the shared secret point (which is defined, for instance, in
  * 'NIST SP 800-56A').
@@ -166,13 +166,13 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_
 	const BIGNUM *priv_key;
 	EC_POINT *secret = NULL;
 	bool x_coordinate_only, ret = FALSE;
-	
+
 	priv_key = EC_KEY_get0_private_key(this->key);
 	if (!priv_key)
 	{
 		goto error;
 	}
-	
+
 	secret = EC_POINT_new(this->ec_group);
 	if (!secret)
 	{
@@ -183,7 +183,7 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_
 	{
 		goto error;
 	}
-	
+
 	/*
 	 * The default setting ecp_x_coordinate_only = TRUE
 	 * applies the following errata for RFC 4753:
@@ -195,7 +195,7 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_
 	{
 		goto error;
 	}
-	
+
 	ret = TRUE;
 error:
 	if (secret)
@@ -215,14 +215,14 @@ static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, ch
 		DBG1("ECDH public value is malformed");
 		return;
 	}
-	
+
 	chunk_free(&this->shared_secret);
-	
+
 	if (!compute_shared_key(this, &this->shared_secret)) {
 		DBG1("ECDH shared secret computation failed");
 		return;
 	}
-	
+
 	this->computed = TRUE;
 }
 
@@ -272,13 +272,13 @@ static void destroy(private_openssl_ec_diffie_hellman_t *this)
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_openssl_ec_diffie_hellman_t *this = malloc_thing(private_openssl_ec_diffie_hellman_t);
-	
+
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-	
+
 	switch (group)
 	{
 		case ECP_192_BIT:
@@ -300,34 +300,34 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 			this->key = NULL;
 			break;
 	}
-	
+
 	if (!this->key)
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	/* caching the EC group */
 	this->ec_group = EC_KEY_get0_group(this->key);
-	
+
 	this->pub_key = EC_POINT_new(this->ec_group);
 	if (!this->pub_key)
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	/* generate an EC private (public) key */
 	if (!EC_KEY_generate_key(this->key))
 	{
 		free(this);
 		return NULL;
 	}
-	
+
 	this->group = group;
 	this->computed = FALSE;
-	
+
 	this->shared_secret = chunk_empty;
-	
+
 	return &this->public;
 }

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup diffie_hellman diffie_hellman
  * @{ @ingroup crypto
@@ -32,7 +32,7 @@ typedef struct diffie_hellman_t diffie_hellman_t;
  *
  * The modulus (or group) to use for a Diffie-Hellman calculation.
  * See IKEv2 RFC 3.3.2 and RFC 3526.
- * 
+ *
  * ECP groups are defined in RFC 4753 and RFC 5114.
  */
 enum diffie_hellman_group_t {
@@ -63,39 +63,39 @@ extern enum_name_t *diffie_hellman_group_names;
  * Implementation of the Diffie-Hellman algorithm, as in RFC2631.
  */
 struct diffie_hellman_t {
-		
+
 	/**
 	 * Returns the shared secret of this diffie hellman exchange.
-	 * 	
-	 * Space for returned secret is allocated and must be 
+	 *
+	 * Space for returned secret is allocated and must be
 	 * freed by the caller.
-	 * 
+	 *
 	 * @param secret 	shared secret will be written into this chunk
 	 * @return 			SUCCESS, FAILED if not both DH values are set
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
-	
+
 	/**
 	 * Sets the public value of partner.
-	 * 	
+	 *
 	 * Chunk gets cloned and can be destroyed afterwards.
-	 * 
+	 *
 	 * @param value 	public value of partner
 	 */
 	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
-	
+
 	/**
 	 * Gets the own public value to transmit.
-	 * 	
+	 *
 	 * Space for returned chunk is allocated and must be freed by the caller.
-	 * 
+	 *
 	 * @param value		public value of caller is stored at this location
 	 */
 	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *value);
-	
+
 	/**
 	 * Get the DH group used.
-	 * 
+	 *
 	 * @return			DH group set in construction
 	 */
 	diffie_hellman_group_t (*get_dh_group) (diffie_hellman_t *this);

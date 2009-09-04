@@ -25,7 +25,7 @@ ENUM(action_names, ACTION_NONE, ACTION_RESTART,
 	"restart",
 );
 
-ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE, 
+ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE,
 	"IPCOMP_NONE");
 ENUM_NEXT(ipcomp_transform_names, IPCOMP_OUI, IPCOMP_LZJH, IPCOMP_NONE,
 	"IPCOMP_OUI",
@@ -45,62 +45,62 @@ struct private_child_cfg_t {
 	 * Public part
 	 */
 	child_cfg_t public;
-	
+
 	/**
 	 * Number of references hold by others to this child_cfg
 	 */
 	refcount_t refcount;
-	
+
 	/**
 	 * Name of the child_cfg, used to query it
 	 */
 	char *name;
-	
+
 	/**
 	 * list for all proposals
 	 */
 	linked_list_t *proposals;
-	
+
 	/**
 	 * list for traffic selectors for my site
 	 */
 	linked_list_t *my_ts;
-	
+
 	/**
 	 * list for traffic selectors for others site
 	 */
 	linked_list_t *other_ts;
-	
+
 	/**
 	 * updown script
 	 */
 	char *updown;
-	
+
 	/**
 	 * allow host access
 	 */
 	bool hostaccess;
-	
+
 	/**
 	 * Mode to propose for a initiated CHILD: tunnel/transport
 	 */
 	ipsec_mode_t mode;
-	
+
 	/**
 	 * action to take on DPD
 	 */
 	action_t dpd_action;
-	
+
 	/**
 	 * action to take on CHILD_SA close
 	 */
 	action_t close_action;
-	
+
 	/**
 	 * CHILD_SA lifetime config
 	 */
 	lifetime_cfg_t lifetime;
-	
+
 	/**
 	 * enable IPComp
 	 */
@@ -141,7 +141,7 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 	enumerator_t *enumerator;
 	proposal_t *current;
 	linked_list_t *proposals = linked_list_create();
-	
+
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -153,7 +153,7 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 		proposals->insert_last(proposals, current);
 	}
 	enumerator->destroy(enumerator);
-	
+
 	return proposals;
 }
 
@@ -165,10 +165,10 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 {
 	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
-	
+
 	stored_enum = this->proposals->create_enumerator(this->proposals);
 	supplied_enum = proposals->create_enumerator(proposals);
-	
+
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
 	while (stored_enum->enumerate(stored_enum, &stored))
 	{
@@ -194,7 +194,7 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 			break;
 		}
 		supplied_enum->destroy(supplied_enum);
-		supplied_enum = proposals->create_enumerator(proposals);	
+		supplied_enum = proposals->create_enumerator(proposals);
 	}
 	stored_enum->destroy(stored_enum);
 	supplied_enum->destroy(supplied_enum);
@@ -232,7 +232,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
 	linked_list_t *result = linked_list_create();
-	
+
 	if (local)
 	{
 		e1 = this->my_ts->create_enumerator(this->my_ts);
@@ -241,11 +241,11 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	{
 		e1 = this->other_ts->create_enumerator(this->other_ts);
 	}
-	
+
 	/* no list supplied, just fetch the stored traffic selectors */
 	if (supplied == NULL)
 	{
-		DBG2(DBG_CFG, "proposing traffic selectors for %s:", 
+		DBG2(DBG_CFG, "proposing traffic selectors for %s:",
 			 local ? "us" : "other");
 		while (e1->enumerate(e1, &ts1))
 		{
@@ -262,7 +262,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	}
 	else
 	{
-		DBG2(DBG_CFG, "selecting traffic selectors for %s:", 
+		DBG2(DBG_CFG, "selecting traffic selectors for %s:",
 			 local ? "us" : "other");
 		e2 = supplied->create_enumerator(supplied);
 		/* iterate over all stored selectors */
@@ -274,7 +274,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 			{
 				ts1->set_address(ts1, host);
 			}
-			
+
 			/* iterate over all supplied traffic selectors */
 			while (e2->enumerate(e2, &ts2))
 			{
@@ -298,7 +298,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 		e1->destroy(e1);
 		e2->destroy(e2);
 	}
-	
+
 	/* remove any redundant traffic selectors in the list */
 	e1 = result->create_enumerator(result);
 	e2 = result->create_enumerator(result);
@@ -329,7 +329,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	}
 	e1->destroy(e1);
 	e2->destroy(e2);
-	
+
 	return result;
 }
 
@@ -410,7 +410,7 @@ static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 	u_int16_t dh_group = MODP_NONE;
-	
+
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
@@ -514,16 +514,16 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->public.install_policy = (bool (*) (child_cfg_t *))install_policy;
 	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
-	
+
 	this->name = strdup(name);
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
 	this->dpd_action = dpd_action;
 	this->close_action = close_action;
-	this->use_ipcomp = ipcomp; 
+	this->use_ipcomp = ipcomp;
 	this->proxy_mode = FALSE;
-	this->install_policy = TRUE; 
+	this->install_policy = TRUE;
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();

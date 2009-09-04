@@ -30,7 +30,7 @@ typedef struct md5_hasher_t md5_hasher_t;
  * Implementation of hasher_t interface using the MD5 algorithm.
  */
 struct md5_hasher_t {
-	
+
 	/**
 	 * Generic hasher_t interface for this hasher.
 	 */
@@ -39,7 +39,7 @@ struct md5_hasher_t {
 
 /**
  * Creates a new md5_hasher_t.
- * 
+ *
  * @param algo		hash algorithm, must be HASH_MD5
  * @return			md5_hasher_t object, NULL if not supported
  */

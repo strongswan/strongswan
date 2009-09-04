@@ -16,7 +16,7 @@
 /**
  * @defgroup random_p random
  * @ingroup plugins
- * 
+ *
  * @defgroup random_plugin random_plugin
  * @{ @ingroup random_p
  */

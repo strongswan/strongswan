@@ -29,7 +29,7 @@ typedef struct openssl_crypter_t openssl_crypter_t;
  * Implementation of crypters using OpenSSL.
  */
 struct openssl_crypter_t {
-	
+
 	/**
 	 * The crypter_t interface.
 	 */
@@ -38,7 +38,7 @@ struct openssl_crypter_t {
 
 /**
  * Constructor to create openssl_crypter_t.
- * 
+ *
  * @param algo			algorithm to implement
  * @param key_size		key size in bytes
  * @return				openssl_crypter_t, NULL if not supported

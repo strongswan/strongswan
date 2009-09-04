@@ -36,42 +36,42 @@ typedef struct child_sa_t child_sa_t;
  * States of a CHILD_SA
  */
 enum child_sa_state_t {
-	
+
 	/**
 	 * Just created, uninstalled CHILD_SA
 	 */
 	CHILD_CREATED,
-	
+
 	/**
 	 * Installed SPD, but no SAD entries
 	 */
 	CHILD_ROUTED,
-	
+
 	/**
 	 * Installing an in-use CHILD_SA
 	 */
 	CHILD_INSTALLING,
-	
+
 	/**
 	 * Installed an in-use CHILD_SA
 	 */
 	CHILD_INSTALLED,
-	
+
 	/**
 	 * While updating hosts, in update_hosts()
 	 */
 	CHILD_UPDATING,
-	
+
 	/**
 	 * CHILD_SA which is rekeying
 	 */
 	CHILD_REKEYING,
-	
+
 	/**
 	 * CHILD_SA in progress of delete
 	 */
 	CHILD_DELETING,
-	
+
 	/**
 	 * CHILD_SA object gets destroyed
 	 */
@@ -102,14 +102,14 @@ extern enum_name_t *child_sa_state_names;
  * Once SAs are set up, policies can be added using add_policies.
  */
 struct child_sa_t {
-	
+
 	/**
 	 * Get the name of the config this CHILD_SA uses.
 	 *
 	 * @return			name
 	 */
 	char* (*get_name) (child_sa_t *this);
-	
+
 	/**
 	 * Get the reqid of the CHILD SA.
 	 *
@@ -119,28 +119,28 @@ struct child_sa_t {
 	 * @return 			reqid of the CHILD SA
 	 */
 	u_int32_t (*get_reqid)(child_sa_t *this);
-	
+
 	/**
 	 * Get the config used to set up this child sa.
 	 *
 	 * @return			child_cfg
 	 */
 	child_cfg_t* (*get_config) (child_sa_t *this);
-	
+
 	/**
 	 * Get the state of the CHILD_SA.
 	 *
 	 * @return 			CHILD_SA state
 	 */
 	child_sa_state_t (*get_state) (child_sa_t *this);
-	
+
 	/**
 	 * Set the state of the CHILD_SA.
 	 *
 	 * @param state		state to set on CHILD_SA
 	 */
 	void (*set_state) (child_sa_t *this, child_sa_state_t state);
-	
+
 	/**
 	 * Get the SPI of this CHILD_SA.
 	 *
@@ -152,7 +152,7 @@ struct child_sa_t {
 	 * @return 			SPI of the CHILD SA
 	 */
 	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
-	
+
 	/**
 	 * Get the CPI of this CHILD_SA.
 	 *
@@ -171,63 +171,63 @@ struct child_sa_t {
 	 * @return 			AH | ESP
 	 */
 	protocol_id_t (*get_protocol) (child_sa_t *this);
-	
+
 	/**
 	 * Set the negotiated protocol to use for this CHILD_SA.
 	 *
 	 * @param protocol	AH | ESP
 	 */
 	void (*set_protocol)(child_sa_t *this, protocol_id_t protocol);
-	
+
 	/**
 	 * Get the IPsec mode of this CHILD_SA.
 	 *
 	 * @return			TUNNEL | TRANSPORT | BEET
 	 */
 	ipsec_mode_t (*get_mode)(child_sa_t *this);
-	
+
 	/**
 	 * Set the negotiated IPsec mode to use.
 	 *
 	 * @param mode		TUNNEL | TRANPORT | BEET
 	 */
 	void (*set_mode)(child_sa_t *this, ipsec_mode_t mode);
-	
+
 	/**
 	 * Get the used IPComp algorithm.
 	 *
 	 * @return			IPComp compression algorithm.
 	 */
 	ipcomp_transform_t (*get_ipcomp)(child_sa_t *this);
-	
+
 	/**
 	 * Set the IPComp algorithm to use.
 	 *
 	 * @param ipcomp	the IPComp transform to use
 	 */
 	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
-	
+
 	/**
 	 * Get the selected proposal.
 	 *
 	 * @return			selected proposal
 	 */
 	proposal_t* (*get_proposal)(child_sa_t *this);
-	
+
 	/**
 	 * Set the negotiated proposal.
 	 *
 	 * @param proposal	selected proposal
 	 */
 	void (*set_proposal)(child_sa_t *this, proposal_t *proposal);
-	
+
 	/**
 	 * Check if this CHILD_SA uses UDP encapsulation.
 	 *
 	 * @return			TRUE if SA encapsulates ESP packets
 	 */
 	bool (*has_encap)(child_sa_t *this);
-	
+
 	/**
 	 * Get the absolute time when the CHILD_SA expires or gets rekeyed.
 	 *
@@ -235,7 +235,7 @@ struct child_sa_t {
 	 * @return			absolute time
 	 */
 	time_t (*get_lifetime)(child_sa_t *this, bool hard);
-	
+
 	/**
 	 * Get last use time and the number of bytes processed.
 	 *
@@ -245,7 +245,7 @@ struct child_sa_t {
 	 */
 	void (*get_usestats)(child_sa_t *this, bool inbound, time_t *time,
 						 u_int64_t *bytes);
-	
+
 	/**
 	 * Get the traffic selectors list added for one side.
 	 *
@@ -253,14 +253,14 @@ struct child_sa_t {
 	 * @return			list of traffic selectors
 	 */
 	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
-	
+
 	/**
 	 * Create an enumerator over installed policies.
 	 *
 	 * @return			enumerator over pairs of traffic selectors.
 	 */
 	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
-	
+
 	/**
 	 * Allocate an SPI to include in a proposal.
 	 *
@@ -269,14 +269,14 @@ struct child_sa_t {
 	 * @return			SPI, 0 on failure
 	 */
 	u_int32_t (*alloc_spi)(child_sa_t *this, protocol_id_t protocol);
-	
+
 	/**
 	 * Allocate a CPI to use for IPComp.
 	 *
 	 * @return			CPI, 0 on failure
 	 */
 	u_int16_t (*alloc_cpi)(child_sa_t *this);
-	
+
 	/**
 	 * Install an IPsec SA for one direction.
 	 *

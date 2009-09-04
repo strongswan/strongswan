@@ -23,14 +23,14 @@ typedef struct private_delete_payload_t private_delete_payload_t;
 
 /**
  * Private data of an delete_payload_t object.
- * 
+ *
  */
 struct private_delete_payload_t {
 	/**
 	 * Public delete_payload_t interface.
 	 */
 	delete_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -40,12 +40,12 @@ struct private_delete_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-	
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-	
+
 	/**
 	 * Protocol ID.
 	 */
@@ -55,29 +55,29 @@ struct private_delete_payload_t {
 	 * SPI Size.
 	 */
 	u_int8_t spi_size;
-	
+
 	/**
 	 * Number of SPI's.
 	 */
 	u_int16_t spi_count;
-	
+
 	/**
 	 * The contained SPI's.
 	 */
 	chunk_t spis;
-	
+
 	/**
-	 * List containing u_int32_t spis 
+	 * List containing u_int32_t spis
 	 */
 	linked_list_t *spi_list;
 };
 
 /**
  * Encoding rules to parse or generate a DELETE payload
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_delete_payload_t.
- * 
+ *
  */
 encoding_rule_t delete_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -223,7 +223,7 @@ static void add_spi(private_delete_payload_t *this, u_int32_t spi)
 static iterator_t* create_spi_iterator(private_delete_payload_t *this)
 {
 	int i;
-	
+
 	if (this->spi_list == NULL)
 	{
 		this->spi_list = linked_list_create();
@@ -253,7 +253,7 @@ static void destroy(private_delete_payload_t *this)
 	{
 		this->spi_list->destroy(this->spi_list);
 	}
-	free(this);	
+	free(this);
 }
 
 /*
@@ -271,13 +271,13 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.destroy = (void (*) (delete_payload_t *)) destroy;
 	this->public.get_protocol_id = (protocol_id_t (*) (delete_payload_t *)) get_protocol_id;
 	this->public.add_spi = (void (*) (delete_payload_t *,u_int32_t))add_spi;
 	this->public.create_spi_iterator = (iterator_t* (*) (delete_payload_t *)) create_spi_iterator;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;

@@ -79,7 +79,7 @@ typedef struct scheduler_t scheduler_t;
  * children has a smaller key or it is again a leaf node.
  */
 struct scheduler_t {
-	
+
 	/**
 	 * Adds a event to the queue, using a relative time offset in s.
 	 *
@@ -87,7 +87,7 @@ struct scheduler_t {
 	 * @param time 			relative time to schedule job, in s
 	 */
 	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t s);
-	
+
 	/**
 	 * Adds a event to the queue, using a relative time offset in ms.
 	 *
@@ -95,7 +95,7 @@ struct scheduler_t {
 	 * @param time 			relative time to schedule job, in ms
 	 */
 	void (*schedule_job_ms) (scheduler_t *this, job_t *job, u_int32_t ms);
-	
+
 	/**
 	 * Adds a event to the queue, using an absolut time.
 	 *
@@ -106,14 +106,14 @@ struct scheduler_t {
 	 * @param time 			absolut time to schedule job
 	 */
 	void (*schedule_job_tv) (scheduler_t *this, job_t *job, timeval_t tv);
-	
+
 	/**
 	 * Returns number of jobs scheduled.
 	 *
 	 * @return 				number of scheduled jobs
 	 */
 	u_int (*get_job_load) (scheduler_t *this);
-	
+
 	/**
 	 * Destroys a scheduler object.
 	 */

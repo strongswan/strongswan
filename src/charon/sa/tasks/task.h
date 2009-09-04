@@ -123,7 +123,7 @@ struct task_t {
 	 * Get the type of the task implementation.
 	 */
 	task_type_t (*get_type) (task_t *this);
-	
+
 	/**
 	 * Migrate a task to a new IKE_SA.
 	 *
@@ -138,7 +138,7 @@ struct task_t {
 	 * @param ike_sa		new IKE_SA this task works for
 	 */
 	void (*migrate) (task_t *this, ike_sa_t *ike_sa);
-	
+
 	/**
 	 * Destroys a task_t object.
 	 */

@@ -27,19 +27,19 @@ typedef struct private_configuration_attribute_t private_configuration_attribute
 
 /**
  * Private data of an configuration_attribute_t object.
- * 
+ *
  */
 struct private_configuration_attribute_t {
 	/**
 	 * Public configuration_attribute_t interface.
 	 */
 	configuration_attribute_t public;
-	
+
 	/**
 	 * Type of the attribute.
 	 */
 	u_int16_t attribute_type;
-	
+
 	/**
 	 * Length of the attribute.
 	 */
@@ -74,16 +74,16 @@ ENUM_END(configuration_attribute_type_names, INTERNAL_IP6_SERVER);
 
 /**
  * Encoding rules to parse or generate a configuration attribute.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_configuration_attribute_t.
- * 
+ *
  */
 encoding_rule_t configuration_attribute_encodings[] = {
 
 	{ RESERVED_BIT,	0																					},
 	/* type of the attribute as 15 bit unsigned integer */
-	{ ATTRIBUTE_TYPE,			offsetof(private_configuration_attribute_t, attribute_type)				},	
+	{ ATTRIBUTE_TYPE,			offsetof(private_configuration_attribute_t, attribute_type)				},
 	/* Length of attribute value */
 	{ CONFIGURATION_ATTRIBUTE_LENGTH,		offsetof(private_configuration_attribute_t, attribute_length)},
 	/* Value of attribute if attribute format flag is zero */
@@ -159,11 +159,11 @@ static status_t verify(private_configuration_attribute_t *this)
 		 	/* any length acceptable */
 		 	break;
 		 default:
-			DBG1(DBG_ENC, "unknown attribute type %N", 
+			DBG1(DBG_ENC, "unknown attribute type %N",
 				 configuration_attribute_type_names, this->attribute_type);
 		 	break;
 	}
-	
+
 	if (failed)
 	{
 		DBG1(DBG_ENC, "invalid attribute length %d for %N",
@@ -222,12 +222,12 @@ static void set_value(private_configuration_attribute_t *this, chunk_t value)
 	if (this->attribute_value.ptr != NULL)
 	{
 		/* free existing value */
-		chunk_free(&(this->attribute_value));		
+		chunk_free(&(this->attribute_value));
 	}
-	
+
 	this->attribute_value.ptr = clalloc(value.ptr,value.len);
 	this->attribute_value.len = value.len;
-	
+
 	this->attribute_length = this->attribute_value.len;
 }
 
@@ -272,7 +272,7 @@ static void destroy(private_configuration_attribute_t *this)
 	if (this->attribute_value.ptr != NULL)
 	{
 		free(this->attribute_value.ptr);
-	}	
+	}
 	free(this);
 }
 
@@ -291,7 +291,7 @@ configuration_attribute_t *configuration_attribute_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-	
+
 	/* public functions */
 	this->public.set_value = (void (*) (configuration_attribute_t *,chunk_t)) set_value;
 	this->public.get_value = (chunk_t (*) (configuration_attribute_t *)) get_value;
@@ -299,7 +299,7 @@ configuration_attribute_t *configuration_attribute_create()
 	this->public.get_type = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_type;
 	this->public.get_length = (u_int16_t (*) (configuration_attribute_t *)) get_attribute_length;
 	this->public.destroy = (void (*) (configuration_attribute_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->attribute_type = 0;
 	this->attribute_value = chunk_empty;

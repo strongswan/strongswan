@@ -63,12 +63,12 @@ struct entry_t {
  * Private data of an radius_client_t object.
  */
 struct private_radius_client_t {
-	
+
 	/**
 	 * Public radius_client_t interface.
 	 */
 	radius_client_t public;
-	
+
 	/**
 	 * RADIUS servers State attribute
 	 */
@@ -106,7 +106,7 @@ static chunk_t nas_identifier;
 void radius_client_cleanup()
 {
 	entry_t *entry;
-	
+
 	mutex->destroy(mutex);
 	condvar->destroy(condvar);
 	while (sockets->remove_last(sockets, (void**)&entry) == SUCCESS)
@@ -130,11 +130,11 @@ bool radius_client_init()
 	entry_t *entry;
 	host_t *host;
 	char *server;
-	
+
 	nas_identifier.ptr = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap_radius.nas_identifier", "strongSwan");
 	nas_identifier.len = strlen(nas_identifier.ptr);
-	
+
 	secret.ptr = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap_radius.secret", NULL);
 	if (!secret.ptr)
@@ -159,7 +159,7 @@ bool radius_client_init()
 	}
 	count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap_radius.sockets", 1);
-	
+
 	sockets = linked_list_create();
 	mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
@@ -214,7 +214,7 @@ bool radius_client_init()
 static entry_t* get_socket()
 {
 	entry_t *entry;
-	
+
 	mutex->lock(mutex);
 	while (sockets->remove_first(sockets, (void**)&entry) != SUCCESS)
 	{
@@ -243,7 +243,7 @@ static void save_state(private_radius_client_t *this, radius_message_t *msg)
 	enumerator_t *enumerator;
 	int type;
 	chunk_t data;
-	
+
 	enumerator = msg->create_enumerator(msg);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -270,9 +270,9 @@ static radius_message_t* request(private_radius_client_t *this,
 	entry_t *socket;
 	chunk_t data;
 	int i;
-	
+
 	socket = get_socket();
-	
+
 	/* set Message Identifier */
 	req->set_identifier(req, socket->identifier++);
 	/* we add the "Virtual" NAS-Port-Type, as we SHOULD include one */
@@ -286,7 +286,7 @@ static radius_message_t* request(private_radius_client_t *this,
 	}
 	/* sign the request */
 	req->sign(req, socket->rng, socket->signer);
-	
+
 	data = req->get_encoding(req);
 	/* timeout after 2, 3, 4, 5 seconds */
 	for (i = 2; i <= 5; i++)
@@ -297,7 +297,7 @@ static radius_message_t* request(private_radius_client_t *this,
 		char buf[1024];
 		fd_set fds;
 		int res;
-		
+
 		if (send(socket->fd, data.ptr, data.len, 0) != data.len)
 		{
 			DBG1(DBG_CFG, "sending RADIUS message failed: %s", strerror(errno));
@@ -306,7 +306,7 @@ static radius_message_t* request(private_radius_client_t *this,
 		}
 		tv.tv_sec = i;
 		tv.tv_usec = 0;
-		
+
 		while (TRUE)
 		{
 			FD_ZERO(&fds);
@@ -334,7 +334,7 @@ static radius_message_t* request(private_radius_client_t *this,
 			}
 			response = radius_message_parse_response(chunk_create(buf, res));
 			if (response)
-			{	
+			{
 				if (response->verify(response, req->get_authenticator(req),
 							secret, socket->hasher, socket->signer))
 				{
@@ -366,7 +366,7 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 	chunk_t A, R, P, seed;
 	u_char *c, *p;
 	hasher_t *hasher;
-	
+
 	/**
 	 * From RFC2548 (encryption):
 	 * b(1) = MD5(S + R + A)    c(1) = p(1) xor b(1)   C = c(1)
@@ -374,42 +374,42 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 	 *      . . .
 	 * b(i) = MD5(S + c(i-1))   c(i) = p(i) xor b(i)   C = C + c(i)
 	 */
-	
+
 	if (C.len % HASH_SIZE_MD5 || C.len < HASH_SIZE_MD5)
 	{
 		return chunk_empty;
 	}
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (!hasher)
 	{
 		return chunk_empty;
 	}
-	
+
 	A = chunk_create((u_char*)&salt, sizeof(salt));
 	R = chunk_create(request->get_authenticator(request), HASH_SIZE_MD5);
 	P = chunk_alloca(C.len);
 	p = P.ptr;
 	c = C.ptr;
-	
+
 	seed = chunk_cata("cc", R, A);
-	
+
 	while (c < C.ptr + C.len)
 	{
 		/* b(i) = MD5(S + c(i-1)) */
 		hasher->get_hash(hasher, secret, NULL);
 		hasher->get_hash(hasher, seed, p);
-		
+
 		/* p(i) = b(i) xor c(1) */
 		memxor(p, c, HASH_SIZE_MD5);
-		
+
 		/* prepare next round */
 		seed = chunk_create(c, HASH_SIZE_MD5);
 		c += HASH_SIZE_MD5;
 		p += HASH_SIZE_MD5;
 	}
 	hasher->destroy(hasher);
-	
+
 	/* remove truncation, first byte is key length */
 	if (*P.ptr >= P.len)
 	{	/* decryption failed? */
@@ -434,7 +434,7 @@ static chunk_t decrypt_msk(private_radius_client_t *this,
 	enumerator_t *enumerator;
 	chunk_t data, send = chunk_empty, recv = chunk_empty;
 	int type;
-	
+
 	enumerator = response->create_enumerator(response);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -482,13 +482,13 @@ static void destroy(private_radius_client_t *this)
 radius_client_t *radius_client_create()
 {
 	private_radius_client_t *this = malloc_thing(private_radius_client_t);
-	
+
 	this->public.request = (radius_message_t*(*)(radius_client_t*, radius_message_t *msg))request;
 	this->public.decrypt_msk = (chunk_t(*)(radius_client_t*, radius_message_t *, radius_message_t *))decrypt_msk;
 	this->public.destroy = (void(*)(radius_client_t*))destroy;
-	
+
 	this->state = chunk_empty;
-	
+
 	return &this->public;
 }
 

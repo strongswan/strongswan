@@ -424,7 +424,7 @@ whack_handle(int whackctlfd)
 
 	if (msg.whack_ca && msg.cacert != NULL)
 		add_ca_info(&msg);
-		
+
 	/* process "listen" before any operation that could require it */
 	if (msg.whack_listen)
 	{

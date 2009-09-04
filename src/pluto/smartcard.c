@@ -115,7 +115,7 @@ static const char *const pkcs11_return_name_10[] = {
 	};
 
 static const char *const pkcs11_return_name_20[] = {
-		"CKR_DATA_INVALID", 
+		"CKR_DATA_INVALID",
 		"CKR_DATA_LEN_RANGE"
 	};
 
@@ -659,7 +659,7 @@ scx_find_all_cert_objects(void)
 				, enum_show(&pkcs11_return_names, rv));
 			continue;
 		}
-		
+
 		if (!(info.flags & CKF_TOKEN_PRESENT))
 		{
 			plog("no token present in slot %lu", slot);
@@ -750,7 +750,7 @@ scx_init(const char* module, const char *init_args)
 }
 
 /*
- * finalize and unload PKCS#11 cryptoki module 
+ * finalize and unload PKCS#11 cryptoki module
  */
 void
 scx_finalize(void)
@@ -791,12 +791,12 @@ scx_on_smartcard(const char *filename)
 
 #ifdef SMARTCARD
 /*
- * find a specific object on the smartcard 
+ * find a specific object on the smartcard
  */
 static bool
-scx_pkcs11_find_object( CK_SESSION_HANDLE session, 
-						CK_OBJECT_HANDLE_PTR object, 
-						CK_OBJECT_CLASS class, 
+scx_pkcs11_find_object( CK_SESSION_HANDLE session,
+						CK_OBJECT_HANDLE_PTR object,
+						CK_OBJECT_CLASS class,
 						const char* id)
 {
 	size_t len;
@@ -863,7 +863,7 @@ scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 			, enum_show(&pkcs11_return_names, rv));
 		 return FALSE;
 	}
-		
+
 	if (!(info.flags & CKF_TOKEN_PRESENT))
 	{
 		plog("no token present in slot %lu", slot);
@@ -891,7 +891,7 @@ scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 		sc->session_opened = TRUE;
 		return TRUE;
 	}
-		
+
 	rv = pkcs11_functions->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
@@ -996,7 +996,7 @@ scx_login(smartcard_t *sc)
 		)
 		return TRUE;
 	}
-		
+
 	if (sc->pin.ptr == NULL)
 	{
 		plog("unable to log in without PIN!");
@@ -1009,7 +1009,7 @@ scx_login(smartcard_t *sc)
 		return FALSE;
 	}
 
-	rv = pkcs11_functions->C_Login(sc->session, CKU_USER 
+	rv = pkcs11_functions->C_Login(sc->session, CKU_USER
 								, (CK_UTF8CHAR *) sc->pin.ptr, sc->pin.len);
 	if (rv != CKR_OK && rv != CKR_USER_ALREADY_LOGGED_IN)
 	{
@@ -1035,7 +1035,7 @@ static void
 scx_logout(smartcard_t *sc)
 {
 	CK_RV rv;
-	
+
 	rv = pkcs11_functions->C_Logout(sc->session);
 	if (rv != CKR_OK)
 		plog("error in C_Logout: %s"
@@ -1067,7 +1067,7 @@ scx_release_context(smartcard_t *sc)
 			scx_logout(sc);
 
 		sc->session_opened = FALSE;
-		
+
 		rv = pkcs11_functions->C_CloseSession(sc->session);
 		if (rv != CKR_OK)
 			plog("error in C_CloseSession: %s"
@@ -1169,7 +1169,7 @@ scx_parse_number_slot_id(const char *number_slot_id)
 
 	if (len == 0)                       /* default: use certificate #1 */
 	{
-		sc->number = 1; 
+		sc->number = 1;
 	}
 	else if (*number_slot_id == '#')    /* #number scheme */
 	{
@@ -1223,7 +1223,7 @@ scx_verify_pin(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
-	
+
 	if (!sc->pinpad)
 		sc->valid = FALSE;
 
@@ -1377,7 +1377,7 @@ scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen
 #endif
 }
 
-/* 
+/*
  * encrypt data block with an RSA public key
  */
 bool
@@ -1423,7 +1423,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 		scx_release_context(sc);
 		return FALSE;
 	}
-		
+
 	/* there must be enough space left for the PKCS#1 v1.5 padding */
 	if (inlen > attr[0].ulValueLen - 11)
 	{
@@ -1467,7 +1467,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 			rsa_key = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_integer("m", rsa_modulus),
 								asn1_integer("m", rsa_exponent));
-			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,	
+			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 								BUILD_BLOB_ASN1_DER, rsa_key, BUILD_END);
 			free(rsa_key.ptr);
 			if (key == NULL)
@@ -1527,7 +1527,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	return FALSE;
 #endif
 }
-/* 
+/*
  * decrypt a data block with an RSA private key
  */
 bool
@@ -1570,7 +1570,7 @@ scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
 		scx_release_context(sc);
 		return FALSE;
 	}
-		
+
 	DBG(DBG_CONTROL,
 		DBG_log("doing RSA decryption on smartcard")
 	)
@@ -1680,7 +1680,7 @@ scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op
 		DBG_dump("smartcard output data:\n", inbuf, outlen)
 	)
 
-	if (outbase == 0)  /* use default base */ 
+	if (outbase == 0)  /* use default base */
 		outbase = DEFAULT_BASE;
 
 	if (outbase == 256) /* ascii plain text */
@@ -1957,7 +1957,7 @@ scx_list(bool utc)
 			, scx_print_slot(sc, "    ")
 			, sc->session_opened? "opened" : "closed"
 			, sc->logged_in? "in" : "out"
-			, sc->pinpad? "pin pad" 
+			, sc->pinpad? "pin pad"
 				: ((sc->pin.ptr == NULL)? "no pin"
 					: sc->valid? "valid pin" : "invalid pin"));
 		if (sc->id != NULL)

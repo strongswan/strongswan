@@ -27,12 +27,12 @@ typedef struct trap_listener_t trap_listener_t;
  * listener to track acquires
  */
 struct trap_listener_t {
-	
+
 	/**
 	 * Implements listener interface
 	 */
 	listener_t listener;
-	
+
 	/**
 	 * points to trap_manager
 	 */
@@ -43,22 +43,22 @@ struct trap_listener_t {
  * Private data of an trap_manager_t object.
  */
 struct private_trap_manager_t {
-	
+
 	/**
 	 * Public trap_manager_t interface.
 	 */
 	trap_manager_t public;
-	
+
 	/**
 	 * Installed traps, as entry_t
 	 */
 	linked_list_t *traps;
-	
+
 	/**
 	 * read write lock for traps list
 	 */
 	rwlock_t *lock;
-	
+
 	/**
 	 * listener to track acquiring IKE_SAs
 	 */
@@ -102,7 +102,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	bool found = FALSE;
 	status_t status;
 	u_int32_t reqid;
-	
+
 	/* check if not already done */
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -123,10 +123,10 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 			 child->get_name(child));
 		return 0;
 	}
-	
+
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
-	other = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg), 
+	other = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg),
 								 0, IKEV2_UDP_PORT);
 	if (!other)
 	{
@@ -148,14 +148,14 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 		}
 		me->set_port(me, IKEV2_UDP_PORT);
 	}
-	
+
 	/* create and route CHILD_SA */
 	child_sa = child_sa_create(me, other, child, 0, FALSE);
 	my_ts = child->get_traffic_selectors(child, TRUE, NULL, me);
 	other_ts = child->get_traffic_selectors(child, FALSE, NULL, other);
 	me->destroy(me);
 	other->destroy(other);
-	
+
 	/* while we don't know the finally negotiated protocol (ESP|AH), we
 	 * could iterate all proposals for a best guest (TODO). But as we
 	 * support ESP only for now, we set here. */
@@ -170,17 +170,17 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 		DBG1(DBG_CFG, "installing trap failed");
 		return 0;
 	}
-	
+
 	reqid = child_sa->get_reqid(child_sa);
 	entry = malloc_thing(entry_t);
 	entry->child_sa = child_sa;
 	entry->peer_cfg = peer->get_ref(peer);
 	entry->pending = NULL;
-	
+
 	this->lock->write_lock(this->lock);
 	this->traps->insert_last(this->traps, entry);
 	this->lock->unlock(this->lock);
-	
+
 	return reqid;
 }
 
@@ -191,7 +191,7 @@ static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -205,13 +205,13 @@ static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	if (!found)
 	{
 		DBG1(DBG_CFG, "trap %d not found to uninstall", reqid);
 		return FALSE;
 	}
-	
+
 	destroy_entry(found);
 	return TRUE;
 }
@@ -255,7 +255,7 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 	peer_cfg_t *peer;
 	child_cfg_t *child;
 	ike_sa_t *ike_sa;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -267,7 +267,7 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	if (!found)
 	{
 		DBG1(DBG_CFG, "trap not found, unable to acquire reqid %d",reqid);
@@ -311,7 +311,7 @@ static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 	private_trap_manager_t *this;
 	enumerator_t *enumerator;
 	entry_t *entry;
-	
+
 	switch (state)
 	{
 		case IKE_ESTABLISHED:
@@ -320,7 +320,7 @@ static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 		default:
 			return TRUE;
 	}
-	
+
 	this = listener->traps;
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -354,22 +354,22 @@ static void destroy(private_trap_manager_t *this)
 trap_manager_t *trap_manager_create()
 {
 	private_trap_manager_t *this = malloc_thing(private_trap_manager_t);
-	
+
 	this->public.install = (u_int(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
 	this->public.uninstall = (bool(*)(trap_manager_t*, u_int32_t id))uninstall;
 	this->public.create_enumerator = (enumerator_t*(*)(trap_manager_t*))create_enumerator;
 	this->public.acquire = (void(*)(trap_manager_t*, u_int32_t reqid, traffic_selector_t *src, traffic_selector_t *dst))acquire;
 	this->public.destroy = (void(*)(trap_manager_t*))destroy;
-	
+
 	this->traps = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	
+
 	/* register listener for IKE state changes */
 	this->listener.traps = this;
 	memset(&this->listener.listener, 0, sizeof(listener_t));
 	this->listener.listener.ike_state_change = (void*)ike_state_change;
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
-	
+
 	return &this->public;
 }
 

@@ -49,7 +49,7 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
 
 /**
  * Create an authenticator to verify PSK signatures.
- * 
+ *
  * @param ike_sa			associated ike_sa
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data

@@ -23,17 +23,17 @@ typedef struct private_nm_handler_t private_nm_handler_t;
  * Private data of an nm_handler_t object.
  */
 struct private_nm_handler_t {
-	
+
 	/**
 	 * Public nm_handler_t interface.
 	 */
 	nm_handler_t public;
-	
+
 	/**
 	 * list of received DNS server attributes, pointer to 4 byte data
 	 */
 	linked_list_t *dns;
-	
+
 	/**
 	 * list of received NBNS server attributes, pointer to 4 byte data
 	 */
@@ -47,7 +47,7 @@ static bool handle(private_nm_handler_t *this, ike_sa_t *ike_sa,
 				   configuration_attribute_type_t type, chunk_t data)
 {
 	linked_list_t *list;
-	
+
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
@@ -83,7 +83,7 @@ static enumerator_t* create_enumerator(private_nm_handler_t *this,
 									   configuration_attribute_type_t type)
 {
 	linked_list_t *list;
-	
+
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
@@ -105,7 +105,7 @@ static enumerator_t* create_enumerator(private_nm_handler_t *this,
 static void reset(private_nm_handler_t *this)
 {
 	void *data;
-	
+
 	while (this->dns->remove_last(this->dns, (void**)&data) == SUCCESS)
 	{
 		free(data);
@@ -133,16 +133,16 @@ static void destroy(private_nm_handler_t *this)
 nm_handler_t *nm_handler_create()
 {
 	private_nm_handler_t *this = malloc_thing(private_nm_handler_t);
-	
+
 	this->public.handler.handle = (bool(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))handle;
 	this->public.handler.release = (void(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))nop;
 	this->public.create_enumerator = (enumerator_t*(*)(nm_handler_t*, configuration_attribute_type_t type))create_enumerator;
 	this->public.reset = (void(*)(nm_handler_t*))reset;
 	this->public.destroy = (void(*)(nm_handler_t*))destroy;
-	
+
 	this->dns = linked_list_create();
 	this->nbns = linked_list_create();
-	
+
 	return &this->public;
 }
 

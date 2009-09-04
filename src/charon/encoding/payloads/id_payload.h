@@ -51,35 +51,35 @@ struct id_payload_t {
 	 * @param type			Type of ID
 	 */
 	void (*set_id_type) (id_payload_t *this, id_type_t type);
-	
+
 	/**
 	 * Get the ID type.
 	 *
-	 * @return				type of the ID 
+	 * @return				type of the ID
 	 */
 	id_type_t (*get_id_type) (id_payload_t *this);
-	
+
 	/**
 	 * Set the ID data.
-	 * 
+	 *
 	 * Data are getting cloned.
 	 *
 	 * @param data			ID data as chunk_t
 	 */
 	void (*set_data) (id_payload_t *this, chunk_t data);
-	
+
 	/**
 	 * Get the ID data.
-	 * 
+	 *
 	 * Returned data are a copy of the internal one
 	 *
 	 * @return				ID data as chunk_t
 	 */
 	chunk_t (*get_data_clone) (id_payload_t *this);
-	
+
 	/**
 	 * Get the ID data.
-	 * 
+	 *
 	 * Returned data are NOT copied.
 	 *
 	 * @return				ID data as chunk_t
@@ -88,13 +88,13 @@ struct id_payload_t {
 
 	/**
 	 * Creates an identification object of this id payload.
-	 * 
+	 *
 	 * Returned object has to get destroyed by the caller.
 	 *
-	 * @return				identification_t object 
+	 * @return				identification_t object
 	 */
 	identification_t *(*get_identification) (id_payload_t *this);
-	
+
 	/**
 	 * Destroys an id_payload_t object.
 	 */
@@ -103,7 +103,7 @@ struct id_payload_t {
 
 /**
  * Creates an empty id_payload_t object.
- * 
+ *
  * @param payload_type	one of ID_INITIATOR, ID_RESPONDER
  * @return				id_payload_t object
  */
@@ -111,7 +111,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type);
 
 /**
  * Creates an id_payload_t from an existing identification_t object.
- * 
+ *
  * @param payload_type		one of ID_INITIATOR, ID_RESPONDER
  * @param identification	identification_t object
  * @return					id_payload_t object

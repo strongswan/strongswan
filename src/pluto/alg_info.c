@@ -238,12 +238,12 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
  * merging alg_info (ike_info) contents
  */
 
-static int default_ike_groups[] = { 
+static int default_ike_groups[] = {
 	MODP_1536_BIT,
 	MODP_1024_BIT
 };
 
-/*      
+/*
  *      Add IKE alg info _with_ logic (policy):
  */
 static void alg_info_ike_add (struct alg_info *alg_info, int ealg_id,
@@ -258,7 +258,7 @@ static void alg_info_ike_add (struct alg_info *alg_info, int ealg_id,
 		n_groups=0;
 		goto in_loop;
 	}
-		
+
 	for (; n_groups--; i++)
 	{
 		modp_id = default_ike_groups[i];
@@ -372,7 +372,7 @@ static status_t alg_info_parse_str(struct alg_info *alg_info, char *alg_str)
 
 		eat_whitespace(&string);
 
-		if (string.len > 0) 
+		if (string.len > 0)
 		{
 			chunk_t alg;
 
@@ -494,7 +494,7 @@ struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
  *      several connections instances,
  *      handle free() with ref_cnts
  */
-void 
+void
 alg_info_addref(struct alg_info *alg_info)
 {
 	if (alg_info != NULL)
@@ -529,7 +529,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 	struct esp_info *esp_info;
 	struct ike_info *ike_info;
 	int cnt;
-		
+
 	switch (alg_info->alg_info_protoid) {
 	case PROTO_IPSEC_ESP:
 		{
@@ -608,7 +608,7 @@ out:
 			, "buffer space exhausted in alg_info_snprint_ike(), buflen=%d"
 			, buflen);
 	}
-		
+
 	return ptr - buf;
 }
 

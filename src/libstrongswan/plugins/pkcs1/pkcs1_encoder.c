@@ -25,7 +25,7 @@
 bool build_pub(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
-	
+
 	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
 						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
 	{
@@ -43,7 +43,7 @@ bool build_pub(chunk_t *encoding, va_list args)
 bool build_pub_info(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
-	
+
 	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
 						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
 	{
@@ -64,7 +64,7 @@ bool build_pub_info(chunk_t *encoding, va_list args)
 bool build_priv(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e, d, p, q, exp1, exp2, coeff;
-	
+
 	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
 					KEY_PART_RSA_PUB_EXP, &e, KEY_PART_RSA_PRIV_EXP, &d,
 					KEY_PART_RSA_PRIME1, &p, KEY_PART_RSA_PRIME2, &q,
@@ -92,7 +92,7 @@ bool build_priv(chunk_t *encoding, va_list args)
 static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
 {
 	hasher_t *hasher;
-	
+
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (hasher == NULL)
 	{
@@ -112,7 +112,7 @@ static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
 static bool build_info_sha1(chunk_t *encoding, va_list args)
 {
 	chunk_t pubkey;
-	
+
 	if (build_pub_info(&pubkey, args))
 	{
 		return hash_pubkey(pubkey, encoding);
@@ -126,7 +126,7 @@ static bool build_info_sha1(chunk_t *encoding, va_list args)
 static bool build_sha1(chunk_t *encoding, va_list args)
 {
 	chunk_t pubkey;
-	
+
 	if (build_pub(&pubkey, args))
 	{
 		return hash_pubkey(pubkey, encoding);

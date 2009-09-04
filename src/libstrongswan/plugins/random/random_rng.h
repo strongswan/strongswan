@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup random_rng random_rng
  * @{ @ingroup random_p
@@ -29,7 +29,7 @@ typedef struct random_rng_t random_rng_t;
  * rng_t implementation on top of /dev/[u]random
  */
 struct random_rng_t {
-	
+
 	/**
 	 * Implements rng_t.
 	 */
@@ -38,7 +38,7 @@ struct random_rng_t {
 
 /**
  * Creates an random_rng_t instance.
- * 
+ *
  * @param quality	required quality of randomness
  * @return			created random_rng_t
  */

@@ -29,7 +29,7 @@ typedef struct kernel_net_t kernel_net_t;
 
 /**
  * Interface to the network subsystem of the kernel.
- * 
+ *
  * The kernel network interface handles the communication with the kernel
  * for interface and IP address management.
  */
@@ -48,7 +48,7 @@ struct kernel_net_t {
 	 * @return				outgoing source address, NULL if unreachable
 	 */
 	host_t* (*get_source_addr)(kernel_net_t *this, host_t *dest, host_t *src);
-	
+
 	/**
 	 * Get the next hop for a destination.
 	 *
@@ -59,7 +59,7 @@ struct kernel_net_t {
 	 * @return				next hop address, NULL if unreachable
 	 */
 	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest);
-	
+
 	/**
 	 * Get the interface name of a local address.
 	 *
@@ -67,21 +67,21 @@ struct kernel_net_t {
 	 * @return 				allocated interface name, or NULL if not found
 	 */
 	char* (*get_interface) (kernel_net_t *this, host_t *host);
-	
+
 	/**
 	 * Creates an enumerator over all local addresses.
-	 * 
+	 *
 	 * This function blocks an internal cached address list until the
 	 * enumerator gets destroyed.
 	 * The hosts are read-only, do not modify of free.
-	 * 
+	 *
 	 * @param include_down_ifaces	TRUE to enumerate addresses from down interfaces
 	 * @param include_virtual_ips	TRUE to enumerate virtual ip addresses
 	 * @return						enumerator over host_t's
 	 */
 	enumerator_t *(*create_address_enumerator) (kernel_net_t *this,
 						bool include_down_ifaces, bool include_virtual_ips);
-	
+
 	/**
 	 * Add a virtual IP to an interface.
 	 *
@@ -96,7 +96,7 @@ struct kernel_net_t {
 	 */
 	status_t (*add_ip) (kernel_net_t *this, host_t *virtual_ip,
 						host_t *iface_ip);
-	
+
 	/**
 	 * Remove a virtual IP from an interface.
 	 *
@@ -106,10 +106,10 @@ struct kernel_net_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_ip) (kernel_net_t *this, host_t *virtual_ip);
-	
+
 	/**
 	 * Add a route.
-	 * 
+	 *
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
@@ -120,10 +120,10 @@ struct kernel_net_t {
 	 */
 	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 								host_t *gateway, host_t *src_ip, char *if_name);
-	
+
 	/**
 	 * Delete a route.
-	 * 
+	 *
 	 * @param dst_net		destination net
 	 * @param prefixlen		destination net prefix length
 	 * @param gateway		gateway for this route
@@ -133,7 +133,7 @@ struct kernel_net_t {
 	 */
 	status_t (*del_route) (kernel_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 								host_t *gateway, host_t *src_ip, char *if_name);
-	
+
 	/**
 	 * Destroy the implementation.
 	 */

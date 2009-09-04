@@ -448,7 +448,7 @@ void delete_states_by_connection(struct connection *c, bool relations)
 			}
 		}
 	}
-	
+
 	sr = &c->spd;
 	while (sr != NULL)
 	{
@@ -521,7 +521,7 @@ struct state *duplicate_state(struct state *st)
 
 	memcpy(nst->st_icookie, st->st_icookie, COOKIE_SIZE);
 	memcpy(nst->st_rcookie, st->st_rcookie, COOKIE_SIZE);
-	
+
 	nst->st_connection = st->st_connection;
 	nst->st_doi = st->st_doi;
 	nst->st_situation = st->st_situation;
@@ -724,7 +724,7 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 		? "; eroute owner" : "";
 	const char *dpd = (all && st->st_dpd && c->dpd_action != DPD_ACTION_NONE)
 					  ? "; DPD active" : "";
-	
+
 	passert(st->st_event != 0);
 
 	fmt_conn_instance(c, inst);

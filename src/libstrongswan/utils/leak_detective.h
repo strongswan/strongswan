@@ -32,7 +32,7 @@ typedef struct leak_detective_t leak_detective_t;
  * and dynamic whitelisting.
  */
 struct leak_detective_t {
-		
+
 	/**
      * Destroy a leak_detective instance.
      */

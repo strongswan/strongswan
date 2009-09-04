@@ -31,7 +31,7 @@ typedef struct trap_manager_t trap_manager_t;
  * Manage policies to create SAs from traffic.
  */
 struct trap_manager_t {
-	
+
 	/**
 	 * Install a policy as a trap.
 	 *
@@ -41,7 +41,7 @@ struct trap_manager_t {
 	 */
 	u_int32_t (*install)(trap_manager_t *this, peer_cfg_t *peer,
 						 child_cfg_t *child);
-	
+
 	/**
 	 * Uninstall a trap policy.
 	 *
@@ -49,14 +49,14 @@ struct trap_manager_t {
 	 * @return			TRUE if uninstalled successfully
 	 */
 	bool (*uninstall)(trap_manager_t *this, u_int32_t reqid);
-	
+
 	/**
 	 * Create an enumerator over all installed traps.
 	 *
 	 * @return			enumerator over (peer_cfg_t, child_sa_t)
 	 */
 	enumerator_t* (*create_enumerator)(trap_manager_t *this);
-	
+
 	/**
 	 * Acquire an SA triggered by an installed trap.
 	 *
@@ -66,7 +66,7 @@ struct trap_manager_t {
 	 */
 	void (*acquire)(trap_manager_t *this, u_int32_t reqid,
 					traffic_selector_t *src, traffic_selector_t *dst);
-	
+
 	/**
 	 * Destroy a trap_manager_t.
 	 */

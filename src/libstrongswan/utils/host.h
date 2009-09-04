@@ -48,103 +48,103 @@ enum host_diff_t {
 
 /**
  * Representates a Host
- * 
- * Host object, identifies a address:port pair and defines some 
+ *
+ * Host object, identifies a address:port pair and defines some
  * useful functions on it.
  */
 struct host_t {
-	
-	/** 
+
+	/**
 	 * Build a clone of this host object.
-	 * 
+	 *
 	 * @return		cloned host
 	 */
 	host_t *(*clone) (host_t *this);
-	
-	/** 
+
+	/**
 	 * Get a pointer to the internal sockaddr struct.
-	 * 
+	 *
 	 * This is used for sending and receiving via sockets.
-	 * 
+	 *
 	 * @return		pointer to the internal sockaddr structure
 	 */
 	sockaddr_t  *(*get_sockaddr) (host_t *this);
-	
-	/** 
+
+	/**
 	 * Get the length of the sockaddr struct.
-	 * 
+	 *
 	 * Depending on the family, the length of the sockaddr struct
 	 * is different. Use this function to get the length of the sockaddr
 	 * struct returned by get_sock_addr.
-	 * 
+	 *
 	 * This is used for sending and receiving via sockets.
-	 * 
+	 *
 	 * @return		length of the sockaddr struct
 	 */
 	socklen_t *(*get_sockaddr_len) (host_t *this);
-	
+
 	/**
 	 * Gets the family of the address
-	 * 
+	 *
 	 * @return		family
 	 */
 	int (*get_family) (host_t *this);
-	
-	/** 
+
+	/**
 	 * Checks if the ip address of host is set to default route.
-	 * 
+	 *
 	 * @return		TRUE if host is 0.0.0.0 or 0::0, FALSE otherwise
 	 */
 	bool (*is_anyaddr) (host_t *this);
-	
-	/** 
+
+	/**
 	 * Get the address of this host as chunk_t
-	 * 
+	 *
 	 * Returned chunk points to internal data.
-	 * 
-	 * @return		address string, 
+	 *
+	 * @return		address string,
 	 */
 	chunk_t (*get_address) (host_t *this);
-		
-	/** 
+
+	/**
 	 * Get the port of this host
-	 * 
+	 *
 	 * @return		port number
 	 */
 	u_int16_t (*get_port) (host_t *this);
 
-	/** 
+	/**
 	 * Set the port of this host
 	 *
 	 * @param port	port numer
 	 */
 	void (*set_port) (host_t *this, u_int16_t port);
-		
-	/** 
+
+	/**
 	 * Compare the ips of two hosts hosts.
-	 * 
+	 *
 	 * @param other	the other to compare
 	 * @return		TRUE if addresses are equal.
 	 */
 	bool (*ip_equals) (host_t *this, host_t *other);
-		
-	/** 
+
+	/**
 	 * Compare two hosts, with port.
-	 * 
+	 *
 	 * @param other	the other to compare
 	 * @return		TRUE if addresses and ports are equal.
 	 */
 	bool (*equals) (host_t *this, host_t *other);
 
-	/** 
+	/**
 	 * Compare two hosts and return the differences.
 	 *
 	 * @param other	the other to compare
 	 * @return		differences in a combination of host_diff_t's
 	 */
 	host_diff_t (*get_differences) (host_t *this, host_t *other);
-	
-	/** 
+
+	/**
 	 * Destroy this host object.
 	 */
 	void (*destroy) (host_t *this);
@@ -200,7 +200,7 @@ host_t *host_create_any(int family);
 /**
  * printf hook function for host_t.
  *
- * Arguments are: 
+ * Arguments are:
  *    host_t *host
  * Use #-modifier to include port number
  */
