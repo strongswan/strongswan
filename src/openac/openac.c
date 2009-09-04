@@ -272,7 +272,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 0: /* long option already handled */
-		 		continue;
+				continue;
 
 			case ':':	/* diagnostic already printed by getopt_long */
 			case '?':	/* diagnostic already printed by getopt_long */
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
 						status = 1;
 						goto end;
 					}
-		 		}
+				}
 				continue;
 
 			case 'q':	/* --quiet */

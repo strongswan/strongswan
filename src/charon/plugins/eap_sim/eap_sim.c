@@ -475,17 +475,17 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 				if (code <= 32767) /* no success bit */
 				{
 					DBG1(DBG_IKE, "received %N error %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 					*out = build_payload(this,
 									in->get_identifier(in), SIM_CLIENT_ERROR,
-						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_CLIENT_ERROR_CODE, client_error_general,
 									AT_END);
 					return NEED_MORE;
 				}
 				else
 				{
 					DBG1(DBG_IKE, "received %N code %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -623,17 +623,17 @@ static status_t peer_process_challenge(private_eap_sim_t *this,
 				if (code <= 32767) /* no success bit */
 				{
 					DBG1(DBG_IKE, "received %N error %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 					*out = build_payload(this,
 									in->get_identifier(in), SIM_CLIENT_ERROR,
-						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_CLIENT_ERROR_CODE, client_error_general,
 									AT_END);
 					return NEED_MORE;
 				}
 				else
 				{
 					DBG1(DBG_IKE, "received %N code %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -877,17 +877,17 @@ static status_t peer_process_notification(private_eap_sim_t *this,
 				if (code <= 32767) /* no success bit */
 				{
 					DBG1(DBG_IKE, "received %N error %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 					*out = build_payload(this,
 									in->get_identifier(in), SIM_CLIENT_ERROR,
-						 			AT_CLIENT_ERROR_CODE, client_error_general,
+									AT_CLIENT_ERROR_CODE, client_error_general,
 									AT_END);
 					return NEED_MORE;
 				}
 				else
 				{
 					DBG1(DBG_IKE, "received %N code %d",
-				 		 sim_attribute_names, attribute, code);
+						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -924,7 +924,7 @@ static status_t server_process_client_error(private_eap_sim_t *this,
 				code = ntohs(*(u_int16_t*)data.ptr);
 			}
 			DBG1(DBG_IKE, "received %N error %d",
-		 		 sim_attribute_names, attribute, code);
+				 sim_attribute_names, attribute, code);
 		}
 		else
 		{

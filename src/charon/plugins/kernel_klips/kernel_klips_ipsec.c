@@ -784,7 +784,7 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_3IDEA, 				0							}, */
 /*	{ENCR_DES_IV32, 			0							}, */
 	{ENCR_NULL, 				SADB_EALG_NULL				},
-	{ENCR_AES_CBC,	 			SADB_EALG_AESCBC			},
+	{ENCR_AES_CBC,				SADB_EALG_AESCBC			},
 /*	{ENCR_AES_CTR, 				0							}, */
 /*	{ENCR_AES_CCM_ICV8,			0							}, */
 /*	{ENCR_AES_CCM_ICV12,		0							}, */

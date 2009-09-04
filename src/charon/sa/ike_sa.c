@@ -1718,7 +1718,7 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
 		charon->processor->queue_job(charon->processor,
-		 			(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
+					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||
 			 this->stats[STAT_REAUTH] > reauth_time)
@@ -1914,7 +1914,7 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 
 	/* adopt all children */
 	while (other->child_sas->remove_last(other->child_sas,
-		   								 (void**)&child_sa) == SUCCESS)
+										 (void**)&child_sa) == SUCCESS)
 	{
 		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
 	}

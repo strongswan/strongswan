@@ -253,7 +253,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 								this->child_sa->get_protocol(this->child_sa),
 								this->child_sa->get_spi(this->child_sa, TRUE));
 			DBG1(DBG_IKE, "CHILD_SA rekeying failed, "
-				 				"trying again in %d seconds", retry);
+								"trying again in %d seconds", retry);
 			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 			charon->scheduler->schedule_job(charon->scheduler, job, retry);
 		}

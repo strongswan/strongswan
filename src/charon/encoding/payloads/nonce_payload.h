@@ -51,7 +51,7 @@ struct nonce_payload_t {
 	/**
 	 * Set the nonce value.
 	 *
-	 * @param nonce	  		chunk containing the nonce, will be cloned
+	 * @param nonce			chunk containing the nonce, will be cloned
 	 */
 	void (*set_nonce) (nonce_payload_t *this, chunk_t nonce);
 

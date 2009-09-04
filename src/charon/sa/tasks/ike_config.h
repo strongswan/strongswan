@@ -44,7 +44,7 @@ struct ike_config_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator
- * @return			  	ike_config task to handle by the task_manager
+ * @return				ike_config task to handle by the task_manager
  */
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator);
 

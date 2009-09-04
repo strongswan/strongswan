@@ -718,7 +718,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 		{
 			if (charon->kernel_interface->update_sa(charon->kernel_interface,
 							this->other_spi, this->protocol,
-					 		this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 							this->my_addr, this->other_addr, me, other,
 							this->encap, encap) == NOT_SUPPORTED)
 			{

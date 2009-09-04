@@ -66,7 +66,7 @@ static const asn1Object_t crlObjects[] = {
 	{ 4,         "userCertificate",		ASN1_INTEGER,      ASN1_BODY }, /* 10 */
 	{ 4,         "revocationDate",		ASN1_EOC,          ASN1_RAW  }, /* 11 */
 	{ 4,         "crlEntryExtensions",  ASN1_SEQUENCE,     ASN1_OPT |
-							   							   ASN1_LOOP }, /* 12 */
+														   ASN1_LOOP }, /* 12 */
 	{ 5,           "extension",			ASN1_SEQUENCE,	   ASN1_NONE }, /* 13 */
 	{ 6,             "extnID",			ASN1_OID,          ASN1_BODY }, /* 14 */
 	{ 6,             "critical",		ASN1_BOOLEAN,      ASN1_DEF |

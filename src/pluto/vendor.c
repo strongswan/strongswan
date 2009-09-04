@@ -341,7 +341,7 @@ void init_vendorid(void)
 			chunk_t vid_data = { (u_char *)vid->data, strlen(vid->data) };
 
 			/** VendorID is a string to hash with MD5 **/
-		 	hasher->allocate_hash(hasher, vid_data, &vid->vid);
+			hasher->allocate_hash(hasher, vid_data, &vid->vid);
 		}
 
 		if (vid->descr == NULL)

@@ -291,10 +291,10 @@ static const asn1Object_t generalNameObjects[] = {
 	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 17 */
 	{ 0, "exit",			ASN1_EOC,          ASN1_EXIT			}
 };
-#define GN_OBJ_OTHER_NAME	 	 0
-#define GN_OBJ_RFC822_NAME	 	 2
-#define GN_OBJ_DNS_NAME		 	 4
-#define GN_OBJ_X400_ADDRESS	 	 6
+#define GN_OBJ_OTHER_NAME		 0
+#define GN_OBJ_RFC822_NAME		 2
+#define GN_OBJ_DNS_NAME			 4
+#define GN_OBJ_X400_ADDRESS		 6
 #define GN_OBJ_DIRECTORY_NAME	 8
 #define GN_OBJ_EDI_PARTY_NAME	10
 #define GN_OBJ_URI				12
@@ -765,7 +765,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_AUTHORITY_KEY_ID:
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
-							 							level, &this->authKeySerialNumber);
+														level, &this->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
 						parse_authorityInfoAccess(object, level, this);

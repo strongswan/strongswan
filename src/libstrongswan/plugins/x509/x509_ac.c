@@ -165,7 +165,7 @@ static u_char ASN1_authorityKeyIdentifier_oid_str[] = {
 };
 
 static const chunk_t ASN1_authorityKeyIdentifier_oid =
-	 			 	 	chunk_from_buf(ASN1_authorityKeyIdentifier_oid_str);
+					 	chunk_from_buf(ASN1_authorityKeyIdentifier_oid_str);
 
 static u_char ASN1_noRevAvail_ext_str[] = {
 	0x30, 0x09,
@@ -293,7 +293,7 @@ static const asn1Object_t acObjects[] =
 	{ 3,	     "baseCertificateID",		ASN1_CONTEXT_C_0,	  ASN1_OPT  }, /* 21 */
 	{ 4,	       "issuerSerial",			ASN1_SEQUENCE,		  ASN1_NONE }, /* 22 */
 	{ 5,	         "issuer",				ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 23 */
-	{ 5,	  	 "serial",					ASN1_INTEGER,		  ASN1_BODY }, /* 24 */
+	{ 5,		 "serial",					ASN1_INTEGER,		  ASN1_BODY }, /* 24 */
 	{ 5,           "issuerUID",				ASN1_BIT_STRING,	  ASN1_OPT |
 																  ASN1_BODY }, /* 25 */
 	{ 5,           "end opt",				ASN1_EOC,			  ASN1_END  }, /* 26 */
@@ -301,7 +301,7 @@ static const asn1Object_t acObjects[] =
 	{ 3,       "objectDigestInfo",			ASN1_CONTEXT_C_1,	  ASN1_OPT  }, /* 28 */
 	{ 4,	       "digestInfo",			ASN1_SEQUENCE,		  ASN1_OBJ  }, /* 29 */
 	{ 5,  	 "digestedObjectType",			ASN1_ENUMERATED,	  ASN1_BODY }, /* 30 */
-	{ 5,	  	 "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
+	{ 5,		 "otherObjectTypeID",		ASN1_OID,			  ASN1_OPT |
 																  ASN1_BODY }, /* 31 */
 	{ 5,           "end opt",				ASN1_EOC,			  ASN1_END  }, /* 32 */
 	{ 5,           "digestAlgorithm",		ASN1_EOC,			  ASN1_RAW  }, /* 33 */

@@ -97,7 +97,7 @@ struct ike_sa_manager_t {
 	 * @return					checked out/created IKE_SA
 	 */
 	ike_sa_t* (*checkout_by_config) (ike_sa_manager_t* this,
-								 	 peer_cfg_t *peer_cfg);
+									 peer_cfg_t *peer_cfg);
 
 	/**
 	 * Check for duplicates of the given IKE_SA.

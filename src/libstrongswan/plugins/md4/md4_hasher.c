@@ -227,7 +227,7 @@ static void MD4Update(private_md4_hasher_t *this, u_int8_t *input, size_t inputL
 
 		for (i = partLen; i + 63 < inputLen; i += 64)
 		{
-	    	MD4Transform (this->state, &input[i]);
+		MD4Transform (this->state, &input[i]);
 		}
 		index = 0;
 	}

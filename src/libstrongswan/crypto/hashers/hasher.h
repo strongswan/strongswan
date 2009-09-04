@@ -35,7 +35,7 @@ enum hash_algorithm_t {
 	/** not specified hash function */
 	HASH_UNKNOWN 		= 0,
 	/** preferred hash function, general purpose */
-	HASH_PREFERRED	 	= 1,
+	HASH_PREFERRED		= 1,
 	HASH_MD2 			= 2,
 	HASH_MD4			= 3,
 	HASH_MD5 			= 4,

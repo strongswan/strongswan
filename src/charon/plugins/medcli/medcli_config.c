@@ -166,7 +166,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
 		TRUE, this->dpd, 				/* mobike, dpddelay */
 		NULL, NULL, 					/* vip, pool */
-		FALSE, med_cfg,				 	/* mediation, med by */
+		FALSE, med_cfg,					/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
 
 	auth = auth_cfg_create();

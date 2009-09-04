@@ -1197,8 +1197,8 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	chunk_free(&this->k);
 	if (load_key(this->peer, this->server, &this->k) != SUCCESS)
 	{
-	 	*out = build_aka_payload(this, EAP_RESPONSE, identifier,
-	 							 AKA_AUTHENTICATION_REJECT, AT_END);
+		*out = build_aka_payload(this, EAP_RESPONSE, identifier,
+								 AKA_AUTHENTICATION_REJECT, AT_END);
 		DBG3(DBG_IKE, "no shared key found for IDs '%Y' - '%Y' to authenticate "
 			 "with EAP-AKA, sending %N", this->peer, this->server,
 			 aka_subtype_names, AKA_AUTHENTICATION_REJECT);
@@ -1230,8 +1230,8 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	f1(this, this->k, this->rand, sqn, amf, xmac.ptr);
 	if (!chunk_equals(mac, xmac))
 	{
-	 	*out = build_aka_payload(this, EAP_RESPONSE, identifier,
-	 							 AKA_AUTHENTICATION_REJECT, AT_END);
+		*out = build_aka_payload(this, EAP_RESPONSE, identifier,
+								 AKA_AUTHENTICATION_REJECT, AT_END);
 		DBG1(DBG_IKE, "received MAC does not match XMAC, sending %N",
 			 aka_subtype_names, AKA_AUTHENTICATION_REJECT);
 		DBG3(DBG_IKE, "MAC %B\nXMAC %B", &mac, &xmac);
@@ -1258,9 +1258,9 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 		memxor(aks.ptr, peer_sqn.ptr, aks.len);
 		auts = chunk_cata("cc", aks, macs);
 
-	 	*out = build_aka_payload(this, EAP_RESPONSE, identifier,
-	 							 AKA_SYNCHRONIZATION_FAILURE,
-	 							 AT_AUTS, auts, AT_END);
+		*out = build_aka_payload(this, EAP_RESPONSE, identifier,
+								 AKA_SYNCHRONIZATION_FAILURE,
+								 AT_AUTS, auts, AT_END);
 		DBG1(DBG_IKE, "received SQN invalid, sending %N",
 			 aka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
 		DBG3(DBG_IKE, "received SQN %B\ncurrent SQN %B", &sqn, &peer_sqn);
@@ -1363,8 +1363,8 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 				if (attribute >= 0 && attribute <= 127)
 				{
 					DBG1(DBG_IKE, "ignoring non-skippable attribute %N in %N",
-					 	aka_attribute_names, attribute, aka_subtype_names,
-					 	AKA_NOTIFICATION);
+						aka_attribute_names, attribute, aka_subtype_names,
+						AKA_NOTIFICATION);
 				}
 				else
 				{

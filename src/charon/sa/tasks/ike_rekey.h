@@ -54,7 +54,7 @@ struct ike_rekey_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator, FALSE for responder
- * @return			  	IKE_REKEY task to handle by the task_manager
+ * @return				IKE_REKEY task to handle by the task_manager
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator);
 

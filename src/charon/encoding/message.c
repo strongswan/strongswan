@@ -926,7 +926,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	while (enumerator->enumerate(enumerator, &payload))
 	{
 		written = snprintf(pos, len, " %N", payload_type_short_names,
-				  		   payload->get_type(payload));
+						   payload->get_type(payload));
 		if (written >= len || written < 0)
 		{
 			return buf;
@@ -937,7 +937,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			written = snprintf(pos, len, "(%N)", notify_type_short_names,
-					  		   notify->get_notify_type(notify));
+							   notify->get_notify_type(notify));
 			if (written >= len || written < 0)
 			{
 				return buf;

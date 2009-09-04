@@ -570,7 +570,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 		case VALIDATION_REVOKED:
 			/* subject has been revoked by a valid OCSP response */
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
-				 		  &revocation, TRUE, crl_reason_names, reason);
+						  &revocation, TRUE, crl_reason_names, reason);
 			revoked = TRUE;
 			break;
 		case VALIDATION_GOOD:

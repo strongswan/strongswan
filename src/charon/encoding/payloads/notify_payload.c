@@ -238,7 +238,7 @@ encoding_rule_t notify_payload_encodings[] = {
 	/* Notify message type as 16 bit field*/
 	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
 	/* SPI as variable length field*/
-	{ SPI,				offsetof(private_notify_payload_t, spi)		 			},
+	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
 	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data) 	}
 };

@@ -758,7 +758,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 		in.ptr = malloc(in.len);
 
 		DBG2("padding %u bytes of data to multiple block size of %u bytes",
-		 	 data.len, in.len);
+			 data.len, in.len);
 
 		/* copy data */
 		memcpy(in.ptr, data.ptr, data.len);

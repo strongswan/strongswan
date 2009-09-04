@@ -56,7 +56,7 @@ struct child_rekey_t {
  * @param ike_sa		IKE_SA this task works for
  * @param protocol		protocol of CHILD_SA to rekey, PROTO_NONE as responder
  * @param spi			inbound SPI of CHILD_SA to rekey
- * @return			  	child_rekey task to handle by the task_manager
+ * @return				child_rekey task to handle by the task_manager
  */
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 								  u_int32_t spi);

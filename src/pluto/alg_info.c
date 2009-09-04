@@ -397,7 +397,7 @@ static status_t alg_info_parse_str(struct alg_info *alg_info, char *alg_str)
 			{
 				case PROTO_IPSEC_ESP:
 					alg_info_esp_add(alg_info, ealg, ealg_keysize,
-								 			   aalg, aalg_keysize);
+											   aalg, aalg_keysize);
 					break;
 				case PROTO_ISAKMP:
 					alg_info_ike_add(alg_info, ealg, ealg_keysize,

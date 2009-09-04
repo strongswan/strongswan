@@ -137,10 +137,10 @@ static const asn1Object_t generalNameObjects[] = {
 	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /* 17 */
 	{ 0, "exit",			ASN1_EOC,          ASN1_EXIT			}
 };
-#define GN_OBJ_OTHER_NAME	 	 0
-#define GN_OBJ_RFC822_NAME	 	 2
-#define GN_OBJ_DNS_NAME		 	 4
-#define GN_OBJ_X400_ADDRESS	 	 6
+#define GN_OBJ_OTHER_NAME		 0
+#define GN_OBJ_RFC822_NAME		 2
+#define GN_OBJ_DNS_NAME			 4
+#define GN_OBJ_X400_ADDRESS		 6
 #define GN_OBJ_DIRECTORY_NAME	 8
 #define GN_OBJ_EDI_PARTY_NAME	10
 #define GN_OBJ_URI				12
@@ -1595,7 +1595,7 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 		case AUTH_KEY_ID_CERT_ISSUER:
 			{
 				generalName_t * gn = parse_generalNames(object,
-					 					parser->get_level(parser) + 1, TRUE);
+										parser->get_level(parser) + 1, TRUE);
 
 				free_generalNames(gn, FALSE);
 			}

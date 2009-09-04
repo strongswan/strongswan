@@ -1536,7 +1536,7 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 				single_response_t sres = empty_single_response;
 
 				if (!parse_ocsp_single_response(object,
-						 				parser->get_level(parser)+1, &sres))
+										parser->get_level(parser)+1, &sres))
 				{
 					goto end;
 				}

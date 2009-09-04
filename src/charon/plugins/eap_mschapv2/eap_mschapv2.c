@@ -1035,9 +1035,9 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		/* FIXME: windows 7 always sends the username that is first entered in
 		 * the username box, even, if the user changes it during retries (probably
 		 * to keep consistent with the EAP-Identity).
-	 	 * thus, we could actually fail here, because retries do not make much
-	 	 * sense. on the other hand, an attacker could guess usernames, if the
-	 	 * error messages were different. */
+		 * thus, we could actually fail here, because retries do not make much
+		 * sense. on the other hand, an attacker could guess usernames, if the
+		 * error messages were different. */
 		userid->destroy(userid);
 		return process_server_retry(this, out);
 	}

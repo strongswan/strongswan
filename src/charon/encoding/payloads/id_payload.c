@@ -89,7 +89,7 @@ encoding_rule_t id_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_id_payload_t, payload_length) 	},
  	/* 1 Byte ID type*/
-	{ U_INT_8,			offsetof(private_id_payload_t, id_type)		 	},
+	{ U_INT_8,			offsetof(private_id_payload_t, id_type)			},
 	/* 3 reserved bytes */
 	{ RESERVED_BYTE,	0 												},
 	{ RESERVED_BYTE,	0 												},

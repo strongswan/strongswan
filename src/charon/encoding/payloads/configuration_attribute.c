@@ -123,45 +123,45 @@ static status_t verify(private_configuration_attribute_t *this)
 		 case INTERNAL_IP4_NBNS:
 		 case INTERNAL_ADDRESS_EXPIRY:
 		 case INTERNAL_IP4_DHCP:
-		 	if (this->attribute_length != 0 && this->attribute_length != 4)
-		 	{
+			if (this->attribute_length != 0 && this->attribute_length != 4)
+			{
 				failed = TRUE;
-		 	}
+			}
 			break;
 		 case INTERNAL_IP4_SUBNET:
-		 	if (this->attribute_length != 0 && this->attribute_length != 8)
-		 	{
+			if (this->attribute_length != 0 && this->attribute_length != 8)
+			{
 				failed = TRUE;
-		 	}
+			}
 			break;
 		 case INTERNAL_IP6_ADDRESS:
 		 case INTERNAL_IP6_SUBNET:
-		 	if (this->attribute_length != 0 && this->attribute_length != 17)
-		 	{
+			if (this->attribute_length != 0 && this->attribute_length != 17)
+			{
 				failed = TRUE;
-		 	}
+			}
 			break;
 		 case INTERNAL_IP6_DNS:
 		 case INTERNAL_IP6_NBNS:
 		 case INTERNAL_IP6_DHCP:
-		 	if (this->attribute_length != 0 && this->attribute_length != 16)
-		 	{
+			if (this->attribute_length != 0 && this->attribute_length != 16)
+			{
 				failed = TRUE;
-		 	}
+			}
 			break;
 		 case SUPPORTED_ATTRIBUTES:
-		 	if (this->attribute_length % 2)
-		 	{
+			if (this->attribute_length % 2)
+			{
 				failed = TRUE;
-		 	}
+			}
 			break;
 		 case APPLICATION_VERSION:
-		 	/* any length acceptable */
-		 	break;
+			/* any length acceptable */
+			break;
 		 default:
 			DBG1(DBG_ENC, "unknown attribute type %N",
 				 configuration_attribute_type_names, this->attribute_type);
-		 	break;
+			break;
 	}
 
 	if (failed)

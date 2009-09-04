@@ -1079,7 +1079,7 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 				if (addr->refcount == 1)
 				{
 					status = manage_ipaddr(this, RTM_DELADDR, 0,
-									  	   ifindex, virtual_ip);
+										   ifindex, virtual_ip);
 					if (status == SUCCESS)
 					{	/* wait until the address is really gone */
 						while (get_vip_refcount(this, virtual_ip) > 0)

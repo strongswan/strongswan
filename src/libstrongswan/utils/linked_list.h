@@ -123,7 +123,7 @@ struct linked_list_t {
 	/**
 	 * Returns the value of the first list item without removing it.
 	 *
-	 * @param this	 	calling object
+	 * @param this		calling object
 	 * @param item		returned value of first item
 	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
@@ -139,7 +139,7 @@ struct linked_list_t {
 	/**
 	 * Removes the last item in the list and returns its value.
 	 *
-	 * @param this	 	calling object
+	 * @param this		calling object
 	 * @param item		returned value of last item, or NULL
 	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */

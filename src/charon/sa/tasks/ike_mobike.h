@@ -81,7 +81,7 @@ struct ike_mobike_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if taks is initiated by us
- * @return			  	ike_mobike task to handle by the task_manager
+ * @return				ike_mobike task to handle by the task_manager
  */
 ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator);
 

@@ -251,9 +251,9 @@ static const asn1Object_t signedDataObjects[] = {
 	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 25 */
 	{ 0, "exit",							ASN1_EOC,			ASN1_EXIT }
 };
-#define PKCS7_DIGEST_ALG	 		 3
+#define PKCS7_DIGEST_ALG			 3
 #define PKCS7_SIGNED_CONTENT_INFO	 5
-#define PKCS7_SIGNED_CERT	 		 7
+#define PKCS7_SIGNED_CERT			 7
 #define PKCS7_SIGNER_INFO			13
 #define PKCS7_SIGNED_ISSUER			16
 #define PKCS7_SIGNED_SERIAL_NUMBER	17
@@ -460,7 +460,7 @@ static const asn1Object_t envelopedDataObjects[] = {
 	{ 2,     "contentType",					ASN1_OID,			ASN1_BODY }, /* 12 */
 	{ 2,     "contentEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 13 */
 	{ 2,     "encryptedContent",			ASN1_CONTEXT_S_0, 	ASN1_BODY }, /* 14 */
-	{ 0, "exit",							ASN1_EOC,		 	ASN1_EXIT }
+	{ 0, "exit",							ASN1_EOC,			ASN1_EXIT }
 };
 #define PKCS7_ENVELOPED_VERSION			 1
 #define PKCS7_RECIPIENT_INFO_VERSION	 4
@@ -554,7 +554,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 				if (known_oid(object) != OID_PKCS7_DATA)
 				{
 					DBG1("encrypted content not of type pkcs7 data");
-		 			goto end;
+					goto end;
 				}
 				break;
 			case PKCS7_CONTENT_ENC_ALGORITHM:
@@ -792,7 +792,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 		in.ptr = malloc(in.len);
 
 		DBG2("  padding %d bytes of data to multiple block size of %d bytes",
-		 	(int)this->data.len, (int)in.len);
+			(int)this->data.len, (int)in.len);
 
 		/* copy data */
 		memcpy(in.ptr, this->data.ptr, this->data.len);
@@ -888,7 +888,7 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 			this->attributes->set_messageDigest(this->attributes,
 								messageDigest);
 			this->attributes->set_attribute(this->attributes,
-					 			OID_PKCS9_SIGNING_TIME, signingTime);
+								OID_PKCS9_SIGNING_TIME, signingTime);
 			attributes = this->attributes->get_encoding(this->attributes);
 
 			free(messageDigest.ptr);

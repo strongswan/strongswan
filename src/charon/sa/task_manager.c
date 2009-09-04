@@ -892,7 +892,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 			host_t *me, *other;
 
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
-			 	 "retransmitting response", mid);
+				 "retransmitting response", mid);
 			clone = this->responding.packet->clone(this->responding.packet);
 			me = msg->get_destination(msg);
 			other = msg->get_source(msg);

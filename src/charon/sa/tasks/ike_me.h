@@ -91,7 +91,7 @@ struct ike_me_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if taks is initiated by us
- * @return			  	ike_me task to handle by the task_manager
+ * @return				ike_me task to handle by the task_manager
  */
 ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator);
 

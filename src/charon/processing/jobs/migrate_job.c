@@ -110,7 +110,7 @@ static void execute(private_migrate_job_t *this)
 
 		if (child_sa->update(child_sa, this->local, this->remote,
 				ike_sa->get_virtual_ip(ike_sa, TRUE),
-			 	ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+				ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
 		{
 			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 								   child_sa->get_spi(child_sa, TRUE));

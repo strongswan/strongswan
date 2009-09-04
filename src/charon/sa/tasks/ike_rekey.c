@@ -215,7 +215,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				job = (job_t*)rekey_ike_sa_job_create(
 										this->ike_sa->get_id(this->ike_sa), FALSE);
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
-					 					"trying again in %d seconds", retry);
+										"trying again in %d seconds", retry);
 				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 				charon->scheduler->schedule_job(charon->scheduler, job, retry);
 			}

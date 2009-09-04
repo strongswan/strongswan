@@ -93,7 +93,7 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 	{
 		value = va_arg(args, char**);
 		if (value && uci_lookup(this->ctx, &element, this->package,
-					 	  this->current->name, this->keywords[i]) == UCI_OK)
+						  this->current->name, this->keywords[i]) == UCI_OK)
 		{
 			*value = uci_to_option(element)->value;
 		}
