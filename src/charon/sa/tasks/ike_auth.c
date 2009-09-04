@@ -730,7 +730,6 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 								chunk_empty);
 			return FAILED;
 		}
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 			 this->ike_sa->get_name(this->ike_sa),
 			 this->ike_sa->get_unique_id(this->ike_sa),
@@ -738,6 +737,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			 this->ike_sa->get_my_id(this->ike_sa),
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 		return SUCCESS;
 	}
@@ -909,7 +909,6 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
 			return FAILED;
 		}
-		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 			 this->ike_sa->get_name(this->ike_sa),
 			 this->ike_sa->get_unique_id(this->ike_sa),
@@ -917,6 +916,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			 this->ike_sa->get_my_id(this->ike_sa),
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 		return SUCCESS;
 	}
