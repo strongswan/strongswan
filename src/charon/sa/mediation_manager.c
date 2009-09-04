@@ -20,7 +20,6 @@
 #include <utils/linked_list.h>
 #include <processing/jobs/mediation_job.h>
 
-
 typedef struct peer_t peer_t;
 
 /**
@@ -44,7 +43,8 @@ static void peer_destroy(peer_t *this)
 {
 	DESTROY_IF(this->id);
 	DESTROY_IF(this->ike_sa_id);
-	this->requested_by->destroy_offset(this->requested_by, offsetof(identification_t, destroy));
+	this->requested_by->destroy_offset(this->requested_by,
+									   offsetof(identification_t, destroy));
 	free(this);
 }
 
@@ -62,7 +62,6 @@ static peer_t *peer_create(identification_t *id, ike_sa_id_t* ike_sa_id)
 
 	return this;
 }
-
 
 typedef struct private_mediation_manager_t private_mediation_manager_t;
 
@@ -105,14 +104,15 @@ static void register_peer(peer_t *peer, identification_t *peer_id)
 	}
 	iterator->destroy(iterator);
 
-	peer->requested_by->insert_last(peer->requested_by, peer_id->clone(peer_id));
+	peer->requested_by->insert_last(peer->requested_by,
+									peer_id->clone(peer_id));
 }
 
 /**
  * Get a peer_t object by a peer's id
  */
 static status_t get_peer_by_id(private_mediation_manager_t *this,
-		identification_t *id, peer_t **peer)
+							   identification_t *id, peer_t **peer)
 {
 	iterator_t *iterator;
 	peer_t *current;
@@ -141,7 +141,8 @@ static status_t get_peer_by_id(private_mediation_manager_t *this,
  * and then remove peers completely that are not online and have no registered
  * peers.
  */
-static void unregister_peer(private_mediation_manager_t *this, identification_t *peer_id)
+static void unregister_peer(private_mediation_manager_t *this,
+							identification_t *peer_id)
 {
 	iterator_t *iterator, *iterator_r;
 	peer_t *peer;
@@ -150,7 +151,8 @@ static void unregister_peer(private_mediation_manager_t *this, identification_t 
 	iterator = this->peers->create_iterator(this->peers, TRUE);
 	while (iterator->iterate(iterator, (void**)&peer))
 	{
-		iterator_r = peer->requested_by->create_iterator(peer->requested_by, TRUE);
+		iterator_r = peer->requested_by->create_iterator(peer->requested_by,
+														 TRUE);
 		while (iterator_r->iterate(iterator_r, (void**)&registered))
 		{
 			if (peer_id->equals(peer_id, registered))
@@ -235,7 +237,8 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 
 	/* send callbacks to registered peers */
 	identification_t *requester;
-	while(peer->requested_by->remove_last(peer->requested_by, (void**)&requester) == SUCCESS)
+	while(peer->requested_by->remove_last(peer->requested_by,
+										  (void**)&requester) == SUCCESS)
 	{
 		job_t *job = (job_t*)mediation_callback_job_create(requester, peer_id);
 		charon->processor->queue_job(charon->processor, job);
@@ -290,7 +293,8 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 	if (!peer->ike_sa_id)
 	{
 		/* the peer is not online */
-		DBG2(DBG_IKE, "requested peer '%Y' is offline, registering peer '%Y'", peer_id, requester);
+		DBG2(DBG_IKE, "requested peer '%Y' is offline, registering peer '%Y'",
+			 peer_id, requester);
 		register_peer(peer, requester);
 		this->mutex->unlock(this->mutex);
 		return NULL;

@@ -23,7 +23,6 @@ typedef struct private_endpoint_notify_t private_endpoint_notify_t;
 
 /**
  * Private data of an notify_payload_t object.
- *
  */
 struct private_endpoint_notify_t {
 	/**
@@ -65,7 +64,7 @@ struct private_endpoint_notify_t {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !     Family    !      Type     !              Port             !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      !                       IP Address (variable)
+      !                       IP Address (variable)                   !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
@@ -136,15 +135,14 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid family");
 		return FAILED;
 	}
-
 	this->family = (me_endpoint_family_t)family;
 
-	if (parse_uint8(&cur, top, &type) != SUCCESS || type >= MAX_TYPE)
+	if (parse_uint8(&cur, top, &type) != SUCCESS ||
+		type == NO_TYPE || type >= MAX_TYPE)
 	{
 		DBG1(DBG_IKE, "failed to parse ME_ENDPOINT: invalid type");
 		return FAILED;
 	}
-
 	this->type = (me_endpoint_type_t)type;
 
 	addr_family = AF_INET;
@@ -170,7 +168,6 @@ static status_t parse_notification_data(private_endpoint_notify_t *this, chunk_t
 			}
 
 			addr.ptr = cur;
-
 			this->endpoint = host_create_from_chunk(addr_family, addr, port);
 			break;
 		case NO_FAMILY:
@@ -214,9 +211,8 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 
 	/* data = prio | family | type | port | addr */
 	data = chunk_cat("ccccc", prio_chunk, family_chunk, type_chunk,
-			port_chunk, addr_chunk);
+					 port_chunk, addr_chunk);
 	DBG3(DBG_IKE, "me_endpoint_data %B", &data);
-
 	return data;
 }
 

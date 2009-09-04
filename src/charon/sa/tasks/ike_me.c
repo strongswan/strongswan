@@ -193,16 +193,19 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 			}
 			case ME_ENDPOINT:
 			{
-				endpoint_notify_t *endpoint = endpoint_notify_create_from_payload(notify);
+				endpoint_notify_t *endpoint;
+				endpoint = endpoint_notify_create_from_payload(notify);
 				if (!endpoint)
 				{
 					DBG1(DBG_IKE, "received invalid ME_ENDPOINT notify");
 					break;
 				}
-				DBG1(DBG_IKE, "received %N ME_ENDPOINT %#H", me_endpoint_type_names,
-					endpoint->get_type(endpoint), endpoint->get_host(endpoint));
+				DBG1(DBG_IKE, "received %N ME_ENDPOINT %#H",
+					 me_endpoint_type_names, endpoint->get_type(endpoint),
+					 endpoint->get_host(endpoint));
 
-				this->remote_endpoints->insert_last(this->remote_endpoints, endpoint);
+				this->remote_endpoints->insert_last(this->remote_endpoints,
+													endpoint);
 				break;
 			}
 			case ME_CALLBACK:
@@ -263,7 +266,9 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 		{
 			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
 			{
-				endpoint_notify_t *endpoint = endpoint_notify_create_from_host(SERVER_REFLEXIVE, NULL, NULL);
+				endpoint_notify_t *endpoint;
+				endpoint = endpoint_notify_create_from_host(SERVER_REFLEXIVE,
+															NULL, NULL);
 				message->add_payload(message, (payload_t*)endpoint->build_notify(endpoint));
 				endpoint->destroy(endpoint);
 			}
@@ -271,10 +276,10 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 		}
 		case ME_CONNECT:
 		{
-			id_payload_t *id_payload;
 			rng_t *rng;
-
-			id_payload = id_payload_create_from_identification(ID_PEER, this->peer_id);
+			id_payload_t *id_payload;
+			id_payload = id_payload_create_from_identification(ID_PEER,
+															   this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 
 			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
@@ -285,8 +290,8 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 			}
 			if (!this->response)
 			{
-				/* only the initiator creates a connect ID. the responder returns
-				 * the connect ID that it received from the initiator */
+				/* only the initiator creates a connect ID. the responder
+				 * returns the connect ID that it received from the initiator */
 				rng->allocate_bytes(rng, ME_CONNECTID_LEN, &this->connect_id);
 			}
 			rng->allocate_bytes(rng, ME_CONNECTKEY_LEN, &this->connect_key);
@@ -301,7 +306,7 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 			}
 			else
 			{
-				/* FIXME: should we make that configurable? */
+				/* FIXME: should we make this configurable? */
 				message->add_notify(message, FALSE, ME_CALLBACK, chunk_empty);
 			}
 
@@ -328,7 +333,8 @@ static status_t process_r(private_ike_me_t *this, message_t *message)
 			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
 			if (!id_payload)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload"
+					 ", aborting");
 				break;
 			}
 			this->peer_id = id_payload->get_identification(id_payload);
@@ -343,21 +349,24 @@ static status_t process_r(private_ike_me_t *this, message_t *message)
 
 			if (!this->connect_id.ptr)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify"
+					 ", aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 
 			if (!this->connect_key.ptr)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY "
+					 "notify, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 
 			if (!this->remote_endpoints->get_count(this->remote_endpoints))
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT payloads, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT "
+					 "payloads, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
@@ -388,7 +397,10 @@ static status_t build_r(private_ike_me_t *this, message_t *message)
 
 			if (this->callback)
 			{
-				charon->connect_manager->check_and_initiate(charon->connect_manager,
+				/* we got a callback from the mediation server, initiate the
+				 * queued mediated connecction */
+				charon->connect_manager->check_and_initiate(
+						charon->connect_manager,
 						this->ike_sa->get_id(this->ike_sa),
 						this->ike_sa->get_my_id(this->ike_sa), this->peer_id);
 				return SUCCESS;
@@ -399,19 +411,22 @@ static status_t build_r(private_ike_me_t *this, message_t *message)
 				/* FIXME: handle result of set_responder_data
 				 * as initiator, upon receiving a response from another peer,
 				 * update the checklist and start sending checks */
-				charon->connect_manager->set_responder_data(charon->connect_manager,
-						this->connect_id, this->connect_key, this->remote_endpoints);
+				charon->connect_manager->set_responder_data(
+						charon->connect_manager,
+						this->connect_id, this->connect_key,
+						this->remote_endpoints);
 			}
 			else
 			{
 				/* FIXME: handle result of set_initiator_data
 				 * as responder, create a checklist with the initiator's data */
-				charon->connect_manager->set_initiator_data(charon->connect_manager,
+				charon->connect_manager->set_initiator_data(
+						charon->connect_manager,
 						this->peer_id, this->ike_sa->get_my_id(this->ike_sa),
-						this->connect_id, this->connect_key, this->remote_endpoints,
-						FALSE);
+						this->connect_id, this->connect_key,
+						this->remote_endpoints, FALSE);
 				if (this->ike_sa->respond(this->ike_sa, this->peer_id,
-						this->connect_id) != SUCCESS)
+										  this->connect_id) != SUCCESS)
 				{
 					return FAILED;
 				}
@@ -434,13 +449,11 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 		case IKE_SA_INIT:
 		{
 			process_payloads(this, message);
-
 			if (!this->mediation)
 			{
 				DBG1(DBG_IKE, "server did not return a ME_MEDIATION, aborting");
 				return FAILED;
 			}
-
 			return NEED_MORE;
 		}
 		case IKE_AUTH:
@@ -455,12 +468,9 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 			{	/* FIXME: should we accept this endpoint even if we did not send
 				 * a request? */
 				host_t *endpoint = reflexive->get_host(reflexive);
-
-				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
+				endpoint = endpoint->clone(endpoint);
+				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint);
 			}
-			/* FIXME: what if it failed? e.g. AUTH failure */
-			DBG1(DBG_IKE, "established mediation connection successfully");
-
 			break;
 		}
 		case ME_CONNECT:
@@ -476,21 +486,25 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 			{
 				if (this->response)
 				{
-					/* FIXME: handle result of set_responder_data.
-					 * as responder, we update the checklist and start sending checks */
-					charon->connect_manager->set_responder_data(charon->connect_manager,
-							this->connect_id, this->connect_key, this->local_endpoints);
+					/* FIXME: handle result of set_responder_data. */
+					/* as responder, we update the checklist and start sending
+					 * checks */
+					charon->connect_manager->set_responder_data(
+							charon->connect_manager, this->connect_id,
+							this->connect_key, this->local_endpoints);
 				}
 				else
 				{
-					/* FIXME: handle result of set_initiator_data
-					 * as initiator, we create a checklist and set the initiator's data */
-					charon->connect_manager->set_initiator_data(charon->connect_manager,
-						this->ike_sa->get_my_id(this->ike_sa), this->peer_id,
-						this->connect_id, this->connect_key, this->local_endpoints,
-						TRUE);
-					/* FIXME: also start a timer for the whole transaction (maybe
-					 * within the connect_manager?) */
+					/* FIXME: handle result of set_initiator_data */
+					/* as initiator, we create a checklist and set the
+					 * initiator's data */
+					charon->connect_manager->set_initiator_data(
+							charon->connect_manager,
+							this->ike_sa->get_my_id(this->ike_sa),
+							this->peer_id, this->connect_id, this->connect_key,
+							this->local_endpoints, TRUE);
+					/* FIXME: also start a timer for the whole transaction
+					 * (maybe within the connect_manager?) */
 				}
 			}
 			break;
@@ -510,7 +524,9 @@ static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 	{
 		case ME_CONNECT:
 		{
-			id_payload_t *id_payload = id_payload_create_from_identification(ID_PEER, this->peer_id);
+			id_payload_t *id_payload;
+			id_payload = id_payload_create_from_identification(ID_PEER,
+															   this->peer_id);
 			message->add_payload(message, (payload_t*)id_payload);
 
 			if (this->callback)
@@ -521,11 +537,13 @@ static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 			{
 				if (this->response)
 				{
-					message->add_notify(message, FALSE, ME_RESPONSE, chunk_empty);
+					message->add_notify(message, FALSE, ME_RESPONSE,
+										chunk_empty);
 				}
-				message->add_notify(message, FALSE, ME_CONNECTID, this->connect_id);
-				message->add_notify(message, FALSE, ME_CONNECTKEY, this->connect_key);
-
+				message->add_notify(message, FALSE, ME_CONNECTID,
+									this->connect_id);
+				message->add_notify(message, FALSE, ME_CONNECTKEY,
+									this->connect_key);
 				add_endpoints_to_message(message, this->remote_endpoints);
 			}
 			break;
@@ -533,7 +551,6 @@ static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 		default:
 			break;
 	}
-
 	return NEED_MORE;
 }
 
@@ -546,15 +563,15 @@ static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 	{
 		case IKE_SA_INIT:
 		{
-			/* FIXME: we should check for SA* and TS* payloads
-			 * if any are there send NO_ADDITIONAL_SAS back and delete this SA */
+			/* FIXME: we should check for SA* and TS* payloads. if there are
+			 * any, send NO_ADDITIONAL_SAS back and delete this SA */
 			process_payloads(this, message);
 			return this->mediation ? NEED_MORE : SUCCESS;
 		}
 		case IKE_AUTH:
 		{
-			/* FIXME: we should check whether the current peer_config is configured
-			 * as mediation connection */
+			/* FIXME: we should check whether the current peer_config is
+			 * configured as mediation connection */
 			process_payloads(this, message);
 			break;
 		}
@@ -570,32 +587,35 @@ static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 			id_payload = (id_payload_t*)message->get_payload(message, ID_PEER);
 			if (!id_payload)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ID_PEER payload"
+					 ", aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
-
 			this->peer_id = id_payload->get_identification(id_payload);
 
 			process_payloads(this, message);
 
 			if (!this->connect_id.ptr)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTID notify"
+					 ", aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 
 			if (!this->connect_key.ptr)
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY notify, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without ME_CONNECTKEY notify"
+					 ", aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
 
 			if (!this->remote_endpoints->get_count(this->remote_endpoints))
 			{
-				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT payloads, aborting");
+				DBG1(DBG_IKE, "received ME_CONNECT without any ME_ENDPOINT "
+					 "payloads, aborting");
 				this->invalid_syntax = TRUE;
 				break;
 			}
@@ -604,7 +624,6 @@ static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 		default:
 			break;
 	}
-
 	return NEED_MORE;
 }
 
@@ -623,24 +642,19 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 		case IKE_AUTH:
 		{
 			endpoint_notify_t *endpoint;
-			if (this->remote_endpoints->get_first(this->remote_endpoints, (void**)&endpoint) == SUCCESS &&
-					endpoint->get_type(endpoint) == SERVER_REFLEXIVE)
+			if (this->remote_endpoints->get_first(this->remote_endpoints,
+											(void**)&endpoint) == SUCCESS &&
+				endpoint->get_type(endpoint) == SERVER_REFLEXIVE)
 			{
 				host_t *host = this->ike_sa->get_other_host(this->ike_sa);
-
-				DBG2(DBG_IKE, "received request for a server reflexive endpoint "
-						"sending: %#H", host);
-
-				endpoint = endpoint_notify_create_from_host(SERVER_REFLEXIVE, host, NULL);
+				DBG2(DBG_IKE, "received request for a server reflexive "
+					 "endpoint sending: %#H", host);
+				endpoint = endpoint_notify_create_from_host(SERVER_REFLEXIVE,
+															host, NULL);
 				message->add_payload(message, (payload_t*)endpoint->build_notify(endpoint));
 				endpoint->destroy(endpoint);
 			}
-
-			/* FIXME: we actually must delete any existing IKE_SAs with the same remote id */
 			this->ike_sa->act_as_mediation_server(this->ike_sa);
-
-			DBG1(DBG_IKE, "established mediation connection successfully");
-
 			break;
 		}
 		case ME_CONNECT:
@@ -654,19 +668,21 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			ike_sa_id_t *peer_sa;
 			if (this->callback)
 			{
-				peer_sa = charon->mediation_manager->check_and_register(charon->mediation_manager,
-						this->peer_id, this->ike_sa->get_other_id(this->ike_sa));
+				peer_sa = charon->mediation_manager->check_and_register(
+									charon->mediation_manager, this->peer_id,
+									this->ike_sa->get_other_id(this->ike_sa));
 			}
 			else
 			{
-				peer_sa = charon->mediation_manager->check(charon->mediation_manager,
-						this->peer_id);
+				peer_sa = charon->mediation_manager->check(
+									charon->mediation_manager, this->peer_id);
 			}
 
 			if (!peer_sa)
 			{
 				/* the peer is not online */
-				message->add_notify(message, TRUE, ME_CONNECT_FAILED, chunk_empty);
+				message->add_notify(message, TRUE, ME_CONNECT_FAILED,
+									chunk_empty);
 				break;
 			}
 
@@ -674,7 +690,6 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,
 					this->connect_key, this->remote_endpoints, this->response);
 			charon->processor->queue_job(charon->processor, job);
-
 			break;
 		}
 		default:
@@ -707,7 +722,7 @@ static void me_connect(private_ike_me_t *this, identification_t *peer_id)
  * Implementation of ike_me.respond
  */
 static void me_respond(private_ike_me_t *this, identification_t *peer_id,
-		chunk_t connect_id)
+					   chunk_t connect_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 	this->connect_id = chunk_clone(connect_id);
@@ -726,15 +741,18 @@ static void me_callback(private_ike_me_t *this, identification_t *peer_id)
 /**
  * Implementation of ike_me.relay
  */
-static void relay(private_ike_me_t *this, identification_t *requester, chunk_t connect_id,
-		chunk_t connect_key, linked_list_t *endpoints, bool response)
+static void relay(private_ike_me_t *this, identification_t *requester,
+				  chunk_t connect_id, chunk_t connect_key,
+				  linked_list_t *endpoints, bool response)
 {
 	this->peer_id = requester->clone(requester);
 	this->connect_id = chunk_clone(connect_id);
 	this->connect_key = chunk_clone(connect_key);
 
-	this->remote_endpoints->destroy_offset(this->remote_endpoints, offsetof(endpoint_notify_t, destroy));
-	this->remote_endpoints = endpoints->clone_offset(endpoints, offsetof(endpoint_notify_t, clone));
+	this->remote_endpoints->destroy_offset(this->remote_endpoints,
+										offsetof(endpoint_notify_t, destroy));
+	this->remote_endpoints = endpoints->clone_offset(endpoints,
+										offsetof(endpoint_notify_t, clone));
 
 	this->response = response;
 }
@@ -765,8 +783,10 @@ static void destroy(private_ike_me_t *this)
 	chunk_free(&this->connect_id);
 	chunk_free(&this->connect_key);
 
-	this->local_endpoints->destroy_offset(this->local_endpoints, offsetof(endpoint_notify_t, destroy));
-	this->remote_endpoints->destroy_offset(this->remote_endpoints, offsetof(endpoint_notify_t, destroy));
+	this->local_endpoints->destroy_offset(this->local_endpoints,
+										offsetof(endpoint_notify_t, destroy));
+	this->remote_endpoints->destroy_offset(this->remote_endpoints,
+										offsetof(endpoint_notify_t, destroy));
 
 	DESTROY_IF(this->mediated_cfg);
 	free(this);

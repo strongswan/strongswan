@@ -55,7 +55,8 @@ initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id);
  * @param mediated_sa_id		identification of the mediated sa (gets cloned)
  * @return						job object
  */
-initiate_mediation_job_t *reinitiate_mediation_job_create(ike_sa_id_t *mediation_sa_id,
-		ike_sa_id_t *mediated_sa_id);
+initiate_mediation_job_t *reinitiate_mediation_job_create(
+												ike_sa_id_t *mediation_sa_id,
+												ike_sa_id_t *mediated_sa_id);
 
 #endif /** INITIATE_MEDIATION_JOB_H_ @}*/

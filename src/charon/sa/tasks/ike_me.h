@@ -40,7 +40,6 @@ typedef struct ike_me_t ike_me_t;
  * to it afterwards.
  */
 struct ike_me_t {
-
 	/**
 	 * Implements the task_t interface
 	 */
@@ -58,13 +57,16 @@ struct ike_me_t {
 	 * Responds to a ME_CONNECT from another peer (i.e. sends a ME_CONNECT
 	 * to the mediation server)
 	 *
-	 * @param peer_id			ID of the other peer (gets cloned)
-	 * @param connect_id		the connect ID as provided by the initiator (gets cloned)
+	 * Data gets cloned.
+	 *
+	 * @param peer_id			ID of the other peer
+	 * @param connect_id		the connect ID as provided by the initiator
 	 */
-	void (*respond)(ike_me_t *this, identification_t *peer_id, chunk_t connect_id);
+	void (*respond)(ike_me_t *this, identification_t *peer_id,
+					chunk_t connect_id);
 
 	/**
-	 * Sends a ME_CALLBACK to a peer that previously requested another peer.
+	 * Sends a ME_CALLBACK to a peer that previously requested some other peer.
 	 *
 	 * @param peer_id			ID of the other peer (gets cloned)
 	 */
@@ -81,17 +83,17 @@ struct ike_me_t {
 	 * @param endpoints			endpoints
 	 * @param response			TRUE if this is a response
 	 */
-	void (*relay)(ike_me_t *this, identification_t *requester, chunk_t connect_id,
-			chunk_t connect_key, linked_list_t *endpoints, bool response);
-
+	void (*relay)(ike_me_t *this, identification_t *requester,
+				  chunk_t connect_id, chunk_t connect_key,
+				  linked_list_t *endpoints, bool response);
 };
 
 /**
  * Create a new ike_me task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if taks is initiated by us
- * @return				ike_me task to handle by the task_manager
+ * @param initiator		TRUE if task is initiated by us
+ * @return				ike_me task to be handled by the task_manager
  */
 ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator);
 

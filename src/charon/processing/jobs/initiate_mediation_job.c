@@ -181,7 +181,7 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 	peer_cfg_t *mediated_cfg;
 
 	mediated_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-											  this->mediated_sa_id);
+												   this->mediated_sa_id);
 	if (mediated_sa)
 	{
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
@@ -189,22 +189,27 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 
 		mediation_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-				this->mediation_sa_id);
+														this->mediation_sa_id);
 		if (mediation_sa)
 		{
-			if (mediation_sa->initiate_mediation(mediation_sa, mediated_cfg) != SUCCESS)
+			if (mediation_sa->initiate_mediation(mediation_sa,
+												 mediated_cfg) != SUCCESS)
 			{
 				DBG1(DBG_JOB, "initiating mediated connection '%s' failed",
-						mediated_cfg->get_name(mediated_cfg));
+					 mediated_cfg->get_name(mediated_cfg));
 				mediated_cfg->destroy(mediated_cfg);
-				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, mediation_sa);
+				charon->ike_sa_manager->checkin_and_destroy(
+										charon->ike_sa_manager,
+										mediation_sa);
 				mediated_sa = charon->ike_sa_manager->checkout(
-								charon->ike_sa_manager, this->mediated_sa_id);
+										charon->ike_sa_manager,
+										this->mediated_sa_id);
 				if (mediated_sa)
 				{
 					DBG1(DBG_IKE, "establishing mediation connection failed");
 					charon->ike_sa_manager->checkin_and_destroy(
-										charon->ike_sa_manager, mediated_sa);
+										charon->ike_sa_manager,
+										mediated_sa);
 				}
 				destroy(this);
 				return;

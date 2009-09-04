@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil

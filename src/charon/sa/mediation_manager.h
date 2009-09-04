@@ -47,18 +47,18 @@ struct mediation_manager_t {
 	 * @param ike_sa_id			the IKE_SA ID of the peer's SA
 	 */
 	void (*update_sa_id) (mediation_manager_t* this, identification_t *peer_id,
-			ike_sa_id_t *ike_sa_id);
+						  ike_sa_id_t *ike_sa_id);
 
 	/**
 	 * Checks if a specific peer is online.
 	 *
 	 * @param peer_id			the peer's ID
 	 * @returns
-	 * 							- IKE_SA ID of the peer's SA.
-	 * 							- NULL, if the peer is not online.
+	 *							- IKE_SA ID of the peer's SA.
+	 *							- NULL, if the peer is not online.
 	 */
 	ike_sa_id_t* (*check) (mediation_manager_t* this,
-			identification_t *peer_id);
+						   identification_t *peer_id);
 
 	/**
 	 * Checks if a specific peer is online and registers the requesting
@@ -67,11 +67,12 @@ struct mediation_manager_t {
 	 * @param peer_id			the peer's ID
 	 * @param requester			the requesters ID
 	 * @returns
-	 * 							- IKE_SA ID of the peer's SA.
-	 * 							- NULL, if the peer is not online.
+	 *							- IKE_SA ID of the peer's SA.
+	 *							- NULL, if the peer is not online.
 	 */
 	ike_sa_id_t* (*check_and_register) (mediation_manager_t* this,
-			identification_t *peer_id, identification_t *requester);
+										identification_t *peer_id,
+										identification_t *requester);
 
 	/**
 	 * Destroys the manager with all data.
@@ -82,7 +83,7 @@ struct mediation_manager_t {
 /**
  * Create a manager.
  *
- * @returns 	mediation_manager_t object
+ * @returns	mediation_manager_t object
  */
 mediation_manager_t *mediation_manager_create(void);
 
