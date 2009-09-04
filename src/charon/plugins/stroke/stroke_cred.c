@@ -780,7 +780,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1(DBG_CFG, "opening secrets file '%s' failed");
+		DBG1(DBG_CFG, "opening secrets file '%s' failed", file);
 		return;
 	}
 
