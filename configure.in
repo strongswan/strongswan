@@ -1,12 +1,12 @@
 dnl  configure.in for linux strongSwan
 dnl  Copyright (C) 2006 Martin Willi
 dnl  Hochschule fuer Technik Rapperswil
-dnl 
+dnl
 dnl  This program is free software; you can redistribute it and/or modify it
 dnl  under the terms of the GNU General Public License as published by the
 dnl  Free Software Foundation; either version 2 of the License, or (at your
 dnl  option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-dnl 
+dnl
 dnl  This program is distributed in the hope that it will be useful, but
 dnl  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 dnl  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -1036,7 +1036,7 @@ if test x$gmp = xtrue; then
 			#if (__GNU_MP_VERSION*100 +  __GNU_MP_VERSION_MINOR*10 + __GNU_MP_VERSION_PATCHLEVEL) < 414
 				#error bad gmp
 			#endif
-		], 
+		],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
 	)
 fi
@@ -1094,7 +1094,7 @@ if test x$fast = xtrue; then
 	AC_HAVE_LIBRARY([z],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver dependency zlib not found!])])
 dnl autoconf does not like CamelCase!? How to fix this?
 dnl	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
-	
+
 	AC_HAVE_LIBRARY([fcgi],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])])
 	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
 fi
@@ -1112,7 +1112,7 @@ if test x$sqlite = xtrue; then
 		[#include <sqlite3.h>],
 		[
 			void *test = sqlite3_prepare_v2;
-		], 
+		],
 		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
 	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
 	AC_TRY_COMPILE(
@@ -1121,7 +1121,7 @@ if test x$sqlite = xtrue; then
 			#if SQLITE_VERSION_NUMBER < 3003001
 				#error bad sqlite
 			#endif
-		], 
+		],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])])
 fi
 
@@ -1168,7 +1168,7 @@ if test x$integrity_test = xtrue; then
 	AC_TRY_COMPILE(
 		[#define _GNU_SOURCE
 		 #include <dlfcn.h>],
-		[Dl_info info; dladdr(main, &info);], 
+		[Dl_info info; dladdr(main, &info);],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
 		 AC_MSG_ERROR([dladdr() not supported, required by integrity-test!])]
 	)
@@ -1176,7 +1176,7 @@ if test x$integrity_test = xtrue; then
 	AC_TRY_COMPILE(
 		[#define _GNU_SOURCE
 		 #include <link.h>],
-		[dl_iterate_phdr((void*)0, (void*)0);], 
+		[dl_iterate_phdr((void*)0, (void*)0);],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
 		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
 	)

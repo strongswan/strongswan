@@ -5,12 +5,12 @@
 # Copyright (C) 2003-2004 Tuomo Soini
 # Copyright (C) 2002-2004 Michael Richardson
 # Copyright (C) 2005-2007 Andreas Steffen <andreas.steffen@strongswan.org>
-# 
+#
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at your
 # option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -231,7 +231,7 @@ doroute() {
 	    parms2="via $PLUTO_NEXT_HOP"
 	else
 	    parms2="via $PLUTO_PEER"
-	fi	
+	fi
 	parms2="$parms2 dev $PLUTO_INTERFACE"
 
 	parms3=
@@ -251,7 +251,7 @@ doroute() {
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
 	"0.0.0.0/0.0.0.0")
 		# opportunistic encryption work around
-		# need to provide route that eclipses default, without 
+		# need to provide route that eclipses default, without
 		# replacing it.
 		it="ip route $1 0.0.0.0/1 $parms2 $parms3 &&
 			ip route $1 128.0.0.0/1 $parms2 $parms3"
@@ -271,8 +271,8 @@ doroute() {
 	fi
 	return $st
 }
- 
-# in the presence of KLIPS and ipsecN interfaces do not use IPSEC_POLICY 
+
+# in the presence of KLIPS and ipsecN interfaces do not use IPSEC_POLICY
 if [ `echo "$PLUTO_INTERFACE" | grep "ipsec"` ]
 then
 	KLIPS=1
@@ -314,7 +314,7 @@ prepare-host:*|prepare-client:*)
 	# delete possibly-existing route (preliminary to adding a route)
 	case "$PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK" in
 	"0.0.0.0/0.0.0.0")
-		# need to provide route that eclipses default, without 
+		# need to provide route that eclipses default, without
 		# replacing it.
 		parms1="0.0.0.0/1"
 		parms2="128.0.0.0/1"
@@ -333,7 +333,7 @@ prepare-host:*|prepare-client:*)
 		oops="silent error, exit status $status"
 	fi
 	case "$oops" in
-	*'RTNETLINK answers: No such process'*)	
+	*'RTNETLINK answers: No such process'*)
 		# This is what route (currently -- not documented!) gives
 		# for "could not find such a route".
 		oops=
@@ -392,7 +392,7 @@ up-host:iptables)
 	    logger -t $TAG -p $FAC_PRIO \
 	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
-	fi	
+	fi
 	;;
 down-host:iptables)
 	# connection to me, with (left/right)firewall=yes, going down
@@ -551,7 +551,7 @@ up-host-v6:iptables)
 	    logger -t $TAG -p $FAC_PRIO \
 	      "+ $PLUTO_PEER_ID $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
 	  fi
-	fi	
+	fi
 	;;
 down-host-v6:iptables)
 	# connection to me, with (left/right)firewall=yes, going down

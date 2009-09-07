@@ -1,5 +1,5 @@
 ipsec_PROGRAMS = scepclient
-scepclient_SOURCES = scepclient.c pkcs10.c pkcs10.h scep.c scep.h loglite.c 
+scepclient_SOURCES = scepclient.c pkcs10.c pkcs10.h scep.c scep.h loglite.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac

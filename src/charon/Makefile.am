@@ -137,7 +137,7 @@ endif
 # build optional plugins
 ########################
 
-SUBDIRS = . 
+SUBDIRS = .
 PLUGINS = ${libstrongswan_plugins}
 
 if USE_LOAD_TESTS
