@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include <debug.h>
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 
 typedef struct private_dispatcher_t private_dispatcher_t;
@@ -56,7 +57,7 @@ struct private_dispatcher_t {
 	/**
 	 * session locking mutex
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 
 	/**
 	 * List of sessions
@@ -112,7 +113,7 @@ typedef struct {
 	/** session instance */
 	session_t *session;
 	/** condvar to wait for session */
-	pthread_cond_t cond;
+	condvar_t *cond;
 	/** client host address, to prevent session hijacking */
 	char *host;
 	/** TRUE if session is in use */
@@ -172,7 +173,7 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 	entry = malloc_thing(session_entry_t);
 	entry->in_use = FALSE;
 	entry->closed = FALSE;
-	pthread_cond_init(&entry->cond, NULL);
+	entry->cond = condvar_create(CONDVAR_TYPE_DEFAULT);
 	entry->session = load_session(this);
 	entry->used = time_monotonic(NULL);
 	entry->host = strdup(host);
@@ -180,9 +181,13 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 	return entry;
 }
 
+/**
+ * destroy a session
+ */
 static void session_entry_destroy(session_entry_t *entry)
 {
 	entry->session->destroy(entry->session);
+	entry->cond->destroy(entry->cond);
 	free(entry->host);
 	free(entry);
 }
@@ -240,7 +245,7 @@ static void dispatch(private_dispatcher_t *this)
 		now = time_monotonic(NULL);
 
 		/* find session */
-		pthread_mutex_lock(&this->mutex);
+		this->mutex->lock(this->mutex);
 		enumerator = this->sessions->create_enumerator(this->sessions);
 		while (enumerator->enumerate(enumerator, &current))
 		{
@@ -268,7 +273,7 @@ static void dispatch(private_dispatcher_t *this)
 			/* wait until session is unused */
 			while (found->in_use)
 			{
-				pthread_cond_wait(&found->cond, &this->mutex);
+				found->cond->wait(found->cond, this->mutex);
 			}
 		}
 		else
@@ -277,18 +282,18 @@ static void dispatch(private_dispatcher_t *this)
 			this->sessions->insert_first(this->sessions, found);
 		}
 		found->in_use = TRUE;
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
 
 		/* start processing */
 		found->session->process(found->session, request);
 		found->used = time_monotonic(NULL);
 
 		/* release session */
-		pthread_mutex_lock(&this->mutex);
+		this->mutex->lock(this->mutex);
 		found->in_use = FALSE;
 		found->closed = request->session_closed(request);
-		pthread_cond_signal(&found->cond);
-		pthread_mutex_unlock(&this->mutex);
+		this->mutex->unlock(this->mutex);
+		found->cond->signal(found->cond);
 
 		/* cleanup */
 		request->destroy(request);
@@ -342,6 +347,7 @@ static void destroy(private_dispatcher_t *this)
 	this->sessions->destroy_function(this->sessions, (void*)session_entry_destroy);
 	this->controllers->destroy_function(this->controllers, free);
 	this->filters->destroy_function(this->filters, free);
+	this->mutex->destroy(this->mutex);
 	free(this->threads);
 	free(this);
 }
@@ -364,7 +370,7 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
 	this->context_constructor = constructor;
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->param = param;
 	this->fd = 0;
 	this->timeout = timeout;
