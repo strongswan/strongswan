@@ -146,650 +146,77 @@ AC_ARG_WITH(
 	[capabilities=no]
 )
 
-AC_ARG_ENABLE(
-	[curl],
-	AS_HELP_STRING([--enable-curl],[enable CURL fetcher plugin to fetch files via libcurl (default is NO). Requires libcurl.]),
-	[if test x$enableval = xyes; then
-		curl=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[ldap],
-	AS_HELP_STRING([--enable-ldap],[enable LDAP fetching plugin to fetch files via libldap (default is NO). Requires openLDAP.]),
-	[if test x$enableval = xyes; then
-		ldap=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[aes],
-	AS_HELP_STRING([--disable-aes],[disable own AES software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		aes=true
-	 else
-		aes=false
-	fi],
-	aes=true
-)
-
-AC_ARG_ENABLE(
-	[des],
-	AS_HELP_STRING([--disable-des],[disable own DES/3DES software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		des=true
-	 else
-		des=false
-	fi],
-	des=true
-)
-
-AC_ARG_ENABLE(
-	[blowfish],
-	AS_HELP_STRING([--enable-blowfish],[enable Blowfish software implementation plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		blowfish=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[md4],
-	AS_HELP_STRING([--enable-md4],[enable MD4 software implementation plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		md4=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[md5],
-	AS_HELP_STRING([--disable-md5],[disable own MD5 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		md5=true
-	 else
-		md5=false
-	fi],
-	md5=true
-)
-
-AC_ARG_ENABLE(
-	[sha1],
-	AS_HELP_STRING([--disable-sha1],[disable own SHA1 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		sha1=true
-	 else
-		sha1=false
-	fi],
-	sha1=true
-)
-
-AC_ARG_ENABLE(
-	[sha2],
-	AS_HELP_STRING([--disable-sha2],[disable own SHA256/SHA384/SHA512 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		sha2=true
-	 else
-		sha2=false
-	fi],
-	sha2=true
-)
-
-AC_ARG_ENABLE(
-	[fips-prf],
-	AS_HELP_STRING([--disable-fips-prf],[disable FIPS PRF software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		fips_prf=true
-	 else
-		fips_prf=false
-	fi],
-	fips_prf=true
-)
-
-AC_ARG_ENABLE(
-	[gmp],
-	AS_HELP_STRING([--disable-gmp],[disable own GNU MP (libgmp) based crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		gmp=true
-	 else
-		gmp=false
-	fi],
-	gmp=true
-)
-
-AC_ARG_ENABLE(
-	[random],
-	AS_HELP_STRING([--disable-random],[disable RNG implementation on top of /dev/(u)random. (default is NO).]),
-	[if test x$enableval = xyes; then
-		random=true
-	 else
-		random=false
-	fi],
-	random=true
-)
-
-AC_ARG_ENABLE(
-	[x509],
-	AS_HELP_STRING([--disable-x509],[disable own X509 certificate implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		x509=true
-	 else
-		x509=false
-	fi],
-	x509=true
-)
-
-AC_ARG_ENABLE(
-	[pubkey],
-	AS_HELP_STRING([--disable-pubkey],[disable RAW public key support plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pubkey=true
-	 else
-		pubkey=false
-	fi],
-	pubkey=true
-)
-
-AC_ARG_ENABLE(
-	[pkcs1],
-	AS_HELP_STRING([--disable-pkcs1],[disable PKCS1 key decoding plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pkcs1=true
-	 else
-		pkcs1=false
-	fi],
-	pkcs1=true
-)
-
-AC_ARG_ENABLE(
-	[pgp],
-	AS_HELP_STRING([--disable-pgp],[disable PGP key decoding plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pgp=true
-	 else
-		pgp=false
-	fi],
-	pgp=true
-)
-
-AC_ARG_ENABLE(
-	[dnskey],
-	AS_HELP_STRING([--disable-dnskey],[disable DNS RR key decoding plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		dnskey=true
-	 else
-		dnskey=false
-	fi],
-	dnskey=true
-)
-
-AC_ARG_ENABLE(
-	[pem],
-	AS_HELP_STRING([--disable-pem],[disable PEM decoding plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pem=true
-	 else
-		pem=false
-	fi],
-	pem=true
-)
-
-AC_ARG_ENABLE(
-	[hmac],
-	AS_HELP_STRING([--disable-hmac],[disable HMAC crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		hmac=true
-	 else
-		hmac=false
-	fi],
-	hmac=true
-)
-
-AC_ARG_ENABLE(
-	[xcbc],
-	AS_HELP_STRING([--disable-xcbc],[disable xcbc crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		xcbc=true
-	 else
-		xcbc=false
-	fi],
-	xcbc=true
-)
-
-AC_ARG_ENABLE(
-	[test-vectors],
-	AS_HELP_STRING([--enable-test-vectors],[enable plugin providing crypto test vectors (default is NO).]),
-	[if test x$enableval = xyes; then
-		test_vectors=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[mysql],
-	AS_HELP_STRING([--enable-mysql],[enable MySQL database support (default is NO). Requires libmysqlclient_r.]),
-	[if test x$enableval = xyes; then
-		mysql=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[sqlite],
-	AS_HELP_STRING([--enable-sqlite],[enable SQLite database support (default is NO). Requires libsqlite3.]),
-	[if test x$enableval = xyes; then
-		sqlite=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[stroke],
-	AS_HELP_STRING([--disable-stroke],[disable charons stroke (pluto compatibility) configuration backend. (default is NO).]),
-	[if test x$enableval = xyes; then
-		stroke=true
-	 else
-		stroke=false
-	fi],
-	stroke=true
-)
-
-AC_ARG_ENABLE(
-	[medsrv],
-	AS_HELP_STRING([--enable-medsrv],[enable mediation server web frontend and daemon plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		medsrv=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[medcli],
-	AS_HELP_STRING([--enable-medcli],[enable mediation client configuration database plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		medcli=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[smp],
-	AS_HELP_STRING([--enable-smp],[enable SMP configuration and control interface (default is NO). Requires libxml.]),
-	[if test x$enableval = xyes; then
-		smp=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[sql],
-	AS_HELP_STRING([--enable-sql],[enable SQL database configuration backend (default is NO).]),
-	[if test x$enableval = xyes; then
-		sql=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[smartcard],
-	AS_HELP_STRING([--enable-smartcard],[enable smartcard support (default is NO).]),
-	[if test x$enableval = xyes; then
-		smartcard=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[cisco-quirks],
-	AS_HELP_STRING([--enable-cisco-quirks],[enable support of Cisco VPN client (default is NO).]),
-	[if test x$enableval = xyes; then
-		cisco_quirks=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[leak-detective],
-	AS_HELP_STRING([--enable-leak-detective],[enable malloc hooks to find memory leaks (default is NO).]),
-	[if test x$enableval = xyes; then
-		leak_detective=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[lock-profiler],
-	AS_HELP_STRING([--enable-lock-profiler],[enable lock/mutex profiling code (default is NO).]),
-	[if test x$enableval = xyes; then
-		lock_profiler=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[unit-tests],
-	AS_HELP_STRING([--enable-unit-tests],[enable unit tests on IKEv2 daemon startup (default is NO).]),
-	[if test x$enableval = xyes; then
-		unittest=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[load-tests],
-	AS_HELP_STRING([--enable-load-tests],[enable load testing plugin for IKEv2 daemon (default is NO).]),
-	[if test x$enableval = xyes; then
-		loadtest=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-sim],
-	AS_HELP_STRING([--enable-eap-sim],[build SIM authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_sim=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-sim-file],
-	AS_HELP_STRING([--enable-eap-sim-file],[build EAP-SIM backend based on a triplet file (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_sim_file=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-identity],
-	AS_HELP_STRING([--enable-eap-identity],[build EAP module providing EAP-Identity helper (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_identity=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-md5],
-	AS_HELP_STRING([--enable-eap-md5],[build MD5 (CHAP) authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_md5=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-gtc],
-	AS_HELP_STRING([--enable-eap-gtc],[build PAM based GTC authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_gtc=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-aka],
-	AS_HELP_STRING([--enable-eap-aka],[build AKA authentication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_aka=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-mschapv2],
-	AS_HELP_STRING([--enable-eap-mschapv2],[build MS-CHAPv2 authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_mschapv2=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-radius],
-	AS_HELP_STRING([--enable-eap-radius],[build RADIUS proxy authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_radius=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-netlink],
-	AS_HELP_STRING([--disable-kernel-netlink],[disable the netlink kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_netlink=true
-	 else
-		kernel_netlink=false
-	fi],
-	kernel_netlink=true
-)
-
-AC_ARG_ENABLE(
-	[kernel-pfkey],
-	AS_HELP_STRING([--enable-kernel-pfkey],[enable the PF_KEY kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_pfkey=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-pfroute],
-	AS_HELP_STRING([--enable-kernel-pfroute],[enable the PF_ROUTE kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_pfroute=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-klips],
-	AS_HELP_STRING([--enable-kernel-klips],[enable the KLIPS kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_klips=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[nat-transport],
-	AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
-	[if test x$enableval = xyes; then
-		nat_transport=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[vendor-id],
-	AS_HELP_STRING([--disable-vendor-id],[disable the sending of the strongSwan vendor ID (default is NO).]),
-	[if test x$enableval = xyes; then
-		vendor_id=true
-	 else
-		vendor_id=false
-	fi],
-	vendor_id=true
-)
-
-AC_ARG_ENABLE(
-	[xauth-vid],
-	AS_HELP_STRING([--disable-xauth-vid],[disable the sending of the XAUTH vendor ID (default is NO).]),
-	[if test x$enableval = xyes; then
-		xauth_vid=true
-	 else
-		xauth_vid=false
-	fi],
-	xauth_vid=true
-)
-
-AC_ARG_ENABLE(
-	[dumm],
-	AS_HELP_STRING([--enable-dumm],[build the DUMM UML test framework (default is NO).]),
-	[if test x$enableval = xyes; then
-		dumm=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[fast],
-	AS_HELP_STRING([--enable-fast],[build libfast (FastCGI Application Server w/ templates (default is NO).]),
-	[if test x$enableval = xyes; then
-		fast=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[manager],
-	AS_HELP_STRING([--enable-manager],[build web management console (default is NO).]),
-	[if test x$enableval = xyes; then
-		manager=true
-		xml=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[mediation],
-	AS_HELP_STRING([--enable-mediation],[enable IKEv2 Mediation Extension (default is NO).]),
-	[if test x$enableval = xyes; then
-		me=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[integrity-test],
-	AS_HELP_STRING([--enable-integrity-test],[enable integrity testing of libstrongswan and plugins (default is NO).]),
-	[if test x$enableval = xyes; then
-		integrity_test=true 
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[pluto],
-	AS_HELP_STRING([--disable-pluto],[disable the IKEv1 keying daemon pluto. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pluto=true
-	 else
-		pluto=false
-	fi],
-	pluto=true
-)
-
-AC_ARG_ENABLE(
-	[threads],
-	AS_HELP_STRING([--disable-threads],[disable the use of threads in pluto. Charon always uses threads. (default is NO).]),
-	[if test x$enableval = xyes; then
-		threads=true
-	 else
-		threads=false
-	fi],
-	threads=true
-)
-
-AC_ARG_ENABLE(
-	[charon],
-	AS_HELP_STRING([--disable-charon],[disable the IKEv2 keying daemon charon. (default is NO).]),
-	[if test x$enableval = xyes; then
-		charon=true
-	 else
-		charon=false
-	fi],
-	charon=true
-)
-
-AC_ARG_ENABLE(
-	[tools],
-	AS_HELP_STRING([--disable-tools],[disable additional utilities (openac, scepclient and pki). (default is NO).]),
-	[if test x$enableval = xyes; then
-		tools=true
-	 else
-		tools=false
-	fi],
-	tools=true
-)
-
-AC_ARG_ENABLE(
-	[scripts],
-	AS_HELP_STRING([--disable-scripts],[disable additional utilities (found in directory scripts). (default is NO).]),
-	[if test x$enableval = xyes; then
-		scripts=true
-	 else
-		scripts=false
-	fi],
-	scripts=true
-)
-
-AC_ARG_ENABLE(
-	[updown],
-	AS_HELP_STRING([--disable-updown],[disable updown firewall script plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		updown=true
-	 else
-		updown=false
-	fi],
-	updown=true
-)
-
-AC_ARG_ENABLE(
-	[attr],
-	AS_HELP_STRING([--disable-attr],[disable strongswan.conf based configuration attribute plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		attr=true
-	 else
-		attr=false
-	fi],
-	attr=true
-)
-
-AC_ARG_ENABLE(
-	[resolv-conf],
-	AS_HELP_STRING([--disable-resolv-conf],[disable resolv.conf DNS handler plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		resolvconf=true
-	 else
-		resolvconf=false
-	fi],
-	resolvconf=true
-)
-
-AC_ARG_ENABLE(
-	[padlock],
-	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		padlock=true
-	 else
-		padlock=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[openssl],
-	AS_HELP_STRING([--enable-openssl],[enables the OpenSSL crypto plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		openssl=true
-	 else
-		openssl=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[gcrypt],
-	AS_HELP_STRING([--enable-gcrypt],[enables the libgcrypt plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		gcrypt=true
-	 else
-		gcrypt=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[agent],
-	AS_HELP_STRING([--enable-agent],[enables the ssh-agent signing plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		agent=true
-	 else
-		agent=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[uci],
-	AS_HELP_STRING([--enable-uci],[enable OpenWRT UCI configuration plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		uci=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[nm],
-	AS_HELP_STRING([--enable-nm],[enable NetworkManager plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		nm=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[vstr],
-	AS_HELP_STRING([--enable-vstr],[enforce using the Vstr string library to replace glibc-like printf hooks (default is NO).]),
-	[if test x$enableval = xyes; then
-	 	vstr=true
-	fi]
-)
+m4_include(m4/macros/enable-disable.m4)
+
+ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
+ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
+ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
+ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
+ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
+ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
+ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
+ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
+ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
+ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
+ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
+ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
+ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
+ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
+ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
+ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
+ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
+ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
+ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
+ARG_DISBL_SET([stroke],         [disable charons stroke (pluto compatibility) configuration backend.])
+ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
+ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
+ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
+ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
+ARG_ENABL_SET([smartcard],      [enable smartcard support.])
+ARG_ENABL_SET([cisco-quirks],   [enable support of Cisco VPN client.])
+ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
+ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
+ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
+ARG_ENABL_SET([load-tests],     [enable load testing plugin for IKEv2 daemon.])
+ARG_ENABL_SET([eap-sim],        [enable SIM authenication module for EAP.])
+ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
+ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
+ARG_ENABL_SET([enable-eap-md5], [enable EAP MD5 (CHAP) authenication module.])
+ARG_ENABL_SET([enable-eap-gtc], [enable PAM based EAP GTC authenication module.])
+ARG_ENABL_SET([eap-aka],        [enable EAP AKA authentication module.])
+ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
+ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
+ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
+ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
+ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
+ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
+ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
+ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
+ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
+ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
+ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
+ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
+ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
+ARG_DISBL_SET([pluto],          [disable the IKEv1 keying daemon pluto.])
+ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
+ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
+ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
+ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
+ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
+ARG_DISBL_SET([resolv-conf],    [disable resolv.conf DNS handler plugin.])
+ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
+ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
+ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
+ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
+ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
+ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 
 dnl =========================
 dnl  set up compiler and flags
