@@ -18,6 +18,7 @@ dnl ===========================
 
 AC_INIT(strongSwan,4.3.5)
 AM_INIT_AUTOMAKE(tar-ustar)
+AC_CONFIG_MACRO_DIR([m4/config])
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
 

@@ -4,6 +4,8 @@ if USE_SCRIPTS
   SUBDIRS += scripts
 endif
 
+ACLOCAL_AMFLAGS = -I m4/config m4/macros m4
+
 EXTRA_DIST = Doxyfile.in CREDITS
 CLEANFILES = apidoc Doxyfile
 
