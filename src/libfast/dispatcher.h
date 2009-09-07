@@ -90,7 +90,7 @@ struct dispatcher_t {
 						   controller_constructor_t constructor, void *param);
 
 	/**
-	 * @brief Add a filter to the dispatcher.
+	 * Add a filter to the dispatcher.
 	 *
 	 * @param constructor	constructor to create filter in session
 	 * @param param			param to pass to constructor

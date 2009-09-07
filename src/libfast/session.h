@@ -47,7 +47,7 @@ struct session_t {
 	void (*add_controller)(session_t *this, controller_t *controller);
 
 	/**
-	 * @brief Add a filter instance to the session.
+	 * Add a filter instance to the session.
 	 *
 	 * @param filter		filter to add
 	 */
