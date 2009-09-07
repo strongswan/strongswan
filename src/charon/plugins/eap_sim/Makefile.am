@@ -1,7 +1,9 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DSIM_READER_LIB=\"${simreader}\"
+AM_CFLAGS = -rdynamic \
+	-DIPSEC_CONFDIR=\"${confdir}\" \
+	-DSIM_READER_LIB=\"${sim_reader}\"
 
 plugin_LTLIBRARIES = libstrongswan-eapsim.la
 

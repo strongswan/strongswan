@@ -58,7 +58,7 @@ LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
 
 INCLUDES = \
--I${linuxdir} \
+-I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/whack
@@ -71,6 +71,7 @@ AM_CFLAGS = \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
 

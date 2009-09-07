@@ -1,7 +1,9 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+-DDEV_RANDOM=\"${random_device}\" \
+-DDEV_URANDOM=\"${urandom_device}\"
 
 plugin_LTLIBRARIES = libstrongswan-random.la
 

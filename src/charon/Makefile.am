@@ -102,7 +102,7 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 AM_CFLAGS = -rdynamic \
   -DIPSEC_DIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \

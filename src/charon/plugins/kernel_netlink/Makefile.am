@@ -1,7 +1,9 @@
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+-DROUTING_TABLE=${routing_table} \
+-DROUTING_TABLE_PRIO=${routing_table_prio}
 
 plugin_LTLIBRARIES = libstrongswan-kernel-netlink.la
 

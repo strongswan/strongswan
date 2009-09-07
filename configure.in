@@ -26,102 +26,27 @@ dnl =================================
 dnl  check --enable-xxx & --with-xxx
 dnl =================================
 
-AC_ARG_WITH(
-	[default-pkcs11],
-	AS_HELP_STRING([--with-default-pkcs11=lib],[set the default PKCS11 library other than "/usr/lib/opensc-pkcs11.so"]),
-	[AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "$withval")],
-	[AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "/usr/lib/opensc-pkcs11.so")]
-)
+m4_include(m4/macros/with.m4)
+
+ARG_WITH_SUBST([default-pkcs11],     [/usr/lib/opensc-pkcs11.so], [set the default PKCS11 library])
+ARG_WITH_SUBST([random-device],      [/dev/random], [set the device to read real random data from])
+ARG_WITH_SUBST([urandom-device],     [/dev/urandom], [set the device to read pseudo random data from])
+ARG_WITH_SUBST([strongswan-conf],    [${sysconfdir}/strongswan.conf], [set the strongswan.conf file location])
+ARG_WITH_SUBST([resolv-conf],        [${sysconfdir}/resolv.conf], [set the file to use in DNS handler plugin])
+ARG_WITH_SUBST([piddir],             [/var/run], [set path for PID and UNIX socket files])
+ARG_WITH_SUBST([ipsecdir],           [${libexecdir%/}/ipsec], [set installation path for ipsec tools])
+ARG_WITH_SUBST([plugindir],          [${ipsecdir%/}/plugins], [set the installation path of plugins])
+ARG_WITH_SUBST([sim-reader],         [${plugindir%/}/libeapsim-file.so], [set library containing the sim_run_alg()/sim_get_triplet() functions for EAP-SIM])
+ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
+ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
+ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
+
+ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currenlty only the value "libcap" is supported])
 
 AC_ARG_WITH(
 	[xauth-module],
 	AS_HELP_STRING([--with-xauth-module=lib],[set the path to the XAUTH module]),
 	[AC_DEFINE_UNQUOTED(XAUTH_DEFAULT_LIB, "$withval")],
-)
-
-AC_ARG_WITH(
-	[random-device],
-	AS_HELP_STRING([--with-random-device=dev],[set the device for real random data other than "/dev/random"]),
-	[AC_DEFINE_UNQUOTED(DEV_RANDOM, "$withval")],
-	[AC_DEFINE_UNQUOTED(DEV_RANDOM, "/dev/random")]
-)
-AC_ARG_WITH(
-	[resolv-conf],
-	AS_HELP_STRING([--with-resolv-conf=file],[set the file to use in DNS handler plugin other than "sysconfdir/resolv.conf"]),
-	[AC_SUBST(resolv_conf, "$withval")],
-	[AC_SUBST(resolv_conf, "${sysconfdir}/resolv.conf")]
-)
-
-AC_ARG_WITH(
-	[strongswan-conf],
-	AS_HELP_STRING([--with-strongswan-conf=file],[strongswan.conf file other than "sysconfdir/strongswan.conf"]),
-	[AC_SUBST(strongswan_conf, "$withval")],
-	[AC_SUBST(strongswan_conf, "${sysconfdir}/strongswan.conf")]
-)
-
-AC_ARG_WITH(
-	[urandom-device],
-	AS_HELP_STRING([--with-urandom-device=dev],[set the device for pseudo random data other than "/dev/urandom"]),
-	[AC_DEFINE_UNQUOTED(DEV_URANDOM, "$withval")],
-	[AC_DEFINE_UNQUOTED(DEV_URANDOM, "/dev/urandom")]
-)
-
-AC_ARG_WITH(
-	[piddir],
-	AS_HELP_STRING([--with-piddir=dir],[path for PID and UNIX socket files other than "/var/run"]),
-	[AC_SUBST(piddir, "$withval")],
-	[AC_SUBST(piddir, "/var/run")]
-)
-
-AC_ARG_WITH(
-	[ipsecdir],
-	AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
-	[AC_SUBST(ipsecdir, "$withval")],
-	[AC_SUBST(ipsecdir, "${libexecdir%/}/ipsec")]
-)
-AC_SUBST(plugindir, "${ipsecdir%/}/plugins")
-
-AC_ARG_WITH(
-	[plugindir],
-	AS_HELP_STRING([--with-plugindir=dir],[installation path for plugins other than "ipsecdir/plugins"]),
-	[AC_SUBST(plugindir, "$withval")],
-	[AC_SUBST(plugindir, "${ipsecdir%/}/plugins")]
-)
-
-AC_ARG_WITH(
-	[sim-reader],
-	AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg()/sim_get_triplet() function for EAP-SIM]),
-	[AC_SUBST(simreader, "$withval")],
-	[AC_SUBST(simreader, "${plugindir%/}/libeapsim-file.so")]
-)
-
-AC_ARG_WITH(
-	[linux-headers],
-	AS_HELP_STRING([--with-linux-headers=dir],[use the linux header files in dir instead of the supplied ones in "src/include"]),
-	[AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "\${top_srcdir}/src/include")]
-)
-AC_SUBST(LINUX_HEADERS)
-
-AC_ARG_WITH(
-	[routing-table],
-	AS_HELP_STRING([--with-routing-table=num],[use routing table for IPsec routes (default: 220)]),
-	[AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, $withval) AC_SUBST(IPSEC_ROUTING_TABLE, "$withval")], 
-	[AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE, 220) AC_SUBST(IPSEC_ROUTING_TABLE, "220")]
-)
-
-AC_ARG_WITH(
-	[routing-table-prio],
-	AS_HELP_STRING([--with-routing-table-prio=prio],[priority for IPsec routing table (default: 220)]),
-	[AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE_PRIO, $withval) AC_SUBST(IPSEC_ROUTING_TABLE_PRIO, "$withval")], 
-	[AC_DEFINE_UNQUOTED(IPSEC_ROUTING_TABLE_PRIO, 220) AC_SUBST(IPSEC_ROUTING_TABLE_PRIO, "220")]
-)
-
-AC_ARG_WITH(
-	[uid],,[AC_MSG_ERROR([--with-uid is gone, use --with-user instead!])]
-)
-
-AC_ARG_WITH(
-	[gid],,[AC_MSG_ERROR([--with-gid is gone, use --with-group instead!])]
 )
 
 AC_ARG_WITH(
@@ -136,14 +61,6 @@ AC_ARG_WITH(
 	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
-)
-
-dnl Will be extended to --with-capabilities=libcap|libcap2
-AC_ARG_WITH(
-	[capabilities],
-	AS_HELP_STRING([--with-capabilities=libcap],[capability dropping using libcap. Currenlty only the value "libcap" is supported (default is NO).]),
-	[capabilities="$withval"],
-	[capabilities=no]
 )
 
 m4_include(m4/macros/enable-disable.m4)

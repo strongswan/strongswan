@@ -6,7 +6,7 @@ keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
 exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
 
 INCLUDES = \
--I${linuxdir} \
+-I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/pluto \
@@ -18,6 +18,8 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DIPSEC_EAPDIR=\"${eapdir}\" \
+-DDEV_RANDOM=\"${random_device}\" \
+-DDEV_URANDOM=\"${urandom_device}\" \
 -DDEBUG
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)

@@ -34,14 +34,6 @@
 /** delay before firing roam jobs (ms) */
 #define ROAM_DELAY 100
 
-/** routing table for routes installed by us */
-#ifndef IPSEC_ROUTING_TABLE
-#define IPSEC_ROUTING_TABLE 100
-#endif
-#ifndef IPSEC_ROUTING_TABLE_PRIO
-#define IPSEC_ROUTING_TABLE_PRIO 100
-#endif
-
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -1366,9 +1358,9 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	timerclear(&this->last_roam);
 	this->routing_table = lib->settings->get_int(lib->settings,
-					"charon.routing_table", IPSEC_ROUTING_TABLE);
+					"charon.routing_table", ROUTING_TABLE);
 	this->routing_table_prio = lib->settings->get_int(lib->settings,
-					"charon.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO);
+					"charon.routing_table_prio", ROUTING_TABLE_PRIO);
 	this->process_route = lib->settings->get_bool(lib->settings,
 					"charon.process_route", TRUE);
 	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
