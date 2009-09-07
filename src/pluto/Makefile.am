@@ -65,7 +65,7 @@ INCLUDES = \
 
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \

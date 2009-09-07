@@ -15,7 +15,7 @@ INCLUDES = \
 
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DIPSEC_EAPDIR=\"${eapdir}\" \
 -DDEV_RANDOM=\"${random_device}\" \

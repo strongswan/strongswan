@@ -16,7 +16,7 @@ INCLUDES = \
 -I$(WHACKDIR)
 
 AM_CFLAGS = \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \

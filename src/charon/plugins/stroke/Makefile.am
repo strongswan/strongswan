@@ -3,7 +3,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_
 
 AM_CFLAGS = \
 -rdynamic \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\"
 
 plugin_LTLIBRARIES = libstrongswan-stroke.la
