@@ -128,7 +128,7 @@ typedef struct {
  */
 static session_t* load_session(private_dispatcher_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	controller_entry_t *centry;
 	filter_entry_t *fentry;
 	session_t *session;
@@ -142,21 +142,21 @@ static session_t* load_session(private_dispatcher_t *this)
 	}
 	session = session_create(context);
 
-	iterator = this->controllers->create_iterator(this->controllers, TRUE);
-	while (iterator->iterate(iterator, (void**)&centry))
+	enumerator = this->controllers->create_enumerator(this->controllers);
+	while (enumerator->enumerate(enumerator, &centry))
 	{
 		controller = centry->constructor(context, centry->param);
 		session->add_controller(session, controller);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
-	iterator = this->filters->create_iterator(this->filters, TRUE);
-	while (iterator->iterate(iterator, (void**)&fentry))
+	enumerator = this->filters->create_enumerator(this->filters);
+	while (enumerator->enumerate(enumerator, &fentry))
 	{
 		filter = fentry->constructor(context, fentry->param);
 		session->add_filter(session, filter);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	return session;
 }
@@ -224,7 +224,7 @@ static void dispatch(private_dispatcher_t *this)
 	{
 		request_t *request;
 		session_entry_t *current, *found = NULL;
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		time_t now;
 		char *sid;
 
@@ -241,15 +241,15 @@ static void dispatch(private_dispatcher_t *this)
 
 		/* find session */
 		pthread_mutex_lock(&this->mutex);
-		iterator = this->sessions->create_iterator(this->sessions, TRUE);
-		while (iterator->iterate(iterator, (void**)&current))
+		enumerator = this->sessions->create_enumerator(this->sessions);
+		while (enumerator->enumerate(enumerator, &current))
 		{
 			/* check all sessions for timeout or close flag
 			 * TODO: use a seperate cleanup thread */
 			if (!current->in_use &&
 				(current->used < now - this->timeout || current->closed))
 			{
-				iterator->remove(iterator);
+				this->sessions->remove_at(this->sessions, enumerator);
 				session_entry_destroy(current);
 				continue;
 			}
@@ -261,7 +261,7 @@ static void dispatch(private_dispatcher_t *this)
 				found = current;
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 
 		if (found)
 		{
