@@ -67,6 +67,7 @@ static int usage(char *error)
 	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
+	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "  pki --issue [--in file] [--type pub|pkcs10]\n");
 	fprintf(out, "              --cacert file --cakey file --dn subject-dn\n");
 	fprintf(out, "              [--lifetime days] [--serial hex]\n");
@@ -80,10 +81,11 @@ static int usage(char *error)
 	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
+	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "  pki --verify [--in file] [--ca file]\n");
 	fprintf(out, "      verify a certificate using the CA certificate\n");
 	fprintf(out, "        --in       x509 certifcate to verify, default: stdin\n");
-	fprintf(out, "        --ca       CA certificate, default: verify self signed\n");
+	fprintf(out, "        --cacert   CA certificate, default: verify self signed\n");
 	return !!error;
 }
 
@@ -494,6 +496,7 @@ static int self(int argc, char *argv[])
 	int lifetime = 1080;
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
+	x509_flag_t flags = 0;
 
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
@@ -502,6 +505,7 @@ static int self(int argc, char *argv[])
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
 		{ "digest", required_argument, NULL, 'h' },
+		{ "ca", no_argument, NULL, 'c' },
 		{ 0,0,0,0 }
 	};
 
@@ -545,6 +549,9 @@ static int self(int argc, char *argv[])
 				continue;
 			case 's':
 				hex = optarg;
+				continue;
+			case 'c':
+				flags |= X509_CA;
 				continue;
 			case EOF:
 				break;
@@ -613,7 +620,8 @@ static int self(int argc, char *argv[])
 						BUILD_SIGNING_KEY, private, BUILD_PUBLIC_KEY, public,
 						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
-						BUILD_DIGEST_ALG, digest, BUILD_END);
+						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
+						BUILD_END);
 	private->destroy(private);
 	public->destroy(public);
 	id->destroy(id);
@@ -655,6 +663,7 @@ static int issue(int argc, char *argv[])
 	int lifetime = 1080;
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
+	x509_flag_t flags = 0;
 
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
@@ -665,6 +674,7 @@ static int issue(int argc, char *argv[])
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
 		{ "digest", required_argument, NULL, 'h' },
+		{ "ca", no_argument, NULL, 'b' },
 		{ 0,0,0,0 }
 	};
 
@@ -706,6 +716,9 @@ static int issue(int argc, char *argv[])
 				continue;
 			case 's':
 				hex = optarg;
+				continue;
+			case 'b':
+				flags |= X509_CA;
 				continue;
 			case EOF:
 				break;
@@ -816,7 +829,7 @@ static int issue(int argc, char *argv[])
 					BUILD_PUBLIC_KEY, public, BUILD_SUBJECT, id,
 					BUILD_NOT_BEFORE_TIME, not_before, BUILD_DIGEST_ALG, digest,
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
-					BUILD_END);
+					BUILD_X509_FLAG, flags, BUILD_END);
 	private->destroy(private);
 	public->destroy(public);
 	ca->destroy(ca);
@@ -856,7 +869,7 @@ static int verify(int argc, char *argv[])
 
 	struct option long_opts[] = {
 		{ "in", required_argument, NULL, 'i' },
-		{ "ca", required_argument, NULL, 'c' },
+		{ "cacert", required_argument, NULL, 'c' },
 		{ 0,0,0,0 }
 	};
 
