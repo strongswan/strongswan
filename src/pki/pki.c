@@ -63,6 +63,7 @@ static int usage(char *error)
 	fprintf(out, "             --dn distinguished-name [--san subjectAltName]+\n");
 	fprintf(out, "             [--lifetime days] [--serial hex] [--ca]\n");
 	fprintf(out, "             [--digest md5|sha1|sha224|sha256|sha384|sha512]\n");
+	fprintf(out, "             [--options file]\n");
 	fprintf(out, "      create a self signed certificate\n");
 	fprintf(out, "        --in       private key input file, default: stdin\n");
 	fprintf(out, "        --type     type of input key, default: rsa\n");
@@ -72,6 +73,7 @@ static int usage(char *error)
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
+	fprintf(out, "        --options  read command line options from file\n");
 	fprintf(out, "  pki --issue [--in file] [--type pub|pkcs10]\n");
 	fprintf(out, "              --cacert file --cakey file\n");
 	fprintf(out, "              --dn subject-dn [--san subjectAltName]+\n");
