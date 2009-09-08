@@ -1,5 +1,6 @@
 /* strongSwan IPsec interfaces management
  * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
+ *               2009 Heiko Hund - Astaro AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,6 +15,7 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <linux/rtnetlink.h>
 #ifdef HAVE_SYS_SOCKIO_H
 #include <sys/sockio.h>
 #endif
@@ -34,119 +36,142 @@
 #include "files.h"
 
 /*
- * discover the default route via /proc/net/route
+ * Get the default route information via rtnetlink
  */
 void
 get_defaultroute(defaultroute_t *defaultroute)
 {
-	FILE *fd;
-	char line[BUF_LEN];
-	bool first = TRUE;
+	union {
+		struct {
+			struct nlmsghdr nh;
+			struct rtmsg    rt;
+		} m;
+		char buf[4096];
+	} rtu;
 
-	memset(defaultroute, 0, sizeof(defaultroute_t));
+	struct nlmsghdr *nh;
+	uint32_t best_metric = ~0;
+	ssize_t msglen;
+	int fd;
 
-	fd = fopen("/proc/net/route", "r");
+	bzero(&rtu, sizeof(rtu));
+	rtu.m.nh.nlmsg_len = NLMSG_LENGTH(sizeof(rtu.m.rt));
+	rtu.m.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+	rtu.m.nh.nlmsg_type = RTM_GETROUTE;
+	rtu.m.rt.rtm_family = AF_INET;
+	rtu.m.rt.rtm_table = RT_TABLE_UNSPEC;
+	rtu.m.rt.rtm_protocol = RTPROT_UNSPEC;
+	rtu.m.rt.rtm_type = RTN_UNICAST;
 
-	if (!fd)
+	fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE);
+	if (fd == -1)
 	{
-		plog("could not open 'proc/net/route'");
+		plog("could not create rtnetlink socket");
 		return;
 	}
 
-	while (fgets(line, sizeof(line), fd) != 0)
+	if (send(fd, &rtu, rtu.m.nh.nlmsg_len, 0) == -1)
 	{
-		char iface[11];
-		char destination[9];
-		char gateway[11];
-		char flags[5];
-		char mask[9];
+		plog("could not write to rtnetlink socket");
+		close(fd);
+		return;
+	}
 
-		int refcnt;
-		int use;
-		int metric;
-		int items;
+	msglen = recv(fd, &rtu, sizeof(rtu), MSG_WAITALL);
+	if (msglen == -1)
+	{
+		plog("could not read from rtnetlink socket");
+		close(fd);
+		return;
+	}
 
-		/* proc/net/route returns IP addresses in host order */
-		strcpy(gateway, "0h");
+	close(fd);
 
-		/* skip the header line */
-		if (first)
+	for (nh = &rtu.m.nh; NLMSG_OK(nh, msglen); nh = NLMSG_NEXT(nh, msglen))
+	{
+		struct rtmsg *rt;
+		struct rtattr *rta;
+		uint32_t rtalen, metric = 0;
+		struct in_addr gw = { .s_addr = INADDR_ANY };
+		int iface_idx = -1;
+
+		if (nh->nlmsg_type == NLMSG_ERROR)
 		{
-			first = FALSE;
-			continue;
+			plog("error from rtnetlink");
+			return;
 		}
 
-		/* parsing a single line of proc/net/route */
-		items = sscanf(line, "%10s\t%8s\t%8s\t%5s\t%d\t%d\t%d\t%8s\t"
-					 , iface, destination, gateway+2, flags, &refcnt, &use, &metric, mask);
-		if (items < 8)
-		{
-			plog("parsing error while scanning /proc/net/route");
-			continue;
-		}
+		if (nh->nlmsg_type == NLMSG_DONE)
+			break;
 
-		/* check for defaultroute (destination 0.0.0.0 and mask 0.0.0.0) */
-		if (streq(destination, "00000000") && streq(mask, "00000000"))
+		rt = NLMSG_DATA(nh);
+		if ( rt->rtm_dst_len != 0
+		||  (rt->rtm_table != RT_TABLE_MAIN
+		  && rt->rtm_table != RT_TABLE_DEFAULT) )
+			continue;
+
+		rta = RTM_RTA(rt);
+		rtalen = RTM_PAYLOAD(nh);
+		while ( RTA_OK(rta, rtalen) )
 		{
-			if (defaultroute->defined)
+			switch (rta->rta_type)
 			{
-				plog("multiple default routes - cannot cope with %%defaultroute!!!");
-				defaultroute->defined = FALSE;
-				fclose(fd);
-				return;
+			case RTA_GATEWAY:
+				gw = *(struct in_addr *) RTA_DATA(rta);
+				break;
+			case RTA_OIF:
+				iface_idx = *(int *) RTA_DATA(rta);
+				break;
+			case RTA_PRIORITY:
+				metric = *(uint32_t *) RTA_DATA(rta);
+				break;
 			}
-			ttoaddr(gateway, strlen(gateway), AF_INET, &defaultroute->nexthop);
-			strncpy(defaultroute->iface, iface, IFNAMSIZ);
+			rta = RTA_NEXT(rta, rtalen);
+		}
+
+		if (metric < best_metric
+		&&  gw.s_addr != INADDR_ANY
+		&&  iface_idx != -1)
+		{
+			struct ifreq req;
+
+			fd = socket(AF_INET, SOCK_DGRAM, 0);
+			if (fd < 0)
+			{
+				plog("could not open AF_INET socket");
+				defaultroute->defined = FALSE;
+				break;
+			}
+			bzero(&req, sizeof(req));
+			req.ifr_ifindex = iface_idx;
+			ioctl(fd, SIOCGIFNAME, &req);
+			ioctl(fd, SIOCGIFADDR, &req);
+			close(fd);
+
+			strncpy(defaultroute->iface, req.ifr_name, IFNAMSIZ);
+			defaultroute->addr.u.v4 = *((struct sockaddr_in *) &req.ifr_addr);
+			defaultroute->nexthop.u.v4.sin_family = AF_INET;
+			defaultroute->nexthop.u.v4.sin_addr = gw;
+
+			DBG(DBG_CONTROL,
+				char addr[20];
+				char nexthop[20];
+				addrtot(&defaultroute->addr, 0, addr, sizeof(addr));
+				addrtot(&defaultroute->nexthop, 0, nexthop, sizeof(nexthop));
+
+				DBG_log(
+					( !defaultroute->defined
+					? "Default route found: iface=%s, addr=%s, nexthop=%s"
+					: "Better default route: iface=%s, addr=%s, nexthop=%s"
+					), defaultroute->iface, addr, nexthop
+				)
+			);
+
+			best_metric = metric;
 			defaultroute->defined = TRUE;
 		}
 	}
-	fclose(fd);
 
 	if (!defaultroute->defined)
-	{
 		plog("no default route - cannot cope with %%defaultroute!!!");
-	}
-	else
-	{
-		char addr_buf[20], nexthop_buf[20];
-		struct ifreq physreq;
-
-		int sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-		/* determine IP address of iface */
-		if (sock < 0)
-		{
-			plog("could not open SOCK_DGRAM socket");
-			defaultroute->defined = FALSE;
-			return;
-		}
-		memset ((void*)&physreq, 0, sizeof(physreq));
-		strncpy(physreq.ifr_name, defaultroute->iface, IFNAMSIZ);
-		ioctl(sock, SIOCGIFADDR, &physreq);
-		close(sock);
-		defaultroute->addr.u.v4 = *((struct sockaddr_in *)&physreq.ifr_addr);
-
-		addrtot(&defaultroute->addr, 0, addr_buf, sizeof(addr_buf));
-		addrtot(&defaultroute->nexthop, 0, nexthop_buf, sizeof(nexthop_buf));
-
-		DBG(DBG_CONTROL,
-			DBG_log("Default route found: iface=%s, addr=%s, nexthop=%s"
-				, defaultroute->iface, addr_buf, nexthop_buf)
-		)
-
-		/* for backwards-compatibility with the awk shell scripts
-		 * store the defaultroute in /var/run/ipsec.info
-		 */
-		fd = fopen(INFO_FILE, "w");
-
-		if (fd)
-		{
-			fprintf(fd, "defaultroutephys=%s\n", defaultroute->iface );
-			fprintf(fd, "defaultroutevirt=ipsec0\n");
-			fprintf(fd, "defaultrouteaddr=%s\n", addr_buf);
-			fprintf(fd, "defaultroutenexthop=%s\n", nexthop_buf);
-			fclose(fd);
-		}
-	}
-	return;
 }
