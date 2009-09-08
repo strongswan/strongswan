@@ -496,18 +496,21 @@ static int self(int argc, char *argv[])
 {
 	key_type_t type = KEY_RSA;
 	hash_algorithm_t digest = HASH_SHA1;
-	certificate_t *cert;
-	private_key_t *private;
-	public_key_t *public;
-	char *file = NULL, *dn = NULL, *hex = NULL;
-	identification_t *id;
+	certificate_t *cert = NULL;
+	private_key_t *private = NULL;
+	public_key_t *public = NULL;
+	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL;
+	identification_t *id = NULL;
 	linked_list_t *san;
 	int lifetime = 1080;
-	chunk_t serial, encoding;
+	chunk_t serial = chunk_empty;
+	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
+	options_t *options;
 
 	struct option long_opts[] = {
+		{ "options", required_argument, NULL, '+' },
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
 		{ "dn", required_argument, NULL, 'd' },
@@ -519,12 +522,20 @@ static int self(int argc, char *argv[])
 		{ 0,0,0,0 }
 	};
 
+	options = options_create();
 	san = linked_list_create();
 
 	while (TRUE)
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case '+':
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					error = "invalid options file";
+					goto usage;
+				}
+				continue;
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -536,16 +547,16 @@ static int self(int argc, char *argv[])
 				}
 				else
 				{
-					san->destroy_offset(san, offsetof(identification_t, destroy));
-					return usage("invalid input type");
+					error = "invalid input type";
+					goto usage;
 				}
 				continue;
 			case 'h':
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
-					san->destroy_offset(san, offsetof(identification_t, destroy));
-					return usage("invalid --digest type");
+					error = "invalid --digest type";
+					goto usage;
 				}
 				continue;
 			case 'i':
@@ -561,7 +572,8 @@ static int self(int argc, char *argv[])
 				lifetime = atoi(optarg);
 				if (!lifetime)
 				{
-					return usage("invalid --lifetime value");
+					error = "invalid --lifetime value";
+					goto usage;
 				}
 				continue;
 			case 's':
@@ -573,24 +585,22 @@ static int self(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				san->destroy_offset(san, offsetof(identification_t, destroy));
-				return usage("invalid --self option");
+				error = "invalid --self option";
+				goto usage;
 		}
 		break;
 	}
 
 	if (!dn)
 	{
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		return usage("--dn is required");
+		error = "--dn is required";
+		goto usage;
 	}
 	id = identification_create_from_string(dn);
 	if (id->get_type(id) != ID_DER_ASN1_DN)
 	{
-		id->destroy(id);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "supplied --dn is not a distinguished name\n");
-		return 1;
+		error = "supplied --dn is not a distinguished name";
+		goto end;
 	}
 	if (file)
 	{
@@ -604,19 +614,14 @@ static int self(int argc, char *argv[])
 	}
 	if (!private)
 	{
-		id->destroy(id);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "parsing private key failed\n");
-		return 1;
+		error = "parsing private key failed";
+		goto end;
 	}
 	public = private->get_public_key(private);
 	if (!public)
 	{
-		private->destroy(private);
-		id->destroy(id);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "extracting public key failed\n");
-		return 1;
+		error = "extracting public key failed";
+		goto end;
 	}
 	if (hex)
 	{
@@ -625,14 +630,11 @@ static int self(int argc, char *argv[])
 	else
 	{
 		rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+
 		if (!rng)
 		{
-			id->destroy(id);
-			private->destroy(private);
-			public->destroy(public);
-			san->destroy_offset(san, offsetof(identification_t, destroy));
-			fprintf(stderr, "no random number generator found\n");
-			return 1;
+			error = "no random number generator found";
+			goto end;
 		}
 		rng->allocate_bytes(rng, 8, &serial);
 		rng->destroy(rng);
@@ -645,32 +647,44 @@ static int self(int argc, char *argv[])
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
 						BUILD_SUBJECT_ALTNAMES, san, BUILD_END);
-	private->destroy(private);
-	public->destroy(public);
-	id->destroy(id);
-	san->destroy_offset(san, offsetof(identification_t, destroy));
-	free(serial.ptr);
 	if (!cert)
 	{
-		fprintf(stderr, "generating certificate failed\n");
-		return 1;
+		error = "generating certificate failed";
+		goto end;
 	}
 	encoding = cert->get_encoding(cert);
 	if (!encoding.ptr)
 	{
-		cert->destroy(cert);
-		fprintf(stderr, "encoding certificate failed\n");
-		return 1;
+		error = "encoding certificate failed";
+		goto end;
 	}
-	cert->destroy(cert);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
-		fprintf(stderr, "writing certificate key failed\n");
-		free(encoding.ptr);
+		error = "writing certificate key failed";
+		goto end;
+	}
+
+end:
+	DESTROY_IF(id);
+	DESTROY_IF(cert);
+	DESTROY_IF(public);
+	DESTROY_IF(private);
+	san->destroy_offset(san, offsetof(identification_t, destroy));
+	options->destroy(options);
+	free(encoding.ptr);
+	free(serial.ptr);
+
+	if (error)
+	{    
+		fprintf(stderr, "%s\n", error);
 		return 1;
 	}
-	free(encoding.ptr);
 	return 0;
+
+usage:
+	san->destroy_offset(san, offsetof(identification_t, destroy));
+	options->destroy(options);
+	return usage(error);
 }
 
 /**
