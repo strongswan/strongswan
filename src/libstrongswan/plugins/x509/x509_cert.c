@@ -1210,6 +1210,7 @@ static bool generate(private_builder_t *this)
 {
 	chunk_t extensions = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
+	chunk_t subjectKeyIdentifier = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -1309,7 +1310,7 @@ static bool generate(private_builder_t *this)
 	}
 	if (this->flags & X509_CA)
 	{
-		chunk_t yes;
+		chunk_t yes, keyid;
 
 		yes = chunk_alloca(1);
 		yes.ptr[0] = 0xFF;
@@ -1319,12 +1320,22 @@ static bool generate(private_builder_t *this)
 								asn1_wrap(ASN1_OCTET_STRING, "m",
 										asn1_wrap(ASN1_SEQUENCE, "m",
 											asn1_wrap(ASN1_BOOLEAN, "c", yes))));
+		/* add subjectKeyIdentifier to CA certificates */
+		if (this->cert->public_key->get_fingerprint(this->cert->public_key,
+													KEY_ID_PUBKEY_SHA1, &keyid))
+		{
+			subjectKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
+									asn1_build_known_oid(OID_SUBJECT_KEY_ID),
+									asn1_wrap(ASN1_OCTET_STRING, "m",
+										asn1_wrap(ASN1_OCTET_STRING, "c", keyid)));
+		}
 	}
 	if (basicConstraints.ptr || subjectAltNames.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mm",
-							basicConstraints, subjectAltNames));
+						asn1_wrap(ASN1_SEQUENCE, "mmm",
+							basicConstraints, subjectKeyIdentifier,
+							subjectAltNames));
 	}
 
 	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
