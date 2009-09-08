@@ -1,6 +1,5 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
--DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS="\"${libstrongswan_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 

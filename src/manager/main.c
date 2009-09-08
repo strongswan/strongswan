@@ -35,7 +35,7 @@ int main (int arc, char *argv[])
 	int threads, timeout;
 
 	library_init(STRONGSWAN_CONF);
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "manager.load", PLUGINS)))
 	{
 		return 1;

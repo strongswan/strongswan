@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	}
 
 	library_init(STRONGSWAN_CONF);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, argv[1]);
+	lib->plugins->load(lib->plugins, NULL, argv[1]);
 	atexit(library_deinit);
 
 	keydata = chunk_create(buf, 0);

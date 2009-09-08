@@ -491,7 +491,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.traps = trap_manager_create();
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
 	{
 		return FALSE;

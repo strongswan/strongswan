@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 	int read, n;
 
 	library_init(NULL);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, PLUGINS);
+	lib->plugins->load(lib->plugins, NULL, PLUGINS);
 	atexit(library_deinit);
 
 	read = fread(buf, 1, sizeof(buf), stdin);

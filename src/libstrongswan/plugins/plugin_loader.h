@@ -37,7 +37,7 @@ struct plugin_loader_t {
 	 * as a critical plugin. If loading a critical plugin fails, plugin loading
 	 * is aborted and FALSE is returned.
 	 *
-	 * @param path			path containing loadable plugins
+	 * @param path			path containing loadable plugins, NULL for default
 	 * @param list			space separated list of plugins to load
 	 * @return				TRUE if all critical plugins loaded successfully
 	 */

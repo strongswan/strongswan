@@ -759,7 +759,7 @@ int main(int argc, char **argv)
 	init_log("scepclient");
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS)))
 	{
 		exit_scepclient("plugin loading failed");

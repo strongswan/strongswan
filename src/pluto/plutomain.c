@@ -652,7 +652,7 @@ int main(int argc, char **argv)
 	}
 
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "pluto.load", PLUGINS)))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);

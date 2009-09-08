@@ -116,6 +116,11 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 	char *token;
 	bool critical_failed = FALSE;
 
+	if (path == NULL)
+	{
+		path = PLUGINDIR;
+	}
+
 	enumerator = enumerator_create_token(list, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
 	{

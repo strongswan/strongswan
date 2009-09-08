@@ -54,7 +54,7 @@ libstrongswan_la_LIBADD = -lpthread $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_PLUGINDIR=\"${plugindir}\"
+-DPLUGINDIR=\"${plugindir}\"
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE

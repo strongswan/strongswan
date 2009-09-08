@@ -17,7 +17,6 @@ INCLUDES = \
 
 AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
--DIPSEC_PLUGINDIR=\"${plugindir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DDEBUG -DNO_PLUTO

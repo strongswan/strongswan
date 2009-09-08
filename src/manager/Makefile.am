@@ -17,7 +17,6 @@ AM_CFLAGS = -rdynamic \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DIPSEC_PLUGINDIR=\"${plugindir}\"\
   -DPLUGINS=\""${libstrongswan_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
