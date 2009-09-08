@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-	library_init(STRONGSWAN_CONF);
+	library_init(NULL);
 	lib->plugins->load(lib->plugins, NULL, argv[1]);
 	atexit(library_deinit);
 

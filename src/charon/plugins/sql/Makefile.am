@@ -2,7 +2,6 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
 AM_CFLAGS = -rdynamic \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DPLUGINS=\""${libstrongswan_plugins}\""
 
 plugin_LTLIBRARIES = libstrongswan-sql.la

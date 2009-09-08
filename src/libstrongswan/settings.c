@@ -484,8 +484,12 @@ static void destroy(private_settings_t *this)
  */
 settings_t *settings_create(char *file)
 {
-	private_settings_t *this = malloc_thing(private_settings_t);
+	private_settings_t *this;
+	char *pos;
+	FILE *fd;
+	int len;
 
+	this = malloc_thing(private_settings_t);
 	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
 	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
 	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
@@ -496,39 +500,35 @@ settings_t *settings_create(char *file)
 	this->top = NULL;
 	this->text = NULL;
 
-	if (file)
+	if (file == NULL)
 	{
-		FILE *fd;
-		int len;
-		char *pos;
+		file = STRONGSWAN_CONF;
+	}
+	fd = fopen(file, "r");
+	if (fd == NULL)
+	{
+		DBG1("'%s' does not exist or is not readable", file);
+		return &this->public;
+	}
+	fseek(fd, 0, SEEK_END);
+	len = ftell(fd);
+	rewind(fd);
+	this->text = malloc(len + 1);
+	this->text[len] = '\0';
+	if (fread(this->text, 1, len, fd) != len)
+	{
+		free(this->text);
+		this->text = NULL;
+		return &this->public;
+	}
+	fclose(fd);
 
-		fd = fopen(file, "r");
-		if (fd == NULL)
-		{
-			DBG1("'%s' does not exist or is not readable", file);
-			return &this->public;
-		}
-		fseek(fd, 0, SEEK_END);
-		len = ftell(fd);
-		rewind(fd);
-		this->text = malloc(len + 1);
-		this->text[len] = '\0';
-		if (fread(this->text, 1, len, fd) != len)
-		{
-			free(this->text);
-			this->text = NULL;
-			return &this->public;
-		}
-		fclose(fd);
-
-		pos = this->text;
-		this->top = parse_section(&pos, NULL);
-		if (this->top == NULL)
-		{
-			free(this->text);
-			this->text = NULL;
-			return &this->public;
-		}
+	pos = this->text;
+	this->top = parse_section(&pos, NULL);
+	if (this->top == NULL)
+	{
+		free(this->text);
+		this->text = NULL;
 	}
 	return &this->public;
 }

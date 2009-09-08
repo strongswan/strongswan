@@ -79,7 +79,7 @@ hash_algorithm_t get_digest(char *name)
 int main(int argc, char *argv[])
 {
 	atexit(library_deinit);
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

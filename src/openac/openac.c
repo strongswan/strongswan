@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 
 	/* initialize library */
 	atexit(library_deinit);
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}

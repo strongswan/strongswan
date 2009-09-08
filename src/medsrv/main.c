@@ -33,7 +33,7 @@ int main(int arc, char *argv[])
 	char *uri;
 	int timeout, threads;
 
-	library_init(STRONGSWAN_CONF);
+	library_init(NULL);
 	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "medsrv.load", PLUGINS)))
 	{

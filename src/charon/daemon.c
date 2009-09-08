@@ -684,7 +684,7 @@ int main(int argc, char *argv[])
 	dbg = dbg_stderr;
 
 	/* initialize library */
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);

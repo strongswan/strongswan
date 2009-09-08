@@ -11,7 +11,6 @@ medsrv_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
 AM_CFLAGS = -rdynamic \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DPLUGINS=\""${libstrongswan_plugins}\""

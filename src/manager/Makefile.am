@@ -14,7 +14,6 @@ manager_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DPLUGINS=\""${libstrongswan_plugins}\""

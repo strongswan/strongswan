@@ -387,7 +387,7 @@ int main(int argc, char **argv)
 	log_to_stderr     = TRUE;
 
 	/* initialize library */
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);

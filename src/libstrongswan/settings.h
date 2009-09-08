@@ -110,7 +110,10 @@ struct settings_t {
 };
 
 /**
- * Load setings from a file.
+ * Load settings from a file.
+ *
+ * @param file			file to read settings from, NULL for default
+ * @return				settings object
  */
 settings_t *settings_create(char *file);
 

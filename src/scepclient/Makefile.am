@@ -18,7 +18,6 @@ INCLUDES = \
 AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DDEBUG -DNO_PLUTO
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
