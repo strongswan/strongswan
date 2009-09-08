@@ -26,6 +26,7 @@
 #include <time.h>
 
 #include <library.h>
+#include <utils/linked_list.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
@@ -57,20 +58,23 @@ static int usage(char *error)
 	fprintf(out, "      calculate key identifiers of a key/certificate\n");
 	fprintf(out, "        --in       input file, default: stdin\n");
 	fprintf(out, "        --type     type of key, default: rsa-priv\n");
-	fprintf(out, "  pki --self [--in file] [--type rsa|ecdsa] --dn distinguished-name\n");
-	fprintf(out, "             [--lifetime days] [--serial hex]\n");
+	fprintf(out, "  pki --self [--in file] [--type rsa|ecdsa]\n");
+	fprintf(out, "             --dn distinguished-name [--san subjectAltName]+\n");
+	fprintf(out, "             [--lifetime days] [--serial hex] [--ca]\n");
 	fprintf(out, "             [--digest md5|sha1|sha224|sha256|sha384|sha512\n");
 	fprintf(out, "      create a self signed certificate\n");
 	fprintf(out, "        --in       private key input file, default: stdin\n");
 	fprintf(out, "        --type     type of input key, default: rsa\n");
 	fprintf(out, "        --dn       subject and issuer distinguished name\n");
+	fprintf(out, "        --san      subjectAltName to include in certificate\n");
 	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
-	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
+	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "  pki --issue [--in file] [--type pub|pkcs10]\n");
-	fprintf(out, "              --cacert file --cakey file --dn subject-dn\n");
-	fprintf(out, "              [--lifetime days] [--serial hex]\n");
+	fprintf(out, "              --cacert file --cakey file\n");
+	fprintf(out, "              --dn subject-dn [--san subjectAltName]+\n");
+	fprintf(out, "              [--lifetime days] [--serial hex] [--ca]\n");
 	fprintf(out, "              [--digest md5|sha1|sha224|sha256|sha384|sha512\n");
 	fprintf(out, "      issue a certificate using a CA certificate and key\n");
 	fprintf(out, "        --in       public key/request file to issue, default: stdin\n");
@@ -78,10 +82,11 @@ static int usage(char *error)
 	fprintf(out, "        --cacert   CA certificate file\n");
 	fprintf(out, "        --cakey    CA private key file\n");
 	fprintf(out, "        --dn       distinguished name to include as subject\n");
+	fprintf(out, "        --san      subjectAltName to include in certificate\n");
 	fprintf(out, "        --lifetime days the certificate is valid, default: 1080\n");
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
-	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
+	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "  pki --verify [--in file] [--ca file]\n");
 	fprintf(out, "      verify a certificate using the CA certificate\n");
 	fprintf(out, "        --in       x509 certifcate to verify, default: stdin\n");
@@ -493,6 +498,7 @@ static int self(int argc, char *argv[])
 	public_key_t *public;
 	char *file = NULL, *dn = NULL, *hex = NULL;
 	identification_t *id;
+	linked_list_t *san;
 	int lifetime = 1080;
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
@@ -502,12 +508,15 @@ static int self(int argc, char *argv[])
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
 		{ "dn", required_argument, NULL, 'd' },
+		{ "san", required_argument, NULL, 'a' },
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
 		{ "digest", required_argument, NULL, 'h' },
 		{ "ca", no_argument, NULL, 'c' },
 		{ 0,0,0,0 }
 	};
+
+	san = linked_list_create();
 
 	while (TRUE)
 	{
@@ -524,6 +533,7 @@ static int self(int argc, char *argv[])
 				}
 				else
 				{
+					san->destroy_offset(san, offsetof(identification_t, destroy));
 					return usage("invalid input type");
 				}
 				continue;
@@ -531,6 +541,7 @@ static int self(int argc, char *argv[])
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
+					san->destroy_offset(san, offsetof(identification_t, destroy));
 					return usage("invalid --digest type");
 				}
 				continue;
@@ -539,6 +550,9 @@ static int self(int argc, char *argv[])
 				continue;
 			case 'd':
 				dn = optarg;
+				continue;
+			case 'a':
+				san->insert_last(san, identification_create_from_string(optarg));
 				continue;
 			case 'l':
 				lifetime = atoi(optarg);
@@ -556,6 +570,7 @@ static int self(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
+				san->destroy_offset(san, offsetof(identification_t, destroy));
 				return usage("invalid --self option");
 		}
 		break;
@@ -563,12 +578,14 @@ static int self(int argc, char *argv[])
 
 	if (!dn)
 	{
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		return usage("--dn is required");
 	}
 	id = identification_create_from_string(dn);
 	if (id->get_type(id) != ID_DER_ASN1_DN)
 	{
 		id->destroy(id);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "supplied --dn is not a distinguished name\n");
 		return 1;
 	}
@@ -585,6 +602,7 @@ static int self(int argc, char *argv[])
 	if (!private)
 	{
 		id->destroy(id);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "parsing private key failed\n");
 		return 1;
 	}
@@ -593,6 +611,7 @@ static int self(int argc, char *argv[])
 	{
 		private->destroy(private);
 		id->destroy(id);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "extracting public key failed\n");
 		return 1;
 	}
@@ -608,6 +627,7 @@ static int self(int argc, char *argv[])
 			id->destroy(id);
 			private->destroy(private);
 			public->destroy(public);
+			san->destroy_offset(san, offsetof(identification_t, destroy));
 			fprintf(stderr, "no random number generator found\n");
 			return 1;
 		}
@@ -621,10 +641,11 @@ static int self(int argc, char *argv[])
 						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
-						BUILD_END);
+						BUILD_SUBJECT_ALTNAMES, san, BUILD_END);
 	private->destroy(private);
 	public->destroy(public);
 	id->destroy(id);
+	san->destroy_offset(san, offsetof(identification_t, destroy));
 	free(serial.ptr);
 	if (!cert)
 	{
@@ -660,6 +681,7 @@ static int issue(int argc, char *argv[])
 	public_key_t *public;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	identification_t *id;
+	linked_list_t *san;
 	int lifetime = 1080;
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
@@ -672,12 +694,15 @@ static int issue(int argc, char *argv[])
 		{ "cacert", required_argument, NULL, 'c' },
 		{ "cakey", required_argument, NULL, 'k' },
 		{ "dn", required_argument, NULL, 'd' },
+		{ "san", required_argument, NULL, 'a' },
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
 		{ "digest", required_argument, NULL, 'h' },
 		{ "ca", no_argument, NULL, 'b' },
 		{ 0,0,0,0 }
 	};
+
+	san = linked_list_create();
 
 	while (TRUE)
 	{
@@ -686,6 +711,7 @@ static int issue(int argc, char *argv[])
 			case 't':
 				if (!streq(optarg, "pub"))
 				{
+					san->destroy_offset(san, offsetof(identification_t, destroy));
 					return usage("invalid input type");
 				}
 				continue;
@@ -693,6 +719,7 @@ static int issue(int argc, char *argv[])
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
+					san->destroy_offset(san, offsetof(identification_t, destroy));
 					return usage("invalid --digest type");
 				}
 				continue;
@@ -708,10 +735,14 @@ static int issue(int argc, char *argv[])
 			case 'd':
 				dn = optarg;
 				continue;
+			case 'a':
+				san->insert_last(san, identification_create_from_string(optarg));
+				continue;
 			case 'l':
 				lifetime = atoi(optarg);
 				if (!lifetime)
 				{
+					san->destroy_offset(san, offsetof(identification_t, destroy));
 					return usage("invalid --lifetime value");
 				}
 				continue;
@@ -724,6 +755,7 @@ static int issue(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
+				san->destroy_offset(san, offsetof(identification_t, destroy));
 				return usage("invalid --issue option");
 		}
 		break;
@@ -731,20 +763,24 @@ static int issue(int argc, char *argv[])
 
 	if (!dn)
 	{
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		return usage("--dn is required");
 	}
 	if (!cacert)
 	{
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		return usage("--cacert is required");
 	}
 	if (!cakey)
 	{
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		return usage("--cakey is required");
 	}
 	id = identification_create_from_string(dn);
 	if (id->get_type(id) != ID_DER_ASN1_DN)
 	{
 		id->destroy(id);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "supplied --dn is not a distinguished name\n");
 		return 1;
 	}
@@ -753,6 +789,7 @@ static int issue(int argc, char *argv[])
 	if (!ca)
 	{
 		id->destroy(id);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "parsing CA certificate failed\n");
 		return 1;
 	}
@@ -761,6 +798,7 @@ static int issue(int argc, char *argv[])
 	{
 		id->destroy(id);
 		ca->destroy(ca);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "CA certificate misses CA basicConstraint\n");
 		return 1;
 	}
@@ -770,6 +808,7 @@ static int issue(int argc, char *argv[])
 	{
 		id->destroy(id);
 		ca->destroy(ca);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "extracting CA certificate public key failed\n");
 		return 1;
 	}
@@ -781,6 +820,7 @@ static int issue(int argc, char *argv[])
 		id->destroy(id);
 		ca->destroy(ca);
 		public->destroy(public);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "parsing CA private key failed\n");
 		return 1;
 	}
@@ -790,6 +830,7 @@ static int issue(int argc, char *argv[])
 		ca->destroy(ca);
 		public->destroy(public);
 		private->destroy(private);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "CA private key does not match CA certificate\n");
 		return 1;
 	}
@@ -809,6 +850,7 @@ static int issue(int argc, char *argv[])
 		id->destroy(id);
 		ca->destroy(ca);
 		private->destroy(private);
+		san->destroy_offset(san, offsetof(identification_t, destroy));
 		fprintf(stderr, "parsing public key failed\n");
 		return 1;
 	}
@@ -826,6 +868,7 @@ static int issue(int argc, char *argv[])
 			ca->destroy(ca);
 			private->destroy(private);
 			public->destroy(public);
+			san->destroy_offset(san, offsetof(identification_t, destroy));
 			fprintf(stderr, "no random number generator found\n");
 			return 1;
 		}
@@ -839,11 +882,13 @@ static int issue(int argc, char *argv[])
 					BUILD_PUBLIC_KEY, public, BUILD_SUBJECT, id,
 					BUILD_NOT_BEFORE_TIME, not_before, BUILD_DIGEST_ALG, digest,
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
-					BUILD_X509_FLAG, flags, BUILD_END);
+					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
+					BUILD_END);
 	private->destroy(private);
 	public->destroy(public);
 	ca->destroy(ca);
 	id->destroy(id);
+	san->destroy_offset(san, offsetof(identification_t, destroy));
 	free(serial.ptr);
 	if (!cert)
 	{
