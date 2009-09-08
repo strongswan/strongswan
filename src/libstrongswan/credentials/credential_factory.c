@@ -210,9 +210,9 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_SIGNING_KEY:
 				case BUILD_PUBLIC_KEY:
 				case BUILD_SUBJECT:
-				case BUILD_SUBJECT_ALTNAME:
+				case BUILD_SUBJECT_ALTNAMES:
 				case BUILD_ISSUER:
-				case BUILD_ISSUER_ALTNAME:
+				case BUILD_ISSUER_ALTNAMES:
 				case BUILD_SIGNING_CERT:
 				case BUILD_CA_CERT:
 				case BUILD_CERT:

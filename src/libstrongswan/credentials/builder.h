@@ -68,12 +68,12 @@ enum builder_part_t {
 	BUILD_PUBLIC_KEY,
 	/** subject for e.g. certificates, identification_t* */
 	BUILD_SUBJECT,
-	/** additional subject name, identification_t* */
-	BUILD_SUBJECT_ALTNAME,
+	/** additional subject names, linked_list_t* containing identification_t* */
+	BUILD_SUBJECT_ALTNAMES,
 	/** issuer for e.g. certificates, identification_t* */
 	BUILD_ISSUER,
-	/** additional issuer name, identification_t* */
-	BUILD_ISSUER_ALTNAME,
+	/** additional issuer names, linked_list_t* containing identification_t* */
+	BUILD_ISSUER_ALTNAMES,
 	/** notBefore, time_t* */
 	BUILD_NOT_BEFORE_TIME,
 	/** notAfter, time_t* */

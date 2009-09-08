@@ -1215,6 +1215,8 @@ static bool generate(private_builder_t *this)
 	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
+	enumerator_t *enumerator;
+	identification_t *id;
 
 	subject = this->cert->subject;
 	if (this->sign_cert)
@@ -1303,10 +1305,45 @@ static bool generate(private_builder_t *this)
 		return FALSE;
 	}
 
-	if (this->cert->subjectAltNames->get_count(this->cert->subjectAltNames))
+	enumerator = this->cert->subjectAltNames->create_enumerator(
+													this->cert->subjectAltNames);
+	while (enumerator->enumerate(enumerator, &id))
 	{
-		/* TODO: encode subjectAltNames */
+		int context;
+		chunk_t name;
+
+		switch (id->get_type(id))
+		{
+			case ID_RFC822_ADDR:
+				context = ASN1_CONTEXT_S_1;
+				break;
+			case ID_FQDN:
+				context = ASN1_CONTEXT_S_2;
+				break;
+			case ID_IPV4_ADDR:
+			case ID_IPV6_ADDR:
+				context = ASN1_CONTEXT_S_7;
+				break;
+			default:
+				DBG1("encoding %N as subjectAltName not supported",
+					 id_type_names, id->get_type(id));
+				enumerator->destroy(enumerator);
+				free(key_info.ptr);
+				free(subjectAltNames.ptr);
+				return FALSE;
+		}
+		name = asn1_wrap(context, "c", id->get_encoding(id));
+		subjectAltNames = chunk_cat("mm", subjectAltNames, name);
 	}
+	enumerator->destroy(enumerator);
+	if (subjectAltNames.ptr)
+	{
+		subjectAltNames = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_SUBJECT_ALT_NAME),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)));
+	}
+
 	if (this->flags & X509_CA)
 	{
 		chunk_t yes, keyid;
@@ -1462,11 +1499,19 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 			this->cert->subject = id->clone(id);
 			break;
 		}
-		case BUILD_SUBJECT_ALTNAME:
+		case BUILD_SUBJECT_ALTNAMES:
 		{
-			identification_t *id = va_arg(args, identification_t*);
-			this->cert->subjectAltNames->insert_last(
+			identification_t *id;
+			enumerator_t *enumerator;
+			linked_list_t *list = va_arg(args, linked_list_t*);
+
+			enumerator = list->create_enumerator(list);
+			while (enumerator->enumerate(enumerator, &id))
+			{
+				this->cert->subjectAltNames->insert_last(
 									this->cert->subjectAltNames, id->clone(id));
+			}
+			enumerator->destroy(enumerator);
 			break;
 		}
 		case BUILD_NOT_BEFORE_TIME:
