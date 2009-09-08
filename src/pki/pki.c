@@ -27,6 +27,7 @@
 
 #include <library.h>
 #include <utils/linked_list.h>
+#include <utils/optionsfrom.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
@@ -61,7 +62,7 @@ static int usage(char *error)
 	fprintf(out, "  pki --self [--in file] [--type rsa|ecdsa]\n");
 	fprintf(out, "             --dn distinguished-name [--san subjectAltName]+\n");
 	fprintf(out, "             [--lifetime days] [--serial hex] [--ca]\n");
-	fprintf(out, "             [--digest md5|sha1|sha224|sha256|sha384|sha512\n");
+	fprintf(out, "             [--digest md5|sha1|sha224|sha256|sha384|sha512]\n");
 	fprintf(out, "      create a self signed certificate\n");
 	fprintf(out, "        --in       private key input file, default: stdin\n");
 	fprintf(out, "        --type     type of input key, default: rsa\n");
@@ -75,7 +76,8 @@ static int usage(char *error)
 	fprintf(out, "              --cacert file --cakey file\n");
 	fprintf(out, "              --dn subject-dn [--san subjectAltName]+\n");
 	fprintf(out, "              [--lifetime days] [--serial hex] [--ca]\n");
-	fprintf(out, "              [--digest md5|sha1|sha224|sha256|sha384|sha512\n");
+	fprintf(out, "              [--digest md5|sha1|sha224|sha256|sha384|sha512]\n");
+	fprintf(out, "              [--options file]\n");
 	fprintf(out, "      issue a certificate using a CA certificate and key\n");
 	fprintf(out, "        --in       public key/request file to issue, default: stdin\n");
 	fprintf(out, "        --type     type of input, default: pub\n");
@@ -87,6 +89,7 @@ static int usage(char *error)
 	fprintf(out, "        --serial   serial number in hex, default: random\n");
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
+	fprintf(out, "        --options  read command line options from file\n");
 	fprintf(out, "  pki --verify [--in file] [--ca file]\n");
 	fprintf(out, "      verify a certificate using the CA certificate\n");
 	fprintf(out, "        --in       x509 certifcate to verify, default: stdin\n");
@@ -676,19 +679,23 @@ static int self(int argc, char *argv[])
 static int issue(int argc, char *argv[])
 {
 	hash_algorithm_t digest = HASH_SHA1;
-	certificate_t *cert, *ca;
-	private_key_t *private;
-	public_key_t *public;
+	certificate_t *cert = NULL, *ca =NULL;
+	private_key_t *private = NULL;
+	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
-	identification_t *id;
+	char *error = NULL;
+	identification_t *id = NULL;
 	linked_list_t *san;
 	int lifetime = 1080;
-	chunk_t serial, encoding;
+	chunk_t serial = chunk_empty;
+	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
 	x509_t *x509;
+	options_t *options;
 
 	struct option long_opts[] = {
+		{ "options", required_argument, NULL, '+' },
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
 		{ "cacert", required_argument, NULL, 'c' },
@@ -702,25 +709,33 @@ static int issue(int argc, char *argv[])
 		{ 0,0,0,0 }
 	};
 
+	options = options_create();
 	san = linked_list_create();
 
 	while (TRUE)
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case '+':
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					error = "invalid options file";
+					goto usage;
+				}
+				continue;
 			case 't':
 				if (!streq(optarg, "pub"))
 				{
-					san->destroy_offset(san, offsetof(identification_t, destroy));
-					return usage("invalid input type");
+					error = "invalid input type";
+					goto usage;
 				}
 				continue;
 			case 'h':
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
-					san->destroy_offset(san, offsetof(identification_t, destroy));
-					return usage("invalid --digest type");
+					error = "invalid --digest type";
+					goto usage;
 				}
 				continue;
 			case 'i':
@@ -742,8 +757,8 @@ static int issue(int argc, char *argv[])
 				lifetime = atoi(optarg);
 				if (!lifetime)
 				{
-					san->destroy_offset(san, offsetof(identification_t, destroy));
-					return usage("invalid --lifetime value");
+					error = "invalid --lifetime value";
+					goto usage;
 				}
 				continue;
 			case 's':
@@ -755,86 +770,67 @@ static int issue(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				san->destroy_offset(san, offsetof(identification_t, destroy));
-				return usage("invalid --issue option");
+				error = "invalid --issue option";
+				goto usage;
 		}
 		break;
 	}
 
 	if (!dn)
 	{
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		return usage("--dn is required");
+		error = "--dn is required";
+		goto usage;
 	}
 	if (!cacert)
 	{
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		return usage("--cacert is required");
+		error = "--cacert is required";
+		goto usage;
 	}
 	if (!cakey)
 	{
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		return usage("--cakey is required");
+		error = "--cakey is required";
+		goto usage;
 	}
 	id = identification_create_from_string(dn);
 	if (id->get_type(id) != ID_DER_ASN1_DN)
 	{
-		id->destroy(id);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "supplied --dn is not a distinguished name\n");
-		return 1;
+		error = "supplied --dn is not a distinguished name";
+		goto end;
 	}
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_FROM_FILE, cacert, BUILD_END);
 	if (!ca)
 	{
-		id->destroy(id);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "parsing CA certificate failed\n");
-		return 1;
+		error = "parsing CA certificate failed";
+		goto end;
 	}
 	x509 = (x509_t*)ca;
 	if (!(x509->get_flags(x509) & X509_CA))
 	{
-		id->destroy(id);
-		ca->destroy(ca);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "CA certificate misses CA basicConstraint\n");
-		return 1;
+		error = "CA certificate misses CA basicConstraint";
+		goto end;
 	}
 
 	public = ca->get_public_key(ca);
 	if (!public)
 	{
-		id->destroy(id);
-		ca->destroy(ca);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "extracting CA certificate public key failed\n");
-		return 1;
+		error = "extracting CA certificate public key failed";
+		goto end;
 	}
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 								 public->get_type(public),
 								 BUILD_FROM_FILE, cakey, BUILD_END);
 	if (!private)
 	{
-		id->destroy(id);
-		ca->destroy(ca);
-		public->destroy(public);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "parsing CA private key failed\n");
-		return 1;
+		error = "parsing CA private key failed";
+		goto end;
 	}
 	if (!private->belongs_to(private, public))
 	{
-		id->destroy(id);
-		ca->destroy(ca);
-		public->destroy(public);
-		private->destroy(private);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "CA private key does not match CA certificate\n");
-		return 1;
+		error = "CA private key does not match CA certificate";
+		goto end;
 	}
-	public->destroy(public);
+
 	if (file)
 	{
 		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
@@ -847,12 +843,8 @@ static int issue(int argc, char *argv[])
 	}
 	if (!public)
 	{
-		id->destroy(id);
-		ca->destroy(ca);
-		private->destroy(private);
-		san->destroy_offset(san, offsetof(identification_t, destroy));
-		fprintf(stderr, "parsing public key failed\n");
-		return 1;
+		error = "parsing public key failed";
+		goto end;
 	}
 
 	if (hex)
@@ -862,15 +854,11 @@ static int issue(int argc, char *argv[])
 	else
 	{
 		rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+
 		if (!rng)
 		{
-			id->destroy(id);
-			ca->destroy(ca);
-			private->destroy(private);
-			public->destroy(public);
-			san->destroy_offset(san, offsetof(identification_t, destroy));
-			fprintf(stderr, "no random number generator found\n");
-			return 1;
+			error = "no random number generator found";
+			goto end;
 		}
 		rng->allocate_bytes(rng, 8, &serial);
 		rng->destroy(rng);
@@ -884,33 +872,45 @@ static int issue(int argc, char *argv[])
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
 					BUILD_END);
-	private->destroy(private);
-	public->destroy(public);
-	ca->destroy(ca);
-	id->destroy(id);
-	san->destroy_offset(san, offsetof(identification_t, destroy));
-	free(serial.ptr);
 	if (!cert)
 	{
-		fprintf(stderr, "generating certificate failed\n");
-		return 1;
+		error = "generating certificate failed";
+		goto end;
 	}
 	encoding = cert->get_encoding(cert);
 	if (!encoding.ptr)
 	{
-		cert->destroy(cert);
-		fprintf(stderr, "encoding certificate failed\n");
-		return 1;
+		error = "encoding certificate failed";
+		goto end;
 	}
-	cert->destroy(cert);
 	if (fwrite(encoding.ptr, encoding.len, 1, stdout) != 1)
 	{
-		fprintf(stderr, "writing certificate key failed\n");
-		free(encoding.ptr);
+		error = "writing certificate key failed";
+		goto end;
+	}
+
+end:
+	DESTROY_IF(id);
+	DESTROY_IF(cert);
+	DESTROY_IF(ca);
+	DESTROY_IF(public);
+	DESTROY_IF(private);
+	san->destroy_offset(san, offsetof(identification_t, destroy));
+	options->destroy(options);
+	free(encoding.ptr);
+	free(serial.ptr);
+
+	if (error)
+	{    
+		fprintf(stderr, "%s\n", error);
 		return 1;
 	}
-	free(encoding.ptr);
 	return 0;
+
+usage:
+	san->destroy_offset(san, offsetof(identification_t, destroy));
+	options->destroy(options);
+	return usage(error);
 }
 
 /**
