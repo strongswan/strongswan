@@ -1210,7 +1210,7 @@ static bool generate(private_builder_t *this)
 {
 	chunk_t extensions = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
-	chunk_t subjectKeyIdentifier = chunk_empty;
+	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -1303,7 +1303,6 @@ static bool generate(private_builder_t *this)
 		return FALSE;
 	}
 
-
 	if (this->cert->subjectAltNames->get_count(this->cert->subjectAltNames))
 	{
 		/* TODO: encode subjectAltNames */
@@ -1330,12 +1329,26 @@ static bool generate(private_builder_t *this)
 										asn1_wrap(ASN1_OCTET_STRING, "c", keyid)));
 		}
 	}
-	if (basicConstraints.ptr || subjectAltNames.ptr)
+	if (this->sign_key)
+	{	/* add the keyid authKeyIdentifier for non self-signed certificates */
+		chunk_t keyid;
+
+		if (this->sign_key->get_fingerprint(this->sign_key,
+											KEY_ID_PUBKEY_SHA1, &keyid))
+		{
+			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m",
+									asn1_wrap(ASN1_CONTEXT_S_0, "c", keyid))));
+		}
+	}
+	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmm",
 							basicConstraints, subjectKeyIdentifier,
-							subjectAltNames));
+							authKeyIdentifier, subjectAltNames));
 	}
 
 	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
