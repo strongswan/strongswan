@@ -664,6 +664,7 @@ static int issue(int argc, char *argv[])
 	chunk_t serial, encoding;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
+	x509_t *x509;
 
 	struct option long_opts[] = {
 		{ "type", required_argument, NULL, 't' },
@@ -755,6 +756,15 @@ static int issue(int argc, char *argv[])
 		fprintf(stderr, "parsing CA certificate failed\n");
 		return 1;
 	}
+	x509 = (x509_t*)ca;
+	if (!(x509->get_flags(x509) & X509_CA))
+	{
+		id->destroy(id);
+		ca->destroy(ca);
+		fprintf(stderr, "CA certificate misses CA basicConstraint\n");
+		return 1;
+	}
+
 	public = ca->get_public_key(ca);
 	if (!public)
 	{
@@ -909,9 +919,7 @@ static int verify(int argc, char *argv[])
 	if (cafile)
 	{
 		ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								BUILD_FROM_FILE, cafile,
-								BUILD_X509_FLAG, X509_CA,
-								BUILD_END);
+								BUILD_FROM_FILE, cafile, BUILD_END);
 		if (!ca)
 		{
 			fprintf(stderr, "parsing CA certificate failed\n");
