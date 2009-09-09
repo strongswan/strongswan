@@ -33,36 +33,9 @@
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
+#include <credentials/certificates/x509.h>
 
 #define PKCS5_SALT_LEN	8	/* bytes */
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for PEM decoding
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** credential type we are building */
-	credential_type_t type;
-	/** subtype (keytype, certtype) of the credential we build */
-	int subtype;
-	/** path to file, if we are reading from a file */
-	char *file;
-	/** file description, if we are reading from a fd */
-	int fd;
-	/** PEM encoding of the credential */
-	chunk_t pem;
-	/** PEM decryption passphrase, if given */
-	chunk_t passphrase;
-	/** supplied callback to read passphrase */
-	chunk_t (*cb)(void *data, int try);
-	/** user data to callback */
-	void *data;
-	/** X509 flags to pass along */
-	int flags;
-};
 
 /**
  * check the presence of a pattern in a character string, skip if found
@@ -194,7 +167,8 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 /**
  * Converts a PEM encoded file into its binary form (RFC 1421, RFC 934)
  */
-status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
+static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data,
+						   bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -351,14 +325,14 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 	{
 		return SUCCESS;
 	}
-	if (!this->cb)
+	if (!cb)
 	{
 		DBG1("  missing passphrase");
 		return INVALID_ARG;
 	}
 	while (TRUE)
 	{
-		passphrase = this->cb(this->data, ++try);
+		passphrase = cb(cb_data, ++try);
 		if (!passphrase.len || !passphrase.ptr)
 		{
 			return INVALID_ARG;
@@ -377,9 +351,11 @@ status_t pem_to_bin(chunk_t *blob, private_builder_t *this, bool *pgp)
 }
 
 /**
- * build the credential from a blob
+ * load the credential from a blob
  */
-static void *build_from_blob(private_builder_t *this, chunk_t blob)
+static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
+							chunk_t(*cb)(void*,int), void *cb_data,
+							x509_flag_t flags)
 {
 	void *cred = NULL;
 	bool pgp = FALSE;
@@ -387,31 +363,33 @@ static void *build_from_blob(private_builder_t *this, chunk_t blob)
 	blob = chunk_clone(blob);
 	if (!is_asn1(blob))
 	{
-		if (pem_to_bin(&blob, this, &pgp) != SUCCESS)
+		if (pem_to_bin(&blob, cb, cb_data, &pgp) != SUCCESS)
 		{
 			chunk_clear(&blob);
 			return NULL;
 		}
-		if (pgp && this->type == CRED_PRIVATE_KEY)
+		if (pgp && type == CRED_PRIVATE_KEY)
 		{
 			/* PGP encoded keys are parsed with a KEY_ANY key type, as it
 			 * can contain any type of key. However, ipsec.secrets uses
 			 * RSA for PGP keys, which is actually wrong. */
-			this->subtype = KEY_ANY;
+			subtype = KEY_ANY;
 		}
 	}
-	cred = lib->creds->create(lib->creds, this->type, this->subtype,
+	cred = lib->creds->create(lib->creds, type, subtype,
 							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,
-							  this->flags ? BUILD_X509_FLAG : BUILD_END,
-							  this->flags, BUILD_END);
+							  flags ? BUILD_X509_FLAG : BUILD_END,
+							  flags, BUILD_END);
 	chunk_clear(&blob);
 	return cred;
 }
 
 /**
- * build the credential from a file
+ * load the credential from a file
  */
-static void *build_from_file(private_builder_t *this, char *file)
+static void *load_from_file(char *file, credential_type_t type, int subtype,
+							chunk_t(*cb)(void*,int), void *cb_data,
+							x509_flag_t flags)
 {
 	void *cred = NULL;
 	struct stat sb;
@@ -440,7 +418,8 @@ static void *build_from_file(private_builder_t *this, char *file)
 		return NULL;
 	}
 
-	cred = build_from_blob(this, chunk_create(addr, sb.st_size));
+	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype,
+						  cb, cb_data, flags);
 
 	munmap(addr, sb.st_size);
 	close(fd);
@@ -448,9 +427,11 @@ static void *build_from_file(private_builder_t *this, char *file)
 }
 
 /**
- * build the credential from a file
+ * load the credential from a file descriptor
  */
-static void *build_from_fd(private_builder_t *this, int fd)
+static void *load_from_fd(int fd, credential_type_t type, int subtype,
+						  chunk_t(*cb)(void*,int), void *cb_data,
+						  x509_flag_t flags)
 {
 	char buf[8096];
 	char *pos = buf;
@@ -475,30 +456,8 @@ static void *build_from_fd(private_builder_t *this, int fd)
 			return NULL;
 		}
 	}
-	return build_from_blob(this, chunk_create(buf, total));
-}
-
-/**
- * Implementation of builder_t.build
- */
-static void *build(private_builder_t *this)
-{
-	void *cred = NULL;
-
-	if (this->pem.ptr)
-	{
-		cred = build_from_blob(this, this->pem);
-	}
-	else if (this->file)
-	{
-		cred = build_from_file(this, this->file);
-	}
-	else if (this->fd != -1)
-	{
-		cred = build_from_fd(this, this->fd);
-	}
-	free(this);
-	return cred;
+	return load_from_blob(chunk_create(buf, total), type, subtype,
+						  cb, cb_data, flags);
 }
 
 /**
@@ -514,100 +473,89 @@ static chunk_t given_passphrase_cb(chunk_t *passphrase, int try)
 }
 
 /**
- * Implementation of builder_t.add
+ * Load all kind of PEM encoded credentials.
  */
-static void add(private_builder_t *this, builder_part_t part, ...)
+static void *pem_load(credential_type_t type, int subtype, va_list args)
 {
-	va_list args;
+	char *file = NULL;
+	int fd = -1;
+	chunk_t pem = chunk_empty, passphrase = chunk_empty;
+	chunk_t (*cb)(void *data, int try) = NULL;
+	void *cb_data = NULL;
+	int flags = 0;
 
-	switch (part)
+	while (TRUE)
 	{
-		case BUILD_FROM_FILE:
-			va_start(args, part);
-			this->file = va_arg(args, char*);
-			va_end(args);
-			break;
-		case BUILD_FROM_FD:
-			va_start(args, part);
-			this->fd = va_arg(args, int);
-			va_end(args);
-			break;
-		case BUILD_BLOB_PEM:
-			va_start(args, part);
-			this->pem = va_arg(args, chunk_t);
-			va_end(args);
-			break;
-		case BUILD_PASSPHRASE:
-			va_start(args, part);
-			this->passphrase = va_arg(args, chunk_t);
-			va_end(args);
-			if (this->passphrase.len && this->passphrase.ptr)
-			{
-				this->cb = (void*)given_passphrase_cb;
-				this->data = &this->passphrase;
-			}
-			break;
-		case BUILD_PASSPHRASE_CALLBACK:
-			va_start(args, part);
-			this->cb = va_arg(args, chunk_t(*)(void*,int));
-			this->data = va_arg(args, void*);
-			va_end(args);
-			break;
-		case BUILD_X509_FLAG:
-			va_start(args, part);
-			this->flags = va_arg(args, int);
-			va_end(args);
-			break;
-		default:
-			builder_cancel(&this->public);
-			break;
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_FROM_FILE:
+				file = va_arg(args, char*);
+				continue;
+			case BUILD_FROM_FD:
+				fd = va_arg(args, int);
+				continue;
+			case BUILD_BLOB_PEM:
+				pem = va_arg(args, chunk_t);
+				continue;
+			case BUILD_PASSPHRASE:
+				passphrase = va_arg(args, chunk_t);
+				if (passphrase.len && passphrase.ptr)
+				{
+					cb = (void*)given_passphrase_cb;
+					cb_data = &passphrase;
+				}
+				continue;
+			case BUILD_PASSPHRASE_CALLBACK:
+				cb = va_arg(args, chunk_t(*)(void*,int));
+				cb_data = va_arg(args, void*);
+				continue;
+			case BUILD_X509_FLAG:
+				flags = va_arg(args, int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
 	}
+
+	if (pem.ptr)
+	{
+		return load_from_blob(pem, type, subtype, cb, cb_data, flags);
+	}
+	if (file)
+	{
+		return load_from_file(file, type, subtype, cb, cb_data, flags);
+	}
+	if (fd != -1)
+	{
+		return load_from_fd(fd, type, subtype, cb, cb_data, flags);
+	}
+	return NULL;
 }
 
 /**
- * Generic PEM builder.
+ * Private key PEM loader.
  */
-static builder_t *pem_builder(credential_type_t type, int subtype)
+private_key_t *pem_private_key_load(key_type_t type, va_list args)
 {
-	private_builder_t *this = malloc_thing(private_builder_t);
-
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	this->type = type;
-	this->subtype = subtype;
-	this->file = NULL;
-	this->fd = -1;
-	this->pem = chunk_empty;
-	this->passphrase = chunk_empty;
-	this->cb = NULL;
-	this->data = NULL;
-	this->flags = 0;
-
-	return &this->public;
+	return pem_load(CRED_PRIVATE_KEY, type, args);
 }
 
 /**
- * Private key PEM builder.
+ * Public key PEM loader.
  */
-builder_t *private_key_pem_builder(key_type_t type)
+public_key_t *pem_public_key_load(key_type_t type, va_list args)
 {
-	return pem_builder(CRED_PRIVATE_KEY, type);
+	return pem_load(CRED_PUBLIC_KEY, type, args);
 }
 
 /**
- * Public key PEM builder.
+ * Certificate PEM loader.
  */
-builder_t *public_key_pem_builder(key_type_t type)
+certificate_t *pem_certificate_load(certificate_type_t type, va_list args)
 {
-	return pem_builder(CRED_PUBLIC_KEY, type);
-}
-
-/**
- * Certificate PEM builder.
- */
-builder_t *certificate_pem_builder(certificate_type_t type)
-{
-	return pem_builder(CRED_CERTIFICATE, type);
+	return pem_load(CRED_CERTIFICATE, type, args);
 }
 

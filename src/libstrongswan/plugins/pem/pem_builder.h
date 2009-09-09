@@ -21,40 +21,37 @@
 #ifndef PEM_PRIVATE_KEY_H_
 #define PEM_PRIVATE_KEY_H_
 
-#include <credentials/certificates/certificate.h>
+#include <credentials/builder.h>
 #include <credentials/credential_factory.h>
+#include <credentials/keys/private_key.h>
+#include <credentials/certificates/certificate.h>
 
 /**
- * Builder for PEM encoded private keys of all kind.
+ * Load PEM encoded private keys.
  *
  * @param type		type of the key
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			private key, NULL if failed
  */
-builder_t *private_key_pem_builder(key_type_t type);
+private_key_t *pem_private_key_load(key_type_t type, va_list args);
 
 /**
- * Builder for PEM encoded public keys of all kind.
+ * Load PEM encoded public keys.
  *
  * @param type		type of the key
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			public key, NULL if failed
  */
-builder_t *public_key_pem_builder(key_type_t type);
+public_key_t *pem_public_key_load(key_type_t type, va_list args);
 
 /**
- * Builder for PEM encoded certificates of all kind.
+ * Build PEM encoded certificates..
  *
- * @param type		type of the key
- * @return 			builder instance
+ * @param type		type of the certificate
+ * @param args		builder_part_t argument list
+ * @return 			certificate, NULL if failed
  */
-builder_t *certificate_pem_builder(certificate_type_t type);
-
-/**
- * Builder for PEM encoded pluto certificates of all kind.
- *
- * @param type		type of the key
- * @return 			builder instance
- */
-builder_t *pluto_pem_builder(certificate_type_t type);
+certificate_t *pem_certificate_load(certificate_type_t type, va_list args);
 
 #endif /** PEM_PRIVATE_KEY_H_ @}*/
 

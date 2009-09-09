@@ -37,11 +37,11 @@ struct private_pem_plugin_t {
 static void destroy(private_pem_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							   (builder_constructor_t)private_key_pem_builder);
+							   (builder_function_t)pem_private_key_load);
 	lib->creds->remove_builder(lib->creds,
-							   (builder_constructor_t)public_key_pem_builder);
+							   (builder_function_t)pem_public_key_load);
 	lib->creds->remove_builder(lib->creds,
-							   (builder_constructor_t)certificate_pem_builder);
+							   (builder_function_t)pem_certificate_load);
 	free(this);
 }
 
@@ -56,49 +56,49 @@ plugin_t *plugin_create()
 
 	/* register private key PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
-							(builder_constructor_t)private_key_pem_builder);
+							(builder_function_t)pem_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							(builder_constructor_t)private_key_pem_builder);
+							(builder_function_t)pem_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
-							(builder_constructor_t)private_key_pem_builder);
+							(builder_function_t)pem_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_DSA,
-							(builder_constructor_t)private_key_pem_builder);
+							(builder_function_t)pem_private_key_load);
 
 	/* register public key PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-							(builder_constructor_t)public_key_pem_builder);
+							(builder_function_t)pem_public_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-							(builder_constructor_t)public_key_pem_builder);
+							(builder_function_t)pem_public_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
-							(builder_constructor_t)public_key_pem_builder);
+							(builder_function_t)pem_public_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_DSA,
-							(builder_constructor_t)public_key_pem_builder);
+							(builder_function_t)pem_public_key_load);
 
 	/* register certificate PEM decoding builders */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_ANY,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 
 	/* register pluto specific certificate formats */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_AC,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
-							(builder_constructor_t)certificate_pem_builder);
+							(builder_function_t)pem_certificate_load);
 
 	return &this->public.plugin;
 }
