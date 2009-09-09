@@ -21,22 +21,25 @@
 #ifndef PKCS1_BUILDER_H_
 #define PKCS1_BUILDER_H_
 
-#include <credentials/keys/public_key.h>
+#include <credentials/builder.h>
+#include <credentials/keys/private_key.h>
 
 /**
- * Create the builder for a generic or an RSA public key.
+ * Load a generic or an RSA public key from PKCS#1 data.
  *
  * @param type		type of the key, either KEY_ANY or KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			public key, NULL on failure
  */
-builder_t *pkcs1_public_key_builder(key_type_t type);
+public_key_t *pkcs1_public_key_load(key_type_t type, va_list args);
 
 /**
- * Create the builder for a RSA private key.
+ * Load a RSA public key from PKCS#1 data.
  *
  * @param type		type of the key, KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			private key, NULL on failure
  */
-builder_t *pkcs1_private_key_builder(key_type_t type);
+private_key_t *pkcs1_private_key_load(key_type_t type, va_list args);
 
 #endif /** PKCS1_BUILDER_H_ @}*/
