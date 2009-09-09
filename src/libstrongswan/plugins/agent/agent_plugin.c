@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ struct private_agent_plugin_t {
 static void destroy(private_agent_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							   (builder_constructor_t)agent_private_key_builder);
+							   (builder_function_t)agent_private_key_open);
 	free(this);
 }
 
@@ -51,7 +51,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							(builder_constructor_t)agent_private_key_builder);
+							(builder_function_t)agent_private_key_open);
 	return &this->public.plugin;
 }
 

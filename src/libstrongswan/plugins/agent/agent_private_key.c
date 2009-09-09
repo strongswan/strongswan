@@ -386,12 +386,37 @@ static void destroy(private_agent_private_key_t *this)
 }
 
 /**
- * Internal constructor
+ * See header.
  */
-static agent_private_key_t *agent_private_key_create(char *path,
-													 public_key_t *pubkey)
+agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 {
-	private_agent_private_key_t *this = malloc_thing(private_agent_private_key_t);
+	private_agent_private_key_t *this;
+	public_key_t *pubkey = NULL;
+	char *path = NULL;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_AGENT_SOCKET:
+				path = va_arg(args, char*);
+				continue;
+			case BUILD_PUBLIC_KEY:
+				pubkey = va_arg(args, public_key_t*);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!path)
+	{
+		return FALSE;
+	}
+
+	this = malloc_thing(private_agent_private_key_t);
 
 	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
 	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
@@ -419,86 +444,6 @@ static agent_private_key_t *agent_private_key_create(char *path,
 		destroy(this);
 		return NULL;
 	}
-	return &this->public;
-}
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for key loading/generation
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** agent unix socket */
-	char *socket;
-	/** matching public key */
-	public_key_t *pubkey;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static agent_private_key_t *build(private_builder_t *this)
-{
-	agent_private_key_t *key = NULL;
-
-	if (this->socket)
-	{
-		key = agent_private_key_create(this->socket, this->pubkey);
-	}
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	switch (part)
-	{
-		case BUILD_AGENT_SOCKET:
-		{
-			va_start(args, part);
-			this->socket = va_arg(args, char*);
-			va_end(args);
-			return;
-		}
-		case BUILD_PUBLIC_KEY:
-		{
-			va_start(args, part);
-			this->pubkey = va_arg(args, public_key_t*);
-			va_end(args);
-			return;
-		}
-		default:
-			break;
-	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *agent_private_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_RSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->pubkey = NULL;
-	this->socket = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
 	return &this->public;
 }
 
