@@ -21,22 +21,25 @@
 #ifndef PGP_BUILDER_H_
 #define PGP_BUILDER_H_
 
-#include <credentials/keys/public_key.h>
+#include <credentials/builder.h>
+#include <credentials/keys/private_key.h>
 
 /**
- * Create the builder for a generic or an RSA public key using PGP decoding.
+ * Load a generic or an RSA public key using PGP decoding.
  *
  * @param type		type of the key, either KEY_ANY or KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			private key, NULL if failed
  */
-builder_t *pgp_public_key_builder(key_type_t type);
+public_key_t *pgp_public_key_load(key_type_t type, va_list args);
 
 /**
- * Create the builder for a generic or RSA private key using PGP decoding.
+ * Load a generic or RSA private key using PGP decoding.
  *
  * @param type		type of the key, either KEY_ANY or KEY_RSA
+ * @param args		builder_part_t argument list
  * @return 			builder instance
  */
-builder_t *pgp_private_key_builder(key_type_t type);
+private_key_t *pgp_private_key_load(key_type_t type, va_list args);
 
 #endif /** PGP_BUILDER_H_ @}*/
