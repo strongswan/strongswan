@@ -37,7 +37,7 @@ struct private_dnskey_plugin_t {
 static void destroy(private_dnskey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							(builder_constructor_t)dnskey_public_key_builder);
+							(builder_function_t)dnskey_public_key_load);
 	free(this);
 }
 
@@ -51,9 +51,9 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-							(builder_constructor_t)dnskey_public_key_builder);
+							(builder_function_t)dnskey_public_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-							(builder_constructor_t)dnskey_public_key_builder);
+							(builder_function_t)dnskey_public_key_load);
 
 	return &this->public.plugin;
 }

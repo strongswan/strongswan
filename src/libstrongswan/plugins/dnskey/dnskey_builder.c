@@ -46,7 +46,7 @@ enum dnskey_algorithm_t {
 /**
  * Load a generic public key from a DNSKEY RR blob
  */
-static public_key_t *parse_public_key(chunk_t blob)
+static dnskey_public_key_t *parse_public_key(chunk_t blob)
 {
 	dnskey_rr_t *rr = (dnskey_rr_t*)blob.ptr;
 
@@ -71,7 +71,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 /**
  * Load a RSA public key from DNSKEY RR data
  */
-static public_key_t *parse_rsa_public_key(chunk_t blob)
+static dnskey_public_key_t *parse_rsa_public_key(chunk_t blob)
 {
 	chunk_t n, e;
 
@@ -104,83 +104,39 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 						BUILD_END);
 }
 
-typedef struct private_builder_t private_builder_t;
-
 /**
- * Builder implementation for private/public key loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** dnskey packet data */
-	chunk_t blob;
-	/** type of key to build */
-	key_type_t type;
-};
-
-/**
- * Implementation of builder_t.build for public keys
- */
-static public_key_t *build_public(private_builder_t *this)
+dnskey_public_key_t *dnskey_public_key_load(key_type_t type, va_list args)
 {
-	public_key_t *key = NULL;
+	chunk_t blob = chunk_empty;
 
-	switch (this->type)
+	while (TRUE)
 	{
-		case KEY_ANY:
-			key = parse_public_key(this->blob);
-			break;
-		case KEY_RSA:
-			key = parse_rsa_public_key(this->blob);
-			break;
-		default:
-			break;
-	}
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add for public keys
- */
-static void add_public(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	switch (part)
-	{
-		case BUILD_BLOB_DNSKEY:
+		switch (va_arg(args, builder_part_t))
 		{
-			va_start(args, part);
-			this->blob = va_arg(args, chunk_t);
-			va_end(args);
-			break;
+			case BUILD_BLOB_DNSKEY:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
 		}
-		default:
-			builder_cancel(&this->public);
-			break;
+		break;
 	}
-}
-
-/**
- * Builder construction function for public keys
- */
-builder_t *dnskey_public_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_ANY && type != KEY_RSA)
+	if (!blob.ptr)
 	{
 		return NULL;
 	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->blob = chunk_empty;
-	this->type = type;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add_public;
-	this->public.build = (void*(*)(builder_t *this))build_public;
-
-	return &this->public;
+	switch (type)
+	{
+		case KEY_ANY:
+			return parse_public_key(blob);
+		case KEY_RSA:
+			return parse_rsa_public_key(blob);
+		default:
+			return NULL;
+	}
 }
 
