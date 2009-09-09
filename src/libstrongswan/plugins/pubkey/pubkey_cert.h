@@ -21,6 +21,7 @@
 #ifndef PUBKEY_CERT_H_
 #define PUBKEY_CERT_H_
 
+#include <credentials/builder.h>
 #include <credentials/certificates/certificate.h>
 
 typedef struct pubkey_cert_t pubkey_cert_t;
@@ -37,13 +38,14 @@ struct pubkey_cert_t {
 };
 
 /**
- * Create the builder for a trusted public key.
+ * Create a trusted public key cert using a public key.
  *
- * The builders add() function takes BUILD_PUBLIC_KEY to enwrap.
+ * The build accepts a BUILD_PUBLIC_KEY or a BUILD_BLOB_ASN1_DER part.
  *
  * @param type		type of the certificate, must be CERT_pubkey_cert
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			pubkey_cert_t, NULL on failure
  */
-builder_t *pubkey_cert_builder(certificate_type_t type);
+pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args);
 
 #endif /** PUBKEY_CERT_H_ @}*/

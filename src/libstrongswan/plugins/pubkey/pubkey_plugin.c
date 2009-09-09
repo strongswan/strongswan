@@ -37,7 +37,7 @@ struct private_pubkey_plugin_t {
 static void destroy(private_pubkey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							(builder_constructor_t)pubkey_cert_builder);
+							(builder_function_t)pubkey_cert_wrap);
 	free(this);
 }
 
@@ -51,7 +51,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							(builder_constructor_t)pubkey_cert_builder);
+							(builder_function_t)pubkey_cert_wrap);
 
 	return &this->public.plugin;
 }

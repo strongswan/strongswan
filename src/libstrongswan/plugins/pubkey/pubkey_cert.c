@@ -242,89 +242,44 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	return &this->public;
 }
 
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for key loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded public key */
-	pubkey_cert_t *key;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static pubkey_cert_t *build(private_builder_t *this)
+pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 {
-	pubkey_cert_t *key = this->key;
+	public_key_t *key = NULL;
+	chunk_t blob = chunk_empty;
 
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	if (!this->key)
+	while (TRUE)
 	{
-		public_key_t *key;
-		va_list args;
-
-		switch (part)
+		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-										 va_arg(args, chunk_t));
-				if (key)
-				{
-					this->key = pubkey_cert_create(key);
-				}
-				va_end(args);
-				return;
-			}
+				blob = va_arg(args, chunk_t);
+				continue;
 			case BUILD_PUBLIC_KEY:
-			{
-				va_start(args, part);
 				key = va_arg(args, public_key_t*);
-				pubkey_cert_create(key->get_ref(key));
-				va_end(args);
-				return;
-			}
-			default:
+				continue;
+			case BUILD_END:
 				break;
+			default:
+				return NULL;
 		}
+		break;
 	}
-	if (this->key)
+	if (key)
 	{
-		destroy((private_pubkey_cert_t*)this->key);
+		key->get_ref(key);
 	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *pubkey_cert_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_TRUSTED_PUBKEY)
+	else if (blob.ptr)
 	{
-		return NULL;
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+								 BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->key = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	return &this->public;
+	if (key)
+	{
+		return pubkey_cert_create(key);
+	}
+	return NULL;
 }
 
