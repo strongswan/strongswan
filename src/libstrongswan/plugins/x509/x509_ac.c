@@ -2,6 +2,7 @@
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
  * Copyright (C) 2002-2008 Andreas Steffen
+ * Copyright (C) 2009 Martin Willi
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -940,140 +941,93 @@ static private_x509_ac_t *create_empty(void)
 }
 
 /**
- * create X.509 attribute certificate from a chunk
+ * See header.
  */
-static private_x509_ac_t* create_from_chunk(chunk_t chunk)
+x509_ac_t *x509_ac_load(certificate_type_t type, va_list args)
 {
-	private_x509_ac_t *this = create_empty();
+	chunk_t blob = chunk_empty;
 
-	this->encoding = chunk;
-	if (!parse_certificate(this))
+	while (TRUE)
 	{
-		destroy(this);
-		return NULL;
-	}
-	return this;
-}
-
-typedef struct private_builder_t private_builder_t;
-/**
- * Builder implementation for certificate loading
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** X.509 attribute certificate to build */
-	private_x509_ac_t *ac;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static private_x509_ac_t* build(private_builder_t *this)
-{
-	private_x509_ac_t *ac = this->ac;
-
-	free(this);
-
-	/* synthesis if encoding does not exist */
-	if (ac && ac->encoding.ptr == NULL)
-	{
-		if (ac->holderCert && ac->signerCert && ac->signerKey)
+		switch (va_arg(args, builder_part_t))
 		{
-			ac->encoding = build_ac(ac);
-			return ac;
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (blob.ptr)
+	{
+		private_x509_ac_t *ac = create_empty();
+
+		ac->encoding = chunk_clone(blob);
+		if (parse_certificate(ac))
+		{
+			return &ac->public;
 		}
 		destroy(ac);
-		return NULL;
 	}
-	else
-	{
-		return ac;
-	}
+	return NULL;
 }
 
 /**
- * Implementation of builder_t.add
+ * See header.
  */
-static void add(private_builder_t *this, builder_part_t part, ...)
+x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 {
-	va_list args;
-	certificate_t *cert;
-	chunk_t chunk;
+	private_x509_ac_t *ac;
 
-	va_start(args, part);
-	switch (part)
+	ac = create_empty();
+	while (TRUE)
 	{
-		case BUILD_BLOB_ASN1_DER:
-			if (this->ac)
-			{
-				destroy(this->ac);
-			}
-			chunk = va_arg(args, chunk_t);
-			this->ac = create_from_chunk(chunk_clone(chunk));
-			break;
-		case BUILD_NOT_BEFORE_TIME:
-			this->ac->notBefore = va_arg(args, time_t);
-			break;
-		case BUILD_NOT_AFTER_TIME:
-			this->ac->notAfter = va_arg(args, time_t);
-			break;
-		case BUILD_SERIAL:
-			chunk = va_arg(args, chunk_t);
-			this->ac->serialNumber = chunk_clone(chunk);
-			break;
-		case BUILD_IETF_GROUP_ATTR:
-			ietfAttr_list_create_from_string(va_arg(args, char*),
-											 this->ac->groups);
-			break;
-		case BUILD_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->ac->holderCert = cert->get_ref(cert);
-			}
-			break;
-		case BUILD_SIGNING_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->ac->signerCert = cert->get_ref(cert);
-			}
-			break;
-		case BUILD_SIGNING_KEY:
-			this->ac->signerKey = va_arg(args, private_key_t*);
-			this->ac->signerKey->get_ref(this->ac->signerKey);
-			break;
-		default:
-			/* abort if unsupported option */
-			if (this->ac)
-			{
-				destroy(this->ac);
-			}
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_ac_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_X509_AC)
-	{
-		return NULL;
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_NOT_BEFORE_TIME:
+				ac->notBefore = va_arg(args, time_t);
+				continue;
+			case BUILD_NOT_AFTER_TIME:
+				ac->notAfter = va_arg(args, time_t);
+				continue;
+			case BUILD_SERIAL:
+				ac->serialNumber = chunk_clone(va_arg(args, chunk_t));
+				continue;
+			case BUILD_IETF_GROUP_ATTR:
+				ietfAttr_list_create_from_string(va_arg(args, char*), ac->groups);
+				continue;
+			case BUILD_CERT:
+				ac->holderCert = va_arg(args, certificate_t*);
+				ac->holderCert->get_ref(ac->holderCert);
+				continue;
+			case BUILD_SIGNING_CERT:
+				ac->signerCert = va_arg(args, certificate_t*);
+				ac->signerCert->get_ref(ac->signerCert);
+				continue;
+			case BUILD_SIGNING_KEY:
+				ac->signerKey = va_arg(args, private_key_t*);
+				ac->signerKey->get_ref(ac->signerKey);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(ac);
+				return NULL;
+		}
+		break;
 	}
 
-	this = malloc_thing(private_builder_t);
-
-	this->ac = create_empty();
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	return &this->public;
+	if (ac->signerKey && ac->holderCert && ac->signerCert &&
+		ac->holderCert->get_type(ac->holderCert) == CERT_X509 &&
+		ac->signerCert->get_type(ac->signerCert) == CERT_X509)
+	{
+		ac->encoding = build_ac(ac);
+		return &ac->public;
+	}
+	destroy(ac);
+	return NULL;
 }
 

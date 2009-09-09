@@ -2,6 +2,7 @@
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
  * Copyright (C) 2002-2008 Andreas Steffen
+ * Copyright (C) 2009 Martin Willi
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,6 +25,7 @@
 #ifndef X509_AC_H_
 #define X509_AC_H_
 
+#include <credentials/builder.h>
 #include <credentials/certificates/ac.h>
 
 typedef struct x509_ac_t x509_ac_t;
@@ -40,18 +42,28 @@ struct x509_ac_t {
 };
 
 /**
- * Create the building facility for X.509 attribute certificates.
- *
- * The resulting builder accepts:
- * 	BUILD_USER_CERT: 	user certificate, exactly one
- *	BUILD_SIGNER_CERT:	signer certificate, exactly one
- *	BUILD_SIGNER_KEY:	signer private key, exactly one
- *  BUILD_SERIAL:		serial number, exactly one
- *  BUILD_GROUP_ATTR:	group attribute, optional, several possible
+ * Load a X.509 attribute certificate.
  *
  * @param type		certificate type, CERT_X509_AC only
- * @return			builder instance to build X.509 attribute certificates
+ * @param args		builder_part_t argument list
+ * @return			X.509 Attribute certificate, NULL on failure
  */
-builder_t *x509_ac_builder(certificate_type_t type);
+x509_ac_t *x509_ac_load(certificate_type_t type, va_list args);
+
+/**
+ * Generate a X.509 attribute certificate.
+ *
+ * Accepted build parts:
+ *  BUILD_USER_CERT:	user certificate
+ *  BUILD_SIGNER_CERT:	signer certificate
+ *  BUILD_SIGNER_KEY:	signer private key
+ *  BUILD_SERIAL:		serial number
+ *  BUILD_GROUP_ATTR:	group attribute, several possible
+ *
+ * @param type		certificate type, CERT_X509_AC only
+ * @param args		builder_part_t argument list
+ * @return			X.509 Attribute certificate, NULL on failure
+ */
+x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args);
 
 #endif /** X509_AC_H_ @}*/

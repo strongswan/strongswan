@@ -3,7 +3,7 @@
  * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
  * Copyright (C) 2002 Mario Strasser
  * Copyright (C) 2000-2006 Andreas Steffen
- * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -676,6 +676,11 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_SIGNATURE						25
 
 /**
+ * forward declaration
+ */
+static bool issued_by(private_x509_cert_t *this, certificate_t *issuer);
+
+/**
  * Parses an X.509v3 certificate
  */
 static bool parse_certificate(private_x509_cert_t *this)
@@ -810,6 +815,25 @@ static bool parse_certificate(private_x509_cert_t *this)
 
 end:
 	parser->destroy(parser);
+	if (success)
+	{
+		hasher_t *hasher;
+
+		/* check if the certificate is self-signed */
+		if (issued_by(this, &this->public.interface.interface))
+		{
+			this->flags |= X509_SELF_SIGNED;
+		}
+		/* create certificate hash */
+		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (hasher == NULL)
+		{
+			DBG1("  unable to create hash of certificate, SHA1 not supported");
+			return NULL;
+		}
+		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
+		hasher->destroy(hasher);
+	}
 	return success;
 }
 
@@ -910,17 +934,18 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 		return FALSE;
 	}
 
-	/* get the public key of the issuer */
-	key = issuer->get_public_key(issuer);
-
 	/* determine signature scheme */
 	scheme = signature_scheme_from_oid(this->algorithm);
-
-	if (scheme == SIGN_UNKNOWN || key == NULL)
+	if (scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
 	}
-	/* TODO: add a lightweight check option (comparing auth/subject keyids only) */
+	/* get the public key of the issuer */
+	key = issuer->get_public_key(issuer);
+	if (!key)
+	{
+		return FALSE;
+	}
 	valid = key->verify(key, scheme, this->tbsCertificate, this->signature);
 	key->destroy(key);
 	return valid;
@@ -1150,63 +1175,10 @@ static private_x509_cert_t* create_empty(void)
 }
 
 /**
- * create an X.509 certificate from a chunk
- */
-static private_x509_cert_t *create_from_chunk(chunk_t chunk)
-{
-	hasher_t *hasher;
-	private_x509_cert_t *this = create_empty();
-
-	this->encoding = chunk;
-	this->parsed = TRUE;
-	if (!parse_certificate(this))
-	{
-		destroy(this);
-		return NULL;
-	}
-
-	/* check if the certificate is self-signed */
-	if (issued_by(this, &this->public.interface.interface))
-	{
-		this->flags |= X509_SELF_SIGNED;
-	}
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1("  unable to create hash of certificate, SHA1 not supported");
-		destroy(this);
-		return NULL;
-	}
-	hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
-	hasher->destroy(hasher);
-
-	return this;
-}
-
-typedef struct private_builder_t private_builder_t;
-/**
- * Builder implementation for certificate loading
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded certificate */
-	private_x509_cert_t *cert;
-	/** additional flags to enforce */
-	x509_flag_t flags;
-	/** certificate to sign, if we generate a new cert */
-	certificate_t *sign_cert;
-	/** private key to sign, if we generate a new cert */
-	private_key_t *sign_key;
-	/** digest algorithm to be used for signature */
-	hash_algorithm_t digest_alg;
-};
-
-/**
  * Generate and sign a new certificate
  */
-static bool generate(private_builder_t *this)
+static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
+					 private_key_t *sign_key, int digest_alg)
 {
 	chunk_t extensions = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
@@ -1218,11 +1190,11 @@ static bool generate(private_builder_t *this)
 	enumerator_t *enumerator;
 	identification_t *id;
 
-	subject = this->cert->subject;
-	if (this->sign_cert)
+	subject = cert->subject;
+	if (sign_cert)
 	{
-		issuer = this->sign_cert->get_subject(this->sign_cert);
-		if (!this->cert->public_key)
+		issuer = sign_cert->get_subject(sign_cert);
+		if (!cert->public_key)
 		{
 			return FALSE;
 		}
@@ -1230,65 +1202,64 @@ static bool generate(private_builder_t *this)
 	else
 	{	/* self signed */
 		issuer = subject;
-		if (!this->cert->public_key)
+		if (!cert->public_key)
 		{
-			this->cert->public_key = this->sign_key->get_public_key(this->sign_key);
+			cert->public_key = sign_key->get_public_key(sign_key);
 		}
-		this->flags |= X509_SELF_SIGNED;
+		cert->flags |= X509_SELF_SIGNED;
 	}
-	this->cert->issuer = issuer->clone(issuer);
-	if (!this->cert->notBefore)
+	cert->issuer = issuer->clone(issuer);
+	if (!cert->notBefore)
 	{
-		this->cert->notBefore = time(NULL);
+		cert->notBefore = time(NULL);
 	}
-	if (!this->cert->notAfter)
+	if (!cert->notAfter)
 	{	/* defaults to 1 year from now */
-		this->cert->notAfter = this->cert->notBefore + 60 * 60 * 24 * 365;
+		cert->notAfter = cert->notBefore + 60 * 60 * 24 * 365;
 	}
-	this->cert->flags = this->flags;
 
 	/* select signature scheme */
-	switch (this->sign_key->get_type(this->sign_key))
+	switch (sign_key->get_type(sign_key))
 	{
 		case KEY_RSA:
-			switch (this->digest_alg)
+			switch (digest_alg)
 			{
 				case HASH_MD5:
-					this->cert->algorithm = OID_MD5_WITH_RSA;
+					cert->algorithm = OID_MD5_WITH_RSA;
 					break;
 				case HASH_SHA1:
-					this->cert->algorithm = OID_SHA1_WITH_RSA;
+					cert->algorithm = OID_SHA1_WITH_RSA;
 					break;
 				case HASH_SHA224:
-					this->cert->algorithm = OID_SHA224_WITH_RSA;
+					cert->algorithm = OID_SHA224_WITH_RSA;
 					break;
 				case HASH_SHA256:
-					this->cert->algorithm = OID_SHA256_WITH_RSA;
+					cert->algorithm = OID_SHA256_WITH_RSA;
 					break;
 				case HASH_SHA384:
-					this->cert->algorithm = OID_SHA384_WITH_RSA;
+					cert->algorithm = OID_SHA384_WITH_RSA;
 					break;
 				case HASH_SHA512:
-					this->cert->algorithm = OID_SHA512_WITH_RSA;
+					cert->algorithm = OID_SHA512_WITH_RSA;
 					break;
 				default:
 					return FALSE;
 			}
 			break;
 		case KEY_ECDSA:
-			switch (this->digest_alg)
+			switch (digest_alg)
 			{
 				case HASH_SHA1:
-					this->cert->algorithm = OID_ECDSA_WITH_SHA1;
+					cert->algorithm = OID_ECDSA_WITH_SHA1;
 					break;
 				case HASH_SHA256:
-					this->cert->algorithm = OID_ECDSA_WITH_SHA256;
+					cert->algorithm = OID_ECDSA_WITH_SHA256;
 					break;
 				case HASH_SHA384:
-					this->cert->algorithm = OID_ECDSA_WITH_SHA384;
+					cert->algorithm = OID_ECDSA_WITH_SHA384;
 					break;
 				case HASH_SHA512:
-					this->cert->algorithm = OID_ECDSA_WITH_SHA512;
+					cert->algorithm = OID_ECDSA_WITH_SHA512;
 					break;
 				default:
 					return FALSE;
@@ -1297,16 +1268,15 @@ static bool generate(private_builder_t *this)
 		default:
 			return FALSE;
 	}
-	scheme = signature_scheme_from_oid(this->cert->algorithm);
+	scheme = signature_scheme_from_oid(cert->algorithm);
 
-	if (!this->cert->public_key->get_encoding(this->cert->public_key,
-											  KEY_PUB_SPKI_ASN1_DER, &key_info))
+	if (!cert->public_key->get_encoding(cert->public_key,
+										KEY_PUB_SPKI_ASN1_DER, &key_info))
 	{
 		return FALSE;
 	}
 
-	enumerator = this->cert->subjectAltNames->create_enumerator(
-													this->cert->subjectAltNames);
+	enumerator = cert->subjectAltNames->create_enumerator(cert->subjectAltNames);
 	while (enumerator->enumerate(enumerator, &id))
 	{
 		int context;
@@ -1344,7 +1314,7 @@ static bool generate(private_builder_t *this)
 								asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)));
 	}
 
-	if (this->flags & X509_CA)
+	if (cert->flags & X509_CA)
 	{
 		chunk_t yes, keyid;
 
@@ -1357,8 +1327,8 @@ static bool generate(private_builder_t *this)
 										asn1_wrap(ASN1_SEQUENCE, "m",
 											asn1_wrap(ASN1_BOOLEAN, "c", yes))));
 		/* add subjectKeyIdentifier to CA certificates */
-		if (this->cert->public_key->get_fingerprint(this->cert->public_key,
-													KEY_ID_PUBKEY_SHA1, &keyid))
+		if (cert->public_key->get_fingerprint(cert->public_key,
+											  KEY_ID_PUBKEY_SHA1, &keyid))
 		{
 			subjectKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 									asn1_build_known_oid(OID_SUBJECT_KEY_ID),
@@ -1366,12 +1336,11 @@ static bool generate(private_builder_t *this)
 										asn1_wrap(ASN1_OCTET_STRING, "c", keyid)));
 		}
 	}
-	if (this->sign_key)
+	if (sign_key)
 	{	/* add the keyid authKeyIdentifier for non self-signed certificates */
 		chunk_t keyid;
 
-		if (this->sign_key->get_fingerprint(this->sign_key,
-											KEY_ID_PUBKEY_SHA1, &keyid))
+		if (sign_key->get_fingerprint(sign_key, KEY_ID_PUBKEY_SHA1, &keyid))
 		{
 			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
@@ -1388,181 +1357,146 @@ static bool generate(private_builder_t *this)
 							authKeyIdentifier, subjectAltNames));
 	}
 
-	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
+	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
-		asn1_integer("c", this->cert->serialNumber),
-		asn1_algorithmIdentifier(this->cert->algorithm),
+		asn1_integer("c", cert->serialNumber),
+		asn1_algorithmIdentifier(cert->algorithm),
 		issuer->get_encoding(issuer),
 		asn1_wrap(ASN1_SEQUENCE, "mm",
-			asn1_from_time(&this->cert->notBefore, ASN1_UTCTIME),
-			asn1_from_time(&this->cert->notAfter, ASN1_UTCTIME)),
+			asn1_from_time(&cert->notBefore, ASN1_UTCTIME),
+			asn1_from_time(&cert->notAfter, ASN1_UTCTIME)),
 		subject->get_encoding(subject),
 		key_info, extensions);
 
-	if (!this->sign_key->sign(this->sign_key, scheme,
-							this->cert->tbsCertificate, &this->cert->signature))
+	if (!sign_key->sign(sign_key, scheme, cert->tbsCertificate, &cert->signature))
 	{
 		return FALSE;
 	}
-	this->cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
-								this->cert->tbsCertificate,
-								asn1_algorithmIdentifier(this->cert->algorithm),
-								asn1_bitstring("c", this->cert->signature));
+	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm", cert->tbsCertificate,
+							   asn1_algorithmIdentifier(cert->algorithm),
+							   asn1_bitstring("c", cert->signature));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, this->cert->encoding,
-						  &this->cert->encoding_hash);
+	hasher->allocate_hash(hasher, cert->encoding, &cert->encoding_hash);
 	hasher->destroy(hasher);
 	return TRUE;
 }
 
 /**
- * Implementation of builder_t.build
+ * See header.
  */
-static private_x509_cert_t *build(private_builder_t *this)
+x509_cert_t *x509_cert_load(certificate_type_t type, va_list args)
+{
+	chunk_t blob = chunk_empty;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (blob.ptr)
+	{
+		private_x509_cert_t *cert = create_empty();
+
+		cert->encoding = chunk_clone(blob);
+		if (parse_certificate(cert))
+		{
+			cert->parsed = TRUE;
+			return &cert->public;
+		}
+		destroy(cert);
+	}
+	return NULL;
+}
+
+/**
+ * See header.
+ */
+x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 {
 	private_x509_cert_t *cert;
+	certificate_t *sign_cert = NULL;
+	private_key_t *sign_key = NULL;
+	hash_algorithm_t digest_alg = HASH_SHA1;
 
-	if (this->cert)
+	cert = create_empty();
+	while (TRUE)
 	{
-		this->cert->flags |= this->flags;
-		if (!this->cert->encoding.ptr)
-		{	/* generate a new certificate */
-			if (!this->sign_key || !generate(this))
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_X509_FLAG:
+				cert->flags |= va_arg(args, x509_flag_t);
+				continue;
+			case BUILD_SIGNING_KEY:
+				sign_key = va_arg(args, private_key_t*);
+				continue;
+			case BUILD_SIGNING_CERT:
+				sign_cert = va_arg(args, certificate_t*);
+				continue;
+			case BUILD_PUBLIC_KEY:
+				cert->public_key = va_arg(args, public_key_t*);
+				cert->public_key->get_ref(cert->public_key);
+				continue;
+			case BUILD_SUBJECT:
+				cert->subject = va_arg(args, identification_t*);
+				cert->subject = cert->subject->clone(cert->subject);
+				continue;
+			case BUILD_SUBJECT_ALTNAMES:
 			{
-				destroy(this->cert);
-				free(this);
+				enumerator_t *enumerator;
+				identification_t *id;
+				linked_list_t *list;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &id))
+				{
+					cert->subjectAltNames->insert_last(
+										cert->subjectAltNames, id->clone(id));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_NOT_BEFORE_TIME:
+				cert->notBefore = va_arg(args, time_t);
+				continue;
+			case BUILD_NOT_AFTER_TIME:
+				cert->notAfter = va_arg(args, time_t);
+				continue;
+			case BUILD_SERIAL:
+				cert->serialNumber = chunk_clone(va_arg(args, chunk_t));
+				continue;
+			case BUILD_DIGEST_ALG:
+				digest_alg = va_arg(args, int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(cert);
 				return NULL;
-			}
 		}
+		break;
 	}
-	cert = this->cert;
-	free(this);
-	return cert;
-}
 
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-	chunk_t chunk;
-	bool handled = TRUE;
-
-	va_start(args, part);
-	switch (part)
+	if (sign_key && generate(cert, sign_cert, sign_key, digest_alg))
 	{
-		case BUILD_BLOB_ASN1_DER:
-			chunk = va_arg(args, chunk_t);
-			this->cert = create_from_chunk(chunk_clone(chunk));
-			break;
-		case BUILD_X509_FLAG:
-			this->flags = va_arg(args, x509_flag_t);
-			break;
-		case BUILD_SIGNING_KEY:
-			this->sign_key = va_arg(args, private_key_t*);
-			break;
-		case BUILD_SIGNING_CERT:
-			this->sign_cert = va_arg(args, certificate_t*);
-			break;
-		default:
-			/* all other parts need an empty cert */
-			if (!this->cert)
-			{
-				this->cert = create_empty();
-			}
-			handled = FALSE;
-			break;
+		return &cert->public;
 	}
-	if (handled)
-	{
-		va_end(args);
-		return;
-	}
-
-	switch (part)
-	{
-		case BUILD_PUBLIC_KEY:
-		{
-			public_key_t *key = va_arg(args, public_key_t*);
-			this->cert->public_key = key->get_ref(key);
-			break;
-		}
-		case BUILD_SUBJECT:
-		{
-			identification_t *id = va_arg(args, identification_t*);
-			this->cert->subject = id->clone(id);
-			break;
-		}
-		case BUILD_SUBJECT_ALTNAMES:
-		{
-			identification_t *id;
-			enumerator_t *enumerator;
-			linked_list_t *list = va_arg(args, linked_list_t*);
-
-			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &id))
-			{
-				this->cert->subjectAltNames->insert_last(
-									this->cert->subjectAltNames, id->clone(id));
-			}
-			enumerator->destroy(enumerator);
-			break;
-		}
-		case BUILD_NOT_BEFORE_TIME:
-			this->cert->notBefore = va_arg(args, time_t);
-			break;
-		case BUILD_NOT_AFTER_TIME:
-			this->cert->notAfter = va_arg(args, time_t);
-			break;
-		case BUILD_SERIAL:
-		{
-			chunk_t serial = va_arg(args, chunk_t);
-			this->cert->serialNumber = chunk_clone(serial);
-			break;
-		}
-		case BUILD_DIGEST_ALG:
-			this->digest_alg = va_arg(args, int);
-			break;
-		default:
-			/* abort if unsupported option */
-			if (this->cert)
-			{
-				destroy(this->cert);
-			}
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_cert_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_X509)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->cert = NULL;
-	this->flags = 0;
-	this->sign_cert = NULL;
-	this->sign_key = NULL;
-	this->digest_alg = HASH_SHA1;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	return &this->public;
+	destroy(cert);
+	return NULL;
 }
 

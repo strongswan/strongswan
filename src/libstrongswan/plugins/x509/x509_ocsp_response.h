@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,7 @@
 #ifndef X509_OCSP_RESPONSE_H_
 #define X509_OCSP_RESPONSE_H_
 
+#include <credentials/builder.h>
 #include <credentials/certificates/ocsp_response.h>
 
 typedef struct x509_ocsp_response_t x509_ocsp_response_t;
@@ -37,11 +38,13 @@ struct x509_ocsp_response_t {
 };
 
 /**
- * Create the building facility for OCSP responses.
+ * Load a X.509 OCSP response.
  *
  * @param type		certificate type, CERT_X509_OCSP_RESPONSE only
- * @return			builder instance to build OCSP responses
+ * @param args		builder_part_t argument list
+ * @return			OCSP response, NULL on failure
  */
-builder_t *x509_ocsp_response_builder(certificate_type_t type);
+x509_ocsp_response_t *x509_ocsp_response_load(certificate_type_t type,
+											  va_list args);
 
 #endif /** X509_OCSP_RESPONSE_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,6 +23,7 @@
 
 typedef struct x509_crl_t x509_crl_t;
 
+#include <credentials/builder.h>
 #include <credentials/certificates/crl.h>
 
 /**
@@ -36,13 +37,13 @@ struct x509_crl_t {
 	crl_t crl;
 };
 
-
 /**
- * Create the building facility for x509 certificate revocation lists.
+ * Load a X.509 CRL.
  *
  * @param type		certificate type, CERT_X509_CRL only
- * @return			builder instance to build certificate
+ * @param args		builder_part_t argument list
+ * @return			X.509 CRL, NULL on failure
  */
-builder_t *x509_crl_builder(certificate_type_t type);
+x509_crl_t *x509_crl_load(certificate_type_t type, va_list args);
 
 #endif /** X509_CRL_H_ @}*/

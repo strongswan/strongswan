@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,7 @@
 #ifndef X509_OCSP_REQUEST_H_
 #define X509_OCSP_REQUEST_H_
 
+#include <credentials/builder.h>
 #include <credentials/certificates/ocsp_request.h>
 
 typedef struct x509_ocsp_request_t x509_ocsp_request_t;
@@ -37,7 +38,7 @@ struct x509_ocsp_request_t {
 };
 
 /**
- * Create the building facility for OCSP requests.
+ * Generate a X.509 OCSP request.
  *
  * The resulting builder accepts:
  * 	BUILD_CA_CERT:		CA of the checked certificates, exactly one
@@ -46,9 +47,10 @@ struct x509_ocsp_request_t {
  *	BUILD_SIGNING_CERT:	certificate to create requestor signature, optional
  *	BUILD_SIGNING_KEY:	private key to create requestor signature, optional
  *
- * @param type		certificate type, CERT_X509_OCSP_REQUEST only
- * @return			builder instance to build OCSP requests
+ * @param type			certificate type, CERT_X509_OCSP_REQUEST only
+ * @param args			builder_part_t argument list
+ * @return				OCSP request, NULL on failure
  */
-builder_t *x509_ocsp_request_builder(certificate_type_t type);
+x509_ocsp_request_t *x509_ocsp_request_gen(certificate_type_t type, va_list args);
 
 #endif /** X509_OCSP_REQUEST_H_ @}*/

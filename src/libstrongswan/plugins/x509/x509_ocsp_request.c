@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
@@ -508,26 +508,56 @@ static private_x509_ocsp_request_t *create_empty()
 	return this;
 }
 
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for certificate loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** OCSP request to build */
-	private_x509_ocsp_request_t *req;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static x509_ocsp_request_t *build(private_builder_t *this)
+x509_ocsp_request_t *x509_ocsp_request_gen(certificate_type_t type, va_list args)
 {
 	private_x509_ocsp_request_t *req;
+	certificate_t *cert;
+	private_key_t *private;
+	identification_t *subject;
 
-	req = this->req;
-	free(this);
+	req = create_empty();
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_CA_CERT:
+				cert = va_arg(args, certificate_t*);
+				if (cert->get_type(cert) == CERT_X509)
+				{
+					req->ca = (x509_t*)cert->get_ref(cert);
+				}
+				continue;
+			case BUILD_CERT:
+				cert = va_arg(args, certificate_t*);
+				if (cert->get_type(cert) == CERT_X509)
+				{
+					req->candidates->insert_last(req->candidates,
+												 cert->get_ref(cert));
+				}
+				continue;
+			case BUILD_SIGNING_CERT:
+				cert = va_arg(args, certificate_t*);
+				req->cert = cert->get_ref(cert);
+				continue;
+			case BUILD_SIGNING_KEY:
+				private = va_arg(args, private_key_t*);
+				req->key = private->get_ref(private);
+				continue;
+			case BUILD_SUBJECT:
+				subject = va_arg(args, identification_t*);
+				req->requestor = subject->clone(subject);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(req);
+				return NULL;
+		}
+		break;
+	}
 	if (req->ca)
 	{
 		req->encoding = build_OCSPRequest(req);
@@ -535,78 +565,5 @@ static x509_ocsp_request_t *build(private_builder_t *this)
 	}
 	destroy(req);
 	return NULL;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-	certificate_t *cert;
-	identification_t *subject;
-	private_key_t *private;
-
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_CA_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->req->ca = (x509_t*)cert->get_ref(cert);
-			}
-			break;
-		case BUILD_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->req->candidates->insert_last(this->req->candidates,
-												   cert->get_ref(cert));
-			}
-			break;
-		case BUILD_SIGNING_CERT:
-			cert = va_arg(args, certificate_t*);
-			this->req->cert = cert->get_ref(cert);
-			break;
-		case BUILD_SIGNING_KEY:
-			private = va_arg(args, private_key_t*);
-			this->req->key = private->get_ref(private);
-			break;
-		case BUILD_SUBJECT:
-			subject = va_arg(args, identification_t*);
-			this->req->requestor = subject->clone(subject);
-			break;
-		default:
-			/* cancel if option not supported */
-			if (this->req)
-			{
-				destroy(this->req);
-			}
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_ocsp_request_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_X509_OCSP_REQUEST)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->req = create_empty();
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	return &this->public;
 }
 

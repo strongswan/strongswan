@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -593,78 +593,38 @@ static private_x509_crl_t* create_empty(void)
 	return this;
 }
 
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for certificate loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** CRL chunk to build from */
-	chunk_t blob;
+x509_crl_t *x509_crl_load(certificate_type_t type, va_list args)
+{
+	chunk_t blob = chunk_empty;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (blob.ptr)
+	{
+		private_x509_crl_t *crl = create_empty();
+
+		crl->encoding = chunk_clone(blob);
+		if (parse(crl))
+		{
+			return &crl->public;
+		}
+		destroy(crl);
+	}
+	return NULL;
 };
-
-/**
- * Implementation of builder_t.build
- */
-static private_x509_crl_t *build(private_builder_t *this)
-{
-	private_x509_crl_t *crl = NULL;
-
-	if (this->blob.len && this->blob.ptr)
-	{
-		crl = create_empty();
-		crl->encoding = chunk_clone(this->blob);
-		if (!parse(crl))
-		{
-			destroy(crl);
-			crl = NULL;
-		}
-	}
-	free(this);
-	return crl;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	switch (part)
-	{
-		case BUILD_BLOB_ASN1_DER:
-		{
-			va_start(args, part);
-			this->blob = va_arg(args, chunk_t);
-			va_end(args);
-			return;
-		}
-		default:
-			break;
-	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_crl_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_X509_CRL)
-	{
-		return NULL;
-	}
-	this = malloc_thing(private_builder_t);
-
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	this->blob = chunk_empty;
-
-	return &this->public;
-}
 

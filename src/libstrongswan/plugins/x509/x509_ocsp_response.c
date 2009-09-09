@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
@@ -853,7 +853,7 @@ static void destroy(private_x509_ocsp_response_t *this)
 /**
  * load an OCSP response
  */
-static x509_ocsp_response_t *load(chunk_t data)
+static x509_ocsp_response_t *load(chunk_t blob)
 {
 	private_x509_ocsp_response_t *this;
 
@@ -876,7 +876,7 @@ static x509_ocsp_response_t *load(chunk_t data)
 	this->public.interface.create_cert_enumerator = (enumerator_t*(*)(ocsp_response_t*))create_cert_enumerator;
 
 	this->ref = 1;
-	this->encoding = data;
+	this->encoding = chunk_clone(blob);
 	this->tbsResponseData = chunk_empty;
 	this->responderId = NULL;
 	this->producedAt = UNDEFINED_TIME;
@@ -895,78 +895,32 @@ static x509_ocsp_response_t *load(chunk_t data)
 	return &this->public;
 }
 
-
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for certificate loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded response */
-	x509_ocsp_response_t *res;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static x509_ocsp_response_t *build(private_builder_t *this)
+x509_ocsp_response_t *x509_ocsp_response_load(certificate_type_t type,
+											  va_list args)
 {
-	x509_ocsp_response_t *res = this->res;
+	chunk_t blob = chunk_empty;
 
-	free(this);
-	return res;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	if (!this->res)
+	while (TRUE)
 	{
-		va_list args;
-		chunk_t chunk;
-
-		switch (part)
+		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				chunk = va_arg(args, chunk_t);
-				this->res = load(chunk_clone(chunk));
-				va_end(args);
-				return;
-			}
-			default:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
 				break;
+			default:
+				return NULL;
 		}
+		break;
 	}
-	if (this->res)
+	if (blob.ptr)
 	{
-		destroy((private_x509_ocsp_response_t*)this->res);
+		return load(blob);
 	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_ocsp_response_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != CERT_X509_OCSP_RESPONSE)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->res = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
-	return &this->public;
+	return NULL;
 }
 
