@@ -22,9 +22,10 @@
 #ifndef GMP_RSA_PUBLIC_KEY_H_
 #define GMP_RSA_PUBLIC_KEY_H_
 
-typedef struct gmp_rsa_public_key_t gmp_rsa_public_key_t;
-
+#include <credentials/builder.h>
 #include <credentials/keys/public_key.h>
+
+typedef struct gmp_rsa_public_key_t gmp_rsa_public_key_t;
 
 /**
  * public_key_t implementation of RSA algorithm using libgmp.
@@ -38,11 +39,14 @@ struct gmp_rsa_public_key_t {
 };
 
 /**
- * Create the builder for a public key.
+ * Load a RSA public key using libgmp.
+ *
+ * Accepts BUILD_RSA_* components.
  *
  * @param type		type of the key, must be KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
  */
-builder_t *gmp_rsa_public_key_builder(key_type_t type);
+gmp_rsa_public_key_t *gmp_rsa_public_key_load(key_type_t type, va_list args);
 
 #endif /** GMP_RSA_PUBLIC_KEY_H_ @}*/

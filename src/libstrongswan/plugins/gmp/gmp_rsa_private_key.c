@@ -605,14 +605,34 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 }
 
 /**
- * Generate an RSA key of specified key size
+ * See header.
  */
-static gmp_rsa_private_key_t *generate(size_t key_size)
+gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 {
-	mpz_t p, q, n, e, d, exp1, exp2, coeff;
-	mpz_t m, q1, t;
-	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
+	mpz_t p, q, n, e, d, exp1, exp2, coeff, m, q1, t;
+	private_gmp_rsa_private_key_t *this;
+	u_int key_size = 0;
 
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_KEY_SIZE:
+				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!key_size)
+	{
+		return NULL;
+	}
+
+	this = gmp_rsa_private_key_create_empty();
 	key_size = key_size / BITS_PER_BYTE;
 
 	/* Get values of primes p and q  */
@@ -689,12 +709,51 @@ static gmp_rsa_private_key_t *generate(size_t key_size)
 }
 
 /**
- * load private key from a RSA components
+ * See header.
  */
-static gmp_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
-				chunk_t p, chunk_t q, chunk_t exp1, chunk_t exp2, chunk_t coeff)
+gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 {
-	private_gmp_rsa_private_key_t *this = gmp_rsa_private_key_create_empty();
+	chunk_t n, e, d, p, q, exp1, exp2, coeff;
+	private_gmp_rsa_private_key_t *this;
+
+	n = e = d = p = q = exp1 = exp2 = coeff = chunk_empty;
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_RSA_MODULUS:
+				n = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PUB_EXP:
+				e = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIV_EXP:
+				d = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME1:
+				p = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME2:
+				q = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_EXP1:
+				exp1 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_EXP2:
+				exp2 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_COEFF:
+				coeff = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	this = gmp_rsa_private_key_create_empty();
 
 	mpz_init(this->n);
 	mpz_init(this->e);
@@ -735,106 +794,6 @@ static gmp_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
 		destroy(this);
 		return NULL;
 	}
-	return &this->public;
-}
-
-typedef struct private_builder_t private_builder_t;
-/**
- * Builder implementation for key loading/generation
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** key size, if generating */
-	u_int key_size;
-	/** rsa key parameters */
-	chunk_t n, e, d, p, q, exp1, exp2, coeff;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static gmp_rsa_private_key_t *build(private_builder_t *this)
-{
-	gmp_rsa_private_key_t *key = NULL;
-
-	if (this->key_size)
-	{
-		key = generate(this->key_size);
-	}
-	else
-	{
-		key = load(this->n, this->e, this->d, this->p, this->q,
-				   this->exp1, this->exp2, this->coeff);
-	}
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_KEY_SIZE:
-			this->key_size = va_arg(args, u_int);
-			return;
-		case BUILD_RSA_MODULUS:
-			this->n = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PUB_EXP:
-			this->e = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIV_EXP:
-			this->d = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIME1:
-			this->p = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIME2:
-			this->q = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_EXP1:
-			this->exp1 = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_EXP2:
-			this->exp2 = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_COEFF:
-			this->coeff = va_arg(args, chunk_t);
-			break;
-		default:
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *gmp_rsa_private_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_RSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->n = this->e = this->d = this->p = this->q = chunk_empty;
-	this->exp1 = this->exp2 = this->coeff = chunk_empty;
-	this->key_size = 0;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
 	return &this->public;
 }
 

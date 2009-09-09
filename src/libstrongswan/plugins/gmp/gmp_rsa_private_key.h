@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,6 +21,7 @@
 #ifndef GMP_RSA_PRIVATE_KEY_H_
 #define GMP_RSA_PRIVATE_KEY_H_
 
+#include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
 typedef struct gmp_rsa_private_key_t gmp_rsa_private_key_t;
@@ -37,12 +38,25 @@ struct gmp_rsa_private_key_t {
 };
 
 /**
- * Create the builder for a private key.
+ * Generated a RSA private keys using libgmp.
+ *
+ * Accepts the BUILD_KEY_SIZE argument.
  *
  * @param type		type of the key, must be KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			generated key, NULL on failure
  */
-builder_t *gmp_rsa_private_key_builder(key_type_t type);
+gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args);
+
+/**
+ * Loaded a RSA private keys using libgmp.
+ *
+ * Accepts BUILD_RSA_* components.
+ *
+ * @param type		type of the key, must be KEY_RSA
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
+ */
+gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args);
 
 #endif /** GMP_RSA_PRIVATE_KEY_H_ @}*/
-
