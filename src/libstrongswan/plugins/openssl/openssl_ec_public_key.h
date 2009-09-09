@@ -23,6 +23,7 @@
 
 typedef struct openssl_ec_public_key_t openssl_ec_public_key_t;
 
+#include <credentials/builder.h>
 #include <credentials/keys/public_key.h>
 
 /**
@@ -37,11 +38,15 @@ struct openssl_ec_public_key_t {
 };
 
 /**
- * Create the builder for a public key.
+ * Load a ECDSA public key using OpenSSL.
+ *
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
  *
  * @param type		type of the key, must be KEY_ECDSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
  */
-builder_t *openssl_ec_public_key_builder(key_type_t type);
+openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
+													va_list args);
 
 #endif /** OPENSSL_EC_PUBLIC_KEY_H_ @}*/

@@ -288,26 +288,64 @@ static private_openssl_rsa_private_key_t *create_empty(void)
 }
 
 /**
- * Generate an RSA key of specified key size
+ * See header.
  */
-static openssl_rsa_private_key_t *generate(size_t key_size)
+openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
+													   va_list args)
 {
-	private_openssl_rsa_private_key_t *this = create_empty();
+	private_openssl_rsa_private_key_t *this;
+	u_int key_size = 0;
 
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_KEY_SIZE:
+				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!key_size)
+	{
+		return NULL;
+	}
+	this = create_empty();
 	this->rsa = RSA_generate_key(key_size, PUBLIC_EXPONENT, NULL, NULL);
 
 	return &this->public;
 }
 
 /**
- * load private key from an ASN1 encoded blob
+ * See header
  */
-static openssl_rsa_private_key_t *load(chunk_t blob)
+openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
+														va_list args)
 {
-	u_char *p = blob.ptr;
-	private_openssl_rsa_private_key_t *this = create_empty();
+	private_openssl_rsa_private_key_t *this;
+	chunk_t blob = chunk_empty;
 
-	this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&p, blob.len);
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	this = create_empty();
+	this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
 	if (!this->rsa)
 	{
 		destroy(this);
@@ -322,155 +360,73 @@ static openssl_rsa_private_key_t *load(chunk_t blob)
 }
 
 /**
- * load private key from a smart card
+ * See header.
  */
-static openssl_rsa_private_key_t *load_from_smartcard(char *keyid, char *pin)
+openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
+														   va_list args)
 {
-	private_openssl_rsa_private_key_t *this = NULL;
+	private_openssl_rsa_private_key_t *this;
+	char *keyid = NULL, *pin = NULL;
 	EVP_PKEY *key;
-	char *engine_id = lib->settings->get_str(lib->settings,
-								"library.plugins.openssl.engine_id", "pkcs11");
+	char *engine_id;
+	ENGINE *engine;
 
-	ENGINE *engine = ENGINE_by_id(engine_id);
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_SMARTCARD_KEYID:
+				keyid = va_arg(args, char*);
+				continue;
+			case BUILD_SMARTCARD_PIN:
+				pin = va_arg(args, char*);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!keyid || !pin)
+	{
+		return NULL;
+	}
+
+	engine_id = lib->settings->get_str(lib->settings,
+								"library.plugins.openssl.engine_id", "pkcs11");
+	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
 		DBG1("engine '%s' is not available", engine_id);
 		return NULL;
 	}
-
 	if (!ENGINE_init(engine))
 	{
 		DBG1("failed to initialize engine '%s'", engine_id);
-		goto error;
+		ENGINE_free(engine);
+		return NULL;
 	}
-
 	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
 	{
 		DBG1("failed to set PIN on engine '%s'", engine_id);
-		goto error;
+		ENGINE_free(engine);
+		return NULL;
 	}
 
 	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
-
 	if (!key)
 	{
-		DBG1("failed to load private key with ID '%s' from engine '%s'", keyid,
-				engine_id);
-		goto error;
+		DBG1("failed to load private key with ID '%s' from engine '%s'",
+			 keyid, engine_id);
+		ENGINE_free(engine);
+		return NULL;
 	}
 	ENGINE_free(engine);
 
 	this = create_empty();
 	this->rsa = EVP_PKEY_get1_RSA(key);
 	this->engine = TRUE;
-
-	return &this->public;
-
-error:
-	ENGINE_free(engine);
-	return NULL;
-}
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for key loading/generation
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded/generated private key */
-	openssl_rsa_private_key_t *key;
-	/** temporary stored smartcard key ID */
-	char *keyid;
-	/** temporary stored smartcard pin */
-	char *pin;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static openssl_rsa_private_key_t *build(private_builder_t *this)
-{
-	openssl_rsa_private_key_t *key = this->key;
-
-	if (this->keyid && this->pin)
-	{
-		key = load_from_smartcard(this->keyid, this->pin);
-	}
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	if (!this->key)
-	{
-		va_list args;
-
-		switch (part)
-		{
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				this->key = load(va_arg(args, chunk_t));
-				va_end(args);
-				return;
-			}
-			case BUILD_KEY_SIZE:
-			{
-				va_start(args, part);
-				this->key = generate(va_arg(args, u_int));
-				va_end(args);
-				return;
-			}
-			case BUILD_SMARTCARD_KEYID:
-			{
-				va_start(args, part);
-				this->keyid = va_arg(args, char*);
-				va_end(args);
-				return;
-			}
-			case BUILD_SMARTCARD_PIN:
-			{
-				va_start(args, part);
-				this->pin = va_arg(args, char*);
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
-	}
-	if (this->key)
-	{
-		destroy((private_openssl_rsa_private_key_t*)this->key);
-	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *openssl_rsa_private_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_RSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->key = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-	this->keyid = NULL;
-	this->pin = NULL;
 
 	return &this->public;
 }

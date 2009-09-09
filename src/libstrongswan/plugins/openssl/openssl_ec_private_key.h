@@ -21,6 +21,7 @@
 #ifndef OPENSSL_EC_PRIVATE_KEY_H_
 #define OPENSSL_EC_PRIVATE_KEY_H_
 
+#include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
 typedef struct openssl_ec_private_key_t openssl_ec_private_key_t;
@@ -37,11 +38,27 @@ struct openssl_ec_private_key_t {
 };
 
 /**
- * Create the builder for a private key.
+ * Generate a ECDSA private key using OpenSSL.
+ *
+ * Accepts the BUILD_KEY_SIZE argument.
  *
  * @param type		type of the key, must be KEY_ECDSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			generated key, NULL on failure
  */
-builder_t *openssl_ec_private_key_builder(key_type_t type);
+openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
+													 va_list args);
+
+/**
+ * Load a ECDSA private key using OpenSSL.
+ *
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
+ *
+ * @param type		type of the key, must be KEY_ECDSA
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
+ */
+openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
+													  va_list args);
 
 #endif /** OPENSSL_EC_PRIVATE_KEY_H_ @}*/

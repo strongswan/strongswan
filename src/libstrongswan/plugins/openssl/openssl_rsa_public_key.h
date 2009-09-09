@@ -37,11 +37,15 @@ struct openssl_rsa_public_key_t {
 };
 
 /**
- * Create the builder for a public key.
+ * Load a RSA public key using OpenSSL.
+ *
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
  *
  * @param type		type of the key, must be KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
  */
-builder_t *openssl_rsa_public_key_builder(key_type_t type);
+openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
+													  va_list args);
 
 #endif /** OPENSSL_RSA_PUBLIC_KEY_H_ @}*/

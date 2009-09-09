@@ -295,12 +295,33 @@ static private_openssl_ec_private_key_t *create_empty(void)
 }
 
 /**
- * Generate an ECDSA key of specified key size
+ * See header.
  */
-static openssl_ec_private_key_t *generate(size_t key_size)
+openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
+													 va_list args)
 {
-	private_openssl_ec_private_key_t *this = create_empty();
+	private_openssl_ec_private_key_t *this;
+	u_int key_size = 0;
 
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_KEY_SIZE:
+				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!key_size)
+	{
+		return NULL;
+	}
+	this = create_empty();
 	switch (key_size)
 	{
 		case 256:
@@ -330,14 +351,31 @@ static openssl_ec_private_key_t *generate(size_t key_size)
 }
 
 /**
- * load private key from an ASN1 encoded blob
+ * See header.
  */
-static openssl_ec_private_key_t *load(chunk_t blob)
+openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
+													  va_list args)
 {
-	private_openssl_ec_private_key_t *this = create_empty();
+	private_openssl_ec_private_key_t *this;
+	chunk_t blob = chunk_empty;
 
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	this = create_empty();
 	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-
 	if (!this->ec)
 	{
 		destroy(this);
@@ -348,86 +386,6 @@ static openssl_ec_private_key_t *load(chunk_t blob)
 		destroy(this);
 		return NULL;
 	}
-	return &this->public;
-}
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for key loading/generation
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded/generated private key */
-	openssl_ec_private_key_t *key;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static openssl_ec_private_key_t *build(private_builder_t *this)
-{
-	openssl_ec_private_key_t *key = this->key;
-
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	if (!this->key)
-	{
-		va_list args;
-
-		switch (part)
-		{
-			case BUILD_KEY_SIZE:
-			{
-				va_start(args, part);
-				this->key = generate(va_arg(args, u_int));
-				va_end(args);
-				return;
-			}
-			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				this->key = load(va_arg(args, chunk_t));
-				va_end(args);
-				return;
-			}
-			default:
-				break;
-		}
-	}
-	if (this->key)
-	{
-		destroy((private_openssl_ec_private_key_t*)this->key);
-	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *openssl_ec_private_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_ECDSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->key = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
 	return &this->public;
 }
 

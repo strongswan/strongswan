@@ -175,13 +175,19 @@ static void destroy(private_openssl_plugin_t *this)
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->creds->remove_builder(lib->creds,
-					(builder_constructor_t)openssl_rsa_private_key_builder);
+					(builder_function_t)openssl_rsa_private_key_load);
 	lib->creds->remove_builder(lib->creds,
-					(builder_constructor_t)openssl_rsa_public_key_builder);
+					(builder_function_t)openssl_rsa_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
-					(builder_constructor_t)openssl_ec_private_key_builder);
+					(builder_function_t)openssl_rsa_private_key_connect);
 	lib->creds->remove_builder(lib->creds,
-					(builder_constructor_t)openssl_ec_public_key_builder);
+					(builder_function_t)openssl_rsa_public_key_load);
+	lib->creds->remove_builder(lib->creds,
+					(builder_function_t)openssl_ec_private_key_load);
+	lib->creds->remove_builder(lib->creds,
+					(builder_function_t)openssl_ec_private_key_gen);
+	lib->creds->remove_builder(lib->creds,
+					(builder_function_t)openssl_ec_public_key_load);
 
 	ENGINE_cleanup();
 	EVP_cleanup();
@@ -282,15 +288,22 @@ plugin_t *plugin_create()
 
 	/* rsa */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-						(builder_constructor_t)openssl_rsa_private_key_builder);
+					(builder_function_t)openssl_rsa_private_key_load);
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					(builder_function_t)openssl_rsa_private_key_gen);
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					(builder_function_t)openssl_rsa_private_key_connect);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-						(builder_constructor_t)openssl_rsa_public_key_builder);
+					(builder_function_t)openssl_rsa_public_key_load);
 
 	/* ec */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
-						(builder_constructor_t)openssl_ec_private_key_builder);
+					(builder_function_t)openssl_ec_private_key_load);
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+					(builder_function_t)openssl_ec_private_key_gen);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
-						(builder_constructor_t)openssl_ec_public_key_builder);
+					(builder_function_t)openssl_ec_public_key_load);
 
 	return &this->public.plugin;
 }
+
