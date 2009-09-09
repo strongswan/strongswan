@@ -21,16 +21,21 @@
 #ifndef BUILDER_H_
 #define BUILDER_H_
 
-typedef struct builder_t builder_t;
+#include <stdarg.h>
+
 typedef enum builder_part_t builder_part_t;
 
 /**
- * Constructor function which creates a new builder instance.
+ * Constructor function to build credentials.
  *
- * @param subtype	constructor specific subtype, e.g. certificate_type_t
- * @return			builder to construct a instance of type
+ * Any added parts are cloned/refcounted by the builder implementation, a
+ * caller may need to free the passed ressources themself.
+ *
+ * @param subtype	constructor specific subtype, e.g. a certificate_type_t
+ * @param args		list of builder part types, followed by parts, BUILD_END
+ * @return			builder specific credential, NULL on error
  */
-typedef builder_t* (*builder_constructor_t)(int subtype);
+typedef void* (*builder_function_t)(int subtype, va_list args);
 
 #include <library.h>
 
@@ -118,45 +123,5 @@ enum builder_part_t {
  * enum names for build_part_t
  */
 extern enum_name_t *builder_part_names;
-
-/**
- * Credential construction API.
- *
- * The builder allows the construction of credentials in a generic and
- * flexible way.
- */
-struct builder_t {
-
-	/**
-	 * Add a part to the construct.
-	 *
-	 * Any added parts are cloned/refcounted by the builder implementation, a
-	 * caller may need to free the passed ressources themself.
-	 *
-	 * @param part		kind of part
-	 * @param ...		part specific variable argument
-	 */
-	void (*add)(builder_t *this, builder_part_t part, ...);
-
-	/**
-	 * Build the construct with all supplied parts.
-	 *
-	 * Once build() is called, the builder gets destroyed.
-	 *
-	 * @return			specific interface, as requested with constructor.
-	 */
-	void* (*build)(builder_t *this);
-};
-
-/**
- * Helper macro to cancel a build in a builder
- */
-#define builder_cancel(builder) { (builder)->add = (void*)nop; \
-								  (builder)->build = (void*)builder_free; }
-
-/**
- * Helper function for a cancelled build.
- */
-void* builder_free(builder_t *this);
 
 #endif /** BUILDER_H_ @}*/

@@ -64,55 +64,16 @@ struct entry_t {
 	credential_type_t type;
 	/** subtype of credential, e.g. certificate_type_t */
 	int subtype;
-	/** builder construction function */
-	builder_constructor_t constructor;
+	/** builder function */
+	builder_function_t constructor;
 };
-
-/**
- * type/subtype filter function for builder_enumerator
- */
-static bool builder_filter(entry_t *data, entry_t **in, builder_t **out)
-{
-	builder_t *builder;
-
-	if (data->type == (*in)->type &&
-		data->subtype == (*in)->subtype)
-	{
-		builder = (*in)->constructor(data->subtype);
-		if (builder)
-		{
-			*out = builder;
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-/**
- * Implementation of credential_factory_t.create_builder_enumerator.
- */
-static enumerator_t* create_builder_enumerator(
-		private_credential_factory_t *this,	credential_type_t type, int subtype)
-{
-	entry_t *data = malloc_thing(entry_t);
-
-	data->type = type;
-	data->subtype = subtype;
-
-	this->lock->read_lock(this->lock);
-	return enumerator_create_cleaner(
-				enumerator_create_filter(
-					this->constructors->create_enumerator(this->constructors),
-					(void*)builder_filter, data, free),
-				(void*)this->lock->unlock, this->lock);
-}
 
 /**
  * Implementation of credential_factory_t.add_builder_constructor.
  */
 static void add_builder(private_credential_factory_t *this,
 						credential_type_t type, int subtype,
-						builder_constructor_t constructor)
+						builder_function_t constructor)
 {
 	entry_t *entry = malloc_thing(entry_t);
 
@@ -128,7 +89,7 @@ static void add_builder(private_credential_factory_t *this,
  * Implementation of credential_factory_t.remove_builder.
  */
 static void remove_builder(private_credential_factory_t *this,
-						   builder_constructor_t constructor)
+						   builder_function_t constructor)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -154,92 +115,34 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 					int subtype, ...)
 {
 	enumerator_t *enumerator;
-	builder_t *builder;
-	builder_part_t part;
+	entry_t *entry;
 	va_list args;
-	void* construct = NULL, *fn, *data;
+	void *construct = NULL;
 	int failures = 0;
 	uintptr_t level;
 
 	level = (uintptr_t)pthread_getspecific(this->recursive);
 	pthread_setspecific(this->recursive, (void*)level + 1);
 
-	enumerator = create_builder_enumerator(this, type, subtype);
-	while (enumerator->enumerate(enumerator, &builder))
+	this->lock->read_lock(this->lock);
+	enumerator = this->constructors->create_enumerator(this->constructors);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		va_start(args, subtype);
-		while (TRUE)
+		if (entry->type == type && entry->subtype == subtype)
 		{
-			part = va_arg(args, builder_part_t);
-			switch (part)
+			va_start(args, subtype);
+			construct = entry->constructor(subtype, args);
+			va_end(args);
+			if (construct)
 			{
-				case BUILD_END:
-					break;
-				case BUILD_BLOB_PEM:
-				case BUILD_BLOB_ASN1_DER:
-				case BUILD_BLOB_PGP:
-				case BUILD_BLOB_DNSKEY:
-				case BUILD_PASSPHRASE:
-				case BUILD_SERIAL:
-				case BUILD_RSA_MODULUS:
-				case BUILD_RSA_PUB_EXP:
-				case BUILD_RSA_PRIV_EXP:
-				case BUILD_RSA_PRIME1:
-				case BUILD_RSA_PRIME2:
-				case BUILD_RSA_EXP1:
-				case BUILD_RSA_EXP2:
-				case BUILD_RSA_COEFF:
-					builder->add(builder, part, va_arg(args, chunk_t));
-					continue;
-				case BUILD_X509_FLAG:
-					builder->add(builder, part, va_arg(args, x509_flag_t));
-					continue;
-				case BUILD_KEY_SIZE:
-				case BUILD_FROM_FD:
-					builder->add(builder, part, va_arg(args, u_int));
-					continue;
-				case BUILD_DIGEST_ALG:
-					builder->add(builder, part, va_arg(args, int));
-					continue;
-				case BUILD_NOT_BEFORE_TIME:
-				case BUILD_NOT_AFTER_TIME:
-					builder->add(builder, part, va_arg(args, time_t));
-					continue;
-				case BUILD_FROM_FILE:
-				case BUILD_AGENT_SOCKET:
-				case BUILD_SIGNING_KEY:
-				case BUILD_PUBLIC_KEY:
-				case BUILD_SUBJECT:
-				case BUILD_SUBJECT_ALTNAMES:
-				case BUILD_ISSUER:
-				case BUILD_ISSUER_ALTNAMES:
-				case BUILD_SIGNING_CERT:
-				case BUILD_CA_CERT:
-				case BUILD_CERT:
-				case BUILD_IETF_GROUP_ATTR:
-				case BUILD_SMARTCARD_KEYID:
-				case BUILD_SMARTCARD_PIN:
-					builder->add(builder, part, va_arg(args, void*));
-					continue;
-				case BUILD_PASSPHRASE_CALLBACK:
-					fn = va_arg(args, void*);
-					data = va_arg(args, void*);
-					builder->add(builder, part, fn, data);
-					continue;
-				/* no default to get a compiler warning */
+				break;
 			}
-			break;
+			failures++;
 		}
-		va_end(args);
-
-		construct = builder->build(builder);
-		if (construct)
-		{
-			break;
-		}
-		failures++;
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
 	if (!construct && !level)
 	{
 		enum_name_t *names = key_type_names;
@@ -274,9 +177,8 @@ credential_factory_t *credential_factory_create()
 	private_credential_factory_t *this = malloc_thing(private_credential_factory_t);
 
 	this->public.create = (void*(*)(credential_factory_t*, credential_type_t type, int subtype, ...))create;
-	this->public.create_builder_enumerator = (enumerator_t*(*)(credential_factory_t*, credential_type_t type, int subtype))create_builder_enumerator;
-	this->public.add_builder = (void(*)(credential_factory_t*,credential_type_t type, int subtype, builder_constructor_t constructor))add_builder;
-	this->public.remove_builder = (void(*)(credential_factory_t*,builder_constructor_t constructor))remove_builder;
+	this->public.add_builder = (void(*)(credential_factory_t*,credential_type_t type, int subtype, builder_function_t constructor))add_builder;
+	this->public.remove_builder = (void(*)(credential_factory_t*,builder_function_t constructor))remove_builder;
 	this->public.destroy = (void(*)(credential_factory_t*))destroy;
 
 	this->constructors = linked_list_create();

@@ -54,11 +54,3 @@ ENUM(builder_part_names, BUILD_FROM_FILE, BUILD_END,
 	"BUILD_END",
 );
 
-/**
- * See header.
- */
-void* builder_free(builder_t *this)
-{
-	free(this);
-	return NULL;
-}

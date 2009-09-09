@@ -53,7 +53,7 @@ struct credential_factory_t {
 	 *
 	 * The variable argument list takes builder_part_t types followed
 	 * by the type specific value. The list must be terminated using BUILD_END.
-	 * All passed parts get cloned/refcounted by the builder implementations,
+	 * All passed parts get cloned/refcounted by the builder functions,
 	 * so free up allocated ressources after successful and unsuccessful
 	 * invocations.
 	 *
@@ -66,34 +66,21 @@ struct credential_factory_t {
 					int subtype, ...);
 
 	/**
-	 * Create an enumerator for a builder type.
-	 *
-	 * The build() method has to be called on each enumerated builder to
-	 * cleanup associated ressources.
-	 *
-	 * @param type			type of credentials the builder creates
-	 * @param subtype		type specific subtype, such as certificate_type_t
-	 * @return				enumerator over builder_t
-	 */
-	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this,
-										credential_type_t type, int subtype);
-
-	/**
-	 * Register a builder_t constructor function.
+	 * Register a credential builder function.
 	 *
 	 * @param type			type of credential the builder creates
 	 * @param constructor	builder constructor function to register
 	 */
 	void (*add_builder)(credential_factory_t *this,
 						credential_type_t type, int subtype,
-						builder_constructor_t constructor);
+						builder_function_t constructor);
 	/**
-	 * Unregister a builder_t constructor function.
+	 * Unregister a credential builder function.
 	 *
 	 * @param constructor	constructor function to unregister.
 	 */
 	void (*remove_builder)(credential_factory_t *this,
-						   builder_constructor_t constructor);
+						   builder_function_t constructor);
 
 	/**
 	 * Destroy a credential_factory instance.
