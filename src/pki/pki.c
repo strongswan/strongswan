@@ -32,33 +32,34 @@
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 
-static int usage(char *error)
+static void print_gen(FILE *out)
 {
-	FILE *out = stdout;
-
-	if (error)
-	{
-		out = stderr;
-		fprintf(out, "Error: %s\n", error);
-	}
-	fprintf(out, "strongSwan %s PKI tool\n", VERSION);
-	fprintf(out, "usage:\n");
-	fprintf(out, "  pki --help\n");
-	fprintf(out, "      show this usage information\n");
 	fprintf(out, "  pki --gen [--type rsa|ecdsa] [--size bits] [--outform der|pem|pgp]\n");
 	fprintf(out, "      generate a new private key\n");
 	fprintf(out, "        --type     type of key, default: rsa\n");
 	fprintf(out, "        --size     keylength in bits, default: rsa 2048, ecdsa 384\n");
 	fprintf(out, "        --outform  encoding of generated private key\n");
+}
+
+static void print_pub(FILE *out)
+{
 	fprintf(out, "  pki --pub [--in file] [--type rsa|ecdsa|x509] [--outform der|pem|pgp]\n");
 	fprintf(out, "      extract the public key from a private key/certificate\n");
 	fprintf(out, "        --in       input file, default: stdin\n");
 	fprintf(out, "        --type     type of credential, default: rsa\n");
 	fprintf(out, "        --outform  encoding of extracted public key\n");
+}
+
+static void print_keyid(FILE *out)
+{
 	fprintf(out, "  pki --keyid [--in file] [--type rsa-priv|ecdsa-priv|pub|x509]\n");
 	fprintf(out, "      calculate key identifiers of a key/certificate\n");
 	fprintf(out, "        --in       input file, default: stdin\n");
 	fprintf(out, "        --type     type of key, default: rsa-priv\n");
+}
+
+static void print_self(FILE *out)
+{
 	fprintf(out, "  pki --self [--in file] [--type rsa|ecdsa]\n");
 	fprintf(out, "             --dn distinguished-name [--san subjectAltName]+\n");
 	fprintf(out, "             [--lifetime days] [--serial hex] [--ca]\n");
@@ -74,6 +75,10 @@ static int usage(char *error)
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "        --options  read command line options from file\n");
+}
+
+static void print_issue(FILE *out)
+{
 	fprintf(out, "  pki --issue [--in file] [--type pub|pkcs10]\n");
 	fprintf(out, "              --cacert file --cakey file\n");
 	fprintf(out, "              --dn subject-dn [--san subjectAltName]+\n");
@@ -92,11 +97,125 @@ static int usage(char *error)
 	fprintf(out, "        --ca       include CA basicConstraint, default: no\n");
 	fprintf(out, "        --digest   digest for signature creation, default: sha1\n");
 	fprintf(out, "        --options  read command line options from file\n");
+}
+
+static void print_verify(FILE *out)
+{
 	fprintf(out, "  pki --verify [--in file] [--ca file]\n");
 	fprintf(out, "      verify a certificate using the CA certificate\n");
 	fprintf(out, "        --in       x509 certifcate to verify, default: stdin\n");
 	fprintf(out, "        --cacert   CA certificate, default: verify self signed\n");
-	return !!error;
+}
+
+static void print_version(FILE *out, char *name)
+{
+	fprintf(out, "strongSwan %s PKI tool\n", VERSION);
+	fprintf(out, "usage:\n");
+	fprintf(out, "  pki%s --help\n", name);
+	fprintf(out, "      show this usage information\n");
+}
+
+static int usage(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, "");
+	print_gen(out);
+	print_pub(out);
+	print_keyid(out);
+	print_self(out);
+	print_issue(out);
+	print_verify(out);
+	return error != NULL;
+}
+
+static int usage_gen(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --gen");
+	print_gen(out);
+	return error != NULL;
+}
+
+static int usage_pub(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --pub");
+	print_pub(out);
+	return error != NULL;
+}
+
+static int usage_keyid(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --keyid");
+	print_keyid(out);
+	return error != NULL;
+}
+
+static int usage_self(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --self");
+	print_self(out);
+	return error != NULL;
+}
+
+static int usage_issue(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --issue");
+	print_issue(out);
+	return error != NULL;
+}
+
+static int usage_verify(char *error)
+{
+	FILE *out = stdout;
+
+	if (error)
+	{
+		out = stderr;
+		fprintf(out, "Error: %s\n", error);
+	}
+	print_version(out, " --verify");
+	print_verify(out);
+	return error != NULL;
 }
 
 /**
@@ -168,6 +287,7 @@ static int gen(int argc, char *argv[])
 	chunk_t encoding;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "type", required_argument, NULL, 't' },
 		{ "size", required_argument, NULL, 's' },
 		{ "outform", required_argument, NULL, 'o' },
@@ -177,6 +297,8 @@ static int gen(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				return usage_gen(NULL);
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -188,26 +310,26 @@ static int gen(int argc, char *argv[])
 				}
 				else
 				{
-					return usage("invalid key type");
+					return usage_gen("invalid key type");
 				}
 				continue;
 			case 'o':
 				if (!get_form(optarg, &form, FALSE))
 				{
-					return usage("invalid key output format");
+					return usage_gen("invalid key output format");
 				}
 				continue;
 			case 's':
 				size = atoi(optarg);
 				if (!size)
 				{
-					return usage("invalid key size");
+					return usage_gen("invalid key size");
 				}
 				continue;
 			case EOF:
 				break;
 			default:
-				return usage("invalid --gen option");
+				return usage_gen("invalid --gen option");
 		}
 		break;
 	}
@@ -266,6 +388,7 @@ static int pub(int argc, char *argv[])
 	void *cred;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "type", required_argument, NULL, 't' },
 		{ "outform", required_argument, NULL, 'f' },
 		{ "in", required_argument, NULL, 'i' },
@@ -275,6 +398,8 @@ static int pub(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				return usage_pub(NULL);
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -293,13 +418,13 @@ static int pub(int argc, char *argv[])
 				}
 				else
 				{
-					return usage("invalid input type");
+					return usage_pub("invalid input type");
 				}
 				continue;
 			case 'f':
 				if (!get_form(optarg, &form, TRUE))
 				{
-					return usage("invalid output format");
+					return usage_pub("invalid output format");
 				}
 				continue;
 			case 'i':
@@ -308,7 +433,7 @@ static int pub(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return usage("invalid --pub option");
+				return usage_pub("invalid --pub option");
 		}
 		break;
 	}
@@ -382,6 +507,7 @@ static int keyid(int argc, char *argv[])
 	chunk_t id;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
 		{ 0,0,0,0 }
@@ -390,6 +516,8 @@ static int keyid(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				return usage_keyid(NULL);
 			case 't':
 				if (streq(optarg, "rsa-priv"))
 				{
@@ -413,7 +541,7 @@ static int keyid(int argc, char *argv[])
 				}
 				else
 				{
-					return usage("invalid input type");
+					return usage_keyid("invalid input type");
 				}
 				continue;
 			case 'i':
@@ -422,7 +550,7 @@ static int keyid(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return usage("invalid --keyid option");
+				return usage_keyid("invalid --keyid option");
 		}
 		break;
 	}
@@ -512,6 +640,7 @@ static int self(int argc, char *argv[])
 	options_t *options;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "options", required_argument, NULL, '+' },
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
@@ -519,7 +648,7 @@ static int self(int argc, char *argv[])
 		{ "san", required_argument, NULL, 'a' },
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
-		{ "digest", required_argument, NULL, 'h' },
+		{ "digest", required_argument, NULL, 'g' },
 		{ "ca", no_argument, NULL, 'c' },
 		{ 0,0,0,0 }
 	};
@@ -531,6 +660,8 @@ static int self(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				goto usage;
 			case '+':
 				if (!options->from(options, optarg, &argc, &argv, optind))
 				{
@@ -553,7 +684,7 @@ static int self(int argc, char *argv[])
 					goto usage;
 				}
 				continue;
-			case 'h':
+			case 'g':
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
@@ -686,7 +817,7 @@ end:
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	options->destroy(options);
-	return usage(error);
+	return usage_self(error);
 }
 
 /**
@@ -711,6 +842,7 @@ static int issue(int argc, char *argv[])
 	options_t *options;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "options", required_argument, NULL, '+' },
 		{ "type", required_argument, NULL, 't' },
 		{ "in", required_argument, NULL, 'i' },
@@ -720,7 +852,7 @@ static int issue(int argc, char *argv[])
 		{ "san", required_argument, NULL, 'a' },
 		{ "lifetime", required_argument, NULL, 'l' },
 		{ "serial", required_argument, NULL, 's' },
-		{ "digest", required_argument, NULL, 'h' },
+		{ "digest", required_argument, NULL, 'g' },
 		{ "ca", no_argument, NULL, 'b' },
 		{ 0,0,0,0 }
 	};
@@ -732,6 +864,8 @@ static int issue(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				goto usage;
 			case '+':
 				if (!options->from(options, optarg, &argc, &argv, optind))
 				{
@@ -746,7 +880,7 @@ static int issue(int argc, char *argv[])
 					goto usage;
 				}
 				continue;
-			case 'h':
+			case 'g':
 				digest = get_digest(optarg);
 				if (digest == HASH_UNKNOWN)
 				{
@@ -926,7 +1060,7 @@ end:
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	options->destroy(options);
-	return usage(error);
+	return usage_issue(error);
 }
 
 /**
@@ -939,6 +1073,7 @@ static int verify(int argc, char *argv[])
 	bool good = FALSE;
 
 	struct option long_opts[] = {
+		{ "help", no_argument, NULL, 'h' },
 		{ "in", required_argument, NULL, 'i' },
 		{ "cacert", required_argument, NULL, 'c' },
 		{ 0,0,0,0 }
@@ -948,6 +1083,8 @@ static int verify(int argc, char *argv[])
 	{
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
+			case 'h':
+				return usage_verify(NULL);
 			case 'i':
 				file = optarg;
 				continue;
@@ -957,7 +1094,7 @@ static int verify(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return usage("invalid --verify option");
+				return usage_verify("invalid --verify option");
 		}
 		break;
 	}
