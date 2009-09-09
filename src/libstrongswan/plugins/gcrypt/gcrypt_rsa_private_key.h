@@ -21,6 +21,7 @@
 #ifndef GCRYPT_RSA_PRIVATE_KEY_H_
 #define GCRYPT_RSA_PRIVATE_KEY_H_
 
+#include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
 typedef struct gcrypt_rsa_private_key_t gcrypt_rsa_private_key_t;
@@ -37,11 +38,27 @@ struct gcrypt_rsa_private_key_t {
 };
 
 /**
- * Create the builder for a private key.
+ * Generate a private key using gcrypt.
+ *
+ * Accepts the BUILD_KEY_SIZE argument.
  *
  * @param type		type of the key, must be KEY_RSA
- * @return 			builder instance
+ * @param args		builder_part_t argument list
+ * @return			generated key, NULL on failure
  */
-builder_t *gcrypt_rsa_private_key_builder(key_type_t type);
+gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
+													 va_list args);
+
+/**
+ * Load a gcrypt RSA private keys.
+ *
+ * Accepts BUILD_RSA_* components.
+ *
+ * @param type		type of the key, must be KEY_RSA
+ * @param args		builder_part_t argument list
+ * @return			loaded key, NULL on failure
+ */
+gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
+													  va_list args);
 
 #endif /** GCRYPT_RSA_PRIVATE_KEY_H_ @}*/

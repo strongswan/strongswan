@@ -295,11 +295,35 @@ static void destroy(private_gcrypt_rsa_public_key_t *this)
 }
 
 /**
- * Generic private constructor
+ * See header.
  */
-static private_gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_create_empty()
+gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_load(key_type_t type,
+													va_list args)
 {
-	private_gcrypt_rsa_public_key_t *this = malloc_thing(private_gcrypt_rsa_public_key_t);
+	private_gcrypt_rsa_public_key_t *this;
+	gcry_error_t err;
+	chunk_t n, e;
+
+	n = e = chunk_empty;
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_RSA_MODULUS:
+				n = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PUB_EXP:
+				e = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	this = malloc_thing(private_gcrypt_rsa_public_key_t);
 
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
@@ -314,18 +338,6 @@ static private_gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_create_empty()
 	this->key = NULL;
 	this->ref = 1;
 
-	return this;
-}
-
-/**
- * Load a public key from components
- */
-static gcrypt_rsa_public_key_t *load(chunk_t n, chunk_t e)
-{
-	private_gcrypt_rsa_public_key_t *this;
-	gcry_error_t err;
-
-	this = gcrypt_rsa_public_key_create_empty();
 	err = gcry_sexp_build(&this->key, NULL, "(public-key(rsa(n %b)(e %b)))",
 						  n.len, n.ptr, e.len, e.ptr);
 	if (err)
@@ -334,73 +346,6 @@ static gcrypt_rsa_public_key_t *load(chunk_t n, chunk_t e)
 		free(this);
 		return NULL;
 	}
-	return &this->public;
-}
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for key loading
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** rsa key parameters */
-	chunk_t n, e;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static gcrypt_rsa_public_key_t *build(private_builder_t *this)
-{
-	gcrypt_rsa_public_key_t *key;
-
-	key = load(this->n, this->e);
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_RSA_MODULUS:
-			this->n = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PUB_EXP:
-			this->e = va_arg(args, chunk_t);
-			break;
-		default:
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *gcrypt_rsa_public_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_RSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->n = this->e = chunk_empty;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
 
 	return &this->public;
 }

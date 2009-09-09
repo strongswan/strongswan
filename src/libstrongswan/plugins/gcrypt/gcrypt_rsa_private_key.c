@@ -455,13 +455,34 @@ static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 }
 
 /**
- * Generate an RSA key of specified key size
+ * See header.
  */
-static gcrypt_rsa_private_key_t *generate(size_t key_size)
+gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
+													 va_list args)
 {
 	private_gcrypt_rsa_private_key_t *this;
-	gcry_sexp_t param, key;
+	gcry_sexp_t param;
 	gcry_error_t err;
+	u_int key_size = 0;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_KEY_SIZE:
+				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!key_size)
+	{
+		return NULL;
+	}
 
 	err = gcry_sexp_build(&param, NULL, "(genkey(rsa(nbits %d)))", key_size);
 	if (err)
@@ -469,29 +490,65 @@ static gcrypt_rsa_private_key_t *generate(size_t key_size)
 		DBG1("building S-expression failed: %s", gpg_strerror(err));
 		return NULL;
 	}
-
-	err = gcry_pk_genkey(&key, param);
+	this = gcrypt_rsa_private_key_create_empty();
+	err = gcry_pk_genkey(&this->key, param);
 	gcry_sexp_release(param);
 	if (err)
 	{
+		free(this);
 		DBG1("generating RSA key failed: %s", gpg_strerror(err));
 		return NULL;
 	}
-	this = gcrypt_rsa_private_key_create_empty();
-	this->key = key;
-
 	return &this->public;
 }
 
 /**
- * Load a private key from components
+ * See header.
  */
-static gcrypt_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
-									  chunk_t p, chunk_t q, chunk_t u)
+gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
+													  va_list args)
 {
+	private_gcrypt_rsa_private_key_t *this;
+	chunk_t n, e, d, p, q, u;
 	gcry_error_t err;
-	private_gcrypt_rsa_private_key_t *this = gcrypt_rsa_private_key_create_empty();
 
+	n = e = d = p = q = u = chunk_empty;
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_RSA_MODULUS:
+				n = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PUB_EXP:
+				e = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIV_EXP:
+				d = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME1:
+				/* swap p and q, gcrypt expects p < q */
+				q = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME2:
+				p = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_EXP1:
+			case BUILD_RSA_EXP2:
+				/* not required for gcrypt */
+				continue;
+			case BUILD_RSA_COEFF:
+				u = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	this = gcrypt_rsa_private_key_create_empty();
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,
@@ -509,104 +566,6 @@ static gcrypt_rsa_private_key_t *load(chunk_t n, chunk_t e, chunk_t d,
 		destroy(this);
 		return NULL;
 	}
-	return &this->public;
-}
-
-typedef struct private_builder_t private_builder_t;
-
-/**
- * Builder implementation for key loading/generation
- */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** key size, if generating */
-	u_int key_size;
-	/** rsa key parameters */
-	chunk_t n, e, d, p, q, u;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static gcrypt_rsa_private_key_t *build(private_builder_t *this)
-{
-	gcrypt_rsa_private_key_t *key = NULL;
-
-	if (this->key_size)
-	{
-		key = generate(this->key_size);
-	}
-	else
-	{
-		key = load(this->n, this->e, this->d, this->p, this->q, this->u);
-	}
-	free(this);
-	return key;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_KEY_SIZE:
-			this->key_size = va_arg(args, u_int);
-			return;
-		case BUILD_RSA_MODULUS:
-			this->n = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PUB_EXP:
-			this->e = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIV_EXP:
-			this->d = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIME1:
-			/* swap p and q, gcrypt expects p < q */
-			this->q = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_PRIME2:
-			this->p = va_arg(args, chunk_t);
-			break;
-		case BUILD_RSA_EXP1:
-		case BUILD_RSA_EXP2:
-			/* not required for gcrypt */
-			break;
-		case BUILD_RSA_COEFF:
-			this->u = va_arg(args, chunk_t);
-			break;
-		default:
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *gcrypt_rsa_private_key_builder(key_type_t type)
-{
-	private_builder_t *this;
-
-	if (type != KEY_RSA)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_builder_t);
-
-	this->key_size = 0;
-	this->n = this->e = this->d = this->p = this->q = this->u = chunk_empty;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-
 	return &this->public;
 }
 
