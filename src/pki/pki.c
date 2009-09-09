@@ -808,7 +808,7 @@ end:
 	free(serial.ptr);
 
 	if (error)
-	{    
+	{
 		fprintf(stderr, "%s\n", error);
 		return 1;
 	}
@@ -980,6 +980,7 @@ static int issue(int argc, char *argv[])
 		error = "CA private key does not match CA certificate";
 		goto end;
 	}
+	public->destroy(public);
 
 	if (file)
 	{
@@ -1051,7 +1052,7 @@ end:
 	free(serial.ptr);
 
 	if (error)
-	{    
+	{
 		fprintf(stderr, "%s\n", error);
 		return 1;
 	}
