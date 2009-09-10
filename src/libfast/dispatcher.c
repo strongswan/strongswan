@@ -259,7 +259,7 @@ static void dispatch(private_dispatcher_t *this)
 				continue;
 			}
 			/* find by session ID. Prevent session hijacking by host check */
-			if (!found && sid &&
+			if (!found && sid && current->session->get_sid(current->session) &&
 				streq(current->session->get_sid(current->session), sid) &&
 				streq(current->host, request->get_host(request)))
 			{
