@@ -31,7 +31,7 @@ static int gen(int argc, char *argv[])
 		switch (getopt_long(argc, argv, "", command_opts, NULL))
 		{
 			case 'h':
-				return command_usage(CMD_GEN, NULL);
+				return command_usage(NULL);
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -43,26 +43,26 @@ static int gen(int argc, char *argv[])
 				}
 				else
 				{
-					return command_usage(CMD_GEN, "invalid key type");
+					return command_usage("invalid key type");
 				}
 				continue;
 			case 'o':
 				if (!get_form(optarg, &form, FALSE))
 				{
-					return command_usage(CMD_GEN, "invalid key output format");
+					return command_usage("invalid key output format");
 				}
 				continue;
 			case 's':
 				size = atoi(optarg);
 				if (!size)
 				{
-					return command_usage(CMD_GEN, "invalid key size");
+					return command_usage("invalid key size");
 				}
 				continue;
 			case EOF:
 				break;
 			default:
-				return command_usage(CMD_GEN, "invalid --gen option");
+				return command_usage("invalid --gen option");
 		}
 		break;
 	}
@@ -110,7 +110,7 @@ static int gen(int argc, char *argv[])
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_GEN, (command_t) {
+	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
 		{"[--type rsa|ecdsa] [--size bits] [--outform der|pem|pgp]"},
 		{

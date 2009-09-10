@@ -206,7 +206,7 @@ end:
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	options->destroy(options);
-	return command_usage(CMD_SELF, error);
+	return command_usage(error);
 }
 
 /**
@@ -214,7 +214,7 @@ usage:
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_SELF, (command_t) {
+	command_register((command_t) {
 		self, 's', "self",
 		"create a self signed certificate",
 		{"[--in file] [--type rsa|ecdsa]",

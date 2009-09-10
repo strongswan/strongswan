@@ -32,7 +32,7 @@ static int verify(int argc, char *argv[])
 		switch (getopt_long(argc, argv, "", command_opts, NULL))
 		{
 			case 'h':
-				return command_usage(CMD_VERIFY, NULL);
+				return command_usage(NULL);
 			case 'i':
 				file = optarg;
 				continue;
@@ -42,7 +42,7 @@ static int verify(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return command_usage(CMD_VERIFY, "invalid --verify option");
+				return command_usage("invalid --verify option");
 		}
 		break;
 	}
@@ -121,7 +121,7 @@ static int verify(int argc, char *argv[])
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_VERIFY, (command_t) {
+	command_register((command_t) {
 		verify, 'v', "verify",
 		"verify a certificate using the CA certificate",
 		{"[--in file] [--ca file]"},

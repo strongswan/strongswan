@@ -25,6 +25,11 @@
 #include <getopt.h>
 
 /**
+ * Maximum number of commands.
+ */
+#define MAX_COMMANDS 10
+
+/**
  * Maximum number of options in a command (+1)
  */
 #define MAX_OPTIONS 14
@@ -65,28 +70,14 @@ struct command_t {
 };
 
 /**
- * Type of available commands
- */
-enum command_type_t {
-	CMD_HELP = 0,
-	CMD_GEN,
-	CMD_PUB,
-	CMD_KEYID,
-	CMD_SELF,
-	CMD_ISSUE,
-	CMD_VERIFY,
-	CMD_MAX
-};
-
-/**
- * Options of the currently processing command.
+ * Options of the active command.
  */
 extern struct option command_opts[];
 
 /**
  * Register a command.
  */
-void command_register(command_type_t type, command_t command);
+void command_register(command_t command);
 
 /**
  * Dispatch commands.
@@ -96,6 +87,6 @@ int command_dispatch(int argc, char *argv[]);
 /**
  * Show usage information of active command.
  */
-int command_usage(command_type_t cmd, char *error);
+int command_usage(char *error);
 
 #endif /* COMMAND_H_ @}*/

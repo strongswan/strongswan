@@ -247,7 +247,7 @@ end:
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	options->destroy(options);
-	return command_usage(CMD_ISSUE, error);
+	return command_usage(error);
 }
 
 /**
@@ -255,7 +255,7 @@ usage:
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_ISSUE, (command_t) {
+	command_register((command_t) {
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10]",

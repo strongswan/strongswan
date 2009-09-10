@@ -37,7 +37,7 @@ static int keyid(int argc, char *argv[])
 		switch (getopt_long(argc, argv, "", command_opts, NULL))
 		{
 			case 'h':
-				return command_usage(CMD_KEYID, NULL);
+				return command_usage(NULL);
 			case 't':
 				if (streq(optarg, "rsa-priv"))
 				{
@@ -61,7 +61,7 @@ static int keyid(int argc, char *argv[])
 				}
 				else
 				{
-					return command_usage(CMD_KEYID, "invalid input type");
+					return command_usage( "invalid input type");
 				}
 				continue;
 			case 'i':
@@ -70,7 +70,7 @@ static int keyid(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return command_usage(CMD_KEYID, "invalid --keyid option");
+				return command_usage("invalid --keyid option");
 		}
 		break;
 	}
@@ -144,7 +144,7 @@ static int keyid(int argc, char *argv[])
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_KEYID, (command_t)
+	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
 		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509]"},

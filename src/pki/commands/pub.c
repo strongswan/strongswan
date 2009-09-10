@@ -38,7 +38,7 @@ static int pub(int argc, char *argv[])
 		switch (getopt_long(argc, argv, "", command_opts, NULL))
 		{
 			case 'h':
-				return command_usage(CMD_PUB, NULL);
+				return command_usage(NULL);
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -57,13 +57,13 @@ static int pub(int argc, char *argv[])
 				}
 				else
 				{
-					return command_usage(CMD_PUB, "invalid input type");
+					return command_usage("invalid input type");
 				}
 				continue;
 			case 'f':
 				if (!get_form(optarg, &form, TRUE))
 				{
-					return command_usage(CMD_PUB, "invalid output format");
+					return command_usage("invalid output format");
 				}
 				continue;
 			case 'i':
@@ -72,7 +72,7 @@ static int pub(int argc, char *argv[])
 			case EOF:
 				break;
 			default:
-				return command_usage(CMD_PUB, "invalid --pub option");
+				return command_usage("invalid --pub option");
 		}
 		break;
 	}
@@ -136,7 +136,7 @@ static int pub(int argc, char *argv[])
  */
 static void __attribute__ ((constructor))reg()
 {
-	command_register(CMD_PUB, (command_t) {
+	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
 		{"[--in file] [--type rsa|ecdsa|x509] [--outform der|pem|pgp]"},

@@ -23,24 +23,39 @@
 /**
  * Registered commands.
  */
-command_t cmds[CMD_MAX];
+command_t cmds[MAX_COMMANDS];
+
+/**
+ * active command.
+ */
+static int active = 0;
+
+/**
+ * number of registered commands
+ */
+static int registered = 0;
+
+/**
+ * help command index
+ */
+static int help_idx;
 
 /**
  * Global options used by all subcommands
  */
-struct option command_opts[CMD_MAX > MAX_OPTIONS ?: MAX_OPTIONS];
+struct option command_opts[MAX_COMMANDS > MAX_OPTIONS ?: MAX_OPTIONS];
 
 /**
  * Build long_opts for a specific command
  */
-static void build_opts(command_type_t cmd)
+static void build_opts()
 {
 	int i;
 
 	memset(command_opts, 0, sizeof(command_opts));
-	if (cmd == CMD_HELP)
+	if (active == help_idx)
 	{
-		for (i = 0; i < CMD_MAX; i++)
+		for (i = 0; cmds[i].cmd; i++)
 		{
 			command_opts[i].name = cmds[i].cmd;
 			command_opts[i].val = cmds[i].op;
@@ -48,11 +63,11 @@ static void build_opts(command_type_t cmd)
 	}
 	else
 	{
-		for (i = 0; cmds[cmd].options[i].name; i++)
+		for (i = 0; cmds[active].options[i].name; i++)
 		{
-			command_opts[i].name = cmds[cmd].options[i].name;
-			command_opts[i].has_arg = cmds[cmd].options[i].arg;
-			command_opts[i].val = cmds[cmd].options[i].op;
+			command_opts[i].name = cmds[active].options[i].name;
+			command_opts[i].has_arg = cmds[active].options[i].arg;
+			command_opts[i].val = cmds[active].options[i].op;
 		}
 	}
 }
@@ -60,15 +75,15 @@ static void build_opts(command_type_t cmd)
 /**
  * Register a command
  */
-void command_register(command_type_t type, command_t command)
+void command_register(command_t command)
 {
-	cmds[type] = command;
+	cmds[registered++] = command;
 }
 
 /**
  * Print usage text, with an optional error
  */
-int command_usage(command_type_t cmd, char *error)
+int command_usage(char *error)
 {
 	FILE *out = stdout;
 	int i;
@@ -80,35 +95,35 @@ int command_usage(command_type_t cmd, char *error)
 	}
 	fprintf(out, "strongSwan %s PKI tool\n", VERSION);
 	fprintf(out, "usage:\n");
-	if (cmd == CMD_HELP)
+	if (active == help_idx)
 	{
-		for (i = 0; i < CMD_MAX; i++)
+		for (i = 0; cmds[i].cmd; i++)
 		{
 			fprintf(out, "  pki --%-6s %s\n", cmds[i].cmd, cmds[i].description);
 		}
 	}
 	else
 	{
-		for (i = 0; cmds[cmd].line[i]; i++)
+		for (i = 0; cmds[active].line[i]; i++)
 		{
 			if (i == 0)
 			{
-				fprintf(out, "  pki --%s %s\n", cmds[cmd].cmd, cmds[cmd].line[i]);
+				fprintf(out, "  pki --%s %s\n",
+						cmds[active].cmd, cmds[active].line[i]);
 			}
 			else
 			{
-				fprintf(out, "               %s\n", cmds[cmd].line[i]);
+				fprintf(out, "              %s\n", cmds[active].line[i]);
 			}
 		}
-		for (i = 0; cmds[cmd].options[i].name; i++)
+		for (i = 0; cmds[active].options[i].name; i++)
 		{
 			fprintf(out, "        --%-8s %s\n",
-					cmds[cmd].options[i].name, cmds[cmd].options[i].desc);
+					cmds[active].options[i].name, cmds[active].options[i].desc);
 		}
 	}
 	return error != NULL;
 }
-
 
 
 /**
@@ -116,7 +131,7 @@ int command_usage(command_type_t cmd, char *error)
  */
 static int help(int argc, char *argv[])
 {
-	return command_usage(CMD_HELP, NULL);
+	return command_usage(NULL);
 }
 
 /**
@@ -126,18 +141,20 @@ int command_dispatch(int argc, char *argv[])
 {
 	int op, i;
 
-	command_register(CMD_HELP, (command_t) {
-					 help, 'h', "help", "show usage information"});
-	build_opts(CMD_HELP);
+	active = help_idx = registered;
+	command_register((command_t){help, 'h', "help", "show usage information"});
+
+	build_opts();
 	op = getopt_long(argc, argv, "", command_opts, NULL);
-	for (i = 0; i < CMD_MAX; i++)
+	for (i = 0; cmds[i].cmd; i++)
 	{
 		if (cmds[i].op == op)
 		{
-			build_opts(i);
+			active = i;
+			build_opts();
 			return cmds[i].call(argc, argv);
 		}
 	}
-	return command_usage(CMD_HELP, "invalid operation");
+	return command_usage("invalid operation");
 }
 
