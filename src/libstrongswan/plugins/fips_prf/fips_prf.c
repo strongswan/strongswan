@@ -114,7 +114,6 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 	u_int8_t sum[this->b];
 	u_int8_t *xkey = this->key;
 	u_int8_t one[this->b];
-	chunk_t xval_chunk = chunk_from_buf(xval);
 
 	memset(one, 0, this->b);
 	one[this->b - 1] = 0x01;
@@ -129,7 +128,7 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 		add_mod(this->b, xkey, xseed, xval);
 		DBG3("XVAL %b", xval, this->b);
 		/* b. wi = G(t, XVAL ) */
-		this->g(this, xval_chunk, &w[i * this->b]);
+		this->g(this, chunk_create(xval, this->b), &w[i * this->b]);
 		DBG3("w[%d] %b", i, &w[i * this->b], this->b);
 		/* c. XKEY = (1 + XKEY + wi) mod 2b */
 		add_mod(this->b, xkey, &w[i * this->b], sum);

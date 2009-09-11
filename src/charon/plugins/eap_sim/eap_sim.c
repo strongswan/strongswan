@@ -222,16 +222,10 @@ struct private_eap_sim_t {
 /** length of the EMSK */
 #define EMSK_LEN 64
 
-static char version[] = {0x00,0x01};
 /* client error codes used in AT_CLIENT_ERROR_CODE */
-char client_error_general_buf[] = {0x00, 0x01};
-char client_error_unsupported_buf[] = {0x00, 0x02};
-char client_error_insufficient_buf[] = {0x00, 0x03};
-char client_error_notfresh_buf[] = {0x00, 0x04};
-chunk_t client_error_general = chunk_from_buf(client_error_general_buf);
-chunk_t client_error_unsupported = chunk_from_buf(client_error_unsupported_buf);
-chunk_t client_error_insufficient = chunk_from_buf(client_error_insufficient_buf);
-chunk_t client_error_notfresh = chunk_from_buf(client_error_notfresh_buf);
+static chunk_t client_error_general = chunk_from_chars(0x00, 0x01);
+static chunk_t client_error_unsupported = chunk_from_chars(0x00, 0x02);
+static chunk_t client_error_insufficient = chunk_from_chars(0x00, 0x03);
 
 /**
  * Read EAP and EAP-SIM header, return SIM type
@@ -1075,8 +1069,7 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 	this->sreses = chunk_empty;
 	this->peer = peer->clone(peer);
 	this->tries = MAX_TRIES;
-	this->version.ptr = version;
-	this->version.len = sizeof(version);
+	this->version = chunk_from_chars(0x00,0x01);
 	this->version_list = chunk_empty;
 	this->k_auth = chunk_empty;
 	this->k_encr = chunk_empty;

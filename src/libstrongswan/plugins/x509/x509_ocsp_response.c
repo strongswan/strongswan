@@ -130,29 +130,23 @@ typedef struct {
 #define OCSP_BASIC_RESPONSE_VERSION 1
 
 /* some OCSP specific prefabricated ASN.1 constants */
-static u_char ASN1_nonce_oid_str[] = {
+static const chunk_t ASN1_nonce_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
-};
-
-static u_char ASN1_response_oid_str[] = {
+);
+static const chunk_t ASN1_response_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
-};
-
-static u_char ASN1_response_content_str[] = {
+);
+static const chunk_t ASN1_response_content = chunk_from_chars(
 	0x04, 0x0D,
 		  0x30, 0x0B,
 				0x06, 0x09,
 				0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
-};
-
-static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
-static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
-static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
+);
 
 /**
  * Implementaiton of ocsp_response_t.get_status

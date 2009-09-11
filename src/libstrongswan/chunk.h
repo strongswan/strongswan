@@ -169,9 +169,9 @@ static inline void chunk_clear(chunk_t *chunk)
 }
 
 /**
- * Initialize a chunk to point to buffer inspectable by sizeof()
+ * Initialize a chunk using a char array
  */
-#define chunk_from_buf(str) { str, sizeof(str) }
+#define chunk_from_chars(...) ((chunk_t){(char[]){__VA_ARGS__}, sizeof((char[]){__VA_ARGS__})})
 
 /**
  * Initialize a chunk to point to a thing

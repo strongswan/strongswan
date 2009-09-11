@@ -161,7 +161,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 {
 	int len, count;
 	char buf[2048];
-	chunk_t blob = chunk_from_buf(buf), key, type, n;
+	chunk_t blob, key, type, n;
 
 	len = htonl(1);
 	buf[0] = SSH_AGENT_ID_REQUEST;
@@ -172,6 +172,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		return FALSE;
 	}
 
+	blob = chunk_create(buf, sizeof(buf));
 	blob.len = read(this->socket, blob.ptr, blob.len);
 
 	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
@@ -226,7 +227,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 {
 	u_int32_t len, flags;
 	char buf[2048];
-	chunk_t blob = chunk_from_buf(buf);
+	chunk_t blob;
 
 	if (scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
 	{
@@ -267,6 +268,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 		return FALSE;
 	}
 
+	blob = chunk_create(buf, sizeof(buf));
 	blob.len = read(this->socket, blob.ptr, blob.len);
 	if (blob.len < sizeof(u_int32_t) + sizeof(u_char) ||
 		read_uint32(&blob) != blob.len ||

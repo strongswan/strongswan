@@ -78,48 +78,30 @@ struct attribute_t {
 /**
  * PKCS#9 attribute type OIDs
  */
-static u_char ASN1_contentType_oid_str[] = {
+static chunk_t ASN1_contentType_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-};
-
-static u_char ASN1_messageDigest_oid_str[] = {
+);
+static chunk_t ASN1_messageDigest_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-};
-
-static u_char ASN1_signingTime_oid_str[] = {
+);
+static chunk_t ASN1_signingTime_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x05
-};
-
-static char ASN1_messageType_oid_str[] = {
+);
+static chunk_t ASN1_messageType_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-};
-
-static char ASN1_senderNonce_oid_str[] = {
+);
+static chunk_t ASN1_senderNonce_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-};
-
-static char ASN1_transId_oid_str[] = {
+);
+static chunk_t ASN1_transId_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-};
-
-static const chunk_t ASN1_contentType_oid =
-						chunk_from_buf(ASN1_contentType_oid_str);
-static const chunk_t ASN1_messageDigest_oid =
-						chunk_from_buf(ASN1_messageDigest_oid_str);
-static const chunk_t ASN1_signingTime_oid =
-						chunk_from_buf(ASN1_signingTime_oid_str);
-static const chunk_t ASN1_messageType_oid =
-						chunk_from_buf(ASN1_messageType_oid_str);
-static const chunk_t ASN1_senderNonce_oid =
-						chunk_from_buf(ASN1_senderNonce_oid_str);
-static const chunk_t ASN1_transId_oid =
-						chunk_from_buf(ASN1_transId_oid_str);
+);
 
 /**
  * return the ASN.1 encoded OID of a PKCS#9 attribute

@@ -171,10 +171,9 @@ struct private_x509_cert_t {
 	refcount_t ref;
 };
 
-static u_char ASN1_sAN_oid_buf[] = {
+static const chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
 	0x06, 0x03, 0x55, 0x1D, 0x11
-};
-static const chunk_t ASN1_subjectAltName_oid = chunk_from_buf(ASN1_sAN_oid_buf);
+);
 
 /**
  * ASN.1 definition of a basicConstraints extension
@@ -1341,16 +1340,16 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 
 	if (cert->flags & X509_CA)
 	{
-		chunk_t yes, keyid;
+		chunk_t keyid;
 
-		yes = chunk_alloca(1);
-		yes.ptr[0] = 0xFF;
 		basicConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
 								asn1_build_known_oid(OID_BASIC_CONSTRAINTS),
-								asn1_wrap(ASN1_BOOLEAN, "c", yes),
+								asn1_wrap(ASN1_BOOLEAN, "c",
+									chunk_from_chars(0xFF)),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
 										asn1_wrap(ASN1_SEQUENCE, "m",
-											asn1_wrap(ASN1_BOOLEAN, "c", yes))));
+											asn1_wrap(ASN1_BOOLEAN, "c",
+												chunk_from_chars(0xFF)))));
 		/* add subjectKeyIdentifier to CA certificates */
 		if (cert->public_key->get_fingerprint(cert->public_key,
 											  KEY_ID_PUBKEY_SHA1, &keyid))

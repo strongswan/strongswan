@@ -25,8 +25,6 @@ static void usage()
 	exit(1);
 }
 
-static char data_buf[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07};
-
 int main(int argc, char *argv[])
 {
 	private_key_t *private;
@@ -36,7 +34,7 @@ int main(int argc, char *argv[])
 	char buf[8096], *pos = buf;
 	key_type_t type = KEY_ANY;
 	signature_scheme_t scheme = SIGN_UNKNOWN;
-	chunk_t keydata, *sigs, data = chunk_from_buf(data_buf);
+	chunk_t keydata, *sigs, data;
 
 	if (argc < 4)
 	{
@@ -102,6 +100,7 @@ int main(int argc, char *argv[])
 
 	sigs = malloc(sizeof(chunk_t) * rounds);
 
+	data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07);
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{

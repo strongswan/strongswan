@@ -28,15 +28,11 @@
 #include "asn1_parser.h"
 
 /**
- * some common prefabricated ASN.1 constants
+ * Commonly used ASN1 values.
  */
-static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
-static u_char ASN1_INTEGER_1_str[] = { 0x02, 0x01, 0x01 };
-static u_char ASN1_INTEGER_2_str[] = { 0x02, 0x01, 0x02 };
-
-const chunk_t ASN1_INTEGER_0 = chunk_from_buf(ASN1_INTEGER_0_str);
-const chunk_t ASN1_INTEGER_1 = chunk_from_buf(ASN1_INTEGER_1_str);
-const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
+const chunk_t ASN1_INTEGER_0 = chunk_from_chars(0x02, 0x00);
+const chunk_t ASN1_INTEGER_1 = chunk_from_chars(0x02, 0x01, 0x01);
+const chunk_t ASN1_INTEGER_2 = chunk_from_chars(0x02, 0x01, 0x02);
 
 /*
  * Defined in header.

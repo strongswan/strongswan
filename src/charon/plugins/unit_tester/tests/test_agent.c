@@ -21,8 +21,8 @@
  ******************************************************************************/
 bool test_agent()
 {
-	char *path, buf[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
-	chunk_t sig, data = chunk_from_buf(buf);
+	char *path;
+	chunk_t sig, data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08);
 	private_key_t *private;
 	public_key_t *public;
 
@@ -53,7 +53,7 @@ bool test_agent()
 		return FALSE;
 	}
 	free(sig.ptr);
-	buf[1] = 0x01; /* fake it */
+	data.ptr[1] = 0x01; /* fake it */
 	if (public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, data, sig))
 	{
 		return FALSE;

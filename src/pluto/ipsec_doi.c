@@ -1233,12 +1233,9 @@ static bool generate_skeyids_iv(struct state *st)
 
 	/* generate SKEYID_* from SKEYID */
 	{
-		char buf_skeyid_d[] = { 0x00 };
-		char buf_skeyid_a[] = { 0x01 };
-		char buf_skeyid_e[] = { 0x02 };
-		chunk_t seed_skeyid_d = chunk_from_buf(buf_skeyid_d);
-		chunk_t seed_skeyid_a = chunk_from_buf(buf_skeyid_a);
-		chunk_t seed_skeyid_e = chunk_from_buf(buf_skeyid_e);
+		chunk_t seed_skeyid_d = chunk_from_chars(0x00);
+		chunk_t seed_skeyid_a = chunk_from_chars(0x01);
+		chunk_t seed_skeyid_e = chunk_from_chars(0x02);
 		chunk_t icookie = { st->st_icookie, COOKIE_SIZE };
 		chunk_t rcookie = { st->st_rcookie, COOKIE_SIZE };
 		pseudo_random_function_t prf_alg;
@@ -1308,8 +1305,7 @@ static bool generate_skeyids_iv(struct state *st)
 		if (keysize > st->st_skeyid_e.len)
 		{
 			u_char keytemp[MAX_OAKLEY_KEY_LEN + MAX_DIGEST_LEN];
-			char seed_buf[] = { 0x00 };
-			chunk_t seed = chunk_from_buf(seed_buf);
+			chunk_t seed = chunk_from_chars(0x00);
 			size_t prf_block_size, i;
 			pseudo_random_function_t prf_alg;
 			prf_t *prf;
@@ -1775,8 +1771,7 @@ static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
  */
 static size_t quick_mode_hash3(u_char *dest, struct state *st)
 {
-	char seed_buf[] = { 0x00 };
-	chunk_t seed_chunk = chunk_from_buf(seed_buf);
+	chunk_t seed_chunk = chunk_from_chars(0x00);
 	chunk_t msgid_chunk = chunk_from_thing(st->st_msgid);
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
@@ -3466,8 +3461,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
    /* HASH_I or SIG_I out */
 	{
-		u_char hash_buf[MAX_DIGEST_LEN];
-		chunk_t hash = chunk_from_buf(hash_buf);
+		chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 
 		main_mode_hash(st, &hash, TRUE, &id_pbs);
 
@@ -3558,8 +3552,7 @@ main_id_and_auth(struct msg_digest *md
 				 , const struct key_continuation *kc    /* current state, can be NULL */
 )
 {
-	u_char hash_buf[MAX_DIGEST_LEN];
-	chunk_t hash = chunk_from_buf(hash_buf);
+	chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 	struct state *st = md->st;
 	struct id peer;
 	stf_status r = STF_OK;
@@ -3881,8 +3874,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 
 	/* HASH_R or SIG_R out */
 	{
-		u_char hash_buf[MAX_DIGEST_LEN];
-		chunk_t hash = chunk_from_buf(hash_buf);
+		chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 
 		main_mode_hash(st, &hash, FALSE, &r_id_pbs);
 

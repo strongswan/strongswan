@@ -261,10 +261,9 @@ static bool parse_pgp_pubkey_packet(chunk_t *packet, pgpcert_t *cert)
 	/* compute V4 or V3 fingerprint according to section 12.2 of RFC 4880 */
 	if (cert->version == 4)
 	{
-		char pubkey_packet_header_buf[] = {
+		chunk_t pubkey_packet_header = chunk_from_chars(
 				0x99, pubkey_packet.len / 256, pubkey_packet.len % 256
-			 };
-		chunk_t pubkey_packet_header = chunk_from_buf(pubkey_packet_header_buf);
+		);
 		chunk_t hash;
 		hasher_t *hasher;
 

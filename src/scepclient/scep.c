@@ -39,24 +39,15 @@
 
 #include "scep.h"
 
-static char ASN1_messageType_oid_str[] = {
+static const chunk_t ASN1_messageType_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-};
-
-static char ASN1_senderNonce_oid_str[] = {
+);
+static const chunk_t ASN1_senderNonce_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-};
-
-static char ASN1_transId_oid_str[] = {
+);
+static const chunk_t ASN1_transId_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-};
-
-static const chunk_t ASN1_messageType_oid =
-						chunk_from_buf(ASN1_messageType_oid_str);
-static const chunk_t ASN1_senderNonce_oid =
-						chunk_from_buf(ASN1_senderNonce_oid_str);
-static const chunk_t ASN1_transId_oid =
-						chunk_from_buf(ASN1_transId_oid_str);
+);
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
@@ -267,12 +258,11 @@ end:
  */
 chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 {
-	char digest_buf[HASH_SIZE_MD5];
-	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
 	hasher_t *hasher;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, pkcs10, digest_buf);
+	hasher->get_hash(hasher, pkcs10, digest.ptr);
 	hasher->destroy(hasher);
 
 	return chunk_to_hex(digest, NULL, FALSE);
@@ -285,8 +275,7 @@ chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 								  chunk_t *serialNumber)
 {
-	char digest_buf[HASH_SIZE_MD5];
-	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
 	chunk_t keyEncoding = chunk_empty, keyInfo;
 	hasher_t *hasher;
 	bool msb_set;
@@ -299,7 +288,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 						asn1_bitstring("m", keyEncoding));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, keyInfo, digest_buf);
+	hasher->get_hash(hasher, keyInfo, digest.ptr);
 	hasher->destroy(hasher);
 	free(keyInfo.ptr);
 

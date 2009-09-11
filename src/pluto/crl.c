@@ -290,7 +290,7 @@ bool insert_crl(x509crl_t *crl, chunk_t crl_uri, bool cache_crl)
 	{
 		char path[BUF_LEN], buf[BUF_LEN];
 		char digest_buf[HASH_SIZE_SHA1];
-		chunk_t subjectKeyID = chunk_from_buf(digest_buf);
+		chunk_t subjectKeyID = chunk_create(digest_buf, sizeof(digest_buf));
 		bool has_keyID;
 
 		if (issuer_cert->subjectKeyID.ptr == NULL)

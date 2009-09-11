@@ -333,18 +333,15 @@ static const x501rdn_t x501rdns[] = {
 
 #define X501_RDN_ROOF   26
 
-static u_char ASN1_subjectAltName_oid_str[] = {
+static chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
 	0x06, 0x03, 0x55, 0x1D, 0x11
-};
-
-static const chunk_t ASN1_subjectAltName_oid = chunk_from_buf(ASN1_subjectAltName_oid_str);
+);
 
 static void update_chunk(chunk_t *ch, int n)
 {
 	n = (n > -1 && n < (int)ch->len)? n : (int)ch->len-1;
 	ch->ptr += n; ch->len -= n;
 }
-
 
 /**
  *  Pointer is set to the first RDN in a DN

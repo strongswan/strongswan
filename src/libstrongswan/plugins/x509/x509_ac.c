@@ -153,30 +153,21 @@ struct private_x509_ac_t {
 	refcount_t ref;
 };
 
-static u_char ASN1_group_oid_str[] = {
+static chunk_t ASN1_group_oid = chunk_from_chars(
 	0x06, 0x08,
 		  0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x0a ,0x04
-};
-
-static const chunk_t ASN1_group_oid = chunk_from_buf(ASN1_group_oid_str);
-
-static u_char ASN1_authorityKeyIdentifier_oid_str[] = {
+);
+static chunk_t ASN1_authorityKeyIdentifier_oid = chunk_from_chars(
 	0x06, 0x03,
 		  0x55, 0x1d, 0x23
-};
-
-static const chunk_t ASN1_authorityKeyIdentifier_oid =
-					 	chunk_from_buf(ASN1_authorityKeyIdentifier_oid_str);
-
-static u_char ASN1_noRevAvail_ext_str[] = {
+);
+static chunk_t ASN1_noRevAvail_ext = chunk_from_chars(
 	0x30, 0x09,
 		  0x06, 0x03,
 				0x55, 0x1d, 0x38,
 		  0x04, 0x02,
 				0x05, 0x00
-};
-
-static const chunk_t ASN1_noRevAvail_ext = chunk_from_buf(ASN1_noRevAvail_ext_str);
+);
 
 /**
  * declaration of function implemented in x509_cert.c

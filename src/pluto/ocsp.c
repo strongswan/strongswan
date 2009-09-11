@@ -126,26 +126,17 @@ struct request_list {
 };
 
 /* some OCSP specific prefabricated ASN.1 constants */
-
-static u_char ASN1_nonce_oid_str[] = {
+static const chunk_t ASN1_nonce_oid = chunk_from_chars(
 	0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
-};
-
-static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
-
-static u_char ASN1_response_oid_str[] = {
+);
+static const chunk_t ASN1_response_oid = chunk_from_chars(
 	0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
-};
-
-static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
-
-static u_char ASN1_response_content_str[] = {
+);
+static const chunk_t ASN1_response_content = chunk_from_chars(
 	0x04, 0x0D,
 		  0x30, 0x0B,
 				0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
-};
-
-static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
+);
 
 /* default OCSP uri */
 static chunk_t ocsp_default_uri;
@@ -726,8 +717,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 {
 	hasher_t *hasher;
 	u_char *pos;
-	u_char digest_buf[HASH_SIZE_SHA1];
-	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest;
 	chunk_t digest_info, sigdata;
 	size_t siglen = 0;
 
@@ -756,7 +746,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 	{
 		return chunk_empty;
 	}
-	hasher->get_hash(hasher, tbs, digest_buf);
+	hasher->allocate_hash(hasher, tbs, &digest);
 	hasher->destroy(hasher);
 
 	/* according to PKCS#1 v2.1 digest must be packaged into
@@ -764,7 +754,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 	 */
 	digest_info = asn1_wrap(ASN1_SEQUENCE, "mm"
 		, asn1_algorithmIdentifier(OID_SHA1)
-		, asn1_simple_object(ASN1_OCTET_STRING, digest));
+		, asn1_wrap(ASN1_OCTET_STRING, "m", digest));
 
 	pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
 	*pos++ = 0x00;

@@ -251,20 +251,17 @@ struct private_eap_aka_t {
 };
 
 /** Family key, as proposed in S.S0055 */
-static u_int8_t fmk_buf[] = {0x41, 0x48, 0x41, 0x47};
-static chunk_t fmk = chunk_from_buf(fmk_buf);
+static chunk_t fmk = chunk_from_chars(0x41, 0x48, 0x41, 0x47);
 
 /** Authentication management field */
-static u_int8_t amf_buf[] = {0x00, 0x01};
-static chunk_t amf = chunk_from_buf(amf_buf);
+static chunk_t amf = chunk_from_chars(0x00, 0x01);
 
 /** AT_CLIENT_ERROR_CODE AKA attribute */
-static u_int8_t client_error_code_buf[] = {0, 0};
-static chunk_t client_error_code = chunk_from_buf(client_error_code_buf);
+static chunk_t client_error_code = chunk_from_chars(0, 0);
 
 /** previously used sqn by peer, next one must be greater */
 static u_int8_t peer_sqn_buf[6];
-static chunk_t peer_sqn = chunk_from_buf(peer_sqn_buf);
+static chunk_t peer_sqn = {peer_sqn_buf, sizeof(peer_sqn_buf)};
 
 /** set SQN to the current time */
 static void update_sqn(u_int8_t *sqn, time_t offset)

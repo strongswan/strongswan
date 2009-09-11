@@ -130,77 +130,34 @@ static const asn1Object_t envelopedDataObjects[] = {
 /**
  * PKCS7 contentInfo OIDs
  */
-
-static u_char ASN1_pkcs7_data_oid_str[] = {
+static chunk_t ASN1_pkcs7_data_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01
-};
-
-static u_char ASN1_pkcs7_signed_data_oid_str[] = {
+);
+static chunk_t ASN1_pkcs7_signed_data_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x02
-};
-
-static u_char ASN1_pkcs7_enveloped_data_oid_str[] = {
+);
+static chunk_t ASN1_pkcs7_enveloped_data_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x03
-};
-
-static u_char ASN1_pkcs7_signed_enveloped_data_oid_str[] = {
+);
+static chunk_t ASN1_pkcs7_signed_enveloped_data_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x04
-};
-
-static u_char ASN1_pkcs7_digested_data_oid_str[] = {
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x05
-};
-
-static char ASN1_pkcs7_encrypted_data_oid_str[] = {
+);
+static chunk_t ASN1_pkcs7_digested_data_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
-};
-
-static const chunk_t ASN1_pkcs7_data_oid =
-						chunk_from_buf(ASN1_pkcs7_data_oid_str);
-static const chunk_t ASN1_pkcs7_signed_data_oid =
-						chunk_from_buf(ASN1_pkcs7_signed_data_oid_str);
-static const chunk_t ASN1_pkcs7_enveloped_data_oid =
-						chunk_from_buf(ASN1_pkcs7_enveloped_data_oid_str);
-static const chunk_t ASN1_pkcs7_signed_enveloped_data_oid =
-						chunk_from_buf(ASN1_pkcs7_signed_enveloped_data_oid_str);
-static const chunk_t ASN1_pkcs7_digested_data_oid =
-						chunk_from_buf(ASN1_pkcs7_digested_data_oid_str);
-static const chunk_t ASN1_pkcs7_encrypted_data_oid =
-						chunk_from_buf(ASN1_pkcs7_encrypted_data_oid_str);
-
-/**
- * 3DES and DES encryption OIDs
- */
-
-static u_char ASN1_3des_ede_cbc_oid_str[] = {
-	0x06, 0x08, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x03, 0x07
-};
-
-static u_char ASN1_des_cbc_oid_str[] = {
-	0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x07
-};
-
-static const chunk_t ASN1_3des_ede_cbc_oid =
-						chunk_from_buf(ASN1_3des_ede_cbc_oid_str);
-static const chunk_t ASN1_des_cbc_oid =
-						chunk_from_buf(ASN1_des_cbc_oid_str);
+);
+static chunk_t ASN1_pkcs7_encrypted_data_oid = chunk_from_chars(
+	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x05
+);
 
 /**
  * PKCS#7 attribute type OIDs
  */
-
-static u_char ASN1_contentType_oid_str[] = {
+static chunk_t ASN1_contentType_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-};
-
-static u_char ASN1_messageDigest_oid_str[] = {
+);
+static chunk_t ASN1_messageDigest_oid = chunk_from_chars(
 	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-};
-
-static const chunk_t ASN1_contentType_oid =
-						chunk_from_buf(ASN1_contentType_oid_str);
-static const chunk_t ASN1_messageDigest_oid =
-						chunk_from_buf(ASN1_messageDigest_oid_str);
+);
 
 /**
  * Parse PKCS#7 ContentInfo object
