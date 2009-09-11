@@ -34,7 +34,7 @@ static int issue(int argc, char *argv[])
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL;
 	identification_t *id = NULL;
-	linked_list_t *san;
+	linked_list_t *san, *cdps;
 	int lifetime = 1080;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
@@ -45,6 +45,7 @@ static int issue(int argc, char *argv[])
 
 	options = options_create();
 	san = linked_list_create();
+	cdps = linked_list_create();
 
 	while (TRUE)
 	{
@@ -82,6 +83,9 @@ static int issue(int argc, char *argv[])
 				continue;
 			case 'k':
 				cakey = optarg;
+				continue;
+			case 'u':
+				cdps->insert_last(cdps, optarg);
 				continue;
 			case 'd':
 				dn = optarg;
@@ -208,7 +212,7 @@ static int issue(int argc, char *argv[])
 					BUILD_NOT_BEFORE_TIME, not_before, BUILD_DIGEST_ALG, digest,
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
-					BUILD_END);
+					BUILD_CRL_DISTRIBUTION_POINTS, cdps, BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -233,6 +237,7 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	cdps->destroy(cdps);
 	options->destroy(options);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -246,6 +251,7 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	cdps->destroy(cdps);
 	options->destroy(options);
 	return command_usage(error);
 }
@@ -259,7 +265,7 @@ static void __attribute__ ((constructor))reg()
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10]",
-		 " --cacert file --cakey file",
+		 " --cacert file --cakey file [--cdp uri]+",
 		 " --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
@@ -270,6 +276,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",	't', 1, "type of input, default: pub"},
 			{"cacert",	'c', 1, "CA certificate file"},
 			{"cakey",	'k', 1, "CA private key file"},
+			{"cdp",		'u', 1, "CRL distribution point URI to include"},
 			{"dn",		'd', 1, "distinguished name to include as subject"},
 			{"san",		'a', 1, "subjectAltName to include in certificate"},
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
