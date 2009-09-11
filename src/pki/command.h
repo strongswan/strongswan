@@ -32,12 +32,12 @@
 /**
  * Maximum number of options in a command (+1)
  */
-#define MAX_OPTIONS 14
+#define MAX_OPTIONS 20
 
 /**
  * Maximum number of usage summary lines (+1)
  */
-#define MAX_LINES 8
+#define MAX_LINES 10
 
 typedef struct command_t command_t;
 typedef enum command_type_t command_type_t;

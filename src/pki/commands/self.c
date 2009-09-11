@@ -34,7 +34,7 @@ static int self(int argc, char *argv[])
 	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL;
 	identification_t *id = NULL;
-	linked_list_t *san;
+	linked_list_t *san, *ocsp;
 	int lifetime = 1080;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
@@ -44,6 +44,7 @@ static int self(int argc, char *argv[])
 
 	options = options_create();
 	san = linked_list_create();
+	ocsp = linked_list_create();
 
 	while (TRUE)
 	{
@@ -101,8 +102,11 @@ static int self(int argc, char *argv[])
 			case 's':
 				hex = optarg;
 				continue;
-			case 'c':
+			case 'b':
 				flags |= X509_CA;
+				continue;
+			case 'o':
+				ocsp->insert_last(ocsp, optarg);
 				continue;
 			case EOF:
 				break;
@@ -168,7 +172,8 @@ static int self(int argc, char *argv[])
 						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
-						BUILD_SUBJECT_ALTNAMES, san, BUILD_END);
+						BUILD_SUBJECT_ALTNAMES, san,
+						BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -192,6 +197,7 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	ocsp->destroy(ocsp);
 	options->destroy(options);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -205,6 +211,7 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	ocsp->destroy(ocsp);
 	options->destroy(options);
 	return command_usage(error);
 }
@@ -219,7 +226,7 @@ static void __attribute__ ((constructor))reg()
 		"create a self signed certificate",
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--ca]",
+		 "[--lifetime days] [--serial hex] [--ca] [--ocsp URI]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
 		 "[--options file]"},
 		{
@@ -231,6 +238,7 @@ static void __attribute__ ((constructor))reg()
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
+			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to incude"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}
