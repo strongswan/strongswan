@@ -1182,7 +1182,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t extensions = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
-	chunk_t crlDistributionPoints = chunk_empty;
+	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -1315,6 +1315,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)));
 	}
 
+	/* encode CRL distribution points extension */
 	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
 	while (enumerator->enumerate(enumerator, &uri))
 	{
@@ -1338,6 +1339,29 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 						asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
 	}
 
+	/* encode OCSP URIs in authorityInfoAccess extension */
+	enumerator = cert->ocsp_uris->create_enumerator(cert->ocsp_uris);
+	while (enumerator->enumerate(enumerator, &uri))
+	{
+		chunk_t accessDescription;
+
+		accessDescription = asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_build_known_oid(OID_OCSP),
+								asn1_wrap(ASN1_CONTEXT_S_6, "c",
+										  chunk_create(uri, strlen(uri))));
+		authorityInfoAccess = chunk_cat("mm", authorityInfoAccess,
+										accessDescription);
+	}
+	enumerator->destroy(enumerator);
+	if (authorityInfoAccess.ptr)
+	{
+		authorityInfoAccess = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(OID_AUTHORITY_INFO_ACCESS),
+					asn1_wrap(ASN1_OCTET_STRING, "m",
+						asn1_wrap(ASN1_SEQUENCE, "m", authorityInfoAccess)));
+	}
+
+	/* build CA basicConstraint for CA certificates */
 	if (cert->flags & X509_CA)
 	{
 		chunk_t keyid;
@@ -1377,10 +1401,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		crlDistributionPoints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmm",
 							basicConstraints, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
-							crlDistributionPoints));
+							crlDistributionPoints, authorityInfoAccess));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -1508,6 +1532,21 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				while (enumerator->enumerate(enumerator, &uri))
 				{
 					cert->crl_uris->insert_last(cert->crl_uris, strdup(uri));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_OCSP_ACCESS_LOCATIONS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				char *uri;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &uri))
+				{
+					cert->ocsp_uris->insert_last(cert->ocsp_uris, strdup(uri));
 				}
 				enumerator->destroy(enumerator);
 				continue;
