@@ -77,6 +77,7 @@ static void add_filter(private_session_t *this, filter_t *filter)
  */
 static void create_sid(private_session_t *this, request_t *request)
 {
+	char buf[16];
 	rng_t *rng;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
