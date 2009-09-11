@@ -93,6 +93,8 @@ enum builder_part_t {
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */
 	BUILD_CERT,
+	/** CRL distribution point URIs, linked_list_t* containing char* */
+	BUILD_CRL_DISTRIBUTION_POINTS,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */

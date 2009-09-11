@@ -121,7 +121,7 @@ struct private_x509_cert_t {
 	linked_list_t *crl_uris;
 
 	/**
-	 * List ocspAccessLocations as identification_t
+	 * List ocspAccessLocations as allocated char*
 	 */
 	linked_list_t *ocsp_uris;
 
@@ -1183,12 +1183,14 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t extensions = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
+	chunk_t crlDistributionPoints = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
 	enumerator_t *enumerator;
 	identification_t *id;
+	char *uri;
 
 	subject = cert->subject;
 	if (sign_cert)
@@ -1314,6 +1316,29 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)));
 	}
 
+	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
+	while (enumerator->enumerate(enumerator, &uri))
+	{
+		chunk_t distributionPoint;
+
+		distributionPoint = asn1_wrap(ASN1_SEQUENCE, "m",
+								asn1_wrap(ASN1_CONTEXT_C_0, "m",
+									asn1_wrap(ASN1_CONTEXT_C_0, "m",
+										asn1_wrap(ASN1_CONTEXT_S_6, "c",
+											chunk_create(uri, strlen(uri))))));
+
+		crlDistributionPoints = chunk_cat("mm", crlDistributionPoints,
+										  distributionPoint);
+	}
+	enumerator->destroy(enumerator);
+	if (crlDistributionPoints.ptr)
+	{
+		crlDistributionPoints = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(OID_CRL_DISTRIBUTION_POINTS),
+					asn1_wrap(ASN1_OCTET_STRING, "m",
+						asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
+	}
+
 	if (cert->flags & X509_CA)
 	{
 		chunk_t yes, keyid;
@@ -1349,12 +1374,14 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 									asn1_wrap(ASN1_CONTEXT_S_0, "c", keyid))));
 		}
 	}
-	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr)
+	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
+		crlDistributionPoints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmm",
 							basicConstraints, subjectKeyIdentifier,
-							authKeyIdentifier, subjectAltNames));
+							authKeyIdentifier, subjectAltNames,
+							crlDistributionPoints));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -1467,6 +1494,21 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				{
 					cert->subjectAltNames->insert_last(
 										cert->subjectAltNames, id->clone(id));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_CRL_DISTRIBUTION_POINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				char *uri;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &uri))
+				{
+					cert->crl_uris->insert_last(cert->crl_uris, strdup(uri));
 				}
 				enumerator->destroy(enumerator);
 				continue;
