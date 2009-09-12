@@ -97,9 +97,9 @@
                 0x04         "messageDigest"			OID_PKCS9_MESSAGE_DIGEST
                 0x05         "signingTime"				OID_PKCS9_SIGNING_TIME
                 0x06         "counterSignature"
-                0x07         "challengePassword"
+                0x07         "challengePassword"		OID_CHALLENGE_PASSWORD
                 0x08         "unstructuredAddress"
-                0x0E         "extensionRequest"
+                0x0E         "extensionRequest"			OID_EXTENSION_REQUEST
                 0x0F         "S/MIME Capabilities"
             0x02             "digestAlgorithm"
               0x02           "md2"						OID_MD2
