@@ -273,7 +273,7 @@ static void __attribute__ ((constructor))reg()
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10]",
 		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--ca] [--crl uri]+ [--ocsp URI]+",
+		 "[--lifetime days] [--serial hex] [--ca] [--crl uri]+ [--ocsp uri]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
 		 "[--options file]"},
 		{
@@ -288,7 +288,7 @@ static void __attribute__ ((constructor))reg()
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
-			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to incude"},
+			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}

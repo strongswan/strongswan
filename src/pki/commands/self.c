@@ -226,7 +226,7 @@ static void __attribute__ ((constructor))reg()
 		"create a self signed certificate",
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--ca] [--ocsp URI]+",
+		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
 		 "[--options file]"},
 		{
@@ -238,7 +238,7 @@ static void __attribute__ ((constructor))reg()
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to incude"},
+			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}
