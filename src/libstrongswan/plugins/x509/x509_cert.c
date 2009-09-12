@@ -126,7 +126,7 @@ struct private_x509_cert_t {
 	linked_list_t *ocsp_uris;
 
 	/**
-	 * certificates embedded public key
+	 * certificate's embedded public key
 	 */
 	public_key_t *public_key;
 
@@ -960,7 +960,7 @@ static public_key_t* get_public_key(private_x509_cert_t *this)
 }
 
 /**
- * Implementation of certificate_t.asdf
+ * Implementation of certificate_t.get_ref
  */
 static private_x509_cert_t* get_ref(private_x509_cert_t *this)
 {
@@ -1095,7 +1095,7 @@ static enumerator_t* create_crl_uri_enumerator(private_x509_cert_t *this)
 }
 
 /**
- * Implementation of certificate_t.asdf
+ * Implementation of certificate_t.destroy.
  */
 static void destroy(private_x509_cert_t *this)
 {
