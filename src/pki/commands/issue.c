@@ -288,7 +288,7 @@ static void __attribute__ ((constructor))reg()
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
-			{"ocsp",	'o', 1, "OCSP AuthoritiyInfoAccess URI to include"},
+			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}
