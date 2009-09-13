@@ -1463,9 +1463,9 @@ x509_cert_t *x509_cert_load(certificate_type_t type, va_list args)
 		private_x509_cert_t *cert = create_empty();
 
 		cert->encoding = chunk_clone(blob);
+		cert->parsed = TRUE;
 		if (parse_certificate(cert))
 		{
-			cert->parsed = TRUE;
 			return &cert->public;
 		}
 		destroy(cert);
