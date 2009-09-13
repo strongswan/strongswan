@@ -21,6 +21,7 @@
 #include "x509_crl.h"
 #include "x509_ocsp_request.h"
 #include "x509_ocsp_response.h"
+#include "x509_pkcs10.h"
 
 typedef struct private_x509_plugin_t private_x509_plugin_t;
 
@@ -54,6 +55,10 @@ static void destroy(private_x509_plugin_t *this)
 							   (builder_function_t)x509_ocsp_request_gen);
 	lib->creds->remove_builder(lib->creds,
 							   (builder_function_t)x509_ocsp_response_load);
+	lib->creds->remove_builder(lib->creds,
+							   (builder_function_t)x509_pkcs10_gen);
+	lib->creds->remove_builder(lib->creds,
+							   (builder_function_t)x509_pkcs10_load);
 	free(this);
 }
 
@@ -80,6 +85,10 @@ plugin_t *plugin_create()
 							(builder_function_t)x509_ocsp_request_gen);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
 							(builder_function_t)x509_ocsp_response_load);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+							(builder_function_t)x509_pkcs10_gen);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+							(builder_function_t)x509_pkcs10_load);
 
 	return &this->public.plugin;
 }

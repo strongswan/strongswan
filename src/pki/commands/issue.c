@@ -21,6 +21,7 @@
 #include <utils/optionsfrom.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/certificates/pkcs10.h>
 
 /**
  * Issue a certificate using a CA certificate and key
@@ -28,9 +29,10 @@
 static int issue(int argc, char *argv[])
 {
 	hash_algorithm_t digest = HASH_SHA1;
-	certificate_t *cert = NULL, *ca =NULL;
+	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
+	bool pkcs10 = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL;
 	identification_t *id = NULL;
@@ -62,7 +64,11 @@ static int issue(int argc, char *argv[])
 				}
 				continue;
 			case 't':
-				if (!streq(optarg, "pub"))
+				if (streq(optarg, "pkcs10"))
+				{
+					pkcs10 = TRUE;
+				}
+				else if (!streq(optarg, "pub"))
 				{
 					error = "invalid input type";
 					goto usage;
@@ -120,7 +126,7 @@ static int issue(int argc, char *argv[])
 		break;
 	}
 
-	if (!dn)
+	if (!pkcs10 && !dn)
 	{
 		error = "--dn is required";
 		goto usage;
@@ -135,11 +141,14 @@ static int issue(int argc, char *argv[])
 		error = "--cakey is required";
 		goto usage;
 	}
-	id = identification_create_from_string(dn);
-	if (id->get_type(id) != ID_DER_ASN1_DN)
+	if (dn)
 	{
-		error = "supplied --dn is not a distinguished name";
-		goto end;
+		id = identification_create_from_string(dn);
+		if (id->get_type(id) != ID_DER_ASN1_DN)
+		{
+			error = "supplied --dn is not a distinguished name";
+			goto end;
+		}
 	}
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_FROM_FILE, cacert, BUILD_END);
@@ -176,22 +185,6 @@ static int issue(int argc, char *argv[])
 	}
 	public->destroy(public);
 
-	if (file)
-	{
-		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-									 BUILD_FROM_FILE, file, BUILD_END);
-	}
-	else
-	{
-		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-									 BUILD_FROM_FD, 0, BUILD_END);
-	}
-	if (!public)
-	{
-		error = "parsing public key failed";
-		goto end;
-	}
-
 	if (hex)
 	{
 		serial = chunk_from_hex(chunk_create(hex, strlen(hex)), NULL);
@@ -208,8 +201,72 @@ static int issue(int argc, char *argv[])
 		rng->allocate_bytes(rng, 8, &serial);
 		rng->destroy(rng);
 	}
+
+	if (pkcs10)
+	{
+		enumerator_t *enumerator;
+		identification_t *subjectAltName;
+		pkcs10_t *req;
+
+		if (file)
+		{
+			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										  CERT_PKCS10_REQUEST,
+										  BUILD_FROM_FILE, file, BUILD_END);
+		}
+		else
+		{
+			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										  CERT_PKCS10_REQUEST,
+										  BUILD_FROM_FD, 0, BUILD_END);
+		}
+		if (!cert_req)
+		{
+			error = "parsing certificate request failed";
+			goto end;
+		}
+
+		/* If not set yet use subject from PKCS#10 certificate request as DN */
+		if (!id)
+		{
+			id = cert_req->get_subject(cert_req);
+			id = id->clone(id);
+		}
+
+		/* Add subjectAltNames from PKCS#10 certificate request */
+		req = (pkcs10_t*)cert_req;
+		enumerator = req->create_subjectAltName_enumerator(req);
+		while (enumerator->enumerate(enumerator, &subjectAltName))
+		{
+			san->insert_last(san, subjectAltName->clone(subjectAltName));
+		}
+		enumerator->destroy(enumerator);
+
+		/* Use public key from PKCS#10 certificate request */
+		public = cert_req->get_public_key(cert_req);
+	}
+	else
+	{
+		if (file)
+		{
+			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+										BUILD_FROM_FILE, file, BUILD_END);
+		}
+		else
+		{
+			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+										 BUILD_FROM_FD, 0, BUILD_END);
+		}
+	}
+	if (!public)
+	{
+		error = "parsing public key failed";
+		goto end;
+	}
+
 	not_before = time(NULL);
 	not_after = not_before + lifetime * 24 * 60 * 60;
+	
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
 					BUILD_PUBLIC_KEY, public, BUILD_SUBJECT, id,
@@ -237,6 +294,7 @@ static int issue(int argc, char *argv[])
 
 end:
 	DESTROY_IF(id);
+	DESTROY_IF(cert_req);
 	DESTROY_IF(cert);
 	DESTROY_IF(ca);
 	DESTROY_IF(public);

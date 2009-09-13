@@ -45,6 +45,8 @@ enum certificate_type_t {
 	CERT_X509_OCSP_RESPONSE,
 	/** X.509 attribute certificate */
 	CERT_X509_AC,
+	/** PKCS#10 certificate request */
+	CERT_PKCS10_REQUEST,
 	/** trusted, preinstalled public key */
 	CERT_TRUSTED_PUBKEY,
 	/** PGP certificate */
@@ -96,7 +98,7 @@ struct certificate_t {
 	/**
 	 * Get the type of the certificate.
 	 *
-	 * @return			certifcate type
+	 * @return			certificate type
 	 */
 	certificate_type_t (*get_type)(certificate_t *this);
 

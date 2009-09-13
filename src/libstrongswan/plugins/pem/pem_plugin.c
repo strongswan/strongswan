@@ -87,6 +87,8 @@ plugin_t *plugin_create()
 							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
 							(builder_function_t)pem_certificate_load);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
 							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG,
