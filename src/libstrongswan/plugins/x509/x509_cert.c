@@ -1220,54 +1220,11 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	}
 
 	/* select signature scheme */
-	switch (sign_key->get_type(sign_key))
+	cert->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
+								sign_key->get_type(sign_key));
+	if (cert->algorithm == OID_UNKNOWN)
 	{
-		case KEY_RSA:
-			switch (digest_alg)
-			{
-				case HASH_MD5:
-					cert->algorithm = OID_MD5_WITH_RSA;
-					break;
-				case HASH_SHA1:
-					cert->algorithm = OID_SHA1_WITH_RSA;
-					break;
-				case HASH_SHA224:
-					cert->algorithm = OID_SHA224_WITH_RSA;
-					break;
-				case HASH_SHA256:
-					cert->algorithm = OID_SHA256_WITH_RSA;
-					break;
-				case HASH_SHA384:
-					cert->algorithm = OID_SHA384_WITH_RSA;
-					break;
-				case HASH_SHA512:
-					cert->algorithm = OID_SHA512_WITH_RSA;
-					break;
-				default:
-					return FALSE;
-			}
-			break;
-		case KEY_ECDSA:
-			switch (digest_alg)
-			{
-				case HASH_SHA1:
-					cert->algorithm = OID_ECDSA_WITH_SHA1;
-					break;
-				case HASH_SHA256:
-					cert->algorithm = OID_ECDSA_WITH_SHA256;
-					break;
-				case HASH_SHA384:
-					cert->algorithm = OID_ECDSA_WITH_SHA384;
-					break;
-				case HASH_SHA512:
-					cert->algorithm = OID_ECDSA_WITH_SHA512;
-					break;
-				default:
-					return FALSE;
-			}
-			break;
-		default:
-			return FALSE;
+		return FALSE;
 	}
 	scheme = signature_scheme_from_oid(cert->algorithm);
 

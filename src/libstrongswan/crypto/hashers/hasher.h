@@ -27,6 +27,7 @@ typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
 #include <library.h>
+#include <credentials/keys/public_key.h>
 
 /**
  * Algorithms to use for hashing.
@@ -129,8 +130,9 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg);
  * Conversion of hash signature algorithm into ASN.1 OID.
  *
  * @param alg			hash algorithm
+ * @param alg			public key type
  * @return				ASN.1 OID if, or OID_UNKNOW
  */
-int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key);
 
 #endif /** HASHER_H_ @}*/

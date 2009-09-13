@@ -825,7 +825,8 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 					  hash_algorithm_t alg)
 {
-	int signature_oid = hasher_signature_algorithm_to_oid(alg);
+	int signature_oid = hasher_signature_algorithm_to_oid(alg,
+							private_key->get_type(private_key));
 	chunk_t authenticatedAttributes = chunk_empty;
 	chunk_t encryptedDigest = chunk_empty;
 	chunk_t signerInfo;

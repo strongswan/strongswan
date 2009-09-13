@@ -28,6 +28,7 @@ typedef enum signature_scheme_t signature_scheme_t;
 
 #include <library.h>
 #include <utils/identification.h>
+#include <credentials/keys/key_encoding.h>
 
 /**
  * Type of a key pair, the used crypto system
