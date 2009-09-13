@@ -53,7 +53,7 @@ x509_pkcs10_t *x509_pkcs10_load(certificate_type_t type, va_list args);
 /**
  * Generate a PKCS#10 certificate request.
  *
- * To issue a self-signed certificate, the function takes:
+ * To issue a self-signed certificate request, the function takes:
  * BUILD_SUBJECT, BUILD_SUBJECT_ALTNAMES, BUILD_SIGNING_KEY, BUILD_DIGEST_ALG.
  *
  * @param type		certificate type, CERT_PKCS10_REQUEST only

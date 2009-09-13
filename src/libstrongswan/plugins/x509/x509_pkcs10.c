@@ -531,12 +531,50 @@ static private_x509_pkcs10_t* create_empty(void)
 }
 
 /**
- * Generate and sign a new certificate
+ * Generate and sign a new certificate request
  */
 static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 					 int digest_alg)
 {
-	/* TODO */
+	chunk_t attributes = chunk_empty;
+	chunk_t key_info;
+	signature_scheme_t scheme;
+	identification_t *subject;
+
+	subject = cert->subject;
+	cert->public_key = sign_key->get_public_key(sign_key);
+
+	/* select signature scheme */
+	cert->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
+									sign_key->get_type(sign_key));
+	if (cert->algorithm == OID_UNKNOWN)
+	{
+		return FALSE;
+	}
+	scheme = signature_scheme_from_oid(cert->algorithm);
+
+	if (!cert->public_key->get_encoding(cert->public_key,
+										KEY_PUB_SPKI_ASN1_DER, &key_info))
+	{
+		return FALSE;
+	}
+
+	cert->certificationRequestInfo = asn1_wrap(ASN1_SEQUENCE, "ccmm",
+							ASN1_INTEGER_0,
+							subject->get_encoding(subject),
+							key_info,
+							asn1_wrap(ASN1_CONTEXT_C_0, "m", attributes));
+
+	if (!sign_key->sign(sign_key, scheme, cert->certificationRequestInfo,
+						&cert->signature))
+	{
+		return FALSE;
+	}
+
+	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
+							   cert->certificationRequestInfo,
+							   asn1_algorithmIdentifier(cert->algorithm),
+							   asn1_bitstring("c", cert->signature));
 	return TRUE;
 }
 
@@ -593,10 +631,6 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 		{
 			case BUILD_SIGNING_KEY:
 				sign_key = va_arg(args, private_key_t*);
-				continue;
-			case BUILD_PUBLIC_KEY:
-				cert->public_key = va_arg(args, public_key_t*);
-				cert->public_key->get_ref(cert->public_key);
 				continue;
 			case BUILD_SUBJECT:
 				cert->subject = va_arg(args, identification_t*);
