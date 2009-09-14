@@ -67,7 +67,7 @@ AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
--DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
+-DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
