@@ -258,8 +258,8 @@ extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, lin
  * ASN.1 definition of a PKCS#10 extension request
  */
 static const asn1Object_t extensionRequestObjects[] = {
- 	{ 0, "extensions",   ASN1_SEQUENCE,     ASN1_LOOP           }, /* 0 */
- 	{ 1,   "extension",   ASN1_SEQUENCE,     ASN1_NONE          }, /* 1 */
+	{ 0, "extensions",   ASN1_SEQUENCE,     ASN1_LOOP           }, /* 0 */
+	{ 1,   "extension",   ASN1_SEQUENCE,     ASN1_NONE          }, /* 1 */
 	{ 2,     "extnID",	  ASN1_OID,          ASN1_BODY          }, /* 2 */
 	{ 2,     "critical",  ASN1_BOOLEAN,      ASN1_DEF|ASN1_BODY }, /* 3 */
 	{ 2,     "extnValue", ASN1_OCTET_STRING, ASN1_BODY          }, /* 4 */
@@ -357,7 +357,7 @@ static bool parse_challengePassword(private_x509_pkcs10_t *this, chunk_t blob, i
 static const asn1Object_t certificationRequestObjects[] = {
 	{ 0, "certificationRequest",       ASN1_SEQUENCE,    ASN1_OBJ  }, /*  0 */
 	{ 1,   "certificationRequestInfo", ASN1_SEQUENCE,    ASN1_OBJ  }, /*  1 */
-	{ 2,     "version",                ASN1_INTEGER,     ASN1_RAW  }, /*  2 */
+	{ 2,     "version",                ASN1_INTEGER,     ASN1_OBJ  }, /*  2 */
 	{ 2,     "subject",                ASN1_SEQUENCE,    ASN1_OBJ  }, /*  3 */
 	{ 2,     "subjectPublicKeyInfo",   ASN1_SEQUENCE,    ASN1_RAW  }, /*  4 */
 	{ 2,     "attributes",             ASN1_CONTEXT_C_0, ASN1_LOOP }, /*  5 */
@@ -405,7 +405,6 @@ static bool parse_certificate_request(private_x509_pkcs10_t *this)
 			case PKCS10_VERSION:
 				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
 				DBG2("  v%d", this->version);
-				break;
 				break;
 			case PKCS10_SUBJECT:
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
