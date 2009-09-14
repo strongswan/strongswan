@@ -52,6 +52,9 @@ static int self(int argc, char *argv[])
 		{
 			case 'h':
 				goto usage;
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case '+':
 				if (!options->from(options, optarg, &argc, &argv, optind))
 				{
@@ -240,6 +243,7 @@ static void __attribute__ ((constructor))reg()
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}
 	});

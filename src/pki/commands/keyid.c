@@ -38,6 +38,9 @@ static int keyid(int argc, char *argv[])
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case 't':
 				if (streq(optarg, "rsa-priv"))
 				{
@@ -152,6 +155,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"type",	't', 1, "type of key, default: rsa-priv"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

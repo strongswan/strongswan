@@ -39,6 +39,9 @@ static int pub(int argc, char *argv[])
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -145,6 +148,7 @@ static void __attribute__ ((constructor))reg()
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"type",	't', 1, "type of credential, default: rsa"},
 			{"outform",	'f', 1, "encoding of extracted public key"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

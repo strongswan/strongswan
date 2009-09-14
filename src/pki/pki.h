@@ -27,6 +27,11 @@
 #include <credentials/keys/private_key.h>
 
 /**
+ * Defines the settable debug level
+ */
+extern int dbg_level;
+
+/**
  * Convert a form string to a encoding type
  */
 bool get_form(char *form, key_encoding_type_t *type, bool pub);

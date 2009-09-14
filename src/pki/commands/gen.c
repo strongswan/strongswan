@@ -32,6 +32,9 @@ static int gen(int argc, char *argv[])
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case 't':
 				if (streq(optarg, "rsa"))
 				{
@@ -118,6 +121,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",	't', 1, "type of key, default: rsa"},
 			{"size",	's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
 			{"outform",	'f', 1, "encoding of generated private key"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

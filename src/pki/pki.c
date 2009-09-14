@@ -16,6 +16,29 @@
 #include "command.h"
 #include "pki.h"
 
+#include <debug.h>
+
+/**
+ * Default debug level
+ */
+int dbg_level = 1;
+
+/**
+ * Logging to stderr with configurable debug level
+ */
+void dbg_pki(int level, char *fmt, ...)
+{
+	if (level <= dbg_level)
+	{
+		va_list args;
+
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
+}
+
 /**
  * Convert a form string to a encoding type
  */
@@ -78,6 +101,8 @@ hash_algorithm_t get_digest(char *name)
  */
 int main(int argc, char *argv[])
 {
+	dbg = dbg_pki;
+
 	atexit(library_deinit);
 	if (!library_init(NULL))
 	{

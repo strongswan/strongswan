@@ -17,6 +17,7 @@
 
 #include "pki.h"
 
+#include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/optionsfrom.h>
 #include <credentials/certificates/certificate.h>
@@ -56,6 +57,9 @@ static int issue(int argc, char *argv[])
 		{
 			case 'h':
 				goto usage;
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case '+':
 				if (!options->from(options, optarg, &argc, &argv, optind))
 				{
@@ -150,6 +154,8 @@ static int issue(int argc, char *argv[])
 			goto end;
 		}
 	}
+
+	DBG2("Reading ca certificate:");
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_FROM_FILE, cacert, BUILD_END);
 	if (!ca)
@@ -163,13 +169,14 @@ static int issue(int argc, char *argv[])
 		error = "CA certificate misses CA basicConstraint";
 		goto end;
 	}
-
 	public = ca->get_public_key(ca);
 	if (!public)
 	{
 		error = "extracting CA certificate public key failed";
 		goto end;
 	}
+
+	DBG2("Reading ca private key:");
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 								 public->get_type(public),
 								 BUILD_FROM_FILE, cakey, BUILD_END);
@@ -208,6 +215,7 @@ static int issue(int argc, char *argv[])
 		identification_t *subjectAltName;
 		pkcs10_t *req;
 
+		DBG2("Reading certificate request");
 		if (file)
 		{
 			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
@@ -247,6 +255,7 @@ static int issue(int argc, char *argv[])
 	}
 	else
 	{
+		DBG2("Reading public key:");
 		if (file)
 		{
 			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
@@ -348,6 +357,7 @@ static void __attribute__ ((constructor))reg()
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 			{"options",	'+', 1, "read command line options from file"},
 		}
 	});

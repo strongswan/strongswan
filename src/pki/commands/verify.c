@@ -33,6 +33,9 @@ static int verify(int argc, char *argv[])
 		{
 			case 'h':
 				return command_usage(NULL);
+			case 'v':
+				dbg_level = atoi(optarg);
+				continue;
 			case 'i':
 				file = optarg;
 				continue;
@@ -129,6 +132,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "x509 certifcate to verify, default: stdin"},
 			{"cacert",	'c', 1, "CA certificate, default: verify self signed"},
+			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }
