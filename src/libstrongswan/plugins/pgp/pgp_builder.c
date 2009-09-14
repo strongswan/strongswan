@@ -15,140 +15,11 @@
  */
 
 #include "pgp_builder.h"
+#include "pgp_utils.h"
 
 #include <enum.h>
 #include <debug.h>
 #include <credentials/keys/private_key.h>
-
-typedef enum pgp_pubkey_alg_t pgp_pubkey_alg_t;
-typedef enum pgp_sym_alg_t pgp_sym_alg_t;
-
-/**
- * OpenPGP public key algorithms as defined in section 9.1 of RFC 4880
- */
-enum pgp_pubkey_alg_t {
-	PGP_PUBKEY_ALG_RSA              =  1,
-	PGP_PUBKEY_ALG_RSA_ENC_ONLY     =  2,
-	PGP_PUBKEY_ALG_RSA_SIGN_ONLY    =  3,
-	PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY = 16,
-	PGP_PUBKEY_ALG_DSA              = 17,
-	PGP_PUBKEY_ALG_ECC              = 18,
-	PGP_PUBKEY_ALG_ECDSA            = 19,
-	PGP_PUBKEY_ALG_ELGAMAL          = 20,
-	PGP_PUBKEY_ALG_DIFFIE_HELLMAN   = 21,
-};
-
-/**
- * OpenPGP symmetric key algorithms as defined in section 9.2 of RFC 4880
- */
-enum pgp_sym_alg_t {
-	PGP_SYM_ALG_PLAIN    =  0,
-	PGP_SYM_ALG_IDEA     =  1,
-	PGP_SYM_ALG_3DES     =  2,
-	PGP_SYM_ALG_CAST5    =  3,
-	PGP_SYM_ALG_BLOWFISH =  4,
-	PGP_SYM_ALG_SAFER    =  5,
-	PGP_SYM_ALG_DES      =  6,
-	PGP_SYM_ALG_AES_128  =  7,
-	PGP_SYM_ALG_AES_192  =  8,
-	PGP_SYM_ALG_AES_256  =  9,
-	PGP_SYM_ALG_TWOFISH  = 10
-};
-
-ENUM_BEGIN(pgp_pubkey_alg_names, PGP_PUBKEY_ALG_RSA, PGP_PUBKEY_ALG_RSA_SIGN_ONLY,
-	"RSA",
-	"RSA_ENC_ONLY",
-	"RSA_SIGN_ONLY"
-);
-ENUM_NEXT(pgp_pubkey_alg_names, PGP_PUBKEY_ALG_ELGAMAL_ENC_ONLY, PGP_PUBKEY_ALG_DIFFIE_HELLMAN, PGP_PUBKEY_ALG_RSA_SIGN_ONLY,
-	"ELGAMAL_ENC_ONLY",
-	"DSA",
-	"ECC",
-	"ECDSA",
-	"ELGAMAL",
-	"DIFFIE_HELLMAN"
-);
-ENUM_END(pgp_pubkey_alg_names, PGP_PUBKEY_ALG_DIFFIE_HELLMAN);
-
-ENUM(pgp_sym_alg_names, PGP_SYM_ALG_PLAIN, PGP_SYM_ALG_TWOFISH,
-	"PLAINTEXT",
-	"IDEA",
-	"3DES",
-	"CAST5",
-	"BLOWFISH",
-	"SAFER",
-	"DES",
-	"AES_128",
-	"AES_192",
-	"AES_256",
-	"TWOFISH"
-);
-
-/**
- * Read a PGP scalar of bytes length, advance blob
- */
-static bool read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
-{
-	u_int32_t res = 0;
-
-	if (bytes > blob->len)
-	{
-		DBG1("PGP data too short to read %d byte scalar", bytes);
-		return FALSE;
-	}
-	while (bytes-- > 0)
-	{
-		res = 256 * res + blob->ptr[0];
-		*blob = chunk_skip(*blob, 1);
-	}
-	*scalar = res;
-	return TRUE;
-}
-
-/**
- * Read length of an PGP old packet length encoding
- */
-static bool old_packet_length(chunk_t *blob, u_int32_t *length)
-{
-	/* bits 0 and 1 define the packet length type */
-	u_char type;
-
-	if (!blob->len)
-	{
-		return FALSE;
-	}
-	type = 0x03 & blob->ptr[0];
-	*blob = chunk_skip(*blob, 1);
-
-	if (type > 2)
-	{
-		return FALSE;
-	}
-	return read_scalar(blob, type == 0 ? 1 : type * 2, length);
-}
-
-/**
- * Read a PGP MPI, advance blob
- */
-static bool read_mpi(chunk_t *blob, chunk_t *mpi)
-{
-	u_int32_t bits, bytes;
-
-	if (!read_scalar(blob, 2, &bits))
-	{
-		DBG1("PGP data too short to read MPI length");
-		return FALSE;
-	}
-	bytes = (bits + 7) / 8;
-	if (bytes > blob->len)
-	{
-		DBG1("PGP data too short to read %d byte MPI", bytes);
-		return FALSE;
-	}
-	*mpi = chunk_create(blob->ptr, bytes);
-	*blob = chunk_skip(*blob, bytes);
-	return TRUE;
-}
 
 /**
  * Load a generic public key from a PGP packet
@@ -158,7 +29,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 	u_int32_t alg;
 	public_key_t *key;
 
-	if (!read_scalar(&blob, 1, &alg))
+	if (!pgp_read_scalar(&blob, 1, &alg))
 	{
 		return NULL;
 	}
@@ -187,7 +58,7 @@ static public_key_t *parse_rsa_public_key(chunk_t blob)
 
 	for (i = 0; i < 2; i++)
 	{
-		if (!read_mpi(&blob, &mpi[i]))
+		if (!pgp_read_mpi(&blob, &mpi[i]))
 		{
 			return NULL;
 		}
@@ -208,12 +79,12 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 
 	for (i = 0; i < 2; i++)
 	{
-		if (!read_mpi(&blob, &mpi[i]))
+		if (!pgp_read_mpi(&blob, &mpi[i]))
 		{
 			return NULL;
 		}
 	}
-	if (!read_scalar(&blob, 1, &s2k))
+	if (!pgp_read_scalar(&blob, 1, &s2k))
 	{
 		return NULL;
 	}
@@ -230,7 +101,7 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 
 	for (i = 2; i < 6; i++)
 	{
-		if (!read_mpi(&blob, &mpi[i]))
+		if (!pgp_read_mpi(&blob, &mpi[i]))
 		{
 			return NULL;
 		}
@@ -270,56 +141,37 @@ static bool decrypt_not_allowed(private_key_t *this,
 static private_key_t *parse_private_key(chunk_t blob)
 {
 	chunk_t packet;
-	u_char tag, type;
-	u_int32_t len, version, created, days, alg;
+	pgp_packet_tag_t tag;
+	u_int32_t version, created, days, alg;
 	private_key_t *key;
 
-	tag = blob.ptr[0];
-
-	/* bit 7 must be set */
-	if (!(tag & 0x80))
-	{
-		DBG1("invalid packet tag");
-		return NULL;
-	}
-	/* bit 6 set defines new packet format */
-	if (tag & 0x40)
-	{
-		DBG1("new PGP packet format not supported");
-		return NULL;
-	}
-
-	type = (tag & 0x3C) >> 2;
-	if (!old_packet_length(&blob, &len) || len > blob.len)
-	{
-		DBG1("invalid packet length");
-		return NULL;
-	}
-	packet.len = len;
-	packet.ptr = blob.ptr;
-	blob = chunk_skip(blob, len);
-
-	if (!read_scalar(&packet, 1, &version))
+	if (!pgp_read_packet(&blob, &packet, &tag))
 	{
 		return NULL;
 	}
-	if (version < 3 || version > 4)
+	if (!pgp_read_scalar(&packet, 1, &version))
 	{
-		DBG1("OpenPGP packet version V%d not supported", version);
+		return FALSE;
+	}
+	switch (version)
+	{
+		case 3:
+			if (!pgp_read_scalar(&packet, 2, &days))
+			{
+				return NULL;
+			}
+			break;
+		case 4:
+			break;
+		default:
+			DBG1("PGP packet version V%d not supported", version);
+			return FALSE;
+	}
+	if (!pgp_read_scalar(&packet, 4, &created))
+	{
 		return NULL;
 	}
-	if (!read_scalar(&packet, 4, &created))
-	{
-		return NULL;
-	}
-	if (version == 3)
-	{
-		if (!read_scalar(&packet, 2, &days))
-		{
-			return NULL;
-		}
-	}
-	if (!read_scalar(&packet, 1, &alg))
+	if (!pgp_read_scalar(&packet, 1, &alg))
 	{
 		return NULL;
 	}
