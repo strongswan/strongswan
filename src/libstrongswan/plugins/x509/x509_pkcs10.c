@@ -357,7 +357,7 @@ static bool parse_challengePassword(private_x509_pkcs10_t *this, chunk_t blob, i
 static const asn1Object_t certificationRequestObjects[] = {
 	{ 0, "certificationRequest",       ASN1_SEQUENCE,    ASN1_OBJ  }, /*  0 */
 	{ 1,   "certificationRequestInfo", ASN1_SEQUENCE,    ASN1_OBJ  }, /*  1 */
-	{ 2,     "version",                ASN1_INTEGER,     ASN1_OBJ  }, /*  2 */
+	{ 2,     "version",                ASN1_INTEGER,     ASN1_BODY }, /*  2 */
 	{ 2,     "subject",                ASN1_SEQUENCE,    ASN1_OBJ  }, /*  3 */
 	{ 2,     "subjectPublicKeyInfo",   ASN1_SEQUENCE,    ASN1_RAW  }, /*  4 */
 	{ 2,     "attributes",             ASN1_CONTEXT_C_0, ASN1_LOOP }, /*  5 */
@@ -403,8 +403,11 @@ static bool parse_certificate_request(private_x509_pkcs10_t *this)
 				this->certificationRequestInfo = object;
 				break;
 			case PKCS10_VERSION:
-				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2("  v%d", this->version);
+				if (object.len > 0 && *object.ptr != 0)
+				{
+					DBG1("PKCS#10 certificate request format is not version 1");
+					goto end;
+				}
 				break;
 			case PKCS10_SUBJECT:
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
