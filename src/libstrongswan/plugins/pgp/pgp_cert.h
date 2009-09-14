@@ -43,6 +43,6 @@ struct pgp_cert_t {
  * @param args		builder_part_t argument list
  * @return 			builder instance
  */
-pgp_cert_t *pgp_cert_load(certificate_t type, va_list args);
+pgp_cert_t *pgp_cert_load(certificate_type_t type, va_list args);
 
 #endif /* PGP_CERT_ @}*/

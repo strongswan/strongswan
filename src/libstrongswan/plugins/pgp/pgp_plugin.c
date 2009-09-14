@@ -18,6 +18,7 @@
 #include <library.h>
 #include "pgp_builder.h"
 #include "pgp_encoder.h"
+#include "pgp_cert.h"
 
 typedef struct private_pgp_plugin_t private_pgp_plugin_t;
 
@@ -42,6 +43,9 @@ static void destroy(private_pgp_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 							(builder_function_t)pgp_private_key_load);
 
+	lib->creds->remove_builder(lib->creds,
+							(builder_function_t)pgp_cert_load);
+
 	lib->encoding->remove_encoder(lib->encoding, pgp_encoder_encode);
 
 	free(this);
@@ -64,6 +68,9 @@ plugin_t *plugin_create()
 							(builder_function_t)pgp_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							(builder_function_t)pgp_private_key_load);
+
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG,
+							(builder_function_t)pgp_cert_load);
 
 	lib->encoding->add_encoder(lib->encoding, pgp_encoder_encode);
 

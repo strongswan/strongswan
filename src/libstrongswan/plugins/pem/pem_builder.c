@@ -375,6 +375,11 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
 			 * RSA for PGP keys, which is actually wrong. */
 			subtype = KEY_ANY;
 		}
+		/* if CERT_ANY is given, ASN1 encoded blob is handled as X509 */
+		if (type == CRED_CERTIFICATE && subtype == CERT_ANY)
+		{
+			subtype = pgp ? CERT_GPG : CERT_X509;
+		}
 	}
 	cred = lib->creds->create(lib->creds, type, subtype,
 							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,

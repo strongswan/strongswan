@@ -240,8 +240,8 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 					(cert == CERT_X509_CRL)? (void*)crl_filter : (void*)ac_filter,
 					data, (void*)id_data_destroy);
 	}
-	if (cert != CERT_X509 && cert != CERT_ANY)
-	{	/* we only have X509 certificates. TODO: ACs? */
+	if (cert != CERT_X509 && cert != CERT_GPG && cert != CERT_ANY)
+	{	/* we have X509/PGP certificates. TODO: ACs? */
 		return NULL;
 	}
 	data = malloc_thing(id_data_t);
@@ -484,9 +484,8 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 	}
 
 	cert = lib->creds->create(lib->creds,
-							  CRED_CERTIFICATE, CERT_X509,
+							  CRED_CERTIFICATE, CERT_ANY,
 							  BUILD_FROM_FILE, path,
-							  BUILD_X509_FLAG, 0,
 							  BUILD_END);
 	if (cert)
 	{

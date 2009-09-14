@@ -347,7 +347,7 @@ static bool parse_user_id(private_pgp_cert_t *this, chunk_t packet)
 /**
  * See header.
  */
-pgp_cert_t *pgp_cert_load(certificate_t type, va_list args)
+pgp_cert_t *pgp_cert_load(certificate_type_t type, va_list args)
 {
 	chunk_t packet, blob = chunk_empty;
 	pgp_packet_tag_t tag;
