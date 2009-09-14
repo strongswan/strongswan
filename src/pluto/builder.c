@@ -39,7 +39,7 @@
  */
 static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 {
-	chunk_t blob;
+	chunk_t blob = chunk_empty;
 	bool pgp = FALSE;
 
 	while (TRUE)
@@ -57,6 +57,7 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 			default:
 				return NULL;
 		}
+		break;
 	}
 	if (blob.ptr)
 	{
@@ -114,6 +115,7 @@ static x509acert_t *builder_load_ac(certificate_type_t type, va_list args)
 			default:
 				return NULL;
 		}
+		break;
 	}
 	if (blob.ptr)
 	{
@@ -135,7 +137,7 @@ static x509acert_t *builder_load_ac(certificate_type_t type, va_list args)
  */
 static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 {
-	chunk_t blob;
+	chunk_t blob = chunk_empty;
 	x509crl_t *crl;
 
 	while (TRUE)
@@ -150,6 +152,7 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 			default:
 				return NULL;
 		}
+		break;
 	}
 	if (blob.ptr)
 	{
