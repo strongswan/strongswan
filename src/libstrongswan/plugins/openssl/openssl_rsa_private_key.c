@@ -327,14 +327,39 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 														va_list args)
 {
 	private_openssl_rsa_private_key_t *this;
-	chunk_t blob = chunk_empty;
+	chunk_t blob, n, e, d, p, q, exp1, exp2, coeff;
 
+	blob = n = e = d = p = q = exp1 = exp2 = coeff = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_ASN1_DER:
 				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_MODULUS:
+				n = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PUB_EXP:
+				e = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIV_EXP:
+				d = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME1:
+				p = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PRIME2:
+				q = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_EXP1:
+				exp1 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_EXP2:
+				exp2 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_COEFF:
+				coeff = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -345,18 +370,33 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 	}
 
 	this = create_empty();
-	this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-	if (!this->rsa)
+	if (blob.ptr)
 	{
-		destroy(this);
-		return NULL;
+		this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
+		if (this->rsa && RSA_check_key(this->rsa))
+		{
+			return &this->public;
+		}
 	}
-	if (!RSA_check_key(this->rsa))
+	else if (n.ptr && e.ptr && d.ptr && p.ptr && q.ptr &&
+			 exp1.ptr && exp2.ptr && coeff.ptr)
 	{
-		destroy(this);
-		return NULL;
+		this->rsa = RSA_new();
+		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
+		this->rsa->e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
+		this->rsa->d = BN_bin2bn((const u_char*)d.ptr, d.len, NULL);
+		this->rsa->p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
+		this->rsa->q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
+		this->rsa->dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
+		this->rsa->dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
+		this->rsa->iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
+		if (RSA_check_key(this->rsa))
+		{
+			return &this->public;
+		}
 	}
-	return &this->public;
+	destroy(this);
+	return NULL;
 }
 
 /**

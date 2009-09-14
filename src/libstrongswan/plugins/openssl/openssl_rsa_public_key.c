@@ -304,14 +304,21 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 													  va_list args)
 {
 	private_openssl_rsa_public_key_t *this;
-	chunk_t blob;
+	chunk_t blob, n, e;
 
+	n = e = blob = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_ASN1_DER:
 				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_MODULUS:
+				n = va_arg(args, chunk_t);
+				continue;
+			case BUILD_RSA_PUB_EXP:
+				e = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -322,12 +329,22 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 	}
 
 	this = create_empty();
-	this->rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr, blob.len);
-	if (!this->rsa)
+	if (blob.ptr)
 	{
-		destroy(this);
-		return NULL;
+		this->rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr, blob.len);
+		if (this->rsa)
+		{
+			return &this->public;
+		}
 	}
-	return &this->public;
+	else if (n.ptr && e.ptr)
+	{
+		this->rsa = RSA_new();
+		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
+		this->rsa->e = BN_bin2bn((const u_char*)e.ptr, e.len, NULL);
+		return &this->public;
+	}
+	destroy(this);
+	return NULL;
 }
 
