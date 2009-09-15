@@ -378,8 +378,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 			return &this->public;
 		}
 	}
-	else if (n.ptr && e.ptr && d.ptr && p.ptr && q.ptr &&
-			 exp1.ptr && exp2.ptr && coeff.ptr)
+	else if (n.ptr && e.ptr && d.ptr && p.ptr && q.ptr && coeff.ptr)
 	{
 		this->rsa = RSA_new();
 		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);
@@ -387,8 +386,14 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 		this->rsa->d = BN_bin2bn((const u_char*)d.ptr, d.len, NULL);
 		this->rsa->p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
 		this->rsa->q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
-		this->rsa->dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
-		this->rsa->dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
+		if (exp1.ptr)
+		{
+			this->rsa->dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
+		}
+		if (exp2.ptr)
+		{
+			this->rsa->dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
+		}
 		this->rsa->iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
 		if (RSA_check_key(this->rsa))
 		{
