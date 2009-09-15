@@ -25,11 +25,6 @@
 
 #include <sa/ike_sa.h>
 
-/**
- * UDP port we use for communication
- */
-#define HA_SYNC_PORT 4510
-
 typedef struct ha_sync_socket_t ha_sync_socket_t;
 
 /**
@@ -52,14 +47,6 @@ struct ha_sync_socket_t {
 	ha_sync_message_t *(*pull)(ha_sync_socket_t *this);
 
 	/**
-	 * Check if an IKE_SA is used for exchanging sync messages.
-	 *
-	 * @param ike_Sa	ike_sa to check
-	 * @return			TRUE if IKE_SA is used to secure sync messages
-	 */
-	bool (*is_sync_sa)(ha_sync_socket_t *this, ike_sa_t *ike_sa);
-
-	/**
 	 * Destroy a ha_sync_socket_t.
 	 */
 	void (*destroy)(ha_sync_socket_t *this);
@@ -68,6 +55,6 @@ struct ha_sync_socket_t {
 /**
  * Create a ha_sync_socket instance.
  */
-ha_sync_socket_t *ha_sync_socket_create();
+ha_sync_socket_t *ha_sync_socket_create(char *local, char *remote);
 
 #endif /* HA_SYNC_SOCKET_ @}*/

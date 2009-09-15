@@ -26,6 +26,11 @@
 
 #include <plugins/plugin.h>
 
+/**
+ * UDP port we use for communication
+ */
+#define HA_SYNC_PORT 4510
+
 typedef struct ha_sync_plugin_t ha_sync_plugin_t;
 
 /**

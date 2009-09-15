@@ -17,6 +17,7 @@
 #include "ha_sync_ike.h"
 #include "ha_sync_child.h"
 #include "ha_sync_socket.h"
+#include "ha_sync_tunnel.h"
 #include "ha_sync_dispatcher.h"
 #include "ha_sync_segments.h"
 #include "ha_sync_ctl.h"
@@ -40,6 +41,11 @@ struct private_ha_sync_plugin_t {
 	 * Communication socket
 	 */
 	ha_sync_socket_t *socket;
+
+	/**
+	 * Tunnel securing sync messages.
+	 */
+	ha_sync_tunnel_t *tunnel;
 
 	/**
 	 * IKE_SA synchronization
@@ -72,10 +78,7 @@ struct private_ha_sync_plugin_t {
  */
 static void destroy(private_ha_sync_plugin_t *this)
 {
-	if (this->ctl)
-	{
-		this->ctl->destroy(this->ctl);
-	}
+	DESTROY_IF(this->ctl);
 	charon->bus->remove_listener(charon->bus, &this->ike->listener);
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
@@ -83,6 +86,7 @@ static void destroy(private_ha_sync_plugin_t *this)
 	this->dispatcher->destroy(this->dispatcher);
 	this->segments->destroy(this->segments);
 	this->socket->destroy(this->socket);
+	DESTROY_IF(this->tunnel);
 	free(this);
 }
 
@@ -91,28 +95,50 @@ static void destroy(private_ha_sync_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	private_ha_sync_plugin_t *this = malloc_thing(private_ha_sync_plugin_t);
+	private_ha_sync_plugin_t *this;
+	char *local, *remote, *secret;
+	bool fifo;
+
+	local = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.local", NULL);
+	remote = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.remote", NULL);
+	secret = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.secret", NULL);
+	fifo = lib->settings->get_bool(lib->settings,
+								"charon.plugins.ha_sync.fifo_interface", FALSE);
+	if (!local || !remote)
+	{
+		DBG1(DBG_CFG, "HA sync config misses local/remote address");
+		return NULL;
+	}
+
+	this = malloc_thing(private_ha_sync_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	this->tunnel = NULL;
+	this->ctl = NULL;
 
-	this->socket = ha_sync_socket_create();
+	this->socket = ha_sync_socket_create(local, remote);
 	if (!this->socket)
 	{
 		free(this);
 		return NULL;
 	}
 	this->segments = ha_sync_segments_create();
-	this->dispatcher = ha_sync_dispatcher_create(this->socket);
-	this->ike = ha_sync_ike_create(this->socket);
-	this->child = ha_sync_child_create(this->socket);
-	charon->bus->add_listener(charon->bus, &this->ike->listener);
-	charon->bus->add_listener(charon->bus, &this->child->listener);
-	this->ctl = NULL;
-	if (lib->settings->get_bool(lib->settings,
-								"charon.plugins.ha_sync.fifo_interface", FALSE))
+	if (secret)
+	{
+		this->tunnel = ha_sync_tunnel_create(secret, local, remote);
+	}
+	if (fifo)
 	{
 		this->ctl = ha_sync_ctl_create(this->segments);
 	}
+	this->dispatcher = ha_sync_dispatcher_create(this->socket);
+	this->ike = ha_sync_ike_create(this->socket, this->tunnel);
+	this->child = ha_sync_child_create(this->socket, this->tunnel);
+	charon->bus->add_listener(charon->bus, &this->ike->listener);
+	charon->bus->add_listener(charon->bus, &this->child->listener);
 
 	return &this->public.plugin;
 }
