@@ -128,7 +128,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--ca file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "x509 certifcate to verify, default: stdin"},
+			{"in",		'i', 1, "X.509 certificate to verify, default: stdin"},
 			{"cacert",	'c', 1, "CA certificate, default: verify self signed"},
 		}
 	});
