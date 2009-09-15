@@ -18,14 +18,13 @@
 #include "pki.h"
 
 #include <utils/linked_list.h>
-#include <utils/optionsfrom.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 
 /**
  * Create a self signed certificate.
  */
-static int self(int argc, char *argv[])
+static int self()
 {
 	key_type_t type = KEY_RSA;
 	hash_algorithm_t digest = HASH_SHA1;
@@ -40,34 +39,26 @@ static int self(int argc, char *argv[])
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
-	options_t *options;
+	char *arg;
 
-	options = options_create();
 	san = linked_list_create();
 	ocsp = linked_list_create();
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				goto usage;
 			case 'v':
-				dbg_level = atoi(optarg);
-				continue;
-			case '+':
-				if (!options->from(options, optarg, &argc, &argv, optind))
-				{
-					error = "invalid options file";
-					goto usage;
-				}
+				dbg_level = atoi(arg);
 				continue;
 			case 't':
-				if (streq(optarg, "rsa"))
+				if (streq(arg, "rsa"))
 				{
 					type = KEY_RSA;
 				}
-				else if (streq(optarg, "ecdsa"))
+				else if (streq(arg, "ecdsa"))
 				{
 					type = KEY_ECDSA;
 				}
@@ -78,7 +69,7 @@ static int self(int argc, char *argv[])
 				}
 				continue;
 			case 'g':
-				digest = get_digest(optarg);
+				digest = get_digest(arg);
 				if (digest == HASH_UNKNOWN)
 				{
 					error = "invalid --digest type";
@@ -86,16 +77,16 @@ static int self(int argc, char *argv[])
 				}
 				continue;
 			case 'i':
-				file = optarg;
+				file = arg;
 				continue;
 			case 'd':
-				dn = optarg;
+				dn = arg;
 				continue;
 			case 'a':
-				san->insert_last(san, identification_create_from_string(optarg));
+				san->insert_last(san, identification_create_from_string(arg));
 				continue;
 			case 'l':
-				lifetime = atoi(optarg);
+				lifetime = atoi(arg);
 				if (!lifetime)
 				{
 					error = "invalid --lifetime value";
@@ -103,13 +94,13 @@ static int self(int argc, char *argv[])
 				}
 				continue;
 			case 's':
-				hex = optarg;
+				hex = arg;
 				continue;
 			case 'b':
 				flags |= X509_CA;
 				continue;
 			case 'o':
-				ocsp->insert_last(ocsp, optarg);
+				ocsp->insert_last(ocsp, arg);
 				continue;
 			case EOF:
 				break;
@@ -201,7 +192,6 @@ end:
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	ocsp->destroy(ocsp);
-	options->destroy(options);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -215,7 +205,6 @@ end:
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	ocsp->destroy(ocsp);
-	options->destroy(options);
 	return command_usage(error);
 }
 
@@ -230,8 +219,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
-		 "[--options file]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
@@ -243,8 +231,6 @@ static void __attribute__ ((constructor))reg()
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
-			{"options",	'+', 1, "read command line options from file"},
 		}
 	});
 }

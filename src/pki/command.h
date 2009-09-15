@@ -21,9 +21,6 @@
 #ifndef COMMAND_H_
 #define COMMAND_H_
 
-#define _GNU_SOURCE
-#include <getopt.h>
-
 /**
  * Maximum number of commands.
  */
@@ -40,14 +37,29 @@
 #define MAX_LINES 10
 
 typedef struct command_t command_t;
+typedef struct command_option_t command_option_t;
 typedef enum command_type_t command_type_t;
+
+/**
+ * Option specification
+ */
+struct command_option_t {
+	/** long option string of the option */
+	char *name;
+	/** short option character of the option */
+	char op;
+	/** expected argument to option, no/req/opt_argument */
+	int arg;
+	/** description of the option */
+	char *desc;
+};
 
 /**
  * Command specification.
  */
 struct command_t {
 	/** Function implementing the command */
-	int (*call)(int, char*[]);
+	int (*call)();
 	/** short option character */
 	char op;
 	/** long option string */
@@ -57,27 +69,13 @@ struct command_t {
 	/** usage summary of the command */
 	char *line[MAX_LINES];
 	/** list of options the command accepts */
-	struct {
-		/** long option string of the option */
-		char *name;
-		/** short option character of the option */
-		char op;
-		/** expected argument to option, no/req/opt_argument */
-		int arg;
-		/** description of the option */
-		char *desc;
-	} options[MAX_OPTIONS];
+	command_option_t options[MAX_OPTIONS];
 };
 
 /**
- * Options of the active command.
+ * Get the next option, as with getopt.
  */
-extern struct option command_opts[];
-
-/**
- * Short option string of the active command.
- */
-extern char command_optstring[];
+int command_getopt(char **arg);
 
 /**
  * Register a command.

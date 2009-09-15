@@ -18,29 +18,30 @@
 /**
  * Generate a private key
  */
-static int gen(int argc, char *argv[])
+static int gen()
 {
 	key_encoding_type_t form = KEY_PRIV_ASN1_DER;
 	key_type_t type = KEY_RSA;
 	u_int size = 0;
 	private_key_t *key;
 	chunk_t encoding;
+	char *arg;
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				return command_usage(NULL);
 			case 'v':
-				dbg_level = atoi(optarg);
+				dbg_level = atoi(arg);
 				continue;
 			case 't':
-				if (streq(optarg, "rsa"))
+				if (streq(arg, "rsa"))
 				{
 					type = KEY_RSA;
 				}
-				else if (streq(optarg, "ecdsa"))
+				else if (streq(arg, "ecdsa"))
 				{
 					type = KEY_ECDSA;
 				}
@@ -50,13 +51,13 @@ static int gen(int argc, char *argv[])
 				}
 				continue;
 			case 'o':
-				if (!get_form(optarg, &form, FALSE))
+				if (!get_form(arg, &form, FALSE))
 				{
 					return command_usage("invalid key output format");
 				}
 				continue;
 			case 's':
-				size = atoi(optarg);
+				size = atoi(arg);
 				if (!size)
 				{
 					return command_usage("invalid key size");
@@ -121,7 +122,6 @@ static void __attribute__ ((constructor))reg()
 			{"type",	't', 1, "type of key, default: rsa"},
 			{"size",	's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
 			{"outform",	'f', 1, "encoding of generated private key"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

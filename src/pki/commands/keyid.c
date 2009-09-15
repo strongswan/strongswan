@@ -21,7 +21,7 @@
 /**
  * Calculate the keyid of a key/certificate
  */
-static int keyid(int argc, char *argv[])
+static int keyid()
 {
 	credential_type_t type = CRED_PRIVATE_KEY;
 	int subtype = KEY_RSA;
@@ -31,38 +31,36 @@ static int keyid(int argc, char *argv[])
 	char *file = NULL;
 	void *cred;
 	chunk_t id;
+	char *arg;
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				return command_usage(NULL);
-			case 'v':
-				dbg_level = atoi(optarg);
-				continue;
 			case 't':
-				if (streq(optarg, "rsa-priv"))
+				if (streq(arg, "rsa-priv"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_RSA;
 				}
-				else if (streq(optarg, "ecdsa-priv"))
+				else if (streq(arg, "ecdsa-priv"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
-				else if (streq(optarg, "pub"))
+				else if (streq(arg, "pub"))
 				{
 					type = CRED_PUBLIC_KEY;
 					subtype = KEY_ANY;
 				}
-				else if (streq(optarg, "pkcs10"))
+				else if (streq(arg, "pkcs10"))
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_PKCS10_REQUEST;
 				}
-				else if (streq(optarg, "x509"))
+				else if (streq(arg, "x509"))
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509;
@@ -73,7 +71,7 @@ static int keyid(int argc, char *argv[])
 				}
 				continue;
 			case 'i':
-				file = optarg;
+				file = arg;
 				continue;
 			case EOF:
 				break;
@@ -155,13 +153,11 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|pkcs10|x509]",
-		 "[--debug 0|1|2|3|4]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|pkcs10|x509]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"type",	't', 1, "type of key, default: rsa-priv"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

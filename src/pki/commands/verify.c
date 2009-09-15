@@ -21,26 +21,24 @@
 /**
  * Verify a certificate signature
  */
-static int verify(int argc, char *argv[])
+static int verify()
 {
 	certificate_t *cert, *ca;
 	char *file = NULL, *cafile = NULL;
 	bool good = FALSE;
+	char *arg;
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				return command_usage(NULL);
-			case 'v':
-				dbg_level = atoi(optarg);
-				continue;
 			case 'i':
-				file = optarg;
+				file = arg;
 				continue;
 			case 'c':
-				cafile = optarg;
+				cafile = arg;
 				continue;
 			case EOF:
 				break;
@@ -132,7 +130,6 @@ static void __attribute__ ((constructor))reg()
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "x509 certifcate to verify, default: stdin"},
 			{"cacert",	'c', 1, "CA certificate, default: verify self signed"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

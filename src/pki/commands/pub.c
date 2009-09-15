@@ -21,7 +21,7 @@
 /**
  * Extract a public key from a private key/certificate
  */
-static int pub(int argc, char *argv[])
+static int pub()
 {
 	key_encoding_type_t form = KEY_PUB_SPKI_ASN1_DER;
 	credential_type_t type = CRED_PRIVATE_KEY;
@@ -32,33 +32,31 @@ static int pub(int argc, char *argv[])
 	chunk_t encoding;
 	char *file = NULL;
 	void *cred;
+	char *arg;
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				return command_usage(NULL);
-			case 'v':
-				dbg_level = atoi(optarg);
-				continue;
 			case 't':
-				if (streq(optarg, "rsa"))
+				if (streq(arg, "rsa"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_RSA;
 				}
-				else if (streq(optarg, "ecdsa"))
+				else if (streq(arg, "ecdsa"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
-				else if (streq(optarg, "pkcs10"))
+				else if (streq(arg, "pkcs10"))
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_PKCS10_REQUEST;
 				}
-				else if (streq(optarg, "x509"))
+				else if (streq(arg, "x509"))
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509;
@@ -69,13 +67,13 @@ static int pub(int argc, char *argv[])
 				}
 				continue;
 			case 'f':
-				if (!get_form(optarg, &form, TRUE))
+				if (!get_form(arg, &form, TRUE))
 				{
 					return command_usage("invalid output format");
 				}
 				continue;
 			case 'i':
-				file = optarg;
+				file = arg;
 				continue;
 			case EOF:
 				break;
@@ -147,14 +145,12 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
-		{"[--in file] [--type rsa|ecdsa|pkcs10|x509] [--outform der|pem|pgp]",
-		 "[--debug 0|1|2|3|4]"},
+		{"[--in file] [--type rsa|ecdsa|pkcs10|x509] [--outform der|pem|pgp]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"type",	't', 1, "type of credential, default: rsa"},
 			{"outform",	'f', 1, "encoding of extracted public key"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
 		}
 	});
 }

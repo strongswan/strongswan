@@ -19,7 +19,6 @@
 
 #include <debug.h>
 #include <utils/linked_list.h>
-#include <utils/optionsfrom.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/pkcs10.h>
@@ -27,7 +26,7 @@
 /**
  * Issue a certificate using a CA certificate and key
  */
-static int issue(int argc, char *argv[])
+static int issue()
 {
 	hash_algorithm_t digest = HASH_SHA1;
 	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
@@ -44,42 +43,31 @@ static int issue(int argc, char *argv[])
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
 	x509_t *x509;
-	options_t *options;
+	char *arg;
 
-	options = options_create();
 	san = linked_list_create();
 	cdps = linked_list_create();
 	ocsp = linked_list_create();
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
+		switch (command_getopt(&arg))
 		{
 			case 'h':
 				goto usage;
-			case 'v':
-				dbg_level = atoi(optarg);
-				continue;
-			case '+':
-				if (!options->from(options, optarg, &argc, &argv, optind))
-				{
-					error = "invalid options file";
-					goto usage;
-				}
-				continue;
 			case 't':
-				if (streq(optarg, "pkcs10"))
+				if (streq(arg, "pkcs10"))
 				{
 					pkcs10 = TRUE;
 				}
-				else if (!streq(optarg, "pub"))
+				else if (!streq(arg, "pub"))
 				{
 					error = "invalid input type";
 					goto usage;
 				}
 				continue;
 			case 'g':
-				digest = get_digest(optarg);
+				digest = get_digest(arg);
 				if (digest == HASH_UNKNOWN)
 				{
 					error = "invalid --digest type";
@@ -87,22 +75,22 @@ static int issue(int argc, char *argv[])
 				}
 				continue;
 			case 'i':
-				file = optarg;
+				file = arg;
 				continue;
 			case 'c':
-				cacert = optarg;
+				cacert = arg;
 				continue;
 			case 'k':
-				cakey = optarg;
+				cakey = arg;
 				continue;
 			case 'd':
-				dn = optarg;
+				dn = arg;
 				continue;
 			case 'a':
-				san->insert_last(san, identification_create_from_string(optarg));
+				san->insert_last(san, identification_create_from_string(arg));
 				continue;
 			case 'l':
-				lifetime = atoi(optarg);
+				lifetime = atoi(arg);
 				if (!lifetime)
 				{
 					error = "invalid --lifetime value";
@@ -110,16 +98,16 @@ static int issue(int argc, char *argv[])
 				}
 				continue;
 			case 's':
-				hex = optarg;
+				hex = arg;
 				continue;
 			case 'b':
 				flags |= X509_CA;
 				continue;
 			case 'u':
-				cdps->insert_last(cdps, optarg);
+				cdps->insert_last(cdps, arg);
 				continue;
 			case 'o':
-				ocsp->insert_last(ocsp, optarg);
+				ocsp->insert_last(ocsp, arg);
 				continue;
 			case EOF:
 				break;
@@ -311,7 +299,6 @@ end:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
-	options->destroy(options);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -326,7 +313,6 @@ usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
-	options->destroy(options);
 	return command_usage(error);
 }
 
@@ -341,8 +327,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type pub|pkcs10]",
 		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--crl uri]+ [--ocsp uri]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]",
-		 "[--options file]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "public key/request file to issue, default: stdin"},
@@ -357,8 +342,6 @@ static void __attribute__ ((constructor))reg()
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"debug",	'v', 1, "set debug level, default: 1"},
-			{"options",	'+', 1, "read command line options from file"},
 		}
 	});
 }
