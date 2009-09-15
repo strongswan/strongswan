@@ -1174,6 +1174,58 @@ static private_x509_cert_t* create_empty(void)
 }
 
 /**
+ * Encode a linked list of subjectAltNames
+ */
+chunk_t x509_build_subjectAltNames(linked_list_t *list)
+{
+	chunk_t subjectAltNames = chunk_empty;
+	enumerator_t *enumerator;
+	identification_t *id;
+
+	if (list->get_count(list) == 0)
+	{
+		return chunk_empty;
+	}
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		int context;
+		chunk_t name;
+
+		switch (id->get_type(id))
+		{
+			case ID_RFC822_ADDR:
+				context = ASN1_CONTEXT_S_1;
+				break;
+			case ID_FQDN:
+				context = ASN1_CONTEXT_S_2;
+				break;
+			case ID_IPV4_ADDR:
+			case ID_IPV6_ADDR:
+				context = ASN1_CONTEXT_S_7;
+				break;
+			default:
+				DBG1("encoding %N as subjectAltName not supported",
+					 id_type_names, id->get_type(id));
+				enumerator->destroy(enumerator);
+				free(subjectAltNames.ptr);
+				return chunk_empty;
+		}
+		name = asn1_wrap(context, "c", id->get_encoding(id));
+		subjectAltNames = chunk_cat("mm", subjectAltNames, name);
+	}
+	enumerator->destroy(enumerator);
+
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_SUBJECT_ALT_NAME),
+						asn1_wrap(ASN1_OCTET_STRING, "m",
+							asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)
+						)
+					 );
+}
+
+/**
  * Generate and sign a new certificate
  */
 static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
@@ -1188,7 +1240,6 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	signature_scheme_t scheme;
 	hasher_t *hasher;
 	enumerator_t *enumerator;
-	identification_t *id;
 	char *uri;
 
 	subject = cert->subject;
@@ -1234,43 +1285,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		return FALSE;
 	}
 
-	enumerator = cert->subjectAltNames->create_enumerator(cert->subjectAltNames);
-	while (enumerator->enumerate(enumerator, &id))
-	{
-		int context;
-		chunk_t name;
-
-		switch (id->get_type(id))
-		{
-			case ID_RFC822_ADDR:
-				context = ASN1_CONTEXT_S_1;
-				break;
-			case ID_FQDN:
-				context = ASN1_CONTEXT_S_2;
-				break;
-			case ID_IPV4_ADDR:
-			case ID_IPV6_ADDR:
-				context = ASN1_CONTEXT_S_7;
-				break;
-			default:
-				DBG1("encoding %N as subjectAltName not supported",
-					 id_type_names, id->get_type(id));
-				enumerator->destroy(enumerator);
-				free(key_info.ptr);
-				free(subjectAltNames.ptr);
-				return FALSE;
-		}
-		name = asn1_wrap(context, "c", id->get_encoding(id));
-		subjectAltNames = chunk_cat("mm", subjectAltNames, name);
-	}
-	enumerator->destroy(enumerator);
-	if (subjectAltNames.ptr)
-	{
-		subjectAltNames = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_build_known_oid(OID_SUBJECT_ALT_NAME),
-							asn1_wrap(ASN1_OCTET_STRING, "m",
-								asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)));
-	}
+	/* encode subjectAltNames */
+	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
 
 	/* encode CRL distribution points extension */
 	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
@@ -1472,8 +1488,8 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				enumerator = list->create_enumerator(list);
 				while (enumerator->enumerate(enumerator, &id))
 				{
-					cert->subjectAltNames->insert_last(
-										cert->subjectAltNames, id->clone(id));
+					cert->subjectAltNames->insert_last(cert->subjectAltNames,
+													id->clone(id));
 				}
 				enumerator->destroy(enumerator);
 				continue;

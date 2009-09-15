@@ -99,6 +99,12 @@ struct private_x509_pkcs10_t {
 };
 
 /**
+ * Imported from x509_cert.c
+ */
+extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
+extern chunk_t x509_build_subjectAltNames(linked_list_t *list);
+
+/**
  * Implementation of certificate_t.get_type.
  */
 static certificate_type_t get_type(private_x509_pkcs10_t *this)
@@ -248,11 +254,6 @@ static enumerator_t* create_subjectAltName_enumerator(private_x509_pkcs10_t *thi
 {
 	return this->subjectAltNames->create_enumerator(this->subjectAltNames);
 }
-
-/**
- * Imported from x509_cert.c
- */
-extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
 
 /**
  * ASN.1 definition of a PKCS#10 extension request
@@ -538,8 +539,9 @@ static private_x509_pkcs10_t* create_empty(void)
 static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 					 int digest_alg)
 {
-	chunk_t attributes = chunk_empty;
-	chunk_t key_info;
+	chunk_t key_info, subjectAltNames, attributes;
+	chunk_t extensionRequest  = chunk_empty;
+	chunk_t challengePassword = chunk_empty;
 	signature_scheme_t scheme;
 	identification_t *subject;
 
@@ -561,11 +563,37 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 		return FALSE;
 	}
 
+	/* encode subjectAltNames */
+	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
+
+	if (subjectAltNames.ptr)
+	{
+		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(OID_EXTENSION_REQUEST),
+					asn1_wrap(ASN1_SET, "m",
+						asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)
+					));
+	}
+	if (cert->challengePassword.len > 0)
+	{
+		asn1_t type = asn1_is_printablestring(cert->challengePassword) ?
+								ASN1_PRINTABLESTRING : ASN1_T61STRING;
+
+		challengePassword = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
+					asn1_wrap(ASN1_SET, "m",
+						asn1_simple_object(type, cert->challengePassword)
+					)
+			);
+	}
+	attributes = asn1_wrap(ASN1_CONTEXT_C_0, "mm", extensionRequest,
+												   challengePassword);
+
 	cert->certificationRequestInfo = asn1_wrap(ASN1_SEQUENCE, "ccmm",
 							ASN1_INTEGER_0,
 							subject->get_encoding(subject),
 							key_info,
-							asn1_wrap(ASN1_CONTEXT_C_0, "m", attributes));
+							attributes);
 
 	if (!sign_key->sign(sign_key, scheme, cert->certificationRequestInfo,
 						&cert->signature))
@@ -648,12 +676,15 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 				enumerator = list->create_enumerator(list);
 				while (enumerator->enumerate(enumerator, &id))
 				{
-					cert->subjectAltNames->insert_last(
-										cert->subjectAltNames, id->clone(id));
+					cert->subjectAltNames->insert_last(cert->subjectAltNames,
+													   id->clone(id));
 				}
 				enumerator->destroy(enumerator);
 				continue;
 			}
+			case BUILD_PASSPHRASE:
+				cert->challengePassword = chunk_clone(va_arg(args, chunk_t));
+				continue;
 			case BUILD_DIGEST_ALG:
 				digest_alg = va_arg(args, int);
 				continue;
