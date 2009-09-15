@@ -13,13 +13,6 @@
  * for more details.
  */
 
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <linux/rtnetlink.h>
-#ifdef HAVE_SYS_SOCKIO_H
-#include <sys/sockio.h>
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -34,6 +27,15 @@
 #include "interfaces.h"
 #include "exec.h"
 #include "files.h"
+
+#ifdef START_PLUTO
+
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <linux/rtnetlink.h>
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
 
 /*
  * Get the default route information via rtnetlink
@@ -175,3 +177,18 @@ get_defaultroute(defaultroute_t *defaultroute)
 	if (!defaultroute->defined)
 		plog("no default route - cannot cope with %%defaultroute!!!");
 }
+
+#else /* !START_PLUTO */
+
+/**
+ * Pluto disabled, fall back to %any
+ */
+void
+get_defaultroute(defaultroute_t *defaultroute)
+{
+	memset(defaultroute, 0, sizeof(defaultroute_t));
+	defaultroute->defined = TRUE;
+	plog("%%defaultroute not supported, fallback to %%any");
+}
+#endif /* START_PLUTO */
+
