@@ -1458,7 +1458,11 @@ static private_key_t *get_private(private_credential_manager_t *this,
 	/* check if this is a lookup by key ID, and do it if so */
 	if (id && id->get_type(id) == ID_KEY_ID)
 	{
-		return get_private_by_keyid(this, type, id);
+		private = get_private_by_keyid(this, type, id);
+		if (private)
+		{
+			return private;
+		}
 	}
 
 	/* if a specific certificate is preferred, check for a matching key */
