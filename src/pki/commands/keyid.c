@@ -57,6 +57,11 @@ static int keyid(int argc, char *argv[])
 					type = CRED_PUBLIC_KEY;
 					subtype = KEY_ANY;
 				}
+				else if (streq(optarg, "pkcs10"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_PKCS10_REQUEST;
+				}
 				else if (streq(optarg, "x509"))
 				{
 					type = CRED_CERTIFICATE;
@@ -150,7 +155,8 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|pkcs10|x509]",
+		 "[--debug 0|1|2|3|4]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},

@@ -53,6 +53,11 @@ static int pub(int argc, char *argv[])
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
+				else if (streq(optarg, "pkcs10"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_PKCS10_REQUEST;
+				}
 				else if (streq(optarg, "x509"))
 				{
 					type = CRED_CERTIFICATE;
@@ -142,7 +147,8 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
-		{"[--in file] [--type rsa|ecdsa|x509] [--outform der|pem|pgp]"},
+		{"[--in file] [--type rsa|ecdsa|pkcs10|x509] [--outform der|pem|pgp]",
+		 "[--debug 0|1|2|3|4]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
