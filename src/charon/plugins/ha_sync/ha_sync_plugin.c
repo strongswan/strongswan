@@ -72,12 +72,15 @@ struct private_ha_sync_plugin_t {
  */
 static void destroy(private_ha_sync_plugin_t *this)
 {
+	if (this->ctl)
+	{
+		this->ctl->destroy(this->ctl);
+	}
 	charon->bus->remove_listener(charon->bus, &this->ike->listener);
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
-	this->ctl->destroy(this->ctl);
 	this->segments->destroy(this->segments);
 	this->socket->destroy(this->socket);
 	free(this);
@@ -99,12 +102,17 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 	this->segments = ha_sync_segments_create();
-	this->ctl = ha_sync_ctl_create(this->segments);
 	this->dispatcher = ha_sync_dispatcher_create(this->socket);
 	this->ike = ha_sync_ike_create(this->socket);
 	this->child = ha_sync_child_create(this->socket);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
+	this->ctl = NULL;
+	if (lib->settings->get_bool(lib->settings,
+								"charon.plugins.ha_sync.fifo_interface", FALSE))
+	{
+		this->ctl = ha_sync_ctl_create(this->segments);
+	}
 
 	return &this->public.plugin;
 }
