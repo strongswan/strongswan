@@ -37,14 +37,14 @@ struct ha_sync_segments_t {
 	 * This involves moving all SAs to the daemons IKE_SA manager and handle
 	 * them actively now.
 	 *
-	 * @param segment	numerical segments to takeover
+	 * @param segment	numerical segment to takeover, 0 for all
 	 */
 	void (*activate)(ha_sync_segments_t *this, u_int segment);
 
 	/**
 	 * Deactivate a set of IKE_SAs identified by a segments.
 	 *
-	 * @param segment	numerical segments to takeover
+	 * @param segment	numerical segment to takeover, 0 for all
 	 */
 	void (*deactivate)(ha_sync_segments_t *this, u_int segment);
 

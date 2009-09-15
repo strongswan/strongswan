@@ -104,31 +104,70 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 }
 
 /**
- * Implementation of ha_sync_segments_t.activate
+ * Get the bit of the segment in the bitmask
  */
-static void activate(private_ha_sync_segments_t *this, u_int segment)
+static inline u_int16_t bit_of(u_int segment)
+{
+	return 0x01 << (segment - 1);
+}
+
+/**
+ * Enable/Disable an an IKE_SA.
+ */
+static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
+						   ike_sa_state_t old, ike_sa_state_t new, bool enable)
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
-	u_int16_t mask = 0x01 << (segment - 1);
+	u_int i, limit;
 
-	if (segment > 0 && segment <= this->segment_count && !(this->active & mask))
+	if (segment == 0 || segment <= this->segment_count)
 	{
-		this->active |= mask;
-
+		if (segment)
+		{	/* loop once for single segment ... */
+			limit = segment + 1;
+		}
+		else
+		{	/* or segment_count times for all segments */
+			limit = this->segment_count;
+		}
+		for (i = segment; i < limit; i++)
+		{
+			if (enable)
+			{
+				this->active |= bit_of(i);
+			}
+			else
+			{
+				this->active &= ~bit_of(i);
+			}
+		}
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
-			if (ike_sa->get_state(ike_sa) == IKE_PASSIVE &&
-				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
+			if (ike_sa->get_state(ike_sa) == old)
 			{
-				ike_sa->set_state(ike_sa, IKE_ESTABLISHED);
+				for (i = segment; i < limit; i++)
+				{
+					if (in_segment(this, ike_sa->get_other_host(ike_sa), i))
+					{
+						ike_sa->set_state(ike_sa, new);
+					}
+				}
 			}
 		}
 		enumerator->destroy(enumerator);
 
-		log_segments(this, TRUE, segment);
+		log_segments(this, enable, segment);
 	}
+}
+
+/**
+ * Implementation of ha_sync_segments_t.activate
+ */
+static void activate(private_ha_sync_segments_t *this, u_int segment)
+{
+	return enable_disable(this, segment, IKE_PASSIVE, IKE_ESTABLISHED, TRUE);
 }
 
 /**
@@ -136,27 +175,7 @@ static void activate(private_ha_sync_segments_t *this, u_int segment)
  */
 static void deactivate(private_ha_sync_segments_t *this, u_int segment)
 {
-	ike_sa_t *ike_sa;
-	enumerator_t *enumerator;
-	u_int16_t mask = 0x01 << (segment - 1);
-
-	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
-	{
-		this->active &= ~mask;
-
-		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
-		while (enumerator->enumerate(enumerator, &ike_sa))
-		{
-			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
-			{
-				ike_sa->set_state(ike_sa, IKE_PASSIVE);
-			}
-		}
-		enumerator->destroy(enumerator);
-
-		log_segments(this, FALSE, segment);
-	}
+	return enable_disable(this, segment, IKE_ESTABLISHED, IKE_PASSIVE, FALSE);
 }
 
 /**
@@ -192,8 +211,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	ike_sa_id_t *id;
-	u_int16_t mask = 0x01 << (segment - 1);
-
+	u_int16_t mask = bit_of(segment);
 
 	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
 	{
@@ -277,7 +295,7 @@ ha_sync_segments_t *ha_sync_segments_create()
 		segment = atoi(str);
 		if (segment > 0 && segment < MAX_SEGMENTS)
 		{
-			this->active |= 0x01 << (segment - 1);
+			this->active |= bit_of(segment);
 		}
 	}
 	enumerator->destroy(enumerator);
