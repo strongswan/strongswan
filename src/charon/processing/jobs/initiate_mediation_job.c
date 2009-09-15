@@ -80,6 +80,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 												   this->mediated_sa_id);
 	if (mediated_sa)
 	{
+		DBG1(DBG_IKE, "initiating mediation connection");
 		mediated_cfg = mediated_sa->get_peer_cfg(mediated_sa);
 		mediated_cfg->get_ref(mediated_cfg);
 
@@ -99,6 +100,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 			destroy(this);
 			return;
 		}
+		enumerator->destroy(enumerator);
 
 		if (charon->connect_manager->check_and_register(charon->connect_manager,
 				auth_cfg->get(auth_cfg, AUTH_RULE_IDENTITY),
@@ -142,8 +144,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 		mediation_cfg->destroy(mediation_cfg);
 
 		mediation_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-				this->mediation_sa_id);
-
+														this->mediation_sa_id);
 		if (mediation_sa)
 		{
 			if (mediation_sa->initiate_mediation(mediation_sa,
@@ -163,10 +164,9 @@ static void initiate(private_initiate_mediation_job_t *this)
 				destroy(this);
 				return;
 			}
-
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediation_sa);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+											mediation_sa);
 		}
-
 		mediated_cfg->destroy(mediated_cfg);
 	}
 	destroy(this);
@@ -214,7 +214,8 @@ static void reinitiate(private_initiate_mediation_job_t *this)
 				destroy(this);
 				return;
 			}
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediation_sa);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager,
+											mediation_sa);
 		}
 
 		mediated_cfg->destroy(mediated_cfg);

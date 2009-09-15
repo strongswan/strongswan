@@ -462,10 +462,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 	}
-	else
-	{
-		peer_cfg->destroy(peer_cfg);
-	}
+	peer_cfg->destroy(peer_cfg);
 
 	/**
 	 * Register listener, enable  initiate-failure-detection hooks

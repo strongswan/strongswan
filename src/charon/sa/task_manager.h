@@ -95,7 +95,7 @@ struct task_manager_t {
 	 *
 	 * @param message		message to add payloads to
 	 * @return
-	 * 						- DESTROY_ME if IKE_SA must be closed
+	 *						- DESTROY_ME if IKE_SA must be closed
 	 *						- SUCCESS otherwise
 	 */
 	status_t (*process_message) (task_manager_t *this, message_t *message);
@@ -121,7 +121,7 @@ struct task_manager_t {
 	 *
 	 * @param message_id	ID of the message to retransmit
 	 * @return
-	 * 						- INVALID_STATE if retransmission not required
+	 *						- INVALID_STATE if retransmission not required
 	 *						- SUCCESS if retransmission sent
 	 */
 	status_t (*retransmit) (task_manager_t *this, u_int32_t message_id);
