@@ -340,7 +340,7 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 static bool parse_user_id(private_pgp_cert_t *this, chunk_t packet)
 {
 	DESTROY_IF(this->user_id);
-	this->user_id = identification_create_from_encoding(ID_RFC822_ADDR, packet);
+	this->user_id = identification_create_from_encoding(ID_KEY_ID, packet);
 	return TRUE;
 }
 
