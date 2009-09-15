@@ -53,7 +53,7 @@ static int issue(int argc, char *argv[])
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, "", command_opts, NULL))
+		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
 		{
 			case 'h':
 				goto usage;
@@ -275,7 +275,7 @@ static int issue(int argc, char *argv[])
 
 	not_before = time(NULL);
 	not_after = not_before + lifetime * 24 * 60 * 60;
-	
+
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
 					BUILD_PUBLIC_KEY, public, BUILD_SUBJECT, id,

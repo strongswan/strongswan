@@ -46,19 +46,26 @@ static int help_idx;
 struct option command_opts[MAX_COMMANDS > MAX_OPTIONS ?: MAX_OPTIONS];
 
 /**
- * Build long_opts for a specific command
+ * Global optstring used by all subcommands
+ */
+char command_optstring[(MAX_COMMANDS > MAX_OPTIONS ?: MAX_OPTIONS) * 3];
+
+/**
+ * Build command_opts/command_optstr for the active command
  */
 static void build_opts()
 {
-	int i;
+	int i, pos = 0;
 
 	memset(command_opts, 0, sizeof(command_opts));
+	memset(command_optstring, 0, sizeof(command_optstring));
 	if (active == help_idx)
 	{
 		for (i = 0; cmds[i].cmd; i++)
 		{
 			command_opts[i].name = cmds[i].cmd;
 			command_opts[i].val = cmds[i].op;
+			command_optstring[i] = cmds[i].op;
 		}
 	}
 	else
@@ -68,6 +75,19 @@ static void build_opts()
 			command_opts[i].name = cmds[active].options[i].name;
 			command_opts[i].has_arg = cmds[active].options[i].arg;
 			command_opts[i].val = cmds[active].options[i].op;
+			command_optstring[pos++] = cmds[active].options[i].op;
+			switch (cmds[active].options[i].arg)
+			{
+				case optional_argument:
+					command_optstring[pos++] = ':';
+					/* FALL */
+				case required_argument:
+					command_optstring[pos++] = ':';
+					/* FALL */
+				case no_argument:
+				default:
+					break;
+			}
 		}
 	}
 }
@@ -86,6 +106,7 @@ void command_register(command_t command)
 int command_usage(char *error)
 {
 	FILE *out = stdout;
+	char buf[64];
 	int i;
 
 	if (error)
@@ -99,7 +120,8 @@ int command_usage(char *error)
 	{
 		for (i = 0; cmds[i].cmd; i++)
 		{
-			fprintf(out, "  pki --%-6s %s\n", cmds[i].cmd, cmds[i].description);
+			snprintf(buf, sizeof(buf), "--%s (-%c)", cmds[i].cmd, cmds[i].op);
+			fprintf(out, "  pki %-14s %s\n", buf, cmds[i].description);
 		}
 	}
 	else
@@ -118,8 +140,10 @@ int command_usage(char *error)
 		}
 		for (i = 0; cmds[active].options[i].name; i++)
 		{
-			fprintf(out, "        --%-8s %s\n",
-					cmds[active].options[i].name, cmds[active].options[i].desc);
+			snprintf(buf, sizeof(buf), "--%s (-%c)",
+					 cmds[active].options[i].name, cmds[active].options[i].op);
+			fprintf(out, "        %-15s %s\n",
+					buf, cmds[active].options[i].desc);
 		}
 	}
 	return error != NULL;
@@ -145,7 +169,7 @@ int command_dispatch(int argc, char *argv[])
 	command_register((command_t){help, 'h', "help", "show usage information"});
 
 	build_opts();
-	op = getopt_long(argc, argv, "", command_opts, NULL);
+	op = getopt_long(argc, argv, command_optstring, command_opts, NULL);
 	for (i = 0; cmds[i].cmd; i++)
 	{
 		if (cmds[i].op == op)

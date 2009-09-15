@@ -75,6 +75,11 @@ struct command_t {
 extern struct option command_opts[];
 
 /**
+ * Short option string of the active command.
+ */
+extern char command_optstring[];
+
+/**
  * Register a command.
  */
 void command_register(command_t command);

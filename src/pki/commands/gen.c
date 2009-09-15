@@ -28,7 +28,7 @@ static int gen(int argc, char *argv[])
 
 	while (TRUE)
 	{
-		switch (getopt_long(argc, argv, "", command_opts, NULL))
+		switch (getopt_long(argc, argv, command_optstring, command_opts, NULL))
 		{
 			case 'h':
 				return command_usage(NULL);
