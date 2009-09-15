@@ -21,7 +21,6 @@
 
 #include <utils/linked_list.h>
 #include <credentials/certificates/certificate.h>
-#include <credentials/certificates/x509.h>
 
 /**
  * Create a self-signed PKCS#10 certificate requesst.
@@ -179,7 +178,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
 			{"type",	't', 1, "type of input key, default: rsa"},
-			{"dn",		'd', 1, "subject and issuer distinguished name"},
+			{"dn",		'd', 1, "subject distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in cert request"},
 			{"password",'p', 1, "challengePassword to include in cert request"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
