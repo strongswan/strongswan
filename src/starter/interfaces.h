@@ -23,6 +23,7 @@
 
 typedef struct {
 	bool defined;
+	bool supported;
 	char iface[IFNAMSIZ];
 	ip_address addr;
 	ip_address nexthop;

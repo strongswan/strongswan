@@ -173,6 +173,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 			defaultroute->defined = TRUE;
 		}
 	}
+	defaultroute->supported = TRUE;
 
 	if (!defaultroute->defined)
 		plog("no default route - cannot cope with %%defaultroute!!!");
@@ -186,9 +187,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 void
 get_defaultroute(defaultroute_t *defaultroute)
 {
-	memset(defaultroute, 0, sizeof(defaultroute_t));
-	defaultroute->defined = TRUE;
-	plog("%%defaultroute not supported, fallback to %%any");
+	defaultroute->supported = FALSE;
 }
 #endif /* START_PLUTO */
 

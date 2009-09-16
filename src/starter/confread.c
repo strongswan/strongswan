@@ -245,6 +245,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				end->addr    = cfg->defaultroute.addr;
 				end->nexthop = cfg->defaultroute.nexthop;
 			}
+			else if (!cfg->defaultroute.supported)
+			{
+				plog("%%defaultroute not supported, fallback to %%any");
+			}
 			else
 			{
 				plog("# default route not known: %s=%s", name, value);
