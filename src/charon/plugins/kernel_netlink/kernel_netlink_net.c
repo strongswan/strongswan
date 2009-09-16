@@ -851,13 +851,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 				if (nexthop)
 				{
-					/* nexthop lookup, return gateway */
-					if (rta_gtw.ptr)
-					{
-						DESTROY_IF(gtw);
-						gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
-						best = msg->rtm_dst_len;
-					}
+					/* nexthop lookup, return gateway if any */
+					DESTROY_IF(gtw);
+					gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
+					best = msg->rtm_dst_len;
 					continue;
 				}
 				if (rta_src.ptr)
