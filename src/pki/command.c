@@ -124,7 +124,7 @@ int command_getopt(char **arg)
 				}
 				continue;
 			case 'v':
-				dbg_level = atoi(optarg);
+				dbg_default_set_level(atoi(optarg));
 				continue;
 			default:
 				*arg = optarg;

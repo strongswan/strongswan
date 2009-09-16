@@ -21,6 +21,8 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+#include <stdio.h>
+
 #ifndef DEBUG_LEVEL
 # define DEBUG_LEVEL 4
 #endif /* DEBUG_LEVEL */

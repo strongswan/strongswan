@@ -589,22 +589,6 @@ static void cleanup(void)
 	DESTROY_IF(end);
 }
 
-/**
- * Logging hook for library logs, using stderr output
- */
-static void dbg_stderr(int level, char *fmt, ...)
-{
-	va_list args;
-
-	if (level <= 1)
-	{
-		va_start(args, fmt);
-		vfprintf(stderr, fmt, args);
-		fprintf(stderr, "\n");
-		va_end(args);
-	}
-}
-
 int main(int argc, char *argv[])
 {
 	char *uri, *name = "", *filter = "";
@@ -620,7 +604,6 @@ int main(int argc, char *argv[])
 		OP_PURGE,
 	} operation = OP_USAGE;
 
-	dbg = dbg_stderr;
 	atexit(library_deinit);
 
 	/* initialize library */
