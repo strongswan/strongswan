@@ -789,8 +789,9 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		return NULL;
 	}
 	this->mutex->lock(this->mutex);
-	current = out;
-	while (NLMSG_OK(current, len))
+
+	for (current = out; NLMSG_OK(current, len);
+		 current = NLMSG_NEXT(current, len))
 	{
 		switch (current->nlmsg_type)
 		{
@@ -832,20 +833,20 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				}
 				if (msg->rtm_dst_len <= best)
 				{	/* not better than a previous one */
-					goto next;
+					continue;
 				}
 				if (this->routing_table != 0 &&
 					msg->rtm_table == this->routing_table)
 				{	/* route is from our own ipsec routing table */
-					goto next;
+					continue;
 				}
 				if (rta_oif && !is_interface_up(this, rta_oif))
 				{	/* interface is down */
-					goto next;
+					continue;
 				}
 				if (!addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))
 				{	/* route destination does not contain dest */
-					goto next;
+					continue;
 				}
 
 				if (nexthop)
@@ -857,7 +858,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
 						best = msg->rtm_dst_len;
 					}
-					goto next;
+					continue;
 				}
 				if (rta_src.ptr)
 				{
@@ -873,7 +874,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						src = new_src;
 						best = msg->rtm_dst_len;
 					}
-					goto next;
+					continue;
 				}
 				if (rta_gtw.ptr)
 				{	/* no source, but a gateway. Lookup source to reach gtw. */
@@ -886,13 +887,11 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						src = new_src;
 						best = msg->rtm_dst_len;
 					}
-					goto next;
+					continue;
 				}
-				goto next;
+				continue;
 			}
 			default:
-			next:
-				current = NLMSG_NEXT(current, len);
 				continue;
 		}
 		break;
