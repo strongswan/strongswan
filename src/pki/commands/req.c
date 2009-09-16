@@ -46,9 +46,6 @@ static int req()
 		{
 			case 'h':
 				goto usage;
-			case 'v':
-				dbg_level = atoi(arg);
-				continue;
 			case 't':
 				if (streq(arg, "rsa"))
 				{

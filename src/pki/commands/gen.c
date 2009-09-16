@@ -33,9 +33,6 @@ static int gen()
 		{
 			case 'h':
 				return command_usage(NULL);
-			case 'v':
-				dbg_level = atoi(arg);
-				continue;
 			case 't':
 				if (streq(arg, "rsa"))
 				{
