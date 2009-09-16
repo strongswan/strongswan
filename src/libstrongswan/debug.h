@@ -52,10 +52,16 @@
 # define DBG4(...) {}
 #endif
 
-/** dbg function hook, uses stderr logger by default */
+/** dbg function hook, uses dbg_default() by default */
 extern void (*dbg) (int level, char *fmt, ...);
 
-/** default logging function, prints to stderr */
+/** default logging function */
 void dbg_default(int level, char *fmt, ...);
+
+/** set the level logged by dbg_default() */
+void dbg_default_set_level(int level);
+
+/** set the stream logged by dbg_default() to */
+void dbg_default_set_stream(FILE *stream);
 
 #endif /** DEBUG_H_ @}*/
