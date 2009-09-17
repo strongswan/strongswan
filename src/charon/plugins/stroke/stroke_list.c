@@ -581,14 +581,18 @@ static void list_public_key(public_key_t *public, FILE *out)
 	private_key_t *private = NULL;
 	chunk_t keyid;
 	identification_t *id;
+	auth_cfg_t *auth;
 
 	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
+		auth = auth_cfg_create();
 		private = charon->credentials->get_private(charon->credentials,
-									public->get_type(public), id, NULL);
+									public->get_type(public), id, auth);
+		auth->destroy(auth);
 		id->destroy(id);
 	}
+
 	fprintf(out, "  pubkey:    %N %d bits%s\n",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * 8,
