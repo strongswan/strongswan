@@ -1,11 +1,11 @@
 strongswan-4.3.5
 ----------------
 
-- The private/public key parsing and encoding has been splitted up to the
-  separate pkcs1, pgp, pem and dnskey plugins. The key implementation plugins
-  gmp, gcrypt and openssl can all make use of them.
+- The private/public key parsing and encoding has been split up into
+  separate pkcs1, pgp, pem and dnskey plugins. The public key implementation
+  plugins gmp, gcrypt and openssl can all make use of them.
 
-- The IKEv2 daemon charon gained basic PGP support. It can use pre-installed
+- The IKEv2 daemon charon gained basic PGP support. It can use locally installed
   peer certificates and can issue signatures based on RSA private keys.
 
 - The new 'ipsec pki' tool provides a set of commands to maintain a public
