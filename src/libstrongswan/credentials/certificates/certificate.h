@@ -45,10 +45,10 @@ enum certificate_type_t {
 	CERT_X509_OCSP_RESPONSE,
 	/** X.509 attribute certificate */
 	CERT_X509_AC,
-	/** PKCS#10 certificate request */
-	CERT_PKCS10_REQUEST,
 	/** trusted, preinstalled public key */
 	CERT_TRUSTED_PUBKEY,
+	/** PKCS#10 certificate request */
+	CERT_PKCS10_REQUEST,
 	/** PGP certificate */
 	CERT_GPG,
 	/** Pluto cert_t (not a certificate_t), either x509 or PGP */
