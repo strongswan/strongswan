@@ -790,6 +790,26 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 				pos.len -= AT_MAC_LENGTH;
 				break;
 			}
+			case AT_IDENTITY:
+			{
+				u_int16_t act_len = data.len;
+				/* align up to four byte */
+				if (data.len % 4)
+				{
+					chunk_t tmp = chunk_alloca((data.len/4)*4 + 4);
+					memset(tmp.ptr, 0, tmp.len);
+					memcpy(tmp.ptr, data.ptr, data.len);
+					data = tmp;
+				}
+				*pos.ptr = data.len/4 + 1;
+				pos = chunk_skip(pos, 1);
+				/* actual length in bytes */
+				*(u_int16_t*)pos.ptr = htons(act_len);
+				pos = chunk_skip(pos, sizeof(u_int16_t));
+				memcpy(pos.ptr, data.ptr, data.len);
+				pos = chunk_skip(pos, data.len);
+				break;
+			}
 			default:
 			{
 				/* length is data length in 4-bytes + 1 for header */
@@ -1295,6 +1315,62 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 }
 
 /**
+ * Process an incoming AKA-Identity client side
+ */
+static status_t peer_process_identity(private_eap_aka_t *this,
+									  eap_payload_t *in, eap_payload_t **out)
+{
+	chunk_t identity = chunk_empty, message, pos, attr;
+	u_int8_t identifier;
+
+	identifier = in->get_identifier(in);
+	pos = message = in->get_data(in);
+	read_header(&pos);
+
+	DBG3(DBG_IKE, "reading attributes from %B", &pos);
+
+	/* iterate over attributes */
+	while (TRUE)
+	{
+		aka_attribute_t attribute = read_attribute(&pos, &attr);
+
+		switch (attribute)
+		{
+			case AT_END:
+				break;
+			case AT_PERMANENT_ID_REQ:
+			case AT_FULLAUTH_ID_REQ:
+			case AT_ANY_ID_REQ:
+				/* always respond with full identity */
+				identity = this->peer->get_encoding(this->peer);
+				DBG1(DBG_IKE, "server requested %N, sending '%Y'",
+					 aka_attribute_names, attribute, this->peer);
+				continue;
+			default:
+				if (attribute >= 0 && attribute <= 127)
+				{
+					/* non skippable attribute, abort */
+					*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CLIENT_ERROR,
+								AT_CLIENT_ERROR_CODE, client_error_code, AT_END);
+					DBG1(DBG_IKE, "found non skippable attribute %N, sending %N %d",
+						 aka_attribute_names, attribute,
+						 aka_attribute_names, AT_CLIENT_ERROR_CODE, 0);
+					return NEED_MORE;
+				}
+				DBG1(DBG_IKE, "ignoring skippable attribute %N",
+					 aka_attribute_names, attribute);
+				continue;
+		}
+		break;
+	}
+
+	/* build response */
+	*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_IDENTITY,
+							 AT_IDENTITY, identity, AT_END);
+	return NEED_MORE;
+}
+
+/**
  * Process an incoming AKA-Notification as client
  */
 static status_t peer_process_notification(private_eap_aka_t *this,
@@ -1396,6 +1472,10 @@ static status_t peer_process(private_eap_aka_t *this,
 		case AKA_CHALLENGE:
 		{
 			return peer_process_challenge(this, in, out);
+		}
+		case AKA_IDENTITY:
+		{
+			return peer_process_identity(this, in, out);
 		}
 		case AKA_NOTIFICATION:
 		{
