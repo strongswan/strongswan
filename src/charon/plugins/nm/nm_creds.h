@@ -37,11 +37,18 @@ struct nm_creds_t {
 	credential_set_t set;
 
 	/**
-	 * Set the trusted gateway certificate to serve by this set.
+	 * Add a trusted gateway certificate to serve by this set.
 	 *
 	 * @param cert		certificate to serve
 	 */
-	void (*set_certificate)(nm_creds_t *this, certificate_t *cert);
+	void (*add_certificate)(nm_creds_t *this, certificate_t *cert);
+
+	/**
+	 * Load CA certificates recursively from a directory.
+	 *
+	 * @param dir		directory to PEM encoded CA certificates
+	 */
+	void (*load_ca_dir)(nm_creds_t *this, char *dir);
 
 	/**
 	 * Set the username/password for authentication.

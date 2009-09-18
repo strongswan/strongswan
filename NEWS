@@ -22,6 +22,12 @@ strongswan-4.3.5
   'marginbytes' and 'marginpackets' trigger the rekeying before a SA expires.
   The existing parameter 'rekeyfuzz' affects all margins.
 
+- If no CA/Gateway certificate is specified in the NetworkManager plugin,
+  charon uses a set of trusted root certificates preinstalled by distributions.
+  The directory containing CA certificates can be specified using the
+  --with-nm-ca-dir=path configure option.
+
+
 strongswan-4.3.4
 ----------------
 

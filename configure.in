@@ -36,6 +36,7 @@ ARG_WITH_SUBST([piddir],             [/var/run], [set path for PID and UNIX sock
 ARG_WITH_SUBST([ipsecdir],           [${libexecdir%/}/ipsec], [set installation path for ipsec tools])
 ARG_WITH_SUBST([plugindir],          [${ipsecdir%/}/plugins], [set the installation path of plugins])
 ARG_WITH_SUBST([sim-reader],         [${plugindir%/}/libeapsim-file.so], [set library containing the sim_run_alg()/sim_get_triplet() functions for EAP-SIM])
+ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory the NM plugin uses to look up trusted root certificates])
 ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])

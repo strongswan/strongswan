@@ -1,7 +1,8 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${nm_CFLAGS}
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+  -DNM_CA_DIR=\"${nm_ca_dir}\"
 
 plugin_LTLIBRARIES = libstrongswan-nm.la
 libstrongswan_nm_la_SOURCES = \

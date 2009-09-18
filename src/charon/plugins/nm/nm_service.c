@@ -212,7 +212,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	NMStrongswanPluginPrivate *priv;
 	NMSettingConnection *conn;
 	NMSettingVPN *vpn;
-	identification_t *user = NULL, *gateway;
+	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
 	bool virtual, encap, ipcomp;
 	ike_cfg_t *ike_cfg;
@@ -292,28 +292,36 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_FROM_FILE, str, BUILD_END);
-		priv->creds->set_certificate(priv->creds, cert);
+		if (!cert)
+		{
+			g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"Loading gateway certificate failed.");
+			return FALSE;
+		}
+		priv->creds->add_certificate(priv->creds, cert);
+
+		x509 = (x509_t*)cert;
+		if (!(x509->get_flags(x509) & X509_CA))
+		{	/* For a gateway certificate, we use the cert subject as identity. */
+			gateway = cert->get_subject(cert);
+			gateway = gateway->clone(gateway);
+			DBG1(DBG_CFG, "using gateway certificate, identity '%Y'", gateway);
+		}
 	}
-	if (!cert)
+	else
 	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-					"Loading gateway certificate failed.");
-		return FALSE;
+		/* no certificate defined, fall back to system-wide CA certificates */
+		priv->creds->load_ca_dir(priv->creds, NM_CA_DIR);
 	}
-	x509 = (x509_t*)cert;
-	if (x509->get_flags(x509) & X509_CA)
-	{	/* If the user configured a CA certificate, we use the IP/DNS
+	if (!gateway)
+	{
+		/* If the user configured a CA certificate, we use the IP/DNS
 		 * of the gateway as its identity. This identity will be used for
 		 * certificate lookup and requires the configured IP/DNS to be
 		 * included in the gateway certificate. */
 		gateway = identification_create_from_string((char*)address);
 		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
-	}
-	else
-	{	/* For a gateway certificate, we use the cert subject as identity. */
-		gateway = cert->get_subject(cert);
-		gateway = gateway->clone(gateway);
-		DBG1(DBG_CFG, "using gateway certificate, identity '%Y'", gateway);
 	}
 
 	if (auth_class == AUTH_CLASS_EAP)

@@ -15,8 +15,13 @@
 
 #include "nm_creds.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <daemon.h>
 #include <utils/mutex.h>
+#include <credentials/certificates/x509.h>
 
 typedef struct private_nm_creds_t private_nm_creds_t;
 
@@ -31,9 +36,9 @@ struct private_nm_creds_t {
 	nm_creds_t public;
 
 	/**
-	 * gateway certificate
+	 * List of trusted certificates, certificate_t*
 	 */
-	certificate_t *cert;
+	linked_list_t *certs;
 
 	/**
 	 * User name
@@ -94,6 +99,82 @@ static enumerator_t *create_usercert_enumerator(private_nm_creds_t *this,
 }
 
 /**
+ * CA certificate enumerator data
+ */
+typedef struct {
+	/** ref to credential credential store */
+	private_nm_creds_t *this;
+	/** type of key we are looking for */
+	key_type_t key;
+	/** CA certificate ID */
+	identification_t *id;
+} cert_data_t;
+
+/**
+ * Destroy CA certificate enumerator data
+ */
+static void cert_data_destroy(cert_data_t *data)
+{
+	data->this->lock->unlock(data->this->lock);
+	free(data);
+}
+
+/**
+ * Filter function for certificates enumerator
+ */
+static bool cert_filter(cert_data_t *data, certificate_t **in,
+						 certificate_t **out)
+{
+	certificate_t *cert = *in;
+	public_key_t *public;
+	chunk_t keyid;
+
+	public = cert->get_public_key(cert);
+	if (!public)
+	{
+		return FALSE;
+	}
+	if (data->key != KEY_ANY && public->get_type(public) != data->key)
+	{
+		public->destroy(public);
+		return FALSE;
+	}
+	if (data->id && data->id->get_type(data->id) == ID_KEY_ID &&
+		public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
+		chunk_equals(keyid, data->id->get_encoding(data->id)))
+	{
+		public->destroy(public);
+		*out = cert;
+		return TRUE;
+	}
+	public->destroy(public);
+	if (data->id && !cert->has_subject(cert, data->id))
+	{
+		return FALSE;
+	}
+	*out = cert;
+	return TRUE;
+}
+
+/**
+ * Create enumerator for trusted certificates
+ */
+static enumerator_t *create_trusted_cert_enumerator(private_nm_creds_t *this,
+										key_type_t key, identification_t *id)
+{
+	cert_data_t *data = malloc_thing(cert_data_t);
+
+	data->this = this;
+	data->id = id;
+	data->key = key;
+
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(
+					this->certs->create_enumerator(this->certs),
+					(void*)cert_filter, data, (void*)cert_data_destroy);
+}
+
+/**
  * Implements credential_set_t.create_cert_enumerator
  */
 static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
@@ -105,38 +186,11 @@ static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
 	{
 		return create_usercert_enumerator(this, cert, key);
 	}
-
-	if (!this->cert)
+	if (cert == CERT_X509 || cert == CERT_ANY)
 	{
-		return NULL;
+		return create_trusted_cert_enumerator(this, key, id);
 	}
-	if (cert != CERT_ANY && cert != this->cert->get_type(this->cert))
-	{
-		return NULL;
-	}
-	if (id && !this->cert->has_subject(this->cert, id))
-	{
-		return NULL;
-	}
-	if (key != KEY_ANY)
-	{
-		public_key_t *public;
-
-		public = this->cert->get_public_key(this->cert);
-		if (!public)
-		{
-			return NULL;
-		}
-		if (public->get_type(public) != key)
-		{
-			public->destroy(public);
-			return NULL;
-		}
-		public->destroy(public);
-	}
-	this->lock->read_lock(this->lock);
-	return enumerator_create_cleaner(enumerator_create_single(this->cert, NULL),
-									 (void*)this->lock->unlock, this->lock);
+	return NULL;
 }
 
 /**
@@ -240,14 +294,70 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 }
 
 /**
- * Implementation of nm_creds_t.set_certificate
+ * Implementation of nm_creds_t.add_certificate
  */
-static void set_certificate(private_nm_creds_t *this, certificate_t *cert)
+static void add_certificate(private_nm_creds_t *this, certificate_t *cert)
 {
 	this->lock->write_lock(this->lock);
-	DESTROY_IF(this->cert);
-	this->cert = cert;
+	this->certs->insert_last(this->certs, cert);
 	this->lock->unlock(this->lock);
+}
+
+/**
+ * Load a certificate file
+ */
+static void load_ca_file(private_nm_creds_t *this, char *file)
+{
+	certificate_t *cert;
+
+	/* We add the CA constraint, as many CAs miss it */
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							  BUILD_FROM_FILE, file, BUILD_END);
+	if (!cert)
+	{
+		DBG1(DBG_CFG, "loading CA certificate '%s' failed", file);
+	}
+	else
+	{
+		DBG2(DBG_CFG, "loaded CA certificate '%Y'", cert->get_subject(cert));
+		x509_t *x509 = (x509_t*)cert;
+		if (!(x509->get_flags(x509) & X509_SELF_SIGNED))
+		{
+			DBG1(DBG_CFG, "%Y is not self signed", cert->get_subject(cert));
+		}
+		this->certs->insert_last(this->certs, cert);
+	}
+}
+
+/**
+ * Implementation of nm_creds_t.load_ca_dir
+ */
+static void load_ca_dir(private_nm_creds_t *this, char *dir)
+{
+	enumerator_t *enumerator;
+	char *rel, *abs;
+	struct stat st;
+
+	enumerator = enumerator_create_directory(dir);
+	if (enumerator)
+	{
+		while (enumerator->enumerate(enumerator, &rel, &abs, &st))
+		{
+			/* skip '.', '..' and hidden files */
+			if (rel[0] != '.')
+			{
+				if (S_ISDIR(st.st_mode))
+				{
+					load_ca_dir(this, abs);
+				}
+				else if (S_ISREG(st.st_mode))
+				{
+					load_ca_file(this, abs);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 }
 
 /**
@@ -283,7 +393,12 @@ static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,
  */
 static void clear(private_nm_creds_t *this)
 {
-	DESTROY_IF(this->cert);
+	certificate_t *cert;
+
+	while (this->certs->remove_last(this->certs, (void**)&cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+	}
 	DESTROY_IF(this->user);
 	free(this->pass);
 	DESTROY_IF(this->usercert);
@@ -291,7 +406,6 @@ static void clear(private_nm_creds_t *this)
 	this->key = NULL;
 	this->usercert = NULL;
 	this->pass = NULL;
-	this->cert = NULL;
 	this->user = NULL;
 }
 
@@ -301,6 +415,7 @@ static void clear(private_nm_creds_t *this)
 static void destroy(private_nm_creds_t *this)
 {
 	clear(this);
+	this->certs->destroy(this->certs);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -317,7 +432,8 @@ nm_creds_t *nm_creds_create()
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)nop;
-	this->public.set_certificate = (void(*)(nm_creds_t*, certificate_t *cert))set_certificate;
+	this->public.add_certificate = (void(*)(nm_creds_t*, certificate_t *cert))add_certificate;
+	this->public.load_ca_dir = (void(*)(nm_creds_t*, char *dir))load_ca_dir;
 	this->public.set_username_password = (void(*)(nm_creds_t*, identification_t *id, char *password))set_username_password;
 	this->public.set_cert_and_key = (void(*)(nm_creds_t*, certificate_t *cert, private_key_t *key))set_cert_and_key;
 	this->public.clear = (void(*)(nm_creds_t*))clear;
@@ -325,7 +441,7 @@ nm_creds_t *nm_creds_create()
 
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
-	this->cert = NULL;
+	this->certs = linked_list_create();
 	this->user = NULL;
 	this->pass = NULL;
 	this->usercert = NULL;
