@@ -521,6 +521,5 @@ end:
 	closelog();
 	dbg = dbg_default;
 	options->destroy(options);
-	library_deinit();
 	exit(status);
 }
