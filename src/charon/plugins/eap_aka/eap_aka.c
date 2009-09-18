@@ -844,6 +844,33 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 }
 
 /**
+ * check if an unknown attribute is skippable
+ */
+static bool attribute_skippable(aka_attribute_t attribute)
+{
+	if (attribute >= 0 && attribute <= 127)
+	{
+		DBG1(DBG_IKE, "ignoring skippable attribute %N",
+			 aka_attribute_names, attribute);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * build the error response if we received an unknown non-skippable attribute
+ */
+static eap_payload_t *build_non_skippable_error(private_eap_aka_t *this,
+								aka_attribute_t attribute, u_char identifier)
+{
+	DBG1(DBG_IKE, "found non skippable attribute %N, sending %N %d",
+		 aka_attribute_names, attribute,
+		 aka_attribute_names, AT_CLIENT_ERROR_CODE, 0);
+	return build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CLIENT_ERROR,
+							 AT_CLIENT_ERROR_CODE, client_error_code, AT_END);
+}
+
+/**
  * generate a new non-zero identifier
  */
 static u_char get_identifier()
@@ -976,15 +1003,13 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 				auts = attr;
 				continue;
 			default:
-				if (attribute >= 0 && attribute <= 127)
+				if (attribute_skippable(attribute))
 				{
-					DBG1(DBG_IKE, "found non skippable attribute %N",
-						 aka_attribute_names, attribute);
-					return FAILED;
+					continue;
 				}
-				DBG1(DBG_IKE, "ignoring skippable attribute %N",
+				DBG1(DBG_IKE, "found non skippable attribute %N",
 					 aka_attribute_names, attribute);
-				continue;
+				return FAILED;
 		}
 		break;
 	}
@@ -1060,15 +1085,13 @@ static status_t server_process_challenge(private_eap_aka_t *this, eap_payload_t 
 				memset(attr.ptr, 0, attr.len);
 				continue;
 			default:
-				if (attribute >= 0 && attribute <= 127)
+				if (attribute_skippable(attribute))
 				{
-					DBG1(DBG_IKE, "found non skippable attribute %N",
-						 aka_attribute_names, attribute);
-					return FAILED;
+					continue;
 				}
-				DBG1(DBG_IKE, "ignoring skippable attribute %N",
+				DBG1(DBG_IKE, "found non skippable attribute %N",
 					 aka_attribute_names, attribute);
-				continue;
+				return FAILED;
 		}
 		break;
 	}
@@ -1179,19 +1202,12 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 				memset(attr.ptr, 0, attr.len);
 				continue;
 			default:
-				if (attribute >= 0 && attribute <= 127)
+				if (attribute_skippable(attribute))
 				{
-					/* non skippable attribute, abort */
-					*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CLIENT_ERROR,
-								AT_CLIENT_ERROR_CODE, client_error_code, AT_END);
-					DBG1(DBG_IKE, "found non skippable attribute %N, sending %N %d",
-						 aka_attribute_names, attribute,
-						 aka_attribute_names, AT_CLIENT_ERROR_CODE, 0);
-					return NEED_MORE;
+					continue;
 				}
-				DBG1(DBG_IKE, "ignoring skippable attribute %N",
-					 aka_attribute_names, attribute);
-				continue;
+				*out = build_non_skippable_error(this, attribute, identifier);
+				return NEED_MORE;
 		}
 		break;
 	}
@@ -1347,19 +1363,12 @@ static status_t peer_process_identity(private_eap_aka_t *this,
 					 aka_attribute_names, attribute, this->peer);
 				continue;
 			default:
-				if (attribute >= 0 && attribute <= 127)
+				if (attribute_skippable(attribute))
 				{
-					/* non skippable attribute, abort */
-					*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CLIENT_ERROR,
-								AT_CLIENT_ERROR_CODE, client_error_code, AT_END);
-					DBG1(DBG_IKE, "found non skippable attribute %N, sending %N %d",
-						 aka_attribute_names, attribute,
-						 aka_attribute_names, AT_CLIENT_ERROR_CODE, 0);
-					return NEED_MORE;
+					continue;
 				}
-				DBG1(DBG_IKE, "ignoring skippable attribute %N",
-					 aka_attribute_names, attribute);
-				continue;
+				*out = build_non_skippable_error(this, attribute, identifier);
+				return NEED_MORE;
 		}
 		break;
 	}
@@ -1433,16 +1442,11 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 				}
 			}
 			default:
-				if (attribute >= 0 && attribute <= 127)
+				if (!attribute_skippable(attribute))
 				{
 					DBG1(DBG_IKE, "ignoring non-skippable attribute %N in %N",
-						aka_attribute_names, attribute, aka_subtype_names,
-						AKA_NOTIFICATION);
-				}
-				else
-				{
-					DBG1(DBG_IKE, "ignoring skippable attribute %N",
-						 aka_attribute_names, attribute);
+						 aka_attribute_names, attribute, aka_subtype_names,
+						 AKA_NOTIFICATION);
 				}
 				continue;
 		}
