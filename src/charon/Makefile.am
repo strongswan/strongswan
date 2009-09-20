@@ -243,9 +243,9 @@ if USE_NM
   PLUGINS += nm
 endif
 
-if USE_RESOLV_CONF
-  SUBDIRS += plugins/resolv_conf
-  PLUGINS += resolv-conf
+if USE_RESOLVE
+  SUBDIRS += plugins/resolve
+  PLUGINS += resolve
 endif
 
 if USE_UCI

@@ -41,7 +41,7 @@ ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set director
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 
-ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currenlty only the value "libcap" is supported])
+ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently only the value "libcap" is supported])
 
 AC_ARG_WITH(
 	[xauth-module],
@@ -126,7 +126,7 @@ ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclien
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
-ARG_DISBL_SET([resolv-conf],    [disable resolv.conf DNS handler plugin.])
+ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
@@ -683,7 +683,7 @@ AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
-AM_CONDITIONAL(USE_RESOLV_CONF, test x$resolvconf = xtrue)
+AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTS, test x$loadtest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
@@ -795,7 +795,7 @@ AC_OUTPUT(
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/updown/Makefile
 	src/charon/plugins/attr/Makefile
-	src/charon/plugins/resolv_conf/Makefile
+	src/charon/plugins/resolve/Makefile
 	src/charon/plugins/unit_tester/Makefile
 	src/charon/plugins/load_tester/Makefile
 	src/stroke/Makefile
