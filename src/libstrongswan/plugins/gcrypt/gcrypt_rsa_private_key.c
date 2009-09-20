@@ -509,7 +509,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 													  va_list args)
 {
 	private_gcrypt_rsa_private_key_t *this;
-	chunk_t n, e, d, p, q, u;
+	chunk_t n, e, d, p, q, exp, u;
 	gcry_error_t err;
 
 	n = e = d = p = q = u = chunk_empty;
@@ -536,6 +536,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 			case BUILD_RSA_EXP1:
 			case BUILD_RSA_EXP2:
 				/* not required for gcrypt */
+				exp = va_arg(args, chunk_t);
 				continue;
 			case BUILD_RSA_COEFF:
 				u = va_arg(args, chunk_t);
