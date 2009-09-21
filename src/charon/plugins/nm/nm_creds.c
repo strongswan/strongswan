@@ -127,7 +127,6 @@ static bool cert_filter(cert_data_t *data, certificate_t **in,
 {
 	certificate_t *cert = *in;
 	public_key_t *public;
-	chunk_t keyid;
 
 	public = cert->get_public_key(cert);
 	if (!public)
@@ -140,8 +139,7 @@ static bool cert_filter(cert_data_t *data, certificate_t **in,
 		return FALSE;
 	}
 	if (data->id && data->id->get_type(data->id) == ID_KEY_ID &&
-		public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
-		chunk_equals(keyid, data->id->get_encoding(data->id)))
+		public->has_fingerprint(public, data->id->get_encoding(data->id)))
 	{
 		public->destroy(public);
 		*out = cert;
@@ -209,11 +207,8 @@ static enumerator_t* create_private_enumerator(private_nm_creds_t *this,
 	}
 	if (id && id->get_type(id) != ID_ANY)
 	{
-		chunk_t keyid;
-
 		if (id->get_type(id) != ID_KEY_ID ||
-			!this->key->get_fingerprint(this->key, KEY_ID_PUBKEY_SHA1, &keyid) ||
-			!chunk_equals(keyid, id->get_encoding(id)))
+			!this->key->has_fingerprint(this->key, id->get_encoding(id)))
 		{
 			return NULL;
 		}

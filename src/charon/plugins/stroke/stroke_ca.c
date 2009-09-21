@@ -142,7 +142,6 @@ static void cdp_data_destroy(cdp_data_t *data)
 static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 {
 	public_key_t *public;
-	chunk_t keyid;
 	enumerator_t *enumerator = NULL;
 	linked_list_t *list;
 
@@ -164,8 +163,7 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 		}
 		else
 		{
-			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
-				chunk_equals(keyid, data->id->get_encoding(data->id)))
+			if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
 			{
 				enumerator = list->create_enumerator(list);
 			}

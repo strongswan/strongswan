@@ -107,7 +107,6 @@ static bool private_filter(id_data_t *data,
 						   private_key_t **in, private_key_t **out)
 {
 	private_key_t *key;
-	chunk_t keyid;
 
 	key = *in;
 	if (data->id == NULL)
@@ -115,8 +114,7 @@ static bool private_filter(id_data_t *data,
 		*out = key;
 		return TRUE;
 	}
-	if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid) &&
-		chunk_equals(keyid, data->id->get_encoding(data->id)))
+	if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
 	{
 		*out = key;
 		return TRUE;
@@ -149,7 +147,6 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 {
 	public_key_t *public;
 	certificate_t *cert = *in;
-	chunk_t keyid;
 
 	if (data->type != CERT_ANY && data->type != cert->get_type(cert))
 	{
@@ -164,8 +161,7 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid) &&
-			chunk_equals(keyid, data->id->get_encoding(data->id)))
+		if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
 		{
 			public->destroy(public);
 			*out = *in;
