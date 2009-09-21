@@ -155,6 +155,14 @@ struct public_key_t {
 							chunk_t *fp);
 
 	/**
+	 * Check if a key has a given fingerprint of any kind.
+	 *
+	 * @param fp		fingerprint to check
+	 * @return			TRUE if key has given fingerprint
+	 */
+	bool (*has_fingerprint)(public_key_t *this, chunk_t fp);
+
+	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
 	 * @param type		type of the encoding, one of KEY_PRIV_*
@@ -185,6 +193,15 @@ struct public_key_t {
  * @return				TRUE if this is equal to other
  */
 bool public_key_equals(public_key_t *this, public_key_t *other);
+
+/**
+ * Generic public key has_fingerprint() implementation, usable by implementors.
+ *
+ * @param this			key to check fingerprint
+ * @param fp			fingerprint to check
+ * @return				TRUE if key has given fingerprint
+ */
+bool public_key_has_fingerprint(public_key_t *this, chunk_t fingerprint);
 
 /**
  * Conversion of ASN.1 signature or hash OID to signature scheme.

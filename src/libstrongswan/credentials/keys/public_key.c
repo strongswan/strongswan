@@ -66,6 +66,25 @@ bool public_key_equals(public_key_t *this, public_key_t *other)
 	return FALSE;
 }
 
+/**
+ * See header.
+ */
+bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint)
+{
+	key_encoding_type_t type;
+	chunk_t current;
+
+	for (type = 0; type < KEY_ID_MAX; type++)
+	{
+		if (public->get_fingerprint(public, type, &current) &&
+			chunk_equals(current, fingerprint))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 /*
  * Defined in header.
  */

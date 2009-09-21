@@ -58,3 +58,22 @@ bool private_key_belongs_to(private_key_t *private, public_key_t *public)
 	return FALSE;
 }
 
+/**
+ * See header.
+ */
+bool private_key_has_fingerprint(private_key_t *private, chunk_t fingerprint)
+{
+	key_encoding_type_t type;
+	chunk_t current;
+
+	for (type = 0; type < KEY_ID_MAX; type++)
+	{
+		if (private->get_fingerprint(private, type, &current) &&
+			chunk_equals(current, fingerprint))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+

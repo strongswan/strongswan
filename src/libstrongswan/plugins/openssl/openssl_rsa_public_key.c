@@ -287,6 +287,7 @@ static private_openssl_rsa_public_key_t *create_empty()
 	this->public.interface.equals = public_key_equals;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
 	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.has_fingerprint = (bool(*)(public_key_t*, chunk_t fp))public_key_has_fingerprint;
 	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;

@@ -97,6 +97,14 @@ struct private_key_t {
 							chunk_t *fp);
 
 	/**
+	 * Check if a key has a given fingerprint of any kind.
+	 *
+	 * @param fp		fingerprint to check
+	 * @return			TRUE if key has given fingerprint
+	 */
+	bool (*has_fingerprint)(private_key_t *this, chunk_t fp);
+
+	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
 	 * @param type		type of the encoding, one of KEY_PRIV_*
@@ -136,5 +144,14 @@ bool private_key_equals(private_key_t *this, private_key_t *other);
  * @return				TRUE if this is equal to other
  */
 bool private_key_belongs_to(private_key_t *private, public_key_t *public);
+
+/**
+ * Generic private key has_fingerprint() implementation, usable by implementors.
+ *
+ * @param this			key to check fingerprint
+ * @param fp			fingerprint to check
+ * @return				TRUE if key has given fingerprint
+ */
+bool private_key_has_fingerprint(private_key_t *this, chunk_t fingerprint);
 
 #endif /** PRIVATE_KEY_H_ @}*/
