@@ -1075,9 +1075,15 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	else
 	{
+		int family = 0;
+
+		/* use same address family as for other */
+		if (!this->other_host->is_anyaddr(this->other_host))
+		{
+			family = this->other_host->get_family(this->other_host);
+		}
 		host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
-									this->my_host->get_family(this->my_host),
-									IKEV2_UDP_PORT);
+									family, IKEV2_UDP_PORT);
 
 		if (host && host->is_anyaddr(host) &&
 			!this->other_host->is_anyaddr(this->other_host))
