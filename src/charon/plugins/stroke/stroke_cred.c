@@ -151,7 +151,7 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	certificate_t *cert = *in;
 	chunk_t keyid;
 
-	if (cert->get_type(cert) != data->type)
+	if (data->type != CERT_ANY && data->type != cert->get_type(cert))
 	{
 		return FALSE;
 	}
