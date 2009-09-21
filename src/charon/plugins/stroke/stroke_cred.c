@@ -88,6 +88,7 @@ struct private_stroke_cred_t {
 typedef struct {
 	private_stroke_cred_t *this;
 	identification_t *id;
+	certificate_type_t type;
 } id_data_t;
 
 /**
@@ -150,8 +151,7 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	certificate_t *cert = *in;
 	chunk_t keyid;
 
-	if (cert->get_type(cert) == CERT_X509_CRL ||
-		cert->get_type(cert) == CERT_X509_AC)
+	if (cert->get_type(cert) != data->type)
 	{
 		return FALSE;
 	}
@@ -177,46 +177,6 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 }
 
 /**
- * filter function for crl enumerator
- */
-static bool crl_filter(id_data_t *data, certificate_t **in, certificate_t **out)
-{
-	certificate_t *cert = *in;
-
-	if (cert->get_type(cert) != CERT_X509_CRL)
-	{
-		return FALSE;
-	}
-
-	if (data->id == NULL || cert->has_issuer(cert, data->id))
-	{
-		*out = *in;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * filter function for attribute certificate enumerator
- */
-static bool ac_filter(id_data_t *data, certificate_t **in, certificate_t **out)
-{
-	certificate_t *cert = *in;
-
-	if (cert->get_type(cert) != CERT_X509_AC)
-	{
-		return FALSE;
-	}
-
-	if (data->id == NULL || cert->has_subject(cert, data->id))
-	{
-		*out = *in;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * Implements credential_set_t.create_cert_enumerator
  */
 static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
@@ -225,28 +185,14 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 {
 	id_data_t *data;
 
-	if (cert == CERT_X509_CRL || cert == CERT_X509_AC)
+	if (trusted && (cert == CERT_X509_CRL || cert == CERT_X509_AC))
 	{
-		if (trusted)
-		{
-			return NULL;
-		}
-		data = malloc_thing(id_data_t);
-		data->this = this;
-		data->id = id;
-
-		this->lock->read_lock(this->lock);
-		return enumerator_create_filter(this->certs->create_enumerator(this->certs),
-					(cert == CERT_X509_CRL)? (void*)crl_filter : (void*)ac_filter,
-					data, (void*)id_data_destroy);
-	}
-	if (cert != CERT_X509 && cert != CERT_GPG && cert != CERT_ANY)
-	{	/* we have X509/PGP certificates. TODO: ACs? */
 		return NULL;
 	}
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
+	data->type = cert;
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->certs->create_enumerator(this->certs),
