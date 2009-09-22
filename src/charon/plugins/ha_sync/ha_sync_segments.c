@@ -15,6 +15,7 @@
 
 #include "ha_sync_segments.h"
 
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 
 typedef u_int32_t u32;
@@ -35,6 +36,11 @@ struct private_ha_sync_segments_t {
 	 * Public ha_sync_segments_t interface.
 	 */
 	ha_sync_segments_t public;
+
+	/**
+	 * read/write lock for segment manipulation
+	 */
+	rwlock_t *lock;
 
 	/**
 	 * Init value for jhash
@@ -121,6 +127,8 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 	enumerator_t *enumerator;
 	u_int i, limit;
 
+	this->lock->write_lock(this->lock);
+
 	if (segment == 0 || segment <= this->segment_count)
 	{
 		if (segment)
@@ -160,6 +168,8 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 
 		log_segments(this, enable, segment);
 	}
+
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -213,10 +223,12 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 	ike_sa_id_t *id;
 	u_int16_t mask = bit_of(segment);
 
+	list = linked_list_create();
+	this->lock->read_lock(this->lock);
+
 	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
 	{
 		this->active &= ~mask;
-		list = linked_list_create();
 
 		DBG1(DBG_CFG, "resyncing HA sync segment %d", segment);
 
@@ -234,29 +246,30 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 			}
 		}
 		enumerator->destroy(enumerator);
-
-		while (list->remove_last(list, (void**)&id) == SUCCESS)
-		{
-			ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
-			id->destroy(id);
-			if (ike_sa)
-			{
-				DBG1(DBG_CFG, "resyncing IKE_SA");
-				if (ike_sa->rekey(ike_sa) != DESTROY_ME)
-				{
-					if (rekey_children(ike_sa) != DESTROY_ME)
-					{
-						charon->ike_sa_manager->checkin(
-											charon->ike_sa_manager, ike_sa);
-						continue;
-					}
-				}
-				charon->ike_sa_manager->checkin_and_destroy(
-											charon->ike_sa_manager, ike_sa);
-			}
-		}
-		list->destroy(list);
 	}
+	this->lock->unlock(this->lock);
+
+	while (list->remove_last(list, (void**)&id) == SUCCESS)
+	{
+		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
+		id->destroy(id);
+		if (ike_sa)
+		{
+			DBG1(DBG_CFG, "resyncing IKE_SA");
+			if (ike_sa->rekey(ike_sa) != DESTROY_ME)
+			{
+				if (rekey_children(ike_sa) != DESTROY_ME)
+				{
+					charon->ike_sa_manager->checkin(
+										charon->ike_sa_manager, ike_sa);
+					continue;
+				}
+			}
+			charon->ike_sa_manager->checkin_and_destroy(
+										charon->ike_sa_manager, ike_sa);
+		}
+	}
+	list->destroy(list);
 }
 
 /**
@@ -264,6 +277,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
  */
 static void destroy(private_ha_sync_segments_t *this)
 {
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -282,6 +296,7 @@ ha_sync_segments_t *ha_sync_segments_create()
 	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->initval = 0;
 	this->active = 0;
 	this->segment_count = lib->settings->get_int(lib->settings,
