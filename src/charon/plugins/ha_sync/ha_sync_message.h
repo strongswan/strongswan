@@ -51,6 +51,10 @@ enum ha_sync_message_type_t {
 	HA_SYNC_CHILD_ADD,
 	/** delete an existing CHILD_SA */
 	HA_SYNC_CHILD_DELETE,
+	/** segments the sending node is giving up */
+	HA_SYNC_SEGMENT_DROP,
+	/** segments the sending node is taking over */
+	HA_SYNC_SEGMENT_TAKE,
 };
 
 /**
@@ -121,6 +125,8 @@ enum ha_sync_message_attribute_t {
 	HA_SYNC_INITIATE_MID,
 	/** u_int32_t, responding message ID */
 	HA_SYNC_RESPOND_MID,
+	/** u_int16_t, HA sync segment */
+	HA_SYNC_SEGMENT,
 };
 
 /**

@@ -223,6 +223,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 		case HA_SYNC_ALG_INTEG:
 		case HA_SYNC_INBOUND_CPI:
 		case HA_SYNC_OUTBOUND_CPI:
+		case HA_SYNC_SEGMENT:
 		{
 			u_int16_t val;
 
@@ -438,6 +439,7 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		case HA_SYNC_ALG_INTEG:
 		case HA_SYNC_INBOUND_CPI:
 		case HA_SYNC_OUTBOUND_CPI:
+		case HA_SYNC_SEGMENT:
 		{
 			if (this->buf.len < sizeof(u_int16_t))
 			{

@@ -78,10 +78,10 @@ static job_requeue_t dispatch_fifo(private_ha_sync_ctl_t *this)
 			switch (buf[0])
 			{
 				case '+':
-					this->segments->activate(this->segments, segment);
+					this->segments->activate(this->segments, segment, TRUE);
 					break;
 				case '-':
-					this->segments->deactivate(this->segments, segment);
+					this->segments->deactivate(this->segments, segment, TRUE);
 					break;
 				case '*':
 					this->segments->resync(this->segments, segment);

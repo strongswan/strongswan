@@ -22,6 +22,7 @@
 #define HA_SYNC_DISPATCHER_H_
 
 #include "ha_sync_socket.h"
+#include "ha_sync_segments.h"
 
 typedef struct ha_sync_dispatcher_t ha_sync_dispatcher_t;
 
@@ -40,8 +41,10 @@ struct ha_sync_dispatcher_t {
  * Create a ha_sync_dispatcher instance pulling from socket.
  *
  * @param socket		socket to pull messages from
+ * @param segments		segments to control based on received messages
  * @return				dispatcher object
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket);
+ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
+												ha_sync_segments_t *segments);
 
 #endif /* HA_SYNC_DISPATCHER_ @}*/

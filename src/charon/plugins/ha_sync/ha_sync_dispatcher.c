@@ -36,6 +36,11 @@ struct private_ha_sync_dispatcher_t {
 	ha_sync_socket_t *socket;
 
 	/**
+	 * segments to control
+	 */
+	ha_sync_segments_t *segments;
+
+	/**
 	 * Dispatcher job
 	 */
 	callback_job_t *job;
@@ -570,6 +575,38 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 }
 
 /**
+ * Process messages of type SEGMENT_TAKE/DROP
+ */
+static void process_segment(private_ha_sync_dispatcher_t *this,
+							ha_sync_message_t *message, bool take)
+{
+	ha_sync_message_attribute_t attribute;
+	ha_sync_message_value_t value;
+	enumerator_t *enumerator;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SYNC_SEGMENT:
+				if (take)
+				{
+					this->segments->deactivate(this->segments, value.u16, FALSE);
+				}
+				else
+				{
+					this->segments->activate(this->segments, value.u16, FALSE);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Dispatcher job function
  */
 static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
@@ -594,6 +631,12 @@ static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
 		case HA_SYNC_CHILD_DELETE:
 			process_child_delete(this, message);
 			break;
+		case HA_SYNC_SEGMENT_DROP:
+			process_segment(this, message, FALSE);
+			break;
+		case HA_SYNC_SEGMENT_TAKE:
+			process_segment(this, message, TRUE);
+			break;
 		default:
 			DBG1(DBG_CFG, "received unknown HA sync message type %d",
 				 message->get_type(message));
@@ -616,16 +659,19 @@ static void destroy(private_ha_sync_dispatcher_t *this)
 /**
  * See header
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket)
+ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
+												ha_sync_segments_t *segments)
 {
 	private_ha_sync_dispatcher_t *this = malloc_thing(private_ha_sync_dispatcher_t);
 
 	this->public.destroy = (void(*)(ha_sync_dispatcher_t*))destroy;
 
 	this->socket = socket;
+	this->segments = segments;
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 
 	return &this->public;
 }
+

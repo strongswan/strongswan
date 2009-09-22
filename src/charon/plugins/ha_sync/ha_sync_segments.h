@@ -21,32 +21,32 @@
 #ifndef HA_SYNC_SEGMENTS_H_
 #define HA_SYNC_SEGMENTS_H_
 
+#include "ha_sync_socket.h"
+
 #include <daemon.h>
 
 typedef struct ha_sync_segments_t ha_sync_segments_t;
 
 /**
- * Locally segmentsd HA state synced from other nodes.
+ * Segmentation of peers into active and passive.
  */
 struct ha_sync_segments_t {
 
 	/**
-	 * Activate a set of IKE_SAs identified by a segments.
-	 *
-	 * Activating means do a takeover of SAs as the responsible node has failed.
-	 * This involves moving all SAs to the daemons IKE_SA manager and handle
-	 * them actively now.
+	 * Activate a set of IKE_SAs identified by a segment.
 	 *
 	 * @param segment	numerical segment to takeover, 0 for all
+	 * @param notify	wheter to notify other nodes about activation
 	 */
-	void (*activate)(ha_sync_segments_t *this, u_int segment);
+	void (*activate)(ha_sync_segments_t *this, u_int segment, bool notify);
 
 	/**
-	 * Deactivate a set of IKE_SAs identified by a segments.
+	 * Deactivate a set of IKE_SAs identified by a segment.
 	 *
 	 * @param segment	numerical segment to takeover, 0 for all
+	 * @param notify	wheter to notify other nodes about deactivation
 	 */
-	void (*deactivate)(ha_sync_segments_t *this, u_int segment);
+	void (*deactivate)(ha_sync_segments_t *this, u_int segment, bool notify);
 
 	/**
 	 * Resync an active segment.
@@ -68,7 +68,10 @@ struct ha_sync_segments_t {
 
 /**
  * Create a ha_sync_segments instance.
+ *
+ * @param socket		socket to communicate segment (de-)activation
+ * @return				segment object
  */
-ha_sync_segments_t *ha_sync_segments_create();
+ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket);
 
 #endif /* HA_SYNC_SEGMENTS_ @}*/

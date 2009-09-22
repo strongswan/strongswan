@@ -125,7 +125,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->segments = ha_sync_segments_create();
+	this->segments = ha_sync_segments_create(this->socket);
 	if (secret)
 	{
 		this->tunnel = ha_sync_tunnel_create(secret, local, remote);
@@ -134,7 +134,7 @@ plugin_t *plugin_create()
 	{
 		this->ctl = ha_sync_ctl_create(this->segments);
 	}
-	this->dispatcher = ha_sync_dispatcher_create(this->socket);
+	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->segments);
 	this->ike = ha_sync_ike_create(this->socket, this->tunnel);
 	this->child = ha_sync_child_create(this->socket, this->tunnel);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);

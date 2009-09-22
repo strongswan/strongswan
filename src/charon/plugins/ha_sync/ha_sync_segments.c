@@ -38,6 +38,11 @@ struct private_ha_sync_segments_t {
 	ha_sync_segments_t public;
 
 	/**
+	 * communication socket
+	 */
+	ha_sync_socket_t *socket;
+
+	/**
 	 * read/write lock for segment manipulation
 	 */
 	rwlock_t *lock;
@@ -175,17 +180,37 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 /**
  * Implementation of ha_sync_segments_t.activate
  */
-static void activate(private_ha_sync_segments_t *this, u_int segment)
+static void activate(private_ha_sync_segments_t *this, u_int segment,
+					 bool notify)
 {
-	return enable_disable(this, segment, IKE_PASSIVE, IKE_ESTABLISHED, TRUE);
+	ha_sync_message_t *message;
+
+	enable_disable(this, segment, IKE_PASSIVE, IKE_ESTABLISHED, TRUE);
+
+	if (notify)
+	{
+		message = ha_sync_message_create(HA_SYNC_SEGMENT_TAKE);
+		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
+		this->socket->push(this->socket, message);
+	}
 }
 
 /**
  * Implementation of ha_sync_segments_t.deactivate
  */
-static void deactivate(private_ha_sync_segments_t *this, u_int segment)
+static void deactivate(private_ha_sync_segments_t *this, u_int segment,
+					   bool notify)
 {
-	return enable_disable(this, segment, IKE_ESTABLISHED, IKE_PASSIVE, FALSE);
+	ha_sync_message_t *message;
+
+	enable_disable(this, segment, IKE_ESTABLISHED, IKE_PASSIVE, FALSE);
+
+	if (notify)
+	{
+		message = ha_sync_message_create(HA_SYNC_SEGMENT_DROP);
+		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
+		this->socket->push(this->socket, message);
+	}
 }
 
 /**
@@ -284,18 +309,19 @@ static void destroy(private_ha_sync_segments_t *this)
 /**
  * See header
  */
-ha_sync_segments_t *ha_sync_segments_create()
+ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket)
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
 	enumerator_t *enumerator;
 	u_int segment;
 	char *str;
 
-	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment))activate;
-	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment))deactivate;
+	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment,bool))activate;
+	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment,bool))deactivate;
 	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
+	this->socket = socket;
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->initval = 0;
 	this->active = 0;
