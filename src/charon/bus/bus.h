@@ -133,6 +133,8 @@ enum level_t {
 enum alert_t {
 	/* a RADIUS server did not respond, no additional arguments */
 	ALERT_RADIUS_NOT_RESPONDING,
+	/* a shutdown signal has been received, argument is a int with the signal */
+	ALERT_SHUTDOWN_SIGNAL,
 };
 
 /**

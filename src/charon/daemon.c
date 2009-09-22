@@ -145,11 +145,13 @@ static void run(private_daemon_t *this)
 			case SIGINT:
 			{
 				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return;
 			}
 			case SIGTERM:
 			{
 				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return;
 			}
 			default:
