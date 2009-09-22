@@ -107,17 +107,6 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 		{	/* or segment_count times for all segments */
 			limit = this->segment_count;
 		}
-		for (i = segment; i < limit; i++)
-		{
-			if (enable)
-			{
-				this->active |= SEGMENTS_BIT(i);
-			}
-			else
-			{
-				this->active &= ~SEGMENTS_BIT(i);
-			}
-		}
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
@@ -134,6 +123,19 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			}
 		}
 		enumerator->destroy(enumerator);
+		for (i = segment; i < limit; i++)
+		{
+			if (enable)
+			{
+				this->active |= SEGMENTS_BIT(i);
+				this->kernel->activate(this->kernel, i);
+			}
+			else
+			{
+				this->active &= ~SEGMENTS_BIT(i);
+				this->kernel->deactivate(this->kernel, i);
+			}
+		}
 
 		log_segments(this, enable, segment);
 	}

@@ -40,6 +40,20 @@ struct ha_sync_kernel_t {
 	bool (*in_segment)(ha_sync_kernel_t *this, host_t *host, u_int segment);
 
 	/**
+	 * Activate a segment at kernel level for all cluster addresses.
+	 *
+	 * @param segment	segment to activate
+	 */
+	void (*activate)(ha_sync_kernel_t *this, u_int segment);
+
+	/**
+	 * Deactivate a segment at kernel level for all cluster addresses.
+	 *
+	 * @param segment	segment to deactivate
+	 */
+	void (*deactivate)(ha_sync_kernel_t *this, u_int segment);
+
+	/**
 	 * Destroy a ha_sync_kernel_t.
 	 */
 	void (*destroy)(ha_sync_kernel_t *this);
@@ -50,10 +64,9 @@ struct ha_sync_kernel_t {
  *
  * @param count			total number of segments to use
  * @param active		bitmask of initially active segments
- * @param external		external virtual IP the cluster acts as
- * @param internal		internal virtual IP the cluster uses
+ * @param virtuals		comma separated list of virtual cluster addresses
  */
 ha_sync_kernel_t *ha_sync_kernel_create(u_int count, segment_mask_t active,
-										char *external, char *internal);
+										char *virtuals);
 
 #endif /* HA_SYNC_KERNEL_ @}*/

@@ -125,7 +125,7 @@ static segment_mask_t parse_active(char *active)
 plugin_t *plugin_create()
 {
 	private_ha_sync_plugin_t *this;
-	char *local, *remote, *secret, *external, *internal;
+	char *local, *remote, *secret, *virtuals;
 	segment_mask_t active;
 	u_int count;
 	bool fifo;
@@ -134,10 +134,8 @@ plugin_t *plugin_create()
 								"charon.plugins.ha_sync.local", NULL);
 	remote = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha_sync.remote", NULL);
-	external = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.external", NULL);
-	internal = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.internal", NULL);
+	virtuals = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.virtuals", "");
 	secret = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha_sync.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
@@ -149,11 +147,6 @@ plugin_t *plugin_create()
 	if (!local || !remote)
 	{
 		DBG1(DBG_CFG, "HA sync config misses local/remote address");
-		return NULL;
-	}
-	if (!external || !internal)
-	{
-		DBG1(DBG_CFG, "HA sync config misses external/internal virtual address");
 		return NULL;
 	}
 
@@ -169,7 +162,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->kernel = ha_sync_kernel_create(count, active, external, internal);
+	this->kernel = ha_sync_kernel_create(count, active, virtuals);
 	if (!this->kernel)
 	{
 		this->socket->destroy(this->socket);
