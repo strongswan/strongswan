@@ -68,6 +68,11 @@ struct private_ha_sync_plugin_t {
 	ha_sync_segments_t *segments;
 
 	/**
+	 * Interface to control segments at kernel level
+	 */
+	ha_sync_kernel_t *kernel;
+
+	/**
 	 * Segment control interface via FIFO
 	 */
 	ha_sync_ctl_t *ctl;
@@ -85,6 +90,7 @@ static void destroy(private_ha_sync_plugin_t *this)
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
 	this->segments->destroy(this->segments);
+	this->kernel->destroy(this->kernel);
 	this->socket->destroy(this->socket);
 	DESTROY_IF(this->tunnel);
 	free(this);
@@ -119,7 +125,7 @@ static segment_mask_t parse_active(char *active)
 plugin_t *plugin_create()
 {
 	private_ha_sync_plugin_t *this;
-	char *local, *remote, *secret;
+	char *local, *remote, *secret, *external, *internal;
 	segment_mask_t active;
 	u_int count;
 	bool fifo;
@@ -128,6 +134,10 @@ plugin_t *plugin_create()
 								"charon.plugins.ha_sync.local", NULL);
 	remote = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha_sync.remote", NULL);
+	external = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.external", NULL);
+	internal = lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.internal", NULL);
 	secret = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha_sync.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
@@ -139,6 +149,11 @@ plugin_t *plugin_create()
 	if (!local || !remote)
 	{
 		DBG1(DBG_CFG, "HA sync config misses local/remote address");
+		return NULL;
+	}
+	if (!external || !internal)
+	{
+		DBG1(DBG_CFG, "HA sync config misses external/internal virtual address");
 		return NULL;
 	}
 
@@ -154,7 +169,16 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->segments = ha_sync_segments_create(this->socket, count, active);
+	this->kernel = ha_sync_kernel_create(count, active, external, internal);
+	if (!this->kernel)
+	{
+		this->socket->destroy(this->socket);
+		free(this);
+		return NULL;
+	}
+
+	this->segments = ha_sync_segments_create(this->socket, this->kernel,
+											 count, active);
 	if (secret)
 	{
 		this->tunnel = ha_sync_tunnel_create(secret, local, remote);

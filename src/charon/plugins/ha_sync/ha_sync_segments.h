@@ -21,8 +21,6 @@
 #ifndef HA_SYNC_SEGMENTS_H_
 #define HA_SYNC_SEGMENTS_H_
 
-#include "ha_sync_socket.h"
-
 #include <daemon.h>
 
 typedef struct ha_sync_segments_t ha_sync_segments_t;
@@ -38,6 +36,9 @@ typedef u_int16_t segment_mask_t;
  * Get the bit in the mask of a segment
  */
 #define SEGMENTS_BIT(segment) (0x01 << (segment - 1))
+
+#include "ha_sync_socket.h"
+#include "ha_sync_kernel.h"
 
 /**
  * Segmentation of peers into active and passive.
@@ -82,11 +83,13 @@ struct ha_sync_segments_t {
  * Create a ha_sync_segments instance.
  *
  * @param socket		socket to communicate segment (de-)activation
+ * @param kernel		interface to control segments at kernel level
  * @param count			number of segments the cluster uses
  * @param active		bit mask of initially active segments
  * @return				segment object
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
+											ha_sync_kernel_t *kernel,
 											u_int count, segment_mask_t active);
 
 #endif /* HA_SYNC_SEGMENTS_ @}*/

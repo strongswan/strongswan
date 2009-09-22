@@ -11,6 +11,7 @@ libstrongswan_ha_sync_la_SOURCES = \
   ha_sync_tunnel.h ha_sync_tunnel.c \
   ha_sync_dispatcher.h ha_sync_dispatcher.c \
   ha_sync_segments.h ha_sync_segments.c \
+  ha_sync_kernel.h ha_sync_kernel.c \
   ha_sync_ctl.h ha_sync_ctl.c \
   ha_sync_ike.h ha_sync_ike.c \
   ha_sync_child.h ha_sync_child.c

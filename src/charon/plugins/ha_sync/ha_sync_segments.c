@@ -18,11 +18,6 @@
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
 
-typedef u_int32_t u32;
-typedef u_int8_t u8;
-
-#include <linux/jhash.h>
-
 typedef struct private_ha_sync_segments_t private_ha_sync_segments_t;
 
 /**
@@ -41,14 +36,14 @@ struct private_ha_sync_segments_t {
 	ha_sync_socket_t *socket;
 
 	/**
+	 * Interface to control segments at kernel level
+	 */
+	ha_sync_kernel_t *kernel;
+
+	/**
 	 * read/write lock for segment manipulation
 	 */
 	rwlock_t *lock;
-
-	/**
-	 * Init value for jhash
-	 */
-	u_int initval;
 
 	/**
 	 * Total number of ClusterIP segments
@@ -60,28 +55,6 @@ struct private_ha_sync_segments_t {
 	 */
 	segment_mask_t active;
 };
-
-/**
- * Check if a host address is in the CLUSTERIP segment
- */
-static bool in_segment(private_ha_sync_segments_t *this,
-					   host_t *host, u_int segment)
-{
-	if (host->get_family(host) == AF_INET)
-	{
-		unsigned long hash;
-		u_int32_t addr;
-
-		addr = *(u_int32_t*)host->get_address(host).ptr;
-		hash = jhash_1word(ntohl(addr), this->initval);
-
-		if ((((u_int64_t)hash * this->segment_count) >> 32) + 1 == segment)
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
 
 /**
  * Log currently active segments
@@ -152,7 +125,8 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			{
 				for (i = segment; i < limit; i++)
 				{
-					if (in_segment(this, ike_sa->get_other_host(ike_sa), i))
+					if (this->kernel->in_segment(this->kernel,
+											ike_sa->get_other_host(ike_sa), i))
 					{
 						ike_sa->set_state(ike_sa, new);
 					}
@@ -254,7 +228,8 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
 			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-				in_segment(this, ike_sa->get_other_host(ike_sa), segment))
+				this->kernel->in_segment(this->kernel,
+									ike_sa->get_other_host(ike_sa), segment))
 			{
 				id = ike_sa->get_id(ike_sa);
 				list->insert_last(list, id->clone(id));
@@ -300,6 +275,7 @@ static void destroy(private_ha_sync_segments_t *this)
  * See header
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
+											ha_sync_kernel_t *kernel,
 											u_int count, segment_mask_t active)
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
@@ -310,8 +286,8 @@ ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
 	this->socket = socket;
+	this->kernel = kernel;
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->initval = 0;
 	this->active = active;
 	this->segment_count = count;
 
