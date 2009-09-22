@@ -265,6 +265,27 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 }
 
 /**
+ * Implementation of listener_t.alert
+ */
+static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
+					   alert_t alert, va_list args)
+{
+	if (alert == ALERT_SHUTDOWN_SIGNAL)
+	{
+		int i;
+
+		for (i = 0; i < SEGMENTS_MAX; i++)
+		{
+			if (this->active & SEGMENTS_BIT(i))
+			{
+				deactivate(this, i, TRUE);
+			}
+		}
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of ha_sync_segments_t.destroy.
  */
 static void destroy(private_ha_sync_segments_t *this)
@@ -282,6 +303,8 @@ ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
 
+	memset(&this->public.listener, 0, sizeof(listener_t));
+	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
 	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment,bool))activate;
 	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment,bool))deactivate;
 	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;

@@ -84,6 +84,7 @@ struct private_ha_sync_plugin_t {
 static void destroy(private_ha_sync_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
+	charon->bus->remove_listener(charon->bus, &this->segments->listener);
 	charon->bus->remove_listener(charon->bus, &this->ike->listener);
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
@@ -183,6 +184,7 @@ plugin_t *plugin_create()
 	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->segments);
 	this->ike = ha_sync_ike_create(this->socket, this->tunnel);
 	this->child = ha_sync_child_create(this->socket, this->tunnel);
+	charon->bus->add_listener(charon->bus, &this->segments->listener);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
 

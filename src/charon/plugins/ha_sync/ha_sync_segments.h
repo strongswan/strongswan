@@ -46,6 +46,11 @@ typedef u_int16_t segment_mask_t;
 struct ha_sync_segments_t {
 
 	/**
+	 * Implements listener interface to catch daemon shutdown.
+	 */
+	listener_t listener;
+
+	/**
 	 * Activate a set of IKE_SAs identified by a segment.
 	 *
 	 * @param segment	numerical segment to takeover, 0 for all
