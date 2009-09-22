@@ -40,6 +40,11 @@
 #include "whack.h"      /* for RC_LOG_SERIOUS */
 #include "kernel_alg.h"
 
+/** required for Linux 2.6.26 kernel and later */
+#ifndef XFRM_STATE_AF_UNSPEC
+#define XFRM_STATE_AF_UNSPEC	32
+#endif
+
 /* Minimum priority number in SPD used by pluto. */
 #define MIN_SPD_PRIORITY 1024
 
@@ -602,7 +607,15 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 	req.p.id.spi = sa->spi;
 	req.p.id.proto = satype2proto(sa->satype);
 	req.p.family = sa->src->u.v4.sin_family;
-	req.p.mode = (sa->encapsulation == ENCAPSULATION_MODE_TUNNEL);
+	if (sa->encapsulation == ENCAPSULATION_MODE_TUNNEL)
+	{
+		req.p.mode = XFRM_MODE_TUNNEL;
+		req.p.flags |= XFRM_STATE_AF_UNSPEC;
+	}
+	else
+	{
+		req.p.mode = XFRM_MODE_TRANSPORT;
+	}
 	req.p.replay_window = sa->replay_window;
 	req.p.reqid = sa->reqid;
 	req.p.lft.soft_byte_limit = XFRM_INF;
