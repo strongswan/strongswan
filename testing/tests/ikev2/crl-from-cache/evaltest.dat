@@ -1,8 +1,8 @@
-moon::cat /var/log/daemon.log::loaded crl from file::YES
+moon::cat /var/log/daemon.log::loaded crl from::YES
 moon::cat /var/log/daemon.log::crl is valid::YES
 moon::cat /var/log/daemon.log::certificate status is good::YES
 moon::ipsec listcrls:: ok::YES
-carol::cat /var/log/daemon.log::loaded crl from file::YES
+carol::cat /var/log/daemon.log::loaded crl from::YES
 carol::cat /var/log/daemon.log::crl is valid::YES
 carol::cat /var/log/daemon.log::certificate status is good::YES
 carol::ipsec listcrls:: ok::YES

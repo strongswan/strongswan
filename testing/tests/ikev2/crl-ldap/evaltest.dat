@@ -1,9 +1,9 @@
-moon::cat /var/log/daemon.log::loaded crl file::YES
+moon::cat /var/log/daemon.log::loaded crl from::YES
 moon::cat /var/log/daemon.log::crl is stale::YES
 moon::cat /var/log/daemon.log::fetching crl from.*ldap::YES
 moon::cat /var/log/daemon.log::crl is valid::YES
 moon::cat /var/log/daemon.log::certificate status is good::YES
-carol::cat /var/log/daemon.log::loaded crl file::YES
+carol::cat /var/log/daemon.log::loaded crl from::YES
 carol::cat /var/log/daemon.log::crl is stale::YES
 carol::cat /var/log/daemon.log::fetching crl from.*ldap::YES
 carol::cat /var/log/daemon.log::crl is valid::YES

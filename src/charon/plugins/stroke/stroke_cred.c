@@ -432,12 +432,11 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 	if (cert)
 	{
 		cert = add_cert(this, cert);
-		DBG1(DBG_CFG, "  loaded certificate '%Y' from "
-				 "file '%s'", cert->get_subject(cert), filename);
+		DBG1(DBG_CFG, "  loaded certificate '%Y' from '%s'",
+					  cert->get_subject(cert), filename);
 		return cert->get_ref(cert);
 	}
-	DBG1(DBG_CFG, "  loading certificate from file "
-		 "'%s' failed", filename);
+	DBG1(DBG_CFG, "  loading certificate from '%s' failed", filename);
 	return NULL;
 }
 
@@ -471,8 +470,8 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 		{
 			case CERT_X509:
 				if (flag & X509_CA)
-				{	/* for CA certificates, we strictly require CA
-					 * basicconstraints to be set */
+				{	/* for CA certificates, we strictly require
+					 * the CA basic constraint to be set */
 					cert = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, file, BUILD_END);
@@ -482,22 +481,22 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 
 						if (!(x509->get_flags(x509) & X509_CA))
 						{
-							DBG1(DBG_CFG, "  ca certificate '%Y' misses "
-								 "ca basic constraint, discarded",
+							DBG1(DBG_CFG, "  CA certificate '%Y' misses "
+								 "CA basic constraint, discarded",
 								 cert->get_subject(cert));
 							cert->destroy(cert);
 							cert = NULL;
 						}
 						else
 						{
-							DBG1(DBG_CFG, "  loaded CA certificate '%Y' from "
-								 "file '%s'", cert->get_subject(cert), file);
+							DBG1(DBG_CFG, "  loaded CA certificate '%Y' from '%s'",
+										  cert->get_subject(cert), file);
 						}
 					}
 					else
 					{
-						DBG1(DBG_CFG, "  loading CA certificate from file "
-							 "'%s' failed", file);
+						DBG1(DBG_CFG, "  loading CA certificate from '%s' "
+									  "failed", file);
 					}
 				}
 				else
@@ -508,13 +507,13 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										BUILD_X509_FLAG, flag, BUILD_END);
 					if (cert)
 					{
-						DBG1(DBG_CFG, "  loaded certificate '%Y' from "
-								 "file '%s'", cert->get_subject(cert), file);
+						DBG1(DBG_CFG, "  loaded certificate '%Y' from '%s'",
+									  cert->get_subject(cert), file);
 					}
 					else
 					{
-						DBG1(DBG_CFG, "  loading certificate from file "
-							 "'%s' failed", file);
+						DBG1(DBG_CFG, "  loading certificate from '%s' "
+									  "failed", file);
 					}
 				}
 				if (cert)
@@ -530,11 +529,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_crl(this, (crl_t*)cert);
-					DBG1(DBG_CFG, "  loaded crl from file '%s'",  file);
+					DBG1(DBG_CFG, "  loaded crl from '%s'",  file);
 				}
 				else
 				{
-					DBG1(DBG_CFG, "  loading crl from file '%s' failed", file);
+					DBG1(DBG_CFG, "  loading crl from '%s' failed", file);
 				}
 				break;
 			case CERT_X509_AC:
@@ -545,13 +544,13 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_ac(this, (ac_t*)cert);
-					DBG1(DBG_CFG, "  loaded attribute certificate from "
-						 "file '%s'", file);
+					DBG1(DBG_CFG, "  loaded attribute certificate from '%s'",
+								  file);
 				}
 				else
 				{
-					DBG1(DBG_CFG, "  loading attribute certificate from "
-						 "file '%s' failed", file);
+					DBG1(DBG_CFG, "  loading attribute certificate from '%s' "
+								  "failed", file);
 				}
 				break;
 			default:
@@ -915,7 +914,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			}
 			else
 			{
-				DBG1(DBG_CFG, "  skipped private key file '%s'", path);
+				DBG1(DBG_CFG, "  loading private key file '%s' failed", path);
 			}
 			chunk_clear(&secret);
 		}
