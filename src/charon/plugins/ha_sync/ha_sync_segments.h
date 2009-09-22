@@ -27,6 +27,18 @@
 
 typedef struct ha_sync_segments_t ha_sync_segments_t;
 
+typedef u_int16_t segment_mask_t;
+
+/**
+ * maximum number of segments
+ */
+#define SEGMENTS_MAX (sizeof(segment_mask_t)*8)
+
+/**
+ * Get the bit in the mask of a segment
+ */
+#define SEGMENTS_BIT(segment) (0x01 << (segment - 1))
+
 /**
  * Segmentation of peers into active and passive.
  */
@@ -70,8 +82,11 @@ struct ha_sync_segments_t {
  * Create a ha_sync_segments instance.
  *
  * @param socket		socket to communicate segment (de-)activation
+ * @param count			number of segments the cluster uses
+ * @param active		bit mask of initially active segments
  * @return				segment object
  */
-ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket);
+ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
+											u_int count, segment_mask_t active);
 
 #endif /* HA_SYNC_SEGMENTS_ @}*/

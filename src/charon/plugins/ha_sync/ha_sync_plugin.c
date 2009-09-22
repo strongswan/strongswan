@@ -90,6 +90,29 @@ static void destroy(private_ha_sync_plugin_t *this)
 	free(this);
 }
 
+/**
+ * Convert segment string to mask
+ */
+static segment_mask_t parse_active(char *active)
+{
+	enumerator_t *enumerator;
+	u_int segment;
+	segment_mask_t mask = 0;
+
+	enumerator = enumerator_create_token(active, ",", " ");
+	while (enumerator->enumerate(enumerator, &active))
+	{
+		segment = atoi(active);
+		if (segment > 0 && segment < SEGMENTS_MAX)
+		{
+			mask |= SEGMENTS_BIT(segment);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return mask;
+}
+
 /*
  * see header file
  */
@@ -97,6 +120,8 @@ plugin_t *plugin_create()
 {
 	private_ha_sync_plugin_t *this;
 	char *local, *remote, *secret;
+	segment_mask_t active;
+	u_int count;
 	bool fifo;
 
 	local = lib->settings->get_str(lib->settings,
@@ -107,6 +132,10 @@ plugin_t *plugin_create()
 								"charon.plugins.ha_sync.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
 								"charon.plugins.ha_sync.fifo_interface", FALSE);
+	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
+								"charon.plugins.ha_sync.segment_count", 1));
+	active = parse_active(lib->settings->get_str(lib->settings,
+								"charon.plugins.ha_sync.active_segments", "1"));
 	if (!local || !remote)
 	{
 		DBG1(DBG_CFG, "HA sync config misses local/remote address");
@@ -125,7 +154,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->segments = ha_sync_segments_create(this->socket);
+	this->segments = ha_sync_segments_create(this->socket, count, active);
 	if (secret)
 	{
 		this->tunnel = ha_sync_tunnel_create(secret, local, remote);

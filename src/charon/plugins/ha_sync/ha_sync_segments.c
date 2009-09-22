@@ -23,8 +23,6 @@ typedef u_int8_t u8;
 
 #include <linux/jhash.h>
 
-#define MAX_SEGMENTS 16
-
 typedef struct private_ha_sync_segments_t private_ha_sync_segments_t;
 
 /**
@@ -60,7 +58,7 @@ struct private_ha_sync_segments_t {
 	/**
 	 * mask of active segments
 	 */
-	u_int16_t active;
+	segment_mask_t active;
 };
 
 /**
@@ -115,14 +113,6 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 }
 
 /**
- * Get the bit of the segment in the bitmask
- */
-static inline u_int16_t bit_of(u_int segment)
-{
-	return 0x01 << (segment - 1);
-}
-
-/**
  * Enable/Disable an an IKE_SA.
  */
 static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
@@ -148,11 +138,11 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 		{
 			if (enable)
 			{
-				this->active |= bit_of(i);
+				this->active |= SEGMENTS_BIT(i);
 			}
 			else
 			{
-				this->active &= ~bit_of(i);
+				this->active &= ~SEGMENTS_BIT(i);
 			}
 		}
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
@@ -246,7 +236,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	ike_sa_id_t *id;
-	u_int16_t mask = bit_of(segment);
+	u_int16_t mask = SEGMENTS_BIT(segment);
 
 	list = linked_list_create();
 	this->lock->read_lock(this->lock);
@@ -309,12 +299,10 @@ static void destroy(private_ha_sync_segments_t *this)
 /**
  * See header
  */
-ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket)
+ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
+											u_int count, segment_mask_t active)
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
-	enumerator_t *enumerator;
-	u_int segment;
-	char *str;
 
 	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment,bool))activate;
 	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment,bool))deactivate;
@@ -324,22 +312,8 @@ ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket)
 	this->socket = socket;
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->initval = 0;
-	this->active = 0;
-	this->segment_count = lib->settings->get_int(lib->settings,
-								"charon.plugins.ha_sync.segment_count", 1);
-	this->segment_count = min(this->segment_count, MAX_SEGMENTS);
-	str = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.active_segments", "1");
-	enumerator = enumerator_create_token(str, ",", " ");
-	while (enumerator->enumerate(enumerator, &str))
-	{
-		segment = atoi(str);
-		if (segment > 0 && segment < MAX_SEGMENTS)
-		{
-			this->active |= bit_of(segment);
-		}
-	}
-	enumerator->destroy(enumerator);
+	this->active = active;
+	this->segment_count = count;
 
 	return &this->public;
 }
