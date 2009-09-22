@@ -58,6 +58,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	chunk_t hash, encoded ;
 	enumerator_t *enumerator;
 	char *url;
+	cert_payload_t *payload = NULL;
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
 	{
@@ -73,25 +74,24 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 
 	encoded = cert->get_encoding(cert);
 	hasher->allocate_hash(hasher, encoded, &hash);
-	id = identification_create_from_encoding(ID_KEY_ID, hash);
-
-	enumerator = charon->credentials->create_cdp_enumerator(
-										charon->credentials, CERT_X509, id);
-	if (!enumerator->enumerate(enumerator, &url))
-	{
-		url = NULL;
-	}
-	enumerator->destroy(enumerator);
-
-	id->destroy(id);
-	chunk_free(&hash);
 	chunk_free(&encoded);
 	hasher->destroy(hasher);
-	if (url)
+	id = identification_create_from_encoding(ID_KEY_ID, hash);
+
+	enumerator = charon->credentials->create_cdp_enumerator(charon->credentials,
+															CERT_X509, id);
+	if (enumerator->enumerate(enumerator, &url))
 	{
-		return cert_payload_create_from_hash_and_url(hash, url);
+		payload = cert_payload_create_from_hash_and_url(hash, url);
 	}
-	return cert_payload_create_from_cert(cert);
+	else
+	{
+		payload = cert_payload_create_from_cert(cert);
+	}
+	enumerator->destroy(enumerator);
+	chunk_free(&hash);
+	id->destroy(id);
+	return payload;
 }
 
 /**
