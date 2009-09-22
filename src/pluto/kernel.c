@@ -347,11 +347,13 @@ ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 	latest_cpi++;
 
 	if (latest_cpi == first_busy_cpi)
+	{
 		find_my_cpi_gap(&latest_cpi, &first_busy_cpi);
-
+	}
 	if (latest_cpi > IPCOMP_LAST_NEGOTIATED)
+	{
 		latest_cpi = IPCOMP_FIRST_NEGOTIATED;
-
+	}
 	return htonl((ipsec_spi_t)latest_cpi);
 }
 
@@ -847,7 +849,9 @@ void unroute_connection(struct connection *c)
 
 		/* only unroute if no other connection shares it */
 		if (routed(cr) && route_owner(c, NULL, NULL, NULL) == NULL)
+		{
 			(void) do_command(c, sr, "unroute");
+		}
 	}
 }
 
@@ -1072,8 +1076,9 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 			 , "eroute_connection %s", opname);
 
 	if (proto == SA_INT)
+	{
 		peer = aftoinfo(addrtypeof(peer))->any;
-
+	}
 	return raw_eroute(&sr->this.host_addr, &sr->this.client
 					  , peer
 					  , &sr->that.client
@@ -1359,15 +1364,20 @@ static const char *read_proto(const char * s, size_t * len, int * transport_prot
 
 	l = *len;
 	p = memchr(s, ':', l);
-	if (p == 0) {
+	if (p == 0)
+	{
 		*transport_proto = 0;
 		return 0;
 	}
 	ugh = ttoul(p+1, l-((p-s)+1), 10, &proto);
 	if (ugh != 0)
+	{
 		return ugh;
+	}
 	if (proto > 65535)
+	{
 		return "protocol number is too large, legal range is 0-65535";
+	}
 	*len = p-s;
 	*transport_proto = proto;
 	return 0;
@@ -1429,7 +1439,9 @@ void scan_proc_shunts(void)
 
 	f = fopen(procname, "r");
 	if (f == NULL)
+	{
 		return;
+	}
 
 	/* for each line... */
 	for (lino = 1; ; lino++)
@@ -1445,7 +1457,9 @@ void scan_proc_shunts(void)
 
 		cp = fgets(buf, sizeof(buf), f);
 		if (cp == NULL)
+		{
 			break;
+		}
 
 		/* break out each field
 		 * Note: if there are too many fields, just stop;
@@ -1461,7 +1475,9 @@ void scan_proc_shunts(void)
 			field[fi] = chunk_create(cp, w);
 			cp += w;
 			if (w == 0)
+			{
 				break;
+			}
 		}
 
 		/* This odd do-hickey is to share error reporting code.
@@ -1473,9 +1489,13 @@ void scan_proc_shunts(void)
 			 * check if things are as they should be.
 			 */
 			if (fi == 5)
+			{
 				ff = &field[0]; /* old form, with no count */
+			}
 			else if (fi == 6)
+			{
 				ff = &field[1]; /* new form, with count */
+			}
 			else
 			{
 				ugh = "has wrong number of fields";
@@ -1501,7 +1521,9 @@ void scan_proc_shunts(void)
 				context = "count field is malformed: ";
 				ugh = ttoul(field[0].ptr, field[0].len, 10, &eri.count);
 				if (ugh != NULL)
+				{
 					break;
+				}
 			}
 
 			/* our client */
@@ -1509,21 +1531,27 @@ void scan_proc_shunts(void)
 			context = "source subnet field malformed: ";
 			ugh = ttosubnet(ff[0].ptr, ff[0].len, AF_INET, &eri.ours);
 			if (ugh != NULL)
+			{
 				break;
+			}
 
 			/* his client */
 
 			context = "destination subnet field malformed: ";
 			ugh = ttosubnet(ff[2].ptr, ff[2].len, AF_INET, &eri.his);
 			if (ugh != NULL)
+			{
 				break;
+			}
 
 			/* SAID */
 
 			context = "SA ID field malformed: ";
 			ugh = read_proto(ff[4].ptr, &ff[4].len, &eri.transport_proto);
 			if (ugh != NULL)
+			{
 				break;
+			}
 			ugh = ttosa(ff[4].ptr, ff[4].len, &eri.said);
 		} while (FALSE);
 
@@ -1738,9 +1766,13 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 			ipip_spi = htonl(++last_tunnel_spi);
 			if (inbound)
+			{
 				st->st_tunnel_in_spi = ipip_spi;
+			}
 			else
+			{
 				st->st_tunnel_out_spi = ipip_spi;
+			}
 		}
 
 		set_text_said(text_said
@@ -1797,10 +1829,10 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		said_next->text_said = text_said;
 
 		if (!kernel_ops->add_sa(said_next, replace))
+		{
 			goto fail;
-
+		}
 		said_next++;
-
 		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 	}
 
@@ -2472,11 +2504,14 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 
 		/* if no state provided, then install a shunt for later */
 		if (st == NULL)
+		{
 			eroute_installed = shunt_eroute(c, sr, RT_ROUTED_PROSPECTIVE
 											, ERO_REPLACE, "replace");
+		}
 		else
+		{
 			eroute_installed = sag_eroute(st, sr, ERO_REPLACE, "replace");
-
+		}
 #if 0
 		/* XXX - MCR. I previously felt that this was a bogus check */
 		if (ero != NULL && ero != c && esr != sr)
