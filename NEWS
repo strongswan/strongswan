@@ -27,6 +27,9 @@ strongswan-4.3.5
   The directory containing CA certificates can be specified using the
   --with-nm-ca-dir=path configure option.
 
+- Fixed the encoding of the Email relative distinguished name in left|rightid
+  statements
+
 
 strongswan-4.3.4
 ----------------
