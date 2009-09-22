@@ -163,11 +163,6 @@ struct private_eap_sim_t {
 	u_int8_t type;
 
 	/**
-	 * version this implementation uses
-	 */
-	chunk_t version;
-
-	/**
 	 * version list received from server
 	 */
 	chunk_t version_list;
@@ -222,6 +217,8 @@ struct private_eap_sim_t {
 /** length of the EMSK */
 #define EMSK_LEN 64
 
+/* version of sim protocol we speak */
+static chunk_t version = chunk_from_chars(0x00,0x01);
 /* client error codes used in AT_CLIENT_ERROR_CODE */
 static chunk_t client_error_general = chunk_from_chars(0x00, 0x01);
 static chunk_t client_error_unsupported = chunk_from_chars(0x00, 0x02);
@@ -432,20 +429,20 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 					data = chunk_skip(data, 2);
 					chunk_free(&this->version_list);
 					this->version_list = chunk_clone(data);
-					while (data.len >= this->version.len)
+					while (data.len >= version.len)
 					{
-						if (memeq(data.ptr, this->version.ptr, this->version.len))
+						if (memeq(data.ptr, version.ptr, version.len))
 						{
 							found = TRUE;
 							break;
 						}
-						data = chunk_skip(data, this->version.len);
+						data = chunk_skip(data, version.len);
 					}
 				}
 				if (!found)
 				{
 					DBG1(DBG_IKE, "server does not support EAP_SIM "
-						 "version number %#B", &this->version);
+						 "version number %#B", &version);
 					*out = build_payload(this, identifier, SIM_CLIENT_ERROR,
 							AT_CLIENT_ERROR_CODE, client_error_unsupported,
 							AT_END);
@@ -492,7 +489,7 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 
 	/* build payload. If "include_id" is AT_END, AT_IDENTITY is ommited */
 	*out = build_payload(this, identifier, SIM_START,
-						 AT_SELECTED_VERSION, this->version,
+						 AT_SELECTED_VERSION, version,
 						 AT_NONCE_MT, this->nonce,
 						 include_id, this->peer->get_encoding(this->peer),
 						 AT_END);
@@ -509,7 +506,7 @@ static void derive_keys(private_eap_sim_t *this, chunk_t kcs)
 
 	/* build MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version) */
 	tmp = chunk_cata("ccccc", this->peer->get_encoding(this->peer), kcs,
-					 this->nonce, this->version_list, this->version);
+					 this->nonce, this->version_list, version);
 	mk = chunk_alloca(this->hasher->get_hash_size(this->hasher));
 	this->hasher->get_hash(this->hasher, tmp, mk.ptr);
 	DBG3(DBG_IKE, "MK = SHA1(%B\n) = %B", &tmp, &mk);
@@ -798,7 +795,7 @@ static status_t server_process_start(private_eap_sim_t *this,
 				}
 				break;
 			case AT_SELECTED_VERSION:
-				if (chunk_equals(data, this->version))
+				if (chunk_equals(data, version))
 				{
 					supported = TRUE;
 				}
@@ -1000,10 +997,10 @@ static status_t peer_initiate(private_eap_sim_t *this, eap_payload_t **out)
 static status_t server_initiate(private_eap_sim_t *this, eap_payload_t **out)
 {
 	/* version_list to derive MK, no padding */
-	this->version_list = chunk_clone(this->version);
+	this->version_list = chunk_clone(version);
 	/* build_payloads adds padding itself */
 	*out = build_payload(this, this->identifier++, SIM_START,
-						 AT_VERSION_LIST, this->version, AT_END);
+						 AT_VERSION_LIST, version, AT_END);
 	return NEED_MORE;
 }
 
@@ -1069,7 +1066,6 @@ eap_sim_t *eap_sim_create_generic(eap_role_t role, identification_t *server,
 	this->sreses = chunk_empty;
 	this->peer = peer->clone(peer);
 	this->tries = MAX_TRIES;
-	this->version = chunk_from_chars(0x00,0x01);
 	this->version_list = chunk_empty;
 	this->k_auth = chunk_empty;
 	this->k_encr = chunk_empty;
