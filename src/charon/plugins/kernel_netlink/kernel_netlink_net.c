@@ -861,15 +861,18 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{
 					/* got a source address */
 					new_src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
-					if (get_vip_refcount(this, src))
-					{	/* skip source address if it is installed by us */
-						new_src->destroy(new_src);
-					}
-					else
+					if (new_src)
 					{
-						DESTROY_IF(src);
-						src = new_src;
-						best = msg->rtm_dst_len;
+						if (get_vip_refcount(this, new_src))
+						{	/* skip source address if it is installed by us */
+							new_src->destroy(new_src);
+						}
+						else
+						{
+							DESTROY_IF(src);
+							src = new_src;
+							best = msg->rtm_dst_len;
+						}
 					}
 					continue;
 				}
