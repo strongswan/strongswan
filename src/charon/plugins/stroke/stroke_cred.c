@@ -481,21 +481,21 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 
 						if (!(x509->get_flags(x509) & X509_CA))
 						{
-							DBG1(DBG_CFG, "  CA certificate '%Y' misses "
-								 "CA basic constraint, discarded",
+							DBG1(DBG_CFG, "  ca certificate '%Y' lacks "
+								 "ca basic constraint, discarded",
 								 cert->get_subject(cert));
 							cert->destroy(cert);
 							cert = NULL;
 						}
 						else
 						{
-							DBG1(DBG_CFG, "  loaded CA certificate '%Y' from '%s'",
+							DBG1(DBG_CFG, "  loaded ca certificate '%Y' from '%s'",
 										  cert->get_subject(cert), file);
 						}
 					}
 					else
 					{
-						DBG1(DBG_CFG, "  loading CA certificate from '%s' "
+						DBG1(DBG_CFG, "  loading ca certificate from '%s' "
 									  "failed", file);
 					}
 				}
@@ -908,13 +908,13 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			}
 			if (key)
 			{
-				DBG1(DBG_CFG, "  loaded %N private key file '%s'",
+				DBG1(DBG_CFG, "  loaded %N private key from '%s'",
 					 key_type_names, key->get_type(key), path);
 				this->private->insert_last(this->private, key);
 			}
 			else
 			{
-				DBG1(DBG_CFG, "  loading private key file '%s' failed", path);
+				DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
 			}
 			chunk_clear(&secret);
 		}
