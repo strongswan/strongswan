@@ -30,6 +30,8 @@ strongswan-4.3.5
 - Fixed the encoding of the Email relative distinguished name in left|rightid
   statements
 
+- Fixed the broken parsing of PKCS#7 wrapped certificates by the pluto daemon
+
 
 strongswan-4.3.4
 ----------------
