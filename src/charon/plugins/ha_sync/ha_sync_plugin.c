@@ -171,12 +171,12 @@ plugin_t *plugin_create()
 		return NULL;
 	}
 
-	this->segments = ha_sync_segments_create(this->socket, this->kernel,
-											 count, active);
 	if (secret)
 	{
-		this->tunnel = ha_sync_tunnel_create(secret, local, remote);
+		this->tunnel = ha_sync_tunnel_create(local, remote, secret);
 	}
+	this->segments = ha_sync_segments_create(this->socket, this->kernel,
+											 this->tunnel, count, active);
 	if (fifo)
 	{
 		this->ctl = ha_sync_ctl_create(this->segments);

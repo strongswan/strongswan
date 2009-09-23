@@ -38,6 +38,7 @@ typedef u_int16_t segment_mask_t;
 #define SEGMENTS_BIT(segment) (0x01 << (segment - 1))
 
 #include "ha_sync_socket.h"
+#include "ha_sync_tunnel.h"
 #include "ha_sync_kernel.h"
 
 /**
@@ -95,6 +96,7 @@ struct ha_sync_segments_t {
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
 											ha_sync_kernel_t *kernel,
+											ha_sync_tunnel_t *tunnel,
 											u_int count, segment_mask_t active);
 
 #endif /* HA_SYNC_SEGMENTS_ @}*/

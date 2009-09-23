@@ -36,6 +36,11 @@ struct private_ha_sync_segments_t {
 	ha_sync_socket_t *socket;
 
 	/**
+	 * Sync tunnel, if any
+	 */
+	ha_sync_tunnel_t *tunnel;
+
+	/**
 	 * Interface to control segments at kernel level
 	 */
 	ha_sync_kernel_t *kernel;
@@ -110,15 +115,20 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
-			if (ike_sa->get_state(ike_sa) == old)
+			if (ike_sa->get_state(ike_sa) != old)
 			{
-				for (i = segment; i < limit; i++)
+				continue;
+			}
+			if (this->tunnel && this->tunnel->is_sync_sa(this->tunnel, ike_sa))
+			{
+				continue;
+			}
+			for (i = segment; i < limit; i++)
+			{
+				if (this->kernel->in_segment(this->kernel,
+										ike_sa->get_other_host(ike_sa), i))
 				{
-					if (this->kernel->in_segment(this->kernel,
-											ike_sa->get_other_host(ike_sa), i))
-					{
-						ike_sa->set_state(ike_sa, new);
-					}
+					ike_sa->set_state(ike_sa, new);
 				}
 			}
 		}
@@ -305,6 +315,7 @@ static void destroy(private_ha_sync_segments_t *this)
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
 											ha_sync_kernel_t *kernel,
+											ha_sync_tunnel_t *tunnel,
 											u_int count, segment_mask_t active)
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
@@ -317,6 +328,7 @@ ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
 	this->socket = socket;
+	this->tunnel = tunnel;
 	this->kernel = kernel;
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->active = active;
