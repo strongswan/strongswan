@@ -84,10 +84,12 @@ static const asn1Object_t signedDataObjects[] = {
 	{ 1,   "end loop",                      ASN1_EOC,          ASN1_END           }, /* 25 */
 	{ 0, "exit",                            ASN1_EOC,          ASN1_EXIT          }
 };
+#define PKCS7_SIGNED_VERSION             1
 #define PKCS7_DIGEST_ALG                 3
 #define PKCS7_SIGNED_CONTENT_INFO        5
 #define PKCS7_SIGNED_CERT                7
 #define PKCS7_SIGNER_INFO               13
+#define PKCS7_SIGNER_INFO_VERSION       14
 #define PKCS7_SIGNED_ISSUER             16
 #define PKCS7_SIGNED_SERIAL_NUMBER      17
 #define PKCS7_DIGEST_ALGORITHM          18
@@ -208,6 +210,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	int digest_alg = OID_UNKNOWN;
 	int enc_alg    = OID_UNKNOWN;
 	int signerInfos = 0;
+	int version;
 	int objectID;
 	bool success = FALSE;
 
@@ -233,6 +236,10 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 
 		switch (objectID)
 		{
+		case PKCS7_SIGNED_VERSION:
+			version = object.len ? (int)*object.ptr : 0;
+			DBG2("  v%d", version);
+			break;
 		case PKCS7_DIGEST_ALG:
 			digest_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 			break;
@@ -265,6 +272,10 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 		case PKCS7_SIGNER_INFO:
 			signerInfos++;
 			DBG2("  signer #%d", signerInfos);
+			break;
+		case PKCS7_SIGNER_INFO_VERSION:
+			version = object.len ? (int)*object.ptr : 0;
+			DBG2("  v%d", version);
 			break;
 		case PKCS7_SIGNED_ISSUER:
 			dntoa(buf, BUF_LEN, object);
@@ -359,6 +370,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 	u_char buf[BUF_LEN];
 	int enc_alg         = OID_UNKNOWN;
 	int content_enc_alg = OID_UNKNOWN;
+	int version;
 	int objectID;
 	bool success = FALSE;
 
@@ -385,14 +397,18 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		switch (objectID)
 		{
 		case PKCS7_ENVELOPED_VERSION:
-		if (*object.ptr != 0)
-		{
-			DBG1("envelopedData version is not 0");
-			goto end;
-		}
-		break;
+			version = object.len ? (int)*object.ptr : 0;
+			DBG2("  v%d", version);
+			if (version != 0)
+			{
+				DBG1("envelopedData version is not 0");
+				goto end;
+			}
+			break;
 		case PKCS7_RECIPIENT_INFO_VERSION:
-			if (*object.ptr != 0)
+			version = object.len ? (int)*object.ptr : 0;
+			DBG2("  v%d", version);
+			if (version != 0)
 			{
 				DBG1("recipient info version is not 0");
 				goto end;
