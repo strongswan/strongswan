@@ -325,7 +325,7 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
-			DBG1(DBG_CFG, "  ca certificate '%Y' misses ca basic constraint, "
+			DBG1(DBG_CFG, "  ca certificate \"%Y\" misses ca basic constraint, "
 				 "discarded", cert->get_subject(cert));
 			cert->destroy(cert);
 			return NULL;
@@ -432,7 +432,7 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 	if (cert)
 	{
 		cert = add_cert(this, cert);
-		DBG1(DBG_CFG, "  loaded certificate '%Y' from '%s'",
+		DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
 					  cert->get_subject(cert), filename);
 		return cert->get_ref(cert);
 	}
@@ -481,7 +481,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 
 						if (!(x509->get_flags(x509) & X509_CA))
 						{
-							DBG1(DBG_CFG, "  ca certificate '%Y' lacks "
+							DBG1(DBG_CFG, "  ca certificate \"%Y\" lacks "
 								 "ca basic constraint, discarded",
 								 cert->get_subject(cert));
 							cert->destroy(cert);
@@ -489,7 +489,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 						}
 						else
 						{
-							DBG1(DBG_CFG, "  loaded ca certificate '%Y' from '%s'",
+							DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
 										  cert->get_subject(cert), file);
 						}
 					}
@@ -507,7 +507,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										BUILD_X509_FLAG, flag, BUILD_END);
 					if (cert)
 					{
-						DBG1(DBG_CFG, "  loaded certificate '%Y' from '%s'",
+						DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
 									  cert->get_subject(cert), file);
 					}
 					else
