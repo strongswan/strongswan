@@ -216,12 +216,12 @@ if test x$manager = xtrue; then
 fi
 
 if test x$medsrv = xtrue; then
-	me=true
+	mediation=true
 	fast=true
 fi
 
 if test x$medcli = xtrue; then
-	me=true
+	mediation=true
 fi
 
 dnl ===========================================
@@ -727,7 +727,7 @@ dnl ==============================
 dnl  set global definitions
 dnl ==============================
 
-if test x$me = xtrue; then
+if test x$mediation = xtrue; then
 	AC_DEFINE(ME)
 fi
 if test x$capabilities = xlibcap; then
