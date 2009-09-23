@@ -127,13 +127,19 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 		{
 			if (enable)
 			{
-				this->active |= SEGMENTS_BIT(i);
-				this->kernel->activate(this->kernel, i);
+				if (!(this->active & SEGMENTS_BIT(i)))
+				{
+					this->active |= SEGMENTS_BIT(i);
+					this->kernel->activate(this->kernel, i);
+				}
 			}
 			else
 			{
-				this->active &= ~SEGMENTS_BIT(i);
-				this->kernel->deactivate(this->kernel, i);
+				if (this->active & SEGMENTS_BIT(i))
+				{
+					this->active &= ~SEGMENTS_BIT(i);
+					this->kernel->deactivate(this->kernel, i);
+				}
 			}
 		}
 
