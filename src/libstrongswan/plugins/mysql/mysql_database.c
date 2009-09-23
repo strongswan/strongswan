@@ -16,7 +16,7 @@
 #define _GNU_SOURCE
 #include <string.h>
 #include <pthread.h>
-#include <mysql/mysql.h>
+#include <mysql.h>
 
 #include "mysql_database.h"
 
