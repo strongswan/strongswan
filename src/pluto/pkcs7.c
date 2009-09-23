@@ -224,7 +224,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 		return FALSE;
 	}
 
-	parser = asn1_parser_create(signedDataObjects, blob);
+	parser = asn1_parser_create(signedDataObjects, cInfo.content);
 	parser->set_top_level(parser, 2);
 
 	while (parser->iterate(parser, &objectID, &object))
