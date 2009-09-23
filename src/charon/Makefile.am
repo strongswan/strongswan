@@ -125,6 +125,7 @@ if USE_ME
     sa/connect_manager.c sa/connect_manager.h \
     sa/mediation_manager.c sa/mediation_manager.h \
     sa/tasks/ike_me.c sa/tasks/ike_me.h
+  AM_CFLAGS += -DME
 endif
 
 if USE_CAPABILITIES
