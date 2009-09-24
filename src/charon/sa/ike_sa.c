@@ -1549,7 +1549,7 @@ static status_t reestablish(private_ike_sa_t *this)
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
-	bool required = FALSE;
+	bool restart = FALSE;
 	status_t status = FAILED;
 
 	/* check if we have children to keep up at all */
@@ -1568,8 +1568,11 @@ static status_t reestablish(private_ike_sa_t *this)
 		switch (action)
 		{
 			case ACTION_RESTART:
+				restart = TRUE;
+				break;
 			case ACTION_ROUTE:
-				required = TRUE;
+				charon->traps->install(charon->traps, this->peer_cfg, child_cfg);
+				break;
 			default:
 				break;
 		}
@@ -1579,10 +1582,10 @@ static status_t reestablish(private_ike_sa_t *this)
 	/* mediation connections have no children, keep them up anyway */
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		required = TRUE;
+		restart = TRUE;
 	}
 #endif /* ME */
-	if (!required)
+	if (!restart)
 	{
 		return FAILED;
 	}
@@ -1640,10 +1643,6 @@ static status_t reestablish(private_ike_sa_t *this)
 						 child_cfg->get_name(child_cfg));
 					child_cfg->get_ref(child_cfg);
 					status = new->initiate(new, child_cfg, 0, NULL, NULL);
-					break;
-				case ACTION_ROUTE:
-					charon->traps->install(charon->traps,
-										   this->peer_cfg, child_cfg);
 					break;
 				default:
 					continue;
