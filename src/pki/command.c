@@ -168,7 +168,6 @@ void command_register(command_t command)
 int command_usage(char *error)
 {
 	FILE *out = stdout;
-	char buf[64];
 	int i;
 
 	if (error)
@@ -182,8 +181,8 @@ int command_usage(char *error)
 	{
 		for (i = 0; cmds[i].cmd; i++)
 		{
-			snprintf(buf, sizeof(buf), "--%s (-%c)", cmds[i].cmd, cmds[i].op);
-			fprintf(out, "  pki %-14s %s\n", buf, cmds[i].description);
+			fprintf(out, "  pki --%-6s (-%c)  %s\n",
+					cmds[i].cmd, cmds[i].op, cmds[i].description);
 		}
 	}
 	else
@@ -202,10 +201,9 @@ int command_usage(char *error)
 		}
 		for (i = 0; cmds[active].options[i].name; i++)
 		{
-			snprintf(buf, sizeof(buf), "--%s (-%c)",
-					 cmds[active].options[i].name, cmds[active].options[i].op);
-			fprintf(out, "        %-15s %s\n",
-					buf, cmds[active].options[i].desc);
+			fprintf(out, "        --%-8s (-%c)  %s\n",
+					cmds[active].options[i].name, cmds[active].options[i].op,
+					cmds[active].options[i].desc);
 		}
 	}
 	return error != NULL;
