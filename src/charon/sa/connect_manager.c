@@ -1145,7 +1145,8 @@ static job_requeue_t sender(callback_data_t *data)
 	check->src = pair->local->clone(pair->local);
 	check->dst = pair->remote->clone(pair->remote);
 	check->connect_id = chunk_clone(checklist->connect_id);
-	check->endpoint = endpoint_notify_create();
+	check->endpoint = endpoint_notify_create_from_host(PEER_REFLEXIVE, NULL,
+													   NULL);
 
 	pair->state = CHECK_IN_PROGRESS;
 
