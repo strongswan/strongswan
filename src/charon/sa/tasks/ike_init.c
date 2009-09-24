@@ -240,7 +240,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		 this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	if (this->retry++ >= MAX_RETRIES)
+	if (this->retry >= MAX_RETRIES)
 	{
 		DBG1(DBG_IKE, "giving up after %d retries", MAX_RETRIES);
 		return FAILED;
@@ -451,6 +451,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					}
 
 					enumerator->destroy(enumerator);
+					this->retry++;
 					return NEED_MORE;
 				}
 				case NAT_DETECTION_SOURCE_IP:
@@ -467,6 +468,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					this->ike_sa->reset(this->ike_sa);
 					enumerator->destroy(enumerator);
 					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
+					this->retry++;
 					return NEED_MORE;
 				}
 				default:
