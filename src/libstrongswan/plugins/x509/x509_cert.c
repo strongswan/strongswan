@@ -133,7 +133,7 @@ struct private_x509_cert_t {
 	/**
 	 * Subject Key Identifier
 	 */
-	chunk_t subjectKeyID;
+	chunk_t subjectKeyIdentifier;
 
 	/**
 	 * Authority Key Identifier
@@ -752,7 +752,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						{
 							goto end;
 						}
-						this->subjectKeyID = object;
+						this->subjectKeyIdentifier = object;
 						break;
 					case OID_SUBJECT_ALT_NAME:
 						x509_parse_generalNames(object, level, FALSE,
@@ -892,7 +892,7 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 }
 
 /**
- * Implementation of certificate_t.has_subject.
+ * Implementation of certificate_t.has_issuer.
  */
 static id_match_t has_issuer(private_x509_cert_t *this, identification_t *issuer)
 {
@@ -901,7 +901,7 @@ static id_match_t has_issuer(private_x509_cert_t *this, identification_t *issuer
 }
 
 /**
- * Implementation of certificate_t.issued_by
+ * Implementation of certificate_t.issued_by.
  */
 static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 {
@@ -982,16 +982,8 @@ static x509_flag_t get_flags(private_x509_cert_t *this)
 static bool get_validity(private_x509_cert_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
-	time_t t;
+	time_t t = when ? *when : time(NULL);
 
-	if (when)
-	{
-		t = *when;
-	}
-	else
-	{
-		t = time(NULL);
-	}
 	if (not_before)
 	{
 		*not_before = this->notBefore;
@@ -1060,6 +1052,31 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 static chunk_t get_serial(private_x509_cert_t *this)
 {
 	return this->serialNumber;
+}
+
+/**
+ * Implementation of x509_t.get_subjectKeyIdentifier.
+ */
+static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
+{
+	if (this->subjectKeyIdentifier.ptr)
+	{
+		return this->subjectKeyIdentifier;
+	}
+	else
+	{
+		chunk_t fingerprint;
+
+		if (this->public_key->get_fingerprint(this->public_key,
+					 				KEY_ID_PUBKEY_SHA1, &fingerprint))
+		{
+			return fingerprint;
+		}
+		else
+		{
+			return chunk_empty;
+		}
+	}					
 }
 
 /**
@@ -1143,6 +1160,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
 	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
+	this->public.interface.get_subjectKeyIdentifier = (chunk_t (*)(x509_t*))get_subjectKeyIdentifier;
 	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(x509_t*))get_authKeyIdentifier;
 	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
@@ -1161,7 +1179,7 @@ static private_x509_cert_t* create_empty(void)
 	this->subjectAltNames = linked_list_create();
 	this->crl_uris = linked_list_create();
 	this->ocsp_uris = linked_list_create();
-	this->subjectKeyID = chunk_empty;
+	this->subjectKeyIdentifier = chunk_empty;
 	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->algorithm = 0;

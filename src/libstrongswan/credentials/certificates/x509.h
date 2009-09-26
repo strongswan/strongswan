@@ -74,6 +74,13 @@ struct x509_t {
 	chunk_t (*get_serial)(x509_t *this);
 
 	/**
+	 * Get the the subjectKeyIdentifier.
+	 *
+	 * @return			subjectKeyIdentifier as chunk_t, internal data
+	 */
+	chunk_t (*get_subjectKeyIdentifier)(x509_t *this);
+
+	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
 	 * @return			authKeyIdentifier as chunk_t, internal data
