@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <utils/linked_list.h>
+
 #include "x509.h"
 
 #define FETCH_CMD_TIMEOUT       10      /* seconds */
@@ -32,8 +34,7 @@ struct fetch_req {
 	int           trials;
 	chunk_t       issuer;
 	chunk_t       authKeyID;
-	chunk_t       authKeySerialNumber;
-	generalName_t *distributionPoints;
+	linked_list_t *distributionPoints;
 };
 
 #ifdef THREADS
@@ -64,13 +65,15 @@ extern void wake_fetch_thread(const char *who);
 extern void init_fetch(void);
 extern void free_crl_fetch(void);
 extern void free_ocsp_fetch(void);
-extern void add_distribution_points(const generalName_t *newPoints
-	, generalName_t **distributionPoints);
-extern fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber
-	, chunk_t authKeyID, const generalName_t *gn);
+extern void add_distribution_point(linked_list_t *points, char* new_point);
+extern void add_distribution_points(linked_list_t *points,
+									linked_list_t *new_points);
+extern fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID,
+											linked_list_t *distributionPoints);
 extern void add_crl_fetch_request(fetch_req_t *req);
-extern void add_ocsp_fetch_request(struct ocsp_location *location, chunk_t serialNumber);
-extern void list_distribution_points(const generalName_t *gn);
+extern void add_ocsp_fetch_request(struct ocsp_location *location,
+								   chunk_t serialNumber);
+extern void list_distribution_points(linked_list_t *distributionPoints);
 extern void list_crl_fetch_requests(bool utc);
 extern void list_ocsp_fetch_requests(bool utc);
 extern size_t write_buffer(void *ptr, size_t size, size_t nmemb, void *data);

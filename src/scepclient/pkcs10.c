@@ -45,15 +45,14 @@ static const chunk_t ASN1_extensionRequest_oid = chunk_from_chars(
 );
 
 /**
- * @brief Adds a subjectAltName in DER-coded form to a linked list
+ * Adds a subjectAltName in DER-coded form to a linked list
  *
- * @param[in,out]       subjectAltNames head of the linked list of subjectAltNames
- * @param[in]           kind            type of the subjectAltName (which is a generalName)
- * @param[in]           value           value of the subjectAltName as an ASCII string
+ * @param[in]       subjectAltNames linked list of subjectAltNames
+ * @param[in]       kind            type of the subjectAltName (which is a generalName)
+ * @param[in]       value           value of the subjectAltName as an ASCII string
  */
-void
-pkcs10_add_subjectAltName(generalName_t **subjectAltNames, generalNames_t kind
-, char *value)
+void pkcs10_add_subjectAltName(linked_list_t *subjectAltNames,
+							   generalNames_t kind, char *value)
 {
 	generalName_t *gn;
 	asn1_t asn1_type = ASN1_EOC;
@@ -96,16 +95,15 @@ pkcs10_add_subjectAltName(generalName_t **subjectAltNames, generalNames_t kind
 }
 
 /**
- * @brief Builds the requestInfoAttributes of the certificationRequestInfo-field
+ * Builds the requestInfoAttributes of the certificationRequestInfo-field
  *
  * challenge password ans subjectAltNames are only included,
  * when avaiable in given #pkcs10_t structure
  *
  * @param[in]   pkcs10          Pointer to a #pkcs10_t structure
- * @return                                      1 if succeeded, 0 otherwise
+ * @return                      1 if succeeded, 0 otherwise
  */
-static chunk_t
-build_req_info_attributes(pkcs10_t* pkcs10)
+static chunk_t build_req_info_attributes(pkcs10_t* pkcs10)
 {
 
 	chunk_t subjectAltNames   = chunk_empty;
@@ -143,13 +141,12 @@ build_req_info_attributes(pkcs10_t* pkcs10)
 }
 
 /**
- * @brief Builds a DER-code pkcs#10 certificate request
+ * Builds a DER-code pkcs#10 certificate request
  *
  * @param[in]   pkcs10          pointer to a pkcs10_t struct
  * @return                      DER-code pkcs10 request
  */
-static chunk_t
-pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
+static chunk_t pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 {
 	chunk_t key = chunk_empty;
 
@@ -175,7 +172,7 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
 }
 
 /**
- * @brief Creates a pkcs#10 certificate request object
+ * Creates a pkcs#10 certificate request object
  *
  * To create a certificate request, the RSA key and the
  * names to be included as subject in the certificate request
@@ -190,7 +187,7 @@ pkcs10_build_request(pkcs10_t *pkcs10, int signature_alg)
  */
 pkcs10_t* pkcs10_build(private_key_t *private, public_key_t *public,
 					   chunk_t subject, chunk_t challengePassword,
-					   generalName_t *subjectAltNames, int signature_alg)
+					   linked_list_t *subjectAltNames, int signature_alg)
 {
 	pkcs10_t *pkcs10 = malloc_thing(pkcs10_t);
 
@@ -205,12 +202,11 @@ pkcs10_t* pkcs10_build(private_key_t *private, public_key_t *public,
 }
 
 /**
- * @brief Frees the resources used by an #pkcs10_t object
+ * Frees the resources used by an #pkcs10_t object
  *
  * @param[in]   pkcs10          #pkcs10_t to free
  */
-void
-pkcs10_free(pkcs10_t *pkcs10)
+void pkcs10_free(pkcs10_t *pkcs10)
 {
 	if (pkcs10 != NULL)
 	{

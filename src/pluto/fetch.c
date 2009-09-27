@@ -48,7 +48,6 @@ fetch_req_t empty_fetch_req = {
 		  0 , /* trials */
   { NULL, 0}, /* issuer */
   { NULL, 0}, /* authKeyID */
-  { NULL, 0}, /* authKeySerialNumber */
 	NULL      /* distributionPoints */
 };
 
@@ -251,10 +250,9 @@ void wake_fetch_thread(const char *who)
  */
 static void free_fetch_request(fetch_req_t *req)
 {
+	req->distributionPoints->destroy_function(req->distributionPoints, free);
 	free(req->issuer.ptr);
-	free(req->authKeySerialNumber.ptr);
 	free(req->authKeyID.ptr);
-	free_generalNames(req->distributionPoints, TRUE);
 	free(req);
 }
 
@@ -286,47 +284,39 @@ x509crl_t* fetch_crl(char *url)
 /**
  * Complete a distributionPoint URI with ca information
  */
-static char* complete_uri(chunk_t distPoint, const char *ldaphost)
+static char* complete_uri(char *distPoint, const char *ldaphost)
 {
-	char *uri;
-	char *ptr  = distPoint.ptr;
-	size_t len = distPoint.len;
+	char *symbol = strchr(distPoint, ':');
 
-	char *symbol = memchr(ptr, ':', len);
-
-	if (symbol != NULL)
+	if (symbol)
 	{
-		size_t type_len = symbol - ptr;
+		int type_len = symbol - distPoint;
 
-		if (type_len >= 4 && strncasecmp(ptr, "ldap", 4) == 0)
+		if (type_len >= 4 && strncasecmp(distPoint, "ldap", 4) == 0)
 		{
-			ptr = symbol + 1;
-			len -= (type_len + 1);
+			char *ptr  = symbol + 1;
+			int len = strlen(distPoint) - (type_len + 1);
 
 			if (len > 2 && *ptr++ == '/' && *ptr++ == '/')
 			{
 				len -= 2;
-				symbol = memchr(ptr, '/', len);
+				symbol = strchr(ptr, '/');
 
-				if (symbol != NULL && symbol - ptr == 0 && ldaphost != NULL)
+				if (symbol && symbol - ptr == 0 && ldaphost)
 				{
-					uri = malloc(distPoint.len + strlen(ldaphost) + 1);
+					char uri[BUF_LEN];
 
 					/* insert the ldaphost into the uri */
-					sprintf(uri, "%.*s%s%.*s"
-						, (int)(distPoint.len - len), distPoint.ptr
-						, ldaphost
-						, (int)len, symbol);
-					return uri;
+					snprintf(uri, BUF_LEN, "%.*s%s%.*s", strlen(distPoint)-len,
+							 distPoint, ldaphost, len, symbol);
+					return strdup(uri);
 				}
 			}
 		}
 	}
 
 	/* default action:  copy distributionPoint without change */
-	uri = malloc(distPoint.len + 1);
-	sprintf(uri, "%.*s", (int)distPoint.len, distPoint.ptr);
-	return uri;
+	return strdup(distPoint);
 }
 
 /**
@@ -343,40 +333,40 @@ static void fetch_crls(bool cache_crls)
 
 	while (req != NULL)
 	{
+		enumerator_t *enumerator;
+		char *point;
 		bool valid_crl = FALSE;
-		generalName_t *gn = req->distributionPoints;
 		const char *ldaphost;
 		ca_info_t *ca;
 
 		lock_ca_info_list("fetch_crls");
 
-		ca = get_ca_info(req->issuer, req->authKeySerialNumber, req->authKeyID);
+		ca = get_ca_info(req->issuer, req->authKeyID);
 		ldaphost = (ca == NULL)? NULL : ca->ldaphost;
 
-		while (gn != NULL)
+		enumerator = req->distributionPoints->create_enumerator(req->distributionPoints);
+		while (enumerator->enumerate(enumerator, &point))
 		{
-			char *uri = complete_uri(gn->name, ldaphost);
 			x509crl_t *crl;
+			char *uri;
 
+			uri = complete_uri(point, ldaphost);
 			crl = fetch_crl(uri);
+			free(uri);
+
 			if (crl)
 			{
-				chunk_t crl_uri = chunk_clone(gn->name);
-
-				if (insert_crl(crl, crl_uri, cache_crls))
+				if (insert_crl(crl, point, cache_crls))
 				{
 					DBG(DBG_CONTROL,
 						DBG_log("we have a valid crl")
 					)
 					valid_crl = TRUE;
-					free(uri);
 					break;
 				}
 			}
-			free(uri);
-			gn = gn->next;
 		}
-
+		enumerator->destroy(enumerator);
 		unlock_ca_info_list("fetch_crls");
 
 		if (valid_crl)
@@ -401,19 +391,11 @@ static void fetch_crls(bool cache_crls)
 
 static void fetch_ocsp_status(ocsp_location_t* location)
 {
-	chunk_t request, response;
-	char *uri;
+	chunk_t request = build_ocsp_request(location);
+	chunk_t response = chunk_empty;
 
-	request = build_ocsp_request(location);
-	response = chunk_empty;
-
-	/* we need a null terminated string for curl */
-	uri = malloc(location->uri.len + 1);
-	memcpy(uri, location->uri.ptr, location->uri.len);
-	*(uri + location->uri.len) = '\0';
-
-	DBG1("  requesting ocsp status from '%s' ...", uri);
-	if (lib->fetcher->fetch(lib->fetcher, uri, &response,
+	DBG1("  requesting ocsp status from '%s' ...", location->uri);
+	if (lib->fetcher->fetch(lib->fetcher, location->uri, &response,
 							FETCH_REQUEST_DATA, request,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
 							FETCH_END) == SUCCESS)
@@ -422,10 +404,9 @@ static void fetch_ocsp_status(ocsp_location_t* location)
 	}
 	else
 	{
-		DBG1("ocsp request to %s failed", uri);
+		DBG1("ocsp request to %s failed", location->uri);
 	}
 
-	free(uri);
 	free(request.ptr);
 	chunk_free(&location->nonce);
 
@@ -554,62 +535,95 @@ void free_ocsp_fetch(void)
 
 
 /**
- * Add additional distribution points
+ * Add an additional distribution point
  */
-void add_distribution_points(const generalName_t *newPoints ,generalName_t **distributionPoints)
+void add_distribution_point(linked_list_t *points, char *new_point)
 {
-	while (newPoints != NULL)
+	char *point;
+	bool add = TRUE;
+	enumerator_t *enumerator;
+
+	if (new_point == NULL || *new_point == '\0')
 	{
-		/* skip empty distribution point */
-		if (newPoints->name.len > 0)
+		return;
+	}
+
+	enumerator = points->create_enumerator(points);
+	while (enumerator->enumerate(enumerator, &point))
+	{
+		if (streq(point, new_point))
 		{
-			bool add = TRUE;
-			generalName_t *gn = *distributionPoints;
-
-			while (gn != NULL)
-			{
-				if (gn->kind == newPoints->kind
-				&& gn->name.len == newPoints->name.len
-				&& memeq(gn->name.ptr, newPoints->name.ptr, gn->name.len))
-				{
-					/* skip if the distribution point is already present */
-					add = FALSE;
-					break;
-				}
-				gn = gn->next;
-			}
-
-			if (add)
-			{
-				/* clone additional distribution point */
-				gn = clone_thing(*newPoints);
-				gn->name = chunk_clone(newPoints->name);
-
-				/* insert additional CRL distribution point */
-				gn->next = *distributionPoints;
-				*distributionPoints = gn;
-			}
+			add = FALSE;
+			break;
 		}
-		newPoints = newPoints->next;
+	}
+	enumerator->destroy(enumerator);
+
+	if (add)
+	{
+		points->insert_last(points, strdup(new_point));
 	}
 }
 
-fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeySerialNumber,
-									 chunk_t authKeyID, const generalName_t *gn)
+/**
+ * Add additional distribution points
+ */
+void add_distribution_points(linked_list_t *points, linked_list_t *new_points)
 {
+	char *new_point;
+	enumerator_t *enumerator;
+
+	enumerator = new_points->create_enumerator(new_points);
+	while (enumerator->enumerate(enumerator, &new_point))
+	{
+		bool add = TRUE;
+		char *point;
+		enumerator_t *enumerator;
+
+		enumerator = points->create_enumerator(points);
+		while (enumerator->enumerate(enumerator, &point))
+		{
+			if (streq(point, new_point))
+			{
+				add = FALSE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (add)
+		{
+			points->insert_last(points, strdup(new_point));
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID, 
+									 linked_list_t *distributionPoints)
+{
+	char *point;
+	enumerator_t *enumerator;
 	fetch_req_t *req = malloc_thing(fetch_req_t);
-	*req = empty_fetch_req;
+
+	memset(req, 0, sizeof(fetch_req_t));
+	req->distributionPoints = linked_list_create();
 
 	/* note current time */
 	req->installed = time(NULL);
 
 	/* clone fields */
 	req->issuer = chunk_clone(issuer);
-	req->authKeySerialNumber =  chunk_clone(authKeySerialNumber);
 	req->authKeyID = chunk_clone(authKeyID);
 
 	/* copy distribution points */
-	add_distribution_points(gn, &req->distributionPoints);
+	enumerator = distributionPoints->create_enumerator(distributionPoints);
+	while (enumerator->enumerate(enumerator, &point))
+	{
+		req->distributionPoints->insert_last(req->distributionPoints,
+											 strdup(point));
+	}
+	enumerator->destroy(enumerator);
 
 	return req;
 }
@@ -626,9 +640,8 @@ void add_crl_fetch_request(fetch_req_t *req)
 
 	while (r != NULL)
 	{
-		if ((req->authKeyID.ptr != NULL)? same_keyid(req->authKeyID, r->authKeyID)
-				: (same_dn(req->issuer, r->issuer)
-				&& same_serial(req->authKeySerialNumber, r->authKeySerialNumber)))
+		if (req->authKeyID.ptr ? same_keyid(req->authKeyID, r->authKeyID) :
+			same_dn(req->issuer, r->issuer))
 		{
 			/* there is already a fetch request */
 			DBG(DBG_CONTROL,
@@ -636,7 +649,8 @@ void add_crl_fetch_request(fetch_req_t *req)
 			)
 
 			/* there might be new distribution points */
-			add_distribution_points(req->distributionPoints, &r->distributionPoints);
+			add_distribution_points(r->distributionPoints,
+									req->distributionPoints);
 
 			unlock_crl_fetch_list("add_crl_fetch_request");
 			free_fetch_request(req);
@@ -672,17 +686,20 @@ void add_ocsp_fetch_request(ocsp_location_t *location, chunk_t serialNumber)
 /**
  * List all distribution points
  */
-void list_distribution_points(const generalName_t *gn)
+void list_distribution_points(linked_list_t *distributionPoints)
 {
-	bool first_gn = TRUE;
+	char *point;
+	bool first_point = TRUE;
+	enumerator_t *enumerator;
 
-	while (gn != NULL)
+	enumerator = distributionPoints->create_enumerator(distributionPoints);
+	while (enumerator->enumerate(enumerator, &point))
 	{
-		whack_log(RC_COMMENT, "       %s '%.*s'", (first_gn)? "distPts: "
-			:"         ", (int)gn->name.len, gn->name.ptr);
-		first_gn = FALSE;
-		gn = gn->next;
+		whack_log(RC_COMMENT, "       %s '%s'",
+				 (first_point)? "distPts: " : "         ", point);
+		first_point = FALSE;
 	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -715,12 +732,6 @@ void list_crl_fetch_requests(bool utc)
 			datatot(req->authKeyID.ptr, req->authKeyID.len, ':'
 				, buf, BUF_LEN);
 			whack_log(RC_COMMENT, "       authkey:   %s", buf);
-		}
-		if (req->authKeySerialNumber.ptr != NULL)
-		{
-			datatot(req->authKeySerialNumber.ptr, req->authKeySerialNumber.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       aserial:   %s", buf);
 		}
 		list_distribution_points(req->distributionPoints);
 		req = req->next;

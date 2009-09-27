@@ -57,9 +57,8 @@ struct ocsp_location {
 	chunk_t          issuer;
 	chunk_t          authNameID;
 	chunk_t          authKeyID;
-	chunk_t          authKeySerialNumber;
-	chunk_t          uri;
 	chunk_t          nonce;
+	char             *uri;
 	ocsp_certinfo_t  *certinfo;
 };
 

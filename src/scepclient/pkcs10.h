@@ -23,6 +23,7 @@
 #ifndef _PKCS10_H
 #define _PKCS10_H
 
+#include <utils/linked_list.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
 
@@ -45,16 +46,16 @@ struct pkcs10_struct {
 	chunk_t         request;
 	chunk_t         subject;
 	chunk_t         challengePassword;
-	generalName_t  *subjectAltNames;
+	linked_list_t  *subjectAltNames;
 };
 
 extern const pkcs10_t empty_pkcs10;
 
-extern void pkcs10_add_subjectAltName(generalName_t **subjectAltNames,
+extern void pkcs10_add_subjectAltName(linked_list_t *subjectAltNames,
 									  generalNames_t kind, char *value);
 extern pkcs10_t* pkcs10_build(private_key_t *private, public_key_t *public,
 							  chunk_t subject, chunk_t challengePassword,
-							  generalName_t *subjectAltNames, int signature_alg);
+							  linked_list_t *subjectAltNames, int signature_alg);
 extern void pkcs10_free(pkcs10_t *pkcs10);
 
 #endif /* _PKCS10_H */

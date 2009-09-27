@@ -49,18 +49,6 @@
 static x509cert_t *x509certs     = NULL;
 
 /**
- * ASN.1 definition of a basicConstraints extension
- */
-static const asn1Object_t basicConstraintsObjects[] = {
-	{ 0, "basicConstraints",	ASN1_SEQUENCE, ASN1_NONE          }, /*  0 */
-	{ 1,   "CA",				ASN1_BOOLEAN,  ASN1_DEF|ASN1_BODY }, /*  1 */
-	{ 1,   "pathLenConstraint",	ASN1_INTEGER,  ASN1_OPT|ASN1_BODY }, /*  2 */
-	{ 1,   "end opt",			ASN1_EOC,      ASN1_END           }, /*  3 */
-	{ 0, "exit",				ASN1_EOC,      ASN1_EXIT          }
-};
-#define BASIC_CONSTRAINTS_CA	1
-
-/**
  * ASN.1 definition of a authorityKeyIdentifier extension
  */
 static const asn1Object_t authKeyIdentifierObjects[] = {
@@ -76,31 +64,6 @@ static const asn1Object_t authKeyIdentifierObjects[] = {
 #define AUTH_KEY_ID_KEY_ID			1
 #define AUTH_KEY_ID_CERT_ISSUER		3
 #define AUTH_KEY_ID_CERT_SERIAL		5
-
-/**
- * ASN.1 definition of a authorityInfoAccess extension
- */
-static const asn1Object_t authInfoAccessObjects[] = {
-	{ 0, "authorityInfoAccess",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
-	{ 1,   "accessDescription",	ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
-	{ 2,     "accessMethod",	ASN1_OID,		ASN1_BODY }, /* 2 */
-	{ 2,     "accessLocation",	ASN1_EOC,		ASN1_RAW  }, /* 3 */
-	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 4 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-#define AUTH_INFO_ACCESS_METHOD		2
-#define AUTH_INFO_ACCESS_LOCATION	3
-
-/**
- * ASN.1 definition of a extendedKeyUsage extension
- */
-static const asn1Object_t extendedKeyUsageObjects[] = {
-	{ 0, "extendedKeyUsage",	ASN1_SEQUENCE,	ASN1_LOOP }, /* 0 */
-	{ 1,   "keyPurposeID",		ASN1_OID,		ASN1_BODY }, /* 1 */
-	{ 0, "end loop",			ASN1_EOC,		ASN1_END  }, /* 2 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-#define EXT_KEY_USAGE_PURPOSE_ID	1
 
 /**
  * ASN.1 definition of generalNames
@@ -158,109 +121,13 @@ static const asn1Object_t otherNameObjects[] = {
 #define ON_OBJ_ID_TYPE		0
 #define ON_OBJ_VALUE		1
 
-/**
- * ASN.1 definition of crlDistributionPoints
- */
-static const asn1Object_t crlDistributionPointsObjects[] = {
-	{ 0, "crlDistributionPoints",	ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
-	{ 1,   "DistributionPoint",		ASN1_SEQUENCE,		ASN1_NONE			}, /*  1 */
-	{ 2,     "distributionPoint",	ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_LOOP	}, /*  2 */
-	{ 3,       "fullName",			ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_OBJ	}, /*  3 */
-	{ 3,       "end choice",		ASN1_EOC,			ASN1_END			}, /*  4 */
-	{ 3,       "nameRelToCRLIssuer",ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_BODY	}, /*  5 */
-	{ 3,       "end choice",		ASN1_EOC,			ASN1_END			}, /*  6 */
-	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /*  7 */
-	{ 2,     "reasons",				ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_BODY	}, /*  8 */
-	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /*  9 */
-	{ 2,     "crlIssuer",			ASN1_CONTEXT_C_2,	ASN1_OPT|ASN1_BODY	}, /* 10 */
-	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 11 */
-	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 12 */
-	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
-};
-#define CRL_DIST_POINTS_FULLNAME	 3
-
-/**
- * ASN.1 definition of an X.509v3 x509_cert
- */
-static const asn1Object_t certObjects[] = {
-	{ 0, "x509",					ASN1_SEQUENCE,     ASN1_OBJ           }, /*  0 */
-	{ 1,   "tbsCertificate",		ASN1_SEQUENCE,     ASN1_OBJ           }, /*  1 */
-	{ 2,     "DEFAULT v1",			ASN1_CONTEXT_C_0,  ASN1_DEF           }, /*  2 */
-	{ 3,       "version",			ASN1_INTEGER,      ASN1_BODY          }, /*  3 */
-	{ 2,     "serialNumber",		ASN1_INTEGER,      ASN1_BODY          }, /*  4 */
-	{ 2,     "signature",			ASN1_EOC,          ASN1_RAW           }, /*  5 */
-	{ 2,     "issuer",				ASN1_SEQUENCE,     ASN1_OBJ           }, /*  6 */
-	{ 2,     "validity",			ASN1_SEQUENCE,     ASN1_NONE          }, /*  7 */
-	{ 3,       "notBefore",			ASN1_EOC,          ASN1_RAW           }, /*  8 */
-	{ 3,       "notAfter",			ASN1_EOC,          ASN1_RAW           }, /*  9 */
-	{ 2,     "subject",				ASN1_SEQUENCE,     ASN1_OBJ           }, /* 10 */
-	{ 2,     "subjectPublicKeyInfo",ASN1_SEQUENCE,	   ASN1_RAW           }, /* 11 */
-	{ 2,     "issuerUniqueID",		ASN1_CONTEXT_C_1,  ASN1_OPT           }, /* 12 */
-	{ 2,     "end opt",				ASN1_EOC,          ASN1_END           }, /* 13 */
-	{ 2,     "subjectUniqueID",		ASN1_CONTEXT_C_2,  ASN1_OPT           }, /* 14 */
-	{ 2,     "end opt",				ASN1_EOC,          ASN1_END           }, /* 15 */
-	{ 2,     "optional extensions",	ASN1_CONTEXT_C_3,  ASN1_OPT           }, /* 16 */
-	{ 3,       "extensions",		ASN1_SEQUENCE,     ASN1_LOOP          }, /* 17 */
-	{ 4,         "extension",		ASN1_SEQUENCE,     ASN1_NONE          }, /* 18 */
-	{ 5,           "extnID",		ASN1_OID,          ASN1_BODY          }, /* 19 */
-	{ 5,           "critical",		ASN1_BOOLEAN,      ASN1_DEF|ASN1_BODY }, /* 20 */
-	{ 5,           "extnValue",		ASN1_OCTET_STRING, ASN1_BODY          }, /* 21 */
-	{ 3,       "end loop",			ASN1_EOC,          ASN1_END           }, /* 22 */
-	{ 2,     "end opt",				ASN1_EOC,          ASN1_END           }, /* 23 */
-	{ 1,   "signatureAlgorithm",	ASN1_EOC,          ASN1_RAW           }, /* 24 */
-	{ 1,   "signatureValue",		ASN1_BIT_STRING,   ASN1_BODY          }, /* 25 */
-	{ 0, "exit",					ASN1_EOC,          ASN1_EXIT          }
-};
-#define X509_OBJ_CERTIFICATE                     0
-#define X509_OBJ_TBS_CERTIFICATE                 1
-#define X509_OBJ_VERSION                         3
-#define X509_OBJ_SERIAL_NUMBER                   4
-#define X509_OBJ_SIG_ALG                         5
-#define X509_OBJ_ISSUER                          6
-#define X509_OBJ_NOT_BEFORE                      8
-#define X509_OBJ_NOT_AFTER                       9
-#define X509_OBJ_SUBJECT                        10
-#define X509_OBJ_SUBJECT_PUBLIC_KEY_INFO        11
-#define X509_OBJ_EXTN_ID                        19
-#define X509_OBJ_CRITICAL                       20
-#define X509_OBJ_EXTN_VALUE                     21
-#define X509_OBJ_ALGORITHM                      24
-#define X509_OBJ_SIGNATURE                      25
-
 const x509cert_t empty_x509cert = {
+	  NULL        , /* cert */
 	  NULL        , /* *next */
 	UNDEFINED_TIME, /* installed */
 			0     , /* count */
 	  FALSE       , /* smartcard */
 	 AUTH_NONE    , /* authority_flags */
-	{ NULL, 0 }   , /* certificate */
-	{ NULL, 0 }   , /*   tbsCertificate */
-			1     , /*     version */
-	{ NULL, 0 }   , /*     serialNumber */
-	OID_UNKNOWN   , /*     sigAlg */
-	{ NULL, 0 }   , /*     issuer */
-					/*     validity */
-			0     , /*       notBefore */
-			0     , /*       notAfter */
-	{ NULL, 0 }   , /*     subject */
-	  NULL        , /*     public_key */
-					/*     issuerUniqueID */
-					/*     subjectUniqueID */
-					/*     extensions */
-					/*       extension */
-					/*         extnID */
-					/*         critical */
-					/*         extnValue */
-	  FALSE       , /*           isCA */
-	  FALSE       , /*           isOcspSigner */
-	{ NULL, 0 }   , /*           subjectKeyID */
-	{ NULL, 0 }   , /*           authKeyID */
-	{ NULL, 0 }   , /*           authKeySerialNumber */
-	{ NULL, 0 }   , /*           accessLocation */
-	  NULL        , /*           subjectAltName */
-	  NULL        , /*           crlDistributionPoints */
-	OID_UNKNOWN   , /*   algorithm */
-	{ NULL, 0 }     /*   signature */
 };
 
 /* coding of X.501 distinguished name */
@@ -332,10 +199,6 @@ static const x501rdn_t x501rdns[] = {
 };
 
 #define X501_RDN_ROOF   26
-
-static chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
-	0x06, 0x03, 0x55, 0x1D, 0x11
-);
 
 static void update_chunk(chunk_t *ch, int n)
 {
@@ -947,14 +810,6 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 }
 
 /**
- *  Compare two X.509 certificates by comparing their signatures
- */
-bool same_x509cert(const x509cert_t *a, const x509cert_t *b)
-{
-	return chunk_equals(a->signature, b->signature);
-}
-
-/**
  * For each link pointing to the certificate increase the count by one
  */
 void share_x509cert(x509cert_t *cert)
@@ -970,11 +825,12 @@ void share_x509cert(x509cert_t *cert)
  */
 x509cert_t* add_x509cert(x509cert_t *cert)
 {
+	certificate_t *certificate = cert->cert;
 	x509cert_t *c = x509certs;
 
 	while (c != NULL)
 	{
-		if (same_x509cert(c, cert)) /* already in chain, free cert */
+		if (certificate->equals(certificate, c->cert)) /* already in chain, free cert */
 		{
 			free_x509cert(cert);
 			return c;
@@ -998,39 +854,47 @@ x509cert_t* add_x509cert(x509cert_t *cert)
  */
 void select_x509cert_id(x509cert_t *cert, struct id *end_id)
 {
+	certificate_t *certificate = cert->cert;
+	x509_t *x509 = (x509_t*)certificate;
+	identification_t *subjectAltName;
+
 	bool copy_subject_dn = TRUE;         /* ID is subject DN */
 
 	if (end_id->kind != ID_ANY) /* check for matching subjectAltName */
 	{
-		generalName_t *gn = cert->subjectAltName;
+		enumerator_t *enumerator;
 
-		while (gn != NULL)
+		enumerator = x509->create_subjectAltName_enumerator(x509);
+		while (enumerator->enumerate(enumerator, &subjectAltName))
 		{
 			struct id id = empty_id;
 
-			gntoid(&id, gn);
+			id_from_identification(&id, subjectAltName);
 			if (same_id(&id, end_id))
 			{
 				copy_subject_dn = FALSE; /* take subjectAltName instead */
 				break;
 			}
-			gn = gn->next;
 		}
+		enumerator->destroy(enumerator);
 	}
 
 	if (copy_subject_dn)
 	{
+		identification_t *subject = certificate->get_subject(certificate);
+		chunk_t subject_dn = subject->get_encoding(subject);
+
 		if (end_id->kind != ID_ANY && end_id->kind != ID_DER_ASN1_DN)
 		{
-			 char buf[BUF_LEN];
+			char buf[BUF_LEN];
 
-			 idtoa(end_id, buf, BUF_LEN);
-			 plog("  no subjectAltName matches ID '%s', replaced by subject DN", buf);
+			idtoa(end_id, buf, BUF_LEN);
+			plog("  no subjectAltName matches ID '%s', replaced by subject DN", buf);
 		}
 		end_id->kind = ID_DER_ASN1_DN;
-		end_id->name.len = cert->subject.len;
+		end_id->name.len = subject_dn.len;
 		end_id->name.ptr = temporary_cyclic_buffer();
-		memcpy(end_id->name.ptr, cert->subject.ptr, cert->subject.len);
+		memcpy(end_id->name.ptr, subject_dn.ptr, subject_dn.len);
 	}
 }
 
@@ -1047,123 +911,28 @@ bool same_keyid(chunk_t a, chunk_t b)
 }
 
 /**
- * Check for equality between two serial numbers
- */
-bool same_serial(chunk_t a, chunk_t b)
-{
-	/* do not compare serial numbers if one of them is not defined */
-	if (a.ptr == NULL || b.ptr == NULL)
-	{
-		return TRUE;
-	}
-	return chunk_equals(a, b);
-}
-
-/**
  * Get a X.509 certificate with a given issuer found at a certain position
  */
-x509cert_t* get_x509cert(chunk_t issuer, chunk_t serial, chunk_t keyid,
-						 x509cert_t *chain)
+x509cert_t* get_x509cert(chunk_t issuer, chunk_t keyid, x509cert_t *chain)
 {
 	x509cert_t *cert = (chain != NULL)? chain->next : x509certs;
 
 	while (cert != NULL)
 	{
-		if ((keyid.ptr != NULL) ? same_keyid(keyid, cert->authKeyID)
-			: (same_dn(issuer, cert->issuer)
-			   && same_serial(serial, cert->authKeySerialNumber)))
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+		identification_t *cert_issuer = certificate->get_issuer(certificate);
+		chunk_t cert_issuer_dn = cert_issuer->get_encoding(cert_issuer);
+		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
+
+		if ((keyid.ptr != NULL) ? same_keyid(keyid, authKeyID)
+			: same_dn(issuer, cert_issuer_dn))
 		{
 			return cert;
 		}
 		cert = cert->next;
 	}
 	return NULL;
-}
-
-/**
- * Encode a linked list of subjectAltNames
- */
-chunk_t build_subjectAltNames(generalName_t *subjectAltNames)
-{
-	u_char *pos;
-	chunk_t names;
-	size_t len = 0;
-	generalName_t *gn = subjectAltNames;
-
-   /* compute the total size of the ASN.1 attributes object */
-	while (gn != NULL)
-	{
-		len += gn->name.len;
-		gn = gn->next;
-	}
-
-	pos = asn1_build_object(&names, ASN1_SEQUENCE, len);
-
-	gn = subjectAltNames;
-	while (gn != NULL)
-	{
-		chunkcpy(pos, gn->name);
-		gn = gn->next;
-	}
-
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_subjectAltName_oid
-				, asn1_wrap(ASN1_OCTET_STRING, "m", names));
-}
-
-/**
- * Build a to-be-signed X.509 certificate body
- */
-static chunk_t build_tbs_x509cert(x509cert_t *cert, public_key_t *rsa)
-{
-	/* version is always X.509v3 */
-	chunk_t version = asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2);
-	chunk_t key = chunk_empty;
-	chunk_t extensions = chunk_empty;
-
-	rsa->get_encoding(rsa, KEY_PUB_ASN1_DER, &key);
-
-	chunk_t keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-							asn1_bitstring("m", key));
-
-	if (cert->subjectAltName != NULL)
-	{
-		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m"
-				, asn1_wrap(ASN1_SEQUENCE, "m"
-				, build_subjectAltNames(cert->subjectAltName)));
-	}
-
-	return asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm"
-				, version
-				, asn1_integer("c", cert->serialNumber)
-				, asn1_algorithmIdentifier(cert->sigAlg)
-				, cert->issuer
-				, asn1_wrap(ASN1_SEQUENCE, "mm"
-					, asn1_from_time(&cert->notBefore, ASN1_UTCTIME)
-					, asn1_from_time(&cert->notAfter,  ASN1_UTCTIME)
-				  )
-				, cert->subject
-				, keyInfo
-				, extensions
-		   );
-}
-
-/**
- * Build a DER-encoded X.509 certificate
- */
-void build_x509cert(x509cert_t *cert, public_key_t *cert_key,
-					private_key_t *signer_key)
-{
-	chunk_t tbs_cert = build_tbs_x509cert(cert, cert_key);
-
-	chunk_t signature = x509_build_signature(tbs_cert, cert->sigAlg
-								, signer_key, TRUE);
-
-	cert->certificate = asn1_wrap(ASN1_SEQUENCE, "mmm"
-								, tbs_cert
-								, asn1_algorithmIdentifier(cert->sigAlg)
-								, signature);
 }
 
 /**
@@ -1190,10 +959,12 @@ void free_x509cert(x509cert_t *cert)
 {
 	if (cert != NULL)
 	{
-		DESTROY_IF(cert->public_key);
-		free_generalNames(cert->subjectAltName, FALSE);
-		free_generalNames(cert->crlDistributionPoints, FALSE);
-		free(cert->certificate.ptr);
+		certificate_t *certificate = cert->cert;
+
+		if (certificate)
+		{
+			certificate->destroy(certificate);
+		}
 		free(cert);
 		cert = NULL;
 	}
@@ -1230,13 +1001,16 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
 	while (*pp != NULL)
 	{
 		x509cert_t *cert = *pp;
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+		x509_flag_t flags = x509->get_flags(x509);
 
-		if (cert->isCA)
+		if (flags & X509_CA)
 		{
 			*pp = cert->next;
 
 			/* we don't accept self-signed CA certs */
-			if (same_dn(cert->issuer, cert->subject))
+			if (flags & X509_SELF_SIGNED)
 			{
 				plog("self-signed cacert rejected");
 				free_x509cert(cert);
@@ -1302,16 +1076,27 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
  * Check if a signature over binary blob is genuine
  */
 bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
-						  const x509cert_t *issuer_cert)
+						  certificate_t *issuer_cert)
 {
-	public_key_t *key = issuer_cert->public_key;
-	signature_scheme_t scheme = signature_scheme_from_oid(algorithm);
+	bool success;
+	public_key_t *key;
+	signature_scheme_t scheme;
 
+	scheme = signature_scheme_from_oid(algorithm);
 	if (scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
 	}
-	return key->verify(key, scheme, tbs, sig);
+
+	key = issuer_cert->get_public_key(issuer_cert);
+	if (key == NULL)
+	{
+		return FALSE;
+	}
+	success = key->verify(key, scheme, tbs, sig);
+	key->destroy(key);
+
+	return success;
 }
 
 /**
@@ -1329,82 +1114,6 @@ chunk_t x509_build_signature(chunk_t tbs, int algorithm, private_key_t *key,
 	}
 	return (bit_string) ? asn1_bitstring("m", signature)
 						: asn1_wrap(ASN1_OCTET_STRING, "m", signature);
-}
-
-/**
- * Extracts the basicConstraints extension
- */
-static bool parse_basicConstraints(chunk_t blob, int level0)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool isCA = FALSE;
-
-	parser = asn1_parser_create(basicConstraintsObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		if (objectID == BASIC_CONSTRAINTS_CA)
-		{
-			isCA = object.len && *object.ptr;
-			DBG(DBG_PARSING,
-				DBG_log("  %s",(isCA)?"TRUE":"FALSE");
-			)
-		}
-	}
-	parser->destroy(parser);
-
-	return isCA;
-}
-
-/**
- *  Converts a X.500 generalName into an ID
- */
-void gntoid(struct id *id, const generalName_t *gn)
-{
-	switch(gn->kind)
-	{
-	case GN_DNS_NAME:           /* ID type: ID_FQDN */
-		id->kind = ID_FQDN;
-		id->name = gn->name;
-		break;
-	case GN_IP_ADDRESS:         /* ID type: ID_IPV4_ADDR */
-		{
-			const struct af_info *afi = &af_inet4_info;
-			err_t ugh = NULL;
-
-			id->kind = afi->id_addr;
-			ugh = initaddr(gn->name.ptr, gn->name.len, afi->af, &id->ip_addr);
-		}
-		break;
-	case GN_RFC822_NAME:        /* ID type: ID_USER_FQDN */
-		id->kind = ID_USER_FQDN;
-		id->name = gn->name;
-		break;
-	default:
-		id->kind = ID_ANY;
-		id->name = chunk_empty;
-	}
-}
-
-/**
- * Compute the subjectKeyIdentifier according to section 4.2.1.2 of RFC 3280
- * as the 160 bit SHA-1 hash of the public key
- */
-bool compute_subjectKeyID(x509cert_t *cert, chunk_t subjectKeyID)
-{
-	chunk_t fingerprint;
-
-	if (!cert->public_key->get_fingerprint(cert->public_key, KEY_ID_PUBKEY_SHA1,
-										   &fingerprint))
-	{
-		plog("  unable to compute subjectKeyID");
-		return FALSE;
-	}
-	memcpy(subjectKeyID.ptr, fingerprint.ptr, subjectKeyID.len);
-	return TRUE;
 }
 
 /**
@@ -1608,294 +1317,31 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 }
 
 /**
- * Extracts an authorityInfoAcess location
- */
-static void parse_authorityInfoAccess(chunk_t blob, int level0,
-									  chunk_t *accessLocation)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	int accessMethod = OID_UNKNOWN;
-
-	parser = asn1_parser_create(authInfoAccessObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		switch (objectID)
-		{
-		case AUTH_INFO_ACCESS_METHOD:
-			accessMethod = asn1_known_oid(object);
-			break;
-		case AUTH_INFO_ACCESS_LOCATION:
-			{
-				switch (accessMethod)
-				{
-				case OID_OCSP:
-					if (*object.ptr == ASN1_CONTEXT_S_6)
-					{
-						if (asn1_length(&object) == ASN1_INVALID_LENGTH)
-						{
-							goto end;
-						}
-						DBG(DBG_PARSING,
-							DBG_log("  '%.*s'",(int)object.len, object.ptr)
-						)
-
-						/* only HTTP(S) URIs accepted */
-						if (strncasecmp(object.ptr, "http", 4) == 0)
-						{
-							*accessLocation = object;
-							goto end;
-						}
-					}
-					plog("warning: ignoring OCSP InfoAccessLocation with unkown protocol");
-					break;
-				default:
-					/* unkown accessMethod, ignoring */
-					break;
-				}
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
-end:
-	parser->destroy(parser);
-}
-
-/**
- * Extracts extendedKeyUsage OIDs
- */
-static bool parse_extendedKeyUsage(chunk_t blob, int level0)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool ocsp_signing = FALSE;
-
-	parser = asn1_parser_create(extendedKeyUsageObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		if (objectID == EXT_KEY_USAGE_PURPOSE_ID
-		&& asn1_known_oid(object) == OID_OCSP_SIGNING)
-		{
-			ocsp_signing = TRUE;
-		}
-	}
-	parser->destroy(parser);
-
-	return ocsp_signing;
-}
-
-/**
- * Extracts one or several crlDistributionPoints
- * and puts them into a chained list
- */
-static generalName_t* parse_crlDistributionPoints(chunk_t blob, int level0)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-
-	generalName_t *top_gn = NULL;      /* top of the chained list */
-	generalName_t **tail_gn = &top_gn; /* tail of the chained list */
-
-	parser = asn1_parser_create(crlDistributionPointsObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		if (objectID == CRL_DIST_POINTS_FULLNAME)
-		{
-			generalName_t *gn;
-
-			gn = parse_generalNames(object, parser->get_level(parser)+1, TRUE);
-			/* append extracted generalNames to existing chained list */
-			*tail_gn = gn;
-			/* find new tail of the chained list */
-			while (gn != NULL)
-			{
-				tail_gn = &gn->next;  gn = gn->next;
-			}
-		}
-	}
-	parser->destroy(parser);
-
-	return top_gn;
-}
-
-/**
- *  Parses an X.509v3 certificate
- */
-bool parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
-{
-	u_char  buf[BUF_LEN];
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	int extn_oid = OID_UNKNOWN;
-	bool critical;
-	bool success = FALSE;
-
-	parser = asn1_parser_create(certObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		u_int level = parser->get_level(parser) + 1;
-
-		switch (objectID) {
-		case X509_OBJ_CERTIFICATE:
-			cert->certificate = object;
-			break;
-		case X509_OBJ_TBS_CERTIFICATE:
-			cert->tbsCertificate = object;
-			break;
-		case X509_OBJ_VERSION:
-			cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-			DBG(DBG_PARSING,
-				DBG_log("  v%d", cert->version);
-			)
-			break;
-		case X509_OBJ_SERIAL_NUMBER:
-			cert->serialNumber = object;
-			break;
-		case X509_OBJ_SIG_ALG:
-			cert->sigAlg = asn1_parse_algorithmIdentifier(object, level, NULL);
-			break;
-		case X509_OBJ_ISSUER:
-			cert->issuer = object;
-			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'",buf)
-			)
-			break;
-		case X509_OBJ_NOT_BEFORE:
-			cert->notBefore = asn1_parse_time(object, level);
-			break;
-		case X509_OBJ_NOT_AFTER:
-			cert->notAfter = asn1_parse_time(object, level);
-			break;
-		case X509_OBJ_SUBJECT:
-			cert->subject = object;
-			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'",buf)
-			)
-			break;
-		case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
-			cert->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
-			if (cert->public_key == NULL)
-			{
-				goto end;
-			}
-			break;
-		case X509_OBJ_EXTN_ID:
-			extn_oid = asn1_known_oid(object);
-			break;
-		case X509_OBJ_CRITICAL:
-			critical = object.len && *object.ptr;
-			DBG(DBG_PARSING,
-				DBG_log("  %s",(critical)?"TRUE":"FALSE");
-			)
-			break;
-		case X509_OBJ_EXTN_VALUE:
-			{
-				switch (extn_oid) {
-				case OID_SUBJECT_KEY_ID:
-					if (!asn1_parse_simple_object(&object, ASN1_OCTET_STRING,
-												  level, "keyIdentifier"))
-					{
-						goto end;
-					}
-					cert->subjectKeyID = object;
-					break;
-				case OID_SUBJECT_ALT_NAME:
-					cert->subjectAltName =
-						parse_generalNames(object, level, FALSE);
-					break;
-				case OID_BASIC_CONSTRAINTS:
-					cert->isCA =
-						parse_basicConstraints(object, level);
-					break;
-				case OID_CRL_DISTRIBUTION_POINTS:
-					cert->crlDistributionPoints =
-						parse_crlDistributionPoints(object, level);
-					break;
-				 case OID_AUTHORITY_KEY_ID:
-					parse_authorityKeyIdentifier(object, level
-						, &cert->authKeyID, &cert->authKeySerialNumber);
-					break;
-				case OID_AUTHORITY_INFO_ACCESS:
-					parse_authorityInfoAccess(object, level, &cert->accessLocation);
-					break;
-				case OID_EXTENDED_KEY_USAGE:
-					cert->isOcspSigner = parse_extendedKeyUsage(object, level);
-					break;
-				case OID_NS_REVOCATION_URL:
-				case OID_NS_CA_REVOCATION_URL:
-				case OID_NS_CA_POLICY_URL:
-				case OID_NS_COMMENT:
-					if (!asn1_parse_simple_object(&object, ASN1_IA5STRING
-					, level, oid_names[extn_oid].name))
-					{
-						goto end;
-					}
-					break;
-				default:
-					break;
-				}
-			}
-			break;
-		case X509_OBJ_ALGORITHM:
-			cert->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
-			break;
-		case X509_OBJ_SIGNATURE:
-			cert->signature = object;
-			break;
-		default:
-			break;
-		}
-	}
-	success = parser->success(parser);
-	time(&cert->installed);
-
-end:
-	parser->destroy(parser);
-	return success;
-}
-
-/**
  * Verify the validity of a certificate by
  * checking the notBefore and notAfter dates
  */
 err_t check_validity(const x509cert_t *cert, time_t *until)
 {
-	time_t current_time;
-
+	time_t current_time, notBefore, notAfter;
+	certificate_t *certificate = cert->cert;
+	
 	time(&current_time);
+	certificate->get_validity(certificate, &current_time, &notBefore, &notAfter);
 	DBG(DBG_CONTROL | DBG_PARSING ,
-		DBG_log("  not before  : %T", &cert->notBefore, TRUE);
+		DBG_log("  not before  : %T", &notBefore, TRUE);
 		DBG_log("  current time: %T", &current_time, TRUE);
-		DBG_log("  not after   : %T", &cert->notAfter, TRUE);
+		DBG_log("  not after   : %T", &notAfter, TRUE);
 	)
 
-	if (cert->notAfter < *until)
+	if (*until == 0 || notAfter < *until)
 	{
-		*until = cert->notAfter;
+		*until = notAfter;
 	}
-	if (current_time < cert->notBefore)
+	if (current_time < notBefore)
 	{
 		return "certificate is not valid yet";
 	}
-	if (current_time > cert->notAfter)
+	if (current_time > notAfter)
 	{
 		return "certificate has expired";
 	}
@@ -1912,24 +1358,24 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 {
 	int pathlen;
 
-	*until = cert->notAfter;
+	*until = 0;
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
+		certificate_t *certificate = cert->cert;
+		identification_t *subject = certificate->get_subject(certificate);
+		identification_t *issuer  = certificate->get_issuer(certificate);
+		x509_t *x509 = (x509_t*)certificate;
+		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 		x509cert_t *issuer_cert;
-		u_char buf[BUF_LEN];
 		err_t ugh = NULL;
 
 		DBG(DBG_CONTROL,
-			dntoa(buf, BUF_LEN, cert->subject);
-			DBG_log("subject: '%s'",buf);
-			dntoa(buf, BUF_LEN, cert->issuer);
-			DBG_log("issuer:  '%s'",buf);
-			if (cert->authKeyID.ptr != NULL)
+			DBG_log("subject: '%Y'", subject);
+			DBG_log("issuer:  '%Y'", issuer);
+			if (authKeyID.ptr != NULL)
 			{
-				datatot(cert->authKeyID.ptr, cert->authKeyID.len, ':'
-					, buf, BUF_LEN);
-				DBG_log("authkey:  %s", buf);
+				DBG_log("authkey:  %#B", &authKeyID);
 			}
 		)
 
@@ -1946,9 +1392,8 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		)
 
 		lock_authcert_list("verify_x509cert");
-		issuer_cert = get_authcert(cert->issuer, cert->authKeySerialNumber
-			, cert->authKeyID, AUTH_CA);
-
+		issuer_cert = get_authcert(issuer->get_encoding(issuer),
+								   authKeyID, AUTH_CA);
 		if (issuer_cert == NULL)
 		{
 			plog("issuer cacert not found");
@@ -1959,8 +1404,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 			DBG_log("issuer cacert found")
 		)
 
-		if (!x509_check_signature(cert->tbsCertificate, cert->signature,
-								  cert->algorithm, issuer_cert))
+		if (!certificate->issued_by(certificate, issuer_cert->cert))
 		{
 			plog("certificate signature is invalid");
 			unlock_authcert_list("verify_x509cert");
@@ -1972,7 +1416,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		unlock_authcert_list("verify_x509cert");
 
 		/* check if cert is a self-signed root ca */
-		if (pathlen > 0 && same_dn(cert->issuer, cert->subject))
+		if (pathlen > 0 && (x509->get_flags(x509) & X509_SELF_SIGNED))
 		{
 			DBG(DBG_CONTROL,
 				DBG_log("reached self-signed root ca")
@@ -2063,11 +1507,13 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 	{
 		if (auth_flags == AUTH_NONE || (auth_flags & cert->authority_flags))
 		{
-			u_char buf[BUF_LEN];
-			public_key_t *key = cert->public_key;
-			chunk_t keyid;
+			time_t notBefore, notAfter;
+			public_key_t *key;
+			chunk_t serial, keyid, subjkey, authkey;
 			cert_t c;
-
+			certificate_t *certificate = cert->cert;
+			x509_t *x509 = (x509_t*)certificate;
+			
 			c.type = CERT_X509_SIGNATURE;
 			c.u.x509 = cert;
 
@@ -2081,45 +1527,47 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 
 			whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc,
 				cert->count);
-			dntoa(buf, BUF_LEN, cert->subject);
-			whack_log(RC_COMMENT, "       subject:  '%s'", buf);
-			dntoa(buf, BUF_LEN, cert->issuer);
-			whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
-			datatot(cert->serialNumber.ptr, cert->serialNumber.len, ':',
-				 buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       serial:    %s", buf);
+			whack_log(RC_COMMENT, "       subject:  '%Y'",
+				certificate->get_subject(certificate));
+			whack_log(RC_COMMENT, "       issuer:   '%Y'",
+				certificate->get_issuer(certificate));
+				serial = x509->get_serial(x509);
+			whack_log(RC_COMMENT, "       serial:    %#B", &serial);
+
+			/* list validity */
+			certificate->get_validity(certificate, &now, &notBefore, &notAfter);
 			whack_log(RC_COMMENT, "       validity:  not before %T %s",
-				&cert->notBefore, utc,
-				(cert->notBefore < now)?"ok":"fatal (not valid yet)");
+				&notBefore, utc,
+				(notBefore < now)?"ok":"fatal (not valid yet)");
 			whack_log(RC_COMMENT, "                  not after  %T %s",
-				&cert->notAfter, utc,
-				check_expiry(cert->notAfter, CA_CERT_WARNING_INTERVAL, TRUE));
-			whack_log(RC_COMMENT, "       pubkey:    %N %4d bits%s",
-				key_type_names, key->get_type(key),
-				key->get_keysize(key) * BITS_PER_BYTE,
-				cert->smartcard ? ", on smartcard" :
-				(has_private_key(c)? ", has private key" : ""));
-			if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+				&notAfter, utc,
+				check_expiry(notAfter, CA_CERT_WARNING_INTERVAL, TRUE));
+
+			key = certificate->get_public_key(certificate);
+			if (key);
 			{
-				whack_log(RC_COMMENT, "       keyid:     %#B", &keyid);
+				whack_log(RC_COMMENT, "       pubkey:    %N %4d bits%s",
+					key_type_names, key->get_type(key),
+					key->get_keysize(key) * BITS_PER_BYTE,				
+					cert->smartcard ? ", on smartcard" :
+					(has_private_key(c)? ", has private key" : ""));
+
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+				{
+					whack_log(RC_COMMENT, "       keyid:     %#B", &keyid);
+				}
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &subjkey))
+				{
+					whack_log(RC_COMMENT, "       subjkey:   %#B", &subjkey);
+				}
+				key->destroy(key);
 			}
-			if (cert->subjectKeyID.ptr != NULL)
+
+			/* list optional authorityKeyIdentifier */
+			authkey = x509->get_authKeyIdentifier(x509);
+			if (authkey.ptr)
 			{
-				datatot(cert->subjectKeyID.ptr, cert->subjectKeyID.len, ':',
-						buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       subjkey:   %s", buf);
-			}
-			if (cert->authKeyID.ptr != NULL)
-			{
-				datatot(cert->authKeyID.ptr, cert->authKeyID.len, ':',
-						buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       authkey:   %s", buf);
-			}
-			if (cert->authKeySerialNumber.ptr != NULL)
-			{
-				datatot(cert->authKeySerialNumber.ptr,
-						cert->authKeySerialNumber.len, ':', buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       aserial:   %s", buf);
+				whack_log(RC_COMMENT, "       authkey:   %#B", &authkey);
 			}
 		}
 		cert = cert->next;

@@ -15,6 +15,8 @@
 #ifndef _ID_H
 #define _ID_H
 
+#include <utils/identification.h>
+
 #include "defs.h"
 
 struct id {
@@ -26,7 +28,7 @@ struct id {
 
 extern void init_id(void);
 extern void free_id(void);
-extern const struct id empty_id;        /* ID_NONE */
+extern const struct id empty_id;        /* ID_ANY */
 
 enum myid_state {
 	MYID_UNKNOWN,       /* not yet figured out */
@@ -59,7 +61,8 @@ extern int id_count_wildcards(const struct id *id);
 #define id_is_ipaddr(id) ((id)->kind == ID_IPV4_ADDR || (id)->kind == ID_IPV6_ADDR)
 
 struct isakmp_ipsec_id; /* forward declaration of tag (defined in packet.h) */
-extern void
-	build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end);
+extern void	build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl,
+							 struct end *end);
+extern void id_from_identification(struct id *id, identification_t *identification);
 
 #endif /* _ID_H */

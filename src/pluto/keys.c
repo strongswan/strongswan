@@ -127,6 +127,7 @@ static const secret_t* get_secret(const struct connection *c,
 				break; /* we have found the private key - no sense in searching further */
 			}
 		}
+		pub_key->destroy(pub_key);
 		return best;
 	}
 
@@ -277,6 +278,7 @@ bool has_private_key(cert_t cert)
 			break;
 		}
 	}
+	pub_key->destroy(pub_key);
 	return has_key;
 }
 
@@ -285,17 +287,22 @@ bool has_private_key(cert_t cert)
  */
 private_key_t* get_x509_private_key(const x509cert_t *cert)
 {
+	public_key_t *public_key = cert->cert->get_public_key(cert->cert);
+	private_key_t *private_key = NULL;
 	secret_t *s;
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
+
 		if (s->kind == PPK_PUBKEY &&
-			s->u.private_key->belongs_to(s->u.private_key, cert->public_key))
+			s->u.private_key->belongs_to(s->u.private_key, public_key))
 		{
-			return s->u.private_key;
+			private_key = s->u.private_key;
+			break;
 		}
 	}
-	return NULL;
+	public_key->destroy(public_key);
+	return private_key;
 }
 
 /* find the appropriate private key (see get_secret).
@@ -1231,7 +1238,7 @@ void delete_public_keys(const struct id *id, key_type_t type,
 		if (same_id(id, &pk->id) && pk_type == type
 		&& (issuer.ptr == NULL || pk->issuer.ptr == NULL
 			|| same_dn(issuer, pk->issuer))
-		&& same_serial(serial, pk->serial))
+		&& (serial.ptr == NULL || chunk_equals(serial, pk->serial)))
 		{
 			*pp = free_public_keyentry(p);
 		}
@@ -1317,46 +1324,50 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 void add_x509_public_key(x509cert_t *cert , time_t until,
 						 enum dns_auth_level dns_auth_level)
 {
-	generalName_t *gn;
+	certificate_t *certificate = cert->cert;
+	x509_t *x509 = (x509_t*)certificate;
+	identification_t *subject = certificate->get_subject(certificate);
+	identification_t *issuer = certificate->get_issuer(certificate);
+	identification_t *id;
+	chunk_t issuer_dn = issuer->get_encoding(issuer);
+	chunk_t serialNumber = x509->get_serial(x509);
 	pubkey_t *pk;
 	key_type_t pk_type;
+	enumerator_t *enumerator;
 
 	/* ID type: ID_DER_ASN1_DN  (X.509 subject field) */
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
+	pk->public_key = cert->cert->get_public_key(cert->cert);
 	pk->id.kind = ID_DER_ASN1_DN;
-	pk->id.name = cert->subject;
+	pk->id.name = subject->get_encoding(subject);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
-	pk->issuer = cert->issuer;
-	pk->serial = cert->serialNumber;
+	pk->issuer = issuer_dn;
+	pk->serial = serialNumber;
 	pk_type = pk->public_key->get_type(pk->public_key);
 	delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
 	install_public_key(pk, &pubkeys);
 
-	gn = cert->subjectAltName;
-
-	while (gn != NULL) /* insert all subjectAltNames */
+	/* insert all subjectAltNames */
+	enumerator = x509->create_subjectAltName_enumerator(x509);
+	while (enumerator->enumerate(enumerator, &id)) 
 	{
-		struct id id = empty_id;
-
-		gntoid(&id, gn);
-		if (id.kind != ID_ANY)
+		if (id->get_type(id) != ID_ANY)
 		{
 			pk = malloc_thing(pubkey_t);
 			zero(pk);
-			pk->public_key = cert->public_key->get_ref(cert->public_key);
-			pk->id = id;
+			id_from_identification(&pk->id, id);
+			pk->public_key = cert->cert->get_public_key(cert->cert);
 			pk->dns_auth_level = dns_auth_level;
 			pk->until_time = until;
-			pk->issuer = cert->issuer;
-			pk->serial = cert->serialNumber;
+			pk->issuer = issuer_dn;
+			pk->serial = serialNumber;
 			delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
 			install_public_key(pk, &pubkeys);
 		}
-		gn = gn->next;
 	}
+	enumerator->destroy(enumerator);
 }
 
 /* extract id and public key from OpenPGP certificate and
@@ -1385,7 +1396,7 @@ void add_pgp_public_key(pgpcert_t *cert , time_t until,
  */
 void remove_x509_public_key(const x509cert_t *cert)
 {
-	public_key_t *revoked_key = cert->public_key;
+	public_key_t *revoked_key = cert->cert->get_public_key(cert->cert);
 	pubkey_list_t *p, **pp;
 
 	p  = pubkeys;
@@ -1405,6 +1416,7 @@ void remove_x509_public_key(const x509cert_t *cert)
 		}
 		p =*pp;
 	}
+	revoked_key->destroy(revoked_key);
 }
 
 /*

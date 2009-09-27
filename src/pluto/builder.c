@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <freeswan.h>
 
@@ -79,13 +80,20 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 		else
 		{
 			x509cert_t *x509cert = malloc_thing(x509cert_t);
+
 			*x509cert = empty_x509cert;
-			if (parse_x509cert(chunk_clone(blob), 0, x509cert))
+			x509cert->cert = lib->creds->create(lib->creds,
+							  			CRED_CERTIFICATE, CERT_X509,
+							  			BUILD_BLOB_ASN1_DER, blob,
+							  			BUILD_END);
+			if (x509cert->cert)
 			{
 				cert_t *cert = malloc_thing(cert_t);
+
 				*cert = cert_empty;
 				cert->type = CERT_X509_SIGNATURE;
 				cert->u.x509 = x509cert;
+				time(&x509cert->installed);
 				return cert;
 			}
 			plog("  error in X.509 certificate");
@@ -158,6 +166,8 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 	{
 		crl = malloc_thing(x509crl_t);
 		*crl = empty_x509crl;
+		crl->distributionPoints = linked_list_create();
+
 		if (parse_x509crl(chunk_clone(blob), 0, crl))
 		{
 			return crl;

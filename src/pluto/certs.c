@@ -46,9 +46,9 @@ chunk_t cert_get_encoding(cert_t cert)
 	switch (cert.type)
 	{
 	case CERT_PGP:
-		return cert.u.pgp->certificate;
+		return chunk_clone(cert.u.pgp->certificate);
 	case CERT_X509_SIGNATURE:
-		return cert.u.x509->certificate;
+		return cert.u.x509->cert->get_encoding(cert.u.x509->cert);
 	default:
 		return chunk_empty;
 	}
@@ -59,11 +59,17 @@ public_key_t* cert_get_public_key(const cert_t cert)
 	switch (cert.type)
 	{
 		case CERT_PGP:
-			return cert.u.pgp->public_key;
-			break;
+		{
+			public_key_t *public_key = cert.u.pgp->public_key;
+
+			return public_key->get_ref(public_key);
+		}
 		case CERT_X509_SIGNATURE:
-			return cert.u.x509->public_key;
-			break;
+		{
+			certificate_t *certificate = cert.u.x509->cert;
+
+			return certificate->get_public_key(certificate);
+		}
 		default:
 			return NULL;
 	}

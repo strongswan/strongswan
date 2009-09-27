@@ -370,8 +370,8 @@ chunk_t scep_senderNonce_attribute(void)
  * Builds a pkcs7 enveloped and signed scep request
  */
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
-						   const x509cert_t *enc_cert, int enc_alg,
-						   const x509cert_t *signer_cert, int digest_alg,
+						   certificate_t *enc_cert, int enc_alg,
+						   certificate_t *signer_cert, int digest_alg,
 						   private_key_t *private_key)
 {
 	chunk_t envelopedData, attributes, request;
@@ -525,7 +525,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 }
 
 err_t scep_parse_response(chunk_t response, chunk_t transID, contentInfo_t *data,
-						  scep_attributes_t *attrs, x509cert_t *signer_cert)
+						  scep_attributes_t *attrs, certificate_t *signer_cert)
 {
 	chunk_t attributes;
 

@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <freeswan.h>
 
@@ -202,7 +203,7 @@ end:
  * Parse a PKCS#7 signedData object
  */
 bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert,
-							chunk_t *attributes, const x509cert_t *cacert)
+							chunk_t *attributes, certificate_t *cacert)
 {
 	u_char buf[BUF_LEN];
 	asn1_parser_t *parser;
@@ -252,14 +253,17 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 		case PKCS7_SIGNED_CERT:
 			if (cert != NULL)
 			{
-				chunk_t cert_blob = chunk_clone(object);
 				x509cert_t *newcert = malloc_thing(x509cert_t);
 
-				*newcert = empty_x509cert;
-
 				DBG2("  parsing pkcs7-wrapped certificate");
-				if (parse_x509cert(cert_blob, level+1, newcert))
+				*newcert = empty_x509cert;
+				newcert->cert = lib->creds->create(lib->creds,
+								  			 CRED_CERTIFICATE, CERT_X509,
+								  			 BUILD_BLOB_ASN1_DER, object,
+								  			 BUILD_END);
+				if (newcert->cert)
 				{
+					time(&newcert->installed);
 					newcert->next = *cert;
 					*cert = newcert;
 				}
@@ -308,9 +312,15 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 	/* check the signature only if a cacert is available */
 	if (cacert != NULL)
 	{
-		public_key_t *key = cacert->public_key;
-		signature_scheme_t scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+		public_key_t *key;
+		signature_scheme_t scheme;
 
+		scheme = signature_scheme_from_oid(digest_alg);
+		if (scheme == SIGN_UNKNOWN)
+		{
+			DBG1("unsupported signature scheme");
+			return FALSE;
+		}
 		if (signerInfos == 0)
 		{
 			DBG1("no signerInfo object found");
@@ -332,11 +342,11 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			return FALSE;
 		}
 
-		/* determine signature scheme */
-		scheme = signature_scheme_from_oid(digest_alg);
-
-		if (scheme == SIGN_UNKNOWN)
+		/* verify the signature */
+		key = cacert->get_public_key(cacert);
+		if (key == NULL)
 		{
+			DBG1("no public key found in CA certificate");
 			return FALSE;
 		}
 		if (key->verify(key, scheme, *attributes, encrypted_digest))
@@ -346,10 +356,11 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 		else
 		{
 			DBG1("invalid signature");
-			return FALSE;
+			success = FALSE;
 		}
+		key->destroy(key);
 	}
-	return TRUE;
+	return success;
 }
 
 /**
@@ -629,18 +640,21 @@ static chunk_t pkcs7_build_contentInfo(contentInfo_t *cInfo)
 /**
  * build issuerAndSerialNumber object
  */
-chunk_t pkcs7_build_issuerAndSerialNumber(const x509cert_t *cert)
+chunk_t pkcs7_build_issuerAndSerialNumber(certificate_t *cert)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, cert->issuer
-				, asn1_integer("c", cert->serialNumber));
+	identification_t *issuer = cert->get_issuer(cert);
+	x509_t *x509 = (x509_t*)cert;
+
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+					 issuer->get_encoding(issuer),
+					 asn1_integer("c", x509->get_serial(x509)));
 }
 
 /**
  * create a signed pkcs7 contentInfo object
  */
 chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
-							   const x509cert_t *cert, int digest_alg,
+							   certificate_t *cert, int digest_alg,
 							   private_key_t *key)
 {
 	contentInfo_t pkcs7Data, signedData;
@@ -677,7 +691,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 				, ASN1_INTEGER_1
 				, asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_alg))
 				, pkcs7_build_contentInfo(&pkcs7Data)
-				, asn1_simple_object(ASN1_CONTEXT_C_0, cert->certificate)
+				, asn1_wrap(ASN1_CONTEXT_C_0, "m", cert->get_encoding(cert))
 				, asn1_wrap(ASN1_SET, "m", signerInfo));
 
 	cInfo = pkcs7_build_contentInfo(&signedData);
@@ -691,7 +705,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 /**
  * create a symmetrically encrypted pkcs7 contentInfo object
  */
-chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_alg)
+chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg)
 {
 	encryption_algorithm_t alg;
 	size_t alg_key_size;
@@ -744,9 +758,24 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 	crypter->set_key(crypter, symmetricKey);
 	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
+	chunk_clear(&in);
     DBG3("encrypted data %B", &out);
 
-	cert->public_key->encrypt(cert->public_key, symmetricKey, &protectedKey);
+	/* protect symmetric key by public key encryption */
+	{
+		public_key_t *key = cert->get_public_key(cert);
+
+		if (key == NULL)
+		{
+			DBG1("public key not found in encryption certificate");
+			chunk_clear(&symmetricKey);
+			chunk_free(&iv);
+			chunk_free(&out);
+			return chunk_empty;
+		}
+		key->encrypt(key, symmetricKey, &protectedKey);
+		key->destroy(key);
+	}
 
 	/* build pkcs7 enveloped data object */
 	{
@@ -781,10 +810,9 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert, int enc_
 		cInfo = pkcs7_build_contentInfo(&envelopedData);
 		DBG3("envelopedData %B", &cInfo);
 
-		free(envelopedData.content.ptr);
-		free(symmetricKey.ptr);
-		free(in.ptr);
-		free(iv.ptr);
+		chunk_free(&envelopedData.content);
+		chunk_free(&iv);
+		chunk_clear(&symmetricKey);
 		return cInfo;
 	}
 }

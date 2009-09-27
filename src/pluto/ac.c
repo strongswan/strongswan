@@ -669,8 +669,8 @@ x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial)
 
 	while (ac != NULL)
 	{
-		if (same_dn(issuer, ac->holderIssuer)
-		&&  same_serial(serial, ac->holderSerial))
+		if (same_dn(issuer, ac->holderIssuer) &&
+			chunk_equals(serial, ac->holderSerial))
 		{
 			if (ac!= x509acerts)
 			{
@@ -772,8 +772,7 @@ bool verify_x509acert(x509acert_t *ac, bool strict)
 	)
 
 	lock_authcert_list("verify_x509acert");
-	aacert = get_authcert(ac->issuerName, ac->authKeySerialNumber
-		, ac->authKeyID, AUTH_AA);
+	aacert = get_authcert(ac->issuerName, ac->authKeyID, AUTH_AA);
 	unlock_authcert_list("verify_x509acert");
 
 	if (aacert == NULL)
@@ -786,7 +785,7 @@ bool verify_x509acert(x509acert_t *ac, bool strict)
 	)
 
 	if (!x509_check_signature(ac->certificateInfo, ac->signature, ac->algorithm,
-							  aacert))
+							  aacert->cert))
 	{
 		plog("attribute certificate signature is invalid");
 		return FALSE;

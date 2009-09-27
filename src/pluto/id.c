@@ -44,8 +44,7 @@ char *myid_str[MYID_SPECIFIED+1];     /* string form of IDs */
 /* initialize id module
  * Fills in myid from environment variable IPSECmyid or defaultrouteaddr
  */
-void
-init_id(void)
+void init_id(void)
 {
 	passert(empty_id.kind == ID_ANY);
 	myid_state = MYID_UNKNOWN;
@@ -66,8 +65,7 @@ init_id(void)
 /*
  *  free id module
  */
-void
-free_id(void)
+void free_id(void)
 {
 	enum myid_state s;
 
@@ -78,8 +76,7 @@ free_id(void)
 	}
 }
 
-static void
-calc_myid_str(enum myid_state s)
+static void calc_myid_str(enum myid_state s)
 {
 	/* preformat the ID name */
 	char buf[BUF_LEN];
@@ -89,8 +86,7 @@ calc_myid_str(enum myid_state s)
 }
 
 
-void
-set_myid(enum myid_state s, char *idstr)
+void set_myid(enum myid_state s, char *idstr)
 {
 	if (idstr != NULL)
 	{
@@ -114,8 +110,7 @@ set_myid(enum myid_state s, char *idstr)
 	}
 }
 
-void
-set_myFQDN(void)
+void set_myFQDN(void)
 {
 	char FQDN[HOST_NAME_MAX + 1];
 	int r = gethostname(FQDN, sizeof(FQDN));
@@ -151,8 +146,7 @@ set_myFQDN(void)
 	}
 }
 
-void
-show_myid_status(void)
+void show_myid_status(void)
 {
 	char idstr[BUF_LEN];
 
@@ -163,8 +157,7 @@ show_myid_status(void)
 /* Convert textual form of id into a (temporary) struct id.
  * Note that if the id is to be kept, unshare_id_content will be necessary.
  */
-err_t
-atoid(char *src, struct id *id, bool myid_ok)
+err_t atoid(char *src, struct id *id, bool myid_ok)
 {
 	err_t ugh = NULL;
 
@@ -252,15 +245,13 @@ atoid(char *src, struct id *id, bool myid_ok)
 /*
  *  Converts a binary key ID into hexadecimal format
  */
-int
-keyidtoa(char *dst, size_t dstlen, chunk_t keyid)
+int keyidtoa(char *dst, size_t dstlen, chunk_t keyid)
 {
 	int n = datatot(keyid.ptr, keyid.len, 'x', dst, dstlen);
 	return (((size_t)n < dstlen)? n : dstlen) - 1;
 }
 
-void
-iptoid(const ip_address *ip, struct id *id)
+void iptoid(const ip_address *ip, struct id *id)
 {
 	*id = empty_id;
 
@@ -278,8 +269,7 @@ iptoid(const ip_address *ip, struct id *id)
 	id->ip_addr = *ip;
 }
 
-int
-idtoa(const struct id *id, char *dst, size_t dstlen)
+int idtoa(const struct id *id, char *dst, size_t dstlen)
 {
 	int n;
 
@@ -326,8 +316,7 @@ idtoa(const struct id *id, char *dst, size_t dstlen)
 /* Replace the shell metacharacters ', \, ", `, and $ in a character string
  * by escape sequences consisting of their octal values
  */
-void
-escape_metachar(const char *src, char *dst, size_t dstlen)
+void escape_metachar(const char *src, char *dst, size_t dstlen)
 {
 	while (*src != '\0' && dstlen > 4)
 	{
@@ -355,8 +344,7 @@ escape_metachar(const char *src, char *dst, size_t dstlen)
 /* Make private copy of string in struct id.
  * This is needed if the result of atoid is to be kept.
  */
-void
-unshare_id_content(struct id *id)
+void unshare_id_content(struct id *id)
 {
 	switch (id->kind)
 	{
@@ -376,8 +364,7 @@ unshare_id_content(struct id *id)
 	}
 }
 
-void
-free_id_content(struct id *id)
+void free_id_content(struct id *id)
 {
 	switch (id->kind)
 	{
@@ -398,8 +385,7 @@ free_id_content(struct id *id)
 }
 
 /* compare two struct id values */
-bool
-same_id(const struct id *a, const struct id *b)
+bool same_id(const struct id *a, const struct id *b)
 {
 	a = resolve_myid(a);
 	b = resolve_myid(b);
@@ -446,8 +432,7 @@ same_id(const struct id *a, const struct id *b)
 }
 
 /* compare two struct id values, DNs can contain wildcards */
-bool
-match_id(const struct id *a, const struct id *b, int *wildcards)
+bool match_id(const struct id *a, const struct id *b, int *wildcards)
 {
 	if (b->kind == ID_ANY)
 	{
@@ -466,8 +451,7 @@ match_id(const struct id *a, const struct id *b, int *wildcards)
 }
 
 /* count the numer of wildcards in an id */
-int
-id_count_wildcards(const struct id *id)
+int id_count_wildcards(const struct id *id)
 {
 	switch (id->kind)
 	{
@@ -485,8 +469,7 @@ id_count_wildcards(const struct id *id)
  * We assume it will end up being a pointer into a sufficiently
  * stable datastructure.  It only needs to last a short time.
  */
-void
-build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
+void build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
 {
 	const struct id *id = resolve_myid(&end->id);
 
@@ -512,6 +495,37 @@ build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
 		break;
 	default:
 		bad_case(id->kind);
+	}
+}
+
+/**
+ *  Converts libstrongswan's identification_t type into pluto's struct id
+ */
+void id_from_identification(struct id *id, identification_t *identification)
+{
+	chunk_t encoding;
+
+	encoding = identification->get_encoding(identification);
+	id->kind = identification->get_type(identification);
+
+	switch (id->kind)
+	{
+		case ID_FQDN:
+		case ID_USER_FQDN:
+		case ID_DER_ASN1_DN:
+		case ID_KEY_ID:
+			id->name = encoding;
+			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
+			initaddr(encoding.ptr, encoding.len,
+					(id->kind == ID_IPV4_ADDR) ? AF_INET : AF_INET6,
+					&id->ip_addr);
+			break;
+	case ID_ANY:	
+	default:
+		id->kind = ID_ANY;
+		id->name = chunk_empty;
 	}
 }
 

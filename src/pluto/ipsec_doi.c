@@ -2149,8 +2149,14 @@ static void decode_cert(struct msg_digest *md)
 		if (cert->isacert_type == CERT_X509_SIGNATURE)
 		{
 			x509cert_t cert = empty_x509cert;
-			if (parse_x509cert(blob, 0, &cert))
+
+			cert.cert = lib->creds->create(lib->creds,
+							  			CRED_CERTIFICATE, CERT_X509,
+							  			BUILD_BLOB_ASN1_DER, blob,
+							  			BUILD_END);
+			if (cert.cert)
 			{
+				time(&cert.installed);
 				if (verify_x509cert(&cert, strict_crl_policy, &valid_until))
 				{
 					DBG(DBG_PARSING,
@@ -2162,9 +2168,7 @@ static void decode_cert(struct msg_digest *md)
 				{
 					plog("X.509 certificate rejected");
 				}
-				DESTROY_IF(cert.public_key);
-				free_generalNames(cert.subjectAltName, FALSE);
-				free_generalNames(cert.crlDistributionPoints, FALSE);
+				DESTROY_IF(cert.cert);
 			}
 			else
 			{
@@ -3556,6 +3560,8 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	}
 	if (send_cert)
 	{
+		bool success;
+		chunk_t cert_encoding;	
 		pb_stream cert_pbs;
 
 		struct isakmp_cert cert_hd;
@@ -3566,7 +3572,10 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
+		cert_encoding = cert_get_encoding(mycert);
+		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+		free(cert_encoding.ptr);
+		if (!success)	
 		{
 			return STF_INTERNAL_ERROR;
 		}
@@ -3996,9 +4005,11 @@ main_inI3_outR3_tail(struct msg_digest *md
 	}
 	if (send_cert)
 	{
+		bool success;
+		chunk_t cert_encoding;
 		pb_stream cert_pbs;
-
 		struct isakmp_cert cert_hd;
+
 		cert_hd.isacert_np = ISAKMP_NEXT_SIG;
 		cert_hd.isacert_type = mycert.type;
 
@@ -4006,8 +4017,11 @@ main_inI3_outR3_tail(struct msg_digest *md
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
-		{
+		cert_encoding = cert_get_encoding(mycert);
+		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+		free(cert_encoding.ptr);
+		if (!success)
+		{	
 			return STF_INTERNAL_ERROR;
 		}
 		close_output_pbs(&cert_pbs);
