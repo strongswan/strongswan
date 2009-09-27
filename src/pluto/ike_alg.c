@@ -126,7 +126,7 @@ struct dh_desc *ike_alg_get_dh_group(u_int alg)
 /**
  * Get pfsgroup for this connection
  */
-const struct dh_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
+const struct dh_desc *ike_alg_pfsgroup(connection_t *c, lset_t policy)
 {
 	const struct dh_desc *ret = NULL;
 
@@ -141,7 +141,7 @@ const struct dh_desc *ike_alg_pfsgroup(struct connection *c, lset_t policy)
 /**
  * Create an OAKLEY proposal based on alg_info and policy
  */
-struct db_context *ike_alg_db_new(struct connection *c, lset_t policy)
+struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 {
 	struct alg_info_ike *ai = c->alg_info_ike;
 	struct db_context *db_ctx = NULL;
@@ -344,7 +344,7 @@ void ike_alg_list(void)
  * Show IKE algorithms for this connection (result from ike= string)
  * and newest SA
  */
-void ike_alg_show_connection(struct connection *c, const char *instance)
+void ike_alg_show_connection(connection_t *c, const char *instance)
 {
 	struct state *st = state_with_serialno(c->newest_isakmp_sa);
 

@@ -819,7 +819,7 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 bool
 send_packet(struct state *st, const char *where)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	int port_buf;
 	bool err;
 	u_int8_t ike_pkt[MAX_OUTPUT_UDP_SIZE];
@@ -2192,7 +2192,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 				time_t delay = UNDEFINED_TIME;
 				enum event_type kind = smc->timeout_event;
 				bool agreed_time = FALSE;
-				struct connection *c = st->st_connection;
+				connection_t *c = st->st_connection;
 
 				switch (kind)
 				{

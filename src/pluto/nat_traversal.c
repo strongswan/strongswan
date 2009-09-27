@@ -600,7 +600,7 @@ static void nat_traversal_send_ka (struct state *st)
 static void nat_traversal_ka_event_state (struct state *st, void *data)
 {
 	unsigned int *_kap_st = (unsigned int *)data;
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 
 	if (!c)
 		return;
@@ -658,7 +658,7 @@ struct _new_mapp_nfo {
 
 static void nat_traversal_find_new_mapp_state (struct state *st, void *data)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	struct _new_mapp_nfo *nfo = (struct _new_mapp_nfo *)data;
 
 	if (c != NULL
@@ -720,7 +720,7 @@ static int nat_traversal_new_mapping(const ip_address *src, u_int16_t sport,
 
 void nat_traversal_change_port_lookup(struct msg_digest *md, struct state *st)
 {
-	struct connection *c = st ? st->st_connection : NULL;
+	connection_t *c = st ? st->st_connection : NULL;
 	struct iface *i = NULL;
 
 	if ((st == NULL) || (c == NULL))
@@ -804,7 +804,7 @@ struct _new_klips_mapp_nfo {
 
 static void nat_t_new_klips_mapp (struct state *st, void *data)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	struct _new_klips_mapp_nfo *nfo = (struct _new_klips_mapp_nfo *)data;
 
 	if (c != NULL && st->st_esp.present

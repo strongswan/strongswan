@@ -97,7 +97,7 @@ secret_t *secrets = NULL;
  * me and the peer.  We match the Id (if none, the IP address).
  * Failure is indicated by a NULL.
  */
-static const secret_t* get_secret(const struct connection *c,
+static const secret_t* get_secret(const connection_t *c,
 								  enum PrivateKeyKind kind, bool asym)
 {
 	enum {      /* bits */
@@ -247,7 +247,7 @@ static const secret_t* get_secret(const struct connection *c,
  * Failure is indicated by a NULL pointer.
  * Note: the result is not to be freed by the caller.
  */
-const chunk_t* get_preshared_secret(const struct connection *c)
+const chunk_t* get_preshared_secret(const connection_t *c)
 {
 	const secret_t *s = get_secret(c, PPK_PSK, FALSE);
 
@@ -308,7 +308,7 @@ private_key_t* get_x509_private_key(const x509cert_t *cert)
 /* find the appropriate private key (see get_secret).
  * Failure is indicated by a NULL pointer.
  */
-private_key_t* get_private_key(const struct connection *c)
+private_key_t* get_private_key(const connection_t *c)
 {
 	const secret_t *s = get_secret(c, PPK_PUBKEY, TRUE);
 

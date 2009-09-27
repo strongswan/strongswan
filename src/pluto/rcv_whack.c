@@ -372,7 +372,7 @@ whack_handle(int whackctlfd)
 		}
 		else if (!msg.whack_connection)
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL)
 			{
@@ -562,7 +562,7 @@ whack_handle(int whackctlfd)
 		}
 		else
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL && c->ikev1)
 			{
@@ -588,7 +588,7 @@ whack_handle(int whackctlfd)
 		}
 		else
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL && c->ikev1)
 			{

@@ -43,7 +43,7 @@
 #include "timer.h"
 
 /* close one per-peer log */
-static void perpeer_logclose(struct connection *c);     /* forward */
+static void perpeer_logclose(connection_t *c);     /* forward */
 
 
 bool
@@ -77,7 +77,7 @@ static TAILQ_HEAD(perpeer, connection) perpeer_list;
  */
 int whack_log_fd = NULL_FD;     /* only set during whack_handle() */
 struct state *cur_state = NULL; /* current state, for diagnostics */
-struct connection *cur_connection = NULL;       /* current connection, for diagnostics */
+connection_t *cur_connection = NULL;       /* current connection, for diagnostics */
 const ip_address *cur_from = NULL;      /* source of current current message */
 u_int16_t cur_from_port;        /* host order */
 
@@ -245,7 +245,7 @@ fmt_log(char *buf, size_t buf_len, const char *fmt, va_list ap)
 {
 	bool reproc = *fmt == '~';
 	size_t ps;
-	struct connection *c = cur_state != NULL ? cur_state->st_connection
+	connection_t *c = cur_state != NULL ? cur_state->st_connection
 		: cur_connection;
 
 	buf[0] = '\0';
@@ -293,7 +293,7 @@ fmt_log(char *buf, size_t buf_len, const char *fmt, va_list ap)
 }
 
 static void
-perpeer_logclose(struct connection *c)
+perpeer_logclose(connection_t *c)
 {
 	/* only free/close things if we had used them! */
 	if (c->log_file != NULL)
@@ -308,7 +308,7 @@ perpeer_logclose(struct connection *c)
 }
 
 void
-perpeer_logfree(struct connection *c)
+perpeer_logfree(connection_t *c)
 {
 	perpeer_logclose(c);
 	if (c->log_file_name != NULL)
@@ -321,7 +321,7 @@ perpeer_logfree(struct connection *c)
 
 /* open the per-peer log */
 static void
-open_peerlog(struct connection *c)
+open_peerlog(connection_t *c)
 {
 	syslog(LOG_INFO, "opening log file for conn %s", c->name);
 
@@ -725,7 +725,7 @@ lset_t
 	cur_debugging =  DBG_NONE;
 
 void
-extra_debugging(const struct connection *c)
+extra_debugging(const connection_t *c)
 {
 	if(c == NULL)
 	{

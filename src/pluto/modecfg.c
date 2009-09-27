@@ -117,7 +117,7 @@ init_internal_addr(internal_addr_t *ia)
  * get internal IP address for a connection
  */
 static void
-get_internal_addr(struct connection *c, internal_addr_t *ia)
+get_internal_addr(connection_t *c, internal_addr_t *ia)
 {
 	int i, dns_idx = 0, nbns_idx = 0;
 
@@ -203,7 +203,7 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
  * Set srcip and client subnet to internal IP address
  */
 static bool
-set_internal_addr(struct connection *c, internal_addr_t *ia)
+set_internal_addr(connection_t *c, internal_addr_t *ia)
 {
 	if (ia->attr_set & LELEM(INTERNAL_IP4_ADDRESS)
 	&& !isanyaddr(&ia->ipaddr))

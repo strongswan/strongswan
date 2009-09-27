@@ -151,7 +151,7 @@ static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 struct eroute_info *orphaned_holds = NULL;
 
 /* forward declaration */
-static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind, unsigned int op,
 						 const char *opname);
 
@@ -394,7 +394,7 @@ ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 # define DEFAULT_UPDOWN "ipsec _updown"
 #endif
 
-static bool do_command(struct connection *c, struct spd_route *sr,
+static bool do_command(connection_t *c, struct spd_route *sr,
 					   const char *verb)
 {
 	char cmd[1536];     /* arbitrary limit on shell command length */
@@ -655,10 +655,10 @@ enum routability {
 	route_farconflict = 3
 };
 
-static enum routability could_route(struct connection *c)
+static enum routability could_route(connection_t *c)
 {
 	struct spd_route *esr, *rosr;
-	struct connection *ero      /* who, if anyone, owns our eroute? */
+	connection_t *ero      /* who, if anyone, owns our eroute? */
 		, *ro = route_owner(c, &rosr, &ero, &esr); /* who owns our route? */
 
 	/* it makes no sense to route a connection that is ISAKMP-only */
@@ -712,8 +712,8 @@ static enum routability could_route(struct connection *c)
 	/* if there is an eroute for another connection, there is a problem */
 	if (ero != NULL && ero != c)
 	{
-		struct connection *ero2, *ero_top;
-		struct connection *inside, *outside;
+		connection_t *ero2, *ero_top;
+		connection_t *inside, *outside;
 
 		/*
 		 * note, wavesec (PERMANENT) goes *outside* and
@@ -799,7 +799,7 @@ static enum routability could_route(struct connection *c)
 	return route_easy;
 }
 
-bool trap_connection(struct connection *c)
+bool trap_connection(connection_t *c)
 {
 	switch (could_route(c))
 	{
@@ -827,7 +827,7 @@ bool trap_connection(struct connection *c)
 /**
  * Delete any eroute for a connection and unroute it if route isn't shared
  */
-void unroute_connection(struct connection *c)
+void unroute_connection(connection_t *c)
 {
 	struct spd_route *sr;
 	enum routing_t cr;
@@ -1088,7 +1088,7 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 
 /* assign a bare hold to a connection */
 
-bool assign_hold(struct connection *c USED_BY_DEBUG, struct spd_route *sr,
+bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 				 int transport_proto,
 				 const ip_address *src,
 				 const ip_address *dst)
@@ -1230,7 +1230,7 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 
 /* compute a (host-order!) SPI to implement the policy in connection c */
 ipsec_spi_t
-shunt_policy_spi(struct connection *c, bool prospective)
+shunt_policy_spi(connection_t *c, bool prospective)
 {
 	/* note: these are in host order :-( */
 	static const ipsec_spi_t shunt_spi[] =
@@ -1261,7 +1261,7 @@ shunt_policy_spi(struct connection *c, bool prospective)
  * If negotiation has failed, the choice between %trap/%pass/%drop/%reject
  * is specified in the policy of connection c.
  */
-static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind,
 						 unsigned int op, const char *opname)
 {
@@ -1321,7 +1321,7 @@ static bool shunt_eroute(struct connection *c, struct spd_route *sr,
 	{
 		/* maybe we are uneclipsing something */
 		struct spd_route *esr;
-		struct connection *ue = eclipsed(c, &esr);
+		connection_t *ue = eclipsed(c, &esr);
 
 		if (ue != NULL)
 		{
@@ -1694,7 +1694,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 {
 	/* Build an inbound or outbound SA */
 
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	ip_subnet src, dst;
 	ip_subnet src_client, dst_client;
 	ipsec_spi_t inner_spi = 0;
@@ -2167,7 +2167,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 	 * so deleting any one will do.  So we just delete the
 	 * first one found.  It may or may not be the only one.
 	 */
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	struct {
 		unsigned proto;
 		struct ipsec_proto_info *info;
@@ -2259,7 +2259,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 {
 	char text_said[SATOT_BUF];
 	struct kernel_sa sa;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	*use_time = UNDEFINED_TIME;
 
@@ -2385,7 +2385,7 @@ void init_kernel(void)
  */
 bool install_inbound_ipsec_sa(struct state *st)
 {
-	struct connection *const c = st->st_connection;
+	connection_t *const c = st->st_connection;
 
 	/* If our peer has a fixed-address client, check if we already
 	 * have a route for that client that conflicts.  We will take this
@@ -2399,7 +2399,7 @@ bool install_inbound_ipsec_sa(struct state *st)
 		for (;;)
 		{
 			struct spd_route *esr;
-			struct connection *o = route_owner(c, &esr, NULL, NULL);
+			connection_t *o = route_owner(c, &esr, NULL, NULL);
 
 			if (o == NULL)
 			{
@@ -2449,20 +2449,20 @@ bool install_inbound_ipsec_sa(struct state *st)
  * Any SA Group must have already been created.
  * On failure, steps will be unwound.
  */
-bool route_and_eroute(struct connection *c USED_BY_KLIPS,
+bool route_and_eroute(connection_t *c USED_BY_KLIPS,
 					  struct spd_route *sr USED_BY_KLIPS,
 					  struct state *st USED_BY_KLIPS)
 {
 #ifdef KLIPS
 	struct spd_route *esr;
 	struct spd_route *rosr;
-	struct connection *ero      /* who, if anyone, owns our eroute? */
+	connection_t *ero      /* who, if anyone, owns our eroute? */
 		, *ro = route_owner(c, &rosr, &ero, &esr);
 	bool eroute_installed = FALSE
 		, firewall_notified = FALSE
 		, route_installed = FALSE;
 
-	struct connection *ero_top;
+	connection_t *ero_top;
 	struct bare_shunt **bspp;
 
 	DBG(DBG_CONTROLMORE,
@@ -2623,7 +2623,7 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 		else if (ero != NULL && ero != c)
 		{
 			/* check if ero is an ancestor of c. */
-			struct connection *ero2;
+			connection_t *ero2;
 
 			for (ero2 = c; ero2 != NULL && ero2 != c; ero2 = ero2->policy_next)
 				;
@@ -2823,7 +2823,7 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 		/* If the state is the eroute owner, we must adjust
 		 * the routing for the connection.
 		 */
-		struct connection *c = st->st_connection;
+		connection_t *c = st->st_connection;
 		struct spd_route *sr;
 
 		passert(st->st_connection);
@@ -2872,7 +2872,7 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 #ifdef KLIPS
 static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	char text_said[SATOT_BUF];
 	struct kernel_sa sa;
 	ip_address

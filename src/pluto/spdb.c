@@ -831,7 +831,7 @@ notification_t parse_isakmp_policy(pb_stream *proposal_pbs, u_int notrans,
 static err_t find_preshared_key(struct state* st)
 {
 	err_t ugh = NULL;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	if (get_preshared_secret(c) == NULL)
 	{
@@ -868,7 +868,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
 									struct state *st,
 									bool initiator)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	unsigned no_trans_left;
 
 	/* for each transform payload... */
@@ -1712,7 +1712,7 @@ parse_ipsec_sa_body(
 	bool selection,             /* if this SA is a selection, only one transform may appear */
 	struct state *st)           /* current state object */
 {
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 	u_int32_t ipsecdoisit;
 	pb_stream next_proposal_pbs;
 

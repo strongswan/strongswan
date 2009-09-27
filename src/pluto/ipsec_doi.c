@@ -235,7 +235,7 @@ static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
 
 static bool collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
 {
-	struct connection *d = find_host_connection(&md->iface->addr
+	connection_t *d = find_host_connection(&md->iface->addr
 		, pluto_port, (ip_address*)NULL, md->sender_port, LEMPTY);
 
 	for (; d != NULL; d = d->hp_next)
@@ -492,7 +492,7 @@ void send_notification_from_md(struct msg_digest *md, u_int16_t type)
 	 *   st_connection->interface
 	 */
 	struct state st;
-	struct connection cnx;
+	connection_t cnx;
 
 	passert(md);
 
@@ -781,7 +781,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			}
 			else
 			{
-				struct connection *oldc;
+				connection_t *oldc;
 
 				oldc = cur_connection;
 				set_cur_connection(dst->st_connection);
@@ -817,8 +817,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			}
 			else
 			{
-				struct connection *rc = dst->st_connection;
-				struct connection *oldc;
+				connection_t *rc = dst->st_connection;
+				connection_t *oldc;
 
 				oldc = cur_connection;
 				set_cur_connection(rc);
@@ -894,7 +894,7 @@ void close_message(pb_stream *pbs)
  * Note: this is not called from demux.c
  */
 static stf_status
-main_outI1(int whack_sock, struct connection *c, struct state *predecessor
+main_outI1(int whack_sock, connection_t *c, struct state *predecessor
 	, lset_t policy, unsigned long try)
 {
 	struct state *st = new_state();
@@ -1089,7 +1089,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	return STF_OK;
 }
 
-void ipsecdoi_initiate(int whack_sock, struct connection *c, lset_t policy,
+void ipsecdoi_initiate(int whack_sock, connection_t *c, lset_t policy,
 					   unsigned long try, so_serial_t replacing)
 {
 	/* If there's already an ISAKMP SA established, use that and
@@ -1463,7 +1463,7 @@ static bool generate_skeyids_iv(struct state *st)
  * Use PKCS#1 version 1.5 encryption of hash (called
  * RSAES-PKCS1-V1_5) in PKCS#2.
  */
-static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
+static size_t sign_hash(signature_scheme_t scheme, connection_t *c,
 						u_char sig_val[RSA_MAX_OCTETS], chunk_t hash)
 {
 	size_t sz = 0;
@@ -1574,7 +1574,7 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 #endif /* USE_KEYRR */
 								  const struct gw_info *gateways_from_dns)
 {
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 	struct tac_state s;
 
 	s.st = st;
@@ -1912,7 +1912,7 @@ static bool emit_subnet_id(ip_subnet *net, u_int8_t np, u_int8_t protoid,
 }
 
 stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
-					   struct connection *c, lset_t policy, unsigned long try,
+					   connection_t *c, lset_t policy, unsigned long try,
 					   so_serial_t replacing)
 {
 	struct state *st = duplicate_state(isakmp_sa);
@@ -2200,7 +2200,7 @@ static void decode_cert(struct msg_digest *md)
 /*
  * Decode the CR payload of Phase 1.
  */
-static void decode_cr(struct msg_digest *md, struct connection *c)
+static void decode_cr(struct msg_digest *md, connection_t *c)
 {
 	struct payload_digest *p;
 
@@ -2371,7 +2371,7 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 							  bool initiator)
 {
 	struct state *const st = md->st;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	chunk_t peer_ca = (st->st_peer_pubkey != NULL)
 					 ? st->st_peer_pubkey->issuer : chunk_empty;
@@ -2416,7 +2416,7 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 	}
 	else
 	{
-		struct connection *r;
+		connection_t *r;
 
 		/* check for certificate requests */
 		decode_cr(md, c);
@@ -2678,7 +2678,7 @@ static bool check_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
  */
 static bool has_preloaded_public_key(struct state *st)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	/* do not consider rw connections since
 	 * the peer's identity must be known
@@ -2917,7 +2917,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 {
 	struct payload_digest *const sa_pd = md->chain[ISAKMP_NEXT_SA];
 	struct state *st;
-	struct connection *c;
+	connection_t *c;
 	struct isakmp_proposal proposal;
 	pb_stream proposal_pbs;
 	pb_stream r_sa_pbs;
@@ -2961,7 +2961,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 		 * but Food Groups kind of assumes one.
 		 */
 		{
-			struct connection *d;
+			connection_t *d;
 
 			d = find_host_connection(&md->iface->addr
 				, pluto_port, (ip_address*)NULL, md->sender_port, policy);
@@ -4256,7 +4256,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 stf_status quick_inI1_outR1(struct msg_digest *md)
 {
 	const struct state *const p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct payload_digest *const id_pd = md->chain[ISAKMP_NEXT_ID];
 	struct verify_oppo_bundle b;
 
@@ -4403,7 +4403,7 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 {
 	struct msg_digest *md = b->md;
 	struct state *p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct verify_oppo_continuation *vc = malloc_thing(struct verify_oppo_continuation);
 	struct id id        /* subject of query */
 		, *our_id       /* needed for myid playing */
@@ -4519,7 +4519,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 										struct adns_continuation *ac,
 										struct state *p1st)
 {
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	enum verify_oppo_step next_step = vos_our_client;
 	err_t ugh = NULL;
 
@@ -4696,7 +4696,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 {
 	struct msg_digest *md = b->md;
 	struct state *const p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct payload_digest *const id_pd = md->chain[ISAKMP_NEXT_ID];
 	ip_subnet *our_net = &b->my.net
 		, *his_net = &b->his.net;
@@ -4709,7 +4709,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 	 * a suitable connection (our current one only matches for hosts).
 	 */
 	{
-		struct connection *p = find_client_connection(c
+		connection_t *p = find_client_connection(c
 			, our_net, his_net, b->my.proto, b->my.port, b->his.proto, b->his.port);
 
 		if (p == NULL)
@@ -4873,7 +4873,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 
 		if (st->st_connection != c)
 		{
-			struct connection *t = st->st_connection;
+			connection_t *t = st->st_connection;
 
 			st->st_connection = c;
 			set_cur_connection(c);
@@ -5095,7 +5095,7 @@ static void dpd_init(struct state *st)
 stf_status quick_inR1_outI2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 
 	/* HASH(2) in */
 	CHECK_QUICK_HASH(md
@@ -5677,7 +5677,7 @@ void
 dpd_timeout(struct state *st)
 {
 	struct state *newest_phase1_st;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	int action = st->st_connection->dpd_action;
 	char cname[BUF_LEN];
 

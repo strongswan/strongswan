@@ -277,7 +277,7 @@ void release_whack(struct state *st)
  */
 void delete_state(struct state *st)
 {
-	struct connection *const c = st->st_connection;
+	connection_t *const c = st->st_connection;
 	struct state *old_cur_state = cur_state == st? NULL : cur_state;
 
 	set_cur_state(st);
@@ -371,7 +371,7 @@ void delete_state(struct state *st)
 /**
  * Is a connection in use by some state?
  */
-bool states_use_connection(struct connection *c)
+bool states_use_connection(connection_t *c)
 {
 	/* are there any states still using it? */
 	struct state *st = NULL;
@@ -390,7 +390,7 @@ bool states_use_connection(struct connection *c)
  * if relations == TRUE, then also delete states that share
  * the same phase 1 SA.
  */
-void delete_states_by_connection(struct connection *c, bool relations)
+void delete_states_by_connection(connection_t *c, bool relations)
 {
 	int pass;
 	/* this kludge avoids an n^2 algorithm */
@@ -480,7 +480,7 @@ void delete_states_by_peer(ip_address *peer)
 		{
 			struct state *this = st;
 			struct spd_route *sr;
-			struct connection *c = this->st_connection;
+			connection_t *c = this->st_connection;
 
 			st = st->st_hashchain_next; /* before this is deleted */
 
@@ -646,7 +646,7 @@ struct state *find_phase2_state_to_delete(const struct state *p1st,
 /**
  * Find newest Phase 1 negotiation state object for suitable for connection c
  */
-struct state *find_phase1_state(const struct connection *c, lset_t ok_states)
+struct state *find_phase1_state(const connection_t *c, lset_t ok_states)
 {
 	struct state
 		*st,
@@ -674,7 +674,7 @@ void state_eroute_usage(ip_subnet *ours, ip_subnet *his, unsigned long count,
 	{
 		for (st = statetable[i]; st != NULL; st = st->st_hashchain_next)
 		{
-			struct connection *c = st->st_connection;
+			connection_t *c = st->st_connection;
 
 			/* XXX spd-enum */
 			if (IS_IPSEC_SA_ESTABLISHED(st->st_state)
@@ -708,7 +708,7 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 			   size_t state_buf_len, char *state_buf2, size_t state_buf2_len)
 {
 	/* what the heck is interesting about a state? */
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 
 	long delta = st->st_event->ev_time >= n
 		? (long)(st->st_event->ev_time - n)
@@ -824,9 +824,9 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 static int state_compare(const void *a, const void *b)
 {
 	const struct state *sap = *(const struct state *const *)a;
-	struct connection *ca = sap->st_connection;
+	connection_t *ca = sap->st_connection;
 	const struct state *sbp = *(const struct state *const *)b;
-	struct connection *cb = sbp->st_connection;
+	connection_t *cb = sbp->st_connection;
 
 	/* DBG_log("comparing %s to %s", ca->name, cb->name); */
 

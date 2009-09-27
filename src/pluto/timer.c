@@ -166,7 +166,7 @@ void handle_timer_event(void)
 	struct event *ev = evlist;
 	int type;
 	struct state *st;
-	struct connection *c = NULL;
+	connection_t *c = NULL;
 	ip_address peer;
 
 	if (ev == (struct event *) NULL)    /* Just paranoid */

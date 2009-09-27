@@ -48,7 +48,7 @@ static size_t fg_path_space = 0;
 
 struct fg_groups {
 	struct fg_groups *next;
-	struct connection *connection;
+	connection_t *connection;
 };
 
 static struct fg_groups *groups = NULL;
@@ -78,8 +78,7 @@ struct fg_targets *new_targets;
  * It returns -1, 0, or +1 if a is, respectively,
  * less than, equal to, or greater than b.
  */
-static int
-ipcmp(ip_address *a, ip_address *b)
+static int ipcmp(ip_address *a, ip_address *b)
 {
 	if (addrtypeof(a) != addrtypeof(b))
 	{
@@ -105,8 +104,7 @@ ipcmp(ip_address *a, ip_address *b)
  * It returns -1, 0, or +1 if a is, respectively,
  * less than, equal to, or greater than b.
  */
-static int
-subnetcmp(const ip_subnet *a, const ip_subnet *b)
+static int subnetcmp(const ip_subnet *a, const ip_subnet *b)
 {
 	ip_address neta, maska, netb, maskb;
 	int r;
@@ -121,8 +119,7 @@ subnetcmp(const ip_subnet *a, const ip_subnet *b)
 	return r;
 }
 
-static void
-read_foodgroup(struct fg_groups *g)
+static void read_foodgroup(struct fg_groups *g)
 {
 	const char *fgn = g->connection->name;
 	const ip_subnet *lsn = &g->connection->spd.this.client;
@@ -244,8 +241,7 @@ read_foodgroup(struct fg_groups *g)
 	}
 }
 
-static void
-free_targets(void)
+static void free_targets(void)
 {
 	while (targets != NULL)
 	{
@@ -257,8 +253,7 @@ free_targets(void)
 	}
 }
 
-void
-load_groups(void)
+void load_groups(void)
 {
 	passert(new_targets == NULL);
 
@@ -341,8 +336,7 @@ load_groups(void)
 }
 
 
-void
-add_group(struct connection *c)
+void add_group(connection_t *c)
 {
 	struct fg_groups *g = malloc_thing(struct fg_groups);
 
@@ -352,8 +346,7 @@ add_group(struct connection *c)
 	g->connection = c;
 }
 
-static struct fg_groups *
-find_group(const struct connection *c)
+static struct fg_groups *find_group(const connection_t *c)
 {
 	struct fg_groups *g;
 
@@ -362,8 +355,7 @@ find_group(const struct connection *c)
 	return g;
 }
 
-void
-route_group(struct connection *c)
+void route_group(connection_t *c)
 {
 	/* it makes no sense to route a connection that is ISAKMP-only */
 	if (!NEVER_NEGOTIATE(c->policy) && !HAS_IPSEC_POLICY(c->policy))
@@ -381,7 +373,7 @@ route_group(struct connection *c)
 		{
 			if (t->group == g)
 			{
-				struct connection *ci = con_by_name(t->name, FALSE);
+				connection_t *ci = con_by_name(t->name, FALSE);
 
 				if (ci != NULL)
 				{
@@ -395,8 +387,7 @@ route_group(struct connection *c)
 	}
 }
 
-void
-unroute_group(struct connection *c)
+void unroute_group(connection_t *c)
 {
 	struct fg_groups *g = find_group(c);
 	struct fg_targets *t;
@@ -407,7 +398,7 @@ unroute_group(struct connection *c)
 	{
 		if (t->group == g)
 		{
-			struct connection *ci = con_by_name(t->name, FALSE);
+			connection_t *ci = con_by_name(t->name, FALSE);
 
 			if (ci != NULL)
 			{
@@ -419,8 +410,7 @@ unroute_group(struct connection *c)
 	}
 }
 
-void
-delete_group(const struct connection *c)
+void delete_group(const connection_t *c)
 {
 	struct fg_groups *g;
 

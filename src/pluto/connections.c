@@ -62,9 +62,9 @@
 #include "nat_traversal.h"
 #include "virtual.h"
 
-static void flush_pending_by_connection(struct connection *c);  /* forward */
+static void flush_pending_by_connection(connection_t *c);  /* forward */
 
-static struct connection *connections = NULL;
+static connection_t *connections = NULL;
 
 /* struct host_pair: a nexus of information about a pair of hosts.
  * A host is an IP address, UDP port pair.  This is a debatable choice:
@@ -82,17 +82,17 @@ struct host_pair {
 		u_int16_t port; /* host order */
 	} me, him;
 	bool initial_connection_sent;
-	struct connection *connections;     /* connections with this pair */
+	connection_t *connections;     /* connections with this pair */
 	struct pending *pending;    /* awaiting Keying Channel */
 	struct host_pair *next;
 };
 
 static struct host_pair *host_pairs = NULL;
 
-static struct connection *unoriented_connections = NULL;
+static connection_t *unoriented_connections = NULL;
 
 /* check to see that Ids of peers match */
-bool same_peer_ids(const struct connection *c, const struct connection *d,
+bool same_peer_ids(const connection_t *c, const connection_t *d,
 				   const struct id *his_id)
 {
 	return same_id(&c->spd.this.id, &d->spd.this.id)
@@ -138,7 +138,7 @@ static struct host_pair *find_host_pair(const ip_address *myaddr,
 }
 
 /* find head of list of connections with this pair of hosts */
-static struct connection *find_host_pair_connections(const ip_address *myaddr,
+static connection_t *find_host_pair_connections(const ip_address *myaddr,
 													 u_int16_t myport,
 													 const ip_address *hisaddr,
 														u_int16_t hisport)
@@ -147,7 +147,7 @@ static struct connection *find_host_pair_connections(const ip_address *myaddr,
 
 	if (nat_traversal_enabled && hp && hisaddr)
 	{
-		struct connection *c;
+		connection_t *c;
 
 		for (c = hp->connections; c != NULL; c = c->hp_next)
 		{
@@ -159,7 +159,7 @@ static struct connection *find_host_pair_connections(const ip_address *myaddr,
 	return hp == NULL? NULL : hp->connections;
 }
 
-static void connect_to_host_pair(struct connection *c)
+static void connect_to_host_pair(connection_t *c)
 {
 	if (oriented(*c))
 	{
@@ -206,9 +206,9 @@ static void connect_to_host_pair(struct connection *c)
  * Move the winner (if any) to the front.
  * If none is found, and strict, a diagnostic is logged to whack.
  */
-struct connection *con_by_name(const char *nm, bool strict)
+connection_t *con_by_name(const char *nm, bool strict)
 {
-	struct connection *p, *prev;
+	connection_t *p, *prev;
 
 	for (prev = NULL, p = connections; ; prev = p, p = p->ac_next)
 	{
@@ -234,7 +234,7 @@ struct connection *con_by_name(const char *nm, bool strict)
 	return p;
 }
 
-void release_connection(struct connection *c, bool relations)
+void release_connection(connection_t *c, bool relations)
 {
 	if (c->kind == CK_INSTANCE)
 	{
@@ -262,9 +262,9 @@ void release_connection(struct connection *c, bool relations)
 	}
 
 
-void delete_connection(struct connection *c, bool relations)
+void delete_connection(connection_t *c, bool relations)
 {
-	struct connection *old_cur_connection
+	connection_t *old_cur_connection
 		= cur_connection == c? NULL : cur_connection;
 #ifdef DEBUG
 	lset_t old_cur_debugging = cur_debugging;
@@ -297,20 +297,20 @@ void delete_connection(struct connection *c, bool relations)
 	perpeer_logfree(c);
 
 	/* find and delete c from connections list */
-	list_rm(struct connection, ac_next, c, connections);
+	list_rm(connection_t, ac_next, c, connections);
 	cur_connection = old_cur_connection;
 
 	/* find and delete c from the host pair list */
 	if (c->host_pair == NULL)
 	{
 		if (c->ikev1)
-			list_rm(struct connection, hp_next, c, unoriented_connections);
+			list_rm(connection_t, hp_next, c, unoriented_connections);
 	}
 	else
 	{
 		struct host_pair *hp = c->host_pair;
 
-		list_rm(struct connection, hp_next, c, hp->connections);
+		list_rm(connection_t, hp_next, c, hp->connections);
 		c->host_pair = NULL;    /* redundant, but safe */
 
 		/* if there are no more connections with this host_pair
@@ -360,7 +360,7 @@ void delete_connection(struct connection *c, bool relations)
 /* Delete connections with the specified name */
 void delete_connections_by_name(const char *name, bool strict)
 {
-	struct connection *c = con_by_name(name, strict);
+	connection_t *c = con_by_name(name, strict);
 
 	for (; c != NULL; c = con_by_name(name, FALSE))
 		delete_connection(c, FALSE);
@@ -378,7 +378,7 @@ void release_dead_interfaces(void)
 
 	for (hp = host_pairs; hp != NULL; hp = hp->next)
 	{
-		struct connection **pp
+		connection_t **pp
 			, *p;
 
 		for (pp = &hp->connections; (p = *pp) != NULL; )
@@ -425,13 +425,13 @@ void check_orientations(void)
 {
 	/* try to orient all the unoriented connections */
 	{
-		struct connection *c = unoriented_connections;
+		connection_t *c = unoriented_connections;
 
 		unoriented_connections = NULL;
 
 		while (c != NULL)
 		{
-			struct connection *nxt = c->hp_next;
+			connection_t *nxt = c->hp_next;
 
 			(void)orient(c);
 			connect_to_host_pair(c);
@@ -465,12 +465,12 @@ void check_orientations(void)
 						 * cost of leaving it is slight and cannot
 						 * be induced by a foe).
 						 */
-						struct connection *c = hp->connections;
+						connection_t *c = hp->connections;
 
 						hp->connections = NULL;
 						while (c != NULL)
 						{
-							struct connection *nxt = c->hp_next;
+							connection_t *nxt = c->hp_next;
 
 							c->interface = NULL;
 							(void)orient(c);
@@ -656,7 +656,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 #define CONNECTION_BUF  (2 * (END_BUF - 1) + 4)
 
 static size_t format_connection(char *buf, size_t buf_len,
-								const struct connection *c,
+								const connection_t *c,
 								struct spd_route *sr)
 {
 	size_t w = format_end(buf, buf_len, &sr->this, &sr->that, TRUE, LEMPTY);
@@ -665,7 +665,7 @@ static size_t format_connection(char *buf, size_t buf_len,
 	return w + format_end(buf + w, buf_len - w, &sr->that, &sr->this, FALSE, c->policy);
 }
 
-static void unshare_connection_strings(struct connection *c)
+static void unshare_connection_strings(connection_t *c)
 {
 	c->name = clone_str(c->name);
 
@@ -913,9 +913,9 @@ static bool check_connection_end(const whack_end_t *this,
 	return TRUE;        /* happy */
 }
 
-struct connection *find_connection_by_reqid(uint32_t reqid)
+connection_t *find_connection_by_reqid(uint32_t reqid)
 {
-	struct connection *c;
+	connection_t *c;
 
 	reqid &= ~3;
 	for (c = connections; c != NULL; c = c->ac_next)
@@ -962,7 +962,7 @@ void add_connection(const whack_message_t *wm)
 	&& check_connection_end(&wm->left, &wm->right, wm))
 	{
 		bool same_rightca, same_leftca;
-		struct connection *c = malloc_thing(struct connection);
+		connection_t *c = malloc_thing(connection_t);
 
 		zero(c);
 		c->name   = wm->name;
@@ -1161,11 +1161,10 @@ void add_connection(const whack_message_t *wm)
  * Returns name of new connection.  May be NULL.
  * Caller is responsible for freeing.
  */
-char *add_group_instance(struct connection *group, const ip_subnet *target)
+char *add_group_instance(connection_t *group, const ip_subnet *target)
 {
-	char namebuf[100]
-		, targetbuf[SUBNETTOT_BUF];
-	struct connection *t;
+	char namebuf[100], targetbuf[SUBNETTOT_BUF];
+	connection_t *t;
 	char *name = NULL;
 
 	passert(group->kind == CK_GROUP);
@@ -1222,7 +1221,7 @@ char *add_group_instance(struct connection *group, const ip_subnet *target)
 }
 
 /* an old target has disappeared for a group: delete instance */
-void remove_group_instance(const struct connection *group USED_BY_DEBUG,
+void remove_group_instance(const connection_t *group USED_BY_DEBUG,
 						   const char *name)
 {
 	passert(group->kind == CK_GROUP);
@@ -1241,11 +1240,11 @@ void remove_group_instance(const struct connection *group USED_BY_DEBUG,
  *
  * Note that instantiate can only deal with a single SPD/eroute.
  */
-static struct connection *instantiate(struct connection *c,
-									  const ip_address *him, u_int16_t his_port,
-									  const struct id *his_id)
+static connection_t *instantiate(connection_t *c,
+								 const ip_address *him, u_int16_t his_port,
+								 const struct id *his_id)
 {
-	struct connection *d;
+	connection_t *d;
 	int wildcards;
 
 	passert(c->kind == CK_TEMPLATE);
@@ -1304,11 +1303,11 @@ static struct connection *instantiate(struct connection *c,
 	}
 }
 
-struct connection *rw_instantiate(struct connection *c, const ip_address *him,
-								  u_int16_t his_port, const ip_subnet *his_net,
-								  const struct id *his_id)
+connection_t *rw_instantiate(connection_t *c, const ip_address *him,
+							 u_int16_t his_port, const ip_subnet *his_net,
+							 const struct id *his_id)
 {
-	struct connection *d = instantiate(c, him, his_port, his_id);
+	connection_t *d = instantiate(c, him, his_port, his_id);
 
 	if (d && his_net && is_virtual_connection(c))
 	{
@@ -1331,12 +1330,12 @@ struct connection *rw_instantiate(struct connection *c, const ip_address *him,
 	return d;
 }
 
-struct connection *oppo_instantiate(struct connection *c, const ip_address *him,
-									const struct id *his_id, struct gw_info *gw,
-									const ip_address *our_client USED_BY_DEBUG,
-									const ip_address *peer_client)
+connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
+							   const struct id *his_id, struct gw_info *gw,
+							   const ip_address *our_client USED_BY_DEBUG,
+							   const ip_address *peer_client)
 {
-	struct connection *d = instantiate(c, him, 0, his_id);
+	connection_t *d = instantiate(c, him, 0, his_id);
 
 	passert(d->spd.next == NULL);
 
@@ -1434,7 +1433,7 @@ static size_t fmt_client(const ip_subnet *client, const ip_address *gw,
 	return strlen(buf);
 }
 
-void fmt_conn_instance(const struct connection *c, char buf[CONN_INST_BUF])
+void fmt_conn_instance(const connection_t *c, char buf[CONN_INST_BUF])
 {
 	char *p = buf;
 
@@ -1491,12 +1490,12 @@ void fmt_conn_instance(const struct connection *c, char buf[CONN_INST_BUF])
  *
  * See also build_outgoing_opportunistic_connection.
  */
-struct connection *find_connection_for_clients(struct spd_route **srp,
-											   const ip_address *our_client,
-											   const ip_address *peer_client,
-											   int transport_proto)
+connection_t *find_connection_for_clients(struct spd_route **srp,
+										  const ip_address *our_client,
+										  const ip_address *peer_client,
+										  int transport_proto)
 {
-	struct connection *c = connections, *best = NULL;
+	connection_t *c = connections, *best = NULL;
 	policy_prio_t best_prio = BOTTOM_PRIO;
 	struct spd_route *sr;
 	struct spd_route *best_sr = NULL;
@@ -1634,12 +1633,12 @@ struct connection *find_connection_for_clients(struct spd_route **srp,
  * find_connection_for_clients.  In this case, we know the gateways
  * that we need to instantiate an opportunistic connection.
  */
-struct connection *build_outgoing_opportunistic_connection(struct gw_info *gw,
+connection_t *build_outgoing_opportunistic_connection(struct gw_info *gw,
 											const ip_address *our_client,
 											const ip_address *peer_client)
 {
 	struct iface *p;
-	struct connection *best = NULL;
+	connection_t *best = NULL;
 	struct spd_route *sr, *bestsr;
 	char ocb[ADDRTOT_BUF], pcb[ADDRTOT_BUF];
 
@@ -1659,8 +1658,8 @@ struct connection *build_outgoing_opportunistic_connection(struct gw_info *gw,
 		 * We cannot know what port the peer would use, so we assume
 		 * that it is pluto_port (makes debugging easier).
 		 */
-		struct connection *c = find_host_pair_connections(&p->addr
-			, pluto_port, (ip_address *)NULL, pluto_port);
+		connection_t *c = find_host_pair_connections(&p->addr, pluto_port,
+										 (ip_address *)NULL, pluto_port);
 
 		for (; c != NULL; c = c->hp_next)
 		{
@@ -1712,7 +1711,7 @@ struct connection *build_outgoing_opportunistic_connection(struct gw_info *gw,
 							  , our_client, peer_client);
 }
 
-bool orient(struct connection *c)
+bool orient(connection_t *c)
 {
 	struct spd_route *sr;
 
@@ -1776,7 +1775,7 @@ bool orient(struct connection *c)
 
 void initiate_connection(const char *name, int whackfd)
 {
-	struct connection *c = con_by_name(name, TRUE);
+	connection_t *c = con_by_name(name, TRUE);
 
 	if (c != NULL && c->ikev1)
 	{
@@ -1905,8 +1904,7 @@ struct find_oppo_continuation {
 	struct find_oppo_bundle b;
 };
 
-static void cannot_oppo(struct connection *c, struct find_oppo_bundle *b,
-						err_t ugh)
+static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 {
 	char pcb[ADDRTOT_BUF];
 	char ocb[ADDRTOT_BUF];
@@ -1925,7 +1923,7 @@ static void cannot_oppo(struct connection *c, struct find_oppo_bundle *b,
 	{
 		/* there is some policy that comes afterwards */
 		struct spd_route *shunt_spd;
-		struct connection *nc = c->policy_next;
+		connection_t *nc = c->policy_next;
 		struct state *st;
 
 		passert(c->kind == CK_TEMPLATE);
@@ -2045,7 +2043,7 @@ void initiate_opportunistic(const ip_address *our_client,
 static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 {
 	struct find_oppo_continuation *cr = (void *)acr;    /* inherit, damn you! */
-	struct connection *c;
+	connection_t *c;
 	bool was_held = cr->b.held;
 	int whackfd = cr->b.whackfd;
 
@@ -2116,8 +2114,7 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 }
 
 #ifdef USE_KEYRR
-static err_t check_key_recs(enum myid_state try_state,
-							const struct connection *c,
+static err_t check_key_recs(enum myid_state try_state, const connection_t *c,
 							struct adns_continuation *ac)
 {
 	/* Check if KEY lookup yielded good results.
@@ -2170,8 +2167,7 @@ static err_t check_key_recs(enum myid_state try_state,
 }
 #endif /* USE_KEYRR */
 
-static err_t check_txt_recs(enum myid_state try_state,
-							const struct connection *c,
+static err_t check_txt_recs(enum myid_state try_state, const connection_t *c,
 							struct adns_continuation *ac)
 {
 	/* Check if TXT lookup yielded good results.
@@ -2234,7 +2230,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 										struct adns_continuation *ac,
 										err_t ac_ugh)
 {
-	struct connection *c;
+	connection_t *c;
 	struct spd_route *sr;
 
 	/* What connection shall we use?
@@ -2938,14 +2934,14 @@ void terminate_connection(const char *nm)
 	/* Loop because more than one may match (master and instances)
 	 * But at least one is required (enforced by con_by_name).
 	 */
-	struct connection *c = con_by_name(nm, TRUE);
+	connection_t *c = con_by_name(nm, TRUE);
 
 	if (c == NULL || !c->ikev1)
 		return;
 
 	do
 	{
-		struct connection *n = c->ac_next;  /* grab this before c might disappear */
+		connection_t *n = c->ac_next;  /* grab this before c might disappear */
 
 		if (streq(c->name, nm)
 		&& c->kind >= CK_PERMANENT
@@ -2970,7 +2966,7 @@ void terminate_connection(const char *nm)
  */
 bool uniqueIDs = FALSE; /* --uniqueids? */
 
-void ISAKMP_SA_established(struct connection *c, so_serial_t serial)
+void ISAKMP_SA_established(connection_t *c, so_serial_t serial)
 {
 	c->newest_isakmp_sa = serial;
 
@@ -2985,11 +2981,11 @@ void ISAKMP_SA_established(struct connection *c, so_serial_t serial)
 		/* for all connections: if the same Phase 1 IDs are used
 		 * for a different IP address, unorient that connection.
 		 */
-		struct connection *d;
+		connection_t *d;
 
 		for (d = connections; d != NULL; )
 		{
-			struct connection *next = d->ac_next;       /* might move underneath us */
+			connection_t *next = d->ac_next;       /* might move underneath us */
 
 			if (d->kind >= CK_PERMANENT
 			&& same_id(&c->spd.this.id, &d->spd.this.id)
@@ -3014,10 +3010,10 @@ void ISAKMP_SA_established(struct connection *c, so_serial_t serial)
  * The return value is used to find other connections sharing a route.
  * *erop is used to find other connections sharing an eroute.
  */
-struct connection *route_owner(struct connection *c, struct spd_route **srp,
-							   struct connection **erop, struct spd_route **esrp)
+connection_t *route_owner(connection_t *c, struct spd_route **srp,
+						  connection_t **erop, struct spd_route **esrp)
 {
-	struct connection *d
+	connection_t *d
 		, *best_ro = c
 		, *best_ero = c;
 	struct spd_route *srd, *src;
@@ -3121,9 +3117,9 @@ struct connection *route_owner(struct connection *c, struct spd_route **srp,
  * There ought to be only one.
  * This might get to be a bottleneck -- try hashing if it does.
  */
-struct connection *shunt_owner(const ip_subnet *ours, const ip_subnet *his)
+connection_t *shunt_owner(const ip_subnet *ours, const ip_subnet *his)
 {
-	struct connection *c;
+	connection_t *c;
 	struct spd_route *sr;
 
 	for (c = connections; c != NULL; c = c->ac_next)
@@ -3143,11 +3139,11 @@ struct connection *shunt_owner(const ip_subnet *ours, const ip_subnet *his)
  * We don't know enough to chose amongst those available.
  * ??? no longer usefully different from find_host_pair_connections
  */
-struct connection *find_host_connection(const ip_address *me, u_int16_t my_port,
-										const ip_address *him, u_int16_t his_port,
-										lset_t policy)
+connection_t *find_host_connection(const ip_address *me, u_int16_t my_port,
+								   const ip_address *him, u_int16_t his_port,
+								   lset_t policy)
 {
-	struct connection *c = find_host_pair_connections(me, my_port, him, his_port);
+	connection_t *c = find_host_pair_connections(me, my_port, him, his_port);
 
 	if (policy != LEMPTY)
 	{
@@ -3229,13 +3225,13 @@ struct connection *find_host_connection(const ip_address *me, u_int16_t my_port,
  */
 #define PRIO_NO_MATCH_FOUND     2048
 
-struct connection *refine_host_connection(const struct state *st,
-										  const struct id *peer_id,
-										  chunk_t peer_ca)
+connection_t *refine_host_connection(const struct state *st,
+									 const struct id *peer_id,
+									 chunk_t peer_ca)
 {
-	struct connection *c = st->st_connection;
-	struct connection *d;
-	struct connection *best_found = NULL;
+	connection_t *c = st->st_connection;
+	connection_t *d;
+	connection_t *best_found = NULL;
 	u_int16_t auth = st->st_oakley.auth;
 	lset_t auth_policy = POLICY_PSK;
 	const chunk_t *psk = NULL;
@@ -3422,7 +3418,7 @@ struct connection *refine_host_connection(const struct state *st,
 static bool is_virtual_net_used(const ip_subnet *peer_net,
 								const struct id *peer_id)
 {
-	struct connection *d;
+	connection_t *d;
 
 	for (d = connections; d != NULL; d = d->ac_next)
 	{
@@ -3483,20 +3479,19 @@ static bool is_virtual_net_used(const ip_subnet *peer_net,
 #define PRIO_WEIGHT     (MAX_WILDCARDS+1)*WILD_WEIGHT
 
 /* fc_try: a helper function for find_client_connection */
-static struct connection *fc_try(const struct connection *c,
-								 struct host_pair *hp,
-								 const struct id *peer_id,
-								 const ip_subnet *our_net,
-								 const ip_subnet *peer_net,
-								 const u_int8_t our_protocol,
-								 const u_int16_t our_port,
-								 const u_int8_t peer_protocol,
-								 const u_int16_t peer_port,
-								 chunk_t peer_ca,
-								 const ietfAttrList_t *peer_list)
+static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
+							const struct id *peer_id,
+							const ip_subnet *our_net,
+							const ip_subnet *peer_net,
+							const u_int8_t our_protocol,
+							const u_int16_t our_port,
+							const u_int8_t peer_protocol,
+							const u_int16_t peer_port,
+							chunk_t peer_ca,
+							const ietfAttrList_t *peer_list)
 {
-	struct connection *d;
-	struct connection *best = NULL;
+	connection_t *d;
+	connection_t *best = NULL;
 	policy_prio_t best_prio = BOTTOM_PRIO;
 	int wildcards, pathlen;
 
@@ -3612,19 +3607,19 @@ static struct connection *fc_try(const struct connection *c,
 	return best;
 }
 
-static struct connection *fc_try_oppo(const struct connection *c,
-									  struct host_pair *hp,
-									  const ip_subnet *our_net,
-									  const ip_subnet *peer_net,
-									  const u_int8_t our_protocol,
-									  const u_int16_t our_port,
-									  const u_int8_t peer_protocol,
-									  const u_int16_t peer_port,
-									  chunk_t peer_ca,
-									  const ietfAttrList_t *peer_list)
+static connection_t *fc_try_oppo(const connection_t *c,
+								 struct host_pair *hp,
+								 const ip_subnet *our_net,
+								 const ip_subnet *peer_net,
+								 const u_int8_t our_protocol,
+								 const u_int16_t our_port,
+								 const u_int8_t peer_protocol,
+								 const u_int16_t peer_port,
+								 chunk_t peer_ca,
+								 const ietfAttrList_t *peer_list)
 {
-	struct connection *d;
-	struct connection *best = NULL;
+	connection_t *d;
+	connection_t *best = NULL;
 	policy_prio_t best_prio = BOTTOM_PRIO;
 	int wildcards, pathlen;
 
@@ -3715,8 +3710,7 @@ static struct connection *fc_try_oppo(const struct connection *c,
 /*
  * get the peer's CA and group attributes
  */
-chunk_t get_peer_ca_and_groups(struct connection *c,
-							   const ietfAttrList_t **peer_list)
+chunk_t get_peer_ca_and_groups(connection_t *c, const ietfAttrList_t **peer_list)
 {
 	struct state *p1st = find_phase1_state(c, ISAKMP_SA_ESTABLISHED_STATES);
 
@@ -3742,15 +3736,15 @@ chunk_t get_peer_ca_and_groups(struct connection *c,
 	return chunk_empty;
 }
 
-struct connection *find_client_connection(struct connection *c,
-										  const ip_subnet *our_net,
-										  const ip_subnet *peer_net,
-										  const u_int8_t our_protocol,
-										  const u_int16_t our_port,
-										  const u_int8_t peer_protocol,
-										  const u_int16_t peer_port)
+connection_t *find_client_connection(connection_t *c,
+									 const ip_subnet *our_net,
+									 const ip_subnet *peer_net,
+									 const u_int8_t our_protocol,
+									 const u_int16_t our_port,
+									 const u_int8_t peer_protocol,
+									 const u_int16_t peer_port)
 {
-	struct connection *d;
+	connection_t *d;
 	struct spd_route *sr;
 
 	const ietfAttrList_t *peer_list = NULL;
@@ -3776,7 +3770,7 @@ struct connection *find_client_connection(struct connection *c,
 	 * but even greater priority to a routed concrete connection
 	 */
 	{
-		struct connection *unrouted = NULL;
+		connection_t *unrouted = NULL;
 		int srnum = -1;
 
 		for (sr = &c->spd; unrouted == NULL && sr != NULL; sr = sr->next)
@@ -3882,7 +3876,7 @@ struct connection *find_client_connection(struct connection *c,
 	return d;
 }
 
-int connection_compare(const struct connection *ca, const struct connection *cb)
+int connection_compare(const connection_t *ca, const connection_t *cb)
 {
 	int ret;
 
@@ -3913,15 +3907,15 @@ int connection_compare(const struct connection *ca, const struct connection *cb)
 
 static int connection_compare_qsort(const void *a, const void *b)
 {
-	return connection_compare(*(const struct connection *const *)a
-							, *(const struct connection *const *)b);
+	return connection_compare(*(const connection_t *const *)a
+							, *(const connection_t *const *)b);
 }
 
 void show_connections_status(bool all, const char *name)
 {
-	struct connection *c;
+	connection_t *c;
 	int count, i;
-	struct connection **array;
+	connection_t **array;
 
 	/* make an array of connections, and sort it */
 	count = 0;
@@ -3930,7 +3924,7 @@ void show_connections_status(bool all, const char *name)
 		if (c->ikev1 && (name == NULL || streq(c->name, name)))
 			count++;
 	}
-	array = malloc(sizeof(struct connection *)*count);
+	array = malloc(sizeof(connection_t *)*count);
 
 	count=0;
 	for (c = connections; c != NULL; c = c->ac_next)
@@ -3940,7 +3934,7 @@ void show_connections_status(bool all, const char *name)
 	}
 
 	/* sort it! */
-	qsort(array, count, sizeof(struct connection *), connection_compare_qsort);
+	qsort(array, count, sizeof(connection_t *), connection_compare_qsort);
 
 	for (i = 0; i < count; i++)
 	{
@@ -4075,7 +4069,7 @@ void show_connections_status(bool all, const char *name)
 struct pending {
 	int whack_sock;
 	struct state *isakmp_sa;
-	struct connection *connection;
+	connection_t *connection;
 	lset_t policy;
 	unsigned long try;
 	so_serial_t replacing;
@@ -4084,7 +4078,7 @@ struct pending {
 };
 
 /* queue a Quick Mode negotiation pending completion of a suitable Main Mode */
-void add_pending(int whack_sock, struct state *isakmp_sa, struct connection *c,
+void add_pending(int whack_sock, struct state *isakmp_sa, connection_t *c,
 				 lset_t policy, unsigned long try, so_serial_t replacing)
 {
 	bool already_queued = FALSE;
@@ -4229,7 +4223,7 @@ void flush_pending_by_state(struct state *st)
 }
 
 /* a connection has been deleted; discard any related pending */
-static void flush_pending_by_connection(struct connection *c)
+static void flush_pending_by_connection(connection_t *c)
 {
 	if (c->host_pair != NULL)
 	{
@@ -4276,7 +4270,7 @@ void show_pending_phase2(const struct host_pair *hp, const struct state *st)
  * We must be careful to avoid circularity:
  * we don't touch it if it is CK_GOING_AWAY.
  */
-void connection_discard(struct connection *c)
+void connection_discard(connection_t *c)
 {
 	if (c->kind == CK_INSTANCE)
 	{
@@ -4300,9 +4294,9 @@ void connection_discard(struct connection *c)
 
 long eclipse_count = 0;
 
-struct connection *eclipsed(struct connection *c, struct spd_route **esrp)
+connection_t *eclipsed(connection_t *c, struct spd_route **esrp)
 {
-	struct connection *ue;
+	connection_t *ue;
 	struct spd_route *sr1 = &c->spd;
 
 	ue = NULL;

@@ -493,7 +493,7 @@ void kernel_alg_list(void)
 	whack_log(RC_COMMENT, "  integrity: %s", buf);
 }
 
-void kernel_alg_show_connection(struct connection *c, const char *instance)
+void kernel_alg_show_connection(connection_t *c, const char *instance)
 {
 	struct state *st = state_with_serialno(c->newest_ipsec_sa);
 
