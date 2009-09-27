@@ -195,6 +195,8 @@ char *whitelist[] = {
 	"xmlInitCharEncodingHandlers",
 	"xmlInitParser",
 	"xmlInitParserCtxt",
+	/* libcurl */
+	"Curl_client_write",
 	/* ClearSilver */
 	"nerr_init",
 	/* OpenSSL */
