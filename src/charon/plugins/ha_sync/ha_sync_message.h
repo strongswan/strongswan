@@ -55,6 +55,8 @@ enum ha_sync_message_type_t {
 	HA_SYNC_SEGMENT_DROP,
 	/** segments the sending node is taking over */
 	HA_SYNC_SEGMENT_TAKE,
+	/** status with the segments the sending node is currently serving */
+	HA_SYNC_STATUS,
 };
 
 /**

@@ -66,7 +66,6 @@ struct ha_sync_kernel_t {
  * @param active		bitmask of initially active segments
  * @param virtuals		comma separated list of virtual cluster addresses
  */
-ha_sync_kernel_t *ha_sync_kernel_create(u_int count, segment_mask_t active,
-										char *virtuals);
+ha_sync_kernel_t *ha_sync_kernel_create(u_int count, char *virtuals);
 
 #endif /* HA_SYNC_KERNEL_ @}*/

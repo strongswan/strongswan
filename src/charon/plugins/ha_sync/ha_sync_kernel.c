@@ -46,7 +46,7 @@ struct private_ha_sync_kernel_t {
 	/**
 	 * Total number of ClusterIP segments
 	 */
-	u_int segment_count;
+	u_int count;
 
 	/**
 	 * List of virtual addresses, as host_t*
@@ -68,7 +68,7 @@ static bool in_segment(private_ha_sync_kernel_t *this,
 		addr = *(u_int32_t*)host->get_address(host).ptr;
 		hash = jhash_1word(ntohl(addr), this->initval);
 
-		if ((((u_int64_t)hash * this->segment_count) >> 32) + 1 == segment)
+		if ((((u_int64_t)hash * this->count) >> 32) + 1 == segment)
 		{
 			return TRUE;
 		}
@@ -128,8 +128,7 @@ static void deactivate(private_ha_sync_kernel_t *this, u_int segment)
 /**
  * Mangle IPtable rules for virtual addresses
  */
-static bool mangle_rules(private_ha_sync_kernel_t *this, bool add,
-						 segment_mask_t active)
+static bool mangle_rules(private_ha_sync_kernel_t *this, bool add)
 {
 	enumerator_t *enumerator;
 	host_t *host;
@@ -148,13 +147,12 @@ static bool mangle_rules(private_ha_sync_kernel_t *this, bool add,
 			host->destroy(host);
 			continue;
 		}
-		/* iptables insists of a local node specification. We add '1' but drop
-		 * it afterwards. */
+		/* iptables insists of a local node specification, enable node 1 */
 		snprintf(buf, sizeof(buf),
 				 "/sbin/iptables -%c INPUT -i %s -d %H -j CLUSTERIP --new "
 				 "--hashmode sourceip --clustermac 01:00:5e:00:00:%2x "
 				 "--total-nodes %d --local-node 1",
-				 add ? 'A' : 'D', iface, host, mac++, this->segment_count);
+				 add ? 'A' : 'D', iface, host, mac++, this->count);
 		free(iface);
 		if (system(buf) != 0)
 		{
@@ -165,13 +163,9 @@ static bool mangle_rules(private_ha_sync_kernel_t *this, bool add,
 
 	if (add)
 	{
-		deactivate(this, 1);
-		for (i = 0; i < SEGMENTS_MAX; i++)
+		for (i = 2; i <= this->count; i++)
 		{
-			if (active & SEGMENTS_BIT(i))
-			{
-				activate(this, i);
-			}
+			activate(this, i);
 		}
 	}
 	return TRUE;
@@ -207,7 +201,7 @@ static void parse_virtuals(private_ha_sync_kernel_t *this, char *virtual)
  */
 static void destroy(private_ha_sync_kernel_t *this)
 {
-	mangle_rules(this, FALSE, 0);
+	mangle_rules(this, FALSE);
 	this->virtuals->destroy_offset(this->virtuals, offsetof(host_t, destroy));
 	free(this);
 }
@@ -215,10 +209,11 @@ static void destroy(private_ha_sync_kernel_t *this)
 /**
  * See header
  */
-ha_sync_kernel_t *ha_sync_kernel_create(u_int count, segment_mask_t active,
-										char *virtuals)
+ha_sync_kernel_t *ha_sync_kernel_create(u_int count, char *virtuals)
 {
 	private_ha_sync_kernel_t *this = malloc_thing(private_ha_sync_kernel_t);
+	segment_mask_t active;
+	int i;
 
 	this->public.in_segment = (bool(*)(ha_sync_kernel_t*, host_t *host, u_int segment))in_segment;
 	this->public.activate = (void(*)(ha_sync_kernel_t*, u_int segment))activate;
@@ -226,12 +221,12 @@ ha_sync_kernel_t *ha_sync_kernel_create(u_int count, segment_mask_t active,
 	this->public.destroy = (void(*)(ha_sync_kernel_t*))destroy;
 
 	this->initval = 0;
-	this->segment_count = count;
+	this->count = count;
 	this->virtuals = linked_list_create();
 
 	parse_virtuals(this, virtuals);
 
-	if (!mangle_rules(this, TRUE, active))
+	if (!mangle_rules(this, TRUE))
 	{
 		destroy(this);
 		return NULL;

@@ -17,6 +17,7 @@
 
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
+#include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_sync_segments_t private_ha_sync_segments_t;
 
@@ -53,12 +54,17 @@ struct private_ha_sync_segments_t {
 	/**
 	 * Total number of ClusterIP segments
 	 */
-	u_int segment_count;
+	u_int count;
 
 	/**
 	 * mask of active segments
 	 */
 	segment_mask_t active;
+
+	/**
+	 * Are we the master node handling segment assignement?
+	 */
+	bool master;
 };
 
 /**
@@ -71,9 +77,9 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 	int i;
 	bool first = TRUE;
 
-	for (i = 0; i < this->segment_count; i++)
+	for (i = 1; i <= this->count; i++)
 	{
-		if (this->active & 0x01 << i)
+		if (this->active & SEGMENTS_BIT(i))
 		{
 			if (first)
 			{
@@ -83,7 +89,7 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 			{
 				pos += snprintf(pos, buf + sizeof(buf) - pos, ",");
 			}
-			pos += snprintf(pos, buf + sizeof(buf) - pos, "%d", i+1);
+			pos += snprintf(pos, buf + sizeof(buf) - pos, "%d", i);
 		}
 	}
 	DBG1(DBG_CFG, "HA sync segment %d %sactivated, now active: %s",
@@ -98,19 +104,20 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
-	u_int i, limit;
+	u_int i, from, to;
 
 	this->lock->write_lock(this->lock);
 
-	if (segment == 0 || segment <= this->segment_count)
+	if (segment == 0 || segment <= this->count)
 	{
 		if (segment)
 		{	/* loop once for single segment ... */
-			limit = segment + 1;
+			from = to = segment;
 		}
 		else
-		{	/* or segment_count times for all segments */
-			limit = this->segment_count;
+		{	/* or count times for all segments */
+			from = 1;
+			to = this->count;
 		}
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 		while (enumerator->enumerate(enumerator, &ike_sa))
@@ -123,7 +130,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			{
 				continue;
 			}
-			for (i = segment; i < limit; i++)
+			for (i = from; i <= to; i++)
 			{
 				if (this->kernel->in_segment(this->kernel,
 										ike_sa->get_other_host(ike_sa), i))
@@ -133,7 +140,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			}
 		}
 		enumerator->destroy(enumerator);
-		for (i = segment; i < limit; i++)
+		for (i = from; i <= to; i++)
 		{
 			if (enable)
 			{
@@ -152,7 +159,6 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 				}
 			}
 		}
-
 		log_segments(this, enable, segment);
 	}
 
@@ -233,7 +239,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 	list = linked_list_create();
 	this->lock->read_lock(this->lock);
 
-	if (segment > 0 && segment <= this->segment_count && (this->active & mask))
+	if (segment > 0 && segment <= this->count && (this->active & mask))
 	{
 		this->active &= ~mask;
 
@@ -290,7 +296,7 @@ static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
 	{
 		int i;
 
-		for (i = 0; i < SEGMENTS_MAX; i++)
+		for (i = 1; i <= this->count; i++)
 		{
 			if (this->active & SEGMENTS_BIT(i))
 			{
@@ -299,6 +305,88 @@ static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
 		}
 	}
 	return TRUE;
+}
+
+/**
+ * Implementation of ha_sync_segments_t.handle_status
+ */
+static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
+{
+	segment_mask_t missing, overlap;
+	int i, active = 0;
+
+	this->lock->read_lock(this->lock);
+	missing = ~(this->active | mask);
+	overlap = this->active & mask;
+	for (i = 1; i <= this->count; i++)
+	{
+		if (this->active & SEGMENTS_BIT(i))
+		{
+			active++;
+		}
+	}
+	this->lock->unlock(this->lock);
+
+	/* Activate any missing segment. The master will disable overlapping
+	 * segments if both nodes activate the missing segments simultaneously. */
+	for (i = 1; i <= this->count; i++)
+	{
+		if (missing & SEGMENTS_BIT(i))
+		{
+			DBG1(DBG_CFG, "HA segment %d was not handled", i);
+			activate(this, i, TRUE);
+		}
+	}
+	if (this->master && overlap)
+	{
+		/* Disable overlapping segment on one node, controlled by master */
+		for (i = 1; i <= this->count; i++)
+		{
+			if (overlap & SEGMENTS_BIT(i))
+			{
+				DBG1(DBG_CFG, "HA segment %d handled twice", i);
+				if (active > this->count)
+				{
+					deactivate(this, i, TRUE);
+					active--;
+				}
+				else
+				{
+					activate(this, i, TRUE);
+					active++;
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Send a status message with our active segments
+ */
+static job_requeue_t send_status(private_ha_sync_segments_t *this)
+{
+	ha_sync_message_t *message;
+	int i;
+
+	message = ha_sync_message_create(HA_SYNC_STATUS);
+
+	for (i = 1; i <= this->count; i++)
+	{
+		if (this->active & SEGMENTS_BIT(i))
+		{
+			message->add_attribute(message, HA_SYNC_SEGMENT, i);
+		}
+	}
+
+	this->socket->push(this->socket, message);
+
+	/* schedule next invocation */
+	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
+									callback_job_create((callback_job_cb_t)
+										send_status, this, NULL, NULL),
+									1000);
+
+	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -314,25 +402,35 @@ static void destroy(private_ha_sync_segments_t *this)
  * See header
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
-											ha_sync_kernel_t *kernel,
-											ha_sync_tunnel_t *tunnel,
-											u_int count, segment_mask_t active)
+							ha_sync_kernel_t *kernel, ha_sync_tunnel_t *tunnel,
+							char *local, char *remote, u_int count)
 {
 	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
+	int i;
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
 	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment,bool))activate;
 	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment,bool))deactivate;
 	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;
+	this->public.handle_status = (void(*)(ha_sync_segments_t*, segment_mask_t mask))handle_status;
 	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
 
 	this->socket = socket;
 	this->tunnel = tunnel;
 	this->kernel = kernel;
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->active = active;
-	this->segment_count = count;
+	this->count = count;
+	this->master = strcmp(local, remote) > 0;
+
+	/* initially all segments are active */
+	this->active = 0;
+	for (i = 1; i <= count; i++)
+	{
+		this->active |= SEGMENTS_BIT(i);
+	}
+
+	send_status(this);
 
 	return &this->public;
 }

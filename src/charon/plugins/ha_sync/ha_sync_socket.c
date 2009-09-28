@@ -152,6 +152,7 @@ static void push(private_ha_sync_socket_t *this, ha_sync_message_t *message)
 	job = callback_job_create((callback_job_cb_t)send_message,
 							  data, (void*)job_data_destroy, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)job);
+	sched_yield();
 }
 
 /**

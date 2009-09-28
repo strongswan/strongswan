@@ -80,6 +80,13 @@ struct ha_sync_segments_t {
 	void (*resync)(ha_sync_segments_t *this, u_int segment);
 
 	/**
+	 * Handle a status message from the remote node.
+	 *
+	 * @param mask		segments the remote node is serving actively
+	 */
+	void (*handle_status)(ha_sync_segments_t *this, segment_mask_t mask);
+
+	/**
 	 * Destroy a ha_sync_segments_t.
 	 */
 	void (*destroy)(ha_sync_segments_t *this);
@@ -95,8 +102,7 @@ struct ha_sync_segments_t {
  * @return				segment object
  */
 ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
-											ha_sync_kernel_t *kernel,
-											ha_sync_tunnel_t *tunnel,
-											u_int count, segment_mask_t active);
+							ha_sync_kernel_t *kernel, ha_sync_tunnel_t *tunnel,
+							char *local, char *remote, u_int count);
 
 #endif /* HA_SYNC_SEGMENTS_ @}*/

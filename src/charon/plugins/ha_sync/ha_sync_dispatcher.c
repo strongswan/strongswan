@@ -607,6 +607,34 @@ static void process_segment(private_ha_sync_dispatcher_t *this,
 }
 
 /**
+ * Process messages of type STATUS
+ */
+static void process_status(private_ha_sync_dispatcher_t *this,
+						   ha_sync_message_t *message)
+{
+	ha_sync_message_attribute_t attribute;
+	ha_sync_message_value_t value;
+	enumerator_t *enumerator;
+	segment_mask_t mask = 0;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SYNC_SEGMENT:
+				mask |= SEGMENTS_BIT(value.u16);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	this->segments->handle_status(this->segments, mask);
+}
+
+/**
  * Dispatcher job function
  */
 static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
@@ -636,6 +664,9 @@ static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
 			break;
 		case HA_SYNC_SEGMENT_TAKE:
 			process_segment(this, message, TRUE);
+			break;
+		case HA_SYNC_STATUS:
+			process_status(this, message);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown HA sync message type %d",

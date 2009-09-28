@@ -42,6 +42,7 @@ struct ha_sync_dispatcher_t {
  *
  * @param socket		socket to pull messages from
  * @param segments		segments to control based on received messages
+ * @param manager		distributed management logic for segment control
  * @return				dispatcher object
  */
 ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
