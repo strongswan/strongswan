@@ -27,50 +27,6 @@
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_sync_socket_t private_ha_sync_socket_t;
-typedef struct ha_backend_t ha_backend_t;
-typedef struct ha_creds_t ha_creds_t;
-
-/**
- * Serves credentials for the HA sync SA
- */
-struct ha_creds_t {
-
-	/**
-	 * Implements credential_set_t
-	 */
-	credential_set_t public;
-
-	/**
-	 * own identity
-	 */
-	identification_t *local;
-
-	/**
-	 * peer identity
-	 */
-	identification_t *remote;
-
-	/**
-	 * Shared key to serve
-	 */
-	shared_key_t *key;
-};
-
-/**
- * Serves configurations for the HA sync SA
- */
-struct ha_backend_t {
-
-	/**
-	 * Implements backend_t
-	 */
-	backend_t public;
-
-	/**
-	 * peer config we serve
-	 */
-	peer_cfg_t *cfg;
-};
 
 /**
  * Private data of an ha_sync_socket_t object.

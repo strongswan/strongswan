@@ -212,8 +212,6 @@ static void destroy(private_ha_sync_kernel_t *this)
 ha_sync_kernel_t *ha_sync_kernel_create(u_int count, char *virtuals)
 {
 	private_ha_sync_kernel_t *this = malloc_thing(private_ha_sync_kernel_t);
-	segment_mask_t active;
-	int i;
 
 	this->public.in_segment = (bool(*)(ha_sync_kernel_t*, host_t *host, u_int segment))in_segment;
 	this->public.activate = (void(*)(ha_sync_kernel_t*, u_int segment))activate;
