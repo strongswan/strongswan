@@ -323,24 +323,43 @@ static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
 }
 
 /**
+ * Get the number of SAs in a segment.
+ */
+static u_int get_sa_count(private_ha_segments_t *this)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	u_int count = 0;
+
+	enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
+		{
+			continue;
+		}
+		if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
+		{
+			continue;
+		}
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	return count;
+}
+
+/**
  * Implementation of ha_segments_t.handle_status
  */
 static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
 {
 	segment_mask_t missing, overlap;
-	int i, active = 0;
+	int i;
 
 	this->mutex->lock(this->mutex);
 
 	missing = ~(this->active | mask);
 	overlap = this->active & mask;
-	for (i = 1; i <= this->count; i++)
-	{
-		if (this->active & SEGMENTS_BIT(i))
-		{
-			active++;
-		}
-	}
 
 	/* Activate any missing segment. The master will disable overlapping
 	 * segments if both nodes activate the missing segments simultaneously. */
@@ -359,16 +378,15 @@ static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
 		{
 			if (overlap & SEGMENTS_BIT(i))
 			{
-				DBG1(DBG_CFG, "HA segment %d handled twice", i);
-				if (active > this->count)
+				if (get_sa_count(this))
 				{
-					enable_disable(this, i, FALSE, TRUE);
-					active--;
+					DBG1(DBG_CFG, "HA segment %d overlaps, taking over", i);
+					enable_disable(this, i, TRUE, TRUE);
 				}
 				else
 				{
-					enable_disable(this, i, TRUE, TRUE);
-					active++;
+					DBG1(DBG_CFG, "HA segment %d overlaps, dropping", i);
+					enable_disable(this, i, FALSE, TRUE);
 				}
 			}
 		}
