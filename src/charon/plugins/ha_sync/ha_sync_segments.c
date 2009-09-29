@@ -97,28 +97,50 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 }
 
 /**
- * Enable/Disable an an IKE_SA.
+ * Enable/Disable a specific segment
  */
 static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
-						   ike_sa_state_t old, ike_sa_state_t new, bool enable)
+						   bool enable, bool notify)
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
-	u_int i, from, to;
+	ike_sa_state_t old, new;
+	ha_sync_message_t *message = NULL;
+	ha_sync_message_type_t type;
+	bool changes = FALSE;
 
-	this->lock->write_lock(this->lock);
-
-	if (segment == 0 || segment <= this->count)
+	if (segment > this->count)
 	{
-		if (segment)
-		{	/* loop once for single segment ... */
-			from = to = segment;
+		return;
+	}
+
+	if (enable)
+	{
+		old = IKE_PASSIVE;
+		new = IKE_ESTABLISHED;
+		type = HA_SYNC_SEGMENT_TAKE;
+		if (!(this->active & SEGMENTS_BIT(segment)))
+		{
+			this->active |= SEGMENTS_BIT(segment);
+			this->kernel->activate(this->kernel, segment);
+			changes = TRUE;
 		}
-		else
-		{	/* or count times for all segments */
-			from = 1;
-			to = this->count;
+	}
+	else
+	{
+		old = IKE_ESTABLISHED;
+		new = IKE_PASSIVE;
+		type = HA_SYNC_SEGMENT_DROP;
+		if (this->active & SEGMENTS_BIT(segment))
+		{
+			this->active &= ~SEGMENTS_BIT(segment);
+			this->kernel->deactivate(this->kernel, segment);
+			changes = TRUE;
 		}
+	}
+
+	if (changes)
+	{
 		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
@@ -130,38 +152,44 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			{
 				continue;
 			}
-			for (i = from; i <= to; i++)
+			if (this->kernel->in_segment(this->kernel,
+									ike_sa->get_other_host(ike_sa), segment))
 			{
-				if (this->kernel->in_segment(this->kernel,
-										ike_sa->get_other_host(ike_sa), i))
-				{
-					ike_sa->set_state(ike_sa, new);
-				}
+				ike_sa->set_state(ike_sa, new);
 			}
 		}
 		enumerator->destroy(enumerator);
-		for (i = from; i <= to; i++)
-		{
-			if (enable)
-			{
-				if (!(this->active & SEGMENTS_BIT(i)))
-				{
-					this->active |= SEGMENTS_BIT(i);
-					this->kernel->activate(this->kernel, i);
-				}
-			}
-			else
-			{
-				if (this->active & SEGMENTS_BIT(i))
-				{
-					this->active &= ~SEGMENTS_BIT(i);
-					this->kernel->deactivate(this->kernel, i);
-				}
-			}
-		}
 		log_segments(this, enable, segment);
 	}
 
+	if (notify)
+	{
+		message = ha_sync_message_create(type);
+		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
+		this->socket->push(this->socket, message);
+	}
+}
+
+/**
+ * Enable/Disable all or a specific segment, do locking
+ */
+static void enable_disable_all(private_ha_sync_segments_t *this, u_int segment,
+							   bool enable, bool notify)
+{
+	int i;
+
+	this->lock->write_lock(this->lock);
+	if (segment == 0)
+	{
+		for (i = 1; i <= this->count; i++)
+		{
+			enable_disable(this, i, enable, notify);
+		}
+	}
+	else
+	{
+		enable_disable(this, segment, enable, notify);
+	}
 	this->lock->unlock(this->lock);
 }
 
@@ -171,16 +199,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 static void activate(private_ha_sync_segments_t *this, u_int segment,
 					 bool notify)
 {
-	ha_sync_message_t *message;
-
-	enable_disable(this, segment, IKE_PASSIVE, IKE_ESTABLISHED, TRUE);
-
-	if (notify)
-	{
-		message = ha_sync_message_create(HA_SYNC_SEGMENT_TAKE);
-		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
-		this->socket->push(this->socket, message);
-	}
+	enable_disable_all(this, segment, TRUE, notify);
 }
 
 /**
@@ -189,16 +208,7 @@ static void activate(private_ha_sync_segments_t *this, u_int segment,
 static void deactivate(private_ha_sync_segments_t *this, u_int segment,
 					   bool notify)
 {
-	ha_sync_message_t *message;
-
-	enable_disable(this, segment, IKE_ESTABLISHED, IKE_PASSIVE, FALSE);
-
-	if (notify)
-	{
-		message = ha_sync_message_create(HA_SYNC_SEGMENT_DROP);
-		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
-		this->socket->push(this->socket, message);
-	}
+	enable_disable_all(this, segment, FALSE, notify);
 }
 
 /**
@@ -294,15 +304,7 @@ static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
 	{
-		int i;
-
-		for (i = 1; i <= this->count; i++)
-		{
-			if (this->active & SEGMENTS_BIT(i))
-			{
-				deactivate(this, i, TRUE);
-			}
-		}
+		deactivate(this, 0, TRUE);
 	}
 	return TRUE;
 }
@@ -315,7 +317,8 @@ static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
 	segment_mask_t missing, overlap;
 	int i, active = 0;
 
-	this->lock->read_lock(this->lock);
+	this->lock->write_lock(this->lock);
+
 	missing = ~(this->active | mask);
 	overlap = this->active & mask;
 	for (i = 1; i <= this->count; i++)
@@ -325,7 +328,6 @@ static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
 			active++;
 		}
 	}
-	this->lock->unlock(this->lock);
 
 	/* Activate any missing segment. The master will disable overlapping
 	 * segments if both nodes activate the missing segments simultaneously. */
@@ -334,7 +336,7 @@ static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
 		if (missing & SEGMENTS_BIT(i))
 		{
 			DBG1(DBG_CFG, "HA segment %d was not handled", i);
-			activate(this, i, TRUE);
+			enable_disable(this, i, TRUE, TRUE);
 		}
 	}
 	if (this->master && overlap)
@@ -347,17 +349,18 @@ static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
 				DBG1(DBG_CFG, "HA segment %d handled twice", i);
 				if (active > this->count)
 				{
-					deactivate(this, i, TRUE);
+					enable_disable(this, i, FALSE, TRUE);
 					active--;
 				}
 				else
 				{
-					activate(this, i, TRUE);
+					enable_disable(this, i, TRUE, TRUE);
 					active++;
 				}
 			}
 		}
 	}
+	this->lock->unlock(this->lock);
 }
 
 /**
