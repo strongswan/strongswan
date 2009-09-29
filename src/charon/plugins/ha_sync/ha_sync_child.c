@@ -116,7 +116,9 @@ static bool child_keys(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 							   child_sa_t *child_sa, child_sa_state_t state)
 {
-	if (!ike_sa || ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+	if (!ike_sa ||
+		ike_sa->get_state(ike_sa) == IKE_PASSIVE ||
+		ike_sa->get_state(ike_sa) == IKE_DESTROYING)
 	{	/* only sync active IKE_SAs */
 		return TRUE;
 	}
@@ -124,6 +126,7 @@ static bool child_state_change(private_ha_sync_child_t *this, ike_sa_t *ike_sa,
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
+
 
 	if (state == CHILD_DESTROYING)
 	{
