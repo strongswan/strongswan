@@ -26,6 +26,8 @@ typedef u_int8_t u8;
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define CLUSTERIP_DIR "/proc/net/ipt_CLUSTERIP"
+
 typedef struct private_ha_kernel_t private_ha_kernel_t;
 
 /**
@@ -47,11 +49,6 @@ struct private_ha_kernel_t {
 	 * Total number of ClusterIP segments
 	 */
 	u_int count;
-
-	/**
-	 * List of virtual addresses, as host_t*
-	 */
-	linked_list_t *virtuals;
 };
 
 /**
@@ -74,38 +71,75 @@ static bool in_segment(private_ha_kernel_t *this, host_t *host, u_int segment)
 	}
 	return FALSE;
 }
+
 /**
- * Activate/Deactivate a segment
+ * Activate/Deactivate a segment for a given clusterip file
  */
-static void activate_deactivate(private_ha_kernel_t *this,
-								u_int segment, char op)
+static void enable_disable(private_ha_kernel_t *this, u_int segment,
+						   char *file, bool enable)
 {
-	enumerator_t *enumerator;
-	host_t *host;
-	char cmd[8], file[256];
+	char cmd[8];
 	int fd;
 
-	enumerator = this->virtuals->create_enumerator(this->virtuals);
-	while (enumerator->enumerate(enumerator, &host))
-	{
-		snprintf(file, sizeof(file), "/proc/net/ipt_CLUSTERIP/%H", host);
-		snprintf(cmd, sizeof(cmd), "%c%d\n", op, segment);
+	snprintf(cmd, sizeof(cmd), "%c%d\n", enable ? '+' : '-', segment);
 
-		fd = open(file, O_WRONLY);
-		if (fd == -1)
-		{
-			DBG1(DBG_CFG, "opening CLUSTERIP file '%s' failed: %s",
-				 file, strerror(errno));
-			continue;
-		}
-		if (write(fd, cmd, strlen(cmd) == -1))
-		{
-			DBG1(DBG_CFG, "writing to CLUSTERIP file '%s' failed: %s",
-				 file, strerror(errno));
-		}
-		close(fd);
+	fd = open(file, O_WRONLY);
+	if (fd == -1)
+	{
+		DBG1(DBG_CFG, "opening CLUSTERIP file '%s' failed: %s",
+			 file, strerror(errno));
+		return;
 	}
-	enumerator->destroy(enumerator);
+	if (write(fd, cmd, strlen(cmd) == -1))
+	{
+		DBG1(DBG_CFG, "writing to CLUSTERIP file '%s' failed: %s",
+			 file, strerror(errno));
+	}
+	close(fd);
+}
+
+/**
+ * Get the currenlty active segments in the kernel for a clusterip file
+ */
+static segment_mask_t get_active(private_ha_kernel_t *this, char *file)
+{
+	char buf[256];
+	segment_mask_t mask = 0;
+	ssize_t len;
+	int fd;
+
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
+	{
+		DBG1(DBG_CFG, "opening CLUSTERIP file '%s' failed: %s",
+			 file, strerror(errno));
+		return 0;
+	}
+	len = read(fd, buf, sizeof(buf)-1);
+	if (len == -1)
+	{
+		DBG1(DBG_CFG, "reading from CLUSTERIP file '%s' failed: %s",
+			 file, strerror(errno));
+	}
+	else
+	{
+		enumerator_t *enumerator;
+		u_int segment;
+		char *token;
+
+		buf[len] = '\0';
+		enumerator = enumerator_create_token(buf, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			segment = atoi(token);
+			if (segment)
+			{
+				mask |= SEGMENTS_BIT(segment);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	return mask;
 }
 
 /**
@@ -113,7 +147,15 @@ static void activate_deactivate(private_ha_kernel_t *this,
  */
 static void activate(private_ha_kernel_t *this, u_int segment)
 {
-	activate_deactivate(this, segment, '+');
+	enumerator_t *enumerator;
+	char *file;
+
+	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
+	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+	{
+		enable_disable(this, segment, file, TRUE);
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -121,75 +163,37 @@ static void activate(private_ha_kernel_t *this, u_int segment)
  */
 static void deactivate(private_ha_kernel_t *this, u_int segment)
 {
-	activate_deactivate(this, segment, '-');
-}
-
-/**
- * Mangle IPtable rules for virtual addresses
- */
-static bool mangle_rules(private_ha_kernel_t *this, bool add)
-{
 	enumerator_t *enumerator;
-	host_t *host;
-	u_char i, mac = 0x20;
-	char *iface, buf[256];
+	char *file;
 
-	enumerator = this->virtuals->create_enumerator(this->virtuals);
-	while (enumerator->enumerate(enumerator, &host))
+	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
+	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
 	{
-		iface = charon->kernel_interface->get_interface(
-											charon->kernel_interface, host);
-		if (!iface)
-		{
-			DBG1(DBG_CFG, "cluster address %H not installed, ignored", host);
-			this->virtuals->remove_at(this->virtuals, enumerator);
-			host->destroy(host);
-			continue;
-		}
-		/* iptables insists of a local node specification, enable node 1 */
-		snprintf(buf, sizeof(buf),
-				 "/sbin/iptables -%c INPUT -i %s -d %H -j CLUSTERIP --new "
-				 "--hashmode sourceip --clustermac 01:00:5e:00:00:%2x "
-				 "--total-nodes %d --local-node 1",
-				 add ? 'A' : 'D', iface, host, mac++, this->count);
-		free(iface);
-		if (system(buf) != 0)
-		{
-			DBG1(DBG_CFG, "installing CLUSTERIP rule '%s' failed", buf);
-		}
+		enable_disable(this, segment, file, FALSE);
 	}
 	enumerator->destroy(enumerator);
-
-	if (add)
-	{
-		for (i = 2; i <= this->count; i++)
-		{
-			activate(this, i);
-		}
-	}
-	return TRUE;
 }
 
 /**
- * Parse the list of virtual cluster addresses
+ * Enable all not-yet enabled segments on all clusterip addresses
  */
-static void parse_virtuals(private_ha_kernel_t *this, char *virtual)
+static void activate_all(private_ha_kernel_t *this)
 {
 	enumerator_t *enumerator;
-	host_t *host;
+	segment_mask_t active;
+	char *file;
+	int i;
 
-	enumerator = enumerator_create_token(virtual, ",", " ");
-	while (enumerator->enumerate(enumerator, &virtual))
+	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
+	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
 	{
-		host = host_create_from_string(virtual, 0);
-		if (host)
+		active = get_active(this, file);
+		for (i = 1; i <= this->count; i++)
 		{
-			this->virtuals->insert_last(this->virtuals, host);
-		}
-		else
-		{
-			DBG1(DBG_CFG, "virtual cluster address '%s' invalid, ignored",
-				 virtual);
+			if (!(active & SEGMENTS_BIT(i)))
+			{
+				enable_disable(this, i, file, TRUE);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -200,15 +204,13 @@ static void parse_virtuals(private_ha_kernel_t *this, char *virtual)
  */
 static void destroy(private_ha_kernel_t *this)
 {
-	mangle_rules(this, FALSE);
-	this->virtuals->destroy_offset(this->virtuals, offsetof(host_t, destroy));
 	free(this);
 }
 
 /**
  * See header
  */
-ha_kernel_t *ha_kernel_create(u_int count, char *virtuals)
+ha_kernel_t *ha_kernel_create(u_int count)
 {
 	private_ha_kernel_t *this = malloc_thing(private_ha_kernel_t);
 
@@ -219,15 +221,8 @@ ha_kernel_t *ha_kernel_create(u_int count, char *virtuals)
 
 	this->initval = 0;
 	this->count = count;
-	this->virtuals = linked_list_create();
 
-	parse_virtuals(this, virtuals);
-
-	if (!mangle_rules(this, TRUE))
-	{
-		destroy(this);
-		return NULL;
-	}
+	activate_all(this);
 
 	return &this->public;
 }

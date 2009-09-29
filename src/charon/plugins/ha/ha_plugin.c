@@ -103,7 +103,7 @@ static void destroy(private_ha_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_ha_plugin_t *this;
-	char *local, *remote, *secret, *virtuals;
+	char *local, *remote, *secret;
 	u_int count;
 	bool fifo;
 
@@ -111,8 +111,6 @@ plugin_t *plugin_create()
 								"charon.plugins.ha.local", NULL);
 	remote = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha.remote", NULL);
-	virtuals = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha.virtuals", "");
 	secret = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
@@ -137,7 +135,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	this->kernel = ha_kernel_create(count, virtuals);
+	this->kernel = ha_kernel_create(count);
 	if (!this->kernel)
 	{
 		this->socket->destroy(this->socket);

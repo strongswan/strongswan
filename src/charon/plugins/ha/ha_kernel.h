@@ -64,8 +64,7 @@ struct ha_kernel_t {
  *
  * @param count			total number of segments to use
  * @param active		bitmask of initially active segments
- * @param virtuals		comma separated list of virtual cluster addresses
  */
-ha_kernel_t *ha_kernel_create(u_int count, char *virtuals);
+ha_kernel_t *ha_kernel_create(u_int count);
 
 #endif /* HA_KERNEL_ @}*/
