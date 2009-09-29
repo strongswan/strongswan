@@ -124,19 +124,20 @@ static ha_sync_message_t *pull(private_ha_sync_socket_t *this)
 		ssize_t len;
 
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		len = recvfrom(this->fd, buf, sizeof(buf), 0,
-					   this->remote->get_sockaddr(this->remote),
-					   this->remote->get_sockaddr_len(this->remote));
+		len = recv(this->fd, buf, sizeof(buf), 0);
 		pthread_setcancelstate(oldstate, NULL);
 		if (len <= 0)
 		{
-			if (errno != EINTR)
+			switch (errno)
 			{
-				DBG1(DBG_CFG, "pulling HA sync message failed: %s",
-					 strerror(errno));
-				sleep(1);
+				case ECONNREFUSED:
+				case EINTR:
+					continue;
+				default:
+					DBG1(DBG_CFG, "pulling HA sync message failed: %s",
+						 strerror(errno));
+					sleep(1);
 			}
-			continue;
 		}
 		message = ha_sync_message_parse(chunk_create(buf, len));
 		if (message)
@@ -166,6 +167,15 @@ static bool open_socket(private_ha_sync_socket_t *this)
 		this->fd = -1;
 		return FALSE;
 	}
+	if (connect(this->fd, this->remote->get_sockaddr(this->remote),
+				*this->remote->get_sockaddr_len(this->remote)) == -1)
+	{
+		DBG1(DBG_CFG, "connecting HA sync socket failed: %s", strerror(errno));
+		close(this->fd);
+		this->fd = -1;
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
