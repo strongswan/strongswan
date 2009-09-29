@@ -81,9 +81,7 @@ static job_requeue_t send_message(job_data_t *data)
 
 	this = data->this;
 	chunk = data->message->get_encoding(data->message);
-	if (sendto(this->fd, chunk.ptr, chunk.len, 0,
-			   this->remote->get_sockaddr(this->remote),
-			   *this->remote->get_sockaddr_len(this->remote)) < chunk.len)
+	if (send(this->fd, chunk.ptr, chunk.len, 0) < chunk.len)
 	{
 		DBG1(DBG_CFG, "pushing HA sync message failed: %s", strerror(errno));
 	}
@@ -95,20 +93,32 @@ static job_requeue_t send_message(job_data_t *data)
  */
 static void push(private_ha_sync_socket_t *this, ha_sync_message_t *message)
 {
-	callback_job_t *job;
-	job_data_t *data;
+	chunk_t chunk;
 
-	data = malloc_thing(job_data_t);
-	data->message = message;
-	data->this = this;
+	/* Try to send synchronously, but non-blocking. */
+	chunk = message->get_encoding(message);
+	if (send(this->fd, chunk.ptr, chunk.len, MSG_DONTWAIT) < chunk.len)
+	{
+		if (errno == EAGAIN)
+		{
+			callback_job_t *job;
+			job_data_t *data;
 
-	/* we send sync message asynchronously. This is required, as sendto()
-	 * is a blocking call if it acquires a policy. Otherwise we could
-	 * end up in a deadlock, as we own an IKE_SA. */
-	job = callback_job_create((callback_job_cb_t)send_message,
-							  data, (void*)job_data_destroy, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)job);
-	sched_yield();
+			/* Fallback to asynchronous transmission. This is required, as sendto()
+			 * is a blocking call if it acquires a policy. We could end up in a
+			 * deadlock, as we own an IKE_SA. */
+			data = malloc_thing(job_data_t);
+			data->message = message;
+			data->this = this;
+
+			job = callback_job_create((callback_job_cb_t)send_message,
+									  data, (void*)job_data_destroy, NULL);
+			charon->processor->queue_job(charon->processor, (job_t*)job);
+			return;
+		}
+		DBG1(DBG_CFG, "pushing HA sync message failed: %s", strerror(errno));
+	}
+	message->destroy(message);
 }
 
 /**
