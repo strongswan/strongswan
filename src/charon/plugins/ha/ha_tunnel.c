@@ -13,19 +13,19 @@
  * for more details.
  */
 
-#include "ha_sync_tunnel.h"
-#include "ha_sync_plugin.h"
+#include "ha_tunnel.h"
+#include "ha_plugin.h"
 
 #include <daemon.h>
 #include <utils/identification.h>
 #include <processing/jobs/callback_job.h>
 
-typedef struct private_ha_sync_tunnel_t private_ha_sync_tunnel_t;
+typedef struct private_ha_tunnel_t private_ha_tunnel_t;
 typedef struct ha_backend_t ha_backend_t;
 typedef struct ha_creds_t ha_creds_t;
 
 /**
- * Serves credentials for the HA sync SA
+ * Serves credentials for the HA SA
  */
 struct ha_creds_t {
 
@@ -51,7 +51,7 @@ struct ha_creds_t {
 };
 
 /**
- * Serves configurations for the HA sync SA
+ * Serves configurations for the HA SA
  */
 struct ha_backend_t {
 
@@ -67,14 +67,14 @@ struct ha_backend_t {
 };
 
 /**
- * Private data of an ha_sync_tunnel_t object.
+ * Private data of an ha_tunnel_t object.
  */
-struct private_ha_sync_tunnel_t {
+struct private_ha_tunnel_t {
 
 	/**
-	 * Public ha_sync_tunnel_t interface.
+	 * Public ha_tunnel_t interface.
 	 */
-	ha_sync_tunnel_t public;
+	ha_tunnel_t public;
 
 	/**
 	 * Reqid of installed trap
@@ -82,20 +82,20 @@ struct private_ha_sync_tunnel_t {
 	u_int32_t trap;
 
 	/**
-	 * backend for sync SA
+	 * backend for HA SA
 	 */
 	ha_backend_t backend;
 
 	/**
-	 * credential set for sync SA
+	 * credential set for HA SA
 	 */
 	ha_creds_t creds;
 };
 
 /**
- * Implementation of ha_sync_tunnel_t.is_sync_sa
+ * Implementation of ha_tunnel_t.is_sa
  */
-static bool is_sync_sa(private_ha_sync_tunnel_t *this, ike_sa_t *ike_sa)
+static bool is_sa(private_ha_tunnel_t *this, ike_sa_t *ike_sa)
 {
 	peer_cfg_t *cfg = this->backend.cfg;
 
@@ -184,10 +184,10 @@ static enumerator_t* create_ike_cfg_enumerator(ha_backend_t *this,
 }
 
 /**
- * Install configs and a a trap for secured sync
+ * Install configs and a a trap for secured HA message exchange
  */
-static void setup_sync_tunnel(private_ha_sync_tunnel_t *this,
-							  char *local, char *remote, char *secret)
+static void setup_tunnel(private_ha_tunnel_t *this,
+						 char *local, char *remote, char *secret)
 {
 	peer_cfg_t *peer_cfg;
 	ike_cfg_t *ike_cfg;
@@ -216,7 +216,7 @@ static void setup_sync_tunnel(private_ha_sync_tunnel_t *this,
 	/* create config and backend */
 	ike_cfg = ike_cfg_create(FALSE, FALSE, local, remote);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	peer_cfg = peer_cfg_create("ha-sync", 2, ike_cfg, CERT_NEVER_SEND,
+	peer_cfg = peer_cfg_create("ha", 2, ike_cfg, CERT_NEVER_SEND,
 						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, 30,
 						NULL, NULL, FALSE, NULL, NULL);
 
@@ -232,13 +232,13 @@ static void setup_sync_tunnel(private_ha_sync_tunnel_t *this,
 				  identification_create_from_string(remote));
 	peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 
-	child_cfg = child_cfg_create("ha-sync", &lifetime, NULL, TRUE,
+	child_cfg = child_cfg_create("ha", &lifetime, NULL, TRUE,
 						MODE_TRANSPORT, ACTION_NONE, ACTION_NONE, FALSE);
-	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_SYNC_PORT, HA_SYNC_PORT);
+	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_SYNC_PORT, HA_SYNC_PORT);
+	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
@@ -257,9 +257,9 @@ static void setup_sync_tunnel(private_ha_sync_tunnel_t *this,
 }
 
 /**
- * Implementation of ha_sync_tunnel_t.destroy.
+ * Implementation of ha_tunnel_t.destroy.
  */
-static void destroy(private_ha_sync_tunnel_t *this)
+static void destroy(private_ha_tunnel_t *this)
 {
 	if (this->backend.cfg)
 	{
@@ -283,14 +283,14 @@ static void destroy(private_ha_sync_tunnel_t *this)
 /**
  * See header
  */
-ha_sync_tunnel_t *ha_sync_tunnel_create(char *local, char *remote, char *secret)
+ha_tunnel_t *ha_tunnel_create(char *local, char *remote, char *secret)
 {
-	private_ha_sync_tunnel_t *this = malloc_thing(private_ha_sync_tunnel_t);
+	private_ha_tunnel_t *this = malloc_thing(private_ha_tunnel_t);
 
-	this->public.is_sync_sa = (bool(*)(ha_sync_tunnel_t*, ike_sa_t *ike_sa))is_sync_sa;
-	this->public.destroy = (void(*)(ha_sync_tunnel_t*))destroy;
+	this->public.is_sa = (bool(*)(ha_tunnel_t*, ike_sa_t *ike_sa))is_sa;
+	this->public.destroy = (void(*)(ha_tunnel_t*))destroy;
 
-	setup_sync_tunnel(this, local, remote, secret);
+	setup_tunnel(this, local, remote, secret);
 
 	return &this->public;
 }

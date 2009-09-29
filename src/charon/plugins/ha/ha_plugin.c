@@ -13,75 +13,75 @@
  * for more details.
  */
 
-#include "ha_sync_plugin.h"
-#include "ha_sync_ike.h"
-#include "ha_sync_child.h"
-#include "ha_sync_socket.h"
-#include "ha_sync_tunnel.h"
-#include "ha_sync_dispatcher.h"
-#include "ha_sync_segments.h"
-#include "ha_sync_ctl.h"
+#include "ha_plugin.h"
+#include "ha_ike.h"
+#include "ha_child.h"
+#include "ha_socket.h"
+#include "ha_tunnel.h"
+#include "ha_dispatcher.h"
+#include "ha_segments.h"
+#include "ha_ctl.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
 
-typedef struct private_ha_sync_plugin_t private_ha_sync_plugin_t;
+typedef struct private_ha_plugin_t private_ha_plugin_t;
 
 /**
- * private data of ha_sync plugin
+ * private data of ha plugin
  */
-struct private_ha_sync_plugin_t {
+struct private_ha_plugin_t {
 
 	/**
 	 * implements plugin interface
 	 */
-	ha_sync_plugin_t public;
+	ha_plugin_t public;
 
 	/**
 	 * Communication socket
 	 */
-	ha_sync_socket_t *socket;
+	ha_socket_t *socket;
 
 	/**
 	 * Tunnel securing sync messages.
 	 */
-	ha_sync_tunnel_t *tunnel;
+	ha_tunnel_t *tunnel;
 
 	/**
 	 * IKE_SA synchronization
 	 */
-	ha_sync_ike_t *ike;
+	ha_ike_t *ike;
 
 	/**
 	 * CHILD_SA synchronization
 	 */
-	ha_sync_child_t *child;
+	ha_child_t *child;
 
 	/**
 	 * Dispatcher to process incoming messages
 	 */
-	ha_sync_dispatcher_t *dispatcher;
+	ha_dispatcher_t *dispatcher;
 
 	/**
 	 * Active/Passive segment management
 	 */
-	ha_sync_segments_t *segments;
+	ha_segments_t *segments;
 
 	/**
 	 * Interface to control segments at kernel level
 	 */
-	ha_sync_kernel_t *kernel;
+	ha_kernel_t *kernel;
 
 	/**
 	 * Segment control interface via FIFO
 	 */
-	ha_sync_ctl_t *ctl;
+	ha_ctl_t *ctl;
 };
 
 /**
  * Implementation of plugin_t.destroy
  */
-static void destroy(private_ha_sync_plugin_t *this)
+static void destroy(private_ha_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
 	charon->bus->remove_listener(charon->bus, &this->segments->listener);
@@ -102,42 +102,42 @@ static void destroy(private_ha_sync_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	private_ha_sync_plugin_t *this;
+	private_ha_plugin_t *this;
 	char *local, *remote, *secret, *virtuals;
 	u_int count;
 	bool fifo;
 
 	local = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.local", NULL);
+								"charon.plugins.ha.local", NULL);
 	remote = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.remote", NULL);
+								"charon.plugins.ha.remote", NULL);
 	virtuals = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.virtuals", "");
+								"charon.plugins.ha.virtuals", "");
 	secret = lib->settings->get_str(lib->settings,
-								"charon.plugins.ha_sync.secret", NULL);
+								"charon.plugins.ha.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
-								"charon.plugins.ha_sync.fifo_interface", FALSE);
+								"charon.plugins.ha.fifo_interface", FALSE);
 	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
-								"charon.plugins.ha_sync.segment_count", 1));
+								"charon.plugins.ha.segment_count", 1));
 	if (!local || !remote)
 	{
-		DBG1(DBG_CFG, "HA sync config misses local/remote address");
+		DBG1(DBG_CFG, "HA config misses local/remote address");
 		return NULL;
 	}
 
-	this = malloc_thing(private_ha_sync_plugin_t);
+	this = malloc_thing(private_ha_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	this->tunnel = NULL;
 	this->ctl = NULL;
 
-	this->socket = ha_sync_socket_create(local, remote);
+	this->socket = ha_socket_create(local, remote);
 	if (!this->socket)
 	{
 		free(this);
 		return NULL;
 	}
-	this->kernel = ha_sync_kernel_create(count, virtuals);
+	this->kernel = ha_kernel_create(count, virtuals);
 	if (!this->kernel)
 	{
 		this->socket->destroy(this->socket);
@@ -147,17 +147,17 @@ plugin_t *plugin_create()
 
 	if (secret)
 	{
-		this->tunnel = ha_sync_tunnel_create(local, remote, secret);
+		this->tunnel = ha_tunnel_create(local, remote, secret);
 	}
-	this->segments = ha_sync_segments_create(this->socket, this->kernel,
+	this->segments = ha_segments_create(this->socket, this->kernel,
 										this->tunnel, local, remote, count);
 	if (fifo)
 	{
-		this->ctl = ha_sync_ctl_create(this->segments);
+		this->ctl = ha_ctl_create(this->segments);
 	}
-	this->dispatcher = ha_sync_dispatcher_create(this->socket, this->segments);
-	this->ike = ha_sync_ike_create(this->socket, this->tunnel);
-	this->child = ha_sync_child_create(this->socket, this->tunnel);
+	this->dispatcher = ha_dispatcher_create(this->socket, this->segments);
+	this->ike = ha_ike_create(this->socket, this->tunnel);
+	this->child = ha_child_create(this->socket, this->tunnel);
 	charon->bus->add_listener(charon->bus, &this->segments->listener);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);

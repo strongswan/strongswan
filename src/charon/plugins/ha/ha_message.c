@@ -17,23 +17,23 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "ha_sync_message.h"
+#include "ha_message.h"
 
 #include <daemon.h>
 
 #define ALLOCATION_BLOCK 64
 
-typedef struct private_ha_sync_message_t private_ha_sync_message_t;
+typedef struct private_ha_message_t private_ha_message_t;
 
 /**
- * Private data of an ha_sync_message_t object.
+ * Private data of an ha_message_t object.
  */
-struct private_ha_sync_message_t {
+struct private_ha_message_t {
 
 	/**
-	 * Public ha_sync_message_t interface.
+	 * Public ha_message_t interface.
 	 */
-	ha_sync_message_t public;
+	ha_message_t public;
 
 	/**
 	 * Allocated size of buf
@@ -94,9 +94,9 @@ struct ts_encoding_t {
 } __attribute__((packed));
 
 /**
- * Implementation of ha_sync_message_t.get_type
+ * Implementation of ha_message_t.get_type
  */
-static ha_sync_message_type_t get_type(private_ha_sync_message_t *this)
+static ha_message_type_t get_type(private_ha_message_t *this)
 {
 	return this->buf.ptr[1];
 }
@@ -104,7 +104,7 @@ static ha_sync_message_type_t get_type(private_ha_sync_message_t *this)
 /**
  * check for space in buffer, increase if necessary
  */
-static void check_buf(private_ha_sync_message_t *this, size_t len)
+static void check_buf(private_ha_message_t *this, size_t len)
 {
 	int increased = 0;
 
@@ -120,10 +120,10 @@ static void check_buf(private_ha_sync_message_t *this, size_t len)
 }
 
 /**
- * Implementation of ha_sync_message_t.add_attribute
+ * Implementation of ha_message_t.add_attribute
  */
-static void add_attribute(private_ha_sync_message_t *this,
-						  ha_sync_message_attribute_t attribute, ...)
+static void add_attribute(private_ha_message_t *this,
+						  ha_message_attribute_t attribute, ...)
 {
 	size_t len;
 	va_list args;
@@ -136,8 +136,8 @@ static void add_attribute(private_ha_sync_message_t *this,
 	switch (attribute)
 	{
 		/* ike_sa_id_t* */
-		case HA_SYNC_IKE_ID:
-		case HA_SYNC_IKE_REKEY_ID:
+		case HA_IKE_ID:
+		case HA_IKE_REKEY_ID:
 		{
 			ike_sa_id_encoding_t *enc;
 			ike_sa_id_t *id;
@@ -152,9 +152,9 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/* identification_t* */
-		case HA_SYNC_LOCAL_ID:
-		case HA_SYNC_REMOTE_ID:
-		case HA_SYNC_EAP_ID:
+		case HA_LOCAL_ID:
+		case HA_REMOTE_ID:
+		case HA_EAP_ID:
 		{
 			identification_encoding_t *enc;
 			identification_t *id;
@@ -171,11 +171,11 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/* host_t* */
-		case HA_SYNC_LOCAL_ADDR:
-		case HA_SYNC_REMOTE_ADDR:
-		case HA_SYNC_LOCAL_VIP:
-		case HA_SYNC_REMOTE_VIP:
-		case HA_SYNC_ADDITIONAL_ADDR:
+		case HA_LOCAL_ADDR:
+		case HA_REMOTE_ADDR:
+		case HA_LOCAL_VIP:
+		case HA_REMOTE_VIP:
+		case HA_ADDITIONAL_ADDR:
 		{
 			host_encoding_t *enc;
 			host_t *host;
@@ -192,7 +192,7 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/* char* */
-		case HA_SYNC_CONFIG_NAME:
+		case HA_CONFIG_NAME:
 		{
 			char *str;
 
@@ -204,8 +204,8 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/* u_int8_t */
-		case HA_SYNC_IPSEC_MODE:
-		case HA_SYNC_IPCOMP:
+		case HA_IPSEC_MODE:
+		case HA_IPCOMP:
 		{
 			u_int8_t val;
 
@@ -216,14 +216,14 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/* u_int16_t */
-		case HA_SYNC_ALG_PRF:
-		case HA_SYNC_ALG_OLD_PRF:
-		case HA_SYNC_ALG_ENCR:
-		case HA_SYNC_ALG_ENCR_LEN:
-		case HA_SYNC_ALG_INTEG:
-		case HA_SYNC_INBOUND_CPI:
-		case HA_SYNC_OUTBOUND_CPI:
-		case HA_SYNC_SEGMENT:
+		case HA_ALG_PRF:
+		case HA_ALG_OLD_PRF:
+		case HA_ALG_ENCR:
+		case HA_ALG_ENCR_LEN:
+		case HA_ALG_INTEG:
+		case HA_INBOUND_CPI:
+		case HA_OUTBOUND_CPI:
+		case HA_SEGMENT:
 		{
 			u_int16_t val;
 
@@ -234,12 +234,12 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/** u_int32_t */
-		case HA_SYNC_CONDITIONS:
-		case HA_SYNC_EXTENSIONS:
-		case HA_SYNC_INBOUND_SPI:
-		case HA_SYNC_OUTBOUND_SPI:
-		case HA_SYNC_INITIATE_MID:
-		case HA_SYNC_RESPOND_MID:
+		case HA_CONDITIONS:
+		case HA_EXTENSIONS:
+		case HA_INBOUND_SPI:
+		case HA_OUTBOUND_SPI:
+		case HA_INITIATE_MID:
+		case HA_RESPOND_MID:
 		{
 			u_int32_t val;
 
@@ -250,10 +250,10 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/** chunk_t */
-		case HA_SYNC_NONCE_I:
-		case HA_SYNC_NONCE_R:
-		case HA_SYNC_SECRET:
-		case HA_SYNC_OLD_SKD:
+		case HA_NONCE_I:
+		case HA_NONCE_R:
+		case HA_SECRET:
+		case HA_OLD_SKD:
 		{
 			chunk_t chunk;
 
@@ -266,8 +266,8 @@ static void add_attribute(private_ha_sync_message_t *this,
 			break;
 		}
 		/** traffic_selector_t */
-		case HA_SYNC_LOCAL_TS:
-		case HA_SYNC_REMOTE_TS:
+		case HA_LOCAL_TS:
+		case HA_REMOTE_TS:
 		{
 			ts_encoding_t *enc;
 			traffic_selector_t *ts;
@@ -315,10 +315,10 @@ typedef struct {
  * Implementation of create_attribute_enumerator().enumerate
  */
 static bool attribute_enumerate(attribute_enumerator_t *this,
-								ha_sync_message_attribute_t *attr_out,
-								ha_sync_message_value_t *value)
+								ha_message_attribute_t *attr_out,
+								ha_message_value_t *value)
 {
-	ha_sync_message_attribute_t attr;
+	ha_message_attribute_t attr;
 
 	if (this->cleanup)
 	{
@@ -334,8 +334,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 	switch (attr)
 	{
 		/* ike_sa_id_t* */
-		case HA_SYNC_IKE_ID:
-		case HA_SYNC_IKE_REKEY_ID:
+		case HA_IKE_ID:
+		case HA_IKE_REKEY_ID:
 		{
 			ike_sa_id_encoding_t *enc;
 
@@ -353,9 +353,9 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/* identification_t* */
-		case HA_SYNC_LOCAL_ID:
-		case HA_SYNC_REMOTE_ID:
-		case HA_SYNC_EAP_ID:
+		case HA_LOCAL_ID:
+		case HA_REMOTE_ID:
+		case HA_EAP_ID:
 		{
 			identification_encoding_t *enc;
 
@@ -375,11 +375,11 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/* host_t* */
-		case HA_SYNC_LOCAL_ADDR:
-		case HA_SYNC_REMOTE_ADDR:
-		case HA_SYNC_LOCAL_VIP:
-		case HA_SYNC_REMOTE_VIP:
-		case HA_SYNC_ADDITIONAL_ADDR:
+		case HA_LOCAL_ADDR:
+		case HA_REMOTE_ADDR:
+		case HA_LOCAL_VIP:
+		case HA_REMOTE_VIP:
+		case HA_ADDITIONAL_ADDR:
 		{
 			host_encoding_t *enc;
 
@@ -404,7 +404,7 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/* char* */
-		case HA_SYNC_CONFIG_NAME:
+		case HA_CONFIG_NAME:
 		{
 			size_t len;
 
@@ -419,8 +419,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/* u_int8_t */
-		case HA_SYNC_IPSEC_MODE:
-		case HA_SYNC_IPCOMP:
+		case HA_IPSEC_MODE:
+		case HA_IPCOMP:
 		{
 			if (this->buf.len < sizeof(u_int8_t))
 			{
@@ -432,14 +432,14 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/** u_int16_t */
-		case HA_SYNC_ALG_PRF:
-		case HA_SYNC_ALG_OLD_PRF:
-		case HA_SYNC_ALG_ENCR:
-		case HA_SYNC_ALG_ENCR_LEN:
-		case HA_SYNC_ALG_INTEG:
-		case HA_SYNC_INBOUND_CPI:
-		case HA_SYNC_OUTBOUND_CPI:
-		case HA_SYNC_SEGMENT:
+		case HA_ALG_PRF:
+		case HA_ALG_OLD_PRF:
+		case HA_ALG_ENCR:
+		case HA_ALG_ENCR_LEN:
+		case HA_ALG_INTEG:
+		case HA_INBOUND_CPI:
+		case HA_OUTBOUND_CPI:
+		case HA_SEGMENT:
 		{
 			if (this->buf.len < sizeof(u_int16_t))
 			{
@@ -451,12 +451,12 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/** u_int32_t */
-		case HA_SYNC_CONDITIONS:
-		case HA_SYNC_EXTENSIONS:
-		case HA_SYNC_INBOUND_SPI:
-		case HA_SYNC_OUTBOUND_SPI:
-		case HA_SYNC_INITIATE_MID:
-		case HA_SYNC_RESPOND_MID:
+		case HA_CONDITIONS:
+		case HA_EXTENSIONS:
+		case HA_INBOUND_SPI:
+		case HA_OUTBOUND_SPI:
+		case HA_INITIATE_MID:
+		case HA_RESPOND_MID:
 		{
 			if (this->buf.len < sizeof(u_int32_t))
 			{
@@ -468,10 +468,10 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			return TRUE;
 		}
 		/** chunk_t */
-		case HA_SYNC_NONCE_I:
-		case HA_SYNC_NONCE_R:
-		case HA_SYNC_SECRET:
-		case HA_SYNC_OLD_SKD:
+		case HA_NONCE_I:
+		case HA_NONCE_R:
+		case HA_SECRET:
+		case HA_OLD_SKD:
 		{
 			size_t len;
 
@@ -491,8 +491,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 			this->buf = chunk_skip(this->buf, len);
 			return TRUE;
 		}
-		case HA_SYNC_LOCAL_TS:
-		case HA_SYNC_REMOTE_TS:
+		case HA_LOCAL_TS:
+		case HA_REMOTE_TS:
 		{
 			ts_encoding_t *enc;
 			host_t *host;
@@ -574,9 +574,9 @@ static void enum_destroy(attribute_enumerator_t *this)
 }
 
 /**
- * Implementation of ha_sync_message_t.create_attribute_enumerator
+ * Implementation of ha_message_t.create_attribute_enumerator
  */
-static enumerator_t* create_attribute_enumerator(private_ha_sync_message_t *this)
+static enumerator_t* create_attribute_enumerator(private_ha_message_t *this)
 {
 	attribute_enumerator_t *e = malloc_thing(attribute_enumerator_t);
 
@@ -591,32 +591,32 @@ static enumerator_t* create_attribute_enumerator(private_ha_sync_message_t *this
 }
 
 /**
- * Implementation of ha_sync_message_t.get_encoding
+ * Implementation of ha_message_t.get_encoding
  */
-static chunk_t get_encoding(private_ha_sync_message_t *this)
+static chunk_t get_encoding(private_ha_message_t *this)
 {
 	return this->buf;
 }
 
 /**
- * Implementation of ha_sync_message_t.destroy.
+ * Implementation of ha_message_t.destroy.
  */
-static void destroy(private_ha_sync_message_t *this)
+static void destroy(private_ha_message_t *this)
 {
 	free(this->buf.ptr);
 	free(this);
 }
 
 
-static private_ha_sync_message_t *ha_sync_message_create_generic()
+static private_ha_message_t *ha_message_create_generic()
 {
-	private_ha_sync_message_t *this = malloc_thing(private_ha_sync_message_t);
+	private_ha_message_t *this = malloc_thing(private_ha_message_t);
 
-	this->public.get_type = (ha_sync_message_type_t(*)(ha_sync_message_t*))get_type;
-	this->public.add_attribute = (void(*)(ha_sync_message_t*, ha_sync_message_attribute_t attribute, ...))add_attribute;
-	this->public.create_attribute_enumerator = (enumerator_t*(*)(ha_sync_message_t*))create_attribute_enumerator;
-	this->public.get_encoding = (chunk_t(*)(ha_sync_message_t*))get_encoding;
-	this->public.destroy = (void(*)(ha_sync_message_t*))destroy;
+	this->public.get_type = (ha_message_type_t(*)(ha_message_t*))get_type;
+	this->public.add_attribute = (void(*)(ha_message_t*, ha_message_attribute_t attribute, ...))add_attribute;
+	this->public.create_attribute_enumerator = (enumerator_t*(*)(ha_message_t*))create_attribute_enumerator;
+	this->public.get_encoding = (chunk_t(*)(ha_message_t*))get_encoding;
+	this->public.destroy = (void(*)(ha_message_t*))destroy;
 
 	return this;
 }
@@ -624,14 +624,14 @@ static private_ha_sync_message_t *ha_sync_message_create_generic()
 /**
  * See header
  */
-ha_sync_message_t *ha_sync_message_create(ha_sync_message_type_t type)
+ha_message_t *ha_message_create(ha_message_type_t type)
 {
-	private_ha_sync_message_t *this = ha_sync_message_create_generic();
+	private_ha_message_t *this = ha_message_create_generic();
 
 	this->allocated = ALLOCATION_BLOCK;
 	this->buf.ptr = malloc(this->allocated);
 	this->buf.len = 2;
-	this->buf.ptr[0] = HA_SYNC_MESSAGE_VERSION;
+	this->buf.ptr[0] = HA_MESSAGE_VERSION;
 	this->buf.ptr[1] = type;
 
 	return &this->public;
@@ -640,23 +640,23 @@ ha_sync_message_t *ha_sync_message_create(ha_sync_message_type_t type)
 /**
  * See header
  */
-ha_sync_message_t *ha_sync_message_parse(chunk_t data)
+ha_message_t *ha_message_parse(chunk_t data)
 {
-	private_ha_sync_message_t *this;
+	private_ha_message_t *this;
 
 	if (data.len < 2)
 	{
-		DBG1(DBG_CFG, "HA sync message too short");
+		DBG1(DBG_CFG, "HA message too short");
 		return NULL;
 	}
-	if (data.ptr[0] != HA_SYNC_MESSAGE_VERSION)
+	if (data.ptr[0] != HA_MESSAGE_VERSION)
 	{
-		DBG1(DBG_CFG, "HA sync message has version %d, expected %d",
-			 data.ptr[0], HA_SYNC_MESSAGE_VERSION);
+		DBG1(DBG_CFG, "HA message has version %d, expected %d",
+			 data.ptr[0], HA_MESSAGE_VERSION);
 		return NULL;
 	}
 
-	this = ha_sync_message_create_generic();
+	this = ha_message_create_generic();
 	this->buf = chunk_clone(data);
 	this->allocated = this->buf.len;
 

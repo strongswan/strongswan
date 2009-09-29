@@ -13,29 +13,29 @@
  * for more details.
  */
 
-#include "ha_sync_ike.h"
+#include "ha_ike.h"
 
-typedef struct private_ha_sync_ike_t private_ha_sync_ike_t;
+typedef struct private_ha_ike_t private_ha_ike_t;
 
 /**
- * Private data of an ha_sync_ike_t object.
+ * Private data of an ha_ike_t object.
  */
-struct private_ha_sync_ike_t {
+struct private_ha_ike_t {
 
 	/**
-	 * Public ha_sync_ike_t interface.
+	 * Public ha_ike_t interface.
 	 */
-	ha_sync_ike_t public;
+	ha_ike_t public;
 
 	/**
 	 * socket we use for syncing
 	 */
-	ha_sync_socket_t *socket;
+	ha_socket_t *socket;
 
 	/**
 	 * tunnel securing sync messages
 	 */
-	ha_sync_tunnel_t *tunnel;
+	ha_tunnel_t *tunnel;
 };
 
 /**
@@ -65,16 +65,16 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 /**
  * Implementation of listener_t.ike_keys
  */
-static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
+static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
 					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
 					 ike_sa_t *rekey)
 {
-	ha_sync_message_t *m;
+	ha_message_t *m;
 	chunk_t secret;
 	proposal_t *proposal;
 	u_int16_t alg, len;
 
-	if (this->tunnel && this->tunnel->is_sync_sa(this->tunnel, ike_sa))
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
@@ -83,8 +83,8 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 		return TRUE;
 	}
 
-	m = ha_sync_message_create(HA_SYNC_IKE_ADD);
-	m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+	m = ha_message_create(HA_IKE_ADD);
+	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 
 	if (rekey)
 	{
@@ -92,31 +92,31 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 		keymat_t *keymat;
 
 		keymat = rekey->get_keymat(rekey);
-		m->add_attribute(m, HA_SYNC_IKE_REKEY_ID, rekey->get_id(rekey));
-		m->add_attribute(m, HA_SYNC_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
-		m->add_attribute(m, HA_SYNC_OLD_SKD, skd);
+		m->add_attribute(m, HA_IKE_REKEY_ID, rekey->get_id(rekey));
+		m->add_attribute(m, HA_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
+		m->add_attribute(m, HA_OLD_SKD, skd);
 	}
 
 	proposal = ike_sa->get_proposal(ike_sa);
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &len))
 	{
-		m->add_attribute(m, HA_SYNC_ALG_ENCR, alg);
+		m->add_attribute(m, HA_ALG_ENCR, alg);
 		if (len)
 		{
-			m->add_attribute(m, HA_SYNC_ALG_ENCR_LEN, len);
+			m->add_attribute(m, HA_ALG_ENCR_LEN, len);
 		}
 	}
 	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
 	{
-		m->add_attribute(m, HA_SYNC_ALG_INTEG, alg);
+		m->add_attribute(m, HA_ALG_INTEG, alg);
 	}
 	if (proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
 	{
-		m->add_attribute(m, HA_SYNC_ALG_PRF, alg);
+		m->add_attribute(m, HA_ALG_PRF, alg);
 	}
-	m->add_attribute(m, HA_SYNC_NONCE_I, nonce_i);
-	m->add_attribute(m, HA_SYNC_NONCE_R, nonce_r);
-	m->add_attribute(m, HA_SYNC_SECRET, secret);
+	m->add_attribute(m, HA_NONCE_I, nonce_i);
+	m->add_attribute(m, HA_NONCE_R, nonce_r);
+	m->add_attribute(m, HA_SECRET, secret);
 	chunk_clear(&secret);
 
 	this->socket->push(this->socket, m);
@@ -127,16 +127,16 @@ static bool ike_keys(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 /**
  * Implementation of listener_t.ike_state_change
  */
-static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
+static bool ike_state_change(private_ha_ike_t *this, ike_sa_t *ike_sa,
 							 ike_sa_state_t state)
 {
-	ha_sync_message_t *m;
+	ha_message_t *m;
 
 	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
 	{	/* only sync active IKE_SAs */
 		return TRUE;
 	}
-	if (this->tunnel && this->tunnel->is_sync_sa(this->tunnel, ike_sa))
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
@@ -169,31 +169,31 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 			eap_id = ike_sa->get_eap_identity(ike_sa);
 			id = ike_sa->get_id(ike_sa);
 
-			m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
-			m->add_attribute(m, HA_SYNC_IKE_ID, id);
-			m->add_attribute(m, HA_SYNC_LOCAL_ID, ike_sa->get_my_id(ike_sa));
-			m->add_attribute(m, HA_SYNC_REMOTE_ID, ike_sa->get_other_id(ike_sa));
-			m->add_attribute(m, HA_SYNC_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
-			m->add_attribute(m, HA_SYNC_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
-			m->add_attribute(m, HA_SYNC_CONDITIONS, condition);
-			m->add_attribute(m, HA_SYNC_EXTENSIONS, extension);
-			m->add_attribute(m, HA_SYNC_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
+			m = ha_message_create(HA_IKE_UPDATE);
+			m->add_attribute(m, HA_IKE_ID, id);
+			m->add_attribute(m, HA_LOCAL_ID, ike_sa->get_my_id(ike_sa));
+			m->add_attribute(m, HA_REMOTE_ID, ike_sa->get_other_id(ike_sa));
+			m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
+			m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
+			m->add_attribute(m, HA_CONDITIONS, condition);
+			m->add_attribute(m, HA_EXTENSIONS, extension);
+			m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
 			if (eap_id)
 			{
-				m->add_attribute(m, HA_SYNC_EAP_ID, eap_id);
+				m->add_attribute(m, HA_EAP_ID, eap_id);
 			}
 			iterator = ike_sa->create_additional_address_iterator(ike_sa);
 			while (iterator->iterate(iterator, (void**)&addr))
 			{
-				m->add_attribute(m, HA_SYNC_ADDITIONAL_ADDR, addr);
+				m->add_attribute(m, HA_ADDITIONAL_ADDR, addr);
 			}
 			iterator->destroy(iterator);
 			break;
 		}
 		case IKE_DESTROYING:
 		{
-			m = ha_sync_message_create(HA_SYNC_IKE_DELETE);
-			m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+			m = ha_message_create(HA_IKE_DELETE);
+			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 			break;
 		}
 		default:
@@ -206,10 +206,10 @@ static bool ike_state_change(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 /**
  * Implementation of listener_t.message
  */
-static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
+static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
 						 message_t *message, bool incoming)
 {
-	if (this->tunnel && this->tunnel->is_sync_sa(this->tunnel, ike_sa))
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
@@ -217,19 +217,19 @@ static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	if (message->get_exchange_type(message) != IKE_SA_INIT &&
 		message->get_request(message))
 	{	/* we sync on requests, but skip it on IKE_SA_INIT */
-		ha_sync_message_t *m;
+		ha_message_t *m;
 		u_int32_t mid;
 
-		m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
-		m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
+		m = ha_message_create(HA_IKE_UPDATE);
+		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 		mid = message->get_message_id(message) + 1;
 		if (incoming)
 		{
-			m->add_attribute(m, HA_SYNC_RESPOND_MID, mid);
+			m->add_attribute(m, HA_RESPOND_MID, mid);
 		}
 		else
 		{
-			m->add_attribute(m, HA_SYNC_INITIATE_MID, mid);
+			m->add_attribute(m, HA_INITIATE_MID, mid);
 		}
 		this->socket->push(this->socket, m);
 	}
@@ -239,15 +239,15 @@ static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 	{	/* After IKE_SA has been established, sync peers virtual IP.
 		 * We cannot sync it in the state_change hook, it is installed later.
 		 * TODO: where to sync local VIP? */
-		ha_sync_message_t *m;
+		ha_message_t *m;
 		host_t *vip;
 
 		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 		if (vip)
 		{
-			m = ha_sync_message_create(HA_SYNC_IKE_UPDATE);
-			m->add_attribute(m, HA_SYNC_IKE_ID, ike_sa->get_id(ike_sa));
-			m->add_attribute(m, HA_SYNC_REMOTE_VIP, vip);
+			m = ha_message_create(HA_IKE_UPDATE);
+			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+			m->add_attribute(m, HA_REMOTE_VIP, vip);
 			this->socket->push(this->socket, m);
 		}
 	}
@@ -255,9 +255,9 @@ static bool message_hook(private_ha_sync_ike_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * Implementation of ha_sync_ike_t.destroy.
+ * Implementation of ha_ike_t.destroy.
  */
-static void destroy(private_ha_sync_ike_t *this)
+static void destroy(private_ha_ike_t *this)
 {
 	free(this);
 }
@@ -265,16 +265,15 @@ static void destroy(private_ha_sync_ike_t *this)
 /**
  * See header
  */
-ha_sync_ike_t *ha_sync_ike_create(ha_sync_socket_t *socket,
-								  ha_sync_tunnel_t *tunnel)
+ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 {
-	private_ha_sync_ike_t *this = malloc_thing(private_ha_sync_ike_t);
+	private_ha_ike_t *this = malloc_thing(private_ha_ike_t);
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.listener.ike_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, ike_sa_state_t state))ike_state_change;
 	this->public.listener.message = (bool(*)(listener_t*, ike_sa_t *, message_t *,bool))message_hook;
-	this->public.destroy = (void(*)(ha_sync_ike_t*))destroy;
+	this->public.destroy = (void(*)(ha_ike_t*))destroy;
 
 	this->socket = socket;
 	this->tunnel = tunnel;

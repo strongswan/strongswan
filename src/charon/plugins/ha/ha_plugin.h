@@ -14,29 +14,29 @@
  */
 
 /**
- * @defgroup ha_sync ha_sync
+ * @defgroup ha ha
  * @ingroup cplugins
  *
- * @defgroup ha_sync_plugin ha_sync_plugin
- * @{ @ingroup ha_sync
+ * @defgroup ha_plugin ha_plugin
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_PLUGIN_H_
-#define HA_SYNC_PLUGIN_H_
+#ifndef HA_PLUGIN_H_
+#define HA_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
 /**
  * UDP port we use for communication
  */
-#define HA_SYNC_PORT 4510
+#define HA_PORT 4510
 
-typedef struct ha_sync_plugin_t ha_sync_plugin_t;
+typedef struct ha_plugin_t ha_plugin_t;
 
 /**
  * Plugin to synchronize state in a high availability cluster.
  */
-struct ha_sync_plugin_t {
+struct ha_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -45,8 +45,8 @@ struct ha_sync_plugin_t {
 };
 
 /**
- * Create a ha_sync_plugin instance.
+ * Create a ha_plugin instance.
  */
 plugin_t *plugin_create();
 
-#endif /* HA_SYNC_PLUGIN_H_ @}*/
+#endif /* HA_PLUGIN_H_ @}*/

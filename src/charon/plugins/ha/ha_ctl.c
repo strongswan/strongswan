@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "ha_sync_ctl.h"
+#include "ha_ctl.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,24 +25,24 @@
 
 #include <processing/jobs/callback_job.h>
 
-#define HA_SYNC_FIFO IPSEC_PIDDIR "/charon.ha"
+#define HA_FIFO IPSEC_PIDDIR "/charon.ha"
 
-typedef struct private_ha_sync_ctl_t private_ha_sync_ctl_t;
+typedef struct private_ha_ctl_t private_ha_ctl_t;
 
 /**
- * Private data of an ha_sync_ctl_t object.
+ * Private data of an ha_ctl_t object.
  */
-struct private_ha_sync_ctl_t {
+struct private_ha_ctl_t {
 
 	/**
-	 * Public ha_sync_ctl_t interface.
+	 * Public ha_ctl_t interface.
 	 */
-	ha_sync_ctl_t public;
+	ha_ctl_t public;
 
 	/**
 	 * Segments to control
 	 */
-	ha_sync_segments_t *segments;
+	ha_segments_t *segments;
 
 	/**
 	 * FIFO reader thread
@@ -53,18 +53,18 @@ struct private_ha_sync_ctl_t {
 /**
  * FIFO dispatching function
  */
-static job_requeue_t dispatch_fifo(private_ha_sync_ctl_t *this)
+static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 {
 	int fifo, old;
 	char buf[8];
 	u_int segment;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
-	fifo = open(HA_SYNC_FIFO, O_RDONLY);
+	fifo = open(HA_FIFO, O_RDONLY);
 	pthread_setcancelstate(old, NULL);
 	if (fifo == -1)
 	{
-		DBG1(DBG_CFG, "opening HA sync fifo failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "opening HA fifo failed: %s", strerror(errno));
 		sleep(1);
 		return JOB_REQUEUE_FAIR;
 	}
@@ -97,9 +97,9 @@ static job_requeue_t dispatch_fifo(private_ha_sync_ctl_t *this)
 }
 
 /**
- * Implementation of ha_sync_ctl_t.destroy.
+ * Implementation of ha_ctl_t.destroy.
  */
-static void destroy(private_ha_sync_ctl_t *this)
+static void destroy(private_ha_ctl_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
@@ -108,18 +108,18 @@ static void destroy(private_ha_sync_ctl_t *this)
 /**
  * See header
  */
-ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_segments_t *segments)
+ha_ctl_t *ha_ctl_create(ha_segments_t *segments)
 {
-	private_ha_sync_ctl_t *this = malloc_thing(private_ha_sync_ctl_t);
+	private_ha_ctl_t *this = malloc_thing(private_ha_ctl_t);
 
-	this->public.destroy = (void(*)(ha_sync_ctl_t*))destroy;
+	this->public.destroy = (void(*)(ha_ctl_t*))destroy;
 
-	if (access(HA_SYNC_FIFO, R_OK|W_OK) != 0)
+	if (access(HA_FIFO, R_OK|W_OK) != 0)
 	{
-		if (mkfifo(HA_SYNC_FIFO, 600) != 0)
+		if (mkfifo(HA_FIFO, 600) != 0)
 		{
-			DBG1(DBG_CFG, "creating HA sync FIFO %s failed: %s",
-				 HA_SYNC_FIFO, strerror(errno));
+			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
+				 HA_FIFO, strerror(errno));
 		}
 	}
 

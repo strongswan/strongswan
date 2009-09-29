@@ -14,25 +14,25 @@
  */
 
 /**
- * @defgroup ha_sync_child ha_sync_child
- * @{ @ingroup ha_sync
+ * @defgroup ha_ike ha_ike
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_CHILD_H_
-#define HA_SYNC_CHILD_H_
+#ifndef HA_IKE_H_
+#define HA_IKE_H_
 
-#include "ha_sync_socket.h"
-#include "ha_sync_tunnel.h"
-#include "ha_sync_segments.h"
+#include "ha_socket.h"
+#include "ha_tunnel.h"
+#include "ha_segments.h"
 
 #include <daemon.h>
 
-typedef struct ha_sync_child_t ha_sync_child_t;
+typedef struct ha_ike_t ha_ike_t;
 
 /**
- * Listener to synchronize CHILD_SAs.
+ * Listener to synchronize IKE_SAs.
  */
-struct ha_sync_child_t {
+struct ha_ike_t {
 
 	/**
 	 * Implements bus listener interface.
@@ -40,19 +40,18 @@ struct ha_sync_child_t {
 	listener_t listener;
 
 	/**
-	 * Destroy a ha_sync_child_t.
+	 * Destroy a ha_ike_t.
 	 */
-	void (*destroy)(ha_sync_child_t *this);
+	void (*destroy)(ha_ike_t *this);
 };
 
 /**
- * Create a ha_sync_child instance.
+ * Create a ha_ike instance.
  *
  * @param socket		socket to use for sending synchronization messages
  * @param tunnel		tunnel securing sync messages, if any
- * @return				CHILD listener
+ * @return				IKE listener
  */
-ha_sync_child_t *ha_sync_child_create(ha_sync_socket_t *socket,
-									  ha_sync_tunnel_t *tunnel);
+ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel);
 
-#endif /* HA_SYNC_CHILD_ @}*/
+#endif /* HA_IKE_ @}*/

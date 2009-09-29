@@ -13,8 +13,8 @@
  * for more details.
  */
 
-#include "ha_sync_socket.h"
-#include "ha_sync_plugin.h"
+#include "ha_socket.h"
+#include "ha_plugin.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -26,17 +26,17 @@
 #include <utils/host.h>
 #include <processing/jobs/callback_job.h>
 
-typedef struct private_ha_sync_socket_t private_ha_sync_socket_t;
+typedef struct private_ha_socket_t private_ha_socket_t;
 
 /**
- * Private data of an ha_sync_socket_t object.
+ * Private data of an ha_socket_t object.
  */
-struct private_ha_sync_socket_t {
+struct private_ha_socket_t {
 
 	/**
-	 * Public ha_sync_socket_t interface.
+	 * Public ha_socket_t interface.
 	 */
-	ha_sync_socket_t public;
+	ha_socket_t public;
 
 	/**
 	 * UDP communication socket fd
@@ -58,8 +58,8 @@ struct private_ha_sync_socket_t {
  * Data to pass to the send_message() callback job
  */
 typedef struct {
-	ha_sync_message_t *message;
-	private_ha_sync_socket_t *this;
+	ha_message_t *message;
+	private_ha_socket_t *this;
 } job_data_t;
 
 /**
@@ -76,22 +76,22 @@ static void job_data_destroy(job_data_t *this)
  */
 static job_requeue_t send_message(job_data_t *data)
 {
-	private_ha_sync_socket_t *this;
+	private_ha_socket_t *this;
 	chunk_t chunk;
 
 	this = data->this;
 	chunk = data->message->get_encoding(data->message);
 	if (send(this->fd, chunk.ptr, chunk.len, 0) < chunk.len)
 	{
-		DBG1(DBG_CFG, "pushing HA sync message failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
 	return JOB_REQUEUE_NONE;
 }
 
 /**
- * Implementation of ha_sync_socket_t.push
+ * Implementation of ha_socket_t.push
  */
-static void push(private_ha_sync_socket_t *this, ha_sync_message_t *message)
+static void push(private_ha_socket_t *this, ha_message_t *message)
 {
 	chunk_t chunk;
 
@@ -116,19 +116,19 @@ static void push(private_ha_sync_socket_t *this, ha_sync_message_t *message)
 			charon->processor->queue_job(charon->processor, (job_t*)job);
 			return;
 		}
-		DBG1(DBG_CFG, "pushing HA sync message failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
 	message->destroy(message);
 }
 
 /**
- * Implementation of ha_sync_socket_t.pull
+ * Implementation of ha_socket_t.pull
  */
-static ha_sync_message_t *pull(private_ha_sync_socket_t *this)
+static ha_message_t *pull(private_ha_socket_t *this)
 {
 	while (TRUE)
 	{
-		ha_sync_message_t *message;
+		ha_message_t *message;
 		char buf[1024];
 		int oldstate;
 		ssize_t len;
@@ -144,12 +144,12 @@ static ha_sync_message_t *pull(private_ha_sync_socket_t *this)
 				case EINTR:
 					continue;
 				default:
-					DBG1(DBG_CFG, "pulling HA sync message failed: %s",
+					DBG1(DBG_CFG, "pulling HA message failed: %s",
 						 strerror(errno));
 					sleep(1);
 			}
 		}
-		message = ha_sync_message_parse(chunk_create(buf, len));
+		message = ha_message_parse(chunk_create(buf, len));
 		if (message)
 		{
 			return message;
@@ -158,21 +158,21 @@ static ha_sync_message_t *pull(private_ha_sync_socket_t *this)
 }
 
 /**
- * Open and connect the HA sync socket
+ * Open and connect the HA socket
  */
-static bool open_socket(private_ha_sync_socket_t *this)
+static bool open_socket(private_ha_socket_t *this)
 {
 	this->fd = socket(this->local->get_family(this->local), SOCK_DGRAM, 0);
 	if (this->fd == -1)
 	{
-		DBG1(DBG_CFG, "opening HA sync socket failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "opening HA socket failed: %s", strerror(errno));
 		return FALSE;
 	}
 
 	if (bind(this->fd, this->local->get_sockaddr(this->local),
 			 *this->local->get_sockaddr_len(this->local)) == -1)
 	{
-		DBG1(DBG_CFG, "binding HA sync socket failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "binding HA socket failed: %s", strerror(errno));
 		close(this->fd);
 		this->fd = -1;
 		return FALSE;
@@ -180,7 +180,7 @@ static bool open_socket(private_ha_sync_socket_t *this)
 	if (connect(this->fd, this->remote->get_sockaddr(this->remote),
 				*this->remote->get_sockaddr_len(this->remote)) == -1)
 	{
-		DBG1(DBG_CFG, "connecting HA sync socket failed: %s", strerror(errno));
+		DBG1(DBG_CFG, "connecting HA socket failed: %s", strerror(errno));
 		close(this->fd);
 		this->fd = -1;
 		return FALSE;
@@ -190,9 +190,9 @@ static bool open_socket(private_ha_sync_socket_t *this)
 }
 
 /**
- * Implementation of ha_sync_socket_t.destroy.
+ * Implementation of ha_socket_t.destroy.
  */
-static void destroy(private_ha_sync_socket_t *this)
+static void destroy(private_ha_socket_t *this)
 {
 	if (this->fd != -1)
 	{
@@ -206,21 +206,21 @@ static void destroy(private_ha_sync_socket_t *this)
 /**
  * See header
  */
-ha_sync_socket_t *ha_sync_socket_create(char *local, char *remote)
+ha_socket_t *ha_socket_create(char *local, char *remote)
 {
-	private_ha_sync_socket_t *this = malloc_thing(private_ha_sync_socket_t);
+	private_ha_socket_t *this = malloc_thing(private_ha_socket_t);
 
-	this->public.push = (void(*)(ha_sync_socket_t*, ha_sync_message_t*))push;
-	this->public.pull = (ha_sync_message_t*(*)(ha_sync_socket_t*))pull;
-	this->public.destroy = (void(*)(ha_sync_socket_t*))destroy;
+	this->public.push = (void(*)(ha_socket_t*, ha_message_t*))push;
+	this->public.pull = (ha_message_t*(*)(ha_socket_t*))pull;
+	this->public.destroy = (void(*)(ha_socket_t*))destroy;
 
-	this->local = host_create_from_dns(local, 0, HA_SYNC_PORT);
-	this->remote = host_create_from_dns(remote, 0, HA_SYNC_PORT);
+	this->local = host_create_from_dns(local, 0, HA_PORT);
+	this->remote = host_create_from_dns(remote, 0, HA_PORT);
 	this->fd = -1;
 
 	if (!this->local || !this->remote)
 	{
-		DBG1(DBG_CFG, "invalid local/remote HA sync address");
+		DBG1(DBG_CFG, "invalid local/remote HA address");
 		destroy(this);
 		return NULL;
 	}

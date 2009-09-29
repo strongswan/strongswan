@@ -13,32 +13,32 @@
  * for more details.
  */
 
-#include "ha_sync_dispatcher.h"
+#include "ha_dispatcher.h"
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
-typedef struct private_ha_sync_dispatcher_t private_ha_sync_dispatcher_t;
+typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
 
 /**
- * Private data of an ha_sync_dispatcher_t object.
+ * Private data of an ha_dispatcher_t object.
  */
-struct private_ha_sync_dispatcher_t {
+struct private_ha_dispatcher_t {
 
 	/**
-	 * Public ha_sync_dispatcher_t interface.
+	 * Public ha_dispatcher_t interface.
 	 */
-	ha_sync_dispatcher_t public;
+	ha_dispatcher_t public;
 
 	/**
 	 * socket to pull messages from
 	 */
-	ha_sync_socket_t *socket;
+	ha_socket_t *socket;
 
 	/**
 	 * segments to control
 	 */
-	ha_sync_segments_t *segments;
+	ha_segments_t *segments;
 
 	/**
 	 * Dispatcher job
@@ -58,11 +58,10 @@ static status_t get_shared_secret(diffie_hellman_t *this, chunk_t *secret)
 /**
  * Process messages of type IKE_ADD
  */
-static void process_ike_add(private_ha_sync_dispatcher_t *this,
-							ha_sync_message_t *message)
+static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL, *old_sa = NULL;
 	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
@@ -74,38 +73,38 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_IKE_ID:
+			case HA_IKE_ID:
 				ike_sa = ike_sa_create(value.ike_sa_id);
 				break;
-			case HA_SYNC_IKE_REKEY_ID:
+			case HA_IKE_REKEY_ID:
 				old_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
 				break;
-			case HA_SYNC_NONCE_I:
+			case HA_NONCE_I:
 				nonce_i = value.chunk;
 				break;
-			case HA_SYNC_NONCE_R:
+			case HA_NONCE_R:
 				nonce_r = value.chunk;
 				break;
-			case HA_SYNC_SECRET:
+			case HA_SECRET:
 				secret = value.chunk;
 				break;
-			case HA_SYNC_OLD_SKD:
+			case HA_OLD_SKD:
 				old_skd = value.chunk;
 				break;
-			case HA_SYNC_ALG_ENCR:
+			case HA_ALG_ENCR:
 				encr = value.u16;
 				break;
-			case HA_SYNC_ALG_ENCR_LEN:
+			case HA_ALG_ENCR_LEN:
 				len = value.u16;
 				break;
-			case HA_SYNC_ALG_INTEG:
+			case HA_ALG_INTEG:
 				integ = value.u16;
 				break;
-			case HA_SYNC_ALG_PRF:
+			case HA_ALG_PRF:
 				prf = value.u16;
 				break;
-			case HA_SYNC_ALG_OLD_PRF:
+			case HA_ALG_OLD_PRF:
 				old_prf = value.u16;
 				break;
 			default:
@@ -158,7 +157,7 @@ static void process_ike_add(private_ha_sync_dispatcher_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "HA sync keymat derivation failed");
+			DBG1(DBG_IKE, "HA keymat derivation failed");
 			ike_sa->destroy(ike_sa);
 		}
 		charon->bus->set_sa(charon->bus, NULL);
@@ -194,11 +193,11 @@ static void set_extension(ike_sa_t *ike_sa, ike_extension_t set,
 /**
  * Process messages of type IKE_UPDATE
  */
-static void process_ike_update(private_ha_sync_dispatcher_t *this,
-							   ha_sync_message_t *message)
+static void process_ike_update(private_ha_dispatcher_t *this,
+							   ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *peer_cfg = NULL;
@@ -206,43 +205,43 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
 	{
-		if (attribute != HA_SYNC_IKE_ID && ike_sa == NULL)
+		if (attribute != HA_IKE_ID && ike_sa == NULL)
 		{
 			/* must be first attribute */
 			break;
 		}
 		switch (attribute)
 		{
-			case HA_SYNC_IKE_ID:
+			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
 				break;
-			case HA_SYNC_LOCAL_ID:
+			case HA_LOCAL_ID:
 				ike_sa->set_my_id(ike_sa, value.id->clone(value.id));
 				break;
-			case HA_SYNC_REMOTE_ID:
+			case HA_REMOTE_ID:
 				ike_sa->set_other_id(ike_sa, value.id->clone(value.id));
 				break;
-			case HA_SYNC_EAP_ID:
+			case HA_EAP_ID:
 				ike_sa->set_eap_identity(ike_sa, value.id->clone(value.id));
 				break;
-			case HA_SYNC_LOCAL_ADDR:
+			case HA_LOCAL_ADDR:
 				ike_sa->set_my_host(ike_sa, value.host->clone(value.host));
 				break;
-			case HA_SYNC_REMOTE_ADDR:
+			case HA_REMOTE_ADDR:
 				ike_sa->set_other_host(ike_sa, value.host->clone(value.host));
 				break;
-			case HA_SYNC_LOCAL_VIP:
+			case HA_LOCAL_VIP:
 				ike_sa->set_virtual_ip(ike_sa, TRUE, value.host);
 				break;
-			case HA_SYNC_REMOTE_VIP:
+			case HA_REMOTE_VIP:
 				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
 				break;
-			case HA_SYNC_ADDITIONAL_ADDR:
+			case HA_ADDITIONAL_ADDR:
 				ike_sa->add_additional_address(ike_sa,
 											   value.host->clone(value.host));
 				break;
-			case HA_SYNC_CONFIG_NAME:
+			case HA_CONFIG_NAME:
 				peer_cfg = charon->backends->get_peer_cfg_by_name(
 												charon->backends, value.str);
 				if (peer_cfg)
@@ -252,15 +251,15 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 				}
 				else
 				{
-					DBG1(DBG_IKE, "HA sync is missing nodes peer configuration");
+					DBG1(DBG_IKE, "HA is missing nodes peer configuration");
 				}
 				break;
-			case HA_SYNC_EXTENSIONS:
+			case HA_EXTENSIONS:
 				set_extension(ike_sa, value.u32, EXT_NATT);
 				set_extension(ike_sa, value.u32, EXT_MOBIKE);
 				set_extension(ike_sa, value.u32, EXT_HASH_AND_URL);
 				break;
-			case HA_SYNC_CONDITIONS:
+			case HA_CONDITIONS:
 				set_condition(ike_sa, value.u32, COND_NAT_ANY);
 				set_condition(ike_sa, value.u32, COND_NAT_HERE);
 				set_condition(ike_sa, value.u32, COND_NAT_THERE);
@@ -269,10 +268,10 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 				set_condition(ike_sa, value.u32, COND_CERTREQ_SEEN);
 				set_condition(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
 				break;
-			case HA_SYNC_INITIATE_MID:
+			case HA_INITIATE_MID:
 				ike_sa->set_message_id(ike_sa, TRUE, value.u32);
 				break;
-			case HA_SYNC_RESPOND_MID:
+			case HA_RESPOND_MID:
 				ike_sa->set_message_id(ike_sa, FALSE, value.u32);
 				break;
 			default:
@@ -295,11 +294,11 @@ static void process_ike_update(private_ha_sync_dispatcher_t *this,
 /**
  * Process messages of type IKE_DELETE
  */
-static void process_ike_delete(private_ha_sync_dispatcher_t *this,
-							   ha_sync_message_t *message)
+static void process_ike_delete(private_ha_dispatcher_t *this,
+							   ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 
@@ -308,7 +307,7 @@ static void process_ike_delete(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_IKE_ID:
+			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(
 									charon->ike_sa_manager, value.ike_sa_id);
 				if (ike_sa)
@@ -353,11 +352,11 @@ static child_cfg_t* find_child_cfg(ike_sa_t *ike_sa, char *name)
 /**
  * Process messages of type CHILD_ADD
  */
-static void process_child_add(private_ha_sync_dispatcher_t *this,
-							  ha_sync_message_t *message)
+static void process_child_add(private_ha_dispatcher_t *this,
+							  ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
 	char *config_name;
@@ -382,48 +381,48 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_IKE_ID:
+			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
 				initiator = value.ike_sa_id->is_initiator(value.ike_sa_id);
 				break;
-			case HA_SYNC_CONFIG_NAME:
+			case HA_CONFIG_NAME:
 				config_name = value.str;
 				break;
-			case HA_SYNC_INBOUND_SPI:
+			case HA_INBOUND_SPI:
 				inbound_spi = value.u32;
 				break;
-			case HA_SYNC_OUTBOUND_SPI:
+			case HA_OUTBOUND_SPI:
 				outbound_spi = value.u32;
 				break;
-			case HA_SYNC_INBOUND_CPI:
+			case HA_INBOUND_CPI:
 				inbound_cpi = value.u32;
 				break;
-			case HA_SYNC_OUTBOUND_CPI:
+			case HA_OUTBOUND_CPI:
 				outbound_cpi = value.u32;
 				break;
-			case HA_SYNC_IPSEC_MODE:
+			case HA_IPSEC_MODE:
 				mode = value.u8;
 				break;
-			case HA_SYNC_IPCOMP:
+			case HA_IPCOMP:
 				ipcomp = value.u8;
 				break;
-			case HA_SYNC_ALG_ENCR:
+			case HA_ALG_ENCR:
 				encr = value.u16;
 				break;
-			case HA_SYNC_ALG_ENCR_LEN:
+			case HA_ALG_ENCR_LEN:
 				len = value.u16;
 				break;
-			case HA_SYNC_ALG_INTEG:
+			case HA_ALG_INTEG:
 				integ = value.u16;
 				break;
-			case HA_SYNC_NONCE_I:
+			case HA_NONCE_I:
 				nonce_i = value.chunk;
 				break;
-			case HA_SYNC_NONCE_R:
+			case HA_NONCE_R:
 				nonce_r = value.chunk;
 				break;
-			case HA_SYNC_SECRET:
+			case HA_SECRET:
 				secret = value.chunk;
 				break;
 			default:
@@ -434,13 +433,13 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 
 	if (!ike_sa)
 	{
-		DBG1(DBG_CHD, "IKE_SA for HA sync CHILD_SA not found");
+		DBG1(DBG_CHD, "IKE_SA for HA CHILD_SA not found");
 		return;
 	}
 	config = find_child_cfg(ike_sa, config_name);
 	if (!config)
 	{
-		DBG1(DBG_CHD, "HA sync is missing nodes child configuration");
+		DBG1(DBG_CHD, "HA is missing nodes child configuration");
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return;
 	}
@@ -466,7 +465,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	if (!keymat->derive_child_keys(keymat, proposal, secret.ptr ? &dh : NULL,
 					nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
 	{
-		DBG1(DBG_CHD, "HA sync CHILD_SA key derivation failed");
+		DBG1(DBG_CHD, "HA CHILD_SA key derivation failed");
 		child_sa->destroy(child_sa);
 		proposal->destroy(proposal);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -503,7 +502,7 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 
 	if (failed)
 	{
-		DBG1(DBG_CHD, "HA sync CHILD_SA installation failed");
+		DBG1(DBG_CHD, "HA CHILD_SA installation failed");
 		child_sa->destroy(child_sa);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		return;
@@ -517,10 +516,10 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_LOCAL_TS:
+			case HA_LOCAL_TS:
 				local_ts->insert_last(local_ts, value.ts->clone(value.ts));
 				break;
-			case HA_SYNC_REMOTE_TS:
+			case HA_REMOTE_TS:
 				remote_ts->insert_last(remote_ts, value.ts->clone(value.ts));
 				break;
 			default:
@@ -540,11 +539,11 @@ static void process_child_add(private_ha_sync_dispatcher_t *this,
 /**
  * Process messages of type CHILD_DELETE
  */
-static void process_child_delete(private_ha_sync_dispatcher_t *this,
-								 ha_sync_message_t *message)
+static void process_child_delete(private_ha_dispatcher_t *this,
+								 ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
 
@@ -553,11 +552,11 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_IKE_ID:
+			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
 				break;
-			case HA_SYNC_INBOUND_SPI:
+			case HA_INBOUND_SPI:
 				if (ike_sa)
 				{
 					ike_sa->destroy_child_sa(ike_sa, PROTO_ESP, value.u32);
@@ -577,11 +576,11 @@ static void process_child_delete(private_ha_sync_dispatcher_t *this,
 /**
  * Process messages of type SEGMENT_TAKE/DROP
  */
-static void process_segment(private_ha_sync_dispatcher_t *this,
-							ha_sync_message_t *message, bool take)
+static void process_segment(private_ha_dispatcher_t *this,
+							ha_message_t *message, bool take)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 
 	enumerator = message->create_attribute_enumerator(message);
@@ -589,7 +588,7 @@ static void process_segment(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_SEGMENT:
+			case HA_SEGMENT:
 				if (take)
 				{
 					this->segments->deactivate(this->segments, value.u16, FALSE);
@@ -609,11 +608,11 @@ static void process_segment(private_ha_sync_dispatcher_t *this,
 /**
  * Process messages of type STATUS
  */
-static void process_status(private_ha_sync_dispatcher_t *this,
-						   ha_sync_message_t *message)
+static void process_status(private_ha_dispatcher_t *this,
+						   ha_message_t *message)
 {
-	ha_sync_message_attribute_t attribute;
-	ha_sync_message_value_t value;
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
 	enumerator_t *enumerator;
 	segment_mask_t mask = 0;
 
@@ -622,7 +621,7 @@ static void process_status(private_ha_sync_dispatcher_t *this,
 	{
 		switch (attribute)
 		{
-			case HA_SYNC_SEGMENT:
+			case HA_SEGMENT:
 				mask |= SEGMENTS_BIT(value.u16);
 				break;
 			default:
@@ -637,39 +636,39 @@ static void process_status(private_ha_sync_dispatcher_t *this,
 /**
  * Dispatcher job function
  */
-static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
+static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 {
-	ha_sync_message_t *message;
+	ha_message_t *message;
 
 	message = this->socket->pull(this->socket);
 	switch (message->get_type(message))
 	{
-		case HA_SYNC_IKE_ADD:
+		case HA_IKE_ADD:
 			process_ike_add(this, message);
 			break;
-		case HA_SYNC_IKE_UPDATE:
+		case HA_IKE_UPDATE:
 			process_ike_update(this, message);
 			break;
-		case HA_SYNC_IKE_DELETE:
+		case HA_IKE_DELETE:
 			process_ike_delete(this, message);
 			break;
-		case HA_SYNC_CHILD_ADD:
+		case HA_CHILD_ADD:
 			process_child_add(this, message);
 			break;
-		case HA_SYNC_CHILD_DELETE:
+		case HA_CHILD_DELETE:
 			process_child_delete(this, message);
 			break;
-		case HA_SYNC_SEGMENT_DROP:
+		case HA_SEGMENT_DROP:
 			process_segment(this, message, FALSE);
 			break;
-		case HA_SYNC_SEGMENT_TAKE:
+		case HA_SEGMENT_TAKE:
 			process_segment(this, message, TRUE);
 			break;
-		case HA_SYNC_STATUS:
+		case HA_STATUS:
 			process_status(this, message);
 			break;
 		default:
-			DBG1(DBG_CFG, "received unknown HA sync message type %d",
+			DBG1(DBG_CFG, "received unknown HA message type %d",
 				 message->get_type(message));
 			break;
 	}
@@ -679,9 +678,9 @@ static job_requeue_t dispatch(private_ha_sync_dispatcher_t *this)
 }
 
 /**
- * Implementation of ha_sync_dispatcher_t.destroy.
+ * Implementation of ha_dispatcher_t.destroy.
  */
-static void destroy(private_ha_sync_dispatcher_t *this)
+static void destroy(private_ha_dispatcher_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
@@ -690,12 +689,12 @@ static void destroy(private_ha_sync_dispatcher_t *this)
 /**
  * See header
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
-												ha_sync_segments_t *segments)
+ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
+									  ha_segments_t *segments)
 {
-	private_ha_sync_dispatcher_t *this = malloc_thing(private_ha_sync_dispatcher_t);
+	private_ha_dispatcher_t *this = malloc_thing(private_ha_dispatcher_t);
 
-	this->public.destroy = (void(*)(ha_sync_dispatcher_t*))destroy;
+	this->public.destroy = (void(*)(ha_dispatcher_t*))destroy;
 
 	this->socket = socket;
 	this->segments = segments;

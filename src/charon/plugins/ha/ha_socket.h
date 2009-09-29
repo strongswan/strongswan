@@ -14,47 +14,47 @@
  */
 
 /**
- * @defgroup ha_sync_socket ha_sync_socket
- * @{ @ingroup ha_sync
+ * @defgroup ha_socket ha_socket
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_SOCKET_H_
-#define HA_SYNC_SOCKET_H_
+#ifndef HA_SOCKET_H_
+#define HA_SOCKET_H_
 
-#include "ha_sync_message.h"
+#include "ha_message.h"
 
 #include <sa/ike_sa.h>
 
-typedef struct ha_sync_socket_t ha_sync_socket_t;
+typedef struct ha_socket_t ha_socket_t;
 
 /**
  * Socket to send/received SA synchronization data
  */
-struct ha_sync_socket_t {
+struct ha_socket_t {
 
 	/**
 	 * Push synchronization information to the responsible node.
 	 *
 	 * @param message	message to send, gets destroyed by push()
 	 */
-	void (*push)(ha_sync_socket_t *this, ha_sync_message_t *message);
+	void (*push)(ha_socket_t *this, ha_message_t *message);
 
 	/**
 	 * Pull synchronization information from a peer we are responsible.
 	 *
 	 * @return			received message
 	 */
-	ha_sync_message_t *(*pull)(ha_sync_socket_t *this);
+	ha_message_t *(*pull)(ha_socket_t *this);
 
 	/**
-	 * Destroy a ha_sync_socket_t.
+	 * Destroy a ha_socket_t.
 	 */
-	void (*destroy)(ha_sync_socket_t *this);
+	void (*destroy)(ha_socket_t *this);
 };
 
 /**
- * Create a ha_sync_socket instance.
+ * Create a ha_socket instance.
  */
-ha_sync_socket_t *ha_sync_socket_create(char *local, char *remote);
+ha_socket_t *ha_socket_create(char *local, char *remote);
 
-#endif /* HA_SYNC_SOCKET_ @}*/
+#endif /* HA_SOCKET_ @}*/

@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "ha_sync_kernel.h"
+#include "ha_kernel.h"
 
 typedef u_int32_t u32;
 typedef u_int8_t u8;
@@ -26,17 +26,17 @@ typedef u_int8_t u8;
 #include <sys/stat.h>
 #include <fcntl.h>
 
-typedef struct private_ha_sync_kernel_t private_ha_sync_kernel_t;
+typedef struct private_ha_kernel_t private_ha_kernel_t;
 
 /**
- * Private data of an ha_sync_kernel_t object.
+ * Private data of an ha_kernel_t object.
  */
-struct private_ha_sync_kernel_t {
+struct private_ha_kernel_t {
 
 	/**
-	 * Public ha_sync_kernel_t interface.
+	 * Public ha_kernel_t interface.
 	 */
-	ha_sync_kernel_t public;
+	ha_kernel_t public;
 
 	/**
 	 * Init value for jhash
@@ -55,10 +55,9 @@ struct private_ha_sync_kernel_t {
 };
 
 /**
- * Implementation of ha_sync_kernel_t.in_segment
+ * Implementation of ha_kernel_t.in_segment
  */
-static bool in_segment(private_ha_sync_kernel_t *this,
-					   host_t *host, u_int segment)
+static bool in_segment(private_ha_kernel_t *this, host_t *host, u_int segment)
 {
 	if (host->get_family(host) == AF_INET)
 	{
@@ -78,7 +77,7 @@ static bool in_segment(private_ha_sync_kernel_t *this,
 /**
  * Activate/Deactivate a segment
  */
-static void activate_deactivate(private_ha_sync_kernel_t *this,
+static void activate_deactivate(private_ha_kernel_t *this,
 								u_int segment, char op)
 {
 	enumerator_t *enumerator;
@@ -110,17 +109,17 @@ static void activate_deactivate(private_ha_sync_kernel_t *this,
 }
 
 /**
- * Implementation of ha_sync_kernel_t.activate
+ * Implementation of ha_kernel_t.activate
  */
-static void activate(private_ha_sync_kernel_t *this, u_int segment)
+static void activate(private_ha_kernel_t *this, u_int segment)
 {
 	activate_deactivate(this, segment, '+');
 }
 
 /**
- * Implementation of ha_sync_kernel_t.deactivate
+ * Implementation of ha_kernel_t.deactivate
  */
-static void deactivate(private_ha_sync_kernel_t *this, u_int segment)
+static void deactivate(private_ha_kernel_t *this, u_int segment)
 {
 	activate_deactivate(this, segment, '-');
 }
@@ -128,7 +127,7 @@ static void deactivate(private_ha_sync_kernel_t *this, u_int segment)
 /**
  * Mangle IPtable rules for virtual addresses
  */
-static bool mangle_rules(private_ha_sync_kernel_t *this, bool add)
+static bool mangle_rules(private_ha_kernel_t *this, bool add)
 {
 	enumerator_t *enumerator;
 	host_t *host;
@@ -174,7 +173,7 @@ static bool mangle_rules(private_ha_sync_kernel_t *this, bool add)
 /**
  * Parse the list of virtual cluster addresses
  */
-static void parse_virtuals(private_ha_sync_kernel_t *this, char *virtual)
+static void parse_virtuals(private_ha_kernel_t *this, char *virtual)
 {
 	enumerator_t *enumerator;
 	host_t *host;
@@ -197,9 +196,9 @@ static void parse_virtuals(private_ha_sync_kernel_t *this, char *virtual)
 }
 
 /**
- * Implementation of ha_sync_kernel_t.destroy.
+ * Implementation of ha_kernel_t.destroy.
  */
-static void destroy(private_ha_sync_kernel_t *this)
+static void destroy(private_ha_kernel_t *this)
 {
 	mangle_rules(this, FALSE);
 	this->virtuals->destroy_offset(this->virtuals, offsetof(host_t, destroy));
@@ -209,14 +208,14 @@ static void destroy(private_ha_sync_kernel_t *this)
 /**
  * See header
  */
-ha_sync_kernel_t *ha_sync_kernel_create(u_int count, char *virtuals)
+ha_kernel_t *ha_kernel_create(u_int count, char *virtuals)
 {
-	private_ha_sync_kernel_t *this = malloc_thing(private_ha_sync_kernel_t);
+	private_ha_kernel_t *this = malloc_thing(private_ha_kernel_t);
 
-	this->public.in_segment = (bool(*)(ha_sync_kernel_t*, host_t *host, u_int segment))in_segment;
-	this->public.activate = (void(*)(ha_sync_kernel_t*, u_int segment))activate;
-	this->public.deactivate = (void(*)(ha_sync_kernel_t*, u_int segment))deactivate;
-	this->public.destroy = (void(*)(ha_sync_kernel_t*))destroy;
+	this->public.in_segment = (bool(*)(ha_kernel_t*, host_t *host, u_int segment))in_segment;
+	this->public.activate = (void(*)(ha_kernel_t*, u_int segment))activate;
+	this->public.deactivate = (void(*)(ha_kernel_t*, u_int segment))deactivate;
+	this->public.destroy = (void(*)(ha_kernel_t*))destroy;
 
 	this->initval = 0;
 	this->count = count;

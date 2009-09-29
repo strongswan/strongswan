@@ -14,38 +14,37 @@
  */
 
 /**
- * @defgroup ha_sync_dispatcher ha_sync_dispatcher
- * @{ @ingroup ha-sync
+ * @defgroup ha_dispatcher ha_dispatcher
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_DISPATCHER_H_
-#define HA_SYNC_DISPATCHER_H_
+#ifndef HA_DISPATCHER_H_
+#define HA_DISPATCHER_H_
 
-#include "ha_sync_socket.h"
-#include "ha_sync_segments.h"
+#include "ha_socket.h"
+#include "ha_segments.h"
 
-typedef struct ha_sync_dispatcher_t ha_sync_dispatcher_t;
+typedef struct ha_dispatcher_t ha_dispatcher_t;
 
 /**
- * The dispatcher pulls sync message in a thread an processes them.
+ * The dispatcher pulls messages in a thread an processes them.
  */
-struct ha_sync_dispatcher_t {
+struct ha_dispatcher_t {
 
 	/**
-	 * Destroy a ha_sync_dispatcher_t.
+	 * Destroy a ha_dispatcher_t.
 	 */
-	void (*destroy)(ha_sync_dispatcher_t *this);
+	void (*destroy)(ha_dispatcher_t *this);
 };
 
 /**
- * Create a ha_sync_dispatcher instance pulling from socket.
+ * Create a ha_dispatcher instance pulling from socket.
  *
  * @param socket		socket to pull messages from
  * @param segments		segments to control based on received messages
- * @param manager		distributed management logic for segment control
  * @return				dispatcher object
  */
-ha_sync_dispatcher_t *ha_sync_dispatcher_create(ha_sync_socket_t *socket,
-												ha_sync_segments_t *segments);
+ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
+									  ha_segments_t *segments);
 
-#endif /* HA_SYNC_DISPATCHER_ @}*/
+#endif /* HA_DISPATCHER_ @}*/

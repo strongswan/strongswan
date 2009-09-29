@@ -943,7 +943,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/medcli/Makefile
 	src/libcharon/plugins/nm/Makefile
 	src/libcharon/plugins/uci/Makefile
-	src/libcharon/plugins/ha_sync/Makefile
+	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/android/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile

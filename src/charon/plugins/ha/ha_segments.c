@@ -13,38 +13,38 @@
  * for more details.
  */
 
-#include "ha_sync_segments.h"
+#include "ha_segments.h"
 
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
-typedef struct private_ha_sync_segments_t private_ha_sync_segments_t;
+typedef struct private_ha_segments_t private_ha_segments_t;
 
 /**
- * Private data of an ha_sync_segments_t object.
+ * Private data of an ha_segments_t object.
  */
-struct private_ha_sync_segments_t {
+struct private_ha_segments_t {
 
 	/**
-	 * Public ha_sync_segments_t interface.
+	 * Public ha_segments_t interface.
 	 */
-	ha_sync_segments_t public;
+	ha_segments_t public;
 
 	/**
 	 * communication socket
 	 */
-	ha_sync_socket_t *socket;
+	ha_socket_t *socket;
 
 	/**
 	 * Sync tunnel, if any
 	 */
-	ha_sync_tunnel_t *tunnel;
+	ha_tunnel_t *tunnel;
 
 	/**
 	 * Interface to control segments at kernel level
 	 */
-	ha_sync_kernel_t *kernel;
+	ha_kernel_t *kernel;
 
 	/**
 	 * read/write lock for segment manipulation
@@ -70,7 +70,7 @@ struct private_ha_sync_segments_t {
 /**
  * Log currently active segments
  */
-static void log_segments(private_ha_sync_segments_t *this, bool activated,
+static void log_segments(private_ha_segments_t *this, bool activated,
 						 u_int segment)
 {
 	char buf[64] = "none", *pos = buf;
@@ -92,21 +92,21 @@ static void log_segments(private_ha_sync_segments_t *this, bool activated,
 			pos += snprintf(pos, buf + sizeof(buf) - pos, "%d", i);
 		}
 	}
-	DBG1(DBG_CFG, "HA sync segment %d %sactivated, now active: %s",
+	DBG1(DBG_CFG, "HA segment %d %sactivated, now active: %s",
 		 segment, activated ? "" : "de", buf);
 }
 
 /**
  * Enable/Disable a specific segment
  */
-static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
+static void enable_disable(private_ha_segments_t *this, u_int segment,
 						   bool enable, bool notify)
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
 	ike_sa_state_t old, new;
-	ha_sync_message_t *message = NULL;
-	ha_sync_message_type_t type;
+	ha_message_t *message = NULL;
+	ha_message_type_t type;
 	bool changes = FALSE;
 
 	if (segment > this->count)
@@ -118,7 +118,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 	{
 		old = IKE_PASSIVE;
 		new = IKE_ESTABLISHED;
-		type = HA_SYNC_SEGMENT_TAKE;
+		type = HA_SEGMENT_TAKE;
 		if (!(this->active & SEGMENTS_BIT(segment)))
 		{
 			this->active |= SEGMENTS_BIT(segment);
@@ -130,7 +130,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 	{
 		old = IKE_ESTABLISHED;
 		new = IKE_PASSIVE;
-		type = HA_SYNC_SEGMENT_DROP;
+		type = HA_SEGMENT_DROP;
 		if (this->active & SEGMENTS_BIT(segment))
 		{
 			this->active &= ~SEGMENTS_BIT(segment);
@@ -148,7 +148,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 			{
 				continue;
 			}
-			if (this->tunnel && this->tunnel->is_sync_sa(this->tunnel, ike_sa))
+			if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 			{
 				continue;
 			}
@@ -164,8 +164,8 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 
 	if (notify)
 	{
-		message = ha_sync_message_create(type);
-		message->add_attribute(message, HA_SYNC_SEGMENT, segment);
+		message = ha_message_create(type);
+		message->add_attribute(message, HA_SEGMENT, segment);
 		this->socket->push(this->socket, message);
 	}
 }
@@ -173,7 +173,7 @@ static void enable_disable(private_ha_sync_segments_t *this, u_int segment,
 /**
  * Enable/Disable all or a specific segment, do locking
  */
-static void enable_disable_all(private_ha_sync_segments_t *this, u_int segment,
+static void enable_disable_all(private_ha_segments_t *this, u_int segment,
 							   bool enable, bool notify)
 {
 	int i;
@@ -194,19 +194,17 @@ static void enable_disable_all(private_ha_sync_segments_t *this, u_int segment,
 }
 
 /**
- * Implementation of ha_sync_segments_t.activate
+ * Implementation of ha_segments_t.activate
  */
-static void activate(private_ha_sync_segments_t *this, u_int segment,
-					 bool notify)
+static void activate(private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, TRUE, notify);
 }
 
 /**
- * Implementation of ha_sync_segments_t.deactivate
+ * Implementation of ha_segments_t.deactivate
  */
-static void deactivate(private_ha_sync_segments_t *this, u_int segment,
-					   bool notify)
+static void deactivate(private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, FALSE, notify);
 }
@@ -236,9 +234,9 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 }
 
 /**
- * Implementation of ha_sync_segments_t.resync
+ * Implementation of ha_segments_t.resync
  */
-static void resync(private_ha_sync_segments_t *this, u_int segment)
+static void resync(private_ha_segments_t *this, u_int segment)
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
@@ -253,7 +251,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 	{
 		this->active &= ~mask;
 
-		DBG1(DBG_CFG, "resyncing HA sync segment %d", segment);
+		DBG1(DBG_CFG, "resyncing HA segment %d", segment);
 
 		/* we do the actual rekeying in a seperate loop to avoid rekeying
 		 * an SA twice. */
@@ -299,7 +297,7 @@ static void resync(private_ha_sync_segments_t *this, u_int segment)
 /**
  * Implementation of listener_t.alert
  */
-static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
+static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
 					   alert_t alert, va_list args)
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
@@ -310,9 +308,9 @@ static bool alert_hook(private_ha_sync_segments_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * Implementation of ha_sync_segments_t.handle_status
+ * Implementation of ha_segments_t.handle_status
  */
-static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
+static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
 {
 	segment_mask_t missing, overlap;
 	int i, active = 0;
@@ -366,18 +364,18 @@ static void handle_status(private_ha_sync_segments_t *this, segment_mask_t mask)
 /**
  * Send a status message with our active segments
  */
-static job_requeue_t send_status(private_ha_sync_segments_t *this)
+static job_requeue_t send_status(private_ha_segments_t *this)
 {
-	ha_sync_message_t *message;
+	ha_message_t *message;
 	int i;
 
-	message = ha_sync_message_create(HA_SYNC_STATUS);
+	message = ha_message_create(HA_STATUS);
 
 	for (i = 1; i <= this->count; i++)
 	{
 		if (this->active & SEGMENTS_BIT(i))
 		{
-			message->add_attribute(message, HA_SYNC_SEGMENT, i);
+			message->add_attribute(message, HA_SEGMENT, i);
 		}
 	}
 
@@ -393,9 +391,9 @@ static job_requeue_t send_status(private_ha_sync_segments_t *this)
 }
 
 /**
- * Implementation of ha_sync_segments_t.destroy.
+ * Implementation of ha_segments_t.destroy.
  */
-static void destroy(private_ha_sync_segments_t *this)
+static void destroy(private_ha_segments_t *this)
 {
 	this->lock->destroy(this->lock);
 	free(this);
@@ -404,20 +402,19 @@ static void destroy(private_ha_sync_segments_t *this)
 /**
  * See header
  */
-ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
-							ha_sync_kernel_t *kernel, ha_sync_tunnel_t *tunnel,
-							char *local, char *remote, u_int count)
+ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
+					ha_tunnel_t *tunnel, char *local, char *remote, u_int count)
 {
-	private_ha_sync_segments_t *this = malloc_thing(private_ha_sync_segments_t);
+	private_ha_segments_t *this = malloc_thing(private_ha_segments_t);
 	int i;
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
-	this->public.activate = (void(*)(ha_sync_segments_t*, u_int segment,bool))activate;
-	this->public.deactivate = (void(*)(ha_sync_segments_t*, u_int segment,bool))deactivate;
-	this->public.resync = (void(*)(ha_sync_segments_t*, u_int segment))resync;
-	this->public.handle_status = (void(*)(ha_sync_segments_t*, segment_mask_t mask))handle_status;
-	this->public.destroy = (void(*)(ha_sync_segments_t*))destroy;
+	this->public.activate = (void(*)(ha_segments_t*, u_int segment,bool))activate;
+	this->public.deactivate = (void(*)(ha_segments_t*, u_int segment,bool))deactivate;
+	this->public.resync = (void(*)(ha_segments_t*, u_int segment))resync;
+	this->public.handle_status = (void(*)(ha_segments_t*, segment_mask_t mask))handle_status;
+	this->public.destroy = (void(*)(ha_segments_t*))destroy;
 
 	this->socket = socket;
 	this->tunnel = tunnel;

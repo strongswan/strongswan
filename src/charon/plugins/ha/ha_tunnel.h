@@ -14,44 +14,44 @@
  */
 
 /**
- * @defgroup ha_sync_ ha_sync_tunnel
- * @{ @ingroup ha_sync
+ * @defgroup ha_ ha_tunnel
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_TUNNEL_H_
-#define HA_SYNC_TUNNEL_H_
+#ifndef HA_TUNNEL_H_
+#define HA_TUNNEL_H_
 
 #include <sa/ike_sa.h>
 
-typedef struct ha_sync_tunnel_t ha_sync_tunnel_t;
+typedef struct ha_tunnel_t ha_tunnel_t;
 
 /**
  * Socket to send/received SA synchronization data
  */
-struct ha_sync_tunnel_t {
+struct ha_tunnel_t {
 
 	/**
-	 * Check if an IKE_SA is used for exchanging sync messages.
+	 * Check if an IKE_SA is used for exchanging HA messages.
 	 *
 	 * @param ike_Sa	ike_sa to check
-	 * @return			TRUE if IKE_SA is used to secure sync messages
+	 * @return			TRUE if IKE_SA is used to secure HA messages
 	 */
-	bool (*is_sync_sa)(ha_sync_tunnel_t *this, ike_sa_t *ike_sa);
+	bool (*is_sa)(ha_tunnel_t *this, ike_sa_t *ike_sa);
 
 	/**
-	 * Destroy a ha_sync_tunnel_t.
+	 * Destroy a ha_tunnel_t.
 	 */
-	void (*destroy)(ha_sync_tunnel_t *this);
+	void (*destroy)(ha_tunnel_t *this);
 };
 
 /**
- * Create a ha_sync_tunnel instance.
+ * Create a ha_tunnel instance.
  *
- * @param local		local address of sync tunnel
- * @param remote	remote address of sync tunnel
+ * @param local		local address of HA tunnel
+ * @param remote	remote address of HA tunnel
  * @param secret	PSK tunnel authentication secret
- * @return			sync tunnel instance
+ * @return			HA tunnel instance
  */
-ha_sync_tunnel_t *ha_sync_tunnel_create(char *local, char *remote, char *secret);
+ha_tunnel_t *ha_tunnel_create(char *local, char *remote, char *secret);
 
-#endif /* HA_SYNC_TUNNEL_H_ @}*/
+#endif /* HA_TUNNEL_H_ @}*/

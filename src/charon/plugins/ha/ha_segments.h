@@ -14,16 +14,16 @@
  */
 
 /**
- * @defgroup ha_sync_segments ha_sync_segments
- * @{ @ingroup ha_sync
+ * @defgroup ha_segments ha_segments
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_SEGMENTS_H_
-#define HA_SYNC_SEGMENTS_H_
+#ifndef HA_SEGMENTS_H_
+#define HA_SEGMENTS_H_
 
 #include <daemon.h>
 
-typedef struct ha_sync_segments_t ha_sync_segments_t;
+typedef struct ha_segments_t ha_segments_t;
 
 typedef u_int16_t segment_mask_t;
 
@@ -37,14 +37,14 @@ typedef u_int16_t segment_mask_t;
  */
 #define SEGMENTS_BIT(segment) (0x01 << (segment - 1))
 
-#include "ha_sync_socket.h"
-#include "ha_sync_tunnel.h"
-#include "ha_sync_kernel.h"
+#include "ha_socket.h"
+#include "ha_tunnel.h"
+#include "ha_kernel.h"
 
 /**
  * Segmentation of peers into active and passive.
  */
-struct ha_sync_segments_t {
+struct ha_segments_t {
 
 	/**
 	 * Implements listener interface to catch daemon shutdown.
@@ -57,7 +57,7 @@ struct ha_sync_segments_t {
 	 * @param segment	numerical segment to takeover, 0 for all
 	 * @param notify	wheter to notify other nodes about activation
 	 */
-	void (*activate)(ha_sync_segments_t *this, u_int segment, bool notify);
+	void (*activate)(ha_segments_t *this, u_int segment, bool notify);
 
 	/**
 	 * Deactivate a set of IKE_SAs identified by a segment.
@@ -65,7 +65,7 @@ struct ha_sync_segments_t {
 	 * @param segment	numerical segment to takeover, 0 for all
 	 * @param notify	wheter to notify other nodes about deactivation
 	 */
-	void (*deactivate)(ha_sync_segments_t *this, u_int segment, bool notify);
+	void (*deactivate)(ha_segments_t *this, u_int segment, bool notify);
 
 	/**
 	 * Resync an active segment.
@@ -77,23 +77,23 @@ struct ha_sync_segments_t {
 	 *
 	 * @param segment	segment to resync
 	 */
-	void (*resync)(ha_sync_segments_t *this, u_int segment);
+	void (*resync)(ha_segments_t *this, u_int segment);
 
 	/**
 	 * Handle a status message from the remote node.
 	 *
 	 * @param mask		segments the remote node is serving actively
 	 */
-	void (*handle_status)(ha_sync_segments_t *this, segment_mask_t mask);
+	void (*handle_status)(ha_segments_t *this, segment_mask_t mask);
 
 	/**
-	 * Destroy a ha_sync_segments_t.
+	 * Destroy a ha_segments_t.
 	 */
-	void (*destroy)(ha_sync_segments_t *this);
+	void (*destroy)(ha_segments_t *this);
 };
 
 /**
- * Create a ha_sync_segments instance.
+ * Create a ha_segments instance.
  *
  * @param socket		socket to communicate segment (de-)activation
  * @param kernel		interface to control segments at kernel level
@@ -101,8 +101,7 @@ struct ha_sync_segments_t {
  * @param active		bit mask of initially active segments
  * @return				segment object
  */
-ha_sync_segments_t *ha_sync_segments_create(ha_sync_socket_t *socket,
-							ha_sync_kernel_t *kernel, ha_sync_tunnel_t *tunnel,
-							char *local, char *remote, u_int count);
+ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
+					ha_tunnel_t *tunnel, char *local, char *remote, u_int count);
 
-#endif /* HA_SYNC_SEGMENTS_ @}*/
+#endif /* HA_SEGMENTS_ @}*/

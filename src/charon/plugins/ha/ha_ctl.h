@@ -14,34 +14,34 @@
  */
 
 /**
- * @defgroup ha_sync_ctl ha_sync_ctl
- * @{ @ingroup ha_sync
+ * @defgroup ha_ctl ha_ctl
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_CTL_H_
-#define HA_SYNC_CTL_H_
+#ifndef HA_CTL_H_
+#define HA_CTL_H_
 
-#include "ha_sync_segments.h"
+#include "ha_segments.h"
 
-typedef struct ha_sync_ctl_t ha_sync_ctl_t;
+typedef struct ha_ctl_t ha_ctl_t;
 
 /**
  * HA Sync control interface using a FIFO.
  */
-struct ha_sync_ctl_t {
+struct ha_ctl_t {
 
 	/**
-	 * Destroy a ha_sync_ctl_t.
+	 * Destroy a ha_ctl_t.
 	 */
-	void (*destroy)(ha_sync_ctl_t *this);
+	void (*destroy)(ha_ctl_t *this);
 };
 
 /**
- * Create a ha_sync_ctl instance.
+ * Create a ha_ctl instance.
  *
  * @param segments	segments to control
- * @return			HA sync control interface
+ * @return			HA control interface
  */
-ha_sync_ctl_t *ha_sync_ctl_create(ha_sync_segments_t *segments);
+ha_ctl_t *ha_ctl_create(ha_segments_t *segments);
 
-#endif /* HA_SYNC_CTL_ @}*/
+#endif /* HA_CTL_ @}*/

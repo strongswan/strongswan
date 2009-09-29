@@ -14,21 +14,21 @@
  */
 
 /**
- * @defgroup ha_sync_kernel ha_sync_kernel
- * @{ @ingroup ha_sync
+ * @defgroup ha_kernel ha_kernel
+ * @{ @ingroup ha
  */
 
-#ifndef HA_SYNC_KERNEL_H_
-#define HA_SYNC_KERNEL_H_
+#ifndef HA_KERNEL_H_
+#define HA_KERNEL_H_
 
-typedef struct ha_sync_kernel_t ha_sync_kernel_t;
+typedef struct ha_kernel_t ha_kernel_t;
 
-#include "ha_sync_segments.h"
+#include "ha_segments.h"
 
 /**
- * HA sync segment kernel configuration interface.
+ * HA segment kernel configuration interface.
  */
-struct ha_sync_kernel_t {
+struct ha_kernel_t {
 
 	/**
 	 * Check if a host is in a segment.
@@ -37,35 +37,35 @@ struct ha_sync_kernel_t {
 	 * @param segment	segment
 	 * @return 			TRUE if host belongs to segment
 	 */
-	bool (*in_segment)(ha_sync_kernel_t *this, host_t *host, u_int segment);
+	bool (*in_segment)(ha_kernel_t *this, host_t *host, u_int segment);
 
 	/**
 	 * Activate a segment at kernel level for all cluster addresses.
 	 *
 	 * @param segment	segment to activate
 	 */
-	void (*activate)(ha_sync_kernel_t *this, u_int segment);
+	void (*activate)(ha_kernel_t *this, u_int segment);
 
 	/**
 	 * Deactivate a segment at kernel level for all cluster addresses.
 	 *
 	 * @param segment	segment to deactivate
 	 */
-	void (*deactivate)(ha_sync_kernel_t *this, u_int segment);
+	void (*deactivate)(ha_kernel_t *this, u_int segment);
 
 	/**
-	 * Destroy a ha_sync_kernel_t.
+	 * Destroy a ha_kernel_t.
 	 */
-	void (*destroy)(ha_sync_kernel_t *this);
+	void (*destroy)(ha_kernel_t *this);
 };
 
 /**
- * Create a ha_sync_kernel instance.
+ * Create a ha_kernel instance.
  *
  * @param count			total number of segments to use
  * @param active		bitmask of initially active segments
  * @param virtuals		comma separated list of virtual cluster addresses
  */
-ha_sync_kernel_t *ha_sync_kernel_create(u_int count, char *virtuals);
+ha_kernel_t *ha_kernel_create(u_int count, char *virtuals);
 
-#endif /* HA_SYNC_KERNEL_ @}*/
+#endif /* HA_KERNEL_ @}*/
