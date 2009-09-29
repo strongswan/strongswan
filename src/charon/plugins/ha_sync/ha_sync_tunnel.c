@@ -234,9 +234,13 @@ static void setup_sync_tunnel(private_ha_sync_tunnel_t *this,
 
 	child_cfg = child_cfg_create("ha-sync", &lifetime, NULL, TRUE,
 						MODE_TRANSPORT, ACTION_NONE, ACTION_NONE, FALSE);
-	ts = traffic_selector_create_dynamic(0, HA_SYNC_PORT, HA_SYNC_PORT);
+	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_SYNC_PORT, HA_SYNC_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_dynamic(0, HA_SYNC_PORT, HA_SYNC_PORT);
+	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
+	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
+	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_SYNC_PORT, HA_SYNC_PORT);
+	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
