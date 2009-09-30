@@ -125,10 +125,9 @@ static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * Implementation of listener_t.ike_state_change
+ * Implementation of listener_t.ike_updown
  */
-static bool ike_state_change(private_ha_ike_t *this, ike_sa_t *ike_sa,
-							 ike_sa_state_t state)
+static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 {
 	ha_message_t *m;
 
@@ -141,65 +140,68 @@ static bool ike_state_change(private_ha_ike_t *this, ike_sa_t *ike_sa,
 		return TRUE;
 	}
 
-	switch (state)
+	if (up)
 	{
-		case IKE_ESTABLISHED:
+		iterator_t *iterator;
+		peer_cfg_t *peer_cfg;
+		u_int32_t extension, condition;
+		host_t *addr;
+		identification_t *eap_id;
+		ike_sa_id_t *id;
+
+		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+
+		condition = copy_condition(ike_sa, COND_NAT_ANY)
+				  | copy_condition(ike_sa, COND_NAT_HERE)
+				  | copy_condition(ike_sa, COND_NAT_THERE)
+				  | copy_condition(ike_sa, COND_NAT_FAKE)
+				  | copy_condition(ike_sa, COND_EAP_AUTHENTICATED)
+				  | copy_condition(ike_sa, COND_CERTREQ_SEEN)
+				  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR);
+
+		extension = copy_extension(ike_sa, EXT_NATT)
+				  | copy_extension(ike_sa, EXT_MOBIKE)
+				  | copy_extension(ike_sa, EXT_HASH_AND_URL);
+
+		eap_id = ike_sa->get_eap_identity(ike_sa);
+		id = ike_sa->get_id(ike_sa);
+
+		m = ha_message_create(HA_IKE_UPDATE);
+		m->add_attribute(m, HA_IKE_ID, id);
+		m->add_attribute(m, HA_LOCAL_ID, ike_sa->get_my_id(ike_sa));
+		m->add_attribute(m, HA_REMOTE_ID, ike_sa->get_other_id(ike_sa));
+		m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
+		m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
+		m->add_attribute(m, HA_CONDITIONS, condition);
+		m->add_attribute(m, HA_EXTENSIONS, extension);
+		m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
+		if (eap_id)
 		{
-			iterator_t *iterator;
-			peer_cfg_t *peer_cfg;
-			u_int32_t extension, condition;
-			host_t *addr;
-			identification_t *eap_id;
-			ike_sa_id_t *id;
-
-			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-
-			condition = copy_condition(ike_sa, COND_NAT_ANY)
-					  | copy_condition(ike_sa, COND_NAT_HERE)
-					  | copy_condition(ike_sa, COND_NAT_THERE)
-					  | copy_condition(ike_sa, COND_NAT_FAKE)
-					  | copy_condition(ike_sa, COND_EAP_AUTHENTICATED)
-					  | copy_condition(ike_sa, COND_CERTREQ_SEEN)
-					  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR);
-
-			extension = copy_extension(ike_sa, EXT_NATT)
-					  | copy_extension(ike_sa, EXT_MOBIKE)
-					  | copy_extension(ike_sa, EXT_HASH_AND_URL);
-
-			eap_id = ike_sa->get_eap_identity(ike_sa);
-			id = ike_sa->get_id(ike_sa);
-
-			m = ha_message_create(HA_IKE_UPDATE);
-			m->add_attribute(m, HA_IKE_ID, id);
-			m->add_attribute(m, HA_LOCAL_ID, ike_sa->get_my_id(ike_sa));
-			m->add_attribute(m, HA_REMOTE_ID, ike_sa->get_other_id(ike_sa));
-			m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
-			m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
-			m->add_attribute(m, HA_CONDITIONS, condition);
-			m->add_attribute(m, HA_EXTENSIONS, extension);
-			m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
-			if (eap_id)
-			{
-				m->add_attribute(m, HA_EAP_ID, eap_id);
-			}
-			iterator = ike_sa->create_additional_address_iterator(ike_sa);
-			while (iterator->iterate(iterator, (void**)&addr))
-			{
-				m->add_attribute(m, HA_ADDITIONAL_ADDR, addr);
-			}
-			iterator->destroy(iterator);
-			break;
+			m->add_attribute(m, HA_EAP_ID, eap_id);
 		}
-		case IKE_DESTROYING:
+		iterator = ike_sa->create_additional_address_iterator(ike_sa);
+		while (iterator->iterate(iterator, (void**)&addr))
 		{
-			m = ha_message_create(HA_IKE_DELETE);
-			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-			break;
+			m->add_attribute(m, HA_ADDITIONAL_ADDR, addr);
 		}
-		default:
-			return TRUE;
+		iterator->destroy(iterator);
+	}
+	else
+	{
+		m = ha_message_create(HA_IKE_DELETE);
+		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 	}
 	this->socket->push(this->socket, m);
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.ike_rekey
+ */
+static bool ike_rekey(private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	ike_updown(this, old, FALSE);
+	ike_updown(this, new, TRUE);
 	return TRUE;
 }
 
@@ -271,7 +273,8 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
-	this->public.listener.ike_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, ike_sa_state_t state))ike_state_change;
+	this->public.listener.ike_updown = (bool(*)(listener_t*,ike_sa_t *ike_sa, bool up))ike_updown;
+	this->public.listener.ike_rekey = (bool(*)(listener_t*,ike_sa_t *old, ike_sa_t *new))ike_rekey;
 	this->public.listener.message = (bool(*)(listener_t*, ike_sa_t *, message_t *,bool))message_hook;
 	this->public.destroy = (void(*)(ha_ike_t*))destroy;
 
