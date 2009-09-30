@@ -175,9 +175,9 @@ static void deactivate(private_ha_kernel_t *this, u_int segment)
 }
 
 /**
- * Enable all not-yet enabled segments on all clusterip addresses
+ * Disable all not-yet disabled segments on all clusterip addresses
  */
-static void activate_all(private_ha_kernel_t *this)
+static void disable_all(private_ha_kernel_t *this)
 {
 	enumerator_t *enumerator;
 	segment_mask_t active;
@@ -190,9 +190,9 @@ static void activate_all(private_ha_kernel_t *this)
 		active = get_active(this, file);
 		for (i = 1; i <= this->count; i++)
 		{
-			if (!(active & SEGMENTS_BIT(i)))
+			if (active & SEGMENTS_BIT(i))
 			{
-				enable_disable(this, i, file, TRUE);
+				enable_disable(this, i, file, FALSE);
 			}
 		}
 	}
@@ -222,7 +222,7 @@ ha_kernel_t *ha_kernel_create(u_int count)
 	this->initval = 0;
 	this->count = count;
 
-	activate_all(this);
+	disable_all(this);
 
 	return &this->public;
 }

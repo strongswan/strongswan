@@ -323,29 +323,39 @@ static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * Get the number of SAs in a segment.
+ * Monitor heartbeat activity of remote node
  */
-static u_int get_sa_count(private_ha_segments_t *this)
+static job_requeue_t watchdog(private_ha_segments_t *this)
 {
-	enumerator_t *enumerator;
-	ike_sa_t *ike_sa;
-	u_int count = 0;
+	int oldstate;
+	bool timeout;
 
-	enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
-	while (enumerator->enumerate(enumerator, &ike_sa))
+	this->mutex->lock(this->mutex);
+	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+										HEARTBEAT_TIMEOUT);
+	pthread_setcancelstate(oldstate, NULL);
+	pthread_cleanup_pop(TRUE);
+	if (timeout)
 	{
-		if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
-		{
-			continue;
-		}
-		if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
-		{
-			continue;
-		}
-		count++;
+		DBG1(DBG_CFG, "no heartbeat received, taking all segments");
+		activate(this, 0, TRUE);
+		/* disable heartbeat detection util we get one */
+		this->job = NULL;
+		return JOB_REQUEUE_NONE;
 	}
-	enumerator->destroy(enumerator);
-	return count;
+	return JOB_REQUEUE_DIRECT;
+}
+
+/**
+ * Start the heartbeat detection thread
+ */
+static void start_watchdog(private_ha_segments_t *this)
+{
+	this->job = callback_job_create((callback_job_cb_t)watchdog,
+									this, NULL, NULL);
+	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 }
 
 /**
@@ -353,46 +363,38 @@ static u_int get_sa_count(private_ha_segments_t *this)
  */
 static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
 {
-	segment_mask_t missing, overlap;
+	segment_mask_t missing;
 	int i;
 
 	this->mutex->lock(this->mutex);
 
 	missing = ~(this->active | mask);
-	overlap = this->active & mask;
 
-	/* Activate any missing segment. The master will disable overlapping
-	 * segments if both nodes activate the missing segments simultaneously. */
 	for (i = 1; i <= this->count; i++)
 	{
 		if (missing & SEGMENTS_BIT(i))
 		{
-			DBG1(DBG_CFG, "HA segment %d was not handled", i);
-			enable_disable(this, i, TRUE, TRUE);
-		}
-	}
-	if (this->master && overlap)
-	{
-		/* Disable overlapping segment on one node, controlled by master */
-		for (i = 1; i <= this->count; i++)
-		{
-			if (overlap & SEGMENTS_BIT(i))
+			if (this->master != i % 2)
 			{
-				if (get_sa_count(this))
-				{
-					DBG1(DBG_CFG, "HA segment %d overlaps, taking over", i);
-					enable_disable(this, i, TRUE, TRUE);
-				}
-				else
-				{
-					DBG1(DBG_CFG, "HA segment %d overlaps, dropping", i);
-					enable_disable(this, i, FALSE, TRUE);
-				}
+				DBG1(DBG_CFG, "HA segment %d was not handled, taking", i);
+				enable_disable(this, i, TRUE, TRUE);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "HA segment %d was not handled, dropping", i);
+				enable_disable(this, i, FALSE, TRUE);
 			}
 		}
 	}
+
 	this->mutex->unlock(this->mutex);
 	this->condvar->signal(this->condvar);
+
+	if (!this->job)
+	{
+		DBG1(DBG_CFG, "received heartbeat, reenabling watchdog");
+		start_watchdog(this);
+	}
 }
 
 /**
@@ -425,33 +427,14 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 }
 
 /**
- * Monitor heartbeat activity of remote node
- */
-static job_requeue_t watchdog(private_ha_segments_t *this)
-{
-	int oldstate;
-	bool timeout;
-
-	this->mutex->lock(this->mutex);
-	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
-										HEARTBEAT_TIMEOUT);
-	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(TRUE);
-	if (timeout)
-	{	/* didn't get a heartbeat, take all segments */
-		activate(this, 0, TRUE);
-	}
-	return JOB_REQUEUE_DIRECT;
-}
-
-/**
  * Implementation of ha_segments_t.destroy.
  */
 static void destroy(private_ha_segments_t *this)
 {
-	this->job->cancel(this->job);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
 	this->mutex->destroy(this->mutex);
 	this->condvar->destroy(this->condvar);
 	free(this);
@@ -464,7 +447,6 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 					ha_tunnel_t *tunnel, char *local, char *remote, u_int count)
 {
 	private_ha_segments_t *this = malloc_thing(private_ha_segments_t);
-	int i;
 
 	memset(&this->public.listener, 0, sizeof(listener_t));
 	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
@@ -482,19 +464,12 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	this->count = count;
 	this->master = strcmp(local, remote) > 0;
 
-	/* initially all segments are active */
+	/* initially all segments are deactivated */
 	this->active = 0;
-	for (i = 1; i <= count; i++)
-	{
-		this->active |= SEGMENTS_BIT(i);
-	}
 
 	send_status(this);
 
-	/* start heartbeat detection thread */
-	this->job = callback_job_create((callback_job_cb_t)watchdog,
-									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	start_watchdog(this);
 
 	return &this->public;
 }

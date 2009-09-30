@@ -591,10 +591,12 @@ static void process_segment(private_ha_dispatcher_t *this,
 			case HA_SEGMENT:
 				if (take)
 				{
+					DBG1(DBG_CFG, "remote node takes segment %d", value.u16);
 					this->segments->deactivate(this->segments, value.u16, FALSE);
 				}
 				else
 				{
+					DBG1(DBG_CFG, "remote node drops segment %d", value.u16);
 					this->segments->activate(this->segments, value.u16, FALSE);
 				}
 				break;
