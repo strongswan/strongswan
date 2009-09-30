@@ -257,15 +257,12 @@ static void resync(private_ha_segments_t *this, u_int segment)
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	ike_sa_id_t *id;
-	u_int16_t mask = SEGMENTS_BIT(segment);
 
 	list = linked_list_create();
 	this->mutex->lock(this->mutex);
 
-	if (segment > 0 && segment <= this->count && (this->active & mask))
+	if (segment > 0 && segment <= this->count)
 	{
-		this->active &= ~mask;
-
 		DBG1(DBG_CFG, "resyncing HA segment %d", segment);
 
 		/* we do the actual rekeying in a seperate loop to avoid rekeying
@@ -320,6 +317,23 @@ static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
 		deactivate(this, 0, TRUE);
 	}
 	return TRUE;
+}
+
+/**
+ * Request a resync of all segments
+ */
+static job_requeue_t request_resync(private_ha_segments_t *this)
+{
+	ha_message_t *message;
+	int i;
+
+	message = ha_message_create(HA_RESYNC);
+	for (i = 1; i <= this->count; i++)
+	{
+		message->add_attribute(message, HA_SEGMENT, i);
+	}
+	this->socket->push(this->socket, message);
+	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -463,6 +477,7 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->count = count;
 	this->master = strcmp(local, remote) > 0;
+	this->job = NULL;
 
 	/* initially all segments are deactivated */
 	this->active = 0;
@@ -470,6 +485,11 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	send_status(this);
 
 	start_watchdog(this);
+
+	/* request a resync as soon as we are up */
+	charon->processor->queue_job(charon->processor, (job_t*)
+						callback_job_create((callback_job_cb_t)request_resync,
+											this, NULL, NULL));
 
 	return &this->public;
 }

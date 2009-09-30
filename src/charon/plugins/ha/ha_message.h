@@ -57,6 +57,8 @@ enum ha_message_type_t {
 	HA_SEGMENT_TAKE,
 	/** status with the segments the sending node is currently serving */
 	HA_STATUS,
+	/** segments the receiving node is requested to resync */
+	HA_RESYNC,
 };
 
 /**

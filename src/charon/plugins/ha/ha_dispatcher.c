@@ -636,6 +636,31 @@ static void process_status(private_ha_dispatcher_t *this,
 }
 
 /**
+ * Process messages of type RESYNC
+ */
+static void process_resync(private_ha_dispatcher_t *this,
+						   ha_message_t *message)
+{
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
+	enumerator_t *enumerator;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_SEGMENT:
+				this->segments->resync(this->segments, value.u16);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Dispatcher job function
  */
 static job_requeue_t dispatch(private_ha_dispatcher_t *this)
@@ -668,6 +693,9 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 			break;
 		case HA_STATUS:
 			process_status(this, message);
+			break;
+		case HA_RESYNC:
+			process_resync(this, message);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown HA message type %d",
