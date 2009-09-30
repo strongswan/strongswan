@@ -105,7 +105,7 @@ plugin_t *plugin_create()
 	private_ha_plugin_t *this;
 	char *local, *remote, *secret;
 	u_int count;
-	bool fifo;
+	bool fifo, monitor, resync;
 
 	local = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha.local", NULL);
@@ -114,7 +114,11 @@ plugin_t *plugin_create()
 	secret = lib->settings->get_str(lib->settings,
 								"charon.plugins.ha.secret", NULL);
 	fifo = lib->settings->get_bool(lib->settings,
-								"charon.plugins.ha.fifo_interface", FALSE);
+								"charon.plugins.ha.fifo_interface", TRUE);
+	monitor = lib->settings->get_bool(lib->settings,
+								"charon.plugins.ha.monitor", TRUE);
+	resync = lib->settings->get_bool(lib->settings,
+								"charon.plugins.ha.resync", TRUE);
 	count = min(SEGMENTS_MAX, lib->settings->get_int(lib->settings,
 								"charon.plugins.ha.segment_count", 1));
 	if (!local || !remote)
@@ -129,26 +133,20 @@ plugin_t *plugin_create()
 	this->tunnel = NULL;
 	this->ctl = NULL;
 
-	this->socket = ha_socket_create(local, remote);
-	if (!this->socket)
-	{
-		free(this);
-		return NULL;
-	}
-	this->kernel = ha_kernel_create(count);
-	if (!this->kernel)
-	{
-		this->socket->destroy(this->socket);
-		free(this);
-		return NULL;
-	}
-
 	if (secret)
 	{
 		this->tunnel = ha_tunnel_create(local, remote, secret);
 	}
-	this->segments = ha_segments_create(this->socket, this->kernel,
-										this->tunnel, local, remote, count);
+	this->socket = ha_socket_create(local, remote);
+	if (!this->socket)
+	{
+		DESTROY_IF(this->tunnel);
+		free(this);
+		return NULL;
+	}
+	this->kernel = ha_kernel_create(count);
+	this->segments = ha_segments_create(this->socket, this->kernel, this->tunnel,
+							count, strcmp(local, remote) > 0, monitor, resync);
 	if (fifo)
 	{
 		this->ctl = ha_ctl_create(this->segments);

@@ -97,11 +97,15 @@ struct ha_segments_t {
  *
  * @param socket		socket to communicate segment (de-)activation
  * @param kernel		interface to control segments at kernel level
+ * @param tunnel		HA tunnel
  * @param count			number of segments the cluster uses
- * @param active		bit mask of initially active segments
+ * @param node			node, currently 1 or 0
+ * @param monitor		should we use monitoring functionality
+ * @param resync		request a complete resync on startup
  * @return				segment object
  */
 ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
-					ha_tunnel_t *tunnel, char *local, char *remote, u_int count);
+								  ha_tunnel_t *tunnel, u_int count, u_int node,
+								  bool monitor, bool resync);
 
 #endif /* HA_SEGMENTS_ @}*/

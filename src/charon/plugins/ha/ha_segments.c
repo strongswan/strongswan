@@ -77,9 +77,9 @@ struct private_ha_segments_t {
 	segment_mask_t active;
 
 	/**
-	 * Are we the master node handling segment assignement?
+	 * Node number
 	 */
-	bool master;
+	u_int node;
 };
 
 /**
@@ -388,7 +388,7 @@ static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
 	{
 		if (missing & SEGMENTS_BIT(i))
 		{
-			if (this->master != i % 2)
+			if (this->node == i % 2)
 			{
 				DBG1(DBG_CFG, "HA segment %d was not handled, taking", i);
 				enable_disable(this, i, TRUE, TRUE);
@@ -458,7 +458,8 @@ static void destroy(private_ha_segments_t *this)
  * See header
  */
 ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
-					ha_tunnel_t *tunnel, char *local, char *remote, u_int count)
+								  ha_tunnel_t *tunnel, u_int count, u_int node,
+								  bool monitor, bool sync)
 {
 	private_ha_segments_t *this = malloc_thing(private_ha_segments_t);
 
@@ -476,20 +477,25 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->count = count;
-	this->master = strcmp(local, remote) > 0;
+	this->node = node;
 	this->job = NULL;
 
 	/* initially all segments are deactivated */
 	this->active = 0;
 
-	send_status(this);
+	if (monitor)
+	{
+		send_status(this);
+		start_watchdog(this);
+	}
 
-	start_watchdog(this);
-
-	/* request a resync as soon as we are up */
-	charon->processor->queue_job(charon->processor, (job_t*)
+	if (sync)
+	{
+		/* request a resync as soon as we are up */
+		charon->processor->queue_job(charon->processor, (job_t*)
 						callback_job_create((callback_job_cb_t)request_resync,
 											this, NULL, NULL));
+	}
 
 	return &this->public;
 }
