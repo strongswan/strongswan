@@ -153,14 +153,6 @@ struct private_x509_ac_t {
 	refcount_t ref;
 };
 
-static chunk_t ASN1_group_oid = chunk_from_chars(
-	0x06, 0x08,
-		  0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x0a ,0x04
-);
-static chunk_t ASN1_authorityKeyIdentifier_oid = chunk_from_chars(
-	0x06, 0x03,
-		  0x55, 0x1d, 0x23
-);
 static chunk_t ASN1_noRevAvail_ext = chunk_from_chars(
 	0x30, 0x09,
 		  0x06, 0x03,
@@ -538,10 +530,10 @@ static chunk_t build_attr_cert_validity(private_x509_ac_t *this)
 /**
  * build attribute type
  */
-static chunk_t build_attribute_type(const chunk_t type, chunk_t content)
+static chunk_t build_attribute_type(int type, chunk_t content)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cm",
-				type,
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(type),
 				asn1_wrap(ASN1_SET, "m", content));
 }
 
@@ -551,7 +543,7 @@ static chunk_t build_attribute_type(const chunk_t type, chunk_t content)
 static chunk_t build_attributes(private_x509_ac_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-		build_attribute_type(ASN1_group_oid, ietfAttr_list_encode(this->groups)));
+		build_attribute_type(OID_GROUP, ietfAttr_list_encode(this->groups)));
 }
 
 /**
@@ -581,8 +573,8 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 											issuer->get_encoding(issuer));
 	authorityCertSerialNumber = asn1_simple_object(ASN1_CONTEXT_S_2,
 											x509->get_serial(x509));
-	return asn1_wrap(ASN1_SEQUENCE, "cm",
-				ASN1_authorityKeyIdentifier_oid,
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
 				asn1_wrap(ASN1_OCTET_STRING, "m",
 					asn1_wrap(ASN1_SEQUENCE, "cmm",
 						keyIdentifier,
