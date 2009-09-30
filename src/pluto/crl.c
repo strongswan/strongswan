@@ -24,12 +24,6 @@
 
 #include <freeswan.h>
 
-#include <asn1/asn1.h>
-#include <asn1/asn1_parser.h>
-#include <asn1/oid.h>
-#include <crypto/hashers/hasher.h>
-#include <credentials/certificates/certificate.h>
-
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
@@ -47,87 +41,11 @@
 
 static x509crl_t  *x509crls      = NULL;
 
-/**
-  * ASN.1 definition of an X.509 certificate revocation list
- */
-static const asn1Object_t crlObjects[] = {
-	{ 0, "certificateList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
-	{ 1,   "tbsCertList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  1 */
-	{ 2,     "version",					ASN1_INTEGER,      ASN1_OPT |
-														   ASN1_BODY }, /*  2 */
-	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /*  3 */
-	{ 2,     "signature",				ASN1_EOC,          ASN1_RAW  }, /*  4 */
-	{ 2,     "issuer",					ASN1_SEQUENCE,     ASN1_OBJ  }, /*  5 */
-	{ 2,     "thisUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  6 */
-	{ 2,     "nextUpdate",				ASN1_EOC,          ASN1_RAW  }, /*  7 */
-	{ 2,     "revokedCertificates",		ASN1_SEQUENCE,     ASN1_OPT |
-														   ASN1_LOOP }, /*  8 */
-	{ 3,       "certList",				ASN1_SEQUENCE,     ASN1_NONE }, /*  9 */
-	{ 4,         "userCertificate",		ASN1_INTEGER,      ASN1_BODY }, /* 10 */
-	{ 4,         "revocationDate",		ASN1_EOC,          ASN1_RAW  }, /* 11 */
-	{ 4,         "crlEntryExtensions",  ASN1_SEQUENCE,     ASN1_OPT |
-														   ASN1_LOOP }, /* 12 */
-	{ 5,           "extension",			ASN1_SEQUENCE,	   ASN1_NONE }, /* 13 */
-	{ 6,             "extnID",			ASN1_OID,          ASN1_BODY }, /* 14 */
-	{ 6,             "critical",		ASN1_BOOLEAN,      ASN1_DEF |
-														   ASN1_BODY }, /* 15 */
-	{ 6,             "extnValue",		ASN1_OCTET_STRING, ASN1_BODY }, /* 16 */
-	{ 4,         "end opt or loop",		ASN1_EOC,          ASN1_END  }, /* 17 */
-	{ 2,     "end opt or loop",			ASN1_EOC,          ASN1_END  }, /* 18 */
-	{ 2,     "optional extensions",		ASN1_CONTEXT_C_0,  ASN1_OPT  }, /* 19 */
-	{ 3,       "crlExtensions",			ASN1_SEQUENCE,     ASN1_LOOP }, /* 20 */
-	{ 4,         "extension",			ASN1_SEQUENCE,     ASN1_NONE }, /* 21 */
-	{ 5,           "extnID",			ASN1_OID,          ASN1_BODY }, /* 22 */
-	{ 5,           "critical",			ASN1_BOOLEAN,      ASN1_DEF |
-														   ASN1_BODY }, /* 23 */
-	{ 5,           "extnValue",			ASN1_OCTET_STRING, ASN1_BODY }, /* 24 */
-	{ 3,       "end loop",				ASN1_EOC,          ASN1_END  }, /* 25 */
-	{ 2,     "end opt",					ASN1_EOC,          ASN1_END  }, /* 26 */
-	{ 1,   "signatureAlgorithm",		ASN1_EOC,          ASN1_RAW  }, /* 27 */
-	{ 1,   "signatureValue",			ASN1_BIT_STRING,   ASN1_BODY }, /* 28 */
-	{ 0, "exit",						ASN1_EOC,		   ASN1_EXIT }
-};
-
-#define CRL_OBJ_CERTIFICATE_LIST         0
-#define CRL_OBJ_TBS_CERT_LIST			 1
-#define CRL_OBJ_VERSION					 2
-#define CRL_OBJ_SIG_ALG					 4
-#define CRL_OBJ_ISSUER					 5
-#define CRL_OBJ_THIS_UPDATE				 6
-#define CRL_OBJ_NEXT_UPDATE				 7
-#define CRL_OBJ_USER_CERTIFICATE		10
-#define CRL_OBJ_REVOCATION_DATE			11
-#define CRL_OBJ_CRL_ENTRY_EXTN_ID		14
-#define CRL_OBJ_CRL_ENTRY_CRITICAL		15
-#define CRL_OBJ_CRL_ENTRY_EXTN_VALUE	16
-#define CRL_OBJ_EXTN_ID					22
-#define CRL_OBJ_CRITICAL				23
-#define CRL_OBJ_EXTN_VALUE				24
-#define CRL_OBJ_ALGORITHM				27
-#define CRL_OBJ_SIGNATURE				28
-
 const x509crl_t empty_x509crl = {
+	  NULL        , /* crl */
 	  NULL        , /* *next */
 	UNDEFINED_TIME, /* installed */
 	  NULL        , /* distributionPoints */
-	{ NULL, 0 }   , /* certificateList */
-	{ NULL, 0 }   , /*   tbsCertList */
-			1     , /*     version */
-	OID_UNKNOWN   , /*     sigAlg */
-	{ NULL, 0 }   , /*     issuer */
-	UNDEFINED_TIME, /*     thisUpdate */
-	UNDEFINED_TIME, /*     nextUpdate */
-	  NULL        , /*     revokedCertificates */
-					/*     crlExtensions */
-					/*       extension */
-					/*         extnID */
-					/*         critical */
-					/*         extnValue */
-	{ NULL, 0 }   , /*           authKeyID */
-	{ NULL, 0 }   , /*           authKeySerialNumber */
-	{ NULL, 0 }   , /*           crlNumber */
-	OID_UNKNOWN   , /*   algorithm */
-	{ NULL, 0 }     /*   signature */
 };
 
 /**
@@ -135,41 +53,33 @@ const x509crl_t empty_x509crl = {
  */
 static x509crl_t* get_x509crl(chunk_t issuer, chunk_t keyid)
 {
-	x509crl_t *crl = x509crls;
+	x509crl_t *x509crl = x509crls;
 	x509crl_t *prev_crl = NULL;
 
-	while (crl != NULL)
+	while (x509crl != NULL)
 	{
-		if ((keyid.ptr != NULL && crl->authKeyID.ptr != NULL)
-		? same_keyid(keyid, crl->authKeyID)
-		: (same_dn(crl->issuer, issuer)))
+		certificate_t *cert_crl = x509crl->crl;
+		crl_t *crl = (crl_t*)cert_crl;
+		identification_t *crl_issuer = cert_crl->get_issuer(cert_crl);
+		chunk_t crl_issuer_dn = crl_issuer->get_encoding(crl_issuer);
+		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
+
+		if ((keyid.ptr && authKeyID.ptr)? same_keyid(keyid, authKeyID) :
+			 same_dn(crl_issuer_dn, issuer))
 		{
-			if (crl != x509crls)
+			if (x509crl != x509crls)
 			{
 				/* bring the CRL up front */
-				prev_crl->next = crl->next;
-				crl->next = x509crls;
-				x509crls = crl;
+				prev_crl->next = x509crl->next;
+				x509crl->next = x509crls;
+				x509crls = x509crl;
 			}
-			return crl;
+			return x509crl;
 		}
-		prev_crl = crl;
-		crl = crl->next;
+		prev_crl = x509crl;
+		x509crl = x509crl->next;
 	}
 	return NULL;
-}
-
-/**
- *  Free the dynamic memory used to store revoked certificates
- */
-static void free_revoked_certs(revokedCert_t* revokedCerts)
-{
-	while (revokedCerts != NULL)
-	{
-		revokedCert_t * revokedCert = revokedCerts;
-		revokedCerts = revokedCert->next;
-		free(revokedCert);
-	}
 }
 
 /**
@@ -177,9 +87,8 @@ static void free_revoked_certs(revokedCert_t* revokedCerts)
  */
 void free_crl(x509crl_t *crl)
 {
+	DESTROY_IF(crl->crl);
 	crl->distributionPoints->destroy_function(crl->distributionPoints, free);
-	free_revoked_certs(crl->revokedCertificates);
-	free(crl->certificateList.ptr);
 	free(crl);
 }
 
@@ -196,7 +105,9 @@ void free_crls(void)
 	lock_crl_list("free_crls");
 
 	while (x509crls != NULL)
+	{
 		free_first_crl();
+	}
 
 	unlock_crl_list("free_crls");
 }
@@ -204,23 +115,29 @@ void free_crls(void)
 /**
  * Insert X.509 CRL into chained list
  */
-bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl)
+bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 {
+	certificate_t *cert_crl = x509crl->crl;
+	crl_t *crl = (crl_t*)cert_crl;
+	identification_t *issuer = cert_crl->get_issuer(cert_crl);
+	chunk_t issuer_dn = issuer->get_encoding(issuer);
+	chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 	x509cert_t *issuer_cert;
 	x509crl_t *oldcrl;
+	time_t now, nextUpdate;
 	bool valid_sig;
 
 	/* add distribution point */
-	add_distribution_point(crl->distributionPoints, crl_uri);
+	add_distribution_point(x509crl->distributionPoints, crl_uri);
 
 	lock_authcert_list("insert_crl");
 
 	/* get the issuer cacert */
-	issuer_cert = get_authcert(crl->issuer, crl->authKeyID, AUTH_CA);
+	issuer_cert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
 	if (issuer_cert == NULL)
 	{
 		plog("crl issuer cacert not found");
-		free_crl(crl);
+		free_crl(x509crl);
 		unlock_authcert_list("insert_crl");
 		return FALSE;
 	}
@@ -229,28 +146,32 @@ bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl)
 	)
 
 	/* check the issuer's signature of the crl */
-	valid_sig = x509_check_signature(crl->tbsCertList, crl->signature,
-									 crl->algorithm, issuer_cert->cert);
+	valid_sig = cert_crl->issued_by(cert_crl, issuer_cert->cert);
 	unlock_authcert_list("insert_crl");
 
 	if (!valid_sig)
 	{
-		free_crl(crl);
+		free_crl(x509crl);
 		return FALSE;
 	}
 	DBG(DBG_CONTROL,
 		DBG_log("crl signature is valid")
 	)
 
+	/* note the current time */
+	time(&now);
+
 	lock_crl_list("insert_crl");
-	oldcrl = get_x509crl(crl->issuer, crl->authKeyID);
+	oldcrl = get_x509crl(issuer_dn, authKeyID);
 
 	if (oldcrl != NULL)
 	{
-		if (crl->thisUpdate > oldcrl->thisUpdate)
+		certificate_t *old_cert_crl = oldcrl->crl;
+
+		if (cert_crl->is_newer(cert_crl, old_cert_crl))
 		{
 			/* keep any known CRL distribution points */
-			add_distribution_points(crl->distributionPoints,
+			add_distribution_points(x509crl->distributionPoints,
 					 				oldcrl->distributionPoints);
 
 			/* now delete the old CRL */
@@ -265,39 +186,39 @@ bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl)
 			DBG(DBG_CONTROL,
 				DBG_log("thisUpdate is not newer - existing crl not replaced");
 			)
-			free_crl(crl);
-			return oldcrl->nextUpdate - time(NULL) > 2*crl_check_interval;
+			free_crl(x509crl);
+			old_cert_crl->get_validity(old_cert_crl, &now, NULL, &nextUpdate);
+			return nextUpdate - now > 2*crl_check_interval;
 		}
 	}
 
 	/* insert new CRL */
-	crl->next = x509crls;
-	x509crls = crl;
+	x509crl->next = x509crls;
+	x509crls = x509crl;
 
 	unlock_crl_list("insert_crl");
 
 	/* If crl caching is enabled then the crl is saved locally.
 	 * Only http or ldap URIs are cached but not local file URIs.
-	 * The issuer's subjectKeyID is used as a unique filename
+	 * The CRL's authorityKeyIdentifier is used as a unique filename
 	 */
 	if (cache_crl && strncasecmp(crl_uri, "file", 4) != 0)
 	{
-		char path[BUF_LEN], buf[BUF_LEN];
-		certificate_t *certificate = issuer_cert->cert;
-		x509_t *x509 = (x509_t*)certificate;
-		chunk_t subjectKeyID;
+		char buf[BUF_LEN];
+		chunk_t hex, encoding;
 
-		subjectKeyID = x509->get_subjectKeyIdentifier(x509);
-		if (subjectKeyID.ptr)
-		{
-			datatot(subjectKeyID.ptr, subjectKeyID.len, 16, buf, BUF_LEN);
-			snprintf(path, BUF_LEN, "%s/%s.crl", CRL_PATH, buf);
-			chunk_write(crl->certificateList, path, "crl",  0022, TRUE);
-		}
+		hex = chunk_to_hex(crl->get_authKeyIdentifier(crl), NULL, FALSE);
+		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex);
+		free(hex.ptr);
+
+		encoding = cert_crl->get_encoding(cert_crl);
+		chunk_write(encoding, buf, "crl", 022, TRUE);
+		free(encoding.ptr);
 	}
 
 	/* is the fetched crl valid? */
-	return crl->nextUpdate - time(NULL) > 2*crl_check_interval;
+	cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
+	return nextUpdate - now > 2*crl_check_interval;
 }
 
 /**
@@ -328,17 +249,18 @@ void load_crls(void)
 			while (n--)
 			{
 				char *filename = filelist[n]->d_name;
-				x509crl_t *crl;
+				x509crl_t *x509crl;
 
-				crl = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-						CERT_PLUTO_CRL, BUILD_FROM_FILE, filename, BUILD_END);
-				if (crl)
+				x509crl = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										 CERT_PLUTO_CRL,
+										 BUILD_FROM_FILE, filename, BUILD_END);
+				if (x509crl)
 				{
 					char crl_uri[BUF_LEN];
 
 					plog("  loaded crl from '%s'", filename);
 					snprintf(crl_uri, BUF_LEN, "file://%s/%s", CRL_PATH, filename);
-					insert_crl(crl, crl_uri, FALSE);
+					insert_crl(x509crl, crl_uri, FALSE);
 				}
 				free(filelist[n]);
 			}
@@ -349,175 +271,38 @@ void load_crls(void)
 	ignore_result(chdir(save_dir));
 }
 
-/**
- * Parses a CRL revocation reason code
- */
-static crl_reason_t parse_crl_reasonCode(chunk_t object)
-{
-	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
-
-	if (*object.ptr == ASN1_ENUMERATED
-	&&  asn1_length(&object) == 1)
-	{
-		reason = *object.ptr;
-	}
-
-	DBG(DBG_PARSING,
-		DBG_log("  '%N'", crl_reason_names, reason)
-	)
-	return reason;
-}
-
-/*
- *  Parses an X.509 CRL
- */
-bool parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
-{
-	u_char buf[BUF_LEN];
-	asn1_parser_t *parser;
-	chunk_t extnID;
-	chunk_t userCertificate = chunk_empty;
-	chunk_t object;
-	int objectID;
-	bool success = FALSE;
-	bool critical;
-
-	parser = asn1_parser_create(crlObjects, blob);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		u_int level = parser->get_level(parser)+1;
-
-		switch (objectID) {
-		case CRL_OBJ_CERTIFICATE_LIST:
-			crl->certificateList = object;
-			break;
-		case CRL_OBJ_TBS_CERT_LIST:
-			crl->tbsCertList = object;
-			break;
-		case CRL_OBJ_VERSION:
-			crl->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-			DBG(DBG_PARSING,
-				DBG_log("  v%d", crl->version);
-			)
-			break;
-		case CRL_OBJ_SIG_ALG:
-			crl->sigAlg = asn1_parse_algorithmIdentifier(object, level, NULL);
-			break;
-		case CRL_OBJ_ISSUER:
-			crl->issuer = object;
-			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'",buf)
-			)
-			break;
-		case CRL_OBJ_THIS_UPDATE:
-			crl->thisUpdate = asn1_parse_time(object, level);
-			break;
-		case CRL_OBJ_NEXT_UPDATE:
-			crl->nextUpdate = asn1_parse_time(object, level);
-			break;
-		case CRL_OBJ_USER_CERTIFICATE:
-			userCertificate = object;
-			break;
-		case CRL_OBJ_REVOCATION_DATE:
-			{
-				/* put all the serial numbers and the revocation date in a chained list
-				   with revocedCertificates pointing to the first revoked certificate */
-
-				revokedCert_t *revokedCert = malloc_thing(revokedCert_t);
-				revokedCert->userCertificate = userCertificate;
-				revokedCert->revocationDate = asn1_parse_time(object, level);
-				revokedCert->revocationReason = CRL_REASON_UNSPECIFIED;
-				revokedCert->next = crl->revokedCertificates;
-				crl->revokedCertificates = revokedCert;
-			}
-			break;
-		case CRL_OBJ_CRL_ENTRY_EXTN_ID:
-		case CRL_OBJ_EXTN_ID:
-			extnID = object;
-			break;
-		case CRL_OBJ_CRL_ENTRY_CRITICAL:
-		case CRL_OBJ_CRITICAL:
-			critical = object.len && *object.ptr;
-			DBG(DBG_PARSING,
-				DBG_log("  %s",(critical)?"TRUE":"FALSE");
-			)
-			break;
-		case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
-		case CRL_OBJ_EXTN_VALUE:
-			{
-				u_int extn_oid = asn1_known_oid(extnID);
-
-				if (extn_oid == OID_CRL_REASON_CODE)
-				{
-					crl->revokedCertificates->revocationReason =
-						parse_crl_reasonCode(object);
-				}
-				else if (extn_oid == OID_AUTHORITY_KEY_ID)
-				{
-					parse_authorityKeyIdentifier(object, level
-						, &crl->authKeyID, &crl->authKeySerialNumber);
-				}
-				else if (extn_oid == OID_CRL_NUMBER)
-				{
-					if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
-												  level, "crlNumber"))
-					{
-						goto end;
-					}
-					crl->crlNumber = object;
-				}
-			}
-			break;
-		case CRL_OBJ_ALGORITHM:
-			crl->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
-			break;
-		case CRL_OBJ_SIGNATURE:
-			crl->signature = object;
-			break;
-		default:
-			break;
-		}
-	}
-	success = parser->success(parser);
-	time(&crl->installed);
-
-end:
-	parser->destroy(parser);
-	return success;
-}
 
 /*  Checks if the current certificate is revoked. It goes through the
  *  list of revoked certificates of the corresponding crl. Either the
  *  status CERT_GOOD or CERT_REVOKED is returned
  */
-static cert_status_t
-check_revocation(const x509crl_t *crl, chunk_t serial
-, time_t *revocationDate, crl_reason_t * revocationReason)
+static cert_status_t check_revocation(crl_t *crl, chunk_t cert_serial,
+									  time_t *revocationDate,
+									  crl_reason_t *revocationReason)
 {
-	revokedCert_t *revokedCert = crl->revokedCertificates;
-
-	*revocationDate = UNDEFINED_TIME;
-	*revocationReason = CRL_REASON_UNSPECIFIED;
+	enumerator_t *enumerator;
+	cert_status_t status;
+	chunk_t serial;
 
 	DBG(DBG_CONTROL,
-		DBG_dump_chunk("serial number:", serial)
+		DBG_log("serial number: %#B", &cert_serial)
 	)
+	*revocationDate = UNDEFINED_TIME;
+	*revocationReason = CRL_REASON_UNSPECIFIED;
+	status = CERT_GOOD;
 
-	while(revokedCert != NULL)
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &serial,
+								 revocationDate, revocationReason))
 	{
-		/* compare serial numbers */
-		if (revokedCert->userCertificate.len == serial.len &&
-			memeq(revokedCert->userCertificate.ptr, serial.ptr, serial.len))
+		if (chunk_equals(serial, cert_serial))
 		{
-			*revocationDate = revokedCert->revocationDate;
-			*revocationReason = revokedCert->revocationReason;
-			return CERT_REVOKED;
+			status = CERT_REVOKED;
+			break;
 		}
-		revokedCert = revokedCert->next;
 	}
-	return CERT_GOOD;
+	enumerator->destroy(enumerator);
+	return status;
 }
 
 /*
@@ -525,35 +310,39 @@ check_revocation(const x509crl_t *crl, chunk_t serial
  */
 void check_crls(void)
 {
-	x509crl_t *crl;
+	x509crl_t *x509crl;
+	time_t now, nextUpdate, time_left;
 
 	lock_crl_list("check_crls");
-	crl = x509crls;
+	time(&now);
+	x509crl = x509crls;
 
-	while (crl != NULL)
+	while (x509crl != NULL)
 	{
-		time_t time_left = crl->nextUpdate - time(NULL);
-		u_char buf[BUF_LEN];
+		certificate_t *cert_crl = x509crl->crl;
+		crl_t *crl = (crl_t*)cert_crl;
+		identification_t *issuer = cert_crl->get_issuer(cert_crl);
+		chunk_t issuer_dn = issuer->get_encoding(issuer);
+		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);		
+
+		cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
+		time_left = nextUpdate - now;
 
 		DBG(DBG_CONTROL,
-			dntoa(buf, BUF_LEN, crl->issuer);
-			DBG_log("issuer: '%s'",buf);
-			if (crl->authKeyID.ptr != NULL)
+			DBG_log("issuer: '%Y'", issuer);
+			if (authKeyID.ptr)
 			{
-				datatot(crl->authKeyID.ptr, crl->authKeyID.len, ':'
-					, buf, BUF_LEN);
-				DBG_log("authkey: %s", buf);
+				DBG_log("authkey: %#B", authKeyID);
 			}
 			DBG_log("%ld seconds left", time_left)
 		)
 		if (time_left < 2*crl_check_interval)
 		{
-			fetch_req_t *req = build_crl_fetch_request(crl->issuer,
-													   crl->authKeyID,
-													   crl->distributionPoints);
+			fetch_req_t *req = build_crl_fetch_request(issuer_dn, authKeyID,
+											x509crl->distributionPoints);
 			add_crl_fetch_request(req);
 		}
-		crl = crl->next;
+		x509crl = x509crl->next;
 	}
 	unlock_crl_list("check_crls");
 }
@@ -570,7 +359,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 	identification_t *issuer = certificate->get_issuer(certificate);
 	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
-	x509crl_t *crl;
+	x509crl_t *x509crl;
 	ca_info_t *ca;
 	enumerator_t *enumerator;
 	char *point;
@@ -581,9 +370,9 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 	*revocationReason = CRL_REASON_UNSPECIFIED;
 
 	lock_crl_list("verify_by_crl");
-	crl = get_x509crl(issuer_dn, authKeyID);
+	x509crl = get_x509crl(issuer_dn, authKeyID);
 
-	if (crl == NULL)
+	if (x509crl == NULL)
 	{
 		linked_list_t *crluris;
 
@@ -621,6 +410,9 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 	}
 	else
 	{
+		certificate_t *cert_crl = x509crl->crl;
+		crl_t *crl = (crl_t*)cert_crl;
+		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 		x509cert_t *issuer_cert;
 		bool valid;
 
@@ -630,47 +422,49 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 
 		if (ca)
 		{
-			add_distribution_points(crl->distributionPoints, ca->crluris);
+			add_distribution_points(x509crl->distributionPoints, ca->crluris);
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
 		while (enumerator->enumerate(enumerator, &point))
 		{
-			add_distribution_point(crl->distributionPoints, point);
+			add_distribution_point(x509crl->distributionPoints, point);
 		}
 		enumerator->destroy(enumerator);
 
 		lock_authcert_list("verify_by_crl");
 
-		issuer_cert = get_authcert(crl->issuer, crl->authKeyID, AUTH_CA);
-		valid = x509_check_signature(crl->tbsCertList, crl->signature,
-									 crl->algorithm, issuer_cert->cert);
+		issuer_cert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
+		valid = cert_crl->issued_by(cert_crl, issuer_cert->cert);
 
 		unlock_authcert_list("verify_by_crl");
 
 		if (valid)
 		{
+			time_t now, nextUpdate;
 			cert_status_t status;
 
 			DBG(DBG_CONTROL,
 				DBG_log("crl signature is valid")
 			)
 		   /* return the expiration date */
-			*until = crl->nextUpdate;
+			time(&now);
+			cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
+			*until = nextUpdate;
 
 			/* has the certificate been revoked? */
 			status = check_revocation(crl, x509->get_serial(x509), revocationDate
 								, revocationReason);
 
-			if (*until < time(NULL))
+			if (*until < now)
 			{
 				fetch_req_t *req;
 
 				plog("crl update is overdue since %T", until, TRUE);
 
 				/* try to fetch a crl update */
-				req = build_crl_fetch_request(crl->issuer, crl->authKeyID,
-											  crl->distributionPoints);
+				req = build_crl_fetch_request(issuer_dn, authKeyID,
+											  x509crl->distributionPoints);
 				unlock_crl_list("verify_by_crl");
 
 				add_crl_fetch_request(req);
@@ -699,62 +493,59 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
  */
 void list_crls(bool utc, bool strict)
 {
-	x509crl_t *crl;
+	x509crl_t *x509crl;
 
 	lock_crl_list("list_crls");
-	crl = x509crls;
+	x509crl = x509crls;
 
-	if (crl != NULL)
+	if (x509crl)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of X.509 CRLs:");
 		whack_log(RC_COMMENT, " ");
 	}
 
-	while (crl != NULL)
+	while (x509crl)
 	{
-		u_char buf[BUF_LEN];
+		certificate_t *cert_crl = x509crl->crl;
+		crl_t *crl = (crl_t*)cert_crl;
+		chunk_t serial, authKeyID;
+		time_t thisUpdate, nextUpdate;
 		u_int revoked = 0;
-		revokedCert_t *revokedCert = crl->revokedCertificates;
+		enumerator_t *enumerator;
 
 		/* count number of revoked certificates in CRL */
-		while (revokedCert != NULL)
+		enumerator = crl->create_enumerator(crl);
+		while (enumerator->enumerate(enumerator, NULL, NULL, NULL))
 		{
 			revoked++;
-			revokedCert = revokedCert->next;
 		}
+		enumerator->destroy(enumerator);
 
 		whack_log(RC_COMMENT, "%T, revoked certs: %d",
-				&crl->installed, utc, revoked);
-		dntoa(buf, BUF_LEN, crl->issuer);
-		whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
-		if (crl->crlNumber.ptr != NULL)
+				&x509crl->installed, utc, revoked);
+		whack_log(RC_COMMENT, "       issuer:   '%Y'",
+				cert_crl->get_issuer(cert_crl));
+		serial = crl->get_serial(crl);
+		if (serial.ptr)
 		{
-			datatot(crl->crlNumber.ptr, crl->crlNumber.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       crlnumber: %s", buf);
+			whack_log(RC_COMMENT, "       crlnumber: %#B", &serial);
 		}
-		list_distribution_points(crl->distributionPoints);
+		list_distribution_points(x509crl->distributionPoints);
 
+		cert_crl->get_validity(cert_crl, NULL, &thisUpdate, &nextUpdate);
 		whack_log(RC_COMMENT, "       updates:   this %T",
-				&crl->thisUpdate, utc);
+				&thisUpdate, utc);
 		whack_log(RC_COMMENT, "                  next %T %s",
-				&crl->nextUpdate, utc,
-				check_expiry(crl->nextUpdate, CRL_WARNING_INTERVAL, strict));
-		if (crl->authKeyID.ptr != NULL)
+				&nextUpdate, utc,
+				check_expiry(nextUpdate, CRL_WARNING_INTERVAL, strict));
+		authKeyID = crl->get_authKeyIdentifier(crl);
+		if (authKeyID.ptr)
 		{
-			datatot(crl->authKeyID.ptr, crl->authKeyID.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       authkey:   %s", buf);
-		}
-		if (crl->authKeySerialNumber.ptr != NULL)
-		{
-			datatot(crl->authKeySerialNumber.ptr, crl->authKeySerialNumber.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       aserial:   %s", buf);
+			whack_log(RC_COMMENT, "       authkey:   %#B", &authKeyID);
 		}
 
-		crl = crl->next;
+		x509crl = x509crl->next;
 	}
 	unlock_crl_list("list_crls");
 }

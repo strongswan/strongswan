@@ -168,7 +168,11 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 		*crl = empty_x509crl;
 		crl->distributionPoints = linked_list_create();
 
-		if (parse_x509crl(chunk_clone(blob), 0, crl))
+		crl->crl = lib->creds->create(lib->creds,
+							  		  CRED_CERTIFICATE, CERT_X509_CRL,
+							  		  BUILD_BLOB_ASN1_DER, blob,
+							  		  BUILD_END);
+		if (crl->crl)
 		{
 			return crl;
 		}
