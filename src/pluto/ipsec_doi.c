@@ -1928,6 +1928,23 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	bool send_natoa = FALSE;
 	u_int8_t np = ISAKMP_NEXT_NONE;
 
+	if (c->spd.this.modecfg && !c->spd.this.has_client &&
+		isanyaddr(&c->spd.this.host_srcip))
+	{
+		connection_t *ph1_c = isakmp_sa->st_connection;
+
+		if (ph1_c->spd.this.modecfg && !isanyaddr(&ph1_c->spd.this.host_srcip))
+		{
+			char srcip[ADDRTOT_BUF];
+
+			c->spd.this.host_srcip = ph1_c->spd.this.host_srcip;
+			c->spd.this.client = ph1_c->spd.this.client;
+			c->spd.this.has_client = TRUE;
+			addrtot(&c->spd.this.host_srcip, 0, srcip, sizeof(srcip));
+			plog("inheriting virtual IP source address %s from ModeCfg", srcip);
+		}
+	}
+
 	st->st_whack_sock = whack_sock;
 	st->st_connection = c;
 	set_cur_state(st);  /* we must reset before exit */
