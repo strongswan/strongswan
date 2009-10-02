@@ -44,10 +44,22 @@
     0x13                     "basicConstraints"			OID_BASIC_CONSTRAINTS
     0x14                     "crlNumber"				OID_CRL_NUMBER
     0x15                     "reasonCode"				OID_CRL_REASON_CODE
+    0x17                     "holdInstructionCode"
+    0x18                     "invalidityDate"
+    0x1B                     "deltaCrlIndicator"		OID_DELTA_CRL_INDICATOR
+    0x1C                     "issuingDistributionPoint"
+    0x1D                     "certificateIssuer"
+    0x1E                     "nameConstraints"			OID_NAME_CONSTRAINTS
     0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
     0x20                     "certificatePolicies"
+      0x00                   "anyPolicy"				OID_ANY_POLICY
+    0x21                     "policyMappings"
     0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
+    0x24                     "policyConstraints"
     0x25                     "extendedKeyUsage"			OID_EXTENDED_KEY_USAGE
+      0x00                   "anyExtendedKeyUsage"
+    0x2E                     "freshestCRL"				OID_FRESHEST_CRL
+    0x36                     "inhibitAnyPolicy"			OID_INHIBIT_ANY_POLICY
     0x37                     "targetInformation"		OID_TARGET_INFORMATION
     0x38                     "noRevAvail"				OID_NO_REV_AVAIL
 0x2A                         ""
@@ -173,6 +185,9 @@
           0x07               "id-pkix"
             0x01             "id-pe"
               0x01           "authorityInfoAccess"		OID_AUTHORITY_INFO_ACCESS
+            0x02             "id-qt"
+              0x01           "cps"
+              0x02           "unotice"
             0x03             "id-kp"
               0x01           "serverAuth"
               0x02           "clientAuth"
@@ -190,6 +205,7 @@
               0x02           "accessIdentity"			OID_ACCESS_IDENTITY
               0x03           "chargingIdentity"			OID_CHARGING_IDENTITY
               0x04           "group"					OID_GROUP
+            0x0B             "subjectInfoAccess"
             0x30             "id-ad"
               0x01           "ocsp"						OID_OCSP
                 0x01         "basic"					OID_BASIC
@@ -200,6 +216,8 @@
                 0x06         "archiveCutoff"			OID_ARCHIVE_CUTOFF
                 0x07         "serviceLocator"			OID_SERVICE_LOCATOR
               0x02           "caIssuers"				OID_CA_ISSUERS
+              0x03           "timeStamping"
+              0x05           "caRepository"
   0x0E                       "oiw"
     0x03                     "secsig"
       0x02                   "algorithms"
