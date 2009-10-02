@@ -668,6 +668,7 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_NOT_AFTER						 9
 #define X509_OBJ_SUBJECT						10
 #define X509_OBJ_SUBJECT_PUBLIC_KEY_INFO		11
+#define X509_OBJ_OPTIONAL_EXTENSIONS			16
 #define X509_OBJ_EXTN_ID						19
 #define X509_OBJ_CRITICAL						20
 #define X509_OBJ_EXTN_VALUE						21
@@ -705,7 +706,15 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_VERSION:
 				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2("  v%d", this->version);
+				if (this->version < 1 || this->version > 3)
+				{
+					DBG1("X.509v%d not supported", this->version);
+					goto end; 
+				}
+				else
+				{
+					DBG2("  X.509v%d", this->version);
+				}
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
 				this->serialNumber = object;
@@ -732,6 +741,13 @@ static bool parse_certificate(private_x509_cert_t *this)
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				if (this->public_key == NULL)
 				{
+					goto end;
+				}
+				break;
+			case X509_OBJ_OPTIONAL_EXTENSIONS:
+				if (this->version != 3)
+				{
+					DBG1("Only X.509v3 certificates have extensions");
 					goto end;
 				}
 				break;
@@ -1169,7 +1185,7 @@ static private_x509_cert_t* create_empty(void)
 	this->encoding = chunk_empty;
 	this->encoding_hash = chunk_empty;
 	this->tbsCertificate = chunk_empty;
-	this->version = 3;
+	this->version = 1;
 	this->serialNumber = chunk_empty;
 	this->notBefore = 0;
 	this->notAfter = 0;
