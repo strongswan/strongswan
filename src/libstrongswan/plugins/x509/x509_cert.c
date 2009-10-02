@@ -737,8 +737,10 @@ static bool parse_certificate(private_x509_cert_t *this)
 				DBG2("  '%Y'", this->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
+				DBG2("-- > --");
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
+				DBG2("-- < --");
 				if (this->public_key == NULL)
 				{
 					goto end;

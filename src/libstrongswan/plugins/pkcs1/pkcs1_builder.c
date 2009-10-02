@@ -81,8 +81,10 @@ static public_key_t *parse_public_key(chunk_t blob)
 					/* skip initial bit string octet defining 0 unused bits */
 					object = chunk_skip(object, 1);
 				}
+				DBG2("-- > --");
 				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
 										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
+				DBG2("-- < --");
 				break;
 		}
 	}
