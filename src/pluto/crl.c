@@ -332,7 +332,7 @@ void check_crls(void)
 			DBG_log("issuer: '%Y'", issuer);
 			if (authKeyID.ptr)
 			{
-				DBG_log("authkey: %#B", authKeyID);
+				DBG_log("authkey: %#B", &authKeyID);
 			}
 			DBG_log("%ld seconds left", time_left)
 		)
