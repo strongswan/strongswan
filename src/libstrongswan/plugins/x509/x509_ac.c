@@ -804,7 +804,19 @@ static bool get_validity(private_x509_ac_t *this, time_t *when,
 	{
 		*not_after = this->notAfter;
 	}
-	return (t >= this->notBefore && t <= this->notAfter);
+	if (t < this->notBefore)
+	{
+		DBG1("attribute certificate is not valid before %T",
+			 this->notBefore, TRUE);
+		return FALSE;
+	}
+	if (t > this->notAfter)
+	{
+		DBG1("attribute certificate expired on %T",
+			 this->notAfter, TRUE);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
