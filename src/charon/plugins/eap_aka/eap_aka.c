@@ -173,6 +173,8 @@ ENUM_END(aka_attribute_names, AT_RESULT_IND);
 
 
 typedef struct private_eap_aka_t private_eap_aka_t;
+typedef struct eap_aka_header_t eap_aka_header_t;
+typedef struct aka_attribute_header_t aka_attribute_header_t;
 
 /**
  * Private data of an eap_aka_t object.
@@ -249,6 +251,34 @@ struct private_eap_aka_t {
 	 */
 	 chunk_t rand;
 };
+
+/**
+ * packed EAP AKA header struct
+ */
+struct eap_aka_header_t {
+	/** EAP code (REQUEST/RESPONSE) */
+	u_int8_t code;
+	/** unique message identifier */
+	u_int8_t identifier;
+	/** length of whole message */
+	u_int16_t length;
+	/** EAP type => EAP_AKA */
+	u_int8_t type;
+	/** AKA subtype */
+	u_int8_t subtype;
+	/** reserved bytes */
+	u_int16_t reserved;
+} __attribute__((__packed__));
+
+/**
+ * packed EAP AKA attribute header struct
+ */
+struct aka_attribute_header_t {
+	/** attribute type */
+	u_int8_t type;
+	/** attibute length */
+	u_int8_t length;
+} __attribute__((__packed__));
 
 /** Family key, as proposed in S.S0055 */
 static chunk_t fmk = chunk_from_chars(0x41, 0x48, 0x41, 0x47);
@@ -685,34 +715,32 @@ static aka_subtype_t read_header(chunk_t *message)
 }
 
 /**
- * read the next attribute from the chunk data
+ * read the next attribute from the message data
  */
-static aka_attribute_t read_attribute(chunk_t *data, chunk_t *attr_data)
+static aka_attribute_t read_attribute(chunk_t *message, chunk_t *data)
 {
 	aka_attribute_t attribute;
 	size_t length;
 
-	DBG3(DBG_IKE, "reading attribute from %B", data);
+	DBG3(DBG_IKE, "reading attribute from %B", message);
 
-	if (data->len < 2)
+	if (message->len < 2)
 	{
 		return AT_END;
 	}
-	/* read attribute and length */
-	attribute = *data->ptr++;
-	length = *data->ptr++ * 4 - 2;
-	data->len -= 2;
+	attribute = message->ptr[0];
+	length = message->ptr[1] * 4 - 2;
+	*message = chunk_skip(*message, 2);
 	DBG3(DBG_IKE, "found attribute %N with length %d",
 		 aka_attribute_names, attribute, length);
-	if (length > data->len)
+
+	if (length > message->len)
 	{
 		return AT_END;
 	}
-	/* apply attribute value to attr_data */
-	attr_data->len = length;
-	attr_data->ptr = data->ptr;
-	/* update data to point to next attribute */
-	*data = chunk_skip(*data, length);
+	data->len = length;
+	data->ptr = message->ptr;
+	*message = chunk_skip(*message, length);
 	return attribute;
 }
 
@@ -722,48 +750,49 @@ static aka_attribute_t read_attribute(chunk_t *data, chunk_t *attr_data)
  * followed by its data in a chunk.
  */
 static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code,
-										u_int8_t identifier, aka_subtype_t type, ...)
+									u_int8_t identifier, aka_subtype_t type, ...)
 {
-	chunk_t message = chunk_alloca(512); /* is enought for all current messages */
-	chunk_t pos = message;
+	chunk_t pos, data, message;
 	eap_payload_t *payload;
 	va_list args;
-	aka_attribute_t attr;
 	u_int8_t *mac_pos = NULL;
+	u_int16_t len;
+	eap_aka_header_t *hdr;
+	aka_attribute_t attr;
+	aka_attribute_header_t *ahdr;
 
-	/* write EAP header, skip length bytes */
-	*pos.ptr++ = code;
-	*pos.ptr++ = identifier;
-	pos.ptr += 2;
-	pos.len -= 4;
-	/* write AKA header with type and subtype, null reserved bytes */
-	*pos.ptr++ = EAP_AKA;
-	*pos.ptr++ = type;
-	*pos.ptr++ = 0;
-	*pos.ptr++ = 0;
-	pos.len -= 4;
+	pos = message = chunk_alloca(512);
+
+	hdr = (eap_aka_header_t*)message.ptr;
+	hdr->code = code;
+	hdr->identifier = identifier;
+	hdr->length = 0;
+	hdr->type = EAP_AKA;
+	hdr->subtype = type;
+	hdr->reserved = 0;
+
+	pos = chunk_skip(pos, sizeof(eap_aka_header_t));
 
 	va_start(args, type);
 	while ((attr = va_arg(args, aka_attribute_t)) != AT_END)
 	{
-		chunk_t data = va_arg(args, chunk_t);
+		data = va_arg(args, chunk_t);
 
 		DBG3(DBG_IKE, "building %N %B", aka_attribute_names, attr, &data);
 
-		/* write attribute header */
-		*pos.ptr++ = attr;
-		pos.len--;
+		ahdr = (aka_attribute_header_t*)pos.ptr;
+		ahdr->type = attr;
+		pos = chunk_skip(pos, sizeof(aka_attribute_header_t));
 
 		switch (attr)
 		{
 			case AT_RES:
 			{
-				/* attribute length in 4byte words */
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				/* RES length in bits */
-				*(u_int16_t*)pos.ptr = htons(data.len * 8);
-				pos = chunk_skip(pos, sizeof(u_int16_t));
+				len = htons(data.len * 8);
+				memcpy(pos.ptr, &len, sizeof(len));
+				pos = chunk_skip(pos, sizeof(len));
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
 				break;
@@ -771,29 +800,27 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 			case AT_AUTN:
 			case AT_RAND:
 			{
-				*pos.ptr++ = data.len/4 + 1; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
+				ahdr->length = data.len / 4 + 1;
+				memset(pos.ptr, 0, 2);
+				pos = chunk_skip(pos, 2);
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
 				break;
 			}
 			case AT_MAC:
 			{
-				*pos.ptr++ = 5; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
+				ahdr->length = 5;
+				memset(pos.ptr, 0, 2);
+				pos = chunk_skip(pos, 2);
 				mac_pos = pos.ptr;
-				/* MAC is calculated over message including zeroed AT_MAC attribute */
 				memset(mac_pos, 0, AT_MAC_LENGTH);
-				pos.ptr += AT_MAC_LENGTH;
-				pos.len -= AT_MAC_LENGTH;
+				pos = chunk_skip(pos, AT_MAC_LENGTH);
 				break;
 			}
 			case AT_IDENTITY:
 			{
-				u_int16_t act_len = data.len;
-				/* align up to four byte */
+				len = data.len;
+				/* align up to four bytes */
 				if (data.len % 4)
 				{
 					chunk_t tmp = chunk_alloca((data.len/4)*4 + 4);
@@ -801,22 +828,21 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 					memcpy(tmp.ptr, data.ptr, data.len);
 					data = tmp;
 				}
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				/* actual length in bytes */
-				*(u_int16_t*)pos.ptr = htons(act_len);
-				pos = chunk_skip(pos, sizeof(u_int16_t));
+				len = htons(len);
+				memcpy(pos.ptr, &len, sizeof(len));
+				pos = chunk_skip(pos, sizeof(len));
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
 				break;
 			}
 			default:
 			{
-				/* length is data length in 4-bytes + 1 for header */
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
+				break;
 			}
 		}
 	}
@@ -824,7 +850,8 @@ static eap_payload_t *build_aka_payload(private_eap_aka_t *this, eap_code_t code
 
 	/* calculate message length, write into header */
 	message.len = pos.ptr - message.ptr;
-	*(u_int16_t*)(message.ptr + 2) = htons(message.len);
+	len = htons(message.len);
+	memcpy(&hdr->length, &len, sizeof(len));
 
 	/* create MAC if AT_MAC attribte was included */
 	if (mac_pos)
@@ -985,6 +1012,7 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 										   eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t attr, auts = chunk_empty, pos, message, macs, xmacs, sqn, aks, amf;
+	aka_attribute_t attribute;
 	u_int i;
 
 	message = in->get_data(in);
@@ -994,7 +1022,7 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 	/* iterate over attributes */
 	while (TRUE)
 	{
-		aka_attribute_t attribute = read_attribute(&pos, &attr);
+		attribute = read_attribute(&pos, &attr);
 		switch (attribute)
 		{
 			case AT_END:
@@ -1056,6 +1084,8 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 static status_t server_process_challenge(private_eap_aka_t *this, eap_payload_t *in)
 {
 	chunk_t attr, res = chunk_empty, at_mac = chunk_empty, pos, message;
+	aka_attribute_t attribute;
+	u_int16_t len;
 
 	message = in->get_data(in);
 	pos = message;
@@ -1064,20 +1094,22 @@ static status_t server_process_challenge(private_eap_aka_t *this, eap_payload_t 
 	/* iterate over attributes */
 	while (TRUE)
 	{
-		aka_attribute_t attribute = read_attribute(&pos, &attr);
+		attribute = read_attribute(&pos, &attr);
 		switch (attribute)
 		{
 			case AT_END:
 				break;
 			case AT_RES:
 				res = attr;
-				if (attr.len == 2 + RES_LENGTH &&
-					*(u_int16_t*)attr.ptr == htons(RES_LENGTH * 8))
+				if (attr.len == 2 + RES_LENGTH)
 				{
-					res = chunk_skip(attr, 2);
+					memcpy(&len, attr.ptr, 2);
+					if (ntohs(len) == RES_LENGTH * 8)
+					{
+						res = chunk_skip(attr, 2);
+					}
 				}
 				continue;
-
 			case AT_MAC:
 				attr = chunk_skip(attr, 2);
 				at_mac = chunk_clonea(attr);
@@ -1167,6 +1199,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	chunk_t attr = chunk_empty;
 	chunk_t autn = chunk_empty, at_mac = chunk_empty;
 	chunk_t ak, sqn, sqn_ak, mac, xmac, res, amf, message, pos;
+	aka_attribute_t attribute;
 	u_int8_t identifier;
 
 	ak = chunk_alloca(AK_LENGTH);
@@ -1184,7 +1217,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	/* iterate over attributes */
 	while (TRUE)
 	{
-		aka_attribute_t attribute = read_attribute(&pos, &attr);
+		attribute = read_attribute(&pos, &attr);
 		switch (attribute)
 		{
 			case AT_END:
@@ -1386,6 +1419,7 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 										  eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t message, pos, attr;
+	aka_attribute_t attribute;
 	u_int8_t identifier;
 
 	message = in->get_data(in);
@@ -1395,10 +1429,9 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 
 	DBG3(DBG_IKE, "reading attributes from %B", &pos);
 
-	/* iterate over attributes */
 	while (TRUE)
 	{
-		aka_attribute_t attribute = read_attribute(&pos, &attr);
+		attribute = read_attribute(&pos, &attr);
 		switch (attribute)
 		{
 			case AT_END:
@@ -1412,7 +1445,8 @@ static status_t peer_process_notification(private_eap_aka_t *this,
 					DBG1(DBG_IKE, "received invalid AKA notification, ignored");
 					continue;
 				}
-				code = ntohs(*(u_int16_t*)attr.ptr);
+				memcpy(&code, attr.ptr, 2);
+				code = ntohs(code);
 				switch (code)
 				{
 					case 0:
