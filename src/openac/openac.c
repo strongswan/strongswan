@@ -93,6 +93,11 @@ static chunk_t read_serial(void)
 		hex.len = fread(hex.ptr, 1, hex.len, fd);
 		if (hex.len)
 		{
+			/* remove any terminating newline character */
+			if (hex.ptr[hex.len-1] == '\n')
+			{
+				hex.len--;
+			}
 			serial = chunk_alloca((hex.len / 2) + (hex.len % 2));
 			serial = chunk_from_hex(hex, serial.ptr);
 		}
