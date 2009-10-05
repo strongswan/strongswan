@@ -189,7 +189,7 @@
               0x01           "cps"
               0x02           "unotice"
             0x03             "id-kp"
-              0x01           "serverAuth"
+              0x01           "serverAuth"				OID_SERVER_AUTH
               0x02           "clientAuth"
               0x03           "codeSigning"
               0x04           "emailProtection"

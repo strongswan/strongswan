@@ -544,26 +544,34 @@ static const asn1Object_t extendedKeyUsageObjects[] = {
 /**
  * Extracts extendedKeyUsage OIDs - currently only OCSP_SIGING is returned
  */
-static bool parse_extendedKeyUsage(chunk_t blob, int level0)
+static void parse_extendedKeyUsage(chunk_t blob, int level0,
+								   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool ocsp_signing = FALSE;
 
 	parser = asn1_parser_create(extendedKeyUsageObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (objectID == EXT_KEY_USAGE_PURPOSE_ID &&
-			asn1_known_oid(object) == OID_OCSP_SIGNING)
+		if (objectID == EXT_KEY_USAGE_PURPOSE_ID)
 		{
-			ocsp_signing = TRUE;
+			switch (asn1_known_oid(object))
+			{
+				case OID_SERVER_AUTH:
+					this->flags |= X509_SERVER_AUTH;
+					break;
+				case OID_OCSP_SIGNING:
+					this->flags |= X509_OCSP_SIGNER;
+					break;
+				default:
+					break;
+			}
 		}
 	}
 	parser->destroy(parser);
-	return ocsp_signing;
 }
 
 /**
@@ -793,10 +801,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						parse_authorityInfoAccess(object, level, this);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
-						if (parse_extendedKeyUsage(object, level))
-						{
-							this->flags |= X509_OCSP_SIGNER;
-						}
+						parse_extendedKeyUsage(object, level, this);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -1268,6 +1273,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					 private_key_t *sign_key, int digest_alg)
 {
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
+	chunk_t serverAuth = chunk_empty, ocspSigning = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
@@ -1383,14 +1389,25 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 												chunk_from_chars(0xFF)))));
 	}
 
-	/* add ocspSigning extendedKeyUsage */
+	/* add serverAuth extendedKeyUsage flag */
+	if (cert->flags & X509_SERVER_AUTH)
+	{
+		serverAuth = asn1_build_known_oid(OID_SERVER_AUTH);
+	}
+
+	/* add ocspSigning extendedKeyUsage flag */
 	if (cert->flags & X509_OCSP_SIGNER)
 	{
-		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm ",
+		ocspSigning = asn1_build_known_oid(OID_OCSP_SIGNING);
+	}
+
+	if (serverAuth.ptr || ocspSigning.ptr)
+	{
+		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EXTENDED_KEY_USAGE),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
-									asn1_wrap(ASN1_SEQUENCE, "m",
-										asn1_build_known_oid(OID_OCSP_SIGNING))));
+									asn1_wrap(ASN1_SEQUENCE, "mm",
+										serverAuth, ocspSigning)));
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */

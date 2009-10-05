@@ -104,7 +104,11 @@ static int issue()
 				flags |= X509_CA;
 				continue;
 			case 'f':
-				if (streq(arg, "ocspSigning"))
+				if (streq(arg, "serverAuth"))
+				{
+					flags |= X509_SERVER_AUTH;
+				}
+				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
 				}

@@ -655,8 +655,11 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 		x509_t *x509 = (x509_t*)cert;
 		x509_flag_t x509_flags = x509->get_flags(x509);
 
-		/* list only if flag is set, or flags == 0 (ignoring self-signed) */
-		if ((x509_flags & flags) || (flags == (x509_flags & ~X509_SELF_SIGNED)))
+		/* list only if flag is set,
+		 * or flags == 0 (ignoring self-signed and serverAuth)
+		 */
+		if ((x509_flags & flags) ||
+			(flags == (x509_flags & ~(X509_SELF_SIGNED | X509_SERVER_AUTH))))
 		{
 			enumerator_t *enumerator;
 			identification_t *altName;
