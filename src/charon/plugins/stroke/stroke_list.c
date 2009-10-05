@@ -791,6 +791,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		if (groups)
 		{
 			fprintf(out, "  groups:    %s\n", groups->get_string(groups));
+			groups->destroy(groups);
 		}
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 		chunk  = ac->get_serial(ac);
