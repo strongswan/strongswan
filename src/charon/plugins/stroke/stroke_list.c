@@ -22,6 +22,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/certificates/crl.h>
+#include <credentials/ietf_attributes/ietf_attributes.h>
 #include <config/peer_cfg.h>
 
 /* warning intervals for list functions */
@@ -760,6 +761,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 	{
 		ac_t *ac = (ac_t*)cert;
 		identification_t *id;
+		ietf_attributes_t *groups;
 		chunk_t chunk;
 
 		if (first)
@@ -784,6 +786,11 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		if (chunk.ptr)
 		{
 			fprintf(out, "  hserial:   %#B\n", &chunk);
+		}
+		groups = ac->get_groups(ac);
+		if (groups)
+		{
+			fprintf(out, "  groups:    %s\n", groups->get_string(groups));
 		}
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 		chunk  = ac->get_serial(ac);
