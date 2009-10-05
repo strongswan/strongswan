@@ -116,6 +116,8 @@ ENUM_END(sim_attribute_names, AT_RESULT_IND);
 
 
 typedef struct private_eap_sim_t private_eap_sim_t;
+typedef struct eap_sim_header_t eap_sim_header_t;
+typedef struct sim_attribute_header_t sim_attribute_header_t;
 
 /**
  * Private data of an eap_sim_t object.
@@ -198,6 +200,35 @@ struct private_eap_sim_t {
 	chunk_t emsk;
 };
 
+
+/**
+ * packed eap SIM header struct
+ */
+struct eap_sim_header_t {
+	/** EAP code (REQUEST/RESPONSE) */
+	u_int8_t code;
+	/** unique message identifier */
+	u_int8_t identifier;
+	/** length of whole message */
+	u_int16_t length;
+	/** EAP type => EAP_SIM */
+	u_int8_t type;
+	/** SIM subtype */
+	u_int8_t subtype;
+	/** reserved bytes */
+	u_int16_t reserved;
+} __attribute__((__packed__));
+
+/**
+ * packed eap SIM attribute header struct
+ */
+struct sim_attribute_header_t {
+	/** attribute type */
+	u_int8_t type;
+	/** attibute length */
+	u_int8_t length;
+} __attribute__((__packed__));
+
 /** length of the AT_NONCE_MT nonce value */
 #define NONCE_LEN 16
 /** length of the AT_MAC value */
@@ -255,9 +286,9 @@ static sim_attribute_t read_attribute(chunk_t *message, chunk_t *data)
 	{
 		return AT_END;
 	}
-	attribute = *message->ptr++;
-	length = *message->ptr++ * 4 - 2;
-	message->len -= 2;
+	attribute = message->ptr[0];
+	length = message->ptr[1] * 4 - 2;
+	*message = chunk_skip(*message, 2);
 	DBG3(DBG_IKE, "found attribute %N with length %d",
 		 sim_attribute_names, attribute, length);
 
@@ -278,44 +309,44 @@ static sim_attribute_t read_attribute(chunk_t *message, chunk_t *data)
 static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier,
 									sim_subtype_t type, ...)
 {
-	chunk_t message = chunk_alloca(512);
-	chunk_t pos = message;
+	chunk_t pos, data, message, mac_data = chunk_empty;
 	eap_payload_t *payload;
 	va_list args;
-	sim_attribute_t attr;
 	u_int8_t *mac_pos = NULL;
-	chunk_t mac_data = chunk_empty;
+	u_int16_t len;
+	eap_sim_header_t *hdr;
+	sim_attribute_t attr;
+	sim_attribute_header_t *ahdr;
 
-	/* write EAP header, skip length bytes */
-	*pos.ptr++ = this->type;
-	*pos.ptr++ = identifier;
-	pos.ptr += 2;
-	pos.len -= 4;
-	/* write SIM header with type and subtype, zero reserved bytes */
-	*pos.ptr++ = EAP_SIM;
-	*pos.ptr++ = type;
-	*pos.ptr++ = 0;
-	*pos.ptr++ = 0;
-	pos.len -= 4;
+	pos = message = chunk_alloca(512);
+
+	hdr = (eap_sim_header_t*)message.ptr;
+	hdr->code = this->type;
+	hdr->identifier = identifier;
+	hdr->length = 0;
+	hdr->type = EAP_SIM;
+	hdr->subtype = type;
+	hdr->reserved = 0;
+
+	pos = chunk_skip(pos, sizeof(eap_sim_header_t));
 
 	va_start(args, type);
 	while ((attr = va_arg(args, sim_attribute_t)) != AT_END)
 	{
-		chunk_t data = va_arg(args, chunk_t);
+		data = va_arg(args, chunk_t);
 
 		DBG3(DBG_IKE, "building %N %B", sim_attribute_names, attr, &data);
 
-		/* write attribute header */
-		*pos.ptr++ = attr;
-		pos.len--;
+		ahdr = (sim_attribute_header_t*)pos.ptr;
+		ahdr->type = attr;
+		pos = chunk_skip(pos, sizeof(sim_attribute_header_t));
 
 		switch (attr)
 		{
 			case AT_CLIENT_ERROR_CODE:
 			case AT_SELECTED_VERSION:
 			{
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
 				break;
@@ -323,8 +354,8 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 			case AT_IDENTITY:
 			case AT_VERSION_LIST:
 			{
-				u_int16_t act_len = data.len;
-				/* align up to four byte */
+				len = data.len;
+				/* align up to four bytes */
 				if (data.len % 4)
 				{
 					chunk_t tmp = chunk_alloca((data.len/4)*4 + 4);
@@ -332,19 +363,19 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 					memcpy(tmp.ptr, data.ptr, data.len);
 					data = tmp;
 				}
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				/* actual length in bytes */
-				*(u_int16_t*)pos.ptr = htons(act_len);
-				pos = chunk_skip(pos, sizeof(u_int16_t));
+				len = htons(len);
+				memcpy(pos.ptr, &len, sizeof(len));
+				pos = chunk_skip(pos, sizeof(len));
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
 				break;
 			}
+			case AT_RAND:
 			case AT_NONCE_MT:
 			{
-				*pos.ptr = data.len/4 + 1;
-				pos = chunk_skip(pos, 1);
+				ahdr->length = data.len / 4 + 1;
 				memset(pos.ptr, 0, 2);
 				pos = chunk_skip(pos, 2);
 				memcpy(pos.ptr, data.ptr, data.len);
@@ -353,22 +384,13 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 			}
 			case AT_MAC:
 			{
-				*pos.ptr++ = 5; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
+				ahdr->length = 5;
+				memset(pos.ptr, 0, 2);
+				pos = chunk_skip(pos, 2);
 				mac_pos = pos.ptr;
 				memset(mac_pos, 0, MAC_LEN);
 				pos = chunk_skip(pos, MAC_LEN);
 				mac_data = data;
-				break;
-			}
-			case AT_RAND:
-			{
-				*pos.ptr++ = data.len/4 + 1; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
-				*pos.ptr++ = 0; pos.len--;
-				memcpy(pos.ptr, data.ptr, data.len);
-				pos = chunk_skip(pos, data.len);
 				break;
 			}
 			default:
@@ -381,7 +403,8 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 
 	/* calculate message length, write into header */
 	message.len = pos.ptr - message.ptr;
-	*(u_int16_t*)(message.ptr + 2) = htons(message.len);
+	len = htons(message.len);
+	memcpy(&hdr->length, &len, sizeof(len));
 
 	/* create MAC if AT_MAC attribte was included. Append supplied va_arg
 	 * chunk mac_data to "to-sign" chunk */
@@ -401,6 +424,35 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 }
 
 /**
+ * Process the AT_NOTIFICATION attribute
+ */
+static bool process_notification(private_eap_sim_t *this, chunk_t data,
+								 eap_payload_t *in, eap_payload_t **out)
+{
+	u_int16_t code = 0;
+
+	if (data.len == 2)
+	{
+		memcpy(&code, data.ptr, 2);
+		code = ntohs(code);
+	}
+	if (code > 32767)
+	{	/* success bit set */
+		DBG1(DBG_IKE, "received %N code %d",
+			 sim_attribute_names, AT_NOTIFICATION, code);
+		return FALSE;
+	}
+	DBG1(DBG_IKE, "received %N error %d",
+		 sim_attribute_names, AT_NOTIFICATION, code);
+
+	*out = build_payload(this,
+					in->get_identifier(in), SIM_CLIENT_ERROR,
+					AT_CLIENT_ERROR_CODE, client_error_general,
+					AT_END);
+	return TRUE;
+}
+
+/**
  * process an EAP-SIM/Request/Start message
  */
 static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
@@ -409,6 +461,7 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 	chunk_t message, data;
 	sim_attribute_t attribute, include_id = AT_END;
 	u_int8_t identifier;
+	u_int16_t len;
 
 	identifier = in->get_identifier(in);
 	message = in->get_data(in);
@@ -425,10 +478,12 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 				if (data.len > 2)
 				{
 					/* read actual length first */
-					data.len = min(data.len, ntohs(*(u_int16_t*)data.ptr) + 2);
+					memcpy(&len, data.ptr, 2);
+					data.len = min(data.len, ntohs(len) + 2);
 					data = chunk_skip(data, 2);
 					chunk_free(&this->version_list);
 					this->version_list = chunk_clone(data);
+
 					while (data.len >= version.len)
 					{
 						if (memeq(data.ptr, version.ptr, version.len))
@@ -458,25 +513,9 @@ static status_t peer_process_start(private_eap_sim_t *this, eap_payload_t *in,
 				break;
 			case AT_NOTIFICATION:
 			{
-				u_int16_t code = 0;
-				if (data.len == 2)
+				if (process_notification(this, data, in, out))
 				{
-					code = ntohs(*(u_int16_t*)data.ptr);
-				}
-				if (code <= 32767) /* no success bit */
-				{
-					DBG1(DBG_IKE, "received %N error %d",
-						 sim_attribute_names, attribute, code);
-					*out = build_payload(this,
-									in->get_identifier(in), SIM_CLIENT_ERROR,
-									AT_CLIENT_ERROR_CODE, client_error_general,
-									AT_END);
 					return NEED_MORE;
-				}
-				else
-				{
-					DBG1(DBG_IKE, "received %N code %d",
-						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -606,25 +645,9 @@ static status_t peer_process_challenge(private_eap_sim_t *this,
 			}
 			case AT_NOTIFICATION:
 			{
-				u_int16_t code = 0;
-				if (data.len == 2)
+				if (process_notification(this, data, in, out))
 				{
-					code = ntohs(*(u_int16_t*)data.ptr);
-				}
-				if (code <= 32767) /* no success bit */
-				{
-					DBG1(DBG_IKE, "received %N error %d",
-						 sim_attribute_names, attribute, code);
-					*out = build_payload(this,
-									in->get_identifier(in), SIM_CLIENT_ERROR,
-									AT_CLIENT_ERROR_CODE, client_error_general,
-									AT_END);
 					return NEED_MORE;
-				}
-				else
-				{
-					DBG1(DBG_IKE, "received %N code %d",
-						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -860,25 +883,9 @@ static status_t peer_process_notification(private_eap_sim_t *this,
 		{
 			case AT_NOTIFICATION:
 			{
-				u_int16_t code = 0;
-				if (data.len == 2)
+				if (process_notification(this, data, in, out))
 				{
-					code = ntohs(*(u_int16_t*)data.ptr);
-				}
-				if (code <= 32767) /* no success bit */
-				{
-					DBG1(DBG_IKE, "received %N error %d",
-						 sim_attribute_names, attribute, code);
-					*out = build_payload(this,
-									in->get_identifier(in), SIM_CLIENT_ERROR,
-									AT_CLIENT_ERROR_CODE, client_error_general,
-									AT_END);
 					return NEED_MORE;
-				}
-				else
-				{
-					DBG1(DBG_IKE, "received %N code %d",
-						 sim_attribute_names, attribute, code);
 				}
 				break;
 			}
@@ -910,9 +917,11 @@ static status_t server_process_client_error(private_eap_sim_t *this,
 		if (attribute == AT_CLIENT_ERROR_CODE)
 		{
 			u_int16_t code = 0;
+
 			if (data.len == 2)
 			{
-				code = ntohs(*(u_int16_t*)data.ptr);
+				memcpy(&code, data.ptr, 2);
+				code = ntohs(code);
 			}
 			DBG1(DBG_IKE, "received %N error %d",
 				 sim_attribute_names, attribute, code);
