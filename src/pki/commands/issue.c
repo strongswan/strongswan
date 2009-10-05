@@ -103,6 +103,12 @@ static int issue()
 			case 'b':
 				flags |= X509_CA;
 				continue;
+			case 'f':
+				if (streq(arg, "ocspSigning"))
+				{
+					flags |= X509_OCSP_SIGNER;
+				}
+				continue;
 			case 'u':
 				cdps->insert_last(cdps, arg);
 				continue;
@@ -327,6 +333,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type pub|pkcs10]",
 		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--crl uri]+ [--ocsp uri]+",
+		 "[--flag serverAuth|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
 		{
 			{"help",	'h', 0, "show usage information"},
@@ -339,6 +346,7 @@ static void __attribute__ ((constructor))reg()
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
+			{"flag",	'f', 1, "include extendedKeyUsage flag"},
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},

@@ -1267,7 +1267,7 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					 private_key_t *sign_key, int digest_alg)
 {
-	chunk_t extensions = chunk_empty;
+	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
@@ -1373,8 +1373,6 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* build CA basicConstraint for CA certificates */
 	if (cert->flags & X509_CA)
 	{
-		chunk_t keyid;
-
 		basicConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
 								asn1_build_known_oid(OID_BASIC_CONSTRAINTS),
 								asn1_wrap(ASN1_BOOLEAN, "c",
@@ -1383,7 +1381,23 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 										asn1_wrap(ASN1_SEQUENCE, "m",
 											asn1_wrap(ASN1_BOOLEAN, "c",
 												chunk_from_chars(0xFF)))));
-		/* add subjectKeyIdentifier to CA certificates */
+	}
+
+	/* add ocspSigning extendedKeyUsage */
+	if (cert->flags & X509_OCSP_SIGNER)
+	{
+		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm ",
+								asn1_build_known_oid(OID_EXTENDED_KEY_USAGE),
+								asn1_wrap(ASN1_OCTET_STRING, "m",
+									asn1_wrap(ASN1_SEQUENCE, "m",
+										asn1_build_known_oid(OID_OCSP_SIGNING))));
+	}
+
+	/* add subjectKeyIdentifier to CA and OCSP signer certificates */
+	if (cert->flags & (X509_CA | X509_OCSP_SIGNER))
+	{
+		chunk_t keyid;
+
 		if (cert->public_key->get_fingerprint(cert->public_key,
 											  KEY_ID_PUBKEY_SHA1, &keyid))
 		{
@@ -1393,8 +1407,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 										asn1_wrap(ASN1_OCTET_STRING, "c", keyid)));
 		}
 	}
+
+	/* add the keyid authKeyIdentifier for non self-signed certificates */
 	if (sign_key)
-	{	/* add the keyid authKeyIdentifier for non self-signed certificates */
+	{
 		chunk_t keyid;
 
 		if (sign_key->get_fingerprint(sign_key, KEY_ID_PUBKEY_SHA1, &keyid))
@@ -1410,10 +1426,11 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		crlDistributionPoints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmm",
 							basicConstraints, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
-							crlDistributionPoints, authorityInfoAccess));
+							extendedKeyUsage, crlDistributionPoints,
+							authorityInfoAccess));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
