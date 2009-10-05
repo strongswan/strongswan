@@ -5182,29 +5182,33 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	}
 
 	/* check the peer's group attributes */
-
 	{
-		const ietfAttrList_t *peer_list = NULL;
+		ietf_attributes_t *peer_attributes = NULL;
+		bool match;
 
-		get_peer_ca_and_groups(st->st_connection, &peer_list);
+		get_peer_ca_and_groups(st->st_connection, &peer_attributes);
+		match = match_group_membership(peer_attributes,
+									   st->st_connection->name,
+									   st->st_connection->spd.that.groups);
+		DESTROY_IF(peer_attributes);
 
-		if (!group_membership(peer_list, st->st_connection->name
-				, st->st_connection->spd.that.groups))
+		if (!match)
 		{
-			char buf[BUF_LEN];
+			ietf_attributes_t *groups = st->st_connection->spd.that.groups;
 
-			format_groups(st->st_connection->spd.that.groups, buf, BUF_LEN);
-			loglog(RC_LOG_SERIOUS, "peer is not member of one of the groups: %s"
-				, buf);
+			loglog(RC_LOG_SERIOUS,
+				   "peer with attributes '%s' is not a member of the groups '%s'",
+					peer_attributes->get_string(peer_attributes),
+					groups->get_string(groups));
 			return STF_FAIL + INVALID_ID_INFORMATION;
 		}
 	}
 
-		if ((st->nat_traversal & NAT_T_DETECTED)
-		&&  (st->nat_traversal & NAT_T_WITH_NATOA))
-		{
-			nat_traversal_natoa_lookup(md);
-		}
+	if ((st->nat_traversal & NAT_T_DETECTED)
+	&&  (st->nat_traversal & NAT_T_WITH_NATOA))
+	{
+		nat_traversal_natoa_lookup(md);
+	}
 
 	/* ??? We used to copy the accepted proposal into the state, but it was
 	 * never used.  From sa_pd->pbs.start, length pbs_room(&sa_pd->pbs).

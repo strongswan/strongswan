@@ -30,6 +30,7 @@
 #include <freeswan.h>
 #include "kameipsec.h"
 
+#include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
 
 #include "constants.h"
@@ -336,11 +337,11 @@ void delete_connection(connection_t *c, bool relations)
 	free_id_content(&c->spd.this.id);
 	free(c->spd.this.updown);
 	free(c->spd.this.ca.ptr);
-	free_ietfAttrList(c->spd.this.groups);
+	DESTROY_IF(c->spd.this.groups);
 	free_id_content(&c->spd.that.id);
 	free(c->spd.that.updown);
 	free(c->spd.that.ca.ptr);
-	free_ietfAttrList(c->spd.that.groups);
+	DESTROY_IF(c->spd.that.groups);
 	free_generalNames(c->requested_ca, TRUE);
 	gw_delref(&c->gw_info);
 
@@ -812,7 +813,7 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->ca = chunk_empty;
 
 	/* decode CA distinguished name, if any */
-	if (src->ca != NULL)
+	if (src->ca)
 	{
 		if streq(src->ca, "%same")
 			same_ca = TRUE;
@@ -837,7 +838,10 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->has_id_wildcards = id_count_wildcards(&dst->id) > 0;
 
 	/* decode group attributes, if any */
-	decode_groups(src->groups, &dst->groups);
+	if (src->groups)
+	{
+		dst->groups = ietf_attributes_create_from_string(src->groups);
+	}
 
 	/* the rest is simple copying of corresponding fields */
 	dst->host_addr = src->host_addr;
@@ -1261,8 +1265,14 @@ static connection_t *instantiate(connection_t *c,
 		d->spd.that.has_id_wildcards = FALSE;
 	}
 	unshare_connection_strings(d);
-	unshare_ietfAttrList(&d->spd.this.groups);
-	unshare_ietfAttrList(&d->spd.that.groups);
+	if (d->spd.this.groups)
+	{
+		d->spd.this.groups = d->spd.this.groups->get_ref(d->spd.this.groups);
+	}
+	if (d->spd.that.groups)
+	{
+		d->spd.that.groups = d->spd.that.groups->get_ref(d->spd.that.groups);
+	}
 	d->kind = CK_INSTANCE;
 
 	passert(oriented(*d));
@@ -1519,7 +1529,9 @@ connection_t *find_connection_for_clients(struct spd_route **srp,
 	for (c = connections; c != NULL; c = c->ac_next)
 	{
 		if (c->kind == CK_GROUP)
+		{
 			continue;
+		}
 
 		for (sr = &c->spd; best!=c && sr; sr = sr->next)
 		{
@@ -1727,7 +1739,9 @@ bool orient(connection_t *c)
 			for (p = interfaces; p != NULL; p = p->next)
 			{
 				if (p->ike_float)
+				{
 					continue;
+				}
 
 				for (;;)
 				{
@@ -3036,11 +3050,17 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 			for (src = &c->spd; src; src=src->next)
 			{
 				if (!samesubnet(&src->that.client, &srd->that.client))
+				{
 					continue;
+				}
 				if (src->that.protocol != srd->that.protocol)
+				{
 					continue;
+				}
 				if (src->that.port != srd->that.port)
+				{
 					continue;
+				}
 				passert(oriented(*d));
 				if (srd->routing > best_routing)
 				{
@@ -3050,11 +3070,17 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 				}
 
 				if (!samesubnet(&src->this.client, &srd->this.client))
+				{
 					continue;
+				}
 				if (src->this.protocol != srd->this.protocol)
+				{
 					continue;
+				}
 				if (src->this.port != srd->this.port)
+				{
 					continue;
+				}
 				if (srd->routing > best_erouting)
 				{
 					best_ero = d;
@@ -3332,11 +3358,15 @@ connection_t *refine_host_connection(const struct state *st,
 
 			/* do we have a match? */
 			if (!match)
+			{
 				continue;
+			}
 
 			/* ignore group connections */
 			if (d->policy & POLICY_GROUP)
+			{
 				continue;
+			}
 
 			if (c->spd.that.host_port != d->spd.that.host_port
 			&& d->kind == CK_INSTANCE)
@@ -3354,12 +3384,17 @@ connection_t *refine_host_connection(const struct state *st,
 					const chunk_t *dpsk = get_preshared_secret(d);
 
 					if (dpsk == NULL)
+					{
 						continue;       /* no secret */
-
+					}
 					if (psk != dpsk)
+					{
 						if (psk->len != dpsk->len
 						|| memcmp(psk->ptr, dpsk->ptr, psk->len) != 0)
+						{
 							continue;   /* different secret */
+						}
+					}
 				}
 				break;
 
@@ -3374,7 +3409,9 @@ connection_t *refine_host_connection(const struct state *st,
 				.*/
 				if (d->spd.this.sc == NULL              /* no smartcard */
 				&& get_private_key(d) == NULL)      /* no private key */
+				{
 					continue;
+				}
 				break;
 
 			default:
@@ -3488,7 +3525,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 							const u_int8_t peer_protocol,
 							const u_int16_t peer_port,
 							chunk_t peer_ca,
-							const ietfAttrList_t *peer_list)
+							ietf_attributes_t *peer_attributes)
 {
 	connection_t *d;
 	connection_t *best = NULL;
@@ -3502,20 +3539,26 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 		struct spd_route *sr;
 
 		if (d->policy & POLICY_GROUP)
+		{
 			continue;
+		}
 
 		if (!(same_id(&c->spd.this.id, &d->spd.this.id)
 		&& match_id(&c->spd.that.id, &d->spd.that.id, &wildcards)
 		&& trusted_ca(peer_ca, d->spd.that.ca, &pathlen)
-		&& group_membership(peer_list, d->name, d->spd.that.groups)))
+		&& match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
+		{
 			continue;
+		}
 
 		/* compare protocol and ports */
 		if (d->spd.this.protocol != our_protocol
 		||  d->spd.this.port != our_port
 		||  d->spd.that.protocol != peer_protocol
 		|| (d->spd.that.port != peer_port && !d->spd.that.has_port_wildcard))
+		{
 			continue;
+		}
 
 		/* non-Opportunistic case:
 		 * our_client must match.
@@ -3552,29 +3595,38 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 #endif /* DEBUG */
 
 			if (!samesubnet(&sr->this.client, our_net))
+			{
 				continue;
-
+			}
 			if (sr->that.has_client)
 			{
 				if (sr->that.has_client_wildcard)
 				{
 					if (!subnetinsubnet(peer_net, &sr->that.client))
+					{
 						continue;
+					}
 				}
 				else
 				{
 					if (!samesubnet(&sr->that.client, peer_net) && !is_virtual_connection(d))
+					{
 						continue;
+					}
 					if (is_virtual_connection(d)
 					&& (!is_virtual_net_allowed(d, peer_net, &c->spd.that.host_addr)
 						|| is_virtual_net_used(peer_net, peer_id?peer_id:&c->spd.that.id)))
-							continue;
+					{
+						continue;
+					}
 				}
 			}
 			else
 			{
 				if (!peer_net_is_host)
+				{
 					continue;
+				}
 			}
 
 			/* We've run the gauntlet -- success:
@@ -3616,7 +3668,7 @@ static connection_t *fc_try_oppo(const connection_t *c,
 								 const u_int8_t peer_protocol,
 								 const u_int16_t peer_port,
 								 chunk_t peer_ca,
-								 const ietfAttrList_t *peer_list)
+								 ietf_attributes_t *peer_attributes)
 {
 	connection_t *d;
 	connection_t *best = NULL;
@@ -3629,20 +3681,25 @@ static connection_t *fc_try_oppo(const connection_t *c,
 		policy_prio_t prio;
 
 		if (d->policy & POLICY_GROUP)
+		{
 			continue;
-
+		}
 		if (!(same_id(&c->spd.this.id, &d->spd.this.id)
 		&& match_id(&c->spd.that.id, &d->spd.that.id, &wildcards)
 		&& trusted_ca(peer_ca, d->spd.that.ca, &pathlen)
-		&& group_membership(peer_list, d->name, d->spd.that.groups)))
+		&& match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
+		{
 			continue;
+		}
 
 		/* compare protocol and ports */
 		if (d->spd.this.protocol != our_protocol
 		||  d->spd.this.port != our_port
 		||  d->spd.that.protocol != peer_protocol
 		|| (d->spd.that.port != peer_port && !d->spd.that.has_port_wildcard))
+		{
 			continue;
+		}
 
 		/* Opportunistic case:
 		 * our_net must be inside d->spd.this.client
@@ -3670,7 +3727,9 @@ static connection_t *fc_try_oppo(const connection_t *c,
 
 			if (!subnetinsubnet(our_net, &sr->this.client)
 			|| !subnetinsubnet(peer_net, &sr->that.client))
+			{
 				continue;
+			}
 
 			/* The connection is feasible, but we continue looking for the best.
 			 * The highest priority wins, implementing eroute-like rule.
@@ -3710,21 +3769,25 @@ static connection_t *fc_try_oppo(const connection_t *c,
 /*
  * get the peer's CA and group attributes
  */
-chunk_t get_peer_ca_and_groups(connection_t *c, const ietfAttrList_t **peer_list)
+chunk_t get_peer_ca_and_groups(connection_t *c, ietf_attributes_t **peer_attributes)
 {
 	struct state *p1st = find_phase1_state(c, ISAKMP_SA_ESTABLISHED_STATES);
 
-	*peer_list = NULL;
+	*peer_attributes = NULL;
 
 	if (p1st != NULL
 	&&  p1st->st_peer_pubkey != NULL
 	&&  p1st->st_peer_pubkey->issuer.ptr != NULL)
 	{
-		x509acert_t *ac = get_x509acert(p1st->st_peer_pubkey->issuer
-									  , p1st->st_peer_pubkey->serial);;
+		x509acert_t *x509ac = get_x509acert(p1st->st_peer_pubkey->issuer,
+											p1st->st_peer_pubkey->serial);
 
-		if (ac != NULL && verify_x509acert(ac, strict_crl_policy))
-			*peer_list = ac->groups;
+		if (x509ac && verify_x509acert(x509ac, strict_crl_policy))
+		{
+			ac_t * ac = (ac_t*)x509ac->ac;
+		
+			*peer_attributes = ac->get_groups(ac);
+		}
 		else
 		{
 			DBG(DBG_CONTROL,
@@ -3746,9 +3809,8 @@ connection_t *find_client_connection(connection_t *c,
 {
 	connection_t *d;
 	struct spd_route *sr;
-
-	const ietfAttrList_t *peer_list = NULL;
-	chunk_t peer_ca = get_peer_ca_and_groups(c, &peer_list);
+	ietf_attributes_t *peer_attributes = NULL;
+	chunk_t peer_ca = get_peer_ca_and_groups(c, &peer_attributes);
 
 #ifdef DEBUG
 	if (DBGP(DBG_CONTROLMORE))
@@ -3795,12 +3857,14 @@ connection_t *find_client_connection(connection_t *c,
 			&& sr->this.port == our_port
 			&& sr->that.protocol == peer_protocol
 			&& sr->that.port == peer_port
-			&& group_membership(peer_list, c->name, sr->that.groups))
+			&& match_group_membership(peer_attributes, c->name, sr->that.groups))
 			{
 				passert(oriented(*c));
 				if (routed(sr->routing))
+				{
+					DESTROY_IF(peer_attributes);
 					return c;
-
+				}
 				unrouted = c;
 			}
 		}
@@ -3808,7 +3872,7 @@ connection_t *find_client_connection(connection_t *c,
 		/* exact match? */
 		d = fc_try(c, c->host_pair, NULL, our_net, peer_net
 			, our_protocol, our_port, peer_protocol, peer_port
-			, peer_ca, peer_list);
+			, peer_ca, peer_attributes);
 
 		DBG(DBG_CONTROLMORE,
 			DBG_log("  fc_try %s gives %s"
@@ -3817,7 +3881,9 @@ connection_t *find_client_connection(connection_t *c,
 		)
 
 		if (d == NULL)
+		{
 			d = unrouted;
+		}
 	}
 
 	if (d == NULL)
@@ -3852,7 +3918,7 @@ connection_t *find_client_connection(connection_t *c,
 			/* RW match with actual peer_id or abstract peer_id? */
 			d = fc_try(c, hp, NULL, our_net, peer_net
 				, our_protocol, our_port, peer_protocol, peer_port
-				, peer_ca, peer_list);
+				, peer_ca, peer_attributes);
 
 			if (d == NULL
 			&& subnetishost(our_net)
@@ -3864,7 +3930,7 @@ connection_t *find_client_connection(connection_t *c,
 				 */
 				d = fc_try_oppo(c, hp, our_net, peer_net
 					, our_protocol, our_port, peer_protocol, peer_port
-					, peer_ca, peer_list);
+					, peer_ca, peer_attributes);
 			}
 		}
 	}
@@ -3873,6 +3939,7 @@ connection_t *find_client_connection(connection_t *c,
 		DBG_log("  concluding with d = %s"
 				, (d ? d->name : "none"))
 	)
+	DESTROY_IF(peer_attributes);
 	return d;
 }
 
@@ -3978,8 +4045,7 @@ void show_connections_status(bool all, const char *name)
 				dntoa_or_null(this_ca, BUF_LEN, c->spd.this.ca, "%any");
 				dntoa_or_null(that_ca, BUF_LEN, c->spd.that.ca, "%any");
 
-				whack_log(RC_COMMENT
-					, "\"%s\"%s:   CAs: '%s'...'%s'"
+				whack_log(RC_COMMENT, "\"%s\"%s:   CAs: '%s'...'%s'"
 					, c->name
 					, instance
 					, this_ca
@@ -3989,14 +4055,10 @@ void show_connections_status(bool all, const char *name)
 			/* show group attributes if defined */
 			if (c->spd.that.groups != NULL)
 			{
-				char buf[BUF_LEN];
-
-				format_groups(c->spd.that.groups, buf, BUF_LEN);
-				whack_log(RC_COMMENT
-					, "\"%s\"%s:   groups: %s"
+				whack_log(RC_COMMENT, "\"%s\"%s:   groups: %s"
 					, c->name
 					, instance
-					, buf);
+					, c->spd.that.groups->get_string(c->spd.that.groups));
 			}
 
 			whack_log(RC_COMMENT

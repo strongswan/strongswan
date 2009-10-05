@@ -133,7 +133,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	lock_authcert_list("insert_crl");
 
 	/* get the issuer cacert */
-	issuer_cert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
+	issuer_cert = get_authcert(issuer_dn, authKeyID, X509_CA);
 	if (issuer_cert == NULL)
 	{
 		plog("crl issuer cacert not found");
@@ -434,7 +434,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 
 		lock_authcert_list("verify_by_crl");
 
-		issuer_cert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
+		issuer_cert = get_authcert(issuer_dn, authKeyID, X509_CA);
 		valid = cert_crl->issued_by(cert_crl, issuer_cert->cert);
 
 		unlock_authcert_list("verify_by_crl");

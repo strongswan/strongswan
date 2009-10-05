@@ -31,6 +31,8 @@ typedef enum x509_flag_t x509_flag_t;
  * X.509 certificate flags.
  */
 enum x509_flag_t {
+	/** cert has no constraints */
+	X509_NONE =			0, 
 	/** cert has CA constraint */
 	X509_CA = 			(1<<0),
 	/** cert has AA constraint */

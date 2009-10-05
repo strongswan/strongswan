@@ -448,7 +448,6 @@ int main(int argc, char **argv)
 		signerCert = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, certfile,
-										BUILD_X509_FLAG, 0,
 										BUILD_END);
 		if (signerCert == NULL)
 		{
@@ -462,7 +461,6 @@ int main(int argc, char **argv)
 		userCert = lib->creds->create(lib->creds,
 									  CRED_CERTIFICATE, CERT_X509,
 									  BUILD_FROM_FILE, usercertfile,
-									  BUILD_X509_FLAG, 0,
 									  BUILD_END);
 		if (userCert == NULL)
 		{

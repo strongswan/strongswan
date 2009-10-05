@@ -451,17 +451,17 @@ whack_handle(int whackctlfd)
 
 	if (msg.whack_reread & REREAD_CACERTS)
 	{
-		load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);
+		load_authcerts("CA cert", CA_CERT_PATH, X509_CA);
 	}
 
 	if (msg.whack_reread & REREAD_AACERTS)
 	{
-		load_authcerts("AA cert", AA_CERT_PATH, AUTH_AA);
+		load_authcerts("AA cert", AA_CERT_PATH, X509_AA);
 	}
 
 	if (msg.whack_reread & REREAD_OCSPCERTS)
 	{
-		load_authcerts("OCSP cert", OCSP_CERT_PATH, AUTH_OCSP);
+		load_authcerts("OCSP cert", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	}
 
 	if (msg.whack_reread & REREAD_ACERTS)
@@ -492,27 +492,22 @@ whack_handle(int whackctlfd)
 
 	if (msg.whack_list & LIST_CACERTS)
 	{
-		list_authcerts("CA", AUTH_CA, msg.whack_utc);
+		list_authcerts("CA", X509_CA, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_AACERTS)
 	{
-		list_authcerts("AA", AUTH_AA, msg.whack_utc);
+		list_authcerts("AA", X509_AA, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_OCSPCERTS)
 	{
-		list_authcerts("OCSP", AUTH_OCSP, msg.whack_utc);
+		list_authcerts("OCSP", X509_OCSP_SIGNER, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_ACERTS)
 	{
 		list_acerts(msg.whack_utc);
-	}
-
-	if (msg.whack_list & LIST_GROUPS)
-	{
-		list_groups(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CAINFOS)

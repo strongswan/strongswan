@@ -36,6 +36,7 @@ credentials/certificates/pkcs10.h \
 credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
 credentials/certificates/pgp_certificate.h \
+credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_attributes.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 utils.h utils.c \

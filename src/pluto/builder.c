@@ -40,6 +40,7 @@
  */
 static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 {
+	x509_flag_t flags = 0;
 	chunk_t blob = chunk_empty;
 	bool pgp = FALSE;
 
@@ -52,6 +53,9 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 				/* FALL */
 			case BUILD_BLOB_ASN1_DER:
 				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_X509_FLAG:
+				flags |= va_arg(args, x509_flag_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -85,6 +89,7 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 			x509cert->cert = lib->creds->create(lib->creds,
 							  			CRED_CERTIFICATE, CERT_X509,
 							  			BUILD_BLOB_ASN1_DER, blob,
+										BUILD_X509_FLAG, flags,
 							  			BUILD_END);
 			if (x509cert->cert)
 			{
@@ -128,9 +133,12 @@ static x509acert_t *builder_load_ac(certificate_type_t type, va_list args)
 	if (blob.ptr)
 	{
 		ac = malloc_thing(x509acert_t);
-		*ac = empty_ac;
-		if (parse_ac(chunk_clone(blob), ac) &&
-			verify_x509acert(ac, FALSE))
+		ac->next = NULL;
+		ac->installed = UNDEFINED_TIME;
+		ac->ac = lib->creds->create(lib->creds,
+							  		CRED_CERTIFICATE, CERT_X509_AC,
+							  		BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+		if (ac->ac && verify_x509acert(ac, FALSE))
 		{
 			return ac;
 		}

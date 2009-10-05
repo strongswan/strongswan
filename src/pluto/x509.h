@@ -58,7 +58,6 @@ struct x509cert {
 	time_t          installed;
 	int             count;
 	bool            smartcard;
-	u_char          authority_flags;
 };
 
 /* used for initialization */
@@ -91,7 +90,7 @@ extern void release_x509cert(x509cert_t *cert);
 extern void free_x509cert(x509cert_t *cert);
 extern void store_x509certs(x509cert_t **firstcert, bool strict);
 extern void list_x509cert_chain(const char *caption, x509cert_t* cert,
-								u_char auth_flags, bool utc);
+								x509_flag_t flags, bool utc);
 extern void list_x509_end_certs(bool utc);
 extern void free_generalNames(generalName_t* gn, bool free_name);
 

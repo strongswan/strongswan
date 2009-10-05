@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
- * Copyright (C) 2002-2008 Andreas Steffen
+ * Copyright (C) 2002-2009 Andreas Steffen
  * Copyright (C) 2009 Martin Willi
  *
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,7 +18,6 @@
  */
 
 #include "x509_ac.h"
-#include "ietf_attr_list.h"
 
 #include <time.h>
 
@@ -30,6 +29,7 @@
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/ietf_attributes/ietf_attributes.h>
 #include <credentials/keys/private_key.h>
 
 extern chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob,
@@ -100,12 +100,12 @@ struct private_x509_ac_t {
 	/**
 	 * List of charging attributes
 	 */
-	linked_list_t *charging;
+	ietf_attributes_t *charging;
 
 	/**
 	 * List of groub attributes
 	 */
-	linked_list_t *groups;
+	ietf_attributes_t *groups;
 
 	/**
 	 * Authority Key Identifier
@@ -413,10 +413,14 @@ static bool parse_certificate(private_x509_ac_t *this)
 						DBG2("  need to parse accessIdentity");
 						break;
 					case OID_CHARGING_IDENTITY:
-						ietfAttr_list_create_from_chunk(object, this->charging, level);
+						DBG2("-- > --");
+						this->charging = ietf_attributes_create_from_encoding(object);
+						DBG2("-- < --");
 						break;
 					case OID_GROUP:
-						ietfAttr_list_create_from_chunk(object, this->groups, level);
+						DBG2("-- > --");
+						this->groups = ietf_attributes_create_from_encoding(object);
+						DBG2("-- < --");
 						break;
 					case OID_ROLE:
 						parse_roleSyntax(object, level);
@@ -543,7 +547,7 @@ static chunk_t build_attribute_type(int type, chunk_t content)
 static chunk_t build_attributes(private_x509_ac_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-		build_attribute_type(OID_GROUP, ietfAttr_list_encode(this->groups)));
+		build_attribute_type(OID_GROUP, this->groups->get_encoding(this->groups)));
 }
 
 /**
@@ -661,6 +665,14 @@ static identification_t* get_holderIssuer(private_x509_ac_t *this)
 static chunk_t get_authKeyIdentifier(private_x509_ac_t *this)
 {
 	return this->authKeyIdentifier;
+}
+
+/**
+ * Implementation of certificate_t.get_groups.
+ */
+static ietf_attributes_t* get_groups(private_x509_ac_t *this)
+{
+	return this->groups ? this->groups->get_ref(this->groups) : NULL;
 }
 
 /**
@@ -881,9 +893,8 @@ static void destroy(private_x509_ac_t *this)
 		DESTROY_IF(this->holderCert);
 		DESTROY_IF(this->signerCert);
 		DESTROY_IF(this->signerKey);
-
-		ietfAttr_list_destroy(this->charging);
-		ietfAttr_list_destroy(this->groups);
+		DESTROY_IF(this->charging);
+		DESTROY_IF(this->groups);
 		free(this->serialNumber.ptr);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
@@ -902,7 +913,8 @@ static private_x509_ac_t *create_empty(void)
 	this->public.interface.get_serial = (chunk_t (*)(ac_t*))get_serial;
 	this->public.interface.get_holderSerial = (chunk_t (*)(ac_t*))get_holderSerial;
 	this->public.interface.get_holderIssuer = (identification_t* (*)(ac_t*))get_holderIssuer;
-	this->public.interface.get_authKeyIdentifier = (chunk_t(*)(ac_t*))get_authKeyIdentifier;
+	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(ac_t*))get_authKeyIdentifier;
+	this->public.interface.get_groups = (ietf_attributes_t* (*)(ac_t*))get_groups;
 	this->public.interface.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
 	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -928,8 +940,8 @@ static private_x509_ac_t *create_empty(void)
 	this->holderCert = NULL;
 	this->signerCert = NULL;
 	this->signerKey = NULL;
-	this->charging = linked_list_create();
-	this->groups = linked_list_create();
+	this->charging = NULL;
+	this->groups = NULL;
 	this->ref = 1;
 
 	return this;
@@ -992,7 +1004,7 @@ x509_ac_t *x509_ac_gen(certificate_type_t type, va_list args)
 				ac->serialNumber = chunk_clone(va_arg(args, chunk_t));
 				continue;
 			case BUILD_IETF_GROUP_ATTR:
-				ietfAttr_list_create_from_string(va_arg(args, char*), ac->groups);
+				ac->groups = ietf_attributes_create_from_string(va_arg(args, char*));
 				continue;
 			case BUILD_CERT:
 				ac->holderCert = va_arg(args, certificate_t*);

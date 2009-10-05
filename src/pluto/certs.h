@@ -66,7 +66,8 @@ extern public_key_t* cert_get_public_key(const cert_t cert);
 extern chunk_t cert_get_encoding(cert_t cert);
 extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 									   key_type_t type);
-extern bool load_cert(char *filename, const char *label, cert_t *cert);
+extern bool load_cert(char *filename, const char *label, x509_flag_t flags,
+					  cert_t *cert);
 extern bool load_host_cert(char *filename, cert_t *cert);
 extern bool load_ca_cert(char *filename, cert_t *cert);
 extern bool same_cert(const cert_t *a, const cert_t *b);

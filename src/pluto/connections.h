@@ -146,7 +146,7 @@ struct end {
 	u_int8_t protocol;
 	cert_t cert;                /* end certificate */
 	chunk_t ca;                 /* CA distinguished name */
-	struct ietfAttrList *groups;/* access control groups */
+	ietf_attributes_t *groups;  /* access control groups */
 	smartcard_t *sc;            /* smartcard reader and key info */
 	struct virtual_t *virt;
 	bool modecfg;               /* this end: request local address from server */
@@ -288,8 +288,8 @@ find_connection_for_clients(struct spd_route **srp
 							, const ip_address *peer_client
 							, int transport_proto);
 
-extern chunk_t get_peer_ca_and_groups(connection_t *c
-	, const ietfAttrList_t **peer_list);
+extern chunk_t get_peer_ca_and_groups(connection_t *c,
+									  ietf_attributes_t **peer_attributes);
 
 /* instantiating routines
  * Note: connection_discard() is in state.h because all its work

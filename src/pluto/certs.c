@@ -162,12 +162,14 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 /**
  *  Loads a X.509 or OpenPGP certificate
  */
-bool load_cert(char *filename, const char *label, cert_t *out)
+bool load_cert(char *filename, const char *label, x509_flag_t flags, cert_t *out)
 {
 	cert_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
-							  BUILD_FROM_FILE, filename, BUILD_END);
+							  BUILD_FROM_FILE, filename,
+							  BUILD_X509_FLAG, flags,
+							  BUILD_END);
 	if (cert)
 	{
 		/* the API passes an empty cert_t, we move over and free the built one */
@@ -186,7 +188,7 @@ bool load_host_cert(char *filename, cert_t *cert)
 {
 	char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
-	return load_cert(path, "host", cert);
+	return load_cert(path, "host", X509_NONE, cert);
 }
 
 /**
@@ -196,7 +198,7 @@ bool load_ca_cert(char *filename, cert_t *cert)
 {
 	char *path = concatenate_paths(CA_CERT_PATH, filename);
 
-	return load_cert(path, "CA", cert);
+	return load_cert(path, "CA", X509_NONE, cert);
 }
 
 /**

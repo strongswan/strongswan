@@ -1,9 +1,7 @@
 /*
- * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
- * Copyright (C) 2003 Martin Berner, Lukas Suter
- * Copyright (C) 2002-2008 Andreas Steffen
+ * Copyright (C) 2002-2009 Andreas Steffen
  *
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,6 +24,7 @@
 
 #include <library.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/ietf_attributes/ietf_attributes.h>
 
 typedef struct ac_t ac_t;
 
@@ -64,11 +63,18 @@ struct ac_t {
 	identification_t* (*get_holderIssuer)(ac_t *this);
 
 	/**
-	 * Get the thauthorityKeyIdentifier.
+	 * Get the authorityKeyIdentifier.
 	 *
 	 * @return			authKeyIdentifier as chunk_t, to internal data
 	 */
 	chunk_t (*get_authKeyIdentifier)(ac_t *this);
+
+	/**
+	 * Get the group memberships as a list of IETF attributes
+	 *
+	 * @return			object containing a list of IETF attributes
+	 */
+	ietf_attributes_t* (*get_groups)(ac_t *this);
 
 	/**
 	 * @brief Checks if two attribute certificates belong to the same holder

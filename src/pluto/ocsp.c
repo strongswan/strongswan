@@ -329,7 +329,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 
 	if (authKeyID.ptr == NULL)
 	{
-		x509cert_t *authcert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
+		x509cert_t *authcert = get_authcert(issuer_dn, authKeyID, X509_CA);
 
 		if (authcert != NULL)
 		{
@@ -983,7 +983,7 @@ static bool valid_ocsp_response(response_t *res)
 	lock_authcert_list("valid_ocsp_response");
 
 	authcert = get_authcert(res->responder_id_name, res->responder_id_key,
-							AUTH_OCSP | AUTH_CA);
+							X509_OCSP_SIGNER | X509_CA);
 	if (authcert == NULL)
 	{
 		plog("no matching ocsp signer cert found");
@@ -1040,7 +1040,7 @@ static bool valid_ocsp_response(response_t *res)
 			DBG_log("certificate is valid")
 		)
 
-		authcert = get_authcert(issuer->get_encoding(issuer), authKeyID, AUTH_CA);
+		authcert = get_authcert(issuer->get_encoding(issuer), authKeyID, X509_CA);
 		if (authcert == NULL)
 		{
 			plog("issuer cacert not found");
@@ -1168,7 +1168,7 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 				if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&
 					trust_authcert_candidate(cert, NULL))
 				{
-					add_authcert(cert, AUTH_OCSP);
+					add_authcert(cert, X509_OCSP_SIGNER);
 				}
 				else
 				{

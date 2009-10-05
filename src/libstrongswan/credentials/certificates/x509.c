@@ -15,7 +15,8 @@
 
 #include "x509.h"
 
-ENUM(x509_flag_names, X509_CA, X509_SELF_SIGNED,
+ENUM(x509_flag_names, X509_NONE, X509_SELF_SIGNED,
+	"X509_NONE",
 	"X509_CA",
 	"X509_AA",
 	"X509_OCSP_SIGNER",

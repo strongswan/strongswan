@@ -81,7 +81,7 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 		chunk_t issuer_dn;
 		x509cert_t *cacert;
 
-		cacert = get_authcert(a, chunk_empty, AUTH_CA);
+		cacert = get_authcert(a, chunk_empty, X509_CA);
 		if (cacert == NULL)
 		{
 			break;
@@ -180,7 +180,7 @@ void free_authcerts(void)
 /*
  *  get a X.509 authority certificate with a given subject or keyid
  */
-x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, u_char auth_flags)
+x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, x509_flag_t auth_flags)
 {
 	x509cert_t *cert, *prev_cert = NULL;
 
@@ -193,11 +193,12 @@ x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, u_char auth_flags)
 	for (cert = x509authcerts; cert != NULL; prev_cert = cert, cert = cert->next)
 	{
 		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
 		identification_t *cert_subject;
 		chunk_t cert_subject_dn;
 
 		/* skip non-matching types of authority certificates */
-		if (!(cert->authority_flags & auth_flags))
+		if (!(x509->get_flags(x509) & auth_flags))
 		{
 			continue;
 		}
@@ -205,7 +206,6 @@ x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, u_char auth_flags)
 		/* compare the keyid with the certificate's subjectKeyIdentifier */
 		if (keyid.ptr)
 		{
-			x509_t *x509 = (x509_t*)certificate;
 			chunk_t subjectKeyId;
 
 			subjectKeyId = x509->get_subjectKeyIdentifier(x509);
@@ -239,16 +239,13 @@ x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, u_char auth_flags)
 /*
  * add an authority certificate to the chained list
  */
-x509cert_t* add_authcert(x509cert_t *cert, u_char auth_flags)
+x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
 {
 	certificate_t *certificate = cert->cert;
 	x509_t *x509 = (x509_t*)certificate;
 	identification_t *cert_subject = certificate->get_subject(certificate);
 	chunk_t cert_subject_dn = cert_subject->get_encoding(cert_subject);
 	x509cert_t *old_cert;
-
-	/* set authority flags */
-	cert->authority_flags |= auth_flags;
 
 	lock_authcert_list("add_authcert");
 
@@ -259,8 +256,6 @@ x509cert_t* add_authcert(x509cert_t *cert, u_char auth_flags)
 	{
 		if (certificate->equals(certificate, old_cert->cert))
 		{
-			/* cert is already present, just add additional authority flags */
-			old_cert->authority_flags |= cert->authority_flags;
 			DBG(DBG_CONTROL | DBG_PARSING ,
 				DBG_log("  authcert is already present and identical")
 			)
@@ -293,7 +288,7 @@ x509cert_t* add_authcert(x509cert_t *cert, u_char auth_flags)
 /*
  *  Loads authority certificates
  */
-void load_authcerts(const char *type, const char *path, u_char auth_flags)
+void load_authcerts(const char *type, const char *path, x509_flag_t auth_flags)
 {
 	struct dirent **filelist;
 	u_char buf[BUF_LEN];
@@ -320,9 +315,10 @@ void load_authcerts(const char *type, const char *path, u_char auth_flags)
 			{
 				cert_t cert;
 
-				if (load_cert(filelist[n]->d_name, type, &cert))
+				if (load_cert(filelist[n]->d_name, type, auth_flags, &cert))
+				{
 					add_authcert(cert.u.x509, auth_flags);
-
+				}
 				free(filelist[n]);
 			}
 			free(filelist);
@@ -335,7 +331,7 @@ void load_authcerts(const char *type, const char *path, u_char auth_flags)
 /*
  *  list all X.509 authcerts with given auth flags in a chained list
  */
-void list_authcerts(const char *caption, u_char auth_flags, bool utc)
+void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc)
 {
 	lock_authcert_list("list_authcerts");
 	list_x509cert_chain(caption, x509authcerts, auth_flags, utc);
@@ -426,7 +422,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		else
 		{
 			/* search in trusted chain */
-			authcert = get_authcert(issuer_dn, authKeyID, AUTH_CA);
+			authcert = get_authcert(issuer_dn, authKeyID, X509_CA);
 
 			if (authcert != NULL)
 			{
@@ -670,7 +666,7 @@ void add_ca_info(const whack_message_t *msg)
 		unlock_ca_info_list("add_ca_info");
 
 		/* add cacert to list of authcerts */
-		cacert = add_authcert(cacert, AUTH_CA);
+		cacert = add_authcert(cacert, X509_CA);
 		if (!cached_cert && sc != NULL)
 		{
 			if (sc->last_cert.type == CERT_X509_SIGNATURE)

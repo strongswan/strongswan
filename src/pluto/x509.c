@@ -126,8 +126,7 @@ const x509cert_t empty_x509cert = {
 	  NULL        , /* *next */
 	UNDEFINED_TIME, /* installed */
 			0     , /* count */
-	  FALSE       , /* smartcard */
-	 AUTH_NONE    , /* authority_flags */
+	  FALSE         /* smartcard */
 };
 
 /* coding of X.501 distinguished name */
@@ -1038,7 +1037,7 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
 
 		if (trust_authcert_candidate(cert, cacerts))
 		{
-			add_authcert(cert, AUTH_CA);
+			add_authcert(cert, X509_CA);
 		}
 		else
 		{
@@ -1393,7 +1392,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 
 		lock_authcert_list("verify_x509cert");
 		issuer_cert = get_authcert(issuer->get_encoding(issuer),
-								   authKeyID, AUTH_CA);
+								   authKeyID, X509_CA);
 		if (issuer_cert == NULL)
 		{
 			plog("issuer cacert not found");
@@ -1495,7 +1494,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
  * List all X.509 certs in a chained list
  */
 void list_x509cert_chain(const char *caption, x509cert_t* cert,
-						 u_char auth_flags, bool utc)
+						 x509_flag_t flags, bool utc)
 {
 	bool first = TRUE;
 	time_t now;
@@ -1505,14 +1504,15 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 
 	while (cert != NULL)
 	{
-		if (auth_flags == AUTH_NONE || (auth_flags & cert->authority_flags))
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+
+		if (flags == X509_NONE || (flags & x509->get_flags(x509)))
 		{
 			time_t notBefore, notAfter;
 			public_key_t *key;
 			chunk_t serial, keyid, subjkey, authkey;
 			cert_t c;
-			certificate_t *certificate = cert->cert;
-			x509_t *x509 = (x509_t*)certificate;
 			
 			c.type = CERT_X509_SIGNATURE;
 			c.u.x509 = cert;
@@ -1579,5 +1579,5 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
  */
 void list_x509_end_certs(bool utc)
 {
-	list_x509cert_chain("End", x509certs, AUTH_NONE, utc);
+	list_x509cert_chain("End", x509certs, X509_NONE, utc);
 }
