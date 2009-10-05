@@ -346,12 +346,13 @@ void *malloc_hook(size_t bytes, const void *caller)
  */
 void free_hook(void *ptr, const void *caller)
 {
-	memory_header_t *hdr;
+	memory_header_t *hdr, *current;
 	memory_tail_t *tail;
 	backtrace_t *backtrace;
 	pthread_t thread_id = pthread_self();
 	int oldpolicy;
 	struct sched_param oldparams, params;
+	bool found = FALSE;
 
 	/* allow freeing of NULL */
 	if (ptr == NULL)
@@ -371,9 +372,26 @@ void free_hook(void *ptr, const void *caller)
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		fprintf(stderr, "freeing invalid memory (%p): "
-				"header magic 0x%x, tail magic 0x%x:\n",
-				ptr, hdr->magic, tail->magic);
+		for (current = &first_header; current != NULL; current = current->next)
+		{
+			if (current == hdr)
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		if (found)
+		{
+			/* memory was allocated by our hooks but is corrupted */
+			fprintf(stderr, "freeing corrupted memory (%p): "
+					"header magic 0x%x, tail magic 0x%x:\n",
+					ptr, hdr->magic, tail->magic);
+		}
+		else
+		{
+			/* memory was not allocated by our hooks */
+			fprintf(stderr, "freeing invalid memory (%p)", ptr);
+		}
 		backtrace = backtrace_create(3);
 		backtrace->log(backtrace, stderr);
 		backtrace->destroy(backtrace);
@@ -389,7 +407,8 @@ void free_hook(void *ptr, const void *caller)
 		hdr->backtrace->destroy(hdr->backtrace);
 
 		/* clear MAGIC, set mem to something remarkable */
-		memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
+		memset(hdr, MEMORY_FREE_PATTERN,
+			   sizeof(memory_header_t) + hdr->bytes + sizeof(memory_tail_t));
 
 		free(hdr);
 	}
