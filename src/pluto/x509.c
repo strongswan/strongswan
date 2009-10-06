@@ -1316,41 +1316,6 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 }
 
 /**
- * Verify the validity of a certificate by
- * checking the notBefore and notAfter dates
- */
-err_t check_validity(const x509cert_t *cert, time_t *until)
-{
-	time_t current_time, notBefore, notAfter;
-	certificate_t *certificate = cert->cert;
-	
-	time(&current_time);
-	certificate->get_validity(certificate, &current_time, &notBefore, &notAfter);
-	DBG(DBG_CONTROL | DBG_PARSING ,
-		DBG_log("  not before  : %T", &notBefore, TRUE);
-		DBG_log("  current time: %T", &current_time, TRUE);
-		DBG_log("  not after   : %T", &notAfter, TRUE);
-	)
-
-	if (*until == 0 || notAfter < *until)
-	{
-		*until = notAfter;
-	}
-	if (current_time < notBefore)
-	{
-		return "certificate is not valid yet";
-	}
-	if (current_time > notAfter)
-	{
-		return "certificate has expired";
-	}
-	else
-	{
-		return NULL;
-	}
-}
-
-/**
  * Verifies a X.509 certificate
  */
 bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
@@ -1367,25 +1332,30 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		x509_t *x509 = (x509_t*)certificate;
 		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 		x509cert_t *issuer_cert;
-		err_t ugh = NULL;
+		time_t notBefore, notAfter;
+		bool valid;
 
 		DBG(DBG_CONTROL,
 			DBG_log("subject: '%Y'", subject);
 			DBG_log("issuer:  '%Y'", issuer);
-			if (authKeyID.ptr != NULL)
+			if (authKeyID.ptr)
 			{
 				DBG_log("authkey:  %#B", &authKeyID);
 			}
 		)
 
-		ugh = check_validity(cert, until);
-
-		if (ugh != NULL)
+		valid = certificate->get_validity(certificate, NULL,
+										  &notBefore, &notAfter);
+		if (*until == UNDEFINED_TIME || notAfter < *until)
 		{
-			plog("%s", ugh);
+			*until = notAfter;
+		}
+		if (!valid)
+		{
+			plog("certificate is invalid (valid from %T to %T)",
+				 &notBefore, FALSE, &notAfter, FALSE);
 			return FALSE;
 		}
-
 		DBG(DBG_CONTROL,
 			DBG_log("certificate is valid")
 		)

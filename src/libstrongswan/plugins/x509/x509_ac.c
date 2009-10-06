@@ -798,16 +798,8 @@ static private_x509_ac_t* get_ref(private_x509_ac_t *this)
 static bool get_validity(private_x509_ac_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
-	time_t t;
+	time_t t = when ? *when : time(NULL);
 
-	if (when)
-	{
-		t = *when;
-	}
-	else
-	{
-		t = time(NULL);
-	}
 	if (not_before)
 	{
 		*not_before = this->notBefore;
@@ -816,19 +808,7 @@ static bool get_validity(private_x509_ac_t *this, time_t *when,
 	{
 		*not_after = this->notAfter;
 	}
-	if (t < this->notBefore)
-	{
-		DBG1("attribute certificate is not valid before %T",
-			 this->notBefore, TRUE);
-		return FALSE;
-	}
-	if (t > this->notAfter)
-	{
-		DBG1("attribute certificate expired on %T",
-			 this->notAfter, TRUE);
-		return FALSE;
-	}
-	return TRUE;
+	return (t >= this->notBefore && t <= this->notAfter);
 }
 
 /**
@@ -844,7 +824,7 @@ static bool is_newer(private_x509_ac_t *this, ac_t *that)
 	this_cert->get_validity(this_cert, &now, &this_update, NULL);
 	that_cert->get_validity(that_cert, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  attr cert from %T is %s - existing attr_cert from %T %s",
+	DBG1("  attr cert from %T is %s - existing attr cert from %T %s",
 			&this_update, FALSE, new ? "newer":"not newer",
 			&that_update, FALSE, new ? "replaced":"retained");
 	return new;

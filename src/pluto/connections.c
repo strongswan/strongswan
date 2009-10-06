@@ -717,8 +717,6 @@ static void load_end_certificate(char *filename, struct end *dst)
 
 	if (valid_cert)
 	{
-		err_t ugh = NULL;
-
 		switch (cert.type)
 		{
 		case CERT_PGP:
@@ -738,20 +736,18 @@ static void load_end_certificate(char *filename, struct end *dst)
 			select_x509cert_id(cert.u.x509, &dst->id);
 
 			if (cached_cert)
+			{
 				dst->cert = cert;
+			}
 			else
 			{
-				time_t valid_until = 0;
-
-				/* check validity of cert */
-				ugh = check_validity(cert.u.x509, &valid_until);
-				if (ugh != NULL)
+				certificate_t *certificate = cert.u.x509->cert;
+				
+				if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
 				{
-					plog("  %s", ugh);
 					free_x509cert(cert.u.x509);
 					break;
 				}
-
 				DBG(DBG_CONTROL,
 					DBG_log("certificate is valid")
 				)

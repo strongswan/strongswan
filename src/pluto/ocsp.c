@@ -424,7 +424,7 @@ cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
 	chunk_t serialNumber = x509->get_serial(x509);
 	cert_status_t status;
 	ocsp_location_t location;
-	time_t nextUpdate = 0;
+	time_t nextUpdate;
 
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
@@ -1008,9 +1008,6 @@ static bool valid_ocsp_response(response_t *res)
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
-		err_t ugh = NULL;
-		time_t until;
-
 		x509cert_t *cert = authcert;
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
@@ -1021,21 +1018,17 @@ static bool valid_ocsp_response(response_t *res)
 		DBG(DBG_CONTROL,
 			DBG_log("subject: '%Y'", subject);
 			DBG_log("issuer:  '%Y'", issuer);
-			if (authKeyID.ptr != NULL)
+			if (authKeyID.ptr)
 			{
 				DBG_log("authkey:  %#B", &authKeyID);
 			}
 		)
 
-		ugh = check_validity(authcert, &until);
-
-		if (ugh != NULL)
+		if (!certificate->get_validity(certificate, NULL, NULL, NULL))
 		{
-			plog("%s", ugh);
 			unlock_authcert_list("valid_ocsp_response");
 			return FALSE;
 		}
-
 		DBG(DBG_CONTROL,
 			DBG_log("certificate is valid")
 		)

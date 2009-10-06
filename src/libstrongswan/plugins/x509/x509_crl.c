@@ -458,16 +458,8 @@ static private_x509_crl_t* get_ref(private_x509_crl_t *this)
 static bool get_validity(private_x509_crl_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
-	time_t t;
+	time_t t = when ? *when : time(NULL);
 
-	if (when)
-	{
-		t = *when;
-	}
-	else
-	{
-		t = time(NULL);
-	}
 	if (not_before)
 	{
 		*not_before = this->thisUpdate;

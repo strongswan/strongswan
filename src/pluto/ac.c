@@ -158,7 +158,7 @@ bool verify_x509acert(x509acert_t *x509ac, bool strict)
 	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t authKeyID = ac->get_authKeyIdentifier(ac);
 	x509cert_t *aacert;
-	time_t valid_until;
+	time_t notBefore, valid_until;
 
 	DBG(DBG_CONTROL,
 		DBG_log("holder: '%Y'", subject);
@@ -167,10 +167,12 @@ bool verify_x509acert(x509acert_t *x509ac, bool strict)
 
 	if (!cert_ac->get_validity(cert_ac, NULL, NULL, &valid_until))
 	{
+		plog("attribute certificate is invalid (valid from %T to %T)",
+			 &notBefore, FALSE, &valid_until, FALSE);
 		return FALSE;
 	}
 	DBG(DBG_CONTROL,
-		DBG_log("attribute certificate is valid until %T", &valid_until, TRUE)
+		DBG_log("attribute certificate is valid until %T", &valid_until, FALSE)
 	)
 
 	lock_authcert_list("verify_x509acert");

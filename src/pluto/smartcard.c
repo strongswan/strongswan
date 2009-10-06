@@ -570,21 +570,15 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 
 		/* check validity of certificate */
 		cert = sc->last_cert.u.x509;
-		valid_until = cert->notAfter;
-		ugh = check_validity(cert, &valid_until);
-		if (ugh != NULL)
+		if (!cert->cert->get_validity(cert->cert, NULL, NULL, &valid_until)
 		{
-			plog("  %s", ugh);
 			free_x509cert(cert);
 			scx_free(sc);
 			continue;
 		}
-		else
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("  certificate is valid")
-			)
-		}
+		DBG(DBG_CONTROL,
+			DBG_log("  certificate is valid")
+		)
 
 		sc = scx_add(sc);
 

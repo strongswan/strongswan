@@ -1,7 +1,7 @@
 moon::cat /var/log/auth.log::loaded crl from::YES
 carol::cat /var/log/auth.log::loaded crl from::YES
-moon::cat /var/log/auth.log::crl update is overdue::YES
-carol::cat /var/log/auth.log::crl update is overdue::YES
+moon::cat /var/log/auth.log::crl is stale ::YES
+carol::cat /var/log/auth.log::crl is stale::YES
 moon::cat /var/log/auth.log::X.509 certificate rejected::YES
 carol::cat /var/log/auth.log::X.509 certificate rejected::YES
 moon::cat /var/log/auth.log::ignoring informational payload, type INVALID_KEY_INFORMATION::YES

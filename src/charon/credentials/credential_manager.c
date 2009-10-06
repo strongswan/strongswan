@@ -951,13 +951,13 @@ static bool check_certificate(private_credential_manager_t *this,
 	if (!subject->get_validity(subject, NULL, &not_before, &not_after))
 	{
 		DBG1(DBG_CFG, "subject certificate invalid (valid from %T to %T)",
-			 &not_before, TRUE, &not_after, TRUE);
+			 &not_before, FALSE, &not_after, FALSE);
 		return FALSE;
 	}
 	if (!issuer->get_validity(issuer, NULL, &not_before, &not_after))
 	{
 		DBG1(DBG_CFG, "issuer certificate invalid (valid from %T to %T)",
-			 &not_before, TRUE, &not_after, TRUE);
+			 &not_before, FALSE, &not_after, FALSE);
 		return FALSE;
 	}
 	if (issuer->get_type(issuer) == CERT_X509 &&

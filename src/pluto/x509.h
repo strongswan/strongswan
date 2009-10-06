@@ -77,7 +77,6 @@ extern void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 										 chunk_t *authKeyID,
 										 chunk_t *authKeySerialNumber);
 extern chunk_t get_directoryName(chunk_t blob, int level, bool implicit);
-extern err_t check_validity(const x509cert_t *cert, time_t *until);
 extern bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 								 certificate_t *issuer_cert);
 extern chunk_t x509_build_signature(chunk_t tbs, int algorithm,

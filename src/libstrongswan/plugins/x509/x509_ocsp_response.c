@@ -748,16 +748,8 @@ static public_key_t* get_public_key(private_x509_ocsp_response_t *this)
 static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
 {
-	time_t t;
+	time_t t = when ? *when : time(NULL);
 
-	if (when == NULL)
-	{
-		t = time(NULL);
-	}
-	else
-	{
-		t = *when;
-	}
 	if (not_before)
 	{
 		*not_before = this->producedAt;

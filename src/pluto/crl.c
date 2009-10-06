@@ -414,7 +414,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 		crl_t *crl = (crl_t*)cert_crl;
 		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 		x509cert_t *issuer_cert;
-		bool valid;
+		bool trusted, valid;
 
 		DBG(DBG_CONTROL,
 			DBG_log("crl found")
@@ -435,32 +435,39 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 		lock_authcert_list("verify_by_crl");
 
 		issuer_cert = get_authcert(issuer_dn, authKeyID, X509_CA);
-		valid = cert_crl->issued_by(cert_crl, issuer_cert->cert);
+		trusted = cert_crl->issued_by(cert_crl, issuer_cert->cert);
 
 		unlock_authcert_list("verify_by_crl");
 
-		if (valid)
+		if (trusted)
 		{
-			time_t now, nextUpdate;
 			cert_status_t status;
 
 			DBG(DBG_CONTROL,
 				DBG_log("crl signature is valid")
 			)
-		   /* return the expiration date */
-			time(&now);
-			cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
-			*until = nextUpdate;
+
+			/* return the expiration date */
+			valid = cert_crl->get_validity(cert_crl, NULL, NULL, until);
 
 			/* has the certificate been revoked? */
 			status = check_revocation(crl, x509->get_serial(x509), revocationDate
 								, revocationReason);
 
-			if (*until < now)
+			if (valid)
+			{
+				unlock_crl_list("verify_by_crl");
+				DBG(DBG_CONTROL,
+					DBG_log("crl is valid: until %T", until, FALSE)
+				)
+			}
+			else
 			{
 				fetch_req_t *req;
 
-				plog("crl update is overdue since %T", until, TRUE);
+				DBG(DBG_CONTROL,
+					DBG_log("crl is stale: since %T", until, FALSE)
+				)
 
 				/* try to fetch a crl update */
 				req = build_crl_fetch_request(issuer_dn, authKeyID,
@@ -469,13 +476,6 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 
 				add_crl_fetch_request(req);
 				wake_fetch_thread("verify_by_crl");
-			}
-			else
-			{
-				unlock_crl_list("verify_by_crl");
-				DBG(DBG_CONTROL,
-					DBG_log("crl is valid")
-				)
 			}
 			return status;
 		}
