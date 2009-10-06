@@ -263,7 +263,6 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 								  			 BUILD_END);
 				if (newcert->cert)
 				{
-					time(&newcert->installed);
 					newcert->next = *cert;
 					*cert = newcert;
 				}

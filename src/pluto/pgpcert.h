@@ -35,7 +35,6 @@ typedef struct pgpcert pgpcert_t;
 struct pgpcert {
 	pgpcert_t        *next;
 	int              version;
-	time_t           installed;
 	int              count;
 	chunk_t          certificate;
 	time_t           created;

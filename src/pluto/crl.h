@@ -25,7 +25,6 @@ typedef struct x509crl x509crl_t;
 struct x509crl {
 	certificate_t *crl;
 	x509crl_t     *next;
-	time_t         installed;
 	linked_list_t *distributionPoints;
 	chunk_t          signature;
 };
@@ -44,10 +43,6 @@ extern bool cache_crls;
  * check periodically for expired crls
  */
 extern long crl_check_interval;
-
-/* used for initialization */
-extern const x509crl_t  empty_x509crl;
-
 extern void load_crls(void);
 extern void check_crls(void);
 extern bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl);

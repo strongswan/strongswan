@@ -97,7 +97,6 @@ static pgpcert_t *pgpcerts   = NULL;
 const pgpcert_t pgpcert_empty = {
 	  NULL     , /* next */
             0  , /* version */
-			0  , /* installed */
 			0  , /* count */
 	{ NULL, 0 }, /* certificate */
 			0  , /* created */
@@ -309,7 +308,6 @@ bool parse_pgp(chunk_t blob, pgpcert_t *cert)
 
 	/* parse a PGP certificate file */
 	cert->certificate = blob;
-	time(&cert->installed);
 
 	while (blob.len > 0)
 	{
@@ -479,8 +477,7 @@ void list_pgp_end_certs(bool utc)
 	if (cert != NULL)
 	{
 		whack_log(RC_COMMENT, " ");
-		whack_log(RC_COMMENT, "List of PGP End certificates:");
-		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "List of PGP End Entity Certificates:");
 	}
 
 	while (cert != NULL)
@@ -492,10 +489,10 @@ void list_pgp_end_certs(bool utc)
 		c.type = CERT_PGP;
 		c.u.pgp = cert;
 
-		whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc, cert->count);
-		whack_log(RC_COMMENT, "       digest:   %Y", cert->fingerprint);
-		whack_log(RC_COMMENT, "       created:  %T", &cert->created, utc);
-		whack_log(RC_COMMENT, "       until:    %T %s", &cert->until, utc,
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  digest:   %Y", cert->fingerprint);
+		whack_log(RC_COMMENT, "  created:  %T", &cert->created, utc);
+		whack_log(RC_COMMENT, "  until:    %T %s", &cert->until, utc,
 				check_expiry(cert->until, CA_CERT_WARNING_INTERVAL, TRUE));
 		whack_log(RC_COMMENT, "       pubkey:   %N %4d bits%s",
 				key_type_names, key->get_type(key),
@@ -503,7 +500,7 @@ void list_pgp_end_certs(bool utc)
 				has_private_key(c)? ", has private key" : "");
 		if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			whack_log(RC_COMMENT, "       keyid:    %#B", &keyid);
+			whack_log(RC_COMMENT, "  keyid:    %#B", &keyid);
 		}
 		cert = cert->next;
 	}

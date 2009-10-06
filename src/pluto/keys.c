@@ -1430,7 +1430,6 @@ void list_public_keys(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of Public Keys:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (p != NULL)
@@ -1440,27 +1439,28 @@ void list_public_keys(bool utc)
 		chunk_t keyid;
 		char buf[BUF_LEN];
 
+		whack_log(RC_COMMENT, " ");
 		idtoa(&key->id, buf, BUF_LEN);
-		whack_log(RC_COMMENT,"%T, '%s'", &key->installed_time, utc, buf);
-		whack_log(RC_COMMENT, "       pubkey:  %N %4d bits, until %T %s",
+		whack_log(RC_COMMENT, "  owner:  '%s'", buf);
+		whack_log(RC_COMMENT, "  pubkey:  %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			whack_log(RC_COMMENT,"       keyid:   %#B", &keyid);
+			whack_log(RC_COMMENT,"  keyid:   %#B", &keyid);
 		}
 		if (key->issuer.len > 0)
 		{
 			dntoa(buf, BUF_LEN, key->issuer);
-			whack_log(RC_COMMENT,"       issuer: '%s'", buf);
+			whack_log(RC_COMMENT,"  issuer: \"%s\"", buf);
 		}
 		if (key->serial.len > 0)
 		{
 			datatot(key->serial.ptr, key->serial.len, ':'
 					, buf, BUF_LEN);
-			whack_log(RC_COMMENT,"       serial:  %s", buf);
+			whack_log(RC_COMMENT,"  serial:  %s", buf);
 		}
 		p = p->next;
 	}

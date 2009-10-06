@@ -30,7 +30,6 @@ typedef struct fetch_req fetch_req_t;
 
 struct fetch_req {
 	fetch_req_t   *next;
-	time_t        installed;
 	int           trials;
 	chunk_t       issuer;
 	chunk_t       authKeyID;

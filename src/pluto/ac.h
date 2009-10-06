@@ -18,8 +18,6 @@
 #ifndef _AC_H
 #define _AC_H
 
-#include <time.h>
-
 #include <credentials/certificates/certificate.h>
 #include <credentials/ietf_attributes/ietf_attributes.h>
 
@@ -30,7 +28,6 @@ typedef struct x509acert x509acert_t;
 struct x509acert {
 	certificate_t *ac;
 	x509acert_t    *next;
- 	time_t         installed;
 };
 
 extern bool verify_x509acert(x509acert_t *ac, bool strict);

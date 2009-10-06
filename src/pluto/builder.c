@@ -98,7 +98,6 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 				*cert = cert_empty;
 				cert->type = CERT_X509_SIGNATURE;
 				cert->u.x509 = x509cert;
-				time(&x509cert->installed);
 				return cert;
 			}
 			plog("  error in X.509 certificate");
@@ -134,7 +133,6 @@ static x509acert_t *builder_load_ac(certificate_type_t type, va_list args)
 	{
 		ac = malloc_thing(x509acert_t);
 		ac->next = NULL;
-		ac->installed = UNDEFINED_TIME;
 		ac->ac = lib->creds->create(lib->creds,
 							  		CRED_CERTIFICATE, CERT_X509_AC,
 							  		BUILD_BLOB_ASN1_DER, blob, BUILD_END);
@@ -173,9 +171,8 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 	if (blob.ptr)
 	{
 		crl = malloc_thing(x509crl_t);
-		*crl = empty_x509crl;
+		crl->next = NULL;
 		crl->distributionPoints = linked_list_create();
-
 		crl->crl = lib->creds->create(lib->creds,
 							  		  CRED_CERTIFICATE, CERT_X509_CRL,
 							  		  BUILD_BLOB_ASN1_DER, blob,

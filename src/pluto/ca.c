@@ -661,7 +661,6 @@ void add_ca_info(const whack_message_t *msg)
 
 		ca->next = ca_infos;
 		ca_infos = ca;
-		ca->installed = time(NULL);
 
 		unlock_ca_info_list("add_ca_info");
 
@@ -690,7 +689,6 @@ void list_ca_infos(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of X.509 CA Information Records:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (ca != NULL)
@@ -703,15 +701,21 @@ void list_ca_infos(bool utc)
 				, &ca->installed, utc, ca->name
 				, ca->strictcrlpolicy? "yes":"no");
 		*/
-		whack_log(RC_COMMENT, "%T, \"%s\"", &ca->installed, utc, ca->name);
+		whack_log(RC_COMMENT, " ");
 		dntoa(buf, BUF_LEN, ca->authName);
-		whack_log(RC_COMMENT, "       authname: '%s'", buf);
-		if (ca->ldaphost != NULL)
-			whack_log(RC_COMMENT, "       ldaphost: '%s'", ca->ldaphost);
-		if (ca->ldapbase != NULL)
-			whack_log(RC_COMMENT, "       ldapbase: '%s'", ca->ldapbase);
-		if (ca->ocspuri != NULL)
-			whack_log(RC_COMMENT, "       ocspuri:  '%s'", ca->ocspuri);
+		whack_log(RC_COMMENT, "  authname: \"%s\"", buf);
+		if (ca->ldaphost)
+		{
+			whack_log(RC_COMMENT, "  ldaphost: '%s'", ca->ldaphost);
+		}
+		if (ca->ldapbase)
+		{
+			whack_log(RC_COMMENT, "  ldapbase: '%s'", ca->ldapbase);
+		}
+		if (ca->ocspuri)
+		{
+			whack_log(RC_COMMENT, "  ocspuri:  '%s'", ca->ocspuri);
+		}
 
 		list_distribution_points(ca->crluris);
 
@@ -719,10 +723,9 @@ void list_ca_infos(bool utc)
 		{
 			datatot(ca->authKeyID.ptr, ca->authKeyID.len, ':'
 				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       authkey:   %s", buf);
+			whack_log(RC_COMMENT, "  authkey:   %s", buf);
 		}
 		ca = ca->next;
 	}
 }
-
 

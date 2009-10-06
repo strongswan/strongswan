@@ -44,7 +44,6 @@
 
 fetch_req_t empty_fetch_req = {
 	NULL    , /* next */
-		  0 , /* installed */
 		  0 , /* trials */
   { NULL, 0}, /* issuer */
   { NULL, 0}, /* authKeyID */
@@ -609,9 +608,6 @@ fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID,
 	memset(req, 0, sizeof(fetch_req_t));
 	req->distributionPoints = linked_list_create();
 
-	/* note current time */
-	req->installed = time(NULL);
-
 	/* clone fields */
 	req->issuer = chunk_clone(issuer);
 	req->authKeyID = chunk_clone(authKeyID);
@@ -695,7 +691,7 @@ void list_distribution_points(linked_list_t *distributionPoints)
 	enumerator = distributionPoints->create_enumerator(distributionPoints);
 	while (enumerator->enumerate(enumerator, &point))
 	{
-		whack_log(RC_COMMENT, "       %s '%s'",
+		whack_log(RC_COMMENT, "  %s '%s'",
 				 (first_point)? "distPts: " : "         ", point);
 		first_point = FALSE;
 	}
@@ -715,7 +711,7 @@ void list_crl_fetch_requests(bool utc)
 	if (req != NULL)
 	{
 		whack_log(RC_COMMENT, " ");
-		whack_log(RC_COMMENT, "List of CRL fetch requests:");
+		whack_log(RC_COMMENT, "List of CRL Fetch Requests:");
 		whack_log(RC_COMMENT, " ");
 	}
 
@@ -723,15 +719,14 @@ void list_crl_fetch_requests(bool utc)
 	{
 		u_char buf[BUF_LEN];
 
-		whack_log(RC_COMMENT, "%T, trials: %d"
-			, &req->installed, utc, req->trials);
+		whack_log(RC_COMMENT, "  trials:    %d", req->trials);
 		dntoa(buf, BUF_LEN, req->issuer);
-		whack_log(RC_COMMENT, "       issuer:   '%s'", buf);
+		whack_log(RC_COMMENT, "  issuer:   '%s'", buf);
 		if (req->authKeyID.ptr != NULL)
 		{
 			datatot(req->authKeyID.ptr, req->authKeyID.len, ':'
 				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "       authkey:   %s", buf);
+			whack_log(RC_COMMENT, "  authkey:   %s", buf);
 		}
 		list_distribution_points(req->distributionPoints);
 		req = req->next;

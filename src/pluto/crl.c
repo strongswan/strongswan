@@ -39,14 +39,7 @@
 
 /* chained lists of X.509 crls */
 
-static x509crl_t  *x509crls      = NULL;
-
-const x509crl_t empty_x509crl = {
-	  NULL        , /* crl */
-	  NULL        , /* *next */
-	UNDEFINED_TIME, /* installed */
-	  NULL        , /* distributionPoints */
-};
+static x509crl_t  *x509crls = NULL;
 
 /**
  *  Get the X.509 CRL with a given issuer
@@ -502,7 +495,6 @@ void list_crls(bool utc, bool strict)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of X.509 CRLs:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (x509crl)
@@ -514,6 +506,15 @@ void list_crls(bool utc, bool strict)
 		u_int revoked = 0;
 		enumerator_t *enumerator;
 
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  issuer:   \"%Y\"",
+				cert_crl->get_issuer(cert_crl));
+		serial = crl->get_serial(crl);
+		if (serial.ptr)
+		{
+			whack_log(RC_COMMENT, "  serial:    %#B", &serial);
+		}
+
 		/* count number of revoked certificates in CRL */
 		enumerator = crl->create_enumerator(crl);
 		while (enumerator->enumerate(enumerator, NULL, NULL, NULL))
@@ -521,28 +522,18 @@ void list_crls(bool utc, bool strict)
 			revoked++;
 		}
 		enumerator->destroy(enumerator);
+		whack_log(RC_COMMENT, "  revoked:   %d certificates", revoked);
 
-		whack_log(RC_COMMENT, "%T, revoked certs: %d",
-				&x509crl->installed, utc, revoked);
-		whack_log(RC_COMMENT, "       issuer:   '%Y'",
-				cert_crl->get_issuer(cert_crl));
-		serial = crl->get_serial(crl);
-		if (serial.ptr)
-		{
-			whack_log(RC_COMMENT, "       crlnumber: %#B", &serial);
-		}
 		list_distribution_points(x509crl->distributionPoints);
 
 		cert_crl->get_validity(cert_crl, NULL, &thisUpdate, &nextUpdate);
-		whack_log(RC_COMMENT, "       updates:   this %T",
-				&thisUpdate, utc);
-		whack_log(RC_COMMENT, "                  next %T %s",
-				&nextUpdate, utc,
+		whack_log(RC_COMMENT, "  updates:   this %T", &thisUpdate, utc);
+		whack_log(RC_COMMENT, "             next %T %s", &nextUpdate, utc,
 				check_expiry(nextUpdate, CRL_WARNING_INTERVAL, strict));
 		authKeyID = crl->get_authKeyIdentifier(crl);
 		if (authKeyID.ptr)
 		{
-			whack_log(RC_COMMENT, "       authkey:   %#B", &authKeyID);
+			whack_log(RC_COMMENT, "  authkey:   %#B", &authKeyID);
 		}
 
 		x509crl = x509crl->next;

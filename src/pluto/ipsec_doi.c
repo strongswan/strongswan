@@ -2173,7 +2173,6 @@ static void decode_cert(struct msg_digest *md)
 							  			BUILD_END);
 			if (cert.cert)
 			{
-				time(&cert.installed);
 				if (verify_x509cert(&cert, strict_crl_policy, &valid_until))
 				{
 					DBG(DBG_PARSING,

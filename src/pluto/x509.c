@@ -124,7 +124,6 @@ static const asn1Object_t otherNameObjects[] = {
 const x509cert_t empty_x509cert = {
 	  NULL        , /* cert */
 	  NULL        , /* *next */
-	UNDEFINED_TIME, /* installed */
 			0     , /* count */
 	  FALSE         /* smartcard */
 };
@@ -1491,32 +1490,29 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 			{
 				whack_log(RC_COMMENT, " ");
 				whack_log(RC_COMMENT, "List of X.509 %s Certificates:", caption);
-				whack_log(RC_COMMENT, " ");
 				first = FALSE;
 			}
-
-			whack_log(RC_COMMENT, "%T, count: %d", &cert->installed, utc,
-				cert->count);
-			whack_log(RC_COMMENT, "       subject:  '%Y'",
+			whack_log(RC_COMMENT, " ");
+			whack_log(RC_COMMENT, "  subject:  \"%Y\"",
 				certificate->get_subject(certificate));
-			whack_log(RC_COMMENT, "       issuer:   '%Y'",
+			whack_log(RC_COMMENT, "  issuer:   \"%Y\"",
 				certificate->get_issuer(certificate));
 				serial = x509->get_serial(x509);
-			whack_log(RC_COMMENT, "       serial:    %#B", &serial);
+			whack_log(RC_COMMENT, "  serial:    %#B", &serial);
 
 			/* list validity */
 			certificate->get_validity(certificate, &now, &notBefore, &notAfter);
-			whack_log(RC_COMMENT, "       validity:  not before %T %s",
+			whack_log(RC_COMMENT, "  validity:  not before %T %s",
 				&notBefore, utc,
 				(notBefore < now)?"ok":"fatal (not valid yet)");
-			whack_log(RC_COMMENT, "                  not after  %T %s",
+			whack_log(RC_COMMENT, "             not after  %T %s",
 				&notAfter, utc,
 				check_expiry(notAfter, CA_CERT_WARNING_INTERVAL, TRUE));
 
 			key = certificate->get_public_key(certificate);
 			if (key);
 			{
-				whack_log(RC_COMMENT, "       pubkey:    %N %4d bits%s",
+				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 					key_type_names, key->get_type(key),
 					key->get_keysize(key) * BITS_PER_BYTE,				
 					cert->smartcard ? ", on smartcard" :
@@ -1524,11 +1520,11 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 
 				if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 				{
-					whack_log(RC_COMMENT, "       keyid:     %#B", &keyid);
+					whack_log(RC_COMMENT, "  keyid:     %#B", &keyid);
 				}
 				if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &subjkey))
 				{
-					whack_log(RC_COMMENT, "       subjkey:   %#B", &subjkey);
+					whack_log(RC_COMMENT, "  subjkey:   %#B", &subjkey);
 				}
 				key->destroy(key);
 			}
@@ -1537,7 +1533,7 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 			authkey = x509->get_authKeyIdentifier(x509);
 			if (authkey.ptr)
 			{
-				whack_log(RC_COMMENT, "       authkey:   %#B", &authkey);
+				whack_log(RC_COMMENT, "  authkey:   %#B", &authkey);
 			}
 		}
 		cert = cert->next;
@@ -1549,5 +1545,5 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
  */
 void list_x509_end_certs(bool utc)
 {
-	list_x509cert_chain("End", x509certs, X509_NONE, utc);
+	list_x509cert_chain("End Entity", x509certs, X509_NONE, utc);
 }

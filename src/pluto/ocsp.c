@@ -424,7 +424,7 @@ cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
 	chunk_t serialNumber = x509->get_serial(x509);
 	cert_status_t status;
 	ocsp_location_t location;
-	time_t nextUpdate;
+	time_t nextUpdate = UNDEFINED_TIME;
 
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
@@ -595,50 +595,46 @@ void list_ocsp_locations(ocsp_location_t *location, bool requests,
 				first = FALSE;
 			}
 			whack_log(RC_COMMENT, " ");
-			if (location->issuer.ptr != NULL)
+			if (location->issuer.ptr)
 			{
 				dntoa(buf, BUF_LEN, location->issuer);
-				whack_log(RC_COMMENT, "       issuer:  '%s'", buf);
+				whack_log(RC_COMMENT, "  issuer:  \"%s\"", buf);
 			}
-			whack_log(RC_COMMENT, "       uri:     '%s'", location->uri);
-			if (location->authNameID.ptr != NULL)
+			whack_log(RC_COMMENT, "  uri:     '%s'", location->uri);
+			if (location->authNameID.ptr)
 			{
 				datatot(location->authNameID.ptr, location->authNameID.len, ':'
 					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       authname: %s", buf);
+				whack_log(RC_COMMENT, "  authname: %s", buf);
 			}
-			if (location->authKeyID.ptr != NULL)
+			if (location->authKeyID.ptr)
 			{
 				datatot(location->authKeyID.ptr, location->authKeyID.len, ':'
 					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       authkey:  %s", buf);
+				whack_log(RC_COMMENT, "  authkey:  %s", buf);
 			}
-			while (certinfo != NULL)
+			while (certinfo)
 			{
-				char thisUpdate[BUF_LEN];
-
-				snprintf(thisUpdate, BUF_LEN, "%T", &certinfo->thisUpdate, utc);
-
 				if (requests)
 				{
-					whack_log(RC_COMMENT, "%s, trials: %d", thisUpdate
-						, certinfo->trials);
+					whack_log(RC_COMMENT, "  serial:   %#B, %d trials",
+						 &certinfo->serialNumber, certinfo->trials);
 				}
 				else if (certinfo->once)
 				{
-					whack_log(RC_COMMENT, "%s, onetime use%s", thisUpdate
-						, (certinfo->nextUpdate < time(NULL))? " (expired)": "");
+					whack_log(RC_COMMENT, "  serial:   %#B, %s, once%s",
+						&certinfo->serialNumber,
+						cert_status_names[certinfo->status],
+						(certinfo->nextUpdate < time(NULL))? " (expired)": "");
 				}
 				else
 				{
-					whack_log(RC_COMMENT, "%s, until %T %s", thisUpdate
-						, &certinfo->nextUpdate, utc
-						, check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
+					whack_log(RC_COMMENT, "  serial:   %#B, %s, until %T %s", 
+						&certinfo->serialNumber,
+						cert_status_names[certinfo->status],
+ 						&certinfo->nextUpdate, utc,
+						check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
 				}
-				datatot(certinfo->serialNumber.ptr, certinfo->serialNumber.len, ':'
-					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       serial:   %s, %s", buf
-					, cert_status_names[certinfo->status]);
 				certinfo = certinfo->next;
 			}
 		}
@@ -1155,7 +1151,6 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 					free_x509cert(cert);
 					break;
 				}
-				time(&cert->installed);
 				x509 = (x509_t*)cert->cert;
 				
 				if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&

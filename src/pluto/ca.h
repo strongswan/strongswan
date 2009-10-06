@@ -29,7 +29,6 @@ typedef struct ca_info ca_info_t;
 struct ca_info {
 	ca_info_t       *next;
 	char            *name;
-	time_t          installed;
 	chunk_t         authName;
 	chunk_t         authKeyID;
 	char            *ldaphost;

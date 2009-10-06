@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/types.h>
+#include <time.h>
 
 #include <freeswan.h>
 
@@ -282,7 +283,6 @@ void list_acerts(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of X.509 Attribute Certificates:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (x509ac)
@@ -294,53 +294,51 @@ void list_acerts(bool utc)
 		time_t notBefore, notAfter;
 		ietf_attributes_t *groups;
 
-
-		whack_log(RC_COMMENT, "%T", &x509ac->installed, utc);
+		whack_log(RC_COMMENT, " ");
 
 		entityName = cert_ac->get_subject(cert_ac);
 		if (entityName)
 		{
-			whack_log(RC_COMMENT, "       holder:   '%Y'", entityName);
+			whack_log(RC_COMMENT, "  holder:   \"%Y\"", entityName);
 		}
 
 		holderIssuer = ac->get_holderIssuer(ac);
 		if (holderIssuer)
 		{
-			whack_log(RC_COMMENT, "       hissuer:  '%Y'", holderIssuer);
+			whack_log(RC_COMMENT, "  hissuer:  \"%Y\"", holderIssuer);
 		}
 
 		holderSerial = ac->get_holderSerial(ac);
 		if (holderSerial.ptr)
 		{
-			whack_log(RC_COMMENT, "       hserial:   %#B", &holderSerial);
+			whack_log(RC_COMMENT, "  hserial:   %#B", &holderSerial);
 		}
 
 		groups = ac->get_groups(ac);		
 		if (groups)
 		{
-			whack_log(RC_COMMENT, "       groups:    %s",
+			whack_log(RC_COMMENT, "  groups:    %s",
 					groups->get_string(groups));
 			groups->destroy(groups);
 		}
 
 		issuer = cert_ac->get_issuer(cert_ac);
-		whack_log(RC_COMMENT, "       issuer:   '%Y'", issuer);
+		whack_log(RC_COMMENT, "  issuer:   \"%Y\"", issuer);
 
 		serial = ac->get_serial(ac);
-		whack_log(RC_COMMENT, "       serial:    %#B", &serial);
+		whack_log(RC_COMMENT, "  serial:    %#B", &serial);
 
 		cert_ac->get_validity(cert_ac, &now, &notBefore, &notAfter);
-		whack_log(RC_COMMENT, "       validity:  not before %T %s",
+		whack_log(RC_COMMENT, "  validity:  not before %T %s",
 				&notBefore, utc,
 				(notBefore < now)?"ok":"fatal (not valid yet)");
-		whack_log(RC_COMMENT, "                  not after  %T %s",
-				&notAfter, utc,
+		whack_log(RC_COMMENT, "             not after  %T %s", &notAfter, utc,
 				check_expiry(notAfter, ACERT_WARNING_INTERVAL, TRUE));
 
 		authKeyID = ac->get_authKeyIdentifier(ac);
 		if (authKeyID.ptr)
 		{
-			whack_log(RC_COMMENT, "       authkey:   %#B", &authKeyID);
+			whack_log(RC_COMMENT, "  authkey:   %#B", &authKeyID);
 		}
 
 		x509ac = x509ac->next;

@@ -55,7 +55,6 @@ typedef struct x509cert x509cert_t;
 struct x509cert {
 	certificate_t  *cert;
 	x509cert_t     *next;
-	time_t          installed;
 	int             count;
 	bool            smartcard;
 };
