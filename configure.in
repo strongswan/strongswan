@@ -586,6 +586,7 @@ if test x$random = xtrue; then
 fi
 if test x$x509 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" x509"
+	pluto_plugins=${pluto_plugins}" x509"
 fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
