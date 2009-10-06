@@ -29,6 +29,8 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
 #include <crypto/hashers/hasher.h>
+#include <utils/enumerator.h>
+#include <utils/identification.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -1478,11 +1480,17 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 
 		if (flags == X509_NONE || (flags & x509->get_flags(x509)))
 		{
+			enumerator_t *enumerator;
+			char buf[BUF_LEN];
+			char *pos = buf;
+			int len = BUF_LEN;
+			bool first_altName = TRUE;
+			identification_t *id;
 			time_t notBefore, notAfter;
 			public_key_t *key;
 			chunk_t serial, keyid, subjkey, authkey;
 			cert_t c;
-			
+
 			c.type = CERT_X509_SIGNATURE;
 			c.u.x509 = cert;
 
@@ -1493,6 +1501,30 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 				first = FALSE;
 			}
 			whack_log(RC_COMMENT, " ");
+
+			enumerator = x509->create_subjectAltName_enumerator(x509);
+			while (enumerator->enumerate(enumerator, &id))
+			{
+				int written;
+
+				if (first_altName)
+				{
+					written = snprintf(pos, len, "%Y", id);
+					first_altName = FALSE;
+				}
+				else
+				{
+					written = snprintf(pos, len, ", %Y", id);
+				}
+				pos += written;
+				len -= written;
+			}
+			enumerator->destroy(enumerator);
+			if (!first_altName)
+			{
+				whack_log(RC_COMMENT, "  altNames:  %s", buf);
+			}
+
 			whack_log(RC_COMMENT, "  subject:  \"%Y\"",
 				certificate->get_subject(certificate));
 			whack_log(RC_COMMENT, "  issuer:   \"%Y\"",
