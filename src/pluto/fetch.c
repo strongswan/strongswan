@@ -721,7 +721,7 @@ void list_crl_fetch_requests(bool utc)
 
 		whack_log(RC_COMMENT, "  trials:    %d", req->trials);
 		dntoa(buf, BUF_LEN, req->issuer);
-		whack_log(RC_COMMENT, "  issuer:   '%s'", buf);
+		whack_log(RC_COMMENT, "  issuer:   \"%s\"", buf);
 		if (req->authKeyID.ptr != NULL)
 		{
 			datatot(req->authKeyID.ptr, req->authKeyID.len, ':'

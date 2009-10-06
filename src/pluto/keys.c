@@ -1441,26 +1441,24 @@ void list_public_keys(bool utc)
 
 		whack_log(RC_COMMENT, " ");
 		idtoa(&key->id, buf, BUF_LEN);
-		whack_log(RC_COMMENT, "  owner:  '%s'", buf);
-		whack_log(RC_COMMENT, "  pubkey:  %N %4d bits, until %T %s",
+		whack_log(RC_COMMENT, "  identity: '%s'", buf);
+		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
 		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			whack_log(RC_COMMENT,"  keyid:   %#B", &keyid);
+			whack_log(RC_COMMENT,"  keyid:     %#B", &keyid);
 		}
-		if (key->issuer.len > 0)
+		if (key->issuer.len)
 		{
 			dntoa(buf, BUF_LEN, key->issuer);
-			whack_log(RC_COMMENT,"  issuer: \"%s\"", buf);
+			whack_log(RC_COMMENT,"  issuer:   \"%s\"", buf);
 		}
-		if (key->serial.len > 0)
+		if (key->serial.len)
 		{
-			datatot(key->serial.ptr, key->serial.len, ':'
-					, buf, BUF_LEN);
-			whack_log(RC_COMMENT,"  serial:  %s", buf);
+			whack_log(RC_COMMENT,"  serial:    %#B", &key->serial);
 		}
 		p = p->next;
 	}

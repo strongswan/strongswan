@@ -1378,6 +1378,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 
 		cnew->serialNumber = chunk_clone(info->serialNumber);
 		cnew->next = certinfo;
+		cnew->trials = 0;
 		*certinfop = cnew;
 		certinfo = cnew;
 	}
