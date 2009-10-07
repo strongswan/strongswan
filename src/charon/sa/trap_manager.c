@@ -303,37 +303,64 @@ static void acquire(private_trap_manager_t *this, u_int32_t reqid,
 }
 
 /**
+ * Complete the acquire, if successful or failed
+ */
+static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
+					 child_sa_t *child_sa)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->traps->create_enumerator(this->traps);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->pending != ike_sa)
+		{
+			continue;
+		}
+		if (child_sa && child_sa->get_reqid(child_sa) !=
+									entry->child_sa->get_reqid(entry->child_sa))
+		{
+			continue;
+		}
+		entry->pending = NULL;
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
+/**
  * Implementation of listener_t.ike_state_change
  */
 static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 							 ike_sa_state_t state)
 {
-	private_trap_manager_t *this;
-	enumerator_t *enumerator;
-	entry_t *entry;
-
 	switch (state)
 	{
-		case IKE_ESTABLISHED:
 		case IKE_DESTROYING:
-			break;
+			complete(listener->traps, ike_sa, NULL);
+			return TRUE;
 		default:
 			return TRUE;
 	}
+}
 
-	this = listener->traps;
-	this->lock->read_lock(this->lock);
-	enumerator = this->traps->create_enumerator(this->traps);
-	while (enumerator->enumerate(enumerator, &entry))
+/**
+ * Implementation of listener_t.child_state_change
+ */
+static bool child_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
+							   child_sa_t *child_sa, child_sa_state_t state)
+{
+	switch (state)
 	{
-		if (entry->pending == ike_sa)
-		{
-			entry->pending = NULL;
-		}
+		case CHILD_INSTALLED:
+		case CHILD_DESTROYING:
+			complete(listener->traps, ike_sa, child_sa);
+			return TRUE;
+		default:
+			return TRUE;
 	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-	return TRUE;
 }
 
 /**
@@ -368,6 +395,7 @@ trap_manager_t *trap_manager_create()
 	this->listener.traps = this;
 	memset(&this->listener.listener, 0, sizeof(listener_t));
 	this->listener.listener.ike_state_change = (void*)ike_state_change;
+	this->listener.listener.child_state_change = (void*)child_state_change;
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
 
 	return &this->public;
