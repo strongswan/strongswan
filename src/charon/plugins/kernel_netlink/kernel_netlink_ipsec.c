@@ -1996,7 +1996,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
 	if (fd)
 	{
-		ignore_result(write(fd, "0", 1));
+		ignore_result(write(fd, "165", 3));
 		close(fd);
 	}
 
