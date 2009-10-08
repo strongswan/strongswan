@@ -269,6 +269,17 @@ static err_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid,
 }
 
 /**
+ * Prints a binary string in hexadecimal form
+ */
+static void hex_str(chunk_t bin, chunk_t *str)
+{
+	u_int i;
+	update_chunk(str, snprintf(str->ptr,str->len,"0x"));
+	for (i=0; i < bin.len; i++)
+		update_chunk(str, snprintf(str->ptr,str->len,"%02X",*bin.ptr++));
+}
+
+/**
  *  Parses an ASN.1 distinguished name int its OID/value pairs
  */
 static err_t dn_parse(chunk_t dn, chunk_t *str)
@@ -355,18 +366,6 @@ int dn_count_wildcards(chunk_t dn)
 	}
 	return wildcards;
 }
-
-/**
- * Prints a binary string in hexadecimal form
- */
-void hex_str(chunk_t bin, chunk_t *str)
-{
-	u_int i;
-	update_chunk(str, snprintf(str->ptr,str->len,"0x"));
-	for (i=0; i < bin.len; i++)
-		update_chunk(str, snprintf(str->ptr,str->len,"%02X",*bin.ptr++));
-}
-
 
 /** Converts a binary DER-encoded ASN.1 distinguished name
  *  into LDAP-style human-readable ASCII format

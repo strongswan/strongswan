@@ -43,7 +43,6 @@ extern const x509cert_t empty_x509cert;
 extern bool same_keyid(chunk_t a, chunk_t b);
 extern bool same_dn(chunk_t a, chunk_t b);
 extern bool match_dn(chunk_t a, chunk_t b, int *wildcards);
-extern void hex_str(chunk_t bin, chunk_t *str);
 extern int dn_count_wildcards(chunk_t dn);
 extern int dntoa(char *dst, size_t dstlen, chunk_t dn);
 extern err_t atodn(char *src, chunk_t *dn);
