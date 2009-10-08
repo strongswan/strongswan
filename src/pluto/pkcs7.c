@@ -131,38 +131,6 @@ static const asn1Object_t envelopedDataObjects[] = {
 #define PKCS7_ENVELOPED_ROOF            15
 
 /**
- * PKCS7 contentInfo OIDs
- */
-static chunk_t ASN1_pkcs7_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01
-);
-static chunk_t ASN1_pkcs7_signed_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x02
-);
-static chunk_t ASN1_pkcs7_enveloped_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x03
-);
-static chunk_t ASN1_pkcs7_signed_enveloped_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x04
-);
-static chunk_t ASN1_pkcs7_digested_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
-);
-static chunk_t ASN1_pkcs7_encrypted_data_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x05
-);
-
-/**
- * PKCS#7 attribute type OIDs
- */
-static chunk_t ASN1_contentType_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-);
-static chunk_t ASN1_messageDigest_oid = chunk_from_chars(
-	0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-);
-
-/**
  * Parse PKCS#7 ContentInfo object
  */
 bool pkcs7_parse_contentInfo(chunk_t blob, u_int level0, contentInfo_t *cInfo)
@@ -205,7 +173,6 @@ end:
 bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert,
 							chunk_t *attributes, certificate_t *cacert)
 {
-	u_char buf[BUF_LEN];
 	asn1_parser_t *parser;
 	chunk_t object;
 	int digest_alg = OID_UNKNOWN;
@@ -281,9 +248,13 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			DBG2("  v%d", version);
 			break;
 		case PKCS7_SIGNED_ISSUER:
-			dntoa(buf, BUF_LEN, object);
-			DBG2("  '%s'",buf);
-			break;
+			{
+				identification_t *issuer = identification_create_from_encoding(
+													ID_DER_ASN1_DN, object);
+				DBG2("  \"%Y\"", issuer);
+				issuer->destroy(issuer);
+				break;
+			}
 		case PKCS7_AUTH_ATTRIBUTES:
 			if (attributes != NULL)
 			{
@@ -377,7 +348,6 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 
 	crypter_t *crypter = NULL;
 
-	u_char buf[BUF_LEN];
 	int enc_alg         = OID_UNKNOWN;
 	int content_enc_alg = OID_UNKNOWN;
 	int version;
@@ -425,9 +395,13 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			}
 			break;
 		case PKCS7_ISSUER:
-			dntoa(buf, BUF_LEN, object);
-			DBG2("  '%s'", buf);
-			break;
+			{
+				identification_t *issuer = identification_create_from_encoding(
+													ID_DER_ASN1_DN, object);
+				DBG2("  \"%Y\"", issuer);
+				issuer->destroy(issuer);
+				break;
+			}
 		case PKCS7_SERIAL_NUMBER:
 			if (!chunk_equals(serialNumber, object))
 			{
@@ -561,9 +535,10 @@ failed:
  */
 chunk_t pkcs7_contentType_attribute(void)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_contentType_oid
-				, asn1_simple_object(ASN1_SET, ASN1_pkcs7_data_oid));
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_PKCS9_CONTENT_TYPE),
+						asn1_wrap(ASN1_SET, "m",
+							asn1_build_known_oid(OID_PKCS7_DATA)));
 }
 
 /**
@@ -586,12 +561,10 @@ chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg)
 	hasher->allocate_hash(hasher, content, &digest);
 	hasher->destroy(hasher);
 
-	return asn1_wrap(ASN1_SEQUENCE, "cm",
-				ASN1_messageDigest_oid,
-					asn1_wrap(ASN1_SET, "m",
-						asn1_wrap(ASN1_OCTET_STRING, "m", digest)
-					)
-				);
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_PKCS9_MESSAGE_DIGEST),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_wrap(ASN1_OCTET_STRING, "m", digest)));
 }
 
 /**
@@ -599,41 +572,11 @@ chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg)
  */
 static chunk_t pkcs7_build_contentInfo(contentInfo_t *cInfo)
 {
-	chunk_t content_type;
-
-	/* select DER-encoded OID for pkcs7 contentInfo type */
-	switch(cInfo->type)
-	{
-	case OID_PKCS7_DATA:
-		content_type = ASN1_pkcs7_data_oid;
-		break;
-	case OID_PKCS7_SIGNED_DATA:
-		content_type = ASN1_pkcs7_signed_data_oid;
-		break;
-	case OID_PKCS7_ENVELOPED_DATA:
-		content_type = ASN1_pkcs7_enveloped_data_oid;
-		break;
-	case OID_PKCS7_SIGNED_ENVELOPED_DATA:
-		content_type = ASN1_pkcs7_signed_enveloped_data_oid;
-		break;
-	case OID_PKCS7_DIGESTED_DATA:
-		content_type = ASN1_pkcs7_digested_data_oid;
-		break;
-	case OID_PKCS7_ENCRYPTED_DATA:
-		content_type = ASN1_pkcs7_encrypted_data_oid;
-		break;
-	case OID_UNKNOWN:
-	default:
-		DBG1("invalid pkcs7 contentInfo type");
-		return chunk_empty;
-	}
-
-	return (cInfo->content.ptr == NULL)
-		? asn1_simple_object(ASN1_SEQUENCE, content_type)
-		: asn1_wrap(ASN1_SEQUENCE, "cm"
-			, content_type
-			, asn1_simple_object(ASN1_CONTEXT_C_0, cInfo->content)
-		  );
+	return (cInfo->content.ptr) ?
+				asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(cInfo->type),
+					asn1_simple_object(ASN1_CONTEXT_C_0, cInfo->content)) :
+				asn1_build_known_oid(cInfo->type);
 }
 
 /**
@@ -783,8 +726,8 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 					, asn1_build_known_oid(enc_alg)
 					, asn1_simple_object(ASN1_OCTET_STRING, iv));
 
-		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "cmm"
-					, ASN1_pkcs7_data_oid
+		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "mmm"
+					, asn1_build_known_oid(OID_PKCS7_DATA)
 					, contentEncryptionAlgorithm
 					, asn1_wrap(ASN1_CONTEXT_S_0, "m", out));
 
