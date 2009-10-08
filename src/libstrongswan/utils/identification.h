@@ -323,6 +323,14 @@ identification_t * identification_create_from_string(char *string);
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
 
 /**
+ * Constructor to create a host_t object from a sockaddr struct
+ *
+ * @param sockaddr		sockaddr struct which contains family and address
+ * @return 				identification_t
+ */
+identification_t * identification_create_from_sockaddr(sockaddr_t *sockaddr);
+
+/**
  * printf hook function for identification_t.
  *
  * Arguments are:
