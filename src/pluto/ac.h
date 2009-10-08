@@ -18,6 +18,7 @@
 #ifndef _AC_H
 #define _AC_H
 
+#include <utils/identification.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/ietf_attributes/ietf_attributes.h>
 
@@ -33,7 +34,7 @@ struct x509acert {
 extern bool verify_x509acert(x509acert_t *ac, bool strict);
 extern bool match_group_membership(ietf_attributes_t *peer_attributes, char *conn,
 								   ietf_attributes_t *conn_attributes);
-extern x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial);
+extern x509acert_t* get_x509acert(identification_t *issuer, chunk_t serial);
 extern void load_acerts(void);
 extern void free_acert(x509acert_t *ac);
 extern void free_acerts(void);

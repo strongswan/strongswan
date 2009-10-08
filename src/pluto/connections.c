@@ -336,13 +336,17 @@ void delete_connection(connection_t *c, bool relations)
 	free(c->name);
 	free_id_content(&c->spd.this.id);
 	free(c->spd.this.updown);
-	free(c->spd.this.ca.ptr);
+	DESTROY_IF(c->spd.this.ca);
 	DESTROY_IF(c->spd.this.groups);
 	free_id_content(&c->spd.that.id);
 	free(c->spd.that.updown);
-	free(c->spd.that.ca.ptr);
+	DESTROY_IF(c->spd.that.ca);
 	DESTROY_IF(c->spd.that.groups);
-	free_generalNames(c->requested_ca, TRUE);
+	if (c->requested_ca)
+	{
+		c->requested_ca->destroy_offset(c->requested_ca,
+										offsetof(identification_t, destroy));
+	}
 	gw_delref(&c->gw_info);
 
 	lock_certs_and_keys("delete_connection");
@@ -674,13 +678,18 @@ static void unshare_connection_strings(connection_t *c)
 	c->spd.this.updown = clone_str(c->spd.this.updown);
 	scx_share(c->spd.this.sc);
 	share_cert(c->spd.this.cert);
-	c->spd.this.ca = chunk_clone(c->spd.this.ca);
-
+	if (c->spd.this.ca)
+	{
+		c->spd.this.ca = c->spd.this.ca->clone(c->spd.this.ca);
+	}
 	unshare_id_content(&c->spd.that.id);
 	c->spd.that.updown = clone_str(c->spd.that.updown);
 	scx_share(c->spd.that.sc);
 	share_cert(c->spd.that.cert);
-	c->spd.that.ca = chunk_clone(c->spd.that.ca);
+	if (c->spd.that.ca)
+	{
+		c->spd.that.ca = c->spd.that.ca->clone(c->spd.that.ca);
+	}
 
 	/* increment references to algo's */
 	alg_info_addref((struct alg_info *)c->alg_info_esp);
@@ -757,12 +766,12 @@ static void load_end_certificate(char *filename, struct end *dst)
 			}
 
 			/* if no CA is defined, use issuer as default */
-			if (dst->ca.ptr == NULL)
+			if (dst->ca)
 			{
 				certificate_t *certificate = dst->cert.u.x509->cert;
 				identification_t *issuer = certificate->get_issuer(certificate);
 
-				dst->ca = issuer->get_encoding(issuer);
+				dst->ca = issuer->clone(issuer);
 			}
 			break;
 		default:
@@ -806,23 +815,23 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 		}
 	}
 
-	dst->ca = chunk_empty;
+	dst->ca = NULL;
 
 	/* decode CA distinguished name, if any */
 	if (src->ca)
 	{
 		if streq(src->ca, "%same")
+		{
 			same_ca = TRUE;
+		}
 		else if (!streq(src->ca, "%any"))
 		{
-			err_t ugh;
-
-			dst->ca.ptr = temporary_cyclic_buffer();
-			ugh = atodn(src->ca, &dst->ca);
-			if (ugh != NULL)
+			dst->ca = identification_create_from_string(src->ca);
+			if (dst->ca->get_type(dst->ca) != ID_DER_ASN1_DN)
 			{
-				plog("bad CA string '%s': %s (ignored)", src->ca, ugh);
-				dst->ca = chunk_empty;
+				plog("bad CA string '%s', ignored", src->ca);
+				dst->ca->destroy(dst->ca);
+				dst->ca = NULL;
 			}
 		}
 	}
@@ -3249,7 +3258,7 @@ connection_t *find_host_connection(const ip_address *me, u_int16_t my_port,
 
 connection_t *refine_host_connection(const struct state *st,
 									 const struct id *peer_id,
-									 chunk_t peer_ca)
+									 identification_t *peer_ca)
 {
 	connection_t *c = st->st_connection;
 	connection_t *d;
@@ -3520,7 +3529,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 							const u_int16_t our_port,
 							const u_int8_t peer_protocol,
 							const u_int16_t peer_port,
-							chunk_t peer_ca,
+							identification_t *peer_ca,
 							ietf_attributes_t *peer_attributes)
 {
 	connection_t *d;
@@ -3663,7 +3672,7 @@ static connection_t *fc_try_oppo(const connection_t *c,
 								 const u_int16_t our_port,
 								 const u_int8_t peer_protocol,
 								 const u_int16_t peer_port,
-								 chunk_t peer_ca,
+								 identification_t *peer_ca,
 								 ietf_attributes_t *peer_attributes)
 {
 	connection_t *d;
@@ -3765,19 +3774,22 @@ static connection_t *fc_try_oppo(const connection_t *c,
 /*
  * get the peer's CA and group attributes
  */
-chunk_t get_peer_ca_and_groups(connection_t *c, ietf_attributes_t **peer_attributes)
+void get_peer_ca_and_groups(connection_t *c,
+							identification_t **peer_ca,
+							ietf_attributes_t **peer_attributes)
 {
-	struct state *p1st = find_phase1_state(c, ISAKMP_SA_ESTABLISHED_STATES);
+	struct state *p1st;
 
+	*peer_ca = NULL;
 	*peer_attributes = NULL;
 
-	if (p1st != NULL
-	&&  p1st->st_peer_pubkey != NULL
-	&&  p1st->st_peer_pubkey->issuer.ptr != NULL)
+	p1st = find_phase1_state(c, ISAKMP_SA_ESTABLISHED_STATES);
+	if (p1st && p1st->st_peer_pubkey && p1st->st_peer_pubkey->issuer)
 	{
-		x509acert_t *x509ac = get_x509acert(p1st->st_peer_pubkey->issuer,
-											p1st->st_peer_pubkey->serial);
+		x509acert_t *x509ac;
 
+		x509ac = get_x509acert(p1st->st_peer_pubkey->issuer,
+							   p1st->st_peer_pubkey->serial);
 		if (x509ac && verify_x509acert(x509ac, strict_crl_policy))
 		{
 			ac_t * ac = (ac_t*)x509ac->ac;
@@ -3790,9 +3802,8 @@ chunk_t get_peer_ca_and_groups(connection_t *c, ietf_attributes_t **peer_attribu
 				DBG_log("no valid attribute cert found")
 			)
 		}
-		return p1st->st_peer_pubkey->issuer;
+		*peer_ca = p1st->st_peer_pubkey->issuer;
 	}
-	return chunk_empty;
 }
 
 connection_t *find_client_connection(connection_t *c,
@@ -3806,7 +3817,9 @@ connection_t *find_client_connection(connection_t *c,
 	connection_t *d;
 	struct spd_route *sr;
 	ietf_attributes_t *peer_attributes = NULL;
-	chunk_t peer_ca = get_peer_ca_and_groups(c, &peer_attributes);
+	identification_t *peer_ca;
+
+	get_peer_ca_and_groups(c, &peer_ca, &peer_attributes);
 
 #ifdef DEBUG
 	if (DBGP(DBG_CONTROLMORE))
@@ -4034,18 +4047,21 @@ void show_connections_status(bool all, const char *name)
 		if (all)
 		{
 			/* show CAs if defined */
-			if (c->spd.this.ca.ptr != NULL || c->spd.that.ca.ptr != NULL)
+			if (c->spd.this.ca && c->spd.that.ca)
 			{
-				char this_ca[BUF_LEN], that_ca[BUF_LEN];
+				whack_log(RC_COMMENT, "\"%s\"%s:   CAs: \"%Y\"...\"%Y\"",
+						  c->name, instance, c->spd.this.ca, c->spd.that.ca);
+			}
+			else if (c->spd.this.ca)
+			{
+				whack_log(RC_COMMENT, "\"%s\"%s:   CAs: \"%Y\"...%%any",
+						  c->name, instance, c->spd.this.ca);
 
-				dntoa_or_null(this_ca, BUF_LEN, c->spd.this.ca, "%any");
-				dntoa_or_null(that_ca, BUF_LEN, c->spd.that.ca, "%any");
-
-				whack_log(RC_COMMENT, "\"%s\"%s:   CAs: '%s'...'%s'"
-					, c->name
-					, instance
-					, this_ca
-					, that_ca);
+			}
+			else if (c->spd.that.ca)
+			{
+				whack_log(RC_COMMENT, "\"%s\"%s:   CAs: %%any...\"%Y\"",
+						  c->name, instance, c->spd.that.ca);
 			}
 
 			/* show group attributes if defined */

@@ -26,7 +26,7 @@ struct x509crl {
 	certificate_t *crl;
 	x509crl_t     *next;
 	linked_list_t *distributionPoints;
-	chunk_t          signature;
+	chunk_t        signature;
 };
 
 /* apply a strict CRL policy

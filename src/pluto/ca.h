@@ -16,6 +16,7 @@
 #define _CA_H
 
 #include <utils/linked_list.h>
+#include <utils/identification.h>
 
 #include "x509.h"
 #include "whack.h"
@@ -27,21 +28,21 @@
 typedef struct ca_info ca_info_t;
 
 struct ca_info {
-	ca_info_t       *next;
-	char            *name;
-	chunk_t         authName;
-	chunk_t         authKeyID;
-	char            *ldaphost;
-	char            *ldapbase;
-	char            *ocspuri;
-	linked_list_t   *crluris;
-	bool            strictcrlpolicy;
+	ca_info_t        *next;
+	char             *name;
+	identification_t *authName;
+	chunk_t           authKeyID;
+	char             *ldaphost;
+	char             *ldapbase;
+	char             *ocspuri;
+	linked_list_t    *crluris;
+	bool              strictcrlpolicy;
 };
 
-extern bool trusted_ca(chunk_t a, chunk_t b, int *pathlen);
-extern bool match_requested_ca(generalName_t *requested_ca, chunk_t our_ca,
-							   int *our_pathlen);
-extern x509cert_t* get_authcert(chunk_t subject, chunk_t keyid,
+extern bool trusted_ca(identification_t *a, identification_t *b, int *pathlen);
+extern bool match_requested_ca(linked_list_t *requested_ca,
+							   identification_t *our_ca, int *our_pathlen);
+extern x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 								x509_flag_t auth_flags);
 extern void load_authcerts(const char *type, const char *path,
 						   x509_flag_t auth_flags);
@@ -50,7 +51,7 @@ extern void free_authcerts(void);
 extern void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc);
 extern bool trust_authcert_candidate(const x509cert_t *cert,
 									 const x509cert_t *alt_chain);
-extern ca_info_t* get_ca_info(chunk_t name, chunk_t keyid);
+extern ca_info_t* get_ca_info(identification_t *name, chunk_t keyid);
 extern bool find_ca_info_by_name(const char *name, bool delete);
 extern void add_ca_info(const whack_message_t *msg);
 extern void delete_ca_info(const char *name);

@@ -45,19 +45,19 @@ static ca_info_t *ca_infos = NULL;
 /*
  * Checks if CA a is trusted by CA b
  */
-bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
+bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
 {
 	bool match = FALSE;
 
 	/* no CA b specified -> any CA a is accepted */
-	if (b.ptr == NULL)
+	if (b == NULL)
 	{
-		*pathlen = (a.ptr == NULL)? 0 : MAX_CA_PATH_LEN;
+		*pathlen = (a == NULL) ? 0 : MAX_CA_PATH_LEN;
 		return TRUE;
 	}
 
 	/* no CA a specified -> trust cannot be established */
-	if (a.ptr == NULL)
+	if (a == NULL)
 	{
 		*pathlen = MAX_CA_PATH_LEN;
 		return FALSE;
@@ -66,7 +66,7 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 	*pathlen = 0;
 
 	/* CA a equals CA b -> we have a match */
-	if (same_dn(a, b))
+	if (a->equals(a, b))
 	{
 		return TRUE;
 	}
@@ -78,7 +78,6 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 	{
 		certificate_t *certificate;
 		identification_t *issuer;
-		chunk_t issuer_dn;
 		x509cert_t *cacert;
 
 		cacert = get_authcert(a, chunk_empty, X509_CA);
@@ -100,8 +99,7 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 
 		/* does the issuer of CA a match CA b? */
 		issuer = certificate->get_issuer(certificate);
-		issuer_dn = issuer->get_encoding(issuer);
-		match = same_dn(issuer_dn, b);
+		match = b->equals(b, issuer);
 
 		/* we have a match and exit the loop */
 		if (match)
@@ -109,7 +107,7 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 			break;
 		}
 		/* go one level up in the CA chain */
-		a = issuer_dn;
+		a = issuer;
 	}
 
 	unlock_authcert_list("trusted_ca");
@@ -119,11 +117,14 @@ bool trusted_ca(chunk_t a, chunk_t b, int *pathlen)
 /*
  * does our CA match one of the requested CAs?
  */
-bool match_requested_ca(generalName_t *requested_ca, chunk_t our_ca,
+bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
 						int *our_pathlen)
 {
+	identification_t *ca;
+	enumerator_t *enumerator;
+
 	/* if no ca is requested than any ca will match */
-	if (requested_ca == NULL)
+	if (requested_ca == NULL || requested_ca->get_count(requested_ca) == 0)
 	{
 		*our_pathlen = 0;
 		return TRUE;
@@ -131,17 +132,17 @@ bool match_requested_ca(generalName_t *requested_ca, chunk_t our_ca,
 
 	*our_pathlen = MAX_CA_PATH_LEN + 1;
 
-	while (requested_ca != NULL)
+	enumerator = requested_ca->create_enumerator(requested_ca);
+	while (enumerator->enumerate(enumerator, &ca))
 	{
 		int pathlen;
 
-		if (trusted_ca(our_ca, requested_ca->name, &pathlen)
-		&& pathlen < *our_pathlen)
+		if (trusted_ca(our_ca, ca, &pathlen) && pathlen < *our_pathlen)
 		{
 			*our_pathlen = pathlen;
 		}
-		requested_ca = requested_ca->next;
 	}
+	enumerator->destroy(enumerator);
 
 	if (*our_pathlen > MAX_CA_PATH_LEN)
 	{
@@ -180,7 +181,8 @@ void free_authcerts(void)
 /*
  *  get a X.509 authority certificate with a given subject or keyid
  */
-x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, x509_flag_t auth_flags)
+x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
+						 x509_flag_t auth_flags)
 {
 	x509cert_t *cert, *prev_cert = NULL;
 
@@ -194,8 +196,6 @@ x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, x509_flag_t auth_flags)
 	{
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
-		identification_t *cert_subject;
-		chunk_t cert_subject_dn;
 
 		/* skip non-matching types of authority certificates */
 		if (!(x509->get_flags(x509) & auth_flags))
@@ -216,9 +216,7 @@ x509cert_t* get_authcert(chunk_t subject, chunk_t keyid, x509_flag_t auth_flags)
 		}
 
 		/* compare the subjectDistinguishedNames */
-		cert_subject = certificate->get_subject(certificate);
-		cert_subject_dn = cert_subject->get_encoding(cert_subject);
-		if (!same_dn(subject, cert_subject_dn))
+		if (!certificate->has_subject(certificate, subject))
 		{
 			continue;
 		}
@@ -243,16 +241,14 @@ x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
 {
 	certificate_t *certificate = cert->cert;
 	x509_t *x509 = (x509_t*)certificate;
-	identification_t *cert_subject = certificate->get_subject(certificate);
-	chunk_t cert_subject_dn = cert_subject->get_encoding(cert_subject);
 	x509cert_t *old_cert;
 
 	lock_authcert_list("add_authcert");
 
-	old_cert = get_authcert(cert_subject_dn, 
+	old_cert = get_authcert(certificate->get_subject(certificate), 
 							x509->get_subjectKeyIdentifier(x509),
 							auth_flags);
-	if (old_cert != NULL)
+	if (old_cert)
 	{
 		if (certificate->equals(certificate, old_cert->cert))
 		{
@@ -341,19 +337,16 @@ void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc)
 /*
  * get a cacert with a given subject or keyid from an alternative list
  */
-static const x509cert_t* get_alt_cacert(chunk_t subject, chunk_t keyid,
+static const x509cert_t* get_alt_cacert(identification_t *subject, chunk_t keyid,
 										const x509cert_t *cert)
 {
 	if (cert == NULL)
 	{
 		return NULL;
 	}
-
 	for (; cert != NULL; cert = cert->next)
 	{
 		certificate_t *certificate = cert->cert;
-		identification_t *cert_subject;
-		chunk_t cert_subject_dn;
 
 		/* compare the keyid with the certificate's subjectKeyIdentifier */
 		if (keyid.ptr)
@@ -369,9 +362,7 @@ static const x509cert_t* get_alt_cacert(chunk_t subject, chunk_t keyid,
 		}
 
 		/* compare the subjectDistinguishedNames */
-		cert_subject = certificate->get_subject(certificate);
-		cert_subject_dn = cert_subject->get_encoding(cert_subject);
-		if (!same_dn(subject, cert_subject_dn))
+		if (!certificate->has_subject(certificate, subject))
 		{
 			continue;
 		}
@@ -397,7 +388,6 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		x509_t *x509 = (x509_t*)certificate;
 		identification_t *subject = certificate->get_subject(certificate);
 		identification_t *issuer = certificate->get_issuer(certificate);
-		chunk_t issuer_dn = issuer->get_encoding(issuer);
 		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 		const x509cert_t *authcert = NULL;
 
@@ -411,7 +401,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		)
 
 		/* search in alternative chain first */
-		authcert = get_alt_cacert(issuer_dn, authKeyID, alt_chain);
+		authcert = get_alt_cacert(issuer, authKeyID, alt_chain);
 
 		if (authcert != NULL)
 		{
@@ -422,7 +412,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		else
 		{
 			/* search in trusted chain */
-			authcert = get_authcert(issuer_dn, authKeyID, X509_CA);
+			authcert = get_authcert(issuer, authKeyID, X509_CA);
 
 			if (authcert != NULL)
 			{
@@ -469,14 +459,14 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 /*
  *  get a CA info record with a given authName or authKeyID
  */
-ca_info_t* get_ca_info(chunk_t authname, chunk_t keyid)
+ca_info_t* get_ca_info(identification_t *name, chunk_t keyid)
 {
 	ca_info_t *ca= ca_infos;
 
-	while (ca!= NULL)
+	while (ca != NULL)
 	{
-		if ((keyid.ptr != NULL) ? same_keyid(keyid, ca->authKeyID)
-			: same_dn(authname, ca->authName))
+		if ((keyid.ptr) ? same_keyid(keyid, ca->authKeyID)
+			: name->equals(name, ca->authName))
 		{
 			return ca;
 		}
@@ -497,11 +487,11 @@ free_ca_info(ca_info_t* ca_info)
 		return;
 	}
 	ca_info->crluris->destroy_function(ca_info->crluris, free);
+	DESTROY_IF(ca_info->authName);
 	free(ca_info->name);
 	free(ca_info->ldaphost);
 	free(ca_info->ldapbase);
 	free(ca_info->ocspuri);
-	free(ca_info->authName.ptr);
 	free(ca_info->authKeyID.ptr);
 	free(ca_info);
 }
@@ -595,12 +585,11 @@ void add_ca_info(const whack_message_t *msg)
 		certificate_t *certificate = cacert->cert;
 		x509_t *x509 = (x509_t*)certificate;
 		identification_t *subject = certificate->get_subject(certificate);
-		chunk_t subject_dn = subject->get_encoding(subject);
 		chunk_t subjectKeyID = x509->get_subjectKeyIdentifier(x509);
 		ca_info_t *ca = NULL;
 
 		/* does the authname already exist? */
-		ca = get_ca_info(subject_dn, subjectKeyID);
+		ca = get_ca_info(subject, subjectKeyID);
 
 		if (ca != NULL)
 		{
@@ -620,7 +609,7 @@ void add_ca_info(const whack_message_t *msg)
 		ca->name = clone_str(msg->name);
 
 		/* authName */
-		ca->authName = chunk_clone(subject_dn);
+		ca->authName = subject->clone(subject);
 		DBG(DBG_CONTROL,
 			DBG_log("authname: '%Y'", subject)
 		)
@@ -693,8 +682,6 @@ void list_ca_infos(bool utc)
 
 	while (ca != NULL)
 	{
-		u_char buf[BUF_LEN];
-
 		/* strictpolicy per CA not supported yet
 		 *
 		whack_log(RC_COMMENT, "%T, \"%s\", strictcrlpolicy: %s"
@@ -702,8 +689,7 @@ void list_ca_infos(bool utc)
 				, ca->strictcrlpolicy? "yes":"no");
 		*/
 		whack_log(RC_COMMENT, " ");
-		dntoa(buf, BUF_LEN, ca->authName);
-		whack_log(RC_COMMENT, "  authname: \"%s\"", buf);
+		whack_log(RC_COMMENT, "  authname: \"%Y\"", ca->authName);
 		if (ca->ldaphost)
 		{
 			whack_log(RC_COMMENT, "  ldaphost: '%s'", ca->ldaphost);
@@ -719,11 +705,9 @@ void list_ca_infos(bool utc)
 
 		list_distribution_points(ca->crluris);
 
-		if (ca->authKeyID.ptr != NULL)
+		if (ca->authKeyID.ptr)
 		{
-			datatot(ca->authKeyID.ptr, ca->authKeyID.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "  authkey:   %s", buf);
+			whack_log(RC_COMMENT, "  authkey:   %#B", &ca->authKeyID);
 		}
 		ca = ca->next;
 	}

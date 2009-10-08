@@ -233,39 +233,42 @@ static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
 	return out_generic_chunk(np, &isakmp_nonce_desc, outs, *n, name);
 }
 
-static bool collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
+static linked_list_t* collect_rw_ca_candidates(struct msg_digest *md)
 {
-	connection_t *d = find_host_connection(&md->iface->addr
-		, pluto_port, (ip_address*)NULL, md->sender_port, LEMPTY);
+	linked_list_t *list = linked_list_create();
+	connection_t *d;
+
+	d = find_host_connection(&md->iface->addr, pluto_port, (ip_address*)NULL,
+							  md->sender_port, LEMPTY);
 
 	for (; d != NULL; d = d->hp_next)
 	{
 		/* must be a road warrior connection */
-		if (d->kind == CK_TEMPLATE && !(d->policy & POLICY_OPPO)
-		&& d->spd.that.ca.ptr != NULL)
+		if (d->kind == CK_TEMPLATE && !(d->policy & POLICY_OPPO) &&
+			d->spd.that.ca)
 		{
-			generalName_t *gn;
+			enumerator_t *enumerator;
+			identification_t *ca;
 			bool new_entry = TRUE;
 
-			for (gn = *top; gn != NULL; gn = gn->next)
+			enumerator = list->create_enumerator(list);
+			while (enumerator->enumerate(enumerator, &ca))
 			{
-				if (same_dn(gn->name, d->spd.that.ca))
+				if (ca->equals(ca, d->spd.that.ca))
 				{
 					new_entry = FALSE;
 					break;
-				}
+				}					
 			}
+			enumerator->destroy(enumerator);
+
 			if (new_entry)
 			{
-				gn = malloc_thing(generalName_t);
-				gn->kind = GN_DIRECTORY_NAME;
-				gn->name = d->spd.that.ca;
-				gn->next = *top;
-				*top = gn;
+				list->insert_last(list, d->spd.that.ca->clone(d->spd.that.ca));
 			}
 		}
 	}
-	return *top != NULL;
+	return list;
 }
 
 static bool build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs,
@@ -1608,8 +1611,11 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
+			struct id key_id;
 
-			if (type == key_type && same_id(peer, &key->id))
+			id_from_identification(&key_id, key->id);
+
+			if (type == key_type && same_id(peer, &key_id))
 			{
 				time_t now = time(NULL);
 
@@ -1621,7 +1627,6 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 					*pp = free_public_keyentry(p);
 					continue; /* continue with next public key */
 				}
-
 				if (take_a_crack(&s, key))
 				{
 					return STF_OK;
@@ -2165,26 +2170,26 @@ static void decode_cert(struct msg_digest *md)
 		blob.len = pbs_left(&p->pbs);
 		if (cert->isacert_type == CERT_X509_SIGNATURE)
 		{
-			x509cert_t cert = empty_x509cert;
+			x509cert_t x509cert = empty_x509cert;
 
-			cert.cert = lib->creds->create(lib->creds,
+			x509cert.cert = lib->creds->create(lib->creds,
 							  			CRED_CERTIFICATE, CERT_X509,
 							  			BUILD_BLOB_ASN1_DER, blob,
 							  			BUILD_END);
-			if (cert.cert)
+			if (x509cert.cert)
 			{
-				if (verify_x509cert(&cert, strict_crl_policy, &valid_until))
+				if (verify_x509cert(&x509cert, strict_crl_policy, &valid_until))
 				{
 					DBG(DBG_PARSING,
 						DBG_log("Public key validated")
 					)
-					add_x509_public_key(&cert, valid_until, DAL_SIGNED);
+					add_x509_public_key(&x509cert, valid_until, DAL_SIGNED);
 				}
 				else
 				{
 					plog("X.509 certificate rejected");
 				}
-				DESTROY_IF(cert.cert);
+				x509cert.cert->destroy(x509cert.cert);
 			}
 			else
 			{
@@ -2193,11 +2198,11 @@ static void decode_cert(struct msg_digest *md)
 		}
 		else if (cert->isacert_type == CERT_PKCS7_WRAPPED_X509)
 		{
-			x509cert_t *cert = NULL;
+			x509cert_t *x509cert = NULL;
 
-			if (pkcs7_parse_signedData(blob, NULL, &cert, NULL, NULL))
+			if (pkcs7_parse_signedData(blob, NULL, &x509cert, NULL, NULL))
 			{
-				store_x509certs(&cert, strict_crl_policy);
+				store_x509certs(&x509cert, strict_crl_policy);
 			}
 			else
 			{
@@ -2232,29 +2237,31 @@ static void decode_cr(struct msg_digest *md, connection_t *c)
 
 		if (cr->isacr_type == CERT_X509_SIGNATURE)
 		{
-			char buf[BUF_LEN];
-
 			if (ca_name.len > 0)
 			{
-				generalName_t *gn;
+				identification_t *ca;
 
 				if (!is_asn1(ca_name))
 				{
 					continue;
 				}
-				gn = malloc_thing(generalName_t);
-				ca_name = chunk_clone(ca_name);
-				gn->kind = GN_DIRECTORY_NAME;
-				gn->name = ca_name;
-				gn->next = c->requested_ca;
-				c->requested_ca = gn;
+				if (c->requested_ca == NULL)
+				{
+					c->requested_ca = linked_list_create();
+				}
+				ca = identification_create_from_encoding(ID_DER_ASN1_DN, ca_name);
+				c->requested_ca->insert_last(c->requested_ca, ca);
+				DBG(DBG_PARSING | DBG_CONTROL,
+					DBG_log("requested CA: \"%Y\"", ca)
+				)
+			}
+			else
+			{
+				DBG(DBG_PARSING | DBG_CONTROL,
+					DBG_log("requested CA: %%any")
+				)
 			}
 			c->got_certrequest = TRUE;
-
-			DBG(DBG_PARSING | DBG_CONTROL,
-				dntoa_or_null(buf, BUF_LEN, ca_name, "%any");
-				DBG_log("requested CA: '%s'", buf);
-			)
 		}
 		else
 		{
@@ -2388,16 +2395,21 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 {
 	struct state *const st = md->st;
 	connection_t *c = st->st_connection;
+	identification_t *peer_ca;
 
-	chunk_t peer_ca = (st->st_peer_pubkey != NULL)
-					 ? st->st_peer_pubkey->issuer : chunk_empty;
-
-	DBG(DBG_CONTROL,
-		char buf[BUF_LEN];
-
-		dntoa_or_null(buf, BUF_LEN, peer_ca, "%none");
-		DBG_log("peer CA:      '%s'", buf);
-	)
+	peer_ca = st->st_peer_pubkey ? st->st_peer_pubkey->issuer : NULL;
+	if (peer_ca)
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("peer CA:      \"%Y\"", peer_ca)
+		)
+	}
+	else
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("peer CA:      %%none")
+		)
+	}
 
 	if (initiator)
 	{
@@ -2416,12 +2428,18 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 			return FALSE;
 		}
 
-		DBG(DBG_CONTROL,
-			char buf[BUF_LEN];
-
-			dntoa_or_null(buf, BUF_LEN, c->spd.that.ca, "%none");
-			DBG_log("required CA:  '%s'", buf);
-		)
+		if (c->spd.that.ca)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("required CA:  \"%s\"", c->spd.that.ca);
+			)
+		}
+		else
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("required CA:  %%none");
+			)
+		}
 
 		if (!trusted_ca(peer_ca, c->spd.that.ca, &pathlen))
 		{
@@ -2440,8 +2458,12 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 		r = refine_host_connection(st, peer, peer_ca);
 
 		/* delete the collected certificate requests */
-		free_generalNames(c->requested_ca, TRUE);
-		c->requested_ca = NULL;
+		if (c->requested_ca)
+		{
+			c->requested_ca->destroy_offset(c->requested_ca,
+									 offsetof(identification_t, destroy));
+			c->requested_ca = NULL;
+		}
 
 		if (r == NULL)
 		{
@@ -2452,12 +2474,18 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 			return FALSE;
 		}
 
-		DBG(DBG_CONTROL,
-			char buf[BUF_LEN];
-
-			dntoa_or_null(buf, BUF_LEN, r->spd.this.ca, "%none");
-			DBG_log("offered CA:   '%s'", buf);
-		)
+		if (r->spd.this.ca)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("offered CA:   \"%s\"", r->spd.this.ca)
+			)
+		}
+		else
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("offered CA:   %%none")
+			)
+		}
 
 		if (r != c)
 		{
@@ -2708,8 +2736,10 @@ static bool has_preloaded_public_key(struct state *st)
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
+			struct id key_id;
 
-			if (type == KEY_RSA && same_id(&c->spd.that.id, &key->id) &&
+			id_from_identification(&key_id, key->id);
+			if (type == KEY_RSA && same_id(&c->spd.that.id, &key_id) &&
 				key->until_time == UNDEFINED_TIME)
 			{
 				/* found a preloaded public key */
@@ -3402,39 +3432,50 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	{
 		if (st->st_connection->kind == CK_PERMANENT)
 		{
-			if (!build_and_ship_CR(CERT_X509_SIGNATURE
-			, st->st_connection->spd.that.ca
-			, &md->rbody, np))
+			identification_t *ca = st->st_connection->spd.that.ca;
+			chunk_t cr = (ca) ? ca->get_encoding(ca) : chunk_empty;
+
+			if (!build_and_ship_CR(CERT_X509_SIGNATURE, cr, &md->rbody, np))
 			{
 				return STF_INTERNAL_ERROR;
 			}
 		}
 		else
 		{
-			generalName_t *ca = NULL;
+			linked_list_t *list = collect_rw_ca_candidates(md);
+			int count = list->get_count(list);
+			bool error = FALSE;
 
-			if (collect_rw_ca_candidates(md, &ca))
+			if (count)
 			{
-				generalName_t *gn;
+				enumerator_t *enumerator;
+				identification_t *ca;
 
-				for (gn = ca; gn != NULL; gn = gn->next)
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &ca))
 				{
-					if (!build_and_ship_CR(CERT_X509_SIGNATURE, gn->name
-					, &md->rbody
-					, gn->next == NULL ? np : ISAKMP_NEXT_CR))
+					if (!build_and_ship_CR(CERT_X509_SIGNATURE,
+										   ca->get_encoding(ca), &md->rbody,
+										   --count ? ISAKMP_NEXT_CR : np))
 					{
-						return STF_INTERNAL_ERROR;
+						error = TRUE;
+						break;
 					}
 				}
-				free_generalNames(ca, FALSE);
+				enumerator->destroy(enumerator);
 			}
 			else
 			{
-				if (!build_and_ship_CR(CERT_X509_SIGNATURE, chunk_empty
-				, &md->rbody, np))
+				if (!build_and_ship_CR(CERT_X509_SIGNATURE, chunk_empty,
+									   &md->rbody, np))
 				{
-					return STF_INTERNAL_ERROR;
+					error = TRUE;
 				}
+			}
+			list->destroy_offset(list, offsetof(identification_t, destroy));
+			if (error)
+			{
+				return STF_INTERNAL_ERROR;
 			}
 		}
 	}
@@ -3478,9 +3519,10 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	struct state *const st = md->st;
 	pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
 	pb_stream id_pbs;   /* ID Payload; also used for hash calculation */
-
-	certpolicy_t cert_policy = st->st_connection->spd.this.sendcert;
-	cert_t mycert = st->st_connection->spd.this.cert;
+	
+	connection_t *c = st->st_connection;
+	certpolicy_t cert_policy = c->spd.this.sendcert;
+	cert_t mycert = c->spd.this.cert;
 	bool requested, send_cert, send_cr;
 	bool pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
 
@@ -3493,20 +3535,23 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	RETURN_STF_FAILURE(accept_nonce(md, &st->st_nr, "Nr"));
 
 	/* decode certificate requests */
-	st->st_connection->got_certrequest = FALSE;
-	decode_cr(md, st->st_connection);
+	c->got_certrequest = FALSE;
+	decode_cr(md, c);
 
 	/* free collected certificate requests since as initiator
 	 * we don't heed them anyway
 	 */
-	free_generalNames(st->st_connection->requested_ca, TRUE);
-	st->st_connection->requested_ca = NULL;
+	if (c->requested_ca)
+	{
+		c->requested_ca->destroy_offset(c->requested_ca,
+								 offsetof(identification_t, destroy));
+		c->requested_ca = NULL;
+	}
 
 	/* send certificate if auth is RSA, we have one and we want
 	 * or are requested to send it
 	 */
-	requested = cert_policy == CERT_SEND_IF_ASKED
-				&& st->st_connection->got_certrequest;
+	requested = cert_policy == CERT_SEND_IF_ASKED && c->got_certrequest;
 	send_cert = pubkey_auth && mycert.type != CERT_NONE
 				&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
@@ -3542,7 +3587,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		struct isakmp_ipsec_id id_hd;
 		chunk_t id_b;
 
-		build_id_payload(&id_hd, &id_b, &st->st_connection->spd.this);
+		build_id_payload(&id_hd, &id_b, &c->spd.this);
 		id_hd.isaiid_np = (send_cert)? ISAKMP_NEXT_CERT : auth_payload;
 		if (!out_struct(&id_hd, &isakmp_ipsec_identification_desc, &md->rbody, &id_pbs)
 		|| !out_chunk(id_b, &id_pbs, "my identity"))
@@ -3601,8 +3646,10 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	/* CR out */
 	if (send_cr)
 	{
-		if (!build_and_ship_CR(mycert.type, st->st_connection->spd.that.ca
-		, &md->rbody, ISAKMP_NEXT_SIG))
+		identification_t *ca = st->st_connection->spd.that.ca;
+		chunk_t cr = (ca) ? ca->get_encoding(ca) : chunk_empty;
+
+		if (!build_and_ship_CR(mycert.type, cr, &md->rbody, ISAKMP_NEXT_SIG))
 		{
 			return STF_INTERNAL_ERROR;
 		}
@@ -3632,7 +3679,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
 			scheme = oakley_to_signature_scheme(st->st_oakley.auth);
 
-			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
+			sig_len = sign_hash(scheme, c, sig_val, hash);
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
@@ -5182,10 +5229,11 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 
 	/* check the peer's group attributes */
 	{
+		identification_t *peer_ca = NULL;
 		ietf_attributes_t *peer_attributes = NULL;
 		bool match;
 
-		get_peer_ca_and_groups(st->st_connection, &peer_attributes);
+		get_peer_ca_and_groups(st->st_connection, &peer_ca, &peer_attributes);
 		match = match_group_membership(peer_attributes,
 									   st->st_connection->name,
 									   st->st_connection->spd.that.groups);

@@ -17,6 +17,9 @@
 
 #include <sys/queue.h>
 
+#include <utils/linked_list.h>
+#include <utils/identification.h>
+
 #include "id.h"
 #include "certs.h"
 #include "ac.h"
@@ -145,7 +148,7 @@ struct end {
 	u_int16_t port;             /* host order */
 	u_int8_t protocol;
 	cert_t cert;                /* end certificate */
-	chunk_t ca;                 /* CA distinguished name */
+	identification_t *ca;       /* CA distinguished name */
 	ietf_attributes_t *groups;  /* access control groups */
 	smartcard_t *sc;            /* smartcard reader and key info */
 	struct virtual_t *virt;
@@ -214,16 +217,13 @@ struct connection {
 
 	connection_t *policy_next;          /* if multiple policies,
 										   next one to apply */
-
 	struct gw_info *gw_info;
 	struct alg_info_esp *alg_info_esp;
 	struct alg_info_ike *alg_info_ike;
-
 	struct host_pair *host_pair;
 	connection_t *hp_next;              /* host pair list link */
 	connection_t *ac_next;              /* all connections list link */
-
-	generalName_t *requested_ca;        /* collected certificate requests */
+	linked_list_t *requested_ca;        /* collected certificate requests */
 	bool got_certrequest;
 };
 
@@ -267,29 +267,30 @@ extern void ISAKMP_SA_established(connection_t *c, so_serial_t serial);
 	sameaddr(&(c)->spd.that.id.ip_addr, &(c)->spd.that.host_addr) : TRUE))
 
 struct state;   /* forward declaration of tag (defined in state.h) */
-extern connection_t
-	*con_by_name(const char *nm, bool strict),
-	*find_host_connection(const ip_address *me, u_int16_t my_port
-		, const ip_address *him, u_int16_t his_port, lset_t policy),
-	*refine_host_connection(const struct state *st, const struct id *id
-		, chunk_t peer_ca),
-	*find_client_connection(connection_t *c
-		, const ip_subnet *our_net
-		, const ip_subnet *peer_net
-		, const u_int8_t our_protocol
-		, const u_int16_t out_port
-		, const u_int8_t peer_protocol
-		, const u_int16_t peer_port),
-	*find_connection_by_reqid(uint32_t reqid);
 
-extern connection_t *
-find_connection_for_clients(struct spd_route **srp
-							, const ip_address *our_client
-							, const ip_address *peer_client
-							, int transport_proto);
-
-extern chunk_t get_peer_ca_and_groups(connection_t *c,
-									  ietf_attributes_t **peer_attributes);
+extern connection_t* con_by_name(const char *nm, bool strict);
+extern connection_t* find_host_connection(const ip_address *me,
+										  u_int16_t my_port,
+										  const ip_address *him,
+										  u_int16_t his_port, lset_t policy);
+extern connection_t* refine_host_connection(const struct state *st,
+											const struct id *id,
+											identification_t *peer_ca);
+extern connection_t* find_client_connection(connection_t *c,
+											const ip_subnet *our_net,
+											const ip_subnet *peer_net,
+											const u_int8_t our_protocol,
+											const u_int16_t out_port,
+											const u_int8_t peer_protocol,
+											const u_int16_t peer_port);
+extern connection_t* find_connection_by_reqid(uint32_t reqid);
+extern connection_t* find_connection_for_clients(struct spd_route **srp,
+												 const ip_address *our_client,
+												 const ip_address *peer_client,
+												 int transport_proto);
+extern void get_peer_ca_and_groups(connection_t *c,
+								   identification_t **peer_ca, 
+								   ietf_attributes_t **peer_attributes);
 
 /* instantiating routines
  * Note: connection_discard() is in state.h because all its work

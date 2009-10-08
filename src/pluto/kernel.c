@@ -492,13 +492,23 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
+			struct id key_id;
 			int pathlen;
 
-			if (type == KEY_RSA && same_id(&sr->that.id, &key->id) &&
+			id_from_identification(&key_id, key->id);
+
+			if (type == KEY_RSA && same_id(&sr->that.id, &key_id) &&
 				trusted_ca(key->issuer, sr->that.ca, &pathlen))
 			{
-				dntoa_or_null(peerca_str, BUF_LEN, key->issuer, "");
-				escape_metachar(peerca_str, secure_peerca_str, sizeof(secure_peerca_str));
+				if (key->issuer)
+				{
+					snprintf(peerca_str, BUF_LEN, "%Y", key->issuer);	
+					escape_metachar(peerca_str, secure_peerca_str, BUF_LEN);
+				}
+				else
+				{
+					secure_peerca_str[0] = '\0';
+				}
 				break;
 			}
 		}

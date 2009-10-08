@@ -63,8 +63,7 @@
 static char *next_str
 	, *str_roof;
 
-static bool
-unpack_str(char **p)
+static bool unpack_str(char **p)
 {
 	char *end = memchr(next_str, '\0', str_roof - next_str);
 
@@ -103,8 +102,7 @@ struct key_add_continuation {
 	enum key_add_attempt lookingfor;
 };
 
-static void
-key_add_ugh(const struct id *keyid, err_t ugh)
+static void key_add_ugh(const struct id *keyid, err_t ugh)
 {
 	char name[BUF_LEN]; /* longer IDs will be truncated in message */
 
@@ -114,8 +112,7 @@ key_add_ugh(const struct id *keyid, err_t ugh)
 }
 
 /* last one out: turn out the lights */
-static void
-key_add_merge(struct key_add_common *oc, const struct id *keyid)
+static void key_add_merge(struct key_add_common *oc, const struct id *keyid)
 {
 	if (oc->refCount == 0)
 	{
@@ -135,8 +132,7 @@ key_add_merge(struct key_add_common *oc, const struct id *keyid)
 	}
 }
 
-static void
-key_add_continue(struct adns_continuation *ac, err_t ugh)
+static void key_add_continue(struct adns_continuation *ac, err_t ugh)
 {
 	struct key_add_continuation *kc = (void *) ac;
 	struct key_add_common *oc = kc->common;
@@ -163,9 +159,9 @@ key_add_continue(struct adns_continuation *ac, err_t ugh)
 	whack_log_fd = NULL_FD;
 }
 
-static void
-key_add_request(const whack_message_t *msg)
+static void key_add_request(const whack_message_t *msg)
 {
+	identification_t *key_id;
 	struct id keyid;
 	err_t ugh = atoid(msg->keyid, &keyid, FALSE);
 
@@ -175,10 +171,12 @@ key_add_request(const whack_message_t *msg)
 	}
 	else
 	{
-		if (!msg->whack_addkey)
-			delete_public_keys(&keyid, msg->pubkey_alg
-				, chunk_empty, chunk_empty);
+		key_id = identification_create_from_string(msg->keyid);
 
+		if (!msg->whack_addkey)
+		{
+			delete_public_keys(key_id, msg->pubkey_alg, NULL, chunk_empty);
+		}
 		if (msg->keyval.len == 0)
 		{
 			struct key_add_common *oc = malloc_thing(struct key_add_common);
@@ -234,20 +232,20 @@ key_add_request(const whack_message_t *msg)
 		}
 		else
 		{
-			if (!add_public_key(&keyid, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
+			if (!add_public_key(key_id, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
 				&pubkeys))
 			{
 				loglog(RC_LOG_SERIOUS, "failed to add public key");
 			}
 		}
+		key_id->destroy(key_id);
 	}
 }
 
 /* Handle a kernel request. Supposedly, there's a message in
  * the kernelsock socket.
  */
-void
-whack_handle(int whackctlfd)
+void whack_handle(int whackctlfd)
 {
 	whack_message_t msg;
 	struct sockaddr_un whackaddr;

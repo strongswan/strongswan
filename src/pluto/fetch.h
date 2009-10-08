@@ -14,6 +14,7 @@
  */
 
 #include <utils/linked_list.h>
+#include <utils/identification.h>
 
 #include "x509.h"
 
@@ -29,11 +30,11 @@ typedef enum {
 typedef struct fetch_req fetch_req_t;
 
 struct fetch_req {
-	fetch_req_t   *next;
-	int           trials;
-	chunk_t       issuer;
-	chunk_t       authKeyID;
-	linked_list_t *distributionPoints;
+	fetch_req_t      *next;
+	int               trials;
+	identification_t *issuer;
+	chunk_t           authKeyID;
+	linked_list_t    *distributionPoints;
 };
 
 #ifdef THREADS
@@ -67,7 +68,8 @@ extern void free_ocsp_fetch(void);
 extern void add_distribution_point(linked_list_t *points, char* new_point);
 extern void add_distribution_points(linked_list_t *points,
 									linked_list_t *new_points);
-extern fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID,
+extern fetch_req_t* build_crl_fetch_request(identification_t *issuer,
+											chunk_t authKeyID,
 											linked_list_t *distributionPoints);
 extern void add_crl_fetch_request(fetch_req_t *req);
 extern void add_ocsp_fetch_request(struct ocsp_location *location,

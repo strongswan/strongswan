@@ -54,10 +54,10 @@ typedef struct ocsp_location ocsp_location_t;
 
 struct ocsp_location {
 	ocsp_location_t  *next;
-	chunk_t          issuer;
-	chunk_t          authNameID;
-	chunk_t          authKeyID;
-	chunk_t          nonce;
+	identification_t *issuer;
+	chunk_t           authNameID;
+	chunk_t           authKeyID;
+	chunk_t           nonce;
 	char             *uri;
 	ocsp_certinfo_t  *certinfo;
 };

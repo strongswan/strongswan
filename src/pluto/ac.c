@@ -78,7 +78,7 @@ void free_acerts(void)
 /**
  *  Get a X.509 attribute certificate for a given holder
  */
-x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial)
+x509acert_t* get_x509acert(identification_t *issuer, chunk_t serial)
 {
 	x509acert_t *x509ac = x509acerts;
 	x509acert_t *prev_ac = NULL;
@@ -87,10 +87,9 @@ x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial)
 	{
 		ac_t *ac = (ac_t*)x509ac->ac;
 		identification_t *holderIssuer = ac->get_holderIssuer(ac);
-		chunk_t holderIssuer_dn = holderIssuer->get_encoding(holderIssuer);
 		chunk_t holderSerial = ac->get_holderSerial(ac);
 
-		if (same_dn(issuer, holderIssuer_dn) &&
+		if (issuer->equals(issuer, holderIssuer) &&
 			chunk_equals(serial, holderSerial))
 		{
 			if (x509ac!= x509acerts)
@@ -116,11 +115,10 @@ static void add_acert(x509acert_t *x509ac)
 	certificate_t *cert_ac = x509ac->ac;
 	ac_t *ac = (ac_t*)cert_ac;
 	identification_t *holderIssuer = ac->get_holderIssuer(ac);
-	chunk_t holderIssuer_dn = holderIssuer->get_encoding(holderIssuer);
 	chunk_t holderSerial = ac->get_serial(ac);
 	x509acert_t *old_ac;
 
-	old_ac = get_x509acert(holderIssuer_dn, holderSerial);
+	old_ac = get_x509acert(holderIssuer, holderSerial);
 	if (old_ac != NULL)
 	{
 		if (cert_ac->is_newer(cert_ac, old_ac->ac))
@@ -156,7 +154,6 @@ bool verify_x509acert(x509acert_t *x509ac, bool strict)
 	ac_t *ac = (ac_t*)cert_ac;
 	identification_t *subject = cert_ac->get_subject(cert_ac);
 	identification_t *issuer = cert_ac->get_issuer(cert_ac);
-	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t authKeyID = ac->get_authKeyIdentifier(ac);
 	x509cert_t *aacert;
 	time_t notBefore, valid_until;
@@ -177,7 +174,7 @@ bool verify_x509acert(x509acert_t *x509ac, bool strict)
 	)
 
 	lock_authcert_list("verify_x509acert");
-	aacert = get_authcert(issuer_dn, authKeyID, X509_AA);
+	aacert = get_authcert(issuer, authKeyID, X509_AA);
 	unlock_authcert_list("verify_x509acert");
 
 	if (aacert == NULL)

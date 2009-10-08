@@ -18,9 +18,11 @@
 #ifndef _X509_H
 #define _X509_H
 
+#include <utils/identification.h>
 #include <credentials/keys/public_key.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/x509.h>
+
 #include "constants.h"
 #include "id.h"
 
@@ -68,8 +70,6 @@ extern bool match_dn(chunk_t a, chunk_t b, int *wildcards);
 extern void hex_str(chunk_t bin, chunk_t *str);
 extern int dn_count_wildcards(chunk_t dn);
 extern int dntoa(char *dst, size_t dstlen, chunk_t dn);
-extern int dntoa_or_null(char *dst, size_t dstlen, chunk_t dn,
-						 const char* null_dn);
 extern err_t atodn(char *src, chunk_t *dn);
 extern void select_x509cert_id(x509cert_t *cert, struct id *end_id);
 extern void parse_authorityKeyIdentifier(chunk_t blob, int level0,
@@ -82,7 +82,7 @@ extern chunk_t x509_build_signature(chunk_t tbs, int algorithm,
 									private_key_t *key, bool bit_string);
 extern bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until);
 extern x509cert_t* add_x509cert(x509cert_t *cert);
-extern x509cert_t* get_x509cert(chunk_t issuer, chunk_t keyid, x509cert_t* chain);
+extern x509cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, x509cert_t* chain);
 extern void share_x509cert(x509cert_t *cert);
 extern void release_x509cert(x509cert_t *cert);
 extern void free_x509cert(x509cert_t *cert);

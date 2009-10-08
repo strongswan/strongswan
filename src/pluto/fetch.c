@@ -45,7 +45,7 @@
 fetch_req_t empty_fetch_req = {
 	NULL    , /* next */
 		  0 , /* trials */
-  { NULL, 0}, /* issuer */
+    NULL    , /* issuer */
   { NULL, 0}, /* authKeyID */
 	NULL      /* distributionPoints */
 };
@@ -250,7 +250,7 @@ void wake_fetch_thread(const char *who)
 static void free_fetch_request(fetch_req_t *req)
 {
 	req->distributionPoints->destroy_function(req->distributionPoints, free);
-	free(req->issuer.ptr);
+	DESTROY_IF(req->issuer);
 	free(req->authKeyID.ptr);
 	free(req);
 }
@@ -598,7 +598,8 @@ void add_distribution_points(linked_list_t *points, linked_list_t *new_points)
 	enumerator->destroy(enumerator);
 }
 
-fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID, 
+fetch_req_t* build_crl_fetch_request(identification_t *issuer,
+									 chunk_t authKeyID, 
 									 linked_list_t *distributionPoints)
 {
 	char *point;
@@ -609,7 +610,7 @@ fetch_req_t* build_crl_fetch_request(chunk_t issuer, chunk_t authKeyID,
 	req->distributionPoints = linked_list_create();
 
 	/* clone fields */
-	req->issuer = chunk_clone(issuer);
+	req->issuer = issuer->clone(issuer);
 	req->authKeyID = chunk_clone(authKeyID);
 
 	/* copy distribution points */
@@ -637,7 +638,7 @@ void add_crl_fetch_request(fetch_req_t *req)
 	while (r != NULL)
 	{
 		if (req->authKeyID.ptr ? same_keyid(req->authKeyID, r->authKeyID) :
-			same_dn(req->issuer, r->issuer))
+			req->issuer->equals(req->issuer, r->issuer))
 		{
 			/* there is already a fetch request */
 			DBG(DBG_CONTROL,
@@ -712,21 +713,16 @@ void list_crl_fetch_requests(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of CRL Fetch Requests:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (req != NULL)
 	{
-		u_char buf[BUF_LEN];
-
+		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "  trials:    %d", req->trials);
-		dntoa(buf, BUF_LEN, req->issuer);
-		whack_log(RC_COMMENT, "  issuer:   \"%s\"", buf);
-		if (req->authKeyID.ptr != NULL)
+		whack_log(RC_COMMENT, "  issuer:   \"%Y\"", req->issuer);
+		if (req->authKeyID.ptr)
 		{
-			datatot(req->authKeyID.ptr, req->authKeyID.len, ':'
-				, buf, BUF_LEN);
-			whack_log(RC_COMMENT, "  authkey:   %s", buf);
+			whack_log(RC_COMMENT, "  authkey:   %#B", &req->authKeyID);
 		}
 		list_distribution_points(req->distributionPoints);
 		req = req->next;

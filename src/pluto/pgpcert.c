@@ -490,17 +490,17 @@ void list_pgp_end_certs(bool utc)
 		c.u.pgp = cert;
 
 		whack_log(RC_COMMENT, " ");
-		whack_log(RC_COMMENT, "  digest:   %Y", cert->fingerprint);
-		whack_log(RC_COMMENT, "  created:  %T", &cert->created, utc);
-		whack_log(RC_COMMENT, "  until:    %T %s", &cert->until, utc,
+		whack_log(RC_COMMENT, "  digest:    %Y", cert->fingerprint);
+		whack_log(RC_COMMENT, "  created:   %T", &cert->created, utc);
+		whack_log(RC_COMMENT, "  until:     %T %s", &cert->until, utc,
 				check_expiry(cert->until, CA_CERT_WARNING_INTERVAL, TRUE));
-		whack_log(RC_COMMENT, "       pubkey:   %N %4d bits%s",
+		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 				key_type_names, key->get_type(key),
 				key->get_keysize(key) * BITS_PER_BYTE,
 				has_private_key(c)? ", has private key" : "");
 		if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			whack_log(RC_COMMENT, "  keyid:    %#B", &keyid);
+			whack_log(RC_COMMENT, "  keyid:     %#B", &keyid);
 		}
 		cert = cert->next;
 	}

@@ -337,7 +337,7 @@ static err_t dn_parse(chunk_t dn, chunk_t *str)
 
 	err_t ugh = init_rdn(dn, &rdn, &attribute, &next);
 
-	if (ugh != NULL) /* a parsing error has occured */
+	if (ugh) /* a parsing error has occured */
 	{
 		return ugh;
 	}
@@ -346,7 +346,7 @@ static err_t dn_parse(chunk_t dn, chunk_t *str)
 	{
 		ugh = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
 
-		if (ugh != NULL) /* a parsing error has occured */
+		if (ugh) /* a parsing error has occured */
 		{
 			return ugh;
 		}
@@ -391,7 +391,7 @@ int dn_count_wildcards(chunk_t dn)
 
 	err_t ugh = init_rdn(dn, &rdn, &attribute, &next);
 
-	if (ugh != NULL) /* a parsing error has occured */
+	if (ugh) /* a parsing error has occured */
 	{
 		return -1;
 	}
@@ -400,7 +400,7 @@ int dn_count_wildcards(chunk_t dn)
 	{
 		ugh = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
 
-		if (ugh != NULL) /* a parsing error has occured */
+		if (ugh) /* a parsing error has occured */
 		{
 			return -1;
 		}
@@ -436,7 +436,7 @@ int dntoa(char *dst, size_t dstlen, chunk_t dn)
 	str.len = dstlen;
 	ugh = dn_parse(dn, &str);
 
-	if (ugh != NULL) /* error, print DN as hex string */
+	if (ugh) /* error, print DN as hex string */
 	{
 		DBG(DBG_PARSING,
 			DBG_log("error in DN parsing: %s", ugh)
@@ -447,22 +447,6 @@ int dntoa(char *dst, size_t dstlen, chunk_t dn)
 	}
 	return (int)(dstlen - str.len);
 }
-
-/**
- * Same as dntoa but prints a special string for a null dn
- */
-int dntoa_or_null(char *dst, size_t dstlen, chunk_t dn, const char* null_dn)
-{
-	if (dn.ptr == NULL)
-	{
-		return snprintf(dst, dstlen, "%s", null_dn);
-	}
-	else
-	{
-		return dntoa(dst, dstlen, dn);
-	}
-}
-
 
 /**
  * Codes ASN.1 lengths up to a size of 16'777'215 bytes
@@ -913,20 +897,18 @@ bool same_keyid(chunk_t a, chunk_t b)
 /**
  * Get a X.509 certificate with a given issuer found at a certain position
  */
-x509cert_t* get_x509cert(chunk_t issuer, chunk_t keyid, x509cert_t *chain)
+x509cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, x509cert_t *chain)
 {
-	x509cert_t *cert = (chain != NULL)? chain->next : x509certs;
+	x509cert_t *cert = chain ? chain->next : x509certs;
 
-	while (cert != NULL)
+	while (cert)
 	{
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
-		identification_t *cert_issuer = certificate->get_issuer(certificate);
-		chunk_t cert_issuer_dn = cert_issuer->get_encoding(cert_issuer);
 		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 
-		if ((keyid.ptr != NULL) ? same_keyid(keyid, authKeyID)
-			: same_dn(issuer, cert_issuer_dn))
+		if (keyid.ptr ? same_keyid(keyid, authKeyID) :
+			certificate->has_issuer(certificate, issuer))
 		{
 			return cert;
 		}
@@ -940,7 +922,7 @@ x509cert_t* get_x509cert(chunk_t issuer, chunk_t keyid, x509cert_t *chain)
  */
 void free_generalNames(generalName_t* gn, bool free_name)
 {
-	while (gn != NULL)
+	while (gn)
 	{
 		generalName_t *gn_top = gn;
 		if (free_name)
@@ -957,7 +939,7 @@ void free_generalNames(generalName_t* gn, bool free_name)
  */
 void free_x509cert(x509cert_t *cert)
 {
-	if (cert != NULL)
+	if (cert)
 	{
 		certificate_t *certificate = cert->cert;
 
@@ -976,7 +958,7 @@ void free_x509cert(x509cert_t *cert)
  */
 void release_x509cert(x509cert_t *cert)
 {
-	if (cert != NULL && --cert->count == 0)
+	if (cert && --cert->count == 0)
 	{
 		x509cert_t **pp = &x509certs;
 		while (*pp != cert)
@@ -998,7 +980,7 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
 
 	/* first extract CA certs, discarding root CA certs */
 
-	while (*pp != NULL)
+	while (*pp)
 	{
 		x509cert_t *cert = *pp;
 		certificate_t *certificate = cert->cert;
@@ -1030,7 +1012,7 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
 
 	/* now verify the candidate CA certs */
 
-	while (cacerts != NULL)
+	while (cacerts)
 	{
 		x509cert_t *cert = cacerts;
 
@@ -1051,7 +1033,7 @@ void store_x509certs(x509cert_t **firstcert, bool strict)
 
 	pp = firstcert;
 
-	while (*pp != NULL)
+	while (*pp)
 	{
 		time_t valid_until;
 		x509cert_t *cert = *pp;
@@ -1269,7 +1251,7 @@ chunk_t get_directoryName(chunk_t blob, int level, bool implicit)
 	chunk_t name = chunk_empty;
 	generalName_t * gn = parse_generalNames(blob, level, implicit);
 
-	if (gn != NULL && gn->kind == GN_DIRECTORY_NAME)
+	if (gn && gn->kind == GN_DIRECTORY_NAME)
 	{
 		name= gn->name;
 	}
@@ -1362,8 +1344,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		)
 
 		lock_authcert_list("verify_x509cert");
-		issuer_cert = get_authcert(issuer->get_encoding(issuer),
-								   authKeyID, X509_CA);
+		issuer_cert = get_authcert(issuer, authKeyID, X509_CA);
 		if (issuer_cert == NULL)
 		{
 			plog("issuer cacert not found");
@@ -1473,7 +1454,7 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 	/* determine the current time */
 	time(&now);
 
-	while (cert != NULL)
+	while (cert)
 	{
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;

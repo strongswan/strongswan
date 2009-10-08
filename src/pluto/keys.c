@@ -84,9 +84,9 @@ struct secret {
  */
 static void free_public_key(pubkey_t *pk)
 {
+	DESTROY_IF(pk->id);
 	DESTROY_IF(pk->public_key);
-	free_id_content(&pk->id);
-	free(pk->issuer.ptr);
+	DESTROY_IF(pk->issuer);
 	free(pk->serial.ptr);
 	free(pk);
 }
@@ -1118,8 +1118,8 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	pubkey_t *p = malloc_thing(pubkey_t);
 
 	zero(p);
-	p->id = empty_id;   /* don't know, doesn't matter */
-	p->issuer = chunk_empty;
+	p->id = identification_create_from_string("%any");  /* don't know, doesn't matter */
+	p->issuer = NULL;
 	p->serial = chunk_empty;
 	p->public_key = key;
 
@@ -1127,7 +1127,6 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	 * invariant: recount > 0.
 	 */
 	p->refcnt = 1;
-	time(&p->installed_time);
 	return p;
 }
 
@@ -1206,25 +1205,14 @@ static void install_public_key(pubkey_t *pk, pubkey_list_t **head)
 {
 	pubkey_list_t *p = malloc_thing(pubkey_list_t);
 
-	unshare_id_content(&pk->id);
-
-	/* copy issuer dn */
-	pk->issuer = chunk_clone(pk->issuer);
-
-	/* copy serial number */
-	pk->serial = chunk_clone(pk->serial);
-
-	/* store the time the public key was installed */
-	time(&pk->installed_time);
-
 	/* install new key at front */
 	p->key = reference_key(pk);
 	p->next = *head;
 	*head = p;
 }
 
-void delete_public_keys(const struct id *id, key_type_t type,
-						chunk_t issuer, chunk_t serial)
+void delete_public_keys(identification_t *id, key_type_t type,
+						identification_t *issuer, chunk_t serial)
 {
 	pubkey_list_t **pp, *p;
 	pubkey_t *pk;
@@ -1235,9 +1223,9 @@ void delete_public_keys(const struct id *id, key_type_t type,
 		pk = p->key;
 		pk_type = pk->public_key->get_type(pk->public_key);
 
-		if (same_id(id, &pk->id) && pk_type == type
-		&& (issuer.ptr == NULL || pk->issuer.ptr == NULL
-			|| same_dn(issuer, pk->issuer))
+		if (id->equals(id, pk->id) && pk_type == type
+		&& (issuer == NULL || pk->issuer == NULL
+			|| issuer->equals(issuer, pk->issuer))
 		&& (serial.ptr == NULL || chunk_equals(serial, pk->serial)))
 		{
 			*pp = free_public_keyentry(p);
@@ -1251,25 +1239,26 @@ void delete_public_keys(const struct id *id, key_type_t type,
 
 pubkey_t* reference_key(pubkey_t *pk)
 {
+	DBG(DBG_CONTROLMORE,
+		DBG_log("  ref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
+	)
 	pk->refcnt++;
 	return pk;
 }
 
-void
-unreference_key(pubkey_t **pkp)
+void unreference_key(pubkey_t **pkp)
 {
 	pubkey_t *pk = *pkp;
-	char b[BUF_LEN];
 
 	if (pk == NULL)
 	{
 		return;
 	}
 
-	/* print stuff */
 	DBG(DBG_CONTROLMORE,
-		idtoa(&pk->id, b, sizeof(b));
-		DBG_log("unreference key: %p %s cnt %d--", pk, b, pk->refcnt)
+		DBG_log("unref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
 	)
 
 	/* cancel out the pointer */
@@ -1283,7 +1272,7 @@ unreference_key(pubkey_t **pkp)
 	}
 }
 
-bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
+bool add_public_key(identification_t *id, enum dns_auth_level dns_auth_level,
 					enum pubkey_alg alg, chunk_t rfc3110_key,
 					pubkey_list_t **head)
 {
@@ -1309,10 +1298,10 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
 	pk->public_key = key;
-	pk->id = *id;
+	pk->id = id->clone(id);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = UNDEFINED_TIME;
-	pk->issuer = chunk_empty;
+	pk->issuer = NULL;
 	pk->serial = chunk_empty;
 	install_public_key(pk, head);
 	return TRUE;
@@ -1329,7 +1318,6 @@ void add_x509_public_key(x509cert_t *cert , time_t until,
 	identification_t *subject = certificate->get_subject(certificate);
 	identification_t *issuer = certificate->get_issuer(certificate);
 	identification_t *id;
-	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t serialNumber = x509->get_serial(x509);
 	pubkey_t *pk;
 	key_type_t pk_type;
@@ -1338,15 +1326,14 @@ void add_x509_public_key(x509cert_t *cert , time_t until,
 	/* ID type: ID_DER_ASN1_DN  (X.509 subject field) */
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
-	pk->public_key = cert->cert->get_public_key(cert->cert);
-	pk->id.kind = ID_DER_ASN1_DN;
-	pk->id.name = subject->get_encoding(subject);
+	pk->public_key = certificate->get_public_key(certificate);
+	pk->id = subject->clone(subject);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
-	pk->issuer = issuer_dn;
-	pk->serial = serialNumber;
+	pk->issuer = issuer->clone(issuer);
+	pk->serial = chunk_clone(serialNumber);
 	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
+	delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
 	install_public_key(pk, &pubkeys);
 
 	/* insert all subjectAltNames */
@@ -1357,13 +1344,13 @@ void add_x509_public_key(x509cert_t *cert , time_t until,
 		{
 			pk = malloc_thing(pubkey_t);
 			zero(pk);
-			id_from_identification(&pk->id, id);
-			pk->public_key = cert->cert->get_public_key(cert->cert);
+			pk->id = id->clone(id);
+			pk->public_key = certificate->get_public_key(certificate);
 			pk->dns_auth_level = dns_auth_level;
 			pk->until_time = until;
-			pk->issuer = issuer_dn;
-			pk->serial = serialNumber;
-			delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
+			pk->issuer = issuer->clone(issuer);
+			pk->serial = chunk_clone(serialNumber);
+			delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
 			install_public_key(pk, &pubkeys);
 		}
 	}
@@ -1382,12 +1369,11 @@ void add_pgp_public_key(pgpcert_t *cert , time_t until,
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
 	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id.kind = ID_KEY_ID;
-	pk->id.name = cert->fingerprint->get_encoding(cert->fingerprint);
+	pk->id = cert->fingerprint->clone(cert->fingerprint);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
 	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, chunk_empty, chunk_empty);
+	delete_public_keys(pk->id, pk_type, NULL, chunk_empty);
 	install_public_key(pk, &pubkeys);
 }
 
@@ -1437,11 +1423,9 @@ void list_public_keys(bool utc)
 		pubkey_t *key = p->key;
 		public_key_t *public = key->public_key;
 		chunk_t keyid;
-		char buf[BUF_LEN];
 
 		whack_log(RC_COMMENT, " ");
-		idtoa(&key->id, buf, BUF_LEN);
-		whack_log(RC_COMMENT, "  identity: '%s'", buf);
+		whack_log(RC_COMMENT, "  identity: '%Y'", key->id);
 		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * BITS_PER_BYTE,
@@ -1451,10 +1435,9 @@ void list_public_keys(bool utc)
 		{
 			whack_log(RC_COMMENT,"  keyid:     %#B", &keyid);
 		}
-		if (key->issuer.len)
+		if (key->issuer)
 		{
-			dntoa(buf, BUF_LEN, key->issuer);
-			whack_log(RC_COMMENT,"  issuer:   \"%s\"", buf);
+			whack_log(RC_COMMENT,"  issuer:   \"%Y\"", key->issuer);
 		}
 		if (key->serial.len)
 		{

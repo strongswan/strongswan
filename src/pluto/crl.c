@@ -44,7 +44,7 @@ static x509crl_t  *x509crls = NULL;
 /**
  *  Get the X.509 CRL with a given issuer
  */
-static x509crl_t* get_x509crl(chunk_t issuer, chunk_t keyid)
+static x509crl_t* get_x509crl(identification_t *issuer, chunk_t keyid)
 {
 	x509crl_t *x509crl = x509crls;
 	x509crl_t *prev_crl = NULL;
@@ -54,11 +54,10 @@ static x509crl_t* get_x509crl(chunk_t issuer, chunk_t keyid)
 		certificate_t *cert_crl = x509crl->crl;
 		crl_t *crl = (crl_t*)cert_crl;
 		identification_t *crl_issuer = cert_crl->get_issuer(cert_crl);
-		chunk_t crl_issuer_dn = crl_issuer->get_encoding(crl_issuer);
 		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 
 		if ((keyid.ptr && authKeyID.ptr)? same_keyid(keyid, authKeyID) :
-			 same_dn(crl_issuer_dn, issuer))
+			issuer->equals(issuer, crl_issuer))
 		{
 			if (x509crl != x509crls)
 			{
@@ -113,7 +112,6 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	certificate_t *cert_crl = x509crl->crl;
 	crl_t *crl = (crl_t*)cert_crl;
 	identification_t *issuer = cert_crl->get_issuer(cert_crl);
-	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 	x509cert_t *issuer_cert;
 	x509crl_t *oldcrl;
@@ -126,7 +124,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	lock_authcert_list("insert_crl");
 
 	/* get the issuer cacert */
-	issuer_cert = get_authcert(issuer_dn, authKeyID, X509_CA);
+	issuer_cert = get_authcert(issuer, authKeyID, X509_CA);
 	if (issuer_cert == NULL)
 	{
 		plog("crl issuer cacert not found");
@@ -155,7 +153,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	time(&now);
 
 	lock_crl_list("insert_crl");
-	oldcrl = get_x509crl(issuer_dn, authKeyID);
+	oldcrl = get_x509crl(issuer, authKeyID);
 
 	if (oldcrl != NULL)
 	{
@@ -315,7 +313,6 @@ void check_crls(void)
 		certificate_t *cert_crl = x509crl->crl;
 		crl_t *crl = (crl_t*)cert_crl;
 		identification_t *issuer = cert_crl->get_issuer(cert_crl);
-		chunk_t issuer_dn = issuer->get_encoding(issuer);
 		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);		
 
 		cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
@@ -331,7 +328,7 @@ void check_crls(void)
 		)
 		if (time_left < 2*crl_check_interval)
 		{
-			fetch_req_t *req = build_crl_fetch_request(issuer_dn, authKeyID,
+			fetch_req_t *req = build_crl_fetch_request(issuer, authKeyID,
 											x509crl->distributionPoints);
 			add_crl_fetch_request(req);
 		}
@@ -350,20 +347,19 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 	certificate_t *certificate = cert->cert;
 	x509_t *x509 = (x509_t*)certificate;
 	identification_t *issuer = certificate->get_issuer(certificate);
-	chunk_t issuer_dn = issuer->get_encoding(issuer);
 	chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 	x509crl_t *x509crl;
 	ca_info_t *ca;
 	enumerator_t *enumerator;
 	char *point;
 
-	ca = get_ca_info(issuer_dn, authKeyID);
+	ca = get_ca_info(issuer, authKeyID);
 	
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
 
 	lock_crl_list("verify_by_crl");
-	x509crl = get_x509crl(issuer_dn, authKeyID);
+	x509crl = get_x509crl(issuer, authKeyID);
 
 	if (x509crl == NULL)
 	{
@@ -389,7 +385,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 		{
 			fetch_req_t *req;
 
-			req = build_crl_fetch_request(issuer_dn, authKeyID, crluris);
+			req = build_crl_fetch_request(issuer, authKeyID, crluris);
 			crluris->destroy_function(crluris, free);
 			add_crl_fetch_request(req);
 			wake_fetch_thread("verify_by_crl");
@@ -427,7 +423,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 
 		lock_authcert_list("verify_by_crl");
 
-		issuer_cert = get_authcert(issuer_dn, authKeyID, X509_CA);
+		issuer_cert = get_authcert(issuer, authKeyID, X509_CA);
 		trusted = cert_crl->issued_by(cert_crl, issuer_cert->cert);
 
 		unlock_authcert_list("verify_by_crl");
@@ -463,7 +459,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 				)
 
 				/* try to fetch a crl update */
-				req = build_crl_fetch_request(issuer_dn, authKeyID,
+				req = build_crl_fetch_request(issuer, authKeyID,
 											  x509crl->distributionPoints);
 				unlock_crl_list("verify_by_crl");
 
