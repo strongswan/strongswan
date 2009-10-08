@@ -38,7 +38,7 @@ struct private_eap_aka_3gpp2_functions_t {
 	prf_t *prf;
 };
 
-#define PAYLOAD_LENGTH 64
+#define AKA_PAYLOAD_LEN 64
 
 #define F1			  0x42
 #define F1STAR		  0x43
@@ -170,8 +170,8 @@ static void mpz_mod_poly(mpz_t r, mpz_t a, mpz_t b)
  * Step 3 of the various fx() functions:
  * XOR the key into the SHA1 IV
  */
-static void step3(prf_t *prf, u_char k[K_LENGTH], u_char payload[PAYLOAD_LENGTH],
-				  u_int8_t h[HASH_SIZE_SHA1])
+static void step3(prf_t *prf, u_char k[AKA_K_LEN],
+				  u_char payload[AKA_PAYLOAD_LEN], u_int8_t h[HASH_SIZE_SHA1])
 {
 	/* use the keyed hasher to build the hash */
 	prf->set_key(prf, chunk_create(k, sizeof(k)));
@@ -211,10 +211,10 @@ static void step4(u_char x[HASH_SIZE_SHA1])
 /**
  * Calculation function for f2(), f3(), f4()
  */
-static void fx(prf_t *prf, u_char f, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char out[MAC_LENGTH])
+static void fx(prf_t *prf, u_char f, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char out[AKA_MAC_LEN])
 {
-	u_char payload[PAYLOAD_LENGTH];
+	u_char payload[AKA_PAYLOAD_LEN];
 	u_char h[HASH_SIZE_SHA1];
 	u_char i;
 
@@ -239,15 +239,15 @@ static void fx(prf_t *prf, u_char f, u_char k[K_LENGTH],
 /**
  * Calculation function of f1() and f1star()
  */
-static void f1x(prf_t *prf, u_int8_t f, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH],
-				u_char amf[AMF_LENGTH], u_char mac[MAC_LENGTH])
+static void f1x(prf_t *prf, u_int8_t f, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
+				u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN])
 {
 	/* generate MAC = f1(FMK, SQN, RAND, AMF)
 	 * K is loaded into hashers IV; FMK, RAND, SQN, AMF are XORed in a 512-bit
 	 * payload which gets hashed
 	 */
-	u_char payload[PAYLOAD_LENGTH];
+	u_char payload[AKA_PAYLOAD_LEN];
 	u_char h[HASH_SIZE_SHA1];
 
 	memset(payload, 0x5c, sizeof(payload));
@@ -265,10 +265,10 @@ static void f1x(prf_t *prf, u_int8_t f, u_char k[K_LENGTH],
 /**
  * Calculation function of f5() and f5star()
  */
-static void f5x(prf_t *prf, u_char f, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char ak[AK_LENGTH])
+static void f5x(prf_t *prf, u_char f, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN])
 {
-	u_char payload[PAYLOAD_LENGTH];
+	u_char payload[AKA_PAYLOAD_LEN];
 	u_char h[HASH_SIZE_SHA1];
 
 	memset(payload, 0x5c, sizeof(payload));
@@ -284,9 +284,9 @@ static void f5x(prf_t *prf, u_char f, u_char k[K_LENGTH],
 /**
  * Calculate MAC from RAND, SQN, AMF using K
  */
-static void f1(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH],
-			   u_char amf[AMF_LENGTH], u_char mac[MAC_LENGTH])
+static void f1(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
+			   u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN])
 {
 	f1x(this->prf, F1, k, rand, sqn, amf, mac);
 	DBG3(DBG_IKE, "MAC %b", mac, sizeof(mac));
@@ -295,9 +295,9 @@ static void f1(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate MACS from RAND, SQN, AMF using K
  */
-static void f1star(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				   u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH],
-				   u_char amf[AMF_LENGTH], u_char macs[MAC_LENGTH])
+static void f1star(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				   u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
+				   u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN])
 {
 	f1x(this->prf, F1STAR, k, rand, sqn, amf, macs);
 	DBG3(DBG_IKE, "MACS %b", macs, sizeof(macs));
@@ -306,8 +306,8 @@ static void f1star(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate RES from RAND using K
  */
-static void f2(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char res[RES_LENGTH])
+static void f2(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN])
 {
 	fx(this->prf, F2, k, rand, res);
 	DBG3(DBG_IKE, "RES %b", res, sizeof(res));
@@ -316,8 +316,8 @@ static void f2(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate CK from RAND using K
  */
-static void f3(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char ck[CK_LENGTH])
+static void f3(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN])
 {
 	fx(this->prf, F3, k, rand, ck);
 	DBG3(DBG_IKE, "CK %b", ck, sizeof(ck));
@@ -326,8 +326,8 @@ static void f3(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate IK from RAND using K
  */
-static void f4(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char ik[IK_LENGTH])
+static void f4(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN])
 {
 	fx(this->prf, F4, k, rand, ik);
 	DBG3(DBG_IKE, "IK %b", ik, sizeof(ik));
@@ -336,8 +336,8 @@ static void f4(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate AK from a RAND using K
  */
-static void f5(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char ak[AK_LENGTH])
+static void f5(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN])
 {
 	f5x(this->prf, F5, k, rand, ak);
 	DBG3(DBG_IKE, "AK %b", ak, sizeof(ak));
@@ -346,8 +346,8 @@ static void f5(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
 /**
  * Calculate AKS from a RAND using K
  */
-static void f5star(private_eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-			   u_char rand[RAND_LENGTH], u_char aks[AK_LENGTH])
+static void f5star(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+			   u_char rand[AKA_RAND_LEN], u_char aks[AKA_AK_LEN])
 {
 	f5x(this->prf, F5STAR, k, rand, aks);
 	DBG3(DBG_IKE, "AKS %b", aks, sizeof(aks));
@@ -372,13 +372,13 @@ eap_aka_3gpp2_functions_t *eap_aka_3gpp2_functions_create()
 
 	this = malloc_thing(private_eap_aka_3gpp2_functions_t);
 
-	this->public.f1 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH], u_char amf[AMF_LENGTH], u_char mac[MAC_LENGTH]))f1;
-	this->public.f1star = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH], u_char amf[AMF_LENGTH], u_char macs[MAC_LENGTH]))f1star;
-	this->public.f2 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char res[RES_LENGTH]))f2;
-	this->public.f3 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char ck[CK_LENGTH]))f3;
-	this->public.f4 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char ik[IK_LENGTH]))f4;
-	this->public.f5 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char ak[AK_LENGTH]))f5;
-	this->public.f5star = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH], u_char rand[RAND_LENGTH], u_char aks[AK_LENGTH]))f5star;
+	this->public.f1 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN], u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN]))f1;
+	this->public.f1star = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN], u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN]))f1star;
+	this->public.f2 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN]))f2;
+	this->public.f3 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN]))f3;
+	this->public.f4 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN]))f4;
+	this->public.f5 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN]))f5;
+	this->public.f5star = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char aks[AKA_AK_LEN]))f5star;
 	this->public.destroy = (void(*)(eap_aka_3gpp2_functions_t*))destroy;
 
 	this->prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);

@@ -21,21 +21,14 @@
 #ifndef EAP_AKA_3GPP2_FUNCTIONS_H_
 #define EAP_AKA_3GPP2_FUNCTIONS_H_
 
-#include <utils/enumerator.h>
-#include <utils/identification.h>
+#include <sa/authenticators/eap/usim_manager.h>
 
-#define RAND_LENGTH		16
-#define RES_LENGTH		16
-#define SQN_LENGTH		 6
-#define K_LENGTH		16
-#define MAC_LENGTH 		 8
-#define CK_LENGTH		16
-#define IK_LENGTH		16
-#define AK_LENGTH		 6
-#define AMF_LENGTH		 2
-#define FMK_LENGTH		 4
-#define AUTN_LENGTH 	(SQN_LENGTH + AMF_LENGTH + MAC_LENGTH)
-#define AUTS_LENGTH 	(SQN_LENGTH + MAC_LENGTH)
+#define AKA_SQN_LEN		 6
+#define AKA_K_LEN		16
+#define AKA_MAC_LEN 	 8
+#define AKA_AK_LEN		 6
+#define AKA_AMF_LEN		 2
+#define AKA_FMK_LEN		 4
 
 typedef struct eap_aka_3gpp2_functions_t eap_aka_3gpp2_functions_t;
 
@@ -53,9 +46,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param amf	authentication management field
 	 * @param mac	buffer receiving mac MAC
 	 */
-	void (*f1)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH],
-				u_char amf[AMF_LENGTH], u_char mac[MAC_LENGTH]);
+	void (*f1)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
+				u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN]);
 
 	/**
 	 * Calculate MACS from RAND, SQN, AMF using K
@@ -66,9 +59,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param amf	authentication management field
 	 * @param macs	buffer receiving resynchronization mac MACS
 	 */
-	void (*f1star)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char sqn[SQN_LENGTH],
-				u_char amf[AMF_LENGTH], u_char macs[MAC_LENGTH]);
+	void (*f1star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
+				u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN]);
 
 	/**
 	 * Calculate RES from RAND using K
@@ -77,8 +70,8 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving result RES
 	 */
-	void (*f2)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char res[RES_LENGTH]);
+	void (*f2)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN]);
 	/**
 	 * Calculate CK from RAND using K
 	 *
@@ -86,8 +79,8 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving encryption key CK
 	 */
-	void (*f3)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char ck[CK_LENGTH]);
+	void (*f3)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN]);
 	/**
 	 * Calculate IK from RAND using K
 	 *
@@ -95,8 +88,8 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving integrity key IK
 	 */
-	void (*f4)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char ik[IK_LENGTH]);
+	void (*f4)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN]);
 	/**
 	 * Calculate AK from a RAND using K
 	 *
@@ -104,8 +97,8 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving anonymity key AK
 	 */
-	void (*f5)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char ak[AK_LENGTH]);
+	void (*f5)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN]);
 	/**
 	 * Calculate AKS from a RAND using K
 	 *
@@ -113,8 +106,8 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving resynchronization anonymity key AKS
 	 */
-	void (*f5star)(eap_aka_3gpp2_functions_t *this, u_char k[K_LENGTH],
-				u_char rand[RAND_LENGTH], u_char aks[AK_LENGTH]);
+	void (*f5star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+				u_char rand[AKA_RAND_LEN], u_char aks[AKA_AK_LEN]);
 
 	/**
 	 * Destroy a eap_aka_3gpp2_functions_t.

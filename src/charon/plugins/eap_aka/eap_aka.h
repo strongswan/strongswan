@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,32 +25,11 @@ typedef struct eap_aka_t eap_aka_t;
 
 #include <sa/authenticators/eap/eap_method.h>
 
-/**  check SEQ values as client for validity, disabled by default */
-#ifndef SEQ_CHECK
-# define SEQ_CHECK 0
-#endif
-
 /**
  * Implementation of the eap_method_t interface using EAP-AKA.
  *
  * EAP-AKA uses 3rd generation mobile phone standard authentication
- * mechanism for authentication. It is a mutual authentication
- * mechanism which establishs a shared key and therefore supports EAP_ONLY
- * authentication. This implementation follows the standard of the
- * 3GPP2 (S.S0055) and not the one of 3GGP.
- * The shared key used for authentication is from ipsec.secrets. The
- * peers ID is used to query it.
- * The AKA mechanism uses sequence numbers to detect replay attacks. The
- * peer stores the sequence number normally in a USIM and accepts
- * incremental sequence numbers (incremental for lifetime of the USIM). To
- * prevent a complex sequence number management, this implementation uses
- * a sequence number derived from time. It is initialized to the startup
- * time of the daemon. As long as the (UTC) time of the system is not
- * turned back while the daemon is not running, this method is secure.
- * To enable time based SEQs, define SEQ_CHECK as 1. Default is to accept
- * any SEQ numbers. This allows an attacker to do replay attacks. But since
- * the server has proven his identity via IKE, such an attack is only
- * possible between server and AAA (if any).
+ * mechanism for authentication, as defined RFC4187.
  */
 struct eap_aka_t {
 

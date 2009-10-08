@@ -15,6 +15,9 @@
 
 #include "eap_aka_3gpp2_provider.h"
 
+#include <daemon.h>
+#include <credentials/keys/shared_key.h>
+
 typedef struct private_eap_aka_3gpp2_provider_t private_eap_aka_3gpp2_provider_t;
 
 /**
@@ -31,25 +34,139 @@ struct private_eap_aka_3gpp2_provider_t {
 	 * AKA functions
 	 */
 	eap_aka_3gpp2_functions_t *f;
+
+	/**
+	 * time based SQN, we use the same for all peers
+	 */
+	char sqn[AKA_SQN_LEN];
 };
+
+/** Authentication management field */
+static char amf[AKA_AMF_LEN] = {0x00, 0x01};
+
+/**
+ * Get a shared key K from the credential database
+ */
+bool eap_aka_3gpp2_get_k(identification_t *id, char k[AKA_K_LEN])
+{
+	shared_key_t *shared;
+	chunk_t key;
+
+	shared = charon->credentials->get_shared(charon->credentials,
+											 SHARED_EAP, id, NULL);
+	if (shared == NULL)
+	{
+		return FALSE;
+	}
+	key = shared->get_key(shared);
+	memset(k, '\0', sizeof(k));
+	memcpy(k, key.ptr, min(key.len, sizeof(k)));
+	shared->destroy(shared);
+	return TRUE;
+}
+
+/**
+ * get SQN using current time
+ */
+void eap_aka_3gpp2_get_sqn(char sqn[AKA_SQN_LEN], int offset)
+{
+	timeval_t time;
+
+	time_monotonic(&time);
+	/* set sqn to an integer containing seconds followed by most
+	 * significant useconds */
+	time.tv_sec = htonl(time.tv_sec + offset);
+	/* usec's are never larger than 0x000f423f, so we shift the 12 first bits */
+	time.tv_usec <<= 12;
+	time.tv_usec = htonl(time.tv_usec);
+	memcpy(sqn, &time.tv_sec, 4);
+	memcpy(sqn + 4, &time.tv_usec, 2);
+}
 
 /**
  * Implementation of usim_provider_t.get_quintuplet
  */
 static bool get_quintuplet(private_eap_aka_3gpp2_provider_t *this,
-					identification_t *imsi, char rand[16], char xres[16],
-					char ck[16], char ik[16], char autn[16])
+						   identification_t *imsi, char rand[AKA_RAND_LEN],
+						   char xres[AKA_RES_LEN], char ck[AKA_CK_LEN],
+						   char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN])
 {
-	return FALSE;
+	rng_t *rng;
+	char mac[AKA_MAC_LEN], ak[AKA_AK_LEN], k[AKA_K_LEN];
+
+	/* generate RAND: we use a registered RNG, not f0() proposed in S.S0055 */
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
+	{
+		DBG1(DBG_IKE, "generating RAND for AKA failed");
+		return FALSE;
+	}
+	rng->get_bytes(rng, AKA_RAND_LEN, rand);
+	rng->destroy(rng);
+
+	if (!eap_aka_3gpp2_get_k(imsi, k))
+	{
+		DBG1(DBG_IKE, "no EAP key found for %Y to authenticate with AKA", imsi);
+		return FALSE;
+	}
+
+	/* MAC */
+	this->f->f1(this->f, k, rand, this->sqn, amf, mac);
+	/* AK */
+	this->f->f5(this->f, k, rand, ak);
+	/* XRES as expected from client */
+	this->f->f2(this->f, k, rand, xres);
+	/* AUTN = (SQN xor AK) || AMF || MAC */
+	memcpy(autn, this->sqn, sizeof(this->sqn));
+	memxor(autn, ak, sizeof(ak));
+	memcpy(autn + sizeof(this->sqn), amf, sizeof(amf));
+	memcpy(autn + sizeof(this->sqn) + sizeof(amf), mac, sizeof(mac));
+	DBG3(DBG_IKE, "AUTN %b", autn, sizeof(autn));
+	/* CK/IK */
+	this->f->f3(this->f, k, rand, ck);
+	DBG3(DBG_IKE, "CK %b", ck, sizeof(ck));
+	this->f->f4(this->f, k, rand, ik);
+	DBG3(DBG_IKE, "IK %b", ik, sizeof(ik));
+
+	return TRUE;
 }
 
 /**
  * Implementation of usim_provider_t.resync
  */
 static bool resync(private_eap_aka_3gpp2_provider_t *this,
-					identification_t *imsi, char rand[16], char auts[16])
+				   identification_t *imsi, char rand[AKA_RAND_LEN],
+				   char auts[AKA_AUTS_LEN])
 {
-	return FALSE;
+	char *sqn, *macs;
+	char aks[AKA_AK_LEN], k[AKA_K_LEN], amf[AKA_AMF_LEN], xmacs[AKA_MAC_LEN];
+
+	if (!eap_aka_3gpp2_get_k(imsi, k))
+	{
+		DBG1(DBG_IKE, "no EAP key found for %Y to authenticate with AKA", imsi);
+		return FALSE;
+	}
+
+	/* AUTHS = (AK xor SQN) | MAC */
+	sqn = auts;
+	macs = auts + AKA_SQN_LEN;
+	this->f->f5star(this->f, k, rand, aks);
+	memxor(sqn, aks, sizeof(aks));
+
+	/* verify XMACS, AMF of zero is used in resynchronization */
+	memset(amf, 0, sizeof(amf));
+	this->f->f1star(this->f, k, rand, sqn, amf, xmacs);
+	if (!memeq(macs, xmacs, sizeof(xmacs)))
+	{
+		DBG1(DBG_IKE, "received MACS does not match XMACS");
+		DBG3(DBG_IKE, "MACS %b XMACS %b",
+			 macs, AKA_MAC_LEN, xmacs, sizeof(xmacs));
+		return FALSE;
+	}
+	/* update stored SQN to received SQN + 1 */
+	memcpy(this->sqn, sqn, AKA_SQN_LEN);
+	chunk_increment(chunk_create(this->sqn, AKA_SQN_LEN));
+	return TRUE;
 }
 
 /**
@@ -69,10 +186,12 @@ eap_aka_3gpp2_provider_t *eap_aka_3gpp2_provider_create(
 	private_eap_aka_3gpp2_provider_t *this = malloc_thing(private_eap_aka_3gpp2_provider_t);
 
 	this->public.provider.get_quintuplet = (bool(*)(usim_provider_t*, identification_t *imsi, char rand[16], char xres[16], char ck[16], char ik[16], char autn[16]))get_quintuplet;
-	this->public.provider.resync = (bool(*)(usim_provider_t*, identification_t *imsi, char rand[16], char auts[16]))resync;
+	this->public.provider.resync = (bool(*)(usim_provider_t*, identification_t *imsi, char rand[16], char auts[14]))resync;
 	this->public.destroy = (void(*)(eap_aka_3gpp2_provider_t*))destroy;
 
 	this->f = f;
+	/* use an offset to accept clock skew between client/server without resync */
+	eap_aka_3gpp2_get_sqn(this->sqn, 180);
 
 	return &this->public;
 }

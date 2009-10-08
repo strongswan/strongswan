@@ -28,6 +28,13 @@ typedef struct usim_manager_t usim_manager_t;
 typedef struct usim_card_t usim_card_t;
 typedef struct usim_provider_t usim_provider_t;
 
+#define AKA_RAND_LEN	16
+#define AKA_RES_LEN		16
+#define AKA_CK_LEN		16
+#define AKA_IK_LEN		16
+#define AKA_AUTN_LEN	16
+#define AKA_AUTS_LEN	14
+
 /**
  * Interface for a USIM card (used by EAP-AKA client).
  */
@@ -45,8 +52,9 @@ struct usim_provider_t {
 	 * @return			TRUE if quintuplet generated successfully
 	 */
 	bool (*get_quintuplet)(usim_provider_t *this, identification_t *imsi,
-						   char rand[16], char xres[16],
-						   char ck[16], char ik[16], char autn[16]);
+						   char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
+						   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+						   char autn[AKA_AUTN_LEN]);
 
 	/**
 	 * Process resynchroniusation request of a peer.
@@ -57,7 +65,7 @@ struct usim_provider_t {
 	 * @return			TRUE if resynchronized successfully
 	 */
 	bool (*resync)(usim_provider_t *this, identification_t *imsi,
-				   char rand[16], char auts[16]);
+				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 };
 
 /**
@@ -66,18 +74,12 @@ struct usim_provider_t {
 struct usim_card_t {
 
 	/**
-	 * Get the IMSI of this USIM.
-	 *
-	 * @return			IMSI this USIM belongs to
-	 */
-	identification_t *(*get_imsi)(usim_card_t *this);
-
-	/**
 	 * Process authentication data and complete the quintuplet.
 	 *
 	 * If the received sequence number (in autn) is out of synf, INVALID_STATE
 	 * is returned.
 	 *
+	 * @param imsi		peer identity requesting quintuplet for
 	 * @param rand		random value rand
 	 * @param autn		authentication token autn
 	 * @param ck		buffer receiving encryption key ck
@@ -85,17 +87,21 @@ struct usim_card_t {
 	 * @param res		buffer receiving authentication result res
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
-	status_t (*get_quintuplet)(usim_card_t *this, char rand[16], char autn[16],
-							   char ck[16], char ik[16], char res[16]);
+	status_t (*get_quintuplet)(usim_card_t *this, identification_t *imsi,
+							   char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
+							   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+							   char res[AKA_RES_LEN]);
 
 	/**
 	 * Request parameter to start resynchronization.
 	 *
+	 * @param imsi		peer identity requesting quintuplet for
 	 * @param in		random value rand
 	 * @param auts		resynchronization parameter auts
 	 * @return			TRUE if parameter generated successfully
 	 */
-	bool (*resync)(usim_card_t *this, char rand[16], char auts[16]);
+	bool (*resync)(usim_card_t *this, identification_t *imsi,
+				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 };
 
 /**
