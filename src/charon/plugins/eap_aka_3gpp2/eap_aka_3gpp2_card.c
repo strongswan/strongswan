@@ -65,48 +65,47 @@ static status_t get_quintuplet(private_eap_aka_3gpp2_card_t *this,
 	if (!eap_aka_3gpp2_get_k(imsi, k))
 	{
 		DBG1(DBG_IKE, "no EAP key found for %Y to authenticate with AKA", imsi);
-		return FALSE;
+		return FAILED;
 	}
 
 	/* AUTN = SQN xor AK | AMF | MAC */
-	DBG3(DBG_IKE, "received autn %b", autn, sizeof(autn));
-	DBG3(DBG_IKE, "using K %b", k, sizeof(k));
-	DBG3(DBG_IKE, "using rand %b", rand, sizeof(rand));
-	memcpy(sqn, autn, sizeof(sqn));
-	amf = autn + sizeof(sqn);
-	mac = autn + sizeof(sqn) + AKA_AMF_LEN;
+	DBG3(DBG_IKE, "received autn %b", autn, AKA_AUTN_LEN);
+	DBG3(DBG_IKE, "using K %b", k, AKA_K_LEN);
+	DBG3(DBG_IKE, "using rand %b", rand, AKA_RAND_LEN);
+	memcpy(sqn, autn, AKA_SQN_LEN);
+	amf = autn + AKA_SQN_LEN;
+	mac = autn + AKA_SQN_LEN + AKA_AMF_LEN;
 
 	/* XOR anonymity key AK into SQN to decrypt it */
 	this->f->f5(this->f, k, rand, ak);
-	DBG3(DBG_IKE, "using ak %b", ak, sizeof(ak));
-	memxor(sqn, ak, sizeof(sqn));
-	DBG3(DBG_IKE, "using sqn %b", sqn, sizeof(sqn));
+	DBG3(DBG_IKE, "using ak %b", ak, AKA_AK_LEN);
+	memxor(sqn, ak, AKA_SQN_LEN);
+	DBG3(DBG_IKE, "using sqn %b", sqn, AKA_SQN_LEN);
 
 	/* calculate expected MAC and compare against received one */
 	this->f->f1(this->f, k, rand, sqn, amf, xmac);
-	if (!memeq(mac, xmac, sizeof(xmac)))
+	if (!memeq(mac, xmac, AKA_MAC_LEN))
 	{
 		DBG1(DBG_IKE, "received MAC does not match XMAC");
 		DBG3(DBG_IKE, "MAC %b\nXMAC %b", mac, AKA_MAC_LEN, xmac, AKA_MAC_LEN);
 		return FAILED;
 	}
 
-	if (this->seq_check && memcmp(this->sqn, sqn, sizeof(sqn)) >= 0)
+	if (this->seq_check && memcmp(this->sqn, sqn, AKA_SQN_LEN) >= 0)
 	{
 		DBG3(DBG_IKE, "received SQN %b\ncurrent SQN %b",
-			 sqn, sizeof(sqn), this->sqn, sizeof(this->sqn));
+			 sqn, AKA_SQN_LEN, this->sqn, AKA_SQN_LEN);
 		return INVALID_STATE;
 	}
 
 	/* update stored SQN to the received one */
-	memcpy(this->sqn, sqn, sizeof(sqn));
+	memcpy(this->sqn, sqn, AKA_SQN_LEN);
 
 	/* CK/IK */
 	this->f->f3(this->f, k, rand, ck);
 	this->f->f4(this->f, k, rand, ik);
 	/* calculate RES */
 	this->f->f2(this->f, k, rand, res);
-	DBG3(DBG_IKE, "calculated rand %b", res, sizeof(res));
 
 	return SUCCESS;
 }
@@ -126,13 +125,13 @@ static bool resync(private_eap_aka_3gpp2_card_t *this, identification_t *imsi,
 	}
 
 	/* AMF is set to zero in resync */
-	memset(amf, 0, sizeof(amf));
+	memset(amf, 0, AKA_AMF_LEN);
 	this->f->f5star(this->f, k, rand, aks);
 	this->f->f1star(this->f, k, rand, this->sqn, amf, macs);
 	/* AUTS = SQN xor AKS | MACS */
-	memcpy(auts, this->sqn, sizeof(this->sqn));
-	memxor(auts, aks, sizeof(aks));
-	memcpy(auts + sizeof(aks), macs, sizeof(macs));
+	memcpy(auts, this->sqn, AKA_SQN_LEN);
+	memxor(auts, aks, AKA_AK_LEN);
+	memcpy(auts + AKA_AK_LEN, macs, AKA_MAC_LEN);
 
 	return TRUE;
 }

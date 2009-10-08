@@ -51,16 +51,19 @@ bool eap_aka_3gpp2_get_k(identification_t *id, char k[AKA_K_LEN])
 {
 	shared_key_t *shared;
 	chunk_t key;
+	identification_t *any;
 
+	any = identification_create_from_encoding(ID_ANY, chunk_empty);
 	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, id, NULL);
+											 SHARED_EAP, id, any);
+	any->destroy(any);
 	if (shared == NULL)
 	{
 		return FALSE;
 	}
 	key = shared->get_key(shared);
-	memset(k, '\0', sizeof(k));
-	memcpy(k, key.ptr, min(key.len, sizeof(k)));
+	memset(k, '\0', AKA_K_LEN);
+	memcpy(k, key.ptr, min(key.len, AKA_K_LEN));
 	shared->destroy(shared);
 	return TRUE;
 }
@@ -110,6 +113,9 @@ static bool get_quintuplet(private_eap_aka_3gpp2_provider_t *this,
 		return FALSE;
 	}
 
+	DBG3(DBG_IKE, "generated rand %b", rand, AKA_RAND_LEN);
+	DBG3(DBG_IKE, "using K %b", k, AKA_K_LEN);
+
 	/* MAC */
 	this->f->f1(this->f, k, rand, this->sqn, amf, mac);
 	/* AK */
@@ -117,16 +123,14 @@ static bool get_quintuplet(private_eap_aka_3gpp2_provider_t *this,
 	/* XRES as expected from client */
 	this->f->f2(this->f, k, rand, xres);
 	/* AUTN = (SQN xor AK) || AMF || MAC */
-	memcpy(autn, this->sqn, sizeof(this->sqn));
-	memxor(autn, ak, sizeof(ak));
-	memcpy(autn + sizeof(this->sqn), amf, sizeof(amf));
-	memcpy(autn + sizeof(this->sqn) + sizeof(amf), mac, sizeof(mac));
-	DBG3(DBG_IKE, "AUTN %b", autn, sizeof(autn));
+	memcpy(autn, this->sqn, AKA_SQN_LEN);
+	memxor(autn, ak, AKA_AK_LEN);
+	memcpy(autn + AKA_SQN_LEN, amf, AKA_AMF_LEN);
+	memcpy(autn + AKA_SQN_LEN + AKA_AMF_LEN, mac, AKA_MAC_LEN);
+	DBG3(DBG_IKE, "AUTN %b", autn, AKA_AUTN_LEN);
 	/* CK/IK */
 	this->f->f3(this->f, k, rand, ck);
-	DBG3(DBG_IKE, "CK %b", ck, sizeof(ck));
 	this->f->f4(this->f, k, rand, ik);
-	DBG3(DBG_IKE, "IK %b", ik, sizeof(ik));
 
 	return TRUE;
 }
@@ -151,16 +155,16 @@ static bool resync(private_eap_aka_3gpp2_provider_t *this,
 	sqn = auts;
 	macs = auts + AKA_SQN_LEN;
 	this->f->f5star(this->f, k, rand, aks);
-	memxor(sqn, aks, sizeof(aks));
+	memxor(sqn, aks, AKA_AK_LEN);
 
 	/* verify XMACS, AMF of zero is used in resynchronization */
-	memset(amf, 0, sizeof(amf));
+	memset(amf, 0, AKA_AMF_LEN);
 	this->f->f1star(this->f, k, rand, sqn, amf, xmacs);
-	if (!memeq(macs, xmacs, sizeof(xmacs)))
+	if (!memeq(macs, xmacs, AKA_MAC_LEN))
 	{
 		DBG1(DBG_IKE, "received MACS does not match XMACS");
 		DBG3(DBG_IKE, "MACS %b XMACS %b",
-			 macs, AKA_MAC_LEN, xmacs, sizeof(xmacs));
+			 macs, AKA_MAC_LEN, xmacs, AKA_MAC_LEN);
 		return FALSE;
 	}
 	/* update stored SQN to received SQN + 1 */

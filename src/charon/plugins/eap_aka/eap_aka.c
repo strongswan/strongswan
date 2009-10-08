@@ -240,19 +240,20 @@ static void derive_keys(private_eap_aka_t *this, identification_t *id,
 						chunk_t ck, chunk_t ik)
 {
 	char mk[MK_LEN];
-	chunk_t tmp, k_auth;
+	chunk_t tmp, k_auth, identity;
 
 	/* MK = SHA1( Identity | IK | CK ) */
-	DBG3(DBG_IKE, "Identity|IK|CK => %#B|%#B|%#B", &id->get_encoding, &ik, &ck);
-	this->sha1->get_hash(this->sha1, id->get_encoding(id), NULL);
+	identity = id->get_encoding(id);
+	DBG3(DBG_IKE, "Identity %B", &identity);
+	this->sha1->get_hash(this->sha1, identity, NULL);
 	this->sha1->get_hash(this->sha1, ik, NULL);
 	this->sha1->get_hash(this->sha1, ck, mk);
-	DBG3(DBG_IKE, "MK %b", mk, sizeof(mk));
+	DBG3(DBG_IKE, "MK %b", mk, MK_LEN);
 
 	/* K_encr | K_auth | MSK | EMSK = prf(0) | prf(0)
 	 * FIPS PRF has 320 bit block size, we need 160 byte for keys
 	 *  => run prf four times */
-	this->prf->set_key(this->prf, chunk_create(mk, sizeof(mk)));
+	this->prf->set_key(this->prf, chunk_create(mk, MK_LEN));
 	tmp = chunk_alloca(this->prf->get_block_size(this->prf) * 4);
 	this->prf->get_bytes(this->prf, chunk_empty, tmp.ptr);
 	this->prf->get_bytes(this->prf, chunk_empty, tmp.ptr + tmp.len / 4 * 1);
@@ -270,7 +271,7 @@ static void derive_keys(private_eap_aka_t *this, identification_t *id,
 
 	DBG3(DBG_IKE, "PRF res %B", &tmp);
 	DBG3(DBG_IKE, "K_auth %B", &k_auth);
-	DBG3(DBG_IKE, "MSK %b", this->msk, sizeof(this->msk));
+	DBG3(DBG_IKE, "MSK %b", this->msk, MSK_LEN);
 
 	this->derived = TRUE;
 }
@@ -517,12 +518,13 @@ static status_t server_initiate(private_eap_aka_t *this, eap_payload_t **out)
 		return FAILED;
 	}
 
-	derive_keys(this, this->peer, chunk_create(ck, sizeof(ck)),
-				chunk_create(ik, sizeof(ik)));
+	derive_keys(this, this->peer, chunk_create(ck, AKA_CK_LEN),
+				chunk_create(ik, AKA_IK_LEN));
 
 	*out = build_aka_payload(this, EAP_REQUEST, get_identifier(), AKA_CHALLENGE,
-							 AT_RAND, this->rand, AT_AUTN, autn, AT_MAC,
-							 chunk_empty, AT_END);
+						AT_RAND, chunk_create(this->rand, AKA_RAND_LEN),
+						AT_AUTN, chunk_create(autn, AKA_AUTN_LEN),
+						AT_MAC, chunk_empty, AT_END);
 	return NEED_MORE;
 }
 
@@ -646,10 +648,10 @@ static status_t server_process_challenge(private_eap_aka_t *this, eap_payload_t 
 	}
 
 	/* compare received RES against stored precalculated XRES */
-	if (!chunk_equals(res, chunk_create(this->res, sizeof(this->res))))
+	if (!chunk_equals(res, chunk_create(this->res, AKA_RES_LEN)))
 	{
 		DBG1(DBG_IKE, "received RES does not match XRES");
-		DBG3(DBG_IKE, "RES %B XRES %b", &res, this->res, sizeof(this->res));
+		DBG3(DBG_IKE, "RES %B XRES %b", &res, this->res, AKA_RES_LEN);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -774,7 +776,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	{
 		*out = build_aka_payload(this, EAP_RESPONSE,
 						identifier, AKA_SYNCHRONIZATION_FAILURE,
-						AT_AUTS, chunk_create(auts, sizeof(auts)), AT_END);
+						AT_AUTS, chunk_create(auts, AKA_AUTS_LEN), AT_END);
 		DBG1(DBG_IKE, "received SQN invalid, sending %N",
 			 aka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
 		return NEED_MORE;
@@ -788,8 +790,8 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 		return NEED_MORE;
 	}
 
-	derive_keys(this, this->peer, chunk_create(ck, sizeof(ck)),
-				chunk_create(ik, sizeof(ik)));
+	derive_keys(this, this->peer, chunk_create(ck, AKA_CK_LEN),
+				chunk_create(ik, AKA_IK_LEN));
 
 	/* verify EAP message MAC AT_MAC */
 	DBG3(DBG_IKE, "verifying AT_MAC signature of %B", &message);
@@ -804,7 +806,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	}
 
 	*out = build_aka_payload(this, EAP_RESPONSE, identifier, AKA_CHALLENGE,
-							 AT_RES, chunk_create(res, sizeof(res)),
+							 AT_RES, chunk_create(res, AKA_RES_LEN),
 							 AT_MAC, chunk_empty, AT_END);
 	return NEED_MORE;
 }
@@ -1001,7 +1003,7 @@ static status_t get_msk(private_eap_aka_t *this, chunk_t *msk)
 {
 	if (this->derived)
 	{
-		*msk = chunk_create(this->msk, sizeof(this->msk));
+		*msk = chunk_create(this->msk, MSK_LEN);
 		return SUCCESS;
 	}
 	return FAILED;

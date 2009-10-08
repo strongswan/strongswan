@@ -174,8 +174,8 @@ static void step3(prf_t *prf, u_char k[AKA_K_LEN],
 				  u_char payload[AKA_PAYLOAD_LEN], u_int8_t h[HASH_SIZE_SHA1])
 {
 	/* use the keyed hasher to build the hash */
-	prf->set_key(prf, chunk_create(k, sizeof(k)));
-	prf->get_bytes(prf, chunk_create(payload, sizeof(payload)), h);
+	prf->set_key(prf, chunk_create(k, AKA_K_LEN));
+	prf->get_bytes(prf, chunk_create(payload, AKA_PAYLOAD_LEN), h);
 }
 
 /**
@@ -191,7 +191,7 @@ static void step4(u_char x[HASH_SIZE_SHA1])
 	mpz_init(bm);
 	mpz_init(gm);
 
-	mpz_import(xm, sizeof(x), 1, 1, 1, 0, x);
+	mpz_import(xm, HASH_SIZE_SHA1, 1, 1, 1, 0, x);
 	mpz_import(am, sizeof(a), 1, 1, 1, 0, a);
 	mpz_import(bm, sizeof(b), 1, 1, 1, 0, b);
 	mpz_import(gm, sizeof(g), 1, 1, 1, 0, g);
@@ -200,7 +200,7 @@ static void step4(u_char x[HASH_SIZE_SHA1])
 	mpz_add_poly(xm, bm, xm);
 	mpz_mod_poly(xm, xm, gm);
 
-	mpz_export(x, NULL, 1, sizeof(x), 1, 0, xm);
+	mpz_export(x, NULL, 1, HASH_SIZE_SHA1, 1, 0, xm);
 
 	mpz_clear(xm);
 	mpz_clear(am);
@@ -220,10 +220,10 @@ static void fx(prf_t *prf, u_char f, u_char k[AKA_K_LEN],
 
 	for (i = 0; i < 2; i++)
 	{
-		memset(payload, 0x5c, sizeof(payload));
+		memset(payload, 0x5c, AKA_PAYLOAD_LEN);
 		payload[11] ^= f;
 		memxor(payload + 12, fmk.ptr, fmk.len);
-		memxor(payload + 24, rand, sizeof(rand));
+		memxor(payload + 24, rand, AKA_RAND_LEN);
 
 		payload[3]  ^= i;
 		payload[19] ^= i;
@@ -250,16 +250,16 @@ static void f1x(prf_t *prf, u_int8_t f, u_char k[AKA_K_LEN],
 	u_char payload[AKA_PAYLOAD_LEN];
 	u_char h[HASH_SIZE_SHA1];
 
-	memset(payload, 0x5c, sizeof(payload));
+	memset(payload, 0x5c, AKA_PAYLOAD_LEN);
 	payload[11] ^= f;
 	memxor(payload + 12, fmk.ptr, fmk.len);
-	memxor(payload + 16, rand, sizeof(rand));
-	memxor(payload + 34, sqn, sizeof(sqn));
-	memxor(payload + 42, amf, sizeof(amf));
+	memxor(payload + 16, rand, AKA_RAND_LEN);
+	memxor(payload + 34, sqn, AKA_SQN_LEN);
+	memxor(payload + 42, amf, AKA_AMF_LEN);
 
 	step3(prf, k, payload, h);
 	step4(h);
-	memcpy(mac, h, sizeof(mac));
+	memcpy(mac, h, AKA_MAC_LEN);
 }
 
 /**
@@ -271,14 +271,14 @@ static void f5x(prf_t *prf, u_char f, u_char k[AKA_K_LEN],
 	u_char payload[AKA_PAYLOAD_LEN];
 	u_char h[HASH_SIZE_SHA1];
 
-	memset(payload, 0x5c, sizeof(payload));
+	memset(payload, 0x5c, AKA_PAYLOAD_LEN);
 	payload[11] ^= f;
 	memxor(payload + 12, fmk.ptr, fmk.len);
-	memxor(payload + 16, rand, sizeof(rand));
+	memxor(payload + 16, rand, AKA_RAND_LEN);
 
 	step3(prf, k, payload, h);
 	step4(h);
-	memcpy(ak, h, sizeof(ak));
+	memcpy(ak, h, AKA_AK_LEN);
 }
 
 /**
@@ -289,7 +289,7 @@ static void f1(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN])
 {
 	f1x(this->prf, F1, k, rand, sqn, amf, mac);
-	DBG3(DBG_IKE, "MAC %b", mac, sizeof(mac));
+	DBG3(DBG_IKE, "MAC %b", mac, AKA_MAC_LEN);
 }
 
 /**
@@ -300,7 +300,7 @@ static void f1star(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				   u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN])
 {
 	f1x(this->prf, F1STAR, k, rand, sqn, amf, macs);
-	DBG3(DBG_IKE, "MACS %b", macs, sizeof(macs));
+	DBG3(DBG_IKE, "MACS %b", macs, AKA_MAC_LEN);
 }
 
 /**
@@ -310,7 +310,7 @@ static void f2(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN])
 {
 	fx(this->prf, F2, k, rand, res);
-	DBG3(DBG_IKE, "RES %b", res, sizeof(res));
+	DBG3(DBG_IKE, "RES %b", res, AKA_RES_LEN);
 }
 
 /**
@@ -320,7 +320,7 @@ static void f3(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN])
 {
 	fx(this->prf, F3, k, rand, ck);
-	DBG3(DBG_IKE, "CK %b", ck, sizeof(ck));
+	DBG3(DBG_IKE, "CK %b", ck, AKA_CK_LEN);
 }
 
 /**
@@ -330,7 +330,7 @@ static void f4(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN])
 {
 	fx(this->prf, F4, k, rand, ik);
-	DBG3(DBG_IKE, "IK %b", ik, sizeof(ik));
+	DBG3(DBG_IKE, "IK %b", ik, AKA_IK_LEN);
 }
 
 /**
@@ -340,7 +340,7 @@ static void f5(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN])
 {
 	f5x(this->prf, F5, k, rand, ak);
-	DBG3(DBG_IKE, "AK %b", ak, sizeof(ak));
+	DBG3(DBG_IKE, "AK %b", ak, AKA_AK_LEN);
 }
 
 /**
@@ -350,7 +350,7 @@ static void f5star(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 			   u_char rand[AKA_RAND_LEN], u_char aks[AKA_AK_LEN])
 {
 	f5x(this->prf, F5STAR, k, rand, aks);
-	DBG3(DBG_IKE, "AKS %b", aks, sizeof(aks));
+	DBG3(DBG_IKE, "AKS %b", aks, AKA_AK_LEN);
 }
 
 
