@@ -71,6 +71,7 @@ sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
 sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
+sa/authenticators/eap/usim_manager.c sa/authenticators/eap/usim_manager.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
