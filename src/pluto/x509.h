@@ -26,30 +26,6 @@
 #include "constants.h"
 #include "id.h"
 
-/* Definition of generalNames kinds */
-
-typedef enum {
-	GN_OTHER_NAME =             0,
-	GN_RFC822_NAME =            1,
-	GN_DNS_NAME =               2,
-	GN_X400_ADDRESS =           3,
-	GN_DIRECTORY_NAME =         4,
-	GN_EDI_PARTY_NAME =         5,
-	GN_URI =                    6,
-	GN_IP_ADDRESS =             7,
-	GN_REGISTERED_ID =          8
-} generalNames_t;
-
-/* access structure for a GeneralName */
-
-typedef struct generalName generalName_t;
-
-struct generalName {
-	generalName_t   *next;
-	generalNames_t  kind;
-	chunk_t         name;
-};
-
 /* access structure for an X.509v3 certificate */
 
 typedef struct x509cert x509cert_t;
@@ -75,7 +51,6 @@ extern void select_x509cert_id(x509cert_t *cert, struct id *end_id);
 extern void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 										 chunk_t *authKeyID,
 										 chunk_t *authKeySerialNumber);
-extern chunk_t get_directoryName(chunk_t blob, int level, bool implicit);
 extern bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 								 certificate_t *issuer_cert);
 extern chunk_t x509_build_signature(chunk_t tbs, int algorithm,
@@ -90,6 +65,5 @@ extern void store_x509certs(x509cert_t **firstcert, bool strict);
 extern void list_x509cert_chain(const char *caption, x509cert_t* cert,
 								x509_flag_t flags, bool utc);
 extern void list_x509_end_certs(bool utc);
-extern void free_generalNames(generalName_t* gn, bool free_name);
 
 #endif /* _X509_H */
