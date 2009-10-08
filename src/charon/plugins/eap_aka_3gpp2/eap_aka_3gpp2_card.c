@@ -101,6 +101,9 @@ static status_t get_quintuplet(private_eap_aka_3gpp2_card_t *this,
 	/* update stored SQN to the received one */
 	memcpy(this->sqn, sqn, sizeof(sqn));
 
+	/* CK/IK */
+	this->f->f3(this->f, k, rand, ck);
+	this->f->f4(this->f, k, rand, ik);
 	/* calculate RES */
 	this->f->f2(this->f, k, rand, res);
 	DBG3(DBG_IKE, "calculated rand %b", res, sizeof(res));
