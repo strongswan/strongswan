@@ -71,6 +71,11 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	this->functions = eap_aka_3gpp2_functions_create();
+	if (!this->functions)
+	{
+		free(this);
+		return NULL;
+	}
 	this->card = eap_aka_3gpp2_card_create(this->functions);
 	this->provider = eap_aka_3gpp2_provider_create(this->functions);
 
