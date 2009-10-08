@@ -105,6 +105,7 @@ ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper
 ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authenication module.])
 ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authenication module.])
 ARG_ENABL_SET([eap-aka],        [enable EAP AKA authentication module.])
+ARG_ENABL_SET([eap-aka-3gpp2],  [enable EAP AKA backend implementing 3GPP2 algorithms in software. Requires libgmp.])
 ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
@@ -193,8 +194,11 @@ dnl =========================
 dnl  dependency calculation
 dnl =========================
 
-if test x$eap_aka = xtrue; then
+if test x$eap_aka_3gpp2 = xtrue; then
 	gmp=true;
+fi
+
+if test x$eap_aka = xtrue; then
 	fips_prf=true;
 	sha1=true;
 fi
@@ -697,6 +701,7 @@ AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+AM_CONDITIONAL(USE_EAP_AKA_3GPP2, test x$eap_aka_3gpp2 = xtrue)
 AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
@@ -780,6 +785,7 @@ AC_OUTPUT(
 	src/whack/Makefile
 	src/charon/Makefile
 	src/charon/plugins/eap_aka/Makefile
+	src/charon/plugins/eap_aka_3gpp2/Makefile
 	src/charon/plugins/eap_identity/Makefile
 	src/charon/plugins/eap_md5/Makefile
 	src/charon/plugins/eap_gtc/Makefile

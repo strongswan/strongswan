@@ -219,6 +219,11 @@ if USE_EAP_AKA
   PLUGINS += eapaka
 endif
 
+if USE_EAP_AKA_3GPP2
+  SUBDIRS += plugins/eap_aka_3gpp2
+  PLUGINS += eapaka-3gpp2
+endif
+
 if USE_EAP_MSCHAPV2
   SUBDIRS += plugins/eap_mschapv2
   PLUGINS += eapmschapv2
