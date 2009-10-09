@@ -96,7 +96,7 @@ struct usim_card_t {
 	 * Request parameter to start resynchronization.
 	 *
 	 * @param imsi		peer identity requesting quintuplet for
-	 * @param in		random value rand
+	 * @param rand		random value rand
 	 * @param auts		resynchronization parameter auts
 	 * @return			TRUE if parameter generated successfully
 	 */
