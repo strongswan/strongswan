@@ -576,30 +576,22 @@ static bool get_card_triplet(private_eap_sim_t *this,
 							 char *rand, char *sres, char *kc)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card = NULL, *current;
-	id_match_t match, best = ID_MATCH_NONE;
+	sim_card_t *card;
 	bool success = FALSE;
 
-	/* find the best matching SIM */
 	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &current))
+	while (enumerator->enumerate(enumerator, &card))
 	{
-		match = this->peer->matches(this->peer, current->get_imsi(current));
-		if (match > best)
+		if (card->get_triplet(card, this->peer, rand, sres, kc))
 		{
-			card = current;
-			best = match;
+			success = TRUE;
 			break;
 		}
 	}
-	if (card)
-	{
-		success = card->get_triplet(card, rand, sres, kc);
-	}
 	enumerator->destroy(enumerator);
-	if (!card)
+	if (!success)
 	{
-		DBG1(DBG_IKE, "no SIM card found matching '%Y'", this->peer);
+		DBG1(DBG_IKE, "no SIM card found with triplets for '%Y'", this->peer);
 	}
 	return success;
 }

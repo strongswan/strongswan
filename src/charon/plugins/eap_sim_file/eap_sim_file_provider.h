@@ -23,8 +23,6 @@
 
 #include "eap_sim_file_triplets.h"
 
-#include <sa/authenticators/eap/sim_manager.h>
-
 typedef struct eap_sim_file_provider_t eap_sim_file_provider_t;
 
 /**

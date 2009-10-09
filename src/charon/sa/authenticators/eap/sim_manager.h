@@ -28,31 +28,27 @@ typedef struct sim_manager_t sim_manager_t;
 typedef struct sim_card_t sim_card_t;
 typedef struct sim_provider_t sim_provider_t;
 
+#define SIM_RAND_LEN	16
+#define SIM_SRES_LEN	 4
+#define SIM_KC_LEN		 8
+
 /**
  * Interface for a SIM card (used as EAP client).
  */
 struct sim_card_t {
 
 	/**
-	 * Get the identity of a SIM card.
-	 *
-	 * The returned identity owned by the sim_card and not destroyed outside.
-	 * The SIM card may return ID_ANY if it does not support/use an IMSI.
-	 *
-	 * @return		identity
-	 */
-	identification_t* (*get_imsi)(sim_card_t *this);
-
-	/**
 	 * Calculate SRES/KC from a RAND.
 	 *
+	 * @param imsi	identity to get a triplet for
 	 * @param rand	RAND input buffer, fixed size 16 bytes
 	 * @param sres	SRES output buffer, fixed size 4 byte
 	 * @param kc	KC output buffer, fixed size 8 bytes
-	 * @return		TRUE if SRES/KC calculated, FALSE on error
+	 * @return		TRUE if SRES/KC calculated, FALSE on error/wrong identity
 	 */
-	bool (*get_triplet)(sim_card_t *this,
-						char rand[16], char sres[4], char kc[8]);
+	bool (*get_triplet)(sim_card_t *this, identification_t *imsi,
+						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
+						char kc[SIM_KC_LEN]);
 };
 
 /**
@@ -70,7 +66,8 @@ struct sim_provider_t {
 	 * @return		TRUE if triplet received, FALSE otherwise
 	 */
 	bool (*get_triplet)(sim_provider_t *this, identification_t *imsi,
-						char rand[16], char sres[4], char kc[8]);
+						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
+						char kc[SIM_KC_LEN]);
 };
 
 /**

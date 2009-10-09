@@ -21,23 +21,7 @@
 #ifndef EAP_SIM_FILE_TRIPLETS_H_
 #define EAP_SIM_FILE_TRIPLETS_H_
 
-#include <utils/enumerator.h>
-#include <utils/identification.h>
-
-/**
- * size of RAND value
- */
-#define RAND_LEN 16
-
-/**
- * size of SRES value
- */
-#define SRES_LEN 4
-
-/**
- * size of KC value
- */
-#define KC_LEN 8
+#include <sa/authenticators/eap/sim_manager.h>
 
 typedef struct eap_sim_file_triplets_t eap_sim_file_triplets_t;
 

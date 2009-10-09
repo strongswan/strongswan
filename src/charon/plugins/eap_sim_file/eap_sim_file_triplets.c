@@ -50,9 +50,9 @@ struct private_eap_sim_file_triplets_t {
  */
 typedef struct  {
 	identification_t *imsi;
-	char rand[RAND_LEN];
-	char sres[SRES_LEN];
-	char kc[KC_LEN];
+	char rand[SIM_RAND_LEN];
+	char sres[SIM_SRES_LEN];
+	char kc[SIM_KC_LEN];
 } triplet_t;
 
 /**
@@ -197,13 +197,13 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 					triplet->imsi = identification_create_from_string(token);
 					continue;
 				case 1: /* rand */
-					parse_token(triplet->rand, token, RAND_LEN);
+					parse_token(triplet->rand, token, SIM_RAND_LEN);
 					continue;
 				case 2: /* sres */
-					parse_token(triplet->sres, token, SRES_LEN);
+					parse_token(triplet->sres, token, SIM_SRES_LEN);
 					continue;
 				case 3: /* kc */
-					parse_token(triplet->kc, token, KC_LEN);
+					parse_token(triplet->kc, token, SIM_KC_LEN);
 					continue;
 				default:
 					break;;
@@ -219,8 +219,8 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 		}
 
 		DBG2(DBG_CFG, "triplet: imsi %Y\nrand %b\nsres %b\nkc %b",
-			 triplet->imsi, triplet->rand, RAND_LEN,
-			 triplet->sres, SRES_LEN, triplet->kc, KC_LEN);
+			 triplet->imsi, triplet->rand, SIM_RAND_LEN,
+			 triplet->sres, SIM_SRES_LEN, triplet->kc, SIM_KC_LEN);
 
 		this->triplets->insert_last(this->triplets, triplet);
 	}

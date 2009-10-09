@@ -49,9 +49,9 @@ static bool get_triplet(private_eap_sim_file_provider_t *this,
 	{
 		if (imsi->matches(imsi, id))
 		{
-			memcpy(rand, c_rand, RAND_LEN);
-			memcpy(sres, c_sres, SRES_LEN);
-			memcpy(kc, c_kc, KC_LEN);
+			memcpy(rand, c_rand, SIM_RAND_LEN);
+			memcpy(sres, c_sres, SIM_SRES_LEN);
+			memcpy(kc, c_kc, SIM_KC_LEN);
 			enumerator->destroy(enumerator);
 			return TRUE;
 		}
