@@ -5,6 +5,10 @@ strongswan-4.3.5
   separate pkcs1, pgp, pem and dnskey plugins. The public key implementation
   plugins gmp, gcrypt and openssl can all make use of them.
 
+- The EAP-AKA plugin can use different backends for USIM/quintuplet
+  calculations, very similar to the EAP-SIM plugin. The existing 3GPP2 software
+  implementation has been migrated to a separate plugin.
+
 - The IKEv2 daemon charon gained basic PGP support. It can use locally installed
   peer certificates and can issue signatures based on RSA private keys.
 
