@@ -75,14 +75,12 @@ void eap_aka_3gpp2_get_sqn(char sqn[AKA_SQN_LEN], int offset)
 {
 	timeval_t time;
 
-	time_monotonic(&time);
-	/* set sqn to an integer containing seconds followed by most
-	 * significant useconds */
+	gettimeofday(&time, NULL);
+	/* set sqn to an integer containing 4 bytes seconds + 2 bytes usecs */
 	time.tv_sec = htonl(time.tv_sec + offset);
 	/* usec's are never larger than 0x000f423f, so we shift the 12 first bits */
-	time.tv_usec <<= 12;
-	time.tv_usec = htonl(time.tv_usec);
-	memcpy(sqn, &time.tv_sec, 4);
+	time.tv_usec = htonl(time.tv_usec << 12);
+	memcpy(sqn, (char*)&time.tv_sec + sizeof(time_t) - 4, 4);
 	memcpy(sqn + 4, &time.tv_usec, 2);
 }
 
