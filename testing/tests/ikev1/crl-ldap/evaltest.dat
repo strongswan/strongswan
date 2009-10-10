@@ -1,6 +1,6 @@
 moon::cat /var/log/auth.log::loaded crl from::YES
 carol::cat /var/log/auth.log::loaded crl from::YES
-moon::cat /var/log/auth.log::crl is stale ::YES
+moon::cat /var/log/auth.log::crl is stale::YES
 carol::cat /var/log/auth.log::crl is stale::YES
 moon::cat /var/log/auth.log::X.509 certificate rejected::YES
 carol::cat /var/log/auth.log::X.509 certificate rejected::YES
