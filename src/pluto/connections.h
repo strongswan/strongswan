@@ -1,5 +1,6 @@
 /* information about connections between hosts and clients
  * Copyright (C) 1998-2001  D. Hugh Redelmeier
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,10 +20,9 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <credentials/ietf_attributes/ietf_attributes.h>
 
-#include "id.h"
 #include "certs.h"
-#include "ac.h"
 #include "smartcard.h"
 #include "whack.h"
 
@@ -130,7 +130,7 @@ extern void fmt_policy_prio(policy_prio_t pp, char buf[POLICY_PRIO_BUF]);
 struct virtual_t;
 
 struct end {
-	struct id id;
+	identification_t *id;
 	ip_address
 		host_addr,
 		host_nexthop,
@@ -231,7 +231,7 @@ struct connection {
 extern bool orient(connection_t *c);
 
 extern bool same_peer_ids(const connection_t *c, const connection_t *d,
-						  const struct id *his_id);
+						  identification_t *his_id);
 
 /* Format the topology of a connection end, leaving out defaults.
  * Largest left end looks like: client === host : port [ host_id ] --- hop
@@ -262,9 +262,9 @@ extern connection_t *shunt_owner(const ip_subnet *ours, const ip_subnet *his);
 extern bool uniqueIDs;  /* --uniqueids? */
 extern void ISAKMP_SA_established(connection_t *c, so_serial_t serial);
 
-#define his_id_was_instantiated(c) ((c)->kind == CK_INSTANCE \
-	&& (id_is_ipaddr(&(c)->spd.that.id)? \
-	sameaddr(&(c)->spd.that.id.ip_addr, &(c)->spd.that.host_addr) : TRUE))
+#define id_is_ipaddr(id) ((id)->get_type(id) == ID_IPV4_ADDR || \
+						  (id)->get_type(id) == ID_IPV6_ADDR)
+extern bool his_id_was_instantiated(const connection_t *c);
 
 struct state;   /* forward declaration of tag (defined in state.h) */
 
@@ -274,7 +274,7 @@ extern connection_t* find_host_connection(const ip_address *me,
 										  const ip_address *him,
 										  u_int16_t his_port, lset_t policy);
 extern connection_t* refine_host_connection(const struct state *st,
-											const struct id *id,
+											identification_t *id,
 											identification_t *peer_ca);
 extern connection_t* find_client_connection(connection_t *c,
 											const ip_subnet *our_net,
@@ -298,30 +298,27 @@ extern void get_peer_ca_and_groups(connection_t *c,
  */
 struct gw_info; /* forward declaration of tag (defined in dnskey.h) */
 struct alg_info;        /* forward declaration of tag (defined in alg_info.h) */
-extern connection_t *rw_instantiate(connection_t *c
-										 , const ip_address *him
-										 , u_int16_t his_port
-										 , const ip_subnet *his_net
-										 , const struct id *his_id);
+extern connection_t *rw_instantiate(connection_t *c,
+									const ip_address *him,
+									u_int16_t his_port,
+									const ip_subnet *his_net,
+									identification_t *his_id);
 
-extern connection_t *oppo_instantiate(connection_t *c
-										   , const ip_address *him
-										   , const struct id *his_id
-										   , struct gw_info *gw
-										   , const ip_address *our_client
-										   , const ip_address *peer_client);
+extern connection_t *oppo_instantiate(connection_t *c,
+									  const ip_address *him,
+									  identification_t *his_id,
+									  struct gw_info *gw,
+									  const ip_address *our_client,
+									  const ip_address *peer_client);
 
 extern connection_t
-  *build_outgoing_opportunistic_connection(struct gw_info *gw
-										   , const ip_address *our_client
-										   , const ip_address *peer_client);
+  *build_outgoing_opportunistic_connection(struct gw_info *gw,
+										   const ip_address *our_client,
+										   const ip_address *peer_client);
 
-/* worst case: "[" serial "] " myclient "=== ..." peer "===" hisclient '\0' */
-#define CONN_INST_BUF \
-	(2 + 10 + 1 + SUBNETTOT_BUF + 7 + ADDRTOT_BUF + 3 + SUBNETTOT_BUF + 1)
+#define CONN_INST_BUF	BUF_LEN
 
-extern void fmt_conn_instance(const connection_t *c
-	, char buf[CONN_INST_BUF]);
+extern void fmt_conn_instance(const connection_t *c, char buf[CONN_INST_BUF]);
 
 /* operations on "pending", the structure representing Quick Mode
  * negotiations delayed until a Keying Channel has been negotiated.
@@ -329,12 +326,9 @@ extern void fmt_conn_instance(const connection_t *c
 
 struct pending; /* forward declaration (opaque outside connections.c) */
 
-extern void add_pending(int whack_sock
-	, struct state *isakmp_sa
-	, connection_t *c
-	, lset_t policy
-	, unsigned long try
-	, so_serial_t replacing);
+extern void add_pending(int whack_sock, struct state *isakmp_sa,
+						connection_t *c, lset_t policy, unsigned long try,
+						so_serial_t replacing);
 
 extern void release_pending_whacks(struct state *st, err_t story);
 extern void unpend(struct state *st);

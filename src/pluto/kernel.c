@@ -45,7 +45,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "connections.h"
 #include "state.h"
 #include "timer.h"
@@ -357,6 +356,33 @@ ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 	return htonl((ipsec_spi_t)latest_cpi);
 }
 
+/* Replace the shell metacharacters ', \, ", `, and $ in a character string
+ * by escape sequences consisting of their octal values
+ */
+static void escape_metachar(const char *src, char *dst, size_t dstlen)
+{
+	while (*src != '\0' && dstlen > 4)
+	{
+		switch (*src)
+		{
+		case '\'':
+		case '\\':
+		case '"':
+		case '`':
+		case '$':
+			sprintf(dst,"\\%s%o", (*src < 64)?"0":"", *src);
+			dst += 4;
+			dstlen -= 4;
+			break;
+		default:
+			*dst++ = *src;
+			dstlen--;
+		}
+		src++;
+	}
+	*dst = '\0';
+}
+
 /* invoke the updown script to do the routing and firewall commands required
  *
  * The user-specified updown script is run.  Parameters are fed to it in
@@ -471,7 +497,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 		}
 
 		addrtot(&sr->this.host_addr, 0, me_str, sizeof(me_str));
-		idtoa(&sr->this.id, myid_str, sizeof(myid_str));
+		snprintf(myid_str, sizeof(myid_str), "%Y", sr->this.id);
 		escape_metachar(myid_str, secure_myid_str, sizeof(secure_myid_str));
 		subnettot(&sr->this.client, 0, myclient_str, sizeof(myclientnet_str));
 		networkof(&sr->this.client, &ta);
@@ -480,7 +506,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 		addrtot(&ta, 0, myclientmask_str, sizeof(myclientmask_str));
 
 		addrtot(&sr->that.host_addr, 0, peer_str, sizeof(peer_str));
-		idtoa(&sr->that.id, peerid_str, sizeof(peerid_str));
+		snprintf(peerid_str, sizeof(peerid_str), "%Y", sr->that.id);
 		escape_metachar(peerid_str, secure_peerid_str, sizeof(secure_peerid_str));
 		subnettot(&sr->that.client, 0, peerclient_str, sizeof(peerclientnet_str));
 		networkof(&sr->that.client, &ta);
@@ -492,12 +518,10 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
-			struct id key_id;
 			int pathlen;
 
-			id_from_identification(&key_id, key->id);
-
-			if (type == KEY_RSA && same_id(&sr->that.id, &key_id) &&
+			if (type == KEY_RSA &&
+				sr->that.id->equals(sr->that.id, key->id) &&
 				trusted_ca(key->issuer, sr->that.ca, &pathlen))
 			{
 				if (key->issuer)

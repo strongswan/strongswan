@@ -38,6 +38,7 @@
 #include "server.h"
 #include "state.h"
 #include "connections.h"
+#include "myid.h"
 #include "kernel.h"
 #include "whack.h"      /* needs connections.h */
 #include "timer.h"

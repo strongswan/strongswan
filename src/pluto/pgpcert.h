@@ -17,6 +17,7 @@
 #ifndef _PGPCERT_H
 #define _PGPCERT_H
 
+#include <utils/identification.h>
 #include <crypto/hashers/hasher.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
@@ -46,7 +47,7 @@ struct pgpcert {
 extern const pgpcert_t pgpcert_empty;
 extern bool parse_pgp(chunk_t blob, pgpcert_t *cert);
 extern void share_pgpcert(pgpcert_t *cert);
-extern void select_pgpcert_id(pgpcert_t *cert, struct id *end_id);
+extern identification_t* select_pgpcert_id(pgpcert_t *cert, identification_t *id);
 extern pgpcert_t* add_pgpcert(pgpcert_t *cert);
 extern void list_pgp_end_certs(bool utc);
 extern void release_pgpcert(pgpcert_t *cert);

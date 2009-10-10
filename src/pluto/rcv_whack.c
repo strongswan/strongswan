@@ -33,7 +33,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "ca.h"
 #include "certs.h"
 #include "ac.h"
@@ -55,9 +54,10 @@
 #include "fetch.h"
 #include "ocsp.h"
 #include "crl.h"
-
+#include "myid.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
+
 /* helper variables and function to decode strings from whack message */
 
 static char *next_str
@@ -102,17 +102,13 @@ struct key_add_continuation {
 	enum key_add_attempt lookingfor;
 };
 
-static void key_add_ugh(const struct id *keyid, err_t ugh)
+static void key_add_ugh(identification_t *keyid, err_t ugh)
 {
-	char name[BUF_LEN]; /* longer IDs will be truncated in message */
-
-	(void)idtoa(keyid, name, sizeof(name));
-	loglog(RC_NOKEY
-		, "failure to fetch key for %s from DNS: %s", name, ugh);
+	loglog(RC_NOKEY, "failure to fetch key for %'Y' from DNS: %s", keyid, ugh);
 }
 
 /* last one out: turn out the lights */
-static void key_add_merge(struct key_add_common *oc, const struct id *keyid)
+static void key_add_merge(struct key_add_common *oc, identification_t *keyid)
 {
 	if (oc->refCount == 0)
 	{
@@ -120,9 +116,12 @@ static void key_add_merge(struct key_add_common *oc, const struct id *keyid)
 
 		/* if no success, print all diagnostics */
 		if (!oc->success)
+		{
 			for (kaa = ka_TXT; kaa != ka_roof; kaa++)
+			{
 				key_add_ugh(keyid, oc->diag[kaa]);
-
+			}
+		}
 		for (kaa = ka_TXT; kaa != ka_roof; kaa++)
 		{
 			free(oc->diag[kaa]);
@@ -155,91 +154,81 @@ static void key_add_continue(struct adns_continuation *ac, err_t ugh)
 	}
 
 	oc->refCount--;
-	key_add_merge(oc, &ac->id);
+	key_add_merge(oc, ac->id);
 	whack_log_fd = NULL_FD;
 }
 
 static void key_add_request(const whack_message_t *msg)
 {
 	identification_t *key_id;
-	struct id keyid;
-	err_t ugh = atoid(msg->keyid, &keyid, FALSE);
 
-	if (ugh != NULL)
+	key_id = identification_create_from_string(msg->keyid);
+
+	if (!msg->whack_addkey)
 	{
-		loglog(RC_BADID, "bad --keyid \"%s\": %s", msg->keyid, ugh);
+		delete_public_keys(key_id, msg->pubkey_alg, NULL, chunk_empty);
 	}
-	else
+	if (msg->keyval.len == 0)
 	{
-		key_id = identification_create_from_string(msg->keyid);
+		struct key_add_common *oc = malloc_thing(struct key_add_common);
+		enum key_add_attempt kaa;
+		err_t ugh;
 
-		if (!msg->whack_addkey)
+		/* initialize state shared by queries */
+		oc->refCount = 0;
+		oc->whack_fd = dup_any(whack_log_fd);
+		oc->success = FALSE;
+
+		for (kaa = ka_TXT; kaa != ka_roof; kaa++)
 		{
-			delete_public_keys(key_id, msg->pubkey_alg, NULL, chunk_empty);
-		}
-		if (msg->keyval.len == 0)
-		{
-			struct key_add_common *oc = malloc_thing(struct key_add_common);
-			enum key_add_attempt kaa;
+			struct key_add_continuation *kc;
 
-			/* initialize state shared by queries */
-			oc->refCount = 0;
-			oc->whack_fd = dup_any(whack_log_fd);
-			oc->success = FALSE;
+			oc->diag[kaa] = NULL;
+			oc->refCount++;
+			kc = malloc_thing(struct key_add_continuation);
+			kc->common = oc;
+			kc->lookingfor = kaa;
 
-			for (kaa = ka_TXT; kaa != ka_roof; kaa++)
+			switch (kaa)
 			{
-				struct key_add_continuation *kc;
-
-				oc->diag[kaa] = NULL;
-				oc->refCount++;
-				kc = malloc_thing(struct key_add_continuation);
-				kc->common = oc;
-				kc->lookingfor = kaa;
-
-				switch (kaa)
-				{
 				case ka_TXT:
-					ugh = start_adns_query(&keyid
-						, &keyid        /* same */
-						, T_TXT
-						, key_add_continue
-						, &kc->ac);
+					ugh = start_adns_query(key_id
+							, key_id        /* same */
+							, T_TXT
+							, key_add_continue
+							, &kc->ac);
 					break;
 #ifdef USE_KEYRR
 				case ka_KEY:
-					ugh = start_adns_query(&keyid
-						, NULL
-						, T_KEY
-						, key_add_continue
-						, &kc->ac);
+					ugh = start_adns_query(key_id
+							, NULL
+							, T_KEY
+							, key_add_continue
+							, &kc->ac);
 					break;
 #endif /* USE_KEYRR */
 				default:
 					bad_case(kaa);      /* suppress gcc warning */
-				}
-				if (ugh != NULL)
-				{
-					oc->diag[kaa] = clone_str(ugh);
-					oc->refCount--;
-				}
 			}
-
-			/* Done launching queries.
-			 * Handle total failure case.
-			 */
-			key_add_merge(oc, &keyid);
-		}
-		else
-		{
-			if (!add_public_key(key_id, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
-				&pubkeys))
+			if (ugh)
 			{
-				loglog(RC_LOG_SERIOUS, "failed to add public key");
+				oc->diag[kaa] = clone_str(ugh);
+				oc->refCount--;
 			}
 		}
-		key_id->destroy(key_id);
+
+		/* Done launching queries. Handle total failure case. */
+		key_add_merge(oc, key_id);
 	}
+	else
+	{
+		if (!add_public_key(key_id, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
+			&pubkeys))
+		{
+			loglog(RC_LOG_SERIOUS, "failed to add public key");
+		}
+	}
+	key_id->destroy(key_id);
 }
 
 /* Handle a kernel request. Supposedly, there's a message in

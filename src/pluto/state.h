@@ -21,6 +21,7 @@
 
 #include <crypto/diffie_hellman.h>
 
+#include "defs.h"
 #include "connections.h"
 
 /* Message ID mechanism.

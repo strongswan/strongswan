@@ -35,12 +35,14 @@
 #include <crypto/rngs/rng.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
+#include <utils/identification.h>
 
 #include "constants.h"
 #include "defs.h"
+#include "myid.h"
 #include "state.h"
-#include "id.h"
 #include "x509.h"
+#include "ac.h"
 #include "crl.h"
 #include "ca.h"
 #include "certs.h"
@@ -1569,7 +1571,7 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 	}
 }
 
-static stf_status check_signature(key_type_t key_type, const struct id* peer,
+static stf_status check_signature(key_type_t key_type, identification_t* peer,
 								  struct state *st, chunk_t hash,
 								  const pb_stream *sig_pbs,
 #ifdef USE_KEYRR
@@ -1593,7 +1595,8 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 		for (gw = c->gw_info; gw != NULL; gw = gw->next)
 		{
 			/* only consider entries that have a key and are for our peer */
-			if (gw->gw_key_present && same_id(&gw->gw_id, &c->spd.that.id)&&
+			if (gw->gw_key_present &&
+				gw->gw_id->equals(gw->gw_id, c->spd.that.id) &&
 				take_a_crack(&s, gw->key))
 			{
 				return STF_OK;
@@ -1611,11 +1614,8 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
-			struct id key_id;
 
-			id_from_identification(&key_id, key->id);
-
-			if (type == key_type && same_id(peer, &key_id))
+			if (type == key_type && peer->equals(peer, key->id))
 			{
 				time_t now = time(NULL);
 
@@ -1678,31 +1678,27 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 
 	/* no acceptable key was found: diagnose */
 	{
-		char id_buf[BUF_LEN];   /* arbitrary limit on length of ID reported */
-
-		idtoa(peer, id_buf, sizeof(id_buf));
-
 		if (s.tried_cnt == 0)
 		{
-			loglog(RC_LOG_SERIOUS, "no public key known for '%s'", id_buf);
+			loglog(RC_LOG_SERIOUS, "no public key known for '%Y'", peer);
 		}
 		else if (s.tried_cnt == 1)
 		{
-			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
-					" wrong key?; tried %d", id_buf, s.tried_cnt);
+			loglog(RC_LOG_SERIOUS, "signature check for '%Y' failed: "
+					" wrong key?; tried %d", peer, s.tried_cnt);
 			DBG(DBG_CONTROL,
-				DBG_log("public key for '%s' failed: "
-						"decrypted SIG payload into a malformed ECB", id_buf)
+				DBG_log("public key for '%Y' failed: "
+						"decrypted SIG payload into a malformed ECB", peer)
 			)
 		}
 		else
 		{
-			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
-					  "tried %d keys but none worked.", id_buf, s.tried_cnt);
+			loglog(RC_LOG_SERIOUS, "signature check for '%Y' failed: "
+					  "tried %d keys but none worked.", peer, s.tried_cnt);
 			DBG(DBG_CONTROL,
-				DBG_log("all %d public keys for '%s' failed: "
+				DBG_log("all %d public keys for '%Y' failed: "
 						"best decrypted SIG payload into a malformed ECB",
-						s.tried_cnt, id_buf)
+						s.tried_cnt, peer)
 			)
 		}
 		return STF_FAIL + INVALID_KEY_INFORMATION;
@@ -2198,16 +2194,17 @@ static void decode_cert(struct msg_digest *md)
 		}
 		else if (cert->isacert_type == CERT_PKCS7_WRAPPED_X509)
 		{
-			x509cert_t *x509cert = NULL;
+			linked_list_t *certs = linked_list_create();
 
-			if (pkcs7_parse_signedData(blob, NULL, &x509cert, NULL, NULL))
+			if (pkcs7_parse_signedData(blob, NULL, certs, NULL, NULL))
 			{
-				store_x509certs(&x509cert, strict_crl_policy);
+				store_x509certs(certs, strict_crl_policy);
 			}
 			else
 			{
 				plog("Syntax error in PKCS#7 wrapped X.509 certificates");
 			}
+			certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 		}
 		else
 		{
@@ -2276,12 +2273,13 @@ static void decode_cr(struct msg_digest *md, connection_t *c)
  * We must be called before SIG or HASH are decoded since we
  * may change the peer's public key or ID.
  */
-static bool decode_peer_id(struct msg_digest *md, struct id *peer)
+static bool decode_peer_id(struct msg_digest *md, identification_t **peer)
 {
 	struct state *const st = md->st;
 	struct payload_digest *const id_pld = md->chain[ISAKMP_NEXT_ID];
 	const pb_stream *const id_pbs = &id_pld->pbs;
 	struct isakmp_id *const id = &id_pld->payload.id;
+	chunk_t id_payload;
 
 	/* I think that RFC2407 (IPSEC DOI) 4.6.2 is confused.
 	 * It talks about the protocol ID and Port fields of the ID
@@ -2310,74 +2308,50 @@ static bool decode_peer_id(struct msg_digest *md, struct id *peer)
 		return FALSE;
 	}
 
-	peer->kind = id->isaid_idtype;
+	id_payload = chunk_create(id_pbs->cur, pbs_left(id_pbs));
 
-	switch (peer->kind)
+	switch (id->isaid_idtype)
 	{
-	case ID_IPV4_ADDR:
-	case ID_IPV6_ADDR:
-		/* failure mode for initaddr is probably inappropriate address length */
-		{
-			err_t ugh = initaddr(id_pbs->cur, pbs_left(id_pbs)
-				, peer->kind == ID_IPV4_ADDR? AF_INET : AF_INET6
-				, &peer->ip_addr);
-
-			if (ugh != NULL)
+		case ID_IPV4_ADDR:
+			if (id_payload.len != 4)
 			{
-				loglog(RC_LOG_SERIOUS, "improper %s identification payload: %s"
-					, enum_show(&ident_names, peer->kind), ugh);
-				/* XXX Could send notification back */
+				loglog(RC_LOG_SERIOUS, "improper %s Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
 				return FALSE;
 			}
-		}
-		break;
-
-	case ID_USER_FQDN:
-		if (memchr(id_pbs->cur, '@', pbs_left(id_pbs)) == NULL)
-		{
-			loglog(RC_LOG_SERIOUS, "peer's ID_USER_FQDN contains no @");
+			break;
+		case ID_IPV6_ADDR:
+			if (id_payload.len != 16)
+			{
+				loglog(RC_LOG_SERIOUS, "improper %s Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
+				return FALSE;
+			}
+			break;
+		case ID_USER_FQDN:
+		case ID_FQDN:
+			if (memchr(id_payload.ptr, '\0', id_payload.len) != NULL)
+			{
+				loglog(RC_LOG_SERIOUS, "%s Phase 1 ID payload contains "
+									   "a NUL character",
+								enum_show(&ident_names, id->isaid_idtype));
+				return FALSE;
+			}
+			break;
+		case ID_KEY_ID:
+		case ID_DER_ASN1_DN:
+			break;
+		default:
+			/* XXX Could send notification back */
+			loglog(RC_LOG_SERIOUS, "unacceptable identity type (%s) "
+								   "in Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
 			return FALSE;
-		}
-		/* FALLTHROUGH */
-	case ID_FQDN:
-		if (memchr(id_pbs->cur, '\0', pbs_left(id_pbs)) != NULL)
-		{
-			loglog(RC_LOG_SERIOUS, "Phase 1 ID Payload of type %s contains a NUL"
-				, enum_show(&ident_names, peer->kind));
-			return FALSE;
-		}
-
-		/* ??? ought to do some more sanity check, but what? */
-
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		break;
-
-	case ID_KEY_ID:
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		DBG(DBG_PARSING,
-			DBG_dump_chunk("KEY ID:", peer->name));
-		break;
-
-	case ID_DER_ASN1_DN:
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		DBG(DBG_PARSING,
-			DBG_dump_chunk("DER ASN1 DN:", peer->name));
-		break;
-
-	default:
-		/* XXX Could send notification back */
-		loglog(RC_LOG_SERIOUS, "Unacceptable identity type (%s) in Phase 1 ID Payload"
-			, enum_show(&ident_names, peer->kind));
-		return FALSE;
 	}
+	*peer = identification_create_from_encoding(id->isaid_idtype, id_payload);
 
-	{
-		char buf[BUF_LEN];
-
-		idtoa(peer, buf, sizeof(buf));
-		plog("Peer ID is %s: '%s'",
-			enum_show(&ident_names, id->isaid_idtype), buf);
-	}
+	plog("Peer ID is %s: '%Y'",	enum_show(&ident_names, id->isaid_idtype),
+								*peer);
 
 	/* check for certificates */
 	decode_cert(md);
@@ -2390,7 +2364,7 @@ static bool decode_peer_id(struct msg_digest *md, struct id *peer)
  * - if the initiation was explicit, we'd be ignoring user's intent
  * - if opportunistic, we'll lose our HOLD info
  */
-static bool switch_connection(struct msg_digest *md, struct id *peer,
+static bool switch_connection(struct msg_digest *md, identification_t *peer,
 							  bool initiator)
 {
 	struct state *const st = md->st;
@@ -2415,16 +2389,11 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 	{
 		int pathlen;
 
-		if (!same_id(&c->spd.that.id, peer))
+		if (!peer->equals(peer, c->spd.that.id))
 		{
-			char expect[BUF_LEN]
-				, found[BUF_LEN];
-
-			idtoa(&c->spd.that.id, expect, sizeof(expect));
-			idtoa(peer, found, sizeof(found));
-			loglog(RC_LOG_SERIOUS
-				, "we require peer to have ID '%s', but peer declares '%s'"
-				, expect, found);
+			loglog(RC_LOG_SERIOUS,
+					"we require peer to have ID '%Y', but peer declares '%Y'",
+					c->spd.that.id, peer);
 			return FALSE;
 		}
 
@@ -2467,10 +2436,7 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 
 		if (r == NULL)
 		{
-			char buf[BUF_LEN];
-
-			idtoa(peer, buf, sizeof(buf));
-			loglog(RC_LOG_SERIOUS, "no suitable connection for peer '%s'", buf);
+			loglog(RC_LOG_SERIOUS, "no suitable connection for peer '%Y'", peer);
 			return FALSE;
 		}
 
@@ -2509,10 +2475,9 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 		}
 		else if (c->spd.that.has_id_wildcards)
 		{
-			free_id_content(&c->spd.that.id);
-			c->spd.that.id = *peer;
+			c->spd.that.id->destroy(c->spd.that.id);
+			c->spd.that.id = peer->clone(peer);
 			c->spd.that.has_id_wildcards = FALSE;
-			unshare_id_content(&c->spd.that.id);
 		}
 	}
 	return TRUE;
@@ -2736,10 +2701,9 @@ static bool has_preloaded_public_key(struct state *st)
 		{
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
-			struct id key_id;
 
-			id_from_identification(&key_id, key->id);
-			if (type == KEY_RSA && same_id(&c->spd.that.id, &key_id) &&
+			if (type == KEY_RSA &&
+				c->spd.that.id->equals(c->spd.that.id, key->id) &&
 				key->until_time == UNDEFINED_TIME)
 			{
 				/* found a preloaded public key */
@@ -2937,6 +2901,38 @@ static bool uses_pubkey_auth(int auth)
 	}
 }
 
+/* build an ID payload
+ * Note: no memory is allocated for the body of the payload (tl->ptr).
+ * We assume it will end up being a pointer into a sufficiently
+ * stable datastructure.  It only needs to last a short time.
+ */
+static void build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
+{
+	identification_t *id = resolve_myid(end->id);
+
+	zero(hd);
+	hd->isaiid_idtype = id->get_type(id);
+
+	switch (id->get_type(id))
+	{
+		case ID_ANY:
+			hd->isaiid_idtype = aftoinfo(addrtypeof(&end->host_addr))->id_addr;
+			tl->len = addrbytesptr(&end->host_addr,
+						(const unsigned char **)&tl->ptr); /* sets tl->ptr too */
+			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
+		case ID_FQDN:
+		case ID_USER_FQDN:
+		case ID_DER_ASN1_DN:
+		case ID_KEY_ID:
+			*tl = id->get_encoding(id);
+			break;
+		default:
+			bad_case(id->get_type(id));
+	}
+}
+
 /* State Transition Functions.
  *
  * The definition of state_microcode_table in demux.c is a good
@@ -3066,7 +3062,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 		/* Create an instance
 		 * This is a rare case: wildcard peer ID but static peer IP address
 		 */
-		 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, &c->spd.that.id);
+		 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, c->spd.that.id);
 	}
 
 	/* Set up state */
@@ -3727,13 +3723,10 @@ struct key_continuation {
 typedef stf_status (key_tail_fn)(struct msg_digest *md
 								  , struct key_continuation *kc);
 
-static void report_key_dns_failure(struct id *id, err_t ugh)
+static void report_key_dns_failure(identification_t *id, err_t ugh)
 {
-	char id_buf[BUF_LEN];       /* arbitrary limit on length of ID reported */
-
-	(void) idtoa(id, id_buf, sizeof(id_buf));
-	loglog(RC_LOG_SERIOUS, "no RSA public key known for '%s'"
-		"; DNS search for KEY failed (%s)", id_buf, ugh);
+	loglog(RC_LOG_SERIOUS, "no RSA public key known for '%Y'"
+		"; DNS search for KEY failed (%s)", id, ugh);
 }
 
 
@@ -3753,12 +3746,14 @@ main_id_and_auth(struct msg_digest *md
 {
 	chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 	struct state *st = md->st;
-	struct id peer;
+	identification_t *peer;
 	stf_status r = STF_OK;
 
 	/* ID Payload in */
 	if (!decode_peer_id(md, &peer))
+	{
 		return STF_FAIL + INVALID_ID_INFORMATION;
+	}
 
 	/* Hash the ID Payload.
 	 * main_mode_hash requires idpl->cur to be at end of payload
@@ -3796,12 +3791,12 @@ main_id_and_auth(struct msg_digest *md
 	case OAKLEY_RSA_SIG:
 	case XAUTHInitRSA:
 	case XAUTHRespRSA:
-		r = check_signature(KEY_RSA, &peer, st, hash,
-				 &md->chain[ISAKMP_NEXT_SIG]->pbs,
+		r = check_signature(KEY_RSA, peer, st, hash,
+				 			&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
-				kc == NULL? NULL : kc->ac.keys_from_dns,
+							kc == NULL ? NULL : kc->ac.keys_from_dns,
 #endif /* USE_KEYRR */
-				kc == NULL? NULL : kc->ac.gateways_from_dns
+							kc == NULL ? NULL : kc->ac.gateways_from_dns
 			);
 
 		if (r == STF_SUSPEND)
@@ -3826,22 +3821,14 @@ main_id_and_auth(struct msg_digest *md
 #ifdef USE_KEYRR
 				nkc->failure_ok = TRUE;
 #endif
-				ugh = start_adns_query(&peer
-									   , &peer  /* SG itself */
-									   , T_TXT
-									   , cont_fn
-									   , &nkc->ac);
+				ugh = start_adns_query(peer, peer, T_TXT, cont_fn, &nkc->ac);
 				break;
 
 #ifdef USE_KEYRR
 			case kos_his_txt:
 				/* second try: look for the KEY records */
 				nkc->step = kos_his_key;
-				ugh = start_adns_query(&peer
-									   , NULL   /* no sgw for KEY */
-									   , T_KEY
-									   , cont_fn
-									   , &nkc->ac);
+				ugh = start_adns_query(peer, NULL, T_KEY, cont_fn, &nkc->ac);
 				break;
 #endif /* USE_KEYRR */
 
@@ -3851,7 +3838,7 @@ main_id_and_auth(struct msg_digest *md
 
 			if (ugh != NULL)
 			{
-				report_key_dns_failure(&peer, ugh);
+				report_key_dns_failure(peer, ugh);
 				st->st_suspended_md = NULL;
 				r = STF_FAIL + INVALID_KEY_INFORMATION;
 			}
@@ -3861,7 +3848,7 @@ main_id_and_auth(struct msg_digest *md
 	case OAKLEY_ECDSA_256:
 	case OAKLEY_ECDSA_384:
 	case OAKLEY_ECDSA_521:
-		r = check_signature(KEY_ECDSA, &peer, st, hash,
+		r = check_signature(KEY_ECDSA, peer, st, hash,
 							&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
 							NULL,
@@ -3874,6 +3861,7 @@ main_id_and_auth(struct msg_digest *md
 	}
 	if (r != STF_OK)
 	{
+		peer->destroy(peer);
 		return r;
 	}
 	DBG(DBG_CRYPT, DBG_log("authentication succeeded"));
@@ -3881,10 +3869,11 @@ main_id_and_auth(struct msg_digest *md
 	/*
 	 * With the peer ID known, let's see if we need to switch connections.
 	 */
-	if (!switch_connection(md, &peer, initiator))
+	if (!switch_connection(md, peer, initiator))
 	{
-		return STF_FAIL + INVALID_ID_INFORMATION;
+		r = STF_FAIL + INVALID_ID_INFORMATION;
 	}
+	peer->destroy(peer);
 	return r;
 }
 
@@ -3928,7 +3917,7 @@ static void key_continue(struct adns_continuation *cr, err_t ugh,
 
 		if (!kc->failure_ok && ugh != NULL)
 		{
-			report_key_dns_failure(&st->st_connection->spd.that.id, ugh);
+			report_key_dns_failure(st->st_connection->spd.that.id, ugh);
 			r = STF_FAIL + INVALID_KEY_INFORMATION;
 		}
 		else
@@ -4468,9 +4457,9 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 	struct state *p1st = md->st;
 	connection_t *c = p1st->st_connection;
 	struct verify_oppo_continuation *vc = malloc_thing(struct verify_oppo_continuation);
-	struct id id        /* subject of query */
-		, *our_id       /* needed for myid playing */
-		, our_id_space; /* ephemeral: no need for unshare_id_content */
+	identification_t *id;           /* subject of query */
+	identification_t *our_id;       /* needed for myid playing */
+	identification_t *our_id_space; /* ephemeral: no need for unshare_id_content */
 	ip_address client;
 	err_t ugh = NULL;
 
@@ -4506,20 +4495,20 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 	 * %myid makes no sense for the other side (but it is syntactically
 	 * legal).
 	 */
-	our_id = resolve_myid(&c->spd.this.id);
-	if (our_id->kind == ID_ANY)
+	our_id = resolve_myid(c->spd.this.id);
+	if (our_id->get_type(our_id) == ID_ANY)
 	{
-		iptoid(&c->spd.this.host_addr, &our_id_space);
-		our_id = &our_id_space;
+		our_id_space = identification_create_from_sockaddr((sockaddr_t*)&c->spd.this.host_addr);
+		our_id = our_id_space;
 	}
 
 	switch (next_step)
 	{
 	case vos_our_client:
 		networkof(&b->my.net, &client);
-		iptoid(&client, &id);
+		id = identification_create_from_sockaddr((sockaddr_t*)&client);
 		vc->b.failure_ok = b->failure_ok = FALSE;
-		ugh = start_adns_query(&id
+		ugh = start_adns_query(id
 			, our_id
 			, T_TXT
 			, quick_inI1_outR1_continue
@@ -4548,10 +4537,10 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 
 	case vos_his_client:
 		networkof(&b->his.net, &client);
-		iptoid(&client, &id);
+		id = identification_create_from_sockaddr((sockaddr_t*)&client);
 		vc->b.failure_ok = b->failure_ok = FALSE;
-		ugh = start_adns_query(&id
-			, &c->spd.that.id
+		ugh = start_adns_query(id
+			, c->spd.that.id
 			, T_TXT
 			, quick_inI1_outR1_continue
 			, &vc->ac);
@@ -4869,7 +4858,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 * We should record DNS sec use, if any -- belongs in
 					 * state during perhaps.
 					 */
-					p = oppo_instantiate(p, &c->spd.that.host_addr, &c->spd.that.id
+					p = oppo_instantiate(p, &c->spd.that.host_addr, c->spd.that.id
 						, NULL, &our_client, &his_client);
 				}
 				else
@@ -4878,7 +4867,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 * instantiate, carrying over authenticated peer ID
 					 */
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
-								, his_net, &c->spd.that.id);
+								, his_net, c->spd.that.id);
 				}
 			}
 #ifdef DEBUG

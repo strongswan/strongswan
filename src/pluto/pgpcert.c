@@ -27,12 +27,10 @@
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "id.h"
 #include "pgpcert.h"
 #include "certs.h"
 #include "whack.h"
 #include "keys.h"
-
 
 typedef enum pgp_packet_tag_t pgp_packet_tag_t;
 
@@ -399,10 +397,11 @@ void share_pgpcert(pgpcert_t *cert)
 /**
  * Select the OpenPGP keyid as ID
  */
-void select_pgpcert_id(pgpcert_t *cert, struct id *end_id)
+identification_t* select_pgpcert_id(pgpcert_t *cert, identification_t *id)
 {
-	end_id->kind = ID_KEY_ID;
-	end_id->name = cert->fingerprint->get_encoding(cert->fingerprint);
+	id->destroy(id);
+
+	return cert->fingerprint->clone(cert->fingerprint);
 }
 
 /**

@@ -12,6 +12,11 @@
  * for more details.
  */
 
+#ifndef _IPSEC_DOI_H
+#define _IPSEC_DOI_H
+
+#include "defs.h"
+
 extern void echo_hdr(struct msg_digest *md, bool enc, u_int8_t np);
 
 extern void ipsecdoi_initiate(int whack_sock, struct connection *c
@@ -99,4 +104,5 @@ extern void dpd_timeout(struct state *st);
 		} \
 	}
 
+#endif /* _IPSEC_DOI_H */
 

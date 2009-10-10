@@ -17,6 +17,8 @@
 
 #include <freeswan.h>
 
+#include <defs.h>
+
 /* copy of smartcard operations, defined in smartcard.h */
 #ifndef SC_OP_T
 #define SC_OP_T

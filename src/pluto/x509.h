@@ -19,12 +19,12 @@
 #define _X509_H
 
 #include <utils/identification.h>
+#include <utils/linked_list.h>
 #include <credentials/keys/public_key.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/x509.h>
 
 #include "constants.h"
-#include "id.h"
 
 /* access structure for an X.509v3 certificate */
 
@@ -41,12 +41,7 @@ struct x509cert {
 extern const x509cert_t empty_x509cert;
 
 extern bool same_keyid(chunk_t a, chunk_t b);
-extern bool same_dn(chunk_t a, chunk_t b);
-extern bool match_dn(chunk_t a, chunk_t b, int *wildcards);
-extern int dn_count_wildcards(chunk_t dn);
-extern int dntoa(char *dst, size_t dstlen, chunk_t dn);
-extern err_t atodn(char *src, chunk_t *dn);
-extern void select_x509cert_id(x509cert_t *cert, struct id *end_id);
+extern identification_t* select_x509cert_id(x509cert_t *cert, identification_t *id);
 extern void parse_authorityKeyIdentifier(chunk_t blob, int level0,
 										 chunk_t *authKeyID,
 										 chunk_t *authKeySerialNumber);
@@ -60,7 +55,7 @@ extern x509cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, x509cer
 extern void share_x509cert(x509cert_t *cert);
 extern void release_x509cert(x509cert_t *cert);
 extern void free_x509cert(x509cert_t *cert);
-extern void store_x509certs(x509cert_t **firstcert, bool strict);
+extern void store_x509certs(linked_list_t *certs, bool strict);
 extern void list_x509cert_chain(const char *caption, x509cert_t* cert,
 								x509_flag_t flags, bool utc);
 extern void list_x509_end_certs(bool utc);

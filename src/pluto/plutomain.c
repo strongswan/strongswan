@@ -48,7 +48,7 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
+#include "myid.h"
 #include "ca.h"
 #include "certs.h"
 #include "ac.h"
@@ -673,7 +673,7 @@ int main(int argc, char **argv)
 	init_demux();
 	init_kernel();
 	init_adns();
-	init_id();
+	init_myid();
 	init_fetch();
 
 	/* drop unneeded capabilities and change UID/GID */
@@ -762,7 +762,7 @@ void exit_pluto(int status)
 	stop_adns();
 	free_md_pool();
 	free_crypto();
-	free_id();                  /* free myids */
+	free_myid();                /* free myids */
 	free_events();              /* free remaining events */
 	free_vendorid();			/* free all vendor id records */
 	free_builder();

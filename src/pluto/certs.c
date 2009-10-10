@@ -28,7 +28,6 @@
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "id.h"
 #include "certs.h"
 #include "whack.h"
 #include "builder.h"
@@ -228,10 +227,9 @@ void share_cert(cert_t cert)
 }
 
 /*  release of a certificate decreases the count by one
- "  the certificate is freed when the counter reaches zero
+ *  the certificate is freed when the counter reaches zero
  */
-void
-release_cert(cert_t cert)
+void release_cert(cert_t cert)
 {
    switch (cert.type)
 	{
@@ -246,11 +244,10 @@ release_cert(cert_t cert)
 	}
 }
 
-/*
+/**
  *  list all X.509 and OpenPGP end certificates
  */
-void
-list_certs(bool utc)
+void list_certs(bool utc)
 {
 	list_x509_end_certs(utc);
 	list_pgp_end_certs(utc);

@@ -18,11 +18,10 @@
 #ifndef _PKCS7_H
 #define _PKCS7_H
 
+#include <utils/linked_list.h>
 #include <crypto/crypters/crypter.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/certificate.h>
-#include "defs.h"
-#include "x509.h"
 
 /* Access structure for a PKCS#7 ContentInfo object */
 
@@ -38,7 +37,7 @@ extern const contentInfo_t empty_contentInfo;
 extern bool pkcs7_parse_contentInfo(chunk_t blob, u_int level0,
 									contentInfo_t *cInfo);
 extern bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
-								   x509cert_t **cert, chunk_t *attributes,
+								   linked_list_t *cert, chunk_t *attributes,
 								   certificate_t *cacert);
 extern bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 									  chunk_t serialNumber, private_key_t *key);

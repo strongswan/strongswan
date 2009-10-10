@@ -39,7 +39,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "x509.h"
 #include "pgpcert.h"
 #include "certs.h"
@@ -61,7 +60,7 @@ const char *shared_secrets_file = SHARED_SECRETS_FILE;
 typedef struct id_list id_list_t;
 
 struct id_list {
-	struct id id;
+	identification_t *id;
 	id_list_t *next;
 };
 
@@ -109,9 +108,7 @@ static const secret_t* get_secret(const connection_t *c,
 	unsigned int best_match = 0;
 	secret_t *best = NULL;
 	secret_t *s;
-	const struct id *my_id  = &c->spd.this.id
-				  , *his_id = &c->spd.that.id;
-	struct id rw_id;
+	identification_t *my_id, *his_id;
 
 	/* is there a certificate assigned to this connection? */
 	if (kind == PPK_PUBKEY && c->spd.this.cert.type != CERT_NONE)
@@ -131,23 +128,24 @@ static const secret_t* get_secret(const connection_t *c,
 		return best;
 	}
 
+	my_id  = c->spd.this.id;
+
 	if (his_id_was_instantiated(c))
 	{
 		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = c->spd.that.id.kind;
-		rw_id.name = chunk_empty;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
+		his_id = identification_create_from_string("%any");
 	}
-	else if (kind == PPK_PSK
-	&& (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK))
-	&& ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_ANY) ||
-		(c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
+	else if (kind == PPK_PSK && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK)) &&
+		((c->kind == CK_TEMPLATE &&
+		 c->spd.that.id->get_type(c->spd.that.id) == ID_ANY) ||
+		(c->kind == CK_INSTANCE && id_is_ipaddr(c->spd.that.id))))
 	{
 		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = ID_IPV4_ADDR;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
+		his_id = identification_create_from_string("%any");
+	}
+	else
+	{
+		his_id = c->spd.that.id->clone(c->spd.that.id);
 	}
 
 	for (s = secrets; s != NULL; s = s->next)
@@ -170,11 +168,11 @@ static const secret_t* get_secret(const connection_t *c,
 
 				for (i = s->ids; i != NULL; i = i->next)
 				{
-					if (same_id(my_id, &i->id))
+					if (my_id->equals(my_id, i->id))
 					{
 						match |= match_me;
 					}
-					if (same_id(his_id, &i->id))
+					if (his_id->equals(his_id, i->id))
 					{
 						match |= match_him;
 					}
@@ -240,6 +238,7 @@ static const secret_t* get_secret(const connection_t *c,
 			}
 		}
 	}
+	his_id->destroy(his_id);
 	return best;
 }
 
@@ -761,15 +760,11 @@ static void log_psk(secret_t *s)
 	{
 		do
 		{
-			n += idtoa(&id_list->id, buf + n, BUF_LEN - n);
+			n += snprintf(buf + n, BUF_LEN - n, "%Y ", id_list->id);
 			if (n >= BUF_LEN)
 			{
 				n = BUF_LEN - 1;
 				break;
-			}
-			else if (n < BUF_LEN - 1)
-			{
-				n += snprintf(buf + n, BUF_LEN - n, " ");
 			}
 			id_list = id_list->next;
 		}
@@ -947,42 +942,12 @@ static void process_secret_records(int whackfd)
 					/* an id
 					 * See RFC2407 IPsec Domain of Interpretation 4.6.2
 					 */
-					struct id id;
-					err_t ugh;
+					id_list_t *i = malloc_thing(id_list_t);
 
-					if (tokeq("%any"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV4_ADDR;
-						ugh = anyaddr(AF_INET, &id.ip_addr);
-					}
-					else if (tokeq("%any6"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV6_ADDR;
-						ugh = anyaddr(AF_INET6, &id.ip_addr);
-					}
-					else
-					{
-						ugh = atoid(tok, &id, FALSE);
-					}
+					i->id = identification_create_from_string(tok);
+					i->next = s->ids;
+					s->ids = i;
 
-					if (ugh != NULL)
-					{
-						loglog(RC_LOG_SERIOUS
-							, "ERROR \"%s\" line %d: index \"%s\" %s"
-							, flp->filename, flp->lino, tok, ugh);
-					}
-					else
-					{
-						id_list_t *i = malloc_thing(id_list_t);
-
-						i->id = id;
-						unshare_id_content(&i->id);
-						i->next = s->ids;
-						s->ids = i;
-						/* DBG_log("id type %d: %s %.*s", i->kind, ip_str(&i->ip_addr), (int)i->name.len, i->name.ptr); */
-					}
 					if (!shift())
 					{
 						/* unexpected Record Boundary or EOF */
@@ -1070,11 +1035,11 @@ void free_preshared_secrets(void)
 		{
 			id_list_t *i, *ni;
 
-			ns = s->next;       /* grab before freeing s */
+			ns = s->next;
 			for (i = s->ids; i != NULL; i = ni)
 			{
-				ni = i->next;   /* grab before freeing i */
-				free_id_content(&i->id);
+				ni = i->next; 
+				i->id->destroy(i->id);
 				free(i);
 			}
 			switch (s->kind)

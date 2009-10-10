@@ -1154,7 +1154,8 @@ xauth_inR1(struct msg_digest *md)
 
 		peer.conn_name = st->st_connection->name;
 		addrtot(&md->sender, 0, peer.ip_address, sizeof(peer.ip_address));
-		idtoa(&md->st->st_connection->spd.that.id, peer.id, sizeof(peer.id));
+		snprintf(peer.id, sizeof(peer.id), "%Y",
+				 md->st->st_connection->spd.that.id);
 
 		DBG(DBG_CONTROL,
 			DBG_log("peer xauth user name is '%.*s'"

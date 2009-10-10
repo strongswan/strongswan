@@ -461,12 +461,16 @@ struct alg_info_esp *alg_info_esp_create_from_str(char *alg_str)
 	status = alg_info_parse_str((struct alg_info *)alg_info_esp, alg_str);
 
 out:
-	if (status != SUCCESS)
+	if (status == SUCCESS)
+	{
+		alg_info_esp->ref_cnt = 1;
+		return alg_info_esp;
+	}
+	else
 	{
 		free(alg_info_esp);
-		alg_info_esp = NULL;
+		return NULL;
 	}
-	return alg_info_esp;
 }
 
 struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
@@ -481,12 +485,16 @@ struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
 	zero(alg_info_ike);
 	alg_info_ike->alg_info_protoid = PROTO_ISAKMP;
 
-	if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str) != SUCCESS)
+	if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str) == SUCCESS)
+	{
+		alg_info_ike->ref_cnt = 1;	
+		return alg_info_ike;
+	}
+	else
 	{
 		free(alg_info_ike);
 		return NULL;
 	}
-	return alg_info_ike;
 }
 
 /*

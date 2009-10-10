@@ -54,8 +54,8 @@
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
+#include "../pluto/pkcs7.h"
 
 #include "scep.h"
 
@@ -789,10 +789,10 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_in & PKCS1)    /* load an RSA key pair from file */
 	{
-		prompt_pass_t pass = { "", FALSE, STDIN_FILENO };
 		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
 
-		private_key = load_private_key(path, &pass, KEY_RSA);
+		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+										 BUILD_FROM_FILE, path, BUILD_END);
 	}
 	else                                /* generate an RSA key pair */
 	{
@@ -1020,10 +1020,12 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT)
 	{
+		certificate_t *cert;
+		enumerator_t  *enumerator;
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
 		time_t poll_start = 0;
 
-		x509cert_t       *certs         = NULL;
+		linked_list_t    *certs         = linked_list_create();
 		chunk_t           envelopedData = chunk_empty;
 		chunk_t           certData      = chunk_empty;
 		contentInfo_t     data          = empty_contentInfo;
@@ -1115,7 +1117,7 @@ int main(int argc, char **argv)
 		{
 			exit_scepclient("could not decrypt envelopedData");
 		}
-		if (!pkcs7_parse_signedData(certData, NULL, &certs, NULL, NULL))
+		if (!pkcs7_parse_signedData(certData, NULL, certs, NULL, NULL))
 		{
 			exit_scepclient("error parsing the scep response");
 		}
@@ -1123,11 +1125,12 @@ int main(int argc, char **argv)
 
 		/* store the end entity certificate */
 		path = concatenate_paths(HOST_CERT_PATH, file_out_cert);
-		while (certs != NULL)
+
+		enumerator = certs->create_enumerator(certs);
+		while (enumerator->enumerate(enumerator, &cert))
 		{
 			bool stored = FALSE;
-			x509cert_t *cert = certs;
-			x509_t *x509 = (x509_t*)cert->cert;
+			x509_t *x509 = (x509_t*)cert;
 
 			if (!(x509->get_flags(x509) & X509_CA))
 			{
@@ -1135,7 +1138,7 @@ int main(int argc, char **argv)
 				{
 					exit_scepclient("multiple certs received, only first stored");
 				}
-				encoding = cert->cert->get_encoding(cert->cert);
+				encoding = cert->get_encoding(cert);
 				if (!chunk_write(encoding, path, "requested cert", 0022, force))
 				{
 					exit_scepclient("could not write cert file '%s'", path);
@@ -1143,9 +1146,8 @@ int main(int argc, char **argv)
 				chunk_free(&encoding);
 				stored = TRUE;
 			}
-			certs = certs->next;
-			free_x509cert(cert);
 		}
+		certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 		filetype_out &= ~CERT;   /* delete CERT flag */
 	}
 

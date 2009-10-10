@@ -24,7 +24,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "connections.h"
 #include "state.h"
 #include "packet.h"
@@ -835,19 +834,18 @@ static err_t find_preshared_key(struct state* st)
 
 	if (get_preshared_secret(c) == NULL)
 	{
-		char my_id[BUF_LEN], his_id[BUF_LEN];
+		char his_id[BUF_LEN];
 
-		idtoa(&c->spd.this.id, my_id, sizeof(my_id));
 		if (his_id_was_instantiated(c))
 		{
 			strcpy(his_id, "%any");
 		}
 		else
 		{
-			idtoa(&c->spd.that.id, his_id, sizeof(his_id));
+			snprintf(his_id, sizeof(his_id), "%Y", c->spd.that.id);
 		}
-		ugh = builddiag("Can't authenticate: no preshared key found for `%s' and `%s'"
-						, my_id, his_id);
+		ugh = builddiag("Can't authenticate: no preshared key found "
+						"for '%Y' and '%s'", c->spd.this.id, his_id);
 	}
 	return ugh;
 }

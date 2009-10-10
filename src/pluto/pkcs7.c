@@ -19,8 +19,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <freeswan.h>
-
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
@@ -28,11 +26,8 @@
 #include <asn1/oid.h>
 #include <crypto/rngs/rng.h>
 #include <crypto/crypters/crypter.h>
+#include <credentials/certificates/x509.h>
 
-#include "constants.h"
-#include "defs.h"
-#include "x509.h"
-#include "certs.h"
 #include "pkcs7.h"
 
 const contentInfo_t empty_contentInfo = {
@@ -170,7 +165,8 @@ end:
 /**
  * Parse a PKCS#7 signedData object
  */
-bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert,
+bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
+							linked_list_t *certs,
 							chunk_t *attributes, certificate_t *cacert)
 {
 	asn1_parser_t *parser;
@@ -218,24 +214,17 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data, x509cert_t **cert
 			}
 			break;
 		case PKCS7_SIGNED_CERT:
-			if (cert != NULL)
 			{
-				x509cert_t *newcert = malloc_thing(x509cert_t);
+				certificate_t *cert;
 
 				DBG2("  parsing pkcs7-wrapped certificate");
-				*newcert = empty_x509cert;
-				newcert->cert = lib->creds->create(lib->creds,
-								  			 CRED_CERTIFICATE, CERT_X509,
-								  			 BUILD_BLOB_ASN1_DER, object,
-								  			 BUILD_END);
-				if (newcert->cert)
+				cert = lib->creds->create(lib->creds,
+								  		  CRED_CERTIFICATE, CERT_X509,
+								  		  BUILD_BLOB_ASN1_DER, object,
+								  		  BUILD_END);
+				if (cert)
 				{
-					newcert->next = *cert;
-					*cert = newcert;
-				}
-				else
-				{
-					free_x509cert(newcert);
+					certs->insert_last(certs, cert);
 				}
 			}
 			break;
@@ -600,22 +589,27 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 							   private_key_t *key)
 {
 	contentInfo_t pkcs7Data, signedData;
-	chunk_t authenticatedAttributes, encryptedDigest, signerInfo, cInfo;
+	chunk_t authenticatedAttributes = chunk_empty;
+	chunk_t encryptedDigest = chunk_empty;
+	chunk_t signerInfo, cInfo, signature;
+	signature_scheme_t scheme = signature_scheme_from_oid(digest_alg);
 
-	if (attributes.ptr != NULL)
+	if (attributes.ptr)
 	{
-		encryptedDigest = x509_build_signature(attributes, digest_alg, key,
-											   FALSE);
-		authenticatedAttributes = chunk_clone(attributes);
-		*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
+		if (key->sign(key, scheme, attributes, &signature))
+		{
+			encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", signature);
+			authenticatedAttributes = chunk_clone(attributes);
+			*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
+		}
 	}
-	else
+	else if (data.ptr)
 	{
-		encryptedDigest = (data.ptr == NULL)? chunk_empty
-				: x509_build_signature(data, digest_alg, key, FALSE);
-		authenticatedAttributes = chunk_empty;
+		if (key->sign(key, scheme, data, &signature))
+		{
+			encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", signature);
+		}
 	}
-
 	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm"
 				, ASN1_INTEGER_1
 				, pkcs7_build_issuerAndSerialNumber(cert)

@@ -35,7 +35,7 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
+#include "myid.h"
 #include "x509.h"
 #include "ca.h"
 #include "crl.h"
@@ -92,12 +92,40 @@ static struct host_pair *host_pairs = NULL;
 
 static connection_t *unoriented_connections = NULL;
 
-/* check to see that Ids of peers match */
-bool same_peer_ids(const connection_t *c, const connection_t *d,
-				   const struct id *his_id)
+/**
+ * Check if an id was instantiated by assigning to it the current IP address
+ */
+bool his_id_was_instantiated(const connection_t *c)
 {
-	return same_id(&c->spd.this.id, &d->spd.this.id)
-		&& same_id(his_id == NULL? &c->spd.that.id : his_id, &d->spd.that.id);
+	if (c->kind != CK_INSTANCE)
+	{
+		return FALSE;
+	}
+	if (id_is_ipaddr(c->spd.that.id))
+	{
+		identification_t *host;
+		bool equal;
+	
+		host = identification_create_from_sockaddr((sockaddr_t*)&c->spd.that.host_addr);
+		equal = host->equals(host, c->spd.that.id);
+		host->destroy(host);
+		return equal;
+	}
+	else
+	{
+		return TRUE;
+	} 
+}
+
+/**
+ * Check to see that IDs of peers match
+ */
+bool same_peer_ids(const connection_t *c, const connection_t *d,
+				   identification_t *his_id)
+{
+	return d->spd.this.id->equals(d->spd.this.id, c->spd.this.id) &&
+		   d->spd.that.id->equals(d->spd.that.id,
+								  his_id ? his_id : c->spd.that.id);
 }
 
 static struct host_pair *find_host_pair(const ip_address *myaddr,
@@ -126,7 +154,7 @@ static struct host_pair *find_host_pair(const ip_address *myaddr,
 		if (sameaddr(&p->me.addr, myaddr) && p->me.port == myport
 		&&  sameaddr(&p->him.addr, hisaddr) && p->him.port == hisport)
 		{
-			if (prev != NULL)
+			if (prev)
 			{
 				prev->next = p->next;   /* remove p from list */
 				p->next = host_pairs;   /* and stick it on front */
@@ -223,7 +251,7 @@ connection_t *con_by_name(const char *nm, bool strict)
 		if (streq(p->name, nm)
 		&& (!strict || p->kind != CK_INSTANCE))
 		{
-			if (prev != NULL)
+			if (prev)
 			{
 				prev->ac_next = p->ac_next;     /* remove p from list */
 				p->ac_next = connections;       /* and stick it on front */
@@ -334,14 +362,14 @@ void delete_connection(connection_t *c, bool relations)
 	cur_debugging = old_cur_debugging;
 #endif
 	free(c->name);
-	free_id_content(&c->spd.this.id);
-	free(c->spd.this.updown);
+	DESTROY_IF(c->spd.this.id);
 	DESTROY_IF(c->spd.this.ca);
 	DESTROY_IF(c->spd.this.groups);
-	free_id_content(&c->spd.that.id);
-	free(c->spd.that.updown);
+	free(c->spd.this.updown);
+	DESTROY_IF(c->spd.that.id);
 	DESTROY_IF(c->spd.that.ca);
 	DESTROY_IF(c->spd.that.groups);
+	free(c->spd.that.updown);
 	if (c->requested_ca)
 	{
 		c->requested_ca->destroy_offset(c->requested_ca,
@@ -373,8 +401,10 @@ void delete_connections_by_name(const char *name, bool strict)
 
 void delete_every_connection(void)
 {
-	while (connections != NULL)
+	while (connections)
+	{
 		delete_connection(connections, TRUE);
+	}
 }
 
 void release_dead_interfaces(void)
@@ -434,7 +464,7 @@ void check_orientations(void)
 
 		unoriented_connections = NULL;
 
-		while (c != NULL)
+		while (c)
 		{
 			connection_t *nxt = c->hp_next;
 
@@ -473,7 +503,7 @@ void check_orientations(void)
 						connection_t *c = hp->connections;
 
 						hp->connections = NULL;
-						while (c != NULL)
+						while (c)
 						{
 							connection_t *nxt = c->hp_next;
 
@@ -492,30 +522,35 @@ void check_orientations(void)
 static err_t default_end(struct end *e, ip_address *dflt_nexthop)
 {
 	err_t ugh = NULL;
-	const struct af_info *afi = aftoinfo(addrtypeof(&e->host_addr));
+	int af = addrtypeof(&e->host_addr);
 
-	if (afi == NULL)
+	if (af != AF_INET && af != AF_INET6)
+	{
 		return "unknown address family in default_end";
+	}
 
 	/* default ID to IP (but only if not NO_IP -- WildCard) */
-	if (e->id.kind == ID_ANY && !isanyaddr(&e->host_addr))
+	if (e->id->get_type(e->id) == ID_ANY && !isanyaddr(&e->host_addr))
 	{
-		e->id.kind = afi->id_addr;
-		e->id.ip_addr = e->host_addr;
+		e->id->destroy(e->id);
+		e->id = identification_create_from_sockaddr((sockaddr_t*)&e->host_addr);
 		e->has_id_wildcards = FALSE;
 	}
 
 	/* default nexthop to other side */
 	if (isanyaddr(&e->host_nexthop))
+	{
 		e->host_nexthop = *dflt_nexthop;
+	}
 
 	/* default client to subnet containing only self
 	 * XXX This may mean that the client's address family doesn't match
 	 * tunnel_addr_family.
 	 */
 	if (!e->has_client)
+	{
 		ugh = addrtosubnet(&e->host_addr, &e->client);
-
+	}
 	return ugh;
 }
 
@@ -616,25 +651,13 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 		snprintf(protoport, sizeof(protoport), ":%u/%u", this->protocol
 			, this->port);
 
-	/* id, if different from host */
-	host_id[0] = '\0';
-	if (this->id.kind == ID_MYID)
-	{
-		strcpy(host_id, "[%myid]");
-	}
-	else if (!(this->id.kind == ID_ANY
-	|| (id_is_ipaddr(&this->id) && sameaddr(&this->id.ip_addr, &this->host_addr))))
-	{
-		int len = idtoa(&this->id, host_id+1, sizeof(host_id)-2);
-
-		host_id[0] = '[';
-		strcpy(&host_id[len < 0? (ptrdiff_t)sizeof(host_id)-2 : 1 + len], "]");
-	}
+	/* id */
+	snprintf(host_id, sizeof(host_id), "[%Y]", this->id); 
 
 	/* [---hop] */
 	hop[0] = '\0';
 	hop_sep = "";
-	if (that != NULL && !sameaddr(&this->host_nexthop, &that->host_addr))
+	if (that && !sameaddr(&this->host_nexthop, &that->host_addr))
 	{
 		addrtot(&this->host_nexthop, 0, hop, sizeof(hop));
 		hop_sep = "---";
@@ -673,8 +696,7 @@ static size_t format_connection(char *buf, size_t buf_len,
 static void unshare_connection_strings(connection_t *c)
 {
 	c->name = clone_str(c->name);
-
-	unshare_id_content(&c->spd.this.id);
+	c->spd.this.id = c->spd.this.id->clone(c->spd.this.id);
 	c->spd.this.updown = clone_str(c->spd.this.updown);
 	scx_share(c->spd.this.sc);
 	share_cert(c->spd.this.cert);
@@ -682,13 +704,21 @@ static void unshare_connection_strings(connection_t *c)
 	{
 		c->spd.this.ca = c->spd.this.ca->clone(c->spd.this.ca);
 	}
-	unshare_id_content(&c->spd.that.id);
+	if (c->spd.this.groups)
+	{
+		c->spd.this.groups = c->spd.this.groups->get_ref(c->spd.this.groups);
+	}
+	c->spd.that.id = c->spd.that.id->clone(c->spd.that.id);
 	c->spd.that.updown = clone_str(c->spd.that.updown);
 	scx_share(c->spd.that.sc);
 	share_cert(c->spd.that.cert);
 	if (c->spd.that.ca)
 	{
 		c->spd.that.ca = c->spd.that.ca->clone(c->spd.that.ca);
+	}
+	if (c->spd.that.groups)
+	{
+		c->spd.that.groups = c->spd.that.groups->get_ref(c->spd.that.groups);
 	}
 
 	/* increment references to algo's */
@@ -710,7 +740,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 	/* initialize smartcard info record */
 	dst->sc = NULL;
 
-	if (filename != NULL)
+	if (filename)
 	{
 		if (scx_on_smartcard(filename))
 		{
@@ -729,10 +759,12 @@ static void load_end_certificate(char *filename, struct end *dst)
 		switch (cert.type)
 		{
 		case CERT_PGP:
-			select_pgpcert_id(cert.u.pgp, &dst->id);
+			dst->id = select_pgpcert_id(cert.u.pgp, dst->id);
 
 			if (cached_cert)
+			{
 				dst->cert = cert;
+			}
 			else
 			{
 				valid_until = cert.u.pgp->until;
@@ -742,7 +774,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 			}
 			break;
 		case CERT_X509_SIGNATURE:
-			select_x509cert_id(cert.u.x509, &dst->id);
+			dst->id = select_x509cert_id(cert.u.x509, dst->id);
 
 			if (cached_cert)
 			{
@@ -779,7 +811,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 		}
 
 		/* cache the certificate that was last retrieved from the smartcard */
-		if (dst->sc != NULL)
+		if (dst->sc)
 		{
 			if (!same_cert(&dst->sc->last_cert, &dst->cert))
 			{
@@ -792,6 +824,8 @@ static void load_end_certificate(char *filename, struct end *dst)
 			time(&dst->sc->last_load);
 		}
 	}
+	scx_share(dst->sc);
+	share_cert(dst->cert);
 }
 
 static bool extract_end(struct end *dst, const whack_end_t *src,
@@ -799,22 +833,7 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 {
 	bool same_ca = FALSE;
 
-	/* decode id, if any */
-	if (src->id == NULL)
-	{
-		dst->id.kind = ID_ANY;
-	}
-	else
-	{
-		err_t ugh = atoid(src->id, &dst->id, TRUE);
-
-		if (ugh != NULL)
-		{
-			loglog(RC_BADID, "bad %s --id: %s (ignored)", which, ugh);
-			dst->id = empty_id; /* ignore bad one */
-		}
-	}
-
+	dst->id = identification_create_from_string(src->id);
 	dst->ca = NULL;
 
 	/* decode CA distinguished name, if any */
@@ -840,7 +859,7 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	load_end_certificate(src->cert, dst);
 
 	/* does id has wildcards? */
-	dst->has_id_wildcards = id_count_wildcards(&dst->id) > 0;
+	dst->has_id_wildcards = dst->id->contains_wildcards(dst->id);
 
 	/* decode group attributes, if any */
 	if (src->groups)
@@ -864,7 +883,7 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->hostaccess = src->hostaccess;
 	dst->allow_any = src->allow_any;
 	dst->sendcert = src->sendcert;
-	dst->updown = src->updown;
+	dst->updown = clone_str(src->updown);
 	dst->host_port = src->host_port;
 
 	/* if host sourceip is defined but no client is present
@@ -877,10 +896,14 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	{
 		err_t ugh = addrtosubnet(&dst->host_srcip, &dst->client);
 
-		if (ugh != NULL)
+		if (ugh)
+		{
 			plog("could not assign host sourceip to client subnet");
+		}
 		else
+		{
 			dst->has_client = TRUE;
+		}
 	}
 	return same_ca;
 }
@@ -974,7 +997,7 @@ void add_connection(const whack_message_t *wm)
 		connection_t *c = malloc_thing(connection_t);
 
 		zero(c);
-		c->name   = wm->name;
+		c->name   = clone_str(wm->name);
 		c->ikev1  = wm->ikev1;
 		c->policy = wm->policy;
 
@@ -988,7 +1011,7 @@ void add_connection(const whack_message_t *wm)
 			 DBG(DBG_CONTROL,
 				DBG_log("from whack: got --esp=%s", wm->esp ? wm->esp: "NULL")
 			)
-			c->alg_info_esp= alg_info_esp_create_from_str(wm->esp? wm->esp : "");
+			c->alg_info_esp = alg_info_esp_create_from_str(wm->esp? wm->esp : "");
 
 			DBG(DBG_CRYPT|DBG_CONTROL,
 				static char buf[BUF_LEN]="<NULL>";
@@ -1057,9 +1080,13 @@ void add_connection(const whack_message_t *wm)
 		same_rightca = extract_end(&c->spd.that, &wm->right, "right");
 
 		if (same_rightca)
-			c->spd.that.ca = c->spd.this.ca;
+		{
+			c->spd.that.ca = c->spd.this.ca->clone(c->spd.this.ca);
+		}
 		else if (same_leftca)
-			c->spd.this.ca = c->spd.that.ca;
+		{
+			c->spd.this.ca = c->spd.that.ca->clone(c->spd.that.ca);
+		}
 
 		default_end(&c->spd.this, &c->spd.that.host_addr);
 		default_end(&c->spd.that, &c->spd.this.host_addr);
@@ -1125,16 +1152,17 @@ void add_connection(const whack_message_t *wm)
 				c->spd.that.has_client = TRUE;
 		}
 
-		unshare_connection_strings(c);
 		(void)orient(c);
 
 		if (c->ikev1)
+		{
 			connect_to_host_pair(c);
+		}
 
 		/* log all about this connection */
 		plog("added connection description \"%s\"", c->name);
 		DBG(DBG_CONTROL,
-			char topo[CONNECTION_BUF];
+			char topo[BUF_LEN];
 
 			(void) format_connection(topo, sizeof(topo), c, &c->spd);
 
@@ -1249,12 +1277,10 @@ void remove_group_instance(const connection_t *group USED_BY_DEBUG,
  *
  * Note that instantiate can only deal with a single SPD/eroute.
  */
-static connection_t *instantiate(connection_t *c,
-								 const ip_address *him, u_int16_t his_port,
-								 const struct id *his_id)
+static connection_t *instantiate(connection_t *c, const ip_address *him,
+								 u_int16_t his_port, identification_t *his_id)
 {
 	connection_t *d;
-	int wildcards;
 
 	passert(c->kind == CK_TEMPLATE);
 	passert(c->spd.next == NULL);
@@ -1263,10 +1289,9 @@ static connection_t *instantiate(connection_t *c,
 	d = clone_thing(*c);
 	d->spd.that.allow_any = FALSE;
 
-	if (his_id != NULL)
+	if (his_id)
 	{
-		passert(match_id(his_id, &d->spd.that.id, &wildcards));
-		d->spd.that.id = *his_id;
+		d->spd.that.id = his_id;
 		d->spd.that.has_id_wildcards = FALSE;
 	}
 	unshare_connection_strings(d);
@@ -1320,7 +1345,7 @@ static connection_t *instantiate(connection_t *c,
 
 connection_t *rw_instantiate(connection_t *c, const ip_address *him,
 							 u_int16_t his_port, const ip_subnet *his_net,
-							 const struct id *his_id)
+							 identification_t *his_id)
 {
 	connection_t *d = instantiate(c, him, his_port, his_id);
 
@@ -1346,7 +1371,7 @@ connection_t *rw_instantiate(connection_t *c, const ip_address *him,
 }
 
 connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
-							   const struct id *his_id, struct gw_info *gw,
+							   identification_t *his_id, struct gw_info *gw,
 							   const ip_address *our_client USED_BY_DEBUG,
 							   const ip_address *peer_client)
 {
@@ -1404,7 +1429,7 @@ connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
 		d->instance_initiation_ok = TRUE;
 
 	DBG(DBG_CONTROL,
-		char topo[CONNECTION_BUF];
+		char topo[BUF_LEN];
 
 		(void) format_connection(topo, sizeof(topo), d, &d->spd);
 		DBG_log("instantiated \"%s\": %s", d->name, topo);
@@ -1416,10 +1441,14 @@ connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
 void fmt_policy_prio(policy_prio_t pp, char buf[POLICY_PRIO_BUF])
 {
 	if (pp == BOTTOM_PRIO)
+	{
 		snprintf(buf, POLICY_PRIO_BUF, "0");
+	}
 	else
+	{
 		snprintf(buf, POLICY_PRIO_BUF, "%lu,%lu"
 			, pp>>16, (pp & ~(~(policy_prio_t)0 << 16)) >> 8);
+	}
 }
 
 /* Format any information needed to identify an instance of a connection.
@@ -1601,11 +1630,14 @@ connection_t *find_connection_for_clients(struct spd_route **srp,
 		}
 	}
 
-	if (best!= NULL && NEVER_NEGOTIATE(best->policy))
+	if (best && NEVER_NEGOTIATE(best->policy))
+	{
 		best = NULL;
-
-	if (srp != NULL && best != NULL)
+	}
+	if (srp && best)
+	{
 		*srp = best_sr;
+	}
 
 #ifdef DEBUG
 	if (DBGP(DBG_CONTROL))
@@ -1662,12 +1694,6 @@ connection_t *build_outgoing_opportunistic_connection(struct gw_info *gw,
 	addrtot(our_client, 0, ocb, sizeof(ocb));
 	addrtot(peer_client, 0, pcb, sizeof(pcb));
 
-	passert(!isanyaddr(our_client) && !isanyaddr(peer_client));
-
-	/* We don't know his ID yet, so gw id must be an ipaddr */
-	passert(gw->key != NULL);
-	passert(id_is_ipaddr(&gw->gw_id));
-
 	/* for each of our addresses... */
 	for (p = interfaces; p != NULL; p = p->next)
 	{
@@ -1718,14 +1744,22 @@ connection_t *build_outgoing_opportunistic_connection(struct gw_info *gw,
 		}
 	}
 
-	if (best == NULL
-	|| NEVER_NEGOTIATE(best->policy)
-	|| (best->policy & POLICY_OPPO) == LEMPTY
-	|| best->kind != CK_TEMPLATE)
+	if (best == NULL || NEVER_NEGOTIATE(best->policy) ||
+	   (best->policy & POLICY_OPPO) == LEMPTY || best->kind != CK_TEMPLATE)
+	{
 		return NULL;
+	}
 	else
-		return oppo_instantiate(best, &gw->gw_id.ip_addr, NULL, gw
-							  , our_client, peer_client);
+	{
+		chunk_t encoding = gw->gw_id->get_encoding(gw->gw_id);
+		id_type_t type   = gw->gw_id->get_type(gw->gw_id); 
+		ip_address ip_addr;
+
+		initaddr(encoding.ptr, encoding.len,
+				(type == ID_IPV4_ADDR) ? AF_INET : AF_INET6, &ip_addr);
+
+		return oppo_instantiate(best, &ip_addr, NULL, gw, our_client, peer_client);
+	}
 }
 
 bool orient(connection_t *c)
@@ -1796,7 +1830,7 @@ void initiate_connection(const char *name, int whackfd)
 {
 	connection_t *c = con_by_name(name, TRUE);
 
-	if (c != NULL && c->ikev1)
+	if (c && c->ikev1)
 	{
 		set_cur_connection(c);
 		if (!oriented(*c))
@@ -1818,11 +1852,11 @@ void initiate_connection(const char *name, int whackfd)
 		else
 		{
 			/* do we have to prompt for a PIN code? */
-			if (c->spd.this.sc != NULL && !c->spd.this.sc->valid && whackfd != NULL_FD)
+			if (c->spd.this.sc && !c->spd.this.sc->valid && whackfd != NULL_FD)
 			{
 				scx_get_pin(c->spd.this.sc, whackfd);
 			}
-			if (c->spd.this.sc != NULL && !c->spd.this.sc->valid)
+			if (c->spd.this.sc && !c->spd.this.sc->valid)
 			{
 				loglog(RC_NOVALIDPIN, "cannot initiate connection without valid PIN");
 			}
@@ -1831,8 +1865,8 @@ void initiate_connection(const char *name, int whackfd)
 
 				if (c->spd.that.allow_any)
 				{
-					c = instantiate(c, &c->spd.that.host_addr, c->spd.that.host_port
-								  , &c->spd.that.id);
+					c = instantiate(c, &c->spd.that.host_addr,
+									c->spd.that.host_port, c->spd.that.id);
 				}
 
 				/* We will only request an IPsec SA if policy isn't empty
@@ -1938,7 +1972,7 @@ static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 		, "Can't Opportunistically initiate for %s to %s: %s"
 		, ocb, pcb, ugh);
 
-	if (c != NULL && c->policy_next != NULL)
+	if (c && c->policy_next)
 	{
 		/* there is some policy that comes afterwards */
 		struct spd_route *shunt_spd;
@@ -2083,7 +2117,7 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 
 #ifdef DEBUG
 	/* if we're going to ignore the error, at least note it in debugging log */
-	if (cr->b.failure_ok && ugh != NULL)
+	if (cr->b.failure_ok && ugh)
 	{
 		DBG(DBG_CONTROL | DBG_DNS,
 			{
@@ -2098,7 +2132,7 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	}
 #endif
 
-	if (!cr->b.failure_ok && ugh != NULL)
+	if (!cr->b.failure_ok && ugh)
 	{
 		c = find_connection_for_clients(NULL, &cr->b.our_client, &cr->b.peer_client
 			, cr->b.transport_proto);
@@ -2180,8 +2214,10 @@ static err_t check_key_recs(enum myid_state try_state, const connection_t *c,
 			}
 		}
 	}
-	if (ugh != NULL)
+	if (ugh)
+	{
 		myid_state = old_myid_state;
+	}
 	return ugh;
 }
 #endif /* USE_KEYRR */
@@ -2211,7 +2247,7 @@ static err_t check_txt_recs(enum myid_state try_state, const connection_t *c,
 	{
 		ugh = "we don't know our own RSA key";
 	}
-	else if (!same_id(&ac->id, &c->spd.this.id))
+	else if (!ac->id->equals(ac->id, c->spd.this.id))
 	{
 		ugh = "our ID changed underfoot";
 	}
@@ -2236,7 +2272,7 @@ static err_t check_txt_recs(enum myid_state try_state, const connection_t *c,
 			}
 		}
 	}
-	if (ugh != NULL)
+	if (ugh)
 	{
 		myid_state = old_myid_state;
 	}
@@ -2337,17 +2373,11 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		char mycredentialstr[BUF_LEN];
 		char cib[CONN_INST_BUF];
 
-		DBG(DBG_CONTROL, DBG_log("creating new instance from \"%s\"%s"
-								 , c->name
-								 , (fmt_conn_instance(c, cib), cib)));
-
-
-		idtoa(&sr->this.id, mycredentialstr, sizeof(mycredentialstr));
-
-		passert(c->policy & POLICY_OPPO);   /* can't initiate Road Warrior connections */
+		DBG(DBG_CONTROL, DBG_log("creating new instance from \"%s\"%s",
+								 c->name, (fmt_conn_instance(c, cib), cib)));
+		snprintf(mycredentialstr, BUF_LEN, "%Y", sr->this.id);
 
 		/* handle any DNS answer; select next step */
-
 		switch (b->step)
 		{
 		case fos_start:
@@ -2357,18 +2387,17 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 
 		case fos_myid_ip_txt:   /* TXT for our default IP address as %myid */
 			ugh = check_txt_recs(MYID_IP, c, ac);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				/* cannot use our IP as OE identitiy for initiation */
-				DBG(DBG_OPPO, DBG_log("can not use our IP (%s:TXT) as identity: %s"
-									  , myid_str[MYID_IP]
-									  , ugh));
+				DBG(DBG_OPPO,
+					DBG_log("can not use our IP (%Y:TXT) as identity: %s",
+							myids[MYID_IP], ugh));
 				if (!logged_myid_ip_txt_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "can not use our IP (%s:TXT) as identity: %s"
-						   , myid_str[MYID_IP]
-						   , ugh);
+					loglog(RC_LOG_SERIOUS,
+							"can not use our IP (%Y:TXT) as identity: %s",
+							myids[MYID_IP], ugh);
 					logged_myid_ip_txt_warning = TRUE;
 				}
 
@@ -2380,9 +2409,9 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				/* we can use our IP as OE identity for initiation */
 				if (!logged_myid_ip_txt_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "using our IP (%s:TXT) as identity!"
-						   , myid_str[MYID_IP]);
+					loglog(RC_LOG_SERIOUS,
+							"using our IP (%Y:TXT) as identity!",
+							myids[MYID_IP]);
 					logged_myid_ip_txt_warning = TRUE;
 				}
 
@@ -2392,18 +2421,17 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 
 		case fos_myid_hostname_txt:     /* TXT for our hostname as %myid */
 			ugh = check_txt_recs(MYID_HOSTNAME, c, ac);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				/* cannot use our hostname as OE identitiy for initiation */
-				DBG(DBG_OPPO, DBG_log("can not use our hostname (%s:TXT) as identity: %s"
-									  , myid_str[MYID_HOSTNAME]
-									  , ugh));
+				DBG(DBG_OPPO,
+					DBG_log("can not use our hostname (%Y:TXT) as identity: %s",
+							myids[MYID_HOSTNAME], ugh));
 				if (!logged_myid_fqdn_txt_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "can not use our hostname (%s:TXT) as identity: %s"
-						   , myid_str[MYID_HOSTNAME]
-						   , ugh);
+					loglog(RC_LOG_SERIOUS,
+							"can not use our hostname (%Y:TXT) as identity: %s",
+							myids[MYID_HOSTNAME], ugh);
 					logged_myid_fqdn_txt_warning = TRUE;
 				}
 #ifdef USE_KEYRR
@@ -2416,9 +2444,9 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				/* we can use our hostname as OE identity for initiation */
 				if (!logged_myid_fqdn_txt_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "using our hostname (%s:TXT) as identity!"
-						   , myid_str[MYID_HOSTNAME]);
+					loglog(RC_LOG_SERIOUS,
+							"using our hostname (%Y:TXT) as identity!",
+							myids[MYID_HOSTNAME]);
 					logged_myid_fqdn_txt_warning = TRUE;
 				}
 				next_step = fos_our_client;
@@ -2428,18 +2456,17 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 #ifdef USE_KEYRR
 		case fos_myid_ip_key:   /* KEY for our default IP address as %myid */
 			ugh = check_key_recs(MYID_IP, c, ac);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				/* cannot use our IP as OE identitiy for initiation */
-				DBG(DBG_OPPO, DBG_log("can not use our IP (%s:KEY) as identity: %s"
-									  , myid_str[MYID_IP]
-									  , ugh));
+				DBG(DBG_OPPO,
+					DBG_log("can not use our IP (%Y:KEY) as identity: %s",
+							myids[MYID_IP], ugh));
 				if (!logged_myid_ip_key_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "can not use our IP (%s:KEY) as identity: %s"
-						   , myid_str[MYID_IP]
-						   , ugh);
+					loglog(RC_LOG_SERIOUS,
+							"can not use our IP (%Y:KEY) as identity: %s",
+							myids[MYID_IP], ugh);
 					logged_myid_ip_key_warning = TRUE;
 				}
 
@@ -2451,9 +2478,9 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				/* we can use our IP as OE identity for initiation */
 				if (!logged_myid_ip_key_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "using our IP (%s:KEY) as identity!"
-						   , myid_str[MYID_IP]);
+					loglog(RC_LOG_SERIOUS,
+							"using our IP (%Y:KEY) as identity!",
+							myids[MYID_IP]);
 					logged_myid_ip_key_warning = TRUE;
 				}
 				next_step = fos_our_client;
@@ -2462,21 +2489,19 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 
 		case fos_myid_hostname_key:     /* KEY for our hostname as %myid */
 			ugh = check_key_recs(MYID_HOSTNAME, c, ac);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				/* cannot use our IP as OE identitiy for initiation */
-				DBG(DBG_OPPO, DBG_log("can not use our hostname (%s:KEY) as identity: %s"
-									  , myid_str[MYID_HOSTNAME]
-									  , ugh));
+				DBG(DBG_OPPO,
+					DBG_log("can not use our hostname (%Y:KEY) as identity: %s",
+							myids[MYID_HOSTNAME], ugh));
 				if (!logged_myid_fqdn_key_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "can not use our hostname (%s:KEY) as identity: %s"
-						   , myid_str[MYID_HOSTNAME]
-						   , ugh);
+					loglog(RC_LOG_SERIOUS,
+							"can not use our hostname (%Y:KEY) as identity: %s",
+							myids[MYID_HOSTNAME], ugh);
 					logged_myid_fqdn_key_warning = TRUE;
 				}
-
 				next_step = fos_myid_hostname_key;
 				ugh = NULL;     /* failure can be recovered from */
 			}
@@ -2485,9 +2510,9 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				/* we can use our IP as OE identity for initiation */
 				if (!logged_myid_fqdn_key_warning)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "using our hostname (%s:KEY) as identity!"
-						   , myid_str[MYID_HOSTNAME]);
+					loglog(RC_LOG_SERIOUS,
+							"using our hostname (%Y:KEY) as identity!",
+							myids[MYID_HOSTNAME]);
 					logged_myid_fqdn_key_warning = TRUE;
 				}
 				next_step = fos_our_client;
@@ -2506,8 +2531,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 
 				next_step = fos_his_client;     /* normal situation */
 
-				passert(sr != NULL);
-
 				if (private == NULL)
 				{
 					ugh = "we don't know our own RSA key";
@@ -2517,7 +2540,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					/* this wasn't true when we started -- bail */
 					ugh = "our IP address changed underfoot";
 				}
-				else if (!same_id(&ac->sgw_id, &sr->this.id))
+				else if (!ac->sgw_id->equals(ac->sgw_id, sr->this.id))
 				{
 					/* this wasn't true when we started -- bail */
 					ugh = "our ID changed underfoot";
@@ -2532,8 +2555,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					ugh = "no TXT RR for our client delegates us";
 					for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
 					{
-						passert(same_id(&gwp->gw_id, &sr->this.id));
-
 						ugh = "TXT RR for our client has wrong key";
 						/* If there is a key from the TXT record,
 						 * we count it as a win if we match the key.
@@ -2576,7 +2597,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				{
 					ugh = "we don't know our own RSA key";
 				}
-				else if (!same_id(&ac->id, &c->spd.this.id))
+				else if (!ac->id->equals(ac->id, c->spd.this.id))
 				{
 					ugh = "our ID changed underfoot";
 				}
@@ -2590,8 +2611,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					ugh = "no TXT RR for us";
 					for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
 					{
-						passert(same_id(&gwp->gw_id, &sr->this.id));
-
 						ugh = "TXT RR for us has wrong key";
 						if (gwp->gw_key_present &&
 							private->belongs_to(private, gwp->key->public_key))
@@ -2604,7 +2623,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 						}
 					}
 #ifdef USE_KEYRR
-					if (ugh != NULL)
+					if (ugh)
 					{
 						/* if no TXT with right key, try KEY */
 						DBG(DBG_CONTROL,
@@ -2691,18 +2710,14 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					/* We cannot seem to instantiate a suitable connection:
 					 * complain clearly.
 					 */
-					char ocb[ADDRTOT_BUF]
-						, pcb[ADDRTOT_BUF]
-						, pb[ADDRTOT_BUF];
+					char ocb[ADDRTOT_BUF], pcb[ADDRTOT_BUF];
 
 					addrtot(&b->our_client, 0, ocb, sizeof(ocb));
 					addrtot(&b->peer_client, 0, pcb, sizeof(pcb));
-					passert(id_is_ipaddr(&ac->gateways_from_dns->gw_id));
-					addrtot(&ac->gateways_from_dns->gw_id.ip_addr, 0, pb, sizeof(pb));
-					loglog(RC_OPPOFAILURE
-						, "no suitable connection for opportunism"
-						  " between %s and %s with %s as peer"
-						, ocb, pcb, pb);
+					loglog(RC_OPPOFAILURE,
+							"no suitable connection for opportunism "
+						  	"between %s and %s with %Y as peer",
+							 ocb, pcb, ac->gateways_from_dns->gw_id);
 
 #ifdef KLIPS
 					if (b->held)
@@ -2758,7 +2773,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					, ours, his, oppo_step_name[b->step], ugh ? ugh : "ok");
 		});
 
-		if (ugh != NULL)
+		if (ugh)
 		{
 			b->policy_prio = c->prio;
 			b->failure_shunt = shunt_policy_spi(c, FALSE);
@@ -2772,7 +2787,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		{
 			/* set up the next query */
 			struct find_oppo_continuation *cr = malloc_thing(struct find_oppo_continuation);
-			struct id id;
+			identification_t *id;
 
 			b->policy_prio = c->prio;
 			b->failure_shunt = shunt_policy_spi(c, FALSE);
@@ -2813,23 +2828,20 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 			switch (next_step)
 			{
 			case fos_myid_ip_txt:
-				if (c->spd.this.id.kind == ID_MYID
+				if (c->spd.this.id->get_type(c->spd.this.id) == ID_MYID
 				&& myid_state != MYID_SPECIFIED)
 				{
 					cr->b.failure_ok = TRUE;
 					cr->b.want = b->want = "TXT record for IP address as %myid";
-					ugh = start_adns_query(&myids[MYID_IP]
-						, &myids[MYID_IP]
-						, T_TXT
-						, continue_oppo
-						, &cr->ac);
+					ugh = start_adns_query(myids[MYID_IP], myids[MYID_IP],
+										   T_TXT, continue_oppo, &cr->ac);
 					break;
 				}
 				cr->b.step = fos_myid_hostname_txt;
 				/* fall through */
 
 			case fos_myid_hostname_txt:
-				if (c->spd.this.id.kind == ID_MYID
+				if (c->spd.this.id->get_type(c->spd.this.id) == ID_MYID
 				&& myid_state != MYID_SPECIFIED)
 				{
 #ifdef USE_KEYRR
@@ -2838,11 +2850,9 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					cr->b.failure_ok = FALSE;
 #endif
 					cr->b.want = b->want = "TXT record for hostname as %myid";
-					ugh = start_adns_query(&myids[MYID_HOSTNAME]
-						, &myids[MYID_HOSTNAME]
-						, T_TXT
-						, continue_oppo
-						, &cr->ac);
+					ugh = start_adns_query(myids[MYID_HOSTNAME],
+										   myids[MYID_HOSTNAME],
+										   T_TXT, continue_oppo, &cr->ac);
 					break;
 				}
 
@@ -2856,11 +2866,8 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				{
 					cr->b.failure_ok = TRUE;
 					cr->b.want = b->want = "KEY record for IP address as %myid (no good TXT)";
-					ugh = start_adns_query(&myids[MYID_IP]
-						, (const struct id *) NULL      /* security gateway meaningless */
-						, T_KEY
-						, continue_oppo
-						, &cr->ac);
+					ugh = start_adns_query(myids[MYID_IP], NULL, /* security gateway meaningless */
+										   T_KEY, continue_oppo, &cr->ac);
 					break;
 				}
 				cr->b.step = fos_myid_hostname_key;
@@ -2872,11 +2879,8 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				{
 					cr->b.failure_ok = FALSE;           /* last attempt! */
 					cr->b.want = b->want = "KEY record for hostname as %myid (no good TXT)";
-					ugh = start_adns_query(&myids[MYID_HOSTNAME]
-						, (const struct id *) NULL      /* security gateway meaningless */
-						, T_KEY
-						, continue_oppo
-						, &cr->ac);
+					ugh = start_adns_query(myids[MYID_HOSTNAME], NULL, /* security gateway meaningless */
+										   T_KEY, continue_oppo, &cr->ac);
 					break;
 				}
 #endif
@@ -2890,12 +2894,10 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					 * Note: {unshare|free}_id_content not needed for id: ephemeral.
 					 */
 					cr->b.want = b->want = "our client's TXT record";
-					iptoid(&b->our_client, &id);
-					ugh = start_adns_query(&id
-						, &c->spd.this.id       /* we are the security gateway */
-						, T_TXT
-						, continue_oppo
-						, &cr->ac);
+					id = identification_create_from_sockaddr((sockaddr_t*)&b->our_client);
+					ugh = start_adns_query(id, c->spd.this.id, /* we are the security gateway */
+										   T_TXT, continue_oppo, &cr->ac);
+					id->destroy(id);
 					break;
 				}
 				cr->b.step = fos_our_txt;
@@ -2904,22 +2906,16 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 			case fos_our_txt:   /* TXT for us */
 				cr->b.failure_ok = b->failure_ok = TRUE;
 				cr->b.want = b->want = "our TXT record";
-				ugh = start_adns_query(&sr->this.id
-					, &sr->this.id             /* we are the security gateway XXX - maybe ignore? mcr */
-					, T_TXT
-					, continue_oppo
-					, &cr->ac);
+				ugh = start_adns_query(sr->this.id, sr->this.id, /* we are the security gateway */
+									   T_TXT, continue_oppo, &cr->ac);
 				break;
 
 #ifdef USE_KEYRR
 			case fos_our_key:   /* KEY for us */
 				cr->b.want = b->want = "our KEY record";
 				cr->b.failure_ok = b->failure_ok = FALSE;
-				ugh = start_adns_query(&sr->this.id
-					, (const struct id *) NULL  /* security gateway meaningless */
-					, T_KEY
-					, continue_oppo
-					, &cr->ac);
+				ugh = start_adns_query(sr->this.id, NULL,  /* security gateway meaningless */
+									   T_KEY, continue_oppo, &cr->ac);
 				break;
 #endif /* USE_KEYRR */
 
@@ -2927,12 +2923,10 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				/* note: {unshare|free}_id_content not needed for id: ephemeral */
 				cr->b.want = b->want = "target's TXT record";
 				cr->b.failure_ok = b->failure_ok = FALSE;
-				iptoid(&b->peer_client, &id);
-				ugh = start_adns_query(&id
-					, (const struct id *) NULL  /* security gateway unconstrained */
-					, T_TXT
-					, continue_oppo
-					, &cr->ac);
+				id = identification_create_from_sockaddr((sockaddr_t*)&b->peer_client);
+				ugh = start_adns_query(id, NULL, /* security gateway unconstrained */
+									   T_TXT, continue_oppo, &cr->ac);
+				id->destroy(id);
 				break;
 
 			default:
@@ -2976,7 +2970,7 @@ void terminate_connection(const char *nm)
 			reset_cur_connection();
 		}
 		c = n;
-	} while (c != NULL);
+	} while (c);
 }
 
 /* an ISAKMP SA has been established.
@@ -3006,10 +3000,10 @@ void ISAKMP_SA_established(connection_t *c, so_serial_t serial)
 		{
 			connection_t *next = d->ac_next;       /* might move underneath us */
 
-			if (d->kind >= CK_PERMANENT
-			&& same_id(&c->spd.this.id, &d->spd.this.id)
-			&& same_id(&c->spd.that.id, &d->spd.that.id)
-			&& !sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr))
+			if (d->kind >= CK_PERMANENT &&
+				c->spd.this.id->equals(c->spd.this.id, d->spd.this.id) &&
+				c->spd.that.id->equals(c->spd.that.id, d->spd.that.id) &&
+				!sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr))
 			{
 				release_connection(d, FALSE);
 			}
@@ -3114,7 +3108,7 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 					, (fmt_conn_instance(best_ro, cib), cib)
 					, enum_name(&routing_story, best_ro->spd.routing));
 
-			if (erop != NULL)
+			if (erop)
 			{
 				m = builddiag("%s; eroute owner:", m);
 				if (!erouted(best_ero->spd.routing))
@@ -3131,14 +3125,17 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 			DBG_log("%s", m);
 		});
 
-	if (erop != NULL)
+	if (erop)
+	{
 		*erop = erouted(best_erouting)? best_ero : NULL;
-
-	if (srp != NULL )
+	}
+	if (srp)
 	{
 		*srp = best_sr;
-		if (esrp != NULL )
+		if (esrp)
+		{
 			*esrp = best_esr;
+		}
 	}
 
 	return routed(best_routing)? best_ro : NULL;
@@ -3183,7 +3180,7 @@ connection_t *find_host_connection(const ip_address *me, u_int16_t my_port,
 		/* if we have requirements for the policy,
 		 * choose the first matching connection.
 		 */
-		while (c != NULL)
+		while (c)
 		{
 			if (c->policy & auth_requested)
 			{
@@ -3257,7 +3254,7 @@ connection_t *find_host_connection(const ip_address *me, u_int16_t my_port,
 #define PRIO_NO_MATCH_FOUND     2048
 
 connection_t *refine_host_connection(const struct state *st,
-									 const struct id *peer_id,
+									 identification_t *peer_id,
 									 identification_t *peer_ca)
 {
 	connection_t *c = st->st_connection;
@@ -3268,13 +3265,13 @@ connection_t *refine_host_connection(const struct state *st,
 	const chunk_t *psk = NULL;
 	bool wcpip; /* wildcard Peer IP? */
 	int best_prio = PRIO_NO_MATCH_FOUND;
-	int wildcards, our_pathlen, peer_pathlen;
+	int our_pathlen, peer_pathlen;
 
-	if (same_id(&c->spd.that.id, peer_id)
-	&& trusted_ca(peer_ca, c->spd.that.ca, &peer_pathlen)
-	&& peer_pathlen == 0
-	&& match_requested_ca(c->requested_ca, c->spd.this.ca, &our_pathlen)
-	&& our_pathlen == 0)
+	if (c->spd.that.id->equals(c->spd.that.id, peer_id) &&
+		trusted_ca(peer_ca, c->spd.that.ca, &peer_pathlen) &&
+		peer_pathlen == 0 &&
+		match_requested_ca(c->requested_ca, c->spd.this.ca, &our_pathlen) &&
+		our_pathlen == 0)
 	{
 		DBG(DBG_CONTROL,
 			DBG_log("current connection is a full match"
@@ -3335,8 +3332,10 @@ connection_t *refine_host_connection(const struct state *st,
 		{
 			const char *match_name[] = {"no", "ok"};
 
-			bool matching_id = match_id(peer_id
-										, &d->spd.that.id, &wildcards);
+			id_match_t match_level = peer_id->matches(peer_id, d->spd.that.id);
+
+			bool matching_id = match_level > ID_MATCH_NONE;
+				
 			bool matching_auth = (d->policy & auth_policy) != LEMPTY;
 
 			bool matching_trust = trusted_ca(peer_ca
@@ -3345,7 +3344,8 @@ connection_t *refine_host_connection(const struct state *st,
 										, d->spd.this.ca, &our_pathlen);
 			bool match = matching_id && matching_auth && matching_trust;
 
-			int prio = (MAX_WILDCARDS + 1) * !matching_request + wildcards;
+			int prio = (ID_MATCH_PERFECT) * !matching_request +
+						ID_MATCH_PERFECT - match_level;
 
 			prio = (MAX_CA_PATH_LEN + 1) * prio + peer_pathlen;
 			prio = (MAX_CA_PATH_LEN + 1) * prio + our_pathlen;
@@ -3458,7 +3458,7 @@ connection_t *refine_host_connection(const struct state *st,
  * used (by another id) addr/net.
  */
 static bool is_virtual_net_used(const ip_subnet *peer_net,
-								const struct id *peer_id)
+								identification_t *peer_id)
 {
 	connection_t *d;
 
@@ -3470,16 +3470,15 @@ static bool is_virtual_net_used(const ip_subnet *peer_net,
 		case CK_INSTANCE:
 			if ((subnetinsubnet(peer_net,&d->spd.that.client) ||
 				 subnetinsubnet(&d->spd.that.client,peer_net))
-			&& !same_id(&d->spd.that.id, peer_id))
+			&& !d->spd.that.id->equals(d->spd.that.id, peer_id))
 			{
-				char buf[BUF_LEN];
 				char client[SUBNETTOT_BUF];
 
 				subnettot(peer_net, 0, client, sizeof(client));
-				idtoa(&d->spd.that.id, buf, sizeof(buf));
-				plog("Virtual IP %s is already used by '%s'", client, buf);
-				idtoa(peer_id, buf, sizeof(buf));
-				plog("Your ID is '%s'", buf);
+				plog("Virtual IP %s is already used by '%Y'",
+						 client, d->spd.that.id);
+				plog("Your ID is '%Y'", peer_id);
+
 				return TRUE; /* already used by another one */
 			}
 			break;
@@ -3518,11 +3517,11 @@ static bool is_virtual_net_used(const ip_subnet *peer_net,
 
 #define PATH_WEIGHT     1
 #define WILD_WEIGHT     (MAX_CA_PATH_LEN+1)
-#define PRIO_WEIGHT     (MAX_WILDCARDS+1)*WILD_WEIGHT
+#define PRIO_WEIGHT     (ID_MATCH_PERFECT+1) * WILD_WEIGHT
 
 /* fc_try: a helper function for find_client_connection */
 static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
-							const struct id *peer_id,
+							identification_t *peer_id,
 							const ip_subnet *our_net,
 							const ip_subnet *peer_net,
 							const u_int8_t our_protocol,
@@ -3535,7 +3534,9 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 	connection_t *d;
 	connection_t *best = NULL;
 	policy_prio_t best_prio = BOTTOM_PRIO;
-	int wildcards, pathlen;
+	id_match_t match_level;
+	int pathlen;
+	
 
 	const bool peer_net_is_host = subnetisaddr(peer_net, &c->spd.that.host_addr);
 
@@ -3548,10 +3549,12 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			continue;
 		}
 
-		if (!(same_id(&c->spd.this.id, &d->spd.this.id)
-		&& match_id(&c->spd.that.id, &d->spd.that.id, &wildcards)
-		&& trusted_ca(peer_ca, d->spd.that.ca, &pathlen)
-		&& match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
+		match_level = c->spd.that.id->matches(c->spd.that.id, d->spd.that.id);
+
+		if (!(c->spd.this.id->equals(c->spd.this.id, d->spd.this.id) &&
+			(match_level > ID_MATCH_NONE) &&
+			trusted_ca(peer_ca, d->spd.that.ca, &pathlen) &&
+			match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
 		{
 			continue;
 		}
@@ -3620,7 +3623,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 					}
 					if (is_virtual_connection(d)
 					&& (!is_virtual_net_allowed(d, peer_net, &c->spd.that.host_addr)
-						|| is_virtual_net_used(peer_net, peer_id?peer_id:&c->spd.that.id)))
+						|| is_virtual_net_used(peer_net, peer_id?peer_id:c->spd.that.id)))
 					{
 						continue;
 					}
@@ -3643,7 +3646,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			 * - given that, the shortest CA pathlength is preferred
 			 */
 			prio = PRIO_WEIGHT * routed(sr->routing)
-				 + WILD_WEIGHT * (MAX_WILDCARDS - wildcards)
+				 + WILD_WEIGHT * match_level
 				 + PATH_WEIGHT * (MAX_CA_PATH_LEN - pathlen)
 				 + 1;
 			if (prio > best_prio)
@@ -3654,9 +3657,10 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 		}
 	}
 
-	if (best != NULL && NEVER_NEGOTIATE(best->policy))
+	if (best && NEVER_NEGOTIATE(best->policy))
+	{
 		best = NULL;
-
+	}
 	DBG(DBG_CONTROLMORE,
 		DBG_log("  fc_try concluding with %s [%ld]"
 				, (best ? best->name : "none"), best_prio)
@@ -3678,7 +3682,8 @@ static connection_t *fc_try_oppo(const connection_t *c,
 	connection_t *d;
 	connection_t *best = NULL;
 	policy_prio_t best_prio = BOTTOM_PRIO;
-	int wildcards, pathlen;
+	id_match_t match_level;
+	int pathlen;
 
 	for (d = hp->connections; d != NULL; d = d->hp_next)
 	{
@@ -3689,10 +3694,12 @@ static connection_t *fc_try_oppo(const connection_t *c,
 		{
 			continue;
 		}
-		if (!(same_id(&c->spd.this.id, &d->spd.this.id)
-		&& match_id(&c->spd.that.id, &d->spd.that.id, &wildcards)
-		&& trusted_ca(peer_ca, d->spd.that.ca, &pathlen)
-		&& match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
+		match_level = c->spd.that.id->matches(c->spd.that.id, c->spd.that.id);
+
+		if (!(c->spd.this.id->equals(c->spd.this.id, d->spd.this.id) &&
+			(match_level > ID_MATCH_NONE) &&
+			trusted_ca(peer_ca, d->spd.that.ca, &pathlen) &&
+			match_group_membership(peer_attributes, d->name, d->spd.that.groups)))
 		{
 			continue;
 		}
@@ -3745,7 +3752,7 @@ static connection_t *fc_try_oppo(const connection_t *c,
 			 * - given that, the shortest CA pathlength is preferred
 			 */
 			prio = PRIO_WEIGHT * (d->prio + routed(sr->routing))
-				 + WILD_WEIGHT * (MAX_WILDCARDS - wildcards)
+				 + WILD_WEIGHT * match_level
 				 + PATH_WEIGHT * (MAX_CA_PATH_LEN - pathlen);
 			if (prio > best_prio)
 			{
@@ -3756,9 +3763,8 @@ static connection_t *fc_try_oppo(const connection_t *c,
 	}
 
 	/* if the best wasn't opportunistic, we fail: it must be a shunt */
-	if (best != NULL
-	&& (NEVER_NEGOTIATE(best->policy)
-		|| (best->policy & POLICY_OPPO) == LEMPTY))
+	if (best && (NEVER_NEGOTIATE(best->policy) ||
+	   (best->policy & POLICY_OPPO) == LEMPTY))
 	{
 		best = NULL;
 	}
@@ -3922,7 +3928,7 @@ connection_t *find_client_connection(connection_t *c,
 #endif /* DEBUG */
 		}
 
-		if (hp != NULL)
+		if (hp)
 		{
 			/* RW match with actual peer_id or abstract peer_id? */
 			d = fc_try(c, hp, NULL, our_net, peer_net
@@ -3959,12 +3965,16 @@ int connection_compare(const connection_t *ca, const connection_t *cb)
 	/* DBG_log("comparing %s to %s", ca->name, cb->name);  */
 
 	ret = strcasecmp(ca->name, cb->name);
-	if (ret != 0)
+	if (ret)
+	{
 		return ret;
+	}
 
 	ret = ca->kind - cb->kind;  /* note: enum connection_kind behaves like int */
-	if (ret != 0)
+	if (ret)
+	{
 		return ret;
+	}
 
 	/* same name, and same type */
 	switch (ca->kind)
@@ -4028,11 +4038,11 @@ void show_connections_status(bool all, const char *name)
 
 		/* show topology */
 		{
-			char topo[CONNECTION_BUF];
+			char topo[BUF_LEN];
 			struct spd_route *sr = &c->spd;
 			int num=0;
 
-			while (sr != NULL)
+			while (sr)
 			{
 				(void) format_connection(topo, sizeof(topo), c, sr);
 				whack_log(RC_COMMENT, "\"%s\"%s: %s; %s; eroute owner: #%lu"
@@ -4065,7 +4075,7 @@ void show_connections_status(bool all, const char *name)
 			}
 
 			/* show group attributes if defined */
-			if (c->spd.that.groups != NULL)
+			if (c->spd.that.groups)
 			{
 				whack_log(RC_COMMENT, "\"%s\"%s:   groups: %s"
 					, c->name
@@ -4158,7 +4168,7 @@ void add_pending(int whack_sock, struct state *isakmp_sa, connection_t *c,
 	bool already_queued = FALSE;
 	struct pending *p = c->host_pair->pending;
 
-	while (p != NULL)
+	while (p)
 	{
 		if (streq(c->name, p->connection->name))
 		{
@@ -4228,8 +4238,10 @@ static void delete_pending(struct pending **pp)
 	struct pending *p = *pp;
 
 	*pp = p->next;
-	if (p->connection != NULL)
+	if (p->connection)
+	{
 		connection_discard(p->connection);
+	}
 	close_any(p->whack_sock);
 	free(p);
 }
@@ -4281,7 +4293,7 @@ void flush_pending_by_state(struct state *st)
 {
 	struct host_pair *hp = st->st_connection->host_pair;
 
-	if (hp != NULL)
+	if (hp)
 	{
 		struct pending **pp
 			, *p;
@@ -4299,7 +4311,7 @@ void flush_pending_by_state(struct state *st)
 /* a connection has been deleted; discard any related pending */
 static void flush_pending_by_connection(connection_t *c)
 {
-	if (c->host_pair != NULL)
+	if (c->host_pair)
 	{
 		struct pending **pp
 			, *p;
@@ -4375,20 +4387,19 @@ connection_t *eclipsed(connection_t *c, struct spd_route **esrp)
 
 	ue = NULL;
 
-	while (sr1 != NULL && ue != NULL)
+	while (sr1 && ue)
 	{
 		for (ue = connections; ue != NULL; ue = ue->ac_next)
 		{
 			struct spd_route *srue = &ue->spd;
 
-			while (srue != NULL
-			&& srue->routing == RT_ROUTED_ECLIPSED
+			while (srue	&& srue->routing == RT_ROUTED_ECLIPSED
 			&& !(samesubnet(&sr1->this.client, &srue->this.client)
 				 && samesubnet(&sr1->that.client, &srue->that.client)))
 			{
 				srue = srue->next;
 			}
-			if (srue != NULL && srue->routing==RT_ROUTED_ECLIPSED)
+			if (srue && srue->routing == RT_ROUTED_ECLIPSED)
 			{
 				*esrp = srue;
 				break;

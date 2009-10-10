@@ -36,7 +36,7 @@
 #include "adns.h"       /* needs <resolv.h> */
 #include "defs.h"
 #include "log.h"
-#include "id.h"
+#include "myid.h"
 #include "connections.h"
 #include "keys.h"           /* needs connections.h */
 #include "dnskey.h"
@@ -238,62 +238,30 @@ stop_adns(void)
 #define our_TXT_attr_string "X-IPsec-Server"
 static const char our_TXT_attr[] = our_TXT_attr_string;
 
-static err_t
-decode_iii(u_char **pp, struct id *gw_id)
+identification_t* decode_iii(u_char **pp)
 {
+	identification_t *gw_id;
 	u_char *p = *pp + strspn(*pp, " \t");
 	u_char *e = p + strcspn(p, " \t");
 	u_char under = *e;
 
 	if (p == e)
 	{
-		return "TXT " our_TXT_attr_string " badly formed (no gateway specified)";
+		return NULL;
 	}
 	*e = '\0';
-	if (*p == '@')
-	{
-		/* gateway specification in this record is @FQDN */
-		err_t ugh = atoid(p, gw_id, FALSE);
-
-		if (ugh != NULL)
-		{
-			return builddiag("malformed FQDN in TXT " our_TXT_attr_string ": %s"
-				, ugh);
-		}
-	}
-	else
-	{
-		/* gateway specification is numeric */
-		ip_address ip;
-		err_t ugh = tnatoaddr(p, e-p
-			, strchr(p, ':') == NULL? AF_INET : AF_INET6
-			, &ip);
-
-		if (ugh != NULL)
-		{
-			return builddiag("malformed IP address in TXT " our_TXT_attr_string ": %s"
-				, ugh);
-		}
-		if (isanyaddr(&ip))
-		{
-			return "gateway address must not be 0.0.0.0 or 0::0";
-		}
-		iptoid(&ip, gw_id);
-	}
-
+	gw_id = identification_create_from_string(p);
 	*e = under;
 	*pp = e + strspn(e, " \t");
 
-	return NULL;
+	return gw_id;
 }
 
-static err_t
-process_txt_rr_body(u_char *str
-, bool doit     /* should we capture information? */
-, enum dns_auth_level dns_auth_level
-, struct adns_continuation *const cr)
+static err_t process_txt_rr_body(u_char *str, bool doit,
+								 enum dns_auth_level dns_auth_level,
+								 struct adns_continuation *const cr)
 {
-	const struct id *client_id = &cr->id;       /* subject of query */
+	identification_t *client_id = cr->id;   /* subject of query */
 	u_char *p = str;
 	unsigned long pref = 0;
 	struct gw_info gi;
@@ -349,10 +317,13 @@ process_txt_rr_body(u_char *str
 	p += strspn(p, " \t");
 
 	/* Decode iii (Security Gateway ID). */
-
 	zero(&gi);  /* before first use */
 
-	TRY(decode_iii(&p, &gi.gw_id));     /* will need to unshare_id_content */
+	gi.gw_id = decode_iii(&p);
+	if (gi.gw_id == NULL)
+	{
+		return "TXT " our_TXT_attr_string " badly formed (no gateway specified)";
+	}
 
 	if (!cr->sgw_specified)
 	{
@@ -360,19 +331,14 @@ process_txt_rr_body(u_char *str
 		 * and we don't know who to initiate with.
 		 * So we're looking for gateway specs with an IP address
 		 */
-		if (!id_is_ipaddr(&gi.gw_id))
+		if (gi.gw_id->get_type(gi.gw_id) != ID_IPV4_ADDR &&
+			gi.gw_id->get_type(gi.gw_id) != ID_IPV6_ADDR)
 		{
 			DBG(DBG_DNS,
-				{
-					char cidb[BUF_LEN];
-					char gwidb[BUF_LEN];
-
-					idtoa(client_id, cidb, sizeof(cidb));
-					idtoa(&gi.gw_id, gwidb, sizeof(gwidb));
-					DBG_log("TXT %s record for %s: security gateway %s;"
-						" ignored because gateway's IP is unspecified"
-						, our_TXT_attr, cidb, gwidb);
-				});
+				DBG_log("TXT %s record for '%Y': security gateway '%Y';"
+						" ignored because gateway's IP is unspecified",
+						our_TXT_attr, client_id, gi.gw_id);
+				)
 			return NULL;        /* we cannot use this record, but it isn't wrong */
 		}
 	}
@@ -381,23 +347,15 @@ process_txt_rr_body(u_char *str
 		/* We do know the peer's ID (because we are responding)
 		 * So we're looking for gateway specs specifying this known ID.
 		 */
-		const struct id *peer_id = &cr->sgw_id;
+		identification_t *peer_id = cr->sgw_id;
 
-		if (!same_id(peer_id, &gi.gw_id))
+		if (!peer_id->equals(peer_id, gi.gw_id))
 		{
 			DBG(DBG_DNS,
-				{
-					char cidb[BUF_LEN];
-					char gwidb[BUF_LEN];
-					char pidb[BUF_LEN];
-
-					idtoa(client_id, cidb, sizeof(cidb));
-					idtoa(&gi.gw_id, gwidb, sizeof(gwidb));
-					idtoa(peer_id, pidb, sizeof(pidb));
-					DBG_log("TXT %s record for %s: security gateway %s;"
-						" ignored -- looking to confirm %s as gateway"
-						, our_TXT_attr, cidb, gwidb, pidb);
-				});
+				DBG_log("TXT %s record for '%Y': security gateway '%Y';"
+						" ignored -- looking to confirm '%Y' as gateway",
+						our_TXT_attr, client_id, gi.gw_id, peer_id);
+				)
 			return NULL;        /* we cannot use this record, but it isn't wrong */
 		}
 	}
@@ -407,7 +365,7 @@ process_txt_rr_body(u_char *str
 		/* really accept gateway */
 		struct gw_info **gwip;  /* gateway insertion point */
 
-		gi.client_id = *client_id;      /* will need to unshare_id_content */
+		gi.client_id = client_id;      /* will need to unshare_id_content */
 
 		/* decode optional kkk: base 64 encoding of key */
 
@@ -462,32 +420,26 @@ process_txt_rr_body(u_char *str
 
 		DBG(DBG_DNS,
 			{
-				char cidb[BUF_LEN];
-				char gwidb[BUF_LEN];
 				chunk_t keyid;
-				public_key_t *key;
-
-				idtoa(client_id, cidb, sizeof(cidb));
-				idtoa(&gi.gw_id, gwidb, sizeof(gwidb));
-				key = gi.key->public_key;
+				public_key_t *key = gi.key->public_key;
 
 				if (gi.gw_key_present &&
 					key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
 				{
-					DBG_log("gateway for %s is %s with key %#B"
-						, cidb, gwidb, &keyid);
+					DBG_log("gateway for %s is %s with key %#B",
+							client_id, gi.gw_id, &keyid);
 				}
 				else
 				{
-					DBG_log("gateway for %s is %s; no key specified"
-						, cidb, gwidb);
+					DBG_log("gateway for '%Y' is '%Y'; no key specified",
+							client_id, gi.gw_id);
 				}
 			});
 
 		gi.next = *gwip;
 		*gwip = clone_thing(gi);
-		unshare_id_content(&(*gwip)->gw_id);
-		unshare_id_content(&(*gwip)->client_id);
+		(*gwip)->gw_id = (*gwip)->gw_id->clone((*gwip)->gw_id);
+		(*gwip)->client_id = (*gwip)->client_id->clone((*gwip)->client_id);
 	}
 
 	return NULL;
@@ -1271,75 +1223,62 @@ process_dns_answer(struct adns_continuation *const cr
 
 /****************************************************************/
 
-static err_t
-build_dns_name(u_char name_buf[NS_MAXDNAME + 2]
-, unsigned long serial USED_BY_DEBUG
-, const struct id *id
-, const char *typename USED_BY_DEBUG
-, const char *gwname   USED_BY_DEBUG)
+static err_t build_dns_name(u_char name_buf[NS_MAXDNAME + 2],
+							unsigned long serial USED_BY_DEBUG,
+							identification_t *id,
+							const char *typename USED_BY_DEBUG,
+							identification_t *gw USED_BY_DEBUG)
 {
 	/* note: all end in "." to suppress relative searches */
 	id = resolve_myid(id);
-	switch (id->kind)
-	{
-	case ID_IPV4_ADDR:
-	{
-		/* XXX: this is really ugly and only temporary until addrtot can
-		 *      generate the correct format
-		 */
-		const unsigned char *b;
-		size_t bl USED_BY_DEBUG = addrbytesptr(&id->ip_addr, &b);
 
-		passert(bl == 4);
-		snprintf(name_buf, NS_MAXDNAME + 2, "%d.%d.%d.%d.in-addr.arpa."
-			, b[3], b[2], b[1], b[0]);
-		break;
-	}
-
-	case ID_IPV6_ADDR:
+	switch (id->get_type(id))
 	{
-		/* ??? is this correct? */
-		const unsigned char *b;
-		size_t bl;
-		u_char *op = name_buf;
-		static const char suffix[] = "IP6.INT.";
-
-		for (bl = addrbytesptr(&id->ip_addr, &b); bl-- != 0; )
+		case ID_IPV4_ADDR:
 		{
-			if (op + 4 + sizeof(suffix) >= name_buf + NS_MAXDNAME + 1)
-				return "IPv6 reverse name too long";
-			op += sprintf(op, "%x.%x.", b[bl] & 0xF, b[bl] >> 4);
+			chunk_t b = id->get_encoding(id);
+
+			snprintf(name_buf, NS_MAXDNAME + 2, "%d.%d.%d.%d.in-addr.arpa.",
+							   b.ptr[3], b.ptr[2], b.ptr[1], b.ptr[0]);
+			break;
 		}
-		strcpy(op, suffix);
-		break;
-	}
-
-	case ID_FQDN:
-		/* strip trailing "." characters, then add one */
+		case ID_IPV6_ADDR:
 		{
-			size_t il = id->name.len;
+			chunk_t b = id->get_encoding(id);
+			size_t bl;
+			u_char *op = name_buf;
+			static const char suffix[] = "IP6.INT.";
 
-			while (il > 0 && id->name.ptr[il - 1] == '.')
-				il--;
-			if (il > NS_MAXDNAME)
+			for (bl = b.len; bl-- != 0; )
+			{
+				if (op + 4 + sizeof(suffix) >= name_buf + NS_MAXDNAME + 1)
+				{
+					return "IPv6 reverse name too long";
+				}
+				op += sprintf(op, "%x.%x.", b.ptr[bl] & 0xF, b.ptr[bl] >> 4);
+			}
+			strcpy(op, suffix);
+			break;
+		}
+		case ID_FQDN:
+		{
+			if (snprintf(name_buf, NS_MAXDNAME + 2, "%Y.", id) > NS_MAXDNAME + 1)
+			{
 				return "FQDN too long for domain name";
-
-			memcpy(name_buf, id->name.ptr, il);
-			strcpy(name_buf + il, ".");
+			}
+			break;
 		}
-		break;
-
-	default:
-		return "can only query DNS for key for ID that is a FQDN, IPV4_ADDR, or IPV6_ADDR";
+		default:
+			return "can only query DNS for key for ID that is a FQDN, IPV4_ADDR, or IPV6_ADDR";
 	}
 
-	DBG(DBG_CONTROL | DBG_DNS, DBG_log("DNS query %lu for %s for %s (gw: %s)"
-		, serial, typename, name_buf, gwname));
+	DBG(DBG_CONTROL | DBG_DNS,
+		DBG_log("DNS query %lu for %s for %s (gw: %Y)",	serial, typename, name_buf, gw)
+	)
 	return NULL;
 }
 
-void
-gw_addref(struct gw_info *gw)
+void gw_addref(struct gw_info *gw)
 {
 	if (gw != NULL)
 	{
@@ -1348,8 +1287,7 @@ gw_addref(struct gw_info *gw)
 	}
 }
 
-void
-gw_delref(struct gw_info **gwp)
+void gw_delref(struct gw_info **gwp)
 {
 	struct gw_info *gw = *gwp;
 
@@ -1361,10 +1299,12 @@ gw_delref(struct gw_info **gwp)
 		gw->refcnt--;
 		if (gw->refcnt == 0)
 		{
-			free_id_content(&gw->client_id);
-			free_id_content(&gw->gw_id);
+			DESTROY_IF(gw->client_id);
+			DESTROY_IF(gw->gw_id);
 			if (gw->gw_key_present)
+			{
 				unreference_key(&gw->key);
+			}
 			gw_delref(&gw->next);
 			free(gw);   /* trickery could make this a tail-call */
 		}
@@ -1414,67 +1354,60 @@ static int adns_in_flight = 0;  /* queries outstanding */
 static struct adns_continuation *continuations = NULL;  /* newest of queue */
 static struct adns_continuation *next_query = NULL;     /* oldest not sent */
 
-static struct adns_continuation *
-continuation_for_qtid(unsigned long qtid)
+static struct adns_continuation *continuation_for_qtid(unsigned long qtid)
 {
 	struct adns_continuation *cr = NULL;
 
 	if (qtid != 0)
+	{
 		for (cr = continuations; cr != NULL && cr->qtid != qtid; cr = cr->previous)
 			;
+	}
 	return cr;
 }
 
-static void
-release_adns_continuation(struct adns_continuation *cr)
+static void release_adns_continuation(struct adns_continuation *cr)
 {
 	passert(cr != next_query);
 	gw_delref(&cr->gateways_from_dns);
 #ifdef USE_KEYRR
 	free_public_keys(&cr->keys_from_dns);
 #endif /* USE_KEYRR */
-	unshare_id_content(&cr->id);
-	unshare_id_content(&cr->sgw_id);
+	cr->id = cr->id->clone(cr->id);
+	cr->sgw_id = cr->sgw_id->clone(cr->sgw_id);
 
 	/* unlink from doubly-linked list */
 	if (cr->next == NULL)
 	{
-		passert(continuations == cr);
 		continuations = cr->previous;
 	}
 	else
 	{
-		passert(cr->next->previous == cr);
 		cr->next->previous = cr->previous;
 	}
 
 	if (cr->previous != NULL)
 	{
-		passert(cr->previous->next == cr);
 		cr->previous->next = cr->next;
 	}
 
 	free(cr);
 }
 
-err_t
-start_adns_query(const struct id *id    /* domain to query */
-, const struct id *sgw_id       /* if non-null, any accepted gw_info must match */
-, int type      /* T_TXT or T_KEY, selecting rr type of interest */
-, cont_fn_t cont_fn
-, struct adns_continuation *cr)
+err_t start_adns_query(identification_t *id,     /* domain to query */
+					   identification_t *sgw_id, /* if non-null, any accepted gw_info must match */
+					   int type,                 /* T_TXT or T_KEY, selecting rr type of interest */
+					   cont_fn_t cont_fn,
+					   struct adns_continuation *cr)
 {
 	static unsigned long qtid = 1;      /* query transaction id; NOTE: static */
 	const char *typename = rr_typename(type);
-	char gwidb[BUF_LEN];
 
-	if(adns_pid == 0
-	   && adns_restart_count < ADNS_RESTART_MAX)
+	if(adns_pid == 0 && adns_restart_count < ADNS_RESTART_MAX)
 	{
 		plog("ADNS helper was not running. Restarting attempt %d",adns_restart_count);
 		init_adns();
 	}
-
 
 	/* Splice this in at head of doubly-linked list of continuations.
 	 * Note: this must be done before any release_adns_continuation().
@@ -1483,7 +1416,6 @@ start_adns_query(const struct id *id    /* domain to query */
 	cr->previous = continuations;
 	if (continuations != NULL)
 	{
-		passert(continuations->next == NULL);
 		continuations->next = cr;
 	}
 	continuations = cr;
@@ -1491,11 +1423,11 @@ start_adns_query(const struct id *id    /* domain to query */
 	cr->qtid = qtid++;
 	cr->type = type;
 	cr->cont_fn = cont_fn;
-	cr->id = *id;
-	unshare_id_content(&cr->id);
-	cr->sgw_specified = sgw_id != NULL;
-	cr->sgw_id = cr->sgw_specified? *sgw_id : empty_id;
-	unshare_id_content(&cr->sgw_id);
+	cr->id = id->clone(id);
+	cr->sgw_specified = (sgw_id != NULL);
+	cr->sgw_id = cr->sgw_specified ?
+						sgw_id->clone(sgw_id) :
+				 		identification_create_from_string("%any");
 	cr->gateways_from_dns = NULL;
 #ifdef USE_KEYRR
 	cr->keys_from_dns = NULL;
@@ -1507,15 +1439,12 @@ start_adns_query(const struct id *id    /* domain to query */
 	cr->debugging = LEMPTY;
 #endif
 
-	idtoa(&cr->sgw_id, gwidb, sizeof(gwidb));
-
 	zero(&cr->query);
-
 	{
-		err_t ugh = build_dns_name(cr->query.name_buf, cr->qtid
-			, id, typename, gwidb);
+		err_t ugh = build_dns_name(cr->query.name_buf, cr->qtid, id,
+								   typename, cr->sgw_id);
 
-		if (ugh != NULL)
+		if (ugh)
 		{
 			release_adns_continuation(cr);
 			return ugh;
@@ -1620,8 +1549,7 @@ send_unsent_ADNS_queries(void)
  * Returns with error message iff lwdnsq result is malformed.
  * Most errors will be in DNS data and will be handled by cr->cont_fn.
  */
-static err_t
-process_lwdnsq_answer(char *ts)
+static err_t process_lwdnsq_answer(char *ts)
 {
 	err_t ugh = NULL;
 	char *rest;
@@ -1813,8 +1741,7 @@ process_lwdnsq_answer(char *ts)
 }
 #endif /* USE_LWRES */
 
-static void
-recover_adns_die(void)
+static void recover_adns_die(void)
 {
 	struct adns_continuation *cr = NULL;
 
@@ -1848,8 +1775,7 @@ void reset_adns_restart_count(void)
 	adns_restart_count=0;
 }
 
-void
-handle_adns_answer(void)
+void handle_adns_answer(void)
 {
   /* These are retained across calls to handle_adns_answer. */
 	static size_t buflen = 0;   /* bytes in answer buffer */

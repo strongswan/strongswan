@@ -20,7 +20,6 @@ demux.c demux.h \
 dnskey.c dnskey.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
-id.c id.h \
 ike_alg.c ike_alg.h \
 ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
@@ -32,6 +31,7 @@ kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
+myid.c myid.h \
 modecfg.c modecfg.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
