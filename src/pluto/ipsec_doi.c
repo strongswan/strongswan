@@ -2443,7 +2443,7 @@ static bool switch_connection(struct msg_digest *md, identification_t *peer,
 		if (r->spd.this.ca)
 		{
 			DBG(DBG_CONTROL,
-				DBG_log("offered CA:   \"%s\"", r->spd.this.ca)
+				DBG_log("offered CA:   \"%Y\"", r->spd.this.ca)
 			)
 		}
 		else
