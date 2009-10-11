@@ -31,6 +31,7 @@
 
 #include <asn1/asn1.h>
 #include <credentials/keys/public_key.h>
+#include <credentials/certificates/x509.h>
 
 #include "constants.h"
 
@@ -502,17 +503,21 @@ static bool scx_find_cert_object(CK_SESSION_HANDLE session,
 	x509cert = malloc_thing(x509cert_t);
 	*x509cert = empty_x509cert;
 	x509cert->smartcard = TRUE;
-
-	if (!parse_x509cert(blob, 0, x509cert))
+	x509cert->cert = lib->creds->create(lib->creds,
+							  			CRED_CERTIFICATE, CERT_X509,
+							  			BUILD_BLOB_ASN1_DER, blob,
+							  			BUILD_END);
+	if (x509cert->cert)
 	{
-		plog("failed to load cert from smartcard, error in X.509 certificate");
-		free_x509cert(x509cert);
-		return FALSE;
+		cert->type = CERT_X509_SIGNATURE;
+		cert->u.x509 = x509cert;
+		return TRUE;
 	}
-	cert->type = CERT_X509_SIGNATURE;
-	cert->u.x509 = x509cert;
-	return TRUE;
+	plog("failed to load cert from smartcard, error in X.509 certificate");
+	free_x509cert(x509cert);
+	return FALSE;
 }
+
 
 /*
  * search a given slot for PKCS#11 certificate objects
@@ -535,10 +540,10 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 	{
 		CK_OBJECT_HANDLE object;
 		CK_ULONG obj_count = 0;
-		err_t ugh;
 		time_t valid_until;
 		smartcard_t *sc;
 		x509cert_t *cert;
+		x509_t *x509;
 
 		rv = pkcs11_functions->C_FindObjects(session, &object, 1, &obj_count);
 		if (rv != CKR_OK)
@@ -570,7 +575,7 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 
 		/* check validity of certificate */
 		cert = sc->last_cert.u.x509;
-		if (!cert->cert->get_validity(cert->cert, NULL, NULL, &valid_until)
+		if (!cert->cert->get_validity(cert->cert, NULL, NULL, &valid_until))
 		{
 			free_x509cert(cert);
 			scx_free(sc);
@@ -581,11 +586,12 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		sc = scx_add(sc);
+		x509 = (x509_t*)cert->cert;
 
 		/* put end entity and ca certificates into different chains */
-		if (cert->isCA)
+		if (x509->get_flags(x509) & X509_CA)
 		{
-			sc->last_cert.u.x509 = add_authcert(cert, AUTH_CA);
+			sc->last_cert.u.x509 = add_authcert(cert, X509_CA);
 		}
 		else
 		{
@@ -1907,16 +1913,12 @@ void scx_list(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of Smartcard Objects:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (sc != NULL)
 	{
-		whack_log(RC_COMMENT, "%T, #%d, count: %d"
-			, &sc->last_load, utc
-			, sc->number
-			, sc->count);
-		whack_log(RC_COMMENT, "       %s, session %s, logged %s, has %s"
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  %s, session %s, logged %s, has %s"
 			, scx_print_slot(sc, "    ")
 			, sc->session_opened? "opened" : "closed"
 			, sc->logged_in? "in" : "out"
@@ -1924,14 +1926,14 @@ void scx_list(bool utc)
 				: ((sc->pin.ptr == NULL)? "no pin"
 					: sc->valid? "valid pin" : "invalid pin"));
 		if (sc->id != NULL)
-			whack_log(RC_COMMENT, "       id:       %s", sc->id);
+			whack_log(RC_COMMENT, "  id:       %s", sc->id);
 		if (sc->label != NULL)
-			whack_log(RC_COMMENT, "       label:   '%s'", sc->label);
+			whack_log(RC_COMMENT, "  label:   '%s'", sc->label);
 		if (sc->last_cert.type == CERT_X509_SIGNATURE)
 		{
 			certificate_t *certificate = sc->last_cert.u.x509->cert;
 
-			whack_log(RC_COMMENT, "       subject: '%Y'",
+			whack_log(RC_COMMENT, "  subject: '%Y'",
 					  certificate->get_subject(certificate));
 		}
 		sc = sc->next;
