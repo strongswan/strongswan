@@ -63,7 +63,7 @@ void free_myid(void)
 
 	for (s = MYID_UNKNOWN; s <= MYID_SPECIFIED; s++)
 	{
-		myids[s]->destroy(myids[s]);
+		DESTROY_IF(myids[s]);
 	}
 }
 
