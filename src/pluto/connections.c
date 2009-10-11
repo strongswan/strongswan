@@ -798,7 +798,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 			}
 
 			/* if no CA is defined, use issuer as default */
-			if (dst->ca)
+			if (dst->ca == NULL)
 			{
 				certificate_t *certificate = dst->cert.u.x509->cert;
 				identification_t *issuer = certificate->get_issuer(certificate);
