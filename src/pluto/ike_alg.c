@@ -23,6 +23,8 @@
 
 #include <library.h>
 #include <debug.h>
+#include <credentials/keys/public_key.h>
+#include <credentials/keys/private_key.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/prfs/prf.h>
@@ -193,20 +195,42 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 		if (policy & POLICY_PUBKEY)
 		{
 			int auth_method = 0;
-			private_key_t *key = get_private_key(c);
+			size_t key_size = 0;
+			key_type_t key_type = KEY_ANY;
 
-			if (key == NULL)
+
+			if (c->spd.this.cert.type != CERT_NONE)
 			{
-				plog("ike alg: unable to locate my private key");
-				continue;
+				public_key_t *key = cert_get_public_key(c->spd.this.cert);
+
+				if (key == NULL)
+				{				
+					plog("ike alg: unable to retrieve my public key");
+					continue;
+				}
+				key_type = key->get_type(key);
+				key_size = key->get_keysize(key);
+				key->destroy(key);
 			}
-			switch (key->get_type(key))
+			else
+			{
+				private_key_t *key = get_private_key(c);
+
+				if (key == NULL)
+				{
+					plog("ike alg: unable to retrieve my private key");
+					continue;
+				}
+				key_type = key->get_type(key);
+				key_size = key->get_keysize(key);
+			}
+			switch (key_type)
 			{
 				case KEY_RSA:
 					auth_method = OAKLEY_RSA_SIG;
 					break;
 				case KEY_ECDSA:
-					switch (key->get_keysize(key))
+					switch (key_size)
 					{
 						case 32:
 							auth_method = OAKLEY_ECDSA_256;
