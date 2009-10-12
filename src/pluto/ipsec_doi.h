@@ -100,7 +100,7 @@ extern void dpd_timeout(struct state *st);
 			DBG_cond_dump(DBG_CRYPT, "received " hash_name ":", hash_pbs->cur, pbs_left(hash_pbs)); \
 			loglog(RC_LOG_SERIOUS, "received " hash_name " does not match computed value in " msg_name); \
 			/* XXX Could send notification back */ \
-			return STF_FAIL + INVALID_HASH_INFORMATION; \
+			return STF_FAIL + ISAKMP_INVALID_HASH_INFORMATION; \
 		} \
 	}
 

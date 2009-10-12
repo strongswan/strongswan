@@ -102,7 +102,7 @@
  * and return from the ENCLOSING stf_status returning function if it fails.
  */
 #define RETURN_STF_FAILURE(f) \
-	{ int r = (f); if (r != NOTHING_WRONG) return STF_FAIL + r; }
+	{ int r = (f); if (r != ISAKMP_NOTHING_WRONG) return STF_FAIL + r; }
 
 /* create output HDR as replica of input HDR */
 void echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
@@ -176,13 +176,13 @@ static notification_t accept_KE(chunk_t *dest, const char *val_name,
 		loglog(RC_LOG_SERIOUS, "KE has %u byte DH public value; %u required"
 			, (unsigned) pbs_left(pbs), gr->ke_size);
 		/* XXX Could send notification back */
-		return INVALID_KEY_INFORMATION;
+		return ISAKMP_INVALID_KEY_INFORMATION;
 	}
 	free(dest->ptr);
 	*dest = chunk_create(pbs->cur, pbs_left(pbs));
 	*dest = chunk_clone(*dest);
 	DBG_cond_dump_chunk(DBG_CRYPT, "DH public value received:\n", *dest);
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 /* accept_PFS_KE
@@ -201,7 +201,7 @@ static notification_t accept_PFS_KE(struct msg_digest *md, chunk_t *dest,
 		if (st->st_pfs_group != NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "missing KE payload in %s message", msg_name);
-			return INVALID_KEY_INFORMATION;
+			return ISAKMP_INVALID_KEY_INFORMATION;
 		}
 	}
 	else
@@ -210,16 +210,16 @@ static notification_t accept_PFS_KE(struct msg_digest *md, chunk_t *dest,
 		{
 			loglog(RC_LOG_SERIOUS, "%s message KE payload requires a GROUP_DESCRIPTION attribute in SA"
 				, msg_name);
-			return INVALID_KEY_INFORMATION;
+			return ISAKMP_INVALID_KEY_INFORMATION;
 		}
 		if (ke_pd->next != NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "%s message contains several KE payloads; we accept at most one", msg_name);
-			return INVALID_KEY_INFORMATION;     /* ??? */
+			return ISAKMP_INVALID_KEY_INFORMATION;     /* ??? */
 		}
 		return accept_KE(dest, val_name, st->st_pfs_group, &ke_pd->pbs);
 	}
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
@@ -1701,7 +1701,7 @@ static stf_status check_signature(key_type_t key_type, identification_t* peer,
 						s.tried_cnt, peer)
 			)
 		}
-		return STF_FAIL + INVALID_KEY_INFORMATION;
+		return STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 	}
 }
 
@@ -1715,12 +1715,12 @@ static notification_t accept_nonce(struct msg_digest *md, chunk_t *dest,
 	{
 		loglog(RC_LOG_SERIOUS, "%s length not between %d and %d"
 			, name , MINIMUM_NONCE_SIZE, MAXIMUM_NONCE_SIZE);
-		return PAYLOAD_MALFORMED;       /* ??? */
+		return ISAKMP_PAYLOAD_MALFORMED;       /* ??? */
 	}
 	free(dest->ptr);
 	*dest = chunk_create(nonce_pbs->cur, len);
 	*dest = chunk_clone(*dest);
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 /* encrypt message, sans fixed part of header
@@ -3252,7 +3252,7 @@ stf_status main_inR1_outI2(struct msg_digest *md)
 		{
 			loglog(RC_LOG_SERIOUS, "a single Transform is required in a selecting Oakley Proposal; found %u"
 			, (unsigned)proposal.isap_notrans);
-			RETURN_STF_FAILURE(BAD_PROPOSAL_SYNTAX);
+			RETURN_STF_FAILURE(ISAKMP_BAD_PROPOSAL_SYNTAX);
 		}
 		RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit
 			, &proposal_pbs, &proposal, NULL, st, TRUE));
@@ -3493,7 +3493,7 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	compute_dh_shared(st, st->st_gi);
 	if (!generate_skeyids_iv(st))
 	{
-		return STF_FAIL + AUTHENTICATION_FAILED;
+		return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 	}
 	update_iv(st);
 
@@ -3558,7 +3558,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	compute_dh_shared(st, st->st_gr);
 	if (!generate_skeyids_iv(st))
 	{
-		return STF_FAIL + AUTHENTICATION_FAILED;
+		return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 	}
 	if (st->nat_traversal & NAT_T_WITH_NATD)
 	{
@@ -3679,7 +3679,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
-				return STF_FAIL + AUTHENTICATION_FAILED;
+				return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 			}
 
 			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_signature_desc
@@ -3752,7 +3752,7 @@ main_id_and_auth(struct msg_digest *md
 	/* ID Payload in */
 	if (!decode_peer_id(md, &peer))
 	{
-		return STF_FAIL + INVALID_ID_INFORMATION;
+		return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 	}
 
 	/* Hash the ID Payload.
@@ -3783,7 +3783,7 @@ main_id_and_auth(struct msg_digest *md
 					, hash_pbs->cur, pbs_left(hash_pbs));
 				loglog(RC_LOG_SERIOUS, "received Hash Payload does not match computed value");
 				/* XXX Could send notification back */
-				r = STF_FAIL + INVALID_HASH_INFORMATION;
+				r = STF_FAIL + ISAKMP_INVALID_HASH_INFORMATION;
 			}
 		}
 		break;
@@ -3840,7 +3840,7 @@ main_id_and_auth(struct msg_digest *md
 			{
 				report_key_dns_failure(peer, ugh);
 				st->st_suspended_md = NULL;
-				r = STF_FAIL + INVALID_KEY_INFORMATION;
+				r = STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 			}
 		}
 		break;
@@ -3871,7 +3871,7 @@ main_id_and_auth(struct msg_digest *md
 	 */
 	if (!switch_connection(md, peer, initiator))
 	{
-		r = STF_FAIL + INVALID_ID_INFORMATION;
+		r = STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 	}
 	peer->destroy(peer);
 	return r;
@@ -3918,7 +3918,7 @@ static void key_continue(struct adns_continuation *cr, err_t ugh,
 		if (!kc->failure_ok && ugh != NULL)
 		{
 			report_key_dns_failure(st->st_connection->spd.that.id, ugh);
-			r = STF_FAIL + INVALID_KEY_INFORMATION;
+			r = STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 		}
 		else
 		{
@@ -4107,7 +4107,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
-				return STF_FAIL + AUTHENTICATION_FAILED;
+				return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 			}
 
 			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_signature_desc
@@ -4333,7 +4333,7 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 		if (!decode_net_id(&id_pd->payload.ipsec_id, &id_pd->pbs
 		, &b.his.net, "peer client"))
 		{
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 
 		/* Hack for MS 818043 NAT-T Update */
@@ -4354,7 +4354,7 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 		if (!decode_net_id(&id_pd->next->payload.ipsec_id, &id_pd->next->pbs
 		, &b.my.net, "our client"))
 		{
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 		b.my.proto = id_pd->next->payload.ipsec_id.isaiid_protoid;
 		b.my.port = id_pd->next->payload.ipsec_id.isaiid_port;
@@ -4435,7 +4435,7 @@ static void quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
 		if (!b->failure_ok && ugh != NULL)
 		{
 			report_verify_failure(b, ugh);
-			r = STF_FAIL + INVALID_ID_INFORMATION;
+			r = STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 		else
 		{
@@ -4558,7 +4558,7 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 		 */
 		report_verify_failure(b, ugh);
 		p1st->st_suspended_md = NULL;
-		return STF_FAIL + INVALID_ID_INFORMATION;
+		return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 	}
 	else
 	{
@@ -4791,7 +4791,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			plog("cannot respond to IPsec SA request"
 				" because no connection is known for %s"
 				, buf);
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 		else if (p != c)
 		{
@@ -4819,7 +4819,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					next_step = quick_inI1_outR1_process_answer(b, ac, p1st);
 					if (next_step == vos_fail)
 					{
-						return STF_FAIL + INVALID_ID_INFORMATION;
+						return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 					}
 
 					/* short circuit: if peer's client is self,
@@ -5013,7 +5013,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		if ((st->st_policy & POLICY_PFS) && st->st_pfs_group == NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "we require PFS but Quick I1 SA specifies no GROUP_DESCRIPTION");
-			return STF_FAIL + NO_PROPOSAL_CHOSEN;       /* ??? */
+			return STF_FAIL + ISAKMP_NO_PROPOSAL_CHOSEN;
 		}
 
 		/* Ni in */
@@ -5190,7 +5190,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			, &st->st_connection->spd.this.client
 			, "our client"))
 			{
-				return STF_FAIL + INVALID_ID_INFORMATION;
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 			}
 
 			/* IDcr (responder is peer) */
@@ -5200,7 +5200,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			, &st->st_connection->spd.that.client
 			, "peer client"))
 			{
-				return STF_FAIL + INVALID_ID_INFORMATION;
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 			}
 		}
 		else
@@ -5211,7 +5211,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			{
 				loglog(RC_LOG_SERIOUS, "IDci, IDcr payloads missing in message"
 					" but default does not match proposal");
-				return STF_FAIL + INVALID_ID_INFORMATION;
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 			}
 		}
 	}
@@ -5236,7 +5236,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 				   "peer with attributes '%s' is not a member of the groups '%s'",
 					peer_attributes->get_string(peer_attributes),
 					groups->get_string(groups));
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 	}
 
@@ -5597,7 +5597,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	if (n->isan_spisize != COOKIE_SIZE * 2 || pbs_left(pbs) < COOKIE_SIZE * 2)
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid SPI length (%d)", n->isan_spisize);
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	if (memcmp(pbs->cur, st->st_icookie, COOKIE_SIZE) != 0)
@@ -5606,7 +5606,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid icookie (broken Cisco?)");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5614,7 +5614,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	if (memcmp(pbs->cur, st->st_rcookie, COOKIE_SIZE) != 0)
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid rcookie (broken Cisco?)");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 	}
 	pbs->cur += COOKIE_SIZE;
 
@@ -5622,7 +5622,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid data length (%d)"
 			, (int) pbs_left(pbs));
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	seqno = ntohl(*(u_int32_t *)pbs->cur);
@@ -5671,7 +5671,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		loglog(RC_LOG_SERIOUS
 			, "DPD: R_U_THERE_ACK has invalid SPI length (%d)"
 			, n->isan_spisize);
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	if (memcmp(pbs->cur, st->st_icookie, COOKIE_SIZE) != 0)
@@ -5680,7 +5680,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE_ACK has invalid icookie");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5691,7 +5691,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE_ACK has invalid rcookie");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5701,7 +5701,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		loglog(RC_LOG_SERIOUS
 			, " DPD: R_U_THERE_ACK has invalid data length (%d)"
 			, (int) pbs_left(pbs));
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	seqno = ntohl(*(u_int32_t *)pbs->cur);
@@ -5715,7 +5715,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		loglog(RC_LOG_SERIOUS
 			, "DPD: R_U_THERE_ACK has unexpected sequence number %u (expected %u)"
 			, seqno, st->st_dpd_expectseqno);
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	st->st_dpd_expectseqno = 0;

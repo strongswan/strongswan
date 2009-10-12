@@ -995,11 +995,11 @@ enum_names ipsec_notification_names =
 		ipsec_notification_name, &notification_dpd_names };
 
 enum_names notification_status_names =
-	{ CONNECTED, CONNECTED,
+	{ ISAKMP_CONNECTED, ISAKMP_CONNECTED,
 		notification_status_name, &ipsec_notification_names };
 
 enum_names notification_names =
-	{ INVALID_PAYLOAD_TYPE, UNEQUAL_PAYLOAD_LENGTHS,
+	{ ISAKMP_INVALID_PAYLOAD_TYPE, ISAKMP_UNEQUAL_PAYLOAD_LENGTHS,
 		notification_name, &notification_status_names };
 
 /* MODECFG

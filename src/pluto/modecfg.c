@@ -1205,7 +1205,7 @@ xauth_inI1(struct msg_digest *md)
 	if (stat != STF_OK)
 	{
 		/* notification payload - not exactly the right choice, but okay */
-		md->note = ATTRIBUTES_NOT_SUPPORTED;
+		md->note = ISAKMP_ATTRIBUTES_NOT_SUPPORTED;
 		return stat;
 	}
 
