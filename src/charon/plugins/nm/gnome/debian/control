@@ -13,15 +13,15 @@ Build-Depends: cdbs,
 	libgnomeui-dev,
 	automake1.9,
 	gnome-common,
-Standards-Version: 3.8.2
+Standards-Version: 3.8.3
 
 Package: network-manager-strongswan
 Architecture: any
-Depends: ${misc:Depends}, strongswan-nm, network-manager
+Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan-nm, network-manager
 Description: network management framework (strongSwan plugin)
  NetworkManager attempts to keep an active network connection available at
  all times.  It is intended primarily for laptops where it allows easy
- switching betwen local wireless networks, it's also useful on desktops
+ switching between local wireless networks, it's also useful on desktops
  with a selection of different interfaces to use.  It is not intended for
  usage on servers.
  .
