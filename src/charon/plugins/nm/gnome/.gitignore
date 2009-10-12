@@ -6,3 +6,5 @@ intltool-update.in
 mkinstalldirs
 nm-strongswan-service.name
 stamp-h1
+config.guess.cdbs-orig
+config.sub.cdbs-orig
