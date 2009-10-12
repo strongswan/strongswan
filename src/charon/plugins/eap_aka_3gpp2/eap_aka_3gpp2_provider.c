@@ -51,12 +51,9 @@ bool eap_aka_3gpp2_get_k(identification_t *id, char k[AKA_K_LEN])
 {
 	shared_key_t *shared;
 	chunk_t key;
-	identification_t *any;
 
-	any = identification_create_from_encoding(ID_ANY, chunk_empty);
 	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, id, any);
-	any->destroy(any);
+											 SHARED_EAP, id, NULL);
 	if (shared == NULL)
 	{
 		return FALSE;
