@@ -1,4 +1,3 @@
 carol::cat /var/log/auth.log::unable to locate my private key::YES
-carol::cat /var/log/auth.log::empty ISAKMP SA proposal to send::YES
 moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::NO
 carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::NO
