@@ -33,12 +33,12 @@ struct private_eap_aka_3gpp2_t {
 	eap_aka_3gpp2_plugin_t public;
 
 	/**
-	 * USIM card
+	 * SIM card
 	 */
 	eap_aka_3gpp2_card_t *card;
 
 	/**
-	 * USIM provider
+	 * SIM provider
 	 */
 	eap_aka_3gpp2_provider_t *provider;
 
@@ -53,8 +53,8 @@ struct private_eap_aka_3gpp2_t {
  */
 static void destroy(private_eap_aka_3gpp2_t *this)
 {
-	charon->usim->remove_card(charon->usim, &this->card->card);
-	charon->usim->remove_provider(charon->usim, &this->provider->provider);
+	charon->sim->remove_card(charon->sim, &this->card->card);
+	charon->sim->remove_provider(charon->sim, &this->provider->provider);
 	this->card->destroy(this->card);
 	this->provider->destroy(this->provider);
 	this->functions->destroy(this->functions);
@@ -79,8 +79,8 @@ plugin_t *plugin_create()
 	this->card = eap_aka_3gpp2_card_create(this->functions);
 	this->provider = eap_aka_3gpp2_provider_create(this->functions);
 
-	charon->usim->add_card(charon->usim, &this->card->card);
-	charon->usim->add_provider(charon->usim, &this->provider->provider);
+	charon->sim->add_card(charon->sim, &this->card->card);
+	charon->sim->add_provider(charon->sim, &this->provider->provider);
 
 	return &this->public.plugin;
 }

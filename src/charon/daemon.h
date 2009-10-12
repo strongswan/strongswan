@@ -163,7 +163,6 @@ typedef struct daemon_t daemon_t;
 #include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
-#include <sa/authenticators/eap/usim_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -282,14 +281,9 @@ struct daemon_t {
 	eap_manager_t *eap;
 
 	/**
-	 * SIM manager to maintain SIM cards/providers
+	 * SIM manager to maintain (U)SIM cards/providers
 	 */
 	sim_manager_t *sim;
-
-	/**
-	 * USIM manager to maintain USIM cards/providers
-	 */
-	usim_manager_t *usim;
 
 #ifdef ME
 	/**

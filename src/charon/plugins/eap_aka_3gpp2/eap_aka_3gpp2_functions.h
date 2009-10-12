@@ -21,7 +21,7 @@
 #ifndef EAP_AKA_3GPP2_FUNCTIONS_H_
 #define EAP_AKA_3GPP2_FUNCTIONS_H_
 
-#include <sa/authenticators/eap/usim_manager.h>
+#include <sa/authenticators/eap/sim_manager.h>
 
 #define AKA_SQN_LEN		 6
 #define AKA_K_LEN		16

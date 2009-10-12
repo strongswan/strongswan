@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -76,7 +76,9 @@ eap_sim_file_provider_t *eap_sim_file_provider_create(
 {
 	private_eap_sim_file_provider_t *this = malloc_thing(private_eap_sim_file_provider_t);
 
-	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[16], char sres[4], char kc[8]))get_triplet;
+	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
+	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
+	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
 	this->public.destroy = (void(*)(eap_sim_file_provider_t*))destroy;
 
 	this->triplets = triplets;

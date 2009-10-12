@@ -29,7 +29,7 @@
 typedef struct eap_aka_3gpp2_plugin_t eap_aka_3gpp2_plugin_t;
 
 /**
- * Plugin to provide a USIM card/provider using the 3GPP2 (S.S0055) standard.
+ * Plugin to provide a SIM card/provider using the 3GPP2 (S.S0055) standard.
  *
  * This plugin implements the standard of the 3GPP2 (S.S0055) and not the one
  * of 3GGP, completely in software using the libgmp library..

@@ -184,8 +184,9 @@ eap_aka_3gpp2_provider_t *eap_aka_3gpp2_provider_create(
 {
 	private_eap_aka_3gpp2_provider_t *this = malloc_thing(private_eap_aka_3gpp2_provider_t);
 
-	this->public.provider.get_quintuplet = (bool(*)(usim_provider_t*, identification_t *imsi, char rand[16], char xres[16], char ck[16], char ik[16], char autn[16]))get_quintuplet;
-	this->public.provider.resync = (bool(*)(usim_provider_t*, identification_t *imsi, char rand[16], char auts[14]))resync;
+	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
+	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))get_quintuplet;
+	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))resync;
 	this->public.destroy = (void(*)(eap_aka_3gpp2_provider_t*))destroy;
 
 	this->f = f;

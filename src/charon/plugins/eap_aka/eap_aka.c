@@ -496,11 +496,11 @@ static u_char get_identifier()
 static status_t server_initiate(private_eap_aka_t *this, eap_payload_t **out)
 {
 	enumerator_t *enumerator;
-	usim_provider_t *provider;
+	sim_provider_t *provider;
 	char ck[AKA_CK_LEN], ik[AKA_IK_LEN], autn[AKA_AUTN_LEN];
 	bool found = FALSE;
 
-	enumerator = charon->usim->create_provider_enumerator(charon->usim);
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->get_quintuplet(provider, this->peer, this->rand,
@@ -537,7 +537,7 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 	chunk_t attr, message, pos, auts = chunk_empty;
 	aka_attribute_t attribute;
 	enumerator_t *enumerator;
-	usim_provider_t *provider;
+	sim_provider_t *provider;
 	bool found = FALSE;
 
 	message = in->get_data(in);
@@ -572,7 +572,7 @@ static status_t server_process_synchronize(private_eap_aka_t *this,
 		return FAILED;
 	}
 
-	enumerator = charon->usim->create_provider_enumerator(charon->usim);
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->resync(provider, this->peer, this->rand, auts.ptr))
@@ -708,7 +708,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 	aka_attribute_t attribute;
 	u_int8_t identifier;
 	enumerator_t *enumerator;
-	usim_card_t *card;
+	sim_card_t *card;
 	u_char res[AKA_RES_LEN], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
 	status_t status = NOT_FOUND;
 
@@ -759,7 +759,7 @@ static status_t peer_process_challenge(private_eap_aka_t *this,
 		return NEED_MORE;
 	}
 
-	enumerator = charon->usim->create_card_enumerator(charon->usim);
+	enumerator = charon->sim->create_card_enumerator(charon->sim);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		status = card->get_quintuplet(card, this->peer, rand.ptr, autn.ptr,
