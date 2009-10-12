@@ -32,9 +32,16 @@ strongswan-4.3.5
   --with-nm-ca-dir=path configure option.
 
 - Fixed the encoding of the Email relative distinguished name in left|rightid
-  statements
+  statements.
 
-- Fixed the broken parsing of PKCS#7 wrapped certificates by the pluto daemon
+- Fixed the broken parsing of PKCS#7 wrapped certificates by the pluto daemon.
+
+- Fixed smartcard-based authentication in the pluto daemon which was broken by
+  the ECDSA support introduced with the 4.3.2 release.
+
+- The pluto daemon now uses the libstrongswan x509 plugin for certificates and
+  CRls and the struct id type was replaced by identification_t used by charon
+  and the libstrongswan library.
 
 
 strongswan-4.3.4
