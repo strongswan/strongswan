@@ -220,7 +220,7 @@ static bool shared_filter(shared_data_t *data,
 						  void **unused1, id_match_t *me,
 						  void **unused2, id_match_t *other)
 {
-	id_match_t my_match, other_match;
+	id_match_t my_match = ID_MATCH_ANY, other_match = ID_MATCH_ANY;
 	stroke_shared_key_t *stroke = *in;
 	shared_key_t *shared = &stroke->shared;
 
@@ -229,8 +229,14 @@ static bool shared_filter(shared_data_t *data,
 		return FALSE;
 	}
 
-	my_match = stroke->has_owner(stroke, data->me);
-	other_match = stroke->has_owner(stroke, data->other);
+	if (data->me)
+	{
+		my_match = stroke->has_owner(stroke, data->me);
+	}
+	if (data->other)
+	{
+		other_match = stroke->has_owner(stroke, data->other);
+	}
 	if (!my_match && !other_match)
 	{
 		return FALSE;
