@@ -26,6 +26,7 @@
 #include <freeswan.h>
 
 #include <library.h>
+#include <attributes/attributes.h>
 #include <crypto/prfs/prf.h>
 
 #include "constants.h"

@@ -25,6 +25,8 @@
 
 #include <freeswan.h>
 
+#include <attributes/attributes.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"

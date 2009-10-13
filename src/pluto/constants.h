@@ -534,24 +534,6 @@ extern const char *const payload_name[];
 
 extern enum_names attr_msg_type_names;
 
-/* Mode Config attribute values */
-#define    INTERNAL_IP4_ADDRESS        1
-#define    INTERNAL_IP4_NETMASK        2
-#define    INTERNAL_IP4_DNS            3
-#define    INTERNAL_IP4_NBNS           4
-#define    INTERNAL_ADDRESS_EXPIRY     5
-#define    INTERNAL_IP4_DHCP           6
-#define    APPLICATION_VERSION         7
-#define    INTERNAL_IP6_ADDRESS        8
-#define    INTERNAL_IP6_NETMASK        9
-#define    INTERNAL_IP6_DNS           10
-#define    INTERNAL_IP6_NBNS          11
-#define    INTERNAL_IP6_DHCP          12
-#define    INTERNAL_IP4_SUBNET        13
-#define    SUPPORTED_ATTRIBUTES       14
-#define    INTERNAL_IP6_SUBNET        15
-
-
 extern enum_names modecfg_attr_names;
 
 /* XAUTH attribute values */
