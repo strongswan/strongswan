@@ -200,6 +200,10 @@ if USE_SQLITE
   SUBDIRS += plugins/sqlite
 endif
 
+if USE_ATTR_SQL
+  SUBDIRS += plugins/attr_sql
+endif
+
 if USE_PADLOCK
   SUBDIRS += plugins/padlock
 endif

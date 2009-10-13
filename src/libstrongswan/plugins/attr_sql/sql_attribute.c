@@ -13,11 +13,12 @@
  * for more details.
  */
 
-#include "sql_attribute.h"
-
 #include <time.h>
 
-#include <daemon.h>
+#include <debug.h>
+#include <library.h>
+
+#include "sql_attribute.h"
 
 typedef struct private_sql_attribute_t private_sql_attribute_t;
 
@@ -126,8 +127,8 @@ static host_t* check_lease(private_sql_attribute_t *this, char *name,
 			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
-				DBG1(DBG_CFG, "acquired existing lease "
-					 "for address %H in pool '%s'", host, name);
+				DBG1("acquired existing lease for address %H in pool '%s'",
+					 host, name);
 				return host;
 			}
 		}
@@ -201,13 +202,13 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 			host = host_create_from_chunk(AF_UNSPEC, address, 0);
 			if (host)
 			{
-				DBG1(DBG_CFG, "acquired new lease "
-					 "for address %H in pool '%s'", host, name);
+				DBG1("acquired new lease for address %H in pool '%s'",
+					 host, name);
 				return host;
 			}
 		}
 	}
-	DBG1(DBG_CFG, "no available address found in pool '%s'", name);
+	DBG1("no available address found in pool '%s'", name);
 	return NULL;
 }
 

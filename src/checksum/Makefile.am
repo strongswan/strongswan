@@ -29,8 +29,8 @@ if USE_TOOLS
   libs += $(top_builddir)/src/scepclient/.libs/scepclient
 endif
 
-if USE_SQL
-  libs += $(top_builddir)/src/charon/plugins/sql/.libs/pool
+if USE_ATTR_SQL
+  libs += $(top_builddir)/src/libstrongswan/plugins/attr_sql/.libs/pool
 endif
 
 checksum.c : checksum_builder $(libs)

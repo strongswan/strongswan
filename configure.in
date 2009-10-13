@@ -127,6 +127,7 @@ ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclien
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
+ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
 ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
@@ -618,6 +619,10 @@ fi
 if test x$sqlite = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
 fi
+if test x$attr_sql = xtrue -o x$sql = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" attr-sql"
+	pluto_plugins=${pluto_plugins}" attr-sql"
+fi
 if test x$padlock = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
 fi
@@ -676,6 +681,7 @@ AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
@@ -775,6 +781,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
+	src/libstrongswan/plugins/attr_sql/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
