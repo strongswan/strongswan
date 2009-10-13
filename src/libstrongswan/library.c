@@ -67,6 +67,7 @@ void library_deinit()
 	this->public.encoding->destroy(this->public.encoding);
 	this->public.crypto->destroy(this->public.crypto);
 	this->public.fetcher->destroy(this->public.fetcher);
+	this->public.attributes->destroy(this->public.attributes);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
 	if (this->public.integrity)
@@ -126,6 +127,7 @@ bool library_init(char *settings)
 	this->public.creds = credential_factory_create();
 	this->public.encoding = key_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
+	this->public.attributes = attribute_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();
 	this->public.integrity = NULL;

@@ -43,7 +43,7 @@ struct private_nm_handler_t {
 /**
  * Implementation of attribute_handler_t.handle
  */
-static bool handle(private_nm_handler_t *this, ike_sa_t *ike_sa,
+static bool handle(private_nm_handler_t *this, identification_t *server,
 				   configuration_attribute_type_t type, chunk_t data)
 {
 	linked_list_t *list;
@@ -134,8 +134,8 @@ nm_handler_t *nm_handler_create()
 {
 	private_nm_handler_t *this = malloc_thing(private_nm_handler_t);
 
-	this->public.handler.handle = (bool(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))handle;
-	this->public.handler.release = (void(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))nop;
+	this->public.handler.handle = (bool(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
+	this->public.handler.release = (void(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))nop;
 	this->public.create_enumerator = (enumerator_t*(*)(nm_handler_t*, configuration_attribute_type_t type))create_enumerator;
 	this->public.reset = (void(*)(nm_handler_t*))reset;
 	this->public.destroy = (void(*)(nm_handler_t*))destroy;

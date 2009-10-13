@@ -21,8 +21,10 @@
 #ifndef ATTRIBUTE_HANDLER_H_
 #define ATTRIBUTE_HANDLER_H_
 
-#include <sa/ike_sa.h>
-#include <encoding/payloads/configuration_attribute.h>
+#include <chunk.h>
+#include <utils/identification.h>
+
+#include "attributes.h"
 
 typedef struct attribute_handler_t attribute_handler_t;
 
@@ -37,21 +39,22 @@ struct attribute_handler_t {
 	 * After receiving a configuration attriubte, it is passed to each
 	 * attribute handler until it is handled.
 	 *
+	 * @param server	server from which the attribute was received
 	 * @param type		type of configuration attribute to handle
 	 * @param data		associated attribute data
 	 * @return			TRUE if attribute handled
 	 */
-	bool (*handle)(attribute_handler_t *this, ike_sa_t *ike_sa,
+	bool (*handle)(attribute_handler_t *this, identification_t *server,
 				   configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Release an attribute handled during handle().
 	 *
 	 * A handler that handle()d an attribute gets a call to release() when the
-	 * IKE_SA gets closed. Depending on the implementation, this is required
+	 * connection gets closed. Depending on the implementation, this is required
 	 * to remove the attribute.
 	 */
-	void (*release)(attribute_handler_t *this, ike_sa_t *ike_sa,
+	void (*release)(attribute_handler_t *this, identification_t *server,
 					configuration_attribute_type_t type, chunk_t data);
 };
 

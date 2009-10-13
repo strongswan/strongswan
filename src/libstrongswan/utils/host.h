@@ -34,7 +34,7 @@ typedef struct host_t host_t;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <library.h>
+#include <chunk.h>
 
 /**
  * Differences between two hosts. They differ in

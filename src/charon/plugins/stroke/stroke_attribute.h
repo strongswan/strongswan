@@ -22,7 +22,7 @@
 #define STROKE_ATTRIBUTE_H_
 
 #include <stroke_msg.h>
-#include <config/attributes/attribute_provider.h>
+#include <attributes/attribute_provider.h>
 
 typedef struct stroke_attribute_t stroke_attribute_t;
 

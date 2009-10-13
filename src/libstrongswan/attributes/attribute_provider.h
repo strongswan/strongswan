@@ -21,7 +21,6 @@
 #ifndef ATTRIBUTE_PROVIDER_H_
 #define ATTRIBUTE_PROVIDER_H_
 
-#include <library.h>
 #include <utils/host.h>
 #include <utils/identification.h>
 

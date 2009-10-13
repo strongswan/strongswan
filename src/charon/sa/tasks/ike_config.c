@@ -258,7 +258,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
 			{
-				vip = charon->attributes->acquire_address(charon->attributes,
+				vip = lib->attributes->acquire_address(lib->attributes,
 									config->get_pool(config),
 									this->ike_sa->get_other_id(this->ike_sa),
 									this->virtual_ip);
@@ -281,8 +281,8 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			vip->destroy(vip);
 
 			/* if we add an IP, we also look for other attributes */
-			enumerator = charon->attributes->create_attribute_enumerator(
-				charon->attributes, this->ike_sa->get_other_id(this->ike_sa));
+			enumerator = lib->attributes->create_attribute_enumerator(
+					lib->attributes, this->ike_sa->get_other_id(this->ike_sa));
 			while (enumerator->enumerate(enumerator, &type, &value))
 			{
 				ca = configuration_attribute_create();

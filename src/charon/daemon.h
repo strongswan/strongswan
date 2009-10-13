@@ -159,7 +159,6 @@ typedef struct daemon_t daemon_t;
 #include <sa/ike_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <config/backend_manager.h>
-#include <config/attributes/attribute_manager.h>
 #include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
@@ -219,11 +218,6 @@ struct daemon_t {
 	 * Manager for the different configuration backends.
 	 */
 	backend_manager_t *backends;
-
-	/**
-	 * Manager for IKEv2 cfg payload attributes
-	 */
-	attribute_manager_t *attributes;
 
 	/**
 	 * Manager for the credential backends

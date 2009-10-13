@@ -12,9 +12,6 @@ config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/auth_cfg.c config/auth_cfg.h \
 config/traffic_selector.c config/traffic_selector.h \
-config/attributes/attribute_provider.h \
-config/attributes/attribute_handler.h \
-config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \

@@ -21,7 +21,7 @@
 #ifndef RESOLVE_HANDLER_H_
 #define RESOLVE_HANDLER_H_
 
-#include <config/attributes/attribute_handler.h>
+#include <attributes/attribute_handler.h>
 
 typedef struct resolve_handler_t resolve_handler_t;
 

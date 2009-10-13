@@ -21,8 +21,8 @@
 #ifndef ATTRIBUTE_MANAGER_H_
 #define ATTRIBUTE_MANAGER_H_
 
-#include <config/attributes/attribute_provider.h>
-#include <config/attributes/attribute_handler.h>
+#include "attribute_provider.h"
+#include "attribute_handler.h"
 
 typedef struct attribute_manager_t attribute_manager_t;
 
@@ -85,24 +85,26 @@ struct attribute_manager_t {
 	/**
 	 * Handle a configuration attribute by passing them to the handlers.
 	 *
-	 * @param ike_sa		IKE_SA where attribute was received
+	 * @param server		server from which the attribute was received
 	 * @param type			type of configuration attribute
 	 * @param data			associated attribute data
 	 * @return				handler which handled this attribute, NULL if none
 	 */
-	attribute_handler_t* (*handle)(attribute_manager_t *this, ike_sa_t *ike_sa,
+	attribute_handler_t* (*handle)(attribute_manager_t *this,
+							identification_t *server,
 							configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Release an attribute previously handle()d by a handler.
 	 *
 	 * @param handler		handler returned by handle() for this attribute
-	 * @param ike_sa		IKE_SA owning the attribute
+	 * @param server		server from which the attribute was received
 	 * @param type			type of attribute to release
 	 * @param data			associated attribute data
 	 */
 	void (*release)(attribute_manager_t *this, attribute_handler_t *handler,
-						ike_sa_t *ike_sa, configuration_attribute_type_t type,
+						identification_t *server,
+						configuration_attribute_type_t type,
 						chunk_t data);
 
 	/**

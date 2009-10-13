@@ -1848,8 +1848,8 @@ static void add_configuration_attribute(private_ike_sa_t *this,
 	attribute_entry_t *entry;
 	attribute_handler_t *handler;
 
-	handler = charon->attributes->handle(charon->attributes,
-										 &this->public, type, data);
+	handler = lib->attributes->handle(lib->attributes, this->other_id,
+									  type, data);
 	if (handler)
 	{
 		entry = malloc_thing(attribute_entry_t);
@@ -1962,8 +1962,8 @@ static void destroy(private_ike_sa_t *this)
 	while (this->attributes->remove_last(this->attributes,
 										 (void**)&entry) == SUCCESS)
 	{
-		charon->attributes->release(charon->attributes, entry->handler,
-									&this->public, entry->type, entry->data);
+		lib->attributes->release(lib->attributes, entry->handler,
+								 this->other_id, entry->type, entry->data);
 		free(entry->data.ptr);
 		free(entry);
 	}
@@ -1987,7 +1987,7 @@ static void destroy(private_ike_sa_t *this)
 	{
 		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
 		{
-			charon->attributes->release_address(charon->attributes,
+			lib->attributes->release_address(lib->attributes,
 									this->peer_cfg->get_pool(this->peer_cfg),
 									this->other_virtual_ip, this->other_id);
 		}

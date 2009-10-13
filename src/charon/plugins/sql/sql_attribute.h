@@ -21,7 +21,8 @@
 #ifndef SQL_ATTRIBUTE_H_
 #define SQL_ATTRIBUTE_H_
 
-#include <config/attributes/attribute_provider.h>
+#include <attributes/attribute_provider.h>
+#include <database/database.h>
 
 typedef struct sql_attribute_t sql_attribute_t;
 

@@ -21,7 +21,7 @@
 #ifndef ATTR_PROVIDER_H_
 #define ATTR_PROVIDER_H_
 
-#include <config/attributes/attribute_provider.h>
+#include <attributes/attribute_provider.h>
 
 typedef struct attr_provider_t attr_provider_t;
 

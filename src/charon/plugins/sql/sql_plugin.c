@@ -66,8 +66,8 @@ static void destroy(private_sql_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->cred->set);
-	charon->attributes->remove_provider(charon->attributes, &this->attribute->provider);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
+	lib->attributes->remove_provider(lib->attributes, &this->attribute->provider);
 	this->config->destroy(this->config);
 	this->cred->destroy(this->cred);
 	this->attribute->destroy(this->attribute);
@@ -107,9 +107,9 @@ plugin_t *plugin_create()
 	this->attribute = sql_attribute_create(this->db);
 	this->logger = sql_logger_create(this->db);
 
+	lib->attributes->add_provider(lib->attributes, &this->attribute->provider);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
-	charon->attributes->add_provider(charon->attributes, &this->attribute->provider);
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
 
 	return &this->public.plugin;

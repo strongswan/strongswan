@@ -46,7 +46,7 @@ struct private_resolve_handler_t {
 /**
  * Implementation of attribute_handler_t.handle
  */
-static bool handle(private_resolve_handler_t *this, ike_sa_t *ike_sa,
+static bool handle(private_resolve_handler_t *this, identification_t *server,
 				   configuration_attribute_type_t type, chunk_t data)
 {
 	FILE *in, *out;
@@ -78,7 +78,7 @@ static bool handle(private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	{
 		addr = host_create_from_chunk(family, data, 0);
 		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n",
-				addr, ike_sa->get_other_id(ike_sa));
+				addr, server);
 		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
 		addr->destroy(addr);
 		handled = TRUE;
@@ -106,7 +106,7 @@ static bool handle(private_resolve_handler_t *this, ike_sa_t *ike_sa,
 /**
  * Implementation of attribute_handler_t.release
  */
-static void release(private_resolve_handler_t *this, ike_sa_t *ike_sa,
+static void release(private_resolve_handler_t *this, identification_t *server,
 					configuration_attribute_type_t type, chunk_t data)
 {
 	FILE *in, *out;
@@ -139,7 +139,7 @@ static void release(private_resolve_handler_t *this, ike_sa_t *ike_sa,
 			addr = host_create_from_chunk(family, data, 0);
 			snprintf(matcher, sizeof(matcher),
 					 "nameserver %H   # by strongSwan, from %Y\n",
-					 addr, ike_sa->get_other_id(ike_sa));
+					 addr, server);
 
 			/* copy all, but matching line */
 			while ((pos = fgets(line, sizeof(line), in)))
@@ -179,8 +179,8 @@ resolve_handler_t *resolve_handler_create()
 {
 	private_resolve_handler_t *this = malloc_thing(private_resolve_handler_t);
 
-	this->public.handler.handle = (bool(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))handle;
-	this->public.handler.release = (void(*)(attribute_handler_t*, ike_sa_t*, configuration_attribute_type_t, chunk_t))release;
+	this->public.handler.handle = (bool(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
+	this->public.handler.release = (void(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))release;
 	this->public.destroy = (void(*)(resolve_handler_t*))destroy;
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);

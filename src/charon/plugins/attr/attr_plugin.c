@@ -41,7 +41,7 @@ struct private_attr_plugin_t {
  */
 static void destroy(private_attr_plugin_t *this)
 {
-	charon->attributes->remove_provider(charon->attributes, &this->provider->provider);
+	lib->attributes->remove_provider(lib->attributes, &this->provider->provider);
 	this->provider->destroy(this->provider);
 	free(this);
 }
@@ -56,7 +56,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	this->provider = attr_provider_create();
-	charon->attributes->add_provider(charon->attributes, &this->provider->provider);
+	lib->attributes->add_provider(lib->attributes, &this->provider->provider);
 
 	return &this->public.plugin;
 }

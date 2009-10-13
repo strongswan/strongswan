@@ -41,8 +41,7 @@ struct private_resolve_plugin_t {
  */
 static void destroy(private_resolve_plugin_t *this)
 {
-	charon->attributes->remove_handler(charon->attributes,
-									   &this->handler->handler);
+	lib->attributes->remove_handler(lib->attributes, &this->handler->handler);
 	this->handler->destroy(this->handler);
 	free(this);
 }
@@ -56,7 +55,7 @@ plugin_t *plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	this->handler = resolve_handler_create();
-	charon->attributes->add_handler(charon->attributes, &this->handler->handler);
+	lib->attributes->add_handler(lib->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
 }

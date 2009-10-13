@@ -26,6 +26,7 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <crypto/hashers/hasher.h>
 
 ENUM_BEGIN(id_match_names, ID_MATCH_NONE, ID_MATCH_MAX_WILDCARDS,
 	"MATCH_NONE",

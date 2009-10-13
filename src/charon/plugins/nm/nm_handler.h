@@ -21,7 +21,7 @@
 #ifndef NM_HANDLER_H_
 #define NM_HANDLER_H_
 
-#include <config/attributes/attribute_handler.h>
+#include <attributes/attribute_handler.h>
 
 typedef struct nm_handler_t nm_handler_t;
 
