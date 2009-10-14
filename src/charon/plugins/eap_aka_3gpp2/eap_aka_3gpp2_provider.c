@@ -187,6 +187,9 @@ eap_aka_3gpp2_provider_t *eap_aka_3gpp2_provider_create(
 	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
 	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))get_quintuplet;
 	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))resync;
+	this->public.provider.gen_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
+	this->public.provider.is_reauth = (bool(*)(sim_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))return_false;
+	this->public.provider.gen_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))return_null;
 	this->public.destroy = (void(*)(eap_aka_3gpp2_provider_t*))destroy;
 
 	this->f = f;

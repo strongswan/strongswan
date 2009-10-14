@@ -146,11 +146,11 @@ struct sim_provider_t {
 	/**
 	 * Create a challenge for SIM authentication.
 	 *
-	 * @param imsi	client identity
-	 * @param rand	RAND output buffer, fixed size 16 bytes
-	 * @param sres	SRES output buffer, fixed size 4 byte
-	 * @param kc	KC output buffer, fixed size 8 bytes
-	 * @return		TRUE if triplet received, FALSE otherwise
+	 * @param imsi		client identity
+	 * @param rand		RAND output buffer, fixed size 16 bytes
+	 * @param sres		SRES output buffer, fixed size 4 byte
+	 * @param kc		KC output buffer, fixed size 8 bytes
+	 * @return			TRUE if triplet received, FALSE otherwise
 	 */
 	bool (*get_triplet)(sim_provider_t *this, identification_t *imsi,
 						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
@@ -159,13 +159,13 @@ struct sim_provider_t {
 	/**
 	 * Create a challenge for AKA authentication.
 	 *
-	 * @param imsi	peer identity to create challenge for
-	 * @param rand	buffer receiving random value rand
-	 * @param xres	buffer receiving expected authentication result xres
-	 * @param ck	buffer receiving encryption key ck
-	 * @param ik	buffer receiving integrity key ik
-	 * @param autn	authentication token autn
-	 * @return		TRUE if quintuplet generated successfully
+	 * @param imsi		peer identity to create challenge for
+	 * @param rand		buffer receiving random value rand
+	 * @param xres		buffer receiving expected authentication result xres
+	 * @param ck		buffer receiving encryption key ck
+	 * @param ik		buffer receiving integrity key ik
+	 * @param autn		authentication token autn
+	 * @return			TRUE if quintuplet generated successfully
 	 */
 	bool (*get_quintuplet)(sim_provider_t *this, identification_t *imsi,
 						   char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
@@ -175,13 +175,43 @@ struct sim_provider_t {
 	/**
 	 * Process AKA resynchroniusation request of a peer.
 	 *
-	 * @param imsi	peer identity requesting resynchronisation
-	 * @param rand	random value rand
-	 * @param auts	synchronization parameter auts
-	 * @return		TRUE if resynchronized successfully
+	 * @param imsi		peer identity requesting resynchronisation
+	 * @param rand		random value rand
+	 * @param auts		synchronization parameter auts
+	 * @return			TRUE if resynchronized successfully
 	 */
 	bool (*resync)(sim_provider_t *this, identification_t *imsi,
 				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
+
+	/**
+	 * Generate a pseudonym identitiy for a given peer identity.
+	 *
+	 * @param id		peer identity to generate a pseudonym for
+	 * @return			generated pseudonym, NULL to not use a pseudonym identity
+	 */
+	identification_t* (*gen_pseudonym)(sim_provider_t *this,
+									   identification_t *id);
+
+	/**
+	 * Check if peer uses reauthentication, retrieve parameters if so.
+	 *
+	 * @param id		peer identity, candidate for a reauthentication identity
+	 * @param mk		buffer receiving master key MK
+	 * @param counter	pointer receiving current counter value, host order
+	 * @return			TRUE if id is a fast reauthentication identity
+	 */
+	bool (*is_reauth)(sim_provider_t *this, identification_t *id,
+					  char mk[HASH_SIZE_SHA1], u_int16_t *counter);
+
+	/**
+	 * Generate a fast reauthentication identity, associated to a master key.
+	 *
+	 * @param id		previously used reauthentication/pseudo/permanent id
+	 * @param mk		master key to store to generated identity
+	 * @return			fast reauthentication identity, NULL to not use reauth
+	 */
+	identification_t* (*gen_reauth)(sim_provider_t *this, identification_t *id,
+									char mk[HASH_SIZE_SHA1]);
 };
 
 /**
