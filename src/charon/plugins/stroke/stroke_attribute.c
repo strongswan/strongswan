@@ -320,7 +320,7 @@ static bool release_address(private_stroke_attribute_t *this,
  */
 static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
-	if (msg->add_conn.other.sourceip_size)
+	if (msg->add_conn.other.sourceip_mask)
 	{
 		pool_t *pool;
 
@@ -344,7 +344,7 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 
 			DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d",
 				 msg->add_conn.name, msg->add_conn.other.sourceip,
-				 msg->add_conn.other.sourceip_size);
+				 msg->add_conn.other.sourceip_mask);
 
 			pool->base = host_create_from_string(msg->add_conn.other.sourceip, 0);
 			if (!pool->base)
@@ -354,7 +354,7 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 				return;
 			}
 			family = pool->base->get_family(pool->base);
-			bits = (family == AF_INET ? 32 : 128) - msg->add_conn.other.sourceip_size;
+			bits = (family == AF_INET ? 32 : 128) - msg->add_conn.other.sourceip_mask;
 			if (bits > POOL_LIMIT)
 			{
 				bits = POOL_LIMIT;

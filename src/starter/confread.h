@@ -82,7 +82,8 @@ struct starter_end {
 		char            *updown;
 		u_int16_t       port;
 		u_int8_t        protocol;
-		char            *srcip;
+		char            *sourceip;
+		int				sourceip_mask;
 };
 
 typedef struct also also_t;

@@ -320,7 +320,9 @@ void delete_connection(connection_t *c, bool relations)
 	release_connection(c, relations);   /* won't delete c */
 
 	if (c->kind == CK_GROUP)
+	{
 		delete_group(c);
+	}
 
 	/* free up any logging resources */
 	perpeer_logfree(c);
@@ -333,7 +335,9 @@ void delete_connection(connection_t *c, bool relations)
 	if (c->host_pair == NULL)
 	{
 		if (c->ikev1)
+		{
 			list_rm(connection_t, hp_next, c, unoriented_connections);
+		}
 	}
 	else
 	{
@@ -358,6 +362,20 @@ void delete_connection(connection_t *c, bool relations)
 	{
 		free(c->spd.that.virt);
 	}
+
+	/* release virtual IP address lease if any */
+	if (c->spd.that.modecfg && c->spd.that.pool &&
+		!isanyaddr(&c->spd.that.host_srcip))
+	{
+		host_t *vip;
+
+		vip = host_create_from_sockaddr((sockaddr_t*)&c->spd.that.host_srcip);
+		lib->attributes->release_address(lib->attributes, c->spd.that.pool,
+										 vip, c->spd.that.id);
+		vip->destroy(vip);
+	}
+
+	/* free internal data */
 #ifdef DEBUG
 	cur_debugging = old_cur_debugging;
 #endif
@@ -366,10 +384,12 @@ void delete_connection(connection_t *c, bool relations)
 	DESTROY_IF(c->spd.this.ca);
 	DESTROY_IF(c->spd.this.groups);
 	free(c->spd.this.updown);
+	free(c->spd.this.pool);
 	DESTROY_IF(c->spd.that.id);
 	DESTROY_IF(c->spd.that.ca);
 	DESTROY_IF(c->spd.that.groups);
 	free(c->spd.that.updown);
+	free(c->spd.that.pool);
 	if (c->requested_ca)
 	{
 		c->requested_ca->destroy_offset(c->requested_ca,
@@ -562,7 +582,7 @@ static err_t default_end(struct end *e, ip_address *dflt_nexthop)
 size_t format_end(char *buf, size_t buf_len, const struct end *this,
 				 const struct end *that, bool is_left, lset_t policy)
 {
-	char client[SUBNETTOT_BUF];
+	char client[BUF_LEN];
 	const char *client_sep = "";
 	char protoport[sizeof(":255/65535")];
 	const char *host = NULL;
@@ -618,17 +638,24 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 
 		if (isanyaddr(&client_net) && isanyaddr(&client_mask)
 		&& (policy & (POLICY_GROUP | POLICY_OPPO)))
+		{
 			client_sep = "";    /* boring case */
+		}
 		else if (subnetisnone(&this->client))
+		{
 			strcpy(client, "?");
+		}
 		else
+		{
 			subnettot(&this->client, 0, client, sizeof(client));
+		}
 	}
 	else if (this->modecfg && isanyaddr(&this->host_srcip))
 	{
-		/* we are mode config client */
+		/* we are mode config client, or a server with a pool */
 		client_sep = "===";
-		strcpy(client, "%modecfg");
+		client[0] = '%';
+		strcpy(client+1, this->pool ? this->pool : "modecfg");
 	}
 
 	/* host */
@@ -640,16 +667,21 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 
 	host_port[0] = '\0';
 	if (this->host_port != IKE_UDP_PORT)
-		snprintf(host_port, sizeof(host_port), ":%u"
-			, this->host_port);
+	{
+		snprintf(host_port, sizeof(host_port), ":%u", this->host_port);
+	}
 
 	/* payload portocol and port */
 	protoport[0] = '\0';
 	if (this->has_port_wildcard)
+	{
 		snprintf(protoport, sizeof(protoport), ":%u/%%any", this->protocol);
+	}
 	else if (this->port || this->protocol)
+	{
 		snprintf(protoport, sizeof(protoport), ":%u/%u", this->protocol
 			, this->port);
+	}
 
 	/* id */
 	snprintf(host_id, sizeof(host_id), "[%Y]", this->id); 
@@ -664,17 +696,21 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 	}
 
 	if (is_left)
+	{
 		snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s%s"
 			, open_brackets, client, close_brackets, client_sep
 			, this->allow_any? "%":""
 			, host, host_port, host_id, protoport
 			, hop_sep, hop);
+	}
 	else
+	{
 		snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s%s"
 			, hop, hop_sep
 			, this->allow_any? "%":""
 			, host, host_port, host_id, protoport, client_sep
 			, open_brackets, client, close_brackets);
+	}
 	return strlen(buf);
 }
 
@@ -697,6 +733,7 @@ static void unshare_connection_strings(connection_t *c)
 {
 	c->name = clone_str(c->name);
 	c->spd.this.id = c->spd.this.id->clone(c->spd.this.id);
+	c->spd.this.pool = clone_str(c->spd.this.pool);
 	c->spd.this.updown = clone_str(c->spd.this.updown);
 	scx_share(c->spd.this.sc);
 	share_cert(c->spd.this.cert);
@@ -709,6 +746,7 @@ static void unshare_connection_strings(connection_t *c)
 		c->spd.this.groups = c->spd.this.groups->get_ref(c->spd.this.groups);
 	}
 	c->spd.that.id = c->spd.that.id->clone(c->spd.that.id);
+	c->spd.that.pool = clone_str(c->spd.that.pool);
 	c->spd.that.updown = clone_str(c->spd.that.updown);
 	scx_share(c->spd.that.sc);
 	share_cert(c->spd.that.cert);
@@ -886,13 +924,17 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->updown = clone_str(src->updown);
 	dst->host_port = src->host_port;
 
+	/* if the sourceip netmask is zero a named pool exists */
+	if (src->sourceip_mask == 0)
+	{
+		dst->pool = clone_str(src->sourceip);
+	}
+
 	/* if host sourceip is defined but no client is present
 	 * behind the host then set client to sourceip/32
 	 */
-	if (addrbytesptr(&dst->host_srcip, NULL)
-	&& !isanyaddr(&dst->host_srcip)
-	&& !dst->has_natip
-	&& !dst->has_client)
+	if (addrbytesptr(&dst->host_srcip, NULL) &&
+		!isanyaddr(&dst->host_srcip) && !dst->has_natip && !dst->has_client)
 	{
 		err_t ugh = addrtosubnet(&dst->host_srcip, &dst->client);
 
@@ -2987,7 +3029,9 @@ void ISAKMP_SA_established(connection_t *c, so_serial_t serial)
 	 * whether we are a mode config server with a virtual IP to send.
 	 */
 	if (!isanyaddr(&c->spd.that.host_srcip) && !c->spd.that.has_natip)
+	{
 		c->spd.that.modecfg = TRUE;
+	}
 
 	if (uniqueIDs)
 	{

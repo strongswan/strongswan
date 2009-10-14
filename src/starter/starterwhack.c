@@ -33,8 +33,7 @@
 
 #define ip_version(string)      (strchr(string, '.') ? AF_INET : AF_INET6)
 
-static int
-pack_str (char **p, char **next, char **roof)
+static int pack_str (char **p, char **next, char **roof)
 {
 	const char *s = (*p==NULL) ? "" : *p;    /* note: NULL becomes ""! */
 	size_t len = strlen(s) + 1;
@@ -52,8 +51,7 @@ pack_str (char **p, char **next, char **roof)
 	}
 }
 
-static int
-send_whack_msg (whack_message_t *msg)
+static int send_whack_msg (whack_message_t *msg)
 {
 	struct sockaddr_un ctl_addr;
 	int sock;
@@ -67,37 +65,41 @@ send_whack_msg (whack_message_t *msg)
 	str_next = (char *)msg->string;
 	str_roof = (char *)&msg->string[sizeof(msg->string)];
 
-	if (!pack_str(&msg->name,         &str_next, &str_roof)
-	||  !pack_str(&msg->left.id,      &str_next, &str_roof)
-	||  !pack_str(&msg->left.cert,    &str_next, &str_roof)
-	||  !pack_str(&msg->left.ca,      &str_next, &str_roof)
-	||  !pack_str(&msg->left.groups,  &str_next, &str_roof)
-	||  !pack_str(&msg->left.updown,  &str_next, &str_roof)
-	||  !pack_str(&msg->left.virt,    &str_next, &str_roof)
-	||  !pack_str(&msg->right.id,     &str_next, &str_roof)
-	||  !pack_str(&msg->right.cert,   &str_next, &str_roof)
-	||  !pack_str(&msg->right.ca,     &str_next, &str_roof)
-	||  !pack_str(&msg->right.groups, &str_next, &str_roof)
-	||  !pack_str(&msg->right.updown, &str_next, &str_roof)
-	|| !pack_str(&msg->right.virt,    &str_next, &str_roof)
-	|| !pack_str(&msg->keyid,         &str_next, &str_roof)
-	|| !pack_str(&msg->myid,          &str_next, &str_roof)
-	|| !pack_str(&msg->cacert,        &str_next, &str_roof)
-	|| !pack_str(&msg->ldaphost,      &str_next, &str_roof)
-	|| !pack_str(&msg->ldapbase,      &str_next, &str_roof)
-	|| !pack_str(&msg->crluri,        &str_next, &str_roof)
-	|| !pack_str(&msg->crluri2,       &str_next, &str_roof)
-	|| !pack_str(&msg->ocspuri,       &str_next, &str_roof)
-	|| !pack_str(&msg->ike,           &str_next, &str_roof)
-	|| !pack_str(&msg->esp,           &str_next, &str_roof)
-	|| !pack_str(&msg->sc_data,       &str_next, &str_roof)
-	|| (str_roof - str_next < msg->keyval.len))
+	if (!pack_str(&msg->name,           &str_next, &str_roof)
+	||  !pack_str(&msg->left.id,        &str_next, &str_roof)
+	||  !pack_str(&msg->left.cert,      &str_next, &str_roof)
+	||  !pack_str(&msg->left.ca,        &str_next, &str_roof)
+	||  !pack_str(&msg->left.groups,    &str_next, &str_roof)
+	||  !pack_str(&msg->left.updown,    &str_next, &str_roof)
+	||  !pack_str(&msg->left.sourceip,  &str_next, &str_roof)
+	||  !pack_str(&msg->left.virt,      &str_next, &str_roof)
+	||  !pack_str(&msg->right.id,       &str_next, &str_roof)
+	||  !pack_str(&msg->right.cert,     &str_next, &str_roof)
+	||  !pack_str(&msg->right.ca,       &str_next, &str_roof)
+	||  !pack_str(&msg->right.groups,   &str_next, &str_roof)
+	||  !pack_str(&msg->right.updown,   &str_next, &str_roof)
+	||  !pack_str(&msg->right.sourceip, &str_next, &str_roof)
+	||  !pack_str(&msg->right.virt,     &str_next, &str_roof)
+	||  !pack_str(&msg->keyid,          &str_next, &str_roof)
+	||  !pack_str(&msg->myid,           &str_next, &str_roof)
+	||  !pack_str(&msg->cacert,         &str_next, &str_roof)
+	||  !pack_str(&msg->ldaphost,       &str_next, &str_roof)
+	||  !pack_str(&msg->ldapbase,       &str_next, &str_roof)
+	||  !pack_str(&msg->crluri,         &str_next, &str_roof)
+	||  !pack_str(&msg->crluri2,        &str_next, &str_roof)
+	||  !pack_str(&msg->ocspuri,        &str_next, &str_roof)
+	||  !pack_str(&msg->ike,            &str_next, &str_roof)
+	||  !pack_str(&msg->esp,            &str_next, &str_roof)
+	||  !pack_str(&msg->sc_data,        &str_next, &str_roof)
+	||  (str_roof - str_next < msg->keyval.len))
 	{
 		plog("send_wack_msg(): can't pack strings");
 		return -1;
 	}
 	if (msg->keyval.ptr)
+	{
 		memcpy(str_next, msg->keyval.ptr, msg->keyval.len);
+	}
 	msg->keyval.ptr = NULL;
 	str_next += msg->keyval.len;
 	len = str_next - (char *)msg;
@@ -130,15 +132,13 @@ send_whack_msg (whack_message_t *msg)
 	return 0;
 }
 
-static void
-init_whack_msg(whack_message_t *msg)
+static void init_whack_msg(whack_message_t *msg)
 {
 	memset(msg, 0, sizeof(whack_message_t));
 	msg->magic = WHACK_MAGIC;
 }
 
-static char *
-connection_name(starter_conn_t *conn)
+static char *connection_name(starter_conn_t *conn)
 {
 	/* if connection name is '%auto', create a new name like conn_xxxxx */
 	static char buf[32];
@@ -151,34 +151,26 @@ connection_name(starter_conn_t *conn)
 	return conn->name;
 }
 
-static void
-set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
+static void set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
 {
-	if (end->srcip && end->srcip[0] != '%')
-	{
-		int len = 0;
-		char *pos;
-
-		pos = strchr(end->srcip, '/');
-		if (pos)
-		{
-			/* use first address only for pluto */
-			len = pos - end->srcip;
-		}
-		w->has_srcip = !end->has_natip;
-		ttoaddr(end->srcip, len, ip_version(end->srcip), &w->host_srcip);
-	}
-	else
-	{
-		anyaddr(AF_INET, &w->host_srcip);
-	}
-
 	w->id                  = end->id;
 	w->cert                = end->cert;
 	w->ca                  = end->ca;
 	w->groups              = end->groups;
 	w->host_addr           = end->addr;
 	w->has_client          = end->has_client;
+	w->sourceip            = end->sourceip;
+	w->sourceip_mask       = end->sourceip_mask;
+	
+	if (end->sourceip && end->sourceip_mask > 0)
+	{
+		ttoaddr(end->sourceip, 0, ip_version(end->sourceip), &w->host_srcip);
+		w->has_srcip = !end->has_natip;
+	}
+	else
+	{
+		anyaddr(AF_INET, &w->host_srcip);
+	}
 
 	if (family == AF_INET6 && isanyaddr(&end->nexthop))
 	{
@@ -266,8 +258,7 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 	return 0;
 }
 
-int
-starter_whack_add_conn(starter_conn_t *conn)
+int starter_whack_add_conn(starter_conn_t *conn)
 {
 	whack_message_t msg;
 	int r;
@@ -332,8 +323,7 @@ starter_whack_add_conn(starter_conn_t *conn)
 	return r;
 }
 
-int
-starter_whack_del_conn(starter_conn_t *conn)
+int starter_whack_del_conn(starter_conn_t *conn)
 {
 	whack_message_t msg;
 
@@ -343,8 +333,7 @@ starter_whack_del_conn(starter_conn_t *conn)
 	return send_whack_msg(&msg);
 }
 
-int
-starter_whack_route_conn(starter_conn_t *conn)
+int starter_whack_route_conn(starter_conn_t *conn)
 {
 	whack_message_t msg;
 
@@ -354,8 +343,7 @@ starter_whack_route_conn(starter_conn_t *conn)
 	return send_whack_msg(&msg);
 }
 
-int
-starter_whack_initiate_conn(starter_conn_t *conn)
+int starter_whack_initiate_conn(starter_conn_t *conn)
 {
 	whack_message_t msg;
 
@@ -366,8 +354,7 @@ starter_whack_initiate_conn(starter_conn_t *conn)
 	return send_whack_msg(&msg);
 }
 
-int
-starter_whack_listen(void)
+int starter_whack_listen(void)
 {
 	whack_message_t msg;
 	init_whack_msg(&msg);
@@ -384,8 +371,7 @@ int starter_whack_shutdown(void)
 	return send_whack_msg(&msg);
 }
 
-int
-starter_whack_add_ca(starter_ca_t *ca)
+int starter_whack_add_ca(starter_ca_t *ca)
 {
 	whack_message_t msg;
 
@@ -404,8 +390,7 @@ starter_whack_add_ca(starter_ca_t *ca)
 	return send_whack_msg(&msg);
 }
 
-int
-starter_whack_del_ca(starter_ca_t *ca)
+int starter_whack_del_ca(starter_ca_t *ca)
 {
 	whack_message_t msg;
 

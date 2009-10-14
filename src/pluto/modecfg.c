@@ -82,11 +82,10 @@ struct internal_addr
 	bool       xauth_status;
 };
 
-/*
+/**
  * Initialize an internal_addr struct
  */
-static void
-init_internal_addr(internal_addr_t *ia)
+static void init_internal_addr(internal_addr_t *ia)
 {
 	int i;
 
@@ -114,17 +113,36 @@ init_internal_addr(internal_addr_t *ia)
 	}
 }
 
-/*
- * get internal IP address for a connection
+/**
+ * Get internal IP address for a connection
  */
-static void
-get_internal_addr(connection_t *c, internal_addr_t *ia)
+static void get_internal_addr(connection_t *c, host_t *requested_vip,
+							  internal_addr_t *ia)
 {
 	int i, dns_idx = 0, nbns_idx = 0;
 
 	if (isanyaddr(&c->spd.that.host_srcip))
 	{
-		/* not defined in connection - fetch it from LDAP */
+		if (c->spd.that.pool)
+		{
+			host_t *vip;
+
+			vip = lib->attributes->acquire_address(lib->attributes,
+										c->spd.that.pool, c->spd.that.id,
+										requested_vip);
+			if (vip)
+			{
+				chunk_t addr = vip->get_address(vip);
+		
+				plog("assigning virtual IP %H to peer", vip);
+				initaddr(addr.ptr, addr.len, vip->get_family(vip), &ia->ipaddr);
+				vip->destroy(vip);
+			}
+		}
+		else
+		{
+			plog("no virtual IP found");
+		}
 	}
 	else
 	{
@@ -133,11 +151,12 @@ get_internal_addr(connection_t *c, internal_addr_t *ia)
 		ia->ipaddr = c->spd.that.host_srcip;
 
 		addrtot(&ia->ipaddr, 0, srcip, sizeof(srcip));
-		plog("assigning virtual IP source address %s", srcip);
+		plog("assigning virtual IP  %s to peer", srcip);
 	}
 
 	if (!isanyaddr(&ia->ipaddr))        /* We got an IP address, send it */
 	{
+		c->spd.that.host_srcip      = ia->ipaddr;
 		c->spd.that.client.addr     = ia->ipaddr;
 		c->spd.that.client.maskbits = 32;
 		c->spd.that.has_client      = TRUE;
@@ -200,11 +219,10 @@ get_internal_addr(connection_t *c, internal_addr_t *ia)
 }
 
 
-/*
+/**
  * Set srcip and client subnet to internal IP address
  */
-static bool
-set_internal_addr(connection_t *c, internal_addr_t *ia)
+static bool set_internal_addr(connection_t *c, internal_addr_t *ia)
 {
 	if (ia->attr_set & LELEM(INTERNAL_IP4_ADDRESS)
 	&& !isanyaddr(&ia->ipaddr))
@@ -241,7 +259,7 @@ set_internal_addr(connection_t *c, internal_addr_t *ia)
 	return FALSE;
 }
 
-/*
+/**
  * Compute HASH of Mode Config.
  */
 static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
@@ -269,14 +287,13 @@ static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
 }
 
 
-/*
+/**
  * Generate an IKE message containing ModeCfg information (eg: IP, DNS, WINS)
  */
-static stf_status
-modecfg_build_msg(struct state *st, pb_stream *rbody
-								  , u_int16_t msg_type
-								  , internal_addr_t *ia
-								  , u_int16_t ap_id)
+static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
+									u_int16_t msg_type,
+									internal_addr_t *ia,
+									u_int16_t ap_id)
 {
 	u_char *r_hash_start, *r_hashval;
 
@@ -492,11 +509,11 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	return STF_OK;
 }
 
-/*
+/**
  * Send ModeCfg message
  */
-static stf_status
-modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
+static stf_status modecfg_send_msg(struct state *st, int isama_type,
+								   internal_addr_t *ia)
 {
 	pb_stream msg;
 	pb_stream rbody;
@@ -550,11 +567,10 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 	return STF_OK;
 }
 
-/*
+/**
  * Parse a ModeCfg attribute payload
  */
-static stf_status
-modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
+static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 {
 	struct isakmp_attribute attr;
 	pb_stream strattr;
@@ -736,12 +752,11 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	return STF_OK;
 }
 
-/*
+/**
  * Parse a ModeCfg message
  */
-static stf_status
-modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
-				, internal_addr_t *ia)
+static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
+									u_int16_t *isama_id, internal_addr_t *ia)
 {
 	struct state *const st = md->st;
 	struct payload_digest *p;
@@ -789,12 +804,12 @@ modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
 	return STF_IGNORE;
 }
 
-/*
+/**
  * Send ModeCfg request message from client to server in pull mode
  */
-stf_status
-modecfg_send_request(struct state *st)
+stf_status modecfg_send_request(struct state *st)
 {
+	connection_t *c = st->st_connection;
 	stf_status stat;
 	internal_addr_t ia;
 
@@ -802,6 +817,7 @@ modecfg_send_request(struct state *st)
 
 	ia.attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 				| LELEM(INTERNAL_IP4_NETMASK);
+	ia.ipaddr = c->spd.this.host_srcip;
 
 	plog("sending ModeCfg request");
 	st->st_state = STATE_MODE_CFG_I1;
@@ -818,14 +834,14 @@ modecfg_send_request(struct state *st)
  *
  * used in ModeCfg pull mode, on the server (responder)
  */
-stf_status
-modecfg_inR0(struct msg_digest *md)
+stf_status modecfg_inR0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	bool want_unity_banner;
 	stf_status stat, stat_build;
+	host_t *requested_vip;
 
 	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
 	if (stat != STF_OK)
@@ -833,9 +849,20 @@ modecfg_inR0(struct msg_digest *md)
 		return stat;
 	}
 
+	if (ia.attr_set & LELEM(INTERNAL_IP4_ADDRESS))
+	{
+		requested_vip = host_create_from_sockaddr((sockaddr_t*)&ia.ipaddr);
+	}
+	else
+	{
+		requested_vip = host_create_any(AF_INET);
+	}
+	plog("peer requested virtual IP %H", requested_vip);
+
 	want_unity_banner = (ia.unity_attr_set & LELEM(UNITY_BANNER - UNITY_BASE)) != LEMPTY;
 	init_internal_addr(&ia);
-	get_internal_addr(st->st_connection, &ia);
+	get_internal_addr(st->st_connection, requested_vip, &ia);
+	requested_vip->destroy(requested_vip);
 
 	if (want_unity_banner)
 	{
@@ -862,8 +889,7 @@ modecfg_inR0(struct msg_digest *md)
  *
  * used in ModeCfg pull mode, on the client (initiator)
  */
-stf_status
-modecfg_inI1(struct msg_digest *md)
+stf_status modecfg_inI1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -883,17 +909,19 @@ modecfg_inI1(struct msg_digest *md)
 }
 
 
-/*
+/**
  * Send ModeCfg set message from server to client in push mode
  */
-stf_status
-modecfg_send_set(struct state *st)
+stf_status modecfg_send_set(struct state *st)
 {
 	stf_status stat;
 	internal_addr_t ia;
+	host_t *vip;
 
 	init_internal_addr(&ia);
-	get_internal_addr(st->st_connection, &ia);
+	vip = host_create_any(AF_INET);
+	get_internal_addr(st->st_connection, vip, &ia);
+	vip->destroy(vip);
 
 #ifdef CISCO_QUIRKS
 	ia.unity_banner = UNITY_BANNER_STR;
@@ -915,8 +943,7 @@ modecfg_send_set(struct state *st)
  *
  * used in ModeCfg push mode, on the client (initiator).
  */
-stf_status
-modecfg_inI0(struct msg_digest *md)
+stf_status modecfg_inI0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -959,8 +986,7 @@ modecfg_inI0(struct msg_digest *md)
  *
  * used in ModeCfg push mode, on the server (responder)
  */
-stf_status
-modecfg_inR3(struct msg_digest *md)
+stf_status modecfg_inR3(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -978,11 +1004,10 @@ modecfg_inR3(struct msg_digest *md)
 	return STF_OK;
 }
 
-/*
+/**
  * Send XAUTH credentials request (username + password)
  */
-stf_status
-xauth_send_request(struct state *st)
+stf_status xauth_send_request(struct state *st)
 {
 	stf_status stat;
 	internal_addr_t ia;
@@ -1006,8 +1031,7 @@ xauth_send_request(struct state *st)
  *
  * used on the XAUTH client (initiator)
  */
-stf_status
-xauth_inI0(struct msg_digest *md)
+stf_status xauth_inI0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1112,8 +1136,7 @@ xauth_inI0(struct msg_digest *md)
  *
  *  used on the XAUTH server (responder)
  */
-stf_status
-xauth_inR1(struct msg_digest *md)
+stf_status xauth_inR1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1193,8 +1216,7 @@ xauth_inR1(struct msg_digest *md)
  *
  * used on the XAUTH client (initiator)
  */
-stf_status
-xauth_inI1(struct msg_digest *md)
+stf_status xauth_inI1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1245,8 +1267,7 @@ xauth_inI1(struct msg_digest *md)
  *
  * used on the XAUTH server (responder)
  */
-stf_status
-xauth_inR2(struct msg_digest *md)
+stf_status xauth_inR2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;

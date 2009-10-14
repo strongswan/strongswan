@@ -154,6 +154,7 @@ struct end {
 	struct virtual_t *virt;
 	bool modecfg;               /* this end: request local address from server */
 								/* that end: give local addresses to clients */
+	char *pool;					/* name of an associated virtual IP address pool */
 	bool hostaccess;            /* allow access to host via iptables INPUT/OUTPUT */
 								/* rules if client behind host is a subnet */
 	bool allow_any;             /* IP address is subject to change */
@@ -187,10 +188,10 @@ struct connection {
 	time_t dpd_timeout;
 	dpd_action_t dpd_action;
 
-	char              *log_file_name;       /* name of log file */
-	FILE              *log_file;            /* possibly open FILE */
+	char              *log_file_name;     /* name of log file */
+	FILE              *log_file;          /* possibly open FILE */
 	TAILQ_ENTRY(connection) log_link;     /* linked list of open conns */
-	bool               log_file_err;        /* only bitch once */
+	bool               log_file_err;      /* only bitch once */
 
 	struct spd_route spd;
 

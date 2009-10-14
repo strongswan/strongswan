@@ -583,7 +583,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	{
 		rekey = msg->add_conn.rekey.ike_lifetime - over;
 	}
-	if (msg->add_conn.me.sourceip_size)
+	if (msg->add_conn.me.sourceip_mask)
 	{
 		if (msg->add_conn.me.sourceip)
 		{
@@ -641,7 +641,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		msg->add_conn.me.sendcert, unique,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
-		vip, msg->add_conn.other.sourceip_size ?
+		vip, msg->add_conn.other.sourceip_mask ?
 							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
 

@@ -187,45 +187,13 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
 	msg_end->subnets = push_string(msg, conn_end->subnet);
+	msg_end->sourceip = push_string(msg, conn_end->sourceip);
+	msg_end->sourceip_mask = conn_end->sourceip_mask;
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->tohost = !conn_end->has_client;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
-	if (conn_end->srcip)
-	{
-		if (conn_end->srcip[0] == '%')
-		{	/* %poolname, strip % */
-			msg_end->sourceip_size = 0;
-			msg_end->sourceip = push_string(msg, conn_end->srcip + 1);
-		}
-		else
-		{
-			char *pos = strchr(conn_end->srcip, '/');
-			if (pos)
-			{	/* CIDR subnet definition */
-				snprintf(buffer, pos - conn_end->srcip + 1, "%s", conn_end->srcip);
-				msg_end->sourceip = push_string(msg, buffer);
-				msg_end->sourceip_size = atoi(pos + 1);
-			}
-			else
-			{	/* a single address */
-				msg_end->sourceip = push_string(msg, conn_end->srcip);
-				if (strchr(conn_end->srcip, ':'))
-				{	/* IPv6 */
-					msg_end->sourceip_size = 128;
-				}
-				else
-				{	/* IPv4 */
-					msg_end->sourceip_size = 32;
-				}
-			}
-		}
-	}
-	else if (conn_end->modecfg)
-	{
-		msg_end->sourceip_size = 1;
-	}
 }
 
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)

@@ -306,24 +306,26 @@ void whack_handle(int whackctlfd)
 		|| !unpack_str(&msg.left.ca)            /* string  4 */
 		|| !unpack_str(&msg.left.groups)        /* string  5 */
 		|| !unpack_str(&msg.left.updown)        /* string  6 */
-		|| !unpack_str(&msg.left.virt)          /* string  7 */
-		|| !unpack_str(&msg.right.id)           /* string  8 */
-		|| !unpack_str(&msg.right.cert)         /* string  9 */
-		|| !unpack_str(&msg.right.ca)           /* string 10 */
-		|| !unpack_str(&msg.right.groups)       /* string 11 */
-		|| !unpack_str(&msg.right.updown)       /* string 12 */
-		|| !unpack_str(&msg.right.virt)         /* string 13 */
-		|| !unpack_str(&msg.keyid)              /* string 14 */
-		|| !unpack_str(&msg.myid)               /* string 15 */
-		|| !unpack_str(&msg.cacert)             /* string 16 */
-		|| !unpack_str(&msg.ldaphost)           /* string 17 */
-		|| !unpack_str(&msg.ldapbase)           /* string 18 */
-		|| !unpack_str(&msg.crluri)             /* string 19 */
-		|| !unpack_str(&msg.crluri2)            /* string 20 */
-		|| !unpack_str(&msg.ocspuri)            /* string 21 */
-		|| !unpack_str(&msg.ike)                /* string 22 */
-		|| !unpack_str(&msg.esp)                /* string 23 */
-		|| !unpack_str(&msg.sc_data)            /* string 24 */
+		|| !unpack_str(&msg.left.sourceip)      /* string  7 */
+		|| !unpack_str(&msg.left.virt)          /* string  8 */
+		|| !unpack_str(&msg.right.id)           /* string  9 */
+		|| !unpack_str(&msg.right.cert)         /* string 10 */
+		|| !unpack_str(&msg.right.ca)           /* string 11 */
+		|| !unpack_str(&msg.right.groups)       /* string 12 */
+		|| !unpack_str(&msg.right.updown)       /* string 13 */
+		|| !unpack_str(&msg.right.sourceip)     /* string 14 */
+		|| !unpack_str(&msg.right.virt)         /* string 15 */
+		|| !unpack_str(&msg.keyid)              /* string 16 */
+		|| !unpack_str(&msg.myid)               /* string 17 */
+		|| !unpack_str(&msg.cacert)             /* string 18 */
+		|| !unpack_str(&msg.ldaphost)           /* string 19 */
+		|| !unpack_str(&msg.ldapbase)           /* string 20 */
+		|| !unpack_str(&msg.crluri)             /* string 21 */
+		|| !unpack_str(&msg.crluri2)            /* string 22 */
+		|| !unpack_str(&msg.ocspuri)            /* string 23 */
+		|| !unpack_str(&msg.ike)                /* string 24 */
+		|| !unpack_str(&msg.esp)                /* string 25 */
+		|| !unpack_str(&msg.sc_data)            /* string 26 */
 		|| str_roof - next_str != (ptrdiff_t)msg.keyval.len)    /* check chunk */
 		{
 			ugh = "message from whack contains bad string";
