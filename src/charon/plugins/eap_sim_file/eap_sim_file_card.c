@@ -45,17 +45,18 @@ static bool get_triplet(private_eap_sim_file_card_t *this,
 	identification_t *id;
 	char *c_rand, *c_sres, *c_kc;
 
-	DBG2(DBG_CFG, "looking for rand: %b from %Y", rand, SIM_RAND_LEN, imsi);
+	DBG2(DBG_CFG, "looking for triplet: %Y rand %b", imsi, rand, SIM_RAND_LEN);
 
 	enumerator = this->triplets->create_enumerator(this->triplets);
 	while (enumerator->enumerate(enumerator, &id, &c_rand, &c_sres, &c_kc))
 	{
+		DBG2(DBG_CFG, "got a triplet: %Y rand %b\nsres %b\n kc %b", id,
+			 c_rand, SIM_RAND_LEN, c_sres, SIM_SRES_LEN, c_kc, SIM_KC_LEN);
 		if (imsi->matches(imsi, id))
 		{
-			DBG2(DBG_CFG, "found triplet: rand %b\nsres %b\n kc %b",
-				 c_rand, SIM_RAND_LEN, c_sres, SIM_SRES_LEN, c_kc, SIM_KC_LEN);
 			if (memeq(c_rand, rand, SIM_RAND_LEN))
 			{
+				DBG2(DBG_CFG, "  => triplet matches");
 				memcpy(sres, c_sres, SIM_SRES_LEN);
 				memcpy(kc, c_kc, SIM_KC_LEN);
 				enumerator->destroy(enumerator);
