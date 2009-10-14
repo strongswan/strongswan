@@ -1,6 +1,12 @@
 strongswan-4.3.5
 ----------------
 
+- The IKEv1 pluto daemon can now use SQL-based address pools to deal out
+  virtual IP addresses as a Mode Config server. The pool capability has been
+  migrated from charon's sql plugin to a new attr-sql plugin which is loaded
+  by libstrongswan and which can be used by both daemons either with a SQLite 
+  or MySQL database and the corresponding plugin.
+
 - The private/public key parsing and encoding has been split up into
   separate pkcs1, pgp, pem and dnskey plugins. The public key implementation
   plugins gmp, gcrypt and openssl can all make use of them.
