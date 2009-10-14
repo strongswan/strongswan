@@ -52,11 +52,11 @@ struct sim_card_t {
 	/**
 	 * Calculate SRES/KC from a RAND for SIM authentication.
 	 *
-	 * @param imsi	identity to get a triplet for
-	 * @param rand	RAND input buffer, fixed size 16 bytes
-	 * @param sres	SRES output buffer, fixed size 4 byte
-	 * @param kc	KC output buffer, fixed size 8 bytes
-	 * @return		TRUE if SRES/KC calculated, FALSE on error/wrong identity
+	 * @param imsi		identity to get a triplet for
+	 * @param rand		RAND input buffer, fixed size 16 bytes
+	 * @param sres		SRES output buffer, fixed size 4 byte
+	 * @param kc		KC output buffer, fixed size 8 bytes
+	 * @return			TRUE if SRES/KC calculated, FALSE on error/wrong identity
 	 */
 	bool (*get_triplet)(sim_card_t *this, identification_t *imsi,
 						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
@@ -68,13 +68,13 @@ struct sim_card_t {
 	 * If the received sequence number (in autn) is out of sync, INVALID_STATE
 	 * is returned.
 	 *
-	 * @param imsi	peer identity requesting quintuplet for
-	 * @param rand	random value rand
-	 * @param autn	authentication token autn
-	 * @param ck	buffer receiving encryption key ck
-	 * @param ik	buffer receiving integrity key ik
-	 * @param res	buffer receiving authentication result res
-	 * @return		SUCCESS, FAILED, or INVALID_STATE if out of sync
+	 * @param imsi		peer identity requesting quintuplet for
+	 * @param rand		random value rand
+	 * @param autn		authentication token autn
+	 * @param ck		buffer receiving encryption key ck
+	 * @param ik		buffer receiving integrity key ik
+	 * @param res		buffer receiving authentication result res
+	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
 	status_t (*get_quintuplet)(sim_card_t *this, identification_t *imsi,
 							   char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
@@ -84,13 +84,52 @@ struct sim_card_t {
 	/**
 	 * Calculate AUTS from RAND for AKA resynchronization.
 	 *
-	 * @param imsi	peer identity requesting quintuplet for
-	 * @param rand	random value rand
-	 * @param auts	resynchronization parameter auts
-	 * @return		TRUE if parameter generated successfully
+	 * @param imsi		peer identity requesting quintuplet for
+	 * @param rand		random value rand
+	 * @param auts		resynchronization parameter auts
+	 * @return			TRUE if parameter generated successfully
 	 */
 	bool (*resync)(sim_card_t *this, identification_t *imsi,
 				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
+
+	/**
+	 * Set the pseudonym to use for next authentication.
+	 *
+	 * @param perm		permanent identity of the peer (imsi)
+	 * @param pseudo	pseudonym identity received from the server
+	 */
+	void (*set_pseudonym)(sim_card_t *this, identification_t *perm,
+						  identification_t *pseudo);
+
+	/**
+	 * Get the pseudonym previously stored via set_pseudonym().
+	 *
+	 * @param perm		permanent identity of the peer (imsi)
+	 * @return			associated pseudonym identity, NULL if none stored
+	 */
+	identification_t* (*get_pseudonym)(sim_card_t *this, identification_t *perm);
+
+	/**
+	 * Store parameters to use for the next fast reauthentication.
+	 *
+	 * @param perm		permanent identity of the peer (imsi)
+	 * @param next		next fast reauthentication identity to use
+	 * @param mk		master key MK to store for reauthentication
+	 * @param counter	counter value to store, host order
+	 */
+	void (*set_reauth)(sim_card_t *this, identification_t *perm,
+					   identification_t *next, char mk[HASH_SIZE_SHA1],
+					   u_int16_t counter);
+
+	/**
+	 * Retrieve parameters for fast reauthentication stored via set_reauth().
+	 *
+	 * @param perm		permanent identity of the peer (imsi)
+	 * @param mk		buffer receiving master key MK
+	 * @param counter	pointer receiving counter value, in host order
+	 */
+	identification_t* (*get_reauth)(sim_card_t *this, identification_t *perm,
+									char mk[HASH_SIZE_SHA1], u_int16_t *counter);
 };
 
 /**

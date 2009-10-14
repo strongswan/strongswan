@@ -154,6 +154,10 @@ eap_aka_3gpp2_card_t *eap_aka_3gpp2_card_create(eap_aka_3gpp2_functions_t *f)
 	this->public.card.get_triplet = (bool(*)(sim_card_t*, identification_t *imsi, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
 	this->public.card.get_quintuplet = (status_t(*)(sim_card_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_LEN]))get_quintuplet;
 	this->public.card.resync = (bool(*)(sim_card_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))resync;
+	this->public.card.get_pseudonym = (identification_t*(*)(sim_card_t*, identification_t *perm))return_null;
+	this->public.card.set_pseudonym = (void(*)(sim_card_t*, identification_t *perm, identification_t *pseudonym))nop;
+	this->public.card.get_reauth = (identification_t*(*)(sim_card_t*, identification_t *perm, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
+	this->public.card.set_reauth = (void(*)(sim_card_t*, identification_t *perm, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
 	this->public.destroy = (void(*)(eap_aka_3gpp2_card_t*))destroy;
 
 	this->f = f;
