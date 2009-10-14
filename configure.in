@@ -615,9 +615,11 @@ if test x$pem = xtrue; then
 fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
+	pluto_plugins=${pluto_plugins}" mysql"
 fi
 if test x$sqlite = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
+	pluto_plugins=${pluto_plugins}" sqlite"
 fi
 if test x$attr_sql = xtrue -o x$sql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" attr-sql"
