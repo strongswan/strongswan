@@ -15,12 +15,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <dirent.h>
 #include <time.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
-#include <utils/identification.h>
+#include <debug.h>
+#include <utils/enumerator.h>
 
 #include <freeswan.h>
 
@@ -284,44 +284,36 @@ x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
 /*
  *  Loads authority certificates
  */
-void load_authcerts(const char *type, const char *path, x509_flag_t auth_flags)
+void load_authcerts(char *type, char *path, x509_flag_t auth_flags)
 {
-	struct dirent **filelist;
-	u_char buf[BUF_LEN];
-	u_char *save_dir;
-	int n;
+	enumerator_t *enumerator;
+	struct stat st;
+	char *file;
 
-	/* change directory to specified path */
-	save_dir = getcwd(buf, BUF_LEN);
+	DBG1("loading %s certificates from '%s'", type, path);
 
-	if (chdir(path))
+	enumerator = enumerator_create_directory(path);
+	if (!enumerator)
 	{
-		plog("Could not change to directory '%s'", path);
+		DBG1("  reading directory '%s' failed");
+		return;
 	}
-	else
+
+	while (enumerator->enumerate(enumerator, NULL, &file, &st))
 	{
-		plog("Changing to directory '%s'", path);
-		n = scandir(path, &filelist, file_select, alphasort);
+		cert_t cert;
 
-		if (n < 0)
-			plog("  scandir() error");
-		else
+		if (!S_ISREG(st.st_mode))
 		{
-			while (n--)
-			{
-				cert_t cert;
-
-				if (load_cert(filelist[n]->d_name, type, auth_flags, &cert))
-				{
-					add_authcert(cert.u.x509, auth_flags);
-				}
-				free(filelist[n]);
-			}
-			free(filelist);
+			/* skip special file */
+			continue;
+		}
+		if (load_cert(file, type, auth_flags, &cert))
+		{
+			add_authcert(cert.u.x509, auth_flags);
 		}
 	}
-	/* restore directory path */
-	ignore_result(chdir(save_dir));
+	enumerator->destroy(enumerator);
 }
 
 /*

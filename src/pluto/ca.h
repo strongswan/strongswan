@@ -44,8 +44,7 @@ extern bool match_requested_ca(linked_list_t *requested_ca,
 							   identification_t *our_ca, int *our_pathlen);
 extern x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 								x509_flag_t auth_flags);
-extern void load_authcerts(const char *type, const char *path,
-						   x509_flag_t auth_flags);
+extern void load_authcerts(char *type, char *path, x509_flag_t auth_flags);
 extern x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags);
 extern void free_authcerts(void);
 extern void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc);

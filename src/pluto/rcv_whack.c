@@ -440,17 +440,17 @@ void whack_handle(int whackctlfd)
 
 	if (msg.whack_reread & REREAD_CACERTS)
 	{
-		load_authcerts("CA cert", CA_CERT_PATH, X509_CA);
+		load_authcerts("ca", CA_CERT_PATH, X509_CA);
 	}
 
 	if (msg.whack_reread & REREAD_AACERTS)
 	{
-		load_authcerts("AA cert", AA_CERT_PATH, X509_AA);
+		load_authcerts("aa", AA_CERT_PATH, X509_AA);
 	}
 
 	if (msg.whack_reread & REREAD_OCSPCERTS)
 	{
-		load_authcerts("OCSP cert", OCSP_CERT_PATH, X509_OCSP_SIGNER);
+		load_authcerts("ocsp", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	}
 
 	if (msg.whack_reread & REREAD_ACERTS)

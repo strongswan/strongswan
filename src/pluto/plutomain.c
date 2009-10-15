@@ -721,11 +721,11 @@ int main(int argc, char **argv)
 #endif /* CAPABILITIES */
 
 	/* loading X.509 CA certificates */
-	load_authcerts("CA", CA_CERT_PATH, X509_CA);
+	load_authcerts("ca", CA_CERT_PATH, X509_CA);
 	/* loading X.509 AA certificates */
-	load_authcerts("AA", AA_CERT_PATH, X509_AA);
+	load_authcerts("aa", AA_CERT_PATH, X509_AA);
 	/* loading X.509 OCSP certificates */
-	load_authcerts("OCSP", OCSP_CERT_PATH, X509_OCSP_SIGNER);
+	load_authcerts("ocsp", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	/* loading X.509 CRLs */
 	load_crls();
 	/* loading attribute certificates (experimental) */
