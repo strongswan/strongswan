@@ -16,6 +16,8 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
+#include <freeswan.h>
+
 #include <utils.h>
 #include <utils/identification.h>
 #include <crypto/hashers/hasher.h>

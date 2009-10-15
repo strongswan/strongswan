@@ -675,6 +675,7 @@ int main(int argc, char **argv)
 	init_adns();
 	init_myid();
 	init_fetch();
+	ac_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
@@ -728,7 +729,7 @@ int main(int argc, char **argv)
 	/* loading X.509 CRLs */
 	load_crls();
 	/* loading attribute certificates (experimental) */
-	load_acerts();
+	ac_load_certs();
 
 	daily_log_event();
 	call_server();
@@ -753,10 +754,10 @@ void exit_pluto(int status)
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
 	free_authcerts();           /* free chain of X.509 authority certificates */
 	free_crls();                /* free chain of X.509 CRLs */
-	free_acerts();              /* free chain of X.509 attribute certificates */
 	free_ca_infos();            /* free chain of X.509 CA information records */
 	free_ocsp();                /* free ocsp cache */
 	free_ifaces();
+	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
 	xauth_finalize();           /* finalize and unload XAUTH module */
 	stop_adns();

@@ -97,8 +97,6 @@ plugin_t *plugin_create()
 	/* register pluto specific certificate formats */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_AC,
-							(builder_function_t)pem_certificate_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
 							(builder_function_t)pem_certificate_load);
 

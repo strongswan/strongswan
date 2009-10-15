@@ -3836,13 +3836,13 @@ void get_peer_ca_and_groups(connection_t *c,
 	p1st = find_phase1_state(c, ISAKMP_SA_ESTABLISHED_STATES);
 	if (p1st && p1st->st_peer_pubkey && p1st->st_peer_pubkey->issuer)
 	{
-		x509acert_t *x509ac;
+		certificate_t *cert;
 
-		x509ac = get_x509acert(p1st->st_peer_pubkey->issuer,
-							   p1st->st_peer_pubkey->serial);
-		if (x509ac && verify_x509acert(x509ac, strict_crl_policy))
+		cert = ac_get_cert(p1st->st_peer_pubkey->issuer,
+						   p1st->st_peer_pubkey->serial);
+		if (cert && ac_verify_cert(cert, strict_crl_policy))
 		{
-			ac_t * ac = (ac_t*)x509ac->ac;
+			ac_t *ac = (ac_t*)cert;
 		
 			*peer_attributes = ac->get_groups(ac);
 		}

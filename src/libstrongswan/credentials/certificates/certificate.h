@@ -53,8 +53,6 @@ enum certificate_type_t {
 	CERT_GPG,
 	/** Pluto cert_t (not a certificate_t), either x509 or PGP */
 	CERT_PLUTO_CERT,
-	/** Pluto x509acert_t (not a certificate_t), attribute certificate */
-	CERT_PLUTO_AC,
 	/** Pluto x509crl_t (not a certificate_t), certificate revocation list */
 	CERT_PLUTO_CRL,
 };

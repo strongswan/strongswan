@@ -14,164 +14,88 @@
  * for more details.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/types.h>
+#include <sys/stat.h>
 #include <time.h>
 
-#include <freeswan.h>
-
-#include <utils.h>
+#include <debug.h>
+#include <utils/enumerator.h>
+#include <utils/linked_list.h>
 #include <credentials/certificates/ac.h>
 
 #include "ac.h"
-#include "x509.h"
-#include "crl.h"
 #include "ca.h"
 #include "certs.h"
-#include "log.h"
-#include "whack.h"
 #include "fetch.h"
-#include "builder.h"
+#include "log.h"
 
 /**
  * Chained list of X.509 attribute certificates
  */
-static x509acert_t *x509acerts   = NULL;
+static linked_list_t *acerts   = NULL;
 
 /**
- *  Free a X.509 attribute certificate
+ * Initialize the linked list of attribute certificates
  */
-void free_acert(x509acert_t *ac)
+void ac_initialize(void)
 {
-	if (ac)
-	{
-		DESTROY_IF(ac->ac);
-		free(ac);
-	}
+	acerts = linked_list_create();
 }
 
 /**
- *  Free first X.509 attribute certificate in the chained list
+ * Free the linked list of attribute certificates
  */
-static void free_first_acert(void)
+void ac_finalize(void)
 {
-	x509acert_t *first = x509acerts;
-	x509acerts = first->next;
-	free_acert(first);
-}
-
-/**
- * Free all attribute certificates in the chained list
- */
-void free_acerts(void)
-{
-	while (x509acerts != NULL)
-	{
-		free_first_acert();
-	}
+	acerts->destroy_offset(acerts, offsetof(certificate_t, destroy));
+	free(acerts);
 }
 
 /**
  *  Get a X.509 attribute certificate for a given holder
  */
-x509acert_t* get_x509acert(identification_t *issuer, chunk_t serial)
+certificate_t* ac_get_cert(identification_t *issuer, chunk_t serial)
 {
-	x509acert_t *x509ac = x509acerts;
-	x509acert_t *prev_ac = NULL;
+	enumerator_t *enumerator;
+	certificate_t *cert, *found = NULL;
 
-	while (x509ac != NULL)
+	enumerator = acerts->create_enumerator(acerts);
+	while (enumerator->enumerate(enumerator, &cert))
 	{
-		ac_t *ac = (ac_t*)x509ac->ac;
-		identification_t *holderIssuer = ac->get_holderIssuer(ac);
-		chunk_t holderSerial = ac->get_holderSerial(ac);
+		ac_t *ac = (ac_t*)cert;
 
-		if (issuer->equals(issuer, holderIssuer) &&
-			chunk_equals(serial, holderSerial))
+		if (issuer->equals(issuer, ac->get_holderIssuer(ac)) &&
+			chunk_equals(serial, ac->get_holderSerial(ac)))
 		{
-			if (x509ac!= x509acerts)
-			{
-				/* bring the certificate up front */
-				prev_ac->next = x509ac->next;
-				x509ac->next = x509acerts;
-				x509acerts = x509ac;
-			}
-			return x509ac;
+			found = cert;
+			break;
 		}
-		prev_ac = x509ac;
-		x509ac = x509ac->next;
 	}
-	return NULL;
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 /**
- *  Add a X.509 attribute certificate to the chained list
+ * Verifies a X.509 attribute certificate
  */
-static void add_acert(x509acert_t *x509ac)
+bool ac_verify_cert(certificate_t *cert, bool strict)
 {
-	certificate_t *cert_ac = x509ac->ac;
-	ac_t *ac = (ac_t*)cert_ac;
-	identification_t *holderIssuer = ac->get_holderIssuer(ac);
-	chunk_t holderSerial = ac->get_serial(ac);
-	x509acert_t *old_ac;
-
-	old_ac = get_x509acert(holderIssuer, holderSerial);
-	if (old_ac != NULL)
-	{
-		if (cert_ac->is_newer(cert_ac, old_ac->ac))
-		{
-			/* delete the old attribute cert */
-			free_first_acert();
-			DBG(DBG_CONTROL,
-				DBG_log("attribute cert is newer - existing cert deleted")
-			)
-		}
-		else
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("attribute cert is not newer - existing cert kept");
-			)
-			free_acert(x509ac);
-			return;
-		}
-	}
-	plog("attribute cert added");
-
-	/* insert new attribute cert at the root of the chain */
-	x509ac->next = x509acerts;
-	x509acerts = x509ac;
-}
-
-/**
- * verifies a X.509 attribute certificate
- */
-bool verify_x509acert(x509acert_t *x509ac, bool strict)
-{
-	certificate_t *cert_ac = x509ac->ac;
-	ac_t *ac = (ac_t*)cert_ac;
-	identification_t *subject = cert_ac->get_subject(cert_ac);
-	identification_t *issuer = cert_ac->get_issuer(cert_ac);
+	ac_t *ac = (ac_t*)cert;
+	identification_t *subject = cert->get_subject(cert);
+	identification_t *issuer = cert->get_issuer(cert);
 	chunk_t authKeyID = ac->get_authKeyIdentifier(ac);
 	x509cert_t *aacert;
 	time_t notBefore, valid_until;
 
-	DBG(DBG_CONTROL,
-		DBG_log("holder: '%Y'", subject);
-		DBG_log("issuer: '%Y'", issuer);
-	)
+	DBG1("holder: '%Y'", subject);
+	DBG1("issuer: '%Y'", issuer);
 
-	if (!cert_ac->get_validity(cert_ac, NULL, NULL, &valid_until))
+	if (!cert->get_validity(cert, NULL, NULL, &valid_until))
 	{
-		plog("attribute certificate is invalid (valid from %T to %T)",
+		DBG1("attribute certificate is invalid (valid from %T to %T)",
 			 &notBefore, FALSE, &valid_until, FALSE);
 		return FALSE;
 	}
-	DBG(DBG_CONTROL,
-		DBG_log("attribute certificate is valid until %T", &valid_until, FALSE)
-	)
+	DBG1("attribute certificate is valid until %T", &valid_until, FALSE);
 
 	lock_authcert_list("verify_x509acert");
 	aacert = get_authcert(issuer, authKeyID, X509_AA);
@@ -179,23 +103,62 @@ bool verify_x509acert(x509acert_t *x509ac, bool strict)
 
 	if (aacert == NULL)
 	{
-		plog("issuer aacert not found");
+		DBG1("issuer aacert not found");
 		return FALSE;
 	}
-	DBG(DBG_CONTROL,
-		DBG_log("issuer aacert found")
-	)
+	DBG2("issuer aacert found");
 
-	if (!cert_ac->issued_by(cert_ac, aacert->cert))
+	if (!cert->issued_by(cert, aacert->cert))
 	{
-		plog("attribute certificate signature is invalid");
+		DBG1("attribute certificate signature is invalid");
 		return FALSE;
 	}
-	DBG(DBG_CONTROL,
-		DBG_log("attribute certificate signature is valid");
-	)
+	DBG1("attribute certificate signature is valid");
 
 	return verify_x509cert(aacert, strict, &valid_until);
+}
+
+/**
+ *  Add a X.509 attribute certificate to the chained list
+ */
+static void ac_add_cert(certificate_t *cert)
+{
+	ac_t *ac = (ac_t*)cert;
+	identification_t *issuer = ac->get_holderIssuer(ac);
+	chunk_t serial = ac->get_serial(ac);
+
+	enumerator_t *enumerator;
+	certificate_t *cert_old;
+
+	enumerator = acerts->create_enumerator(acerts);
+	while (enumerator->enumerate(enumerator, &cert_old))
+	{
+		ac_t *ac_old = (ac_t*)cert_old;
+
+		if (issuer->equals(issuer, ac_old->get_holderIssuer(ac_old)) &&
+			chunk_equals(serial, ac_old->get_serial(ac_old)))
+		{
+			if (cert->is_newer(cert, cert_old))
+			{
+				DBG1("  attribute cert is newer - existing cert deleted");
+				acerts->remove_at(acerts, enumerator);
+				cert_old->destroy(cert_old);
+			}
+			else
+			{
+				DBG1("  attribute cert is not newer - existing cert kept");
+				cert->destroy(cert);
+				cert = NULL;
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (cert)
+	{
+		acerts->insert_last(acerts, cert);
+	}
 }
 
 /**
@@ -212,80 +175,73 @@ bool match_group_membership(ietf_attributes_t *peer_attributes, char *conn,
 	}
 
 	match = conn_attributes->matches(conn_attributes, peer_attributes);
-	DBG(DBG_CONTROL,
-		DBG_log("%s: peer with attributes '%s' is %sa member of the groups '%s'",
-				conn,
-				peer_attributes->get_string(peer_attributes),
-				match ? "" : "not ",
-				conn_attributes->get_string(conn_attributes))
-	)
-	return match;
+	DBG1("%s: peer with attributes '%s' is %sa member of the groups '%s'",
+		 conn, peer_attributes->get_string(peer_attributes),
+		 match ? "" : "not ", conn_attributes->get_string(conn_attributes));
 
+	return match;
 }
 
 /**
  * Loads X.509 attribute certificates
  */
-void load_acerts(void)
+void ac_load_certs(void)
 {
-	u_char buf[BUF_LEN];
+	enumerator_t *enumerator;
+	struct stat st;
+	char *file;
 
-	/* change directory to specified path */
-	u_char *save_dir = getcwd(buf, BUF_LEN);
+	DBG1("Loading attribute certificates:");
 
-	if (!chdir(A_CERT_PATH))
+	enumerator = enumerator_create_directory(A_CERT_PATH);
+	if (!enumerator)
 	{
-		struct dirent **filelist;
-		int n;
+		DBG1("  reading directory '%s' failed");
+		return;
+	}
 
-		plog("Changing to directory '%s'",A_CERT_PATH);
-		n = scandir(A_CERT_PATH, &filelist, file_select, alphasort);
+	while (enumerator->enumerate(enumerator, NULL, &file, &st))
+	{
+		certificate_t *cert;
 
-		if (n > 0)
+		if (!S_ISREG(st.st_mode))
 		{
-			while (n--)
-			{
-				char *filename = filelist[n]->d_name;
-				x509acert_t *ac;
-
-				ac = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-							CERT_PLUTO_AC, BUILD_FROM_FILE, filename,
-							BUILD_END);
-				if (ac)
-				{
-					plog("  loaded attribute certificate from '%s'", filename);
-					add_acert(ac);
-				}
-				free(filelist[n]);
-			}
-			free(filelist);
+			/* skip special file */
+			continue;
+		}
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+								  BUILD_FROM_FILE, file, BUILD_END);
+		if (cert)
+		{
+			DBG1("  loaded attribute certificate from '%s'", file);
+			ac_add_cert(cert);
 		}
 	}
-	/* restore directory path */
-	ignore_result(chdir(save_dir));
+	enumerator->destroy(enumerator);
 }
 
 /**
- *  list all X.509 attribute certificates in the chained list
+ *  List all X.509 attribute certificates in the chained list
  */
-void list_acerts(bool utc)
+void ac_list_certs(bool utc)
 {
-	x509acert_t *x509ac = x509acerts;
+	enumerator_t *enumerator;
+	certificate_t *cert;
 	time_t now;
 
 	/* determine the current time */
 	time(&now);
 
-	if (x509ac)
+	if (acerts->get_count(acerts) > 0)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of X.509 Attribute Certificates:");
 	}
 
-	while (x509ac)
+	enumerator = acerts->create_enumerator(acerts);
+	while (enumerator->enumerate(enumerator, &cert))
 	{
-		certificate_t *cert_ac = x509ac->ac;
-		ac_t *ac = (ac_t*)cert_ac;
+		ac_t *ac = (ac_t*)cert;
 		identification_t *entityName, *holderIssuer, *issuer;
 		chunk_t holderSerial, serial, authKeyID;
 		time_t notBefore, notAfter;
@@ -293,7 +249,7 @@ void list_acerts(bool utc)
 
 		whack_log(RC_COMMENT, " ");
 
-		entityName = cert_ac->get_subject(cert_ac);
+		entityName = cert->get_subject(cert);
 		if (entityName)
 		{
 			whack_log(RC_COMMENT, "  holder:   \"%Y\"", entityName);
@@ -314,18 +270,17 @@ void list_acerts(bool utc)
 		groups = ac->get_groups(ac);		
 		if (groups)
 		{
-			whack_log(RC_COMMENT, "  groups:    %s",
-					groups->get_string(groups));
+			whack_log(RC_COMMENT, "  groups:    %s", groups->get_string(groups));
 			groups->destroy(groups);
 		}
 
-		issuer = cert_ac->get_issuer(cert_ac);
+		issuer = cert->get_issuer(cert);
 		whack_log(RC_COMMENT, "  issuer:   \"%Y\"", issuer);
 
 		serial = ac->get_serial(ac);
 		whack_log(RC_COMMENT, "  serial:    %#B", &serial);
 
-		cert_ac->get_validity(cert_ac, &now, &notBefore, &notAfter);
+		cert->get_validity(cert, &now, &notBefore, &notAfter);
 		whack_log(RC_COMMENT, "  validity:  not before %T %s",
 				&notBefore, utc,
 				(notBefore < now)?"ok":"fatal (not valid yet)");
@@ -337,8 +292,7 @@ void list_acerts(bool utc)
 		{
 			whack_log(RC_COMMENT, "  authkey:   %#B", &authKeyID);
 		}
-
-		x509ac = x509ac->next;
 	}
+	enumerator->destroy(enumerator);
 }
 

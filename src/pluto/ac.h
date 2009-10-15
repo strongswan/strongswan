@@ -2,7 +2,6 @@
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
  * Copyright (C) 2009 Andreas Steffen
-
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,20 +23,17 @@
 
 /* access structure for an X.509 attribute certificate */
 
-typedef struct x509acert x509acert_t;
+extern void ac_initialize(void);
+extern void ac_finalize(void);
+extern void ac_load_certs(void);
+extern void ac_list_certs(bool utc);
 
-struct x509acert {
-	certificate_t *ac;
-	x509acert_t    *next;
-};
+extern certificate_t* ac_get_cert(identification_t *issuer, chunk_t serial);
 
-extern bool verify_x509acert(x509acert_t *ac, bool strict);
-extern bool match_group_membership(ietf_attributes_t *peer_attributes, char *conn,
+extern bool ac_verify_cert(certificate_t *ac, bool strict);
+
+extern bool match_group_membership(ietf_attributes_t *peer_attributes,
+								   char *conn,
 								   ietf_attributes_t *conn_attributes);
-extern x509acert_t* get_x509acert(identification_t *issuer, chunk_t serial);
-extern void load_acerts(void);
-extern void free_acert(x509acert_t *ac);
-extern void free_acerts(void);
-extern void list_acerts(bool utc);
 
-#endif /* _AH_H */
+#endif /* _AC_H */

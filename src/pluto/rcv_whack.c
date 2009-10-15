@@ -455,7 +455,7 @@ void whack_handle(int whackctlfd)
 
 	if (msg.whack_reread & REREAD_ACERTS)
 	{
-		load_acerts();
+		ac_load_certs();
 	}
 
 	if (msg.whack_reread & REREAD_CRLS)
@@ -496,7 +496,7 @@ void whack_handle(int whackctlfd)
 
 	if (msg.whack_list & LIST_ACERTS)
 	{
-		list_acerts(msg.whack_utc);
+		ac_list_certs(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CAINFOS)

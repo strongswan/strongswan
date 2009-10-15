@@ -31,7 +31,6 @@
 #include "defs.h"
 #include "log.h"
 #include "certs.h"
-#include "ac.h"
 #include "crl.h"
 
 /**
@@ -107,45 +106,6 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 }
 
 /**
- * Load a attribute certificate
- */
-static x509acert_t *builder_load_ac(certificate_type_t type, va_list args)
-{
-	chunk_t blob = chunk_empty;
-	x509acert_t *ac;
-
-	while (TRUE)
-	{
-		switch (va_arg(args, builder_part_t))
-		{
-			case BUILD_BLOB_ASN1_DER:
-				blob = va_arg(args, chunk_t);
-				continue;
-			case BUILD_END:
-				break;
-			default:
-				return NULL;
-		}
-		break;
-	}
-	if (blob.ptr)
-	{
-		ac = malloc_thing(x509acert_t);
-		ac->next = NULL;
-		ac->ac = lib->creds->create(lib->creds,
-							  		CRED_CERTIFICATE, CERT_X509_AC,
-							  		BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-		if (ac->ac && verify_x509acert(ac, FALSE))
-		{
-			return ac;
-		}
-		plog("  error in X.509 AC");
-		free_acert(ac);
-	}
-	return NULL;
-}
-
-/**
  * Load a CRL
  */
 static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
@@ -190,8 +150,6 @@ void init_builder(void)
 {
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
 							(builder_function_t)builder_load_cert);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_AC,
-							(builder_function_t)builder_load_ac);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
 							(builder_function_t)builder_load_crl);
 }
@@ -199,7 +157,6 @@ void init_builder(void)
 void free_builder(void)
 {
 	lib->creds->remove_builder(lib->creds, (builder_function_t)builder_load_cert);
-	lib->creds->remove_builder(lib->creds, (builder_function_t)builder_load_ac);
 	lib->creds->remove_builder(lib->creds, (builder_function_t)builder_load_crl);
 }
 
