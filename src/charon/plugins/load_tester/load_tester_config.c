@@ -281,32 +281,32 @@ load_tester_config_t *load_tester_config_create()
 
 	this->vip = NULL;
 	if (lib->settings->get_bool(lib->settings,
-				"charon.plugins.load_tester.request_virtual_ip", FALSE))
+				"charon.plugins.load-tester.request_virtual_ip", FALSE))
 	{
 		this->vip = host_create_from_string("0.0.0.0", 0);
 	}
 	this->pool = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.pool", NULL);
+				"charon.plugins.load-tester.pool", NULL);
 	this->remote = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.remote", "127.0.0.1");
+				"charon.plugins.load-tester.remote", "127.0.0.1");
 
 	this->proposal = proposal_create_from_string(PROTO_IKE,
 			lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.proposal", "aes128-sha1-modp768"));
+				"charon.plugins.load-tester.proposal", "aes128-sha1-modp768"));
 	if (!this->proposal)
 	{	/* fallback */
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
 	this->ike_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load_tester.ike_rekey", 0);
+				"charon.plugins.load-tester.ike_rekey", 0);
 	this->child_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load_tester.child_rekey", 600);
+				"charon.plugins.load-tester.child_rekey", 600);
 
 	this->initiator_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.initiator_auth", "pubkey");
+				"charon.plugins.load-tester.initiator_auth", "pubkey");
 	this->responder_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.responder_auth", "pubkey");
+				"charon.plugins.load-tester.responder_auth", "pubkey");
 
 	this->num = 1;
 	this->peer_cfg = generate_config(this, 0);

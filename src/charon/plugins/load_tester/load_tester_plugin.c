@@ -178,7 +178,7 @@ plugin_t *plugin_create()
 	u_int i, shutdown_on = 0;
 
 	if (!lib->settings->get_bool(lib->settings,
-								 "charon.plugins.load_tester.enable", FALSE))
+								 "charon.plugins.load-tester.enable", FALSE))
 	{
 		DBG1(DBG_CFG, "disabling load-tester plugin, not configured");
 		return NULL;
@@ -191,13 +191,13 @@ plugin_t *plugin_create()
 						(dh_constructor_t)load_tester_diffie_hellman_create);
 
 	this->delay = lib->settings->get_int(lib->settings,
-					"charon.plugins.load_tester.delay", 0);
+					"charon.plugins.load-tester.delay", 0);
 	this->iterations = lib->settings->get_int(lib->settings,
-					"charon.plugins.load_tester.iterations", 1);
+					"charon.plugins.load-tester.iterations", 1);
 	this->initiators = lib->settings->get_int(lib->settings,
-					"charon.plugins.load_tester.initiators", 0);
+					"charon.plugins.load-tester.initiators", 0);
 	if (lib->settings->get_bool(lib->settings,
-					"charon.plugins.load_tester.shutdown_when_complete", 0))
+					"charon.plugins.load-tester.shutdown_when_complete", 0))
 	{
 		shutdown_on = this->iterations * this->initiators;
 	}
@@ -212,7 +212,7 @@ plugin_t *plugin_create()
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	if (lib->settings->get_bool(lib->settings,
-					"charon.plugins.load_tester.fake_kernel", FALSE))
+					"charon.plugins.load-tester.fake_kernel", FALSE))
 	{
 		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);

@@ -292,9 +292,9 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->vendor = 0;
 	this->msk = chunk_empty;
 	this->eap_start = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap_radius.eap_start", FALSE);
+								"charon.plugins.eap-radius.eap_start", FALSE);
 	this->id_prefix = lib->settings->get_str(lib->settings,
-								"charon.plugins.eap_radius.id_prefix", "");
+								"charon.plugins.eap-radius.id_prefix", "");
 	return &this->public;
 }
 

@@ -318,7 +318,7 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 	}
 
 	mtu = lib->settings->get_int(lib->settings,
-						"charon.plugins.kernel_klips.ipsec_dev_mtu", 0);
+						"charon.plugins.kernel-klips.ipsec_dev_mtu", 0);
 	if (mtu <= 0)
 	{
 		/* guess MTU as physical MTU - ESP overhead [- NAT-T overhead]
@@ -2540,7 +2540,7 @@ static status_t del_policy(private_kernel_klips_ipsec_t *this,
 static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 {
 	int i, count = lib->settings->get_int(lib->settings,
-						"charon.plugins.kernel_klips.ipsec_dev_count",
+						"charon.plugins.kernel-klips.ipsec_dev_count",
 						DEFAULT_IPSEC_DEV_COUNT);
 
 	for (i = 0; i < count; ++i)

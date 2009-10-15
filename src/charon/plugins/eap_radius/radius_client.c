@@ -132,11 +132,11 @@ bool radius_client_init()
 	char *server;
 
 	nas_identifier.ptr = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap_radius.nas_identifier", "strongSwan");
+					"charon.plugins.eap-radius.nas_identifier", "strongSwan");
 	nas_identifier.len = strlen(nas_identifier.ptr);
 
 	secret.ptr = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap_radius.secret", NULL);
+					"charon.plugins.eap-radius.secret", NULL);
 	if (!secret.ptr)
 	{
 		DBG1(DBG_CFG, "no RADUIS secret defined");
@@ -144,21 +144,21 @@ bool radius_client_init()
 	}
 	secret.len = strlen(secret.ptr);
 	server = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap_radius.server", NULL);
+					"charon.plugins.eap-radius.server", NULL);
 	if (!server)
 	{
 		DBG1(DBG_CFG, "no RADUIS server defined");
 		return FALSE;
 	}
 	port = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap_radius.port", RADIUS_PORT);
+					"charon.plugins.eap-radius.port", RADIUS_PORT);
 	host = host_create_from_dns(server, 0, port);
 	if (!host)
 	{
 		return FALSE;
 	}
 	count = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap_radius.sockets", 1);
+					"charon.plugins.eap-radius.sockets", 1);
 
 	sockets = linked_list_create();
 	mutex = mutex_create(MUTEX_TYPE_DEFAULT);

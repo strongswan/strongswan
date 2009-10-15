@@ -92,7 +92,7 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 	this->public.destroy = (void(*) (load_tester_listener_t*))destroy;
 
 	this->delete_after_established = lib->settings->get_bool(lib->settings,
-				"charon.plugins.load_tester.delete_after_established", FALSE);
+				"charon.plugins.load-tester.delete_after_established", FALSE);
 
 	this->shutdown_on = shutdown_on;
 	this->established = 0;

@@ -227,7 +227,7 @@ static status_t process_server(private_eap_gtc_t *this,
 	password[data.len] = '\0';
 
 	service = lib->settings->get_str(lib->settings,
-						"charon.plugins.eap_gtc.pam_service", GTC_PAM_SERVICE);
+						"charon.plugins.eap-gtc.pam_service", GTC_PAM_SERVICE);
 
 	if (!authenticate(service, user, password))
 	{
