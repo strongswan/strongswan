@@ -135,7 +135,7 @@ endif
 SUBDIRS = .
 PLUGINS = ${libstrongswan_plugins}
 
-if USE_LOAD_TESTS
+if USE_LOAD_TESTER
   SUBDIRS += plugins/load_tester
   PLUGINS += load-tester
 endif
