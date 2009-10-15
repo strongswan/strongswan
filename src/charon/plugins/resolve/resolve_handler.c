@@ -185,7 +185,7 @@ resolve_handler_t *resolve_handler_create()
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->file = lib->settings->get_str(lib->settings,
-								"charon.plugins.resolv-conf.file", RESOLV_CONF);
+								"charon.plugins.resolve.file", RESOLV_CONF);
 
 	return &this->public;
 }
