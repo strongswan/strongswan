@@ -98,20 +98,20 @@ INSERT INTO private_key_identity (
 
 INSERT INTO shared_secrets (
   type, data
-) VALUES ( 
+) VALUES (
   2, X'4172336574546e703031716c704f6762'
 );
 
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 3 
+  1, 3
 );
 
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 6 
+  1, 6
 );
 
 /* Configurations */
@@ -125,13 +125,13 @@ INSERT INTO ike_configs (
 INSERT INTO peer_configs (
   name, ike_cfg, local_id, remote_id, eap_type
 ) VALUES (
-  'rw-eapaka', 1, 3, 5, 23
+  'rw-eap-aka', 1, 3, 5, 23
 );
 
 INSERT INTO child_configs (
   name, updown
 ) VALUES (
-  'rw-eapaka', 'ipsec _updown iptables'
+  'rw-eap-aka', 'ipsec _updown iptables'
 );
 
 INSERT INTO peer_config_child_config (

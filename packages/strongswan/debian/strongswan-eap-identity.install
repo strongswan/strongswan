@@ -1,2 +1,2 @@
-usr/lib/strongswan/plugins/libstrongswan-eapidentity.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eap-identity.so*	usr/lib/strongswan/plugins/
 

@@ -1,7 +1,7 @@
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
 carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
-moon::ipsec statusall::rw-eapsim.*ESTABLISHED::YES
+moon::ipsec statusall::rw-eap-sim.*ESTABLISHED::YES
 carol::ipsec statusall::home.*ESTABLISHED::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES

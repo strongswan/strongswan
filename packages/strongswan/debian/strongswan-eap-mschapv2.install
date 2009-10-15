@@ -1,2 +1,2 @@
-usr/lib/strongswan/plugins/libstrongswan-eapmschapv2.so*	usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eap-mschapv2.so*	usr/lib/strongswan/plugins/
 

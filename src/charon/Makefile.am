@@ -187,47 +187,47 @@ endif
 
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
-  PLUGINS += eapidentity
+  PLUGINS += eap-identity
 endif
 
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
-  PLUGINS += eapsim
+  PLUGINS += eap-sim
 endif
 
 if USE_EAP_SIM_FILE
   SUBDIRS += plugins/eap_sim_file
-  PLUGINS += eapsim-file
+  PLUGINS += eap-sim-file
 endif
 
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
-  PLUGINS += eapmd5
+  PLUGINS += eap-md5
 endif
 
 if USE_EAP_GTC
   SUBDIRS += plugins/eap_gtc
-  PLUGINS += eapgtc
+  PLUGINS += eap-gtc
 endif
 
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
-  PLUGINS += eapaka
+  PLUGINS += eap-aka
 endif
 
 if USE_EAP_AKA_3GPP2
   SUBDIRS += plugins/eap_aka_3gpp2
-  PLUGINS += eapaka-3gpp2
+  PLUGINS += eap-aka-3gpp2
 endif
 
 if USE_EAP_MSCHAPV2
   SUBDIRS += plugins/eap_mschapv2
-  PLUGINS += eapmschapv2
+  PLUGINS += eap-mschapv2
 endif
 
 if USE_EAP_RADIUS
   SUBDIRS += plugins/eap_radius
-  PLUGINS += eapradius
+  PLUGINS += eap-radius
 endif
 
 if USE_MEDSRV
