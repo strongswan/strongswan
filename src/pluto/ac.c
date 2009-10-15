@@ -47,7 +47,6 @@ void ac_initialize(void)
 void ac_finalize(void)
 {
 	acerts->destroy_offset(acerts, offsetof(certificate_t, destroy));
-	free(acerts);
 }
 
 /**
@@ -64,7 +63,7 @@ certificate_t* ac_get_cert(identification_t *issuer, chunk_t serial)
 		ac_t *ac = (ac_t*)cert;
 
 		if (issuer->equals(issuer, ac->get_holderIssuer(ac)) &&
-			chunk_equals(serial, ac->get_holderSerial(ac)))
+			  chunk_equals(serial, ac->get_holderSerial(ac)))
 		{
 			found = cert;
 			break;
@@ -81,7 +80,7 @@ bool ac_verify_cert(certificate_t *cert, bool strict)
 {
 	ac_t *ac = (ac_t*)cert;
 	identification_t *subject = cert->get_subject(cert);
-	identification_t *issuer = cert->get_issuer(cert);
+	identification_t *issuer  = cert->get_issuer(cert);
 	chunk_t authKeyID = ac->get_authKeyIdentifier(ac);
 	x509cert_t *aacert;
 	time_t notBefore, valid_until;
@@ -124,8 +123,8 @@ bool ac_verify_cert(certificate_t *cert, bool strict)
 static void ac_add_cert(certificate_t *cert)
 {
 	ac_t *ac = (ac_t*)cert;
-	identification_t *issuer = ac->get_holderIssuer(ac);
-	chunk_t serial = ac->get_serial(ac);
+	identification_t *hIssuer = ac->get_holderIssuer(ac);
+	chunk_t hSerial = ac->get_holderSerial(ac);
 
 	enumerator_t *enumerator;
 	certificate_t *cert_old;
@@ -135,18 +134,16 @@ static void ac_add_cert(certificate_t *cert)
 	{
 		ac_t *ac_old = (ac_t*)cert_old;
 
-		if (issuer->equals(issuer, ac_old->get_holderIssuer(ac_old)) &&
-			chunk_equals(serial, ac_old->get_serial(ac_old)))
+		if (hIssuer->equals(hIssuer, ac_old->get_holderIssuer(ac_old)) &&
+			   chunk_equals(hSerial, ac_old->get_holderSerial(ac_old)))
 		{
 			if (cert->is_newer(cert, cert_old))
 			{
-				DBG1("  attribute cert is newer - existing cert deleted");
 				acerts->remove_at(acerts, enumerator);
 				cert_old->destroy(cert_old);
 			}
 			else
 			{
-				DBG1("  attribute cert is not newer - existing cert kept");
 				cert->destroy(cert);
 				cert = NULL;
 			}
@@ -191,7 +188,7 @@ void ac_load_certs(void)
 	struct stat st;
 	char *file;
 
-	DBG1("Loading attribute certificates:");
+	DBG1("loading attribute certificates from '%s'", A_CERT_PATH);
 
 	enumerator = enumerator_create_directory(A_CERT_PATH);
 	if (!enumerator)
