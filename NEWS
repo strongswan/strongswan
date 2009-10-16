@@ -51,6 +51,9 @@ strongswan-4.3.5
 - Fixed smartcard-based authentication in the pluto daemon which was broken by
   the ECDSA support introduced with the 4.3.2 release.
 
+- A patch contributed by Heiko Hund fixes mixed IPv6 in IPv4 and vice versa
+  tunnels established with the IKEv1 pluto daemon.
+
 - The pluto daemon now uses the libstrongswan x509 plugin for certificates and
   CRls and the struct id type was replaced by identification_t used by charon
   and the libstrongswan library.
