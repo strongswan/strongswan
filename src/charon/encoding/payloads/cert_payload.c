@@ -331,14 +331,9 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 {
 	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
-	chunk_t url_chunk;
 
 	this->encoding = ENC_X509_HASH_AND_URL;
-
-	url_chunk.ptr = url;
-	url_chunk.len = strlen(url) + 1;
-
-	this->data = chunk_cat("cc", hash, url_chunk);
+	this->data = chunk_cat("cc", hash, chunk_create(url, strlen(url)));
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
 	return &this->public;
 }
