@@ -3,12 +3,12 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
 AM_CFLAGS = -rdynamic
 
-plugin_LTLIBRARIES = libstrongswan-eapradius.la
+plugin_LTLIBRARIES = libstrongswan-eap-radius.la
 
-libstrongswan_eapradius_la_SOURCES = \
+libstrongswan_eap_radius_la_SOURCES = \
   eap_radius_plugin.h eap_radius_plugin.c \
   eap_radius.h eap_radius.c \
   radius_client.h radius_client.c \
   radius_message.h radius_message.c
-libstrongswan_eapradius_la_LDFLAGS = -module -avoid-version
+libstrongswan_eap_radius_la_LDFLAGS = -module -avoid-version
 
