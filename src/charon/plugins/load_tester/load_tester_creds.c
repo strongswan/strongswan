@@ -276,10 +276,6 @@ static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
-	if (type != SHARED_ANY && type != SHARED_IKE)
-	{
-		return NULL;
-	}
 	if (me && !me->matches(me, this->id))
 	{
 		return NULL;
