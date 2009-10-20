@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,8 @@
 
 #include "eap_sim_plugin.h"
 
-#include "eap_sim.h"
+#include "eap_sim_server.h"
+#include "eap_sim_peer.h"
 
 #include <daemon.h>
 
@@ -25,9 +26,9 @@
 static void destroy(eap_sim_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_sim_create_server);
+							   (eap_constructor_t)eap_sim_server_create);
 	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_sim_create_peer);
+							   (eap_constructor_t)eap_sim_peer_create);
 	free(this);
 }
 
@@ -41,9 +42,9 @@ plugin_t *plugin_create()
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	charon->eap->add_method(charon->eap, EAP_SIM, 0, EAP_SERVER,
-							(eap_constructor_t)eap_sim_create_server);
+							(eap_constructor_t)eap_sim_server_create);
 	charon->eap->add_method(charon->eap, EAP_SIM, 0, EAP_PEER,
-							(eap_constructor_t)eap_sim_create_peer);
+							(eap_constructor_t)eap_sim_peer_create);
 
 	return &this->plugin;
 }
