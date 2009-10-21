@@ -217,8 +217,8 @@ static void add_attribute(private_simaka_message_t *this,
 /**
  * Implementation of simaka_message_t.parse
  */
-static bool parse(private_simaka_message_t *this, crypter_t *crypter,
-				  signer_t *signer, chunk_t sigdata)
+static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
+				  chunk_t sigdata)
 {
 	chunk_t in, iv = chunk_empty, encr = chunk_empty;
 
@@ -397,6 +397,7 @@ static bool parse(private_simaka_message_t *this, crypter_t *crypter,
 	if (iv.len && encr.len)
 	{
 		bool success;
+		crypter_t *crypter;
 
 		if (this->encrypted)
 		{
@@ -404,6 +405,7 @@ static bool parse(private_simaka_message_t *this, crypter_t *crypter,
 				 eap_type_names, this->hdr->type);
 			return FALSE;
 		}
+		crypter = crypto->get_crypter(crypto);
 		if (!crypter)
 		{
 			DBG1(DBG_IKE, "%N message contains unexpected encrypted data",
@@ -421,7 +423,7 @@ static bool parse(private_simaka_message_t *this, crypter_t *crypter,
 		crypter->decrypt(crypter, encr, iv, NULL);
 
 		this->encrypted = TRUE;
-		success = parse(this, NULL, NULL, chunk_empty);
+		success = parse(this, crypto, chunk_empty);
 		this->encrypted = FALSE;
 		return success;
 	}
@@ -432,9 +434,12 @@ static bool parse(private_simaka_message_t *this, crypter_t *crypter,
  * Implementation of simaka_message_t.verify
  */
 static bool verify(private_simaka_message_t *this,
-				   signer_t *signer, chunk_t sigdata)
+				   simaka_crypto_t *crypto, chunk_t sigdata)
 {
 	chunk_t data, backup;
+	signer_t *signer;
+
+	signer = crypto->get_signer(crypto);
 
 	switch (this->hdr->subtype)
 	{
@@ -502,8 +507,7 @@ static bool verify(private_simaka_message_t *this,
  * Implementation of simaka_message_t.generate
  */
 static eap_payload_t* generate(private_simaka_message_t *this,
-							   crypter_t *crypter, rng_t *rng,
-							   signer_t *signer, chunk_t sigdata)
+							   simaka_crypto_t *crypto, chunk_t sigdata)
 {
 	/* buffers large enough for messages we generate */
 	char out_buf[1024], encr_buf[512];
@@ -512,6 +516,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 	simaka_attribute_t type;
 	attr_hdr_t *hdr;
 	u_int16_t len;
+	signer_t *signer;
 
 	out = chunk_create(out_buf, sizeof(out_buf));
 	encr = chunk_create(encr_buf, sizeof(encr_buf));
@@ -640,7 +645,10 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 	{
 		chunk_t iv;
 		size_t bs;
+		crypter_t *crypter;
+		rng_t *rng;
 
+		crypter = crypto->get_crypter(crypto);
 		encr = chunk_create(encr_buf, sizeof(encr_buf) - encr.len);
 		bs = crypter->get_block_size(crypter);
 
@@ -651,6 +659,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 		memset(out.ptr + 2, 0, 2);
 		out = chunk_skip(out, 4);
 
+		rng = crypto->get_rng(crypto);
 		rng->get_bytes(rng, bs, out.ptr);
 
 		iv = chunk_clonea(chunk_create(out.ptr, bs));
@@ -669,6 +678,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 	}
 
 	/* include MAC ? */
+	signer = crypto->get_signer(crypto);
 	switch (this->hdr->subtype)
 	{
 		case SIM_CHALLENGE:
@@ -750,9 +760,9 @@ static simaka_message_t *simaka_message_create_data(chunk_t data)
 	this->public.get_subtype = (simaka_subtype_t(*)(simaka_message_t*))get_subtype;
 	this->public.create_attribute_enumerator = (enumerator_t*(*)(simaka_message_t*))create_attribute_enumerator;
 	this->public.add_attribute = (void(*)(simaka_message_t*, simaka_attribute_t type, chunk_t data))add_attribute;
-	this->public.parse = (bool(*)(simaka_message_t*, crypter_t *crypter))parse;
-	this->public.verify = (bool(*)(simaka_message_t*, signer_t *signer, chunk_t sigdata))verify;
-	this->public.generate = (eap_payload_t*(*)(simaka_message_t*, crypter_t *crypter, rng_t *rng, signer_t *signer, chunk_t sigdata))generate;
+	this->public.parse = (bool(*)(simaka_message_t*, simaka_crypto_t* crypto))parse;
+	this->public.verify = (bool(*)(simaka_message_t*, simaka_crypto_t* crypto, chunk_t sigdata))verify;
+	this->public.generate = (eap_payload_t*(*)(simaka_message_t*, simaka_crypto_t* crypto, chunk_t sigdata))generate;
 	this->public.destroy = (void(*)(simaka_message_t*))destroy;
 
 	this->attributes = linked_list_create();

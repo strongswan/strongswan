@@ -35,14 +35,6 @@
 #define KC_LEN 8
 /** length of SRES */
 #define SRES_LEN 4
-/** length of the k_encr key */
-#define KENCR_LEN 16
-/** length of the k_auth key */
-#define KAUTH_LEN 16
-/** length of the MSK */
-#define MSK_LEN 64
-/** length of the EMSK */
-#define EMSK_LEN 64
 
 typedef struct private_eap_sim_peer_t private_eap_sim_peer_t;
 
@@ -62,29 +54,9 @@ struct private_eap_sim_peer_t {
 	identification_t *peer;
 
 	/**
-	 * RNG to create nonces, IVs
+	 * EAP-SIM crypto helper
 	 */
-	rng_t *rng;
-
-	/**
-	 * hashing function
-	 */
-	hasher_t *hasher;
-
-	/**
-	 * prf
-	 */
-	prf_t *prf;
-
-	/**
-	 * MAC function
-	 */
-	signer_t *signer;
-
-	/**
-	 * encryption function
-	 */
-	crypter_t *crypter;
+	simaka_crypto_t *crypto;
 
 	/**
 	 * how many times we try to authenticate
@@ -142,43 +114,6 @@ static bool get_card_triplet(private_eap_sim_peer_t *this,
 }
 
 /**
- * Derive EAP keys from kc when using full authentication
- */
-static void derive_keys_full(private_eap_sim_peer_t *this, chunk_t kcs)
-{
-	char mk[HASH_SIZE_SHA1], k_encr[KENCR_LEN], k_auth[KAUTH_LEN];
-	chunk_t tmp;
-	int i;
-
-	/* MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version) */
-	tmp = chunk_cata("ccccc", this->peer->get_encoding(this->peer),
-					 kcs, this->nonce, this->version_list, version);
-	this->hasher->get_hash(this->hasher, tmp, mk);
-	DBG3(DBG_IKE, "MK = SHA1(%B\n) = %b", &tmp, mk, HASH_SIZE_SHA1);
-
-	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf()
-	 * We currently don't need EMSK, so three prf() are sufficient */
-	this->prf->set_key(this->prf, chunk_create(mk, HASH_SIZE_SHA1));
-	tmp = chunk_alloca(this->prf->get_block_size(this->prf) * 3);
-	for (i = 0; i < 3; i++)
-	{
-		this->prf->get_bytes(this->prf, chunk_empty, tmp.ptr + tmp.len / 3 * i);
-	}
-	memcpy(k_encr, tmp.ptr, KENCR_LEN);
-	tmp = chunk_skip(tmp, KENCR_LEN);
-	memcpy(k_auth, tmp.ptr, KAUTH_LEN);
-	tmp = chunk_skip(tmp, KAUTH_LEN);
-	free(this->msk.ptr);
-	this->msk = chunk_alloc(MSK_LEN);
-	memcpy(this->msk.ptr, tmp.ptr, MSK_LEN);
-	DBG3(DBG_IKE, "K_encr %b\nK_auth %b\nMSK %B",
-		 k_encr, KENCR_LEN, k_auth, KAUTH_LEN, &this->msk);
-
-	this->signer->set_key(this->signer, chunk_create(k_auth, KAUTH_LEN));
-	this->crypter->set_key(this->crypter, chunk_create(k_encr, KENCR_LEN));
-}
-
-/**
  * Send a SIM_CLIENT_ERROR
  */
 static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
@@ -190,7 +125,7 @@ static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
 	message = simaka_message_create(FALSE, identifier,
 									EAP_SIM, SIM_CLIENT_ERROR);
 	message->add_attribute(message, AT_CLIENT_ERROR_CODE, code);
-	out = message->generate(message, NULL, NULL, NULL, chunk_empty);
+	out = message->generate(message, this->crypto, chunk_empty);
 	message->destroy(message);
 	return out;
 }
@@ -205,6 +140,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data;
+	rng_t *rng;
 	bool supported = FALSE;
 
 	enumerator = in->create_attribute_enumerator(in);
@@ -243,14 +179,15 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	}
 
 	/* generate AT_NONCE_MT value */
+	rng = this->crypto->get_rng(this->crypto);
 	free(this->nonce.ptr);
-	this->rng->allocate_bytes(this->rng, NONCE_LEN, &this->nonce);
+	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
 
 	message = simaka_message_create(FALSE, in->get_identifier(in),
 									EAP_SIM, SIM_START);
 	message->add_attribute(message, AT_SELECTED_VERSION, version);
 	message->add_attribute(message, AT_NONCE_MT, this->nonce);
-	*out = message->generate(message, NULL, NULL, NULL, chunk_empty);
+	*out = message->generate(message, this->crypto, chunk_empty);
 	message->destroy(message);
 
 	return NEED_MORE;
@@ -321,10 +258,12 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		rands = chunk_skip(rands, RAND_LEN);
 	}
 
-	derive_keys_full(this, kcs);
+	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
+	free(this->msk.ptr);
+	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
 
 	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT"  */
-	if (!in->verify(in, this->signer, this->nonce))
+	if (!in->verify(in, this->crypto, this->nonce))
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed");
 		*out = create_client_error(this, in->get_identifier(in),
@@ -335,7 +274,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	/* build response with AT_MAC, built over "EAP packet | n*SRES" */
 	message = simaka_message_create(FALSE, in->get_identifier(in),
 									EAP_SIM, SIM_CHALLENGE);
-	*out = message->generate(message, NULL, NULL, this->signer, sreses);
+	*out = message->generate(message, this->crypto, sreses);
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -375,7 +314,7 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 	{	/* empty notification reply */
 		message = simaka_message_create(FALSE, in->get_identifier(in),
 										EAP_SIM, SIM_NOTIFICATION);
-		*out = message->generate(message, NULL, NULL, NULL, chunk_empty);
+		*out = message->generate(message, this->crypto, chunk_empty);
 		message->destroy(message);
 	}
 	else
@@ -402,7 +341,7 @@ static status_t process(private_eap_sim_peer_t *this,
 								   client_error_general);
 		return NEED_MORE;
 	}
-	if (!message->parse(message, this->crypter))
+	if (!message->parse(message, this->crypto))
 	{
 		message->destroy(message);
 		*out = create_client_error(this, in->get_identifier(in),
@@ -475,11 +414,7 @@ static bool is_mutual(private_eap_sim_peer_t *this)
 static void destroy(private_eap_sim_peer_t *this)
 {
 	this->peer->destroy(this->peer);
-	DESTROY_IF(this->rng);
-	DESTROY_IF(this->hasher);
-	DESTROY_IF(this->prf);
-	DESTROY_IF(this->signer);
-	DESTROY_IF(this->crypter);
+	this->crypto->destroy(this->crypto);
 	free(this->version_list.ptr);
 	free(this->nonce.ptr);
 	free(this->msk.ptr);
@@ -494,12 +429,6 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 {
 	private_eap_sim_peer_t *this = malloc_thing(private_eap_sim_peer_t);
 
-	this->peer = peer->clone(peer);
-	this->tries = MAX_TRIES;
-	this->version_list = chunk_empty;
-	this->nonce = chunk_empty;
-	this->msk = chunk_empty;
-
 	this->public.interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
 	this->public.interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
 	this->public.interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
@@ -507,18 +436,18 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 	this->public.interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.interface.destroy = (void(*)(eap_method_t*))destroy;
 
-	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	this->prf = lib->crypto->create_prf(lib->crypto, PRF_FIPS_SHA1_160);
-	this->signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_SHA1_128);
-	this->crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
-	if (!this->rng || !this->hasher || !this->prf ||
-		!this->signer || !this->crypter)
+	this->crypto = simaka_crypto_create();
+	if (!this->crypto)
 	{
-		DBG1(DBG_IKE, "unable to use EAP-SIM, missing algorithms");
-		destroy(this);
+		free(this);
 		return NULL;
 	}
+	this->peer = peer->clone(peer);
+	this->tries = MAX_TRIES;
+	this->version_list = chunk_empty;
+	this->nonce = chunk_empty;
+	this->msk = chunk_empty;
+
 	return &this->public;
 }
 

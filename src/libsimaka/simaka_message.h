@@ -21,8 +21,10 @@
 #ifndef SIMAKA_MESSAGE_H_
 #define SIMAKA_MESSAGE_H_
 
-#include <daemon.h>
 #include <enum.h>
+#include <daemon.h>
+
+#include "simaka_crypto.h"
 
 typedef struct simaka_message_t simaka_message_t;
 typedef enum simaka_attribute_t simaka_attribute_t;
@@ -147,31 +149,30 @@ struct simaka_message_t {
 	 * This method does not verify message integrity, as the key is available
 	 * only after the payload has been parsed.
 	 *
-	 * @param crypter	crypter to decrypt AT_ENCR_DATA attribute
+	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @return			TRUE if message parsed successfully
 	 */
-	bool (*parse)(simaka_message_t *this, crypter_t *crypter);
+	bool (*parse)(simaka_message_t *this, simaka_crypto_t *crypto);
 
 	/**
 	 * Verify the message integrity of a parsed message.
 	 *
-	 * @param signer	signer to verify AT_MAC attribute
+	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @param sigdata	additional data to include in signature, if any
 	 * @return			TRUE if message integrity check successful
 	 */
-	bool (*verify)(simaka_message_t *this, signer_t *signer, chunk_t sigdata);
+	bool (*verify)(simaka_message_t *this, simaka_crypto_t *crypto,
+				   chunk_t sigdata);
 
 	/**
 	 * Generate a message, optionally encrypt attributes and create a MAC.
 	 *
-	 * @param crypter	crypter to encrypt attributes requiring encryption
-	 * @param rng		random number generator for IV
-	 * @param signer	signer to create AT_MAC attribute
+	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @param sigdata	additional data to include in signature, if any
 	 * @return			generated eap payload, NULL if failed
 	 */
-	eap_payload_t* (*generate)(simaka_message_t *this, crypter_t *crypter,
-							   rng_t *rng, signer_t *signer, chunk_t sigdata);
+	eap_payload_t* (*generate)(simaka_message_t *this, simaka_crypto_t *crypto,
+							   chunk_t sigdata);
 
 	/**
 	 * Destroy a simaka_message_t.
