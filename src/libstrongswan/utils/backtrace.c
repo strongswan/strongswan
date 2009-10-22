@@ -71,7 +71,7 @@ static void log_(private_backtrace_t *this, FILE *file)
 		{
 			char cmd[1024];
 			FILE *output;
-			char c;
+			int c;
 			void *ptr = this->frames[i];
 
 			if (strstr(info.dli_fname, ".so"))
