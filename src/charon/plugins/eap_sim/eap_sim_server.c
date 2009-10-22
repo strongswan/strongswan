@@ -127,8 +127,11 @@ static status_t process_start(private_eap_sim_server_t *this,
 				}
 				break;
 			default:
-				DBG1(DBG_IKE, "ignoring EAP-SIM attribute %N",
-					 simaka_attribute_names, type);
+				if (!simaka_attribute_skippable(type))
+				{
+					enumerator->destroy(enumerator);
+					return FAILED;
+				}
 				break;
 		}
 	}
@@ -188,8 +191,11 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
-		DBG1(DBG_IKE, "ignoring EAP-SIM attribute %N",
-			 simaka_attribute_names, type);
+		if (!simaka_attribute_skippable(type))
+		{
+			enumerator->destroy(enumerator);
+			return FAILED;
+		}
 	}
 	enumerator->destroy(enumerator);
 
@@ -206,7 +212,7 @@ static status_t process_challenge(private_eap_sim_server_t *this,
  * EAP-SIM/Response/ClientErrorCode message
  */
 static status_t process_client_error(private_eap_sim_server_t *this,
-									 simaka_message_t *in, eap_payload_t **out)
+									 simaka_message_t *in)
 {
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
@@ -217,12 +223,15 @@ static status_t process_client_error(private_eap_sim_server_t *this,
 	{
 		if (type == AT_CLIENT_ERROR_CODE)
 		{
-			DBG1(DBG_IKE, "received EAP-SIM client error code %#B", &data);
+			u_int16_t code;
+
+			memcpy(&code, data.ptr, sizeof(code));
+			DBG1(DBG_IKE, "received EAP-SIM client error '%N'",
+				 simaka_client_error_names, ntohs(code));
 		}
-		else
+		else if (!simaka_attribute_skippable(type))
 		{
-			DBG1(DBG_IKE, "ignoring EAP-SIM attribute %N",
-				 simaka_attribute_names, type);
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -257,7 +266,7 @@ static status_t process(private_eap_sim_server_t *this,
 			status = process_challenge(this, message, out);
 			break;
 		case SIM_CLIENT_ERROR:
-			status = process_client_error(this, message, out);
+			status = process_client_error(this, message);
 			break;
 		default:
 			DBG1(DBG_IKE, "unable to process EAP-SIM subtype %N",

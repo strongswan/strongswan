@@ -81,10 +81,6 @@ struct private_eap_sim_peer_t {
 
 /* version of SIM protocol we speak */
 static chunk_t version = chunk_from_chars(0x00,0x01);
-/* client error codes used in AT_CLIENT_ERROR_CODE */
-static chunk_t client_error_general = chunk_from_chars(0x00, 0x01);
-static chunk_t client_error_unsupported = chunk_from_chars(0x00, 0x02);
-static chunk_t client_error_insufficient = chunk_from_chars(0x00, 0x03);
 
 /**
  * Read a triplet from the SIM card
@@ -114,17 +110,22 @@ static bool get_card_triplet(private_eap_sim_peer_t *this,
 }
 
 /**
- * Send a SIM_CLIENT_ERROR
+ * Create a SIM_CLIENT_ERROR
  */
 static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
-										  u_int8_t identifier, chunk_t code)
+							u_int8_t identifier, simaka_client_error_t code)
 {
 	simaka_message_t *message;
 	eap_payload_t *out;
+	u_int16_t encoded;
+
+	DBG1(DBG_IKE, "sending client error '%N'", simaka_client_error_names, code);
 
 	message = simaka_message_create(FALSE, identifier,
 									EAP_SIM, SIM_CLIENT_ERROR);
-	message->add_attribute(message, AT_CLIENT_ERROR_CODE, code);
+	encoded = htons(code);
+	message->add_attribute(message, AT_CLIENT_ERROR_CODE,
+						   chunk_create((char*)&encoded, sizeof(encoded)));
 	out = message->generate(message, this->crypto, chunk_empty);
 	message->destroy(message);
 	return out;
@@ -163,8 +164,13 @@ static status_t process_start(private_eap_sim_peer_t *this,
 				break;
 			}
 			default:
-				DBG1(DBG_IKE, "ignoring EAP-SIM attribute %N",
-					 simaka_attribute_names, type);
+				if (!simaka_attribute_skippable(type))
+				{
+					*out = create_client_error(this, in->get_identifier(in),
+											   SIM_UNABLE_TO_PROCESS);
+					enumerator->destroy(enumerator);
+					return NEED_MORE;
+				}
 				break;
 		}
 	}
@@ -174,7 +180,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	{
 		DBG1(DBG_IKE, "server does not support EAP-SIM version number 1");
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_unsupported);
+								   SIM_UNSUPPORTED_VERSION);
 		return NEED_MORE;
 	}
 
@@ -217,13 +223,16 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		switch (type)
 		{
 			case AT_RAND:
-			{
 				rands = data;
 				break;
-			}
 			default:
-				DBG1(DBG_IKE, "ignoring EAP-SIM attribute %N",
-					 simaka_attribute_names, type);
+				if (!simaka_attribute_skippable(type))
+				{
+					*out = create_client_error(this, in->get_identifier(in),
+											   SIM_UNABLE_TO_PROCESS);
+					enumerator->destroy(enumerator);
+					return NEED_MORE;
+				}
 				break;
 		}
 	}
@@ -236,7 +245,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	{
 		DBG1(DBG_IKE, "no valid AT_RAND received");
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_insufficient);
+								   SIM_INSUFFICIENT_CHALLENGES);
 		return NEED_MORE;
 	}
 	/* get two or three KCs/SRESes from SIM using RANDs */
@@ -248,7 +257,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = create_client_error(this, in->get_identifier(in),
-									   client_error_general);
+									   SIM_UNABLE_TO_PROCESS);
 			return NEED_MORE;
 		}
 		DBG3(DBG_IKE, "got triplet for RAND %b\n  Kc %b\n  SRES %b",
@@ -267,7 +276,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed");
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_general);
+								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 
@@ -296,16 +305,28 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 	{
 		if (type == AT_NOTIFICATION)
 		{
+			u_int16_t code;
+
+			memcpy(&code, data.ptr, sizeof(code));
+			code = ntohs(code);
+
 			/* test success bit */
 			if (!(data.ptr[0] & 0x80))
 			{
 				success = FALSE;
-				DBG1(DBG_IKE, "received EAP-SIM notification error %#B", &data);
+				DBG1(DBG_IKE, "received EAP-SIM notification error '%N'",
+					 simaka_notification_names, code);
 			}
 			else
 			{
-				DBG1(DBG_IKE, "received EAP-SIM notification code %#B", &data);
+				DBG1(DBG_IKE, "received EAP-SIM notification '%N'",
+					 simaka_notification_names, code);
 			}
+		}
+		else if (!simaka_attribute_skippable(type))
+		{
+			success = FALSE;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -320,7 +341,7 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 	else
 	{
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_general);
+								   SIM_UNABLE_TO_PROCESS);
 	}
 	return NEED_MORE;
 }
@@ -338,14 +359,14 @@ static status_t process(private_eap_sim_peer_t *this,
 	if (!message)
 	{
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_general);
+								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 	if (!message->parse(message, this->crypto))
 	{
 		message->destroy(message);
 		*out = create_client_error(this, in->get_identifier(in),
-								   client_error_general);
+								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 	switch (message->get_subtype(message))
@@ -360,8 +381,10 @@ static status_t process(private_eap_sim_peer_t *this,
 			status = process_notification(this, message, out);
 			break;
 		default:
+			DBG1(DBG_IKE, "unable to process EAP-SIM subtype %N",
+				 simaka_subtype_names, message->get_subtype(message));
 			*out = create_client_error(this, in->get_identifier(in),
-									   client_error_general);
+									   SIM_UNABLE_TO_PROCESS);
 			status = NEED_MORE;
 			break;
 	}
