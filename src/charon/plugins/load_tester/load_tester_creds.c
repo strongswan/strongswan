@@ -52,11 +52,6 @@ struct private_load_tester_creds_t {
 	 * Preshared key
 	 */
 	shared_key_t *shared;
-
-	/**
-	 * Identification for shared key
-	 */
-	identification_t *id;
 };
 
 /**
@@ -276,14 +271,6 @@ static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
-	if (me && !me->matches(me, this->id))
-	{
-		return NULL;
-	}
-	if (other && !other->matches(other, this->id))
-	{
-		return NULL;
-	}
 	return enumerator_create_single(this->shared, NULL);
 }
 
@@ -295,7 +282,6 @@ static void destroy(private_load_tester_creds_t *this)
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->ca);
 	this->shared->destroy(this->shared);
-	this->id->destroy(this->id);
 	free(this);
 }
 
@@ -321,7 +307,6 @@ load_tester_creds_t *load_tester_creds_create()
 
 	this->shared = shared_key_create(SHARED_IKE,
 									 chunk_clone(chunk_create(psk, sizeof(psk))));
-	this->id = identification_create_from_string("CN=*, OU=load-test, O=strongSwan");
 	this->serial = 0;
 	return &this->public;
 }
