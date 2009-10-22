@@ -130,7 +130,7 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg);
  * Conversion of hash signature algorithm into ASN.1 OID.
  *
  * @param alg			hash algorithm
- * @param alg			public key type
+ * @param key			public key type
  * @return				ASN.1 OID if, or OID_UNKNOW
  */
 int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key);

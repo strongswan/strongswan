@@ -45,7 +45,7 @@ private_key_t *pem_private_key_load(key_type_t type, va_list args);
 public_key_t *pem_public_key_load(key_type_t type, va_list args);
 
 /**
- * Build PEM encoded certificates..
+ * Build PEM encoded certificates.
  *
  * @param type		type of the certificate
  * @param args		builder_part_t argument list

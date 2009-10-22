@@ -58,4 +58,4 @@ struct attribute_handler_t {
 					configuration_attribute_type_t type, chunk_t data);
 };
 
-#endif /* ATTRIBUTE_HANDLER_ @}*/
+#endif /** ATTRIBUTE_HANDLER_H_ @}*/

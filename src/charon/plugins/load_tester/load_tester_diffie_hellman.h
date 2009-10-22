@@ -45,4 +45,4 @@ struct load_tester_diffie_hellman_t {
 load_tester_diffie_hellman_t *load_tester_diffie_hellman_create(
 												diffie_hellman_group_t group);
 
-#endif /** LOAD_TESTER_DIFFIE_HELLMAN_ @}*/
+#endif /** LOAD_TESTER_DIFFIE_HELLMAN_H_ @}*/

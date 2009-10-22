@@ -127,4 +127,4 @@ bool pgp_read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar);
  */
 bool pgp_read_packet(chunk_t *blob, chunk_t *data, pgp_packet_tag_t *tag);
 
-#endif /* PGP_UTILS_ @}*/
+#endif /** PGP_UTILS_H_ @}*/

@@ -122,4 +122,4 @@ struct eap_aka_3gpp2_functions_t {
  */
 eap_aka_3gpp2_functions_t *eap_aka_3gpp2_functions_create();
 
-#endif /** EAP_AKA_3GPP2_FUNCTIONS_ @}*/
+#endif /** EAP_AKA_3GPP2_FUNCTIONS_H_ @}*/

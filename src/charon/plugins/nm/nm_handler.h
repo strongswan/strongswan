@@ -59,4 +59,4 @@ struct nm_handler_t {
  */
 nm_handler_t *nm_handler_create();
 
-#endif /* NM_HANDLER_ @}*/
+#endif /** NM_HANDLER_H_ @}*/

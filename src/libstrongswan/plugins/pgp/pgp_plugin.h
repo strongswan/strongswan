@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup pgp_p pgp
+ * @defgroup pgp pgp
  * @ingroup plugins
  *
  * @defgroup pgp_plugin pgp_plugin
- * @{ @ingroup pgp_p
+ * @{ @ingroup pgp
  */
 
 #ifndef PGP_PLUGIN_H_

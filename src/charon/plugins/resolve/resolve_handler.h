@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup resolv_conf_handler resolv_conf_handler
- * @{ @ingroup resolv_conf
+ * @defgroup resolve_handler resolve_handler
+ * @{ @ingroup resolve
  */
 
 #ifndef RESOLVE_HANDLER_H_
@@ -46,4 +46,4 @@ struct resolve_handler_t {
  */
 resolve_handler_t *resolve_handler_create();
 
-#endif /* RESOLVE_HANDLER_ @}*/
+#endif /** RESOLVE_HANDLER_H_ @}*/

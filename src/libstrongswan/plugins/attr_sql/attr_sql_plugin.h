@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup sql sql
- * @ingroup cplugins
+ * @defgroup attr_sql attr_sql
+ * @ingroup plugins
  *
  * @defgroup sql_plugin sql_plugin
- * @{ @ingroup sql
+ * @{ @ingroup attr_sql
  */
 
 #ifndef ATTR_SQL_PLUGIN_H_

@@ -50,4 +50,4 @@ struct eap_sim_file_card_t {
  */
 eap_sim_file_card_t *eap_sim_file_card_create(eap_sim_file_triplets_t *triplets);
 
-#endif /** EAP_SIM_FILE_CARD_ @}*/
+#endif /** EAP_SIM_FILE_CARD_H_ @}*/

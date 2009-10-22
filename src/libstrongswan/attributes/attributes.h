@@ -15,7 +15,7 @@
  */
 
 /**
- * @defgroup attributes attributes
+ * @defgroup attributes_g attributes
  * @{ @ingroup attributes
  */
 

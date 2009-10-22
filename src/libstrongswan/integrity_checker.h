@@ -108,4 +108,4 @@ struct integrity_checker_t {
  */
 integrity_checker_t *integrity_checker_create(char *checksum_library);
 
-#endif /* INTEGRITY_CHECKER_H_ @}*/
+#endif /** INTEGRITY_CHECKER_H_ @}*/

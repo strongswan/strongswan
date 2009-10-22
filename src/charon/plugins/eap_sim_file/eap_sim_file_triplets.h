@@ -53,4 +53,4 @@ struct eap_sim_file_triplets_t {
  */
 eap_sim_file_triplets_t *eap_sim_file_triplets_create(char *file);
 
-#endif /** EAP_SIM_FILE_TRIPLETS_ @}*/
+#endif /** EAP_SIM_FILE_TRIPLETS_H_ @}*/

@@ -50,4 +50,4 @@ struct eap_aka_3gpp2_card_t {
  */
 eap_aka_3gpp2_card_t *eap_aka_3gpp2_card_create(eap_aka_3gpp2_functions_t *f);
 
-#endif /** EAP_AKA_3GPP2_CARD_ @}*/
+#endif /** EAP_AKA_3GPP2_CARD_H_ @}*/

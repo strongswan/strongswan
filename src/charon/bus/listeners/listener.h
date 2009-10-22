@@ -176,4 +176,4 @@ struct listener_t {
 					  bool final, bool *success);
 };
 
-#endif /* LISTENER_ @}*/
+#endif /** LISTENER_H_ @}*/

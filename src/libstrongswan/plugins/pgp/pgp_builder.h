@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pgp_public_key pgp_public_key
- * @{ @ingroup pgp_p
+ * @{ @ingroup pgp
  */
 
 #ifndef PGP_BUILDER_H_

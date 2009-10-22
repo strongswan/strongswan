@@ -49,4 +49,4 @@ struct eap_aka_3gpp2_provider_t {
 eap_aka_3gpp2_provider_t *eap_aka_3gpp2_provider_create(
 												eap_aka_3gpp2_functions_t *f);
 
-#endif /** EAP_AKA_3GPP2_PROVIDER_ @}*/
+#endif /** EAP_AKA_3GPP2_PROVIDER_H_ @}*/

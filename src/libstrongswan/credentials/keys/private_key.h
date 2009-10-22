@@ -139,8 +139,8 @@ bool private_key_equals(private_key_t *this, private_key_t *other);
 /**
  * Generic private key belongs_to() implementation, usable by implementors.
  *
- * @param this			first key to compare
- * @param other			second key to compare
+ * @param private		private key to check
+ * @param public		public key to compare
  * @return				TRUE if this is equal to other
  */
 bool private_key_belongs_to(private_key_t *private, public_key_t *public);
@@ -149,7 +149,7 @@ bool private_key_belongs_to(private_key_t *private, public_key_t *public);
  * Generic private key has_fingerprint() implementation, usable by implementors.
  *
  * @param this			key to check fingerprint
- * @param fp			fingerprint to check
+ * @param fingerprint	fingerprint to check
  * @return				TRUE if key has given fingerprint
  */
 bool private_key_has_fingerprint(private_key_t *this, chunk_t fingerprint);

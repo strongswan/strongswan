@@ -36,4 +36,4 @@ bool get_form(char *form, key_encoding_type_t *type, bool pub);
  */
 hash_algorithm_t get_digest(char *name);
 
-#endif /* PKI_ @}*/
+#endif /** PKI_H_ @}*/

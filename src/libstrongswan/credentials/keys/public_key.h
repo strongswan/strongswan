@@ -198,7 +198,7 @@ bool public_key_equals(public_key_t *this, public_key_t *other);
  * Generic public key has_fingerprint() implementation, usable by implementors.
  *
  * @param this			key to check fingerprint
- * @param fp			fingerprint to check
+ * @param fingerprint	fingerprint to check
  * @return				TRUE if key has given fingerprint
  */
 bool public_key_has_fingerprint(public_key_t *this, chunk_t fingerprint);

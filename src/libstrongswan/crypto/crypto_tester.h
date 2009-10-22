@@ -202,4 +202,4 @@ struct crypto_tester_t {
  */
 crypto_tester_t *crypto_tester_create();
 
-#endif /* CRYPTO_TESTER_ @}*/
+#endif /** CRYPTO_TESTER_H_ @}*/

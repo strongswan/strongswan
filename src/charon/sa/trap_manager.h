@@ -78,4 +78,4 @@ struct trap_manager_t {
  */
 trap_manager_t *trap_manager_create();
 
-#endif /* TRAP_MANAGER_ @}*/
+#endif /** TRAP_MANAGER_H_ @}*/

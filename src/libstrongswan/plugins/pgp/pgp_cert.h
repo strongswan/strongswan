@@ -45,4 +45,4 @@ struct pgp_cert_t {
  */
 pgp_cert_t *pgp_cert_load(certificate_type_t type, va_list args);
 
-#endif /* PGP_CERT_ @}*/
+#endif /** PGP_CERT_H_ @}*/

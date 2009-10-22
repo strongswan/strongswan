@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup pkcs1_p pkcs1
+ * @defgroup pkcs1 pkcs1
  * @ingroup plugins
  *
  * @defgroup pkcs1_plugin pkcs1_plugin
- * @{ @ingroup pkcs1_p
+ * @{ @ingroup pkcs1
  */
 
 #ifndef PKCS1_PLUGIN_H_

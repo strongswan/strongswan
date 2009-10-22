@@ -200,4 +200,4 @@ struct key_encoding_t {
  */
 key_encoding_t *key_encoding_create();
 
-#endif /* KEY_ENCODING_ @}*/
+#endif /** KEY_ENCODING_H_ @}*/

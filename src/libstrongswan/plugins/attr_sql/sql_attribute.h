@@ -15,7 +15,7 @@
 
 /**
  * @defgroup sql_attribute sql_attribute
- * @{ @ingroup sql
+ * @{ @ingroup attr_sql
  */
 
 #ifndef SQL_ATTRIBUTE_H_
