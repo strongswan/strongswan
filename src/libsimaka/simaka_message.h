@@ -29,6 +29,8 @@
 typedef struct simaka_message_t simaka_message_t;
 typedef enum simaka_attribute_t simaka_attribute_t;
 typedef enum simaka_subtype_t simaka_subtype_t;
+typedef enum simaka_notification_t simaka_notification_t;
+typedef enum simaka_client_error_t simaka_client_error_t;
 
 /**
  * Subtypes of EAP-SIM/AKA messages
@@ -87,6 +89,66 @@ enum simaka_attribute_t {
  * Enum names for simaka_attribute_t
  */
 extern enum_name_t *simaka_attribute_names;
+
+/**
+ * Notification codes used within AT_NOTIFICATION attribute.
+ */
+enum simaka_notification_t {
+	/* SIM General failure after authentication. (Implies failure) */
+	SIM_GENERAL_FAILURE_AA = 0,
+	/* AKA General failure after authentication. (Implies failure) */
+	AKA_GENERAL_FAILURE_AA = 0,
+	/* SIM General failure. (Implies failure, used before authentication) */
+	SIM_GENERAL_FAILURE = 16384,
+	/* AKA General failure. (Implies failure, used before authentication) */
+	AKA_GENERAL_FAILURE = 16384,
+	/* SIM User has been temporarily denied access to the requested service. */
+	SIM_TEMP_DENIED = 1026,
+	/* AKA User has been temporarily denied access to the requested service. */
+	AKA_TEMP_DENIED = 1026,
+	/* SIM User has not subscribed to the requested service. */
+	SIM_NOT_SUBSCRIBED = 1031,
+	/* AKA User has not subscribed to the requested service. */
+	AKA_NOT_SUBSCRIBED = 1031,
+	/* SIM Success. User has been successfully authenticated. */
+	SIM_SUCCESS = 32768,
+	/* AKA Success. User has been successfully authenticated. */
+	AKA_SUCCESS = 32768,
+};
+
+/**
+ * Enum names for simaka_notification_t
+ */
+extern enum_name_t *simaka_notification_names;
+
+/**
+ * Error codes sent in AT_CLIENT_ERROR_CODE attribute
+ */
+enum simaka_client_error_t {
+	/* AKA unable to process packet */
+	AKA_UNABLE_TO_PROCESS = 0,
+	/* SIM unable to process packet */
+	SIM_UNABLE_TO_PROCESS = 0,
+	/* SIM unsupported version */
+	SIM_UNSUPPORTED_VERSION = 1,
+	/* SIM insufficient number of challenges */
+	SIM_INSUFFICIENT_CHALLENGES = 2,
+	/* SIM RANDs are not fresh */
+	SIM_RANDS_NOT_FRESH = 3,
+};
+
+/**
+ * Enum names for simaka_client_error_t
+ */
+extern enum_name_t *simaka_client_error_names;
+
+/**
+ * Check if an EAP-SIM/AKA attribute is "skippable".
+ *
+ * @param attribute		attribute to check
+ * @return				TRUE if attribute skippable, FALSE if non-skippable
+ */
+bool simaka_attribute_skippable(simaka_attribute_t attribute);
 
 /**
  * EAP-SIM and EAP-AKA message abstraction.

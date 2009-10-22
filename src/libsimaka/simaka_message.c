@@ -108,6 +108,40 @@ ENUM_NEXT(simaka_attribute_names, AT_IV, AT_RESULT_IND, AT_CLIENT_ERROR_CODE,
 	"AT_RESULT_IND");
 ENUM_END(simaka_attribute_names, AT_RESULT_IND);
 
+
+ENUM_BEGIN(simaka_notification_names, SIM_GENERAL_FAILURE_AA, SIM_GENERAL_FAILURE_AA,
+	"General failure after authentication");
+ENUM_NEXT(simaka_notification_names, SIM_TEMP_DENIED, SIM_TEMP_DENIED, SIM_GENERAL_FAILURE_AA,
+	"User has been temporarily denied access");
+ENUM_NEXT(simaka_notification_names, SIM_NOT_SUBSCRIBED, SIM_NOT_SUBSCRIBED, SIM_TEMP_DENIED,
+	"User has not subscribed to the requested service");
+ENUM_NEXT(simaka_notification_names, SIM_GENERAL_FAILURE, SIM_GENERAL_FAILURE, SIM_NOT_SUBSCRIBED,
+	"General failure");
+ENUM_NEXT(simaka_notification_names, SIM_SUCCESS, SIM_SUCCESS, SIM_GENERAL_FAILURE,
+	"User has been successfully authenticated");
+ENUM_END(simaka_notification_names, SIM_SUCCESS);
+
+
+ENUM(simaka_client_error_names, SIM_UNABLE_TO_PROCESS, SIM_RANDS_NOT_FRESH,
+	"unable to process packet",
+	"unsupported version",
+	"insufficient number of challenges",
+	"RANDs are not fresh",
+);
+
+/**
+ * Check if an EAP-SIM/AKA attribute is skippable
+ */
+bool simaka_attribute_skippable(simaka_attribute_t attribute)
+{
+	bool skippable = !(attribute >= 0 && attribute <= 127);
+
+	DBG1(DBG_IKE, "%sskippable EAP-SIM/AKA attribute %N",
+		 skippable ? "ignoring " : "found non-",
+		 simaka_attribute_names, attribute);
+	return skippable;
+}
+
 /**
  * Private data of an simaka_message_t object.
  */
@@ -278,7 +312,7 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 				in = chunk_skip(in, 4);
 				break;
 			}
-			/* attributes with an additional actual-length */
+			/* attributes with an additional actual-length in bits or bytes */
 			case AT_NEXT_PSEUDONYM:
 			case AT_NEXT_REAUTH_ID:
 				if (!this->encrypted)
@@ -286,6 +320,7 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 					return FALSE;
 				}
 				/* FALL */
+			case AT_RES:
 			case AT_IDENTITY:
 			case AT_VERSION_LIST:
 			{
@@ -297,6 +332,10 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 				}
 				memcpy(&len, in.ptr + 2, 2);
 				len = ntohs(len);
+				if (hdr->type == AT_RES)
+				{	/* AT_RES uses length encoding in bits */
+					len /= 8;
+				}
 				if (len > hdr->length * 4 || len > in.len)
 				{
 					return FALSE;
@@ -313,7 +352,6 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 				}
 				/* FALL */
 			case AT_AUTN:
-			case AT_RES:
 			case AT_NONCE_MT:
 			case AT_IV:
 			case AT_MAC:
@@ -449,20 +487,17 @@ static bool verify(private_simaka_message_t *this,
 		case AKA_AUTHENTICATION_REJECT:
 		case AKA_SYNCHRONIZATION_FAILURE:
 		case AKA_IDENTITY:
-		{
-			if (this->mac.ptr)
-			{	/* invalid if it contains a MAC */
-				return FALSE;
-			}
+			/* skip MAC if available */
 			return TRUE;
-		}
 		case SIM_CHALLENGE:
-		  /* AKA_CHALLENGE: */
+		case AKA_CHALLENGE:
 		case SIM_REAUTHENTICATION:
 		  /* AKA_REAUTHENTICATION: */
 		{
 			if (!this->mac.ptr || !signer)
 			{	/* require MAC, but not found */
+				DBG1(DBG_IKE, "%N message requires a MAC, but none found",
+					 simaka_subtype_names, this->hdr->subtype);
 				return FALSE;
 			}
 			break;
@@ -475,13 +510,17 @@ static bool verify(private_simaka_message_t *this,
 				return TRUE;
 			}
 			if (!this->mac.ptr || !signer)
-			{	/* require MAC, but not found */
+			{
+				DBG1(DBG_IKE, "%N message has a phase 0 notify, but "
+					 "no MAC found", simaka_subtype_names, this->hdr->subtype);
 				return FALSE;
 			}
 			break;
 		}
 		default:
 			/* unknown message? */
+			DBG1(DBG_IKE, "signature rule for %N messages missing",
+				 simaka_subtype_names, this->hdr->subtype);
 			return FALSE;
 	}
 
@@ -580,15 +619,20 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 				*target = chunk_skip(*target, 4);
 				break;
 			}
-			/* attributes with an additional actual-length */
+			/* attributes with an additional actual-length in bits or bytes */
 			case AT_NEXT_PSEUDONYM:
 			case AT_NEXT_REAUTH_ID:
 			case AT_IDENTITY:
 			case AT_VERSION_LIST:
+			case AT_RES:
 			{
 				u_int16_t len, padding;
 
 				len = htons(data.len);
+				if (type == AT_RES)
+				{	/* AT_RES uses length encoding in bits */
+					len *= 8;
+				}
 				memcpy(target->ptr + 2, &len, sizeof(len));
 				memcpy(target->ptr + 4, data.ptr, data.len);
 				hdr->length = data.len / 4 + 1;
@@ -605,7 +649,6 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 			case AT_NONCE_S:
 			case AT_NONCE_MT:
 			case AT_AUTN:
-			case AT_RES:
 			{
 				hdr->length = 5;
 				memset(target->ptr + 2, 0, 2);
@@ -682,7 +725,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 	switch (this->hdr->subtype)
 	{
 		case SIM_CHALLENGE:
-		  /* AKA_CHALLENGE: */
+		case AKA_CHALLENGE:
 		case SIM_REAUTHENTICATION:
 		  /* AKA_REAUTHENTICATION: */
 		/* TODO: Notifications without P bit */
