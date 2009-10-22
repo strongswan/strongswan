@@ -54,4 +54,4 @@ struct eap_sim_server_t {
 eap_sim_server_t *eap_sim_server_create(identification_t *server,
 										identification_t *peer);
 
-#endif /* EAP_SIM_SERVER_H_ @}*/
+#endif /** EAP_SIM_SERVER_H_ @}*/

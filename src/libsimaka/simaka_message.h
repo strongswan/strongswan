@@ -14,6 +14,11 @@
  */
 
 /**
+ * @defgroup libsimaka libsimaka
+ *
+ * @addtogroup libsimaka
+ * Library providing functions shared between EAP-SIM and EAP-AKA plugins.
+ *
  * @defgroup simaka_message simaka_message
  * @{ @ingroup libsimaka
  */
@@ -94,25 +99,25 @@ extern enum_name_t *simaka_attribute_names;
  * Notification codes used within AT_NOTIFICATION attribute.
  */
 enum simaka_notification_t {
-	/* SIM General failure after authentication. (Implies failure) */
+	/** SIM General failure after authentication. (Implies failure) */
 	SIM_GENERAL_FAILURE_AA = 0,
-	/* AKA General failure after authentication. (Implies failure) */
+	/** AKA General failure after authentication. (Implies failure) */
 	AKA_GENERAL_FAILURE_AA = 0,
-	/* SIM General failure. (Implies failure, used before authentication) */
+	/** SIM General failure. (Implies failure, used before authentication) */
 	SIM_GENERAL_FAILURE = 16384,
-	/* AKA General failure. (Implies failure, used before authentication) */
+	/** AKA General failure. (Implies failure, used before authentication) */
 	AKA_GENERAL_FAILURE = 16384,
-	/* SIM User has been temporarily denied access to the requested service. */
+	/** SIM User has been temporarily denied access to the requested service. */
 	SIM_TEMP_DENIED = 1026,
-	/* AKA User has been temporarily denied access to the requested service. */
+	/** AKA User has been temporarily denied access to the requested service. */
 	AKA_TEMP_DENIED = 1026,
-	/* SIM User has not subscribed to the requested service. */
+	/** SIM User has not subscribed to the requested service. */
 	SIM_NOT_SUBSCRIBED = 1031,
-	/* AKA User has not subscribed to the requested service. */
+	/** AKA User has not subscribed to the requested service. */
 	AKA_NOT_SUBSCRIBED = 1031,
-	/* SIM Success. User has been successfully authenticated. */
+	/** SIM Success. User has been successfully authenticated. */
 	SIM_SUCCESS = 32768,
-	/* AKA Success. User has been successfully authenticated. */
+	/** AKA Success. User has been successfully authenticated. */
 	AKA_SUCCESS = 32768,
 };
 
@@ -125,15 +130,15 @@ extern enum_name_t *simaka_notification_names;
  * Error codes sent in AT_CLIENT_ERROR_CODE attribute
  */
 enum simaka_client_error_t {
-	/* AKA unable to process packet */
+	/** AKA unable to process packet */
 	AKA_UNABLE_TO_PROCESS = 0,
-	/* SIM unable to process packet */
+	/** SIM unable to process packet */
 	SIM_UNABLE_TO_PROCESS = 0,
-	/* SIM unsupported version */
+	/** SIM unsupported version */
 	SIM_UNSUPPORTED_VERSION = 1,
-	/* SIM insufficient number of challenges */
+	/** SIM insufficient number of challenges */
 	SIM_INSUFFICIENT_CHALLENGES = 2,
-	/* SIM RANDs are not fresh */
+	/** SIM RANDs are not fresh */
 	SIM_RANDS_NOT_FRESH = 3,
 };
 
@@ -247,7 +252,8 @@ struct simaka_message_t {
  *
  * @param request		TRUE for a request message, FALSE for a response
  * @param identifier	EAP message identifier
- * @param type			EAP subtype of the message
+ * @param type			EAP type: EAP-SIM or EAP-AKA
+ * @param subtype		subtype of the EAP message
  * @return				empty message of requested kind, NULL on error
  */
 simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
@@ -261,4 +267,4 @@ simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
  */
 simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload);
 
-#endif /* SIMAKA_MESSAGE_H_ @}*/
+#endif /** SIMAKA_MESSAGE_H_ @}*/

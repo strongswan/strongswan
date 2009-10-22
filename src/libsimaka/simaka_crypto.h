@@ -79,4 +79,4 @@ struct simaka_crypto_t {
  */
 simaka_crypto_t *simaka_crypto_create();
 
-#endif /* SIMAKA_CRYPTO_ @}*/
+#endif /** SIMAKA_CRYPTO_H_ @}*/
