@@ -21,6 +21,7 @@
 #ifndef SIM_MANAGER_H_
 #define SIM_MANAGER_H_
 
+#include <crypto/hashers/hasher.h>
 #include <utils/identification.h>
 #include <utils/enumerator.h>
 
