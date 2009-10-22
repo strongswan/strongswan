@@ -62,6 +62,16 @@ struct private_eap_aka_server_t {
 	 * Random value RAND
 	 */
 	chunk_t rand;
+
+	/**
+	 * EAP-AKA message we have initiated
+	 */
+	simaka_subtype_t pending;
+
+	/**
+	 * Did the client send a synchronize request?
+	 */
+	bool synchronized;
 };
 
 /**
@@ -122,6 +132,8 @@ static status_t initiate(private_eap_aka_server_t *this, eap_payload_t **out)
 	message->add_attribute(message, AT_AUTN, chunk_create(autn, AKA_AUTN_LEN));
 	*out = message->generate(message, this->crypto, chunk_empty);
 	message->destroy(message);
+
+	this->pending = AKA_CHALLENGE;
 	return NEED_MORE;
 }
 
@@ -135,6 +147,12 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 	simaka_attribute_t type;
 	chunk_t data, res = chunk_empty;
 
+	if (this->pending != AKA_CHALLENGE)
+	{
+		DBG1(DBG_IKE, "received %N, but not expected",
+			 simaka_subtype_names, AKA_CHALLENGE);
+		return FAILED;
+	}
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -183,6 +201,13 @@ static status_t process_synchronize(private_eap_aka_server_t *this,
 	chunk_t data, auts = chunk_empty;
 	bool found = FALSE;
 
+	if (this->synchronized)
+	{
+		DBG1(DBG_IKE, "received %N, but peer did already resynchronize",
+			 simaka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
+		return FAILED;
+	}
+
 	DBG1(DBG_IKE, "received synchronization request, retrying...");
 
 	enumerator = in->create_attribute_enumerator(in);
@@ -229,6 +254,7 @@ static status_t process_synchronize(private_eap_aka_server_t *this,
 			 "resynchronization for '%Y'", this->peer);
 		return FAILED;
 	}
+	this->synchronized = TRUE;
 	return initiate(this, out);
 }
 
@@ -384,6 +410,8 @@ eap_aka_server_t *eap_aka_server_create(identification_t *server,
 	this->msk = chunk_empty;
 	this->xres = chunk_empty;
 	this->rand = chunk_empty;
+	this->pending = 0;
+	this->synchronized = FALSE;
 	/* generate a non-zero identifier */
 	do {
 		this->identifier = random();

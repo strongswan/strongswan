@@ -59,6 +59,11 @@ struct private_eap_sim_server_t {
 	 * MSK, used for EAP-SIM based IKEv2 authentication
 	 */
 	chunk_t msk;
+
+	/**
+	 * EAP-SIM message we have initiated
+	 */
+	simaka_subtype_t pending;
 };
 
 /* version of SIM protocol we speak */
@@ -102,6 +107,13 @@ static status_t process_start(private_eap_sim_server_t *this,
 	chunk_t data, rands, rand, kcs, kc, sreses, sres, nonce = chunk_empty;
 	bool supported = FALSE;
 	int i;
+
+	if (this->pending != SIM_START)
+	{
+		DBG1(DBG_IKE, "received %N, but not expected",
+			 simaka_subtype_names, SIM_START);
+		return FAILED;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -166,6 +178,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 	message->add_attribute(message, AT_RAND, rands);
 	*out = message->generate(message, this->crypto, nonce);
 	message->destroy(message);
+
+	this->pending = SIM_CHALLENGE;
 	return NEED_MORE;
 }
 
@@ -178,6 +192,13 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data;
+
+	if (this->pending != SIM_CHALLENGE)
+	{
+		DBG1(DBG_IKE, "received %N, but not expected",
+			 simaka_subtype_names, SIM_CHALLENGE);
+		return FAILED;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -281,6 +302,8 @@ static status_t initiate(private_eap_sim_server_t *this, eap_payload_t **out)
 	message->add_attribute(message, AT_VERSION_LIST, version);
 	*out = message->generate(message, this->crypto, chunk_empty);
 	message->destroy(message);
+
+	this->pending = SIM_START;
 	return NEED_MORE;
 }
 
@@ -350,6 +373,7 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 	this->peer = peer->clone(peer);
 	this->sreses = chunk_empty;
 	this->msk = chunk_empty;
+	this->pending = 0;
 	/* generate a non-zero identifier */
 	do {
 		this->identifier = random();
