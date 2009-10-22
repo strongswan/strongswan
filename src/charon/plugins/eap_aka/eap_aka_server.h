@@ -14,37 +14,36 @@
  */
 
 /**
- * @defgroup eap_aka eap_aka
- * @ingroup cplugins
- *
- * @defgroup eap_aka_plugin eap_aka_plugin
+ * @defgroup eap_aka_server eap_aka_server
  * @{ @ingroup eap_aka
  */
 
-#ifndef EAP_AKA_PLUGIN_H_
-#define EAP_AKA_PLUGIN_H_
+#ifndef EAP_AKA_SERVER_H_
+#define EAP_AKA_SERVER_H_
 
-#include <plugins/plugin.h>
+typedef struct eap_aka_server_t eap_aka_server_t;
 
-typedef struct eap_aka_plugin_t eap_aka_plugin_t;
+#include <sa/authenticators/eap/eap_method.h>
 
 /**
- * EAP-AKA plugin.
- *
- * EAP-AKA uses 3rd generation mobile phone standard authentication
- * mechanism for authentication, as defined RFC4187.
+ * Implementation of the eap_method_t interface using EAP-AKA as server.
  */
-struct eap_aka_plugin_t {
+struct eap_aka_server_t {
 
 	/**
-	 * implements plugin interface
+	 * Implemented eap_method_t interface.
 	 */
-	plugin_t plugin;
+	eap_method_t interface;
 };
 
 /**
- * Create a eap_aka_plugin instance.
+ * Creates the server implementation of the EAP method EAP-AKA.
+ *
+ * @param server	ID of the EAP server
+ * @param peer		ID of the EAP client
+ * @return			eap_aka_server_t object
  */
-plugin_t *plugin_create();
+eap_aka_server_t *eap_aka_server_create(identification_t *server,
+										identification_t *peer);
 
-#endif /** EAP_AKA_PLUGIN_H_ @}*/
+#endif /** EAP_AKA_SERVER_H_ @}*/
