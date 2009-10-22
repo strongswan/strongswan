@@ -23,15 +23,6 @@
 /* number of triplets for one authentication */
 #define TRIPLET_COUNT 3
 
-/** length of the AT_MAC value */
-#define MAC_LEN 16
-/** length of the AT_RAND value */
-#define RAND_LEN 16
-/** length of Kc */
-#define KC_LEN 8
-/** length of SRES */
-#define SRES_LEN 4
-
 typedef struct private_eap_sim_server_t private_eap_sim_server_t;
 
 /**
@@ -144,9 +135,9 @@ static status_t process_start(private_eap_sim_server_t *this,
 	}
 
 	/* read triplets from provider */
-	rand = rands = chunk_alloca(RAND_LEN * TRIPLET_COUNT);
-	kc = kcs = chunk_alloca(KC_LEN * TRIPLET_COUNT);
-	sres = sreses = chunk_alloca(SRES_LEN * TRIPLET_COUNT);
+	rand = rands = chunk_alloca(SIM_RAND_LEN * TRIPLET_COUNT);
+	kc = kcs = chunk_alloca(SIM_KC_LEN * TRIPLET_COUNT);
+	sres = sreses = chunk_alloca(SIM_SRES_LEN * TRIPLET_COUNT);
 	rands.len = kcs.len = sreses.len = 0;
 	for (i = 0; i < TRIPLET_COUNT; i++)
 	{
@@ -155,12 +146,12 @@ static status_t process_start(private_eap_sim_server_t *this,
 			DBG1(DBG_IKE, "getting EAP-SIM triplet %d failed", i);
 			return FAILED;
 		}
-		rands.len += RAND_LEN;
-		sreses.len += SRES_LEN;
-		kcs.len += KC_LEN;
-		rand = chunk_skip(rand, RAND_LEN);
-		sres = chunk_skip(sres, SRES_LEN);
-		kc = chunk_skip(kc, KC_LEN);
+		rands.len += SIM_RAND_LEN;
+		sreses.len += SIM_SRES_LEN;
+		kcs.len += SIM_KC_LEN;
+		rand = chunk_skip(rand, SIM_RAND_LEN);
+		sres = chunk_skip(sres, SIM_SRES_LEN);
+		kc = chunk_skip(kc, SIM_KC_LEN);
 	}
 	free(this->sreses.ptr);
 	this->sreses = chunk_clone(sreses);

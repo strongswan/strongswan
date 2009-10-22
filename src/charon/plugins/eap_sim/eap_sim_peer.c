@@ -27,14 +27,6 @@
 
 /** length of the AT_NONCE_MT/AT_NONCE_S nonce value */
 #define NONCE_LEN 16
-/** length of the AT_MAC value */
-#define MAC_LEN 16
-/** length of the AT_RAND value */
-#define RAND_LEN 16
-/** length of Kc */
-#define KC_LEN 8
-/** length of SRES */
-#define SRES_LEN 4
 
 typedef struct private_eap_sim_peer_t private_eap_sim_peer_t;
 
@@ -240,8 +232,8 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 
 	/* excepting two or three RAND, each 16 bytes. We require two valid
 	 * and different RANDs */
-	if ((rands.len != 2 * RAND_LEN && rands.len != 3 * RAND_LEN) ||
-		memeq(rands.ptr, rands.ptr + RAND_LEN, RAND_LEN))
+	if ((rands.len != 2 * SIM_RAND_LEN && rands.len != 3 * SIM_RAND_LEN) ||
+		memeq(rands.ptr, rands.ptr + SIM_RAND_LEN, SIM_RAND_LEN))
 	{
 		DBG1(DBG_IKE, "no valid AT_RAND received");
 		*out = create_client_error(this, in->get_identifier(in),
@@ -251,7 +243,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	/* get two or three KCs/SRESes from SIM using RANDs */
 	kcs = kc = chunk_alloca(rands.len / 2);
 	sreses = sres = chunk_alloca(rands.len / 4);
-	while (rands.len >= RAND_LEN)
+	while (rands.len >= SIM_RAND_LEN)
 	{
 		if (!get_card_triplet(this, rands.ptr, sres.ptr, kc.ptr))
 		{
@@ -261,10 +253,10 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 			return NEED_MORE;
 		}
 		DBG3(DBG_IKE, "got triplet for RAND %b\n  Kc %b\n  SRES %b",
-			 rands.ptr, RAND_LEN, sres.ptr, SRES_LEN, kc.ptr, KC_LEN);
-		kc = chunk_skip(kc, KC_LEN);
-		sres = chunk_skip(sres, SRES_LEN);
-		rands = chunk_skip(rands, RAND_LEN);
+			 rands.ptr, SIM_RAND_LEN, sres.ptr, SIM_SRES_LEN, kc.ptr, SIM_KC_LEN);
+		kc = chunk_skip(kc, SIM_KC_LEN);
+		sres = chunk_skip(sres, SIM_SRES_LEN);
+		rands = chunk_skip(rands, SIM_RAND_LEN);
 	}
 
 	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
