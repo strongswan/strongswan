@@ -214,7 +214,9 @@ struct simaka_message_t {
 	 * Parse a message, with optional attribute decryption.
 	 *
 	 * This method does not verify message integrity, as the key is available
-	 * only after the payload has been parsed.
+	 * only after the payload has been parsed. It might be necessary to call
+	 * parse twice, as key derivation data in EAP-SIM/AKA is in the same
+	 * packet as encrypted data.
 	 *
 	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @return			TRUE if message parsed successfully

@@ -181,6 +181,16 @@ struct private_simaka_message_t {
 	 * MAC value, pointing into message
 	 */
 	chunk_t mac;
+
+	/**
+	 * ENCR_DATA value, pointing into message
+	 */
+	chunk_t encr;
+
+	/**
+	 * IV value, pointing into message
+	 */
+	chunk_t iv;
 };
 
 /**
@@ -255,15 +265,28 @@ static void add_attribute(private_simaka_message_t *this,
 }
 
 /**
- * Implementation of simaka_message_t.parse
+ * Error handling for unencrypted attributes
  */
-static bool parse(private_simaka_message_t *this, chunk_t sigdata)
+static bool not_encrypted(simaka_attribute_t type)
 {
-	chunk_t in, iv = chunk_empty, encr = chunk_empty;
+	DBG1(DBG_IKE, "received unencrypted %N", simaka_attribute_names, type);
+	return FALSE;
+}
 
-	in = chunk_create((char*)(this->hdr + 1),
-					  ntohs(this->hdr->length) - sizeof(hdr_t));
+/**
+ * Error handling for invalid length
+ */
+static bool invalid_length(simaka_attribute_t type)
+{
+	DBG1(DBG_IKE, "invalid length of %N", simaka_attribute_names, type);
+	return FALSE;
+}
 
+/**
+ * Parse attributes from a chunk of data
+ */
+static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
+{
 	while (in.len)
 	{
 		attr_hdr_t *hdr;
@@ -283,7 +306,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			case AT_COUNTER_TOO_SMALL:
 				if (!this->encrypted)
 				{
-					return FALSE;
+					return not_encrypted(hdr->type);
 				}
 				/* FALL */
 			case AT_ANY_ID_REQ:
@@ -292,7 +315,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length != 1 || in.len < 4)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_empty;
 				in = chunk_skip(in, 4);
@@ -302,7 +325,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			case AT_COUNTER:
 				if (!this->encrypted)
 				{
-					return FALSE;
+					return not_encrypted(hdr->type);
 				}
 				/* FALL */
 			case AT_CLIENT_ERROR_CODE:
@@ -311,7 +334,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length != 1 || in.len < 4)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 2, 2);
 				in = chunk_skip(in, 4);
@@ -322,7 +345,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			case AT_NEXT_REAUTH_ID:
 				if (!this->encrypted)
 				{
-					return FALSE;
+					return not_encrypted(hdr->type);
 				}
 				/* FALL */
 			case AT_RES:
@@ -333,7 +356,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 
 				if (hdr->length < 1 || in.len < 4)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				memcpy(&len, in.ptr + 2, 2);
 				len = ntohs(len);
@@ -343,7 +366,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 				}
 				if (len > hdr->length * 4 || len > in.len)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 4, len);
 				in = chunk_skip(in, hdr->length * 4);
@@ -353,7 +376,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			case AT_NONCE_S:
 				if (!this->encrypted)
 				{
-					return FALSE;
+					return not_encrypted(hdr->type);
 				}
 				/* FALL */
 			case AT_AUTN:
@@ -363,7 +386,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length != 5 || in.len < 20)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 4, 16);
 				in = chunk_skip(in, 20);
@@ -375,7 +398,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length * 4 > in.len || in.len < 4)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 4, hdr->length * 4 - 4);
 				in = chunk_skip(in, hdr->length * 4);
@@ -386,7 +409,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length != 4 || in.len < 16)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 2, 14);
 				in = chunk_skip(in, 16);
@@ -398,7 +421,7 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 			{
 				if (hdr->length * 4 > in.len || in.len < 4)
 				{
-					return FALSE;
+					return invalid_length(hdr->type);
 				}
 				data = chunk_create(in.ptr + 2, hdr->length * 4 - 2);
 				in = chunk_skip(in, hdr->length * 4);
@@ -413,10 +436,10 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 				this->mac = data;
 				break;
 			case AT_IV:
-				iv = data;
+				this->iv = data;
 				break;
 			case AT_ENCR_DATA:
-				encr = data;
+				this->encr = data;
 				break;
 			case AT_PADDING:
 				break;
@@ -426,7 +449,8 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 					this->p_bit = !!(data.ptr[0] & 0x40);
 				}
 				else if (!this->encrypted)
-				{	/* found a P bit notify in an unencrypted message */
+				{
+					DBG1(DBG_IKE, "found P-bit 0 notify in unencrypted message");
 					return FALSE;
 				}
 				/* FALL */
@@ -435,42 +459,57 @@ static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 				break;
 		}
 	}
-
-	/* decrypt, invoke parser recursively */
-	if (iv.len && encr.len)
-	{
-		bool success;
-		crypter_t *crypter;
-
-		if (this->encrypted)
-		{
-			DBG1(DBG_IKE, "%N message is recursively encrypted",
-				 eap_type_names, this->hdr->type);
-			return FALSE;
-		}
-		crypter = this->crypto->get_crypter(this->crypto);
-		if (!crypter)
-		{
-			DBG1(DBG_IKE, "%N message contains unexpected encrypted data",
-				 eap_type_names, this->hdr->type);
-			return FALSE;
-		}
-		if (encr.len % crypter->get_block_size(crypter))
-		{
-			DBG1(DBG_IKE, "%N ENCR_DATA not a multiple of block size",
-				 eap_type_names, this->hdr->type);
-			return FALSE;
-		}
-
-		/* decrypt inline */
-		crypter->decrypt(crypter, encr, iv, NULL);
-
-		this->encrypted = TRUE;
-		success = parse(this, chunk_empty);
-		this->encrypted = FALSE;
-		return success;
-	}
 	return TRUE;
+}
+
+/**
+ * Decrypt a message and parse the decrypted attributes
+ */
+static bool decrypt(private_simaka_message_t *this)
+{
+	bool success;
+	crypter_t *crypter;
+
+	crypter = this->crypto->get_crypter(this->crypto);
+	if (!crypter || !this->iv.len || !this->encr.len || this->encrypted)
+	{
+		return TRUE;
+	}
+	if (this->encr.len % crypter->get_block_size(crypter))
+	{
+		DBG1(DBG_IKE, "%N ENCR_DATA not a multiple of block size",
+			 eap_type_names, this->hdr->type);
+		return FALSE;
+	}
+
+	/* decrypt inline */
+	crypter->decrypt(crypter, this->encr, this->iv, NULL);
+
+	this->encrypted = TRUE;
+	success = parse_attributes(this, this->encr);
+	this->encrypted = FALSE;
+	return success;
+}
+
+/**
+ * Implementation of simaka_message_t.parse
+ */
+static bool parse(private_simaka_message_t *this)
+{
+	chunk_t in;
+
+	if (this->attributes->get_count(this->attributes))
+	{	/* Already parsed. Try to decrypt and parse AT_ENCR_DATA. */
+		return decrypt(this);
+	}
+
+	in = chunk_create((char*)this->hdr, ntohs(this->hdr->length));
+	if (!parse_attributes(this, chunk_skip(in, sizeof(hdr_t))))
+	{
+		return FALSE;
+	}
+	/* try to decrypt if we already have keys */
+	return decrypt(this);
 }
 
 /**
@@ -690,13 +729,24 @@ static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 	if (encr.len < sizeof(encr_buf))
 	{
 		chunk_t iv;
-		size_t bs;
+		size_t bs, padding;
 		crypter_t *crypter;
 		rng_t *rng;
 
 		crypter = this->crypto->get_crypter(this->crypto);
-		encr = chunk_create(encr_buf, sizeof(encr_buf) - encr.len);
 		bs = crypter->get_block_size(crypter);
+
+		/* add AT_PADDING attribute */
+		padding = bs - ((sizeof(encr_buf) - encr.len) % bs);
+		if (padding)
+		{
+			hdr = (attr_hdr_t*)encr.ptr;
+			hdr->type = AT_PADDING;
+			hdr->length = padding / 4;
+			memset(encr.ptr + 2, 0, padding - 2);
+			encr = chunk_skip(encr, padding);
+		}
+		encr = chunk_create(encr_buf, sizeof(encr_buf) - encr.len);
 
 		/* add IV attribute */
 		hdr = (attr_hdr_t*)out.ptr;
@@ -807,9 +857,9 @@ static simaka_message_t *simaka_message_create_data(chunk_t data,
 	this->public.get_subtype = (simaka_subtype_t(*)(simaka_message_t*))get_subtype;
 	this->public.create_attribute_enumerator = (enumerator_t*(*)(simaka_message_t*))create_attribute_enumerator;
 	this->public.add_attribute = (void(*)(simaka_message_t*, simaka_attribute_t type, chunk_t data))add_attribute;
-	this->public.parse = (bool(*)(simaka_message_t*, simaka_crypto_t* crypto))parse;
-	this->public.verify = (bool(*)(simaka_message_t*, simaka_crypto_t* crypto, chunk_t sigdata))verify;
-	this->public.generate = (eap_payload_t*(*)(simaka_message_t*, simaka_crypto_t* crypto, chunk_t sigdata))generate;
+	this->public.parse = (bool(*)(simaka_message_t*))parse;
+	this->public.verify = (bool(*)(simaka_message_t*, chunk_t sigdata))verify;
+	this->public.generate = (eap_payload_t*(*)(simaka_message_t*, chunk_t sigdata))generate;
 	this->public.destroy = (void(*)(simaka_message_t*))destroy;
 
 	this->attributes = linked_list_create();
@@ -817,6 +867,8 @@ static simaka_message_t *simaka_message_create_data(chunk_t data,
 	this->crypto = crypto;
 	this->p_bit = TRUE;
 	this->mac = chunk_empty;
+	this->encr = chunk_empty;
+	this->iv = chunk_empty;
 	this->hdr = malloc(data.len);
 	memcpy(this->hdr, hdr, data.len);
 
