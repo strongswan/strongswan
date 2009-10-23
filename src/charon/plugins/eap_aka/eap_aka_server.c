@@ -126,11 +126,11 @@ static status_t initiate(private_eap_aka_server_t *this, eap_payload_t **out)
 	this->rand = chunk_clone(chunk_create(rand, AKA_RAND_LEN));
 	this->xres = chunk_clone(chunk_create(xres, AKA_RES_LEN));
 
-	message = simaka_message_create(TRUE, this->identifier++,
-									EAP_AKA, AKA_CHALLENGE);
+	message = simaka_message_create(TRUE, this->identifier++, EAP_AKA,
+									AKA_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, this->rand);
 	message->add_attribute(message, AT_AUTN, chunk_create(autn, AKA_AUTN_LEN));
-	*out = message->generate(message, this->crypto, chunk_empty);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
 	this->pending = AKA_CHALLENGE;
@@ -175,7 +175,7 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 	enumerator->destroy(enumerator);
 
 	/* verify MAC of EAP message, AT_MAC */
-	if (!in->verify(in, this->crypto, chunk_empty))
+	if (!in->verify(in, chunk_empty))
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed");
 		return FAILED;
@@ -308,12 +308,12 @@ static status_t process(private_eap_aka_server_t *this,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in);
+	message = simaka_message_create_from_payload(in, this->crypto);
 	if (!message)
 	{
 		return FAILED;
 	}
-	if (!message->parse(message, this->crypto))
+	if (!message->parse(message))
 	{
 		message->destroy(message);
 		return FAILED;

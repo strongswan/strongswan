@@ -173,10 +173,10 @@ static status_t process_start(private_eap_sim_server_t *this,
 	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
 
 	/* build response with AT_MAC, built over "EAP packet | NONCE_MT" */
-	message = simaka_message_create(TRUE, this->identifier++,
-									EAP_SIM, SIM_CHALLENGE);
+	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
+									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
-	*out = message->generate(message, this->crypto, nonce);
+	*out = message->generate(message, nonce);
 	message->destroy(message);
 
 	this->pending = SIM_CHALLENGE;
@@ -212,7 +212,7 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 	enumerator->destroy(enumerator);
 
 	/* verify AT_MAC attribute, signature is over "EAP packet | n*SRES"  */
-	if (!in->verify(in, this->crypto, this->sreses))
+	if (!in->verify(in, this->sreses))
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed");
 		return FAILED;
@@ -259,12 +259,12 @@ static status_t process(private_eap_sim_server_t *this,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in);
+	message = simaka_message_create_from_payload(in, this->crypto);
 	if (!message)
 	{
 		return FAILED;
 	}
-	if (!message->parse(message, this->crypto))
+	if (!message->parse(message))
 	{
 		message->destroy(message);
 		return FAILED;
@@ -297,10 +297,10 @@ static status_t initiate(private_eap_sim_server_t *this, eap_payload_t **out)
 {
 	simaka_message_t *message;
 
-	message = simaka_message_create(TRUE, this->identifier++,
-									EAP_SIM, SIM_START);
+	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
+									SIM_START, this->crypto);
 	message->add_attribute(message, AT_VERSION_LIST, version);
-	*out = message->generate(message, this->crypto, chunk_empty);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
 	this->pending = SIM_START;

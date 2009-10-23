@@ -62,12 +62,12 @@ static eap_payload_t* create_client_error(private_eap_aka_peer_t *this,
 	DBG1(DBG_IKE, "sending client error '%N'",
 		 simaka_client_error_names, AKA_UNABLE_TO_PROCESS);
 
-	message = simaka_message_create(FALSE, identifier,
-									EAP_AKA, AKA_CLIENT_ERROR);
+	message = simaka_message_create(FALSE, identifier, EAP_AKA,
+									AKA_CLIENT_ERROR, this->crypto);
 	encoded = htons(AKA_UNABLE_TO_PROCESS);
 	message->add_attribute(message, AT_CLIENT_ERROR_CODE,
 						   chunk_create((char*)&encoded, sizeof(encoded)));
-	out = message->generate(message, this->crypto, chunk_empty);
+	out = message->generate(message, chunk_empty);
 	message->destroy(message);
 	return out;
 }
@@ -133,11 +133,11 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	{
 		DBG1(DBG_IKE, "received SQN invalid, sending %N",
 			 simaka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
-		message = simaka_message_create(FALSE, in->get_identifier(in),
-										EAP_AKA, AKA_SYNCHRONIZATION_FAILURE);
+		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+									AKA_SYNCHRONIZATION_FAILURE, this->crypto);
 		message->add_attribute(message, AT_AUTS,
 							   chunk_create(auts, AKA_AUTS_LEN));
-		*out = message->generate(message, this->crypto, chunk_empty);
+		*out = message->generate(message, chunk_empty);
 		message->destroy(message);
 		return NEED_MORE;
 	}
@@ -145,9 +145,9 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	{
 		DBG1(DBG_IKE, "no USIM found with quintuplets for '%Y', sending %N",
 			 this->peer, simaka_subtype_names, AKA_AUTHENTICATION_REJECT);
-		message = simaka_message_create(FALSE, in->get_identifier(in),
-										EAP_AKA, AKA_AUTHENTICATION_REJECT);
-		*out = message->generate(message, this->crypto, chunk_empty);
+		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+										AKA_AUTHENTICATION_REJECT, this->crypto);
+		*out = message->generate(message, chunk_empty);
 		message->destroy(message);
 		return NEED_MORE;
 	}
@@ -158,17 +158,17 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
 
 	/* verify EAP message MAC AT_MAC */
-	if (!in->verify(in, this->crypto, chunk_empty))
+	if (!in->verify(in, chunk_empty))
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed ");
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
 	}
 
-	message = simaka_message_create(FALSE, in->get_identifier(in),
-									EAP_AKA, AKA_CHALLENGE);
+	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+									AKA_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RES, chunk_create(res, AKA_RES_LEN));
-	*out = message->generate(message, this->crypto, chunk_empty);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -208,11 +208,11 @@ static status_t process_identity(private_eap_aka_peer_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	message = simaka_message_create(FALSE, in->get_identifier(in),
-									EAP_AKA, AKA_IDENTITY);
+	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+									AKA_IDENTITY, this->crypto);
 	message->add_attribute(message, AT_IDENTITY,
 						   this->peer->get_encoding(this->peer));
-	*out = message->generate(message, this->crypto, chunk_empty);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -262,9 +262,9 @@ static status_t process_notification(private_eap_aka_peer_t *this,
 
 	if (success)
 	{	/* empty notification reply */
-		message = simaka_message_create(FALSE, in->get_identifier(in),
-										EAP_AKA, AKA_NOTIFICATION);
-		*out = message->generate(message, this->crypto, chunk_empty);
+		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+										AKA_NOTIFICATION, this->crypto);
+		*out = message->generate(message, chunk_empty);
 		message->destroy(message);
 	}
 	else
@@ -284,13 +284,13 @@ static status_t process(private_eap_aka_peer_t *this,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in);
+	message = simaka_message_create_from_payload(in, this->crypto);
 	if (!message)
 	{
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
 	}
-	if (!message->parse(message, this->crypto))
+	if (!message->parse(message))
 	{
 		message->destroy(message);
 		*out = create_client_error(this, in->get_identifier(in));

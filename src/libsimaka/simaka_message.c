@@ -168,7 +168,13 @@ struct private_simaka_message_t {
 	bool encrypted;
 
 	/**
-	 * Phase a NOTIFICATION is sent within */
+	 * crypto helper
+	 */
+	simaka_crypto_t *crypto;
+
+	/**
+	 * Phase a NOTIFICATION is sent within
+	 */
 	bool p_bit;
 
 	/**
@@ -251,8 +257,7 @@ static void add_attribute(private_simaka_message_t *this,
 /**
  * Implementation of simaka_message_t.parse
  */
-static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
-				  chunk_t sigdata)
+static bool parse(private_simaka_message_t *this, chunk_t sigdata)
 {
 	chunk_t in, iv = chunk_empty, encr = chunk_empty;
 
@@ -443,7 +448,7 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 				 eap_type_names, this->hdr->type);
 			return FALSE;
 		}
-		crypter = crypto->get_crypter(crypto);
+		crypter = this->crypto->get_crypter(this->crypto);
 		if (!crypter)
 		{
 			DBG1(DBG_IKE, "%N message contains unexpected encrypted data",
@@ -461,7 +466,7 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 		crypter->decrypt(crypter, encr, iv, NULL);
 
 		this->encrypted = TRUE;
-		success = parse(this, crypto, chunk_empty);
+		success = parse(this, chunk_empty);
 		this->encrypted = FALSE;
 		return success;
 	}
@@ -471,13 +476,12 @@ static bool parse(private_simaka_message_t *this, simaka_crypto_t *crypto,
 /**
  * Implementation of simaka_message_t.verify
  */
-static bool verify(private_simaka_message_t *this,
-				   simaka_crypto_t *crypto, chunk_t sigdata)
+static bool verify(private_simaka_message_t *this, chunk_t sigdata)
 {
 	chunk_t data, backup;
 	signer_t *signer;
 
-	signer = crypto->get_signer(crypto);
+	signer = this->crypto->get_signer(this->crypto);
 
 	switch (this->hdr->subtype)
 	{
@@ -545,8 +549,7 @@ static bool verify(private_simaka_message_t *this,
 /**
  * Implementation of simaka_message_t.generate
  */
-static eap_payload_t* generate(private_simaka_message_t *this,
-							   simaka_crypto_t *crypto, chunk_t sigdata)
+static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 {
 	/* buffers large enough for messages we generate */
 	char out_buf[1024], encr_buf[512];
@@ -691,7 +694,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 		crypter_t *crypter;
 		rng_t *rng;
 
-		crypter = crypto->get_crypter(crypto);
+		crypter = this->crypto->get_crypter(this->crypto);
 		encr = chunk_create(encr_buf, sizeof(encr_buf) - encr.len);
 		bs = crypter->get_block_size(crypter);
 
@@ -702,7 +705,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 		memset(out.ptr + 2, 0, 2);
 		out = chunk_skip(out, 4);
 
-		rng = crypto->get_rng(crypto);
+		rng = this->crypto->get_rng(this->crypto);
 		rng->get_bytes(rng, bs, out.ptr);
 
 		iv = chunk_clonea(chunk_create(out.ptr, bs));
@@ -721,7 +724,7 @@ static eap_payload_t* generate(private_simaka_message_t *this,
 	}
 
 	/* include MAC ? */
-	signer = crypto->get_signer(crypto);
+	signer = this->crypto->get_signer(this->crypto);
 	switch (this->hdr->subtype)
 	{
 		case SIM_CHALLENGE:
@@ -772,7 +775,8 @@ static void destroy(private_simaka_message_t *this)
 /**
  * Generic constructor.
  */
-static simaka_message_t *simaka_message_create_data(chunk_t data)
+static simaka_message_t *simaka_message_create_data(chunk_t data,
+													simaka_crypto_t *crypto)
 {
 	private_simaka_message_t *this;
 	hdr_t *hdr = (hdr_t*)data.ptr;
@@ -810,6 +814,7 @@ static simaka_message_t *simaka_message_create_data(chunk_t data)
 
 	this->attributes = linked_list_create();
 	this->encrypted = FALSE;
+	this->crypto = crypto;
 	this->p_bit = TRUE;
 	this->mac = chunk_empty;
 	this->hdr = malloc(data.len);
@@ -821,16 +826,18 @@ static simaka_message_t *simaka_message_create_data(chunk_t data)
 /**
  * See header.
  */
-simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload)
+simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload,
+													 simaka_crypto_t *crypto)
 {
-	return simaka_message_create_data(payload->get_data(payload));
+	return simaka_message_create_data(payload->get_data(payload), crypto);
 }
 
 /**
  * See header.
  */
 simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
-									eap_type_t type, simaka_subtype_t subtype)
+									eap_type_t type, simaka_subtype_t subtype,
+									simaka_crypto_t *crypto)
 {
 	hdr_t hdr = {
 		.code = request ? EAP_REQUEST : EAP_RESPONSE,
@@ -839,6 +846,7 @@ simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
 		.type = type,
 		.subtype = subtype,
 	};
-	return simaka_message_create_data(chunk_create((char*)&hdr, sizeof(hdr)));
+	return simaka_message_create_data(chunk_create((char*)&hdr, sizeof(hdr)),
+									  crypto);
 }
 

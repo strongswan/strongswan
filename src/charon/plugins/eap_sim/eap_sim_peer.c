@@ -113,12 +113,12 @@ static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
 
 	DBG1(DBG_IKE, "sending client error '%N'", simaka_client_error_names, code);
 
-	message = simaka_message_create(FALSE, identifier,
-									EAP_SIM, SIM_CLIENT_ERROR);
+	message = simaka_message_create(FALSE, identifier, EAP_SIM,
+									SIM_CLIENT_ERROR, this->crypto);
 	encoded = htons(code);
 	message->add_attribute(message, AT_CLIENT_ERROR_CODE,
 						   chunk_create((char*)&encoded, sizeof(encoded)));
-	out = message->generate(message, this->crypto, chunk_empty);
+	out = message->generate(message, chunk_empty);
 	message->destroy(message);
 	return out;
 }
@@ -181,11 +181,11 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	free(this->nonce.ptr);
 	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
 
-	message = simaka_message_create(FALSE, in->get_identifier(in),
-									EAP_SIM, SIM_START);
+	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+									SIM_START, this->crypto);
 	message->add_attribute(message, AT_SELECTED_VERSION, version);
 	message->add_attribute(message, AT_NONCE_MT, this->nonce);
-	*out = message->generate(message, this->crypto, chunk_empty);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
 	return NEED_MORE;
@@ -264,7 +264,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
 
 	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT"  */
-	if (!in->verify(in, this->crypto, this->nonce))
+	if (!in->verify(in, this->nonce))
 	{
 		DBG1(DBG_IKE, "AT_MAC verification failed");
 		*out = create_client_error(this, in->get_identifier(in),
@@ -273,9 +273,9 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	}
 
 	/* build response with AT_MAC, built over "EAP packet | n*SRES" */
-	message = simaka_message_create(FALSE, in->get_identifier(in),
-									EAP_SIM, SIM_CHALLENGE);
-	*out = message->generate(message, this->crypto, sreses);
+	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+									SIM_CHALLENGE, this->crypto);
+	*out = message->generate(message, sreses);
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -325,9 +325,9 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 
 	if (success)
 	{	/* empty notification reply */
-		message = simaka_message_create(FALSE, in->get_identifier(in),
-										EAP_SIM, SIM_NOTIFICATION);
-		*out = message->generate(message, this->crypto, chunk_empty);
+		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+										SIM_NOTIFICATION, this->crypto);
+		*out = message->generate(message, chunk_empty);
 		message->destroy(message);
 	}
 	else
@@ -347,14 +347,14 @@ static status_t process(private_eap_sim_peer_t *this,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in);
+	message = simaka_message_create_from_payload(in, this->crypto);
 	if (!message)
 	{
 		*out = create_client_error(this, in->get_identifier(in),
 								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
-	if (!message->parse(message, this->crypto))
+	if (!message->parse(message))
 	{
 		message->destroy(message);
 		*out = create_client_error(this, in->get_identifier(in),

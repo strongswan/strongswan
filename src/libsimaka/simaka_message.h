@@ -219,7 +219,7 @@ struct simaka_message_t {
 	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @return			TRUE if message parsed successfully
 	 */
-	bool (*parse)(simaka_message_t *this, simaka_crypto_t *crypto);
+	bool (*parse)(simaka_message_t *this);
 
 	/**
 	 * Verify the message integrity of a parsed message.
@@ -228,18 +228,15 @@ struct simaka_message_t {
 	 * @param sigdata	additional data to include in signature, if any
 	 * @return			TRUE if message integrity check successful
 	 */
-	bool (*verify)(simaka_message_t *this, simaka_crypto_t *crypto,
-				   chunk_t sigdata);
+	bool (*verify)(simaka_message_t *this, chunk_t sigdata);
 
 	/**
 	 * Generate a message, optionally encrypt attributes and create a MAC.
 	 *
-	 * @param crypto	EAP-SIM/AKA crypto helper
 	 * @param sigdata	additional data to include in signature, if any
 	 * @return			generated eap payload, NULL if failed
 	 */
-	eap_payload_t* (*generate)(simaka_message_t *this, simaka_crypto_t *crypto,
-							   chunk_t sigdata);
+	eap_payload_t* (*generate)(simaka_message_t *this, chunk_t sigdata);
 
 	/**
 	 * Destroy a simaka_message_t.
@@ -254,17 +251,21 @@ struct simaka_message_t {
  * @param identifier	EAP message identifier
  * @param type			EAP type: EAP-SIM or EAP-AKA
  * @param subtype		subtype of the EAP message
+ * @param crypto		EAP-SIM/AKA crypto helper
  * @return				empty message of requested kind, NULL on error
  */
 simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
-								eap_type_t type, simaka_subtype_t subtype);
+									eap_type_t type, simaka_subtype_t subtype,
+									simaka_crypto_t *crypto);
 
 /**
  * Create an simaka_message from a chunk of data.
  *
  * @param payload		payload to create message from
+ * @param crypto		EAP-SIM/AKA crypto helper
  * @return				EAP message, NULL on error
  */
-simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload);
+simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload,
+													 simaka_crypto_t *crypto);
 
 #endif /** SIMAKA_MESSAGE_H_ @}*/
