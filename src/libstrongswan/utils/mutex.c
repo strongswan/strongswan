@@ -35,7 +35,13 @@ typedef struct private_rwlock_t private_rwlock_t;
 /**
  * Do not report mutexes with an overall waiting time smaller than this (in us)
  */
-#define PROFILE_TRESHHOLD 1000
+#define PROFILE_WAIT_TRESHHOLD 10000
+
+/**
+ * Do not report mutexes with an overall lock count smaller than this
+ */
+#define PROFILE_LOCK_TRESHHOLD 1000
+
 
 #include <utils/backtrace.h>
 
@@ -49,6 +55,11 @@ struct lock_profile_t {
 	timeval_t waited;
 
 	/**
+	 * How many times the lock has been invoked
+	 */
+	u_int locked;
+
+	/**
 	 * backtrace where mutex has been created
 	 */
 	backtrace_t *backtrace;
@@ -60,10 +71,11 @@ struct lock_profile_t {
 static void profiler_cleanup(lock_profile_t *profile)
 {
 	if (profile->waited.tv_sec > 0 ||
-		profile->waited.tv_usec > PROFILE_TRESHHOLD)
+		profile->waited.tv_usec > PROFILE_WAIT_TRESHHOLD ||
+		profile->locked > PROFILE_LOCK_TRESHHOLD)
 	{
-		fprintf(stderr, "%d.%06ds in lock created at:",
-				profile->waited.tv_sec, profile->waited.tv_usec);
+		fprintf(stderr, "%d.%03ds / %d times in lock created at:",
+			profile->waited.tv_sec, profile->waited.tv_usec, profile->locked);
 		profile->backtrace->log(profile->backtrace, stderr);
 	}
 	profile->backtrace->destroy(profile->backtrace);
@@ -76,10 +88,12 @@ static void profiler_init(lock_profile_t *profile)
 {
 	profile->backtrace = backtrace_create(2);
 	timerclear(&profile->waited);
+	profile->locked = 0;
 }
 
 #define profiler_start(profile) { \
 	struct timeval _start, _end, _diff; \
+	(profile)->locked++; \
 	time_monotonic(&_start);
 
 #define profiler_end(profile) \
