@@ -78,18 +78,18 @@ struct eap_md5_header_t {
 /**
  * Hash the challenge string, create response
  */
-static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response)
+static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response,
+							   identification_t *me, identification_t *other)
 {
 	shared_key_t *shared;
 	chunk_t concat;
 	hasher_t *hasher;
 
 	shared = charon->credentials->get_shared(charon->credentials, SHARED_EAP,
-											 this->server, this->peer);
+											 me, other);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
-			 this->server, this->peer);
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'", me, other);
 		return NOT_FOUND;
 	}
 	concat = chunk_cata("ccc", chunk_from_thing(this->identifier),
@@ -161,7 +161,7 @@ static status_t process_peer(private_eap_md5_t *this,
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
-	if (hash_challenge(this, &response) != SUCCESS)
+	if (hash_challenge(this, &response, this->peer, this->server) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -192,7 +192,7 @@ static status_t process_server(private_eap_md5_t *this,
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
-	if (hash_challenge(this, &expected) != SUCCESS)
+	if (hash_challenge(this, &expected, this->server, this->peer) != SUCCESS)
 	{
 		return FAILED;
 	}
