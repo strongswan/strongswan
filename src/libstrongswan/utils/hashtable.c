@@ -149,6 +149,7 @@ static inline bool pair_equals(pair_t *pair, private_hashtable_t *this, void *ke
 static u_int get_nearest_powerof2(u_int n)
 {
 	u_int i;
+
 	--n;
 	for (i = 1; i < sizeof(u_int) * 8; i <<= 1)
 	{
@@ -175,30 +176,37 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
  */
 static void rehash(private_hashtable_t *this)
 {
-	u_int row;
-	u_int old_capacity = this->capacity;
-	linked_list_t **old_table = this->table;
+	linked_list_t **old_table;
+	u_int row, old_capacity;
 
-	if (old_capacity >= MAX_CAPACITY)
+	if (this->capacity < MAX_CAPACITY)
 	{
 		return;
 	}
 
+	old_capacity = this->capacity;
+	old_table = this->table;
+
 	init_hashtable(this, old_capacity << 1);
 
-	for (row = 0; row < old_capacity; ++row)
+	for (row = 0; row < old_capacity; row++)
 	{
-		linked_list_t *list;
-		if ((list = old_table[row]) != NULL)
+		enumerator_t *enumerator;
+		linked_list_t *list, *new_list;
+		pair_t *pair;
+		u_int new_row;
+
+		list = old_table[row];
+		if (list)
 		{
-			pair_t *pair;
-			enumerator_t *enumerator = list->create_enumerator(list);
+			enumerator = list->create_enumerator(list);
 			while (enumerator->enumerate(enumerator, &pair))
 			{
-				linked_list_t *new_list;
-				u_int new_row = pair->hash & this->mask;
+				new_row = pair->hash & this->mask;
+
 				list->remove_at(list, enumerator);
-				if ((new_list = this->table[new_row]) == NULL)
+				new_list = this->table[new_row];
+				if (!new_list)
 				{
 					new_list = this->table[new_row] = linked_list_create();
 				}
@@ -216,15 +224,20 @@ static void rehash(private_hashtable_t *this)
  */
 static void *put(private_hashtable_t *this, void *key, void *value)
 {
-	linked_list_t *list;
 	void *old_value = NULL;
-	u_int hash = this->hash(key);
-	u_int row = hash & this->mask;
+	linked_list_t *list;
+	u_int hash;
+	u_int row;
 
-	if ((list = this->table[row]) != NULL)
+	hash = this->hash(key);
+	row = hash & this->mask;
+	list = this->table[row];
+	if (list)
 	{
+		enumerator_t *enumerator;
 		pair_t *pair;
-		enumerator_t *enumerator = list->create_enumerator(list);
+
+		enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &pair))
 		{
 			if (pair_equals(pair, this, key))
@@ -240,18 +253,15 @@ static void *put(private_hashtable_t *this, void *key, void *value)
 	{
 		list = this->table[row] = linked_list_create();
 	}
-
 	if (!old_value)
 	{
 		list->insert_last(list, pair_create(key, value, hash));
 		this->count++;
 	}
-
 	if (this->count >= this->capacity * this->load_factor)
 	{
 		rehash(this);
 	}
-
 	return old_value;
 }
 
@@ -262,18 +272,17 @@ static void *get(private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
 	linked_list_t *list;
-	u_int row = this->hash(key) & this->mask;
+	pair_t *pair;
 
-	if ((list = this->table[row]) != NULL)
+	list = this->table[this->hash(key) & this->mask];
+	if (list)
 	{
-		pair_t *pair;
 		if (list->find_first(list, (linked_list_match_t)pair_equals,
-				(void**)&pair, this, key) == SUCCESS)
+							 (void**)&pair, this, key) == SUCCESS)
 		{
 			value = pair->value;
 		}
 	}
-
 	return value;
 }
 
@@ -284,12 +293,14 @@ static void *remove_(private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
 	linked_list_t *list;
-	u_int row = this->hash(key) & this->mask;
 
-	if ((list = this->table[row]) != NULL)
+	list = this->table[this->hash(key) & this->mask];
+	if (list)
 	{
+		enumerator_t *enumerator;
 		pair_t *pair;
-		enumerator_t *enumerator = list->create_enumerator(list);
+
+		enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &pair))
 		{
 			if (pair_equals(pair, this, key))
@@ -303,7 +314,6 @@ static void *remove_(private_hashtable_t *this, void *key)
 		}
 		enumerator->destroy(enumerator);
 	}
-
 	return value;
 }
 
@@ -345,7 +355,8 @@ static bool enumerate(private_enumerator_t *this, void **key, void **value)
 		{
 			linked_list_t *list;
 
-			if ((list = this->table->table[this->row]) != NULL)
+			list = this->table->table[this->row];
+			if (list)
 			{
 				this->current = list->create_enumerator(list);
 				continue;
@@ -389,11 +400,13 @@ static enumerator_t* create_enumerator(private_hashtable_t *this)
  */
 static void destroy(private_hashtable_t *this)
 {
+	linked_list_t *list;
 	u_int row;
-	for (row = 0; row < this->capacity; ++row)
+
+	for (row = 0; row < this->capacity; row++)
 	{
-		linked_list_t *list;
-		if ((list = this->table[row]) != NULL)
+		list = this->table[row];
+		if (list)
 		{
 			list->destroy_function(list, free);
 		}
@@ -429,3 +442,4 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 
 	return &this->public;
 }
+
