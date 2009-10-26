@@ -73,8 +73,14 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	this->triplets = eap_sim_file_triplets_create(TRIPLET_FILE);
-	this->card = eap_sim_file_card_create(this->triplets);
 	this->provider = eap_sim_file_provider_create(this->triplets);
+	if (!this->provider)
+	{
+		this->triplets->destroy(this->triplets);
+		free(this);
+		return NULL;
+	}
+	this->card = eap_sim_file_card_create(this->triplets);
 
 	charon->sim->add_card(charon->sim, &this->card->card);
 	charon->sim->add_provider(charon->sim, &this->provider->provider);

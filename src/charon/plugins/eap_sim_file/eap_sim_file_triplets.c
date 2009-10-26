@@ -60,7 +60,7 @@ typedef struct  {
  */
 static void triplet_destroy(triplet_t *this)
 {
-	this->imsi->destroy(this->imsi);
+	DESTROY_IF(this->imsi);
 	free(this);
 }
 
