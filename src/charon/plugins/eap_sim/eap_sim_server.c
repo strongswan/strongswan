@@ -38,7 +38,7 @@ struct private_eap_sim_server_t {
 	/**
 	 * permanent ID of peer
 	 */
-	identification_t *peer;
+	identification_t *permanent;
 
 	/**
 	 * EAP-SIM/AKA crypto helper
@@ -61,6 +61,21 @@ struct private_eap_sim_server_t {
 	chunk_t msk;
 
 	/**
+	 * Do we request fast reauthentication?
+	 */
+	bool use_reauth;
+
+	/**
+	 * Do we request pseudonym identities?
+	 */
+	bool use_pseudonym;
+
+	/**
+	 * Do we request permanent identities?
+	 */
+	bool use_permanent;
+
+	/**
 	 * EAP-SIM message we have initiated
 	 */
 	simaka_subtype_t pending;
@@ -72,8 +87,8 @@ static chunk_t version = chunk_from_chars(0x00,0x01);
 /**
  * Fetch a triplet from a provider
  */
-static bool get_provider_triplet(private_eap_sim_server_t *this,
-								 char *rand, char *sres, char *kc)
+static bool get_triplet(private_eap_sim_server_t *this, identification_t *peer,
+						char *rand, char *sres, char *kc)
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
@@ -82,7 +97,7 @@ static bool get_provider_triplet(private_eap_sim_server_t *this,
 	enumerator = charon->sim->create_provider_enumerator(charon->sim);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
-		if (provider->get_triplet(provider, this->peer, rand, sres, kc))
+		if (provider->get_triplet(provider, peer, rand, sres, kc))
 		{
 			enumerator->destroy(enumerator);
 			return TRUE;
@@ -91,8 +106,30 @@ static bool get_provider_triplet(private_eap_sim_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
-		 tried, this->peer);
+		 tried, peer);
 	return FALSE;
+}
+
+/**
+ * Generate a new pseudonym for next authentication
+ */
+static identification_t* gen_pseudonym(private_eap_sim_server_t *this)
+{
+	enumerator_t *enumerator;
+	sim_provider_t *provider;
+	identification_t *pseudonym = NULL;
+
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &provider))
+	{
+		pseudonym = provider->gen_pseudonym(provider, this->permanent);
+		if (pseudonym)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return pseudonym;
 }
 
 /**
@@ -104,8 +141,10 @@ static status_t process_start(private_eap_sim_server_t *this,
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	chunk_t data, rands, rand, kcs, kc, sreses, sres, nonce = chunk_empty;
+	chunk_t data, id = chunk_empty, nonce = chunk_empty;
+	chunk_t rands, rand, kcs, kc, sreses, sres;
 	bool supported = FALSE;
+	identification_t *peer = NULL, *pseudonym;
 	int i;
 
 	if (this->pending != SIM_START)
@@ -129,6 +168,9 @@ static status_t process_start(private_eap_sim_server_t *this,
 					supported = TRUE;
 				}
 				break;
+			case AT_IDENTITY:
+				id = data;
+				break;
 			default:
 				if (!simaka_attribute_skippable(type))
 				{
@@ -146,6 +188,26 @@ static status_t process_start(private_eap_sim_server_t *this,
 		return FAILED;
 	}
 
+	if (id.len)
+	{
+		if (this->use_reauth)
+		{
+			/* TODO: handle reauthentication identity */
+		}
+		if (this->use_pseudonym || this->use_permanent)
+		{
+			char buf[id.len + 1];
+
+			snprintf(buf, sizeof(buf), "%.*s", id.len, id.ptr);
+			peer = identification_create_from_string(buf);
+			DBG1(DBG_CFG, "received (pseudonym) identity '%Y'", peer);
+		}
+	}
+	if (!peer)
+	{
+		peer = this->permanent->clone(this->permanent);
+	}
+
 	/* read triplets from provider */
 	rand = rands = chunk_alloca(SIM_RAND_LEN * TRIPLET_COUNT);
 	kc = kcs = chunk_alloca(SIM_KC_LEN * TRIPLET_COUNT);
@@ -153,9 +215,9 @@ static status_t process_start(private_eap_sim_server_t *this,
 	rands.len = kcs.len = sreses.len = 0;
 	for (i = 0; i < TRIPLET_COUNT; i++)
 	{
-		if (!get_provider_triplet(this, rand.ptr, sres.ptr, kc.ptr))
+		if (!get_triplet(this, peer, rand.ptr, sres.ptr, kc.ptr))
 		{
-			DBG1(DBG_IKE, "getting EAP-SIM triplet %d failed", i);
+			peer->destroy(peer);
 			return FAILED;
 		}
 		rands.len += SIM_RAND_LEN;
@@ -170,12 +232,25 @@ static status_t process_start(private_eap_sim_server_t *this,
 
 	data = chunk_cata("cccc", kcs, nonce, version, version);
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
+	this->msk = this->crypto->derive_keys_full(this->crypto, peer, data);
+	peer->destroy(peer);
 
 	/* build response with AT_MAC, built over "EAP packet | NONCE_MT" */
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
+	if (this->use_pseudonym)
+	{
+		/* generate new pseudonym for next authentication */
+		pseudonym = gen_pseudonym(this);
+		if (peer)
+		{
+			DBG1(DBG_IKE, "proposing new pseudonym '%Y'", pseudonym);
+			message->add_attribute(message, AT_NEXT_PSEUDONYM,
+								   pseudonym->get_encoding(pseudonym));
+			pseudonym->destroy(pseudonym);
+		}
+	}
 	*out = message->generate(message, nonce);
 	message->destroy(message);
 
@@ -300,6 +375,18 @@ static status_t initiate(private_eap_sim_server_t *this, eap_payload_t **out)
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_START, this->crypto);
 	message->add_attribute(message, AT_VERSION_LIST, version);
+	if (this->use_reauth)
+	{
+		message->add_attribute(message, AT_ANY_ID_REQ, chunk_empty);
+	}
+	else if (this->use_pseudonym)
+	{
+		message->add_attribute(message, AT_FULLAUTH_ID_REQ, chunk_empty);
+	}
+	else if (this->use_permanent)
+	{
+		message->add_attribute(message, AT_PERMANENT_ID_REQ, chunk_empty);
+	}
 	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
@@ -343,7 +430,7 @@ static bool is_mutual(private_eap_sim_server_t *this)
 static void destroy(private_eap_sim_server_t *this)
 {
 	this->crypto->destroy(this->crypto);
-	this->peer->destroy(this->peer);
+	this->permanent->destroy(this->permanent);
 	free(this->sreses.ptr);
 	free(this->msk.ptr);
 	free(this);
@@ -370,10 +457,16 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->peer = peer->clone(peer);
+	this->permanent = peer->clone(peer);
 	this->sreses = chunk_empty;
 	this->msk = chunk_empty;
 	this->pending = 0;
+	this->use_reauth = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-sim.use_reauth", TRUE);
+	this->use_pseudonym = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-sim.use_pseudonym", TRUE);
+	this->use_permanent = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-sim.use_permanent", TRUE);
 	/* generate a non-zero identifier */
 	do {
 		this->identifier = random();

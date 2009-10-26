@@ -43,7 +43,12 @@ struct private_eap_sim_peer_t {
 	/**
 	 * permanent ID of peer
 	 */
-	identification_t *peer;
+	identification_t *permanent;
+
+	/**
+	 * Pseudonym identity the peer uses
+	 */
+	identification_t *pseudonym;
 
 	/**
 	 * EAP-SIM crypto helper
@@ -77,8 +82,8 @@ static chunk_t version = chunk_from_chars(0x00,0x01);
 /**
  * Read a triplet from the SIM card
  */
-static bool get_card_triplet(private_eap_sim_peer_t *this,
-							 char *rand, char *sres, char *kc)
+static bool get_triplet(private_eap_sim_peer_t *this, identification_t *peer,
+						char *rand, char *sres, char *kc)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
@@ -87,7 +92,7 @@ static bool get_card_triplet(private_eap_sim_peer_t *this,
 	enumerator = charon->sim->create_card_enumerator(charon->sim);
 	while (enumerator->enumerate(enumerator, &card))
 	{
-		if (card->get_triplet(card, this->peer, rand, sres, kc))
+		if (card->get_triplet(card, peer, rand, sres, kc))
 		{
 			success = TRUE;
 			break;
@@ -96,9 +101,55 @@ static bool get_card_triplet(private_eap_sim_peer_t *this,
 	enumerator->destroy(enumerator);
 	if (!success)
 	{
-		DBG1(DBG_IKE, "no SIM card found with triplets for '%Y'", this->peer);
+		DBG1(DBG_IKE, "no SIM card found with triplets for '%Y'", peer);
 	}
 	return success;
+}
+
+/**
+ * Find a stored pseudonym on a SIM card
+ */
+static identification_t *get_pseudonym(private_eap_sim_peer_t *this)
+{
+	enumerator_t *enumerator;
+	sim_card_t *card;
+	identification_t *pseudonym = NULL;
+
+	enumerator = charon->sim->create_card_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &card))
+	{
+		pseudonym = card->get_pseudonym(card, this->permanent);
+		if (pseudonym)
+		{
+			DBG1(DBG_IKE, "using stored pseudonym identity '%Y' "
+				 "instead of '%Y'", pseudonym, this->permanent);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return pseudonym;
+}
+
+/**
+ * Store a pseudonym in a SIM card
+ */
+static void set_pseudonym(private_eap_sim_peer_t *this, chunk_t data)
+{
+	enumerator_t *enumerator;
+	sim_card_t *card;
+	identification_t *pseudonym;
+	char buf[data.len + 1];
+
+	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
+	pseudonym = identification_create_from_string(buf);
+	DBG1(DBG_IKE, "received pseudonym '%Y' for next authentication", pseudonym);
+	enumerator = charon->sim->create_card_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &card))
+	{
+		card->set_pseudonym(card, this->permanent, pseudonym);
+	}
+	enumerator->destroy(enumerator);
+	pseudonym->destroy(pseudonym);
 }
 
 /**
@@ -132,9 +183,10 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	chunk_t data;
+	chunk_t data, id;
 	rng_t *rng;
 	bool supported = FALSE;
+	simaka_attribute_t id_req = 0;
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -155,6 +207,11 @@ static status_t process_start(private_eap_sim_peer_t *this,
 				}
 				break;
 			}
+			case AT_ANY_ID_REQ:
+			case AT_FULLAUTH_ID_REQ:
+			case AT_PERMANENT_ID_REQ:
+				id_req = type;
+				break;
 			default:
 				if (!simaka_attribute_skippable(type))
 				{
@@ -176,6 +233,26 @@ static status_t process_start(private_eap_sim_peer_t *this,
 		return NEED_MORE;
 	}
 
+	switch (id_req)
+	{
+		case AT_ANY_ID_REQ:
+			/* TODO: reauth handling */
+		case AT_FULLAUTH_ID_REQ:
+			DESTROY_IF(this->pseudonym);
+			this->pseudonym = get_pseudonym(this);
+			if (this->pseudonym)
+			{
+				id = this->pseudonym->get_encoding(this->pseudonym);
+				break;
+			}
+			/* FALL */
+		case AT_PERMANENT_ID_REQ:
+			id = this->permanent->get_encoding(this->permanent);
+			break;
+		default:
+			break;
+	}
+
 	/* generate AT_NONCE_MT value */
 	rng = this->crypto->get_rng(this->crypto);
 	free(this->nonce.ptr);
@@ -185,6 +262,10 @@ static status_t process_start(private_eap_sim_peer_t *this,
 									SIM_START, this->crypto);
 	message->add_attribute(message, AT_SELECTED_VERSION, version);
 	message->add_attribute(message, AT_NONCE_MT, this->nonce);
+	if (id.len)
+	{
+		message->add_attribute(message, AT_IDENTITY, id);
+	}
 	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
@@ -201,6 +282,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data, rands = chunk_empty, kcs, kc, sreses, sres;
+	identification_t *peer;
 
 	if (this->tries-- <= 0)
 	{
@@ -230,6 +312,12 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	peer = this->permanent;
+	if (this->pseudonym)
+	{
+		peer = this->pseudonym;
+	}
+
 	/* excepting two or three RAND, each 16 bytes. We require two valid
 	 * and different RANDs */
 	if ((rands.len != 2 * SIM_RAND_LEN && rands.len != 3 * SIM_RAND_LEN) ||
@@ -245,7 +333,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	sreses = sres = chunk_alloca(rands.len / 4);
 	while (rands.len >= SIM_RAND_LEN)
 	{
-		if (!get_card_triplet(this, rands.ptr, sres.ptr, kc.ptr))
+		if (!get_triplet(this, peer, rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = create_client_error(this, in->get_identifier(in),
@@ -261,16 +349,30 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 
 	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
+	this->msk = this->crypto->derive_keys_full(this->crypto, peer, data);
 
-	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT"  */
-	if (!in->verify(in, this->nonce))
+	/* Verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT", and
+	 * parse() again after key derivation, reading encrypted attributes */
+	if (!in->verify(in, this->nonce) || !in->parse(in))
 	{
-		DBG1(DBG_IKE, "AT_MAC verification failed");
 		*out = create_client_error(this, in->get_identifier(in),
 								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
+
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case AT_NEXT_PSEUDONYM:
+				set_pseudonym(this, data);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	/* build response with AT_MAC, built over "EAP packet | n*SRES" */
 	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
@@ -428,7 +530,8 @@ static bool is_mutual(private_eap_sim_peer_t *this)
  */
 static void destroy(private_eap_sim_peer_t *this)
 {
-	this->peer->destroy(this->peer);
+	this->permanent->destroy(this->permanent);
+	DESTROY_IF(this->pseudonym);
 	this->crypto->destroy(this->crypto);
 	free(this->version_list.ptr);
 	free(this->nonce.ptr);
@@ -457,7 +560,8 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->peer = peer->clone(peer);
+	this->permanent = peer->clone(peer);
+	this->pseudonym = NULL;
 	this->tries = MAX_TRIES;
 	this->version_list = chunk_empty;
 	this->nonce = chunk_empty;
