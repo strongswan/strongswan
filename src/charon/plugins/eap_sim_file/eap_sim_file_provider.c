@@ -68,38 +68,19 @@ static bool equals(identification_t *key1, identification_t *key2)
 }
 
 /**
- * Lookup the permanent identity of pseudonym, if any
- */
-static identification_t *lookup_permanent(private_eap_sim_file_provider_t *this,
-										  identification_t *pseudonym)
-{
-	identification_t *permanent;
-
-	permanent = this->permanent->get(this->permanent, pseudonym);
-	if (permanent)
-	{
-		return permanent;
-	}
-	return pseudonym;
-}
-
-/**
  * Implementation of sim_provider_t.get_triplet
  */
 static bool get_triplet(private_eap_sim_file_provider_t *this,
-						identification_t *imsi,
-						char *rand, char *sres, char *kc)
+						identification_t *id, char *rand, char *sres, char *kc)
 {
 	enumerator_t *enumerator;
-	identification_t *id;
+	identification_t *cand;
 	char *c_rand, *c_sres, *c_kc;
 
-	imsi = lookup_permanent(this, imsi);
-
 	enumerator = this->triplets->create_enumerator(this->triplets);
-	while (enumerator->enumerate(enumerator, &id, &c_rand, &c_sres, &c_kc))
+	while (enumerator->enumerate(enumerator, &cand, &c_rand, &c_sres, &c_kc))
 	{
-		if (imsi->matches(imsi, id))
+		if (id->matches(id, cand))
 		{
 			memcpy(rand, c_rand, SIM_RAND_LEN);
 			memcpy(sres, c_sres, SIM_SRES_LEN);
@@ -110,6 +91,22 @@ static bool get_triplet(private_eap_sim_file_provider_t *this,
 	}
 	enumerator->destroy(enumerator);
 	return FALSE;
+}
+
+/**
+ * Implementation of sim_provider_t.is_pseudonym
+ */
+static identification_t* is_pseudonym(private_eap_sim_file_provider_t *this,
+									  identification_t *id)
+{
+	identification_t *permanent;
+
+	permanent = this->permanent->get(this->permanent, id);
+	if (permanent)
+	{
+		return permanent->clone(permanent);
+	}
+	return NULL;
 }
 
 /**
@@ -182,11 +179,12 @@ eap_sim_file_provider_t *eap_sim_file_provider_create(
 {
 	private_eap_sim_file_provider_t *this = malloc_thing(private_eap_sim_file_provider_t);
 
-	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
-	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
-	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *imsi, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
+	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
+	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
+	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
+	this->public.provider.is_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))is_pseudonym;
 	this->public.provider.gen_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))gen_pseudonym;
-	this->public.provider.is_reauth = (bool(*)(sim_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))return_false;
+	this->public.provider.is_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))return_null;
 	this->public.provider.gen_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))return_null;
 	this->public.destroy = (void(*)(eap_sim_file_provider_t*))destroy;
 

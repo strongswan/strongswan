@@ -46,20 +46,20 @@ typedef struct sim_provider_t sim_provider_t;
  * The SIM card completes triplets/quintuplets requested in a challenge
  * received from the server.
  * An implementation supporting only one of SIM/AKA authentication may
- * implement the other methods with return_false()/return NOT_SUPPORTED.
+ * implement the other methods with return_false()/return NOT_SUPPORTED/NULL.
  */
 struct sim_card_t {
 
 	/**
 	 * Calculate SRES/KC from a RAND for SIM authentication.
 	 *
-	 * @param imsi		identity to get a triplet for
+	 * @param id		permanent identity to get a triplet for
 	 * @param rand		RAND input buffer, fixed size 16 bytes
 	 * @param sres		SRES output buffer, fixed size 4 byte
 	 * @param kc		KC output buffer, fixed size 8 bytes
 	 * @return			TRUE if SRES/KC calculated, FALSE on error/wrong identity
 	 */
-	bool (*get_triplet)(sim_card_t *this, identification_t *imsi,
+	bool (*get_triplet)(sim_card_t *this, identification_t *id,
 						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
 						char kc[SIM_KC_LEN]);
 
@@ -69,7 +69,7 @@ struct sim_card_t {
 	 * If the received sequence number (in autn) is out of sync, INVALID_STATE
 	 * is returned.
 	 *
-	 * @param imsi		peer identity requesting quintuplet for
+	 * @param id		permanent identity to request quintuplet for
 	 * @param rand		random value rand
 	 * @param autn		authentication token autn
 	 * @param ck		buffer receiving encryption key ck
@@ -77,7 +77,7 @@ struct sim_card_t {
 	 * @param res		buffer receiving authentication result res
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
-	status_t (*get_quintuplet)(sim_card_t *this, identification_t *imsi,
+	status_t (*get_quintuplet)(sim_card_t *this, identification_t *id,
 							   char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
 							   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 							   char res[AKA_RES_LEN]);
@@ -85,51 +85,51 @@ struct sim_card_t {
 	/**
 	 * Calculate AUTS from RAND for AKA resynchronization.
 	 *
-	 * @param imsi		peer identity requesting quintuplet for
+	 * @param id		permanent identity to request quintuplet for
 	 * @param rand		random value rand
 	 * @param auts		resynchronization parameter auts
 	 * @return			TRUE if parameter generated successfully
 	 */
-	bool (*resync)(sim_card_t *this, identification_t *imsi,
+	bool (*resync)(sim_card_t *this, identification_t *id,
 				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 
 	/**
 	 * Set the pseudonym to use for next authentication.
 	 *
-	 * @param perm		permanent identity of the peer (imsi)
-	 * @param pseudo	pseudonym identity received from the server
+	 * @param id		permanent identity of the peer
+	 * @param pseudonym	pseudonym identity received from the server
 	 */
-	void (*set_pseudonym)(sim_card_t *this, identification_t *perm,
-						  identification_t *pseudo);
+	void (*set_pseudonym)(sim_card_t *this, identification_t *id,
+						  identification_t *pseudonym);
 
 	/**
 	 * Get the pseudonym previously stored via set_pseudonym().
 	 *
-	 * @param perm		permanent identity of the peer (imsi)
+	 * @param id		permanent identity of the peer
 	 * @return			associated pseudonym identity, NULL if none stored
 	 */
-	identification_t* (*get_pseudonym)(sim_card_t *this, identification_t *perm);
+	identification_t* (*get_pseudonym)(sim_card_t *this, identification_t *id);
 
 	/**
 	 * Store parameters to use for the next fast reauthentication.
 	 *
-	 * @param perm		permanent identity of the peer (imsi)
+	 * @param id		permanent identity of the peer
 	 * @param next		next fast reauthentication identity to use
 	 * @param mk		master key MK to store for reauthentication
 	 * @param counter	counter value to store, host order
 	 */
-	void (*set_reauth)(sim_card_t *this, identification_t *perm,
+	void (*set_reauth)(sim_card_t *this, identification_t *id,
 					   identification_t *next, char mk[HASH_SIZE_SHA1],
 					   u_int16_t counter);
 
 	/**
 	 * Retrieve parameters for fast reauthentication stored via set_reauth().
 	 *
-	 * @param perm		permanent identity of the peer (imsi)
+	 * @param id		permanent identity of the peer
 	 * @param mk		buffer receiving master key MK
 	 * @param counter	pointer receiving counter value, in host order
 	 */
-	identification_t* (*get_reauth)(sim_card_t *this, identification_t *perm,
+	identification_t* (*get_reauth)(sim_card_t *this, identification_t *id,
 									char mk[HASH_SIZE_SHA1], u_int16_t *counter);
 };
 
@@ -147,20 +147,20 @@ struct sim_provider_t {
 	/**
 	 * Create a challenge for SIM authentication.
 	 *
-	 * @param imsi		client identity
+	 * @param id		permanent identity of peer to gen triplet for
 	 * @param rand		RAND output buffer, fixed size 16 bytes
 	 * @param sres		SRES output buffer, fixed size 4 byte
 	 * @param kc		KC output buffer, fixed size 8 bytes
 	 * @return			TRUE if triplet received, FALSE otherwise
 	 */
-	bool (*get_triplet)(sim_provider_t *this, identification_t *imsi,
+	bool (*get_triplet)(sim_provider_t *this, identification_t *id,
 						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
 						char kc[SIM_KC_LEN]);
 
 	/**
 	 * Create a challenge for AKA authentication.
 	 *
-	 * @param imsi		peer identity to create challenge for
+	 * @param id		permanent identity of peer to create challenge for
 	 * @param rand		buffer receiving random value rand
 	 * @param xres		buffer receiving expected authentication result xres
 	 * @param ck		buffer receiving encryption key ck
@@ -168,7 +168,7 @@ struct sim_provider_t {
 	 * @param autn		authentication token autn
 	 * @return			TRUE if quintuplet generated successfully
 	 */
-	bool (*get_quintuplet)(sim_provider_t *this, identification_t *imsi,
+	bool (*get_quintuplet)(sim_provider_t *this, identification_t *id,
 						   char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
 						   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 						   char autn[AKA_AUTN_LEN]);
@@ -176,39 +176,48 @@ struct sim_provider_t {
 	/**
 	 * Process AKA resynchroniusation request of a peer.
 	 *
-	 * @param imsi		peer identity requesting resynchronisation
+	 * @param id		permanent identity of peer requesting resynchronisation
 	 * @param rand		random value rand
 	 * @param auts		synchronization parameter auts
 	 * @return			TRUE if resynchronized successfully
 	 */
-	bool (*resync)(sim_provider_t *this, identification_t *imsi,
+	bool (*resync)(sim_provider_t *this, identification_t *id,
 				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
+
+	/**
+	 * Check if peer uses a pseudonym, get permanent identity.
+	 *
+	 * @param id		pseudonym identity candidate
+	 * @return			permanent identity, NULL if id not a pseudonym
+	 */
+	identification_t* (*is_pseudonym)(sim_provider_t *this,
+									  identification_t *id);
 
 	/**
 	 * Generate a pseudonym identitiy for a given peer identity.
 	 *
-	 * @param id		peer identity to generate a pseudonym for
+	 * @param id		permanent identity to generate a pseudonym for
 	 * @return			generated pseudonym, NULL to not use a pseudonym identity
 	 */
 	identification_t* (*gen_pseudonym)(sim_provider_t *this,
 									   identification_t *id);
 
 	/**
-	 * Check if peer uses reauthentication, retrieve parameters if so.
+	 * Check if peer uses reauthentication, retrieve reauth parameters.
 	 *
-	 * @param id		peer identity, candidate for a reauthentication identity
+	 * @param id		reauthentication identity (candidate)
 	 * @param mk		buffer receiving master key MK
 	 * @param counter	pointer receiving current counter value, host order
-	 * @return			TRUE if id is a fast reauthentication identity
+	 * @return			permanent identity, NULL if id not a reauth identity
 	 */
-	bool (*is_reauth)(sim_provider_t *this, identification_t *id,
-					  char mk[HASH_SIZE_SHA1], u_int16_t *counter);
+	identification_t* (*is_reauth)(sim_provider_t *this, identification_t *id,
+								   char mk[HASH_SIZE_SHA1], u_int16_t *counter);
 
 	/**
 	 * Generate a fast reauthentication identity, associated to a master key.
 	 *
-	 * @param id		previously used reauthentication/pseudo/permanent id
-	 * @param mk		master key to store to generated identity
+	 * @param id		permanent peer identity
+	 * @param mk		master key to store along with generated identity
 	 * @return			fast reauthentication identity, NULL to not use reauth
 	 */
 	identification_t* (*gen_reauth)(sim_provider_t *this, identification_t *id,
