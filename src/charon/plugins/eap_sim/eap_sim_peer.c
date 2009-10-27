@@ -188,6 +188,10 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	bool supported = FALSE;
 	simaka_attribute_t id_req = 0;
 
+	/* if this is the second invocation, server did not accept our pseudonym */
+	DESTROY_IF(this->pseudonym);
+	this->pseudonym = NULL;
+
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -238,7 +242,6 @@ static status_t process_start(private_eap_sim_peer_t *this,
 		case AT_ANY_ID_REQ:
 			/* TODO: reauth handling */
 		case AT_FULLAUTH_ID_REQ:
-			DESTROY_IF(this->pseudonym);
 			this->pseudonym = get_pseudonym(this);
 			if (this->pseudonym)
 			{
@@ -312,12 +315,6 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	peer = this->permanent;
-	if (this->pseudonym)
-	{
-		peer = this->pseudonym;
-	}
-
 	/* excepting two or three RAND, each 16 bytes. We require two valid
 	 * and different RANDs */
 	if ((rands.len != 2 * SIM_RAND_LEN && rands.len != 3 * SIM_RAND_LEN) ||
@@ -333,7 +330,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	sreses = sres = chunk_alloca(rands.len / 4);
 	while (rands.len >= SIM_RAND_LEN)
 	{
-		if (!get_triplet(this, peer, rands.ptr, sres.ptr, kc.ptr))
+		if (!get_triplet(this, this->permanent, rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = create_client_error(this, in->get_identifier(in),
@@ -347,6 +344,11 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		rands = chunk_skip(rands, SIM_RAND_LEN);
 	}
 
+	peer = this->permanent;
+	if (this->pseudonym)
+	{
+		peer = this->pseudonym;
+	}
 	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
 	free(this->msk.ptr);
 	this->msk = this->crypto->derive_keys_full(this->crypto, peer, data);
