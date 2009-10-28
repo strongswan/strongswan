@@ -419,7 +419,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 		snprintf(buf, sizeof(buf), "%.*s", identity.len, identity.ptr);
 		id = identification_create_from_string(buf);
 
-		if (this->use_reauth)
+		if (this->use_reauth && !nonce.len)
 		{
 			char mk[HASH_SIZE_SHA1];
 			u_int16_t counter;
@@ -434,6 +434,11 @@ static status_t process_start(private_eap_sim_server_t *this,
 				this->reauth = id;
 				return reauthenticate(this, mk, counter, out);
 			}
+			DBG1(DBG_IKE, "received unknown reauthentication identity '%Y', "
+				 "initiating full authentication", id);
+			this->use_reauth = FALSE;
+			id->destroy(id);
+			return initiate(this, out);
 		}
 		if (this->use_pseudonym)
 		{
