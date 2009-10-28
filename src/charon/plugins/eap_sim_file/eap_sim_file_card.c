@@ -16,7 +16,6 @@
 #include "eap_sim_file_card.h"
 
 #include <daemon.h>
-#include <utils/hashtable.h>
 
 typedef struct private_eap_sim_file_card_t private_eap_sim_file_card_t;
 
@@ -34,49 +33,7 @@ struct private_eap_sim_file_card_t {
 	 * source of triplets
 	 */
 	eap_sim_file_triplets_t *triplets;
-
-	/**
-	 * Permanent -> pseudonym mappings
-	 */
-	hashtable_t *pseudonym;
-
-	/**
-	 * Permanent -> reauth_data_t mappings
-	 */
-	hashtable_t *reauth;
-
-	/**
-	 * Reverse pseudonym -> permanent mappings
-	 */
-	hashtable_t *permanent;
 };
-
-typedef struct {
-	/** currently used reauthentication identity */
-	identification_t *id;
-	/** associated permanent identity */
-	identification_t *permanent;
-	/** counter value */
-	u_int16_t counter;
-	/** master key */
-	char mk[HASH_SIZE_SHA1];
-} reauth_data_t;
-
-/**
- * hashtable hash function
- */
-static u_int hash(identification_t *key)
-{
-	return chunk_hash(key->get_encoding(key));
-}
-
-/**
- * hashtable equals function
- */
-static bool equals(identification_t *key1, identification_t *key2)
-{
-	return key1->equals(key1, key2);
-}
 
 /**
  * Implementation of sim_card_t.get_triplet
@@ -112,90 +69,6 @@ static bool get_triplet(private_eap_sim_file_card_t *this,
 }
 
 /**
- * Implementation of sim_card_t.get_pseudonym
- */
-static identification_t *get_pseudonym(private_eap_sim_file_card_t *this,
-									   identification_t *id)
-{
-	identification_t *pseudonym;
-
-	pseudonym = this->pseudonym->get(this->pseudonym, id);
-	if (pseudonym)
-	{
-		return pseudonym->clone(pseudonym);
-	}
-	return NULL;
-}
-
-/**
- * Implementation of sim_card_t.set_pseudonym
- */
-static void set_pseudonym(private_eap_sim_file_card_t *this,
-						  identification_t *id, identification_t *pseudonym)
-{
-	identification_t *permanent;
-
-	/* create new entries */
-	id = id->clone(id);
-	pseudonym = pseudonym->clone(pseudonym);
-	permanent = this->permanent->put(this->permanent, pseudonym, id);
-	pseudonym = this->pseudonym->put(this->pseudonym, id, pseudonym);
-
-	/* delete old entries */
-	DESTROY_IF(permanent);
-	DESTROY_IF(pseudonym);
-}
-
-/**
- * Implementation of sim_card_t.get_reauth
- */
-static identification_t *get_reauth(private_eap_sim_file_card_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter)
-{
-	reauth_data_t *data;
-	identification_t *reauth;
-
-	/* look up reauthentication data */
-	data = this->reauth->remove(this->reauth, id);
-	if (!data)
-	{
-		return NULL;
-	}
-	*counter = ++data->counter;
-	memcpy(mk, data->mk, HASH_SIZE_SHA1);
-	reauth = data->id;
-	data->permanent->destroy(data->permanent);
-	free(data);
-	return reauth;
-}
-
-/**
- * Implementation of sim_card_t.set_reauth
- */
-static void set_reauth(private_eap_sim_file_card_t *this,
-					   identification_t *id, identification_t* next,
-					   char mk[HASH_SIZE_SHA1], u_int16_t counter)
-{
-	reauth_data_t *data;
-
-	data = this->reauth->get(this->reauth, id);
-	if (data)
-	{
-		data->id->destroy(data->id);
-	}
-	else
-	{
-		data = malloc_thing(reauth_data_t);
-		data->permanent = id->clone(id);
-		this->reauth->put(this->reauth, data->permanent, data);
-	}
-	data->counter = counter;
-	data->id = next->clone(next);
-	memcpy(data->mk, mk, HASH_SIZE_SHA1);
-}
-
-/**
  * Implementation of sim_card_t.get_quintuplet
  */
 static bool get_quintuplet()
@@ -208,37 +81,6 @@ static bool get_quintuplet()
  */
 static void destroy(private_eap_sim_file_card_t *this)
 {
-	enumerator_t *enumerator;
-	identification_t *id;
-	reauth_data_t *data;
-	void *key;
-
-	enumerator = this->pseudonym->create_enumerator(this->pseudonym);
-	while (enumerator->enumerate(enumerator, &key, &id))
-	{
-		id->destroy(id);
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = this->permanent->create_enumerator(this->permanent);
-	while (enumerator->enumerate(enumerator, &key, &id))
-	{
-		id->destroy(id);
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = this->reauth->create_enumerator(this->reauth);
-	while (enumerator->enumerate(enumerator, &key, &data))
-	{
-		data->id->destroy(data->id);
-		data->permanent->destroy(data->permanent);
-		free(data);
-	}
-	enumerator->destroy(enumerator);
-
-	this->pseudonym->destroy(this->pseudonym);
-	this->permanent->destroy(this->permanent);
-	this->reauth->destroy(this->reauth);
 	free(this);
 }
 
@@ -252,16 +94,13 @@ eap_sim_file_card_t *eap_sim_file_card_create(eap_sim_file_triplets_t *triplets)
 	this->public.card.get_triplet = (bool(*)(sim_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
 	this->public.card.get_quintuplet = (status_t(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_LEN]))get_quintuplet;
 	this->public.card.resync = (bool(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.card.get_pseudonym = (identification_t*(*)(sim_card_t*, identification_t *perm))get_pseudonym;
-	this->public.card.set_pseudonym = (void(*)(sim_card_t*, identification_t *id, identification_t *pseudonym))set_pseudonym;
-	this->public.card.get_reauth = (identification_t*(*)(sim_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))get_reauth;
-	this->public.card.set_reauth = (void(*)(sim_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))set_reauth;
+	this->public.card.get_pseudonym = (identification_t*(*)(sim_card_t*, identification_t *perm))return_null;
+	this->public.card.set_pseudonym = (void(*)(sim_card_t*, identification_t *id, identification_t *pseudonym))nop;
+	this->public.card.get_reauth = (identification_t*(*)(sim_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
+	this->public.card.set_reauth = (void(*)(sim_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
 	this->public.destroy = (void(*)(eap_sim_file_card_t*))destroy;
 
 	this->triplets = triplets;
-	this->pseudonym = hashtable_create((void*)hash, (void*)equals, 0);
-	this->permanent = hashtable_create((void*)hash, (void*)equals, 0);
-	this->reauth = hashtable_create((void*)hash, (void*)equals, 0);
 
 	return &this->public;
 }

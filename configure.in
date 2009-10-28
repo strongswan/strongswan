@@ -100,6 +100,8 @@ ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
 ARG_ENABL_SET([eap-sim],        [enable SIM authenication module for EAP.])
 ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
+ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plugin.])
+ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
 ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
 ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authenication module.])
 ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authenication module.])
@@ -712,6 +714,8 @@ AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_REAUTH, test x$eap_simaka_reauth = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
@@ -809,6 +813,8 @@ AC_OUTPUT(
 	src/charon/plugins/eap_gtc/Makefile
 	src/charon/plugins/eap_sim/Makefile
 	src/charon/plugins/eap_sim_file/Makefile
+	src/charon/plugins/eap_simaka_pseudonym/Makefile
+	src/charon/plugins/eap_simaka_reauth/Makefile
 	src/charon/plugins/eap_mschapv2/Makefile
 	src/charon/plugins/eap_radius/Makefile
 	src/charon/plugins/kernel_netlink/Makefile

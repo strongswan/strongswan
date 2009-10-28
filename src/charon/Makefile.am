@@ -200,6 +200,16 @@ if USE_EAP_SIM_FILE
   PLUGINS += eap-sim-file
 endif
 
+if USE_EAP_SIMAKA_PSEUDONYM
+  SUBDIRS += plugins/eap_simaka_pseudonym
+  PLUGINS += eap-simaka-pseudonym
+endif
+
+if USE_EAP_SIMAKA_REAUTH
+  SUBDIRS += plugins/eap_simaka_reauth
+  PLUGINS += eap-simaka-reauth
+endif
+
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
   PLUGINS += eap-md5
