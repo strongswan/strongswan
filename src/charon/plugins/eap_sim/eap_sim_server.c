@@ -23,6 +23,9 @@
 /* number of triplets for one authentication */
 #define TRIPLET_COUNT 3
 
+/** length of the AT_NONCE_S value */
+#define NONCE_LEN 16
+
 typedef struct private_eap_sim_server_t private_eap_sim_server_t;
 
 /**
@@ -46,6 +49,11 @@ struct private_eap_sim_server_t {
 	identification_t *pseudonym;
 
 	/**
+	 * reauthentication ID of peer
+	 */
+	identification_t *reauth;
+
+	/**
 	 * EAP-SIM/AKA crypto helper
 	 */
 	simaka_crypto_t *crypto;
@@ -59,6 +67,16 @@ struct private_eap_sim_server_t {
 	 * concatenated SRES values
 	 */
 	chunk_t sreses;
+
+	/**
+	 * Nonce value used in AT_NONCE_S
+	 */
+	chunk_t nonce;
+
+	/**
+	 * Counter value negotiated, network order
+	 */
+	chunk_t counter;
 
 	/**
 	 * MSK, used for EAP-SIM based IKEv2 authentication
@@ -116,6 +134,54 @@ static bool get_triplet(private_eap_sim_server_t *this, identification_t *peer,
 }
 
 /**
+ * Generate a new reauthentication identity for next fast reauthentication
+ */
+static identification_t* gen_reauth(private_eap_sim_server_t *this,
+									char mk[HASH_SIZE_SHA1])
+{
+	enumerator_t *enumerator;
+	sim_provider_t *provider;
+	identification_t *reauth = NULL;
+
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &provider))
+	{
+		reauth = provider->gen_reauth(provider, this->permanent, mk);
+		if (reauth)
+		{
+			DBG1(DBG_IKE, "proposing new reauthentication identity '%Y'", reauth);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return reauth;
+}
+
+/**
+ * Check if an identity is a known reauthentication identity
+ */
+static identification_t* is_reauth(private_eap_sim_server_t *this,
+								identification_t *id, char mk[HASH_SIZE_SHA1],
+								u_int16_t *counter)
+{
+	enumerator_t *enumerator;
+	sim_provider_t *provider;
+	identification_t *permanent = NULL;
+
+	enumerator = charon->sim->create_provider_enumerator(charon->sim);
+	while (enumerator->enumerate(enumerator, &provider))
+	{
+		permanent = provider->is_reauth(provider, id, mk, counter);
+		if (permanent)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return permanent;
+}
+
+/**
  * Generate a new pseudonym for next authentication
  */
 static identification_t* gen_pseudonym(private_eap_sim_server_t *this)
@@ -130,6 +196,7 @@ static identification_t* gen_pseudonym(private_eap_sim_server_t *this)
 		pseudonym = provider->gen_pseudonym(provider, this->permanent);
 		if (pseudonym)
 		{
+			DBG1(DBG_IKE, "proposing new pseudonym '%Y'", pseudonym);
 			break;
 		}
 	}
@@ -190,6 +257,111 @@ static status_t initiate(private_eap_sim_server_t *this, eap_payload_t **out)
 }
 
 /**
+ * Initiate  EAP-SIM/Request/Re-authentication message
+ */
+static status_t reauthenticate(private_eap_sim_server_t *this,
+							   char mk[HASH_SIZE_SHA1], u_int16_t counter,
+							   eap_payload_t **out)
+{
+	simaka_message_t *message;
+	identification_t *next;
+	chunk_t mkc;
+	rng_t *rng;
+
+	DBG1(DBG_IKE, "initiating EAP-SIM reauthentication");
+
+	rng = this->crypto->get_rng(this->crypto);
+	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
+
+	mkc = chunk_create(mk, HASH_SIZE_SHA1);
+	counter = htons(counter);
+	this->counter = chunk_clone(chunk_create((char*)&counter, sizeof(counter)));
+
+	this->crypto->derive_keys_reauth(this->crypto, mkc);
+	this->msk = this->crypto->derive_keys_reauth_msk(this->crypto,
+								this->reauth, this->counter, this->nonce, mkc);
+
+	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
+									SIM_REAUTHENTICATION, this->crypto);
+	message->add_attribute(message, AT_COUNTER, this->counter);
+	message->add_attribute(message, AT_NONCE_S, this->nonce);
+	next = gen_reauth(this, mk);
+	if (next)
+	{
+		message->add_attribute(message, AT_NEXT_REAUTH_ID,
+							   next->get_encoding(next));
+		next->destroy(next);
+	}
+	/* create AT_MAC over EAP-Message|NONCE_S */
+	*out = message->generate(message, this->nonce);
+	message->destroy(message);
+
+	this->pending = SIM_REAUTHENTICATION;
+	return NEED_MORE;
+}
+
+/**
+ * process an EAP-SIM/Response/Reauthentication message
+ */
+static status_t process_reauthentication(private_eap_sim_server_t *this,
+									simaka_message_t *in, eap_payload_t **out)
+{
+	enumerator_t *enumerator;
+	simaka_attribute_t type;
+	chunk_t data, counter = chunk_empty;
+	bool too_small = FALSE;
+
+	if (this->pending != SIM_REAUTHENTICATION)
+	{
+		DBG1(DBG_IKE, "received %N, but not expected",
+			 simaka_subtype_names, SIM_REAUTHENTICATION);
+		return FAILED;
+	}
+
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case AT_COUNTER:
+				counter = data;
+				break;
+			case AT_COUNTER_TOO_SMALL:
+				too_small = TRUE;
+				break;
+			default:
+				if (!simaka_attribute_skippable(type))
+				{
+					enumerator->destroy(enumerator);
+					return FAILED;
+				}
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_S"  */
+	if (!in->verify(in, this->nonce))
+	{
+		return FAILED;
+	}
+	if (too_small)
+	{
+		DBG1(DBG_IKE, "received %N, initiating full authentication",
+			 simaka_attribute_names, AT_COUNTER_TOO_SMALL);
+		this->use_reauth = FALSE;
+		this->crypto->clear_keys(this->crypto);
+		return initiate(this, out);
+	}
+	if (!chunk_equals(counter, this->counter))
+	{
+		DBG1(DBG_IKE, "received counter does not match");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+/**
  * process an EAP-SIM/Response/Start message
  */
 static status_t process_start(private_eap_sim_server_t *this,
@@ -198,7 +370,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	chunk_t data, identity = chunk_empty, nonce = chunk_empty;
+	chunk_t data, identity = chunk_empty, nonce = chunk_empty, mk;
 	chunk_t rands, rand, kcs, kc, sreses, sres;
 	bool supported = FALSE;
 	identification_t *id;
@@ -239,31 +411,41 @@ static status_t process_start(private_eap_sim_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!supported || !nonce.len)
-	{
-		DBG1(DBG_IKE, "received incomplete EAP-SIM/Response/Start");
-		return FAILED;
-	}
-
 	if (identity.len)
 	{
+		identification_t *permanent;
 		char buf[identity.len + 1];
 
 		snprintf(buf, sizeof(buf), "%.*s", identity.len, identity.ptr);
 		id = identification_create_from_string(buf);
 
+		if (this->use_reauth)
+		{
+			char mk[HASH_SIZE_SHA1];
+			u_int16_t counter;
+
+			permanent = is_reauth(this, id, mk, &counter);
+			if (permanent)
+			{
+				DBG1(DBG_IKE, "received reauthentication identity '%Y' "
+					 "mapping to '%Y'",  id, permanent);
+				this->permanent->destroy(this->permanent);
+				this->permanent = permanent;
+				this->reauth = id;
+				return reauthenticate(this, mk, counter, out);
+			}
+		}
 		if (this->use_pseudonym)
 		{
-			identification_t *permanent;
-
 			permanent = is_pseudonym(this, id);
 			if (permanent)
 			{
-				DBG1(DBG_IKE, "received pseudonym identity '%Y' mapping to '%Y'",
-					 id, permanent);
+				DBG1(DBG_IKE, "received pseudonym identity '%Y' "
+					 "mapping to '%Y'", id, permanent);
 				this->permanent->destroy(this->permanent);
 				this->permanent = permanent;
 				this->pseudonym = id->clone(id);
+				this->use_permanent = FALSE;
 			}
 		}
 		if (!this->pseudonym && this->use_permanent)
@@ -274,6 +456,12 @@ static status_t process_start(private_eap_sim_server_t *this,
 			this->permanent = id->clone(id);
 		}
 		id->destroy(id);
+	}
+
+	if (!supported || !nonce.len)
+	{
+		DBG1(DBG_IKE, "received incomplete EAP-SIM/Response/Start");
+		return FAILED;
 	}
 
 	/* read triplets from provider */
@@ -314,27 +502,28 @@ static status_t process_start(private_eap_sim_server_t *this,
 	{
 		id = this->pseudonym;
 	}
-	this->msk = this->crypto->derive_keys_full(this->crypto, id, data);
+	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
 
 	/* build response with AT_MAC, built over "EAP packet | NONCE_MT" */
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
-	if (this->use_pseudonym)
+	if (this->use_reauth && (id = gen_reauth(this, mk.ptr)))
 	{
-		/* generate new pseudonym for next authentication */
-		id = gen_pseudonym(this);
-		if (id)
-		{
-			DBG1(DBG_IKE, "proposing new pseudonym '%Y'", id);
-			message->add_attribute(message, AT_NEXT_PSEUDONYM,
-								   id->get_encoding(id));
-			id->destroy(id);
-		}
+		message->add_attribute(message, AT_NEXT_REAUTH_ID,
+							   id->get_encoding(id));
+		id->destroy(id);
+	}
+	else if (this->use_pseudonym && (id = gen_pseudonym(this)))
+	{
+		message->add_attribute(message, AT_NEXT_PSEUDONYM,
+							   id->get_encoding(id));
+		id->destroy(id);
 	}
 	*out = message->generate(message, nonce);
 	message->destroy(message);
 
+	free(mk.ptr);
 	this->pending = SIM_CHALLENGE;
 	return NEED_MORE;
 }
@@ -370,7 +559,6 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 	/* verify AT_MAC attribute, signature is over "EAP packet | n*SRES"  */
 	if (!in->verify(in, this->sreses))
 	{
-		DBG1(DBG_IKE, "AT_MAC verification failed");
 		return FAILED;
 	}
 	return SUCCESS;
@@ -433,6 +621,9 @@ static status_t process(private_eap_sim_server_t *this,
 		case SIM_CHALLENGE:
 			status = process_challenge(this, message, out);
 			break;
+		case SIM_REAUTHENTICATION:
+			status = process_reauthentication(this, message, out);
+			break;
 		case SIM_CLIENT_ERROR:
 			status = process_client_error(this, message);
 			break;
@@ -484,8 +675,11 @@ static void destroy(private_eap_sim_server_t *this)
 	this->crypto->destroy(this->crypto);
 	this->permanent->destroy(this->permanent);
 	DESTROY_IF(this->pseudonym);
+	DESTROY_IF(this->reauth);
 	free(this->sreses.ptr);
+	free(this->nonce.ptr);
 	free(this->msk.ptr);
+	free(this->counter.ptr);
 	free(this);
 }
 
@@ -512,11 +706,14 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 	}
 	this->permanent = peer->clone(peer);
 	this->pseudonym = NULL;
+	this->reauth = NULL;
 	this->sreses = chunk_empty;
+	this->nonce = chunk_empty;
 	this->msk = chunk_empty;
+	this->counter = chunk_empty;
 	this->pending = 0;
 	this->use_reauth = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-sim.use_reauth", FALSE);
+								"charon.plugins.eap-sim.use_reauth", TRUE);
 	this->use_pseudonym = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-sim.use_pseudonym", TRUE);
 	this->use_permanent = lib->settings->get_bool(lib->settings,
