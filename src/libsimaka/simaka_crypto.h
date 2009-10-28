@@ -61,10 +61,38 @@ struct simaka_crypto_t {
 	 *
 	 * @param id	peer identity
 	 * @param data	method specific data
+	 * @param mk	chunk receiving allocated master key MK
 	 * @return		allocated MSK value
 	 */
 	chunk_t (*derive_keys_full)(simaka_crypto_t *this, identification_t *id,
-								chunk_t data);
+								chunk_t data, chunk_t *mk);
+
+	/**
+	 * Derive k_encr/k_auth keys from MK using fast reauthentication.
+	 *
+	 * This methods derives the k_encr/k_auth keys and loads them into the
+	 * internal crypter/signer instances.
+	 *
+	 * @param mk	master key
+	 */
+	void (*derive_keys_reauth)(simaka_crypto_t *this, chunk_t mk);
+
+	/**
+	 * Derive MSK using fast reauthentication.
+	 *
+	 * @param id		fast reauthentication identity
+	 * @param counter	fast reauthentication counter value, network order
+	 * @param nonce_s	server generated NONCE_S value
+	 * @param mk		master key of last full authentication
+	 */
+	chunk_t (*derive_keys_reauth_msk)(simaka_crypto_t *this,
+									  identification_t *id, chunk_t counter,
+									  chunk_t nonce_s, chunk_t mk);
+
+	/**
+	 * Clear keys (partially) derived.
+	 */
+	void (*clear_keys)(simaka_crypto_t *this);
 
 	/**
 	 * Destroy a simaka_crypto_t.

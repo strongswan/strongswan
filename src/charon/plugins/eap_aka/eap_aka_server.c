@@ -98,7 +98,7 @@ static status_t initiate(private_eap_aka_server_t *this, eap_payload_t **out)
 	sim_provider_t *provider;
 	char rand[AKA_RAND_LEN], xres[AKA_RES_LEN];
 	char ck[AKA_CK_LEN], ik[AKA_IK_LEN], autn[AKA_AUTN_LEN];
-	chunk_t data;
+	chunk_t data, mk;
 	bool found = FALSE;
 
 	enumerator = charon->sim->create_provider_enumerator(charon->sim);
@@ -122,7 +122,9 @@ static status_t initiate(private_eap_aka_server_t *this, eap_payload_t **out)
 	data = chunk_cata("cc", chunk_create(ik, AKA_IK_LEN),
 					  chunk_create(ck, AKA_CK_LEN));
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
+	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer,
+											   data, &mk);
+	free(mk.ptr);
 	this->rand = chunk_clone(chunk_create(rand, AKA_RAND_LEN));
 	this->xres = chunk_clone(chunk_create(xres, AKA_RES_LEN));
 

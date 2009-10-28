@@ -82,7 +82,7 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	sim_card_t *card;
-	chunk_t data, rand = chunk_empty, autn = chunk_empty;
+	chunk_t data, rand = chunk_empty, autn = chunk_empty, mk;
 	u_char res[AKA_RES_LEN], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
 	status_t status = NOT_FOUND;
 
@@ -155,7 +155,9 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	data = chunk_cata("cc", chunk_create(ik, AKA_IK_LEN),
 					  chunk_create(ck, AKA_CK_LEN));
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer, data);
+	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer,
+											   data, &mk);
+	free(mk.ptr);
 
 	/* verify EAP message MAC AT_MAC */
 	if (!in->verify(in, chunk_empty))

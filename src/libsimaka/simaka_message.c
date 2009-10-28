@@ -469,6 +469,7 @@ static bool decrypt(private_simaka_message_t *this)
 {
 	bool success;
 	crypter_t *crypter;
+	chunk_t plain;
 
 	crypter = this->crypto->get_crypter(this->crypto);
 	if (!crypter || !this->iv.len || !this->encr.len || this->encrypted)
@@ -482,12 +483,12 @@ static bool decrypt(private_simaka_message_t *this)
 		return FALSE;
 	}
 
-	/* decrypt inline */
-	crypter->decrypt(crypter, this->encr, this->iv, NULL);
+	crypter->decrypt(crypter, this->encr, this->iv, &plain);
 
 	this->encrypted = TRUE;
-	success = parse_attributes(this, this->encr);
+	success = parse_attributes(this, plain);
 	this->encrypted = FALSE;
+	free(plain.ptr);
 	return success;
 }
 

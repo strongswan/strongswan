@@ -97,41 +97,97 @@ static rng_t* get_rng(private_simaka_crypto_t *this)
  * Implementation of simaka_crypto_t.derive_keys_full
  */
 static chunk_t derive_keys_full(private_simaka_crypto_t *this,
-								identification_t *id, chunk_t data)
+								identification_t *id, chunk_t data, chunk_t *mk)
 {
-
-	char mk[HASH_SIZE_SHA1], k_encr[KENCR_LEN], k_auth[KAUTH_LEN];
-	chunk_t str, msk;
+	chunk_t str, msk, k_encr, k_auth;
 	int i;
 
 	/* For SIM: MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version)
 	 * For AKA: MK = SHA1(Identity|IK|CK) */
 	this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL);
-	this->hasher->get_hash(this->hasher, data, mk);
-	DBG3(DBG_IKE, "MK %b", mk, HASH_SIZE_SHA1);
+	this->hasher->allocate_hash(this->hasher, data, mk);
+	DBG3(DBG_IKE, "MK %B", mk);
 
 	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf() */
-	this->prf->set_key(this->prf, chunk_create(mk, HASH_SIZE_SHA1));
+	this->prf->set_key(this->prf, *mk);
 	str = chunk_alloca(this->prf->get_block_size(this->prf) * 3);
 	for (i = 0; i < 3; i++)
 	{
 		this->prf->get_bytes(this->prf, chunk_empty, str.ptr + str.len / 3 * i);
 	}
 
-	memcpy(k_encr, str.ptr, KENCR_LEN);
-	str = chunk_skip(str, KENCR_LEN);
-	memcpy(k_auth, str.ptr, KAUTH_LEN);
-	str = chunk_skip(str, KAUTH_LEN);
+	k_encr = chunk_create(str.ptr, KENCR_LEN);
+	k_auth = chunk_create(str.ptr + KENCR_LEN, KAUTH_LEN);
+	msk = chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN);
+	DBG3(DBG_IKE, "K_encr %B\nK_auth %B\nMSK %B", &k_encr, &k_auth, &msk);
 
-	this->signer->set_key(this->signer, chunk_create(k_auth, KAUTH_LEN));
-	this->crypter->set_key(this->crypter, chunk_create(k_encr, KENCR_LEN));
-
-	msk = chunk_clone(chunk_create(str.ptr, MSK_LEN));
-	DBG3(DBG_IKE, "K_encr %b\nK_auth %b\nMSK %B",
-		 k_encr, KENCR_LEN, k_auth, KAUTH_LEN, &msk);
+	this->signer->set_key(this->signer, k_auth);
+	this->crypter->set_key(this->crypter, k_encr);
 
 	this->derived = TRUE;
-	return msk;
+	return chunk_clone(msk);
+}
+
+/**
+ * Implementation of simaka_crypto_t.derive_keys_reauth
+ */
+static void derive_keys_reauth(private_simaka_crypto_t *this, chunk_t mk)
+{
+	chunk_t str, k_encr, k_auth;
+	int i;
+
+	/* K_encr | K_auth = prf() | prf() */
+	this->prf->set_key(this->prf, mk);
+	str = chunk_alloca(this->prf->get_block_size(this->prf) * 2);
+	for (i = 0; i < 2; i++)
+	{
+		this->prf->get_bytes(this->prf, chunk_empty, str.ptr + str.len / 2 * i);
+	}
+	k_encr = chunk_create(str.ptr, KENCR_LEN);
+	k_auth = chunk_create(str.ptr + KENCR_LEN, KAUTH_LEN);
+	DBG3(DBG_IKE, "K_encr %B\nK_auth %B", &k_encr, &k_auth);
+
+	this->signer->set_key(this->signer, k_auth);
+	this->crypter->set_key(this->crypter, k_encr);
+
+	this->derived = TRUE;
+}
+
+/**
+ * Implementation of simaka_crypto_t.derive_keys_reauth_msk
+ */
+static chunk_t derive_keys_reauth_msk(private_simaka_crypto_t *this,
+									  identification_t *id, chunk_t counter,
+									  chunk_t nonce_s, chunk_t mk)
+{
+	char xkey[HASH_SIZE_SHA1];
+	chunk_t str, msk;
+	int i;
+
+	this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL);
+	this->hasher->get_hash(this->hasher, counter, NULL);
+	this->hasher->get_hash(this->hasher, nonce_s, NULL);
+	this->hasher->get_hash(this->hasher, mk, xkey);
+
+	/* MSK | EMSK = prf() | prf() | prf() | prf() */
+	this->prf->set_key(this->prf, chunk_create(xkey, sizeof(xkey)));
+	str = chunk_alloca(this->prf->get_block_size(this->prf) * 2);
+	for (i = 0; i < 2; i++)
+	{
+		this->prf->get_bytes(this->prf, chunk_empty, str.ptr + str.len / 2 * i);
+	}
+	msk = chunk_create(str.ptr, MSK_LEN);
+	DBG3(DBG_IKE, "MSK %B", &msk);
+
+	return chunk_clone(msk);
+}
+
+/**
+ * Implementation of simaka_crypto_t.clear_keys
+ */
+static void clear_keys(private_simaka_crypto_t *this)
+{
+	this->derived = FALSE;
 }
 
 /**
@@ -157,7 +213,10 @@ simaka_crypto_t *simaka_crypto_create()
 	this->public.get_signer = (signer_t*(*)(simaka_crypto_t*))get_signer;
 	this->public.get_crypter = (crypter_t*(*)(simaka_crypto_t*))get_crypter;
 	this->public.get_rng = (rng_t*(*)(simaka_crypto_t*))get_rng;
-	this->public.derive_keys_full = (chunk_t(*)(simaka_crypto_t*, identification_t *id, chunk_t data))derive_keys_full;
+	this->public.derive_keys_full = (chunk_t(*)(simaka_crypto_t*, identification_t *id, chunk_t data, chunk_t *mk))derive_keys_full;
+	this->public.derive_keys_reauth = (void(*)(simaka_crypto_t*, chunk_t mk))derive_keys_reauth;
+	this->public.derive_keys_reauth_msk = (chunk_t(*)(simaka_crypto_t*, identification_t *id, chunk_t counter, chunk_t nonce_s, chunk_t mk))derive_keys_reauth_msk;
+	this->public.clear_keys = (void(*)(simaka_crypto_t*))clear_keys;
 	this->public.destroy = (void(*)(simaka_crypto_t*))destroy;
 
 	this->derived = FALSE;
