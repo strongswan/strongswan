@@ -95,102 +95,19 @@ struct private_eap_sim_peer_t {
 static chunk_t version = chunk_from_chars(0x00,0x01);
 
 /**
- * Read a triplet from the SIM card
- */
-static bool get_triplet(private_eap_sim_peer_t *this, identification_t *peer,
-						char *rand, char *sres, char *kc)
-{
-	enumerator_t *enumerator;
-	sim_card_t *card;
-	bool success = FALSE;
-
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		if (card->get_triplet(card, peer, rand, sres, kc))
-		{
-			success = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (!success)
-	{
-		DBG1(DBG_IKE, "no SIM card found with triplets for '%Y'", peer);
-	}
-	return success;
-}
-
-/**
- * Find a stored reauthentication identity on a SIM card
- */
-static identification_t *get_reauth(private_eap_sim_peer_t *this)
-{
-	enumerator_t *enumerator;
-	sim_card_t *card;
-	identification_t *reauth = NULL;
-
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		reauth = card->get_reauth(card, this->permanent,
-								  this->mk, &this->counter);
-		if (reauth)
-		{
-			DBG1(DBG_IKE, "using stored reauthentication identity '%Y' "
-				 "instead of '%Y'", reauth, this->permanent);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return reauth;
-}
-
-/**
  * Store received next fast reauthentication identity, along with mk/counter
  */
 static void set_reauth(private_eap_sim_peer_t *this, chunk_t data)
 {
-	enumerator_t *enumerator;
-	sim_card_t *card;
 	identification_t *reauth;
 	char buf[data.len + 1];
 
 	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
 	reauth = identification_create_from_string(buf);
 	DBG1(DBG_IKE, "received next reauthentication identity '%Y'", reauth);
-
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		card->set_reauth(card, this->permanent, reauth, this->mk, this->counter);
-	}
-	enumerator->destroy(enumerator);
+	charon->sim->card_set_reauth(charon->sim, this->permanent, reauth,
+								 this->mk, this->counter);
 	reauth->destroy(reauth);
-}
-
-/**
- * Find a stored pseudonym on a SIM card
- */
-static identification_t *get_pseudonym(private_eap_sim_peer_t *this)
-{
-	enumerator_t *enumerator;
-	sim_card_t *card;
-	identification_t *pseudonym = NULL;
-
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		pseudonym = card->get_pseudonym(card, this->permanent);
-		if (pseudonym)
-		{
-			DBG1(DBG_IKE, "using stored pseudonym identity '%Y' "
-				 "instead of '%Y'", pseudonym, this->permanent);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return pseudonym;
 }
 
 /**
@@ -198,20 +115,13 @@ static identification_t *get_pseudonym(private_eap_sim_peer_t *this)
  */
 static void set_pseudonym(private_eap_sim_peer_t *this, chunk_t data)
 {
-	enumerator_t *enumerator;
-	sim_card_t *card;
 	identification_t *pseudonym;
 	char buf[data.len + 1];
 
 	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
 	pseudonym = identification_create_from_string(buf);
 	DBG1(DBG_IKE, "received pseudonym '%Y' for next authentication", pseudonym);
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		card->set_pseudonym(card, this->permanent, pseudonym);
-	}
-	enumerator->destroy(enumerator);
+	charon->sim->card_set_pseudonym(charon->sim, this->permanent, pseudonym);
 	pseudonym->destroy(pseudonym);
 }
 
@@ -306,7 +216,8 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	switch (id_req)
 	{
 		case AT_ANY_ID_REQ:
-			this->reauth = get_reauth(this);
+			this->reauth = charon->sim->card_get_reauth(charon->sim,
+									this->permanent, this->mk, &this->counter);
 			if (this->reauth)
 			{
 				id = this->reauth->get_encoding(this->reauth);
@@ -314,7 +225,8 @@ static status_t process_start(private_eap_sim_peer_t *this,
 			}
 			/* FALL */
 		case AT_FULLAUTH_ID_REQ:
-			this->pseudonym = get_pseudonym(this);
+			this->pseudonym = charon->sim->card_get_pseudonym(charon->sim,
+															  this->permanent);
 			if (this->pseudonym)
 			{
 				id = this->pseudonym->get_encoding(this->pseudonym);
@@ -405,7 +317,8 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	sreses = sres = chunk_alloca(rands.len / 4);
 	while (rands.len >= SIM_RAND_LEN)
 	{
-		if (!get_triplet(this, this->permanent, rands.ptr, sres.ptr, kc.ptr))
+		if (!charon->sim->card_get_triplet(charon->sim, this->permanent,
+										   rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = create_client_error(this, in->get_identifier(in),

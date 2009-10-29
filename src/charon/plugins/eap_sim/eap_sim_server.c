@@ -108,126 +108,6 @@ struct private_eap_sim_server_t {
 static chunk_t version = chunk_from_chars(0x00,0x01);
 
 /**
- * Fetch a triplet from a provider
- */
-static bool get_triplet(private_eap_sim_server_t *this, identification_t *peer,
-						char *rand, char *sres, char *kc)
-{
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
-	int tried = 0;
-
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		if (provider->get_triplet(provider, peer, rand, sres, kc))
-		{
-			enumerator->destroy(enumerator);
-			return TRUE;
-		}
-		tried++;
-	}
-	enumerator->destroy(enumerator);
-	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
-		 tried, peer);
-	return FALSE;
-}
-
-/**
- * Generate a new reauthentication identity for next fast reauthentication
- */
-static identification_t* gen_reauth(private_eap_sim_server_t *this,
-									char mk[HASH_SIZE_SHA1])
-{
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
-	identification_t *reauth = NULL;
-
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		reauth = provider->gen_reauth(provider, this->permanent, mk);
-		if (reauth)
-		{
-			DBG1(DBG_IKE, "proposing new reauthentication identity '%Y'", reauth);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return reauth;
-}
-
-/**
- * Check if an identity is a known reauthentication identity
- */
-static identification_t* is_reauth(private_eap_sim_server_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter)
-{
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
-	identification_t *permanent = NULL;
-
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		permanent = provider->is_reauth(provider, id, mk, counter);
-		if (permanent)
-		{
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return permanent;
-}
-
-/**
- * Generate a new pseudonym for next authentication
- */
-static identification_t* gen_pseudonym(private_eap_sim_server_t *this)
-{
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
-	identification_t *pseudonym = NULL;
-
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		pseudonym = provider->gen_pseudonym(provider, this->permanent);
-		if (pseudonym)
-		{
-			DBG1(DBG_IKE, "proposing new pseudonym '%Y'", pseudonym);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return pseudonym;
-}
-
-/**
- * Check if an identity is a known pseudonym
- */
-static identification_t* is_pseudonym(private_eap_sim_server_t *this,
-									  identification_t *pseudonym)
-{
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
-	identification_t *permanent = NULL;
-
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		permanent = provider->is_pseudonym(provider, pseudonym);
-		if (permanent)
-		{
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return permanent;
-}
-
-/**
  * Implementation of eap_method_t.initiate
  */
 static status_t initiate(private_eap_sim_server_t *this, eap_payload_t **out)
@@ -285,7 +165,7 @@ static status_t reauthenticate(private_eap_sim_server_t *this,
 									SIM_REAUTHENTICATION, this->crypto);
 	message->add_attribute(message, AT_COUNTER, this->counter);
 	message->add_attribute(message, AT_NONCE_S, this->nonce);
-	next = gen_reauth(this, mk);
+	next = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk);
 	if (next)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -424,7 +304,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 			char mk[HASH_SIZE_SHA1];
 			u_int16_t counter;
 
-			permanent = is_reauth(this, id, mk, &counter);
+			permanent = charon->sim->provider_is_reauth(charon->sim, id,
+														mk, &counter);
 			if (permanent)
 			{
 				DBG1(DBG_IKE, "received reauthentication identity '%Y' "
@@ -442,7 +323,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 		}
 		if (this->use_pseudonym)
 		{
-			permanent = is_pseudonym(this, id);
+			permanent = charon->sim->provider_is_pseudonym(charon->sim, id);
 			if (permanent)
 			{
 				DBG1(DBG_IKE, "received pseudonym identity '%Y' "
@@ -477,7 +358,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 	rands.len = kcs.len = sreses.len = 0;
 	for (i = 0; i < TRIPLET_COUNT; i++)
 	{
-		if (!get_triplet(this, this->permanent, rand.ptr, sres.ptr, kc.ptr))
+		if (!charon->sim->provider_get_triplet(charon->sim, this->permanent,
+											   rand.ptr, sres.ptr, kc.ptr))
 		{
 			if (this->use_pseudonym)
 			{
@@ -514,7 +396,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
-	id = gen_reauth(this, mk.ptr);
+	id = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk.ptr);
 	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -523,7 +405,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 	}
 	else
 	{
-		id = gen_pseudonym(this);
+		id = charon->sim->provider_gen_pseudonym(charon->sim, this->permanent);
 		if (id)
 		{
 			message->add_attribute(message, AT_NEXT_PSEUDONYM,

@@ -94,31 +94,17 @@ static bool attribute_skippable(simaka_attribute_t attribute)
 static status_t initiate(private_eap_aka_server_t *this, eap_payload_t **out)
 {
 	simaka_message_t *message;
-	enumerator_t *enumerator;
-	sim_provider_t *provider;
 	char rand[AKA_RAND_LEN], xres[AKA_RES_LEN];
 	char ck[AKA_CK_LEN], ik[AKA_IK_LEN], autn[AKA_AUTN_LEN];
 	chunk_t data, mk;
-	bool found = FALSE;
 
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		if (provider->get_quintuplet(provider, this->peer,
-									 rand, xres, ck, ik, autn))
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (!found)
+	if (!charon->sim->provider_get_quintuplet(charon->sim, this->peer,
+											  rand, xres, ck, ik, autn))
 	{
 		DBG1(DBG_IKE, "no AKA provider found with quintuplets for '%Y'",
 			 this->peer);
 		return FAILED;
 	}
-
 	data = chunk_cata("cc", chunk_create(ik, AKA_IK_LEN),
 					  chunk_create(ck, AKA_CK_LEN));
 	free(this->msk.ptr);
@@ -197,11 +183,9 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 static status_t process_synchronize(private_eap_aka_server_t *this,
 									simaka_message_t *in, eap_payload_t **out)
 {
-	sim_provider_t *provider;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data, auts = chunk_empty;
-	bool found = FALSE;
 
 	if (this->synchronized)
 	{
@@ -239,18 +223,8 @@ static status_t process_synchronize(private_eap_aka_server_t *this,
 		return FAILED;
 	}
 
-	enumerator = charon->sim->create_provider_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &provider))
-	{
-		if (provider->resync(provider, this->peer, this->rand.ptr, auts.ptr))
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (!found)
+	if (!charon->sim->provider_resync(charon->sim, this->peer,
+									  this->rand.ptr, auts.ptr))
 	{
 		DBG1(DBG_IKE, "no AKA provider found supporting "
 			 "resynchronization for '%Y'", this->peer);

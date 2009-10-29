@@ -128,6 +128,7 @@ struct sim_card_t {
 	 * @param id		permanent identity of the peer
 	 * @param mk		buffer receiving master key MK
 	 * @param counter	pointer receiving counter value, in host order
+	 * @return			fast reauthentication identity, NULL if not found
 	 */
 	identification_t* (*get_reauth)(sim_card_t *this, identification_t *id,
 									char mk[HASH_SIZE_SHA1], u_int16_t *counter);
@@ -244,11 +245,86 @@ struct sim_manager_t {
 	void (*remove_card)(sim_manager_t *this, sim_card_t *card);
 
 	/**
-	 * Create an enumerator over all registered cards.
+	 * Calculate SIM triplets on one of the registered SIM cards.
 	 *
-	 * @return			enumerator over sim_card_t's
+	 * @param id		permanent identity to get a triplet for
+	 * @param rand		RAND input buffer, fixed size 16 bytes
+	 * @param sres		SRES output buffer, fixed size 4 byte
+	 * @param kc		KC output buffer, fixed size 8 bytes
+	 * @return			TRUE if calculated, FALSE if no matching card found
 	 */
-	enumerator_t* (*create_card_enumerator)(sim_manager_t *this);
+	bool (*card_get_triplet)(sim_manager_t *this, identification_t *id,
+							 char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
+							 char kc[SIM_KC_LEN]);
+
+	/**
+	 * Calculate AKA quitpulets on one of the registered SIM cards.
+	 *
+	 * @param id		permanent identity to request quintuplet for
+	 * @param rand		random value rand
+	 * @param autn		authentication token autn
+	 * @param ck		buffer receiving encryption key ck
+	 * @param ik		buffer receiving integrity key ik
+	 * @param res		buffer receiving authentication result res
+	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
+	 */
+	status_t (*card_get_quintuplet)(sim_manager_t *this, identification_t *id,
+								char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
+								char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+								char res[AKA_RES_LEN]);
+
+	/**
+	 * Calculate resynchronization data on one of the registered SIM cards.
+	 *
+	 * @param id		permanent identity to request quintuplet for
+	 * @param rand		random value rand
+	 * @param auts		resynchronization parameter auts
+	 * @return			TRUE if calculated, FALSE if no matcing card found
+	 */
+	bool (*card_resync)(sim_manager_t *this, identification_t *id,
+						char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
+
+	/**
+	 * Store a received pseudonym on one of the registered SIM cards.
+	 *
+	 * @param id		permanent identity of the peer
+	 * @param pseudonym	pseudonym identity received from the server
+	 */
+	void (*card_set_pseudonym)(sim_manager_t *this, identification_t *id,
+							   identification_t *pseudonym);
+
+	/**
+	 * Get a stored pseudonym from one of the registerd SIM cards.
+	 *
+	 * @param id		permanent identity of the peer
+	 * @return			associated pseudonym identity, NULL if none found
+	 */
+	identification_t* (*card_get_pseudonym)(sim_manager_t *this,
+											identification_t *id);
+
+	/**
+	 * Store fast reauthentication parameters on one of the registered cards.
+	 *
+	 * @param id		permanent identity of the peer
+	 * @param next		next fast reauthentication identity to use
+	 * @param mk		master key MK to store for reauthentication
+	 * @param counter	counter value to store, host order
+	 */
+	void (*card_set_reauth)(sim_manager_t *this, identification_t *id,
+							identification_t *next, char mk[HASH_SIZE_SHA1],
+							u_int16_t counter);
+
+	/**
+	 * Retrieve fast reauthentication parameters from one of the registerd cards.
+	 *
+	 * @param id		permanent identity of the peer
+	 * @param mk		buffer receiving master key MK
+	 * @param counter	pointer receiving counter value, in host order
+	 * @return			fast reauthentication identity, NULL if none found
+	 */
+	identification_t* (*card_get_reauth)(sim_manager_t *this,
+								identification_t *id, char mk[HASH_SIZE_SHA1],
+								u_int16_t *counter);
 
 	/**
 	 * Register a triplet provider (server) at the manager.
@@ -265,11 +341,84 @@ struct sim_manager_t {
 	void (*remove_provider)(sim_manager_t *this, sim_provider_t *provider);
 
 	/**
-	 * Create an enumerator over all registered provider.
+	 * Get a SIM triplet from one of the registered providers.
 	 *
-	 * @return			enumerator over sim_provider_t's
+	 * @param id		permanent identity of peer to gen triplet for
+	 * @param rand		RAND output buffer, fixed size 16 bytes
+	 * @param sres		SRES output buffer, fixed size 4 byte
+	 * @param kc		KC output buffer, fixed size 8 bytes
+	 * @return			TRUE if triplet received, FALSE if no match found
 	 */
-	enumerator_t* (*create_provider_enumerator)(sim_manager_t *this);
+	bool (*provider_get_triplet)(sim_manager_t *this, identification_t *id,
+							char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
+							char kc[SIM_KC_LEN]);
+
+	/**
+	 * Get a AKA quintuplet from one of the registered providers.
+	 *
+	 * @param id		permanent identity of peer to create challenge for
+	 * @param rand		buffer receiving random value rand
+	 * @param xres		buffer receiving expected authentication result xres
+	 * @param ck		buffer receiving encryption key ck
+	 * @param ik		buffer receiving integrity key ik
+	 * @param autn		authentication token autn
+	 * @return			TRUE if quintuplet received, FALSE if no match found
+	 */
+	bool (*provider_get_quintuplet)(sim_manager_t *this, identification_t *id,
+							char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
+							char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+							char autn[AKA_AUTN_LEN]);
+
+	/**
+	 * Pass AKA resynchronization data to one of the registered providers.
+	 *
+	 * @param id		permanent identity of peer requesting resynchronisation
+	 * @param rand		random value rand
+	 * @param auts		synchronization parameter auts
+	 * @return			TRUE if resynchronized, FALSE if not handled
+	 */
+	bool (*provider_resync)(sim_manager_t *this, identification_t *id,
+							char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
+
+	/**
+	 * Check if a peer uses a pseudonym using one of the registered providers.
+	 *
+	 * @param id		pseudonym identity candidate
+	 * @return			permanent identity, NULL if id not a pseudonym
+	 */
+	identification_t* (*provider_is_pseudonym)(sim_manager_t *this,
+											   identification_t *id);
+
+	/**
+	 * Generate a new pseudonym using one of the registered providers.
+	 *
+	 * @param id		permanent identity to generate a pseudonym for
+	 * @return			generated pseudonym, NULL to not use a pseudonym identity
+	 */
+	identification_t* (*provider_gen_pseudonym)(sim_manager_t *this,
+												identification_t *id);
+
+	/**
+	 * Check if a peer uses a reauth id using one of the registered providers.
+	 *
+	 * @param id		reauthentication identity (candidate)
+	 * @param mk		buffer receiving master key MK
+	 * @param counter	pointer receiving current counter value, host order
+	 * @return			permanent identity, NULL if not a known reauth identity
+	 */
+	identification_t* (*provider_is_reauth)(sim_manager_t *this,
+								identification_t *id, char mk[HASH_SIZE_SHA1],
+								u_int16_t *counter);
+
+	/**
+	 * Generate a fast reauth id using one of the registered providers.
+	 *
+	 * @param id		permanent peer identity
+	 * @param mk		master key to store along with generated identity
+	 * @return			fast reauthentication identity, NULL to not use reauth
+	 */
+	identification_t* (*provider_gen_reauth)(sim_manager_t *this,
+								identification_t *id, char mk[HASH_SIZE_SHA1]);
 
 	/**
 	 * Destroy a manager instance.

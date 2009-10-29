@@ -81,7 +81,6 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	sim_card_t *card;
 	chunk_t data, rand = chunk_empty, autn = chunk_empty, mk;
 	u_char res[AKA_RES_LEN], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
 	status_t status = NOT_FOUND;
@@ -116,20 +115,10 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 		return NEED_MORE;
 	}
 
-	enumerator = charon->sim->create_card_enumerator(charon->sim);
-	while (enumerator->enumerate(enumerator, &card))
-	{
-		status = card->get_quintuplet(card, this->peer, rand.ptr, autn.ptr,
-									  ck, ik, res);
-		if (status != FAILED)
-		{	/* try next on error */
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
+	status = charon->sim->card_get_quintuplet(charon->sim, this->peer,
+											  rand.ptr, autn.ptr, ck, ik, res);
 	if (status == INVALID_STATE &&
-		card->resync(card, this->peer, rand.ptr, auts))
+		charon->sim->card_resync(charon->sim, this->peer, rand.ptr, auts))
 	{
 		DBG1(DBG_IKE, "received SQN invalid, sending %N",
 			 simaka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
