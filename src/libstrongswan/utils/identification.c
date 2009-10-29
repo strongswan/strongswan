@@ -1008,6 +1008,18 @@ identification_t *identification_create_from_string(char *string)
 /*
  * Described in header.
  */
+identification_t * identification_create_from_data(chunk_t data)
+{
+	char buf[data.len + 1];
+
+	/* use string constructor */
+	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
+	return identification_create_from_string(buf);
+}
+
+/*
+ * Described in header.
+ */
 identification_t *identification_create_from_encoding(id_type_t type,
 													  chunk_t encoded)
 {

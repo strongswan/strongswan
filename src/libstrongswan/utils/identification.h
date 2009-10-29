@@ -315,6 +315,14 @@ struct identification_t {
 identification_t * identification_create_from_string(char *string);
 
 /**
+ * Creates an identification from a chunk of data, guessing its type.
+ *
+ * @param data		identification data
+ * @return			identification_t
+ */
+identification_t * identification_create_from_data(chunk_t data);
+
+/**
  * Creates an identification_t object from an encoded chunk.
  *
  * @param type		type of this id, such as ID_IPV4_ADDR
