@@ -1467,6 +1467,14 @@ static void process_single_response(ocsp_location_t *location,
 }
 
 /**
+ *  Destroy a response_t object
+ */
+static void free_response(response_t *res)
+{
+	DESTROY_IF(res->responder_id_name);
+}
+
+/**
  *  Parse and verify ocsp response and update the ocsp cache
  */
 void parse_ocsp(ocsp_location_t *location, chunk_t blob)
@@ -1479,7 +1487,7 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 	if (status != STATUS_SUCCESSFUL)
 	{
 		plog("error in ocsp response");
-		return;
+		goto free;
 	}
 	/* check if there was a nonce in the request */
 	if (location->nonce.ptr && res.nonce.ptr == NULL)
@@ -1490,13 +1498,13 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 	if (res.nonce.ptr && !chunk_equals(res.nonce, location->nonce))
 	{
 		plog("invalid nonce in ocsp response");
-		return;
+		goto free;
 	}
 	/* check if the response is signed by a trusted key */
 	if (!valid_ocsp_response(&res))
 	{
 		plog("invalid ocsp response");
-		return;
+		goto free;
 	}
 	DBG(DBG_CONTROL,
 		DBG_log("valid ocsp response")
@@ -1527,4 +1535,7 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 end:
 		parser->destroy(parser);
 	}
+
+free:
+	free_response(&res);
 }
