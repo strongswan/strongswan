@@ -39,14 +39,34 @@ struct private_eap_aka_peer_t {
 	simaka_crypto_t *crypto;
 
 	/**
-	 * ID of the peer
+	 * permanent ID of peer
 	 */
-	identification_t *peer;
+	identification_t *permanent;
+
+	/**
+	 * Pseudonym identity the peer uses
+	 */
+	identification_t *pseudonym;
+
+	/**
+	 * Reauthentication identity the peer uses
+	 */
+	identification_t *reauth;
 
 	/**
 	 * MSK
 	 */
 	chunk_t msk;
+
+	/**
+	 * Master key, if reauthentication is used
+	 */
+	char mk[HASH_SIZE_SHA1];
+
+	/**
+	 * Counter value if reauthentication is used
+	 */
+	u_int16_t counter;
 };
 
 /**
@@ -73,6 +93,85 @@ static eap_payload_t* create_client_error(private_eap_aka_peer_t *this,
 }
 
 /**
+ * process an EAP-AKA/Request/Identity message
+ */
+static status_t process_identity(private_eap_aka_peer_t *this,
+								 simaka_message_t *in, eap_payload_t **out)
+{
+	simaka_message_t *message;
+	enumerator_t *enumerator;
+	simaka_attribute_t type;
+	chunk_t data, id = chunk_empty;
+	simaka_attribute_t id_req = 0;
+
+	/* reset previously uses reauthentication/pseudonym data */
+	this->crypto->clear_keys(this->crypto);
+	DESTROY_IF(this->pseudonym);
+	this->pseudonym = NULL;
+	DESTROY_IF(this->reauth);
+	this->reauth = NULL;
+
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case AT_ANY_ID_REQ:
+			case AT_FULLAUTH_ID_REQ:
+			case AT_PERMANENT_ID_REQ:
+				id_req = type;
+				break;
+			default:
+				if (!simaka_attribute_skippable(type))
+				{
+					*out = create_client_error(this, in->get_identifier(in));
+					enumerator->destroy(enumerator);
+					return NEED_MORE;
+				}
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	switch (id_req)
+	{
+		case AT_ANY_ID_REQ:
+			this->reauth = charon->sim->card_get_reauth(charon->sim,
+									this->permanent, this->mk, &this->counter);
+			if (this->reauth)
+			{
+				id = this->reauth->get_encoding(this->reauth);
+				break;
+			}
+			/* FALL */
+		case AT_FULLAUTH_ID_REQ:
+			this->pseudonym = charon->sim->card_get_pseudonym(charon->sim,
+															  this->permanent);
+			if (this->pseudonym)
+			{
+				id = this->pseudonym->get_encoding(this->pseudonym);
+				break;
+			}
+			/* FALL */
+		case AT_PERMANENT_ID_REQ:
+			id = this->permanent->get_encoding(this->permanent);
+			break;
+		default:
+			break;
+	}
+	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
+									AKA_IDENTITY, this->crypto);
+	if (id.len)
+	{
+		message->add_attribute(message, AT_IDENTITY, id);
+	}
+	*out = message->generate(message, chunk_empty);
+	message->destroy(message);
+
+	return NEED_MORE;
+}
+
+/**
  * Process an EAP-AKA/Request/Challenge message
  */
 static status_t process_challenge(private_eap_aka_peer_t *this,
@@ -83,7 +182,8 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	simaka_attribute_t type;
 	chunk_t data, rand = chunk_empty, autn = chunk_empty, mk;
 	u_char res[AKA_RES_LEN], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
-	status_t status = NOT_FOUND;
+	identification_t *id;
+	status_t status;
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -115,10 +215,10 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 		return NEED_MORE;
 	}
 
-	status = charon->sim->card_get_quintuplet(charon->sim, this->peer,
+	status = charon->sim->card_get_quintuplet(charon->sim, this->permanent,
 											  rand.ptr, autn.ptr, ck, ik, res);
 	if (status == INVALID_STATE &&
-		charon->sim->card_resync(charon->sim, this->peer, rand.ptr, auts))
+		charon->sim->card_resync(charon->sim, this->permanent, rand.ptr, auts))
 	{
 		DBG1(DBG_IKE, "received SQN invalid, sending %N",
 			 simaka_subtype_names, AKA_SYNCHRONIZATION_FAILURE);
@@ -133,7 +233,7 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_IKE, "no USIM found with quintuplets for '%Y', sending %N",
-			 this->peer, simaka_subtype_names, AKA_AUTHENTICATION_REJECT);
+			 this->permanent, simaka_subtype_names, AKA_AUTHENTICATION_REJECT);
 		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
 										AKA_AUTHENTICATION_REJECT, this->crypto);
 		*out = message->generate(message, chunk_empty);
@@ -141,20 +241,48 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 		return NEED_MORE;
 	}
 
+	id = this->permanent;
+	if (this->pseudonym)
+	{
+		id = this->pseudonym;
+	}
 	data = chunk_cata("cc", chunk_create(ik, AKA_IK_LEN),
 					  chunk_create(ck, AKA_CK_LEN));
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, this->peer,
-											   data, &mk);
+	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
+	memcpy(this->mk, mk.ptr, mk.len);
 	free(mk.ptr);
 
-	/* verify EAP message MAC AT_MAC */
-	if (!in->verify(in, chunk_empty))
+	/* Verify AT_MAC attribute and parse() again after key derivation,
+	 * reading encrypted attributes */
+	if (!in->verify(in, chunk_empty) || !in->parse(in))
 	{
-		DBG1(DBG_IKE, "AT_MAC verification failed ");
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
 	}
+
+	enumerator = in->create_attribute_enumerator(in);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case AT_NEXT_REAUTH_ID:
+				this->counter = 0;
+				id = identification_create_from_data(data);
+				charon->sim->card_set_reauth(charon->sim, this->permanent, id,
+											 this->mk, this->counter);
+				id->destroy(id);
+				break;
+			case AT_NEXT_PSEUDONYM:
+				id = identification_create_from_data(data);
+				charon->sim->card_set_pseudonym(charon->sim, this->permanent, id);
+				id->destroy(id);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
 									AKA_CHALLENGE, this->crypto);
@@ -165,27 +293,59 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 }
 
 /**
- * Process an EAP-AKA/Request/Identity message
+ * Check if a received counter value is acceptable
  */
-static status_t process_identity(private_eap_aka_peer_t *this,
-								 simaka_message_t *in, eap_payload_t **out)
+static bool counter_too_small(private_eap_aka_peer_t *this, chunk_t chunk)
+{
+	u_int16_t counter;
+
+	memcpy(&counter, chunk.ptr, sizeof(counter));
+	counter = htons(counter);
+	return counter < this->counter;
+}
+
+/**
+ * process an EAP-AKA/Request/Reauthentication message
+ */
+static status_t process_reauthentication(private_eap_aka_peer_t *this,
+									simaka_message_t *in, eap_payload_t **out)
 {
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	chunk_t data;
+	chunk_t data, counter = chunk_empty, nonce = chunk_empty, id = chunk_empty;
+
+	if (!this->reauth)
+	{
+		DBG1(DBG_IKE, "received %N, but not expected",
+			 simaka_subtype_names, AKA_REAUTHENTICATION);
+		*out = create_client_error(this, in->get_identifier(in));
+		return NEED_MORE;
+	}
+
+	this->crypto->derive_keys_reauth(this->crypto,
+									 chunk_create(this->mk, HASH_SIZE_SHA1));
+
+	/* parse again with decryption key */
+	if (!in->parse(in))
+	{
+		*out = create_client_error(this, in->get_identifier(in));
+		return NEED_MORE;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
 		switch (type)
 		{
-			case AT_PERMANENT_ID_REQ:
-			case AT_FULLAUTH_ID_REQ:
-			case AT_ANY_ID_REQ:
-				DBG1(DBG_IKE, "server requested %N, sending '%Y'",
-					 simaka_attribute_names, type, this->peer);
-				/* we reply with our permanent identity in any case */
+			case AT_COUNTER:
+				counter = data;
+				break;
+			case AT_NONCE_S:
+				nonce = data;
+				break;
+			case AT_NEXT_REAUTH_ID:
+				id = data;
 				break;
 			default:
 				if (!simaka_attribute_skippable(type))
@@ -199,11 +359,43 @@ static status_t process_identity(private_eap_aka_peer_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (!nonce.len || !counter.len)
+	{
+		DBG1(DBG_IKE, "EAP-AKA/Request/Reauthentication message incomplete");
+		*out = create_client_error(this, in->get_identifier(in));
+		return NEED_MORE;
+	}
+	if (!in->verify(in, nonce))
+	{
+		*out = create_client_error(this, in->get_identifier(in));
+		return NEED_MORE;
+	}
+
 	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
-									AKA_IDENTITY, this->crypto);
-	message->add_attribute(message, AT_IDENTITY,
-						   this->peer->get_encoding(this->peer));
-	*out = message->generate(message, chunk_empty);
+									AKA_REAUTHENTICATION, this->crypto);
+	if (counter_too_small(this, counter))
+	{
+		DBG1(DBG_IKE, "reauthentication counter too small");
+		message->add_attribute(message, AT_COUNTER_TOO_SMALL, chunk_empty);
+	}
+	else
+	{
+		free(this->msk.ptr);
+		this->msk = this->crypto->derive_keys_reauth_msk(this->crypto,
+										this->reauth, counter, nonce,
+										chunk_create(this->mk, HASH_SIZE_SHA1));
+		if (id.len)
+		{
+			identification_t *reauth;
+
+			reauth = identification_create_from_data(data);
+			charon->sim->card_set_reauth(charon->sim, this->permanent, reauth,
+							 this->mk, this->counter);
+			reauth->destroy(reauth);
+		}
+	}
+	message->add_attribute(message, AT_COUNTER, counter);
+	*out = message->generate(message, nonce);
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -295,6 +487,9 @@ static status_t process(private_eap_aka_peer_t *this,
 		case AKA_CHALLENGE:
 			status = process_challenge(this, message, out);
 			break;
+		case AKA_REAUTHENTICATION:
+			status = process_reauthentication(this, message, out);
+			break;
 		case AKA_NOTIFICATION:
 			status = process_notification(this, message, out);
 			break;
@@ -354,7 +549,9 @@ static bool is_mutual(private_eap_aka_peer_t *this)
 static void destroy(private_eap_aka_peer_t *this)
 {
 	this->crypto->destroy(this->crypto);
-	this->peer->destroy(this->peer);
+	this->permanent->destroy(this->permanent);
+	DESTROY_IF(this->pseudonym);
+	DESTROY_IF(this->reauth);
 	free(this->msk.ptr);
 	free(this);
 }
@@ -380,7 +577,9 @@ eap_aka_peer_t *eap_aka_peer_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->peer = peer->clone(peer);
+	this->permanent = peer->clone(peer);
+	this->pseudonym = NULL;
+	this->reauth = NULL;
 	this->msk = chunk_empty;
 
 	return &this->public;

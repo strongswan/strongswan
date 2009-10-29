@@ -330,7 +330,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 				this->counter = 0;
 				id = identification_create_from_data(data);
 				charon->sim->card_set_reauth(charon->sim, this->permanent, id,
-								 this->mk, this->counter);
+											 this->mk, this->counter);
 				id->destroy(id);
 				break;
 			case AT_NEXT_PSEUDONYM:

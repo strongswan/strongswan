@@ -336,6 +336,8 @@ static identification_t* provider_is_pseudonym(private_sim_manager_t *this,
 		permanent = provider->is_pseudonym(provider, id);
 		if (permanent)
 		{
+			DBG1(DBG_IKE, "received pseudonym identity '%Y' "
+				 "mapping to '%Y'", id, permanent);
 			break;
 		}
 	}
@@ -384,6 +386,8 @@ static identification_t* provider_is_reauth(private_sim_manager_t *this,
 		permanent = provider->is_reauth(provider, id, mk, counter);
 		if (permanent)
 		{
+			DBG1(DBG_IKE, "received reauthentication identity '%Y' "
+				 "mapping to '%Y'", id, permanent);
 			break;
 		}
 	}

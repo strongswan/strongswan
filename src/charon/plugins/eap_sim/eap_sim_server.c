@@ -305,8 +305,6 @@ static status_t process_start(private_eap_sim_server_t *this,
 														mk, &counter);
 			if (permanent)
 			{
-				DBG1(DBG_IKE, "received reauthentication identity '%Y' "
-					 "mapping to '%Y'",  id, permanent);
 				this->permanent->destroy(this->permanent);
 				this->permanent = permanent;
 				this->reauth = id;
@@ -323,8 +321,6 @@ static status_t process_start(private_eap_sim_server_t *this,
 			permanent = charon->sim->provider_is_pseudonym(charon->sim, id);
 			if (permanent)
 			{
-				DBG1(DBG_IKE, "received pseudonym identity '%Y' "
-					 "mapping to '%Y'", id, permanent);
 				this->permanent->destroy(this->permanent);
 				this->permanent = permanent;
 				this->pseudonym = id->clone(id);
