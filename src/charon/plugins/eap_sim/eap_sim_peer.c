@@ -246,7 +246,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	simaka_message_t *message;
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
-	chunk_t data, id;
+	chunk_t data, id = chunk_empty;
 	rng_t *rng;
 	bool supported = FALSE;
 	simaka_attribute_t id_req = 0;

@@ -450,6 +450,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 				this->permanent->destroy(this->permanent);
 				this->permanent = permanent;
 				this->pseudonym = id->clone(id);
+				/* we already have a new permanent identity now */
 				this->use_permanent = FALSE;
 			}
 		}
@@ -482,7 +483,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 			{
 				/* probably received a pseudonym we couldn't map */
 				DBG1(DBG_IKE, "failed to map pseudonym identity '%Y', "
-					 "fallback to fullauth identity request", this->permanent);
+					 "fallback to permanent identity request", this->permanent);
 				this->use_pseudonym = FALSE;
 				DESTROY_IF(this->pseudonym);
 				this->pseudonym = NULL;
@@ -513,17 +514,22 @@ static status_t process_start(private_eap_sim_server_t *this,
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
-	if (this->use_reauth && (id = gen_reauth(this, mk.ptr)))
+	id = gen_reauth(this, mk.ptr);
+	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
 							   id->get_encoding(id));
 		id->destroy(id);
 	}
-	else if (this->use_pseudonym && (id = gen_pseudonym(this)))
+	else
 	{
-		message->add_attribute(message, AT_NEXT_PSEUDONYM,
-							   id->get_encoding(id));
-		id->destroy(id);
+		id = gen_pseudonym(this);
+		if (id)
+		{
+			message->add_attribute(message, AT_NEXT_PSEUDONYM,
+								   id->get_encoding(id));
+			id->destroy(id);
+		}
 	}
 	*out = message->generate(message, nonce);
 	message->destroy(message);
@@ -717,12 +723,10 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 	this->msk = chunk_empty;
 	this->counter = chunk_empty;
 	this->pending = 0;
-	this->use_reauth = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-sim.use_reauth", TRUE);
-	this->use_pseudonym = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-sim.use_pseudonym", TRUE);
-	this->use_permanent = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-sim.use_permanent", TRUE);
+	this->use_reauth = this->use_pseudonym = this->use_permanent =
+		lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-sim.request_identity", TRUE);
+
 	/* generate a non-zero identifier */
 	do {
 		this->identifier = random();
