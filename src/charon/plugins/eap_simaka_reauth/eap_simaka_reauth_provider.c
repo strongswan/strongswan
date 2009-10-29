@@ -124,26 +124,26 @@ static identification_t *gen_reauth(private_eap_simaka_reauth_provider_t *this,
 	identification_t *permanent;
 
 	data = this->reauth->get(this->reauth, id);
-	id = id->clone(id);
 	if (data)
 	{	/* update existing entry */
 		permanent = this->permanent->remove(this->permanent, data->id);
 		if (permanent)
 		{
-			permanent->destroy(permanent);
+			data->id->destroy(data->id);
+			data->id = gen_identity(this);
+			this->permanent->put(this->permanent, data->id, permanent);
 		}
-		data->id->destroy(data->id);
 	}
 	else
 	{	/* generate new entry */
 		data = malloc_thing(reauth_data_t);
 		data->counter = 0;
+		data->id = gen_identity(this);
+		id = id->clone(id);
 		this->reauth->put(this->reauth, id, data);
+		this->permanent->put(this->permanent, data->id, id);
 	}
 	memcpy(data->mk, mk, HASH_SIZE_SHA1);
-	data->id = gen_identity(this);
-
-	this->permanent->put(this->permanent, data->id, id);
 
 	return data->id->clone(data->id);
 }
