@@ -294,11 +294,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 	if (identity.len)
 	{
 		identification_t *permanent;
-		char buf[identity.len + 1];
 
-		snprintf(buf, sizeof(buf), "%.*s", identity.len, identity.ptr);
-		id = identification_create_from_string(buf);
-
+		id = identification_create_from_data(identity);
 		if (this->use_reauth && !nonce.len)
 		{
 			char mk[HASH_SIZE_SHA1];

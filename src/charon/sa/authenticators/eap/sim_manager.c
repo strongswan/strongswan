@@ -145,6 +145,8 @@ static void card_set_pseudonym(private_sim_manager_t *this,
 	enumerator_t *enumerator;
 	sim_card_t *card;
 
+	DBG1(DBG_IKE, "storing pseudonym '%Y' for '%Y'", pseudonym, id);
+
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -187,6 +189,9 @@ static void card_set_reauth(private_sim_manager_t *this, identification_t *id,
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
+
+	DBG1(DBG_IKE, "storing next reauthentication identity '%Y' for '%Y'",
+		 next, id);
 
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))

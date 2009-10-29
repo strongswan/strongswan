@@ -95,37 +95,6 @@ struct private_eap_sim_peer_t {
 static chunk_t version = chunk_from_chars(0x00,0x01);
 
 /**
- * Store received next fast reauthentication identity, along with mk/counter
- */
-static void set_reauth(private_eap_sim_peer_t *this, chunk_t data)
-{
-	identification_t *reauth;
-	char buf[data.len + 1];
-
-	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
-	reauth = identification_create_from_string(buf);
-	DBG1(DBG_IKE, "received next reauthentication identity '%Y'", reauth);
-	charon->sim->card_set_reauth(charon->sim, this->permanent, reauth,
-								 this->mk, this->counter);
-	reauth->destroy(reauth);
-}
-
-/**
- * Store a pseudonym in a SIM card
- */
-static void set_pseudonym(private_eap_sim_peer_t *this, chunk_t data)
-{
-	identification_t *pseudonym;
-	char buf[data.len + 1];
-
-	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
-	pseudonym = identification_create_from_string(buf);
-	DBG1(DBG_IKE, "received pseudonym '%Y' for next authentication", pseudonym);
-	charon->sim->card_set_pseudonym(charon->sim, this->permanent, pseudonym);
-	pseudonym->destroy(pseudonym);
-}
-
-/**
  * Create a SIM_CLIENT_ERROR
  */
 static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
@@ -272,7 +241,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data, rands = chunk_empty, kcs, kc, sreses, sres, mk;
-	identification_t *peer;
+	identification_t *id;
 
 	if (this->tries-- <= 0)
 	{
@@ -332,14 +301,14 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		rands = chunk_skip(rands, SIM_RAND_LEN);
 	}
 
-	peer = this->permanent;
+	id = this->permanent;
 	if (this->pseudonym)
 	{
-		peer = this->pseudonym;
+		id = this->pseudonym;
 	}
 	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
 	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, peer, data, &mk);
+	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
 	memcpy(this->mk, mk.ptr, mk.len);
 	free(mk.ptr);
 
@@ -359,10 +328,15 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		{
 			case AT_NEXT_REAUTH_ID:
 				this->counter = 0;
-				set_reauth(this, data);
+				id = identification_create_from_data(data);
+				charon->sim->card_set_reauth(charon->sim, this->permanent, id,
+								 this->mk, this->counter);
+				id->destroy(id);
 				break;
 			case AT_NEXT_PSEUDONYM:
-				set_pseudonym(this, data);
+				id = identification_create_from_data(data);
+				charon->sim->card_set_pseudonym(charon->sim, this->permanent, id);
+				id->destroy(id);
 				break;
 			default:
 				break;
@@ -477,7 +451,12 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 										chunk_create(this->mk, HASH_SIZE_SHA1));
 		if (id.len)
 		{
-			set_reauth(this, id);
+			identification_t *reauth;
+
+			reauth = identification_create_from_data(data);
+			charon->sim->card_set_reauth(charon->sim, this->permanent, reauth,
+							 this->mk, this->counter);
+			reauth->destroy(reauth);
 		}
 	}
 	message->add_attribute(message, AT_COUNTER, counter);
