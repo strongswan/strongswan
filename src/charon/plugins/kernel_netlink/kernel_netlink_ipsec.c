@@ -51,14 +51,14 @@
 #endif
 
 /** from linux/in.h */
-#ifndef IP_IPSEC_POLICY
-#define IP_IPSEC_POLICY 16
+#ifndef IP_XFRM_POLICY
+#define IP_XFRM_POLICY 17
 #endif
 
 /* missing on uclibc */
-#ifndef IPV6_IPSEC_POLICY
-#define IPV6_IPSEC_POLICY 34
-#endif /*IPV6_IPSEC_POLICY*/
+#ifndef IPV6_XFRM_POLICY
+#define IPV6_XFRM_POLICY 34
+#endif /*IPV6_XFRM_POLICY*/
 
 /** default priority of installed policies */
 #define PRIO_LOW 3000
@@ -1908,42 +1908,31 @@ static bool add_bypass_policies()
 	enumerator_t *sockets;
 	bool status = TRUE;
 
-	/* we open an AF_KEY socket to autoload the af_key module. Otherwise
-	 * setsockopt(IPSEC_POLICY) won't work. */
-	fd = socket(AF_KEY, SOCK_RAW, PF_KEY_V2);
-	if (fd == 0)
-	{
-		DBG1(DBG_KNL, "could not open AF_KEY socket");
-		return FALSE;
-	}
-	close(fd);
-
 	sockets = charon->socket->create_enumerator(charon->socket);
 	while (sockets->enumerate(sockets, &fd, &family, &port))
 	{
-		struct sadb_x_policy policy;
+		struct xfrm_userpolicy_info policy;
 		u_int sol, ipsec_policy;
 
 		switch (family)
 		{
 			case AF_INET:
 				sol = SOL_IP;
-				ipsec_policy = IP_IPSEC_POLICY;
+				ipsec_policy = IP_XFRM_POLICY;
 				break;
 			case AF_INET6:
 				sol = SOL_IPV6;
-				ipsec_policy = IPV6_IPSEC_POLICY;
+				ipsec_policy = IPV6_XFRM_POLICY;
 				break;
 			default:
 				continue;
 		}
 
 		memset(&policy, 0, sizeof(policy));
-		policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
-		policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
-		policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+		policy.action = XFRM_POLICY_ALLOW;
+		policy.sel.family = family;
 
-		policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
+		policy.dir = XFRM_POLICY_OUT;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
@@ -1951,7 +1940,7 @@ static bool add_bypass_policies()
 			status = FALSE;
 			break;
 		}
-		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+		policy.dir = XFRM_POLICY_IN;
 		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 		{
 			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
