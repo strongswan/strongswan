@@ -165,10 +165,10 @@ crlDistributionPoints          	= URI:http://crl.strongswan.org/strongswan.crl
 
 [ ca_ext ]
 
-basicConstraints               	= critical, CA:TRUE
+basicConstraints               	= critical, CA:TRUE, pathlen:1
 keyUsage                        = cRLSign, keyCertSign
-subjectKeyIdentifier           = hash
-authorityKeyIdentifier         = keyid, issuer:always
+subjectKeyIdentifier		= hash
+authorityKeyIdentifier		= keyid, issuer:always
 
 ####################################################################
 
