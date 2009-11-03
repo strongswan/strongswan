@@ -24,6 +24,8 @@
 #include <utils/enumerator.h>
 #include <credentials/certificates/certificate.h>
 
+#define NO_PATH_LEN_CONSTRAINT	-1
+
 typedef struct x509_t x509_t;
 typedef enum x509_flag_t x509_flag_t;
 
@@ -90,6 +92,13 @@ struct x509_t {
 	 * @return			authKeyIdentifier as chunk_t, internal data
 	 */
 	chunk_t (*get_authKeyIdentifier)(x509_t *this);
+
+	/**
+	 * Get an optional path length constraint.
+	 *
+	 * @return			pathLenConstraint, -1 if no constraint exists
+	 */
+	int (*get_pathLenConstraint)(x509_t *this);
 
 	/**
 	 * Create an enumerator over all subjectAltNames.

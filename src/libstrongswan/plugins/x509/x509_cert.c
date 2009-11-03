@@ -146,6 +146,11 @@ struct private_x509_cert_t {
 	chunk_t authKeySerialNumber;
 
 	/**
+	 * Path Length Constraint
+	 */
+	int pathLenConstraint;
+
+	/**
 	 * x509 constraints and other flags
 	 */
 	x509_flag_t flags;
@@ -185,12 +190,14 @@ static const asn1Object_t basicConstraintsObjects[] = {
 	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  			}, /*  3 */
 	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT  			}
 };
-#define BASIC_CONSTRAINTS_CA	1
+#define BASIC_CONSTRAINTS_CA		1
+#define BASIC_CONSTRAINTS_PATH_LEN	2
 
 /**
  * Extracts the basicConstraints extension
  */
-static bool parse_basicConstraints(chunk_t blob, int level0)
+static void parse_basicConstraints(chunk_t blob, int level0,
+								   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -202,15 +209,35 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (objectID == BASIC_CONSTRAINTS_CA)
+		switch (objectID)
 		{
-			isCA = object.len && *object.ptr;
-			DBG2("  %s", isCA ? "TRUE" : "FALSE");
+			case BASIC_CONSTRAINTS_CA:
+				isCA = object.len && *object.ptr;
+				DBG2("  %s", isCA ? "TRUE" : "FALSE");
+				if (isCA)
+				{
+					this->flags |= X509_CA;
+				}
+				break;
+			case BASIC_CONSTRAINTS_PATH_LEN:
+				if (isCA)
+				{
+					if (object.len == 0)
+					{
+						this->pathLenConstraint = 0;
+					}
+					else if (object.len == 1)
+					{
+						this->pathLenConstraint = *object.ptr;
+					}
+					/* we ignore path length constraints > 127 */
+				}
+				break;
+			default:
+				break;
 		}
 	}
 	parser->destroy(parser);
-
-	return isCA;
 }
 
 /**
@@ -785,10 +812,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 												this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
-						if (parse_basicConstraints(object, level))
-						{
-							this->flags |= X509_CA;
-						}
+						parse_basicConstraints(object, level, this);
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
 						parse_crlDistributionPoints(object, level, this);
@@ -1205,6 +1229,7 @@ static private_x509_cert_t* create_empty(void)
 	this->subjectKeyIdentifier = chunk_empty;
 	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
+	this->pathLenConstraint = NO_PATH_LEN_CONSTRAINT;
 	this->algorithm = 0;
 	this->signature = chunk_empty;
 	this->flags = 0;
