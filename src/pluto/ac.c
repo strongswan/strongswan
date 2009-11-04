@@ -193,7 +193,6 @@ void ac_load_certs(void)
 	enumerator = enumerator_create_directory(A_CERT_PATH);
 	if (!enumerator)
 	{
-		DBG1("  reading directory '%s' failed");
 		return;
 	}
 
