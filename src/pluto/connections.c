@@ -3391,8 +3391,8 @@ connection_t *refine_host_connection(const struct state *st,
 			int prio = (ID_MATCH_PERFECT) * !matching_request +
 						ID_MATCH_PERFECT - match_level;
 
-			prio = (MAX_CA_PATH_LEN + 1) * prio + peer_pathlen;
-			prio = (MAX_CA_PATH_LEN + 1) * prio + our_pathlen;
+			prio = (X509_MAX_PATH_LEN + 1) * prio + peer_pathlen;
+			prio = (X509_MAX_PATH_LEN + 1) * prio + our_pathlen;
 
 			DBG(DBG_CONTROLMORE,
 				DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s, prio: %4d)"
@@ -3560,7 +3560,7 @@ static bool is_virtual_net_used(const ip_subnet *peer_net,
  */
 
 #define PATH_WEIGHT     1
-#define WILD_WEIGHT     (MAX_CA_PATH_LEN+1)
+#define WILD_WEIGHT     (X509_MAX_PATH_LEN+1)
 #define PRIO_WEIGHT     (ID_MATCH_PERFECT+1) * WILD_WEIGHT
 
 /* fc_try: a helper function for find_client_connection */
@@ -3691,7 +3691,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			 */
 			prio = PRIO_WEIGHT * routed(sr->routing)
 				 + WILD_WEIGHT * match_level
-				 + PATH_WEIGHT * (MAX_CA_PATH_LEN - pathlen)
+				 + PATH_WEIGHT * (X509_MAX_PATH_LEN - pathlen)
 				 + 1;
 			if (prio > best_prio)
 			{
@@ -3797,7 +3797,7 @@ static connection_t *fc_try_oppo(const connection_t *c,
 			 */
 			prio = PRIO_WEIGHT * (d->prio + routed(sr->routing))
 				 + WILD_WEIGHT * match_level
-				 + PATH_WEIGHT * (MAX_CA_PATH_LEN - pathlen);
+				 + PATH_WEIGHT * (X509_MAX_PATH_LEN - pathlen);
 			if (prio > best_prio)
 			{
 				best = d;

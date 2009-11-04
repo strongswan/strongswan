@@ -1,3 +1,9 @@
+strongswan-4.3.6
+----------------
+
+- The IKEv1 and IKEV2 daemons now check certificate path length constraints.
+
+
 strongswan-4.3.5
 ----------------
 

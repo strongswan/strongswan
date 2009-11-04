@@ -961,7 +961,7 @@ chunk_t build_ocsp_request(ocsp_location_t *location)
  */
 static bool valid_ocsp_response(response_t *res)
 {
-	int pathlen;
+	int pathlen, pathlen_constraint;
 	x509cert_t *authcert;
 
 	lock_authcert_list("valid_ocsp_response");
@@ -990,7 +990,7 @@ static bool valid_ocsp_response(response_t *res)
 	)
 
 
-	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	for (pathlen = -1; pathlen <= X509_MAX_PATH_LEN; pathlen++)
 	{
 		x509cert_t *cert = authcert;
 		certificate_t *certificate = cert->cert;
@@ -1038,17 +1038,28 @@ static bool valid_ocsp_response(response_t *res)
 			DBG_log("certificate signature is valid")
 		)
 
+		/* check path length constraint */
+		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+			pathlen > pathlen_constraint)
+		{
+			plog("path length of %d violates constraint of %d",
+				 pathlen, pathlen_constraint);
+			return FALSE;
+		}
+
 		/* check if cert is self-signed */
 		if (x509->get_flags(x509) & X509_SELF_SIGNED)
 		{
 			DBG(DBG_CONTROL,
-				DBG_log("reached self-signed root ca")
+				DBG_log("reached self-signed root ca with a path length of %d",
+						pathlen)
 			)
 			unlock_authcert_list("valid_ocsp_response");
 			return TRUE;
 		}
 	}
-	plog("maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	plog("maximum path length of %d exceeded", X509_MAX_PATH_LEN);
 	unlock_authcert_list("valid_ocsp_response");
 	return FALSE;
 }

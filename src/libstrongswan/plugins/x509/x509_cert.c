@@ -1238,7 +1238,7 @@ static private_x509_cert_t* create_empty(void)
 	this->subjectKeyIdentifier = chunk_empty;
 	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
-	this->pathLenConstraint = NO_PATH_LEN_CONSTRAINT;
+	this->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
 	this->algorithm = 0;
 	this->signature = chunk_empty;
 	this->flags = 0;

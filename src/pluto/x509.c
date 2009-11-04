@@ -348,7 +348,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 
 	*until = 0;
 
-	for (pathlen = -1; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	for (pathlen = -1; pathlen <= X509_MAX_PATH_LEN; pathlen++)
 	{
 		certificate_t *certificate = cert->cert;
 		identification_t *subject = certificate->get_subject(certificate);
@@ -409,7 +409,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 
 		/* check path length constraint */
 		pathlen_constraint = x509->get_pathLenConstraint(x509);
-		if (pathlen_constraint != NO_PATH_LEN_CONSTRAINT &&
+		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
 			pathlen > pathlen_constraint)
 		{
 			plog("path length of %d violates constraint of %d",
@@ -490,7 +490,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		/* go up one step in the trust chain */
 		cert = issuer_cert;
 	}
-	plog("maximum path length of %d exceeded", MAX_CA_PATH_LEN);
+	plog("maximum path length of %d exceeded", X509_MAX_PATH_LEN);
 	return FALSE;
 }
 
@@ -603,7 +603,7 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 
 			/* list optional pathLenConstraint */
 			pathlen = x509->get_pathLenConstraint(x509);
-			if (pathlen != NO_PATH_LEN_CONSTRAINT)
+			if (pathlen != X509_NO_PATH_LEN_CONSTRAINT)
 			{
 				whack_log(RC_COMMENT, "  pathlen:   %d", pathlen);
 			}

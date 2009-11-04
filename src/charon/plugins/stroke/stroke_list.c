@@ -746,7 +746,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 
 			/* list optional pathLenConstraint */
 			pathlen = x509->get_pathLenConstraint(x509);
-			if (pathlen != NO_PATH_LEN_CONSTRAINT)
+			if (pathlen != X509_NO_PATH_LEN_CONSTRAINT)
 			{
 				fprintf(out, "  pathlen:   %d\n", pathlen);
 			}

@@ -21,8 +21,6 @@
 #include "x509.h"
 #include "whack.h"
 
-#define MAX_CA_PATH_LEN         7
-
 /* CA info structures */
 
 typedef struct ca_info ca_info_t;

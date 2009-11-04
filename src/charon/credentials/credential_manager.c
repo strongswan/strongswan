@@ -28,8 +28,6 @@
 #include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 
-#define MAX_CA_LEVELS 6
-
 typedef struct private_credential_manager_t private_credential_manager_t;
 
 /**
@@ -1067,12 +1065,14 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 							   bool trusted, bool crl, bool ocsp)
 {
 	certificate_t *current, *issuer;
+	x509_t *x509;
 	auth_cfg_t *auth;
-	u_int level = 0;
+	int pathlen, pathlen_constraint;
 
 	auth = auth_cfg_create();
 	current = subject->get_ref(subject);
-	while (level++ < MAX_CA_LEVELS)
+
+	for (pathlen = 0; pathlen <= X509_MAX_PATH_LEN; pathlen++)
 	{
 		issuer = get_issuer_cert(this, current, TRUE);
 		if (issuer)
@@ -1082,7 +1082,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				auth->add(auth, AUTH_RULE_CA_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
-					 issuer->get_subject(issuer));
+					 		  issuer->get_subject(issuer));
 				trusted = TRUE;
 			}
 			else
@@ -1122,17 +1122,32 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			issuer->destroy(issuer);
 			break;
 		}
+
+		/* check path length constraint */
+		x509 = (x509_t*)issuer;
+		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+			pathlen > pathlen_constraint)
+		{
+			DBG1(DBG_CFG, "path length of %d violates constraint of %d",
+				 pathlen, pathlen_constraint);
+			trusted = FALSE;
+			issuer->destroy(issuer);
+			break;
+		}
 		current->destroy(current);
 		current = issuer;
 		if (trusted)
 		{
+			DBG1(DBG_CFG, "  reached self-signed root ca with a path length of %d",
+						  pathlen);
 			break;
 		}
 	}
 	current->destroy(current);
-	if (level > MAX_CA_LEVELS)
+	if (pathlen > X509_MAX_PATH_LEN)
 	{
-		DBG1(DBG_CFG, "maximum ca path length of %d levels reached", level);
+		DBG1(DBG_CFG, "maximum path length of %d exceeded", X509_MAX_PATH_LEN);
 	}
 	if (trusted)
 	{
@@ -1377,7 +1392,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 {
 	certificate_t *issuer, *current;
 	auth_cfg_t *trustchain;
-	u_int level = 0;
+	int pathlen = 0;
 
 	trustchain = auth_cfg_create();
 
@@ -1406,13 +1421,14 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 			trustchain->add(trustchain, AUTH_RULE_IM_CERT, current);
 		}
 		issuer = get_issuer_cert(this, current, FALSE);
-		if (!issuer || issuer->equals(issuer, current) || level > MAX_CA_LEVELS)
+		if (!issuer || issuer->equals(issuer, current) ||
+			pathlen > X509_MAX_PATH_LEN)
 		{
 			DESTROY_IF(issuer);
 			break;
 		}
 		current = issuer;
-		level++;
+		pathlen++;
 	}
 	trustchain->destroy(trustchain);
 	return NULL;

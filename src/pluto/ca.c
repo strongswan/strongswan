@@ -21,6 +21,7 @@
 
 #include <debug.h>
 #include <utils/enumerator.h>
+#include <credentials/certificates/x509.h>
 
 #include <freeswan.h>
 
@@ -52,14 +53,14 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
 	/* no CA b specified -> any CA a is accepted */
 	if (b == NULL)
 	{
-		*pathlen = (a == NULL) ? 0 : MAX_CA_PATH_LEN;
+		*pathlen = (a == NULL) ? 0 : X509_MAX_PATH_LEN;
 		return TRUE;
 	}
 
 	/* no CA a specified -> trust cannot be established */
 	if (a == NULL)
 	{
-		*pathlen = MAX_CA_PATH_LEN;
+		*pathlen = X509_MAX_PATH_LEN;
 		return FALSE;
 	}
 
@@ -74,7 +75,7 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
 	/* CA a might be a subordinate CA of b */
 	lock_authcert_list("trusted_ca");
 
-	while ((*pathlen)++ < MAX_CA_PATH_LEN)
+	while ((*pathlen)++ < X509_MAX_PATH_LEN)
 	{
 		certificate_t *certificate;
 		identification_t *issuer;
@@ -130,7 +131,7 @@ bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
 		return TRUE;
 	}
 
-	*our_pathlen = MAX_CA_PATH_LEN + 1;
+	*our_pathlen = X509_MAX_PATH_LEN + 1;
 
 	enumerator = requested_ca->create_enumerator(requested_ca);
 	while (enumerator->enumerate(enumerator, &ca))
@@ -144,9 +145,9 @@ bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
 	}
 	enumerator->destroy(enumerator);
 
-	if (*our_pathlen > MAX_CA_PATH_LEN)
+	if (*our_pathlen > X509_MAX_PATH_LEN)
 	{
-		*our_pathlen = MAX_CA_PATH_LEN;
+		*our_pathlen = X509_MAX_PATH_LEN;
 		return FALSE;
 	}
 	else
@@ -374,7 +375,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 
 	lock_authcert_list("trust_authcert_candidate");
 
-	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	for (pathlen = 0; pathlen < X509_MAX_PATH_LEN; pathlen++)
 	{
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
@@ -443,7 +444,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		/* go up one step in the trust chain */
 		cert = authcert;
 	}
-	plog("maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	plog("maximum ca path length of %d levels exceeded", X509_MAX_PATH_LEN);
 	unlock_authcert_list("trust_authcert_candidate");
 	return FALSE;
 }
