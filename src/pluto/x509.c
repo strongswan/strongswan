@@ -344,11 +344,11 @@ chunk_t x509_build_signature(chunk_t tbs, int algorithm, private_key_t *key,
  */
 bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 {
-	int pathlen;
+	int pathlen, pathlen_constraint;
 
 	*until = 0;
 
-	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	for (pathlen = -1; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
 		certificate_t *certificate = cert->cert;
 		identification_t *subject = certificate->get_subject(certificate);
@@ -407,11 +407,22 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		)
 		unlock_authcert_list("verify_x509cert");
 
+		/* check path length constraint */
+		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		if (pathlen_constraint != NO_PATH_LEN_CONSTRAINT &&
+			pathlen > pathlen_constraint)
+		{
+			plog("path length of %d violates constraint of %d",
+				 pathlen, pathlen_constraint);
+			return FALSE;
+		}
+
 		/* check if cert is a self-signed root ca */
-		if (pathlen > 0 && (x509->get_flags(x509) & X509_SELF_SIGNED))
+		if (pathlen >= 0 && (x509->get_flags(x509) & X509_SELF_SIGNED))
 		{
 			DBG(DBG_CONTROL,
-				DBG_log("reached self-signed root ca")
+				DBG_log("reached self-signed root ca with a path length of %d",
+						 pathlen)
 			)
 			return TRUE;
 		}
@@ -479,7 +490,7 @@ bool verify_x509cert(const x509cert_t *cert, bool strict, time_t *until)
 		/* go up one step in the trust chain */
 		cert = issuer_cert;
 	}
-	plog("maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	plog("maximum path length of %d exceeded", MAX_CA_PATH_LEN);
 	return FALSE;
 }
 
