@@ -665,6 +665,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			enumerator_t *enumerator;
 			identification_t *altName;
 			bool first_altName = TRUE;
+			int pathlen;
 			chunk_t serial, authkey;
 			time_t notBefore, notAfter;
 			public_key_t *public;
@@ -742,6 +743,14 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			{
 				fprintf(out, "  authkey:   %#B\n", &authkey);
 			}
+
+			/* list optional pathLenConstraint */
+			pathlen = x509->get_pathLenConstraint(x509);
+			if (pathlen != NO_PATH_LEN_CONSTRAINT)
+			{
+				fprintf(out, "  pathlen:   %d\n", pathlen);
+			}
+
 		}
 	}
 	enumerator->destroy(enumerator);

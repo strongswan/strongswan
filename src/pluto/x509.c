@@ -505,7 +505,7 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 			enumerator_t *enumerator;
 			char buf[BUF_LEN];
 			char *pos = buf;
-			int len = BUF_LEN;
+			int len = BUF_LEN, pathlen;
 			bool first_altName = TRUE;
 			identification_t *id;
 			time_t notBefore, notAfter;
@@ -589,6 +589,14 @@ void list_x509cert_chain(const char *caption, x509cert_t* cert,
 			{
 				whack_log(RC_COMMENT, "  authkey:   %#B", &authkey);
 			}
+
+			/* list optional pathLenConstraint */
+			pathlen = x509->get_pathLenConstraint(x509);
+			if (pathlen != NO_PATH_LEN_CONSTRAINT)
+			{
+				whack_log(RC_COMMENT, "  pathlen:   %d", pathlen);
+			}
+
 		}
 		cert = cert->next;
 	}

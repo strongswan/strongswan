@@ -1135,6 +1135,14 @@ static chunk_t get_authKeyIdentifier(private_x509_cert_t *this)
 }
 
 /**
+ * Implementation of x509_t.get_pathLenConstraint.
+ */
+static int get_pathLenConstraint(private_x509_cert_t *this)
+{
+	return this->pathLenConstraint;
+}
+
+/**
  * Implementation of x509_cert_t.create_subjectAltName_enumerator.
  */
 static enumerator_t* create_subjectAltName_enumerator(private_x509_cert_t *this)
@@ -1209,6 +1217,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
 	this->public.interface.get_subjectKeyIdentifier = (chunk_t (*)(x509_t*))get_subjectKeyIdentifier;
 	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(x509_t*))get_authKeyIdentifier;
+	this->public.interface.get_pathLenConstraint = (int (*)(x509_t*))get_pathLenConstraint;
 	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
