@@ -46,7 +46,10 @@ void ac_initialize(void)
  */
 void ac_finalize(void)
 {
-	acerts->destroy_offset(acerts, offsetof(certificate_t, destroy));
+	if (acerts)
+	{
+		acerts->destroy_offset(acerts, offsetof(certificate_t, destroy));
+	}
 }
 
 /**
