@@ -282,7 +282,7 @@ static enumerator_t* create_part_enumerator(private_identification_t *this)
 static void dntoa(chunk_t dn, char *buf, size_t len)
 {
 	enumerator_t *e;
-	chunk_t oid_data, data;
+	chunk_t oid_data, data, printable;
 	u_char type;
 	int oid, written;
 	bool finished = FALSE;
@@ -303,14 +303,9 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		buf += written;
 		len -= written;
 
-		if (chunk_printable(data, NULL, '?'))
-		{
-			written = snprintf(buf, len, "%.*s", data.len, data.ptr);
-		}
-		else
-		{
-			written = snprintf(buf, len, "%#B", &data);
-		}
+		chunk_printable(data, &printable, '?');
+		written = snprintf(buf, len, "%.*s", printable.len, printable.ptr);
+		chunk_free(&printable);
 		buf += written;
 		len -= written;
 
