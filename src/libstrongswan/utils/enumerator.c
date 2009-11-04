@@ -132,7 +132,7 @@ enumerator_t* enumerator_create_directory(char *path)
 	len = snprintf(this->full, sizeof(this->full)-1, "%s", path);
 	if (len < 0 || len >= sizeof(this->full)-1)
 	{
-		DBG1("path string %s too long", path);
+		DBG1("path string '%s' too long", path);
 		free(this);
 		return NULL;
 	}
@@ -147,7 +147,7 @@ enumerator_t* enumerator_create_directory(char *path)
 	this->dir = opendir(path);
 	if (this->dir == NULL)
 	{
-		DBG1("opening directory %s failed: %s", path, strerror(errno));
+		DBG1("opening directory '%s' failed: %s", path, strerror(errno));
 		free(this);
 		return NULL;
 	}
