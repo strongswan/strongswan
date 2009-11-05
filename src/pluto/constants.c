@@ -988,9 +988,17 @@ static const char *const notification_dpd_name[] = {
 	"R_U_THERE_ACK",
 };
 
+static const char *const notification_juniper_name[] = {
+	"NS_NHTB_INFORM",
+};
+
+enum_names notification_juniper_names =
+	{ NS_NHTB_INFORM, NS_NHTB_INFORM,
+		notification_juniper_name, NULL };
+
 enum_names notification_dpd_names =
 	{ R_U_THERE, R_U_THERE_ACK,
-		notification_dpd_name, NULL };
+		notification_dpd_name, &notification_juniper_names };
 
 enum_names ipsec_notification_names =
 	{ IPSEC_RESPONDER_LIFETIME, IPSEC_INITIAL_CONTACT,

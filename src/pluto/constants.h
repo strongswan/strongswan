@@ -1040,7 +1040,10 @@ typedef enum {
 
 	/* RFC 3706 DPD */
 	R_U_THERE =                     36136,
-	R_U_THERE_ACK =                 36137
+	R_U_THERE_ACK =                 36137,
+
+	/* Juniper SRX private use */
+	NS_NHTB_INFORM =                40001
 
 	} notification_t;
 
