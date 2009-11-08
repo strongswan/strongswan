@@ -641,6 +641,47 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 }
 
 /**
+ * list OpenPGP certificates
+ */
+static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
+{
+	bool first = TRUE;
+	time_t now = time(NULL);
+	enumerator_t *enumerator = list->create_enumerator(list);
+	certificate_t *cert;
+
+	while (enumerator->enumerate(enumerator, (void**)&cert))
+	{
+		time_t created, until;
+		public_key_t *public;
+
+		if (first)
+		{
+
+			fprintf(out, "\n"); 
+				fprintf(out, "List of PGP End Entity Certificates:\n");
+				first = FALSE;
+		}
+		fprintf(out, "\n");
+		fprintf(out, "  userid:    %Y\n", cert->get_subject(cert));
+
+		/* list validity */
+		cert->get_validity(cert, &now, &created, &until);
+		fprintf(out, "  created:   %T\n", &created, utc);
+		fprintf(out, "  until:     %T%s\n", &until, utc,
+			(until == TIME_32_BIT_SIGNED_MAX) ? " (expires never)":"");
+
+		public = cert->get_public_key(cert);
+		if (public)
+		{
+			list_public_key(public, out);
+			public->destroy(public);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * list all X.509 certificates matching the flags
  */
 static void stroke_list_certs(linked_list_t *list, char *label,
@@ -998,6 +1039,13 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 		stroke_list_pubkeys(pubkey_list, msg->list.utc, out);
 		pubkey_list->destroy_offset(pubkey_list, offsetof(certificate_t, destroy));
 	}
+	if (msg->list.flags & LIST_CERTS)
+	{
+		linked_list_t *pgp_list = create_unique_cert_list(CERT_GPG);
+
+		stroke_list_pgp(pgp_list, msg->list.utc, out);
+		pgp_list->destroy_offset(pgp_list, offsetof(certificate_t, destroy));
+	}
 	if (msg->list.flags & (LIST_CERTS | LIST_CACERTS | LIST_OCSPCERTS | LIST_AACERTS))
 	{
 		cert_list = create_unique_cert_list(CERT_X509);
@@ -1022,6 +1070,8 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 		stroke_list_certs(cert_list, "X.509 AA Certificates",
 						  X509_AA, msg->list.utc, out);
 	}
+	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
+
 	if (msg->list.flags & LIST_ACERTS)
 	{
 		linked_list_t *ac_list = create_unique_cert_list(CERT_X509_AC);
@@ -1048,7 +1098,6 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	{
 		list_algs(out);
 	}
-	DESTROY_OFFSET_IF(cert_list, offsetof(certificate_t, destroy));
 }
 
 /**
