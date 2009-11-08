@@ -34,6 +34,13 @@ struct pgp_certificate_t {
 	 * Implements certificate_t.
 	 */
 	certificate_t interface;
+
+	/**
+	 * Get the v3 or v4 fingerprint of the PGP public key
+	 *
+	 * @return	fingerprint as chunk_t, internal data
+	 */
+	chunk_t (*get_fingerprint)(pgp_certificate_t *this);
 };
 
 #endif /** PGP_CERTIFICATE_H_ @}*/

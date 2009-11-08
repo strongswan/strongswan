@@ -58,6 +58,11 @@ struct private_pgp_cert_t {
 	identification_t *user_id;
 
 	/**
+	 * v3 or v4 fingerprint of the PGP public key
+	 */
+	chunk_t fingerprint;
+
+	/**
 	 * full PGP encoding
 	 */
 	chunk_t encoding;
@@ -138,7 +143,7 @@ static private_pgp_cert_t* get_ref(private_pgp_cert_t *this)
 }
 
 /**
- * Implementation of x509_cert_t.get_validity.
+ * Implementation of certificate_t.get_validity.
  */
 static bool get_validity(private_pgp_cert_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
@@ -233,9 +238,18 @@ static void destroy(private_pgp_cert_t *this)
 	{
 		DESTROY_IF(this->key);
 		DESTROY_IF(this->user_id);
+		free(this->fingerprint.ptr);
 		free(this->encoding.ptr);
 		free(this);
 	}
+}
+
+/**
+ * Implementation of pgp_certificate_t.get_fingerprint.
+ */
+static chunk_t get_fingerprint(private_pgp_cert_t *this)
+{
+	return this->fingerprint;
 }
 
 /**
@@ -258,12 +272,14 @@ private_pgp_cert_t *create_empty()
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
+	this->public.interface.get_fingerprint = (chunk_t (*)(pgp_certificate_t*))get_fingerprint;
 
 	this->key = NULL;
 	this->version = 0;
 	this->created = 0;
 	this->valid = 0;
 	this->user_id = NULL;
+	this->fingerprint = chunk_empty;
 	this->encoding = chunk_empty;
 	this->ref = 1;
 
@@ -275,6 +291,8 @@ private_pgp_cert_t *create_empty()
  */
 static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 {
+	chunk_t pubkey_packet = packet;
+
 	if (!pgp_read_scalar(&packet, 1, &this->version))
 	{
 		return FALSE;
@@ -301,7 +319,40 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 	DESTROY_IF(this->key);
 	this->key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 									BUILD_BLOB_PGP, packet, BUILD_END);
-	return this->key != NULL;
+	if (this->key == NULL)
+	{
+		return FALSE;
+	}
+
+	/* compute V4 or V3 fingerprint according to section 12.2 of RFC 4880 */
+	if (this->version == 4)
+	{
+		chunk_t pubkey_packet_header = chunk_from_chars(
+					0x99, pubkey_packet.len / 256, pubkey_packet.len % 256
+				);
+		hasher_t *hasher;
+
+		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (hasher == NULL)
+		{
+			DBG1("no SHA-1 hasher available");
+			return FALSE;
+		}
+		hasher->allocate_hash(hasher, pubkey_packet_header, NULL);
+		hasher->allocate_hash(hasher, pubkey_packet, &this->fingerprint);
+		hasher->destroy(hasher);
+	}
+	else
+	{
+		/* V3 fingerprint is computed by public_key_t class */
+		if (!this->key->get_fingerprint(this->key, KEY_ID_PGPV3,
+										&this->fingerprint))
+		{
+			return FALSE;
+		}
+		this->fingerprint = chunk_clone(this->fingerprint);
+	}
+	return TRUE;
 }
 
 /**
@@ -318,7 +369,7 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 	/* we parse only V3 signature packets */
 	if (version != 3)
 	{
-		DBG1("skipped V%d PGP signature", version);
+		DBG1("  skipped V%d PGP signature", version);
 		return TRUE;
 	}
 	if (!pgp_read_scalar(&packet, 1, &len) || len != 5)

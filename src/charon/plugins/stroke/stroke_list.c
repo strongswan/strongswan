@@ -22,6 +22,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/certificates/crl.h>
+#include <credentials/certificates/pgp_certificate.h>
 #include <credentials/ietf_attributes/ietf_attributes.h>
 #include <config/peer_cfg.h>
 
@@ -654,6 +655,8 @@ static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
 	{
 		time_t created, until;
 		public_key_t *public;
+		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)cert;
+		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
 
 		if (first)
 		{
@@ -665,6 +668,7 @@ static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
 		fprintf(out, "\n");
 		fprintf(out, "  userid:    %Y\n", cert->get_subject(cert));
 
+		fprintf(out, "  digest:    %#B\n", &fingerprint);
 		/* list validity */
 		cert->get_validity(cert, &now, &created, &until);
 		fprintf(out, "  created:   %T\n", &created, utc);
