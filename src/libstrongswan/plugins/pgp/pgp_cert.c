@@ -163,8 +163,8 @@ static bool get_validity(private_pgp_cert_t *this, time_t *when,
 	}
 	else
 	{
-		/* year 2038 */
-		until = 2147483647;
+		/* Jan 19 03:14:07 UTC 2038 */
+		until = TIME_32_BIT_SIGNED_MAX;
 	}
 	if (not_after)
 	{

@@ -231,8 +231,6 @@ int asn1_unwrap(chunk_t *blob, chunk_t *inner)
 	return type;
 }
 
-#define TIME_MAX	0x7fffffff
-
 static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
 static const int tm_leap_1970 = 477;
 
@@ -306,7 +304,7 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	/* prevent large 32 bit integer overflows */
 	if (sizeof(time_t) == 4 && tm_year > 2038)
 	{
-		return TIME_MAX;
+		return TIME_32_BIT_SIGNED_MAX;
 	}
 
 	/* representation of months as 0..11*/
@@ -334,8 +332,8 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
 	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec - tz_offset;
 
-	/* has a 32 bit overflow occurred? */
-	return (tm_secs < 0) ? TIME_MAX : tm_secs;
+	/* has a 32 bit signed integer overflow occurred? */
+	return (tm_secs < 0) ? TIME_32_BIT_SIGNED_MAX : tm_secs;
 }
 
 /**
