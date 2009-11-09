@@ -286,8 +286,14 @@ AC_TRY_RUN(
 		pthread_condattr_init(&attr);
 		return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}],
 	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])],
-	[AC_MSG_RESULT([no])]
+	[AC_MSG_RESULT([no])],
+	dnl Check existence of pthread_condattr_setclock if cross-compiling
+	[AC_MSG_RESULT([unknown]);
+	 AC_CHECK_FUNCS(pthread_condattr_setclock,
+		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])]
+	)]
 )
+
 LIBS=$saved_LIBS
 
 AC_CHECK_FUNCS(prctl)
