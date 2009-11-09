@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,14 +18,13 @@
 
 #include "vendor_id_payload.h"
 
-
 typedef struct private_vendor_id_payload_t private_vendor_id_payload_t;
 
 /**
  * Private data of an vendor_id_payload_t object.
- *
  */
 struct private_vendor_id_payload_t {
+
 	/**
 	 * Public vendor_id_payload_t interface.
 	 */
@@ -47,9 +46,9 @@ struct private_vendor_id_payload_t {
 	u_int16_t payload_length;
 
 	/**
-	 * The contained vendor_id data value.
+	 * The contained data.
 	 */
-	chunk_t vendor_id_data;
+	chunk_t data;
 };
 
 /**
@@ -57,7 +56,6 @@ struct private_vendor_id_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_vendor_id_payload_t.
- *
  */
 encoding_rule_t vendor_id_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -75,7 +73,7 @@ encoding_rule_t vendor_id_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_vendor_id_payload_t, payload_length)},
 	/* some vendor_id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ VID_DATA,			offsetof(private_vendor_id_payload_t, vendor_id_data) }
+	{ VID_DATA,			offsetof(private_vendor_id_payload_t, data) }
 };
 
 /*
@@ -101,7 +99,8 @@ static status_t verify(private_vendor_id_payload_t *this)
 /**
  * Implementation of vendor_id_payload_t.get_encoding_rules.
  */
-static void get_encoding_rules(private_vendor_id_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static void get_encoding_rules(private_vendor_id_payload_t *this,
+							   encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = vendor_id_payload_encodings;
 	*rule_count = sizeof(vendor_id_payload_encodings) / sizeof(encoding_rule_t);
@@ -120,7 +119,7 @@ static payload_type_t get_payload_type(private_vendor_id_payload_t *this)
  */
 static payload_type_t get_next_type(private_vendor_id_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -140,40 +139,11 @@ static size_t get_length(private_vendor_id_payload_t *this)
 }
 
 /**
- * Implementation of vendor_id_payload_t.set_data.
- */
-static void set_data (private_vendor_id_payload_t *this, chunk_t data)
-{
-	if (this->vendor_id_data.ptr != NULL)
-	{
-		chunk_free(&(this->vendor_id_data));
-	}
-	this->vendor_id_data.ptr = clalloc(data.ptr,data.len);
-	this->vendor_id_data.len = data.len;
-	this->payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH + this->vendor_id_data.len;
-}
-
-/**
  * Implementation of vendor_id_payload_t.get_data.
  */
-static chunk_t get_data (private_vendor_id_payload_t *this)
+static chunk_t get_data(private_vendor_id_payload_t *this)
 {
-	return (this->vendor_id_data);
-}
-
-/**
- * Implementation of vendor_id_payload_t.get_data_clone.
- */
-static chunk_t get_data_clone (private_vendor_id_payload_t *this)
-{
-	chunk_t cloned_data;
-	if (this->vendor_id_data.ptr == NULL)
-	{
-		return (this->vendor_id_data);
-	}
-	cloned_data.ptr = clalloc(this->vendor_id_data.ptr,this->vendor_id_data.len);
-	cloned_data.len = this->vendor_id_data.len;
-	return cloned_data;
+	return this->data;
 }
 
 /**
@@ -181,10 +151,7 @@ static chunk_t get_data_clone (private_vendor_id_payload_t *this)
  */
 static void destroy(private_vendor_id_payload_t *this)
 {
-	if (this->vendor_id_data.ptr != NULL)
-	{
-		chunk_free(&(this->vendor_id_data));
-	}
+	free(this->data.ptr);
 	free(this);
 }
 
@@ -195,7 +162,6 @@ vendor_id_payload_t *vendor_id_payload_create()
 {
 	private_vendor_id_payload_t *this = malloc_thing(private_vendor_id_payload_t);
 
-	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
@@ -203,18 +169,27 @@ vendor_id_payload_t *vendor_id_payload_create()
 	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.destroy = (void (*) (vendor_id_payload_t *)) destroy;
-	this->public.set_data = (void (*) (vendor_id_payload_t *,chunk_t)) set_data;
-	this->public.get_data_clone = (chunk_t (*) (vendor_id_payload_t *)) get_data_clone;
 	this->public.get_data = (chunk_t (*) (vendor_id_payload_t *)) get_data;
 
-	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH;
-	this->vendor_id_data = chunk_empty;
+	this->data = chunk_empty;
 
-	return (&(this->public));
+	return &this->public;
 }
+
+/*
+ * Described in header
+ */
+vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data)
+{
+	private_vendor_id_payload_t *this;
+
+	this = (private_vendor_id_payload_t*)vendor_id_payload_create();
+	this->payload_length += data.len;
+	this->data = data;
+
+	return &this->public;
+}
+

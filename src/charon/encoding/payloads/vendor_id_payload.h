@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -32,56 +32,39 @@ typedef struct vendor_id_payload_t vendor_id_payload_t;
  */
 #define VENDOR_ID_PAYLOAD_HEADER_LENGTH 4
 
-
 /**
  * Class representing an IKEv2 VENDOR ID payload.
  *
  * The VENDOR ID payload format is described in RFC section 3.12.
  */
 struct vendor_id_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Set the VID data.
-	 *
-	 * Data are getting cloned.
-	 *
-	 * @param data			VID data as chunk_t
-	 */
-	void (*set_data) (vendor_id_payload_t *this, chunk_t data);
-
-	/**
 	 * Get the VID data.
 	 *
-	 * Returned data are a copy of the internal one.
-	 *
-	 * @return				VID data as chunk_t
+	 * @return		VID data, pointing to an internal chunk_t
 	 */
-	chunk_t (*get_data_clone) (vendor_id_payload_t *this);
-
-	/**
-	 * Get the VID data.
-	 *
-	 * Returned data are NOT copied.
-	 *
-	 * @return				VID data as chunk_t
-	 */
-	chunk_t (*get_data) (vendor_id_payload_t *this);
-
-	/**
-	 * Destroys an vendor_id_payload_t object.
-	 */
-	void (*destroy) (vendor_id_payload_t *this);
+	chunk_t (*get_data)(vendor_id_payload_t *this);
 };
 
 /**
- * Creates an empty vendor_id_payload_t object.
+ * Creates an empty Vendor ID payload.
  *
- * @return vendor_id_payload_t object
+ * @return			vendor ID payload
  */
-vendor_id_payload_t *vendor_id_payload_create(void);
+vendor_id_payload_t *vendor_id_payload_create();
+
+/**
+ * Creates a vendor ID payload using a chunk of data
+ *
+ * @param data		data to use in vendor ID payload, gets owned by payload
+ * @return			vendor ID payload
+ */
+vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data);
 
 #endif /** VENDOR_ID_PAYLOAD_H_ @}*/
