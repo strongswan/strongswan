@@ -1989,12 +1989,6 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		close(fd);
 	}
 
-	/* add bypass policies on the sockets used by charon */
-	if (!add_bypass_policies())
-	{
-		charon->kill(charon, "unable to add bypass policies on sockets");
-	}
-
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM);
 
 	memset(&addr, 0, sizeof(addr));
@@ -2011,6 +2005,12 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
+	}
+
+	/* add bypass policies on the sockets used by charon */
+	if (!add_bypass_policies())
+	{
+		charon->kill(charon, "unable to add bypass policies on sockets");
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
