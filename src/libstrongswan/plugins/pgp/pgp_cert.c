@@ -104,7 +104,16 @@ static identification_t* get_issuer(private_pgp_cert_t *this)
 static id_match_t has_subject(private_pgp_cert_t *this,
 							  identification_t *subject)
 {
-	return this->user_id->matches(this->user_id, subject);
+	id_match_t match_user_id;
+
+	match_user_id = this->user_id->matches(this->user_id, subject);
+	if (match_user_id == ID_MATCH_NONE &&
+		subject->get_type(subject) == ID_KEY_ID &&
+        chunk_equals(this->fingerprint, subject->get_encoding(subject)))
+	{
+		return ID_MATCH_PERFECT;
+	}
+	return match_user_id;
 }
 
 /**
@@ -369,7 +378,7 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 	/* we parse only V3 signature packets */
 	if (version != 3)
 	{
-		DBG1("  skipped V%d PGP signature", version);
+		DBG2("  skipped V%d PGP signature", version);
 		return TRUE;
 	}
 	if (!pgp_read_scalar(&packet, 1, &len) || len != 5)
