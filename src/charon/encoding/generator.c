@@ -880,6 +880,8 @@ generator_t *generator_create()
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
+	this->attribute_format = FALSE;
+	this->attribute_length = 0;
 
 	return &(this->public);
 }
