@@ -669,6 +669,7 @@ static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
 		fprintf(out, "  userid:   '%Y'\n", cert->get_subject(cert));
 
 		fprintf(out, "  digest:    %#B\n", &fingerprint);
+
 		/* list validity */
 		cert->get_validity(cert, &now, &created, &until);
 		fprintf(out, "  created:   %T\n", &created, utc);
