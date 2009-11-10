@@ -36,11 +36,11 @@
 
 #include <library.h>
 #include <asn1/asn1.h>
+#include <credentials/certificates/pgp_certificate.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "x509.h"
-#include "pgpcert.h"
 #include "certs.h"
 #include "smartcard.h"
 #include "connections.h"
@@ -111,9 +111,11 @@ static const secret_t* get_secret(const connection_t *c,
 	identification_t *my_id, *his_id;
 
 	/* is there a certificate assigned to this connection? */
-	if (kind == PPK_PUBKEY && c->spd.this.cert.type != CERT_NONE)
+	if (kind == PPK_PUBKEY && c->spd.this.cert)
 	{
-		public_key_t *pub_key = cert_get_public_key(c->spd.this.cert);
+		certificate_t *certificate = c->spd.this.cert->cert;
+
+		public_key_t *pub_key = certificate->get_public_key(certificate);
 
 		for (s = secrets; s != NULL; s = s->next)
 		{
@@ -262,11 +264,11 @@ const chunk_t* get_preshared_secret(const connection_t *c)
 /* check the existence of a private key matching a public key contained
  * in an X.509 or OpenPGP certificate
  */
-bool has_private_key(cert_t cert)
+bool has_private_key(cert_t *cert)
 {
 	secret_t *s;
 	bool has_key = FALSE;
-	public_key_t *pub_key = cert_get_public_key(cert);
+	public_key_t *pub_key = cert->cert->get_public_key(cert->cert);
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
@@ -284,7 +286,7 @@ bool has_private_key(cert_t cert)
 /*
  * get the matching private key belonging to a given X.509 certificate
  */
-private_key_t* get_x509_private_key(const x509cert_t *cert)
+private_key_t* get_x509_private_key(const cert_t *cert)
 {
 	public_key_t *public_key = cert->cert->get_public_key(cert->cert);
 	private_key_t *private_key = NULL;
@@ -1272,80 +1274,86 @@ bool add_public_key(identification_t *id, enum dns_auth_level dns_auth_level,
 	return TRUE;
 }
 
-/* extract id and public key from x.509 certificate and
- * insert it into a pubkeyrec
+/**
+ * Extract id and public key a certificate and insert it into a pubkeyrec
  */
-void add_x509_public_key(x509cert_t *cert , time_t until,
-						 enum dns_auth_level dns_auth_level)
+void add_public_key_from_cert(cert_t *cert , time_t until,
+							  enum dns_auth_level dns_auth_level)
 {
 	certificate_t *certificate = cert->cert;
-	x509_t *x509 = (x509_t*)certificate;
 	identification_t *subject = certificate->get_subject(certificate);
-	identification_t *issuer = certificate->get_issuer(certificate);
+	identification_t *issuer = NULL;
 	identification_t *id;
-	chunk_t serialNumber = x509->get_serial(x509);
+	chunk_t serialNumber = chunk_empty;
 	pubkey_t *pk;
 	key_type_t pk_type;
-	enumerator_t *enumerator;
 
 	/* ID type: ID_DER_ASN1_DN  (X.509 subject field) */
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
 	pk->public_key = certificate->get_public_key(certificate);
+	pk_type = pk->public_key->get_type(pk->public_key);
 	pk->id = subject->clone(subject);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
-	pk->issuer = issuer->clone(issuer);
-	pk->serial = chunk_clone(serialNumber);
-	pk_type = pk->public_key->get_type(pk->public_key);
+	if (certificate->get_type(certificate) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)certificate;
+
+		issuer = certificate->get_issuer(certificate);
+		serialNumber = x509->get_serial(x509);
+		pk->issuer = issuer->clone(issuer);
+		pk->serial = chunk_clone(serialNumber);
+	}
 	delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
 	install_public_key(pk, &pubkeys);
 
-	/* insert all subjectAltNames */
-	enumerator = x509->create_subjectAltName_enumerator(x509);
-	while (enumerator->enumerate(enumerator, &id)) 
+	if (certificate->get_type(certificate) == CERT_X509)
 	{
-		if (id->get_type(id) != ID_ANY)
+		x509_t *x509 = (x509_t*)certificate;
+		enumerator_t *enumerator;
+
+		/* insert all subjectAltNames from X.509 certificates */
+		enumerator = x509->create_subjectAltName_enumerator(x509);
+		while (enumerator->enumerate(enumerator, &id)) 
 		{
-			pk = malloc_thing(pubkey_t);
-			zero(pk);
-			pk->id = id->clone(id);
-			pk->public_key = certificate->get_public_key(certificate);
-			pk->dns_auth_level = dns_auth_level;
-			pk->until_time = until;
-			pk->issuer = issuer->clone(issuer);
-			pk->serial = chunk_clone(serialNumber);
-			delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
-			install_public_key(pk, &pubkeys);
+			if (id->get_type(id) != ID_ANY)
+			{
+				pk = malloc_thing(pubkey_t);
+				zero(pk);
+				pk->id = id->clone(id);
+				pk->public_key = certificate->get_public_key(certificate);
+				pk->dns_auth_level = dns_auth_level;
+				pk->until_time = until;
+				pk->issuer = issuer->clone(issuer);
+				pk->serial = chunk_clone(serialNumber);
+				delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+				install_public_key(pk, &pubkeys);
+			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
-}
+	else
+	{
+		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)certificate;
+		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
 
-/* extract id and public key from OpenPGP certificate and
- * insert it into a pubkeyrec
- */
-void add_pgp_public_key(pgpcert_t *cert , time_t until,
-						enum dns_auth_level dns_auth_level)
-{
-	pubkey_t *pk;
-	key_type_t pk_type;
-
-	pk = malloc_thing(pubkey_t);
-	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id = cert->fingerprint->clone(cert->fingerprint);
-	pk->dns_auth_level = dns_auth_level;
-	pk->until_time = until;
-	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(pk->id, pk_type, NULL, chunk_empty);
-	install_public_key(pk, &pubkeys);
+		/* add v3 or v4 PGP fingerprint */
+		pk = malloc_thing(pubkey_t);
+		zero(pk);
+		pk->id = identification_create_from_encoding(ID_KEY_ID, fingerprint);
+		pk->public_key = certificate->get_public_key(certificate);
+		pk->dns_auth_level = dns_auth_level;
+		pk->until_time = until;
+		delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+		install_public_key(pk, &pubkeys);
+	}
 }
 
 /*  when a X.509 certificate gets revoked, all instances of
  *  the corresponding public key must be removed
  */
-void remove_x509_public_key(const x509cert_t *cert)
+void remove_x509_public_key(const cert_t *cert)
 {
 	public_key_t *revoked_key = cert->cert->get_public_key(cert->cert);
 	pubkey_list_t *p, **pp;

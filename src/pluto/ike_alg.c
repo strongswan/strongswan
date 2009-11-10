@@ -199,9 +199,10 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 			key_type_t key_type = KEY_ANY;
 
 
-			if (c->spd.this.cert.type != CERT_NONE)
+			if (c->spd.this.cert)
 			{
-				public_key_t *key = cert_get_public_key(c->spd.this.cert);
+				certificate_t *certificate = c->spd.this.cert->cert;
+				public_key_t *key = certificate->get_public_key(certificate);
 
 				if (key == NULL)
 				{				

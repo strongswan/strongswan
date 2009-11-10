@@ -18,9 +18,12 @@
 #define _CERTS_H
 
 #include <credentials/keys/private_key.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/certificates/x509.h>
 
-#include "x509.h"
-#include "pgpcert.h"
+#include <freeswan.h>
+
+#include "defs.h"
 
 /* path definitions for private keys, end certs,
  * cacerts, attribute certs and crls
@@ -43,16 +46,16 @@
 #define CRL_WARNING_INTERVAL             7 /* days */
 #define ACERT_WARNING_INTERVAL           1 /* day */
 
-/* certificate access structure
- * currently X.509 and OpenPGP certificates are supported
- */
-typedef struct {
-	u_char type;
-	union {
-		x509cert_t *x509;
-		pgpcert_t  *pgp;
-	} u;
-} cert_t;
+/* access structure for a pluto certificate */
+
+typedef struct cert_t cert_t;
+
+struct cert_t {
+	certificate_t  *cert;
+	cert_t         *next;
+	int             count;
+	bool            smartcard;
+};
 
 /* used for initialization */
 extern const cert_t cert_empty;
@@ -62,18 +65,16 @@ extern const cert_t cert_empty;
  */
 extern bool no_cr_send;
 
-extern public_key_t* cert_get_public_key(const cert_t cert);
-extern chunk_t cert_get_encoding(cert_t cert);
 extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 									   key_type_t type);
-extern bool load_cert(char *filename, const char *label, x509_flag_t flags,
-					  cert_t *cert);
-extern bool load_host_cert(char *filename, cert_t *cert);
-extern bool load_ca_cert(char *filename, cert_t *cert);
-extern bool same_cert(const cert_t *a, const cert_t *b);
-extern void share_cert(cert_t cert);
-extern void release_cert(cert_t cert);
-extern void list_certs(bool utc);
+extern cert_t* load_cert(char *filename, const char *label, x509_flag_t flags);
+extern cert_t* load_host_cert(char *filename);
+extern cert_t* load_ca_cert(char *filename);
+extern cert_t* cert_add(cert_t *cert);
+extern void cert_free(cert_t *cert);
+extern void cert_share(cert_t *cert);
+extern void cert_release(cert_t *cert);
+extern void cert_list(bool utc);
 
 #endif /* _CERTS_H */
 

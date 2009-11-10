@@ -39,7 +39,6 @@
 #include "x509.h"
 #include "ca.h"
 #include "crl.h"
-#include "pgpcert.h"
 #include "certs.h"
 #include "ac.h"
 #include "smartcard.h"
@@ -398,9 +397,9 @@ void delete_connection(connection_t *c, bool relations)
 	gw_delref(&c->gw_info);
 
 	lock_certs_and_keys("delete_connection");
-	release_cert(c->spd.this.cert);
+	cert_release(c->spd.this.cert);
 	scx_release(c->spd.this.sc);
-	release_cert(c->spd.that.cert);
+	cert_release(c->spd.that.cert);
 	scx_release(c->spd.that.sc);
 	unlock_certs_and_keys("delete_connection");
 
@@ -736,7 +735,7 @@ static void unshare_connection_strings(connection_t *c)
 	c->spd.this.pool = clone_str(c->spd.this.pool);
 	c->spd.this.updown = clone_str(c->spd.this.updown);
 	scx_share(c->spd.this.sc);
-	share_cert(c->spd.this.cert);
+	cert_share(c->spd.this.cert);
 	if (c->spd.this.ca)
 	{
 		c->spd.this.ca = c->spd.this.ca->clone(c->spd.this.ca);
@@ -749,7 +748,7 @@ static void unshare_connection_strings(connection_t *c)
 	c->spd.that.pool = clone_str(c->spd.that.pool);
 	c->spd.that.updown = clone_str(c->spd.that.updown);
 	scx_share(c->spd.that.sc);
-	share_cert(c->spd.that.cert);
+	cert_share(c->spd.that.cert);
 	if (c->spd.that.ca)
 	{
 		c->spd.that.ca = c->spd.that.ca->clone(c->spd.that.ca);
@@ -767,13 +766,12 @@ static void unshare_connection_strings(connection_t *c)
 static void load_end_certificate(char *filename, struct end *dst)
 {
 	time_t valid_until;
-	cert_t cert;
-	bool valid_cert = FALSE;
+	cert_t *cert = NULL;
+	certificate_t *certificate;
 	bool cached_cert = FALSE;
-
+	
 	/* initialize end certificate */
-	dst->cert.type = CERT_NONE;
-	dst->cert.u.x509 = NULL;
+	dst->cert = NULL;
 
 	/* initialize smartcard info record */
 	dst->sc = NULL;
@@ -783,87 +781,73 @@ static void load_end_certificate(char *filename, struct end *dst)
 		if (scx_on_smartcard(filename))
 		{
 			/* load cert from smartcard */
-			valid_cert = scx_load_cert(filename, &dst->sc, &cert, &cached_cert);
+			cert = scx_load_cert(filename, &dst->sc, &cached_cert);
 		}
 		else
 		{
 			/* load cert from file */
-			valid_cert = load_host_cert(filename, &cert);
+			cert = load_host_cert(filename);
 		}
 	}
 
-	if (valid_cert)
+	if (cert)
 	{
-		switch (cert.type)
+		certificate = cert->cert;
+
+		if (dst->id->get_type(dst->id) == ID_ANY ||
+			!certificate->has_subject(certificate, dst->id))
 		{
-		case CERT_PGP:
-			dst->id = select_pgpcert_id(cert.u.pgp, dst->id);
+			plog( "  id '%Y' not confirmed by certificate, defaulting to '%Y'",
+				 dst->id, certificate->get_subject(certificate));
+			dst->id->destroy(dst->id);
+			dst->id = certificate->get_subject(certificate);
+			dst->id = dst->id->clone(dst->id);
+		}
 
-			if (cached_cert)
+		if (cached_cert)
+		{
+			dst->cert = cert;
+		}
+		else
+		{
+			if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
 			{
-				dst->cert = cert;
+				cert_free(cert);
+				return;
 			}
-			else
-			{
-				valid_until = cert.u.pgp->until;
-				add_pgp_public_key(cert.u.pgp, cert.u.pgp->until, DAL_LOCAL);
-				dst->cert.type = cert.type;
-				dst->cert.u.pgp = add_pgpcert(cert.u.pgp);
-			}
-			break;
-		case CERT_X509_SIGNATURE:
-			dst->id = select_x509cert_id(cert.u.x509, dst->id);
+			DBG(DBG_CONTROL,
+				DBG_log("certificate is valid")
+			)
+			add_public_key_from_cert(cert, valid_until, DAL_LOCAL);
+			dst->cert = cert_add(cert);
+		}
+		certificate = dst->cert->cert;
 
-			if (cached_cert)
-			{
-				dst->cert = cert;
-			}
-			else
-			{
-				certificate_t *certificate = cert.u.x509->cert;
-				
-				if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
-				{
-					free_x509cert(cert.u.x509);
-					break;
-				}
-				DBG(DBG_CONTROL,
-					DBG_log("certificate is valid")
-				)
-				add_x509_public_key(cert.u.x509, valid_until, DAL_LOCAL);
-				dst->cert.type = cert.type;
-				dst->cert.u.x509 = add_x509cert(cert.u.x509);
-			}
+		/* if no CA is defined, use issuer as default */
+		if (dst->ca == NULL && certificate->get_type(certificate) == CERT_X509)
+		{
+			identification_t *issuer;
 
-			/* if no CA is defined, use issuer as default */
-			if (dst->ca == NULL)
-			{
-				certificate_t *certificate = dst->cert.u.x509->cert;
-				identification_t *issuer = certificate->get_issuer(certificate);
-
-				dst->ca = issuer->clone(issuer);
-			}
-			break;
-		default:
-			break;
+			issuer = certificate->get_issuer(certificate);
+			dst->ca = issuer->clone(issuer);
 		}
 
 		/* cache the certificate that was last retrieved from the smartcard */
 		if (dst->sc)
 		{
-			if (!same_cert(&dst->sc->last_cert, &dst->cert))
+			if (!certificate->equals(certificate, dst->sc->last_cert->cert))
 			{
 				lock_certs_and_keys("load_end_certificates");
-				release_cert(dst->sc->last_cert);
+				cert_release(dst->sc->last_cert);
 				dst->sc->last_cert = dst->cert;
-				share_cert(dst->cert);
+				cert_share(dst->cert);
 				unlock_certs_and_keys("load_end_certificates");
 			}
 			time(&dst->sc->last_load);
 		}
 	}
 	scx_share(dst->sc);
-	share_cert(dst->cert);
+	cert_share(dst->cert);
 }
 
 static bool extract_end(struct end *dst, const whack_end_t *src,

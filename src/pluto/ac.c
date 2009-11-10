@@ -85,7 +85,7 @@ bool ac_verify_cert(certificate_t *cert, bool strict)
 	identification_t *subject = cert->get_subject(cert);
 	identification_t *issuer  = cert->get_issuer(cert);
 	chunk_t authKeyID = ac->get_authKeyIdentifier(ac);
-	x509cert_t *aacert;
+	cert_t *aacert;
 	time_t notBefore, valid_until;
 
 	DBG1("holder: '%Y'", subject);

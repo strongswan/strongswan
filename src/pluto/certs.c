@@ -18,60 +18,83 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <freeswan.h>
 
-#include "library.h"
-#include "asn1/asn1.h"
-#include "credentials/certificates/certificate.h"
+#include <library.h>
+#include <asn1/asn1.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/certificates/pgp_certificate.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
 #include "certs.h"
 #include "whack.h"
+#include "fetch.h"
+#include "keys.h"
 #include "builder.h"
 
 /**
- * used for initializatin of certs
+ * Initialization
  */
-const cert_t cert_empty = {CERT_NONE, {NULL}};
+const cert_t cert_empty = {
+	NULL   , /* cert */
+	NULL   , /* *next */
+	  0    , /* count */
+	FALSE    /* smartcard */
+};
 
 /**
- * extracts the certificate to be sent to the peer
+ * Chained lists of X.509 and PGP end entity certificates
  */
-chunk_t cert_get_encoding(cert_t cert)
+static cert_t *certs = NULL;
+
+/**
+ *  Free a pluto certificate
+ */
+void cert_free(cert_t *cert)
 {
-	switch (cert.type)
+	if (cert)
 	{
-	case CERT_PGP:
-		return chunk_clone(cert.u.pgp->certificate);
-	case CERT_X509_SIGNATURE:
-		return cert.u.x509->cert->get_encoding(cert.u.x509->cert);
-	default:
-		return chunk_empty;
+		certificate_t *certificate = cert->cert;
+
+		if (certificate)
+		{
+			certificate->destroy(certificate);
+		}
+		free(cert);
 	}
 }
 
-public_key_t* cert_get_public_key(const cert_t cert)
+/**
+ *  Add a pluto end entity certificate to the chained list
+ */
+cert_t* cert_add(cert_t *cert)
 {
-	switch (cert.type)
+	certificate_t *certificate = cert->cert;
+	cert_t *c = certs;
+
+	while (c != NULL)
 	{
-		case CERT_PGP:
+		if (certificate->equals(certificate, c->cert)) /* already in chain, free cert */
 		{
-			public_key_t *public_key = cert.u.pgp->public_key;
-
-			return public_key->get_ref(public_key);
+			cert_free(cert);
+			return c;
 		}
-		case CERT_X509_SIGNATURE:
-		{
-			certificate_t *certificate = cert.u.x509->cert;
-
-			return certificate->get_public_key(certificate);
-		}
-		default:
-			return NULL;
+		c = c->next;
 	}
+
+	/* insert new cert at the root of the chain */
+	lock_certs_and_keys("cert_add");
+	cert->next = certs;
+	certs = cert;
+	DBG(DBG_CONTROL | DBG_PARSING,
+		DBG_log("  cert inserted")
+	)
+	unlock_certs_and_keys("cert_add");
+	return cert;
 }
 
 /**
@@ -161,7 +184,7 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 /**
  *  Loads a X.509 or OpenPGP certificate
  */
-bool load_cert(char *filename, const char *label, x509_flag_t flags, cert_t *out)
+cert_t* load_cert(char *filename, const char *label, x509_flag_t flags)
 {
 	cert_t *cert;
 
@@ -171,83 +194,133 @@ bool load_cert(char *filename, const char *label, x509_flag_t flags, cert_t *out
 							  BUILD_END);
 	if (cert)
 	{
-		/* the API passes an empty cert_t, we move over and free the built one */
 		plog("  loaded %s certificate from '%s'", label, filename);
-		*out = *cert;
-		free(cert);
-		return TRUE;
 	}
-	return FALSE;
+	return cert;
 }
 
 /**
  *  Loads a host certificate
  */
-bool load_host_cert(char *filename, cert_t *cert)
+cert_t* load_host_cert(char *filename)
 {
 	char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
-	return load_cert(path, "host", X509_NONE, cert);
+	return load_cert(path, "host", X509_NONE);
 }
 
 /**
  *  Loads a CA certificate
  */
-bool load_ca_cert(char *filename, cert_t *cert)
+cert_t* load_ca_cert(char *filename)
 {
 	char *path = concatenate_paths(CA_CERT_PATH, filename);
 
-	return load_cert(path, "CA", X509_NONE, cert);
-}
-
-/**
- * establish equality of two certificates
- */
-bool same_cert(const cert_t *a, const cert_t *b)
-{
-	return a->type == b->type && a->u.x509 == b->u.x509;
+	return load_cert(path, "CA", X509_NONE);
 }
 
 /**
  * for each link pointing to the certificate increase the count by one
  */
-void share_cert(cert_t cert)
+void cert_share(cert_t *cert)
 {
-	switch (cert.type)
+	if (cert != NULL)
 	{
-	case CERT_PGP:
-		share_pgpcert(cert.u.pgp);
-		break;
-	case CERT_X509_SIGNATURE:
-		share_x509cert(cert.u.x509);
-		break;
-	default:
-		break;
+		cert->count++;
 	}
 }
 
 /*  release of a certificate decreases the count by one
  *  the certificate is freed when the counter reaches zero
  */
-void release_cert(cert_t cert)
+void cert_release(cert_t *cert)
 {
-   switch (cert.type)
+	if (cert && --cert->count == 0)
 	{
-	case CERT_PGP:
-		release_pgpcert(cert.u.pgp);
-		break;
-	case CERT_X509_SIGNATURE:
-		release_x509cert(cert.u.x509);
-		break;
-	default:
-		break;
+		cert_t **pp = &certs;
+		while (*pp != cert)
+		{
+			pp = &(*pp)->next;
+		}
+		*pp = cert->next;
+		cert_free(cert);
 	}
+}
+
+/**
+ *  List all PGP end certificates in a chained list
+ */
+void list_pgp_end_certs(bool utc)
+{
+	cert_t *cert = certs;
+	time_t now = time(NULL);
+	bool first = TRUE;
+
+
+	while (cert != NULL)
+	{
+		certificate_t *certificate = cert->cert;
+
+		if (certificate->get_type(certificate) == CERT_GPG)
+		{
+			time_t created, until;
+			public_key_t *key;
+			identification_t *userid = certificate->get_subject(certificate);
+			pgp_certificate_t *pgp_cert = (pgp_certificate_t*)certificate;
+			chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
+
+			if (first)
+			{
+				whack_log(RC_COMMENT, " ");
+				whack_log(RC_COMMENT, "List of PGP End Entity Certificates:");
+				first = false;
+			}
+			whack_log(RC_COMMENT, " ");
+			whack_log(RC_COMMENT, "  userid:   '%Y'", userid);
+			whack_log(RC_COMMENT, "  digest:    %#B", &fingerprint);
+
+			/* list validity */
+			certificate->get_validity(certificate, &now, &created, &until);
+			whack_log(RC_COMMENT, "  created:   %T", &created, utc);
+			whack_log(RC_COMMENT, "  until:     %T %s%s", &until, utc,
+					check_expiry(until, CA_CERT_WARNING_INTERVAL, TRUE),
+					(until == TIME_32_BIT_SIGNED_MAX) ? " (expires never)":"");
+
+			key = certificate->get_public_key(certificate);
+			if (key)
+			{
+				chunk_t keyid;
+
+				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
+						key_type_names, key->get_type(key),
+						key->get_keysize(key) * BITS_PER_BYTE,
+						has_private_key(cert)? ", has private key" : "");
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+				{
+					whack_log(RC_COMMENT, "  keyid:     %#B", &keyid);
+				}
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
+				{
+					whack_log(RC_COMMENT, "  subjkey:   %#B", &keyid);
+				}
+			}
+		}
+		cert = cert->next;
+	}
+}
+
+/**
+ * List all X.509 end certificates in a chained list
+ */
+void list_x509_end_certs(bool utc)
+{
+	list_x509cert_chain("End Entity", certs, X509_NONE, utc);
 }
 
 /**
  *  list all X.509 and OpenPGP end certificates
  */
-void list_certs(bool utc)
+void cert_list(bool utc)
 {
 	list_x509_end_certs(utc);
 	list_pgp_end_certs(utc);

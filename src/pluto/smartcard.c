@@ -59,21 +59,21 @@ static smartcard_t *smartcards   = NULL;
 static int sc_number = 0;
 
 const smartcard_t empty_sc = {
-	  NULL               , /* next */
-			0            , /* last_load */
-	{ CERT_NONE, {NULL} }, /* last_cert */
-			0            , /* count */
-			0            , /* number */
-	   999999            , /* slot */
-	  NULL               , /* id */
-	  NULL               , /* label */
-	{ NULL, 0 }          , /* pin */
-	  FALSE              , /* pinpad */
-	  FALSE              , /* valid */
-	  FALSE              , /* session_opened */
-	  FALSE              , /* logged_in */
-	  TRUE               , /* any_slot */
-			0L           , /* session */
+	  NULL         , /* next */
+			0      , /* last_load */
+	  NULL         , /* last_cert */
+			0      , /* count */
+			0      , /* number */
+	  999999       , /* slot */
+	  NULL         , /* id */
+	  NULL         , /* label */
+	{ NULL, 0 }    , /* pin */
+	  FALSE        , /* pinpad */
+	  FALSE        , /* valid */
+	  FALSE        , /* session_opened */
+	  FALSE        , /* logged_in */
+	  TRUE         , /* any_slot */
+			0L     , /* session */
 };
 
 #ifdef SMARTCARD        /* compile with smartcard support */
@@ -437,14 +437,13 @@ failed: scx_unload_pkcs11_module(mod);
 /*
  * retrieve a certificate object
  */
-static bool scx_find_cert_object(CK_SESSION_HANDLE session,
-								 CK_OBJECT_HANDLE object,
-								 smartcard_t *sc, cert_t *cert)
+static cert_t* scx_find_cert_object(CK_SESSION_HANDLE session,
+									CK_OBJECT_HANDLE object, smartcard_t *sc)
 {
 	size_t hex_len, label_len;
 	u_char *hex_id = NULL;
+	cert_t *cert;
 	chunk_t blob;
-	x509cert_t *x509cert;
 
 	CK_ATTRIBUTE attr[] = {
 		{ CKA_ID,    NULL_PTR, 0L },
@@ -452,16 +451,13 @@ static bool scx_find_cert_object(CK_SESSION_HANDLE session,
 		{ CKA_VALUE, NULL_PTR, 0L }
 	};
 
-	/* initialize the return argument */
-	*cert = cert_empty;
-
 	/* get the length of the attributes first */
 	CK_RV rv = pkcs11_functions->C_GetAttributeValue(session, object, attr, 3);
 	if (rv != CKR_OK)
 	{
 		plog("couldn't read the attribute sizes: %s"
 			, enum_show(&pkcs11_return_names, rv));
-		return FALSE;
+		return NULL;
 	}
 
 	free(sc->label);
@@ -486,7 +482,7 @@ static bool scx_find_cert_object(CK_SESSION_HANDLE session,
 		free(hex_id);
 		free(sc->label);
 		free(blob.ptr);
-		return FALSE;
+		return NULL;
 	}
 
 	free(sc->id);
@@ -500,22 +496,23 @@ static bool scx_find_cert_object(CK_SESSION_HANDLE session,
 	sc->label[label_len] = '\0';
 
 	/* parse the retrieved cert */
-	x509cert = malloc_thing(x509cert_t);
-	*x509cert = empty_x509cert;
-	x509cert->smartcard = TRUE;
-	x509cert->cert = lib->creds->create(lib->creds,
-							  			CRED_CERTIFICATE, CERT_X509,
-							  			BUILD_BLOB_ASN1_DER, blob,
-							  			BUILD_END);
-	if (x509cert->cert)
+
+	/* initialize the return argument */
+	cert = malloc_thing(cert_t);
+	*cert = cert_empty;
+	cert->smartcard = TRUE;
+	cert->cert = lib->creds->create(lib->creds,
+							  		CRED_CERTIFICATE, CERT_X509,
+							  		BUILD_BLOB_ASN1_DER, blob,
+							  		BUILD_END);
+	if (cert->cert)
 	{
-		cert->type = CERT_X509_SIGNATURE;
-		cert->u.x509 = x509cert;
-		return TRUE;
+		return cert;
 	}
+
 	plog("failed to load cert from smartcard, error in X.509 certificate");
-	free_x509cert(x509cert);
-	return FALSE;
+	cert_free(cert);
+	return NULL;
 }
 
 
@@ -542,7 +539,7 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		CK_ULONG obj_count = 0;
 		time_t valid_until;
 		smartcard_t *sc;
-		x509cert_t *cert;
+		certificate_t *certificate;
 		x509_t *x509;
 
 		rv = pkcs11_functions->C_FindObjects(session, &object, 1, &obj_count);
@@ -562,8 +559,8 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		*sc = empty_sc;
 		sc->any_slot = FALSE;
 		sc->slot  = slot;
-
-		if (!scx_find_cert_object(session, object, sc, &sc->last_cert))
+		sc->last_cert = scx_find_cert_object(session, object, sc);
+		if (sc->last_cert == NULL)
 		{
 			scx_free(sc);
 			continue;
@@ -574,10 +571,9 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		/* check validity of certificate */
-		cert = sc->last_cert.u.x509;
-		if (!cert->cert->get_validity(cert->cert, NULL, NULL, &valid_until))
+		certificate = sc->last_cert->cert;
+		if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
 		{
-			free_x509cert(cert);
 			scx_free(sc);
 			continue;
 		}
@@ -586,20 +582,20 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		sc = scx_add(sc);
-		x509 = (x509_t*)cert->cert;
+		x509 = (x509_t*)certificate;
 
 		/* put end entity and ca certificates into different chains */
 		if (x509->get_flags(x509) & X509_CA)
 		{
-			sc->last_cert.u.x509 = add_authcert(cert, X509_CA);
+			sc->last_cert = add_authcert(sc->last_cert, X509_CA);
 		}
 		else
 		{
-			add_x509_public_key(cert, valid_until, DAL_LOCAL);
-			sc->last_cert.u.x509 = add_x509cert(cert);
+			add_public_key_from_cert(sc->last_cert, valid_until, DAL_LOCAL);
+			sc->last_cert = cert_add(sc->last_cert);
 		}
 
-		share_cert(sc->last_cert);
+		cert_share(sc->last_cert);
 		time(&sc->last_load);
 	}
 
@@ -1070,67 +1066,66 @@ void scx_release_context(smartcard_t *sc)
 /*
  * Load host certificate from smartcard
  */
-bool scx_load_cert(const char *filename, smartcard_t **scp, cert_t *cert,
-				   bool *cached)
+cert_t* scx_load_cert(const char *filename, smartcard_t **scp, bool *cached)
 {
 #ifdef SMARTCARD        /* compile with smartcard support */
-	CK_OBJECT_HANDLE object;
-
 	const char *number_slot_id = filename + strlen(SCX_TOKEN);
-
-	smartcard_t *sc = scx_add(scx_parse_number_slot_id(number_slot_id));
+	CK_OBJECT_HANDLE object;
+	smartcard_t *sc;
+	cert_t *cert = NULL;
 
 	/* return the smartcard object */
-	*scp = sc;
+	*scp = sc = scx_add(scx_parse_number_slot_id(number_slot_id));
 
 	/* is there a cached smartcard certificate? */
-	*cached = sc->last_cert.type != CERT_NONE
-			  && (time(NULL) - sc->last_load) < SCX_CERT_CACHE_INTERVAL;
+	*cached = sc->last_cert && 
+			  (time(NULL) - sc->last_load) < SCX_CERT_CACHE_INTERVAL;
 
 	if (*cached)
 	{
-		*cert = sc->last_cert;
 		plog("  using cached cert from smartcard #%d (%s, id: %s, label: '%s')"
 				, sc->number
 				, scx_print_slot(sc, "")
 				, sc->id
 				, sc->label);
-		return TRUE;
+		return sc->last_cert;
 	}
 
 	if (!scx_establish_context(sc))
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	/* find the certificate object */
 	if (!scx_pkcs11_find_object(sc->session, &object, CKO_CERTIFICATE, sc->id))
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	/* retrieve the certificate object */
-	if (!scx_find_cert_object(sc->session, object, sc, cert))
+	cert = scx_find_cert_object(sc->session, object, sc);
+	if (cert == NULL)
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	if (!pkcs11_keep_state)
+	{
 		scx_release_context(sc);
-
+	}
 	plog("  loaded cert from smartcard #%d (%s, id: %s, label: '%s')"
 		, sc->number
 		, scx_print_slot(sc, "")
 		, sc->id
 		, sc->label);
 
-	return TRUE;
+	return cert;
 #else
 	plog("  warning: SMARTCARD support is deactivated in pluto/Makefile!");
-	return FALSE;
+	return NULL;
 #endif
 }
 
@@ -1793,6 +1788,7 @@ void scx_free(smartcard_t *sc)
 	if (sc != NULL)
 	{
 		scx_release_context(sc);
+		cert_release(sc->last_cert);
 		free(sc->id);
 		free(sc->label);
 		scx_free_pin(&sc->pin);
@@ -1811,7 +1807,6 @@ void scx_release(smartcard_t *sc)
 		while (*pp != sc)
 			pp = &(*pp)->next;
 		*pp = sc->next;
-		release_cert(sc->last_cert);
 		scx_free(sc);
 	}
 }
@@ -1875,14 +1870,16 @@ smartcard_t* scx_add(smartcard_t *smartcard)
 /*
  * get the smartcard that belongs to an X.509 certificate
  */
-smartcard_t* scx_get(x509cert_t *cert)
+smartcard_t* scx_get(cert_t *cert)
 {
 	smartcard_t *sc = smartcards;
 
 	while (sc != NULL)
 	{
-		if (sc->last_cert.u.x509 == cert)
+		if (sc->last_cert == cert)
+		{
 			return sc;
+		}
 		sc = sc->next;
 	}
 	return NULL;
@@ -1929,9 +1926,9 @@ void scx_list(bool utc)
 			whack_log(RC_COMMENT, "  id:       %s", sc->id);
 		if (sc->label != NULL)
 			whack_log(RC_COMMENT, "  label:   '%s'", sc->label);
-		if (sc->last_cert.type == CERT_X509_SIGNATURE)
+		if (sc->last_cert)
 		{
-			certificate_t *certificate = sc->last_cert.u.x509->cert;
+			certificate_t *certificate = sc->last_cert->cert;
 
 			whack_log(RC_COMMENT, "  subject: '%Y'",
 					  certificate->get_subject(certificate));

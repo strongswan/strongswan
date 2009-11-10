@@ -45,7 +45,7 @@ struct connection;
 
 extern const chunk_t *get_preshared_secret(const struct connection *c);
 extern private_key_t *get_private_key(const struct connection *c);
-extern private_key_t *get_x509_private_key(const x509cert_t *cert);
+extern private_key_t *get_x509_private_key(const cert_t *cert);
 
 /* public key machinery  */
 
@@ -84,12 +84,10 @@ extern bool add_public_key(identification_t *id,
 						   enum pubkey_alg alg,
 						   chunk_t rfc3110_key,
 						   pubkey_list_t **head);
-extern bool has_private_key(cert_t cert);
-extern void add_x509_public_key(x509cert_t *cert, time_t until
-	, enum dns_auth_level dns_auth_level);
-extern void add_pgp_public_key(pgpcert_t *cert, time_t until
-	, enum dns_auth_level dns_auth_level);
-extern void remove_x509_public_key(const x509cert_t *cert);
+extern bool has_private_key(cert_t *cert);
+extern void add_public_key_from_cert(cert_t *cert, time_t until,
+									 enum dns_auth_level dns_auth_level);
+extern void remove_x509_public_key(const cert_t *cert);
 extern void list_public_keys(bool utc);
 
 struct gw_info; /* forward declaration of tag (defined in dnskey.h) */

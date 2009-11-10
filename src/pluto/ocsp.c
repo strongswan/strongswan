@@ -145,7 +145,7 @@ static chunk_t ocsp_default_uri;
 static ocsp_location_t *ocsp_cache = NULL;
 
 /* static temporary storage for ocsp requestor information */
-static x509cert_t *ocsp_requestor_cert = NULL;
+static cert_t *ocsp_requestor_cert = NULL;
 
 static smartcard_t *ocsp_requestor_sc = NULL;
 
@@ -281,7 +281,7 @@ static const asn1Object_t singleResponseObjects[] = {
  * Build an ocsp location from certificate information
  * without unsharing its contents
  */
-static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
+static bool build_ocsp_location(const cert_t *cert, ocsp_location_t *location)
 {
 	certificate_t *certificate = cert->cert;
 	identification_t *issuer = certificate->get_issuer(certificate);
@@ -329,7 +329,7 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 
 	if (authKeyID.ptr == NULL)
 	{
-		x509cert_t *authcert = get_authcert(issuer, authKeyID, X509_CA);
+		cert_t *authcert = get_authcert(issuer, authKeyID, X509_CA);
 
 		if (authcert)
 		{
@@ -416,7 +416,7 @@ static cert_status_t get_ocsp_status(const ocsp_location_t *loc,
 /**
  * Verify the ocsp status of a certificate
  */
-cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
+cert_status_t verify_by_ocsp(const cert_t *cert, time_t *until,
 							 time_t *revocationDate,
 							 crl_reason_t *revocationReason)
 {
@@ -646,7 +646,7 @@ void list_ocsp_cache(bool utc, bool strict)
 
 static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 {
-	x509cert_t *cert = NULL;
+	cert_t *cert = NULL;
 
 	/* initialize temporary static storage */
 	ocsp_requestor_cert = NULL;
@@ -962,7 +962,7 @@ chunk_t build_ocsp_request(ocsp_location_t *location)
 static bool valid_ocsp_response(response_t *res)
 {
 	int pathlen, pathlen_constraint;
-	x509cert_t *authcert;
+	cert_t *authcert;
 
 	lock_authcert_list("valid_ocsp_response");
 
@@ -992,7 +992,7 @@ static bool valid_ocsp_response(response_t *res)
 
 	for (pathlen = -1; pathlen <= X509_MAX_PATH_LEN; pathlen++)
 	{
-		x509cert_t *cert = authcert;
+		cert_t *cert = authcert;
 		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
 		identification_t *subject = certificate->get_subject(certificate);
@@ -1133,10 +1133,10 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			break;
 		case BASIC_RESPONSE_CERTIFICATE:
 			{
-				x509cert_t *cert = malloc_thing(x509cert_t);
+				cert_t *cert = malloc_thing(cert_t);
 				x509_t *x509;
 
-				*cert = empty_x509cert;
+				*cert = cert_empty;
 				cert->cert = lib->creds->create(lib->creds,
 								  		  CRED_CERTIFICATE, CERT_X509,
 								  		  BUILD_BLOB_ASN1_DER, object,
@@ -1146,7 +1146,7 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 					DBG(DBG_CONTROL | DBG_PARSING,
 						DBG_log("parsing of embedded ocsp certificate failed")
 					)
-					free_x509cert(cert);
+					cert_free(cert);
 					break;
 				}
 				x509 = (x509_t*)cert->cert;
@@ -1161,7 +1161,7 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 					DBG(DBG_CONTROL | DBG_PARSING,
 						DBG_log("embedded ocsp certificate rejected")
 					)
-					free_x509cert(cert);
+					cert_free(cert);
 				}
 			}
 			break;

@@ -147,7 +147,7 @@ struct end {
 	u_int16_t host_port;        /* host order */
 	u_int16_t port;             /* host order */
 	u_int8_t protocol;
-	cert_t cert;                /* end certificate */
+	cert_t *cert;               /* end certificate */
 	identification_t *ca;       /* CA distinguished name */
 	ietf_attributes_t *groups;  /* access control groups */
 	smartcard_t *sc;            /* smartcard reader and key info */

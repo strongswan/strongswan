@@ -18,7 +18,7 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-#include "x509.h"
+#include "certs.h"
 #include "whack.h"
 
 /* CA info structures */
@@ -40,14 +40,13 @@ struct ca_info {
 extern bool trusted_ca(identification_t *a, identification_t *b, int *pathlen);
 extern bool match_requested_ca(linked_list_t *requested_ca,
 							   identification_t *our_ca, int *our_pathlen);
-extern x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
+extern cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 								x509_flag_t auth_flags);
 extern void load_authcerts(char *type, char *path, x509_flag_t auth_flags);
-extern x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags);
+extern cert_t* add_authcert(cert_t *cert, x509_flag_t auth_flags);
 extern void free_authcerts(void);
 extern void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc);
-extern bool trust_authcert_candidate(const x509cert_t *cert,
-									 const x509cert_t *alt_chain);
+extern bool trust_authcert_candidate(const cert_t *cert, const cert_t *alt_chain);
 extern ca_info_t* get_ca_info(identification_t *name, chunk_t keyid);
 extern bool find_ca_info_by_name(const char *name, bool delete);
 extern void add_ca_info(const whack_message_t *msg);

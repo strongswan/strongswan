@@ -69,11 +69,11 @@ extern ocsp_location_t* add_ocsp_location(const ocsp_location_t *loc
 extern void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info
 	, ocsp_location_t **chain, bool request);
 extern void check_ocsp(void);
-extern cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until
+extern cert_status_t verify_by_ocsp(const cert_t *cert, time_t *until
 	, time_t *revocationTime, crl_reason_t *revocationReason);
 extern bool ocsp_set_request_cert(char* path);
 extern void ocsp_set_default_uri(char* uri);
-extern void ocsp_cache_add_cert(const x509cert_t* cert);
+extern void ocsp_cache_add_cert(const cert_t* cert);
 extern chunk_t build_ocsp_request(ocsp_location_t* location);
 extern void parse_ocsp(ocsp_location_t* location, chunk_t blob);
 extern void list_ocsp_locations(ocsp_location_t *location, bool requests

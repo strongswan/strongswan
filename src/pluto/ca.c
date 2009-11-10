@@ -37,7 +37,7 @@
 
 /* chained list of X.509 authority certificates (ca, aa, and ocsp) */
 
-static x509cert_t *x509authcerts = NULL;
+static cert_t *x509authcerts = NULL;
 
 /* chained list of X.509 certification authority information records */
 
@@ -79,7 +79,7 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
 	{
 		certificate_t *certificate;
 		identification_t *issuer;
-		x509cert_t *cacert;
+		cert_t *cacert;
 
 		cacert = get_authcert(a, chunk_empty, X509_CA);
 		if (cacert == NULL)
@@ -161,9 +161,10 @@ bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
  */
 static void free_first_authcert(void)
 {
-	x509cert_t *first = x509authcerts;
+	cert_t *first = x509authcerts;
+
 	x509authcerts = first->next;
-	free_x509cert(first);
+	cert_free(first);
 }
 
 /*
@@ -174,18 +175,19 @@ void free_authcerts(void)
 	lock_authcert_list("free_authcerts");
 
 	while (x509authcerts != NULL)
+	{
 		free_first_authcert();
-
+	}
 	unlock_authcert_list("free_authcerts");
 }
 
 /*
  *  get a X.509 authority certificate with a given subject or keyid
  */
-x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
+cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 						 x509_flag_t auth_flags)
 {
-	x509cert_t *cert, *prev_cert = NULL;
+	cert_t *cert, *prev_cert = NULL;
 
 	/* the authority certificate list is empty */
 	if (x509authcerts == NULL)
@@ -238,11 +240,11 @@ x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 /*
  * add an authority certificate to the chained list
  */
-x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
+cert_t* add_authcert(cert_t *cert, x509_flag_t auth_flags)
 {
 	certificate_t *certificate = cert->cert;
 	x509_t *x509 = (x509_t*)certificate;
-	x509cert_t *old_cert;
+	cert_t *old_cert;
 
 	lock_authcert_list("add_authcert");
 
@@ -258,7 +260,7 @@ x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
 			)
 			unlock_authcert_list("add_authcert");
 
-			free_x509cert(cert);
+			cert_free(cert);
 			return old_cert;
 		}
 		else
@@ -274,7 +276,7 @@ x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
 	/* add new authcert to chained list */
 	cert->next = x509authcerts;
 	x509authcerts = cert;
-	share_x509cert(cert);  /* set count to one */
+	cert_share(cert);  /* set count to one */
 	DBG(DBG_CONTROL | DBG_PARSING,
 		DBG_log("  authcert inserted")
 	)
@@ -302,16 +304,17 @@ void load_authcerts(char *type, char *path, x509_flag_t auth_flags)
 
 	while (enumerator->enumerate(enumerator, NULL, &file, &st))
 	{
-		cert_t cert;
+		cert_t *cert;
 
 		if (!S_ISREG(st.st_mode))
 		{
 			/* skip special file */
 			continue;
 		}
-		if (load_cert(file, type, auth_flags, &cert))
+		cert = load_cert(file, type, auth_flags);
+		if (cert)
 		{
-			add_authcert(cert.u.x509, auth_flags);
+			add_authcert(cert, auth_flags);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -330,8 +333,8 @@ void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc)
 /*
  * get a cacert with a given subject or keyid from an alternative list
  */
-static const x509cert_t* get_alt_cacert(identification_t *subject, chunk_t keyid,
-										const x509cert_t *cert)
+static const cert_t* get_alt_cacert(identification_t *subject, chunk_t keyid,
+										const cert_t *cert)
 {
 	if (cert == NULL)
 	{
@@ -369,7 +372,7 @@ static const x509cert_t* get_alt_cacert(identification_t *subject, chunk_t keyid
 /* establish trust into a candidate authcert by going up the trust chain.
  * validity and revocation status are not checked.
  */
-bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chain)
+bool trust_authcert_candidate(const cert_t *cert, const cert_t *alt_chain)
 {
 	int pathlen;
 
@@ -382,7 +385,7 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
 		identification_t *subject = certificate->get_subject(certificate);
 		identification_t *issuer = certificate->get_issuer(certificate);
 		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
-		const x509cert_t *authcert = NULL;
+		const cert_t *authcert = NULL;
 
 		DBG(DBG_CONTROL,
 			DBG_log("subject: '%Y'", subject);
@@ -551,8 +554,7 @@ ca_info_t* create_ca_info(void)
 void add_ca_info(const whack_message_t *msg)
 {
 	smartcard_t *sc = NULL;
-	cert_t cert;
-	bool valid_cert = FALSE;
+	cert_t *cert = NULL;
 	bool cached_cert = FALSE;
 
 	if (find_ca_info_by_name(msg->name, FALSE))
@@ -564,18 +566,17 @@ void add_ca_info(const whack_message_t *msg)
 	if (scx_on_smartcard(msg->cacert))
 	{
 		/* load CA cert from smartcard */
-		valid_cert = scx_load_cert(msg->cacert, &sc, &cert, &cached_cert);
+		cert = scx_load_cert(msg->cacert, &sc, &cached_cert);
 	}
 	else
 	{
 		/* load CA cert from file */
-		valid_cert = load_ca_cert(msg->cacert, &cert);
+		cert = load_ca_cert(msg->cacert);
 	}
 
-	if (valid_cert)
+	if (cert)
 	{
-		x509cert_t *cacert = cert.u.x509;
-		certificate_t *certificate = cacert->cert;
+		certificate_t *certificate = cert->cert;
 		x509_t *x509 = (x509_t*)certificate;
 		identification_t *subject = certificate->get_subject(certificate);
 		chunk_t subjectKeyID = x509->get_subjectKeyIdentifier(x509);
@@ -589,7 +590,7 @@ void add_ca_info(const whack_message_t *msg)
 			/* ca_info is already present */
 			loglog(RC_DUPNAME, "  duplicate ca information in record \"%s\" found,"
 							   "ignoring \"%s\"", ca->name, msg->name);
-			free_x509cert(cacert);
+			cert_free(cert);
 			return;
 		}
 
@@ -647,13 +648,15 @@ void add_ca_info(const whack_message_t *msg)
 		unlock_ca_info_list("add_ca_info");
 
 		/* add cacert to list of authcerts */
-		cacert = add_authcert(cacert, X509_CA);
+		cert = add_authcert(cert, X509_CA);
 		if (!cached_cert && sc != NULL)
 		{
-			if (sc->last_cert.type == CERT_X509_SIGNATURE)
-				sc->last_cert.u.x509->count--;
-			sc->last_cert.u.x509 = cacert;
-			share_cert(sc->last_cert);
+			if (sc->last_cert != NULL)
+			{
+				sc->last_cert->count--;
+			}
+			sc->last_cert = cert;
+			cert_share(sc->last_cert);
 		}
 		if (sc != NULL)
 			time(&sc->last_load);

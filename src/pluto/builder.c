@@ -64,43 +64,31 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 	}
 	if (blob.ptr)
 	{
+		cert_t *cert = malloc_thing(cert_t);
+
+		*cert = cert_empty;
+
 		if (pgp)
 		{
-			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
-			*pgpcert = pgpcert_empty;
-			if (parse_pgp(chunk_clone(blob), pgpcert))
-			{
-				cert_t *cert = malloc_thing(cert_t);
-				*cert = cert_empty;
-				cert->type = CERT_PGP;
-				cert->u.pgp = pgpcert;
-				return cert;
-			}
-			plog("  error in OpenPGP certificate");
-			free_pgpcert(pgpcert);
+			cert->cert = lib->creds->create(lib->creds,
+							  			   CRED_CERTIFICATE, CERT_GPG,
+							  			   BUILD_BLOB_PGP, blob,
+							  			   BUILD_END);
 		}
 		else
 		{
-			x509cert_t *x509cert = malloc_thing(x509cert_t);
-
-			*x509cert = empty_x509cert;
-			x509cert->cert = lib->creds->create(lib->creds,
-							  			CRED_CERTIFICATE, CERT_X509,
-							  			BUILD_BLOB_ASN1_DER, blob,
-										BUILD_X509_FLAG, flags,
-							  			BUILD_END);
-			if (x509cert->cert)
-			{
-				cert_t *cert = malloc_thing(cert_t);
-
-				*cert = cert_empty;
-				cert->type = CERT_X509_SIGNATURE;
-				cert->u.x509 = x509cert;
-				return cert;
-			}
-			plog("  error in X.509 certificate");
-			free_x509cert(x509cert);
+			cert->cert = lib->creds->create(lib->creds,
+							  			   CRED_CERTIFICATE, CERT_X509,
+							  			   BUILD_BLOB_ASN1_DER, blob,
+										   BUILD_X509_FLAG, flags,
+							  			   BUILD_END);
 		}
+		if (cert->cert)
+		{
+			return cert;
+		}
+		plog("  error in X.509 certificate");
+		cert_free(cert);
 	}
 	return NULL;
 }

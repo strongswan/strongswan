@@ -476,7 +476,7 @@ void whack_handle(int whackctlfd)
 
 	if (msg.whack_list & LIST_CERTS)
 	{
-		list_certs(msg.whack_utc);
+		cert_list(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CACERTS)

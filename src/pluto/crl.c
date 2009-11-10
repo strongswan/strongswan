@@ -113,7 +113,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	crl_t *crl = (crl_t*)cert_crl;
 	identification_t *issuer = cert_crl->get_issuer(cert_crl);
 	chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
-	x509cert_t *issuer_cert;
+	cert_t *issuer_cert;
 	x509crl_t *oldcrl;
 	time_t now, nextUpdate;
 	bool valid_sig;
@@ -340,8 +340,7 @@ void check_crls(void)
 /*
  * verify if a cert hasn't been revoked by a crl
  */
-cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
-							time_t *revocationDate,
+cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 							crl_reason_t *revocationReason)
 {
 	certificate_t *certificate = cert->cert;
@@ -402,7 +401,7 @@ cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
 		certificate_t *cert_crl = x509crl->crl;
 		crl_t *crl = (crl_t*)cert_crl;
 		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
-		x509cert_t *issuer_cert;
+		cert_t *issuer_cert;
 		bool trusted, valid;
 
 		DBG(DBG_CONTROL,

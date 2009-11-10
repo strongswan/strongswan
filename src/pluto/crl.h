@@ -26,7 +26,6 @@ struct x509crl {
 	certificate_t *crl;
 	x509crl_t     *next;
 	linked_list_t *distributionPoints;
-	chunk_t        signature;
 };
 
 /* apply a strict CRL policy
@@ -46,7 +45,7 @@ extern long crl_check_interval;
 extern void load_crls(void);
 extern void check_crls(void);
 extern bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl);
-extern cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until,
+extern cert_status_t verify_by_crl(cert_t *cert, time_t *until,
 								   time_t *revocationDate,
 								   crl_reason_t *revocationReason);
 extern void list_crls(bool utc, bool strict);

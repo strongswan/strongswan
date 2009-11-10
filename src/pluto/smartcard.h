@@ -42,7 +42,7 @@ typedef struct smartcard smartcard_t;
 struct smartcard {
 	smartcard_t  *next;
 	time_t        last_load;
-	cert_t        last_cert;
+	cert_t        *last_cert;
 	int           count;
 	int           number;
 	unsigned long slot;
@@ -75,8 +75,7 @@ extern void scx_finalize(void);
 extern bool scx_establish_context(smartcard_t *sc);
 extern bool scx_login(smartcard_t *sc);
 extern bool scx_on_smartcard(const char *filename);
-extern bool scx_load_cert(const char *filename, smartcard_t **scp
-	, cert_t *cert, bool *cached);
+extern cert_t* scx_load_cert(const char *filename, smartcard_t **scp, bool *cached);
 extern bool scx_verify_pin(smartcard_t *sc);
 extern void scx_share(smartcard_t *sc);
 extern bool scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen
@@ -90,7 +89,7 @@ extern bool scx_op_via_whack(const char* msg, int inbase, int outbase
 extern bool scx_get_pin(smartcard_t *sc, int whackfd);
 extern size_t scx_get_keylength(smartcard_t *sc);
 extern smartcard_t* scx_add(smartcard_t *sc);
-extern smartcard_t* scx_get(x509cert_t *cert);
+extern smartcard_t* scx_get(cert_t *cert);
 extern void scx_release(smartcard_t *sc);
 extern void scx_release_context(smartcard_t *sc);
 extern void scx_free_pin(chunk_t *pin);

@@ -905,7 +905,6 @@ main_outI1(int whack_sock, connection_t *c, struct state *predecessor
 	struct state *st = new_state();
 	pb_stream reply;    /* not actually a reply, but you know what I mean */
 	pb_stream rbody;
-
 	int vids_to_send = 0;
 
 	/* set up new state */
@@ -925,7 +924,8 @@ main_outI1(int whack_sock, connection_t *c, struct state *predecessor
 	{
 		vids_to_send++;
 	}
-	if (c->spd.this.cert.type == CERT_PGP)
+	if (c->spd.this.cert &&
+		c->spd.this.cert->cert->get_type(c->spd.this.cert->cert) == CERT_GPG)
 	{
 		vids_to_send++;
 	}
@@ -1022,7 +1022,8 @@ main_outI1(int whack_sock, connection_t *c, struct state *predecessor
 	/* if we  have an OpenPGP certificate we assume an
 	 * OpenPGP peer and have to send the Vendor ID
 	 */
-	if (c->spd.this.cert.type == CERT_PGP)
+	if (c->spd.this.cert &&
+		c->spd.this.cert->cert->get_type(c->spd.this.cert->cert) == CERT_GPG)
 	{
 		if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
 		, &rbody, VID_OPENPGP))
@@ -2166,12 +2167,12 @@ static void decode_cert(struct msg_digest *md)
 		blob.len = pbs_left(&p->pbs);
 		if (cert->isacert_type == CERT_X509_SIGNATURE)
 		{
-			x509cert_t x509cert = empty_x509cert;
+			cert_t x509cert = cert_empty;
 
 			x509cert.cert = lib->creds->create(lib->creds,
-							  			CRED_CERTIFICATE, CERT_X509,
-							  			BUILD_BLOB_ASN1_DER, blob,
-							  			BUILD_END);
+							  				   CRED_CERTIFICATE, CERT_X509,
+							  				   BUILD_BLOB_ASN1_DER, blob,
+							  				   BUILD_END);
 			if (x509cert.cert)
 			{
 				if (verify_x509cert(&x509cert, strict_crl_policy, &valid_until))
@@ -2179,7 +2180,7 @@ static void decode_cert(struct msg_digest *md)
 					DBG(DBG_PARSING,
 						DBG_log("Public key validated")
 					)
-					add_x509_public_key(&x509cert, valid_until, DAL_SIGNED);
+					add_public_key_from_cert(&x509cert, valid_until, DAL_SIGNED);
 				}
 				else
 				{
@@ -3518,7 +3519,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	
 	connection_t *c = st->st_connection;
 	certpolicy_t cert_policy = c->spd.this.sendcert;
-	cert_t mycert = c->spd.this.cert;
+	cert_t *mycert = c->spd.this.cert;
 	bool requested, send_cert, send_cr;
 	bool pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
 
@@ -3548,8 +3549,9 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	 * or are requested to send it
 	 */
 	requested = cert_policy == CERT_SEND_IF_ASKED && c->got_certrequest;
-	send_cert = pubkey_auth && mycert.type != CERT_NONE
-				&& (cert_policy == CERT_ALWAYS_SEND || requested);
+	send_cert = pubkey_auth && mycert &&
+				mycert->cert->get_type(mycert->cert) == CERT_X509 &&
+				(cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/* send certificate request if we don't have a preloaded RSA public key */
 	send_cr = !no_cr_send && send_cert && !has_preloaded_public_key(st);
@@ -3599,7 +3601,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
-		if (mycert.type != CERT_NONE)
+		if (mycert && mycert->cert->get_type(mycert->cert) == CERT_X509)
 		{
 			const char *request_text = "";
 
@@ -3623,13 +3625,13 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
 		struct isakmp_cert cert_hd;
 		cert_hd.isacert_np = (send_cr)? ISAKMP_NEXT_CR : ISAKMP_NEXT_SIG;
-		cert_hd.isacert_type = mycert.type;
+		cert_hd.isacert_type = CERT_X509_SIGNATURE;
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = cert_get_encoding(mycert);
+		cert_encoding = mycert->cert->get_encoding(mycert->cert);
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
 		if (!success)	
@@ -3645,7 +3647,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		identification_t *ca = st->st_connection->spd.that.ca;
 		chunk_t cr = (ca) ? ca->get_encoding(ca) : chunk_empty;
 
-		if (!build_and_ship_CR(mycert.type, cr, &md->rbody, ISAKMP_NEXT_SIG))
+		if (!build_and_ship_CR(CERT_X509_SIGNATURE, cr, &md->rbody, ISAKMP_NEXT_SIG))
 		{
 			return STF_INTERNAL_ERROR;
 		}
@@ -3971,7 +3973,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	u_int8_t auth_payload;
 	pb_stream r_id_pbs; /* ID Payload; also used for hash calculation */
 	certpolicy_t cert_policy;
-	cert_t mycert;
+	cert_t *mycert;
 	bool pubkey_auth, send_cert, requested;
 
 	/* ID and HASH_I or SIG_I in
@@ -3996,7 +3998,8 @@ main_inI3_outR3_tail(struct msg_digest *md
 	requested = cert_policy == CERT_SEND_IF_ASKED
 				&& st->st_connection->got_certrequest;
 	pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
-	send_cert = pubkey_auth	&& mycert.type != CERT_NONE &&
+	send_cert = pubkey_auth	&& mycert &&
+				mycert->cert->get_type(mycert->cert) == CERT_X509 &&
 				(cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/*************** build output packet HDR*;IDir;HASH/SIG_R ***************/
@@ -4039,7 +4042,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
-		if (mycert.type != CERT_NONE)
+		if (mycert && mycert->cert->get_type(mycert->cert) == CERT_X509)
 		{
 			const char *request_text = "";
 
@@ -4063,13 +4066,13 @@ main_inI3_outR3_tail(struct msg_digest *md
 		struct isakmp_cert cert_hd;
 
 		cert_hd.isacert_np = ISAKMP_NEXT_SIG;
-		cert_hd.isacert_type = mycert.type;
+		cert_hd.isacert_type = CERT_X509_SIGNATURE;
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = cert_get_encoding(mycert);
+		cert_encoding = mycert->cert->get_encoding(mycert->cert);
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
 		if (!success)
