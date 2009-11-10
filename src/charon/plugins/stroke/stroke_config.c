@@ -384,8 +384,8 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			if (identity->get_type(identity) == ID_ANY ||
 				!certificate->has_subject(certificate, identity))
 			{
-				DBG1(DBG_CFG, "  peerid %Y not confirmed by certificate, "
-					 "defaulting to subject DN: %Y", identity,
+				DBG1(DBG_CFG, "  id '%Y' not confirmed by certificate, "
+					 "defaulting to '%Y'", identity,
 					 certificate->get_subject(certificate));
 				identity->destroy(identity);
 				identity = certificate->get_subject(certificate);
