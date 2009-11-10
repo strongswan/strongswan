@@ -64,7 +64,7 @@ void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 	int m, i;
 
 	/* byte wise XOR until dst aligned */
-	for (i = 0; (uintptr_t)&dst[i] % sizeof(long); i++)
+	for (i = 0; (uintptr_t)&dst[i] % sizeof(long) && i < n; i++)
 	{
 		dst[i] ^= src[i];
 	}
