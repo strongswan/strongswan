@@ -1000,10 +1000,14 @@ static void order_payloads(private_message_t *this)
 	/* append all payloads without a rule to the end */
 	while (list->remove_last(list, (void**)&payload) == SUCCESS)
 	{
-		DBG1(DBG_ENC, "payload %N has no ordering rule in %N %s",
-			 payload_type_names, payload->get_type(payload),
-			 exchange_type_names, this->message_rule->exchange_type,
-			 this->message_rule->is_request ? "request" : "response");
+		/* do not complain about payloads in private use space */
+		if (payload->get_type(payload) < 128)
+		{
+			DBG1(DBG_ENC, "payload %N has no ordering rule in %N %s",
+				 payload_type_names, payload->get_type(payload),
+				 exchange_type_names, this->message_rule->exchange_type,
+				 this->message_rule->is_request ? "request" : "response");
+		}
 		add_payload(this, payload);
 	}
 	list->destroy(list);
