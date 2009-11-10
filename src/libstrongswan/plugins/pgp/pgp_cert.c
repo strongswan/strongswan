@@ -325,6 +325,14 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 			DBG1("PGP packet version V%d not supported", this->version);
 			return FALSE;
 	}
+	if (this->valid)
+	{
+		DBG2("L2 - created %T, valid %d days", &this->created, FALSE, this->valid);
+	}
+	else
+	{
+		DBG2("L2 - created %T, never expires", &this->created, FALSE);
+	}
 	DESTROY_IF(this->key);
 	this->key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 									BUILD_BLOB_PGP, packet, BUILD_END);
@@ -350,6 +358,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 		hasher->allocate_hash(hasher, pubkey_packet_header, NULL);
 		hasher->allocate_hash(hasher, pubkey_packet, &this->fingerprint);
 		hasher->destroy(hasher);
+		DBG2("L2 - v4 fingerprint %#B", &this->fingerprint);
 	}
 	else
 	{
@@ -360,6 +369,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 			return FALSE;
 		}
 		this->fingerprint = chunk_clone(this->fingerprint);
+		DBG2("L2 - v3 fingerprint %#B", &this->fingerprint);
 	}
 	return TRUE;
 }
@@ -375,20 +385,34 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 	{
 		return FALSE;
 	}
-	/* we parse only V3 signature packets */
-	if (version != 3)
+
+	/* we parse only v3 or v4 signature packets */
+	if (version != 3 && version != 4)
 	{
-		DBG2("  skipped V%d PGP signature", version);
+		DBG2("L2 - v%d signature ignored", version);
 		return TRUE;
 	}
-	if (!pgp_read_scalar(&packet, 1, &len) || len != 5)
+	if (version == 4)
 	{
-		return FALSE;
+		if (!pgp_read_scalar(&packet, 1, &type))
+		{
+			return FALSE;
+		}
+		DBG2("L2 - v%d signature of type 0x%02x", version, type);
 	}
-	if (!pgp_read_scalar(&packet, 1, &type) ||
-		!pgp_read_scalar(&packet, 1, &created))
+	else
 	{
-		return FALSE;
+		if (!pgp_read_scalar(&packet, 1, &len) || len != 5)
+		{
+			return FALSE;
+		}
+		if (!pgp_read_scalar(&packet, 1, &type) ||
+			!pgp_read_scalar(&packet, 4, &created))
+		{
+			return FALSE;
+		}
+		DBG2("L2 - v3 signature of type 0x%02x, created %T", type,
+												&created, FALSE);
 	}
 	/* TODO: parse and save signature to a list */
 	return TRUE;
@@ -401,6 +425,7 @@ static bool parse_user_id(private_pgp_cert_t *this, chunk_t packet)
 {
 	DESTROY_IF(this->user_id);
 	this->user_id = identification_create_from_encoding(ID_KEY_ID, packet);
+	DBG2("L2 - '%Y'", this->user_id);
 	return TRUE;
 }
 
