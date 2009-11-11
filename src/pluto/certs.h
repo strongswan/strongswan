@@ -75,6 +75,7 @@ extern void cert_free(cert_t *cert);
 extern void cert_share(cert_t *cert);
 extern void cert_release(cert_t *cert);
 extern void cert_list(bool utc);
+extern cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, cert_t* chain);
 
 #endif /* _CERTS_H */
 

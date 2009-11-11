@@ -248,6 +248,29 @@ void cert_release(cert_t *cert)
 }
 
 /**
+ * Get a X.509 certificate with a given issuer found at a certain position
+ */
+cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, cert_t *chain)
+{
+	cert_t *cert = chain ? chain->next : certs;
+
+	while (cert)
+	{
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
+
+		if (keyid.ptr ? same_keyid(keyid, authKeyID) :
+			certificate->has_issuer(certificate, issuer))
+		{
+			return cert;
+		}
+		cert = cert->next;
+	}
+	return NULL;
+}
+
+/**
  *  List all PGP end certificates in a chained list
  */
 void list_pgp_end_certs(bool utc)

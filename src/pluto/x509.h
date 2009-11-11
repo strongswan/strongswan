@@ -32,7 +32,6 @@ extern bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 extern chunk_t x509_build_signature(chunk_t tbs, int algorithm,
 									private_key_t *key, bool bit_string);
 extern bool verify_x509cert(cert_t *cert, bool strict, time_t *until);
-extern cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, cert_t* chain);
 extern void store_x509certs(linked_list_t *certs, bool strict);
 extern void list_x509cert_chain(const char *caption, cert_t* cert,
 								x509_flag_t flags, bool utc);
