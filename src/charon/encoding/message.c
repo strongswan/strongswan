@@ -1019,9 +1019,10 @@ static void order_payloads(private_message_t *this)
 static status_t encrypt_payloads(private_message_t *this,
 								 crypter_t *crypter, signer_t* signer)
 {
-	encryption_payload_t *encryption_payload = NULL;
+	encryption_payload_t *encryption;
+	linked_list_t *payloads;
+	payload_t *current;
 	status_t status;
-	linked_list_t *all_payloads;
 
 	if (!this->message_rule->encrypted_content)
 	{
@@ -1038,60 +1039,52 @@ static status_t encrypt_payloads(private_message_t *this,
 	}
 
 	DBG2(DBG_ENC, "copy all payloads to a temporary list");
-	all_payloads = linked_list_create();
+	payloads = linked_list_create();
 
 	/* first copy all payloads in a temporary list */
 	while (this->payloads->get_count(this->payloads) > 0)
 	{
-		void *current_payload;
-		this->payloads->remove_first(this->payloads,&current_payload);
-		all_payloads->insert_last(all_payloads,current_payload);
+		this->payloads->remove_first(this->payloads, (void**)&current);
+		payloads->insert_last(payloads, current);
 	}
 
-	encryption_payload = encryption_payload_create();
+	encryption = encryption_payload_create();
 
 	DBG2(DBG_ENC, "check each payloads if they have to get encrypted");
-	while (all_payloads->get_count(all_payloads) > 0)
+	while (payloads->get_count(payloads) > 0)
 	{
-		payload_rule_t *payload_rule;
-		payload_t *current_payload;
-		bool to_encrypt = FALSE;
+		payload_rule_t *rule;
+		payload_type_t type;
+		bool to_encrypt = TRUE;
 
-		all_payloads->remove_first(all_payloads,(void **)&current_payload);
+		payloads->remove_first(payloads, (void**)&current);
 
-		status = get_payload_rule(this,
-					current_payload->get_type(current_payload),&payload_rule);
-		/* for payload types which are not found in supported payload list,
-		 * it is presumed that they don't have to be encrypted */
-		if ((status == SUCCESS) && (payload_rule->encrypted))
+		type = current->get_type(current);
+		if (get_payload_rule(this, type, &rule) == SUCCESS)
 		{
-			DBG2(DBG_ENC, "payload %N gets encrypted",
-				 payload_type_names, current_payload->get_type(current_payload));
-			to_encrypt = TRUE;
+			to_encrypt = rule->encrypted;
 		}
-
 		if (to_encrypt)
 		{
 			DBG2(DBG_ENC, "insert payload %N to encryption payload",
-				 payload_type_names, current_payload->get_type(current_payload));
-			encryption_payload->add_payload(encryption_payload,current_payload);
+				 payload_type_names, current->get_type(current));
+			encryption->add_payload(encryption, current);
 		}
 		else
 		{
 			DBG2(DBG_ENC, "insert payload %N unencrypted",
-				 payload_type_names ,current_payload->get_type(current_payload));
-			add_payload(this, (payload_t*)encryption_payload);
+				 payload_type_names, current->get_type(current));
+			add_payload(this, (payload_t*)current);
 		}
 	}
 
-	status = SUCCESS;
 	DBG2(DBG_ENC, "encrypting encryption payload");
-	encryption_payload->set_transforms(encryption_payload, crypter,signer);
-	status = encryption_payload->encrypt(encryption_payload);
+	encryption->set_transforms(encryption, crypter, signer);
+	status = encryption->encrypt(encryption);
 	DBG2(DBG_ENC, "add encrypted payload to payload list");
-	add_payload(this, (payload_t*)encryption_payload);
+	add_payload(this, (payload_t*)encryption);
 
-	all_payloads->destroy(all_payloads);
+	payloads->destroy(payloads);
 
 	return status;
 }
