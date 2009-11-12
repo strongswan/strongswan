@@ -75,7 +75,8 @@ static printf_hook_handler_t *printf_hooks[NUM_HANDLERS];
 #define SPEC_TO_INDEX(spec) ((int)(spec) - (int)'A')
 #define IS_VALID_SPEC(spec) (SPEC_TO_INDEX(spec) > -1 && SPEC_TO_INDEX(spec) < NUM_HANDLERS)
 
-#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
+#if !defined(USE_VSTR) && \
+	(defined(HAVE_PRINTF_FUNCTION) || defined(HAVE_PRINTF_SPECIFIER))
 
 /**
  * Printf hook print function. This is actually of type "printf_function",
@@ -104,9 +105,13 @@ static int custom_print(FILE *stream, const struct printf_info *info,
 
 /**
  * Printf hook arginfo function, which is actually of type
- * "printf_arginfo_function".
+ * "printf_arginfo_[size_]function".
  */
-static int custom_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+static int custom_arginfo(const struct printf_info *info, size_t n, int *argtypes
+#ifdef HAVE_PRINTF_SPECIFIER
+						  , int *size
+#endif
+						  )
 {
 	int i;
 	printf_hook_handler_t *handler = printf_hooks[SPEC_TO_INDEX(info->spec)];
@@ -118,6 +123,7 @@ static int custom_arginfo(const struct printf_info *info, size_t n, int *argtype
 			argtypes[i] = handler->argtypes[i];
 		}
 	}
+	/* we never set "size", as we have no user defined types */
 	return handler->numargs;
 }
 
@@ -359,8 +365,13 @@ static void add_handler(private_printf_hook_t *this, char spec,
 
 	if (handler->numargs > 0)
 	{
-#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
+#if !defined(USE_VSTR) && \
+	(defined(HAVE_PRINTF_FUNCTION) || defined(HAVE_PRINTF_SPECIFIER))
+#	ifdef HAVE_PRINTF_SPECIFIER
+		register_printf_specifier(spec, custom_print, custom_arginfo);
+#	else
 		register_printf_function(spec, custom_print, custom_arginfo);
+#	endif
 #else
 		Vstr_conf *conf = get_vstr_conf();
 		handler->name = malloc(2);

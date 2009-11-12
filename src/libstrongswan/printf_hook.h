@@ -26,7 +26,8 @@ typedef struct printf_hook_t printf_hook_t;
 typedef struct printf_hook_spec_t printf_hook_spec_t;
 typedef enum printf_hook_argtype_t printf_hook_argtype_t;
 
-#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
+#if !defined(USE_VSTR) && \
+	(defined(HAVE_PRINTF_FUNCTION) || defined(HAVE_PRINTF_SPECIFIER))
 
 #include <stdio.h>
 #include <printf.h>
