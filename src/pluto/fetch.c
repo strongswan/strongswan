@@ -484,6 +484,7 @@ static void* fetch_thread(void *arg)
 		fetch_ocsp();
 		fetch_crls(cache_crls);
 	}
+	return NULL;
 }
 #endif /* THREADS*/
 
@@ -598,7 +599,7 @@ void add_distribution_points(linked_list_t *points, linked_list_t *new_points)
 }
 
 fetch_req_t* build_crl_fetch_request(identification_t *issuer,
-									 chunk_t authKeyID, 
+									 chunk_t authKeyID,
 									 linked_list_t *distributionPoints)
 {
 	char *point;
