@@ -78,7 +78,7 @@ eap_sim_file_provider_t *eap_sim_file_provider_create(
 	private_eap_sim_file_provider_t *this = malloc_thing(private_eap_sim_file_provider_t);
 
 	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
-	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
+	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
 	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
 	this->public.provider.is_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
 	this->public.provider.gen_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;

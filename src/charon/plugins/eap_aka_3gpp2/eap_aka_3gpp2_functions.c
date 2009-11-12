@@ -307,10 +307,10 @@ static void f1star(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
  * Calculate RES from RAND using K
  */
 static void f2(private_eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
-			   u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN])
+			   u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_MAX])
 {
 	fx(this->prf, F2, k, rand, res);
-	DBG3(DBG_IKE, "RES %b", res, AKA_RES_LEN);
+	DBG3(DBG_IKE, "RES %b", res, AKA_RES_MAX);
 }
 
 /**
@@ -374,7 +374,7 @@ eap_aka_3gpp2_functions_t *eap_aka_3gpp2_functions_create()
 
 	this->public.f1 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN], u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN]))f1;
 	this->public.f1star = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN], u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN]))f1star;
-	this->public.f2 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN]))f2;
+	this->public.f2 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_MAX]))f2;
 	this->public.f3 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN]))f3;
 	this->public.f4 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN]))f4;
 	this->public.f5 = (void(*)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN], u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN]))f5;

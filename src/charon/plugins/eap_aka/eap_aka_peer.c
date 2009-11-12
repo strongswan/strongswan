@@ -181,7 +181,8 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	enumerator_t *enumerator;
 	simaka_attribute_t type;
 	chunk_t data, rand = chunk_empty, autn = chunk_empty, mk;
-	u_char res[AKA_RES_LEN], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
+	u_char res[AKA_RES_MAX], ck[AKA_CK_LEN], ik[AKA_IK_LEN], auts[AKA_AUTS_LEN];
+	int res_len;
 	identification_t *id;
 	status_t status;
 
@@ -216,7 +217,7 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 	}
 
 	status = charon->sim->card_get_quintuplet(charon->sim, this->permanent,
-											  rand.ptr, autn.ptr, ck, ik, res);
+									rand.ptr, autn.ptr, ck, ik, res, &res_len);
 	if (status == INVALID_STATE &&
 		charon->sim->card_resync(charon->sim, this->permanent, rand.ptr, auts))
 	{
@@ -286,7 +287,7 @@ static status_t process_challenge(private_eap_aka_peer_t *this,
 
 	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_AKA,
 									AKA_CHALLENGE, this->crypto);
-	message->add_attribute(message, AT_RES, chunk_create(res, AKA_RES_LEN));
+	message->add_attribute(message, AT_RES, chunk_create(res, res_len));
 	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 	return NEED_MORE;

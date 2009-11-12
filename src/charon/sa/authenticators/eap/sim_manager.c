@@ -90,7 +90,8 @@ static bool card_get_triplet(private_sim_manager_t *this, identification_t *id,
 static status_t card_get_quintuplet(private_sim_manager_t *this,
 								identification_t *id, char rand[AKA_RAND_LEN],
 								char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
-								char ik[AKA_IK_LEN], char res[AKA_RES_LEN])
+								char ik[AKA_IK_LEN], char res[AKA_RES_MAX],
+								int *res_len)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
@@ -100,7 +101,7 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
-		status = card->get_quintuplet(card, id, rand, autn, ck, ik, res);
+		status = card->get_quintuplet(card, id, rand, autn, ck, ik, res, res_len);
 		if (status != FAILED)
 		{	/* try next on error, but not on INVALID_STATE */
 			enumerator->destroy(enumerator);
@@ -276,8 +277,9 @@ static bool provider_get_triplet(private_sim_manager_t *this,
  */
 static bool provider_get_quintuplet(private_sim_manager_t *this,
 								identification_t *id, char rand[AKA_RAND_LEN],
-								char xres[AKA_RES_LEN], char ck[AKA_CK_LEN],
-								char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN])
+								char xres[AKA_RES_MAX], int *xres_len,
+								char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+								char autn[AKA_AUTN_LEN])
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
@@ -286,7 +288,8 @@ static bool provider_get_quintuplet(private_sim_manager_t *this,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
-		if (provider->get_quintuplet(provider, id, rand, xres, ck, ik, autn))
+		if (provider->get_quintuplet(provider, id, rand, xres, xres_len,
+									 ck, ik, autn))
 		{
 			enumerator->destroy(enumerator);
 			return TRUE;
@@ -439,7 +442,7 @@ sim_manager_t *sim_manager_create()
 	this->public.add_card = (void(*)(sim_manager_t*, sim_card_t *card))add_card;
 	this->public.remove_card = (void(*)(sim_manager_t*, sim_card_t *card))remove_card;
 	this->public.card_get_triplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))card_get_triplet;
-	this->public.card_get_quintuplet = (status_t(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_LEN]))card_get_quintuplet;
+	this->public.card_get_quintuplet = (status_t(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))card_get_quintuplet;
 	this->public.card_resync = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))card_resync;
 	this->public.card_set_pseudonym = (void(*)(sim_manager_t*, identification_t *id, identification_t *pseudonym))card_set_pseudonym;
 	this->public.card_get_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))card_get_pseudonym;
@@ -448,7 +451,7 @@ sim_manager_t *sim_manager_create()
 	this->public.add_provider = (void(*)(sim_manager_t*, sim_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(sim_manager_t*, sim_provider_t *provider))remove_provider;
 	this->public.provider_get_triplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))provider_get_triplet;
-	this->public.provider_get_quintuplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))provider_get_quintuplet;
+	this->public.provider_get_quintuplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))provider_get_quintuplet;
 	this->public.provider_resync = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))provider_resync;
 	this->public.provider_is_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))provider_is_pseudonym;
 	this->public.provider_gen_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))provider_gen_pseudonym;

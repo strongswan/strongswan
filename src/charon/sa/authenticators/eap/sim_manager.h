@@ -34,7 +34,7 @@ typedef struct sim_provider_t sim_provider_t;
 #define SIM_KC_LEN		 8
 
 #define AKA_RAND_LEN	16
-#define AKA_RES_LEN		16
+#define AKA_RES_MAX		16
 #define AKA_CK_LEN		16
 #define AKA_IK_LEN		16
 #define AKA_AUTN_LEN	16
@@ -68,6 +68,10 @@ struct sim_card_t {
 	 *
 	 * If the received sequence number (in autn) is out of sync, INVALID_STATE
 	 * is returned.
+	 * The RES value is the only one with variable length. Pass a buffer
+	 * of at least AKA_RES_MAX, the actual number of bytes is written to the
+	 * res_len value. While the standard would allow any bit length between
+	 * 32 and 128 bits, we support only full bytes for now.
 	 *
 	 * @param id		permanent identity to request quintuplet for
 	 * @param rand		random value rand
@@ -75,12 +79,13 @@ struct sim_card_t {
 	 * @param ck		buffer receiving encryption key ck
 	 * @param ik		buffer receiving integrity key ik
 	 * @param res		buffer receiving authentication result res
+	 * @param res_len	nubmer of bytes written to res buffer
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
 	status_t (*get_quintuplet)(sim_card_t *this, identification_t *id,
 							   char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
 							   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
-							   char res[AKA_RES_LEN]);
+							   char res[AKA_RES_MAX], int *res_len);
 
 	/**
 	 * Calculate AUTS from RAND for AKA resynchronization.
@@ -161,16 +166,23 @@ struct sim_provider_t {
 	/**
 	 * Create a challenge for AKA authentication.
 	 *
+	 * The XRES value is the only one with variable length. Pass a buffer
+	 * of at least AKA_RES_MAX, the actual number of bytes is written to the
+	 * xres_len value. While the standard would allow any bit length between
+	 * 32 and 128 bits, we support only full bytes for now.
+	 *
 	 * @param id		permanent identity of peer to create challenge for
 	 * @param rand		buffer receiving random value rand
 	 * @param xres		buffer receiving expected authentication result xres
+	 * @param xres_len	nubmer of bytes written to xres buffer
 	 * @param ck		buffer receiving encryption key ck
 	 * @param ik		buffer receiving integrity key ik
 	 * @param autn		authentication token autn
 	 * @return			TRUE if quintuplet generated successfully
 	 */
 	bool (*get_quintuplet)(sim_provider_t *this, identification_t *id,
-						   char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
+						   char rand[AKA_RAND_LEN],
+						   char xres[AKA_RES_MAX], int *xres_len,
 						   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 						   char autn[AKA_AUTN_LEN]);
 
@@ -266,12 +278,13 @@ struct sim_manager_t {
 	 * @param ck		buffer receiving encryption key ck
 	 * @param ik		buffer receiving integrity key ik
 	 * @param res		buffer receiving authentication result res
+	 * @param res_len	nubmer of bytes written to res buffer
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
 	status_t (*card_get_quintuplet)(sim_manager_t *this, identification_t *id,
 								char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
 								char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
-								char res[AKA_RES_LEN]);
+								char res[AKA_RES_MAX], int *res_len);
 
 	/**
 	 * Calculate resynchronization data on one of the registered SIM cards.
@@ -365,7 +378,8 @@ struct sim_manager_t {
 	 * @return			TRUE if quintuplet received, FALSE if no match found
 	 */
 	bool (*provider_get_quintuplet)(sim_manager_t *this, identification_t *id,
-							char rand[AKA_RAND_LEN], char xres[AKA_RES_LEN],
+							char rand[AKA_RAND_LEN],
+							char xres[AKA_RES_MAX], int *xres_len,
 							char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 							char autn[AKA_AUTN_LEN]);
 

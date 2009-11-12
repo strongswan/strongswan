@@ -146,13 +146,14 @@ static status_t identity(private_eap_aka_server_t *this, eap_payload_t **out)
 static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 {
 	simaka_message_t *message;
-	char rand[AKA_RAND_LEN], xres[AKA_RES_LEN];
+	char rand[AKA_RAND_LEN], xres[AKA_RES_MAX];
 	char ck[AKA_CK_LEN], ik[AKA_IK_LEN], autn[AKA_AUTN_LEN];
+	int xres_len;
 	chunk_t data, mk;
 	identification_t *id;
 
 	if (!charon->sim->provider_get_quintuplet(charon->sim, this->permanent,
-											  rand, xres, ck, ik, autn))
+										rand, xres, &xres_len, ck, ik, autn))
 	{
 		if (this->use_pseudonym)
 		{
@@ -176,7 +177,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 	free(this->msk.ptr);
 	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
 	this->rand = chunk_clone(chunk_create(rand, AKA_RAND_LEN));
-	this->xres = chunk_clone(chunk_create(xres, AKA_RES_LEN));
+	this->xres = chunk_clone(chunk_create(xres, xres_len));
 
 	message = simaka_message_create(TRUE, this->identifier++, EAP_AKA,
 									AKA_CHALLENGE, this->crypto);

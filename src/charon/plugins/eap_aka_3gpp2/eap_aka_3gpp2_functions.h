@@ -68,10 +68,10 @@ struct eap_aka_3gpp2_functions_t {
 	 *
 	 * @param k		secret key K
 	 * @param rand	random value RAND
-	 * @param macs	buffer receiving result RES
+	 * @param res	buffer receiving result RES, uses full 128 bit
 	 */
 	void (*f2)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
-				u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_LEN]);
+				u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_MAX]);
 	/**
 	 * Calculate CK from RAND using K
 	 *
