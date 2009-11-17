@@ -238,12 +238,58 @@ static void release(private_attribute_manager_t *this,
 }
 
 /**
- * inner enumerator constructor for initiator attributes
+ * Enumerator implementation to enumerate nested initiator attributes
  */
-static enumerator_t *initiator_enum_create(attribute_handler_t *handler,
-										   enum_data_t *data)
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** back ref */
+	private_attribute_manager_t *this;
+	/** currently processing handler */
+	attribute_handler_t *handler;
+	/** outer enumerator over handlers */
+	enumerator_t *outer;
+	/** inner enumerator over current handlers attributes */
+	enumerator_t *inner;
+	/** server ID we want attributes for */
+	identification_t *id;
+	/** virtual IP we are requesting along with attriubutes */
+	host_t *vip;
+} initiator_enumerator_t;
+
+/**
+ * Enumerator implementation for initiator attributes
+ */
+static bool initiator_enumerate(initiator_enumerator_t *this,
+								attribute_handler_t **handler,
+								configuration_attribute_type_t *type,
+								chunk_t *value)
 {
-	return handler->create_attribute_enumerator(handler, data->id, data->vip);
+	/* enumerate inner attributes using outer handler enumerator */
+	while (!this->inner || !this->inner->enumerate(this->inner, type, value))
+	{
+		if (!this->outer->enumerate(this->outer, &this->handler))
+		{
+			return FALSE;
+		}
+		DESTROY_IF(this->inner);
+		this->inner = this->handler->create_attribute_enumerator(this->handler,
+														this->id, this->vip);
+	}
+	/* inject the handler as additional attribute */
+	*handler = this->handler;
+	return TRUE;
+}
+
+/**
+ * Cleanup function of initiator attribute enumerator
+ */
+static void initiator_destroy(initiator_enumerator_t *this)
+{
+	this->this->lock->unlock(this->this->lock);
+	this->outer->destroy(this->outer);
+	DESTROY_IF(this->inner);
+	free(this);
 }
 
 /**
@@ -252,16 +298,19 @@ static enumerator_t *initiator_enum_create(attribute_handler_t *handler,
 static enumerator_t* create_initiator_enumerator(
 		private_attribute_manager_t *this, identification_t *id, host_t *vip)
 {
-	enum_data_t *data = malloc_thing(enum_data_t);
+	initiator_enumerator_t *enumerator = malloc_thing(initiator_enumerator_t);
 
-	data->id = id;
-	data->vip = vip;
 	this->lock->read_lock(this->lock);
-	return enumerator_create_cleaner(
-				enumerator_create_nested(
-					this->handlers->create_enumerator(this->handlers),
-					(void*)initiator_enum_create, data, free),
-				(void*)this->lock->unlock, this->lock);
+	enumerator->public.enumerate = (void*)initiator_enumerate;
+	enumerator->public.destroy = (void*)initiator_destroy;
+	enumerator->this = this;
+	enumerator->id = id;
+	enumerator->vip = vip;
+	enumerator->outer = this->handlers->create_enumerator(this->handlers);
+	enumerator->inner = NULL;
+	enumerator->handler = NULL;
+
+	return &enumerator->public;
 }
 
 /**
