@@ -93,8 +93,8 @@ static void destroy(private_attr_provider_t *this)
 /**
  * Add an attribute entry to the list
  */
-static void add_entry(private_attr_provider_t *this, char *key, int nr,
-					  configuration_attribute_type_t type)
+static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
+							 configuration_attribute_type_t type)
 {
 	attribute_entry_t *entry;
 	host_t *host;
@@ -130,6 +130,82 @@ static void add_entry(private_attr_provider_t *this, char *key, int nr,
 	}
 }
 
+/**
+ * Key to attribute type mappings, for v4 and v6 attributes
+ */
+static struct {
+	char *name;
+	configuration_attribute_type_t v4;
+	configuration_attribute_type_t v6;
+} keys[] = {
+	{"address",		INTERNAL_IP4_ADDRESS,	INTERNAL_IP6_ADDRESS},
+	{"dns",			INTERNAL_IP4_DNS,		INTERNAL_IP6_DNS},
+	{"nbns",		INTERNAL_IP4_NBNS,		INTERNAL_IP6_NBNS},
+	{"dhcp",		INTERNAL_IP4_DHCP,		INTERNAL_IP6_DHCP},
+	{"netmask",		INTERNAL_IP4_NETMASK,	INTERNAL_IP6_NETMASK},
+	{"server",		INTERNAL_IP4_SERVER,	INTERNAL_IP6_SERVER},
+};
+
+/**
+ * Load (numerical) entries from the plugins.attr namespace
+ */
+static void load_entries(private_attr_provider_t *this)
+{
+	enumerator_t *enumerator, *tokens;
+	char *key, *value, *token;
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+														"charon.plugins.attr");
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		configuration_attribute_type_t type;
+		attribute_entry_t *entry;
+		host_t *host;
+		int i;
+
+		type = atoi(key);
+		tokens = enumerator_create_token(value, ",", " ");
+		while (tokens->enumerate(tokens, &token))
+		{
+			host = host_create_from_string(token, 0);
+			if (!host)
+			{
+				DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
+				continue;
+			}
+			if (!type)
+			{
+				for (i = 0; i < countof(keys); i++)
+				{
+					if (streq(key, keys[i].name))
+					{
+						if (host->get_family(host) == AF_INET)
+						{
+							type = keys[i].v4;
+						}
+						else
+						{
+							type = keys[i].v6;
+						}
+					}
+				}
+				if (!type)
+				{
+					DBG1(DBG_CFG, "mapping attribute type %s failed", key);
+					break;
+				}
+			}
+			entry = malloc_thing(attribute_entry_t);
+			entry->type = type;
+			entry->value = chunk_clone(host->get_address(host));
+			host->destroy(host);
+			this->attributes->insert_last(this->attributes, entry);
+		}
+		tokens->destroy(tokens);
+	}
+	enumerator->destroy(enumerator);
+}
+
 /*
  * see header file
  */
@@ -149,9 +225,11 @@ attr_provider_t *attr_provider_create(database_t *db)
 
 	for (i = 1; i <= SERVER_MAX; i++)
 	{
-		add_entry(this, "dns", i, INTERNAL_IP4_DNS);
-		add_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
+		add_legacy_entry(this, "dns", i, INTERNAL_IP4_DNS);
+		add_legacy_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
 	}
+
+	load_entries(this);
 
 	return &this->public;
 }
