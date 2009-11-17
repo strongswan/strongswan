@@ -119,6 +119,7 @@ static void calc_range(private_traffic_selector_t *this, u_int8_t netbits)
 				mask--;
 			}
 		}
+		this->from[byte] &= ~mask;
 		this->to[byte] = this->from[byte] | mask;
 	}
 }
