@@ -855,6 +855,7 @@ struct ike_sa_t {
 	 * @param data			associated attribute data
 	 */
 	void (*add_configuration_attribute)(ike_sa_t *this,
+							attribute_handler_t *handler,
 							configuration_attribute_type_t type, chunk_t data);
 
 	/**

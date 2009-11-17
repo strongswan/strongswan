@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -56,14 +56,14 @@ struct private_cp_payload_t {
 	u_int16_t payload_length;
 
 	/**
-	 * Configuration Attributes in this payload are stored in a linked_list_t.
+	 * List of attributes, as configuration_attribute_t
 	 */
-	linked_list_t * attributes;
+	linked_list_t *attributes;
 
 	/**
 	 * Config Type.
 	 */
-	u_int8_t config_type;
+	u_int8_t type;
 };
 
 /**
@@ -90,7 +90,7 @@ encoding_rule_t cp_payload_encodings[] = {
 	{ PAYLOAD_LENGTH,		offsetof(private_cp_payload_t, payload_length) 	},
 	/* Proposals are stored in a proposal substructure,
 	   offset points to a linked_list_t pointer */
-	{ U_INT_8,		offsetof(private_cp_payload_t, config_type)				},
+	{ U_INT_8,				offsetof(private_cp_payload_t, type)			},
 	{ RESERVED_BYTE,0 														},
 	{ RESERVED_BYTE,0														},
 	{ RESERVED_BYTE,0														},
@@ -117,26 +117,27 @@ encoding_rule_t cp_payload_encodings[] = {
 static status_t verify(private_cp_payload_t *this)
 {
 	status_t status = SUCCESS;
-	iterator_t *iterator;
-	configuration_attribute_t *attribute;
+	enumerator_t *enumerator;
+	payload_t *attribute;
 
-	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while(iterator->iterate(iterator, (void**)&attribute))
+	enumerator = this->attributes->create_enumerator(this->attributes);
+	while (enumerator->enumerate(enumerator, &attribute))
 	{
-		status = attribute->payload_interface.verify(&attribute->payload_interface);
+		status = attribute->verify(attribute);
 		if (status != SUCCESS)
 		{
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
 /**
  * Implementation of payload_t.get_encoding_rules.
  */
-static void get_encoding_rules(private_cp_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static void get_encoding_rules(private_cp_payload_t *this,
+							   encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = cp_payload_encodings;
 	*rule_count = sizeof(cp_payload_encodings) / sizeof(encoding_rule_t);
@@ -155,7 +156,7 @@ static payload_type_t get_type(private_cp_payload_t *this)
  */
 static payload_type_t get_next_type(private_cp_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -171,18 +172,17 @@ static void set_next_type(private_cp_payload_t *this,payload_type_t type)
  */
 static void compute_length(private_cp_payload_t *this)
 {
-	iterator_t *iterator;
-	payload_t *current_attribute;
-	size_t length = CP_PAYLOAD_HEADER_LENGTH;
+	enumerator_t *enumerator;
+	payload_t *attribute;
 
-	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while (iterator->iterate(iterator, (void**)&current_attribute))
+	this->payload_length = CP_PAYLOAD_HEADER_LENGTH;
+
+	enumerator = this->attributes->create_enumerator(this->attributes);
+	while (enumerator->enumerate(enumerator, &attribute))
 	{
-		length += current_attribute->get_length(current_attribute);
+		this->payload_length += attribute->get_length(attribute);
 	}
-	iterator->destroy(iterator);
-
-	this->payload_length = length;
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -190,41 +190,33 @@ static void compute_length(private_cp_payload_t *this)
  */
 static size_t get_length(private_cp_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
 /**
- * Implementation of cp_payload_t.create_configuration_attribute_iterator.
+ * Implementation of cp_payload_t.create_attribute_enumerator.
  */
-static iterator_t *create_attribute_iterator (private_cp_payload_t *this)
+static enumerator_t *create_attribute_enumerator(private_cp_payload_t *this)
 {
-	return this->attributes->create_iterator(this->attributes, TRUE);
+	return this->attributes->create_enumerator(this->attributes);
 }
 
 /**
- * Implementation of cp_payload_t.add_proposal_substructure.
+ * Implementation of cp_payload_t.add_attribute.
  */
-static void add_configuration_attribute (private_cp_payload_t *this,configuration_attribute_t *attribute)
+static void add_attribute(private_cp_payload_t *this,
+						  configuration_attribute_t *attribute)
 {
-	this->attributes->insert_last(this->attributes,(void *) attribute);
+	this->attributes->insert_last(this->attributes, attribute);
 	compute_length(this);
 }
 
 /**
- * Implementation of cp_payload_t.set_config_type.
+ * Implementation of cp_payload_t.get_type.
  */
-static void set_config_type (private_cp_payload_t *this,config_type_t config_type)
+static config_type_t get_config_type(private_cp_payload_t *this)
 {
-	this->config_type = config_type;
-}
-
-/**
- * Implementation of cp_payload_t.get_config_type.
- */
-static config_type_t get_config_type (private_cp_payload_t *this)
-{
-	return this->config_type;
+	return this->type;
 }
 
 /**
@@ -233,7 +225,7 @@ static config_type_t get_config_type (private_cp_payload_t *this)
 static void destroy(private_cp_payload_t *this)
 {
 	this->attributes->destroy_offset(this->attributes,
-									 offsetof(configuration_attribute_t, destroy));
+								offsetof(configuration_attribute_t, destroy));
 	free(this);
 }
 
@@ -244,7 +236,6 @@ cp_payload_t *cp_payload_create()
 {
 	private_cp_payload_t *this = malloc_thing(private_cp_payload_t);
 
-	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
@@ -253,18 +244,30 @@ cp_payload_t *cp_payload_create()
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 
-	/* public functions */
-	this->public.create_attribute_iterator = (iterator_t* (*) (cp_payload_t *)) create_attribute_iterator;
-	this->public.add_configuration_attribute = (void (*) (cp_payload_t *,configuration_attribute_t *)) add_configuration_attribute;
-	this->public.set_config_type = (void (*) (cp_payload_t *, config_type_t)) set_config_type;
-	this->public.get_config_type = (config_type_t (*) (cp_payload_t *)) get_config_type;
-	this->public.destroy = (void (*) (cp_payload_t *)) destroy;
+	this->public.create_attribute_enumerator = (enumerator_t*(*)(cp_payload_t *))create_attribute_enumerator;
+	this->public.add_attribute = (void (*) (cp_payload_t *,configuration_attribute_t*))add_attribute;
+	this->public.get_type = (config_type_t (*) (cp_payload_t *))get_config_type;
+	this->public.destroy = (void (*)(cp_payload_t *))destroy;
 
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = CP_PAYLOAD_HEADER_LENGTH;
-
 	this->attributes = linked_list_create();
-	return (&(this->public));
+	this->type = CFG_REQUEST;
+
+	return &this->public;
 }
+
+/*
+ * Described in header.
+ */
+cp_payload_t *cp_payload_create_type(config_type_t type)
+{
+	private_cp_payload_t *this = (private_cp_payload_t*)cp_payload_create();
+
+	this->type = type;
+
+	return &this->public;
+}
+

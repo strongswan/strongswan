@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -28,7 +28,7 @@ typedef struct cp_payload_t cp_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/configuration_attribute.h>
-#include <utils/linked_list.h>
+#include <utils/enumerator.h>
 
 /**
  * CP_PAYLOAD length in bytes without any proposal substructure.
@@ -56,6 +56,7 @@ extern enum_name_t *config_type_names;
  * The CP Payload format is described in RFC section 3.15.
  */
 struct cp_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -64,36 +65,24 @@ struct cp_payload_t {
 	/**
 	 * Creates an iterator of stored configuration_attribute_t objects.
 	 *
-	 * When deleting an attribute using this iterator, the length of this
-	 * configuration_attribute_t has to be refreshed by calling get_length()!
-	 *
-	 * @return				created iterator_t object
+	 * @return			enumerator over configration_attribute_T
 	 */
-	iterator_t *(*create_attribute_iterator) (cp_payload_t *this);
+	enumerator_t *(*create_attribute_enumerator) (cp_payload_t *this);
 
 	/**
-	 * Adds a configuration_attribute_t object to this object.
+	 * Adds a configuration attribute to the configuration payload.
 	 *
-	 * The added configuration_attribute_t object is getting destroyed in
-	 * destroy function of cp_payload_t.
-	 *
-	 * @param attribute		configuration_attribute_t object to add
+	 * @param attribute	attribute to add
 	 */
-	void (*add_configuration_attribute) (cp_payload_t *this, configuration_attribute_t *attribute);
+	void (*add_attribute)(cp_payload_t *this,
+						  configuration_attribute_t *attribute);
 
 	/**
-	 * Set the config type.
+	 * Get the configuration payload type.
 	 *
-	 * @param config_type	config_type_t to set
+	 * @return			type of configuration payload
 	 */
-	void (*set_config_type) (cp_payload_t *this,config_type_t config_type);
-
-	/**
-	 * Get the config type.
-	 *
-	 * @return				config_type_t
-	 */
-	config_type_t (*get_config_type) (cp_payload_t *this);
+	config_type_t (*get_type) (cp_payload_t *this);
 
 	/**
 	 * Destroys an cp_payload_t object.
@@ -102,10 +91,18 @@ struct cp_payload_t {
 };
 
 /**
- * Creates an empty cp_payload_t object
+ * Creates an empty configuration payload
  *
- * @return cp_payload_t object
+ * @return		empty configuration payload
  */
-cp_payload_t *cp_payload_create(void);
+cp_payload_t *cp_payload_create();
+
+/**
+ * Creates an cp_payload_t with type and value
+ *
+ * @param type	type of configuration payload to create
+ * @return		created configuration payload
+ */
+cp_payload_t *cp_payload_create_type(config_type_t config_type);
 
 #endif /** CP_PAYLOAD_H_ @}*/

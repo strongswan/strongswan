@@ -1843,22 +1843,16 @@ static status_t roam(private_ike_sa_t *this, bool address)
  * Implementation of ike_sa_t.add_configuration_attribute
  */
 static void add_configuration_attribute(private_ike_sa_t *this,
+							attribute_handler_t *handler,
 							configuration_attribute_type_t type, chunk_t data)
 {
-	attribute_entry_t *entry;
-	attribute_handler_t *handler;
+	attribute_entry_t *entry = malloc_thing(attribute_entry_t);
 
-	handler = lib->attributes->handle(lib->attributes, this->other_id,
-									  type, data);
-	if (handler)
-	{
-		entry = malloc_thing(attribute_entry_t);
-		entry->handler = handler;
-		entry->type = type;
-		entry->data = chunk_clone(data);
+	entry->handler = handler;
+	entry->type = type;
+	entry->data = chunk_clone(data);
 
-		this->attributes->insert_last(this->attributes, entry);
-	}
+	this->attributes->insert_last(this->attributes, entry);
 }
 
 /**
@@ -2091,7 +2085,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_unique_id = (u_int32_t (*)(ike_sa_t*))get_unique_id;
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
-	this->public.add_configuration_attribute = (void(*)(ike_sa_t*, configuration_attribute_type_t type, chunk_t data))add_configuration_attribute;
+	this->public.add_configuration_attribute = (void(*)(ike_sa_t*, attribute_handler_t *handler,configuration_attribute_type_t type, chunk_t data))add_configuration_attribute;
 	this->public.set_kmaddress = (void (*)(ike_sa_t*,host_t*,host_t*))set_kmaddress;
 #ifdef ME
 	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;

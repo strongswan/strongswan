@@ -19,9 +19,6 @@
 #include <daemon.h>
 #include <encoding/payloads/cp_payload.h>
 
-#define DNS_SERVER_MAX		2
-#define NBNS_SERVER_MAX		2
-
 typedef struct private_ike_config_t private_ike_config_t;
 
 /**
@@ -48,21 +45,34 @@ struct private_ike_config_t {
 	 * virtual ip
 	 */
 	host_t *virtual_ip;
+
+	/**
+	 * list of attributes requested and its handler, entry_t
+	 */
+	linked_list_t *requested;
 };
 
 /**
- * build INTERNAL_IPV4/6_ADDRESS from virtual ip
+ * Entry for a requested attribute and the requesting handler
  */
-static void build_vip(private_ike_config_t *this, host_t *vip, cp_payload_t *cp)
-{
-	configuration_attribute_t *ca;
-	chunk_t chunk, prefix;
+typedef struct {
+	/** attribute requested */
+	configuration_attribute_type_t type;
+	/** handler requesting this attribute */
+	attribute_handler_t *handler;
+} entry_t;
 
-	ca = configuration_attribute_create();
+/**
+ * build INTERNAL_IPV4/6_ADDRESS attribute from virtual ip
+ */
+static configuration_attribute_t *build_vip(host_t *vip)
+{
+	configuration_attribute_type_t type;
+	chunk_t chunk, prefix;
 
 	if (vip->get_family(vip) == AF_INET)
 	{
-		ca->set_type(ca, INTERNAL_IP4_ADDRESS);
+		type = INTERNAL_IP4_ADDRESS;
 		if (vip->is_anyaddr(vip))
 		{
 			chunk = chunk_empty;
@@ -74,7 +84,7 @@ static void build_vip(private_ike_config_t *this, host_t *vip, cp_payload_t *cp)
 	}
 	else
 	{
-		ca->set_type(ca, INTERNAL_IP6_ADDRESS);
+		type = INTERNAL_IP6_ADDRESS;
 		if (vip->is_anyaddr(vip))
 		{
 			chunk = chunk_empty;
@@ -87,8 +97,41 @@ static void build_vip(private_ike_config_t *this, host_t *vip, cp_payload_t *cp)
 			chunk = chunk_cata("cc", chunk, prefix);
 		}
 	}
-	ca->set_value(ca, chunk);
-	cp->add_configuration_attribute(cp, ca);
+	return configuration_attribute_create_value(type, chunk);
+}
+
+/**
+ * Handle a received attribute as initiator
+ */
+static void handle_attribute(private_ike_config_t *this,
+							 configuration_attribute_t *ca)
+{
+	attribute_handler_t *handler = NULL;
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	/* find the handler which requested this attribute */
+	enumerator = this->requested->create_enumerator(this->requested);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == ca->get_type(ca))
+		{
+			handler = entry->handler;
+			this->requested->remove_at(this->requested, enumerator);
+			free(entry);
+			break;
+		}
+	}
+
+	/* and pass it to the handle function */
+	handler = lib->attributes->handle(lib->attributes,
+							this->ike_sa->get_other_id(this->ike_sa), handler,
+							ca->get_type(ca), ca->get_value(ca));
+	if (handler)
+	{
+		this->ike_sa->add_configuration_attribute(this->ike_sa,
+				handler, ca->get_type(ca), ca->get_value(ca));
+	}
 }
 
 /**
@@ -130,15 +173,12 @@ static void process_attribute(private_ike_config_t *this,
 			break;
 		}
 		default:
+		{
 			if (this->initiator)
 			{
-				this->ike_sa->add_configuration_attribute(this->ike_sa,
-										ca->get_type(ca), ca->get_value(ca));
+				handle_attribute(this, ca);
 			}
-			else
-			{
-				/* we do not handle attribute requests other than for VIPs */
-			}
+		}
 	}
 }
 
@@ -147,8 +187,7 @@ static void process_attribute(private_ike_config_t *this,
  */
 static void process_payloads(private_ike_config_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	iterator_t *attributes;
+	enumerator_t *enumerator, *attributes;
 	payload_t *payload;
 
 	enumerator = message->create_payload_enumerator(message);
@@ -158,13 +197,14 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 		{
 			cp_payload_t *cp = (cp_payload_t*)payload;
 			configuration_attribute_t *ca;
-			switch (cp->get_config_type(cp))
+
+			switch (cp->get_type(cp))
 			{
 				case CFG_REQUEST:
 				case CFG_REPLY:
 				{
-					attributes = cp->create_attribute_iterator(cp);
-					while (attributes->iterate(attributes, (void**)&ca))
+					attributes = cp->create_attribute_enumerator(cp);
+					while (attributes->enumerate(attributes, &ca))
 					{
 						process_attribute(this, ca);
 					}
@@ -173,7 +213,7 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 				}
 				default:
 					DBG1(DBG_IKE, "ignoring %N config payload",
-						 config_type_names, cp->get_config_type(cp));
+						 config_type_names, cp->get_type(cp));
 					break;
 			}
 		}
@@ -188,7 +228,12 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* in first IKE_AUTH only */
+		cp_payload_t *cp = NULL;
+		enumerator_t *enumerator;
+		attribute_handler_t *handler;
 		peer_cfg_t *config;
+		configuration_attribute_type_t type;
+		chunk_t data;
 		host_t *vip;
 
 		/* reuse virtual IP if we already have one */
@@ -200,25 +245,36 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 		}
 		if (vip)
 		{
+			cp = cp_payload_create_type(CFG_REQUEST);
+			cp->add_attribute(cp, build_vip(vip));
+		}
+
+		enumerator = lib->attributes->create_initiator_enumerator(lib->attributes,
+								this->ike_sa->get_other_id(this->ike_sa), vip);
+		while (enumerator->enumerate(enumerator, &handler, &type, &data))
+		{
 			configuration_attribute_t *ca;
-			cp_payload_t *cp;
+			entry_t *entry;
 
-			cp = cp_payload_create();
-			cp->set_config_type(cp, CFG_REQUEST);
-
-			build_vip(this, vip, cp);
-
-			/* we currently always add a DNS request if we request an IP */
-			ca = configuration_attribute_create();
-			if (vip->get_family(vip) == AF_INET)
+			/* create configuration attribute */
+			ca = configuration_attribute_create_value(type, data);
+			if (!cp)
 			{
-				ca->set_type(ca, INTERNAL_IP4_DNS);
+				cp = cp_payload_create_type(CFG_REQUEST);
 			}
-			else
-			{
-				ca->set_type(ca, INTERNAL_IP6_DNS);
-			}
-			cp->add_configuration_attribute(cp, ca);
+			cp->add_attribute(cp, ca);
+
+			/* save handler along with requested type */
+			entry = malloc_thing(entry_t);
+			entry->type = type;
+			entry->handler = handler;
+
+			this->requested->insert_last(this->requested, entry);
+		}
+		enumerator->destroy(enumerator);
+
+		if (cp)
+		{
 			message->add_payload(message, (payload_t*)cp);
 		}
 	}
@@ -244,17 +300,16 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
-		peer_cfg_t *config = this->ike_sa->get_peer_cfg(this->ike_sa);
+		enumerator_t *enumerator;
+		configuration_attribute_type_t type;
+		chunk_t value;
+		host_t *vip = NULL;
+		cp_payload_t *cp = NULL;
+		peer_cfg_t *config;
 
+		config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		if (config && this->virtual_ip)
 		{
-			enumerator_t *enumerator;
-			configuration_attribute_type_t type;
-			configuration_attribute_t *ca;
-			chunk_t value;
-			cp_payload_t *cp;
-			host_t *vip = NULL;
-
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
 			{
@@ -274,26 +329,29 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", vip);
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 
-			cp = cp_payload_create();
-			cp->set_config_type(cp, CFG_REPLY);
+			cp = cp_payload_create_type(CFG_REPLY);
+			cp->add_attribute(cp, build_vip(vip));
+		}
 
-			build_vip(this, vip, cp);
-			vip->destroy(vip);
-
-			/* if we add an IP, we also look for other attributes */
-			enumerator = lib->attributes->create_attribute_enumerator(
-					lib->attributes, this->ike_sa->get_other_id(this->ike_sa));
-			while (enumerator->enumerate(enumerator, &type, &value))
+		/* query registered providers for additional attributes to include */
+		enumerator = lib->attributes->create_responder_enumerator(
+				lib->attributes, this->ike_sa->get_other_id(this->ike_sa), vip);
+		while (enumerator->enumerate(enumerator, &type, &value))
+		{
+			if (!cp)
 			{
-				ca = configuration_attribute_create();
-				ca->set_type(ca, type);
-				ca->set_value(ca, value);
-				cp->add_configuration_attribute(cp, ca);
+				cp = cp_payload_create_type(CFG_REPLY);
 			}
-			enumerator->destroy(enumerator);
+			cp->add_attribute(cp,
+						configuration_attribute_create_value(type, value));
+		}
+		enumerator->destroy(enumerator);
 
+		if (cp)
+		{
 			message->add_payload(message, (payload_t*)cp);
 		}
+		DESTROY_IF(vip);
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -335,6 +393,8 @@ static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
+	this->requested->destroy_function(this->requested, free);
+	this->requested = linked_list_create();
 }
 
 /**
@@ -343,6 +403,7 @@ static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 static void destroy(private_ike_config_t *this)
 {
 	DESTROY_IF(this->virtual_ip);
+	this->requested->destroy_function(this->requested, free);
 	free(this);
 }
 
@@ -360,6 +421,7 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 	this->initiator = initiator;
 	this->ike_sa = ike_sa;
 	this->virtual_ip = NULL;
+	this->requested = linked_list_create();
 
 	if (initiator)
 	{

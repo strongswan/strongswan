@@ -164,6 +164,59 @@ static void release(private_resolve_handler_t *this, identification_t *server,
 }
 
 /**
+ * Attribute enumerator implementation
+ */
+typedef struct {
+	/** implements enumerator_t interface */
+	enumerator_t public;
+	/** virtual IP we are requesting */
+	host_t *vip;
+} attribute_enumerator_t;
+
+/**
+ * Implementation of create_attribute_enumerator().enumerate()
+ */
+static bool attribute_enumerate(attribute_enumerator_t *this,
+						configuration_attribute_type_t *type, chunk_t *data)
+{
+	switch (this->vip->get_family(this->vip))
+	{
+		case AF_INET:
+			*type = INTERNAL_IP4_DNS;
+			break;
+		case AF_INET6:
+			*type = INTERNAL_IP6_DNS;
+			break;
+		default:
+			return FALSE;
+	}
+	*data = chunk_empty;
+	/* enumerate only once */
+	this->public.enumerate = (void*)return_false;
+	return TRUE;
+}
+
+/**
+ * Implementation of attribute_handler_t.create_attribute_enumerator
+ */
+static enumerator_t* create_attribute_enumerator(private_resolve_handler_t *this,
+										identification_t *server, host_t *vip)
+{
+	if (vip)
+	{
+		attribute_enumerator_t *enumerator;
+
+		enumerator = malloc_thing(attribute_enumerator_t);
+		enumerator->public.enumerate = (void*)attribute_enumerate;
+		enumerator->public.destroy = (void*)free;
+		enumerator->vip = vip;
+
+		return &enumerator->public;
+	}
+	return enumerator_create_empty();
+}
+
+/**
  * Implementation of resolve_handler_t.destroy.
  */
 static void destroy(private_resolve_handler_t *this)
@@ -181,6 +234,7 @@ resolve_handler_t *resolve_handler_create()
 
 	this->public.handler.handle = (bool(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
 	this->public.handler.release = (void(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))release;
+	this->public.handler.create_attribute_enumerator = (enumerator_t*(*)(attribute_handler_t*, identification_t *server, host_t *vip))create_attribute_enumerator;
 	this->public.destroy = (void(*)(resolve_handler_t*))destroy;
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);

@@ -68,6 +68,50 @@ static bool handle(private_nm_handler_t *this, identification_t *server,
 }
 
 /**
+ * Implementation of create_attribute_enumerator().enumerate() for WINS
+ */
+static bool enumerate_nbns(enumerator_t *this,
+						   configuration_attribute_type_t *type, chunk_t *data)
+{
+	*type = INTERNAL_IP4_NBNS;
+	*data = chunk_empty;
+	/* done */
+	this->enumerate = (void*)return_false;
+	return TRUE;
+}
+
+/**
+ * Implementation of create_attribute_enumerator().enumerate() for DNS
+ */
+static bool enumerate_dns(enumerator_t *this,
+						  configuration_attribute_type_t *type, chunk_t *data)
+{
+	*type = INTERNAL_IP4_DNS;
+	*data = chunk_empty;
+	/* enumerate WINS server as next attribute ... */
+	this->enumerate = (void*)enumerate_nbns;
+	return TRUE;
+}
+
+/**
+ * Implementation of attribute_handler_t.create_attribute_enumerator
+ */
+static enumerator_t* create_attribute_enumerator(private_nm_handler_t *this,
+										identification_t *server, host_t *vip)
+{
+	if (vip && vip->get_family(vip) == AF_INET)
+	{	/* no IPv6 attributes yet */
+		enumerator_t *enumerator = malloc_thing(enumerator_t);
+		/* enumerate DNS attribute first ... */
+		enumerator->enumerate = (void*)enumerate_dns;
+		enumerator->destroy = (void*)free;
+
+		return enumerator;
+	}
+	return enumerator_create_empty();
+}
+
+/**
  * convert plain byte ptrs to handy chunk during enumeration
  */
 static bool filter_chunks(void* null, char **in, chunk_t *out)
@@ -136,6 +180,7 @@ nm_handler_t *nm_handler_create()
 
 	this->public.handler.handle = (bool(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
 	this->public.handler.release = (void(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))nop;
+	this->public.handler.create_attribute_enumerator = (enumerator_t*(*)(attribute_handler_t*, identification_t *server, host_t *vip))create_attribute_enumerator;
 	this->public.create_enumerator = (enumerator_t*(*)(nm_handler_t*, configuration_attribute_type_t type))create_enumerator;
 	this->public.reset = (void(*)(nm_handler_t*))reset;
 	this->public.destroy = (void(*)(nm_handler_t*))destroy;

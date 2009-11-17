@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -28,7 +28,6 @@ typedef struct configuration_attribute_t configuration_attribute_t;
 #include <attributes/attributes.h>
 #include <encoding/payloads/payload.h>
 
-
 /**
  * Configuration attribute header length in bytes.
  */
@@ -40,49 +39,25 @@ typedef struct configuration_attribute_t configuration_attribute_t;
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
  */
 struct configuration_attribute_t {
+
 	/**
-	 * The payload_t interface.
+	 * Implements payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Returns the currently set value of the attribute.
+	 * Get the type of the attribute.
 	 *
-	 * @warning Returned data are not copied.
+	 * @return 		type of the configuration attribute
+	 */
+	configuration_attribute_type_t (*get_type)(configuration_attribute_t *this);
+
+	/**
+	 * Returns the value of the attribute.
 	 *
-	 * @return 		chunk_t pointing to the value
+	 * @return 		chunk_t pointing to the internal value
 	 */
 	chunk_t (*get_value) (configuration_attribute_t *this);
-
-	/**
-	 * Sets the value of the attribute.
-	 *
-	 * Value is getting copied.
-	 *
-	 * @param value chunk_t pointing to the value to set
-	 */
-	void (*set_value) (configuration_attribute_t *this, chunk_t value);
-
-	/**
-	 * Sets the type of the attribute.
-	 *
-	 * @param type	type to set (most significant bit is set to zero)
-	 */
-	void (*set_type) (configuration_attribute_t *this, u_int16_t type);
-
-	/**
-	 * get the type of the attribute.
-	 *
-	 * @return 		type of the value
-	 */
-	u_int16_t (*get_type) (configuration_attribute_t *this);
-
-	/**
-	 * get the length of an attribute.
-	 *
-	 * @return 		type of the value
-	 */
-	u_int16_t (*get_length) (configuration_attribute_t *this);
 
 	/**
 	 * Destroys an configuration_attribute_t object.
@@ -91,10 +66,20 @@ struct configuration_attribute_t {
 };
 
 /**
- * Creates an empty configuration_attribute_t object.
+ * Creates an empty configuration attribute.
  *
- * @return			created configuration_attribute_t object
+ * @return		created configuration attribute
  */
-configuration_attribute_t *configuration_attribute_create(void);
+configuration_attribute_t *configuration_attribute_create();
+
+/**
+ * Creates a configuration attribute with type and value.
+ *
+ * @param type	type of configuration attribute
+ * @param value	value, gets cloned
+ * @return		created configuration attribute
+ */
+configuration_attribute_t *configuration_attribute_create_value(
+							configuration_attribute_type_t type, chunk_t value);
 
 #endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

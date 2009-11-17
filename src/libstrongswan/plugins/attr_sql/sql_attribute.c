@@ -341,7 +341,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *host))enumerator_create_empty;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 
 	this->db = db;

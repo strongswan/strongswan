@@ -57,10 +57,11 @@ struct attribute_provider_t {
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
 	 * @param id			peer ID
+	 * @param vip			virtual IP to assign to peer, if any
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_attribute_enumerator)(attribute_provider_t *this,
-												 identification_t *id);
+											identification_t *id, host_t *vip);
 };
 
 #endif /** ATTRIBUTE_PROVIDER_H_ @}*/

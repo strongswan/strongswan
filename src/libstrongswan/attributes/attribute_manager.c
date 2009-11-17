@@ -48,6 +48,16 @@ struct private_attribute_manager_t {
 };
 
 /**
+ * Data to pass to enumerator filters
+ */
+typedef struct {
+	/** server/peer identity */
+	identification_t *id;
+	/** requesting/assigned virtual IP */
+	host_t *vip;
+} enum_data_t;
+
+/**
  * Implementation of attribute_manager_t.acquire_address.
  */
 static host_t* acquire_address(private_attribute_manager_t *this,
@@ -108,25 +118,29 @@ static void release_address(private_attribute_manager_t *this,
 }
 
 /**
- * inner enumerator constructor for attributes
+ * inner enumerator constructor for responder attributes
  */
-static enumerator_t *attrib_enum_create(attribute_provider_t *provider,
-										identification_t *id)
+static enumerator_t *responder_enum_create(attribute_provider_t *provider,
+										   enum_data_t *data)
 {
-	return provider->create_attribute_enumerator(provider, id);
+	return provider->create_attribute_enumerator(provider, data->id, data->vip);
 }
 
 /**
- * Implementation of attribute_manager_t.create_attribute_enumerator
+ * Implementation of attribute_manager_t.create_responder_enumerator
  */
-static enumerator_t* create_attribute_enumerator(
-						private_attribute_manager_t *this, identification_t *id)
+static enumerator_t* create_responder_enumerator(
+			private_attribute_manager_t *this, identification_t *id, host_t *vip)
 {
+	enum_data_t *data = malloc_thing(enum_data_t);
+
+	data->id = id;
+	data->vip = vip;
 	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(
 				enumerator_create_nested(
 					this->providers->create_enumerator(this->providers),
-					(void*)attrib_enum_create, id, NULL),
+					(void*)responder_enum_create, data, free),
 				(void*)this->lock->unlock, this->lock);
 }
 
@@ -156,24 +170,38 @@ static void remove_provider(private_attribute_manager_t *this,
  * Implementation of attribute_manager_t.handle
  */
 static attribute_handler_t* handle(private_attribute_manager_t *this,
-								   identification_t *server,
-								   configuration_attribute_type_t type,
-								   chunk_t data)
+						identification_t *server, attribute_handler_t *handler,
+						configuration_attribute_type_t type, chunk_t data)
 {
 	enumerator_t *enumerator;
 	attribute_handler_t *current, *handled = NULL;
 
 	this->lock->read_lock(this->lock);
+
+	/* try to find the passed handler */
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->handle(current, server, type, data))
+		if (current == handler && current->handle(current, server, type, data))
 		{
 			handled = current;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (!handled)
+	{	/* handler requesting this attribute not found, try any other */
+		enumerator = this->handlers->create_enumerator(this->handlers);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (current->handle(current, server, type, data))
+			{
+				handled = current;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 	this->lock->unlock(this->lock);
 
 	if (!handled)
@@ -207,6 +235,33 @@ static void release(private_attribute_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
+}
+
+/**
+ * inner enumerator constructor for initiator attributes
+ */
+static enumerator_t *initiator_enum_create(attribute_handler_t *handler,
+										   enum_data_t *data)
+{
+	return handler->create_attribute_enumerator(handler, data->id, data->vip);
+}
+
+/**
+ * Implementation of attribute_manager_t.create_initiator_enumerator
+ */
+static enumerator_t* create_initiator_enumerator(
+		private_attribute_manager_t *this, identification_t *id, host_t *vip)
+{
+	enum_data_t *data = malloc_thing(enum_data_t);
+
+	data->id = id;
+	data->vip = vip;
+	this->lock->read_lock(this->lock);
+	return enumerator_create_cleaner(
+				enumerator_create_nested(
+					this->handlers->create_enumerator(this->handlers),
+					(void*)initiator_enum_create, data, free),
+				(void*)this->lock->unlock, this->lock);
 }
 
 /**
@@ -251,11 +306,12 @@ attribute_manager_t *attribute_manager_create()
 
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,host_t*))acquire_address;
 	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
-	this->public.create_attribute_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t*))create_attribute_enumerator;
+	this->public.create_responder_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t*, host_t*))create_responder_enumerator;
 	this->public.add_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))remove_provider;
-	this->public.handle = (attribute_handler_t*(*)(attribute_manager_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
+	this->public.handle = (attribute_handler_t*(*)(attribute_manager_t*,identification_t*, attribute_handler_t*, configuration_attribute_type_t, chunk_t))handle;
 	this->public.release = (void(*)(attribute_manager_t*, attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))release;
+	this->public.create_initiator_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t*, host_t*))create_initiator_enumerator;
 	this->public.add_handler = (void(*)(attribute_manager_t*, attribute_handler_t*))add_handler;
 	this->public.remove_handler = (void(*)(attribute_manager_t*, attribute_handler_t*))remove_handler;
 	this->public.destroy = (void(*)(attribute_manager_t*))destroy;

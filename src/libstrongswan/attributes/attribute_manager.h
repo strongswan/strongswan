@@ -62,10 +62,11 @@ struct attribute_manager_t {
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
 	 * @param id			peer identity to hand out attributes to
+	 * @param vip			virtual IP to assign to peer, if any
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
-	enumerator_t* (*create_attribute_enumerator)(attribute_manager_t *this,
-												 identification_t *id);
+	enumerator_t* (*create_responder_enumerator)(attribute_manager_t *this,
+											identification_t *id, host_t *vip);
 
 	/**
 	 * Register an attribute provider to the manager.
@@ -86,13 +87,14 @@ struct attribute_manager_t {
 	 * Handle a configuration attribute by passing them to the handlers.
 	 *
 	 * @param server		server from which the attribute was received
+	 * @param handler		handler we requested the attribute for, if any
 	 * @param type			type of configuration attribute
 	 * @param data			associated attribute data
 	 * @return				handler which handled this attribute, NULL if none
 	 */
 	attribute_handler_t* (*handle)(attribute_manager_t *this,
-							identification_t *server,
-							configuration_attribute_type_t type, chunk_t data);
+						identification_t *server, attribute_handler_t *handler,
+						configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Release an attribute previously handle()d by a handler.
@@ -106,6 +108,16 @@ struct attribute_manager_t {
 						identification_t *server,
 						configuration_attribute_type_t type,
 						chunk_t data);
+
+	/**
+	 * Create an enumerator over attributes to request from server.
+	 *
+	 * @param id			server identity to hand out attributes to
+	 * @param vip			virtual IP going to request, if any
+	 * @return				enumerator (attribute_handler_t, ca_type_t, chunk_t)
+	 */
+	enumerator_t* (*create_initiator_enumerator)(attribute_manager_t *this,
+											identification_t *id, host_t *vip);
 
 	/**
 	 * Register an attribute handler to the manager.
