@@ -325,6 +325,39 @@ static enumerator_t* create_section_enumerator(private_settings_t *this,
 }
 
 /**
+ * Enumerate key and values, not kv_t entries
+ */
+static bool kv_filter(void *null, kv_t **in, char **key,
+					  void *none, char **value)
+{
+	*key = (*in)->key;
+	*value = (*in)->value;
+	return TRUE;
+}
+
+/**
+ * Implementation of settings_t.create_key_value_enumerator
+ */
+static enumerator_t* create_key_value_enumerator(private_settings_t *this,
+												 char *key, ...)
+{
+	section_t *section;
+	va_list args;
+
+	va_start(args, key);
+	section = find_section(this->top, key, args);
+	va_end(args);
+
+	if (!section)
+	{
+		return enumerator_create_empty();
+	}
+	return enumerator_create_filter(
+					section->kv->create_enumerator(section->kv),
+					(void*)kv_filter, NULL, NULL);
+}
+
+/**
  * destroy a section
  */
 static void section_destroy(section_t *this)
@@ -495,6 +528,7 @@ settings_t *settings_create(char *file)
 	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
 	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
 	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
+	this->public.create_key_value_enumerator = (enumerator_t*(*)(settings_t*, char *key, ...))create_key_value_enumerator;
 	this->public.destroy = (void(*)(settings_t*))destroy;
 
 	this->top = NULL;

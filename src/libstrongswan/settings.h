@@ -103,6 +103,17 @@ struct settings_t {
 	 */
 	enumerator_t* (*create_section_enumerator)(settings_t *this,
 											   char *section, ...);
+
+	/**
+	 * Create an enumerator over key/value pairs in a section.
+	 *
+	 * @param section	section name to list key/value pairs of, printf style
+	 * @param ...		argmuent list for section
+	 * @return			enumerator over (char *key, char *value)
+	 */
+	enumerator_t* (*create_key_value_enumerator)(settings_t *this,
+												 char *section, ...);
+
 	/**
 	 * Destroy a settings instance.
 	 */
