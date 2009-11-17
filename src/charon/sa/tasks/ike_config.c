@@ -122,6 +122,7 @@ static void handle_attribute(private_ike_config_t *this,
 			break;
 		}
 	}
+	enumerator->destroy(enumerator);
 
 	/* and pass it to the handle function */
 	handler = lib->attributes->handle(lib->attributes,
