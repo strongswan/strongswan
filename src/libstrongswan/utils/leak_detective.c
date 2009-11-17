@@ -177,6 +177,7 @@ char *whitelist[] = {
 	"getpwnam_r",
 	"getgrnam_r",
 	"register_printf_function",
+	"register_printf_specifier",
 	"syslog",
 	"vsyslog",
 	"getaddrinfo",
