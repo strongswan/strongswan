@@ -946,6 +946,35 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			pos += written;
 			len -= written;
 		}
+		if (payload->get_type(payload) == EXTENSIBLE_AUTHENTICATION)
+		{
+			eap_payload_t *eap = (eap_payload_t*)payload;
+			u_int32_t vendor;
+			eap_type_t type;
+			char method[64] = "";
+
+			type = eap->get_type(eap, &vendor);
+			if (type)
+			{
+				if (vendor)
+				{
+					snprintf(method, sizeof(method), "/%d-%d", type, vendor);
+				}
+				else
+				{
+					snprintf(method, sizeof(method), "/%N",
+							 eap_type_short_names, type);
+				}
+			}
+			written = snprintf(pos, len, "/%N%s", eap_code_short_names,
+							   eap->get_code(eap), method);
+			if (written >= len || written < 0)
+			{
+				return buf;
+			}
+			pos += written;
+			len -= written;
+		}
 	}
 	enumerator->destroy(enumerator);
 

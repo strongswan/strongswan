@@ -34,6 +34,25 @@ ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
 	"EAP_EXPERIMENTAL");
 ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
 
+ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
+	"ID",
+	"NTF",
+	"NAK",
+	"MD5",
+	"OTP",
+	"GTC");
+ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_GTC,
+	"SIM");
+ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_SIM,
+	"AKA");
+ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
+	"MSCHAPV2");
+ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
+	"RAD",
+	"EXP",
+	"XP");
+ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
+
 /*
  * See header
  */
@@ -69,6 +88,13 @@ ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_RESPONSE",
 	"EAP_SUCCESS",
 	"EAP_FAILURE",
+);
+
+ENUM(eap_code_short_names, EAP_REQUEST, EAP_FAILURE,
+	"REQ",
+	"RES",
+	"SUCC",
+	"FAIL",
 );
 
 ENUM(eap_role_names, EAP_SERVER, EAP_PEER,

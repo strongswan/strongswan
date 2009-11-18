@@ -67,6 +67,11 @@ enum eap_type_t {
 extern enum_name_t *eap_type_names;
 
 /**
+ * short string enum names for eap_type_t.
+ */
+extern enum_name_t *eap_type_short_names;
+
+/**
  * Lookup the EAP method type from a string.
  *
  * @param name		EAP method name (such as "md5", "aka")
@@ -88,6 +93,11 @@ enum eap_code_t {
  * enum names for eap_code_t.
  */
 extern enum_name_t *eap_code_names;
+
+/**
+ * short string enum names for eap_code_t.
+ */
+extern enum_name_t *eap_code_short_names;
 
 /**
  * Interface of an EAP method for server and client side.
