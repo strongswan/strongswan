@@ -372,12 +372,12 @@ AC_TRY_RUN(
 [AC_MSG_RESULT([no])],
 [AC_MSG_RESULT([no])])
 
+dnl check for the new register_printf_specifier function with len argument,
+dnl or the deprecated register_printf_function without
 AC_CHECK_FUNC(
 	[register_printf_specifier],
-	dnl new specifier functions with argument length
 	[AC_DEFINE(HAVE_PRINTF_SPECIFIER)],
 	[AC_CHECK_FUNC(
-		dnl deprecated function without argument length
 		[register_printf_function],
 		[AC_DEFINE(HAVE_PRINTF_FUNCTION)],
 		[
