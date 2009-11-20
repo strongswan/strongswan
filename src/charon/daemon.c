@@ -536,7 +536,7 @@ static void segv_handler(int signal)
 	backtrace->destroy(backtrace);
 
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
-	raise(SIGKILL);
+	abort();
 }
 
 /**
