@@ -1062,7 +1062,31 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		}
 	}
 
-	if (int_alg  != AUTH_UNDEFINED)
+	if (int_alg == AUTH_HMAC_SHA2_256_128)
+	{
+		/* the kernel uses SHA256 with 96 bit truncation by default,
+		 * use specified truncation size supported by newer kernels */
+		rthdr->rta_type = XFRMA_ALG_AUTH_TRUNC;
+		alg_name = "hmac(sha256)";
+		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
+			 integrity_algorithm_names, int_alg, int_key.len * 8);
+
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_auth) + int_key.len);
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+
+		struct xfrm_algo_auth* algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
+		algo->alg_key_len = int_key.len * 8;
+		algo->alg_trunc_len = 128;
+		strcpy(algo->alg_name, alg_name);
+		memcpy(algo->alg_key, int_key.ptr, int_key.len);
+
+		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
+	else if (int_alg  != AUTH_UNDEFINED)
 	{
 		rthdr->rta_type = XFRMA_ALG_AUTH;
 		alg_name = lookup_algorithm(integrity_algs, int_alg);
