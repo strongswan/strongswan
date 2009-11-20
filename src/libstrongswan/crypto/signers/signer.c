@@ -16,10 +16,11 @@
 
 #include "signer.h"
 
-ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_HMAC_SHA1_128,
+ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_HMAC_SHA2_256_96,
 	"UNDEFINED",
-	"HMAC_SHA1_128");
-ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_HMAC_SHA2_512_256, AUTH_HMAC_SHA1_128,
+	"HMAC_SHA1_128",
+	"HMAC_SHA2_256_96");
+ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_HMAC_SHA2_512_256, AUTH_HMAC_SHA2_256_96,
 	"HMAC_MD5_96",
 	"HMAC_SHA1_96",
 	"DES_MAC",

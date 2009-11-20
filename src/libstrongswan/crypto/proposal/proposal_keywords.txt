@@ -26,7 +26,7 @@ struct proposal_token {
     char             *name;
     transform_type_t  type;
 	u_int16_t         algorithm;
-    u_int16_t         keysize;  
+    u_int16_t         keysize;
 };
 %%
 null,             ENCRYPTION_ALGORITHM, ENCR_NULL,                0
@@ -96,6 +96,8 @@ sha,              INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,        0
 sha1,             INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,        0
 sha256,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0
 sha2_256,         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0
+sha256_96,        INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_96,    0
+sha2_256_96,      INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_96,    0
 sha384,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,   0
 sha2_384,         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,   0
 sha512,           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,   0
