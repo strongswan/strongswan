@@ -95,7 +95,7 @@ static void set_pseudonym(private_eap_simaka_pseudonym_card_t *this,
 /**
  * Implementation of sim_card_t.get_quintuplet
  */
-static bool get_quintuplet()
+static status_t get_quintuplet()
 {
 	return NOT_SUPPORTED;
 }

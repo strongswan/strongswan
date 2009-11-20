@@ -118,7 +118,7 @@ static void set_reauth(private_eap_simaka_reauth_card_t *this,
 /**
  * Implementation of sim_card_t.get_quintuplet
  */
-static bool get_quintuplet()
+static status_t get_quintuplet()
 {
 	return NOT_SUPPORTED;
 }
