@@ -1011,15 +1011,18 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					diffie_hellman_group_t bad_group;
+					u_int16_t group = MODP_NONE;
 
-					bad_group = this->dh_group;
 					data = notify->get_notification_data(notify);
-					this->dh_group = ntohs(*((u_int16_t*)data.ptr));
+					if (data.len == sizeof(group))
+					{
+						memcpy(&group, data.ptr, data.len);
+						group = ntohs(group);
+					}
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
-						 bad_group, diffie_hellman_group_names, this->dh_group);
-
+						 this->dh_group, diffie_hellman_group_names, group);
+					this->dh_group = group;
 					this->public.task.migrate(&this->public.task, this->ike_sa);
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
