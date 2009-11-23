@@ -152,9 +152,12 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 	message->add_payload(message, (payload_t*)notify);
 
 	/* ... our CHILD_CREATE task does the hard work for us. */
+	if (!this->child_create)
+	{
+		this->child_create = child_create_create(this->ike_sa, config, TRUE,
+												 NULL, NULL);
+	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create = child_create_create(this->ike_sa, config, TRUE,
-											 NULL, NULL);
 	this->child_create->use_reqid(this->child_create, reqid);
 	this->child_create->task.build(&this->child_create->task, message);
 
