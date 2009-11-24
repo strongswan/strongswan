@@ -769,7 +769,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	memset(&request, 0, sizeof(request));
 
 	hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP | NLM_F_ROOT;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	if (dest->get_family(dest) == AF_INET)
+	{
+		/* We dump all addresses for IPv4, as we want to ignore IPsec specific
+		 * routes installed by us. But the kernel does not return source
+		 * addresses in a IPv6 dump, so fall back to get() for v6 routes. */
+		hdr->nlmsg_flags |= NLM_F_ROOT | NLM_F_DUMP;
+	}
 	hdr->nlmsg_type = RTM_GETROUTE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
@@ -1157,8 +1164,11 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 	netlink_add_attribute(hdr, RTA_DST, dst_net, sizeof(request));
 	chunk = src_ip->get_address(src_ip);
 	netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
-	chunk = gateway->get_address(gateway);
-	netlink_add_attribute(hdr, RTA_GATEWAY, chunk, sizeof(request));
+	if (gateway && gateway->get_family(gateway) == src_ip->get_family(src_ip))
+	{
+		chunk = gateway->get_address(gateway);
+		netlink_add_attribute(hdr, RTA_GATEWAY, chunk, sizeof(request));
+	}
 	ifindex = get_interface_index(this, if_name);
 	chunk.ptr = (char*)&ifindex;
 	chunk.len = sizeof(ifindex);
@@ -1282,7 +1292,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
  * create or delete a rule to use our routing table
  */
 static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
-							u_int32_t table, u_int32_t prio)
+							int family, u_int32_t table, u_int32_t prio)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1301,7 +1311,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 
 	msg = (struct rtmsg*)NLMSG_DATA(hdr);
 	msg->rtm_table = table;
-	msg->rtm_family = AF_INET;
+	msg->rtm_family = family;
 	msg->rtm_protocol = RTPROT_BOOT;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 	msg->rtm_type = RTN_UNICAST;
@@ -1319,7 +1329,9 @@ static void destroy(private_kernel_netlink_net_t *this)
 {
 	if (this->routing_table)
 	{
-		manage_rule(this, RTM_DELRULE, this->routing_table,
+		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
+					this->routing_table_prio);
+		manage_rule(this, RTM_DELRULE, AF_INET6, this->routing_table,
 					this->routing_table_prio);
 	}
 
@@ -1394,10 +1406,15 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	if (this->routing_table)
 	{
-		if (manage_rule(this, RTM_NEWRULE, this->routing_table,
+		if (manage_rule(this, RTM_NEWRULE, AF_INET, this->routing_table,
 						this->routing_table_prio) != SUCCESS)
 		{
-			DBG1(DBG_KNL, "unable to create routing table rule");
+			DBG1(DBG_KNL, "unable to create IPv4 routing table rule");
+		}
+		if (manage_rule(this, RTM_NEWRULE, AF_INET6, this->routing_table,
+						this->routing_table_prio) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to create IPv6 routing table rule");
 		}
 	}
 

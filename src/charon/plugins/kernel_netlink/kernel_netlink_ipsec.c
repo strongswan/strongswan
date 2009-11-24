@@ -260,7 +260,7 @@ static void route_entry_destroy(route_entry_t *this)
 {
 	free(this->if_name);
 	this->src_ip->destroy(this->src_ip);
-	this->gateway->destroy(this->gateway);
+	DESTROY_IF(this->gateway);
 	chunk_free(&this->dst_net);
 	free(this);
 }
@@ -1661,24 +1661,34 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	 * - we are NOT updating a policy
 	 * - this is a forward policy (to just get one for each child)
 	 * - we are in tunnel mode
-	 * - we are not using IPv6 (does not work correctly yet!)
 	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->route == NULL && direction == POLICY_FWD &&
-		mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
-		this->install_routes)
+		mode != MODE_TRANSPORT && this->install_routes)
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);
 
 		if (charon->kernel_interface->get_address_by_ts(charon->kernel_interface,
 				dst_ts, &route->src_ip) == SUCCESS)
 		{
-			/* get the nexthop to src (src as we are in POLICY_FWD).*/
-			route->gateway = charon->kernel_interface->get_nexthop(
+			if (policy->sel.family == AF_INET)
+			{
+				/* get the nexthop to src (src as we are in POLICY_FWD).*/
+				route->gateway = charon->kernel_interface->get_nexthop(
 									charon->kernel_interface, src);
-			route->if_name = charon->kernel_interface->get_interface(
-									charon->kernel_interface, dst);
-			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
+				/* for IPv4, the route is installed on the outgoing interface */
+				route->if_name = charon->kernel_interface->get_interface(
+												charon->kernel_interface, dst);
+				route->dst_net = chunk_alloc(4);
+			}
+			else
+			{
+				route->gateway = NULL;
+				/* for IPv6, it is on the interface with our source address */
+				route->if_name = charon->kernel_interface->get_interface(
+										charon->kernel_interface, route->src_ip);
+				route->dst_net = chunk_alloc(16);
+			}
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 			route->prefixlen = policy->sel.prefixlen_s;
 
