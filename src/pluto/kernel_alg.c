@@ -694,12 +694,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 	/* pass aprox. number of transforms and attributes */
 	ctx_new = db_prop_new(PROTO_IPSEC_ESP, trans_cnt, trans_cnt * 2);
 
-	/*
-	 * Loop: for each element (struct esp_info) of alg_info,
-	 *       if kernel support is present then build the transform (and attrs)
-	 *       if NULL alg_info, propose everything ...
-	 */
-
 	if (alg_info)
 	{
 		int i;
@@ -708,28 +702,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 		{
 			tmp_esp_info = *esp_info;
 			kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
-		}
-	}
-	else
-	{
-		u_int ealg_id;
-
-		ESP_EALG_FOR_EACH_UPDOWN(ealg_id)
-		{
-			u_int aalg_id;
-
-			tmp_esp_info.esp_ealg_id = ealg_id;
-			tmp_esp_info.esp_ealg_keylen = 0;
-
-			for (aalg_id = 1; aalg_id <= SADB_AALG_MAX; aalg_id++)
-			{
-				if (ESP_AALG_PRESENT(aalg_id))
-				{
-					tmp_esp_info.esp_aalg_id = alg_info_esp_sadb2aa(aalg_id);
-					tmp_esp_info.esp_aalg_keylen = 0;
-					kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
-				}
-			}
 		}
 	}
 	prop = db_prop_get(ctx_new);
