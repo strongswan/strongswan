@@ -291,7 +291,10 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	{
 		me->set_port(me, me->ip_equals(me, me_old) ?
 					 me_old->get_port(me_old) : IKEV2_NATT_PORT);
-		packet->set_source(packet, me);
+		DBG1(DBG_IKE, "checking original path %#H - %#H", me, other_old);
+		copy = packet->clone(packet);
+		copy->set_source(copy, me);
+		charon->sender->send(charon->sender, copy);
 	}
 
 	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
@@ -320,9 +323,6 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 		}
 	}
 	iterator->destroy(iterator);
-	me = packet->get_source(packet);
-	other = packet->get_destination(packet);
-	DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 }
 
 /**

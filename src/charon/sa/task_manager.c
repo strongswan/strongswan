@@ -233,6 +233,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 					 this->initiating.retransmitted, message_id);
 			}
 			packet = this->initiating.packet->clone(this->initiating.packet);
+			charon->sender->send(charon->sender, packet);
 		}
 		else
 		{	/* for routeability checks, we use a more aggressive behavior */
@@ -253,11 +254,8 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 				DBG1(DBG_IKE, "path probing attempt %d",
 					 this->initiating.retransmitted);
 			}
-			packet = this->initiating.packet->clone(this->initiating.packet);
-			mobike->transmit(mobike, packet);
+			mobike->transmit(mobike, this->initiating.packet);
 		}
-
-		charon->sender->send(charon->sender, packet);
 
 		this->initiating.retransmitted++;
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
