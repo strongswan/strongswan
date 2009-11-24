@@ -59,8 +59,12 @@ enum notify_type_t {
 	FAILED_CP_REQUIRED = 37,
 	TS_UNACCEPTABLE = 38,
 	INVALID_SELECTORS = 39,
+	/* mobile extension, RFC 4555 */
 	UNACCEPTABLE_ADDRESSES = 40,
 	UNEXPECTED_NAT_DETECTED = 41,
+	/* mobile IPv6 bootstrapping, RFC 5026 */
+	USE_ASSIGNED_HoA = 42,
+
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
 
@@ -90,6 +94,18 @@ enum notify_type_t {
 	/* multiple authentication exchanges, RFC 4739 */
 	MULTIPLE_AUTH_SUPPORTED = 16404,
 	ANOTHER_AUTH_FOLLOWS = 16405,
+	/* redirect mechanism, RFC 5685 */
+	REDIRECT_SUPPORTED = 16406,
+	REDIRECT = 16407,
+	REDIRECTED_FROM = 16408,
+	/* draft-ietf-ipsecme-ikev2-resumption, assigned by IANA */
+	TICKET_LT_OPAQUE = 16409,
+	TICKET_REQUEST = 16410,
+	TICKET_ACK = 16411,
+	TICKET_NACK = 16412,
+	TICKET_OPAQUE = 16413,
+	LINK_ID = 16414,
+
 	/* draft-eronen-ipsec-ikev2-eap-auth, not assigned by IANA yet */
 	EAP_ONLY_AUTHENTICATION = 40960,
 	/* BEET mode, not even a draft yet. private use */
