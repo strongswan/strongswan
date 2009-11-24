@@ -112,6 +112,11 @@ static const char *LST_pfsgroup[] = {
 	"modp4096",
 	"modp6144",
 	"modp8192",
+	"ecp192",
+	"ecp224",
+	"ecp256",
+	"ecp384",
+	"ecp521",
 	 NULL
 };
 
