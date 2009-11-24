@@ -979,7 +979,9 @@ connection_t *find_connection_by_reqid(uint32_t reqid)
 	for (c = connections; c != NULL; c = c->ac_next)
 	{
 		if (c->spd.reqid == reqid)
+		{
 			return c;
+		}
 	}
 
 	return NULL;
@@ -994,9 +996,13 @@ static uint32_t gen_reqid(void)
 	do {
 		reqid += 4;
 		if (reqid == 0)
+		{
 			reqid = (IPSEC_MANUAL_REQID_MAX & ~3) + 4;
+		}
 		if (!find_connection_by_reqid(reqid))
+		{
 			return reqid;
+		}
 	} while (reqid != start);
 
 	exit_log("unable to allocate reqid");
@@ -1028,9 +1034,11 @@ void add_connection(const whack_message_t *wm)
 		c->policy = wm->policy;
 
 		if ((c->policy & POLICY_COMPRESS) && !can_do_IPcomp)
+		{
 			loglog(RC_COMMENT
 				, "ignoring --compress in \"%s\" because KLIPS is not configured to do IPCOMP"
 				, c->name);
+		}
 
 		if (wm->esp)
 		{
@@ -1043,15 +1051,19 @@ void add_connection(const whack_message_t *wm)
 				static char buf[BUF_LEN]="<NULL>";
 
 				if (c->alg_info_esp)
+				{
 					alg_info_snprint(buf, sizeof(buf)
 							,(struct alg_info *)c->alg_info_esp);
+				}
 				DBG_log("esp proposal: %s", buf);
 			)
 			if (c->alg_info_esp)
 			{
 				if (c->alg_info_esp->alg_info_cnt==0)
+				{
 					 loglog(RC_LOG_SERIOUS
 							, "got 0 transforms for esp=\"%s\"", wm->esp);
+				}
 			}
 			else
 			{
@@ -1070,15 +1082,19 @@ void add_connection(const whack_message_t *wm)
 				static char buf[BUF_LEN]="<NULL>";
 
 				if (c->alg_info_ike)
+				{
 					alg_info_snprint(buf, sizeof(buf)
 							, (struct alg_info *)c->alg_info_ike);
+				}
 				DBG_log("ike proposal: %s", buf);
 			)
 			if (c->alg_info_ike)
 			{
 				if (c->alg_info_ike->alg_info_cnt==0)
+				{
 					loglog(RC_LOG_SERIOUS
 						   , "got 0 transforms for ike=\"%s\"", wm->ike);
+				}
 			}
 			else
 			{
