@@ -3,6 +3,10 @@ strongswan-4.3.6
 
 - The IKEv1 and IKEV2 daemons now check certificate path length constraints.
 
+- More detailed IKEv2 EAP payload information in debug output
+
+- IKEv2 EAP-SIM and EAP-AKA share joint libsimaka library 
+
 
 strongswan-4.3.5
 ----------------
