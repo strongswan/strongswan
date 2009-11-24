@@ -1059,15 +1059,14 @@ void add_connection(const whack_message_t *wm)
 			)
 			if (c->alg_info_esp)
 			{
-				if (c->alg_info_esp->alg_info_cnt==0)
+				if (c->alg_info_esp->alg_info_cnt == 0)
 				{
-					 loglog(RC_LOG_SERIOUS
-							, "got 0 transforms for esp=\"%s\"", wm->esp);
+					 loglog(RC_LOG_SERIOUS, "got 0 esp transforms");
 				}
 			}
 			else
 			{
-				loglog(RC_LOG_SERIOUS, "esp string error");
+				loglog(RC_LOG_SERIOUS, "syntax error in esp string");
 			}
 		}
 
@@ -1090,15 +1089,14 @@ void add_connection(const whack_message_t *wm)
 			)
 			if (c->alg_info_ike)
 			{
-				if (c->alg_info_ike->alg_info_cnt==0)
+				if (c->alg_info_ike->alg_info_cnt == 0)
 				{
-					loglog(RC_LOG_SERIOUS
-						   , "got 0 transforms for ike=\"%s\"", wm->ike);
+					loglog(RC_LOG_SERIOUS, "got 0 ike transforms");
 				}
 			}
 			else
 			{
-				loglog(RC_LOG_SERIOUS, "ike string error:");
+				loglog(RC_LOG_SERIOUS, "syntax error in ike string");
 			}
 		}
 
