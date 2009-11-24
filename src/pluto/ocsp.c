@@ -998,6 +998,7 @@ static bool valid_ocsp_response(response_t *res)
 		identification_t *subject = certificate->get_subject(certificate);
 		identification_t *issuer  = certificate->get_issuer(certificate);
 		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
+		time_t not_before, not_after;
 
 		DBG(DBG_CONTROL,
 			DBG_log("subject: '%Y'", subject);
@@ -1008,8 +1009,11 @@ static bool valid_ocsp_response(response_t *res)
 			}
 		)
 
-		if (!certificate->get_validity(certificate, NULL, NULL, NULL))
+		if (!certificate->get_validity(certificate, NULL, &not_before, &not_after))
 		{
+			plog("certificate is invalid (valid from %T to %T)",
+				 &not_before, FALSE, &not_after, FALSE);
+			
 			unlock_authcert_list("valid_ocsp_response");
 			return FALSE;
 		}
