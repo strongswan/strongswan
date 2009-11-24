@@ -506,7 +506,7 @@ void kernel_alg_show_connection(connection_t *c, const char *instance)
 					enum_show(&auth_alg_names, st->st_esp.attrs.auth);
 
 		pfsgroup_name = (c->policy & POLICY_PFS) ?
-						(c->alg_info_esp->esp_pfsgroup) ?
+						(c->alg_info_esp && c->alg_info_esp->esp_pfsgroup) ?
 							enum_show(&oakley_group_names,
 										  c->alg_info_esp->esp_pfsgroup) :
 							"<Phase1>" : "<N/A>";
