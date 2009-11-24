@@ -207,6 +207,8 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 					attributes = cp->create_attribute_enumerator(cp);
 					while (attributes->enumerate(attributes, &ca))
 					{
+						DBG2(DBG_IKE, "processing %N config attribute",
+							 configuration_attribute_type_names, ca->get_type(ca));
 						process_attribute(this, ca);
 					}
 					attributes->destroy(attributes);
@@ -258,6 +260,8 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 			entry_t *entry;
 
 			/* create configuration attribute */
+			DBG2(DBG_IKE, "building %N config attribute",
+				 configuration_attribute_type_names, type);
 			ca = configuration_attribute_create_value(type, data);
 			if (!cp)
 			{
