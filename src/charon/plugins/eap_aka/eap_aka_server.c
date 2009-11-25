@@ -323,7 +323,7 @@ static status_t process_identity(private_eap_aka_server_t *this,
 			return reauthenticate(this, mk, counter, out);
 		}
 		/* unable to map, maybe a pseudonym? */
-		DBG1(DBG_IKE, "%Y is not a reauth identity", id);
+		DBG1(DBG_IKE, "'%Y' is not a reauth identity", id);
 		this->use_reauth = FALSE;
 	}
 	if (this->use_pseudonym)
@@ -339,7 +339,7 @@ static status_t process_identity(private_eap_aka_server_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "%Y is not a pseudonym", id);
+			DBG1(DBG_IKE, "'%Y' is not a pseudonym", id);
 		}
 	}
 	if (!this->pseudonym && this->use_permanent)
