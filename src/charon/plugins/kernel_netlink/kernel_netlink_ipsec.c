@@ -946,6 +946,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
 			   mode, ipcomp, 0, FALSE, inbound);
 		ipcomp = IPCOMP_NONE;
+		/* use transport mode ESP SA, IPComp uses tunnel mode */
+		mode = MODE_TRANSPORT;
 	}
 
 	memset(&request, 0, sizeof(request));
@@ -1663,6 +1665,15 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 		}
 
 		tmpl++;
+
+		/* use transport mode for ESP if we have a tunnel mode IPcomp SA */
+		mode = MODE_TRANSPORT;
+	}
+	else
+	{
+		/* when using IPcomp, only the IPcomp SA uses tmp src/dst addresses */
+		host2xfrm(src, &tmpl->saddr);
+		host2xfrm(dst, &tmpl->id.daddr);
 	}
 
 	tmpl->reqid = reqid;
@@ -1670,9 +1681,6 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = mode2kernel(mode);
 	tmpl->family = src->get_family(src);
-
-	host2xfrm(src, &tmpl->saddr);
-	host2xfrm(dst, &tmpl->id.daddr);
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{

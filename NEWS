@@ -5,13 +5,17 @@ strongswan-4.3.6
 
 - More detailed IKEv2 EAP payload information in debug output
 
-- IKEv2 EAP-SIM and EAP-AKA share joint libsimaka library 
+- IKEv2 EAP-SIM and EAP-AKA share joint libsimaka library
 
 - Added required userland changes for proper SHA256 and SHA384/512 in ESP that
   will be introduced with Linux 2.6.33. The "sha256"/"sha2_256" keyword now
   configures the kernel with 128 bit truncation, not the non-standard 96
   bit truncation used by previous releases. To use the old 96 bit truncation
   scheme, the new "sha256_96" proposal keyword has been introduced.
+
+- Fixed IPComp in tunnel mode, stripping out the duplicated outer header. This
+  change makes IPcomp tunnel mode connections incompatible with previous
+  releases; disable compression on such tunnels.
 
 strongswan-4.3.5
 ----------------
