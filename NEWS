@@ -7,6 +7,11 @@ strongswan-4.3.6
 
 - IKEv2 EAP-SIM and EAP-AKA share joint libsimaka library 
 
+- Added required userland changes for proper SHA256 and SHA384/512 in ESP that
+  will be introduced with Linux 2.6.33. The "sha256"/"sha2_256" keyword now
+  configures the kernel with 128 bit truncation, not the non-standard 96
+  bit truncation used by previous releases. To use the old 96 bit truncation
+  scheme, the new "sha256_96" proposal keyword has been introduced.
 
 strongswan-4.3.5
 ----------------
