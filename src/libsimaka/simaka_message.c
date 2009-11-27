@@ -256,16 +256,12 @@ static void add_attribute(private_simaka_message_t *this,
 {
 	attr_t *attr;
 
-	if (!charon->sim->attribute_hook(charon->sim, this->hdr->code,
-							this->hdr->type, this->hdr->subtype, type, data))
-	{
-		attr = malloc(sizeof(attr_t) + data.len);
-		attr->len = data.len;
-		attr->type = type;
-		memcpy(attr->data, data.ptr, data.len);
+	attr = malloc(sizeof(attr_t) + data.len);
+	attr->len = data.len;
+	attr->type = type;
+	memcpy(attr->data, data.ptr, data.len);
 
-		this->attributes->insert_last(this->attributes, attr);
-	}
+	this->attributes->insert_last(this->attributes, attr);
 }
 
 /**
@@ -463,6 +459,9 @@ static bool parse_attributes(private_simaka_message_t *this, chunk_t in)
 				break;
 		}
 	}
+
+	charon->sim->message_hook(charon->sim, &this->public, TRUE, this->encrypted);
+
 	return TRUE;
 }
 
@@ -603,6 +602,8 @@ static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 	attr_hdr_t *hdr;
 	u_int16_t len;
 	signer_t *signer;
+
+	charon->sim->message_hook(charon->sim, &this->public, FALSE, TRUE);
 
 	out = chunk_create(out_buf, sizeof(out_buf));
 	encr = chunk_create(encr_buf, sizeof(encr_buf));
@@ -814,6 +815,9 @@ static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 		data = chunk_cata("cc", out, sigdata);
 		signer->get_signature(signer, data, mac.ptr);
 	}
+
+	charon->sim->message_hook(charon->sim, &this->public, FALSE, FALSE);
+
 	return eap_payload_create_data(out);
 }
 

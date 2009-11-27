@@ -31,6 +31,9 @@ typedef struct sim_card_t sim_card_t;
 typedef struct sim_provider_t sim_provider_t;
 typedef struct sim_hooks_t sim_hooks_t;
 
+/** implemented in libsimaka, but we need it for the message hook */
+typedef struct simaka_message_t simaka_message_t;
+
 #define SIM_RAND_LEN	16
 #define SIM_SRES_LEN	 4
 #define SIM_KC_LEN		 8
@@ -245,17 +248,17 @@ struct sim_provider_t {
 struct sim_hooks_t {
 
 	/**
-	 * SIM/AKA attribute parsing hook.
+	 * SIM/AKA message parsing.
 	 *
-	 * @param code		code of EAP message the attribute was parsed from
-	 * @param type		EAP method, SIM or AKA
-	 * @param subtye	method specific subtype
-	 * @param attribute	parsed SIM/AKA attribute type
-	 * @param data		attribute data
-	 * @return			TRUE to filter out attribute from further processing
+	 * As a SIM/AKA optionally contains encrypted attributes, the hook
+	 * might get invoked twice, once before and once after decryption.
+	 *
+	 * @param message	SIM/AKA message
+	 * @param inbound	TRUE for incoming messages, FALSE for outgoing
+	 * @param decrypted	TRUE if AT_ENCR_DATA has been decrypted
 	 */
-	bool (*attribute)(sim_hooks_t *this, eap_code_t code, eap_type_t type,
-					  u_int8_t subtype, u_int8_t attribute, chunk_t data);
+	void (*message)(sim_hooks_t *this, simaka_message_t *message,
+					bool inbound, bool decrypted);
 
 	/**
 	 * SIM/AKA encryption/authentication key hooks.
@@ -478,18 +481,14 @@ struct sim_manager_t {
 	void (*remove_hooks)(sim_manager_t *this, sim_hooks_t *hooks);
 
 	/**
-	 * Invoke SIM/AKA attribute hook.
+	 * Invoke SIM/AKA message hook.
 	 *
-	 * @param code		EAP message code (Request/response/success/failed)
-	 * @param type		EAP method type, EAP-SIM or AKA
-	 * @param subtype	method specific message subtype
-	 * @param attribute	SIM/AKA attribute type
-	 * @param data		attribute data
-	 * @return			TRUE to filter out attribute from further processing
+	 * @param message	SIM message
+	 * @param inbound	TRUE for incoming messages, FALSE for outgoing
+	 * @param decrypted	TRUE if AT_ENCR_DATA has been decrypted
 	 */
-	bool (*attribute_hook)(sim_manager_t *this, eap_code_t code,
-						   eap_type_t type, u_int8_t subtype,
-						   u_int8_t attribute, chunk_t data);
+	void (*message_hook)(sim_manager_t *this, simaka_message_t *message,
+						 bool inbound, bool decrypted);
 
 	/**
 	 * Invoke SIM/AKA key hook.

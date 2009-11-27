@@ -450,27 +450,20 @@ static void remove_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
 }
 
 /**
- * Implementation of sim_manager_t.attribute_hook
+ * Implementation of sim_manager_t.message_hook
  */
-static bool attribute_hook(private_sim_manager_t *this, eap_code_t code,
-						   eap_type_t type, u_int8_t subtype,
-						   u_int8_t attribute, chunk_t data)
+static void message_hook(private_sim_manager_t *this,
+						 simaka_message_t *message, bool inbound, bool decrypted)
 {
 	enumerator_t *enumerator;
 	sim_hooks_t *hooks;
-	bool filter = FALSE;
 
 	enumerator = this->hooks->create_enumerator(this->hooks);
 	while (enumerator->enumerate(enumerator, &hooks))
 	{
-		if (hooks->attribute(hooks, code, type, subtype, attribute, data))
-		{
-			filter = TRUE;
-			break;
-		}
+		hooks->message(hooks, message, inbound, decrypted);
 	}
 	enumerator->destroy(enumerator);
-	return filter;
 }
 
 /**
@@ -528,7 +521,7 @@ sim_manager_t *sim_manager_create()
 	this->public.provider_gen_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))provider_gen_reauth;
 	this->public.add_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))add_hooks;
 	this->public.remove_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))remove_hooks;
-	this->public.attribute_hook = (bool(*)(sim_manager_t*, eap_code_t code, eap_type_t type, u_int8_t subtype, u_int8_t attribute, chunk_t data))attribute_hook;
+	this->public.message_hook = (void(*)(sim_manager_t*, simaka_message_t *message, bool inbound, bool decrypted))message_hook;
 	this->public.key_hook = (void(*)(sim_manager_t*, chunk_t k_encr, chunk_t k_auth))key_hook;
 	this->public.destroy = (void(*)(sim_manager_t*))destroy;
 

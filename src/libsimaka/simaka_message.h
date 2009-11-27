@@ -31,7 +31,6 @@
 
 #include "simaka_crypto.h"
 
-typedef struct simaka_message_t simaka_message_t;
 typedef enum simaka_attribute_t simaka_attribute_t;
 typedef enum simaka_subtype_t simaka_subtype_t;
 typedef enum simaka_notification_t simaka_notification_t;
