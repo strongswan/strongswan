@@ -102,12 +102,18 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		status = card->get_quintuplet(card, id, rand, autn, ck, ik, res, res_len);
-		if (status != FAILED)
+		switch (status)
 		{	/* try next on error, but not on INVALID_STATE */
-			enumerator->destroy(enumerator);
-			return status;
+			case SUCCESS:
+			case INVALID_STATE:
+				enumerator->destroy(enumerator);
+				return status;
+			case NOT_SUPPORTED:
+			case FAILED:
+			default:
+				tried++;
+				continue;
 		}
-		tried++;
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_IKE, "tried %d SIM cards, but none has quintuplets for '%Y'",
