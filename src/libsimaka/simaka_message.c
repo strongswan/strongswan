@@ -256,12 +256,16 @@ static void add_attribute(private_simaka_message_t *this,
 {
 	attr_t *attr;
 
-	attr = malloc(sizeof(attr_t) + data.len);
-	attr->len = data.len;
-	attr->type = type;
-	memcpy(attr->data, data.ptr, data.len);
+	if (!charon->sim->attribute_hook(charon->sim, this->hdr->code,
+							this->hdr->type, this->hdr->subtype, type, data))
+	{
+		attr = malloc(sizeof(attr_t) + data.len);
+		attr->len = data.len;
+		attr->type = type;
+		memcpy(attr->data, data.ptr, data.len);
 
-	this->attributes->insert_last(this->attributes, attr);
+		this->attributes->insert_last(this->attributes, attr);
+	}
 }
 
 /**

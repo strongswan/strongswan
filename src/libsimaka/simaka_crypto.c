@@ -124,6 +124,8 @@ static chunk_t derive_keys_full(private_simaka_crypto_t *this,
 	this->signer->set_key(this->signer, k_auth);
 	this->crypter->set_key(this->crypter, k_encr);
 
+	charon->sim->key_hook(charon->sim, k_encr, k_auth);
+
 	this->derived = TRUE;
 	return chunk_clone(msk);
 }
@@ -149,6 +151,8 @@ static void derive_keys_reauth(private_simaka_crypto_t *this, chunk_t mk)
 
 	this->signer->set_key(this->signer, k_auth);
 	this->crypter->set_key(this->crypter, k_encr);
+
+	charon->sim->key_hook(charon->sim, k_encr, k_auth);
 
 	this->derived = TRUE;
 }
