@@ -429,7 +429,7 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 								   SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
-	if (!in->verify(in, nonce))
+	if (!in->verify(in, chunk_empty))
 	{
 		*out = create_client_error(this, in->get_identifier(in),
 								   SIM_UNABLE_TO_PROCESS);

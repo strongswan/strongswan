@@ -366,7 +366,7 @@ static status_t process_reauthentication(private_eap_aka_peer_t *this,
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
 	}
-	if (!in->verify(in, nonce))
+	if (!in->verify(in, chunk_empty))
 	{
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;

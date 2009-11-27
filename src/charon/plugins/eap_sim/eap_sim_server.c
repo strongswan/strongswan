@@ -172,8 +172,7 @@ static status_t reauthenticate(private_eap_sim_server_t *this,
 							   next->get_encoding(next));
 		next->destroy(next);
 	}
-	/* create AT_MAC over EAP-Message|NONCE_S */
-	*out = message->generate(message, this->nonce);
+	*out = message->generate(message, chunk_empty);
 	message->destroy(message);
 
 	this->pending = SIM_REAUTHENTICATION;
