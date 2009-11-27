@@ -24,10 +24,12 @@
 #include <crypto/hashers/hasher.h>
 #include <utils/identification.h>
 #include <utils/enumerator.h>
+#include <sa/authenticators/eap/eap_method.h>
 
 typedef struct sim_manager_t sim_manager_t;
 typedef struct sim_card_t sim_card_t;
 typedef struct sim_provider_t sim_provider_t;
+typedef struct sim_hooks_t sim_hooks_t;
 
 #define SIM_RAND_LEN	16
 #define SIM_SRES_LEN	 4
@@ -238,7 +240,34 @@ struct sim_provider_t {
 };
 
 /**
- * The SIM manager handles multiple (U)SIM cards and providers.
+ * Additional hooks invoked during EAP-SIM/AKA message processing.
+ */
+struct sim_hooks_t {
+
+	/**
+	 * SIM/AKA attribute parsing hook.
+	 *
+	 * @param code		code of EAP message the attribute was parsed from
+	 * @param type		EAP method, SIM or AKA
+	 * @param subtye	method specific subtype
+	 * @param attribute	parsed SIM/AKA attribute type
+	 * @param data		attribute data
+	 * @return			TRUE to filter out attribute from further processing
+	 */
+	bool (*attribute)(sim_hooks_t *this, eap_code_t code, eap_type_t type,
+					  u_int8_t subtype, u_int8_t attribute, chunk_t data);
+
+	/**
+	 * SIM/AKA encryption/authentication key hooks.
+	 *
+	 * @param k_encr	derived SIM/AKA encryption key k_encr
+	 * @param k_auth	derived SIM/AKA authentication key k_auth
+	 */
+	void (*keys)(sim_hooks_t *this, chunk_t k_encr, chunk_t k_auth);
+};
+
+/**
+ * The SIM manager handles multiple (U)SIM cards/providers and hooks.
  */
 struct sim_manager_t {
 
@@ -433,6 +462,42 @@ struct sim_manager_t {
 	 */
 	identification_t* (*provider_gen_reauth)(sim_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1]);
+
+	/**
+	 * Register a set of hooks to the manager.
+	 *
+	 * @param hooks		hook interface implementation to register
+	 */
+	void (*add_hooks)(sim_manager_t *this, sim_hooks_t *hooks);
+
+	/**
+	 * Unregister a set of hooks from the manager.
+	 *
+	 * @param hooks		hook interface implementation to unregister
+	 */
+	void (*remove_hooks)(sim_manager_t *this, sim_hooks_t *hooks);
+
+	/**
+	 * Invoke SIM/AKA attribute hook.
+	 *
+	 * @param code		EAP message code (Request/response/success/failed)
+	 * @param type		EAP method type, EAP-SIM or AKA
+	 * @param subtype	method specific message subtype
+	 * @param attribute	SIM/AKA attribute type
+	 * @param data		attribute data
+	 * @return			TRUE to filter out attribute from further processing
+	 */
+	bool (*attribute_hook)(sim_manager_t *this, eap_code_t code,
+						   eap_type_t type, u_int8_t subtype,
+						   u_int8_t attribute, chunk_t data);
+
+	/**
+	 * Invoke SIM/AKA key hook.
+	 *
+	 * @param k_encr	SIM/AKA encryption key k_encr
+	 * @param k_auth	SIM/AKA authentication key k_auth
+	 */
+	void (*key_hook)(sim_manager_t *this, chunk_t k_encr, chunk_t k_auth);
 
 	/**
 	 * Destroy a manager instance.

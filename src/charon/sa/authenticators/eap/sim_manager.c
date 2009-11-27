@@ -39,6 +39,11 @@ struct private_sim_manager_t {
 	 * list of added provider
 	 */
 	linked_list_t *providers;
+
+	/**
+	 * list of added hooks
+	 */
+	linked_list_t *hooks;
 };
 
 /**
@@ -429,12 +434,70 @@ static identification_t* provider_gen_reauth(private_sim_manager_t *this,
 }
 
 /**
+ * Implementation of sim_manager_t.add_hooks
+ */
+static void add_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
+{
+	this->hooks->insert_last(this->hooks, hooks);
+}
+
+/**
+ * Implementation of sim_manager_t.remove_hooks
+ */
+static void remove_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
+{
+	this->hooks->remove(this->hooks, hooks, NULL);
+}
+
+/**
+ * Implementation of sim_manager_t.attribute_hook
+ */
+static bool attribute_hook(private_sim_manager_t *this, eap_code_t code,
+						   eap_type_t type, u_int8_t subtype,
+						   u_int8_t attribute, chunk_t data)
+{
+	enumerator_t *enumerator;
+	sim_hooks_t *hooks;
+	bool filter = FALSE;
+
+	enumerator = this->hooks->create_enumerator(this->hooks);
+	while (enumerator->enumerate(enumerator, &hooks))
+	{
+		if (hooks->attribute(hooks, code, type, subtype, attribute, data))
+		{
+			filter = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return filter;
+}
+
+/**
+ * Implementation of sim_manager_t.key_hook
+ */
+static void key_hook(private_sim_manager_t *this,
+					 chunk_t k_encr, chunk_t k_auth)
+{
+	enumerator_t *enumerator;
+	sim_hooks_t *hooks;
+
+	enumerator = this->hooks->create_enumerator(this->hooks);
+	while (enumerator->enumerate(enumerator, &hooks))
+	{
+		hooks->keys(hooks, k_encr, k_auth);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Implementation of sim_manager_t.destroy.
  */
 static void destroy(private_sim_manager_t *this)
 {
 	this->cards->destroy(this->cards);
 	this->providers->destroy(this->providers);
+	this->hooks->destroy(this->hooks);
 	free(this);
 }
 
@@ -463,10 +526,15 @@ sim_manager_t *sim_manager_create()
 	this->public.provider_gen_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))provider_gen_pseudonym;
 	this->public.provider_is_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))provider_is_reauth;
 	this->public.provider_gen_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))provider_gen_reauth;
+	this->public.add_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))add_hooks;
+	this->public.remove_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))remove_hooks;
+	this->public.attribute_hook = (bool(*)(sim_manager_t*, eap_code_t code, eap_type_t type, u_int8_t subtype, u_int8_t attribute, chunk_t data))attribute_hook;
+	this->public.key_hook = (void(*)(sim_manager_t*, chunk_t k_encr, chunk_t k_auth))key_hook;
 	this->public.destroy = (void(*)(sim_manager_t*))destroy;
 
 	this->cards = linked_list_create();
 	this->providers = linked_list_create();
+	this->hooks = linked_list_create();
 
 	return &this->public;
 }
