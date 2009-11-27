@@ -244,6 +244,14 @@ static void set_sa(private_bus_t *this, ike_sa_t *ike_sa)
 }
 
 /**
+ * Implementation of bus_t.get_sa
+ */
+static ike_sa_t* get_sa(private_bus_t *this)
+{
+	return pthread_getspecific(this->thread_sa);
+}
+
+/**
  * data associated to a signal, passed to callback
  */
 typedef struct {
@@ -744,6 +752,7 @@ bus_t *bus_create()
 	this->public.remove_listener = (void(*)(bus_t*,listener_t*))remove_listener;
 	this->public.listen = (void(*)(bus_t*, listener_t *listener, job_t *job))listen_;
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
+	this->public.get_sa = (ike_sa_t*(*)(bus_t*))get_sa;
 	this->public.log = (void(*)(bus_t*,debug_t,level_t,char*,...))log_;
 	this->public.vlog = (void(*)(bus_t*,debug_t,level_t,char*,va_list))vlog;
 	this->public.alert = (void(*)(bus_t*, alert_t alert, ...))alert;

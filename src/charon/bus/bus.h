@@ -191,6 +191,16 @@ struct bus_t {
 	void (*set_sa) (bus_t *this, ike_sa_t *ike_sa);
 
 	/**
+	 * Get the IKE_SA the calling thread is currently using.
+	 *
+	 * If a thread currently does not know what IKE_SA it is processing,
+	 * it can call get_sa() to look up the SA set during checkout via set_sa().
+	 *
+	 * @return			registered ike_sa, NULL if none registered
+	 */
+	ike_sa_t* (*get_sa)(bus_t *this);
+
+	/**
 	 * Send a log message to the bus.
 	 *
 	 * The signal specifies the type of the event occured. The format string
