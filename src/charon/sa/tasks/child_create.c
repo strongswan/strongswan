@@ -724,6 +724,12 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	this->proposals = this->config->get_proposals(this->config,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
+	if (this->mode == MODE_TRANSPORT &&
+		this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+	{
+		this->mode = MODE_TUNNEL;
+		DBG1(DBG_IKE, "not using transport mode, connection NATed");
+	}
 
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
