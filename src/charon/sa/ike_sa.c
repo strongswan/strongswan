@@ -160,11 +160,6 @@ struct private_ike_sa_t {
 	identification_t *other_id;
 
 	/**
-	 * EAP Identity exchange in EAP-Identity method
-	 */
-	identification_t *eap_identity;;
-
-	/**
 	 * set of extensions the peer supports
 	 */
 	ike_extension_t extensions;
@@ -1354,23 +1349,6 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
- * Implementation of ike_sa_t.get_eap_identity.
- */
-static identification_t* get_eap_identity(private_ike_sa_t *this)
-{
-	return this->eap_identity;
-}
-
-/**
- * Implementation of ike_sa_t.set_eap_identity.
- */
-static void set_eap_identity(private_ike_sa_t *this, identification_t *id)
-{
-	DESTROY_IF(this->eap_identity);
-	this->eap_identity = id;
-}
-
-/**
  * Implementation of ike_sa_t.add_child_sa.
  */
 static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
@@ -2006,7 +1984,6 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->other_id);
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
-	DESTROY_IF(this->eap_identity);
 
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
@@ -2051,8 +2028,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.get_eap_identity = (identification_t* (*)(ike_sa_t*)) get_eap_identity;
-	this->public.set_eap_identity = (void (*)(ike_sa_t*,identification_t*)) set_eap_identity;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
@@ -2107,7 +2082,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	this->eap_identity = NULL;
 	this->extensions = 0;
 	this->conditions = 0;
 	this->keymat = keymat_create(ike_sa_id->is_initiator(ike_sa_id));
