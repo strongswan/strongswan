@@ -327,8 +327,8 @@ static status_t process_reauthentication(private_eap_aka_peer_t *this,
 	this->crypto->derive_keys_reauth(this->crypto,
 									 chunk_create(this->mk, HASH_SIZE_SHA1));
 
-	/* parse again with decryption key */
-	if (!in->parse(in))
+	/* verify MAC and parse again with decryption key */
+	if (!in->verify(in, chunk_empty) || !in->parse(in))
 	{
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
@@ -363,11 +363,6 @@ static status_t process_reauthentication(private_eap_aka_peer_t *this,
 	if (!nonce.len || !counter.len)
 	{
 		DBG1(DBG_IKE, "EAP-AKA/Request/Reauthentication message incomplete");
-		*out = create_client_error(this, in->get_identifier(in));
-		return NEED_MORE;
-	}
-	if (!in->verify(in, chunk_empty))
-	{
 		*out = create_client_error(this, in->get_identifier(in));
 		return NEED_MORE;
 	}

@@ -196,6 +196,11 @@ static status_t process_reauthentication(private_eap_sim_server_t *this,
 			 simaka_subtype_names, SIM_REAUTHENTICATION);
 		return FAILED;
 	}
+	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_S"  */
+	if (!in->verify(in, this->nonce))
+	{
+		return FAILED;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -219,11 +224,6 @@ static status_t process_reauthentication(private_eap_sim_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_S"  */
-	if (!in->verify(in, this->nonce))
-	{
-		return FAILED;
-	}
 	if (too_small)
 	{
 		DBG1(DBG_IKE, "received %N, initiating full authentication",
@@ -429,6 +429,11 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 			 simaka_subtype_names, SIM_CHALLENGE);
 		return FAILED;
 	}
+	/* verify AT_MAC attribute, signature is over "EAP packet | n*SRES"  */
+	if (!in->verify(in, this->sreses))
+	{
+		return FAILED;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -441,11 +446,6 @@ static status_t process_challenge(private_eap_sim_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* verify AT_MAC attribute, signature is over "EAP packet | n*SRES"  */
-	if (!in->verify(in, this->sreses))
-	{
-		return FAILED;
-	}
 	return SUCCESS;
 }
 

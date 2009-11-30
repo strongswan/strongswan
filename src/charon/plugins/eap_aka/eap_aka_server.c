@@ -370,6 +370,11 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 			 simaka_subtype_names, AKA_CHALLENGE);
 		return FAILED;
 	}
+	/* verify MAC of EAP message, AT_MAC */
+	if (!in->verify(in, chunk_empty))
+	{
+		return FAILED;
+	}
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -389,12 +394,6 @@ static status_t process_challenge(private_eap_aka_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* verify MAC of EAP message, AT_MAC */
-	if (!in->verify(in, chunk_empty))
-	{
-		DBG1(DBG_IKE, "AT_MAC verification failed");
-		return FAILED;
-	}
 	/* compare received RES against stored XRES */
 	if (!chunk_equals(res, this->xres))
 	{
@@ -421,6 +420,11 @@ static status_t process_reauthentication(private_eap_aka_server_t *this,
 			 simaka_subtype_names, AKA_REAUTHENTICATION);
 		return FAILED;
 	}
+	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_S"  */
+	if (!in->verify(in, this->nonce))
+	{
+		return FAILED;
+	}
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &type, &data))
@@ -444,11 +448,6 @@ static status_t process_reauthentication(private_eap_aka_server_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* verify AT_MAC attribute, signature is over "EAP packet | NONCE_S"  */
-	if (!in->verify(in, this->nonce))
-	{
-		return FAILED;
-	}
 	if (too_small)
 	{
 		DBG1(DBG_IKE, "received %N, initiating full authentication",
