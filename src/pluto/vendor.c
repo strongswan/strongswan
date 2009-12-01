@@ -382,6 +382,12 @@ static void handle_known_vendorid (struct msg_digest *md, const char *vidstr,
 		vid_useful = TRUE;
 		break;
 
+	/* Remote side is a Windows 2000+ host */
+	case VID_MS_NT5:
+		md->ms_nt5 = TRUE;
+		vid_useful = TRUE;
+		break;
+
 	/*
 	 * Use most recent supported NAT-Traversal method and ignore the
 	 * other ones (implementations will send all supported methods but

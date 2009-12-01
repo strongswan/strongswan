@@ -61,6 +61,7 @@ struct msg_digest {
 	notification_t note;        /* reason for failure */
 	bool dpd;                   /* peer supports RFC 3706 DPD */
 	bool openpgp;               /* peer supports OpenPGP certificates */
+	bool ms_nt5;                /* peer is a windows 2000+ host */
 
 #   define PAYLIMIT 40
 	struct payload_digest
