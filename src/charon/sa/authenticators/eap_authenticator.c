@@ -177,6 +177,30 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 }
 
 /**
+ * Replace the existing EAP-Identity in other auth config
+ */
+static void replace_eap_identity(private_eap_authenticator_t *this)
+{
+	enumerator_t *enumerator;
+	auth_rule_t rule;
+	auth_cfg_t *cfg;
+	void *ptr;
+
+	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	enumerator = cfg->create_enumerator(cfg);
+	while (enumerator->enumerate(enumerator, &rule, &ptr))
+	{
+		if (rule == AUTH_RULE_EAP_IDENTITY)
+		{
+			cfg->replace(cfg, enumerator, AUTH_RULE_EAP_IDENTITY,
+						 this->eap_identity->clone(this->eap_identity));
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Handle EAP exchange as server
  */
 static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
@@ -219,14 +243,13 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			if (type == EAP_IDENTITY)
 			{
 				chunk_t data;
-				char buf[256];
 
 				if (this->method->get_msk(this->method, &data) == SUCCESS)
 				{
-					snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
-					this->eap_identity = identification_create_from_string(buf);
+					this->eap_identity = identification_create_from_data(data);
 					DBG1(DBG_IKE, "received EAP identity '%Y'",
 						 this->eap_identity);
+					replace_eap_identity(this);
 				}
 				/* restart EAP exchange, but with real method */
 				this->method->destroy(this->method);
