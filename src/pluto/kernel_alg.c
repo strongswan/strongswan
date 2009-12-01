@@ -395,6 +395,10 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 						kernel_alg_add(satype, supp_exttype, &alg);
 					}
 				}
+
+				/* also register AES_GMAC */
+				alg.sadb_alg_id = SADB_X_EALG_NULL_AES_GMAC;
+				kernel_alg_add(satype, supp_exttype, &alg);
 			}
 			/* if SHA2_256 is registered then also register SHA2_256_96 */
 			if (satype == SADB_SATYPE_ESP &&

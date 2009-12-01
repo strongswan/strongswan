@@ -125,10 +125,10 @@ extern const char sparse_end[];
 #define MAX_DIGEST_LEN          HASH_SIZE_SHA512
 
 /* RFC 2404 "HMAC-SHA-1-96" section 3 */
-#define HMAC_SHA1_KEY_LEN		HASH_SIZE_SHA1
+#define HMAC_SHA1_KEY_LEN       HASH_SIZE_SHA1
 
 /* RFC 2403 "HMAC-MD5-96" section 3 */
-#define HMAC_MD5_KEY_LEN   		HASH_SIZE_MD5
+#define HMAC_MD5_KEY_LEN        HASH_SIZE_MD5
 
 #define IKE_UDP_PORT    500
 
@@ -150,7 +150,7 @@ enum ipsec_authentication_algo {
 	AH_AES_128_GMAC = 11,
 	AH_AES_192_GMAC = 12,
 	AH_AES_256_GMAC = 13,
-	AH_SHA2_256_96  = 252  
+	AH_SHA2_256_96  = 252
 };
 
 extern enum_names ah_transform_names;
@@ -184,6 +184,7 @@ enum ipsec_cipher_algo {
 	ESP_AES_GCM_16    = 20,
 	ESP_SEED_CBC      = 21,
 	ESP_CAMELLIA      = 22,
+	ESP_AES_GMAC      = 23,
 	ESP_SERPENT       = 252,
 	ESP_TWOFISH       = 253
 };

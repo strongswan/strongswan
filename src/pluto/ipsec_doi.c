@@ -2753,6 +2753,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 				case ESP_AES_GCM_12:
 				case ESP_AES_GCM_16:
 				case ESP_AES_CTR:
+				case ESP_AES_GMAC:
 					needed_len += 4;
 					break;
 				default:
@@ -3620,7 +3621,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	if (send_cert)
 	{
 		bool success;
-		chunk_t cert_encoding;	
+		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 
 		struct isakmp_cert cert_hd;
@@ -3634,7 +3635,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		cert_encoding = mycert->cert->get_encoding(mycert->cert);
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
-		if (!success)	
+		if (!success)
 		{
 			return STF_INTERNAL_ERROR;
 		}
@@ -4076,7 +4077,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
 		if (!success)
-		{	
+		{
 			return STF_INTERNAL_ERROR;
 		}
 		close_output_pbs(&cert_pbs);

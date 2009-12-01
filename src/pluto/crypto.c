@@ -580,9 +580,11 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 			return ESP_AES_GCM_16;
 		case ENCR_CAMELLIA_CBC:
 			return ESP_CAMELLIA;
+		case ENCR_NULL_AUTH_AES_GMAC:
+			return ESP_AES_GMAC;
 		case ENCR_SERPENT_CBC:
 			return ESP_SERPENT;
-	case ENCR_TWOFISH_CBC:
+		case ENCR_TWOFISH_CBC:
 			return ESP_TWOFISH;
 		default:
 			return 0;

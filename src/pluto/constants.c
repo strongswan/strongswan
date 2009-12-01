@@ -392,7 +392,8 @@ static const char *const esp_transform_name[] = {
 	"AES_GCM_12",
 	"AES_GCM_16",
 	"SEED_CBC",
-	"CAMELLIA_CBC"
+	"CAMELLIA_CBC",
+	"AES_GMAC"
 };
 
 static const char *const esp_transform_name_high[] = {

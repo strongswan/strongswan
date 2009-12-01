@@ -181,7 +181,7 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_AES_GCM_ICV8,			"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV12,		"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV16,		"rfc4106(gcm(aes))"	},
-/*	{ENCR_NULL_AUTH_AES_GMAC,	"***"				}, */
+	{ENCR_NULL_AUTH_AES_GMAC,	"rfc4543(gcm(aes))"	},
 	{ENCR_CAMELLIA_CBC,			"cbc(camellia)"		},
 /*	{ENCR_CAMELLIA_CTR,			"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
@@ -1007,6 +1007,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			break;
 		case ENCR_AES_CCM_ICV16:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_NULL_AUTH_AES_GMAC:
 		case ENCR_CAMELLIA_CCM_ICV16:
 			icv_size += 32;
 			/* FALL */

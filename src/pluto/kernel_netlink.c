@@ -112,6 +112,7 @@ static sparse_names ealg_list = {
 	{ SADB_X_EALG_AES_GCM_ICV8,  "rfc4106(gcm(aes))" },
 	{ SADB_X_EALG_AES_GCM_ICV12, "rfc4106(gcm(aes))" },
 	{ SADB_X_EALG_AES_GCM_ICV16, "rfc4106(gcm(aes))" },
+	{ SADB_X_EALG_NULL_AES_GMAC, "rfc4543(gcm(aes))" },
 	{ SADB_X_EALG_CAMELLIACBC,   "cbc(camellia)" },
 	{ SADB_X_EALG_SERPENTCBC,    "serpent" },
 	{ SADB_X_EALG_TWOFISHCBC,    "twofish" },
@@ -687,6 +688,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			break;
 		case SADB_X_EALG_AES_CCM_ICV16:
 		case SADB_X_EALG_AES_GCM_ICV16:
+		case SADB_X_EALG_NULL_AES_GMAC:
 			icv_size += 32;
 			/* FALL */
 		case SADB_X_EALG_AES_CCM_ICV12:

@@ -139,6 +139,7 @@ static bool is_authenticated_encryption(int ealg_id)
 		case ESP_AES_GCM_8:
 		case ESP_AES_GCM_12:
 		case ESP_AES_GCM_16:
+		case ESP_AES_GMAC:
 			return TRUE;
 	}
 	return FALSE;
@@ -474,7 +475,7 @@ struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
 
 	if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str) == SUCCESS)
 	{
-		alg_info_ike->ref_cnt = 1;	
+		alg_info_ike->ref_cnt = 1;
 		return alg_info_ike;
 	}
 	else

@@ -1993,6 +1993,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			case ESP_AES_GCM_12:
 			case ESP_AES_GCM_16:
 			case ESP_AES_CTR:
+			case ESP_AES_GMAC:
 				key_len += 4;
 				break;
 			default:

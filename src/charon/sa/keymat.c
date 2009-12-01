@@ -99,8 +99,8 @@ struct keylen_entry_t {
  * Keylen for encryption algos
  */
 keylen_entry_t keylen_enc[] = {
-	{ENCR_DES, 					 64},
-	{ENCR_3DES, 				192},
+	{ENCR_DES,					 64},
+	{ENCR_3DES,					192},
 	{END_OF_LIST,				  0}
 };
 
@@ -108,7 +108,7 @@ keylen_entry_t keylen_enc[] = {
  * Keylen for integrity algos
  */
 keylen_entry_t keylen_int[] = {
-	{AUTH_HMAC_MD5_96, 			128},
+	{AUTH_HMAC_MD5_96,			128},
 	{AUTH_HMAC_SHA1_96,			160},
 	{AUTH_HMAC_SHA2_256_96,		256},
 	{AUTH_HMAC_SHA2_256_128,	256},
@@ -414,7 +414,7 @@ static bool derive_child_keys(private_keymat_t *this,
 		/* to bytes */
 		enc_size /= 8;
 
-		/* CCM/GCM/CTR needs additional bytes */
+		/* CCM/GCM/CTR/GMAC needs additional bytes */
 		switch (enc_alg)
 		{
 			case ENCR_AES_CCM_ICV8:
@@ -429,6 +429,7 @@ static bool derive_child_keys(private_keymat_t *this,
 			case ENCR_AES_GCM_ICV12:
 			case ENCR_AES_GCM_ICV16:
 			case ENCR_AES_CTR:
+			case ENCR_NULL_AUTH_AES_GMAC:
 				enc_size += 4;
 				break;
 			default:
