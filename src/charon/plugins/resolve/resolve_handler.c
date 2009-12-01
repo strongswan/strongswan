@@ -52,22 +52,26 @@ static bool handle(private_resolve_handler_t *this, identification_t *server,
 	FILE *in, *out;
 	char buf[1024];
 	host_t *addr;
-	int family;
 	size_t len;
 	bool handled = FALSE;
 
 	switch (type)
 	{
 		case INTERNAL_IP4_DNS:
-			family = AF_INET;
+			addr = host_create_from_chunk(AF_INET, data, 0);
 			break;
 		case INTERNAL_IP6_DNS:
-			family = AF_INET6;
+			addr = host_create_from_chunk(AF_INET6, data, 0);
 			break;
 		default:
 			return FALSE;
 	}
 
+	if (!addr || addr->is_anyaddr(addr))
+	{
+		DESTROY_IF(addr);
+		return FALSE;
+	}
 	this->mutex->lock(this->mutex);
 
 	in = fopen(this->file, "r");
@@ -76,11 +80,8 @@ static bool handle(private_resolve_handler_t *this, identification_t *server,
 	out = fopen(this->file, "w");
 	if (out)
 	{
-		addr = host_create_from_chunk(family, data, 0);
-		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n",
-				addr, server);
+		fprintf(out, "nameserver %H   # by strongSwan, from %Y\n", addr, server);
 		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
-		addr->destroy(addr);
 		handled = TRUE;
 
 		/* copy rest of the file */
@@ -90,16 +91,20 @@ static bool handle(private_resolve_handler_t *this, identification_t *server,
 			{
 				ignore_result(fwrite(buf, 1, len, out));
 			}
-			fclose(in);
 		}
 		fclose(out);
 	}
+	if (in)
+	{
+		fclose(in);
+	}
+	this->mutex->unlock(this->mutex);
+	addr->destroy(addr);
 
 	if (!handled)
 	{
 		DBG1(DBG_IKE, "adding DNS server failed", this->file);
 	}
-	this->mutex->unlock(this->mutex);
 	return handled;
 }
 
