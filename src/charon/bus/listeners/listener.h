@@ -167,12 +167,11 @@ struct listener_t {
 	 * it is invoked again, but with final = TRUE.
 	 *
 	 * @param ike_sa	IKE_SA to authorize
-	 * @param auth		list of auth_cfg_t, done in peers authentication rounds
 	 * @param final		TRUE if this is the final hook invocation
 	 * @param success	set to TRUE to complete IKE_SA, FALSE abort
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
-	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa, linked_list_t *auth,
+	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa,
 					  bool final, bool *success);
 };
 

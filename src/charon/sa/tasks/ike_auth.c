@@ -68,16 +68,6 @@ struct private_ike_auth_t {
 	packet_t *other_packet;
 
 	/**
-	 * completed authentication configs initiated by us (auth_cfg_t)
-	 */
-	linked_list_t *my_cfgs;
-
-	/**
-	 * completed authentication configs initiated by other (auth_cfg_t)
-	 */
-	linked_list_t *other_cfgs;;
-
-	/**
 	 * currently active authenticator, to authenticate us
 	 */
 	authenticator_t *my_auth;
@@ -183,14 +173,7 @@ static auth_cfg_t *get_auth_cfg(private_ike_auth_t *this, bool local)
 	{
 		bool found = FALSE;
 
-		if (local)
-		{
-			e2 = this->my_cfgs->create_enumerator(this->my_cfgs);
-		}
-		else
-		{
-			e2 = this->other_cfgs->create_enumerator(this->other_cfgs);
-		}
+		e2 = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, local);
 		while (e2->enumerate(e2, &c2))
 		{
 			if (c2->complies(c2, c1, FALSE))
@@ -224,7 +207,7 @@ static bool do_another_auth(private_ike_auth_t *this)
 		return FALSE;
 	}
 
-	done = this->my_cfgs->create_enumerator(this->my_cfgs);
+	done = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, TRUE);
 	todo = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg, TRUE);
 	while (todo->enumerate(todo, &todo_cfg))
 	{
@@ -297,7 +280,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			enumerator_t *e1, *e2, *tmp;
 			auth_cfg_t *c1, *c2;
 
-			e1 = this->other_cfgs->create_enumerator(this->other_cfgs);
+			e1 = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
 			e2 = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg, FALSE);
 
 			if (strict)
@@ -427,7 +410,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 			/* authentication step complete, reset authenticator */
 			cfg = auth_cfg_create();
 			cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE), TRUE);
-			this->my_cfgs->insert_last(this->my_cfgs, cfg);
+			this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
 			this->my_auth->destroy(this->my_auth);
 			this->my_auth = NULL;
 			break;
@@ -562,13 +545,12 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	/* store authentication information */
 	cfg = auth_cfg_create();
 	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-	this->other_cfgs->insert_last(this->other_cfgs, cfg);
+	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 
 	/* another auth round done, invoke authorize hook */
-	if (!charon->bus->authorize(charon->bus, this->other_cfgs, FALSE))
+	if (!charon->bus->authorize(charon->bus, FALSE))
 	{
-		DBG1(DBG_IKE, "round %d authorization hook forbids IKE_SA, cancelling",
-			 this->other_cfgs->get_count(this->other_cfgs));
+		DBG1(DBG_IKE, "authorization hook forbids IKE_SA, cancelling");
 		this->authentication_failed = TRUE;
 		return NEED_MORE;
 	}
@@ -691,7 +673,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 				cfg = auth_cfg_create();
 				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
 						   TRUE);
-				this->my_cfgs->insert_last(this->my_cfgs, cfg);
+				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				break;
@@ -723,7 +705,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 								chunk_empty);
 			return FAILED;
 		}
-		if (!charon->bus->authorize(charon->bus, this->other_cfgs, TRUE))
+		if (!charon->bus->authorize(charon->bus, TRUE))
 		{
 			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
@@ -820,7 +802,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				cfg = auth_cfg_create();
 				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
 						   TRUE);
-				this->my_cfgs->insert_last(this->my_cfgs, cfg);
+				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				this->do_another_auth = do_another_auth(this);
@@ -881,15 +863,14 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 		/* store authentication information, reset authenticator */
 		cfg = auth_cfg_create();
 		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-		this->other_cfgs->insert_last(this->other_cfgs, cfg);
+		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 		this->other_auth->destroy(this->other_auth);
 		this->other_auth = NULL;
 
 		/* another auth round done, invoke authorize hook */
-		if (!charon->bus->authorize(charon->bus, this->other_cfgs, FALSE))
+		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
-			DBG1(DBG_IKE, "round %d authorization forbids IKE_SA, cancelling",
-				 this->other_cfgs->get_count(this->other_cfgs));
+			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
 			return FAILED;
 		}
 	}
@@ -904,7 +885,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 		{
 			return FAILED;
 		}
-		if (!charon->bus->authorize(charon->bus, this->other_cfgs, TRUE))
+		if (!charon->bus->authorize(charon->bus, TRUE))
 		{
 			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
 			return FAILED;
@@ -943,8 +924,6 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
-	this->my_cfgs->destroy_offset(this->my_cfgs, offsetof(auth_cfg_t, destroy));
-	this->other_cfgs->destroy_offset(this->other_cfgs, offsetof(auth_cfg_t, destroy));
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 
 	this->my_packet = NULL;
@@ -956,8 +935,6 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	this->do_another_auth = TRUE;
 	this->expect_another_auth = TRUE;
 	this->authentication_failed = FALSE;
-	this->my_cfgs = linked_list_create();
-	this->other_cfgs = linked_list_create();
 	this->candidates = linked_list_create();
 }
 
@@ -973,8 +950,6 @@ static void destroy(private_ike_auth_t *this)
 	DESTROY_IF(this->my_auth);
 	DESTROY_IF(this->other_auth);
 	DESTROY_IF(this->peer_cfg);
-	this->my_cfgs->destroy_offset(this->my_cfgs, offsetof(auth_cfg_t, destroy));
-	this->other_cfgs->destroy_offset(this->other_cfgs, offsetof(auth_cfg_t, destroy));
 	this->candidates->destroy_offset(this->candidates, offsetof(peer_cfg_t, destroy));
 	free(this);
 }
@@ -1008,8 +983,6 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 	this->my_packet = NULL;
 	this->other_packet = NULL;
 	this->peer_cfg = NULL;
-	this->my_cfgs = linked_list_create();
-	this->other_cfgs = linked_list_create();
 	this->candidates = linked_list_create();
 	this->my_auth = NULL;
 	this->other_auth = NULL;

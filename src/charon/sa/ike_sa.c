@@ -108,6 +108,16 @@ struct private_ike_sa_t {
 	auth_cfg_t *my_auth;
 
 	/**
+	 * list of completed local authentication rounds
+	 */
+	linked_list_t *my_auths;
+
+	/**
+	 * list of completed remote authentication rounds
+	 */
+	linked_list_t *other_auths;
+
+	/**
 	 * currently used authentication constraints, remote (as auth_cfg_t)
 	 */
 	auth_cfg_t *other_auth;
@@ -375,6 +385,56 @@ static auth_cfg_t* get_auth_cfg(private_ike_sa_t *this, bool local)
 		return this->my_auth;
 	}
 	return this->other_auth;
+}
+
+/**
+ * Implementation of ike_sa_t.add_auth_cfg
+ */
+static void add_auth_cfg(private_ike_sa_t *this, bool local, auth_cfg_t *cfg)
+{
+	if (local)
+	{
+		this->my_auths->insert_last(this->my_auths, cfg);
+	}
+	else
+	{
+		this->other_auths->insert_last(this->other_auths, cfg);
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.create_auth_cfg_enumerator
+ */
+static enumerator_t* create_auth_cfg_enumerator(private_ike_sa_t *this,
+												bool local)
+{
+	if (local)
+	{
+		return this->my_auths->create_enumerator(this->my_auths);
+	}
+	return this->other_auths->create_enumerator(this->other_auths);
+}
+
+/**
+ * Flush the stored authentication round information
+ */
+static void flush_auth_cfgs(private_ike_sa_t *this)
+{
+	auth_cfg_t *cfg;
+
+	if (lib->settings->get_bool(lib->settings, "charon.flush_auth_cfg", TRUE))
+	{
+		while (this->my_auths->remove_last(this->my_auths,
+										   (void**)&cfg) == SUCCESS)
+		{
+			cfg->destroy(cfg);
+		}
+		while (this->other_auths->remove_last(this->other_auths,
+											  (void**)&cfg) == SUCCESS)
+		{
+			cfg->destroy(cfg);
+		}
+	}
 }
 
 /**
@@ -1264,7 +1324,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		{	/* invalid initiation attempt, close SA */
 			return DESTROY_ME;
 		}
-		return status;
 	}
 	else
 	{
@@ -1302,8 +1361,14 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 				update_hosts(this, me, other);
 			}
 		}
-		return this->task_manager->process_message(this->task_manager, message);
+		status = this->task_manager->process_message(this->task_manager, message);
+		if (message->get_exchange_type(message) == IKE_AUTH &&
+			this->state == IKE_ESTABLISHED)
+		{	/* authentication completed */
+			flush_auth_cfgs(this);
+		}
 	}
+	return status;
 }
 
 /**
@@ -1990,6 +2055,10 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->proposal);
 	this->my_auth->destroy(this->my_auth);
 	this->other_auth->destroy(this->other_auth);
+	this->my_auths->destroy_offset(this->my_auths,
+								   offsetof(auth_cfg_t, destroy));
+	this->other_auths->destroy_offset(this->other_auths,
+									  offsetof(auth_cfg_t, destroy));
 
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -2015,6 +2084,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
 	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
 	this->public.get_auth_cfg = (auth_cfg_t*(*)(ike_sa_t*, bool local))get_auth_cfg;
+	this->public.create_auth_cfg_enumerator = (enumerator_t*(*)(ike_sa_t*, bool local))create_auth_cfg_enumerator;
+	this->public.add_auth_cfg = (void(*)(ike_sa_t*, bool local, auth_cfg_t *cfg))add_auth_cfg;
 	this->public.get_proposal = (proposal_t*(*)(ike_sa_t*))get_proposal;
 	this->public.set_proposal = (void(*)(ike_sa_t*, proposal_t *proposal))set_proposal;
 	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
@@ -2094,6 +2165,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->peer_cfg = NULL;
 	this->my_auth = auth_cfg_create();
 	this->other_auth = auth_cfg_create();
+	this->my_auths = linked_list_create();
+	this->other_auths = linked_list_create();
 	this->proposal = NULL;
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;

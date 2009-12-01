@@ -263,11 +263,10 @@ struct bus_t {
 	/**
 	 * IKE_SA authorization hook.
 	 *
-	 * @param auth		list of auth_cfg_t, containing peers authentication info
 	 * @param final		TRUE if this is the final invocation
 	 * @return			TRUE to establish IKE_SA, FALSE to send AUTH_FAILED
 	 */
-	bool (*authorize)(bus_t *this, linked_list_t *auth, bool final);
+	bool (*authorize)(bus_t *this, bool final);
 
 	/**
 	 * IKE_SA keymat hook.

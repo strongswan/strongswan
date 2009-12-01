@@ -392,6 +392,22 @@ struct ike_sa_t {
 	auth_cfg_t* (*get_auth_cfg)(ike_sa_t *this, bool local);
 
 	/**
+	 * Insert a completed authentication round.
+	 *
+	 * @param local			TRUE for own rules, FALSE for others constraints
+	 * @param cfg			auth config to append
+	 */
+	void (*add_auth_cfg)(ike_sa_t *this, bool local, auth_cfg_t *cfg);
+
+	/**
+	 * Create an enumerator over added authentication rounds.
+	 *
+	 * @param local			TRUE for own rules, FALSE for others constraints
+	 * @return				enumerator over auth_cfg_t
+	 */
+	enumerator_t* (*create_auth_cfg_enumerator)(ike_sa_t *this, bool local);
+
+	/**
 	 * Get the selected proposal of this IKE_SA.
 	 *
 	 * @return				selected proposal

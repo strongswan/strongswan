@@ -696,7 +696,7 @@ static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 /**
  * Implementation of bus_t.authorize
  */
-static bool authorize(private_bus_t *this, linked_list_t *auth, bool final)
+static bool authorize(private_bus_t *this, bool final)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -715,7 +715,7 @@ static bool authorize(private_bus_t *this, linked_list_t *auth, bool final)
 		}
 		entry->calling++;
 		keep = entry->listener->authorize(entry->listener, ike_sa,
-										  auth, final, &success);
+										  final, &success);
 		entry->calling--;
 		if (!keep)
 		{
@@ -765,7 +765,7 @@ bus_t *bus_create()
 	this->public.ike_rekey = (void(*)(bus_t*, ike_sa_t *old, ike_sa_t *new))ike_rekey;
 	this->public.child_updown = (void(*)(bus_t*, child_sa_t *child_sa, bool up))child_updown;
 	this->public.child_rekey = (void(*)(bus_t*, child_sa_t *old, child_sa_t *new))child_rekey;
-	this->public.authorize = (bool(*)(bus_t*, linked_list_t *auth, bool final))authorize;
+	this->public.authorize = (bool(*)(bus_t*, bool final))authorize;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 
 	this->listeners = linked_list_create();
