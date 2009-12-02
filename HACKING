@@ -10,7 +10,10 @@ compile the code, you need the following tools:
 
     - Git
     - a recent GNU C complier (>= 3.x)
-    - recent autotools
+    - automake
+    - autoconf
+    - libtool
+    - gettext
     - perl
     - lex/flex
     - yacc/bison
