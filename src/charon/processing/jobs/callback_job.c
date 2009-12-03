@@ -126,6 +126,8 @@ static void cancel(private_callback_job_t *this)
 		pthread_cancel(thread);
 		pthread_join(thread, NULL);
 	}
+	/* avoid later execution of a cancelled job */
+	this->callback = NULL;
 }
 
 /**
@@ -142,13 +144,17 @@ static void execute(private_callback_job_t *this)
 	pthread_cleanup_push((void*)destroy, this);
 	while (TRUE)
 	{
+		if (this->callback == NULL)
+		{
+			cleanup = TRUE;
+			break;
+		}
 		switch (this->callback(this->data))
 		{
 			case JOB_REQUEUE_DIRECT:
 				continue;
 			case JOB_REQUEUE_FAIR:
 			{
-				this->thread = 0;
 				charon->processor->queue_job(charon->processor,
 											 &this->public.job_interface);
 				break;
@@ -156,13 +162,13 @@ static void execute(private_callback_job_t *this)
 			case JOB_REQUEUE_NONE:
 			default:
 			{
-				this->thread = 0;
 				cleanup = TRUE;
 				break;
 			}
 		}
 		break;
 	}
+	this->thread = 0;
 	unregister(this);
 	pthread_cleanup_pop(cleanup);
 }
