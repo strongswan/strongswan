@@ -767,6 +767,7 @@ int main(int argc, char *argv[])
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		destroy(private_charon);
+		library_deinit();
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
@@ -774,6 +775,7 @@ int main(int argc, char *argv[])
 	{
 		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		destroy(private_charon);
+		library_deinit();
 		exit(-1);
 	}
 
