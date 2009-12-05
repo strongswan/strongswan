@@ -26,6 +26,10 @@
 #include <debug.h>
 #include <utils/mutex.h>
 #include <utils/linked_list.h>
+#include <utils/hashtable.h>
+
+/** Intervall to check for expired sessions, in seconds */
+#define CLEANUP_INTERVAL 30
 
 typedef struct private_dispatcher_t private_dispatcher_t;
 
@@ -60,14 +64,19 @@ struct private_dispatcher_t {
 	mutex_t *mutex;
 
 	/**
-	 * List of sessions
+	 * Hahstable with active sessions
 	 */
-	linked_list_t *sessions;
+	hashtable_t *sessions;
 
 	/**
 	 * session timeout
 	 */
 	time_t timeout;
+
+	/**
+	 * timestamp of last session cleanup round
+	 */
+	time_t last_cleanup;
 
 	/**
 	 * running in debug mode?
@@ -219,6 +228,60 @@ static void add_filter(private_dispatcher_t *this,
 }
 
 /**
+ * Hashtable hash function
+ */
+static u_int session_hash(char *sid)
+{
+	return chunk_hash(chunk_create(sid, strlen(sid)));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool session_equals(char *sid1, char *sid2)
+{
+	return streq(sid1, sid2);
+}
+
+/**
+ * Cleanup unused sessions
+ */
+static void cleanup_sessions(private_dispatcher_t *this, time_t now)
+{
+	if (this->last_cleanup < now - CLEANUP_INTERVAL)
+	{
+		char *sid;
+		session_entry_t *entry;
+		enumerator_t *enumerator;
+		linked_list_t *remove;
+
+		this->last_cleanup = now;
+		remove = linked_list_create();
+		enumerator = this->sessions->create_enumerator(this->sessions);
+		while (enumerator->enumerate(enumerator, &sid, &entry))
+		{
+			/* check all sessions for timeout or close flag */
+			if (!entry->in_use &&
+				(entry->used < now - this->timeout || entry->closed))
+			{
+				remove->insert_last(remove, sid);
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		while (remove->remove_last(remove, (void**)&sid) == SUCCESS)
+		{
+			entry = this->sessions->remove(this->sessions, sid);
+			if (entry)
+			{
+				session_entry_destroy(entry);
+			}
+		}
+		remove->destroy(remove);
+	}
+}
+
+/**
  * Actual dispatching code
  */
 static void dispatch(private_dispatcher_t *this)
@@ -228,8 +291,7 @@ static void dispatch(private_dispatcher_t *this)
 	while (TRUE)
 	{
 		request_t *request;
-		session_entry_t *current, *found = NULL;
-		enumerator_t *enumerator;
+		session_entry_t *found = NULL;
 		time_t now;
 		char *sid;
 
@@ -241,33 +303,18 @@ static void dispatch(private_dispatcher_t *this)
 		{
 			continue;
 		}
-		sid = request->get_cookie(request, "SID");
 		now = time_monotonic(NULL);
+		sid = request->get_cookie(request, "SID");
 
-		/* find session */
 		this->mutex->lock(this->mutex);
-		enumerator = this->sessions->create_enumerator(this->sessions);
-		while (enumerator->enumerate(enumerator, &current))
+		if (sid)
 		{
-			/* check all sessions for timeout or close flag
-			 * TODO: use a seperate cleanup thread */
-			if (!current->in_use &&
-				(current->used < now - this->timeout || current->closed))
-			{
-				this->sessions->remove_at(this->sessions, enumerator);
-				session_entry_destroy(current);
-				continue;
-			}
-			/* find by session ID. Prevent session hijacking by host check */
-			if (!found && sid && current->session->get_sid(current->session) &&
-				streq(current->session->get_sid(current->session), sid) &&
-				streq(current->host, request->get_host(request)))
-			{
-				found = current;
-			}
+			found = this->sessions->get(this->sessions, sid);
 		}
-		enumerator->destroy(enumerator);
-
+		if (found && !streq(found->host, request->get_host(request)))
+		{
+			found = NULL;
+		}
 		if (found)
 		{
 			/* wait until session is unused */
@@ -279,7 +326,8 @@ static void dispatch(private_dispatcher_t *this)
 		else
 		{	/* create a new session if not found */
 			found = session_entry_create(this, request->get_host(request));
-			this->sessions->insert_first(this->sessions, found);
+			sid = found->session->get_sid(found->session);
+			this->sessions->put(this->sessions, sid, found);
 		}
 		found->in_use = TRUE;
 		this->mutex->unlock(this->mutex);
@@ -292,10 +340,10 @@ static void dispatch(private_dispatcher_t *this)
 		this->mutex->lock(this->mutex);
 		found->in_use = FALSE;
 		found->closed = request->session_closed(request);
-		this->mutex->unlock(this->mutex);
 		found->cond->signal(found->cond);
+		cleanup_sessions(this, now);
+		this->mutex->unlock(this->mutex);
 
-		/* cleanup */
 		request->destroy(request);
 	}
 }
@@ -338,13 +386,23 @@ static void waitsignal(private_dispatcher_t *this)
  */
 static void destroy(private_dispatcher_t *this)
 {
+	char *sid;
+	session_entry_t *entry;
+	enumerator_t *enumerator;
+
 	FCGX_ShutdownPending();
 	while (this->thread_count--)
 	{
 		pthread_cancel(this->threads[this->thread_count]);
 		pthread_join(this->threads[this->thread_count], NULL);
 	}
-	this->sessions->destroy_function(this->sessions, (void*)session_entry_destroy);
+	enumerator = this->sessions->create_enumerator(this->sessions);
+	while (enumerator->enumerate(enumerator, &sid, &entry))
+	{
+		session_entry_destroy(entry);
+	}
+	enumerator->destroy(enumerator);
+	this->sessions->destroy(this->sessions);
 	this->controllers->destroy_function(this->controllers, free);
 	this->filters->destroy_function(this->filters, free);
 	this->mutex->destroy(this->mutex);
@@ -366,7 +424,8 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	this->public.waitsignal = (void(*)(dispatcher_t*))waitsignal;
 	this->public.destroy = (void(*)(dispatcher_t*))destroy;
 
-	this->sessions = linked_list_create();
+	this->sessions = hashtable_create((void*)session_hash,
+									  (void*)session_equals, 4096);
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
 	this->context_constructor = constructor;
@@ -374,6 +433,7 @@ dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 	this->param = param;
 	this->fd = 0;
 	this->timeout = timeout;
+	this->last_cleanup = time_monotonic(NULL);
 	this->debug = debug;
 	this->threads = NULL;
 

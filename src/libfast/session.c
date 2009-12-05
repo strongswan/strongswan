@@ -23,6 +23,8 @@
 
 #include <utils/linked_list.h>
 
+#define COOKIE_LEN 16
+
 typedef struct private_session_t private_session_t;
 
 /**
@@ -38,7 +40,12 @@ struct private_session_t {
 	/**
 	 * session ID
 	 */
-	char *sid;
+	char sid[COOKIE_LEN * 2 + 1];
+
+	/**
+	 * have we sent the session cookie?
+	 */
+	bool cookie_sent;
 
 	/**
 	 * list of controller instances controller_t
@@ -75,19 +82,20 @@ static void add_filter(private_session_t *this, filter_t *filter)
 /**
  * Create a session ID and a cookie
  */
-static void create_sid(private_session_t *this, request_t *request)
+static void create_sid(private_session_t *this)
 {
-	char buf[16];
+	char buf[COOKIE_LEN];
 	rng_t *rng;
 
+	memset(buf, 0, sizeof(buf));
+	memset(this->sid, 0, sizeof(this->sid));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng)
 	{
 		rng->get_bytes(rng, sizeof(buf), buf);
-		this->sid = chunk_to_hex(chunk_create(buf, sizeof(buf)), NULL, FALSE).ptr;
-		request->add_cookie(request, "SID", this->sid);
 		rng->destroy(rng);
 	}
+	chunk_to_hex(chunk_create(buf, sizeof(buf)), this->sid, FALSE);
 }
 
 /**
@@ -123,9 +131,10 @@ static void process(private_session_t *this, request_t *request)
 	controller_t *current;
 	int i = 0;
 
-	if (this->sid == NULL)
+	if (!this->cookie_sent)
 	{
-		create_sid(this, request);
+		request->add_cookie(request, "SID", this->sid);
+		this->cookie_sent = TRUE;
 	}
 
 	start = request->get_path(request);
@@ -189,7 +198,6 @@ static void destroy(private_session_t *this)
 	this->controllers->destroy_offset(this->controllers, offsetof(controller_t, destroy));
 	this->filters->destroy_offset(this->filters, offsetof(filter_t, destroy));
 	DESTROY_IF(this->context);
-	free(this->sid);
 	free(this);
 }
 
@@ -206,7 +214,8 @@ session_t *session_create(context_t *context)
 	this->public.get_sid = (char*(*)(session_t*))get_sid;
 	this->public.destroy = (void(*)(session_t*))destroy;
 
-	this->sid = NULL;
+	create_sid(this);
+	this->cookie_sent = FALSE;
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
 	this->context = context;
