@@ -17,7 +17,6 @@
 #include <pthread.h>
 
 #include <library.h>
-#include <daemon.h>
 
 #define ALLOCS 1000
 #define THREADS 20
@@ -40,8 +39,8 @@ static void* testing(void *thread)
 	/* allocate addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		addr[i] = charon->attributes->acquire_address(charon->attributes,
-													  "test", id[i], NULL);
+		addr[i] = lib->attributes->acquire_address(lib->attributes,
+												   "test", id[i], NULL);
 		if (!addr[i])
 		{
 			return (void*)FALSE;
@@ -51,7 +50,8 @@ static void* testing(void *thread)
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		charon->attributes->release_address(charon->attributes, "test", addr[i], id[i]);
+		lib->attributes->release_address(lib->attributes,
+										 "test", addr[i], id[i]);
 	}
 
 	/* cleanup */
