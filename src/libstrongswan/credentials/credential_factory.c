@@ -20,7 +20,7 @@
 
 #include <debug.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <credentials/certificates/x509.h>
 
 ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CERTIFICATE,

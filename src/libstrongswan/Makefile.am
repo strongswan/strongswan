@@ -43,6 +43,7 @@ credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_a
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \
+threading.h threading/mutex.c \
 utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
@@ -52,7 +53,6 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/mutex.c utils/mutex.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 

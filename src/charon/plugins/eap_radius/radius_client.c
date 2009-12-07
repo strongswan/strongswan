@@ -21,7 +21,7 @@
 #include <daemon.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 /**
  * Default RADIUS server port, when not configured

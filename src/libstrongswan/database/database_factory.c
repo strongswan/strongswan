@@ -16,7 +16,7 @@
 #include "database_factory.h"
 
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 typedef struct private_database_factory_t private_database_factory_t;
 

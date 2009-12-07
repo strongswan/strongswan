@@ -18,7 +18,7 @@
 #include "credential_manager.h"
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 #include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_cfg_wrapper.h>

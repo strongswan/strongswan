@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 #include <debug.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 #include <utils/hashtable.h>
 

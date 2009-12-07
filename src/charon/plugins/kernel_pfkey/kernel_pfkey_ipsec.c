@@ -56,7 +56,7 @@
 
 #include <daemon.h>
 #include <utils/host.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/migrate_job.h>

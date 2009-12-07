@@ -27,7 +27,7 @@
 
 #include <processing/jobs/callback_job.h>
 #include <daemon.h>
-#include <utils/mutex.h> /* for Mac OS X compatible accept */
+#include <threading.h> /* for Mac OS X compatible accept */
 
 #include "stroke_config.h"
 #include "stroke_control.h"

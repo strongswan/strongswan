@@ -22,7 +22,7 @@
 #include "processor.h"
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 
 

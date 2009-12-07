@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,12 +15,12 @@
  */
 
 /**
- * @defgroup mutex mutex
- * @{ @ingroup utils
+ * @defgroup threading threading
+ * @{ @ingroup libstrongswan
  */
 
-#ifndef MUTEX_H_
-#define MUTEX_H_
+#ifndef THREADING_H_
+#define THREADING_H_
 
 typedef struct mutex_t mutex_t;
 typedef struct condvar_t condvar_t;
@@ -213,4 +213,4 @@ condvar_t *condvar_create(condvar_type_t type);
  */
 rwlock_t *rwlock_create(rwlock_type_t type);
 
-#endif /** MUTEX_H_ @}*/
+#endif /** THREADING_H_ @}*/

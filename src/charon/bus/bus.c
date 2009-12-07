@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 ENUM(debug_names, DBG_DMN, DBG_LIB,
 	"DMN",

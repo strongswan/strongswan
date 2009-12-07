@@ -26,7 +26,7 @@
 
 #include <daemon.h>
 #include <utils/host.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/roam_job.h>

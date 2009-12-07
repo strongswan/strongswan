@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <credentials/certificates/x509.h>
 
 typedef struct private_nm_creds_t private_nm_creds_t;

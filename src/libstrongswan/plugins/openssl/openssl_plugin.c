@@ -23,7 +23,7 @@
 #include "openssl_plugin.h"
 
 #include <library.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"

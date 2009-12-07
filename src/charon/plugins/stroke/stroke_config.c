@@ -16,7 +16,7 @@
 #include "stroke_config.h"
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/lexparser.h>
 
 typedef struct private_stroke_config_t private_stroke_config_t;

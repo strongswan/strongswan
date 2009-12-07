@@ -19,7 +19,7 @@
 #include <sched.h>
 
 #include <daemon.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 
 /** cache size, a power of 2 for fast modulo */

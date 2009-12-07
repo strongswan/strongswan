@@ -17,7 +17,7 @@
 
 #include <debug.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 typedef struct private_attribute_manager_t private_attribute_manager_t;
 

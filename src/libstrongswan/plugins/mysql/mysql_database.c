@@ -21,7 +21,7 @@
 #include "mysql_database.h"
 
 #include <debug.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 
 /* Older mysql.h headers do not define it, but we need it. It is not returned

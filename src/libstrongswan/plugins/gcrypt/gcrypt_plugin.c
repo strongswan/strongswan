@@ -24,7 +24,7 @@
 
 #include <library.h>
 #include <debug.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 #include <errno.h>
 #include <gcrypt.h>

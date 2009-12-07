@@ -22,7 +22,7 @@
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 

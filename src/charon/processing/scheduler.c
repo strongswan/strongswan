@@ -23,7 +23,7 @@
 #include <daemon.h>
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 /* the initial size of the heap */
 #define HEAP_SIZE_DEFAULT 64

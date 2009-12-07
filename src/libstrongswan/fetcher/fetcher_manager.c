@@ -16,7 +16,7 @@
 #include "fetcher_manager.h"
 
 #include <debug.h>
-#include <utils/mutex.h>
+#include <threading.h>
 #include <utils/linked_list.h>
 
 typedef struct private_fetcher_manager_t private_fetcher_manager_t;

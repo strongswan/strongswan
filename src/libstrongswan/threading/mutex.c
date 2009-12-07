@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,8 +20,7 @@
 #include <time.h>
 #include <errno.h>
 
-#include "mutex.h"
-
+#include <threading.h>
 #include <library.h>
 #include <debug.h>
 

@@ -22,7 +22,7 @@
 #include <daemon.h>
 #include <network/socket.h>
 #include <processing/jobs/callback_job.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 
 typedef struct private_sender_t private_sender_t;

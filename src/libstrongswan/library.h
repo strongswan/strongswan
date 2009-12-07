@@ -40,6 +40,9 @@
  * @defgroup plugins plugins
  * @ingroup libstrongswan
  *
+ * @defgroup threading threading
+ * @ingroup libstrongswan
+ *
  * @defgroup utils utils
  * @ingroup libstrongswan
  */

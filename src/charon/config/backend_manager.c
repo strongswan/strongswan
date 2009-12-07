@@ -20,7 +20,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 
 typedef struct private_backend_manager_t private_backend_manager_t;

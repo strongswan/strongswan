@@ -19,7 +19,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/hashtable.h>
-#include <utils/mutex.h>
+#include <threading.h>
 
 typedef struct private_key_encoding_t private_key_encoding_t;
 
