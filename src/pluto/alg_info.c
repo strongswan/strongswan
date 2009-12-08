@@ -60,6 +60,7 @@ int alg_info_esp_aa2sadb(int auth)
 		case AUTH_ALGORITHM_HMAC_SHA2_384:
 		case AUTH_ALGORITHM_HMAC_SHA2_512:
 		case AUTH_ALGORITHM_HMAC_RIPEMD:
+		case AUTH_ALGORITHM_AES_XCBC_MAC:
 			sadb_aalg = auth;
 			break;
 		default:
@@ -78,11 +79,11 @@ int alg_info_esp_sadb2aa(int sadb_aalg)
 		case SADB_AALG_SHA1HMAC:
 			auth = sadb_aalg - 1;
 			break;
-		/* since they are the same ...  :)  */
-		case AUTH_ALGORITHM_HMAC_SHA2_256:
-		case AUTH_ALGORITHM_HMAC_SHA2_384:
-		case AUTH_ALGORITHM_HMAC_SHA2_512:
-		case AUTH_ALGORITHM_HMAC_RIPEMD:
+		case SADB_X_AALG_SHA2_256HMAC:
+		case SADB_X_AALG_SHA2_384HMAC:
+		case SADB_X_AALG_SHA2_512HMAC:
+		case SADB_X_AALG_RIPEMD160HMAC:
+		case SADB_X_AALG_AES_XCBC_MAC:
 			auth = sadb_aalg;
 			break;
 		default:
@@ -133,7 +134,7 @@ static void __alg_info_esp_add(struct alg_info_esp *alg_info, int ealg_id,
 
 	DBG(DBG_CRYPT,
 		DBG_log("esp alg added: %s_%d/%s, cnt=%d",
-				enum_show(&esp_transformid_names, ealg_id), ek_bits,
+				enum_show(&esp_transform_names, ealg_id), ek_bits,
 				enum_show(&auth_alg_names, aalg_id),
 				alg_info->alg_info_cnt)
 	)
@@ -546,7 +547,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 			ALG_INFO_ESP_FOREACH(alg_info_esp, esp_info, cnt)
 			{
 				np = snprintf(ptr, buflen, "%s",
-						enum_show(&esp_transformid_names, esp_info->esp_ealg_id));
+						enum_show(&esp_transform_names, esp_info->esp_ealg_id));
 				ptr += np;
 				buflen -= np;
 				if (esp_info->esp_ealg_keylen)

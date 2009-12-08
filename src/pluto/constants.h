@@ -137,19 +137,23 @@ extern const char sparse_end[];
  * and in http://www.iana.org/assignments/isakmp-registry
  */
 enum ipsec_authentication_algo {
-  AH_NONE         = 0,
-  AH_MD5          = 2,
-  AH_SHA          = 3,
-  AH_DES          = 4,
-  AH_SHA2_256     = 5,
-  AH_SHA2_384     = 6,
-  AH_SHA2_512     = 7,
-  AH_RIPEMD       = 8,
-  AH_AES_XCBC_MAC = 9,
-  AH_RSA          = 10
+	AH_NONE         = 0,
+	AH_MD5          = 2,
+	AH_SHA          = 3,
+	AH_DES          = 4,
+	AH_SHA2_256     = 5,
+	AH_SHA2_384     = 6,
+	AH_SHA2_512     = 7,
+	AH_RIPEMD       = 8,
+	AH_AES_XCBC_MAC = 9,
+	AH_RSA          = 10,
+	AH_AES_128_GMAC = 11,
+	AH_AES_192_GMAC = 12,
+	AH_AES_256_GMAC = 13,
+	AH_SHA2_256_96  = 252  
 };
 
-extern enum_names ah_transformid_names;
+extern enum_names ah_transform_names;
 
 /* IPsec ESP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.4
@@ -157,45 +161,45 @@ extern enum_names ah_transformid_names;
  */
 
 enum ipsec_cipher_algo {
-  ESP_NONE          = 0,
-  ESP_DES_IV64      = 1,
-  ESP_DES           = 2,
-  ESP_3DES          = 3,
-  ESP_RC5           = 4,
-  ESP_IDEA          = 5,
-  ESP_CAST          = 6,
-  ESP_BLOWFISH      = 7,
-  ESP_3IDEA         = 8,
-  ESP_DES_IV32      = 9,
-  ESP_RC4           = 10,
-  ESP_NULL          = 11,
-  ESP_AES           = 12,
-  ESP_AES_CTR       = 13,
-  ESP_AES_CCM_8     = 14,
-  ESP_AES_CCM_12    = 15,
-  ESP_AES_CCM_16    = 16,
-  ESP_UNASSIGNED_17 = 17,
-  ESP_AES_GCM_8     = 18,
-  ESP_AES_GCM_12    = 19,
-  ESP_AES_GCM_16    = 20,
-  ESP_SEED_CBC      = 21,
-  ESP_CAMELLIA      = 22,
-  ESP_SERPENT       = 252,
-  ESP_TWOFISH       = 253
+	ESP_NONE          = 0,
+	ESP_DES_IV64      = 1,
+	ESP_DES           = 2,
+	ESP_3DES          = 3,
+	ESP_RC5           = 4,
+	ESP_IDEA          = 5,
+	ESP_CAST          = 6,
+	ESP_BLOWFISH      = 7,
+	ESP_3IDEA         = 8,
+	ESP_DES_IV32      = 9,
+	ESP_RC4           = 10,
+	ESP_NULL          = 11,
+	ESP_AES           = 12,
+	ESP_AES_CTR       = 13,
+	ESP_AES_CCM_8     = 14,
+	ESP_AES_CCM_12    = 15,
+	ESP_AES_CCM_16    = 16,
+	ESP_UNASSIGNED_17 = 17,
+	ESP_AES_GCM_8     = 18,
+	ESP_AES_GCM_12    = 19,
+	ESP_AES_GCM_16    = 20,
+	ESP_SEED_CBC      = 21,
+	ESP_CAMELLIA      = 22,
+	ESP_SERPENT       = 252,
+	ESP_TWOFISH       = 253
 };
 
-extern enum_names esp_transformid_names;
+extern enum_names esp_transform_names;
 
 /* IPCOMP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.5
  */
 
 enum ipsec_comp_algo {
-  IPSCOMP_NONE   = 0,
-  IPCOMP_OUI     = 1,
-  IPCOMP_DEFLATE = 2,
-  IPCOMP_LZS     = 3,
-  IPCOMP_LZJH    = 4
+	IPSCOMP_NONE   = 0,
+	IPCOMP_OUI     = 1,
+	IPCOMP_DEFLATE = 2,
+	IPCOMP_LZS     = 3,
+	IPCOMP_LZJH    = 4
 };
 
 extern enum_names ipcomp_transformid_names;
@@ -204,18 +208,18 @@ extern enum_names ipcomp_transformid_names;
  * RFC 2408 ISAKMP, chapter 3.9
  */
 enum ipsec_cert_type {
-  CERT_NONE=                0,
-  CERT_PKCS7_WRAPPED_X509=  1,
-  CERT_PGP=                 2,
-  CERT_DNS_SIGNED_KEY=      3,
-  CERT_X509_SIGNATURE=      4,
-  CERT_X509_KEY_EXCHANGE=   5,
-  CERT_KERBEROS_TOKENS=     6,
-  CERT_CRL=                 7,
-  CERT_ARL=                 8,
-  CERT_SPKI=                9,
-  CERT_X509_ATTRIBUTE=      10,
-  CERT_RAW_RSA_KEY=         11
+	CERT_NONE=                0,
+	CERT_PKCS7_WRAPPED_X509=  1,
+	CERT_PGP=                 2,
+	CERT_DNS_SIGNED_KEY=      3,
+	CERT_X509_SIGNATURE=      4,
+	CERT_X509_KEY_EXCHANGE=   5,
+	CERT_KERBEROS_TOKENS=     6,
+	CERT_CRL=                 7,
+	CERT_ARL=                 8,
+	CERT_SPKI=                9,
+	CERT_X509_ATTRIBUTE=      10,
+	CERT_RAW_RSA_KEY=         11
 };
 
 /* RFC 2560 OCSP - certificate status */
@@ -852,18 +856,22 @@ extern enum_names enc_mode_names;
 
 extern enum_names auth_alg_names, extended_auth_alg_names;
 
-#define AUTH_ALGORITHM_NONE             0  /* our private designation */
-#define AUTH_ALGORITHM_HMAC_MD5         1
-#define AUTH_ALGORITHM_HMAC_SHA1        2
-#define AUTH_ALGORITHM_DES_MAC          3
-#define AUTH_ALGORITHM_KPDK             4
-#define AUTH_ALGORITHM_HMAC_SHA2_256    5
-#define AUTH_ALGORITHM_HMAC_SHA2_384    6
-#define AUTH_ALGORITHM_HMAC_SHA2_512    7
-#define AUTH_ALGORITHM_HMAC_RIPEMD      8
-#define AUTH_ALGORITHM_AES_XCBC_MAC     9
-#define AUTH_ALGORITHM_SIG_RSA          10
-#define AUTH_ALGORITHM_NULL             251
+#define AUTH_ALGORITHM_NONE                0  /* our private designation */
+#define AUTH_ALGORITHM_HMAC_MD5            1
+#define AUTH_ALGORITHM_HMAC_SHA1           2
+#define AUTH_ALGORITHM_DES_MAC             3
+#define AUTH_ALGORITHM_KPDK                4
+#define AUTH_ALGORITHM_HMAC_SHA2_256       5
+#define AUTH_ALGORITHM_HMAC_SHA2_384       6
+#define AUTH_ALGORITHM_HMAC_SHA2_512       7
+#define AUTH_ALGORITHM_HMAC_RIPEMD         8
+#define AUTH_ALGORITHM_AES_XCBC_MAC        9
+#define AUTH_ALGORITHM_SIG_RSA            10
+#define AUTH_ALGORITHM_AES_128_GMAC       11
+#define AUTH_ALGORITHM_AES_192_GMAC       12
+#define AUTH_ALGORITHM_AES_256_GMAC       13
+#define AUTH_ALGORITHM_NULL              251
+#define AUTH_ALGORITHM_HMAC_SHA2_256_96  252
 
 /* Oakley Lifetime Type attribute
  * draft-ietf-ipsec-ike-01.txt appendix A

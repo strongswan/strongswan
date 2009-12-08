@@ -1939,7 +1939,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				 * assuming the name will be found.
 				 */
 				loglog(RC_LOG_SERIOUS, "ESP transform %s / auth %s not implemented yet"
-					, enum_name(&esp_transformid_names, st->st_esp.attrs.transid)
+					, enum_name(&esp_transform_names, st->st_esp.attrs.transid)
 					, enum_name(&auth_alg_names, st->st_esp.attrs.auth));
 				goto fail;
 			}
@@ -1958,7 +1958,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			if (key_len > ei->enckeylen)
 			{
 				loglog(RC_LOG_SERIOUS, "ESP transform %s passed key_len=%d > %d",
-					enum_name(&esp_transformid_names, st->st_esp.attrs.transid),
+					enum_name(&esp_transform_names, st->st_esp.attrs.transid),
 					(int)key_len, (int)ei->enckeylen);
 				goto fail;
 			}

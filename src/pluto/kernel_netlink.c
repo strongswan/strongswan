@@ -85,15 +85,15 @@ static sparse_names xfrm_type_names = {
 
 /* Authentication algorithms */
 static sparse_names aalg_list = {
-	{ SADB_X_AALG_NULL,          "digest_null" },
-	{ SADB_AALG_MD5HMAC,         "md5" },
-	{ SADB_AALG_SHA1HMAC,        "sha1" },
-	{ SADB_X_AALG_SHA2_256HMAC,  "sha256" },
-	{ SADB_X_AALG_SHA2_384HMAC,  "sha384" },
-	{ SADB_X_AALG_SHA2_512HMAC,  "sha512" },
-	{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
-	{ SADB_X_AALG_AES_XCBC_MAC,  "xcbc(aes)"},
-	{ SADB_X_AALG_NULL,          "null" },
+	{ SADB_X_AALG_NULL,            "digest_null" },
+	{ SADB_AALG_MD5HMAC,           "md5" },
+	{ SADB_AALG_SHA1HMAC,          "sha1" },
+	{ SADB_X_AALG_SHA2_256_96HMAC, "sha256" },
+	{ SADB_X_AALG_SHA2_256HMAC,    "hmac(sha256)" },
+	{ SADB_X_AALG_SHA2_384HMAC,    "hmac(sha384)" },
+	{ SADB_X_AALG_SHA2_512HMAC,    "hmac(sha512)" },
+	{ SADB_X_AALG_RIPEMD160HMAC,   "ripemd160" },
+	{ SADB_X_AALG_AES_XCBC_MAC,    "xcbc(aes)"},
 	{ 0, sparse_end }
 };
 
@@ -629,7 +629,6 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 
 	if (sa->authalg)
 	{
-		struct xfrm_algo algo;
 		const char *name;
 
 		name = sparse_name(aalg_list, sa->authalg);
@@ -645,16 +644,37 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 					sa->authkeylen * BITS_PER_BYTE)
 			)
 
-		strcpy(algo.alg_name, name);
-		algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+		if (sa->authalg == SADB_X_AALG_SHA2_256HMAC)
+		{
+			struct xfrm_algo_auth algo;
 
-		attr->rta_type = XFRMA_ALG_AUTH;
-		attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
+			/* the kernel uses SHA256 with 96 bit truncation by default,
+			 * use specified truncation size supported by newer kernels */
+			strcpy(algo.alg_name, name);
+			algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+			algo.alg_trunc_len = 128;
 
-		memcpy(RTA_DATA(attr), &algo, sizeof(algo));
-		memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
-			, sa->authkeylen);
+			attr->rta_type = XFRMA_ALG_AUTH_TRUNC;
+			attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
 
+			memcpy(RTA_DATA(attr), &algo, sizeof(algo));
+			memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
+				, sa->authkeylen);
+		}
+		else
+		{
+			struct xfrm_algo algo;
+
+			strcpy(algo.alg_name, name);
+			algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+
+			attr->rta_type = XFRMA_ALG_AUTH;
+			attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
+
+			memcpy(RTA_DATA(attr), &algo, sizeof(algo));
+			memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
+				, sa->authkeylen);
+		}
 		req.n.nlmsg_len += attr->rta_len;
 		attr = (struct rtattr *)((char *)attr + attr->rta_len);
 	}
@@ -687,7 +707,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			}
 			DBG(DBG_CRYPT,
 				DBG_log("configured esp encryption algorithm %s with key size %d",
-						enum_show(&esp_transformid_names, sa->encalg),
+						enum_show(&esp_transform_names, sa->encalg),
 						sa->enckeylen * BITS_PER_BYTE)
 			)
 			attr->rta_type = XFRMA_ALG_AEAD;
@@ -717,7 +737,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			}
 			DBG(DBG_CRYPT,
 				DBG_log("configured esp encryption algorithm %s with key size %d",
-						enum_show(&esp_transformid_names, sa->encalg),
+						enum_show(&esp_transform_names, sa->encalg),
 						sa->enckeylen * BITS_PER_BYTE)
 			)
 			attr->rta_type = XFRMA_ALG_CRYPT;

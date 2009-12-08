@@ -352,11 +352,21 @@ static const char *const ah_transform_name[] = {
 	"HMAC_SHA2_512",
 	"HMAC_RIPEMD",
 	"AES_XCBC_96",
-	"SIG_RSA"
+	"SIG_RSA",
+	"AES_128_GMAC",
+	"AES_192_GMAC",
+	"AES_256_GMAC"
 };
 
-enum_names ah_transformid_names =
-	{ AH_MD5, AH_RSA, ah_transform_name, NULL };
+static const char *const ah_transform_name_high[] = {
+	"HMAC_SHA2_256_96"
+};
+
+enum_names ah_transform_names_high =
+	{ AH_SHA2_256_96, AH_SHA2_256_96, ah_transform_name_high, NULL };
+
+enum_names ah_transform_names =
+	{ AH_MD5, AH_AES_256_GMAC, ah_transform_name, &ah_transform_names_high };
 
 /* IPsec ESP transform values */
 
@@ -390,11 +400,11 @@ static const char *const esp_transform_name_high[] = {
 	"TWOFISH_CBC"
 };
 
-enum_names esp_transformid_names_high =
+enum_names esp_transform_names_high =
 	{ ESP_SERPENT, ESP_TWOFISH, esp_transform_name_high, NULL };
 
-enum_names esp_transformid_names =
-	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transformid_names_high };
+enum_names esp_transform_names =
+	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transform_names_high };
 
 /* IPCOMP transform values */
 

@@ -318,7 +318,8 @@ struct sadb_protocol {
 #define SADB_X_AALG_RIPEMD160HMAC	8
 #define SADB_X_AALG_AES_XCBC_MAC	9
 #define SADB_X_AALG_NULL			251	/* kame */
-#define SADB_AALG_MAX				251
+#define SADB_X_AALG_SHA2_256_96HMAC	252
+#define SADB_AALG_MAX				252
 
 /* Encryption algorithms */
 #define SADB_EALG_NONE				0

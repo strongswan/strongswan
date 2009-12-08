@@ -581,12 +581,20 @@ int esp_from_integrity_algorithm(integrity_algorithm_t alg)
 			return AUTH_ALGORITHM_HMAC_SHA1;
 		case AUTH_AES_XCBC_96:
 			return AUTH_ALGORITHM_AES_XCBC_MAC;
+		case AUTH_HMAC_SHA2_256_96:
+			return AUTH_ALGORITHM_HMAC_SHA2_256_96;
 		case AUTH_HMAC_SHA2_256_128:
 			return AUTH_ALGORITHM_HMAC_SHA2_256;
 		case AUTH_HMAC_SHA2_384_192:
 			return AUTH_ALGORITHM_HMAC_SHA2_384;
 		case AUTH_HMAC_SHA2_512_256:
 			return AUTH_ALGORITHM_HMAC_SHA2_512;
+		case AUTH_AES_128_GMAC:
+			return AUTH_ALGORITHM_AES_128_GMAC;
+		case AUTH_AES_192_GMAC:
+			return AUTH_ALGORITHM_AES_192_GMAC;
+		case AUTH_AES_256_GMAC:
+			return AUTH_ALGORITHM_AES_256_GMAC;
 		default:
 			return 0;
 	}

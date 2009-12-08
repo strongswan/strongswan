@@ -237,14 +237,14 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 					{
 						loglog(RC_LOG_SERIOUS
 							, "You should NOT use insecure ESP algorithms [%s (%d)]!"
-							, enum_name(&esp_transformid_names, ealg), key_len);
+							, enum_name(&esp_transform_names, ealg), key_len);
 					}
 					return TRUE;
 				}
 			}
 		}
 		plog("IPSec Transform [%s (%d), %s] refused due to %s",
-				enum_name(&esp_transformid_names, ealg), key_len,
+				enum_name(&esp_transform_names, ealg), key_len,
 				enum_name(&auth_alg_names, aalg),
 				ealg_insecure ? "insecure key_len and enc. alg. not listed in \"esp\" string" : "strict flag");
 		return FALSE;
@@ -461,7 +461,7 @@ void kernel_alg_list(void)
 		if (ESP_EALG_PRESENT(sadb_id))
 		{
 			n = snprintf(pos, len, " %s",
-						 enum_name(&esp_transformid_names, sadb_id));
+						 enum_name(&esp_transform_names, sadb_id));
 			pos += n;
 			len -= n;
 			if (len <= 0)
@@ -502,7 +502,7 @@ void kernel_alg_show_connection(connection_t *c, const char *instance)
 		const char *aalg_name, *pfsgroup_name;
 
 		aalg_name = (c->policy & POLICY_AUTHENTICATE) ?
-					enum_show(&ah_transformid_names, st->st_ah.attrs.transid):
+					enum_show(&ah_transform_names, st->st_ah.attrs.transid):
 					enum_show(&auth_alg_names, st->st_esp.attrs.auth);
 
 		pfsgroup_name = (c->policy & POLICY_PFS) ?
@@ -516,7 +516,7 @@ void kernel_alg_show_connection(connection_t *c, const char *instance)
 			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s_%u/%s/%s",
 				c->name, instance,
 				(st->st_ah.present) ? "/AH" : "",
-				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				enum_show(&esp_transform_names, st->st_esp.attrs.transid),
 				st->st_esp.attrs.key_len, aalg_name, pfsgroup_name);
 		}
 		else
@@ -524,7 +524,7 @@ void kernel_alg_show_connection(connection_t *c, const char *instance)
 			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s/%s/%s",
 				c->name, instance,
 				(st->st_ah.present) ? "/AH" : "",
-				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				enum_show(&esp_transform_names, st->st_esp.attrs.transid),
 				aalg_name, pfsgroup_name);
 		}
 	}

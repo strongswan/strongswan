@@ -2008,7 +2008,7 @@ parse_ipsec_sa_body(
 				{
 					loglog(RC_LOG_SERIOUS, "%s attribute inappropriate in %s Transform"
 						, enum_name(&auth_alg_names, ah_attrs.auth)
-						, enum_show(&ah_transformid_names, ah_attrs.transid));
+						, enum_show(&ah_transform_names, ah_attrs.transid));
 					return ISAKMP_BAD_PROPOSAL_SYNTAX;
 				}
 				if (!ok_auth)
@@ -2017,7 +2017,7 @@ parse_ipsec_sa_body(
 						, DBG_log("%s attribute unsupported"
 							" in %s Transform from %s"
 							, enum_name(&auth_alg_names, ah_attrs.auth)
-							, enum_show(&ah_transformid_names, ah_attrs.transid)
+							, enum_show(&ah_transform_names, ah_attrs.transid)
 							, ip_str(&c->spd.that.host_addr)));
 					continue;   /* try another */
 				}
@@ -2085,7 +2085,7 @@ parse_ipsec_sa_body(
 					default:
 						DBG(DBG_CONTROL | DBG_CRYPT
 							, DBG_log("unsupported ESP Transform %s from %s"
-								, enum_show(&esp_transformid_names, esp_attrs.transid)
+								, enum_show(&esp_transform_names, esp_attrs.transid)
 								, ip_str(&c->spd.that.host_addr)));
 						continue;   /* try another */
 					}
