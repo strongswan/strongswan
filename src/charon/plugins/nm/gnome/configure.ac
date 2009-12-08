@@ -76,7 +76,10 @@ if test x"$with_gnome" != xno; then
 	AC_SUBST(GNOMEKEYRING_LIBS)
 fi
 
-PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm_glib libnm_glib_vpn)
+PKG_CHECK_EXISTS([libnm-glib],
+	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm-glib libnm-glib-vpn)],
+	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm_glib libnm_glib_vpn)]
+)
 AC_SUBST(NM_UTILS_CFLAGS)
 AC_SUBST(NM_UTILS_LIBS)
 

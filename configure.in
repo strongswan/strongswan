@@ -517,7 +517,10 @@ if test x$uci = xtrue; then
 fi
 
 if test x$nm = xtrue; then
-	PKG_CHECK_MODULES(nm, [NetworkManager libnm_glib_vpn gthread-2.0])
+	PKG_CHECK_EXISTS([libnm-glib],
+		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],
+		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm_glib libnm_glib_vpn])]
+	)
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
 fi
