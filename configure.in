@@ -297,6 +297,8 @@ AC_TRY_RUN(
 		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])]
 	)]
 )
+dnl check if we actually are able to configure attributes on cond vars
+AC_CHECK_FUNCS(pthread_condattr_init)
 dnl check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
 LIBS=$saved_LIBS

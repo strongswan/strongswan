@@ -341,7 +341,6 @@ condvar_t *condvar_create(condvar_type_t type)
 		case CONDVAR_TYPE_DEFAULT:
 		default:
 		{
-			pthread_condattr_t condattr;
 			private_condvar_t *this = malloc_thing(private_condvar_t);
 
 			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))_wait;
@@ -351,12 +350,17 @@ condvar_t *condvar_create(condvar_type_t type)
 			this->public.broadcast = (void(*)(condvar_t*))broadcast;
 			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
 
-			pthread_condattr_init(&condattr);
+#ifdef HAVE_PTHREAD_CONDATTR_INIT
+			{
+				pthread_condattr_t condattr;
+				pthread_condattr_init(&condattr);
 #ifdef HAVE_CONDATTR_CLOCK_MONOTONIC
-			pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+				pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
 #endif
-			pthread_cond_init(&this->condvar, &condattr);
-			pthread_condattr_destroy(&condattr);
+				pthread_cond_init(&this->condvar, &condattr);
+				pthread_condattr_destroy(&condattr);
+			}
+#endif
 
 			return &this->public;
 		}
