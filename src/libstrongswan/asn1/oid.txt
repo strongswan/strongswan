@@ -185,6 +185,7 @@
           0x07               "id-pkix"
             0x01             "id-pe"
               0x01           "authorityInfoAccess"		OID_AUTHORITY_INFO_ACCESS
+              0x07           "ipAddrBlocks"				OID_IP_ADDR_BLOCKS
             0x02             "id-qt"
               0x01           "cps"
               0x02           "unotice"
