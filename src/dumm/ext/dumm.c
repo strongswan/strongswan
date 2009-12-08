@@ -29,6 +29,7 @@
 #undef PACKAGE_VERSION
 #undef PACKAGE_STRING
 #undef PACKAGE_BUGREPORT
+#undef PACKAGE_URL
 #include <ruby.h>
 
 static dumm_t *dumm;
