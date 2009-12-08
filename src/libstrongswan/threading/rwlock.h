@@ -31,10 +31,46 @@ struct private_rwlock_t {
 	 */
 	rwlock_t public;
 
+#ifdef HAVE_PTHREAD_RWLOCK_INIT
+
 	/**
 	 * wrapped pthread rwlock
 	 */
 	pthread_rwlock_t rwlock;
+
+#else
+
+	/**
+	 * mutex to emulate a native rwlock
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * condvar to handle writers
+	 */
+	condvar_t *writers;
+
+	/**
+	 * condvar to handle readers
+	 */
+	condvar_t *readers;
+
+	/**
+	 * number of waiting writers
+	 */
+	u_int waiting_writers;
+
+	/**
+	 * number of readers holding the lock
+	 */
+	u_int reader_count;
+
+	/**
+	 * current writer thread, if any
+	 */
+	pthread_t writer;
+
+#endif /* HAVE_PTHREAD_RWLOCK_INIT */
 
 	/**
 	 * profiling info, if enabled

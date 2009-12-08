@@ -297,7 +297,8 @@ AC_TRY_RUN(
 		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])]
 	)]
 )
-
+dnl check if native rwlocks are available
+AC_CHECK_FUNCS(pthread_rwlock_init)
 LIBS=$saved_LIBS
 
 AC_CHECK_FUNCS(prctl)
