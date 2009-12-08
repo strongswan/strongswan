@@ -61,10 +61,8 @@ static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
 	return realsize;
 }
 
-/**
- * Implements fetcher_t.fetch.
- */
-static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
+METHOD(fetcher_t, fetch, status_t,
+	private_curl_fetcher_t *this, char *uri, chunk_t *result)
 {
 	char error[CURL_ERROR_SIZE];
 	status_t status;
@@ -103,10 +101,8 @@ static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 	return status;
 }
 
-/**
- * Implementation of fetcher_t.set_option.
- */
-static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ...)
+METHOD(fetcher_t, set_option, bool,
+	private_curl_fetcher_t *this, fetcher_option_t option, ...)
 {
 	va_list args;
 
@@ -154,10 +150,8 @@ static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ..
 	}
 }
 
-/**
- * Implements fetcher_t.destroy
- */
-static void destroy(private_curl_fetcher_t *this)
+METHOD(fetcher_t, destroy, void,
+	private_curl_fetcher_t *this)
 {
 	curl_slist_free_all(this->headers);
 	curl_easy_cleanup(this->curl);
@@ -169,20 +163,22 @@ static void destroy(private_curl_fetcher_t *this)
  */
 curl_fetcher_t *curl_fetcher_create()
 {
-	private_curl_fetcher_t *this = malloc_thing(private_curl_fetcher_t);
+	private_curl_fetcher_t *this;
 
-	this->curl = curl_easy_init();
-	if (this->curl == NULL)
+	INIT(this,
+		.public.interface = {
+			.fetch = _fetch,
+			.set_option = _set_option,
+			.destroy = _destroy,
+		},
+		.curl = curl_easy_init(),
+	);
+
+	if (!this->curl)
 	{
 		free(this);
 		return NULL;
 	}
-	this->headers = NULL;
-
-	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
-	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
-	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-
 	return &this->public;
 }
 
