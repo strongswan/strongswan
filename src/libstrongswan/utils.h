@@ -115,6 +115,19 @@
 						  *(this) = (typeof(*this)){ __VA_ARGS__ }; }
 
 /**
+ * Method declaration/definition macro, providing private and public interface.
+ *
+ * Defines a method name with this as first parameter and a return value ret,
+ * and an alias for this method with a _ prefix, having the this argument
+ * safely casted to the public interface iface.
+ * _name is provided a function pointer, but will get optimized out by GCC.
+ */
+#define METHOD(iface, name, ret, this, ...) \
+	static ret name(union {iface *_public; this;} __attribute__((transparent_union)), ##__VA_ARGS__); \
+	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static ret name(this, ##__VA_ARGS__)
+
+/**
  * Macro to allocate a sized type.
  */
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
