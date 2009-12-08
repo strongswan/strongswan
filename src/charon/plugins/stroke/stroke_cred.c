@@ -27,7 +27,7 @@
 #include <credentials/certificates/ac.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
-#include <threading.h>
+#include <threading/rwlock.h>
 #include <daemon.h>
 
 /* configuration directories and files */

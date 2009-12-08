@@ -18,7 +18,7 @@
 #include "credential_manager.h"
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_cfg_wrapper.h>
@@ -1140,7 +1140,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				auth->add(auth, AUTH_RULE_CA_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
-					 		  issuer->get_subject(issuer));
+							  issuer->get_subject(issuer));
 				trusted = TRUE;
 			}
 			else

@@ -14,7 +14,7 @@
  */
 
 #include <library.h>
-#include <threading.h>
+#include <threading/mutex.h>
 
 #include <unistd.h>
 #include <sched.h>

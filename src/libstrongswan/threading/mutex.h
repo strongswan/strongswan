@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,60 +14,84 @@
  * for more details.
  */
 
+/**
+ * @defgroup mutex mutex
+ * @{ @ingroup threading
+ */
+
 #ifndef THREADING_MUTEX_H_
 #define THREADING_MUTEX_H_
 
-#include "lock_profiler.h"
+typedef struct mutex_t mutex_t;
+typedef enum mutex_type_t mutex_type_t;
 
-typedef struct private_mutex_t private_mutex_t;
-typedef struct private_r_mutex_t private_r_mutex_t;
+#include "condvar.h"
+
+#ifdef __APPLE__
+/* on Mac OS X 10.5 several system calls we use are no cancellation points.
+ * fortunately, select isn't one of them, so we wrap some of the others with
+ * calls to select(2).
+ */
+#include <sys/socket.h>
+#include <sys/select.h>
+
+#define WRAP_WITH_SELECT(func, socket, ...)\
+	fd_set rfds; FD_ZERO(&rfds); FD_SET(socket, &rfds);\
+	if (select(socket + 1, &rfds, NULL, NULL, NULL) <= 0) { return -1; }\
+	return func(socket, __VA_ARGS__)
+
+static inline int cancellable_accept(int socket, struct sockaddr *address,
+									 socklen_t *address_len)
+{
+	WRAP_WITH_SELECT(accept, socket, address, address_len);
+}
+#define accept cancellable_accept
+static inline int cancellable_recvfrom(int socket, void *buffer, size_t length,
+				int flags, struct sockaddr *address, socklen_t *address_len)
+{
+	WRAP_WITH_SELECT(recvfrom, socket, buffer, length, flags, address, address_len);
+}
+#define recvfrom cancellable_recvfrom
+#endif /* __APPLE__ */
 
 /**
- * private data of mutex
+ * Type of mutex.
  */
-struct private_mutex_t {
-
-	/**
-	 * public functions
-	 */
-	mutex_t public;
-
-	/**
-	 * wrapped pthread mutex
-	 */
-	pthread_mutex_t mutex;
-
-	/**
-	 * is this a recursiv emutex, implementing private_r_mutex_t?
-	 */
-	bool recursive;
-
-	/**
-	 * profiling info, if enabled
-	 */
-	lock_profile_t profile;
+enum mutex_type_t {
+	/** default mutex */
+	MUTEX_TYPE_DEFAULT	= 0,
+	/** allow recursive locking of the mutex */
+	MUTEX_TYPE_RECURSIVE	= 1,
 };
 
 /**
- * private data of mutex, extended by recursive locking information
+ * Mutex wrapper implements simple, portable and advanced mutex functions.
  */
-struct private_r_mutex_t {
+struct mutex_t {
 
 	/**
-	 * Extends private_mutex_t
+	 * Acquire the lock to the mutex.
 	 */
-	private_mutex_t generic;
+	void (*lock)(mutex_t *this);
 
 	/**
-	 * thread which currently owns mutex
+	 * Release the lock on the mutex.
 	 */
-	pthread_t thread;
+	void (*unlock)(mutex_t *this);
 
 	/**
-	 * times we have locked the lock, stored per thread
+	 * Destroy a mutex instance.
 	 */
-	pthread_key_t times;
+	void (*destroy)(mutex_t *this);
 };
 
-#endif /* THREADING_MUTEX_H_ */
+/**
+ * Create a mutex instance.
+ *
+ * @param type		type of mutex to create
+ * @return			unlocked mutex instance
+ */
+mutex_t *mutex_create(mutex_type_t type);
+
+#endif /** THREADING_MUTEX_H_ @} */
 

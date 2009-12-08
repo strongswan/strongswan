@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/mutex.h>
 
 typedef struct private_callback_job_t private_callback_job_t;
 

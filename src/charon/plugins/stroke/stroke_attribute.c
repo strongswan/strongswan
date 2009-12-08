@@ -18,7 +18,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/hashtable.h>
-#include <threading.h>
+#include <threading/mutex.h>
 
 #define POOL_LIMIT (sizeof(uintptr_t)*8)
 

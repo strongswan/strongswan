@@ -17,12 +17,61 @@
 #define _GNU_SOURCE
 #include <pthread.h>
 
-#include <threading.h>
 #include <library.h>
 #include <debug.h>
 
 #include "mutex.h"
 #include "lock_profiler.h"
+
+typedef struct private_mutex_t private_mutex_t;
+typedef struct private_r_mutex_t private_r_mutex_t;
+
+/**
+ * private data of mutex
+ */
+struct private_mutex_t {
+
+	/**
+	 * public functions
+	 */
+	mutex_t public;
+
+	/**
+	 * wrapped pthread mutex
+	 */
+	pthread_mutex_t mutex;
+
+	/**
+	 * is this a recursiv emutex, implementing private_r_mutex_t?
+	 */
+	bool recursive;
+
+	/**
+	 * profiling info, if enabled
+	 */
+	lock_profile_t profile;
+};
+
+/**
+ * private data of mutex, extended by recursive locking information
+ */
+struct private_r_mutex_t {
+
+	/**
+	 * Extends private_mutex_t
+	 */
+	private_mutex_t generic;
+
+	/**
+	 * thread which currently owns mutex
+	 */
+	pthread_t thread;
+
+	/**
+	 * times we have locked the lock, stored per thread
+	 */
+	pthread_key_t times;
+};
 
 /**
  * Implementation of mutex_t.lock.

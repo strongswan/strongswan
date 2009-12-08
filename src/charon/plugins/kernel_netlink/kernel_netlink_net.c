@@ -26,7 +26,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/roam_job.h>

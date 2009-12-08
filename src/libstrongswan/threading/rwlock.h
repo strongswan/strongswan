@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,69 +14,67 @@
  * for more details.
  */
 
+/**
+ * @defgroup rwlock rwlock
+ * @{ @ingroup threading
+ */
+
 #ifndef THREADING_RWLOCK_H_
 #define THREADING_RWLOCK_H_
 
-#include "lock_profiler.h"
-
-typedef struct private_rwlock_t private_rwlock_t;
+typedef struct rwlock_t rwlock_t;
+typedef enum rwlock_type_t rwlock_type_t;
 
 /**
- * private data of rwlock
+ * Type of read-write lock.
  */
-struct private_rwlock_t {
-
-	/**
-	 * public functions
-	 */
-	rwlock_t public;
-
-#ifdef HAVE_PTHREAD_RWLOCK_INIT
-
-	/**
-	 * wrapped pthread rwlock
-	 */
-	pthread_rwlock_t rwlock;
-
-#else
-
-	/**
-	 * mutex to emulate a native rwlock
-	 */
-	mutex_t *mutex;
-
-	/**
-	 * condvar to handle writers
-	 */
-	condvar_t *writers;
-
-	/**
-	 * condvar to handle readers
-	 */
-	condvar_t *readers;
-
-	/**
-	 * number of waiting writers
-	 */
-	u_int waiting_writers;
-
-	/**
-	 * number of readers holding the lock
-	 */
-	u_int reader_count;
-
-	/**
-	 * current writer thread, if any
-	 */
-	pthread_t writer;
-
-#endif /* HAVE_PTHREAD_RWLOCK_INIT */
-
-	/**
-	 * profiling info, if enabled
-	 */
-	lock_profile_t profile;
+enum rwlock_type_t {
+	/** default condvar */
+	RWLOCK_TYPE_DEFAULT = 0,
 };
 
-#endif /* THREADING_THREADING_H_ */
+/**
+ * Read-Write lock wrapper.
+ */
+struct rwlock_t {
+
+	/**
+	 * Acquire the read lock.
+	 */
+	void (*read_lock)(rwlock_t *this);
+
+	/**
+	 * Acquire the write lock.
+	 */
+	void (*write_lock)(rwlock_t *this);
+
+	/**
+	 * Try to acquire the write lock.
+	 *
+	 * Never blocks, but returns FALSE if the lock was already occupied.
+	 *
+	 * @return		TRUE if lock acquired
+	 */
+	bool (*try_write_lock)(rwlock_t *this);
+
+	/**
+	 * Release any acquired lock.
+	 */
+	void (*unlock)(rwlock_t *this);
+
+	/**
+	 * Destroy the read-write lock.
+	 */
+	void (*destroy)(rwlock_t *this);
+};
+
+/**
+ * Create a read-write lock instance.
+ *
+ * @param type		type of rwlock to create
+ * @return			unlocked rwlock instance
+ */
+rwlock_t *rwlock_create(rwlock_type_t type);
+
+#endif /** THREADING_RWLOCK_H_ @} */
 

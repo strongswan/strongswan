@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,26 +14,83 @@
  * for more details.
  */
 
+/**
+ * @defgroup condvar condvar
+ * @{ @ingroup threading
+ */
+
 #ifndef THREADING_CONDVAR_H_
 #define THREADING_CONDVAR_H_
 
-typedef struct private_condvar_t private_condvar_t;
+typedef struct condvar_t condvar_t;
+typedef enum condvar_type_t condvar_type_t;
+
+#include "mutex.h"
 
 /**
- * private data of condvar
+ * Type of condvar.
  */
-struct private_condvar_t {
-
-	/**
-	 * public functions
-	 */
-	condvar_t public;
-
-	/**
-	 * wrapped pthread condvar
-	 */
-	pthread_cond_t condvar;
+enum condvar_type_t {
+	/** default condvar */
+	CONDVAR_TYPE_DEFAULT = 0,
 };
 
-#endif /* THREADING_CONDVAR_H_ */
+/**
+ * Condvar wrapper to use in conjunction with mutex_t.
+ */
+struct condvar_t {
+
+	/**
+	 * Wait on a condvar until it gets signalized.
+	 *
+	 * @param mutex			mutex to release while waiting
+	 */
+	void (*wait)(condvar_t *this, mutex_t *mutex);
+
+	/**
+	 * Wait on a condvar until it gets signalized, or times out.
+	 *
+	 * @param mutex			mutex to release while waiting
+	 * @param timeout		timeout im ms
+	 * @return				TRUE if timed out, FALSE otherwise
+	 */
+	bool (*timed_wait)(condvar_t *this, mutex_t *mutex, u_int timeout);
+
+	/**
+	 * Wait on a condvar until it gets signalized, or times out.
+	 *
+	 * The passed timeval should be calculated based on the time_monotonic()
+	 * function.
+	 *
+	 * @param mutex			mutex to release while waiting
+	 * @param tv			absolute time until timeout
+	 * @return				TRUE if timed out, FALSE otherwise
+	 */
+	bool (*timed_wait_abs)(condvar_t *this, mutex_t *mutex, timeval_t tv);
+
+	/**
+	 * Wake up a single thread in a condvar.
+	 */
+	void (*signal)(condvar_t *this);
+
+	/**
+	 * Wake up all threads in a condvar.
+	 */
+	void (*broadcast)(condvar_t *this);
+
+	/**
+	 * Destroy a condvar and free its resources.
+	 */
+	void (*destroy)(condvar_t *this);
+};
+
+/**
+ * Create a condvar instance.
+ *
+ * @param type		type of condvar to create
+ * @return			condvar instance
+ */
+condvar_t *condvar_create(condvar_type_t type);
+
+#endif /** THREADING_CONDVAR_H_ @} */
 

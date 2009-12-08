@@ -20,7 +20,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <threading.h>
+#include <threading/mutex.h>
 
 typedef struct private_eap_sim_file_triplets_t private_eap_sim_file_triplets_t;
 

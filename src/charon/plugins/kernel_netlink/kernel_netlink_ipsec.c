@@ -36,7 +36,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/mutex.h>
 #include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>

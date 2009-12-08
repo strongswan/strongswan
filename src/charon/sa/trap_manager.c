@@ -16,7 +16,7 @@
 #include "trap_manager.h"
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/rwlock.h>
 #include <utils/linked_list.h>
 
 

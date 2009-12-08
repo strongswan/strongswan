@@ -20,7 +20,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
-#include <threading.h>
+#include <threading/rwlock.h>
 
 
 typedef struct private_backend_manager_t private_backend_manager_t;

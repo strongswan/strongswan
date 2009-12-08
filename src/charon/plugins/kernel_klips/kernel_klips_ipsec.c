@@ -30,7 +30,7 @@
 #include "kernel_klips_ipsec.h"
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>

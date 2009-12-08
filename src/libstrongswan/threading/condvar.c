@@ -20,12 +20,29 @@
 #include <time.h>
 #include <errno.h>
 
-#include <threading.h>
 #include <library.h>
 #include <debug.h>
 
 #include "condvar.h"
 #include "mutex.h"
+
+typedef struct private_condvar_t private_condvar_t;
+
+/**
+ * private data of condvar
+ */
+struct private_condvar_t {
+
+	/**
+	 * public functions
+	 */
+	condvar_t public;
+
+	/**
+	 * wrapped pthread condvar
+	 */
+	pthread_cond_t condvar;
+};
 
 /**
  * Implementation of condvar_t.wait.

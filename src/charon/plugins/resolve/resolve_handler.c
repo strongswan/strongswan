@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include <daemon.h>
-#include <threading.h>
+#include <threading/mutex.h>
 
 typedef struct private_resolve_handler_t private_resolve_handler_t;
 

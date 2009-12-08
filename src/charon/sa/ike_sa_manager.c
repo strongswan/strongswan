@@ -22,7 +22,8 @@
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
-#include <threading.h>
+#include <threading/mutex.h>
+#include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
