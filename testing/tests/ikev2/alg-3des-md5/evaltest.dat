@@ -1,0 +1,13 @@
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*INSTALLED::YES
+moon::ipsec statusall::rw.*IKE proposal.*3DES_CBC/HMAC_MD5_96/PRF_HMAC_MD5/MODP_1024::YES
+carol::ipsec statusall::home.*IKE proposal.*3DES_CBC/HMAC_MD5_96/PRF_HMAC_MD5/MODP_1024::YES
+carol::ping -c 1 -s 120 -p deadbeef 10.1.0.10::128 bytes from 10.1.0.10: icmp_seq=1::YES
+moon::ipsec statusall::rw.*3DES_CBC/HMAC_MD5_96,::YES
+carol::ipsec statusall::home.*3DES_CBC/HMAC_MD5_96,::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP.*length ::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP.*length ::YES
+moon::ip xfrm state::enc cbc(des3_ede)::YES
+carol::ip xfrm state::enc cbc(des3_ede)::YES
+moon::ip xfrm state::auth hmac(md5)::YES
+carol::ip xfrm state::auth hmac(md5)::YES
