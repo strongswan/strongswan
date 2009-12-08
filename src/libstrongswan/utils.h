@@ -109,6 +109,12 @@
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
 
 /**
+ * Object allocation/initialization macro, using designated initializer.
+ */
+#define INIT(this, ...) { (this) = malloc(sizeof(*this)); \
+						  *(this) = (typeof(*this)){ __VA_ARGS__ }; }
+
+/**
  * Macro to allocate a sized type.
  */
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
