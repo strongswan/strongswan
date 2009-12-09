@@ -1,0 +1,10 @@
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*INSTALLED::YES
+carol::ping -c 1 -s 120 -p deadbeef PH_IP_ALICE::128 bytes from PH_IP_ALICE: icmp_seq=1::YES
+moon::ipsec statusall::CAMELLIA_CBC_192/HMAC_SHA1_96::YES
+carol::ipsec statusall::CAMELLIA_CBC_192/HMAC_SHA1_96::YES
+moon::ip xfrm state::enc cbc(camellia)::YES
+carol::ip xfrm state::enc cbc(camellia)::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP.*length 196::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP.*length 196::YES
+
