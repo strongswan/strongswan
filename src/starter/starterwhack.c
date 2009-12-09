@@ -226,13 +226,14 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 {
 	const char *err;
 	static char keyspace[1024 + 4];
+	char buf[ADDRTOT_BUF];
 	whack_message_t msg;
 
 	init_whack_msg(&msg);
 
 	msg.whack_key = TRUE;
 	msg.pubkey_alg = PUBKEY_ALG_RSA;
-	if (end->id && end->rsakey)
+	if (end->rsakey)
 	{
 		/* special values to ignore */
 		if (streq(end->rsakey, "")
@@ -242,18 +243,23 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 		{
 			return 0;
 		}
-		msg.keyid = end->id;
 		err = atobytes(end->rsakey, 0, keyspace, sizeof(keyspace), &msg.keyval.len);
 		if (err)
 		{
 			plog("conn %s/%s: rsakey malformed [%s]", connection_name(conn), lr, err);
 			return 1;
 		}
+		if (end->id)
+		{
+			msg.keyid = end->id;
+		}
 		else
 		{
-			msg.keyval.ptr = keyspace;
-			return send_whack_msg(&msg);
+			addrtot(&end->addr, 0, buf, sizeof(buf));
+			msg.keyid = buf;
 		}
+		msg.keyval.ptr = keyspace;
+		return send_whack_msg(&msg);
 	}
 	return 0;
 }
