@@ -5,7 +5,7 @@ carol::ipsec statusall::home.*IKE proposal.*AES_CBC_192/HMAC_SHA2_384_192/PRF_HM
 carol::ping -c 1 -s 120 -p deadbeef 10.1.0.10::128 bytes from 10.1.0.10: icmp_seq=1::YES
 moon::ipsec statusall::rw.*AES_CBC_192/HMAC_SHA2_384_192,::YES
 carol::ipsec statusall::home.*AES_CBC_192/HMAC_SHA2_384_192,::YES
-moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP.*length 208::YES
-moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP.*length 208::YES
 moon::ip xfrm state::auth hmac(sha384)::YES
 carol::ip xfrm state::auth hmac(sha384)::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP.*length 208::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP.*length 208::YES
