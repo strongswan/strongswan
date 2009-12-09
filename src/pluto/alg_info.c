@@ -51,20 +51,13 @@ int alg_info_esp_aa2sadb(int auth)
 {
 	int sadb_aalg = 0;
 
-	switch(auth) {
+	switch(auth)
+	{
 		case AUTH_ALGORITHM_HMAC_MD5:
 		case AUTH_ALGORITHM_HMAC_SHA1:
 			sadb_aalg = auth + 1;
 			break;
-		case AUTH_ALGORITHM_HMAC_SHA2_256:
-		case AUTH_ALGORITHM_HMAC_SHA2_384:
-		case AUTH_ALGORITHM_HMAC_SHA2_512:
-		case AUTH_ALGORITHM_HMAC_RIPEMD:
-		case AUTH_ALGORITHM_AES_XCBC_MAC:
-			sadb_aalg = auth;
-			break;
 		default:
-			/* loose ... */
 			sadb_aalg = auth;
 	}
 	return sadb_aalg;
@@ -74,20 +67,13 @@ int alg_info_esp_sadb2aa(int sadb_aalg)
 {
 	int auth = 0;
 
-	switch(sadb_aalg) {
+	switch(sadb_aalg)
+	{
 		case SADB_AALG_MD5HMAC:
 		case SADB_AALG_SHA1HMAC:
 			auth = sadb_aalg - 1;
 			break;
-		case SADB_X_AALG_SHA2_256HMAC:
-		case SADB_X_AALG_SHA2_384HMAC:
-		case SADB_X_AALG_SHA2_512HMAC:
-		case SADB_X_AALG_RIPEMD160HMAC:
-		case SADB_X_AALG_AES_XCBC_MAC:
-			auth = sadb_aalg;
-			break;
 		default:
-			/* loose ... */
 			auth = sadb_aalg;
 	}
 	return auth;

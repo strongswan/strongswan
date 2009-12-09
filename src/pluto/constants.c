@@ -675,15 +675,17 @@ static const char *const auth_alg_name[] = {
 };
 
 static const char *const extended_auth_alg_name[] = {
-	"NULL"
-	};
+	"NULL",
+	"HMAC_SHA2_256_96"
+};
 
 enum_names extended_auth_alg_names =
-	{ AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_NULL, extended_auth_alg_name, NULL };
+	{ AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_HMAC_SHA2_256_96,
+		extended_auth_alg_name, NULL };
 
 enum_names auth_alg_names =
-	{ AUTH_ALGORITHM_NONE, AUTH_ALGORITHM_SIG_RSA, auth_alg_name
-		, &extended_auth_alg_names };
+	{ AUTH_ALGORITHM_NONE, AUTH_ALGORITHM_SIG_RSA,
+		auth_alg_name, &extended_auth_alg_names };
 
 /* From draft-beaulieu-ike-xauth */
 static const char *const xauth_type_name[] = {

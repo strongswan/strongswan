@@ -380,6 +380,7 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 			)
 			/* if AES_CBC is registered then also register AES_CCM and AES_GCM */
 			if (satype == SADB_SATYPE_ESP &&
+				supp_exttype == SADB_EXT_SUPPORTED_ENCRYPT &&
 				sadb.alg->sadb_alg_id == SADB_X_EALG_AESCBC)
 			{
 				struct sadb_alg alg = *sadb.alg;
@@ -394,6 +395,16 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 						kernel_alg_add(satype, supp_exttype, &alg);
 					}
 				}
+			}
+			/* if SHA2_256 is registered then also register SHA2_256_96 */
+			if (satype == SADB_SATYPE_ESP &&
+				supp_exttype == SADB_EXT_SUPPORTED_AUTH &&
+				sadb.alg->sadb_alg_id == SADB_X_AALG_SHA2_256HMAC)
+			{
+				struct sadb_alg alg = *sadb.alg;
+
+				alg.sadb_alg_id = SADB_X_AALG_SHA2_256_96HMAC;
+				kernel_alg_add(satype, supp_exttype, &alg);
 			}
 		}
 	}
