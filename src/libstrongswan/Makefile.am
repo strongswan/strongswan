@@ -58,7 +58,7 @@ utils/optionsfrom.c utils/optionsfrom.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-libstrongswan_la_LIBADD = -lpthread $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
+libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \

@@ -102,7 +102,7 @@ INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/
 AM_CFLAGS = -rdynamic \
   -DIPSEC_DIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB) $(SOCKLIB)
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 # compile options
 #################

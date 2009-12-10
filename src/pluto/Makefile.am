@@ -75,7 +75,7 @@ AM_CFLAGS = \
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lresolv -lpthread $(DLLIB)
+-lresolv $(PTHREADLIB) $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
