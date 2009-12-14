@@ -1098,7 +1098,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			strcpy(algo->alg_name, alg_name);
 			memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		}
-		else 
+		else
 		{
 			struct xfrm_algo* algo;
 
@@ -1706,24 +1706,13 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 		if (charon->kernel_interface->get_address_by_ts(charon->kernel_interface,
 				dst_ts, &route->src_ip) == SUCCESS)
 		{
-			if (policy->sel.family == AF_INET)
-			{
-				/* get the nexthop to src (src as we are in POLICY_FWD).*/
-				route->gateway = charon->kernel_interface->get_nexthop(
-									charon->kernel_interface, src);
-				/* for IPv4, the route is installed on the outgoing interface */
-				route->if_name = charon->kernel_interface->get_interface(
+			/* get the nexthop to src (src as we are in POLICY_FWD).*/
+			route->gateway = charon->kernel_interface->get_nexthop(
+												charon->kernel_interface, src);
+			/* install route via outgoing interface */
+			route->if_name = charon->kernel_interface->get_interface(
 												charon->kernel_interface, dst);
-				route->dst_net = chunk_alloc(4);
-			}
-			else
-			{
-				route->gateway = NULL;
-				/* for IPv6, it is on the interface with our source address */
-				route->if_name = charon->kernel_interface->get_interface(
-										charon->kernel_interface, route->src_ip);
-				route->dst_net = chunk_alloc(16);
-			}
+			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 			route->prefixlen = policy->sel.prefixlen_s;
 
