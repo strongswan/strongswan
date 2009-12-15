@@ -64,6 +64,7 @@ enum encryption_algorithm_t {
 #define DES_BLOCK_SIZE			 8
 #define BLOWFISH_BLOCK_SIZE		 8
 #define AES_BLOCK_SIZE			16
+#define CAMELLIA_BLOCK_SIZE		16
 #define SERPENT_BLOCK_SIZE		16
 #define TWOFISH_BLOCK_SIZE		16
 

@@ -48,6 +48,22 @@ static struct encrypt_desc encrypt_desc_aes =
 	keymaxlen: 		 AES_KEY_MAX_LEN,
 };
 
+#define  CAMELLIA_KEY_MIN_LEN	128
+#define  CAMELLIA_KEY_DEF_LEN	128
+#define  CAMELLIA_KEY_MAX_LEN	256
+
+static struct encrypt_desc encrypt_desc_camellia =
+{
+	algo_type: 	     IKE_ALG_ENCRYPT,
+	algo_id:   	     OAKLEY_CAMELLIA_CBC,
+	algo_next: 	     NULL,
+
+	enc_blocksize: 	 CAMELLIA_BLOCK_SIZE,
+	keyminlen: 		 CAMELLIA_KEY_MIN_LEN,
+	keydeflen: 		 CAMELLIA_KEY_DEF_LEN,
+	keymaxlen: 		 CAMELLIA_KEY_MAX_LEN,
+};
+
 #define  BLOWFISH_KEY_MIN_LEN	128
 #define  BLOWFISH_KEY_MAX_LEN	448
 
@@ -300,6 +316,9 @@ bool init_crypto(void)
 			case ENCR_AES_CBC:
 				desc = &encrypt_desc_aes;
 				break;
+			case ENCR_CAMELLIA_CBC:
+				desc = &encrypt_desc_camellia;
+				break;
 			case ENCR_TWOFISH_CBC:
 				desc = &encrypt_desc_twofish;
 				ike_alg_add((struct ike_alg *)&encrypt_desc_twofish_ssh);
@@ -392,6 +411,8 @@ encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 			return ENCR_CAST;
 		case OAKLEY_AES_CBC:
 			return ENCR_AES_CBC;
+		case OAKLEY_CAMELLIA_CBC:
+			return ENCR_CAMELLIA_CBC;
 		case OAKLEY_SERPENT_CBC:
 			return ENCR_SERPENT_CBC;
 		case OAKLEY_TWOFISH_CBC:
