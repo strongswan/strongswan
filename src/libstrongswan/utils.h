@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <sys/time.h>
+#include <arpa/inet.h>
+#include <string.h>
 
 #include <enum.h>
 
@@ -319,6 +321,58 @@ bool return_true();
  * returns FALSE
  */
 bool return_false();
+
+/**
+ * Write a 16-bit host order value in network order to an unaligned address.
+ *
+ * @param host		host order 16-bit value
+ * @param network	unaligned address to write network order value to
+ */
+static inline void htoun16(void *network, u_int16_t host)
+{
+	host = htons(host);
+	memcpy(network, &host, sizeof(host));
+}
+
+/**
+ * Write a 32-bit host order value in network order to an unaligned address.
+ *
+ * @param host		host order 32-bit value
+ * @param network	unaligned address to write network order value to
+ */
+static inline void htoun32(void *network, u_int32_t host)
+{
+	host = htonl(host);
+	memcpy(network, &host, sizeof(host));
+}
+
+/**
+ * Read a 16-bit value in network order from an unaligned address to host order.
+ *
+ * @param network	unaligned address to read network order value from
+ * @return			host order value
+ */
+static inline u_int16_t untoh16(void *network)
+{
+	u_int16_t tmp;
+
+	memcpy(&tmp, network, sizeof(tmp));
+	return ntohs(tmp);
+}
+
+/**
+ * Read a 32-bit value in network order from an unaligned address to host order.
+ *
+ * @param network	unaligned address to read network order value from
+ * @return			host order value
+ */
+static inline u_int32_t untoh32(void *network)
+{
+	u_int32_t tmp;
+
+	memcpy(&tmp, network, sizeof(tmp));
+	return ntohs(tmp);
+}
 
 /**
  * Special type to count references
