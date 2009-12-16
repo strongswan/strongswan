@@ -334,7 +334,7 @@ static enumerator_t* create_attribute_enumerator(private_sql_attribute_t *this,
 		enumerator_t *enumerator;
 
 		enumerator = this->db->query(this->db,
-						"SELECT type, value FROM attributes ", DB_INT, DB_BLOB);
+						"SELECT type, value FROM attributes", DB_INT, DB_BLOB);
 		if (enumerator)
 		{
 			return enumerator;
