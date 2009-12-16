@@ -106,7 +106,7 @@ static void init_internal_addr(internal_addr_t *ia)
 		anyaddr(AF_INET, &ia->dns[i]);
 	}
 
-	/* initialize WINS server information */
+	/* initialize NBNS server information */
 	for (i = 0; i < NBNS_SERVER_MAX; i++)
 	{
 		anyaddr(AF_INET, &ia->nbns[i]);
@@ -120,13 +120,15 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 							  internal_addr_t *ia)
 {
 	int i, dns_idx = 0, nbns_idx = 0;
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t value;
+	host_t *vip = NULL;
 
 	if (isanyaddr(&c->spd.that.host_srcip))
 	{
 		if (c->spd.that.pool)
 		{
-			host_t *vip;
-
 			vip = lib->attributes->acquire_address(lib->attributes,
 										c->spd.that.pool, c->spd.that.id,
 										requested_vip);
@@ -136,7 +138,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 		
 				plog("assigning virtual IP %H to peer", vip);
 				initaddr(addr.ptr, addr.len, vip->get_family(vip), &ia->ipaddr);
-				vip->destroy(vip);
+
 			}
 		}
 		else
@@ -146,12 +148,9 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 	}
 	else
 	{
-		char srcip[ADDRTOT_BUF];
-
 		ia->ipaddr = c->spd.that.host_srcip;
-
-		addrtot(&ia->ipaddr, 0, srcip, sizeof(srcip));
-		plog("assigning virtual IP  %s to peer", srcip);
+		vip = host_create_from_sockaddr((sockaddr_t*)&ia->ipaddr);
+		plog("assigning virtual IP  %H to peer", vip);
 	}
 
 	if (!isanyaddr(&ia->ipaddr))        /* We got an IP address, send it */
@@ -165,7 +164,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 					 | LELEM(INTERNAL_IP4_NETMASK);
 	}
 
-	/* assign DNS servers */
+	/* assign DNS servers from strongswan.conf */
 	for (i = 1; i <= DNS_SERVER_MAX; i++)
 	{
 		char dns_key[16], *dns_str;
@@ -178,7 +177,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 			sa_family_t family = strchr(dns_str, ':') ? AF_INET6 : AF_INET;
 
 			ugh = ttoaddr(dns_str, 0, family, &ia->dns[dns_idx]);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				plog("error in DNS server address: %s", ugh);
 				continue;
@@ -191,7 +190,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 		}
 	}
 
-	/* assign WINS servers */
+	/* assign NBNS servers from strongswan.conf */
 	for (i = 1; i <= NBNS_SERVER_MAX; i++)
 	{
 		char nbns_key[16], *nbns_str;
@@ -204,9 +203,9 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 			sa_family_t family = strchr(nbns_str, ':') ? AF_INET6 : AF_INET;
 
 			ugh = ttoaddr(nbns_str, 0, family, &ia->nbns[nbns_idx]);
-			if (ugh != NULL)
+			if (ugh)
 			{
-				plog("error in WINS server address: %s", ugh);
+				plog("error in NBNS server address: %s", ugh);
 				continue;
 			}
 			plog("assigning NBNS server %s to peer", nbns_str);
@@ -216,6 +215,74 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 			nbns_idx++;
 		}
 	}
+
+	/* assign attributes from registered providers */
+	enumerator = lib->attributes->create_responder_enumerator(lib->attributes,
+											c->spd.that.id, vip);
+	while (enumerator->enumerate(enumerator, &type, &value))
+	{
+		err_t ugh;
+		host_t *server;
+		sa_family_t family = AF_INET;
+		
+		switch (type)
+		{
+			case INTERNAL_IP6_DNS:
+				family = AF_INET6;
+				/* fallthrough */
+			case INTERNAL_IP4_DNS:
+				if (dns_idx >= DNS_SERVER_MAX)
+				{
+					plog("exceeded the maximum number of %d DNS servers",
+						 DNS_SERVER_MAX);
+					break;
+				}
+				ugh = initaddr(value.ptr, value.len, family, &ia->dns[dns_idx]);
+				if (ugh)
+				{
+					plog("error in DNS server address: %s", ugh);
+					break;
+				}
+				server = host_create_from_chunk(family, value, 0);
+				plog("assigning DNS server %H to peer", server);
+				server->destroy(server);
+
+				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
+				ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
+				dns_idx++;
+				break;
+
+			case INTERNAL_IP6_NBNS:
+				family = AF_INET6;
+				/* fallthrough */
+			case INTERNAL_IP4_NBNS:
+				if (nbns_idx >= NBNS_SERVER_MAX)
+ 				{
+					plog("exceeded the maximum number of %d NBNS servers",
+						 NBNS_SERVER_MAX);
+					break;
+				}
+				ugh = initaddr(value.ptr, value.len, family, &ia->nbns[nbns_idx]);
+				if (ugh)
+				{
+					plog("error in NBNS server address: %s", ugh);
+					break;
+				}
+				server = host_create_from_chunk(family, value, 0);
+				plog("assigning NBNS server %H to peer", server);
+				server->destroy(server);
+
+				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
+				ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
+				nbns_idx++;
+				break;
+
+			default:
+				break;
+		}			
+	}
+	enumerator->destroy(enumerator);
+	DESTROY_IF(vip);
 }
 
 
@@ -627,12 +694,12 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia
 				ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->nbns[nbns_idx]);
 				if (ugh != NULL)
 				{
-					plog("received invalid IPv4 WINS server address: %s", ugh);
+					plog("received invalid IPv4 NBNS server address: %s", ugh);
 				}
 				else
 				{
 					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv4 WINS server address %s", buf);
+					plog("received IPv4 NBNS server address %s", buf);
 					nbns_idx++;
 				}
 			}
@@ -661,12 +728,12 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia
 				ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->nbns[nbns_idx]);
 				if (ugh != NULL)
 				{
-					plog("received invalid IPv6 WINS server address: %s", ugh);
+					plog("received invalid IPv6 NBNS server address: %s", ugh);
 				}
 				else
 				{
 					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv6 WINS server address %s", buf);
+					plog("received IPv6 NBNS server address %s", buf);
 					nbns_idx++;
 				}
 			}
