@@ -5,6 +5,8 @@ strongswan-4.3.6
   server entries that are sent via the IKEv1 Mode Config or IKEv2
   Configuration Payload to remote clients.
 
+- The Camellia cipher can be used as an IKEv1 encryption algorithm.
+
 - The IKEv1 and IKEV2 daemons now check certificate path length constraints.
 
 - More detailed IKEv2 EAP payload information in debug output
