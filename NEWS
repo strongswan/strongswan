@@ -1,6 +1,10 @@
 strongswan-4.3.6
 ----------------
 
+- The ipsec pool --add|del dns|nbns command manages DNS and NBNS name
+  server entries that are sent via the IKEv1 Mode Config or IKEv2
+  Configuration Payload to remote clients.
+
 - The IKEv1 and IKEV2 daemons now check certificate path length constraints.
 
 - More detailed IKEv2 EAP payload information in debug output
