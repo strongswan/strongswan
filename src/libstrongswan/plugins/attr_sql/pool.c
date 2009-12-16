@@ -23,6 +23,7 @@
 #include <library.h>
 #include <utils/host.h>
 #include <utils/identification.h>
+#include <attributes/attributes.h>
 
 /**
  * global database handle
@@ -30,9 +31,35 @@
 database_t *db;
 
 /**
- * --start/--end addresses of various subcommands
+ * --start/--end/--server addresses of various subcommands
  */
-host_t *start = NULL, *end = NULL;
+host_t *start = NULL, *end = NULL, *server = NULL;
+
+/**
+ * instead of a pool handle a DNS or NBNS attribute
+ */
+static bool is_attribute(char *name)
+{
+	return strcaseeq(name, "dns") || strcaseeq(name, "nbns") ||
+		   strcaseeq(name, "wins");
+}
+
+/**
+ * determine configuration attribute type
+ */
+static configuration_attribute_type_t get_attribute_type(char *name, host_t* addr)
+{
+	if (strcaseeq(name, "dns"))
+	{
+		return (addr->get_family(addr) == AF_INET) ? INTERNAL_IP4_DNS :
+													 INTERNAL_IP6_DNS;
+	}
+	else
+	{
+		return (addr->get_family(addr) == AF_INET) ? INTERNAL_IP4_NBNS :
+													 INTERNAL_IP6_NBNS;
+	}
+}
 
 /**
  * calculate the size of a pool using start and end address chunk
@@ -69,19 +96,27 @@ Usage:\n\
       end:     End address of the pool\n\
       timeout: Lease time in hours, 0 for static leases\n\
   \n\
+  ipsec pool --add dns|nbns|wins --server <server>\n\
+    Add a new DNS or NBNS server to the database.\n\
+      server:  IP address of the name server\n\
+  \n\
   ipsec pool --del <name>\n\
     Delete a pool from the database.\n\
-      name:   Name of the pool to delete\n\
+      name:    Name of the pool to delete\n\
+  \n\
+  ipsec pool --del dns|nbns|wins [--server <server>]\n\
+    Delete a specific or all DNS or NBNS servers from the database.\n\
+      server:  IP address of the name server to delete\n\
   \n\
   ipsec pool --resize <name> --end <end>\n\
     Grow or shrink an existing pool.\n\
-      name:   Name of the pool to resize\n\
-      end:    New end address for the pool\n\
+      name:    Name of the pool to resize\n\
+      end:     New end address for the pool\n\
   \n\
   ipsec pool --leases [--filter <filter>] [--utc]\n\
     Show lease information using filters:\n\
-      filter: Filter string containing comma separated key=value filters,\n\
-              e.g. id=alice@strongswan.org,addr=1.1.1.1\n\
+      filter:  Filter string containing comma separated key=value filters,\n\
+               e.g. id=alice@strongswan.org,addr=1.1.1.1\n\
                   pool:   name of the pool\n\
                   id:     assigned identity of the lease\n\
                   addr:   lease IP address\n\
@@ -91,7 +126,7 @@ Usage:\n\
   \n\
   ipsec pool --purge <name>\n\
     Delete lease history of a pool:\n\
-      name:   Name of the pool to purge\n\
+      name:    Name of the pool to purge\n\
   \n");
 	exit(0);
 }
@@ -101,8 +136,116 @@ Usage:\n\
  */
 static void status(void)
 {
-	enumerator_t *pool, *lease;
+	enumerator_t *ns, *pool, *lease;
+	host_t *server;
+	chunk_t value;
 	bool found = FALSE;
+
+	/* enumerate IPv4 DNS servers */
+	ns = db->query(db, "SELECT value FROM attributes WHERE type = ?",
+				   DB_INT, INTERNAL_IP4_DNS, DB_BLOB);
+	if (ns)
+	{
+		while (ns->enumerate(ns, &value))
+		{
+			if (!found)
+			{
+				printf("dns servers:");
+				found = TRUE;
+			}
+			server = host_create_from_chunk(AF_INET, value, 0);
+			if (server)
+			{
+				printf(" %H", server);
+				server->destroy(server);
+			}
+		}
+		ns->destroy(ns);
+	}
+
+	/* enumerate IPv6 DNS servers */
+	ns = db->query(db, "SELECT value FROM attributes WHERE type = ?",
+				   DB_INT, INTERNAL_IP6_DNS, DB_BLOB);
+	if (ns)
+	{
+		while (ns->enumerate(ns, &value))
+		{
+			if (!found)
+			{
+				printf("dns servers:");
+				found = TRUE;
+			}
+			server = host_create_from_chunk(AF_INET6, value, 0);
+			if (server)
+			{
+				printf(" %H", server);
+				server->destroy(server);
+			}
+		}
+		ns->destroy(ns);
+	}
+	if (found)
+	{
+		printf("\n");
+	}
+	else
+	{
+		printf("no dns servers found.\n");
+	}
+	found = FALSE;
+
+	/* enumerate IPv4 NBNS servers */
+	ns = db->query(db, "SELECT value FROM attributes WHERE type = ?",
+				   DB_INT, INTERNAL_IP4_NBNS, DB_BLOB);
+	if (ns)
+	{
+		while (ns->enumerate(ns, &value))
+		{
+			if (!found)
+			{
+				printf("nbns servers:");
+				found = TRUE;
+			}
+			server = host_create_from_chunk(AF_INET, value, 0);
+			if (server)
+			{
+				printf(" %H", server);
+				server->destroy(server);
+			}
+		}
+		ns->destroy(ns);
+	}
+
+	/* enumerate IPv6 NBNS servers */
+	ns = db->query(db, "SELECT value FROM attributes WHERE type = ?",
+				   DB_INT, INTERNAL_IP6_NBNS, DB_BLOB);
+	if (ns)
+	{
+		while (ns->enumerate(ns, &value))
+		{
+			if (!found)
+			{
+				printf("nbns servers:");
+				found = TRUE;
+			}
+			server = host_create_from_chunk(AF_INET6, value, 0);
+			if (server)
+			{
+				printf(" %H", server);
+				server->destroy(server);
+			}
+		}
+		ns->destroy(ns);
+	}
+	if (found)
+	{
+		printf("\n");
+	}
+	else
+	{
+		printf("no nbns servers found.\n");
+	}
+	found = FALSE;
 
 	pool = db->query(db, "SELECT id, name, start, end, timeout FROM pools",
 					 DB_INT, DB_TEXT, DB_BLOB, DB_BLOB, DB_UINT);
@@ -229,6 +372,27 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 }
 
 /**
+ * ipsec pool --add dns|nbns|wins - add a DNS or NBNS server entry
+ */
+static void add_attr(char *name, host_t *server)
+{
+	configuration_attribute_type_t type;
+	chunk_t value;
+
+	type = get_attribute_type(name, server);
+	value = server->get_address(server);
+	if (db->execute(db, NULL,
+			"INSERT INTO attributes (type, value) VALUES (?, ?)",
+			DB_INT, type, DB_BLOB, value) != 1)
+	{
+		fprintf(stderr, "adding %s server %H failed.\n", name, server);
+		exit(-1);
+	}
+	printf("added %s server %H\n", name, server);
+	exit(0);
+}
+
+/**
  * ipsec pool --del - delete a pool
  */
 static void del(char *name)
@@ -270,7 +434,102 @@ static void del(char *name)
 }
 
 /**
- * ipsec pool --resize - resize a pool
+ * ipsec pool --del dns|nbns|wins - delete a DNS or NBNS server entry
+ */
+static void del_attr(char *name, host_t *server)
+{
+	configuration_attribute_type_t type;
+	chunk_t value;
+	u_int id;
+	enumerator_t *query;
+	bool found = FALSE;
+
+	if (server)
+	{
+		type = get_attribute_type(name, server);
+		value = server->get_address(server);
+		query = db->query(db, 
+					"SELECT id, type, value FROM attributes "
+					"WHERE type = ? AND value = ?",
+					DB_INT, type, DB_BLOB, value,
+					DB_UINT, DB_INT, DB_BLOB);
+	}
+	else
+	{
+		configuration_attribute_type_t type_ip4, type_ip6;
+
+		if (strcaseeq(name, "dns"))
+		{
+			type_ip4 = INTERNAL_IP4_DNS;
+			type_ip6 = INTERNAL_IP6_DNS;
+		}
+		else
+		{
+			type_ip4 = INTERNAL_IP4_NBNS;
+			type_ip6 = INTERNAL_IP6_NBNS;
+		}
+			
+		query = db->query(db,
+					"SELECT id, type, value FROM attributes "
+					"WHERE type = ? OR type = ?",
+					DB_INT, type_ip4, DB_INT, type_ip6,
+					DB_UINT, DB_INT, DB_BLOB);
+	}	
+	if (!query)
+	{
+		fprintf(stderr, "deleting %s servers failed.\n", name);
+		exit(-1);
+	}
+
+	while (query->enumerate(query, &id, &type, &value))
+	{
+		int family;
+		host_t *host;
+
+		found = TRUE;
+		family = (type == INTERNAL_IP4_DNS || type == INTERNAL_IP4_NBNS) ?
+				  AF_INET : AF_INET6;
+		host = host_create_from_chunk(family, value, 0);
+		if (db->execute(db, NULL,
+					"DELETE FROM attributes WHERE id = ?",
+					 DB_UINT, id) != 1)
+		{
+			fprintf(stderr, "deleting %s server %H failed\n", name, host);
+			query->destroy(query);
+			DESTROY_IF(host);
+			exit(-1);
+		}
+		printf("deleted %s server %H\n", name, host);
+		DESTROY_IF(host);
+	}
+	query->destroy(query);
+
+	if (!found)
+	{
+		printf("no matching %s servers found\n", name);
+		exit(-1);		
+	}
+	exit(0);
+}
+
+/**
+ * ipsec pool --resize - resize a pool		if (db->execute(db, NULL,
+					"DELETE FROM attributes WHERE type = ? AND value = ?",
+					 DB_INT, type, DB_BLOB, value) != 1)
+		{
+			fprintf(stderr, "deleting %s server %H failed\n", name, server);
+			exit(-1);
+		}
+		printf("deleted %s server %H\n", name, server);
+		if (db->execute(db, NULL,
+					"DELETE FROM attributes WHERE type = ? AND value = ?",
+					 DB_INT, type, DB_BLOB, value) != 1)
+		{
+			fprintf(stderr, "deleting %s server %H failed\n", name, server);
+			exit(-1);
+		}
+		printf("deleted %s server %H\n", name, server);
+
  */
 static void resize(char *name, host_t *end)
 {
@@ -587,6 +846,7 @@ static void cleanup(void)
 	db->destroy(db);
 	DESTROY_IF(start);
 	DESTROY_IF(end);
+	DESTROY_IF(server);
 }
 
 int main(int argc, char *argv[])
@@ -598,10 +858,12 @@ int main(int argc, char *argv[])
 		OP_USAGE,
 		OP_STATUS,
 		OP_ADD,
+		OP_ADD_ATTR,
 		OP_DEL,
+		OP_DEL_ATTR,
 		OP_RESIZE,
 		OP_LEASES,
-		OP_PURGE,
+		OP_PURGE
 	} operation = OP_USAGE;
 
 	atexit(library_deinit);
@@ -656,6 +918,7 @@ int main(int argc, char *argv[])
 			{ "end", required_argument, NULL, 'e' },
 			{ "timeout", required_argument, NULL, 't' },
 			{ "filter", required_argument, NULL, 'f' },
+			{ "server", required_argument, NULL, 'v' },
 			{ 0,0,0,0 }
 		};
 
@@ -673,23 +936,23 @@ int main(int argc, char *argv[])
 				utc = TRUE;
 				continue;
 			case 'a':
-				operation = OP_ADD;
 				name = optarg;
+				operation = is_attribute(name) ? OP_ADD_ATTR : OP_ADD;
 				continue;
 			case 'd':
-				operation = OP_DEL;
 				name = optarg;
+				operation = is_attribute(name) ? OP_DEL_ATTR : OP_DEL;
 				continue;
 			case 'r':
-				operation = OP_RESIZE;
 				name = optarg;
+				operation = OP_RESIZE;
 				continue;
 			case 'l':
 				operation = OP_LEASES;
 				continue;
 			case 'p':
-				operation = OP_PURGE;
 				name = optarg;
+				operation = OP_PURGE;
 				continue;
 			case 's':
 				start = host_create_from_string(optarg, 0);
@@ -721,6 +984,15 @@ int main(int argc, char *argv[])
 			case 'f':
 				filter = optarg;
 				continue;
+			case 'v':
+				server = host_create_from_string(optarg, 0);
+				if (server == NULL)
+				{
+					fprintf(stderr, "invalid server address: '%s'.\n", optarg);
+					operation = OP_USAGE;
+					break;
+				}
+				continue;
 			default:
 				operation = OP_USAGE;
 				break;
@@ -744,8 +1016,19 @@ int main(int argc, char *argv[])
 			}
 			add(name, start, end, timeout);
 			break;
+		case OP_ADD_ATTR:
+			if (server == NULL)
+			{
+				fprintf(stderr, "missing arguments.\n");
+				usage();
+			}
+			add_attr(name, server);
+			break;
 		case OP_DEL:
 			del(name);
+			break;
+		case OP_DEL_ATTR:
+			del_attr(name, server);
 			break;
 		case OP_RESIZE:
 			if (end == NULL)
