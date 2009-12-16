@@ -324,6 +324,26 @@ static bool release_address(private_sql_attribute_t *this,
 }
 
 /**
+ * Implementation of sql_attribute_t.create_attribute_enumerator
+ */
+static enumerator_t* create_attribute_enumerator(private_sql_attribute_t *this,
+											identification_t *id, host_t *vip)
+{
+	if (vip)
+	{
+		enumerator_t *enumerator;
+
+		enumerator = this->db->query(this->db,
+						"SELECT type, value FROM attributes ", DB_INT, DB_BLOB);
+		if (enumerator)
+		{
+			return enumerator;
+		}
+	}
+	return enumerator_create_empty();
+}
+
+/**
  * Implementation of sql_attribute_t.destroy
  */
 static void destroy(private_sql_attribute_t *this)
@@ -341,7 +361,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *host))enumerator_create_empty;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *host))create_attribute_enumerator;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 
 	this->db = db;

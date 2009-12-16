@@ -187,6 +187,12 @@ CREATE TABLE leases (
   PRIMARY KEY (`id`)
 );
 
+DROP TABLE IF EXISTS attributes;
+CREATE TABLE attributes (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `type` int(10) unsigned NOT NULL,
+  `value` varbinary(16) NOT NULL
+);
 
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (
