@@ -29,12 +29,12 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
-#include <pthread.h>
 
 #include "cowfs.h"
 
 #include <library.h>
 #include <debug.h>
+#include <threading/thread.h>
 
 /** define _XOPEN_SOURCE 500 fails when using libstrongswan, define popen */
 extern ssize_t pread(int fd, void *buf, size_t count, off_t offset);
@@ -64,7 +64,7 @@ struct private_cowfs_t {
 	/** optional COW overlay */
 	int over_fd;
 	/** thread processing FUSE */
-	pthread_t thread;
+	thread_t *thread;
 };
 
 /**
@@ -792,7 +792,7 @@ static void destroy(private_cowfs_t *this)
 {
 	fuse_exit(this->fuse);
 	fuse_unmount(this->mount, this->chan);
-	pthread_join(this->thread, NULL);
+	this->thread->join(this->thread);
 	fuse_destroy(this->fuse);
 	free(this->mount);
 	free(this->master);
@@ -862,7 +862,8 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->host = strdup(host);
 	this->over = NULL;
 
-	if (pthread_create(&this->thread, NULL, (void*)fuse_loop, this->fuse) != 0)
+	this->thread = thread_create((thread_main_t)fuse_loop, this->fuse);
+	if (!this->thread)
 	{
 		DBG1("creating thread to handle FUSE failed");
 		fuse_unmount(mount, this->chan);

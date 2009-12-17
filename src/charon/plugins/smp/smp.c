@@ -23,13 +23,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <errno.h>
-#include <pthread.h>
 #include <signal.h>
 #include <libxml/xmlreader.h>
 #include <libxml/xmlwriter.h>
 
 #include <library.h>
 #include <daemon.h>
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
 
@@ -361,7 +361,7 @@ static bool xml_callback(xmlTextWriterPtr writer, debug_t group, level_t level,
 		xmlTextWriterStartElement(writer, "item");
 		xmlTextWriterWriteFormatAttribute(writer, "level", "%d", level);
 		xmlTextWriterWriteFormatAttribute(writer, "source", "%N", debug_names, group);
-		xmlTextWriterWriteFormatAttribute(writer, "thread", "%u", pthread_self());
+		xmlTextWriterWriteFormatAttribute(writer, "thread", "%u", thread_current_id());
 		xmlTextWriterWriteVFormatString(writer, format, args);
 		xmlTextWriterEndElement(writer);
 		/* </item> */
@@ -622,17 +622,18 @@ static void closefdp(int *fd)
  */
 static job_requeue_t process(int *fdp)
 {
-	int oldstate, fd = *fdp;
+	int fd = *fdp;
+	bool oldstate;
 	char buffer[4096];
 	size_t len;
 	xmlTextReaderPtr reader;
 	char *id = NULL, *type = NULL;
 
-	pthread_cleanup_push((void*)closefdp, (void*)&fd);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	thread_cleanup_push((thread_cleanup_t)closefdp, (void*)&fd);
+	oldstate = thread_cancelability(TRUE);
 	len = read(fd, buffer, sizeof(buffer));
-	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(0);
+	thread_cancelability(oldstate);
+	thread_cleanup_pop(FALSE);
 	if (len <= 0)
 	{
 		close(fd);
@@ -682,13 +683,14 @@ static job_requeue_t process(int *fdp)
 static job_requeue_t dispatch(private_smp_t *this)
 {
 	struct sockaddr_un strokeaddr;
-	int oldstate, fd, *fdp, strokeaddrlen = sizeof(strokeaddr);
+	int fd, *fdp, strokeaddrlen = sizeof(strokeaddr);
 	callback_job_t *job;
+	bool oldstate;
 
 	/* wait for connections, but allow thread to terminate */
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	fd = accept(this->socket, (struct sockaddr *)&strokeaddr, &strokeaddrlen);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (fd < 0)
 	{

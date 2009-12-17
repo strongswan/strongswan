@@ -22,6 +22,7 @@
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <bus/bus.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
 #include <utils/linked_list.h>

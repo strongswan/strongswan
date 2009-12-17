@@ -23,6 +23,7 @@
 #include <library.h>
 #include <debug.h>
 
+#include "condvar.h"
 #include "mutex.h"
 #include "lock_profiler.h"
 

@@ -15,12 +15,12 @@
 
 #define _GNU_SOURCE
 #include <string.h>
-#include <pthread.h>
 #include <mysql.h>
 
 #include "mysql_database.h"
 
 #include <debug.h>
+#include <threading/thread_value.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 
@@ -104,19 +104,20 @@ static void conn_release(conn_t *conn)
 {
 	conn->in_use = FALSE;
 }
+
 /**
  * thread specific initialization flag
  */
-pthread_key_t initialized;
+thread_value_t *initialized;
 
 /**
  * Initialize a thread for mysql usage
  */
 static void thread_initialize()
 {
-	if (pthread_getspecific(initialized) == NULL)
+	if (initialized->get(initialized) == NULL)
 	{
-		pthread_setspecific(initialized, (void*)TRUE);
+		initialized->set(initialized, (void*)TRUE);
 		mysql_thread_init();
 	}
 }
@@ -130,11 +131,7 @@ bool mysql_database_init()
 	{
 		return FALSE;
 	}
-	if (pthread_key_create(&initialized, (void*)mysql_thread_end))
-	{
-		mysql_library_end();
-		return FALSE;
-	}
+	initialized = thread_value_create((thread_cleanup_t)mysql_thread_end);
 	return TRUE;
 }
 
@@ -143,7 +140,7 @@ bool mysql_database_init()
  */
 void mysql_database_deinit()
 {
-	pthread_key_delete(initialized);
+	initialized->destroy(initialized);
 	mysql_thread_end();
 	/* mysql_library_end(); would be the clean way, however, it hangs... */
 }

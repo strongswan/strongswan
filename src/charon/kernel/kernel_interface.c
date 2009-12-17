@@ -15,8 +15,6 @@
 
 #include "kernel_interface.h"
 
-#include <pthread.h>
-
 #include <daemon.h>
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;

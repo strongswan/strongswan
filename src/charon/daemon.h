@@ -302,11 +302,6 @@ struct daemon_t {
 	gid_t gid;
 
 	/**
-	 * The thread_id of main-thread.
-	 */
-	pthread_t main_thread_id;
-
-	/**
 	 * Do not drop a given capability after initialization.
 	 *
 	 * Some plugins might need additional capabilites. They tell the daemon

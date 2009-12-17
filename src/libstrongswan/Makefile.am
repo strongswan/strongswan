@@ -43,6 +43,8 @@ credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_a
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \
+threading/thread.h threading/thread.c \
+threading/thread_value.h threading/thread_value.c \
 threading/mutex.h threading/mutex.c threading/condvar.h  \
 threading/rwlock.h threading/rwlock.c \
 threading/lock_profiler.h \

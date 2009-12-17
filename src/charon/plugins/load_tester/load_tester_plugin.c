@@ -24,6 +24,7 @@
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;

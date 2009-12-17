@@ -16,7 +16,6 @@
 #include "backend_manager.h"
 
 #include <sys/types.h>
-#include <pthread.h>
 
 #include <daemon.h>
 #include <utils/linked_list.h>

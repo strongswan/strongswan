@@ -13,11 +13,10 @@
  * for more details.
  */
 
-#include <pthread.h>
-
 #include "credential_manager.h"
 
 #include <daemon.h>
+#include <threading/thread_value.h>
 #include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <credentials/sets/cert_cache.h>
@@ -48,7 +47,7 @@ struct private_credential_manager_t {
 	/**
 	 * thread local set of credentials, linked_list_t with credential_set_t's
 	 */
-	pthread_key_t local_sets;
+	thread_value_t *local_sets;
 
 	/**
 	 * trust relationship and certificate cache
@@ -152,7 +151,7 @@ static enumerator_t *create_sets_enumerator(private_credential_manager_t *this)
 	enumerator->public.destroy = (void*)sets_enumerator_destroy;
 	enumerator->global = this->sets->create_enumerator(this->sets);
 	enumerator->local = NULL;
-	local = pthread_getspecific(this->local_sets);
+	local = this->local_sets->get(this->local_sets);
 	if (local)
 	{
 		enumerator->local = local->create_enumerator(local);
@@ -378,11 +377,11 @@ static void add_local_set(private_credential_manager_t *this,
 {
 	linked_list_t *sets;
 
-	sets = pthread_getspecific(this->local_sets);
+	sets = this->local_sets->get(this->local_sets);
 	if (!sets)
 	{	/* first invocation */
 		sets = linked_list_create();
-		pthread_setspecific(this->local_sets, sets);
+		this->local_sets->set(this->local_sets, sets);
 	}
 	sets->insert_last(sets, set);
 }
@@ -395,7 +394,7 @@ static void remove_local_set(private_credential_manager_t *this,
 {
 	linked_list_t *sets;
 
-	sets = pthread_getspecific(this->local_sets);
+	sets = this->local_sets->get(this->local_sets);
 	sets->remove(sets, set, NULL);
 }
 
@@ -1633,7 +1632,7 @@ static void destroy(private_credential_manager_t *this)
 	this->cache_queue->destroy(this->cache_queue);
 	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->destroy(this->sets);
-	pthread_key_delete(this->local_sets);
+	this->local_sets->destroy(this->local_sets);
 	this->cache->destroy(this->cache);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -1660,7 +1659,7 @@ credential_manager_t *credential_manager_create()
 	this->public.destroy = (void(*)(credential_manager_t*))destroy;
 
 	this->sets = linked_list_create();
-	pthread_key_create(&this->local_sets, (void*)this->sets->destroy);
+	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
 	this->cache = cert_cache_create();
 	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);

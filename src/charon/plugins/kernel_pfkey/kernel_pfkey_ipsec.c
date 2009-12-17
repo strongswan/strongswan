@@ -49,13 +49,14 @@
 #endif /*HAVE_NATT*/
 
 #include <unistd.h>
-#include <pthread.h>
+#include <time.h>
 #include <errno.h>
 
 #include "kernel_pfkey_ipsec.h"
 
 #include <daemon.h>
 #include <utils/host.h>
+#include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
@@ -1083,11 +1084,12 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 {
 	unsigned char buf[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)buf;
-	int len, oldstate;
+	int len;
+	bool oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (len < 0)
 	{

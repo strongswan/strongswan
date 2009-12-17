@@ -23,11 +23,10 @@
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <pthread.h>
 
 #include <processing/jobs/callback_job.h>
 #include <daemon.h>
-#include <threading/mutex.h> /* for Mac OS X compatible accept */
+#include <threading/thread.h>
 
 #include "stroke_config.h"
 #include "stroke_control.h"
@@ -547,13 +546,13 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	struct sockaddr_un strokeaddr;
 	int strokeaddrlen = sizeof(strokeaddr);
 	int strokefd;
-	int oldstate;
+	bool oldstate;
 	callback_job_t *job;
 	stroke_job_context_t *ctx;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	strokefd = accept(this->socket, (struct sockaddr *)&strokeaddr, &strokeaddrlen);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (strokefd < 0)
 	{

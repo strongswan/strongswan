@@ -23,7 +23,6 @@
 #define __EXTENSIONS__
 #endif
 
-#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -45,6 +44,7 @@
 #include "socket.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
 
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
@@ -117,8 +117,9 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
-	int bytes_read = 0;
-	int data_offset, oldstate;
+	int bytes_read = 0, data_offset;
+	bool oldstate;
+
 	fd_set rfds;
 	int max_fd = 0, selected = 0;
 	u_int16_t port = 0;
@@ -144,13 +145,13 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	max_fd = max(max(this->ipv4, this->ipv4_natt), max(this->ipv6, this->ipv6_natt));
 
 	DBG2(DBG_NET, "waiting for data on sockets");
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	if (select(max_fd + 1, &rfds, NULL, NULL, NULL) <= 0)
 	{
-		pthread_setcancelstate(oldstate, NULL);
+		thread_cancelability(oldstate);
 		return FAILED;
 	}
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (FD_ISSET(this->ipv4, &rfds))
 	{

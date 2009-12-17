@@ -16,13 +16,14 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
 
 #include "scheduler.h"
 
 #include <daemon.h>
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 
 /* the initial size of the heap */
@@ -185,8 +186,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 {
 	timeval_t now;
 	event_t *event;
-	int oldstate;
-	bool timed = FALSE;
+	bool timed = FALSE, oldstate;
 
 	this->mutex->lock(this->mutex);
 
@@ -215,8 +215,8 @@ static job_requeue_t schedule(private_scheduler_t * this)
 		}
 		timed = TRUE;
 	}
-	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
+	oldstate = thread_cancelability(TRUE);
 
 	if (timed)
 	{
@@ -227,8 +227,8 @@ static job_requeue_t schedule(private_scheduler_t * this)
 		DBG2(DBG_JOB, "no events, waiting");
 		this->condvar->wait(this->condvar, this->mutex);
 	}
-	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(TRUE);
+	thread_cancelability(oldstate);
+	thread_cleanup_pop(TRUE);
 	return JOB_REQUEUE_DIRECT;
 }
 

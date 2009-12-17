@@ -14,12 +14,12 @@
  */
 
 #include <stdint.h>
-#include <pthread.h>
 
 #include "credential_factory.h"
 
 #include <debug.h>
 #include <utils/linked_list.h>
+#include <threading/thread_value.h>
 #include <threading/rwlock.h>
 #include <credentials/certificates/x509.h>
 
@@ -50,7 +50,7 @@ struct private_credential_factory_t {
 	/**
 	 * Thread specific recursiveness counter
 	 */
-	pthread_key_t recursive;
+	thread_value_t *recursive;
 
 	/**
 	 * lock access to builders
@@ -121,8 +121,8 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 	int failures = 0;
 	uintptr_t level;
 
-	level = (uintptr_t)pthread_getspecific(this->recursive);
-	pthread_setspecific(this->recursive, (void*)level + 1);
+	level = (uintptr_t)this->recursive->get(this->recursive);
+	this->recursive->set(this->recursive, (void*)level + 1);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->constructors->create_enumerator(this->constructors);
@@ -154,7 +154,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 		DBG1("building %N - %N failed, tried %d builders",
 			 credential_type_names, type, names, subtype, failures);
 	}
-	pthread_setspecific(this->recursive, (void*)level);
+	this->recursive->set(this->recursive, (void*)level);
 	return construct;
 }
 
@@ -164,7 +164,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 static void destroy(private_credential_factory_t *this)
 {
 	this->constructors->destroy_function(this->constructors, free);
-	pthread_key_delete(this->recursive);
+	this->recursive->destroy(this->recursive);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -182,7 +182,7 @@ credential_factory_t *credential_factory_create()
 	this->public.destroy = (void(*)(credential_factory_t*))destroy;
 
 	this->constructors = linked_list_create();
-	pthread_key_create(&this->recursive, NULL);
+	this->recursive = thread_value_create(NULL);
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	return &this->public;

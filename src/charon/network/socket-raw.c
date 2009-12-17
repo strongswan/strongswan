@@ -18,7 +18,6 @@
 /* for struct in6_pktinfo */
 #define _GNU_SOURCE
 
-#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -38,6 +37,7 @@
 #include "socket.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
 
 /* constants for packet handling */
 #define IP_LEN sizeof(struct iphdr)
@@ -127,8 +127,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	packet_t *pkt;
 	struct udphdr *udp;
 	host_t *source = NULL, *dest = NULL;
-	int bytes_read = 0;
-	int data_offset, oldstate;
+	int bytes_read = 0, data_offset;
+	bool oldstate;
 	fd_set rfds;
 
 	FD_ZERO(&rfds);
@@ -144,13 +144,13 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 
 	DBG2(DBG_NET, "waiting for data on raw sockets");
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	if (select(max(this->recv4, this->recv6) + 1, &rfds, NULL, NULL, NULL) <= 0)
 	{
-		pthread_setcancelstate(oldstate, NULL);
+		thread_cancelability(oldstate);
 		return FAILED;
 	}
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (this->recv4 && FD_ISSET(this->recv4, &rfds))
 	{

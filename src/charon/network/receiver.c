@@ -17,7 +17,6 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "receiver.h"
 
@@ -55,11 +54,6 @@ struct private_receiver_t {
 	 * Threads job receiving packets
 	 */
 	callback_job_t *job;
-
-	/**
-	 * Assigned thread.
-	 */
-	pthread_t assigned_thread;
 
 	/**
 	 * current secret to use for cookie calculation

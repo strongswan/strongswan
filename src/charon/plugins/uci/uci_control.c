@@ -21,11 +21,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <pthread.h>
 
 #include "uci_control.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
 #define FIFO_FILE "/var/run/charon.fifo"
@@ -237,13 +237,14 @@ static void process(private_uci_control_t *this, char *message)
 static job_requeue_t receive(private_uci_control_t *this)
 {
 	char message[128];
-	int oldstate, len;
+	int len;
+	bool oldstate;
 	FILE *in;
 
 	memset(message, 0, sizeof(message));
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	in = fopen(FIFO_FILE, "r");
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 	if (in)
 	{
 		len = fread(message, 1, sizeof(message) - 1, in);

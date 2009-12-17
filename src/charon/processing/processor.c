@@ -15,13 +15,14 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
 #include <string.h>
 #include <errno.h>
 
 #include "processor.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 
@@ -80,17 +81,21 @@ static void process_jobs(private_processor_t *this);
  */
 static void restart(private_processor_t *this)
 {
-	pthread_t thread;
+	thread_t *thread;
 
 	/* respawn thread if required */
+	this->mutex->lock(this->mutex);
 	if (this->desired_threads == 0 ||
-		pthread_create(&thread, NULL, (void*)process_jobs, this) != 0)
+		(thread = thread_create((thread_main_t)process_jobs, this)) == NULL)
 	{
-		this->mutex->lock(this->mutex);
 		this->total_threads--;
 		this->thread_terminated->broadcast(this->thread_terminated);
-		this->mutex->unlock(this->mutex);
 	}
+	else
+	{
+		thread->detach(thread);
+	}
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -98,11 +103,11 @@ static void restart(private_processor_t *this)
  */
 static void process_jobs(private_processor_t *this)
 {
-	int oldstate;
+	bool oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+	oldstate = thread_cancelability(FALSE);
 
-	DBG2(DBG_JOB, "started worker thread, thread_ID: %06u", (int)pthread_self());
+	DBG2(DBG_JOB, "started worker thread, thread_ID: %u", thread_current_id());
 
 	this->mutex->lock(this->mutex);
 	while (this->desired_threads >= this->total_threads)
@@ -119,9 +124,9 @@ static void process_jobs(private_processor_t *this)
 		this->list->remove_first(this->list, (void**)&job);
 		this->mutex->unlock(this->mutex);
 		/* terminated threads are restarted, so we have a constant pool */
-		pthread_cleanup_push((void*)restart, this);
+		thread_cleanup_push((thread_cleanup_t)restart, this);
 		job->execute(job);
-		pthread_cleanup_pop(0);
+		thread_cleanup_pop(FALSE);
 		this->mutex->lock(this->mutex);
 	}
 	this->total_threads--;
@@ -185,14 +190,16 @@ static void set_threads(private_processor_t *this, u_int count)
 	if (count > this->total_threads)
 	{	/* increase thread count */
 		int i;
-		pthread_t current;
+		thread_t *current;
 
 		this->desired_threads = count;
 		DBG1(DBG_JOB, "spawning %d worker threads", count - this->total_threads);
 		for (i = this->total_threads; i < count; i++)
 		{
-			if (pthread_create(&current, NULL, (void*)process_jobs, this) == 0)
+			current = thread_create((thread_main_t)process_jobs, this);
+			if (current)
 			{
+				current->detach(current);
 				this->total_threads++;
 			}
 		}

@@ -68,7 +68,7 @@ static bool ike_state_change(private_load_tester_listener_t *this,
 			if (this->shutdown_on == ++this->established)
 			{
 				DBG1(DBG_CFG, "load-test complete, raising SIGTERM");
-				pthread_kill(charon->main_thread_id, SIGTERM);
+				kill(0, SIGTERM);
 			}
 		}
 	}

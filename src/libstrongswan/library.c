@@ -21,6 +21,7 @@
 #include <utils.h>
 #include <chunk.h>
 #include <debug.h>
+#include <threading/thread.h>
 #include <utils/identification.h>
 #include <utils/host.h>
 #ifdef LEAK_DETECTIVE
@@ -81,6 +82,9 @@ void library_deinit()
 		this->detective->destroy(this->detective);
 	}
 #endif /* LEAK_DETECTIVE */
+
+	threads_deinit();
+
 	free(this);
 	lib = NULL;
 }
@@ -93,6 +97,8 @@ bool library_init(char *settings)
 	printf_hook_t *pfh;
 	private_library_t *this = malloc_thing(private_library_t);
 	lib = &this->public;
+
+	threads_init();
 
 	lib->leak_detective = FALSE;
 

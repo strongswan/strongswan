@@ -15,13 +15,14 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
 
 #include "sender.h"
 
 #include <daemon.h>
 #include <network/socket.h>
 #include <processing/jobs/callback_job.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 
 
@@ -85,19 +86,19 @@ static void send_(private_sender_t *this, packet_t *packet)
 static job_requeue_t send_packets(private_sender_t * this)
 {
 	packet_t *packet;
-	int oldstate;
+	bool oldstate;
 
 	this->mutex->lock(this->mutex);
 	while (this->list->get_count(this->list) == 0)
 	{
 		/* add cleanup handler, wait for packet, remove cleanup handler */
-		pthread_cleanup_push((void(*)(void*))this->mutex->unlock, this->mutex);
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
+		oldstate = thread_cancelability(TRUE);
 
 		this->got->wait(this->got, this->mutex);
 
-		pthread_setcancelstate(oldstate, NULL);
-		pthread_cleanup_pop(0);
+		thread_cancelability(oldstate);
+		thread_cleanup_pop(FALSE);
 	}
 	this->list->remove_first(this->list, (void**)&packet);
 	this->sent->signal(this->sent);

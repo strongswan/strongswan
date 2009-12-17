@@ -19,11 +19,12 @@
 #include "session.h"
 
 #include <fcgiapp.h>
-#include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
 
 #include <debug.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <utils/hashtable.h>
@@ -51,7 +52,7 @@ struct private_dispatcher_t {
 	/**
 	 * thread list
 	 */
-	pthread_t *threads;
+	thread_t **threads;
 
 	/**
 	 * number of threads in "threads"
@@ -286,7 +287,7 @@ static void cleanup_sessions(private_dispatcher_t *this, time_t now)
  */
 static void dispatch(private_dispatcher_t *this)
 {
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	thread_cancelability(FALSE);
 
 	while (TRUE)
 	{
@@ -295,9 +296,9 @@ static void dispatch(private_dispatcher_t *this)
 		time_t now;
 		char *sid;
 
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+		thread_cancelability(TRUE);
 		request = request_create(this->fd, this->debug);
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		thread_cancelability(FALSE);
 
 		if (request == NULL)
 		{
@@ -354,11 +355,12 @@ static void dispatch(private_dispatcher_t *this)
 static void run(private_dispatcher_t *this, int threads)
 {
 	this->thread_count = threads;
-	this->threads = malloc(sizeof(pthread_t) * threads);
+	this->threads = malloc(sizeof(thread_t*) * threads);
 	while (threads)
 	{
-		if (pthread_create(&this->threads[threads - 1],
-						   NULL, (void*)dispatch, this) == 0)
+		this->threads[threads - 1] = thread_create((thread_main_t)dispatch,
+												   this);
+		if (this->threads[threads - 1])
 		{
 			threads--;
 		}
@@ -393,8 +395,9 @@ static void destroy(private_dispatcher_t *this)
 	FCGX_ShutdownPending();
 	while (this->thread_count--)
 	{
-		pthread_cancel(this->threads[this->thread_count]);
-		pthread_join(this->threads[this->thread_count], NULL);
+		thread_t *thread = this->threads[this->thread_count];
+		thread->cancel(thread);
+		thread->join(thread);
 	}
 	enumerator = this->sessions->create_enumerator(this->sessions);
 	while (enumerator->enumerate(enumerator, &sid, &entry))

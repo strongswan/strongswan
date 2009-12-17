@@ -20,9 +20,12 @@
 #include <library.h>
 #include <debug.h>
 #include <stdlib.h>
-#include <string.h>
 #include <pthread.h>
+#include <string.h>
 #include <ClearSilver/ClearSilver.h>
+
+#include <threading/thread.h>
+#include <threading/thread_value.h>
 
 typedef struct private_request_t private_request_t;
 
@@ -68,11 +71,10 @@ struct private_request_t {
 };
 
 /**
- * key to a the threads "this" request, used for ClearSilver cgiwrap callbacks.
  * ClearSilver cgiwrap is not threadsave, so we use a private
  * context for each thread.
  */
-static pthread_key_t this_key;
+static thread_value_t *thread_this;
 
 /**
  * control variable for pthread_once
@@ -84,7 +86,7 @@ pthread_once_t once = PTHREAD_ONCE_INIT;
  */
 static int read_cb(void *null, char *buf, int size)
 {
-	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
+	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	return FCGX_GetStr(buf, size, this->req.in);
 }
@@ -94,7 +96,7 @@ static int read_cb(void *null, char *buf, int size)
  */
 static int writef_cb(void *null, const char *format, va_list args)
 {
-	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
+	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	FCGX_VFPrintF(this->req.out, format, args);
 	return 0;
@@ -104,7 +106,7 @@ static int writef_cb(void *null, const char *format, va_list args)
  */
 static int write_cb(void *null, const char *buf, int size)
 {
-	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
+	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	return FCGX_PutStr(buf, size, this->req.out);
 }
@@ -115,7 +117,7 @@ static int write_cb(void *null, const char *buf, int size)
 static char *getenv_cb(void *null, const char *key)
 {
 	char *value;
-	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
+	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	value = FCGX_GetParam(key, this->req.envp);
 	return value ? strdup(value) : NULL;
@@ -137,7 +139,7 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 {
 	*key = NULL;
 	*value = NULL;
-	private_request_t *this = (private_request_t*)pthread_getspecific(this_key);
+	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 	if (num < this->req_env_len)
 	{
 		char *eq;
@@ -206,7 +208,7 @@ static char* get_query_data(private_request_t *this, char *name)
  */
 static void add_cookie(private_request_t *this, char *name, char *value)
 {
-	pthread_setspecific(this_key, this);
+	thread_this->set(thread_this, this);
 	cgi_cookie_set (this->cgi, name, value,
 					FCGX_GetParam("SCRIPT_NAME", this->req.envp),
 					NULL, NULL, 0, 0);
@@ -280,7 +282,7 @@ static void render(private_request_t *this, char *template)
 {
 	NEOERR* err;
 
-	pthread_setspecific(this_key, this);
+	thread_this->set(thread_this, this);
 	err = cgi_display(this->cgi, template);
 	if (err)
 	{
@@ -345,7 +347,7 @@ static void destroy(private_request_t *this)
 {
 	if (ref_put(&this->ref))
 	{
-		pthread_setspecific(this_key, this);
+		thread_this->set(thread_this, this);
 		cgi_destroy(&this->cgi);
 		FCGX_Finish_r(&this->req);
 		free(this);
@@ -360,7 +362,7 @@ static void init(void)
 {
 	cgiwrap_init_emu(NULL, read_cb, writef_cb, write_cb,
 					 getenv_cb, putenv_cb, iterenv_cb);
-	pthread_key_create(&this_key, NULL);
+	thread_this = thread_value_create(NULL);
 }
 
 /*
@@ -372,13 +374,13 @@ request_t *request_create(int fd, bool debug)
 	private_request_t *this = malloc_thing(private_request_t);
 	bool failed = FALSE;
 
-	pthread_cleanup_push(free, this);
+	thread_cleanup_push(free, this);
 	if (FCGX_InitRequest(&this->req, fd, 0) != 0 ||
 		FCGX_Accept_r(&this->req) != 0)
 	{
 		failed = TRUE;
 	}
-	pthread_cleanup_pop(failed);
+	thread_cleanup_pop(failed);
 	if (failed)
 	{
 		return NULL;
@@ -404,7 +406,7 @@ request_t *request_create(int fd, bool debug)
 	this->public.destroy = (void(*)(request_t*))destroy;
 
 	pthread_once(&once, init);
-	pthread_setspecific(this_key, this);
+	thread_this->set(thread_this, this);
 
 	this->ref = 1;
 	this->closed = FALSE;

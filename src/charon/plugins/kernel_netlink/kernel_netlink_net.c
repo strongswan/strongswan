@@ -17,7 +17,6 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
 #include <net/if.h>
@@ -26,6 +25,8 @@
 #include "kernel_netlink_shared.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -481,12 +482,13 @@ static job_requeue_t receive_events(private_kernel_netlink_net_t *this)
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
-	int len, oldstate;
+	int len;
+	bool oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	len = recvfrom(this->socket_events, response, sizeof(response), 0,
 				   (struct sockaddr*)&addr, &addr_len);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (len < 0)
 	{

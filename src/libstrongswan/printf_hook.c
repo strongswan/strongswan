@@ -191,15 +191,9 @@ static void vstr_fmt_add_handler(Vstr_conf *conf, printf_hook_handler_t *handler
 /**
  * Management of thread-specific Vstr_conf objects
  */
-#include <pthread.h>
+#include <threading/thread_value.h>
 
-static pthread_key_t vstr_conf_key;
-static pthread_once_t vstr_conf_key_once = PTHREAD_ONCE_INIT;
-
-static void init_vstr_conf_key(void)
-{
-	pthread_key_create(&vstr_conf_key, (void*)vstr_free_conf);
-}
+static thread_value_t *vstr_conf;
 
 static Vstr_conf *create_vstr_conf()
 {
@@ -223,12 +217,11 @@ static Vstr_conf *create_vstr_conf()
 static inline Vstr_conf *get_vstr_conf()
 {
 	Vstr_conf *conf;
-	pthread_once(&vstr_conf_key_once, init_vstr_conf_key);
-	conf = (Vstr_conf*)pthread_getspecific(vstr_conf_key);
+	conf = (Vstr_conf*)vstr_conf->get(vstr_conf);
 	if (!conf)
 	{
 		conf = create_vstr_conf();
-		pthread_setspecific(vstr_conf_key, conf);
+		vstr_conf->set(vstr_conf, conf);
 	}
 	return conf;
 }
@@ -412,7 +405,7 @@ static void destroy(private_printf_hook_t *this)
 
 #ifdef USE_VSTR
 	/* freeing the Vstr_conf of the main thread */
-	pthread_key_delete(vstr_conf_key);
+	vstr_conf->destroy(vstr_conf);
 	vstr_free_conf(conf);
 	vstr_exit();
 #endif
@@ -438,6 +431,7 @@ printf_hook_t *printf_hook_create()
 		free(this);
 		return NULL;
 	}
+	vstr_conf = thread_value_create((thread_cleanup_t)vstr_free_conf);
 #endif
 
 	return &this->public;

@@ -23,7 +23,6 @@
 #define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
 #undef _POSIX_PTHREAD_SEMANTICS
-#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -41,6 +40,7 @@
 
 #include <library.h>
 #include <utils/backtrace.h>
+#include <threading/thread.h>
 #include <selectors/traffic_selector.h>
 #include <config/proposal.h>
 
@@ -63,6 +63,11 @@ struct private_daemon_t {
 	 * Signal set used for signal handling.
 	 */
 	sigset_t signal_set;
+
+	/**
+	 * Reference to main thread.
+	 */
+	thread_t *main_thread;
 
 #ifdef CAPABILITIES
 	/**
@@ -226,7 +231,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	{
 		fprintf(stderr, "killing daemon: %s\n", reason);
 	}
-	if (this->public.main_thread_id == pthread_self())
+	if (this->main_thread == thread_current())
 	{
 		/* initialization failed, terminate daemon */
 		unlink(PID_FILE);
@@ -235,9 +240,9 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	else
 	{
 		DBG1(DBG_DMN, "sending SIGTERM to ourself");
-		pthread_kill(this->public.main_thread_id, SIGTERM);
+		this->main_thread->kill(this->main_thread, SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
-		pthread_exit(NULL);
+		thread_exit(NULL);
 	}
 }
 
@@ -530,7 +535,7 @@ static void segv_handler(int signal)
 {
 	backtrace_t *backtrace;
 
-	DBG1(DBG_DMN, "thread %u received %d", pthread_self(), signal);
+	DBG1(DBG_DMN, "thread %u received %d", thread_current_id(), signal);
 	backtrace = backtrace_create(2);
 	backtrace->log(backtrace, stderr);
 	backtrace->destroy(backtrace);
@@ -575,7 +580,7 @@ private_daemon_t *daemon_create(void)
 	this->public.uid = 0;
 	this->public.gid = 0;
 
-	this->public.main_thread_id = pthread_self();
+	this->main_thread = thread_current();
 #ifdef CAPABILITIES
 	this->caps = cap_init();
 	keep_cap(this, CAP_NET_ADMIN);
@@ -586,7 +591,6 @@ private_daemon_t *daemon_create(void)
 #endif /* CAPABILITIES */
 
 	/* add handler for SEGV and ILL,
-	 * add handler for USR1 (cancellation).
 	 * INT, TERM and HUP are handled by sigwait() in run() */
 	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
@@ -600,7 +604,7 @@ private_daemon_t *daemon_create(void)
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 
-	pthread_sigmask(SIG_SETMASK, &action.sa_mask, 0);
+	pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
 
 	return this;
 }

@@ -18,11 +18,11 @@
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/crypto.h>
-#include <pthread.h>
 
 #include "openssl_plugin.h"
 
 #include <library.h>
+#include <threading/thread.h>
 #include <threading/mutex.h>
 #include "openssl_util.h"
 #include "openssl_crypter.h"
@@ -120,7 +120,7 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
  */
 static unsigned long id_function(void)
 {
-	return (unsigned long)pthread_self();
+	return (unsigned long)thread_current_id();
 }
 
 /**

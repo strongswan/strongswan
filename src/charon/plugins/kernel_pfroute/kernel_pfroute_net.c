@@ -19,13 +19,13 @@
 #include <ifaddrs.h>
 #include <net/route.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
 
 #include "kernel_pfroute_net.h"
 
 #include <daemon.h>
 #include <utils/host.h>
+#include <threading/thread.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -326,11 +326,12 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 {
 	unsigned char buf[PFROUTE_BUFFER_SIZE];
 	struct rt_msghdr *msg = (struct rt_msghdr*)buf;
-	int len, oldstate;
+	int len;
+	bool oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (len < 0)
 	{

@@ -21,7 +21,6 @@
 #include <linux/udp.h>
 #include <net/if.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -30,6 +29,7 @@
 #include "kernel_klips_ipsec.h"
 
 #include <daemon.h>
+#include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
@@ -1375,11 +1375,12 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 {
 	unsigned char buf[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)buf;
-	int len, oldstate;
+	int len;
+	bool oldstate;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	oldstate = thread_cancelability(TRUE);
 	len = recv(this->socket_events, buf, sizeof(buf), 0);
-	pthread_setcancelstate(oldstate, NULL);
+	thread_cancelability(oldstate);
 
 	if (len < 0)
 	{
