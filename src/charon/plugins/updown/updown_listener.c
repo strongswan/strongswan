@@ -118,6 +118,7 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		char command[1024];
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos, *virtual_ip, *iface;
+		bool is_host, is_ipv6;
 		FILE *shell;
 
 		/* get subnet/bits from string */
@@ -175,6 +176,11 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 			iface = uncache_iface(this, child_sa->get_reqid(child_sa));
 		}
 
+		/* determine IPv4/IPv6 and client/host situation */
+		is_host = my_ts->is_host(my_ts, me);
+		is_ipv6 = is_host ? (me->get_family(me) == AF_INET6) :
+							(my_ts->get_type(my_ts) == TS_IPV6_ADDR_RANGE);
+
 		/* build the command with all env variables.
 		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
 		 */
@@ -203,8 +209,8 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 				"%s"
 				"%s",
 				 up ? "up" : "down",
-				 my_ts->is_host(my_ts, me) ? "-host" : "-client",
-				 me->get_family(me) == AF_INET ? "" : "-v6",
+				 is_host ? "-host" : "-client",
+				 is_ipv6 ? "-v6" : "",
 				 config->get_name(config),
 				 iface ? iface : "unknown",
 				 child_sa->get_reqid(child_sa),
