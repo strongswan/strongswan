@@ -121,9 +121,14 @@ struct private_x509_cert_t {
 	linked_list_t *crl_uris;
 
 	/**
-	 * List ocspAccessLocations as allocated char*
+	 * List of ocspAccessLocations as allocated char*
 	 */
 	linked_list_t *ocsp_uris;
+
+	/**
+	 * List of ipAddrBlocks as ???
+	 */
+	linked_list_t *ipAddrBlocks;
 
 	/**
 	 * certificate's embedded public key
@@ -663,6 +668,64 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 }
 
 /**
+ * ASN.1 definition of ipAddrBlocks according to RFC 3779
+ */
+static const asn1Object_t ipAddrBlocksObjects[] = {
+	{ 0, "ipAddrBlocks",	        ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
+	{ 1,   "ipAddressFamily",		ASN1_SEQUENCE,		ASN1_NONE			}, /*  1 */
+	{ 2,     "addressFamily",	    ASN1_OCTET_STRING,	ASN1_OBJ          	}, /*  2 */
+	{ 2,     "inherit",             ASN1_NULL,          ASN1_OPT|ASN1_NONE  }, /*  3 */
+	{ 2,     "end choice",          ASN1_EOC,           ASN1_END            }, /*  4 */
+	{ 2,     "addressesOrRanges",	ASN1_SEQUENCE,	    ASN1_OPT|ASN1_LOOP 	}, /*  5 */
+	{ 3,       "addressPrefix",	    ASN1_BIT_STRING,	ASN1_OPT|ASN1_BODY  }, /*  6 */
+	{ 3,       "end choice",        ASN1_EOC,           ASN1_END            }, /*  7 */
+	{ 3,       "addressRange",      ASN1_SEQUENCE,      ASN1_OPT|ASN1_NONE  }, /*  8 */
+	{ 4,         "min",             ASN1_BIT_STRING,    ASN1_BODY           }, /*  9 */
+	{ 4,         "max",             ASN1_BIT_STRING,    ASN1_BODY           }, /* 10 */
+	{ 3,       "end choice",        ASN1_EOC,           ASN1_END            }, /* 11 */
+	{ 2,     "end choice/loop",     ASN1_EOC,           ASN1_END            }, /* 12 */
+	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 13 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
+};
+#define IP_ADDR_BLOCKS_FAMILY	 2
+#define IP_ADDR_BLOCKS_INHERIT	 3
+#define IP_ADDR_BLOCKS_PREFIX	 6
+#define IP_ADDR_BLOCKS_MIN		 9
+#define IP_ADDR_BLOCKS_MAX		10
+
+static void parse_ipAddrBlocks(chunk_t blob, int level0,
+							   private_x509_cert_t *this)
+{
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(ipAddrBlocksObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case IP_ADDR_BLOCKS_FAMILY:
+				break;
+			case IP_ADDR_BLOCKS_INHERIT:
+				DBG1("inherit choice is not supported");
+				break;
+			case IP_ADDR_BLOCKS_PREFIX:
+				break;
+			case IP_ADDR_BLOCKS_MIN:
+				break;
+			case IP_ADDR_BLOCKS_MAX:
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
  * ASN.1 definition of an X.509v3 x509_cert
  */
 static const asn1Object_t certObjects[] = {
@@ -826,6 +889,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_EXTENDED_KEY_USAGE:
 						parse_extendedKeyUsage(object, level, this);
+						break;
+					case OID_IP_ADDR_BLOCKS:
+						parse_ipAddrBlocks(object, level, this);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -1177,6 +1243,7 @@ static void destroy(private_x509_cert_t *this)
 									offsetof(identification_t, destroy));
 		this->crl_uris->destroy_function(this->crl_uris, free);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
+		this->ipAddrBlocks->destroy_function(this->ipAddrBlocks, free);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -1235,6 +1302,7 @@ static private_x509_cert_t* create_empty(void)
 	this->subjectAltNames = linked_list_create();
 	this->crl_uris = linked_list_create();
 	this->ocsp_uris = linked_list_create();
+	this->ipAddrBlocks = linked_list_create();
 	this->subjectKeyIdentifier = chunk_empty;
 	this->authKeyIdentifier = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
