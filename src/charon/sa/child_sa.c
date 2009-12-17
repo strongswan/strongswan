@@ -544,9 +544,11 @@ static u_int16_t alloc_cpi(private_child_sa_t *this)
  * Implementation of child_sa_t.install
  */
 static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
-						u_int32_t spi, u_int16_t cpi, bool inbound)
+						u_int32_t spi, u_int16_t cpi, bool inbound,
+						linked_list_t *my_ts, linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
+	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
 	host_t *src, *dst;
@@ -603,10 +605,27 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 		lifetime->time.rekey = 0;
 	}
 
+	if (this->mode == MODE_BEET)
+	{
+		/* BEET requires the bound address from the traffic selectors.
+		 * TODO: We add just the first traffic selector for now, as the
+		 * kernel accepts a single TS per SA only */
+		if (inbound)
+		{
+			my_ts->get_first(my_ts, (void**)&dst_ts);
+			other_ts->get_first(other_ts, (void**)&src_ts);
+		}
+		else
+		{
+			my_ts->get_first(my_ts, (void**)&src_ts);
+			other_ts->get_first(other_ts, (void**)&dst_ts);
+		}
+	}
+
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 				src, dst, spi, this->protocol, this->reqid, lifetime,
 				enc_alg, encr, int_alg, integ, this->mode, this->ipcomp, cpi,
-				this->encap, update);
+				this->encap, update, src_ts, dst_ts);
 
 	free(lifetime);
 
@@ -902,7 +921,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;
 	this->public.alloc_spi = (u_int32_t(*)(child_sa_t*, protocol_id_t protocol))alloc_spi;
 	this->public.alloc_cpi = (u_int16_t(*)(child_sa_t*))alloc_cpi;
-	this->public.install = (status_t(*)(child_sa_t*, chunk_t encr, chunk_t integ, u_int32_t spi, u_int16_t cpi, bool inbound))install;
+	this->public.install = (status_t(*)(child_sa_t*, chunk_t encr, chunk_t integ, u_int32_t spi, u_int16_t cpi, bool inbound, linked_list_t *my_ts_list, linked_list_t *other_ts_list))install;
 	this->public.update = (status_t (*)(child_sa_t*,host_t*,host_t*,host_t*,bool))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;

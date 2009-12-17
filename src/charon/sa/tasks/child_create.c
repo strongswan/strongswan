@@ -408,21 +408,21 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	}
 	status_i = status_o = FAILED;
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
-			this->dh, nonce_i, nonce_r,	&encr_i, &integ_i, &encr_r, &integ_r))
+			this->dh, nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
 	{
 		if (this->initiator)
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
-										this->my_spi, this->my_cpi, TRUE);
+					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
 			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-										this->other_spi, this->other_cpi, FALSE);
+					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
 		}
 		else
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-										this->my_spi, this->my_cpi, TRUE);
+					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
 			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
-										this->other_spi, this->other_cpi, FALSE);
+					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
 		}
 	}
 	chunk_clear(&integ_i);

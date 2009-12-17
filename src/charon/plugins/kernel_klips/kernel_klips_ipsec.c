@@ -1704,7 +1704,8 @@ static status_t add_sa(private_kernel_klips_ipsec_t *this,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-					   bool encap, bool inbound)
+					   bool encap, bool inbound, traffic_selector_t *src_ts,
+					   traffic_selector_t *dst_ts)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2617,7 +2618,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool,traffic_selector_t*,traffic_selector_t*))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;

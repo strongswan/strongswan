@@ -23,6 +23,9 @@ strongswan-4.3.6
   change makes IPcomp tunnel mode connections incompatible with previous
   releases; disable compression on such tunnels.
 
+- Fixed BEET mode connections on recent kernels by installing SAs with
+  appropriate traffic selectors, based on a patch by Michael Rossberg.
+
 - The IKEv1 daemon ignores the Juniper SRX notification type 40001, thus
   allowing interoperability.
 

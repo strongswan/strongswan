@@ -930,7 +930,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-					   bool encap, bool inbound)
+					   bool encap, bool inbound,
+					   traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
 	netlink_buf_t request;
 	char *alg_name;
@@ -945,7 +946,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, &lft,
 			   ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
-			   mode, ipcomp, 0, FALSE, inbound);
+			   mode, ipcomp, 0, FALSE, inbound, NULL, NULL);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
@@ -968,10 +969,21 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	sa->id.proto = proto_ike2kernel(protocol);
 	sa->family = src->get_family(src);
 	sa->mode = mode2kernel(mode);
-	if (mode == MODE_TUNNEL)
+	switch (mode)
 	{
-		sa->flags |= XFRM_STATE_AF_UNSPEC;
+		case MODE_TUNNEL:
+			sa->flags |= XFRM_STATE_AF_UNSPEC;
+			break;
+		case MODE_BEET:
+			if(src_ts && dst_ts)
+			{
+				sa->sel = ts2selector(src_ts, dst_ts);
+			}
+			break;
+		default:
+			break;
 	}
+
 	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
 	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->bytes.rekey);
@@ -1695,7 +1707,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	/* install a route, if:
 	 * - we are NOT updating a policy
 	 * - this is a forward policy (to just get one for each child)
-	 * - we are in tunnel mode
+	 * - we are in tunnel/BEET mode
 	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->route == NULL && direction == POLICY_FWD &&
@@ -1999,7 +2011,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool,traffic_selector_t*,traffic_selector_t*))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;

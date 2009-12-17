@@ -131,6 +131,8 @@ struct kernel_ipsec_t {
 	 * @param cpi			CPI for IPComp
 	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param inbound		TRUE if this is an inbound SA
+	 * @param src_ts		traffic selector with BEET source address
+	 * @param dst_ts		traffic selector with BEET destination address
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa) (kernel_ipsec_t *this,
@@ -140,7 +142,8 @@ struct kernel_ipsec_t {
 						u_int16_t enc_alg, chunk_t enc_key,
 						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-						bool encap, bool inbound);
+						bool encap, bool inbound,
+						traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
 
 	/**
 	 * Update the hosts on an installed SA.

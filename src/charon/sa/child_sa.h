@@ -285,10 +285,13 @@ struct child_sa_t {
 	 * @param spi		SPI to use, allocated for inbound
 	 * @param cpi		CPI to use, allocated for outbound
 	 * @param inbound	TRUE to install an inbound SA, FALSE for outbound
+	 * @param my_ts		negotiated local traffic selector list
+	 * @param other_ts	negotiated remote traffic selector list
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*install)(child_sa_t *this, chunk_t encr, chunk_t integ,
-						u_int32_t spi, u_int16_t cpi, bool inbound);
+						u_int32_t spi, u_int16_t cpi, bool inbound,
+						linked_list_t *my_ts, linked_list_t *other_ts);
 	/**
 	 * Install the policies using some traffic selectors.
 	 *

@@ -77,7 +77,8 @@ static status_t add_sa(private_kernel_interface_t *this, host_t *src, host_t *ds
 				u_int16_t enc_alg, chunk_t enc_key,
 				u_int16_t int_alg, chunk_t int_key,
 				ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi, bool encap,
-				bool inbound)
+				bool inbound, traffic_selector_t *src_ts,
+				traffic_selector_t *dst_ts)
 {
 	if (!this->ipsec)
 	{
@@ -85,7 +86,7 @@ static status_t add_sa(private_kernel_interface_t *this, host_t *src, host_t *ds
 	}
 	return this->ipsec->add_sa(this->ipsec, src, dst, spi, protocol, reqid,
 			lifetime, enc_alg, enc_key, int_alg, int_key, mode, ipcomp, cpi,
-			encap, inbound);
+			encap, inbound, src_ts, dst_ts);
 }
 
 /**
@@ -398,7 +399,7 @@ kernel_interface_t *kernel_interface_create()
 
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.get_cpi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool,traffic_selector_t*,traffic_selector_t*))add_sa;
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;

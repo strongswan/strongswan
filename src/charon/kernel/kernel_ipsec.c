@@ -18,8 +18,6 @@
 ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_BEET,
 	"TRANSPORT",
 	"TUNNEL",
-	"2",
-	"3",
 	"BEET",
 );
 
