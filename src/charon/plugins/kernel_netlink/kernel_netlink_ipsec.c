@@ -163,18 +163,18 @@ ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_KMADDRESS,
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 			"***"				}, */
-	{ENCR_DES, 					"des" 				},
-	{ENCR_3DES, 				"des3_ede"			},
-/*	{ENCR_RC5, 					"***" 				}, */
-/*	{ENCR_IDEA, 				"***"				}, */
-	{ENCR_CAST, 				"cast128"			},
-	{ENCR_BLOWFISH, 			"blowfish"			},
-/*	{ENCR_3IDEA, 				"***"				}, */
-/*	{ENCR_DES_IV32, 			"***"				}, */
-	{ENCR_NULL, 				"cipher_null"		},
+/*	{ENCR_DES_IV64,				"***"				}, */
+	{ENCR_DES,					"des"				},
+	{ENCR_3DES,					"des3_ede"			},
+/*	{ENCR_RC5,					"***"				}, */
+/*	{ENCR_IDEA,					"***"				}, */
+	{ENCR_CAST,					"cast128"			},
+	{ENCR_BLOWFISH,				"blowfish"			},
+/*	{ENCR_3IDEA,				"***"				}, */
+/*	{ENCR_DES_IV32,				"***"				}, */
+	{ENCR_NULL,					"cipher_null"		},
 	{ENCR_AES_CBC,				"aes"				},
-	{ENCR_AES_CTR, 				"rfc3686(ctr(aes))"	},
+	{ENCR_AES_CTR,				"rfc3686(ctr(aes))"	},
 	{ENCR_AES_CCM_ICV8,			"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV12,		"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV16,		"rfc4309(ccm(aes))"	},
@@ -187,14 +187,14 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV12,	"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
-	{END_OF_LIST, 				NULL				}
+	{END_OF_LIST,				NULL				}
 };
 
 /**
  * Algorithms for integrity protection
  */
 static kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 			"md5"				},
+	{AUTH_HMAC_MD5_96,			"md5"				},
 	{AUTH_HMAC_SHA1_96,			"sha1"				},
 	{AUTH_HMAC_SHA2_256_96,		"sha256"			},
 	{AUTH_HMAC_SHA2_256_128,	"hmac(sha256)"		},
@@ -203,18 +203,18 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
-	{END_OF_LIST, 				NULL				}
+	{END_OF_LIST,				NULL				}
 };
 
 /**
  * Algorithms for IPComp
  */
 static kernel_algorithm_t compression_algs[] = {
-/*	{IPCOMP_OUI, 				"***"				}, */
+/*	{IPCOMP_OUI,				"***"				}, */
 	{IPCOMP_DEFLATE,			"deflate"			},
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
-	{END_OF_LIST, 				NULL				}
+	{END_OF_LIST,				NULL				}
 };
 
 /**

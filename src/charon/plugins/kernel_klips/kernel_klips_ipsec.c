@@ -88,7 +88,7 @@ struct ipsectunnelconf
 	__u32	cf_cmd;
 	union
 	{
-		char 	cfu_name[12];
+		char	cfu_name[12];
 	} cf_u;
 #define cf_name cf_u.cfu_name
 };
@@ -774,32 +774,32 @@ struct kernel_algorithm_t {
  * Algorithms for encryption
  */
 static kernel_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 			0							}, */
-	{ENCR_DES, 					SADB_EALG_DESCBC			},
-	{ENCR_3DES, 				SADB_EALG_3DESCBC			},
-/*	{ENCR_RC5, 					0							}, */
-/*	{ENCR_IDEA, 				0							}, */
-/*	{ENCR_CAST, 				0							}, */
-	{ENCR_BLOWFISH, 			SADB_EALG_BFCBC				},
-/*	{ENCR_3IDEA, 				0							}, */
-/*	{ENCR_DES_IV32, 			0							}, */
-	{ENCR_NULL, 				SADB_EALG_NULL				},
+/*	{ENCR_DES_IV64,				0							}, */
+	{ENCR_DES,					SADB_EALG_DESCBC			},
+	{ENCR_3DES,					SADB_EALG_3DESCBC			},
+/*	{ENCR_RC5,					0							}, */
+/*	{ENCR_IDEA,					0							}, */
+/*	{ENCR_CAST,					0							}, */
+	{ENCR_BLOWFISH,				SADB_EALG_BFCBC				},
+/*	{ENCR_3IDEA,				0							}, */
+/*	{ENCR_DES_IV32,				0							}, */
+	{ENCR_NULL,					SADB_EALG_NULL				},
 	{ENCR_AES_CBC,				SADB_EALG_AESCBC			},
-/*	{ENCR_AES_CTR, 				0							}, */
+/*	{ENCR_AES_CTR,				0							}, */
 /*	{ENCR_AES_CCM_ICV8,			0							}, */
 /*	{ENCR_AES_CCM_ICV12,		0							}, */
 /*	{ENCR_AES_CCM_ICV16,		0							}, */
 /*	{ENCR_AES_GCM_ICV8,			0							}, */
 /*	{ENCR_AES_GCM_ICV12,		0							}, */
 /*	{ENCR_AES_GCM_ICV16,		0							}, */
-	{END_OF_LIST, 				0							},
+	{END_OF_LIST,				0							},
 };
 
 /**
  * Algorithms for integrity protection
  */
 static kernel_algorithm_t integrity_algs[] = {
-	{AUTH_HMAC_MD5_96, 			SADB_AALG_MD5HMAC			},
+	{AUTH_HMAC_MD5_96,			SADB_AALG_MD5HMAC			},
 	{AUTH_HMAC_SHA1_96,			SADB_AALG_SHA1HMAC			},
 	{AUTH_HMAC_SHA2_256_128,	SADB_AALG_SHA256_HMAC		},
 	{AUTH_HMAC_SHA2_384_192,	SADB_AALG_SHA384_HMAC		},
@@ -807,7 +807,7 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				0,							}, */
 /*	{AUTH_KPDK_MD5,				0,							}, */
 /*	{AUTH_AES_XCBC_96,			0,							}, */
-	{END_OF_LIST, 				0,							},
+	{END_OF_LIST,				0,							},
 };
 
 #if 0
@@ -815,11 +815,11 @@ static kernel_algorithm_t integrity_algs[] = {
  * Algorithms for IPComp, unused yet
  */
 static kernel_algorithm_t compression_algs[] = {
-/*	{IPCOMP_OUI, 				0							}, */
+/*	{IPCOMP_OUI,				0							}, */
 	{IPCOMP_DEFLATE,			SADB_X_CALG_DEFLATE			},
 	{IPCOMP_LZS,				SADB_X_CALG_LZS				},
 /*	{IPCOMP_LZJH,				0							}, */
-	{END_OF_LIST, 				0							},
+	{END_OF_LIST,				0							},
 };
 #endif
 
