@@ -90,8 +90,9 @@ struct callback_job_t {
 	job_t job_interface;
 
 	/**
-	 * Cancel the jobs thread and wait for its termination.
-	 */
+	 * Cancel the job's thread and wait for its termination. This only works
+	 * reliably for jobs that always use JOB_REQUEUE_FAIR or JOB_REQUEUE_DIRECT,
+	 * otherwise the job may already be destroyed when cancel is called. */
 	void (*cancel)(callback_job_t *this);
 };
 
