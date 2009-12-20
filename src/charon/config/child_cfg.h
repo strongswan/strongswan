@@ -29,8 +29,8 @@ typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
+#include <selectors/traffic_selector.h>
 #include <config/proposal.h>
-#include <config/traffic_selector.h>
 #include <kernel/kernel_ipsec.h>
 
 /**

@@ -41,7 +41,7 @@
 
 #include <library.h>
 #include <utils/backtrace.h>
-#include <config/traffic_selector.h>
+#include <selectors/traffic_selector.h>
 #include <config/proposal.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */

@@ -11,7 +11,6 @@ config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/auth_cfg.c config/auth_cfg.h \
-config/traffic_selector.c config/traffic_selector.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \

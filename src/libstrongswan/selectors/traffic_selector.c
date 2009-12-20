@@ -22,7 +22,6 @@
 
 #include "traffic_selector.h"
 
-#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 

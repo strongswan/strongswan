@@ -25,9 +25,9 @@
 typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
 #include <library.h>
-#include <encoding/payloads/payload.h>
 #include <utils/host.h>
-#include <config/traffic_selector.h>
+#include <selectors/traffic_selector.h>
+#include <encoding/payloads/payload.h>
 
 /**
  * Length of a TRAFFIC SELECTOR SUBSTRUCTURE without start and end address.

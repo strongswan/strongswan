@@ -33,7 +33,7 @@ typedef struct proposal_t proposal_t;
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <crypto/diffie_hellman.h>
-#include <config/traffic_selector.h>
+#include <selectors/traffic_selector.h>
 
 /**
  * Protocol ID of a proposal.
