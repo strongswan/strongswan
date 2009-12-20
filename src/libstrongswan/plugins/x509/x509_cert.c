@@ -127,7 +127,7 @@ struct private_x509_cert_t {
 	linked_list_t *ocsp_uris;
 
 	/**
-	 * List of ipAddrBlocks as ???
+	 * List of ipAddrBlocks as traffic_selector_t
 	 */
 	linked_list_t *ipAddrBlocks;
 
@@ -674,7 +674,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 static const asn1Object_t ipAddrBlocksObjects[] = {
 	{ 0, "ipAddrBlocks",	        ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
 	{ 1,   "ipAddressFamily",		ASN1_SEQUENCE,		ASN1_NONE			}, /*  1 */
-	{ 2,     "addressFamily",	    ASN1_OCTET_STRING,	ASN1_OBJ          	}, /*  2 */
+	{ 2,     "addressFamily",	    ASN1_OCTET_STRING,	ASN1_BODY          	}, /*  2 */
 	{ 2,     "inherit",             ASN1_NULL,          ASN1_OPT|ASN1_NONE  }, /*  3 */
 	{ 2,     "end choice",          ASN1_EOC,           ASN1_END            }, /*  4 */
 	{ 2,     "addressesOrRanges",	ASN1_SEQUENCE,	    ASN1_OPT|ASN1_LOOP 	}, /*  5 */
@@ -700,6 +700,7 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
+	ts_type_t ts_type;
 
 	parser = asn1_parser_create(ipAddrBlocksObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -709,6 +710,19 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 		switch (objectID)
 		{
 			case IP_ADDR_BLOCKS_FAMILY:
+				ts_type = 0;
+				if (object.len == 2 && object.ptr[0] == 0)
+				{
+					if (object.ptr[1] == 1)
+					{
+						ts_type = TS_IPV4_ADDR_RANGE;
+					}
+					else if (object.ptr[1] == 2)
+					{
+						ts_type = TS_IPV6_ADDR_RANGE;
+					}
+					DBG2("  %N", ts_type_name, ts_type);
+				}
 				break;
 			case IP_ADDR_BLOCKS_INHERIT:
 				DBG1("inherit choice is not supported");
