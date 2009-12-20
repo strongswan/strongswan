@@ -37,6 +37,7 @@
 #include <credentials/keys/private_key.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <selectors/traffic_selector.h>
 
 /**
  * Different kinds of generalNames
@@ -1243,7 +1244,7 @@ static void destroy(private_x509_cert_t *this)
 									offsetof(identification_t, destroy));
 		this->crl_uris->destroy_function(this->crl_uris, free);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
-		this->ipAddrBlocks->destroy_function(this->ipAddrBlocks, free);
+		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks, offsetof(traffic_selector_t, destroy));
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
