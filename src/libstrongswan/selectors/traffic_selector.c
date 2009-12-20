@@ -330,7 +330,6 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 
 		/* we have a match in protocol, port, and address: return it... */
 		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port);
-		new_ts->type = this->type;
 		new_ts->dynamic = this->dynamic || other->dynamic;
 		memcpy(new_ts->from, from, size);
 		memcpy(new_ts->to, to, size);
@@ -767,7 +766,6 @@ traffic_selector_t *traffic_selector_create_from_string(
 	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
 															from_port, to_port);
 
-	this->type = type;
 	switch (type)
 	{
 		case TS_IPV4_ADDR_RANGE:
