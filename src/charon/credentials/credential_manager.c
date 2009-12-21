@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <threading/thread_value.h>
+#include <threading/mutex.h>
 #include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <credentials/sets/cert_cache.h>
@@ -63,6 +64,11 @@ struct private_credential_manager_t {
 	 * read-write lock to sets list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * mutex for cache queue
+	 */
+	mutex_t *queue_mutex;
 };
 
 /** data to pass to create_private_enumerator */
@@ -414,13 +420,14 @@ static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
 			set->cache_cert(set, cert);
 		}
 		enumerator->destroy(enumerator);
+		this->lock->unlock(this->lock);
 	}
 	else
 	{	/* we can't cache now as other threads are active, queue for later */
-		this->lock->read_lock(this->lock);
+		this->queue_mutex->lock(this->queue_mutex);
 		this->cache_queue->insert_last(this->cache_queue, cert->get_ref(cert));
+		this->queue_mutex->unlock(this->queue_mutex);
 	}
-	this->lock->unlock(this->lock);
 }
 
 /**
@@ -432,6 +439,7 @@ static void cache_queue(private_credential_manager_t *this)
 	certificate_t *cert;
 	enumerator_t *enumerator;
 
+	this->queue_mutex->lock(this->queue_mutex);
 	if (this->cache_queue->get_count(this->cache_queue) > 0 &&
 		this->lock->try_write_lock(this->lock))
 	{
@@ -448,6 +456,7 @@ static void cache_queue(private_credential_manager_t *this)
 		}
 		this->lock->unlock(this->lock);
 	}
+	this->queue_mutex->unlock(this->queue_mutex);
 }
 
 /**
@@ -1635,6 +1644,7 @@ static void destroy(private_credential_manager_t *this)
 	this->local_sets->destroy(this->local_sets);
 	this->cache->destroy(this->cache);
 	this->lock->destroy(this->lock);
+	this->queue_mutex->destroy(this->queue_mutex);
 	free(this);
 }
 
@@ -1664,6 +1674,7 @@ credential_manager_t *credential_manager_create()
 	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	this->queue_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 
 	return &this->public;
 }
