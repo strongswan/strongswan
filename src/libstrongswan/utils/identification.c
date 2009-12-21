@@ -133,11 +133,8 @@ typedef struct {
 	chunk_t seqs;
 } rdn_enumerator_t;
 
-/**
- * Implementation of rdn_enumerator_t.enumerate
- */
-static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
-						  u_char *type, chunk_t *data)
+METHOD(enumerator_t, rdn_enumerate, bool,
+	rdn_enumerator_t *this, chunk_t *oid, u_char *type, chunk_t *data)
 {
 	chunk_t rdn;
 
@@ -170,10 +167,14 @@ static bool rdn_enumerate(rdn_enumerator_t *this, chunk_t *oid,
  */
 static enumerator_t* create_rdn_enumerator(chunk_t dn)
 {
-	rdn_enumerator_t *e = malloc_thing(rdn_enumerator_t);
+	rdn_enumerator_t *e;
 
-	e->public.enumerate = (void*)rdn_enumerate;
-	e->public.destroy = (void*)free;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_rdn_enumerate,
+			.destroy = (void*)free,
+		},
+	);
 
 	/* a DN is a SEQUENCE, get the first SET of it */
 	if (asn1_unwrap(&dn, &e->sets) == ASN1_SEQUENCE)
@@ -195,11 +196,8 @@ typedef struct {
 	enumerator_t *inner;
 } rdn_part_enumerator_t;
 
-/**
- * Implementation of rdn_part_enumerator_t.enumerate().
- */
-static bool rdn_part_enumerate(rdn_part_enumerator_t *this,
-							   id_part_t *type, chunk_t *data)
+METHOD(enumerator_t, rdn_part_enumerate, bool,
+	rdn_part_enumerator_t *this, id_part_t *type, chunk_t *data)
 {
 	int i, known_oid, strtype;
 	chunk_t oid, inner_data;
@@ -241,30 +239,29 @@ static bool rdn_part_enumerate(rdn_part_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of rdn_part_enumerator_t.destroy().
- */
-static void rdn_part_enumerator_destroy(rdn_part_enumerator_t *this)
+METHOD(enumerator_t, rdn_part_enumerator_destroy, void,
+	rdn_part_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of identification_t.create_part_enumerator
- */
-static enumerator_t* create_part_enumerator(private_identification_t *this)
+METHOD(identification_t, create_part_enumerator, enumerator_t*,
+	private_identification_t *this)
 {
 	switch (this->type)
 	{
 		case ID_DER_ASN1_DN:
 		{
-			rdn_part_enumerator_t *e = malloc_thing(rdn_part_enumerator_t);
+			rdn_part_enumerator_t *e;
 
-			e->inner = create_rdn_enumerator(this->encoded);
-			e->public.enumerate = (void*)rdn_part_enumerate;
-			e->public.destroy = (void*)rdn_part_enumerator_destroy;
-
+			INIT(e,
+				.inner = create_rdn_enumerator(this->encoded),
+				.public = {
+					.enumerate = (void*)_rdn_part_enumerate,
+					.destroy = _rdn_part_enumerator_destroy,
+				},
+			);
 			return &e->public;
 		}
 		case ID_RFC822_ADDR:
@@ -476,26 +473,20 @@ static status_t atodn(char *src, chunk_t *dn)
 	return status;
 }
 
-/**
- * Implementation of identification_t.get_encoding.
- */
-static chunk_t get_encoding(private_identification_t *this)
+METHOD(identification_t, get_encoding, chunk_t,
+	private_identification_t *this)
 {
 	return this->encoded;
 }
 
-/**
- * Implementation of identification_t.get_type.
- */
-static id_type_t get_type(private_identification_t *this)
+METHOD(identification_t, get_type, id_type_t,
+	private_identification_t *this)
 {
 	return this->type;
 }
 
-/**
- * Implementation of identification_t.contains_wildcards for ID_DER_ASN1_DN.
- */
-static bool contains_wildcards_dn(private_identification_t *this)
+METHOD(identification_t, contains_wildcards_dn, bool,
+	private_identification_t *this)
 {
 	enumerator_t *enumerator;
 	bool contains = FALSE;
@@ -515,27 +506,22 @@ static bool contains_wildcards_dn(private_identification_t *this)
 	return contains;
 }
 
-/**
- * Implementation of identification_t.contains_wildcards using memchr(*).
- */
-static bool contains_wildcards_memchr(private_identification_t *this)
+METHOD(identification_t, contains_wildcards_memchr, bool,
+	private_identification_t *this)
 {
 	return memchr(this->encoded.ptr, '*', this->encoded.len) != NULL;
 }
 
-/**
- * Default implementation of identification_t.equals.
- * compares encoded chunk for equality.
- */
-static bool equals_binary(private_identification_t *this, private_identification_t *other)
+METHOD(identification_t, equals_binary, bool,
+	private_identification_t *this, identification_t *other)
 {
-	if (this->type == other->type)
+	if (this->type == other->get_type(other))
 	{
 		if (this->type == ID_ANY)
 		{
 			return TRUE;
 		}
-		return chunk_equals(this->encoded, other->encoded);
+		return chunk_equals(this->encoded, other->get_encoding(other));
 	}
 	return FALSE;
 }
@@ -628,65 +614,55 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 	return finished;
 }
 
-/**
- * Special implementation of identification_t.equals for ID_DER_ASN1_DN.
- */
-static bool equals_dn(private_identification_t *this,
-					  private_identification_t *other)
+METHOD(identification_t, equals_dn, bool,
+	private_identification_t *this, identification_t *other)
 {
-	return compare_dn(this->encoded, other->encoded, NULL);
+	return compare_dn(this->encoded, other->get_encoding(other), NULL);
 }
 
-/**
- * Special implementation of identification_t.equals for RFC822 and FQDN.
- */
-static bool equals_strcasecmp(private_identification_t *this,
-							  private_identification_t *other)
+METHOD(identification_t, equals_strcasecmp,  bool,
+	private_identification_t *this, identification_t *other)
 {
+	chunk_t encoded = other->get_encoding(other);
+
 	/* we do some extra sanity checks to check for invalid IDs with a
 	 * terminating null in it. */
-	if (this->encoded.len == other->encoded.len &&
+	if (this->encoded.len == encoded.len &&
 		memchr(this->encoded.ptr, 0, this->encoded.len) == NULL &&
-		memchr(other->encoded.ptr, 0, other->encoded.len) == NULL &&
-		strncasecmp(this->encoded.ptr, other->encoded.ptr, this->encoded.len) == 0)
+		memchr(encoded.ptr, 0, encoded.len) == NULL &&
+		strncasecmp(this->encoded.ptr, encoded.ptr, this->encoded.len) == 0)
 	{
 		return TRUE;
 	}
 	return FALSE;
 }
 
-/**
- * Default implementation of identification_t.matches.
- */
-static id_match_t matches_binary(private_identification_t *this,
-						   private_identification_t *other)
+METHOD(identification_t, matches_binary, id_match_t,
+	private_identification_t *this, identification_t *other)
 {
-	if (other->type == ID_ANY)
+	if (other->get_type(other) == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
-	if (this->type == other->type &&
-		chunk_equals(this->encoded, other->encoded))
+	if (this->type == other->get_type(other) &&
+		chunk_equals(this->encoded, other->get_encoding(other)))
 	{
 		return ID_MATCH_PERFECT;
 	}
 	return ID_MATCH_NONE;
 }
 
-/**
- * Special implementation of identification_t.matches for ID_RFC822_ADDR/ID_FQDN.
- * Checks for a wildcard in other-string, and compares it against this-string.
- */
-static id_match_t matches_string(private_identification_t *this,
-								 private_identification_t *other)
+METHOD(identification_t, matches_string, id_match_t,
+	private_identification_t *this, identification_t *other)
 {
-	u_int len = other->encoded.len;
+	chunk_t encoded = other->get_encoding(other);
+	u_int len = encoded.len;
 
-	if (other->type == ID_ANY)
+	if (other->get_type(other) == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
-	if (this->type != other->type)
+	if (this->type != other->get_type(other))
 	{
 		return ID_MATCH_NONE;
 	}
@@ -701,7 +677,7 @@ static id_match_t matches_string(private_identification_t *this,
 	}
 
 	/* check for single wildcard at the head of the string */
-	if (*other->encoded.ptr == '*')
+	if (*encoded.ptr == '*')
 	{
 		/* single asterisk matches any string */
 		if (len-- == 1)
@@ -709,7 +685,7 @@ static id_match_t matches_string(private_identification_t *this,
 			return ID_MATCH_ANY;
 		}
 		if (strncasecmp(this->encoded.ptr + this->encoded.len - len,
-						other->encoded.ptr + 1, len) == 0)
+						encoded.ptr + 1, len) == 0)
 		{
 			return ID_MATCH_ONE_WILDCARD;
 		}
@@ -717,36 +693,29 @@ static id_match_t matches_string(private_identification_t *this,
 	return ID_MATCH_NONE;
 }
 
-/**
- * Special implementation of identification_t.matches for ID_ANY.
- * ANY matches only another ANY, but nothing other
- */
-static id_match_t matches_any(private_identification_t *this,
-							  private_identification_t *other)
+METHOD(identification_t, matches_any, id_match_t,
+	private_identification_t *this, identification_t *other)
 {
-	if (other->type == ID_ANY)
+	if (other->get_type(other) == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
 	return ID_MATCH_NONE;
 }
 
-/**
- * Special implementation of identification_t.matches for ID_DER_ASN1_DN
- */
-static id_match_t matches_dn(private_identification_t *this,
-							 private_identification_t *other)
+METHOD(identification_t, matches_dn, id_match_t,
+	private_identification_t *this, identification_t *other)
 {
 	int wc;
 
-	if (other->type == ID_ANY)
+	if (other->get_type(other) == ID_ANY)
 	{
 		return ID_MATCH_ANY;
 	}
 
-	if (this->type == other->type)
+	if (this->type == other->get_type(other))
 	{
-		if (compare_dn(this->encoded, other->encoded, &wc))
+		if (compare_dn(this->encoded, other->get_encoding(other), &wc))
 		{
 			wc = min(wc, ID_MATCH_ONE_WILDCARD - ID_MATCH_MAX_WILDCARDS);
 			return ID_MATCH_PERFECT - wc;
@@ -828,10 +797,9 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	}
 	return print_in_hook(dst, len, "%*s", spec->width, buf);
 }
-/**
- * Implementation of identification_t.clone.
- */
-static identification_t *clone_(private_identification_t *this)
+
+METHOD(identification_t, clone, identification_t*,
+	private_identification_t *this)
 {
 	private_identification_t *clone = malloc_thing(private_identification_t);
 
@@ -843,10 +811,8 @@ static identification_t *clone_(private_identification_t *this)
 	return &clone->public;
 }
 
-/**
- * Implementation of identification_t.destroy.
- */
-static void destroy(private_identification_t *this)
+METHOD(identification_t, destroy, void,
+	private_identification_t *this)
 {
 	chunk_free(&this->encoded);
 	free(this);
@@ -857,42 +823,43 @@ static void destroy(private_identification_t *this)
  */
 static private_identification_t *identification_create(id_type_t type)
 {
-	private_identification_t *this = malloc_thing(private_identification_t);
+	private_identification_t *this;
 
-	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
-	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
-	this->public.create_part_enumerator = (enumerator_t*(*)(identification_t*))create_part_enumerator;
-	this->public.clone = (identification_t* (*) (identification_t*))clone_;
-	this->public.destroy = (void (*) (identification_t*))destroy;
+	INIT(this,
+		.public = {
+			.get_encoding = _get_encoding,
+			.get_type = _get_type,
+			.create_part_enumerator = _create_part_enumerator,
+			.clone = _clone,
+			.destroy = _destroy,
+		},
+		.type = type,
+	);
 
 	switch (type)
 	{
 		case ID_ANY:
-			this->public.matches = (id_match_t (*)(identification_t*,identification_t*))matches_any;
-			this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
-			this->public.contains_wildcards = (bool (*) (identification_t *this))return_true;
+			this->public.matches = _matches_any;
+			this->public.equals = _equals_binary;
+			this->public.contains_wildcards = return_true;
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
-			this->public.matches = (id_match_t (*)(identification_t*,identification_t*))matches_string;
-			this->public.equals = (bool (*)(identification_t*,identification_t*))equals_strcasecmp;
-			this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards_memchr;
+			this->public.matches = _matches_string;
+			this->public.equals = _equals_strcasecmp;
+			this->public.contains_wildcards = _contains_wildcards_memchr;
 			break;
 		case ID_DER_ASN1_DN:
-			this->public.equals = (bool (*)(identification_t*,identification_t*))equals_dn;
-			this->public.matches = (id_match_t (*)(identification_t*,identification_t*))matches_dn;
-			this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards_dn;
+			this->public.equals = _equals_dn;
+			this->public.matches = _matches_dn;
+			this->public.contains_wildcards = _contains_wildcards_dn;
 			break;
 		default:
-			this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
-			this->public.matches = (id_match_t (*) (identification_t*,identification_t*))matches_binary;
-			this->public.contains_wildcards = (bool (*) (identification_t *this))return_false;
+			this->public.equals = _equals_binary;
+			this->public.matches = _matches_binary;
+			this->public.contains_wildcards = return_false;
 			break;
 	}
-
-	this->type = type;
-	this->encoded = chunk_empty;
-
 	return this;
 }
 
