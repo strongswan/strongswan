@@ -652,8 +652,9 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
 
 	clone = traffic_selector_create(this->protocol, this->type,
 									this->from_port, this->to_port);
-
+	clone->netbits = this->netbits;
 	clone->dynamic = this->dynamic;
+
 	switch (clone->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
@@ -876,7 +877,7 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 
 	memset(this->from6, 0, sizeof(this->from6));
 	memset(this->to6, 0xFF, sizeof(this->to6));
-
+	this->netbits = 0;
 	this->dynamic = TRUE;
 
 	return &this->public;
