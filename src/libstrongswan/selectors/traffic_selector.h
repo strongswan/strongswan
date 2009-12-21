@@ -239,9 +239,9 @@ traffic_selector_t *traffic_selector_create_from_string(
  *
  * @param protocol 		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
- * @param from_address	start of address range, network order
+ * @param from_addr		start of address range, network order
  * @param from_port		port number, host order
- * @param to_address	end of address range, network order
+ * @param to_addr		end of address range, network order
  * @param to_port		port number, host order
  * @return				traffic_selector_t object
  */
@@ -249,6 +249,17 @@ traffic_selector_t *traffic_selector_create_from_bytes(
 								u_int8_t protocol, ts_type_t type,
 								chunk_t from_address, u_int16_t from_port,
 								chunk_t to_address, u_int16_t to_port);
+
+/**
+ * Create a new traffic selector using the RFC 3779 ASN.1 min/max address format
+ *
+ * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
+ * @param from_addr		start of address range in RFC 3779 ASN.1 BIT STRING format
+ * @param to_addr		end of address range in RFC 3779 ASN.1 BIT STRING format
+ * @return				traffic_selector_t object
+ */
+traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
+								chunk_t from_addr, chunk_t to_addr);
 
 /**
  * Create a new traffic selector defining a whole subnet.

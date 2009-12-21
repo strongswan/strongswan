@@ -25,6 +25,8 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
+#define NON_SUBNET_ADDRESS_RANGE	255
+
 ENUM(ts_type_name, TS_IPV4_ADDR_RANGE, TS_IPV6_ADDR_RANGE,
 	"TS_IPV4_ADDR_RANGE",
 	"TS_IPV6_ADDR_RANGE",
@@ -57,6 +59,11 @@ struct private_traffic_selector_t {
 	 * if set, from and to have no meaning until set_address() is called
 	 */
 	bool dynamic;
+
+	/**
+	 * subnet size in CIDR notation, 255 means a non-subnet address range 
+	 */
+	u_int8_t netbits;
 
 	/**
 	 * begin of address range, network order
@@ -94,17 +101,19 @@ struct private_traffic_selector_t {
 };
 
 /**
- * calculate to "to"-address for the "from" address and a subnet size
+ * calculate the "to"-address for the "from" address and a subnet size
  */
 static void calc_range(private_traffic_selector_t *this, u_int8_t netbits)
 {
 	int byte;
 	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
 
+	this->netbits = netbits;
+	
 	/* go through the from address, starting at the tail. While we
 	 * have not processed the bits belonging to the host, set them to 1 on
 	 * the to address. If we reach the bits for the net, copy them from "from". */
-	for (byte = size - 1; byte >=0; byte--)
+	for (byte = size - 1; byte >= 0; byte--)
 	{
 		u_char mask = 0x00;
 		int shift;
@@ -124,28 +133,50 @@ static void calc_range(private_traffic_selector_t *this, u_int8_t netbits)
 }
 
 /**
- * calculate to subnet size from "to"- and "from"-address
+ * calculate the subnet size from the "to" and "from" addresses
  */
 static u_int8_t calc_netbits(private_traffic_selector_t *this)
 {
 	int byte, bit;
+	u_int8_t netbits; 
 	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	bool prefix = TRUE;
+	
+	/* a perfect match results in a single address with a /32 or /128 netmask */
+	netbits = (size * 8); 
+	this->netbits = netbits;
 
-	/* go trough all bits of the addresses, beginning in the front.
+	/* go through all bits of the addresses, beginning in the front.
 	 * as long as they are equal, the subnet gets larger
 	 */
 	for (byte = 0; byte < size; byte++)
 	{
 		for (bit = 7; bit >= 0; bit--)
 		{
-			if ((1<<bit & this->from[byte]) != (1<<bit & this->to[byte]))
+			u_int8_t bitmask = 1 << bit;
+
+			if (prefix)
 			{
-				return ((7 - bit) + (byte * 8));
+				if ((bitmask & this->from[byte]) != (bitmask & this->to[byte]))
+				{
+					/* store the common prefix which might be a true subnet */
+					netbits = (7 - bit) + (byte * 8);
+					this->netbits = netbits; 
+					prefix = FALSE;
+				}
 			}
+			else
+			{
+				if ((bitmask & this->from[byte]) || !(bitmask & this->to[byte]))
+				{
+					this->netbits = NON_SUBNET_ADDRESS_RANGE;
+					return netbits;  /* return a pseudo subnet */
+
+				}
+			}					
 		}
 	}
-	/* single host, netmask is 32/128 */
-	return (size * 8);
+	return netbits;  /* return a true subnet */
 }
 
 /**
@@ -162,9 +193,9 @@ int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec
 	private_traffic_selector_t *this = *((private_traffic_selector_t**)(args[0]));
 	linked_list_t *list = *((linked_list_t**)(args[0]));
 	iterator_t *iterator;
-	char addr_str[INET6_ADDRSTRLEN] = "";
+	char from_str[INET6_ADDRSTRLEN] = "";
+	char to_str[INET6_ADDRSTRLEN] = "";
 	char *serv_proto = NULL;
-	u_int8_t mask;
 	bool has_proto;
 	bool has_ports;
 	size_t written = 0;
@@ -199,14 +230,28 @@ int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec
 	{
 		if (this->type == TS_IPV4_ADDR_RANGE)
 		{
-			inet_ntop(AF_INET, &this->from4, addr_str, sizeof(addr_str));
+			inet_ntop(AF_INET, &this->from4, from_str, sizeof(from_str));
 		}
 		else
 		{
-			inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
+			inet_ntop(AF_INET6, &this->from6, from_str, sizeof(from_str));
 		}
-		mask = calc_netbits(this);
-		written += print_in_hook(dst, len, "%s/%d", addr_str, mask);
+		if (this->netbits == NON_SUBNET_ADDRESS_RANGE)
+		{
+			if (this->type == TS_IPV4_ADDR_RANGE)
+			{
+				inet_ntop(AF_INET, &this->to4, to_str, sizeof(to_str));
+			}
+			else
+			{
+				inet_ntop(AF_INET6, &this->to6, to_str, sizeof(to_str));
+			}
+			written += print_in_hook(dst, len, "%s..%s", from_str, to_str);
+		}
+		else
+		{
+			written += print_in_hook(dst, len, "%s/%d", from_str, this->netbits);
+		}
 	}
 
 	/* check if we have protocol and/or port selectors */
@@ -333,7 +378,7 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		new_ts->dynamic = this->dynamic || other->dynamic;
 		memcpy(new_ts->from, from, size);
 		memcpy(new_ts->to, to, size);
-
+		calc_netbits(new_ts);
 		return &new_ts->public;
 	}
 	return NULL;
@@ -568,22 +613,16 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
 			family = AF_INET;
 			net_chunk.len = sizeof(this->from4);
 			break;
-		}
 		case TS_IPV6_ADDR_RANGE:
-		{
 			family = AF_INET6;
 			net_chunk.len = sizeof(this->from6);
 			break;
-		}
 		default:
-		{
 			/* unreachable */
 			return;
-		}
 	}
 
 	net_chunk.ptr = malloc(net_chunk.len);
@@ -618,22 +657,16 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
 	switch (clone->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
 			memcpy(clone->from4, this->from4, sizeof(this->from4));
 			memcpy(clone->to4, this->to4, sizeof(this->to4));
 			return &clone->public;
-		}
 		case TS_IPV6_ADDR_RANGE:
-		{
 			memcpy(clone->from6, this->from6, sizeof(this->from6));
 			memcpy(clone->to6, this->to6, sizeof(this->to6));
 			return &clone->public;
-		}
 		default:
-		{
 			/* unreachable */
 			return &clone->public;
-		}
 	}
 }
 
@@ -659,7 +692,6 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol,
 	switch (type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
 			if (from.len != 4 || to.len != 4)
 			{
 				free(this);
@@ -668,9 +700,7 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol,
 			memcpy(this->from4, from.ptr, from.len);
 			memcpy(this->to4, to.ptr, to.len);
 			break;
-		}
 		case TS_IPV6_ADDR_RANGE:
-		{
 			if (from.len != 16 || to.len != 16)
 			{
 				free(this);
@@ -679,13 +709,49 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol,
 			memcpy(this->from6, from.ptr, from.len);
 			memcpy(this->to6, to.ptr, to.len);
 			break;
-		}
 		default:
-		{
 			free(this);
 			return NULL;
-		}
 	}
+	calc_netbits(this);
+	return (&this->public);
+}
+
+/*
+ * see header
+ */
+traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
+												chunk_t from, chunk_t to)
+{
+	size_t len;
+	private_traffic_selector_t *this = traffic_selector_create(0, type, 0, 65535);
+
+	switch (type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+			len = 4;
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			len = 16;
+			break;
+		default:
+			free(this);
+			return NULL;
+	}
+	memset(this->from, 0x00, len);
+	memset(this->to  , 0xff, len);
+
+	if (from.len > 1)
+	{
+		memcpy(this->from, from.ptr+1, from.len-1);
+	}
+	if (to.len > 1)
+	{
+		memcpy(this->to, to.ptr+1, to.len-1);
+		this->to[to.len-2] |= to.ptr[0] ? (1 << to.ptr[0]) - 1 : 0;
+	}
+	this->netbits = chunk_equals(from, to) ? (from.len-1)*8 - from.ptr[0]
+										   : NON_SUBNET_ADDRESS_RANGE;
 	return (&this->public);
 }
 
@@ -710,6 +776,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 			{
 				/* use /0 for 0.0.0.0 */
 				this->to4[0] = ~0;
+				this->netbits = 0;
 			}
 			else
 			{
@@ -732,6 +799,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 				this->to6[1] = ~0;
 				this->to6[2] = ~0;
 				this->to6[3] = ~0;
+				this->netbits = 0;
 			}
 			else
 			{
@@ -769,7 +837,6 @@ traffic_selector_t *traffic_selector_create_from_string(
 	switch (type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
 			if (inet_pton(AF_INET, from_addr, (struct in_addr*)this->from4) < 0)
 			{
 				free(this);
@@ -781,9 +848,7 @@ traffic_selector_t *traffic_selector_create_from_string(
 				return NULL;
 			}
 			break;
-		}
 		case TS_IPV6_ADDR_RANGE:
-		{
 			if (inet_pton(AF_INET6, from_addr, (struct in6_addr*)this->from6) < 0)
 			{
 				free(this);
@@ -795,8 +860,8 @@ traffic_selector_t *traffic_selector_create_from_string(
 				return NULL;
 			}
 			break;
-		}
 	}
+	calc_netbits(this);
 	return (&this->public);
 }
 

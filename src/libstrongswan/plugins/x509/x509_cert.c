@@ -688,19 +688,60 @@ static const asn1Object_t ipAddrBlocksObjects[] = {
 	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 13 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
-#define IP_ADDR_BLOCKS_FAMILY	 2
-#define IP_ADDR_BLOCKS_INHERIT	 3
-#define IP_ADDR_BLOCKS_PREFIX	 6
-#define IP_ADDR_BLOCKS_MIN		 9
-#define IP_ADDR_BLOCKS_MAX		10
+#define IP_ADDR_BLOCKS_FAMILY       2
+#define IP_ADDR_BLOCKS_INHERIT      3
+#define IP_ADDR_BLOCKS_PREFIX       6
+#define IP_ADDR_BLOCKS_MIN          9
+#define IP_ADDR_BLOCKS_MAX         10
+
+static bool check_address_object(ts_type_t ts_type, chunk_t object)
+{
+	switch (ts_type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+			if (object.len > 5)
+			{
+				DBG1("IPv4 address object is larger than 5 octets");
+				return FALSE;
+			}
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			if (object.len > 17)
+			{
+				DBG1("IPv6 address object is larger than 17 octets");
+				return FALSE;
+			}
+			break;
+		default:
+			DBG1("unknown address family");
+			return FALSE;
+	}
+	if (object.len == 0)
+	{
+		DBG1("An ASN.1 bit string must contain at least the initial octet");
+		return FALSE;
+	}
+	if (object.len == 1 && object.ptr[0] != 0)
+	{
+		DBG1("An empty ASN.1 bit string must contain a zero initial octet");
+		return FALSE;
+	}
+	if (object.ptr[0] > 7)
+	{
+		DBG1("number of unused bits is too large");
+		return FALSE;
+	}
+	return TRUE;
+}
 
 static void parse_ipAddrBlocks(chunk_t blob, int level0,
 							   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
+	chunk_t object, min_object;
 	ts_type_t ts_type;
+	traffic_selector_t *ts;
+	int objectID;
 
 	parser = asn1_parser_create(ipAddrBlocksObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -721,6 +762,10 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 					{
 						ts_type = TS_IPV6_ADDR_RANGE;
 					}
+					else
+					{
+						break;
+					}
 					DBG2("  %N", ts_type_name, ts_type);
 				}
 				break;
@@ -728,15 +773,38 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 				DBG1("inherit choice is not supported");
 				break;
 			case IP_ADDR_BLOCKS_PREFIX:
+				if (!check_address_object(ts_type, object))
+				{
+					goto end;
+				}
+				ts = traffic_selector_create_from_rfc3779_format(ts_type,
+													object, object);
+				DBG2("  %R", ts);
+				this->ipAddrBlocks->insert_last(this->ipAddrBlocks, ts);
 				break;
 			case IP_ADDR_BLOCKS_MIN:
+				if (!check_address_object(ts_type, object))
+				{
+					goto end;
+				}
+				min_object = object;
 				break;
 			case IP_ADDR_BLOCKS_MAX:
+				if (!check_address_object(ts_type, object))
+				{
+					goto end;
+				}
+				ts = traffic_selector_create_from_rfc3779_format(ts_type,
+													min_object, object);
+				DBG2("  %R", ts);
+				this->ipAddrBlocks->insert_last(this->ipAddrBlocks, ts);
 				break;
 			default:
 				break;
 		}
 	}
+
+end:
 	parser->destroy(parser);
 }
 
