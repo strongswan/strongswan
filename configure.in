@@ -304,6 +304,8 @@ AC_TRY_RUN(
 )
 dnl check if we actually are able to configure attributes on cond vars
 AC_CHECK_FUNCS(pthread_condattr_init)
+dnl instead of pthread_condattr_setclock Android has this function
+AC_CHECK_FUNCS(pthread_cond_timedwait_monotonic)
 dnl check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
 LIBS=$saved_LIBS

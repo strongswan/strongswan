@@ -253,6 +253,11 @@ static void _wait(private_condvar_t *this, private_mutex_t *mutex)
 	}
 }
 
+/* use the monotonic clock based version of this function if available */
+#ifdef HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC
+#define pthread_cond_timedwait pthread_cond_timedwait_monotonic
+#endif
+
 /**
  * Implementation of condvar_t.timed_wait_abs.
  */
