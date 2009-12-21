@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #include "traffic_selector.h"
-
+#include "debug.h"
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -105,31 +105,22 @@ struct private_traffic_selector_t {
  */
 static void calc_range(private_traffic_selector_t *this, u_int8_t netbits)
 {
-	int byte;
-	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	size_t len;
+	int bytes, bits;
+	u_int8_t mask;
 
 	this->netbits = netbits;
-	
-	/* go through the from address, starting at the tail. While we
-	 * have not processed the bits belonging to the host, set them to 1 on
-	 * the to address. If we reach the bits for the net, copy them from "from". */
-	for (byte = size - 1; byte >= 0; byte--)
-	{
-		u_char mask = 0x00;
-		int shift;
 
-		shift = (byte+1) * 8 - netbits;
-		if (shift > 0)
-		{
-			mask = 1 << shift;
-			if (mask != 0xFF)
-			{
-				mask--;
-			}
-		}
-		this->from[byte] &= ~mask;
-		this->to[byte] = this->from[byte] | mask;
-	}
+	len   = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	bytes = (netbits + 7)/8;
+	bits  = (bytes * 8) - netbits;
+	mask  = bits ? (1 << bits) - 1 : 0;
+
+	memcpy(this->to, this->from, bytes);
+	memset(this->from + bytes, 0x00, len - bytes);
+	memset(this->to   + bytes, 0xff, len - bytes);
+	this->from[bytes-1] &= ~mask;
+	this->to[bytes-1]   |=  mask;
 }
 
 /**
@@ -772,7 +763,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 
 			this->type = TS_IPV4_ADDR_RANGE;
 			from = net->get_address(net);
-			memcpy(this->from4, from.ptr, from.len);
+			memcpy(this->from, from.ptr, from.len);
 			if (this->from4[0] == 0)
 			{
 				/* use /0 for 0.0.0.0 */
@@ -791,7 +782,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 
 			this->type = TS_IPV6_ADDR_RANGE;
 			from = net->get_address(net);
-			memcpy(this->from6, from.ptr, from.len);
+			memcpy(this->from, from.ptr, from.len);
 			if (this->from6[0] == 0 && this->from6[1] == 0 &&
 				this->from6[2] == 0 && this->from6[3] == 0)
 			{
