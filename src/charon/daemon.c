@@ -23,6 +23,7 @@
 #define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
 #undef _POSIX_PTHREAD_SEMANTICS
+#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -252,7 +253,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 static void drop_capabilities(private_daemon_t *this)
 {
 #ifdef HAVE_PRCTL
-	prctl(PR_SET_KEEPCAPS, 1);
+	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
 #endif
 
 	if (setgid(charon->gid) != 0)
