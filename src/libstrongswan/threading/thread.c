@@ -113,6 +113,18 @@ static mutex_t *id_mutex;
  */
 static thread_value_t *current_thread;
 
+#ifndef HAVE_PTHREAD_CANCEL
+/* if pthread_cancel is not available, we emulate it using a signal */
+#define SIG_CANCEL (SIGRTMIN+7)
+
+/* the signal handler for SIG_CANCEL uses pthread_exit to terminate the
+ * "cancelled" thread */
+static void cancel_signal_handler(int sig)
+{
+	pthread_exit(NULL);
+}
+#endif
+
 
 /**
  * Destroy an internal thread object.
@@ -146,7 +158,11 @@ static void cancel(private_thread_t *this)
 		DBG1("!!! CANNOT CANCEL CURRENT THREAD !!!");
 		return;
 	}
+#ifdef HAVE_PTHREAD_CANCEL
 	pthread_cancel(this->thread_id);
+#else
+	pthread_kill(this->thread_id, SIG_CANCEL);
+#endif /* HAVE_PTHREAD_CANCEL */
 	this->mutex->unlock(this->mutex);
 }
 
@@ -355,10 +371,18 @@ void thread_cleanup_pop(bool execute)
  */
 bool thread_cancelability(bool enable)
 {
+#ifdef HAVE_PTHREAD_CANCEL
 	int old;
 	pthread_setcancelstate(enable ? PTHREAD_CANCEL_ENABLE
 								  : PTHREAD_CANCEL_DISABLE, &old);
 	return old == PTHREAD_CANCEL_ENABLE;
+#else
+	sigset_t new, old;
+	sigemptyset(&new);
+	sigaddset(&new, SIG_CANCEL);
+	pthread_sigmask(enable ? SIG_UNBLOCK : SIG_BLOCK, &new, &old);
+	return sigismember(&old, SIG_CANCEL) == 0;
+#endif /* HAVE_PTHREAD_CANCEL */
 }
 
 /**
@@ -367,7 +391,9 @@ bool thread_cancelability(bool enable)
 void thread_cancellation_point()
 {
 	bool old = thread_cancelability(TRUE);
+#ifdef HAVE_PTHREAD_CANCEL
 	pthread_testcancel();
+#endif /* HAVE_PTHREAD_CANCEL */
 	thread_cancelability(old);
 }
 
@@ -390,6 +416,15 @@ void threads_init()
 	current_thread = thread_value_create(NULL);
 	current_thread->set(current_thread, (void*)main_thread);
 	id_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+
+#ifndef HAVE_PTHREAD_CANCEL
+	{	/* install a signal handler for our custom SIG_CANCEL */
+		struct sigaction action = {
+			.sa_handler = cancel_signal_handler
+		};
+		sigaction(SIG_CANCEL, &action, NULL);
+	}
+#endif /* HAVE_PTHREAD_CANCEL */
 }
 
 /**
