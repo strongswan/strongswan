@@ -35,17 +35,19 @@ typedef enum x509_flag_t x509_flag_t;
  */
 enum x509_flag_t {
 	/** cert has no constraints */
-	X509_NONE =			0, 
+	X509_NONE =			   0, 
 	/** cert has CA constraint */
-	X509_CA = 			(1<<0),
+	X509_CA = 			  (1<<0),
 	/** cert has AA constraint */
-	X509_AA = 			(1<<1),
+	X509_AA = 			  (1<<1),
 	/** cert has OCSP signer constraint */
-	X509_OCSP_SIGNER = 	(1<<2),
+	X509_OCSP_SIGNER = 	  (1<<2),
 	/** cert has serverAuth constraint */
-	X509_SERVER_AUTH = 	(1<<3),
+	X509_SERVER_AUTH = 	  (1<<3),
 	/** cert is self-signed */
-	X509_SELF_SIGNED =  (1<<4),
+	X509_SELF_SIGNED =    (1<<4),
+	/** cert has an ipAddrBlocks extension */
+	X509_IP_ADDR_BLOCKS = (1<<5),
 };
 
 /**

@@ -803,7 +803,8 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 				break;
 		}
 	}
-
+	this->flags |= X509_IP_ADDR_BLOCKS;
+	
 end:
 	parser->destroy(parser);
 }
