@@ -534,12 +534,14 @@ static void set_address(private_traffic_selector_t *this, host_t *host)
 		{
 			memset(this->from6, 0x00, sizeof(this->from6));
 			memset(this->to6, 0xFF, sizeof(this->to6));
+			this->netbits = 0;
 		}
 		else
 		{
 			chunk_t from = host->get_address(host);
 			memcpy(this->from, from.ptr, from.len);
 			memcpy(this->to, from.ptr, from.len);
+			this->netbits = from.len * 8;
 		}
 	}
 }
@@ -599,7 +601,8 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 	u_int16_t port = 0;
 	chunk_t net_chunk;
 
-	*mask = calc_netbits(this);
+	*mask = (this->netbits == NON_SUBNET_ADDRESS_RANGE) ? calc_netbits(this)
+														: this->netbits;
 
 	switch (this->type)
 	{
