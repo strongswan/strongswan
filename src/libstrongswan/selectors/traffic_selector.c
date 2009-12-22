@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #include "traffic_selector.h"
-#include "debug.h"
+
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -739,8 +739,10 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
 	}
 	if (to.len > 1)
 	{
+		u_int8_t mask = to.ptr[0] ? (1 << to.ptr[0]) - 1 : 0;
+
 		memcpy(this->to, to.ptr+1, to.len-1);
-		this->to[to.len-2] |= to.ptr[0] ? (1 << to.ptr[0]) - 1 : 0;
+		this->to[to.len-2] |= mask;
 	}
 	this->netbits = chunk_equals(from, to) ? (from.len-1)*8 - from.ptr[0]
 										   : NON_SUBNET_ADDRESS_RANGE;
