@@ -1324,6 +1324,14 @@ static enumerator_t* create_crl_uri_enumerator(private_x509_cert_t *this)
 }
 
 /**
+ * Implementation of x509_cert_t.create_ipAddrBlock_enumerator.
+ */
+static enumerator_t* create_ipAddrBlock_enumerator(private_x509_cert_t *this)
+{
+	return this->ipAddrBlocks->create_enumerator(this->ipAddrBlocks);
+}
+
+/**
  * Implementation of certificate_t.destroy.
  */
 static void destroy(private_x509_cert_t *this)
@@ -1379,6 +1387,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
 	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
 	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
+	this->public.interface.create_ipAddrBlock_enumerator = (enumerator_t* (*)(x509_t*))create_ipAddrBlock_enumerator;
 
 	this->encoding = chunk_empty;
 	this->encoding_hash = chunk_empty;
