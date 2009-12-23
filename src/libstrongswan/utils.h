@@ -390,7 +390,7 @@ static inline u_int32_t untoh32(void *network)
 	u_int32_t tmp;
 
 	memcpy(&tmp, network, sizeof(tmp));
-	return ntohs(tmp);
+	return ntohl(tmp);
 }
 
 /**
