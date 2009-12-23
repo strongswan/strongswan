@@ -694,19 +694,21 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 {
 	bool first = TRUE;
 	time_t now = time(NULL);
-	enumerator_t *enumerator = list->create_enumerator(list);
+	enumerator_t *enumerator;
 	certificate_t *cert;
+	x509_flag_t flag_mask;
 
+	/* mask all auxiliary flags */
+	flag_mask = ~(X509_SELF_SIGNED | X509_SERVER_AUTH | X509_IP_ADDR_BLOCKS ); 
+
+	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		x509_t *x509 = (x509_t*)cert;
-		x509_flag_t x509_flags = x509->get_flags(x509);
+		x509_flag_t x509_flags = x509->get_flags(x509) & flag_mask;
 
-		/* list only if flag is set,
-		 * or flags == 0 (ignoring self-signed and serverAuth)
-		 */
-		if ((x509_flags & flags) ||
-			(flags == (x509_flags & ~(X509_SELF_SIGNED | X509_SERVER_AUTH))))
+		/* list only if flag is set or flag == 0 */
+		if ((x509_flags & flags) || (x509_flags == flags))
 		{
 			enumerator_t *enumerator;
 			identification_t *altName;
@@ -797,6 +799,29 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 				fprintf(out, "  pathlen:   %d\n", pathlen);
 			}
 
+			/* list optional ipAddrBlocks */
+			if (x509->get_flags(x509) & X509_IP_ADDR_BLOCKS)
+			{
+				traffic_selector_t *ipAddrBlock;
+				bool first_ipAddrBlock = TRUE;
+
+				fprintf(out, "  addresses: ");
+				enumerator = x509->create_ipAddrBlock_enumerator(x509);
+				while (enumerator->enumerate(enumerator, &ipAddrBlock))
+				{
+					if (first_ipAddrBlock)
+					{
+						first_ipAddrBlock = FALSE;
+					}
+					else
+					{
+						fprintf(out, ", ");
+					}
+					fprintf(out, "%R", ipAddrBlock);
+				}
+				enumerator->destroy(enumerator);
+				fprintf(out, "\n");
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1058,7 +1083,7 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	if (msg->list.flags & LIST_CERTS)
 	{
 		stroke_list_certs(cert_list, "X.509 End Entity Certificates",
-						  0, msg->list.utc, out);
+						  X509_NONE, msg->list.utc, out);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
