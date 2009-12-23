@@ -34,7 +34,6 @@
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <net/if.h>
 #ifdef __APPLE__
@@ -75,6 +74,13 @@
 #define IPV6_RECVPKTINFO IPV6_PKTINFO
 #endif
 
+#ifndef IN6ADDR_ANY_INIT
+#define IN6ADDR_ANY_INIT {{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}}
+#endif
+
+#ifndef HAVE_IN6ADDR_ANY
+static const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+#endif
 
 typedef struct private_socket_t private_socket_t;
 
@@ -218,6 +224,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 				return FAILED;
 			}
 
+#ifdef HAVE_IN6_PKTINFO
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
 				cmsgptr->cmsg_type == IPV6_PKTINFO)
 			{
@@ -231,6 +238,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 				dst.sin6_port = htons(port);
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
 			}
+#endif /* HAVE_IN6_PKTINFO */
 			if (cmsgptr->cmsg_level == SOL_IP &&
 #ifdef IP_PKTINFO
 				cmsgptr->cmsg_type == IP_PKTINFO
@@ -404,6 +412,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			memcpy(addr, &sin->sin_addr, sizeof(struct in_addr));
 #endif /* IP_PKTINFO || IP_SENDSRCADDR */
 		}
+#ifdef HAVE_IN6_PKTINFO
 		else
 		{
 			char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -421,6 +430,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			sin = (struct sockaddr_in6*)src->get_sockaddr(src);
 			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
 		}
+#endif /* HAVE_IN6_PKTINFO */
 	}
 
 	bytes_sent = sendmsg(skt, &msg, 0);

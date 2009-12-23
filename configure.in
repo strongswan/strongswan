@@ -334,6 +334,32 @@ AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
 	#endif
 ])
 
+AC_MSG_CHECKING([for in6addr_any])
+AC_TRY_COMPILE(
+	[#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>],
+	[struct in6_addr in6;
+	in6 = in6addr_any;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6ADDR_ANY])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for in6_pktinfo])
+AC_TRY_COMPILE(
+	[#define _GNU_SOURCE
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>],
+	[struct in6_pktinfo pi;
+	if (pi.ipi6_ifindex)
+	{
+		return 0;
+	}],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6_PKTINFO])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_MSG_CHECKING([for IPSEC_MODE_BEET])
 AC_TRY_COMPILE(
 	[#include <sys/types.h>
