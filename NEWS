@@ -1,6 +1,9 @@
 strongswan-4.3.6
 ----------------
 
+- The IKEv2 daemon supports RFC 3779 IP address block constraints 
+  carried as a critical X.509v3 extension in the peer certificate.
+
 - The ipsec pool --add|del dns|nbns command manages DNS and NBNS name
   server entries that are sent via the IKEv1 Mode Config or IKEv2
   Configuration Payload to remote clients.
