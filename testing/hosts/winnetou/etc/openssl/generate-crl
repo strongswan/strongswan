@@ -38,4 +38,8 @@ cd /etc/openssl/monster
 openssl ca -gencrl -crldays 15 -config /etc/openssl/monster/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan-monster.crl
 cp strongswan-monster.crl /var/www/localhost/htdocs/
+cd /etc/openssl/rfc3779
+openssl ca -gencrl -crldays 15 -config /etc/openssl/rfc3779/openssl.cnf -out crl.pem
+openssl crl -in crl.pem -outform der -out strongswan_rfc3779.crl
+cp strongswan_rfc3779.crl /var/www/localhost/htdocs/
 
