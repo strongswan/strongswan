@@ -19,6 +19,7 @@
 
 #include <daemon.h>
 #include <crypto/diffie_hellman.h>
+#include <credentials/certificates/x509.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/ts_payload.h>
@@ -392,6 +393,66 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 				break;
 			default:
 				break;
+		}
+	}
+
+	/* check for any certificate-based IP address block constraints */
+	if (this->mode == MODE_BEET || this->mode == MODE_TUNNEL)
+	{
+		auth_cfg_t *auth;
+		enumerator_t *auth_enum;
+		certificate_t *cert = NULL;
+
+		auth_enum = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
+		while (auth_enum->enumerate(auth_enum, &auth))
+		{
+			cert = auth->get(auth, AUTH_HELPER_SUBJECT_CERT);
+			if (cert)
+			{
+				break;
+			}
+		}
+		auth_enum->destroy(auth_enum);
+
+		if (cert && cert->get_type(cert) == CERT_X509)
+		{
+			x509_t *x509 = (x509_t*)cert;
+
+			if (x509->get_flags(x509) & X509_IP_ADDR_BLOCKS)
+			{
+				enumerator_t *enumerator, *block_enum;
+				traffic_selector_t *ts, *block_ts;
+
+				DBG1(DBG_IKE, "checking certificate-based traffic selector "
+							  "constraints [RFC 3779]");
+				enumerator = other_ts->create_enumerator(other_ts);
+				while (enumerator->enumerate(enumerator, &ts))
+				{
+					bool contained = FALSE;
+
+					block_enum = x509->create_ipAddrBlock_enumerator(x509);
+					while (block_enum->enumerate(block_enum, &block_ts))
+					{
+						if (ts->is_contained_in(ts, block_ts))
+						{
+							DBG1(DBG_IKE, "  TS %R is contained in address block"
+										  " constraint %R", ts, block_ts);
+							contained = TRUE;
+							break;
+						}
+					}
+					block_enum->destroy(block_enum);
+
+					if (!contained)
+					{
+						DBG1(DBG_IKE, "  TS %R is not contained in any"
+									  " address block constraint", ts);
+						enumerator->destroy(enumerator);
+						return FAILED;
+					}
+				}
+				enumerator->destroy(enumerator);
+			}
 		}
 	}
 
