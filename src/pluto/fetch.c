@@ -29,6 +29,9 @@
 #include <debug.h>
 #include <asn1/asn1.h>
 #include <credentials/certificates/certificate.h>
+#ifdef THREADS
+#include <threading/thread.h>
+#endif
 
 #include "constants.h"
 #include "defs.h"
@@ -56,7 +59,7 @@ static fetch_req_t *crl_fetch_reqs  = NULL;
 static ocsp_location_t *ocsp_fetch_reqs = NULL;
 
 #ifdef THREADS
-static pthread_t thread;
+static thread_t *thread;
 static pthread_mutex_t certs_and_keys_mutex  = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t authcert_list_mutex   = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t crl_list_mutex        = PTHREAD_MUTEX_INITIALIZER;
@@ -496,11 +499,15 @@ void init_fetch(void)
 	if (crl_check_interval > 0)
 	{
 #ifdef THREADS
-		int status = pthread_create( &thread, NULL, fetch_thread, NULL);
+		thread = thread_create((thread_main_t)fetch_thread, NULL);
 
-		if (status != 0)
+		if (thread == NULL)
 		{
-			plog("fetching thread could not be started, status = %d", status);
+			plog("fetching thread could not be started");
+		}
+		else
+		{
+			thread->detach(thread);
 		}
 #else   /* !THREADS */
 		plog("warning: not compiled with pthread support");
