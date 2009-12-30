@@ -277,7 +277,7 @@ static status_t NtPasswordHash(chunk_t password, chunk_t *password_hash)
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD4);
 	if (hasher == NULL)
 	{
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, MD4 not supported");
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, no MD4 hasher available");
 		return FAILED;
 	}
 	hasher->allocate_hash(hasher, password, password_hash);
