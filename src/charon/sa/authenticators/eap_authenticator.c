@@ -125,6 +125,7 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	identification_t *id;
 	u_int32_t vendor;
 	eap_payload_t *out;
+	char *action;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 
@@ -150,28 +151,33 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	/* invoke real EAP method */
 	type = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE);
 	vendor = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR);
+	action = "loading";
 	this->method = load_method(this, type, vendor, EAP_SERVER);
-	if (this->method &&
-		this->method->initiate(this->method, &out) == NEED_MORE)
+	if (this->method)
 	{
-		if (vendor)
+		action = "initiating";
+		if (this->method->initiate(this->method, &out) == NEED_MORE)
 		{
-			DBG1(DBG_IKE, "initiating EAP vendor type %d-%d", type, vendor);
-
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method",
+							  type, vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "initiating %N method", eap_type_names, type);
+			}
+			return out;
 		}
-		else
-		{
-			DBG1(DBG_IKE, "initiating %N", eap_type_names, type);
-		}
-		return out;
 	}
 	if (vendor)
 	{
-		DBG1(DBG_IKE, "initiating EAP vendor type %d-%d failed", type, vendor);
+		DBG1(DBG_IKE, "%s EAP vendor type %d-%d method failed",
+					  action, type,	vendor);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "initiating %N failed", eap_type_names, type);
+		DBG1(DBG_IKE, "%s %N method failed", action, eap_type_names, type);
 	}
 	return eap_payload_create_code(EAP_FAILURE, 0);
 }
