@@ -1582,14 +1582,23 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* build CA basicConstraint for CA certificates */
 	if (cert->flags & X509_CA)
 	{
+		chunk_t pathLenConstraint = chunk_empty;
+
+		if (cert->pathLenConstraint != X509_NO_PATH_LEN_CONSTRAINT)
+		{
+			char pathlen = (char)cert->pathLenConstraint;
+
+			pathLenConstraint = asn1_integer("c", chunk_from_thing(pathlen));
+		}
 		basicConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
 								asn1_build_known_oid(OID_BASIC_CONSTRAINTS),
 								asn1_wrap(ASN1_BOOLEAN, "c",
 									chunk_from_chars(0xFF)),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
-										asn1_wrap(ASN1_SEQUENCE, "m",
+										asn1_wrap(ASN1_SEQUENCE, "mm",
 											asn1_wrap(ASN1_BOOLEAN, "c",
-												chunk_from_chars(0xFF)))));
+												chunk_from_chars(0xFF)),
+											pathLenConstraint)));
 	}
 
 	/* add serverAuth extendedKeyUsage flag */
@@ -1802,6 +1811,13 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				enumerator->destroy(enumerator);
 				continue;
 			}
+			case BUILD_PATHLEN:
+				cert->pathLenConstraint = va_arg(args, int);
+				if (cert->pathLenConstraint < 0 || cert->pathLenConstraint > 127)
+				{
+					cert->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
+				}
+				continue;
 			case BUILD_NOT_BEFORE_TIME:
 				cert->notBefore = va_arg(args, time_t);
 				continue;

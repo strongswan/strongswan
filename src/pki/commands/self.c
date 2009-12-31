@@ -35,6 +35,7 @@ static int self()
 	identification_t *id = NULL;
 	linked_list_t *san, *ocsp;
 	int lifetime = 1080;
+	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
@@ -95,6 +96,9 @@ static int self()
 				continue;
 			case 'b':
 				flags |= X509_CA;
+				continue;
+			case 'p':
+				pathlen = atoi(arg);
 				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
@@ -163,7 +167,7 @@ static int self()
 						BUILD_SUBJECT, id, BUILD_NOT_BEFORE_TIME, not_before,
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
-						BUILD_SUBJECT_ALTNAMES, san,
+						BUILD_PATHLEN, pathlen, BUILD_SUBJECT_ALTNAMES, san,
 						BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
 	if (!cert)
 	{
@@ -226,6 +230,7 @@ static void __attribute__ ((constructor))reg()
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
+			{"pathlen",	'p', 1, "set path length constraint"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 		}

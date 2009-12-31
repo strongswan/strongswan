@@ -97,6 +97,8 @@ enum builder_part_t {
 	BUILD_CRL_DISTRIBUTION_POINTS,
 	/** OCSP AuthorityInfoAccess locations, linked_list_t* containing char* */
 	BUILD_OCSP_ACCESS_LOCATIONS,
+	/** certificate path length constraint */
+	BUILD_PATHLEN,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
