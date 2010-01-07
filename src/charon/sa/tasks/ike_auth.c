@@ -650,15 +650,31 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		id_payload = id_payload_create_from_identification(ID_RESPONDER, id);
 		message->add_payload(message, (payload_t*)id_payload);
 
-		/* build authentication data */
-		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
-							this->other_nonce, this->my_nonce,
-							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
-		if (!this->my_auth)
+		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_EAP)
+		{	/* EAP-only authentication */
+			if (!this->ike_sa->supports_extension(this->ike_sa,
+												  EXT_EAP_ONLY_AUTHENTICATION))
+			{
+				DBG1(DBG_IKE, "configured EAP-only authentication, but peer "
+					 "does not support it");
+				message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
+									chunk_empty);
+				return FAILED;
+			}
+		}
+		else
 		{
-			message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
-			return FAILED;
+			/* build authentication data */
+			this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
+								this->other_nonce, this->my_nonce,
+								this->other_packet->get_data(this->other_packet),
+								this->my_packet->get_data(this->my_packet));
+			if (!this->my_auth)
+			{
+				message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
+									chunk_empty);
+				return FAILED;
+			}
 		}
 	}
 
@@ -837,13 +853,6 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			id_payload_t *id_payload;
 			identification_t *id;
 
-			/* responder is not allowed to do EAP */
-			if (!message->get_payload(message, AUTHENTICATION))
-			{
-				DBG1(DBG_IKE, "AUTH payload missing");
-				return FAILED;
-			}
-
 			/* handle IDr payload */
 			id_payload = (id_payload_t*)message->get_payload(message,
 															 ID_RESPONDER);
@@ -857,31 +866,45 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 
-			/* verify authentication data */
-			this->other_auth = authenticator_create_verifier(this->ike_sa,
-							message, this->other_nonce, this->my_nonce,
-							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
-			if (!this->other_auth)
+			if (message->get_payload(message, AUTHENTICATION))
 			{
-				return FAILED;
+				/* verify authentication data */
+				this->other_auth = authenticator_create_verifier(this->ike_sa,
+								message, this->other_nonce, this->my_nonce,
+								this->other_packet->get_data(this->other_packet),
+								this->my_packet->get_data(this->my_packet));
+				if (!this->other_auth)
+				{
+					return FAILED;
+				}
+			}
+			else
+			{	/* responder omited AUTH payload, indicating EAP-only */
+				if (!this->my_auth ||
+					!this->my_auth->is_mutual(this->my_auth))
+				{
+					return FAILED;
+				}
 			}
 		}
-		switch (this->other_auth->process(this->other_auth, message))
+		if (this->other_auth)
 		{
-			case SUCCESS:
-				break;
-			case NEED_MORE:
-				return NEED_MORE;
-			default:
-				return FAILED;
+			switch (this->other_auth->process(this->other_auth, message))
+			{
+				case SUCCESS:
+					break;
+				case NEED_MORE:
+					return NEED_MORE;
+				default:
+					return FAILED;
+			}
+			this->other_auth->destroy(this->other_auth);
+			this->other_auth = NULL;
 		}
 		/* store authentication information, reset authenticator */
 		cfg = auth_cfg_create();
 		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
 		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
-		this->other_auth->destroy(this->other_auth);
-		this->other_auth = NULL;
 
 		/* another auth round done, invoke authorize hook */
 		if (!charon->bus->authorize(charon->bus, FALSE))

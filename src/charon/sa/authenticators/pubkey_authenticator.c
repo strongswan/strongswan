@@ -234,6 +234,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))return_failed;
+	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))return_false;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 
 	this->ike_sa = ike_sa;
@@ -253,6 +254,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))return_failed;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process;
+	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))return_false;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 
 	this->ike_sa = ike_sa;

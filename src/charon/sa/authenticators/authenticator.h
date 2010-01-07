@@ -128,6 +128,16 @@ struct authenticator_t {
 	status_t (*build)(authenticator_t *this, message_t *message);
 
 	/**
+	 * Check if the authenticator is capable of mutual authentication.
+	 *
+	 * Some authenticator authenticate both peers, e.g. EAP. To support
+	 * mutual authentication with only a single authenticator (EAP-only
+	 * authentication), it must be mutual. This method is invoked in ike_auth
+	 * to check if the given authenticator is capable of doing so.
+	 */
+	bool (*is_mutual)(authenticator_t *this);
+
+	/**
 	 * Destroy authenticator instance.
 	 */
 	void (*destroy) (authenticator_t *this);

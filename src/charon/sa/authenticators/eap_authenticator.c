@@ -73,6 +73,11 @@ struct private_eap_authenticator_t {
 	bool eap_complete;
 
 	/**
+	 * Set if we require mutual EAP due EAP-only authentication
+	 */
+	bool require_mutual;
+
+	/**
 	 * authentication payload verified successfully
 	 */
 	bool auth_complete;
@@ -526,6 +531,15 @@ static status_t process_client(private_eap_authenticator_t *this,
 		{
 			return FAILED;
 		}
+		if (this->require_mutual && !this->method->is_mutual(this->method))
+		{	/* we require mutual authentication due to EAP-only */
+			u_int32_t vendor;
+
+			DBG1(DBG_IKE, "EAP-only authentication requires a mutual and "
+				 "MSK deriving EAP method, but %N is not",
+				 eap_type_names, this->method->get_type(this->method, &vendor));
+			return FAILED;
+		}
 		return SUCCESS;
 	}
 
@@ -608,6 +622,16 @@ static status_t build_client(private_eap_authenticator_t *this,
 }
 
 /**
+ * Implementation of authenticator_t.is_mutual.
+ */
+static bool is_mutual(private_eap_authenticator_t *this)
+{
+	/* we don't know yet, but insist on it after EAP is complete */
+	this->require_mutual = TRUE;
+	return TRUE;
+}
+
+/**
  * Implementation of authenticator_t.destroy.
  */
 static void destroy(private_eap_authenticator_t *this)
@@ -630,6 +654,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build_client;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process_client;
+	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))is_mutual;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 
 	this->ike_sa = ike_sa;
@@ -643,6 +668,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 	this->eap_complete = FALSE;
 	this->auth_complete = FALSE;
 	this->eap_identity = NULL;
+	this->require_mutual = FALSE;
 
 	return &this->public;
 }
@@ -658,6 +684,7 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 
 	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *messageh))build_server;
 	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process_server;
+	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))is_mutual;
 	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
 
 	this->ike_sa = ike_sa;
@@ -671,6 +698,7 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 	this->eap_complete = FALSE;
 	this->auth_complete = FALSE;
 	this->eap_identity = NULL;
+	this->require_mutual = FALSE;
 
 	return &this->public;
 }
