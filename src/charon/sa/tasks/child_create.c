@@ -611,7 +611,15 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 			this->mode = MODE_TRANSPORT;
 			break;
 		case USE_BEET_MODE:
-			this->mode = MODE_BEET;
+			if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+			{	/* handle private use notify only if we know its meaning */
+				this->mode = MODE_BEET;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "received a notify strongSwan uses for BEET "
+					 "mode, but peer implementation unknown, skipped");
+			}
 			break;
 		case IPCOMP_SUPPORTED:
 		{
