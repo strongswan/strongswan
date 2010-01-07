@@ -1152,7 +1152,7 @@ static status_t get_msk(private_eap_mschapv2_t *this, chunk_t *msk)
  */
 static bool is_mutual(private_eap_mschapv2_t *this)
 {
-	return TRUE;
+	return FALSE;
 }
 
 /**
