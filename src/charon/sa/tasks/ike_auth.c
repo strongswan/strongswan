@@ -347,10 +347,16 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		this->peer_cfg->get_ref(this->peer_cfg);
 	}
 
-	if (message->get_message_id(message) == 1 &&
-		this->ike_sa->supports_extension(this->ike_sa, EXT_MULTIPLE_AUTH))
-	{	/* in the first IKE_AUTH, indicate support for multiple authentication */
-		message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED, chunk_empty);
+	if (message->get_message_id(message) == 1)
+	{	/* in the first IKE_AUTH ... */
+		if (this->ike_sa->supports_extension(this->ike_sa, EXT_MULTIPLE_AUTH))
+		{	/* indicate support for multiple authentication */
+			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
+								chunk_empty);
+		}
+		/* indicate support for EAP-only authentication */
+		message->add_notify(message, FALSE, EAP_ONLY_AUTHENTICATION,
+							chunk_empty);
 	}
 
 	if (!this->do_another_auth && !this->my_auth)
@@ -468,9 +474,19 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	{
 		return NEED_MORE;
 	}
-	if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED))
-	{
-		this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
+
+	if (message->get_message_id(message) == 1)
+	{	/* check for extensions in the first IKE_AUTH */
+		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED))
+		{
+			this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
+		}
+		if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
+			message->get_notify(message, EAP_ONLY_AUTHENTICATION))
+		{	/* EAP-only has no official notify, accept only from strongSwan */
+			this->ike_sa->enable_extension(this->ike_sa,
+										   EXT_EAP_ONLY_AUTHENTICATION);
+		}
 	}
 
 	if (this->other_auth == NULL)

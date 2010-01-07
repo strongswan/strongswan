@@ -91,6 +91,11 @@ enum ike_extension_t {
 	 * peer uses strongSwan, accept private use extensions
 	 */
 	EXT_STRONGSWAN = (1<<4),
+
+	/**
+	 * peer supports EAP-only authentication, draft-eronen-ipsec-ikev2-eap-auth
+	 */
+	EXT_EAP_ONLY_AUTHENTICATION = (1<<5),
 };
 
 /**
