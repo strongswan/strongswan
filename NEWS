@@ -1,7 +1,7 @@
 strongswan-4.3.6
 ----------------
 
-- The IKEv2 daemon supports RFC 3779 IP address block constraints 
+- The IKEv2 daemon supports RFC 3779 IP address block constraints
   carried as a critical X.509v3 extension in the peer certificate.
 
 - The ipsec pool --add|del dns|nbns command manages DNS and NBNS name
@@ -28,6 +28,12 @@ strongswan-4.3.6
 
 - Fixed BEET mode connections on recent kernels by installing SAs with
   appropriate traffic selectors, based on a patch by Michael Rossberg.
+
+- Using extensions (such as BEET mode) and crypto algorithms (such as twofish,
+  serpent, sha256_96) allocated in the private use space now require that we
+  know its meaning, i.e. we are talking to strongSwan. Use the new
+  "charon.send_vendor_id" option in strongswan.conf to let the remote peer know
+  this is the case.
 
 - The IKEv1 daemon ignores the Juniper SRX notification type 40001, thus
   allowing interoperability.
