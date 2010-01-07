@@ -30,6 +30,7 @@
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_dpd.h>
+#include <sa/tasks/ike_vendor.h>
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/child_delete.h>
@@ -295,6 +296,7 @@ static status_t build_request(private_task_manager_t *this)
 				{
 					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
+					activate_task(this, IKE_VENDOR);
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT_PRE);
 #ifdef ME
@@ -680,6 +682,8 @@ static status_t process_request(private_task_manager_t *this,
 			case IKE_SA_INIT:
 			{
 				task = (task_t*)ike_init_create(this->ike_sa, FALSE, NULL);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_vendor_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);

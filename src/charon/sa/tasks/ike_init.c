@@ -24,7 +24,6 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
-#include <encoding/payloads/vendor_id_payload.h>
 
 /** maximum retries to do with cookies/other dh groups */
 #define MAX_RETRIES 5
@@ -211,13 +210,6 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 
 				this->other_nonce = nonce_payload->get_nonce(nonce_payload);
 				break;
-			}
-			case VENDOR_ID:
-			{
-				vendor_id_payload_t *vendor_id = (vendor_id_payload_t*)payload;
-				chunk_t vid = vendor_id->get_data(vendor_id);
-
-				DBG1(DBG_ENC, "received vendor id: %#B", &vid);
 			}
 			default:
 				break;

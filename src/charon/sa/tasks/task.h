@@ -57,6 +57,8 @@ enum task_type_t {
 	IKE_DELETE,
 	/** liveness check */
 	IKE_DPD,
+	/** Vendor ID processing */
+	IKE_VENDOR,
 #ifdef ME
 	/** handle ME stuff */
 	IKE_ME,

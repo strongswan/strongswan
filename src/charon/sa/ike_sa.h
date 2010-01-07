@@ -86,6 +86,11 @@ enum ike_extension_t {
 	 * peer supports multiple authentication exchanges, RFC4739
 	 */
 	EXT_MULTIPLE_AUTH = (1<<3),
+
+	/**
+	 * peer uses strongSwan, accept private use extensions
+	 */
+	EXT_STRONGSWAN = (1<<4),
 };
 
 /**
