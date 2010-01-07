@@ -161,7 +161,8 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
  * Implementation of child_cfg_t.select_proposal.
  */
 static proposal_t* select_proposal(private_child_cfg_t*this,
-								   linked_list_t *proposals, bool strip_dh)
+								   linked_list_t *proposals, bool strip_dh,
+								   bool private)
 {
 	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
@@ -179,7 +180,7 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 			{
 				stored->strip_dh(stored);
 			}
-			selected = stored->select(stored, supplied);
+			selected = stored->select(stored, supplied, private);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
@@ -500,7 +501,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
 	this->public.add_proposal = (void (*) (child_cfg_t*,proposal_t*))add_proposal;
 	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*,bool))get_proposals;
-	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool))select_proposal;
+	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool,bool))select_proposal;
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
 	this->public.get_mode = (ipsec_mode_t (*) (child_cfg_t *))get_mode;

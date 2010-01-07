@@ -134,9 +134,10 @@ struct proposal_t {
 	 * in common, a resulting proposal of this kind is created.
 	 *
 	 * @param other			proposal to compair agains
+	 * @param private		accepts algorithms allocated in a private range
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
-	proposal_t *(*select) (proposal_t *this, proposal_t *other);
+	proposal_t *(*select) (proposal_t *this, proposal_t *other, bool private);
 
 	/**
 	 * Get the protocol ID of the proposal.

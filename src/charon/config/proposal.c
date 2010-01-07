@@ -277,8 +277,8 @@ static bool is_authenticated_encryption(u_int16_t alg)
 /**
  * Find a matching alg/keysize in two linked lists
  */
-static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
-						u_int16_t *alg, size_t *key_size)
+static bool select_algo(linked_list_t *first, linked_list_t *second, bool priv,
+						bool *add, u_int16_t *alg, size_t *key_size)
 {
 	enumerator_t *e1, *e2;
 	algorithm_t *alg1, *alg2;
@@ -302,6 +302,13 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
 			if (alg1->algorithm == alg2->algorithm &&
 				alg1->key_size == alg2->key_size)
 			{
+				if (!priv && alg1->algorithm >= 1024)
+				{
+					/* accept private use algorithms only if requested */
+					DBG1(DBG_CFG, "an algorithm from private space would match, "
+						 "but peer implementation is unknown, skipped");
+					continue;
+				}
 				/* ok, we have an algorithm */
 				*alg = alg1->algorithm;
 				*key_size = alg1->key_size;
@@ -321,7 +328,8 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
 /**
  * Implements proposal_t.select.
  */
-static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t *other)
+static proposal_t *select_proposal(private_proposal_t *this,
+								private_proposal_t *other, bool private)
 {
 	proposal_t *selected;
 	u_int16_t algo;
@@ -340,7 +348,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	selected = proposal_create(this->protocol);
 
 	/* select encryption algorithm */
-	if (select_algo(this->encryption_algos, other->encryption_algos,
+	if (select_algo(this->encryption_algos, other->encryption_algos, private,
 					&add, &algo, &key_size))
 	{
 		if (add)
@@ -359,7 +367,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	/* select integrity algorithm */
 	if (!is_authenticated_encryption(algo))
 	{
-		if (select_algo(this->integrity_algos, other->integrity_algos,
+		if (select_algo(this->integrity_algos, other->integrity_algos, private,
 						&add, &algo, &key_size))
 		{
 			if (add)
@@ -377,7 +385,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 		}
 	}
 	/* select prf algorithm */
-	if (select_algo(this->prf_algos, other->prf_algos,
+	if (select_algo(this->prf_algos, other->prf_algos, private,
 					&add, &algo, &key_size))
 	{
 		if (add)
@@ -394,7 +402,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 		return NULL;
 	}
 	/* select a DH-group */
-	if (select_algo(this->dh_groups, other->dh_groups, &add, &algo, &key_size))
+	if (select_algo(this->dh_groups, other->dh_groups, private,
+					&add, &algo, &key_size))
 	{
 		if (add)
 		{
@@ -408,8 +417,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 			 transform_type_names, DIFFIE_HELLMAN_GROUP);
 		return NULL;
 	}
-	/* select if we use ESNs */
-	if (select_algo(this->esns, other->esns, &add, &algo, &key_size))
+	/* select if we use ESNs (has no private use space) */
+	if (select_algo(this->esns, other->esns, TRUE, &add, &algo, &key_size))
 	{
 		if (add)
 		{
@@ -730,7 +739,7 @@ proposal_t *proposal_create(protocol_id_t protocol)
 	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,u_int16_t*,u_int16_t*))get_algorithm;
 	this->public.has_dh_group = (bool (*)(proposal_t*,diffie_hellman_group_t))has_dh_group;
 	this->public.strip_dh = (void(*)(proposal_t*))strip_dh;
-	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*))select_proposal;
+	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*,bool))select_proposal;
 	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
 	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;
 	this->public.get_spi = (u_int64_t(*)(proposal_t*))get_spi;

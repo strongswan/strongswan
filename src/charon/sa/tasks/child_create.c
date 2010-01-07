@@ -261,6 +261,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
+	bool private;
 
 	if (this->proposals == NULL)
 	{
@@ -278,8 +279,9 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
 
-	this->proposal = this->config->select_proposal(this->config, this->proposals,
-												   no_dh);
+	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
+	this->proposal = this->config->select_proposal(this->config,
+											this->proposals, no_dh, private);
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");

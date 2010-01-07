@@ -128,7 +128,7 @@ static linked_list_t* get_proposals(private_ike_cfg_t *this)
  * Implementation of ike_cfg_t.select_proposal.
  */
 static proposal_t *select_proposal(private_ike_cfg_t *this,
-								   linked_list_t *proposals)
+								   linked_list_t *proposals, bool private)
 {
 	iterator_t *stored_iter, *supplied_iter;
 	proposal_t *stored, *supplied, *selected;
@@ -144,7 +144,7 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
-			selected = stored->select(stored, supplied);
+			selected = stored->select(stored, supplied, private);
 			if (selected)
 			{
 				/* they match, return */
@@ -268,7 +268,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 	this->public.get_other_addr = (char*(*)(ike_cfg_t*))get_other_addr;
 	this->public.add_proposal = (void(*)(ike_cfg_t*, proposal_t*)) add_proposal;
 	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
-	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
+	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*,bool))select_proposal;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
 	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
 	this->public.get_ref = (ike_cfg_t*(*)(ike_cfg_t*))get_ref;

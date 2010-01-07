@@ -77,9 +77,11 @@ struct ike_cfg_t {
 	 * Returned proposal must be destroyed after use.
 	 *
 	 * @param proposals	list of proposals to select from
+	 * @param private	accept algorithms from a private range
 	 * @return			selected proposal, or NULL if none matches.
 	 */
-	proposal_t *(*select_proposal) (ike_cfg_t *this, linked_list_t *proposals);
+	proposal_t *(*select_proposal) (ike_cfg_t *this, linked_list_t *proposals,
+									bool private);
 
 	/**
 	 * Should we send a certificate request in IKE_SA_INIT?
