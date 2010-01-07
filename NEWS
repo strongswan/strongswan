@@ -35,6 +35,12 @@ strongswan-4.3.6
   "charon.send_vendor_id" option in strongswan.conf to let the remote peer know
   this is the case.
 
+- Experimental support for draft-eronen-ipsec-ikev2-eap-auth, where the
+  responder omits public key authentication in favor of a mutual authentication
+  method. To enable EAP-only authentication, set rightauth=eap on the responder
+  to rely only on the MSK constructed AUTH payload. This not-yet standardized
+  extension requires the strongSwan vendor ID introduced above.
+
 - The IKEv1 daemon ignores the Juniper SRX notification type 40001, thus
   allowing interoperability.
 
