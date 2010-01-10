@@ -1,3 +1,5 @@
+moon::cat /var/log/daemon.log::received strongSwan vendor id::YES
+carol::cat /var/log/daemon.log::received strongSwan vendor id::YES
 moon::ipsec statusall::rw.*INSTALLED::YES
 carol::ipsec statusall::home.*INSTALLED::YES
 moon::ipsec statusall::rw.*IKE proposal.*AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048::YES
