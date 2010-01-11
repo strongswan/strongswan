@@ -879,12 +879,14 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				}
 			}
 			else
-			{	/* responder omited AUTH payload, indicating EAP-only */
-				if (!this->my_auth ||
-					!this->my_auth->is_mutual(this->my_auth))
+			{	/* responder omitted AUTH payload, indicating EAP-only */
+				if (!this->my_auth || !this->my_auth->is_mutual(this->my_auth))
 				{
+					DBG1(DBG_IKE, "do not allow non-mutual or weak "
+								  "EAP-only authentication");
 					return FAILED;
 				}
+				DBG1(DBG_IKE, "allow mutual EAP-only authentication");
 			}
 		}
 		if (this->other_auth)
