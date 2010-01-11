@@ -137,6 +137,21 @@ struct private_task_manager_t {
 	 * the task manager has been reset
 	 */
 	bool reset;
+
+	/**
+	 * Number of times we retransmit messages before giving up
+	 */
+	u_int retransmit_tries;
+
+	/**
+	 * Retransmission timeout
+	 */
+	double retransmit_timeout;
+
+	/**
+	 * Base to calculate retransmission timeout
+	 */
+	double retransmit_base;
 };
 
 /**
@@ -212,10 +227,10 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 
 		if (mobike == NULL)
 		{
-			if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+			if (this->initiating.retransmitted <= this->retransmit_tries)
 			{
-				timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
-							pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+				timeout = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+					pow(this->retransmit_base, this->initiating.retransmitted));
 			}
 			else
 			{
@@ -1055,5 +1070,13 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->passive_tasks = linked_list_create();
 	this->reset = FALSE;
 
+	this->retransmit_tries = lib->settings->get_int(lib->settings,
+								"charon.retransmit_tries", RETRANSMIT_TRIES);
+	this->retransmit_timeout = lib->settings->get_double(lib->settings,
+								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT);
+	this->retransmit_base = lib->settings->get_double(lib->settings,
+								"charon.retransmit_base", RETRANSMIT_BASE);
+
 	return &this->public;
 }
+

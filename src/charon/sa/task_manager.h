@@ -31,9 +31,9 @@ typedef struct task_manager_t task_manager_t;
 #include <sa/tasks/task.h>
 
 /**
- * First retransmit timeout in milliseconds.
+ * First retransmit timeout in seconds.
  */
-#define RETRANSMIT_TIMEOUT 4000
+#define RETRANSMIT_TIMEOUT 4.0
 
 /**
  * Base which is raised to the power of the retransmission try.
