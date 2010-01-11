@@ -85,6 +85,16 @@ struct settings_t {
 	int (*get_int)(settings_t *this, char *key, int def, ...);
 
 	/**
+	 * Get an double value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
+	 * @return			value of the key
+	 */
+	double (*get_double)(settings_t *this, char *key, double def, ...);
+
+	/**
 	 * Get a time value.
 	 *
 	 * @param key		key including sections, printf style format

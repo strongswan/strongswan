@@ -255,6 +255,30 @@ static int get_int(private_settings_t *this, char *key, int def, ...)
 }
 
 /**
+ * Implementation of settings_t.get_double.
+ */
+static double get_double(private_settings_t *this, char *key, double def, ...)
+{
+	char *value;
+	double dval;
+	va_list args;
+
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
+	if (value)
+	{
+		errno = 0;
+		dval = strtod(value, NULL);
+		if (errno == 0)
+		{
+			return dval;
+		}
+	}
+	return def;
+}
+
+/**
  * Implementation of settings_t.get_time.
  */
 static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ...)
@@ -525,6 +549,7 @@ settings_t *settings_create(char *file)
 	this = malloc_thing(private_settings_t);
 	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
 	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
+	this->public.get_double = (double(*)(settings_t*, char *key, double def, ...))get_double;
 	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
 	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
 	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
