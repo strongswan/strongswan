@@ -349,8 +349,10 @@ bool return_false();
  */
 static inline void htoun16(void *network, u_int16_t host)
 {
+	char *unaligned = (char*)network;
+
 	host = htons(host);
-	memcpy(network, &host, sizeof(host));
+	memcpy(unaligned, &host, sizeof(host));
 }
 
 /**
@@ -361,8 +363,10 @@ static inline void htoun16(void *network, u_int16_t host)
  */
 static inline void htoun32(void *network, u_int32_t host)
 {
+	char *unaligned = (char*)network;
+
 	host = htonl(host);
-	memcpy(network, &host, sizeof(host));
+	memcpy((char*)unaligned, &host, sizeof(host));
 }
 
 /**
@@ -373,9 +377,10 @@ static inline void htoun32(void *network, u_int32_t host)
  */
 static inline u_int16_t untoh16(void *network)
 {
+	char *unaligned = (char*)network;
 	u_int16_t tmp;
 
-	memcpy(&tmp, network, sizeof(tmp));
+	memcpy(&tmp, unaligned, sizeof(tmp));
 	return ntohs(tmp);
 }
 
@@ -387,9 +392,10 @@ static inline u_int16_t untoh16(void *network)
  */
 static inline u_int32_t untoh32(void *network)
 {
+	char *unaligned = (char*)network;
 	u_int32_t tmp;
 
-	memcpy(&tmp, network, sizeof(tmp));
+	memcpy(&tmp, unaligned, sizeof(tmp));
 	return ntohl(tmp);
 }
 
