@@ -36,7 +36,9 @@ ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
 	"EAP_MD5",
 	"EAP_OTP",
 	"EAP_GTC");
-ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
+ENUM_NEXT(eap_type_names, EAP_TLS, EAP_TLS, EAP_GTC,
+	"EAP_TLS");
+ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_TLS,
 	"EAP_SIM");
 ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
 	"EAP_AKA");

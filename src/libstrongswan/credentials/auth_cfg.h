@@ -60,6 +60,7 @@ enum eap_type_t {
 	EAP_MD5 = 4,
 	EAP_OTP = 5,
 	EAP_GTC = 6,
+	EAP_TLS = 13,
 	EAP_SIM = 18,
 	EAP_AKA = 23,
 	EAP_MSCHAPV2 = 26,

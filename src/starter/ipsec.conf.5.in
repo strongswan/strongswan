@@ -541,6 +541,7 @@ an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
 .BR eap-gtc ,
 .BR eap-md5 ,
+.BR eap-tls ,
 .B eap-mschapv2
 and
 .BR eap-sim .

@@ -29,6 +29,7 @@ eap_type_t eap_type_from_string(char *name)
 		{"md5",			EAP_MD5},
 		{"otp",			EAP_OTP},
 		{"gtc",			EAP_GTC},
+		{"tls",			EAP_TLS},
 		{"sim",			EAP_SIM},
 		{"aka",			EAP_AKA},
 		{"mschapv2",	EAP_MSCHAPV2},
