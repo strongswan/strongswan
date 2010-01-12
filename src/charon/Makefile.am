@@ -60,6 +60,7 @@ processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
+processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
 processing/scheduler.c processing/scheduler.h \
 processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \

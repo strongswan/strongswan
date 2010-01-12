@@ -26,6 +26,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/inactivity_job.h>
 
 
 typedef struct private_child_create_t private_child_create_t;
@@ -245,6 +246,25 @@ static bool allocate_spi(private_child_create_t *this)
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Schedule inactivity timeout for CHILD_SA with reqid, if enabled
+ */
+static void schedule_inactivity_timeout(u_int32_t reqid)
+{
+	time_t timeout;
+	bool close_ike;
+
+	timeout = lib->settings->get_time(lib->settings,
+									  "charon.inactivity_timeout", 0);
+	if (timeout)
+	{
+		close_ike = lib->settings->get_bool(lib->settings,
+										"charon.inactivity_close_ike", FALSE);
+		charon->scheduler->schedule_job(charon->scheduler,
+			(job_t*)inactivity_job_create(reqid, timeout, close_ike), timeout);
+	}
 }
 
 /**
@@ -516,6 +536,11 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
+
+	if (!this->rekey)
+	{	/* a rekeyed SA uses the same reqid, no need for a new job */
+		schedule_inactivity_timeout(this->child_sa->get_reqid(this->child_sa));
+	}
 	return SUCCESS;
 }
 
