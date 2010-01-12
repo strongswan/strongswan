@@ -129,6 +129,7 @@ static void run(private_daemon_t *this)
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGHUP);
 	sigaddset(&set, SIGTERM);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	while (TRUE)
 	{
