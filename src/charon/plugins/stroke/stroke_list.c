@@ -661,7 +661,7 @@ static void stroke_list_pgp(linked_list_t *list,bool utc, FILE *out)
 		if (first)
 		{
 
-			fprintf(out, "\n"); 
+			fprintf(out, "\n");
 				fprintf(out, "List of PGP End Entity Certificates:\n");
 				first = FALSE;
 		}
@@ -699,7 +699,8 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 	x509_flag_t flag_mask;
 
 	/* mask all auxiliary flags */
-	flag_mask = ~(X509_SELF_SIGNED | X509_SERVER_AUTH | X509_IP_ADDR_BLOCKS ); 
+	flag_mask = ~(X509_SERVER_AUTH | X509_CLIENT_AUTH |
+				  X509_SELF_SIGNED | X509_IP_ADDR_BLOCKS );
 
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, (void**)&cert))

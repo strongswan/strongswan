@@ -191,7 +191,7 @@
               0x02           "unotice"
             0x03             "id-kp"
               0x01           "serverAuth"				OID_SERVER_AUTH
-              0x02           "clientAuth"
+              0x02           "clientAuth"				OID_CLIENT_AUTH
               0x03           "codeSigning"
               0x04           "emailProtection"
               0x05           "ipsecEndSystem"

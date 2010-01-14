@@ -596,6 +596,9 @@ static void parse_extendedKeyUsage(chunk_t blob, int level0,
 				case OID_SERVER_AUTH:
 					this->flags |= X509_SERVER_AUTH;
 					break;
+				case OID_CLIENT_AUTH:
+					this->flags |= X509_CLIENT_AUTH;
+					break;
 				case OID_OCSP_SIGNING:
 					this->flags |= X509_OCSP_SIGNER;
 					break;
@@ -804,7 +807,7 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 		}
 	}
 	this->flags |= X509_IP_ADDR_BLOCKS;
-	
+
 end:
 	parser->destroy(parser);
 }
@@ -891,7 +894,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				if (this->version < 1 || this->version > 3)
 				{
 					DBG1("X.509v%d not supported", this->version);
-					goto end; 
+					goto end;
 				}
 				else
 				{
@@ -993,7 +996,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						{
 							DBG1("critical %s extension not supported",
 								 (extn_oid == OID_UNKNOWN) ? "unknown" :
-								 (char*)oid_names[extn_oid].name); 
+								 (char*)oid_names[extn_oid].name);
 							goto end;
 						}
 						break;
@@ -1281,7 +1284,7 @@ static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
 		{
 			return chunk_empty;
 		}
-	}					
+	}
 }
 
 /**
@@ -1476,7 +1479,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					 private_key_t *sign_key, int digest_alg)
 {
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
-	chunk_t serverAuth = chunk_empty, ocspSigning = chunk_empty;
+	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
+	chunk_t ocspSigning = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
@@ -1606,6 +1610,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		serverAuth = asn1_build_known_oid(OID_SERVER_AUTH);
 	}
+	if (cert->flags & X509_CLIENT_AUTH)
+	{
+		clientAuth = asn1_build_known_oid(OID_CLIENT_AUTH);
+	}
 
 	/* add ocspSigning extendedKeyUsage flag */
 	if (cert->flags & X509_OCSP_SIGNER)
@@ -1613,13 +1621,13 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		ocspSigning = asn1_build_known_oid(OID_OCSP_SIGNING);
 	}
 
-	if (serverAuth.ptr || ocspSigning.ptr)
+	if (serverAuth.ptr || clientAuth.ptr || ocspSigning.ptr)
 	{
 		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EXTENDED_KEY_USAGE),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
-									asn1_wrap(ASN1_SEQUENCE, "mm",
-										serverAuth, ocspSigning)));
+									asn1_wrap(ASN1_SEQUENCE, "mmm",
+										serverAuth, clientAuth, ocspSigning)));
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */

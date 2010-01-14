@@ -112,6 +112,10 @@ static int issue()
 				{
 					flags |= X509_SERVER_AUTH;
 				}
+				else if (streq(arg, "clientAuth"))
+				{
+					flags |= X509_CLIENT_AUTH;
+				}
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
@@ -342,7 +346,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type pub|pkcs10]",
 		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
-		 "[--ca] [--pathlen len] [--flag serverAuth|ocspSigning]+",
+		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
 		{
 			{"help",	'h', 0, "show usage information"},
