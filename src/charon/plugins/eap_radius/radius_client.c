@@ -295,7 +295,7 @@ static radius_message_t* request(private_radius_client_t *this,
 		radius_message_t *response;
 		bool retransmit = FALSE;
 		struct timeval tv;
-		char buf[1024];
+		char buf[4096];
 		fd_set fds;
 		int res;
 

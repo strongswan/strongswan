@@ -269,6 +269,7 @@ static void add(private_radius_message_t *this, radius_attribute_type_t type,
 {
 	rattr_t *attribute;
 
+	data.len = min(data.len, 253);
 	this->msg = realloc(this->msg,
 						ntohs(this->msg->length) + sizeof(rattr_t) + data.len);
 	attribute = ((void*)this->msg) + ntohs(this->msg->length);

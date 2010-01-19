@@ -117,22 +117,26 @@ static bool radius2ike(private_eap_radius_t *this,
 {
 	enumerator_t *enumerator;
 	eap_payload_t *payload;
-	chunk_t data;
+	chunk_t data, message = chunk_empty;
 	int type;
 
 	enumerator = msg->create_enumerator(msg);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
-		if (type == RAT_EAP_MESSAGE)
+		if (type == RAT_EAP_MESSAGE && data.len)
 		{
-			*out = payload = eap_payload_create_data(data);
-			/* apply EAP method selected by RADIUS server */
-			this->type = payload->get_type(payload, &this->vendor);
-			enumerator->destroy(enumerator);
-			return TRUE;
+			message = chunk_cat("mc", message, data);
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (message.len)
+	{
+		*out = payload = eap_payload_create_data(message);
+		free(message.ptr);
+		/* apply EAP method selected by RADIUS server */
+		this->type = payload->get_type(payload, &this->vendor);
+		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -180,10 +184,18 @@ static status_t process(private_eap_radius_t *this,
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
+	chunk_t data;
 
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
-	request->add(request, RAT_EAP_MESSAGE, in->get_data(in));
+	data = in->get_data(in);
+	/* fragment data suitable for RADIUS (not more than 253 bytes) */
+	while (data.len > 253)
+	{
+		request->add(request, RAT_EAP_MESSAGE, chunk_create(data.ptr, 253));
+		data = chunk_skip(data, 253);
+	}
+	request->add(request, RAT_EAP_MESSAGE, data);
 
 	response = this->client->request(this->client, request);
 	if (response)
