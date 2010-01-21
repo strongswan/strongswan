@@ -123,7 +123,17 @@
  * _name is provided a function pointer, but will get optimized out by GCC.
  */
 #define METHOD(iface, name, ret, this, ...) \
-	static ret name(union {iface *_public; this;} __attribute__((transparent_union)), ##__VA_ARGS__); \
+	static ret name(union {iface *_public; this;} \
+	__attribute__((transparent_union)), ##__VA_ARGS__); \
+	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static ret name(this, ##__VA_ARGS__)
+
+/**
+ * Same as METHOD(), but is defined for two public interfaces.
+ */
+#define METHOD2(iface1, iface2, name, ret, this, ...) \
+	static ret name(union {iface1 *_public1; iface2 *_public2; this;} \
+	__attribute__((transparent_union)), ##__VA_ARGS__); \
 	const static typeof(name) *_##name = (const typeof(name)*)name; \
 	static ret name(this, ##__VA_ARGS__)
 
