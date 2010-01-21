@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -60,7 +60,7 @@ struct private_eap_payload_t {
  * private_eap_payload_t.
  *
  */
-encoding_rule_t eap_payload_encodings[] = {
+static encoding_rule_t eap_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_eap_payload_t, next_payload) 	},
 	/* the critical bit */
@@ -91,10 +91,8 @@ encoding_rule_t eap_payload_encodings[] = {
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_eap_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_eap_payload_t *this)
 {
 	u_int16_t length;
 	u_int8_t code;
@@ -104,14 +102,14 @@ static status_t verify(private_eap_payload_t *this)
 		DBG1(DBG_ENC, "EAP payloads EAP message too short (%d)", this->data.len);
 		return FAILED;
 	}
-	code = *this->data.ptr;
-	length = htons(*(u_int16_t*)(this->data.ptr + 2));
+	length = untoh16(this->data.ptr + 2);
 	if (this->data.len != length)
 	{
-		DBG1(DBG_ENC, "EAP payload length (%d) does not match contained message length (%d)",
-			 this->data.len, length);
+		DBG1(DBG_ENC, "EAP payload length (%d) does not match contained "
+			 "message length (%d)", this->data.len, length);
 		return FAILED;
 	}
+	code = this->data.ptr[0];
 	switch (code)
 	{
 		case EAP_REQUEST:
@@ -140,119 +138,97 @@ static status_t verify(private_eap_payload_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of eap_payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_eap_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_eap_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = eap_payload_encodings;
 	*rule_count = sizeof(eap_payload_encodings) / sizeof(encoding_rule_t);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_payload_type(private_eap_payload_t *this)
+METHOD(payload_t, get_payload_type, payload_type_t,
+	private_eap_payload_t *this)
 {
 	return EXTENSIBLE_AUTHENTICATION;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_eap_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_eap_payload_t *this)
 {
 	return (this->next_payload);
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_eap_payload_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_eap_payload_t *this, payload_type_t type)
 {
 	this->next_payload = type;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_eap_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_eap_payload_t *this)
 {
 	return this->payload_length;
 }
 
-/**
- * Implementation of eap_payload_t.get_data.
- */
-static chunk_t get_data(private_eap_payload_t *this)
+METHOD(eap_payload_t, get_data, chunk_t,
+	private_eap_payload_t *this)
 {
 	return this->data;
 }
 
-/**
- * Implementation of eap_payload_t.set_data.
- */
-static void set_data(private_eap_payload_t *this, chunk_t data)
+METHOD(eap_payload_t, set_data, void,
+	private_eap_payload_t *this, chunk_t data)
 {
-	chunk_free(&this->data);
+	free(this->data.ptr);
 	this->data = chunk_clone(data);
 	this->payload_length = this->data.len + 4;
 }
 
-/**
- * Implementation of eap_payload_t.get_code.
- */
-static eap_code_t get_code(private_eap_payload_t *this)
+METHOD(eap_payload_t, get_code, eap_code_t,
+	private_eap_payload_t *this)
 {
 	if (this->data.len > 0)
 	{
-		return *this->data.ptr;
+		return this->data.ptr[0];
 	}
 	/* should not happen, as it is verified */
 	return 0;
 }
 
-/**
- * Implementation of eap_payload_t.get_identifier.
- */
-static u_int8_t get_identifier(private_eap_payload_t *this)
+METHOD(eap_payload_t, get_identifier, u_int8_t,
+	private_eap_payload_t *this)
 {
 	if (this->data.len > 1)
 	{
-		return *(this->data.ptr + 1);
+		return this->data.ptr[1];
 	}
 	/* should not happen, as it is verified */
 	return 0;
 }
 
-/**
- * Implementation of eap_payload_t.get_type.
- */
-static eap_type_t get_type(private_eap_payload_t *this, u_int32_t *vendor)
+METHOD(eap_payload_t, get_type, eap_type_t,
+	private_eap_payload_t *this, u_int32_t *vendor)
 {
 	eap_type_t type;
 
 	*vendor = 0;
 	if (this->data.len > 4)
 	{
-		type = *(this->data.ptr + 4);
+		type = this->data.ptr[4];
 		if (type != EAP_EXPANDED)
 		{
 			return type;
 		}
 		if (this->data.len >= 12)
 		{
-			*vendor = ntohl(*(u_int32_t*)(this->data.ptr + 4)) & 0x00FFFFFF;
-			return ntohl(*(u_int32_t*)(this->data.ptr + 8));
+			*vendor = untoh32(this->data.ptr + 4) & 0x00FFFFFF;
+			return untoh32(this->data.ptr + 8);
 		}
 	}
 	return 0;
 }
 
-/**
- * Implementation of payload_t.destroy and eap_payload_t.destroy.
- */
-static void destroy(private_eap_payload_t *this)
+METHOD2(payload_t, eap_payload_t, destroy, void,
+	private_eap_payload_t *this)
 {
 	chunk_free(&this->data);
 	free(this);
@@ -263,32 +239,30 @@ static void destroy(private_eap_payload_t *this)
  */
 eap_payload_t *eap_payload_create()
 {
-	private_eap_payload_t *this = malloc_thing(private_eap_payload_t);
+	private_eap_payload_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.destroy = (void (*) (eap_payload_t *)) destroy;
-	this->public.get_data = (chunk_t (*) (eap_payload_t*))get_data;
-	this->public.set_data = (void (*) (eap_payload_t *,chunk_t))set_data;
-	this->public.get_code = (eap_code_t (*) (eap_payload_t*))get_code;
-	this->public.get_identifier = (u_int8_t (*) (eap_payload_t*))get_identifier;
-	this->public.get_type = (eap_type_t (*) (eap_payload_t*,u_int32_t*))get_type;
-
-	/* private variables */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length = EAP_PAYLOAD_HEADER_LENGTH;
-	this->data = chunk_empty;
-
-	return &(this->public);
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_payload_type,
+				.destroy = _destroy,
+			},
+			.get_data = _get_data,
+			.set_data = _set_data,
+			.get_code = _get_code,
+			.get_identifier = _get_identifier,
+			.get_type = _get_type,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = EAP_PAYLOAD_HEADER_LENGTH,
+	);
+	return &this->public;
 }
 
 /*
@@ -307,15 +281,11 @@ eap_payload_t *eap_payload_create_data(chunk_t data)
  */
 eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
 {
-	eap_payload_t *this = eap_payload_create();
-	chunk_t data = chunk_alloca(4);
+	chunk_t data;
 
-	*(data.ptr + 0) = code;
-	*(data.ptr + 1) = identifier;
-	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
-
-	this->set_data(this, data);
-	return this;
+	data = chunk_from_chars(code, identifier, 0, 0);
+	htoun16(data.ptr + 2, data.len);
+	return eap_payload_create_data(data);
 }
 
 /*
@@ -323,15 +293,10 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
  */
 eap_payload_t *eap_payload_create_nak(u_int8_t identifier)
 {
-	eap_payload_t *this = eap_payload_create();
-	chunk_t data = chunk_alloca(5);
+	chunk_t data;
 
-	*(data.ptr + 0) = EAP_RESPONSE;
-	*(data.ptr + 1) = identifier;
-	*(u_int16_t*)(data.ptr + 2) = htons(data.len);
-	*(data.ptr + 4) = EAP_NAK;
-
-	this->set_data(this, data);
-	return this;
+	data = chunk_from_chars(EAP_RESPONSE, identifier, 0, 0, EAP_NAK);
+	htoun16(data.ptr + 2, data.len);
+	return eap_payload_create_data(data);
 }
 
