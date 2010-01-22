@@ -15,6 +15,10 @@
 
 #include "tls.h"
 
+#include "tls_protection.h"
+#include "tls_compression.h"
+#include "tls_fragmentation.h"
+
 #include <daemon.h>
 
 ENUM(tls_version_names, SSL_2_0, TLS_1_2,
@@ -64,23 +68,42 @@ struct private_tls_t {
 	 * Role this TLS stack acts as.
 	 */
 	bool is_server;
+
+	/**
+	 * TLS record protection layer
+	 */
+	tls_protection_t *protection;
+
+	/**
+	 * TLS record compression layer
+	 */
+	tls_compression_t *compression;
+
+	/**
+	 * TLS record fragmentation layer
+	 */
+	tls_fragmentation_t *fragmentation;
 };
 
 METHOD(tls_t, process, status_t,
 	private_tls_t *this, tls_content_type_t type, chunk_t data)
 {
-	return NEED_MORE;
+	return this->protection->process(this->protection, type, data);
 }
 
 METHOD(tls_t, build, status_t,
 	private_tls_t *this, tls_content_type_t *type, chunk_t *data)
 {
-	return INVALID_STATE;
+	return this->protection->build(this->protection, type, data);
 }
 
 METHOD(tls_t, destroy, void,
 	private_tls_t *this)
 {
+	this->protection->destroy(this->protection);
+	this->compression->destroy(this->compression);
+	this->fragmentation->destroy(this->fragmentation);
+
 	free(this);
 }
 
@@ -99,6 +122,10 @@ tls_t *tls_create(bool is_server)
 		},
 		.is_server = is_server,
 	);
+
+	this->fragmentation = tls_fragmentation_create();
+	this->compression = tls_compression_create(this->fragmentation);
+	this->protection = tls_protection_create(this->compression);
 
 	return &this->public;
 }
