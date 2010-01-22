@@ -15,6 +15,8 @@
 
 #include "tls.h"
 
+#include <daemon.h>
+
 ENUM(tls_version_names, SSL_2_0, TLS_1_2,
 	"SSLv2",
 	"SSLv3",
@@ -44,3 +46,59 @@ ENUM_NEXT(tls_handshake_type_names, TLS_CERTIFICATE, TLS_CLIENT_KEY_EXCHANGE, TL
 ENUM_NEXT(tls_handshake_type_names, TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_EXCHANGE,
 	"Finished");
 ENUM_END(tls_handshake_type_names, TLS_FINISHED);
+
+
+typedef struct private_tls_t private_tls_t;
+
+/**
+ * Private data of an tls_protection_t object.
+ */
+struct private_tls_t {
+
+	/**
+	 * Public tls_t interface.
+	 */
+	tls_t public;
+
+	/**
+	 * Role this TLS stack acts as.
+	 */
+	bool is_server;
+};
+
+METHOD(tls_t, process, status_t,
+	private_tls_t *this, tls_content_type_t type, chunk_t data)
+{
+	return NEED_MORE;
+}
+
+METHOD(tls_t, build, status_t,
+	private_tls_t *this, tls_content_type_t *type, chunk_t *data)
+{
+	return INVALID_STATE;
+}
+
+METHOD(tls_t, destroy, void,
+	private_tls_t *this)
+{
+	free(this);
+}
+
+/**
+ * See header
+ */
+tls_t *tls_create(bool is_server)
+{
+	private_tls_t *this;
+
+	INIT(this,
+		.public = {
+			.process = _process,
+			.build = _build,
+			.destroy = _destroy,
+		},
+		.is_server = is_server,
+	);
+
+	return &this->public;
+}

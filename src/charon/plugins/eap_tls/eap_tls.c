@@ -15,6 +15,8 @@
 
 #include "eap_tls.h"
 
+#include "tls/tls.h"
+
 #include <daemon.h>
 #include <library.h>
 
@@ -44,6 +46,11 @@ struct private_eap_tls_t {
 	 * Is this method instance acting as server?
 	 */
 	bool is_server;
+
+	/**
+	 * TLS layers
+	 */
+	tls_t *tls;
 
 	/**
 	 * Allocated input buffer
@@ -212,28 +219,62 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
  */
 static status_t process_buf(private_eap_tls_t *this)
 {
-	tls_record_t *record;
-	chunk_t input;
+	tls_record_t *in, out;
+	chunk_t data;
 	u_int16_t len;
+	status_t status;
 
-	input = this->input;
-	while (input.len > sizeof(tls_record_t))
+	/* pass input buffer to upper layer, record for record */
+	data = this->input;
+	while (data.len > sizeof(tls_record_t))
 	{
-		record = (tls_record_t*)input.ptr;
-		len = untoh16(&record->length);
-		if (len > input.len)
+		in = (tls_record_t*)data.ptr;
+		len = untoh16(&in->length);
+		if (len > data.len - sizeof(tls_record_t))
 		{
 			DBG1(DBG_IKE, "TLS record length invalid");
 			break;
 		}
-		/* TODO: pass record to next layer */
-		input = chunk_skip(input, len);
+		status = this->tls->process(this->tls, in->type,
+									chunk_create(in->data, len));
+		if (status != NEED_MORE)
+		{
+			return status;
+		}
+		data = chunk_skip(data, len + sizeof(tls_record_t));
 	}
 	chunk_free(&this->input);
 	this->inpos = 0;
 
-	/* TODO: read records from next layer */
-	return NEED_MORE;
+	/* read in records from upper layer, append to output buffer */
+	chunk_free(&this->output);
+	while (TRUE)
+	{
+		tls_content_type_t type;
+		chunk_t header = chunk_from_thing(out);
+
+		status = this->tls->build(this->tls, &type, &data);
+		switch (status)
+		{
+			case INVALID_STATE:
+				/* invalid state means we need more input from peer first */
+				return NEED_MORE;
+			case NEED_MORE:
+			case SUCCESS:
+				break;
+			case FAILED:
+			default:
+				return FAILED;
+		}
+		out.type = type;
+		htoun16(&out.version, TLS_1_2);
+		htoun16(&out.length, data.len);
+		this->output = chunk_cat("mcm", this->output, header, data);
+		if (status == SUCCESS)
+		{
+			return SUCCESS;
+		}
+	}
 }
 
 METHOD(eap_method_t, process, status_t,
@@ -309,6 +350,8 @@ METHOD(eap_method_t, destroy, void,
 	free(this->input.ptr);
 	free(this->output.ptr);
 
+	this->tls->destroy(this->tls);
+
 	free(this);
 }
 
@@ -332,6 +375,7 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
 		.is_server = is_server,
+		.tls = tls_create(is_server),
 	);
 
 	return &this->public;

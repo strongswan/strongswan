@@ -28,6 +28,7 @@ typedef enum tls_version_t tls_version_t;
 typedef enum tls_content_type_t tls_content_type_t;
 typedef enum tls_handshake_type_t tls_handshake_type_t;
 typedef enum tls_cipher_suite_t tls_cipher_suite_t;
+typedef struct tls_t tls_t;
 
 #include <library.h>
 
@@ -122,5 +123,49 @@ enum tls_cipher_suite_t {
 	TLS_DH_ANON_WITH_AES_128_CBC_SHA256 =	0x6C,
 	TLS_DH_ANON_WITH_AES_256_CBC_SHA256 =	0x6D,
 };
+
+/**
+ * A bottom-up driven TLS stack, suitable for EAP implementations.
+ */
+struct tls_t {
+
+	/**
+	 * Process a TLS record, pass it to upper layers.
+	 *
+	 * @param type		type of the TLS record to process
+	 * @param data		associated TLS record data
+	 * @return
+	 *					- SUCCESS if TLS negotiation complete
+	 *					- FAILED if TLS handshake failed
+	 *					- NEED_MORE if more invocations to process/build needed
+	 */
+	status_t (*process)(tls_t *this, tls_content_type_t type, chunk_t data);
+
+	/**
+	 * Query upper layer for TLS record, build protected record.
+	 *
+	 * @param type		type of the built TLS record
+	 * @param data		allocated data of the built TLS record
+	 * @return
+	 *					- SUCCESS if TLS negotiation complete
+	 *					- FAILED if TLS handshake failed
+	 *					- NEED_MORE if upper layers have more records to send
+	 *					- INVALID_STATE if more input records required
+	 */
+	status_t (*build)(tls_t *this, tls_content_type_t *type, chunk_t *data);
+
+	/**
+	 * Destroy a tls_t.
+	 */
+	void (*destroy)(tls_t *this);
+};
+
+/**
+ * Create a tls instance.
+ *
+ * @param is_server		TRUE to act as server, FALSE for client
+ * @return				TLS stack
+ */
+tls_t *tls_create(bool is_server);
 
 #endif /** TLS_H_ @}*/
