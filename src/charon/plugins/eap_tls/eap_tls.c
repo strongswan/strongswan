@@ -74,7 +74,7 @@ struct private_eap_tls_t {
 };
 
 /** Size limit for a single TLS message */
-#define MAX_TLS_MESSAGE_LEN 16192
+#define MAX_TLS_MESSAGE_LEN 16384
 /** Size of a EAP-TLS fragment */
 #define EAP_TLS_FRAGMENT_LEN 1014
 
@@ -137,39 +137,68 @@ static bool write_buf(private_eap_tls_t *this, eap_tls_packet_t *pkt)
 {
 	u_int32_t msg_len;
 	u_int16_t pkt_len;
+	chunk_t data;
 
-	chunk_free(&this->input);
 	pkt_len = untoh16(&pkt->length);
 
 	if (pkt->flags & EAP_TLS_LENGTH)
-	{	/* first fragment */
-		if (pkt_len < sizeof(eap_tls_packet_t) + 4)
+	{
+		if (pkt_len < sizeof(eap_tls_packet_t) + sizeof(msg_len))
 		{
 			DBG1(DBG_IKE, "EAP-TLS packet too short");
 			return FALSE;
 		}
 		msg_len = untoh32(pkt + 1);
-		this->inpos = pkt_len - sizeof(eap_tls_packet_t) - 4;
-		if (msg_len < this->inpos || msg_len > MAX_TLS_MESSAGE_LEN)
+		if (msg_len < pkt_len - sizeof(eap_tls_packet_t) - sizeof(msg_len) ||
+			msg_len > MAX_TLS_MESSAGE_LEN)
 		{
 			DBG1(DBG_IKE, "invalid EAP-TLS packet length");
 			return FALSE;
 		}
-		this->input = chunk_alloc(msg_len);
-		memcpy(this->input.ptr, ((char*)(pkt + 1)) + 4, this->inpos);
+		if (this->input.ptr)
+		{
+			if (msg_len != this->input.len)
+			{
+				DBG1(DBG_IKE, "received unexpected TLS message length");
+				return FALSE;
+			}
+		}
+		else
+		{
+			this->input = chunk_alloc(msg_len);
+			this->inpos = 0;
+		}
+		data = chunk_create((char*)(pkt + 1) + sizeof(msg_len),
+						pkt_len - sizeof(eap_tls_packet_t) - sizeof(msg_len));
 	}
 	else
-	{	/* non-first fragment */
-		if (pkt_len > this->input.len - this->inpos)
-		{
-			DBG1(DBG_IKE, "EAP-TLS fragment exceeds TLS message length");
-			return FALSE;
-		}
-		memcpy(this->input.ptr + this->inpos, (char*)(pkt + 1),
-			   pkt_len - sizeof(eap_tls_packet_t));
-		this->inpos += pkt_len - sizeof(eap_tls_packet_t);
+	{
+		data = chunk_create((char*)(pkt + 1),
+						pkt_len - sizeof(eap_tls_packet_t));
 	}
+	if (data.len > this->input.len - this->inpos)
+	{
+		DBG1(DBG_IKE, "EAP-TLS fragment exceeds TLS message length");
+		return FALSE;
+	}
+	memcpy(this->input.ptr + this->inpos, data.ptr, data.len);
+	this->inpos += data.len;
 	return TRUE;
+}
+
+/**
+ * Send an ack to request next fragment
+ */
+static eap_payload_t *create_ack(private_eap_tls_t *this, u_int8_t identifier)
+{
+	eap_tls_packet_t pkt = {
+		.code = this->is_server ? EAP_REQUEST : EAP_RESPONSE,
+		.identifier = this->is_server ? identifier + 1 : identifier,
+		.type = EAP_TLS,
+	};
+	htoun16(&pkt.length, sizeof(pkt));
+
+	return eap_payload_create_data(chunk_from_thing(pkt));
 }
 
 /**
@@ -256,12 +285,13 @@ static status_t process_buf(private_eap_tls_t *this)
 		status = this->tls->build(this->tls, &type, &data);
 		switch (status)
 		{
+			case NEED_MORE:
+				break;
 			case INVALID_STATE:
 				/* invalid state means we need more input from peer first */
 				return NEED_MORE;
-			case NEED_MORE:
 			case SUCCESS:
-				break;
+				return SUCCESS;
 			case FAILED:
 			default:
 				return FAILED;
@@ -270,10 +300,6 @@ static status_t process_buf(private_eap_tls_t *this)
 		htoun16(&out.version, TLS_1_2);
 		htoun16(&out.length, data.len);
 		this->output = chunk_cat("mcm", this->output, header, data);
-		if (status == SUCCESS)
-		{
-			return SUCCESS;
-		}
 	}
 }
 
@@ -305,7 +331,7 @@ METHOD(eap_method_t, process, status_t,
 		}
 		if (pkt->flags & EAP_TLS_MORE_FRAGS)
 		{	/* more fragments follow */
-			*out = read_buf(this, pkt->identifier);
+			*out = create_ack(this, pkt->identifier);
 			return NEED_MORE;
 		}
 		else if (this->input.len != this->inpos)
