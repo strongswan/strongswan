@@ -177,6 +177,9 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 			hash = HASH_SHA512;
 			trunc = 32;
 			break;
+		case AUTH_HMAC_SHA2_256_256:
+			hash = HASH_SHA256;
+			trunc = 32;
 		default:
 			return NULL;
 	}
