@@ -30,6 +30,11 @@ struct private_tls_server_t {
 	tls_server_t public;
 
 	/**
+	 * TLS stack
+	 */
+	tls_t *tls;
+
+	/**
 	 * TLS crypto context
 	 */
 	tls_crypto_t *crypto;
@@ -57,7 +62,7 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_server_t *tls_server_create(tls_crypto_t *crypto)
+tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto)
 {
 	private_tls_server_t *this;
 
@@ -67,6 +72,7 @@ tls_server_t *tls_server_create(tls_crypto_t *crypto)
 			.build = _build,
 			.destroy = _destroy,
 		},
+		.tls = tls,
 		.crypto = crypto,
 	);
 

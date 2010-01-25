@@ -24,13 +24,14 @@
 
 #include <daemon.h>
 
-ENUM(tls_version_names, SSL_2_0, TLS_1_2,
-	"SSLv2",
+ENUM_BEGIN(tls_version_names, SSL_2_0, SSL_2_0,
+	"SSLv2");
+ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_2, SSL_2_0,
 	"SSLv3",
 	"TLS 1.0",
 	"TLS 1.1",
-	"TLS 1.2",
-);
+	"TLS 1.2");
+ENUM_END(tls_version_names, TLS_1_2);
 
 ENUM(tls_content_type_names, TLS_CHANGE_CIPHER_SPEC, TLS_APPLICATION_DATA,
 	"ChangeCipherSpec",
@@ -73,6 +74,11 @@ struct private_tls_t {
 	bool is_server;
 
 	/**
+	 * Negotiated TLS version
+	 */
+	tls_version_t version;
+
+	/**
 	 * TLS record protection layer
 	 */
 	tls_protection_t *protection;
@@ -110,6 +116,18 @@ METHOD(tls_t, build, status_t,
 	return this->protection->build(this->protection, type, data);
 }
 
+METHOD(tls_t, get_version, tls_version_t,
+	private_tls_t *this)
+{
+	return this->version;
+}
+
+METHOD(tls_t, set_version, void,
+	private_tls_t *this, tls_version_t version)
+{
+	this->version = version;
+}
+
 METHOD(tls_t, destroy, void,
 	private_tls_t *this)
 {
@@ -133,19 +151,24 @@ tls_t *tls_create(bool is_server)
 		.public = {
 			.process = _process,
 			.build = _build,
+			.get_version = _get_version,
+			.set_version = _set_version,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
 		.crypto = tls_crypto_create(),
+		.version = TLS_1_2,
 	);
 
 	if (is_server)
 	{
-		this->handshake = &tls_server_create(this->crypto)->handshake;
+		this->handshake = &tls_server_create(&this->public,
+											 this->crypto)->handshake;
 	}
 	else
 	{
-		this->handshake = &tls_peer_create(this->crypto)->handshake;
+		this->handshake = &tls_peer_create(&this->public,
+										   this->crypto)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);

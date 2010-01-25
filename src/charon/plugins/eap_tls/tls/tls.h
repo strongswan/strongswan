@@ -155,6 +155,20 @@ struct tls_t {
 	status_t (*build)(tls_t *this, tls_content_type_t *type, chunk_t *data);
 
 	/**
+	 * Get the negotiated TLS/SSL version.
+	 *
+	 * @return			negotiated TLS version
+	 */
+	tls_version_t (*get_version)(tls_t *this);
+
+	/**
+	 * Set the negotiated TLS/SSL version.
+	 *
+	 * @param version	negotiated TLS version
+	 */
+	void (*set_version)(tls_t *this, tls_version_t version);
+
+	/**
 	 * Destroy a tls_t.
 	 */
 	void (*destroy)(tls_t *this);

@@ -40,6 +40,6 @@ struct tls_peer_t {
 /**
  * Create a tls_peer instance.
  */
-tls_peer_t *tls_peer_create(tls_crypto_t *crypto);
+tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto);
 
 #endif /** TLS_PEER_H_ @}*/

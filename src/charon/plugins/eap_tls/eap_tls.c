@@ -262,8 +262,15 @@ static status_t process_buf(private_eap_tls_t *this)
 		if (len > data.len - sizeof(tls_record_t))
 		{
 			DBG1(DBG_IKE, "TLS record length invalid");
-			break;
+			return FAILED;
 		}
+		if (untoh16(&in->version) < TLS_1_0)
+		{
+			DBG1(DBG_IKE, "%N invalid with EAP-TLS",
+				 tls_version_names, untoh16(&in->version));
+			return FAILED;
+		}
+
 		status = this->tls->process(this->tls, in->type,
 									chunk_create(in->data, len));
 		if (status != NEED_MORE)
@@ -297,7 +304,7 @@ static status_t process_buf(private_eap_tls_t *this)
 				return FAILED;
 		}
 		out.type = type;
-		htoun16(&out.version, TLS_1_2);
+		htoun16(&out.version, this->tls->get_version(this->tls));
 		htoun16(&out.length, data.len);
 		this->output = chunk_cat("mcm", this->output, header, data);
 	}

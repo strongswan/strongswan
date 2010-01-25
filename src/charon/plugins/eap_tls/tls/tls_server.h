@@ -40,6 +40,6 @@ struct tls_server_t {
 /**
  * Create a tls_server instance.
  */
-tls_server_t *tls_server_create(tls_crypto_t *crypto);
+tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto);
 
 #endif /** TLS_SERVER_H_ @}*/
