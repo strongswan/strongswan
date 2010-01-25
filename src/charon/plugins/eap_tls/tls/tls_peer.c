@@ -30,6 +30,11 @@ struct private_tls_peer_t {
 	 * Public tls_peer_t interface.
 	 */
 	tls_peer_t public;
+
+	/**
+	 * TLS crypto context
+	 */
+	tls_crypto_t *crypto;
 };
 
 METHOD(tls_handshake_t, process, status_t,
@@ -53,7 +58,7 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_peer_t *tls_peer_create()
+tls_peer_t *tls_peer_create(tls_crypto_t *crypto)
 {
 	private_tls_peer_t *this;
 
@@ -63,6 +68,7 @@ tls_peer_t *tls_peer_create()
 			.build = _build,
 			.destroy = _destroy,
 		},
+		.crypto = crypto,
 	);
 
 	return &this->public;

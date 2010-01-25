@@ -14,32 +14,39 @@
  */
 
 /**
- * @defgroup tls_server tls_server
+ * @defgroup tls_crypto tls_crypto
  * @{ @ingroup tls
  */
 
-#ifndef TLS_SERVER_H_
-#define TLS_SERVER_H_
+#ifndef TLS_CRYPTO_H_
+#define TLS_CRYPTO_H_
 
-typedef struct tls_server_t tls_server_t;
+typedef struct tls_crypto_t tls_crypto_t;
 
-#include "tls_handshake.h"
-#include "tls_crypto.h"
+#include "tls.h"
 
 /**
- * TLS handshake protocol handler as peer.
+ * TLS crypto helper functions.
  */
-struct tls_server_t {
+struct tls_crypto_t {
 
 	/**
-	 * Implements the TLS handshake protocol handler.
+	 * Get a list of supported TLS cipher suites.
+	 *
+	 * @param suites		allocated list of suites
+	 * @return				number of suites returned
 	 */
-	tls_handshake_t handshake;
+	int (*get_cipher_suites)(tls_crypto_t *this, tls_cipher_suite_t **suites);
+
+	/**
+	 * Destroy a tls_crypto_t.
+	 */
+	void (*destroy)(tls_crypto_t *this);
 };
 
 /**
- * Create a tls_server instance.
+ * Create a tls_crypto instance.
  */
-tls_server_t *tls_server_create(tls_crypto_t *crypto);
+tls_crypto_t *tls_crypto_create();
 
-#endif /** TLS_SERVER_H_ @}*/
+#endif /** TLS_CRYPTO_H_ @}*/

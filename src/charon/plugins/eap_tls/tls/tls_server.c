@@ -28,6 +28,11 @@ struct private_tls_server_t {
 	 * Public tls_server_t interface.
 	 */
 	tls_server_t public;
+
+	/**
+	 * TLS crypto context
+	 */
+	tls_crypto_t *crypto;
 };
 
 
@@ -52,7 +57,7 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_server_t *tls_server_create()
+tls_server_t *tls_server_create(tls_crypto_t *crypto)
 {
 	private_tls_server_t *this;
 
@@ -62,6 +67,7 @@ tls_server_t *tls_server_create()
 			.build = _build,
 			.destroy = _destroy,
 		},
+		.crypto = crypto,
 	);
 
 	return &this->public;

@@ -18,6 +18,7 @@
 #include "tls_protection.h"
 #include "tls_compression.h"
 #include "tls_fragmentation.h"
+#include "tls_crypto.h"
 #include "tls_server.h"
 #include "tls_peer.h"
 
@@ -87,6 +88,11 @@ struct private_tls_t {
 	tls_fragmentation_t *fragmentation;
 
 	/**
+	 * TLS crypto helper context
+	 */
+	tls_crypto_t *crypto;
+
+	/**
 	 * TLS handshake protocol handler
 	 */
 	tls_handshake_t *handshake;
@@ -110,6 +116,7 @@ METHOD(tls_t, destroy, void,
 	this->protection->destroy(this->protection);
 	this->compression->destroy(this->compression);
 	this->fragmentation->destroy(this->fragmentation);
+	this->crypto->destroy(this->crypto);
 	this->handshake->destroy(this->handshake);
 
 	free(this);
@@ -129,15 +136,16 @@ tls_t *tls_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
+		.crypto = tls_crypto_create(),
 	);
 
 	if (is_server)
 	{
-		this->handshake = &tls_server_create()->handshake;
+		this->handshake = &tls_server_create(this->crypto)->handshake;
 	}
 	else
 	{
-		this->handshake = &tls_peer_create()->handshake;
+		this->handshake = &tls_peer_create(this->crypto)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);
