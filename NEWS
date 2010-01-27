@@ -12,9 +12,9 @@ strongswan-4.3.6
 
 - The IKEv1 and IKEV2 daemons now check certificate path length constraints.
 
-- The new strongswan.conf option "charon.inactivity_timeout" closes a CHILD_SA
-  if no traffic was sent or received within the given interval. To close the
-  complete IKE_SA if its only CHILD_SA was inactive, set
+- The new ipsec.conf conn option "inactivity" closes a CHILD_SA if no traffic
+  was sent or received within the given interval. To close the complete IKE_SA
+  if its only CHILD_SA was inactive, set the global strongswan.conf option
   "charon.inactivity_close_ike" to yes.
 
 - More detailed IKEv2 EAP payload information in debug output
