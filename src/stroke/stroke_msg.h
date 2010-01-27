@@ -223,6 +223,7 @@ struct stroke_msg_t {
 			int mobike;
 			int force_encap;
 			int ipcomp;
+			time_t inactivity;
 			int proxy_mode;
 			int install_policy;
 

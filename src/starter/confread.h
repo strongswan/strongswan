@@ -135,6 +135,8 @@ struct starter_conn {
 		dpd_action_t    dpd_action;
 		int             dpd_count;
 
+		time_t          inactivity;
+
 		bool            me_mediation;
 		char            *me_mediated_by;
 		char            *me_peerid;

@@ -264,6 +264,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;
 	msg.add_conn.dpd.action = conn->dpd_action;
+	msg.add_conn.inactivity = conn->inactivity;
 	msg.add_conn.ikeme.mediation = conn->me_mediation;
 	msg.add_conn.ikeme.mediated_by = push_string(&msg, conn->me_mediated_by);
 	msg.add_conn.ikeme.peerid = push_string(&msg, conn->me_peerid);

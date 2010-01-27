@@ -81,6 +81,7 @@ pfsgroup,          KW_PFSGROUP
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
+inactivity,        KW_INACTIVITY
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH
 mediation,         KW_MEDIATION

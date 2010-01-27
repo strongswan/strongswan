@@ -248,7 +248,7 @@ for Elliptic Curve DSA signatures.
 .B never
 can be used if negotiation is never to be attempted or accepted (useful for
 shunt-only conns).
-Digital signatures are superior in every way to shared secrets. 
+Digital signatures are superior in every way to shared secrets.
 IKEv1 additionally supports the values
 .B xauthpsk
 and
@@ -256,7 +256,7 @@ and
 that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
 based on shared secrets  or digital RSA signatures, respectively.
 This parameter is deprecated for IKEv2 connections, as two peers do not need
-to agree on an authentication method. Use the 
+to agree on an authentication method. Use the
 .B leftauth
 parameter instead to define authentication methods in IKEv2.
 .TP
@@ -282,7 +282,7 @@ and
 loads a connection and brings it up immediatly.
 .B ignore
 ignores the connection. This is equal to delete a connection from the config
-file. 
+file.
 Relevant only locally, other end need not agree on it
 (but in general, for an intended-to-be-permanent connection,
 both ends should use
@@ -314,7 +314,7 @@ are periodically sent in order to check the
 liveliness of the IPsec peer. The values
 .BR clear ,
 .BR hold ,
-and 
+and
 .B restart
 all activate DPD. If no activity is detected, all connections with a dead peer
 are stopped and unrouted (
@@ -348,19 +348,23 @@ defines the timeout interval, after which all connections to a peer are deleted
 in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
+.B inactivity
+defines the timeout interval, after which a CHILD_SA is closed if it did
+not send or receive any traffic. Currently supported in IKEv2 connections only.
+.TP
 .B eap
 defines the EAP type to propose as server if the client requests EAP
 authentication. This parameter is deprecated in the favour of
 .B leftauth.
 
 To forward EAP authentication to a RADIUS server using the EAP-RADIUS plugin,
-set 
+set
 .B eap=radius
 .TP
 .B eap_identity
 defines the identity the client uses to reply to a EAP Identity request.
 If defined on the EAP server, the defined identity will be used as peer
-identity during EAP authentication. The special value 
+identity during EAP authentication. The special value
 .B %identity
 uses the EAP Identity method to ask the client for a EAP identity. If not
 defined, the IKEv2 identity will be used as EAP identity.
@@ -374,7 +378,7 @@ and rekeying include a separate diffe hellman exchange (IKEv2 only).
 .TP
 .B forceencaps
 Force UDP encapsulation for ESP packets even if no NAT situation is detected.
-This may help to hurdle restrictive firewalls. To enforce the peer to 
+This may help to hurdle restrictive firewalls. To enforce the peer to
 encapsulate packets, NAT detection payloads are faked (IKEv2 only).
 .TP
 .B ike
@@ -403,8 +407,8 @@ which protocol should be used to initialize the connection. Connections marked w
 .B ikev1
 are initiated with pluto, those marked with
 .B ikev2
-with charon. An incoming request from the remote peer is handled by the correct 
-daemon, unaffected from the 
+with charon. An incoming request from the remote peer is handled by the correct
+daemon, unaffected from the
 .B keyexchange
 setting. The default value
 .B ike
@@ -472,14 +476,14 @@ and
 .TP
 .B leftauth
 Authentication method to use (local) or require (remote) in this connection.
-This parameter is supported in IKEv2 only. Acceptable values are 
+This parameter is supported in IKEv2 only. Acceptable values are
 .B pubkey
-for public key authentication (RSA/ECDSA), 
+for public key authentication (RSA/ECDSA),
 .B psk
 for pre-shared key authentication and
 .B eap
 to (require the) use of the Extensible Authentication Protocol. In the case
-of 
+of
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .B eap-aka, eap-sim, eap-gtc, eap-md5
@@ -493,7 +497,7 @@ EAP methods are defined in the form
 ).
 .TP
 .B leftauth2
-Same as 
+Same as
 .B leftauth,
 but defines an additional authentication exchange. IKEv2 supports multiple
 authentication rounds using "Multiple Authentication Exchanges" defined
@@ -503,7 +507,7 @@ of host and user (IKEv2 only).
 .B leftca
 the distinguished name of a certificate authority which is required to
 lie in the trust path going from the left participant's certificate up
-to the root certification authority. 
+to the root certification authority.
 .TP
 .B leftca2
 Same as
@@ -516,7 +520,7 @@ PEM or DER format. OpenPGP certificates are supported as well.
 Both absolute paths or paths relative to \fI/etc/ipsec.d/certs\fP
 are accepted. By default
 .B leftcert
-sets 
+sets
 .B leftid
 to the distinguished name of the certificate's subject and
 .B leftca
@@ -657,7 +661,7 @@ or
 .B %cfg,
 an address is requested from the peer. In IKEv2, a defined address is requested,
 but the server may change it. If the server does not support it, the address
-is enforced. 
+is enforced.
 .TP
 .B rightsourceip
 The internal source IP to use in a tunnel for the remote peer. If the
@@ -792,7 +796,7 @@ PFS is enforced by defining a Diffie-Hellman modp group in the
 .B esp
 parameter.
 .TP
-.B pfsgroup 
+.B pfsgroup
 defines a Diffie-Hellman group for perfect forward secrecy in IKEv1 Quick Mode
 differing from the DH group used for IKEv1 Main Mode (IKEv1 only).
 .TP
@@ -887,7 +891,7 @@ and
 (the default).
 
 .SS "CONN PARAMETERS: IKEv2 MEDIATION EXTENSION"
-The following parameters are relevant to IKEv2 Mediation Extension 
+The following parameters are relevant to IKEv2 Mediation Extension
 operation only.
 .TP 14
 .B mediation
@@ -917,7 +921,7 @@ of this connection will be used as peer ID.
 
 .SH "CA SECTIONS"
 This are optional sections that can be used to assign special
-parameters to a Certification Authority (CA). These parameters are not 
+parameters to a Certification Authority (CA). These parameters are not
 supported in IKEv2 yet.
 .TP 10
 .B auto
@@ -925,10 +929,10 @@ currently can have either the value
 .B ignore
 or
 .B add
-. 
+.
 .TP
 .B cacert
-defines a path to the CA certificate either relative to 
+defines a path to the CA certificate either relative to
 \fI/etc/ipsec.d/cacerts\fP or as an absolute path.
 .TP
 .B crluri
@@ -1003,7 +1007,7 @@ Accepted values are
 .B yes
 or
 .BR no .
-The default is 
+The default is
 .B yes
 if starter was compiled with IKEv2 support.
 .TP
@@ -1020,7 +1024,7 @@ Accepted values are
 .B yes
 or
 .BR no .
-The default is 
+The default is
 .B yes
 if starter was compiled with IKEv1 support.
 .TP
@@ -1225,7 +1229,7 @@ value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
 overriding IPsec's (large) default.
 .SH CHOOSING A CONNECTION
 .PP
-When choosing a connection to apply to an outbound packet caught with a 
+When choosing a connection to apply to an outbound packet caught with a
 .BR %trap,
 the system prefers the one with the most specific eroute that
 includes the packet's source and destination IP addresses.

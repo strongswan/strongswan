@@ -199,7 +199,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			else
 			{	/* %poolname, strip %, serve ip requests */
 				end->sourceip = clone_str(value+1);
-				end->sourceip_mask = 0;	
+				end->sourceip_mask = 0;
 			}
 			end->modecfg = TRUE;
 		}
@@ -224,7 +224,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				end->sourceip = clone_str(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
-			else 
+			else
 			{	/* fixed srcip */
 				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 				if (ugh != NULL)
