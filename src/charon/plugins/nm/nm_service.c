@@ -443,7 +443,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 
 	child_cfg = child_cfg_create(priv->name, &lifetime,
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-								 ACTION_NONE, ACTION_NONE, ipcomp);
+								 ACTION_NONE, ACTION_NONE, ipcomp, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);

@@ -232,6 +232,13 @@ struct child_cfg_t {
 	bool (*use_ipcomp)(child_cfg_t *this);
 
 	/**
+	 * Get the inactivity timeout value.
+	 *
+	 * @return				inactivity timeout in s
+	 */
+	u_int32_t (*get_inactivity)(child_cfg_t *this);
+
+	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
@@ -291,11 +298,13 @@ struct child_cfg_t {
  * @param dpd_action		DPD action
  * @param close_action		close action
  * @param ipcomp			use IPComp, if peer supports it
+ * @param inactivity		inactivity timeout in s before closing a CHILD_SA
  * @return 					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t dpd_action,
-							  action_t close_action, bool ipcomp);
+							  action_t close_action, bool ipcomp,
+							  u_int32_t inactivity);
 
 #endif /** CHILD_CFG_H_ @}*/

@@ -134,7 +134,7 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
 		};
 		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
-									 dpd, close, ipcomp);
+									 dpd, close, ipcomp, 0);
 		/* TODO: read proposal from db */
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		add_traffic_selectors(this, child_cfg, id);

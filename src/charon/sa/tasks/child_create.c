@@ -251,19 +251,19 @@ static bool allocate_spi(private_child_create_t *this)
 /**
  * Schedule inactivity timeout for CHILD_SA with reqid, if enabled
  */
-static void schedule_inactivity_timeout(u_int32_t reqid)
+static void schedule_inactivity_timeout(private_child_create_t *this)
 {
-	time_t timeout;
+	u_int32_t timeout;
 	bool close_ike;
 
-	timeout = lib->settings->get_time(lib->settings,
-									  "charon.inactivity_timeout", 0);
+	timeout = this->config->get_inactivity(this->config);
 	if (timeout)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
 										"charon.inactivity_close_ike", FALSE);
-		charon->scheduler->schedule_job(charon->scheduler,
-			(job_t*)inactivity_job_create(reqid, timeout, close_ike), timeout);
+		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
+				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
+									  timeout, close_ike), timeout);
 	}
 }
 
@@ -539,7 +539,7 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 
 	if (!this->rekey)
 	{	/* a rekeyed SA uses the same reqid, no need for a new job */
-		schedule_inactivity_timeout(this->child_sa->get_reqid(this->child_sa));
+		schedule_inactivity_timeout(this);
 	}
 	return SUCCESS;
 }

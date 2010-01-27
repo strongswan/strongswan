@@ -210,7 +210,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	}
 
 	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE,
-								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
+								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE, 0);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
