@@ -765,7 +765,7 @@ static void unshare_connection_strings(connection_t *c)
 
 static void load_end_certificate(char *filename, struct end *dst)
 {
-	time_t valid_until;
+	time_t notBefore, notAfter;
 	cert_t *cert = NULL;
 	certificate_t *certificate;
 	bool cached_cert = FALSE;
@@ -810,15 +810,17 @@ static void load_end_certificate(char *filename, struct end *dst)
 		}
 		else
 		{
-			if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
+			if (!certificate->get_validity(certificate, NULL, &notBefore, &notAfter))
 			{
+				plog("certificate is invalid (valid from %T to %T)",
+					 &notBefore, FALSE, &notAfter, FALSE);
 				cert_free(cert);
 				return;
 			}
 			DBG(DBG_CONTROL,
 				DBG_log("certificate is valid")
 			)
-			add_public_key_from_cert(cert, valid_until, DAL_LOCAL);
+			add_public_key_from_cert(cert, notAfter, DAL_LOCAL);
 			dst->cert = cert_add(cert);
 		}
 		certificate = dst->cert->cert;
