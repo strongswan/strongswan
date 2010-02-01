@@ -188,7 +188,7 @@ static void _kill(private_thread_t *this, int sig)
 }
 
 /**
- * Implementation of thread_t.cancel.
+ * Implementation of thread_t.detach.
  */
 static void detach(private_thread_t *this)
 {
@@ -199,7 +199,7 @@ static void detach(private_thread_t *this)
 }
 
 /**
- * Implementation of thread_t.cancel.
+ * Implementation of thread_t.join.
  */
 static void *join(private_thread_t *this)
 {
