@@ -15,6 +15,8 @@
 
 #include "tls_fragmentation.h"
 
+#include "tls_reader.h"
+
 #include <daemon.h>
 
 typedef struct private_tls_fragmentation_t private_tls_fragmentation_t;
@@ -73,15 +75,17 @@ typedef union  {
  * Process TLS handshake protocol data
  */
 static status_t process_handshake(private_tls_fragmentation_t *this,
-								  chunk_t data)
+								  tls_reader_t *reader)
 {
-	while (data.len)
+	while (reader->remaining(reader))
 	{
+		tls_reader_t *msg;
+		u_int8_t type;
 		u_int32_t len;
 		status_t status;
-		tls_handshake_header_t *hdr;
+		chunk_t data;
 
-		if (data.len == 0 || data.len > MAX_TLS_FRAGMENT_LEN)
+		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
 		{
 			DBG1(DBG_IKE, "TLS fragment has invalid length");
 			return FAILED;
@@ -89,33 +93,38 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 
 		if (this->input.len == 0)
 		{	/* new handshake message */
-			if (data.len < sizeof(tls_handshake_header_t))
+			if (!reader->read_uint8(reader, &type) ||
+				!reader->read_uint24(reader, &len))
 			{
-				DBG1(DBG_IKE, "initial TLS fragment too short %B", &data);
 				return FAILED;
 			}
-			hdr = (tls_handshake_header_t*)data.ptr;
-			len = untoh32(&hdr->length) & 0x00FFFFFF;
-			this->type = hdr->type;
+			this->type = type;
 			if (len > MAX_TLS_HANDSHAKE_LEN)
 			{
 				DBG1(DBG_IKE, "TLS handshake message exceeds maximum length");
 				return FAILED;
 			}
-			this->input = len ? chunk_alloc(len) : chunk_empty;
+			chunk_free(&this->input);
 			this->inpos = 0;
-			data = chunk_skip(data, sizeof(tls_handshake_header_t));
+			if (len)
+			{
+				this->input = chunk_alloc(len);
+			}
 		}
 
-		len = min(this->input.len - this->inpos, data.len);
+		len = min(this->input.len - this->inpos, reader->remaining(reader));
+		if (!reader->read_data(reader, len, &data))
+		{
+			return FAILED;
+		}
 		memcpy(this->input.ptr + this->inpos, data.ptr, len);
 		this->inpos += len;
-		data = chunk_skip(data, len);
 
 		if (this->input.len == this->inpos)
 		{	/* message completely defragmented, process */
-			status = this->handshake->process(this->handshake,
-											  this->type, this->input);
+			msg = tls_reader_create(this->input);
+			status = this->handshake->process(this->handshake, this->type, msg);
+			msg->destroy(msg);
 			chunk_free(&this->input);
 			if (status != NEED_MORE)
 			{
@@ -129,23 +138,34 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 METHOD(tls_fragmentation_t, process, status_t,
 	private_tls_fragmentation_t *this, tls_content_type_t type, chunk_t data)
 {
+	tls_reader_t *reader;
+	status_t status;
+
+	reader = tls_reader_create(data);
 	switch (type)
 	{
 		case TLS_CHANGE_CIPHER_SPEC:
 			/* TODO: handle ChangeCipherSpec */
-			return FAILED;
+			status = FAILED;
+			break;
 		case TLS_ALERT:
 			/* TODO: handle Alert */
-			return FAILED;
+			status = FAILED;
+			break;
 		case TLS_HANDSHAKE:
-			return process_handshake(this, data);
+			status = process_handshake(this, reader);
+			break;
 		case TLS_APPLICATION_DATA:
 			/* skip application data */
-			return NEED_MORE;
+			status = NEED_MORE;
+			break;
 		default:
 			DBG1(DBG_IKE, "received unknown TLS content type %d, ignored", type);
-			return NEED_MORE;
+			status = NEED_MORE;
+			break;
 	}
+	reader->destroy(reader);
+	return status;
 }
 
 METHOD(tls_fragmentation_t, build, status_t,

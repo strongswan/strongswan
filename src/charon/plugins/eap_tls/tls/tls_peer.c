@@ -56,82 +56,28 @@ struct private_tls_peer_t {
 /**
  * Process a server hello message
  */
-static status_t process_server_hello(private_tls_peer_t *this, chunk_t data)
+static status_t process_server_hello(private_tls_peer_t *this,
+									 tls_reader_t *reader)
 {
-	if (data.len >= 38)
+	u_int8_t compression;
+	u_int16_t version, cipher;
+	u_int32_t gmt;
+	chunk_t random, session, ext = chunk_empty;
+
+	if (!reader->read_uint16(reader, &version) ||
+		!reader->read_uint32(reader, &gmt) ||
+		!reader->read_data(reader, 28, &random) ||
+		!reader->read_data8(reader, &session) ||
+		!reader->read_uint16(reader, &cipher) ||
+		!reader->read_uint8(reader, &compression) ||
+		(reader->remaining(reader) && !reader->read_data16(reader, &ext)))
 	{
-		tls_version_t version;
-
-		struct __attribute__((packed)) {
-			u_int16_t version;
-			struct __attribute__((packed)) {
-				u_int32_t gmt;
-				u_int8_t bytes[28];
-			} random;
-			struct __attribute__((packed)) {
-				u_int8_t len;
-				/* points to len */
-				u_int8_t id[data.ptr[34]];
-			} session;
-			u_int16_t cipher;
-			u_int8_t compression;
-			char extensions[];
-		} *hello = (void*)data.ptr;
-
-		if (sizeof(*hello) > data.len)
-		{
-			DBG1(DBG_IKE, "received invalid ServerHello");
-			return FAILED;
-		}
-
-		version = untoh16(&hello->version);
-		if (version < this->tls->get_version(this->tls))
-		{
-			this->tls->set_version(this->tls, version);
-		}
-		return NEED_MORE;
+		DBG1(DBG_IKE, "received invalid ServerHello");
+		return FAILED;
 	}
-	DBG1(DBG_IKE, "server hello has %d bytes", data.len);
-	return FAILED;
-}
-
-/**
- * Process a Certificate message
- */
-static status_t process_certificate(private_tls_peer_t *this, chunk_t data)
-{
-	if (data.len > 3)
+	if (version < this->tls->get_version(this->tls))
 	{
-		u_int32_t total;
-
-		total = untoh32(data.ptr) >> 8;
-		data = chunk_skip(data, 3);
-		if (total != data.len)
-		{
-			DBG1(DBG_IKE, "certificate chain length invalid");
-			return FAILED;
-		}
-		while (data.len > 3)
-		{
-			certificate_t *cert;
-			u_int32_t len;
-
-			len = untoh32(data.ptr) >> 8;
-			data = chunk_skip(data, 3);
-			if (len > data.len)
-			{
-				DBG1(DBG_IKE, "certificate length invalid");
-				return FAILED;
-			}
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-					BUILD_BLOB_ASN1_DER, chunk_create(data.ptr, len), BUILD_END);
-			if (cert)
-			{
-				DBG1(DBG_IKE, "got certificate: %Y", cert->get_subject(cert));
-				cert->destroy(cert);
-			}
-			data = chunk_skip(data, len);
-		}
+		this->tls->set_version(this->tls, version);
 	}
 	return NEED_MORE;
 }
@@ -139,65 +85,79 @@ static status_t process_certificate(private_tls_peer_t *this, chunk_t data)
 /**
  * Process a Certificate message
  */
-static status_t process_certreq(private_tls_peer_t *this, chunk_t data)
+static status_t process_certificate(private_tls_peer_t *this,
+									tls_reader_t *reader)
 {
-	struct __attribute__((packed)) {
-		u_int8_t len;
-		u_int8_t types[];
-	} *certificate;
-	struct __attribute__((packed)) {
-		u_int16_t len;
-		struct __attribute__((packed)) {
-			u_int8_t hash;
-			u_int8_t sig;
-		} types[];
-	} *alg;
-	u_int16_t len;
+	certificate_t *cert;
+	tls_reader_t *certs;
+	chunk_t data;
+
+	if (!reader->read_data24(reader, &data))
+	{
+		return FAILED;
+	}
+	certs = tls_reader_create(data);
+	while (certs->remaining(certs))
+	{
+		if (!certs->read_data24(certs, &data))
+		{
+			certs->destroy(certs);
+			return FAILED;
+		}
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								   BUILD_BLOB_ASN1_DER, data, BUILD_END);
+		if (cert)
+		{
+			DBG1(DBG_IKE, "got certificate: %Y", cert->get_subject(cert));
+			cert->destroy(cert);
+		}
+	}
+	certs->destroy(certs);
+	return NEED_MORE;
+}
+
+/**
+ * Process a Certificate message
+ */
+static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
+{
+	chunk_t types, hashsig, data;
+	tls_reader_t *authorities;
 	identification_t *id;
 
-	certificate = (void*)data.ptr;
-	data = chunk_skip(data, 1);
-	if (!data.len || certificate->len > data.len)
+	if (!reader->read_data8(reader, &types))
 	{
 		return FAILED;
 	}
-	data = chunk_skip(data, certificate->len);
-
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
-		alg = (void*)data.ptr;
-		data = chunk_skip(data, 2);
-		if (!data.len || untoh16(&alg->len) > data.len)
+		if (!reader->read_data16(reader, &hashsig))
 		{
 			return FAILED;
 		}
-		data = chunk_skip(data, untoh16(&alg->len));
 	}
-	if (data.len < 2 || untoh16(data.ptr) != data.len - 2)
+	if (!reader->read_data16(reader, &data))
 	{
 		return FAILED;
 	}
-	data = chunk_skip(data, 2);
-
-	while (data.len >= 2)
+	authorities = tls_reader_create(data);
+	while (authorities->remaining(authorities))
 	{
-		len = untoh16(data.ptr);
-		data = chunk_skip(data, 2);
-		if (len > data.len)
+		if (!authorities->read_data16(authorities, &data))
 		{
+			authorities->destroy(authorities);
 			return FAILED;
 		}
-		id = identification_create_from_encoding(ID_DER_ASN1_DN,
-												 chunk_create(data.ptr, len));
+		id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
 		DBG1(DBG_IKE, "received certificate request for %Y", id);
 		id->destroy(id);
-		data = chunk_skip(data, len);
 	}
+	authorities->destroy(authorities);
 	return NEED_MORE;
 }
 
 METHOD(tls_handshake_t, process, status_t,
-	private_tls_peer_t *this, tls_handshake_type_t type, chunk_t data)
+	private_tls_peer_t *this, tls_handshake_type_t type, tls_reader_t *reader)
 {
 	switch (this->state)
 	{
@@ -205,11 +165,11 @@ METHOD(tls_handshake_t, process, status_t,
 			switch (type)
 			{
 				case TLS_SERVER_HELLO:
-					return process_server_hello(this, data);
+					return process_server_hello(this, reader);
 				case TLS_CERTIFICATE:
-					return process_certificate(this, data);
+					return process_certificate(this, reader);
 				case TLS_CERTIFICATE_REQUEST:
-					return process_certreq(this, data);
+					return process_certreq(this, reader);
 				case TLS_SERVER_HELLO_DONE:
 					this->state = STATE_HELLO_DONE;
 					return NEED_MORE;

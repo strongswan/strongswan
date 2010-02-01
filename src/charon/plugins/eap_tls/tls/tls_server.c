@@ -42,7 +42,7 @@ struct private_tls_server_t {
 
 
 METHOD(tls_handshake_t, process, status_t,
-	private_tls_server_t *this, tls_handshake_type_t type, chunk_t data)
+	private_tls_server_t *this, tls_handshake_type_t type, tls_reader_t *reader)
 {
 	return NEED_MORE;
 }

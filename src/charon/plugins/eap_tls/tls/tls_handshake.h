@@ -24,6 +24,7 @@
 typedef struct tls_handshake_t tls_handshake_t;
 
 #include "tls.h"
+#include "tls_reader.h"
 
 /**
  * TLS handshake state machine interface.
@@ -34,14 +35,14 @@ struct tls_handshake_t {
 	 * Process received TLS handshake message.
 	 *
 	 * @param type		TLS handshake message type
-	 * @param data		TLS handshake data
+	 * @param reader	TLS data buffer
 	 * @return
 	 *					- SUCCESS if handshake complete
 	 *					- FAILED if handshake failed
 	 *					- NEED_MORE if another invocation of process/build needed
 	 */
 	status_t (*process)(tls_handshake_t *this,
-						tls_handshake_type_t type, chunk_t data);
+						tls_handshake_type_t type, tls_reader_t *reader);
 
 	/**
 	 * Build TLS handshake messages to send out.
