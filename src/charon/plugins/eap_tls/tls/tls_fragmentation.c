@@ -50,6 +50,11 @@ struct private_tls_fragmentation_t {
 	 * Currently processed handshake message type
 	 */
 	tls_handshake_type_t type;
+
+	/**
+	 * Handshake output buffer
+	 */
+	chunk_t output;
 };
 
 /**
@@ -61,15 +66,6 @@ struct private_tls_fragmentation_t {
  * Maximum size of a TLS handshake message we accept
  */
 #define MAX_TLS_HANDSHAKE_LEN 65536
-
-/**
- * TLS handshake message header
- */
-typedef union  {
-	u_int8_t type;
-	/* 24bit length field */
-	u_int32_t length;
-} tls_handshake_header_t;
 
 /**
  * Process TLS handshake protocol data
@@ -171,27 +167,61 @@ METHOD(tls_fragmentation_t, process, status_t,
 METHOD(tls_fragmentation_t, build, status_t,
 	private_tls_fragmentation_t *this, tls_content_type_t *type, chunk_t *data)
 {
-	tls_handshake_header_t header;
 	tls_handshake_type_t hs_type;
-	chunk_t hs_data;
+	tls_writer_t *writer, *msg;
 	status_t status;
 
-	status = this->handshake->build(this->handshake, &hs_type, &hs_data);
-	if (status != NEED_MORE)
+	if (!this->output.len)
 	{
-		return status;
+		msg = tls_writer_create(64);
+		do
+		{
+			writer = tls_writer_create(64);
+			status = this->handshake->build(this->handshake, &hs_type, writer);
+			switch (status)
+			{
+				case NEED_MORE:
+					msg->write_uint8(msg, hs_type);
+					msg->write_data24(msg, writer->get_buf(writer));
+					break;
+				case INVALID_STATE:
+					this->output = chunk_clone(msg->get_buf(msg));
+					break;
+				default:
+					break;
+			}
+			writer->destroy(writer);
+		}
+		while (status == NEED_MORE);
+
+		msg->destroy(msg);
+		if (status != INVALID_STATE)
+		{
+			return status;
+		}
 	}
-	htoun32(&header.length, hs_data.len);
-	header.type |= hs_type;
-	*data = chunk_cat("cm", chunk_from_thing(header), hs_data);
-	*type = TLS_HANDSHAKE;
-	return NEED_MORE;
+
+	if (this->output.len)
+	{
+		*type = TLS_HANDSHAKE;
+		if (this->output.len <= MAX_TLS_FRAGMENT_LEN)
+		{
+			*data = this->output;
+			this->output = chunk_empty;
+			return NEED_MORE;
+		}
+		*data = chunk_create(this->output.ptr, MAX_TLS_FRAGMENT_LEN);
+		this->output = chunk_clone(chunk_skip(this->output, MAX_TLS_FRAGMENT_LEN));
+		return NEED_MORE;
+	}
+	return status;
 }
 
 METHOD(tls_fragmentation_t, destroy, void,
 	private_tls_fragmentation_t *this)
 {
 	free(this->input.ptr);
+	free(this->output.ptr);
 	free(this);
 }
 

@@ -186,81 +186,53 @@ METHOD(tls_handshake_t, process, status_t,
 }
 
 /**
- * Build the Client Hello using a given set of ciphers
- */
-static chunk_t build_hello(private_tls_peer_t *this,
-						   int count, tls_cipher_suite_t *suite, rng_t *rng)
-{
-	int i;
-
-	struct __attribute__((packed)) {
-		u_int16_t version;
-		struct __attribute__((packed)) {
-			u_int32_t gmt;
-			u_int8_t bytes[28];
-		} random;
-		struct __attribute__((packed)) {
-			/* never send a session identifier */
-			u_int8_t len;
-			u_int8_t id[0];
-		} session;
-		struct __attribute__((packed)) {
-			u_int16_t len;
-			u_int16_t suite[count];
-		} cipher;
-		struct __attribute__((packed)) {
-			/* currently NULL compression only */
-			u_int8_t len;
-			u_int8_t method[1];
-		} compression;
-		u_int8_t extensions[0];
-	} hello;
-
-	htoun16(&hello.session.len, 0);
-	htoun16(&hello.version, this->tls->get_version(this->tls));
-	htoun32(&hello.random.gmt, time(NULL));
-	rng->get_bytes(rng, sizeof(hello.random.bytes), (char*)&hello.random.bytes);
-	htoun16(&hello.cipher.len, count * 2);
-	for (i = 0; i < count; i++)
-	{
-		htoun16(&hello.cipher.suite[i], suite[i]);
-	}
-	hello.compression.len = 1;
-	hello.compression.method[0] = 0;
-	return chunk_clone(chunk_create((char*)&hello, sizeof(hello)));
-}
-
-/**
  * Send a client hello
  */
 static status_t send_hello(private_tls_peer_t *this,
-						   tls_handshake_type_t *type, chunk_t *data)
+						   tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	tls_cipher_suite_t *suite;
-	int count;
+	int count, i;
 	rng_t *rng;
+	char random[28];
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
 		return FAILED;
 	}
-	count = this->crypto->get_cipher_suites(this->crypto, &suite);
-	*data = build_hello(this, count, suite, rng);
-	*type = TLS_CLIENT_HELLO;
-	free(suite);
+	rng->get_bytes(rng, sizeof(random), random);
 	rng->destroy(rng);
+
+	writer->write_uint16(writer, this->tls->get_version(this->tls));
+	writer->write_uint32(writer, time(NULL));
+	writer->write_data(writer, chunk_from_thing(random));
+	/* session identifier => none */
+	writer->write_data8(writer, chunk_empty);
+
+	count = this->crypto->get_cipher_suites(this->crypto, &suite);
+	writer->write_uint16(writer, count * 2);
+	for (i = 0; i < count; i++)
+	{
+		writer->write_uint16(writer, suite[i]);
+	}
+	free(suite);
+	/* NULL compression only */
+	writer->write_uint8(writer, 1);
+	writer->write_uint8(writer, 0);
+
+	*type = TLS_CLIENT_HELLO;
 	this->state = STATE_HELLO_SENT;
 	return NEED_MORE;
 }
 
 METHOD(tls_handshake_t, build, status_t,
-	private_tls_peer_t *this, tls_handshake_type_t *type, chunk_t *data)
+	private_tls_peer_t *this, tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	switch (this->state)
 	{
 		case STATE_INIT:
-			return send_hello(this, type, data);
+			return send_hello(this, type, writer);
 		default:
 			return INVALID_STATE;
 	}

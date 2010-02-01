@@ -25,6 +25,7 @@ typedef struct tls_handshake_t tls_handshake_t;
 
 #include "tls.h"
 #include "tls_reader.h"
+#include "tls_writer.h"
 
 /**
  * TLS handshake state machine interface.
@@ -48,7 +49,7 @@ struct tls_handshake_t {
 	 * Build TLS handshake messages to send out.
 	 *
 	 * @param type		type of created handshake message
-	 * @param data		allocated TLS handshake message data
+	 * @param writer	TLS data buffer to write to
 	 * @return
 	 *					- SUCCESS if handshake complete
 	 *					- FAILED if handshake failed
@@ -56,7 +57,7 @@ struct tls_handshake_t {
 	 *					- INVALID_STATE if more input to process() required
 	 */
 	status_t (*build)(tls_handshake_t *this,
-					  tls_handshake_type_t *type, chunk_t *data);
+					  tls_handshake_type_t *type, tls_writer_t *writer);
 
 	/**
 	 * Destroy a tls_handshake_t.
