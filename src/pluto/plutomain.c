@@ -674,7 +674,7 @@ int main(int argc, char **argv)
 	init_kernel();
 	init_adns();
 	init_myid();
-	init_fetch();
+	fetch_initialize();
 	ac_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */

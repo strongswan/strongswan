@@ -500,7 +500,7 @@ static void* fetch_thread(void *arg)
 /**
  * Initializes curl and starts the fetching thread
  */
-void init_fetch(void)
+void fetch_initialize(void)
 {
 	if (crl_check_interval > 0)
 	{
