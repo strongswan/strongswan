@@ -750,6 +750,7 @@ void exit_pluto(int status)
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
+	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
 	free_authcerts();           /* free chain of X.509 authority certificates */
@@ -765,7 +766,7 @@ void exit_pluto(int status)
 	free_crypto();
 	free_myid();                /* free myids */
 	free_events();              /* free remaining events */
-	free_vendorid();			/* free all vendor id records */
+	free_vendorid();            /* free all vendor id records */
 	free_builder();
 	delete_lock();
 	options->destroy(options);

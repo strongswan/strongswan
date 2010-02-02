@@ -63,6 +63,7 @@ extern void wake_fetch_thread(const char *who);
 #define wake_fetch_thread(who)      /* do nothing */
 #endif
 extern void init_fetch(void);
+extern void fetch_finalize(void);
 extern void free_crl_fetch(void);
 extern void free_ocsp_fetch(void);
 extern void add_distribution_point(linked_list_t *points, char* new_point);

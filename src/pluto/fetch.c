@@ -450,6 +450,9 @@ static void* fetch_thread(void *arg)
 {
 	struct timespec wait_interval;
 
+	/* the fetching thread is only cancellable while waiting for new events */
+	thread_cancelability(FALSE);
+
 	DBG(DBG_CONTROL,
 		DBG_log("fetch thread started")
 	)
@@ -466,8 +469,11 @@ static void* fetch_thread(void *arg)
 		DBG(DBG_CONTROL,
 			DBG_log("next regular crl check in %ld seconds", crl_check_interval)
 		)
+
+		thread_cancelability(TRUE);
 		status = pthread_cond_timedwait(&fetch_wake_cond, &fetch_wake_mutex
 										, &wait_interval);
+		thread_cancelability(FALSE);
 
 		if (status == ETIMEDOUT)
 		{
@@ -500,18 +506,30 @@ void init_fetch(void)
 	{
 #ifdef THREADS
 		thread = thread_create((thread_main_t)fetch_thread, NULL);
-
 		if (thread == NULL)
 		{
 			plog("fetching thread could not be started");
 		}
-		else
-		{
-			thread->detach(thread);
-		}
 #else   /* !THREADS */
 		plog("warning: not compiled with pthread support");
 #endif  /* !THREADS */
+	}
+}
+
+/**
+ * Terminates the fetching thread
+ */
+void fetch_finalize(void)
+{
+	if (crl_check_interval > 0)
+	{
+#ifdef THREADS
+		if (thread)
+		{
+			thread->cancel(thread);
+			thread->join(thread);
+		}
+#endif
 	}
 }
 
