@@ -408,7 +408,7 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
 		.is_server = is_server,
-		.tls = tls_create(is_server),
+		.tls = tls_create(is_server, server, peer),
 	);
 
 	return &this->public;

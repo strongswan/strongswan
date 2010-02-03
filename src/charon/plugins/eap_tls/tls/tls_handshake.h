@@ -60,6 +60,18 @@ struct tls_handshake_t {
 					  tls_handshake_type_t *type, tls_writer_t *writer);
 
 	/**
+	 * Check if the cipher spec for outgoing messages has changed.
+	 *
+	 * @return			TRUE if cipher spec changed
+	 */
+	bool (*cipherspec_changed)(tls_handshake_t *this);
+
+	/**
+	 * Change the cipher spec for incoming messages.
+	 */
+	void (*change_cipherspec)(tls_handshake_t *this);
+
+	/**
 	 * Destroy a tls_handshake_t.
 	 */
 	void (*destroy)(tls_handshake_t *this);

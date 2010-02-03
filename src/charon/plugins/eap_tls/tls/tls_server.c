@@ -38,6 +38,16 @@ struct private_tls_server_t {
 	 * TLS crypto context
 	 */
 	tls_crypto_t *crypto;
+
+	/**
+	 * Server identity
+	 */
+	identification_t *server;
+
+	/**
+	 * Peer identity
+	 */
+	identification_t *peer;
 };
 
 
@@ -53,6 +63,18 @@ METHOD(tls_handshake_t, build, status_t,
 	return INVALID_STATE;
 }
 
+METHOD(tls_handshake_t, cipherspec_changed, bool,
+	private_tls_server_t *this)
+{
+	return FALSE;
+}
+
+METHOD(tls_handshake_t, change_cipherspec, void,
+	private_tls_server_t *this)
+{
+
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_server_t *this)
 {
@@ -62,7 +84,8 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto)
+tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
+							identification_t *server, identification_t *peer)
 {
 	private_tls_server_t *this;
 
@@ -70,10 +93,14 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto)
 		.public.handshake = {
 			.process = _process,
 			.build = _build,
+			.cipherspec_changed = _cipherspec_changed,
+			.change_cipherspec = _change_cipherspec,
 			.destroy = _destroy,
 		},
 		.tls = tls,
 		.crypto = crypto,
+		.server = server,
+		.peer = peer,
 	);
 
 	return &this->public;

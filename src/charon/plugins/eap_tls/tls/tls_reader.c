@@ -41,6 +41,12 @@ METHOD(tls_reader_t, remaining, u_int32_t,
 	return this->buf.len;
 }
 
+METHOD(tls_reader_t, peek, chunk_t,
+	private_tls_reader_t *this)
+{
+	return this->buf;
+}
+
 METHOD(tls_reader_t, read_uint8, bool,
 	private_tls_reader_t *this, u_int8_t *res)
 {
@@ -175,6 +181,7 @@ tls_reader_t *tls_reader_create(chunk_t data)
 	INIT(this,
 		.public = {
 			.remaining = _remaining,
+			.peek = _peek,
 			.read_uint8 = _read_uint8,
 			.read_uint16 = _read_uint16,
 			.read_uint24 = _read_uint24,

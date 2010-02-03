@@ -178,8 +178,11 @@ struct tls_t {
  * Create a tls instance.
  *
  * @param is_server		TRUE to act as server, FALSE for client
+ * @param server		server identity
+ * @param peer			peer identity
  * @return				TLS stack
  */
-tls_t *tls_create(bool is_server);
+tls_t *tls_create(bool is_server, identification_t *server,
+				  identification_t *peer);
 
 #endif /** TLS_H_ @}*/

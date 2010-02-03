@@ -143,7 +143,8 @@ METHOD(tls_t, destroy, void,
 /**
  * See header
  */
-tls_t *tls_create(bool is_server)
+tls_t *tls_create(bool is_server, identification_t *server,
+				  identification_t *peer)
 {
 	private_tls_t *this;
 
@@ -162,13 +163,13 @@ tls_t *tls_create(bool is_server)
 
 	if (is_server)
 	{
-		this->handshake = &tls_server_create(&this->public,
-											 this->crypto)->handshake;
+		this->handshake = &tls_server_create(&this->public, this->crypto,
+											 server, peer)->handshake;
 	}
 	else
 	{
-		this->handshake = &tls_peer_create(&this->public,
-										   this->crypto)->handshake;
+		this->handshake = &tls_peer_create(&this->public, this->crypto,
+										   peer, server)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);

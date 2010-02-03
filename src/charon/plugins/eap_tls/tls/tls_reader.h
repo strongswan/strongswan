@@ -38,6 +38,13 @@ struct tls_reader_t {
 	u_int32_t (*remaining)(tls_reader_t *this);
 
 	/**
+	 * Peek the remaining data, not consuming any bytes.
+	 *
+	 * @return			remaining data
+	 */
+	chunk_t (*peek)(tls_reader_t *this);
+
+	/**
 	 * Read a 8-bit integer from the buffer, advance.
 	 *
 	 * @param res		pointer to result

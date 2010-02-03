@@ -26,6 +26,8 @@ typedef struct tls_server_t tls_server_t;
 #include "tls_handshake.h"
 #include "tls_crypto.h"
 
+#include <library.h>
+
 /**
  * TLS handshake protocol handler as peer.
  */
@@ -40,6 +42,7 @@ struct tls_server_t {
 /**
  * Create a tls_server instance.
  */
-tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto);
+tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
+							identification_t *server, identification_t *peer);
 
 #endif /** TLS_SERVER_H_ @}*/
