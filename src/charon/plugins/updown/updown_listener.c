@@ -89,11 +89,9 @@ static char* uncache_iface(private_updown_listener_t *this, u_int32_t reqid)
 	return iface;
 }
 
-/**
- * Run the up/down script
- */
-static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
-				   child_sa_t *child_sa, bool up)
+METHOD(listener_t, child_updown, bool,
+	private_updown_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	bool up)
 {
 	traffic_selector_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
@@ -109,7 +107,7 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 
 	if (script == NULL)
 	{
-		return;
+		return TRUE;
 	}
 
 	enumerator = child_sa->create_policy_enumerator(child_sa);
@@ -238,7 +236,7 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		if (shell == NULL)
 		{
 			DBG1(DBG_CHD, "could not execute updown script '%s'", script);
-			return;
+			return TRUE;
 		}
 
 		while (TRUE)
@@ -250,12 +248,8 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 				if (ferror(shell))
 				{
 					DBG1(DBG_CHD, "error reading output from updown script");
-					return;
 				}
-				else
-				{
-					break;
-				}
+				break;
 			}
 			else
 			{
@@ -270,37 +264,11 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		pclose(shell);
 	}
 	enumerator->destroy(enumerator);
-}
-
-/**
- * Listener implementation
- */
-static bool child_state_change(private_updown_listener_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
-{
-	child_sa_state_t old;
-
-	if (ike_sa)
-	{
-		old = child_sa->get_state(child_sa);
-
-		if ((old == CHILD_INSTALLED && state != CHILD_REKEYING ) ||
-			(old == CHILD_DELETING && state == CHILD_DESTROYING))
-		{
-			updown(this, ike_sa, child_sa, FALSE);
-		}
-		else if (state == CHILD_INSTALLED)
-		{
-			updown(this, ike_sa, child_sa, TRUE);
-		}
-	}
 	return TRUE;
 }
 
-/**
- * Implementation of updown_listener_t.destroy.
- */
-static void destroy(private_updown_listener_t *this)
+METHOD(updown_listener_t, destroy, void,
+	private_updown_listener_t *this)
 {
 	this->iface_cache->destroy(this->iface_cache);
 	free(this);
@@ -311,13 +279,15 @@ static void destroy(private_updown_listener_t *this)
  */
 updown_listener_t *updown_listener_create()
 {
-	private_updown_listener_t *this = malloc_thing(private_updown_listener_t);
+	private_updown_listener_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.child_state_change = (void*)child_state_change;
-	this->public.destroy = (void(*)(updown_listener_t*))destroy;
-
-	this->iface_cache = linked_list_create();
+	INIT(this,
+		.public = {
+			.listener.child_updown = _child_updown,
+			.destroy = _destroy,
+		},
+		.iface_cache = linked_list_create(),
+	);
 
 	return &this->public;
 }
