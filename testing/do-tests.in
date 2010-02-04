@@ -631,6 +631,17 @@ do
   </tr>
 @EOF
 
+
+	##########################################################################
+	# remove any charon.pid files that still may exist
+	#
+
+	for host in $IPSECHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+	    ssh $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
+	done
+
     done
 
 done
