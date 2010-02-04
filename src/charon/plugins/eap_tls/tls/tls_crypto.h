@@ -24,6 +24,7 @@
 typedef struct tls_crypto_t tls_crypto_t;
 
 #include "tls.h"
+#include "tls_prf.h"
 
 /**
  * TLS crypto helper functions.
@@ -33,10 +34,37 @@ struct tls_crypto_t {
 	/**
 	 * Get a list of supported TLS cipher suites.
 	 *
-	 * @param suites		allocated list of suites
+	 * @param suites		list of suites, points to internal data
 	 * @return				number of suites returned
 	 */
 	int (*get_cipher_suites)(tls_crypto_t *this, tls_cipher_suite_t **suites);
+
+	/**
+	 * Select and store a cipher suite from a given list of candidates.
+	 *
+	 * @param suites		list of candidates to select from
+	 * @param count			number of suites
+	 * @return				selected suite, 0 if none acceptable
+	 */
+	tls_cipher_suite_t (*select_cipher_suite)(tls_crypto_t *this,
+										tls_cipher_suite_t *suites, int count);
+
+	/**
+	 * Derive the master secret and load it into the PRF.
+	 *
+	 * @param premaster		premaster secret
+	 * @param client_random	random data from client hello
+	 * @param server_random	random data from server hello
+	 */
+	void (*derive_master_secret)(tls_crypto_t *this, chunk_t premaster,
+								 chunk_t client_random, chunk_t server_random);
+
+	/**
+	 * Get the connection state PRF.
+	 *
+	 * @return				PRF, NULL if not supported
+	 */
+	tls_prf_t* (*get_prf)(tls_crypto_t *this);
 
 	/**
 	 * Destroy a tls_crypto_t.
@@ -47,6 +75,6 @@ struct tls_crypto_t {
 /**
  * Create a tls_crypto instance.
  */
-tls_crypto_t *tls_crypto_create();
+tls_crypto_t *tls_crypto_create(tls_t *tls);
 
 #endif /** TLS_CRYPTO_H_ @}*/

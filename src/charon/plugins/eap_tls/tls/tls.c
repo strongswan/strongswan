@@ -157,10 +157,10 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.crypto = tls_crypto_create(),
 		.version = TLS_1_2,
 	);
 
+	this->crypto = tls_crypto_create(&this->public);
 	if (is_server)
 	{
 		this->handshake = &tls_server_create(&this->public, this->crypto,
