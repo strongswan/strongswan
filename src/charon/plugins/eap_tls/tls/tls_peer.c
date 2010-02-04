@@ -508,10 +508,10 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 	}
 	writer->write_data16(writer, signature);
 	free(signature.ptr);
-	chunk_free(&this->handshake);
 
 	*type = TLS_CERTIFICATE_VERIFY;
 	this->state = STATE_VERIFY_SENT;
+	append_handshake(this, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -596,6 +596,7 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 {
 	if (this->state == STATE_VERIFY_SENT)
 	{
+		this->crypto->change_cipher(this->crypto, FALSE);
 		this->state = STATE_CIPHERSPEC_CHANGED;
 		return TRUE;
 	}

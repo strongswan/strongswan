@@ -61,6 +61,17 @@ struct tls_protection_t {
 					  tls_content_type_t *type, chunk_t *data);
 
 	/**
+	 * Set a new cipher, including encryption and integrity algorithms.
+	 *
+	 * @param inbound	TRUE to use cipher for inbound data, FALSE for outbound
+	 * @param signer	new signer to use, gets owned by protection layer
+	 * @param crypter	new crypter to use, gets owned by protection layer
+	 * @param iv		initial IV for crypter, gets owned by protection layer
+	 */
+	void (*set_cipher)(tls_protection_t *this, bool inbound, signer_t *signer,
+					   crypter_t *crypter, chunk_t iv);
+
+	/**
 	 * Destroy a tls_protection_t.
 	 */
 	void (*destroy)(tls_protection_t *this);
@@ -69,9 +80,11 @@ struct tls_protection_t {
 /**
  * Create a tls_protection instance.
  *
+ * @param tls				TLS context
  * @param compression		compression layer of TLS stack
  * @return					TLS protection layer.
  */
-tls_protection_t *tls_protection_create(tls_compression_t *compression);
+tls_protection_t *tls_protection_create(tls_t *tls,
+										tls_compression_t *compression);
 
 #endif /** TLS_PROTECTION_H_ @}*/

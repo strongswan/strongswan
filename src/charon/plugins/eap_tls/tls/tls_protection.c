@@ -30,33 +30,195 @@ struct private_tls_protection_t {
 	tls_protection_t public;
 
 	/**
+	 * TLS context
+	 */
+	tls_t *tls;
+
+	/**
 	 * Upper layer, TLS record compression
 	 */
 	tls_compression_t *compression;
+
+	/**
+	 * RNG if we generate IVs ourself
+	 */
+	rng_t *rng;
+
+	/**
+	 * Sequence number of incoming records
+	 */
+	u_int32_t seq_in;
+
+	/**
+	 * Sequence number for outgoing records
+	 */
+	u_int32_t seq_out;
+
+	/**
+	 * Signer instance for inbound traffic
+	 */
+	signer_t *signer_in;
+
+	/**
+	 * Signer instance for outbound traffic
+	 */
+	signer_t *signer_out;
+
+	/**
+	 * Crypter instance for inbound traffic
+	 */
+	crypter_t *crypter_in;
+
+	/**
+	 * Crypter instance for outbound traffic
+	 */
+	crypter_t *crypter_out;
+
+	/**
+	 * Current IV for input decryption
+	 */
+	chunk_t iv_in;
+
+	/**
+	 * Current IV for output decryption
+	 */
+	chunk_t iv_out;
 };
+
+/**
+ * Create the header to append to the record data to create the MAC
+ */
+static chunk_t sigheader(u_int32_t seq, u_int8_t type,
+						 u_int16_t version, u_int16_t length)
+{
+	/* we only support 32 bit sequence numbers, but TLS uses 64 bit */
+	u_int32_t seq_high = 0;
+
+	seq = htonl(seq);
+	version = htons(version);
+	length = htons(length);
+
+	return chunk_cat("ccccc", chunk_from_thing(seq_high),
+					chunk_from_thing(seq), chunk_from_thing(type),
+					chunk_from_thing(version), chunk_from_thing(length));
+}
 
 METHOD(tls_protection_t, process, status_t,
 	private_tls_protection_t *this, tls_content_type_t type, chunk_t data)
 {
+	this->seq_in++;
 	return this->compression->process(this->compression, type, data);
 }
 
 METHOD(tls_protection_t, build, status_t,
 	private_tls_protection_t *this, tls_content_type_t *type, chunk_t *data)
 {
-	return this->compression->build(this->compression, type, data);
+	status_t status;
+
+	status = this->compression->build(this->compression, type, data);
+	if (*type == TLS_CHANGE_CIPHER_SPEC)
+	{
+		this->seq_out = 0;
+		return status;
+	}
+
+	if (status == NEED_MORE)
+	{
+		if (this->signer_out)
+		{
+			chunk_t mac, header;
+
+			header = sigheader(this->seq_out, *type,
+							   this->tls->get_version(this->tls), data->len);
+			this->signer_out->get_signature(this->signer_out, header, NULL);
+			free(header.ptr);
+			this->signer_out->allocate_signature(this->signer_out, *data, &mac);
+			if (this->crypter_out)
+			{
+				chunk_t padding, iv;
+				u_int8_t bs, padding_length;
+
+				bs = this->crypter_out->get_block_size(this->crypter_out);
+				padding_length = bs - ((data->len + mac.len + 1) % bs);
+
+				padding = chunk_alloca(padding_length);
+				memset(padding.ptr, padding_length, padding.len);
+
+				if (this->iv_out.len)
+				{	/* < TLSv1.2 uses IV from key derivation/last block */
+					iv = this->iv_out;
+				}
+				else
+				{	/* TLSv1.2 uses random IVs, prepended to record */
+					if (!this->rng)
+					{
+						DBG1(DBG_IKE, "no RNG supported to generate TLS IV");
+						free(data->ptr);
+						return FAILED;
+					}
+					this->rng->allocate_bytes(this->rng, bs, &iv);
+				}
+
+				*data = chunk_cat("mmcc", *data, mac, padding,
+								  chunk_from_thing(padding_length));
+				/* encrypt inline */
+				this->crypter_out->encrypt(this->crypter_out, *data,
+										   this->iv_out, NULL);
+
+				if (this->iv_out.len)
+				{	/* next record IV is last ciphertext block of this record */
+					memcpy(this->iv_out.ptr, data->ptr - this->iv_out.len,
+						   this->iv_out.len);
+				}
+				else
+				{	/* prepend IV */
+					*data = chunk_cat("mm", iv, *data);
+				}
+			}
+			else
+			{	/* NULL encryption */
+				*data = chunk_cat("mm", *data, mac);
+			}
+		}
+	}
+	this->seq_out++;
+	return status;
+}
+
+METHOD(tls_protection_t, set_cipher, void,
+	private_tls_protection_t *this, bool inbound, signer_t *signer,
+	crypter_t *crypter, chunk_t iv)
+{
+	if (inbound)
+	{
+		this->signer_in = signer;
+		this->crypter_in = crypter;
+		this->iv_in = iv;
+	}
+	else
+	{
+		this->signer_out = signer;
+		this->crypter_out = crypter;
+		this->iv_out = iv;
+		if (!iv.len)
+		{	/* generate IVs if none given */
+			this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		}
+	}
 }
 
 METHOD(tls_protection_t, destroy, void,
 	private_tls_protection_t *this)
 {
+	DESTROY_IF(this->rng);
 	free(this);
 }
 
 /**
  * See header
  */
-tls_protection_t *tls_protection_create(tls_compression_t *compression)
+tls_protection_t *tls_protection_create(tls_t *tls,
+										tls_compression_t *compression)
 {
 	private_tls_protection_t *this;
 
@@ -64,8 +226,10 @@ tls_protection_t *tls_protection_create(tls_compression_t *compression)
 		.public = {
 			.process = _process,
 			.build = _build,
+			.set_cipher = _set_cipher,
 			.destroy = _destroy,
 		},
+		.tls = tls,
 		.compression = compression,
 	);
 

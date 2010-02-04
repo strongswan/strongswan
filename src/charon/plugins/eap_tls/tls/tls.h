@@ -155,6 +155,13 @@ struct tls_t {
 	status_t (*build)(tls_t *this, tls_content_type_t *type, chunk_t *data);
 
 	/**
+	 * Check if TLS stack is acting as a server.
+	 *
+	 * @return			TRUE if server, FALSE if peer
+	 */
+	bool (*is_server)(tls_t *this);
+
+	/**
 	 * Get the negotiated TLS/SSL version.
 	 *
 	 * @return			negotiated TLS version
@@ -167,6 +174,17 @@ struct tls_t {
 	 * @param version	negotiated TLS version
 	 */
 	void (*set_version)(tls_t *this, tls_version_t version);
+
+	/**
+	 * Change used cipher, including encryption and integrity algorithms.
+	 *
+	 * @param inbound	TRUE to use cipher for inbound data, FALSE for outbound
+	 * @param signer	new signer to use
+	 * @param crypter	new crypter to use
+	 * @param iv		initial IV for crypter
+	 */
+	void (*change_cipher)(tls_t *this, bool inbound, signer_t *signer,
+						  crypter_t *crypter, chunk_t iv);
 
 	/**
 	 * Destroy a tls_t.

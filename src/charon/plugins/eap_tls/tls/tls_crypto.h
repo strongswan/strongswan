@@ -60,6 +60,13 @@ struct tls_crypto_t {
 								 chunk_t client_random, chunk_t server_random);
 
 	/**
+	 * Change the cipher used at protection layer.
+	 *
+	 * @param inbound		TRUE to change inbound cipher, FALSE for outbound
+	 */
+	void (*change_cipher)(tls_crypto_t *this, bool inbound);
+
+	/**
 	 * Get the connection state PRF.
 	 *
 	 * @return				PRF, NULL if not supported

@@ -116,6 +116,12 @@ METHOD(tls_t, build, status_t,
 	return this->protection->build(this->protection, type, data);
 }
 
+METHOD(tls_t, is_server, bool,
+	private_tls_t *this)
+{
+	return this->is_server;
+}
+
 METHOD(tls_t, get_version, tls_version_t,
 	private_tls_t *this)
 {
@@ -126,6 +132,13 @@ METHOD(tls_t, set_version, void,
 	private_tls_t *this, tls_version_t version)
 {
 	this->version = version;
+}
+
+METHOD(tls_t, change_cipher, void,
+	private_tls_t *this, bool inbound, signer_t *signer,
+	crypter_t *crypter, chunk_t iv)
+{
+	this->protection->set_cipher(this->protection, inbound, signer, crypter, iv);
 }
 
 METHOD(tls_t, destroy, void,
@@ -152,8 +165,10 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.public = {
 			.process = _process,
 			.build = _build,
+			.is_server = _is_server,
 			.get_version = _get_version,
 			.set_version = _set_version,
+			.change_cipher = _change_cipher,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
@@ -173,7 +188,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);
-	this->protection = tls_protection_create(this->compression);
+	this->protection = tls_protection_create(&this->public, this->compression);
 
 	return &this->public;
 }
