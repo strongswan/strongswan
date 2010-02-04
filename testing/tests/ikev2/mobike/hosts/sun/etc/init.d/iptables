@@ -12,14 +12,17 @@ depend() {
 start() {
 	ebegin "Starting firewall"
 
+        # enable IP forwarding
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+
 	# default policy is DROP
 	/sbin/iptables -P INPUT DROP
 	/sbin/iptables -P OUTPUT DROP
 	/sbin/iptables -P FORWARD DROP
 
         # allow IPsec tunnel traffic
-        iptables -A INPUT  -m policy --dir in  --pol ipsec --proto esp -j ACCEPT
-        iptables -A OUTPUT -m policy --dir out --pol ipsec --proto esp -j ACCEPT
+        iptables -A FORWARD -m policy --dir in  --pol ipsec --proto esp -j ACCEPT
+        iptables -A FORWARD -m policy --dir out --pol ipsec --proto esp -j ACCEPT
 
 	# allow esp
 	iptables -A INPUT  -i eth0 -p 50 -j ACCEPT
