@@ -26,6 +26,8 @@ typedef struct tls_crypto_t tls_crypto_t;
 #include "tls.h"
 #include "tls_prf.h"
 
+#include <credentials/keys/private_key.h>
+
 /**
  * TLS crypto helper functions.
  */
@@ -50,14 +52,41 @@ struct tls_crypto_t {
 										tls_cipher_suite_t *suites, int count);
 
 	/**
-	 * Derive the master secret and load it into the PRF.
+	 * Store exchanged handshake data, used for cryptographic operations.
+	 *
+	 * @param type			handshake sub type
+	 * @param data			data to append to handshake buffer
+	 */
+	void (*append_handshake)(tls_crypto_t *this,
+							 tls_handshake_type_t type, chunk_t data);
+
+	/**
+	 * Create a signature of the handshake data using a given private key.
+	 *
+	 * @param key			private key to use for signature
+	 * @param sig			allocated signature
+	 * @return				TRUE if signature create successfully
+	 */
+	bool (*sign_handshake)(tls_crypto_t *this, private_key_t *key, chunk_t *sig);
+
+	/**
+	 * Calculate the data of a TLS finished message.
+	 *
+	 * @param label			ASCII label to use for calculation
+	 * @param out			buffer to write finished data to
+	 * @return				TRUE if calculation successful
+	 */
+	bool (*calculate_finished)(tls_crypto_t *this, char *label, char out[12]);
+
+	/**
+	 * Derive the master secret, MAC and encryption keys.
 	 *
 	 * @param premaster		premaster secret
 	 * @param client_random	random data from client hello
 	 * @param server_random	random data from server hello
 	 */
-	void (*derive_master_secret)(tls_crypto_t *this, chunk_t premaster,
-								 chunk_t client_random, chunk_t server_random);
+	void (*derive_secrets)(tls_crypto_t *this, chunk_t premaster,
+						   chunk_t client_random, chunk_t server_random);
 
 	/**
 	 * Change the cipher used at protection layer.
@@ -67,11 +96,13 @@ struct tls_crypto_t {
 	void (*change_cipher)(tls_crypto_t *this, bool inbound);
 
 	/**
-	 * Get the connection state PRF.
+	 * Derive the EAP-TLS MSK.
 	 *
-	 * @return				PRF, NULL if not supported
+	 * @param client_random	random data from client hello
+	 * @param server_random	random data from server hello
 	 */
-	tls_prf_t* (*get_prf)(tls_crypto_t *this);
+	void (*derive_eap_msk)(tls_crypto_t *this,
+						   chunk_t client_random, chunk_t server_random);
 
 	/**
 	 * Get the MSK to use in EAP-TLS.

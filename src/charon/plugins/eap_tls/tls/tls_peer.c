@@ -70,11 +70,6 @@ struct private_tls_peer_t {
 	peer_state_t state;
 
 	/**
-	 * All handshake data concatentated
-	 */
-	chunk_t handshake;
-
-	/**
 	 * Hello random data selected by client
 	 */
 	char client_random[32];
@@ -101,20 +96,6 @@ struct private_tls_peer_t {
 };
 
 /**
- * Append a handshake message to the handshake data buffer
- */
-static void append_handshake(private_tls_peer_t *this,
-							 tls_handshake_type_t type, chunk_t data)
-{
-	u_int32_t header;
-
-	/* reconstruct handshake header */
-	header = htonl(data.len | (type << 24));
-	this->handshake = chunk_cat("mcc", this->handshake,
-								chunk_from_thing(header), data);
-}
-
-/**
  * Process a server hello message
  */
 static status_t process_server_hello(private_tls_peer_t *this,
@@ -125,7 +106,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	chunk_t random, session, ext = chunk_empty;
 	tls_cipher_suite_t suite;
 
-	append_handshake(this, TLS_SERVER_HELLO, reader->peek(reader));
+	this->crypto->append_handshake(this->crypto,
+								   TLS_SERVER_HELLO, reader->peek(reader));
 
 	if (!reader->read_uint16(reader, &version) ||
 		!reader->read_data(reader, sizeof(this->server_random), &random) ||
@@ -164,7 +146,8 @@ static status_t process_certificate(private_tls_peer_t *this,
 	chunk_t data;
 	bool first = TRUE;
 
-	append_handshake(this, TLS_CERTIFICATE, reader->peek(reader));
+	this->crypto->append_handshake(this->crypto,
+								   TLS_CERTIFICATE, reader->peek(reader));
 
 	if (!reader->read_data24(reader, &data))
 	{
@@ -217,7 +200,8 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 	identification_t *id;
 	certificate_t *cert;
 
-	append_handshake(this, TLS_CERTIFICATE_REQUEST, reader->peek(reader));
+	this->crypto->append_handshake(this->crypto,
+								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
 
 	if (!reader->read_data8(reader, &types))
 	{
@@ -267,7 +251,8 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 static status_t process_hello_done(private_tls_peer_t *this,
 								   tls_reader_t *reader)
 {
-	append_handshake(this, TLS_SERVER_HELLO_DONE, reader->peek(reader));
+	this->crypto->append_handshake(this->crypto,
+								   TLS_SERVER_HELLO_DONE, reader->peek(reader));
 	this->state = STATE_HELLO_DONE;
 	return NEED_MORE;
 }
@@ -277,61 +262,28 @@ static status_t process_hello_done(private_tls_peer_t *this,
  */
 static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 {
-	chunk_t seed, received;
-	tls_prf_t *prf;
-	char data[12];
+	chunk_t received;
+	char buf[12];
 
-	if (!reader->read_data(reader, sizeof(data), &received))
+	if (!reader->read_data(reader, sizeof(buf), &received))
 	{
 		DBG1(DBG_IKE, "received server finished too short");
 		return FAILED;
 	}
-
-	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	if (!this->crypto->calculate_finished(this->crypto, "server finished", buf))
 	{
-		/* TODO: use hash of cipher suite only */
-		seed = chunk_empty;
-	}
-	else
-	{
-		hasher_t *md5, *sha1;
-		char buf[HASH_SIZE_MD5 + HASH_SIZE_SHA1];
-
-		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-		if (!md5)
-		{
-			DBG1(DBG_IKE, "unable to create %N Finished, MD5 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		md5->get_hash(md5, this->handshake, buf);
-		md5->destroy(md5);
-		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (!sha1)
-		{
-			DBG1(DBG_IKE, "unable to sign %N Finished, SHA1 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
-		sha1->destroy(sha1);
-
-		seed = chunk_clonea(chunk_from_thing(buf));
-	}
-
-	prf = this->crypto->get_prf(this->crypto);
-	if (!prf)
-	{
+		DBG1(DBG_IKE, "calculating server finished failed");
 		return FAILED;
 	}
-	prf->get_bytes(prf, "server finished", seed, sizeof(data), data);
-
-	if (!chunk_equals(received, chunk_from_thing(data)))
+	if (!chunk_equals(received, chunk_from_thing(buf)))
 	{
 		DBG1(DBG_IKE, "received server finished invalid");
 		return FAILED;
 	}
 	this->state = STATE_COMPLETE;
+	this->crypto->derive_eap_msk(this->crypto,
+								 chunk_from_thing(this->client_random),
+								 chunk_from_thing(this->server_random));
 	return NEED_MORE;
 }
 
@@ -408,7 +360,7 @@ static status_t send_hello(private_tls_peer_t *this,
 
 	*type = TLS_CLIENT_HELLO;
 	this->state = STATE_HELLO_SENT;
-	append_handshake(this, *type, writer->get_buf(writer));
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -462,7 +414,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 
 	*type = TLS_CERTIFICATE;
 	this->state = STATE_CERT_SENT;
-	append_handshake(this, *type, writer->get_buf(writer));
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -489,9 +441,9 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	rng->destroy(rng);
 	htoun16(premaster, TLS_1_2);
 
-	this->crypto->derive_master_secret(this->crypto, chunk_from_thing(premaster),
-									   chunk_from_thing(this->client_random),
-									   chunk_from_thing(this->server_random));
+	this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
+								 chunk_from_thing(this->client_random),
+								 chunk_from_thing(this->server_random));
 
 	enumerator = charon->credentials->create_public_enumerator(
 				charon->credentials, KEY_ANY, this->server, this->server_auth);
@@ -520,7 +472,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 
 	*type = TLS_CLIENT_KEY_EXCHANGE;
 	this->state = STATE_KEY_EXCHANGE_SENT;
-	append_handshake(this, *type, writer->get_buf(writer));
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -532,60 +484,18 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 {
 	chunk_t signature;
 
-	if (!this->private)
+	if (!this->private ||
+		!this->crypto->sign_handshake(this->crypto, this->private, &signature))
 	{
+		DBG1(DBG_IKE, "creating TLS Certificate Verify signature failed");
 		return FAILED;
 	}
-
-	if (this->tls->get_version(this->tls) >= TLS_1_2)
-	{
-		if (!this->private->sign(this->private, SIGN_RSA_EMSA_PKCS1_SHA1,
-								 this->handshake, &signature))
-		{
-			DBG1(DBG_IKE, "creating TLS Certificate Verify signature failed");
-			return FAILED;
-		}
-		/* TODO: signature scheme to hashsign algorithm mapping */
-		writer->write_uint8(writer, 2);	/* sha1 */
-		writer->write_uint8(writer, 1); /* RSA */
-	}
-	else
-	{
-		hasher_t *md5, *sha1;
-		char buf[HASH_SIZE_MD5 + HASH_SIZE_SHA1];
-
-		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-		if (!md5)
-		{
-			DBG1(DBG_IKE, "unable to sign %N Verify, MD5 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		md5->get_hash(md5, this->handshake, buf);
-		md5->destroy(md5);
-		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (!sha1)
-		{
-			DBG1(DBG_IKE, "unable to sign %N Verify, SHA1 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
-		sha1->destroy(sha1);
-
-		if (!this->private->sign(this->private, SIGN_RSA_EMSA_PKCS1_NULL,
-								 chunk_from_thing(buf), &signature))
-		{
-			DBG1(DBG_IKE, "creating TLS Certificate Verify signature failed");
-			return FAILED;
-		}
-	}
-	writer->write_data16(writer, signature);
+	writer->write_data(writer, signature);
 	free(signature.ptr);
 
 	*type = TLS_CERTIFICATE_VERIFY;
 	this->state = STATE_VERIFY_SENT;
-	append_handshake(this, *type, writer->get_buf(writer));
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -595,54 +505,19 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 static status_t send_finished(private_tls_peer_t *this,
 							  tls_handshake_type_t *type, tls_writer_t *writer)
 {
-	chunk_t seed;
-	tls_prf_t *prf;
-	char data[12];
+	char buf[12];
 
-	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	if (!this->crypto->calculate_finished(this->crypto, "client finished", buf))
 	{
-		/* TODO: use hash of cipher suite only */
-		seed = chunk_empty;
-	}
-	else
-	{
-		hasher_t *md5, *sha1;
-		char buf[HASH_SIZE_MD5 + HASH_SIZE_SHA1];
-
-		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-		if (!md5)
-		{
-			DBG1(DBG_IKE, "unable to create %N Finished, MD5 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		md5->get_hash(md5, this->handshake, buf);
-		md5->destroy(md5);
-		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (!sha1)
-		{
-			DBG1(DBG_IKE, "unable to sign %N Finished, SHA1 not supported",
-				 tls_version_names, this->tls->get_version(this->tls));
-			return FAILED;
-		}
-		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
-		sha1->destroy(sha1);
-
-		seed = chunk_clonea(chunk_from_thing(buf));
-	}
-
-	prf = this->crypto->get_prf(this->crypto);
-	if (!prf)
-	{
+		DBG1(DBG_IKE, "calculating client finished data failed");
 		return FAILED;
 	}
-	prf->get_bytes(prf, "client finished", seed, sizeof(data), data);
 
-	writer->write_data(writer, chunk_from_thing(data));
+	writer->write_data(writer, chunk_from_thing(buf));
 
 	*type = TLS_FINISHED;
 	this->state = STATE_FINISHED_SENT;
-	append_handshake(this, *type, writer->get_buf(writer));
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -696,7 +571,6 @@ METHOD(tls_handshake_t, destroy, void,
 	private_tls_peer_t *this)
 {
 	DESTROY_IF(this->private);
-	free(this->handshake.ptr);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this);
