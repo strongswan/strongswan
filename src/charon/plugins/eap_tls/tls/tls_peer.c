@@ -31,6 +31,7 @@ typedef enum {
 	STATE_CIPHERSPEC_CHANGED_OUT,
 	STATE_FINISHED_SENT,
 	STATE_CIPHERSPEC_CHANGED_IN,
+	STATE_COMPLETE,
 } peer_state_t;
 
 /**
@@ -276,7 +277,62 @@ static status_t process_hello_done(private_tls_peer_t *this,
  */
 static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 {
-	return FAILED;
+	chunk_t seed, received;
+	tls_prf_t *prf;
+	char data[12];
+
+	if (!reader->read_data(reader, sizeof(data), &received))
+	{
+		DBG1(DBG_IKE, "received server finished too short");
+		return FAILED;
+	}
+
+	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	{
+		/* TODO: use hash of cipher suite only */
+		seed = chunk_empty;
+	}
+	else
+	{
+		hasher_t *md5, *sha1;
+		char buf[HASH_SIZE_MD5 + HASH_SIZE_SHA1];
+
+		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
+		if (!md5)
+		{
+			DBG1(DBG_IKE, "unable to create %N Finished, MD5 not supported",
+				 tls_version_names, this->tls->get_version(this->tls));
+			return FAILED;
+		}
+		md5->get_hash(md5, this->handshake, buf);
+		md5->destroy(md5);
+		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		if (!sha1)
+		{
+			DBG1(DBG_IKE, "unable to sign %N Finished, SHA1 not supported",
+				 tls_version_names, this->tls->get_version(this->tls));
+			return FAILED;
+		}
+		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
+		sha1->destroy(sha1);
+
+		seed = chunk_clonea(chunk_from_thing(buf));
+	}
+
+	prf = this->crypto->get_prf(this->crypto);
+	if (!prf)
+	{
+		return FAILED;
+	}
+	prf->get_bytes(prf, "server finished", seed, sizeof(data), data);
+
+	if (!chunk_equals(received, chunk_from_thing(data)))
+	{
+		DBG1(DBG_IKE, "received server finished invalid");
+		return FAILED;
+	}
+	this->state = STATE_COMPLETE;
+	return NEED_MORE;
 }
 
 METHOD(tls_handshake_t, process, status_t,
@@ -605,6 +661,8 @@ METHOD(tls_handshake_t, build, status_t,
 			return send_certificate_verify(this, type, writer);
 		case STATE_CIPHERSPEC_CHANGED_OUT:
 			return send_finished(this, type, writer);
+		case STATE_COMPLETE:
+			return INVALID_STATE;
 		default:
 			return INVALID_STATE;
 	}
