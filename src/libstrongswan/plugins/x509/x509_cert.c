@@ -742,7 +742,7 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 {
 	asn1_parser_t *parser;
 	chunk_t object, min_object;
-	ts_type_t ts_type;
+	ts_type_t ts_type = 0;
 	traffic_selector_t *ts;
 	int objectID;
 
@@ -876,7 +876,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 	int extn_oid = OID_UNKNOWN;
 	int sig_alg  = OID_UNKNOWN;
 	bool success = FALSE;
-	bool critical;
+	bool critical = FALSE;
 
 	parser = asn1_parser_create(certObjects, this->encoding);
 
