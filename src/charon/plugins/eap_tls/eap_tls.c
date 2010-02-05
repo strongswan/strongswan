@@ -215,29 +215,32 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
 	pkt->type = EAP_TLS;
 	pkt->flags = 0;
 
-	start = (char*)(pkt + 1);
-	if (this->outpos == 0)
-	{	/* first fragment */
-		pkt->flags = EAP_TLS_LENGTH;
-		pkt_len += 4;
-		start += 4;
-		htoun32(pkt + 1, this->output.len);
-	}
+	if (this->output.len)
+	{
+		start = (char*)(pkt + 1);
+		if (this->outpos == 0)
+		{	/* first fragment */
+			pkt->flags = EAP_TLS_LENGTH;
+			pkt_len += 4;
+			start += 4;
+			htoun32(pkt + 1, this->output.len);
+		}
 
-	if (this->output.len - this->outpos > EAP_TLS_FRAGMENT_LEN)
-	{
-		pkt->flags |= EAP_TLS_MORE_FRAGS;
-		pkt_len += EAP_TLS_FRAGMENT_LEN;
-		memcpy(start, this->output.ptr + this->outpos, EAP_TLS_FRAGMENT_LEN);
-		this->outpos += EAP_TLS_FRAGMENT_LEN;
-	}
-	else
-	{
-		pkt_len += this->output.len - this->outpos;
-		memcpy(start, this->output.ptr + this->outpos,
-			   this->output.len - this->outpos);
-		chunk_free(&this->output);
-		this->outpos = 0;
+		if (this->output.len - this->outpos > EAP_TLS_FRAGMENT_LEN)
+		{
+			pkt->flags |= EAP_TLS_MORE_FRAGS;
+			pkt_len += EAP_TLS_FRAGMENT_LEN;
+			memcpy(start, this->output.ptr + this->outpos, EAP_TLS_FRAGMENT_LEN);
+			this->outpos += EAP_TLS_FRAGMENT_LEN;
+		}
+		else
+		{
+			pkt_len += this->output.len - this->outpos;
+			memcpy(start, this->output.ptr + this->outpos,
+				   this->output.len - this->outpos);
+			chunk_free(&this->output);
+			this->outpos = 0;
+		}
 	}
 	htoun16(&pkt->length, pkt_len);
 	return eap_payload_create_data(chunk_create(buf, pkt_len));
