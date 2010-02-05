@@ -141,6 +141,12 @@ METHOD(tls_t, change_cipher, void,
 	this->protection->set_cipher(this->protection, inbound, signer, crypter, iv);
 }
 
+METHOD(tls_t, get_eap_msk, chunk_t,
+	private_tls_t *this)
+{
+	return this->crypto->get_eap_msk(this->crypto);
+}
+
 METHOD(tls_t, destroy, void,
 	private_tls_t *this)
 {
@@ -169,6 +175,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.get_version = _get_version,
 			.set_version = _set_version,
 			.change_cipher = _change_cipher,
+			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,

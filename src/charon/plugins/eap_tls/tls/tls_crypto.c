@@ -83,6 +83,11 @@ struct private_tls_crypto_t {
 	 * IV for output decryption, if < TLSv1.2
 	 */
 	chunk_t iv_out;
+
+	/**
+	 * EAP-TLS MSK
+	 */
+	chunk_t msk;
 };
 
 typedef struct {
@@ -358,6 +363,11 @@ METHOD(tls_crypto_t, derive_master_secret, void,
 	this->prf->set_key(this->prf, chunk_from_thing(master));
 	memset(master, 0, sizeof(master));
 
+	/* MSK for EAP-TLS */
+	this->msk = chunk_alloc(64);
+	this->prf->get_bytes(this->prf, "client EAP encryption", seed,
+						 this->msk.len, this->msk.ptr);
+
 	/* derive key block for key expansion */
 	mks = this->signer_out->get_key_size(this->signer_out);
 	if (this->crypter_out)
@@ -448,6 +458,12 @@ METHOD(tls_crypto_t, get_prf, tls_prf_t*,
 	return this->prf;
 }
 
+METHOD(tls_crypto_t, get_eap_msk, chunk_t,
+	private_tls_crypto_t *this)
+{
+	return this->msk;
+}
+
 METHOD(tls_crypto_t, destroy, void,
 	private_tls_crypto_t *this)
 {
@@ -457,6 +473,7 @@ METHOD(tls_crypto_t, destroy, void,
 	DESTROY_IF(this->crypter_out);
 	free(this->iv_in.ptr);
 	free(this->iv_out.ptr);
+	free(this->msk.ptr);
 	DESTROY_IF(this->prf);
 	free(this->suites);
 	free(this);
@@ -476,6 +493,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.derive_master_secret = _derive_master_secret,
 			.change_cipher = _change_cipher,
 			.get_prf = _get_prf,
+			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},
 		.tls = tls,

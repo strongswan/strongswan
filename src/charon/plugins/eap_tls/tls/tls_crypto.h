@@ -74,6 +74,13 @@ struct tls_crypto_t {
 	tls_prf_t* (*get_prf)(tls_crypto_t *this);
 
 	/**
+	 * Get the MSK to use in EAP-TLS.
+	 *
+	 * @return				MSK, points to internal data
+	 */
+	chunk_t (*get_eap_msk)(tls_crypto_t *this);
+
+	/**
 	 * Destroy a tls_crypto_t.
 	 */
 	void (*destroy)(tls_crypto_t *this);

@@ -187,6 +187,13 @@ struct tls_t {
 						  crypter_t *crypter, chunk_t iv);
 
 	/**
+	 * Get the MSK for EAP-TLS.
+	 *
+	 * @return			MSK, internal data
+	 */
+	chunk_t (*get_eap_msk)(tls_t *this);
+
+	/**
 	 * Destroy a tls_t.
 	 */
 	void (*destroy)(tls_t *this);

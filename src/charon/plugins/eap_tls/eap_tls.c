@@ -366,6 +366,11 @@ METHOD(eap_method_t, get_type, eap_type_t,
 METHOD(eap_method_t, get_msk, status_t,
 	private_eap_tls_t *this, chunk_t *msk)
 {
+	*msk = this->tls->get_eap_msk(this->tls);
+	if (msk->len)
+	{
+		return SUCCESS;
+	}
 	return FAILED;
 }
 
