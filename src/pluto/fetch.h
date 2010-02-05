@@ -62,7 +62,7 @@ extern void wake_fetch_thread(const char *who);
 #define unlock_certs_and_keys(who)  /* do nothing */
 #define wake_fetch_thread(who)      /* do nothing */
 #endif
-extern void init_fetch(void);
+extern void fetch_initialize(void);
 extern void fetch_finalize(void);
 extern void free_crl_fetch(void);
 extern void free_ocsp_fetch(void);
