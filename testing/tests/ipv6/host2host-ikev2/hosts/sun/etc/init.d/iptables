@@ -37,9 +37,6 @@ start() {
 	ip6tables -A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
 	ip6tables -A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
 
-	# allow last UDP fragment
-	ip6tables -A INPUT -i eth0 -p udp -m frag --fraglast -j ACCEPT
-
 	# allow ICMPv6 neighbor-solicitations
 	ip6tables -A INPUT  -p icmpv6 --icmpv6-type neighbor-solicitation -j ACCEPT
 	ip6tables -A OUTPUT -p icmpv6 --icmpv6-type neighbor-solicitation -j ACCEPT
