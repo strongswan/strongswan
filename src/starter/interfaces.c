@@ -132,7 +132,6 @@ get_defaultroute(defaultroute_t *defaultroute)
 		}
 
 		if (metric < best_metric
-		&&  gw.s_addr != INADDR_ANY
 		&&  iface_idx != -1)
 		{
 			struct ifreq req;
@@ -141,19 +140,39 @@ get_defaultroute(defaultroute_t *defaultroute)
 			if (fd < 0)
 			{
 				plog("could not open AF_INET socket");
-				defaultroute->defined = FALSE;
 				break;
 			}
 			bzero(&req, sizeof(req));
 			req.ifr_ifindex = iface_idx;
-			ioctl(fd, SIOCGIFNAME, &req);
-			ioctl(fd, SIOCGIFADDR, &req);
-			close(fd);
+			if (ioctl(fd, SIOCGIFNAME, &req) < 0 ||
+				ioctl(fd, SIOCGIFADDR, &req) < 0)
+			{
+				plog("could not read interface data, ignoring route");
+				close(fd);
+				break;
+			}
 
 			strncpy(defaultroute->iface, req.ifr_name, IFNAMSIZ);
 			defaultroute->addr.u.v4 = *((struct sockaddr_in *) &req.ifr_addr);
 			defaultroute->nexthop.u.v4.sin_family = AF_INET;
-			defaultroute->nexthop.u.v4.sin_addr = gw;
+
+			if (gw.s_addr == INADDR_ANY)
+			{
+				if (ioctl(fd, SIOCGIFDSTADDR, &req) < 0 ||
+					((struct sockaddr_in*) &req.ifr_dstaddr)->sin_addr.s_addr == INADDR_ANY)
+				{
+					DBG_log("Ignoring default route to device %s because we can't get it's destination",
+							req.ifr_name);
+					close(fd);
+					break;
+				}
+
+				defaultroute->nexthop.u.v4 = *((struct sockaddr_in *) &req.ifr_dstaddr);
+			}
+			else
+				defaultroute->nexthop.u.v4.sin_addr = gw;
+
+			close(fd);
 
 			DBG(DBG_CONTROL,
 				char addr[20];
