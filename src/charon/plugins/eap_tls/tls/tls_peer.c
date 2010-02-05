@@ -28,8 +28,9 @@ typedef enum {
 	STATE_CERT_SENT,
 	STATE_KEY_EXCHANGE_SENT,
 	STATE_VERIFY_SENT,
-	STATE_CIPHERSPEC_CHANGED,
+	STATE_CIPHERSPEC_CHANGED_OUT,
 	STATE_FINISHED_SENT,
+	STATE_CIPHERSPEC_CHANGED_IN,
 } peer_state_t;
 
 /**
@@ -270,6 +271,14 @@ static status_t process_hello_done(private_tls_peer_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Process finished message
+ */
+static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
+{
+	return FAILED;
+}
+
 METHOD(tls_handshake_t, process, status_t,
 	private_tls_peer_t *this, tls_handshake_type_t type, tls_reader_t *reader)
 {
@@ -286,6 +295,15 @@ METHOD(tls_handshake_t, process, status_t,
 					return process_certreq(this, reader);
 				case TLS_SERVER_HELLO_DONE:
 					return process_hello_done(this, reader);
+				default:
+					break;
+			}
+			break;
+		case STATE_CIPHERSPEC_CHANGED_IN:
+			switch (type)
+			{
+				case TLS_FINISHED:
+					return process_finished(this, reader);
 				default:
 					break;
 			}
@@ -568,6 +586,7 @@ static status_t send_finished(private_tls_peer_t *this,
 
 	*type = TLS_FINISHED;
 	this->state = STATE_FINISHED_SENT;
+	append_handshake(this, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
 
@@ -584,7 +603,7 @@ METHOD(tls_handshake_t, build, status_t,
 			return send_key_exchange(this, type, writer);
 		case STATE_KEY_EXCHANGE_SENT:
 			return send_certificate_verify(this, type, writer);
-		case STATE_CIPHERSPEC_CHANGED:
+		case STATE_CIPHERSPEC_CHANGED_OUT:
 			return send_finished(this, type, writer);
 		default:
 			return INVALID_STATE;
@@ -597,16 +616,22 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 	if (this->state == STATE_VERIFY_SENT)
 	{
 		this->crypto->change_cipher(this->crypto, FALSE);
-		this->state = STATE_CIPHERSPEC_CHANGED;
+		this->state = STATE_CIPHERSPEC_CHANGED_OUT;
 		return TRUE;
 	}
 	return FALSE;
 }
 
-METHOD(tls_handshake_t, change_cipherspec, void,
+METHOD(tls_handshake_t, change_cipherspec, bool,
 	private_tls_peer_t *this)
 {
-
+	if (this->state == STATE_FINISHED_SENT)
+	{
+		this->crypto->change_cipher(this->crypto, TRUE);
+		this->state = STATE_CIPHERSPEC_CHANGED_IN;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(tls_handshake_t, destroy, void,

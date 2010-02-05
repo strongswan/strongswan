@@ -68,8 +68,10 @@ struct tls_handshake_t {
 
 	/**
 	 * Change the cipher spec for incoming messages.
+	 *
+	 * @return			TRUE if cipher spec changed
 	 */
-	void (*change_cipherspec)(tls_handshake_t *this);
+	bool (*change_cipherspec)(tls_handshake_t *this);
 
 	/**
 	 * Destroy a tls_handshake_t.

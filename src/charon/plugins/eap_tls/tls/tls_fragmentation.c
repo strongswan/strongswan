@@ -141,8 +141,12 @@ METHOD(tls_fragmentation_t, process, status_t,
 	switch (type)
 	{
 		case TLS_CHANGE_CIPHER_SPEC:
-			this->handshake->change_cipherspec(this->handshake);
-			status = NEED_MORE;
+			if (this->handshake->change_cipherspec(this->handshake))
+			{
+				status = NEED_MORE;
+				break;
+			}
+			status = FAILED;
 			break;
 		case TLS_ALERT:
 			/* TODO: handle Alert */

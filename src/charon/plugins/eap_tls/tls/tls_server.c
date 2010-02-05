@@ -69,10 +69,10 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 	return FALSE;
 }
 
-METHOD(tls_handshake_t, change_cipherspec, void,
+METHOD(tls_handshake_t, change_cipherspec, bool,
 	private_tls_server_t *this)
 {
-
+	return FALSE;
 }
 
 METHOD(tls_handshake_t, destroy, void,

@@ -363,7 +363,7 @@ METHOD(tls_crypto_t, derive_master_secret, void,
 	if (this->crypter_out)
 	{
 		eks = this->crypter_out->get_key_size(this->crypter_out);
-		if (this->tls->get_version(this->tls) < TLS_1_2)
+		if (this->tls->get_version(this->tls) < TLS_1_1)
 		{
 			ivs = this->crypter_out->get_block_size(this->crypter_out);
 		}

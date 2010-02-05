@@ -318,6 +318,7 @@ METHOD(eap_method_t, process, status_t,
 	status_t status;
 
 	data = in->get_data(in);
+
 	pkt = (eap_tls_packet_t*)data.ptr;
 	if (data.len < sizeof(eap_tls_packet_t) ||
 		untoh16(&pkt->length) != data.len)
