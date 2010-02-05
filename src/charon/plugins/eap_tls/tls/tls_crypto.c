@@ -30,6 +30,11 @@ struct private_tls_crypto_t {
 	tls_crypto_t public;
 
 	/**
+	 * Protection layer
+	 */
+	tls_protection_t *protection;
+
+	/**
 	 * List of supported/acceptable cipher suites
 	 */
 	tls_cipher_suite_t *suites;
@@ -351,6 +356,12 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 	return 0;
 }
 
+METHOD(tls_crypto_t, set_protection, void,
+	private_tls_crypto_t *this, tls_protection_t *protection)
+{
+	this->protection = protection;
+}
+
 METHOD(tls_crypto_t, append_handshake, void,
 	private_tls_crypto_t *this, tls_handshake_type_t type, chunk_t data)
 {
@@ -561,15 +572,18 @@ METHOD(tls_crypto_t, derive_secrets, void,
 METHOD(tls_crypto_t, change_cipher, void,
 	private_tls_crypto_t *this, bool inbound)
 {
-	if (inbound)
+	if (this->protection)
 	{
-		this->tls->change_cipher(this->tls, TRUE, this->signer_in,
-								 this->crypter_in, this->iv_in);
-	}
-	else
-	{
-		this->tls->change_cipher(this->tls, FALSE, this->signer_out,
-								 this->crypter_out, this->iv_out);
+		if (inbound)
+		{
+			this->protection->set_cipher(this->protection, TRUE,
+							this->signer_in, this->crypter_in, this->iv_in);
+		}
+		else
+		{
+			this->protection->set_cipher(this->protection, FALSE,
+							this->signer_out, this->crypter_out, this->iv_out);
+		}
 	}
 }
 
@@ -618,6 +632,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 		.public = {
 			.get_cipher_suites = _get_cipher_suites,
 			.select_cipher_suite = _select_cipher_suite,
+			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
 			.sign_handshake = _sign_handshake,
 			.calculate_finished = _calculate_finished,

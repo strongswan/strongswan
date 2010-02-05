@@ -134,13 +134,6 @@ METHOD(tls_t, set_version, void,
 	this->version = version;
 }
 
-METHOD(tls_t, change_cipher, void,
-	private_tls_t *this, bool inbound, signer_t *signer,
-	crypter_t *crypter, chunk_t iv)
-{
-	this->protection->set_cipher(this->protection, inbound, signer, crypter, iv);
-}
-
 METHOD(tls_t, get_eap_msk, chunk_t,
 	private_tls_t *this)
 {
@@ -174,7 +167,6 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.is_server = _is_server,
 			.get_version = _get_version,
 			.set_version = _set_version,
-			.change_cipher = _change_cipher,
 			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},
@@ -196,6 +188,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);
 	this->protection = tls_protection_create(&this->public, this->compression);
+	this->crypto->set_protection(this->crypto, this->protection);
 
 	return &this->public;
 }

@@ -27,7 +27,6 @@
 typedef enum tls_version_t tls_version_t;
 typedef enum tls_content_type_t tls_content_type_t;
 typedef enum tls_handshake_type_t tls_handshake_type_t;
-typedef enum tls_cipher_suite_t tls_cipher_suite_t;
 typedef struct tls_t tls_t;
 
 #include <library.h>
@@ -84,46 +83,6 @@ enum tls_handshake_type_t {
  */
 extern enum_name_t *tls_handshake_type_names;
 
-enum tls_cipher_suite_t {
-	TLS_NULL_WITH_NULL_NULL =				0x00,
-	TLS_RSA_WITH_NULL_MD5 =					0x01,
-	TLS_RSA_WITH_NULL_SHA =					0x02,
-	TLS_RSA_WITH_NULL_SHA256 =				0x3B,
-	TLS_RSA_WITH_RC4_128_MD5 =				0x04,
-	TLS_RSA_WITH_RC4_128_SHA =				0x05,
-	TLS_RSA_WITH_3DES_EDE_CBC_SHA =			0x0A,
-	TLS_RSA_WITH_AES_128_CBC_SHA =			0x2F,
-	TLS_RSA_WITH_AES_256_CBC_SHA =			0x35,
-	TLS_RSA_WITH_AES_128_CBC_SHA256 =		0x3C,
-	TLS_RSA_WITH_AES_256_CBC_SHA256 =		0x3D,
-	TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA =		0x0D,
-	TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA =		0x10,
-	TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA =		0x13,
-	TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA =		0x16,
-	TLS_DH_DSS_WITH_AES_128_CBC_SHA =		0x30,
-	TLS_DH_RSA_WITH_AES_128_CBC_SHA =		0x31,
-	TLS_DHE_DSS_WITH_AES_128_CBC_SHA =		0x32,
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA =		0x33,
-	TLS_DH_DSS_WITH_AES_256_CBC_SHA =		0x36,
-	TLS_DH_RSA_WITH_AES_256_CBC_SHA =		0x37,
-	TLS_DHE_DSS_WITH_AES_256_CBC_SHA =		0x38,
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA =		0x39,
-	TLS_DH_DSS_WITH_AES_128_CBC_SHA256 =	0x3E,
-	TLS_DH_RSA_WITH_AES_128_CBC_SHA256 =	0x3F,
-	TLS_DHE_DSS_WITH_AES_128_CBC_SHA256 =	0x40,
-	TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 =	0x67,
-	TLS_DH_DSS_WITH_AES_256_CBC_SHA256 =	0x68,
-	TLS_DH_RSA_WITH_AES_256_CBC_SHA256 =	0x69,
-	TLS_DHE_DSS_WITH_AES_256_CBC_SHA256 =	0x6A,
-	TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 =	0x6B,
-	TLS_DH_ANON_WITH_RC4_128_MD5 =			0x18,
-	TLS_DH_ANON_WITH_3DES_EDE_CBC_SHA =		0x1B,
-	TLS_DH_ANON_WITH_AES_128_CBC_SHA =		0x34,
-	TLS_DH_ANON_WITH_AES_256_CBC_SHA =		0x3A,
-	TLS_DH_ANON_WITH_AES_128_CBC_SHA256 =	0x6C,
-	TLS_DH_ANON_WITH_AES_256_CBC_SHA256 =	0x6D,
-};
-
 /**
  * A bottom-up driven TLS stack, suitable for EAP implementations.
  */
@@ -174,17 +133,6 @@ struct tls_t {
 	 * @param version	negotiated TLS version
 	 */
 	void (*set_version)(tls_t *this, tls_version_t version);
-
-	/**
-	 * Change used cipher, including encryption and integrity algorithms.
-	 *
-	 * @param inbound	TRUE to use cipher for inbound data, FALSE for outbound
-	 * @param signer	new signer to use
-	 * @param crypter	new crypter to use
-	 * @param iv		initial IV for crypter
-	 */
-	void (*change_cipher)(tls_t *this, bool inbound, signer_t *signer,
-						  crypter_t *crypter, chunk_t iv);
 
 	/**
 	 * Get the MSK for EAP-TLS.
