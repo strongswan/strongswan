@@ -24,8 +24,11 @@ typedef struct private_tls_peer_t private_tls_peer_t;
 typedef enum {
 	STATE_INIT,
 	STATE_HELLO_SENT,
+	STATE_HELLO_RECEIVED,
 	STATE_HELLO_DONE,
 	STATE_CERT_SENT,
+	STATE_CERT_RECEIVED,
+	STATE_CERTREQ_RECEIVED,
 	STATE_KEY_EXCHANGE_SENT,
 	STATE_VERIFY_SENT,
 	STATE_CIPHERSPEC_CHANGED_OUT,
@@ -132,6 +135,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		DBG1(DBG_IKE, "received cipher suite inacceptable");
 		return FAILED;
 	}
+	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
 }
 
@@ -187,6 +191,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 		}
 	}
 	certs->destroy(certs);
+	this->state = STATE_CERT_RECEIVED;
 	return NEED_MORE;
 }
 
@@ -242,6 +247,7 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 		id->destroy(id);
 	}
 	authorities->destroy(authorities);
+	this->state = STATE_CERTREQ_RECEIVED;
 	return NEED_MORE;
 }
 
@@ -290,45 +296,60 @@ static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 METHOD(tls_handshake_t, process, status_t,
 	private_tls_peer_t *this, tls_handshake_type_t type, tls_reader_t *reader)
 {
+	tls_handshake_type_t expected;
+
 	switch (this->state)
 	{
 		case STATE_HELLO_SENT:
-			switch (type)
+			if (type == TLS_SERVER_HELLO)
 			{
-				case TLS_SERVER_HELLO:
-					return process_server_hello(this, reader);
-				case TLS_CERTIFICATE:
-					return process_certificate(this, reader);
-				case TLS_CERTIFICATE_REQUEST:
-					return process_certreq(this, reader);
-				case TLS_SERVER_HELLO_DONE:
-					return process_hello_done(this, reader);
-				default:
-					break;
+				return process_server_hello(this, reader);
 			}
+			expected = TLS_SERVER_HELLO;
+			break;
+		case STATE_HELLO_RECEIVED:
+			if (type == TLS_CERTIFICATE)
+			{
+				return process_certificate(this, reader);
+			}
+			expected = TLS_CERTIFICATE;
+			break;
+		case STATE_CERT_RECEIVED:
+			if (type == TLS_CERTIFICATE_REQUEST)
+			{
+				return process_certreq(this, reader);
+			}
+			expected = TLS_CERTIFICATE_REQUEST;
+			break;
+		case STATE_CERTREQ_RECEIVED:
+			if (type == TLS_SERVER_HELLO_DONE)
+			{
+				return process_hello_done(this, reader);
+			}
+			expected = TLS_SERVER_HELLO_DONE;
 			break;
 		case STATE_CIPHERSPEC_CHANGED_IN:
-			switch (type)
+			if (type == TLS_FINISHED)
 			{
-				case TLS_FINISHED:
-					return process_finished(this, reader);
-				default:
-					break;
+				return process_finished(this, reader);
 			}
+			expected = TLS_FINISHED;
 			break;
 		default:
-			break;
+			DBG1(DBG_IKE, "TLS %N not expected in current state",
+				 tls_handshake_type_names, type);
+			return FAILED;
 	}
-	DBG1(DBG_IKE, "received TLS handshake message %N, ignored",
-		 tls_handshake_type_names, type);
-	return NEED_MORE;
+	DBG1(DBG_IKE, "TLS %N expected, but received %N",
+		 tls_handshake_type_names, expected, tls_handshake_type_names, type);
+	return FAILED;
 }
 
 /**
  * Send a client hello
  */
-static status_t send_hello(private_tls_peer_t *this,
-						   tls_handshake_type_t *type, tls_writer_t *writer)
+static status_t send_client_hello(private_tls_peer_t *this,
+							tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	tls_cipher_suite_t *suite;
 	int count, i;
@@ -527,7 +548,7 @@ METHOD(tls_handshake_t, build, status_t,
 	switch (this->state)
 	{
 		case STATE_INIT:
-			return send_hello(this, type, writer);
+			return send_client_hello(this, type, writer);
 		case STATE_HELLO_DONE:
 			return send_certificate(this, type, writer);
 		case STATE_CERT_SENT:
@@ -536,8 +557,6 @@ METHOD(tls_handshake_t, build, status_t,
 			return send_certificate_verify(this, type, writer);
 		case STATE_CIPHERSPEC_CHANGED_OUT:
 			return send_finished(this, type, writer);
-		case STATE_COMPLETE:
-			return INVALID_STATE;
 		default:
 			return INVALID_STATE;
 	}
