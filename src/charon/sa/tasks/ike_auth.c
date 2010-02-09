@@ -766,6 +766,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	enumerator_t *enumerator;
 	payload_t *payload;
 	auth_cfg_t *cfg;
+	bool mutual_eap = FALSE;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -826,26 +827,6 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->my_auth)
-	{
-		switch (this->my_auth->process(this->my_auth, message))
-		{
-			case SUCCESS:
-				cfg = auth_cfg_create();
-				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
-						   TRUE);
-				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
-				this->my_auth->destroy(this->my_auth);
-				this->my_auth = NULL;
-				this->do_another_auth = do_another_auth(this);
-				break;
-			case NEED_MORE:
-				break;
-			default:
-				return FAILED;
-		}
-	}
-
 	if (this->expect_another_auth)
 	{
 		if (this->other_auth == NULL)
@@ -879,14 +860,9 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				}
 			}
 			else
-			{	/* responder omitted AUTH payload, indicating EAP-only */
-				if (!this->my_auth || !this->my_auth->is_mutual(this->my_auth))
-				{
-					DBG1(DBG_IKE, "do not allow non-mutual or weak "
-								  "EAP-only authentication");
-					return FAILED;
-				}
-				DBG1(DBG_IKE, "allow mutual EAP-only authentication");
+			{
+				/* responder omitted AUTH payload, indicating EAP-only */
+				mutual_eap = TRUE;
 			}
 		}
 		if (this->other_auth)
@@ -914,6 +890,35 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
 			return FAILED;
 		}
+	}
+
+	if (this->my_auth)
+	{
+		switch (this->my_auth->process(this->my_auth, message))
+		{
+			case SUCCESS:
+				cfg = auth_cfg_create();
+				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
+						   TRUE);
+				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+				this->my_auth->destroy(this->my_auth);
+				this->my_auth = NULL;
+				this->do_another_auth = do_another_auth(this);
+				break;
+			case NEED_MORE:
+				break;
+			default:
+				return FAILED;
+		}
+	}
+	if (mutual_eap)
+	{
+		if (!this->my_auth || !this->my_auth->is_mutual(this->my_auth))
+		{
+			DBG1(DBG_IKE, "do not allow non-mutual EAP-only authentication");
+			return FAILED;
+		}
+		DBG1(DBG_IKE, "allow mutual EAP-only authentication");
 	}
 
 	if (message->get_notify(message, ANOTHER_AUTH_FOLLOWS) == NULL)
