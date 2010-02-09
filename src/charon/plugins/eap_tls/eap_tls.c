@@ -43,6 +43,11 @@ struct private_eap_tls_t {
 	identification_t *peer;
 
 	/**
+	 * Number of EAP-TLS messages processed so far
+	 */
+	int processed;
+
+	/**
 	 * Is this method instance acting as server?
 	 */
 	bool is_server;
@@ -77,6 +82,8 @@ struct private_eap_tls_t {
 #define MAX_TLS_MESSAGE_LEN 16384
 /** Size of a EAP-TLS fragment */
 #define EAP_TLS_FRAGMENT_LEN 1014
+/** Maximum number of EAP-TLS messages/fragments allowed */
+#define MAX_EAP_TLS_MESSAGE_COUNT 16
 
 /**
  * Flags of an EAP-TLS message
@@ -319,6 +326,12 @@ METHOD(eap_method_t, process, status_t,
 	eap_tls_packet_t *pkt;
 	chunk_t data;
 	status_t status;
+
+	if (++this->processed > MAX_EAP_TLS_MESSAGE_COUNT)
+	{
+		DBG1(DBG_IKE, "EAP-TLS packet count exceeded");
+		return FAILED;
+	}
 
 	data = in->get_data(in);
 
