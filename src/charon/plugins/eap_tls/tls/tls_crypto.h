@@ -116,10 +116,21 @@ struct tls_crypto_t {
 	 * Create a signature of the handshake data using a given private key.
 	 *
 	 * @param key			private key to use for signature
-	 * @param sig			allocated signature
+	 * @param writer		TLS writer to write signature to
 	 * @return				TRUE if signature create successfully
 	 */
-	bool (*sign_handshake)(tls_crypto_t *this, private_key_t *key, chunk_t *sig);
+	bool (*sign_handshake)(tls_crypto_t *this, private_key_t *key,
+						   tls_writer_t *writer);
+
+	/**
+	 * Verify the signature over handshake data using a given public key.
+	 *
+	 * @param key			public key to verify signature with
+	 * @param reader		TLS reader to read signature from
+	 * @return				TRUE if signature valid
+	 */
+	bool (*verify_handshake)(tls_crypto_t *this, public_key_t *key,
+							 tls_reader_t *reader);
 
 	/**
 	 * Calculate the data of a TLS finished message.

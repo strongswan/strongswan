@@ -135,6 +135,13 @@ struct tls_t {
 	void (*set_version)(tls_t *this, tls_version_t version);
 
 	/**
+	 * Check if TLS negotiation completed successfully.
+	 *
+	 * @return			TRUE if TLS negotation and authentication complete
+	 */
+	bool (*is_complete)(tls_t *this);
+
+	/**
 	 * Get the MSK for EAP-TLS.
 	 *
 	 * @return			MSK, internal data

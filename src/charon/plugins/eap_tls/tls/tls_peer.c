@@ -172,7 +172,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 			if (first)
 			{
 				this->server_auth->add(this->server_auth,
-									   AUTH_RULE_SUBJECT_CERT, cert);
+									   AUTH_HELPER_SUBJECT_CERT, cert);
 				DBG1(DBG_IKE, "received TLS server certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
@@ -182,7 +182,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 				DBG1(DBG_IKE, "received TLS intermediate certificate '%Y'",
 					 cert->get_subject(cert));
 				this->server_auth->add(this->server_auth,
-									   AUTH_RULE_IM_CERT, cert);
+									   AUTH_HELPER_IM_CERT, cert);
 			}
 		}
 		else
@@ -486,6 +486,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 		DBG1(DBG_IKE, "encrypting TLS premaster secret failed");
 		return FAILED;
 	}
+
 	public->destroy(public);
 
 	writer->write_data16(writer, encrypted);
@@ -503,16 +504,12 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 static status_t send_certificate_verify(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
-	chunk_t signature;
-
 	if (!this->private ||
-		!this->crypto->sign_handshake(this->crypto, this->private, &signature))
+		!this->crypto->sign_handshake(this->crypto, this->private, writer))
 	{
 		DBG1(DBG_IKE, "creating TLS Certificate Verify signature failed");
 		return FAILED;
 	}
-	writer->write_data(writer, signature);
-	free(signature.ptr);
 
 	*type = TLS_CERTIFICATE_VERIFY;
 	this->state = STATE_VERIFY_SENT;

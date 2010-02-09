@@ -335,9 +335,17 @@ METHOD(eap_method_t, process, status_t,
 	if (!(pkt->flags & EAP_TLS_START))
 	{
 		if (data.len == sizeof(eap_tls_packet_t))
-		{	/* ACK to our fragment, send next */
-			*out = read_buf(this, pkt->identifier);
-			return NEED_MORE;
+		{
+			if (this->output.len)
+			{	/* ACK to our fragment, send next */
+				*out = read_buf(this, pkt->identifier);
+				return NEED_MORE;
+			}
+			if (this->tls->is_complete(this->tls))
+			{
+				return SUCCESS;
+			}
+			return FAILED;
 		}
 		if (!write_buf(this, pkt))
 		{

@@ -144,6 +144,12 @@ METHOD(tls_t, set_version, void,
 	this->version = version;
 }
 
+METHOD(tls_t, is_complete, bool,
+	private_tls_t *this)
+{
+	return this->crypto->get_eap_msk(this->crypto).len != 0;
+}
+
 METHOD(tls_t, get_eap_msk, chunk_t,
 	private_tls_t *this)
 {
@@ -179,6 +185,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.is_server = _is_server,
 			.get_version = _get_version,
 			.set_version = _set_version,
+			.is_complete = _is_complete,
 			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},

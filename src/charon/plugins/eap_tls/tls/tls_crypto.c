@@ -425,42 +425,81 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 }
 
 METHOD(tls_crypto_t, sign_handshake, bool,
-	private_tls_crypto_t *this, private_key_t *key, chunk_t *sig)
+	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer)
 {
+	chunk_t sig, hash;
+
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
-		u_int16_t length;
-		u_int8_t hash_alg;
-		u_int8_t sig_alg;
-
-		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_SHA1, this->handshake, sig))
+		/* TODO: use supported algorithms instead of fixed SHA1/RSA */
+		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_SHA1, this->handshake, &sig))
 		{
 			return FALSE;
 		}
-		/* TODO: signature scheme to hashsign algorithm mapping */
-		hash_alg = 2; /* sha1 */
-		sig_alg = 1; /* RSA */
-		length = htons(sig->len);
-		*sig = chunk_cat("cccm", chunk_from_thing(hash_alg),
-					chunk_from_thing(sig_alg), chunk_from_thing(length), *sig);
+		writer->write_uint8(writer, 2);
+		writer->write_uint8(writer, 1);
+		writer->write_data16(writer, sig);
+		free(sig.ptr);
 	}
 	else
 	{
-		u_int16_t length;
-		chunk_t hash;
-
 		if (!hash_handshake(this, &hash))
 		{
 			return FALSE;
 		}
-		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig))
+		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
+		{
+			free(hash.ptr);
+			return FALSE;
+		}
+		writer->write_data16(writer, sig);
+		free(hash.ptr);
+		free(sig.ptr);
+	}
+	return TRUE;
+}
+
+METHOD(tls_crypto_t, verify_handshake, bool,
+	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader)
+{
+	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	{
+		u_int8_t hash, alg;
+		chunk_t sig;
+
+		if (!reader->read_uint8(reader, &hash) ||
+			!reader->read_uint8(reader, &alg) ||
+			!reader->read_data16(reader, &sig))
+		{
+			DBG1(DBG_IKE, "received invalid Certificate Verify");
+			return FALSE;
+		}
+		/* TODO: map received hash/sig alg to signature scheme */
+		if (hash != 2 || alg != 1 ||
+			!key->verify(key, SIGN_RSA_EMSA_PKCS1_SHA1, this->handshake, sig))
+		{
+			return FALSE;
+		}
+	}
+	else
+	{
+		chunk_t sig, hash;
+
+		if (!reader->read_data16(reader, &sig))
+		{
+			DBG1(DBG_IKE, "received invalid Certificate Verify");
+			return FALSE;
+		}
+		if (!hash_handshake(this, &hash))
+		{
+			return FALSE;
+		}
+		if (!key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig))
 		{
 			free(hash.ptr);
 			return FALSE;
 		}
 		free(hash.ptr);
-		length = htons(sig->len);
-		*sig = chunk_cat("cm", chunk_from_thing(length), *sig);
 	}
 	return TRUE;
 }
@@ -635,6 +674,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
 			.sign_handshake = _sign_handshake,
+			.verify_handshake = _verify_handshake,
 			.calculate_finished = _calculate_finished,
 			.derive_secrets = _derive_secrets,
 			.change_cipher = _change_cipher,
