@@ -33,16 +33,6 @@ struct private_eap_tls_t {
 	eap_tls_t public;
 
 	/**
-	 * ID of the server
-	 */
-	identification_t *server;
-
-	/**
-	 * ID of the peer
-	 */
-	identification_t *peer;
-
-	/**
 	 * Number of EAP-TLS messages processed so far
 	 */
 	int processed;
@@ -399,9 +389,6 @@ METHOD(eap_method_t, is_mutual, bool,
 METHOD(eap_method_t, destroy, void,
 	private_eap_tls_t *this)
 {
-	this->peer->destroy(this->peer);
-	this->server->destroy(this->server);
-
 	free(this->input.ptr);
 	free(this->output.ptr);
 
@@ -427,11 +414,9 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 			.get_msk = _get_msk,
 			.destroy = _destroy,
 		},
-		.peer = peer->clone(peer),
-		.server = server->clone(server),
 		.is_server = is_server,
-		.tls = tls_create(is_server, server, peer),
 	);
+	this->tls = tls_create(is_server, server, peer);
 
 	return &this->public;
 }

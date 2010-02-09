@@ -74,6 +74,16 @@ struct private_tls_t {
 	bool is_server;
 
 	/**
+	 * Server identity
+	 */
+	identification_t *server;
+
+	/**
+	 * Peer identity
+	 */
+	identification_t *peer;
+
+	/**
 	 * Negotiated TLS version
 	 */
 	tls_version_t version;
@@ -148,6 +158,8 @@ METHOD(tls_t, destroy, void,
 	this->fragmentation->destroy(this->fragmentation);
 	this->crypto->destroy(this->crypto);
 	this->handshake->destroy(this->handshake);
+	this->peer->destroy(this->peer);
+	this->server->destroy(this->server);
 
 	free(this);
 }
@@ -172,18 +184,20 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		},
 		.is_server = is_server,
 		.version = TLS_1_2,
+		.server = server->clone(server),
+		.peer = peer->clone(peer),
 	);
 
 	this->crypto = tls_crypto_create(&this->public);
 	if (is_server)
 	{
 		this->handshake = &tls_server_create(&this->public, this->crypto,
-											 server, peer)->handshake;
+										this->server, this->peer)->handshake;
 	}
 	else
 	{
 		this->handshake = &tls_peer_create(&this->public, this->crypto,
-										   peer, server)->handshake;
+										this->peer, this->server)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake);
 	this->compression = tls_compression_create(this->fragmentation);
