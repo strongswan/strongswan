@@ -135,6 +135,7 @@ ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
 ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+ARG_ENABL_SET([android],        [enable Android specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 
@@ -554,6 +555,11 @@ if test x$uci = xtrue; then
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
 fi
 
+if test x$android = xtrue; then
+	AC_HAVE_LIBRARY([cutils],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])])
+	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
+fi
+
 if test x$nm = xtrue; then
 	PKG_CHECK_EXISTS([libnm-glib],
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],
@@ -752,6 +758,7 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
+AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
@@ -874,6 +881,7 @@ AC_OUTPUT(
 	src/charon/plugins/medcli/Makefile
 	src/charon/plugins/nm/Makefile
 	src/charon/plugins/uci/Makefile
+	src/charon/plugins/android/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/updown/Makefile
 	src/charon/plugins/attr/Makefile

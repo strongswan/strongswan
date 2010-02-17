@@ -261,6 +261,11 @@ if USE_RESOLVE
   PLUGINS += resolve
 endif
 
+if USE_ANDROID
+  SUBDIRS += plugins/android
+  PLUGINS += android
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
   PLUGINS += uci
