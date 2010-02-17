@@ -926,6 +926,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 	{
 		if (mid == this->initiating.mid)
 		{
+			charon->bus->message(charon->bus, msg, TRUE);
 			if (process_response(this, msg) != SUCCESS)
 			{
 				flush(this);
