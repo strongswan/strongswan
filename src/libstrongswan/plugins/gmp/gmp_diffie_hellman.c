@@ -22,6 +22,10 @@
 
 #include <debug.h>
 
+#ifdef HAVE_MPZ_POWM_SEC
+# undef mpz_powm
+# define mpz_powm mpz_powm_sec
+#endif
 
 /**
  * Modulus of Group 1 (MODP_768_BIT).

@@ -27,6 +27,11 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 
+#ifdef HAVE_MPZ_POWM_SEC
+# undef mpz_powm
+# define mpz_powm mpz_powm_sec
+#endif
+
 /**
  *  Public exponent to use for key generation.
  */

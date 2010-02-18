@@ -28,6 +28,11 @@
 #include <asn1/asn1_parser.h>
 #include <crypto/hashers/hasher.h>
 
+#ifdef HAVE_MPZ_POWM_SEC
+# undef mpz_powm
+# define mpz_powm mpz_powm_sec
+#endif
+
 typedef struct private_gmp_rsa_public_key_t private_gmp_rsa_public_key_t;
 
 /**

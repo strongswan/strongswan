@@ -41,6 +41,7 @@ ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec 
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently only the value "libcap" is supported])
+ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 
 AC_ARG_WITH(
 	[xauth-module],
@@ -432,7 +433,21 @@ if test x$vstr = xtrue; then
 fi
 
 if test x$gmp = xtrue; then
-	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	saved_LIBS=$LIBS
+	AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	AC_MSG_CHECKING([mpz_powm_sec])
+	if test x$mpz_powm_sec = xyes; then
+		AC_TRY_COMPILE(
+			[#include "gmp.h"],
+			[
+				void *x = mpz_powm_sec;
+			],
+			[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_MPZ_POWM_SEC)], [AC_MSG_RESULT([no])]
+		)
+	else
+		AC_MSG_RESULT([disabled])
+	fi
+	LIBS=$saved_LIBS
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
 	AC_TRY_COMPILE(
 		[#include "gmp.h"],
