@@ -57,7 +57,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">An IP address or hostname the Gateway can be contacted.</property>
+                        <property name="tooltip" translatable="yes">An IP address or hostname the Gateway can be contacted.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -83,7 +83,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="certificate-button">
                         <property name="visible">True</property>
-                        <property name="tooltip">Gateway or CA certificate to use for gateway authentication. If none is specified, pre-installed CA certificates are used.</property>
+                        <property name="tooltip" translatable="yes">Gateway or CA certificate to use for gateway authentication. If none is specified, pre-installed CA certificates are used.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -137,7 +137,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="userkey-button">
                         <property name="visible">True</property>
-                        <property name="tooltip">Private key to use for client authentication. This key has to match the certificates public key and may be encrypted..</property>
+                        <property name="tooltip" translatable="yes">Private key to use for client authentication. This key has to match the certificates public key and may be encrypted.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -165,7 +165,7 @@
                       <widget class="GtkComboBox" id="method-combo">
                         <property name="visible">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">Authentication Method to use for authentication against the Gateway. </property>
+                        <property name="tooltip" translatable="yes">Authentication Method to use for authentication against the Gateway. </property>
                         <property name="items"></property>
                       </widget>
                       <packing>
@@ -206,7 +206,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">The username (identity) to use for authentication against the gateway.</property>
+                        <property name="tooltip" translatable="yes">The username (identity) to use for authentication against the gateway.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -234,7 +234,7 @@
                     <child>
                       <widget class="GtkFileChooserButton" id="usercert-button">
                         <property name="visible">True</property>
-                        <property name="tooltip">Client certificate to use for client authentication.</property>
+                        <property name="tooltip" translatable="yes">Client certificate to use for client authentication.</property>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -289,7 +289,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
+                        <property name="tooltip" translatable="yes">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
                         <property name="use_underline">True</property>
                         <property name="draw_indicator">True</property>
                       </widget>
@@ -304,7 +304,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT situation is detected might help in such cases.</property>
+                        <property name="tooltip" translatable="yes">Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT situation is detected might help in such cases.</property>
                         <property name="use_underline">True</property>
                         <property name="draw_indicator">True</property>
                       </widget>
@@ -319,7 +319,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="has_tooltip">True</property>
-                        <property name="tooltip">IPComp compresses raw IP packets before they get encrypted. This saves some bandwith, but uses more processing power.</property>
+                        <property name="tooltip" translatable="yes">IPComp compresses raw IP packets before they get encrypted. This saves some bandwith, but uses more processing power.</property>
                         <property name="use_underline">True</property>
                         <property name="draw_indicator">True</property>
                       </widget>
