@@ -1,32 +1,36 @@
-#: ../auth-dialog/main.c:139
-msgid "VPN password required"
-msgstr "VPN Passwort notwendig"
-
-#: ../auth-dialog/main.c:140
-msgid "Password required to establish VPN connection:"
-msgstr "Für die Erstellung des VPN-Tunnels ist ein Passwort erforderlich:"
-
-#: ../auth-dialog/main.c:187
+# Translations for NetworkManager-strongswan.
+# Copyright (C) 2010 Martin Willi <martin@strongswan.org>
+# This file is distributed under the same license as the
+# NetworkManager-strongswan package.
 msgid ""
-"Configuration uses ssh-agent for authentication, but ssh-agent is not "
-"running!"
 msgstr ""
-"Die Konfiguration verwendet ssh-agent für die Authentisierung, aber ssh-agent "
-"ist nicht gestartet!"
+"Project-Id-Version: NetworkManager-strongswan\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-02-18 09:20+0100\n"
+"PO-Revision-Date: 2010-02-18 09:20+0100\n"
+"Last-Translator: Martin Willi <martin@strongswan.org>\n"
+"Language-Team: de <martin@strongswan.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 
-#: ../properties/nm-strongswan.c:42
+#: ../properties/nm-strongswan.c:38
 msgid "IPsec/IKEv2 (strongswan)"
 msgstr "IPsec/IKEv2 (strongswan)"
 
-#: ../properties/nm-strongswan.c:43
+#: ../properties/nm-strongswan.c:39
 msgid "IPsec with the IKEv2 key exchange protocol."
 msgstr "IPsec mit dem IKEv2 Protokoll."
 
-#: ../properties/nm-strongswan.c:186
+#: ../properties/nm-strongswan.c:200
+msgid "Certificate/private key"
+msgstr "Zertifikat/Privater Schlüssel"
+
+#: ../properties/nm-strongswan.c:201
 msgid "Certificate/ssh-agent"
 msgstr "Zertifikat/ssh-agent"
 
-#: ../properties/nm-strongswan.c:187
+#: ../properties/nm-strongswan.c:202
 msgid "EAP"
 msgstr "EAP"
 
@@ -43,74 +47,117 @@ msgid "<b>Options</b>"
 msgstr "<b>Optionen</b>"
 
 #: ../properties/nm-strongswan-dialog.glade.h:4
-msgid "Au_thentication:"
-msgstr "Au_thentisierung:"
-
-#: ../properties/nm-strongswan-dialog.glade.h:5
-msgid "C_ertificate:"
-msgstr "Z_ertifikat:"
-
-#: ../properties/nm-strongswan-dialog.glade.h:6
-msgid "Ce_rtificate:"
-msgstr "Ze_rtifikat:"
-
-#: ../properties/nm-strongswan-dialog.glade.h:7
-msgid "En_force UDP encapsulation"
-msgstr "_Erzwingen einer zusätzlichen Einbettung der Datenpakete in UDP"
-
-#: ../properties/nm-strongswan-dialog.glade.h:8
-msgid "Request an _inner IP address"
-msgstr "_Innere IP-Adresse beziehen"
-
-#: ../properties/nm-strongswan-dialog.glade.h:9
-msgid "Use IP c_ompression"
-msgstr "IP-Pakete k_omprimieren"
-
-#: ../properties/nm-strongswan-dialog.glade.h:10
-msgid "_Address:"
-msgstr "_Adresse:"
-
-#: ../properties/nm-strongswan-dialog.glade.h:11
-msgid "_Username:"
-msgstr "_Benutzername:"
-
-msgid "Gateway certificate to use for gateway authentication."
-msgstr "Zertifikat des Gateways für dessen Authentisierung."
-
 msgid "An IP address or hostname the Gateway can be contacted."
 msgstr "Ein IP-Adresse oder einen Rechnernamen des Gateways."
 
+#: ../properties/nm-strongswan-dialog.glade.h:5
+msgid "Au_thentication:"
+msgstr "Au_thentisierung:"
+
+#: ../properties/nm-strongswan-dialog.glade.h:6
+msgid "Authentication Method to use for authentication against the Gateway. "
+msgstr "Methode zur Authentisierung gegenüber dem Gateway."
+
+#: ../properties/nm-strongswan-dialog.glade.h:7
+msgid "C_ertificate:"
+msgstr "Z_ertifikat:"
+
+#: ../properties/nm-strongswan-dialog.glade.h:8
+msgid "Ce_rtificate:"
+msgstr "Ze_rtifikat:"
+
+#: ../properties/nm-strongswan-dialog.glade.h:9
 msgid "Client certificate to use for client authentication."
 msgstr "Zertifikat des Clients für dessen Authentisierung."
 
+#: ../properties/nm-strongswan-dialog.glade.h:10
+msgid "En_force UDP encapsulation"
+msgstr "Erzwingen einer zusätzlichen Einbettung der Datenpakete in _UDP"
+
+#: ../properties/nm-strongswan-dialog.glade.h:11
 msgid ""
-"The username (identity) to use for authentication against the gateway."
+"Gateway or CA certificate to use for gateway authentication. If none is "
+"specified, pre-installed CA certificates are used."
 msgstr ""
-"Benutzername/Identität für die Authentisierung gegenüber dem Gateway."
+"Gateway- oder CA-Zertifikat für die Authentisierung des Gateways. Ohne "
+"Angabe eines Zertifikates werden die CA-Zertifikate des Systems verwendet."
 
+#: ../properties/nm-strongswan-dialog.glade.h:12
 msgid ""
-"Authentication Method to use for authentication against the Gateway. "
-msgstr "Authentisierungsmethode zur Authentisierung gegenüber dem Gateway."
+"IPComp compresses raw IP packets before they get encrypted. This saves some "
+"bandwith, but uses more processing power."
+msgstr ""
+"IPComp komprimiert IP-Pakete, bevor sie verschlsselt werden. Diese Option "
+"kann Bandbreite sparen, bentigt jedoch zustzliche Rechenleistung."
 
+#: ../properties/nm-strongswan-dialog.glade.h:13
+msgid "Private _key:"
+msgstr "Privater _Schlüssel:"
+
+#: ../properties/nm-strongswan-dialog.glade.h:14
+msgid ""
+"Private key to use for client authentication. This key has to match the "
+"certificates public key and may be encrypted."
+msgstr ""
+"Privater Schlüssel für die Authentisierung des Clients. Dieser Schlüssel "
+"muss zum konfigurierten Zertifikat passen und kann verschlüsselt sein."
+
+#: ../properties/nm-strongswan-dialog.glade.h:15
+msgid "Request an _inner IP address"
+msgstr "_Innere IP-Adresse beziehen"
+
+#: ../properties/nm-strongswan-dialog.glade.h:16
+msgid ""
+"Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT "
+"situation is detected might help in such cases."
+msgstr ""
+"Manche Firewalls blockieren Datenverkehr mit dem ESP-Protokoll. Das "
+"erzwingen einer zustzlichen Einbettung in UDP, auch wenn kein NAT-Router "
+"detektiert wurde, kann in solchen Situationen hilfreich sein."
+
+#: ../properties/nm-strongswan-dialog.glade.h:17
 msgid ""
 "The Gateway may provide addresses from a pool to use for communication in "
 "the Gateways network. Check to request such an address."
 msgstr ""
 "Der Gateway kann IP-Adressen bereitstellen, welche der Client für die "
-"Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um "
-"eine solche Adresse zu beziehen."
+"Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um eine "
+"solche Adresse zu beziehen."
 
-msgid ""
-"Some firewalls block ESP traffic. Enforcing UDP capsulation even if no "
-"NAT situation is detected might help in such cases."
-msgstr ""
-"Manche Firewalls blockieren Datenverkehr mit dem ESP-Protokoll. Das "
-"erzwingen einer zusätzlichen Einbettung in UDP, auch wenn kein NAT-Router "
-"detektiert wurde, kann in solchen Situationen hilfreich sein."
+#: ../properties/nm-strongswan-dialog.glade.h:18
+msgid "The username (identity) to use for authentication against the gateway."
+msgstr "Benutzername/Identitt für die Authentisierung gegenüber dem Gateway."
 
-msgid ""
-"IPComp compresses raw IP packets before they get encrypted. This saves "
-"some bandwith, but uses more processing power."
+#: ../properties/nm-strongswan-dialog.glade.h:19
+msgid "Use IP c_ompression"
+msgstr "IP-Pakete k_omprimieren"
+
+#: ../properties/nm-strongswan-dialog.glade.h:20
+msgid "_Address:"
+msgstr "_Adresse:"
+
+#: ../properties/nm-strongswan-dialog.glade.h:21
+msgid "_Username:"
+msgstr "_Benutzername:"
+
+#: ../auth-dialog/main.c:172 ../auth-dialog/main.c:178
+msgid "VPN password required"
+msgstr "VPN Passwort notwendig"
+
+#: ../auth-dialog/main.c:173
+msgid "EAP password required to establish VPN connection:"
+msgstr "Für die Erstellung des VPN-Tunnels ist ein EAP-Passwort erforderlich:"
+
+#: ../auth-dialog/main.c:179
+msgid "Private key decryption password required to establish VPN connection:"
 msgstr ""
-"IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
-"kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."
+"Der Private Schlüssel für die Erstellung des VPN-Tunnels ist durch ein "
+"Passwort geschützt:"
+
+#: ../auth-dialog/main.c:225
+msgid ""
+"Configuration uses ssh-agent for authentication, but ssh-agent is not "
+"running!"
+msgstr ""
+"Die Konfiguration verwendet ssh-agent fr die Authentisierung, aber ssh-agent "
+"ist nicht gestartet!"
