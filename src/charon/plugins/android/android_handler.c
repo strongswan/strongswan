@@ -14,23 +14,23 @@
  * for more details.
  */
 
-#include "mipv4_handler.h"
+#include "android_handler.h"
 
 #include <utils/linked_list.h>
 
 #include <cutils/properties.h>
 
-typedef struct private_mipv4_handler_t private_mipv4_handler_t;
+typedef struct private_android_handler_t private_android_handler_t;
 
 /**
- * Private data of an mipv4_handler_t object.
+ * Private data of an android_handler_t object.
  */
-struct private_mipv4_handler_t {
+struct private_android_handler_t {
 
 	/**
-	 * Public mipv4_handler_t interface.
+	 * Public android_handler_t interface.
 	 */
-	mipv4_handler_t public;
+	android_handler_t public;
 
 	/**
 	 * List of registered DNS servers
@@ -119,7 +119,7 @@ bool set_dns_server(int index, host_t *dns)
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_mipv4_handler_t *this, identification_t *id,
+	private_android_handler_t *this, identification_t *id,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -142,13 +142,14 @@ METHOD(attribute_handler_t, handle, bool,
 				return TRUE;
 			}
 			return FALSE;
+		}
 		default:
 			return FALSE;
 	}
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_mipv4_handler_t *this, identification_t *server,
+	private_android_handler_t *this, identification_t *server,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	if (type == INTERNAL_IP4_DNS)
@@ -182,7 +183,7 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	mipv4_handler_t *this, identification_t *id, host_t *vip)
+	android_handler_t *this, identification_t *id, host_t *vip)
 {
 	enumerator_t *enumerator;
 
@@ -193,8 +194,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 	return enumerator;
 }
 
-METHOD(mipv4_handler_t, destroy, void,
-	private_mipv4_handler_t *this)
+METHOD(android_handler_t, destroy, void,
+	private_android_handler_t *this)
 {
 	this->dns->destroy_function(this->dns, (void*)destroy_dns_pair);
 	free(this);
@@ -203,9 +204,9 @@ METHOD(mipv4_handler_t, destroy, void,
 /**
  * See header
  */
-mipv4_handler_t *mipv4_handler_create()
+android_handler_t *android_handler_create()
 {
-	private_mipv4_handler_t *this;
+	private_android_handler_t *this;
 
 	INIT(this,
 		.public = {
