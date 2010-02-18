@@ -1,3 +1,10 @@
+network-manager-strongswan (1.1.2-1) unstable; urgency=low
+
+  * New upstream release, fixes pkgconfig for new libnm-glib packages
+    (Closes: #569302)
+
+ -- Martin Willi <martin@strongswan.org>  Thu, 18 Feb 2010 09:41:39 +0100
+
 network-manager-strongswan (1.1.1-2) unstable; urgency=low
 
   * Added ${shlibs:Depends} dependency
