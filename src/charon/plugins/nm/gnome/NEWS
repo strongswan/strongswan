@@ -1,3 +1,10 @@
+NetworkManager-strongswan-1.1.2
+-------------------------------
+
+- Additionally look for libnm-glib[-vpn] pkgconfig packages during configure
+- Tooltips are translatable
+- Update german translations
+
 NetworkManager-strongswan-1.1.1
 -------------------------------
 
