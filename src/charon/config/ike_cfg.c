@@ -64,71 +64,57 @@ struct private_ike_cfg_t {
 	linked_list_t *proposals;
 };
 
-/**
- * Implementation of ike_cfg_t.certreq.
- */
-static bool send_certreq(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, send_certreq, bool,
+	private_ike_cfg_t *this)
 {
 	return this->certreq;
 }
 
-/**
- * Implementation of ike_cfg_t.force_encap.
- */
-static bool force_encap_meth(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, force_encap_, bool,
+	private_ike_cfg_t *this)
 {
 	return this->force_encap;
 }
 
-/**
- * Implementation of ike_cfg_t.get_my_addr.
- */
-static char *get_my_addr(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_my_addr, char*,
+	private_ike_cfg_t *this)
 {
 	return this->me;
 }
 
-/**
- * Implementation of ike_cfg_t.get_other_addr.
- */
-static char *get_other_addr(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_other_addr, char*,
+	private_ike_cfg_t *this)
 {
 	return this->other;
 }
 
-/**
- * Implementation of ike_cfg_t.add_proposal.
- */
-static void add_proposal(private_ike_cfg_t *this, proposal_t *proposal)
+METHOD(ike_cfg_t, add_proposal, void,
+	private_ike_cfg_t *this, proposal_t *proposal)
 {
 	this->proposals->insert_last(this->proposals, proposal);
 }
 
-/**
- * Implementation of ike_cfg_t.get_proposals.
- */
-static linked_list_t* get_proposals(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_proposals, linked_list_t*,
+	private_ike_cfg_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *current;
-	linked_list_t *proposals = linked_list_create();
+	linked_list_t *proposals;
 
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	proposals = linked_list_create();
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		current = current->clone(current);
-		proposals->insert_last(proposals, (void*)current);
+		proposals->insert_last(proposals, current);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	return proposals;
 }
 
-/**
- * Implementation of ike_cfg_t.select_proposal.
- */
-static proposal_t *select_proposal(private_ike_cfg_t *this,
-								   linked_list_t *proposals, bool private)
+METHOD(ike_cfg_t, select_proposal, proposal_t*,
+	private_ike_cfg_t *this, linked_list_t *proposals, bool private)
 {
 	iterator_t *stored_iter, *supplied_iter;
 	proposal_t *stored, *supplied, *selected;
@@ -166,10 +152,8 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	return NULL;
 }
 
-/**
- * Implementation of ike_cfg_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_dh_group, diffie_hellman_group_t,
+	private_ike_cfg_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
@@ -187,11 +171,10 @@ static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
 	return dh_group;
 }
 
-/**
- * Implementation of ike_cfg_t.equals.
- */
-static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
+METHOD(ike_cfg_t, equals, bool,
+	private_ike_cfg_t *this, ike_cfg_t *other_public)
 {
+	private_ike_cfg_t *other = (private_ike_cfg_t*)other_public;
 	enumerator_t *e1, *e2;
 	proposal_t *p1, *p2;
 	bool eq = TRUE;
@@ -229,19 +212,15 @@ static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
 		streq(this->other, other->other));
 }
 
-/**
- * Implementation of ike_cfg_t.get_ref.
- */
-static ike_cfg_t* get_ref(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_ref, ike_cfg_t*,
+	private_ike_cfg_t *this)
 {
 	ref_get(&this->refcount);
 	return &this->public;
 }
 
-/**
- * Implementation of ike_cfg_t.destroy.
- */
-static void destroy(private_ike_cfg_t *this)
+METHOD(ike_cfg_t, destroy, void,
+	private_ike_cfg_t *this)
 {
 	if (ref_put(&this->refcount))
 	{
@@ -259,28 +238,29 @@ static void destroy(private_ike_cfg_t *this)
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 						  char *me, char *other)
 {
-	private_ike_cfg_t *this = malloc_thing(private_ike_cfg_t);
+	private_ike_cfg_t *this;
 
-	/* public functions */
-	this->public.send_certreq = (bool(*)(ike_cfg_t*))send_certreq;
-	this->public.force_encap = (bool (*) (ike_cfg_t *))force_encap_meth;
-	this->public.get_my_addr = (char*(*)(ike_cfg_t*))get_my_addr;
-	this->public.get_other_addr = (char*(*)(ike_cfg_t*))get_other_addr;
-	this->public.add_proposal = (void(*)(ike_cfg_t*, proposal_t*)) add_proposal;
-	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
-	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*,bool))select_proposal;
-	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
-	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
-	this->public.get_ref = (ike_cfg_t*(*)(ike_cfg_t*))get_ref;
-	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
-
-	/* private variables */
-	this->refcount = 1;
-	this->certreq = certreq;
-	this->force_encap = force_encap;
-	this->me = strdup(me);
-	this->other = strdup(other);
-	this->proposals = linked_list_create();
+	INIT(this,
+		.public = {
+			.send_certreq = _send_certreq,
+			.force_encap = _force_encap_,
+			.get_my_addr = _get_my_addr,
+			.get_other_addr = _get_other_addr,
+			.add_proposal = _add_proposal,
+			.get_proposals = _get_proposals,
+			.select_proposal = _select_proposal,
+			.get_dh_group = _get_dh_group,
+			.equals = _equals,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.refcount = 1,
+		.certreq = certreq,
+		.force_encap = force_encap,
+		.me = strdup(me),
+		.other = strdup(other),
+		.proposals = linked_list_create(),
+	);
 
 	return &this->public;
 }
