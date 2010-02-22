@@ -44,95 +44,73 @@ struct private_packet_t {
 	chunk_t data;
 };
 
-/**
- * Implements packet_t.get_source
- */
-static void set_source(private_packet_t *this, host_t *source)
+METHOD(packet_t, set_source, void,
+	private_packet_t *this, host_t *source)
 {
 	DESTROY_IF(this->source);
 	this->source = source;
 }
 
-/**
- * Implements packet_t.set_destination
- */
-static void set_destination(private_packet_t *this, host_t *destination)
+METHOD(packet_t, set_destination, void,
+	private_packet_t *this, host_t *destination)
 {
 	DESTROY_IF(this->destination);
 	this->destination = destination;
 }
 
-/**
- * Implements packet_t.get_source
- */
-static host_t *get_source(private_packet_t *this)
+METHOD(packet_t, get_source, host_t*,
+	private_packet_t *this)
 {
 	return this->source;
 }
 
-/**
- * Implements packet_t.get_destination
- */
-static host_t *get_destination(private_packet_t *this)
+METHOD(packet_t, get_destination, host_t*,
+	private_packet_t *this)
 {
 	return this->destination;
 }
 
-/**
- * Implements packet_t.get_data
- */
-static chunk_t get_data(private_packet_t *this)
+METHOD(packet_t, get_data, chunk_t,
+	private_packet_t *this)
 {
 	return this->data;
 }
 
-/**
- * Implements packet_t.set_data
- */
-static void set_data(private_packet_t *this, chunk_t data)
+METHOD(packet_t, set_data, void,
+	private_packet_t *this, chunk_t data)
 {
 	free(this->data.ptr);
 	this->data = data;
 }
 
-/**
- * Implements packet_t.destroy.
- */
-static void destroy(private_packet_t *this)
+METHOD(packet_t, destroy, void,
+	private_packet_t *this)
 {
-	if (this->source != NULL)
-	{
-		this->source->destroy(this->source);
-	}
-	if (this->destination != NULL)
-	{
-		this->destination->destroy(this->destination);
-	}
+	DESTROY_IF(this->source);
+	DESTROY_IF(this->destination);
 	free(this->data.ptr);
 	free(this);
 }
 
-/**
- * Implements packet_t.clone.
- */
-static packet_t *clone_(private_packet_t *this)
+METHOD(packet_t, clone_, packet_t*,
+	private_packet_t *this)
 {
-	private_packet_t *other = (private_packet_t*)packet_create();
+	packet_t *other;
 
+	other = packet_create();
 	if (this->destination != NULL)
 	{
-		other->destination = this->destination->clone(this->destination);
+		other->set_destination(other, this->destination->clone(this->destination));
 	}
 	if (this->source != NULL)
 	{
-		other->source = this->source->clone(this->source);
+		other->set_source(other, this->source->clone(this->source));
 	}
 	if (this->data.ptr != NULL)
 	{
-		other->data.ptr = clalloc(this->data.ptr,this->data.len);
-		other->data.len = this->data.len;
+		other->set_data(other, chunk_clone(this->data));
 	}
-	return &(other->public);
+	return other;
 }
 
 /*
@@ -140,20 +118,21 @@ static packet_t *clone_(private_packet_t *this)
  */
 packet_t *packet_create(void)
 {
-	private_packet_t *this = malloc_thing(private_packet_t);
+	private_packet_t *this;
 
-	this->public.set_data = (void(*) (packet_t *,chunk_t)) set_data;
-	this->public.get_data = (chunk_t(*) (packet_t *)) get_data;
-	this->public.set_source = (void(*) (packet_t *,host_t*)) set_source;
-	this->public.get_source = (host_t*(*) (packet_t *)) get_source;
-	this->public.set_destination = (void(*) (packet_t *,host_t*)) set_destination;
-	this->public.get_destination = (host_t*(*) (packet_t *)) get_destination;
-	this->public.clone = (packet_t*(*) (packet_t *))clone_;
-	this->public.destroy = (void(*) (packet_t *)) destroy;
+	INIT(this,
+		.public = {
+			.set_data = _set_data,
+			.get_data = _get_data,
+			.set_source = _set_source,
+			.get_source = _get_source,
+			.set_destination = _set_destination,
+			.get_destination = _get_destination,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+	);
 
-	this->destination = NULL;
-	this->source = NULL;
-	this->data = chunk_empty;
-
-	return &(this->public);
+	return &this->public;
 }
+
