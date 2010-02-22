@@ -313,6 +313,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
 	enumerator_t *enumerator;
+	ike_cfg_t *ike_cfg;
 	host_t *host;
 
 	if (this->hasher == NULL)
@@ -320,6 +321,8 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 		DBG1(DBG_IKE, "unable to build NATD payloads, SHA1 not supported");
 		return NEED_MORE;
 	}
+
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	/* destination is always set */
 	host = message->get_destination(message);
@@ -343,7 +346,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 							this->ike_sa->get_other_host(this->ike_sa), NULL);
 		if (host)
 		{	/* 2. */
-			host->set_port(host, IKEV2_UDP_PORT);
+			host->set_port(host, ike_cfg->get_my_port(ike_cfg));
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 			message->add_payload(message, (payload_t*)notify);
 			host->destroy(host);
@@ -356,7 +359,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 			{
 				/* apply port 500 to host, but work on a copy */
 				host = host->clone(host);
-				host->set_port(host, IKEV2_UDP_PORT);
+				host->set_port(host, ike_cfg->get_my_port(ike_cfg));
 				notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 				host->destroy(host);
 				message->add_payload(message, (payload_t*)notify);

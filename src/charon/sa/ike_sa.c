@@ -1117,7 +1117,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	else
 	{
 		host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
-									0, IKEV2_UDP_PORT);
+								0, this->ike_cfg->get_other_port(this->ike_cfg));
 	}
 	if (host)
 	{
@@ -1139,7 +1139,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 			family = this->other_host->get_family(this->other_host);
 		}
 		host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
-									family, IKEV2_UDP_PORT);
+							family, this->ike_cfg->get_my_port(this->ike_cfg));
 
 		if (host && host->is_anyaddr(host) &&
 			!this->other_host->is_anyaddr(this->other_host))
@@ -1149,13 +1149,13 @@ static void resolve_hosts(private_ike_sa_t *this)
 							charon->kernel_interface, this->other_host, NULL);
 			if (host)
 			{
-				host->set_port(host, IKEV2_UDP_PORT);
+				host->set_port(host, this->ike_cfg->get_my_port(this->ike_cfg));
 			}
 			else
 			{	/* fallback to address family specific %any(6), if configured */
 				host = host_create_from_dns(
-									this->ike_cfg->get_my_addr(this->ike_cfg),
-									0, IKEV2_UDP_PORT);
+								this->ike_cfg->get_my_addr(this->ike_cfg),
+								0, this->ike_cfg->get_my_port(this->ike_cfg));
 			}
 		}
 	}

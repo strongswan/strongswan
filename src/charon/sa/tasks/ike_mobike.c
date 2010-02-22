@@ -269,12 +269,36 @@ static void update_children(private_ike_mobike_t *this)
 }
 
 /**
+ * Apply port of old address if it equals new, port otherwise
+ */
+static void apply_port(private_ike_mobike_t *this, host_t *host, host_t *old,
+					   u_int16_t port)
+{
+	if (host->ip_equals(host, old))
+	{
+		host->set_port(host, old->get_port(old));
+	}
+	else
+	{
+		if (port == IKEV2_UDP_PORT)
+		{
+			host->set_port(host, IKEV2_NATT_PORT);
+		}
+		else
+		{
+			host->set_port(host, port);
+		}
+	}
+}
+
+/**
  * Implementation of ike_mobike_t.transmit
  */
 static void transmit(private_ike_mobike_t *this, packet_t *packet)
 {
 	host_t *me, *other, *me_old, *other_old;
 	iterator_t *iterator;
+	ike_cfg_t *ike_cfg;
 	packet_t *copy;
 
 	if (!this->check)
@@ -284,13 +308,13 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 
 	me_old = this->ike_sa->get_my_host(this->ike_sa);
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	me = charon->kernel_interface->get_source_addr(
 									charon->kernel_interface, other_old, NULL);
 	if (me)
 	{
-		me->set_port(me, me->ip_equals(me, me_old) ?
-					 me_old->get_port(me_old) : IKEV2_NATT_PORT);
+		apply_port(this, me, me_old, ike_cfg->get_my_port(ike_cfg));
 		DBG1(DBG_IKE, "checking original path %#H - %#H", me, other_old);
 		copy = packet->clone(packet);
 		copy->set_source(copy, me);
@@ -310,11 +334,9 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 				continue;
 			}
 			/* reuse port for an active address, 4500 otherwise */
-			me->set_port(me, me->ip_equals(me, me_old) ?
-						 me_old->get_port(me_old) : IKEV2_NATT_PORT);
+			apply_port(this, me, me_old, ike_cfg->get_my_port(ike_cfg));
 			other = other->clone(other);
-			other->set_port(other, other->ip_equals(other, other_old) ?
-							other_old->get_port(other_old) : IKEV2_NATT_PORT);
+			apply_port(this, other, other_old, ike_cfg->get_other_port(ike_cfg));
 			DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 			copy = packet->clone(packet);
 			copy->set_source(copy, me);

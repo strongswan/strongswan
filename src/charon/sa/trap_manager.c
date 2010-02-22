@@ -127,14 +127,14 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
 	other = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg),
-								 0, IKEV2_UDP_PORT);
+								 0, ike_cfg->get_other_port(ike_cfg));
 	if (!other)
 	{
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
 	}
 	me = host_create_from_dns(ike_cfg->get_my_addr(ike_cfg),
-							  other->get_family(other), IKEV2_UDP_PORT);
+					other->get_family(other), ike_cfg->get_my_port(ike_cfg));
 	if (!me || me->is_anyaddr(me))
 	{
 		DESTROY_IF(me);
@@ -146,7 +146,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 			other->destroy(other);
 			return 0;
 		}
-		me->set_port(me, IKEV2_UDP_PORT);
+		me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 	}
 
 	/* create and route CHILD_SA */
