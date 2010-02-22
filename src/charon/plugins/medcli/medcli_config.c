@@ -120,7 +120,8 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 		DESTROY_IF(e);
 		return NULL;
 	}
-	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", address);
+	ike_cfg = ike_cfg_create(FALSE, FALSE,
+						"0.0.0.0", IKEV2_UDP_PORT, address, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
@@ -395,7 +396,8 @@ medcli_config_t *medcli_config_create(database_t *db)
 	this->db = db;
 	this->rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200);
 	this->dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300);
-	this->ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", "0.0.0.0");
+	this->ike = ike_cfg_create(FALSE, FALSE,
+						"0.0.0.0", IKEV2_UDP_PORT, "0.0.0.0", IKEV2_UDP_PORT);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 
 	schedule_autoinit(this);

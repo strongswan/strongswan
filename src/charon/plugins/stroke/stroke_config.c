@@ -233,8 +233,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	}
 	ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
 							 msg->add_conn.force_encap,
-							 msg->add_conn.me.address,
-							 msg->add_conn.other.address);
+							 msg->add_conn.me.address, IKEV2_UDP_PORT,
+							 msg->add_conn.other.address, IKEV2_UDP_PORT);
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;
 }
@@ -697,7 +697,7 @@ static void add_ts(private_stroke_config_t *this,
 
 		if (!end->subnets)
 		{
-			net = host_create_from_string(end->address, IKEV2_UDP_PORT);
+			net = host_create_from_string(end->address, 0);
 			if (net)
 			{
 				ts = traffic_selector_create_from_subnet(net, 0, end->protocol,
@@ -726,7 +726,7 @@ static void add_ts(private_stroke_config_t *this,
 					intbits = atoi(bits + 1);
 				}
 
-				net = host_create_from_string(start, IKEV2_UDP_PORT);
+				net = host_create_from_string(start, 0);
 				if (net)
 				{
 					ts = traffic_selector_create_from_subnet(net, intbits,

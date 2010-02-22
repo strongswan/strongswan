@@ -170,7 +170,8 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 			&ike_proposal, &esp_proposal, &ike_rekey, &esp_rekey))
 	{
 		DESTROY_IF(this->peer_cfg);
-		ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, remote_addr);
+		ike_cfg = ike_cfg_create(FALSE, FALSE,
+					local_addr, IKEV2_UDP_PORT, remote_addr, IKEV2_UDP_PORT);
 		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
 		this->peer_cfg = peer_cfg_create(
 					name, 2, ike_cfg, CERT_SEND_IF_ASKED, UNIQUE_NO,
@@ -268,7 +269,8 @@ static bool ike_enumerator_enumerate(ike_enumerator_t *this, ike_cfg_t **cfg)
 							   &local_addr, &remote_addr, &ike_proposal))
 	{
 		DESTROY_IF(this->ike_cfg);
-		this->ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, remote_addr);
+		this->ike_cfg = ike_cfg_create(FALSE, FALSE, local_addr, IKEV2_UDP_PORT,
+										remote_addr, IKEV2_UDP_PORT);
 		this->ike_cfg->add_proposal(this->ike_cfg,
 									create_proposal(ike_proposal, PROTO_IKE));
 

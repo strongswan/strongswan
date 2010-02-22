@@ -182,7 +182,8 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 	{
 		ike_cfg_t *ike_cfg;
 
-		ike_cfg = ike_cfg_create(certreq, force_encap, local, remote);
+		ike_cfg = ike_cfg_create(certreq, force_encap,
+								 local, IKEV2_UDP_PORT, remote, IKEV2_UDP_PORT);
 		/* TODO: read proposal from db */
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 		return ike_cfg;

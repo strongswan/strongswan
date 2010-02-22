@@ -53,6 +53,20 @@ struct ike_cfg_t {
 	char* (*get_other_addr) (ike_cfg_t *this);
 
 	/**
+	 * Get the port to use as our source port.
+	 *
+	 * @return		source address port, host order
+	 */
+	u_int16_t (*get_my_port)(ike_cfg_t *this);
+
+	/**
+	 * Get the port to use as destination port.
+	 *
+	 * @return		destination address, host order
+	 */
+	u_int16_t (*get_other_port)(ike_cfg_t *this);
+
+	/**
 	 * Adds a proposal to the list.
 	 *
 	 * The first added proposal has the highest priority, the last
@@ -136,10 +150,12 @@ struct ike_cfg_t {
  * @param certreq		TRUE to send a certificate request
  * @param force_encap	enforce UDP encapsulation by faking NATD notify
  * @param me			address/DNS name of local peer
+ * @param my_port		IKE port to use as source, 500 uses IKEv2 port floating
  * @param other			address/DNS name of remote peer
+ * @param other_port	IKE port to use as dest, 500 uses IKEv2 port floating
  * @return 				ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
-						  char *me, char *other);
+				char *me, u_int16_t my_port, char *other, u_int16_t other_port);
 
 #endif /** IKE_CFG_H_ @}*/

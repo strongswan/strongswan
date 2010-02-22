@@ -423,7 +423,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(TRUE, encap, "0.0.0.0", (char*)address);
+	ike_cfg = ike_cfg_create(TRUE, encap,
+					"0.0.0.0", IKEV2_UDP_PORT, (char*)address, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(priv->name, 2, ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */

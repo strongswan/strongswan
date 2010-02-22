@@ -189,7 +189,8 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		}
 	};
 
-	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
+	ike_cfg = ike_cfg_create(FALSE, FALSE,
+					"0.0.0.0", IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
 							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
