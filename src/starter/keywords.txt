@@ -98,6 +98,7 @@ ocspuri1,          KW_OCSPURI
 ocspuri2,          KW_OCSPURI2
 certuribase,       KW_CERTURIBASE
 left,              KW_LEFT
+leftikeport,       KW_LEFTIKEPORT
 leftnexthop,       KW_LEFTNEXTHOP
 leftsubnet,        KW_LEFTSUBNET
 leftsubnetwithin,  KW_LEFTSUBNETWITHIN
@@ -120,6 +121,7 @@ leftca,            KW_LEFTCA
 leftca2,           KW_LEFTCA2
 leftgroups,        KW_LEFTGROUPS
 right,             KW_RIGHT
+rightikeport,      KW_RIGHTIKEPORT
 rightnexthop,      KW_RIGHTNEXTHOP
 rightsubnet,       KW_RIGHTSUBNET
 rightsubnetwithin, KW_RIGHTSUBNETWITHIN

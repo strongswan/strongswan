@@ -145,6 +145,7 @@ typedef enum {
 
    /* left end keywords */
 	KW_LEFT,
+	KW_LEFTIKEPORT,
 	KW_LEFTNEXTHOP,
 	KW_LEFTSUBNET,
 	KW_LEFTSUBNETWITHIN,
@@ -172,6 +173,7 @@ typedef enum {
 
    /* right end keywords */
 	KW_RIGHT,
+	KW_RIGHTIKEPORT,
 	KW_RIGHTNEXTHOP,
 	KW_RIGHTSUBNET,
 	KW_RIGHTSUBNETWITHIN,

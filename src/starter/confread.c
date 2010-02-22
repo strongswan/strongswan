@@ -96,6 +96,8 @@ static void default_values(starter_config_t *cfg)
 	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
 	anyaddr(AF_INET, &cfg->conn_default.right.addr);
 	anyaddr(AF_INET, &cfg->conn_default.right.nexthop);
+	cfg->conn_default.left.ikeport = 500;
+	cfg->conn_default.right.ikeport = 500;
 
 	cfg->ca_default.seen = LEMPTY;
 }

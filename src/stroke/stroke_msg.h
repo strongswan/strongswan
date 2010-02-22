@@ -137,6 +137,7 @@ struct stroke_end_t {
 	char *groups;
 	char *updown;
 	char *address;
+	u_int16_t ikeport;
 	char *sourceip;
 	int sourceip_mask;
 	char *subnets;

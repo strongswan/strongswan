@@ -66,6 +66,7 @@ struct starter_end {
 		char            *groups;
 		char            *iface;
 		ip_address      addr;
+		u_int16_t       ikeport;
 		ip_address      nexthop;
 		char            *subnet;
 		bool            has_client;

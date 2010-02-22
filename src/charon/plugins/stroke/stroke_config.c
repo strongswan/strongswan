@@ -232,9 +232,9 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 		}
 	}
 	ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
-							 msg->add_conn.force_encap,
-							 msg->add_conn.me.address, IKEV2_UDP_PORT,
-							 msg->add_conn.other.address, IKEV2_UDP_PORT);
+					msg->add_conn.force_encap,
+					msg->add_conn.me.address, msg->add_conn.me.ikeport,
+					msg->add_conn.other.address, msg->add_conn.other.ikeport);
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;
 }

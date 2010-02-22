@@ -186,6 +186,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
+	msg_end->ikeport = conn_end->ikeport;
 	msg_end->subnets = push_string(msg, conn_end->subnet);
 	msg_end->sourceip = push_string(msg, conn_end->sourceip);
 	msg_end->sourceip_mask = conn_end->sourceip_mask;

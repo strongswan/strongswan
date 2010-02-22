@@ -604,6 +604,13 @@ identity to use for a second authentication for the left participant
 (IKEv2 only); defaults to
 .BR leftid .
 .TP
+.B leftikeport
+UDP port the left participant uses for IKE communication. Currently supported in
+IKEv2 connections only. If unspecified, port 500 is used with port floating to
+4500 if NAT is detected or MOBIKE enabled. Specifying a local IKE port
+different from the default additionally requires a socket implementation that
+listens to this port.
+.TP
 .B leftnexthop
 this parameter is not needed any more because the NETKEY IPsec stack does
 not require explicit routing entries for the traffic to be tunneled.
