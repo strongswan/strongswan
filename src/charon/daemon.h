@@ -148,7 +148,7 @@ typedef struct daemon_t daemon_t;
 
 #include <network/sender.h>
 #include <network/receiver.h>
-#include <network/socket.h>
+#include <network/socket_manager.h>
 #include <processing/scheduler.h>
 #include <processing/processor.h>
 #include <kernel/kernel_interface.h>
@@ -200,9 +200,9 @@ typedef struct daemon_t daemon_t;
 struct daemon_t {
 
 	/**
-	 * A socket_t instance.
+	 * Socket manager instance
 	 */
-	socket_t *socket;
+	socket_manager_t *socket;
 
 	/**
 	 * A ike_sa_manager_t instance.

@@ -45,7 +45,7 @@ kernel/kernel_net.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
-network/socket.h \
+network/socket_manager.c network/socket_manager.h network/socket.h \
 processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
@@ -109,13 +109,6 @@ charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADL
 # compile options
 #################
 
-# Use RAW socket if pluto gets built
-if USE_PLUTO
-  charon_SOURCES += network/socket-raw.c
-else
-  charon_SOURCES += network/socket.c
-endif
-
 if USE_ME
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
     processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
@@ -159,6 +152,16 @@ endif
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
   PLUGINS += kernel-netlink
+endif
+
+if USE_SOCKET_DEFAULT
+  SUBDIRS += plugins/socket_default
+  PLUGINS += socket-default
+endif
+
+if USE_SOCKET_RAW
+  SUBDIRS += plugins/socket_raw
+  PLUGINS += socket-raw
 endif
 
 if USE_STROKE

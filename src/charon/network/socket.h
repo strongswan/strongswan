@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,29 +27,10 @@ typedef struct socket_t socket_t;
 
 #include <library.h>
 #include <network/packet.h>
-#include <utils/host.h>
 #include <utils/enumerator.h>
 
 /**
- * Maximum size of a packet.
- *
- * 3000 Bytes should be sufficient, see IKEv2 RFC. However, to run our
- * multi-CA test with 2 intermediate CAs, we increase that to 5000 bytes.
- */
-#define MAX_PACKET 5000
-
-/**
- * Abstraction of all sockets (IPv4/IPv6 send/receive).
- *
- * All available sockets are bound and the receive function
- * reads from them. There are actually two implementations:
- * The first uses raw sockets to allow binding of other daemons (pluto) to
- * UDP/500. An installed "Linux socket filter" filters out all non-IKEv2
- * traffic and handles just IKEv2 messages. An other daemon (pluto) must
- * handle all traffic separately, e.g. ignore IKEv2 traffic, since charon
- * handles that.
- * The other implementation uses normal sockets and is built if
- * --disable-pluto is given to the configure script.
+ * Socket interface definition.
  */
 struct socket_t {
 
@@ -85,18 +66,6 @@ struct socket_t {
 	 * @return				enumerator over (int fd, int family, int port)
 	 */
 	enumerator_t *(*create_enumerator) (socket_t *this);
-
-	/**
-	 * Destroy socket.
-	 */
-	void (*destroy) (socket_t *this);
 };
-
-/**
- * Create a socket_t, which binds multiple sockets.
- *
- * @return  				socket_t object
- */
-socket_t *socket_create();
 
 #endif /** SOCKET_H_ @}*/

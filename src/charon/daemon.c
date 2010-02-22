@@ -185,6 +185,7 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
 	}
+	DESTROY_IF(this->public.receiver);
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
 #ifdef CAPABILITIES
@@ -204,7 +205,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.sender);
-	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.socket);
 	/* wait until all threads are gone */
 	DESTROY_IF(this->public.processor);
@@ -494,7 +494,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.sim = sim_manager_create();
 	this->public.backends = backend_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
-	this->public.socket = socket_create();
+	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
 
 	/* load plugins, further infrastructure may need it */

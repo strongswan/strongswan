@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,6 +18,8 @@
 /* for struct in6_pktinfo */
 #define _GNU_SOURCE
 
+#include "socket_raw_socket.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -34,10 +36,11 @@
 #include <linux/filter.h>
 #include <net/if.h>
 
-#include "socket.h"
-
 #include <daemon.h>
 #include <threading/thread.h>
+
+/* Maximum size of a packet */
+#define MAX_PACKET 5000
 
 /* constants for packet handling */
 #define IP_LEN sizeof(struct iphdr)
@@ -65,62 +68,61 @@
 #define IPV6_2292PKTINFO 2
 #endif /*IPV6_2292PKTINFO*/
 
-typedef struct private_socket_t private_socket_t;
+typedef struct private_socket_raw_socket_t private_socket_raw_socket_t;
 
 /**
  * Private data of an socket_t object
  */
-struct private_socket_t{
+struct private_socket_raw_socket_t {
+
 	/**
 	 * public functions
 	 */
-	 socket_t public;
+	 socket_raw_socket_t public;
 
-	 /**
-	  * regular port
-	  */
-	 int port;
+	/**
+	 * regular port
+	 */
+	int port;
 
-	 /**
-	  * port used for nat-t
-	  */
-	 int natt_port;
+	/**
+	 * port used for nat-t
+	 */
+	int natt_port;
 
-	 /**
-	  * raw receiver socket for IPv4
-	  */
-	 int recv4;
+	/**
+	 * raw receiver socket for IPv4
+	 */
+	int recv4;
 
-	 /**
-	  * raw receiver socket for IPv6
-	  */
-	 int recv6;
+	/**
+	 * raw receiver socket for IPv6
+	 */
+	int recv6;
 
-	 /**
-	  * send socket on regular port for IPv4
-	  */
-	 int send4;
+	/**
+	 * send socket on regular port for IPv4
+	 */
+	int send4;
 
-	 /**
-	  * send socket on regular port for IPv6
-	  */
-	 int send6;
+	/**
+	 * send socket on regular port for IPv6
+	 */
+	int send6;
 
-	 /**
-	  * send socket on nat-t port for IPv4
-	  */
-	 int send4_natt;
+	/**
+	 * send socket on nat-t port for IPv4
+	 */
+	int send4_natt;
 
-	 /**
-	  * send socket on nat-t port for IPv6
-	  */
-	 int send6_natt;
+	/**
+	 * send socket on nat-t port for IPv6
+	 */
+	int send6_natt;
 };
 
-/**
- * implementation of socket_t.receive
- */
-static status_t receiver(private_socket_t *this, packet_t **packet)
+METHOD(socket_t, receiver, status_t,
+	private_socket_raw_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
 	chunk_t data;
@@ -296,10 +298,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	return SUCCESS;
 }
 
-/**
- * implementation of socket_t.send
- */
-status_t sender(private_socket_t *this, packet_t *packet)
+METHOD(socket_t, sender, status_t,
+	private_socket_raw_socket_t *this, packet_t *packet)
 {
 	int sport, skt, family;
 	ssize_t bytes_sent;
@@ -423,7 +423,8 @@ status_t sender(private_socket_t *this, packet_t *packet)
 /**
  * open a socket to send packets
  */
-static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
+static int open_send_socket(private_socket_raw_socket_t *this,
+							int family, u_int16_t port)
 {
 	int on = TRUE;
 	int type = UDP_ENCAP_ESPINUDP;
@@ -497,7 +498,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 /**
  * open a socket to receive packets
  */
-static int open_recv_socket(private_socket_t *this, int family)
+static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 {
 	int skt;
 	int on = TRUE;
@@ -599,7 +600,7 @@ typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
 	/** sockets we enumerate */
-	private_socket_t *socket;
+	private_socket_raw_socket_t *socket;
 	/** counter */
 	int index;
 } socket_enumerator_t;
@@ -614,12 +615,12 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 		int family;
 		int port;
 	} sockets[] = {
-		{ offsetof(private_socket_t, recv4), AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, recv6), AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, send4), AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, send6), AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, send4_natt), AF_INET, IKEV2_NATT_PORT },
-		{ offsetof(private_socket_t, send6_natt), AF_INET6, IKEV2_NATT_PORT }
+		{ offsetof(private_socket_raw_socket_t, recv4), AF_INET, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_raw_socket_t, recv6), AF_INET6, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_raw_socket_t, send4), AF_INET, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_raw_socket_t, send6), AF_INET6, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_raw_socket_t, send4_natt), AF_INET, IKEV2_NATT_PORT },
+		{ offsetof(private_socket_raw_socket_t, send6_natt), AF_INET6, IKEV2_NATT_PORT }
 	};
 
 	while(++this->index < countof(sockets))
@@ -637,10 +638,8 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 	return FALSE;
 }
 
-/**
- * implementation of socket_t.create_enumerator
- */
-static enumerator_t *create_enumerator(private_socket_t *this)
+METHOD(socket_t, create_enumerator, enumerator_t*,
+	private_socket_raw_socket_t *this)
 {
 	socket_enumerator_t *enumerator;
 
@@ -652,10 +651,8 @@ static enumerator_t *create_enumerator(private_socket_t *this)
 	return &enumerator->public;
 }
 
-/**
- * implementation of socket_t.destroy
- */
-static void destroy(private_socket_t *this)
+METHOD(socket_raw_socket_t, destroy, void,
+	private_socket_raw_socket_t *this)
 {
 	if (this->recv4)
 	{
@@ -687,22 +684,20 @@ static void destroy(private_socket_t *this)
 /*
  * See header for description
  */
-socket_t *socket_create()
+socket_raw_socket_t *socket_raw_socket_create()
 {
-	private_socket_t *this = malloc_thing(private_socket_t);
+	private_socket_raw_socket_t *this;
 
-	/* public functions */
-	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
-	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.create_enumerator = (enumerator_t*(*)(socket_t*))create_enumerator;
-	this->public.destroy = (void(*)(socket_t*)) destroy;
-
-	this->recv4 = 0;
-	this->recv6 = 0;
-	this->send4 = 0;
-	this->send6 = 0;
-	this->send4_natt = 0;
-	this->send6_natt = 0;
+	INIT(this,
+		.public = {
+			.socket = {
+				.send = _sender,
+				.receive = _receiver,
+				.create_enumerator = _create_enumerator,
+			},
+			.destroy = _destroy,
+		},
+	);
 
 	this->recv4 = open_recv_socket(this, AF_INET);
 	if (this->recv4 == 0)
@@ -754,8 +749,8 @@ socket_t *socket_create()
 	{
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
-		charon->kill(charon, "socket initialization failed");
+		return NULL;
 	}
 
-	return (socket_t*)this;
+	return &this->public;
 }

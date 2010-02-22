@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,6 +23,8 @@
 #define __EXTENSIONS__
 #endif
 
+#include "socket_default_socket.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -40,10 +42,11 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "socket.h"
-
 #include <daemon.h>
 #include <threading/thread.h>
+
+/* Maximum size of a packet */
+#define MAX_PACKET 5000
 
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
@@ -82,16 +85,17 @@
 static const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
 #endif
 
-typedef struct private_socket_t private_socket_t;
+typedef struct private_socket_default_socket_t private_socket_default_socket_t;
 
 /**
  * Private data of an socket_t object
  */
-struct private_socket_t {
+struct private_socket_default_socket_t {
+
 	/**
 	 * public functions
 	 */
-	socket_t public;
+	socket_default_socket_t public;
 
 	/**
 	 * IPv4 socket (500)
@@ -114,10 +118,8 @@ struct private_socket_t {
 	int ipv6_natt;
 };
 
-/**
- * implementation of socket_t.receive
- */
-static status_t receiver(private_socket_t *this, packet_t **packet)
+METHOD(socket_t, receiver, status_t,
+	private_socket_default_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
 	chunk_t data;
@@ -304,10 +306,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	return SUCCESS;
 }
 
-/**
- * implementation of socket_t.send
- */
-status_t sender(private_socket_t *this, packet_t *packet)
+METHOD(socket_t, sender, status_t,
+	private_socket_default_socket_t *this, packet_t *packet)
 {
 	int sport, skt, family;
 	ssize_t bytes_sent;
@@ -446,7 +446,8 @@ status_t sender(private_socket_t *this, packet_t *packet)
 /**
  * open a socket to send and receive packets
  */
-static int open_socket(private_socket_t *this, int family, u_int16_t port)
+static int open_socket(private_socket_default_socket_t *this,
+					   int family, u_int16_t port)
 {
 	int on = TRUE;
 	struct sockaddr_storage addr;
@@ -541,7 +542,7 @@ typedef struct {
 	/** implements enumerator_t */
 	enumerator_t public;
 	/** sockets we enumerate */
-	private_socket_t *socket;
+	private_socket_default_socket_t *socket;
 	/** counter */
 	int index;
 } socket_enumerator_t;
@@ -556,10 +557,14 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 		int family;
 		int port;
 	} sockets[] = {
-		{ offsetof(private_socket_t, ipv4), AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, ipv6), AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_t, ipv4_natt), AF_INET, IKEV2_NATT_PORT },
-		{ offsetof(private_socket_t, ipv6_natt), AF_INET6, IKEV2_NATT_PORT }
+		{ offsetof(private_socket_default_socket_t, ipv4),
+			AF_INET, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_default_socket_t, ipv6),
+			AF_INET6, IKEV2_UDP_PORT },
+		{ offsetof(private_socket_default_socket_t, ipv4_natt),
+			AF_INET, IKEV2_NATT_PORT },
+		{ offsetof(private_socket_default_socket_t, ipv6_natt),
+			AF_INET6, IKEV2_NATT_PORT }
 	};
 
 	while(++this->index < countof(sockets))
@@ -577,10 +582,8 @@ static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port
 	return FALSE;
 }
 
-/**
- * implementation of socket_t.create_enumerator
- */
-static enumerator_t *create_enumerator(private_socket_t *this)
+METHOD(socket_t, create_enumerator, enumerator_t*,
+	private_socket_default_socket_t *this)
 {
 	socket_enumerator_t *enumerator;
 
@@ -592,10 +595,8 @@ static enumerator_t *create_enumerator(private_socket_t *this)
 	return &enumerator->public;
 }
 
-/**
- * implementation of socket_t.destroy
- */
-static void destroy(private_socket_t *this)
+METHOD(socket_default_socket_t, destroy, void,
+	private_socket_default_socket_t *this)
 {
 	if (this->ipv4)
 	{
@@ -619,20 +620,20 @@ static void destroy(private_socket_t *this)
 /*
  * See header for description
  */
-socket_t *socket_create()
+socket_default_socket_t *socket_default_socket_create()
 {
-	private_socket_t *this = malloc_thing(private_socket_t);
+	private_socket_default_socket_t *this;
 
-	/* public functions */
-	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
-	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.create_enumerator = (enumerator_t*(*)(socket_t*))create_enumerator;
-	this->public.destroy = (void(*)(socket_t*)) destroy;
-
-	this->ipv4 = 0;
-	this->ipv6 = 0;
-	this->ipv4_natt = 0;
-	this->ipv6_natt = 0;
+	INIT(this,
+		.public = {
+			.socket = {
+				.send = _sender,
+				.receive = _receiver,
+				.create_enumerator = _create_enumerator,
+			},
+			.destroy = _destroy,
+		},
+	);
 
 #ifdef __APPLE__
 	{
@@ -678,8 +679,8 @@ socket_t *socket_create()
 	{
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
-		charon->kill(charon, "socket initialization failed");
+		return NULL;
 	}
-	return (socket_t*)this;
+	return &this->public;
 }
 
