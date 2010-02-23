@@ -48,7 +48,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *socket_raw_plugin_create()
 {
 	private_socket_raw_plugin_t *this;
 

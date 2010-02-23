@@ -34,7 +34,7 @@ static void destroy(eap_md5_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *eap_md5_plugin_create()
 {
 	eap_md5_plugin_t *this = malloc_thing(eap_md5_plugin_t);
 

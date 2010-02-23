@@ -103,7 +103,7 @@ static void destroy(private_unit_tester_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *unit_tester_plugin_create()
 {
 	private_unit_tester_t *this = malloc_thing(private_unit_tester_t);
 

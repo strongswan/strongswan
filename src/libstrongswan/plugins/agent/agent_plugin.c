@@ -44,7 +44,7 @@ static void destroy(private_agent_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *agent_plugin_create()
 {
 	private_agent_plugin_t *this = malloc_thing(private_agent_plugin_t);
 

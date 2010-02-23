@@ -44,7 +44,7 @@ static void destroy(private_md4_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *md4_plugin_create()
 {
 	private_md4_plugin_t *this = malloc_thing(private_md4_plugin_t);
 

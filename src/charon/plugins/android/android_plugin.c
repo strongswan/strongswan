@@ -48,7 +48,7 @@ METHOD(plugin_t, destroy, void,
 /**
  * See header
  */
-plugin_t *plugin_create()
+plugin_t *android_plugin_create()
 {
 	private_android_plugin_t *this;
 

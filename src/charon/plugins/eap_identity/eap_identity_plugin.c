@@ -34,7 +34,7 @@ static void destroy(eap_identity_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *eap_identity_plugin_create()
 {
 	eap_identity_plugin_t *this = malloc_thing(eap_identity_plugin_t);
 

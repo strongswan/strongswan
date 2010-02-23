@@ -44,7 +44,7 @@ static void destroy(private_sqlite_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *sqlite_plugin_create()
 {
 	private_sqlite_plugin_t *this = malloc_thing(private_sqlite_plugin_t);
 

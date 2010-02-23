@@ -104,7 +104,7 @@ static void destroy(private_test_vectors_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *test_vectors_plugin_create()
 {
 	private_test_vectors_plugin_t *this = malloc_thing(private_test_vectors_plugin_t);
 	int i;

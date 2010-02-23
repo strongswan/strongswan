@@ -75,7 +75,7 @@ static void destroy(private_uci_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *uci_plugin_create()
 {
 	private_uci_plugin_t *this = malloc_thing(private_uci_plugin_t);
 

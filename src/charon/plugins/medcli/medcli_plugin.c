@@ -72,7 +72,7 @@ static void destroy(private_medcli_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *medcli_plugin_create()
 {
 	char *uri;
 	private_medcli_plugin_t *this = malloc_thing(private_medcli_plugin_t);

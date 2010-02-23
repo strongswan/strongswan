@@ -57,7 +57,7 @@ static void destroy(private_eap_simaka_pseudonym_t *this)
 /**
  * See header
  */
-plugin_t *plugin_create()
+plugin_t *eap_simaka_pseudonym_plugin_create()
 {
 	private_eap_simaka_pseudonym_t *this;
 

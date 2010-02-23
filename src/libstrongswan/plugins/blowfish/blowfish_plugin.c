@@ -45,7 +45,7 @@ static void destroy(private_blowfish_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *blowfish_plugin_create()
 {
 	private_blowfish_plugin_t *this = malloc_thing(private_blowfish_plugin_t);
 

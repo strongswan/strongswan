@@ -71,7 +71,7 @@ static void destroy(private_sql_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *sql_plugin_create()
 {
 	char *uri;
 	private_sql_plugin_t *this;

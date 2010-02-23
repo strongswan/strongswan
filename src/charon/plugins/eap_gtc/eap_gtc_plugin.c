@@ -37,7 +37,7 @@ static void destroy(eap_gtc_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *eap_gtc_plugin_create()
 {
 	eap_gtc_plugin_t *this = malloc_thing(eap_gtc_plugin_t);
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -50,18 +51,42 @@ struct private_plugin_loader_t {
 };
 
 /**
+ * Replace '-' with '_' to use str as identifier.
+ */
+static char* sanitize(char *str)
+{
+	char *pos = str;
+	while (pos && *pos)
+	{
+		if (*pos == '-')
+		{
+			*pos = '_';
+		}
+		pos++;
+	}
+	return str;
+}
+
+/**
  * load a single plugin
  */
 static plugin_t* load_plugin(private_plugin_loader_t *this,
 							 char *path, char *name)
 {
+	char create[128];
 	char file[PATH_MAX];
 	void *handle;
 	plugin_t *plugin;
 	plugin_constructor_t constructor;
 
-	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
-
+	if (snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path,
+				 name) >= sizeof(file) ||
+		snprintf(create, sizeof(create), "%s_plugin_create",
+				 name) >= sizeof(create))
+	{
+		return NULL;
+	}
+	sanitize(create);
 	if (lib->integrity)
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
@@ -76,10 +101,10 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 		DBG1("plugin '%s': failed to load '%s' - %s", name, file, dlerror());
 		return NULL;
 	}
-	constructor = dlsym(handle, "plugin_create");
+	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG1("plugin '%s': failed to load - no plugin_create() function", name);
+		DBG1("plugin '%s': failed to load - %s not found", name, create);
 		dlclose(handle);
 		return NULL;
 	}
@@ -96,7 +121,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	plugin = constructor();
 	if (plugin == NULL)
 	{
-		DBG1("plugin '%s': failed to load - plugin_create() returned NULL", name);
+		DBG1("plugin '%s': failed to load - %s returned NULL", name, create);
 		dlclose(handle);
 		return NULL;
 	}

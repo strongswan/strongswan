@@ -64,7 +64,7 @@ static void destroy(private_eap_aka_3gpp2_t *this)
 /**
  * See header
  */
-plugin_t *plugin_create()
+plugin_t *eap_aka_3gpp2_plugin_create()
 {
 	private_eap_aka_3gpp2_t *this = malloc_thing(private_eap_aka_3gpp2_t);
 

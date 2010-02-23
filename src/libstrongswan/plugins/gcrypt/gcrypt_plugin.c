@@ -118,7 +118,7 @@ static void destroy(private_gcrypt_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *gcrypt_plugin_create()
 {
 	private_gcrypt_plugin_t *this;
 

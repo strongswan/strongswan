@@ -49,7 +49,7 @@ static void destroy(private_updown_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *updown_plugin_create()
 {
 	private_updown_plugin_t *this = malloc_thing(private_updown_plugin_t);
 

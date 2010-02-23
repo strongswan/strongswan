@@ -44,7 +44,7 @@ static void destroy(private_dnskey_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *dnskey_plugin_create()
 {
 	private_dnskey_plugin_t *this = malloc_thing(private_dnskey_plugin_t);
 

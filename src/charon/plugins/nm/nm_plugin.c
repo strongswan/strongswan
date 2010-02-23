@@ -93,7 +93,7 @@ static void destroy(private_nm_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *nm_plugin_create()
 {
 	private_nm_plugin_t *this = malloc_thing(private_nm_plugin_t);
 

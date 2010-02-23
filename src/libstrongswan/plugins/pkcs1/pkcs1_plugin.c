@@ -50,7 +50,7 @@ static void destroy(private_pkcs1_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *pkcs1_plugin_create()
 {
 	private_pkcs1_plugin_t *this = malloc_thing(private_pkcs1_plugin_t);
 

@@ -47,7 +47,7 @@ static void destroy(private_xcbc_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *xcbc_plugin_create()
 {
 	private_xcbc_plugin_t *this = malloc_thing(private_xcbc_plugin_t);
 

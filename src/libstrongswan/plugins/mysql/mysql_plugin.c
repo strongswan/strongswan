@@ -46,7 +46,7 @@ static void destroy(private_mysql_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *mysql_plugin_create()
 {
 	private_mysql_plugin_t *this;
 

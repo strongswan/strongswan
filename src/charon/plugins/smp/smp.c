@@ -720,7 +720,7 @@ static void destroy(private_smp_t *this)
 /*
  * Described in header file
  */
-plugin_t *plugin_create()
+plugin_t *smp_plugin_create()
 {
 	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
 	private_smp_t *this = malloc_thing(private_smp_t);

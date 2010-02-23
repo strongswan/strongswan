@@ -201,7 +201,7 @@ static void destroy(private_openssl_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *openssl_plugin_create()
 {
 	private_openssl_plugin_t *this = malloc_thing(private_openssl_plugin_t);
 

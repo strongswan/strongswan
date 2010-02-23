@@ -44,7 +44,7 @@ static void destroy(private_sha2_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *sha2_plugin_create()
 {
 	private_sha2_plugin_t *this = malloc_thing(private_sha2_plugin_t);
 

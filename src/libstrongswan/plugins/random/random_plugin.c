@@ -44,7 +44,7 @@ static void destroy(private_random_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *random_plugin_create()
 {
 	private_random_plugin_t *this = malloc_thing(private_random_plugin_t);
 

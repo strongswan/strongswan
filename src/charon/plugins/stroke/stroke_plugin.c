@@ -48,7 +48,7 @@ static void destroy(private_stroke_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *stroke_plugin_create()
 {
 	private_stroke_plugin_t *this = malloc_thing(private_stroke_plugin_t);
 

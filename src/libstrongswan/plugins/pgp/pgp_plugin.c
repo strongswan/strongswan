@@ -54,7 +54,7 @@ static void destroy(private_pgp_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *pgp_plugin_create()
 {
 	private_pgp_plugin_t *this = malloc_thing(private_pgp_plugin_t);
 

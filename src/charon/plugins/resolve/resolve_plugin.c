@@ -49,7 +49,7 @@ static void destroy(private_resolve_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *resolve_plugin_create()
 {
 	private_resolve_plugin_t *this = malloc_thing(private_resolve_plugin_t);
 

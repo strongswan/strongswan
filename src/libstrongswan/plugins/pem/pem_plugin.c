@@ -48,7 +48,7 @@ static void destroy(private_pem_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *pem_plugin_create()
 {
 	private_pem_plugin_t *this = malloc_thing(private_pem_plugin_t);
 

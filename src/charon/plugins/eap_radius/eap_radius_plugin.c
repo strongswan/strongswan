@@ -33,7 +33,7 @@ static void destroy(eap_radius_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *eap_radius_plugin_create()
 {
 	eap_radius_plugin_t *this;
 

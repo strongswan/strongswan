@@ -44,7 +44,7 @@ static void destroy(private_fips_prf_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *fips_prf_plugin_create()
 {
 	private_fips_prf_plugin_t *this = malloc_thing(private_fips_prf_plugin_t);
 
