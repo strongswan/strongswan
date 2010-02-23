@@ -875,13 +875,9 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.get_spi.
- */
-static status_t get_spi(private_kernel_netlink_ipsec_t *this,
-						host_t *src, host_t *dst,
-						protocol_id_t protocol, u_int32_t reqid,
-						u_int32_t *spi)
+METHOD(kernel_ipsec_t, get_spi, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
 
@@ -897,12 +893,9 @@ static status_t get_spi(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.get_cpi.
- */
-static status_t get_cpi(private_kernel_netlink_ipsec_t *this,
-						host_t *src, host_t *dst,
-						u_int32_t reqid, u_int16_t *cpi)
+METHOD(kernel_ipsec_t, get_cpi, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	u_int32_t reqid, u_int16_t *cpi)
 {
 	u_int32_t received_spi = 0;
 
@@ -922,18 +915,13 @@ static status_t get_cpi(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.add_sa.
- */
-static status_t add_sa(private_kernel_netlink_ipsec_t *this,
-					   host_t *src, host_t *dst, u_int32_t spi,
-					   protocol_id_t protocol, u_int32_t reqid,
-					   lifetime_cfg_t *lifetime,
-					   u_int16_t enc_alg, chunk_t enc_key,
-					   u_int16_t int_alg, chunk_t int_key,
-					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-					   bool encap, bool inbound,
-					   traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
+METHOD(kernel_ipsec_t, add_sa, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	u_int32_t spi, protocol_id_t protocol, u_int32_t reqid,
+	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
+	u_int16_t cpi, bool encap, bool inbound, traffic_selector_t* src_ts,
+	traffic_selector_t* dst_ts)
 {
 	netlink_buf_t request;
 	char *alg_name;
@@ -1285,12 +1273,9 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 	return FAILED;
 }
 
-/**
- * Implementation of kernel_interface_t.query_sa.
- */
-static status_t query_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
-						 host_t *dst, u_int32_t spi, protocol_id_t protocol,
-						 u_int64_t *bytes)
+METHOD(kernel_ipsec_t, query_sa, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1353,12 +1338,10 @@ static status_t query_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
 	free(out);
 	return SUCCESS;
 }
-/**
- * Implementation of kernel_interface_t.del_sa.
- */
-static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
-					   host_t *dst, u_int32_t spi, protocol_id_t protocol,
-					   u_int16_t cpi)
+
+METHOD(kernel_ipsec_t, del_sa, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1394,14 +1377,10 @@ static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.update_sa.
- */
-static status_t update_sa(private_kernel_netlink_ipsec_t *this,
-						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
-						  host_t *src, host_t *dst,
-						  host_t *new_src, host_t *new_dst,
-						  bool old_encap, bool new_encap)
+METHOD(kernel_ipsec_t, update_sa, status_t,
+	private_kernel_netlink_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
+	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	bool old_encap, bool new_encap)
 {
 	netlink_buf_t request;
 	u_char *pos;
@@ -1575,17 +1554,12 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.add_policy.
- */
-static status_t add_policy(private_kernel_netlink_ipsec_t *this,
-						   host_t *src, host_t *dst,
-						   traffic_selector_t *src_ts,
-						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, u_int32_t spi,
-						   protocol_id_t protocol, u_int32_t reqid,
-						   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-						   bool routed)
+METHOD(kernel_ipsec_t, add_policy, status_t,
+	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
+	u_int32_t reqid, ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
+	bool routed)
 {
 	policy_entry_t *current, *policy;
 	bool found = FALSE;
@@ -1765,13 +1739,9 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.query_policy.
- */
-static status_t query_policy(private_kernel_netlink_ipsec_t *this,
-							 traffic_selector_t *src_ts,
-							 traffic_selector_t *dst_ts,
-							 policy_dir_t direction, u_int32_t *use_time)
+METHOD(kernel_ipsec_t, query_policy, status_t,
+	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
+	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t *use_time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1844,13 +1814,9 @@ static status_t query_policy(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.del_policy.
- */
-static status_t del_policy(private_kernel_netlink_ipsec_t *this,
-						   traffic_selector_t *src_ts,
-						   traffic_selector_t *dst_ts,
-						   policy_dir_t direction, bool unrouted)
+METHOD(kernel_ipsec_t, del_policy, status_t,
+	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
+	traffic_selector_t *dst_ts, policy_dir_t direction, bool unrouted)
 {
 	policy_entry_t *current, policy, *to_delete = NULL;
 	route_entry_t *route;
@@ -1926,10 +1892,8 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of kernel_interface_t.destroy.
- */
-static void destroy(private_kernel_netlink_ipsec_t *this)
+METHOD(kernel_ipsec_t, destroy, void,
+	private_kernel_netlink_ipsec_t *this)
 {
 	enumerator_t *enumerator;
 	policy_entry_t *policy;
@@ -2007,28 +1971,29 @@ static bool add_bypass_policies()
  */
 kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 {
-	private_kernel_netlink_ipsec_t *this = malloc_thing(private_kernel_netlink_ipsec_t);
+	private_kernel_netlink_ipsec_t *this;
 	struct sockaddr_nl addr;
 	int fd;
 
-	/* public functions */
-	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool,traffic_selector_t*,traffic_selector_t*))add_sa;
-	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
-	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
-	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
-	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
-	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
-	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
-	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
-
-	/* private members */
-	this->policies = hashtable_create((hashtable_hash_t)policy_hash,
-									  (hashtable_equals_t)policy_equals, 32);
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->install_routes = lib->settings->get_bool(lib->settings,
-					"charon.install_routes", TRUE);
+	INIT(this,
+		.public.interface = {
+			.get_spi = _get_spi,
+			.get_cpi = _get_cpi,
+			.add_sa  = _add_sa,
+			.update_sa = _update_sa,
+			.query_sa = _query_sa,
+			.del_sa = _del_sa,
+			.add_policy = _add_policy,
+			.query_policy = _query_policy,
+			.del_policy = _del_policy,
+			.destroy = _destroy,
+		},
+		.policies = hashtable_create((hashtable_hash_t)policy_hash,
+									 (hashtable_equals_t)policy_equals, 32),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.install_routes = lib->settings->get_bool(lib->settings,
+												"charon.install_routes", TRUE),
+	);
 
 	/* disable lifetimes for allocated SPIs in kernel */
 	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
@@ -2068,3 +2033,4 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 
 	return &this->public;
 }
+
