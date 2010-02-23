@@ -309,13 +309,6 @@ struct daemon_t {
 	 * drop these.
 	 */
 	void (*keep_cap)(daemon_t *this, u_int cap);
-
-	/**
-	 * Shut down the daemon.
-	 *
-	 * @param reason		describtion why it will be killed
-	 */
-	void (*kill) (daemon_t *this, char *reason);
 };
 
 /**

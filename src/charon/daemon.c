@@ -65,11 +65,6 @@ struct private_daemon_t {
 	 */
 	sigset_t signal_set;
 
-	/**
-	 * Reference to main thread.
-	 */
-	thread_t *main_thread;
-
 #ifdef CAPABILITIES
 	/**
 	 * capabilities to keep
@@ -220,38 +215,9 @@ static void destroy(private_daemon_t *this)
 }
 
 /**
- * Enforce daemon shutdown, with a given reason to do so.
- */
-static void kill_daemon(private_daemon_t *this, char *reason)
-{
-	/* we send SIGTERM, so the daemon can cleanly shut down */
-	if (this->public.bus)
-	{
-		DBG1(DBG_DMN, "killing daemon: %s", reason);
-	}
-	else
-	{
-		fprintf(stderr, "killing daemon: %s\n", reason);
-	}
-	if (this->main_thread == thread_current())
-	{
-		/* initialization failed, terminate daemon */
-		unlink(PID_FILE);
-		exit(-1);
-	}
-	else
-	{
-		DBG1(DBG_DMN, "sending SIGTERM to ourself");
-		this->main_thread->kill(this->main_thread, SIGTERM);
-		/* thread must die, since he produced a ciritcal failure and can't continue */
-		thread_exit(NULL);
-	}
-}
-
-/**
  * drop daemon capabilities
  */
-static void drop_capabilities(private_daemon_t *this)
+static bool drop_capabilities(private_daemon_t *this)
 {
 #ifdef HAVE_PRCTL
 	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
@@ -259,19 +225,23 @@ static void drop_capabilities(private_daemon_t *this)
 
 	if (setgid(charon->gid) != 0)
 	{
-		kill_daemon(this, "change to unprivileged group failed");
+		DBG1(DBG_DMN, "change to unprivileged group failed");
+		return FALSE;
 	}
 	if (setuid(charon->uid) != 0)
 	{
-		kill_daemon(this, "change to unprivileged user failed");
+		DBG1(DBG_DMN, "change to unprivileged user failed");
+		return FALSE;
 	}
 
 #ifdef CAPABILITIES
 	if (cap_set_proc(this->caps) != 0)
 	{
-		kill_daemon(this, "unable to drop daemon capabilities");
+		DBG1(DBG_DMN, "unable to drop daemon capabilities");
+		return FALSE;
 	}
 #endif /* CAPABILITIES */
+	return TRUE;
 }
 
 /**
@@ -289,7 +259,7 @@ static void keep_cap(private_daemon_t *this, u_int cap)
 /**
  * lookup UID and GID
  */
-static void lookup_uid_gid(private_daemon_t *this)
+static bool lookup_uid_gid(private_daemon_t *this)
 {
 #ifdef IPSEC_USER
 	{
@@ -299,7 +269,8 @@ static void lookup_uid_gid(private_daemon_t *this)
 		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
 			pwp == NULL)
 		{
-			kill_daemon(this, "resolving user '"IPSEC_USER"' failed");
+			DBG1(DBG_DMN, "resolving user '"IPSEC_USER"' failed");
+			return FALSE;
 		}
 		charon->uid = pwp->pw_uid;
 	}
@@ -312,11 +283,13 @@ static void lookup_uid_gid(private_daemon_t *this)
 		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
 			grp == NULL)
 		{
-			kill_daemon(this, "resolving group '"IPSEC_GROUP"' failed");
+			DBG1(DBG_DMN, "resolving group '"IPSEC_GROUP"' failed");
+			return FALSE;
 		}
 		charon->gid = grp->gr_gid;
 	}
 #endif
+	return TRUE;
 }
 
 /**
@@ -555,7 +528,6 @@ private_daemon_t *daemon_create(void)
 	private_daemon_t *this = malloc_thing(private_daemon_t);
 
 	/* assign methods */
-	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	this->public.keep_cap = (void(*)(daemon_t*, u_int cap))keep_cap;
 
 	/* NULL members for clean destruction */
@@ -582,7 +554,6 @@ private_daemon_t *daemon_create(void)
 	this->public.uid = 0;
 	this->public.gid = 0;
 
-	this->main_thread = thread_current();
 #ifdef CAPABILITIES
 	this->caps = cap_init();
 	keep_cap(this, CAP_NET_ADMIN);
@@ -714,8 +685,6 @@ int main(int argc, char *argv[])
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 
-	lookup_uid_gid(private_charon);
-
 	/* use CTRL loglevel for default */
 	for (group = 0; group < DBG_MAX; group++)
 	{
@@ -768,6 +737,14 @@ int main(int argc, char *argv[])
 		break;
 	}
 
+	if (!lookup_uid_gid(private_charon))
+	{
+		DBG1(DBG_DMN, "invalid uid/gid - aborting charon");
+		destroy(private_charon);
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+
 	/* initialize daemon */
 	if (!initialize(private_charon, use_syslog, levels))
 	{
@@ -785,8 +762,13 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	/* drop the capabilities we won't need */
-	drop_capabilities(private_charon);
+	if (!drop_capabilities(private_charon))
+	{
+		DBG1(DBG_DMN, "capability dropping failed - aborting charon");
+		destroy(private_charon);
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 
 	/* start the engine, go multithreaded */
 	charon->processor->set_threads(charon->processor,
