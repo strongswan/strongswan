@@ -39,9 +39,4 @@ struct fips_prf_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a fips_prf_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** FIPS_PRF_PLUGIN_H_ @}*/

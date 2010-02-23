@@ -39,9 +39,4 @@ struct eap_identity_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_identity_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_IDENTITY_PLUGIN_H_ @}*/

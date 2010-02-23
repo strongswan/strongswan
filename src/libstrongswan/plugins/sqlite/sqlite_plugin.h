@@ -39,9 +39,4 @@ struct sqlite_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a sqlite_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SQLITE_PLUGIN_H_ @}*/

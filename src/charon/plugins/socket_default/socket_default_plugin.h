@@ -39,9 +39,4 @@ struct socket_default_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a socket_default_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SOCKET_DEFAULT_PLUGIN_H_ @}*/

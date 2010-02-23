@@ -42,9 +42,4 @@ struct eap_radius_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_radius_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_RADIUS_PLUGIN_H_ @}*/

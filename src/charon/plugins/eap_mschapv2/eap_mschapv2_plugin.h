@@ -39,9 +39,4 @@ struct eap_mschapv2_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_mschapv2_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_MSCHAPV2_PLUGIN_H_ @}*/

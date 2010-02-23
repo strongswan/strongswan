@@ -39,9 +39,4 @@ struct random_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a random_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** RANDOM_PLUGIN_H_ @}*/

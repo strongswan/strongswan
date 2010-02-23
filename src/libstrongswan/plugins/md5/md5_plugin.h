@@ -39,9 +39,4 @@ struct md5_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a md5_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** MD5_PLUGIN_H_ @}*/

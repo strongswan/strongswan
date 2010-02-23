@@ -39,9 +39,4 @@ struct updown_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a updown_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** UPDOWN_PLUGIN_H_ @}*/

@@ -39,9 +39,4 @@ struct dnskey_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a dnskey_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** DNSKEY_PLUGIN_H_ @}*/

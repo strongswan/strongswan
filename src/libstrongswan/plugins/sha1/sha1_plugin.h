@@ -39,9 +39,4 @@ struct sha1_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a sha1_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SHA1_PLUGIN_H_ @}*/

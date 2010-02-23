@@ -54,9 +54,4 @@ struct eap_aka_3gpp2_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_aka_3gpp2_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_AKA_3GPP2_PLUGIN_H_ @}*/

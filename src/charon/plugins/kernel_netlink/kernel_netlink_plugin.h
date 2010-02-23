@@ -39,9 +39,4 @@ struct kernel_netlink_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a kernel_netlink_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** KERNEL_NETLINK_PLUGIN_H_ @}*/

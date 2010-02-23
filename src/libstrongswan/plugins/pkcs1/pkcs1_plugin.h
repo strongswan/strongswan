@@ -39,9 +39,4 @@ struct pkcs1_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a pkcs1_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** PKCS1_PLUGIN_H_ @}*/

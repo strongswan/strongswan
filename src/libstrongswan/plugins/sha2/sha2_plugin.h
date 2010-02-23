@@ -39,9 +39,4 @@ struct sha2_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a sha2_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SHA2_PLUGIN_H_ @}*/

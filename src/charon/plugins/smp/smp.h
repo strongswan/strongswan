@@ -42,9 +42,4 @@ struct smp_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a smp plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** XML_H_ @}*/

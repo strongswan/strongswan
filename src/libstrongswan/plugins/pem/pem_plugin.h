@@ -39,9 +39,4 @@ struct pem_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a pem_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** PEM_PLUGIN_H_ @}*/

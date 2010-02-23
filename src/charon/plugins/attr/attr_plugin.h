@@ -39,9 +39,4 @@ struct attr_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a attr_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** ATTR_PLUGIN_H_ @}*/

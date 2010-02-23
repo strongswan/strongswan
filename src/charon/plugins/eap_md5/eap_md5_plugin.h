@@ -39,9 +39,4 @@ struct eap_md5_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_md5_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_MD5_PLUGIN_H_ @}*/

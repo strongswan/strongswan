@@ -39,9 +39,4 @@ struct android_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create the android_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** ANDROID_PLUGIN_H_ @}*/

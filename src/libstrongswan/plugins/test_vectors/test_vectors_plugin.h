@@ -39,9 +39,4 @@ struct test_vectors_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a test_vectors_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** TEST_VECTORS_PLUGIN_H_ @}*/

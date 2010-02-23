@@ -39,9 +39,4 @@ struct attr_sql_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a sql_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** ATTR_SQL_PLUGIN_H_ @}*/

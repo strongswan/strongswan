@@ -39,9 +39,4 @@ struct socket_dynamic_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a socket_dynamic_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SOCKET_DYNAMIC_PLUGIN_H_ @}*/

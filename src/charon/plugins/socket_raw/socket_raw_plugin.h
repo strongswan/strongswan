@@ -39,9 +39,4 @@ struct socket_raw_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a socket_raw_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** SOCKET_RAW_PLUGIN_H_ @}*/

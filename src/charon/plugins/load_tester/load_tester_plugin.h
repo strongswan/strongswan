@@ -41,9 +41,4 @@ struct load_tester_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a load_tester_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** LOAD_TESTER_PLUGIN_H_ @}*/

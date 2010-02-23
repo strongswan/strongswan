@@ -40,9 +40,4 @@ struct uci_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a uci_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** UCI_PLUGIN_H_ @}*/

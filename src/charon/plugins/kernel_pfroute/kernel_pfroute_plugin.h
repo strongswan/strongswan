@@ -39,9 +39,4 @@ struct kernel_pfroute_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a kernel_pfroute_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** KERNEL_PFROUTE_PLUGIN_H_ @}*/

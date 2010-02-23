@@ -40,9 +40,4 @@ struct blowfish_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a blowfish_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** BLOWFISH_PLUGIN_H_ @}*/

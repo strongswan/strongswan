@@ -39,9 +39,4 @@ struct hmac_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a hmac_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** HMAC_PLUGIN_H_ @}*/

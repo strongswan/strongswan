@@ -39,9 +39,4 @@ struct nm_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a nm_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** NM_PLUGIN_H_ @}*/

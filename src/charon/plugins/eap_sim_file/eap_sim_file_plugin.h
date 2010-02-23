@@ -39,9 +39,4 @@ struct eap_sim_file_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_sim_file_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_SIM_FILE_PLUGIN_H_ @}*/

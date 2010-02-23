@@ -39,9 +39,4 @@ struct mysql_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a mysql_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** MYSQL_PLUGIN_H_ @}*/

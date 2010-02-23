@@ -39,9 +39,4 @@ struct resolve_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a resolve_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** RESOLVE_PLUGIN_H_ @}*/

@@ -39,9 +39,4 @@ struct agent_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a agent_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** AGENT_PLUGIN_H_ @}*/

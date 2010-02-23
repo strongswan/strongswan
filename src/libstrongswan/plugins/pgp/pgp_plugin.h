@@ -39,9 +39,4 @@ struct pgp_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a pgp_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** PGP_PLUGIN_H_ @}*/

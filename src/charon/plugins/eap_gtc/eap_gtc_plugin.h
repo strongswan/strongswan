@@ -39,9 +39,4 @@ struct eap_gtc_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_gtc_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_GTC_PLUGIN_H_ @}*/

@@ -42,9 +42,4 @@ struct eap_aka_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_aka_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_AKA_PLUGIN_H_ @}*/

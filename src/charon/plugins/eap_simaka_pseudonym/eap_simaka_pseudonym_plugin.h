@@ -39,9 +39,4 @@ struct eap_simaka_pseudonym_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_simaka_pseudonym_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_SIMAKA_PSEUDONYM_PLUGIN_H_ @}*/

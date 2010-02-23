@@ -39,9 +39,4 @@ struct kernel_klips_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a kernel_klips_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** KERNEL_KLIPS_PLUGIN_H_ @}*/

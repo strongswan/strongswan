@@ -39,9 +39,4 @@ struct xcbc_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a xcbc_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** XCBC_PLUGIN_H_ @}*/

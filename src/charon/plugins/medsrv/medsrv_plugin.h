@@ -39,9 +39,4 @@ struct medsrv_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a medsrv_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** MEDSRV_PLUGIN_H_ @}*/

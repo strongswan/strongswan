@@ -41,9 +41,4 @@ struct unit_tester_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a unit_tester plugin.
- */
-plugin_t *plugin_create();
-
 #endif /** UNIT_TESTER_H_ @}*/

@@ -39,9 +39,4 @@ struct x509_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a x509_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** X509_PLUGIN_H_ @}*/

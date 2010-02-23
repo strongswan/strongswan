@@ -39,9 +39,4 @@ struct aes_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a aes_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** AES_PLUGIN_H_ @}*/

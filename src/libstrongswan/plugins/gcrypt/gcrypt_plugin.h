@@ -39,9 +39,4 @@ struct gcrypt_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a gcrypt_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** GCRYPT_PLUGIN_H_ @}*/

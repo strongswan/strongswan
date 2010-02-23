@@ -39,9 +39,4 @@ struct eap_simaka_reauth_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a eap_simaka_reauth_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** EAP_SIMAKA_REAUTH_PLUGIN_H_ @}*/

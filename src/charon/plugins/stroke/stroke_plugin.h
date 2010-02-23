@@ -42,9 +42,4 @@ struct stroke_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Instanciate stroke plugin.
- */
-plugin_t *plugin_create();
-
 #endif /** STROKE_PLUGIN_H_ @}*/

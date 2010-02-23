@@ -39,9 +39,4 @@ struct des_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a des_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** DES_PLUGIN_H_ @}*/

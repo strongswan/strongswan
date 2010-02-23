@@ -39,9 +39,4 @@ struct padlock_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a padlock_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** PADLOCK_PLUGIN_H_ @}*/

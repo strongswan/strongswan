@@ -39,9 +39,4 @@ struct medcli_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a medcli_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** MEDCLI_PLUGIN_H_ @}*/

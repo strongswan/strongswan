@@ -39,9 +39,4 @@ struct md4_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a md4_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /** MD4_PLUGIN_H_ @}*/
