@@ -51,13 +51,6 @@ struct socket_manager_t {
 	status_t (*send) (socket_manager_t *this, packet_t *packet);
 
 	/**
-	 * Enumerate all underlying socket file descriptors of the active socket.
-	 *
-	 * @return				enumerator over (int fd, int family, int port)
-	 */
-	enumerator_t *(*create_enumerator) (socket_manager_t *this);
-
-	/**
 	 * Register a socket implementation.
 	 */
 	void (*add_socket)(socket_manager_t *this, socket_t *socket);

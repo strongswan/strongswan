@@ -265,6 +265,15 @@ struct kernel_ipsec_t {
 							bool unrouted);
 
 	/**
+	 * Install a bypass policy for the given socket.
+	 *
+	 * @param fd			socket file descriptor to setup policy for
+	 * @param family		protocol family of the socket
+	 * @return				TRUE of policy set up successfully
+	 */
+	bool (*bypass_socket)(kernel_ipsec_t *this, int fd, int family);
+
+	/**
 	 * Destroy the implementation.
 	 */
 	void (*destroy) (kernel_ipsec_t *this);

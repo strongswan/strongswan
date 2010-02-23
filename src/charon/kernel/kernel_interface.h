@@ -333,6 +333,15 @@ struct kernel_interface_t {
 								host_t *gateway, host_t *src_ip, char *if_name);
 
 	/**
+	 * Set up a bypass policy for a given socket.
+	 *
+	 * @param fd			socket file descriptor to setup policy for
+	 * @param family		protocol family of the socket
+	 * @return				TRUE of policy set up successfully
+	 */
+	bool (*bypass_socket)(kernel_interface_t *this, int fd, int family);
+
+	/**
 	 * manager methods
 	 */
 

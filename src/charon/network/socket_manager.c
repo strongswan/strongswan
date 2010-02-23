@@ -81,21 +81,6 @@ METHOD(socket_manager_t, sender, status_t,
 	return status;
 }
 
-METHOD(socket_manager_t, create_enumerator, enumerator_t*,
-	private_socket_manager_t *this)
-{
-	socket_t *socket;
-
-	this->lock->read_lock(this->lock);
-	if (this->sockets->get_first(this->sockets, (void**)&socket) != SUCCESS)
-	{
-		this->lock->unlock(this->lock);
-		return enumerator_create_empty();
-	}
-	return enumerator_create_cleaner(socket->create_enumerator(socket),
-									 (void*)this->lock->unlock, this->lock);
-}
-
 METHOD(socket_manager_t, add_socket, void,
 	private_socket_manager_t *this, socket_t *socket)
 {
@@ -131,7 +116,6 @@ socket_manager_t *socket_manager_create()
 		.public = {
 			.send = _sender,
 			.receive = _receiver,
-			.create_enumerator = _create_enumerator,
 			.add_socket = _add_socket,
 			.remove_socket = _remove_socket,
 			.destroy = _destroy,

@@ -521,6 +521,12 @@ static int open_socket(private_socket_default_socket_t *this,
 		}
 	}
 
+	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
+												 skt, family))
+	{
+		DBG1(DBG_NET, "installing IKE bypass policy failed");
+	}
+
 #ifndef __APPLE__
 	{
 		/* enable UDP decapsulation globally, only for one socket needed */
@@ -533,66 +539,6 @@ static int open_socket(private_socket_default_socket_t *this,
 	}
 #endif
 	return skt;
-}
-
-/**
- * enumerator for underlying sockets
- */
-typedef struct {
-	/** implements enumerator_t */
-	enumerator_t public;
-	/** sockets we enumerate */
-	private_socket_default_socket_t *socket;
-	/** counter */
-	int index;
-} socket_enumerator_t;
-
-/**
- * enumerate function for socket_enumerator_t
- */
-static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port)
-{
-	static const struct {
-		int fd_offset;
-		int family;
-		int port;
-	} sockets[] = {
-		{ offsetof(private_socket_default_socket_t, ipv4),
-			AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_default_socket_t, ipv6),
-			AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_default_socket_t, ipv4_natt),
-			AF_INET, IKEV2_NATT_PORT },
-		{ offsetof(private_socket_default_socket_t, ipv6_natt),
-			AF_INET6, IKEV2_NATT_PORT }
-	};
-
-	while(++this->index < countof(sockets))
-	{
-		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
-		if (!sock)
-		{
-			continue;
-		}
-		*fd = sock;
-		*family = sockets[this->index].family;
-		*port = sockets[this->index].port;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-METHOD(socket_t, create_enumerator, enumerator_t*,
-	private_socket_default_socket_t *this)
-{
-	socket_enumerator_t *enumerator;
-
-	enumerator = malloc_thing(socket_enumerator_t);
-	enumerator->index = -1;
-	enumerator->socket = this;
-	enumerator->public.enumerate = (void*)enumerate;
-	enumerator->public.destroy = (void*)free;
-	return &enumerator->public;
 }
 
 METHOD(socket_default_socket_t, destroy, void,
@@ -629,7 +575,6 @@ socket_default_socket_t *socket_default_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
-				.create_enumerator = _create_enumerator,
 			},
 			.destroy = _destroy,
 		},

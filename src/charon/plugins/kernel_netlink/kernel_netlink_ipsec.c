@@ -1892,6 +1892,47 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, bypass_socket, bool,
+	private_kernel_netlink_ipsec_t *this, int fd, int family)
+{
+	struct xfrm_userpolicy_info policy;
+	u_int sol, ipsec_policy;
+
+	switch (family)
+	{
+		case AF_INET:
+			sol = SOL_IP;
+			ipsec_policy = IP_XFRM_POLICY;
+			break;
+		case AF_INET6:
+			sol = SOL_IPV6;
+			ipsec_policy = IPV6_XFRM_POLICY;
+			break;
+		default:
+			return FALSE;
+	}
+
+	memset(&policy, 0, sizeof(policy));
+	policy.action = XFRM_POLICY_ALLOW;
+	policy.sel.family = family;
+
+	policy.dir = XFRM_POLICY_OUT;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	policy.dir = XFRM_POLICY_IN;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_netlink_ipsec_t *this)
 {
@@ -1910,60 +1951,6 @@ METHOD(kernel_ipsec_t, destroy, void,
 	this->policies->destroy(this->policies);
 	this->mutex->destroy(this->mutex);
 	free(this);
-}
-
-/**
- * Add bypass policies for IKE on the sockets used by charon
- */
-static bool add_bypass_policies()
-{
-	int fd, family, port;
-	enumerator_t *sockets;
-	bool status = TRUE;
-
-	sockets = charon->socket->create_enumerator(charon->socket);
-	while (sockets->enumerate(sockets, &fd, &family, &port))
-	{
-		struct xfrm_userpolicy_info policy;
-		u_int sol, ipsec_policy;
-
-		switch (family)
-		{
-			case AF_INET:
-				sol = SOL_IP;
-				ipsec_policy = IP_XFRM_POLICY;
-				break;
-			case AF_INET6:
-				sol = SOL_IPV6;
-				ipsec_policy = IPV6_XFRM_POLICY;
-				break;
-			default:
-				continue;
-		}
-
-		memset(&policy, 0, sizeof(policy));
-		policy.action = XFRM_POLICY_ALLOW;
-		policy.sel.family = family;
-
-		policy.dir = XFRM_POLICY_OUT;
-		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-		{
-			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-				 strerror(errno));
-			status = FALSE;
-			break;
-		}
-		policy.dir = XFRM_POLICY_IN;
-		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-		{
-			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-				 strerror(errno));
-			status = FALSE;
-			break;
-		}
-	}
-	sockets->destroy(sockets);
-	return status;
 }
 
 /*
@@ -1986,6 +1973,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 			.add_policy = _add_policy,
 			.query_policy = _query_policy,
 			.del_policy = _del_policy,
+			.bypass_socket = _bypass_socket,
 			.destroy = _destroy,
 		},
 		.policies = hashtable_create((hashtable_hash_t)policy_hash,
@@ -2020,13 +2008,6 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
 	}
-
-	/* add bypass policies on the sockets used by charon */
-	if (!add_bypass_policies())
-	{
-		charon->kill(charon, "unable to add bypass policies on sockets");
-	}
-
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

@@ -2044,6 +2044,52 @@ static status_t register_pfkey_socket(private_kernel_pfkey_ipsec_t *this,
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, bypass_socket, bool,
+	private_kernel_pfkey_ipsec_t *this, int fd, int family)
+{
+	struct sadb_x_policy policy;
+	u_int sol, ipsec_policy;
+
+	switch (family)
+	{
+		case AF_INET:
+		{
+			sol = SOL_IP;
+			ipsec_policy = IP_IPSEC_POLICY;
+			break;
+		}
+		case AF_INET6:
+		{
+			sol = SOL_IPV6;
+			ipsec_policy = IPV6_IPSEC_POLICY;
+			break;
+		}
+		default:
+			return FALSE;
+	}
+
+	memset(&policy, 0, sizeof(policy));
+	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
+	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+
+	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_pfkey_ipsec_t *this)
 {
@@ -2054,65 +2100,6 @@ METHOD(kernel_ipsec_t, destroy, void,
 	this->mutex->destroy(this->mutex);
 	this->mutex_pfkey->destroy(this->mutex_pfkey);
 	free(this);
-}
-
-/**
- * Add bypass policies for IKE on the sockets of charon
- */
-static bool add_bypass_policies(private_kernel_pfkey_ipsec_t *this)
-{
-	int fd, family, port;
-	enumerator_t *sockets;
-	bool status = TRUE;
-
-	sockets = charon->socket->create_enumerator(charon->socket);
-	while (sockets->enumerate(sockets, &fd, &family, &port))
-	{
-		struct sadb_x_policy policy;
-		u_int sol, ipsec_policy;
-
-		switch (family)
-		{
-			case AF_INET:
-			{
-				sol = SOL_IP;
-				ipsec_policy = IP_IPSEC_POLICY;
-				break;
-			}
-			case AF_INET6:
-			{
-				sol = SOL_IPV6;
-				ipsec_policy = IPV6_IPSEC_POLICY;
-				break;
-			}
-			default:
-				continue;
-		}
-
-		memset(&policy, 0, sizeof(policy));
-		policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
-		policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
-		policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
-
-		policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
-		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-		{
-			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-				 strerror(errno));
-			status = FALSE;
-			break;
-		}
-		policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
-		if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
-		{
-			DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-				 strerror(errno));
-			status = FALSE;
-			break;
-		}
-	}
-	sockets->destroy(sockets);
-	return status;
 }
 
 /*
@@ -2133,6 +2120,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 			.add_policy = _add_policy,
 			.query_policy = _query_policy,
 			.del_policy = _del_policy,
+			.bypass_socket = _bypass_socket,
 			.destroy = _destroy,
 		},
 		.policies = linked_list_create(),
@@ -2154,12 +2142,6 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	if (this->socket_events <= 0)
 	{
 		charon->kill(charon, "unable to create PF_KEY event socket");
-	}
-
-	/* add bypass policies on the sockets used by charon */
-	if (!add_bypass_policies(this))
-	{
-		charon->kill(charon, "unable to add bypass policies on sockets");
 	}
 
 	/* register the event socket */

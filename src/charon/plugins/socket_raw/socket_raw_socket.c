@@ -492,6 +492,12 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		}
 	}
 
+	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
+												 skt, family))
+	{
+		DBG1(DBG_NET, "installing bypass policy on send socket failed");
+	}
+
 	return skt;
 }
 
@@ -590,65 +596,13 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 		return 0;
 	}
 
-	return skt;
-}
-
-/**
- * enumerator for underlying sockets
- */
-typedef struct {
-	/** implements enumerator_t */
-	enumerator_t public;
-	/** sockets we enumerate */
-	private_socket_raw_socket_t *socket;
-	/** counter */
-	int index;
-} socket_enumerator_t;
-
-/**
- * enumerate function for socket_enumerator_t
- */
-static bool enumerate(socket_enumerator_t *this, int *fd, int *family, int *port)
-{
-	static const struct {
-		int fd_offset;
-		int family;
-		int port;
-	} sockets[] = {
-		{ offsetof(private_socket_raw_socket_t, recv4), AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_raw_socket_t, recv6), AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_raw_socket_t, send4), AF_INET, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_raw_socket_t, send6), AF_INET6, IKEV2_UDP_PORT },
-		{ offsetof(private_socket_raw_socket_t, send4_natt), AF_INET, IKEV2_NATT_PORT },
-		{ offsetof(private_socket_raw_socket_t, send6_natt), AF_INET6, IKEV2_NATT_PORT }
-	};
-
-	while(++this->index < countof(sockets))
+	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
+												 skt, family))
 	{
-		int sock = *(int*)((char*)this->socket + sockets[this->index].fd_offset);
-		if (!sock)
-		{
-			continue;
-		}
-		*fd = sock;
-		*family = sockets[this->index].family;
-		*port = sockets[this->index].port;
-		return TRUE;
+		DBG1(DBG_NET, "installing bypass policy on receive socket failed");
 	}
-	return FALSE;
-}
 
-METHOD(socket_t, create_enumerator, enumerator_t*,
-	private_socket_raw_socket_t *this)
-{
-	socket_enumerator_t *enumerator;
-
-	enumerator = malloc_thing(socket_enumerator_t);
-	enumerator->index = -1;
-	enumerator->socket = this;
-	enumerator->public.enumerate = (void*)enumerate;
-	enumerator->public.destroy = (void*)free;
-	return &enumerator->public;
+	return skt;
 }
 
 METHOD(socket_raw_socket_t, destroy, void,
@@ -693,7 +647,6 @@ socket_raw_socket_t *socket_raw_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
-				.create_enumerator = _create_enumerator,
 			},
 			.destroy = _destroy,
 		},

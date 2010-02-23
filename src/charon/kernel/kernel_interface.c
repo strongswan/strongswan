@@ -241,6 +241,15 @@ METHOD(kernel_interface_t, del_route, status_t,
 								src_ip, if_name);
 }
 
+METHOD(kernel_interface_t, bypass_socket, bool,
+	private_kernel_interface_t *this, int fd, int family)
+{
+	if (!this->ipsec)
+	{
+		return FALSE;
+	}
+	return this->ipsec->bypass_socket(this->ipsec, fd, family);
+}
 
 METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *ts, host_t **ip)
@@ -361,6 +370,7 @@ kernel_interface_t *kernel_interface_create()
 			.del_ip = _del_ip,
 			.add_route = _add_route,
 			.del_route = _del_route,
+			.bypass_socket = _bypass_socket,
 
 			.get_address_by_ts = _get_address_by_ts,
 			.add_ipsec_interface = _add_ipsec_interface,

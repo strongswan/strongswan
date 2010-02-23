@@ -2556,6 +2556,13 @@ static status_t register_pfkey_socket(private_kernel_klips_ipsec_t *this, u_int8
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, bypass_socket, bool,
+	private_kernel_klips_ipsec_t *this, int fd, int family)
+{
+	/* KLIPS does not need a bypass policy for IKE */
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_klips_ipsec_t *this)
 {
@@ -2589,6 +2596,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 			.add_policy = _add_policy,
 			.query_policy = _query_policy,
 			.del_policy = _del_policy,
+			.bypass_socket = _bypass_socket,
 			.destroy = _destroy,
 		},
 		.policies = linked_list_create(),

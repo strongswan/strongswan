@@ -59,13 +59,6 @@ struct socket_t {
 	 * 						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_t *this, packet_t *packet);
-
-	/**
-	 * Enumerate all underlying socket file descriptors.
-	 *
-	 * @return				enumerator over (int fd, int family, int port)
-	 */
-	enumerator_t *(*create_enumerator) (socket_t *this);
 };
 
 #endif /** SOCKET_H_ @}*/
