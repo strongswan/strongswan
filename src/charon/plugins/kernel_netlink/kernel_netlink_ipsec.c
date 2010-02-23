@@ -1939,9 +1939,15 @@ METHOD(kernel_ipsec_t, destroy, void,
 	enumerator_t *enumerator;
 	policy_entry_t *policy;
 
-	this->job->cancel(this->job);
-	close(this->socket_xfrm_events);
-	this->socket_xfrm->destroy(this->socket_xfrm);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
+	if (this->socket_xfrm_events > 0)
+	{
+		close(this->socket_xfrm_events);
+	}
+	DESTROY_IF(this->socket_xfrm);
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, &policy, &policy))
 	{
@@ -1992,6 +1998,11 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	}
 
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM);
+	if (!this->socket_xfrm)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
@@ -2000,13 +2011,17 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket_xfrm_events <= 0)
 	{
-		charon->kill(charon, "unable to create XFRM event socket");
+		DBG1(DBG_KNL, "unable to create XFRM event socket");
+		destroy(this);
+		return NULL;
 	}
 	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
 					 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
-		charon->kill(charon, "unable to bind XFRM event socket");
+		DBG1(DBG_KNL, "unable to bind XFRM event socket");
+		destroy(this);
+		return NULL;
 	}
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);

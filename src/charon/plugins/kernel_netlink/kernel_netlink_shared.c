@@ -236,7 +236,10 @@ static status_t netlink_send_ack(private_netlink_socket_t *this, struct nlmsghdr
  */
 static void destroy(private_netlink_socket_t *this)
 {
-	close(this->socket);
+	if (this->socket > 0)
+	{
+		close(this->socket);
+	}
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -244,7 +247,8 @@ static void destroy(private_netlink_socket_t *this)
 /**
  * Described in header.
  */
-netlink_socket_t *netlink_socket_create(int protocol) {
+netlink_socket_t *netlink_socket_create(int protocol)
+{
 	private_netlink_socket_t *this = malloc_thing(private_netlink_socket_t);
 	struct sockaddr_nl addr;
 
@@ -262,15 +266,19 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 
 	this->protocol = protocol;
 	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
-	if (this->socket <= 0)
+	if (this->socket < 0)
 	{
-		charon->kill(charon, "unable to create netlink socket");
+		DBG1(DBG_KNL, "unable to create netlink socket");
+		destroy(this);
+		return NULL;
 	}
 
 	addr.nl_groups = 0;
 	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
 	{
-		charon->kill(charon, "unable to bind netlink socket");
+		DBG1(DBG_KNL, "unable to bind netlink socket");
+		destroy(this);
+		return NULL;
 	}
 
 	return &this->public;

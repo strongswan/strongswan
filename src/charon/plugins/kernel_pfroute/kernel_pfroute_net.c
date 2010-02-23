@@ -650,9 +650,18 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
  */
 static void destroy(private_kernel_pfroute_net_t *this)
 {
-	this->job->cancel(this->job);
-	close(this->socket);
-	close(this->socket_events);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
+	if (this->socket > 0)
+	{
+		close(this->socket);
+	}
+	if (this->socket_events)
+	{
+		close(this->socket_events);
+	}
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->mutex->destroy(this->mutex);
 	this->mutex_pfroute->destroy(this->mutex_pfroute);
@@ -684,19 +693,25 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 	this->mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT);
 
 	this->seq = 0;
+	this->socket_events = 0;
+	this->job = NULL;
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-	if (this->socket <= 0)
+	if (this->socket < 0)
 	{
-		charon->kill(charon, "unable to create PF_ROUTE socket");
+		DBG1(DBG_KNL, "unable to create PF_ROUTE socket");
+		destroy(this);
+		return NULL;
 	}
 
 	/* create a PF_ROUTE socket to receive events */
 	this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-	if (this->socket_events <= 0)
+	if (this->socket_events < 0)
 	{
-		charon->kill(charon, "unable to create PF_ROUTE event socket");
+		DBG1(DBG_KNL, "unable to create PF_ROUTE event socket");
+		destroy(this);
+		return NULL;
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
@@ -705,7 +720,9 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 
 	if (init_address_list(this) != SUCCESS)
 	{
-		charon->kill(charon, "unable to get interface list");
+		DBG1(DBG_KNL, "unable to get interface list");
+		destroy(this);
+		return NULL;
 	}
 
 	return &this->public;

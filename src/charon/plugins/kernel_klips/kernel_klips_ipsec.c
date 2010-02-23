@@ -2566,9 +2566,18 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_klips_ipsec_t *this)
 {
-	this->job->cancel(this->job);
-	close(this->socket);
-	close(this->socket_events);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
+	if (this->socket > 0)
+	{
+		close(this->socket);
+	}
+	if (this->socket_evnets > 0)
+	{
+		close(this->socket_events);
+	}
 	this->mutex_pfkey->destroy(this->mutex_pfkey);
 	this->mutex->destroy(this->mutex);
 	this->ipsec_devices->destroy_function(this->ipsec_devices, (void*)ipsec_dev_destroy);
@@ -2616,21 +2625,27 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 	this->socket = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
 	if (this->socket <= 0)
 	{
-		charon->kill(charon, "unable to create PF_KEY socket");
+		DBG1(DBG_KNL, "unable to create PF_KEY socket");
+		destroy(this);
+		return NULL;
 	}
 
 	/* create a PF_KEY socket for ACQUIRE & EXPIRE */
 	this->socket_events = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
 	if (this->socket_events <= 0)
 	{
-		charon->kill(charon, "unable to create PF_KEY event socket");
+		DBG1(DBG_KNL, "unable to create PF_KEY event socket");
+		destroy(this);
+		return NULL;
 	}
 
 	/* register the event socket */
 	if (register_pfkey_socket(this, SADB_SATYPE_ESP) != SUCCESS ||
 		register_pfkey_socket(this, SADB_SATYPE_AH) != SUCCESS)
 	{
-		charon->kill(charon, "unable to register PF_KEY event socket");
+		DBG1(DBG_KNL, "unable to register PF_KEY event socket");
+		destroy(this);
+		return NULL;
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
@@ -2639,3 +2654,4 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 
 	return &this->public;
 }
+

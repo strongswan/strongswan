@@ -1336,10 +1336,15 @@ static void destroy(private_kernel_netlink_net_t *this)
 		manage_rule(this, RTM_DELRULE, AF_INET6, this->routing_table,
 					this->routing_table_prio);
 	}
-
-	this->job->cancel(this->job);
-	close(this->socket_events);
-	this->socket->destroy(this->socket);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
+	if (this->socket_events > 0)
+	{
+		close(this->socket_events);
+	}
+	DESTROY_IF(this->socket);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
@@ -1380,21 +1385,26 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 					"charon.install_virtual_ip", TRUE);
 
 	this->socket = netlink_socket_create(NETLINK_ROUTE);
+	this->job = NULL;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 
 	/* create and bind RT socket for events (address/interface/route changes) */
 	this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (this->socket_events <= 0)
+	if (this->socket_events < 0)
 	{
-		charon->kill(charon, "unable to create RT event socket");
+		DBG1(DBG_KNL, "unable to create RT event socket");
+		destroy(this);
+		return NULL;
 	}
 	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
 					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_LINK;
 	if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
-		charon->kill(charon, "unable to bind RT event socket");
+		DBG1(DBG_KNL, "unable to bind RT event socket");
+		destroy(this);
+		return NULL;
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
@@ -1403,7 +1413,9 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	if (init_address_list(this) != SUCCESS)
 	{
-		charon->kill(charon, "unable to get interface list");
+		DBG1(DBG_KNL, "unable to get interface list");
+		destroy(this);
+		return NULL;
 	}
 
 	if (this->routing_table)
