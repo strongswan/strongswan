@@ -345,7 +345,7 @@ METHOD(socket_t, receiver, status_t,
  * open a socket to send and receive packets
  */
 static int open_socket(private_socket_dynamic_socket_t *this,
-					   int family, u_int16_t port, bool first)
+					   int family, u_int16_t port)
 {
 	int on = TRUE, type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
@@ -418,8 +418,8 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
 
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (first && setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	/* enable UDP decapsulation on each socket */
+	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 	{
 		DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
 	}
@@ -446,8 +446,7 @@ static dynsock_t *find_socket(private_socket_dynamic_socket_t *this,
 	{
 		return skt;
 	}
-	fd = open_socket(this, family, port,
-					 this->sockets->get_count(this->sockets));
+	fd = open_socket(this, family, port);
 	if (!fd)
 	{
 		return NULL;
