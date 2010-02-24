@@ -231,7 +231,9 @@ METHOD(ike_cfg_t, equals, bool,
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
 		streq(this->me, other->me) &&
-		streq(this->other, other->other));
+		streq(this->other, other->other) &&
+		this->my_port == other->my_port &&
+		this->other_port == other->other_port);
 }
 
 METHOD(ike_cfg_t, get_ref, ike_cfg_t*,
