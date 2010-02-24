@@ -9,5 +9,6 @@ libstrongswan_resolve_la_SOURCES = \
   resolve_plugin.h resolve_plugin.c \
   resolve_handler.h resolve_handler.c
 libstrongswan_resolve_la_LDFLAGS = -module -avoid-version
+libstrongswan_resolve_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 

@@ -9,6 +9,7 @@ libstrongswan_attr_sql_la_SOURCES = \
   attr_sql_plugin.h attr_sql_plugin.c \
   sql_attribute.h sql_attribute.c
 libstrongswan_attr_sql_la_LDFLAGS = -module -avoid-version
+libstrongswan_attr_sql_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 ipsec_PROGRAMS = pool
 pool_SOURCES = pool.c

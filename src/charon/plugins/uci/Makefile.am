@@ -9,6 +9,6 @@ libstrongswan_uci_la_SOURCES = \
   uci_config.h uci_config.c uci_creds.h uci_creds.c \
   uci_control.h uci_control.c
 libstrongswan_uci_la_LDFLAGS = -module -avoid-version
-libstrongswan_uci_la_LIBADD = -luci
+libstrongswan_uci_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -luci
 
 

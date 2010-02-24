@@ -11,4 +11,5 @@ libstrongswan_eap_sim_file_la_SOURCES = \
   eap_sim_file_provider.h eap_sim_file_provider.c \
   eap_sim_file_triplets.h eap_sim_file_triplets.c
 libstrongswan_eap_sim_file_la_LDFLAGS = -module -avoid-version
+libstrongswan_eap_sim_file_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

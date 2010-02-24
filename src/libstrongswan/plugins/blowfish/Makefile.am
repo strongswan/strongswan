@@ -9,4 +9,5 @@ libstrongswan_blowfish_la_SOURCES = \
 blowfish_plugin.h blowfish_plugin.c blowfish_crypter.c blowfish_crypter.h \
 bf_skey.c blowfish.h bf_pi.h bf_locl.h bf_enc.c
 libstrongswan_blowfish_la_LDFLAGS = -module -avoid-version
+libstrongswan_blowfish_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

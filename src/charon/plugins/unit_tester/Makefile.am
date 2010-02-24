@@ -21,4 +21,5 @@ libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h tests.h \
   tests/test_id.c
 
 libstrongswan_unit_tester_la_LDFLAGS = -module -avoid-version
+libstrongswan_unit_tester_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

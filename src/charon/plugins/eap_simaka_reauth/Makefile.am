@@ -10,4 +10,5 @@ libstrongswan_eap_simaka_reauth_la_SOURCES = \
   eap_simaka_reauth_card.h eap_simaka_reauth_card.c \
   eap_simaka_reauth_provider.h eap_simaka_reauth_provider.c
 libstrongswan_eap_simaka_reauth_la_LDFLAGS = -module -avoid-version
+libstrongswan_eap_simaka_reauth_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

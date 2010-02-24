@@ -11,4 +11,5 @@ libstrongswan_eap_radius_la_SOURCES = \
   radius_client.h radius_client.c \
   radius_message.h radius_message.c
 libstrongswan_eap_radius_la_LDFLAGS = -module -avoid-version
+libstrongswan_eap_radius_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

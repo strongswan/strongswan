@@ -9,4 +9,5 @@ libstrongswan_medcli_la_SOURCES = medcli_plugin.h medcli_plugin.c \
 			      medcli_config.h medcli_config.c \
 			      medcli_listener.h medcli_listener.c
 libstrongswan_medcli_la_LDFLAGS = -module -avoid-version
+libstrongswan_medcli_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

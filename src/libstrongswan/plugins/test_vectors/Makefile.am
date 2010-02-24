@@ -30,4 +30,5 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/fips_prf.c \
 	test_vectors/rng.c
 libstrongswan_test_vectors_la_LDFLAGS = -module -avoid-version
+libstrongswan_test_vectors_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
