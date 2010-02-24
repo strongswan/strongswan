@@ -116,6 +116,7 @@ ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon, enforced if pluto is enabled])
+ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
 ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
 ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
 ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
@@ -238,9 +239,10 @@ fi
 
 if test x$pluto = xtrue; then
 	if test x$socket_raw = xfalse; then
-		AC_MSG_NOTICE([Enforcing --enable-socket-raw/--disable-socket-default, as pluto is enabled])
+		AC_MSG_NOTICE([Enforcing --enable-socket-raw, as pluto is enabled])
 		socket_default=false
 		socket_raw=true
+		socket_dynamic=false
 	fi
 fi
 
@@ -812,6 +814,7 @@ AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
+AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 
 dnl other options
 dnl =============
@@ -908,6 +911,7 @@ AC_OUTPUT(
 	src/charon/plugins/kernel_klips/Makefile
 	src/charon/plugins/socket_default/Makefile
 	src/charon/plugins/socket_raw/Makefile
+	src/charon/plugins/socket_dynamic/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile

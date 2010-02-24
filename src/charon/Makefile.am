@@ -164,6 +164,11 @@ if USE_SOCKET_RAW
   PLUGINS += socket-raw
 endif
 
+if USE_SOCKET_DYNAMIC
+  SUBDIRS += plugins/socket_dynamic
+  PLUGINS += socket-dynamic
+endif
+
 if USE_STROKE
   SUBDIRS += plugins/stroke
   PLUGINS += stroke
