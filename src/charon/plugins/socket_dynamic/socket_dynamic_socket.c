@@ -38,6 +38,7 @@
 
 #include <daemon.h>
 #include <threading/thread.h>
+#include <threading/rwlock.h>
 #include <utils/hashtable.h>
 
 /* Maximum size of a packet */
@@ -89,6 +90,11 @@ struct private_socket_dynamic_socket_t {
 	 * Hashtable of bound sockets
 	 */
 	hashtable_t *sockets;
+
+	/**
+	 * Lock for sockets hashtable
+	 */
+	rwlock_t *lock;
 
 	/**
 	 * Notification pipe to signal receiver
@@ -146,6 +152,7 @@ static int build_fds(private_socket_dynamic_socket_t *this, fd_set *fds)
 	FD_SET(this->notify[0], fds);
 	maxfd = this->notify[0];
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->sockets->create_enumerator(this->sockets);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
@@ -153,6 +160,7 @@ static int build_fds(private_socket_dynamic_socket_t *this, fd_set *fds)
 		maxfd = max(maxfd, value->fd);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	return maxfd + 1;
 }
@@ -165,6 +173,7 @@ static dynsock_t* scan_fds(private_socket_dynamic_socket_t *this, fd_set *fds)
 	enumerator_t *enumerator;
 	dynsock_t *key, *value, *selected = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->sockets->create_enumerator(this->sockets);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
@@ -175,6 +184,8 @@ static dynsock_t* scan_fds(private_socket_dynamic_socket_t *this, fd_set *fds)
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
 	return selected;
 }
 
@@ -428,7 +439,9 @@ static dynsock_t *find_socket(private_socket_dynamic_socket_t *this,
 	char buf[] = {0x01};
 	int fd;
 
+	this->lock->read_lock(this->lock);
 	skt = this->sockets->get(this->sockets, &lookup);
+	this->lock->unlock(this->lock);
 	if (skt)
 	{
 		return skt;
@@ -444,7 +457,9 @@ static dynsock_t *find_socket(private_socket_dynamic_socket_t *this,
 		.port = port,
 		.fd = fd,
 	);
+	this->lock->write_lock(this->lock);
 	this->sockets->put(this->sockets, skt, skt);
+	this->lock->unlock(this->lock);
 	/* notify receiver thread to reread socket list */
 	ignore_result(write(this->notify[1], buf, sizeof(buf)));
 
@@ -567,6 +582,7 @@ METHOD(socket_dynamic_socket_t, destroy, void,
 	}
 	enumerator->destroy(enumerator);
 	this->sockets->destroy(this->sockets);
+	this->lock->destroy(this->lock);
 
 	close(this->notify[0]);
 	close(this->notify[1]);
@@ -588,6 +604,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			},
 			.destroy = _destroy,
 		},
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	if (pipe(this->notify) != 0)
