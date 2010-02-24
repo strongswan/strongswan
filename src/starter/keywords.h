@@ -118,6 +118,7 @@ typedef enum {
    /* end keywords */
 	KW_HOST,
 	KW_NEXTHOP,
+	KW_IKEPORT,
 	KW_SUBNET,
 	KW_SUBNETWITHIN,
 	KW_PROTOPORT,
