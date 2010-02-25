@@ -182,7 +182,7 @@ static void cancel(private_callback_job_t *this)
  */
 static void execute(private_callback_job_t *this)
 {
-	bool cleanup = FALSE;
+	bool cleanup = FALSE, requeue = FALSE;
 
 	thread_cleanup_push((thread_cleanup_t)destroy, this);
 
@@ -206,8 +206,7 @@ static void execute(private_callback_job_t *this)
 				continue;
 			case JOB_REQUEUE_FAIR:
 			{
-				charon->processor->queue_job(charon->processor,
-											 &this->public.job_interface);
+				requeue = TRUE;
 				break;
 			}
 			case JOB_REQUEUE_NONE:
@@ -225,6 +224,11 @@ static void execute(private_callback_job_t *this)
 	/* manually create a cancellation point to avoid that a cancelled thread
 	 * goes back into the thread pool */
 	thread_cancellation_point();
+	if (requeue)
+	{
+		charon->processor->queue_job(charon->processor,
+									 &this->public.job_interface);
+	}
 	thread_cleanup_pop(cleanup);
 }
 
