@@ -573,6 +573,10 @@ fi
 if test x$android = xtrue; then
 	AC_HAVE_LIBRARY([cutils],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])])
 	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
+	dnl we have to force the use of libdl here because the autodetection
+	dnl above does not work correctly when cross-compiling for android.
+	DLLIB="-ldl"
+	AC_SUBST(DLLIB)
 fi
 
 if test x$nm = xtrue; then
