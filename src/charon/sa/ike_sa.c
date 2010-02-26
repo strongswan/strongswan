@@ -1191,9 +1191,9 @@ static status_t initiate(private_ike_sa_t *this,
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
 
-		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_vendor_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
