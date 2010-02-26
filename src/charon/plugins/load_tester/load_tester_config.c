@@ -78,6 +78,11 @@ struct private_load_tester_config_t {
 	 * incremental numbering of generated configs
 	 */
 	u_int num;
+
+	/**
+	 * Dynamic source port, if used
+	 */
+	u_int16_t port;
 };
 
 /**
@@ -189,8 +194,16 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		}
 	};
 
-	ike_cfg = ike_cfg_create(FALSE, FALSE,
-					"0.0.0.0", IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
+	if (this->port && num)
+	{
+		ike_cfg = ike_cfg_create(FALSE, FALSE,
+				"0.0.0.0", this->port + num - 1, this->remote, IKEV2_NATT_PORT);
+	}
+	else
+	{
+		ike_cfg = ike_cfg_create(FALSE, FALSE,
+				"0.0.0.0", IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
+	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
 							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
@@ -308,6 +321,9 @@ load_tester_config_t *load_tester_config_create()
 				"charon.plugins.load-tester.initiator_auth", "pubkey");
 	this->responder_auth = lib->settings->get_str(lib->settings,
 				"charon.plugins.load-tester.responder_auth", "pubkey");
+
+	this->port = lib->settings->get_int(lib->settings,
+				"charon.plugins.load-tester.dynamic_port", 0);
 
 	this->num = 1;
 	this->peer_cfg = generate_config(this, 0);
