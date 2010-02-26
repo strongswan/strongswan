@@ -1,3 +1,12 @@
+strongswan-4.4.0
+----------------
+
+- The existing IKEv2 socket implementations have been migrated to the
+  socket-default and the socket-raw plugins. The new socket-dynamic plugin
+  binds sockets dynamically to ports configured via the left-/rightikeport
+  ipsec.conf connection parameters.
+
+
 strongswan-4.3.6
 ----------------
 
