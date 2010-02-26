@@ -9,3 +9,4 @@ libstrongswan_socket_default_la_SOURCES = \
 	socket_default_plugin.h socket_default_plugin.c \
 	socket_default_socket.h socket_default_socket.c
 libstrongswan_socket_default_la_LDFLAGS = -module -avoid-version
+libstrongswan_socket_default_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
