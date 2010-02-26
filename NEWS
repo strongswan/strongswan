@@ -6,6 +6,8 @@ strongswan-4.4.0
   binds sockets dynamically to ports configured via the left-/rightikeport
   ipsec.conf connection parameters.
 
+- The android charon plugin stores received DNS server information as "net.dns"
+  system properties, as used by the Android platform.
 
 strongswan-4.3.6
 ----------------
