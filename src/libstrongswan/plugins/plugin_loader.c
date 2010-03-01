@@ -67,6 +67,40 @@ static char* sanitize(char *str)
 	return str;
 }
 
+#ifdef MONOLITHIC
+/**
+ * load a single plugin in monolithic mode
+ */
+static plugin_t* load_plugin(private_plugin_loader_t *this,
+							 char *path, char *name)
+{
+	char create[128];
+	plugin_t *plugin;
+	plugin_constructor_t constructor;
+
+	if (snprintf(create, sizeof(create), "%s_plugin_create",
+				 name) >= sizeof(create))
+	{
+		return NULL;
+	}
+	sanitize(create);
+	constructor = dlsym(RTLD_DEFAULT, create);
+	if (constructor == NULL)
+	{
+		DBG1("plugin '%s': failed to load - %s not found", name, create);
+		return NULL;
+	}
+	plugin = constructor();
+	if (plugin == NULL)
+	{
+		DBG1("plugin '%s': failed to load - %s returned NULL", name, create);
+		return NULL;
+	}
+	DBG2("plugin '%s': loaded successfully", name);
+
+	return plugin;
+}
+#else
 /**
  * load a single plugin
  */
@@ -131,6 +165,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	 * the modules to keep loaded until leak report */
 	return plugin;
 }
+#endif
 
 /**
  * Implementation of plugin_loader_t.load_plugins.
@@ -141,10 +176,12 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 	char *token;
 	bool critical_failed = FALSE;
 
+#ifndef MONOLITHIC
 	if (path == NULL)
 	{
 		path = PLUGINDIR;
 	}
+#endif
 
 	enumerator = enumerator_create_token(list, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
