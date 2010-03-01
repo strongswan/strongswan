@@ -142,6 +142,7 @@ ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
+ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
 dnl =========================
 dnl  set up compiler and flags
@@ -840,6 +841,7 @@ AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
+AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
 dnl  set global definitions
@@ -851,6 +853,10 @@ fi
 if test x$capabilities = xlibcap; then
 	AC_DEFINE(CAPABILITIES)
 fi
+if test x$monolithic = xtrue; then
+	AC_DEFINE(MONOLITHIC)
+fi
+
 
 dnl ==============================
 dnl  build Makefiles
