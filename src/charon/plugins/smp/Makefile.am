@@ -3,8 +3,14 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${xml_CF
 
 AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-smp.la
+libstrongswan_smp_la_LIBADD =
+else
 plugin_LTLIBRARIES = libstrongswan-smp.la
+libstrongswan_smp_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
+
 libstrongswan_smp_la_SOURCES = smp.h smp.c
 libstrongswan_smp_la_LDFLAGS = -module -avoid-version
-libstrongswan_smp_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la ${xml_LIBS}
-
+libstrongswan_smp_la_LIBADD += ${xml_LIBS}

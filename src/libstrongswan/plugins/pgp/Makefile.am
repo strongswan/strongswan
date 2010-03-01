@@ -3,7 +3,12 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-pgp.la
+else
 plugin_LTLIBRARIES = libstrongswan-pgp.la
+libstrongswan_pgp_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_pgp_la_SOURCES = pgp_plugin.h pgp_plugin.c \
   pgp_utils.h pgp_utils.c \
@@ -12,5 +17,3 @@ libstrongswan_pgp_la_SOURCES = pgp_plugin.h pgp_plugin.c \
   pgp_builder.h pgp_builder.c
 
 libstrongswan_pgp_la_LDFLAGS = -module -avoid-version
-libstrongswan_pgp_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-

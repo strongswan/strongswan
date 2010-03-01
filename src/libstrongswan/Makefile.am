@@ -115,116 +115,200 @@ $(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposa
 # build plugins with their own Makefile
 #######################################
 
-SUBDIRS = .
+SUBDIRS =
 
 if USE_AES
   SUBDIRS += plugins/aes
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/aes/libstrongswan-aes.la
+endif
 endif
 
 if USE_DES
   SUBDIRS += plugins/des
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/des/libstrongswan-des.la
+endif
 endif
 
 if USE_BLOWFISH
   SUBDIRS += plugins/blowfish
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/blowfish/libstrongswan-blowfish.la
+endif
 endif
 
 if USE_MD4
   SUBDIRS += plugins/md4
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/md4/libstrongswan-md4.la
+endif
 endif
 
 if USE_MD5
   SUBDIRS += plugins/md5
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/md5/libstrongswan-md5.la
+endif
 endif
 
 if USE_SHA1
   SUBDIRS += plugins/sha1
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sha1/libstrongswan-sha1.la
+endif
 endif
 
 if USE_SHA2
   SUBDIRS += plugins/sha2
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sha2/libstrongswan-sha2.la
+endif
 endif
 
 if USE_FIPS_PRF
   SUBDIRS += plugins/fips_prf
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/fips_prf/libstrongswan-fips-prf.la
+endif
 endif
 
 if USE_GMP
   SUBDIRS += plugins/gmp
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gmp/libstrongswan-gmp.la
+endif
 endif
 
 if USE_RANDOM
   SUBDIRS += plugins/random
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/random/libstrongswan-random.la
+endif
 endif
 
 if USE_HMAC
   SUBDIRS += plugins/hmac
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/hmac/libstrongswan-hmac.la
+endif
 endif
 
 if USE_XCBC
   SUBDIRS += plugins/xcbc
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/xcbc/libstrongswan-xcbc.la
+endif
 endif
 
 if USE_X509
   SUBDIRS += plugins/x509
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/x509/libstrongswan-x509.la
+endif
 endif
 
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pubkey/libstrongswan-pubkey.la
+endif
 endif
 
 if USE_PKCS1
   SUBDIRS += plugins/pkcs1
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs1/libstrongswan-pkcs1.la
+endif
 endif
 
 if USE_PGP
   SUBDIRS += plugins/pgp
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pgp/libstrongswan-pgp.la
+endif
 endif
 
 if USE_DNSKEY
   SUBDIRS += plugins/dnskey
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/dnskey/libstrongswan-dnskey.la
+endif
 endif
 
 if USE_PEM
   SUBDIRS += plugins/pem
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pem/libstrongswan-pem.la
+endif
 endif
 
 if USE_CURL
   SUBDIRS += plugins/curl
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/curl/libstrongswan-curl.la
+endif
 endif
 
 if USE_LDAP
   SUBDIRS += plugins/ldap
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ldap/libstrongswan-ldap.la
+endif
 endif
 
 if USE_MYSQL
   SUBDIRS += plugins/mysql
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/mysql/libstrongswan-mysql.la
+endif
 endif
 
 if USE_SQLITE
   SUBDIRS += plugins/sqlite
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sqlite/libstrongswan-sqlite.la
+endif
 endif
 
 if USE_ATTR_SQL
   SUBDIRS += plugins/attr_sql
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
+endif
 endif
 
 if USE_PADLOCK
   SUBDIRS += plugins/padlock
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/padlock/libstrongswan-padlock.la
+endif
 endif
 
 if USE_OPENSSL
   SUBDIRS += plugins/openssl
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/openssl/libstrongswan-openssl.la
+endif
 endif
 
 if USE_GCRYPT
   SUBDIRS += plugins/gcrypt
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gcrypt/libstrongswan-gcrypt.la
+endif
 endif
 
 if USE_AGENT
   SUBDIRS += plugins/agent
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/agent/libstrongswan-agent.la
+endif
 endif
 
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/test_vectors/libstrongswan-test-vectors.la
+endif
 endif

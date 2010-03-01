@@ -3,9 +3,15 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-ldap.la
+libstrongswan_ldap_la_LIBADD =
+else
 plugin_LTLIBRARIES = libstrongswan-ldap.la
+libstrongswan_ldap_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_ldap_la_SOURCES = ldap_plugin.h ldap_plugin.c ldap_fetcher.h ldap_fetcher.c
 libstrongswan_ldap_la_LDFLAGS = -module -avoid-version
-libstrongswan_ldap_la_LIBADD  = $(top_builddir)/src/libstrongswan/libstrongswan.la -lldap -llber
+libstrongswan_ldap_la_LIBADD += -lldap -llber
 

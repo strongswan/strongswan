@@ -3,7 +3,13 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-openssl.la
+libstrongswan_openssl_la_LIBADD =
+else
 plugin_LTLIBRARIES = libstrongswan-openssl.la
+libstrongswan_openssl_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_openssl_la_SOURCES = openssl_plugin.h openssl_plugin.c \
 	openssl_util.c openssl_util.h \
@@ -17,5 +23,5 @@ libstrongswan_openssl_la_SOURCES = openssl_plugin.h openssl_plugin.c \
 	openssl_ec_public_key.c openssl_ec_public_key.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
-libstrongswan_openssl_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lcrypto
+libstrongswan_openssl_la_LIBADD += -lcrypto
 

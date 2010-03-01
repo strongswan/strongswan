@@ -6,7 +6,12 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\"
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-stroke.la
+else
 plugin_LTLIBRARIES = libstrongswan-stroke.la
+libstrongswan_stroke_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_stroke_la_SOURCES = stroke_plugin.h stroke_plugin.c \
   stroke_socket.h stroke_socket.c \
@@ -19,5 +24,3 @@ libstrongswan_stroke_la_SOURCES = stroke_plugin.h stroke_plugin.c \
   stroke_shared_key.h stroke_shared_key.c
 
 libstrongswan_stroke_la_LDFLAGS = -module -avoid-version
-libstrongswan_stroke_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-

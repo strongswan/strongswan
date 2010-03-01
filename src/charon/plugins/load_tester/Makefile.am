@@ -3,7 +3,12 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-load-tester.la
+else
 plugin_LTLIBRARIES = libstrongswan-load-tester.la
+libstrongswan_load_tester_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_load_tester_la_SOURCES = \
   load_tester_plugin.c load_tester_plugin.h \
@@ -14,5 +19,3 @@ libstrongswan_load_tester_la_SOURCES = \
   load_tester_diffie_hellman.c load_tester_diffie_hellman.h
 
 libstrongswan_load_tester_la_LDFLAGS = -module -avoid-version
-libstrongswan_load_tester_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-

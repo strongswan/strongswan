@@ -3,7 +3,13 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-gcrypt.la
+libstrongswan_gcrypt_la_LIBADD =
+else
 plugin_LTLIBRARIES = libstrongswan-gcrypt.la
+libstrongswan_gcrypt_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_gcrypt_la_SOURCES = gcrypt_plugin.h gcrypt_plugin.c \
 	gcrypt_rsa_public_key.h gcrypt_rsa_public_key.c \
@@ -14,4 +20,4 @@ libstrongswan_gcrypt_la_SOURCES = gcrypt_plugin.h gcrypt_plugin.c \
 	gcrypt_hasher.h gcrypt_hasher.c
 
 libstrongswan_gcrypt_la_LDFLAGS = -module -avoid-version
-libstrongswan_gcrypt_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgcrypt
+libstrongswan_gcrypt_la_LIBADD += -lgcrypt

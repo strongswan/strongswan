@@ -3,7 +3,12 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-x509.la
+else
 plugin_LTLIBRARIES = libstrongswan-x509.la
+libstrongswan_x509_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
 
 libstrongswan_x509_la_SOURCES = x509_plugin.h x509_plugin.c \
   x509_cert.h x509_cert.c \
@@ -13,5 +18,3 @@ libstrongswan_x509_la_SOURCES = x509_plugin.h x509_plugin.c \
   x509_ocsp_request.h x509_ocsp_request.c \
   x509_ocsp_response.h x509_ocsp_response.c
 libstrongswan_x509_la_LDFLAGS = -module -avoid-version
-libstrongswan_x509_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-
