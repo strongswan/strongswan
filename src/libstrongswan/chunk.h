@@ -42,7 +42,7 @@ struct chunk_t {
 	size_t len;
 };
 
-#include <utils.h>
+#include "utils.h"
 
 /**
  * A { NULL, 0 }-chunk handy for initialization.

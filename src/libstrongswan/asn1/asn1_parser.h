@@ -25,9 +25,9 @@
 
 #include <stdarg.h>
 
-#include <utils.h>
-#include <chunk.h>
-#include <asn1/asn1.h>
+#include <library.h>
+
+#include "asn1.h"
 
 /**
  * Definition of ASN.1 flags

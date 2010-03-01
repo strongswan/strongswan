@@ -18,14 +18,12 @@
 
 #include <stdlib.h>
 
-#include <utils.h>
-#include <chunk.h>
-#include <debug.h>
-#include <threading/thread.h>
-#include <utils/identification.h>
-#include <utils/host.h>
+#include "debug.h"
+#include "threading/thread.h"
+#include "utils/identification.h"
+#include "utils/host.h"
 #ifdef LEAK_DETECTIVE
-#include <utils/leak_detective.h>
+#include "utils/leak_detective.h"
 #endif
 
 #define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"

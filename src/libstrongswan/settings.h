@@ -23,8 +23,8 @@
 
 typedef struct settings_t settings_t;
 
-#include <utils.h>
-#include <utils/enumerator.h>
+#include "utils.h"
+#include "utils/enumerator.h"
 
 /**
  * Generic configuration options read from a config file.

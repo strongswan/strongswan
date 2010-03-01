@@ -25,8 +25,7 @@
 
 #include <stdarg.h>
 
-#include <utils.h>
-#include <chunk.h>
+#include <library.h>
 
 /**
  * Definition of some primitive ASN1 types

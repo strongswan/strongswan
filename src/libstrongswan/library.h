@@ -55,18 +55,18 @@
 #ifndef LIBRARY_H_
 #define LIBRARY_H_
 
-#include <printf_hook.h>
-#include <utils.h>
-#include <chunk.h>
-#include <settings.h>
-#include <integrity_checker.h>
-#include <plugins/plugin_loader.h>
-#include <crypto/crypto_factory.h>
-#include <fetcher/fetcher_manager.h>
-#include <attributes/attribute_manager.h>
-#include <database/database_factory.h>
-#include <credentials/credential_factory.h>
-#include <credentials/keys/key_encoding.h>
+#include "printf_hook.h"
+#include "utils.h"
+#include "chunk.h"
+#include "settings.h"
+#include "integrity_checker.h"
+#include "plugins/plugin_loader.h"
+#include "crypto/crypto_factory.h"
+#include "fetcher/fetcher_manager.h"
+#include "attributes/attribute_manager.h"
+#include "database/database_factory.h"
+#include "credentials/credential_factory.h"
+#include "credentials/keys/key_encoding.h"
 
 typedef struct library_t library_t;
 

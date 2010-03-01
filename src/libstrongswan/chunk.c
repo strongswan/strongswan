@@ -22,8 +22,7 @@
 #include <ctype.h>
 
 #include "chunk.h"
-
-#include <debug.h>
+#include "debug.h"
 
 /* required for chunk_hash */
 #undef get16bits

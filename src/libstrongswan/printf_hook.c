@@ -16,8 +16,8 @@
 
 #include "printf_hook.h"
 
-#include <utils.h>
-#include <debug.h>
+#include "utils.h"
+#include "debug.h"
 
 #include <stdio.h>
 #include <stdarg.h>

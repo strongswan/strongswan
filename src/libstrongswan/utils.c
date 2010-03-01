@@ -25,8 +25,8 @@
 #include <dirent.h>
 #include <time.h>
 
-#include <enum.h>
-#include <debug.h>
+#include "enum.h"
+#include "debug.h"
 
 ENUM(status_names, SUCCESS, DESTROY_ME,
 	"SUCCESS",

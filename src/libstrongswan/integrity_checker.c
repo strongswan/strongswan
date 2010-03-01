@@ -26,8 +26,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <debug.h>
-#include <library.h>
+#include "debug.h"
+#include "library.h"
 
 typedef struct private_integrity_checker_t private_integrity_checker_t;
 

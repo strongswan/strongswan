@@ -29,7 +29,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include <enum.h>
+#include "enum.h"
 
 /**
  * strongSwan program return codes

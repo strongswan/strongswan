@@ -19,7 +19,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <utils.h>
 #include <debug.h>
 
 #include "asn1.h"

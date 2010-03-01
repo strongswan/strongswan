@@ -21,8 +21,8 @@
 
 #include "settings.h"
 
-#include <debug.h>
-#include <utils/linked_list.h>
+#include "debug.h"
+#include "utils/linked_list.h"
 
 
 typedef struct private_settings_t private_settings_t;
