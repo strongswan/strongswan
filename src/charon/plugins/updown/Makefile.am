@@ -11,6 +11,7 @@ libstrongswan_updown_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan
 endif
 
 libstrongswan_updown_la_SOURCES = \
-  updown_plugin.h updown_plugin.c \
-  updown_listener.h updown_listener.c
+	updown_plugin.h updown_plugin.c \
+	updown_listener.h updown_listener.c
+
 libstrongswan_updown_la_LDFLAGS = -module -avoid-version

@@ -11,5 +11,6 @@ libstrongswan_eap_identity_la_LIBADD = $(top_builddir)/src/libstrongswan/libstro
 endif
 
 libstrongswan_eap_identity_la_SOURCES = \
-  eap_identity_plugin.h eap_identity_plugin.c eap_identity.h eap_identity.c
+	eap_identity_plugin.h eap_identity_plugin.c eap_identity.h eap_identity.c
+
 libstrongswan_eap_identity_la_LDFLAGS = -module -avoid-version

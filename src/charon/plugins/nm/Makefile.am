@@ -13,9 +13,10 @@ libstrongswan_nm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_nm_la_SOURCES = \
-  nm_plugin.h nm_plugin.c \
-  nm_service.h nm_service.c \
-  nm_creds.h nm_creds.c \
-  nm_handler.h nm_handler.c
+	nm_plugin.h nm_plugin.c \
+	nm_service.h nm_service.c \
+	nm_creds.h nm_creds.c \
+	nm_handler.h nm_handler.c
+
 libstrongswan_nm_la_LDFLAGS = -module -avoid-version
 libstrongswan_nm_la_LIBADD += ${nm_LIBS}

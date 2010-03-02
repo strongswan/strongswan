@@ -10,6 +10,8 @@ plugin_LTLIBRARIES = libstrongswan-kernel-klips.la
 libstrongswan_kernel_klips_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
-libstrongswan_kernel_klips_la_SOURCES = kernel_klips_plugin.h kernel_klips_plugin.c \
+libstrongswan_kernel_klips_la_SOURCES = \
+	kernel_klips_plugin.h kernel_klips_plugin.c \
 	kernel_klips_ipsec.h kernel_klips_ipsec.c pfkeyv2.h
+
 libstrongswan_kernel_klips_la_LDFLAGS = -module -avoid-version

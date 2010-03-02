@@ -12,9 +12,10 @@ libstrongswan_eap_aka_3gpp2_la_LIBADD = $(top_builddir)/src/libstrongswan/libstr
 endif
 
 libstrongswan_eap_aka_3gpp2_la_SOURCES = \
-  eap_aka_3gpp2_plugin.h eap_aka_3gpp2_plugin.c \
-  eap_aka_3gpp2_card.h eap_aka_3gpp2_card.c \
-  eap_aka_3gpp2_provider.h eap_aka_3gpp2_provider.c \
-  eap_aka_3gpp2_functions.h eap_aka_3gpp2_functions.c
+	eap_aka_3gpp2_plugin.h eap_aka_3gpp2_plugin.c \
+	eap_aka_3gpp2_card.h eap_aka_3gpp2_card.c \
+	eap_aka_3gpp2_provider.h eap_aka_3gpp2_provider.c \
+	eap_aka_3gpp2_functions.h eap_aka_3gpp2_functions.c
+
 libstrongswan_eap_aka_3gpp2_la_LDFLAGS = -module -avoid-version
 libstrongswan_eap_aka_3gpp2_la_LIBADD += -lgmp

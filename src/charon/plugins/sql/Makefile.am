@@ -12,6 +12,7 @@ libstrongswan_sql_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_sql_la_SOURCES = \
-  sql_plugin.h sql_plugin.c sql_config.h sql_config.c \
-  sql_cred.h sql_cred.c sql_logger.h sql_logger.c
+	sql_plugin.h sql_plugin.c sql_config.h sql_config.c \
+	sql_cred.h sql_cred.c sql_logger.h sql_logger.c
+
 libstrongswan_sql_la_LDFLAGS = -module -avoid-version
