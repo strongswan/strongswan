@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-padlock.la
 else
 plugin_LTLIBRARIES = libstrongswan-padlock.la
-libstrongswan_padlock_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_padlock_la_SOURCES = \

@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-simaka-reauth.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-simaka-reauth.la
-libstrongswan_eap_simaka_reauth_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_eap_simaka_reauth_la_SOURCES = \

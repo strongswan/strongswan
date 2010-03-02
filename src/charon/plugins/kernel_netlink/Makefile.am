@@ -9,7 +9,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-netlink.la
 else
 plugin_LTLIBRARIES = libstrongswan-kernel-netlink.la
-libstrongswan_kernel_netlink_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_kernel_netlink_la_SOURCES = \

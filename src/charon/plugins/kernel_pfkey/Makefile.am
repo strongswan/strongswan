@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-pfkey.la
 else
 plugin_LTLIBRARIES = libstrongswan-kernel-pfkey.la
-libstrongswan_kernel_pfkey_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_kernel_pfkey_la_SOURCES = \

@@ -8,7 +8,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-resolve.la
 else
 plugin_LTLIBRARIES = libstrongswan-resolve.la
-libstrongswan_resolve_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_resolve_la_SOURCES = \

@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-x509.la
 else
 plugin_LTLIBRARIES = libstrongswan-x509.la
-libstrongswan_x509_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_x509_la_SOURCES = \

@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-radius.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-radius.la
-libstrongswan_eap_radius_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_eap_radius_la_SOURCES = \

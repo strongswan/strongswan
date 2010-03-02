@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-blowfish.la
 else
 plugin_LTLIBRARIES = libstrongswan-blowfish.la
-libstrongswan_blowfish_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_blowfish_la_SOURCES = \

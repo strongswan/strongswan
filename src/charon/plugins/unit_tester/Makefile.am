@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-unit-tester.la
 else
 plugin_LTLIBRARIES = libstrongswan-unit-tester.la
-libstrongswan_unit_tester_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_unit_tester_la_SOURCES = \

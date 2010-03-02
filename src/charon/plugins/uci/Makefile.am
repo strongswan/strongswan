@@ -5,10 +5,8 @@ AM_CFLAGS = -rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-uci.la
-libstrongswan_uci_la_LIBADD =
 else
 plugin_LTLIBRARIES = libstrongswan-uci.la
-libstrongswan_uci_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_uci_la_SOURCES = \
@@ -17,4 +15,4 @@ libstrongswan_uci_la_SOURCES = \
 	uci_control.h uci_control.c
 
 libstrongswan_uci_la_LDFLAGS = -module -avoid-version
-libstrongswan_uci_la_LIBADD += -luci
+libstrongswan_uci_la_LIBADD  = -luci

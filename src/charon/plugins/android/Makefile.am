@@ -5,10 +5,8 @@ AM_CFLAGS = -rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-android.la
-libstrongswan_android_la_LIBADD =
 else
 plugin_LTLIBRARIES = libstrongswan-android.la
-libstrongswan_android_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_android_la_SOURCES = \
@@ -16,4 +14,4 @@ libstrongswan_android_la_SOURCES = \
 	android_handler.c android_handler.h
 
 libstrongswan_android_la_LDFLAGS = -module -avoid-version
-libstrongswan_android_la_LIBADD += -lcutils
+libstrongswan_android_la_LIBADD  = -lcutils

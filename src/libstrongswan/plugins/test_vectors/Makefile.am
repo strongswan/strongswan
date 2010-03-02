@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-test-vectors.la
 else
 plugin_LTLIBRARIES = libstrongswan-test-vectors.la
-libstrongswan_test_vectors_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_test_vectors_la_SOURCES = \

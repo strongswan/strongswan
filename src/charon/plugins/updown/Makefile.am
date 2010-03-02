@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-updown.la
 else
 plugin_LTLIBRARIES = libstrongswan-updown.la
-libstrongswan_updown_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_updown_la_SOURCES = \

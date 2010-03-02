@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-gtc.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-gtc.la
-libstrongswan_eap_gtc_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_eap_gtc_la_SOURCES = \

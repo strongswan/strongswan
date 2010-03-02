@@ -6,10 +6,8 @@ AM_CFLAGS = -rdynamic \
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-nm.la
-libstrongswan_nm_la_LIBADD =
 else
 plugin_LTLIBRARIES = libstrongswan-nm.la
-libstrongswan_nm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_nm_la_SOURCES = \
@@ -19,4 +17,4 @@ libstrongswan_nm_la_SOURCES = \
 	nm_handler.h nm_handler.c
 
 libstrongswan_nm_la_LDFLAGS = -module -avoid-version
-libstrongswan_nm_la_LIBADD += ${nm_LIBS}
+libstrongswan_nm_la_LIBADD  = ${nm_LIBS}

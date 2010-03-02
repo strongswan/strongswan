@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-agent.la
 else
 plugin_LTLIBRARIES = libstrongswan-agent.la
-libstrongswan_agent_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_agent_la_SOURCES = \

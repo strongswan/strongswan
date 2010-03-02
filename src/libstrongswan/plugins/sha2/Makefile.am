@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-sha2.la
 else
 plugin_LTLIBRARIES = libstrongswan-sha2.la
-libstrongswan_sha2_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_sha2_la_SOURCES = \

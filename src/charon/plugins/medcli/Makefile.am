@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-medcli.la
 else
 plugin_LTLIBRARIES = libstrongswan-medcli.la
-libstrongswan_medcli_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_medcli_la_SOURCES = \

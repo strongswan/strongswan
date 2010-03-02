@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-socket-default.la
 else
 plugin_LTLIBRARIES = libstrongswan-socket-default.la
-libstrongswan_socket_default_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_socket_default_la_SOURCES = \

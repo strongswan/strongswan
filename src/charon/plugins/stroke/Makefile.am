@@ -10,7 +10,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-stroke.la
 else
 plugin_LTLIBRARIES = libstrongswan-stroke.la
-libstrongswan_stroke_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_stroke_la_SOURCES = \

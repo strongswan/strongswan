@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-pgp.la
 else
 plugin_LTLIBRARIES = libstrongswan-pgp.la
-libstrongswan_pgp_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_pgp_la_SOURCES = \

@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-mschapv2.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-mschapv2.la
-libstrongswan_eap_mschapv2_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_eap_mschapv2_la_SOURCES = \

@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-pubkey.la
 else
 plugin_LTLIBRARIES = libstrongswan-pubkey.la
-libstrongswan_pubkey_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_pubkey_la_SOURCES = \

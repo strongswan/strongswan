@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-pkcs1.la
 else
 plugin_LTLIBRARIES = libstrongswan-pkcs1.la
-libstrongswan_pkcs1_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_pkcs1_la_SOURCES = \

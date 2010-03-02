@@ -9,7 +9,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-random.la
 else
 plugin_LTLIBRARIES = libstrongswan-random.la
-libstrongswan_random_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_random_la_SOURCES = \

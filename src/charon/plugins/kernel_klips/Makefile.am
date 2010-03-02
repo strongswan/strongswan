@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-kernel-klips.la
 else
 plugin_LTLIBRARIES = libstrongswan-kernel-klips.la
-libstrongswan_kernel_klips_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_kernel_klips_la_SOURCES = \

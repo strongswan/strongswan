@@ -7,7 +7,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-hmac.la
 else
 plugin_LTLIBRARIES = libstrongswan-hmac.la
-libstrongswan_hmac_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 endif
 
 libstrongswan_hmac_la_SOURCES = \
