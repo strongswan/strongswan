@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <unistd.h>
 #include <stdlib.h>
 
 #include "sender.h"
@@ -61,6 +62,11 @@ struct private_sender_t {
 	 * condvar to signal for packets sent
 	 */
 	condvar_t *sent;
+
+	/**
+	 * Delay for sending outgoing packets, to simulate larger RTT
+	 */
+	int send_delay;
 };
 
 METHOD(sender_t, send_, void,
@@ -71,6 +77,11 @@ METHOD(sender_t, send_, void,
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
 	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
+
+	if (this->send_delay)
+	{
+		usleep(this->send_delay * 1000);
+	}
 
 	this->mutex->lock(this->mutex);
 	this->list->insert_last(this->list, packet);
@@ -143,6 +154,8 @@ sender_t * sender_create()
 		.sent = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.job = callback_job_create((callback_job_cb_t)send_packets,
 									this, NULL, NULL),
+		.send_delay = lib->settings->get_int(lib->settings,
+											 "charon.send_delay", 0),
 	);
 
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

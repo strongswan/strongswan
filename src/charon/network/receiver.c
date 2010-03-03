@@ -99,6 +99,11 @@ struct private_receiver_t {
 	 * how many half open IKE_SAs per peer before blocking
 	 */
 	u_int32_t block_threshold;
+
+	/**
+	 * Delay for receiving incoming packets, to simulate larger RTT
+	 */
+	u_int receive_delay;
 };
 
 /**
@@ -325,7 +330,15 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		}
 	}
 	job = (job_t*)process_message_job_create(message);
-	charon->processor->queue_job(charon->processor, job);
+	if (this->receive_delay)
+	{
+		charon->scheduler->schedule_job_ms(charon->scheduler,
+										   job, this->receive_delay);
+	}
+	else
+	{
+		charon->processor->queue_job(charon->processor, job);
+	}
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -359,6 +372,9 @@ receiver_t *receiver_create()
 		this->block_threshold = lib->settings->get_int(lib->settings,
 						"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
 	}
+	this->receive_delay = lib->settings->get_int(lib->settings,
+						"charon.receive_delay", 0);
+
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (this->hasher == NULL)
 	{
