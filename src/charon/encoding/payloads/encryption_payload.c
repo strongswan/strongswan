@@ -95,19 +95,19 @@ struct private_encryption_payload_t {
  */
 encoding_rule_t encryption_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_encryption_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_encryption_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_encryption_payload_t, critical) 		},
+	{ FLAG,				offsetof(private_encryption_payload_t, critical)		},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
-	{ RESERVED_BIT,		0 														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
+	{ RESERVED_BIT,		0														},
 	/* Length of the whole encryption payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_encryption_payload_t, payload_length) 	},
+	{ PAYLOAD_LENGTH,	offsetof(private_encryption_payload_t, payload_length)	},
 	/* encrypted data, stored in a chunk. contains iv, data, padding */
 	{ ENCRYPTED_DATA,	offsetof(private_encryption_payload_t, encrypted)			},
 };
@@ -480,15 +480,15 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* add one byte to the padding length, since the padding_length field is
 	 * not included */
 	padding_length++;
-	this->decrypted.len -= padding_length;
 
 	/* check size again */
-	if (padding_length > concatenated.len || this->decrypted.len < 0)
+	if (padding_length > concatenated.len || padding_length > this->decrypted.len)
 	{
 		DBG1(DBG_ENC, "decryption failed, invalid padding length found. Invalid key?");
 		/* decryption failed :-/ */
 		return FAILED;
 	}
+	this->decrypted.len -= padding_length;
 
 	/* free padding */
 	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
