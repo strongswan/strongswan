@@ -293,8 +293,8 @@ static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ..
 	if (value)
 	{
 		errno = 0;
-		timeval = strtol(value, &endptr, 10);
-		if (errno == 0 && timeval >= 0)
+		timeval = strtoul(value, &endptr, 10);
+		if (errno == 0)
 		{
 			switch (*endptr)
 			{
