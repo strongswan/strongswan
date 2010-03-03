@@ -19,6 +19,7 @@ libgmp_PATH = external/strongswan-support/gmp
 strongswan_CFLAGS := \
 	-Wno-format \
 	-Wno-pointer-sign \
+	-Wno-pointer-arith \
 	-Wno-sign-compare \
 	-Wno-strict-aliasing \
 	-DHAVE___BOOL \
