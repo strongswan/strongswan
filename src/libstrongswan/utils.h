@@ -150,7 +150,7 @@
 /**
  * Ignore result of functions tagged with warn_unused_result attributes
  */
-#define ignore_result(call) { if(call); }
+#define ignore_result(call) { if(call){}; }
 
 /**
  * Assign a function as a class method
