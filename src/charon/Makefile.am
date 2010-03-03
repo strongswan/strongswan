@@ -106,6 +106,8 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PIDDIR=\"${piddir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
+EXTRA_DIST = Android.mk
+
 # compile options
 #################
 

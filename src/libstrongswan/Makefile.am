@@ -90,7 +90,8 @@ endif
 
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
-crypto/proposal/proposal_keywords.txt
+crypto/proposal/proposal_keywords.txt \
+Android.mk AndroidConfigLocal.h
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \

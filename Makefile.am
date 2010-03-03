@@ -6,7 +6,7 @@ endif
 
 ACLOCAL_AMFLAGS = -I m4/config
 
-EXTRA_DIST = Doxyfile.in CREDITS
+EXTRA_DIST = Doxyfile.in CREDITS Android.mk
 CLEANFILES = apidoc Doxyfile
 
 Doxyfile :	Doxyfile.in
