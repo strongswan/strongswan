@@ -63,10 +63,8 @@ struct private_sender_t {
 	condvar_t *sent;
 };
 
-/**
- * implements sender_t.send
- */
-static void send_(private_sender_t *this, packet_t *packet)
+METHOD(sender_t, send_, void,
+	private_sender_t *this, packet_t *packet)
 {
 	host_t *src, *dst;
 
@@ -81,7 +79,7 @@ static void send_(private_sender_t *this, packet_t *packet)
 }
 
 /**
- * Implementation of private_sender_t.send_packets.
+ * Job callback function to send packets
  */
 static job_requeue_t send_packets(private_sender_t * this)
 {
@@ -109,10 +107,8 @@ static job_requeue_t send_packets(private_sender_t * this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of sender_t.destroy.
- */
-static void destroy(private_sender_t *this)
+METHOD(sender_t, destroy, void,
+	private_sender_t *this)
 {
 	/* send all packets in the queue */
 	this->mutex->lock(this->mutex);
@@ -134,18 +130,21 @@ static void destroy(private_sender_t *this)
  */
 sender_t * sender_create()
 {
-	private_sender_t *this = malloc_thing(private_sender_t);
+	private_sender_t *this;
 
-	this->public.send = (void(*)(sender_t*,packet_t*))send_;
-	this->public.destroy = (void(*)(sender_t*)) destroy;
+	INIT(this,
+		.public = {
+			.send = _send_,
+			.destroy = _destroy,
+		},
+		.list = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.got = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.sent = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.job = callback_job_create((callback_job_cb_t)send_packets,
+									this, NULL, NULL),
+	);
 
-	this->list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->got = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->sent = condvar_create(CONDVAR_TYPE_DEFAULT);
-
-	this->job = callback_job_create((callback_job_cb_t)send_packets,
-									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 
 	return &this->public;
