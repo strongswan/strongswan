@@ -248,7 +248,7 @@ static bool peer_to_aggressive(private_receiver_t *this, message_t *message)
 }
 
 /**
- * Implementation of receiver_t.receive_packets.
+ * Job callback to receive packets
  */
 static job_requeue_t receive_packets(private_receiver_t *this)
 {
@@ -329,10 +329,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of receiver_t.destroy.
- */
-static void destroy(private_receiver_t *this)
+METHOD(receiver_t, destroy, void,
+	private_receiver_t *this)
 {
 	this->job->cancel(this->job);
 	this->rng->destroy(this->rng);
@@ -345,11 +343,22 @@ static void destroy(private_receiver_t *this)
  */
 receiver_t *receiver_create()
 {
-	private_receiver_t *this = malloc_thing(private_receiver_t);
+	private_receiver_t *this;
 	u_int32_t now = time_monotonic(NULL);
 
-	this->public.destroy = (void(*)(receiver_t*)) destroy;
+	INIT(this,
+		.public.destroy = _destroy,
+		.secret_switch = now,
+		.secret_offset = random() % now,
+	);
 
+	if (lib->settings->get_bool(lib->settings, "charon.dos_protection", TRUE))
+	{
+		this->cookie_threshold = lib->settings->get_int(lib->settings,
+						"charon.cookie_threshold", COOKIE_THRESHOLD_DEFAULT);
+		this->block_threshold = lib->settings->get_int(lib->settings,
+						"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
+	}
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (this->hasher == NULL)
 	{
@@ -365,20 +374,8 @@ receiver_t *receiver_create()
 		free(this);
 		return NULL;
 	}
-	this->secret_switch = now;
-	this->secret_offset = random() % now;
-	this->secret_used = 0;
 	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-	this->cookie_threshold = lib->settings->get_int(lib->settings,
-									"charon.cookie_threshold", COOKIE_THRESHOLD_DEFAULT);
-	this->block_threshold = lib->settings->get_int(lib->settings,
-									"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
-	if (!lib->settings->get_bool(lib->settings, "charon.dos_protection", TRUE))
-	{
-		this->cookie_threshold = 0;
-		this->block_threshold = 0;
-	}
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
