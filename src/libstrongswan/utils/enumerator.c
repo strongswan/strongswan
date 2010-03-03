@@ -76,7 +76,8 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 							   char **absolute, struct stat *st)
 {
 	struct dirent *entry = readdir(this->dir);
-	size_t len, remaining;
+	size_t remaining;
+	int len;
 
 	if (!entry)
 	{
@@ -120,7 +121,7 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
  */
 enumerator_t* enumerator_create_directory(char *path)
 {
-	size_t len;
+	int len;
 	dir_enum_t *this = malloc_thing(dir_enum_t);
 	this->public.enumerate = (void*)enumerate_dir_enum;
 	this->public.destroy = (void*)destroy_dir_enum;

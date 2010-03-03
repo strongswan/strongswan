@@ -121,7 +121,7 @@ void *memstr(const void *haystack, const char *needle, size_t n)
  */
 bool mkdir_p(const char *path, mode_t mode)
 {
-	size_t len;
+	int len;
 	char *pos, full[PATH_MAX];
 	pos = full;
 	if (!path || *path == '\0')
