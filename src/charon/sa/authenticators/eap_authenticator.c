@@ -251,7 +251,7 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 		case NEED_MORE:
 			return out;
 		case SUCCESS:
-			if (type == EAP_IDENTITY)
+			if (!vendor && type == EAP_IDENTITY)
 			{
 				chunk_t data;
 
