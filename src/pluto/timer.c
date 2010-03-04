@@ -48,7 +48,7 @@ time_t now(void)
 {
 	static time_t delta = 0
 		, last_time = 0;
-	time_t n = time((time_t)NULL);
+	time_t n = time(NULL);
 
 	passert(n != (time_t)-1);
 	if (last_time > n)
