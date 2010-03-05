@@ -116,7 +116,11 @@ $(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposa
 # build plugins with their own Makefile
 #######################################
 
+if MONOLITHIC
 SUBDIRS =
+else
+SUBDIRS = .
+endif
 
 if USE_AES
   SUBDIRS += plugins/aes
