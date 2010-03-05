@@ -29,7 +29,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient pki
+  SUBDIRS += libfreeswan openac scepclient pki
 endif
 
 if USE_DUMM
