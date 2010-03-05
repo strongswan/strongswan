@@ -11,7 +11,7 @@ CLEANFILES = apidoc Doxyfile
 BUILT_SOURCES = Android.mk
 MAINTAINERCLEANFILES = Android.mk
 
-Android.mk :	Android.mk.in
+Android.mk :	Android.mk.in configure.in
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
 		$(srcdir)/$@.in > $@
