@@ -38,7 +38,7 @@ if USE_CHARON
   AM_CFLAGS += -DSTART_CHARON
 endif
 
-lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h
+lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
 		$(LEX) $(srcdir)/parser.l
 
 y.tab.c:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
