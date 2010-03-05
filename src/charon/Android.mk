@@ -214,8 +214,8 @@ LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic, \
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
-	external/strongswan/src/include \
-	external/strongswan/src/libstrongswan
+	$(strongswan_PATH)/src/include \
+	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
 
