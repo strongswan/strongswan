@@ -974,6 +974,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 					case OID_AUTHORITY_INFO_ACCESS:
 						parse_authorityInfoAccess(object, level, this);
 						break;
+					case OID_KEY_USAGE:
+						/* TODO parse the flags */
+						break;
 					case OID_EXTENDED_KEY_USAGE:
 						parse_extendedKeyUsage(object, level, this);
 						break;

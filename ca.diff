@@ -1,0 +1,542 @@
+diff --git a/src/pluto/ca.c b/src/pluto/ca.c
+index 2f59a90..d9db082 100644
+--- a/src/pluto/ca.c
++++ b/src/pluto/ca.c
+@@ -27,7 +27,6 @@
+ #include "constants.h"
+ #include "defs.h"
+ #include "log.h"
+-#include "x509.h"
+ #include "ca.h"
+ #include "certs.h"
+ #include "whack.h"
+@@ -36,13 +35,180 @@
+ 
+ /* chained list of X.509 authority certificates (ca, aa, and ocsp) */
+ 
+-static x509cert_t *x509authcerts = NULL;
++static linked_list_t *authcerts = NULL;
+ 
+ /* chained list of X.509 certification authority information records */
+ 
+ static ca_info_t *ca_infos = NULL;
+ 
++/**
++ * Initialize the linked list of authority certificates
++ */
++void ca_initialize(void)
++{
++	authcerts = linked_list_create();
++}
++
++/**
++ * Free the linked list of authority certificates
++ */
++void ca_finalize(void)
++{
++	lock_authcert_list("free_authcerts");
++	authcerts->destroy_offset(authcerts, offsetof(certificate_t, destroy));
++	unlock_authcert_list("free_authcerts");
++}
++
+ /*
++ *  get a X.509 authority certificate with a given subject or keyid
++ */
++certificate_t* ca_get_cert(identification_t *subject, chunk_t keyid,
++						   x509_flag_t auth_flags)
++{
++	enumerator_t *enumerator;
++	certificate_t *cert, *found = NULL;
++
++	enumerator = authcerts->create_enumerator(authcerts);
++	while (enumerator->enumerate(enumerator, &cert))
++	{
++		x509_t *x509 = (x509_t*)cert;
++
++		/* skip non-matching types of authority certificates */
++		if (!(x509->get_flags(x509) & auth_flags))
++		{
++			continue;
++		}
++
++		/* compare the keyid with the certificate's subjectKeyIdentifier */
++		if (keyid.ptr)
++		{
++			chunk_t subjectKeyId;
++
++			subjectKeyId = x509->get_subjectKeyIdentifier(x509);
++			if (subjectKeyId.ptr && !chunk_equals(keyid, subjectKeyId))
++			{
++				continue;
++			}
++		}
++
++		/* compare the subjectDistinguishedNames */
++		if (cert->has_subject(cert, subject))
++		{
++			found = cert;
++			break;
++		}
++	}
++	enumerator->destroy(enumerator);
++	return found;
++}
++
++/**
++ * Add an authority certificate to the chained list
++ */
++certificate_t* ca_add_cert(certificate_t *cert)
++{
++	identification_t *subject = cert->get_subject(cert);
++	x509_t *x509 = (x509_t*)cert;
++	x509_flag_t flags = x509->get_flags(x509);
++	chunk_t keyid = x509->get_subjectKeyIdentifier(x509);
++
++	certificate_t *old_cert;
++	enumerator_t *enumerator;
++	bool add = TRUE;
++
++	lock_authcert_list("add_authcert");
++
++	enumerator = acerts->create_enumerator(acerts);
++	while (enumerator->enumerate(enumerator, &cert_old))
++	{
++		x509_t *x509_old = (x509_t*)cert_old;
++
++		/* skip non-matching types of authority certificates */
++		if (!(x509_old->get_flags(x509_old) & flags))
++		{
++			continue;
++		}
++
++		/* compare the keyid with the certificate's subjectKeyIdentifier */
++		if (keyid.ptr)
++		{
++			chunk_t subjectKeyId;
++
++			subjectKeyId = x509_old->get_subjectKeyIdentifier(x509_old);
++			if (subjectKeyId.ptr && !chunk_equals(keyid, subjectKeyId))
++			{
++				continue;
++			}
++		}
++
++		/* compare the subjectDistinguishedNames */
++		if (!cert_old->has_subject(cert_old, subject))
++		{
++			continue,
++		}
++
++		if (cert->equals(cert, cert_old))
++		{
++			DBG1("  authcert is already present and identical")
++
++			cert->destroy(cert);
++			cert = cert_old;
++			add = FALSE;
++		}
++		else
++		{
++			authcerts->remove_at(authcerts, enumerator);
++			DBG1("  existing authcert replaced");
++		}
++		break;
++	}
++	enumerator->destroy(enumerator);
++
++	if (add)
++	{
++		authcerts->insert_last(authcerts, cert);
++	}
++	unlock_authcert_list("add_authcert");
++
++	return cert;
++}
++
++/**
++ *  Loads authority certificates
++ */
++void ca_load_authcerts(char *type, char *path, x509_flag_t auth_flags)
++{
++	enumerator_t *enumerator;
++	struct stat st;
++	char *file;
++
++	DBG1("loading %s certificates from '%s'", type, path);
++
++	enumerator = enumerator_create_directory(path);
++	if (!enumerator)
++	{
++		DBG1("  reading directory '%s' failed");
++		return;
++	}
++
++	while (enumerator->enumerate(enumerator, NULL, &file, &st))
++	{
++		cert_t cert;
++
++		if (!S_ISREG(st.st_mode))
++		{
++			/* skip special file */
++			continue;
++		}
++		if (load_cert(file, type, auth_flags, &cert))
++		{
++			add_authcert(cert.u.x509, auth_flags);
++		}
++	}
++	enumerator->destroy(enumerator);
++}
++
++/**
+  * Checks if CA a is trusted by CA b
+  */
+ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
+@@ -76,20 +242,18 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
+ 
+ 	while ((*pathlen)++ < MAX_CA_PATH_LEN)
+ 	{
+-		certificate_t *certificate;
++		certificate_t *cacert;
+ 		identification_t *issuer;
+-		x509cert_t *cacert;
+ 
+-		cacert = get_authcert(a, chunk_empty, X509_CA);
++		cacert = ca_get_cert(a, chunk_empty, X509_CA);
+ 		if (cacert == NULL)
+ 		{
+ 			break;
+ 		}
+-		certificate = cacert->cert;
+ 		
+ 		/* is the certificate self-signed? */
+ 		{
+-			x509_t *x509 = (x509_t*)certificate;
++			x509_t *x509 = (x509_t*)cacert;
+ 
+ 			if (x509->get_flags(x509) & X509_SELF_SIGNED)
+ 			{
+@@ -98,7 +262,7 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
+ 		}
+ 
+ 		/* does the issuer of CA a match CA b? */
+-		issuer = certificate->get_issuer(certificate);
++		issuer = cert->get_issuer(cert);
+ 		match = b->equals(b, issuer);
+ 
+ 		/* we have a match and exit the loop */
+@@ -114,8 +278,8 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
+ 	return match;
+ }
+ 
+-/*
+- * does our CA match one of the requested CAs?
++/**
++ * Does our CA match one of the requested CAs?
+  */
+ bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
+ 						int *our_pathlen)
+@@ -156,167 +320,6 @@ bool match_requested_ca(linked_list_t *requested_ca, identification_t *our_ca,
+ }
+ 
+ /*
+- *  free the first authority certificate in the chain
+- */
+-static void free_first_authcert(void)
+-{
+-	x509cert_t *first = x509authcerts;
+-	x509authcerts = first->next;
+-	free_x509cert(first);
+-}
+-
+-/*
+- *  free  all CA certificates
+- */
+-void free_authcerts(void)
+-{
+-	lock_authcert_list("free_authcerts");
+-
+-	while (x509authcerts != NULL)
+-		free_first_authcert();
+-
+-	unlock_authcert_list("free_authcerts");
+-}
+-
+-/*
+- *  get a X.509 authority certificate with a given subject or keyid
+- */
+-x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
+-						 x509_flag_t auth_flags)
+-{
+-	x509cert_t *cert, *prev_cert = NULL;
+-
+-	/* the authority certificate list is empty */
+-	if (x509authcerts == NULL)
+-	{
+-		return NULL;
+-	}
+-
+-	for (cert = x509authcerts; cert != NULL; prev_cert = cert, cert = cert->next)
+-	{
+-		certificate_t *certificate = cert->cert;
+-		x509_t *x509 = (x509_t*)certificate;
+-
+-		/* skip non-matching types of authority certificates */
+-		if (!(x509->get_flags(x509) & auth_flags))
+-		{
+-			continue;
+-		}
+-
+-		/* compare the keyid with the certificate's subjectKeyIdentifier */
+-		if (keyid.ptr)
+-		{
+-			chunk_t subjectKeyId;
+-
+-			subjectKeyId = x509->get_subjectKeyIdentifier(x509);
+-			if (subjectKeyId.ptr && !chunk_equals(keyid, subjectKeyId))
+-			{
+-				continue;
+-			}
+-		}
+-
+-		/* compare the subjectDistinguishedNames */
+-		if (!certificate->has_subject(certificate, subject))
+-		{
+-			continue;
+-		}
+-
+-		/* found the authcert */
+-		if (cert != x509authcerts)
+-		{
+-			/* bring the certificate up front */
+-			prev_cert->next = cert->next;
+-			cert->next = x509authcerts;
+-			x509authcerts = cert;
+-		}
+-		return cert;
+-	}
+-	return NULL;
+-}
+-
+-/*
+- * add an authority certificate to the chained list
+- */
+-x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags)
+-{
+-	certificate_t *certificate = cert->cert;
+-	x509_t *x509 = (x509_t*)certificate;
+-	x509cert_t *old_cert;
+-
+-	lock_authcert_list("add_authcert");
+-
+-	old_cert = get_authcert(certificate->get_subject(certificate), 
+-							x509->get_subjectKeyIdentifier(x509),
+-							auth_flags);
+-	if (old_cert)
+-	{
+-		if (certificate->equals(certificate, old_cert->cert))
+-		{
+-			DBG(DBG_CONTROL | DBG_PARSING ,
+-				DBG_log("  authcert is already present and identical")
+-			)
+-			unlock_authcert_list("add_authcert");
+-
+-			free_x509cert(cert);
+-			return old_cert;
+-		}
+-		else
+-		{
+-			/* cert is already present but will be replaced by new cert */
+-			free_first_authcert();
+-			DBG(DBG_CONTROL | DBG_PARSING ,
+-				DBG_log("  existing authcert deleted")
+-			)
+-		}
+-	}
+-
+-	/* add new authcert to chained list */
+-	cert->next = x509authcerts;
+-	x509authcerts = cert;
+-	share_x509cert(cert);  /* set count to one */
+-	DBG(DBG_CONTROL | DBG_PARSING,
+-		DBG_log("  authcert inserted")
+-	)
+-	unlock_authcert_list("add_authcert");
+-	return cert;
+-}
+-
+-/*
+- *  Loads authority certificates
+- */
+-void load_authcerts(char *type, char *path, x509_flag_t auth_flags)
+-{
+-	enumerator_t *enumerator;
+-	struct stat st;
+-	char *file;
+-
+-	DBG1("loading %s certificates from '%s'", type, path);
+-
+-	enumerator = enumerator_create_directory(path);
+-	if (!enumerator)
+-	{
+-		DBG1("  reading directory '%s' failed");
+-		return;
+-	}
+-
+-	while (enumerator->enumerate(enumerator, NULL, &file, &st))
+-	{
+-		cert_t cert;
+-
+-		if (!S_ISREG(st.st_mode))
+-		{
+-			/* skip special file */
+-			continue;
+-		}
+-		if (load_cert(file, type, auth_flags, &cert))
+-		{
+-			add_authcert(cert.u.x509, auth_flags);
+-		}
+-	}
+-	enumerator->destroy(enumerator);
+-}
+-
+-/*
+  *  list all X.509 authcerts with given auth flags in a chained list
+  */
+ void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc)
+@@ -368,7 +371,7 @@ static const x509cert_t* get_alt_cacert(identification_t *subject, chunk_t keyid
+ /* establish trust into a candidate authcert by going up the trust chain.
+  * validity and revocation status are not checked.
+  */
+-bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chain)
++bool trust_authcert_candidate(certificate_t *cert, linked_list_t *alt_chain)
+ {
+ 	int pathlen;
+ 
+@@ -448,8 +451,8 @@ bool trust_authcert_candidate(const x509cert_t *cert, const x509cert_t *alt_chai
+ 	return FALSE;
+ }
+ 
+-/*
+- *  get a CA info record with a given authName or authKeyID
++/**
++ *  Get a CA info record with a given authName or authKeyID
+  */
+ ca_info_t* get_ca_info(identification_t *name, chunk_t keyid)
+ {
+@@ -468,11 +471,10 @@ ca_info_t* get_ca_info(identification_t *name, chunk_t keyid)
+ }
+ 
+ 
+-/*
+- *  free the dynamic memory used by a ca_info record
++/**
++ *  Free the dynamic memory used by a ca_info record
+  */
+-static void
+-free_ca_info(ca_info_t* ca_info)
++static void free_ca_info(ca_info_t* ca_info)
+ {
+ 	if (ca_info == NULL)
+ 	{
+@@ -502,8 +504,8 @@ void free_ca_infos(void)
+ 	}
+ }
+ 
+-/*
+- * find a CA information record by name and optionally delete it
++/**
++ * Find a CA information record by name and optionally delete it
+  */
+ bool find_ca_info_by_name(const char *name, bool delete)
+ {
+@@ -531,7 +533,7 @@ bool find_ca_info_by_name(const char *name, bool delete)
+ 	return FALSE;
+ }
+ 
+-/*
++/**
+  * Create an empty ca_info_t record
+  */
+ ca_info_t* create_ca_info(void)
+@@ -659,8 +661,8 @@ void add_ca_info(const whack_message_t *msg)
+ 	}
+ }
+ 
+-/*
+- * list all ca_info records in the chained list
++/**
++ * List all ca_info records in the chained list
+  */
+ void list_ca_infos(bool utc)
+ {
+diff --git a/src/pluto/ca.h b/src/pluto/ca.h
+index 77dfe33..3b9e4c9 100644
+--- a/src/pluto/ca.h
++++ b/src/pluto/ca.h
+@@ -17,8 +17,8 @@
+ 
+ #include <utils/linked_list.h>
+ #include <utils/identification.h>
++#include <credentials/certificates/certificate.h>
+ 
+-#include "x509.h"
+ #include "whack.h"
+ 
+ #define MAX_CA_PATH_LEN         7
+@@ -39,17 +39,21 @@ struct ca_info {
+ 	bool              strictcrlpolicy;
+ };
+ 
++extern void ca_initialize(void);
++extern void ca_finalize(void);
++extern void ca_load_certs(char *type, char *path, x509_flag_t auth_flags);
++extern void ca_list_certs(const char *caption, x509_flag_t auth_flags, bool utc);
++
++extern certificate_t* ca_add_cert(certificate_t *cert);
++
++extern certificate_t* ca_get_cert(identification_t *subject, chunk_t keyid,
++								  x509_flag_t auth_flags)
++
+ extern bool trusted_ca(identification_t *a, identification_t *b, int *pathlen);
+ extern bool match_requested_ca(linked_list_t *requested_ca,
+ 							   identification_t *our_ca, int *our_pathlen);
+-extern x509cert_t* get_authcert(identification_t *subject, chunk_t keyid,
+-								x509_flag_t auth_flags);
+-extern void load_authcerts(char *type, char *path, x509_flag_t auth_flags);
+-extern x509cert_t* add_authcert(x509cert_t *cert, x509_flag_t auth_flags);
+-extern void free_authcerts(void);
+-extern void list_authcerts(const char *caption, x509_flag_t auth_flags, bool utc);
+-extern bool trust_authcert_candidate(const x509cert_t *cert,
+-									 const x509cert_t *alt_chain);
++extern bool trust_authcert_candidate(certificate_t *cert,
++									 linked_list_t *alt_chain);
+ extern ca_info_t* get_ca_info(identification_t *name, chunk_t keyid);
+ extern bool find_ca_info_by_name(const char *name, bool delete);
+ extern void add_ca_info(const whack_message_t *msg);
+diff --git a/src/pluto/plutomain.c b/src/pluto/plutomain.c
+index 0471d26..a9e3aa0 100644
+--- a/src/pluto/plutomain.c
++++ b/src/pluto/plutomain.c
+@@ -675,6 +675,7 @@ int main(int argc, char **argv)
+ 	init_adns();
+ 	init_myid();
+ 	init_fetch();
++	ca_initialize();
+ 	ac_initialize();
+ 
+ 	/* drop unneeded capabilities and change UID/GID */
+@@ -752,12 +753,12 @@ void exit_pluto(int status)
+ 	delete_every_connection();
+ 	free_crl_fetch();           /* free chain of crl fetch requests */
+ 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
+-	free_authcerts();           /* free chain of X.509 authority certificates */
+ 	free_crls();                /* free chain of X.509 CRLs */
+ 	free_ca_infos();            /* free chain of X.509 CA information records */
+ 	free_ocsp();                /* free ocsp cache */
+ 	free_ifaces();
+ 	ac_finalize();              /* free X.509 attribute certificates */
++	ca_finalize();              /* free X.509 authority certificates */
+ 	scx_finalize();             /* finalize and unload PKCS #11 module */
+ 	xauth_finalize();           /* finalize and unload XAUTH module */
+ 	stop_adns();
