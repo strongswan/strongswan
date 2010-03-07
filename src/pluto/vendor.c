@@ -375,57 +375,63 @@ static void handle_known_vendorid (struct msg_digest *md, const char *vidstr,
 	bool vid_useful = FALSE;
 	size_t i, j;
 
-	switch (vid->id) {
-	/* Remote side supports OpenPGP certificates */
-	case VID_OPENPGP:
-		md->openpgp = TRUE;
-		vid_useful = TRUE;
-		break;
-
-	/* Remote side is a Windows 2000+ host */
-	case VID_MS_NT5:
-		md->ms_nt5 = TRUE;
-		vid_useful = TRUE;
-		break;
-
-	/*
-	 * Use most recent supported NAT-Traversal method and ignore the
-	 * other ones (implementations will send all supported methods but
-	 * only one will be used)
-	 *
-	 * Note: most recent == higher id in vendor.h
-	 */
-	case VID_NATT_IETF_00:
-		if (!nat_traversal_support_non_ike)
+	switch (vid->id)
+	 {
+		/* Remote side is a strongSwan host */
+		case VID_STRONGSWAN:
+			vid_useful = TRUE;
 			break;
-		if ((nat_traversal_enabled) && (!md->nat_traversal_vid))
-		{
-			md->nat_traversal_vid = vid->id;
+		
+		/* Remote side supports OpenPGP certificates */
+		case VID_OPENPGP:
+			md->openpgp = TRUE;
 			vid_useful = TRUE;
-		}
-		break;
-	case VID_NATT_IETF_02:
-	case VID_NATT_IETF_02_N:
-	case VID_NATT_IETF_03:
-	case VID_NATT_RFC:
-		if (nat_traversal_support_port_floating
-		&& md->nat_traversal_vid < vid->id)
-		{
-			md->nat_traversal_vid = vid->id;
-			vid_useful = TRUE;
-		}
-		break;
+			break;
 
-	/* Remote side would like to do DPD with us on this connection */
-	case VID_MISC_DPD:
-		md->dpd = TRUE;
-		vid_useful = TRUE;
-		break;
-	case VID_MISC_XAUTH:
-		vid_useful = TRUE;
-		break;
-	default:
-		break;
+		/* Remote side is a Windows 2000+ host */
+		case VID_MS_NT5:
+			md->ms_nt5 = TRUE;
+			vid_useful = TRUE;
+			break;
+
+		/*
+		 * Use most recent supported NAT-Traversal method and ignore the
+		 * other ones (implementations will send all supported methods but
+		 * only one will be used)
+		 *
+		 * Note: most recent == higher id in vendor.h
+		 */
+		case VID_NATT_IETF_00:
+			if (!nat_traversal_support_non_ike)
+				break;
+			if ((nat_traversal_enabled) && (!md->nat_traversal_vid))
+			{
+				md->nat_traversal_vid = vid->id;
+				vid_useful = TRUE;
+			}
+			break;
+		case VID_NATT_IETF_02:
+		case VID_NATT_IETF_02_N:
+		case VID_NATT_IETF_03:
+		case VID_NATT_RFC:
+			if (nat_traversal_support_port_floating
+			&& md->nat_traversal_vid < vid->id)
+			{
+				md->nat_traversal_vid = vid->id;
+				vid_useful = TRUE;
+			}
+			break;
+
+		/* Remote side would like to do DPD with us on this connection */
+		case VID_MISC_DPD:
+			md->dpd = TRUE;
+			vid_useful = TRUE;
+			break;
+		case VID_MISC_XAUTH:
+			vid_useful = TRUE;
+			break;
+		default:
+			break;
 	}
 
 	if (vid->flags & VID_SUBSTRING_DUMPHEXA)
