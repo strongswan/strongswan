@@ -37,7 +37,7 @@
   0x1D                       "id-ce"
     0x09                     "subjectDirectoryAttrs"
     0x0E                     "subjectKeyIdentifier"		OID_SUBJECT_KEY_ID
-    0x0F                     "keyUsage"
+    0x0F                     "keyUsage"					OID_KEY_USAGE
     0x10                     "privateKeyUsagePeriod"
     0x11                     "subjectAltName"			OID_SUBJECT_ALT_NAME
     0x12                     "issuerAltName"

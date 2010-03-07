@@ -1481,7 +1481,9 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
 	chunk_t ocspSigning = chunk_empty;
-	chunk_t basicConstraints = chunk_empty, subjectAltNames = chunk_empty;
+	chunk_t basicConstraints = chunk_empty;
+	chunk_t keyUsage = chunk_empty;
+	chunk_t subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	identification_t *issuer, *subject;
@@ -1583,7 +1585,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 						asn1_wrap(ASN1_SEQUENCE, "m", authorityInfoAccess)));
 	}
 
-	/* build CA basicConstraint for CA certificates */
+	/* build CA basicConstraint and keyUsage flags for CA certificates */
 	if (cert->flags & X509_CA)
 	{
 		chunk_t pathLenConstraint = chunk_empty;
@@ -1603,6 +1605,13 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 											asn1_wrap(ASN1_BOOLEAN, "c",
 												chunk_from_chars(0xFF)),
 											pathLenConstraint)));
+		keyUsage = asn1_wrap(ASN1_SEQUENCE, "mmm",
+								asn1_build_known_oid(OID_KEY_USAGE),
+								asn1_wrap(ASN1_BOOLEAN, "c",
+									chunk_from_chars(0xFF)),
+								asn1_wrap(ASN1_OCTET_STRING, "m",
+										asn1_wrap(ASN1_BIT_STRING, "c",
+												chunk_from_chars(0x01, 0x06))));
 	}
 
 	/* add serverAuth extendedKeyUsage flag */
@@ -1663,8 +1672,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		crlDistributionPoints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmmm",
-							basicConstraints, subjectKeyIdentifier,
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmm",
+							basicConstraints, keyUsage, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
 							authorityInfoAccess));
