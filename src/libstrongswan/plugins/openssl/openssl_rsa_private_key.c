@@ -296,6 +296,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
 {
 	private_openssl_rsa_private_key_t *this;
 	u_int key_size = 0;
+	RSA *rsa = NULL;
+	BIGNUM *e = NULL;
 
 	while (TRUE)
 	{
@@ -315,10 +317,31 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
 	{
 		return NULL;
 	}
+	e = BN_new();
+	if (!e || !BN_set_word(e, PUBLIC_EXPONENT))
+	{
+		goto error;
+	}
+	rsa = RSA_new();
+	if (!rsa || !RSA_generate_key_ex(rsa, key_size, e, NULL))
+	{
+		goto error;
+	}
 	this = create_empty();
-	this->rsa = RSA_generate_key(key_size, PUBLIC_EXPONENT, NULL, NULL);
-
+	this->rsa = rsa;
+	BN_free(e);
 	return &this->public;
+
+error:
+	if (e)
+	{
+		BN_free(e);
+	}
+	if (rsa)
+	{
+		RSA_free(rsa);
+	}
+	return NULL;
 }
 
 /**
