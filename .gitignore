@@ -24,3 +24,7 @@ Doxyfile
 apidoc/
 *~
 *.orig
+*.patch
+*.diff
+*.tar.bz2
+*.tar.gz
