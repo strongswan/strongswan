@@ -119,6 +119,28 @@ void *memstr(const void *haystack, const char *needle, size_t n)
 /**
  * Described in header.
  */
+char* translate(char *str, const char *from, const char *to)
+{
+	char *pos = str;
+	if (strlen(from) != strlen(to))
+	{
+		return str;
+	}
+	while (pos && *pos)
+	{
+		char *match;
+		if ((match = strchr(from, *pos)) != NULL)
+		{
+			*pos = to[match - from];
+		}
+		pos++;
+	}
+	return str;
+}
+
+/**
+ * Described in header.
+ */
 bool mkdir_p(const char *path, mode_t mode)
 {
 	int len;

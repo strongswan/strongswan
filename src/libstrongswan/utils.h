@@ -311,6 +311,14 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 void *memstr(const void *haystack, const char *needle, size_t n);
 
 /**
+ * Translates the characters in the given string, searching for characters
+ * in 'from' and mapping them to characters in 'to'.
+ * The two characters sets 'from' and 'to' must contain the same number of
+ * characters.
+ */
+char *translate(char *str, const char *from, const char *to);
+
+/**
  * Creates a directory and all required parent directories.
  *
  * @param path		path to the new directory

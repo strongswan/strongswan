@@ -50,23 +50,6 @@ struct private_plugin_loader_t {
 	linked_list_t *names;
 };
 
-/**
- * Replace '-' with '_' to use str as identifier.
- */
-static char* sanitize(char *str)
-{
-	char *pos = str;
-	while (pos && *pos)
-	{
-		if (*pos == '-')
-		{
-			*pos = '_';
-		}
-		pos++;
-	}
-	return str;
-}
-
 #ifdef MONOLITHIC
 /**
  * load a single plugin in monolithic mode
@@ -83,7 +66,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	{
 		return NULL;
 	}
-	sanitize(create);
+	translate(create, "-", "_");
 	constructor = dlsym(RTLD_DEFAULT, create);
 	if (constructor == NULL)
 	{
@@ -120,7 +103,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	{
 		return NULL;
 	}
-	sanitize(create);
+	translate(create, "-", "_");
 	if (lib->integrity)
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
