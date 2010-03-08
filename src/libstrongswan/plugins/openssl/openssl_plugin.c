@@ -27,6 +27,7 @@
 #include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
+#include "openssl_sha1_prf.h"
 #include "openssl_diffie_hellman.h"
 #include "openssl_ec_diffie_hellman.h"
 #include "openssl_rsa_private_key.h"
@@ -170,6 +171,8 @@ static void destroy(private_openssl_plugin_t *this)
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->remove_prf(lib->crypto,
+					(prf_constructor_t)openssl_sha1_prf_create);
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)openssl_diffie_hellman_create);
 	lib->crypto->remove_dh(lib->crypto,
@@ -255,6 +258,10 @@ plugin_t *openssl_plugin_create()
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
 					(hasher_constructor_t)openssl_hasher_create);
+
+	/* prf */
+	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
+					(prf_constructor_t)openssl_sha1_prf_create);
 
 	/* (ec) diffie hellman */
 	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,

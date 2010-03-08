@@ -171,13 +171,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_FIPS_PRF
-  SUBDIRS += plugins/fips_prf
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/fips_prf/libstrongswan-fips-prf.la
-endif
-endif
-
 if USE_GMP
   SUBDIRS += plugins/gmp
 if MONOLITHIC
@@ -301,6 +294,13 @@ if USE_GCRYPT
   SUBDIRS += plugins/gcrypt
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/gcrypt/libstrongswan-gcrypt.la
+endif
+endif
+
+if USE_FIPS_PRF
+  SUBDIRS += plugins/fips_prf
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/fips_prf/libstrongswan-fips-prf.la
 endif
 endif
 

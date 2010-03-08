@@ -208,7 +208,6 @@ fi
 
 if test x$eap_aka = xtrue; then
 	fips_prf=true;
-	sha1=true;
 	simaka=true;
 fi
 
@@ -218,7 +217,9 @@ if test x$eap_sim = xtrue; then
 fi
 
 if test x$fips_prf = xtrue; then
-	sha1=true;
+	if test x$openssl = xfalse; then
+		sha1=true;
+	fi
 fi
 
 if test x$smp = xtrue; then
@@ -676,9 +677,6 @@ if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
 	pluto_plugins=${pluto_plugins}" md5"
 fi
-if test x$fips_prf = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
 	pluto_plugins=${pluto_plugins}" random"
@@ -729,6 +727,9 @@ fi
 if test x$gcrypt = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
 	pluto_plugins=${pluto_plugins}" gcrypt"
+fi
+if test x$fips_prf = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
