@@ -13,6 +13,7 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -59,15 +60,23 @@ int main(int argc, char* argv[])
 		if ((name = strstr(path, "libstrongswan-")))
 		{
 			name = strdup(name + strlen("libstrongswan-"));
+			if (asprintf(&sname, "%.*s_plugin_create", strlen(name) - 3,
+						 name) < 0)
+			{
+				fprintf(stderr, "failed to format plugin constructor "
+						"for '%s', ignored", path);
+				free(name);
+				continue;
+			}
+			translate(sname, "-", "_");
 			name[strlen(name) - 3] = '"';
 			name[strlen(name) - 2] = ',';
 			name[strlen(name) - 1] = '\0';
-			sname = "plugin_create";
 		}
 		else if (strstr(path, "libstrongswan.so"))
 		{
 			name = strdup("libstrongswan\",");
-			sname = "library_init";
+			sname = strdup("library_init");
 		}
 		else if (strstr(path, "pool"))
 		{
@@ -126,6 +135,7 @@ int main(int argc, char* argv[])
 			   name, fsize, fsum, ssize, ssum);
 		fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n",
 				name, fsize, fsum, ssize, ssum);
+		free(sname);
 		free(name);
 	}
 	printf("};\n");
