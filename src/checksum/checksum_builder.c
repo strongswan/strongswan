@@ -60,7 +60,10 @@ int main(int argc, char* argv[])
 		if ((name = strstr(path, "libstrongswan-")))
 		{
 			name = strdup(name + strlen("libstrongswan-"));
-			if (asprintf(&sname, "%.*s_plugin_create", strlen(name) - 3,
+			name[strlen(name) - 3] = '"';
+			name[strlen(name) - 2] = ',';
+			name[strlen(name) - 1] = '\0';
+			if (asprintf(&sname, "%.*s_plugin_create", strlen(name) - 2,
 						 name) < 0)
 			{
 				fprintf(stderr, "failed to format plugin constructor "
@@ -69,9 +72,6 @@ int main(int argc, char* argv[])
 				continue;
 			}
 			translate(sname, "-", "_");
-			name[strlen(name) - 3] = '"';
-			name[strlen(name) - 2] = ',';
-			name[strlen(name) - 1] = '\0';
 		}
 		else if (strstr(path, "libstrongswan.so"))
 		{
