@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -24,6 +25,7 @@
 
 typedef enum diffie_hellman_group_t diffie_hellman_group_t;
 typedef struct diffie_hellman_t diffie_hellman_t;
+typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
 
@@ -70,8 +72,8 @@ struct diffie_hellman_t {
 	 * Space for returned secret is allocated and must be
 	 * freed by the caller.
 	 *
-	 * @param secret 	shared secret will be written into this chunk
-	 * @return 			SUCCESS, FAILED if not both DH values are set
+	 * @param secret	shared secret will be written into this chunk
+	 * @return			SUCCESS, FAILED if not both DH values are set
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
 
@@ -80,7 +82,7 @@ struct diffie_hellman_t {
 	 *
 	 * Chunk gets cloned and can be destroyed afterwards.
 	 *
-	 * @param value 	public value of partner
+	 * @param value		public value of partner
 	 */
 	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
 
@@ -105,5 +107,49 @@ struct diffie_hellman_t {
 	 */
 	void (*destroy) (diffie_hellman_t *this);
 };
+
+/**
+ * Parameters for a specific diffie hellman group.
+ */
+struct diffie_hellman_params_t {
+	/**
+	 * DH group.
+	 */
+	diffie_hellman_group_t group;
+
+	/**
+	 * The prime as byte array.
+	 */
+	const u_int8_t *prime;
+
+	/**
+	 * Length of the prime (in bytes).
+	 */
+	size_t prime_len;
+
+	/**
+	 * Optimal length of the exponent (in bytes), as specified in RFC 3526.
+	 */
+	size_t opt_exp_len;
+
+	/**
+	 * Length of the exponent (in bytes) that should be used, depending on
+	 * the dh_exponent_ansi_x9_42 setting in strongswan.conf.
+	 */
+	size_t exp_len;
+
+	/**
+	 * Generator.
+	 */
+	u_int16_t generator;
+};
+
+/**
+ * Get the parameters associated with the specified diffie hellman group.
+ *
+ * @param group			DH group
+ * @return				The parameters or NULL, if the group is not supported
+ */
+diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group);
 
 #endif /** DIFFIE_HELLMAN_H_ @}*/

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,47 +19,6 @@
 #include "openssl_diffie_hellman.h"
 
 #include <debug.h>
-
-typedef struct modulus_entry_t modulus_entry_t;
-
-/**
- * Entry of the modulus list.
- */
-struct modulus_entry_t {
-	/**
-	 * Group number as it is defined in file transform_substructure.h.
-	 */
-	diffie_hellman_group_t group;
-
-	/**
-	 * Pointer to the function to get the modulus.
-	 */
-	BIGNUM *(*get_prime)(BIGNUM *bn);
-
-	/*
-	 * Optimum length of exponent in bits.
-	 */
-	long opt_exponent_len;
-
-	/*
-	 * Generator value.
-	 */
-	u_int16_t generator;
-};
-
-/**
- * All supported modulus values - optimum exponent size according to RFC 3526.
- */
-static modulus_entry_t modulus_entries[] = {
-	{MODP_768_BIT,  get_rfc2409_prime_768,  256, 2},
-	{MODP_1024_BIT, get_rfc2409_prime_1024, 256, 2},
-	{MODP_1536_BIT, get_rfc3526_prime_1536, 256, 2},
-	{MODP_2048_BIT, get_rfc3526_prime_2048, 384, 2},
-	{MODP_3072_BIT, get_rfc3526_prime_3072, 384, 2},
-	{MODP_4096_BIT, get_rfc3526_prime_4096, 512, 2},
-	{MODP_6144_BIT, get_rfc3526_prime_6144, 512, 2},
-	{MODP_8192_BIT, get_rfc3526_prime_8192, 512, 2},
-};
 
 typedef struct private_openssl_diffie_hellman_t private_openssl_diffie_hellman_t;
 
@@ -125,7 +84,6 @@ static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
 	memset(secret->ptr, 0, secret->len);
 	memcpy(secret->ptr + secret->len - this->shared_secret.len,
 		   this->shared_secret.ptr, this->shared_secret.len);
-
 	return SUCCESS;
 }
 
@@ -165,27 +123,19 @@ static diffie_hellman_group_t get_dh_group(private_openssl_diffie_hellman_t *thi
  */
 static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 {
-	int i;
-	bool ansi_x9_42;
-
-	ansi_x9_42 = lib->settings->get_bool(lib->settings,
-										 "libstrongswan.dh_exponent_ansi_x9_42", TRUE);
-
-	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
+	diffie_hellman_params_t *params = diffie_hellman_get_params(this->group);
+	if (!params)
 	{
-		if (modulus_entries[i].group == this->group)
-		{
-			this->dh->p = modulus_entries[i].get_prime(NULL);
-			this->dh->g = BN_new();
-			BN_set_word(this->dh->g, modulus_entries[i].generator);
-			if (!ansi_x9_42)
-			{
-				this->dh->length = modulus_entries[i].opt_exponent_len;
-			}
-			return SUCCESS;
-		}
+		return NOT_FOUND;
 	}
-	return NOT_FOUND;
+	this->dh->p = BN_bin2bn(params->prime, params->prime_len, NULL);
+	this->dh->g = BN_new();
+	BN_set_word(this->dh->g, params->generator);
+	if (params->exp_len != params->prime_len)
+	{
+		this->dh->length = params->exp_len * 8;
+	}
+	return SUCCESS;
 }
 
 /**
