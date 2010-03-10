@@ -748,7 +748,8 @@ static void leases(char *filter, bool utc)
 	chunk_t address_chunk, identity_chunk;
 	int identity_type;
 	char *name;
-	u_int acquired, released, timeout;
+	u_int db_acquired, db_released, db_timeout;
+	time_t acquired, released, timeout;
 	host_t *address;
 	identification_t *identity;
 	bool found = FALSE;
@@ -760,7 +761,7 @@ static void leases(char *filter, bool utc)
 		exit(-1);
 	}
 	while (query->enumerate(query, &name, &address_chunk, &identity_type,
-							&identity_chunk, &acquired, &released, &timeout))
+							&identity_chunk, &db_acquired, &db_released, &db_timeout))
 	{
 		if (!found)
 		{
@@ -772,6 +773,11 @@ static void leases(char *filter, bool utc)
 		}
 		address = host_create_from_chunk(AF_UNSPEC, address_chunk, 0);
 		identity = identification_create_from_encoding(identity_type, identity_chunk);
+
+		/* u_int is not always equal to time_t */
+		acquired = (time_t)db_acquired;
+		released = (time_t)db_released;
+		timeout  = (time_t)db_timeout;
 
 		printf("%-8s %-15H ", name, address);
 		if (released == 0)
