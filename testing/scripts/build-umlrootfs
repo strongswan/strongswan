@@ -221,6 +221,11 @@ then
     echo -n " --enable-gcrypt" >> $INSTALLSHELL
 fi
 
+if [ "$USE_SOCKET_DEFAULT" = "yes" ]
+then
+    echo -n " --enable-socket-default" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
