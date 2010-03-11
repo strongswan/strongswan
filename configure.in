@@ -242,9 +242,10 @@ fi
 if test x$pluto = xtrue; then
 	if test x$socket_raw = xfalse; then
 		AC_MSG_NOTICE([Enforcing --enable-socket-raw, as pluto is enabled])
-		socket_default=false
 		socket_raw=true
-		socket_dynamic=false
+		if test x$socket_default_given = xfalse; then
+			socket_default=false
+		fi
 	fi
 fi
 
