@@ -14,6 +14,29 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2010 secunet Security Networks AG
+ * Copyright (C) 2010 Thomas Egerer
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -158,6 +181,11 @@ struct private_kernel_netlink_net_t {
 	 * whether to actually install virtual IPs
 	 */
 	bool install_virtual_ip;
+
+	/**
+	 * list with routing tables to be excluded from route lookup
+	 */
+	linked_list_t *rt_exclude;
 };
 
 /**
@@ -764,6 +792,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	chunk_t chunk;
 	size_t len;
 	int best = -1;
+	enumerator_t *enumerator;
 	host_t *src = NULL, *gtw = NULL;
 
 	DBG2(DBG_KNL, "getting address to reach %H", dest);
@@ -813,6 +842,8 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				chunk_t rta_gtw, rta_src, rta_dst;
 				u_int32_t rta_oif = 0;
 				host_t *new_src, *new_gtw;
+				bool cont = FALSE;
+				uintptr_t table;
 
 				rta_gtw = rta_src = rta_dst = chunk_empty;
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
@@ -842,6 +873,20 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				}
 				if (msg->rtm_dst_len <= best)
 				{	/* not better than a previous one */
+					continue;
+				}
+				enumerator = this->rt_exclude->create_enumerator(this->rt_exclude);
+				while (enumerator->enumerate(enumerator, &table))
+				{
+					if (table == msg->rtm_table)
+					{
+						cont = TRUE;
+						break;
+					}
+				}
+				enumerator->destroy(enumerator);
+				if (cont)
+				{
 					continue;
 				}
 				if (this->routing_table != 0 &&
@@ -1346,6 +1391,7 @@ static void destroy(private_kernel_netlink_net_t *this)
 	}
 	DESTROY_IF(this->socket);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
+	this->rt_exclude->destroy(this->rt_exclude);
 	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -1358,6 +1404,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 {
 	private_kernel_netlink_net_t *this = malloc_thing(private_kernel_netlink_net_t);
 	struct sockaddr_nl addr;
+	enumerator_t *enumerator;
+	char *exclude;
 
 	/* public functions */
 	this->public.interface.get_interface = (char*(*)(kernel_net_t*,host_t*))get_interface_name;
@@ -1383,6 +1431,28 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 					"charon.process_route", TRUE);
 	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
 					"charon.install_virtual_ip", TRUE);
+
+	this->rt_exclude = linked_list_create();
+	exclude = lib->settings->get_str(lib->settings,
+					"charon.ignore_routing_tables", NULL);
+	if (exclude)
+	{
+		char *token;
+		uintptr_t table;
+
+		enumerator = enumerator_create_token(exclude, " ", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			errno = 0;
+			table = strtoul(token, NULL, 10);
+
+			if (errno == 0)
+			{
+				this->rt_exclude->insert_last(this->rt_exclude, (void*)table);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	this->socket = netlink_socket_create(NETLINK_ROUTE);
 	this->job = NULL;
