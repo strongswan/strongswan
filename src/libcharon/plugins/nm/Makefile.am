@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${nm_CFLAGS}
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon ${nm_CFLAGS}
 
 AM_CFLAGS = -rdynamic \
   -DNM_CA_DIR=\"${nm_ca_dir}\"

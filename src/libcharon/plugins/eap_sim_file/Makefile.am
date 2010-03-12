@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${sysconfdir}\"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -17,52 +17,52 @@
  */
 
 /**
- * @defgroup charon charon
+ * @defgroup libcharon libcharon
  *
  * @defgroup bus bus
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup listeners listeners
  * @ingroup bus
  *
  * @defgroup config config
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup attributes attributes
  * @ingroup config
  *
  * @defgroup control control
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup ccredentials credentials
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup sets sets
  * @ingroup ccredentials
  *
  * @defgroup encoding encoding
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup payloads payloads
  * @ingroup encoding
  *
  * @defgroup kernel kernel
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup network network
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup cplugins plugins
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup processing processing
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup jobs jobs
  * @ingroup processing
  *
  * @defgroup sa sa
- * @ingroup charon
+ * @ingroup libcharon
  *
  * @defgroup authenticators authenticators
  * @ingroup sa
@@ -73,7 +73,7 @@
  * @defgroup tasks tasks
  * @ingroup sa
  *
- * @addtogroup charon
+ * @addtogroup libcharon
  * @{
  *
  * IKEv2 keying daemon.
@@ -169,11 +169,6 @@ typedef struct daemon_t daemon_t;
 #endif /* ME */
 
 /**
- * Name of the daemon.
- */
-#define DAEMON_NAME "charon"
-
-/**
  * Number of threads in the thread pool, if not specified in config.
  */
 #define DEFAULT_THREADS 16
@@ -187,12 +182,6 @@ typedef struct daemon_t daemon_t;
  * UDP Port to which the daemon will float to if NAT is detected.
  */
 #define IKEV2_NATT_PORT 4500
-
-/**
- * PID file, in which charon stores its process id
- */
-#define PID_FILE IPSEC_PIDDIR "/charon.pid"
-
 
 /**
  * Main class of daemon, contains some globals.
@@ -309,11 +298,45 @@ struct daemon_t {
 	 * drop these.
 	 */
 	void (*keep_cap)(daemon_t *this, u_int cap);
+
+	/**
+	 * Drop all capabilities of the current process, but keep those that have
+	 * been set with a call to keep_cap.
+	 *
+	 * This should be called after the initialization of the daemon because
+	 * some plugins require the process to keep additional capabilities.
+	 *
+	 * @return		TRUE if successful, FALSE otherwise
+	 */
+	bool (*drop_capabilities)(daemon_t *this);
+
+	/**
+	 * Initialize the daemon.
+	 */
+	bool (*initialize)(daemon_t *this, bool syslog, level_t levels[]);
+
+	/**
+	 * Starts the daemon, i.e. spawns the threads of the thread pool.
+	 */
+	void (*start)(daemon_t *this);
+
 };
 
 /**
- * The one and only instance of the daemon.
+ * The one and only instance of the daemon. Set between libcharon_init() and
+ * libcharon_deinit() calls.
  */
 extern daemon_t *charon;
+
+/**
+ * Initialize libcharon and create the "charon" instance of daemon_t.
+ * @return		FALSE if integrity check failed
+ */
+bool libcharon_init();
+
+/**
+ * Deinitialize libcharon and destroy the "charon" instance of daemon_t.
+ */
+void libcharon_deinit();
 
 #endif /** DAEMON_H_ @}*/

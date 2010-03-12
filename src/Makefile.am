@@ -17,7 +17,7 @@ if USE_PLUTO
 endif
 
 if USE_CHARON
-  SUBDIRS += charon
+  SUBDIRS += libcharon charon
 endif
 
 if USE_STROKE

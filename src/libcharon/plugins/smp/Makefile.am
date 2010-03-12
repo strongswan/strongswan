@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon ${xml_CFLAGS}
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon ${xml_CFLAGS}
 
 AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
 

@@ -902,37 +902,38 @@ AC_OUTPUT(
 	src/pluto/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
-	src/charon/plugins/eap_aka/Makefile
-	src/charon/plugins/eap_aka_3gpp2/Makefile
-	src/charon/plugins/eap_identity/Makefile
-	src/charon/plugins/eap_md5/Makefile
-	src/charon/plugins/eap_gtc/Makefile
-	src/charon/plugins/eap_sim/Makefile
-	src/charon/plugins/eap_sim_file/Makefile
-	src/charon/plugins/eap_simaka_pseudonym/Makefile
-	src/charon/plugins/eap_simaka_reauth/Makefile
-	src/charon/plugins/eap_mschapv2/Makefile
-	src/charon/plugins/eap_radius/Makefile
-	src/charon/plugins/kernel_netlink/Makefile
-	src/charon/plugins/kernel_pfkey/Makefile
-	src/charon/plugins/kernel_pfroute/Makefile
-	src/charon/plugins/kernel_klips/Makefile
-	src/charon/plugins/socket_default/Makefile
-	src/charon/plugins/socket_raw/Makefile
-	src/charon/plugins/socket_dynamic/Makefile
-	src/charon/plugins/smp/Makefile
-	src/charon/plugins/sql/Makefile
-	src/charon/plugins/medsrv/Makefile
-	src/charon/plugins/medcli/Makefile
-	src/charon/plugins/nm/Makefile
-	src/charon/plugins/uci/Makefile
-	src/charon/plugins/android/Makefile
-	src/charon/plugins/stroke/Makefile
-	src/charon/plugins/updown/Makefile
-	src/charon/plugins/attr/Makefile
-	src/charon/plugins/resolve/Makefile
-	src/charon/plugins/unit_tester/Makefile
-	src/charon/plugins/load_tester/Makefile
+	src/libcharon/Makefile
+	src/libcharon/plugins/eap_aka/Makefile
+	src/libcharon/plugins/eap_aka_3gpp2/Makefile
+	src/libcharon/plugins/eap_identity/Makefile
+	src/libcharon/plugins/eap_md5/Makefile
+	src/libcharon/plugins/eap_gtc/Makefile
+	src/libcharon/plugins/eap_sim/Makefile
+	src/libcharon/plugins/eap_sim_file/Makefile
+	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
+	src/libcharon/plugins/eap_simaka_reauth/Makefile
+	src/libcharon/plugins/eap_mschapv2/Makefile
+	src/libcharon/plugins/eap_radius/Makefile
+	src/libcharon/plugins/kernel_netlink/Makefile
+	src/libcharon/plugins/kernel_pfkey/Makefile
+	src/libcharon/plugins/kernel_pfroute/Makefile
+	src/libcharon/plugins/kernel_klips/Makefile
+	src/libcharon/plugins/socket_default/Makefile
+	src/libcharon/plugins/socket_raw/Makefile
+	src/libcharon/plugins/socket_dynamic/Makefile
+	src/libcharon/plugins/smp/Makefile
+	src/libcharon/plugins/sql/Makefile
+	src/libcharon/plugins/medsrv/Makefile
+	src/libcharon/plugins/medcli/Makefile
+	src/libcharon/plugins/nm/Makefile
+	src/libcharon/plugins/uci/Makefile
+	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/stroke/Makefile
+	src/libcharon/plugins/updown/Makefile
+	src/libcharon/plugins/attr/Makefile
+	src/libcharon/plugins/resolve/Makefile
+	src/libcharon/plugins/unit_tester/Makefile
+	src/libcharon/plugins/load_tester/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

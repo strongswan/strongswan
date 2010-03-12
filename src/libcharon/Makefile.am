@@ -1,6 +1,6 @@
-ipsec_PROGRAMS = charon
+lib_LTLIBRARIES = libcharon.la
 
-charon_SOURCES = \
+libcharon_la_SOURCES = \
 bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
@@ -100,11 +100,11 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
-AM_CFLAGS = -rdynamic \
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
+AM_CFLAGS = \
   -DIPSEC_DIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
+libcharon_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 EXTRA_DIST = Android.mk
 
@@ -112,7 +112,7 @@ EXTRA_DIST = Android.mk
 #################
 
 if USE_ME
-  charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
+  libcharon_la_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
     processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
     processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
     sa/connect_manager.c sa/connect_manager.h \
@@ -121,20 +121,18 @@ if USE_ME
 endif
 
 if USE_CAPABILITIES
-  charon_LDADD += -lcap
-endif
-
-if MONOLITHIC
-    lib_LTLIBRARIES = libcharon.la
-    charon_LDADD += $(top_builddir)/src/charon/libcharon.la
-    libcharon_la_SOURCES =
-    libcharon_la_LIBADD =
+  libcharon_la_LIBADD += -lcap
 endif
 
 # build optional plugins
 ########################
 
+if MONOLITHIC
 SUBDIRS =
+else
+SUBDIRS = .
+endif
+
 PLUGINS = ${libstrongswan_plugins}
 
 if USE_LOAD_TESTER

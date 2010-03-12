@@ -15,7 +15,7 @@
 
 /**
  * @defgroup bus bus
- * @{ @ingroup charon
+ * @{ @ingroup libcharon
  */
 
 #ifndef BUS_H_
