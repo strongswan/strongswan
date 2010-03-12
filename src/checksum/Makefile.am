@@ -12,10 +12,11 @@ CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 
-libs =	$(shell find $(top_builddir)/src/libstrongswan $(top_builddir)/src/charon \
+libs =	$(shell find $(top_builddir)/src/libstrongswan $(top_builddir)/src/libcharon \
 			-name 'libstrongswan*.so')
 
 if USE_CHARON
+  libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
   libs += $(top_builddir)/src/charon/.libs/charon
 endif
 
