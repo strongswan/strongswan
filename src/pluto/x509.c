@@ -419,11 +419,11 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
 				check_expiry(notAfter, CA_CERT_WARNING_INTERVAL, TRUE));
 
 			key = certificate->get_public_key(certificate);
-			if (key);
+			if (key)
 			{
 				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 					key_type_names, key->get_type(key),
-					key->get_keysize(key) * BITS_PER_BYTE,				
+					key->get_keysize(key) * BITS_PER_BYTE,
 					cert->smartcard ? ", on smartcard" :
 					(has_private_key(cert)? ", has private key" : ""));
 
