@@ -158,6 +158,11 @@ static int self()
 			goto end;
 		}
 		rng->allocate_bytes(rng, 8, &serial);
+		while (*serial.ptr == 0x00)
+		{
+			/* we don't accept a serial number with leading zeroes */
+			rng->get_bytes(rng, 1, serial.ptr);
+		}
 		rng->destroy(rng);
 	}
 	not_before = time(NULL);
