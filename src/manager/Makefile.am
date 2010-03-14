@@ -10,7 +10,7 @@ controller/control_controller.c controller/control_controller.h \
 controller/config_controller.c controller/config_controller.h \
 controller/gateway_controller.c controller/gateway_controller.h
 
-manager_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
+manager_fcgi_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic \

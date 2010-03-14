@@ -5,7 +5,7 @@ nodist_libchecksum_la_SOURCES = checksum.c
 libchecksum_la_LDFLAGS = -module -avoid-version
 
 checksum_builder_SOURCES = checksum_builder.c
-checksum_builder_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+checksum_builder_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(DLLIB)
 
 BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
