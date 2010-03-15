@@ -149,8 +149,8 @@ static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 	do
 	{
 		rng->allocate_bytes(rng, prime_size, &random_bytes);
-		/* make sure most significant bit is set */
-		random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
+		/* make sure the two most significant bits are set */
+		random_bytes.ptr[0] = random_bytes.ptr[0] | 0xC0;
 
 		mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
 		mpz_nextprime (*prime, *prime);
