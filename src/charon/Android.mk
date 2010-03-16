@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-	charon.c
+charon.c
 
 # build charon -----------------------------------------------------------------
 
