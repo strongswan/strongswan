@@ -52,5 +52,6 @@ strongswan_CFLAGS += \
 
 include $(addprefix $(LOCAL_PATH)/src/,$(addsuffix /Android.mk, \
 		charon \
+		libcharon \
 		libstrongswan \
 	))

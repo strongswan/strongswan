@@ -210,7 +210,7 @@ LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic, \
 	socket_dynamic_socket.h socket_dynamic_socket.c \
 )
 
-# build charon -----------------------------------------------------------------
+# build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
@@ -219,10 +219,7 @@ LOCAL_C_INCLUDES += \
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
 
-# this is required to be able load the plugins
-LOCAL_LDFLAGS := -Wl,--export-dynamic
-
-LOCAL_MODULE := charon
+LOCAL_MODULE := libcharon
 
 LOCAL_ARM_MODE := arm
 
@@ -230,5 +227,5 @@ LOCAL_PRELINK_MODULE := false
 
 LOCAL_SHARED_LIBRARIES += libstrongswan
 
-include $(BUILD_EXECUTABLE)
+include $(BUILD_SHARED_LIBRARY)
 
