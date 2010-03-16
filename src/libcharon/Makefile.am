@@ -104,7 +104,7 @@ INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/
 AM_CFLAGS = \
   -DIPSEC_DIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\"
-libcharon_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
+libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 EXTRA_DIST = Android.mk
 
