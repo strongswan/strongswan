@@ -205,7 +205,7 @@ flushline(const char *m)
 	{
 		if (m != NULL)
 			loglog(RC_LOG_SERIOUS, "\"%s\" line %d: %s", flp->filename, flp->lino, m);
-		do ; while (shift());
+		do {} while (shift());
 		return FALSE;
 	}
 }
