@@ -63,7 +63,7 @@ static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
 		{
 			fprintf(stderr, "pool '%s' exists.\n", name);
 			e->destroy(e);
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 		del(name);
 	}
@@ -74,7 +74,7 @@ static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
 			DB_INT, timeout*3600) != 1)
 	{
 		fprintf(stderr, "creating pool failed.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	return pool;
@@ -187,7 +187,6 @@ Usage:\n\
     Delete lease history of a pool:\n\
       name:    Name of the pool to purge\n\
   \n");
-	exit(0);
 }
 
 /**
@@ -386,7 +385,6 @@ static void status(void)
 	{
 		printf("no pools found.\n");
 	}
-	exit(0);
 }
 
 /**
@@ -406,7 +404,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		memcmp(start_addr.ptr, end_addr.ptr, start_addr.len) > 0)
 	{
 		fprintf(stderr, "invalid start/end pair specified.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	id = create_pool(name, start_addr, end_addr, timeout);
 	printf("allocating %d addresses... ", count);
@@ -432,8 +430,6 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		db->execute(db, NULL, "END TRANSACTION");
 	}
 	printf("done.\n", count);
-
-	exit(0);
 }
 
 static bool add_address(u_int pool_id, char *address_str, int *family)
@@ -540,7 +536,7 @@ static void add_addresses(char *pool, char *path, int timeout)
 		}
 		if (add_address(pool_id, address_str, &family) == FALSE)
 		{
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 		++count;
 	}
@@ -556,7 +552,6 @@ static void add_addresses(char *pool, char *path, int timeout)
 	}
 
 	printf("%d addresses done.\n", count);
-	exit(0);
 }
 
 /**
@@ -574,10 +569,9 @@ static void add_attr(char *name, host_t *server)
 			DB_INT, type, DB_BLOB, value) != 1)
 	{
 		fprintf(stderr, "adding %s server %H failed.\n", name, server);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	printf("added %s server %H\n", name, server);
-	exit(0);
 }
 
 /**
@@ -594,7 +588,7 @@ static void del(char *name)
 	if (!query)
 	{
 		fprintf(stderr, "deleting pool failed.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	while (query->enumerate(query, &id))
 	{
@@ -609,16 +603,15 @@ static void del(char *name)
 		{
 			fprintf(stderr, "deleting pool failed.\n");
 			query->destroy(query);
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	query->destroy(query);
 	if (!found)
 	{
 		fprintf(stderr, "pool '%s' not found.\n", name);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
-	exit(0);
 }
 
 /**
@@ -666,7 +659,7 @@ static void del_attr(char *name, host_t *server)
 	if (!query)
 	{
 		fprintf(stderr, "deleting %s servers failed.\n", name);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	while (query->enumerate(query, &id, &type, &value))
@@ -685,19 +678,22 @@ static void del_attr(char *name, host_t *server)
 			fprintf(stderr, "deleting %s server %H failed\n", name, host);
 			query->destroy(query);
 			DESTROY_IF(host);
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 		printf("deleted %s server %H\n", name, host);
 		DESTROY_IF(host);
 	}
 	query->destroy(query);
 
-	if (!found)
+	if (!found && server)
 	{
-		printf("no matching %s servers found\n", name);
-		exit(-1);		
+		printf("%s server %H not found\n", name, server);
+		exit(EXIT_FAILURE);
 	}
-	exit(0);
+	else if (!found)
+	{
+		printf("no %s servers found\n", name);
+	}
 }
 
 /**
@@ -706,7 +702,7 @@ static void del_attr(char *name, host_t *server)
 					 DB_INT, type, DB_BLOB, value) != 1)
 		{
 			fprintf(stderr, "deleting %s server %H failed\n", name, server);
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 		printf("deleted %s server %H\n", name, server);
 		if (db->execute(db, NULL,
@@ -714,7 +710,7 @@ static void del_attr(char *name, host_t *server)
 					 DB_INT, type, DB_BLOB, value) != 1)
 		{
 			fprintf(stderr, "deleting %s server %H failed\n", name, server);
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 		printf("deleted %s server %H\n", name, server);
 
@@ -734,14 +730,14 @@ static void resize(char *name, host_t *end)
 	{
 		DESTROY_IF(query);
 		fprintf(stderr, "resizing pool failed.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	if (old_addr.len != new_addr.len ||
 		memcmp(new_addr.ptr, old_addr.ptr, old_addr.len) < 0)
 	{
 		fprintf(stderr, "shrinking of pools not supported.\n");
 		query->destroy(query);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	cur_addr = chunk_clonea(old_addr);
 	count = get_pool_size(old_addr, new_addr) - 1;
@@ -753,7 +749,7 @@ static void resize(char *name, host_t *end)
 	{
 		fprintf(stderr, "pool is not resizable.\n");
 		old_end->destroy(old_end);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	DESTROY_IF(old_end);
 
@@ -762,7 +758,7 @@ static void resize(char *name, host_t *end)
 			DB_BLOB, new_addr, DB_TEXT, name) <= 0)
 	{
 		fprintf(stderr, "pool '%s' not found.\n", name);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	printf("allocating %d new addresses... ", count);
@@ -785,7 +781,6 @@ static void resize(char *name, host_t *end)
 	}
 	printf("done.\n", count);
 
-	exit(0);
 }
 
 /**
@@ -851,7 +846,7 @@ static enumerator_t *create_lease_query(char *filter)
 				if (!addr)
 				{
 					fprintf(stderr, "invalid 'addr' in filter string.\n");
-					exit(-1);
+					exit(EXIT_FAILURE);
 				}
 				break;
 			case FIL_TSTAMP:
@@ -882,13 +877,13 @@ static enumerator_t *create_lease_query(char *filter)
 					else
 					{
 						fprintf(stderr, "invalid 'state' in filter string.\n");
-						exit(-1);
+						exit(EXIT_FAILURE);
 					}
 				}
 				break;
 			default:
 				fprintf(stderr, "invalid filter string.\n");
-				exit(-1);
+				exit(EXIT_FAILURE);
 				break;
 		}
 	}
@@ -957,7 +952,7 @@ static void leases(char *filter, bool utc)
 	if (!query)
 	{
 		fprintf(stderr, "querying leases failed.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	while (query->enumerate(query, &name, &address_chunk, &identity_type,
 							&identity_chunk, &db_acquired, &db_released, &db_timeout))
@@ -1017,9 +1012,8 @@ static void leases(char *filter, bool utc)
 	if (!found)
 	{
 		fprintf(stderr, "no matching leases found.\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
-	exit(0);
 }
 
 /**
@@ -1037,10 +1031,9 @@ static void purge(char *name)
 	if (purged < 0)
 	{
 		fprintf(stderr, "purging pool '%s' failed.\n", name);
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 	fprintf(stderr, "purged %d leases in pool '%s'.\n", purged, name);
-	exit(0);
 }
 
 /**
@@ -1060,6 +1053,7 @@ int main(int argc, char *argv[])
 	int timeout = 0;
 	bool utc = FALSE;
 	enum {
+		OP_UNDEF,
 		OP_USAGE,
 		OP_STATUS,
 		OP_ADD,
@@ -1069,7 +1063,7 @@ int main(int argc, char *argv[])
 		OP_RESIZE,
 		OP_LEASES,
 		OP_PURGE
-	} operation = OP_USAGE;
+	} operation = OP_UNDEF;
 
 	atexit(library_deinit);
 
@@ -1135,6 +1129,7 @@ int main(int argc, char *argv[])
 			case EOF:
 				break;
 			case 'h':
+				operation = OP_USAGE;
 				break;
 			case 'w':
 				operation = OP_STATUS;
@@ -1151,8 +1146,8 @@ int main(int argc, char *argv[])
 				if (replace_pool && operation == OP_ADD_ATTR)
 				{
 					fprintf(stderr, "invalid pool name: '%s'.\n", optarg);
-					operation = OP_USAGE;
-					break;
+					usage();
+					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 'd':
@@ -1175,8 +1170,8 @@ int main(int argc, char *argv[])
 				if (start == NULL)
 				{
 					fprintf(stderr, "invalid start address: '%s'.\n", optarg);
-					operation = OP_USAGE;
-					break;
+					usage();
+					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 'e':
@@ -1184,8 +1179,8 @@ int main(int argc, char *argv[])
 				if (end == NULL)
 				{
 					fprintf(stderr, "invalid end address: '%s'.\n", optarg);
-					operation = OP_USAGE;
-					break;
+					usage();
+					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 't':
@@ -1193,8 +1188,8 @@ int main(int argc, char *argv[])
 				if (timeout == 0 && strcmp(optarg, "0") != 0)
 				{
 					fprintf(stderr, "invalid timeout '%s'.\n", optarg);
-					operation = OP_USAGE;
-					break;
+					usage();
+					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 'f':
@@ -1208,12 +1203,13 @@ int main(int argc, char *argv[])
 				if (server == NULL)
 				{
 					fprintf(stderr, "invalid server address: '%s'.\n", optarg);
-					operation = OP_USAGE;
-					break;
+					usage();
+					exit(EXIT_FAILURE);
 				}
 				continue;
 			default:
-				operation = OP_USAGE;
+				usage();
+				exit(EXIT_FAILURE);
 				break;
 		}
 		break;
@@ -1240,6 +1236,7 @@ int main(int argc, char *argv[])
 			{
 				fprintf(stderr, "missing arguments.\n");
 				usage();
+				exit(EXIT_FAILURE);
 			}
 			break;
 		case OP_ADD_ATTR:
@@ -1247,6 +1244,7 @@ int main(int argc, char *argv[])
 			{
 				fprintf(stderr, "missing arguments.\n");
 				usage();
+				exit(EXIT_FAILURE);
 			}
 			add_attr(name, server);
 			break;
@@ -1261,6 +1259,7 @@ int main(int argc, char *argv[])
 			{
 				fprintf(stderr, "missing arguments.\n");
 				usage();
+				exit(EXIT_FAILURE);
 			}
 			resize(name, end);
 			break;
@@ -1270,7 +1269,10 @@ int main(int argc, char *argv[])
 		case OP_PURGE:
 			purge(name);
 			break;
+		default:
+			usage();
+			exit(EXIT_FAILURE);
 	}
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
