@@ -7,9 +7,15 @@ strongswan_PLUGINS := aes des sha1 sha2 md5 fips-prf random x509 pubkey pkcs1 \
 	pem xcbc hmac gmp kernel-netlink socket-default attr android
 
 # helper macros to only add source files for plugins included in the list above
+# source files are relative to the android.mk that called the macro
 plugin_enabled = $(findstring $(1), $(strongswan_PLUGINS))
 add_plugin = $(if $(call plugin_enabled,$(1)), \
-				$(addprefix plugins/$(subst -,_,$(strip $(1))/),$(2)))
+               $(patsubst $(LOCAL_PATH)/%,%, \
+                 $(wildcard \
+                   $(LOCAL_PATH)/plugins/$(subst -,_,$(strip $(1)))/*.c \
+                  ) \
+                ) \
+              )
 
 # includes
 strongswan_PATH := $(LOCAL_PATH)

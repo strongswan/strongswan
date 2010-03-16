@@ -102,79 +102,38 @@ LOCAL_SRC_FILES := \
 	credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 	credentials/credential_set.h
 
-# adding the plugin source files (copy-n-paste from Makefile.am)
+# adding the plugin source files
 
-LOCAL_SRC_FILES += $(call add_plugin, android, \
-	android_plugin.c android_plugin.h \
-	android_handler.c android_handler.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, android)
 ifneq ($(call plugin_enabled, android)),)
 LOCAL_SHARED_LIBRARIES += libcutils
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, attr, \
-	attr_plugin.h attr_plugin.c \
-	attr_provider.h attr_provider.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, attr)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-aka, \
-	eap_aka_plugin.h eap_aka_plugin.c \
-	eap_aka_peer.h eap_aka_peer.c \
-	eap_aka_server.h eap_aka_server.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-aka)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2, \
-	eap_aka_3gpp2_plugin.h eap_aka_3gpp2_plugin.c \
-	eap_aka_3gpp2_card.h eap_aka_3gpp2_card.c \
-	eap_aka_3gpp2_provider.h eap_aka_3gpp2_provider.c \
-	eap_aka_3gpp2_functions.h eap_aka_3gpp2_functions.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2)
 ifneq ($(call plugin_enabled, eap-aka-3gpp2)),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
 LOCAL_STATIC_LIBRARIES += libgmp
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-gtc, \
-	eap_gtc_plugin.h eap_gtc_plugin.c eap_gtc.h eap_gtc.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-gtc)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-identity, \
-	eap_identity_plugin.h eap_identity_plugin.c eap_identity.h eap_identity.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-identity)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-md5, \
-	eap_md5_plugin.h eap_md5_plugin.c eap_md5.h eap_md5.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-md5)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-mschapv2, \
-	eap_mschapv2_plugin.h eap_mschapv2_plugin.c \
-	eap_mschapv2.h eap_mschapv2.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-mschapv2)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-sim, \
-	eap_sim_plugin.h eap_sim_plugin.c \
-	eap_sim_peer.h eap_sim_peer.c \
-	eap_sim_server.h eap_sim_server.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-sim)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-pseudonym, \
-	eap_simaka_pseudonym_plugin.h eap_simaka_pseudonym_plugin.c \
-	eap_simaka_pseudonym_card.h eap_simaka_pseudonym_card.c \
-	eap_simaka_pseudonym_provider.h eap_simaka_pseudonym_provider.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-pseudonym)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-reauth, \
-	eap_simaka_reauth_plugin.h eap_simaka_reauth_plugin.c \
-	eap_simaka_reauth_card.h eap_simaka_reauth_card.c \
-	eap_simaka_reauth_provider.h eap_simaka_reauth_provider.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-reauth)
 
-LOCAL_SRC_FILES += $(call add_plugin, eap-sim-file, \
-	eap_sim_file_plugin.h eap_sim_file_plugin.c \
-	eap_sim_file_card.h eap_sim_file_card.c \
-	eap_sim_file_provider.h eap_sim_file_provider.c \
-	eap_sim_file_triplets.h eap_sim_file_triplets.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, eap-sim-file)
 
 # adding libakasim if either eap-aka or eap-sim is enabled
 ifneq ($(or $(call plugin_enabled, eap-aka), $(call plugin_enabled, eap-sim)),)
@@ -185,30 +144,13 @@ LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 	)
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink, \
-	kernel_netlink_plugin.h kernel_netlink_plugin.c \
-	kernel_netlink_ipsec.h kernel_netlink_ipsec.c kernel_netlink_net.h kernel_netlink_net.c \
-	kernel_netlink_shared.h kernel_netlink_shared.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
 
-LOCAL_SRC_FILES += $(call add_plugin, load-tester, \
-	load_tester_plugin.c load_tester_plugin.h \
-	load_tester_config.c load_tester_config.h \
-	load_tester_creds.c load_tester_creds.h \
-	load_tester_ipsec.c load_tester_ipsec.h \
-	load_tester_listener.c load_tester_listener.h \
-	load_tester_diffie_hellman.c load_tester_diffie_hellman.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 
-LOCAL_SRC_FILES += $(call add_plugin, socket-default, \
-	socket_default_socket.h socket_default_socket.c \
-	socket_default_plugin.h socket_default_plugin.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, socket-default)
 
-LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic, \
-	socket_dynamic_plugin.h socket_dynamic_plugin.c \
-	socket_dynamic_socket.h socket_dynamic_socket.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic)
 
 # build libcharon --------------------------------------------------------------
 

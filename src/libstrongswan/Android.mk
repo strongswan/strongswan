@@ -62,106 +62,47 @@ LOCAL_SRC_FILES := \
 	utils/backtrace.c utils/backtrace.h \
 	plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-# adding the plugin source files (copy-n-paste from their Makefile.am)
+# adding the plugin source files
 
-LOCAL_SRC_FILES += $(call add_plugin, aes, \
-	aes_plugin.h aes_plugin.c aes_crypter.c aes_crypter.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, aes)
 
-LOCAL_SRC_FILES += $(call add_plugin, des, \
-	des_plugin.h des_plugin.c des_crypter.c des_crypter.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, des)
 
-LOCAL_SRC_FILES += $(call add_plugin, fips-prf, \
-	fips_prf_plugin.h fips_prf_plugin.c fips_prf.c fips_prf.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
 
-LOCAL_SRC_FILES += $(call add_plugin, gmp, \
-	gmp_plugin.h gmp_plugin.c \
-	gmp_diffie_hellman.c gmp_diffie_hellman.h \
-	gmp_rsa_private_key.c gmp_rsa_private_key.h \
-	gmp_rsa_public_key.c gmp_rsa_public_key.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, gmp)
 ifneq ($(call plugin_enabled, gmp)),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
 LOCAL_STATIC_LIBRARIES += libgmp
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, hmac, \
-	hmac_plugin.h hmac_plugin.c hmac.h hmac.c \
-	hmac_prf.h hmac_prf.c hmac_signer.h hmac_signer.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, hmac)
 
-LOCAL_SRC_FILES += $(call add_plugin, md4, \
-	md4_plugin.h md4_plugin.c md4_hasher.c md4_hasher.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, md4)
 
-LOCAL_SRC_FILES += $(call add_plugin, md5, \
-	md5_plugin.h md5_plugin.c md5_hasher.c md5_hasher.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, md5)
 
-LOCAL_SRC_FILES += $(call add_plugin, openssl, \
-	openssl_plugin.h openssl_plugin.c \
-	openssl_util.c openssl_util.h \
-	openssl_crypter.c openssl_crypter.h \
-	openssl_hasher.c openssl_hasher.h \
-	openssl_sha1_prf.c openssl_sha1_prf.h \
-	openssl_diffie_hellman.c openssl_diffie_hellman.h \
-	openssl_rsa_private_key.c openssl_rsa_private_key.h \
-	openssl_rsa_public_key.c openssl_rsa_public_key.h \
-	openssl_ec_diffie_hellman.c openssl_ec_diffie_hellman.h \
-	openssl_ec_private_key.c openssl_ec_private_key.h \
-	openssl_ec_public_key.c openssl_ec_public_key.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, openssl)
 ifneq ($(call plugin_enabled, openssl)),)
 LOCAL_C_INCLUDES += external/openssl/include
 LOCAL_SHARED_LIBRARIES += libcrypto
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, pem, \
-	pem_plugin.h pem_plugin.c \
-	pem_builder.c pem_builder.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, pem)
 
-LOCAL_SRC_FILES += $(call add_plugin, pkcs1, \
-	pkcs1_plugin.h pkcs1_plugin.c \
-	pkcs1_encoder.h pkcs1_encoder.c \
-	pkcs1_builder.h pkcs1_builder.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, pkcs1)
 
-LOCAL_SRC_FILES += $(call add_plugin, pubkey, \
-	pubkey_plugin.h pubkey_plugin.c \
-	pubkey_cert.h pubkey_cert.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, pubkey)
 
-LOCAL_SRC_FILES += $(call add_plugin, random, \
-	random_plugin.h random_plugin.c \
-	random_rng.c random_rng.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, random)
 
-LOCAL_SRC_FILES += $(call add_plugin, sha1, \
-	sha1_plugin.h sha1_plugin.c \
-	sha1_hasher.c sha1_hasher.h sha1_prf.c sha1_prf.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, sha1)
 
-LOCAL_SRC_FILES += $(call add_plugin, sha2, \
-	sha2_plugin.h sha2_plugin.c sha2_hasher.c sha2_hasher.h \
-)
+LOCAL_SRC_FILES += $(call add_plugin, sha2)
 
-LOCAL_SRC_FILES += $(call add_plugin, x509, \
-	x509_plugin.h x509_plugin.c \
-	x509_cert.h x509_cert.c \
-	x509_crl.h x509_crl.c \
-	x509_ac.h x509_ac.c \
-	x509_pkcs10.h x509_pkcs10.c \
-	x509_ocsp_request.h x509_ocsp_request.c \
-	x509_ocsp_response.h x509_ocsp_response.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, x509)
 
-LOCAL_SRC_FILES += $(call add_plugin, xcbc, \
-	xcbc_plugin.h xcbc_plugin.c xcbc.h xcbc.c \
-	xcbc_prf.h xcbc_prf.c xcbc_signer.h xcbc_signer.c \
-)
+LOCAL_SRC_FILES += $(call add_plugin, xcbc)
 
 # build libstrongswan ----------------------------------------------------------
 
