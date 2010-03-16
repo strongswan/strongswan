@@ -43,9 +43,45 @@ host_t *start = NULL, *end = NULL, *server = NULL;
 bool replace_pool = FALSE;
 
 /**
- * forward declaration
+ * forward declarations
  */
 static void del(char *name);
+static void do_args(int argc, char *argv[]);
+
+/**
+ * nesting counter for database transaction functions
+ */
+int nested_transaction = 0;
+
+/**
+ * start a database transaction
+ */
+static void begin_transaction()
+{
+	if (db->get_driver(db) == DB_SQLITE)
+	{
+		if (!nested_transaction)
+		{
+			db->execute(db, NULL, "BEGIN EXCLUSIVE TRANSACTION");
+		}
+		++nested_transaction;
+	}
+}
+
+/**
+ * commit a database transaction
+ */
+static void commit_transaction()
+{
+	if (db->get_driver(db) == DB_SQLITE)
+	{
+		--nested_transaction;
+		if (!nested_transaction)
+		{
+			db->execute(db, NULL, "END TRANSACTION");
+		}
+	}
+}
 
 /**
  * Create or replace a pool by name
@@ -186,6 +222,18 @@ Usage:\n\
   ipsec pool --purge <name>\n\
     Delete lease history of a pool:\n\
       name:    Name of the pool to purge\n\
+  \n\
+  ipsec pool --batch <file>\n\
+    Read commands from a file and execute them atomically.\n\
+      file:    File to read the newline separated commands from. Commands\n\
+               appear as they are written on the command line, e.g.\n\
+                  --replace mypool --start 10.0.0.1 --end 10.0.0.254\n\
+                  --del dns\n\
+                  --add dns --server 10.1.0.1\n\
+                  --add dns --server 10.1.1.1\n\
+               If a - (hyphen) is given as a file name, the commands are read\n\
+               from STDIN. Readin commands stops at the end of file. Empty\n\
+               lines are ignored. The file may not contain a --batch command.\n\
   \n");
 }
 
@@ -409,10 +457,8 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 	id = create_pool(name, start_addr, end_addr, timeout);
 	printf("allocating %d addresses... ", count);
 	fflush(stdout);
-	if (db->get_driver(db) == DB_SQLITE)
-	{	/* run population in a transaction for sqlite */
-		db->execute(db, NULL, "BEGIN TRANSACTION");
-	}
+	/* run population in a transaction for sqlite */
+	begin_transaction();
 	while (TRUE)
 	{
 		db->execute(db, NULL,
@@ -425,10 +471,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		}
 		chunk_increment(cur_addr);
 	}
-	if (db->get_driver(db) == DB_SQLITE)
-	{
-		db->execute(db, NULL, "END TRANSACTION");
-	}
+	commit_transaction();
 	printf("done.\n", count);
 }
 
@@ -502,10 +545,8 @@ static void add_addresses(char *pool, char *path, int timeout)
 	host_t *addr;
 	FILE *file;
 
-	if (db->get_driver(db) == DB_SQLITE)
-	{	/* run population in a transaction for sqlite */
-		db->execute(db, NULL, "BEGIN TRANSACTION");
-	}
+	/* run population in a transaction for sqlite */
+	begin_transaction();
 
 	addr = host_create_from_string("%any", 0);
 	pool_id = create_pool(pool, addr->get_address(addr),
@@ -546,10 +587,7 @@ static void add_addresses(char *pool, char *path, int timeout)
 		fclose(file);
 	}
 
-	if (db->get_driver(db) == DB_SQLITE)
-	{
-		db->execute(db, NULL, "END TRANSACTION");
-	}
+	commit_transaction();
 
 	printf("%d addresses done.\n", count);
 }
@@ -763,10 +801,8 @@ static void resize(char *name, host_t *end)
 
 	printf("allocating %d new addresses... ", count);
 	fflush(stdout);
-	if (db->get_driver(db) == DB_SQLITE)
-	{	/* run population in a transaction for sqlite */
-		db->execute(db, NULL, "BEGIN TRANSACTION");
-	}
+	/* run population in a transaction for sqlite */
+	begin_transaction();
 	while (count-- > 0)
 	{
 		chunk_increment(cur_addr);
@@ -775,10 +811,7 @@ static void resize(char *name, host_t *end)
 			"VALUES (?, ?, ?, ?, ?)",
 			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
 	}
-	if (db->get_driver(db) == DB_SQLITE)
-	{
-		db->execute(db, NULL, "END TRANSACTION");
-	}
+	commit_transaction();
 	printf("done.\n", count);
 
 }
@@ -1036,6 +1069,79 @@ static void purge(char *name)
 	fprintf(stderr, "purged %d leases in pool '%s'.\n", purged, name);
 }
 
+#define ARGV_SIZE 32
+
+static void argv_add(char **argv, int argc, char *value)
+{
+	if (argc >= ARGV_SIZE)
+	{
+		fprintf(stderr, "too many arguments: %s\n", value);
+		exit(EXIT_FAILURE);
+	}
+	argv[argc] = value;
+}
+
+/**
+ * ipsec pool --batch - read commands from a file
+ */
+static void batch(char *argv0, char *name)
+{
+	char command[512];
+
+	FILE *file = strncmp(name, "-", 1) == 0 ? stdin : fopen(name, "r");
+	if (file == NULL)
+	{
+		fprintf(stderr, "opening '%s' failed: %s\n", name, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	begin_transaction();
+	while (fgets(command, sizeof(command), file))
+	{
+		char *argv[ARGV_SIZE], *start;
+		int i, argc = 0;
+		size_t cmd_len = strlen(command);
+
+		/* ignore empty lines */
+		if (cmd_len == 1 && *(command + cmd_len - 1) == '\n')
+		{
+			continue;
+		}
+
+		/* parse command into argv */
+		start = command;
+		argv_add(argv, argc++, argv0);
+		for (i = 0; i < cmd_len; ++i)
+		{
+			if (command[i] == ' ' || command[i] == '\n')
+			{
+				if (command + i == start)
+				{
+					/* ignore leading whitespace */
+					++start;
+					continue;
+				}
+				command[i] = '\0';
+				argv_add(argv, argc++, start);
+				start = command + i + 1;
+			}
+		}
+		if (strlen(start) > 0)
+		{
+			argv_add(argv, argc++, start);
+		}
+		argv_add(argv, argc, NULL);
+
+		do_args(argc, argv);
+	}
+	commit_transaction();
+
+	if (file != stdin)
+	{
+		fclose(file);
+	}
+}
+
 /**
  * atexit handler to close db on shutdown
  */
@@ -1047,9 +1153,9 @@ static void cleanup(void)
 	DESTROY_IF(server);
 }
 
-int main(int argc, char *argv[])
+static void do_args(int argc, char *argv[])
 {
-	char *uri, *name = "", *filter = "", *addresses = NULL;
+	char *name = "", *filter = "", *addresses = NULL;
 	int timeout = 0;
 	bool utc = FALSE;
 	enum {
@@ -1062,41 +1168,12 @@ int main(int argc, char *argv[])
 		OP_DEL_ATTR,
 		OP_RESIZE,
 		OP_LEASES,
-		OP_PURGE
+		OP_PURGE,
+		OP_BATCH
 	} operation = OP_UNDEF;
 
-	atexit(library_deinit);
-
-	/* initialize library */
-	if (!library_init(NULL))
-	{
-		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
-	}
-	if (lib->integrity &&
-		!lib->integrity->check_file(lib->integrity, "pool", argv[0]))
-	{
-		fprintf(stderr, "integrity check of pool failed\n");
-		exit(SS_RC_DAEMON_INTEGRITY);
-	}
-	if (!lib->plugins->load(lib->plugins, NULL,
-			lib->settings->get_str(lib->settings, "pool.load", PLUGINS)))
-	{
-		exit(SS_RC_INITIALIZATION_FAILED);
-	}
-
-	uri = lib->settings->get_str(lib->settings, "libstrongswan.plugins.attr-sql.database", NULL);
-	if (!uri)
-	{
-		fprintf(stderr, "database URI libstrongswan.plugins.attr-sql.database not set.\n");
-		exit(SS_RC_INITIALIZATION_FAILED);
-	}
-	db = lib->db->create(lib->db, uri);
-	if (!db)
-	{
-		fprintf(stderr, "opening database failed.\n");
-		exit(SS_RC_INITIALIZATION_FAILED);
-	}
-	atexit(cleanup);
+	/* set option index to first argument */
+	optind = 1;
 
 	while (TRUE)
 	{
@@ -1113,6 +1190,7 @@ int main(int argc, char *argv[])
 			{ "resize", required_argument, NULL, 'r' },
 			{ "leases", no_argument, NULL, 'l' },
 			{ "purge", required_argument, NULL, 'p' },
+			{ "batch", required_argument, NULL, 'b' },
 
 			{ "start", required_argument, NULL, 's' },
 			{ "end", required_argument, NULL, 'e' },
@@ -1165,7 +1243,17 @@ int main(int argc, char *argv[])
 				name = optarg;
 				operation = OP_PURGE;
 				continue;
+			case 'b':
+				name = optarg;
+				if (operation == OP_BATCH)
+				{
+					fprintf(stderr, "--batch commands can not be nested\n");
+					exit(EXIT_FAILURE);
+				}
+				operation = OP_BATCH;
+				continue;
 			case 's':
+				DESTROY_IF(start);
 				start = host_create_from_string(optarg, 0);
 				if (start == NULL)
 				{
@@ -1175,6 +1263,7 @@ int main(int argc, char *argv[])
 				}
 				continue;
 			case 'e':
+				DESTROY_IF(end);
 				end = host_create_from_string(optarg, 0);
 				if (end == NULL)
 				{
@@ -1199,6 +1288,7 @@ int main(int argc, char *argv[])
 				addresses = optarg;
 				continue;
 			case 'v':
+				DESTROY_IF(server);
 				server = host_create_from_string(optarg, 0);
 				if (server == NULL)
 				{
@@ -1269,10 +1359,60 @@ int main(int argc, char *argv[])
 		case OP_PURGE:
 			purge(name);
 			break;
+		case OP_BATCH:
+			if (name == NULL)
+			{
+				fprintf(stderr, "missing arguments.\n");
+				usage();
+				exit(EXIT_FAILURE);
+			}
+			batch(argv[0], name);
+			break;
 		default:
 			usage();
 			exit(EXIT_FAILURE);
 	}
+}
+
+int main(int argc, char *argv[])
+{
+	char *uri;
+
+	atexit(library_deinit);
+
+	/* initialize library */
+	if (!library_init(NULL))
+	{
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "pool", argv[0]))
+	{
+		fprintf(stderr, "integrity check of pool failed\n");
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "pool.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+
+	uri = lib->settings->get_str(lib->settings, "libstrongswan.plugins.attr-sql.database", NULL);
+	if (!uri)
+	{
+		fprintf(stderr, "database URI libstrongswan.plugins.attr-sql.database not set.\n");
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	db = lib->db->create(lib->db, uri);
+	if (!db)
+	{
+		fprintf(stderr, "opening database failed.\n");
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	atexit(cleanup);
+
+	do_args(argc, argv);
+
 	exit(EXIT_SUCCESS);
 }
 
