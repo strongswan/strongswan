@@ -38,6 +38,49 @@ database_t *db;
 host_t *start = NULL, *end = NULL, *server = NULL;
 
 /**
+ * whether --add should --replace an existing pool
+ */
+bool replace_pool = FALSE;
+
+/**
+ * forward declaration
+ */
+static void del(char *name);
+
+/**
+ * Create or replace a pool by name
+ */
+static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
+{
+	enumerator_t *e;
+	int pool;
+
+	e = db->query(db, "SELECT id FROM pools WHERE name = ?",
+			DB_TEXT, name, DB_UINT);
+	if (e && e->enumerate(e, &pool))
+	{
+		if (replace_pool == FALSE)
+		{
+			fprintf(stderr, "pool '%s' exists.\n", name);
+			e->destroy(e);
+			exit(-1);
+		}
+		del(name);
+	}
+	DESTROY_IF(e);
+	if (db->execute(db, &pool,
+			"INSERT INTO pools (name, start, end, timeout) VALUES (?, ?, ?, ?)",
+			DB_TEXT, name, DB_BLOB, start, DB_BLOB, end,
+			DB_INT, timeout*3600) != 1)
+	{
+		fprintf(stderr, "creating pool failed.\n");
+		exit(-1);
+	}
+
+	return pool;
+}
+
+/**
  * instead of a pool handle a DNS or NBNS attribute
  */
 static bool is_attribute(char *name)
@@ -86,20 +129,22 @@ static void usage(void)
 {
 	printf("\
 Usage:\n\
-  ipsec pool --status|--add|--del|--resize|--purge [options]\n\
+  ipsec pool --status|--add|--replace|--del|--resize|--purge [options]\n\
   \n\
   ipsec pool --status\n\
     Show a list of installed pools with statistics.\n\
   \n\
   ipsec pool --add <name> --start <start> --end <end> [--timeout <timeout>]\n\
-    Add a new pool to the database.\n\
+  ipsec pool --replace <name> --start <start> --end <end> [--timeout <timeout>]\n\
+    Add a new pool to or replace an existing pool in the database.\n\
       name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       start:   Start address of the pool\n\
       end:     End address of the pool\n\
       timeout: Lease time in hours, 0 for static leases\n\
   \n\
   ipsec pool --add <name> --addresses <file> [--timeout <timeout>]\n\
-    Add a new pool to the database.\n\
+  ipsec pool --replace <name> --addresses <file> [--timeout <timeout>]\n\
+    Add a new pool to or replace an existing pool in the database.\n\
       name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       file:    File newline separated addresses for the pool are read from.\n\
                Optionally each address can be pre-assigned to a roadwarrior\n\
@@ -363,15 +408,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		fprintf(stderr, "invalid start/end pair specified.\n");
 		exit(-1);
 	}
-	if (db->execute(db, &id,
-			"INSERT INTO pools (name, start, end, timeout) "
-			"VALUES (?, ?, ?, ?)",
-			DB_TEXT, name, DB_BLOB, start_addr,
-			DB_BLOB, end_addr, DB_INT, timeout*3600) != 1)
-	{
-		fprintf(stderr, "creating pool failed.\n");
-		exit(-1);
-	}
+	id = create_pool(name, start_addr, end_addr, timeout);
 	printf("allocating %d addresses... ", count);
 	fflush(stdout);
 	if (db->get_driver(db) == DB_SQLITE)
@@ -475,17 +512,8 @@ static void add_addresses(char *pool, char *path, int timeout)
 	}
 
 	addr = host_create_from_string("%any", 0);
-	if (addr == NULL ||
-		db->execute(db, &pool_id,
-			"INSERT INTO pools (name, start, end, timeout) "
-			"VALUES (?, ?, ?, ?)",
-			DB_TEXT, pool, DB_BLOB, addr->get_address(addr),
-			DB_BLOB, addr->get_address(addr), DB_INT, timeout*3600) != 1)
-	{
-		fprintf(stderr, "creating pool failed.\n");
-		DESTROY_IF(addr);
-		exit(-1);
-	}
+	pool_id = create_pool(pool, addr->get_address(addr),
+						  addr->get_address(addr), timeout);
 	addr->destroy(addr);
 
 	file = (strcmp(path, "-") == 0 ? stdin : fopen(path, "r"));
@@ -1086,6 +1114,7 @@ int main(int argc, char *argv[])
 			{ "utc", no_argument, NULL, 'u' },
 			{ "status", no_argument, NULL, 'w' },
 			{ "add", required_argument, NULL, 'a' },
+			{ "replace", required_argument, NULL, 'c' },
 			{ "del", required_argument, NULL, 'd' },
 			{ "resize", required_argument, NULL, 'r' },
 			{ "leases", no_argument, NULL, 'l' },
@@ -1113,9 +1142,18 @@ int main(int argc, char *argv[])
 			case 'u':
 				utc = TRUE;
 				continue;
+			case 'c':
+				replace_pool = TRUE;
+				/* fallthrough */
 			case 'a':
 				name = optarg;
 				operation = is_attribute(name) ? OP_ADD_ATTR : OP_ADD;
+				if (replace_pool && operation == OP_ADD_ATTR)
+				{
+					fprintf(stderr, "invalid pool name: '%s'.\n", optarg);
+					operation = OP_USAGE;
+					break;
+				}
 				continue;
 			case 'd':
 				name = optarg;
