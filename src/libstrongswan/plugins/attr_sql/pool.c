@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
+#include <errno.h>
 
 #include <debug.h>
 #include <library.h>
@@ -94,6 +96,18 @@ Usage:\n\
       name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       start:   Start address of the pool\n\
       end:     End address of the pool\n\
+      timeout: Lease time in hours, 0 for static leases\n\
+  \n\
+  ipsec pool --add <name> --addresses <file> [--timeout <timeout>]\n\
+    Add a new pool to the database.\n\
+      name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
+      file:    File newline separated addresses for the pool are read from.\n\
+               Optionally each address can be pre-assigned to a roadwarrior\n\
+               identity, e.g. 10.231.14.2=alice@strongswan.org.\n\
+               If a - (hyphen) is given instead of a file name, the addresses\n\
+               are read from STDIN. Reading addresses stops at the end of file\n\
+               or an empty line. Pools created with this command can not be\n\
+               resized.\n\
       timeout: Lease time in hours, 0 for static leases\n\
   \n\
   ipsec pool --add dns|nbns|wins --server <server>\n\
@@ -268,8 +282,14 @@ static void status(void)
 
 			start = host_create_from_chunk(AF_UNSPEC, start_chunk, 0);
 			end = host_create_from_chunk(AF_UNSPEC, end_chunk, 0);
-			size = get_pool_size(start_chunk, end_chunk);
-			printf("%8s %15H %15H ", name, start, end);
+			if (start->is_anyaddr(start) && end->is_anyaddr(end))
+			{
+				printf("%8s %15s %15s ", name, "n/a", "n/a");
+			}
+			else
+			{
+				printf("%8s %15H %15H ", name, start, end);
+			}
 			if (timeout)
 			{
 				printf("%7dh ", timeout/3600);
@@ -277,6 +297,14 @@ static void status(void)
 			else
 			{
 				printf("%8s ", "static");
+			}
+			/* get total number of hosts in the pool */
+			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
+							  "WHERE pool = ?", DB_UINT, id, DB_INT);
+			if (lease)
+			{
+				lease->enumerate(lease, &size);
+				lease->destroy(lease);
 			}
 			printf("%6d ", size);
 			/* get number of online hosts */
@@ -368,6 +396,138 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 	}
 	printf("done.\n", count);
 
+	exit(0);
+}
+
+static bool add_address(u_int pool_id, char *address_str, int *family)
+{
+	host_t *address;
+	int user_id = 0;
+
+	char *pos_eq = strchr(address_str, '=');
+	if (pos_eq != NULL)
+	{
+		enumerator_t *e;
+		identification_t *id = identification_create_from_string(pos_eq + 1);
+
+		/* look for peer identity in the identities table */
+		e = db->query(db,
+				"SELECT id FROM identities WHERE type = ? AND data = ?",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_UINT);
+
+		if (!e || !e->enumerate(e, &user_id))
+		{
+			/* not found, insert new one */
+			if (db->execute(db, &user_id,
+					"INSERT INTO identities (type, data) VALUES (?, ?)",
+					DB_INT, id->get_type(id),
+					DB_BLOB, id->get_encoding(id)) != 1)
+			{
+				fprintf(stderr, "creating id '%s' failed.\n", pos_eq + 1);
+				return FALSE;
+			}
+		}
+		DESTROY_IF(e);
+		id->destroy(id);
+		*pos_eq = '\0';
+	}
+
+	address = host_create_from_string(address_str, 0);
+	if (address == NULL)
+	{
+		fprintf(stderr, "invalid address '%s'.\n", address_str);
+		return FALSE;
+	}
+	if (family && *family && *family != address->get_family(address))
+	{
+		fprintf(stderr, "invalid address family '%s'.\n", address_str);
+		return FALSE;
+	}
+
+	if (db->execute(db, NULL,
+			"INSERT INTO addresses "
+			"(pool, address, identity, acquired, released) "
+			"VALUES (?, ?, ?, ?, ?)",
+			DB_UINT, pool_id, DB_BLOB, address->get_address(address),
+			DB_UINT, user_id, DB_UINT, 0, DB_UINT, 1) != 1)
+	{
+		fprintf(stderr, "inserting address '%s' failed.\n", address_str);
+		return FALSE;
+	}
+	*family = address->get_family(address);
+	address->destroy(address);
+
+	return TRUE;
+}
+
+static void add_addresses(char *pool, char *path, int timeout)
+{
+	u_int pool_id, count = 0;
+	int family = AF_UNSPEC;
+	char address_str[512];
+	host_t *addr;
+	FILE *file;
+
+	if (db->get_driver(db) == DB_SQLITE)
+	{	/* run population in a transaction for sqlite */
+		db->execute(db, NULL, "BEGIN TRANSACTION");
+	}
+
+	addr = host_create_from_string("%any", 0);
+	if (addr == NULL ||
+		db->execute(db, &pool_id,
+			"INSERT INTO pools (name, start, end, timeout) "
+			"VALUES (?, ?, ?, ?)",
+			DB_TEXT, pool, DB_BLOB, addr->get_address(addr),
+			DB_BLOB, addr->get_address(addr), DB_INT, timeout*3600) != 1)
+	{
+		fprintf(stderr, "creating pool failed.\n");
+		DESTROY_IF(addr);
+		exit(-1);
+	}
+	addr->destroy(addr);
+
+	file = (strcmp(path, "-") == 0 ? stdin : fopen(path, "r"));
+	if (file == NULL)
+	{
+		fprintf(stderr, "opening '%s' failed: %s\n", path, strerror(errno));
+		exit(-1);
+	}
+
+	printf("starting allocation... ");
+	fflush(stdout);
+
+	while (fgets(address_str, sizeof(address_str), file))
+	{
+		size_t addr_len = strlen(address_str);
+		char *last_chr = address_str + addr_len - 1;
+		if (*last_chr == '\n')
+		{
+			if (addr_len == 1)
+			{	/* end of input */
+				break;
+			}
+			*last_chr = '\0';
+		}
+		if (add_address(pool_id, address_str, &family) == FALSE)
+		{
+			exit(-1);
+		}
+		++count;
+	}
+
+	if (file != stdin)
+	{
+		fclose(file);
+	}
+
+	if (db->get_driver(db) == DB_SQLITE)
+	{
+		db->execute(db, NULL, "END TRANSACTION");
+	}
+
+	printf("%d addresses done.\n", count);
 	exit(0);
 }
 
@@ -536,6 +696,7 @@ static void resize(char *name, host_t *end)
 	enumerator_t *query;
 	chunk_t old_addr, new_addr, cur_addr;
 	u_int id, count;
+	host_t *old_end;
 
 	new_addr = end->get_address(end);
 
@@ -557,6 +718,16 @@ static void resize(char *name, host_t *end)
 	cur_addr = chunk_clonea(old_addr);
 	count = get_pool_size(old_addr, new_addr) - 1;
 	query->destroy(query);
+
+	/* Check whether pool is resizable */
+	old_end = host_create_from_chunk(AF_UNSPEC, old_addr, 0);
+	if (old_end && old_end->is_anyaddr(old_end))
+	{
+		fprintf(stderr, "pool is not resizable.\n");
+		old_end->destroy(old_end);
+		exit(-1);
+	}
+	DESTROY_IF(old_end);
 
 	if (db->execute(db, NULL,
 			"UPDATE pools SET end = ? WHERE name = ?",
@@ -857,7 +1028,7 @@ static void cleanup(void)
 
 int main(int argc, char *argv[])
 {
-	char *uri, *name = "", *filter = "";
+	char *uri, *name = "", *filter = "", *addresses = NULL;
 	int timeout = 0;
 	bool utc = FALSE;
 	enum {
@@ -922,6 +1093,7 @@ int main(int argc, char *argv[])
 
 			{ "start", required_argument, NULL, 's' },
 			{ "end", required_argument, NULL, 'e' },
+			{ "addresses", required_argument, NULL, 'x' },
 			{ "timeout", required_argument, NULL, 't' },
 			{ "filter", required_argument, NULL, 'f' },
 			{ "server", required_argument, NULL, 'v' },
@@ -990,6 +1162,9 @@ int main(int argc, char *argv[])
 			case 'f':
 				filter = optarg;
 				continue;
+			case 'x':
+				addresses = optarg;
+				continue;
 			case 'v':
 				server = host_create_from_string(optarg, 0);
 				if (server == NULL)
@@ -1015,12 +1190,19 @@ int main(int argc, char *argv[])
 			status();
 			break;
 		case OP_ADD:
-			if (start == NULL || end == NULL)
+			if (addresses != NULL)
+			{
+				add_addresses(name, addresses, timeout);
+			}
+			else if (start != NULL && end != NULL)
+			{
+				add(name, start, end, timeout);
+			}
+			else
 			{
 				fprintf(stderr, "missing arguments.\n");
 				usage();
 			}
-			add(name, start, end, timeout);
 			break;
 		case OP_ADD_ATTR:
 			if (server == NULL)
