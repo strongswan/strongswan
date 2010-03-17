@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -460,37 +461,31 @@ static status_t GenerateMSK(chunk_t password_hash_hash,
 
 static status_t GenerateStuff(private_eap_mschapv2_t *this,
 							  chunk_t server_challenge, chunk_t peer_challenge,
-							  chunk_t username, chunk_t password)
+							  chunk_t username, chunk_t nt_hash)
 {
 	status_t status = FAILED;
-	chunk_t password_hash = chunk_empty, password_hash_hash = chunk_empty,
-			challenge_hash = chunk_empty;
+	chunk_t nt_hash_hash = chunk_empty, challenge_hash = chunk_empty;
 
-	if (NtPasswordHash(password, &password_hash) != SUCCESS)
-	{
-		goto error;
-	}
-	if (NtPasswordHash(password_hash, &password_hash_hash) != SUCCESS)
+	if (NtPasswordHash(nt_hash, &nt_hash_hash) != SUCCESS)
 	{
 		goto error;
 	}
 	if (ChallengeHash(peer_challenge, server_challenge, username,
-					  &challenge_hash) != SUCCESS)
+						&challenge_hash) != SUCCESS)
 	{
 		goto error;
 	}
-
-	if (ChallengeResponse(challenge_hash, password_hash,
-						  &this->nt_response) != SUCCESS)
+	if (ChallengeResponse(challenge_hash, nt_hash,
+						&this->nt_response) != SUCCESS)
 	{
 		goto error;
 	}
-	if (AuthenticatorResponse(password_hash_hash, challenge_hash,
-							  this->nt_response, &this->auth_response) != SUCCESS)
+	if (AuthenticatorResponse(nt_hash_hash, challenge_hash,
+						this->nt_response, &this->auth_response) != SUCCESS)
 	{
 		goto error;
 	}
-	if (GenerateMSK(password_hash_hash, this->nt_response, &this->msk) != SUCCESS)
+	if (GenerateMSK(nt_hash_hash, this->nt_response, &this->msk) != SUCCESS)
 	{
 		goto error;
 	}
@@ -498,8 +493,7 @@ static status_t GenerateStuff(private_eap_mschapv2_t *this,
 	status = SUCCESS;
 
 error:
-	chunk_free(&password_hash);
-	chunk_free(&password_hash_hash);
+	chunk_free(&nt_hash_hash);
 	chunk_free(&challenge_hash);
 	return status;
 }
@@ -613,6 +607,39 @@ static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **ou
 	return NEED_MORE;
 }
 
+static bool get_nt_hash(private_eap_mschapv2_t *this, identification_t *me,
+					   identification_t *other, chunk_t *nt_hash)
+{
+	shared_key_t *shared;
+	chunk_t password;
+
+	/* try to find a stored NT_HASH first */
+	shared = charon->credentials->get_shared(charon->credentials,
+											SHARED_NT_HASH, me, other);
+	if (shared )
+	{
+		*nt_hash = chunk_clone(shared->get_key(shared));
+		shared->destroy(shared);
+		return TRUE;
+	}
+
+	/* fallback to plaintext password */
+	shared = charon->credentials->get_shared(charon->credentials,
+											SHARED_EAP, me, other);
+	if (shared)
+	{
+		password = ascii_to_unicode(shared->get_key(shared));
+		shared->destroy(shared);
+
+		if (NtPasswordHash(password, nt_hash) == SUCCESS)
+		{
+			chunk_clear(&password);
+			return TRUE;
+		}
+		chunk_clear(&password);
+	}
+	return FALSE;
+}
 
 /**
  * Process MS-CHAPv2 Challenge Requests
@@ -624,8 +651,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	eap_mschapv2_challenge_t *cha;
 	eap_mschapv2_response_t *res;
-	shared_key_t *shared;
-	chunk_t data, peer_challenge, username, password;
+	chunk_t data, peer_challenge, username, nt_hash;
 	u_int16_t len = RESPONSE_PAYLOAD_LEN;
 
 	data = in->get_data(in);
@@ -660,28 +686,24 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	rng->get_bytes(rng, CHALLENGE_LEN, peer_challenge.ptr);
 	rng->destroy(rng);
 
-	shared = charon->credentials->get_shared(charon->credentials,
-										SHARED_EAP, this->peer, this->server);
-	if (shared == NULL)
+	if (!get_nt_hash(this, this->peer, this->server, &nt_hash))
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 			 this->server, this->peer);
 		return NOT_FOUND;
 	}
 
-	password = ascii_to_unicode(shared->get_key(shared));
-	shared->destroy(shared);
-
 	username = extract_username(this->peer);
 	len += username.len;
 
-	if (GenerateStuff(this, this->challenge, peer_challenge, username, password) != SUCCESS)
+	if (GenerateStuff(this, this->challenge, peer_challenge,
+					  username, nt_hash) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 generating NT-Response failed");
-		chunk_clear(&password);
+		chunk_clear(&nt_hash);
 		return FAILED;
 	}
-	chunk_clear(&password);
+	chunk_clear(&nt_hash);
 
 	eap = alloca(len);
 	eap->code = EAP_RESPONSE;
@@ -995,9 +1017,8 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 {
 	eap_mschapv2_header_t *eap;
 	eap_mschapv2_response_t *res;
-	chunk_t data, peer_challenge, username, password;
+	chunk_t data, peer_challenge, username, nt_hash;
 	identification_t *userid;
-	shared_key_t *shared;
 	int name_len;
 	char buf[256];
 
@@ -1019,9 +1040,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
 	username = extract_username(userid);
 
-	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, this->server, userid);
-	if (shared == NULL)
+	if (!get_nt_hash(this, this->server, userid, &nt_hash))
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 					  this->server, userid);
@@ -1035,21 +1054,19 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		return process_server_retry(this, out);
 	}
 
-	password = ascii_to_unicode(shared->get_key(shared));
-	shared->destroy(shared);
-
 	if (GenerateStuff(this, this->challenge, peer_challenge,
-					  username, password) != SUCCESS)
+					  username, nt_hash) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed");
 		userid->destroy(userid);
-		chunk_clear(&password);
+		chunk_clear(&nt_hash);
 		return FAILED;
 	}
 	userid->destroy(userid);
-	chunk_clear(&password);
+	chunk_clear(&nt_hash);
 
-	if (memeq(res->response.nt_response, this->nt_response.ptr, this->nt_response.len))
+	if (memeq(res->response.nt_response, this->nt_response.ptr,
+			  this->nt_response.len))
 	{
 		chunk_t hex;
 		char msg[AUTH_RESPONSE_LEN + sizeof(SUCCESS_MESSAGE)];

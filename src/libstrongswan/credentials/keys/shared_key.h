@@ -41,6 +41,8 @@ enum shared_key_type_t {
 	SHARED_PRIVATE_KEY_PASS,
 	/** PIN to unlock a smartcard */
 	SHARED_PIN,
+	/** Calculated NT Hash = MD4(UTF-16LE(password)) */
+	SHARED_NT_HASH,
 };
 
 /**
