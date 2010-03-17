@@ -993,6 +993,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
+				 (match("NTLM", &token) && (type = SHARED_NT_HASH)) ||
 				 (match("XAUTH", &token) && (type = SHARED_EAP)))
 		{
 			stroke_shared_key_t *shared_key;
