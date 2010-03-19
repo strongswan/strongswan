@@ -16,6 +16,7 @@
 #include "farp_listener.h"
 
 #include <utils/hashtable.h>
+#include <threading/rwlock.h>
 
 typedef struct private_farp_listener_t private_farp_listener_t;
 
@@ -33,6 +34,11 @@ struct private_farp_listener_t {
 	 * Hashtable with active virtual IPs
 	 */
 	hashtable_t *ips;
+
+	/**
+	 * RWlock for IP list
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -59,6 +65,7 @@ METHOD(listener_t, ike_updown, bool,
 	ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 	if (ip)
 	{
+		this->lock->write_lock(this->lock);
 		if (up)
 		{
 			ip = ip->clone(ip);
@@ -68,6 +75,7 @@ METHOD(listener_t, ike_updown, bool,
 		{
 			ip = this->ips->remove(this->ips, ip);
 		}
+		this->lock->unlock(this->lock);
 		DESTROY_IF(ip);
 	}
 	return TRUE;
@@ -76,7 +84,12 @@ METHOD(listener_t, ike_updown, bool,
 METHOD(farp_listener_t, is_active, bool,
 	private_farp_listener_t *this, host_t *ip)
 {
-	return this->ips->get(this->ips, ip) != NULL;
+	bool active;
+
+	this->lock->read_lock(this->lock);
+	active = this->ips->get(this->ips, ip) != NULL;
+	this->lock->unlock(this->lock);
+	return active;
 }
 
 METHOD(farp_listener_t, destroy, void,
@@ -93,6 +106,7 @@ METHOD(farp_listener_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->ips->destroy(this->ips);
 
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -111,6 +125,7 @@ farp_listener_t *farp_listener_create()
 		},
 		.ips = hashtable_create((hashtable_hash_t)hash,
 								(hashtable_equals_t)equals, 8),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;
