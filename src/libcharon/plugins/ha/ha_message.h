@@ -25,7 +25,7 @@
 #include <utils/host.h>
 #include <utils/identification.h>
 #include <sa/ike_sa_id.h>
-#include <config/traffic_selector.h>
+#include <selectors/traffic_selector.h>
 
 /**
  * Protocol version of this implementation
