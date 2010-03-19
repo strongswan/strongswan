@@ -388,6 +388,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_HA
+  SUBDIRS += plugins/ha
+  PLUGINS += ha
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/ha/libstrongswan-ha.la
+endif
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
   PLUGINS += uci

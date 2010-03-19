@@ -1,9 +1,14 @@
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = -rdynamic -DIPSEC_PIDDIR=\"${piddir}\"
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-ha.la
+else
 plugin_LTLIBRARIES = libstrongswan-ha.la
+endif
+
 libstrongswan_ha_la_SOURCES = \
   ha_plugin.h ha_plugin.c \
   ha_message.h ha_message.c \
@@ -15,5 +20,5 @@ libstrongswan_ha_la_SOURCES = \
   ha_ctl.h ha_ctl.c \
   ha_ike.h ha_ike.c \
   ha_child.h ha_child.c
-libstrongswan_ha_la_LDFLAGS = -module
+libstrongswan_ha_la_LDFLAGS = -module -avoid-version
 
