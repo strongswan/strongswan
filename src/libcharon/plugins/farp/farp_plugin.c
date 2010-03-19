@@ -16,6 +16,7 @@
 #include "farp_plugin.h"
 
 #include "farp_listener.h"
+#include "farp_spoofer.h"
 
 #include <daemon.h>
 
@@ -35,11 +36,17 @@ struct private_farp_plugin_t {
 	 * Listener registering active virtual IPs
 	 */
 	farp_listener_t *listener;
+
+	/**
+	 * Spoofer listening and spoofing ARP messages
+	 */
+	farp_spoofer_t *spoofer;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_farp_plugin_t *this)
 {
+	DESTROY_IF(this->spoofer);
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
 	free(this);
@@ -59,6 +66,12 @@ plugin_t *farp_plugin_create()
 
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
+	this->spoofer = farp_spoofer_create(this->listener);
+	if (!this->spoofer)
+	{
+		destroy(this);
+		return NULL;
+	}
 	return &this->public.plugin;
 }
 
