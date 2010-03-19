@@ -250,8 +250,8 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	auth_cfg_t *auth;
 	tls_reader_t *sig;
 
-	enumerator = charon->credentials->create_public_enumerator(
-					charon->credentials, KEY_ANY, this->peer, this->peer_auth);
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+										KEY_ANY, this->peer, this->peer_auth);
 	while (enumerator->enumerate(enumerator, &public, &auth))
 	{
 		sig = tls_reader_create(reader->peek(reader));
@@ -404,7 +404,7 @@ static status_t send_certificate(private_tls_server_t *this,
 	tls_writer_t *certs;
 	chunk_t data;
 
-	this->private = charon->credentials->get_private(charon->credentials,
+	this->private = lib->credmgr->get_private(lib->credmgr,
 									KEY_ANY, this->server, this->server_auth);
 	if (!this->private)
 	{
@@ -417,22 +417,26 @@ static status_t send_certificate(private_tls_server_t *this,
 	cert = this->server_auth->get(this->server_auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
 	{
-		DBG1(DBG_IKE, "sending TLS server certificate '%Y'",
-			 cert->get_subject(cert));
-		data = cert->get_encoding(cert);
-		certs->write_data24(certs, data);
-		free(data.ptr);
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+		{
+			DBG1(DBG_IKE, "sending TLS server certificate '%Y'",
+				 cert->get_subject(cert));
+			certs->write_data24(certs, data);
+			free(data.ptr);
+		}
 	}
 	enumerator = this->server_auth->create_enumerator(this->server_auth);
 	while (enumerator->enumerate(enumerator, &rule, &cert))
 	{
 		if (rule == AUTH_RULE_IM_CERT)
 		{
-			DBG1(DBG_IKE, "sending TLS intermediate certificate '%Y'",
-				 cert->get_subject(cert));
-			data = cert->get_encoding(cert);
-			certs->write_data24(certs, data);
-			free(data.ptr);
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+			{
+				DBG1(DBG_IKE, "sending TLS intermediate certificate '%Y'",
+					 cert->get_subject(cert));
+				certs->write_data24(certs, data);
+				free(data.ptr);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -466,8 +470,8 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	}
 
 	authorities = tls_writer_create(64);
-	enumerator = charon->credentials->create_cert_enumerator(
-						charon->credentials, CERT_X509, KEY_RSA, NULL, TRUE);
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+												CERT_X509, KEY_RSA, NULL, TRUE);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		id = cert->get_subject(cert);

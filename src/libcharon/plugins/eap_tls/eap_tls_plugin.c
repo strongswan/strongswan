@@ -33,7 +33,7 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *eap_tls_plugin_create()
 {
 	eap_tls_plugin_t *this;
 

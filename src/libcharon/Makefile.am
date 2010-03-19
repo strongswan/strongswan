@@ -344,6 +344,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_TLS
+  SUBDIRS += plugins/eap_tls
+  PLUGINS += eap-tls
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_tls/libstrongswan-eap-tls.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
   PLUGINS += medsrv

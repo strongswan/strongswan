@@ -1,9 +1,14 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-eap-tls.la
+else
 plugin_LTLIBRARIES = libstrongswan-eap-tls.la
+endif
 
 libstrongswan_eap_tls_la_SOURCES = eap_tls_plugin.h eap_tls_plugin.c \
 	eap_tls.h eap_tls.c tls/tls.h tls/tls.c \

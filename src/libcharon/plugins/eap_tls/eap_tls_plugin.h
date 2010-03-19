@@ -42,6 +42,6 @@ struct eap_tls_plugin_t {
 /**
  * Create a eap_tls_plugin instance.
  */
-plugin_t *plugin_create();
+plugin_t *eap_tls_plugin_create();
 
 #endif /** EAP_TLS_PLUGIN_H_ @}*/

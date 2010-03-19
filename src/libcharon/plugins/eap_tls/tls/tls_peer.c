@@ -233,8 +233,8 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 			return FAILED;
 		}
 		id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
-		cert = charon->credentials->get_cert(charon->credentials,
-											 CERT_X509, KEY_ANY, id, TRUE);
+		cert = lib->credmgr->get_cert(lib->credmgr,
+									  CERT_X509, KEY_ANY, id, TRUE);
 		if (cert)
 		{
 			DBG1(DBG_IKE, "received cert request for '%Y", id);
@@ -397,7 +397,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	tls_writer_t *certs;
 	chunk_t data;
 
-	this->private = charon->credentials->get_private(charon->credentials,
+	this->private = lib->credmgr->get_private(lib->credmgr,
 										KEY_ANY, this->peer, this->peer_auth);
 	if (!this->private)
 	{
@@ -410,22 +410,26 @@ static status_t send_certificate(private_tls_peer_t *this,
 	cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
 	{
-		DBG1(DBG_IKE, "sending TLS peer certificate '%Y'",
-			 cert->get_subject(cert));
-		data = cert->get_encoding(cert);
-		certs->write_data24(certs, data);
-		free(data.ptr);
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+		{
+			DBG1(DBG_IKE, "sending TLS peer certificate '%Y'",
+				 cert->get_subject(cert));
+			certs->write_data24(certs, data);
+			free(data.ptr);
+		}
 	}
 	enumerator = this->peer_auth->create_enumerator(this->peer_auth);
 	while (enumerator->enumerate(enumerator, &rule, &cert))
 	{
 		if (rule == AUTH_RULE_IM_CERT)
 		{
-			DBG1(DBG_IKE, "sending TLS intermediate certificate '%Y'",
-				 cert->get_subject(cert));
-			data = cert->get_encoding(cert);
-			certs->write_data24(certs, data);
-			free(data.ptr);
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+			{
+				DBG1(DBG_IKE, "sending TLS intermediate certificate '%Y'",
+					 cert->get_subject(cert));
+				certs->write_data24(certs, data);
+				free(data.ptr);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -466,8 +470,8 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
 
-	enumerator = charon->credentials->create_public_enumerator(
-				charon->credentials, KEY_ANY, this->server, this->server_auth);
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+									KEY_ANY, this->server, this->server_auth);
 	while (enumerator->enumerate(enumerator, &current, &auth))
 	{
 		public = current->get_ref(current);
