@@ -60,21 +60,36 @@ static bool equals(host_t *a, host_t *b)
 METHOD(listener_t, ike_updown, bool,
 	private_farp_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
-	host_t *ip;
-
-	ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-	if (ip)
+	if (!up)
 	{
-		this->lock->write_lock(this->lock);
-		if (up)
+		host_t *ip;
+
+		ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+		if (ip)
 		{
-			ip = ip->clone(ip);
-			ip = this->ips->put(this->ips, ip, ip);
-		}
-		else
-		{
+			this->lock->write_lock(this->lock);
 			ip = this->ips->remove(this->ips, ip);
+			this->lock->unlock(this->lock);
+			DESTROY_IF(ip);
 		}
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, message_hook, bool,
+	private_farp_listener_t *this, ike_sa_t *ike_sa,
+	message_t *message, bool incoming)
+{
+	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+		message->get_exchange_type(message) == IKE_AUTH &&
+		!message->get_request(message))
+	{
+		host_t *ip;
+
+		ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+		ip = ip->clone(ip);
+		this->lock->write_lock(this->lock);
+		ip = this->ips->put(this->ips, ip, ip);
 		this->lock->unlock(this->lock);
 		DESTROY_IF(ip);
 	}
@@ -119,7 +134,10 @@ farp_listener_t *farp_listener_create()
 
 	INIT(this,
 		.public = {
-			.listener.ike_updown = _ike_updown,
+			.listener = {
+				.ike_updown = _ike_updown,
+				.message = _message_hook,
+			},
 			.is_active = _is_active,
 			.destroy = _destroy,
 		},
