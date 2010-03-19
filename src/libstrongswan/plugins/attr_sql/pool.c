@@ -667,7 +667,7 @@ static void del_attr(char *name, host_t *server)
 	{
 		type = get_attribute_type(name, server);
 		value = server->get_address(server);
-		query = db->query(db, 
+		query = db->query(db,
 					"SELECT id, type, value FROM attributes "
 					"WHERE type = ? AND value = ?",
 					DB_INT, type, DB_BLOB, value,
@@ -687,13 +687,13 @@ static void del_attr(char *name, host_t *server)
 			type_ip4 = INTERNAL_IP4_NBNS;
 			type_ip6 = INTERNAL_IP6_NBNS;
 		}
-			
+
 		query = db->query(db,
 					"SELECT id, type, value FROM attributes "
 					"WHERE type = ? OR type = ?",
 					DB_INT, type_ip4, DB_INT, type_ip6,
 					DB_UINT, DB_INT, DB_BLOB);
-	}	
+	}
 	if (!query)
 	{
 		fprintf(stderr, "deleting %s servers failed.\n", name);
@@ -735,23 +735,7 @@ static void del_attr(char *name, host_t *server)
 }
 
 /**
- * ipsec pool --resize - resize a pool		if (db->execute(db, NULL,
-					"DELETE FROM attributes WHERE type = ? AND value = ?",
-					 DB_INT, type, DB_BLOB, value) != 1)
-		{
-			fprintf(stderr, "deleting %s server %H failed\n", name, server);
-			exit(EXIT_FAILURE);
-		}
-		printf("deleted %s server %H\n", name, server);
-		if (db->execute(db, NULL,
-					"DELETE FROM attributes WHERE type = ? AND value = ?",
-					 DB_INT, type, DB_BLOB, value) != 1)
-		{
-			fprintf(stderr, "deleting %s server %H failed\n", name, server);
-			exit(EXIT_FAILURE);
-		}
-		printf("deleted %s server %H\n", name, server);
-
+ * ipsec pool --resize - resize a pool
  */
 static void resize(char *name, host_t *end)
 {
