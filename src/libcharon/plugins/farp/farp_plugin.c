@@ -15,6 +15,8 @@
 
 #include "farp_plugin.h"
 
+#include "farp_listener.h"
+
 #include <daemon.h>
 
 typedef struct private_farp_plugin_t private_farp_plugin_t;
@@ -28,11 +30,18 @@ struct private_farp_plugin_t {
 	 * implements plugin interface
 	 */
 	farp_plugin_t public;
+
+	/**
+	 * Listener registering active virtual IPs
+	 */
+	farp_listener_t *listener;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_farp_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	this->listener->destroy(this->listener);
 	free(this);
 }
 
@@ -45,7 +54,10 @@ plugin_t *farp_plugin_create()
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
+		.listener = farp_listener_create(),
 	);
+
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;
 }
