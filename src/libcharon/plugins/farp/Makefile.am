@@ -1,0 +1,14 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
+
+AM_CFLAGS = -rdynamic
+
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-farp.la
+else
+plugin_LTLIBRARIES = libstrongswan-farp.la
+endif
+
+libstrongswan_farp_la_SOURCES = farp_plugin.h farp_plugin.c
+
+libstrongswan_farp_la_LDFLAGS = -module -avoid-version

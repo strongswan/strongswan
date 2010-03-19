@@ -205,6 +205,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_FARP
+  SUBDIRS += plugins/farp
+  PLUGINS += farp
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/farp/libstrongswan-farp.la
+endif
+endif
+
 if USE_STROKE
   SUBDIRS += plugins/stroke
   PLUGINS += stroke

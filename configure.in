@@ -117,6 +117,7 @@ ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon, enforced if pluto is enabled])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
 ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
 ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
@@ -822,6 +823,7 @@ AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
+AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 
 dnl other options
 dnl =============
@@ -927,6 +929,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
+	src/libcharon/plugins/farp/Makefile
 	src/libcharon/plugins/smp/Makefile
 	src/libcharon/plugins/sql/Makefile
 	src/libcharon/plugins/medsrv/Makefile
