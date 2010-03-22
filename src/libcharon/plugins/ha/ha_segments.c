@@ -17,7 +17,8 @@
 
 #include <pthread.h>
 
-#include <utils/mutex.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 

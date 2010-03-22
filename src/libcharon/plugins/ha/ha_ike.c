@@ -146,7 +146,6 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 		peer_cfg_t *peer_cfg;
 		u_int32_t extension, condition;
 		host_t *addr;
-		identification_t *eap_id;
 		ike_sa_id_t *id;
 
 		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
@@ -163,7 +162,6 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 				  | copy_extension(ike_sa, EXT_MOBIKE)
 				  | copy_extension(ike_sa, EXT_HASH_AND_URL);
 
-		eap_id = ike_sa->get_eap_identity(ike_sa);
 		id = ike_sa->get_id(ike_sa);
 
 		m = ha_message_create(HA_IKE_UPDATE);
@@ -175,10 +173,6 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 		m->add_attribute(m, HA_CONDITIONS, condition);
 		m->add_attribute(m, HA_EXTENSIONS, extension);
 		m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
-		if (eap_id)
-		{
-			m->add_attribute(m, HA_EAP_ID, eap_id);
-		}
 		iterator = ike_sa->create_additional_address_iterator(ike_sa);
 		while (iterator->iterate(iterator, (void**)&addr))
 		{

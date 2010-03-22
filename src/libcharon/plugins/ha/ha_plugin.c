@@ -97,10 +97,10 @@ static void destroy(private_ha_plugin_t *this)
 	free(this);
 }
 
-/*
- * see header file
+/**
+ * Plugin constructor
  */
-plugin_t *plugin_create()
+plugin_t *ha_plugin_create()
 {
 	private_ha_plugin_t *this;
 	char *local, *remote, *secret;

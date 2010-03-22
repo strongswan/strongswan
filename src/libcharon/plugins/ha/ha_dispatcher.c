@@ -222,9 +222,6 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 			case HA_REMOTE_ID:
 				ike_sa->set_other_id(ike_sa, value.id->clone(value.id));
 				break;
-			case HA_EAP_ID:
-				ike_sa->set_eap_identity(ike_sa, value.id->clone(value.id));
-				break;
 			case HA_LOCAL_ADDR:
 				ike_sa->set_my_host(ike_sa, value.host->clone(value.host));
 				break;
@@ -359,12 +356,12 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
-	char *config_name;
+	char *config_name = "";
 	child_cfg_t *config = NULL;
 	child_sa_t *child_sa;
 	proposal_t *proposal;
 	keymat_t *keymat;
-	bool initiator, failed = FALSE;
+	bool initiator = FALSE, failed = FALSE;
 	u_int32_t inbound_spi = 0, outbound_spi = 0;
 	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
 	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
@@ -475,39 +472,6 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	child_sa->set_state(child_sa, CHILD_INSTALLING);
 	proposal->destroy(proposal);
 
-	if (initiator)
-	{
-		if (child_sa->install(child_sa, encr_r, integ_r,
-							  inbound_spi, inbound_cpi, TRUE) != SUCCESS ||
-			child_sa->install(child_sa, encr_i, integ_i,
-							  outbound_spi, outbound_cpi, FALSE) != SUCCESS)
-		{
-			failed = TRUE;
-		}
-	}
-	else
-	{
-		if (child_sa->install(child_sa, encr_i, integ_i,
-							  inbound_spi, inbound_cpi, TRUE) != SUCCESS ||
-			child_sa->install(child_sa, encr_r, integ_r,
-							  outbound_spi, outbound_cpi, FALSE) != SUCCESS)
-		{
-			failed = TRUE;
-		}
-	}
-	chunk_clear(&encr_i);
-	chunk_clear(&integ_i);
-	chunk_clear(&encr_r);
-	chunk_clear(&integ_r);
-
-	if (failed)
-	{
-		DBG1(DBG_CHD, "HA CHILD_SA installation failed");
-		child_sa->destroy(child_sa);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return;
-	}
-
 	/* TODO: Change CHILD_SA API to avoid cloning twice */
 	local_ts = linked_list_create();
 	remote_ts = linked_list_create();
@@ -527,6 +491,42 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (initiator)
+	{
+		if (child_sa->install(child_sa, encr_r, integ_r, inbound_spi,
+						inbound_cpi, TRUE, local_ts, remote_ts) != SUCCESS ||
+			child_sa->install(child_sa, encr_i, integ_i, outbound_spi,
+						outbound_cpi, FALSE, local_ts, remote_ts) != SUCCESS)
+		{
+			failed = TRUE;
+		}
+	}
+	else
+	{
+		if (child_sa->install(child_sa, encr_i, integ_i, inbound_spi,
+						inbound_cpi, TRUE, local_ts, remote_ts) != SUCCESS ||
+			child_sa->install(child_sa, encr_r, integ_r, outbound_spi,
+						outbound_cpi, FALSE, local_ts, remote_ts) != SUCCESS)
+		{
+			failed = TRUE;
+		}
+	}
+	chunk_clear(&encr_i);
+	chunk_clear(&integ_i);
+	chunk_clear(&encr_r);
+	chunk_clear(&integ_r);
+
+	if (failed)
+	{
+		DBG1(DBG_CHD, "HA CHILD_SA installation failed");
+		child_sa->destroy(child_sa);
+		local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
+		remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		return;
+	}
+
 	child_sa->add_policies(child_sa, local_ts, remote_ts);
 	local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
 	remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));

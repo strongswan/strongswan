@@ -154,7 +154,6 @@ static void add_attribute(private_ha_message_t *this,
 		/* identification_t* */
 		case HA_LOCAL_ID:
 		case HA_REMOTE_ID:
-		case HA_EAP_ID:
 		{
 			identification_encoding_t *enc;
 			identification_t *id;
@@ -355,7 +354,6 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 		/* identification_t* */
 		case HA_LOCAL_ID:
 		case HA_REMOTE_ID:
-		case HA_EAP_ID:
 		{
 			identification_encoding_t *enc;
 

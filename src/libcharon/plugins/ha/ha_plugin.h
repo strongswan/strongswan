@@ -44,9 +44,4 @@ struct ha_plugin_t {
 	plugin_t plugin;
 };
 
-/**
- * Create a ha_plugin instance.
- */
-plugin_t *plugin_create();
-
 #endif /* HA_PLUGIN_H_ @}*/
