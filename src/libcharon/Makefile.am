@@ -364,6 +364,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_DHCP
+  SUBDIRS += plugins/dhcp
+  PLUGINS += dhcp
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/dhcp/libstrongswan-dhcp.la
+endif
+endif
+
 if USE_RESOLVE
   SUBDIRS += plugins/resolve
   PLUGINS += resolve
