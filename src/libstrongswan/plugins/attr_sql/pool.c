@@ -1156,8 +1156,8 @@ static void do_args(int argc, char *argv[])
 		OP_BATCH
 	} operation = OP_UNDEF;
 
-	/* set option index to first argument */
-	optind = 1;
+	/* reinit getopt state */
+	optind = 0;
 
 	while (TRUE)
 	{
