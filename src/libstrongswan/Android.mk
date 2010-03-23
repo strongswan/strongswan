@@ -73,7 +73,7 @@ LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
 LOCAL_SRC_FILES += $(call add_plugin, gmp)
 ifneq ($(call plugin_enabled, gmp)),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
-LOCAL_STATIC_LIBRARIES += libgmp
+LOCAL_SHARED_LIBRARIES += libgmp
 endif
 
 LOCAL_SRC_FILES += $(call add_plugin, hmac)
@@ -118,9 +118,7 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libdl
-
-LOCAL_STATIC_LIBRARIES += libvstr
+LOCAL_SHARED_LIBRARIES += libdl libvstr
 
 include $(BUILD_SHARED_LIBRARY)
 

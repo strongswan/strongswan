@@ -116,7 +116,7 @@ LOCAL_SRC_FILES += $(call add_plugin, eap-aka)
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2)
 ifneq ($(call plugin_enabled, eap-aka-3gpp2)),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
-LOCAL_STATIC_LIBRARIES += libgmp
+LOCAL_SHARED_LIBRARIES += libgmp
 endif
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-gtc)
