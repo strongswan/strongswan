@@ -340,7 +340,8 @@ int main(int argc, char *argv[])
 				break;
 			case 'v':
 				printf("Linux strongSwan %s\n", VERSION);
-				exit(0);
+				status = 0;
+				goto deinit;
 			case 'l':
 				use_syslog = TRUE;
 				continue;
