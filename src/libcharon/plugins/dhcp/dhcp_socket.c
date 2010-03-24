@@ -96,6 +96,11 @@ struct private_dhcp_socket_t {
 	int receive;
 
 	/**
+	 * Do we use per-identity or random leases (and MAC addresses)
+	 */
+	bool identity_lease;
+
+	/**
 	 * DHCP server address, or broadcast
 	 */
 	host_t *dst;
@@ -192,7 +197,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp_option_t *option;
 	int optlen = 0;
 	host_t *src;
-	u_int hash;
+	u_int32_t id;
 
 	memset(dhcp, 0, sizeof(*dhcp));
 	dhcp->opcode = BOOTREQUEST;
@@ -222,8 +227,15 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->client_hw_addr[0] = 0x7A;
 	dhcp->client_hw_addr[1] = 0xA7;
 	/* with ID specific postfix */
-	hash = htonl(chunk_hash(chunk));
-	memcpy(&dhcp->client_hw_addr[2], &hash, 4);
+	if (this->identity_lease)
+	{
+		id = htonl(chunk_hash(chunk));
+	}
+	else
+	{
+		id = transaction->get_id(transaction);
+	}
+	memcpy(&dhcp->client_hw_addr[2], &id, sizeof(id));
 
 	dhcp->magic_cookie = htonl(0x63825363);
 
@@ -600,6 +612,8 @@ dhcp_socket_t *dhcp_socket_create()
 		destroy(this);
 		return NULL;
 	}
+	this->identity_lease = lib->settings->get_bool(lib->settings,
+							"charon.plugins.dhcp.identity_lease", FALSE);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 							"charon.plugins.dhcp.server", "255.255.255.255"),
 							DHCP_SERVER_PORT);
