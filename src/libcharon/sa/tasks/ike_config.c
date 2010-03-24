@@ -300,38 +300,6 @@ static status_t process_r(private_ike_config_t *this, message_t *message)
 }
 
 /**
- * Find a peer (EAP) identity to query provider for attributes
- */
-static identification_t *get_peer_identity(private_ike_config_t *this)
-{
-	identification_t *id = NULL, *current;
-	enumerator_t *enumerator;
-	auth_cfg_t *cfg;
-
-	enumerator = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
-	while (enumerator->enumerate(enumerator, &cfg))
-	{
-		/* prefer EAP-Identity of last round */
-		current = cfg->get(cfg, AUTH_RULE_EAP_IDENTITY);
-		if (!current || current->get_type(current) == ID_ANY)
-		{
-			current = cfg->get(cfg, AUTH_RULE_IDENTITY);
-		}
-		if (current && current->get_type(current) != ID_ANY)
-		{
-			id = current;
-			continue;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (!id)
-	{	/* fallback, should not happen */
-		id = this->ike_sa->get_other_id(this->ike_sa);
-	}
-	return id;
-}
-
-/**
  * Implementation of task_t.build for responder
  */
 static status_t build_r(private_ike_config_t *this, message_t *message)
@@ -346,7 +314,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 		peer_cfg_t *config;
 		identification_t *id;
 
-		id = get_peer_identity(this);
+		id = this->ike_sa->get_other_eap_id(this->ike_sa);
 
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		if (config && this->virtual_ip)

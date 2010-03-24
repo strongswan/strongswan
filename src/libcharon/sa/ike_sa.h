@@ -360,6 +360,13 @@ struct ike_sa_t {
 	identification_t* (*get_other_id) (ike_sa_t *this);
 
 	/**
+	 * Get the others peer identity, but prefer an EAP-Identity.
+	 *
+	 * @return				EAP or IKEv2 identity
+	 */
+	identification_t* (*get_other_eap_id)(ike_sa_t *this);
+
+	/**
 	 * Set the other peer's identification.
 	 *
 	 * @param other			identification

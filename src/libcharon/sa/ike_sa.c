@@ -424,7 +424,7 @@ static void flush_auth_cfgs(private_ike_sa_t *this)
 {
 	auth_cfg_t *cfg;
 
-	if (lib->settings->get_bool(lib->settings, "charon.flush_auth_cfg", TRUE))
+	if (lib->settings->get_bool(lib->settings, "charon.flush_auth_cfg", FALSE))
 	{
 		while (this->my_auths->remove_last(this->my_auths,
 										   (void**)&cfg) == SUCCESS)
@@ -1409,6 +1409,38 @@ static identification_t* get_other_id(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.get_other_eap_id.
+ */
+static identification_t* get_other_eap_id(private_ike_sa_t *this)
+{
+	identification_t *id = NULL, *current;
+	enumerator_t *enumerator;
+	auth_cfg_t *cfg;
+
+	enumerator = this->other_auths->create_enumerator(this->other_auths);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		/* prefer EAP-Identity of last round */
+		current = cfg->get(cfg, AUTH_RULE_EAP_IDENTITY);
+		if (!current || current->get_type(current) == ID_ANY)
+		{
+			current = cfg->get(cfg, AUTH_RULE_IDENTITY);
+		}
+		if (current && current->get_type(current) != ID_ANY)
+		{
+			id = current;
+			continue;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (id)
+	{
+		return id;
+	}
+	return this->other_id;
+}
+
+/**
  * Implementation of ike_sa_t.set_other_id.
  */
 static void set_other_id(private_ike_sa_t *this, identification_t *other)
@@ -2029,8 +2061,8 @@ static void destroy(private_ike_sa_t *this)
 		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
 		{
 			hydra->attributes->release_address(hydra->attributes,
-									this->peer_cfg->get_pool(this->peer_cfg),
-									this->other_virtual_ip, this->other_id);
+							this->peer_cfg->get_pool(this->peer_cfg),
+							this->other_virtual_ip, get_other_eap_id(this));
 		}
 		this->other_virtual_ip->destroy(this->other_virtual_ip);
 	}
@@ -2103,6 +2135,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
+	this->public.get_other_eap_id = (identification_t* (*)(ike_sa_t*)) get_other_eap_id;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
