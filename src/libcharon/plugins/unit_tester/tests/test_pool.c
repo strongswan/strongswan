@@ -14,9 +14,9 @@
  */
 
 #include <time.h>
-#include <pthread.h>
 
 #include <library.h>
+#include <threading/thread.h>
 
 #define ALLOCS 1000
 #define THREADS 20
@@ -69,21 +69,20 @@ static void* testing(void *thread)
  ******************************************************************************/
 bool test_pool()
 {
+	thread_t *threads[THREADS];
 	uintptr_t i;
-	void *res;
-	pthread_t thread[THREADS];
 
 	for (i = 0; i < THREADS; i++)
 	{
-		if (pthread_create(&thread[i], NULL, (void*)testing, (void*)i) < 0)
+		if (!(threads[i] = thread_create((thread_main_t)testing, (void*)i)))
 		{
 			return FALSE;
 		}
 	}
 	for (i = 0; i < THREADS; i++)
 	{
-		pthread_join(thread[i], &res);
-		if (res == NULL)
+		bool *res = threads[i]->join(threads[i]);
+		if (!res)
 		{
 			return FALSE;
 		}
