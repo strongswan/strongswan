@@ -366,7 +366,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 
 	this->db = db;
 	this->history = lib->settings->get_bool(lib->settings,
-						"libstrongswan.plugins.attr-sql.lease_history", TRUE);
+						"libhydra.plugins.attr-sql.lease_history", TRUE);
 
 	/* close any "online" leases in the case we crashed */
 	if (this->history)

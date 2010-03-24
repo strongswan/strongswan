@@ -1381,10 +1381,10 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
-	uri = lib->settings->get_str(lib->settings, "libstrongswan.plugins.attr-sql.database", NULL);
+	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database", NULL);
 	if (!uri)
 	{
-		fprintf(stderr, "database URI libstrongswan.plugins.attr-sql.database not set.\n");
+		fprintf(stderr, "database URI libhydra.plugins.attr-sql.database not set.\n");
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	db = lib->db->create(lib->db, uri);

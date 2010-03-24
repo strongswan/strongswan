@@ -62,7 +62,7 @@ plugin_t *attr_sql_plugin_create()
 	char *uri;
 	private_attr_sql_plugin_t *this;
 
-	uri = lib->settings->get_str(lib->settings, "libstrongswan.plugins.attr-sql.database", NULL);
+	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database", NULL);
 	if (!uri)
 	{
 		DBG1("attr-sql plugin: database URI not set");
