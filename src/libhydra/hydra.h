@@ -16,11 +16,11 @@
 /**
  * @defgroup libhydra libhydra
  *
- */
-
-/**
- * @defgroup hydra hydra
- * @{ @ingroup libhydra
+ * @defgroup hplugins plugins
+ * @ingroup libhydra
+ *
+ * @addtogroup libhydra
+ * @{
  */
 
 #ifndef HYDRA_H_
