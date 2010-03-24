@@ -100,8 +100,8 @@ cp_payload_t *cp_payload_create();
 /**
  * Creates an cp_payload_t with type and value
  *
- * @param type	type of configuration payload to create
- * @return		created configuration payload
+ * @param config_type	type of configuration payload to create
+ * @return				created configuration payload
  */
 cp_payload_t *cp_payload_create_type(config_type_t config_type);
 

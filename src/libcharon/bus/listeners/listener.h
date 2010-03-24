@@ -44,7 +44,7 @@ struct listener_t {
 	 * @param ike_sa	IKE_SA associated to the event
 	 * @param format	printf() style format string
 	 * @param args		vprintf() style va_list argument list
-	 " @return			TRUE to stay registered, FALSE to unregister
+	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*log)(listener_t *this, debug_t group, level_t level, int thread,
 				ike_sa_t *ike_sa, char* format, va_list args);
@@ -55,7 +55,7 @@ struct listener_t {
 	 * @param ike_sa	IKE_SA associated to the alert, if any
 	 * @param alert		kind of alert
 	 * @param ...		alert specific argument list
-	 " @return			TRUE to stay registered, FALSE to unregister
+	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*alert)(listener_t *this, ike_sa_t *ike_sa,
 				  alert_t alert, va_list args);

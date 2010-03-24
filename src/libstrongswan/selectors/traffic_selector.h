@@ -74,8 +74,8 @@ struct traffic_selector_t {
 	 *
 	 * @param other		traffic selector to compare
 	 * @return
-	 * 					- created subset of them
-	 * 					- or NULL if no match between this and other
+	 *					- created subset of them
+	 *					- or NULL if no match between this and other
 	 */
 	traffic_selector_t *(*get_subset)  (traffic_selector_t *this,
 										traffic_selector_t *other);
@@ -173,7 +173,7 @@ struct traffic_selector_t {
 	 * Compare two traffic selectors for equality.
 	 *
 	 * @param other		ts to compare with this
-	 * @return 			TRUE if equal, FALSE otherwise
+	 * @return			TRUE if equal, FALSE otherwise
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
 
@@ -215,15 +215,15 @@ struct traffic_selector_t {
 /**
  * Create a new traffic selector using human readable params.
  *
- * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param protocol		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
  * @param from_addr		start of address range as string
  * @param from_port		port number in host order
  * @param to_addr		end of address range as string
  * @param to_port		port number in host order
  * @return
- * 						- traffic_selector_t object
- * 						- NULL if invalid address strings/protocol
+ *						- traffic_selector_t object
+ *						- NULL if invalid address strings/protocol
  */
 traffic_selector_t *traffic_selector_create_from_string(
 									u_int8_t protocol, ts_type_t type,
@@ -237,11 +237,11 @@ traffic_selector_t *traffic_selector_create_from_string(
  * But the parser gives us this data in this format, so we
  * don't have to convert twice.
  *
- * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param protocol		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
- * @param from_addr		start of address range, network order
+ * @param from_address	start of address range, network order
  * @param from_port		port number, host order
- * @param to_addr		end of address range, network order
+ * @param to_address	end of address range, network order
  * @param to_port		port number, host order
  * @return				traffic_selector_t object
  */
@@ -273,11 +273,11 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  *
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
- * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param protocol		protocol for this ts, such as TCP or UDP
  * @param port			port number, host order
  * @return
- * 						- traffic_selector_t object
- * 						- NULL if address family of net not supported
+ *						- traffic_selector_t object
+ *						- NULL if address family of net not supported
  */
 traffic_selector_t *traffic_selector_create_from_subnet(
 									host_t *net, u_int8_t netbits,
@@ -295,8 +295,8 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * @param from_port		start of allowed port range
  * @param to_port		end of range
  * @return
- * 						- traffic_selector_t object
- * 						- NULL if type not supported
+ *						- traffic_selector_t object
+ *						- NULL if type not supported
  */
 traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 									u_int16_t from_port, u_int16_t to_port);
