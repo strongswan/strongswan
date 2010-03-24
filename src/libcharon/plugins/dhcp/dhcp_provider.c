@@ -120,6 +120,7 @@ METHOD(attribute_provider_t, release_address, bool,
 		this->mutex->unlock(this->mutex);
 		if (transaction)
 		{
+			this->socket->release(this->socket, transaction);
 			transaction->destroy(transaction);
 			return TRUE;
 		}

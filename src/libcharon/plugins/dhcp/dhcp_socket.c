@@ -123,7 +123,9 @@ typedef enum {
  * Some DHCP options used
  */
 typedef enum {
+	DHCP_DNS_SERVER = 6,
 	DHCP_HOST_NAME = 12,
+	DHCP_NBNS_SERVER = 44,
 	DHCP_REQUESTED_IP = 50,
 	DHCP_MESSAGE_TYPE = 53,
 	DHCP_SERVER_ID = 54,
@@ -144,15 +146,6 @@ typedef enum {
 	DHCP_RELEASE = 7,
 	DHCP_INFORM = 8,
 } dhcp_message_type_t;
-
-/**
- * DHCP parameters in the DHCP_PARAM_REQ_LIST option
- */
-typedef enum {
-	DHCP_ROUTER = 3,
-	DHCP_DNS_SERVER = 6,
-} dhcp_parameter_t;
-
 /**
  * DHCP option encoding, a TLV
  */
@@ -251,13 +244,6 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	memcpy(option->data, chunk.ptr, option->len);
 	optlen += sizeof(dhcp_option_t) + option->len;
 
-	option = (dhcp_option_t*)&dhcp->options[optlen];
-	option->type = DHCP_PARAM_REQ_LIST;
-	option->len = 2;
-	option->data[0] = DHCP_ROUTER;
-	option->data[1] = DHCP_DNS_SERVER;
-	optlen += sizeof(dhcp_option_t) + option->len;
-
 	return optlen;
 }
 
@@ -286,12 +272,20 @@ static bool send_dhcp(private_dhcp_socket_t *this,
 static bool discover(private_dhcp_socket_t *this,
 					 dhcp_transaction_t *transaction)
 {
+	dhcp_option_t *option;
 	dhcp_t dhcp;
 	int optlen;
 
 	optlen = prepare_dhcp(this, transaction, DHCP_DISCOVER, &dhcp);
 
 	DBG1(DBG_CFG, "sending DHCP DISCOVER to %H", this->dst);
+
+	option = (dhcp_option_t*)&dhcp.options[optlen];
+	option->type = DHCP_PARAM_REQ_LIST;
+	option->len = 2;
+	option->data[0] = DHCP_DNS_SERVER;
+	option->data[1] = DHCP_NBNS_SERVER;
+	optlen += sizeof(dhcp_option_t) + option->len;
 
 	dhcp.options[optlen++] = DHCP_OPTEND;
 
@@ -337,6 +331,13 @@ static bool request(private_dhcp_socket_t *this,
 	option->len = 4;
 	chunk = server->get_address(server);
 	memcpy(option->data, chunk.ptr, min(chunk.len, option->len));
+	optlen += sizeof(dhcp_option_t) + option->len;
+
+	option = (dhcp_option_t*)&dhcp.options[optlen];
+	option->type = DHCP_PARAM_REQ_LIST;
+	option->len = 2;
+	option->data[0] = DHCP_DNS_SERVER;
+	option->data[1] = DHCP_NBNS_SERVER;
 	optlen += sizeof(dhcp_option_t) + option->len;
 
 	dhcp.options[optlen++] = DHCP_OPTEND;
@@ -400,6 +401,44 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	this->mutex->unlock(this->mutex);
 
 	return transaction;
+}
+
+METHOD(dhcp_socket_t, release, void,
+	private_dhcp_socket_t *this, dhcp_transaction_t *transaction)
+{
+	dhcp_option_t *option;
+	dhcp_t dhcp;
+	host_t *release, *server;
+	chunk_t chunk;
+	int optlen;
+
+	optlen = prepare_dhcp(this, transaction, DHCP_RELEASE, &dhcp);
+
+	release = transaction->get_address(transaction);
+	server = transaction->get_server(transaction);
+	if (!release || !server)
+	{
+		return;
+	}
+	DBG1(DBG_CFG, "sending DHCP RELEASE for %H to %H", release, server);
+
+	chunk = release->get_address(release);
+	memcpy(&dhcp.client_address, chunk.ptr,
+		   min(chunk.len, sizeof(dhcp.client_address)));
+
+	option = (dhcp_option_t*)&dhcp.options[optlen];
+	option->type = DHCP_SERVER_ID;
+	option->len = 4;
+	chunk = server->get_address(server);
+	memcpy(option->data, chunk.ptr, min(chunk.len, option->len));
+	optlen += sizeof(dhcp_option_t) + option->len;
+
+	dhcp.options[optlen++] = DHCP_OPTEND;
+
+	if (!send_dhcp(this, transaction, &dhcp, optlen))
+	{
+		DBG1(DBG_CFG, "sending DHCP RELEASE failed: %s", strerror(errno));
+	}
 }
 
 /**
@@ -596,6 +635,7 @@ dhcp_socket_t *dhcp_socket_create()
 	INIT(this,
 		.public = {
 			.enroll = _enroll,
+			.release = _release,
 			.destroy = _destroy,
 		},
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),

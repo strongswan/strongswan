@@ -40,6 +40,13 @@ struct dhcp_socket_t {
 								  identification_t *identity);
 
 	/**
+	 * Release an enrolled DHCP address.
+	 *
+	 * @param transaction	transaction returned by enroll
+	 */
+	void (*release)(dhcp_socket_t *this, dhcp_transaction_t *transaction);
+
+	/**
 	 * Destroy a dhcp_socket_t.
 	 */
 	void (*destroy)(dhcp_socket_t *this);
