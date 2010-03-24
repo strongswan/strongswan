@@ -38,6 +38,7 @@
 
 #include <freeswan.h>
 
+#include <hydra.h>
 #include <library.h>
 #include <debug.h>
 #include <utils/enumerator.h>
@@ -272,6 +273,12 @@ int main(int argc, char **argv)
 		fprintf(stderr, "integrity check of pluto failed\n");
 		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
+	}
+	if (!libhydra_init())
+	{
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	options = options_create();
 
@@ -648,6 +655,7 @@ int main(int argc, char **argv)
 	{
 		plog("integrity tests enabled:");
 		plog("lib    'libstrongswan': passed file and segment integrity tests");
+		plog("lib    'libhydra': passed file and segment integrity tests");
 		plog("daemon 'pluto': passed file integrity test");
 	}
 
@@ -770,6 +778,7 @@ void exit_pluto(int status)
 	free_builder();
 	delete_lock();
 	options->destroy(options);
+	libhydra_deinit();
 	library_deinit();
 	close_log();
 	exit(status);

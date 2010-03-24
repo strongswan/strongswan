@@ -31,6 +31,7 @@
 #include <pwd.h>
 #include <grp.h>
 
+#include <hydra.h>
 #include <daemon.h>
 
 #include <library.h>
@@ -268,7 +269,7 @@ int main(int argc, char *argv[])
 	struct sigaction action;
 	bool use_syslog = FALSE;
 	level_t levels[DBG_MAX];
-	int group;
+	int group, status = SS_RC_INITIALIZATION_FAILED;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -288,12 +289,18 @@ int main(int argc, char *argv[])
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
+	if (!libhydra_init())
+	{
+		dbg_stderr(1, "initialization failed - aborting charon");
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+
 	if (!libcharon_init())
 	{
 		dbg_stderr(1, "initialization failed - aborting charon");
-		libcharon_deinit();
-		library_deinit();
-		exit(SS_RC_INITIALIZATION_FAILED);
+		goto deinit;
 	}
 
 	/* use CTRL loglevel for default */
@@ -351,34 +358,27 @@ int main(int argc, char *argv[])
 	if (!lookup_uid_gid())
 	{
 		dbg_stderr(1, "invalid uid/gid - aborting charon");
-		libcharon_deinit();
-		library_deinit();
-		exit(SS_RC_INITIALIZATION_FAILED);
+		goto deinit;
 	}
 
 	/* initialize daemon */
 	if (!charon->initialize(charon, use_syslog, levels))
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
-		libcharon_deinit();
-		library_deinit();
-		exit(SS_RC_INITIALIZATION_FAILED);
+		goto deinit;
 	}
 
 	if (check_pidfile())
 	{
 		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
-		libcharon_deinit();
-		library_deinit();
-		exit(-1);
+		status = -1;
+		goto deinit;
 	}
 
 	if (!drop_capabilities())
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon");
-		libcharon_deinit();
-		library_deinit();
-		exit(SS_RC_INITIALIZATION_FAILED);
+		goto deinit;
 	}
 
 	/* add handler for SEGV and ILL,
@@ -404,11 +404,13 @@ int main(int argc, char *argv[])
 	run();
 
 	/* normal termination, cleanup and exit */
-	libcharon_deinit();
-	library_deinit();
-
 	unlink(PID_FILE);
+	status = 0;
 
-	return 0;
+deinit:
+	libcharon_deinit();
+	libhydra_deinit();
+	library_deinit();
+	return status;
 }
 

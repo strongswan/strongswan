@@ -323,6 +323,7 @@ METHOD(daemon_t, initialize, bool,
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
 		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "lib    'libhydra': passed file and segment integrity tests");
 		DBG1(DBG_DMN, "lib    'libcharon': passed file and segment integrity tests");
 		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
