@@ -17,11 +17,32 @@
 
 #include <debug.h>
 
+typedef struct private_hydra_t private_hydra_t;
+
+/**
+ * Private additions to hydra_t.
+ */
+struct private_hydra_t {
+	/**
+	 * Public members of hydra_t.
+	 */
+	hydra_t public;
+};
+
+/**
+ * Single instance of hydra_t.
+ */
+hydra_t *hydra;
+
 /**
  * Described in header.
  */
 void libhydra_deinit()
 {
+	private_hydra_t *this = (private_hydra_t*)hydra;
+	this->public.attributes->destroy(this->public.attributes);
+	free(this);
+	hydra = NULL;
 }
 
 /**
@@ -29,6 +50,15 @@ void libhydra_deinit()
  */
 bool libhydra_init()
 {
+	private_hydra_t *this;
+
+	INIT(this,
+		.public = {
+			.attributes = attribute_manager_create(),
+		},
+	);
+	hydra = &this->public;
+
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libhydra", libhydra_init))
 	{

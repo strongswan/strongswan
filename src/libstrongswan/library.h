@@ -63,7 +63,6 @@
 #include "plugins/plugin_loader.h"
 #include "crypto/crypto_factory.h"
 #include "fetcher/fetcher_manager.h"
-#include "attributes/attribute_manager.h"
 #include "database/database_factory.h"
 #include "credentials/credential_factory.h"
 #include "credentials/keys/key_encoding.h"
@@ -99,11 +98,6 @@ struct library_t {
 	 * URL fetching facility
 	 */
 	fetcher_manager_t *fetcher;
-
-	/**
-	 * manager for payload attributes
-	 */
-	attribute_manager_t *attributes;
 
 	/**
 	 * database construction factory

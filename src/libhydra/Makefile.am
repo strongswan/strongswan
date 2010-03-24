@@ -1,7 +1,10 @@
 lib_LTLIBRARIES = libhydra.la
 
 libhydra_la_SOURCES = \
-hydra.c hydra.h
+hydra.c hydra.h \
+attributes/attributes.c attributes/attributes.h \
+attributes/attribute_provider.h attributes/attribute_handler.h \
+attributes/attribute_manager.c attributes/attribute_manager.h
 
 libhydra_la_LIBADD =
 

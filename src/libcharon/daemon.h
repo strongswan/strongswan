@@ -28,9 +28,6 @@
  * @defgroup config config
  * @ingroup libcharon
  *
- * @defgroup attributes attributes
- * @ingroup config
- *
  * @defgroup control control
  * @ingroup libcharon
  *

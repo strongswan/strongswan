@@ -16,6 +16,9 @@
 /**
  * @defgroup libhydra libhydra
  *
+ * @defgroup attributes attributes
+ * @ingroup libhydra
+ *
  * @defgroup hplugins plugins
  * @ingroup libhydra
  *
@@ -26,7 +29,27 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
+typedef struct hydra_t hydra_t;
+
+#include <attributes/attribute_manager.h>
+
 #include <library.h>
+
+/**
+ * IKE Daemon support object.
+ */
+struct hydra_t {
+	/**
+	 * manager for payload attributes
+	 */
+	attribute_manager_t *attributes;
+};
+
+/**
+ * The single instance of hydra_t. Set between calls to libhydra_init() and
+ * libhydra_deinit() calls.
+ */
+extern hydra_t *hydra;
 
 /**
  * Initialize libhydra.
