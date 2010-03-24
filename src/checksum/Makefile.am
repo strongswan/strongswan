@@ -15,8 +15,14 @@ CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 
-libs =	$(shell find $(top_builddir)/src/libstrongswan $(top_builddir)/src/libcharon \
+libs =	$(shell find $(top_builddir)/src/libstrongswan \
+			$(top_builddir)/src/libcharon \
+			$(top_builddir)/src/libhydra \
 			-name 'libstrongswan*.so')
+
+if USE_LIBHYDRA
+  libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
+endif
 
 if USE_CHARON
   libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
@@ -34,7 +40,7 @@ if USE_TOOLS
 endif
 
 if USE_ATTR_SQL
-  libs += $(top_builddir)/src/libstrongswan/plugins/attr_sql/.libs/pool
+  libs += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
 endif
 
 checksum.c : checksum_builder $(libs)
