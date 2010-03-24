@@ -446,7 +446,7 @@ METHOD(dhcp_socket_t, release, void,
  */
 static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
-	dhcp_transaction_t *transaction;
+	dhcp_transaction_t *transaction = NULL;
 	enumerator_t *enumerator;
 	host_t *offer, *server;
 
@@ -470,6 +470,34 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (transaction)
+	{
+		int optsize, optpos = 0, pos;
+		dhcp_option_t *option;
+
+		while (optlen > sizeof(dhcp_option_t))
+		{
+			option = (dhcp_option_t*)&dhcp->options[optpos];
+			optsize = sizeof(dhcp_option_t) + option->len;
+			if (option->type == DHCP_OPTEND || optlen < optsize)
+			{
+				break;
+			}
+			if (option->type == DHCP_DNS_SERVER ||
+				option->type == DHCP_NBNS_SERVER)
+			{
+				for (pos = 0; pos + 4 <= option->len; pos += 4)
+				{
+					transaction->add_attribute(transaction, option->type ==
+						DHCP_DNS_SERVER ? INTERNAL_IP4_DNS : INTERNAL_IP4_NBNS,
+						chunk_create((char*)&option->data[pos], 4));
+				}
+			}
+			optlen -= optsize;
+			optpos += optsize;
+		}
+	}
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
 	offer->destroy(offer);

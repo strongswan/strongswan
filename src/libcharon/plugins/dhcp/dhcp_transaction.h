@@ -23,6 +23,7 @@
 
 #include <utils/host.h>
 #include <utils/identification.h>
+#include <attributes/attributes.h>
 
 typedef struct dhcp_transaction_t dhcp_transaction_t;
 
@@ -72,6 +73,22 @@ struct dhcp_transaction_t {
 	 * @return			DHCP server address
 	 */
 	host_t* (*get_server)(dhcp_transaction_t *this);
+
+	/**
+	 * An an additional attribute to serve to peer.
+	 *
+	 * @param type		type of attribute
+	 * @param data		attribute data
+	 */
+	void (*add_attribute)(dhcp_transaction_t *this,
+						  configuration_attribute_type_t type, chunk_t data);
+
+	/**
+	 * Create an enumerator over added attributes.
+	 *
+	 * @return			enumerator over (configuration_attribute_t, chunk_t)
+	 */
+	enumerator_t* (*create_attribute_enumerator)(dhcp_transaction_t *this);
 
 	/**
 	 * Destroy a dhcp_transaction_t.

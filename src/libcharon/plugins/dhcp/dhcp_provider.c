@@ -131,7 +131,23 @@ METHOD(attribute_provider_t, release_address, bool,
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_dhcp_provider_t *this, identification_t *id, host_t *vip)
 {
-	return enumerator_create_empty();
+	dhcp_transaction_t *transaction;
+
+	if (!vip)
+	{
+		return NULL;
+	}
+	this->mutex->lock(this->mutex);
+	transaction = this->transactions->get(this->transactions,
+										  (void*)hash_id_host(id, vip));
+	if (!transaction)
+	{
+		this->mutex->unlock(this->mutex);
+		return NULL;
+	}
+	return enumerator_create_cleaner(
+						transaction->create_attribute_enumerator(transaction),
+						(void*)this->mutex->unlock, this->mutex);
 }
 
 METHOD(dhcp_provider_t, destroy, void,
