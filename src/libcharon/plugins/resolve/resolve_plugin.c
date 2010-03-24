@@ -16,7 +16,7 @@
 #include "resolve_plugin.h"
 #include "resolve_handler.h"
 
-#include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_resolve_plugin_t private_resolve_plugin_t;
 
@@ -41,7 +41,7 @@ struct private_resolve_plugin_t {
  */
 static void destroy(private_resolve_plugin_t *this)
 {
-	lib->attributes->remove_handler(lib->attributes, &this->handler->handler);
+	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->handler->destroy(this->handler);
 	free(this);
 }
@@ -55,7 +55,7 @@ plugin_t *resolve_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	this->handler = resolve_handler_create();
-	lib->attributes->add_handler(lib->attributes, &this->handler->handler);
+	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
 }

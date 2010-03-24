@@ -25,6 +25,7 @@
 
 #include <library.h>
 #include <daemon.h>
+#include <hydra.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <sa/task_manager.h>
@@ -2002,8 +2003,8 @@ static void destroy(private_ike_sa_t *this)
 	while (this->attributes->remove_last(this->attributes,
 										 (void**)&entry) == SUCCESS)
 	{
-		lib->attributes->release(lib->attributes, entry->handler,
-								 this->other_id, entry->type, entry->data);
+		hydra->attributes->release(hydra->attributes, entry->handler,
+								   this->other_id, entry->type, entry->data);
 		free(entry->data.ptr);
 		free(entry);
 	}
@@ -2027,7 +2028,7 @@ static void destroy(private_ike_sa_t *this)
 	{
 		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
 		{
-			lib->attributes->release_address(lib->attributes,
+			hydra->attributes->release_address(hydra->attributes,
 									this->peer_cfg->get_pool(this->peer_cfg),
 									this->other_virtual_ip, this->other_id);
 		}

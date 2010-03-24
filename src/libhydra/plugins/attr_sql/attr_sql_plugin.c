@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include <library.h>
+#include <hydra.h>
 #include <debug.h>
 
 #include "attr_sql_plugin.h"
@@ -48,7 +48,7 @@ struct private_attr_sql_plugin_t {
  */
 static void destroy(private_attr_sql_plugin_t *this)
 {
-	lib->attributes->remove_provider(lib->attributes, &this->attribute->provider);
+	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
 	this->attribute->destroy(this->attribute);
 	this->db->destroy(this->db);
 	free(this);
@@ -81,7 +81,7 @@ plugin_t *attr_sql_plugin_create()
 		return NULL;
 	}
 	this->attribute = sql_attribute_create(this->db);
-	lib->attributes->add_provider(lib->attributes, &this->attribute->provider);
+	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 
 	return &this->public.plugin;
 }

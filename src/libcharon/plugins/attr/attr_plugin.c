@@ -16,7 +16,7 @@
 #include "attr_plugin.h"
 #include "attr_provider.h"
 
-#include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_attr_plugin_t private_attr_plugin_t;
 
@@ -41,7 +41,7 @@ struct private_attr_plugin_t {
  */
 static void destroy(private_attr_plugin_t *this)
 {
-	lib->attributes->remove_provider(lib->attributes, &this->provider->provider);
+	hydra->attributes->remove_provider(hydra->attributes, &this->provider->provider);
 	this->provider->destroy(this->provider);
 	free(this);
 }
@@ -56,7 +56,7 @@ plugin_t *attr_plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	this->provider = attr_provider_create();
-	lib->attributes->add_provider(lib->attributes, &this->provider->provider);
+	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
 
 	return &this->public.plugin;
 }

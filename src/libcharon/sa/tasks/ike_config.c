@@ -17,6 +17,7 @@
 #include "ike_config.h"
 
 #include <daemon.h>
+#include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
 
 typedef struct private_ike_config_t private_ike_config_t;
@@ -125,7 +126,7 @@ static void handle_attribute(private_ike_config_t *this,
 	enumerator->destroy(enumerator);
 
 	/* and pass it to the handle function */
-	handler = lib->attributes->handle(lib->attributes,
+	handler = hydra->attributes->handle(hydra->attributes,
 							this->ike_sa->get_other_id(this->ike_sa), handler,
 							ca->get_type(ca), ca->get_value(ca));
 	if (handler)
@@ -252,7 +253,7 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 			cp->add_attribute(cp, build_vip(vip));
 		}
 
-		enumerator = lib->attributes->create_initiator_enumerator(lib->attributes,
+		enumerator = hydra->attributes->create_initiator_enumerator(hydra->attributes,
 								this->ike_sa->get_other_id(this->ike_sa), vip);
 		while (enumerator->enumerate(enumerator, &handler, &type, &data))
 		{
@@ -353,7 +354,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
 			{
-				vip = lib->attributes->acquire_address(lib->attributes,
+				vip = hydra->attributes->acquire_address(hydra->attributes,
 							config->get_pool(config), id, this->virtual_ip);
 			}
 			if (vip == NULL)
@@ -372,8 +373,8 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 		}
 
 		/* query registered providers for additional attributes to include */
-		enumerator = lib->attributes->create_responder_enumerator(
-													lib->attributes, id, vip);
+		enumerator = hydra->attributes->create_responder_enumerator(
+													hydra->attributes, id, vip);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)

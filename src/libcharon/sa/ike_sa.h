@@ -31,6 +31,7 @@ typedef enum statistic_t statistic_t;
 typedef struct ike_sa_t ike_sa_t;
 
 #include <library.h>
+#include <attributes/attribute_handler.h>
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <encoding/payloads/configuration_attribute.h>

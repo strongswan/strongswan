@@ -100,10 +100,16 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
-INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
+INCLUDES = \
+	-I${linux_headers} \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
+
 AM_CFLAGS = \
-  -DIPSEC_DIR=\"${ipsecdir}\" \
-  -DIPSEC_PIDDIR=\"${piddir}\"
+	-DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\"
+
 libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 EXTRA_DIST = Android.mk

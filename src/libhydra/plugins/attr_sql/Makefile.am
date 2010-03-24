@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra
 
 AM_CFLAGS = \
 	-rdynamic \

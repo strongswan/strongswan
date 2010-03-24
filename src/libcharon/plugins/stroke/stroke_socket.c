@@ -25,6 +25,7 @@
 #include <errno.h>
 
 #include <processing/jobs/callback_job.h>
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
@@ -624,7 +625,7 @@ static void destroy(private_stroke_socket_t *this)
 	charon->credentials->remove_set(charon->credentials, &this->ca->set);
 	charon->credentials->remove_set(charon->credentials, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	lib->attributes->remove_provider(lib->attributes, &this->attribute->provider);
+	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
@@ -659,7 +660,7 @@ stroke_socket_t *stroke_socket_create()
 	charon->credentials->add_set(charon->credentials, &this->ca->set);
 	charon->credentials->add_set(charon->credentials, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->attributes->add_provider(lib->attributes, &this->attribute->provider);
+	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);

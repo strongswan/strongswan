@@ -16,7 +16,7 @@
 #include "android_plugin.h"
 #include "android_handler.h"
 
-#include <library.h>
+#include <hydra.h>
 #include <daemon.h>
 
 typedef struct private_android_plugin_t private_android_plugin_t;
@@ -40,7 +40,7 @@ struct private_android_plugin_t {
 METHOD(plugin_t, destroy, void,
 	private_android_plugin_t *this)
 {
-	lib->attributes->remove_handler(lib->attributes, &this->handler->handler);
+	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->handler->destroy(this->handler);
 	free(this);
 }
@@ -59,7 +59,7 @@ plugin_t *android_plugin_create()
 		.handler = android_handler_create(),
 	);
 
-	lib->attributes->add_handler(lib->attributes, &this->handler->handler);
+	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
 }

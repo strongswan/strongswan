@@ -26,6 +26,7 @@
 #include <freeswan.h>
 
 #include <library.h>
+#include <hydra.h>
 #include <attributes/attributes.h>
 #include <crypto/prfs/prf.h>
 
@@ -129,13 +130,13 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 	{
 		if (c->spd.that.pool)
 		{
-			vip = lib->attributes->acquire_address(lib->attributes,
+			vip = hydra->attributes->acquire_address(hydra->attributes,
 										c->spd.that.pool, c->spd.that.id,
 										requested_vip);
 			if (vip)
 			{
 				chunk_t addr = vip->get_address(vip);
-		
+
 				plog("assigning virtual IP %H to peer", vip);
 				initaddr(addr.ptr, addr.len, vip->get_family(vip), &ia->ipaddr);
 
@@ -217,14 +218,14 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 	}
 
 	/* assign attributes from registered providers */
-	enumerator = lib->attributes->create_responder_enumerator(lib->attributes,
+	enumerator = hydra->attributes->create_responder_enumerator(hydra->attributes,
 											c->spd.that.id, vip);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		err_t ugh;
 		host_t *server;
 		sa_family_t family = AF_INET;
-		
+
 		switch (type)
 		{
 			case INTERNAL_IP6_DNS:
@@ -257,7 +258,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 				/* fallthrough */
 			case INTERNAL_IP4_NBNS:
 				if (nbns_idx >= NBNS_SERVER_MAX)
- 				{
+				{
 					plog("exceeded the maximum number of %d NBNS servers",
 						 NBNS_SERVER_MAX);
 					break;
@@ -279,7 +280,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 
 			default:
 				break;
-		}			
+		}
 	}
 	enumerator->destroy(enumerator);
 	DESTROY_IF(vip);

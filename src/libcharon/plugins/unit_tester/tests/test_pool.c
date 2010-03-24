@@ -17,6 +17,7 @@
 
 #include <library.h>
 #include <threading/thread.h>
+#include <hydra.h>
 
 #define ALLOCS 1000
 #define THREADS 20
@@ -39,8 +40,8 @@ static void* testing(void *thread)
 	/* allocate addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		addr[i] = lib->attributes->acquire_address(lib->attributes,
-												   "test", id[i], NULL);
+		addr[i] = hydra->attributes->acquire_address(hydra->attributes,
+													 "test", id[i], NULL);
 		if (!addr[i])
 		{
 			return (void*)FALSE;
@@ -50,8 +51,8 @@ static void* testing(void *thread)
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		lib->attributes->release_address(lib->attributes,
-										 "test", addr[i], id[i]);
+		hydra->attributes->release_address(hydra->attributes,
+										   "test", addr[i], id[i]);
 	}
 
 	/* cleanup */
