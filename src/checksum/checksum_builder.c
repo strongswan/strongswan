@@ -20,11 +20,6 @@
 
 #include <library.h>
 
-/* we need to fake some charon symbols to dlopen() its plugins */
-void *charon, *eap_type_names, *auth_class_names, *protocol_id_names,
-*action_names, *ipsec_mode_names, *ike_sa_state_names, *child_sa_state_names,
-*policy_dir_names, *ipcomp_transform_names, *debug_names, *controller_cb_empty;
-
 int main(int argc, char* argv[])
 {
 	int i;
