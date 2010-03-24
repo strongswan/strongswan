@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
 		else if (strstr(path, "libhydra.so"))
 		{
 			name = strdup("libhydra\",");
+			sname = strdup("libhydra_init");
 		}
 		else if (strstr(path, "libcharon.so"))
 		{
