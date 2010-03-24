@@ -1,10 +1,11 @@
 lib_LTLIBRARIES = libhydra.la
 
-libhydra_la_SOURCES =
+libhydra_la_SOURCES = \
+hydra.c hydra.h
 
 libhydra_la_LIBADD =
 
-#INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
 -DPLUGINDIR=\"${plugindir}\" \
