@@ -54,6 +54,7 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 _pluto_adns_SOURCES = adns.c adns.h
 
 LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
+LIBHYDRADIR=$(top_builddir)/src/libhydra
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
 
 INCLUDES = \
@@ -74,6 +75,7 @@ AM_CFLAGS = \
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
+$(LIBHYDRADIR)/libhydra.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(PTHREADLIB) $(DLLIB)
 
