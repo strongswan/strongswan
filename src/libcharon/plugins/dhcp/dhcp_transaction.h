@@ -60,6 +60,20 @@ struct dhcp_transaction_t {
 	host_t* (*get_address)(dhcp_transaction_t *this);
 
 	/**
+	 * Set the DCHP server address discovered.
+	 *
+	 * @param server	DHCP server address
+	 */
+	void (*set_server)(dhcp_transaction_t *this, host_t *server);
+
+	/**
+	 * Get the DHCP server address.
+	 *
+	 * @return			DHCP server address
+	 */
+	host_t* (*get_server)(dhcp_transaction_t *this);
+
+	/**
 	 * Destroy a dhcp_transaction_t.
 	 */
 	void (*destroy)(dhcp_transaction_t *this);

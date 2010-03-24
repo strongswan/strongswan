@@ -36,6 +36,7 @@
 
 #define DHCP_SERVER_PORT 67
 #define DHCP_CLIENT_PORT 68
+#define DHCP_TRIES 5
 
 typedef struct private_dhcp_socket_t private_dhcp_socket_t;
 
@@ -105,18 +106,29 @@ struct private_dhcp_socket_t {
 	callback_job_t *job;
 };
 
+/**
+ * DHCP opcode (or BOOTP actually)
+ */
 typedef enum {
 	BOOTREQUEST = 1,
 	BOOTREPLY = 2,
 } dhcp_opcode_t;
 
+/**
+ * Some DHCP options used
+ */
 typedef enum {
 	DHCP_HOST_NAME = 12,
+	DHCP_REQUESTED_IP = 50,
 	DHCP_MESSAGE_TYPE = 53,
+	DHCP_SERVER_ID = 54,
 	DHCP_PARAM_REQ_LIST = 55,
 	DHCP_OPTEND = 255,
 } dhcp_option_type_t;
 
+/**
+ * DHCP messages types in the DHCP_MESSAGE_TYPE option
+ */
 typedef enum {
 	DHCP_DISCOVER = 1,
 	DHCP_OFFER = 2,
@@ -128,17 +140,26 @@ typedef enum {
 	DHCP_INFORM = 8,
 } dhcp_message_type_t;
 
+/**
+ * DHCP parameters in the DHCP_PARAM_REQ_LIST option
+ */
 typedef enum {
 	DHCP_ROUTER = 3,
 	DHCP_DNS_SERVER = 6,
 } dhcp_parameter_t;
 
+/**
+ * DHCP option encoding, a TLV
+ */
 typedef struct __attribute__((packed)) {
 	u_int8_t type;
 	u_int8_t len;
 	char data[];
 } dhcp_option_t;
 
+/**
+ * DHCP message format, with a maximum size options buffer
+ */
 typedef struct __attribute__((packed)) {
 	u_int8_t opcode;
 	u_int8_t hw_type;
@@ -163,7 +184,8 @@ typedef struct __attribute__((packed)) {
  * Prepare a DHCP message for a given transaction
  */
 static int prepare_dhcp(private_dhcp_socket_t *this,
-						dhcp_transaction_t *transaction, dhcp_t *dhcp)
+						dhcp_transaction_t *transaction,
+						dhcp_message_type_t type, dhcp_t *dhcp)
 {
 	chunk_t chunk, broadcast = chunk_from_chars(0xFF,0xFF,0xFF,0xFF);
 	identification_t *identity;
@@ -208,7 +230,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	option = (dhcp_option_t*)&dhcp->options[optlen];
 	option->type = DHCP_MESSAGE_TYPE;
 	option->len = 1;
-	option->data[0] = DHCP_DISCOVER;
+	option->data[0] = type;
 	optlen += sizeof(dhcp_option_t) + option->len;
 
 	option = (dhcp_option_t*)&dhcp->options[optlen];
@@ -217,7 +239,33 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	memcpy(option->data, chunk.ptr, option->len);
 	optlen += sizeof(dhcp_option_t) + option->len;
 
+	option = (dhcp_option_t*)&dhcp->options[optlen];
+	option->type = DHCP_PARAM_REQ_LIST;
+	option->len = 2;
+	option->data[0] = DHCP_ROUTER;
+	option->data[1] = DHCP_DNS_SERVER;
+	optlen += sizeof(dhcp_option_t) + option->len;
+
 	return optlen;
+}
+
+/**
+ * Send a DHCP message with given options length
+ */
+static bool send_dhcp(private_dhcp_socket_t *this,
+					  dhcp_transaction_t *transaction, dhcp_t *dhcp, int optlen)
+{
+	host_t *dst;
+	ssize_t len;
+
+	dst = transaction->get_server(transaction);
+	if (!dst)
+	{
+		dst = this->dst;
+	}
+	len = offsetof(dhcp_t, magic_cookie) + ((optlen + 4) / 64 * 64 + 64);
+	return sendto(this->send, dhcp, len, 0, dst->get_sockaddr(dst),
+				  *dst->get_sockaddr_len(dst)) == len;
 }
 
 /**
@@ -226,27 +274,16 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 static bool discover(private_dhcp_socket_t *this,
 					 dhcp_transaction_t *transaction)
 {
-	dhcp_option_t *option;
 	dhcp_t dhcp;
-	ssize_t len;
 	int optlen;
 
-	optlen = prepare_dhcp(this, transaction, &dhcp);
+	optlen = prepare_dhcp(this, transaction, DHCP_DISCOVER, &dhcp);
 
 	DBG1(DBG_CFG, "sending DHCP DISCOVER to %H", this->dst);
 
-	option = (dhcp_option_t*)&dhcp.options[optlen];
-	option->type = DHCP_PARAM_REQ_LIST;
-	option->len = 2;
-	option->data[0] = DHCP_ROUTER;
-	option->data[1] = DHCP_DNS_SERVER;
-	optlen += sizeof(dhcp_option_t) + option->len;
-
 	dhcp.options[optlen++] = DHCP_OPTEND;
 
-	len = offsetof(dhcp_t, magic_cookie) + ((optlen + 4) / 64 * 64 + 64);
-	if (sendto(this->send, &dhcp, len, 0, this->dst->get_sockaddr(this->dst),
-			   *this->dst->get_sockaddr_len(this->dst)) != len)
+	if (!send_dhcp(this, transaction, &dhcp, optlen))
 	{
 		DBG1(DBG_CFG, "sending DHCP DISCOVER failed: %s", strerror(errno));
 		return FALSE;
@@ -258,9 +295,46 @@ static bool discover(private_dhcp_socket_t *this,
  * Send DHCP request using a given transaction
  */
 static bool request(private_dhcp_socket_t *this,
-					 dhcp_transaction_t *transaction)
+					dhcp_transaction_t *transaction)
 {
-	return FALSE;
+	dhcp_option_t *option;
+	dhcp_t dhcp;
+	host_t *offer, *server;
+	chunk_t chunk;
+	int optlen;
+
+	optlen = prepare_dhcp(this, transaction, DHCP_REQUEST, &dhcp);
+
+	offer = transaction->get_address(transaction);
+	server = transaction->get_server(transaction);
+	if (!offer || !server)
+	{
+		return FALSE;
+	}
+	DBG1(DBG_CFG, "sending DHCP REQUEST for %H to %H", offer, server);
+
+	option = (dhcp_option_t*)&dhcp.options[optlen];
+	option->type = DHCP_REQUESTED_IP;
+	option->len = 4;
+	chunk = offer->get_address(offer);
+	memcpy(option->data, chunk.ptr, min(chunk.len, option->len));
+	optlen += sizeof(dhcp_option_t) + option->len;
+
+	option = (dhcp_option_t*)&dhcp.options[optlen];
+	option->type = DHCP_SERVER_ID;
+	option->len = 4;
+	chunk = server->get_address(server);
+	memcpy(option->data, chunk.ptr, min(chunk.len, option->len));
+	optlen += sizeof(dhcp_option_t) + option->len;
+
+	dhcp.options[optlen++] = DHCP_OPTEND;
+
+	if (!send_dhcp(this, transaction, &dhcp, optlen))
+	{
+		DBG1(DBG_CFG, "sending DHCP REQUEST failed: %s", strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
@@ -268,66 +342,68 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 {
 	dhcp_transaction_t *transaction;
 	u_int32_t id;
-	int tries;
+	int try;
 
 	this->rng->get_bytes(this->rng, sizeof(id), (u_int8_t*)&id);
 	transaction = dhcp_transaction_create(id, identity);
 
 	this->mutex->lock(this->mutex);
 	this->discover->insert_last(this->discover, transaction);
-	tries = 3;
-	while (tries && discover(this, transaction))
+	try = 1;
+	while (try <= DHCP_TRIES && discover(this, transaction))
 	{
-		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000))
+		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000 * try) &&
+			this->request->find_first(this->request, NULL,
+									  (void**)&transaction) == SUCCESS)
 		{
 			break;
 		}
-		tries--;
+		try++;
 	}
 	if (this->discover->remove(this->discover, transaction, NULL))
 	{	/* no OFFER received */
 		this->mutex->unlock(this->mutex);
 		transaction->destroy(transaction);
+		DBG1(DBG_CFG, "DHCP disover timed out");
 		return NULL;
 	}
 
-	tries = 3;
-	while (tries && request(this, transaction))
+	try = 1;
+	while (try <= DHCP_TRIES && request(this, transaction))
 	{
-		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000))
+		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000 * try) &&
+			this->completed->remove(this->completed, transaction, NULL))
 		{
 			break;
 		}
-		tries--;
+		try++;
 	}
 	if (this->request->remove(this->request, transaction, NULL))
 	{	/* no ACK received */
 		this->mutex->unlock(this->mutex);
 		transaction->destroy(transaction);
+		DBG1(DBG_CFG, "DHCP request timed out");
 		return NULL;
 	}
 	this->mutex->unlock(this->mutex);
 
-	transaction->destroy(transaction);
-	return NULL;
+	return transaction;
 }
 
 /**
- * Handle a DHCP offer
+ * Handle a DHCP OFFER
  */
 static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
 	dhcp_transaction_t *transaction;
 	enumerator_t *enumerator;
-	host_t *offer;
+	host_t *offer, *server;
 
 	offer = host_create_from_chunk(AF_INET,
-								   chunk_from_thing(dhcp->your_address), 0);
-	if (!offer)
-	{
-		return;
-	}
-	DBG1(DBG_CFG, "received DHCP OFFER %H", offer);
+					chunk_from_thing(dhcp->your_address), 0);
+	server = host_create_from_chunk(AF_INET,
+					chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
+	DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
@@ -338,6 +414,38 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 			this->discover->remove_at(this->discover, enumerator);
 			this->request->insert_last(this->request, transaction);
 			transaction->set_address(transaction, offer->clone(offer));
+			transaction->set_server(transaction, server->clone(server));
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	this->condvar->broadcast(this->condvar);
+	offer->destroy(offer);
+	server->destroy(server);
+}
+
+/**
+ * Handle a DHCP ACK
+ */
+static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
+{
+	dhcp_transaction_t *transaction;
+	enumerator_t *enumerator;
+	host_t *offer;
+
+	offer = host_create_from_chunk(AF_INET,
+						chunk_from_thing(dhcp->your_address), 0);
+	DBG1(DBG_CFG, "received DHCP ACK for %H", offer);
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->request->create_enumerator(this->request);
+	while (enumerator->enumerate(enumerator, &transaction))
+	{
+		if (transaction->get_id(transaction) == dhcp->transaction_id)
+		{
+			this->request->remove_at(this->request, enumerator);
+			this->completed->insert_last(this->completed, transaction);
 			break;
 		}
 	}
@@ -388,6 +496,8 @@ static job_requeue_t receive_dhcp(private_dhcp_socket_t *this)
 					case DHCP_OFFER:
 						handle_offer(this, &packet.dhcp, origoptlen);
 						break;
+					case DHCP_ACK:
+						handle_ack(this, &packet.dhcp, origoptlen);
 					default:
 						break;
 				}

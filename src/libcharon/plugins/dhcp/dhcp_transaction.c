@@ -41,6 +41,11 @@ struct private_dhcp_transaction_t {
 	 * received DHCP address
 	 */
 	host_t *address;
+
+	/**
+	 * discovered DHCP server address
+	 */
+	host_t *server;
 };
 
 METHOD(dhcp_transaction_t, get_id, u_int32_t,
@@ -68,11 +73,25 @@ METHOD(dhcp_transaction_t, get_address, host_t*,
 	return this->address;
 }
 
+METHOD(dhcp_transaction_t, set_server, void,
+	private_dhcp_transaction_t *this, host_t *server)
+{
+	DESTROY_IF(this->server);
+	this->server = server;
+}
+
+METHOD(dhcp_transaction_t, get_server, host_t*,
+	private_dhcp_transaction_t *this)
+{
+	return this->server;
+}
+
 METHOD(dhcp_transaction_t, destroy, void,
 	private_dhcp_transaction_t *this)
 {
 	this->identity->destroy(this->identity);
 	DESTROY_IF(this->address);
+	DESTROY_IF(this->server);
 	free(this);
 }
 
@@ -90,6 +109,8 @@ dhcp_transaction_t *dhcp_transaction_create(u_int32_t id,
 			.get_identity = _get_identity,
 			.set_address = _set_address,
 			.get_address = _get_address,
+			.set_server = _set_server,
+			.get_server = _get_server,
 			.destroy = _destroy,
 		},
 		.id = id,
