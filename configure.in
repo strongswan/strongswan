@@ -632,11 +632,12 @@ if test x$integrity_test = xtrue; then
 	)
 fi
 
-dnl ======================================
-dnl  collect all plugins for libstrongswan
-dnl ======================================
+dnl ==========================================================
+dnl  collect all plugins for libstrongswan, libhydra and pluto
+dnl ==========================================================
 
 libstrongswan_plugins=
+libhydra_plugins=
 pluto_plugins=
 
 if test x$test_vectors = xtrue; then
@@ -714,10 +715,6 @@ if test x$sqlite = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
 	pluto_plugins=${pluto_plugins}" sqlite"
 fi
-if test x$attr_sql = xtrue -o x$sql = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" attr-sql"
-	pluto_plugins=${pluto_plugins}" attr-sql"
-fi
 if test x$padlock = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
 fi
@@ -746,8 +743,13 @@ if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
 fi
+if test x$attr_sql = xtrue -o x$sql = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr-sql"
+	pluto_plugins=${pluto_plugins}" attr-sql"
+fi
 
 AC_SUBST(libstrongswan_plugins)
+AC_SUBST(libhydra_plugins)
 AC_SUBST(pluto_plugins)
 
 dnl =========================
@@ -892,13 +894,13 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
-	src/libstrongswan/plugins/attr_sql/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
+	src/libhydra/plugins/attr_sql/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/pluto/Makefile

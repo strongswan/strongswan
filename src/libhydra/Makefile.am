@@ -21,10 +21,10 @@ else
 SUBDIRS = .
 endif
 
-#if USE_FOO
-#  SUBDIRS += plugins/foo
-#if MONOLITHIC
-#  libhydra_la_LIBADD += plugins/foo/libstrongswan-foo.la
-#endif
-#endif
+if USE_ATTR_SQL
+  SUBDIRS += plugins/attr_sql
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
+endif
+endif
 

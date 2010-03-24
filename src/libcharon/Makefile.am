@@ -133,7 +133,7 @@ else
 SUBDIRS = .
 endif
 
-PLUGINS = ${libstrongswan_plugins}
+PLUGINS = ${libstrongswan_plugins} ${libhydra_plugins}
 
 if USE_LOAD_TESTER
   SUBDIRS += plugins/load_tester

@@ -269,13 +269,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_ATTR_SQL
-  SUBDIRS += plugins/attr_sql
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
-endif
-endif
-
 if USE_PADLOCK
   SUBDIRS += plugins/padlock
 if MONOLITHIC
