@@ -96,7 +96,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 		{
 			if (fgets(buffer, sizeof(buffer), stdin))
 			{
-				if (write(sock, buffer, strlen(buffer)));
+				ignore_result(write(sock, buffer, strlen(buffer)));
 			}
 		}
 	}
