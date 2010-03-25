@@ -15,6 +15,7 @@
 
 #include "dhcp_plugin.h"
 
+#include <hydra.h>
 #include <daemon.h>
 
 #include "dhcp_socket.h"
@@ -46,7 +47,8 @@ struct private_dhcp_plugin_t {
 METHOD(plugin_t, destroy, void,
 	private_dhcp_plugin_t *this)
 {
-	lib->attributes->remove_provider(lib->attributes, &this->provider->provider);
+	hydra->attributes->remove_provider(hydra->attributes,
+									   &this->provider->provider);
 	this->provider->destroy(this->provider);
 	this->socket->destroy(this->socket);
 	free(this);
@@ -71,7 +73,8 @@ plugin_t *dhcp_plugin_create()
 	}
 
 	this->provider = dhcp_provider_create(this->socket);
-	lib->attributes->add_provider(lib->attributes, &this->provider->provider);
+	hydra->attributes->add_provider(hydra->attributes,
+									&this->provider->provider);
 
 	return &this->public.plugin;
 }
