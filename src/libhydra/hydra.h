@@ -39,6 +39,7 @@ typedef struct hydra_t hydra_t;
  * IKE Daemon support object.
  */
 struct hydra_t {
+
 	/**
 	 * manager for payload attributes
 	 */
@@ -46,13 +47,15 @@ struct hydra_t {
 };
 
 /**
- * The single instance of hydra_t. Set between calls to libhydra_init() and
- * libhydra_deinit() calls.
+ * The single instance of hydra_t.
+ *
+ * Set between calls to libhydra_init() and libhydra_deinit() calls.
  */
 extern hydra_t *hydra;
 
 /**
  * Initialize libhydra.
+ *
  * @return				FALSE if integrity check failed
  */
 bool libhydra_init();

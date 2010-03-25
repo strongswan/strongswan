@@ -297,9 +297,9 @@ struct daemon_t {
 	void (*keep_cap)(daemon_t *this, u_int cap);
 
 	/**
-	 * Drop all capabilities of the current process, but keep those that have
-	 * been set with a call to keep_cap.
+	 * Drop all capabilities of the current process.
 	 *
+	 * Drops all capabalities, excect those exlcuded using keep_cap().
 	 * This should be called after the initialization of the daemon because
 	 * some plugins require the process to keep additional capabilities.
 	 *
@@ -320,13 +320,15 @@ struct daemon_t {
 };
 
 /**
- * The one and only instance of the daemon. Set between libcharon_init() and
- * libcharon_deinit() calls.
+ * The one and only instance of the daemon.
+ *
+ * Set between libcharon_init() and libcharon_deinit() calls.
  */
 extern daemon_t *charon;
 
 /**
  * Initialize libcharon and create the "charon" instance of daemon_t.
+ *
  * @return		FALSE if integrity check failed
  */
 bool libcharon_init();

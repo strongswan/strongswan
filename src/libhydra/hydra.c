@@ -23,6 +23,7 @@ typedef struct private_hydra_t private_hydra_t;
  * Private additions to hydra_t.
  */
 struct private_hydra_t {
+
 	/**
 	 * Public members of hydra_t.
 	 */

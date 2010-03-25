@@ -10,7 +10,7 @@ strongswan-4.4.0
 
 - A new plugin called farp fakes ARP responses for virtual IP addresses
   handed out to clients from the IKEv2 daemon charon. The plugin lets a
-  road-warrior act a client on the local LAN if it uses a virtual IP
+  road-warrior act as a client on the local LAN if it uses a virtual IP
   from the responders subnet, e.g. acquired using the DHCP plugin.
 
 - The existing IKEv2 socket implementations have been migrated to the
