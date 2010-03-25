@@ -1,6 +1,13 @@
 strongswan-4.4.0
 ----------------
 
+- The new DHCP plugin queries virtual IP addresses for clients from a DHCP
+  server using broadcasts, or a defined server using the
+  charon.plugins.dhcp.server strongswan.conf option. DNS/WINS server information
+  is additionally served to clients if the DHCP server provides such
+  information. The plugin is used in ipsec.conf configurations having
+  rightsourceip set to %dhcp.
+
 - The existing IKEv2 socket implementations have been migrated to the
   socket-default and the socket-raw plugins. The new socket-dynamic plugin
   binds sockets dynamically to ports configured via the left-/rightikeport
