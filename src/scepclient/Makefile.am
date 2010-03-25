@@ -6,11 +6,13 @@ OPENACDIR=$(top_srcdir)/src/openac
 WHACKDIR=$(top_srcdir)/src/whack
 LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
 LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBHYDRADIR=$(top_srcdir)/src/libhydra
 LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
 
 INCLUDES = \
 -I$(LIBFREESWANDIR) \
 -I$(LIBSTRONGSWANDIR) \
+-I$(LIBHYDRADIR) \
 -I$(PLUTODIR) \
 -I$(LIBCRYPTODIR) \
 -I$(WHACKDIR)
