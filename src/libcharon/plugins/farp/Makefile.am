@@ -1,5 +1,6 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = -rdynamic
 
@@ -9,8 +10,7 @@ else
 plugin_LTLIBRARIES = libstrongswan-farp.la
 endif
 
-libstrongswan_farp_la_SOURCES = \
-	farp_plugin.h farp_plugin.c \
+libstrongswan_farp_la_SOURCES = farp_plugin.h farp_plugin.c \
 	farp_listener.h farp_listener.c farp_spoofer.h farp_spoofer.c
 
 libstrongswan_farp_la_LDFLAGS = -module -avoid-version
