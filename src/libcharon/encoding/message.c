@@ -1539,22 +1539,19 @@ static status_t verify(private_message_t *this)
 				}
 			}
 		}
+		enumerator->destroy(enumerator);
 
 		if (found_payloads < rule->min_occurence)
 		{
 			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
 				 payload_type_names, rule->payload_type, rule->min_occurence,
 				 found_payloads);
-			enumerator->destroy(enumerator);
 			return VERIFY_ERROR;
 		}
-		if (rule->sufficient &&
-			this->payloads->get_count(this->payloads) == total_found_payloads)
+		if (rule->sufficient)
 		{
-			enumerator->destroy(enumerator);
 			return SUCCESS;
 		}
-		enumerator->destroy(enumerator);
 	}
 	return SUCCESS;
 }
