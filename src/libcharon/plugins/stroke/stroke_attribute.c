@@ -19,7 +19,7 @@
 #include <daemon.h>
 #include <attributes/mem_pool.h>
 #include <utils/linked_list.h>
-#include <threading/mutex.h>
+#include <threading/rwlock.h>
 
 typedef struct private_stroke_attribute_t private_stroke_attribute_t;
 
@@ -39,9 +39,9 @@ struct private_stroke_attribute_t {
 	linked_list_t *pools;
 
 	/**
-	 * mutex to lock access to pools
+	 * rwlock to lock access to pools
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 /**
@@ -71,13 +71,13 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 {
 	mem_pool_t *pool;
 	host_t *addr = NULL;
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	pool = find_pool(this, name);
 	if (pool)
 	{
 		addr = pool->acquire_address(pool, id, requested);
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return addr;
 }
 
@@ -87,13 +87,13 @@ METHOD(attribute_provider_t, release_address, bool,
 {
 	mem_pool_t *pool;
 	bool found = FALSE;
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	pool = find_pool(this, name);
 	if (pool)
 	{
 		found = pool->release_address(pool, address, id);
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return found;
 }
 
@@ -123,9 +123,9 @@ METHOD(stroke_attribute_t, add_pool, void,
 		pool = mem_pool_create(msg->add_conn.name, base, bits);
 		DESTROY_IF(base);
 
-		this->mutex->lock(this->mutex);
+		this->lock->write_lock(this->lock);
 		this->pools->insert_last(this->pools, pool);
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 	}
 }
 
@@ -135,7 +135,7 @@ METHOD(stroke_attribute_t, del_pool, void,
 	enumerator_t *enumerator;
 	mem_pool_t *pool;
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &pool))
 	{
@@ -147,13 +147,13 @@ METHOD(stroke_attribute_t, del_pool, void,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
  * Pool enumerator filter function, converts pool_t to name, size, ...
  */
-static bool pool_filter(void *mutex, mem_pool_t **poolp, const char **name,
+static bool pool_filter(void *lock, mem_pool_t **poolp, const char **name,
 						void *d1, u_int *size, void *d2, u_int *online,
 						void *d3, u_int *offline)
 {
@@ -168,31 +168,31 @@ static bool pool_filter(void *mutex, mem_pool_t **poolp, const char **name,
 METHOD(stroke_attribute_t, create_pool_enumerator, enumerator_t*,
 	   private_stroke_attribute_t *this)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->pools->create_enumerator(this->pools),
 									(void*)pool_filter,
-									this->mutex, (void*)this->mutex->unlock);
+									this->lock, (void*)this->lock->unlock);
 }
 
 METHOD(stroke_attribute_t, create_lease_enumerator, enumerator_t*,
 	   private_stroke_attribute_t *this, char *name)
 {
 	mem_pool_t *pool;
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	pool = find_pool(this, name);
 	if (!pool)
 	{
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return NULL;
 	}
 	return enumerator_create_cleaner(pool->create_lease_enumerator(pool),
-									 (void*)this->mutex->unlock, this->mutex);
+									 (void*)this->lock->unlock, this->lock);
 }
 
 METHOD(stroke_attribute_t, destroy, void,
 	   private_stroke_attribute_t *this)
 {
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
 	free(this);
 }
@@ -218,7 +218,7 @@ stroke_attribute_t *stroke_attribute_create()
 			.destroy = _destroy,
 		},
 		.pools = linked_list_create(),
-		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;
