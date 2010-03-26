@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -64,12 +65,9 @@ static mem_pool_t *find_pool(private_stroke_attribute_t *this, char *name)
 	return found;
 }
 
-/**
- * Implementation of attribute_provider_t.acquire_address
- */
-static host_t* acquire_address(private_stroke_attribute_t *this,
-							   char *name, identification_t *id,
-							   host_t *requested)
+METHOD(attribute_provider_t, acquire_address, host_t*,
+	   private_stroke_attribute_t *this, char *name, identification_t *id,
+	   host_t *requested)
 {
 	mem_pool_t *pool;
 	host_t *addr = NULL;
@@ -83,11 +81,9 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 	return addr;
 }
 
-/**
- * Implementation of attribute_provider_t.release_address
- */
-static bool release_address(private_stroke_attribute_t *this,
-							char *name, host_t *address, identification_t *id)
+METHOD(attribute_provider_t, release_address, bool,
+	   private_stroke_attribute_t *this, char *name, host_t *address,
+	   identification_t *id)
 {
 	mem_pool_t *pool;
 	bool found = FALSE;
@@ -101,10 +97,8 @@ static bool release_address(private_stroke_attribute_t *this,
 	return found;
 }
 
-/**
- * Implementation of stroke_attribute_t.add_pool.
- */
-static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
+METHOD(stroke_attribute_t, add_pool, void,
+	   private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	if (msg->add_conn.other.sourceip_mask)
 	{
@@ -135,10 +129,8 @@ static void add_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
 	}
 }
 
-/**
- * Implementation of stroke_attribute_t.del_pool.
- */
-static void del_pool(private_stroke_attribute_t *this, stroke_msg_t *msg)
+METHOD(stroke_attribute_t, del_pool, void,
+	   private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
 	mem_pool_t *pool;
@@ -173,10 +165,8 @@ static bool pool_filter(void *mutex, mem_pool_t **poolp, const char **name,
 	return TRUE;
 }
 
-/**
- * Implementation of stroke_attribute_t.create_pool_enumerator
- */
-static enumerator_t* create_pool_enumerator(private_stroke_attribute_t *this)
+METHOD(stroke_attribute_t, create_pool_enumerator, enumerator_t*,
+	   private_stroke_attribute_t *this)
 {
 	this->mutex->lock(this->mutex);
 	return enumerator_create_filter(this->pools->create_enumerator(this->pools),
@@ -184,11 +174,8 @@ static enumerator_t* create_pool_enumerator(private_stroke_attribute_t *this)
 									this->mutex, (void*)this->mutex->unlock);
 }
 
-/**
- * Implementation of stroke_attribute_t.create_lease_enumerator
- */
-static enumerator_t* create_lease_enumerator(private_stroke_attribute_t *this,
-											 char *name)
+METHOD(stroke_attribute_t, create_lease_enumerator, enumerator_t*,
+	   private_stroke_attribute_t *this, char *name)
 {
 	mem_pool_t *pool;
 	this->mutex->lock(this->mutex);
@@ -202,10 +189,8 @@ static enumerator_t* create_lease_enumerator(private_stroke_attribute_t *this,
 									 (void*)this->mutex->unlock, this->mutex);
 }
 
-/**
- * Implementation of stroke_attribute_t.destroy
- */
-static void destroy(private_stroke_attribute_t *this)
+METHOD(stroke_attribute_t, destroy, void,
+	   private_stroke_attribute_t *this)
 {
 	this->mutex->destroy(this->mutex);
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
@@ -217,19 +202,24 @@ static void destroy(private_stroke_attribute_t *this)
  */
 stroke_attribute_t *stroke_attribute_create()
 {
-	private_stroke_attribute_t *this = malloc_thing(private_stroke_attribute_t);
+	private_stroke_attribute_t *this;
 
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,host_t *))acquire_address;
-	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *vip))enumerator_create_empty;
-	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
-	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;
-	this->public.create_pool_enumerator = (enumerator_t*(*)(stroke_attribute_t*))create_pool_enumerator;
-	this->public.create_lease_enumerator = (enumerator_t*(*)(stroke_attribute_t*, char *pool))create_lease_enumerator;
-	this->public.destroy = (void(*)(stroke_attribute_t*))destroy;
-
-	this->pools = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
+	INIT(this,
+		.public = {
+			.provider = {
+				.acquire_address = _acquire_address,
+				.release_address = _release_address,
+				.create_attribute_enumerator = enumerator_create_empty,
+			},
+			.add_pool = _add_pool,
+			.del_pool = _del_pool,
+			.create_pool_enumerator = _create_pool_enumerator,
+			.create_lease_enumerator = _create_lease_enumerator,
+			.destroy = _destroy,
+		},
+		.pools = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+	);
 
 	return &this->public;
 }
