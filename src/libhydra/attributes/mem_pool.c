@@ -18,6 +18,7 @@
 
 #include <debug.h>
 #include <utils/hashtable.h>
+#include <threading/rwlock.h>
 
 #define POOL_LIMIT (sizeof(uintptr_t)*8)
 
@@ -66,6 +67,11 @@ struct private_mem_pool_t {
 	 * hashtable [identity => identity], handles identity references
 	 */
 	hashtable_t *ids;
+
+	/**
+	 * lock to safely access the pool
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -162,13 +168,21 @@ METHOD(mem_pool_t, get_size, u_int,
 METHOD(mem_pool_t, get_online, u_int,
 	   private_mem_pool_t *this)
 {
-	return this->online->get_count(this->online);
+	u_int count;
+	this->lock->read_lock(this->lock);
+	count = this->online->get_count(this->online);
+	this->lock->unlock(this->lock);
+	return count;
 }
 
 METHOD(mem_pool_t, get_offline, u_int,
 	   private_mem_pool_t *this)
 {
-	return this->offline->get_count(this->offline);
+	u_int count;
+	this->lock->read_lock(this->lock);
+	count = this->offline->get_count(this->offline);
+	this->lock->unlock(this->lock);
+	return count;
 }
 
 METHOD(mem_pool_t, acquire_address, host_t*,
@@ -185,16 +199,17 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		return requested->clone(requested);
 	}
 
+	if (!requested->is_anyaddr(requested) &&
+		requested->get_family(requested) !=
+		this->base->get_family(this->base))
+	{
+		DBG1("IP pool address family mismatch");
+		return NULL;
+	}
+
+	this->lock->write_lock(this->lock);
 	while (TRUE)
 	{
-		if (!requested->is_anyaddr(requested) &&
-			requested->get_family(requested) !=
-			this->base->get_family(this->base))
-		{
-			DBG1("IP pool address family mismatch");
-			break;
-		}
-
 		/* check for a valid offline lease, refresh */
 		offset = (uintptr_t)this->offline->remove(this->offline, id);
 		if (offset)
@@ -255,6 +270,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		DBG1("pool '%s' is full, unable to assign address", this->name);
 		break;
 	}
+	this->lock->unlock(this->lock);
 
 	if (offset)
 	{
@@ -266,9 +282,11 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 METHOD(mem_pool_t, release_address, bool,
 	   private_mem_pool_t *this, host_t *address, identification_t *id)
 {
-	uintptr_t offset;
+	bool found = FALSE;
 	if (this->size != 0)
 	{
+		uintptr_t offset;
+		this->lock->write_lock(this->lock);
 		offset = (uintptr_t)this->online->remove(this->online, id);
 		if (offset)
 		{
@@ -277,11 +295,12 @@ METHOD(mem_pool_t, release_address, bool,
 			{
 				DBG1("lease %H by '%Y' went offline", address, id);
 				this->offline->put(this->offline, id, (void*)offset);
-				return TRUE;
+				found = TRUE;
 			}
 		}
+		this->lock->unlock(this->lock);
 	}
-	return FALSE;
+	return found;
 }
 
 /**
@@ -335,6 +354,7 @@ METHOD(enumerator_t, lease_enumerator_destroy, void,
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
+	this->pool->lock->unlock(this->pool->lock);
 	free(this);
 }
 
@@ -342,7 +362,7 @@ METHOD(mem_pool_t, create_lease_enumerator, enumerator_t*,
 	   private_mem_pool_t *this)
 {
 	lease_enumerator_t *enumerator;
-
+	this->lock->read_lock(this->lock);
 	INIT(enumerator,
 		.public = {
 			.enumerate = (void*)_lease_enumerate,
@@ -351,7 +371,6 @@ METHOD(mem_pool_t, create_lease_enumerator, enumerator_t*,
 		.pool = this,
 		.inner = this->ids->create_enumerator(this->ids),
 	);
-
 	return &enumerator->public;
 }
 
@@ -371,6 +390,7 @@ METHOD(mem_pool_t, destroy, void,
 	this->ids->destroy(this->ids);
 	this->online->destroy(this->online);
 	this->offline->destroy(this->offline);
+	this->lock->destroy(this->lock);
 	DESTROY_IF(this->base);
 	free(this->name);
 	free(this);
@@ -401,6 +421,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 									(hashtable_equals_t)id_equals, 16),
 		.ids = hashtable_create((hashtable_hash_t)id_hash,
 								(hashtable_equals_t)id_equals, 16),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	if (base)

@@ -28,8 +28,6 @@ typedef struct mem_pool_t mem_pool_t;
 
 /**
  * An in-memory IP address pool.
- *
- * @note the implementation is not thread-safe.
  */
 struct mem_pool_t {
 
