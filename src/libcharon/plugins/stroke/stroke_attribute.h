@@ -37,15 +37,14 @@ struct stroke_attribute_t {
 	attribute_provider_t provider;
 
 	/**
-	 * Add a virtual IP address.
+	 * Add a virtual IP address pool.
 	 *
 	 * @param msg		stroke message
-	 * @param end		end of stroke message that contains virtual IP.
 	 */
 	void (*add_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
 
 	/**
-	 * Remove a virtual IP address.
+	 * Remove a virtual IP address pool.
 	 *
 	 * @param msg		stroke message
 	 */
@@ -68,10 +67,11 @@ struct stroke_attribute_t {
 	 * identification_t *id, host_t *address, bool online
 	 *
 	 * @param pool		name of the pool to enumerate
-	 * @return 			enumerator, NULL if pool not found
+	 * @return			enumerator, NULL if pool not found
 	 */
 	enumerator_t* (*create_lease_enumerator)(stroke_attribute_t *this,
 											 char *pool);
+
 	/**
 	 * Destroy a stroke_attribute instance.
 	 */
