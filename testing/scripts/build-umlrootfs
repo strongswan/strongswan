@@ -226,6 +226,16 @@ then
     echo -n " --enable-socket-default" >> $INSTALLSHELL
 fi
 
+if [ "$USE_DHCP" = "yes" ]
+then
+    echo -n " --enable-dhcp" >> $INSTALLSHELL
+fi
+
+if [ "$USE_FARP" = "yes" ]
+then
+    echo -n " --enable-farp" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
