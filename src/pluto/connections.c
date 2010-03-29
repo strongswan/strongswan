@@ -1122,11 +1122,11 @@ void add_connection(const whack_message_t *wm)
 		same_leftca  = extract_end(&c->spd.this, &wm->left, "left");
 		same_rightca = extract_end(&c->spd.that, &wm->right, "right");
 
-		if (same_rightca)
+		if (same_rightca && c->spd.this.ca)
 		{
 			c->spd.that.ca = c->spd.this.ca->clone(c->spd.this.ca);
 		}
-		else if (same_leftca)
+		else if (same_leftca && c->spd.that.ca)
 		{
 			c->spd.this.ca = c->spd.that.ca->clone(c->spd.that.ca);
 		}
