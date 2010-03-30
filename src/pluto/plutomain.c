@@ -75,6 +75,7 @@
 #include "timer.h"
 #include "vendor.h"
 #include "builder.h"
+#include "whack_attribute.h"
 
 static void usage(const char *mess)
 {
@@ -684,6 +685,7 @@ int main(int argc, char **argv)
 	init_myid();
 	fetch_initialize();
 	ac_initialize();
+	whack_attribute_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
@@ -758,6 +760,7 @@ void exit_pluto(int status)
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
+	whack_attribute_finalize(); /* free in-memory pools */
 	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */

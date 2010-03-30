@@ -151,7 +151,7 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 	{
 		ia->ipaddr = c->spd.that.host_srcip;
 		vip = host_create_from_sockaddr((sockaddr_t*)&ia->ipaddr);
-		plog("assigning virtual IP  %H to peer", vip);
+		plog("assigning virtual IP %H to peer", vip);
 	}
 
 	if (!isanyaddr(&ia->ipaddr))        /* We got an IP address, send it */

@@ -62,6 +62,7 @@
 #include "kernel_alg.h"
 #include "nat_traversal.h"
 #include "virtual.h"
+#include "whack_attribute.h"
 
 static void flush_pending_by_connection(connection_t *c);  /* forward */
 
@@ -854,7 +855,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 }
 
 static bool extract_end(struct end *dst, const whack_end_t *src,
-						const char *which)
+						const char *name, const char *which)
 {
 	bool same_ca = FALSE;
 
@@ -911,10 +912,22 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->updown = clone_str(src->updown);
 	dst->host_port = src->host_port;
 
-	/* if the sourceip netmask is zero a named pool exists */
-	if (src->sourceip_mask == 0)
+	if (streq(which, "right"))
 	{
-		dst->pool = clone_str(src->sourceip);
+		/* if the sourceip netmask is zero a named pool exists */
+		if (src->sourceip_mask == 0)
+		{
+			dst->pool = clone_str(src->sourceip);
+		}
+		else if (whack_attr->add_pool(whack_attr, name, src))
+		{	/* otherwise we try to add a new in-memory pool, which in case of
+			 * %config (sourceip == NULL, sourceip_maks == 1) just returns
+			 * the requested address */
+			dst->pool = clone_str(name);
+			dst->modecfg = TRUE;
+			/* reset the host sourceip so it gets assigned in modecfg */
+			anyaddr(AF_INET, &dst->host_srcip);
+		}
 	}
 
 	/* if host sourceip is defined but no client is present
@@ -1119,8 +1132,8 @@ void add_connection(const whack_message_t *wm)
 
 		c->requested_ca = NULL;
 
-		same_leftca  = extract_end(&c->spd.this, &wm->left, "left");
-		same_rightca = extract_end(&c->spd.that, &wm->right, "right");
+		same_leftca  = extract_end(&c->spd.this, &wm->left, wm->name, "left");
+		same_rightca = extract_end(&c->spd.that, &wm->right, wm->name, "right");
 
 		if (same_rightca && c->spd.this.ca)
 		{
