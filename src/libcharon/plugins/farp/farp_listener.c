@@ -87,11 +87,14 @@ METHOD(listener_t, message_hook, bool,
 		host_t *ip;
 
 		ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-		ip = ip->clone(ip);
-		this->lock->write_lock(this->lock);
-		ip = this->ips->put(this->ips, ip, ip);
-		this->lock->unlock(this->lock);
-		DESTROY_IF(ip);
+		if (ip)
+		{
+			ip = ip->clone(ip);
+			this->lock->write_lock(this->lock);
+			ip = this->ips->put(this->ips, ip, ip);
+			this->lock->unlock(this->lock);
+			DESTROY_IF(ip);
+		}
 	}
 	return TRUE;
 }
