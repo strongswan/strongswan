@@ -46,6 +46,7 @@ state.c state.h \
 timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
+whack_attribute.c whack_attribute.h \
 xauth.c xauth.h \
 x509.c x509.h \
 builder.c builder.h \
