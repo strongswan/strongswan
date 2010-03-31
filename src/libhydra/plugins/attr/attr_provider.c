@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,7 +18,9 @@
 
 #include <time.h>
 
-#include <daemon.h>
+#include <hydra.h>
+#include <debug.h>
+#include <utils/linked_list.h>
 
 #define SERVER_MAX		2
 
@@ -100,7 +103,8 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 	host_t *host;
 	char *str;
 
-	str = lib->settings->get_str(lib->settings, "charon.%s%d", NULL, key, nr);
+	str = lib->settings->get_str(lib->settings, "%s.%s%d", NULL, hydra->daemon,
+								 key, nr);
 	if (str)
 	{
 		host = host_create_from_string(str, 0);
@@ -155,7 +159,7 @@ static void load_entries(private_attr_provider_t *this)
 	char *key, *value, *token;
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-														"charon.plugins.attr");
+											"%s.plugins.attr", hydra->daemon);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		configuration_attribute_type_t type;
@@ -170,7 +174,7 @@ static void load_entries(private_attr_provider_t *this)
 			host = host_create_from_string(token, 0);
 			if (!host)
 			{
-				DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
+				DBG1("invalid host in key %s: %s", key, token);
 				continue;
 			}
 			if (!type)
@@ -191,7 +195,7 @@ static void load_entries(private_attr_provider_t *this)
 				}
 				if (!type)
 				{
-					DBG1(DBG_CFG, "mapping attribute type %s failed", key);
+					DBG1("mapping attribute type %s failed", key);
 					break;
 				}
 			}
