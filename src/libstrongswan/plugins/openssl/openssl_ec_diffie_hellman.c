@@ -212,14 +212,14 @@ static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, ch
 {
 	if (!chunk2ecp(this->ec_group, value, this->pub_key))
 	{
-		DBG1("ECDH public value is malformed");
+		DBG1(DBG_LIB, "ECDH public value is malformed");
 		return;
 	}
 
 	chunk_free(&this->shared_secret);
 
 	if (!compute_shared_key(this, &this->shared_secret)) {
-		DBG1("ECDH shared secret computation failed");
+		DBG1(DBG_LIB, "ECDH shared secret computation failed");
 		return;
 	}
 

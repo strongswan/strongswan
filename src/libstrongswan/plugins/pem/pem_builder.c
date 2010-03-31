@@ -73,7 +73,7 @@ static bool find_boundary(char* tag, chunk_t *line)
 	{
 		if (present("-----", line))
 		{
-			DBG2("  -----%s %.*s-----", tag, (int)name.len, name.ptr);
+			DBG2(DBG_LIB, "  -----%s %.*s-----", tag, (int)name.len, name.ptr);
 			return TRUE;
 		}
 		line->ptr++;  line->len--;  name.len++;
@@ -99,7 +99,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (hasher == NULL)
 	{
-		DBG1("  MD5 hash algorithm not available");
+		DBG1(DBG_LIB, "  MD5 hash algorithm not available");
 		return NOT_SUPPORTED;
 	}
 	hash.len = hasher->get_hash_size(hasher);
@@ -121,7 +121,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 	if (crypter == NULL)
 	{
-		DBG1("  %N encryption algorithm not available",
+		DBG1(DBG_LIB, "  %N encryption algorithm not available",
 			 encryption_algorithm_names, alg);
 		return NOT_SUPPORTED;
 	}
@@ -131,7 +131,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		blob->len % iv.len)
 	{
 		crypter->destroy(crypter);
-		DBG1("  data size is not multiple of block size");
+		DBG1(DBG_LIB, "  data size is not multiple of block size");
 		return PARSE_ERROR;
 	}
 	crypter->decrypt(crypter, *blob, iv, &decrypted);
@@ -155,7 +155,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	{
 		if (*last_padding_pos != padding)
 		{
-			DBG1("  invalid passphrase");
+			DBG1(DBG_LIB, "  invalid passphrase");
 			return INVALID_ARG;
 		}
 	}
@@ -234,7 +234,7 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 				}
 
 				/* we are looking for a parameter: value pair */
-				DBG2("  %.*s", (int)line.len, line.ptr);
+				DBG2(DBG_LIB, "  %.*s", (int)line.len, line.ptr);
 				ugh = extract_parameter_value(&name, &value, &line);
 				if (ugh != NULL)
 				{
@@ -274,8 +274,8 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 					}
 					else
 					{
-						DBG1("  encryption algorithm '%.*s' not supported",
-							 dek.len, dek.ptr);
+						DBG1(DBG_LIB, "  encryption algorithm '%.*s'"
+							 " not supported", dek.len, dek.ptr);
 						return NOT_SUPPORTED;
 					}
 					eat_whitespace(&value);
@@ -298,7 +298,8 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 					*pgp = TRUE;
 					data.ptr++;
 					data.len--;
-					DBG2("  armor checksum: %.*s", (int)data.len, data.ptr);
+					DBG2(DBG_LIB, "  armor checksum: %.*s", (int)data.len,
+						 data.ptr);
 					continue;
 				}
 
@@ -318,7 +319,7 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 
 	if (state != PEM_POST)
 	{
-		DBG1("  file coded in unknown format, discarded");
+		DBG1(DBG_LIB, "  file coded in unknown format, discarded");
 		return PARSE_ERROR;
 	}
 	if (!encrypted)
@@ -327,7 +328,7 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 	}
 	if (!cb)
 	{
-		DBG1("  missing passphrase");
+		DBG1(DBG_LIB, "  missing passphrase");
 		return INVALID_ARG;
 	}
 	while (TRUE)
@@ -404,13 +405,14 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 	fd = open(file, O_RDONLY);
 	if (fd == -1)
 	{
-		DBG1("  opening '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
 		return NULL;
 	}
 
 	if (fstat(fd, &sb) == -1)
 	{
-		DBG1("  getting file size of '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  getting file size of '%s' failed: %s", file,
+			 strerror(errno));
 		close(fd);
 		return NULL;
 	}
@@ -418,7 +420,7 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
-		DBG1("  mapping '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  mapping '%s' failed: %s", file, strerror(errno));
 		close(fd);
 		return NULL;
 	}
@@ -447,7 +449,8 @@ static void *load_from_fd(int fd, credential_type_t type, int subtype,
 		len = read(fd, pos, buf + sizeof(buf) - pos);
 		if (len < 0)
 		{
-			DBG1("reading from file descriptor failed: %s", strerror(errno));
+			DBG1(DBG_LIB, "reading from file descriptor failed: %s",
+				 strerror(errno));
 			return NULL;
 		}
 		if (len == 0)
@@ -457,7 +460,7 @@ static void *load_from_fd(int fd, credential_type_t type, int subtype,
 		total += len;
 		if (total == sizeof(buf))
 		{
-			DBG1("buffer too small to read from file descriptor");
+			DBG1(DBG_LIB, "buffer too small to read from file descriptor");
 			return NULL;
 		}
 	}

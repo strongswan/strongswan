@@ -162,7 +162,7 @@ static bool load_template(private_dumm_t *this, char *dir)
 	}
 	if (strlen(dir) > PATH_MAX)
 	{
-		DBG1("template directory string '%s' is too long", dir);
+		DBG1(DBG_LIB, "template directory string '%s' is too long", dir);
 		return FALSE;
 	}
 
@@ -175,7 +175,8 @@ static bool load_template(private_dumm_t *this, char *dir)
 	{	/* does not exist, create template */
 		if (!mkdir_p(this->template, PERME))
 		{
-			DBG1("creating template directory '%s' failed: %m", this->template);
+			DBG1(DBG_LIB, "creating template directory '%s' failed: %m",
+				 this->template);
 			return FALSE;
 		}
 	}
@@ -302,7 +303,8 @@ static void load_guests(private_dumm_t *this)
 		}
 		else
 		{
-			DBG1("loading guest in directory '%s' failed, skipped", ent->d_name);
+			DBG1(DBG_LIB, "loading guest in directory '%s' failed, skipped",
+				 ent->d_name);
 		}
 	}
 	closedir(dir);
@@ -360,7 +362,8 @@ dumm_t *dumm_create(char *dir)
 	if (this->dir == NULL || this->guest_dir == NULL ||
 		(mkdir(this->guest_dir, PERME) < 0 && errno != EEXIST))
 	{
-		DBG1("creating guest directory '%s' failed: %m", this->guest_dir);
+		DBG1(DBG_LIB, "creating guest directory '%s' failed: %m",
+			 this->guest_dir);
 		destroy(this);
 		return NULL;
 	}

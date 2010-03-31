@@ -203,7 +203,7 @@ static conn_t *conn_get(private_mysql_database_t *this)
 								this->password, this->database, this->port,
 								NULL, 0))
 		{
-			DBG1("connecting to mysql://%s:***@%s:%d/%s failed: %s",
+			DBG1(DBG_LIB, "connecting to mysql://%s:***@%s:%d/%s failed: %s",
 				 this->username, this->host, this->port, this->database,
 				 mysql_error(found->mysql));
 			conn_destroy(found);
@@ -213,7 +213,7 @@ static conn_t *conn_get(private_mysql_database_t *this)
 		{
 			this->mutex->lock(this->mutex);
 			this->pool->insert_last(this->pool, found);
-			DBG2("increased MySQL connection pool size to %d",
+			DBG2(DBG_LIB, "increased MySQL connection pool size to %d",
 				 this->pool->get_count(this->pool));
 			this->mutex->unlock(this->mutex);
 		}
@@ -232,12 +232,14 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 	stmt = mysql_stmt_init(mysql);
 	if (stmt == NULL)
 	{
-		DBG1("creating MySQL statement failed: %s", mysql_error(mysql));
+		DBG1(DBG_LIB, "creating MySQL statement failed: %s",
+			 mysql_error(mysql));
 		return NULL;
 	}
 	if (mysql_stmt_prepare(stmt, sql, strlen(sql)))
 	{
-		DBG1("preparing MySQL statement failed: %s", mysql_stmt_error(stmt));
+		DBG1(DBG_LIB, "preparing MySQL statement failed: %s",
+			 mysql_stmt_error(stmt));
 		mysql_stmt_close(stmt);
 		return NULL;
 	}
@@ -303,21 +305,23 @@ static MYSQL_STMT* run(MYSQL *mysql, char *sql, va_list *args)
 					break;
 				}
 				default:
-					DBG1("invalid data type supplied");
+					DBG1(DBG_LIB, "invalid data type supplied");
 					mysql_stmt_close(stmt);
 					return NULL;
 			}
 		}
 		if (mysql_stmt_bind_param(stmt, bind))
 		{
-			DBG1("binding MySQL param failed: %s", mysql_stmt_error(stmt));
+			DBG1(DBG_LIB, "binding MySQL param failed: %s",
+				 mysql_stmt_error(stmt));
 			mysql_stmt_close(stmt);
 			return NULL;
 		}
 	}
 	if (mysql_stmt_execute(stmt))
 	{
-		DBG1("executing MySQL statement failed: %s", mysql_stmt_error(stmt));
+		DBG1(DBG_LIB, "executing MySQL statement failed: %s",
+			 mysql_stmt_error(stmt));
 		mysql_stmt_close(stmt);
 		return NULL;
 	}
@@ -413,7 +417,8 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 		case MYSQL_NO_DATA:
 			return FALSE;
 		default:
-			DBG1("fetching MySQL row failed: %s", mysql_stmt_error(this->stmt));
+			DBG1(DBG_LIB, "fetching MySQL row failed: %s",
+				 mysql_stmt_error(this->stmt));
 			return FALSE;
 	}
 
@@ -536,7 +541,7 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 					break;
 				}
 				default:
-					DBG1("invalid result data type supplied");
+					DBG1(DBG_LIB, "invalid result data type supplied");
 					mysql_enumerator_destroy(enumerator);
 					va_end(args);
 					return NULL;
@@ -544,7 +549,8 @@ static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
 		}
 		if (mysql_stmt_bind_result(stmt, enumerator->bind))
 		{
-			DBG1("binding MySQL result failed: %s", mysql_stmt_error(stmt));
+			DBG1(DBG_LIB, "binding MySQL result failed: %s",
+				 mysql_stmt_error(stmt));
 			mysql_enumerator_destroy(enumerator);
 			enumerator = NULL;
 		}
@@ -653,7 +659,7 @@ static bool parse_uri(private_mysql_database_t *this, char *uri)
 			}
 		}
 	}
-	DBG1("parsing MySQL database uri '%s' failed", uri);
+	DBG1(DBG_LIB, "parsing MySQL database uri '%s' failed", uri);
 	return FALSE;
 }
 

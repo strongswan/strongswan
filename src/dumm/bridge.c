@@ -69,8 +69,8 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 		{
 			if (br_del_interface(this->name, iface->get_hostif(iface)) != 0)
 			{
-				DBG1("removing iface '%s' from bridge '%s' in kernel failed: %m",
-					 iface->get_hostif(iface), this->name);
+				DBG1(DBG_LIB, "removing iface '%s' from bridge '%s' in kernel"
+					 " failed: %m", iface->get_hostif(iface), this->name);
 			}
 			else
 			{
@@ -83,8 +83,8 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 	}
 	if (iface != current)
 	{
-		DBG1("iface '%s' not found on bridge '%s'", iface->get_hostif(iface),
-			 this->name);
+		DBG1(DBG_LIB, "iface '%s' not found on bridge '%s'",
+			 iface->get_hostif(iface), this->name);
 	}
 	enumerator->destroy(enumerator);
 	return good;
@@ -97,7 +97,7 @@ static bool connect_iface(private_bridge_t *this, iface_t *iface)
 {
 	if (br_add_interface(this->name, iface->get_hostif(iface)) != 0)
 	{
-		DBG1("adding iface '%s' to bridge '%s' failed: %m",
+		DBG1(DBG_LIB, "adding iface '%s' to bridge '%s' failed: %m",
 			 iface->get_hostif(iface), this->name);
 		return FALSE;
 	}
@@ -124,7 +124,8 @@ static void destroy(private_bridge_t *this)
 	{
 		if (br_del_interface(this->name, iface->get_hostif(iface)) != 0)
 		{
-			DBG1("disconnecting iface '%s' failed: %m", iface->get_hostif(iface));
+			DBG1(DBG_LIB, "disconnecting iface '%s' failed: %m",
+				 iface->get_hostif(iface));
 		}
 		iface->set_bridge(iface, NULL);
 	}
@@ -133,7 +134,8 @@ static void destroy(private_bridge_t *this)
 	iface_control(this->name, FALSE);
 	if (br_del_bridge(this->name) != 0)
 	{
-		DBG1("deleting bridge '%s' from kernel failed: %m", this->name);
+		DBG1(DBG_LIB, "deleting bridge '%s' from kernel failed: %m",
+			 this->name);
 	}
 	free(this->name);
 	free(this);
@@ -154,7 +156,7 @@ bridge_t *bridge_create(char *name)
 	{
 		if (br_init() != 0)
 		{
-			DBG1("libbridge initialization failed: %m");
+			DBG1(DBG_LIB, "libbridge initialization failed: %m");
 			return NULL;
 		}
 	}
@@ -168,13 +170,13 @@ bridge_t *bridge_create(char *name)
 
 	if (br_add_bridge(name) != 0)
 	{
-		DBG1("creating bridge '%s' failed: %m", name);
+		DBG1(DBG_LIB, "creating bridge '%s' failed: %m", name);
 		free(this);
 		return NULL;
 	}
 	if (!iface_control(name, TRUE))
 	{
-		DBG1("bringing bridge '%s' up failed: %m", name);
+		DBG1(DBG_LIB, "bringing bridge '%s' up failed: %m", name);
 	}
 
 	this->name = strdup(name);

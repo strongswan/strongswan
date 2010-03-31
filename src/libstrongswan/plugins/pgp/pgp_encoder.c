@@ -31,7 +31,8 @@ static bool build_v3_fingerprint(chunk_t *encoding, va_list args)
 		hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 		if (!hasher)
 		{
-			DBG1("MD5 hash algorithm not supported, PGP fingerprinting failed");
+			DBG1(DBG_LIB, "MD5 hash algorithm not supported, PGP"
+				 " fingerprinting failed");
 			return FALSE;
 		}
 		/* remove leading zero bytes before hashing modulus and exponent */

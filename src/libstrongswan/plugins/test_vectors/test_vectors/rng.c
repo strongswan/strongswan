@@ -44,7 +44,7 @@ static bool test_monobit(monobit_t *param, chunk_t data)
 			}
 		}
 	}
-	DBG2("  Monobit: %d/%d bits set", bits, data.len * 8);
+	DBG2(DBG_LIB, "  Monobit: %d/%d bits set", bits, data.len * 8);
 	if (bits > param->lower && bits < param->upper)
 	{
 		return TRUE;
@@ -101,7 +101,7 @@ static bool test_poker(poker_t *param, chunk_t data)
 		sum += (counter[i] * counter[i]) / 5000.0 * 16.0;
 	}
 	sum -= 5000.0;
-	DBG2("  Poker: %f", sum);
+	DBG2(DBG_LIB, "  Poker: %f", sum);
 	if (sum > param->lower && sum < param->upper)
 	{
 		return TRUE;
@@ -190,7 +190,7 @@ static bool test_runs(runs_t *param, chunk_t data)
 		}
 	}
 
-	DBG2("  Runs: zero: %d/%d/%d/%d/%d/%d, one: %d/%d/%d/%d/%d/%d, "
+	DBG2(DBG_LIB, "  Runs: zero: %d/%d/%d/%d/%d/%d, one: %d/%d/%d/%d/%d/%d, "
 		 "longruns: %d",
 		 zero_runs[1], zero_runs[2], zero_runs[3],
 		 zero_runs[4], zero_runs[5], zero_runs[6],

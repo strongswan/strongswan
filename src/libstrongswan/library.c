@@ -141,11 +141,11 @@ bool library_init(char *settings)
 		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);
 		if (!lib->integrity->check(lib->integrity, "libstrongswan", library_init))
 		{
-			DBG1("integrity check of libstrongswan failed");
+			DBG1(DBG_LIB, "integrity check of libstrongswan failed");
 			return FALSE;
 		}
 #else /* !INTEGRITY_TEST */
-		DBG1("integrity test enabled, but not supported");
+		DBG1(DBG_LIB, "integrity test enabled, but not supported");
 		return FALSE;
 #endif /* INTEGRITY_TEST */
 	}

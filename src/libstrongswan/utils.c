@@ -153,7 +153,7 @@ bool mkdir_p(const char *path, mode_t mode)
 	len = snprintf(full, sizeof(full)-1, "%s", path);
 	if (len < 0 || len >= sizeof(full)-1)
 	{
-		DBG1("path string %s too long", path);
+		DBG1(DBG_LIB, "path string %s too long", path);
 		return FALSE;
 	}
 	/* ensure that the path ends with a '/' */
@@ -174,7 +174,7 @@ bool mkdir_p(const char *path, mode_t mode)
 		{
 			if (mkdir(full, mode) < 0)
 			{
-				DBG1("failed to create directory %s", full);
+				DBG1(DBG_LIB, "failed to create directory %s", full);
 				return FALSE;
 			}
 		}

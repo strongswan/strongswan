@@ -122,7 +122,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	if ((obj.flags & ASN1_DEF) && (blob->len == 0 || *start_ptr != obj.type) )
 	{
 		/* field is missing */
-		DBG2("L%d - %s:", level, obj.name);
+		DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
 		if (obj.type & ASN1_CONSTRUCTED)
 		{
 			this->line++ ;  /* skip context-specific tag */
@@ -149,7 +149,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 
 	if (blob->len < 2)
 	{
-		DBG1("L%d - %s:  ASN.1 object smaller than 2 octets",
+		DBG1(DBG_LIB, "L%d - %s:  ASN.1 object smaller than 2 octets",
 					level, obj.name);
 		this->success = FALSE;
 		goto end;
@@ -159,7 +159,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 
 	if (blob1->len == ASN1_INVALID_LENGTH)
 	{
-		DBG1("L%d - %s:  length of ASN.1 object invalid or too large",
+		DBG1(DBG_LIB, "L%d - %s:  length of ASN.1 object invalid or too large",
 					level, obj.name);
 		this->success = FALSE;
 	}
@@ -172,7 +172,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 
 	if (obj.flags & ASN1_RAW)
 	{
-		DBG2("L%d - %s:", level, obj.name);
+		DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
 		goto end;
@@ -180,14 +180,14 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 
 	if (*start_ptr != obj.type && !(this->implicit && this->line == 0))
 	{
-		DBG1("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
+		DBG1(DBG_LIB, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
 					level, obj.name, obj.type, *start_ptr);
-		DBG3("%b", start_ptr, (u_int)(blob->ptr - start_ptr));
+		DBG3(DBG_LIB, "%b", start_ptr, (u_int)(blob->ptr - start_ptr));
 		this->success = FALSE;
 		goto end;
 	}
 
-	DBG2("L%d - %s:", level, obj.name);
+	DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
 
 	/* In case of "SEQUENCE OF" or "SET OF" start a loop */
 	if (obj.flags & ASN1_LOOP)
@@ -216,11 +216,11 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 		object->len = (size_t)(blob->ptr - start_ptr);
 		if (this->private)
 		{
-			DBG4("%B", object);
+			DBG4(DBG_LIB, "%B", object);
 		}
 		else
 		{
-			DBG3("%B", object);
+			DBG3(DBG_LIB, "%B", object);
 		}
 	}
 	else if (obj.flags & ASN1_BODY)

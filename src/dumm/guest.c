@@ -100,7 +100,8 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 
 	if (this->state != GUEST_RUNNING)
 	{
-		DBG1("guest '%s' not running, unable to add interface", this->name);
+		DBG1(DBG_LIB, "guest '%s' not running, unable to add interface",
+			 this->name);
 		return NULL;
 	}
 
@@ -109,7 +110,8 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	{
 		if (streq(name, iface->get_guestif(iface)))
 		{
-			DBG1("guest '%s' already has an interface '%s'", this->name, name);
+			DBG1(DBG_LIB, "guest '%s' already has an interface '%s'",
+				 this->name, name);
 			enumerator->destroy(enumerator);
 			return NULL;
 		}
@@ -251,7 +253,8 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 
 	if (this->state != GUEST_STOPPED)
 	{
-		DBG1("unable to start guest in state %N", guest_state_names, this->state);
+		DBG1(DBG_LIB, "unable to start guest in state %N", guest_state_names,
+			 this->state);
 		return FALSE;
 	}
 	this->state = GUEST_STARTING;
@@ -284,7 +287,7 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	this->mconsole = mconsole_create(notify, idle);
 	if (this->mconsole == NULL)
 	{
-		DBG1("opening mconsole at '%s' failed, stopping guest", buf);
+		DBG1(DBG_LIB, "opening mconsole at '%s' failed, stopping guest", buf);
 		stop(this, NULL);
 		return FALSE;
 	}
@@ -315,7 +318,8 @@ static bool load_template(private_guest_t *this, char *path)
 	{
 		if (!mkdir_p(dir, PERME))
 		{
-			DBG1("creating overlay for guest '%s' failed: %m", this->name);
+			DBG1(DBG_LIB, "creating overlay for guest '%s' failed: %m",
+				 this->name);
 			return FALSE;
 		}
 	}
@@ -595,7 +599,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->dir = open(this->dirname, O_DIRECTORY, PERME);
 	if (this->dir < 0)
 	{
-		DBG1("opening guest directory '%s' failed: %m", this->dirname);
+		DBG1(DBG_LIB, "opening guest directory '%s' failed: %m", this->dirname);
 		free(this->dirname);
 		free(this);
 		return NULL;
@@ -647,7 +651,7 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 	if (!make_symlink(this, master, MASTER_DIR) ||
 		!make_symlink(this, kernel, KERNEL_FILE))
 	{
-		DBG1("creating master/kernel symlink failed: %m");
+		DBG1(DBG_LIB, "creating master/kernel symlink failed: %m");
 		destroy(this);
 		return NULL;
 	}
@@ -655,7 +659,7 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 	if (mkdirat(this->dir, UNION_DIR, PERME) != 0 ||
 		mkdirat(this->dir, DIFF_DIR, PERME) != 0)
 	{
-		DBG1("unable to create directories for '%s': %m", name);
+		DBG1(DBG_LIB, "unable to create directories for '%s': %m", name);
 		destroy(this);
 		return NULL;
 	}

@@ -84,7 +84,7 @@ METHOD(fetcher_t, fetch, status_t,
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
 	}
 
-	DBG2("  sending http request to '%s'...", uri);
+	DBG2(DBG_LIB, "  sending http request to '%s'...", uri);
 	switch (curl_easy_perform(this->curl))
 	{
 		case CURLE_UNSUPPORTED_PROTOCOL:
@@ -94,7 +94,7 @@ METHOD(fetcher_t, fetch, status_t,
 			status = SUCCESS;
 			break;
 		default:
-			DBG1("libcurl http request failed: %s", error);
+			DBG1(DBG_LIB, "libcurl http request failed: %s", error);
 			status = FAILED;
 			break;
 	}

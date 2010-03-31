@@ -293,12 +293,12 @@ void load_authcerts(char *type, char *path, x509_flag_t auth_flags)
 	struct stat st;
 	char *file;
 
-	DBG1("loading %s certificates from '%s'", type, path);
+	DBG1(DBG_LIB, "loading %s certificates from '%s'", type, path);
 
 	enumerator = enumerator_create_directory(path);
 	if (!enumerator)
 	{
-		DBG1("  reading directory '%s' failed");
+		DBG1(DBG_LIB, "  reading directory '%s' failed");
 		return;
 	}
 

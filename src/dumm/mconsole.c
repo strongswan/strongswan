@@ -120,7 +120,7 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 
 	if (len < 0)
 	{
-		DBG1("sending mconsole command to UML failed: %m");
+		DBG1(DBG_LIB, "sending mconsole command to UML failed: %m");
 		return -1;
 	}
 	do
@@ -136,7 +136,7 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 		}
 		if (len < 0)
 		{
-			DBG1("receiving from mconsole failed: %m");
+			DBG1(DBG_LIB, "receiving from mconsole failed: %m");
 			return -1;
 		}
 		if (len > 0)
@@ -149,7 +149,7 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 			{
 				if (reply.len && *reply.data)
 				{
-					DBG1("received mconsole error %d: %.*s",
+					DBG1(DBG_LIB, "received mconsole error %d: %.*s",
 						 reply.err, reply.len, reply.data);
 				}
 				break;
@@ -245,7 +245,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 	this->notify = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (this->notify < 0)
 	{
-		DBG1("opening mconsole notify socket failed: %m");
+		DBG1(DBG_LIB, "opening mconsole notify socket failed: %m");
 		return FALSE;
 	}
 	memset(&addr, 0, sizeof(addr));
@@ -253,7 +253,8 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 	strncpy(addr.sun_path, nsock, sizeof(addr.sun_path));
 	if (bind(this->notify, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
-		DBG1("binding mconsole notify socket to '%s' failed: %m", nsock);
+		DBG1(DBG_LIB, "binding mconsole notify socket to '%s' failed: %m",
+			 nsock);
 		close(this->notify);
 		return FALSE;
 	}
@@ -273,7 +274,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 
 	if (len < 0 || len >= sizeof(notify))
 	{
-		DBG1("reading from mconsole notify socket failed: %m");
+		DBG1(DBG_LIB, "reading from mconsole notify socket failed: %m");
 		close(this->notify);
 		unlink(nsock);
 		return FALSE;
@@ -282,8 +283,8 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 		notify.version != MCONSOLE_VERSION ||
 		notify.type != MCONSOLE_SOCKET)
 	{
-		DBG1("received unexpected message from mconsole notify socket: %b",
-			 &notify, sizeof(notify));
+		DBG1(DBG_LIB, "received unexpected message from mconsole notify"
+			 " socket: %b", &notify, sizeof(notify));
 		close(this->notify);
 		unlink(nsock);
 		return FALSE;
@@ -304,7 +305,7 @@ static bool setup_console(private_mconsole_t *this)
 	this->console = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (this->console < 0)
 	{
-		DBG1("opening mconsole socket failed: %m");
+		DBG1(DBG_LIB, "opening mconsole socket failed: %m");
 		return FALSE;
 	}
 	memset(&addr, 0, sizeof(addr));
@@ -313,7 +314,8 @@ static bool setup_console(private_mconsole_t *this)
 			 getpid(), this->console);
 	if (bind(this->console, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
-		DBG1("binding mconsole socket to '%s' failed: %m", &addr.sun_path[1]);
+		DBG1(DBG_LIB, "binding mconsole socket to '%s' failed: %m",
+			 &addr.sun_path[1]);
 		close(this->console);
 		return FALSE;
 	}

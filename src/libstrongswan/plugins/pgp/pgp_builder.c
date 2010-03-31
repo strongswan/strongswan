@@ -41,7 +41,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 									 BUILD_BLOB_PGP, blob, BUILD_END);
 			break;
 		default:
-			DBG1("PGP public key algorithm %N not supported",
+			DBG1(DBG_LIB, "PGP public key algorithm %N not supported",
 				 pgp_pubkey_alg_names, alg);
 			return NULL;
 	}
@@ -90,12 +90,13 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 	}
 	if (s2k == 255 || s2k == 254)
 	{
-		DBG1("string-to-key specifiers not supported");
+		DBG1(DBG_LIB, "string-to-key specifiers not supported");
 		return NULL;
 	}
 	if (s2k != PGP_SYM_ALG_PLAIN)
 	{
-		DBG1("%N private key encryption not supported", pgp_sym_alg_names, s2k);
+		DBG1(DBG_LIB, "%N private key encryption not supported",
+			 pgp_sym_alg_names, s2k);
 		return NULL;
 	}
 
@@ -121,7 +122,7 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 static bool sign_not_allowed(private_key_t *this, signature_scheme_t scheme,
 							 chunk_t data, chunk_t *signature)
 {
-	DBG1("signing failed - decryption only key");
+	DBG1(DBG_LIB, "signing failed - decryption only key");
 	return FALSE;
 }
 
@@ -131,7 +132,7 @@ static bool sign_not_allowed(private_key_t *this, signature_scheme_t scheme,
 static bool decrypt_not_allowed(private_key_t *this,
 								chunk_t crypto, chunk_t *plain)
 {
-	DBG1("decryption failed - signature only key");
+	DBG1(DBG_LIB, "decryption failed - signature only key");
 	return FALSE;
 }
 
@@ -164,7 +165,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 		case 4:
 			break;
 		default:
-			DBG1("PGP packet version V%d not supported", version);
+			DBG1(DBG_LIB, "PGP packet version V%d not supported", version);
 			return FALSE;
 	}
 	if (!pgp_read_scalar(&packet, 4, &created))

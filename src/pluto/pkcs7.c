@@ -146,7 +146,7 @@ bool pkcs7_parse_contentInfo(chunk_t blob, u_int level0, contentInfo_t *cInfo)
 			if (cInfo->type < OID_PKCS7_DATA
 			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 			{
-				DBG1("unknown pkcs7 content type");
+				DBG1(DBG_LIB, "unknown pkcs7 content type");
 				goto end;
 			}
 		}
@@ -187,7 +187,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 	}
 	if (cInfo.type != OID_PKCS7_SIGNED_DATA)
 	{
-		DBG1("pkcs7 content type is not signedData");
+		DBG1(DBG_LIB, "pkcs7 content type is not signedData");
 		return FALSE;
 	}
 
@@ -202,7 +202,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 		{
 		case PKCS7_SIGNED_VERSION:
 			version = object.len ? (int)*object.ptr : 0;
-			DBG2("  v%d", version);
+			DBG2(DBG_LIB, "  v%d", version);
 			break;
 		case PKCS7_DIGEST_ALG:
 			digest_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
@@ -217,7 +217,7 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 			{
 				certificate_t *cert;
 
-				DBG2("  parsing pkcs7-wrapped certificate");
+				DBG2(DBG_LIB, "  parsing pkcs7-wrapped certificate");
 				cert = lib->creds->create(lib->creds,
 								  		  CRED_CERTIFICATE, CERT_X509,
 								  		  BUILD_BLOB_ASN1_DER, object,
@@ -230,17 +230,17 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 			break;
 		case PKCS7_SIGNER_INFO:
 			signerInfos++;
-			DBG2("  signer #%d", signerInfos);
+			DBG2(DBG_LIB, "  signer #%d", signerInfos);
 			break;
 		case PKCS7_SIGNER_INFO_VERSION:
 			version = object.len ? (int)*object.ptr : 0;
-			DBG2("  v%d", version);
+			DBG2(DBG_LIB, "  v%d", version);
 			break;
 		case PKCS7_SIGNED_ISSUER:
 			{
 				identification_t *issuer = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
-				DBG2("  \"%Y\"", issuer);
+				DBG2(DBG_LIB, "  \"%Y\"", issuer);
 				issuer->destroy(issuer);
 				break;
 			}
@@ -277,27 +277,27 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 		scheme = signature_scheme_from_oid(digest_alg);
 		if (scheme == SIGN_UNKNOWN)
 		{
-			DBG1("unsupported signature scheme");
+			DBG1(DBG_LIB, "unsupported signature scheme");
 			return FALSE;
 		}
 		if (signerInfos == 0)
 		{
-			DBG1("no signerInfo object found");
+			DBG1(DBG_LIB, "no signerInfo object found");
 			return FALSE;
 		}
 		else if (signerInfos > 1)
 		{
-			DBG1("more than one signerInfo object found");
+			DBG1(DBG_LIB, "more than one signerInfo object found");
 			return FALSE;
 		}
 		if (attributes->ptr == NULL)
 		{
-			DBG1("no authenticatedAttributes object found");
+			DBG1(DBG_LIB, "no authenticatedAttributes object found");
 			return FALSE;
 		}
 		if (enc_alg != OID_RSA_ENCRYPTION)
 		{
-			DBG1("only RSA digest encryption supported");
+			DBG1(DBG_LIB, "only RSA digest encryption supported");
 			return FALSE;
 		}
 
@@ -305,16 +305,16 @@ bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
 		key = cacert->get_public_key(cacert);
 		if (key == NULL)
 		{
-			DBG1("no public key found in CA certificate");
+			DBG1(DBG_LIB, "no public key found in CA certificate");
 			return FALSE;
 		}
 		if (key->verify(key, scheme, *attributes, encrypted_digest))
 		{
-			DBG2("signature is valid");
+			DBG2(DBG_LIB, "signature is valid");
 		}
 		else
 		{
-			DBG1("invalid signature");
+			DBG1(DBG_LIB, "invalid signature");
 			success = FALSE;
 		}
 		key->destroy(key);
@@ -352,7 +352,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 	}
 	if (cInfo.type != OID_PKCS7_ENVELOPED_DATA)
 	{
-		DBG1("pkcs7 content type is not envelopedData");
+		DBG1(DBG_LIB, "pkcs7 content type is not envelopedData");
 		goto failed;
 	}
 
@@ -367,19 +367,19 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 		{
 		case PKCS7_ENVELOPED_VERSION:
 			version = object.len ? (int)*object.ptr : 0;
-			DBG2("  v%d", version);
+			DBG2(DBG_LIB, "  v%d", version);
 			if (version != 0)
 			{
-				DBG1("envelopedData version is not 0");
+				DBG1(DBG_LIB, "envelopedData version is not 0");
 				goto end;
 			}
 			break;
 		case PKCS7_RECIPIENT_INFO_VERSION:
 			version = object.len ? (int)*object.ptr : 0;
-			DBG2("  v%d", version);
+			DBG2(DBG_LIB, "  v%d", version);
 			if (version != 0)
 			{
-				DBG1("recipient info version is not 0");
+				DBG1(DBG_LIB, "recipient info version is not 0");
 				goto end;
 			}
 			break;
@@ -387,14 +387,14 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			{
 				identification_t *issuer = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
-				DBG2("  \"%Y\"", issuer);
+				DBG2(DBG_LIB, "  \"%Y\"", issuer);
 				issuer->destroy(issuer);
 				break;
 			}
 		case PKCS7_SERIAL_NUMBER:
 			if (!chunk_equals(serialNumber, object))
 			{
-				DBG1("serial numbers do not match");
+				DBG1(DBG_LIB, "serial numbers do not match");
 				goto end;
 			}
 			break;
@@ -402,22 +402,22 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			enc_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 			if (enc_alg != OID_RSA_ENCRYPTION)
 			{
-				DBG1("only rsa encryption supported");
+				DBG1(DBG_LIB, "only rsa encryption supported");
 				goto end;
 			}
 			break;
 		case PKCS7_ENCRYPTED_KEY:
 			if (!key->decrypt(key, object, &symmetric_key))
 			{
-				DBG1("symmetric key could not be decrypted with rsa");
+				DBG1(DBG_LIB, "symmetric key could not be decrypted with rsa");
 				goto end;
 			}
-			DBG4("symmetric key %B", &symmetric_key);
+			DBG4(DBG_LIB, "symmetric key %B", &symmetric_key);
 			break;
 		case PKCS7_CONTENT_TYPE:
 			if (asn1_known_oid(object) != OID_PKCS7_DATA)
 			{
-				 DBG1("encrypted content not of type pkcs7 data");
+				 DBG1(DBG_LIB, "encrypted content not of type pkcs7 data");
 				 goto end;
 			}
 			break;
@@ -426,12 +426,12 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 
 			if (content_enc_alg == OID_UNKNOWN)
 			{
-				DBG1("unknown content encryption algorithm");
+				DBG1(DBG_LIB, "unknown content encryption algorithm");
 				goto end;
 			}
 			if (!asn1_parse_simple_object(&iv, ASN1_OCTET_STRING, level+1, "IV"))
 			{
-				DBG1("IV could not be parsed");
+				DBG1(DBG_LIB, "IV could not be parsed");
 				goto end;
 			}
 			break;
@@ -459,28 +459,28 @@ end:
 		alg = encryption_algorithm_from_oid(content_enc_alg, &key_size);
 		if (alg == ENCR_UNDEFINED)
 		{
-			DBG1("unsupported content encryption algorithm");
+			DBG1(DBG_LIB, "unsupported content encryption algorithm");
 			goto failed;
 		}
 		crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 		if (crypter == NULL)
 		{
-			DBG1("crypter %N not available", encryption_algorithm_names, alg);
+			DBG1(DBG_LIB, "crypter %N not available", encryption_algorithm_names, alg);
 			goto failed;
 		}
 		if (symmetric_key.len != crypter->get_key_size(crypter))
 		{
-			DBG1("symmetric key length %d is wrong", symmetric_key.len);
+			DBG1(DBG_LIB, "symmetric key length %d is wrong", symmetric_key.len);
 			goto failed;
 		}
 		if (iv.len != crypter->get_block_size(crypter))
 		{
-			DBG1("IV length %d is wrong", iv.len);
+			DBG1(DBG_LIB, "IV length %d is wrong", iv.len);
 			goto failed;
 		}
 		crypter->set_key(crypter, symmetric_key);
 		crypter->decrypt(crypter, encrypted_content, iv, data);
-		DBG4("decrypted content with padding: %B", data);
+		DBG4(DBG_LIB, "decrypted content with padding: %B", data);
 	}
 
 	/* remove the padding */
@@ -491,7 +491,7 @@ end:
 
 		if (padding > data->len)
 		{
-			DBG1("padding greater than data length");
+			DBG1(DBG_LIB, "padding greater than data length");
 			goto failed;
 		}
 		data->len -= padding;
@@ -500,7 +500,7 @@ end:
 		{
 			if (*pos-- != pattern)
 			{
-				DBG1("wrong padding pattern");
+				DBG1(DBG_LIB, "wrong padding pattern");
 				goto failed;
 			}
 		}
@@ -631,7 +631,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 				, asn1_wrap(ASN1_SET, "m", signerInfo));
 
 	cInfo = pkcs7_build_contentInfo(&signedData);
-	DBG3("signedData %B", &cInfo);
+	DBG3(DBG_LIB, "signedData %B", &cInfo);
 
 	free(pkcs7Data.content.ptr);
 	free(signedData.content.ptr);
@@ -653,7 +653,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 										  alg_key_size/BITS_PER_BYTE);
 	if (crypter == NULL)
 	{
-		DBG1("crypter for %N not available", encryption_algorithm_names, alg);
+		DBG1(DBG_LIB, "crypter for %N not available", encryption_algorithm_names, alg);
 		return chunk_empty;
 	}
 
@@ -663,12 +663,12 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
-		DBG4("symmetric encryption key %B", &symmetricKey);
+		DBG4(DBG_LIB, "symmetric encryption key %B", &symmetricKey);
 		rng->destroy(rng);
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 		rng->allocate_bytes(rng, crypter->get_block_size(crypter), &iv);
-		DBG4("initialization vector: %B", &iv);
+		DBG4(DBG_LIB, "initialization vector: %B", &iv);
 		rng->destroy(rng);
 	}
 
@@ -680,7 +680,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 		in.len = data.len + padding;
 		in.ptr = malloc(in.len);
 
-		DBG2("padding %u bytes of data to multiple block size of %u bytes",
+		DBG2(DBG_LIB, "padding %u bytes of data to multiple block size of %u bytes",
 			 data.len, in.len);
 
 		/* copy data */
@@ -688,14 +688,14 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 		/* append padding */
 		memset(in.ptr + data.len, padding, padding);
 	}
-	DBG3("padded unencrypted data %B", &in);
+	DBG3(DBG_LIB, "padded unencrypted data %B", &in);
 
 	/* symmetric encryption of data object */
 	crypter->set_key(crypter, symmetricKey);
 	crypter->encrypt(crypter, in, iv, &out);
 	crypter->destroy(crypter);
 	chunk_clear(&in);
-    DBG3("encrypted data %B", &out);
+    DBG3(DBG_LIB, "encrypted data %B", &out);
 
 	/* protect symmetric key by public key encryption */
 	{
@@ -703,7 +703,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 
 		if (key == NULL)
 		{
-			DBG1("public key not found in encryption certificate");
+			DBG1(DBG_LIB, "public key not found in encryption certificate");
 			chunk_clear(&symmetricKey);
 			chunk_free(&iv);
 			chunk_free(&out);
@@ -744,7 +744,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 					, encryptedContentInfo);
 
 		cInfo = pkcs7_build_contentInfo(&envelopedData);
-		DBG3("envelopedData %B", &cInfo);
+		DBG3(DBG_LIB, "envelopedData %B", &cInfo);
 
 		chunk_free(&envelopedData.content);
 		chunk_free(&iv);

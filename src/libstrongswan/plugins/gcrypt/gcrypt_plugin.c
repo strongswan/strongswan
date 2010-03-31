@@ -126,7 +126,7 @@ plugin_t *gcrypt_plugin_create()
 
 	if (!gcry_check_version(GCRYPT_VERSION))
 	{
-		DBG1("libgcrypt version mismatch");
+		DBG1(DBG_LIB, "libgcrypt version mismatch");
 		return NULL;
 	}
 

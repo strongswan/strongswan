@@ -83,7 +83,7 @@ static int write_cmd(private_smtp_t *this, char *fmt, ...)
 
 	if (fprintf(this->f, "%s\n", buf) < 1)
 	{
-		DBG1("sending SMTP command failed");
+		DBG1(DBG_LIB, "sending SMTP command failed");
 		return 0;
 	}
 	return read_response(this);
@@ -96,17 +96,17 @@ METHOD(smtp_t, send_mail, bool,
 
 	if (write_cmd(this, "MAIL FROM:<%s>", from) != 250)
 	{
-		DBG1("SMTP MAIL FROM failed");
+		DBG1(DBG_LIB, "SMTP MAIL FROM failed");
 		return FALSE;
 	}
 	if (write_cmd(this, "RCPT TO:<%s>", to) != 250)
 	{
-		DBG1("SMTP RCPT TO failed");
+		DBG1(DBG_LIB, "SMTP RCPT TO failed");
 		return FALSE;
 	}
 	if (write_cmd(this, "DATA") != 354)
 	{
-		DBG1("SMTP DATA failed");
+		DBG1(DBG_LIB, "SMTP DATA failed");
 		return FALSE;
 	}
 
@@ -149,7 +149,7 @@ smtp_t *smtp_create()
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s < 0)
 	{
-		DBG1("opening SMTP socket failed: %s", strerror(errno));
+		DBG1(DBG_LIB, "opening SMTP socket failed: %s", strerror(errno));
 		free(this);
 		return NULL;
 	}
@@ -158,7 +158,7 @@ smtp_t *smtp_create()
 	addr.sin_port = htons(25);
 	if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
-		DBG1("connecting to SMTP server failed: %s", strerror(errno));
+		DBG1(DBG_LIB, "connecting to SMTP server failed: %s", strerror(errno));
 		close(s);
 		free(this);
 		return NULL;
@@ -166,7 +166,8 @@ smtp_t *smtp_create()
 	this->f = fdopen(s, "a+");
 	if (!this->f)
 	{
-		DBG1("opening stream to SMTP server failed: %s", strerror(errno));
+		DBG1(DBG_LIB, "opening stream to SMTP server failed: %s",
+			 strerror(errno));
 		close(s);
 		free(this);
 		return NULL;
@@ -174,7 +175,7 @@ smtp_t *smtp_create()
 	if (read_response(this) != 220 ||
 		write_cmd(this, "EHLO localhost") != 250)
 	{
-		DBG1("SMTP EHLO failed");
+		DBG1(DBG_LIB, "SMTP EHLO failed");
 		fclose(this->f);
 		free(this);
 		return NULL;

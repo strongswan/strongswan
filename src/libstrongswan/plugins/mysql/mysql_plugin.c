@@ -52,7 +52,7 @@ plugin_t *mysql_plugin_create()
 
 	if (!mysql_database_init())
 	{
-		DBG1("MySQL client library initialization failed");
+		DBG1(DBG_LIB, "MySQL client library initialization failed");
 		return NULL;
 	}
 

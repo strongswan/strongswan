@@ -198,9 +198,9 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 	this->get_validity(this, &now, &this_update, NULL);
 	that->get_validity(that, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  certificate from %T is %s - existing certificate from %T %s",
-				&this_update, FALSE, new ? "newer":"not newer",
-				&that_update, FALSE, new ? "replaced":"retained");
+	DBG1(DBG_LIB, "  certificate from %T is %s - existing certificate"
+		 " from %T %s", &this_update, FALSE, new ? "newer" : "not newer",
+		 &that_update, FALSE, new ? "replaced" : "retained");
 	return new;
 }
 
@@ -322,16 +322,18 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 			}
 			break;
 		default:
-			DBG1("PGP packet version V%d not supported", this->version);
+			DBG1(DBG_LIB, "PGP packet version V%d not supported",
+				 this->version);
 			return FALSE;
 	}
 	if (this->valid)
 	{
-		DBG2("L2 - created %T, valid %d days", &this->created, FALSE, this->valid);
+		DBG2(DBG_LIB, "L2 - created %T, valid %d days", &this->created, FALSE,
+			 this->valid);
 	}
 	else
 	{
-		DBG2("L2 - created %T, never expires", &this->created, FALSE);
+		DBG2(DBG_LIB, "L2 - created %T, never expires", &this->created, FALSE);
 	}
 	DESTROY_IF(this->key);
 	this->key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
@@ -352,13 +354,13 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 		if (hasher == NULL)
 		{
-			DBG1("no SHA-1 hasher available");
+			DBG1(DBG_LIB, "no SHA-1 hasher available");
 			return FALSE;
 		}
 		hasher->allocate_hash(hasher, pubkey_packet_header, NULL);
 		hasher->allocate_hash(hasher, pubkey_packet, &this->fingerprint);
 		hasher->destroy(hasher);
-		DBG2("L2 - v4 fingerprint %#B", &this->fingerprint);
+		DBG2(DBG_LIB, "L2 - v4 fingerprint %#B", &this->fingerprint);
 	}
 	else
 	{
@@ -369,7 +371,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 			return FALSE;
 		}
 		this->fingerprint = chunk_clone(this->fingerprint);
-		DBG2("L2 - v3 fingerprint %#B", &this->fingerprint);
+		DBG2(DBG_LIB, "L2 - v3 fingerprint %#B", &this->fingerprint);
 	}
 	return TRUE;
 }
@@ -389,7 +391,7 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 	/* we parse only v3 or v4 signature packets */
 	if (version != 3 && version != 4)
 	{
-		DBG2("L2 - v%d signature ignored", version);
+		DBG2(DBG_LIB, "L2 - v%d signature ignored", version);
 		return TRUE;
 	}
 	if (version == 4)
@@ -398,7 +400,7 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 		{
 			return FALSE;
 		}
-		DBG2("L2 - v%d signature of type 0x%02x", version, type);
+		DBG2(DBG_LIB, "L2 - v%d signature of type 0x%02x", version, type);
 	}
 	else
 	{
@@ -411,8 +413,8 @@ static bool parse_signature(private_pgp_cert_t *this, chunk_t packet)
 		{
 			return FALSE;
 		}
-		DBG2("L2 - v3 signature of type 0x%02x, created %T", type,
-												&created, FALSE);
+		DBG2(DBG_LIB, "L2 - v3 signature of type 0x%02x, created %T", type,
+			 &created, FALSE);
 	}
 	/* TODO: parse and save signature to a list */
 	return TRUE;
@@ -425,7 +427,7 @@ static bool parse_user_id(private_pgp_cert_t *this, chunk_t packet)
 {
 	DESTROY_IF(this->user_id);
 	this->user_id = identification_create_from_encoding(ID_KEY_ID, packet);
-	DBG2("L2 - '%Y'", this->user_id);
+	DBG2(DBG_LIB, "L2 - '%Y'", this->user_id);
 	return TRUE;
 }
 
@@ -486,7 +488,7 @@ pgp_cert_t *pgp_cert_load(certificate_type_t type, va_list args)
 				}
 				break;
 			default:
-				DBG1("ignoring %N packet in PGP certificate",
+				DBG1(DBG_LIB, "ignoring %N packet in PGP certificate",
 					 pgp_packet_tag_names, tag);
 				break;
 		}

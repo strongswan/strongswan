@@ -83,14 +83,16 @@ static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
 	chunk_free(&em);
 	if (err)
 	{
-		DBG1("building data S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building data S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_sexp_build(&sig, NULL, "(sig-val(rsa(s %b)))",
 						  signature.len, signature.ptr);
 	if (err)
 	{
-		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s",
+			 gpg_strerror(err));
 		gcry_sexp_release(in);
 		return FALSE;
 	}
@@ -99,7 +101,8 @@ static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
 	gcry_sexp_release(sig);
 	if (err)
 	{
-		DBG1("RSA signature verification failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "RSA signature verification failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	return TRUE;
@@ -130,7 +133,8 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	chunk_free(&hash);
 	if (err)
 	{
-		DBG1("building data S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building data S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 
@@ -138,7 +142,8 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 						  signature.len, signature.ptr);
 	if (err)
 	{
-		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s",
+			 gpg_strerror(err));
 		gcry_sexp_release(in);
 		return FALSE;
 	}
@@ -147,7 +152,8 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	gcry_sexp_release(sig);
 	if (err)
 	{
-		DBG1("RSA signature verification failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "RSA signature verification failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	return TRUE;
@@ -184,7 +190,7 @@ static bool verify(private_gcrypt_rsa_public_key_t *this,
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
 			return verify_pkcs1(this, HASH_SHA512, "sha512", data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -205,14 +211,16 @@ static bool encrypt_(private_gcrypt_rsa_public_key_t *this, chunk_t plain,
 						  plain.len, plain.ptr);
 	if (err)
 	{
-		DBG1("building encryption S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building encryption S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_encrypt(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1("encrypting data using pkcs1 failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "encrypting data using pkcs1 failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	*encrypted = gcrypt_rsa_find_token(out, "a", this->key);
@@ -343,7 +351,7 @@ gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_load(key_type_t type,
 						  n.len, n.ptr, e.len, e.ptr);
 	if (err)
 	{
-		DBG1("loading public key failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "loading public key failed: %s", gpg_strerror(err));
 		free(this);
 		return NULL;
 	}

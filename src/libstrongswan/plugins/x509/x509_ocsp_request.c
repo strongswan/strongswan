@@ -179,13 +179,14 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 		}
 		else
 		{
-			DBG1("creating OCSP request failed, SHA1 not supported");
+			DBG1(DBG_LIB, "creating OCSP request failed, SHA1 not supported");
 		}
 		public->destroy(public);
 	}
 	else
 	{
-		DBG1("creating OCSP request failed, CA certificate has no public key");
+		DBG1(DBG_LIB, "creating OCSP request failed, CA certificate has "
+			 "no public key");
 	}
 	return asn1_wrap(ASN1_SEQUENCE, "m", list);
 }
@@ -205,7 +206,7 @@ static chunk_t build_nonce(private_x509_ocsp_request_t *this)
 		return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_nonce_oid,
 					asn1_simple_object(ASN1_OCTET_STRING, this->nonce));
 	}
-	DBG1("creating OCSP request nonce failed, no RNG found");
+	DBG1(DBG_LIB, "creating OCSP request nonce failed, no RNG found");
 	return chunk_empty;
 }
 
@@ -263,14 +264,14 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 			scheme = SIGN_ECDSA_WITH_SHA1_DER;
 			break;
 		default:
-			DBG1("unable to sign OCSP request, %N signature not supported",
-				 key_type_names, this->key->get_type(this->key));
+			DBG1(DBG_LIB, "unable to sign OCSP request, %N signature not "
+				 "supported", key_type_names, this->key->get_type(this->key));
 			return chunk_empty;
 	}
 
 	if (!this->key->sign(this->key, scheme, tbsRequest, &signature))
 	{
-		DBG1("creating OCSP signature failed, skipped");
+		DBG1(DBG_LIB, "creating OCSP signature failed, skipped");
 		return chunk_empty;
 	}
 	if (this->cert)
@@ -378,7 +379,7 @@ static id_match_t has_issuer(private_x509_ocsp_request_t *this,
  */
 static bool issued_by(private_x509_ocsp_request_t *this, certificate_t *issuer)
 {
-	DBG1("OCSP request validation not implemented!");
+	DBG1(DBG_LIB, "OCSP request validation not implemented!");
 	return FALSE;
 }
 

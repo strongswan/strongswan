@@ -97,7 +97,8 @@ static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
 	if (hasher == NULL)
 	{
 		chunk_free(&pubkey);
-		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, "
+			 "fingerprinting failed");
 		return FALSE;
 	}
 	hasher->allocate_hash(hasher, pubkey, hash);

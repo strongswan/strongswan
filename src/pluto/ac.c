@@ -88,16 +88,17 @@ bool ac_verify_cert(certificate_t *cert, bool strict)
 	cert_t *aacert;
 	time_t notBefore, valid_until;
 
-	DBG1("holder: '%Y'", subject);
-	DBG1("issuer: '%Y'", issuer);
+	DBG1(DBG_LIB, "holder: '%Y'", subject);
+	DBG1(DBG_LIB, "issuer: '%Y'", issuer);
 
 	if (!cert->get_validity(cert, NULL, NULL, &valid_until))
 	{
-		DBG1("attribute certificate is invalid (valid from %T to %T)",
+		DBG1(DBG_LIB, "attribute certificate is invalid (valid from %T to %T)",
 			 &notBefore, FALSE, &valid_until, FALSE);
 		return FALSE;
 	}
-	DBG1("attribute certificate is valid until %T", &valid_until, FALSE);
+	DBG1(DBG_LIB, "attribute certificate is valid until %T", &valid_until,
+		 FALSE);
 
 	lock_authcert_list("verify_x509acert");
 	aacert = get_authcert(issuer, authKeyID, X509_AA);
@@ -105,17 +106,17 @@ bool ac_verify_cert(certificate_t *cert, bool strict)
 
 	if (aacert == NULL)
 	{
-		DBG1("issuer aacert not found");
+		DBG1(DBG_LIB, "issuer aacert not found");
 		return FALSE;
 	}
-	DBG2("issuer aacert found");
+	DBG2(DBG_LIB, "issuer aacert found");
 
 	if (!cert->issued_by(cert, aacert->cert))
 	{
-		DBG1("attribute certificate signature is invalid");
+		DBG1(DBG_LIB, "attribute certificate signature is invalid");
 		return FALSE;
 	}
-	DBG1("attribute certificate signature is valid");
+	DBG1(DBG_LIB, "attribute certificate signature is valid");
 
 	return verify_x509cert(aacert, strict, &valid_until);
 }
@@ -175,8 +176,8 @@ bool match_group_membership(ietf_attributes_t *peer_attributes, char *conn,
 	}
 
 	match = conn_attributes->matches(conn_attributes, peer_attributes);
-	DBG1("%s: peer with attributes '%s' is %sa member of the groups '%s'",
-		 conn, peer_attributes->get_string(peer_attributes),
+	DBG1(DBG_LIB, "%s: peer with attributes '%s' is %sa member of the "
+		 "groups '%s'", conn, peer_attributes->get_string(peer_attributes),
 		 match ? "" : "not ", conn_attributes->get_string(conn_attributes));
 
 	return match;
@@ -191,7 +192,7 @@ void ac_load_certs(void)
 	struct stat st;
 	char *file;
 
-	DBG1("loading attribute certificates from '%s'", A_CERT_PATH);
+	DBG1(DBG_LIB, "loading attribute certificates from '%s'", A_CERT_PATH);
 
 	enumerator = enumerator_create_directory(A_CERT_PATH);
 	if (!enumerator)
@@ -212,7 +213,7 @@ void ac_load_certs(void)
 								  BUILD_FROM_FILE, file, BUILD_END);
 		if (cert)
 		{
-			DBG1("  loaded attribute certificate from '%s'", file);
+			DBG1(DBG_LIB, "  loaded attribute certificate from '%s'", file);
 			ac_add_cert(cert);
 		}
 	}
@@ -266,7 +267,7 @@ void ac_list_certs(bool utc)
 			whack_log(RC_COMMENT, "  hserial:   %#B", &holderSerial);
 		}
 
-		groups = ac->get_groups(ac);		
+		groups = ac->get_groups(ac);
 		if (groups)
 		{
 			whack_log(RC_COMMENT, "  groups:    %s", groups->get_string(groups));

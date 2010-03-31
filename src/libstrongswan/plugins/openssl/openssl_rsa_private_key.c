@@ -160,7 +160,7 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -172,7 +172,7 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 static bool decrypt(private_openssl_rsa_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
 {
-	DBG1("RSA private key decryption not implemented");
+	DBG1(DBG_LIB, "RSA private key decryption not implemented");
 	return FALSE;
 }
 
@@ -480,18 +480,18 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
-		DBG1("engine '%s' is not available", engine_id);
+		DBG1(DBG_LIB, "engine '%s' is not available", engine_id);
 		return NULL;
 	}
 	if (!ENGINE_init(engine))
 	{
-		DBG1("failed to initialize engine '%s'", engine_id);
+		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
 	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
 	{
-		DBG1("failed to set PIN on engine '%s'", engine_id);
+		DBG1(DBG_LIB, "failed to set PIN on engine '%s'", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
@@ -499,8 +499,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
 	if (!key)
 	{
-		DBG1("failed to load private key with ID '%s' from engine '%s'",
-			 keyid, engine_id);
+		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
+			 "engine '%s'", keyid, engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}

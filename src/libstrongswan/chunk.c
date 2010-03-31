@@ -221,7 +221,7 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 
 	if (!force && access(path, F_OK) == 0)
 	{
-		DBG1("  %s file '%s' already exists", label, path);
+		DBG1(DBG_LIB, "  %s file '%s' already exists", label, path);
 		return FALSE;
 	}
 	oldmask = umask(mask);
@@ -230,20 +230,21 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
-			DBG1("  written %s file '%s' (%d bytes)",
+			DBG1(DBG_LIB, "  written %s file '%s' (%d bytes)",
 				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1("  writing %s file '%s' failed: %s",
+			DBG1(DBG_LIB, "  writing %s file '%s' failed: %s",
 				 label, path, strerror(errno));
 		}
 		fclose(fd);
 	}
 	else
 	{
-		DBG1("  could not open %s file '%s': %s", label, path, strerror(errno));
+		DBG1(DBG_LIB, "  could not open %s file '%s': %s", label, path,
+			 strerror(errno));
 	}
 	umask(oldmask);
 	return good;
@@ -496,7 +497,7 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
  * Described in header.
  *
  * The implementation is based on Paul Hsieh's SuperFastHash:
- * 	 http://www.azillionmonkeys.com/qed/hash.html
+ *	 http://www.azillionmonkeys.com/qed/hash.html
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {

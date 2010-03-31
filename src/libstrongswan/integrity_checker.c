@@ -72,13 +72,14 @@ static u_int32_t build_file(private_integrity_checker_t *this, char *file,
 	fd = open(file, O_RDONLY);
 	if (fd == -1)
 	{
-		DBG1("  opening '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  opening '%s' failed: %s", file, strerror(errno));
 		return 0;
 	}
 
 	if (fstat(fd, &sb) == -1)
 	{
-		DBG1("  getting file size of '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  getting file size of '%s' failed: %s", file,
+			 strerror(errno));
 		close(fd);
 		return 0;
 	}
@@ -86,7 +87,7 @@ static u_int32_t build_file(private_integrity_checker_t *this, char *file,
 	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
-		DBG1("  mapping '%s' failed: %s", file, strerror(errno));
+		DBG1(DBG_LIB, "  mapping '%s' failed: %s", file, strerror(errno));
 		close(fd);
 		return 0;
 	}
@@ -146,13 +147,13 @@ static u_int32_t build_segment(private_integrity_checker_t *this, void *sym,
 
 	if (dladdr(sym, &dli) == 0)
 	{
-		DBG1("  unable to locate symbol: %s", dlerror());
+		DBG1(DBG_LIB, "  unable to locate symbol: %s", dlerror());
 		return 0;
 	}
 	/* we reuse the Dl_info struct as in/out parameter */
 	if (!dl_iterate_phdr((void*)callback, &dli))
 	{
-		DBG1("  executable section not found");
+		DBG1(DBG_LIB, "  executable section not found");
 		return 0;
 	}
 
@@ -192,7 +193,7 @@ static bool check_file(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
-		DBG1("  '%s' file checksum not found", name);
+		DBG1(DBG_LIB, "  '%s' file checksum not found", name);
 		return FALSE;
 	}
 	sum = build_file(this, file, &len);
@@ -202,17 +203,17 @@ static bool check_file(private_integrity_checker_t *this,
 	}
 	if (cs->file_len != len)
 	{
-		DBG1("  invalid '%s' file size: %u bytes, expected %u bytes",
+		DBG1(DBG_LIB, "  invalid '%s' file size: %u bytes, expected %u bytes",
 			 name, len, cs->file_len);
 		return FALSE;
 	}
 	if (cs->file != sum)
 	{
-		DBG1("  invalid '%s' file checksum: %08x, expected %08x",
+		DBG1(DBG_LIB, "  invalid '%s' file checksum: %08x, expected %08x",
 			 name, sum, cs->file);
 		return FALSE;
 	}
-	DBG2("  valid '%s' file checksum: %08x", name, sum);
+	DBG2(DBG_LIB, "  valid '%s' file checksum: %08x", name, sum);
 	return TRUE;
 }
 
@@ -229,7 +230,7 @@ static bool check_segment(private_integrity_checker_t *this,
 	cs = find_checksum(this, name);
 	if (!cs)
 	{
-		DBG1("  '%s' segment checksum not found", name);
+		DBG1(DBG_LIB, "  '%s' segment checksum not found", name);
 		return FALSE;
 	}
 	sum = build_segment(this, sym, &len);
@@ -239,17 +240,17 @@ static bool check_segment(private_integrity_checker_t *this,
 	}
 	if (cs->segment_len != len)
 	{
-		DBG1("  invalid '%s' segment size: %u bytes, expected %u bytes",
-			 name, len, cs->segment_len);
+		DBG1(DBG_LIB, "  invalid '%s' segment size: %u bytes,"
+			 " expected %u bytes", name, len, cs->segment_len);
 		return FALSE;
 	}
 	if (cs->segment != sum)
 	{
-		DBG1("  invalid '%s' segment checksum: %08x, expected %08x",
+		DBG1(DBG_LIB, "  invalid '%s' segment checksum: %08x, expected %08x",
 			 name, sum, cs->segment);
 		return FALSE;
 	}
-	DBG2("  valid '%s' segment checksum: %08x", name, sum);
+	DBG2(DBG_LIB, "  valid '%s' segment checksum: %08x", name, sum);
 	return TRUE;
 }
 
@@ -262,7 +263,7 @@ static bool check(private_integrity_checker_t *this, char *name, void *sym)
 
 	if (dladdr(sym, &dli) == 0)
 	{
-		DBG1("unable to locate symbol: %s", dlerror());
+		DBG1(DBG_LIB, "unable to locate symbol: %s", dlerror());
 		return FALSE;
 	}
 	if (!check_file(this, name, (char*)dli.dli_fname))
@@ -319,12 +320,14 @@ integrity_checker_t *integrity_checker_create(char *checksum_library)
 			}
 			else
 			{
-				DBG1("checksum library '%s' invalid", checksum_library);
+				DBG1(DBG_LIB, "checksum library '%s' invalid",
+					 checksum_library);
 			}
 		}
 		else
 		{
-			DBG1("loading checksum library '%s' failed", checksum_library);
+			DBG1(DBG_LIB, "loading checksum library '%s' failed",
+				 checksum_library);
 		}
 	}
 	return &this->public;

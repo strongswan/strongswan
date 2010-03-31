@@ -493,12 +493,12 @@ static int cowfs_link(const char *from, const char *to)
 
 	if (!clone_path(rd, wr, to))
 	{
-		DBG1("cloning path '%s' failed", to);
+		DBG1(DBG_LIB, "cloning path '%s' failed", to);
 		return -errno;
 	}
 	if (linkat(rd, from, wr, to, 0) < 0)
 	{
-		DBG1("linking '%s' to '%s' failed", from, to);
+		DBG1(DBG_LIB, "linking '%s' to '%s' failed", from, to);
 		return -errno;
 	}
 	return 0;
@@ -777,7 +777,7 @@ static bool set_overlay(private_cowfs_t *this, char *path)
 		this->over_fd = open(path, O_RDONLY | O_DIRECTORY);
 		if (this->over_fd < 0)
 		{
-			DBG1("failed to open overlay directory '%s': %m", path);
+			DBG1(DBG_LIB, "failed to open overlay directory '%s': %m", path);
 			return FALSE;
 		}
 		this->over = strdup(path);
@@ -821,14 +821,14 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
 	if (this->master_fd < 0)
 	{
-		DBG1("failed to open master filesystem '%s'", master);
+		DBG1(DBG_LIB, "failed to open master filesystem '%s'", master);
 		free(this);
 		return NULL;
 	}
 	this->host_fd = open(host, O_RDONLY | O_DIRECTORY);
 	if (this->host_fd < 0)
 	{
-		DBG1("failed to open host filesystem '%s'", host);
+		DBG1(DBG_LIB, "failed to open host filesystem '%s'", host);
 		close(this->master_fd);
 		free(this);
 		return NULL;
@@ -838,7 +838,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->chan = fuse_mount(mount, &args);
 	if (this->chan == NULL)
 	{
-		DBG1("mounting cowfs FUSE on '%s' failed", mount);
+		DBG1(DBG_LIB, "mounting cowfs FUSE on '%s' failed", mount);
 		close(this->master_fd);
 		close(this->host_fd);
 		free(this);
@@ -849,7 +849,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 						  sizeof(cowfs_operations), this);
 	if (this->fuse == NULL)
 	{
-		DBG1("creating cowfs FUSE handle failed");
+		DBG1(DBG_LIB, "creating cowfs FUSE handle failed");
 		close(this->master_fd);
 		close(this->host_fd);
 		fuse_unmount(mount, this->chan);
@@ -865,7 +865,7 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->thread = thread_create((thread_main_t)fuse_loop, this->fuse);
 	if (!this->thread)
 	{
-		DBG1("creating thread to handle FUSE failed");
+		DBG1(DBG_LIB, "creating thread to handle FUSE failed");
 		fuse_unmount(mount, this->chan);
 		free(this->mount);
 		free(this->master);

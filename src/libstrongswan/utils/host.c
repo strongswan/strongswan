@@ -482,7 +482,7 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	error = getaddrinfo(string, NULL, &hints, &result);
 	if (error != 0)
 	{
-		DBG1("resolving '%s' failed: %s", string, gai_strerror(error));
+		DBG1(DBG_LIB, "resolving '%s' failed: %s", string, gai_strerror(error));
 		return NULL;
 	}
 	/* result is a linked list, but we use only the first address */

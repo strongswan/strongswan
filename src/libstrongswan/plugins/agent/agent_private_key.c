@@ -137,7 +137,8 @@ static int open_connection(char *path)
 	s = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (s == -1)
 	{
-		DBG1("opening ssh-agent socket %s failed: %s:", path, strerror(errno));
+		DBG1(DBG_LIB, "opening ssh-agent socket %s failed: %s:", path,
+			 strerror(errno));
 		return -1;
 	}
 
@@ -147,7 +148,8 @@ static int open_connection(char *path)
 
 	if (connect(s, (struct sockaddr*)&addr, SUN_LEN(&addr)) != 0)
 	{
-		DBG1("connecting to ssh-agent socket failed: %s", strerror(errno));
+		DBG1(DBG_LIB, "connecting to ssh-agent socket failed: %s",
+			 strerror(errno));
 		close(s);
 		return -1;
 	}
@@ -168,7 +170,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, &buf, 1) != 1)
 	{
-		DBG1("writing to ssh-agent failed");
+		DBG1(DBG_LIB, "writing to ssh-agent failed");
 		return FALSE;
 	}
 
@@ -179,7 +181,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		read_uint32(&blob) != blob.len ||
 		read_byte(&blob) != SSH_AGENT_ID_RESPONSE)
 	{
-		DBG1("received invalid ssh-agent identity response");
+		DBG1(DBG_LIB, "received invalid ssh-agent identity response");
 		return FALSE;
 	}
 	count = read_uint32(&blob);
@@ -231,7 +233,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 
 	if (scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
 	{
-		DBG1("signature scheme %N not supported by ssh-agent",
+		DBG1(DBG_LIB, "signature scheme %N not supported by ssh-agent",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
@@ -241,7 +243,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, &buf, 1) != 1)
 	{
-		DBG1("writing to ssh-agent failed");
+		DBG1(DBG_LIB, "writing to ssh-agent failed");
 		return FALSE;
 	}
 
@@ -249,7 +251,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, this->key.ptr, this->key.len) != this->key.len)
 	{
-		DBG1("writing to ssh-agent failed");
+		DBG1(DBG_LIB, "writing to ssh-agent failed");
 		return FALSE;
 	}
 
@@ -257,14 +259,14 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	if (write(this->socket, &len, sizeof(len)) != sizeof(len) ||
 		write(this->socket, data.ptr, data.len) != data.len)
 	{
-		DBG1("writing to ssh-agent failed");
+		DBG1(DBG_LIB, "writing to ssh-agent failed");
 		return FALSE;
 	}
 
 	flags = htonl(0);
 	if (write(this->socket, &flags, sizeof(flags)) != sizeof(flags))
 	{
-		DBG1("writing to ssh-agent failed");
+		DBG1(DBG_LIB, "writing to ssh-agent failed");
 		return FALSE;
 	}
 
@@ -274,7 +276,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 		read_uint32(&blob) != blob.len ||
 		read_byte(&blob) != SSH_AGENT_SIGN_RESPONSE)
 	{
-		DBG1("received invalid ssh-agent signature response");
+		DBG1(DBG_LIB, "received invalid ssh-agent signature response");
 		return FALSE;
 	}
 	/* parse length */
@@ -285,7 +287,7 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	blob = read_string(&blob);
 	if (!blob.len)
 	{
-		DBG1("received invalid ssh-agent signature response");
+		DBG1(DBG_LIB, "received invalid ssh-agent signature response");
 		return FALSE;
 	}
 	*signature =  chunk_clone(blob);
@@ -306,7 +308,7 @@ static key_type_t get_type(private_agent_private_key_t *this)
 static bool decrypt(private_agent_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
 {
-	DBG1("private key decryption not supported by ssh-agent");
+	DBG1(DBG_LIB, "private key decryption not supported by ssh-agent");
 	return FALSE;
 }
 

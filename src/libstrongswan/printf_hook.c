@@ -333,7 +333,8 @@ static void add_handler(private_printf_hook_t *this, char spec,
 
 	if (!IS_VALID_SPEC(spec))
 	{
-		DBG1("'%c' is not a valid printf hook specifier, not registered!", spec);
+		DBG1(DBG_LIB, "'%c' is not a valid printf hook specifier, "
+			 "not registered!", spec);
 		return;
 	}
 
@@ -345,7 +346,8 @@ static void add_handler(private_printf_hook_t *this, char spec,
 	{
 		if (++i >= ARGS_MAX)
 		{
-			DBG1("Too many arguments for printf hook with specifier '%c', not registered!", spec);
+			DBG1(DBG_LIB, "Too many arguments for printf hook with "
+				 "specifier '%c', not registered!", spec);
 			va_end(args);
 			free(handler);
 			return;
@@ -427,7 +429,7 @@ printf_hook_t *printf_hook_create()
 #ifdef USE_VSTR
 	if (!vstr_init())
 	{
-		DBG1("failed to initialize Vstr library!");
+		DBG1(DBG_LIB, "failed to initialize Vstr library!");
 		free(this);
 		return NULL;
 	}

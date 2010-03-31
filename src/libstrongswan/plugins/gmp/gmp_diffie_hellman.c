@@ -119,7 +119,8 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 		}
 		else
 		{
-			DBG1("public DH value verification failed: y ^ q mod p != 1");
+			DBG1(DBG_LIB, "public DH value verification failed:"
+				 " y ^ q mod p != 1");
 		}
 		mpz_clear(one);
 #else
@@ -129,7 +130,8 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 	}
 	else
 	{
-		DBG1("public DH value verification failed: y < 2 || y > p - 1 ");
+		DBG1(DBG_LIB, "public DH value verification failed:"
+			 " y < 2 || y > p - 1 ");
 	}
 	mpz_clear(p_min_1);
 }
@@ -228,7 +230,8 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
 	{
-		DBG1("no RNG found for quality %N", rng_quality_names, RNG_STRONG);
+		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+			 RNG_STRONG);
 		destroy(this);
 		return NULL;
 	}
@@ -243,7 +246,8 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	}
 	mpz_import(this->xa, random.len, 1, 1, 1, 0, random.ptr);
 	chunk_free(&random);
-	DBG2("size of DH secret exponent: %u bits", mpz_sizeinbase(this->xa, 2));
+	DBG2(DBG_LIB, "size of DH secret exponent: %u bits",
+		 mpz_sizeinbase(this->xa, 2));
 
 	mpz_powm(this->ya, this->g, this->xa, this->p);
 

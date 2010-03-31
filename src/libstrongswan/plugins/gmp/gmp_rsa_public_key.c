@@ -183,8 +183,8 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 	{   /* IKEv1 signatures without digestInfo */
 		if (em.len != data.len)
 		{
-			DBG1("hash size in signature is %u bytes instead of %u bytes",
-				 em.len, data.len);
+			DBG1(DBG_LIB, "hash size in signature is %u bytes instead of"
+				 " %u bytes", em.len, data.len);
 			goto end;
 		}
 		success = memeq(em.ptr, data.ptr, data.len);
@@ -196,7 +196,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		int objectID;
 		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
 
-		DBG2("signature verification:");
+		DBG2(DBG_LIB, "signature verification:");
 		parser = asn1_parser_create(digestInfoObjects, em);
 
 		while (parser->iterate(parser, &objectID, &object))
@@ -207,7 +207,8 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 				{
 					if (em.len > object.len)
 					{
-						DBG1("digestInfo field in signature is followed by %u surplus bytes",
+						DBG1(DBG_LIB, "digestInfo field in signature is"
+							 " followed by %u surplus bytes",
 							 em.len - object.len);
 						goto end_parser;
 					}
@@ -221,8 +222,8 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					hash_algorithm = hasher_algorithm_from_oid(hash_oid);
 					if (hash_algorithm == HASH_UNKNOWN || hash_algorithm != algorithm)
 					{
-						DBG1("expected hash algorithm %N, but found %N (OID: %#B)",
-							 hash_algorithm_names, algorithm,
+						DBG1(DBG_LIB, "expected hash algorithm %N, but found"
+							 " %N (OID: %#B)", hash_algorithm_names, algorithm,
 							 hash_algorithm_names, hash_algorithm,  &object);
 						goto end_parser;
 					}
@@ -236,15 +237,16 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
 					if (hasher == NULL)
 					{
-						DBG1("hash algorithm %N not supported",
+						DBG1(DBG_LIB, "hash algorithm %N not supported",
 							 hash_algorithm_names, hash_algorithm);
 						goto end_parser;
 					}
 
 					if (object.len != hasher->get_hash_size(hasher))
 					{
-						DBG1("hash size in signature is %u bytes instead of %u "
-							 "bytes", object.len, hasher->get_hash_size(hasher));
+						DBG1(DBG_LIB, "hash size in signature is %u bytes"
+							 " instead of %u bytes", object.len,
+							 hasher->get_hash_size(hasher));
 						hasher->destroy(hasher);
 						goto end_parser;
 					}
@@ -302,7 +304,7 @@ static bool verify(private_gmp_rsa_public_key_t *this, signature_scheme_t scheme
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
 			return verify_emsa_pkcs1_signature(this, HASH_SHA512, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -324,7 +326,7 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng == NULL)
 	{
-		DBG1("no random generator available");
+		DBG1(DBG_LIB, "no random generator available");
 		return FALSE;
 	}
 
@@ -332,13 +334,14 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 	padding = this->k - plain.len - 3;
 	if (padding < MIN_PS_PADDING)
 	{
-		DBG1("pseudo-random padding must be at least %d octets", MIN_PS_PADDING);
+		DBG1(DBG_LIB, "pseudo-random padding must be at least %d octets",
+			 MIN_PS_PADDING);
 		return FALSE;
 	}
 
 	/* padding according to PKCS#1 7.2.1 (RSAES-PKCS1-v1.5-ENCRYPT) */
-	DBG2("padding %u bytes of data to the rsa modulus size of %u bytes",
-		 plain.len, this->k);
+	DBG2(DBG_LIB, "padding %u bytes of data to the rsa modulus size of"
+		 " %u bytes", plain.len, this->k);
 	em.len = this->k;
 	em.ptr = malloc(em.len);
 	pos = em.ptr;
@@ -364,11 +367,11 @@ static bool encrypt_(private_gmp_rsa_public_key_t *this, chunk_t plain,
 
 	/* now add the data */
 	memcpy(pos, plain.ptr, plain.len);
-	DBG3("padded data before rsa encryption: %B", &em);
+	DBG3(DBG_LIB, "padded data before rsa encryption: %B", &em);
 
 	/* rsa encryption using PKCS#1 RSAEP */
 	*crypto = rsaep(this, em);
-	DBG3("rsa encrypted data: %B", crypto);
+	DBG3(DBG_LIB, "rsa encrypted data: %B", crypto);
 	chunk_clear(&em);
 	return TRUE;
 }

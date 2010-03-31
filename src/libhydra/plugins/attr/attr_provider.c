@@ -174,7 +174,7 @@ static void load_entries(private_attr_provider_t *this)
 			host = host_create_from_string(token, 0);
 			if (!host)
 			{
-				DBG1("invalid host in key %s: %s", key, token);
+				DBG1(DBG_LIB, "invalid host in key %s: %s", key, token);
 				continue;
 			}
 			if (!type)
@@ -195,7 +195,7 @@ static void load_entries(private_attr_provider_t *this)
 				}
 				if (!type)
 				{
-					DBG1("mapping attribute type %s failed", key);
+					DBG1(DBG_LIB, "mapping attribute type %s failed", key);
 					break;
 				}
 			}

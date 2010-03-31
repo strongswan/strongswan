@@ -103,7 +103,7 @@ static void set_other_public_value(private_openssl_diffie_hellman_t *this,
 	len = DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh);
 	if (len < 0)
 	{
-		DBG1("DH shared secret computation failed");
+		DBG1(DBG_LIB, "DH shared secret computation failed");
 		return;
 	}
 	this->shared_secret.len = len;
@@ -187,7 +187,8 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		destroy(this);
 		return NULL;
 	}
-	DBG2("size of DH secret exponent: %d bits", BN_num_bits(this->dh->priv_key));
+	DBG2(DBG_LIB, "size of DH secret exponent: %d bits",
+		 BN_num_bits(this->dh->priv_key));
 
 	return &this->public;
 }

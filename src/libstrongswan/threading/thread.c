@@ -155,7 +155,7 @@ static void cancel(private_thread_t *this)
 	if (pthread_equal(this->thread_id, pthread_self()))
 	{
 		this->mutex->unlock(this->mutex);
-		DBG1("!!! CANNOT CANCEL CURRENT THREAD !!!");
+		DBG1(DBG_LIB, "!!! CANNOT CANCEL CURRENT THREAD !!!");
 		return;
 	}
 #ifdef HAVE_PTHREAD_CANCEL
@@ -180,7 +180,7 @@ static void _kill(private_thread_t *this, int sig)
 		 * returned, so depending on the signal, the lock might not get
 		 * unlocked. */
 		this->mutex->unlock(this->mutex);
-		DBG1("!!! CANNOT SEND SIGNAL TO CURRENT THREAD !!!");
+		DBG1(DBG_LIB, "!!! CANNOT SEND SIGNAL TO CURRENT THREAD !!!");
 		return;
 	}
 	pthread_kill(this->thread_id, sig);
@@ -209,13 +209,13 @@ static void *join(private_thread_t *this)
 	if (pthread_equal(this->thread_id, pthread_self()))
 	{
 		this->mutex->unlock(this->mutex);
-		DBG1("!!! CANNOT JOIN CURRENT THREAD !!!");
+		DBG1(DBG_LIB, "!!! CANNOT JOIN CURRENT THREAD !!!");
 		return NULL;
 	}
 	if (this->detached_or_joined)
 	{
 		this->mutex->unlock(this->mutex);
-		DBG1("!!! CANNOT JOIN DETACHED THREAD !!!");
+		DBG1(DBG_LIB, "!!! CANNOT JOIN DETACHED THREAD !!!");
 		return NULL;
 	}
 	thread_id = this->thread_id;
@@ -299,7 +299,7 @@ thread_t *thread_create(thread_main_t main, void *arg)
 	this->arg = arg;
 	if (pthread_create(&this->thread_id, NULL, (void*)thread_main, this) != 0)
 	{
-		DBG1("failed to create thread!");
+		DBG1(DBG_LIB, "failed to create thread!");
 		thread_destroy(this);
 		return NULL;
 	}
@@ -354,7 +354,7 @@ void thread_cleanup_pop(bool execute)
 											(void**)&handler) != SUCCESS)
 	{
 		this->mutex->unlock(this->mutex);
-		DBG1("!!! THREAD CLEANUP ERROR !!!");
+		DBG1(DBG_LIB, "!!! THREAD CLEANUP ERROR !!!");
 		return;
 	}
 	this->mutex->unlock(this->mutex);

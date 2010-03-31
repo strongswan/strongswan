@@ -134,7 +134,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 	this->lock->unlock(this->lock);
 	if (!capable)
 	{
-		DBG1("unable to fetch from %s, no capable fetcher found", url);
+		DBG1(DBG_LIB, "unable to fetch from %s, no capable fetcher found", url);
 	}
 	return status;
 }

@@ -126,14 +126,14 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 	{
 		/* a. XVAL = (XKEY + XSEED j) mod 2^b */
 		add_mod(this->b, xkey, xseed, xval);
-		DBG3("XVAL %b", xval, this->b);
+		DBG3(DBG_LIB, "XVAL %b", xval, this->b);
 		/* b. wi = G(t, XVAL ) */
 		this->g(this, chunk_create(xval, this->b), &w[i * this->b]);
-		DBG3("w[%d] %b", i, &w[i * this->b], this->b);
+		DBG3(DBG_LIB, "w[%d] %b", i, &w[i * this->b], this->b);
 		/* c. XKEY = (1 + XKEY + wi) mod 2b */
 		add_mod(this->b, xkey, &w[i * this->b], sum);
 		add_mod(this->b, sum, one, xkey);
-		DBG3("XKEY %b", xkey, this->b);
+		DBG3(DBG_LIB, "XKEY %b", xkey, this->b);
 	}
 
 	/* 3.3 done already, mod q not used */

@@ -105,7 +105,8 @@ static chunk_t read_serial(void)
 	}
 	else
 	{
-		DBG1("  file '%s' does not exist yet - serial number set to 01", OPENAC_SERIAL);
+		DBG1(DBG_LIB, "  file '%s' does not exist yet - serial number "
+			 "set to 01", OPENAC_SERIAL);
 	}
 	if (!serial.len)
 	{
@@ -129,7 +130,7 @@ static void write_serial(chunk_t serial)
 	{
 		chunk_t hex_serial;
 
-		DBG1("  serial number is %#B", &serial);
+		DBG1(DBG_LIB, "  serial number is %#B", &serial);
 		hex_serial = chunk_to_hex(serial, NULL, FALSE);
 		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
 		fclose(fd);
@@ -137,7 +138,7 @@ static void write_serial(chunk_t serial)
 	}
 	else
 	{
-		DBG1("  could not open file '%s' for writing", OPENAC_SERIAL);
+		DBG1(DBG_LIB, "  could not open file '%s' for writing", OPENAC_SERIAL);
 	}
 }
 
@@ -431,7 +432,7 @@ int main(int argc, char **argv)
 		goto end;
 	}
 
-	DBG1("starting openac (strongSwan Version %s)", VERSION);
+	DBG1(DBG_LIB, "starting openac (strongSwan Version %s)", VERSION);
 
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
@@ -444,7 +445,7 @@ int main(int argc, char **argv)
 		{
 			goto end;
 		}
-		DBG1("  loaded private key file '%s'", keyfile);
+		DBG1(DBG_LIB, "  loaded private key file '%s'", keyfile);
 	}
 
 	/* load the signer's X.509 certificate */

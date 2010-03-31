@@ -110,11 +110,13 @@ static sqlite3_stmt* run(private_sqlite_database_t *this, char *sql,
 	}
 	else
 	{
-		DBG1("preparing sqlite statement failed: %s", sqlite3_errmsg(this->db));
+		DBG1(DBG_LIB, "preparing sqlite statement failed: %s",
+			 sqlite3_errmsg(this->db));
 	}
 	if (res != SQLITE_OK)
 	{
-		DBG1("binding sqlite statement failed: %s", sqlite3_errmsg(this->db));
+		DBG1(DBG_LIB, "binding sqlite statement failed: %s",
+			 sqlite3_errmsg(this->db));
 		sqlite3_finalize(stmt);
 		return NULL;
 	}
@@ -160,7 +162,7 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 		case SQLITE_ROW:
 			break;
 		default:
-			DBG1("stepping sqlite statement failed: %s",
+			DBG1(DBG_LIB, "stepping sqlite statement failed: %s",
 				 sqlite3_errmsg(this->database->db));
 			/* fall */
 		case SQLITE_DONE:
@@ -203,7 +205,7 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 				break;
 			}
 			default:
-				DBG1("invalid result type supplied");
+				DBG1(DBG_LIB, "invalid result type supplied");
 				return FALSE;
 		}
 	}
@@ -272,7 +274,8 @@ static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
 		}
 		else
 		{
-			DBG1("sqlite execute failed: %s", sqlite3_errmsg(this->db));
+			DBG1(DBG_LIB, "sqlite execute failed: %s",
+				 sqlite3_errmsg(this->db));
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -337,7 +340,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
-		DBG1("opening SQLite database '%s' failed: %s",
+		DBG1(DBG_LIB, "opening SQLite database '%s' failed: %s",
 			 file, sqlite3_errmsg(this->db));
 		destroy(this);
 		return NULL;

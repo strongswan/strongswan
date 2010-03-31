@@ -70,16 +70,18 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	constructor = dlsym(RTLD_DEFAULT, create);
 	if (constructor == NULL)
 	{
-		DBG1("plugin '%s': failed to load - %s not found", name, create);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
+			 create);
 		return NULL;
 	}
 	plugin = constructor();
 	if (plugin == NULL)
 	{
-		DBG1("plugin '%s': failed to load - %s returned NULL", name, create);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
+			 create);
 		return NULL;
 	}
-	DBG2("plugin '%s': loaded successfully", name);
+	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
 
 	return plugin;
 }
@@ -108,20 +110,23 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
 		{
-			DBG1("plugin '%s': failed file integrity test of '%s'", name, file);
+			DBG1(DBG_LIB, "plugin '%s': failed file integrity test of '%s'",
+				 name, file);
 			return NULL;
 		}
 	}
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
 	{
-		DBG1("plugin '%s': failed to load '%s' - %s", name, file, dlerror());
+		DBG1(DBG_LIB, "plugin '%s': failed to load '%s' - %s", name, file,
+			 dlerror());
 		return NULL;
 	}
 	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG1("plugin '%s': failed to load - %s not found", name, create);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
+			 create);
 		dlclose(handle);
 		return NULL;
 	}
@@ -129,20 +134,22 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	{
 		if (!lib->integrity->check_segment(lib->integrity, name, constructor))
 		{
-			DBG1("plugin '%s': failed segment integrity test", name);
+			DBG1(DBG_LIB, "plugin '%s': failed segment integrity test", name);
 			dlclose(handle);
 			return NULL;
 		}
-		DBG1("plugin '%s': passed file and segment integrity tests", name);
+		DBG1(DBG_LIB, "plugin '%s': passed file and segment integrity tests",
+			 name);
 	}
 	plugin = constructor();
 	if (plugin == NULL)
 	{
-		DBG1("plugin '%s': failed to load - %s returned NULL", name, create);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
+			 create);
 		dlclose(handle);
 		return NULL;
 	}
-	DBG2("plugin '%s': loaded successfully", name);
+	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
 
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
@@ -192,7 +199,7 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 			if (critical)
 			{
 				critical_failed = TRUE;
-				DBG1("loading critical plugin '%s' failed", token);
+				DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
 			}
 			free(token);
 		}

@@ -161,7 +161,7 @@ static int issue()
 		}
 	}
 
-	DBG2("Reading ca certificate:");
+	DBG2(DBG_LIB, "Reading ca certificate:");
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							BUILD_FROM_FILE, cacert, BUILD_END);
 	if (!ca)
@@ -182,7 +182,7 @@ static int issue()
 		goto end;
 	}
 
-	DBG2("Reading ca private key:");
+	DBG2(DBG_LIB, "Reading ca private key:");
 	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 								 public->get_type(public),
 								 BUILD_FROM_FILE, cakey, BUILD_END);
@@ -226,7 +226,7 @@ static int issue()
 		identification_t *subjectAltName;
 		pkcs10_t *req;
 
-		DBG2("Reading certificate request");
+		DBG2(DBG_LIB, "Reading certificate request");
 		if (file)
 		{
 			cert_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
@@ -266,7 +266,7 @@ static int issue()
 	}
 	else
 	{
-		DBG2("Reading public key:");
+		DBG2(DBG_LIB, "Reading public key:");
 		if (file)
 		{
 			public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,

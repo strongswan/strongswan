@@ -141,7 +141,8 @@ static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!rng)
 	{
-		DBG1("no RNG of quality %N found", rng_quality_names, RNG_TRUE);
+		DBG1(DBG_LIB, "no RNG of quality %N found", rng_quality_names,
+			 RNG_TRUE);
 		return FAILED;
 	}
 
@@ -248,7 +249,8 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	if (data.len > this->k - 3)
 	{
 		free(digestInfo.ptr);
-		DBG1("unable to sign %d bytes using a %dbit key", data.len, this->k * 8);
+		DBG1(DBG_LIB, "unable to sign %d bytes using a %dbit key", data.len,
+			 this->k * 8);
 		return FALSE;
 	}
 
@@ -309,7 +311,7 @@ static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -332,7 +334,7 @@ static bool decrypt(private_gmp_rsa_private_key_t *this, chunk_t crypto,
 	/* check for hex pattern 00 02 in decrypted message */
 	if ((*stripped.ptr++ != 0x00) || (*(stripped.ptr++) != 0x02))
 	{
-		DBG1("incorrect padding - probably wrong rsa key");
+		DBG1(DBG_LIB, "incorrect padding - probably wrong rsa key");
 		goto end;
 	}
 	stripped.len -= 2;
@@ -342,7 +344,7 @@ static bool decrypt(private_gmp_rsa_private_key_t *this, chunk_t crypto,
 
 	if (stripped.len == 0)
 	{
-		DBG1("no plaintext data");
+		DBG1(DBG_LIB, "no plaintext data");
 		goto end;
 	}
 
@@ -514,14 +516,14 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	 */
 	if (this->k < 512 / BITS_PER_BYTE)
 	{
-		DBG1("key shorter than 512 bits");
+		DBG1(DBG_LIB, "key shorter than 512 bits");
 		return FAILED;
 	}
 
 	/* we picked a max modulus size to simplify buffer allocation */
 	if (this->k > 8192 / BITS_PER_BYTE)
 	{
-		DBG1("key larger than 8192 bits");
+		DBG1(DBG_LIB, "key larger than 8192 bits");
 		return FAILED;
 	}
 
@@ -595,7 +597,7 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	mpz_clear_sensitive(q1);
 	if (status != SUCCESS)
 	{
-		DBG1("key integrity tests failed");
+		DBG1(DBG_LIB, "key integrity tests failed");
 	}
 	return status;
 }
@@ -684,7 +686,7 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 
 	mpz_mul(n, p, q);						/* n = p*q */
 	mpz_init_set_ui(e, PUBLIC_EXPONENT);	/* assign public exponent */
-	mpz_init_set(m, p); 					/* m = p */
+	mpz_init_set(m, p);					/* m = p */
 	mpz_sub_ui(m, m, 1);					/* m = m -1 */
 	mpz_init_set(q1, q);					/* q1 = q */
 	mpz_sub_ui(q1, q1, 1);					/* q1 = q1 -1 */

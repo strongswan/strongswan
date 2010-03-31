@@ -130,14 +130,15 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 	chunk_free(&em);
 	if (err)
 	{
-		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_sign(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1("creating pkcs1 signature failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
 	*signature = gcrypt_rsa_find_token(out, "s", this->key);
@@ -176,14 +177,14 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 	chunk_free(&hash);
 	if (err)
 	{
-		DBG1("building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_sign(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1("creating pkcs1 signature failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
 	*signature = gcrypt_rsa_find_token(out, "s", this->key);
@@ -222,7 +223,7 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return sign_pkcs1(this, HASH_MD5, "md5", data, sig);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -243,14 +244,15 @@ static bool decrypt(private_gcrypt_rsa_private_key_t *this,
 						  encrypted.len, encrypted.ptr);
 	if (err)
 	{
-		DBG1("building decryption S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building decryption S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_decrypt(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1("decrypting pkcs1 data failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "decrypting pkcs1 data failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
 	padded.ptr = (u_char*)gcry_sexp_nth_data(out, 1, &padded.len);
@@ -269,7 +271,7 @@ static bool decrypt(private_gcrypt_rsa_private_key_t *this,
 	gcry_sexp_release(out);
 	if (!pos)
 	{
-		DBG1("decrypted data has invalid pkcs1 padding");
+		DBG1(DBG_LIB, "decrypted data has invalid pkcs1 padding");
 		return FALSE;
 	}
 	return TRUE;
@@ -329,7 +331,7 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 		chunk_clear(&cp);
 		chunk_clear(&cq);
 		chunk_clear(&cd);
-		DBG1("scanning mpi for export failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "scanning mpi for export failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
 
@@ -352,7 +354,7 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 
 	if (err)
 	{
-		DBG1("printing mpi for export failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "printing mpi for export failed: %s", gpg_strerror(err));
 		chunk_clear(&cp);
 		chunk_clear(&cq);
 		chunk_clear(&cd);
@@ -488,7 +490,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
 	err = gcry_sexp_build(&param, NULL, "(genkey(rsa(nbits %d)))", key_size);
 	if (err)
 	{
-		DBG1("building S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building S-expression failed: %s", gpg_strerror(err));
 		return NULL;
 	}
 	this = gcrypt_rsa_private_key_create_empty();
@@ -497,7 +499,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
 	if (err)
 	{
 		free(this);
-		DBG1("generating RSA key failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "generating RSA key failed: %s", gpg_strerror(err));
 		return NULL;
 	}
 	return &this->public;
@@ -557,14 +559,14 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 					p.len, p.ptr, q.len, q.ptr, u.len, u.ptr);
 	if (err)
 	{
-		DBG1("loading private key failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "loading private key failed: %s", gpg_strerror(err));
 		free(this);
 		return NULL;
 	}
 	err = gcry_pk_testkey(this->key);
 	if (err)
 	{
-		DBG1("private key sanity check failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "private key sanity check failed: %s", gpg_strerror(err));
 		destroy(this);
 		return NULL;
 	}

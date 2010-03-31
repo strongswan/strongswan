@@ -137,7 +137,7 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 	err = gcry_md_open(&this->hd, gcrypt_alg, 0);
 	if (err)
 	{
-		DBG1("grcy_md_open(%N) failed: %s",
+		DBG1(DBG_LIB, "grcy_md_open(%N) failed: %s",
 			 hash_algorithm_names, algo, gpg_strerror(err));
 		free(this);
 		return NULL;

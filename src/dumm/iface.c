@@ -196,7 +196,7 @@ static bool destroy_tap(private_iface_t *this)
 
 	if (!iface_control(this->hostif, FALSE))
 	{
-		DBG1("bringing iface down failed: %m");
+		DBG1(DBG_LIB, "bringing iface down failed: %m");
 	}
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
@@ -205,13 +205,13 @@ static bool destroy_tap(private_iface_t *this)
 	tap = open(TAP_DEVICE, O_RDWR);
 	if (tap < 0)
 	{
-		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		DBG1(DBG_LIB, "unable to open tap device %s: %m", TAP_DEVICE);
 		return FALSE;
 	}
 	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
 		ioctl(tap, TUNSETPERSIST, 0) < 0)
 	{
-		DBG1("removing %s failed: %m", this->hostif);
+		DBG1(DBG_LIB, "removing %s failed: %m", this->hostif);
 		close(tap);
 		return FALSE;
 	}
@@ -235,14 +235,14 @@ static char* create_tap(private_iface_t *this)
 	tap = open(TAP_DEVICE, O_RDWR);
 	if (tap < 0)
 	{
-		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		DBG1(DBG_LIB, "unable to open tap device %s: %m", TAP_DEVICE);
 		return NULL;
 	}
 	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
 		ioctl(tap, TUNSETPERSIST, 1) < 0 ||
 		ioctl(tap, TUNSETOWNER, 0))
 	{
-		DBG1("creating new tap device failed: %m");
+		DBG1(DBG_LIB, "creating new tap device failed: %m");
 		close(tap);
 		return NULL;
 	}
@@ -299,7 +299,7 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	}
 	if (!this->mconsole->add_iface(this->mconsole, this->guestif, this->hostif))
 	{
-		DBG1("creating interface '%s' in guest failed", this->guestif);
+		DBG1(DBG_LIB, "creating interface '%s' in guest failed", this->guestif);
 		destroy_tap(this);
 		free(this->guestif);
 		free(this->hostif);
@@ -308,7 +308,7 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	}
 	if (!iface_control(this->hostif, TRUE))
 	{
-		DBG1("bringing iface '%s' up failed: %m", this->hostif);
+		DBG1(DBG_LIB, "bringing iface '%s' up failed: %m", this->hostif);
 	}
 	return &this->public;
 }

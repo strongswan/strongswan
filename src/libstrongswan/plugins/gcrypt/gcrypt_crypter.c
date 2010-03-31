@@ -234,7 +234,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 	err = gcry_cipher_open(&this->h, gcrypt_alg, mode, 0);
 	if (err)
 	{
-		DBG1("grcy_cipher_open(%N) failed: %s",
+		DBG1(DBG_LIB, "grcy_cipher_open(%N) failed: %s",
 			 encryption_algorithm_names, algo, gpg_strerror(err));
 		free(this);
 		return NULL;

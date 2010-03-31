@@ -216,14 +216,14 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_VERSION:
 				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2("  v%d", this->version);
+				DBG2(DBG_LIB, "  v%d", this->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
 				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%Y'", this->issuer);
+				DBG2(DBG_LIB, "  '%Y'", this->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
 				this->thisUpdate = asn1_parse_time(object, level);
@@ -248,7 +248,7 @@ static bool parse(private_x509_crl_t *this)
 			case CRL_OBJ_CRL_ENTRY_CRITICAL:
 			case CRL_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG2("  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_LIB, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 			case CRL_OBJ_EXTN_VALUE:
@@ -262,7 +262,8 @@ static bool parse(private_x509_crl_t *this)
 						{
 							revoked->reason = *object.ptr;
 						}
-						DBG2("  '%N'", crl_reason_names, revoked->reason);
+						DBG2(DBG_LIB, "  '%N'", crl_reason_names,
+							 revoked->reason);
 					}
 					else if (extn_oid == OID_AUTHORITY_KEY_ID)
 					{
@@ -286,7 +287,7 @@ static bool parse(private_x509_crl_t *this)
 				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
 				if (this->algorithm != sig_alg)
 				{
-					DBG1("  signature algorithms do not agree");
+					DBG1(DBG_LIB, "  signature algorithms do not agree");
 					goto end;
 				}
 				break;
@@ -483,7 +484,7 @@ static bool is_newer(private_x509_crl_t *this, crl_t *that)
 	if (this->crlNumber.ptr != NULL && that_crlNumber.ptr != NULL)
 	{
 		new = chunk_compare(this->crlNumber, that_crlNumber) > 0;
-		DBG1("  crl #%#B is %s - existing crl #%#B %s",
+		DBG1(DBG_LIB, "  crl #%#B is %s - existing crl #%#B %s",
 				&this->crlNumber, new ? "newer":"not newer",
 				&that_crlNumber,  new ? "replaced":"retained");
 	}
@@ -497,7 +498,7 @@ static bool is_newer(private_x509_crl_t *this, crl_t *that)
 		this_cert->get_validity(this_cert, &now, &this_update, NULL);
 		that_cert->get_validity(that_cert, &now, &that_update, NULL);
 		new = this_update > that_update;
-		DBG1("  crl from %T is %s - existing crl from %T %s",
+		DBG1(DBG_LIB, "  crl from %T is %s - existing crl from %T %s",
 				&this_update, FALSE, new ? "newer":"not newer",
 				&that_update, FALSE, new ? "replaced":"retained");
 	}

@@ -69,7 +69,7 @@ plugin_t *curl_plugin_create()
 	}
 	else
 	{
-		DBG1("global libcurl initializing failed: %s, curl disabled",
+		DBG1(DBG_LIB, "global libcurl initializing failed: %s, curl disabled",
 			 curl_easy_strerror(res));
 	}
 	return &this->public.plugin;

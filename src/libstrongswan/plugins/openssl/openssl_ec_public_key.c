@@ -82,14 +82,14 @@ static bool verify_curve_signature(private_openssl_ec_public_key_t *this,
 	req_group = EC_GROUP_new_by_curve_name(nid_curve);
 	if (!req_group)
 	{
-		DBG1("signature scheme %N not supported in EC (required curve "
+		DBG1(DBG_LIB, "signature scheme %N not supported in EC (required curve "
 			 "not supported)", signature_scheme_names, scheme);
 		return FALSE;
 	}
 	my_group = EC_KEY_get0_group(this->ec);
 	if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
 	{
-		DBG1("signature scheme %N not supported by private key",
+		DBG1(DBG_LIB, "signature scheme %N not supported by private key",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
@@ -162,7 +162,7 @@ static bool verify(private_openssl_ec_public_key_t *this,
 			return verify_curve_signature(this, scheme, NID_sha512,
 										  NID_secp521r1, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in EC",
+			DBG1(DBG_LIB, "signature scheme %N not supported in EC",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -174,7 +174,7 @@ static bool verify(private_openssl_ec_public_key_t *this,
 static bool encrypt_(private_openssl_ec_public_key_t *this,
 					 chunk_t crypto, chunk_t *plain)
 {
-	DBG1("EC public key encryption not implemented");
+	DBG1(DBG_LIB, "EC public key encryption not implemented");
 	return FALSE;
 }
 
@@ -217,7 +217,7 @@ bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
-		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
 		free(key.ptr);
 		return FALSE;
 	}

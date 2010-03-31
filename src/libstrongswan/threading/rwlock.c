@@ -98,7 +98,7 @@ static void read_lock(private_rwlock_t *this)
 	err = pthread_rwlock_rdlock(&this->rwlock);
 	if (err != 0)
 	{
-		DBG1("!!! RWLOCK READ LOCK ERROR: %s !!!", strerror(err));
+		DBG1(DBG_LIB, "!!! RWLOCK READ LOCK ERROR: %s !!!", strerror(err));
 	}
 	profiler_end(&this->profile);
 }
@@ -114,7 +114,7 @@ static void write_lock(private_rwlock_t *this)
 	err = pthread_rwlock_wrlock(&this->rwlock);
 	if (err != 0)
 	{
-		DBG1("!!! RWLOCK WRITE LOCK ERROR: %s !!!", strerror(err));
+		DBG1(DBG_LIB, "!!! RWLOCK WRITE LOCK ERROR: %s !!!", strerror(err));
 	}
 	profiler_end(&this->profile);
 }
@@ -137,7 +137,7 @@ static void rw_unlock(private_rwlock_t *this)
 	err = pthread_rwlock_unlock(&this->rwlock);
 	if (err != 0)
 	{
-		DBG1("!!! RWLOCK UNLOCK ERROR: %s !!!", strerror(err));
+		DBG1(DBG_LIB, "!!! RWLOCK UNLOCK ERROR: %s !!!", strerror(err));
 	}
 }
 

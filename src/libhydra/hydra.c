@@ -65,7 +65,7 @@ bool libhydra_init(const char *daemon)
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libhydra", libhydra_init))
 	{
-		DBG1("integrity check of libhydra failed");
+		DBG1(DBG_LIB, "integrity check of libhydra failed");
 		return FALSE;
 	}
 	return TRUE;

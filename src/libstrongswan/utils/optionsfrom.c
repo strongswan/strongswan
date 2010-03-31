@@ -80,14 +80,15 @@ bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
 	this->nuses++;
 	if (this->nuses >= MAX_USES)
 	{
-		DBG1("optionsfrom called %d times by \"%s\" - looping?", this->nuses + 1, (*argvp)[0]);
+		DBG1(DBG_LIB, "optionsfrom called %d times by \"%s\" - looping?",
+			 this->nuses + 1, (*argvp)[0]);
 		return FALSE;
 	}
 
 	fd = fopen(filename, "r");
 	if (fd == NULL)
 	{
-		DBG1("optionsfrom: unable to open file '%s': %s",
+		DBG1(DBG_LIB, "optionsfrom: unable to open file '%s': %s",
 			 filename, strerror(errno));
 		return FALSE;
 	}
@@ -132,7 +133,7 @@ bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
 				line.len--;
 				if (!extract_token(&token, delimiter, &line))
 				{
-					DBG1("optionsfrom: missing terminator at %s:%d",
+					DBG1(DBG_LIB, "optionsfrom: missing terminator at %s:%d",
 						 filename, linepos);
 					good = FALSE;
 					break;

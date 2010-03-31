@@ -108,7 +108,7 @@ static void lock(private_mutex_t *this)
 	err = pthread_mutex_lock(&this->mutex);
 	if (err)
 	{
-		DBG1("!!! MUTEX LOCK ERROR: %s !!!", strerror(err));
+		DBG1(DBG_LIB, "!!! MUTEX LOCK ERROR: %s !!!", strerror(err));
 	}
 	profiler_end(&this->profile);
 }
@@ -123,7 +123,7 @@ static void unlock(private_mutex_t *this)
 	err = pthread_mutex_unlock(&this->mutex);
 	if (err)
 	{
-		DBG1("!!! MUTEX UNLOCK ERROR: %s !!!", strerror(err));
+		DBG1(DBG_LIB, "!!! MUTEX UNLOCK ERROR: %s !!!", strerror(err));
 	}
 }
 

@@ -151,7 +151,7 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 		{
 			names = certificate_type_names;
 		}
-		DBG1("building %N - %N failed, tried %d builders",
+		DBG1(DBG_LIB, "building %N - %N failed, tried %d builders",
 			 credential_type_names, type, names, subtype, failures);
 	}
 	this->recursive->set(this->recursive, (void*)level);

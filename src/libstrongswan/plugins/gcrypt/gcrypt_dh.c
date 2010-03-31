@@ -89,7 +89,7 @@ static void set_other_public_value(private_gcrypt_dh_t *this, chunk_t value)
 	err = gcry_mpi_scan(&this->yb, GCRYMPI_FMT_USG, value.ptr, value.len, NULL);
 	if (err)
 	{
-		DBG1("importing mpi yb failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "importing mpi yb failed: %s", gpg_strerror(err));
 		return;
 	}
 
@@ -110,7 +110,8 @@ static void set_other_public_value(private_gcrypt_dh_t *this, chunk_t value)
 	}
 	else
 	{
-		DBG1("public DH value verification failed: y < 2 || y > p - 1 ");
+		DBG1(DBG_LIB, "public DH value verification failed:"
+			 " y < 2 || y > p - 1 ");
 	}
 	gcry_mpi_release(p_min_1);
 }
@@ -207,7 +208,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 						params->prime, params->prime_len, NULL);
 	if (err)
 	{
-		DBG1("importing mpi modulus failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "importing mpi modulus failed: %s", gpg_strerror(err));
 		free(this);
 		return NULL;
 	}
@@ -222,7 +223,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 		chunk_clear(&random);
 		if (err)
 		{
-			DBG1("importing mpi xa failed: %s", gpg_strerror(err));
+			DBG1(DBG_LIB, "importing mpi xa failed: %s", gpg_strerror(err));
 			gcry_mpi_release(this->p);
 			free(this);
 			return NULL;

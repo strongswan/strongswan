@@ -48,7 +48,8 @@ int main (int arc, char *argv[])
 	database = lib->settings->get_str(lib->settings, "manager.database", NULL);
 	if (!database)
 	{
-		DBG1("database URI undefined, set manager.database in strongswan.conf");
+		DBG1(DBG_LIB, "database URI undefined, set manager.database "
+			 "in strongswan.conf");
 		return 1;
 	}
 

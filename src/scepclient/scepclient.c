@@ -289,7 +289,7 @@ static void print_plugins()
 		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
 	}
 	enumerator->destroy(enumerator);
-	DBG1("  loaded plugins: %s", buf);
+	DBG1(DBG_LIB, "  loaded plugins: %s", buf);
 }
 
 /**

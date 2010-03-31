@@ -509,7 +509,8 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 
 				if (version != OCSP_BASIC_RESPONSE_VERSION)
 				{
-					DBG1("  ocsp ResponseData version %d not supported", version);
+					DBG1(DBG_LIB, "  ocsp ResponseData version %d not "
+						 "supported", version);
 					goto end;
 				}
 				break;
@@ -517,12 +518,12 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 			case BASIC_RESPONSE_ID_BY_NAME:
 				this->responderId = identification_create_from_encoding(
 													ID_DER_ASN1_DN, object);
-				DBG2("  '%Y'", this->responderId);
+				DBG2(DBG_LIB, "  '%Y'", this->responderId);
 				break;
 			case BASIC_RESPONSE_ID_BY_KEY:
 				this->responderId = identification_create_from_encoding(
 													ID_KEY_ID, object);
-				DBG2("  '%Y'", this->responderId);
+				DBG2(DBG_LIB, "  '%Y'", this->responderId);
 				break;
 			case BASIC_RESPONSE_PRODUCED_AT:
 				this->producedAt = asn1_to_time(&object, ASN1_GENERALIZEDTIME);
@@ -536,7 +537,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				break;
 			case BASIC_RESPONSE_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG2("  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_LIB, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case BASIC_RESPONSE_EXT_VALUE:
 				if (extn_oid == OID_NONCE)
@@ -622,7 +623,7 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 					case OCSP_SUCCESSFUL:
 						break;
 					default:
-						DBG1("  ocsp response status: %N",
+						DBG1(DBG_LIB, "  ocsp response status: %N",
 							 ocsp_status_names, status);
 						goto end;
 				}
@@ -638,7 +639,8 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 												parser->get_level(parser)+1);
 						break;
 					default:
-						DBG1("  ocsp response type %#B not supported", &object);
+						DBG1(DBG_LIB, "  ocsp response type %#B not supported",
+							 &object);
 						goto end;
 				}
 				break;
@@ -772,9 +774,9 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 	this->get_validity(this, &now, &this_update, NULL);
 	that->get_validity(that, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  ocsp response from %T is %s - existing ocsp response from %T %s",
-				&this_update, FALSE, new ? "newer":"not newer",
-				&that_update, FALSE, new ? "replaced":"retained");
+	DBG1(DBG_LIB, "  ocsp response from %T is %s - existing ocsp response "
+		 "from %T %s", &this_update, FALSE, new ? "newer" : "not newer",
+		 &that_update, FALSE, new ? "replaced" : "retained");
 	return new;
 }
 

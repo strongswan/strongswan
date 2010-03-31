@@ -497,7 +497,7 @@ static section_t* parse_section(char **text, char *name)
 						continue;
 					}
 				}
-				DBG1("matching '}' not found near %s", *text);
+				DBG1(DBG_LIB, "matching '}' not found near %s", *text);
 				break;
 			case '=':
 				if (parse(text, "\t ", "\n", NULL, &value))
@@ -508,7 +508,7 @@ static section_t* parse_section(char **text, char *name)
 					section->kv->insert_last(section->kv, kv);
 					continue;
 				}
-				DBG1("parsing value failed near %s", *text);
+				DBG1(DBG_LIB, "parsing value failed near %s", *text);
 				break;
 			case '#':
 				parse(text, "", "\n", NULL, &value);
@@ -566,7 +566,7 @@ settings_t *settings_create(char *file)
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1("'%s' does not exist or is not readable", file);
+		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
 		return &this->public;
 	}
 	fseek(fd, 0, SEEK_END);

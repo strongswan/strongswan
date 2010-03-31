@@ -266,10 +266,10 @@ x509crl_t* fetch_crl(char *url)
 	x509crl_t *crl;
 	chunk_t blob;
 
-	DBG1("  fetching crl from '%s' ...", url);
+	DBG1(DBG_LIB, "  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &blob, FETCH_END) != SUCCESS)
 	{
-		DBG1("crl fetching failed");
+		DBG1(DBG_LIB, "crl fetching failed");
 		return FALSE;
 	}
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
@@ -277,7 +277,8 @@ x509crl_t* fetch_crl(char *url)
 	free(blob.ptr);
 	if (!crl)
 	{
-		DBG1("crl fetched successfully but data coded in unknown format");
+		DBG1(DBG_LIB, "crl fetched successfully but data coded in unknown "
+			 "format");
 	}
 	return crl;
 }
@@ -395,7 +396,7 @@ static void fetch_ocsp_status(ocsp_location_t* location)
 	chunk_t request = build_ocsp_request(location);
 	chunk_t response = chunk_empty;
 
-	DBG1("  requesting ocsp status from '%s' ...", location->uri);
+	DBG1(DBG_LIB, "  requesting ocsp status from '%s' ...", location->uri);
 	if (lib->fetcher->fetch(lib->fetcher, location->uri, &response,
 							FETCH_REQUEST_DATA, request,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
@@ -405,7 +406,7 @@ static void fetch_ocsp_status(ocsp_location_t* location)
 	}
 	else
 	{
-		DBG1("ocsp request to %s failed", location->uri);
+		DBG1(DBG_LIB, "ocsp request to %s failed", location->uri);
 	}
 
 	free(request.ptr);

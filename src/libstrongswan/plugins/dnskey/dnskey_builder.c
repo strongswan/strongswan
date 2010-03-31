@@ -52,7 +52,7 @@ static dnskey_public_key_t *parse_public_key(chunk_t blob)
 
 	if (blob.len < sizeof(dnskey_rr_t))
 	{
-		DBG1("DNSKEY too short");
+		DBG1(DBG_LIB, "DNSKEY too short");
 		return NULL;
 	}
 	blob = chunk_skip(blob, sizeof(dnskey_rr_t));
@@ -63,7 +63,8 @@ static dnskey_public_key_t *parse_public_key(chunk_t blob)
 			return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 									  BUILD_BLOB_DNSKEY, blob, BUILD_END);
 		default:
-			DBG1("DNSKEY public key algorithm %d not supported", rr->algorithm);
+			DBG1(DBG_LIB, "DNSKEY public key algorithm %d not supported",
+				 rr->algorithm);
 			return NULL;
 	}
 }
@@ -77,7 +78,7 @@ static dnskey_public_key_t *parse_rsa_public_key(chunk_t blob)
 
 	if (blob.len < 3)
 	{
-		DBG1("RFC 3110 public key blob too short for exponent length");
+		DBG1(DBG_LIB, "RFC 3110 public key blob too short for exponent length");
 		return NULL;
 	}
 
@@ -94,7 +95,7 @@ static dnskey_public_key_t *parse_rsa_public_key(chunk_t blob)
 	e.ptr = blob.ptr;
 	if (e.len >= blob.len)
 	{
-		DBG1("RFC 3110 public key blob too short for exponent");
+		DBG1(DBG_LIB, "RFC 3110 public key blob too short for exponent");
 		return NULL;
 	}
 	n = chunk_skip(blob, e.len);

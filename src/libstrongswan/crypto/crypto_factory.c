@@ -686,7 +686,7 @@ static void add_test_vector(private_crypto_factory_t *this,
 		case RANDOM_NUMBER_GENERATOR:
 			return this->tester->add_rng_vector(this->tester, vector);
 		default:
-			DBG1("%N test vectors not supported, ignored",
+			DBG1(DBG_LIB, "%N test vectors not supported, ignored",
 				 transform_type_names, type);
 	}
 }

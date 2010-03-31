@@ -71,7 +71,7 @@ static void get_bytes(private_random_rng_t *this, size_t bytes,
 		got = read(this->dev, buffer + done, bytes - done);
 		if (got <= 0)
 		{
-			DBG1("reading from \"%s\" failed: %s, retrying...",
+			DBG1(DBG_LIB, "reading from \"%s\" failed: %s, retrying...",
 				 this->file, strerror(errno));
 			close(this->dev);
 			sleep(1);
@@ -124,7 +124,7 @@ random_rng_t *random_rng_create(rng_quality_t quality)
 	this->dev = open(this->file, 0);
 	if (this->dev < 0)
 	{
-		DBG1("opening \"%s\" failed: %s", this->file, strerror(errno));
+		DBG1(DBG_LIB, "opening \"%s\" failed: %s", this->file, strerror(errno));
 		free(this);
 		return NULL;
 	}
