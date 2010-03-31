@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	if (!libhydra_init())
+	if (!libhydra_init("pluto"))
 	{
 		libhydra_deinit();
 		library_deinit();

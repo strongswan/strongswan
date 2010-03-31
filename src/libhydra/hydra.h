@@ -44,6 +44,11 @@ struct hydra_t {
 	 * manager for payload attributes
 	 */
 	attribute_manager_t *attributes;
+
+	/**
+	 * name of the daemon that initialized the library
+	 */
+	const char *daemon;
 };
 
 /**
@@ -56,9 +61,12 @@ extern hydra_t *hydra;
 /**
  * Initialize libhydra.
  *
+ * The daemon's name is used to load daemon-specific settings.
+ *
+ * @param daemon		name of the daemon that initializes the library
  * @return				FALSE if integrity check failed
  */
-bool libhydra_init();
+bool libhydra_init(const char *daemon);
 
 /**
  * Deinitialize libhydra.
