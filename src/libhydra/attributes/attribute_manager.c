@@ -83,7 +83,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 
 	if (!host)
 	{
-		DBG1(DBG_LIB, "acquiring address from pool '%s' failed", pool);
+		DBG1(DBG_CFG, "acquiring address from pool '%s' failed", pool);
 	}
 	return host;
 }
@@ -113,7 +113,7 @@ static void release_address(private_attribute_manager_t *this,
 
 	if (!found)
 	{
-		DBG1(DBG_LIB, "releasing address to pool '%s' failed", pool);
+		DBG1(DBG_CFG, "releasing address to pool '%s' failed", pool);
 	}
 }
 
@@ -206,7 +206,7 @@ static attribute_handler_t* handle(private_attribute_manager_t *this,
 
 	if (!handled)
 	{
-		DBG1(DBG_LIB, "handling %N attribute failed",
+		DBG1(DBG_CFG, "handling %N attribute failed",
 			 configuration_attribute_type_names, type);
 	}
 	return handled;

@@ -65,7 +65,7 @@ plugin_t *attr_sql_plugin_create()
 	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database", NULL);
 	if (!uri)
 	{
-		DBG1(DBG_LIB, "attr-sql plugin: database URI not set");
+		DBG1(DBG_CFG, "attr-sql plugin: database URI not set");
 		return NULL;
 	}
 
@@ -76,7 +76,7 @@ plugin_t *attr_sql_plugin_create()
 	this->db = lib->db->create(lib->db, uri);
 	if (!this->db)
 	{
-		DBG1(DBG_LIB, "attr-sql plugin failed to connect to database");
+		DBG1(DBG_CFG, "attr-sql plugin failed to connect to database");
 		free(this);
 		return NULL;
 	}

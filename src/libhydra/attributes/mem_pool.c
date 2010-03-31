@@ -203,7 +203,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		requested->get_family(requested) !=
 		this->base->get_family(this->base))
 	{
-		DBG1(DBG_LIB, "IP pool address family mismatch");
+		DBG1(DBG_CFG, "IP pool address family mismatch");
 		return NULL;
 	}
 
@@ -217,7 +217,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 			id = this->ids->get(this->ids, id);
 			if (id)
 			{
-				DBG1(DBG_LIB, "reassigning offline lease to '%Y'", id);
+				DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
 				this->online->put(this->online, id, (void*)offset);
 				break;
 			}
@@ -227,7 +227,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		offset = (uintptr_t)this->online->get(this->online, id);
 		if (offset && offset == host2offset(this, requested))
 		{
-			DBG1(DBG_LIB, "reassigning online lease to '%Y'", id);
+			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
 			break;
 		}
 
@@ -239,7 +239,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 			id = id->clone(id);
 			this->ids->put(this->ids, id, id);
 			this->online->put(this->online, id, (void*)offset);
-			DBG1(DBG_LIB, "assigning new lease to '%Y'", id);
+			DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
 			break;
 		}
 
@@ -252,7 +252,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 			{
 				/* destroy reference to old ID */
 				old_id = this->ids->remove(this->ids, old_id);
-				DBG1(DBG_LIB, "reassigning existing offline lease by '%Y'"
+				DBG1(DBG_CFG, "reassigning existing offline lease by '%Y'"
 					 " to '%Y'", old_id, id);
 				if (old_id)
 				{
@@ -267,7 +267,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		}
 		enumerator->destroy(enumerator);
 
-		DBG1(DBG_LIB, "pool '%s' is full, unable to assign address",
+		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address",
 			 this->name);
 		break;
 	}
@@ -294,7 +294,7 @@ METHOD(mem_pool_t, release_address, bool,
 			id = this->ids->get(this->ids, id);
 			if (id)
 			{
-				DBG1(DBG_LIB, "lease %H by '%Y' went offline", address, id);
+				DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
 				this->offline->put(this->offline, id, (void*)offset);
 				found = TRUE;
 			}
@@ -433,7 +433,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 		if (bits > POOL_LIMIT)
 		{
 			bits = POOL_LIMIT;
-			DBG1(DBG_LIB, "virtual IP pool too large, limiting to %H/%d",
+			DBG1(DBG_CFG, "virtual IP pool too large, limiting to %H/%d",
 				 base, addr_bits - bits);
 		}
 		this->size = 1 << (bits);
