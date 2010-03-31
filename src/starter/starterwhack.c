@@ -266,6 +266,7 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 
 int starter_whack_add_conn(starter_conn_t *conn)
 {
+	char esp_buf[256];
 	whack_message_t msg;
 	int r;
 
@@ -302,8 +303,6 @@ int starter_whack_add_conn(starter_conn_t *conn)
 	/* taken from pluto/whack.c */
 	if (msg.pfsgroup)
 	{
-		char esp_buf[256];
-
 		snprintf(esp_buf, sizeof (esp_buf), "%s;%s"
 				   , msg.esp ? msg.esp : ""
 				   , msg.pfsgroup ? msg.pfsgroup : "");
