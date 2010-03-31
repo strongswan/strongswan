@@ -46,19 +46,19 @@
 /**
  * hook in library for debugging messages
  */
-extern void (*dbg) (int level, char *fmt, ...);
+extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 
 /**
  * Logging hook for library logs, using stderr output
  */
-static void dbg_stderr(int level, char *fmt, ...)
+static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
 {
 	va_list args;
 
 	if (level <= 1)
 	{
 		va_start(args, fmt);
-		fprintf(stderr, "00[LIB] ");
+		fprintf(stderr, "00[%N] ", debug_names, group);
 		vfprintf(stderr, fmt, args);
 		fprintf(stderr, "\n");
 		va_end(args);
@@ -284,14 +284,14 @@ int main(int argc, char *argv[])
 	if (lib->integrity &&
 		!lib->integrity->check_file(lib->integrity, "charon", argv[0]))
 	{
-		dbg_stderr(1, "integrity check of charon failed");
+		dbg_stderr(DBG_DMN, 1, "integrity check of charon failed");
 		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
 	if (!libhydra_init("charon"))
 	{
-		dbg_stderr(1, "initialization failed - aborting charon");
+		dbg_stderr(DBG_DMN, 1, "initialization failed - aborting charon");
 		libhydra_deinit();
 		library_deinit();
 		exit(SS_RC_INITIALIZATION_FAILED);
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 
 	if (!libcharon_init())
 	{
-		dbg_stderr(1, "initialization failed - aborting charon");
+		dbg_stderr(DBG_DMN, 1, "initialization failed - aborting charon");
 		goto deinit;
 	}
 
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 
 	if (!lookup_uid_gid())
 	{
-		dbg_stderr(1, "invalid uid/gid - aborting charon");
+		dbg_stderr(DBG_DMN, 1, "invalid uid/gid - aborting charon");
 		goto deinit;
 	}
 

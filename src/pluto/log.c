@@ -85,7 +85,7 @@ u_int16_t cur_from_port;        /* host order */
 /**
  * pluto dbg function for libstrongswan
  */
-static void pluto_dbg(int level, char *fmt, ...)
+static void pluto_dbg(debug_t group, level_t level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
 	int debug_level;

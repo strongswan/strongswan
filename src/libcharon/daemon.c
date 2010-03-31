@@ -62,22 +62,22 @@ daemon_t *charon;
 /**
  * hook in library for debugging messages
  */
-extern void (*dbg) (int level, char *fmt, ...);
+extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 
 /**
  * we store the previous debug function so we can reset it
  */
-static void (*dbg_old) (int level, char *fmt, ...);
+static void (*dbg_old) (debug_t group, level_t level, char *fmt, ...);
 
 /**
  * Logging hook for library logs, spreads debug message over bus
  */
-static void dbg_bus(int level, char *fmt, ...)
+static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 {
 	va_list args;
 
 	va_start(args, fmt);
-	charon->bus->vlog(charon->bus, DBG_LIB, level, fmt, args);
+	charon->bus->vlog(charon->bus, group, level, fmt, args);
 	va_end(args);
 }
 
@@ -435,7 +435,7 @@ bool libcharon_init()
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libcharon", libcharon_init))
 	{
-		dbg(1, "integrity check of libcharon failed");
+		dbg(DBG_DMN, 1, "integrity check of libcharon failed");
 		return FALSE;
 	}
 
