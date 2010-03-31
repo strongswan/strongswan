@@ -185,6 +185,10 @@ static void help(void)
 			" [--debug-private]"
 			"\n\n"
 #endif
+		"leases: whack --leases"
+			" [--name <connection_name>]"
+			" [--lease-addr <ip-address> | --lease-id <identity>]"
+			"\n\n"
 		"listen: whack"
 			" (--listen | --unlisten)"
 			"\n\n"
@@ -321,6 +325,10 @@ enum {
 	OPT_DELETESTATE,
 	OPT_LISTEN,
 	OPT_UNLISTEN,
+
+	OPT_LEASES,
+	OPT_LEASEADDR,
+	OPT_LEASEID,
 
 	OPT_PURGEOCSP,
 
@@ -518,6 +526,10 @@ static const struct option long_opts[] = {
 	{ "crash", required_argument, NULL, OPT_DELETECRASH + OO },
 	{ "listen", no_argument, NULL, OPT_LISTEN + OO },
 	{ "unlisten", no_argument, NULL, OPT_UNLISTEN + OO },
+
+	{ "leases", no_argument, NULL, OPT_LEASES + OO },
+	{ "lease-addr", required_argument, NULL, OPT_LEASEADDR + OO },
+	{ "lease-id", required_argument, NULL, OPT_LEASEID + OO },
 
 	{ "purgeocsp", no_argument, NULL, OPT_PURGEOCSP + OO },
 
@@ -1103,6 +1115,18 @@ int main(int argc, char **argv)
 				diagq("0.0.0.0 or 0::0 isn't a valid client address", optarg);
 			continue;
 
+		case OPT_LEASES:        /* --leases */
+			msg.whack_leases = TRUE;
+			continue;
+
+		case OPT_LEASEADDR:     /* --lease-addr <ip-address> */
+			msg.whack_lease_ip = optarg;      /* decoded by Pluto */
+			continue;
+
+		case OPT_LEASEID:       /* --lease-id <identity> */
+			msg.whack_lease_id = optarg;      /* decoded by Pluto */
+			continue;
+
 		case OPT_LISTEN:        /* --listen */
 			msg.whack_listen = TRUE;
 			continue;
@@ -1618,6 +1642,12 @@ int main(int argc, char **argv)
 		break;
 	}
 
+	/* check leases */
+	if (LHAS(opts_seen, OPT_LEASEADDR) && LHAS(opts_seen, OPT_LEASEID))
+	{
+		diag("--lease-addr and --lease-id cannot be used together");
+	}
+
 	/* check connection description */
 	if (LHAS(opts_seen, OPT_CD))
 	{
@@ -1682,7 +1712,7 @@ int main(int argc, char **argv)
 		if (!LHAS(opts_seen, OPT_NAME) && !msg.whack_ca)
 			diag("missing --name <connection_name>");
 	}
-	else if (!msg.whack_options && !msg.whack_status)
+	else if (!msg.whack_options && !msg.whack_status && !msg.whack_leases)
 	{
 		if (LHAS(opts_seen, OPT_NAME))
 			diag("no reason for --name");
@@ -1698,9 +1728,10 @@ int main(int argc, char **argv)
 	|| msg.whack_delete || msg.whack_deletestate
 	|| msg.whack_initiate || msg.whack_oppo_initiate || msg.whack_terminate
 	|| msg.whack_route || msg.whack_unroute || msg.whack_listen
-	|| msg.whack_unlisten || msg.whack_list || msg.whack_purgeocsp || msg.whack_reread
-	|| msg.whack_ca || msg.whack_status || msg.whack_options || msg.whack_shutdown
-	|| msg.whack_sc_op))
+	|| msg.whack_unlisten || msg.whack_list || msg.whack_purgeocsp
+	|| msg.whack_reread || msg.whack_ca || msg.whack_status
+	|| msg.whack_options || msg.whack_shutdown || msg.whack_sc_op
+	|| msg.whack_leases))
 	{
 		diag("no action specified; try --help for hints");
 	}
@@ -1771,6 +1802,8 @@ int main(int argc, char **argv)
 	||  !pack_str(&msg.ike)              /* string 24 */
 	||  !pack_str(&msg.esp)              /* string 25 */
 	||  !pack_str(&msg.sc_data)          /* string 26 */
+	||  !pack_str(&msg.whack_lease_ip)   /* string 27 */
+	||  !pack_str(&msg.whack_lease_id)   /* string 28 */
 	||  str_roof - next_str < (ptrdiff_t)msg.keyval.len)
 		diag("too many bytes of strings to fit in message to pluto");
 

@@ -91,6 +91,8 @@ static int send_whack_msg (whack_message_t *msg)
 	||  !pack_str(&msg->ike,            &str_next, &str_roof)
 	||  !pack_str(&msg->esp,            &str_next, &str_roof)
 	||  !pack_str(&msg->sc_data,        &str_next, &str_roof)
+	||  !pack_str(&msg->whack_lease_ip, &str_next, &str_roof)
+	||  !pack_str(&msg->whack_lease_id, &str_next, &str_roof)
 	||  (str_roof - str_next < msg->keyval.len))
 	{
 		plog("send_wack_msg(): can't pack strings");

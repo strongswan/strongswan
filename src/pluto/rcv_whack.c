@@ -57,6 +57,7 @@
 #include "myid.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
+#include "whack_attribute.h"
 
 /* helper variables and function to decode strings from whack message */
 
@@ -326,6 +327,8 @@ void whack_handle(int whackctlfd)
 		|| !unpack_str(&msg.ike)                /* string 24 */
 		|| !unpack_str(&msg.esp)                /* string 25 */
 		|| !unpack_str(&msg.sc_data)            /* string 26 */
+		|| !unpack_str(&msg.whack_lease_ip)     /* string 27 */
+		|| !unpack_str(&msg.whack_lease_id)     /* string 28 */
 		|| str_roof - next_str != (ptrdiff_t)msg.keyval.len)    /* check chunk */
 		{
 			ugh = "message from whack contains bad string";
@@ -467,6 +470,11 @@ void whack_handle(int whackctlfd)
 	{
 		free_ocsp_fetch();
 		free_ocsp_cache();
+	}
+
+	if (msg.whack_leases)
+	{
+		list_leases(msg.name, msg.whack_lease_ip, msg.whack_lease_id);
 	}
 
    if (msg.whack_list & LIST_PUBKEYS)

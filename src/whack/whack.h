@@ -65,7 +65,7 @@ struct whack_end {
 	int   sourceip_mask;
 	ip_address host_addr;
 	ip_address host_nexthop;
-	ip_address host_srcip;	
+	ip_address host_srcip;
 	ip_subnet client;
 	bool key_from_DNS_on_demand;
 	bool has_client;
@@ -176,6 +176,10 @@ struct whack_message {
 	/* for WHACK_DELETESTATE: */
 	bool whack_deletestate;
 	so_serial_t whack_deletestateno;
+
+	/* for WHACK_LEASES: */
+	bool whack_leases;
+	char *whack_lease_ip, *whack_lease_id;
 
 	/* for WHACK_LISTEN: */
 	bool whack_listen, whack_unlisten;
