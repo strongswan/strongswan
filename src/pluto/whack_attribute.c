@@ -160,6 +160,9 @@ METHOD(whack_attribute_t, del_pool, void,
 	{
 		if (streq(name, pool->get_name(pool)))
 		{
+			DBG(DBG_CONTROL,
+				DBG_log("deleting virtual IP address pool '%s'", name)
+			);
 			this->pools->remove_at(this->pools, enumerator);
 			pool->destroy(pool);
 			break;

@@ -376,6 +376,11 @@ void delete_connection(connection_t *c, bool relations)
 		vip->destroy(vip);
 	}
 
+	if (c->kind != CK_GOING_AWAY)
+	{
+		whack_attr->del_pool(whack_attr, c->name);
+	}
+
 	/* free internal data */
 #ifdef DEBUG
 	cur_debugging = old_cur_debugging;
