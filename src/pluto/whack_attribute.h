@@ -92,4 +92,13 @@ void whack_attribute_initialize();
  */
 void whack_attribute_finalize();
 
+/**
+ * List the leases matching the given parameters.
+ *
+ * @param name		name of the pool, NULL for all pools
+ * @param addr		ip address of the lease to list, NULL to ignore
+ * @param id		id of the lease to list, NULL to ignore
+ */
+void list_leases(char *name, char *addr, char *id);
+
 #endif /** WHACK_ATTRIBUTE_H_ @}*/

@@ -252,3 +252,83 @@ void whack_attribute_initialize()
 	whack_attr = &this->public;
 }
 
+/**
+ * list leases of a single pool
+ */
+static void pool_leases(char *pool, host_t *address,
+						identification_t *identification,
+						u_int size, u_int online, u_int offline)
+{
+
+	enumerator_t *enumerator;
+	identification_t *id;
+	host_t *lease;
+	bool on, found = FALSE;
+
+	whack_log(RC_COMMENT, "Leases in pool '%s', usage: %lu/%lu, %lu online",
+			  pool, online + offline, size, online);
+	enumerator = whack_attr->create_lease_enumerator(whack_attr, pool);
+	while (enumerator && enumerator->enumerate(enumerator, &id, &lease, &on))
+	{
+		if ((!address && !identification) ||
+			(address && address->ip_equals(address, lease)) ||
+			(identification && identification->equals(identification, id)))
+		{
+			whack_log(RC_COMMENT, "  %15H   %s   '%Y'",
+					  lease, on ? "online" : "offline", id);
+			found = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		whack_log(RC_COMMENT, "  no matching leases found");
+	}
+}
+
+/**
+ * see header file
+ */
+void list_leases(char *name, char *addr, char *id)
+{
+	identification_t *identification = NULL;
+	host_t *address = NULL;
+	bool found = FALSE;
+	enumerator_t *enumerator;
+	u_int size, online, offline;
+	char *pool;
+
+	if (addr)
+	{
+		address = host_create_from_string(addr, 0);
+	}
+	if (id)
+	{
+		identification = identification_create_from_string(id);
+	}
+
+	enumerator = whack_attr->create_pool_enumerator(whack_attr);
+	while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
+	{
+		if (!name || streq(name, pool))
+		{
+			pool_leases(pool, address, identification, size, online, offline);
+			found = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		if (name)
+		{
+			whack_log(RC_COMMENT, "pool '%s' not found", name);
+		}
+		else
+		{
+			whack_log(RC_COMMENT, "no pools found");
+		}
+	}
+	DESTROY_IF(identification);
+	DESTROY_IF(address);
+}
+
