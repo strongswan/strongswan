@@ -2,13 +2,13 @@
 # prefix command to run stuff from our programs directory
 # Copyright (C) 1998-2002  Henry Spencer.
 # Copyright (C) 2006 Andreas Steffen
-# Copyright (C) 2006 Martin Willi 
-# 
+# Copyright (C) 2006 Martin Willi
+#
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
 # Free Software Foundation; either version 2 of the License, or (at your
 # option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -67,7 +67,7 @@ case "$1" in
 	echo "	rereadacerts|rereadcrls|rereadall"
 	echo "	purgeocsp|purgeike"
 	echo "	scencrypt|scdecrypt <value> [--inbase <base>] [--outbase <base>] [--keyid <id>]"
- 	echo "	openac"
+	echo "	openac"
 	echo "	pluto"
 	echo "	scepclient"
 	echo "	secrets"
@@ -138,17 +138,26 @@ listcards|rereadgroups)
 		$IPSEC_WHACK "$@" "--$op"
 		rc="$?"
 	fi
-	if [ -e $IPSEC_CHARON_PID ] 
-	then 
-		exit 3 
-	else 
-		exit 7 
-	fi 
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		exit 3
+	else
+		exit 7
+	fi
 	;;
 leases)
 	op="$1"
 	rc=7
 	shift
+	if [ -e $IPSEC_PLUTO_PID ]
+	then
+		case "$#" in
+		0) $IPSEC_WHACK "--$op" ;;
+		1) $IPSEC_WHACK "--$op" --name "$1" ;;
+		*) $IPSEC_WHACK "--$op" --name "$1" --lease-addr "$2" ;;
+		esac
+		rc="$?"
+	fi
 	if [ -e $IPSEC_CHARON_PID ]
 	then
 		case "$#" in
@@ -330,7 +339,7 @@ stop)
 			fi
 		fi
 	else
-	    	echo "Stopping strongSwan IPsec failed: starter is not running" >&2
+		echo "Stopping strongSwan IPsec failed: starter is not running" >&2
 	fi
 	if [ -d /var/lock/subsys ]; then
 		rm -f /var/lock/subsys/ipsec
