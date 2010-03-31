@@ -138,14 +138,12 @@ static void init_whack_msg(whack_message_t *msg)
 	msg->magic = WHACK_MAGIC;
 }
 
-static char *connection_name(starter_conn_t *conn)
+static char *connection_name(starter_conn_t *conn, char *buf, size_t size)
 {
 	/* if connection name is '%auto', create a new name like conn_xxxxx */
-	static char buf[32];
-
 	if (streq(conn->name, "%auto"))
 	{
-		sprintf(buf, "conn_%ld", conn->id);
+		snprintf(buf, size, "conn_%ld", conn->id);
 		return buf;
 	}
 	return conn->name;
@@ -161,7 +159,7 @@ static void set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family
 	w->has_client          = end->has_client;
 	w->sourceip            = end->sourceip;
 	w->sourceip_mask       = end->sourceip_mask;
-	
+
 	if (end->sourceip && end->sourceip_mask > 0)
 	{
 		ttoaddr(end->sourceip, 0, ip_version(end->sourceip), &w->host_srcip);
@@ -226,10 +224,11 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 {
 	const char *err;
 	static char keyspace[1024 + 4];
-	char buf[ADDRTOT_BUF];
+	char buf[ADDRTOT_BUF], name[32];
 	whack_message_t msg;
 
 	init_whack_msg(&msg);
+	connection_name(conn, name, sizeof(name));
 
 	msg.whack_key = TRUE;
 	msg.pubkey_alg = PUBKEY_ALG_RSA;
@@ -246,7 +245,7 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 		err = atobytes(end->rsakey, 0, keyspace, sizeof(keyspace), &msg.keyval.len);
 		if (err)
 		{
-			plog("conn %s/%s: rsakey malformed [%s]", connection_name(conn), lr, err);
+			plog("conn %s/%s: rsakey malformed [%s]", name, lr, err);
 			return 1;
 		}
 		if (end->id)
@@ -266,14 +265,14 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 
 int starter_whack_add_conn(starter_conn_t *conn)
 {
-	char esp_buf[256];
+	char esp_buf[256], name[32];
 	whack_message_t msg;
 	int r;
 
 	init_whack_msg(&msg);
 
 	msg.whack_connection = TRUE;
-	msg.name = connection_name(conn);
+	msg.name = connection_name(conn, name, sizeof(name));
 
 	msg.ikev1                 = conn->keyexchange != KEY_EXCHANGE_IKEV2;
 	msg.addr_family           = conn->addr_family;
@@ -330,32 +329,35 @@ int starter_whack_add_conn(starter_conn_t *conn)
 
 int starter_whack_del_conn(starter_conn_t *conn)
 {
+	char name[32];
 	whack_message_t msg;
 
 	init_whack_msg(&msg);
 	msg.whack_delete = TRUE;
-	msg.name = connection_name(conn);
+	msg.name = connection_name(conn, name, sizeof(name));
 	return send_whack_msg(&msg);
 }
 
 int starter_whack_route_conn(starter_conn_t *conn)
 {
+	char name[32];
 	whack_message_t msg;
 
 	init_whack_msg(&msg);
 	msg.whack_route = TRUE;
-	msg.name = connection_name(conn);
+	msg.name = connection_name(conn, name, sizeof(name));
 	return send_whack_msg(&msg);
 }
 
 int starter_whack_initiate_conn(starter_conn_t *conn)
 {
+	char name[32];
 	whack_message_t msg;
 
 	init_whack_msg(&msg);
 	msg.whack_initiate = TRUE;
 	msg.whack_async = TRUE;
-	msg.name = connection_name(conn);
+	msg.name = connection_name(conn, name, sizeof(name));
 	return send_whack_msg(&msg);
 }
 
