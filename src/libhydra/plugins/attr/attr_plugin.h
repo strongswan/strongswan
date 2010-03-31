@@ -15,7 +15,7 @@
 
 /**
  * @defgroup attr attr
- * @ingroup cplugins
+ * @ingroup hplugins
  *
  * @defgroup attr_plugin attr_plugin
  * @{ @ingroup attr

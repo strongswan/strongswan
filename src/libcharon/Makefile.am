@@ -245,14 +245,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_ATTR
-  SUBDIRS += plugins/attr
-  PLUGINS += attr
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/attr/libstrongswan-attr.la
-endif
-endif
-
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
   PLUGINS += eap-identity

@@ -745,6 +745,10 @@ if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
 fi
+if test x$attr = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr"
+	pluto_plugins=${pluto_plugins}" attr"
+fi
 if test x$attr_sql = xtrue -o x$sql = xtrue; then
 	libhydra_plugins=${libhydra_plugins}" attr-sql"
 	pluto_plugins=${pluto_plugins}" attr-sql"
@@ -904,6 +908,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
+	src/libhydra/plugins/attr/Makefile
 	src/libhydra/plugins/attr_sql/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
@@ -939,7 +944,6 @@ AC_OUTPUT(
 	src/libcharon/plugins/android/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
-	src/libcharon/plugins/attr/Makefile
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/unit_tester/Makefile
