@@ -21,7 +21,70 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+typedef enum debug_t debug_t;
+typedef enum level_t level_t;
+
 #include <stdio.h>
+
+#include "enum.h"
+
+/**
+ * Debug message group.
+ */
+enum debug_t {
+	/** daemon specific */
+	DBG_DMN,
+	/** IKE_SA_MANAGER */
+	DBG_MGR,
+	/** IKE_SA */
+	DBG_IKE,
+	/** CHILD_SA */
+	DBG_CHD,
+	/** job processing */
+	DBG_JOB,
+	/** configuration backends */
+	DBG_CFG,
+	/** kernel interface */
+	DBG_KNL,
+	/** networking/sockets */
+	DBG_NET,
+	/** message encoding/decoding */
+	DBG_ENC,
+	/** libstrongswan */
+	DBG_LIB,
+	/** number of groups */
+	DBG_MAX,
+	/** pseudo group with all groups */
+	DBG_ANY = DBG_MAX,
+};
+
+/**
+ * short names of debug message group.
+ */
+extern enum_name_t *debug_names;
+
+/**
+ * short names of debug message group, lower case.
+ */
+extern enum_name_t *debug_lower_names;
+
+/**
+ * Debug levels used to control output verbosity.
+ */
+enum level_t {
+	/** absolutely silent */
+	LEVEL_SILENT =  1,
+	/** most important auditing logs */
+	LEVEL_AUDIT =   0,
+	/** control flow */
+	LEVEL_CTRL =    1,
+	/** diagnose problems */
+	LEVEL_DIAG =    2,
+	/** raw binary blobs */
+	LEVEL_RAW =     3,
+	/** including sensitive data (private keys) */
+	LEVEL_PRIVATE = 4,
+};
 
 #ifndef DEBUG_LEVEL
 # define DEBUG_LEVEL 4
@@ -41,6 +104,9 @@
 # define DBG4(fmt, ...) dbg(4, fmt, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 
+#ifndef DBG0
+# define DBG0(...) {}
+#endif
 #ifndef DBG1
 # define DBG1(...) {}
 #endif

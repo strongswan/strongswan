@@ -23,32 +23,6 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 
-ENUM(debug_names, DBG_DMN, DBG_LIB,
-	"DMN",
-	"MGR",
-	"IKE",
-	"CHD",
-	"JOB",
-	"CFG",
-	"KNL",
-	"NET",
-	"ENC",
-	"LIB",
-);
-
-ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
-	"dmn",
-	"mgr",
-	"ike",
-	"chd",
-	"job",
-	"cfg",
-	"knl",
-	"net",
-	"enc",
-	"lib",
-);
-
 typedef struct private_bus_t private_bus_t;
 
 /**

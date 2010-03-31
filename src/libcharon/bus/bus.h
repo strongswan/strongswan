@@ -21,75 +21,23 @@
 #ifndef BUS_H_
 #define BUS_H_
 
-typedef enum debug_t debug_t;
-typedef enum level_t level_t;
 typedef enum alert_t alert_t;
 typedef struct bus_t bus_t;
 
 #include <stdarg.h>
 
+#include <debug.h>
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 #include <processing/jobs/job.h>
 #include <bus/listeners/listener.h>
 
-/**
- * Debug message group.
- */
-enum debug_t {
-	/** daemon main loop */
-	DBG_DMN,
-	/** IKE_SA_MANAGER */
-	DBG_MGR,
-	/** IKE_SA */
-	DBG_IKE,
-	/** CHILD_SA */
-	DBG_CHD,
-	/** job processing */
-	DBG_JOB,
-	/** configuration backends */
-	DBG_CFG,
-	/** kernel interface */
-	DBG_KNL,
-	/** networking/sockets */
-	DBG_NET,
-	/** message encoding/decoding */
-	DBG_ENC,
-	/** libstrongswan via logging hook */
-	DBG_LIB,
-	/** number of groups */
-	DBG_MAX,
-	/** pseudo group with all groups */
-	DBG_ANY = DBG_MAX,
-};
-
-/**
- * short names of debug message group.
- */
-extern enum_name_t *debug_names;
-
-/**
- * short names of debug message group, lower case.
- */
-extern enum_name_t *debug_lower_names;
-
-/**
- * Debug levels used to control output verbosity.
- */
-enum level_t {
-	/** absolutely silent */
-	LEVEL_SILENT = 	-1,
-	/** most important auditing logs */
-	LEVEL_AUDIT = 	 0,
-	/** control flow */
-	LEVEL_CTRL = 	 1,
-	/** diagnose problems */
-	LEVEL_DIAG = 	 2,
-	/** raw binary blobs */
-	LEVEL_RAW = 	 3,
-	/** including sensitive data (private keys) */
-	LEVEL_PRIVATE =  4,
-};
+/* undefine the definitions from libstrongswan */
+#undef DBG0
+#undef DBG1
+#undef DBG2
+#undef DBG3
+#undef DBG4
 
 #ifndef DEBUG_LEVEL
 # define DEBUG_LEVEL 4
