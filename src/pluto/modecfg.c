@@ -120,7 +120,7 @@ static void init_internal_addr(internal_addr_t *ia)
 static void get_internal_addr(connection_t *c, host_t *requested_vip,
 							  internal_addr_t *ia)
 {
-	int i, dns_idx = 0, nbns_idx = 0;
+	int dns_idx = 0, nbns_idx = 0;
 	enumerator_t *enumerator;
 	configuration_attribute_type_t type;
 	chunk_t value;
@@ -163,58 +163,6 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 
 		ia->attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 					 | LELEM(INTERNAL_IP4_NETMASK);
-	}
-
-	/* assign DNS servers from strongswan.conf */
-	for (i = 1; i <= DNS_SERVER_MAX; i++)
-	{
-		char dns_key[16], *dns_str;
-
-		snprintf(dns_key, sizeof(dns_key), "pluto.dns%d", i);
-		dns_str = lib->settings->get_str(lib->settings, dns_key, NULL);
-		if (dns_str)
-		{
-			err_t ugh;
-			sa_family_t family = strchr(dns_str, ':') ? AF_INET6 : AF_INET;
-
-			ugh = ttoaddr(dns_str, 0, family, &ia->dns[dns_idx]);
-			if (ugh)
-			{
-				plog("error in DNS server address: %s", ugh);
-				continue;
-			}
-			plog("assigning DNS server %s to peer", dns_str);
-
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
-			ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
-			dns_idx++;
-		}
-	}
-
-	/* assign NBNS servers from strongswan.conf */
-	for (i = 1; i <= NBNS_SERVER_MAX; i++)
-	{
-		char nbns_key[16], *nbns_str;
-
-		snprintf(nbns_key, sizeof(nbns_key), "pluto.nbns%d", i);
-		nbns_str = lib->settings->get_str(lib->settings, nbns_key, NULL);
-		if (nbns_str)
-		{
-			err_t ugh;
-			sa_family_t family = strchr(nbns_str, ':') ? AF_INET6 : AF_INET;
-
-			ugh = ttoaddr(nbns_str, 0, family, &ia->nbns[nbns_idx]);
-			if (ugh)
-			{
-				plog("error in NBNS server address: %s", ugh);
-				continue;
-			}
-			plog("assigning NBNS server %s to peer", nbns_str);
-
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
-			ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
-			nbns_idx++;
-		}
 	}
 
 	/* assign attributes from registered providers */
