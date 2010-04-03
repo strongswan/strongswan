@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup pkcs1_public_key pkcs1_public_key
+ * @defgroup pkcs1_builder pkcs1_builder
  * @{ @ingroup pkcs1
  */
 
