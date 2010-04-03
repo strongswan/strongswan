@@ -18,8 +18,8 @@
  * @{ @ingroup pem_p
  */
 
-#ifndef PEM_PRIVATE_KEY_H_
-#define PEM_PRIVATE_KEY_H_
+#ifndef PEM_BUILDER_H_
+#define PEM_BUILDER_H_
 
 #include <credentials/builder.h>
 #include <credentials/credential_factory.h>
@@ -53,5 +53,5 @@ public_key_t *pem_public_key_load(key_type_t type, va_list args);
  */
 certificate_t *pem_certificate_load(certificate_type_t type, va_list args);
 
-#endif /** PEM_PRIVATE_KEY_H_ @}*/
+#endif /** PEM_BUILDER_H_ @}*/
 
