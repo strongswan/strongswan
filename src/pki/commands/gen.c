@@ -47,7 +47,7 @@ static int gen()
 					return command_usage("invalid key type");
 				}
 				continue;
-			case 'o':
+			case 'f':
 				if (!get_form(arg, &form, FALSE))
 				{
 					return command_usage("invalid key output format");
