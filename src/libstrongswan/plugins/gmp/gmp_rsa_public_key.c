@@ -396,7 +396,13 @@ static bool get_encoding(private_gmp_rsa_public_key_t *this,
 						 key_encoding_type_t type, chunk_t *encoding)
 {
 	chunk_t n, e;
-	bool success;
+	bool success, pem = FALSE;
+
+	if (type == KEY_PUB_PEM)
+	{
+		pem = TRUE;
+		type = KEY_PUB_SPKI_ASN1_DER;
+	}
 
 	n = gmp_mpz_to_chunk(this->n);
 	e = gmp_mpz_to_chunk(this->e);
@@ -406,6 +412,15 @@ static bool get_encoding(private_gmp_rsa_public_key_t *this,
 	chunk_free(&n);
 	chunk_free(&e);
 
+	if (pem && success)
+	{
+		chunk_t asn1_encoding = *encoding;
+
+		success = lib->encoding->encode(lib->encoding, KEY_PUB_PEM, NULL,
+									encoding, KEY_PART_RSA_PUB_ASN1_DER,
+									asn1_encoding, KEY_PART_END);
+		chunk_clear(&asn1_encoding);
+	}
 	return success;
 }
 
