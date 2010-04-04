@@ -231,11 +231,24 @@ static bool get_encoding(private_openssl_rsa_public_key_t *this,
 	switch (type)
 	{
 		case KEY_PUB_SPKI_ASN1_DER:
+		case KEY_PUB_PEM:
 		{
+			bool success = TRUE;
+
 			*encoding = chunk_alloc(i2d_RSA_PUBKEY(this->rsa, NULL));
 			p = encoding->ptr;
 			i2d_RSA_PUBKEY(this->rsa, &p);
-			return TRUE;
+
+			if (type == KEY_PUB_PEM)
+			{
+				chunk_t asn1_encoding = *encoding;
+
+				success = lib->encoding->encode(lib->encoding, KEY_PUB_PEM,
+								NULL, encoding, KEY_PART_RSA_PUB_ASN1_DER,
+								asn1_encoding, KEY_PART_END);
+				chunk_clear(&asn1_encoding);
+			}					
+			return success;
 		}
 		case KEY_PUB_ASN1_DER:
 		{

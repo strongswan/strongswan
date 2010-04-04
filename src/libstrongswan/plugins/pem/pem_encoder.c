@@ -31,21 +31,29 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 	switch (type)
 	{
 		case KEY_PUB_PEM:
-			if (!key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER,
+			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER,
+								   &asn1, KEY_PART_END) ||
+				key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER,
 								   &asn1, KEY_PART_END))
 			{
-				return FALSE;
+				label ="PUBLIC KEY";
+				break;
 			}
-			label ="PUBLIC KEY";
-			break;
+			return FALSE;
 		case KEY_PRIV_PEM:
-			if (!key_encoding_args(args, KEY_PART_RSA_PRIV_ASN1_DER,
+			if (key_encoding_args(args, KEY_PART_RSA_PRIV_ASN1_DER,
 								   &asn1, KEY_PART_END))
 			{
-				return FALSE;
+				label ="RSA PRIVATE KEY";
+				break;
 			}
-			label ="RSA PRIVATE KEY";
-			break;
+			if (key_encoding_args(args, KEY_PART_ECDSA_PRIV_ASN1_DER,
+								   &asn1, KEY_PART_END))
+			{
+				label ="EC PRIVATE KEY";
+				break;
+			}
+			return FALSE;
 		default:
 			return FALSE;
 	}

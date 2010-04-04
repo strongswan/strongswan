@@ -233,11 +233,24 @@ static bool get_encoding(private_openssl_ec_private_key_t *this,
 	switch (type)
 	{
 		case KEY_PRIV_ASN1_DER:
+		case KEY_PRIV_PEM:
 		{
+			bool success = TRUE;
+
 			*encoding = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
 			p = encoding->ptr;
 			i2d_ECPrivateKey(this->ec, &p);
-			return TRUE;
+
+			if (type == KEY_PRIV_PEM)
+			{
+				chunk_t asn1_encoding = *encoding;
+
+				success = lib->encoding->encode(lib->encoding, KEY_PRIV_PEM,
+								NULL, encoding, KEY_PART_ECDSA_PRIV_ASN1_DER,
+								asn1_encoding, KEY_PART_END);
+				chunk_clear(&asn1_encoding);
+			}					
+			return success;
 		}
 		default:
 			return FALSE;
