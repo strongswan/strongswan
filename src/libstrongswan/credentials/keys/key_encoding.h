@@ -79,7 +79,7 @@ enum key_encoding_type_t {
 	KEY_PRIV_ASN1_DER,
 	/** subjectPublicKeyInfo encoding */
 	KEY_PUB_SPKI_ASN1_DER,
-	/** PEM oncoded PKCS#1 key */
+	/** PEM encoded PKCS#1 key */
 	KEY_PUB_PEM,
 	KEY_PRIV_PEM,
 	/** PGP key encoding */
