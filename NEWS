@@ -1,6 +1,10 @@
 strongswan-4.4.0
 ----------------
 
+- The ipsec pki --gen and --pub commands now allow the output of
+  private and public keys in PEM format using the --outform pem
+  command line option.
+
 - The new DHCP plugin queries virtual IP addresses for clients from a DHCP
   server using broadcasts, or a defined server using the
   charon.plugins.dhcp.server strongswan.conf option. DNS/WINS server information
@@ -20,6 +24,7 @@ strongswan-4.4.0
 
 - The android charon plugin stores received DNS server information as "net.dns"
   system properties, as used by the Android platform.
+
 
 strongswan-4.3.6
 ----------------
