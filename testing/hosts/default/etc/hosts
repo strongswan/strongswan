@@ -14,6 +14,8 @@
 
 10.1.0.10	alice.strongswan.org	alice
 10.1.0.20	venus.strongswan.org	venus
+10.1.0.30	carol2.strongswan.org	carol2
+10.1.0.40	dave2.strongswan.org	dave2
 10.1.0.1	moon1.strongswan.org	moon1
 192.168.0.1	moon.strongswan.org	moon
 192.168.0.50	alice1.strongswan.org	alice1
