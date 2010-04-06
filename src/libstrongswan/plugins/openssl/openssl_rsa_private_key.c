@@ -242,7 +242,7 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 								NULL, encoding, KEY_PART_RSA_PRIV_ASN1_DER,
 								asn1_encoding, KEY_PART_END);
 				chunk_clear(&asn1_encoding);
-			}					
+			}
 			return success;
 		}
 		default:

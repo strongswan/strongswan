@@ -60,7 +60,7 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 
 	/* compute and allocate maximum size of PEM object */
 	pem_chars = 4*(asn1.len + 2)/3;
-	pem_lines = (asn1.len + BYTES_PER_LINE - 1) / BYTES_PER_LINE; 
+	pem_lines = (asn1.len + BYTES_PER_LINE - 1) / BYTES_PER_LINE;
 	*encoding = chunk_alloc(5 + 2*(6 + strlen(label) + 6) + 3 + pem_chars + pem_lines);
 	pos = encoding->ptr;
 	len = encoding->len;
@@ -68,7 +68,7 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 	/* write PEM header */
 	written = snprintf(pos, len, "-----BEGIN %s-----\n", label);
 	pos += written;
-	len -= written;	
+	len -= written;
 
 	/* write PEM body */
 	while (pem_lines--)
@@ -89,10 +89,10 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 	/* write PEM trailer */
 	written = snprintf(pos, len, "-----END %s-----", label);
 	pos += written;
-	len -= written;	
+	len -= written;
 
 	/* replace termination null character with newline */
-    *pos = '\n';
+	*pos = '\n';
 	pos++;
 	len--;
 
