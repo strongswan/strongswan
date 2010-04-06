@@ -1561,6 +1561,7 @@ static status_t delete_(private_ike_sa_t *this)
 		default:
 			DBG1(DBG_IKE, "destroying IKE_SA in state %N "
 				"without notification", ike_sa_state_names, this->state);
+			charon->bus->ike_updown(charon->bus, &this->public, FALSE);
 			break;
 	}
 	return DESTROY_ME;
