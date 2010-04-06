@@ -17,3 +17,4 @@ dave::ipsec start
 carol::sleep 1
 dave::ipsec up home
 carol::ipsec up home
+carol::sleep 1
