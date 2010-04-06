@@ -781,6 +781,7 @@ void exit_pluto(int status)
 	free_builder();
 	delete_lock();
 	options->destroy(options);
+	lib->plugins->unload(lib->plugins);
 	libhydra_deinit();
 	library_deinit();
 	close_log();
