@@ -1,6 +1,13 @@
 strongswan-4.4.0
 ----------------
 
+- The IKEv2 High Availability plugin has been integrated. It provides
+  load sharing and failover capabilities in a cluster of currently two nodes,
+  based on an extend ClusterIP kernel module. More information is available at
+  http://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
+  Development of the High Availability functionality has been sponsored by
+  secunet Security Networks AG.
+
 - The ipsec pki --gen and --pub commands now allow the output of
   private and public keys in PEM format using the --outform pem
   command line option.
