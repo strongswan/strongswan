@@ -41,7 +41,7 @@ bool
 /**
  * @brief scepclient dbg function
  */
-static void scepclient_dbg(int level, char *fmt, ...)
+static void scepclient_dbg(debug_t group, level_t level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
 	int debug_level;

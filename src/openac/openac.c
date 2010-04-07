@@ -152,7 +152,7 @@ static bool stderr_quiet = FALSE;
 /**
  * openac dbg function
  */
-static void openac_dbg(int level, char *fmt, ...)
+static void openac_dbg(debug_t group, level_t level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
 	char buffer[8192];
