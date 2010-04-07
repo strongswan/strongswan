@@ -113,11 +113,6 @@ struct request_t {
 	char* (*get_referer)(request_t *this);
 
 	/**
-	 * Redirect the client to the referer.
-	 */
-	void (*to_referer)(request_t *this);
-
-	/**
 	 * Set a template value.
 	 *
 	 * @param key		key to set
