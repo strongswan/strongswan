@@ -798,7 +798,7 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	return print_in_hook(dst, len, "%*s", spec->width, buf);
 }
 
-METHOD(identification_t, clone, identification_t*,
+METHOD(identification_t, clone_, identification_t*,
 	private_identification_t *this)
 {
 	private_identification_t *clone = malloc_thing(private_identification_t);
@@ -830,7 +830,7 @@ static private_identification_t *identification_create(id_type_t type)
 			.get_encoding = _get_encoding,
 			.get_type = _get_type,
 			.create_part_enumerator = _create_part_enumerator,
-			.clone = _clone,
+			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.type = type,
