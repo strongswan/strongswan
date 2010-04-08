@@ -112,36 +112,21 @@ struct diffie_hellman_t {
  * Parameters for a specific diffie hellman group.
  */
 struct diffie_hellman_params_t {
-	/**
-	 * DH group.
-	 */
-	diffie_hellman_group_t group;
 
 	/**
-	 * The prime as byte array.
+	 * The prime of the group
 	 */
-	const u_int8_t *prime;
+	const chunk_t prime;
 
 	/**
-	 * Length of the prime (in bytes).
+	 * Generator of the group
 	 */
-	size_t prime_len;
+	const chunk_t generator;
 
 	/**
-	 * Optimal length of the exponent (in bytes), as specified in RFC 3526.
-	 */
-	size_t opt_exp_len;
-
-	/**
-	 * Length of the exponent (in bytes) that should be used, depending on
-	 * the dh_exponent_ansi_x9_42 setting in strongswan.conf.
+	 * Exponent length to use
 	 */
 	size_t exp_len;
-
-	/**
-	 * Generator.
-	 */
-	u_int16_t generator;
 };
 
 /**

@@ -128,10 +128,9 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	{
 		return NOT_FOUND;
 	}
-	this->dh->p = BN_bin2bn(params->prime, params->prime_len, NULL);
-	this->dh->g = BN_new();
-	BN_set_word(this->dh->g, params->generator);
-	if (params->exp_len != params->prime_len)
+	this->dh->p = BN_bin2bn(params->prime.ptr, params->prime.len, NULL);
+	this->dh->g = BN_bin2bn(params->generator.ptr, params->generator.len, NULL);
+	if (params->exp_len != params->prime.len)
 	{
 		this->dh->length = params->exp_len * 8;
 	}

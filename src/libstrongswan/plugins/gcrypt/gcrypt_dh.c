@@ -203,12 +203,21 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
 
 	this->group = group;
-	this->p_len = params->prime_len;
+	this->p_len = params->prime.len;
 	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG,
-						params->prime, params->prime_len, NULL);
+						params->prime.ptr, params->prime.len, NULL);
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi modulus failed: %s", gpg_strerror(err));
+		free(this);
+		return NULL;
+	}
+	err = gcry_mpi_scan(&this->g, GCRYMPI_FMT_USG,
+						params->generator.ptr, params->generator.len, NULL);
+	if (err)
+	{
+		DBG1(DBG_LIB, "importing mpi generator failed: %s", gpg_strerror(err));
+		gcry_mpi_release(this->p);
 		free(this);
 		return NULL;
 	}
@@ -225,6 +234,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 		{
 			DBG1(DBG_LIB, "importing mpi xa failed: %s", gpg_strerror(err));
 			gcry_mpi_release(this->p);
+			gcry_mpi_release(this->g);
 			free(this);
 			return NULL;
 		}
@@ -240,7 +250,6 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 		gcry_mpi_clear_bit(this->xa, params->exp_len * 8 - 1);
 	}
 
-	this->g = gcry_mpi_set_ui(NULL, params->generator);
 	this->ya = gcry_mpi_new(this->p_len * 8);
 	this->yb = NULL;
 	this->zz = NULL;

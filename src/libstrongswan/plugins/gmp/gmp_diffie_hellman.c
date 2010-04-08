@@ -194,10 +194,18 @@ static void destroy(private_gmp_diffie_hellman_t *this)
  */
 gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 {
-	private_gmp_diffie_hellman_t *this = malloc_thing(private_gmp_diffie_hellman_t);
+	private_gmp_diffie_hellman_t *this;
 	diffie_hellman_params_t *params;
 	rng_t *rng;
 	chunk_t random;
+
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		return NULL;
+	}
+
+	this = malloc_thing(private_gmp_diffie_hellman_t);
 
 	/* public functions */
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -216,16 +224,9 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	mpz_init(this->g);
 
 	this->computed = FALSE;
-
-	params = diffie_hellman_get_params(this->group);
-	if (!params)
-	{
-		destroy(this);
-		return NULL;
-	}
-	mpz_import(this->p, params->prime_len, 1, 1, 1, 0, params->prime);
-	this->p_len = params->prime_len;
-	mpz_set_ui(this->g, params->generator);
+	this->p_len = params->prime.len;
+	mpz_import(this->p, params->prime.len, 1, 1, 1, 0, params->prime.ptr);
+	mpz_import(this->g, params->generator.len, 1, 1, 1, 0, params->generator.ptr);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
