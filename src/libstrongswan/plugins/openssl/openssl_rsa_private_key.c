@@ -476,7 +476,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	}
 
 	engine_id = lib->settings->get_str(lib->settings,
-								"library.plugins.openssl.engine_id", "pkcs11");
+						"libstrongswan.plugins.openssl.engine_id", "pkcs11");
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
