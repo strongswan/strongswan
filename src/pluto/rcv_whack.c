@@ -379,7 +379,9 @@ void whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_myid)
+	{
 		set_myid(MYID_SPECIFIED, msg.myid);
+	}
 
 	/* Deleting combined with adding a connection works as replace.
 	 * To make this more useful, in only this combination,
@@ -388,9 +390,13 @@ void whack_handle(int whackctlfd)
 	if (msg.whack_delete)
 	{
 		if (msg.whack_ca)
+		{
 			find_ca_info_by_name(msg.name, TRUE);
+		}
 		else
+		{
 			delete_connections_by_name(msg.name, !msg.whack_connection);
+		}
 	}
 
 	if (msg.whack_deletestate)
@@ -409,13 +415,19 @@ void whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_crash)
+	{
 		delete_states_by_peer(&msg.whack_crash_peer);
+	}
 
 	if (msg.whack_connection)
+	{
 		add_connection(&msg);
+	}
 
 	if (msg.whack_ca && msg.cacert != NULL)
+	{
 		add_ca_info(&msg);
+	}
 
 	/* process "listen" before any operation that could require it */
 	if (msg.whack_listen)
@@ -477,7 +489,7 @@ void whack_handle(int whackctlfd)
 		list_leases(msg.name, msg.whack_lease_ip, msg.whack_lease_id);
 	}
 
-   if (msg.whack_list & LIST_PUBKEYS)
+	if (msg.whack_list & LIST_PUBKEYS)
 	{
 		list_public_keys(msg.whack_utc);
 	}
@@ -560,12 +572,18 @@ void whack_handle(int whackctlfd)
 			{
 				set_cur_connection(c);
 				if (!oriented(*c))
+				{
 					whack_log(RC_ORIENT
 						, "we have no ipsecN interface for either end of this connection");
+				}
 				else if (c->policy & POLICY_GROUP)
+				{
 					route_group(c);
+				}
 				else if (!trap_connection(c))
+				{
 					whack_log(RC_ROUTE, "could not route");
+				}
 				reset_cur_connection();
 			}
 		}
@@ -592,14 +610,22 @@ void whack_handle(int whackctlfd)
 				for (sr = &c->spd; sr != NULL; sr = sr->next)
 				{
 					if (sr->routing >= RT_ROUTED_TUNNEL)
+					{
 						fail++;
+					}
 				}
 				if (fail > 0)
+				{
 					whack_log(RC_RTBUSY, "cannot unroute: route busy");
+				}
 				else if (c->policy & POLICY_GROUP)
+				{
 					unroute_group(c);
+				}
 				else
+				{
 					unroute_connection(c);
+				}
 				reset_cur_connection();
 			}
 		}
@@ -626,11 +652,15 @@ void whack_handle(int whackctlfd)
 	if (msg.whack_oppo_initiate)
 	{
 		if (!listening)
+		{
 			whack_log(RC_DEAF, "need --listen before opportunistic initiation");
+		}
 		else
+		{
 			initiate_opportunistic(&msg.oppo_my_client, &msg.oppo_peer_client, 0
 				, FALSE
 				, msg.whack_async? NULL_FD : dup_any(whackfd));
+		}
 	}
 
 	if (msg.whack_terminate)
@@ -647,7 +677,9 @@ void whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_status)
+	{
 		show_status(msg.whack_statusall, msg.name);
+	}
 
 	if (msg.whack_shutdown)
 	{
@@ -658,10 +690,14 @@ void whack_handle(int whackctlfd)
 	if (msg.whack_sc_op != SC_OP_NONE)
 	{
 		if (pkcs11_proxy)
+		{
 			scx_op_via_whack(msg.sc_data, msg.inbase, msg.outbase
 						   , msg.whack_sc_op, msg.keyid, whackfd);
+		}
 		else
+		{
 		   plog("pkcs11 access to smartcard not allowed (set pkcs11proxy=yes)");
+		}
 	}
 
 	whack_log_fd = NULL_FD;
