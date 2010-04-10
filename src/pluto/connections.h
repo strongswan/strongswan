@@ -137,6 +137,7 @@ struct end {
 		host_srcip;
 	ip_subnet client;
 
+	bool is_left;
 	bool key_from_DNS_on_demand;
 	bool has_client;
 	bool has_client_wildcard;

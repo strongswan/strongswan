@@ -860,10 +860,11 @@ static void load_end_certificate(char *filename, struct end *dst)
 }
 
 static bool extract_end(struct end *dst, const whack_end_t *src,
-						const char *name, const char *which)
+						const char *name, bool is_left)
 {
 	bool same_ca = FALSE;
 
+	dst->is_left = is_left;
 	dst->id = identification_create_from_string(src->id);
 	dst->ca = NULL;
 
@@ -917,22 +918,10 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	dst->updown = clone_str(src->updown);
 	dst->host_port = src->host_port;
 
-	if (streq(which, "right"))
+	/* if the sourceip netmask is zero a named pool exists */
+	if (src->sourceip_mask == 0)
 	{
-		/* if the sourceip netmask is zero a named pool exists */
-		if (src->sourceip_mask == 0)
-		{
-			dst->pool = clone_str(src->sourceip);
-		}
-		else if (whack_attr->add_pool(whack_attr, name, src))
-		{	/* otherwise we try to add a new in-memory pool, which in case of
-			 * %config (sourceip == NULL, sourceip_maks == 1) just returns
-			 * the requested address */
-			dst->pool = clone_str(name);
-			dst->modecfg = TRUE;
-			/* reset the host sourceip so it gets assigned in modecfg */
-			anyaddr(AF_INET, &dst->host_srcip);
-		}
+		dst->pool = clone_str(src->sourceip);
 	}
 
 	/* if host sourceip is defined but no client is present
@@ -1136,9 +1125,8 @@ void add_connection(const whack_message_t *wm)
 		c->tunnel_addr_family = wm->tunnel_addr_family;
 
 		c->requested_ca = NULL;
-
-		same_leftca  = extract_end(&c->spd.this, &wm->left, wm->name, "left");
-		same_rightca = extract_end(&c->spd.that, &wm->right, wm->name, "right");
+		same_leftca  = extract_end(&c->spd.this, &wm->left, wm->name, TRUE);
+		same_rightca = extract_end(&c->spd.that, &wm->right, wm->name, FALSE);
 
 		if (same_rightca && c->spd.this.ca)
 		{
@@ -1214,6 +1202,17 @@ void add_connection(const whack_message_t *wm)
 		}
 
 		(void)orient(c);
+
+		/* if rightsourceip defines a subnet then create an in-memory pool */
+		if (whack_attr->add_pool(whack_attr, c->name,
+							c->spd.this.is_left ? &wm->right : &wm->left))
+		{
+			c->spd.that.pool = clone_str(c->name);
+			c->spd.that.modecfg = TRUE;
+			c->spd.that.has_client = FALSE;
+			/* reset the host_srcip so that it gets assigned in modecfg */
+			anyaddr(AF_INET, &c->spd.that.host_srcip);
+		}
 
 		if (c->ikev1)
 		{
