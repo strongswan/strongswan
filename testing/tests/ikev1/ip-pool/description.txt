@@ -1,5 +1,5 @@
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
-Both <b>carol</b> and <b>dave</b> request a <b>virtual IP</b> via the IKEv2 configuration payload
+Both <b>carol</b> and <b>dave</b> request a <b>virtual IP</b> via the IKEv1 Mode Config payload
 by using the <b>leftsourceip=%config</b> parameter. The gateway <b>moon</b> assigns virtual
 IP addresses from a simple pool defined by <b>rightsourceip=10.3.0.0/28</b> in a monotonously
 increasing order. 
