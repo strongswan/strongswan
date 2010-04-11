@@ -40,7 +40,8 @@
 #include "connections.h"
 #include "myid.h"
 #include "kernel.h"
-#include "whack.h"      /* needs connections.h */
+#include "whack.h"
+#include "whack_attribute.h"
 #include "timer.h"
 
 /* close one per-peer log */
@@ -856,6 +857,7 @@ void show_status(bool all, const char *name)
 		show_myid_status();
 		show_loaded_plugins();
 		show_debug_status();
+		show_pools(name);
 		whack_log(RC_COMMENT, BLANK_FORMAT);    /* spacer */
 	}
 	show_connections_status(all, name);

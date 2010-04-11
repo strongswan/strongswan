@@ -332,3 +332,29 @@ void list_leases(char *name, char *addr, char *id)
 	DESTROY_IF(address);
 }
 
+/**
+ * see header file
+ */
+void show_pools(const char *name)
+{
+	enumerator_t *enumerator;
+	u_int size, online, offline;
+	char *pool;
+	bool first = TRUE;
+
+	enumerator = whack_attr->create_pool_enumerator(whack_attr);
+	while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
+	{
+		if (name && !streq(name, pool))
+		{
+			continue;
+		}
+		if (first)
+		{
+			first = FALSE;
+			whack_log(RC_COMMENT, "Virtual IP pools (size/online/offline):");
+		}
+		whack_log(RC_COMMENT, "\"%s\": %u/%u/%u", pool, size, online, offline);
+	}
+	enumerator->destroy(enumerator);
+}

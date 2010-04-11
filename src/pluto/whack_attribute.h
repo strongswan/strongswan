@@ -101,4 +101,11 @@ void whack_attribute_finalize();
  */
 void list_leases(char *name, char *addr, char *id);
 
+/**
+ * List either all pools or the pool with a given name
+ *
+ * @param name		name of the pool, NULL for all pools
+ */
+void show_pools(const char *name);
+
 #endif /** WHACK_ATTRIBUTE_H_ @}*/
