@@ -5,8 +5,12 @@ strongswan-4.4.0
   load sharing and failover capabilities in a cluster of currently two nodes,
   based on an extend ClusterIP kernel module. More information is available at
   http://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
-  Development of the High Availability functionality has been sponsored by
+  The development of the High Availability functionality was sponsored by
   secunet Security Networks AG.
+
+- The IKEv1 pluto daemon supports RAM-based virtual IP pools using
+  the rightsourceip directive with a subnet from which addresses
+  are allocated.
 
 - The ipsec pki --gen and --pub commands now allow the output of
   private and public keys in PEM format using the --outform pem
