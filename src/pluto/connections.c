@@ -3693,7 +3693,8 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			}
 			else
 			{
-				if (!peer_net_is_host)
+				if (!peer_net_is_host && !(sr->that.modecfg && c->spd.that.modecfg &&
+						subnetisaddr(peer_net, &c->spd.that.host_srcip)))
 				{
 					continue;
 				}

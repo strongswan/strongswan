@@ -4872,6 +4872,21 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 */
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
+
+					/* inherit any virtual IP assigned by a Mode Config exchange */ 
+					if (p->spd.that.modecfg && c->spd.that.modecfg &&
+						subnetisaddr(his_net, &c->spd.that.host_srcip))
+					{
+						char srcip[ADDRTOT_BUF];
+
+						DBG(DBG_CONTROL,
+							addrtot(&c->spd.that.host_srcip, 0, srcip, sizeof(srcip));
+							DBG_log("inheriting virtual IP source address %s from ModeCfg", srcip)
+						)
+						p->spd.that.host_srcip = c->spd.that.host_srcip;
+						p->spd.that.client = c->spd.that.client;
+						p->spd.that.has_client = TRUE;
+					}
 				}
 			}
 #ifdef DEBUG
