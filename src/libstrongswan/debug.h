@@ -73,7 +73,7 @@ extern enum_name_t *debug_lower_names;
  */
 enum level_t {
 	/** absolutely silent */
-	LEVEL_SILENT =  1,
+	LEVEL_SILENT = -1,
 	/** most important auditing logs */
 	LEVEL_AUDIT =   0,
 	/** control flow */
