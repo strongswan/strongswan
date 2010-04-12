@@ -15,7 +15,7 @@ AM_CFLAGS = \
 -DPLUGINDIR=\"${plugindir}\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
-#EXTRA_DIST = Android.mk
+EXTRA_DIST = Android.mk
 
 # build optional plugins
 ########################
