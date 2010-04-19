@@ -50,6 +50,9 @@ enum diffie_hellman_group_t {
 	ECP_256_BIT   = 19,
 	ECP_384_BIT   = 20,
 	ECP_521_BIT   = 21,
+	MODP_1024_160 = 22,
+	MODP_2048_224 = 23,
+	MODP_2048_256 = 24,
 	ECP_192_BIT   = 25,
 	ECP_224_BIT   = 26,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
@@ -127,6 +130,11 @@ struct diffie_hellman_params_t {
 	 * Exponent length to use
 	 */
 	size_t exp_len;
+
+	/**
+	 * Prime order subgroup; for MODP Groups 22-24
+	 */
+	const chunk_t subgroup;
 };
 
 /**

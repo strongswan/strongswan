@@ -106,10 +106,20 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 #ifdef EXTENDED_DH_TEST
 		/* 3. test if y ^ q mod p = 1, where q = (p - 1)/2. */
 		mpz_t q, one;
+		diffie_hellman_params_t *params;
 
 		mpz_init(q);
 		mpz_init(one);
-		mpz_fdiv_q_2exp(q, p_min_1, 1);
+
+		params = diffie_hellman_get_params(this->group);
+		if (!params->subgroup.len)
+		{
+			mpz_fdiv_q_2exp(q, p_min_1, 1);
+		}
+		else
+		{
+			mpz_import(q, params->subgroup.len, 1, 1, 1, 0, params->subgroup.ptr);
+		}
 		mpz_powm(one, this->yb, q, this->p);
 		mpz_clear(q);
 		if (mpz_cmp_ui(one, 1) == 0)

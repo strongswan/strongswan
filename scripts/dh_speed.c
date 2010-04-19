@@ -15,19 +15,22 @@ struct {
 	char *name;
 	diffie_hellman_group_t group;
 } groups[] = {
-	{"modp768",		MODP_768_BIT},
-	{"modp1024",	MODP_1024_BIT},
-	{"modp1536",	MODP_1536_BIT},
-	{"modp2048",	MODP_2048_BIT},
-	{"modp3072",	MODP_3072_BIT},
-	{"modp4096",	MODP_4096_BIT},
-	{"modp6144",	MODP_6144_BIT},
-	{"modp8192",	MODP_8192_BIT},
-	{"ecp256",		ECP_256_BIT},
-	{"ecp384",		ECP_384_BIT},
-	{"ecp521",		ECP_521_BIT},
-	{"ecp192",		ECP_192_BIT},
-	{"ecp224",		ECP_224_BIT},
+	{"modp768",			MODP_768_BIT},
+	{"modp1024",		MODP_1024_BIT},
+	{"modp1024s160",	MODP_1024_160},
+	{"modp1536",		MODP_1536_BIT},
+	{"modp2048",		MODP_2048_BIT},
+	{"modp2048s224",	MODP_2048_224},
+	{"modp2048s256",	MODP_2048_256},
+	{"modp3072",		MODP_3072_BIT},
+	{"modp4096",		MODP_4096_BIT},
+	{"modp6144",		MODP_6144_BIT},
+	{"modp8192",		MODP_8192_BIT},
+	{"ecp256",			ECP_256_BIT},
+	{"ecp384",			ECP_384_BIT},
+	{"ecp521",			ECP_521_BIT},
+	{"ecp192",			ECP_192_BIT},
+	{"ecp224",			ECP_224_BIT},
 };
 
 static void start_timing(struct timespec *start)

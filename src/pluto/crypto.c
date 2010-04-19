@@ -237,6 +237,27 @@ static struct dh_desc dh_desc_ecp_521 = {
 	ke_size:    2*528 / BITS_PER_BYTE
 };
 
+static struct dh_desc dh_desc_modp_1024_160 = {
+	algo_type:  IKE_ALG_DH_GROUP,
+	algo_id:    MODP_1024_160,
+	algo_next:  NULL,
+	ke_size:    1024 / BITS_PER_BYTE
+};
+
+static struct dh_desc dh_desc_modp_2048_224 = {
+	algo_type:  IKE_ALG_DH_GROUP,
+	algo_id:    MODP_2048_224,
+	algo_next:  NULL,
+	ke_size:    2048 / BITS_PER_BYTE
+};
+
+static struct dh_desc dh_desc_modp_2048_256 = {
+	algo_type:  IKE_ALG_DH_GROUP,
+	algo_id:    MODP_2048_256,
+	algo_next:  NULL,
+	ke_size:    2048 / BITS_PER_BYTE
+};
+
 static struct dh_desc dh_desc_ecp_192 = {
 	algo_type:  IKE_ALG_DH_GROUP,
 	algo_id:    ECP_192_BIT,
@@ -369,6 +390,15 @@ bool init_crypto(void)
 				break;
 			case ECP_521_BIT:
 				desc = &dh_desc_ecp_521;
+				break;
+			case MODP_1024_160:
+				desc = &dh_desc_modp_1024_160;
+				break;
+			case MODP_2048_224:
+				desc = &dh_desc_modp_2048_224;
+				break;
+			case MODP_2048_256:
+				desc = &dh_desc_modp_2048_256;
 				break;
 			case ECP_192_BIT:
 				desc = &dh_desc_ecp_192;
