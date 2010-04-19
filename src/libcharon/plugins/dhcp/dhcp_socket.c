@@ -454,7 +454,6 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 					chunk_from_thing(dhcp->your_address), 0);
 	server = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
-	DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
@@ -462,6 +461,7 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	{
 		if (transaction->get_id(transaction) == dhcp->transaction_id)
 		{
+			DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 			this->discover->remove_at(this->discover, enumerator);
 			this->request->insert_last(this->request, transaction);
 			transaction->set_address(transaction, offer->clone(offer));
@@ -515,7 +515,6 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 
 	offer = host_create_from_chunk(AF_INET,
 						chunk_from_thing(dhcp->your_address), 0);
-	DBG1(DBG_CFG, "received DHCP ACK for %H", offer);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->request->create_enumerator(this->request);
@@ -523,6 +522,7 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	{
 		if (transaction->get_id(transaction) == dhcp->transaction_id)
 		{
+			DBG1(DBG_CFG, "received DHCP ACK for %H", offer);
 			this->request->remove_at(this->request, enumerator);
 			this->completed->insert_last(this->completed, transaction);
 			break;
@@ -632,13 +632,15 @@ dhcp_socket_t *dhcp_socket_create()
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS,
 				 offsetof(struct iphdr, protocol)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 14),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 16),
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct iphdr) +
 				 offsetof(struct udphdr, source)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 12),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 14),
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct iphdr) +
 				 offsetof(struct udphdr, dest)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 0, 10),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 0, 2),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 1),
+		BPF_JUMP(BPF_JMP+BPF_JA, 0, 0, 10),
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, sizeof(struct iphdr) +
 				 sizeof(struct udphdr) + offsetof(dhcp_t, opcode)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, BOOTREPLY, 0, 8),
