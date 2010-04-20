@@ -702,6 +702,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
+	identification_t *this_id, *that_id;
+	ip_address peer_addr;
 	size_t sizespi;
 	int i;
 
@@ -759,6 +761,15 @@ void accept_delete(struct state *st, struct msg_digest *md,
 		return;
 	}
 
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		struct end *this = &st->st_connection->spd.this;
+		struct end *that = &st->st_connection->spd.that;
+		this_id = this->id->clone(this->id);
+		that_id = that->id->clone(that->id);
+		peer_addr = st->st_connection->spd.that.host_addr;
+	}
+
 	for (i = 0; i < d->isad_nospi; i++)
 	{
 		u_char *spi = p->pbs.cur + (i * sizespi);
@@ -770,7 +781,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			 */
 			struct state *dst = find_state(spi /*iCookie*/
 				, spi+COOKIE_SIZE /*rCookie*/
-				, &st->st_connection->spd.that.host_addr
+				, &peer_addr
 				, MAINMODE_MSGID);
 
 			if (dst == NULL)
@@ -778,7 +789,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
 					"ISAKMP SA not found (maybe expired)");
 			}
-			else if (!same_peer_ids(st->st_connection, dst->st_connection, NULL))
+			else if (! this_id->equals(this_id, dst->st_connection->spd.this.id) ||
+					 ! that_id->equals(that_id, dst->st_connection->spd.that.id))
 			{
 				/* we've not authenticated the relevant identities */
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
@@ -875,6 +887,12 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				set_cur_connection(oldc);
 			}
 		}
+	}
+
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		this_id->destroy(this_id);
+		that_id->destroy(that_id);
 	}
 }
 
