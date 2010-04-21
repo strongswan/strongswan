@@ -329,11 +329,11 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 			this->dh_group = group;
 			return INVALID_ARG;
 		}
-		else
-		{
-			DBG1(DBG_IKE, "no acceptable proposal found");
-			return FAILED;
-		}
+		/* the selected proposal does not use a DH group */
+		DBG1(DBG_IKE, "ignoring KE exchange, agreed on a non-PFS proposal");
+		DESTROY_IF(this->dh);
+		this->dh = NULL;
+		this->dh_group = MODP_NONE;
 	}
 
 	if (my_vip == NULL)
