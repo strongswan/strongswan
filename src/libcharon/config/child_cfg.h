@@ -239,6 +239,13 @@ struct child_cfg_t {
 	u_int32_t (*get_inactivity)(child_cfg_t *this);
 
 	/**
+	 * Specific reqid to use for CHILD_SA
+	 *
+	 * @return				reqid
+	 */
+	u_int32_t (*get_reqid)(child_cfg_t *this);
+
+	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
@@ -299,12 +306,13 @@ struct child_cfg_t {
  * @param close_action		close action
  * @param ipcomp			use IPComp, if peer supports it
  * @param inactivity		inactivity timeout in s before closing a CHILD_SA
- * @return 					child_cfg_t object
+ * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
+ * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity);
+							  u_int32_t inactivity, u_int32_t reqid);
 
 #endif /** CHILD_CFG_H_ @}*/

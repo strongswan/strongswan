@@ -112,6 +112,11 @@ struct private_child_cfg_t {
 	u_int32_t inactivity;
 
 	/**
+	 * Reqid to install CHIL_SA with
+	 */
+	u_int32_t reqid;
+
+	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
 	 */
 	bool proxy_mode;
@@ -446,6 +451,14 @@ static u_int32_t get_inactivity(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.get_reqid.
+ */
+static u_int32_t get_reqid(private_child_cfg_t *this)
+{
+	return this->reqid;
+}
+
+/**
  * Implementation of child_cfg_t.set_mipv6_options.
  */
 static void set_mipv6_options(private_child_cfg_t *this, bool proxy_mode,
@@ -506,7 +519,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity)
+							  u_int32_t inactivity, u_int32_t reqid)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -526,6 +539,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->public.set_mipv6_options = (void (*) (child_cfg_t*,bool,bool))set_mipv6_options;
 	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
 	this->public.get_inactivity = (u_int32_t (*) (child_cfg_t *))get_inactivity;
+	this->public.get_reqid = (u_int32_t (*) (child_cfg_t *))get_reqid;
 	this->public.use_proxy_mode = (bool (*) (child_cfg_t *))use_proxy_mode;
 	this->public.install_policy = (bool (*) (child_cfg_t *))install_policy;
 	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
@@ -539,6 +553,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->close_action = close_action;
 	this->use_ipcomp = ipcomp;
 	this->inactivity = inactivity;
+	this->reqid = reqid;
 	this->proxy_mode = FALSE;
 	this->install_policy = TRUE;
 	this->refcount = 1;
