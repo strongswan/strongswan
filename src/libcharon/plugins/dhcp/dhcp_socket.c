@@ -377,7 +377,7 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	{	/* no OFFER received */
 		this->mutex->unlock(this->mutex);
 		transaction->destroy(transaction);
-		DBG1(DBG_CFG, "DHCP disover timed out");
+		DBG1(DBG_CFG, "DHCP DISCOVER timed out");
 		return NULL;
 	}
 
