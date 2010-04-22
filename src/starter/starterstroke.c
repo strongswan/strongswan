@@ -269,6 +269,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.ikeme.mediation = conn->me_mediation;
 	msg.add_conn.ikeme.mediated_by = push_string(&msg, conn->me_mediated_by);
 	msg.add_conn.ikeme.peerid = push_string(&msg, conn->me_peerid);
+	msg.add_conn.reqid = conn->reqid;
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
