@@ -942,8 +942,6 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other_usetime = 0;
 	this->my_usebytes = 0;
 	this->other_usebytes = 0;
-	/* reuse old reqid if we are rekeying an existing CHILD_SA */
-	this->reqid = rekey ? rekey : ++reqid;
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
@@ -953,6 +951,12 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->expire_time = 0;
 	this->config = config;
 	config->get_ref(config);
+	this->reqid = config->get_reqid(config);
+	if (!this->reqid)
+	{
+		/* reuse old reqid if we are rekeying an existing CHILD_SA */
+		this->reqid = rekey ? rekey : ++reqid;
+	}
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
