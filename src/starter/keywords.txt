@@ -87,6 +87,7 @@ xauth,             KW_XAUTH
 mediation,         KW_MEDIATION
 mediated_by,       KW_MEDIATED_BY
 me_peerid,         KW_ME_PEERID
+reqid,             KW_REQID
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE

@@ -120,6 +120,7 @@ struct starter_conn {
 		u_int64_t	sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
+		u_int32_t       reqid;
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
