@@ -395,7 +395,7 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	{	/* no ACK received */
 		this->mutex->unlock(this->mutex);
 		transaction->destroy(transaction);
-		DBG1(DBG_CFG, "DHCP request timed out");
+		DBG1(DBG_CFG, "DHCP REQUEST timed out");
 		return NULL;
 	}
 	this->mutex->unlock(this->mutex);
