@@ -130,6 +130,7 @@ typedef enum {
 	DHCP_MESSAGE_TYPE = 53,
 	DHCP_SERVER_ID = 54,
 	DHCP_PARAM_REQ_LIST = 55,
+	DHCP_CLIENT_ID = 61,
 	DHCP_OPTEND = 255,
 } dhcp_option_type_t;
 
@@ -238,8 +239,17 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	option->data[0] = type;
 	optlen += sizeof(dhcp_option_t) + option->len;
 
+	if (identity->get_type(identity) == ID_FQDN)
+	{
+		option = (dhcp_option_t*)&dhcp->options[optlen];
+		option->type = DHCP_HOST_NAME;
+		option->len = min(chunk.len, 64);
+		memcpy(option->data, chunk.ptr, option->len);
+		optlen += sizeof(dhcp_option_t) + option->len;
+	}
+
 	option = (dhcp_option_t*)&dhcp->options[optlen];
-	option->type = DHCP_HOST_NAME;
+	option->type = DHCP_CLIENT_ID;
 	option->len = min(chunk.len, 64);
 	memcpy(option->data, chunk.ptr, option->len);
 	optlen += sizeof(dhcp_option_t) + option->len;
