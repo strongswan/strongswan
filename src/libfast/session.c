@@ -177,7 +177,9 @@ static void process(private_session_t *this, request_t *request)
 		if (this->controllers->get_first(this->controllers,
 										 (void**)&current) == SUCCESS)
 		{
-			request->redirect(request, current->get_name(current));
+			request->streamf(request,
+				"Status: 301 Moved permanently\nLocation: %s/%s\n\n",
+				request->get_base(request), current->get_name(current));
 		}
 	}
 }
