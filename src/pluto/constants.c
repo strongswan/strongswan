@@ -405,7 +405,7 @@ enum_names esp_transform_names_high =
 	{ ESP_SERPENT, ESP_TWOFISH, esp_transform_name_high, NULL };
 
 enum_names esp_transform_names =
-	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transform_names_high };
+	{ ESP_DES_IV64, ESP_AES_GMAC, esp_transform_name, &esp_transform_names_high };
 
 /* IPCOMP transform values */
 
