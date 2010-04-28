@@ -245,6 +245,25 @@ static char* get_referer(private_request_t *this)
 }
 
 /**
+ * Implementation of request_t.to_referer.
+ */
+static void to_referer(private_request_t *this)
+{
+	char *referer;
+
+	referer = get_referer(this);
+	if (referer)
+	{
+		FCGX_FPrintF(this->req.out, "Status: 303 See Other\n");
+		FCGX_FPrintF(this->req.out, "Location: %s\n\n", referer);
+	}
+	else
+	{
+		redirect(this, "/");
+	}
+}
+
+/**
  * Implementation of request_t.session_closed.
  */
 static bool session_closed(private_request_t *this)
@@ -392,6 +411,7 @@ request_t *request_create(int fd, bool debug)
 	this->public.close_session = (void(*)(request_t*))close_session;
 	this->public.redirect = (void(*)(request_t*, char *fmt,...))redirect;
 	this->public.get_referer = (char*(*)(request_t*))get_referer;
+	this->public.to_referer = (void(*)(request_t*))to_referer;
 	this->public.render = (void(*)(request_t*,char*))render;
 	this->public.streamf = (int(*)(request_t*, char *format, ...))streamf;
 	this->public.serve = (void(*)(request_t*,char*,chunk_t))serve;
