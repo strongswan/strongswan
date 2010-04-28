@@ -298,7 +298,7 @@ void load_authcerts(char *type, char *path, x509_flag_t auth_flags)
 	enumerator = enumerator_create_directory(path);
 	if (!enumerator)
 	{
-		DBG1(DBG_LIB, "  reading directory '%s' failed");
+		DBG1(DBG_LIB, "  reading directory '%s' failed", path);
 		return;
 	}
 
