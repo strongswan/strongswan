@@ -27,25 +27,58 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 	char *label;
 	u_char *pos;
 	size_t len, written, pem_chars, pem_lines;
+	chunk_t n, e, d, p, q, exp1, exp2, coeff, to_free = chunk_empty;
 
 	switch (type)
 	{
 		case KEY_PUB_PEM:
+			label ="PUBLIC KEY";
+			/* direct PKCS#1 PEM encoding */
 			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER,
-								   &asn1, KEY_PART_END) ||
+									&asn1, KEY_PART_END) ||
 				key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER,
-								   &asn1, KEY_PART_END))
+									&asn1, KEY_PART_END))
 			{
-				label ="PUBLIC KEY";
 				break;
+			}
+			/* indirect PEM encoding from components */
+			if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
+									KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+			{
+				if (lib->encoding->encode(lib->encoding, KEY_PUB_SPKI_ASN1_DER,
+									NULL, &asn1, KEY_PART_RSA_MODULUS, n,
+									KEY_PART_RSA_PUB_EXP, e, KEY_PART_END))
+				{
+					to_free = asn1;
+					break;
+				}
 			}
 			return FALSE;
 		case KEY_PRIV_PEM:
+			label ="RSA PRIVATE KEY";
+			/* direct PKCS#1 PEM encoding */
 			if (key_encoding_args(args, KEY_PART_RSA_PRIV_ASN1_DER,
-								   &asn1, KEY_PART_END))
+									&asn1, KEY_PART_END))
 			{
-				label ="RSA PRIVATE KEY";
 				break;
+			}
+			/* indirect PEM encoding from components */
+			if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
+							KEY_PART_RSA_PUB_EXP, &e, KEY_PART_RSA_PRIV_EXP, &d,
+							KEY_PART_RSA_PRIME1, &p, KEY_PART_RSA_PRIME2, &q,
+							KEY_PART_RSA_EXP1, &exp1, KEY_PART_RSA_EXP2, &exp2,
+							KEY_PART_RSA_COEFF, &coeff, KEY_PART_END))
+			{
+				if (lib->encoding->encode(lib->encoding, KEY_PRIV_ASN1_DER, NULL,
+							&asn1, KEY_PART_RSA_MODULUS, n,
+							KEY_PART_RSA_PUB_EXP, e, KEY_PART_RSA_PRIV_EXP, d,
+							KEY_PART_RSA_PRIME1, p, KEY_PART_RSA_PRIME2, q,
+							KEY_PART_RSA_EXP1, exp1, KEY_PART_RSA_EXP2, exp2,
+							KEY_PART_RSA_COEFF, coeff, KEY_PART_END))
+				{
+					to_free = asn1;
+					break;
+				}
 			}
 			if (key_encoding_args(args, KEY_PART_ECDSA_PRIV_ASN1_DER,
 								   &asn1, KEY_PART_END))
@@ -85,6 +118,8 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 		pos++;
 		len--;
 	}
+
+	chunk_clear(&to_free);
 
 	/* write PEM trailer */
 	written = snprintf(pos, len, "-----END %s-----", label);
