@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <library.h>
+
 #include "stroke_msg.h"
 #include "stroke_keywords.h"
 
@@ -356,6 +358,9 @@ int main(int argc, char *argv[])
 {
 	const stroke_token_t *token;
 	int res = 0;
+
+	library_init(NULL);
+	atexit(library_deinit);
 
 	if (argc < 2)
 	{
