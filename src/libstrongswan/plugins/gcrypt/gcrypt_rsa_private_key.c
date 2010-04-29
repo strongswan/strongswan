@@ -342,7 +342,7 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 
 	gcry_mpi_sub_ui(q, q, 1);
 	exp2 = gcry_mpi_new(gcry_pk_get_nbits(this->key));
-	gcry_mpi_mod(exp1, d, q);
+	gcry_mpi_mod(exp2, d, q);
 	gcry_mpi_release(q);
 
 	err = gcry_mpi_aprint(GCRYMPI_FMT_USG, &cexp1.ptr, &cexp1.len, exp1)
