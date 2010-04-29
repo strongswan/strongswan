@@ -216,12 +216,17 @@ METHOD(whack_attribute_t, create_lease_enumerator, enumerator_t*,
  */
 void whack_attribute_finalize()
 {
-	private_whack_attribute_t *this = (private_whack_attribute_t*)whack_attr;
-	hydra->attributes->remove_provider(hydra->attributes,
+	private_whack_attribute_t *this;
+
+	if (whack_attr)
+	{
+ 		this = (private_whack_attribute_t*)whack_attr;
+		hydra->attributes->remove_provider(hydra->attributes,
 									   &this->public.provider);
-	this->lock->destroy(this->lock);
-	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
-	free(this);
+		this->lock->destroy(this->lock);
+		this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
+		free(this);
+	}
 }
 
 /**
