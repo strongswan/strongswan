@@ -300,6 +300,7 @@ thread_t *thread_create(thread_main_t main, void *arg)
 	if (pthread_create(&this->thread_id, NULL, (void*)thread_main, this) != 0)
 	{
 		DBG1(DBG_LIB, "failed to create thread!");
+		this->mutex->lock(this->mutex);
 		thread_destroy(this);
 		return NULL;
 	}
@@ -433,6 +434,7 @@ void threads_init()
 void threads_deinit()
 {
 	private_thread_t *main_thread = (private_thread_t*)thread_current();
+	main_thread->mutex->lock(main_thread->mutex);
 	thread_destroy(main_thread);
 	current_thread->destroy(current_thread);
 	id_mutex->destroy(id_mutex);
