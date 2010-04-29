@@ -1,6 +1,8 @@
 ipsec_PROGRAMS = scepclient
 scepclient_SOURCES = scepclient.c scep.c scep.h loglite.c
 
+scepclient.o :	$(top_srcdir)/config.status
+
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac
 WHACKDIR=$(top_srcdir)/src/whack

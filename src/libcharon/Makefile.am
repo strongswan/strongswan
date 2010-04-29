@@ -100,6 +100,8 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
+daemon.lo :		$(top_srcdir)/config.status
+
 INCLUDES = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \

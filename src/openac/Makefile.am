@@ -7,4 +7,4 @@ AM_CFLAGS = \
   -DIPSEC_CONFDIR=\"${sysconfdir}\" \
   -DPLUGINS=\""${libstrongswan_plugins}\""
 openac_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
-
+openac.o :		$(top_srcdir)/config.status

@@ -54,6 +54,8 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
+plutomain.o :	$(top_srcdir)/config.status
+
 LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
 LIBHYDRADIR=$(top_builddir)/src/libhydra
