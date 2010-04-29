@@ -28,6 +28,7 @@
 #include <grp.h>
 
 #include <freeswan.h>
+#include <library.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -244,6 +245,9 @@ int main (int argc, char **argv)
 	/* global variables defined in log.h */
 	log_to_stderr = TRUE;
 	base_debugging = DBG_NONE;
+
+	library_init(NULL);
+	atexit(library_deinit);
 
 	/* parse command line */
 	for (i = 1; i < argc; i++)
