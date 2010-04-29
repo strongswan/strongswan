@@ -24,6 +24,12 @@
 typedef struct thread_t thread_t;
 
 #ifdef __APPLE__
+/* thread_create is a syscall used to create Mach kernel threads and although
+ * there are no errors or warnings during compilation or linkage the dynamic
+ * linker does not use our implementation, therefore we rename it here
+ */
+#define thread_create(main, arg) strongswan_thread_create(main, arg)
+
 /* on Mac OS X 10.5 several system calls we use are no cancellation points.
  * fortunately, select isn't one of them, so we wrap some of the others with
  * calls to select(2).
