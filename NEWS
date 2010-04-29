@@ -8,6 +8,11 @@ strongswan-4.4.0
   The development of the High Availability functionality was sponsored by
   secunet Security Networks AG.
 
+- Added IKEv1 and IKEv2 configuration support for the AES-GMAC
+  authentication-only ESP cipher. Our aes_gmac kernel patch or a Linux
+  2.6.34 kernel is required to make AES-GMAC available via the XFRM
+  kernel interface.
+
 - Added support for Diffie-Hellman groups 22, 23 and 24 to the gmp, gcrypt
   and openssl plugins, usable by both pluto and charon. The new proposal
   keywords are modp1024s160, modp2048s224 and modp2048s256. Thanks to Joy Latten
