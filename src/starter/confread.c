@@ -224,6 +224,8 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					goto err;
 				 }
 				*pos = '\0';
+				free(end->sourceip);
+				end->sourceip = clone_str(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
 			else
