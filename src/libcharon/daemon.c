@@ -254,6 +254,11 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 					 filename, strerror(errno));
 				continue;
 			}
+			if (lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.flush_line", FALSE, filename))
+			{
+				setlinebuf(file);
+			}
 		}
 		file_logger = file_logger_create(file);
 		def = lib->settings->get_int(lib->settings,
