@@ -206,9 +206,9 @@ then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL
 fi
 
-if [ "$USE_LOAD_TESTS" = "yes" ]
+if [ "$USE_LOAD_TESTER" = "yes" ]
 then
-    echo -n " --enable-load-tests" >> $INSTALLSHELL
+    echo -n " --enable-load-tester" >> $INSTALLSHELL
 fi
 
 if [ "$USE_TEST_VECTORS" = "yes" ]
@@ -224,6 +224,11 @@ fi
 if [ "$USE_SOCKET_DEFAULT" = "yes" ]
 then
     echo -n " --enable-socket-default" >> $INSTALLSHELL
+fi
+
+if [ "$USE_SOCKET_DYNAMIC" = "yes" ]
+then
+    echo -n " --enable-socket-dynamic" >> $INSTALLSHELL
 fi
 
 if [ "$USE_DHCP" = "yes" ]
