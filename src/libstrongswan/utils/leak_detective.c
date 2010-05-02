@@ -167,6 +167,7 @@ char *whitelist[] = {
 	"tzset",
 	"inet_ntoa",
 	"strerror",
+	"getprotobyname",
 	"getprotobynumber",
 	"getservbyport",
 	"getservbyname",
