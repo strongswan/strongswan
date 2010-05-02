@@ -362,6 +362,7 @@ int main (int argc, char **argv)
 	if (stat(STARTER_PID_FILE, &stb) == 0)
 	{
 		plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
+		confread_free(cfg);
 		exit(LSB_RC_SUCCESS);
 	}
 
@@ -392,6 +393,7 @@ int main (int argc, char **argv)
 				plog("can't fork: %s", strerror(errno));
 				break;
 			default:
+				confread_free(cfg);
 				exit(LSB_RC_SUCCESS);
 		}
 	}
@@ -426,11 +428,8 @@ int main (int argc, char **argv)
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
 			unlink(INFO_FILE);
-#ifdef LEAK_DETECTIVE
-			report_leaks();
-#endif /* LEAK_DETECTIVE */
-			close_log();
 			plog("ipsec starter stopped");
+			close_log();
 			exit(LSB_RC_SUCCESS);
 		}
 
