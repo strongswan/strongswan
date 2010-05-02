@@ -156,21 +156,20 @@ statement_kw:
 
 %%
 
-void
-yyerror(const char *s)
+void yyerror(const char *s)
 {
 	if (_save_errors_)
 		_parser_y_error(parser_errstring, ERRSTRING_LEN, s);
 }
 
-config_parsed_t *
-parser_load_conf(const char *file)
+config_parsed_t *parser_load_conf(const char *file)
 {
 	config_parsed_t *cfg = NULL;
 	int err = 0;
 	FILE *f;
 
-	extern void _parser_y_init (const char *f);
+	extern void _parser_y_init(const char *f);
+	extern void _parser_y_fini(void);
 	extern FILE *yyin;
 
 	memset(parser_errstring, 0, ERRSTRING_LEN+1);
@@ -231,11 +230,11 @@ parser_load_conf(const char *file)
 		cfg = NULL;
 	}
 
+	_parser_y_fini();
 	return cfg;
 }
 
-static void
-parser_free_kwlist(kw_list_t *list)
+static void parser_free_kwlist(kw_list_t *list)
 {
 	kw_list_t *elt;
 
@@ -248,8 +247,7 @@ parser_free_kwlist(kw_list_t *list)
 	}
 }
 
-void
-parser_free_conf(config_parsed_t *cfg)
+void parser_free_conf(config_parsed_t *cfg)
 {
 	section_list_t *sec;
 	if (cfg)

@@ -24,7 +24,8 @@
 #define MAX_INCLUDE_DEPTH  20
 
 extern void yyerror(const char *);
-extern int yylex (void);
+extern int yylex(void);
+extern int yylex_destroy(void);
 
 static struct {
 	int stack_ptr;
@@ -68,6 +69,7 @@ void _parser_y_fini (void)
 			fclose(__parser_y_private.file[i]);
 	}
 	memset(&__parser_y_private, 0, sizeof(__parser_y_private));
+	yylex_destroy();
 }
 
 int _parser_y_include (const char *filename)
