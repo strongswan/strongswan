@@ -194,11 +194,13 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				streq(value, "%config") || streq(value, "%cfg"))
 			{
 				/* request ip via config payload */
+				free(end->sourceip);
 				end->sourceip = NULL;
 				end->sourceip_mask = 1;
 			}
 			else
 			{	/* %poolname, strip %, serve ip requests */
+				free(end->sourceip);
 				end->sourceip = clone_str(value+1);
 				end->sourceip_mask = 0;
 			}
@@ -222,7 +224,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					goto err;
 				 }
 				*pos = '\0';
-				end->sourceip = clone_str(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
 			else
@@ -233,7 +234,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					plog("# bad addr: %s=%s [%s]", name, value, ugh);
 					goto err;
 				}
-				end->sourceip = clone_str(value);
 				end->sourceip_mask = (conn->tunnel_addr_family == AF_INET) ?
 									  32 : 128;
 			}
@@ -925,8 +925,6 @@ static void free_also(also_t *head)
  */
 static void confread_free_conn(starter_conn_t *conn)
 {
-	free(conn->left.sourceip);
-	free(conn->right.sourceip);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
 	free_args(KW_CONN_NAME, KW_CONN_LAST, (char *)conn);
