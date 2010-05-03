@@ -53,14 +53,15 @@ are required for the strongSwan testing environment:
     * A vanilla Linux kernel on which the UML kernel will be based on.
       We recommend the use of
 
-      http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.31.5.tar.bz2
+      http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.33.3.tar.bz2
 
-    * The Linux kernel 2.6.31 does not require any patches for the uml guest kernel
-      to successfully start up.
+    * The Linux kernel 2.6.33.3 does not require any patches for the uml guest kernel
+      to successfully start up but the aes_gmac patch must be applied for
+      ESP AES-GMAC support.
 
     * The matching .config file required to compile the UML kernel:
 
-      http://download.strongswan.org/uml/.config-2.6.31
+      http://download.strongswan.org/uml/.config-2.6.33
 
     * A gentoo-based UML file system (compressed size 130 MBytes) found at
 
@@ -68,7 +69,7 @@ are required for the strongSwan testing environment:
 
     * The latest strongSwan distribution
 
-      http://download.strongswan.org/strongswan-4.3.6.tar.bz2
+      http://download.strongswan.org/strongswan-4.4.1.tar.bz2
 
 
 3. Creating the environment
