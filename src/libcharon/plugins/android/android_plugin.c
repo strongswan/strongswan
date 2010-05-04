@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,6 +18,7 @@
 #include "android_logger.h"
 #include "android_handler.h"
 #include "android_creds.h"
+#include "android_service.h"
 
 #include <hydra.h>
 #include <daemon.h>
@@ -48,6 +50,11 @@ struct private_android_plugin_t {
 	 */
 	android_creds_t *creds;
 
+	/**
+	 * Service that interacts with the Android Settings frontend
+	 */
+	android_service_t *service;
+
 };
 
 METHOD(plugin_t, destroy, void,
@@ -57,6 +64,7 @@ METHOD(plugin_t, destroy, void,
 									  &this->handler->handler);
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
+	this->service->destroy(this->service);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
 	this->logger->destroy(this->logger);
@@ -82,6 +90,13 @@ plugin_t *android_plugin_create()
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
 	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+
+	this->service = android_service_create(this->creds);
+	if (!this->service)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public.plugin;
 }
