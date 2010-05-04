@@ -21,8 +21,6 @@
 #ifndef SYS_LOGGER_H_
 #define SYS_LOGGER_H_
 
-#include <syslog.h>
-
 #include <bus/listeners/listener.h>
 
 typedef struct sys_logger_t sys_logger_t;

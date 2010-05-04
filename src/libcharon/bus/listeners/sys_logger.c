@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 
 #include "sys_logger.h"
 
