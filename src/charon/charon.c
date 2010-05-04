@@ -38,6 +38,11 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 
+#ifdef ANDROID
+#include <private/android_filesystem_config.h>
+#endif
+
+
 /**
  * PID file, in which charon stores its process id
  */
@@ -182,6 +187,9 @@ static bool lookup_uid_gid()
 		}
 		charon->gid = grp->gr_gid;
 	}
+#endif
+#ifdef ANDROID
+	charon->uid = AID_VPN;
 #endif
 	return TRUE;
 }
