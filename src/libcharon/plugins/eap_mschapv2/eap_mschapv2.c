@@ -820,7 +820,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
 	char *message, *token, *msg = NULL;
-	int message_len, error, retryable;
+	int message_len, error = 0, retryable;
 	chunk_t challenge = chunk_empty;
 
 	data = in->get_data(in);
