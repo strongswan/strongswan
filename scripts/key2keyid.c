@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 		}
 		if (private->get_fingerprint(private, KEY_ID_PGPV3, &chunk))
 		{
-			printf("PGP verison 3 keyid:        %#B\n", &chunk);
+			printf("PGP version 3 keyid:        %#B\n", &chunk);
 		}
 		private->destroy(private);
 		return 0;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		}
 		if (public->get_fingerprint(public, KEY_ID_PGPV3, &chunk))
 		{
-			printf("PGP verison 3 keyid:        %#B\n", &chunk);
+			printf("PGP version 3 keyid:        %#B\n", &chunk);
 		}
 		public->destroy(public);
 		return 0;
