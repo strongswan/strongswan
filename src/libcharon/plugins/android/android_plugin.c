@@ -14,6 +14,7 @@
  */
 
 #include "android_plugin.h"
+#include "android_logger.h"
 #include "android_handler.h"
 
 #include <hydra.h>
@@ -32,16 +33,24 @@ struct private_android_plugin_t {
 	android_plugin_t public;
 
 	/**
+	 * Android specific logger
+	 */
+	android_logger_t *logger;
+
+	/**
 	 * Android specific DNS handler
 	 */
 	android_handler_t *handler;
 };
 
 METHOD(plugin_t, destroy, void,
-	private_android_plugin_t *this)
+	   private_android_plugin_t *this)
 {
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	hydra->attributes->remove_handler(hydra->attributes,
+									  &this->handler->handler);
+	charon->bus->remove_listener(charon->bus, &this->logger->listener);
 	this->handler->destroy(this->handler);
+	this->logger->destroy(this->logger);
 	free(this);
 }
 
@@ -56,9 +65,11 @@ plugin_t *android_plugin_create()
 		.public.plugin = {
 			.destroy = _destroy,
 		},
+		.logger = android_logger_create(),
 		.handler = android_handler_create(),
 	);
 
+	charon->bus->add_listener(charon->bus, &this->logger->listener);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
