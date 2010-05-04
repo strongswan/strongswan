@@ -748,11 +748,12 @@ if test x$gmp = xtrue; then
 fi
 if test x$attr = xtrue; then
 	libhydra_plugins=${libhydra_plugins}" attr"
-	pluto_plugins=${pluto_plugins}" attr"
 fi
 if test x$attr_sql = xtrue -o x$sql = xtrue; then
 	libhydra_plugins=${libhydra_plugins}" attr-sql"
-	pluto_plugins=${pluto_plugins}" attr-sql"
+fi
+if test x$resolve = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" resolve"
 fi
 
 AC_SUBST(libstrongswan_plugins)
@@ -912,6 +913,7 @@ AC_OUTPUT(
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
 	src/libhydra/plugins/attr_sql/Makefile
+	src/libhydra/plugins/resolve/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/pluto/Makefile
@@ -948,7 +950,6 @@ AC_OUTPUT(
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
-	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/unit_tester/Makefile
 	src/libcharon/plugins/load_tester/Makefile
 	src/stroke/Makefile

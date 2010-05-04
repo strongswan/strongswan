@@ -17,7 +17,8 @@
 
 #include <unistd.h>
 
-#include <daemon.h>
+#include <hydra.h>
+#include <debug.h>
 #include <threading/mutex.h>
 
 typedef struct private_resolve_handler_t private_resolve_handler_t;
@@ -244,7 +245,7 @@ resolve_handler_t *resolve_handler_create()
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->file = lib->settings->get_str(lib->settings,
-								"charon.plugins.resolve.file", RESOLV_CONF);
+								"%s.plugins.resolve.file", RESOLV_CONF, hydra->daemon);
 
 	return &this->public;
 }
