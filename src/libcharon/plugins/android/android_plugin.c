@@ -16,6 +16,7 @@
 #include "android_plugin.h"
 #include "android_logger.h"
 #include "android_handler.h"
+#include "android_creds.h"
 
 #include <hydra.h>
 #include <daemon.h>
@@ -41,6 +42,12 @@ struct private_android_plugin_t {
 	 * Android specific DNS handler
 	 */
 	android_handler_t *handler;
+
+	/**
+	 * Android specific credential set
+	 */
+	android_creds_t *creds;
+
 };
 
 METHOD(plugin_t, destroy, void,
@@ -48,7 +55,9 @@ METHOD(plugin_t, destroy, void,
 {
 	hydra->attributes->remove_handler(hydra->attributes,
 									  &this->handler->handler);
+	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
+	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
 	this->logger->destroy(this->logger);
 	free(this);
@@ -67,9 +76,11 @@ plugin_t *android_plugin_create()
 		},
 		.logger = android_logger_create(),
 		.handler = android_handler_create(),
+		.creds = android_creds_create(),
 	);
 
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
+	charon->credentials->add_set(charon->credentials, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;

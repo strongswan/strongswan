@@ -106,6 +106,7 @@ credentials/credential_set.h
 
 LOCAL_SRC_FILES += $(call add_plugin, android)
 ifneq ($(call plugin_enabled, android)),)
+LOCAL_C_INCLUDES += frameworks/base/cmds/keystore
 LOCAL_SHARED_LIBRARIES += libcutils
 endif
 
