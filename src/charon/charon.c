@@ -258,7 +258,6 @@ static void usage(const char *msg)
 					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
 					"\n"
 		   );
-	exit(msg == NULL? 0 : 1);
 }
 
 /**
@@ -337,7 +336,8 @@ int main(int argc, char *argv[])
 				break;
 			case 'h':
 				usage(NULL);
-				break;
+				status = 0;
+				goto deinit;
 			case 'v':
 				printf("Linux strongSwan %s\n", VERSION);
 				status = 0;
@@ -351,7 +351,8 @@ int main(int argc, char *argv[])
 				continue;
 			default:
 				usage("");
-				break;
+				status = 1;
+				goto deinit;
 		}
 		break;
 	}
