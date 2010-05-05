@@ -434,6 +434,69 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 	return chunk_create(buf, outlen);
 }
 
+/** base 32 conversion digits */
+static char b32digits[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_to_base32(chunk_t chunk, char *buf)
+{
+	int i, len;
+	char *pos;
+
+	len = chunk.len + ((5 - chunk.len % 5) % 5);
+	if (!buf)
+	{
+		buf = malloc(len * 8 / 5 + 1);
+	}
+	pos = buf;
+	for (i = 0; i < len; i+=5)
+	{
+		*pos++ = b32digits[chunk.ptr[i] >> 3];
+		if (i+1 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i] & 0x07) << 2];
+			memset(pos, '=', 6);
+			pos += 6;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i] & 0x07) << 2) |
+						   (chunk.ptr[i+1] >> 6)];
+		*pos++ = b32digits[(chunk.ptr[i+1] & 0x3E) >> 1];
+		if (i+2 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+1] & 0x01) << 4];
+			memset(pos, '=', 4);
+			pos += 4;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+1] & 0x01) << 4) |
+						   (chunk.ptr[i+2] >> 4)];
+		if (i+3 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+2] & 0x0F) << 1];
+			memset(pos, '=', 3);
+			pos += 3;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+2] & 0x0F) << 1) |
+						   (chunk.ptr[i+3] >> 7)];
+		*pos++ = b32digits[(chunk.ptr[i+3] & 0x7F) >> 2];
+		if (i+4 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+3] & 0x03) << 3];
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+3] & 0x03) << 3) |
+						   (chunk.ptr[i+4] >> 5)];
+		*pos++ = b32digits[chunk.ptr[i+4] & 0x1F];
+	}
+	*pos = '\0';
+	return chunk_create(buf, len * 8 / 5);
+}
+
 /**
  * Described in header.
  */

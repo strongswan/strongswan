@@ -148,6 +148,18 @@ chunk_t chunk_to_base64(chunk_t chunk, char *buf);
 chunk_t chunk_from_base64(chunk_t base64, char *buf);
 
 /**
+ * Convert a chunk of data to its base32 encoding.
+ *
+ * The resulting string is '\\0' terminated, but the chunk does not include
+ * the '\\0'. If buf is supplied, it must hold (chunk.len * 8 / 5 + 1) bytes.
+ *
+ * @param chunk			data to convert
+ * @param buf			buffer to write to, NULL to malloc
+ * @return				chunk of encoded data
+ */
+chunk_t chunk_to_base32(chunk_t chunk, char *buf);
+
+/**
  * Free contents of a chunk
  */
 static inline void chunk_free(chunk_t *chunk)
