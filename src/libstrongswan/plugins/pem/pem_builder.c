@@ -528,7 +528,7 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 		break;
 	}
 
-	if (pem.ptr)
+	if (pem.len)
 	{
 		return load_from_blob(pem, type, subtype, cb, cb_data, flags);
 	}
