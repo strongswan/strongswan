@@ -345,13 +345,25 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 	this = create_empty();
 	if (blob.ptr)
 	{
-		this->rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr, blob.len);
+		switch (type)
+		{
+			case KEY_ANY:
+				this->rsa = d2i_RSA_PUBKEY(NULL, (const u_char**)&blob.ptr,
+										   blob.len);
+				break;
+			case KEY_RSA:
+				this->rsa = d2i_RSAPublicKey(NULL, (const u_char**)&blob.ptr,
+											 blob.len);
+				break;
+			default:
+				break;
+		}
 		if (this->rsa)
 		{
 			return &this->public;
 		}
 	}
-	else if (n.ptr && e.ptr)
+	else if (n.ptr && e.ptr && type == KEY_RSA)
 	{
 		this->rsa = RSA_new();
 		this->rsa->n = BN_bin2bn((const u_char*)n.ptr, n.len, NULL);

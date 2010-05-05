@@ -306,6 +306,8 @@ plugin_t *openssl_plugin_create()
 					(builder_function_t)openssl_rsa_private_key_connect);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 					(builder_function_t)openssl_rsa_public_key_load);
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+					(builder_function_t)openssl_rsa_public_key_load);
 
 	/* ec */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
