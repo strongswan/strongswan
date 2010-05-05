@@ -118,8 +118,7 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
 	{
-		DBG1(DBG_LIB, "plugin '%s': failed to load '%s' - %s", name, file,
-			 dlerror());
+		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
 		return NULL;
 	}
 	constructor = dlsym(handle, create);
