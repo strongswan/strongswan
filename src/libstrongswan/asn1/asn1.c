@@ -497,8 +497,14 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 bool is_asn1(chunk_t blob)
 {
 	u_int len;
-	u_char tag = *blob.ptr;
+	u_char tag;
 
+	if (!blob.len || !blob.ptr)
+	{
+		return FALSE;
+	}
+
+	tag = *blob.ptr;
 	if (tag != ASN1_SEQUENCE && tag != ASN1_SET && tag != ASN1_OCTET_STRING)
 	{
 		DBG2(DBG_LIB, "  file content is not binary ASN.1");
