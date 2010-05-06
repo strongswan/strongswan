@@ -14,6 +14,9 @@
  * for more details.
  */
 
+#ifndef _STATE_H
+#define _STATE_H
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -270,3 +273,5 @@ extern void fmt_state(bool all, struct state *st, time_t n
 					 , char *state_buf, size_t state_buf_len
 					 , char *state_buf2, size_t state_buf_len2);
 extern void delete_states_by_peer(ip_address *peer);
+
+#endif /* _STATE_H */
