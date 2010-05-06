@@ -12,9 +12,12 @@
  * for more details.
  */
 
-#include "packet.h"
+#ifndef _DEMUX_H
+#define _DEMUX_H
 
-struct state;   /* forward declaration of tag */
+#include "packet.h"
+#include "state.h"
+
 extern void init_demux(void);
 extern bool send_packet(struct state *st, const char *where);
 extern void comm_handle(const struct iface *ifp);
@@ -90,3 +93,5 @@ typedef stf_status state_transition_fn(struct msg_digest *md);
 extern void complete_state_transition(struct msg_digest **mdp, stf_status result);
 
 extern void free_md_pool(void);
+
+#endif /* _DEMUX_H */
