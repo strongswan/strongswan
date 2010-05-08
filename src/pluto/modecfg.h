@@ -16,8 +16,36 @@
 #ifndef _MODECFG_H
 #define _MODECFG_H
 
-struct state;
-struct msg_digest;
+#include <chunk.h>
+#include <attributes/attribute_handler.h>
+
+#include "state.h"
+#include "demux.h"
+
+typedef struct modecfg_attribute_t modecfg_attribute_t;
+
+/**
+ * Defines a modecfg_attribute_t object.
+ */
+struct modecfg_attribute_t {
+	/**
+	 * Type of the attribute.
+	 */
+	u_int16_t type;
+
+	/**
+	 * Attribute value as chunk.
+	 */
+	chunk_t value;
+
+	/**
+	 * Attribute handler.
+	 */
+	attribute_handler_t *handler;
+};
+
+/* Destroys a modecfg_attribute_t object */
+extern void modecfg_attribute_destroy(modecfg_attribute_t *this);
 
 /* ModeConfig pull mode start function */
 extern stf_status modecfg_send_request(struct state *st);

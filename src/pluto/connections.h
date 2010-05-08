@@ -226,6 +226,8 @@ struct connection {
 	connection_t *hp_next;              /* host pair list link */
 	connection_t *ac_next;              /* all connections list link */
 	linked_list_t *requested_ca;        /* collected certificate requests */
+	linked_list_t *requested;           /* requested attributes with handlers */
+	linked_list_t *attributes;          /* configuration attributes with handlers */
 	bool got_certrequest;
 };
 

@@ -63,6 +63,7 @@
 #include "nat_traversal.h"
 #include "virtual.h"
 #include "whack_attribute.h"
+#include "modecfg.h"
 
 static void flush_pending_by_connection(connection_t *c);  /* forward */
 
@@ -294,8 +295,10 @@ void release_connection(connection_t *c, bool relations)
 
 void delete_connection(connection_t *c, bool relations)
 {
-	connection_t *old_cur_connection
-		= cur_connection == c? NULL : cur_connection;
+	modecfg_attribute_t *ca;
+	connection_t *old_cur_connection;
+
+	old_cur_connection = cur_connection == c? NULL : cur_connection;
 #ifdef DEBUG
 	lset_t old_cur_debugging = cur_debugging;
 #endif
@@ -374,6 +377,25 @@ void delete_connection(connection_t *c, bool relations)
 		hydra->attributes->release_address(hydra->attributes, c->spd.that.pool,
 										   vip, c->spd.that.id);
 		vip->destroy(vip);
+	}
+
+	/* release requested attributes if any */
+	if (c->requested)
+	{
+		c->requested->destroy_function(c->requested,
+									  (void*)modecfg_attribute_destroy);
+	}
+
+	/* release other attributes if any */
+	if (c->attributes)
+	{
+		while (c->attributes->remove_last(c->attributes, (void **)&ca) == SUCCESS)
+		{
+			hydra->attributes->release(hydra->attributes, ca->handler,
+									   c->spd.that.id, ca->type, ca->value);
+			modecfg_attribute_destroy(ca);
+		}
+		c->attributes->destroy(c->attributes);
 	}
 
 	if (c->kind != CK_GOING_AWAY)

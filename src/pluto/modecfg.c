@@ -27,7 +27,7 @@
 
 #include <library.h>
 #include <hydra.h>
-#include <attributes/attributes.h>
+#include <utils/linked_list.h>
 #include <crypto/prfs/prf.h>
 
 #include "constants.h"
@@ -43,8 +43,6 @@
 #include "xauth.h"
 
 #define MAX_XAUTH_TRIES         3
-#define DNS_SERVER_MAX          2
-#define NBNS_SERVER_MAX         2
 
 #define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS)         \
 							 | LELEM(INTERNAL_IP4_NETMASK)         \
@@ -59,6 +57,32 @@
 
 #define UNITY_BANNER_STR    "Welcome to strongSwan - the Linux VPN Solution!\n"
 
+
+/**
+ * Creates a modecfg_attribute_t object
+ */
+static modecfg_attribute_t *modecfg_attribute_create(configuration_attribute_type_t type,
+													 chunk_t value)
+{
+	modecfg_attribute_t *this;
+
+	this = malloc_thing(modecfg_attribute_t);
+	this->type = ((u_int16_t)type) & 0x7FFF;
+	this->value = chunk_clone(value);
+	this->handler = NULL;
+
+	return this;
+}
+
+/**
+ * Destroys a modecfg_attribute_t object
+ */
+void modecfg_attribute_destroy(modecfg_attribute_t *this)
+{
+	free(this->value.ptr);
+	free(this);
+}
+
 /*
  * Addresses assigned (usually via ModeCfg) to the Initiator
  */
@@ -72,8 +96,6 @@ struct internal_addr
 
 	/* ModeCfg variables */
 	ip_address ipaddr;
-	ip_address dns[DNS_SERVER_MAX];
-	ip_address nbns[NBNS_SERVER_MAX];
 
 	char *unity_banner;
 
@@ -88,8 +110,6 @@ struct internal_addr
  */
 static void init_internal_addr(internal_addr_t *ia)
 {
-	int i;
-
 	ia->attr_set = LEMPTY;
 	ia->xauth_attr_set = LEMPTY;
 	ia->xauth_secret.user_name = chunk_empty;
@@ -100,30 +120,18 @@ static void init_internal_addr(internal_addr_t *ia)
 	ia->unity_banner = NULL;
 
 	anyaddr(AF_INET, &ia->ipaddr);
-
-	/* initialize DNS server information */
-	for (i = 0; i < DNS_SERVER_MAX; i++)
-	{
-		anyaddr(AF_INET, &ia->dns[i]);
-	}
-
-	/* initialize NBNS server information */
-	for (i = 0; i < NBNS_SERVER_MAX; i++)
-	{
-		anyaddr(AF_INET, &ia->nbns[i]);
-	}
 }
 
 /**
  * Get internal IP address for a connection
  */
 static void get_internal_addr(connection_t *c, host_t *requested_vip,
-							  internal_addr_t *ia)
+							  internal_addr_t *ia, linked_list_t *ca_list)
 {
-	int dns_idx = 0, nbns_idx = 0;
 	enumerator_t *enumerator;
 	configuration_attribute_type_t type;
 	chunk_t value;
+	modecfg_attribute_t *ca;
 	host_t *vip = NULL;
 
 	if (isanyaddr(&c->spd.that.host_srcip))
@@ -170,65 +178,12 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 											c->spd.that.id, vip);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
-		err_t ugh;
-		host_t *server;
-		sa_family_t family = AF_INET;
-
-		switch (type)
-		{
-			case INTERNAL_IP6_DNS:
-				family = AF_INET6;
-				/* fallthrough */
-			case INTERNAL_IP4_DNS:
-				if (dns_idx >= DNS_SERVER_MAX)
-				{
-					plog("exceeded the maximum number of %d DNS servers",
-						 DNS_SERVER_MAX);
-					break;
-				}
-				ugh = initaddr(value.ptr, value.len, family, &ia->dns[dns_idx]);
-				if (ugh)
-				{
-					plog("error in DNS server address: %s", ugh);
-					break;
-				}
-				server = host_create_from_chunk(family, value, 0);
-				plog("assigning DNS server %H to peer", server);
-				server->destroy(server);
-
-				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
-				ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
-				dns_idx++;
-				break;
-
-			case INTERNAL_IP6_NBNS:
-				family = AF_INET6;
-				/* fallthrough */
-			case INTERNAL_IP4_NBNS:
-				if (nbns_idx >= NBNS_SERVER_MAX)
-				{
-					plog("exceeded the maximum number of %d NBNS servers",
-						 NBNS_SERVER_MAX);
-					break;
-				}
-				ugh = initaddr(value.ptr, value.len, family, &ia->nbns[nbns_idx]);
-				if (ugh)
-				{
-					plog("error in NBNS server address: %s", ugh);
-					break;
-				}
-				server = host_create_from_chunk(family, value, 0);
-				plog("assigning NBNS server %H to peer", server);
-				server->destroy(server);
-
-				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
-				ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
-				nbns_idx++;
-				break;
-
-			default:
-				break;
-		}
+		DBG(DBG_CONTROLMORE,
+			DBG_log("building %N attribute", 
+			 		configuration_attribute_type_names, type)
+		)
+		ca = modecfg_attribute_create(type, value);
+		ca_list->insert_last(ca_list, ca);
 	}
 	enumerator->destroy(enumerator);
 	DESTROY_IF(vip);
@@ -238,11 +193,16 @@ static void get_internal_addr(connection_t *c, host_t *requested_vip,
 /**
  * Set srcip and client subnet to internal IP address
  */
-static bool set_internal_addr(connection_t *c, internal_addr_t *ia)
+static bool set_internal_addr(connection_t *c, internal_addr_t *ia,
+							 linked_list_t *ca_list)
 {
 	if (ia->attr_set & LELEM(INTERNAL_IP4_ADDRESS)
 	&& !isanyaddr(&ia->ipaddr))
 	{
+		host_t *vip;
+		modecfg_attribute_t *ca;
+		enumerator_t *enumerator;
+
 		if (addrbytesptr(&c->spd.this.host_srcip, NULL) == 0
 		|| isanyaddr(&c->spd.this.host_srcip)
 		|| sameaddr(&c->spd.this.host_srcip, &ia->ipaddr))
@@ -265,11 +225,53 @@ static bool set_internal_addr(connection_t *c, internal_addr_t *ia)
 
 		/* setting srcip */
 		c->spd.this.host_srcip = ia->ipaddr;
+		vip = host_create_from_sockaddr((sockaddr_t*)&ia->ipaddr);
 
 		/* setting client subnet to srcip/32 */
 		addrtosubnet(&ia->ipaddr, &c->spd.this.client);
 		setportof(0, &c->spd.this.client.addr);
 		c->spd.this.has_client = TRUE;
+
+		/* setting other attributes (e.g. DNS and NBNS servers) */
+		enumerator = ca_list->create_enumerator(ca_list);
+		while (enumerator->enumerate(enumerator, &ca))
+		{
+			modecfg_attribute_t *ca_handler;
+			attribute_handler_t *handler = NULL;
+			enumerator_t *e;
+
+			/* find the first handler which requested this attribute */
+			e = c->requested->create_enumerator(c->requested);
+			while (e->enumerate(e, &ca_handler))
+			{
+				if (ca_handler->type == ca->type)
+				{
+					handler = ca_handler->handler;
+					break;
+				}
+			}
+			e->destroy(e);
+
+			/* and pass it to the handle function */
+			handler = hydra->attributes->handle(hydra->attributes,
+								 c->spd.that.id, handler, ca->type, ca->value);
+			if (handler)
+			{
+				ca_handler = modecfg_attribute_create(ca->type, ca->value);
+				ca_handler->handler = handler;
+
+				if (c->attributes == NULL)
+				{
+					c->attributes = linked_list_create();
+				}
+				c->attributes->insert_last(c->attributes, ca_handler);
+			}
+		}
+		enumerator->destroy(enumerator);
+		vip->destroy(vip);
+		c->requested->destroy_function(c->requested, 
+									  (void*)modecfg_attribute_destroy);
+		c->requested = NULL;
 		return TRUE;
 	}
 	return FALSE;
@@ -309,6 +311,7 @@ static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
 static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 									u_int16_t msg_type,
 									internal_addr_t *ia,
+									linked_list_t *ca_list,
 									u_int16_t ap_id)
 {
 	u_char *r_hash_start, *r_hashval;
@@ -320,12 +323,12 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 		struct isakmp_mode_attr attrh;
 		struct isakmp_attribute attr;
 		pb_stream strattr,attrval;
-		int attr_type, dns_attr_type, nbns_attr_type;
-		int dns_idx, nbns_idx;
-		bool dont_advance;
+		int attr_type;
 		bool is_xauth_attr_set = ia->xauth_attr_set != LEMPTY;
 		bool is_unity_attr_set = ia->unity_attr_set != LEMPTY;
 		lset_t attr_set = ia->attr_set;
+		enumerator_t *enumerator;
+		modecfg_attribute_t *ca;
 
 		attrh.isama_np         = ISAKMP_NEXT_NONE;
 		attrh.isama_type       = msg_type;
@@ -336,8 +339,20 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 			return STF_INTERNAL_ERROR;
 		}
 		attr_type = 0;
-		dns_idx = 0;
-		nbns_idx = 0;
+
+		enumerator = ca_list->create_enumerator(ca_list);
+		while (enumerator->enumerate(enumerator, &ca))
+		{
+			char ca_type_name[BUF_LEN];
+
+			snprintf(ca_type_name, BUF_LEN, "%N",
+					 configuration_attribute_type_names, ca->type);
+			attr.isaat_af_type = ca->type | ISAKMP_ATTR_AF_TLV;
+			out_struct(&attr, &isakmp_modecfg_attribute_desc, &strattr, &attrval);
+			out_raw(ca->value.ptr, ca->value.len, &attrval, ca_type_name);
+			close_output_pbs(&attrval);
+		}
+		enumerator->destroy(enumerator);
 
 		while (attr_set != LEMPTY || is_xauth_attr_set || is_unity_attr_set)
 		{
@@ -357,8 +372,6 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 				}
 			}
 
-			dont_advance = FALSE;
-
 			if (attr_set & 1)
 			{
 				const u_char *byte_ptr;
@@ -374,20 +387,6 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 				{
 					attr.isaat_af_type = attr_type | ISAKMP_ATTR_AF_TV;
 					attr.isaat_lv = ia->xauth_status;
-				}
-				else if (attr_type == INTERNAL_IP4_DNS && !isanyaddr(&ia->dns[dns_idx]))
-				{
-					dns_attr_type = (addrtypeof(&ia->dns[dns_idx]) == AF_INET) ?
-										INTERNAL_IP4_DNS : INTERNAL_IP6_DNS;
-					attr.isaat_af_type = dns_attr_type | ISAKMP_ATTR_AF_TLV;
-
-				}
-				else if (attr_type == INTERNAL_IP4_NBNS && !isanyaddr(&ia->nbns[nbns_idx]))
-				{
-					nbns_attr_type = (addrtypeof(&ia->nbns[nbns_idx]) == AF_INET) ?
-										INTERNAL_IP4_NBNS : INTERNAL_IP6_NBNS;
-					attr.isaat_af_type = nbns_attr_type | ISAKMP_ATTR_AF_TLV;
-
 				}
 				else
 				{
@@ -451,30 +450,6 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 						out_raw(mask, sizeof(mask), &attrval, "IP4_submsk");
 					}
 					break;
-				case INTERNAL_IP4_DNS:
-				case INTERNAL_IP6_DNS:
-					if (!isanyaddr(&ia->dns[dns_idx]))
-					{
-						len = addrbytesptr(&ia->dns[dns_idx++], &byte_ptr);
-						out_raw(byte_ptr, len, &attrval, "IP_dns");
-					}
-					if (dns_idx < DNS_SERVER_MAX && !isanyaddr(&ia->dns[dns_idx]))
-					{
-						dont_advance = TRUE;
-					}
-					break;
-				case INTERNAL_IP4_NBNS:
-				case INTERNAL_IP6_NBNS:
-					if (!isanyaddr(&ia->nbns[nbns_idx]))
-					{
-						len = addrbytesptr(&ia->nbns[nbns_idx++], &byte_ptr);
-						out_raw(byte_ptr, len, &attrval, "IP_nbns");
-					}
-					if (nbns_idx < NBNS_SERVER_MAX && !isanyaddr(&ia->nbns[nbns_idx]))
-					{
-						dont_advance = TRUE;
-					}
-					break;
 				case XAUTH_TYPE:
 					break;
 				case XAUTH_USER_NAME:
@@ -510,11 +485,8 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 				}
 				close_output_pbs(&attrval);
 			}
-			if (!dont_advance)
-			{
-				attr_type++;
-				attr_set >>= 1;
-			}
+			attr_type++;
+			attr_set >>= 1;
 		}
 		close_message(&strattr);
 	}
@@ -529,7 +501,7 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
  * Send ModeCfg message
  */
 static stf_status modecfg_send_msg(struct state *st, int isama_type,
-								   internal_addr_t *ia)
+								   internal_addr_t *ia, linked_list_t *ca_list)
 {
 	pb_stream msg;
 	pb_stream rbody;
@@ -561,12 +533,8 @@ static stf_status modecfg_send_msg(struct state *st, int isama_type,
 		}
 	}
 
-	/* ATTR out */
-	modecfg_build_msg(st, &rbody
-						, isama_type
-						, ia
-						, 0 /* XXX isama_id */
-					 );
+	/* ATTR out with isama_id of 0 */
+	modecfg_build_msg(st, &rbody, isama_type, ia, ca_list, 0);
 
 	free(st->st_tpacket.ptr);
 	st->st_tpacket = chunk_create(msg.start, pbs_offset(&msg));
@@ -586,19 +554,19 @@ static stf_status modecfg_send_msg(struct state *st, int isama_type,
 /**
  * Parse a ModeCfg attribute payload
  */
-static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
+static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia,
+										   linked_list_t *ca_list)
 {
 	struct isakmp_attribute attr;
 	pb_stream strattr;
 	err_t ugh;
-	char buf[BUF_LEN];
-	int dns_idx = 0;
-	int nbns_idx = 0;
 
 	while (pbs_left(attrs) >= sizeof(struct isakmp_attribute))
 	{
 		u_int16_t attr_type;
 		u_int16_t attr_len;
+		chunk_t attr_chunk;
+		modecfg_attribute_t *ca;
 
 		if (!in_struct(&attr, &isakmp_modecfg_attribute_desc, attrs, &strattr))
 		{
@@ -606,6 +574,10 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia
 		}
 		attr_type = attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK;
 		attr_len  = attr.isaat_lv;
+		DBG(DBG_CONTROLMORE,
+			DBG_log("processing %N attribute",
+					configuration_attribute_type_names, attr_type)
+		)
 
 		switch (attr_type)
 		{
@@ -621,72 +593,22 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia
 			ia->attr_set |= LELEM(attr_type);
 			break;
 		case INTERNAL_IP4_DNS:
-			if (attr_len == 4 && dns_idx < DNS_SERVER_MAX)
-			{
-				ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->dns[dns_idx]);
-				if (ugh != NULL)
-				{
-					plog("received invalid IPv4 DNS server address: %s", ugh);
-				}
-				else
-				{
-					addrtot(&ia->dns[dns_idx], 0, buf, BUF_LEN);
-					plog("received IPv4 DNS server address %s", buf);
-					dns_idx++;
-				}
-			}
-			ia->attr_set |= LELEM(attr_type);
-			break;
 		case INTERNAL_IP4_NBNS:
-			if (attr_len == 4 && nbns_idx < NBNS_SERVER_MAX)
+			if (attr_len == 4)
 			{
-				ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->nbns[nbns_idx]);
-				if (ugh != NULL)
-				{
-					plog("received invalid IPv4 NBNS server address: %s", ugh);
-				}
-				else
-				{
-					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv4 NBNS server address %s", buf);
-					nbns_idx++;
-				}
+				attr_chunk = chunk_create(strattr.cur, attr_len);
+				ca = modecfg_attribute_create(attr_type, attr_chunk);
+				ca_list->insert_last(ca_list, ca);
 			}
-			ia->attr_set |= LELEM(attr_type);
 			break;
 		case INTERNAL_IP6_DNS:
-			if (attr_len == 16 && dns_idx < DNS_SERVER_MAX)
-			{
-				ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->dns[dns_idx]);
-				if (ugh != NULL)
-				{
-					plog("received invalid IPv6 DNS server address: %s", ugh);
-				}
-				else
-				{
-					addrtot(&ia->dns[dns_idx], 0, buf, BUF_LEN);
-					plog("received IPv6 DNS server address %s", buf);
-					dns_idx++;
-				}
-			}
-			ia->attr_set |= LELEM(attr_type);
-			break;
 		case INTERNAL_IP6_NBNS:
-			if (attr_len == 16 && nbns_idx < NBNS_SERVER_MAX)
+			if (attr_len == 16)
 			{
-				ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->nbns[nbns_idx]);
-				if (ugh != NULL)
-				{
-					plog("received invalid IPv6 NBNS server address: %s", ugh);
-				}
-				else
-				{
-					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv6 NBNS server address %s", buf);
-					nbns_idx++;
-				}
+				attr_chunk = chunk_create(strattr.cur, attr_len);
+				ca = modecfg_attribute_create(attr_type, attr_chunk);
+				ca_list->insert_last(ca_list, ca);
 			}
-			ia->attr_set |= LELEM(attr_type);
 			break;
 		case INTERNAL_IP4_NETMASK:
 		case INTERNAL_IP4_SUBNET:
@@ -772,7 +694,8 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia
  * Parse a ModeCfg message
  */
 static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
-									u_int16_t *isama_id, internal_addr_t *ia)
+									u_int16_t *isama_id, internal_addr_t *ia,
+									linked_list_t *ca_list)
 {
 	struct state *const st = md->st;
 	struct payload_digest *p;
@@ -796,7 +719,7 @@ static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
 		{
 			*isama_id = p->payload.attribute.isama_identifier;
 
-			stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
+			stat = modecfg_parse_attributes(&p->pbs, &ia_candidate, ca_list);
 			if (stat == STF_OK)
 			{
 				/* return with a valid set of attributes */
@@ -810,7 +733,7 @@ static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
 				, enum_name(&attr_msg_type_names, isama_type)
 				, enum_name(&attr_msg_type_names, p->payload.attribute.isama_type));
 
-			stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
+			stat = modecfg_parse_attributes(&p->pbs, &ia_candidate, ca_list);
 		}
 		if (stat != STF_OK)
 		{
@@ -828,16 +751,45 @@ stf_status modecfg_send_request(struct state *st)
 	connection_t *c = st->st_connection;
 	stf_status stat;
 	internal_addr_t ia;
+	attribute_handler_t *handler;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	host_t *vip;
+	enumerator_t *enumerator;
 
 	init_internal_addr(&ia);
 
 	ia.attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 				| LELEM(INTERNAL_IP4_NETMASK);
 	ia.ipaddr = c->spd.this.host_srcip;
+	vip = host_create_from_sockaddr((sockaddr_t*)&ia.ipaddr);
+
+	/* add configuration attributes requested by handlers */
+	enumerator = hydra->attributes->create_initiator_enumerator(
+							hydra->attributes,c->spd.that.id, vip);
+	while (enumerator->enumerate(enumerator, &handler, &type, &data))
+	{
+		modecfg_attribute_t *ca; 
+
+		/* create configuration attribute request and link to handler */
+		DBG(DBG_CONTROLMORE,
+			DBG_log("building %N attribute", configuration_attribute_type_names, type)
+		)
+		ca = modecfg_attribute_create(type, data);
+		ca->handler = handler;
+
+		if (c->requested == NULL)
+		{
+			c->requested = linked_list_create();
+		}
+		c->requested->insert_last(c->requested, ca);
+	}
+	enumerator->destroy(enumerator);
+	vip->destroy(vip);
 
 	plog("sending ModeCfg request");
 	st->st_state = STATE_MODE_CFG_I1;
-	stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
+	stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia, c->requested);
 	if (stat == STF_OK)
 	{
 		st->st_modecfg.started = TRUE;
@@ -858,8 +810,9 @@ stf_status modecfg_inR0(struct msg_digest *md)
 	bool want_unity_banner;
 	stf_status stat, stat_build;
 	host_t *requested_vip;
+	linked_list_t *ca_list = linked_list_create();
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia, ca_list);
 	if (stat != STF_OK)
 	{
 		return stat;
@@ -876,8 +829,12 @@ stf_status modecfg_inR0(struct msg_digest *md)
 	plog("peer requested virtual IP %H", requested_vip);
 
 	want_unity_banner = (ia.unity_attr_set & LELEM(UNITY_BANNER - UNITY_BASE)) != LEMPTY;
-	init_internal_addr(&ia);
-	get_internal_addr(st->st_connection, requested_vip, &ia);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
+
+	/* build the CFG_REPLY */
+	ca_list = linked_list_create();
+	init_internal_addr(&ia);	
+	get_internal_addr(st->st_connection, requested_vip, &ia, ca_list);
 	requested_vip->destroy(requested_vip);
 
 	if (want_unity_banner)
@@ -888,10 +845,10 @@ stf_status modecfg_inR0(struct msg_digest *md)
 
 	plog("sending ModeCfg reply");
 
-	stat_build = modecfg_build_msg(st, &md->rbody
-									 , ISAKMP_CFG_REPLY
-									 , &ia
-									 , isama_id);
+	stat_build = modecfg_build_msg(st, &md->rbody, ISAKMP_CFG_REPLY,
+								   &ia, ca_list, isama_id);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
+
 	if (stat_build != STF_OK)
 	{
 		return stat_build;
@@ -911,16 +868,18 @@ stf_status modecfg_inI1(struct msg_digest *md)
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	stf_status stat;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing ModeCfg reply");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia, ca_list);
 	if (stat != STF_OK)
 	{
 		return stat;
 	}
-	st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
+	st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia, ca_list);
 	st->st_msgid = 0;
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	return STF_OK;
 }
 
@@ -933,10 +892,11 @@ stf_status modecfg_send_set(struct state *st)
 	stf_status stat;
 	internal_addr_t ia;
 	host_t *vip;
+	linked_list_t *ca_list = linked_list_create();
 
 	init_internal_addr(&ia);
 	vip = host_create_any(AF_INET);
-	get_internal_addr(st->st_connection, vip, &ia);
+	get_internal_addr(st->st_connection, vip, &ia, ca_list);
 	vip->destroy(vip);
 
 #ifdef CISCO_QUIRKS
@@ -946,7 +906,8 @@ stf_status modecfg_send_set(struct state *st)
 
    plog("sending ModeCfg set");
 	st->st_state = STATE_MODE_CFG_R3;
-	stat = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+	stat = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat == STF_OK)
 	{
 		st->st_modecfg.started = TRUE;
@@ -966,15 +927,18 @@ stf_status modecfg_inI0(struct msg_digest *md)
 	internal_addr_t ia;
 	lset_t attr_set, unity_attr_set;
 	stf_status stat, stat_build;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing ModeCfg set");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
+
 	if (stat != STF_OK)
 	{
 		return stat;
 	}
-	st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
+	st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia, ca_list);
 
 	/* prepare ModeCfg ack which sends zero length attributes */
 	attr_set = ia.attr_set;
@@ -985,10 +949,9 @@ stf_status modecfg_inI0(struct msg_digest *md)
 
 	plog("sending ModeCfg ack");
 
-	stat_build = modecfg_build_msg(st, &md->rbody
-									 , ISAKMP_CFG_ACK
-									 , &ia
-									 , isama_id);
+	stat_build = modecfg_build_msg(st, &md->rbody, ISAKMP_CFG_ACK,
+								   &ia, ca_list, isama_id);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat_build != STF_OK)
 	{
 		return stat_build;
@@ -1008,10 +971,12 @@ stf_status modecfg_inR3(struct msg_digest *md)
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	stf_status stat;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing ModeCfg ack");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat != STF_OK)
 	{
 		return stat;
@@ -1027,6 +992,7 @@ stf_status xauth_send_request(struct state *st)
 {
 	stf_status stat;
 	internal_addr_t ia;
+	linked_list_t *ca_list = linked_list_create();
 
 	init_internal_addr(&ia);
 	ia.xauth_attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE)
@@ -1034,7 +1000,8 @@ stf_status xauth_send_request(struct state *st)
 
 	plog("sending XAUTH request");
 	st->st_state = STATE_XAUTH_R1;
-	stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
+	stat = modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat == STF_OK)
 	{
 		st->st_xauth.started = TRUE;
@@ -1054,10 +1021,12 @@ stf_status xauth_inI0(struct msg_digest *md)
 	internal_addr_t ia;
 	stf_status stat, stat_build;
 	bool xauth_type_present;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing XAUTH request");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat != STF_OK)
 	{
 		return stat;
@@ -1121,10 +1090,9 @@ stf_status xauth_inI0(struct msg_digest *md)
 
 	plog("sending XAUTH reply");
 
-	stat_build = modecfg_build_msg(st, &md->rbody
-									 , ISAKMP_CFG_REPLY
-									 , &ia
-									 , isama_id);
+	stat_build = modecfg_build_msg(st, &md->rbody, ISAKMP_CFG_REPLY,
+								   &ia, ca_list, isama_id);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat_build != STF_OK)
 	{
 		return stat_build;
@@ -1158,10 +1126,12 @@ stf_status xauth_inR1(struct msg_digest *md)
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	stf_status stat, stat_build;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing XAUTH reply");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat != STF_OK)
 	{
 		return stat;
@@ -1216,10 +1186,12 @@ stf_status xauth_inR1(struct msg_digest *md)
 	init_internal_addr(&ia);
 	ia.xauth_attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE);
 	ia.xauth_status = (st->st_xauth.status)? XAUTH_STATUS_OK : XAUTH_STATUS_FAIL;
+	ca_list = linked_list_create();
 
 	plog("sending XAUTH status:");
 
-	stat_build = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+	stat_build = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat_build != STF_OK)
 	{
 		return stat_build;
@@ -1238,9 +1210,11 @@ stf_status xauth_inI1(struct msg_digest *md)
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	stf_status stat, stat_build;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing XAUTH status");
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat != STF_OK)
 	{
 		/* notification payload - not exactly the right choice, but okay */
@@ -1253,10 +1227,9 @@ stf_status xauth_inI1(struct msg_digest *md)
 
 	plog("sending XAUTH ack");
 	init_internal_addr(&ia);
-	stat_build = modecfg_build_msg(st, &md->rbody
-									 , ISAKMP_CFG_ACK
-									 , &ia
-									 , isama_id);
+	stat_build = modecfg_build_msg(st, &md->rbody, ISAKMP_CFG_ACK,
+								   &ia, ca_list, isama_id);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat_build != STF_OK)
 	{
 		return stat_build;
@@ -1289,10 +1262,12 @@ stf_status xauth_inR2(struct msg_digest *md)
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	stf_status stat;
+	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing XAUTH ack");
 
-	stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
+	stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia, ca_list);
+	ca_list->destroy_function(ca_list, (void *)modecfg_attribute_destroy);
 	if (stat != STF_OK)
 	{
 		return stat;
@@ -1307,4 +1282,5 @@ stf_status xauth_inR2(struct msg_digest *md)
 		delete_state(st);
 		return STF_IGNORE;
 	}
+
 }
