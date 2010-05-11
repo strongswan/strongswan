@@ -75,7 +75,7 @@ host_t *get_dns_server(int index)
 	host_t *dns = NULL;
 	char key[10], value[PROPERTY_VALUE_MAX];
 
-	if (snprintf(key, sizeof(key), "net.dns%d", index) >= sizeof(key))
+	if (snprintf(key, sizeof(key), "vpn.dns%d", index) >= sizeof(key))
 	{
 		return NULL;
 	}
@@ -94,7 +94,7 @@ bool set_dns_server(int index, host_t *dns)
 {
 	char key[10], value[PROPERTY_VALUE_MAX];
 
-	if (snprintf(key, sizeof(key), "net.dns%d", index) >= sizeof(key))
+	if (snprintf(key, sizeof(key), "vpn.dns%d", index) >= sizeof(key))
 	{
 		return FALSE;
 	}
