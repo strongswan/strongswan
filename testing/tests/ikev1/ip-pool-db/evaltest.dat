@@ -1,14 +1,11 @@
-carol::cat /var/log/auth.log::received IPv4 DNS server address PH_IP_WINNETOU::YES
-carol::cat /var/log/auth.log::received IPv4 DNS server address PH_IP_VENUS::YES
-carol::cat /var/log/auth.log::received IPv4 NBNS server address PH_IP_VENUS::YES
+carol::cat /etc/resolv.conf::nameserver PH_IP_WINNETOU .*from moon.strongswan.org::YES
+carol::cat /etc/resolv.conf::nameserver PH_IP_VENUS .*from moon.strongswan.org::YES
+carol::cat /var/log/auth.log::handling INTERNAL_IP4_NBNS attribute failed::YES
 carol::cat /var/log/auth.log::setting virtual IP source address to PH_IP_CAROL1::YES
 carol::ip addr list dev eth0::PH_IP_CAROL1::YES
 carol::ip route list table 220::10.1.0.0/16.*src PH_IP_CAROL1::YES
 carol::ipsec status::home.*IPsec SA established::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
-dave::cat /var/log/auth.log::received IPv4 DNS server address PH_IP_WINNETOU::YES
-dave::cat /var/log/auth.log::received IPv4 DNS server address PH_IP_VENUS::YES
-dave::cat /var/log/auth.log::received IPv4 NBNS server address PH_IP_VENUS::YES
 dave::cat /var/log/auth.log::setting virtual IP source address to PH_IP_DAVE1::YES
 dave::ip addr list dev eth0::PH_IP_DAVE1::YES
 dave::ip route list table 220::10.1.0.0/16.*src PH_IP_DAVE1::YES
