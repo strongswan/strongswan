@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -600,17 +600,43 @@ static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 }
 
 /**
- * add a host behind a sadb_address extension
+ * Copy a host_t as sockaddr_t to the given memory location. Ports are
+ * reset to zero as per RFC 2367.
+ * @return		the number of bytes copied
+ */
+static size_t hostcpy(void *dest, host_t *host)
+{
+	sockaddr_t *addr = host->get_sockaddr(host), *dest_addr = dest;
+	socklen_t *len = host->get_sockaddr_len(host);
+	memcpy(dest, addr, *len);
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+	dest_addr->sa_len = *len;
+#endif
+	switch (dest_addr->sa_family)
+	{
+		case AF_INET:
+		{
+			struct sockaddr_in *sin = dest;
+			sin->sin_port = 0;
+			break;
+		}
+		case AF_INET6:
+		{
+			struct sockaddr_in6 *sin6 = dest;
+			sin6->sin6_port = 0;
+			break;
+		}
+	}
+	return *len;
+}
+
+/**
+ * add a host behind an sadb_address extension
  */
 static void host2ext(host_t *host, struct sadb_address *ext)
 {
-	sockaddr_t *host_addr = host->get_sockaddr(host);
-	socklen_t *len = host->get_sockaddr_len(host);
-#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
-	host_addr->sa_len = *len;
-#endif
-	memcpy((char*)(ext + 1), host_addr, *len);
-	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
+	size_t len = hostcpy(ext + 1, host);
+	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + len);
 }
 
 /**
@@ -1679,14 +1705,10 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
 	if (mode == MODE_TUNNEL)
 	{
-		sockaddr_t *sa;
-		socklen_t sl;
-		sa = src->get_sockaddr(src);
-		sl = *src->get_sockaddr_len(src);
-		memcpy(req + 1, sa, sl);
-		sa = dst->get_sockaddr(dst);
-		memcpy((u_int8_t*)(req + 1) + sl, sa, sl);
-		req->sadb_x_ipsecrequest_len += sl * 2;
+		len = hostcpy(req + 1, src);
+		req->sadb_x_ipsecrequest_len += len;
+		len = hostcpy((char*)(req + 1) + len, dst);
+		req->sadb_x_ipsecrequest_len += len;
 	}
 
 	pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
