@@ -34,6 +34,11 @@ struct modecfg_attribute_t {
 	u_int16_t type;
 
 	/**
+	 * Attribute is coded as TV
+	 */
+	bool is_tv;
+
+	/**
 	 * Attribute value as chunk.
 	 */
 	chunk_t value;

@@ -1,6 +1,6 @@
 /* information about connections between hosts and clients
  * Copyright (C) 1998-2001  D. Hugh Redelmeier
- * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2009-2010  Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +18,7 @@
 
 #include <sys/queue.h>
 
+#include <utils/host.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <credentials/ietf_attributes/ietf_attributes.h>
@@ -131,10 +132,8 @@ struct virtual_t;
 
 struct end {
 	identification_t *id;
-	ip_address
-		host_addr,
-		host_nexthop,
-		host_srcip;
+	ip_address host_addr, host_nexthop;
+	host_t *host_srcip;
 	ip_subnet client;
 
 	bool is_left;

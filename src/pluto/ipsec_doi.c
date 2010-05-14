@@ -702,7 +702,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
-	identification_t *this_id, *that_id;
+	identification_t *this_id = NULL, *that_id = NULL;
 	ip_address peer_addr;
 	size_t sizespi;
 	int i;
@@ -1949,19 +1949,18 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	u_int8_t np = ISAKMP_NEXT_NONE;
 
 	if (c->spd.this.modecfg && !c->spd.this.has_client &&
-		isanyaddr(&c->spd.this.host_srcip))
+		c->spd.this.host_srcip->is_anyaddr(c->spd.this.host_srcip))
 	{
 		connection_t *ph1_c = isakmp_sa->st_connection;
+		host_t * ph1_srcip = ph1_c->spd.this.host_srcip;
 
-		if (ph1_c->spd.this.modecfg && !isanyaddr(&ph1_c->spd.this.host_srcip))
+		if (ph1_c->spd.this.modecfg && !ph1_srcip->is_anyaddr(ph1_srcip))
 		{
-			char srcip[ADDRTOT_BUF];
-
-			c->spd.this.host_srcip = ph1_c->spd.this.host_srcip;
+			c->spd.this.host_srcip->destroy(c->spd.this.host_srcip);
+			c->spd.this.host_srcip = ph1_srcip->clone(ph1_srcip);
 			c->spd.this.client = ph1_c->spd.this.client;
 			c->spd.this.has_client = TRUE;
-			addrtot(&c->spd.this.host_srcip, 0, srcip, sizeof(srcip));
-			plog("inheriting virtual IP source address %s from ModeCfg", srcip);
+			plog("inheriting virtual IP source address %H from ModeCfg", ph1_srcip);
 		}
 	}
 
@@ -4888,20 +4887,20 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					/* Plain Road Warrior:
 					 * instantiate, carrying over authenticated peer ID
 					 */
+					host_t *vip = c->spd.that.host_srcip;
+
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
 
 					/* inherit any virtual IP assigned by a Mode Config exchange */ 
 					if (p->spd.that.modecfg && c->spd.that.modecfg &&
-						subnetisaddr(his_net, &c->spd.that.host_srcip))
+						subnetisaddr(his_net, (ip_address*)vip->get_sockaddr(vip)))
 					{
-						char srcip[ADDRTOT_BUF];
-
 						DBG(DBG_CONTROL,
-							addrtot(&c->spd.that.host_srcip, 0, srcip, sizeof(srcip));
-							DBG_log("inheriting virtual IP source address %s from ModeCfg", srcip)
+							DBG_log("inheriting virtual IP source address %H from ModeCfg", vip)
 						)
-						p->spd.that.host_srcip = c->spd.that.host_srcip;
+						p->spd.that.host_srcip->destroy(p->spd.that.host_srcip);
+						p->spd.that.host_srcip = vip->clone(vip);
 						p->spd.that.client = c->spd.that.client;
 						p->spd.that.has_client = TRUE;
 					}

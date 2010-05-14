@@ -483,16 +483,14 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			strncat(nexthop_str, "' ", sizeof(nexthop_str));
 		}
 
-		if (addrbytesptr(&sr->this.host_srcip, NULL)
-		&& !isanyaddr(&sr->this.host_srcip))
+		if (!sr->this.host_srcip->is_anyaddr(sr->this.host_srcip))
 		{
 			char *n;
 
 			strcpy(srcip_str, "PLUTO_MY_SOURCEIP='");
 			n = srcip_str + strlen(srcip_str);
-
-			addrtot(&sr->this.host_srcip, 0
-					,n , sizeof(srcip_str)-strlen(srcip_str));
+			snprintf(n, sizeof(srcip_str)-strlen(srcip_str), "%H", 
+						sr->this.host_srcip);
 			strncat(srcip_str, "' ", sizeof(srcip_str));
 		}
 

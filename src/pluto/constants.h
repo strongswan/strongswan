@@ -543,41 +543,6 @@ extern enum_names attr_msg_type_names;
 
 extern enum_names modecfg_attr_names;
 
-/* XAUTH attribute values */
-#define    XAUTH_TYPE                16520
-#define    XAUTH_USER_NAME           16521
-#define    XAUTH_USER_PASSWORD       16522
-#define    XAUTH_PASSCODE            16523
-#define    XAUTH_MESSAGE             16524
-#define    XAUTH_CHALLENGE           16525
-#define    XAUTH_DOMAIN              16526
-#define    XAUTH_STATUS              16527
-#define    XAUTH_NEXT_PIN            16528
-#define    XAUTH_ANSWER              16529
-
-#define    XAUTH_BASE                XAUTH_TYPE
-
-extern enum_names xauth_attr_names;
-
-extern enum_names microsoft_attr_names;
-
-/* ISAKMP mode config attributes specific to the Unity vendor ID */
-#define   UNITY_BANNER              28672
-#define   UNITY_SAVE_PASSWD         28673
-#define   UNITY_DEF_DOMAIN          28674
-#define   UNITY_SPLITDNS_NAME       28675
-#define   UNITY_SPLIT_INCLUDE       28676
-#define   UNITY_NATT_PORT           28677
-#define   UNITY_LOCAL_LAN           28678
-#define   UNITY_PFS                 28679
-#define   UNITY_FW_TYPE             28680
-#define   UNITY_BACKUP_SERVERS      28681
-#define   UNITY_DDNS_HOSTNAME       28682
-
-#define   UNITY_BASE                UNITY_BANNER
-
-extern enum_names unity_attr_names;
-
 /* XAUTH authentication types */
 #define XAUTH_TYPE_GENERIC 0
 #define XAUTH_TYPE_CHAP    1
