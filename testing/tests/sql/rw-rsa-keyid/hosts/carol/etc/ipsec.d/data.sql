@@ -14,13 +14,13 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of carol@strongswan.org */
+) VALUES ( /* subjkey of carol@strongswan.org */
   11, X'1fa1a988d9648cb5a0a2546439b4f23d745d6e7c'
  );
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of moon.strongswan.org */
+) VALUES ( /* subjkey of moon.strongswan.org */
   11, X'6a9c74d1f8897989f65a94e989f1fac3649d292e'
  );
 
