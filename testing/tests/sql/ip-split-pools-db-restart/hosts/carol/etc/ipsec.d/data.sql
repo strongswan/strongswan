@@ -17,6 +17,7 @@ INSERT INTO identities (
 ) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
   11, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
  );
+
 INSERT INTO identities (
   type, data
 ) VALUES ( /* carol@strongswan.org */
