@@ -84,6 +84,7 @@ dpdaction,         KW_DPDACTION
 inactivity,        KW_INACTIVITY
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH
+xauth_identity,    KW_XAUTH_IDENTITY
 mediation,         KW_MEDIATION
 mediated_by,       KW_MEDIATED_BY
 me_peerid,         KW_ME_PEERID

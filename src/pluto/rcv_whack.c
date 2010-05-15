@@ -329,6 +329,7 @@ void whack_handle(int whackctlfd)
 		|| !unpack_str(&msg.sc_data)            /* string 26 */
 		|| !unpack_str(&msg.whack_lease_ip)     /* string 27 */
 		|| !unpack_str(&msg.whack_lease_id)     /* string 28 */
+		|| !unpack_str(&msg.xauth_identity)     /* string 29 */
 		|| str_roof - next_str != (ptrdiff_t)msg.keyval.len)    /* check chunk */
 		{
 			ugh = "message from whack contains bad string";

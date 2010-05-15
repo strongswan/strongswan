@@ -183,6 +183,8 @@ struct connection {
 	unsigned long sa_rekey_fuzz;
 	unsigned long sa_keying_tries;
 
+	identification_t *xauth_identity;     /* XAUTH identity */
+
 	/* RFC 3706 DPD */
 	time_t dpd_delay;
 	time_t dpd_timeout;

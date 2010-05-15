@@ -404,11 +404,11 @@ void delete_connection(connection_t *c, bool relations)
 	cur_debugging = old_cur_debugging;
 #endif
 	free(c->name);
+	DESTROY_IF(c->xauth_identity);
 	DESTROY_IF(c->spd.this.id);
 	DESTROY_IF(c->spd.this.ca);
 	DESTROY_IF(c->spd.this.groups);
 	DESTROY_IF(c->spd.this.host_srcip);
-
 	free(c->spd.this.updown);
 	free(c->spd.this.pool);
 	DESTROY_IF(c->spd.that.id);
@@ -759,6 +759,10 @@ static size_t format_connection(char *buf, size_t buf_len,
 static void unshare_connection_strings(connection_t *c)
 {
 	c->name = clone_str(c->name);
+	if (c->xauth_identity)
+	{
+		c->xauth_identity = c->xauth_identity->clone(c->xauth_identity);
+	}
 	c->spd.this.id = c->spd.this.id->clone(c->spd.this.id);
 	c->spd.this.pool = clone_str(c->spd.this.pool);
 	c->spd.this.updown = clone_str(c->spd.this.updown);
@@ -1135,6 +1139,12 @@ void add_connection(const whack_message_t *wm)
 			{
 				loglog(RC_LOG_SERIOUS, "syntax error in ike string");
 			}
+		}
+
+		if (wm->xauth_identity)
+		{
+			c->xauth_identity
+					= identification_create_from_string(wm->xauth_identity);
 		}
 
 		c->sa_ike_life_seconds = wm->sa_ike_life_seconds;

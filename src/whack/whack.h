@@ -48,7 +48,7 @@ typedef enum {
  */
 
 #define WHACK_BASIC_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 24)
-#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 26)
+#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 29)
 
 typedef struct whack_end whack_end_t;
 
@@ -214,30 +214,40 @@ struct whack_message {
 	int inbase, outbase;
 	char *sc_data;
 
+	/* XAUTH user identity */
+	char *xauth_identity;
+
 	/* space for strings (hope there is enough room):
 	 * Note that pointers don't travel on wire.
-	 *  1 connection name [name_len]
-	 *  2 left's name [left.host.name.len]
+	 *  1 connection name
+	 *  2 left's id
 	 *  3 left's cert
 	 *  4 left's ca
 	 *  5 left's groups
 	 *  6 left's updown
-	 *  7 right's name [left.host.name.len]
-	 *  8 right's cert
-	 *  9 right's ca
-	 * 10 right's groups
-	 * 11 right's updown
-	 * 12 keyid
-	 * 13 myid
-	 * 14 cacert
-	 * 15 ldaphost
-	 * 16 ldapbase
-	 * 17 crluri
-	 * 18 crluri2
-	 * 19 ocspuri
-	 * 20 ike
-	 " 21 esp
-	 * 22 rsa_data
+	 *  7 left's source ip
+	 *  8 left's virtual ip ranges
+	 *  9 right's id
+	 * 10 right's cert
+	 * 11 right's ca
+	 * 12 right's groups
+	 * 13 right's updown
+	 * 14 right's source ip
+	 * 15 right's virtual ip ranges
+	 * 16 keyid
+	 * 17 myid
+	 * 18 cacert
+	 * 19 ldaphost
+	 * 20 ldapbase
+	 * 21 crluri
+	 * 22 crluri2
+	 * 23 ocspuri
+	 * 24 ike
+	 * 25 esp
+	 * 26 smartcard data
+	 * 27 whack leases ip argument
+	 * 28 whack leases id argument
+	 * 29 xauth identity
 	 * plus keyval (limit: 8K bits + overhead), a chunk.
 	 */
 	size_t str_size;

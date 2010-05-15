@@ -230,6 +230,7 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, inactivity), NULL                         },
 	{ ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
 	{ ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+	{ ARG_STR,  offsetof(starter_conn_t, xauth_identity), NULL                     },
 	{ ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
 	{ ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
 	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },

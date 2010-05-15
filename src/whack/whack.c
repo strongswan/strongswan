@@ -1804,6 +1804,7 @@ int main(int argc, char **argv)
 	||  !pack_str(&msg.sc_data)          /* string 26 */
 	||  !pack_str(&msg.whack_lease_ip)   /* string 27 */
 	||  !pack_str(&msg.whack_lease_id)   /* string 28 */
+	||  !pack_str(&msg.xauth_identity)   /* string 29 */
 	||  str_roof - next_str < (ptrdiff_t)msg.keyval.len)
 		diag("too many bytes of strings to fit in message to pluto");
 
