@@ -8,8 +8,14 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+) VALUES ( /* subjkey of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
   11, X'5da7dd700651327ee7b66db3b5e5e060ea2e4def'
+ );
+
+INSERT INTO identities (
+  type, data
+) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+  11, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
  );
 
 INSERT INTO identities (
@@ -44,6 +50,12 @@ INSERT INTO certificate_identity (
   1, 2
 );
 
+INSERT INTO certificate_identity (
+  certificate, identity
+) VALUES (
+  1, 3
+);
+
 /* Shared Secrets */
 
 INSERT INTO shared_secrets (
@@ -55,13 +67,13 @@ INSERT INTO shared_secrets (
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 3
+  1, 4 
 );
 
 INSERT INTO shared_secret_identity (
   shared_secret, identity
 ) VALUES (
-  1, 4
+  1, 5 
 );
 
 /* Configurations */
@@ -75,7 +87,7 @@ INSERT INTO ike_configs (
 INSERT INTO peer_configs (
   name, ike_cfg, local_id, remote_id, auth_method
 ) VALUES (
-  'home', 1, 3, 4, 2
+  'home', 1, 4, 5, 2
 );
 
 INSERT INTO child_configs (
