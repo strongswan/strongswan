@@ -8,8 +8,14 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+) VALUES ( /* subjkey of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
   11, X'5da7dd700651327ee7b66db3b5e5e060ea2e4def'
+ );
+
+INSERT INTO identities (
+  type, data
+) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+  11, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
  );
 
 INSERT INTO identities (
@@ -20,7 +26,7 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' */
+) VALUES ( /* subjkey of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' */
   11, X'6a9c74d1f8897989f65a94e989f1fac3649d292e'
  );
 
@@ -71,13 +77,19 @@ INSERT INTO certificate_identity (
 INSERT INTO certificate_identity (
   certificate, identity
 ) VALUES (
-  2, 3
+  1, 3
 );
 
 INSERT INTO certificate_identity (
   certificate, identity
 ) VALUES (
-  2, 4
+  2, 4 
+);
+
+INSERT INTO certificate_identity (
+  certificate, identity
+) VALUES (
+  2, 5 
 );
 
 /* Private Keys */
@@ -91,13 +103,13 @@ INSERT INTO private_keys (
 INSERT INTO private_key_identity (
   private_key, identity
 ) VALUES (
-  1, 3
+  1, 4 
 );
 
 INSERT INTO private_key_identity (
   private_key, identity
 ) VALUES (
-  1, 4
+  1, 5 
 );
 
 /* Configurations */
@@ -111,7 +123,7 @@ INSERT INTO ike_configs (
 INSERT INTO peer_configs (
   name, ike_cfg, local_id, remote_id, pool
 ) VALUES (
-  'rw', 1, 3, 5, 'bigpool'
+  'rw', 1, 4, 6, 'bigpool'
 );
 
 INSERT INTO child_configs (
@@ -161,13 +173,13 @@ INSERT INTO pools (
 INSERT INTO addresses (
   pool, address, identity, acquired, released
 ) VALUES (
-  1, X'0a030001', 6, 1211299013 , 1211299205
+  1, X'0a030001', 7, 1211299013 , 1211299205
 );
 
 INSERT INTO addresses (
   pool, address, identity, acquired, released
 ) VALUES (
-  1, X'0a030002', 7, 1211299031, 1211299187
+  1, X'0a030002', 8, 1211299031, 1211299187
 );
 
 INSERT INTO addresses (
@@ -197,11 +209,11 @@ INSERT INTO addresses (
 INSERT INTO leases (
   address, identity, acquired, released
 ) VALUES (
-  1, 6, 1211299013 , 1211299205
+  1, 7, 1211299013 , 1211299205
 );
 
 INSERT INTO leases (
   address, identity, acquired, released
 ) VALUES (
-  2, 7, 1211299031, 1211299187
+  2, 8, 1211299031, 1211299187
 );
