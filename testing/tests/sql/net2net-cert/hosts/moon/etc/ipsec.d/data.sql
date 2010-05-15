@@ -8,8 +8,14 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+) VALUES ( /* subjkey of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
   11, X'5da7dd700651327ee7b66db3b5e5e060ea2e4def'
+ );
+
+INSERT INTO identities (
+  type, data
+) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA' */
+  11, X'ae096b87b44886d3b820978623dabd0eae22ebbc'
  );
 
 INSERT INTO identities (
@@ -26,7 +32,7 @@ INSERT INTO identities (
 
 INSERT INTO identities (
   type, data
-) VALUES ( /* keyid of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' */
+) VALUES ( /* subjkey of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' */
   11, X'6a9c74d1f8897989f65a94e989f1fac3649d292e'
  );
 
@@ -59,13 +65,19 @@ INSERT INTO certificate_identity (
 INSERT INTO certificate_identity (
   certificate, identity
 ) VALUES (
-  2, 3
+  1, 3
 );
 
 INSERT INTO certificate_identity (
   certificate, identity
 ) VALUES (
-  2, 5
+  2, 4 
+);
+
+INSERT INTO certificate_identity (
+  certificate, identity
+) VALUES (
+  2, 6 
 );
 
 /* Private Keys */
@@ -79,13 +91,13 @@ INSERT INTO private_keys (
 INSERT INTO private_key_identity (
   private_key, identity
 ) VALUES (
-  1, 3
+  1, 4 
 );
 
 INSERT INTO private_key_identity (
   private_key, identity
 ) VALUES (
-  1, 5
+  1, 6 
 );
 
 /* Configurations */
@@ -99,7 +111,7 @@ INSERT INTO ike_configs (
 INSERT INTO peer_configs (
   name, ike_cfg, local_id, remote_id, mobike
 ) VALUES (
-  'net-net', 1, 3, 4, 0
+  'net-net', 1, 4, 5, 0
 );
 
 INSERT INTO child_configs (
