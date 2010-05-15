@@ -19,7 +19,7 @@ CREATE TABLE `child_configs` (
   `jitter` mediumint(8) unsigned NOT NULL default '60',
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
   `hostaccess` tinyint(1) unsigned NOT NULL default '0',
-  `mode` tinyint(4) unsigned NOT NULL default '1',
+  `mode` tinyint(4) unsigned NOT NULL default '2',
   `dpd_action` tinyint(4) unsigned NOT NULL default '0',
   `close_action` tinyint(4) unsigned NOT NULL default '0',
   `ipcomp` tinyint(4) unsigned NOT NULL default '0',
