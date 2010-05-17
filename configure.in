@@ -572,7 +572,7 @@ if test x$openssl = xtrue; then
 fi
 
 if test x$gcrypt = xtrue; then
-	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])])
+	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
 	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
 	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
 	AC_TRY_COMPILE(
