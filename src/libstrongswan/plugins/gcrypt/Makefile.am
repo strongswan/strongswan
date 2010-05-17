@@ -19,4 +19,4 @@ libstrongswan_gcrypt_la_SOURCES = \
 	gcrypt_hasher.h gcrypt_hasher.c
 
 libstrongswan_gcrypt_la_LDFLAGS = -module -avoid-version
-libstrongswan_gcrypt_la_LIBADD  = -lgcrypt
+libstrongswan_gcrypt_la_LIBADD  = -lgcrypt -lgpg-error
