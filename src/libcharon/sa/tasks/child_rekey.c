@@ -215,6 +215,59 @@ static status_t build_r(private_child_rekey_t *this, message_t *message)
 }
 
 /**
+ * Handle a rekey collision
+ */
+static child_sa_t *handle_collision(private_child_rekey_t *this)
+{
+	child_sa_t *to_delete;
+
+	if (this->collision->get_type(this->collision) == CHILD_REKEY)
+	{
+		chunk_t this_nonce, other_nonce;
+		private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
+
+		this_nonce = this->child_create->get_lower_nonce(this->child_create);
+		other_nonce = other->child_create->get_lower_nonce(other->child_create);
+
+		/* if we have the lower nonce, delete rekeyed SA. If not, delete
+		 * the redundant. */
+		if (memcmp(this_nonce.ptr, other_nonce.ptr,
+				   min(this_nonce.len, other_nonce.len)) < 0)
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey collision won, "
+				 "deleting rekeyed child");
+			to_delete = this->child_sa;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, "
+				 "deleting redundant child");
+			to_delete = this->child_create->get_child(this->child_create);
+		}
+	}
+	else
+	{	/* CHILD_DELETE */
+		child_delete_t *del = (child_delete_t*)this->collision;
+
+		/* we didn't had a chance to compare the nonces, so we delete
+		 * the CHILD_SA the other is not deleting. */
+		if (del->get_child(del) != this->child_sa)
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, "
+				 "deleting rekeyed child");
+			to_delete = this->child_sa;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, "
+				 "deleting redundant child");
+			to_delete = this->child_create->get_child(this->child_create);
+		}
+	}
+	return to_delete;
+}
+
+/**
  * Implementation of task_t.process for initiator
  */
 static status_t process_i(private_child_rekey_t *this, message_t *message)
@@ -263,35 +316,14 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 		return SUCCESS;
 	}
 
-	to_delete = this->child_sa;
-
 	/* check for rekey collisions */
-	if (this->collision &&
-		this->collision->get_type(this->collision) == CHILD_REKEY)
+	if (this->collision)
 	{
-		chunk_t this_nonce, other_nonce;
-		private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
-
-		this_nonce = this->child_create->get_lower_nonce(this->child_create);
-		other_nonce = other->child_create->get_lower_nonce(other->child_create);
-
-		/* if we have the lower nonce, delete rekeyed SA. If not, delete
-		 * the redundant. */
-		if (memcmp(this_nonce.ptr, other_nonce.ptr,
-				   min(this_nonce.len, other_nonce.len)) < 0)
-		{
-			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting rekeyed child");
-		}
-		else
-		{
-			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, deleting redundant child");
-			to_delete = this->child_create->get_child(this->child_create);
-			if (to_delete == NULL)
-			{
-				/* ooops, should not happen, fallback */
-				to_delete = this->child_sa;
-			}
-		}
+		to_delete = handle_collision(this);
+	}
+	else
+	{
+		to_delete = this->child_sa;
 	}
 
 	if (to_delete != this->child_create->get_child(this->child_create))
@@ -300,6 +332,10 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 							this->child_create->get_child(this->child_create));
 	}
 
+	if (to_delete == NULL)
+	{
+		return SUCCESS;
+	}
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
 
