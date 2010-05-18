@@ -21,6 +21,7 @@
 #include <credentials/keys/public_key.h>
 
 #include "certs.h"
+#include "connections.h"
 
 #ifndef SHARED_SECRETS_FILE
 # define SHARED_SECRETS_FILE  IPSEC_CONFDIR "/ipsec.secrets"
@@ -31,20 +32,12 @@ const char *shared_secrets_file;
 extern void load_preshared_secrets(int whackfd);
 extern void free_preshared_secrets(void);
 
-enum PrivateKeyKind {
-	PPK_PSK,
-	PPK_PUBKEY,
-	PPK_XAUTH,
-	PPK_PIN
-};
-
 extern void xauth_defaults(void);
 
-/* forward declaration */
-struct connection;
-
-extern const chunk_t *get_preshared_secret(const struct connection *c);
-extern private_key_t *get_private_key(const struct connection *c);
+extern bool get_xauth_secret(identification_t *user, identification_t *server,
+							 chunk_t *secret);
+extern const chunk_t *get_preshared_secret(const connection_t *c);
+extern private_key_t *get_private_key(const connection_t *c);
 extern private_key_t *get_x509_private_key(const cert_t *cert);
 
 /* public key machinery  */

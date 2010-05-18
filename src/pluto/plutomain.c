@@ -68,7 +68,6 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
-#include "xauth.h"
 #include "crypto.h"
 #include "nat_traversal.h"
 #include "virtual.h"
@@ -76,6 +75,7 @@
 #include "vendor.h"
 #include "builder.h"
 #include "whack_attribute.h"
+#include "pluto.h"
 
 static void usage(const char *mess)
 {
@@ -268,18 +268,18 @@ int main(int argc, char **argv)
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
-	if (lib->integrity &&
-		!lib->integrity->check_file(lib->integrity, "pluto", argv[0]))
-	{
-		fprintf(stderr, "integrity check of pluto failed\n");
-		library_deinit();
-		exit(SS_RC_DAEMON_INTEGRITY);
-	}
 	if (!libhydra_init("pluto"))
 	{
 		libhydra_deinit();
 		library_deinit();
 		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	if (!pluto_init(argv[0]))
+	{
+		pluto_deinit();
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 	options = options_create();
 
@@ -677,7 +677,6 @@ int main(int argc, char **argv)
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);
-	xauth_init();
 	init_states();
 	init_demux();
 	init_kernel();
@@ -771,7 +770,6 @@ void exit_pluto(int status)
 	free_ifaces();
 	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
-	xauth_finalize();           /* finalize and unload XAUTH module */
 	stop_adns();
 	free_md_pool();
 	free_crypto();
@@ -781,6 +779,7 @@ void exit_pluto(int status)
 	free_builder();
 	delete_lock();
 	options->destroy(options);
+	pluto_deinit();
 	lib->plugins->unload(lib->plugins);
 	libhydra_deinit();
 	library_deinit();

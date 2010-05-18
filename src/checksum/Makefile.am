@@ -19,6 +19,7 @@ AM_CFLAGS = -rdynamic
 libs =	$(shell find $(top_builddir)/src/libstrongswan \
 			$(top_builddir)/src/libcharon \
 			$(top_builddir)/src/libhydra \
+			$(top_builddir)/src/pluto \
 			-name 'libstrongswan*.so')
 
 if USE_LIBHYDRA

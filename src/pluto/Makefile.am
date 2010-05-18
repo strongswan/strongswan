@@ -37,6 +37,7 @@ nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
 pkcs7.c pkcs7.h \
+pluto.c pluto.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \
 server.c server.h \
@@ -47,7 +48,8 @@ timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
 whack_attribute.c whack_attribute.h \
-xauth.c xauth.h \
+xauth/xauth_manager.c xauth/xauth_manager.h \
+xauth/xauth_provider.h xauth/xauth_verifier.h \
 x509.c x509.h \
 builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
@@ -67,7 +69,7 @@ INCLUDES = \
 -I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/whack
 
-AM_CFLAGS = \
+AM_CFLAGS = -rdynamic \
 -DIPSEC_DIR=\"${ipsecdir}\" \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
@@ -88,6 +90,9 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
+
+# compile options
+#################
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
@@ -121,3 +126,14 @@ endif
 if USE_THREADS
   AM_CFLAGS += -DTHREADS
 endif
+
+# build optional plugins
+########################
+
+SUBDIRS = .
+
+if USE_XAUTH
+  SUBDIRS += plugins/xauth
+endif
+
+

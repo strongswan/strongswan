@@ -127,6 +127,7 @@ ARG_ENABL_SET([manager],        [enable web management console (proof of concept
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
 ARG_DISBL_SET([pluto],          [disable the IKEv1 keying daemon pluto.])
+ARG_DISBL_SET([xauth],          [disable xauth plugin.])
 ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
 ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
@@ -746,6 +747,9 @@ if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
 fi
+if test x$xauth = xtrue; then
+	pluto_plugins=${pluto_plugins}" xauth"
+fi
 if test x$attr = xtrue; then
 	libhydra_plugins=${libhydra_plugins}" attr"
 fi
@@ -789,7 +793,6 @@ AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
-AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
@@ -806,9 +809,7 @@ AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
-AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
-AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
@@ -831,6 +832,16 @@ AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
+
+dnl hydra plugins
+dnl =============
+AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
+AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
+
+dnl pluto plugins
+dnl =============
+AM_CONDITIONAL(USE_XAUTH, test x$xauth = xtrue)
 
 dnl other options
 dnl =============
@@ -917,6 +928,7 @@ AC_OUTPUT(
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/pluto/Makefile
+	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
 	src/libcharon/Makefile

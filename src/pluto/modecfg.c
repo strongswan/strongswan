@@ -40,7 +40,7 @@
 #include "crypto.h"
 #include "modecfg.h"
 #include "whack.h"
-#include "xauth.h"
+#include "pluto.h"
 
 #define MAX_XAUTH_TRIES         3
 
@@ -929,13 +929,15 @@ stf_status xauth_send_request(struct state *st)
 stf_status xauth_inI0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
+	connection_t *c = st->st_connection;
 	u_int16_t isama_id;
 	stf_status stat, stat_build;
 	modecfg_attribute_t *ca;
-	bool xauth_user_name = FALSE;
-	bool xauth_user_password = FALSE;
+	bool xauth_user_name_present = FALSE;
+	bool xauth_user_password_present = FALSE;
 	bool xauth_type_present = FALSE;
-	xauth_t xauth_secret;
+	chunk_t xauth_user_name, xauth_user_password;
+	identification_t *user_id;
 	linked_list_t *ca_list = linked_list_create();
 
 	plog("parsing XAUTH request");
@@ -963,10 +965,10 @@ stf_status xauth_inI0(struct msg_digest *md)
 				}
 				break;
 			case XAUTH_USER_NAME:
-				xauth_user_name = TRUE;
+				xauth_user_name_present = TRUE;
 				break;
 			case XAUTH_USER_PASSWORD:
-				xauth_user_password = TRUE;
+				xauth_user_password_present = TRUE;
 				break;
 			case XAUTH_MESSAGE:
 				if (ca->value.len)
@@ -982,12 +984,12 @@ stf_status xauth_inI0(struct msg_digest *md)
 		modecfg_attribute_destroy(ca);
 	}
 
-	if (!xauth_user_name)
+	if (!xauth_user_name_present)
 	{
 		plog("user name attribute is missing in XAUTH request");
 		stat = STF_FAIL;
 	}
-	if (!xauth_user_password)
+	if (!xauth_user_password_present)
 	{
 		plog("user password attribute is missing in XAUTH request");
 		stat = STF_FAIL;
@@ -997,7 +999,7 @@ stf_status xauth_inI0(struct msg_digest *md)
 	if (stat == STF_OK)
 	{
 		/* get user credentials using a plugin function */
-		if (!xauth_module.get_secret(&xauth_secret))
+		if (!pluto->xauth->get_secret(pluto->xauth, c, &xauth_user_password))
 		{
 			plog("xauth user credentials not found");
 			stat = STF_FAIL;
@@ -1005,23 +1007,31 @@ stf_status xauth_inI0(struct msg_digest *md)
 	}
 	if (stat == STF_OK)
 	{
+		/* insert xauth type if present */
 		if (xauth_type_present)
 		{
 			ca = modecfg_attribute_create_tv(XAUTH_TYPE, XAUTH_TYPE_GENERIC);
 			ca_list->insert_last(ca_list, ca);
 		}
+
+		/* insert xauth user name */
+		user_id = (c->xauth_identity) ? c->xauth_identity : c->spd.this.id;
+		xauth_user_name = user_id->get_encoding(user_id);
 		DBG(DBG_CONTROL,
-			DBG_log("my xauth user name is '%.*s'", xauth_secret.user_name.len,
-													xauth_secret.user_name.ptr)
+			DBG_log("my xauth user name is '%.*s'", xauth_user_name.len,
+													xauth_user_name.ptr)
 		)
-		ca = modecfg_attribute_create(XAUTH_USER_NAME, xauth_secret.user_name);
+		ca = modecfg_attribute_create(XAUTH_USER_NAME, xauth_user_name);
 		ca_list->insert_last(ca_list, ca);
+
+		/* insert xauth user password */
 		DBG(DBG_PRIVATE,
-			DBG_log("my xauth user password is '%.*s'",	xauth_secret.user_password.len,
-														xauth_secret.user_password.ptr)
+			DBG_log("my xauth user password is '%.*s'",	xauth_user_password.len,
+														xauth_user_password.ptr)
 		)
-		ca = modecfg_attribute_create(XAUTH_USER_PASSWORD, xauth_secret.user_password);
+		ca = modecfg_attribute_create(XAUTH_USER_PASSWORD, xauth_user_password);
 		ca_list->insert_last(ca_list, ca);
+		chunk_clear(&xauth_user_password);
 	}
 	else
 	{
@@ -1065,9 +1075,10 @@ stf_status xauth_inI0(struct msg_digest *md)
 stf_status xauth_inR1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
+	connection_t *c = st->st_connection;
 	u_int16_t isama_id;
 	stf_status stat, stat_build;
-	xauth_t xauth_secret;
+	chunk_t xauth_user_name, xauth_user_password;
 	int xauth_status = XAUTH_STATUS_OK;
 	modecfg_attribute_t *ca;
 	linked_list_t *ca_list = linked_list_create();
@@ -1081,8 +1092,8 @@ stf_status xauth_inR1(struct msg_digest *md)
 	}
 
 	/* initialize xauth_secret */
-	xauth_secret.user_name = chunk_empty;
-	xauth_secret.user_password = chunk_empty;
+	xauth_user_name = chunk_empty;
+	xauth_user_password = chunk_empty;
 
 	while (ca_list->remove_last(ca_list, (void **)&ca) == SUCCESS)
 	{
@@ -1092,10 +1103,10 @@ stf_status xauth_inR1(struct msg_digest *md)
 				xauth_status = ca->value.len;
 				break;
 			case XAUTH_USER_NAME:
-				xauth_secret.user_name = chunk_clone(ca->value);
+				xauth_user_name = chunk_clone(ca->value);
 				break;
 			case XAUTH_USER_PASSWORD:
-				xauth_secret.user_password = chunk_clone(ca->value);
+				xauth_user_password = chunk_clone(ca->value);
 				break;
 			default:
 				break;
@@ -1108,44 +1119,44 @@ stf_status xauth_inR1(struct msg_digest *md)
 		plog("received FAIL status in XAUTH reply");
 
 		/* client is not able to do XAUTH, delete ISAKMP SA */
+		free(xauth_user_name.ptr);
+		free(xauth_user_password.ptr);
 		delete_state(st);
 		ca_list->destroy(ca_list);
 		return STF_IGNORE;
 	}
 
 	/* check XAUTH reply */
-	if (xauth_secret.user_name.ptr == NULL)
+	if (xauth_user_name.ptr == NULL)
 	{
 		plog("user name attribute is missing in XAUTH reply");
 		st->st_xauth.status = FALSE;
 	}
-	else if (xauth_secret.user_password.ptr == NULL)
+	else if (xauth_user_password.ptr == NULL)
 	{
 		plog("user password attribute is missing in XAUTH reply");
 		st->st_xauth.status = FALSE;
 	}
 	else
 	{
-		xauth_peer_t peer;
-
-		peer.conn_name = st->st_connection->name;
-		addrtot(&md->sender, 0, peer.ip_address, sizeof(peer.ip_address));
-		snprintf(peer.id, sizeof(peer.id), "%Y", md->st->st_connection->spd.that.id);
-
 		DBG(DBG_CONTROL,
-			DBG_log("peer xauth user name is '%.*s'", xauth_secret.user_name.len,
-													  xauth_secret.user_name.ptr)
+			DBG_log("peer xauth user name is '%.*s'", xauth_user_name.len,
+													  xauth_user_name.ptr)
 		)
+		DESTROY_IF(c->xauth_identity);
+		c->xauth_identity = identification_create_from_data(xauth_user_name);		
+
 		DBG(DBG_PRIVATE,
-			DBG_log("peer xauth user password is '%.*s'", xauth_secret.user_password.len,
-														  xauth_secret.user_password.ptr)
+			DBG_log("peer xauth user password is '%.*s'", xauth_user_password.len,
+														  xauth_user_password.ptr)
 		)
 		/* verify the user credentials using a plugin function */
-		st->st_xauth.status = xauth_module.verify_secret(&peer, &xauth_secret);
+		st->st_xauth.status = pluto->xauth->verify_secret(pluto->xauth, c,
+														  xauth_user_password);
 		plog("extended authentication %s", st->st_xauth.status? "was successful":"failed");
 	}
-	chunk_clear(&xauth_secret.user_name);
-	chunk_clear(&xauth_secret.user_password);
+	chunk_clear(&xauth_user_name);
+	chunk_clear(&xauth_user_password);
 
 	plog("sending XAUTH status");
 	xauth_status = (st->st_xauth.status) ? XAUTH_STATUS_OK : XAUTH_STATUS_FAIL;

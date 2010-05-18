@@ -53,25 +53,26 @@
 #include "whack.h"      /* for RC_LOG_SERIOUS */
 #include "timer.h"
 #include "fetch.h"
-#include "xauth.h"
 
 const char *shared_secrets_file = SHARED_SECRETS_FILE;
 
-typedef struct id_list id_list_t;
 
-struct id_list {
-	identification_t *id;
-	id_list_t *next;
+typedef enum secret_kind_t secret_kind_t;
+
+enum secret_kind_t {
+	SECRET_PSK,
+	SECRET_PUBKEY,
+	SECRET_XAUTH,
+	SECRET_PIN
 };
 
-typedef struct secret secret_t;
+typedef struct secret_t secret_t;
 
-struct secret {
-	id_list_t *ids;
-	enum PrivateKeyKind kind;
+struct secret_t {
+	linked_list_t *ids;
+	secret_kind_t kind;
 	union {
 		chunk_t        preshared_secret;
-		xauth_t        xauth_secret;
 		private_key_t *private_key;
 		smartcard_t   *smartcard;
 	} u;
@@ -92,12 +93,11 @@ static void free_public_key(pubkey_t *pk)
 
 secret_t *secrets = NULL;
 
-/* find the struct secret associated with the combination of
- * me and the peer.  We match the Id (if none, the IP address).
- * Failure is indicated by a NULL.
+/**
+ * Find the secret associated with the combination of me and the peer.
  */
-static const secret_t* get_secret(const connection_t *c,
-								  enum PrivateKeyKind kind, bool asym)
+const secret_t* match_secret(identification_t *my_id, identification_t *his_id,
+							 secret_kind_t kind)
 {
 	enum {      /* bits */
 		match_default = 0x01,
@@ -106,29 +106,135 @@ static const secret_t* get_secret(const connection_t *c,
 	};
 
 	unsigned int best_match = 0;
-	secret_t *best = NULL;
-	secret_t *s;
-	identification_t *my_id, *his_id;
+	secret_t *s, *best = NULL;
 
-	/* is there a certificate assigned to this connection? */
-	if (kind == PPK_PUBKEY && c->spd.this.cert)
+	for (s = secrets; s != NULL; s = s->next)
 	{
-		certificate_t *certificate = c->spd.this.cert->cert;
+		unsigned int match = 0;
 
-		public_key_t *pub_key = certificate->get_public_key(certificate);
-
-		for (s = secrets; s != NULL; s = s->next)
+		if (s->kind != kind)
 		{
-			if (s->kind == kind &&
-				s->u.private_key->belongs_to(s->u.private_key, pub_key))
+			continue;
+		}
+
+		if (s->ids->get_count(s->ids) == 0)
+		{
+			/* a default (signified by lack of ids):
+			 * accept if no more specific match found
+			 */
+			match = match_default;
+		}
+		else
+		{
+			/* check if both ends match ids */
+			enumerator_t *enumerator;
+			identification_t *id;
+
+			enumerator = s->ids->create_enumerator(s->ids);
+			while (enumerator->enumerate(enumerator, &id))
 			{
-				best = s;
-				break; /* we have found the private key - no sense in searching further */
+				if (my_id->equals(my_id, id))
+				{
+					match |= match_me;
+				}
+				if (his_id->equals(his_id, id))
+				{
+					match |= match_him;
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			/* If our end matched the only id in the list,
+			 * default to matching any peer.
+			 * A more specific match will trump this.
+			 */
+			if (match == match_me && s->ids->get_count(s->ids) == 1)
+			{
+				match |= match_default;
 			}
 		}
-		pub_key->destroy(pub_key);
-		return best;
+
+		switch (match)
+		{
+			case match_me:
+				/* if this is an asymmetric (eg. public key) system,
+				 * allow this-side-only match to count, even if
+				 * there are other ids in the list.
+				 */
+				if (kind != SECRET_PUBKEY)
+				{
+					break;
+				}
+				/* FALLTHROUGH */
+			case match_default:              /* default all */
+			case match_me | match_default:   /* default peer */
+			case match_me | match_him:       /* explicit */
+				if (match == best_match)
+				{
+					/* two good matches are equally good: do they agree? */
+					bool same = FALSE;
+
+					switch (kind)
+					{
+					case SECRET_PSK:
+					case SECRET_XAUTH:
+						same = chunk_equals(s->u.preshared_secret,
+											best->u.preshared_secret);
+						break;
+					case SECRET_PUBKEY:
+						same = s->u.private_key->equals(s->u.private_key,
+														best->u.private_key);
+						break;
+					default:
+						bad_case(kind);
+					}
+					if (!same)
+					{
+						loglog(RC_LOG_SERIOUS, "multiple ipsec.secrets entries with "
+							"distinct secrets match endpoints: first secret used");
+						best = s;       /* list is backwards: take latest in list */
+					}
+				}
+				else if (match > best_match)
+				{
+					/* this is the best match so far */
+					best_match = match;
+					best = s;
+				}
+		}
 	}
+	return best;
+}
+
+/**
+ * Retrieves an XAUTH secret primarily based on the user ID and
+ * secondarily based on the server ID
+ */
+bool get_xauth_secret(identification_t *user, identification_t *server,
+					  chunk_t *secret)
+{
+	const secret_t *s;
+
+	s = match_secret(user, server, SECRET_XAUTH);
+	if (s)
+	{
+		*secret = chunk_clone(s->u.preshared_secret);
+		return TRUE;
+	}
+	else
+	{
+		*secret = chunk_empty;
+		return FALSE;
+	}
+}
+
+/**
+ * We match the ID (if none, the IP address). Failure is indicated by a NULL.
+ */
+static const secret_t* get_secret(const connection_t *c, secret_kind_t kind)
+{
+	identification_t *my_id, *his_id;
+	const secret_t *best;
 
 	my_id  = c->spd.this.id;
 
@@ -137,7 +243,7 @@ static const secret_t* get_secret(const connection_t *c,
 		/* roadwarrior: replace him with 0.0.0.0 */
 		his_id = identification_create_from_string("%any");
 	}
-	else if (kind == PPK_PSK && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK)) &&
+	else if (kind == SECRET_PSK && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK)) &&
 		((c->kind == CK_TEMPLATE &&
 		 c->spd.that.id->get_type(c->spd.that.id) == ID_ANY) ||
 		(c->kind == CK_INSTANCE && id_is_ipaddr(c->spd.that.id))))
@@ -150,96 +256,8 @@ static const secret_t* get_secret(const connection_t *c,
 		his_id = c->spd.that.id->clone(c->spd.that.id);
 	}
 
-	for (s = secrets; s != NULL; s = s->next)
-	{
-		if (s->kind == kind)
-		{
-			unsigned int match = 0;
+	best = match_secret(my_id, his_id, kind);
 
-			if (s->ids == NULL)
-			{
-				/* a default (signified by lack of ids):
-				 * accept if no more specific match found
-				 */
-				match = match_default;
-			}
-			else
-			{
-				/* check if both ends match ids */
-				id_list_t *i;
-
-				for (i = s->ids; i != NULL; i = i->next)
-				{
-					if (my_id->equals(my_id, i->id))
-					{
-						match |= match_me;
-					}
-					if (his_id->equals(his_id, i->id))
-					{
-						match |= match_him;
-					}
-				}
-
-				/* If our end matched the only id in the list,
-				 * default to matching any peer.
-				 * A more specific match will trump this.
-				 */
-				if (match == match_me && s->ids->next == NULL)
-				{
-					match |= match_default;
-				}
-			}
-
-			switch (match)
-			{
-			case match_me:
-				/* if this is an asymmetric (eg. public key) system,
-				 * allow this-side-only match to count, even if
-				 * there are other ids in the list.
-				 */
-				if (!asym)
-				{
-					break;
-				}
-				/* FALLTHROUGH */
-			case match_default: /* default all */
-			case match_me | match_default:      /* default peer */
-			case match_me | match_him:  /* explicit */
-				if (match == best_match)
-				{
-					/* two good matches are equally good:
-					 * do they agree?
-					 */
-					bool same = FALSE;
-
-					switch (kind)
-					{
-					case PPK_PSK:
-						same = s->u.preshared_secret.len == best->u.preshared_secret.len
-								&& memeq(s->u.preshared_secret.ptr, best->u.preshared_secret.ptr, s->u.preshared_secret.len);
-						break;
-					case PPK_PUBKEY:
-						same = s->u.private_key->equals(s->u.private_key, best->u.private_key);
-						break;
-					default:
-						bad_case(kind);
-					}
-					if (!same)
-					{
-						loglog(RC_LOG_SERIOUS, "multiple ipsec.secrets entries with distinct secrets match endpoints:"
-							" first secret used");
-						best = s;       /* list is backwards: take latest in list */
-					}
-				}
-				else if (match > best_match)
-				{
-					/* this is the best match so far */
-					best_match = match;
-					best = s;
-				}
-			}
-		}
-	}
 	his_id->destroy(his_id);
 	return best;
 }
@@ -250,7 +268,7 @@ static const secret_t* get_secret(const connection_t *c,
  */
 const chunk_t* get_preshared_secret(const connection_t *c)
 {
-	const secret_t *s = get_secret(c, PPK_PSK, FALSE);
+	const secret_t *s = get_secret(c, SECRET_PSK);
 
 	DBG(DBG_PRIVATE,
 		if (s == NULL)
@@ -272,7 +290,7 @@ bool has_private_key(cert_t *cert)
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
-		if (s->kind == PPK_PUBKEY &&
+		if (s->kind == SECRET_PUBKEY &&
 			s->u.private_key->belongs_to(s->u.private_key, pub_key))
 		{
 			has_key = TRUE;
@@ -295,7 +313,7 @@ private_key_t* get_x509_private_key(const cert_t *cert)
 	for (s = secrets; s != NULL; s = s->next)
 	{
 
-		if (s->kind == PPK_PUBKEY &&
+		if (s->kind == SECRET_PUBKEY &&
 			s->u.private_key->belongs_to(s->u.private_key, public_key))
 		{
 			private_key = s->u.private_key;
@@ -311,9 +329,33 @@ private_key_t* get_x509_private_key(const cert_t *cert)
  */
 private_key_t* get_private_key(const connection_t *c)
 {
-	const secret_t *s = get_secret(c, PPK_PUBKEY, TRUE);
+	const secret_t *s, *best = NULL;
 
-	return s == NULL? NULL : s->u.private_key;
+	/* is a certificate assigned to this connection? */
+	if (c->spd.this.cert)
+	{
+		certificate_t *certificate;
+		public_key_t *pub_key;
+
+		certificate = c->spd.this.cert->cert;
+		pub_key = certificate->get_public_key(certificate);
+
+		for (s = secrets; s != NULL; s = s->next)
+		{
+			if (s->kind == SECRET_PUBKEY &&
+				s->u.private_key->belongs_to(s->u.private_key, pub_key))
+			{
+				best = s;
+				break; /* found the private key - no sense in searching further */
+			}
+		}
+		pub_key->destroy(pub_key);
+	}
+	else
+	{
+		best = get_secret(c, SECRET_PUBKEY);
+	}
+	return best ? best->u.private_key : NULL;
 }
 
 /* digest a secrets file
@@ -556,120 +598,6 @@ static err_t process_keyfile(private_key_t **key, key_type_t type, int whackfd)
 }
 
 /**
- * Process xauth secret read from ipsec.secrets
- */
-static err_t process_xauth(secret_t *s)
-{
-	chunk_t user_name;
-
-	s->kind = PPK_XAUTH;
-
-	if (!shift())
-		return "missing xauth user name";
-	if (*tok == '"' || *tok == '\'')  /* quoted user name */
-	{
-		user_name.ptr = tok + 1;
-		user_name.len = flp->cur - tok - 2;
-	}
-	else
-	{
-		user_name.ptr = tok;
-		user_name.len = flp->cur - tok;
-	}
-	plog("  loaded xauth credentials of user '%.*s'"
-				, user_name.len
-				, user_name.ptr);
-	s->u.xauth_secret.user_name = chunk_clone(user_name);
-
-	if (!shift())
-		return "missing xauth user password";
-	return process_psk_secret(&s->u.xauth_secret.user_password);
-}
-
-/**
- * Get XAUTH secret from chained secrets lists
- * only one entry is currently supported
- */
-static bool xauth_get_secret(xauth_t *xauth_secret)
-{
-	secret_t *s;
-	bool found = FALSE;
-
-	for (s = secrets; s != NULL; s = s->next)
-	{
-		if (s->kind == PPK_XAUTH)
-		{
-			if (found)
-			{
-				plog("found multiple xauth secrets - first selected");
-			}
-			else
-			{
-				found = TRUE;
-				*xauth_secret = s->u.xauth_secret;
-			}
-		}
-	}
-	return found;
-}
-
-/**
- * find a matching secret
- */
-static bool xauth_verify_secret(const xauth_peer_t *peer,
-								const xauth_t *xauth_secret)
-{
-	bool found = FALSE;
-	secret_t *s;
-
-	for (s = secrets; s != NULL; s = s->next)
-	{
-		if (s->kind == PPK_XAUTH)
-		{
-			if (!chunk_equals(xauth_secret->user_name, s->u.xauth_secret.user_name))
-			{
-				continue;
-			}
-			found = TRUE;
-			if (chunk_equals(xauth_secret->user_password, s->u.xauth_secret.user_password))
-			{
-				return TRUE;
-			}
-		}
-	}
-	plog("xauth user '%.*s' %s"
-	   , xauth_secret->user_name.len, xauth_secret->user_name.ptr
-	   , found? "sent wrong password":"not found");
-	return FALSE;
-}
-
-/**
- * the global xauth_module struct is defined here
- */
-xauth_module_t xauth_module;
-
-/**
- * Assign the default xauth functions to any null function pointers
- */
-void xauth_defaults(void)
-{
-	if (xauth_module.get_secret == NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("xauth module: using default get_secret() function")
-		)
-		xauth_module.get_secret = xauth_get_secret;
-	}
-	if (xauth_module.verify_secret == NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("xauth module: using default verify_secret() function")
-		)
-		xauth_module.verify_secret = xauth_verify_secret;
-	}
-};
-
-/**
  * Process pin read from ipsec.secrets or prompted for it using whack
  */
 static err_t process_pin(secret_t *s, int whackfd)
@@ -677,7 +605,7 @@ static err_t process_pin(secret_t *s, int whackfd)
 	smartcard_t *sc;
 	const char *pin_status = "no pin";
 
-	s->kind = PPK_PIN;
+	s->kind = SECRET_PIN;
 
 	/* looking for the smartcard keyword */
 	if (!shift() || strncmp(tok, SCX_TOKEN, strlen(SCX_TOKEN)) != 0)
@@ -748,49 +676,61 @@ static err_t process_pin(secret_t *s, int whackfd)
 	return NULL;
 }
 
-static void log_psk(secret_t *s)
+static void log_psk(char *label, secret_t *s)
 {
 	int n = 0;
 	char buf[BUF_LEN];
-	id_list_t *id_list = s->ids;
+	enumerator_t *enumerator;
+	identification_t *id;
 
-	if (id_list == NULL)
+	if (s->ids->get_count(s->ids) == 0)
 	{
 		n = snprintf(buf, BUF_LEN, "%%any");
 	}
 	else
 	{
-		do
+		enumerator = s->ids->create_enumerator(s->ids);
+		while(enumerator->enumerate(enumerator, &id))
 		{
-			n += snprintf(buf + n, BUF_LEN - n, "%Y ", id_list->id);
+			n += snprintf(buf + n, BUF_LEN - n, "%Y ", id);
 			if (n >= BUF_LEN)
 			{
 				n = BUF_LEN - 1;
 				break;
 			}
-			id_list = id_list->next;
 		}
-		while (id_list);
+		enumerator->destroy(enumerator);
 	}
-	plog("  loaded shared key for %.*s", n, buf);
+	plog("  loaded %s for %.*s", label, n, buf);
 }
 
 static void process_secret(secret_t *s, int whackfd)
 {
 	err_t ugh = NULL;
 
-	s->kind = PPK_PSK;  /* default */
+	s->kind = SECRET_PSK;  /* default */
 	if (*tok == '"' || *tok == '\'')
 	{
+		log_psk("PSK", s);
+
 		/* old PSK format: just a string */
-		log_psk(s);
 		ugh = process_psk_secret(&s->u.preshared_secret);
 	}
 	else if (tokeqword("psk"))
 	{
+		log_psk("PSK", s);
+
 		/* preshared key: quoted string or ttodata format */
-		log_psk(s);
 		ugh = !shift()? "unexpected end of record in PSK"
+			: process_psk_secret(&s->u.preshared_secret);
+	}
+	else if (tokeqword("xauth"))
+	{
+		s->kind = SECRET_XAUTH;
+		log_psk("XAUTH", s);
+
+		/* xauth secret: quoted string or ttodata format */
+		ugh = !shift()? "unexpected end of record in XAUTH"
 			: process_psk_secret(&s->u.preshared_secret);
 	}
 	else if (tokeqword("rsa"))
@@ -798,7 +738,7 @@ static void process_secret(secret_t *s, int whackfd)
 		/* RSA key: the fun begins.
 		 * A braced list of keyword and value pairs.
 		 */
-		s->kind = PPK_PUBKEY;
+		s->kind = SECRET_PUBKEY;
 		if (!shift())
 		{
 			ugh = "bad RSA key syntax";
@@ -814,7 +754,7 @@ static void process_secret(secret_t *s, int whackfd)
 	}
 	else if (tokeqword("ecdsa"))
 	{
-		s->kind = PPK_PUBKEY;
+		s->kind = SECRET_PUBKEY;
 		if (!shift())
 		{
 			ugh = "bad ECDSA key syntax";
@@ -823,10 +763,6 @@ static void process_secret(secret_t *s, int whackfd)
 		{
 		   ugh = process_keyfile(&s->u.private_key, KEY_ECDSA, whackfd);
 		}
-	}
-	else if (tokeqword("xauth"))
-	{
-		ugh = process_xauth(s);
 	}
 	else if (tokeqword("pin"))
 	{
@@ -919,8 +855,8 @@ static void process_secret_records(int whackfd)
 			secret_t *s = malloc_thing(secret_t);
 
 			zero(s);
-			s->ids = NULL;
-			s->kind = PPK_PSK;  /* default */
+			s->ids = linked_list_create();
+			s->kind = SECRET_PSK;  /* default */
 			s->u.preshared_secret = chunk_empty;
 			s->next = NULL;
 
@@ -941,14 +877,10 @@ static void process_secret_records(int whackfd)
 				}
 				else
 				{
-					/* an id
-					 * See RFC2407 IPsec Domain of Interpretation 4.6.2
-					 */
-					id_list_t *i = malloc_thing(id_list_t);
+					identification_t *id;
 
-					i->id = identification_create_from_string(tok);
-					i->next = s->ids;
-					s->ids = i;
+					id = identification_create_from_string(tok);
+					s->ids->insert_last(s->ids, id);
 
 					if (!shift())
 					{
@@ -1035,32 +967,23 @@ void free_preshared_secrets(void)
 
 		for (s = secrets; s != NULL; s = ns)
 		{
-			id_list_t *i, *ni;
-
 			ns = s->next;
-			for (i = s->ids; i != NULL; i = ni)
-			{
-				ni = i->next; 
-				i->id->destroy(i->id);
-				free(i);
-			}
+			s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));		
+
 			switch (s->kind)
 			{
-			case PPK_PSK:
-				free(s->u.preshared_secret.ptr);
-				break;
-			case PPK_PUBKEY:
-				DESTROY_IF(s->u.private_key);
-				break;
-			case PPK_XAUTH:
-				free(s->u.xauth_secret.user_name.ptr);
-				free(s->u.xauth_secret.user_password.ptr);
-				break;
-			case PPK_PIN:
-				scx_release(s->u.smartcard);
-				break;
-			default:
-				bad_case(s->kind);
+				case SECRET_PSK:
+				case SECRET_XAUTH:
+					free(s->u.preshared_secret.ptr);
+					break;
+				case SECRET_PUBKEY:
+					DESTROY_IF(s->u.private_key);
+					break;
+				case SECRET_PIN:
+					scx_release(s->u.smartcard);
+					break;
+				default:
+					bad_case(s->kind);
 			}
 			free(s);
 		}
