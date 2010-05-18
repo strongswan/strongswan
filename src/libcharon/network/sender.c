@@ -67,6 +67,21 @@ struct private_sender_t {
 	 * Delay for sending outgoing packets, to simulate larger RTT
 	 */
 	int send_delay;
+
+	/**
+	 * Specific message type to delay, 0 for any
+	 */
+	int send_delay_type;
+
+	/**
+	 * Delay request messages?
+	 */
+	bool send_delay_request;
+
+	/**
+	 * Delay response messages?
+	 */
+	bool send_delay_response;
 };
 
 METHOD(sender_t, send_, void,
@@ -80,7 +95,23 @@ METHOD(sender_t, send_, void,
 
 	if (this->send_delay)
 	{
-		usleep(this->send_delay * 1000);
+		message_t *message;
+
+		message = message_create_from_packet(packet->clone(packet));
+		if (message->parse_header(message) == SUCCESS)
+		{
+			if (this->send_delay_type == 0 ||
+				this->send_delay_type == message->get_exchange_type(message))
+			{
+				if ((message->get_request(message) && this->send_delay_request) ||
+					(!message->get_request(message) && this->send_delay_response))
+				{
+					DBG1(DBG_NET, "using send delay: %dms", this->send_delay);
+					usleep(this->send_delay * 1000);
+				}
+			}
+		}
+		message->destroy(message);
 	}
 
 	this->mutex->lock(this->mutex);
@@ -155,7 +186,13 @@ sender_t * sender_create()
 		.job = callback_job_create((callback_job_cb_t)send_packets,
 									this, NULL, NULL),
 		.send_delay = lib->settings->get_int(lib->settings,
-											 "charon.send_delay", 0),
+											"charon.send_delay", 0),
+		.send_delay_type = lib->settings->get_int(lib->settings,
+											"charon.send_delay_type", 0),
+		.send_delay_request = lib->settings->get_bool(lib->settings,
+											"charon.send_delay_request", TRUE),
+		.send_delay_response = lib->settings->get_int(lib->settings,
+											"charon.send_delay_response", TRUE),
 	);
 
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
