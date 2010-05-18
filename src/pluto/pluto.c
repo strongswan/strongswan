@@ -20,7 +20,7 @@
 typedef struct private_pluto_t private_pluto_t;
 
 /**
- * Private additions to hydra_t.
+ * Private additions to pluto_t.
  */
 struct private_pluto_t {
 
@@ -31,7 +31,7 @@ struct private_pluto_t {
 };
 
 /**
- * Single instance of hydra_t.
+ * Single instance of pluto_t.
  */
 pluto_t *pluto;
 
