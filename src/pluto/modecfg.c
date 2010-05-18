@@ -146,9 +146,11 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 	{
 		if (c->spd.that.pool)
 		{
+			identification_t *client_id;
+
+			client_id = (c->xauth_identity) ? c->xauth_identity : c->spd.that.id;
 			vip = hydra->attributes->acquire_address(hydra->attributes,
-										c->spd.that.pool, c->spd.that.id,
-										requested_vip);
+								c->spd.that.pool, client_id, requested_vip);
 			if (vip)
 			{
 				c->spd.that.host_srcip->destroy(c->spd.that.host_srcip);
