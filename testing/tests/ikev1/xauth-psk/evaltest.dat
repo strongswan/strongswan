@@ -1,5 +1,7 @@
 carol::cat /var/log/auth.log::extended authentication was successful::YES
 dave::cat /var/log/auth.log::extended authentication was successful::YES
+moon::cat /var/log/auth.log::xauth user name is .*carol@strongswan.org::YES
+moon::cat /var/log/auth.log::xauth user name is .*dave@strongswan.org::YES
 moon::cat /var/log/auth.log::extended authentication was successful::YES
 carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
 dave::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
