@@ -701,7 +701,7 @@ static void log_psk(char *label, secret_t *s)
 		}
 		enumerator->destroy(enumerator);
 	}
-	plog("  loaded %s for %.*s", label, n, buf);
+	plog("  loaded %s secret for %.*s", label, n, buf);
 }
 
 static void process_secret(secret_t *s, int whackfd)
