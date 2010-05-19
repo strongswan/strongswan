@@ -4,6 +4,9 @@ strongswan-4.4.1
 - The major refactoring of the IKEv1 Mode Config functionality now allows
   the transport and handling of any Mode Config attribute.
 
+- The ipsec pool tool manages arbitrary configuration attributes stored
+  in an SQL database. ipsec pool --help gives the details.
+
 
 strongswan-4.4.0
 ----------------
