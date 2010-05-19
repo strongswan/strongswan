@@ -233,39 +233,45 @@ static bool is_whitelisted(backtrace_t *backtrace)
 /**
  * Report leaks at library destruction
  */
-void report_leaks()
+static void report(private_leak_detective_t *this, bool detailed)
 {
-	memory_header_t *hdr;
-	int leaks = 0, whitelisted = 0;
-
-	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
+	if (lib->leak_detective)
 	{
-		if (is_whitelisted(hdr->backtrace))
-		{
-			whitelisted++;
-		}
-		else
-		{
-			fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
-			/* skip the first frame, contains leak detective logic */
-			hdr->backtrace->log(hdr->backtrace, stderr);
-			leaks++;
-		}
-	}
+		memory_header_t *hdr;
+		int leaks = 0, whitelisted = 0;
 
-	switch (leaks)
-	{
-		case 0:
-			fprintf(stderr, "No leaks detected");
-			break;
-		case 1:
-			fprintf(stderr, "One leak detected");
-			break;
-		default:
-			fprintf(stderr, "%d leaks detected", leaks);
-			break;
+		for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
+		{
+			if (is_whitelisted(hdr->backtrace))
+			{
+				whitelisted++;
+			}
+			else
+			{
+				fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
+				/* skip the first frame, contains leak detective logic */
+				hdr->backtrace->log(hdr->backtrace, stderr, detailed);
+				leaks++;
+			}
+		}
+		switch (leaks)
+		{
+			case 0:
+				fprintf(stderr, "No leaks detected");
+				break;
+			case 1:
+				fprintf(stderr, "One leak detected");
+				break;
+			default:
+				fprintf(stderr, "%d leaks detected", leaks);
+				break;
+		}
+		fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
 	}
-	fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
+	else
+	{
+		fprintf(stderr, "Leak detective disabled\n");
+	}
 }
 
 /**
@@ -395,7 +401,7 @@ void free_hook(void *ptr, const void *caller)
 			fprintf(stderr, "freeing invalid memory (%p)", ptr);
 		}
 		backtrace = backtrace_create(3);
-		backtrace->log(backtrace, stderr);
+		backtrace->log(backtrace, stderr, TRUE);
 		backtrace->destroy(backtrace);
 	}
 	else
@@ -454,7 +460,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 				"header magic 0x%x, tail magic 0x%x:\n",
 				old, hdr->magic, tail->magic);
 		backtrace = backtrace_create(3);
-		backtrace->log(backtrace, stderr);
+		backtrace->log(backtrace, stderr, TRUE);
 		backtrace->destroy(backtrace);
 	}
 	/* clear tail magic, allocate, set tail magic */
@@ -487,7 +493,6 @@ static void destroy(private_leak_detective_t *this)
 	if (installed)
 	{
 		uninstall_hooks();
-		report_leaks();
 	}
 	free(this);
 }
@@ -499,6 +504,7 @@ leak_detective_t *leak_detective_create()
 {
 	private_leak_detective_t *this = malloc_thing(private_leak_detective_t);
 
+	this->public.report = (void(*)(leak_detective_t*,bool))report;
 	this->public.destroy = (void(*)(leak_detective_t*))destroy;
 
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)

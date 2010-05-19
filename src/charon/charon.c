@@ -190,7 +190,7 @@ static void segv_handler(int signal)
 
 	DBG1(DBG_DMN, "thread %u received %d", thread_current_id(), signal);
 	backtrace = backtrace_create(2);
-	backtrace->log(backtrace, stderr);
+	backtrace->log(backtrace, stderr, TRUE);
 	backtrace->destroy(backtrace);
 
 	DBG1(DBG_DMN, "killing ourself, received critical signal");

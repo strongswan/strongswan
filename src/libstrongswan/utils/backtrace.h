@@ -34,8 +34,11 @@ struct backtrace_t {
 
 	/**
 	 * Log the backtrace to a FILE stream.
+	 *
+	 * @param file		FILE to log backtrace to
+	 * @param detailed	TRUE to resolve line/file using addr2line (slow)
 	 */
-	void (*log)(backtrace_t *this, FILE *file);
+	void (*log)(backtrace_t *this, FILE *file, bool detailed);
 
 	/**
 	 * Check if the backtrace contains a frame in a specific function.

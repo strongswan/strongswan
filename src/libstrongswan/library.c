@@ -59,6 +59,10 @@ library_t *lib;
 void library_deinit()
 {
 	private_library_t *this = (private_library_t*)lib;
+	bool detailed;
+
+	detailed = lib->settings->get_bool(lib->settings,
+								"libstrongswan.leak_detective.detailed", TRUE);
 
 	this->public.plugins->destroy(this->public.plugins);
 	this->public.settings->destroy(this->public.settings);
@@ -76,6 +80,7 @@ void library_deinit()
 #ifdef LEAK_DETECTIVE
 	if (this->detective)
 	{
+		this->detective->report(this->detective, detailed);
 		this->detective->destroy(this->detective);
 	}
 #endif /* LEAK_DETECTIVE */

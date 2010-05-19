@@ -63,7 +63,7 @@ static inline void profiler_cleanup(lock_profile_t *profile)
 	{
 		fprintf(stderr, "%d.%03ds / %d times in lock created at:",
 			profile->waited.tv_sec, profile->waited.tv_usec, profile->locked);
-		profile->backtrace->log(profile->backtrace, stderr);
+		profile->backtrace->log(profile->backtrace, stderr, TRUE);
 	}
 	profile->backtrace->destroy(profile->backtrace);
 }

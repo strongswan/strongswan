@@ -53,7 +53,7 @@ struct private_backtrace_t {
 /**
  * Implementation of backtrace_t.log
  */
-static void log_(private_backtrace_t *this, FILE *file)
+static void log_(private_backtrace_t *this, FILE *file, bool detailed)
 {
 #ifdef HAVE_BACKTRACE
 	size_t i;
@@ -78,7 +78,6 @@ static void log_(private_backtrace_t *this, FILE *file)
 			{
 				ptr = (void*)(this->frames[i] - info.dli_fbase);
 			}
-			snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", info.dli_fname, ptr);
 			if (info.dli_sname)
 			{
 				fprintf(file, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%x) [%p]\n",
@@ -90,28 +89,33 @@ static void log_(private_backtrace_t *this, FILE *file)
 				fprintf(file, "  \e[33m%s\e[0m @ %p [%p]\n", info.dli_fname,
 						info.dli_fbase, this->frames[i]);
 			}
-			fprintf(file, "    -> \e[32m");
-			output = popen(cmd, "r");
-			if (output)
+			if (detailed)
 			{
-				while (TRUE)
+				fprintf(file, "    -> \e[32m");
+				snprintf(cmd, sizeof(cmd), "addr2line -e %s %p",
+						 info.dli_fname, ptr);
+				output = popen(cmd, "r");
+				if (output)
 				{
-					c = getc(output);
-					if (c == '\n' || c == EOF)
+					while (TRUE)
 					{
-						break;
+						c = getc(output);
+						if (c == '\n' || c == EOF)
+						{
+							break;
+						}
+						fputc(c, file);
 					}
-					fputc(c, file);
+					pclose(output);
 				}
-				pclose(output);
+				else
+				{
+	#endif /* HAVE_DLADDR */
+					fprintf(file, "    %s\n", strings[i]);
+	#ifdef HAVE_DLADDR
+				}
+				fprintf(file, "\n\e[0m");
 			}
-			else
-			{
-#endif /* HAVE_DLADDR */
-				fprintf(file, "    %s\n", strings[i]);
-#ifdef HAVE_DLADDR
-			}
-			fprintf(file, "\n\e[0m");
 		}
 		else
 		{
@@ -174,7 +178,7 @@ backtrace_t *backtrace_create(int skip)
 	memcpy(this->frames, frames + skip, frame_count * sizeof(void*));
 	this->frame_count = frame_count;
 
-	this->public.log = (void(*)(backtrace_t*,FILE*))log_;
+	this->public.log = (void(*)(backtrace_t*,FILE*,bool))log_;
 	this->public.contains_function = (bool(*)(backtrace_t*, char *function))contains_function;
 	this->public.destroy = (void(*)(backtrace_t*))destroy;
 
