@@ -27,15 +27,18 @@
 #include <utils/identification.h>
 #include <attributes/attributes.h>
 
+#include "pool_attributes.h"
+#include "pool_usage.h"
+
 /**
  * global database handle
  */
 database_t *db;
 
 /**
- * --start/--end/--server addresses of various subcommands
+ * --start/--end addresses of various subcommands
  */
-host_t *start = NULL, *end = NULL, *server = NULL;
+host_t *start = NULL, *end = NULL;
 
 /**
  * whether --add should --replace an existing pool
@@ -126,23 +129,6 @@ static bool is_attribute(char *name)
 }
 
 /**
- * determine configuration attribute type
- */
-static configuration_attribute_type_t get_attribute_type(char *name, host_t* addr)
-{
-	if (strcaseeq(name, "dns"))
-	{
-		return (addr->get_family(addr) == AF_INET) ? INTERNAL_IP4_DNS :
-													 INTERNAL_IP6_DNS;
-	}
-	else
-	{
-		return (addr->get_family(addr) == AF_INET) ? INTERNAL_IP4_NBNS :
-													 INTERNAL_IP6_NBNS;
-	}
-}
-
-/**
  * calculate the size of a pool using start and end address chunk
  */
 static u_int get_pool_size(chunk_t start, chunk_t end)
@@ -156,85 +142,6 @@ static u_int get_pool_size(chunk_t start, chunk_t end)
 	start_ptr = (u_int*)(start.ptr + start.len - sizeof(u_int));
 	end_ptr = (u_int*)(end.ptr + end.len - sizeof(u_int));
 	return ntohl(*end_ptr) -  ntohl(*start_ptr) + 1;
-}
-
-/**
- * print usage info
- */
-static void usage(void)
-{
-	printf("\
-Usage:\n\
-  ipsec pool --status|--add|--replace|--del|--resize|--purge [options]\n\
-  \n\
-  ipsec pool --status\n\
-    Show a list of installed pools with statistics.\n\
-  \n\
-  ipsec pool --add <name> --start <start> --end <end> [--timeout <timeout>]\n\
-  ipsec pool --replace <name> --start <start> --end <end> [--timeout <timeout>]\n\
-    Add a new pool to or replace an existing pool in the database.\n\
-      name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
-      start:   Start address of the pool\n\
-      end:     End address of the pool\n\
-      timeout: Lease time in hours, 0 for static leases\n\
-  \n\
-  ipsec pool --add <name> --addresses <file> [--timeout <timeout>]\n\
-  ipsec pool --replace <name> --addresses <file> [--timeout <timeout>]\n\
-    Add a new pool to or replace an existing pool in the database.\n\
-      name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
-      file:    File newline separated addresses for the pool are read from.\n\
-               Optionally each address can be pre-assigned to a roadwarrior\n\
-               identity, e.g. 10.231.14.2=alice@strongswan.org.\n\
-               If a - (hyphen) is given instead of a file name, the addresses\n\
-               are read from STDIN. Reading addresses stops at the end of file\n\
-               or an empty line. Pools created with this command can not be\n\
-               resized.\n\
-      timeout: Lease time in hours, 0 for static leases\n\
-  \n\
-  ipsec pool --add dns|nbns|wins --server <server>\n\
-    Add a new DNS or NBNS server to the database.\n\
-      server:  IP address of the name server\n\
-  \n\
-  ipsec pool --del <name>\n\
-    Delete a pool from the database.\n\
-      name:    Name of the pool to delete\n\
-  \n\
-  ipsec pool --del dns|nbns|wins [--server <server>]\n\
-    Delete a specific or all DNS or NBNS servers from the database.\n\
-      server:  IP address of the name server to delete\n\
-  \n\
-  ipsec pool --resize <name> --end <end>\n\
-    Grow or shrink an existing pool.\n\
-      name:    Name of the pool to resize\n\
-      end:     New end address for the pool\n\
-  \n\
-  ipsec pool --leases [--filter <filter>] [--utc]\n\
-    Show lease information using filters:\n\
-      filter:  Filter string containing comma separated key=value filters,\n\
-               e.g. id=alice@strongswan.org,addr=1.1.1.1\n\
-                  pool:   name of the pool\n\
-                  id:     assigned identity of the lease\n\
-                  addr:   lease IP address\n\
-                  tstamp: UNIX timestamp when lease was valid, as integer\n\
-                  status: status of the lease: online|valid|expired\n\
-      utc:    Show times in UTC instead of local time\n\
-  \n\
-  ipsec pool --purge <name>\n\
-    Delete lease history of a pool:\n\
-      name:    Name of the pool to purge\n\
-  \n\
-  ipsec pool --batch <file>\n\
-    Read commands from a file and execute them atomically.\n\
-      file:    File to read the newline separated commands from. Commands\n\
-               appear as they are written on the command line, e.g.\n\
-                  --replace mypool --start 10.0.0.1 --end 10.0.0.254\n\
-                  --del dns\n\
-                  --add dns --server 10.1.0.1\n\
-                  --add dns --server 10.1.1.1\n\
-               If a - (hyphen) is given as a file name, the commands are read\n\
-               from STDIN. Readin commands stops at the end of file. Empty\n\
-               lines are ignored. The file may not contain a --batch command.\n\
-  \n");
 }
 
 /**
@@ -593,26 +500,6 @@ static void add_addresses(char *pool, char *path, int timeout)
 }
 
 /**
- * ipsec pool --add dns|nbns|wins - add a DNS or NBNS server entry
- */
-static void add_attr(char *name, host_t *server)
-{
-	configuration_attribute_type_t type;
-	chunk_t value;
-
-	type = get_attribute_type(name, server);
-	value = server->get_address(server);
-	if (db->execute(db, NULL,
-			"INSERT INTO attributes (type, value) VALUES (?, ?)",
-			DB_INT, type, DB_BLOB, value) != 1)
-	{
-		fprintf(stderr, "adding %s server %H failed.\n", name, server);
-		exit(EXIT_FAILURE);
-	}
-	printf("added %s server %H\n", name, server);
-}
-
-/**
  * ipsec pool --del - delete a pool
  */
 static void del(char *name)
@@ -649,88 +536,6 @@ static void del(char *name)
 	{
 		fprintf(stderr, "pool '%s' not found.\n", name);
 		exit(EXIT_FAILURE);
-	}
-}
-
-/**
- * ipsec pool --del dns|nbns|wins - delete a DNS or NBNS server entry
- */
-static void del_attr(char *name, host_t *server)
-{
-	configuration_attribute_type_t type;
-	chunk_t value;
-	u_int id;
-	enumerator_t *query;
-	bool found = FALSE;
-
-	if (server)
-	{
-		type = get_attribute_type(name, server);
-		value = server->get_address(server);
-		query = db->query(db,
-					"SELECT id, type, value FROM attributes "
-					"WHERE type = ? AND value = ?",
-					DB_INT, type, DB_BLOB, value,
-					DB_UINT, DB_INT, DB_BLOB);
-	}
-	else
-	{
-		configuration_attribute_type_t type_ip4, type_ip6;
-
-		if (strcaseeq(name, "dns"))
-		{
-			type_ip4 = INTERNAL_IP4_DNS;
-			type_ip6 = INTERNAL_IP6_DNS;
-		}
-		else
-		{
-			type_ip4 = INTERNAL_IP4_NBNS;
-			type_ip6 = INTERNAL_IP6_NBNS;
-		}
-
-		query = db->query(db,
-					"SELECT id, type, value FROM attributes "
-					"WHERE type = ? OR type = ?",
-					DB_INT, type_ip4, DB_INT, type_ip6,
-					DB_UINT, DB_INT, DB_BLOB);
-	}
-	if (!query)
-	{
-		fprintf(stderr, "deleting %s servers failed.\n", name);
-		exit(EXIT_FAILURE);
-	}
-
-	while (query->enumerate(query, &id, &type, &value))
-	{
-		int family;
-		host_t *host;
-
-		found = TRUE;
-		family = (type == INTERNAL_IP4_DNS || type == INTERNAL_IP4_NBNS) ?
-				  AF_INET : AF_INET6;
-		host = host_create_from_chunk(family, value, 0);
-		if (db->execute(db, NULL,
-					"DELETE FROM attributes WHERE id = ?",
-					 DB_UINT, id) != 1)
-		{
-			fprintf(stderr, "deleting %s server %H failed\n", name, host);
-			query->destroy(query);
-			DESTROY_IF(host);
-			exit(EXIT_FAILURE);
-		}
-		printf("deleted %s server %H\n", name, host);
-		DESTROY_IF(host);
-	}
-	query->destroy(query);
-
-	if (!found && server)
-	{
-		printf("%s server %H not found\n", name, server);
-		exit(EXIT_FAILURE);
-	}
-	else if (!found)
-	{
-		printf("no %s servers found\n", name);
 	}
 }
 
@@ -1134,18 +939,20 @@ static void cleanup(void)
 	db->destroy(db);
 	DESTROY_IF(start);
 	DESTROY_IF(end);
-	DESTROY_IF(server);
 }
 
 static void do_args(int argc, char *argv[])
 {
-	char *name = "", *filter = "", *addresses = NULL;
+	char *name = "", *value = "", *filter = "", *addresses = NULL;
+	value_type_t value_type = VALUE_NONE;
 	int timeout = 0;
 	bool utc = FALSE;
+
 	enum {
 		OP_UNDEF,
 		OP_USAGE,
 		OP_STATUS,
+		OP_STATUS_ATTR,
 		OP_ADD,
 		OP_ADD_ATTR,
 		OP_DEL,
@@ -1174,14 +981,20 @@ static void do_args(int argc, char *argv[])
 			{ "resize", required_argument, NULL, 'r' },
 			{ "leases", no_argument, NULL, 'l' },
 			{ "purge", required_argument, NULL, 'p' },
+			{ "statusattr", no_argument, NULL, '1' },
+			{ "addattr", required_argument, NULL, '2' },
+			{ "delattr", required_argument, NULL, '3' },
 			{ "batch", required_argument, NULL, 'b' },
 
 			{ "start", required_argument, NULL, 's' },
 			{ "end", required_argument, NULL, 'e' },
-			{ "addresses", required_argument, NULL, 'x' },
+			{ "addresses", required_argument, NULL, 'y' },
 			{ "timeout", required_argument, NULL, 't' },
 			{ "filter", required_argument, NULL, 'f' },
 			{ "server", required_argument, NULL, 'v' },
+			{ "subnet", required_argument, NULL, 'n' },
+			{ "string", required_argument, NULL, 'g' },
+			{ "hex", required_argument, NULL, 'x' },
 			{ 0,0,0,0 }
 		};
 
@@ -1196,6 +1009,8 @@ static void do_args(int argc, char *argv[])
 			case 'w':
 				operation = OP_STATUS;
 				break;
+			case '1':
+				operation = OP_STATUS_ATTR;
 			case 'u':
 				utc = TRUE;
 				continue;
@@ -1207,14 +1022,23 @@ static void do_args(int argc, char *argv[])
 				operation = is_attribute(name) ? OP_ADD_ATTR : OP_ADD;
 				if (replace_pool && operation == OP_ADD_ATTR)
 				{
-					fprintf(stderr, "invalid pool name: '%s'.\n", optarg);
+					fprintf(stderr, "invalid pool name: "
+									"reserved for '%s' attribute.\n", optarg);
 					usage();
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			case '2':
+				name = optarg;
+				operation = OP_ADD_ATTR;
+				continue;
 			case 'd':
 				name = optarg;
 				operation = is_attribute(name) ? OP_DEL_ATTR : OP_DEL;
+				continue;
+			case '3':
+				name = optarg;
+				operation = OP_DEL_ATTR;
 				continue;
 			case 'r':
 				name = optarg;
@@ -1268,18 +1092,24 @@ static void do_args(int argc, char *argv[])
 			case 'f':
 				filter = optarg;
 				continue;
-			case 'x':
+			case 'y':
 				addresses = optarg;
 				continue;
+			case 'g':
+				value_type = VALUE_STRING;
+				value = optarg;
+				continue;
+			case 'n':
+				value_type = VALUE_SUBNET;
+				value = optarg;
+				continue;
 			case 'v':
-				DESTROY_IF(server);
-				server = host_create_from_string(optarg, 0);
-				if (server == NULL)
-				{
-					fprintf(stderr, "invalid server address: '%s'.\n", optarg);
-					usage();
-					exit(EXIT_FAILURE);
-				}
+				value_type = VALUE_ADDR;
+				value = optarg;
+				continue;
+			case 'x':
+				value_type = VALUE_HEX;
+				value = optarg;
 				continue;
 			default:
 				usage();
@@ -1296,6 +1126,9 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_STATUS:
 			status();
+			break;
+		case OP_STATUS_ATTR:
+			status_attr();
 			break;
 		case OP_ADD:
 			if (addresses != NULL)
@@ -1314,19 +1147,20 @@ static void do_args(int argc, char *argv[])
 			}
 			break;
 		case OP_ADD_ATTR:
-			if (server == NULL)
+			if (value_type == VALUE_NONE)
 			{
 				fprintf(stderr, "missing arguments.\n");
 				usage();
 				exit(EXIT_FAILURE);
 			}
-			add_attr(name, server);
+			add_attr(name, value, value_type);
 			break;
 		case OP_DEL:
 			del(name);
 			break;
 		case OP_DEL_ATTR:
-			del_attr(name, server);
+			
+			del_attr(name, value, value_type);
 			break;
 		case OP_RESIZE:
 			if (end == NULL)

@@ -18,6 +18,8 @@ libstrongswan_attr_sql_la_SOURCES = \
 libstrongswan_attr_sql_la_LDFLAGS = -module -avoid-version
 
 ipsec_PROGRAMS = pool
-pool_SOURCES = pool.c
-pool_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+pool_SOURCES = pool.c pool_attributes.c pool_attributes.h \
+			   pool_usage.h pool_usage.c
+pool_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+			 $(top_builddir)/src/libhydra/libhydra.la
 pool.o :	$(top_builddir)/config.status
