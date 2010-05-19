@@ -20,6 +20,9 @@
 
 #include <library.h>
 
+/* we need to fake the pluto symbol to dlopen() the xauth plugin */
+void *pluto;
+
 int main(int argc, char* argv[])
 {
 	int i;
