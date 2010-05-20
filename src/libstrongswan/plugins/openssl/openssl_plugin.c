@@ -34,6 +34,7 @@
 #include "openssl_rsa_public_key.h"
 #include "openssl_ec_private_key.h"
 #include "openssl_ec_public_key.h"
+#include "openssl_x509.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -191,6 +192,8 @@ static void destroy(private_openssl_plugin_t *this)
 					(builder_function_t)openssl_ec_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_ec_public_key_load);
+	lib->creds->remove_builder(lib->creds,
+					(builder_function_t)openssl_x509_load);
 
 	ENGINE_cleanup();
 	EVP_cleanup();
@@ -316,6 +319,10 @@ plugin_t *openssl_plugin_create()
 					(builder_function_t)openssl_ec_private_key_gen);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
 					(builder_function_t)openssl_ec_public_key_load);
+
+	/* X509 certificates */
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+					(builder_function_t)openssl_x509_load);
 
 	return &this->public.plugin;
 }

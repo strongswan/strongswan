@@ -100,7 +100,6 @@ error:
 	return FALSE;
 }
 
-
 /**
  * Described in header.
  */
@@ -124,3 +123,85 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b)
 	return TRUE;
 }
 
+/**
+ * Described in header.
+ */
+chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1)
+{
+	if (asn1)
+	{
+		return chunk_create(asn1->data, asn1->length);
+	}
+	return chunk_empty;
+}
+
+/**
+ * Described in header.
+ */
+chunk_t openssl_asn1_str2chunk(ASN1_STRING *asn1)
+{
+	if (asn1)
+	{
+		return chunk_create(ASN1_STRING_data(asn1), ASN1_STRING_length(asn1));
+	}
+	return chunk_empty;
+}
+
+/**
+ * Convert a X509 name to a ID_DER_ASN1_DN identification_t
+ */
+identification_t *openssl_x509_name2id(X509_NAME *name)
+{
+	if (name)
+	{
+		identification_t *id;
+		chunk_t chunk;
+
+		chunk = openssl_i2chunk(X509_NAME, name);
+		if (chunk.len)
+		{
+			id = identification_create_from_encoding(ID_DER_ASN1_DN, chunk);
+			free(chunk.ptr);
+			return id;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * We can't include <asn1/asn1.h>, as the ASN1_ definitions would clash
+ * with OpenSSL. Redeclare what we need.
+ */
+int asn1_known_oid(chunk_t);
+time_t asn1_to_time(chunk_t *,int);
+
+/**
+ * Described in header.
+ */
+int openssl_asn1_known_oid(ASN1_OBJECT *obj)
+{
+	return asn1_known_oid(openssl_asn1_obj2chunk(obj));
+}
+
+/**
+ * Described in header.
+ */
+time_t openssl_asn1_to_time(ASN1_TIME *time)
+{
+	chunk_t chunk;
+
+	if (time)
+	{
+		chunk = openssl_asn1_str2chunk(time);
+		switch (time->type)
+		{
+			case V_ASN1_UTCTIME:
+			case V_ASN1_GENERALIZEDTIME:
+				return asn1_to_time(&chunk, time->type);
+			default:
+				break;
+		}
+	}
+	DBG1(DBG_LIB, "invalid ASN1 time");
+	return 0;
+}

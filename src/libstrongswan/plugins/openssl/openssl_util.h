@@ -23,6 +23,7 @@
 
 #include <library.h>
 #include <openssl/bn.h>
+#include <openssl/asn1.h>
 
 /**
  * Returns the length in bytes of a field element
@@ -64,5 +65,58 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
  * @return			TRUE on success, FALSE otherwise
  */
 bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
+
+
+/**
+ * Allocate a chunk using the i2d function of a given object
+ *
+ * @param type_id	type of the object
+ * @param object	object to convert to DER
+ * @returns			allocated chunk of the object, or chunk_empty
+ */
+#define openssl_i2chunk(type, obj) ({ \
+					unsigned char *ptr = NULL; \
+					int len = i2d_##type(obj, &ptr); \
+					len < 0 ? chunk_empty : chunk_create(ptr, len);})
+
+/**
+ * Convert an OpenSSL ASN1_OBJECT to a chunk.
+ *
+ * @param asn1		asn1 object to convert
+ * @return			chunk, pointing into asn1 object
+ */
+chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1);
+
+/**
+ * Convert an OpenSSL ASN1_STRING to a chunk.
+ *
+ * @param asn1		asn1 string to convert
+ * @return			chunk, pointing into asn1 string
+ */
+chunk_t openssl_asn1_str2chunk(ASN1_STRING *asn1);
+
+/**
+ * Convert an openssl X509_NAME to a identification_t of type ID_DER_ASN1_DN.
+ *
+ * @param name		name to convert
+ * @return			identification_t, NULL on error
+ */
+identification_t *openssl_x509_name2id(X509_NAME *name);
+
+/**
+ * Check if an ASN1 oid is a an OID known by libstrongswan.
+ *
+ * @param object	openssl ASN1 object
+ * @returns			OID, as defined in <asn1/oid.h>
+ */
+int openssl_asn1_known_oid(ASN1_OBJECT *obj);
+
+/**
+ * Convert an OpenSSL ASN1_TIME to a time_t.
+ *
+ * @param time		openssl ASN1_TIME
+ * @returns			time_t, 0 on error
+ */
+time_t openssl_asn1_to_time(ASN1_TIME *time);
 
 #endif /** OPENSSL_UTIL_H_ @}*/
