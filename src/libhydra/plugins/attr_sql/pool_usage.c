@@ -53,10 +53,6 @@ Usage:\n\
                resized.\n\
       timeout: Lease time in hours, 0 for static leases\n\
   \n\
-  ipsec pool --add dns|nbns|wins --server <server>\n\
-    Add a new DNS or NBNS server to the database.\n\
-      server:  IPv4 or IPv6 address of a name server\n\
-  \n\
   ipsec pool --addattr <type> --server|--subnet|--string|--hex <value>\n\
     Add a new attribute to the database.\n\
       server:  IPv4 or IPv6 address of a server\n\
@@ -67,10 +63,6 @@ Usage:\n\
   ipsec pool --del <name>\n\
     Delete a pool from the database.\n\
       name:    Name of the pool to delete\n\
-  \n\
-  ipsec pool --del dns|nbns|wins [--server <server>]\n\
-    Delete a specific or all DNS or NBNS servers from the database.\n\
-      server:  IP address of the name server to delete\n\
   \n\
   ipsec pool --delattr <type> [--server|--subnet|--string|--hex <value>]\n\
     Delete a specific or all attributes of a given type from the database.\n\
