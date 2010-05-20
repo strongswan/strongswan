@@ -21,7 +21,8 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_ec_diffie_hellman.c openssl_ec_diffie_hellman.h \
 	openssl_ec_private_key.c openssl_ec_private_key.h \
 	openssl_ec_public_key.c openssl_ec_public_key.h \
-	openssl_x509.c openssl_x509.h
+	openssl_x509.c openssl_x509.h \
+	openssl_crl.c openssl_crl.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = -lcrypto

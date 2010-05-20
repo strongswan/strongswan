@@ -35,6 +35,7 @@
 #include "openssl_ec_private_key.h"
 #include "openssl_ec_public_key.h"
 #include "openssl_x509.h"
+#include "openssl_crl.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -194,6 +195,8 @@ static void destroy(private_openssl_plugin_t *this)
 					(builder_function_t)openssl_ec_public_key_load);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_x509_load);
+	lib->creds->remove_builder(lib->creds,
+					(builder_function_t)openssl_crl_load);
 
 	ENGINE_cleanup();
 	EVP_cleanup();
@@ -323,6 +326,8 @@ plugin_t *openssl_plugin_create()
 	/* X509 certificates */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					(builder_function_t)openssl_x509_load);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+					(builder_function_t)openssl_crl_load);
 
 	return &this->public.plugin;
 }
