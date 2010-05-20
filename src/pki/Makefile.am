@@ -7,6 +7,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/pub.c \
 	commands/req.c \
 	commands/self.c \
+	commands/print.c \
 	commands/verify.c
 
 pki_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
