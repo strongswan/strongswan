@@ -12,7 +12,9 @@ plugin_enabled = $(findstring $(1), $(strongswan_PLUGINS))
 add_plugin = $(if $(call plugin_enabled,$(1)), \
                $(patsubst $(LOCAL_PATH)/%,%, \
                  $(wildcard \
-                   $(LOCAL_PATH)/plugins/$(subst -,_,$(strip $(1)))/*.c \
+                   $(subst %,$(subst -,_,$(strip $(1))), \
+                     $(LOCAL_PATH)/plugins/%/%*.c \
+                    ) \
                   ) \
                 ) \
               )
