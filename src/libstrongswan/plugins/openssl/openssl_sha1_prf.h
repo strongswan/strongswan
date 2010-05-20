@@ -15,7 +15,7 @@
 
 /**
  * @defgroup openssl_sha1_prf openssl_sha1_prf
- * @{ @ingroup sha1_p
+ * @{ @ingroup openssl_p
  */
 
 #ifndef OPENSSL_SHA1_PRF_H_
