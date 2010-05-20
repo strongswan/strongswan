@@ -29,6 +29,13 @@ extern database_t *db;
 
 #define UNITY_NETWORK_LEN	14
 
+ENUM(value_type_names, VALUE_HEX, VALUE_SUBNET,
+	"hex",
+	"string",
+	"server",
+	"subnet"
+);
+
 typedef struct attr_info_t attr_info_t;
 
 struct attr_info_t {
@@ -448,3 +455,35 @@ void status_attr(void)
 		enumerator->destroy(enumerator);
 	}
 }
+
+/**
+ * ipsec pool --showattr - show all supported attribute keywords
+ */
+void show_attr(void)
+{
+	int i;
+
+	for (i = 0; i < countof(attr_info); i++)
+	{
+		char value_name[10];
+		
+		
+		snprintf(value_name, sizeof(value_name), "%N",
+			value_type_names, attr_info[i].value_type);
+	
+		printf("%-19s  --%-6s  (%N", 
+				attr_info[i].keyword, value_name, 
+				configuration_attribute_type_names, attr_info[i].type);
+
+		if (attr_info[i].type_ip6)
+		{
+			printf(", %N)\n",
+				configuration_attribute_type_names, attr_info[i].type_ip6);
+		}
+		else
+		{
+			printf(")\n");
+		}
+	}
+}
+

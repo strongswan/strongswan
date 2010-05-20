@@ -957,6 +957,7 @@ static void do_args(int argc, char *argv[])
 		OP_ADD_ATTR,
 		OP_DEL,
 		OP_DEL_ATTR,
+		OP_SHOW_ATTR,
 		OP_RESIZE,
 		OP_LEASES,
 		OP_PURGE,
@@ -984,6 +985,7 @@ static void do_args(int argc, char *argv[])
 			{ "statusattr", no_argument, NULL, '1' },
 			{ "addattr", required_argument, NULL, '2' },
 			{ "delattr", required_argument, NULL, '3' },
+			{ "showattr", no_argument, NULL, '4' },
 			{ "batch", required_argument, NULL, 'b' },
 
 			{ "start", required_argument, NULL, 's' },
@@ -1039,6 +1041,9 @@ static void do_args(int argc, char *argv[])
 			case '3':
 				name = optarg;
 				operation = OP_DEL_ATTR;
+				continue;
+			case '4':
+				operation = OP_SHOW_ATTR;
 				continue;
 			case 'r':
 				name = optarg;
@@ -1161,6 +1166,9 @@ static void do_args(int argc, char *argv[])
 		case OP_DEL_ATTR:
 			
 			del_attr(name, value, value_type);
+			break;
+		case OP_SHOW_ATTR:
+			show_attr();
 			break;
 		case OP_RESIZE:
 			if (end == NULL)

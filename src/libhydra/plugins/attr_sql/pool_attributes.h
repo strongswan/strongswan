@@ -29,6 +29,11 @@ enum value_type_t {
 };
 
 /**
+ * enum names for value_type_t.
+ */
+extern enum_name_t *value_type_names;
+
+/**
  * ipsec pool --addattr <type>  - add attribute entry
  */
 void add_attr(char *name, char *value, value_type_t value_type);
@@ -42,6 +47,11 @@ void del_attr(char *name, char *value, value_type_t value_type);
  * ipsec pool --statusattr      - show all attribute entries
  */
 void status_attr(void);
+
+/**
+ * ipsec pool --showattr - show all supported attribute keywords
+ */
+void show_attr(void);
 
 #endif /* POOL_ATTRIBUTES_H_ */
 
