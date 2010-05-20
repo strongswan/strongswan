@@ -232,6 +232,12 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 		free(blob->ptr);
 		return FALSE;
 	}
+	if (*type < 1 || *type > 32767)
+	{
+		fprintf(stderr, "the attribute type must lie in the range 1..32767.\n");
+		free(blob->ptr);
+		return FALSE);
+	}
 	if (*value_type == VALUE_NONE)
 	{
 		*value_type = VALUE_HEX;
