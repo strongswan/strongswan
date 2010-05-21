@@ -181,7 +181,7 @@ int command_usage(char *error)
 	{
 		for (i = 0; cmds[i].cmd; i++)
 		{
-			fprintf(out, "  pki --%-6s (-%c)  %s\n",
+			fprintf(out, "  pki --%-7s (-%c)  %s\n",
 					cmds[i].cmd, cmds[i].op, cmds[i].description);
 		}
 	}
