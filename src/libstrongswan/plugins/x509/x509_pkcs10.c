@@ -189,14 +189,6 @@ static bool get_validity(private_x509_pkcs10_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	return FALSE;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
 static chunk_t get_encoding(private_x509_pkcs10_t *this)
@@ -512,7 +504,6 @@ static private_x509_pkcs10_t* create_empty(void)
 	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
 	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
 	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;

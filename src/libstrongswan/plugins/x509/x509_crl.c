@@ -452,40 +452,6 @@ METHOD(certificate_t, get_validity, bool,
 	return (t <= this->nextUpdate);
 }
 
-METHOD(certificate_t, is_newer, bool,
-	private_x509_crl_t *this, certificate_t *other)
-{
-	chunk_t other_crlNumber = chunk_empty;
-	bool new;
-
-	if (other->get_type(other) == CERT_X509_CRL)
-	{
-		crl_t *crl = (crl_t*)other;
-		other_crlNumber = crl->get_serial(crl);
-	}
-
-	/* compare crlNumbers if available - otherwise use thisUpdate */
-	if (this->crlNumber.ptr != NULL && other_crlNumber.ptr != NULL)
-	{
-		new = chunk_compare(this->crlNumber, other_crlNumber) > 0;
-		DBG1(DBG_LIB, "  crl #%#B is %s - existing crl #%#B %s",
-				&this->crlNumber, new ? "newer":"not newer",
-				&other_crlNumber, new ? "replaced":"retained");
-	}
-	else
-	{
-		time_t this_update, that_update, now = time(NULL);
-
-		get_validity(this, &now, &this_update, NULL);
-		other->get_validity(other, &now, &that_update, NULL);
-		new = this_update > that_update;
-		DBG1(DBG_LIB, "  crl from %T is %s - existing crl from %T %s",
-				&this_update, FALSE, new ? "newer":"not newer",
-				&that_update, FALSE, new ? "replaced":"retained");
-	}
-	return new;
-}
-
 METHOD(certificate_t, get_encoding, chunk_t,
 	private_x509_crl_t *this)
 {
@@ -544,7 +510,6 @@ static private_x509_crl_t* create_empty(void)
 					.issued_by = _issued_by,
 					.get_public_key = _get_public_key,
 					.get_validity = _get_validity,
-					.is_newer = _is_newer,
 					.get_encoding = _get_encoding,
 					.equals = _equals,
 					.get_ref = _get_ref,

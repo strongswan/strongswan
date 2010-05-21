@@ -383,21 +383,6 @@ METHOD(certificate_t, get_validity, bool,
 	return (t >= this->notBefore && t <= this->notAfter);
 }
 
-METHOD(certificate_t, is_newer, bool,
-	private_openssl_x509_t *this, certificate_t *other)
-{
-	time_t this_update, that_update, now = time(NULL);
-	bool new;
-
-	get_validity(this, &now, &this_update, NULL);
-	other->get_validity(other, &now, &that_update, NULL);
-	new = this_update > that_update;
-	DBG1(DBG_LIB, "  certificate from %T is %s - existing certificate "
-		 "from %T %s", &this_update, FALSE, new ? "newer":"not newer",
-		 &that_update, FALSE, new ? "replaced":"retained");
-	return new;
-}
-
 METHOD(certificate_t, get_encoding, chunk_t,
 	private_openssl_x509_t *this)
 {
@@ -481,7 +466,6 @@ static private_openssl_x509_t *create_empty()
 					.issued_by = _issued_by,
 					.get_public_key = _get_public_key,
 					.get_validity = _get_validity,
-					.is_newer = _is_newer,
 					.get_encoding = _get_encoding,
 					.equals = _equals,
 					.get_ref = _get_ref,

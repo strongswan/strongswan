@@ -1209,23 +1209,6 @@ static bool get_validity(private_x509_cert_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	time_t this_update, that_update, now = time(NULL);
-	bool new;
-
-	this->get_validity(this, &now, &this_update, NULL);
-	that->get_validity(that, &now, &that_update, NULL);
-	new = this_update > that_update;
-	DBG1(DBG_LIB, "  certificate from %T is %s - existing certificate "
-		 "from %T %s", &this_update, FALSE, new ? "newer":"not newer",
-		 &that_update, FALSE, new ? "replaced":"retained");
-	return new;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
 static chunk_t get_encoding(private_x509_cert_t *this)
@@ -1383,7 +1366,6 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
 	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
 	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
