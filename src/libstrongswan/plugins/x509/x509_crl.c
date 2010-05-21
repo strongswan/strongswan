@@ -619,7 +619,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 	this->issuer = cert->get_issuer(cert);
 	this->issuer = this->issuer->clone(this->issuer);
 
-	this->authKeyIdentifier = chunk_clone(x509->get_authKeyIdentifier(x509));
+	this->authKeyIdentifier = chunk_clone(x509->get_subjectKeyIdentifier(x509));
 
 	/* select signature scheme */
 	this->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
