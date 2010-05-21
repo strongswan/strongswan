@@ -141,7 +141,7 @@ static void ac_add_cert(certificate_t *cert)
 		if (hIssuer->equals(hIssuer, ac_old->get_holderIssuer(ac_old)) &&
 			   chunk_equals(hSerial, ac_old->get_holderSerial(ac_old)))
 		{
-			if (cert->is_newer(cert, cert_old))
+			if (certificate_is_newer(cert, cert_old))
 			{
 				acerts->remove_at(acerts, enumerator);
 				cert_old->destroy(cert_old);

@@ -378,7 +378,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 			}
 			if (found)
 			{
-				new = cert->is_newer(cert, current);
+				new = crl_is_newer(crl, crl_c);
 				if (new)
 				{
 					this->certs->remove_at(this->certs, enumerator);

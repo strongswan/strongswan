@@ -80,7 +80,15 @@ struct crl_t {
 	 * @return			enumerator over revoked certificates.
 	 */
 	enumerator_t* (*create_enumerator)(crl_t *this);
-
 };
+
+/**
+ * Generic check if a given CRL is newer than another.
+ *
+ * @param this			first CRL to check
+ * @param other			second CRL
+ * @return				TRUE if this newer than other
+ */
+bool crl_is_newer(crl_t *this, crl_t *other);
 
 #endif /** CRL_H_ @}*/

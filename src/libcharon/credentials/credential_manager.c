@@ -591,7 +591,7 @@ static certificate_t *get_better_ocsp(private_credential_manager_t *this,
 	}
 
 	/* select the better of the two responses */
-	if (best == NULL || cand->is_newer(cand, best))
+	if (best == NULL || certificate_is_newer(cand, best))
 	{
 		DESTROY_IF(best);
 		best = cand;
@@ -812,7 +812,7 @@ static certificate_t *get_better_crl(private_credential_manager_t *this,
 	enumerator->destroy(enumerator);
 
 	/* select the better of the two CRLs */
-	if (best == NULL || cand->is_newer(cand, best))
+	if (best == NULL || crl_is_newer(crl, (crl_t*)best))
 	{
 		DESTROY_IF(best);
 		best = cand;
@@ -959,7 +959,7 @@ static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
 
 	if (!subject_constraint && !issuer_constraint)
 	{
-		return TRUE;		
+		return TRUE;
 	}
 	if (!subject_constraint)
 	{
@@ -969,7 +969,7 @@ static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
 	if (!issuer_constraint)
 	{
 		DBG1(DBG_CFG, "issuer certficate lacks ipAddrBlocks extension");
-		return FALSE;		
+		return FALSE;
 	}
 	subject_enumerator = subject->create_ipAddrBlock_enumerator(subject);
 	while (subject_enumerator->enumerate(subject_enumerator, &subject_ts))
@@ -996,7 +996,7 @@ static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
 		}
 	}
 	subject_enumerator->destroy(subject_enumerator);
-	return contained;	
+	return contained;
 }
 
 /**

@@ -16,6 +16,8 @@
 
 #include "crl.h"
 
+#include <debug.h>
+
 ENUM(crl_reason_names, CRL_REASON_UNSPECIFIED, CRL_REASON_REMOVE_FROM_CRL,
 	"unspecified",
 	"key compromise",
@@ -27,3 +29,29 @@ ENUM(crl_reason_names, CRL_REASON_UNSPECIFIED, CRL_REASON_REMOVE_FROM_CRL,
 	"reason #7",
 	"remove from crl",
 );
+
+/**
+ * Check if this CRL is newer
+ */
+bool crl_is_newer(crl_t *this, crl_t *other)
+{
+	chunk_t this_num, other_num;
+	bool newer;
+
+	this_num = this->get_serial(this);
+	other_num = other->get_serial(other);
+
+	/* compare crlNumbers if available - otherwise use generic cert compare */
+	if (this_num.ptr != NULL && other_num.ptr != NULL)
+	{
+		newer = chunk_compare(this_num, other_num) > 0;
+		DBG1(DBG_LIB, "  crl #%#B is %s - existing crl #%#B %s",
+			 &this_num, newer ? "newer" : "not newer",
+			 &other_num, newer ? "replaced" : "retained");
+	}
+	else
+	{
+		newer = certificate_is_newer(&this->certificate, &other->certificate);
+	}
+	return newer;
+}

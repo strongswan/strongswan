@@ -159,7 +159,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	{
 		certificate_t *old_cert_crl = oldcrl->crl;
 
-		if (cert_crl->is_newer(cert_crl, old_cert_crl))
+		if (crl_is_newer(x509crl->crl, oldcrl->crl))
 		{
 			/* keep any known CRL distribution points */
 			add_distribution_points(x509crl->distributionPoints,
@@ -313,7 +313,7 @@ void check_crls(void)
 		certificate_t *cert_crl = x509crl->crl;
 		crl_t *crl = (crl_t*)cert_crl;
 		identification_t *issuer = cert_crl->get_issuer(cert_crl);
-		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);		
+		chunk_t authKeyID = crl->get_authKeyIdentifier(crl);
 
 		cert_crl->get_validity(cert_crl, &now, NULL, &nextUpdate);
 		time_left = nextUpdate - now;
@@ -353,7 +353,7 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 	char *point;
 
 	ca = get_ca_info(issuer, authKeyID);
-	
+
 	*revocationDate = UNDEFINED_TIME;
 	*revocationReason = CRL_REASON_UNSPECIFIED;
 
