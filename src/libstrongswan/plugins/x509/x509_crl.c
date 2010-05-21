@@ -327,52 +327,40 @@ static bool filter(void *data, revoked_t **revoked, chunk_t *serial, void *p2,
 	return TRUE;
 }
 
-/**
- * Implementation of crl_t.get_serial.
- */
-static chunk_t get_serial(private_x509_crl_t *this)
+METHOD(crl_t, get_serial, chunk_t,
+	private_x509_crl_t *this)
 {
 	return this->crlNumber;
 }
 
-/**
- * Implementation of crl_t.get_authKeyIdentifier.
- */
-static chunk_t get_authKeyIdentifier(private_x509_crl_t *this)
+METHOD(crl_t, get_authKeyIdentifier, chunk_t,
+	private_x509_crl_t *this)
 {
 	return this->authKeyIdentifier;
 }
 
-/**
- * Implementation of crl_t.create_enumerator.
- */
-static enumerator_t* create_enumerator(private_x509_crl_t *this)
+METHOD(crl_t, create_enumerator, enumerator_t*,
+	private_x509_crl_t *this)
 {
 	return enumerator_create_filter(
 								this->revoked->create_enumerator(this->revoked),
 								(void*)filter, NULL, NULL);
 }
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_crl_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_crl_t *this)
 {
 	return CERT_X509_CRL;
 }
 
-/**
- * Implementation of certificate_t.get_issuer and get_subject
- */
-static identification_t* get_issuer(private_x509_crl_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_crl_t *this)
 {
 	return this->issuer;
 }
 
-/**
- * Implementation of certificate_t.has_subject and has_issuer.
- */
-static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_crl_t *this, identification_t *issuer)
 {
 	if (issuer->get_type(issuer) == ID_KEY_ID && this->authKeyIdentifier.ptr &&
 		chunk_equals(this->authKeyIdentifier, issuer->get_encoding(issuer)))
@@ -382,10 +370,8 @@ static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
 	return this->issuer->matches(this->issuer, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_crl_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -436,28 +422,22 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 	return valid;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_x509_crl_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_crl_t *this)
 {
 	return NULL;
 }
 
-/**
- * Implementation of certificate_t.asdf
- */
-static private_x509_crl_t* get_ref(private_x509_crl_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_crl_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.crl.certificate;
 }
 
-/**
- * Implementation of certificate_t.get_validity.
- */
-static bool get_validity(private_x509_crl_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_crl_t *this, time_t *when,
+	time_t *not_before, time_t *not_after)
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -472,31 +452,32 @@ static bool get_validity(private_x509_crl_t *this, time_t *when,
 	return (t <= this->nextUpdate);
 }
 
-/**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(private_x509_crl_t *this, crl_t *that)
+METHOD(certificate_t, is_newer, bool,
+	private_x509_crl_t *this, certificate_t *other)
 {
-	chunk_t that_crlNumber = that->get_serial(that);
+	chunk_t other_crlNumber = chunk_empty;
 	bool new;
 
-	/* compare crlNumbers if available - otherwise use thisUpdate */
-	if (this->crlNumber.ptr != NULL && that_crlNumber.ptr != NULL)
+	if (other->get_type(other) == CERT_X509_CRL)
 	{
-		new = chunk_compare(this->crlNumber, that_crlNumber) > 0;
+		crl_t *crl = (crl_t*)other;
+		other_crlNumber = crl->get_serial(crl);
+	}
+
+	/* compare crlNumbers if available - otherwise use thisUpdate */
+	if (this->crlNumber.ptr != NULL && other_crlNumber.ptr != NULL)
+	{
+		new = chunk_compare(this->crlNumber, other_crlNumber) > 0;
 		DBG1(DBG_LIB, "  crl #%#B is %s - existing crl #%#B %s",
 				&this->crlNumber, new ? "newer":"not newer",
-				&that_crlNumber,  new ? "replaced":"retained");
+				&other_crlNumber, new ? "replaced":"retained");
 	}
 	else
 	{
-		certificate_t *this_cert = &this->public.crl.certificate;
-		certificate_t *that_cert = &that->certificate;
-
 		time_t this_update, that_update, now = time(NULL);
 
-		this_cert->get_validity(this_cert, &now, &this_update, NULL);
-		that_cert->get_validity(that_cert, &now, &that_update, NULL);
+		get_validity(this, &now, &this_update, NULL);
+		other->get_validity(other, &now, &that_update, NULL);
 		new = this_update > that_update;
 		DBG1(DBG_LIB, "  crl from %T is %s - existing crl from %T %s",
 				&this_update, FALSE, new ? "newer":"not newer",
@@ -505,18 +486,14 @@ static bool is_newer(private_x509_crl_t *this, crl_t *that)
 	return new;
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static chunk_t get_encoding(private_x509_crl_t *this)
+METHOD(certificate_t, get_encoding, chunk_t,
+	private_x509_crl_t *this)
 {
 	return chunk_clone(this->encoding);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_crl_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_crl_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -535,10 +512,8 @@ static bool equals(private_x509_crl_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of certificate_t.destroy
- */
-static void destroy(private_x509_crl_t *this)
+METHOD(certificate_t, destroy, void,
+	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -555,34 +530,34 @@ static void destroy(private_x509_crl_t *this)
  */
 static private_x509_crl_t* create_empty(void)
 {
-	private_x509_crl_t *this = malloc_thing(private_x509_crl_t);
+	private_x509_crl_t *this;
 
-	this->public.crl.get_serial = (chunk_t (*)(crl_t*))get_serial;
-	this->public.crl.get_authKeyIdentifier = (chunk_t (*)(crl_t*))get_authKeyIdentifier;
-	this->public.crl.create_enumerator = (enumerator_t* (*)(crl_t*))create_enumerator;
-	this->public.crl.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.crl.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.crl.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.crl.certificate.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_issuer;
-	this->public.crl.certificate.has_issuer = (id_match_t (*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.crl.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.crl.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.crl.certificate.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.crl.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.crl.certificate.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
-	this->public.crl.certificate.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
-	this->public.crl.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.crl.certificate.destroy = (void (*)(certificate_t *this))destroy;
-
-	this->encoding = chunk_empty;
-	this->tbsCertList = chunk_empty;
-	this->issuer = NULL;
-	this->crlNumber = chunk_empty;
-	this->revoked = linked_list_create();
-	this->authKeyIdentifier = chunk_empty;
-	this->authKeySerialNumber = chunk_empty;
-	this->ref = 1;
-
+	INIT(this,
+		.public = {
+			.crl = {
+				.certificate = {
+					.get_type = _get_type,
+					.get_subject = _get_issuer,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_issuer,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.is_newer = _is_newer,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_serial = _get_serial,
+				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.create_enumerator = _create_enumerator,
+			},
+		},
+		.revoked = linked_list_create(),
+		.ref = 1,
+	);
 	return this;
 }
 
