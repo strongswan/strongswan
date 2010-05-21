@@ -52,6 +52,8 @@ static void destroy(private_x509_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 							   (builder_function_t)x509_crl_load);
 	lib->creds->remove_builder(lib->creds,
+							   (builder_function_t)x509_crl_gen);
+	lib->creds->remove_builder(lib->creds,
 							   (builder_function_t)x509_ocsp_request_gen);
 	lib->creds->remove_builder(lib->creds,
 							   (builder_function_t)x509_ocsp_response_load);
@@ -81,6 +83,8 @@ plugin_t *x509_plugin_create()
 							(builder_function_t)x509_ac_load);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
 							(builder_function_t)x509_crl_load);
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+							(builder_function_t)x509_crl_gen);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
 							(builder_function_t)x509_ocsp_request_gen);
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,

@@ -46,4 +46,13 @@ struct x509_crl_t {
  */
 x509_crl_t *x509_crl_load(certificate_type_t type, va_list args);
 
+/**
+ * Generate a X.509 CRL.
+ *
+ * @param type		certificate type, CERT_X509_CRL only
+ * @param args		builder_part_t argument list
+ * @return			X.509 CRL, NULL on failure
+ */
+x509_crl_t *x509_crl_gen(certificate_type_t type, va_list args);
+
 #endif /** X509_CRL_H_ @}*/

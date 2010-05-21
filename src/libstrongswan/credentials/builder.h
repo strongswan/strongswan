@@ -101,6 +101,8 @@ enum builder_part_t {
 	BUILD_PATHLEN,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
+	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
+	BUILD_REVOKED_ENUMERATOR,
 	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
 	BUILD_SMARTCARD_KEYID,
 	/** pin to access a key on a smartcard, null terminated char* */

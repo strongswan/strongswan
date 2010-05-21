@@ -26,6 +26,7 @@ typedef struct revoked_t revoked_t;
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 #include <utils/linked_list.h>
 
 /**
@@ -117,6 +118,11 @@ struct private_x509_crl_t {
 	 * Signature
 	 */
 	chunk_t signature;
+
+	/**
+	 * has this CRL been generated
+	 */
+	bool generated;
 
 	/**
 	 * reference counter
@@ -236,7 +242,7 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_REVOCATION_DATE:
 				revoked = malloc_thing(revoked_t);
-				revoked->serial = userCertificate;
+				revoked->serial = chunk_clone(userCertificate);
 				revoked->date = asn1_parse_time(object, level);
 				revoked->reason = CRL_REASON_UNSPECIFIED;
 				this->revoked->insert_last(this->revoked, (void *)revoked);
@@ -267,7 +273,6 @@ static bool parse(private_x509_crl_t *this)
 					}
 					else if (extn_oid == OID_AUTHORITY_KEY_ID)
 					{
-
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
 														level, &this->authKeySerialNumber);
 					}
@@ -478,15 +483,30 @@ METHOD(certificate_t, equals, bool,
 	return equal;
 }
 
+/**
+ * Destroy a revoked_t entry
+ */
+static void revoked_destroy(revoked_t *revoked)
+{
+	free(revoked->serial.ptr);
+	free(revoked);
+}
+
 METHOD(certificate_t, destroy, void,
 	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
-		this->revoked->destroy_function(this->revoked, free);
+		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
+		if (this->generated)
+		{
+			free(this->crlNumber.ptr);
+			free(this->signature.ptr);
+			free(this->tbsCertList.ptr);
+		}
 		free(this);
 	}
 }
@@ -561,3 +581,166 @@ x509_crl_t *x509_crl_load(certificate_type_t type, va_list args)
 	return NULL;
 };
 
+/**
+ * Read certificate status from enumerator, copy to crl
+ */
+static void read_revoked(private_x509_crl_t *crl, enumerator_t *enumerator)
+{
+	revoked_t *revoked;
+	chunk_t serial;
+	time_t date;
+	crl_reason_t reason;
+
+	while (enumerator->enumerate(enumerator, &serial, &date, &reason))
+	{
+		INIT(revoked,
+			.serial = chunk_clone(serial),
+			.date = date,
+			.reason = reason,
+		);
+		crl->revoked->insert_last(crl->revoked, revoked);
+	}
+}
+
+/**
+ * Generate CRL encoding, sign CRL
+ */
+static bool generate(private_x509_crl_t *this, certificate_t *cert,
+					 private_key_t *key, hash_algorithm_t digest_alg)
+{
+	chunk_t extensions = chunk_empty, certList = chunk_empty, serial;
+	enumerator_t *enumerator;
+	crl_reason_t reason;
+	time_t date;
+	x509_t *x509;
+
+	x509 = (x509_t*)cert;
+
+	this->issuer = cert->get_issuer(cert);
+	this->issuer = this->issuer->clone(this->issuer);
+
+	this->authKeyIdentifier = chunk_clone(x509->get_authKeyIdentifier(x509));
+
+	/* select signature scheme */
+	this->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
+														key->get_type(key));
+	if (this->algorithm == OID_UNKNOWN)
+	{
+		return FALSE;
+	}
+
+	enumerator = create_enumerator(this);
+	while (enumerator->enumerate(enumerator, &serial, &date, &reason))
+	{
+		chunk_t revoked, entry_ext = chunk_empty;
+
+		if (reason != CRL_REASON_UNSPECIFIED)
+		{
+			entry_ext = asn1_wrap(ASN1_SEQUENCE, "m",
+							asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_build_known_oid(OID_CRL_REASON_CODE),
+								asn1_wrap(ASN1_OCTET_STRING, "m",
+									asn1_wrap(ASN1_ENUMERATED, "c",
+										chunk_from_chars(reason)))));
+		}
+		revoked = asn1_wrap(ASN1_SEQUENCE, "mmm",
+							asn1_integer("c", serial),
+							asn1_from_time(&date, ASN1_UTCTIME),
+							entry_ext);
+		certList = chunk_cat("mm", certList, revoked);
+	}
+	enumerator->destroy(enumerator);
+
+	extensions = asn1_wrap(ASN1_CONTEXT_C_0, "m",
+					asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m",
+									asn1_wrap(ASN1_CONTEXT_S_0, "c",
+											  this->authKeyIdentifier)))),
+						asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_CRL_NUMBER),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_integer("c", this->crlNumber))
+							)
+						));
+
+	this->tbsCertList = asn1_wrap(ASN1_SEQUENCE, "cmcmmmm",
+							ASN1_INTEGER_1,
+							asn1_algorithmIdentifier(this->algorithm),
+							this->issuer->get_encoding(this->issuer),
+							asn1_from_time(&this->thisUpdate, ASN1_UTCTIME),
+							asn1_from_time(&this->nextUpdate, ASN1_UTCTIME),
+							asn1_wrap(ASN1_SEQUENCE, "m", certList),
+							extensions);
+
+	if (!key->sign(key, signature_scheme_from_oid(this->algorithm),
+				   this->tbsCertList, &this->signature))
+	{
+		return FALSE;
+	}
+	this->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
+							this->tbsCertList,
+							asn1_algorithmIdentifier(this->algorithm),
+							asn1_bitstring("c", this->signature));
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+x509_crl_t *x509_crl_gen(certificate_type_t type, va_list args)
+{
+	hash_algorithm_t digest_alg = HASH_SHA1;
+	private_x509_crl_t *crl;
+	certificate_t *cert = NULL;
+	private_key_t *key = NULL;
+
+	crl = create_empty();
+	crl->generated = TRUE;
+	while (TRUE)
+	{
+		builder_part_t part = va_arg(args, builder_part_t);
+
+		switch (part)
+		{
+			case BUILD_SIGNING_KEY:
+				key = va_arg(args, private_key_t*);
+				continue;
+			case BUILD_SIGNING_CERT:
+				cert = va_arg(args, certificate_t*);
+				continue;
+			case BUILD_NOT_BEFORE_TIME:
+				crl->thisUpdate = va_arg(args, time_t);
+				continue;
+			case BUILD_NOT_AFTER_TIME:
+				crl->nextUpdate = va_arg(args, time_t);
+				continue;
+			case BUILD_SERIAL:
+				crl->crlNumber = va_arg(args, chunk_t);
+				crl->crlNumber = chunk_clone(crl->crlNumber);
+				continue;
+			case BUILD_DIGEST_ALG:
+				digest_alg = va_arg(args, int);
+				continue;
+			case BUILD_REVOKED_ENUMERATOR:
+				read_revoked(crl, va_arg(args, enumerator_t*));
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(crl);
+				return NULL;
+		}
+		break;
+	}
+
+	if (key && cert && cert->get_type(cert) == CERT_X509 &&
+		generate(crl, cert, key, digest_alg))
+	{
+		return &crl->public;
+	}
+	destroy(crl);
+	return NULL;
+}
