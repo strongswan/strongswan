@@ -159,7 +159,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 	{
 		certificate_t *old_cert_crl = oldcrl->crl;
 
-		if (crl_is_newer(x509crl->crl, oldcrl->crl))
+		if (crl_is_newer((crl_t*)cert_crl, (crl_t*)old_cert_crl))
 		{
 			/* keep any known CRL distribution points */
 			add_distribution_points(x509crl->distributionPoints,
