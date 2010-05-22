@@ -60,7 +60,7 @@ Usage:\n\
     Add a new attribute to the database.\n\
       type:    a keyword from --showattr or a number from the range 1..32767\n\
       server:  IPv4 or IPv6 address of a server\n\
-      subnet:  IPv4 subnet given by network/mask\n\
+      subnet:  IPv4 subnet[s] given by network/mask[,network/mask,...]\n\
       string:  value of a string-type attribute\n\
       hex:     hex value of any attribute\n\
   \n\
@@ -72,7 +72,7 @@ Usage:\n\
     Delete a specific or all attributes of a given type from the database.\n\
       type:    a keyword from --showattr or a number from the range 1..32767\n\
       server:  IPv4 or IPv6 address of a server\n\
-      subnet:  IPv4 subnet given by network/mask\n\
+      subnet:  IPv4 subnet[s] given by network/mask[,network/mask,...]\n\
       string:  value of a string-type attribute\n\
       hex:     hex value of any attribute\n\
   \n\

@@ -82,8 +82,8 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 							 chunk_t *blob)
 {
 	host_t *addr = NULL, *mask = NULL;
-	chunk_t addr_chunk, mask_chunk;
-	char *text = "", *pos, *endptr;
+	chunk_t addr_chunk, mask_chunk, blob_next;
+	char *text = "", *pos_addr, *pos_mask, *pos_next, *endptr;
 	int i;
 
 	switch (*value_type)
@@ -106,31 +106,53 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 			*blob = chunk_clone(addr_chunk);
 			break;
 		case VALUE_SUBNET:
-			pos = strchr(value, '/');
-			if (pos == NULL || (value - pos) == strlen(value))
+			*blob = chunk_empty;
+			pos_next = value;
+
+			do
 			{
-				fprintf(stderr, "invalid IPv4 subnet: '%s'.\n", value);
-				return FALSE;
+				pos_addr = pos_next;
+				pos_next = strchr(pos_next, ',');
+				if (pos_next)
+				{
+					*pos_next = '\0';
+					pos_next += 1;
+				}
+				pos_mask = strchr(pos_addr, '/');
+				if (pos_mask == NULL)
+				{
+					fprintf(stderr, "invalid IPv4 subnet: '%s'.\n", pos_addr);
+					free(blob->ptr);
+					return FALSE;
+				}
+				*pos_mask = '\0';
+				pos_mask += 1;
+				addr = host_create_from_string(pos_addr, 0);
+				mask = host_create_from_string(pos_mask, 0);
+				if (addr == NULL || addr->get_family(addr) != AF_INET ||
+					mask == NULL || mask->get_family(addr) != AF_INET)
+				{
+					fprintf(stderr, "invalid IPv4 subnet: '%s/%s'.\n",
+									pos_addr, pos_mask);
+					DESTROY_IF(addr);
+					DESTROY_IF(mask);
+					free(blob->ptr);
+					return FALSE;
+				}
+				addr_chunk = addr->get_address(addr);
+				mask_chunk = mask->get_address(mask);
+				blob_next = chunk_alloc(blob->len + UNITY_NETWORK_LEN);
+				memcpy(blob_next.ptr, blob->ptr, blob->len);
+				pos_addr = blob_next.ptr + blob->len;
+				memset(pos_addr, 0x00, UNITY_NETWORK_LEN);
+				memcpy(pos_addr,     addr_chunk.ptr, 4);
+				memcpy(pos_addr + 4, mask_chunk.ptr, 4);
+				addr->destroy(addr);
+				mask->destroy(mask);
+				chunk_free(blob);
+				*blob = blob_next;
 			}
-			*pos = '\0';
-			addr = host_create_from_string(value, 0);
-			mask = host_create_from_string(pos+1, 0);
-			if (addr == NULL || addr->get_family(addr) != AF_INET ||
-				mask == NULL || mask->get_family(addr) != AF_INET)
-			{
-				fprintf(stderr, "invalid IPv4 subnet: '%s'.\n", value);
-				DESTROY_IF(addr);
-				DESTROY_IF(mask);
-				return FALSE;
-			}
-			addr_chunk = addr->get_address(addr);
-			mask_chunk = mask->get_address(mask);
-			*blob = chunk_alloc(UNITY_NETWORK_LEN);
-			memset(blob->ptr, 0x00, UNITY_NETWORK_LEN);
-			memcpy(blob->ptr,     addr_chunk.ptr, 4);
-			memcpy(blob->ptr + 4, mask_chunk.ptr, 4);
-			addr->destroy(addr);
-			mask->destroy(mask);
+			while (pos_next);
 			break;
 		case VALUE_NONE:
 			*blob = chunk_empty;
