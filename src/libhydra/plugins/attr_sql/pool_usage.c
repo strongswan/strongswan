@@ -32,6 +32,9 @@ Usage:\n\
   ipsec pool --statusattr\n\
     Show a list of all attributes stored in the database.\n\
   \n\
+  ipsec pool --showattr\n\
+    Show a keyword list of the major attribute types.\n\
+  \n\
   ipsec pool --add <name> --start <start> --end <end> [--timeout <timeout>]\n\
   ipsec pool --replace <name> --start <start> --end <end> [--timeout <timeout>]\n\
     Add a new pool to or replace an existing pool in the database.\n\
@@ -55,6 +58,7 @@ Usage:\n\
   \n\
   ipsec pool --addattr <type> --server|--subnet|--string|--hex <value>\n\
     Add a new attribute to the database.\n\
+      type:    a keyword from --showattr or a number from the range 1..32767\n\
       server:  IPv4 or IPv6 address of a server\n\
       subnet:  IPv4 subnet given by network/mask\n\
       string:  value of a string-type attribute\n\
@@ -66,6 +70,7 @@ Usage:\n\
   \n\
   ipsec pool --delattr <type> [--server|--subnet|--string|--hex <value>]\n\
     Delete a specific or all attributes of a given type from the database.\n\
+      type:    a keyword from --showattr or a number from the range 1..32767\n\
       server:  IPv4 or IPv6 address of a server\n\
       subnet:  IPv4 subnet given by network/mask\n\
       string:  value of a string-type attribute\n\
