@@ -1,5 +1,5 @@
 The hosts <b>carol</b>, <b>dave</b>, and <b>moon</b> use the <b>openssl</b> plugin
-based on the <b>OpenSSL</b> library for all cryptographical functions.
+based on the <b>OpenSSL</b> library for all cryptographical and X.509 certificate functions.
 <p>
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
 to gateway <b>moon</b>. The authentication is based on <b>ECDSA signatures</b>
