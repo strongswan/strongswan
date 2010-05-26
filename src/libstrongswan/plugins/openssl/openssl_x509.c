@@ -666,10 +666,18 @@ static bool parse_authKeyIdentifier_ext(private_openssl_x509_t *this,
 static bool parse_subjectKeyIdentifier_ext(private_openssl_x509_t *this,
 										   X509_EXTENSION *ext)
 {
-	free(this->subjectKeyIdentifier.ptr);
-	this->subjectKeyIdentifier = chunk_clone(openssl_asn1_str2chunk(
-												X509_EXTENSION_get_data(ext)));
-	return TRUE;
+	chunk_t ostr;
+
+	ostr = openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext));
+	/* quick and dirty unwrap of octet string */
+	if (ostr.len > 2 &&
+		ostr.ptr[0] == V_ASN1_OCTET_STRING && ostr.ptr[1] == ostr.len - 2)
+	{
+		free(this->subjectKeyIdentifier.ptr);
+		this->subjectKeyIdentifier = chunk_clone(chunk_skip(ostr, 2));
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
