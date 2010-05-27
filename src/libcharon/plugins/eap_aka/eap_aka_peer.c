@@ -421,7 +421,6 @@ static status_t process_notification(private_eap_aka_peer_t *this,
 			/* test success bit */
 			if (!(data.ptr[0] & 0x80))
 			{
-				success = FALSE;
 				DBG1(DBG_IKE, "received EAP-AKA notification error '%N'",
 					 simaka_notification_names, code);
 			}
