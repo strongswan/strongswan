@@ -204,6 +204,14 @@ static char* get_query_data(private_request_t *this, char *name)
 }
 
 /**
+ * Implementation of request_t.read_data.
+ */
+static int read_data(private_request_t *this, char *buf, int len)
+{
+	return FCGX_GetStr(buf, len, this->req.in);
+}
+
+/**
  * Implementation of request_t.get_base.
  */
 static char* get_base(private_request_t *this)
@@ -407,6 +415,7 @@ request_t *request_create(int fd, bool debug)
 	this->public.add_cookie = (void(*)(request_t*, char *name, char *value))add_cookie;
 	this->public.get_cookie = (char*(*)(request_t*,char*))get_cookie;
 	this->public.get_query_data = (char*(*)(request_t*, char *name))get_query_data;
+	this->public.read_data = (int(*)(request_t*, char*, int))read_data;
 	this->public.session_closed = (bool(*)(request_t*))session_closed;
 	this->public.close_session = (void(*)(request_t*))close_session;
 	this->public.redirect = (void(*)(request_t*, char *fmt,...))redirect;

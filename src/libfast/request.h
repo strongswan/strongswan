@@ -86,6 +86,15 @@ struct request_t {
 	char* (*get_query_data)(request_t *this, char *name);
 
 	/**
+	 * Read raw POST/PUT data from HTTP request.
+	 *
+	 * @param buf		buffer to read data into
+	 * @param len		size of the supplied buffer
+	 * @return			number of bytes read, < 0 on error
+	 */
+	int (*read_data)(request_t *this, char *buf, int len);
+
+	/**
 	 * Close the session and it's context after handling.
 	 */
 	void (*close_session)(request_t *this);
