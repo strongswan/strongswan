@@ -557,12 +557,6 @@ static stf_status modecfg_parse_attributes(pb_stream *attrs, linked_list_t *ca_l
 			/* XAUTH attributes */
 			case XAUTH_TYPE:
 			case XAUTH_STATUS:
-				if (!(attr.isaat_af_type & ISAKMP_ATTR_AF_TV))
-				{
-					plog("%N attribute is not TV encoded",
-						  configuration_attribute_type_names, attr_type);
-					return STF_FAIL;
-				}
 			case XAUTH_USER_NAME:
 			case XAUTH_USER_PASSWORD:
 			case XAUTH_PASSCODE:
