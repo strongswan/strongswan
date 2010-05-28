@@ -128,7 +128,7 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	ike_cfg = peer->get_ike_cfg(peer);
 	other = host_create_from_dns(ike_cfg->get_other_addr(ike_cfg),
 								 0, ike_cfg->get_other_port(ike_cfg));
-	if (!other)
+	if (!other || other->is_anyaddr(other))
 	{
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
