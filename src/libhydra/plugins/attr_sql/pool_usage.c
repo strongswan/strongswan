@@ -23,7 +23,7 @@ void usage(void)
 {
 	printf("\
 Usage:\n\
-  ipsec pool --status|--add|--replace|--del|--resize|--purge [options]\n\
+  ipsec pool --status|--add|--replace|--del|--resize|--leases|--purge [options]\n\
   ipsec pool --showattr|--statusattr|--addattr|--delattr [options]\n\
   \n\
   ipsec pool --status\n\
