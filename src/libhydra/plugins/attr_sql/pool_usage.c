@@ -24,7 +24,7 @@ void usage(void)
 	printf("\
 Usage:\n\
   ipsec pool --status|--add|--replace|--del|--resize|--purge [options]\n\
-  ipsec pool --statusattr|--addattr|--delattr [options]\n\
+  ipsec pool --showattr|--statusattr|--addattr|--delattr [options]\n\
   \n\
   ipsec pool --status\n\
     Show a list of installed pools with statistics plus nameserver info.\n\
