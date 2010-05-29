@@ -1,6 +1,8 @@
 strongswan-4.4.1
 ----------------
 
+- The openssl plugin now supports X.509 certificate and CRL functions.
+
 - The major refactoring of the IKEv1 Mode Config functionality now allows
   the transport and handling of any Mode Config attribute.
 
