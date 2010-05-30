@@ -15,7 +15,7 @@ ipsec : ipsec.in
 	-e "s:@IPSEC_DISTRO@::" \
 	-e "s:@IPSEC_DIR@:$(ipsecdir):" \
 	-e "s:@IPSEC_SBINDIR@:$(sbindir):" \
-	-e "s:@IPSEC_CONFDIR@:$(confdir):" \
+	-e "s:@IPSEC_CONFDIR@:$(sysconfdir):" \
 	-e "s:@IPSEC_PIDDIR@:$(piddir):" \
 	$(srcdir)/$@.in > $@
 	chmod +x $@
