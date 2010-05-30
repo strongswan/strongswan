@@ -1,7 +1,12 @@
 sbin_SCRIPTS = ipsec
-CLEANFILES = ipsec
+CLEANFILES = ipsec ipsec.8
 dist_man8_MANS = ipsec.8
-EXTRA_DIST = ipsec.in
+EXTRA_DIST = ipsec.in ipsec.8.in
+
+ipsec.8 : ipsec.8.in
+	sed \
+	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
+	$(srcdir)/$@.in > $@
 
 ipsec : ipsec.in
 	sed \

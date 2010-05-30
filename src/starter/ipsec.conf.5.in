@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "2010-05-30"
+.TH IPSEC.CONF 5 "2010-05-30" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
