@@ -34,7 +34,7 @@ static int self()
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san, *ocsp;
-	int lifetime = 1080;
+	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
@@ -247,7 +247,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",	't', 1, "type of input key, default: rsa"},
 			{"dn",		'd', 1, "subject and issuer distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
+			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",	'p', 1, "set path length constraint"},
