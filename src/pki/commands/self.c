@@ -100,6 +100,20 @@ static int self()
 			case 'p':
 				pathlen = atoi(arg);
 				continue;
+			case 'f':
+				if (streq(arg, "serverAuth"))
+				{
+					flags |= X509_SERVER_AUTH;
+				}
+				else if (streq(arg, "clientAuth"))
+				{
+					flags |= X509_CLIENT_AUTH;
+				}
+				else if (streq(arg, "ocspSigning"))
+				{
+					flags |= X509_OCSP_SIGNER;
+				}
+				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
 				continue;
@@ -225,6 +239,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
+		 "[--flag serverAuth|clientAuth|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
 		{
 			{"help",	'h', 0, "show usage information"},
@@ -236,6 +251,7 @@ static void __attribute__ ((constructor))reg()
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",	'p', 1, "set path length constraint"},
+			{"flag",	'f', 1, "include extendedKeyUsage flag"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 		}
