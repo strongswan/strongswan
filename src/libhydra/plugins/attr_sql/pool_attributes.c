@@ -68,6 +68,7 @@ static const attr_info_t attr_info[] = {
 	{ "version",             VALUE_STRING, APPLICATION_VERSION, 0 },
 	{ "unity_banner",        VALUE_STRING, UNITY_BANNER,        0 },
 	{ "banner",              VALUE_STRING, UNITY_BANNER,        0 },
+	{ "unity_def_domain",    VALUE_STRING, UNITY_DEF_DOMAIN,    0 },
 	{ "unity_splitdns_name", VALUE_STRING, UNITY_SPLITDNS_NAME, 0 },
 	{ "unity_split_include", VALUE_SUBNET, UNITY_SPLIT_INCLUDE, 0 },
 	{ "unity_local_lan",     VALUE_SUBNET, UNITY_LOCAL_LAN,     0 },
