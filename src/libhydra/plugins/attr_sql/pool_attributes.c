@@ -32,7 +32,7 @@ extern database_t *db;
 ENUM(value_type_names, VALUE_HEX, VALUE_SUBNET,
 	"hex",
 	"string",
-	"server",
+	"addr",
 	"subnet"
 );
 
@@ -46,32 +46,36 @@ struct attr_info_t {
 };
 
 static const attr_info_t attr_info[] = {
-	{ "internal_ip4_dns",    VALUE_ADDR,   INTERNAL_IP4_DNS,    0 },
-	{ "internal_ip6_dns",    VALUE_ADDR,   INTERNAL_IP6_DNS,    0 },
-	{ "dns",                 VALUE_ADDR,   INTERNAL_IP4_DNS,
-										   INTERNAL_IP6_DNS       },
-	{ "internal_ip4_nbns",   VALUE_ADDR,   INTERNAL_IP4_NBNS,   0 },
-	{ "internal_ip6_nbns",   VALUE_ADDR,   INTERNAL_IP6_NBNS,   0 },
-	{ "nbns",                VALUE_ADDR,   INTERNAL_IP4_NBNS,
-										   INTERNAL_IP6_NBNS      },
-	{ "wins",                VALUE_ADDR,   INTERNAL_IP4_NBNS,
-										   INTERNAL_IP6_NBNS      },
-	{ "internal_ip4_dhcp",   VALUE_ADDR,   INTERNAL_IP4_DHCP,   0 },
-	{ "internal_ip6_dhcp",   VALUE_ADDR,   INTERNAL_IP6_DHCP,   0 },
-	{ "dhcp",                VALUE_ADDR,   INTERNAL_IP4_DHCP,
-										   INTERNAL_IP6_DHCP      },
-	{ "internal_ip4_server", VALUE_ADDR,   INTERNAL_IP4_SERVER, 0 },
-	{ "internal_ip6_server", VALUE_ADDR,   INTERNAL_IP6_SERVER, 0 },
-	{ "server",              VALUE_ADDR,   INTERNAL_IP4_SERVER,
-										   INTERNAL_IP6_SERVER    },
-	{ "application_version", VALUE_STRING, APPLICATION_VERSION, 0 },
-	{ "version",             VALUE_STRING, APPLICATION_VERSION, 0 },
-	{ "unity_banner",        VALUE_STRING, UNITY_BANNER,        0 },
-	{ "banner",              VALUE_STRING, UNITY_BANNER,        0 },
-	{ "unity_def_domain",    VALUE_STRING, UNITY_DEF_DOMAIN,    0 },
-	{ "unity_splitdns_name", VALUE_STRING, UNITY_SPLITDNS_NAME, 0 },
-	{ "unity_split_include", VALUE_SUBNET, UNITY_SPLIT_INCLUDE, 0 },
-	{ "unity_local_lan",     VALUE_SUBNET, UNITY_LOCAL_LAN,     0 },
+	{ "internal_ip4_dns",     VALUE_ADDR,   INTERNAL_IP4_DNS,     0 },
+	{ "internal_ip6_dns",     VALUE_ADDR,   INTERNAL_IP6_DNS,     0 },
+	{ "dns",                  VALUE_ADDR,   INTERNAL_IP4_DNS,
+											INTERNAL_IP6_DNS        },
+	{ "internal_ip4_netmask", VALUE_ADDR,   INTERNAL_IP4_NETMASK, 0 },
+	{ "internal_ip6_netmask", VALUE_ADDR,   INTERNAL_IP6_NETMASK, 0 },
+	{ "netmask",              VALUE_ADDR,   INTERNAL_IP4_NETMASK,
+							 				INTERNAL_IP6_NETMASK    },
+	{ "internal_ip4_nbns",    VALUE_ADDR,   INTERNAL_IP4_NBNS,    0 },
+	{ "internal_ip6_nbns",    VALUE_ADDR,   INTERNAL_IP6_NBNS,    0 },
+	{ "nbns",                 VALUE_ADDR,   INTERNAL_IP4_NBNS,
+							 				INTERNAL_IP6_NBNS       },
+	{ "wins",                 VALUE_ADDR,   INTERNAL_IP4_NBNS,
+											INTERNAL_IP6_NBNS       },
+	{ "internal_ip4_dhcp",    VALUE_ADDR,   INTERNAL_IP4_DHCP,    0 },
+	{ "internal_ip6_dhcp",    VALUE_ADDR,   INTERNAL_IP6_DHCP,    0 },
+	{ "dhcp",                 VALUE_ADDR,   INTERNAL_IP4_DHCP,
+											INTERNAL_IP6_DHCP       },
+	{ "internal_ip4_server",  VALUE_ADDR,   INTERNAL_IP4_SERVER,  0 },
+	{ "internal_ip6_server",  VALUE_ADDR,   INTERNAL_IP6_SERVER,  0 },
+	{ "server",               VALUE_ADDR,   INTERNAL_IP4_SERVER,
+											INTERNAL_IP6_SERVER     },
+	{ "application_version",  VALUE_STRING, APPLICATION_VERSION,  0 },
+	{ "version",              VALUE_STRING, APPLICATION_VERSION,  0 },
+	{ "unity_banner",         VALUE_STRING, UNITY_BANNER,         0 },
+	{ "banner",               VALUE_STRING, UNITY_BANNER,         0 },
+	{ "unity_def_domain",     VALUE_STRING, UNITY_DEF_DOMAIN,     0 },
+	{ "unity_splitdns_name",  VALUE_STRING, UNITY_SPLITDNS_NAME,  0 },
+	{ "unity_split_include",  VALUE_SUBNET, UNITY_SPLIT_INCLUDE,  0 },
+	{ "unity_local_lan",      VALUE_SUBNET, UNITY_LOCAL_LAN,      0 },
 };
 
 /**
@@ -453,13 +457,16 @@ void del_attr(char *name, char *value, value_type_t value_type)
 /**
  * ipsec pool --statusattr - show all attribute entries
  */
-void status_attr(void)
+void status_attr(bool hexout)
 {
 	configuration_attribute_type_t type;
-	chunk_t value;
+	value_type_t value_type;
+	chunk_t value, addr_chunk, mask_chunk;
 	enumerator_t *enumerator;
+	host_t *addr, *mask;
 	char type_name[30];
 	bool first = TRUE;
+	int i;
 
 	/* enumerate over all attributes */
 	enumerator = db->query(db, "SELECT type, value FROM attributes ORDER BY type",
@@ -470,7 +477,7 @@ void status_attr(void)
 		{
 			if (first)
 			{
-				printf(" type  description          value\n");
+				printf(" type  description           value\n");
 				first = FALSE;
 			}
 			snprintf(type_name, sizeof(type_name), "%N",
@@ -479,7 +486,63 @@ void status_attr(void)
 			{
 				type_name[0] = '\0';
 			}
-			printf("%5d  %-20s %#B\n",type, type_name, &value);
+			printf("%5d  %-20s ",type, type_name);
+
+			value_type = VALUE_HEX;
+			if (!hexout)
+			{
+				for (i = 0; i < countof(attr_info); i++)
+				{
+					if (type == attr_info[i].type)
+					{
+						value_type = attr_info[i].value_type;
+						break; 
+					}
+				}
+			}
+			switch (value_type)
+			{
+				case VALUE_ADDR:
+					addr = host_create_from_chunk(AF_UNSPEC, value, 0);
+					if (addr)
+					{
+						printf(" %H\n", addr);
+						addr->destroy(addr);
+					}
+					else
+					{
+						/* value cannot be represented as an IP address */
+						printf(" %#B\n", &value);
+					}
+					break;
+				case VALUE_SUBNET:
+					if (value.len % UNITY_NETWORK_LEN == 0)
+					{
+						for (i = 0; i < value.len / UNITY_NETWORK_LEN; i++)
+						{
+							addr_chunk = chunk_create(value.ptr + i*UNITY_NETWORK_LEN, 4);
+							addr = host_create_from_chunk(AF_INET, addr_chunk, 0);
+							mask_chunk = chunk_create(addr_chunk.ptr + 4, 4);
+							mask = host_create_from_chunk(AF_INET, mask_chunk, 0);
+							printf("%s%H/%H", (i > 0) ? "," : " ", addr, mask);
+							addr->destroy(addr);
+							mask->destroy(mask);
+						}
+						printf("\n");
+					}
+					else
+					{
+						/* value cannot be represented as a list of subnets */
+						printf(" %#B\n", &value);
+					}
+					break;
+				case VALUE_STRING:
+					printf("\"%.*s\"\n", value.len, value.ptr);
+					break;					
+				case VALUE_HEX:
+				default:
+					printf(" %#B\n", &value);
+			}
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -500,7 +563,7 @@ void show_attr(void)
 		snprintf(value_name, sizeof(value_name), "%N",
 			value_type_names, attr_info[i].value_type);
 	
-		printf("%-19s  --%-6s  (%N", 
+		printf("%-20s  --%-6s  (%N", 
 				attr_info[i].keyword, value_name, 
 				configuration_attribute_type_names, attr_info[i].type);
 

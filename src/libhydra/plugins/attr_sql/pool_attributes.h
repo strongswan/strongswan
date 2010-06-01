@@ -46,7 +46,7 @@ void del_attr(char *name, char *value, value_type_t value_type);
 /**
  * ipsec pool --statusattr      - show all attribute entries
  */
-void status_attr(void);
+void status_attr(bool hexout);
 
 /**
  * ipsec pool --showattr - show all supported attribute keywords

@@ -946,7 +946,7 @@ static void do_args(int argc, char *argv[])
 	char *name = "", *value = "", *filter = "", *addresses = NULL;
 	value_type_t value_type = VALUE_NONE;
 	int timeout = 0;
-	bool utc = FALSE;
+	bool utc = FALSE, hexout = FALSE;
 
 	enum {
 		OP_UNDEF,
@@ -993,10 +993,13 @@ static void do_args(int argc, char *argv[])
 			{ "addresses", required_argument, NULL, 'y' },
 			{ "timeout", required_argument, NULL, 't' },
 			{ "filter", required_argument, NULL, 'f' },
+			{ "addr", required_argument, NULL, 'v' },
+			{ "mask", required_argument, NULL, 'v' },
 			{ "server", required_argument, NULL, 'v' },
 			{ "subnet", required_argument, NULL, 'n' },
 			{ "string", required_argument, NULL, 'g' },
 			{ "hex", required_argument, NULL, 'x' },
+			{ "hexout", no_argument, NULL, '5' },
 			{ 0,0,0,0 }
 		};
 
@@ -1116,6 +1119,9 @@ static void do_args(int argc, char *argv[])
 				value_type = VALUE_HEX;
 				value = optarg;
 				continue;
+			case '5':
+				hexout = TRUE;
+				continue;
 			default:
 				usage();
 				exit(EXIT_FAILURE);
@@ -1133,7 +1139,7 @@ static void do_args(int argc, char *argv[])
 			status();
 			break;
 		case OP_STATUS_ATTR:
-			status_attr();
+			status_attr(hexout);
 			break;
 		case OP_ADD:
 			if (addresses != NULL)
