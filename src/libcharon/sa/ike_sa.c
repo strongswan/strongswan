@@ -1636,14 +1636,13 @@ static status_t reestablish(private_ike_sa_t *this)
 	iterator = create_child_sa_iterator(this);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		child_cfg = child_sa->get_config(child_sa);
 		if (this->state == IKE_DELETING)
 		{
-			action = child_cfg->get_close_action(child_cfg);
+			action = child_sa->get_close_action(child_sa);
 		}
 		else
 		{
-			action = child_cfg->get_dpd_action(child_cfg);
+			action = child_sa->get_dpd_action(child_sa);
 		}
 		switch (action)
 		{
@@ -1651,7 +1650,8 @@ static status_t reestablish(private_ike_sa_t *this)
 				restart = TRUE;
 				break;
 			case ACTION_ROUTE:
-				charon->traps->install(charon->traps, this->peer_cfg, child_cfg);
+				charon->traps->install(charon->traps, this->peer_cfg,
+									   child_sa->get_config(child_sa));
 				break;
 			default:
 				break;
@@ -1707,18 +1707,18 @@ static status_t reestablish(private_ike_sa_t *this)
 		iterator = create_child_sa_iterator(this);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			child_cfg = child_sa->get_config(child_sa);
 			if (this->state == IKE_DELETING)
 			{
-				action = child_cfg->get_close_action(child_cfg);
+				action = child_sa->get_close_action(child_sa);
 			}
 			else
 			{
-				action = child_cfg->get_dpd_action(child_cfg);
+				action = child_sa->get_dpd_action(child_sa);
 			}
 			switch (action)
 			{
 				case ACTION_RESTART:
+					child_cfg = child_sa->get_config(child_sa);
 					DBG1(DBG_IKE, "restarting CHILD_SA %s",
 						 child_cfg->get_name(child_cfg));
 					child_cfg->get_ref(child_cfg);

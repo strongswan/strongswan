@@ -191,6 +191,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
 	u_int32_t spi;
+	action_t action;
 	status_t status = SUCCESS;
 
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -205,10 +206,11 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		protocol = child_sa->get_protocol(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
+		action = child_sa->get_close_action(child_sa);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
 		if (this->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
-			switch (child_cfg->get_close_action(child_cfg))
+			switch (action)
 			{
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
