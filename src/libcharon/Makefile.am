@@ -271,6 +271,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_SIMAKA_SQL
+  SUBDIRS += plugins/eap_simaka_sql
+  PLUGINS += eap-simaka-sql
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_simaka_sql/libstrongswan-eap-simaka-sql.la
+endif
+endif
+
 if USE_EAP_SIMAKA_PSEUDONYM
   SUBDIRS += plugins/eap_simaka_pseudonym
   PLUGINS += eap-simaka-pseudonym

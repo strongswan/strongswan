@@ -129,6 +129,8 @@ LOCAL_SRC_FILES += $(call add_plugin, eap-mschapv2)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-sim)
 
+LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-sql)
+
 LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-pseudonym)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-reauth)

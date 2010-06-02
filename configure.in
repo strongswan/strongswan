@@ -101,6 +101,7 @@ ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
 ARG_ENABL_SET([eap-sim],        [enable SIM authenication module for EAP.])
 ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
+ARG_ENABL_SET([eap-simaka-sql], [enable EAP-SIM/AKA backend based on a triplet/quintuplet SQL database.])
 ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plugin.])
 ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
 ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
@@ -815,6 +816,7 @@ AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_SQL, test x$eap_simaka_sql = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_REAUTH, test x$eap_simaka_reauth = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
@@ -939,6 +941,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_gtc/Makefile
 	src/libcharon/plugins/eap_sim/Makefile
 	src/libcharon/plugins/eap_sim_file/Makefile
+	src/libcharon/plugins/eap_simaka_sql/Makefile
 	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
 	src/libcharon/plugins/eap_simaka_reauth/Makefile
 	src/libcharon/plugins/eap_mschapv2/Makefile
