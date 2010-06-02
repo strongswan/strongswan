@@ -128,6 +128,16 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 
 	/**
+	 * Action to enforce if peer closes the CHILD_SA
+	 */
+	action_t close_action;
+
+	/**
+	 * Action to enforce if peer is considered dead
+	 */
+	action_t dpd_action;
+
+	/**
 	 * selected proposal
 	 */
 	proposal_t *proposal;
@@ -269,6 +279,38 @@ static ipcomp_transform_t get_ipcomp(private_child_sa_t *this)
 static void set_ipcomp(private_child_sa_t *this, ipcomp_transform_t ipcomp)
 {
 	this->ipcomp = ipcomp;
+}
+
+/**
+ * Implementation of child_sa_t.set_close_action.
+ */
+static void set_close_action(private_child_sa_t *this, action_t action)
+{
+	this->close_action = action;
+}
+
+/**
+ * Implementation of child_sa_t.get_close_action.
+ */
+static action_t get_close_action(private_child_sa_t *this)
+{
+	return this->close_action;
+}
+
+/**
+ * Implementation of child_sa_t.set_dpd_action.
+ */
+static void set_dpd_action(private_child_sa_t *this, action_t action)
+{
+	this->dpd_action = action;
+}
+
+/**
+ * Implementation of child_sa_t.get_dpd_action.
+ */
+static action_t get_dpd_action(private_child_sa_t *this)
+{
+	return this->dpd_action;
 }
 
 /**
@@ -919,6 +961,10 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
 	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
 	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;
+	this->public.get_close_action = (action_t(*)(child_sa_t*))get_close_action;
+	this->public.set_close_action = (void(*)(child_sa_t*,action_t))set_close_action;
+	this->public.get_dpd_action = (action_t(*)(child_sa_t*))get_dpd_action;
+	this->public.set_dpd_action = (void(*)(child_sa_t*,action_t))set_dpd_action;
 	this->public.alloc_spi = (u_int32_t(*)(child_sa_t*, protocol_id_t protocol))alloc_spi;
 	this->public.alloc_cpi = (u_int16_t(*)(child_sa_t*))alloc_cpi;
 	this->public.install = (status_t(*)(child_sa_t*, chunk_t encr, chunk_t integ, u_int32_t spi, u_int16_t cpi, bool inbound, linked_list_t *my_ts_list, linked_list_t *other_ts_list))install;
@@ -946,6 +992,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
+	this->close_action = config->get_close_action(config);
+	this->dpd_action = config->get_dpd_action(config);
 	this->proposal = NULL;
 	this->rekey_time = 0;
 	this->expire_time = 0;

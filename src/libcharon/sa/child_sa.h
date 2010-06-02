@@ -208,6 +208,34 @@ struct child_sa_t {
 	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
 
 	/**
+	 * Get the action to enforce if the remote peer closes the CHILD_SA.
+	 *
+	 * @return			close action
+	 */
+	action_t (*get_close_action)(child_sa_t *this);
+
+	/**
+	 * Override the close action specified by the CHILD_SA config.
+	 *
+	 * @param			close action to enforce
+	 */
+	void (*set_close_action)(child_sa_t *this, action_t action);
+
+	/**
+	 * Get the action to enforce if the peer is considered dead.
+	 *
+	 * @return			dpd action
+	 */
+	action_t (*get_dpd_action)(child_sa_t *this);
+
+	/**
+	 * Override the DPD action specified by the CHILD_SA config.
+	 *
+	 * @param			close action to enforce
+	 */
+	void (*set_dpd_action)(child_sa_t *this, action_t action);
+
+	/**
 	 * Get the selected proposal.
 	 *
 	 * @return			selected proposal
