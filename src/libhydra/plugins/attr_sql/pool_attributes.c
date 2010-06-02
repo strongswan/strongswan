@@ -46,14 +46,14 @@ struct attr_info_t {
 };
 
 static const attr_info_t attr_info[] = {
-	{ "internal_ip4_dns",     VALUE_ADDR,   INTERNAL_IP4_DNS,     0 },
-	{ "internal_ip6_dns",     VALUE_ADDR,   INTERNAL_IP6_DNS,     0 },
-	{ "dns",                  VALUE_ADDR,   INTERNAL_IP4_DNS,
-											INTERNAL_IP6_DNS        },
 	{ "internal_ip4_netmask", VALUE_ADDR,   INTERNAL_IP4_NETMASK, 0 },
 	{ "internal_ip6_netmask", VALUE_ADDR,   INTERNAL_IP6_NETMASK, 0 },
 	{ "netmask",              VALUE_ADDR,   INTERNAL_IP4_NETMASK,
 							 				INTERNAL_IP6_NETMASK    },
+	{ "internal_ip4_dns",     VALUE_ADDR,   INTERNAL_IP4_DNS,     0 },
+	{ "internal_ip6_dns",     VALUE_ADDR,   INTERNAL_IP6_DNS,     0 },
+	{ "dns",                  VALUE_ADDR,   INTERNAL_IP4_DNS,
+											INTERNAL_IP6_DNS        },
 	{ "internal_ip4_nbns",    VALUE_ADDR,   INTERNAL_IP4_NBNS,    0 },
 	{ "internal_ip6_nbns",    VALUE_ADDR,   INTERNAL_IP6_NBNS,    0 },
 	{ "nbns",                 VALUE_ADDR,   INTERNAL_IP4_NBNS,
@@ -172,13 +172,15 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 	{
 		if (strcaseeq(name, attr_info[i].keyword))
 		{
+			*type      = attr_info[i].type;
+			*type_ip6  = attr_info[i].type_ip6;
+
 			if (*value_type == VALUE_NONE)
 			{
 				*value_type = attr_info[i].value_type;
-				*type       = attr_info[i].type;
-				*type_ip6   = attr_info[i].type_ip6;
 				return TRUE;
 			}
+
 			if (*value_type != attr_info[i].value_type &&
 				*value_type != VALUE_HEX)
 			{
@@ -206,27 +208,24 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 				free(blob->ptr);
 				return FALSE;
 			}
+
 			if (*value_type == VALUE_ADDR)
 			{
 				*type = (addr->get_family(addr) == AF_INET) ?
 						 	attr_info[i].type : attr_info[i].type_ip6;
 				addr->destroy(addr);
 			}
-			if (*value_type == VALUE_HEX)
+			else if (*value_type == VALUE_HEX)
 			{
 				*value_type = attr_info[i].value_type;
 
 				if (*value_type == VALUE_ADDR)
 				{
-					if (blob->len == 4)
-					{
-						*type = attr_info[i].type;
-					}
-					else if (blob->len == 16)
+					if (blob->len == 16)
 					{
 						*type = attr_info[i].type_ip6;
 					}
-					else
+					else if (blob->len != 4)
 					{
 						fprintf(stderr, "the %s attribute requires "
 										"a valid IP address.\n", name);
@@ -234,14 +233,6 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 						return FALSE;
 					}
 				}
-				else
-				{
-					*type = attr_info[i].type;
-				}			
-			}
-			else
-			{
-				*type = attr_info[i].type;
 			}
 			return TRUE;
 		}
@@ -291,6 +282,7 @@ void add_attr(char *name, char *value, value_type_t value_type)
 	{
 		exit(EXIT_FAILURE);
 	}
+
 	success = db->execute(db, NULL,
 				"INSERT INTO attributes (type, value) VALUES (?, ?)",
 				DB_INT, type, DB_BLOB, blob) == 1;
@@ -324,6 +316,7 @@ void del_attr(char *name, char *value, value_type_t value_type)
 	{
 		exit(EXIT_FAILURE);
 	}
+
 	if (blob.len > 0)
 	{
 		query = db->query(db,
@@ -442,7 +435,7 @@ void del_attr(char *name, char *value, value_type_t value_type)
 			}
 			else
 			{
-				fprintf(stderr, "the %s attribute (%N) with value '%*.s' "
+				fprintf(stderr, "the %s attribute (%N) with value '%.*s' "
 								"was not found.\n", name,
 								 configuration_attribute_type_names, type,
 								 blob.len, blob.ptr);
