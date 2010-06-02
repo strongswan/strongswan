@@ -234,9 +234,14 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 		if (memcmp(this_nonce.ptr, other_nonce.ptr,
 				   min(this_nonce.len, other_nonce.len)) < 0)
 		{
+			child_sa_t *child_sa;
+
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, "
 				 "deleting rekeyed child");
 			to_delete = this->child_sa;
+			/* disable close action for the redundand child */
+			child_sa = other->child_create->get_child(other->child_create);
+			child_sa->set_close_action(child_sa, ACTION_NONE);
 		}
 		else
 		{
