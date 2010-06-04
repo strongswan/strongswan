@@ -42,7 +42,15 @@ enum
 	PROP_PASS,
 };
 
+#ifndef USE_DYNAMIC_TYPES
 G_DEFINE_TYPE (StrongswanConnection, strongswan_connection, G_TYPE_OBJECT);
+#else
+G_DEFINE_DYNAMIC_TYPE (StrongswanConnection, strongswan_connection, G_TYPE_OBJECT);
+void strongswan_connection_register (GTypeModule *type_module)
+{
+	strongswan_connection_register_type (type_module);
+}
+#endif
 
 static void
 strongswan_connection_get_property (GObject		*object,
@@ -175,6 +183,13 @@ strongswan_connection_class_init (StrongswanConnectionClass *klass)
 
 	g_type_class_add_private (klass, sizeof (StrongswanConnectionPrivate));
 }
+
+#ifdef USE_DYNAMIC_TYPES
+static void
+strongswan_connection_class_finalize (StrongswanConnectionClass *klass)
+{
+}
+#endif
 
 static inline gchar *
 get_string_from_key_file (GKeyFile *key_file,

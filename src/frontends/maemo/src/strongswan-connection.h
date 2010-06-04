@@ -51,6 +51,10 @@ StrongswanConnection *strongswan_connection_new (const gchar *name);
 StrongswanConnection *strongswan_connection_new_from_key_file(GKeyFile *key_file, const gchar *name);
 void strongswan_connection_save_to_key_file (GKeyFile *key_file, StrongswanConnection *connection);
 
+#ifdef USE_DYNAMIC_TYPES
+void strongswan_connection_register (GTypeModule *type_module);
+#endif
+
 G_END_DECLS
 
 #endif /* __STRONGSWAN_CONNECTION_H__ */

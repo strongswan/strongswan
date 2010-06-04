@@ -34,7 +34,15 @@ struct _StrongswanConnectionsPrivate
 	GtkTreeModel *model;
 };
 
+#ifndef USE_DYNAMIC_TYPES
 G_DEFINE_TYPE (StrongswanConnections, strongswan_connections, G_TYPE_OBJECT);
+#else
+G_DEFINE_DYNAMIC_TYPE (StrongswanConnections, strongswan_connections, G_TYPE_OBJECT);
+void strongswan_connections_register (GTypeModule *type_module)
+{
+	strongswan_connections_register_type (type_module);
+}
+#endif
 
 static void
 strongswan_connections_load_connections (StrongswanConnections *connections)
@@ -217,6 +225,13 @@ strongswan_connections_class_init (StrongswanConnectionsClass *klass)
 
 	g_type_class_add_private (klass, sizeof (StrongswanConnectionsPrivate));
 }
+
+#ifdef USE_DYNAMIC_TYPES
+static void
+strongswan_connections_class_finalize (StrongswanConnectionsClass *klass)
+{
+}
+#endif
 
 GtkTreeModel *
 strongswan_connections_get_model (StrongswanConnections *self)

@@ -56,6 +56,10 @@ StrongswanConnection *strongswan_connections_get_connection (StrongswanConnectio
 void strongswan_connections_save_connection (StrongswanConnections *self, StrongswanConnection *conn);
 void strongswan_connections_remove_connection (StrongswanConnections *self, const gchar *name);
 
+#ifdef USE_DYNAMIC_TYPES
+void strongswan_connections_register (GTypeModule *type_module);
+#endif
+
 G_END_DECLS
 
 #endif /* __STRONGSWAN_CONNECTIONS_H__ */
