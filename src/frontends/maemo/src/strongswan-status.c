@@ -15,6 +15,9 @@
 
 #include <hildon/hildon.h>
 
+#include "strongswan-status.h"
+#include "strongswan-connections.h"
+
 #define STRONGSWAN_STATUS_GET_PRIVATE(object) \
 	(G_TYPE_INSTANCE_GET_PRIVATE ((object), \
 								  STRONGSWAN_TYPE_STATUS, \
@@ -32,8 +35,15 @@ struct _StrongswanStatusPrivate
 		GdkPixbuf *button_close;
 	} icons;
 
+	GtkWidget *dialog;
 	GtkWidget *button;
 	GtkWidget *image;
+	GtkWidget *selector;
+	GtkWidget *box;
+
+	StrongswanConnections *conns;
+
+	gchar *current;
 };
 
 HD_DEFINE_PLUGIN_MODULE_EXTENDED (StrongswanStatus, strongswan_status, \
@@ -42,9 +52,91 @@ HD_DEFINE_PLUGIN_MODULE_EXTENDED (StrongswanStatus, strongswan_status, \
 			strongswan_connections_register (G_TYPE_MODULE (plugin)); }, {});
 
 static void
+dialog_response (GtkDialog *dialog, gint response_id, StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+	g_object_unref (priv->dialog);
+	priv->dialog = NULL;
+}
+
+static void
+connect_clicked (HildonButton *button, StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+	gtk_dialog_response (GTK_DIALOG (priv->dialog), GTK_RESPONSE_OK);
+}
+
+static void
+disconnect_clicked (HildonButton *button, StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+	gtk_dialog_response (GTK_DIALOG (priv->dialog), GTK_RESPONSE_OK);
+}
+
+static void
 button_clicked (HildonButton *button,  StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = plugin->priv;
+
+	priv->dialog = gtk_dialog_new ();
+	gtk_window_set_title (GTK_WINDOW (priv->dialog),  "strongSwan VPN");
+	g_signal_connect (priv->dialog, "response",
+					  G_CALLBACK (dialog_response), plugin);
+
+	GtkWidget *vbox = GTK_DIALOG (priv->dialog)->vbox;
+
+	if (priv->current)
+	{
+		/* connected case */
+		GtkWidget *hbox = gtk_hbox_new (FALSE, 0);
+		priv->box = hbox;
+		GtkWidget *button = hildon_button_new_with_text (
+								HILDON_SIZE_FINGER_HEIGHT |
+								HILDON_SIZE_AUTO_WIDTH,
+								HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
+								"Disconnect", priv->current);
+		hildon_button_set_style (HILDON_BUTTON (button),
+								 HILDON_BUTTON_STYLE_PICKER);
+		g_signal_connect (button, "clicked", G_CALLBACK (disconnect_clicked),
+						  plugin);
+		gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);
+		gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
+	}
+	else
+	{
+		/* unconnected case */
+		GtkWidget *hbox = gtk_hbox_new (FALSE, 0);
+		priv->box = hbox;
+		GtkWidget *button = hildon_picker_button_new (
+								HILDON_SIZE_FINGER_HEIGHT |
+								HILDON_SIZE_AUTO_WIDTH,
+								HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+		hildon_button_set_title (HILDON_BUTTON (button), "Connection:");
+		gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);
+
+		GtkWidget *selector = hildon_touch_selector_new ();
+		priv->selector = selector;
+		GtkTreeModel *model = strongswan_connections_get_model (priv->conns);
+		hildon_touch_selector_append_text_column (
+								HILDON_TOUCH_SELECTOR (selector),
+								model,
+								TRUE);
+		hildon_picker_button_set_selector (HILDON_PICKER_BUTTON (button),
+										   HILDON_TOUCH_SELECTOR (selector));
+		g_object_unref (model);
+
+		button = hildon_button_new_with_text (
+								HILDON_SIZE_FINGER_HEIGHT |
+								HILDON_SIZE_AUTO_WIDTH,
+								HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
+								"Connect", NULL);
+		gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, FALSE, 0);
+		gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
+		g_signal_connect (button, "clicked", G_CALLBACK (connect_clicked),
+						  plugin);
+	}
+
+	gtk_widget_show_all (priv->dialog);
 }
 
 static void
@@ -70,6 +162,8 @@ strongswan_status_init (StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = STRONGSWAN_STATUS_GET_PRIVATE (plugin);
 	plugin->priv = priv;
+
+	priv->conns = strongswan_connections_new ();
 
 	load_icons(priv);
 
@@ -100,6 +194,14 @@ static void
 strongswan_status_dispose (GObject *object)
 {
 	StrongswanStatusPrivate *priv = STRONGSWAN_STATUS (object)->priv;
+	if (priv->conns)
+	{
+		priv->conns = (g_object_unref (priv->conns), NULL);
+	}
+	if (priv->dialog)
+	{
+		priv->dialog = (g_object_unref (priv->dialog), NULL);
+	}
 	if (priv->icons.status_open)
 	{
 		g_object_unref (priv->icons.status_open);
@@ -127,6 +229,7 @@ static void
 strongswan_status_finalize (GObject *object)
 {
 	StrongswanStatusPrivate *priv = STRONGSWAN_STATUS (object)->priv;
+	priv->current = (g_free (priv->current), NULL);
 	G_OBJECT_CLASS (strongswan_status_parent_class)->finalize (object);
 }
 
