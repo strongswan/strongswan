@@ -31,6 +31,7 @@ struct _StrongswanConnectionsPrivate
 	gchar *path;
 	GnomeVFSMonitorHandle *monitor;
 	GHashTable *connections;
+	GtkTreeModel *model;
 };
 
 G_DEFINE_TYPE (StrongswanConnections, strongswan_connections, G_TYPE_OBJECT);
@@ -39,6 +40,8 @@ static void
 strongswan_connections_load_connections (StrongswanConnections *connections)
 {
 	StrongswanConnectionsPrivate *priv = connections->priv;
+	GHashTableIter iter;
+	gpointer key, value;
 	gchar **groups;
 	guint i;
 
@@ -57,6 +60,17 @@ strongswan_connections_load_connections (StrongswanConnections *connections)
 		}
 	}
 	g_strfreev (groups);
+
+	gtk_list_store_clear (GTK_LIST_STORE (priv->model));
+	g_hash_table_iter_init (&iter, priv->connections);
+	while (g_hash_table_iter_next (&iter, &key, &value))
+	{
+		gtk_list_store_insert_with_values (GTK_LIST_STORE (priv->model),
+										   NULL,
+										   -1,
+										   0, key,
+										   -1);
+	}
 }
 
 static void
@@ -123,6 +137,12 @@ strongswan_connections_init (StrongswanConnections *connections)
 											   g_free,
 											   g_object_unref);
 
+	priv->model = GTK_TREE_MODEL (gtk_list_store_new (2,
+													  G_TYPE_STRING,
+													  G_TYPE_STRING));
+	gtk_tree_sortable_set_sort_column_id (GTK_TREE_SORTABLE (priv->model),
+										  0,
+										  GTK_SORT_ASCENDING);
 }
 
 static void
@@ -162,6 +182,11 @@ strongswan_connections_dispose (GObject *object)
 	g_return_if_fail (STRONGSWAN_IS_CONNECTIONS (object));
 	priv = STRONGSWAN_CONNECTIONS (object)->priv;
 
+	if (priv->model)
+	{
+		priv->model = (g_object_unref (priv->model), NULL);
+	}
+
 	G_OBJECT_CLASS (strongswan_connections_parent_class)->dispose (object);
 }
 
@@ -191,6 +216,27 @@ strongswan_connections_class_init (StrongswanConnectionsClass *klass)
 	object_class->finalize = strongswan_connections_finalize;
 
 	g_type_class_add_private (klass, sizeof (StrongswanConnectionsPrivate));
+}
+
+GtkTreeModel *
+strongswan_connections_get_model (StrongswanConnections *self)
+{
+	StrongswanConnectionsPrivate *priv = self->priv;
+	return g_object_ref (priv->model);
+}
+
+void
+strongswan_connections_setup_column_renderers (StrongswanConnections *self,
+											   GtkCellLayout *layout)
+{
+	GtkCellRenderer *renderer;
+	renderer = gtk_cell_renderer_text_new ();
+	gtk_cell_layout_pack_start (layout,
+								renderer,
+								TRUE);
+	gtk_cell_layout_add_attribute (layout,
+								   renderer,
+								   "text", 0);
 }
 
 StrongswanConnections *

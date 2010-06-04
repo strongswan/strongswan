@@ -16,6 +16,8 @@
 #ifndef __STRONGSWAN_CONNECTIONS_H__
 #define __STRONGSWAN_CONNECTIONS_H__
 
+#include <gtk/gtk.h>
+
 #include "strongswan-connection.h"
 
 G_BEGIN_DECLS
@@ -46,6 +48,9 @@ struct _StrongswanConnectionsClass
 GType strongswan_connections_get_type (void);
 
 StrongswanConnections *strongswan_connections_new (void);
+
+GtkTreeModel *strongswan_connections_get_model (StrongswanConnections *connections);
+void strongswan_connections_setup_column_renderers (StrongswanConnections *connections, GtkCellLayout *layout);
 
 StrongswanConnection *strongswan_connections_get_connection (StrongswanConnections *self, const gchar *name);
 void strongswan_connections_save_connection (StrongswanConnections *self, StrongswanConnection *conn);
