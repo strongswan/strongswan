@@ -291,7 +291,8 @@ METHOD(task_manager_t, initiate, status_t,
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
-		DBG2(DBG_IKE, "delaying task initiation, exchange in progress");
+		DBG2(DBG_IKE, "delaying task initiation, %N exchange in progress",
+				exchange_type_names, this->initiating.type);
 		/* do not initiate if we already have a message in the air */
 		return SUCCESS;
 	}

@@ -886,9 +886,10 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	{
 		if (wait_for_entry(this, entry, segment))
 		{
-			DBG2(DBG_MGR, "IKE_SA successfully checked out");
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
+			DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
 		unlock_single_segment(this, segment);
 	}
@@ -916,7 +917,8 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 	}
 	ike_sa = ike_sa_create(ike_sa_id);
 
-	DBG2(DBG_MGR, "created IKE_SA");
+	DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
+			ike_sa->get_unique_id(ike_sa));
 
 	if (!initiator)
 	{
@@ -971,10 +973,11 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 			}
 			else if (wait_for_entry(this, entry, segment))
 			{
-				DBG2(DBG_MGR, "IKE_SA checked out by hash");
 				entry->checked_out = TRUE;
 				entry->message_id = message->get_message_id(message);
 				ike_sa = entry->ike_sa;
+				DBG2(DBG_MGR, "IKE_SA %s[%u] checked out by hash",
+						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 			}
 			unlock_single_segment(this, segment);
 		}
@@ -998,7 +1001,8 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				entry->init_hash = hash;
 				ike_sa = entry->ike_sa;
 
-				DBG2(DBG_MGR, "created IKE_SA");
+				DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 			}
 			else
 			{
@@ -1027,7 +1031,6 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 		else if (wait_for_entry(this, entry, segment))
 		{
 			ike_sa_id_t *ike_id = entry->ike_sa->get_id(entry->ike_sa);
-			DBG2(DBG_MGR, "IKE_SA successfully checked out");
 			entry->checked_out = TRUE;
 			entry->message_id = message->get_message_id(message);
 			if (ike_id->get_responder_spi(ike_id) == 0)
@@ -1035,6 +1038,8 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 				ike_id->set_responder_spi(ike_id, id->get_responder_spi(id));
 			}
 			ike_sa = entry->ike_sa;
+			DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
 		unlock_single_segment(this, segment);
 	}
@@ -1055,6 +1060,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	peer_cfg_t *current_peer;
 	ike_cfg_t *current_ike;
 	u_int segment;
+
+	DBG2(DBG_MGR, "checkout IKE_SA by config");
 
 	if (!this->reuse_ikesa)
 	{	/* IKE_SA reuse disable by config */
@@ -1081,10 +1088,11 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 			current_ike = current_peer->get_ike_cfg(current_peer);
 			if (current_ike->equals(current_ike, peer_cfg->get_ike_cfg(peer_cfg)))
 			{
-				DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
-					 current_peer->get_name(current_peer));
 				entry->checked_out = TRUE;
 				ike_sa = entry->ike_sa;
+				DBG2(DBG_MGR, "found existing IKE_SA %u with a '%s' config",
+						ike_sa->get_unique_id(ike_sa),
+						current_peer->get_name(current_peer));
 				break;
 			}
 		}
@@ -1111,6 +1119,8 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
 	u_int segment;
+
+	DBG2(DBG_MGR, "checkout IKE_SA by ID");
 
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
@@ -1142,6 +1152,8 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this, u_int32_t id,
 			if (ike_sa)
 			{
 				entry->checked_out = TRUE;
+				DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
+						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 				break;
 			}
 		}
@@ -1195,6 +1207,8 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 			if (ike_sa)
 			{
 				entry->checked_out = TRUE;
+				DBG2(DBG_MGR, "IKE_SA %s[%u] successfully checked out",
+						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 				break;
 			}
 		}
@@ -1251,7 +1265,8 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	other_id = ike_sa->get_other_id(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
 
-	DBG2(DBG_MGR, "checkin IKE_SA");
+	DBG2(DBG_MGR, "checkin IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
+			ike_sa->get_unique_id(ike_sa));
 
 	/* look for the entry */
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
@@ -1327,7 +1342,8 @@ static void checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 
 	ike_sa_id = ike_sa->get_id(ike_sa);
 
-	DBG2(DBG_MGR, "checkin and destroy IKE_SA");
+	DBG2(DBG_MGR, "checkin and destroy IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
+			ike_sa->get_unique_id(ike_sa));
 
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
