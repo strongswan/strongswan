@@ -287,18 +287,14 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	return use_time;
 }
 
-/**
- * Implementation of ike_sa_t.get_unique_id
- */
-static u_int32_t get_unique_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_unique_id, u_int32_t,
+	private_ike_sa_t *this)
 {
 	return this->unique_id;
 }
 
-/**
- * Implementation of ike_sa_t.get_name.
- */
-static char *get_name(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_name, char*,
+	private_ike_sa_t *this)
 {
 	if (this->peer_cfg)
 	{
@@ -307,10 +303,8 @@ static char *get_name(private_ike_sa_t *this)
 	return "(unnamed)";
 }
 
-/**
- * Implementation of ike_sa_t.get_statistic.
- */
-static u_int32_t get_statistic(private_ike_sa_t *this, statistic_t kind)
+METHOD(ike_sa_t, get_statistic, u_int32_t,
+	private_ike_sa_t *this, statistic_t kind)
 {
 	if (kind < STAT_MAX)
 	{
@@ -319,52 +313,40 @@ static u_int32_t get_statistic(private_ike_sa_t *this, statistic_t kind)
 	return 0;
 }
 
-/**
- * Implementation of ike_sa_t.get_my_host.
- */
-static host_t *get_my_host(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_my_host, host_t*,
+	private_ike_sa_t *this)
 {
 	return this->my_host;
 }
 
-/**
- * Implementation of ike_sa_t.set_my_host.
- */
-static void set_my_host(private_ike_sa_t *this, host_t *me)
+METHOD(ike_sa_t, set_my_host, void,
+	private_ike_sa_t *this, host_t *me)
 {
 	DESTROY_IF(this->my_host);
 	this->my_host = me;
 }
 
-/**
- * Implementation of ike_sa_t.get_other_host.
- */
-static host_t *get_other_host(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_other_host, host_t*,
+	private_ike_sa_t *this)
 {
 	return this->other_host;
 }
 
-/**
- * Implementation of ike_sa_t.set_other_host.
- */
-static void set_other_host(private_ike_sa_t *this, host_t *other)
+METHOD(ike_sa_t, set_other_host, void,
+	private_ike_sa_t *this, host_t *other)
 {
 	DESTROY_IF(this->other_host);
 	this->other_host = other;
 }
 
-/**
- * Implementation of ike_sa_t.get_peer_cfg
- */
-static peer_cfg_t* get_peer_cfg(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_peer_cfg, peer_cfg_t*,
+	private_ike_sa_t *this)
 {
 	return this->peer_cfg;
 }
 
-/**
- * Implementation of ike_sa_t.set_peer_cfg
- */
-static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
+METHOD(ike_sa_t, set_peer_cfg, void,
+	private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 {
 	DESTROY_IF(this->peer_cfg);
 	peer_cfg->get_ref(peer_cfg);
@@ -377,10 +359,8 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.get_auth_cfg
- */
-static auth_cfg_t* get_auth_cfg(private_ike_sa_t *this, bool local)
+METHOD(ike_sa_t, get_auth_cfg, auth_cfg_t*,
+	private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
@@ -389,10 +369,8 @@ static auth_cfg_t* get_auth_cfg(private_ike_sa_t *this, bool local)
 	return this->other_auth;
 }
 
-/**
- * Implementation of ike_sa_t.add_auth_cfg
- */
-static void add_auth_cfg(private_ike_sa_t *this, bool local, auth_cfg_t *cfg)
+METHOD(ike_sa_t, add_auth_cfg, void,
+	private_ike_sa_t *this, bool local, auth_cfg_t *cfg)
 {
 	if (local)
 	{
@@ -404,11 +382,8 @@ static void add_auth_cfg(private_ike_sa_t *this, bool local, auth_cfg_t *cfg)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.create_auth_cfg_enumerator
- */
-static enumerator_t* create_auth_cfg_enumerator(private_ike_sa_t *this,
-												bool local)
+METHOD(ike_sa_t, create_auth_cfg_enumerator, enumerator_t*,
+	private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
@@ -439,27 +414,21 @@ static void flush_auth_cfgs(private_ike_sa_t *this)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.get_proposal
- */
-static proposal_t* get_proposal(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_proposal, proposal_t*,
+	private_ike_sa_t *this)
 {
 	return this->proposal;
 }
 
-/**
- * Implementation of ike_sa_t.set_proposal
- */
-static void set_proposal(private_ike_sa_t *this, proposal_t *proposal)
+METHOD(ike_sa_t, set_proposal, void,
+	private_ike_sa_t *this, proposal_t *proposal)
 {
 	DESTROY_IF(this->proposal);
 	this->proposal = proposal->clone(proposal);
 }
 
-/**
- * Implementation of ike_sa_t.set_message_id
- */
-static void set_message_id(private_ike_sa_t *this, bool initiate, u_int32_t mid)
+METHOD(ike_sa_t, set_message_id, void,
+	private_ike_sa_t *this, bool initiate, u_int32_t mid)
 {
 	if (initiate)
 	{
@@ -471,10 +440,8 @@ static void set_message_id(private_ike_sa_t *this, bool initiate, u_int32_t mid)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.send_keepalive
- */
-static void send_keepalive(private_ike_sa_t *this)
+METHOD(ike_sa_t, send_keepalive, void,
+	private_ike_sa_t *this)
 {
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
@@ -510,52 +477,39 @@ static void send_keepalive(private_ike_sa_t *this)
 									this->keepalive_interval - diff);
 }
 
-/**
- * Implementation of ike_sa_t.get_ike_cfg
- */
-static ike_cfg_t *get_ike_cfg(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_ike_cfg, ike_cfg_t*,
+	private_ike_sa_t *this)
 {
 	return this->ike_cfg;
 }
 
-/**
- * Implementation of ike_sa_t.set_ike_cfg
- */
-static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
+METHOD(ike_sa_t, set_ike_cfg, void,
+	private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 {
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
 }
 
-/**
- * Implementation of ike_sa_t.enable_extension.
- */
-static void enable_extension(private_ike_sa_t *this, ike_extension_t extension)
+METHOD(ike_sa_t, enable_extension, void,
+	private_ike_sa_t *this, ike_extension_t extension)
 {
 	this->extensions |= extension;
 }
 
-/**
- * Implementation of ike_sa_t.has_extension.
- */
-static bool supports_extension(private_ike_sa_t *this, ike_extension_t extension)
+METHOD(ike_sa_t, supports_extension, bool,
+	private_ike_sa_t *this, ike_extension_t extension)
 {
 	return (this->extensions & extension) != FALSE;
 }
 
-/**
- * Implementation of ike_sa_t.has_condition.
- */
-static bool has_condition(private_ike_sa_t *this, ike_condition_t condition)
+METHOD(ike_sa_t, has_condition, bool,
+	private_ike_sa_t *this, ike_condition_t condition)
 {
 	return (this->conditions & condition) != FALSE;
 }
 
-/**
- * Implementation of ike_sa_t.enable_condition.
- */
-static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
-						  bool enable)
+METHOD(ike_sa_t, set_condition, void,
+	private_ike_sa_t *this, ike_condition_t condition, bool enable)
 {
 	if (has_condition(this, condition) != enable)
 	{
@@ -601,10 +555,8 @@ static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
 	}
 }
 
-/**
- * Implementation of ike_sa_t.send_dpd
- */
-static status_t send_dpd(private_ike_sa_t *this)
+METHOD(ike_sa_t, send_dpd, status_t,
+	private_ike_sa_t *this)
 {
 	job_t *job;
 	time_t diff, delay;
@@ -660,18 +612,14 @@ static status_t send_dpd(private_ike_sa_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of ike_sa_t.get_state.
- */
-static ike_sa_state_t get_state(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_state, ike_sa_state_t,
+	private_ike_sa_t *this)
 {
 	return this->state;
 }
 
-/**
- * Implementation of ike_sa_t.set_state.
- */
-static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
+METHOD(ike_sa_t, set_state, void,
+	private_ike_sa_t *this, ike_sa_state_t state)
 {
 	DBG2(DBG_IKE, "IKE_SA %s[%d] state change: %N => %N",
 		 get_name(this), this->unique_id,
@@ -754,10 +702,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	this->state = state;
 }
 
-/**
- * Implementation of ike_sa_t.reset
- */
-static void reset(private_ike_sa_t *this)
+METHOD(ike_sa_t, reset, void,
+	private_ike_sa_t *this)
 {
 	/*  the responder ID is reset, as peer may choose another one */
 	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
@@ -770,18 +716,14 @@ static void reset(private_ike_sa_t *this)
 	this->task_manager->reset(this->task_manager, 0, 0);
 }
 
-/**
- * Implementation of ike_sa_t.get_keymat
- */
-static keymat_t* get_keymat(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_keymat, keymat_t*,
+	private_ike_sa_t *this)
 {
 	return this->keymat;
 }
 
-/**
- * Implementation of ike_sa_t.set_virtual_ip
- */
-static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
+METHOD(ike_sa_t, set_virtual_ip, void,
+	private_ike_sa_t *this, bool local, host_t *ip)
 {
 	if (local)
 	{
@@ -811,10 +753,8 @@ static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.get_virtual_ip
- */
-static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
+METHOD(ike_sa_t, get_virtual_ip, host_t*,
+	private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
@@ -826,27 +766,21 @@ static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.add_additional_address.
- */
-static void add_additional_address(private_ike_sa_t *this, host_t *host)
+METHOD(ike_sa_t, add_additional_address, void,
+	private_ike_sa_t *this, host_t *host)
 {
 	this->additional_addresses->insert_last(this->additional_addresses, host);
 }
 
-/**
- * Implementation of ike_sa_t.create_additional_address_iterator.
- */
-static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
+METHOD(ike_sa_t, create_additional_address_iterator, iterator_t*,
+	private_ike_sa_t *this)
 {
 	return this->additional_addresses->create_iterator(
 											this->additional_addresses, TRUE);
 }
 
-/**
- * Implementation of ike_sa_t.has_mapping_changed
- */
-static bool has_mapping_changed(private_ike_sa_t *this, chunk_t hash)
+METHOD(ike_sa_t, has_mapping_changed, bool,
+	private_ike_sa_t *this, chunk_t hash)
 {
 	if (this->nat_detection_dest.ptr == NULL)
 	{
@@ -862,26 +796,20 @@ static bool has_mapping_changed(private_ike_sa_t *this, chunk_t hash)
 	return TRUE;
 }
 
-/**
- * Implementation of ike_sa_t.set_pending_updates.
- */
-static void set_pending_updates(private_ike_sa_t *this, u_int32_t updates)
+METHOD(ike_sa_t, set_pending_updates, void,
+	private_ike_sa_t *this, u_int32_t updates)
 {
 	this->pending_updates = updates;
 }
 
-/**
- * Implementation of ike_sa_t.get_pending_updates.
- */
-static u_int32_t get_pending_updates(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_pending_updates, u_int32_t,
+	private_ike_sa_t *this)
 {
 	return this->pending_updates;
 }
 
-/**
- * Update hosts, as addresses may change (NAT)
- */
-static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
+METHOD(ike_sa_t, update_hosts, void,
+	private_ike_sa_t *this, host_t *me, host_t *other)
 {
 	bool update = FALSE;
 
@@ -946,11 +874,8 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.generate
- */
-static status_t generate_message(private_ike_sa_t *this, message_t *message,
-								 packet_t **packet)
+METHOD(ike_sa_t, generate_message, status_t,
+	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
@@ -994,10 +919,8 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->destroy(response);
 }
 
-/**
- * Implementation of ike_sa_t.set_kmaddress.
- */
-static void set_kmaddress(private_ike_sa_t *this, host_t *local, host_t *remote)
+METHOD(ike_sa_t, set_kmaddress, void,
+	private_ike_sa_t *this, host_t *local, host_t *remote)
 {
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
@@ -1006,46 +929,35 @@ static void set_kmaddress(private_ike_sa_t *this, host_t *local, host_t *remote)
 }
 
 #ifdef ME
-/**
- * Implementation of ike_sa_t.act_as_mediation_server.
- */
-static void act_as_mediation_server(private_ike_sa_t *this)
+METHOD(ike_sa_t, act_as_mediation_server, void,
+	private_ike_sa_t *this)
 {
 	charon->mediation_manager->update_sa_id(charon->mediation_manager,
 			this->other_id, this->ike_sa_id);
 	this->is_mediation_server = TRUE;
 }
 
-/**
- * Implementation of ike_sa_t.get_server_reflexive_host.
- */
-static host_t *get_server_reflexive_host(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_server_reflexive_host, host_t*,
+	private_ike_sa_t *this)
 {
 	return this->server_reflexive_host;
 }
 
-/**
- * Implementation of ike_sa_t.set_server_reflexive_host.
- */
-static void set_server_reflexive_host(private_ike_sa_t *this, host_t *host)
+METHOD(ike_sa_t, set_server_reflexive_host, void,
+	private_ike_sa_t *this, host_t *host)
 {
 	DESTROY_IF(this->server_reflexive_host);
 	this->server_reflexive_host = host;
 }
 
-/**
- * Implementation of ike_sa_t.get_connect_id.
- */
-static chunk_t get_connect_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_connect_id, chunk_t,
+	private_ike_sa_t *this)
 {
 	return this->connect_id;
 }
 
-/**
- * Implementation of ike_sa_t.respond
- */
-static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
-						chunk_t connect_id)
+METHOD(ike_sa_t, respond, status_t,
+	private_ike_sa_t *this, identification_t *peer_id, chunk_t connect_id)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->respond(task, peer_id, connect_id);
@@ -1053,10 +965,8 @@ static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.callback
- */
-static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
+METHOD(ike_sa_t, callback, status_t,
+	private_ike_sa_t *this, identification_t *peer_id)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->callback(task, peer_id);
@@ -1064,12 +974,9 @@ static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.relay
- */
-static status_t relay(private_ike_sa_t *this, identification_t *requester,
-					  chunk_t connect_id, chunk_t connect_key,
-					  linked_list_t *endpoints, bool response)
+METHOD(ike_sa_t, relay, status_t,
+	private_ike_sa_t *this, identification_t *requester, chunk_t connect_id,
+	chunk_t connect_key, linked_list_t *endpoints, bool response)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->relay(task, requester, connect_id, connect_key, endpoints, response);
@@ -1077,11 +984,8 @@ static status_t relay(private_ike_sa_t *this, identification_t *requester,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.initiate_mediation
- */
-static status_t initiate_mediation(private_ike_sa_t *this,
-								   peer_cfg_t *mediated_cfg)
+METHOD(ike_sa_t, initiate_mediation, status_t,
+	private_ike_sa_t *this, peer_cfg_t *mediated_cfg)
 {
 	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->connect(task, mediated_cfg->get_peer_id(mediated_cfg));
@@ -1089,11 +993,8 @@ static status_t initiate_mediation(private_ike_sa_t *this,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.initiate_mediated
- */
-static status_t initiate_mediated(private_ike_sa_t *this, host_t *me,
-								  host_t *other, chunk_t connect_id)
+METHOD(ike_sa_t, initiate_mediated, status_t,
+	private_ike_sa_t *this, host_t *me, host_t *other, chunk_t connect_id)
 {
 	set_my_host(this, me->clone(me));
 	set_other_host(this, other->clone(other));
@@ -1166,12 +1067,9 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.initiate
- */
-static status_t initiate(private_ike_sa_t *this,
-						 child_cfg_t *child_cfg, u_int32_t reqid,
-						 traffic_selector_t *tsi, traffic_selector_t *tsr)
+METHOD(ike_sa_t, initiate, status_t,
+	private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid,
+	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
 	task_t *task;
 
@@ -1259,10 +1157,8 @@ static status_t initiate(private_ike_sa_t *this,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.process_message.
- */
-static status_t process_message(private_ike_sa_t *this, message_t *message)
+METHOD(ike_sa_t, process_message, status_t,
+	private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
 	bool is_request;
@@ -1375,43 +1271,33 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	return status;
 }
 
-/**
- * Implementation of ike_sa_t.get_id.
- */
-static ike_sa_id_t* get_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_id, ike_sa_id_t*,
+	private_ike_sa_t *this)
 {
 	return this->ike_sa_id;
 }
 
-/**
- * Implementation of ike_sa_t.get_my_id.
- */
-static identification_t* get_my_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_my_id, identification_t*,
+	private_ike_sa_t *this)
 {
 	return this->my_id;
 }
 
-/**
- * Implementation of ike_sa_t.set_my_id.
- */
-static void set_my_id(private_ike_sa_t *this, identification_t *me)
+METHOD(ike_sa_t, set_my_id, void,
+	private_ike_sa_t *this, identification_t *me)
 {
 	DESTROY_IF(this->my_id);
 	this->my_id = me;
 }
 
-/**
- * Implementation of ike_sa_t.get_other_id.
- */
-static identification_t* get_other_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_other_id, identification_t*,
+	private_ike_sa_t *this)
 {
 	return this->other_id;
 }
 
-/**
- * Implementation of ike_sa_t.get_other_eap_id.
- */
-static identification_t* get_other_eap_id(private_ike_sa_t *this)
+METHOD(ike_sa_t, get_other_eap_id, identification_t*,
+	private_ike_sa_t *this)
 {
 	identification_t *id = NULL, *current;
 	enumerator_t *enumerator;
@@ -1440,28 +1326,21 @@ static identification_t* get_other_eap_id(private_ike_sa_t *this)
 	return this->other_id;
 }
 
-/**
- * Implementation of ike_sa_t.set_other_id.
- */
-static void set_other_id(private_ike_sa_t *this, identification_t *other)
+METHOD(ike_sa_t, set_other_id, void,
+	private_ike_sa_t *this, identification_t *other)
 {
 	DESTROY_IF(this->other_id);
 	this->other_id = other;
 }
 
-/**
- * Implementation of ike_sa_t.add_child_sa.
- */
-static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
+METHOD(ike_sa_t, add_child_sa, void,
+	private_ike_sa_t *this, child_sa_t *child_sa)
 {
 	this->child_sas->insert_last(this->child_sas, child_sa);
 }
 
-/**
- * Implementation of ike_sa_t.get_child_sa.
- */
-static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
-								u_int32_t spi, bool inbound)
+METHOD(ike_sa_t, get_child_sa, child_sa_t*,
+	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool inbound)
 {
 	iterator_t *iterator;
 	child_sa_t *current, *found = NULL;
@@ -1479,19 +1358,14 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	return found;
 }
 
-/**
- * Implementation of ike_sa_t.create_child_sa_iterator.
- */
-static iterator_t* create_child_sa_iterator(private_ike_sa_t *this)
+METHOD(ike_sa_t, create_child_sa_iterator, iterator_t*,
+	private_ike_sa_t *this)
 {
 	return this->child_sas->create_iterator(this->child_sas, TRUE);
 }
 
-/**
- * Implementation of ike_sa_t.rekey_child_sa.
- */
-static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
-							   u_int32_t spi)
+METHOD(ike_sa_t, rekey_child_sa, status_t,
+	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
 	child_rekey_t *child_rekey;
 
@@ -1500,11 +1374,8 @@ static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.delete_child_sa.
- */
-static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
-								u_int32_t spi)
+METHOD(ike_sa_t, delete_child_sa, status_t,
+	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
 	child_delete_t *child_delete;
 
@@ -1513,11 +1384,8 @@ static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.destroy_child_sa.
- */
-static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
-								 u_int32_t spi)
+METHOD(ike_sa_t, destroy_child_sa, status_t,
+	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -1539,10 +1407,8 @@ static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	return status;
 }
 
-/**
- * Implementation of public_ike_sa_t.delete.
- */
-static status_t delete_(private_ike_sa_t *this)
+METHOD(ike_sa_t, delete_, status_t,
+	private_ike_sa_t *this)
 {
 	ike_delete_t *ike_delete;
 
@@ -1567,10 +1433,8 @@ static status_t delete_(private_ike_sa_t *this)
 	return DESTROY_ME;
 }
 
-/**
- * Implementation of ike_sa_t.rekey.
- */
-static status_t rekey(private_ike_sa_t *this)
+METHOD(ike_sa_t, rekey, status_t,
+	private_ike_sa_t *this)
 {
 	ike_rekey_t *ike_rekey;
 
@@ -1580,10 +1444,8 @@ static status_t rekey(private_ike_sa_t *this)
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.reauth
- */
-static status_t reauth(private_ike_sa_t *this)
+METHOD(ike_sa_t, reauth, status_t,
+	private_ike_sa_t *this)
 {
 	task_t *task;
 
@@ -1618,10 +1480,8 @@ static status_t reauth(private_ike_sa_t *this)
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.reestablish
- */
-static status_t reestablish(private_ike_sa_t *this)
+METHOD(ike_sa_t, reestablish, status_t,
+	private_ike_sa_t *this)
 {
 	ike_sa_t *new;
 	host_t *host;
@@ -1749,10 +1609,8 @@ static status_t reestablish(private_ike_sa_t *this)
 	return status;
 }
 
-/**
- * Implementation of ike_sa_t.retransmit.
- */
-static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
+METHOD(ike_sa_t, retransmit, status_t,
+	private_ike_sa_t *this, u_int32_t message_id)
 {
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
@@ -1790,10 +1648,8 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 	return SUCCESS;
 }
 
-/**
- * Implementation of ike_sa_t.set_auth_lifetime.
- */
-static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
+METHOD(ike_sa_t, set_auth_lifetime, void,
+	private_ike_sa_t *this, u_int32_t lifetime)
 {
 	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
 	u_int32_t reauth_time = time_monotonic(NULL) + lifetime - reduction;
@@ -1823,10 +1679,8 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 	}
 }
 
-/**
- * Implementation of ike_sa_t.roam.
- */
-static status_t roam(private_ike_sa_t *this, bool address)
+METHOD(ike_sa_t, roam, status_t,
+	private_ike_sa_t *this, bool address)
 {
 	host_t *src;
 	ike_mobike_t *mobike;
@@ -1919,12 +1773,9 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	return reauth(this);
 }
 
-/**
- * Implementation of ike_sa_t.add_configuration_attribute
- */
-static void add_configuration_attribute(private_ike_sa_t *this,
-							attribute_handler_t *handler,
-							configuration_attribute_type_t type, chunk_t data)
+METHOD(ike_sa_t, add_configuration_attribute, void,
+	private_ike_sa_t *this, attribute_handler_t *handler,
+	configuration_attribute_type_t type, chunk_t data)
 {
 	attribute_entry_t *entry = malloc_thing(attribute_entry_t);
 
@@ -1935,11 +1786,10 @@ static void add_configuration_attribute(private_ike_sa_t *this,
 	this->attributes->insert_last(this->attributes, entry);
 }
 
-/**
- * Implementation of ike_sa_t.inherit.
- */
-static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
+METHOD(ike_sa_t, inherit, status_t,
+	private_ike_sa_t *this, ike_sa_t *other_public)
 {
+	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
 	child_sa_t *child_sa;
 	attribute_entry_t *entry;
 
@@ -2021,10 +1871,8 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	return this->task_manager->initiate(this->task_manager);
 }
 
-/**
- * Implementation of ike_sa_t.destroy.
- */
-static void destroy(private_ike_sa_t *this)
+METHOD(ike_sa_t, destroy, void,
+	private_ike_sa_t *this)
 {
 	attribute_entry_t *entry;
 
@@ -2106,122 +1954,106 @@ static void destroy(private_ike_sa_t *this)
  */
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 {
-	private_ike_sa_t *this = malloc_thing(private_ike_sa_t);
+	private_ike_sa_t *this;
 	static u_int32_t unique_id = 0;
 
-	/* Public functions */
-	this->public.get_state = (ike_sa_state_t (*)(ike_sa_t*)) get_state;
-	this->public.set_state = (void (*)(ike_sa_t*,ike_sa_state_t)) set_state;
-	this->public.get_name = (char* (*)(ike_sa_t*))get_name;
-	this->public.get_statistic = (u_int32_t(*)(ike_sa_t*, statistic_t kind))get_statistic;
-	this->public.process_message = (status_t (*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initiate = (status_t (*)(ike_sa_t*,child_cfg_t*,u_int32_t,traffic_selector_t*,traffic_selector_t*)) initiate;
-	this->public.get_ike_cfg = (ike_cfg_t* (*)(ike_sa_t*))get_ike_cfg;
-	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
-	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
-	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
-	this->public.get_auth_cfg = (auth_cfg_t*(*)(ike_sa_t*, bool local))get_auth_cfg;
-	this->public.create_auth_cfg_enumerator = (enumerator_t*(*)(ike_sa_t*, bool local))create_auth_cfg_enumerator;
-	this->public.add_auth_cfg = (void(*)(ike_sa_t*, bool local, auth_cfg_t *cfg))add_auth_cfg;
-	this->public.get_proposal = (proposal_t*(*)(ike_sa_t*))get_proposal;
-	this->public.set_proposal = (void(*)(ike_sa_t*, proposal_t *proposal))set_proposal;
-	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
-	this->public.get_my_host = (host_t* (*)(ike_sa_t*)) get_my_host;
-	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
-	this->public.get_other_host = (host_t* (*)(ike_sa_t*)) get_other_host;
-	this->public.set_other_host = (void (*)(ike_sa_t*,host_t*)) set_other_host;
-	this->public.set_message_id = (void(*)(ike_sa_t*, bool inbound, u_int32_t mid))set_message_id;
-	this->public.update_hosts = (void(*)(ike_sa_t*, host_t *me, host_t *other))update_hosts;
-	this->public.get_my_id = (identification_t* (*)(ike_sa_t*)) get_my_id;
-	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
-	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
-	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.get_other_eap_id = (identification_t* (*)(ike_sa_t*)) get_other_eap_id;
-	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
-	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
-	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
-	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
-	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
-	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
-	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
-	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
-	this->public.has_mapping_changed = (bool(*)(ike_sa_t*, chunk_t hash))has_mapping_changed;
-	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
-	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
-	this->public.destroy = (void (*)(ike_sa_t*))destroy;
-	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
-	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
-	this->public.get_keymat = (keymat_t*(*)(ike_sa_t*))get_keymat;
-	this->public.add_child_sa = (void (*)(ike_sa_t*,child_sa_t*)) add_child_sa;
-	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
-	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
-	this->public.rekey_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
-	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
-	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
-	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
-	this->public.reauth = (status_t (*)(ike_sa_t*))reauth;
-	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
-	this->public.set_auth_lifetime = (void(*)(ike_sa_t*, u_int32_t lifetime))set_auth_lifetime;
-	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;
-	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
-	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
-	this->public.reset = (void (*)(ike_sa_t*))reset;
-	this->public.get_unique_id = (u_int32_t (*)(ike_sa_t*))get_unique_id;
-	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
-	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
-	this->public.add_configuration_attribute = (void(*)(ike_sa_t*, attribute_handler_t *handler,configuration_attribute_type_t type, chunk_t data))add_configuration_attribute;
-	this->public.set_kmaddress = (void (*)(ike_sa_t*,host_t*,host_t*))set_kmaddress;
+	INIT(this,
+		.public = {
+			.get_state = _get_state,
+			.set_state = _set_state,
+			.get_name = _get_name,
+			.get_statistic = _get_statistic,
+			.process_message = _process_message,
+			.initiate = _initiate,
+			.get_ike_cfg = _get_ike_cfg,
+			.set_ike_cfg = _set_ike_cfg,
+			.get_peer_cfg = _get_peer_cfg,
+			.set_peer_cfg = _set_peer_cfg,
+			.get_auth_cfg = _get_auth_cfg,
+			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.add_auth_cfg = _add_auth_cfg,
+			.get_proposal = _get_proposal,
+			.set_proposal = _set_proposal,
+			.get_id = _get_id,
+			.get_my_host = _get_my_host,
+			.set_my_host = _set_my_host,
+			.get_other_host = _get_other_host,
+			.set_other_host = _set_other_host,
+			.set_message_id = _set_message_id,
+			.update_hosts = _update_hosts,
+			.get_my_id = _get_my_id,
+			.set_my_id = _set_my_id,
+			.get_other_id = _get_other_id,
+			.set_other_id = _set_other_id,
+			.get_other_eap_id = _get_other_eap_id,
+			.enable_extension = _enable_extension,
+			.supports_extension = _supports_extension,
+			.set_condition = _set_condition,
+			.has_condition = _has_condition,
+			.set_pending_updates = _set_pending_updates,
+			.get_pending_updates = _get_pending_updates,
+			.create_additional_address_iterator = _create_additional_address_iterator,
+			.add_additional_address = _add_additional_address,
+			.has_mapping_changed = _has_mapping_changed,
+			.retransmit = _retransmit,
+			.delete = _delete_,
+			.destroy = _destroy,
+			.send_dpd = _send_dpd,
+			.send_keepalive = _send_keepalive,
+			.get_keymat = _get_keymat,
+			.add_child_sa = _add_child_sa,
+			.get_child_sa = _get_child_sa,
+			.create_child_sa_iterator = _create_child_sa_iterator,
+			.rekey_child_sa = _rekey_child_sa,
+			.delete_child_sa = _delete_child_sa,
+			.destroy_child_sa = _destroy_child_sa,
+			.rekey = _rekey,
+			.reauth = _reauth,
+			.reestablish = _reestablish,
+			.set_auth_lifetime = _set_auth_lifetime,
+			.roam = _roam,
+			.inherit = _inherit,
+			.generate_message = _generate_message,
+			.reset = _reset,
+			.get_unique_id = _get_unique_id,
+			.set_virtual_ip = _set_virtual_ip,
+			.get_virtual_ip = _get_virtual_ip,
+			.add_configuration_attribute = _add_configuration_attribute,
+			.set_kmaddress = _set_kmaddress,
 #ifdef ME
-	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;
-	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
-	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
-	this->public.get_connect_id = (chunk_t (*)(ike_sa_t*)) get_connect_id;
-	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
-	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,chunk_t)) initiate_mediated;
-	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
-	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
-	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;
+			.act_as_mediation_server = _act_as_mediation_server,
+			.get_server_reflexive_host = _get_server_reflexive_host,
+			.set_server_reflexive_host = _set_server_reflexive_host,
+			.get_connect_id = _get_connect_id,
+			.initiate_mediation = _initiate_mediation,
+			.initiate_mediated = _initiate_mediated,
+			.relay = _relay,
+			.callback = _callback,
+			.respond = _respond,
 #endif /* ME */
-
-	/* initialize private fields */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->child_sas = linked_list_create();
-	this->my_host = host_create_any(AF_INET);
+		},
+		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+		.child_sas = linked_list_create(),
+		.my_host = host_create_any(AF_INET),
+		.other_host = host_create_any(AF_INET),
+		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
+		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
+		.keymat = keymat_create(ike_sa_id->is_initiator(ike_sa_id)),
+		.state = IKE_CREATED,
+		.stats[STAT_INBOUND] = time_monotonic(NULL),
+		.stats[STAT_OUTBOUND] = time_monotonic(NULL),
+		.my_auth = auth_cfg_create(),
+		.other_auth = auth_cfg_create(),
+		.my_auths = linked_list_create(),
+		.other_auths = linked_list_create(),
+		.task_manager = task_manager_create(&this->public),
+		.unique_id = ++unique_id,
+		.additional_addresses = linked_list_create(),
+		.attributes = linked_list_create(),
+		.keepalive_interval = lib->settings->get_time(lib->settings,
+									"charon.keep_alive", KEEPALIVE_INTERVAL),
+	);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
-	this->other_host = host_create_any(AF_INET);
-	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	this->extensions = 0;
-	this->conditions = 0;
-	this->keymat = keymat_create(ike_sa_id->is_initiator(ike_sa_id));
-	this->state = IKE_CREATED;
-	this->keepalive_interval = lib->settings->get_time(lib->settings,
-									"charon.keep_alive", KEEPALIVE_INTERVAL);
-	memset(this->stats, 0, sizeof(this->stats));
-	this->stats[STAT_INBOUND] = this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
-	this->ike_cfg = NULL;
-	this->peer_cfg = NULL;
-	this->my_auth = auth_cfg_create();
-	this->other_auth = auth_cfg_create();
-	this->my_auths = linked_list_create();
-	this->other_auths = linked_list_create();
-	this->proposal = NULL;
-	this->task_manager = task_manager_create(&this->public);
-	this->unique_id = ++unique_id;
-	this->my_virtual_ip = NULL;
-	this->other_virtual_ip = NULL;
-	this->additional_addresses = linked_list_create();
-	this->attributes = linked_list_create();
-	this->nat_detection_dest = chunk_empty;
-	this->pending_updates = 0;
-	this->keyingtry = 0;
-	this->local_host = NULL;
-	this->remote_host = NULL;
-#ifdef ME
-	this->is_mediation_server = FALSE;
-	this->server_reflexive_host = NULL;
-	this->connect_id = chunk_empty;
-#endif /* ME */
 
 	return &this->public;
 }
