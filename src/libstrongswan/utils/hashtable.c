@@ -129,6 +129,11 @@ struct private_enumerator_t {
 	u_int row;
 
 	/**
+	 * current pair
+	 */
+	pair_t *pair;
+
+	/**
 	 * enumerator for the current row
 	 */
 	enumerator_t *current;
@@ -313,6 +318,22 @@ METHOD(hashtable_t, remove_, void*,
 	return value;
 }
 
+METHOD(hashtable_t, remove_at, void,
+	   private_hashtable_t *this, private_enumerator_t *enumerator)
+{
+	if (enumerator->table == this && enumerator->current)
+	{
+		linked_list_t *list;
+		list = this->table[enumerator->row];
+		if (list)
+		{
+			list->remove_at(list, enumerator->current);
+			free(enumerator->pair);
+			this->count--;
+		}
+	}
+}
+
 METHOD(hashtable_t, get_count, u_int,
 	   private_hashtable_t *this)
 {
@@ -326,17 +347,15 @@ METHOD(enumerator_t, enumerate, bool,
 	{
 		if (this->current)
 		{
-			pair_t *pair;
-
-			if (this->current->enumerate(this->current, &pair))
+			if (this->current->enumerate(this->current, &this->pair))
 			{
 				if (key)
 				{
-					*key = pair->key;
+					*key = this->pair->key;
 				}
 				if (value)
 				{
-					*value = pair->value;
+					*value = this->pair->value;
 				}
 				return TRUE;
 			}
@@ -346,7 +365,6 @@ METHOD(enumerator_t, enumerate, bool,
 		else
 		{
 			linked_list_t *list;
-
 			list = this->table->table[this->row];
 			if (list)
 			{
@@ -416,6 +434,7 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 			.put = _put,
 			.get = _get,
 			.remove = _remove_,
+			.remove_at = (void*)_remove_at,
 			.get_count = _get_count,
 			.create_enumerator = _create_enumerator,
 			.destroy = _destroy,

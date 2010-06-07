@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -87,9 +87,17 @@ struct hashtable_t {
 	void *(*remove) (hashtable_t *this, void *key);
 
 	/**
+	 * Removes the key and value pair from the hash table at which the given
+	 * enumerator currently points.
+	 *
+	 * @param enumerator	enumerator, from create_enumerator
+	 */
+	void (*remove_at) (hashtable_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Gets the number of items in the hash table.
 	 *
-	 * @return 			number of items
+	 * @return			number of items
 	 */
 	u_int (*get_count) (hashtable_t *this);
 
@@ -106,7 +114,7 @@ struct hashtable_t {
  * @param hash			hash function
  * @param equals		equals function
  * @param capacity		initial capacity
- * @return 				hashtable_t object.
+ * @return				hashtable_t object.
  */
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int capacity);
