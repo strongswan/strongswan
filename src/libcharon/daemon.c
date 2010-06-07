@@ -29,7 +29,6 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <selectors/traffic_selector.h>
 #include <config/proposal.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
@@ -429,10 +428,6 @@ bool libcharon_init()
 	this = daemon_create();
 	charon = &this->public;
 
-	lib->printf_hook->add_handler(lib->printf_hook, 'R',
-								  traffic_selector_printf_hook,
-								  PRINTF_HOOK_ARGTYPE_POINTER,
-								  PRINTF_HOOK_ARGTYPE_END);
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,

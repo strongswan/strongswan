@@ -18,12 +18,13 @@
 
 #include <stdlib.h>
 
-#include "debug.h"
-#include "threading/thread.h"
-#include "utils/identification.h"
-#include "utils/host.h"
+#include <debug.h>
+#include <threading/thread.h>
+#include <utils/identification.h>
+#include <utils/host.h>
+#include <selectors/traffic_selector.h>
 #ifdef LEAK_DETECTIVE
-#include "utils/leak_detective.h"
+#include <utils/leak_detective.h>
 #endif
 
 #define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
@@ -128,6 +129,8 @@ bool library_init(char *settings)
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_POINTER,
 					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'Y', identification_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'R', traffic_selector_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 
 	this->public.settings = settings_create(settings);
