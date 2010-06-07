@@ -1013,6 +1013,22 @@ METHOD(task_manager_t, reset, void,
 	this->reset = TRUE;
 }
 
+METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
+	private_task_manager_t *this, task_queue_t queue)
+{
+	switch (queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			return this->active_tasks->create_enumerator(this->active_tasks);
+		case TASK_QUEUE_PASSIVE:
+			return this->passive_tasks->create_enumerator(this->passive_tasks);
+		case TASK_QUEUE_QUEUED:
+			return this->queued_tasks->create_enumerator(this->queued_tasks);
+		default:
+			return enumerator_create_empty();
+	}
+}
+
 METHOD(task_manager_t, destroy, void,
 	private_task_manager_t *this)
 {
@@ -1043,6 +1059,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 			.reset = _reset,
 			.adopt_tasks = _adopt_tasks,
 			.busy = _busy,
+			.create_task_enumerator = _create_task_enumerator,
 			.destroy = _destroy,
 		},
 		.ike_sa = ike_sa,

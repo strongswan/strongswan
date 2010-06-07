@@ -22,6 +22,7 @@
 #define TASK_MANAGER_H_
 
 typedef struct task_manager_t task_manager_t;
+typedef enum task_queue_t task_queue_t;
 
 #include <limits.h>
 
@@ -55,6 +56,17 @@ typedef struct task_manager_t task_manager_t;
  */
 #define ROUTEABILITY_CHECK_TRIES 10
 
+/**
+ * Type of task queues the task manager uses to handle tasks
+ */
+enum task_queue_t {
+	/** tasks currently active, initiated by us */
+	TASK_QUEUE_ACTIVE,
+	/** passive tasks initiated by the remote peer */
+	TASK_QUEUE_PASSIVE,
+	/** tasks queued for initiated, but not yet activated */
+	TASK_QUEUE_QUEUED,
+};
 
 /**
  * The task manager, juggles task and handles message exchanges.
@@ -156,6 +168,15 @@ struct task_manager_t {
 	 * @return				TRUE if we are waiting, FALSE otherwise
 	 */
 	bool (*busy) (task_manager_t *this);
+
+	/**
+	 * Create an enumerator over tasks in a specific queue.
+	 *
+	 * @param queue			queue to create an enumerator over
+	 * @return				enumerator over task_t
+	 */
+	enumerator_t* (*create_task_enumerator)(task_manager_t *this,
+											task_queue_t queue);
 
 	/**
 	 * Destroy the task_manager_t.
