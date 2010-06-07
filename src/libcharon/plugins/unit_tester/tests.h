@@ -19,6 +19,7 @@
  */
 
 DEFINE_TEST("linked_list_t->remove()", test_list_remove, FALSE)
+DEFINE_TEST("hashtable_t->remove_at()", test_hashtable_remove_at, FALSE)
 DEFINE_TEST("simple enumerator", test_enumerate, FALSE)
 DEFINE_TEST("nested enumerator", test_enumerate_nested, FALSE)
 DEFINE_TEST("filtered enumerator", test_enumerate_filtered, FALSE)
