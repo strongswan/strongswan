@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Tobias Brunner
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2007-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -195,10 +195,8 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	return found;
 }
 
-/**
- * Implementation of task_manager_t.retransmit
- */
-static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
+METHOD(task_manager_t, retransmit, status_t,
+	private_task_manager_t *this, u_int32_t message_id)
 {
 	if (message_id == this->initiating.mid)
 	{
@@ -281,11 +279,8 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 	return SUCCESS;
 }
 
-/**
- * build a request using the active task list
- * Implementation of task_manager_t.initiate
- */
-static status_t build_request(private_task_manager_t *this)
+METHOD(task_manager_t, initiate, status_t,
+	private_task_manager_t *this)
 {
 	iterator_t *iterator;
 	task_t *task;
@@ -534,7 +529,7 @@ static status_t process_response(private_task_manager_t *this,
 		{	/* start all over again if we were reset */
 			this->reset = FALSE;
 			iterator->destroy(iterator);
-			return build_request(this);
+			return initiate(this);
 		}
 	}
 	iterator->destroy(iterator);
@@ -544,7 +539,7 @@ static status_t process_response(private_task_manager_t *this,
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
 
-	return build_request(this);
+	return initiate(this);
 }
 
 /**
@@ -883,10 +878,8 @@ static status_t process_request(private_task_manager_t *this,
 	return build_response(this, message);
 }
 
-/**
- * Implementation of task_manager_t.process_message
- */
-static status_t process_message(private_task_manager_t *this, message_t *msg)
+METHOD(task_manager_t, process_message, status_t,
+	private_task_manager_t *this, message_t *msg)
 {
 	u_int32_t mid = msg->get_message_id(msg);
 
@@ -943,10 +936,8 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 	return SUCCESS;
 }
 
-/**
- * Implementation of task_manager_t.queue_task
- */
-static void queue_task(private_task_manager_t *this, task_t *task)
+METHOD(task_manager_t, queue_task, void,
+	private_task_manager_t *this, task_t *task)
 {
 	if (task->get_type(task) == IKE_MOBIKE)
 	{	/*  there is no need to queue more than one mobike task */
@@ -969,11 +960,10 @@ static void queue_task(private_task_manager_t *this, task_t *task)
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
-/**
- * Implementation of task_manager_t.adopt_tasks
- */
-static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *other)
+METHOD(task_manager_t, adopt_tasks, void,
+	private_task_manager_t *this, task_manager_t *other_public)
 {
+	private_task_manager_t *other = (private_task_manager_t*)other_public;
 	task_t *task;
 
 	/* move queued tasks from other to this */
@@ -986,19 +976,14 @@ static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *ot
 	}
 }
 
-/**
- * Implementation of task_manager_t.busy
- */
-static bool busy(private_task_manager_t *this)
+METHOD(task_manager_t, busy, bool,
+	private_task_manager_t *this)
 {
 	return (this->active_tasks->get_count(this->active_tasks) > 0);
 }
 
-/**
- * Implementation of task_manager_t.reset
- */
-static void reset(private_task_manager_t *this,
-				  u_int32_t initiate, u_int32_t respond)
+METHOD(task_manager_t, reset, void,
+	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
 	task_t *task;
 
@@ -1028,10 +1013,8 @@ static void reset(private_task_manager_t *this,
 	this->reset = TRUE;
 }
 
-/**
- * Implementation of task_manager_t.destroy
- */
-static void destroy(private_task_manager_t *this)
+METHOD(task_manager_t, destroy, void,
+	private_task_manager_t *this)
 {
 	flush(this);
 
@@ -1049,34 +1032,31 @@ static void destroy(private_task_manager_t *this)
  */
 task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 {
-	private_task_manager_t *this = malloc_thing(private_task_manager_t);
+	private_task_manager_t *this;
 
-	this->public.process_message = (status_t(*)(task_manager_t*,message_t*))process_message;
-	this->public.queue_task = (void(*)(task_manager_t*,task_t*))queue_task;
-	this->public.initiate = (status_t(*)(task_manager_t*))build_request;
-	this->public.retransmit = (status_t(*)(task_manager_t*,u_int32_t))retransmit;
-	this->public.reset = (void(*)(task_manager_t*,u_int32_t,u_int32_t))reset;
-	this->public.adopt_tasks = (void(*)(task_manager_t*,task_manager_t*))adopt_tasks;
-	this->public.busy = (bool(*)(task_manager_t*))busy;
-	this->public.destroy = (void(*)(task_manager_t*))destroy;
-
-	this->ike_sa = ike_sa;
-	this->responding.packet = NULL;
-	this->initiating.packet = NULL;
-	this->responding.mid = 0;
-	this->initiating.mid = 0;
-	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	this->queued_tasks = linked_list_create();
-	this->active_tasks = linked_list_create();
-	this->passive_tasks = linked_list_create();
-	this->reset = FALSE;
-
-	this->retransmit_tries = lib->settings->get_int(lib->settings,
-								"charon.retransmit_tries", RETRANSMIT_TRIES);
-	this->retransmit_timeout = lib->settings->get_double(lib->settings,
-								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT);
-	this->retransmit_base = lib->settings->get_double(lib->settings,
-								"charon.retransmit_base", RETRANSMIT_BASE);
+	INIT(this,
+		.public = {
+			.process_message = _process_message,
+			.queue_task = _queue_task,
+			.initiate = _initiate,
+			.retransmit = _retransmit,
+			.reset = _reset,
+			.adopt_tasks = _adopt_tasks,
+			.busy = _busy,
+			.destroy = _destroy,
+		},
+		.ike_sa = ike_sa,
+		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
+		.queued_tasks = linked_list_create(),
+		.active_tasks = linked_list_create(),
+		.passive_tasks = linked_list_create(),
+		.retransmit_tries = lib->settings->get_int(lib->settings,
+								"charon.retransmit_tries", RETRANSMIT_TRIES),
+		.retransmit_timeout = lib->settings->get_double(lib->settings,
+								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT),
+		.retransmit_base = lib->settings->get_double(lib->settings,
+								"charon.retransmit_base", RETRANSMIT_BASE),
+	);
 
 	return &this->public;
 }
