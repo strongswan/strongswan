@@ -262,7 +262,7 @@ static void unlink_pidfile()
 	 * permissions on the parent dir(s) of the PID file */
 	if (pidfile)
 	{
-		ftruncate(fileno(pidfile), 0);
+		ignore_result(ftruncate(fileno(pidfile), 0));
 		fclose(pidfile);
 	}
 	unlink(PID_FILE);
