@@ -1628,6 +1628,17 @@ METHOD(ike_sa_t, retransmit, status_t,
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
 					reset(this);
+					if (this->stats[STAT_INBOUND])
+					{	/* IKE_INIT already completed, recreate associated tasks */
+						task_t *task;
+
+						task = (task_t*)ike_vendor_create(&this->public, TRUE);
+						this->task_manager->queue_task(this->task_manager, task);
+						task = (task_t*)ike_natd_create(&this->public, TRUE);
+						this->task_manager->queue_task(this->task_manager, task);
+						task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
+						this->task_manager->queue_task(this->task_manager, task);
+					}
 					return this->task_manager->initiate(this->task_manager);
 				}
 				DBG1(DBG_IKE, "establishing IKE_SA failed, peer not responding");
