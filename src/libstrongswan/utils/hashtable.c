@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -47,11 +47,13 @@ struct pair_t {
  */
 pair_t *pair_create(void *key, void *value, u_int hash)
 {
-	pair_t *this = malloc_thing(pair_t);
+	pair_t *this;
 
-	this->key = key;
-	this->value = value;
-	this->hash = hash;
+	INIT(this,
+		.key = key,
+		.value = value,
+		.hash = hash,
+	);
 
 	return this;
 }
@@ -219,10 +221,8 @@ static void rehash(private_hashtable_t *this)
 	free(old_table);
 }
 
-/**
- * Implementation of hashtable_t.put
- */
-static void *put(private_hashtable_t *this, void *key, void *value)
+METHOD(hashtable_t, put, void*,
+	   private_hashtable_t *this, void *key, void *value)
 {
 	void *old_value = NULL;
 	linked_list_t *list;
@@ -265,10 +265,8 @@ static void *put(private_hashtable_t *this, void *key, void *value)
 	return old_value;
 }
 
-/**
- * Implementation of hashtable_t.get
- */
-static void *get(private_hashtable_t *this, void *key)
+METHOD(hashtable_t, get, void*,
+	   private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
 	linked_list_t *list;
@@ -286,10 +284,8 @@ static void *get(private_hashtable_t *this, void *key)
 	return value;
 }
 
-/**
- * Implementation of hashtable_t.remove
- */
-static void *remove_(private_hashtable_t *this, void *key)
+METHOD(hashtable_t, remove_, void*,
+	   private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
 	linked_list_t *list;
@@ -317,18 +313,14 @@ static void *remove_(private_hashtable_t *this, void *key)
 	return value;
 }
 
-/**
- * Implementation of hashtable_t.get_count
- */
-static u_int get_count(private_hashtable_t *this)
+METHOD(hashtable_t, get_count, u_int,
+	   private_hashtable_t *this)
 {
 	return this->count;
 }
 
-/**
- * Implementation of private_enumerator_t.enumerator.enumerate.
- */
-static bool enumerate(private_enumerator_t *this, void **key, void **value)
+METHOD(enumerator_t, enumerate, bool,
+	   private_enumerator_t *this, void **key, void **value)
 {
 	while (this->row < this->table->capacity)
 	{
@@ -367,10 +359,8 @@ static bool enumerate(private_enumerator_t *this, void **key, void **value)
 	return FALSE;
 }
 
-/**
- * Implementation of private_enumerator_t.enumerator.destroy.
- */
-static void enumerator_destroy(private_enumerator_t *this)
+METHOD(enumerator_t, enumerator_destroy, void,
+	   private_enumerator_t *this)
 {
 	if (this->current)
 	{
@@ -379,26 +369,24 @@ static void enumerator_destroy(private_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of hashtable_t.create_enumerator.
- */
-static enumerator_t* create_enumerator(private_hashtable_t *this)
+METHOD(hashtable_t, create_enumerator, enumerator_t*,
+	   private_hashtable_t *this)
 {
-	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
+	private_enumerator_t *enumerator;
 
-	enumerator->enumerator.enumerate = (void*)enumerate;
-	enumerator->enumerator.destroy = (void*)enumerator_destroy;
-	enumerator->table = this;
-	enumerator->row = 0;
-	enumerator->current = NULL;
+	INIT(enumerator,
+		.enumerator = {
+			.enumerate = (void*)_enumerate,
+			.destroy = (void*)_enumerator_destroy,
+		},
+		.table = this,
+	);
 
 	return &enumerator->enumerator;
 }
 
-/**
- * Implementation of hashtable_t.destroy
- */
-static void destroy(private_hashtable_t *this)
+METHOD(hashtable_t, destroy, void,
+	   private_hashtable_t *this)
 {
 	linked_list_t *list;
 	u_int row;
@@ -421,22 +409,20 @@ static void destroy(private_hashtable_t *this)
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int capacity)
 {
-	private_hashtable_t *this = malloc_thing(private_hashtable_t);
+	private_hashtable_t *this;
 
-	this->public.put = (void*(*)(hashtable_t*,void*,void*))put;
-	this->public.get = (void*(*)(hashtable_t*,void*))get;
-	this->public.remove = (void*(*)(hashtable_t*,void*))remove_;
-	this->public.get_count = (u_int(*)(hashtable_t*))get_count;
-	this->public.create_enumerator = (enumerator_t*(*)(hashtable_t*))create_enumerator;
-	this->public.destroy = (void(*)(hashtable_t*))destroy;
-
-	this->count = 0;
-	this->capacity = 0;
-	this->mask = 0;
-	this->load_factor = 0;
-	this->table = NULL;
-	this->hash = hash;
-	this->equals = equals;
+	INIT(this,
+		.public = {
+			.put = _put,
+			.get = _get,
+			.remove = _remove_,
+			.get_count = _get_count,
+			.create_enumerator = _create_enumerator,
+			.destroy = _destroy,
+		},
+		.hash = hash,
+		.equals = equals,
+	);
 
 	init_hashtable(this, capacity);
 
