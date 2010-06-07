@@ -37,7 +37,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
-#include <sa/tasks/task.h>
+#include <sa/task_manager.h>
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
@@ -886,6 +886,14 @@ struct ike_sa_t {
 	 * @param remote		remote kmaddress
 	 */
 	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
+
+	/**
+	 * Create enumerator over a task queue of this IKE_SA.
+	 *
+	 * @param				queue type to enumerate
+	 * @return				enumerator over task_t
+	 */
+	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
 	 * Inherit all attributes of other to this after rekeying.

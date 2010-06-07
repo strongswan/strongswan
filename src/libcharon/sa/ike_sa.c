@@ -1786,6 +1786,12 @@ METHOD(ike_sa_t, add_configuration_attribute, void,
 	this->attributes->insert_last(this->attributes, entry);
 }
 
+METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
+	private_ike_sa_t *this, task_queue_t queue)
+{
+	return this->task_manager->create_task_enumerator(this->task_manager, queue);
+}
+
 METHOD(ike_sa_t, inherit, status_t,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
@@ -2020,6 +2026,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 			.get_virtual_ip = _get_virtual_ip,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.set_kmaddress = _set_kmaddress,
+			.create_task_enumerator = _create_task_enumerator,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
 			.get_server_reflexive_host = _get_server_reflexive_host,
