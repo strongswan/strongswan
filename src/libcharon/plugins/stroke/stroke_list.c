@@ -55,6 +55,33 @@ struct private_stroke_list_t {
 };
 
 /**
+ * Log tasks of a specific queue to out
+ */
+static void log_task_q(FILE *out, ike_sa_t *ike_sa, task_queue_t q, char *name)
+{
+	enumerator_t *enumerator;
+	bool has = FALSE;
+	task_t *task;
+
+	enumerator = ike_sa->create_task_enumerator(ike_sa, q);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!has)
+		{
+			fprintf(out, "%12s[%d]: Tasks %s: ", ike_sa->get_name(ike_sa),
+					ike_sa->get_unique_id(ike_sa), name);
+			has = TRUE;
+		}
+		fprintf(out, "%N ", task_type_names, task->get_type(task));
+	}
+	enumerator->destroy(enumerator);
+	if (has)
+	{
+		fprintf(out, "\n");
+	}
+}
+
+/**
  * log an IKE_SA to out
  */
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
@@ -140,6 +167,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 					buf+4);
 		}
+
+		log_task_q(out, ike_sa, TASK_QUEUE_QUEUED, "queued");
+		log_task_q(out, ike_sa, TASK_QUEUE_ACTIVE, "active");
+		log_task_q(out, ike_sa, TASK_QUEUE_PASSIVE, "passive");
 	}
 }
 
