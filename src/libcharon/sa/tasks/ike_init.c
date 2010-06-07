@@ -543,6 +543,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 	chunk_free(&this->other_nonce);
 
 	this->ike_sa = ike_sa;
+	this->keymat = ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
 	DESTROY_IF(this->dh);
 	this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
