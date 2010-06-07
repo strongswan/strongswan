@@ -306,7 +306,8 @@ static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
 		return;
 	}
 	ca_section_destroy(ca);
-	/* TODO: flush cached certs */
+
+	charon->credentials->flush_cache(charon->credentials, CERT_ANY);
 }
 
 /**
