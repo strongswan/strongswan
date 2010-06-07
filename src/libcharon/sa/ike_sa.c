@@ -399,18 +399,15 @@ static void flush_auth_cfgs(private_ike_sa_t *this)
 {
 	auth_cfg_t *cfg;
 
-	if (lib->settings->get_bool(lib->settings, "charon.flush_auth_cfg", FALSE))
+	while (this->my_auths->remove_last(this->my_auths,
+									   (void**)&cfg) == SUCCESS)
 	{
-		while (this->my_auths->remove_last(this->my_auths,
-										   (void**)&cfg) == SUCCESS)
-		{
-			cfg->destroy(cfg);
-		}
-		while (this->other_auths->remove_last(this->other_auths,
-											  (void**)&cfg) == SUCCESS)
-		{
-			cfg->destroy(cfg);
-		}
+		cfg->destroy(cfg);
+	}
+	while (this->other_auths->remove_last(this->other_auths,
+										  (void**)&cfg) == SUCCESS)
+	{
+		cfg->destroy(cfg);
 	}
 }
 
@@ -712,6 +709,11 @@ METHOD(ike_sa_t, reset, void,
 	}
 
 	set_state(this, IKE_CREATED);
+
+	flush_auth_cfgs(this);
+
+	this->keymat->destroy(this->keymat);
+	this->keymat = keymat_create(this->ike_sa_id->is_initiator(this->ike_sa_id));
 
 	this->task_manager->reset(this->task_manager, 0, 0);
 }
@@ -1263,7 +1265,9 @@ METHOD(ike_sa_t, process_message, status_t,
 		}
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (message->get_exchange_type(message) == IKE_AUTH &&
-			this->state == IKE_ESTABLISHED)
+			this->state == IKE_ESTABLISHED &&
+			lib->settings->get_bool(lib->settings,
+									"charon.flush_auth_cfg", FALSE))
 		{	/* authentication completed */
 			flush_auth_cfgs(this);
 		}
