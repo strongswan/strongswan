@@ -115,6 +115,9 @@
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
 #              restricted on the peer side.
 #
+#		PLUTO_XAUTH_USER
+#				is an optional user ID employed by the XAUTH protocol
+#
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@sbindir@"
