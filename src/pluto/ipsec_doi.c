@@ -1944,14 +1944,13 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	bool has_client = c->spd.this.has_client || c->spd.that.has_client ||
 					  c->spd.this.protocol || c->spd.that.protocol ||
 					  c->spd.this.port || c->spd.that.port;
-
 	bool send_natoa = FALSE;
 	u_int8_t np = ISAKMP_NEXT_NONE;
+	connection_t *ph1_c = isakmp_sa->st_connection;
 
 	if (c->spd.this.modecfg && !c->spd.this.has_client &&
 		c->spd.this.host_srcip->is_anyaddr(c->spd.this.host_srcip))
 	{
-		connection_t *ph1_c = isakmp_sa->st_connection;
 		host_t * ph1_srcip = ph1_c->spd.this.host_srcip;
 
 		if (ph1_c->spd.this.modecfg && !ph1_srcip->is_anyaddr(ph1_srcip))
@@ -1962,6 +1961,16 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 			c->spd.this.has_client = TRUE;
 			plog("inheriting virtual IP source address %H from ModeCfg", ph1_srcip);
 		}
+	}
+
+	if (ph1_c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+		ph1_c->xauth_identity)
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("inheriting XAUTH identity %Y", ph1_c->xauth_identity)
+		)
+		DESTROY_IF(c->xauth_identity);
+		c->xauth_identity = ph1_c->xauth_identity->clone(ph1_c->xauth_identity);
 	}
 
 	st->st_whack_sock = whack_sock;
@@ -4888,6 +4897,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 * instantiate, carrying over authenticated peer ID
 					 */
 					host_t *vip = c->spd.that.host_srcip;
+					identification_t *xauth_id = c->xauth_identity;
 
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
@@ -4903,6 +4913,16 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 						p->spd.that.host_srcip = vip->clone(vip);
 						p->spd.that.client = c->spd.that.client;
 						p->spd.that.has_client = TRUE;
+					}
+
+					if (c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+						xauth_id)
+					{
+						DBG(DBG_CONTROL,
+							DBG_log("inheriting XAUTH identity %Y", xauth_id)
+						)
+						DESTROY_IF(p->xauth_identity);
+						p->xauth_identity = xauth_id->clone(xauth_id);
 					}
 				}
 			}
