@@ -464,11 +464,11 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			peerclientnet_str[ADDRTOT_BUF],
 			peerclientmask_str[ADDRTOT_BUF],
 			peerca_str[BUF_LEN],
-			xauth_user_str[BUF_LEN] = "",
+			xauth_id_str[BUF_LEN] = "",
 			secure_myid_str[BUF_LEN] = "",
 			secure_peerid_str[BUF_LEN] = "",
 			secure_peerca_str[BUF_LEN] = "",
-			secure_xauth_user_str[BUF_LEN] = "";
+			secure_xauth_id_str[BUF_LEN] = "";
 		ip_address ta;
 		pubkey_list_t *p;
 
@@ -508,10 +508,11 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 		if (c->xauth_identity &&
 			c->xauth_identity->get_type(c->xauth_identity) != ID_ANY)
 		{
-			snprintf(xauth_user_str, sizeof(xauth_user_str),
-					 "PLUTO_XAUTH_USER='%Y' ", c->xauth_identity);
-			escape_metachar(xauth_user_str, secure_xauth_user_str,
-					 sizeof(secure_xauth_user_str));
+			snprintf(xauth_id_str, sizeof(xauth_id_str), "%Y", c->xauth_identity);
+			escape_metachar(xauth_id_str, secure_xauth_id_str,
+					 sizeof(secure_xauth_id_str));
+			snprintf(xauth_id_str, sizeof(xauth_id_str), "PLUTO_XAUTH_ID='%s' ",
+					 secure_xauth_id_str);
 		}
 
 		addrtot(&sr->that.host_addr, 0, peer_str, sizeof(peer_str));
@@ -571,7 +572,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			"PLUTO_PEER_PROTOCOL='%u' "
 			"PLUTO_PEER_CA='%s' "
 			"%s"        /* optional PLUTO_MY_SRCIP */
-			"%s"        /* optional PLUTO_XAUTH_USER */
+			"%s"        /* optional PLUTO_XAUTH_USER_ID */
 			"%s"        /* actual script */
 			, verb, verb_suffix
 			, c->name
@@ -595,7 +596,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			, sr->that.protocol
 			, secure_peerca_str
 			, srcip_str
-			, secure_xauth_user_str
+			, xauth_id_str
 			, sr->this.updown == NULL? DEFAULT_UPDOWN : sr->this.updown))
 		{
 			loglog(RC_LOG_SERIOUS, "%s%s command too long!", verb, verb_suffix);

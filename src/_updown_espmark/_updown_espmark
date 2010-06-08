@@ -115,7 +115,7 @@
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
 #              restricted on the peer side.
 #
-#		PLUTO_XAUTH_USER
+#		PLUTO_XAUTH_ID
 #				is an optional user ID employed by the XAUTH protocol
 
 # logging of VPN connections
