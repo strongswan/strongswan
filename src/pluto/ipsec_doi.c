@@ -1964,12 +1964,11 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	}
 
 	if (ph1_c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
-		ph1_c->xauth_identity)
+		ph1_c->xauth_identity && !c->xauth_identity)
 	{
 		DBG(DBG_CONTROL,
 			DBG_log("inheriting XAUTH identity %Y", ph1_c->xauth_identity)
 		)
-		DESTROY_IF(c->xauth_identity);
 		c->xauth_identity = ph1_c->xauth_identity->clone(ph1_c->xauth_identity);
 	}
 
@@ -4897,7 +4896,6 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 * instantiate, carrying over authenticated peer ID
 					 */
 					host_t *vip = c->spd.that.host_srcip;
-					identification_t *xauth_id = c->xauth_identity;
 
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
@@ -4916,13 +4914,12 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					}
 
 					if (c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
-						xauth_id)
+						c->xauth_identity && !p->xauth_identity)
 					{
 						DBG(DBG_CONTROL,
-							DBG_log("inheriting XAUTH identity %Y", xauth_id)
+							DBG_log("inheriting XAUTH identity %Y", c->xauth_identity)
 						)
-						DESTROY_IF(p->xauth_identity);
-						p->xauth_identity = xauth_id->clone(xauth_id);
+						p->xauth_identity = c->xauth_identity->clone(c->xauth_identity);
 					}
 				}
 			}
