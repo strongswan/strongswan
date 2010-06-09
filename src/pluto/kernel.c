@@ -572,7 +572,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			"PLUTO_PEER_PROTOCOL='%u' "
 			"PLUTO_PEER_CA='%s' "
 			"%s"        /* optional PLUTO_MY_SRCIP */
-			"%s"        /* optional PLUTO_XAUTH_USER_ID */
+			"%s"        /* optional PLUTO_XAUTH_ID */
 			"%s"        /* actual script */
 			, verb, verb_suffix
 			, c->name
