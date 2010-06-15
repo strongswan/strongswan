@@ -1045,7 +1045,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 }
 #endif /*SADB_X_MIGRATE*/
 
-#ifdef HAVE_NATT
+#ifdef SADB_X_NAT_T_NEW_MAPPING
 /**
  * Process a SADB_X_NAT_T_NEW_MAPPING message from the kernel
  */
@@ -1101,7 +1101,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		}
 	}
 }
-#endif /*HAVE_NATT*/
+#endif /*SADB_X_NAT_T_NEW_MAPPING*/
 
 /**
  * Receives events from kernel
@@ -1163,11 +1163,11 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 			process_migrate(this, msg);
 			break;
 #endif /*SADB_X_MIGRATE*/
-#ifdef HAVE_NATT
+#ifdef SADB_X_NAT_T_NEW_MAPPING
 		case SADB_X_NAT_T_NEW_MAPPING:
 			process_mapping(this, msg);
 			break;
-#endif /*HAVE_NATT*/
+#endif /*SADB_X_NAT_T_NEW_MAPPING*/
 		default:
 			break;
 	}
