@@ -44,6 +44,11 @@
 #define PID_FILE IPSEC_PIDDIR "/charon.pid"
 
 /**
+ * Global reference to PID file (required to truncate, if undeletable)
+ */
+static FILE *pidfile = NULL;
+
+/**
  * hook in library for debugging messages
  */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
@@ -203,22 +208,21 @@ static void segv_handler(int signal)
 static bool check_pidfile()
 {
 	struct stat stb;
-	FILE *file;
 
 	if (stat(PID_FILE, &stb) == 0)
 	{
-		file = fopen(PID_FILE, "r");
-		if (file)
+		pidfile = fopen(PID_FILE, "r");
+		if (pidfile)
 		{
 			char buf[64];
 			pid_t pid = 0;
 
 			memset(buf, 0, sizeof(buf));
-			if (fread(buf, 1, sizeof(buf), file))
+			if (fread(buf, 1, sizeof(buf), pidfile))
 			{
 				pid = atoi(buf);
 			}
-			fclose(file);
+			fclose(pidfile);
 			if (pid && kill(pid, 0) == 0)
 			{	/* such a process is running */
 				return TRUE;
@@ -229,15 +233,33 @@ static bool check_pidfile()
 	}
 
 	/* create new pidfile */
-	file = fopen(PID_FILE, "w");
-	if (file)
+	pidfile = fopen(PID_FILE, "w");
+	if (pidfile)
 	{
-		fprintf(file, "%d\n", getpid());
-		ignore_result(fchown(fileno(file), charon->uid, charon->gid));
-		fclose(file);
+		ignore_result(fchown(fileno(pidfile), charon->uid, charon->gid));
+		fprintf(pidfile, "%d\n", getpid());
+		fflush(pidfile);
 	}
 	return FALSE;
 }
+
+/**
+ * Delete/truncate the PID file
+ */
+static void unlink_pidfile()
+{
+	/* because unlinking the PID file may fail, we truncate it to ensure the
+	 * daemon can be properly restarted.  one probable cause for this is the
+	 * combination of not running as root and the effective user lacking
+	 * permissions on the parent dir(s) of the PID file */
+	if (pidfile)
+	{
+		ftruncate(fileno(pidfile), 0);
+		fclose(pidfile);
+	}
+	unlink(PID_FILE);
+}
+
 
 /**
  * print command line usage and exit
@@ -406,7 +428,7 @@ int main(int argc, char *argv[])
 	run();
 
 	/* normal termination, cleanup and exit */
-	unlink(PID_FILE);
+	unlink_pidfile();
 	status = 0;
 
 deinit:
