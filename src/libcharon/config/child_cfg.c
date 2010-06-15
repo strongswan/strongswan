@@ -17,6 +17,8 @@
 
 #include "child_cfg.h"
 
+#include <stdint.h>
+
 #include <daemon.h>
 
 ENUM(action_names, ACTION_NONE, ACTION_RESTART,
