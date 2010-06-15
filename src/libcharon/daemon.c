@@ -22,8 +22,11 @@
 #include <syslog.h>
 #include <time.h>
 #include <errno.h>
+
 #ifdef CAPABILITIES
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif /* HAVE_SYS_CAPABILITY_H */
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
@@ -46,12 +49,16 @@ struct private_daemon_t {
 	 */
 	daemon_t public;
 
-#ifdef CAPABILITIES
 	/**
 	 * capabilities to keep
 	 */
+#ifdef CAPABILITIES_LIBCAP
 	cap_t caps;
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_data_struct caps;
+#endif /* CAPABILITIES_NATIVE */
+
 };
 
 /**
@@ -99,9 +106,9 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.receiver);
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
@@ -133,22 +140,36 @@ static void destroy(private_daemon_t *this)
 METHOD(daemon_t, keep_cap, void,
 	   private_daemon_t *this, u_int cap)
 {
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	this->caps.effective |= 1 << cap;
+	this->caps.permitted |= 1 << cap;
+	this->caps.inheritable |= 1 << cap;
+#endif /* CAPABILITIES_NATIVE */
 }
 
 METHOD(daemon_t, drop_capabilities, bool,
 	   private_daemon_t *this)
 {
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	if (cap_set_proc(this->caps) != 0)
 	{
 		return FALSE;
 	}
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_header_struct header = {
+		.version = _LINUX_CAPABILITY_VERSION,
+	};
+	if (capset(&header, &this->caps) != 0)
+	{
+		return FALSE;
+	}
+#endif /* CAPABILITIES_NATIVE */
 	return TRUE;
 }
 
@@ -397,7 +418,9 @@ private_daemon_t *daemon_create()
 	);
 
 #ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	this->caps = cap_init();
+#endif /* CAPABILITIES_LIBCAP */
 	keep_cap(this, CAP_NET_ADMIN);
 	if (lib->leak_detective)
 	{

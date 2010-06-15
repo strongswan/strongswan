@@ -40,7 +40,7 @@ ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set director
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 
-ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently only the value "libcap" is supported])
+ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 
 AC_ARG_WITH(
@@ -613,9 +613,21 @@ if test x$eap_gtc = xtrue; then
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
 
+if test x$capabilities = xnative; then
+	AC_MSG_NOTICE([Usage of the native Linux capabilities interface is deprecated, use libcap instead])
+	dnl Linux requires the following for capset(), Android does not have it,
+	dnl but defines capset() in unistd.h instead.
+	AC_CHECK_HEADERS([sys/capability.h])
+	AC_CHECK_FUNC(capset,,[AC_MSG_ERROR([capset() not found!])])
+	AC_DEFINE(CAPABILITIES_NATIVE)
+fi
+
 if test x$capabilities = xlibcap; then
 	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
-	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
+	AC_CHECK_HEADER([sys/capability.h],
+		[AC_DEFINE(HAVE_SYS_CAPABILITY_H)],
+		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
+	AC_DEFINE(CAPABILITIES_LIBCAP)
 fi
 
 if test x$integrity_test = xtrue; then
@@ -879,7 +891,7 @@ dnl ==============================
 if test x$mediation = xtrue; then
 	AC_DEFINE(ME)
 fi
-if test x$capabilities = xlibcap; then
+if test x$capabilities = xlibcap -o x$capabilities = xnative; then
 	AC_DEFINE(CAPABILITIES)
 fi
 if test x$monolithic = xtrue; then

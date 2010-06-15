@@ -33,7 +33,9 @@
 #include <grp.h>
 
 #ifdef CAPABILITIES
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif /* HAVE_SYS_CAPABILITY_H */
 #endif /* CAPABILITIES */
 
 #include <freeswan.h>
@@ -258,7 +260,6 @@ int main(int argc, char **argv)
 	char *virtual_private = NULL;
 	int lockfd;
 #ifdef CAPABILITIES
-	cap_t caps;
 	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
 
@@ -716,18 +717,41 @@ int main(int argc, char **argv)
 		}
 #endif
 
-#ifdef CAPABILITIES
-	caps = cap_init();
-	cap_set_flag(caps, CAP_EFFECTIVE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_INHERITABLE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_PERMITTED, 2, keep, CAP_SET);
-	if (cap_set_proc(caps) != 0)
+#ifdef CAPABILITIES_LIBCAP
 	{
-		plog("unable to drop daemon capabilities");
-		abort();
+		cap_t caps;
+		caps = cap_init();
+		cap_set_flag(caps, CAP_EFFECTIVE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_INHERITABLE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_PERMITTED, countof(keep), keep, CAP_SET);
+		if (cap_set_proc(caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+		cap_free(caps);
 	}
-	cap_free(caps);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	{
+		struct __user_cap_data_struct caps = { .effective = 0 };
+		struct __user_cap_header_struct header = {
+			.version = _LINUX_CAPABILITY_VERSION,
+		};
+		int i;
+		for (i = 0; i < countof(keep); i++)
+		{
+			caps.effective |= 1 << keep[i];
+			caps.permitted |= 1 << keep[i];
+			caps.inheritable |= 1 << keep[i];
+		}
+		if (capset(&header, &caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+	}
+#endif /* CAPABILITIES_NATIVE */
 
 	/* loading X.509 CA certificates */
 	load_authcerts("ca", CA_CERT_PATH, X509_CA);
