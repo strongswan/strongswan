@@ -121,7 +121,7 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
-if USE_CAPABILITIES
+if USE_LIBCAP
   pluto_LDADD += -lcap
 endif
 

@@ -128,7 +128,7 @@ if USE_ME
     sa/tasks/ike_me.c sa/tasks/ike_me.h
 endif
 
-if USE_CAPABILITIES
+if USE_LIBCAP
   libcharon_la_LIBADD += -lcap
 endif
 
