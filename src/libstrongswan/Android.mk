@@ -68,7 +68,7 @@ LOCAL_SRC_FILES += $(call add_plugin, des)
 LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
 
 LOCAL_SRC_FILES += $(call add_plugin, gmp)
-ifneq ($(call plugin_enabled, gmp)),)
+ifneq ($(call plugin_enabled, gmp),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
 LOCAL_SHARED_LIBRARIES += libgmp
 endif
@@ -80,7 +80,7 @@ LOCAL_SRC_FILES += $(call add_plugin, md4)
 LOCAL_SRC_FILES += $(call add_plugin, md5)
 
 LOCAL_SRC_FILES += $(call add_plugin, openssl)
-ifneq ($(call plugin_enabled, openssl)),)
+ifneq ($(call plugin_enabled, openssl),)
 LOCAL_C_INCLUDES += external/openssl/include
 LOCAL_SHARED_LIBRARIES += libcrypto
 endif
