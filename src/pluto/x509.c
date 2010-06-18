@@ -393,6 +393,10 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
 				{
 					written = snprintf(pos, len, ", %Y", id);
 				}
+				if (written < 0 || written >= len)
+				{
+					break;
+				}
 				pos += written;
 				len -= written;
 			}

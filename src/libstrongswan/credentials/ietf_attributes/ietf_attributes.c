@@ -159,7 +159,7 @@ static char* get_string(private_ietf_attributes_t *this)
 		enumerator = this->list->create_enumerator(this->list);
 		while (enumerator->enumerate(enumerator, &attr))
 		{
-			int written = 0;
+			int written;
 
 			if (first)
 			{
@@ -168,8 +168,12 @@ static char* get_string(private_ietf_attributes_t *this)
 			else
 			{
 				written = snprintf(pos, len, ", ");
+				if (written < 0 || written >= len)
+				{
+					break;
+				}
 				pos += written;
-				len -= written; 
+				len -= written;
 			}
 
 			switch (attr->type)
@@ -194,7 +198,12 @@ static char* get_string(private_ietf_attributes_t *this)
 					break;
 				}
 				default:
+					written = 0;
 					break;
+			}
+			if (written < 0 || written >= len)
+			{
+				break;
 			}
 			pos += written;
 			len -= written;
