@@ -441,8 +441,6 @@ void del_attr(char *name, char *value, value_type_t value_type)
 								 blob.len, blob.ptr);
 			}
 		}
-		free(blob.ptr);
-		exit(EXIT_FAILURE);
 	}
 	free(blob.ptr);
 }
