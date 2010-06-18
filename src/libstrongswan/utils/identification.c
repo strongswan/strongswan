@@ -296,18 +296,30 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		{
 			written = snprintf(buf, len,"%s=", oid_names[oid].name);
 		}
+		if (written < 0 || written >= len)
+		{
+			break;
+		}
 		buf += written;
 		len -= written;
 
 		chunk_printable(data, &printable, '?');
 		written = snprintf(buf, len, "%.*s", printable.len, printable.ptr);
 		chunk_free(&printable);
+		if (written < 0 || written >= len)
+		{
+			break;
+		}
 		buf += written;
 		len -= written;
 
 		if (data.ptr + data.len != dn.ptr + dn.len)
 		{
 			written = snprintf(buf, len, ", ");
+			if (written < 0 || written >= len)
+			{
+				break;
+			}
 			buf += written;
 			len -= written;
 		}
