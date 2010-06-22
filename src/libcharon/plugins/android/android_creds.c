@@ -199,20 +199,30 @@ METHOD(android_creds_t, add_certificate, bool,
 	certificate_t *cert = NULL;
 	bool status = FALSE;
 	chunk_t chunk;
-	this->lock->write_lock(this->lock);
+#ifdef KEYSTORE_MESSAGE_SIZE
+	char value[KEYSTORE_MESSAGE_SIZE];
+	chunk.ptr = value;
+	chunk.len = keystore_get(name, chunk.ptr);
+	if (chunk.len > 0)
+#else
+	/* 1.6 interface, allocates memory */
 	chunk.ptr = keystore_get(name, &chunk.len);
 	if (chunk.ptr)
+#endif /* KEYSTORE_MESSAGE_SIZE */
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB_PEM, chunk, BUILD_END);
 		if (cert)
 		{
+			this->lock->write_lock(this->lock);
 			this->certs->insert_last(this->certs, cert);
+			this->lock->unlock(this->lock);
 			status = TRUE;
 		}
+#ifndef KEYSTORE_MESSAGE_SIZE
 		free(chunk.ptr);
+#endif /* KEYSTORE_MESSAGE_SIZE */
 	}
-	this->lock->unlock(this->lock);
 	return status;
 }
 
