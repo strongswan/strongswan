@@ -67,7 +67,9 @@
 
 /** non linux specific */
 #ifndef IPPROTO_COMP
+#ifdef IPPROTO_IPCOMP
 #define IPPROTO_COMP IPPROTO_IPCOMP
+#endif
 #endif
 
 #ifndef SADB_X_AALG_SHA2_256HMAC
