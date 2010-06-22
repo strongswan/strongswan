@@ -64,10 +64,10 @@ METHOD(plugin_t, destroy, void,
 									  &this->handler->handler);
 	charon->credentials->remove_set(charon->credentials, &this->creds->set);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
-	this->service->destroy(this->service);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
 	this->logger->destroy(this->logger);
+	DESTROY_IF(this->service);
 	free(this);
 }
 
