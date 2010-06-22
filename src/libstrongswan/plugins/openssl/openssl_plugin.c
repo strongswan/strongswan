@@ -177,8 +177,6 @@ static void destroy(private_openssl_plugin_t *this)
 					(prf_constructor_t)openssl_sha1_prf_create);
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->remove_dh(lib->crypto,
-					(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_rsa_private_key_load);
 	lib->creds->remove_builder(lib->creds,
@@ -187,12 +185,16 @@ static void destroy(private_openssl_plugin_t *this)
 					(builder_function_t)openssl_rsa_private_key_connect);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_rsa_public_key_load);
+#ifndef OPENSSL_NO_EC
+	lib->crypto->remove_dh(lib->crypto,
+					(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_ec_private_key_load);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_ec_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_ec_public_key_load);
+#endif /* OPENSSL_NO_EC */
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_x509_load);
 	lib->creds->remove_builder(lib->creds,
@@ -278,6 +280,7 @@ plugin_t *openssl_plugin_create()
 						(dh_constructor_t)openssl_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT,
 						(dh_constructor_t)openssl_diffie_hellman_create);
+#ifndef OPENSSL_NO_EC
 	lib->crypto->add_dh(lib->crypto, ECP_256_BIT,
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, ECP_384_BIT,
@@ -288,6 +291,7 @@ plugin_t *openssl_plugin_create()
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, ECP_192_BIT,
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
+#endif /* OPENSSL_NO_EC */
 	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT,
 						(dh_constructor_t)openssl_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT,
@@ -315,13 +319,15 @@ plugin_t *openssl_plugin_create()
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 					(builder_function_t)openssl_rsa_public_key_load);
 
-	/* ec */
+#ifndef OPENSSL_NO_EC
+	/* ecdsa */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
 					(builder_function_t)openssl_ec_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
 					(builder_function_t)openssl_ec_private_key_gen);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
 					(builder_function_t)openssl_ec_public_key_load);
+#endif /* OPENSSL_NO_EC */
 
 	/* X509 certificates */
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,

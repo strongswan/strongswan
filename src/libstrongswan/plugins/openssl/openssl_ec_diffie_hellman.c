@@ -13,6 +13,10 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_EC
+
 #include <openssl/ec.h>
 #include <openssl/objects.h>
 
@@ -331,3 +335,5 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 
 	return &this->public;
 }
+#endif /* OPENSSL_NO_EC */
+

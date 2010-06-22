@@ -14,6 +14,10 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_EC
+
 #include "openssl_ec_private_key.h"
 #include "openssl_ec_public_key.h"
 #include "openssl_util.h"
@@ -402,4 +406,5 @@ openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
 	}
 	return &this->public;
 }
+#endif /* OPENSSL_NO_EC */
 
