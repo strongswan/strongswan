@@ -21,7 +21,9 @@
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif /* OPENSSL_NO_ENGINE */
 
 /**
  *  Public exponent to use for key generation.
@@ -447,6 +449,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 														   va_list args)
 {
+#ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
 	char *keyid = NULL, *pin = NULL;
 	EVP_PKEY *key;
@@ -511,5 +514,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	this->engine = TRUE;
 
 	return &this->public;
+#else /* OPENSSL_NO_ENGINE */
+	return NULL;
+#endif /* OPENSSL_NO_ENGINE */
 }
 

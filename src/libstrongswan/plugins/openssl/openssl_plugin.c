@@ -14,10 +14,12 @@
  * for more details.
  */
 
-#include <openssl/conf.h>
 #include <openssl/evp.h>
-#include <openssl/engine.h>
+#include <openssl/conf.h>
 #include <openssl/crypto.h>
+#ifndef OPENSSL_NO_ENGINE
+#include <openssl/engine.h>
+#endif
 
 #include "openssl_plugin.h"
 
@@ -200,7 +202,9 @@ static void destroy(private_openssl_plugin_t *this)
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)openssl_crl_load);
 
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif /* OPENSSL_NO_ENGINE */
 	EVP_cleanup();
 	CONF_modules_free();
 
@@ -223,9 +227,11 @@ plugin_t *openssl_plugin_create()
 	OPENSSL_config(NULL);
 	OpenSSL_add_all_algorithms();
 
+#ifndef OPENSSL_NO_ENGINE
 	/* activate support for hardware accelerators */
 	ENGINE_load_builtin_engines();
 	ENGINE_register_all_complete();
+#endif /* OPENSSL_NO_ENGINE */
 
 	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
