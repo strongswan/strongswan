@@ -1215,7 +1215,7 @@ read_packet(struct msg_digest *md)
 
 	/* ignore IKEv2 packets - they will be handled by charon */
 	if (pbs_room(&md->packet_pbs) > IKEV2_VERSION_OFFSET
-	&&  md->packet_pbs.start[IKEV2_VERSION_OFFSET] == IKEV2_VERSION)
+	&&  (md->packet_pbs.start[IKEV2_VERSION_OFFSET] & 0xF0) == IKEV2_VERSION)
 	{
 		DBG(DBG_CONTROLMORE,
 			DBG_log("  ignoring IKEv2 packet")
