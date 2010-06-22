@@ -538,11 +538,12 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 		/* Destination Port must be either port or natt_port */
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, udp_header + 2),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_UDP_PORT, 1, 0),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_NATT_PORT, 5, 12),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_NATT_PORT, 6, 14),
 		/* port */
-			/* IKE version must be 2.0 */
+			/* IKE version must be 2.x */
 			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, ike_header + IKE_VERSION_OFFSET),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 10),
+			BPF_STMT(BPF_ALU+BPF_RSH+BPF_K, 4),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 2, 0, 11),
 			/* packet length is length in IKEv2 header + ip header + udp header */
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, ike_header + IKE_LENGTH_OFFSET),
 			BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, ip_len + UDP_LEN),
@@ -550,10 +551,11 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 		/* natt_port */
 			/* nat-t: check for marker */
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, ike_header),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0, 0, 5),
-			/* nat-t: IKE version must be 2.0 */
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0, 0, 6),
+			/* nat-t: IKE version must be 2.x */
 			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, ike_header + MARKER_LEN + IKE_VERSION_OFFSET),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 3),
+			BPF_STMT(BPF_ALU+BPF_RSH+BPF_K, 4),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 2, 0, 3),
 			/* nat-t: packet length is length in IKEv2 header + ip header + udp header + non esp marker */
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, ike_header + MARKER_LEN + IKE_LENGTH_OFFSET),
 			BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, ip_len + UDP_LEN + MARKER_LEN),
