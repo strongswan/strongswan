@@ -1795,22 +1795,30 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			route->dst_net = chunk_clone(policy->src.net->get_address(policy->src.net));
 			route->prefixlen = policy->src.mask;
 
-			switch (charon->kernel_interface->add_route(charon->kernel_interface,
-					route->dst_net, route->prefixlen, route->gateway,
-					route->src_ip, route->if_name))
+			if (route->if_name)
 			{
-				default:
-					DBG1(DBG_KNL, "unable to install source route for %H",
-						 route->src_ip);
-					/* FALL */
-				case ALREADY_DONE:
-					/* route exists, do not uninstall */
-					route_entry_destroy(route);
-					break;
-				case SUCCESS:
-					/* cache the installed route */
-					policy->route = route;
-					break;
+				switch (charon->kernel_interface->add_route(
+									charon->kernel_interface, route->dst_net,
+									route->prefixlen, route->gateway,
+									route->src_ip, route->if_name))
+				{
+					default:
+						DBG1(DBG_KNL, "unable to install source route for %H",
+							 route->src_ip);
+						/* FALL */
+					case ALREADY_DONE:
+						/* route exists, do not uninstall */
+						route_entry_destroy(route);
+						break;
+					case SUCCESS:
+						/* cache the installed route */
+						policy->route = route;
+						break;
+				}
+			}
+			else
+			{
+				route_entry_destroy(route);
 			}
 		}
 		else
