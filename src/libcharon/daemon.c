@@ -104,6 +104,7 @@ static void destroy(private_daemon_t *this)
 		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
 	}
 	DESTROY_IF(this->public.receiver);
+	DESTROY_IF(this->public.sender);
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
 #ifdef CAPABILITIES_LIBCAP
@@ -122,7 +123,6 @@ static void destroy(private_daemon_t *this)
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.socket);
 	/* wait until all threads are gone */
 	DESTROY_IF(this->public.processor);
