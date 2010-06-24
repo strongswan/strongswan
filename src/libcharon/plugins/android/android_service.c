@@ -178,7 +178,7 @@ static char *read_argument(int fd, u_char length)
 		offset += n;
 	}
 	data[length] = '\0';
-	DBG1(DBG_CFG, "received argument from Android control socket: %s", data);
+	DBG3(DBG_CFG, "received argument from Android control socket: %s", data);
 	return data;
 }
 
