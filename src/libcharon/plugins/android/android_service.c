@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <cutils/sockets.h>
 #include <cutils/properties.h>
+#include <signal.h>
 
 #include "android_service.h"
 
@@ -107,6 +108,15 @@ METHOD(listener_t, child_state_change, bool,
 	return TRUE;
 }
 
+/**
+ * Callback used to shutdown the daemon
+ */
+static job_requeue_t shutdown_callback(void *data)
+{
+	kill(0, SIGTERM);
+	return JOB_REQUEUE_NONE;
+}
+
 METHOD(listener_t, child_updown, bool,
 	   private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   bool up)
@@ -119,6 +129,20 @@ METHOD(listener_t, child_updown, bool,
 			this->public.listener.ike_updown = NULL;
 			this->public.listener.child_state_change = NULL;
 			property_set("vpn.status", "ok");
+		}
+		else
+		{
+			callback_job_t *job;
+			/* the control socket is closed as soon as vpn.status is set to "ok"
+			 * and the daemon proxy then only checks for terminated daemons to
+			 * detect lost connections, so... */
+			DBG1(DBG_CFG, "connection lost, raising delayed SIGTERM");
+			/* to avoid any conflicts we send the SIGTERM not directly from this
+			 * callback, but from a different thread. we also delay it to avoid
+			 * a race condition during a regular shutdown */
+			job = callback_job_create(shutdown_callback, NULL, NULL, NULL);
+			charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, 1);
+			return FALSE;
 		}
 	}
 	return TRUE;
