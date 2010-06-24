@@ -173,8 +173,18 @@ static identification_t *general_name2id(GENERAL_NAME *name)
 			return identification_create_from_encoding(ID_DER_ASN1_GN_URI,
 					openssl_asn1_str2chunk(name->d.uniformResourceIdentifier));
 		case GEN_IPADD:
-			return identification_create_from_encoding(ID_IPV4_ADDR,
-					openssl_asn1_str2chunk(name->d.iPAddress));
+		{
+			chunk_t chunk = openssl_asn1_str2chunk(name->d.iPAddress);
+			if (chunk.len == 4)
+			{
+				return identification_create_from_encoding(ID_IPV4_ADDR, chunk);
+			}
+			if (chunk.len == 16)
+			{
+				return identification_create_from_encoding(ID_IPV6_ADDR, chunk);
+			}
+			return NULL;
+		}
 		case GEN_DIRNAME :
 			return openssl_x509_name2id(name->d.directoryName);
 		default:
