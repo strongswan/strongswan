@@ -72,6 +72,15 @@ typedef enum {
 } android_vpn_errors_t;
 
 /**
+ * send a status code back to the Android app
+ */
+static void send_status(private_android_service_t *this, u_char code)
+{
+	DBG1(DBG_CFG, "status of Android plugin changed: %d", code);
+	send(this->control, &code, 1, 0);
+}
+
+/**
  * Read a string argument from the Android control socket
  */
 static char *read_argument(int fd, u_char length)
@@ -125,7 +134,9 @@ static job_requeue_t initiate(private_android_service_t *this)
 			 strerror(errno));
 		return JOB_REQUEUE_NONE;
 	}
+	/* the original control socket is not used anymore */
 	close(this->control);
+	this->control = fd;
 
 	while (TRUE)
 	{
@@ -218,15 +229,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 	charon->bus->add_listener(charon->bus, &this->listener);*/
 
 	/* confirm that we received the request */
-	u_char code = i;
-	send(fd, &code, 1, 0);
+	send_status(this, i);
 
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 controller_cb_empty, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
-		code = VPN_ERROR_CONNECTION_FAILED;
-		send(fd, &code, 1, 0);
+		send_status(this, VPN_ERROR_CONNECTION_FAILED);
 		return JOB_REQUEUE_NONE;
 	}
 	property_set("vpn.status", "ok");
@@ -236,6 +245,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 METHOD(android_service_t, destroy, void,
 	   private_android_service_t *this)
 {
+	close(this->control);
 	free(this);
 }
 
