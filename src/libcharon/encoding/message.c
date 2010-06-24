@@ -31,6 +31,7 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/unknown_payload.h>
+#include <encoding/payloads/cp_payload.h>
 
 /**
  * Max number of notify payloads per IKEv2 Message
@@ -974,6 +975,39 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			}
 			pos += written;
 			len -= written;
+		}
+		if (payload->get_type(payload) == CONFIGURATION)
+		{
+			cp_payload_t *cp = (cp_payload_t*)payload;
+			enumerator_t *attributes;
+			configuration_attribute_t *attribute;
+			bool first = TRUE;
+
+			attributes = cp->create_attribute_enumerator(cp);
+			while (attributes->enumerate(attributes, &attribute))
+			{
+				written = snprintf(pos, len, "%s%N", first ? "(" : " ",
+								   configuration_attribute_type_short_names,
+								   attribute->get_type(attribute));
+				if (written >= len || written < 0)
+				{
+					return buf;
+				}
+				pos += written;
+				len -= written;
+				first = FALSE;
+			}
+			attributes->destroy(attributes);
+			if (!first)
+			{
+				written = snprintf(pos, len, ")");
+				if (written >= len || written < 0)
+				{
+					return buf;
+				}
+				pos += written;
+				len -= written;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);

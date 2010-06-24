@@ -81,5 +81,10 @@ enum configuration_attribute_type_t {
  */
 extern enum_name_t *configuration_attribute_type_names;
 
+/**
+ * Short enum names for configuration_attribute_type_t.
+ */
+extern enum_name_t *configuration_attribute_type_short_names;
+
 
 #endif /** ATTRIBUTES_H_ @}*/
