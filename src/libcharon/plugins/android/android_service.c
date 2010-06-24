@@ -58,6 +58,20 @@ struct private_android_service_t {
 };
 
 /**
+ * Some of the error codes defined in VpnManager.java
+ */
+typedef enum {
+	/** Error code to indicate an error from authentication. */
+	VPN_ERROR_AUTH = 51,
+	/** Error code to indicate the connection attempt failed. */
+	VPN_ERROR_CONNECTION_FAILED = 101,
+	/** Error code to indicate an error of remote server hanging up. */
+	VPN_ERROR_REMOTE_HUNG_UP = 7,
+	/** Error code to indicate an error of losing connectivity. */
+	VPN_ERROR_CONNECTION_LOST = 103,
+} android_vpn_errors_t;
+
+/**
  * Read a string argument from the Android control socket
  */
 static char *read_argument(int fd, u_char length)
@@ -209,7 +223,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 									 controller_cb_empty, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
-		code = 0x33; /* FIXME: this indicates an AUTH error, which might not be the case */
+		code = VPN_ERROR_CONNECTION_FAILED;
 		send(fd, &code, 1, 0);
 		return JOB_REQUEUE_NONE;
 	}
