@@ -283,7 +283,9 @@ updown_listener_t *updown_listener_create()
 
 	INIT(this,
 		.public = {
-			.listener.child_updown = _child_updown,
+			.listener = {
+				.child_updown = _child_updown,
+			},
 			.destroy = _destroy,
 		},
 		.iface_cache = linked_list_create(),
