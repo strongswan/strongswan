@@ -83,6 +83,13 @@ static void send_status(private_android_service_t *this, u_char code)
 METHOD(listener_t, ike_updown, bool,
 	   private_android_service_t *this, ike_sa_t *ike_sa, bool up)
 {
+	/* this callback is only registered during initiation, so if the IKE_SA
+	 * goes down we assume an authentication error */
+	if (this->ike_sa == ike_sa && !up)
+	{
+		send_status(this, VPN_ERROR_AUTH);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -90,6 +97,13 @@ METHOD(listener_t, child_state_change, bool,
 	   private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   child_sa_state_t state)
 {
+	/* this callback is only registered during initiation, so we still have
+	 * the control socket open */
+	if (this->ike_sa == ike_sa && state == CHILD_DESTROYING)
+	{
+		send_status(this, VPN_ERROR_CONNECTION_FAILED);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -97,6 +111,16 @@ METHOD(listener_t, child_updown, bool,
 	   private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   bool up)
 {
+	if (this->ike_sa == ike_sa)
+	{
+		if (up)
+		{
+			/* disable the hooks registered to catch initiation failures */
+			this->public.listener.ike_updown = NULL;
+			this->public.listener.child_state_change = NULL;
+			property_set("vpn.status", "ok");
+		}
+	}
 	return TRUE;
 }
 
@@ -254,21 +278,30 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
 
-	/*this->listener.ike_up_down = ike_up_down;
-	this->listener.child_up_down = child_up_down;
-	charon->bus->add_listener(charon->bus, &this->listener);*/
+	/* get us an IKE_SA */
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
+	if (!ike_sa->get_peer_cfg(ike_sa))
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+	peer_cfg->destroy(peer_cfg);
+
+	/* store the IKE_SA so we can track its progress */
+	this->ike_sa = ike_sa;
 
 	/* confirm that we received the request */
 	send_status(this, i);
 
-	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 controller_cb_empty, NULL) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+													ike_sa);
 		send_status(this, VPN_ERROR_CONNECTION_FAILED);
 		return JOB_REQUEUE_NONE;
 	}
-	property_set("vpn.status", "ok");
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return JOB_REQUEUE_NONE;
 }
 
