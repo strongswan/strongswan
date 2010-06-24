@@ -366,7 +366,17 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 				id_type = ID_DER_ASN1_DN;
 				break;
 			case GN_OBJ_IP_ADDRESS:
-				id_type = ID_IPV4_ADDR;
+				switch (object.len)
+				{
+					case 4:
+						id_type = ID_IPV4_ADDR;
+						break;
+					case 16:
+						id_type = ID_IPV6_ADDR;
+						break;
+					default:
+						break;
+				}
 				break;
 			case GN_OBJ_OTHER_NAME:
 				if (!parse_otherName(object, parser->get_level(parser)+1))
