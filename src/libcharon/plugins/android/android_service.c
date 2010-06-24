@@ -36,9 +36,9 @@ struct private_android_service_t {
 	android_service_t public;
 
 	/**
-	 * listener to track progress
+	 * current IKE_SA
 	 */
-	listener_t listener;
+	ike_sa_t *ike_sa;
 
 	/**
 	 * job that handles requests from the Android control socket
@@ -78,6 +78,36 @@ static void send_status(private_android_service_t *this, u_char code)
 {
 	DBG1(DBG_CFG, "status of Android plugin changed: %d", code);
 	send(this->control, &code, 1, 0);
+}
+
+METHOD(listener_t, ike_updown, bool,
+	   private_android_service_t *this, ike_sa_t *ike_sa, bool up)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, child_state_change, bool,
+	   private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	   child_sa_state_t state)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, child_updown, bool,
+	   private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	   bool up)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, ike_rekey, bool,
+	   private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		this->ike_sa = new;
+	}
+	return TRUE;
 }
 
 /**
@@ -245,6 +275,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 METHOD(android_service_t, destroy, void,
 	   private_android_service_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	close(this->control);
 	free(this);
 }
@@ -258,6 +289,12 @@ android_service_t *android_service_create(android_creds_t *creds)
 
 	INIT(this,
 		.public = {
+			.listener = {
+				.ike_updown = _ike_updown,
+				.child_state_change = _child_state_change,
+				.child_updown = _child_updown,
+				.ike_rekey = _ike_rekey,
+			},
 			.destroy = _destroy,
 		},
 		.creds = creds,
@@ -280,6 +317,7 @@ android_service_t *android_service_create(android_creds_t *creds)
 		return NULL;
 	}
 
+	charon->bus->add_listener(charon->bus, &this->public.listener);
 	this->job = callback_job_create((callback_job_cb_t)initiate, this,
 									NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

@@ -23,12 +23,19 @@
 
 typedef struct android_service_t android_service_t;
 
+#include <bus/listeners/listener.h>
+
 #include "android_creds.h"
 
 /**
  * Service that interacts with the Android Settings frontend.
  */
 struct android_service_t {
+
+	/**
+	 * Implements listener_t.
+	 */
+	listener_t listener;
 
 	/**
 	 * Destroy a android_service_t.
