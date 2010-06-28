@@ -220,7 +220,6 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 	eap_type_t type, received_type;
 	u_int32_t vendor, received_vendor;
 	eap_payload_t *out;
-	auth_cfg_t *cfg;
 
 	if (in->get_code(in) != EAP_RESPONSE)
 	{
@@ -283,12 +282,6 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			}
 			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED,
 										TRUE);
-			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);
-			if (vendor)
-			{
-				cfg->add(cfg, AUTH_RULE_EAP_VENDOR, vendor);
-			}
 			this->eap_complete = TRUE;
 			return eap_payload_create_code(EAP_SUCCESS, in->get_identifier(in));
 		case FAILED:

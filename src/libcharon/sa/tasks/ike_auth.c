@@ -527,7 +527,16 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 				}
 				cand = get_auth_cfg(this, FALSE);
 			}
-			cfg->merge(cfg, cand, TRUE);
+			/* copy over the EAP specific rules for authentication */
+			cfg->add(cfg, AUTH_RULE_EAP_TYPE,
+					 cand->get(cand, AUTH_RULE_EAP_TYPE));
+			cfg->add(cfg, AUTH_RULE_EAP_VENDOR,
+					 cand->get(cand, AUTH_RULE_EAP_VENDOR));
+			id = (identification_t*)cand->get(cand, AUTH_RULE_EAP_IDENTITY);
+			if (id)
+			{
+				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+			}
 		}
 
 		/* verify authentication data */
