@@ -71,6 +71,11 @@ struct private_eap_radius_t {
 	 * Prefix to prepend to EAP identity
 	 */
 	char *id_prefix;
+
+	/**
+	 * Handle the Class attribute as group membership information?
+	 */
+	bool class_group;
 };
 
 /**
@@ -177,6 +182,35 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 }
 
 /**
+ * Handle the Class attribute as group membership information
+ */
+static void process_class(private_eap_radius_t *this, radius_message_t *msg)
+{
+	enumerator_t *enumerator;
+	chunk_t data;
+	int type;
+
+	enumerator = msg->create_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		if (type == RAT_CLASS)
+		{
+			ike_sa_t *ike_sa;
+			auth_cfg_t *auth;
+
+			ike_sa = charon->bus->get_sa(charon->bus);
+			if (ike_sa)
+			{
+				auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+				auth->add(auth, AUTH_RULE_GROUP,
+						  identification_create_from_data(data));
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Implementation of eap_method_t.process
  */
 static status_t process(private_eap_radius_t *this,
@@ -213,6 +247,10 @@ static status_t process(private_eap_radius_t *this,
 			case RMC_ACCESS_ACCEPT:
 				this->msk = this->client->decrypt_msk(this->client,
 													  response, request);
+				if (this->class_group)
+				{
+					process_class(this, response);
+				}
 				status = SUCCESS;
 				break;
 			case RMC_ACCESS_REJECT:
@@ -307,6 +345,8 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 								"charon.plugins.eap-radius.eap_start", FALSE);
 	this->id_prefix = lib->settings->get_str(lib->settings,
 								"charon.plugins.eap-radius.id_prefix", "");
+	this->class_group = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.class_group", FALSE);
 	return &this->public;
 }
 
