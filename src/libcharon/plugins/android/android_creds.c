@@ -200,9 +200,11 @@ METHOD(android_creds_t, add_certificate, bool,
 	bool status = FALSE;
 	chunk_t chunk;
 #ifdef KEYSTORE_MESSAGE_SIZE
+	/* most current interface, the eclair interface (without key length) is
+	 * currently not supported */
 	char value[KEYSTORE_MESSAGE_SIZE];
 	chunk.ptr = value;
-	chunk.len = keystore_get(name, chunk.ptr);
+	chunk.len = keystore_get(name, strlen(name), chunk.ptr);
 	if (chunk.len > 0)
 #else
 	/* 1.6 interface, allocates memory */
