@@ -1229,11 +1229,11 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
-	if (this->tsi)
+	if (this->tsr)
 	{
 		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	}
-	if (this->tsr)
+	if (this->tsi)
 	{
 		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	}
