@@ -413,7 +413,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 	}
 
-	/* AC groups */
+	/* groups */
 	if (end->groups)
 	{
 		enumerator_t *enumerator;
@@ -422,9 +422,8 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator = enumerator_create_token(end->groups, ",", " ");
 		while (enumerator->enumerate(enumerator, &group))
 		{
-			identity = identification_create_from_encoding(ID_IETF_ATTR_STRING,
-											chunk_create(group, strlen(group)));
-			cfg->add(cfg, AUTH_RULE_AC_GROUP, identity);
+			cfg->add(cfg, AUTH_RULE_GROUP,
+					 identification_create_from_string(group));
 		}
 		enumerator->destroy(enumerator);
 	}

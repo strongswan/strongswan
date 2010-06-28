@@ -50,8 +50,7 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
 ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_MYID, ID_KEY_ID,
-	"ID_DER_ASN1_GN_URI"
-	"ID_IETF_ATTR_STRING"
+	"ID_DER_ASN1_GN_URI",
 	"ID_MYID");
 ENUM_END(id_type_names, ID_MYID);
 
@@ -761,7 +760,6 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
-		case ID_IETF_ATTR_STRING:
 			chunk_printable(this->encoded, &proper, '?');
 			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);

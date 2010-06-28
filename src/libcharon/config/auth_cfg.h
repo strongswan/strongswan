@@ -62,8 +62,8 @@ enum auth_rule_t {
 	AUTH_RULE_CRL_VALIDATION,
 	/** result of a OCSP validation, cert_validation_t */
 	AUTH_RULE_OCSP_VALIDATION,
-	/** subject is in attribute certificate group, identification_t* */
-	AUTH_RULE_AC_GROUP,
+	/** subject is member of a group, identification_t* */
+	AUTH_RULE_GROUP,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,

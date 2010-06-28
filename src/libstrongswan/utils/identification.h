@@ -131,11 +131,6 @@ enum id_type_t {
 	ID_DER_ASN1_GN_URI = 201,
 
 	/**
-	 * IETF Attribute Syntax String (RFC 3281)
-	 */
-	ID_IETF_ATTR_STRING = 202,
-
-	/**
 	 * Private ID used by the pluto daemon for opportunistic encryption
 	 */
 	ID_MYID = 203,

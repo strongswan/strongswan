@@ -32,7 +32,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_SUBJECT_HASH_URL,
 	"RULE_SUBJECT_CERT",
 	"RULE_CRL_VALIDATION",
 	"RULE_OCSP_VALIDATION",
-	"RULE_AC_GROUP",
+	"RULE_GROUP",
 	"HELPER_IM_CERT",
 	"HELPER_SUBJECT_CERT",
 	"HELPER_IM_HASH_URL",
@@ -128,7 +128,7 @@ static void destroy_entry_value(entry_t *entry)
 	{
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
-		case AUTH_RULE_AC_GROUP:
+		case AUTH_RULE_GROUP:
 		{
 			identification_t *id = (identification_t*)entry->value;
 			id->destroy(id);
@@ -185,7 +185,7 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 				break;
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
-			case AUTH_RULE_AC_GROUP:
+			case AUTH_RULE_GROUP:
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
@@ -250,7 +250,7 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 			return (void*)VALIDATION_FAILED;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
-		case AUTH_RULE_AC_GROUP:
+		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
@@ -285,7 +285,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 			break;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
-		case AUTH_RULE_AC_GROUP:
+		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
@@ -459,13 +459,20 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				}
 				break;
 			}
-			case AUTH_RULE_AC_GROUP:
+			case AUTH_RULE_GROUP:
 			{
-				success = FALSE;
-				if (log_error)
+				identification_t *id1, *id2;
+
+				id1 = (identification_t*)value;
+				id2 = get(this, t1);
+				if (!id2 || !id2->matches(id2, id1))
 				{
-					DBG1(DBG_CFG, "constraint check %N not implemented!",
-						 auth_rule_names, t1);
+					success = FALSE;
+					if (log_error)
+					{
+						DBG1(DBG_CFG, "constraint check failed: membership to "
+							 "group '%Y' required", id1);
+					}
 				}
 				break;
 			}
@@ -527,7 +534,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				}
 				case AUTH_RULE_IDENTITY:
 				case AUTH_RULE_EAP_IDENTITY:
-				case AUTH_RULE_AC_GROUP:
+				case AUTH_RULE_GROUP:
 				{
 					identification_t *id = (identification_t*)value;
 
@@ -614,7 +621,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					}
 					case AUTH_RULE_IDENTITY:
 					case AUTH_RULE_EAP_IDENTITY:
-					case AUTH_RULE_AC_GROUP:
+					case AUTH_RULE_GROUP:
 					{
 						identification_t *id1, *id2;
 
@@ -698,7 +705,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 		{
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
-			case AUTH_RULE_AC_GROUP:
+			case AUTH_RULE_GROUP:
 			{
 				identification_t *id = (identification_t*)entry->value;
 				clone->add(clone, entry->type, id->clone(id));

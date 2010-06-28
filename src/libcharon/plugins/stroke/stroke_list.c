@@ -373,7 +373,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 		rules = auth->create_enumerator(auth);
 		while (rules->enumerate(rules, &rule, &id))
 		{
-			if (rule == AUTH_RULE_AC_GROUP)
+			if (rule == AUTH_RULE_GROUP)
 			{
 				fprintf(out, "%12s:    group: %Y\n", name, id);
 			}
