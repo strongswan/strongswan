@@ -140,17 +140,26 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 		id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
 		if (id)
 		{
-			this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
-			if (this->method)
+			if (id->get_type(id) == ID_ANY)
 			{
-				if (this->method->initiate(this->method, &out) == NEED_MORE)
+				this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
+				if (this->method)
 				{
-					DBG1(DBG_IKE, "initiating EAP-Identity request");
-					return out;
+					if (this->method->initiate(this->method, &out) == NEED_MORE)
+					{
+						DBG1(DBG_IKE, "initiating EAP-Identity request");
+						return out;
+					}
+					this->method->destroy(this->method);
 				}
-				this->method->destroy(this->method);
+				DBG1(DBG_IKE, "EAP-Identity request configured, "
+					 "but not supported");
 			}
-			DBG1(DBG_IKE, "EAP-Identity request configured, but not supported");
+			else
+			{
+				DBG1(DBG_IKE, "using configured EAP-Identity %Y", id);
+				this->eap_identity = id->clone(id);
+			}
 		}
 	}
 	/* invoke real EAP method */
