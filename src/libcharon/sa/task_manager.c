@@ -1003,6 +1003,13 @@ METHOD(task_manager_t, reset, void,
 	}
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 
+	/* reset queued tasks */
+	while (this->queued_tasks->remove_last(this->queued_tasks,
+										   (void**)&task) == SUCCESS)
+	{
+		task->migrate(task, this->ike_sa);
+		this->queued_tasks->insert_first(this->queued_tasks, task);
+	}
 	/* reset active tasks */
 	while (this->active_tasks->remove_last(this->active_tasks,
 										   (void**)&task) == SUCCESS)
