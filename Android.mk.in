@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
 strongswan_PLUGINS := openssl fips-prf random pubkey pkcs1 \
-	pem xcbc hmac kernel-netlink socket-default android
+	pem xcbc hmac kernel-netlink socket-default android \
+	eap-identity eap-mschapv2 eap-gtc eap-md5
 
 # helper macros to only add source files for plugins included in the list above
 # source files are relative to the android.mk that called the macro
