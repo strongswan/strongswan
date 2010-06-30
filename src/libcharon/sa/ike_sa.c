@@ -1613,6 +1613,40 @@ METHOD(ike_sa_t, reestablish, status_t,
 	return status;
 }
 
+/**
+ * Requeue the IKE_SA_INIT tasks for initiation, if required
+ */
+static void requeue_init_tasks(private_ike_sa_t *this)
+{
+	enumerator_t *enumerator;
+	bool has_init = FALSE;
+	task_t *task;
+
+	/* if we have advanced to IKE_AUTH, the IKE_INIT and related tasks
+	 * have already completed. Recreate them if necessary. */
+	enumerator = this->task_manager->create_task_enumerator(
+										this->task_manager, TASK_QUEUE_QUEUED);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == IKE_INIT)
+		{
+			has_init = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!has_init)
+	{
+		task = (task_t*)ike_vendor_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_natd_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
+		this->task_manager->queue_task(this->task_manager, task);
+	}
+}
+
 METHOD(ike_sa_t, retransmit, status_t,
 	private_ike_sa_t *this, u_int32_t message_id)
 {
@@ -1632,17 +1666,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
 					reset(this);
-					if (this->stats[STAT_INBOUND])
-					{	/* IKE_INIT already completed, recreate associated tasks */
-						task_t *task;
-
-						task = (task_t*)ike_vendor_create(&this->public, TRUE);
-						this->task_manager->queue_task(this->task_manager, task);
-						task = (task_t*)ike_natd_create(&this->public, TRUE);
-						this->task_manager->queue_task(this->task_manager, task);
-						task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-						this->task_manager->queue_task(this->task_manager, task);
-					}
+					requeue_init_tasks(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
 				DBG1(DBG_IKE, "establishing IKE_SA failed, peer not responding");
