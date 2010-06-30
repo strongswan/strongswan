@@ -986,6 +986,7 @@ METHOD(task_manager_t, busy, bool,
 METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
+	enumerator_t *enumerator;
 	task_t *task;
 
 	/* reset message counters and retransmit packets */
@@ -1004,12 +1005,13 @@ METHOD(task_manager_t, reset, void,
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 
 	/* reset queued tasks */
-	while (this->queued_tasks->remove_last(this->queued_tasks,
-										   (void**)&task) == SUCCESS)
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &task))
 	{
 		task->migrate(task, this->ike_sa);
-		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
+	enumerator->destroy(enumerator);
+
 	/* reset active tasks */
 	while (this->active_tasks->remove_last(this->active_tasks,
 										   (void**)&task) == SUCCESS)
