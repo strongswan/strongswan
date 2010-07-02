@@ -26,6 +26,8 @@
 #include "constants.h"
 #include "certs.h"
 
+#define X509_MAX_PATH_LEN				 7
+
 extern bool same_keyid(chunk_t a, chunk_t b);
 extern bool x509_check_signature(chunk_t tbs, chunk_t sig, int algorithm,
 								 certificate_t *issuer_cert);

@@ -25,7 +25,6 @@
 #include <credentials/certificates/certificate.h>
 
 #define X509_NO_PATH_LEN_CONSTRAINT		-1
-#define X509_MAX_PATH_LEN				 7
 
 typedef struct x509_t x509_t;
 typedef enum x509_flag_t x509_flag_t;

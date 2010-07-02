@@ -28,6 +28,11 @@
 #include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 
+/**
+ * Maximum length of a certificate trust chain
+ */
+#define MAX_TRUST_PATH_LEN 7
+
 typedef struct private_credential_manager_t private_credential_manager_t;
 
 /**
@@ -1132,7 +1137,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	auth = auth_cfg_create();
 	current = subject->get_ref(subject);
 
-	for (pathlen = 0; pathlen <= X509_MAX_PATH_LEN; pathlen++)
+	for (pathlen = 0; pathlen <= MAX_TRUST_PATH_LEN; pathlen++)
 	{
 		issuer = get_issuer_cert(this, current, TRUE);
 		if (issuer)
@@ -1205,9 +1210,9 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		}
 	}
 	current->destroy(current);
-	if (pathlen > X509_MAX_PATH_LEN)
+	if (pathlen > MAX_TRUST_PATH_LEN)
 	{
-		DBG1(DBG_CFG, "maximum path length of %d exceeded", X509_MAX_PATH_LEN);
+		DBG1(DBG_CFG, "maximum path length of %d exceeded", MAX_TRUST_PATH_LEN);
 	}
 	if (trusted)
 	{
@@ -1479,7 +1484,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		}
 		issuer = get_issuer_cert(this, current, FALSE);
 		if (!issuer || issuer->equals(issuer, current) ||
-			pathlen > X509_MAX_PATH_LEN)
+			pathlen > MAX_TRUST_PATH_LEN)
 		{
 			DESTROY_IF(issuer);
 			break;
