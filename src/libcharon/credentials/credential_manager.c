@@ -463,7 +463,7 @@ static void cache_queue(private_credential_manager_t *this)
  * forward declaration
  */
 static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
-					key_type_t type, identification_t *id, bool crl, bool ocsp);
+					key_type_t type, identification_t *id, bool online);
 
 /**
  * Do an OCSP request
@@ -529,7 +529,7 @@ static bool verify_ocsp(private_credential_manager_t *this,
 
 	subject = &response->certificate;
 	responder = subject->get_issuer(subject);
-	enumerator = create_trusted_enumerator(this, KEY_ANY, responder, FALSE, FALSE);
+	enumerator = create_trusted_enumerator(this, KEY_ANY, responder, FALSE);
 	while (enumerator->enumerate(enumerator, &issuer, NULL))
 	{
 		if (this->cache->issued_by(this->cache, subject, issuer))
@@ -757,7 +757,7 @@ static bool verify_crl(private_credential_manager_t *this, certificate_t *crl)
 	bool verified = FALSE;
 
 	enumerator = create_trusted_enumerator(this, KEY_ANY, crl->get_issuer(crl),
-										   FALSE, FALSE);
+										   FALSE);
 	while (enumerator->enumerate(enumerator, &issuer, NULL))
 	{
 		if (this->cache->issued_by(this->cache, crl, issuer))
@@ -1004,7 +1004,7 @@ static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
  */
 static bool check_certificate(private_credential_manager_t *this,
 							  certificate_t *subject, certificate_t *issuer,
-							  bool crl, bool ocsp, auth_cfg_t *auth)
+							  bool online, auth_cfg_t *auth)
 {
 	time_t not_before, not_after;
 
@@ -1027,13 +1027,10 @@ static bool check_certificate(private_credential_manager_t *this,
 		{
 			return FALSE;
 		}
-		if (ocsp || crl)
+		if (online)
 		{
 			DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 						   subject->get_subject(subject));
-		}
-		if (ocsp)
-		{
 			switch (check_ocsp(this, (x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
@@ -1052,9 +1049,6 @@ static bool check_certificate(private_credential_manager_t *this,
 					DBG1(DBG_CFG, "ocsp check failed, fallback to crl");
 					break;
 			}
-		}
-		if (crl)
-		{
 			switch (check_crl(this, (x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
@@ -1128,7 +1122,7 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
  */
 static bool verify_trust_chain(private_credential_manager_t *this,
 							   certificate_t *subject, auth_cfg_t *result,
-							   bool trusted, bool crl, bool ocsp)
+							   bool trusted, bool online)
 {
 	certificate_t *current, *issuer;
 	x509_t *x509;
@@ -1181,7 +1175,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
-		if (!check_certificate(this, current, issuer, crl, ocsp,
+		if (!check_certificate(this, current, issuer, online,
 							   current == subject ? auth : NULL))
 		{
 			trusted = FALSE;
@@ -1237,10 +1231,8 @@ typedef struct {
 	key_type_t type;
 	/** identity the requested key belongs to */
 	identification_t *id;
-	/** TRUE to do CRL checking */
-	bool crl;
-	/** TRUE to do OCSP checking */
-	bool ocsp;
+	/** TRUE to do CRL/OCSP checking */
+	bool online;
 	/** pretrusted certificate we have served at first invocation */
 	certificate_t *pretrusted;
 	/** currently enumerating auth config */
@@ -1273,7 +1265,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 			if (this->this->cache->issued_by(this->this->cache,
 								   this->pretrusted, this->pretrusted) ||
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
-								   TRUE, this->crl, this->ocsp))
+								   TRUE, this->online))
 			{
 				this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
 								this->pretrusted->get_ref(this->pretrusted));
@@ -1300,7 +1292,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 		DBG1(DBG_CFG, "  using certificate \"%Y\"",
 			 current->get_subject(current));
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
-							   this->crl, this->ocsp))
+							   this->online))
 		{
 			*cert = current;
 			if (auth)
@@ -1328,7 +1320,7 @@ static void trusted_destroy(trusted_enumerator_t *this)
  * create an enumerator over trusted certificates and their trustchain
  */
 static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
-					key_type_t type, identification_t *id, bool crl, bool ocsp)
+					key_type_t type, identification_t *id, bool online)
 {
 	trusted_enumerator_t *enumerator = malloc_thing(trusted_enumerator_t);
 
@@ -1339,8 +1331,7 @@ static enumerator_t *create_trusted_enumerator(private_credential_manager_t *thi
 	enumerator->this = this;
 	enumerator->type = type;
 	enumerator->id = id;
-	enumerator->crl = crl;
-	enumerator->ocsp = ocsp;
+	enumerator->online = online;
 	enumerator->pretrusted = NULL;
 	enumerator->auth = NULL;
 
@@ -1413,7 +1404,7 @@ static enumerator_t* create_public_enumerator(private_credential_manager_t *this
 
 	enumerator->public.enumerate = (void*)public_enumerate;
 	enumerator->public.destroy = (void*)public_destroy;
-	enumerator->inner = create_trusted_enumerator(this, type, id, TRUE, TRUE);
+	enumerator->inner = create_trusted_enumerator(this, type, id, TRUE);
 	enumerator->this = this;
 	enumerator->current = NULL;
 	enumerator->wrapper = NULL;
