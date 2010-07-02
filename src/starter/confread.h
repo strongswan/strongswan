@@ -122,6 +122,8 @@ struct starter_conn {
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
 		u_int32_t       reqid;
+		u_int32_t		mark_value;
+		u_int32_t		mark_mask;
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;

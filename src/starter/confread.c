@@ -671,6 +671,41 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			}
 			break;
 		}
+		case KW_MARK:
+		{
+			char *pos, *endptr;
+
+			pos = strchr(kw->value, '/');
+			if (pos)
+			{
+				*pos = '\0';
+				conn->mark_mask = strtoul(pos+1, &endptr, 0);
+				if (*endptr != '\0')
+				{
+					plog("# invalid mark mask: %s", pos+1);
+					cfg->err++;
+					break;
+				}
+			}
+			else
+			{
+				conn->mark_mask = 0xffffffff;
+			}
+			if (*kw->value == '\0')
+			{
+				conn->mark_value = 0;
+			}
+			else
+			{
+				conn->mark_value = strtoul(kw->value, &endptr, 0);
+				if (*endptr != '\0')
+				{
+					plog("# invalid mark value: %s", kw->value);
+					cfg->err++;
+				}
+			}
+			break;
+		}
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{

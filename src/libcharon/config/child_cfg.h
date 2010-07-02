@@ -26,6 +26,7 @@
 typedef enum action_t action_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
+typedef struct mark_t mark_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -80,6 +81,16 @@ struct lifetime_cfg_t {
 		/** The range of a random value subtracted from rekey. */
 		u_int64_t	jitter;
 	} time, bytes, packets;
+};
+
+/**
+ * A mark_t defines an optional mark in a CHILD_SA.
+ */
+struct mark_t {
+	/** Mark value */
+	u_int32_t value;
+	/** Mark mask */
+	u_int32_t mask;
 };
 
 /**
@@ -246,6 +257,14 @@ struct child_cfg_t {
 	u_int32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
+	 * Optional mark for CHILD_SA
+	 *
+	 * @param inbound		TRUE for inbound, FALSE for outbound 
+	 * @return				mark
+	 */
+	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
+
+	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
@@ -307,12 +326,14 @@ struct child_cfg_t {
  * @param ipcomp			use IPComp, if peer supports it
  * @param inactivity		inactivity timeout in s before closing a CHILD_SA
  * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
+ * @param mark				optional mark (can be NULL)
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity, u_int32_t reqid);
+							  u_int32_t inactivity, u_int32_t reqid,
+							  mark_t *mark);
 
 #endif /** CHILD_CFG_H_ @}*/

@@ -256,6 +256,10 @@ struct stroke_msg_t {
 				char *mediated_by;
 				char *peerid;
 			} ikeme;
+			struct {
+				u_int32_t value;
+				u_int32_t mask;
+			} mark;
 			stroke_end_t me, other;
 		} add_conn;
 

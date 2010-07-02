@@ -67,8 +67,8 @@ METHOD(kernel_interface_t, get_cpi, status_t,
 METHOD(kernel_interface_t, add_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, protocol_id_t protocol, u_int32_t reqid,
-	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
+	mark_t mark, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+	u_int16_t int_alg, chunk_t int_key,	ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool encap, bool inbound, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts)
 {
@@ -77,82 +77,84 @@ METHOD(kernel_interface_t, add_sa, status_t,
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->add_sa(this->ipsec, src, dst, spi, protocol, reqid,
-			lifetime, enc_alg, enc_key, int_alg, int_key, mode, ipcomp, cpi,
-			encap, inbound, src_ts, dst_ts);
+			mark, lifetime, enc_alg, enc_key, int_alg, int_key,	mode, ipcomp,
+			cpi, encap, inbound, src_ts, dst_ts);
 }
 
 METHOD(kernel_interface_t, update_sa, status_t,
 	private_kernel_interface_t *this, u_int32_t spi, protocol_id_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool encap, bool new_encap)
+	bool encap, bool new_encap, mark_t mark)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->update_sa(this->ipsec, spi, protocol, cpi, src, dst,
-								  new_src, new_dst, encap, new_encap);
+								  new_src, new_dst, encap, new_encap, mark);
 }
 
 METHOD(kernel_interface_t, query_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes)
+	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->ipsec->query_sa(this->ipsec, src, dst, spi, protocol, bytes);
+	return this->ipsec->query_sa(this->ipsec, src, dst, spi, protocol, mark, bytes);
 }
 
 METHOD(kernel_interface_t, del_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	protocol_id_t protocol, u_int16_t cpi)
+	protocol_id_t protocol, u_int16_t cpi, mark_t mark)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->ipsec->del_sa(this->ipsec, src, dst, spi, protocol, cpi);
+	return this->ipsec->del_sa(this->ipsec, src, dst, spi, protocol, cpi, mark);
 }
 
 METHOD(kernel_interface_t, add_policy, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
-	u_int32_t reqid, ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-	bool routed)
+	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
+	u_int16_t cpi,	bool routed)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->add_policy(this->ipsec, src, dst, src_ts, dst_ts,
-			direction, spi, protocol, reqid, mode, ipcomp, cpi, routed);
+			direction, spi, protocol, reqid, mark, mode, ipcomp, cpi, routed);
 }
 
 METHOD(kernel_interface_t, query_policy, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t *use_time)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	u_int32_t *use_time)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->query_policy(this->ipsec, src_ts, dst_ts,
-									 direction, use_time);
+									 direction, mark, use_time);
 }
 
 METHOD(kernel_interface_t, del_policy, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, bool unrouted)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	bool unrouted)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->del_policy(this->ipsec, src_ts, dst_ts,
-								   direction, unrouted);
+								   direction, mark, unrouted);
 }
 
 METHOD(kernel_interface_t, get_source_addr, host_t*,

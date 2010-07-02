@@ -98,6 +98,16 @@ struct private_child_sa_t {
 	u_int32_t reqid;
 
 	/**
+	 * inbound mark used for this child_sa
+	 */
+	mark_t mark_in;
+
+	/**
+	 * outbound mark used for this child_sa
+	 */
+	mark_t mark_out;
+
+	/**
 	 * absolute time when rekeying is scheduled
 	 */
 	time_t rekey_time;
@@ -431,10 +441,10 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->my_spi)
 		{
-			status = charon->kernel_interface->query_sa(
-									charon->kernel_interface,
+			status = charon->kernel_interface->query_sa(charon->kernel_interface,
 									this->other_addr, this->my_addr,
-									this->my_spi, this->protocol, &bytes);
+									this->my_spi, this->protocol,
+									this->mark_in, &bytes);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
@@ -450,10 +460,10 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->other_spi)
 		{
-			status = charon->kernel_interface->query_sa(
-									charon->kernel_interface,
+			status = charon->kernel_interface->query_sa(charon->kernel_interface,
 									this->my_addr, this->other_addr,
-									this->other_spi, this->protocol, &bytes);
+									this->other_spi, this->protocol,
+									this->mark_out,	&bytes);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
@@ -485,14 +495,14 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 		if (inbound)
 		{
 			if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								other_ts, my_ts, POLICY_IN, &in) == SUCCESS)
+						other_ts, my_ts, POLICY_IN, this->mark_in, &in) == SUCCESS)
 			{
 				last_use = max(last_use, in);
 			}
 			if (this->mode != MODE_TRANSPORT)
 			{
 				if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								other_ts, my_ts, POLICY_FWD, &fwd) == SUCCESS)
+						other_ts, my_ts, POLICY_FWD, this->mark_in, &fwd) == SUCCESS)
 				{
 					last_use = max(last_use, fwd);
 				}
@@ -501,7 +511,7 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 		else
 		{
 			if (charon->kernel_interface->query_policy(charon->kernel_interface,
-								my_ts, other_ts, POLICY_OUT, &out) == SUCCESS)
+						my_ts, other_ts, POLICY_OUT, this->mark_out, &out) == SUCCESS)
 			{
 				last_use = max(last_use, out);
 			}
@@ -665,9 +675,10 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	}
 
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-				src, dst, spi, this->protocol, this->reqid, lifetime,
-				enc_alg, encr, int_alg, integ, this->mode, this->ipcomp, cpi,
-				this->encap, update, src_ts, dst_ts);
+				src, dst, spi, this->protocol, this->reqid,
+				inbound ? this->mark_in : this->mark_out,
+				lifetime, enc_alg, encr, int_alg, integ, this->mode,
+				this->ipcomp, cpi, this->encap, update, src_ts, dst_ts);
 
 	free(lifetime);
 
@@ -708,19 +719,19 @@ static status_t add_policies(private_child_sa_t *this,
 			/* install 3 policies: out, in and forward */
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
-					this->other_spi, this->protocol, this->reqid, this->mode,
-					this->ipcomp, this->other_cpi, routed);
+					this->other_spi, this->protocol, this->reqid, this->mark_out,
+					this->mode, this->ipcomp, this->other_cpi, routed);
 
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
-					this->my_spi, this->protocol, this->reqid, this->mode,
-					this->ipcomp, this->my_cpi, routed);
+					this->my_spi, this->protocol, this->reqid, this->mark_in,
+					this->mode,	this->ipcomp, this->my_cpi, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
-					this->my_spi, this->protocol, this->reqid, this->mode,
-					this->ipcomp, this->my_cpi, routed);
+					this->my_spi, this->protocol, this->reqid, this->mark_in,
+					this->mode,	this->ipcomp, this->my_cpi, routed);
 			}
 
 			if (status != SUCCESS)
@@ -768,7 +779,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 							this->my_spi, this->protocol,
 							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 							this->other_addr, this->my_addr, other, me,
-							this->encap, encap) == NOT_SUPPORTED)
+							this->encap, encap, this->mark_in) == NOT_SUPPORTED)
 			{
 				return NOT_SUPPORTED;
 			}
@@ -781,7 +792,7 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 							this->other_spi, this->protocol,
 							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 							this->my_addr, this->other_addr, me, other,
-							this->encap, encap) == NOT_SUPPORTED)
+							this->encap, encap, this->mark_out) == NOT_SUPPORTED)
 			{
 				return NOT_SUPPORTED;
 			}
@@ -803,13 +814,13 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 			{
 				/* remove old policies first */
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-											my_ts, other_ts, POLICY_OUT, FALSE);
+							my_ts, other_ts, POLICY_OUT, this->mark_out, FALSE);
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-											other_ts, my_ts,  POLICY_IN, FALSE);
+							other_ts, my_ts,  POLICY_IN, this->mark_in, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					charon->kernel_interface->del_policy(charon->kernel_interface,
-											other_ts, my_ts, POLICY_FWD, FALSE);
+							other_ts, my_ts, POLICY_FWD, this->mark_in, FALSE);
 				}
 
 				/* check whether we have to update a "dynamic" traffic selector */
@@ -835,18 +846,18 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 				/* reinstall updated policies */
 				charon->kernel_interface->add_policy(charon->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
-						this->protocol, this->reqid, this->mode, this->ipcomp,
-						this->other_cpi, FALSE);
+						this->protocol, this->reqid, this->mark_out, this->mode,
+						this->ipcomp, this->other_cpi, FALSE);
 				charon->kernel_interface->add_policy(charon->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_IN, this->my_spi,
-						this->protocol, this->reqid, this->mode, this->ipcomp,
-						this->my_cpi, FALSE);
+						this->protocol, this->reqid, this->mark_in, this->mode,
+						this->ipcomp, this->my_cpi, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					charon->kernel_interface->add_policy(charon->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_FWD, this->my_spi,
-						this->protocol, this->reqid, this->mode, this->ipcomp,
-						this->my_cpi, FALSE);
+						this->protocol, this->reqid, this->mark_in, this->mode,
+						this->ipcomp, this->my_cpi, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -896,13 +907,13 @@ static void destroy(private_child_sa_t *this)
 		}
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
-					this->protocol, this->my_cpi);
+					this->protocol, this->my_cpi, this->mark_in);
 	}
 	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 					this->my_addr, this->other_addr, this->other_spi,
-					this->protocol, this->other_cpi);
+					this->protocol, this->other_cpi, this->mark_out);
 	}
 
 	if (this->config->install_policy(this->config))
@@ -912,13 +923,13 @@ static void destroy(private_child_sa_t *this)
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-										my_ts, other_ts, POLICY_OUT, unrouted);
+							my_ts, other_ts, POLICY_OUT, this->mark_out, unrouted);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-										other_ts, my_ts, POLICY_IN, unrouted);
+							other_ts, my_ts, POLICY_IN, this->mark_in, unrouted);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-										other_ts, my_ts, POLICY_FWD, unrouted);
+							other_ts, my_ts, POLICY_FWD, this->mark_in, unrouted);
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -1000,6 +1011,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->config = config;
 	config->get_ref(config);
 	this->reqid = config->get_reqid(config);
+	this->mark_in = config->get_mark(config, TRUE);
+	this->mark_out = config->get_mark(config, FALSE);
+
 	if (!this->reqid)
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA */

@@ -1690,10 +1690,11 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	protocol_id_t protocol, u_int32_t reqid, lifetime_cfg_t *lifetime,
-	u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg, chunk_t int_key,
-	ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi, bool encap,
-	bool inbound, traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	protocol_id_t protocol, u_int32_t reqid, mark_t mark,
+	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	u_int16_t ipcomp, u_int16_t cpi, bool encap, bool inbound,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1849,7 +1850,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 METHOD(kernel_ipsec_t, update_sa, status_t,
 	private_kernel_klips_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool encap, bool new_encap)
+	bool encap, bool new_encap, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1920,14 +1921,14 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes)
+	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	return NOT_SUPPORTED;  /* TODO */
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
+	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1992,8 +1993,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
-	u_int32_t reqid, ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-	bool routed)
+	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
+	u_int16_t cpi, bool routed)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2210,7 +2211,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
 	private_kernel_klips_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t *use_time)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	u_int32_t *use_time)
 {
 	#define IDLE_PREFIX "idle="
 	static const char *path_eroute = "/proc/net/ipsec_eroute";
@@ -2365,7 +2367,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
 	private_kernel_klips_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, bool unrouted)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	bool unrouted)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg = (struct sadb_msg*)request, *out;
@@ -2574,7 +2577,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 	{
 		close(this->socket);
 	}
-	if (this->socket_evnets > 0)
+	if (this->socket_events > 0)
 	{
 		close(this->socket_events);
 	}
