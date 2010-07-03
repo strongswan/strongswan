@@ -1,6 +1,10 @@
 strongswan-4.4.1
 ----------------
 
+- Support of xfrm marks in IPsec SAs and IPsec policies introduced
+  with the Linux 2.6.34 kernel. For details see example scenario
+  ikev2/nat-two-rw-mark.
+
 - The openssl plugin now supports X.509 certificate and CRL functions.
 
 - The major refactoring of the IKEv1 Mode Config functionality now allows
