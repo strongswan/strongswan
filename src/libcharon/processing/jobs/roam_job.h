@@ -15,7 +15,7 @@
 
 /**
  * @defgroup roam_job roam_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef ROAM_JOB_H_

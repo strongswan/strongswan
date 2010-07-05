@@ -16,7 +16,7 @@
 
 /**
  * @defgroup process_message_job process_message_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef PROCESS_MESSAGE_JOB_H_

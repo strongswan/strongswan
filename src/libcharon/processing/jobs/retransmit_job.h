@@ -16,7 +16,7 @@
 
 /**
  * @defgroup retransmit_job retransmit_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef RETRANSMIT_JOB_H_

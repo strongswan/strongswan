@@ -15,7 +15,7 @@
 
 /**
  * @defgroup update_sa_job update_sa_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef UPDATE_SA_JOB_H_

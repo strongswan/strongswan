@@ -15,7 +15,7 @@
 
 /**
  * @defgroup send_dpd_job send_dpd_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef SEND_DPD_JOB_H_

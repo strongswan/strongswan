@@ -15,7 +15,7 @@
 
 /**
  * @defgroup migrate_job migrate_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef MIGRATE_JOB_H_

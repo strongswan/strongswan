@@ -22,11 +22,11 @@
  * @defgroup hplugins plugins
  * @ingroup libhydra
  *
- * @defgroup processing processing
+ * @defgroup hprocessing processing
  * @ingroup libhydra
  *
- * @defgroup jobs jobs
- * @ingroup processing
+ * @defgroup hjobs jobs
+ * @ingroup hprocessing
  *
  * @addtogroup libhydra
  * @{

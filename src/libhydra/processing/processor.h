@@ -16,7 +16,7 @@
 
 /**
  * @defgroup processor processor
- * @{ @ingroup processing
+ * @{ @ingroup hprocessing
  */
 
 #ifndef PROCESSOR_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup rekey_ike_sa_job rekey_ike_sa_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef REKEY_IKE_SA_JOB_H_

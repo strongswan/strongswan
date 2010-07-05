@@ -15,7 +15,7 @@
 
 /**
  * @defgroup inactivity_job inactivity_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef INACTIVITY_JOB_H_

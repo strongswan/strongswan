@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mediation_job mediation_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef MEDIATION_JOB_H_

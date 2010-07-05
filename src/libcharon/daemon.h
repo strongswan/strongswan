@@ -46,11 +46,11 @@
  * @defgroup cplugins plugins
  * @ingroup libcharon
  *
- * @defgroup processing processing
+ * @defgroup cprocessing processing
  * @ingroup libcharon
  *
- * @defgroup jobs jobs
- * @ingroup processing
+ * @defgroup cjobs jobs
+ * @ingroup cprocessing
  *
  * @defgroup sa sa
  * @ingroup libcharon

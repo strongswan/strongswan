@@ -15,7 +15,7 @@
 
 /**
  * @defgroup send_keepalive_job send_keepalive_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef SEND_KEEPALIVE_JOB_H_

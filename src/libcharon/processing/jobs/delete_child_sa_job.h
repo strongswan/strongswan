@@ -15,7 +15,7 @@
 
 /**
  * @defgroup delete_child_sa_job delete_child_sa_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef DELETE_CHILD_SA_JOB_H_

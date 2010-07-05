@@ -15,7 +15,7 @@
 
 /**
  * @defgroup acquire_job acquire_job
- * @{ @ingroup jobs
+ * @{ @ingroup cjobs
  */
 
 #ifndef ACQUIRE_JOB_H_
