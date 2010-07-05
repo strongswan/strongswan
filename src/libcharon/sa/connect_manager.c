@@ -17,6 +17,7 @@
 
 #include <math.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
@@ -1222,7 +1223,7 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 
 			initiate_data_t *data = initiate_data_create(checklist, initiated);
 			job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiate_mediated, data, (callback_job_cleanup_t)initiate_data_destroy, NULL);
-			charon->processor->queue_job(charon->processor, job);
+			hydra->processor->queue_job(hydra->processor, job);
 			return;
 		}
 		else
@@ -1477,7 +1478,7 @@ static void check_and_initiate(private_connect_manager_t *this,
 	{
 		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa,
 															 waiting_sa);
-		charon->processor->queue_job(charon->processor, job);
+		hydra->processor->queue_job(hydra->processor, job);
 	}
 	iterator->destroy(iterator);
 

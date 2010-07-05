@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <processing/jobs/callback_job.h>
 #include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
+#include <processing/jobs/callback_job.h>
 
 #include "stroke_config.h"
 #include "stroke_control.h"
@@ -586,7 +586,7 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	ctx->this = this;
 	job = callback_job_create((callback_job_cb_t)process,
 							  ctx, (void*)stroke_job_context_destroy, this->job);
-	charon->processor->queue_job(charon->processor, (job_t*)job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)job);
 
 	return JOB_REQUEUE_FAIR;
 }
@@ -684,7 +684,7 @@ stroke_socket_t *stroke_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

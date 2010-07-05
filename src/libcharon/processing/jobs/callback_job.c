@@ -18,10 +18,11 @@
 
 #include <semaphore.h>
 
-#include <daemon.h>
+#include <hydra.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
+#include <utils/linked_list.h>
 
 typedef struct private_callback_job_t private_callback_job_t;
 
@@ -226,7 +227,7 @@ static void execute(private_callback_job_t *this)
 	thread_cancellation_point();
 	if (requeue)
 	{
-		charon->processor->queue_job(charon->processor,
+		hydra->processor->queue_job(hydra->processor,
 									 &this->public.job_interface);
 	}
 	thread_cleanup_pop(cleanup);

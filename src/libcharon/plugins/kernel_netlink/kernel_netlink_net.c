@@ -47,6 +47,7 @@
 #include "kernel_netlink_net.h"
 #include "kernel_netlink_shared.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
@@ -1479,7 +1480,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	if (init_address_list(this) != SUCCESS)
 	{

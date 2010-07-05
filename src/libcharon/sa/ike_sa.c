@@ -24,8 +24,8 @@
 #include "ike_sa.h"
 
 #include <library.h>
-#include <daemon.h>
 #include <hydra.h>
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <sa/task_manager.h>
@@ -1163,7 +1163,7 @@ METHOD(ike_sa_t, initiate, status_t,
 		{
 			/* mediated connection, initiate mediation process */
 			job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id);
-			charon->processor->queue_job(charon->processor, job);
+			hydra->processor->queue_job(hydra->processor, job);
 			return SUCCESS;
 		}
 #endif /* ME */
@@ -1709,7 +1709,7 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
-		charon->processor->queue_job(charon->processor,
+		hydra->processor->queue_job(hydra->processor,
 					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||

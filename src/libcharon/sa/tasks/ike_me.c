@@ -17,6 +17,7 @@
 
 #include <string.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <config/peer_cfg.h>
 #include <encoding/payloads/id_payload.h>
@@ -692,7 +693,7 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			job_t *job = (job_t*)mediation_job_create(this->peer_id,
 					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,
 					this->connect_key, this->remote_endpoints, this->response);
-			charon->processor->queue_job(charon->processor, job);
+			hydra->processor->queue_job(hydra->processor, job);
 			break;
 		}
 		default:

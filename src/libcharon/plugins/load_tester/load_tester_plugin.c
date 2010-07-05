@@ -22,6 +22,7 @@
 
 #include <unistd.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>
@@ -221,7 +222,7 @@ plugin_t *load_tester_plugin_create()
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
-		charon->processor->queue_job(charon->processor,
+		hydra->processor->queue_job(hydra->processor,
 					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
 												this, NULL, NULL));
 	}

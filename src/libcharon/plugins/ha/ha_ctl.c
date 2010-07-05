@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <hydra.h>
 #include <processing/jobs/callback_job.h>
 
 #define HA_FIFO IPSEC_PIDDIR "/charon.ha"
@@ -134,7 +135,7 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 
 	this->job = callback_job_create((callback_job_cb_t)dispatch_fifo,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 	return &this->public;
 }
 

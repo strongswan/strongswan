@@ -122,7 +122,7 @@ plugin_t *nm_plugin_create()
 	/* bypass file permissions to read from users ssh-agent */
 	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
 
-	charon->processor->queue_job(charon->processor,
+	hydra->processor->queue_job(hydra->processor,
 		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
 
 	return &this->public.plugin;

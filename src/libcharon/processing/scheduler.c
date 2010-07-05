@@ -19,6 +19,7 @@
 
 #include "scheduler.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
@@ -199,7 +200,7 @@ static job_requeue_t schedule(private_scheduler_t * this)
 			remove_event(this);
 			this->mutex->unlock(this->mutex);
 			DBG2(DBG_JOB, "got event, queuing job for execution");
-			charon->processor->queue_job(charon->processor, event->job);
+			hydra->processor->queue_job(hydra->processor, event->job);
 			free(event);
 			return JOB_REQUEUE_DIRECT;
 		}
@@ -351,7 +352,7 @@ scheduler_t * scheduler_create()
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 
 	this->job = callback_job_create((callback_job_cb_t)schedule, this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

@@ -21,6 +21,7 @@
 #include <malloc.h>
 #endif /* HAVE_MALLINFO */
 
+#include <hydra.h>
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -422,10 +423,10 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 #endif /* HAVE_MALLINFO */
 		fprintf(out, "  worker threads: %d idle of %d,",
-				charon->processor->get_idle_threads(charon->processor),
-				charon->processor->get_total_threads(charon->processor));
+				hydra->processor->get_idle_threads(hydra->processor),
+				hydra->processor->get_total_threads(hydra->processor));
 		fprintf(out, " job queue load: %d,",
-				charon->processor->get_job_load(charon->processor));
+				hydra->processor->get_job_load(hydra->processor));
 		fprintf(out, " scheduled events: %d\n",
 				charon->scheduler->get_job_load(charon->scheduler));
 		fprintf(out, "  loaded plugins: ");

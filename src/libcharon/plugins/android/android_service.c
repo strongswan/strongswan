@@ -20,6 +20,7 @@
 
 #include "android_service.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -378,7 +379,7 @@ android_service_t *android_service_create(android_creds_t *creds)
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 	this->job = callback_job_create((callback_job_cb_t)initiate, this,
 									NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

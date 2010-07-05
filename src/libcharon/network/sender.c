@@ -19,6 +19,7 @@
 
 #include "sender.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <network/socket.h>
 #include <processing/jobs/callback_job.h>
@@ -195,7 +196,7 @@ sender_t * sender_create()
 											"charon.send_delay_response", TRUE),
 	);
 
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

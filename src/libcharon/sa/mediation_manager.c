@@ -15,6 +15,7 @@
 
 #include "mediation_manager.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
@@ -241,7 +242,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 										  (void**)&requester) == SUCCESS)
 	{
 		job_t *job = (job_t*)mediation_callback_job_create(requester, peer_id);
-		charon->processor->queue_job(charon->processor, job);
+		hydra->processor->queue_job(hydra->processor, job);
 		requester->destroy(requester);
 	}
 

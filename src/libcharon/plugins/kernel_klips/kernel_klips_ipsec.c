@@ -28,6 +28,7 @@
 
 #include "kernel_klips_ipsec.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
@@ -1300,7 +1301,7 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 	DBG2(DBG_KNL, "received an SADB_ACQUIRE");
 	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
 	job = (job_t*)acquire_job_create(reqid, NULL, NULL);
-	charon->processor->queue_job(charon->processor, job);
+	hydra->processor->queue_job(hydra->processor, job);
 }
 
 /**
@@ -1363,7 +1364,7 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and"
 				" reqid {%d} changed, queuing update job", ntohl(spi), reqid);
 			job = (job_t*)update_sa_job_create(reqid, new_src);
-			charon->processor->queue_job(charon->processor, job);
+			hydra->processor->queue_job(hydra->processor, job);
 		}
 	}
 }
@@ -1510,7 +1511,7 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	{
 		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
 	}
-	charon->processor->queue_job(charon->processor, job);
+	hydra->processor->queue_job(hydra->processor, job);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -2655,7 +2656,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

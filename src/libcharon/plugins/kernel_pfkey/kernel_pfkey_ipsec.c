@@ -54,6 +54,7 @@
 
 #include "kernel_pfkey_ipsec.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <utils/host.h>
 #include <threading/thread.h>
@@ -940,7 +941,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
 				   src_ts, dst_ts, reqid);
 	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
-	charon->processor->queue_job(charon->processor, job);
+	hydra->processor->queue_job(hydra->processor, job);
 }
 
 /**
@@ -985,7 +986,7 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 	{
 		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
 	}
-	charon->processor->queue_job(charon->processor, job);
+	hydra->processor->queue_job(hydra->processor, job);
 }
 
 #ifdef SADB_X_MIGRATE
@@ -1035,7 +1036,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
 		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
 										 local, remote);
-		charon->processor->queue_job(charon->processor, job);
+		hydra->processor->queue_job(hydra->processor, job);
 	}
 	else
 	{
@@ -1099,7 +1100,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
 				"reqid {%u} changed, queuing update job", ntohl(spi), reqid);
 			job = (job_t*)update_sa_job_create(reqid, host);
-			charon->processor->queue_job(charon->processor, job);
+			hydra->processor->queue_job(hydra->processor, job);
 		}
 	}
 }
@@ -2205,7 +2206,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

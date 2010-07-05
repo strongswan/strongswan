@@ -20,6 +20,7 @@
 
 #include "receiver.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <network/socket.h>
 #include <network/packet.h>
@@ -360,7 +361,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			}
 		}
 	}
-	charon->processor->queue_job(charon->processor,
+	hydra->processor->queue_job(hydra->processor,
 								 (job_t*)process_message_job_create(message));
 	return JOB_REQUEUE_DIRECT;
 }
@@ -426,7 +427,7 @@ receiver_t *receiver_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

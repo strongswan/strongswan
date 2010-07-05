@@ -16,6 +16,7 @@
 
 #include "child_rekey.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/child_create.h>
@@ -299,7 +300,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 		DBG1(DBG_IKE, "peer seems to not support CHILD_SA rekeying, "
 			 "starting reauthentication");
 		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-		charon->processor->queue_job(charon->processor,
+		hydra->processor->queue_job(hydra->processor,
 				(job_t*)rekey_ike_sa_job_create(
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;

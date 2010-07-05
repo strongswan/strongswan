@@ -15,6 +15,7 @@
 
 #include "ha_dispatcher.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -869,7 +870,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	return &this->public;
 }

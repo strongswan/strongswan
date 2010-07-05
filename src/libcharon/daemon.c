@@ -32,6 +32,7 @@
 #include "daemon.h"
 
 #include <library.h>
+#include <hydra.h>
 #include <config/proposal.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */

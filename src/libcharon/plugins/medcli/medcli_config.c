@@ -18,6 +18,7 @@
 
 #include "medcli_config.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -126,11 +127,11 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-		TRUE, this->dpd, 				/* mobike, dpddelay */
-		NULL, NULL, 					/* vip, pool */
-		TRUE, NULL, NULL); 				/* mediation, med by, peer id */
+		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+		this->rekey*5, this->rekey*3,	/* jitter, overtime */
+		TRUE, this->dpd,				/* mobike, dpddelay */
+		NULL, NULL,						/* vip, pool */
+		TRUE, NULL, NULL);				/* mediation, med by, peer id */
 	e->destroy(e);
 
 	auth = auth_cfg_create();
@@ -163,10 +164,10 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	peer_cfg = peer_cfg_create(
 		name, 2, this->ike->get_ref(this->ike),
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-		TRUE, this->dpd, 				/* mobike, dpddelay */
-		NULL, NULL, 					/* vip, pool */
+		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+		this->rekey*5, this->rekey*3,	/* jitter, overtime */
+		TRUE, this->dpd,				/* mobike, dpddelay */
+		NULL, NULL,						/* vip, pool */
 		FALSE, med_cfg,					/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
 
@@ -243,11 +244,11 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	this->current = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
-				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-				TRUE, this->dpd, 				/* mobike, dpddelay */
-				NULL, NULL, 					/* vip, pool */
-				FALSE, NULL, NULL); 			/* mediation, med by, peer id */
+				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+				this->rekey*5, this->rekey*3,	/* jitter, overtime */
+				TRUE, this->dpd,				/* mobike, dpddelay */
+				NULL, NULL,						/* vip, pool */
+				FALSE, NULL, NULL);				/* mediation, med by, peer id */
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -364,7 +365,7 @@ static void schedule_autoinit(private_medcli_config_t *this)
 			if (peer_cfg)
 			{
 				/* schedule asynchronous initiation job */
-				charon->processor->queue_job(charon->processor,
+				hydra->processor->queue_job(hydra->processor,
 						(job_t*)callback_job_create(
 									(callback_job_cb_t)initiate_config,
 									peer_cfg, (void*)peer_cfg->destroy, NULL));

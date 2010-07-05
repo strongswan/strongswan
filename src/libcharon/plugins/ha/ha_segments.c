@@ -17,6 +17,7 @@
 
 #include <pthread.h>
 
+#include <hydra.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <utils/linked_list.h>
@@ -283,7 +284,7 @@ static void start_watchdog(private_ha_segments_t *this)
 {
 	this->job = callback_job_create((callback_job_cb_t)watchdog,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 }
 
 METHOD(ha_segments_t, handle_status, void,

@@ -15,6 +15,7 @@
 
 #include "stroke_control.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -354,7 +355,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 		}
 
 		/* schedule delete asynchronously */
-		charon->processor->queue_job(charon->processor, (job_t*)
+		hydra->processor->queue_job(hydra->processor, (job_t*)
 						delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
 	}
 	enumerator->destroy(enumerator);

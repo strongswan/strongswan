@@ -23,6 +23,7 @@
 
 #include "kernel_pfroute_net.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <utils/host.h>
 #include <threading/thread.h>
@@ -716,7 +717,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
 
 	if (init_address_list(this) != SUCCESS)
 	{

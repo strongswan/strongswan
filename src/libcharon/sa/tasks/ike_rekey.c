@@ -16,6 +16,7 @@
 
 #include "ike_rekey.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
@@ -196,7 +197,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
 			 "starting reauthentication");
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		charon->processor->queue_job(charon->processor,
+		hydra->processor->queue_job(hydra->processor,
 				(job_t*)rekey_ike_sa_job_create(
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
