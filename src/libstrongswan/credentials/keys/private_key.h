@@ -23,6 +23,7 @@
 
 typedef struct private_key_t private_key_t;
 
+#include <credentials/keys/key_encoding.h>
 #include <credentials/keys/public_key.h>
 
 /**

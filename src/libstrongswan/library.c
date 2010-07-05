@@ -67,6 +67,7 @@ void library_deinit()
 
 	this->public.plugins->destroy(this->public.plugins);
 	this->public.settings->destroy(this->public.settings);
+	this->public.credmgr->destroy(this->public.credmgr);
 	this->public.creds->destroy(this->public.creds);
 	this->public.encoding->destroy(this->public.encoding);
 	this->public.crypto->destroy(this->public.crypto);
@@ -136,6 +137,7 @@ bool library_init(char *settings)
 	this->public.settings = settings_create(settings);
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
+	this->public.credmgr = credential_manager_create();
 	this->public.encoding = key_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();

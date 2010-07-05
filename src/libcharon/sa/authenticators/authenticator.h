@@ -24,11 +24,10 @@
 #define AUTHENTICATOR_H_
 
 typedef enum auth_method_t auth_method_t;
-typedef enum auth_class_t auth_class_t;
 typedef struct authenticator_t authenticator_t;
 
 #include <library.h>
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 #include <sa/ike_sa.h>
 
 /**
@@ -74,27 +73,6 @@ enum auth_method_t {
  * enum names for auth_method_t.
  */
 extern enum_name_t *auth_method_names;
-
-/**
- * Class of authentication to use. This is different to auth_method_t in that
- * it does not specify a method, but a class of acceptable methods. The found
- * certificate finally dictates wich method is used.
- */
-enum auth_class_t {
-	/** any class acceptable */
-	AUTH_CLASS_ANY = 0,
-	/** authentication using public keys (RSA, ECDSA) */
-	AUTH_CLASS_PUBKEY = 1,
-	/** authentication using a pre-shared secrets */
-	AUTH_CLASS_PSK = 2,
-	/** authentication using EAP */
-	AUTH_CLASS_EAP = 3,
-};
-
-/**
- * enum strings for auth_class_t
- */
-extern enum_name_t *auth_class_names;
 
 /**
  * Authenticator interface implemented by the various authenticators.

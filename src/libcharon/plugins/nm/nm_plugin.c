@@ -84,7 +84,7 @@ static void destroy(private_nm_plugin_t *this)
 	{
 		g_object_unref(this->plugin);
 	}
-	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
@@ -110,7 +110,7 @@ plugin_t *nm_plugin_create()
 	this->creds = nm_creds_create();
 	this->handler = nm_handler_create();
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
-	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	this->plugin = nm_strongswan_plugin_new(this->creds, this->handler);
 	if (!this->plugin)
 	{

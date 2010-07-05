@@ -211,7 +211,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	this->creds.public.create_cdp_enumerator = (void*)return_null;
 	this->creds.public.cache_cert = (void*)nop;
 
-	charon->credentials->add_set(charon->credentials, &this->creds.public);
+	lib->credmgr->add_set(lib->credmgr, &this->creds.public);
 
 	/* create config and backend */
 	ike_cfg = ike_cfg_create(FALSE, FALSE, local, IKEV2_UDP_PORT,
@@ -270,7 +270,7 @@ static void destroy(private_ha_tunnel_t *this)
 	}
 	if (this->creds.key)
 	{
-		charon->credentials->remove_set(charon->credentials, &this->creds.public);
+		lib->credmgr->remove_set(lib->credmgr, &this->creds.public);
 		this->creds.key->destroy(this->creds.key);
 	}
 	this->creds.local->destroy(this->creds.local);

@@ -21,7 +21,7 @@
 #ifndef AUTH_CFG_WRAPPER_H_
 #define AUTH_CFG_WRAPPER_H_
 
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 #include <credentials/credential_set.h>
 
 typedef struct auth_cfg_wrapper_t auth_cfg_wrapper_t;

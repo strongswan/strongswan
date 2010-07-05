@@ -62,7 +62,7 @@ METHOD(plugin_t, destroy, void,
 {
 	hydra->attributes->remove_handler(hydra->attributes,
 									  &this->handler->handler);
-	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
@@ -88,7 +88,7 @@ plugin_t *android_plugin_create()
 	);
 
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
-	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	this->service = android_service_create(this->creds);

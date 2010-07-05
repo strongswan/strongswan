@@ -54,7 +54,7 @@ struct private_medsrv_plugin_t {
 static void destroy(private_medsrv_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->db->destroy(this->db);
@@ -91,7 +91,7 @@ plugin_t *medsrv_plugin_create()
 	this->creds = medsrv_creds_create(this->db);
 	this->config = medsrv_config_create(this->db);
 
-	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 
 	return &this->public.plugin;

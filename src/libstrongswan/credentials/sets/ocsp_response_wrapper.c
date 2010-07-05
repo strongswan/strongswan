@@ -144,4 +144,3 @@ ocsp_response_wrapper_t *ocsp_response_wrapper_create(ocsp_response_t *response)
 
 	return &this->public;
 }
-

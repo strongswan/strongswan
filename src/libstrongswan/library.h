@@ -28,6 +28,9 @@
  * @defgroup certificates certificates
  * @ingroup credentials
  *
+ * @defgroup sets sets
+ * @ingroup credentials
+ *
  * @defgroup crypto crypto
  * @ingroup libstrongswan
  *
@@ -65,6 +68,7 @@
 #include "fetcher/fetcher_manager.h"
 #include "database/database_factory.h"
 #include "credentials/credential_factory.h"
+#include "credentials/credential_manager.h"
 #include "credentials/keys/key_encoding.h"
 
 typedef struct library_t library_t;
@@ -88,6 +92,11 @@ struct library_t {
 	 * credential constructor registry and factory
 	 */
 	credential_factory_t *creds;
+
+	/**
+	 * Manager for the credential set backends
+	 */
+	credential_manager_t *credmgr;
 
 	/**
 	 * key encoding registry and factory

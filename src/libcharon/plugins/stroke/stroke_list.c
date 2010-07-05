@@ -576,9 +576,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 static linked_list_t* create_unique_cert_list(certificate_type_t type)
 {
 	linked_list_t *list = linked_list_create();
-	enumerator_t *enumerator = charon->credentials->create_cert_enumerator(
-									charon->credentials, type, KEY_ANY,
-									NULL, FALSE);
+	enumerator_t *enumerator = lib->credmgr->create_cert_enumerator(
+									lib->credmgr, type, KEY_ANY, NULL, FALSE);
 	certificate_t *cert;
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
@@ -631,7 +630,7 @@ static void list_public_key(public_key_t *public, FILE *out)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
 		auth = auth_cfg_create();
-		private = charon->credentials->get_private(charon->credentials,
+		private = lib->credmgr->get_private(lib->credmgr,
 									public->get_type(public), id, auth);
 		auth->destroy(auth);
 		id->destroy(id);

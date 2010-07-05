@@ -37,8 +37,8 @@ bool test_med_db()
 	bool good = FALSE;
 
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);
-	enumerator = charon->credentials->create_public_enumerator(
-									charon->credentials, KEY_ANY, id, NULL);
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+														KEY_ANY, id, NULL);
 	while (enumerator->enumerate(enumerator, &public, &auth))
 	{
 		good = public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &found);

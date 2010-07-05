@@ -15,21 +15,21 @@
 
 /**
  * @defgroup credential_manager credential_manager
- * @{ @ingroup ccredentials
+ * @{ @ingroup credentials
  */
 
 #ifndef CREDENTIAL_MANAGER_H_
 #define CREDENTIAL_MANAGER_H_
 
+typedef struct credential_manager_t credential_manager_t;
+
 #include <utils/identification.h>
 #include <utils/enumerator.h>
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 #include <credentials/credential_set.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/shared_key.h>
 #include <credentials/certificates/certificate.h>
-
-typedef struct credential_manager_t credential_manager_t;
 
 /**
  * Manages credentials using credential_sets.

@@ -78,8 +78,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	hasher->destroy(hasher);
 	id = identification_create_from_encoding(ID_KEY_ID, hash);
 
-	enumerator = charon->credentials->create_cdp_enumerator(charon->credentials,
-															CERT_X509, id);
+	enumerator = lib->credmgr->create_cdp_enumerator(lib->credmgr, CERT_X509, id);
 	if (enumerator->enumerate(enumerator, &url))
 	{
 		payload = cert_payload_create_from_hash_and_url(hash, url);

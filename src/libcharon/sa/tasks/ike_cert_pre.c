@@ -93,8 +93,8 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 					certificate_t *cert;
 
 					id = identification_create_from_encoding(ID_KEY_ID, keyid);
-					cert = charon->credentials->get_cert(charon->credentials,
-											CERT_X509, KEY_ANY, id, TRUE);
+					cert = lib->credmgr->get_cert(lib->credmgr,
+												  CERT_X509, KEY_ANY, id, TRUE);
 					if (cert)
 					{
 						DBG1(DBG_IKE, "received cert request for \"%Y\"",
@@ -156,8 +156,8 @@ static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 				break;
 			}
 			id = identification_create_from_encoding(ID_KEY_ID, hash);
-			cert = charon->credentials->get_cert(charon->credentials,
-												 CERT_X509, KEY_ANY, id, FALSE);
+			cert = lib->credmgr->get_cert(lib->credmgr,
+										  CERT_X509, KEY_ANY, id, FALSE);
 			id->destroy(id);
 			break;
 		}
@@ -370,8 +370,8 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	if (!req)
 	{
 		/* otherwise add all trusted CA certificates */
-		enumerator = charon->credentials->create_cert_enumerator(
-							charon->credentials, CERT_ANY, KEY_ANY, NULL, TRUE);
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+												CERT_ANY, KEY_ANY, NULL, TRUE);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			add_certreq(&req, cert);

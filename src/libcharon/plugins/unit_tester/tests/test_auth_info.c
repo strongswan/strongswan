@@ -15,7 +15,7 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 
 
 static chunk_t certchunk = chunk_from_chars(

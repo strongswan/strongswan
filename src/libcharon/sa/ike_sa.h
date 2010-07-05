@@ -41,7 +41,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 
 /**
  * Timeout in seconds after that a half open IKE_SA gets deleted.

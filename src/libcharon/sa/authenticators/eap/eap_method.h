@@ -23,7 +23,6 @@
 
 typedef struct eap_method_t eap_method_t;
 typedef enum eap_role_t eap_role_t;
-typedef enum eap_type_t eap_type_t;
 typedef enum eap_code_t eap_code_t;
 
 #include <library.h>
@@ -41,35 +40,6 @@ enum eap_role_t {
  * enum names for eap_role_t.
  */
 extern enum_name_t *eap_role_names;
-
-/**
- * EAP types, defines the EAP method implementation
- */
-enum eap_type_t {
-	EAP_IDENTITY = 1,
-	EAP_NOTIFICATION = 2,
-	EAP_NAK = 3,
-	EAP_MD5 = 4,
-	EAP_OTP = 5,
-	EAP_GTC = 6,
-	EAP_SIM = 18,
-	EAP_AKA = 23,
-	EAP_MSCHAPV2 = 26,
-	/** not a method, but an implementation providing different methods */
-	EAP_RADIUS = 253,
-	EAP_EXPANDED = 254,
-	EAP_EXPERIMENTAL = 255,
-};
-
-/**
- * enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_names;
-
-/**
- * short string enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_short_names;
 
 /**
  * Lookup the EAP method type from a string.

@@ -37,6 +37,11 @@ credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
 credentials/certificates/pgp_certificate.h \
 credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_attributes.h \
+credentials/credential_manager.c credentials/credential_manager.h \
+credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
+credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
+credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \

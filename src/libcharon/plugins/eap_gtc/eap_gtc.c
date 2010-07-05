@@ -168,8 +168,8 @@ static status_t process_peer(private_eap_gtc_t *this,
 	chunk_t key;
 	size_t len;
 
-	shared = charon->credentials->get_shared(charon->credentials, SHARED_EAP,
-											 this->peer, this->server);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
+									  this->peer, this->server);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",

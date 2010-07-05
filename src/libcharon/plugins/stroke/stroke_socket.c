@@ -344,8 +344,7 @@ static void stroke_purge(private_stroke_socket_t *this,
 {
 	if (msg->purge.flags & PURGE_OCSP)
 	{
-		charon->credentials->flush_cache(charon->credentials,
-										 CERT_X509_OCSP_RESPONSE);
+		lib->credmgr->flush_cache(lib->credmgr, CERT_X509_OCSP_RESPONSE);
 	}
 	if (msg->purge.flags & PURGE_IKE)
 	{
@@ -622,8 +621,8 @@ static bool open_socket(private_stroke_socket_t *this)
 static void destroy(private_stroke_socket_t *this)
 {
 	this->job->cancel(this->job);
-	charon->credentials->remove_set(charon->credentials, &this->ca->set);
-	charon->credentials->remove_set(charon->credentials, &this->cred->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->ca->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
 	this->cred->destroy(this->cred);
@@ -657,8 +656,8 @@ stroke_socket_t *stroke_socket_create()
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);
 
-	charon->credentials->add_set(charon->credentials, &this->ca->set);
-	charon->credentials->add_set(charon->credentials, &this->cred->set);
+	lib->credmgr->add_set(lib->credmgr, &this->ca->set);
+	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 

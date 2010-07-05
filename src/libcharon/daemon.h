@@ -31,12 +31,6 @@
  * @defgroup control control
  * @ingroup libcharon
  *
- * @defgroup ccredentials credentials
- * @ingroup libcharon
- *
- * @defgroup sets sets
- * @ingroup ccredentials
- *
  * @defgroup encoding encoding
  * @ingroup libcharon
  *
@@ -156,7 +150,6 @@ typedef struct daemon_t daemon_t;
 #include <sa/ike_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <config/backend_manager.h>
-#include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
 
@@ -204,11 +197,6 @@ struct daemon_t {
 	 * Manager for the different configuration backends.
 	 */
 	backend_manager_t *backends;
-
-	/**
-	 * Manager for the credential backends
-	 */
-	credential_manager_t *credentials;
 
 	/**
 	 * The Sender-Thread.

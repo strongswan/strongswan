@@ -61,7 +61,7 @@ static void destroy(private_medcli_plugin_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	charon->credentials->remove_set(charon->credentials, &this->creds->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->listener->destroy(this->listener);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
@@ -100,7 +100,7 @@ plugin_t *medcli_plugin_create()
 	this->config = medcli_config_create(this->db);
 	this->listener = medcli_listener_create(this->db);
 
-	charon->credentials->add_set(charon->credentials, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 

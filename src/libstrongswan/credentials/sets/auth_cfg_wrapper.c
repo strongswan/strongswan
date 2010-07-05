@@ -14,7 +14,8 @@
  * for more details.
  */
 
-#include <daemon.h>
+#include <library.h>
+#include <debug.h>
 
 #include "auth_cfg_wrapper.h"
 
@@ -95,7 +96,7 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 	}
 
 	DBG1(DBG_CFG, "  fetched certificate \"%Y\"", cert->get_subject(cert));
-	charon->credentials->cache_cert(charon->credentials, cert);
+	lib->credmgr->cache_cert(lib->credmgr, cert);
 
 	if (*rule == AUTH_HELPER_IM_HASH_URL)
 	{
@@ -220,4 +221,3 @@ auth_cfg_wrapper_t *auth_cfg_wrapper_create(auth_cfg_t *auth)
 
 	return &this->public;
 }
-

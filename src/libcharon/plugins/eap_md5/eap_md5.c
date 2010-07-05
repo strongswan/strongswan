@@ -85,8 +85,7 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response,
 	chunk_t concat;
 	hasher_t *hasher;
 
-	shared = charon->credentials->get_shared(charon->credentials, SHARED_EAP,
-											 me, other);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, me, other);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'", me, other);

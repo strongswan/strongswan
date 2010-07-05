@@ -36,7 +36,7 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <config/child_cfg.h>
 #include <sa/authenticators/authenticator.h>
 #include <sa/authenticators/eap/eap_method.h>
-#include <config/auth_cfg.h>
+#include <credentials/auth_cfg.h>
 
 /**
  * Certificate sending policy. This is also used for certificate

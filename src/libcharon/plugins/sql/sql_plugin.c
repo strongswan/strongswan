@@ -59,7 +59,7 @@ struct private_sql_plugin_t {
 static void destroy(private_sql_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	charon->credentials->remove_set(charon->credentials, &this->cred->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
 	this->config->destroy(this->config);
 	this->cred->destroy(this->cred);
@@ -99,7 +99,7 @@ plugin_t *sql_plugin_create()
 	this->logger = sql_logger_create(this->db);
 
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	charon->credentials->add_set(charon->credentials, &this->cred->set);
+	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 	charon->bus->add_listener(charon->bus, &this->logger->listener);
 
 	return &this->public.plugin;

@@ -399,8 +399,8 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	if (ca)
 	{
 		identity = identification_create_from_string(ca);
-		certificate = charon->credentials->get_cert(charon->credentials,
-											CERT_X509, KEY_ANY, identity, TRUE);
+		certificate = lib->credmgr->get_cert(lib->credmgr, CERT_X509,
+											 KEY_ANY, identity, TRUE);
 		identity->destroy(identity);
 		if (certificate)
 		{

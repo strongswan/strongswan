@@ -158,7 +158,7 @@ static void destroy(private_load_tester_plugin_t *this)
 	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	charon->credentials->remove_set(charon->credentials, &this->creds->credential_set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
@@ -209,7 +209,7 @@ plugin_t *load_tester_plugin_create()
 	this->creds = load_tester_creds_create();
 	this->listener = load_tester_listener_create(shutdown_on);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	if (lib->settings->get_bool(lib->settings,

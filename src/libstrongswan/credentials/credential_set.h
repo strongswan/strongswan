@@ -15,17 +15,17 @@
 
 /**
  * @defgroup credential_set credential_set
- * @{ @ingroup ccredentials
+ * @{ @ingroup credentials
  */
 
 #ifndef CREDENTIAL_SET_H_
 #define CREDENTIAL_SET_H_
 
+typedef struct credential_set_t credential_set_t;
+
 #include <credentials/keys/public_key.h>
 #include <credentials/keys/shared_key.h>
 #include <credentials/certificates/certificate.h>
-
-typedef struct credential_set_t credential_set_t;
 
 /**
  * A set of credentials.

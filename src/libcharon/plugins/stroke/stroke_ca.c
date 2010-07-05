@@ -307,7 +307,7 @@ static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
 	}
 	ca_section_destroy(ca);
 
-	charon->credentials->flush_cache(charon->credentials, CERT_ANY);
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 }
 
 /**

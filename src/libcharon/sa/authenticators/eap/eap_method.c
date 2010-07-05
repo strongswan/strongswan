@@ -15,44 +15,6 @@
 
 #include "eap_method.h"
 
-ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
-	"EAP_IDENTITY",
-	"EAP_NOTIFICATION",
-	"EAP_NAK",
-	"EAP_MD5",
-	"EAP_OTP",
-	"EAP_GTC");
-ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
-	"EAP_SIM");
-ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
-	"EAP_AKA");
-ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"EAP_MSCHAPV2");
-ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
-	"EAP_RADIUS",
-	"EAP_EXPANDED",
-	"EAP_EXPERIMENTAL");
-ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
-
-ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
-	"ID",
-	"NTF",
-	"NAK",
-	"MD5",
-	"OTP",
-	"GTC");
-ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_GTC,
-	"SIM");
-ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_SIM,
-	"AKA");
-ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"MSCHAPV2");
-ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
-	"RAD",
-	"EXP",
-	"XP");
-ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
-
 /*
  * See header
  */

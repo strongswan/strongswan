@@ -64,7 +64,7 @@ struct private_uci_plugin_t {
 static void destroy(private_uci_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	charon->credentials->remove_set(charon->credentials, &this->creds->credential_set);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->parser->destroy(this->parser);
@@ -86,7 +86,7 @@ plugin_t *uci_plugin_create()
 	this->creds = uci_creds_create(this->parser);
 	this->control = uci_control_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
-	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
 
 	return &this->public.plugin;
 }

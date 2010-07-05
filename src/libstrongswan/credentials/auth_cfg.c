@@ -16,10 +16,56 @@
 
 #include "auth_cfg.h"
 
-#include <daemon.h>
+#include <library.h>
+#include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <credentials/certificates/certificate.h>
+
+ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
+	"any",
+	"public key",
+	"pre-shared key",
+	"EAP",
+);
+
+ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
+	"EAP_IDENTITY",
+	"EAP_NOTIFICATION",
+	"EAP_NAK",
+	"EAP_MD5",
+	"EAP_OTP",
+	"EAP_GTC");
+ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
+	"EAP_SIM");
+ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
+	"EAP_AKA");
+ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
+	"EAP_MSCHAPV2");
+ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
+	"EAP_RADIUS",
+	"EAP_EXPANDED",
+	"EAP_EXPERIMENTAL");
+ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
+
+ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
+	"ID",
+	"NTF",
+	"NAK",
+	"MD5",
+	"OTP",
+	"GTC");
+ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_GTC,
+	"SIM");
+ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_SIM,
+	"AKA");
+ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
+	"MSCHAPV2");
+ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
+	"RAD",
+	"EXP",
+	"XP");
+ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
 
 ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_SUBJECT_HASH_URL,
 	"RULE_IDENTITY",
@@ -782,4 +828,3 @@ auth_cfg_t *auth_cfg_create()
 
 	return &this->public;
 }
-

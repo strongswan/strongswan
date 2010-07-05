@@ -18,7 +18,7 @@
 #include <time.h>
 #include <sched.h>
 
-#include <daemon.h>
+#include <library.h>
 #include <threading/rwlock.h>
 #include <utils/linked_list.h>
 
@@ -387,4 +387,3 @@ cert_cache_t *cert_cache_create()
 	}
 	return &this->public;
 }
-

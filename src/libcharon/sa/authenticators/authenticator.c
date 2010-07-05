@@ -34,13 +34,6 @@ ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_ECDSA_521, AUTH_DSS,
 	"ECDSA-521 signature");
 ENUM_END(auth_method_names, AUTH_ECDSA_521);
 
-ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
-	"any",
-	"public key",
-	"pre-shared key",
-	"EAP",
-);
-
 /**
  * Described in header.
  */

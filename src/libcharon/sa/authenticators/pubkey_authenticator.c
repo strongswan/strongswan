@@ -65,8 +65,7 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	private = charon->credentials->get_private(charon->credentials, KEY_ANY,
-											   id, auth);
+	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
 	if (private == NULL)
 	{
 		DBG1(DBG_IKE, "no private key found for '%Y'", id);
@@ -178,8 +177,8 @@ static status_t process(private_pubkey_authenticator_t *this, message_t *message
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
 									 this->nonce, id);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	enumerator = charon->credentials->create_public_enumerator(
-										charon->credentials, key_type, id, auth);
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+														key_type, id, auth);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, octets, auth_data))

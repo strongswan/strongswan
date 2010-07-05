@@ -15,10 +15,12 @@
 
 #include "credential_manager.h"
 
-#include <daemon.h>
+#include <library.h>
+#include <debug.h>
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+#include <selectors/traffic_selector.h>
 #include <utils/linked_list.h>
 #include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_cfg_wrapper.h>
@@ -1675,4 +1677,3 @@ credential_manager_t *credential_manager_create()
 
 	return &this->public;
 }
-

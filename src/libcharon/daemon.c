@@ -122,7 +122,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
-	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.socket);
 	/* wait until all threads are gone */
 	DESTROY_IF(this->public.processor);
@@ -359,7 +358,6 @@ METHOD(daemon_t, initialize, bool,
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
-	this->public.credentials = credential_manager_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.sim = sim_manager_create();
