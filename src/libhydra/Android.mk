@@ -9,6 +9,7 @@ attributes/attribute_provider.h attributes/attribute_handler.h \
 attributes/attribute_manager.c attributes/attribute_manager.h \
 attributes/mem_pool.c attributes/mem_pool.h \
 processing/jobs/job.h \
+processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/processor.c processing/processor.h
 
 # adding the plugin source files

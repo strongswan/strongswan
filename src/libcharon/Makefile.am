@@ -46,7 +46,6 @@ network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
 network/socket_manager.c network/socket_manager.h network/socket.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
-processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
 processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
