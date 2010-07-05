@@ -23,6 +23,8 @@
 
 typedef struct cert_validator_t cert_validator_t;
 
+#include <library.h>
+
 /**
  * Certificate validator interface.
  *

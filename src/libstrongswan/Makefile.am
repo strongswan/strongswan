@@ -42,6 +42,7 @@ credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
+credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \
@@ -303,6 +304,13 @@ if USE_AGENT
   SUBDIRS += plugins/agent
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/agent/libstrongswan-agent.la
+endif
+endif
+
+if USE_ADDRBLOCK
+  SUBDIRS += plugins/addrblock
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/addrblock/libstrongswan-addrblock.la
 endif
 endif
 

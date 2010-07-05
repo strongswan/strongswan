@@ -944,60 +944,6 @@ static cert_validation_t check_crl(private_credential_manager_t *this,
 }
 
 /**
- * check a certificate for optional IP address block constraints
- */
-static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
-{
-	bool subject_constraint = subject->get_flags(subject) & X509_IP_ADDR_BLOCKS;
-	bool issuer_constraint = issuer->get_flags(issuer) & X509_IP_ADDR_BLOCKS;
-	bool contained = TRUE;
-
-	enumerator_t *subject_enumerator, *issuer_enumerator;
-	traffic_selector_t *subject_ts, *issuer_ts;
-
-	if (!subject_constraint && !issuer_constraint)
-	{
-		return TRUE;
-	}
-	if (!subject_constraint)
-	{
-		DBG1(DBG_CFG, "subject certficate lacks ipAddrBlocks extension");
-		return FALSE;
-	}
-	if (!issuer_constraint)
-	{
-		DBG1(DBG_CFG, "issuer certficate lacks ipAddrBlocks extension");
-		return FALSE;
-	}
-	subject_enumerator = subject->create_ipAddrBlock_enumerator(subject);
-	while (subject_enumerator->enumerate(subject_enumerator, &subject_ts))
-	{
-		contained = FALSE;
-
-		issuer_enumerator = issuer->create_ipAddrBlock_enumerator(issuer);
-		while (issuer_enumerator->enumerate(issuer_enumerator, &issuer_ts))
-		{
-			if (subject_ts->is_contained_in(subject_ts, issuer_ts))
-			{
-				DBG2(DBG_CFG, "  subject address block %R is contained in "
-							  "issuer address block %R", subject_ts, issuer_ts);
-				contained = TRUE;
-				break;
-			}
-		}
-		issuer_enumerator->destroy(issuer_enumerator);
-		if (!contained)
-		{
-			DBG1(DBG_CFG, "subject address block %R is not contained in any "
-						  "issuer address block", subject_ts);
-			break;
-		}
-	}
-	subject_enumerator->destroy(subject_enumerator);
-	return contained;
-}
-
-/**
  * check a certificate for its lifetime
  */
 static bool check_certificate(private_credential_manager_t *this,
@@ -1025,11 +971,6 @@ static bool check_certificate(private_credential_manager_t *this,
 	{
 		int pathlen_constraint;
 		x509_t *x509;
-
-		if (!check_ip_addr_block_constraints((x509_t*)subject, (x509_t*)issuer))
-		{
-			return FALSE;
-		}
 
 		/* check path length constraint */
 		x509 = (x509_t*)issuer;
