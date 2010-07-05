@@ -182,7 +182,7 @@ struct kernel_interface_t {
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param spi			SPI of SA
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			unique ID of an SA to use to enforce policy
@@ -210,7 +210,7 @@ struct kernel_interface_t {
 	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param mark			optional mark
 	 * @param[out] use_time	the time of this SA's last use
 	 * @return				SUCCESS if operation completed
@@ -231,7 +231,7 @@ struct kernel_interface_t {
 	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param mark			optional mark
 	 * @param unrouted		TRUE, if this policy is unrouted from the kernel
 	 * @return				SUCCESS if operation completed
@@ -272,7 +272,7 @@ struct kernel_interface_t {
 	 * Get the interface name of a local address.
 	 *
 	 * @param host			address to get interface name from
-	 * @return 				allocated interface name, or NULL if not found
+	 * @return				allocated interface name, or NULL if not found
 	 */
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
 
@@ -324,10 +324,11 @@ struct kernel_interface_t {
 	 * @param src_ip		sourc ip of the route
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
-	 * 						ALREADY_DONE if the route already exists
+	 *						ALREADY_DONE if the route already exists
 	 */
-	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
+	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net,
+						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   char *if_name);
 
 	/**
 	 * Delete a route.
@@ -339,8 +340,9 @@ struct kernel_interface_t {
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
+	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net,
+						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   char *if_name);
 
 	/**
 	 * Set up a bypass policy for a given socket.
@@ -363,36 +365,40 @@ struct kernel_interface_t {
 	 * @param ip			returned ip (has to be destroyed)
 	 * @return				SUCCESS if address found
 	 */
-	status_t (*get_address_by_ts) (kernel_interface_t *this,
-										traffic_selector_t *ts, host_t **ip);
+	status_t (*get_address_by_ts)(kernel_interface_t *this,
+								  traffic_selector_t *ts, host_t **ip);
 
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.
 	 *
 	 * @param create			constructor to register
 	 */
-	void (*add_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
+	void (*add_ipsec_interface)(kernel_interface_t *this,
+								kernel_ipsec_constructor_t create);
 
 	/**
 	 * Unregister an ipsec kernel interface constructor.
 	 *
 	 * @param create			constructor to unregister
 	 */
-	void (*remove_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
+	void (*remove_ipsec_interface)(kernel_interface_t *this,
+								   kernel_ipsec_constructor_t create);
 
 	/**
 	 * Register a network kernel interface constructor on the manager.
 	 *
 	 * @param create			constructor to register
 	 */
-	void (*add_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
+	void (*add_net_interface)(kernel_interface_t *this,
+							  kernel_net_constructor_t create);
 
 	/**
 	 * Unregister a network kernel interface constructor.
 	 *
 	 * @param create			constructor to unregister
 	 */
-	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
+	void (*remove_net_interface)(kernel_interface_t *this,
+								 kernel_net_constructor_t create);
 
 	/**
 	 * Destroys a kernel_interface_manager_t object.

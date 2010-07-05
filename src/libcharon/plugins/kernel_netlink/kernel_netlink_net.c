@@ -225,7 +225,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 
 /**
  * start a roaming job. We delay it for a second and fire only one job
- * for multiple events. Otherwise we would create two many jobs.
+ * for multiple events. Otherwise we would create too many jobs.
  */
 static void fire_roam_job(private_kernel_netlink_net_t *this, bool address)
 {

@@ -213,7 +213,7 @@ struct kernel_ipsec_t {
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param spi			SPI of SA
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			unique ID of an SA to use to enforce policy
@@ -242,7 +242,7 @@ struct kernel_ipsec_t {
 	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param mark			optional mark
 	 * @param[out] use_time	the monotonic timestamp of this SA's last use
 	 * @return				SUCCESS if operation completed
@@ -263,7 +263,7 @@ struct kernel_ipsec_t {
 	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
-	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
+	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param mark			optional mark
 	 * @param unrouted		TRUE, if this policy is unrouted from the kernel
 	 * @return				SUCCESS if operation completed

@@ -64,7 +64,7 @@ struct kernel_net_t {
 	 * Get the interface name of a local address.
 	 *
 	 * @param host			address to get interface name from
-	 * @return 				allocated interface name, or NULL if not found
+	 * @return				allocated interface name, or NULL if not found
 	 */
 	char* (*get_interface) (kernel_net_t *this, host_t *host);
 
@@ -116,10 +116,11 @@ struct kernel_net_t {
 	 * @param src_ip		sourc ip of the route
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
-	 * 						ALREADY_DONE if the route already exists
+	 *						ALREADY_DONE if the route already exists
 	 */
-	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
+	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net,
+						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   char *if_name);
 
 	/**
 	 * Delete a route.
@@ -131,8 +132,9 @@ struct kernel_net_t {
 	 * @param if_name		name of the interface the route is bound to
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_route) (kernel_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name);
+	status_t (*del_route) (kernel_net_t *this, chunk_t dst_net,
+						   u_int8_t prefixlen, host_t *gateway, host_t *src_ip,
+						   char *if_name);
 
 	/**
 	 * Destroy the implementation.
