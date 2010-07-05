@@ -119,21 +119,9 @@ typedef struct {
 	enumerator_t *local;
 } sets_enumerator_t;
 
-/**
- * destroy a sets_enumerator_t
- */
-static void sets_enumerator_destroy(sets_enumerator_t *this)
-{
-	DESTROY_IF(this->global);
-	DESTROY_IF(this->local);
-	free(this);
-}
 
-/**
- * sets_enumerator_t.enumerate
- */
-static bool sets_enumerator_enumerate(sets_enumerator_t *this,
-									  credential_set_t **set)
+METHOD(enumerator_t, sets_enumerate, bool,
+	sets_enumerator_t *this, credential_set_t **set)
 {
 	if (this->global)
 	{
@@ -152,18 +140,27 @@ static bool sets_enumerator_enumerate(sets_enumerator_t *this,
 	return FALSE;
 }
 
+METHOD(enumerator_t, sets_destroy, void,
+	sets_enumerator_t *this)
+{
+	DESTROY_IF(this->global);
+	DESTROY_IF(this->local);
+	free(this);
+}
+
 /**
  * create an enumerator over both, global and local sets
  */
 static enumerator_t *create_sets_enumerator(private_credential_manager_t *this)
 {
+	sets_enumerator_t *enumerator;
 	linked_list_t *local;
-	sets_enumerator_t *enumerator = malloc_thing(sets_enumerator_t);
 
-	enumerator->public.enumerate = (void*)sets_enumerator_enumerate;
-	enumerator->public.destroy = (void*)sets_enumerator_destroy;
-	enumerator->global = this->sets->create_enumerator(this->sets);
-	enumerator->local = NULL;
+	INIT(enumerator,
+		.public.enumerate = (void*)_sets_enumerate,
+		.public.destroy = _sets_destroy,
+		.global = this->sets->create_enumerator(this->sets),
+	);
 	local = this->local_sets->get(this->local_sets);
 	if (local)
 	{
@@ -190,12 +187,9 @@ static enumerator_t *create_cert(credential_set_t *set, cert_data_t *data)
 									   data->id, data->trusted);
 }
 
-/**
- * Implementation of credential_manager_t.create_cert_enumerator.
- */
-static enumerator_t *create_cert_enumerator(private_credential_manager_t *this,
-						certificate_type_t certificate, key_type_t key,
-						identification_t *id, bool trusted)
+METHOD(credential_manager_t, create_cert_enumerator, enumerator_t*,
+	private_credential_manager_t *this, certificate_type_t certificate,
+	key_type_t key, identification_t *id, bool trusted)
 {
 	cert_data_t *data = malloc_thing(cert_data_t);
 	data->this = this;
@@ -210,12 +204,9 @@ static enumerator_t *create_cert_enumerator(private_credential_manager_t *this,
 									(void*)destroy_cert_data);
 }
 
-/**
- * Implementation of credential_manager_t.get_cert.
- */
-static certificate_t *get_cert(private_credential_manager_t *this,
-						certificate_type_t cert, key_type_t key,
-						identification_t *id, bool trusted)
+METHOD(credential_manager_t, get_cert, certificate_t*,
+	private_credential_manager_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	certificate_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -247,17 +238,18 @@ static enumerator_t *create_cdp(credential_set_t *set, cdp_data_t *data)
 {
 	return set->create_cdp_enumerator(set, data->type, data->id);
 }
-/**
- * Implementation of credential_manager_t.create_cdp_enumerator.
- */
-static enumerator_t * create_cdp_enumerator(private_credential_manager_t *this,
-								certificate_type_t type, identification_t *id)
-{
-	cdp_data_t *data = malloc_thing(cdp_data_t);
-	data->this = this;
-	data->type = type;
-	data->id = id;
 
+METHOD(credential_manager_t, create_cdp_enumerator, enumerator_t*,
+	private_credential_manager_t *this, certificate_type_t type,
+	identification_t *id)
+{
+	cdp_data_t *data;
+
+	INIT(data,
+		.this = this,
+		.type = type,
+		.id = id,
+	);
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_cdp, data,
@@ -282,18 +274,18 @@ static enumerator_t *create_private(credential_set_t *set, private_data_t *data)
 }
 
 /**
- * Implementation of credential_manager_t.create_private_enumerator.
+ * Create an enumerator over private keys
  */
-static enumerator_t* create_private_enumerator(
-									private_credential_manager_t *this,
-									key_type_t key, identification_t *keyid)
+static enumerator_t *create_private_enumerator(
+	private_credential_manager_t *this, key_type_t key, identification_t *keyid)
 {
 	private_data_t *data;
 
-	data = malloc_thing(private_data_t);
-	data->this = this;
-	data->type = key;
-	data->keyid = keyid;
+	INIT(data,
+		.this = this,
+		.type = key,
+		.keyid = keyid,
+	);
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_private, data,
@@ -301,10 +293,10 @@ static enumerator_t* create_private_enumerator(
 }
 
 /**
- * Implementation of credential_manager_t.get_private_by_keyid.
+ * Look up a private key by its key identifier
  */
-static private_key_t *get_private_by_keyid(private_credential_manager_t *this,
-										key_type_t key, identification_t *keyid)
+static private_key_t* get_private_by_keyid(private_credential_manager_t *this,
+									key_type_t key, identification_t *keyid)
 {
 	private_key_t *found = NULL;
 	enumerator_t *enumerator;
@@ -335,31 +327,27 @@ static enumerator_t *create_shared(credential_set_t *set, shared_data_t *data)
 	return set->create_shared_enumerator(set, data->type, data->me, data->other);
 }
 
-/**
- * Implementation of credential_manager_t.create_shared_enumerator.
- */
-static enumerator_t *create_shared_enumerator(private_credential_manager_t *this,
-						shared_key_type_t type,
-						identification_t *me, identification_t *other)
+METHOD(credential_manager_t, create_shared_enumerator, enumerator_t*,
+	private_credential_manager_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
 {
-	shared_data_t *data = malloc_thing(shared_data_t);
-	data->this = this;
-	data->type = type;
-	data->me = me;
-	data->other = other;
+	shared_data_t *data;
 
+	INIT(data,
+		.this = this,
+		.type = type,
+		.me = me,
+		.other = other,
+	);
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(create_sets_enumerator(this),
 									(void*)create_shared, data,
 									(void*)destroy_shared_data);
 }
 
-/**
- * Implementation of credential_manager_t.get_shared.
- */
-static shared_key_t *get_shared(private_credential_manager_t *this,
-								shared_key_type_t type,	identification_t *me,
-								identification_t *other)
+METHOD(credential_manager_t, get_shared, shared_key_t*,
+	private_credential_manager_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
 {
 	shared_key_t *current, *found = NULL;
 	id_match_t *best_me = ID_MATCH_NONE, *best_other = ID_MATCH_NONE;
@@ -411,10 +399,8 @@ static void remove_local_set(private_credential_manager_t *this,
 	sets->remove(sets, set, NULL);
 }
 
-/**
- * Implementation of credential_manager_t.cache_cert.
- */
-static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
+METHOD(credential_manager_t, cache_cert, void,
+	private_credential_manager_t *this, certificate_t *cert)
 {
 	credential_set_t *set;
 	enumerator_t *enumerator;
@@ -1247,11 +1233,8 @@ typedef struct {
 	auth_cfg_t *auth;
 } trusted_enumerator_t;
 
-/**
- * Implements trusted_enumerator_t.enumerate
- */
-static bool trusted_enumerate(trusted_enumerator_t *this,
-							  certificate_t **cert, auth_cfg_t **auth)
+METHOD(enumerator_t, trusted_enumerate, bool,
+	trusted_enumerator_t *this, certificate_t **cert, auth_cfg_t **auth)
 {
 	certificate_t *current;
 
@@ -1313,10 +1296,8 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implements trusted_enumerator_t.destroy
- */
-static void trusted_destroy(trusted_enumerator_t *this)
+METHOD(enumerator_t, trusted_destroy, void,
+	trusted_enumerator_t *this)
 {
 	DESTROY_IF(this->pretrusted);
 	DESTROY_IF(this->auth);
@@ -1330,19 +1311,18 @@ static void trusted_destroy(trusted_enumerator_t *this)
 static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
 					key_type_t type, identification_t *id, bool online)
 {
-	trusted_enumerator_t *enumerator = malloc_thing(trusted_enumerator_t);
+	trusted_enumerator_t *enumerator;
 
-	enumerator->public.enumerate = (void*)trusted_enumerate;
-	enumerator->public.destroy = (void*)trusted_destroy;
-
-	enumerator->candidates = NULL;
-	enumerator->this = this;
-	enumerator->type = type;
-	enumerator->id = id;
-	enumerator->online = online;
-	enumerator->pretrusted = NULL;
-	enumerator->auth = NULL;
-
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_trusted_enumerate,
+			.destroy = _trusted_destroy,
+		},
+		.this = this,
+		.type = type,
+		.id = id,
+		.online = online,
+	);
 	return &enumerator->public;
 }
 
@@ -1362,11 +1342,8 @@ typedef struct {
 	auth_cfg_wrapper_t *wrapper;
 } public_enumerator_t;
 
-/**
- * Implements public_enumerator_t.enumerate
- */
-static bool public_enumerate(public_enumerator_t *this,
-							 public_key_t **key, auth_cfg_t **auth)
+METHOD(enumerator_t, public_enumerate, bool,
+	public_enumerator_t *this, public_key_t **key, auth_cfg_t **auth)
 {
 	certificate_t *cert;
 
@@ -1383,10 +1360,8 @@ static bool public_enumerate(public_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implements public_enumerator_t.destroy
- */
-static void public_destroy(public_enumerator_t *this)
+METHOD(enumerator_t, public_destroy, void,
+	public_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
@@ -1402,20 +1377,20 @@ static void public_destroy(public_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of credential_manager_t.create_public_enumerator.
- */
-static enumerator_t* create_public_enumerator(private_credential_manager_t *this,
-						key_type_t type, identification_t *id, auth_cfg_t *auth)
+METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
+	private_credential_manager_t *this, key_type_t type, identification_t *id,
+	auth_cfg_t *auth)
 {
-	public_enumerator_t *enumerator = malloc_thing(public_enumerator_t);
+	public_enumerator_t *enumerator;
 
-	enumerator->public.enumerate = (void*)public_enumerate;
-	enumerator->public.destroy = (void*)public_destroy;
-	enumerator->inner = create_trusted_enumerator(this, type, id, TRUE);
-	enumerator->this = this;
-	enumerator->current = NULL;
-	enumerator->wrapper = NULL;
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_public_enumerate,
+			.destroy = _public_destroy,
+		},
+		.inner = create_trusted_enumerator(this, type, id, TRUE),
+		.this = this,
+	);
 	if (auth)
 	{
 		enumerator->wrapper = auth_cfg_wrapper_create(auth);
@@ -1524,12 +1499,9 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 	return private;
 }
 
-/**
- * Implementation of credential_manager_t.get_private.
- */
-static private_key_t *get_private(private_credential_manager_t *this,
-								  key_type_t type, identification_t *id,
-								  auth_cfg_t *auth)
+METHOD(credential_manager_t, get_private, private_key_t*,
+	private_credential_manager_t *this, key_type_t type, identification_t *id,
+	auth_cfg_t *auth)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -1601,40 +1573,30 @@ static private_key_t *get_private(private_credential_manager_t *this,
 	return private;
 }
 
-/**
- * Implementation of credential_manager_t.flush_cache.
- */
-static void flush_cache(private_credential_manager_t *this,
-						certificate_type_t type)
+METHOD(credential_manager_t, flush_cache, void,
+	private_credential_manager_t *this, certificate_type_t type)
 {
 	this->cache->flush(this->cache, type);
 }
 
-/**
- * Implementation of credential_manager_t.add_set.
- */
-static void add_set(private_credential_manager_t *this,
-							   credential_set_t *set)
+METHOD(credential_manager_t, add_set, void,
+	private_credential_manager_t *this, credential_set_t *set)
 {
 	this->lock->write_lock(this->lock);
 	this->sets->insert_last(this->sets, set);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of credential_manager_t.remove_set.
- */
-static void remove_set(private_credential_manager_t *this, credential_set_t *set)
+METHOD(credential_manager_t, remove_set, void,
+	private_credential_manager_t *this, credential_set_t *set)
 {
 	this->lock->write_lock(this->lock);
 	this->sets->remove(this->sets, set, NULL);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of credential_manager_t.destroy
- */
-static void destroy(private_credential_manager_t *this)
+METHOD(credential_manager_t, destroy, void,
+	private_credential_manager_t *this)
 {
 	cache_queue(this);
 	this->cache_queue->destroy(this->cache_queue);
@@ -1652,28 +1614,32 @@ static void destroy(private_credential_manager_t *this)
  */
 credential_manager_t *credential_manager_create()
 {
-	private_credential_manager_t *this = malloc_thing(private_credential_manager_t);
+	private_credential_manager_t *this;
 
-	this->public.create_cert_enumerator = (enumerator_t *(*)(credential_manager_t *this,certificate_type_t cert, key_type_t key,identification_t *id,bool))create_cert_enumerator;
-	this->public.create_shared_enumerator = (enumerator_t *(*)(credential_manager_t *this, shared_key_type_t type,identification_t *me, identification_t *other))create_shared_enumerator;
-	this->public.create_cdp_enumerator = (enumerator_t *(*)(credential_manager_t*, certificate_type_t type, identification_t *id))create_cdp_enumerator;
-	this->public.get_cert = (certificate_t *(*)(credential_manager_t *this,certificate_type_t cert, key_type_t key,identification_t *, bool))get_cert;
-	this->public.get_shared = (shared_key_t *(*)(credential_manager_t *this,shared_key_type_t type,identification_t *me, identification_t *other))get_shared;
-	this->public.get_private = (private_key_t*(*)(credential_manager_t*, key_type_t type, identification_t *, auth_cfg_t*))get_private;
-	this->public.create_public_enumerator = (enumerator_t*(*)(credential_manager_t*, key_type_t type, identification_t *id, auth_cfg_t *aut))create_public_enumerator;
-	this->public.flush_cache = (void(*)(credential_manager_t*, certificate_type_t type))flush_cache;
-	this->public.cache_cert = (void(*)(credential_manager_t*, certificate_t *cert))cache_cert;
-	this->public.add_set = (void(*)(credential_manager_t*, credential_set_t *set))add_set;
-	this->public.remove_set = (void(*)(credential_manager_t*, credential_set_t *set))remove_set;
-	this->public.destroy = (void(*)(credential_manager_t*))destroy;
+	INIT(this,
+		.public = {
+			.create_cert_enumerator = _create_cert_enumerator,
+			.create_shared_enumerator = _create_shared_enumerator,
+			.create_cdp_enumerator = _create_cdp_enumerator,
+			.get_cert = _get_cert,
+			.get_shared = _get_shared,
+			.get_private = _get_private,
+			.create_public_enumerator = _create_public_enumerator,
+			.flush_cache = _flush_cache,
+			.cache_cert = _cache_cert,
+			.add_set = _add_set,
+			.remove_set = _remove_set,
+			.destroy = _destroy,
+		},
+		.sets = linked_list_create(),
+		.cache = cert_cache_create(),
+		.cache_queue = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.queue_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+	);
 
-	this->sets = linked_list_create();
 	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
-	this->cache = cert_cache_create();
-	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->queue_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 
 	return &this->public;
 }
