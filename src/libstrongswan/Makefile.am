@@ -209,6 +209,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_REVOCATION
+  SUBDIRS += plugins/revocation
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/revocation/libstrongswan-revocation.la
+endif
+endif
+
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 if MONOLITHIC
