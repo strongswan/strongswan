@@ -30,6 +30,7 @@ typedef struct credential_manager_t credential_manager_t;
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/shared_key.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/cert_validator.h>
 
 /**
  * Manages credentials using credential_sets.
@@ -188,6 +189,20 @@ struct credential_manager_t {
 	 * @param set		set to unregister
 	 */
 	void (*remove_set)(credential_manager_t *this, credential_set_t *set);
+
+	/**
+	 * Register a certificate validator to the manager.
+	 *
+	 * @param vdtr		validator to register
+	 */
+	void (*add_validator)(credential_manager_t *this, cert_validator_t *vdtr);
+
+	/**
+	 * Remove a certificate validator from the manager.
+	 *
+	 * @param vdtr		validator to unregister
+	 */
+	void (*remove_validator)(credential_manager_t *this, cert_validator_t *vdtr);
 
 	/**
 	 * Destroy a credential_manager instance.

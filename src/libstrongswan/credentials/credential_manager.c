@@ -68,6 +68,11 @@ struct private_credential_manager_t {
 	linked_list_t *cache_queue;
 
 	/**
+	 * list of certificate validators, cert_validator_t
+	 */
+	linked_list_t *validators;
+
+	/**
 	 * read-write lock to sets list
 	 */
 	rwlock_t *lock;
@@ -1000,6 +1005,8 @@ static bool check_certificate(private_credential_manager_t *this,
 							  bool online, int pathlen, auth_cfg_t *auth)
 {
 	time_t not_before, not_after;
+	cert_validator_t *validator;
+	enumerator_t *enumerator;
 
 	if (!subject->get_validity(subject, NULL, &not_before, &not_after))
 	{
@@ -1075,6 +1082,18 @@ static bool check_certificate(private_credential_manager_t *this,
 			}
 		}
 	}
+
+	enumerator = this->validators->create_enumerator(this->validators);
+	while (enumerator->enumerate(enumerator, &validator))
+	{
+		if (!validator->validate(validator, subject, issuer,
+								 online, pathlen, auth))
+		{
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
 	return TRUE;
 }
 
@@ -1595,6 +1614,22 @@ METHOD(credential_manager_t, remove_set, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(credential_manager_t, add_validator, void,
+	private_credential_manager_t *this, cert_validator_t *vdtr)
+{
+	this->lock->write_lock(this->lock);
+	this->sets->insert_last(this->validators, vdtr);
+	this->lock->unlock(this->lock);
+}
+
+METHOD(credential_manager_t, remove_validator, void,
+	private_credential_manager_t *this, cert_validator_t *vdtr)
+{
+	this->lock->write_lock(this->lock);
+	this->validators->remove(this->validators, vdtr, NULL);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(credential_manager_t, destroy, void,
 	private_credential_manager_t *this)
 {
@@ -1604,6 +1639,7 @@ METHOD(credential_manager_t, destroy, void,
 	this->sets->destroy(this->sets);
 	this->local_sets->destroy(this->local_sets);
 	this->cache->destroy(this->cache);
+	this->validators->destroy(this->validators);
 	this->lock->destroy(this->lock);
 	this->queue_mutex->destroy(this->queue_mutex);
 	free(this);
@@ -1629,9 +1665,12 @@ credential_manager_t *credential_manager_create()
 			.cache_cert = _cache_cert,
 			.add_set = _add_set,
 			.remove_set = _remove_set,
+			.add_validator = _add_validator,
+			.remove_validator = _remove_validator,
 			.destroy = _destroy,
 		},
 		.sets = linked_list_create(),
+		.validators = linked_list_create(),
 		.cache = cert_cache_create(),
 		.cache_queue = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
