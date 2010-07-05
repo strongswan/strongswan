@@ -38,7 +38,7 @@
  * @param hash_type	NID of the hash
  * @param data		the chunk of data to hash
  * @param hash		chunk that contains the hash
- * @return 			TRUE on success, FALSE otherwise
+ * @return			TRUE on success, FALSE otherwise
  */
 bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash);
 
@@ -70,8 +70,8 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
 /**
  * Allocate a chunk using the i2d function of a given object
  *
- * @param type_id	type of the object
- * @param object	object to convert to DER
+ * @param type		type of the object
+ * @param obj		object to convert to DER
  * @returns			allocated chunk of the object, or chunk_empty
  */
 #define openssl_i2chunk(type, obj) ({ \
@@ -106,7 +106,7 @@ identification_t *openssl_x509_name2id(X509_NAME *name);
 /**
  * Check if an ASN1 oid is a an OID known by libstrongswan.
  *
- * @param object	openssl ASN1 object
+ * @param obj		openssl ASN1 object
  * @returns			OID, as defined in <asn1/oid.h>
  */
 int openssl_asn1_known_oid(ASN1_OBJECT *obj);

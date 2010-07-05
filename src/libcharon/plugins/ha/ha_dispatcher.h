@@ -47,4 +47,4 @@ struct ha_dispatcher_t {
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 									  ha_segments_t *segments);
 
-#endif /* HA_DISPATCHER_ @}*/
+#endif /** HA_DISPATCHER_ @}*/

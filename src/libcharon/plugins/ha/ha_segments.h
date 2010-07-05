@@ -108,4 +108,4 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 								  ha_tunnel_t *tunnel, u_int count, u_int node,
 								  bool monitor, bool resync);
 
-#endif /* HA_SEGMENTS_ @}*/
+#endif /** HA_SEGMENTS_ @}*/

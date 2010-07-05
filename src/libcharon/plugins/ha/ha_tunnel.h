@@ -54,4 +54,4 @@ struct ha_tunnel_t {
  */
 ha_tunnel_t *ha_tunnel_create(char *local, char *remote, char *secret);
 
-#endif /* HA_TUNNEL_H_ @}*/
+#endif /** HA_TUNNEL_H_ @}*/

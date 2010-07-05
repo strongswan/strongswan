@@ -44,4 +44,4 @@ struct ha_ctl_t {
  */
 ha_ctl_t *ha_ctl_create(ha_segments_t *segments);
 
-#endif /* HA_CTL_ @}*/
+#endif /** HA_CTL_ @}*/

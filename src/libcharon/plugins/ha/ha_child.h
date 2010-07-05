@@ -54,4 +54,4 @@ struct ha_child_t {
  */
 ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel);
 
-#endif /* HA_CHILD_ @}*/
+#endif /** HA_CHILD_ @}*/

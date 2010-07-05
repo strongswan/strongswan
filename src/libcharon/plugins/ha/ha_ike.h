@@ -54,4 +54,4 @@ struct ha_ike_t {
  */
 ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel);
 
-#endif /* HA_IKE_ @}*/
+#endif /** HA_IKE_ @}*/

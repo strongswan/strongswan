@@ -190,7 +190,6 @@ struct ha_message_t {
 /**
  * Create a new ha_message instance, ready for adding attributes
  *
- * @param version			protocol version to create a message from
  * @param type				type of the message
  */
 ha_message_t *ha_message_create(ha_message_type_t type);
@@ -202,4 +201,4 @@ ha_message_t *ha_message_create(ha_message_type_t type);
  */
 ha_message_t *ha_message_parse(chunk_t data);
 
-#endif /* HA_MESSAGE_ @}*/
+#endif /** HA_MESSAGE_ @}*/

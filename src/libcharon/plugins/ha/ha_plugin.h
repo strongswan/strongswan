@@ -44,4 +44,4 @@ struct ha_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /* HA_PLUGIN_H_ @}*/
+#endif /** HA_PLUGIN_H_ @}*/

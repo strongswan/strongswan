@@ -57,4 +57,4 @@ struct ha_socket_t {
  */
 ha_socket_t *ha_socket_create(char *local, char *remote);
 
-#endif /* HA_SOCKET_ @}*/
+#endif /** HA_SOCKET_ @}*/

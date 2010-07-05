@@ -35,7 +35,7 @@ struct ha_kernel_t {
 	 *
 	 * @param host		host to check
 	 * @param segment	segment
-	 * @return 			TRUE if host belongs to segment
+	 * @return			TRUE if host belongs to segment
 	 */
 	bool (*in_segment)(ha_kernel_t *this, host_t *host, u_int segment);
 
@@ -63,8 +63,7 @@ struct ha_kernel_t {
  * Create a ha_kernel instance.
  *
  * @param count			total number of segments to use
- * @param active		bitmask of initially active segments
  */
 ha_kernel_t *ha_kernel_create(u_int count);
 
-#endif /* HA_KERNEL_ @}*/
+#endif /** HA_KERNEL_ @}*/
