@@ -143,6 +143,24 @@ struct credential_manager_t {
 								  identification_t *id, auth_cfg_t *auth);
 
 	/**
+	 * Create an enumerator over trusted certificates.
+	 *
+	 * This method creates an enumerator over trusted certificates. The auth
+	 * parameter (if given) recevies the trustchain used to validate
+	 * the certificate. The resulting enumerator enumerates over
+	 * certificate_t*, auth_cfg_t*.
+	 * If online is set, revocations are checked online for the whole
+	 * trustchain.
+	 *
+	 * @param type		type of the key we want a certificate for
+	 * @param id		subject of the certificate
+	 * @param online	whether revocations should be checked online
+	 * @return			enumerator
+	 */
+	enumerator_t* (*create_trusted_enumerator)(credential_manager_t *this,
+					key_type_t type, identification_t *id, bool online);
+
+	/**
 	 * Create an enumerator over trusted public keys.
 	 *
 	 * This method gets a an enumerator over trusted public keys to verify a
@@ -150,6 +168,8 @@ struct credential_manager_t {
 	 * authentication infos, e.g. peer and intermediate certificates.
 	 * The resulting enumerator enumerates over public_key_t *, auth_cfg_t *,
 	 * where the auth config helper contains rules for constraint checks.
+	 * This function is very similar to create_trusted_enumerator(), but
+	 * gets public keys directly.
 	 *
 	 * @param type		type of the key to get
 	 * @param id		owner of the key, signer of the signature
@@ -177,6 +197,19 @@ struct credential_manager_t {
 	void (*flush_cache)(credential_manager_t *this, certificate_type_t type);
 
 	/**
+	 * Check if a given subject certificate is issued by an issuer certificate.
+	 *
+	 * This operation does signature verification, but uses the credential
+	 * managers cache for to speed up the operation.
+	 *
+	 * @param subject	subject certificate to check
+	 * @param issuer	issuer certificate that potentially has signed subject
+	 * @return			TRUE if issuer signed subject
+	 */
+	bool (*issued_by)(credential_manager_t *this,
+					  certificate_t *subject, certificate_t *issuer);
+
+	/**
 	 * Register a credential set to the manager.
 	 *
 	 * @param set		set to register
@@ -189,6 +222,25 @@ struct credential_manager_t {
 	 * @param set		set to unregister
 	 */
 	void (*remove_set)(credential_manager_t *this, credential_set_t *set);
+
+	/**
+	 * Register a thread local credential set to the manager.
+	 *
+	 * To add a credential set for the current trustchain verification
+	 * operation, sets may be added for the calling thread only. This
+	 * does not require a write lock and is therefore a much less expensive
+	 * operation.
+	 *
+	 * @param set		set to register
+	 */
+	void (*add_local_set)(credential_manager_t *this, credential_set_t *set);
+
+	/**
+	 * Unregister a thread local credential set from the manager.
+	 *
+	 * @param set		set to unregister
+	 */
+	void (*remove_local_set)(credential_manager_t *this, credential_set_t *set);
 
 	/**
 	 * Register a certificate validator to the manager.

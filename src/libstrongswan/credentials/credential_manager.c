@@ -375,11 +375,8 @@ METHOD(credential_manager_t, get_shared, shared_key_t*,
 	return found;
 }
 
-/**
- * add a credential set to the thread local list
- */
-static void add_local_set(private_credential_manager_t *this,
-						  credential_set_t *set)
+METHOD(credential_manager_t, add_local_set, void,
+	private_credential_manager_t *this, credential_set_t *set)
 {
 	linked_list_t *sets;
 
@@ -392,11 +389,8 @@ static void add_local_set(private_credential_manager_t *this,
 	sets->insert_last(sets, set);
 }
 
-/**
- * remove a credential set from the thread local list
- */
-static void remove_local_set(private_credential_manager_t *this,
-							 credential_set_t *set)
+METHOD(credential_manager_t, remove_local_set, void,
+	private_credential_manager_t *this, credential_set_t *set)
 {
 	linked_list_t *sets;
 
@@ -1265,11 +1259,9 @@ METHOD(enumerator_t, trusted_destroy, void,
 	free(this);
 }
 
-/**
- * create an enumerator over trusted certificates and their trustchain
- */
-static enumerator_t *create_trusted_enumerator(private_credential_manager_t *this,
-					key_type_t type, identification_t *id, bool online)
+METHOD(credential_manager_t, create_trusted_enumerator, enumerator_t*,
+	private_credential_manager_t *this, key_type_t type,
+	identification_t *id, bool online)
 {
 	trusted_enumerator_t *enumerator;
 
@@ -1539,6 +1531,13 @@ METHOD(credential_manager_t, flush_cache, void,
 	this->cache->flush(this->cache, type);
 }
 
+METHOD(credential_manager_t, issued_by, bool,
+	private_credential_manager_t *this, certificate_t *subject,
+	certificate_t *issuer)
+{
+	return this->cache->issued_by(this->cache, subject, issuer);
+}
+
 METHOD(credential_manager_t, add_set, void,
 	private_credential_manager_t *this, credential_set_t *set)
 {
@@ -1601,11 +1600,15 @@ credential_manager_t *credential_manager_create()
 			.get_cert = _get_cert,
 			.get_shared = _get_shared,
 			.get_private = _get_private,
+			.create_trusted_enumerator = _create_trusted_enumerator,
 			.create_public_enumerator = _create_public_enumerator,
 			.flush_cache = _flush_cache,
 			.cache_cert = _cache_cert,
+			.issued_by = _issued_by,
 			.add_set = _add_set,
 			.remove_set = _remove_set,
+			.add_local_set = _add_local_set,
+			.remove_local_set = _remove_local_set,
 			.add_validator = _add_validator,
 			.remove_validator = _remove_validator,
 			.destroy = _destroy,
