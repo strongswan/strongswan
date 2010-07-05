@@ -20,7 +20,6 @@
 
 #include "processor.h"
 
-#include <daemon.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>

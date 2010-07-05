@@ -22,6 +22,12 @@
  * @defgroup hplugins plugins
  * @ingroup libhydra
  *
+ * @defgroup processing processing
+ * @ingroup libhydra
+ *
+ * @defgroup jobs jobs
+ * @ingroup processing
+ *
  * @addtogroup libhydra
  * @{
  */
@@ -32,6 +38,7 @@
 typedef struct hydra_t hydra_t;
 
 #include <attributes/attribute_manager.h>
+#include <processing/processor.h>
 
 #include <library.h>
 
@@ -44,6 +51,11 @@ struct hydra_t {
 	 * manager for payload attributes
 	 */
 	attribute_manager_t *attributes;
+
+	/**
+	 * process jobs using a thread pool
+	 */
+	processor_t *processor;
 
 	/**
 	 * name of the daemon that initialized the library

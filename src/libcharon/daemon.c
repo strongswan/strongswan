@@ -94,10 +94,8 @@ static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	if (this->public.processor)
-	{
-		this->public.processor->set_threads(this->public.processor, 0);
-	}
+	hydra->processor->set_threads(hydra->processor, 0);
+
 	/* close all IKE_SAs */
 	if (this->public.ike_sa_manager)
 	{
@@ -123,8 +121,6 @@ static void destroy(private_daemon_t *this)
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
-	/* wait until all threads are gone */
-	DESTROY_IF(this->public.processor);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -176,7 +172,7 @@ METHOD(daemon_t, start, void,
 	   private_daemon_t *this)
 {
 	/* start the engine, go multithreaded */
-	charon->processor->set_threads(charon->processor,
+	hydra->processor->set_threads(hydra->processor,
 						lib->settings->get_int(lib->settings, "charon.threads",
 											   DEFAULT_THREADS));
 }
@@ -361,7 +357,6 @@ METHOD(daemon_t, initialize, bool,
 	}
 
 	/* load secrets, ca certificates and crls */
-	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
