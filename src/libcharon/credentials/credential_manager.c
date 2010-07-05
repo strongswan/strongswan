@@ -1009,7 +1009,7 @@ static bool check_ip_addr_block_constraints(x509_t *subject, x509_t *issuer)
  */
 static bool check_certificate(private_credential_manager_t *this,
 							  certificate_t *subject, certificate_t *issuer,
-							  bool online, auth_cfg_t *auth)
+							  bool online, int pathlen, auth_cfg_t *auth)
 {
 	time_t not_before, not_after;
 
@@ -1028,10 +1028,25 @@ static bool check_certificate(private_credential_manager_t *this,
 	if (issuer->get_type(issuer) == CERT_X509 &&
 		subject->get_type(subject) == CERT_X509)
 	{
+		int pathlen_constraint;
+		x509_t *x509;
+
 		if (!check_ip_addr_block_constraints((x509_t*)subject, (x509_t*)issuer))
 		{
 			return FALSE;
 		}
+
+		/* check path length constraint */
+		x509 = (x509_t*)issuer;
+		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+			pathlen > pathlen_constraint)
+		{
+			DBG1(DBG_CFG, "path length of %d violates constraint of %d",
+				 pathlen, pathlen_constraint);
+			return FALSE;
+		}
+
 		if (online)
 		{
 			DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
@@ -1130,9 +1145,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 							   bool trusted, bool online)
 {
 	certificate_t *current, *issuer;
-	x509_t *x509;
 	auth_cfg_t *auth;
-	int pathlen, pathlen_constraint;
+	int pathlen;
 
 	auth = auth_cfg_create();
 	current = subject->get_ref(subject);
@@ -1180,22 +1194,9 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
-		if (!check_certificate(this, current, issuer, online,
+		if (!check_certificate(this, current, issuer, online, pathlen,
 							   current == subject ? auth : NULL))
 		{
-			trusted = FALSE;
-			issuer->destroy(issuer);
-			break;
-		}
-
-		/* check path length constraint */
-		x509 = (x509_t*)issuer;
-		pathlen_constraint = x509->get_pathLenConstraint(x509);
-		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
-			pathlen > pathlen_constraint)
-		{
-			DBG1(DBG_CFG, "path length of %d violates constraint of %d",
-				 pathlen, pathlen_constraint);
 			trusted = FALSE;
 			issuer->destroy(issuer);
 			break;
