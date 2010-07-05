@@ -257,7 +257,7 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 /**
  * check if peer has to many half open IKE_SAs
  */
-static bool peer_to_aggressive(private_receiver_t *this, message_t *message)
+static bool peer_too_aggressive(private_receiver_t *this, message_t *message)
 {
 	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
 						message->get_source(message)) >= this->block_threshold)
@@ -335,7 +335,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		}
 
 		/* check if peer has not too many IKE_SAs half open */
-		if (this->block_threshold && peer_to_aggressive(this, message))
+		if (this->block_threshold && peer_too_aggressive(this, message))
 		{
 			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
 				 "peer too aggressive", message->get_source(message));
