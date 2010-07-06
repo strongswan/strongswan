@@ -41,7 +41,6 @@
 #include <threading/mutex.h>
 #include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/acquire_job.h>
 #include <processing/jobs/migrate_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
@@ -557,7 +556,6 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	struct xfrm_user_acquire *acquire;
 	struct rtattr *rta;
 	size_t rtasize;
-	job_t *job;
 
 	acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
 	rta = XFRM_RTA(hdr, struct xfrm_user_acquire);
@@ -591,10 +589,9 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	}
 	src_ts = selector2ts(&acquire->sel, TRUE);
 	dst_ts = selector2ts(&acquire->sel, FALSE);
-	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
-					src_ts, dst_ts, reqid);
-	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
-	hydra->processor->queue_job(hydra->processor, job);
+
+	charon->kernel_interface->acquire(charon->kernel_interface, reqid, src_ts,
+									  dst_ts);
 }
 
 /**

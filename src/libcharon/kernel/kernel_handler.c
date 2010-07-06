@@ -15,7 +15,9 @@
 
 #include "kernel_handler.h"
 
+#include <hydra.h>
 #include <daemon.h>
+#include <processing/jobs/acquire_job.h>
 
 typedef struct private_kernel_handler_t private_kernel_handler_t;
 
@@ -30,6 +32,25 @@ struct private_kernel_handler_t {
 	kernel_handler_t public;
 
 };
+
+METHOD(kernel_listener_t, acquire, bool,
+	   private_kernel_handler_t *this, u_int32_t reqid,
+	   traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+{
+	job_t *job;
+	if (src_ts && dst_ts)
+	{
+		DBG1(DBG_KNL, "creating acquire job for policy %R === %R "
+					  "with reqid {%u}", src_ts, dst_ts, reqid);
+	}
+	else
+	{
+		DBG1(DBG_KNL, "creating acquire job for policy with reqid {%u}", reqid);
+	}
+	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
+	hydra->processor->queue_job(hydra->processor, job);
+	return TRUE;
+}
 
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
@@ -46,7 +67,7 @@ kernel_handler_t *kernel_handler_create()
 	INIT(this,
 		.public = {
 			.listener = {
-				.acquire = NULL,
+				.acquire = _acquire,
 			},
 			.destroy = _destroy,
 		},

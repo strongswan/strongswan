@@ -60,7 +60,6 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/acquire_job.h>
 #include <processing/jobs/migrate_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
@@ -902,7 +901,6 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	u_int32_t index, reqid = 0;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_entry_t *policy;
-	job_t *job;
 
 	switch (msg->sadb_msg_satype)
 	{
@@ -931,17 +929,15 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	}
 	else
 	{
-		DBG1(DBG_KNL, "received an SADB_ACQUIRE with policy id %d but no matching policy found",
-					   index);
+		DBG1(DBG_KNL, "received an SADB_ACQUIRE with policy id %d but no"
+					  " matching policy found", index);
 	}
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
 	this->mutex->unlock(this->mutex);
 
-	DBG1(DBG_KNL, "creating acquire job for policy %R === %R with reqid {%u}",
-				   src_ts, dst_ts, reqid);
-	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
-	hydra->processor->queue_job(hydra->processor, job);
+	charon->kernel_interface->acquire(charon->kernel_interface, reqid, src_ts,
+									  dst_ts);
 }
 
 /**

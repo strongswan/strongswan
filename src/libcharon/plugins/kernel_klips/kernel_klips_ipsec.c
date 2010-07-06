@@ -33,7 +33,6 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/acquire_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
@@ -1237,7 +1236,6 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 	u_int32_t reqid;
 	u_int8_t proto;
 	policy_entry_t *policy;
-	job_t *job;
 
 	switch (msg->sadb_msg_satype)
 	{
@@ -1298,10 +1296,8 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 
 	this->mutex->unlock(this->mutex);
 
-	DBG2(DBG_KNL, "received an SADB_ACQUIRE");
-	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid {%d}", reqid);
-	job = (job_t*)acquire_job_create(reqid, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, job);
+	charon->kernel_interface->acquire(charon->kernel_interface, reqid, NULL,
+									  NULL);
 }
 
 /**
