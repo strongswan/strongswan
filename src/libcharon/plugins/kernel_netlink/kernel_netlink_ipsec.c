@@ -41,7 +41,6 @@
 #include <threading/mutex.h>
 #include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/migrate_job.h>
 
 /** required for Linux 2.6.26 kernel and later */
 #ifndef XFRM_STATE_AF_UNSPEC
@@ -632,7 +631,6 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 	size_t rtasize;
 	u_int32_t reqid = 0;
 	policy_dir_t dir;
-	job_t *job;
 
 	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
 	rta     = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
@@ -683,11 +681,8 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 
 	if (src_ts && dst_ts && local && remote)
 	{
-		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
-					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
-		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
-										 local, remote);
-		hydra->processor->queue_job(hydra->processor, job);
+		charon->kernel_interface->migrate(charon->kernel_interface, reqid,
+										  src_ts, dst_ts, dir, local, remote);
 	}
 	else
 	{

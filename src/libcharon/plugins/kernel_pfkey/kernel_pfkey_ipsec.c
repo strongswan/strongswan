@@ -60,7 +60,6 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/migrate_job.h>
 
 /** non linux specific */
 #ifndef IPPROTO_COMP
@@ -982,7 +981,6 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	policy_dir_t dir;
 	u_int32_t reqid = 0;
 	host_t *local = NULL, *remote = NULL;
-	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_MIGRATE");
 
@@ -1014,11 +1012,8 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 
 	if (src_ts && dst_ts && local && remote)
 	{
-		DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with reqid {%u}",
-					   src_ts, dst_ts, policy_dir_names, dir, reqid, local);
-		job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, dir,
-										 local, remote);
-		hydra->processor->queue_job(hydra->processor, job);
+		charon->kernel_interface->migrate(charon->kernel_interface, reqid,
+										  src_ts, dst_ts, dir, local, remote);
 	}
 	else
 	{

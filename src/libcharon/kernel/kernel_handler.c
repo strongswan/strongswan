@@ -18,8 +18,9 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/acquire_job.h>
-#include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
+#include <processing/jobs/migrate_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
 typedef struct private_kernel_handler_t private_kernel_handler_t;
@@ -87,6 +88,21 @@ METHOD(kernel_listener_t, mapping, bool,
 	return TRUE;
 }
 
+METHOD(kernel_listener_t, migrate, bool,
+	   private_kernel_handler_t *this, u_int32_t reqid,
+	   traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	   policy_dir_t direction, host_t *local, host_t *remote)
+{
+	job_t *job;
+	DBG1(DBG_KNL, "creating migrate job for policy %R === %R %N with "
+				  "reqid {%u}", src_ts, dst_ts, policy_dir_names, direction,
+				  reqid, local);
+	job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, direction, local,
+									 remote);
+	hydra->processor->queue_job(hydra->processor, job);
+	return TRUE;
+}
+
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
 {
@@ -105,6 +121,7 @@ kernel_handler_t *kernel_handler_create()
 				.acquire = _acquire,
 				.expire = _expire,
 				.mapping = _mapping,
+				.migrate = _migrate,
 			},
 			.destroy = _destroy,
 		},
