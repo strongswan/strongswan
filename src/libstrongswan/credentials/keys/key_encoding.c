@@ -168,20 +168,21 @@ static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
 		va_end(copy);
 		if (success)
 		{
-			if (cache)
-			{
-				chunk = malloc_thing(chunk_t);
-				*chunk = *encoding;
-				this->lock->unlock(this->lock);
-				this->lock->write_lock(this->lock);
-				this->cache[type]->put(this->cache[type], cache, chunk);
-			}
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	va_end(args);
 	this->lock->unlock(this->lock);
+	va_end(args);
+
+	if (success && cache)
+	{
+		chunk = malloc_thing(chunk_t);
+		*chunk = *encoding;
+		this->lock->write_lock(this->lock);
+		this->cache[type]->put(this->cache[type], cache, chunk);
+		this->lock->unlock(this->lock);
+	}
 	return success;
 }
 
