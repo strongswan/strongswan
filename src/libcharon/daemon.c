@@ -34,6 +34,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <config/proposal.h>
+#include <kernel/kernel_handler.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
@@ -49,6 +50,11 @@ struct private_daemon_t {
 	 * Public members of daemon_t.
 	 */
 	daemon_t public;
+
+	/**
+	 * Handler for kernel events
+	 */
+	kernel_handler_t *kernel_handler;
 
 	/**
 	 * capabilities to keep
@@ -111,6 +117,7 @@ static void destroy(private_daemon_t *this)
 #endif /* CAPABILITIES_LIBCAP */
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
+	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
@@ -364,6 +371,7 @@ METHOD(daemon_t, initialize, bool,
 	this->public.sim = sim_manager_create();
 	this->public.backends = backend_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
+	this->kernel_handler = kernel_handler_create();
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
 
