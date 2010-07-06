@@ -140,7 +140,6 @@ typedef struct daemon_t daemon_t;
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
-#include <processing/scheduler.h>
 #include <kernel/kernel_interface.h>
 #include <control/controller.h>
 #include <bus/bus.h>
@@ -206,11 +205,6 @@ struct daemon_t {
 	 * The Receiver-Thread.
 	 */
 	receiver_t *receiver;
-
-	/**
-	 * The Scheduler-Thread.
-	 */
-	scheduler_t *scheduler;
 
 	/**
 	 * The signaling bus.

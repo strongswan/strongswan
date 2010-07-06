@@ -39,6 +39,7 @@ typedef struct hydra_t hydra_t;
 
 #include <attributes/attribute_manager.h>
 #include <processing/processor.h>
+#include <processing/scheduler.h>
 
 #include <library.h>
 
@@ -56,6 +57,11 @@ struct hydra_t {
 	 * process jobs using a thread pool
 	 */
 	processor_t *processor;
+
+	/**
+	 * schedule jobs
+	 */
+	scheduler_t *scheduler;
 
 	/**
 	 * name of the daemon that initialized the library

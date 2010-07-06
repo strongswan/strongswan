@@ -20,7 +20,7 @@
 #include "scheduler.h"
 
 #include <hydra.h>
-#include <daemon.h>
+#include <debug.h>
 #include <processing/processor.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/thread.h>

@@ -17,7 +17,7 @@
 
 /**
  * @defgroup scheduler scheduler
- * @{ @ingroup cprocessing
+ * @{ @ingroup hprocessing
  */
 
 #ifndef SCHEDULER_H_
@@ -83,16 +83,16 @@ struct scheduler_t {
 	/**
 	 * Adds a event to the queue, using a relative time offset in s.
 	 *
-	 * @param job 			job to schedule
-	 * @param time 			relative time to schedule job, in s
+	 * @param job			job to schedule
+	 * @param time			relative time to schedule job, in s
 	 */
 	void (*schedule_job) (scheduler_t *this, job_t *job, u_int32_t s);
 
 	/**
 	 * Adds a event to the queue, using a relative time offset in ms.
 	 *
-	 * @param job 			job to schedule
-	 * @param time 			relative time to schedule job, in ms
+	 * @param job			job to schedule
+	 * @param time			relative time to schedule job, in ms
 	 */
 	void (*schedule_job_ms) (scheduler_t *this, job_t *job, u_int32_t ms);
 
@@ -102,15 +102,15 @@ struct scheduler_t {
 	 * The passed timeval should be calculated based on the time_monotonic()
 	 * function.
 	 *
-	 * @param job 			job to schedule
-	 * @param time 			absolut time to schedule job
+	 * @param job			job to schedule
+	 * @param time			absolut time to schedule job
 	 */
 	void (*schedule_job_tv) (scheduler_t *this, job_t *job, timeval_t tv);
 
 	/**
 	 * Returns number of jobs scheduled.
 	 *
-	 * @return 				number of scheduled jobs
+	 * @return				number of scheduled jobs
 	 */
 	u_int (*get_job_load) (scheduler_t *this);
 
@@ -123,7 +123,7 @@ struct scheduler_t {
 /**
  * Create a scheduler.
  *
- * @return 		scheduler_t object
+ * @return		scheduler_t object
  */
 scheduler_t *scheduler_create(void);
 

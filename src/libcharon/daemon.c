@@ -119,7 +119,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.kernel_interface);
-	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.sim);
@@ -365,7 +364,6 @@ METHOD(daemon_t, initialize, bool,
 	}
 
 	/* load secrets, ca certificates and crls */
-	this->public.scheduler = scheduler_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.sim = sim_manager_create();
