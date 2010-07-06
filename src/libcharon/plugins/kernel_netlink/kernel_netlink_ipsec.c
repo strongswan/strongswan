@@ -42,7 +42,6 @@
 #include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/migrate_job.h>
-#include <processing/jobs/update_sa_job.h>
 
 /** required for Linux 2.6.26 kernel and later */
 #ifndef XFRM_STATE_AF_UNSPEC
@@ -705,7 +704,6 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 static void process_mapping(private_kernel_netlink_ipsec_t *this,
 							struct nlmsghdr *hdr)
 {
-	job_t *job;
 	u_int32_t spi, reqid;
 	struct xfrm_user_mapping *mapping;
 	host_t *host;
@@ -722,10 +720,8 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 						 mapping->new_sport);
 		if (host)
 		{
-			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
-				"reqid {%u} changed, queuing update job", ntohl(spi), reqid);
-			job = (job_t*)update_sa_job_create(reqid, host);
-			hydra->processor->queue_job(hydra->processor, job);
+			charon->kernel_interface->mapping(charon->kernel_interface, reqid,
+											  spi, host);
 		}
 	}
 }

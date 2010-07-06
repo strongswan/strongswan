@@ -61,7 +61,6 @@
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/migrate_job.h>
-#include <processing/jobs/update_sa_job.h>
 
 /** non linux specific */
 #ifndef IPPROTO_COMP
@@ -1040,7 +1039,6 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	pfkey_msg_t response;
 	u_int32_t spi, reqid;
 	host_t *host;
-	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_NAT_T_NEW_MAPPING");
 
@@ -1052,7 +1050,8 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 
 	if (!response.x_sa2)
 	{
-		DBG1(DBG_KNL, "received SADB_X_NAT_T_NEW_MAPPING is missing required information");
+		DBG1(DBG_KNL, "received SADB_X_NAT_T_NEW_MAPPING is missing required "
+					  "information");
 		return;
 	}
 
@@ -1080,10 +1079,8 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		host = host_create_from_sockaddr(sa);
 		if (host)
 		{
-			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
-				"reqid {%u} changed, queuing update job", ntohl(spi), reqid);
-			job = (job_t*)update_sa_job_create(reqid, host);
-			hydra->processor->queue_job(hydra->processor, job);
+			charon->kernel_interface->mapping(charon->kernel_interface, reqid,
+											  spi, host);
 		}
 	}
 }

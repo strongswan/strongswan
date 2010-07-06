@@ -20,6 +20,7 @@
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/delete_child_sa_job.h>
+#include <processing/jobs/update_sa_job.h>
 
 typedef struct private_kernel_handler_t private_kernel_handler_t;
 
@@ -74,6 +75,18 @@ METHOD(kernel_listener_t, expire, bool,
 	return TRUE;
 }
 
+METHOD(kernel_listener_t, mapping, bool,
+	   private_kernel_handler_t *this, u_int32_t reqid, u_int32_t spi,
+	   host_t *remote)
+{
+	job_t *job;
+	DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
+				  "reqid {%u} changed, queuing update job", ntohl(spi), reqid);
+	job = (job_t*)update_sa_job_create(reqid, remote);
+	hydra->processor->queue_job(hydra->processor, job);
+	return TRUE;
+}
+
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
 {
@@ -91,6 +104,7 @@ kernel_handler_t *kernel_handler_create()
 			.listener = {
 				.acquire = _acquire,
 				.expire = _expire,
+				.mapping = _mapping,
 			},
 			.destroy = _destroy,
 		},

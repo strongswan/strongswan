@@ -33,7 +33,6 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/update_sa_job.h>
 
 /** default timeout for generated SPIs (in seconds) */
 #define SPI_TIMEOUT 30
@@ -1306,7 +1305,6 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 	pfkey_msg_t response;
 	u_int32_t spi, reqid;
 	host_t *old_src, *new_src;
-	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_X_NAT_T_NEW_MAPPING");
 
@@ -1355,10 +1353,8 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 		new_src = host_create_from_sockaddr(addr);
 		if (new_src)
 		{
-			DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and"
-				" reqid {%d} changed, queuing update job", ntohl(spi), reqid);
-			job = (job_t*)update_sa_job_create(reqid, new_src);
-			hydra->processor->queue_job(hydra->processor, job);
+			charon->kernel_interface->mapping(charon->kernel_interface, reqid,
+											  spi, new_src);
 		}
 	}
 }
