@@ -17,6 +17,10 @@
 
 #include <time.h>
 
+#ifdef HAVE_MALLINFO
+#include <malloc.h>
+#endif /* HAVE_MALLINFO */
+
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -404,12 +408,19 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		u_int32_t dpd;
 		time_t since, now;
 		u_int size, online, offline;
-
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
 		fprintf(out, "Status of IKEv2 charon daemon (strongSwan "VERSION"):\n");
 		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
+#ifdef HAVE_MALLINFO
+		{
+			struct mallinfo mi = mallinfo();
+
+			fprintf(out, "  malloc: sbrk %d, mmap %d, used %d, free %d\n",
+				    mi.arena, mi.hblkhd, mi.uordblks, mi.fordblks);
+		}
+#endif /* HAVE_MALLINFO */
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
