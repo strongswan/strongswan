@@ -33,8 +33,6 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/rekey_child_sa_job.h>
-#include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
 /** default timeout for generated SPIs (in seconds) */
@@ -1418,12 +1416,14 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 			process_acquire(this, msg);
 			break;
 		case SADB_EXPIRE:
-			/* SADB_EXPIRE events in KLIPS are only triggered by traffic (even for
-			 * the time based limits). So if there is no traffic for a longer
-			 * period than configured as hard limit, we wouldn't be able to rekey
-			 * the SA and just receive the hard expire and thus delete the SA.
-			 * To avoid this behavior and to make charon behave as with the other
-			 * kernel plugins, we implement the expiration of SAs ourselves. */
+			/* SADB_EXPIRE events in KLIPS are only triggered by traffic (even
+			 * for the time based limits). So if there is no traffic for a
+			 * longer period than configured as hard limit, we wouldn't be able
+			 * to rekey the SA and just receive the hard expire and thus delete
+			 * the SA.
+			 * To avoid this behavior and to make charon behave as with the
+			 * other kernel plugins, we implement the expiration of SAs
+			 * ourselves. */
 			break;
 		case SADB_X_NAT_T_NEW_MAPPING:
 			process_mapping(this, msg);
@@ -1470,7 +1470,6 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	bool hard = expire->type != EXPIRE_TYPE_SOFT;
 	sa_entry_t *cached_sa;
 	linked_list_t *list;
-	job_t *job;
 
 	/* for an expired SPI we first check whether the CHILD_SA got installed
 	 * in the meantime, for expired SAs we check whether they are still installed */
@@ -1496,18 +1495,8 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	DBG2(DBG_KNL, "%N CHILD_SA with SPI %.8x and reqid {%d} expired",
 			protocol_id_names, protocol, ntohl(spi), reqid);
 
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%d}",
-		 hard ? "delete" : "rekey",  protocol_id_names,
-		 protocol, ntohl(spi), reqid);
-	if (hard)
-	{
-		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-	}
-	else
-	{
-		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-	}
-	hydra->processor->queue_job(hydra->processor, job);
+	charon->kernel_interface->expire(charon->kernel_interface, reqid, protocol,
+									 spi, hard);
 	return JOB_REQUEUE_NONE;
 }
 

@@ -61,8 +61,6 @@
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/migrate_job.h>
-#include <processing/jobs/rekey_child_sa_job.h>
-#include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
 /** non linux specific */
@@ -949,7 +947,6 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 	protocol_id_t protocol;
 	u_int32_t spi, reqid;
 	bool hard;
-	job_t *job;
 
 	DBG2(DBG_KNL, "received an SADB_EXPIRE");
 
@@ -971,18 +968,8 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 		return;
 	}
 
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%u}",
-		 hard ? "delete" : "rekey",  protocol_id_names,
-		 protocol, ntohl(spi), reqid);
-	if (hard)
-	{
-		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-	}
-	else
-	{
-		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-	}
-	hydra->processor->queue_job(hydra->processor, job);
+	charon->kernel_interface->expire(charon->kernel_interface, reqid, protocol,
+									 spi, hard);
 }
 
 #ifdef SADB_X_MIGRATE

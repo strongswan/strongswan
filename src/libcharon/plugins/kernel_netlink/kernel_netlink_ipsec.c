@@ -42,8 +42,6 @@
 #include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/migrate_job.h>
-#include <processing/jobs/rekey_child_sa_job.h>
-#include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/update_sa_job.h>
 
 /** required for Linux 2.6.26 kernel and later */
@@ -599,7 +597,6 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
  */
 static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr *hdr)
 {
-	job_t *job;
 	protocol_id_t protocol;
 	u_int32_t spi, reqid;
 	struct xfrm_user_expire *expire;
@@ -613,23 +610,13 @@ static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr
 
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and reqid {%u} "
-					  "which is not a CHILD_SA", ntohl(spi), reqid);
+		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and "
+					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
 		return;
 	}
 
-	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x and reqid {%d}",
-		 expire->hard ? "delete" : "rekey",  protocol_id_names,
-		 protocol, ntohl(spi), reqid);
-	if (expire->hard)
-	{
-		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-	}
-	else
-	{
-		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-	}
-	hydra->processor->queue_job(hydra->processor, job);
+	charon->kernel_interface->expire(charon->kernel_interface, reqid, protocol,
+									 spi, expire->hard != 0);
 }
 
 /**

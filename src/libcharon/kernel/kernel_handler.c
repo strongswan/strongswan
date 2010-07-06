@@ -18,6 +18,8 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/acquire_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
+#include <processing/jobs/delete_child_sa_job.h>
 
 typedef struct private_kernel_handler_t private_kernel_handler_t;
 
@@ -52,6 +54,26 @@ METHOD(kernel_listener_t, acquire, bool,
 	return TRUE;
 }
 
+METHOD(kernel_listener_t, expire, bool,
+	   private_kernel_handler_t *this, u_int32_t reqid, protocol_id_t protocol,
+	   u_int32_t spi, bool hard)
+{
+	job_t *job;
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x "
+				  "and reqid {%u}", hard ? "delete" : "rekey",
+				  protocol_id_names, protocol, ntohl(spi), reqid);
+	if (hard)
+	{
+		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
+	}
+	else
+	{
+		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
+	}
+	hydra->processor->queue_job(hydra->processor, job);
+	return TRUE;
+}
+
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
 {
@@ -68,6 +90,7 @@ kernel_handler_t *kernel_handler_create()
 		.public = {
 			.listener = {
 				.acquire = _acquire,
+				.expire = _expire,
 			},
 			.destroy = _destroy,
 		},
