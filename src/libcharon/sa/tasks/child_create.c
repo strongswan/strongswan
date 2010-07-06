@@ -17,6 +17,7 @@
 
 #include "child_create.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <crypto/diffie_hellman.h>
 #include <credentials/certificates/x509.h>
@@ -261,7 +262,7 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
 										"charon.inactivity_close_ike", FALSE);
-		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
+		hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)
 				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
 									  timeout, close_ike), timeout);
 	}
@@ -871,7 +872,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 		/* we delay the delete for 100ms, as the IKE_AUTH response must arrive
 		 * first */
 		DBG1(DBG_IKE, "closing IKE_SA due CHILD_SA setup failure");
-		charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
+		hydra->scheduler->schedule_job_ms(hydra->scheduler, (job_t*)
 			delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE),
 			100);
 	}

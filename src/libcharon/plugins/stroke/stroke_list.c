@@ -428,7 +428,7 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		fprintf(out, " job queue load: %d,",
 				hydra->processor->get_job_load(hydra->processor));
 		fprintf(out, " scheduled events: %d\n",
-				charon->scheduler->get_job_load(charon->scheduler));
+				hydra->scheduler->get_job_load(hydra->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 		while (enumerator->enumerate(enumerator, &plugin))

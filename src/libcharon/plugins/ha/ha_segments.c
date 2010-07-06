@@ -346,7 +346,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	message->destroy(message);
 
 	/* schedule next invocation */
-	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
+	hydra->scheduler->schedule_job_ms(hydra->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
 									this->heartbeat_delay);

@@ -142,7 +142,7 @@ METHOD(listener_t, child_updown, bool,
 			 * callback, but from a different thread. we also delay it to avoid
 			 * a race condition during a regular shutdown */
 			job = callback_job_create(shutdown_callback, NULL, NULL, NULL);
-			charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, 1);
+			hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)job, 1);
 			return FALSE;
 		}
 	}

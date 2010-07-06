@@ -1511,7 +1511,7 @@ static void schedule_expire(private_kernel_klips_ipsec_t *this,
 	expire->reqid = reqid;
 	expire->type = type;
 	job = callback_job_create((callback_job_cb_t)sa_expires, expire, free, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, time);
+	hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)job, time);
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,

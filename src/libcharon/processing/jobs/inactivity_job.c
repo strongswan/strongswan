@@ -15,6 +15,7 @@
 
 #include "inactivity_job.h"
 
+#include <hydra.h>
 #include <daemon.h>
 
 typedef struct private_inactivity_job_t private_inactivity_job_t;
@@ -87,7 +88,7 @@ METHOD(job_t, execute, void,
 				}
 				else
 				{
-					charon->scheduler->schedule_job(charon->scheduler,
+					hydra->scheduler->schedule_job(hydra->scheduler,
 							&this->public.job_interface, this->timeout - diff);
 					rescheduled = TRUE;
 				}

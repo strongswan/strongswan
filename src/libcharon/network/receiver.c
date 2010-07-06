@@ -354,7 +354,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			{
 				DBG1(DBG_NET, "using receive delay: %dms",
 					 this->receive_delay);
-				charon->scheduler->schedule_job_ms(charon->scheduler,
+				hydra->scheduler->schedule_job_ms(hydra->scheduler,
 								(job_t*)process_message_job_create(message),
 								this->receive_delay);
 				return JOB_REQUEUE_DIRECT;
