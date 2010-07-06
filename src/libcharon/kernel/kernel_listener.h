@@ -29,6 +29,8 @@ typedef struct kernel_listener_t kernel_listener_t;
 
 /**
  * Interface for components interested in kernel events.
+ *
+ * All hooks are optional.
  */
 struct kernel_listener_t {
 

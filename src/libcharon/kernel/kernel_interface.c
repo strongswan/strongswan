@@ -376,7 +376,8 @@ METHOD(kernel_interface_t, acquire, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
-		if (!listener->acquire(listener, reqid, src_ts, dst_ts))
+		if (listener->acquire &&
+			!listener->acquire(listener, reqid, src_ts, dst_ts))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
 		}
@@ -395,7 +396,8 @@ METHOD(kernel_interface_t, expire, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
-		if (!listener->expire(listener, reqid, protocol, spi, hard))
+		if (listener->expire &&
+			!listener->expire(listener, reqid, protocol, spi, hard))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
 		}
@@ -414,7 +416,8 @@ METHOD(kernel_interface_t, mapping, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
-		if (!listener->mapping(listener, reqid, spi, remote))
+		if (listener->mapping &&
+			!listener->mapping(listener, reqid, spi, remote))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
 		}
@@ -434,7 +437,8 @@ METHOD(kernel_interface_t, migrate, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
-		if (!listener->migrate(listener, reqid, src_ts, dst_ts, direction,
+		if (listener->migrate &&
+			!listener->migrate(listener, reqid, src_ts, dst_ts, direction,
 							   local, remote))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
@@ -446,7 +450,7 @@ METHOD(kernel_interface_t, migrate, void,
 
 static bool call_roam(kernel_listener_t *listener, bool *roam)
 {
-	return !listener->roam(listener, *roam);
+	return listener->roam && !listener->roam(listener, *roam);
 }
 
 METHOD(kernel_interface_t, roam, void,
