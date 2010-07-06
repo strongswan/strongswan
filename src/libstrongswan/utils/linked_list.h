@@ -34,8 +34,8 @@ typedef struct linked_list_t linked_list_t;
  * @param item			current list item
  * @param ...			user supplied data (only pointers, at most 5)
  * @return
- * 						- TRUE, if the item matched
- * 						- FALSE, otherwise
+ *						- TRUE, if the item matched
+ *						- FALSE, otherwise
  */
 typedef bool (*linked_list_match_t)(void *item, ...);
 
@@ -57,7 +57,7 @@ struct linked_list_t {
 	/**
 	 * Gets the count of items in the list.
 	 *
-	 * @return 			number of items in list
+	 * @return			number of items in list
 	 */
 	int (*get_count) (linked_list_t *this);
 
@@ -69,7 +69,7 @@ struct linked_list_t {
 	 * @deprecated Iterator is obsolete and will disappear, it is too
 	 * complicated to implement. Use enumerator instead.
 	 *
-	 * @param forward 	iterator direction (TRUE: front to end)
+	 * @param forward	iterator direction (TRUE: front to end)
 	 * @return			new iterator_t object
 	 */
 	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
@@ -94,7 +94,7 @@ struct linked_list_t {
 	/**
 	 * Removes the first item in the list and returns its value.
 	 *
-	 * @param item 		returned value of first item, or NULL
+	 * @param item		returned value of first item, or NULL
 	 * @return			SUCCESS, or NOT_FOUND if list is empty
 	 */
 	status_t (*remove_first) (linked_list_t *this, void **item);
@@ -107,18 +107,20 @@ struct linked_list_t {
 	void (*remove_at)(linked_list_t *this, enumerator_t *enumerator);
 
 	/**
-	 * Remove items from the list matching item.
+	 * Remove items from the list matching the given item.
 	 *
-	 * If a compare function is given, it is called for each item, where
-	 * the first parameter is the current list item and the second parameter
-	 * is the supplied item parameter.
-	 * If compare is NULL, compare is done by pointer.
+	 * If a compare function is given, it is called for each item, with the
+	 * first parameter being the current list item and the second parameter
+	 * being the supplied item. Return TRUE from the compare function to remove
+	 * the item, return FALSE to keep it in the list.
+	 *
+	 * If compare is NULL, comparison is done by pointers.
 	 *
 	 * @param item		item to remove/pass to comparator
 	 * @param compare	compare function, or NULL
 	 * @return			number of removed items
 	 */
-	int (*remove)(linked_list_t *this, void *item, bool (*compare)(void *,void*));
+	int (*remove)(linked_list_t *this, void *item, bool (*compare)(void*,void*));
 
 	/**
 	 * Returns the value of the first list item without removing it.
@@ -132,7 +134,7 @@ struct linked_list_t {
 	/**
 	 * Inserts a new item at the end of the list.
 	 *
-	 * @param item 		value to insert into list
+	 * @param item		value to insert into list
 	 */
 	void (*insert_last) (linked_list_t *this, void *item);
 
@@ -148,7 +150,7 @@ struct linked_list_t {
 	/**
 	 * Returns the value of the last list item without removing it.
 	 *
-	 * @param this 		calling object
+	 * @param this		calling object
 	 * @param item		returned value of last item
 	 * @return			SUCCESS, NOT_FOUND if list is empty
 	 */
@@ -203,6 +205,8 @@ struct linked_list_t {
 	 * which can be evalutated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
 	 *
+	 * @warning Only use pointers as user supplied data.
+	 *
 	 * @param offset	offset of the method to invoke on objects
 	 * @param ...		user data to supply to called function (limited to 5 arguments)
 	 */
@@ -210,6 +214,8 @@ struct linked_list_t {
 
 	/**
 	 * Invoke a function on all of the contained objects.
+	 *
+	 * @warning Only use pointers as user supplied data.
 	 *
 	 * @param function	offset of the method to invoke on objects
 	 * @param ...		user data to supply to called function (limited to 5 arguments)
@@ -265,7 +271,7 @@ struct linked_list_t {
 /**
  * Creates an empty linked list object.
  *
- * @return 		linked_list_t object.
+ * @return		linked_list_t object.
  */
 linked_list_t *linked_list_create(void);
 
