@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -30,6 +30,7 @@ typedef struct kernel_interface_t kernel_interface_t;
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
+#include <kernel/kernel_listener.h>
 #include <kernel/kernel_ipsec.h>
 #include <kernel/kernel_net.h>
 
@@ -399,6 +400,74 @@ struct kernel_interface_t {
 	 */
 	void (*remove_net_interface)(kernel_interface_t *this,
 								 kernel_net_constructor_t create);
+
+	/**
+	 * Add a listener to the kernel interface.
+	 *
+	 * @param listener			listener to add
+	 */
+	void (*add_listener)(kernel_interface_t *this,
+						 kernel_listener_t *listener);
+
+	/**
+	 * Remove a listener from the kernel interface.
+	 *
+	 * @param listener			listener to remove
+	 */
+	void (*remove_listener)(kernel_interface_t *this,
+							kernel_listener_t *listener);
+
+	/**
+	 * Raise an acquire event.
+	 *
+	 * @param reqid			reqid of the policy to acquire
+	 * @param src_ts		source traffic selector
+	 * @param dst_ts		destination traffic selector
+	 */
+	void (*acquire)(kernel_interface_t *this, u_int32_t reqid,
+					traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
+
+	/**
+	 * Raise an expire event.
+	 *
+	 * @param reqid			reqid of the expired SA
+	 * @param protocol		protocol of the expired SA
+	 * @param spi			spi of the expired SA
+	 * @param hard			TRUE if it is a hard expire, FALSE otherwise
+	 */
+	void (*expire)(kernel_interface_t *this, u_int32_t reqid,
+				   protocol_id_t protocol, u_int32_t spi, bool hard);
+
+	/**
+	 * Raise a mapping event.
+	 *
+	 * @param reqid			reqid of the SA
+	 * @param spi			spi of the SA
+	 * @param remote		new remote host
+	 */
+	void (*mapping)(kernel_interface_t *this, u_int32_t reqid, u_int32_t spi,
+					host_t *remote);
+
+	/**
+	 * Raise a migrate event.
+	 *
+	 * @param reqid			reqid of the policy
+	 * @param src_ts		source traffic selector
+	 * @param dst_ts		destination traffic selector
+	 * @param direction		direction of the policy (in|out)
+	 * @param local			local host address to be used in the IKE_SA
+	 * @param remote		remote host address to be used in the IKE_SA
+	 */
+	void (*migrate)(kernel_interface_t *this, u_int32_t reqid,
+					traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+					policy_dir_t direction, host_t *local, host_t *remote);
+
+	/**
+	 * Raise a roam event.
+	 *
+	 * @param address		TRUE if address list, FALSE if routing changed
+	 */
+	void (*roam)(kernel_interface_t *this, bool address);
 
 	/**
 	 * Destroys a kernel_interface_manager_t object.

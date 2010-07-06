@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -18,6 +18,8 @@
 #include "kernel_interface.h"
 
 #include <daemon.h>
+#include <threading/mutex.h>
+#include <utils/linked_list.h>
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
@@ -40,6 +42,16 @@ struct private_kernel_interface_t {
 	 * network interface
 	 */
 	kernel_net_t *net;
+
+	/**
+	 * mutex for listeners
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * list of registered listeners
+	 */
+	linked_list_t *listeners;
 };
 
 METHOD(kernel_interface_t, get_spi, status_t,
@@ -338,11 +350,120 @@ METHOD(kernel_interface_t, remove_net_interface, void,
 	/* TODO: replace if interface currently in use */
 }
 
+METHOD(kernel_interface_t, add_listener, void,
+	private_kernel_interface_t *this, kernel_listener_t *listener)
+{
+	this->mutex->lock(this->mutex);
+	this->listeners->insert_last(this->listeners, listener);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(kernel_interface_t, remove_listener, void,
+	private_kernel_interface_t *this, kernel_listener_t *listener)
+{
+	this->mutex->lock(this->mutex);
+	this->listeners->remove(this->listeners, listener, NULL);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(kernel_interface_t, acquire, void,
+	private_kernel_interface_t *this, u_int32_t reqid,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+{
+	kernel_listener_t *listener;
+	enumerator_t *enumerator;
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (!listener->acquire(listener, reqid, src_ts, dst_ts))
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(kernel_interface_t, expire, void,
+	private_kernel_interface_t *this, u_int32_t reqid, protocol_id_t protocol,
+	u_int32_t spi, bool hard)
+{
+	kernel_listener_t *listener;
+	enumerator_t *enumerator;
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (!listener->expire(listener, reqid, protocol, spi, hard))
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(kernel_interface_t, mapping, void,
+	private_kernel_interface_t *this, u_int32_t reqid, u_int32_t spi,
+	host_t *remote)
+{
+	kernel_listener_t *listener;
+	enumerator_t *enumerator;
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (!listener->mapping(listener, reqid, spi, remote))
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(kernel_interface_t, migrate, void,
+	private_kernel_interface_t *this, u_int32_t reqid,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, host_t *local, host_t *remote)
+{
+	kernel_listener_t *listener;
+	enumerator_t *enumerator;
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &listener))
+	{
+		if (!listener->migrate(listener, reqid, src_ts, dst_ts, direction,
+							   local, remote))
+		{
+			this->listeners->remove_at(this->listeners, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+static bool call_roam(kernel_listener_t *listener, bool *roam)
+{
+	return !listener->roam(listener, *roam);
+}
+
+METHOD(kernel_interface_t, roam, void,
+	private_kernel_interface_t *this, bool address)
+{
+	this->mutex->lock(this->mutex);
+	this->listeners->remove(this->listeners, &address, (void*)call_roam);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(kernel_interface_t, destroy, void,
 	private_kernel_interface_t *this)
 {
 	DESTROY_IF(this->ipsec);
 	DESTROY_IF(this->net);
+	this->mutex->destroy(this->mutex);
+	this->listeners->destroy(this->listeners);
 	free(this);
 }
 
@@ -379,8 +500,18 @@ kernel_interface_t *kernel_interface_create()
 			.remove_ipsec_interface = _remove_ipsec_interface,
 			.add_net_interface = _add_net_interface,
 			.remove_net_interface = _remove_net_interface,
+
+			.add_listener = _add_listener,
+			.remove_listener = _remove_listener,
+			.acquire = _acquire,
+			.expire = _expire,
+			.mapping = _mapping,
+			.migrate = _migrate,
+			.roam = _roam,
 			.destroy = _destroy,
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.listeners = linked_list_create(),
 	);
 
 	return &this->public;
