@@ -30,13 +30,12 @@
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
-#include <processing/jobs/roam_job.h>
 
 #ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
 #error Cannot compile this plugin on systems where 'struct sockaddr' has no sa_len member.
 #endif
 
-/** delay before firing roam jobs (ms) */
+/** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
 /** buffer size for PF_ROUTE messages */
@@ -146,18 +145,28 @@ struct private_kernel_pfroute_net_t
 	int seq;
 
 	/**
-	 * time of last roam job
+	 * time of last roam event
 	 */
 	timeval_t last_roam;
 };
 
 /**
- * Start a roaming job. We delay it a bit and fire only one job
- * for multiple events. Otherwise we would create too many jobs.
+ * callback function that raises the delayed roam event
  */
-static void fire_roam_job(private_kernel_pfroute_net_t *this, bool address)
+static job_requeue_t roam_event(uintptr_t address)
+{
+	charon->kernel_interface->roam(charon->kernel_interface, address != 0);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * fire a roaming event. we delay it for a bit and fire only one event
+ * for multiple calls. otherwise we would create too many events.
+ */
+static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 {
 	timeval_t now;
+	job_t *job;
 
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_roam, >))
@@ -169,8 +178,11 @@ static void fire_roam_job(private_kernel_pfroute_net_t *this, bool address)
 			now.tv_usec -= 1000000;
 		}
 		this->last_roam = now;
-		hydra->scheduler->schedule_job_ms(hydra->scheduler,
-			(job_t*)roam_job_create(address), ROAM_DELAY);
+
+		job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
+										  (void*)(uintptr_t)(address ? 1 : 0),
+										  NULL, NULL);
+		hydra->scheduler->schedule_job_ms(hydra->scheduler, job, ROAM_DELAY);
 	}
 }
 
@@ -262,7 +274,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 
 	if (roam)
 	{
-		fire_roam_job(this, TRUE);
+		fire_roam_event(this, TRUE);
 	}
 }
 
@@ -307,7 +319,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 
 	if (roam)
 	{
-		fire_roam_job(this, TRUE);
+		fire_roam_event(this, TRUE);
 	}
 }
 

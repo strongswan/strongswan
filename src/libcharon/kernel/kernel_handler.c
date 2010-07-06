@@ -21,6 +21,7 @@
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/migrate_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
+#include <processing/jobs/roam_job.h>
 #include <processing/jobs/update_sa_job.h>
 
 typedef struct private_kernel_handler_t private_kernel_handler_t;
@@ -103,6 +104,15 @@ METHOD(kernel_listener_t, migrate, bool,
 	return TRUE;
 }
 
+METHOD(kernel_listener_t, roam, bool,
+	   private_kernel_handler_t *this, bool address)
+{
+	job_t *job;
+	job = (job_t*)roam_job_create(address);
+	hydra->processor->queue_job(hydra->processor, job);
+	return TRUE;
+}
+
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
 {
@@ -122,6 +132,7 @@ kernel_handler_t *kernel_handler_create()
 				.expire = _expire,
 				.mapping = _mapping,
 				.migrate = _migrate,
+				.roam = _roam,
 			},
 			.destroy = _destroy,
 		},
