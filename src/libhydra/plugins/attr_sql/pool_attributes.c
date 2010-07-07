@@ -264,53 +264,164 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 }
  
 /**
- * ipsec pool --addattr <type> --string|server|subnet - add attribute entry
+ * Lookup/insert an attribute pool by name
  */
-void add_attr(char *name, char *value, value_type_t value_type)
+static u_int get_attr_pool(char *name)
+{
+	enumerator_t *e;
+	u_int row = 0;
+
+	/* look for an existing attribute pool in the table */
+	e = db->query(db, "SELECT id FROM attribute_pools WHERE name = ?",
+				  DB_TEXT, name, DB_UINT);
+	if (e && e->enumerate(e, &row))
+	{
+		e->destroy(e);
+		return row;
+	}
+	DESTROY_IF(e);
+	/* not found, insert new one */
+	if (db->execute(db, &row, "INSERT INTO attribute_pools (name) VALUES (?)",
+					DB_TEXT, name) != 1)
+	{
+		fprintf(stderr, "creating attribute pool '%s' failed.\n", name);
+		return 0;
+	}
+	return row;
+}
+
+/**
+ * Lookup/insert an identity
+ */
+u_int get_identity(identification_t *id)
+{
+	enumerator_t *e;
+	u_int row;
+
+	/* look for peer identity in the identities table */
+	e = db->query(db, "SELECT id FROM identities WHERE type = ? AND data = ?",
+			DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id), DB_UINT);
+	if (e && e->enumerate(e, &row))
+	{
+		e->destroy(e);
+		return row;
+	}
+	DESTROY_IF(e);
+	/* not found, insert new one */
+	if (db->execute(db, &row, "INSERT INTO identities (type,data) VALUES (?,?)",
+				  DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id)) != 1)
+	{
+		fprintf(stderr, "creating id '%Y' failed.\n", id);
+		return 0;
+	}
+	return row;
+}
+
+/**
+ * ipsec pool --addattr <type> - add attribute entry
+ */
+void add_attr(char *name, char *pool, char *identity,
+			  char *value, value_type_t value_type)
 {
 	configuration_attribute_type_t type, type_ip6;
+	u_int pool_id = 0, identity_id = 0;
+	char id_pool_str[128] = "";
 	chunk_t blob;
 	bool success;
+
+	if (pool)
+	{
+		pool_id = get_attr_pool(pool);
+		if (pool_id == 0)
+		{
+			exit(EXIT_FAILURE);
+		}
+
+		if (identity)
+		{
+			identification_t *id = identification_create_from_string(identity);
+			identity_id = get_identity(id);
+			id->destroy(id);
+			if (identity_id == 0)
+			{
+				exit(EXIT_FAILURE);
+			}
+			snprintf(id_pool_str, sizeof(id_pool_str),
+					 " for '%Y' in pool '%s'", identity, pool);
+		}
+		else
+		{
+			snprintf(id_pool_str, sizeof(id_pool_str), " in pool '%s'", pool);
+		}
+	}
 
 	if (value_type == VALUE_NONE)
 	{
 		fprintf(stderr, "the value of the %s attribute is missing.\n", name);
 		usage();
-		exit(EXIT_FAILURE);
-	}	
+	}
 	if (!parse_attributes(name, value, &value_type, &type, &type_ip6, &blob))
 	{
 		exit(EXIT_FAILURE);
 	}
 
 	success = db->execute(db, NULL,
-				"INSERT INTO attributes (type, value) VALUES (?, ?)",
+				"INSERT INTO attributes (identity, pool, type, value) "
+				"VALUES (?, ?, ?, ?)", DB_UINT, identity_id, DB_UINT, pool_id,
 				DB_INT, type, DB_BLOB, blob) == 1;
 	free(blob.ptr);
 
 	if (success)
 	{
-		printf("added %s attribute (%N).\n", name,
-				configuration_attribute_type_names, type);
+		printf("added %s attribute (%N)%s.\n", name,
+			   configuration_attribute_type_names, type, id_pool_str);
 	}
 	else
 	{
-		fprintf(stderr, "adding %s attribute (%N) failed.\n", name,
-						 configuration_attribute_type_names, type);
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "adding %s attribute (%N)%s failed.\n", name,
+						configuration_attribute_type_names, type, id_pool_str);
 	}
 }
 
 /**
- * ipsec pool --delattr <type> --string|server|subnet - delete attribute entry
+ * ipsec pool --delattr <type> - delete attribute entry
  */
-void del_attr(char *name, char *value, value_type_t value_type)
+void del_attr(char *name, char *pool, char *identity,
+			  char *value, value_type_t value_type)
 {
 	configuration_attribute_type_t type, type_ip6, type_db;
+	u_int pool_id = 0, identity_id = 0;
+	char id_pool_str[128] = "";
 	chunk_t blob, blob_db;
 	u_int id;
 	enumerator_t *query;
 	bool found = FALSE;
+
+	if (pool)
+	{
+		pool_id = get_attr_pool(pool);
+		if (pool_id == 0)
+		{
+			exit(EXIT_FAILURE);
+		}
+
+		if (identity)
+		{
+			identification_t *id = identification_create_from_string(identity);
+			identity_id = get_identity(id);
+			id->destroy(id);
+			if (identity_id == 0)
+			{
+				exit(EXIT_FAILURE);
+			}
+			snprintf(id_pool_str, sizeof(id_pool_str),
+					 " for '%Y' in pool '%s'", identity, pool);
+		}
+		else
+		{
+			snprintf(id_pool_str, sizeof(id_pool_str), " in pool '%s'", pool);
+		}
+	}
 
 	if (!parse_attributes(name, value, &value_type, &type, &type_ip6, &blob))
 	{
@@ -321,31 +432,31 @@ void del_attr(char *name, char *value, value_type_t value_type)
 	{
 		query = db->query(db,
 					"SELECT id, type, value FROM attributes "
-					"WHERE type = ? AND value = ?",
-					DB_INT, type, DB_BLOB, blob,
-					DB_UINT, DB_INT, DB_BLOB);
+					"WHERE identity = ? AND pool = ? AND type = ? AND value = ?",
+					DB_UINT, identity_id, DB_UINT, pool_id, DB_INT, type,
+					DB_BLOB, blob, DB_UINT, DB_INT, DB_BLOB);
 	}
 	else if (type_ip6 == 0)
 	{
 		query = db->query(db,
 					"SELECT id, type, value FROM attributes "
-					"WHERE type = ?",
-					DB_INT, type, 
+					"WHERE identity = ? AND pool = ? AND type = ?",
+					DB_UINT, identity_id, DB_UINT, pool_id, DB_INT, type,
 					DB_UINT, DB_INT, DB_BLOB);
 	}
 	else
 	{
 		query = db->query(db,
 					"SELECT id, type, value FROM attributes "
-					"WHERE type = ? OR type = ?",
-					DB_INT, type, DB_INT, type_ip6,
-					DB_UINT, DB_INT, DB_BLOB);
+					"WHERE identity = ? AND pool = ? AND (type = ? OR type = ?)",
+					DB_UINT, identity_id, DB_UINT, pool_id, DB_INT, type,
+					DB_INT, type_ip6, DB_UINT, DB_INT, DB_BLOB);
 	}
 
 	if (!query)
 	{
-		fprintf(stderr, "deleting '%s' attribute (%N) failed.\n",
-						 name, configuration_attribute_type_names, type);
+		fprintf(stderr, "deleting '%s' attribute (%N)%s failed.\n",
+				name, configuration_attribute_type_names, type, id_pool_str);
 		free(blob.ptr);
 		exit(EXIT_FAILURE);
 	}
@@ -369,21 +480,22 @@ void del_attr(char *name, char *value, value_type_t value_type)
 		{
 			if (server)
 			{
-				fprintf(stderr, "deleting %s server %H failed\n", name, server);
+				fprintf(stderr, "deleting %s server %H%s failed\n",
+						name, server, id_pool_str);
 				server->destroy(server);
 			}
 			else if (value_type == VALUE_STRING)
 			{
-				fprintf(stderr, "deleting %s attribute (%N) with value '%.*s' failed.\n",
+				fprintf(stderr, "deleting %s attribute (%N) with value '%.*s'%s failed.\n",
 						 		name, configuration_attribute_type_names, type,
-								blob_db.len, blob_db.ptr);
+								blob_db.len, blob_db.ptr, id_pool_str);
 			}
 
 			else
 			{
-				fprintf(stderr, "deleting %s attribute (%N) with value %#B failed.\n",
+				fprintf(stderr, "deleting %s attribute (%N) with value %#B%s failed.\n",
 						 		name, configuration_attribute_type_names, type,
-								&blob_db);
+								&blob_db, id_pool_str);
 			}
 			query->destroy(query);
 			free(blob.ptr);
@@ -391,20 +503,20 @@ void del_attr(char *name, char *value, value_type_t value_type)
 		}
 		if (server)
 		{
-			printf("deleted %s server %H\n", name, server);
+			printf("deleted %s server %H%s\n", name, server, id_pool_str);
 			server->destroy(server);
 		}
 		else if (value_type == VALUE_STRING)
 		{
-			printf("deleted %s attribute (%N) with value '%.*s'.\n",
+			printf("deleted %s attribute (%N) with value '%.*s'%s.\n",
 				   name, configuration_attribute_type_names, type,
-				   blob_db.len, blob_db.ptr);
+				   blob_db.len, blob_db.ptr, id_pool_str);
 		}
 		else
 		{
-			printf("deleted %s attribute (%N) with value %#B.\n",
+			printf("deleted %s attribute (%N) with value %#B%s.\n",
 				   name, configuration_attribute_type_names, type,
-				   &blob_db);
+				   &blob_db, id_pool_str);
 		}
 	}
 	query->destroy(query);
@@ -415,12 +527,13 @@ void del_attr(char *name, char *value, value_type_t value_type)
 		{
 			if (type_ip6 == 0)
 			{
-				fprintf(stderr, "no %s attribute (%N) was found.\n", name,
-								 configuration_attribute_type_names, type);
+				fprintf(stderr, "no %s attribute (%N) was found%s.\n", name,
+						configuration_attribute_type_names, type, id_pool_str);
 			}
 			else
 			{
-				fprintf(stderr, "no %s attribute was found.\n",	name);
+				fprintf(stderr, "no %s attribute%s was found.\n",
+						name, id_pool_str);
 			}
 		}
 		else
@@ -429,16 +542,16 @@ void del_attr(char *name, char *value, value_type_t value_type)
 			{
 				host_t *server = host_create_from_chunk(AF_UNSPEC, blob, 0);
 	
-				fprintf(stderr, "the %s server %H was not found.\n", name,
-								 server);
+				fprintf(stderr, "the %s server %H%s was not found.\n", name,
+								 server, id_pool_str);
 				server->destroy(server);
 			}
 			else
 			{
-				fprintf(stderr, "the %s attribute (%N) with value '%.*s' "
+				fprintf(stderr, "the %s attribute (%N) with value '%.*s'%s "
 								"was not found.\n", name,
 								 configuration_attribute_type_names, type,
-								 blob.len, blob.ptr);
+								 blob.len, blob.ptr, id_pool_str);
 			}
 		}
 	}
@@ -452,23 +565,36 @@ void status_attr(bool hexout)
 {
 	configuration_attribute_type_t type;
 	value_type_t value_type;
-	chunk_t value, addr_chunk, mask_chunk;
+	chunk_t value, addr_chunk, mask_chunk, identity_chunk;
+	identification_t *identity;
 	enumerator_t *enumerator;
 	host_t *addr, *mask;
 	char type_name[30];
 	bool first = TRUE;
-	int i;
+	int i, identity_type;
+	char *pool_name;
 
 	/* enumerate over all attributes */
-	enumerator = db->query(db, "SELECT type, value FROM attributes ORDER BY type",
-								DB_INT, DB_BLOB);
+	enumerator = db->query(db,
+					"SELECT identities.type, identities.data, "
+					"attribute_pools.name, attributes.type, attributes.value "
+					"FROM attributes "
+					"LEFT OUTER JOIN identities "
+					"ON attributes.identity = identities.id "
+					"LEFT OUTER JOIN attribute_pools "
+					"ON attributes.pool = attribute_pools.id "
+					"ORDER BY identities.type, identities.data, "
+					"attribute_pools.name, attributes.type",
+					DB_INT, DB_BLOB, DB_TEXT, DB_INT, DB_BLOB);
 	if (enumerator)
 	{
-		while (enumerator->enumerate(enumerator, &type, &value))
+		while (enumerator->enumerate(enumerator, &identity_type,
+							&identity_chunk, &pool_name, &type, &value))
 		{
 			if (first)
 			{
-				printf(" type  description           value\n");
+				printf(" type  description           pool             "
+					   " identity        value\n");
 				first = FALSE;
 			}
 			snprintf(type_name, sizeof(type_name), "%N",
@@ -478,6 +604,19 @@ void status_attr(bool hexout)
 				type_name[0] = '\0';
 			}
 			printf("%5d  %-20s ",type, type_name);
+
+			printf(" %-15.15s ", (pool_name ? pool_name : ""));
+
+			if (identity_type)
+			{
+				identity = identification_create_from_encoding(identity_type, identity_chunk);
+				printf(" %-15.15Y ", identity);
+				identity->destroy(identity);
+			}
+			else
+			{
+				printf("                 ");
+			}
 
 			value_type = VALUE_HEX;
 			if (!hexout)

@@ -74,6 +74,26 @@ static u_int get_identity(private_sql_attribute_t *this, identification_t *id)
 }
 
 /**
+ * Lookup an attribute pool by name
+ */
+static u_int get_attr_pool(private_sql_attribute_t *this, char *name)
+{
+	enumerator_t *e;
+	u_int row = 0;
+
+	e = this->db->query(this->db,
+						"SELECT id FROM attribute_pools WHERE name = ?",
+						DB_TEXT, name, DB_UINT);
+	if (e)
+	{
+		e->enumerate(e, &row);
+	}
+	DESTROY_IF(e);
+
+	return row;
+}
+
+/**
  * Lookup pool by name
  */
 static u_int get_pool(private_sql_attribute_t *this, char *name, u_int *timeout)
@@ -327,20 +347,101 @@ static bool release_address(private_sql_attribute_t *this,
  * Implementation of sql_attribute_t.create_attribute_enumerator
  */
 static enumerator_t* create_attribute_enumerator(private_sql_attribute_t *this,
-											identification_t *id, host_t *vip)
+								char *names, identification_t *id, host_t *vip)
 {
+	enumerator_t *attr_enumerator = NULL;
+
 	if (vip)
 	{
-		enumerator_t *enumerator;
+		enumerator_t *names_enumerator;
+		u_int count;
+		char *name;
 
-		enumerator = this->db->query(this->db,
-						"SELECT type, value FROM attributes", DB_INT, DB_BLOB);
-		if (enumerator)
+		this->db->execute(this->db, NULL, "BEGIN EXCLUSIVE TRANSACTION");
+
+		/* in a first step check for attributes that match name and id */
+		if (id)
 		{
-			return enumerator;
+			u_int identity = get_identity(this, id);
+
+			names_enumerator = enumerator_create_token(names, ",", " ");
+			while (names_enumerator->enumerate(names_enumerator, &name))
+			{
+				u_int attr_pool = get_attr_pool(this, name);
+				if (!attr_pool)
+				{
+					continue;
+				}
+
+				attr_enumerator = this->db->query(this->db,
+								"SELECT count(*) FROM attributes "
+								"WHERE pool = ? AND identity = ?",
+								DB_UINT, attr_pool, DB_UINT, identity, DB_UINT);
+
+				if (attr_enumerator &&
+					attr_enumerator->enumerate(attr_enumerator, &count) &&
+					count != 0)
+				{
+					attr_enumerator->destroy(attr_enumerator);
+					attr_enumerator = this->db->query(this->db,
+								"SELECT type, value FROM attributes "
+								"WHERE pool = ? AND identity = ?", DB_UINT,
+								attr_pool, DB_UINT, identity, DB_INT, DB_BLOB);
+					break;
+				}
+				DESTROY_IF(attr_enumerator);
+				attr_enumerator = NULL;
+			}
+			names_enumerator->destroy(names_enumerator);
+		}
+
+		/* in a second step check for attributes that match name */
+		if (!attr_enumerator)
+		{
+			names_enumerator = enumerator_create_token(names, ",", " ");
+			while (names_enumerator->enumerate(names_enumerator, &name))
+			{
+				u_int attr_pool = get_attr_pool(this, name);
+				if (!attr_pool)
+				{
+					continue;
+				}
+
+				attr_enumerator = this->db->query(this->db,
+									"SELECT count(*) FROM attributes "
+									"WHERE pool = ? AND identity = 0",
+									DB_UINT, attr_pool, DB_UINT);
+
+				if (attr_enumerator &&
+					attr_enumerator->enumerate(attr_enumerator, &count) &&
+					count != 0)
+				{
+					attr_enumerator->destroy(attr_enumerator);
+					attr_enumerator = this->db->query(this->db,
+									"SELECT type, value FROM attributes "
+									"WHERE pool = ? AND identity = 0",
+									DB_UINT, attr_pool, DB_INT, DB_BLOB);
+					break;
+				}
+				DESTROY_IF(attr_enumerator);
+				attr_enumerator = NULL;
+			}
+			names_enumerator->destroy(names_enumerator);
+		}
+
+		this->db->execute(this->db, NULL, "END TRANSACTION");
+
+		/* lastly try to find global attributes */
+		if (!attr_enumerator)
+		{
+			attr_enumerator = this->db->query(this->db,
+									"SELECT type, value FROM attributes "
+									"WHERE pool = 0 AND identity = 0",
+									DB_INT, DB_BLOB);
 		}
 	}
-	return enumerator_create_empty();
+
+	return (attr_enumerator ? attr_enumerator : enumerator_create_empty());
 }
 
 /**
@@ -361,7 +462,7 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *host))create_attribute_enumerator;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, char *names, identification_t *id, host_t *host))create_attribute_enumerator;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 
 	this->db = db;

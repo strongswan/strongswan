@@ -390,29 +390,14 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 	char *pos_eq = strchr(address_str, '=');
 	if (pos_eq != NULL)
 	{
-		enumerator_t *e;
 		identification_t *id = identification_create_from_string(pos_eq + 1);
-
-		/* look for peer identity in the identities table */
-		e = db->query(db,
-				"SELECT id FROM identities WHERE type = ? AND data = ?",
-				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
-				DB_UINT);
-
-		if (!e || !e->enumerate(e, &user_id))
-		{
-			/* not found, insert new one */
-			if (db->execute(db, &user_id,
-					"INSERT INTO identities (type, data) VALUES (?, ?)",
-					DB_INT, id->get_type(id),
-					DB_BLOB, id->get_encoding(id)) != 1)
-			{
-				fprintf(stderr, "creating id '%s' failed.\n", pos_eq + 1);
-				return FALSE;
-			}
-		}
-		DESTROY_IF(e);
+		user_id = get_identity(id);
 		id->destroy(id);
+
+		if (user_id == 0)
+		{
+			return FALSE;
+		}
 		*pos_eq = '\0';
 	}
 
@@ -943,7 +928,8 @@ static void cleanup(void)
 
 static void do_args(int argc, char *argv[])
 {
-	char *name = "", *value = "", *filter = "", *addresses = NULL;
+	char *name = "", *value = "", *filter = "";
+	char *pool = NULL, *identity = NULL, *addresses = NULL;
 	value_type_t value_type = VALUE_NONE;
 	int timeout = 0;
 	bool utc = FALSE, hexout = FALSE;
@@ -1000,6 +986,8 @@ static void do_args(int argc, char *argv[])
 			{ "string", required_argument, NULL, 'g' },
 			{ "hex", required_argument, NULL, 'x' },
 			{ "hexout", no_argument, NULL, '5' },
+			{ "pool", required_argument, NULL, '6' },
+			{ "identity", required_argument, NULL, '7' },
 			{ 0,0,0,0 }
 		};
 
@@ -1122,6 +1110,12 @@ static void do_args(int argc, char *argv[])
 			case '5':
 				hexout = TRUE;
 				continue;
+			case '6':
+				pool = optarg;
+				continue;
+			case '7':
+				identity = optarg;
+				continue;
 			default:
 				usage();
 				exit(EXIT_FAILURE);
@@ -1164,14 +1158,25 @@ static void do_args(int argc, char *argv[])
 				usage();
 				exit(EXIT_FAILURE);
 			}
-			add_attr(name, value, value_type);
+			if (identity && !pool)
+			{
+				fprintf(stderr, "--identity option can't be used without --pool.\n");
+				usage();
+				exit(EXIT_FAILURE);
+			}
+			add_attr(name, pool, identity, value, value_type);
 			break;
 		case OP_DEL:
 			del(name);
 			break;
 		case OP_DEL_ATTR:
-			
-			del_attr(name, value, value_type);
+			if (identity && !pool)
+			{
+				fprintf(stderr, "--identity option can't be used without --pool.\n");
+				usage();
+				exit(EXIT_FAILURE);
+			}
+			del_attr(name, pool, identity, value, value_type);
 			break;
 		case OP_SHOW_ATTR:
 			show_attr();

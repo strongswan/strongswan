@@ -51,6 +51,8 @@ struct private_attribute_manager_t {
  * Data to pass to enumerator filters
  */
 typedef struct {
+	/** attribute group pool */
+	char *pool;
 	/** server/peer identity */
 	identification_t *id;
 	/** requesting/assigned virtual IP */
@@ -123,17 +125,20 @@ static void release_address(private_attribute_manager_t *this,
 static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
-	return provider->create_attribute_enumerator(provider, data->id, data->vip);
+	return provider->create_attribute_enumerator(provider, data->pool,
+												 data->id, data->vip);
 }
 
 /**
  * Implementation of attribute_manager_t.create_responder_enumerator
  */
 static enumerator_t* create_responder_enumerator(
-			private_attribute_manager_t *this, identification_t *id, host_t *vip)
+								private_attribute_manager_t *this, char *pool,
+								identification_t *id, host_t *vip)
 {
 	enum_data_t *data = malloc_thing(enum_data_t);
 
+	data->pool = pool;
 	data->id = id;
 	data->vip = vip;
 	this->lock->read_lock(this->lock);
@@ -355,7 +360,7 @@ attribute_manager_t *attribute_manager_create()
 
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,host_t*))acquire_address;
 	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
-	this->public.create_responder_enumerator = (enumerator_t*(*)(attribute_manager_t*, identification_t*, host_t*))create_responder_enumerator;
+	this->public.create_responder_enumerator = (enumerator_t*(*)(attribute_manager_t*, char *name, identification_t*, host_t*))create_responder_enumerator;
 	this->public.add_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))remove_provider;
 	this->public.handle = (attribute_handler_t*(*)(attribute_manager_t*,identification_t*, attribute_handler_t*, configuration_attribute_type_t, chunk_t))handle;

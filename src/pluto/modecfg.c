@@ -93,6 +93,7 @@ void modecfg_attribute_destroy(modecfg_attribute_t *this)
 static void get_attributes(connection_t *c, linked_list_t *ca_list)
 {
 	configuration_attribute_type_t type;
+	identification_t *client_id;
 	modecfg_attribute_t *ca;
 	enumerator_t *enumerator;
 	chunk_t value;
@@ -141,14 +142,13 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 		requested_vip = host_create_any(AF_INET);
 	}
 
+	client_id = (c->xauth_identity) ? c->xauth_identity : c->spd.that.id;
+
 	/* if no virtual IP has been assigned yet - acquire one */
 	if (c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))
 	{
 		if (c->spd.that.pool)
 		{
-			identification_t *client_id;
-
-			client_id = (c->xauth_identity) ? c->xauth_identity : c->spd.that.id;
 			vip = hydra->attributes->acquire_address(hydra->attributes,
 								c->spd.that.pool, client_id, requested_vip);
 			if (vip)
@@ -185,7 +185,7 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 
 	/* assign attributes from registered providers */
 	enumerator = hydra->attributes->create_responder_enumerator(hydra->attributes,
-											c->spd.that.id, vip);
+											c->spd.that.pool, client_id, vip);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		ca = modecfg_attribute_create(type, value);

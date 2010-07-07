@@ -342,7 +342,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 
 		/* query registered providers for additional attributes to include */
 		enumerator = hydra->attributes->create_responder_enumerator(
-													hydra->attributes, id, vip);
+						hydra->attributes, config->get_pool(config), id, vip);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)

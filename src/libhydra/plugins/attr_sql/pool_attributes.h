@@ -34,14 +34,21 @@ enum value_type_t {
 extern enum_name_t *value_type_names;
 
 /**
+ * lookup/insert an identity
+ */
+u_int get_identity(identification_t *id);
+
+/**
  * ipsec pool --addattr <type>  - add attribute entry
  */
-void add_attr(char *name, char *value, value_type_t value_type);
+void add_attr(char *name, char *pool, char *identity,
+			  char *value, value_type_t value_type);
 
 /**
  * ipsec pool --delattr <type>  - delete attribute entry
  */
-void del_attr(char *name, char *value, value_type_t value_type);
+void del_attr(char *name, char *pool, char *identity,
+			  char *value, value_type_t value_type);
 
 /**
  * ipsec pool --statusattr      - show all attribute entries

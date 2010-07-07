@@ -59,9 +59,14 @@ Usage:\n\
                resized.\n\
       timeout: Lease time in hours, 0 for static leases\n\
   \n\
-  ipsec pool --addattr <type> --addr|--mask|--server|--subnet|--string|--hex <value>\n\
-    Add a new attribute to the database.\n\
+  ipsec pool --addattr <type> [--pool <name> [--identity <id>]]\n\
+             --addr|--mask|--server|--subnet|--string|--hex <value>\n\
+    Add a new attribute to the database. Attributes can be bundled by using\n\
+    the --pool and --identity options. If a bundle matches a peer the contained\n\
+    attributes are sent to that peer instead of the global ones.\n\
       type:    a keyword from --showattr or a number from the range 1..32767\n\
+      name:    the name of the pool this attribute is added to\n\
+      id:      identity of the peer this attribute is bound to\n\
       addr:    IPv4 or IPv6 address\n\
       mask:    IPv4 or IPv6 netmask (synonym for --addr)\n\
       server:  IPv4 or IPv6 address of a server (synonym for --addr)\n\
@@ -73,9 +78,12 @@ Usage:\n\
     Delete a pool from the database.\n\
       name:    Name of the pool to delete\n\
   \n\
-  ipsec pool --delattr <type> [--addr|--mask|--server|--subnet|--string|--hex <value>]\n\
+  ipsec pool --delattr <type> [--pool <name> [--identity <id>]]\n\
+             [--addr|--mask|--server|--subnet|--string|--hex <value>]\n\
     Delete a specific or all attributes of a given type from the database.\n\
       type:    a keyword from --showattr or a number from the range 1..32767\n\
+      name:    the name of the pool this attribute is added to\n\
+      id:      identity of the peer this attribute is bound to\n\
       addr:    IPv4 or IPv6 address\n\
       mask:    IPv4 or IPv6 netmask (synonym for --addr)\n\
       server:  IPv4 or IPv6 address of a server (synonym for --addr)\n\
