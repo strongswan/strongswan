@@ -333,7 +333,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 									chunk_empty);
 				return SUCCESS;
 			}
-			DBG1(DBG_IKE, "assigning virtual IP %H to peer", vip);
+			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", vip, id);
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 
 			cp = cp_payload_create_type(CFG_REPLY);
