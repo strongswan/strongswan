@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "file_logger.h"
 
@@ -40,6 +41,11 @@ struct private_file_logger_t {
 	 * Maximum level to log, for each group
 	 */
 	level_t levels[DBG_MAX];
+
+	/**
+	 * strftime() format of time prefix, if any
+	 */
+	char *time_format;
 };
 
 /**
@@ -50,8 +56,17 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 {
 	if (level <= this->levels[group])
 	{
-		char buffer[8192];
+		char buffer[8192], timestr[128];
 		char *current = buffer, *next;
+		struct tm tm;
+		time_t t;
+
+		if (this->time_format)
+		{
+			t = time(NULL);
+			localtime_r(&t, &tm);
+			strftime(timestr, sizeof(timestr), this->time_format, &tm);
+		}
 
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
@@ -64,8 +79,16 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 			{
 				*(next++) = '\0';
 			}
-			fprintf(this->out, "%.2d[%N] %s\n",
-					thread, debug_names, group, current);
+			if (this->time_format)
+			{
+				fprintf(this->out, "%s %.2d[%N] %s\n",
+						timestr, thread, debug_names, group, current);
+			}
+			else
+			{
+				fprintf(this->out, "%.2d[%N] %s\n",
+						thread, debug_names, group, current);
+			}
 			current = next;
 		}
 	}
@@ -106,7 +129,7 @@ static void destroy(private_file_logger_t *this)
 /*
  * Described in header.
  */
-file_logger_t *file_logger_create(FILE *out)
+file_logger_t *file_logger_create(FILE *out, char *time_format)
 {
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
 
@@ -118,6 +141,7 @@ file_logger_t *file_logger_create(FILE *out)
 
 	/* private variables */
 	this->out = out;
+	this->time_format = time_format;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
 
 	return &this->public;

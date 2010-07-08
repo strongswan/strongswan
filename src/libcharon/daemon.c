@@ -281,7 +281,9 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 				setlinebuf(file);
 			}
 		}
-		file_logger = file_logger_create(file);
+		file_logger = file_logger_create(file,
+						lib->settings->get_str(lib->settings,
+							"charon.filelog.%s.time_format", NULL, filename));
 		def = lib->settings->get_int(lib->settings,
 									 "charon.filelog.%s.default", 1, filename);
 		for (group = 0; group < DBG_MAX; group++)
@@ -302,7 +304,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	if (!loggers_defined)
 	{
 		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout);
+		file_logger = file_logger_create(stdout, NULL);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);

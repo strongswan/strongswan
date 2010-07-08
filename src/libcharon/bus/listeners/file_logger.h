@@ -52,9 +52,10 @@ struct file_logger_t {
 /**
  * Constructor to create a file_logger_t object.
  *
- * @param out		FILE to write to
- * @return			file_logger_t object
+ * @param out			FILE to write to
+ * @param time_format	format of timestamp prefix, as in strftime()
+ * @return				file_logger_t object
  */
-file_logger_t *file_logger_create(FILE *out);
+file_logger_t *file_logger_create(FILE *out, char *time_format);
 
 #endif /** FILE_LOGGER_H_ @}*/
