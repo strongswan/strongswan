@@ -236,6 +236,8 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
 	{ ARG_UINT, offsetof(starter_conn_t, reqid), NULL                              },
 	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
 
 	/* ca section keywords */
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },

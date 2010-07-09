@@ -768,9 +768,13 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 			.jitter = msg->add_conn.rekey.margin_packets * msg->add_conn.rekey.fuzz / 100
 		}
 	};
-	mark_t mark = {
-		.value = msg->add_conn.mark.value,
-		.mask = msg->add_conn.mark.mask
+	mark_t mark_in = {
+		.value = msg->add_conn.mark_in.value,
+		.mask = msg->add_conn.mark_in.mask
+	};
+	mark_t mark_out = {
+		.value = msg->add_conn.mark_out.value,
+		.mask = msg->add_conn.mark_out.mask
 	};
 
 	switch (msg->add_conn.dpd.action)
@@ -790,7 +794,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.name, &lifetime,
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
 				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp,
-				msg->add_conn.inactivity, msg->add_conn.reqid, &mark);
+				msg->add_conn.inactivity, msg->add_conn.reqid,
+				&mark_in, &mark_out);
 	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,
 											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);

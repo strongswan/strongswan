@@ -539,7 +539,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
 							  u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark)
+							  mark_t *mark_in, mark_t *mark_out)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -576,16 +576,21 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->inactivity = inactivity;
 	this->reqid = reqid;
 
-	/* TODO configure separate inbound and outbound marks */
-	if (mark)
+	if (mark_in)
 	{
-		this->mark_in  = *mark;
-		this->mark_out = *mark;
+		this->mark_in = *mark_in;
 	}
 	else
 	{
-		this->mark_in.value  = 0;
-		this->mark_in.mask   = 0;
+		this->mark_in.value = 0;
+		this->mark_in.mask  = 0;
+	}
+	if (mark_out)
+	{
+		this->mark_out = *mark_out;
+	}
+	else
+	{
 		this->mark_out.value = 0;
 		this->mark_out.mask  = 0;
 	}

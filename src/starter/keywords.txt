@@ -90,6 +90,8 @@ mediated_by,       KW_MEDIATED_BY
 me_peerid,         KW_ME_PEERID
 reqid,             KW_REQID
 mark,              KW_MARK
+mark_in,           KW_MARK_IN
+mark_out,          KW_MARK_OUT
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE

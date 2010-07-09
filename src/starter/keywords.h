@@ -99,9 +99,11 @@ typedef enum {
 	KW_ME_PEERID,
 	KW_REQID,
 	KW_MARK,
+	KW_MARK_IN,
+	KW_MARK_OUT,
 
 #define KW_CONN_FIRST   KW_CONN_SETUP
-#define KW_CONN_LAST    KW_MARK
+#define KW_CONN_LAST    KW_MARK_OUT
 
    /* ca section keywords */
 	KW_CA_NAME,

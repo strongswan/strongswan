@@ -326,7 +326,8 @@ struct child_cfg_t {
  * @param ipcomp			use IPComp, if peer supports it
  * @param inactivity		inactivity timeout in s before closing a CHILD_SA
  * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
- * @param mark				optional mark (can be NULL)
+ * @param mark_in			optional inbound mark (can be NULL)
+ * @param mark_out			optional outbound mark (can be NULL)
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
@@ -334,6 +335,6 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
 							  u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark);
+							  mark_t *mark_in, mark_t *mark_out);
 
 #endif /** CHILD_CFG_H_ @}*/

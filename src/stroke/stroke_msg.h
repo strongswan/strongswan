@@ -259,7 +259,7 @@ struct stroke_msg_t {
 			struct {
 				u_int32_t value;
 				u_int32_t mask;
-			} mark;
+			} mark_in, mark_out;
 			stroke_end_t me, other;
 		} add_conn;
 

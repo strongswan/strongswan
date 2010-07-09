@@ -461,6 +461,41 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	}
 }
 
+static bool handle_mark(char *value, mark_t *mark)	
+{
+	char *pos, *endptr;
+
+	pos = strchr(value, '/');
+	if (pos)
+	{
+		*pos = '\0';
+		mark->mask = strtoul(pos+1, &endptr, 0);
+		if (*endptr != '\0')
+		{
+			plog("# invalid mark mask: %s", pos+1);
+			return FALSE;
+		}
+	}
+	else
+	{
+		mark->mask = 0xffffffff;
+	}
+	if (value == '\0')
+	{
+		mark->value = 0;
+	}
+	else
+	{
+		mark->value = strtoul(value, &endptr, 0);
+		if (*endptr != '\0')
+		{
+			plog("# invalid mark value: %s", value);
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /*
  * parse a conn section
  */
@@ -672,40 +707,25 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			break;
 		}
 		case KW_MARK:
-		{
-			char *pos, *endptr;
-
-			pos = strchr(kw->value, '/');
-			if (pos)
+			if (!handle_mark(kw->value, &conn->mark_in))
 			{
-				*pos = '\0';
-				conn->mark_mask = strtoul(pos+1, &endptr, 0);
-				if (*endptr != '\0')
-				{
-					plog("# invalid mark mask: %s", pos+1);
-					cfg->err++;
-					break;
-				}
+				cfg->err++;
+				break;
 			}
-			else
+			conn->mark_out = conn->mark_in;
+			break;
+		case KW_MARK_IN:
+			if (!handle_mark(kw->value, &conn->mark_in))
 			{
-				conn->mark_mask = 0xffffffff;
-			}
-			if (*kw->value == '\0')
-			{
-				conn->mark_value = 0;
-			}
-			else
-			{
-				conn->mark_value = strtoul(kw->value, &endptr, 0);
-				if (*endptr != '\0')
-				{
-					plog("# invalid mark value: %s", kw->value);
-					cfg->err++;
-				}
+				cfg->err++;
 			}
 			break;
-		}
+		case KW_MARK_OUT:
+			if (!handle_mark(kw->value, &conn->mark_out))
+			{
+				cfg->err++;
+			}
+			break;
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{
