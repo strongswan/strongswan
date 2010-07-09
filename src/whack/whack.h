@@ -48,7 +48,7 @@ typedef enum {
  */
 
 #define WHACK_BASIC_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 24)
-#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 29)
+#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 30)
 
 typedef struct whack_end whack_end_t;
 
@@ -128,6 +128,14 @@ struct whack_message {
 	time_t dpd_delay;
 	time_t dpd_timeout;
 	dpd_action_t dpd_action;
+
+
+	/* Assign optional fixed reqid and xfrm marks to IPsec SA */
+	u_int32_t reqid;
+	struct {
+		u_int32_t value;
+		u_int32_t mask;
+	} mark_in, mark_out;
 
 	/*  note that each end contains string 2/5.id, string 3/6 cert,
 	 *  and string 4/7 updown
