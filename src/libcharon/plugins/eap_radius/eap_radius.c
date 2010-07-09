@@ -195,15 +195,23 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 	{
 		if (type == RAT_CLASS)
 		{
+			identification_t *id;
 			ike_sa_t *ike_sa;
 			auth_cfg_t *auth;
+
+			if (data.len >= 44)
+			{	/* quirk: ignore long class attributes, these are used for
+				 * other purposes by some RADIUS servers (such as NPS). */
+				continue;
+			}
 
 			ike_sa = charon->bus->get_sa(charon->bus);
 			if (ike_sa)
 			{
 				auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
-				auth->add(auth, AUTH_RULE_GROUP,
-						  identification_create_from_data(data));
+				id = identification_create_from_data(data);
+				DBG1(DBG_CFG, "received group membership '%Y' from RADIUS", id);
+				auth->add(auth, AUTH_RULE_GROUP, id);
 			}
 		}
 	}
