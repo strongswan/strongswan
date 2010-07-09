@@ -308,7 +308,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 					 bool log_error)
 {
 	enumerator_t *e1, *e2;
-	bool success = TRUE;
+	bool success = TRUE, has_group = FALSE, group_match = FALSE;
 	auth_rule_t t1, t2;
 	void *value;
 
@@ -463,17 +463,18 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			{
 				identification_t *id1, *id2;
 
+				/* for groups, a match of a single group is sufficient */
+				has_group = TRUE;
 				id1 = (identification_t*)value;
-				id2 = get(this, t1);
-				if (!id2 || !id2->matches(id2, id1))
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &id2))
 				{
-					success = FALSE;
-					if (log_error)
+					if (t2 == AUTH_RULE_GROUP && id2->matches(id2, id1))
 					{
-						DBG1(DBG_CFG, "constraint check failed: membership to "
-							 "group '%Y' required", id1);
+						group_match = TRUE;
 					}
 				}
+				e2->destroy(e2);
 				break;
 			}
 			case AUTH_HELPER_IM_CERT:
@@ -489,6 +490,15 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 		}
 	}
 	e1->destroy(e1);
+
+	if (has_group && !group_match)
+	{
+		if (log_error)
+		{
+			DBG1(DBG_CFG, "constraint check failed: group membership required");
+		}
+		return FALSE;
+	}
 	return success;
 }
 

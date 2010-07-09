@@ -62,7 +62,9 @@ enum auth_rule_t {
 	AUTH_RULE_CRL_VALIDATION,
 	/** result of a OCSP validation, cert_validation_t */
 	AUTH_RULE_OCSP_VALIDATION,
-	/** subject is member of a group, identification_t* */
+	/** subject is member of a group, identification_t*
+	 * The group membership constraint is fulfilled if the subject is member of
+	 * one group defined in the constraints. */
 	AUTH_RULE_GROUP,
 
 	/** intermediate certificate, certificate_t* */
