@@ -5,8 +5,10 @@ after ESP decryption to map these subnets to 10.3.0.10 and 10.3.0.20, respective
 <p/>
 In order to differentiate between the tunnels to <b>alice</b> and <b>venus</b>, respectively,
 <b>XFRM marks</b> are defined for both the inbound and outbound IPsec SAs and policies using
-the <b>mark=</b> ipsec.conf parameter. <b>iptables -t mangle</b> rules are then used in the PREROUTING
-chain to mark the traffic to and from <b>alice</b> and <b>venus</b>, respectively.
+the <b>mark</b> parameter in ipsec.conf.
+<p/>
+<b>iptables -t mangle</b> rules are then used in the PREROUTING chain to mark the traffic to
+and from <b>alice</b> and <b>venus</b>, respectively.
 <p/>
 <b>leftfirewall=yes</b> automatically inserts iptables-based firewall rules that let pass
 the tunneled traffic. In order to test the tunnel, the NAT-ed hosts <b>alice</b> and <b>venus</b>
