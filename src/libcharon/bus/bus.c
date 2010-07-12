@@ -102,20 +102,16 @@ static void entry_destroy(entry_t *entry)
 	free(entry);
 }
 
-/**
- * Implementation of bus_t.add_listener.
- */
-static void add_listener(private_bus_t *this, listener_t *listener)
+METHOD(bus_t, add_listener, void,
+	private_bus_t *this, listener_t *listener)
 {
 	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, entry_create(listener, FALSE));
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.remove_listener.
- */
-static void remove_listener(private_bus_t *this, listener_t *listener)
+METHOD(bus_t, remove_listener, void,
+	private_bus_t *this, listener_t *listener)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -156,10 +152,8 @@ static void listener_cleanup(cleanup_data_t *data)
 	entry_destroy(data->entry);
 }
 
-/**
- * Implementation of bus_t.listen.
- */
-static void listen_(private_bus_t *this, listener_t *listener, job_t *job)
+METHOD(bus_t, listen_, void,
+	private_bus_t *this, listener_t *listener, job_t *job)
 {
 	bool old;
 	cleanup_data_t data;
@@ -184,18 +178,14 @@ static void listen_(private_bus_t *this, listener_t *listener, job_t *job)
 	entry_destroy(data.entry);
 }
 
-/**
- * Implementation of bus_t.set_sa.
- */
-static void set_sa(private_bus_t *this, ike_sa_t *ike_sa)
+METHOD(bus_t, set_sa, void,
+	private_bus_t *this, ike_sa_t *ike_sa)
 {
 	this->thread_sa->set(this->thread_sa, ike_sa);
 }
 
-/**
- * Implementation of bus_t.get_sa
- */
-static ike_sa_t* get_sa(private_bus_t *this)
+METHOD(bus_t, get_sa, ike_sa_t*,
+	private_bus_t *this)
 {
 	return this->thread_sa->get(this->thread_sa);
 }
@@ -252,11 +242,9 @@ static bool log_cb(entry_t *entry, log_data_t *data)
 	return FALSE;
 }
 
-/**
- * Implementation of bus_t.vlog.
- */
-static void vlog(private_bus_t *this, debug_t group, level_t level,
-				 char* format, va_list args)
+METHOD(bus_t, vlog, void,
+	private_bus_t *this, debug_t group, level_t level,
+	char* format, va_list args)
 {
 	log_data_t data;
 
@@ -276,11 +264,8 @@ static void vlog(private_bus_t *this, debug_t group, level_t level,
 	va_end(data.args);
 }
 
-/**
- * Implementation of bus_t.log.
- */
-static void log_(private_bus_t *this, debug_t group, level_t level,
-				 char* format, ...)
+METHOD(bus_t, log_, void,
+	private_bus_t *this, debug_t group, level_t level, char* format, ...)
 {
 	va_list args;
 
@@ -307,10 +292,8 @@ static void unregister_listener(private_bus_t *this, entry_t *entry,
 	this->listeners->remove_at(this->listeners, enumerator);
 }
 
-/**
- * Implementation of bus_t.alert
- */
-static void alert(private_bus_t *this, alert_t alert, ...)
+METHOD(bus_t, alert, void,
+	private_bus_t *this, alert_t alert, ...)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -342,11 +325,8 @@ static void alert(private_bus_t *this, alert_t alert, ...)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.ike_state_change
- */
-static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
-							 ike_sa_state_t state)
+METHOD(bus_t, ike_state_change, void,
+	private_bus_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -372,11 +352,8 @@ static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.child_state_change
- */
-static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
-							   child_sa_state_t state)
+METHOD(bus_t, child_state_change, void,
+	private_bus_t *this, child_sa_t *child_sa, child_sa_state_t state)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -406,10 +383,8 @@ static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.message
- */
-static void message(private_bus_t *this, message_t *message, bool incoming)
+METHOD(bus_t, message, void,
+	private_bus_t *this, message_t *message, bool incoming)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -439,12 +414,9 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.ike_keys
- */
-static void ike_keys(private_bus_t *this, ike_sa_t *ike_sa,
-					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-					 ike_sa_t *rekey)
+METHOD(bus_t, ike_keys, void,
+	private_bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -471,11 +443,9 @@ static void ike_keys(private_bus_t *this, ike_sa_t *ike_sa,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.child_keys
- */
-static void child_keys(private_bus_t *this, child_sa_t *child_sa,
-					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+METHOD(bus_t, child_keys, void,
+	private_bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -505,10 +475,8 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.child_updown
- */
-static void child_updown(private_bus_t *this, child_sa_t *child_sa, bool up)
+METHOD(bus_t, child_updown, void,
+	private_bus_t *this, child_sa_t *child_sa, bool up)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -538,10 +506,8 @@ static void child_updown(private_bus_t *this, child_sa_t *child_sa, bool up)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.child_rekey
- */
-static void child_rekey(private_bus_t *this, child_sa_t *old, child_sa_t *new)
+METHOD(bus_t, child_rekey, void,
+	private_bus_t *this, child_sa_t *old, child_sa_t *new)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -570,10 +536,8 @@ static void child_rekey(private_bus_t *this, child_sa_t *old, child_sa_t *new)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.ike_updown
- */
-static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
+METHOD(bus_t, ike_updown, void,
+	private_bus_t *this, ike_sa_t *ike_sa, bool up)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -613,10 +577,8 @@ static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
 	}
 }
 
-/**
- * Implementation of bus_t.ike_rekey
- */
-static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
+METHOD(bus_t, ike_rekey, void,
+	private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -642,10 +604,8 @@ static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of bus_t.authorize
- */
-static bool authorize(private_bus_t *this, bool final)
+METHOD(bus_t, authorize, bool,
+	private_bus_t *this, bool final)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -680,10 +640,8 @@ static bool authorize(private_bus_t *this, bool final)
 	return success;
 }
 
-/**
- * Implementation of bus_t.destroy.
- */
-static void destroy(private_bus_t *this)
+METHOD(bus_t, destroy, void,
+	private_bus_t *this)
 {
 	this->thread_sa->destroy(this->thread_sa);
 	this->mutex->destroy(this->mutex);
@@ -696,31 +654,34 @@ static void destroy(private_bus_t *this)
  */
 bus_t *bus_create()
 {
-	private_bus_t *this = malloc_thing(private_bus_t);
+	private_bus_t *this;
 
-	this->public.add_listener = (void(*)(bus_t*,listener_t*))add_listener;
-	this->public.remove_listener = (void(*)(bus_t*,listener_t*))remove_listener;
-	this->public.listen = (void(*)(bus_t*, listener_t *listener, job_t *job))listen_;
-	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
-	this->public.get_sa = (ike_sa_t*(*)(bus_t*))get_sa;
-	this->public.log = (void(*)(bus_t*,debug_t,level_t,char*,...))log_;
-	this->public.vlog = (void(*)(bus_t*,debug_t,level_t,char*,va_list))vlog;
-	this->public.alert = (void(*)(bus_t*, alert_t alert, ...))alert;
-	this->public.ike_state_change = (void(*)(bus_t*,ike_sa_t*,ike_sa_state_t))ike_state_change;
-	this->public.child_state_change = (void(*)(bus_t*,child_sa_t*,child_sa_state_t))child_state_change;
-	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
-	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
-	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
-	this->public.ike_updown = (void(*)(bus_t*, ike_sa_t *ike_sa, bool up))ike_updown;
-	this->public.ike_rekey = (void(*)(bus_t*, ike_sa_t *old, ike_sa_t *new))ike_rekey;
-	this->public.child_updown = (void(*)(bus_t*, child_sa_t *child_sa, bool up))child_updown;
-	this->public.child_rekey = (void(*)(bus_t*, child_sa_t *old, child_sa_t *new))child_rekey;
-	this->public.authorize = (bool(*)(bus_t*, bool final))authorize;
-	this->public.destroy = (void(*)(bus_t*)) destroy;
-
-	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	this->thread_sa = thread_value_create(NULL);
+	INIT(this,
+		.public = {
+			.add_listener = _add_listener,
+			.remove_listener = _remove_listener,
+			.listen = _listen_,
+			.set_sa = _set_sa,
+			.get_sa = _get_sa,
+			.log = _log_,
+			.vlog = _vlog,
+			.alert = _alert,
+			.ike_state_change = _ike_state_change,
+			.child_state_change = _child_state_change,
+			.message = _message,
+			.ike_keys = _ike_keys,
+			.child_keys = _child_keys,
+			.ike_updown = _ike_updown,
+			.ike_rekey = _ike_rekey,
+			.child_updown = _child_updown,
+			.child_rekey = _child_rekey,
+			.authorize = _authorize,
+			.destroy = _destroy,
+		},
+		.listeners = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.thread_sa = thread_value_create(NULL),
+	);
 
 	return &this->public;
 }
