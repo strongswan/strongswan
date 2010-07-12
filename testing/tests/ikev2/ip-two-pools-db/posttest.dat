@@ -13,4 +13,7 @@ moon::ip route del 10.4.0.0/16 via PH_IP_MOON1
 moon::conntrack -F
 moon::ipsec pool --del extpool 2> /dev/null
 moon::ipsec pool --del intpool 2> /dev/null
+moon::ipsec pool --delattr dns --server PH_IP_VENUS --pool intpool --identity venus.strongswan.org 2> /dev/null
+moon::ipsec pool --delattr dns --server PH_IP_ALICE --pool intpool --identity alice@strongswan.org 2> /dev/null
+moon::ipsec pool --delattr dns --server PH_IP_WINNETOU --pool extpool 2> /dev/null
 moon::rm /etc/ipsec.d/ipsec.*
