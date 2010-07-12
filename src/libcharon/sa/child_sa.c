@@ -178,171 +178,129 @@ struct private_child_sa_t {
 	u_int64_t other_usebytes;
 };
 
-/**
- * Implementation of child_sa_t.get_name
- */
-static char *get_name(private_child_sa_t *this)
+METHOD(child_sa_t, get_name, char*,
+	   private_child_sa_t *this)
 {
 	return this->config->get_name(this->config);
 }
 
-/**
- * Implements child_sa_t.get_reqid
- */
-static u_int32_t get_reqid(private_child_sa_t *this)
+METHOD(child_sa_t, get_reqid, u_int32_t,
+	   private_child_sa_t *this)
 {
 	return this->reqid;
 }
 
-/**
- * Implements child_sa_t.get_config
- */
-static child_cfg_t* get_config(private_child_sa_t *this)
+METHOD(child_sa_t, get_config, child_cfg_t*,
+	   private_child_sa_t *this)
 {
 	return this->config;
 }
 
-/**
- * Implements child_sa_t.set_state
- */
-static void set_state(private_child_sa_t *this, child_sa_state_t state)
+METHOD(child_sa_t, set_state, void,
+	   private_child_sa_t *this, child_sa_state_t state)
 {
 	charon->bus->child_state_change(charon->bus, &this->public, state);
 	this->state = state;
 }
 
-/**
- * Implements child_sa_t.get_state
- */
-static child_sa_state_t get_state(private_child_sa_t *this)
+METHOD(child_sa_t, get_state, child_sa_state_t,
+	   private_child_sa_t *this)
 {
 	return this->state;
 }
 
-/**
- * Implements child_sa_t.get_spi
- */
-u_int32_t get_spi(private_child_sa_t *this, bool inbound)
+METHOD(child_sa_t, get_spi, u_int32_t,
+	   private_child_sa_t *this, bool inbound)
 {
 	return inbound ? this->my_spi : this->other_spi;
 }
 
-/**
- * Implements child_sa_t.get_cpi
- */
-u_int16_t get_cpi(private_child_sa_t *this, bool inbound)
+METHOD(child_sa_t, get_cpi, u_int16_t,
+	   private_child_sa_t *this, bool inbound)
 {
 	return inbound ? this->my_cpi : this->other_cpi;
 }
 
-/**
- * Implements child_sa_t.get_protocol
- */
-protocol_id_t get_protocol(private_child_sa_t *this)
+METHOD(child_sa_t, get_protocol, protocol_id_t,
+	   private_child_sa_t *this)
 {
 	return this->protocol;
 }
 
-/**
- * Implementation of child_sa_t.set_protocol
- */
-static void set_protocol(private_child_sa_t *this, protocol_id_t protocol)
+METHOD(child_sa_t, set_protocol, void,
+	   private_child_sa_t *this, protocol_id_t protocol)
 {
 	this->protocol = protocol;
 }
 
-/**
- * Implementation of child_sa_t.get_mode
- */
-static ipsec_mode_t get_mode(private_child_sa_t *this)
+METHOD(child_sa_t, get_mode, ipsec_mode_t,
+	   private_child_sa_t *this)
 {
 	return this->mode;
 }
 
-/**
- * Implementation of child_sa_t.set_mode
- */
-static void set_mode(private_child_sa_t *this, ipsec_mode_t mode)
+METHOD(child_sa_t, set_mode, void,
+	   private_child_sa_t *this, ipsec_mode_t mode)
 {
 	this->mode = mode;
 }
 
-/**
- * Implementation of child_sa_t.has_encap
- */
-static bool has_encap(private_child_sa_t *this)
+METHOD(child_sa_t, has_encap, bool,
+	   private_child_sa_t *this)
 {
 	return this->encap;
 }
 
-/**
- * Implementation of child_sa_t.get_ipcomp
- */
-static ipcomp_transform_t get_ipcomp(private_child_sa_t *this)
+METHOD(child_sa_t, get_ipcomp, ipcomp_transform_t,
+	   private_child_sa_t *this)
 {
 	return this->ipcomp;
 }
 
-/**
- * Implementation of child_sa_t.set_ipcomp.
- */
-static void set_ipcomp(private_child_sa_t *this, ipcomp_transform_t ipcomp)
+METHOD(child_sa_t, set_ipcomp, void,
+	   private_child_sa_t *this, ipcomp_transform_t ipcomp)
 {
 	this->ipcomp = ipcomp;
 }
 
-/**
- * Implementation of child_sa_t.set_close_action.
- */
-static void set_close_action(private_child_sa_t *this, action_t action)
+METHOD(child_sa_t, set_close_action, void,
+	   private_child_sa_t *this, action_t action)
 {
 	this->close_action = action;
 }
 
-/**
- * Implementation of child_sa_t.get_close_action.
- */
-static action_t get_close_action(private_child_sa_t *this)
+METHOD(child_sa_t, get_close_action, action_t,
+	   private_child_sa_t *this)
 {
 	return this->close_action;
 }
 
-/**
- * Implementation of child_sa_t.set_dpd_action.
- */
-static void set_dpd_action(private_child_sa_t *this, action_t action)
+METHOD(child_sa_t, set_dpd_action, void,
+	   private_child_sa_t *this, action_t action)
 {
 	this->dpd_action = action;
 }
 
-/**
- * Implementation of child_sa_t.get_dpd_action.
- */
-static action_t get_dpd_action(private_child_sa_t *this)
+METHOD(child_sa_t, get_dpd_action, action_t,
+	   private_child_sa_t *this)
 {
 	return this->dpd_action;
 }
 
-/**
- * Implementation of child_sa_t.get_proposal
- */
-static proposal_t* get_proposal(private_child_sa_t *this)
+METHOD(child_sa_t, get_proposal, proposal_t*,
+	   private_child_sa_t *this)
 {
 	return this->proposal;
 }
 
-/**
- * Implementation of child_sa_t.set_proposal
- */
-static void set_proposal(private_child_sa_t *this, proposal_t *proposal)
+METHOD(child_sa_t, set_proposal, void,
+	   private_child_sa_t *this, proposal_t *proposal)
 {
 	this->proposal = proposal->clone(proposal);
 }
 
-/**
- * Implementation of child_sa_t.get_traffic_selectors.
- */
-static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local)
+METHOD(child_sa_t, get_traffic_selectors, linked_list_t*,
+	   private_child_sa_t *this, bool local)
 {
 	return local ? this->my_ts : this->other_ts;
 }
@@ -365,11 +323,9 @@ struct policy_enumerator_t {
 	traffic_selector_t *ts;
 };
 
-/**
- * enumerator function of create_policy_enumerator()
- */
-static bool policy_enumerate(policy_enumerator_t *this,
-				 traffic_selector_t **my_out, traffic_selector_t **other_out)
+METHOD(enumerator_t, policy_enumerate, bool,
+	   policy_enumerator_t *this, traffic_selector_t **my_out,
+	   traffic_selector_t **other_out)
 {
 	traffic_selector_t *other_ts;
 
@@ -399,29 +355,29 @@ static bool policy_enumerate(policy_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * destroy function of create_policy_enumerator()
- */
-static void policy_destroy(policy_enumerator_t *this)
+METHOD(enumerator_t, policy_destroy, void,
+	   policy_enumerator_t *this)
 {
 	this->mine->destroy(this->mine);
 	this->other->destroy(this->other);
 	free(this);
 }
 
-/**
- * Implementation of child_sa_t.create_policy_enumerator
- */
-static enumerator_t* create_policy_enumerator(private_child_sa_t *this)
+METHOD(child_sa_t, create_policy_enumerator, enumerator_t*,
+	   private_child_sa_t *this)
 {
-	policy_enumerator_t *e = malloc_thing(policy_enumerator_t);
+	policy_enumerator_t *e;
 
-	e->public.enumerate = (void*)policy_enumerate;
-	e->public.destroy = (void*)policy_destroy;
-	e->mine = this->my_ts->create_enumerator(this->my_ts);
-	e->other = this->other_ts->create_enumerator(this->other_ts);
-	e->list = this->other_ts;
-	e->ts = NULL;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_policy_enumerate,
+			.destroy = _policy_destroy,
+		},
+		.mine = this->my_ts->create_enumerator(this->my_ts),
+		.other = this->other_ts->create_enumerator(this->other_ts),
+		.list = this->other_ts,
+		.ts = NULL,
+	);
 
 	return &e->public;
 }
@@ -533,11 +489,8 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 	}
 }
 
-/**
- * Implementation of child_sa_t.get_usestats
- */
-static void get_usestats(private_child_sa_t *this, bool inbound,
-						 time_t *time, u_int64_t *bytes)
+METHOD(child_sa_t, get_usestats, void,
+	   private_child_sa_t *this, bool inbound, time_t *time, u_int64_t *bytes)
 {
 	if (update_usebytes(this, inbound) != FAILED)
 	{
@@ -556,18 +509,14 @@ static void get_usestats(private_child_sa_t *this, bool inbound,
 	}
 }
 
-/**
- * Implementation of child_sa_t.get_lifetime
- */
-static time_t get_lifetime(private_child_sa_t *this, bool hard)
+METHOD(child_sa_t, get_lifetime, time_t,
+	   private_child_sa_t *this, bool hard)
 {
 	return hard ? this->expire_time : this->rekey_time;
 }
 
-/**
- * Implementation of child_sa_t.alloc_spi
- */
-static u_int32_t alloc_spi(private_child_sa_t *this, protocol_id_t protocol)
+METHOD(child_sa_t, alloc_spi, u_int32_t,
+	   private_child_sa_t *this, protocol_id_t protocol)
 {
 	if (charon->kernel_interface->get_spi(charon->kernel_interface,
 							this->other_addr, this->my_addr, protocol,
@@ -578,10 +527,8 @@ static u_int32_t alloc_spi(private_child_sa_t *this, protocol_id_t protocol)
 	return 0;
 }
 
-/**
- * Implementation of child_sa_t.alloc_cpi
- */
-static u_int16_t alloc_cpi(private_child_sa_t *this)
+METHOD(child_sa_t, alloc_cpi, u_int16_t,
+	   private_child_sa_t *this)
 {
 	if (charon->kernel_interface->get_cpi(charon->kernel_interface,
 					this->other_addr, this->my_addr, this->reqid,
@@ -592,12 +539,10 @@ static u_int16_t alloc_cpi(private_child_sa_t *this)
 	return 0;
 }
 
-/**
- * Implementation of child_sa_t.install
- */
-static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
-						u_int32_t spi, u_int16_t cpi, bool inbound,
-						linked_list_t *my_ts, linked_list_t *other_ts)
+METHOD(child_sa_t, install, status_t,
+	   private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
+	   u_int16_t cpi, bool inbound, linked_list_t *my_ts,
+	   linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
@@ -685,11 +630,9 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 	return status;
 }
 
-/**
- * Implementation of child_sa_t.add_policies
- */
-static status_t add_policies(private_child_sa_t *this,
-					linked_list_t *my_ts_list, linked_list_t *other_ts_list)
+METHOD(child_sa_t, add_policies, status_t,
+	   private_child_sa_t *this, linked_list_t *my_ts_list,
+	   linked_list_t *other_ts_list)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
@@ -749,11 +692,9 @@ static status_t add_policies(private_child_sa_t *this,
 	return status;
 }
 
-/**
- * Implementation of child_sa_t.update.
- */
-static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
-					   host_t *vip, bool encap)
+METHOD(child_sa_t, update, status_t,
+	   private_child_sa_t *this,  host_t *me, host_t *other, host_t *vip,
+	   bool encap)
 {
 	child_sa_state_t old;
 	bool transport_proxy_mode;
@@ -885,10 +826,8 @@ static status_t update(private_child_sa_t *this,  host_t *me, host_t *other,
 	return SUCCESS;
 }
 
-/**
- * Implementation of child_sa_t.destroy.
- */
-static void destroy(private_child_sa_t *this)
+METHOD(child_sa_t, destroy, void,
+	   private_child_sa_t *this)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
@@ -944,75 +883,66 @@ static void destroy(private_child_sa_t *this)
 	free(this);
 }
 
-/*
+/**
  * Described in header.
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
 	static u_int32_t reqid = 0;
-	private_child_sa_t *this = malloc_thing(private_child_sa_t);
+	private_child_sa_t *this;
 
-	/* public functions */
-	this->public.get_name = (char*(*)(child_sa_t*))get_name;
-	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
-	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
-	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
-	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
-	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
-	this->public.get_cpi = (u_int16_t(*)(child_sa_t*, bool))get_cpi;
-	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
-	this->public.set_protocol = (void(*)(child_sa_t*, protocol_id_t protocol))set_protocol;
-	this->public.get_mode = (ipsec_mode_t(*)(child_sa_t*))get_mode;
-	this->public.set_mode = (void(*)(child_sa_t*, ipsec_mode_t mode))set_mode;
-	this->public.get_proposal = (proposal_t*(*)(child_sa_t*))get_proposal;
-	this->public.set_proposal = (void(*)(child_sa_t*, proposal_t *proposal))set_proposal;
-	this->public.get_lifetime = (time_t(*)(child_sa_t*, bool))get_lifetime;
-	this->public.get_usestats = (void(*)(child_sa_t*,bool,time_t*,u_int64_t*))get_usestats;
-	this->public.has_encap = (bool(*)(child_sa_t*))has_encap;
-	this->public.get_ipcomp = (ipcomp_transform_t(*)(child_sa_t*))get_ipcomp;
-	this->public.set_ipcomp = (void(*)(child_sa_t*,ipcomp_transform_t))set_ipcomp;
-	this->public.get_close_action = (action_t(*)(child_sa_t*))get_close_action;
-	this->public.set_close_action = (void(*)(child_sa_t*,action_t))set_close_action;
-	this->public.get_dpd_action = (action_t(*)(child_sa_t*))get_dpd_action;
-	this->public.set_dpd_action = (void(*)(child_sa_t*,action_t))set_dpd_action;
-	this->public.alloc_spi = (u_int32_t(*)(child_sa_t*, protocol_id_t protocol))alloc_spi;
-	this->public.alloc_cpi = (u_int16_t(*)(child_sa_t*))alloc_cpi;
-	this->public.install = (status_t(*)(child_sa_t*, chunk_t encr, chunk_t integ, u_int32_t spi, u_int16_t cpi, bool inbound, linked_list_t *my_ts_list, linked_list_t *other_ts_list))install;
-	this->public.update = (status_t (*)(child_sa_t*,host_t*,host_t*,host_t*,bool))update;
-	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
-	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
-	this->public.create_policy_enumerator = (enumerator_t*(*)(child_sa_t*))create_policy_enumerator;
-	this->public.destroy = (void(*)(child_sa_t*))destroy;
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.get_reqid = _get_reqid,
+			.get_config = _get_config,
+			.get_state = _get_state,
+			.set_state = _set_state,
+			.get_spi = _get_spi,
+			.get_cpi = _get_cpi,
+			.get_protocol = _get_protocol,
+			.set_protocol = _set_protocol,
+			.get_mode = _get_mode,
+			.set_mode = _set_mode,
+			.get_proposal = _get_proposal,
+			.set_proposal = _set_proposal,
+			.get_lifetime = _get_lifetime,
+			.get_usestats = _get_usestats,
+			.has_encap = _has_encap,
+			.get_ipcomp = _get_ipcomp,
+			.set_ipcomp = _set_ipcomp,
+			.get_close_action = _get_close_action,
+			.set_close_action = _set_close_action,
+			.get_dpd_action = _get_dpd_action,
+			.set_dpd_action = _set_dpd_action,
+			.alloc_spi = _alloc_spi,
+			.alloc_cpi = _alloc_cpi,
+			.install = _install,
+			.update = _update,
+			.add_policies = _add_policies,
+			.get_traffic_selectors = _get_traffic_selectors,
+			.create_policy_enumerator = _create_policy_enumerator,
+			.destroy = _destroy,
+		},
+		.my_addr = me->clone(me),
+		.other_addr = other->clone(other),
+		.encap = encap,
+		.ipcomp = IPCOMP_NONE,
+		.state = CHILD_CREATED,
+		.my_ts = linked_list_create(),
+		.other_ts = linked_list_create(),
+		.protocol = PROTO_NONE,
+		.mode = MODE_TUNNEL,
+		.close_action = config->get_close_action(config),
+		.dpd_action = config->get_dpd_action(config),
+		.reqid = config->get_reqid(config),
+		.mark_in = config->get_mark(config, TRUE),
+		.mark_out = config->get_mark(config, FALSE),
+	);
 
-	/* private data */
-	this->my_addr = me->clone(me);
-	this->other_addr = other->clone(other);
-	this->my_spi = 0;
-	this->other_spi = 0;
-	this->my_cpi = 0;
-	this->other_cpi = 0;
-	this->encap = encap;
-	this->ipcomp = IPCOMP_NONE;
-	this->state = CHILD_CREATED;
-	this->my_usetime = 0;
-	this->other_usetime = 0;
-	this->my_usebytes = 0;
-	this->other_usebytes = 0;
-	this->my_ts = linked_list_create();
-	this->other_ts = linked_list_create();
-	this->protocol = PROTO_NONE;
-	this->mode = MODE_TUNNEL;
-	this->close_action = config->get_close_action(config);
-	this->dpd_action = config->get_dpd_action(config);
-	this->proposal = NULL;
-	this->rekey_time = 0;
-	this->expire_time = 0;
 	this->config = config;
 	config->get_ref(config);
-	this->reqid = config->get_reqid(config);
-	this->mark_in = config->get_mark(config, TRUE);
-	this->mark_out = config->get_mark(config, FALSE);
 
 	if (!this->reqid)
 	{
