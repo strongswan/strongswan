@@ -584,7 +584,7 @@ typedef struct sa_entry_t sa_entry_t;
 struct sa_entry_t {
 
 	/** protocol of this SA */
-	protocol_id_t protocol;
+	u_int8_t protocol;
 
 	/** reqid of this SA */
 	u_int32_t reqid;
@@ -608,7 +608,7 @@ struct sa_entry_t {
 /**
  * create an sa_entry_t object
  */
-static sa_entry_t *create_sa_entry(protocol_id_t protocol, u_int32_t spi,
+static sa_entry_t *create_sa_entry(u_int8_t protocol, u_int32_t spi,
 								   u_int32_t reqid, host_t *src, host_t *dst,
 								   bool encap, bool inbound)
 {
@@ -646,7 +646,7 @@ static inline bool sa_entry_match_encapbysrc(sa_entry_t *current, u_int32_t *spi
 /**
  * match an sa_entry_t by protocol, spi and dst address (as the kernel does it)
  */
-static inline bool sa_entry_match_bydst(sa_entry_t *current, protocol_id_t *protocol,
+static inline bool sa_entry_match_bydst(sa_entry_t *current, u_int8_t *protocol,
 		u_int32_t *spi, host_t *dst)
 {
 	return current->protocol == *protocol && current->spi == *spi && dst->ip_equals(dst, current->dst);
@@ -655,7 +655,7 @@ static inline bool sa_entry_match_bydst(sa_entry_t *current, protocol_id_t *prot
 /**
  * match an sa_entry_t by protocol, reqid and spi
  */
-static inline bool sa_entry_match_byid(sa_entry_t *current, protocol_id_t *protocol,
+static inline bool sa_entry_match_byid(sa_entry_t *current, u_int8_t *protocol,
 		u_int32_t *spi, u_int32_t *reqid)
 {
 	return current->protocol == *protocol && current->spi == *spi && current->reqid == *reqid;
@@ -713,15 +713,15 @@ struct pfkey_msg_t
 };
 
 /**
- * convert a IKEv2 specific protocol identifier to the PF_KEY sa type
+ * convert a protocol identifier to the PF_KEY sa type
  */
-static u_int8_t proto_ike2satype(protocol_id_t proto)
+static u_int8_t proto2satype(u_int8_t proto)
 {
 	switch (proto)
 	{
-		case PROTO_ESP:
+		case IPPROTO_ESP:
 			return SADB_SATYPE_ESP;
-		case PROTO_AH:
+		case IPPROTO_AH:
 			return SADB_SATYPE_AH;
 		case IPPROTO_COMP:
 			return SADB_X_SATYPE_COMP;
@@ -731,20 +731,20 @@ static u_int8_t proto_ike2satype(protocol_id_t proto)
 }
 
 /**
- * convert a PF_KEY sa type to a IKEv2 specific protocol identifier
+ * convert a PF_KEY sa type to a protocol identifier
  */
-static protocol_id_t proto_satype2ike(u_int8_t proto)
+static u_int8_t satype2proto(u_int8_t satype)
 {
-	switch (proto)
+	switch (satype)
 	{
 		case SADB_SATYPE_ESP:
-			return PROTO_ESP;
+			return IPPROTO_ESP;
 		case SADB_SATYPE_AH:
-			return PROTO_AH;
+			return IPPROTO_AH;
 		case SADB_X_SATYPE_COMP:
 			return IPPROTO_COMP;
 		default:
-			return proto;
+			return satype;
 	}
 }
 
@@ -1316,7 +1316,7 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 
 	spi = response.sa->sadb_sa_spi;
 
-	if (proto_satype2ike(msg->sadb_msg_satype) == PROTO_ESP)
+	if (satype2proto(msg->sadb_msg_satype) == IPPROTO_ESP)
 	{
 		sa_entry_t *sa;
 		sockaddr_t *addr = (sockaddr_t*)(response.src + 1);
@@ -1448,7 +1448,7 @@ struct sa_expire_t {
 	/** the SPI of the expiring SA */
 	u_int32_t spi;
 	/** the protocol of the expiring SA */
-	protocol_id_t protocol;
+	u_int8_t protocol;
 	/** the reqid of the expiring SA*/
 	u_int32_t reqid;
 	/** what type of expire this is */
@@ -1461,7 +1461,7 @@ struct sa_expire_t {
 static job_requeue_t sa_expires(sa_expire_t *expire)
 {
 	private_kernel_klips_ipsec_t *this = expire->this;
-	protocol_id_t protocol = expire->protocol;
+	u_int8_t protocol = expire->protocol;
 	u_int32_t spi = expire->spi, reqid = expire->reqid;
 	bool hard = expire->type != EXPIRE_TYPE_SOFT;
 	sa_entry_t *cached_sa;
@@ -1500,7 +1500,7 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
  * Schedule an expire job for an SA. Time is in seconds.
  */
 static void schedule_expire(private_kernel_klips_ipsec_t *this,
-							protocol_id_t protocol, u_int32_t spi,
+							u_int8_t protocol, u_int32_t spi,
 							u_int32_t reqid, expire_type_t type, u_int32_t time)
 {
 	callback_job_t *job;
@@ -1516,7 +1516,7 @@ static void schedule_expire(private_kernel_klips_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	/* we cannot use SADB_GETSPI because KLIPS does not allow us to set the
 	 * NAT-T type in an SADB_UPDATE which we would have to use to update the
@@ -1611,7 +1611,7 @@ static status_t add_ipip_sa(private_kernel_klips_ipsec_t *this,
  */
 static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
-					   protocol_id_t protocol, u_int32_t reqid)
+					   u_int8_t protocol, u_int32_t reqid)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1641,7 +1641,7 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 	satype = (struct sadb_x_satype*)PFKEY_EXT_ADD_NEXT(msg);
 	satype->sadb_x_satype_exttype = SADB_X_EXT_SATYPE2;
 	satype->sadb_x_satype_len = PFKEY_LEN(sizeof(struct sadb_x_satype));
-	satype->sadb_x_satype_satype = proto_ike2satype(protocol);
+	satype->sadb_x_satype_satype = proto2satype(protocol);
 	PFKEY_EXT_ADD(msg, satype);
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1672,7 +1672,7 @@ static status_t group_ipip_sa(private_kernel_klips_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	protocol_id_t protocol, u_int32_t reqid, mark_t mark,
+	u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, bool encap, bool inbound,
@@ -1713,7 +1713,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_ADD;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1830,7 +1830,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_klips_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
+	private_kernel_klips_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
@@ -1867,7 +1867,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_UPDATE;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1903,14 +1903,14 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	return NOT_SUPPORTED;  /* TODO */
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi, mark_t mark)
+	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1939,7 +1939,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_DELETE;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1974,7 +1974,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
+	policy_dir_t direction, u_int32_t spi, u_int8_t protocol,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool routed)
 {
@@ -1992,7 +1992,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* tunnel mode policies direct the packets into the pseudo IPIP SA */
 	satype = (mode == MODE_TUNNEL) ? SADB_X_SATYPE_IPIP :
-									 proto_ike2satype(protocol);
+									 proto2satype(protocol);
 
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction);

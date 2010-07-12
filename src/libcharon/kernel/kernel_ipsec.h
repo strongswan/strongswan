@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -93,7 +93,7 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
-						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
+						u_int8_t protocol, u_int32_t reqid, u_int32_t *spi);
 
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
@@ -138,7 +138,7 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*add_sa) (kernel_ipsec_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
-						protocol_id_t protocol, u_int32_t reqid,
+						u_int8_t protocol, u_int32_t reqid,
 						mark_t mark, lifetime_cfg_t *lifetime,
 						u_int16_t enc_alg, chunk_t enc_key,
 						u_int16_t int_alg, chunk_t int_key,
@@ -168,7 +168,7 @@ struct kernel_ipsec_t {
 	 *					  the kernel interface can't update the SA
 	 */
 	status_t (*update_sa)(kernel_ipsec_t *this,
-						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
+						  u_int32_t spi, u_int8_t protocol, u_int16_t cpi,
 						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
 						  bool encap, bool new_encap, mark_t mark);
@@ -185,7 +185,7 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
-						  u_int32_t spi, protocol_id_t protocol, mark_t mark,
+						  u_int32_t spi, u_int8_t protocol, mark_t mark,
 						  u_int64_t *bytes);
 
 	/**
@@ -200,7 +200,7 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
-						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
+						u_int32_t spi, u_int8_t protocol, u_int16_t cpi,
 						mark_t mark);
 
 	/**
@@ -229,7 +229,7 @@ struct kernel_ipsec_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, u_int32_t spi,
-							protocol_id_t protocol, u_int32_t reqid,
+							u_int8_t protocol, u_int32_t reqid,
 							mark_t mark, ipsec_mode_t mode,
 							u_int16_t ipcomp, u_int16_t cpi, bool routed);
 

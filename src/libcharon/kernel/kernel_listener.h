@@ -55,7 +55,7 @@ struct kernel_listener_t {
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
 	bool (*expire)(kernel_listener_t *this, u_int32_t reqid,
-				   protocol_id_t protocol, u_int32_t spi, bool hard);
+				   u_int8_t protocol, u_int32_t spi, bool hard);
 
 	/**
 	 * Hook called if the NAT mappings of an IPsec SA changed.

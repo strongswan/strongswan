@@ -38,6 +38,22 @@ struct private_kernel_handler_t {
 
 };
 
+/**
+ * convert an IP protocol identifier to the IKEv2 specific protocol identifier.
+ */
+static inline protocol_id_t proto_ip2ike(u_int8_t protocol)
+{
+	switch (protocol)
+	{
+		case IPPROTO_ESP:
+			return PROTO_ESP;
+		case IPPROTO_AH:
+			return PROTO_AH;
+		default:
+			return protocol;
+	}
+}
+
 METHOD(kernel_listener_t, acquire, bool,
 	   private_kernel_handler_t *this, u_int32_t reqid,
 	   traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
@@ -58,20 +74,21 @@ METHOD(kernel_listener_t, acquire, bool,
 }
 
 METHOD(kernel_listener_t, expire, bool,
-	   private_kernel_handler_t *this, u_int32_t reqid, protocol_id_t protocol,
+	   private_kernel_handler_t *this, u_int32_t reqid, u_int8_t protocol,
 	   u_int32_t spi, bool hard)
 {
 	job_t *job;
+	protocol_id_t proto = proto_ip2ike(protocol);
 	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA with SPI %.8x "
 				  "and reqid {%u}", hard ? "delete" : "rekey",
-				  protocol_id_names, protocol, ntohl(spi), reqid);
+				  protocol_id_names, proto, ntohl(spi), reqid);
 	if (hard)
 	{
-		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
+		job = (job_t*)delete_child_sa_job_create(reqid, proto, spi);
 	}
 	else
 	{
-		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
+		job = (job_t*)rekey_child_sa_job_create(reqid, proto, spi);
 	}
 	hydra->processor->queue_job(hydra->processor, job);
 	return TRUE;

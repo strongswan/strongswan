@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -349,38 +349,6 @@ struct private_kernel_netlink_ipsec_t {
 };
 
 /**
- * convert a IKEv2 specific protocol identifier to the kernel one
- */
-static u_int8_t proto_ike2kernel(protocol_id_t proto)
-{
-	switch (proto)
-	{
-		case PROTO_ESP:
-			return IPPROTO_ESP;
-		case PROTO_AH:
-			return IPPROTO_AH;
-		default:
-			return proto;
-	}
-}
-
-/**
- * reverse of ike2kernel
- */
-static protocol_id_t proto_kernel2ike(u_int8_t proto)
-{
-	switch (proto)
-	{
-		case IPPROTO_ESP:
-			return PROTO_ESP;
-		case IPPROTO_AH:
-			return PROTO_AH;
-		default:
-			return proto;
-	}
-}
-
-/**
  * convert the general ipsec mode to the one defined in xfrm.h
  */
 static u_int8_t mode2kernel(ipsec_mode_t mode)
@@ -595,18 +563,18 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this, struct nlmsghd
  */
 static void process_expire(private_kernel_netlink_ipsec_t *this, struct nlmsghdr *hdr)
 {
-	protocol_id_t protocol;
+	u_int8_t protocol;
 	u_int32_t spi, reqid;
 	struct xfrm_user_expire *expire;
 
 	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-	protocol = proto_kernel2ike(expire->state.id.proto);
+	protocol = expire->state.id.proto;
 	spi = expire->state.id.spi;
 	reqid = expire->state.reqid;
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
 
-	if (protocol != PROTO_ESP && protocol != PROTO_AH)
+	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
 	{
 		DBG2(DBG_KNL, "ignoring XFRM_MSG_EXPIRE for SA with SPI %.8x and "
 					  "reqid {%u} which is not a CHILD_SA", ntohl(spi), reqid);
@@ -659,18 +627,15 @@ static void process_migrate(private_kernel_netlink_ipsec_t *this, struct nlmsghd
 		else if (rta->rta_type == XFRMA_MIGRATE)
 		{
 			struct xfrm_user_migrate *migrate;
-			protocol_id_t proto;
 
 			migrate = (struct xfrm_user_migrate*)RTA_DATA(rta);
 			old_src = xfrm2host(migrate->old_family, &migrate->old_saddr, 0);
 			old_dst = xfrm2host(migrate->old_family, &migrate->old_daddr, 0);
 			new_src = xfrm2host(migrate->new_family, &migrate->new_saddr, 0);
 			new_dst = xfrm2host(migrate->new_family, &migrate->new_daddr, 0);
-			proto = proto_kernel2ike(migrate->proto);
 			reqid = migrate->reqid;
-			DBG2(DBG_KNL, "  migrate %N %H...%H to %H...%H, reqid {%u}",
-							 protocol_id_names, proto, old_src, old_dst,
-							 new_src, new_dst, reqid);
+			DBG2(DBG_KNL, "  migrate %H...%H to %H...%H, reqid {%u}",
+						  old_src, old_dst, new_src, new_dst, reqid);
 			DESTROY_IF(old_src);
 			DESTROY_IF(old_dst);
 			DESTROY_IF(new_src);
@@ -709,7 +674,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 
 	DBG2(DBG_KNL, "received a XFRM_MSG_MAPPING");
 
-	if (proto_kernel2ike(mapping->id.proto) == PROTO_ESP)
+	if (mapping->id.proto == IPPROTO_ESP)
 	{
 		host = xfrm2host(mapping->id.family, &mapping->new_saddr,
 						 mapping->new_sport);
@@ -858,11 +823,11 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	DBG2(DBG_KNL, "getting SPI for reqid {%u}", reqid);
 
-	if (get_spi_internal(this, src, dst, proto_ike2kernel(protocol),
+	if (get_spi_internal(this, src, dst, protocol,
 			0xc0000000, 0xcFFFFFFF, reqid, spi) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get SPI for reqid {%u}", reqid);
@@ -898,7 +863,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int32_t reqid, mark_t mark,
+	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key,	ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool encap, bool inbound,
@@ -944,7 +909,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	host2xfrm(src, &sa->saddr);
 	host2xfrm(dst, &sa->id.daddr);
 	sa->id.spi = spi;
-	sa->id.proto = proto_ike2kernel(protocol);
+	sa->id.proto = protocol;
 	sa->family = src->get_family(src);
 	sa->mode = mode2kernel(mode);
 	switch (mode)
@@ -1206,7 +1171,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
  * Get the replay state (i.e. sequence numbers) of an SA.
  */
 static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
-						  u_int32_t spi, protocol_id_t protocol, host_t *dst,
+						  u_int32_t spi, u_int8_t protocol, host_t *dst,
 						  struct xfrm_replay_state *replay)
 {
 	netlink_buf_t request;
@@ -1230,7 +1195,7 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 	host2xfrm(dst, &aevent_id->sa_id.daddr);
 	aevent_id->sa_id.spi = spi;
-	aevent_id->sa_id.proto = proto_ike2kernel(protocol);
+	aevent_id->sa_id.proto = protocol;
 	aevent_id->sa_id.family = dst->get_family(dst);
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -1292,7 +1257,7 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1319,7 +1284,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
 	if (mark.value)
@@ -1395,7 +1360,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi, mark_t mark)
+	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1426,7 +1391,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
 	if (mark.value)
@@ -1473,7 +1438,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_netlink_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
+	private_kernel_netlink_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool old_encap, bool new_encap, mark_t mark)
 {
@@ -1509,7 +1474,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
-	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -1652,9 +1617,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
+	policy_dir_t direction, u_int32_t spi, u_int8_t protocol,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi,	bool routed)
+	u_int16_t cpi, bool routed)
 {
 	policy_entry_t *current, *policy;
 	bool found = FALSE;
@@ -1784,7 +1749,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	tmpl->reqid = reqid;
-	tmpl->id.proto = proto_ike2kernel(protocol);
+	tmpl->id.proto = protocol;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = mode2kernel(mode);
 	tmpl->family = src->get_family(src);

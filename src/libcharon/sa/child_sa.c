@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -177,6 +177,22 @@ struct private_child_sa_t {
 	 */
 	u_int64_t other_usebytes;
 };
+
+/**
+ * convert an IKEv2 specific protocol identifier to the IP protocol identifier.
+ */
+static inline u_int8_t proto_ike2ip(protocol_id_t protocol)
+{
+	switch (protocol)
+	{
+		case PROTO_ESP:
+			return IPPROTO_ESP;
+		case PROTO_AH:
+			return IPPROTO_AH;
+		default:
+			return protocol;
+	}
+}
 
 METHOD(child_sa_t, get_name, char*,
 	   private_child_sa_t *this)
@@ -398,9 +414,9 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 		if (this->my_spi)
 		{
 			status = charon->kernel_interface->query_sa(charon->kernel_interface,
-									this->other_addr, this->my_addr,
-									this->my_spi, this->protocol,
-									this->mark_in, &bytes);
+							this->other_addr, this->my_addr, this->my_spi,
+							proto_ike2ip(this->protocol), this->mark_in,
+							&bytes);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
@@ -417,9 +433,9 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 		if (this->other_spi)
 		{
 			status = charon->kernel_interface->query_sa(charon->kernel_interface,
-									this->my_addr, this->other_addr,
-									this->other_spi, this->protocol,
-									this->mark_out,	&bytes);
+							this->my_addr, this->other_addr, this->other_spi,
+							proto_ike2ip(this->protocol), this->mark_out,
+							&bytes);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
@@ -519,8 +535,9 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 	   private_child_sa_t *this, protocol_id_t protocol)
 {
 	if (charon->kernel_interface->get_spi(charon->kernel_interface,
-							this->other_addr, this->my_addr, protocol,
-							this->reqid, &this->my_spi) == SUCCESS)
+									this->other_addr, this->my_addr,
+									proto_ike2ip(protocol), this->reqid,
+									&this->my_spi) == SUCCESS)
 	{
 		return this->my_spi;
 	}
@@ -531,8 +548,8 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 	   private_child_sa_t *this)
 {
 	if (charon->kernel_interface->get_cpi(charon->kernel_interface,
-					this->other_addr, this->my_addr, this->reqid,
-					&this->my_cpi) == SUCCESS)
+									this->other_addr, this->my_addr,
+									this->reqid, &this->my_cpi) == SUCCESS)
 	{
 		return this->my_cpi;
 	}
@@ -620,7 +637,7 @@ METHOD(child_sa_t, install, status_t,
 	}
 
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-				src, dst, spi, this->protocol, this->reqid,
+				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->encap, update, src_ts, dst_ts);
@@ -661,20 +678,26 @@ METHOD(child_sa_t, add_policies, status_t,
 		{
 			/* install 3 policies: out, in and forward */
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->my_addr, this->other_addr, my_ts, other_ts, POLICY_OUT,
-					this->other_spi, this->protocol, this->reqid, this->mark_out,
-					this->mode, this->ipcomp, this->other_cpi, routed);
+							this->my_addr, this->other_addr, my_ts, other_ts,
+							POLICY_OUT, this->other_spi,
+							proto_ike2ip(this->protocol), this->reqid,
+							this->mark_out, this->mode, this->ipcomp,
+							this->other_cpi, routed);
 
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_IN,
-					this->my_spi, this->protocol, this->reqid, this->mark_in,
-					this->mode,	this->ipcomp, this->my_cpi, routed);
+							this->other_addr, this->my_addr, other_ts, my_ts,
+							POLICY_IN, this->my_spi,
+							proto_ike2ip(this->protocol), this->reqid,
+							this->mark_in, this->mode, this->ipcomp,
+							this->my_cpi, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other_addr, this->my_addr, other_ts, my_ts, POLICY_FWD,
-					this->my_spi, this->protocol, this->reqid, this->mark_in,
-					this->mode,	this->ipcomp, this->my_cpi, routed);
+							this->other_addr, this->my_addr, other_ts, my_ts,
+							POLICY_FWD, this->my_spi,
+							proto_ike2ip(this->protocol), this->reqid,
+							this->mark_in, this->mode, this->ipcomp,
+							this->my_cpi, routed);
 			}
 
 			if (status != SUCCESS)
@@ -717,7 +740,7 @@ METHOD(child_sa_t, update, status_t,
 		if (this->my_spi)
 		{
 			if (charon->kernel_interface->update_sa(charon->kernel_interface,
-							this->my_spi, this->protocol,
+							this->my_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 							this->other_addr, this->my_addr, other, me,
 							this->encap, encap, this->mark_in) == NOT_SUPPORTED)
@@ -730,7 +753,7 @@ METHOD(child_sa_t, update, status_t,
 		if (this->other_spi)
 		{
 			if (charon->kernel_interface->update_sa(charon->kernel_interface,
-							this->other_spi, this->protocol,
+							this->other_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 							this->my_addr, this->other_addr, me, other,
 							this->encap, encap, this->mark_out) == NOT_SUPPORTED)
@@ -786,19 +809,22 @@ METHOD(child_sa_t, update, status_t,
 
 				/* reinstall updated policies */
 				charon->kernel_interface->add_policy(charon->kernel_interface,
-						me, other, my_ts, other_ts, POLICY_OUT, this->other_spi,
-						this->protocol, this->reqid, this->mark_out, this->mode,
-						this->ipcomp, this->other_cpi, FALSE);
+							me, other, my_ts, other_ts, POLICY_OUT,
+							this->other_spi, proto_ike2ip(this->protocol),
+							this->reqid, this->mark_out, this->mode,
+							this->ipcomp, this->other_cpi, FALSE);
 				charon->kernel_interface->add_policy(charon->kernel_interface,
-						other, me, other_ts, my_ts, POLICY_IN, this->my_spi,
-						this->protocol, this->reqid, this->mark_in, this->mode,
-						this->ipcomp, this->my_cpi, FALSE);
+							other, me, other_ts, my_ts, POLICY_IN,
+							this->my_spi, proto_ike2ip(this->protocol),
+							this->reqid, this->mark_in, this->mode,
+							this->ipcomp, this->my_cpi, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					charon->kernel_interface->add_policy(charon->kernel_interface,
-						other, me, other_ts, my_ts, POLICY_FWD, this->my_spi,
-						this->protocol, this->reqid, this->mark_in, this->mode,
-						this->ipcomp, this->my_cpi, FALSE);
+							other, me, other_ts, my_ts, POLICY_FWD,
+							this->my_spi, proto_ike2ip(this->protocol),
+							this->reqid, this->mark_in, this->mode,
+							this->ipcomp, this->my_cpi, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -846,13 +872,15 @@ METHOD(child_sa_t, destroy, void,
 		}
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
-					this->protocol, this->my_cpi, this->mark_in);
+					proto_ike2ip(this->protocol), this->my_cpi,
+					this->mark_in);
 	}
 	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 					this->my_addr, this->other_addr, this->other_spi,
-					this->protocol, this->other_cpi, this->mark_out);
+					proto_ike2ip(this->protocol), this->other_cpi,
+					this->mark_out);
 	}
 
 	if (this->config->install_policy(this->config))
@@ -862,13 +890,13 @@ METHOD(child_sa_t, destroy, void,
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-							my_ts, other_ts, POLICY_OUT, this->mark_out, unrouted);
+						my_ts, other_ts, POLICY_OUT, this->mark_out, unrouted);
 			charon->kernel_interface->del_policy(charon->kernel_interface,
-							other_ts, my_ts, POLICY_IN, this->mark_in, unrouted);
+						other_ts, my_ts, POLICY_IN, this->mark_in, unrouted);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				charon->kernel_interface->del_policy(charon->kernel_interface,
-							other_ts, my_ts, POLICY_FWD, this->mark_in, unrouted);
+						other_ts, my_ts, POLICY_FWD, this->mark_in, unrouted);
 			}
 		}
 		enumerator->destroy(enumerator);

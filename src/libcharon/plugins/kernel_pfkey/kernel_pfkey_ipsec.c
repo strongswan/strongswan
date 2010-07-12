@@ -394,15 +394,15 @@ ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_EXT_MAX,
 );
 
 /**
- * convert a IKEv2 specific protocol identifier to the PF_KEY sa type
+ * convert a protocol identifier to the PF_KEY sa type
  */
-static u_int8_t proto_ike2satype(protocol_id_t proto)
+static u_int8_t proto2satype(u_int8_t proto)
 {
 	switch (proto)
 	{
-		case PROTO_ESP:
+		case IPPROTO_ESP:
 			return SADB_SATYPE_ESP;
-		case PROTO_AH:
+		case IPPROTO_AH:
 			return SADB_SATYPE_AH;
 		case IPPROTO_COMP:
 			return SADB_X_SATYPE_IPCOMP;
@@ -412,36 +412,20 @@ static u_int8_t proto_ike2satype(protocol_id_t proto)
 }
 
 /**
- * convert a PF_KEY sa type to a IKEv2 specific protocol identifier
+ * convert a PF_KEY sa type to a protocol identifier
  */
-static protocol_id_t proto_satype2ike(u_int8_t proto)
+static u_int8_t satype2proto(u_int8_t satype)
 {
-	switch (proto)
+	switch (satype)
 	{
 		case SADB_SATYPE_ESP:
-			return PROTO_ESP;
+			return IPPROTO_ESP;
 		case SADB_SATYPE_AH:
-			return PROTO_AH;
+			return IPPROTO_AH;
 		case SADB_X_SATYPE_IPCOMP:
 			return IPPROTO_COMP;
 		default:
-			return proto;
-	}
-}
-
-/**
- * convert a IKEv2 specific protocol identifier to the IP protocol identifier
- */
-static u_int8_t proto_ike2ip(protocol_id_t proto)
-{
-	switch (proto)
-	{
-		case PROTO_ESP:
-			return IPPROTO_ESP;
-		case PROTO_AH:
-			return IPPROTO_AH;
-		default:
-			return proto;
+			return satype;
 	}
 }
 
@@ -942,7 +926,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	protocol_id_t protocol;
+	u_int8_t protocol;
 	u_int32_t spi, reqid;
 	bool hard;
 
@@ -954,12 +938,12 @@ static void process_expire(private_kernel_pfkey_ipsec_t *this, struct sadb_msg* 
 		return;
 	}
 
-	protocol = proto_satype2ike(msg->sadb_msg_satype);
+	protocol = satype2proto(msg->sadb_msg_satype);
 	spi = response.sa->sadb_sa_spi;
 	reqid = response.x_sa2->sadb_x_sa2_reqid;
 	hard = response.lft_hard != NULL;
 
-	if (protocol != PROTO_ESP && protocol != PROTO_AH)
+	if (protocol != IPPROTO_ESP && protocol != IPPROTO_AH)
 	{
 		DBG2(DBG_KNL, "ignoring SADB_EXPIRE for SA with SPI %.8x and reqid {%u} "
 					  "which is not a CHILD_SA", ntohl(spi), reqid);
@@ -1053,7 +1037,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 	spi = response.sa->sadb_sa_spi;
 	reqid = response.x_sa2->sadb_x_sa2_reqid;
 
-	if (proto_satype2ike(msg->sadb_msg_satype) == PROTO_ESP)
+	if (satype2proto(msg->sadb_msg_satype) == IPPROTO_ESP)
 	{
 		sockaddr_t *sa = (sockaddr_t*)(response.dst + 1);
 		switch (sa->sa_family)
@@ -1155,7 +1139,7 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi)
+	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1170,7 +1154,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_GETSPI;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1221,7 +1205,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	protocol_id_t protocol, u_int32_t reqid, mark_t mark,
+	u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, bool encap, bool inbound,
@@ -1242,7 +1226,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 #ifdef __APPLE__
@@ -1367,7 +1351,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
-	private_kernel_pfkey_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
+	private_kernel_pfkey_ipsec_t *this, u_int32_t spi, u_int8_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
@@ -1395,7 +1379,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_GET;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1438,7 +1422,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_UPDATE;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 #ifdef __APPLE__
@@ -1502,7 +1486,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1517,7 +1501,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_GET;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1558,7 +1542,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi, mark_t mark)
+	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1572,7 +1556,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
 	msg->sadb_msg_type = SADB_DELETE;
-	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_satype = proto2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
 	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
@@ -1608,7 +1592,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
+	policy_dir_t direction, u_int32_t spi, u_int8_t protocol,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool routed)
 {
@@ -1676,7 +1660,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* one or more sadb_x_ipsecrequest extensions are added to the sadb_x_policy extension */
 	req = (struct sadb_x_ipsecrequest*)(pol + 1);
-	req->sadb_x_ipsecrequest_proto = proto_ike2ip(protocol);
+	req->sadb_x_ipsecrequest_proto = protocol;
 	/* !!! the length of this struct MUST be in octets instead of 64 bit words */
 	req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
 	req->sadb_x_ipsecrequest_mode = mode2kernel(mode);
