@@ -597,8 +597,8 @@ void status_attr(bool hexout)
 		{
 			if (first)
 			{
-				printf(" type  description           pool             "
-					   " identity        value\n");
+				printf(" type  description           pool       "
+					   " identity              value\n");
 				first = FALSE;
 			}
 			snprintf(type_name, sizeof(type_name), "%N",
