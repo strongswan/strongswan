@@ -15,7 +15,7 @@
 
 /**
  * @defgroup addrblock addrblock
- * @ingroup plugins
+ * @ingroup cplugins
  *
  * @defgroup addrblock_plugin addrblock_plugin
  * @{ @ingroup addrblock

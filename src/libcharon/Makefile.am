@@ -400,6 +400,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ADDRBLOCK
+  SUBDIRS += plugins/addrblock
+  PLUGINS += addrblock
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/uci/libstrongswan-addrblock.la
+endif
+endif
+
 if USE_UNIT_TESTS
   SUBDIRS += plugins/unit_tester
   PLUGINS += unit-tester

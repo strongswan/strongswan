@@ -763,9 +763,6 @@ fi
 if test x$agent = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" agent"
 fi
-if test x$addrblock = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" addrblock"
-fi
 if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
@@ -821,7 +818,6 @@ AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
-AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 
 dnl charon plugins
 dnl ==============
@@ -858,6 +854,7 @@ AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
+AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 
 dnl hydra plugins
 dnl =============
@@ -947,7 +944,6 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
-	src/libstrongswan/plugins/addrblock/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
@@ -985,6 +981,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/medsrv/Makefile
 	src/libcharon/plugins/medcli/Makefile
 	src/libcharon/plugins/nm/Makefile
+	src/libcharon/plugins/addrblock/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/android/Makefile

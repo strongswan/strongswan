@@ -314,13 +314,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_ADDRBLOCK
-  SUBDIRS += plugins/addrblock
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/addrblock/libstrongswan-addrblock.la
-endif
-endif
-
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
