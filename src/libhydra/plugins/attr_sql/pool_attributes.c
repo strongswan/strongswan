@@ -339,7 +339,9 @@ void add_attr(char *name, char *pool, char *identity,
 
 		if (identity)
 		{
-			identification_t *id = identification_create_from_string(identity);
+			identification_t *id;
+
+			id = identification_create_from_string(identity);
 			identity_id = get_identity(id);
 			id->destroy(id);
 			if (identity_id == 0)
@@ -347,7 +349,7 @@ void add_attr(char *name, char *pool, char *identity,
 				exit(EXIT_FAILURE);
 			}
 			snprintf(id_pool_str, sizeof(id_pool_str),
-					 " for '%Y' in pool '%s'", identity, pool);
+					 " for '%s' in pool '%s'", identity, pool);
 		}
 		else
 		{
@@ -407,7 +409,9 @@ void del_attr(char *name, char *pool, char *identity,
 
 		if (identity)
 		{
-			identification_t *id = identification_create_from_string(identity);
+			identification_t *id;
+
+			id = identification_create_from_string(identity);
 			identity_id = get_identity(id);
 			id->destroy(id);
 			if (identity_id == 0)
@@ -415,7 +419,7 @@ void del_attr(char *name, char *pool, char *identity,
 				exit(EXIT_FAILURE);
 			}
 			snprintf(id_pool_str, sizeof(id_pool_str),
-					 " for '%Y' in pool '%s'", identity, pool);
+					 " for '%s' in pool '%s'", identity, pool);
 		}
 		else
 		{
@@ -605,17 +609,17 @@ void status_attr(bool hexout)
 			}
 			printf("%5d  %-20s ",type, type_name);
 
-			printf(" %-15.15s ", (pool_name ? pool_name : ""));
+			printf(" %-10s ", (pool_name ? pool_name : ""));
 
 			if (identity_type)
 			{
 				identity = identification_create_from_encoding(identity_type, identity_chunk);
-				printf(" %-15.15Y ", identity);
+				printf(" %-20.20Y ", identity);
 				identity->destroy(identity);
 			}
 			else
 			{
-				printf("                 ");
+				printf("                      ");
 			}
 
 			value_type = VALUE_HEX;
