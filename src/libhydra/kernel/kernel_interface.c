@@ -17,7 +17,7 @@
 
 #include "kernel_interface.h"
 
-#include <daemon.h>
+#include <debug.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 

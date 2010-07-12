@@ -15,7 +15,7 @@
 
 /**
  * @defgroup kernel_listener kernel_listener
- * @{ @ingroup kernel
+ * @{ @ingroup hkernel
  */
 
 #ifndef KERNEL_LISTENER_H_

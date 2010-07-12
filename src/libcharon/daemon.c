@@ -115,10 +115,9 @@ static void destroy(private_daemon_t *this)
 #ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
 #endif /* CAPABILITIES_LIBCAP */
+	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
-	DESTROY_IF(this->kernel_handler);
-	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.sim);
@@ -368,10 +367,9 @@ METHOD(daemon_t, initialize, bool,
 	this->public.eap = eap_manager_create();
 	this->public.sim = sim_manager_create();
 	this->public.backends = backend_manager_create();
-	this->public.kernel_interface = kernel_interface_create();
-	this->kernel_handler = kernel_handler_create();
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
+	this->kernel_handler = kernel_handler_create();
 
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,

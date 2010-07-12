@@ -15,7 +15,7 @@
 
 /**
  * @defgroup kernel_handler kernel_handler
- * @{ @ingroup kernel
+ * @{ @ingroup ckernel
  */
 
 #ifndef KERNEL_HANDLER_H_

@@ -18,7 +18,7 @@
 
 /**
  * @defgroup kernel_ipsec kernel_ipsec
- * @{ @ingroup kernel
+ * @{ @ingroup hkernel
  */
 
 #ifndef KERNEL_IPSEC_H_
@@ -27,11 +27,12 @@
 typedef enum ipsec_mode_t ipsec_mode_t;
 typedef enum policy_dir_t policy_dir_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
+typedef struct lifetime_cfg_t lifetime_cfg_t;
+typedef struct mark_t mark_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
-#include <config/proposal.h>
-#include <config/child_cfg.h>
+#include <selectors/traffic_selector.h>
 
 /**
  * Mode of a CHILD_SA.
@@ -68,6 +69,32 @@ enum policy_dir_t {
  * enum names for policy_dir_t.
  */
 extern enum_name_t *policy_dir_names;
+
+/**
+ * A lifetime_cfg_t defines the lifetime limits of an SA.
+ *
+ * Set any of these values to 0 to ignore.
+ */
+struct lifetime_cfg_t {
+	struct {
+		/** Limit before the SA gets invalid. */
+		u_int64_t	life;
+		/** Limit before the SA gets rekeyed. */
+		u_int64_t	rekey;
+		/** The range of a random value subtracted from rekey. */
+		u_int64_t	jitter;
+	} time, bytes, packets;
+};
+
+/**
+ * A mark_t defines an optional mark in an IPsec SA.
+ */
+struct mark_t {
+	/** Mark value */
+	u_int32_t value;
+	/** Mark mask */
+	u_int32_t mask;
+};
 
 /**
  * Interface to the ipsec subsystem of the kernel.

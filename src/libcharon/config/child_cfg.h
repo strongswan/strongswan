@@ -25,8 +25,6 @@
 
 typedef enum action_t action_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
-typedef struct lifetime_cfg_t lifetime_cfg_t;
-typedef struct mark_t mark_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -66,32 +64,6 @@ enum ipcomp_transform_t {
  * enum strings for ipcomp_transform_t.
  */
 extern enum_name_t *ipcomp_transform_names;
-
-/**
- * A lifetime_cfg_t defines the lifetime limits of a CHILD_SA.
- *
- * Set any of these values to 0 to ignore.
- */
-struct lifetime_cfg_t {
-	struct {
-		/** Limit before the CHILD_SA gets invalid. */
-		u_int64_t	life;
-		/** Limit before the CHILD_SA gets rekeyed. */
-		u_int64_t	rekey;
-		/** The range of a random value subtracted from rekey. */
-		u_int64_t	jitter;
-	} time, bytes, packets;
-};
-
-/**
- * A mark_t defines an optional mark in a CHILD_SA.
- */
-struct mark_t {
-	/** Mark value */
-	u_int32_t value;
-	/** Mark mask */
-	u_int32_t mask;
-};
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
@@ -238,7 +210,7 @@ struct child_cfg_t {
 	 * Check whether IPComp should be used, if the other peer supports it.
 	 *
 	 * @return				TRUE, if IPComp should be used
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*use_ipcomp)(child_cfg_t *this);
 
@@ -259,7 +231,7 @@ struct child_cfg_t {
 	/**
 	 * Optional mark for CHILD_SA
 	 *
-	 * @param inbound		TRUE for inbound, FALSE for outbound 
+	 * @param inbound		TRUE for inbound, FALSE for outbound
 	 * @return				mark
 	 */
 	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
@@ -277,7 +249,7 @@ struct child_cfg_t {
 	 * Check whether IPsec transport SA should be set up in proxy mode
 	 *
 	 * @return				TRUE, if proxy mode should be used
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*use_proxy_mode)(child_cfg_t *this);
 
@@ -285,7 +257,7 @@ struct child_cfg_t {
 	 * Check whether IPsec policies should be installed in the kernel
 	 *
 	 * @return				TRUE, if IPsec kernel policies should be installed
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*install_policy)(child_cfg_t *this);
 

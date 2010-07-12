@@ -37,7 +37,7 @@
  * @defgroup payloads payloads
  * @ingroup encoding
  *
- * @defgroup kernel kernel
+ * @defgroup ckernel kernel
  * @ingroup libcharon
  *
  * @defgroup network network
@@ -140,7 +140,6 @@ typedef struct daemon_t daemon_t;
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
-#include <kernel/kernel_interface.h>
 #include <control/controller.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
@@ -220,11 +219,6 @@ struct daemon_t {
 	 * A list of installed sys_logger_t's
 	 */
 	linked_list_t *sys_loggers;
-
-	/**
-	 * Kernel Interface to communicate with kernel
-	 */
-	kernel_interface_t *kernel_interface;
 
 	/**
 	 * Controller to control the daemon

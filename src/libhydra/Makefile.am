@@ -6,6 +6,10 @@ attributes/attributes.c attributes/attributes.h \
 attributes/attribute_provider.h attributes/attribute_handler.h \
 attributes/attribute_manager.c attributes/attribute_manager.h \
 attributes/mem_pool.c attributes/mem_pool.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
+kernel/kernel_listener.h \
 processing/jobs/job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/processor.c processing/processor.h \

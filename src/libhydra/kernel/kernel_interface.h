@@ -18,7 +18,7 @@
 
 /**
  * @defgroup kernel_interface kernel_interface
- * @{ @ingroup kernel
+ * @{ @ingroup hkernel
  */
 
 #ifndef KERNEL_INTERFACE_H_
@@ -28,7 +28,6 @@ typedef struct kernel_interface_t kernel_interface_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
-#include <encoding/payloads/proposal_substructure.h>
 
 #include <kernel/kernel_listener.h>
 #include <kernel/kernel_ipsec.h>
