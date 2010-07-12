@@ -730,14 +730,14 @@ METHOD(ike_sa_t, set_virtual_ip, void,
 	if (local)
 	{
 		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->my_host) == SUCCESS)
+		if (hydra->kernel_interface->add_ip(hydra->kernel_interface, ip,
+											this->my_host) == SUCCESS)
 		{
 			if (this->my_virtual_ip)
 			{
 				DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-				charon->kernel_interface->del_ip(charon->kernel_interface,
-												 this->my_virtual_ip);
+				hydra->kernel_interface->del_ip(hydra->kernel_interface,
+												this->my_virtual_ip);
 			}
 			DESTROY_IF(this->my_virtual_ip);
 			this->my_virtual_ip = ip->clone(ip);
@@ -1062,8 +1062,8 @@ static void resolve_hosts(private_ike_sa_t *this)
 			!this->other_host->is_anyaddr(this->other_host))
 		{
 			host->destroy(host);
-			host = charon->kernel_interface->get_source_addr(
-							charon->kernel_interface, this->other_host, NULL);
+			host = hydra->kernel_interface->get_source_addr(
+							hydra->kernel_interface, this->other_host, NULL);
 			if (host)
 			{
 				host->set_port(host, this->ike_cfg->get_my_port(this->ike_cfg));
@@ -1760,7 +1760,7 @@ METHOD(ike_sa_t, roam, status_t,
 	}
 
 	/* keep existing path if possible */
-	src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
 											this->other_host, this->my_host);
 	if (src)
 	{
@@ -1781,8 +1781,8 @@ METHOD(ike_sa_t, roam, status_t,
 		enumerator_t *enumerator;
 		host_t *addr;
 
-		src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-														this->other_host, NULL);
+		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													   this->other_host, NULL);
 		if (!src)
 		{
 			enumerator = this->additional_addresses->create_enumerator(
@@ -1790,8 +1790,8 @@ METHOD(ike_sa_t, roam, status_t,
 			while (enumerator->enumerate(enumerator, &addr))
 			{
 				DBG1(DBG_IKE, "looking for a route to %H ...", addr);
-				src = charon->kernel_interface->get_source_addr(
-										charon->kernel_interface, addr, NULL);
+				src = hydra->kernel_interface->get_source_addr(
+										hydra->kernel_interface, addr, NULL);
 				if (src)
 				{
 					break;
@@ -1958,8 +1958,8 @@ METHOD(ike_sa_t, destroy, void,
 
 	if (this->my_virtual_ip)
 	{
-		charon->kernel_interface->del_ip(charon->kernel_interface,
-										 this->my_virtual_ip);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface,
+										this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
 	if (this->other_virtual_ip)

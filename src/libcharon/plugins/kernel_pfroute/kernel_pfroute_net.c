@@ -155,7 +155,7 @@ struct private_kernel_pfroute_net_t
  */
 static job_requeue_t roam_event(uintptr_t address)
 {
-	charon->kernel_interface->roam(charon->kernel_interface, address != 0);
+	hydra->kernel_interface->roam(hydra->kernel_interface, address != 0);
 	return JOB_REQUEUE_NONE;
 }
 

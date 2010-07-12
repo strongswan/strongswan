@@ -18,7 +18,7 @@
 
 #include "kernel_pfkey_ipsec.h"
 
-#include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_kernel_pfkey_plugin_t private_kernel_pfkey_plugin_t;
 
@@ -37,7 +37,8 @@ struct private_kernel_pfkey_plugin_t {
  */
 static void destroy(private_kernel_pfkey_plugin_t *this)
 {
-	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_pfkey_ipsec_create);
+	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
+						(kernel_ipsec_constructor_t)kernel_pfkey_ipsec_create);
 	free(this);
 }
 
@@ -50,7 +51,8 @@ plugin_t *kernel_pfkey_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_pfkey_ipsec_create);
+	hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
+						(kernel_ipsec_constructor_t)kernel_pfkey_ipsec_create);
 
 	return &this->public.plugin;
 }

@@ -206,8 +206,8 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	else
 	{
 		/* act as relay agent */
-		src = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface, this->dst, NULL);
+		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													   this->dst, NULL);
 		if (src)
 		{
 			memcpy(&dhcp->gateway_address, src->get_address(src).ptr,

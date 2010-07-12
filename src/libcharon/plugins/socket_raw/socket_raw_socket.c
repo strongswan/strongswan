@@ -36,6 +36,7 @@
 #include <linux/filter.h>
 #include <net/if.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
@@ -496,8 +497,8 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		}
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on send socket failed");
 	}
@@ -602,8 +603,8 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 		return 0;
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on receive socket failed");
 	}

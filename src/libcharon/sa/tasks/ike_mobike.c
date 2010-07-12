@@ -17,6 +17,7 @@
 
 #include <string.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <sa/tasks/ike_natd.h>
 #include <encoding/payloads/notify_payload.h>
@@ -193,8 +194,8 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	int added = 0;
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
-	enumerator = charon->kernel_interface->create_address_enumerator(
-										charon->kernel_interface, FALSE, FALSE);
+	enumerator = hydra->kernel_interface->create_address_enumerator(
+										hydra->kernel_interface, FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
 		if (me->ip_equals(me, host))
@@ -310,8 +311,8 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
-	me = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface, other_old, NULL);
+	me = hydra->kernel_interface->get_source_addr(
+									hydra->kernel_interface, other_old, NULL);
 	if (me)
 	{
 		apply_port(this, me, me_old, ike_cfg->get_my_port(ike_cfg));
@@ -324,8 +325,8 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&other))
 	{
-		me = charon->kernel_interface->get_source_addr(
-										charon->kernel_interface, other, NULL);
+		me = hydra->kernel_interface->get_source_addr(
+										hydra->kernel_interface, other, NULL);
 		if (me)
 		{
 			if (me->get_family(me) != other->get_family(other))
@@ -363,7 +364,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 
 		/* we check if the existing address is still valid */
 		old = message->get_source(message);
-		new = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+		new = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
 										message->get_destination(message), old);
 		if (new)
 		{

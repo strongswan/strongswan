@@ -15,6 +15,7 @@
 
 #include "trap_manager.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/rwlock.h>
 #include <utils/linked_list.h>
@@ -138,8 +139,8 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	if (!me || me->is_anyaddr(me))
 	{
 		DESTROY_IF(me);
-		me = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface, other, NULL);
+		me = hydra->kernel_interface->get_source_addr(
+									hydra->kernel_interface, other, NULL);
 		if (!me)
 		{
 			DBG1(DBG_CFG, "installing trap failed, local address unknown");

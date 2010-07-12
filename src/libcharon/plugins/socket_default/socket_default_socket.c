@@ -42,6 +42,7 @@
 #include <sys/sysctl.h>
 #endif
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
@@ -525,8 +526,8 @@ static int open_socket(private_socket_default_socket_t *this,
 		}
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}

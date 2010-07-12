@@ -135,8 +135,8 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 
-	enumerator = charon->kernel_interface->create_address_enumerator(
-										charon->kernel_interface, FALSE, FALSE);
+	enumerator = hydra->kernel_interface->create_address_enumerator(
+										hydra->kernel_interface, FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);

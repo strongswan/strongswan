@@ -1293,8 +1293,8 @@ static void process_acquire(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 
 	this->mutex->unlock(this->mutex);
 
-	charon->kernel_interface->acquire(charon->kernel_interface, reqid, NULL,
-									  NULL);
+	hydra->kernel_interface->acquire(hydra->kernel_interface, reqid, NULL,
+									 NULL);
 }
 
 /**
@@ -1353,8 +1353,8 @@ static void process_mapping(private_kernel_klips_ipsec_t *this, struct sadb_msg*
 		new_src = host_create_from_sockaddr(addr);
 		if (new_src)
 		{
-			charon->kernel_interface->mapping(charon->kernel_interface, reqid,
-											  spi, new_src);
+			hydra->kernel_interface->mapping(hydra->kernel_interface, reqid,
+											 spi, new_src);
 		}
 	}
 }
@@ -1491,8 +1491,8 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	DBG2(DBG_KNL, "%N CHILD_SA with SPI %.8x and reqid {%d} expired",
 			protocol_id_names, protocol, ntohl(spi), reqid);
 
-	charon->kernel_interface->expire(charon->kernel_interface, reqid, protocol,
-									 spi, hard);
+	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
+									spi, hard);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -2105,8 +2105,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		if (mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
 			this->install_routes)
 		{
-			charon->kernel_interface->get_address_by_ts(charon->kernel_interface,
-						src_ts, &route->src_ip);
+			hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
+													   src_ts, &route->src_ip);
 		}
 
 		if (!route->src_ip)
@@ -2115,8 +2115,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		}
 
 		/* find the virtual interface */
-		iface = charon->kernel_interface->get_interface(charon->kernel_interface,
-														src);
+		iface = hydra->kernel_interface->get_interface(hydra->kernel_interface,
+													   src);
 		if (find_ipsec_dev(this, iface, &dev) == SUCCESS)
 		{
 			/* above, we got either the name of a virtual or a physical
@@ -2162,12 +2162,12 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		route->if_name = strdup(dev->name);
 
 		/* get the nexthop to dst */
-		route->gateway = charon->kernel_interface->get_nexthop(
-										charon->kernel_interface, dst);
+		route->gateway = hydra->kernel_interface->get_nexthop(
+												hydra->kernel_interface, dst);
 		route->dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net));
 		route->prefixlen = policy->dst.mask;
 
-		switch (charon->kernel_interface->add_route(charon->kernel_interface,
+		switch (hydra->kernel_interface->add_route(hydra->kernel_interface,
 				route->dst_net, route->prefixlen, route->gateway,
 				route->src_ip, route->if_name))
 		{
@@ -2449,7 +2449,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	{
 		ipsec_dev_t *dev;
 
-		if (charon->kernel_interface->del_route(charon->kernel_interface,
+		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
 				route->dst_net, route->prefixlen, route->gateway,
 				route->src_ip, route->if_name) != SUCCESS)
 		{

@@ -18,7 +18,7 @@
 
 #include "kernel_pfroute_net.h"
 
-#include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_kernel_pfroute_plugin_t private_kernel_pfroute_plugin_t;
 
@@ -37,7 +37,7 @@ struct private_kernel_pfroute_plugin_t {
  */
 static void destroy(private_kernel_pfroute_plugin_t *this)
 {
-	charon->kernel_interface->remove_net_interface(charon->kernel_interface,
+	hydra->kernel_interface->remove_net_interface(hydra->kernel_interface,
 						(kernel_net_constructor_t)kernel_pfroute_net_create);
 	free(this);
 }
@@ -51,7 +51,7 @@ plugin_t *kernel_pfroute_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	charon->kernel_interface->add_net_interface(charon->kernel_interface,
+	hydra->kernel_interface->add_net_interface(hydra->kernel_interface,
 						(kernel_net_constructor_t)kernel_pfroute_net_create);
 
 	return &this->public.plugin;

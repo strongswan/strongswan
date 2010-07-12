@@ -133,8 +133,8 @@ METHOD(kernel_listener_t, roam, bool,
 METHOD(kernel_handler_t, destroy, void,
 	   private_kernel_handler_t *this)
 {
-	charon->kernel_interface->remove_listener(charon->kernel_interface,
-											  &this->public.listener);
+	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
+											 &this->public.listener);
 	free(this);
 }
 
@@ -155,8 +155,8 @@ kernel_handler_t *kernel_handler_create()
 		},
 	);
 
-	charon->kernel_interface->add_listener(charon->kernel_interface,
-										   &this->public.listener);
+	hydra->kernel_interface->add_listener(hydra->kernel_interface,
+										  &this->public.listener);
 
 	return &this->public;
 }

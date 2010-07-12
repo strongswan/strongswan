@@ -15,6 +15,7 @@
 
 #include "stroke_config.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/lexparser.h>
@@ -199,8 +200,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
 	{
-		interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+		interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 		host->destroy(host);
 		if (interface)
 		{
@@ -215,8 +216,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
 			if (host)
 			{
-				interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+				interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 				host->destroy(host);
 				if (!interface)
 				{

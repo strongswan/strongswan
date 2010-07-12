@@ -36,6 +36,7 @@
 #include <netinet/udp.h>
 #include <net/if.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
@@ -422,8 +423,8 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 		return 0;
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 fd, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												fd, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}

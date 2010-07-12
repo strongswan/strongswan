@@ -23,6 +23,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <hydra.h>
 #include <daemon.h>
 
 ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
@@ -413,7 +414,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->my_spi)
 		{
-			status = charon->kernel_interface->query_sa(charon->kernel_interface,
+			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->other_addr, this->my_addr, this->my_spi,
 							proto_ike2ip(this->protocol), this->mark_in,
 							&bytes);
@@ -432,7 +433,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	{
 		if (this->other_spi)
 		{
-			status = charon->kernel_interface->query_sa(charon->kernel_interface,
+			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->my_addr, this->other_addr, this->other_spi,
 							proto_ike2ip(this->protocol), this->mark_out,
 							&bytes);
@@ -466,14 +467,14 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 
 		if (inbound)
 		{
-			if (charon->kernel_interface->query_policy(charon->kernel_interface,
+			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_IN, this->mark_in, &in) == SUCCESS)
 			{
 				last_use = max(last_use, in);
 			}
 			if (this->mode != MODE_TRANSPORT)
 			{
-				if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_FWD, this->mark_in, &fwd) == SUCCESS)
 				{
 					last_use = max(last_use, fwd);
@@ -482,7 +483,7 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 		}
 		else
 		{
-			if (charon->kernel_interface->query_policy(charon->kernel_interface,
+			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
 						my_ts, other_ts, POLICY_OUT, this->mark_out, &out) == SUCCESS)
 			{
 				last_use = max(last_use, out);
@@ -534,10 +535,10 @@ METHOD(child_sa_t, get_lifetime, time_t,
 METHOD(child_sa_t, alloc_spi, u_int32_t,
 	   private_child_sa_t *this, protocol_id_t protocol)
 {
-	if (charon->kernel_interface->get_spi(charon->kernel_interface,
-									this->other_addr, this->my_addr,
-									proto_ike2ip(protocol), this->reqid,
-									&this->my_spi) == SUCCESS)
+	if (hydra->kernel_interface->get_spi(hydra->kernel_interface,
+										 this->other_addr, this->my_addr,
+										 proto_ike2ip(protocol), this->reqid,
+										 &this->my_spi) == SUCCESS)
 	{
 		return this->my_spi;
 	}
@@ -547,9 +548,9 @@ METHOD(child_sa_t, alloc_spi, u_int32_t,
 METHOD(child_sa_t, alloc_cpi, u_int16_t,
 	   private_child_sa_t *this)
 {
-	if (charon->kernel_interface->get_cpi(charon->kernel_interface,
-									this->other_addr, this->my_addr,
-									this->reqid, &this->my_cpi) == SUCCESS)
+	if (hydra->kernel_interface->get_cpi(hydra->kernel_interface,
+										 this->other_addr, this->my_addr,
+										 this->reqid, &this->my_cpi) == SUCCESS)
 	{
 		return this->my_cpi;
 	}
@@ -636,7 +637,7 @@ METHOD(child_sa_t, install, status_t,
 		}
 	}
 
-	status = charon->kernel_interface->add_sa(charon->kernel_interface,
+	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
@@ -677,14 +678,14 @@ METHOD(child_sa_t, add_policies, status_t,
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			/* install 3 policies: out, in and forward */
-			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+			status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							this->my_addr, this->other_addr, my_ts, other_ts,
 							POLICY_OUT, this->other_spi,
 							proto_ike2ip(this->protocol), this->reqid,
 							this->mark_out, this->mode, this->ipcomp,
 							this->other_cpi, routed);
 
-			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+			status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
 							POLICY_IN, this->my_spi,
 							proto_ike2ip(this->protocol), this->reqid,
@@ -692,7 +693,7 @@ METHOD(child_sa_t, add_policies, status_t,
 							this->my_cpi, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
-				status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+				status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
 							POLICY_FWD, this->my_spi,
 							proto_ike2ip(this->protocol), this->reqid,
@@ -739,7 +740,7 @@ METHOD(child_sa_t, update, status_t,
 		/* update our (initator) SA */
 		if (this->my_spi)
 		{
-			if (charon->kernel_interface->update_sa(charon->kernel_interface,
+			if (hydra->kernel_interface->update_sa(hydra->kernel_interface,
 							this->my_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
 							this->other_addr, this->my_addr, other, me,
@@ -752,7 +753,7 @@ METHOD(child_sa_t, update, status_t,
 		/* update his (responder) SA */
 		if (this->other_spi)
 		{
-			if (charon->kernel_interface->update_sa(charon->kernel_interface,
+			if (hydra->kernel_interface->update_sa(hydra->kernel_interface,
 							this->other_spi, proto_ike2ip(this->protocol),
 							this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
 							this->my_addr, this->other_addr, me, other,
@@ -777,13 +778,13 @@ METHOD(child_sa_t, update, status_t,
 			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 			{
 				/* remove old policies first */
-				charon->kernel_interface->del_policy(charon->kernel_interface,
+				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							my_ts, other_ts, POLICY_OUT, this->mark_out, FALSE);
-				charon->kernel_interface->del_policy(charon->kernel_interface,
+				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							other_ts, my_ts,  POLICY_IN, this->mark_in, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
-					charon->kernel_interface->del_policy(charon->kernel_interface,
+					hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							other_ts, my_ts, POLICY_FWD, this->mark_in, FALSE);
 				}
 
@@ -803,24 +804,24 @@ METHOD(child_sa_t, update, status_t,
 				 * correctly */
 				if (vip)
 				{
-					charon->kernel_interface->del_ip(charon->kernel_interface, vip);
-					charon->kernel_interface->add_ip(charon->kernel_interface, vip, me);
+					hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+					hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, me);
 				}
 
 				/* reinstall updated policies */
-				charon->kernel_interface->add_policy(charon->kernel_interface,
+				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							me, other, my_ts, other_ts, POLICY_OUT,
 							this->other_spi, proto_ike2ip(this->protocol),
 							this->reqid, this->mark_out, this->mode,
 							this->ipcomp, this->other_cpi, FALSE);
-				charon->kernel_interface->add_policy(charon->kernel_interface,
+				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							other, me, other_ts, my_ts, POLICY_IN,
 							this->my_spi, proto_ike2ip(this->protocol),
 							this->reqid, this->mark_in, this->mode,
 							this->ipcomp, this->my_cpi, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
-					charon->kernel_interface->add_policy(charon->kernel_interface,
+					hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							other, me, other_ts, my_ts, POLICY_FWD,
 							this->my_spi, proto_ike2ip(this->protocol),
 							this->reqid, this->mark_in, this->mode,
@@ -870,14 +871,14 @@ METHOD(child_sa_t, destroy, void,
 		{
 			this->protocol = PROTO_ESP;
 		}
-		charon->kernel_interface->del_sa(charon->kernel_interface,
+		hydra->kernel_interface->del_sa(hydra->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
 					proto_ike2ip(this->protocol), this->my_cpi,
 					this->mark_in);
 	}
 	if (this->other_spi)
 	{
-		charon->kernel_interface->del_sa(charon->kernel_interface,
+		hydra->kernel_interface->del_sa(hydra->kernel_interface,
 					this->my_addr, this->other_addr, this->other_spi,
 					proto_ike2ip(this->protocol), this->other_cpi,
 					this->mark_out);
@@ -889,13 +890,13 @@ METHOD(child_sa_t, destroy, void,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			charon->kernel_interface->del_policy(charon->kernel_interface,
+			hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						my_ts, other_ts, POLICY_OUT, this->mark_out, unrouted);
-			charon->kernel_interface->del_policy(charon->kernel_interface,
+			hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_IN, this->mark_in, unrouted);
 			if (this->mode != MODE_TRANSPORT)
 			{
-				charon->kernel_interface->del_policy(charon->kernel_interface,
+				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_FWD, this->mark_in, unrouted);
 			}
 		}

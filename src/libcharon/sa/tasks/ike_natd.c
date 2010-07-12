@@ -18,6 +18,7 @@
 
 #include <string.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <config/peer_cfg.h>
 #include <crypto/hashers/hasher.h>
@@ -316,7 +317,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	}
 	else
 	{
-		host = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+		host = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
 							this->ike_sa->get_other_host(this->ike_sa), NULL);
 		if (host)
 		{	/* 2. */
@@ -327,8 +328,8 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 		}
 		else
 		{	/* 3. */
-			enumerator = charon->kernel_interface->create_address_enumerator(
-										charon->kernel_interface, FALSE, FALSE);
+			enumerator = hydra->kernel_interface->create_address_enumerator(
+										hydra->kernel_interface, FALSE, FALSE);
 			while (enumerator->enumerate(enumerator, (void**)&host))
 			{
 				/* apply port 500 to host, but work on a copy */

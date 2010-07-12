@@ -19,7 +19,7 @@
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_net.h"
 
-#include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_kernel_netlink_plugin_t private_kernel_netlink_plugin_t;
 
@@ -38,8 +38,10 @@ struct private_kernel_netlink_plugin_t {
  */
 static void destroy(private_kernel_netlink_plugin_t *this)
 {
-	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
-	charon->kernel_interface->remove_net_interface(charon->kernel_interface, (kernel_net_constructor_t)kernel_netlink_net_create);
+	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
+					(kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
+	hydra->kernel_interface->remove_net_interface(hydra->kernel_interface,
+					(kernel_net_constructor_t)kernel_netlink_net_create);
 	free(this);
 }
 
@@ -52,8 +54,10 @@ plugin_t *kernel_netlink_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, (kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
-	charon->kernel_interface->add_net_interface(charon->kernel_interface, (kernel_net_constructor_t)kernel_netlink_net_create);
+	hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
+					(kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
+	hydra->kernel_interface->add_net_interface(hydra->kernel_interface,
+					(kernel_net_constructor_t)kernel_netlink_net_create);
 
 	return &this->public.plugin;
 }

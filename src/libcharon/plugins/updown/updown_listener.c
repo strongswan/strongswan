@@ -18,6 +18,7 @@
 
 #include "updown_listener.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <config/child_cfg.h>
 
@@ -218,8 +219,8 @@ METHOD(listener_t, child_updown, bool,
 
 		if (up)
 		{
-			iface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, me);
+			iface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, me);
 			if (iface)
 			{
 				cache_iface(this, child_sa->get_reqid(child_sa), iface);

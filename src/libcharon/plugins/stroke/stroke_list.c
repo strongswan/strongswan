@@ -455,8 +455,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 
-		enumerator = charon->kernel_interface->create_address_enumerator(
-								charon->kernel_interface, FALSE, FALSE);
+		enumerator = hydra->kernel_interface->create_address_enumerator(
+									hydra->kernel_interface, FALSE, FALSE);
 		fprintf(out, "Listening IP addresses:\n");
 		while (enumerator->enumerate(enumerator, (void**)&host))
 		{

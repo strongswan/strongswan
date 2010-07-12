@@ -227,7 +227,7 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
  */
 static job_requeue_t roam_event(uintptr_t address)
 {
-	charon->kernel_interface->roam(charon->kernel_interface, address != 0);
+	hydra->kernel_interface->roam(hydra->kernel_interface, address != 0);
 	return JOB_REQUEUE_NONE;
 }
 
