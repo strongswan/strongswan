@@ -187,11 +187,23 @@ CREATE TABLE leases (
   PRIMARY KEY (`id`)
 );
 
+DROP TABLE IF EXISTS attribute_pools;
+CREATE TABLE attribute_pools (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(32) NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
 DROP TABLE IF EXISTS attributes;
 CREATE TABLE attributes (
   `id` int(10) unsigned NOT NULL auto_increment,
+  `identity` int(10) unsigned NOT NULL default '0',
+  `pool` int(10) unsigned NOT NULL default '0',
   `type` int(10) unsigned NOT NULL,
-  `value` varbinary(16) NOT NULL
+  `value` varbinary(16) NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX (`identity`),
+  INDEX (`pool`)
 );
 
 DROP TABLE IF EXISTS ike_sas;
