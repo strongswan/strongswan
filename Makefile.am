@@ -7,7 +7,7 @@ endif
 ACLOCAL_AMFLAGS = -I m4/config
 
 EXTRA_DIST = Doxyfile.in CREDITS Android.mk.in Android.mk
-CLEANFILES = apidoc Doxyfile
+CLEANFILES = Doxyfile
 BUILT_SOURCES = Android.mk
 MAINTAINERCLEANFILES = Android.mk
 
@@ -25,3 +25,6 @@ Doxyfile :	Doxyfile.in
 
 apidoc :	Doxyfile
 		doxygen
+
+clean-local:
+		rm -rf apidoc
