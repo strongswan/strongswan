@@ -48,7 +48,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <hydra.h>
-#include <daemon.h>
+#include <debug.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>

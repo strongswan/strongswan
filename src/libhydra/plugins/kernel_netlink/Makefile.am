@@ -1,6 +1,6 @@
 
 INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
+	-I$(top_srcdir)/src/libhydra
 
 AM_CFLAGS = -rdynamic \
 -DROUTING_TABLE=${routing_table} \
@@ -14,7 +14,8 @@ endif
 
 libstrongswan_kernel_netlink_la_SOURCES = \
 	kernel_netlink_plugin.h kernel_netlink_plugin.c \
-	kernel_netlink_ipsec.h kernel_netlink_ipsec.c kernel_netlink_net.h kernel_netlink_net.c \
+	kernel_netlink_ipsec.h kernel_netlink_ipsec.c \
+	kernel_netlink_net.h kernel_netlink_net.c \
 	kernel_netlink_shared.h kernel_netlink_shared.c
 
 libstrongswan_kernel_netlink_la_LDFLAGS = -module -avoid-version

@@ -29,7 +29,8 @@
 #include "kernel_klips_ipsec.h"
 
 #include <hydra.h>
-#include <daemon.h>
+#include <debug.h>
+#include <utils/linked_list.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
@@ -1488,9 +1489,6 @@ static job_requeue_t sa_expires(sa_expire_t *expire)
 	}
 	this->mutex->unlock(this->mutex);
 
-	DBG2(DBG_KNL, "%N CHILD_SA with SPI %.8x and reqid {%d} expired",
-			protocol_id_names, protocol, ntohl(spi), reqid);
-
 	hydra->kernel_interface->expire(hydra->kernel_interface, reqid, protocol,
 									spi, hard);
 	return JOB_REQUEUE_NONE;
@@ -1536,9 +1534,6 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 
 	/* charon's SPIs lie within the range from 0xc0000000 to 0xcFFFFFFF */
 	spi_gen = 0xc0000000 | (spi_gen & 0x0FFFFFFF);
-
-	DBG2(DBG_KNL, "allocated SPI %.8x for %N SA between %#H..%#H",
-			spi_gen, protocol_id_names, protocol, src, dst);
 
 	*spi = htonl(spi_gen);
 

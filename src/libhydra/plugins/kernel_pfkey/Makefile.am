@@ -1,6 +1,6 @@
 
 INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
+	-I$(top_srcdir)/src/libhydra
 
 AM_CFLAGS = -rdynamic
 

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup kernel_klips kernel_klips
- * @ingroup cplugins
+ * @ingroup hplugins
  *
  * @defgroup kernel_klips_plugin kernel_klips_plugin
  * @{ @ingroup kernel_klips

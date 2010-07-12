@@ -55,8 +55,9 @@
 #include "kernel_pfkey_ipsec.h"
 
 #include <hydra.h>
-#include <daemon.h>
+#include <debug.h>
 #include <utils/host.h>
+#include <utils/linked_list.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>

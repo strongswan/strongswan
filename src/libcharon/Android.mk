@@ -135,10 +135,6 @@ LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 	)
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
-
-LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
-
 LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 
 LOCAL_SRC_FILES += $(call add_plugin, socket-default)

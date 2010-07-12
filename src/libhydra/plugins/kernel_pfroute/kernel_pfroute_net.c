@@ -24,7 +24,7 @@
 #include "kernel_pfroute_net.h"
 
 #include <hydra.h>
-#include <daemon.h>
+#include <debug.h>
 #include <utils/host.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>

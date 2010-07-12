@@ -21,6 +21,10 @@ processing/scheduler.c processing/scheduler.h
 
 LOCAL_SRC_FILES += $(call add_plugin, attr)
 
+LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
+
+LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
+
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \

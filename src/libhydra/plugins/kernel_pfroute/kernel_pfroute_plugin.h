@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2009 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup kernel_pfkey kernel_pfkey
- * @ingroup cplugins
+ * @defgroup kernel_pfroute kernel_pfroute
+ * @ingroup hplugins
  *
- * @defgroup kernel_pfkey_plugin kernel_pfkey_plugin
- * @{ @ingroup kernel_pfkey
+ * @defgroup kernel_pfroute_plugin kernel_pfroute_plugin
+ * @{ @ingroup kernel_pfroute
  */
 
-#ifndef KERNEL_PFKEY_PLUGIN_H_
-#define KERNEL_PFKEY_PLUGIN_H_
+#ifndef KERNEL_PFROUTE_PLUGIN_H_
+#define KERNEL_PFROUTE_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct kernel_pfkey_plugin_t kernel_pfkey_plugin_t;
+typedef struct kernel_pfroute_plugin_t kernel_pfroute_plugin_t;
 
 /**
- * PF_KEY kernel interface plugin
+ * PF_ROUTE kernel interface plugin
  */
-struct kernel_pfkey_plugin_t {
+struct kernel_pfroute_plugin_t {
 
 	/**
 	 * implements plugin interface
@@ -39,4 +39,4 @@ struct kernel_pfkey_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /** KERNEL_PFKEY_PLUGIN_H_ @}*/
+#endif /** KERNEL_PFROUTE_PLUGIN_H_ @}*/
