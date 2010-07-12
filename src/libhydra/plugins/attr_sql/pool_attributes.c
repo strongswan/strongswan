@@ -586,7 +586,9 @@ void status_attr(bool hexout)
 					"LEFT OUTER JOIN identities "
 					"ON attributes.identity = identities.id "
 					"LEFT OUTER JOIN attribute_pools "
-					"ON attributes.pool = attribute_pools.id",
+					"ON attributes.pool = attribute_pools.id "
+					"ORDER BY attributes.type, attribute_pools.name, "
+					"identities.type, identities.data, attributes.value",
 					DB_INT, DB_TEXT, DB_INT, DB_BLOB, DB_BLOB);
 	if (enumerator)
 	{
