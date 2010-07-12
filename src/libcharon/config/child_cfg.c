@@ -27,15 +27,6 @@ ENUM(action_names, ACTION_NONE, ACTION_RESTART,
 	"restart",
 );
 
-ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE,
-	"IPCOMP_NONE");
-ENUM_NEXT(ipcomp_transform_names, IPCOMP_OUI, IPCOMP_LZJH, IPCOMP_NONE,
-	"IPCOMP_OUI",
-	"IPCOMP_DEFLATE",
-	"IPCOMP_LZS",
-	"IPCOMP_LZJH");
-ENUM_END(ipcomp_transform_names, IPCOMP_LZJH);
-
 typedef struct private_child_cfg_t private_child_cfg_t;
 
 /**

@@ -24,7 +24,6 @@
 #define CHILD_CFG_H_
 
 typedef enum action_t action_t;
-typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -48,22 +47,6 @@ enum action_t {
  * enum names for action_t.
  */
 extern enum_name_t *action_names;
-
-/**
- * IPComp transform IDs, as in RFC 4306
- */
-enum ipcomp_transform_t {
-	IPCOMP_NONE = 241,
-	IPCOMP_OUI = 1,
-	IPCOMP_DEFLATE = 2,
-	IPCOMP_LZS = 3,
-	IPCOMP_LZJH = 4,
-};
-
-/**
- * enum strings for ipcomp_transform_t.
- */
-extern enum_name_t *ipcomp_transform_names;
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.

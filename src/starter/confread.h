@@ -95,13 +95,6 @@ struct also {
 		also_t          *next;
 };
 
-typedef struct mark_t mark_t;
-
-struct mark_t{
-		u_int32_t value;
-		u_int32_t mask;
-};
-
 typedef struct starter_conn starter_conn_t;
 
 struct starter_conn {

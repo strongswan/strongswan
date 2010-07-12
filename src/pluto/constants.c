@@ -411,7 +411,7 @@ enum_names esp_transform_names =
 
 static const char *const ipcomp_transform_name[] = {
 	"IPCOMP_OUI",
-	"IPCOMP_DEFLAT",
+	"IPCOMP_DEFLATE",
 	"IPCOMP_LZS",
 	"IPCOMP_LZJH",
 };

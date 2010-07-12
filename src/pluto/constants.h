@@ -18,6 +18,8 @@
 
 #include <freeswan.h>
 
+#include <kernel/kernel_ipsec.h>
+
 #include <utils.h>
 #include <utils/identification.h>
 #include <crypto/hashers/hasher.h>
@@ -193,15 +195,8 @@ extern enum_names esp_transform_names;
 
 /* IPCOMP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.5
+ * now defined in kernel/kernel_ipsec.h
  */
-
-enum ipsec_comp_algo {
-	IPSCOMP_NONE   = 0,
-	IPCOMP_OUI     = 1,
-	IPCOMP_DEFLATE = 2,
-	IPCOMP_LZS     = 3,
-	IPCOMP_LZJH    = 4
-};
 
 extern enum_names ipcomp_transformid_names;
 

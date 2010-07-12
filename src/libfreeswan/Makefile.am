@@ -11,6 +11,7 @@ libfreeswan_a_SOURCES = addrtoa.c addrtot.c addrtypeof.c anyaddr.c atoaddr.c ato
 
 INCLUDES = \
 -I$(top_srcdir)/src/libstrongswan \
+-I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/pluto
 
 dist_man3_MANS = anyaddr.3 atoaddr.3 atoasr.3 atosa.3 atoul.3 goodmask.3 initaddr.3 initsubnet.3 \

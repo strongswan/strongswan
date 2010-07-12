@@ -27,3 +27,11 @@ ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
 	"fwd"
 );
 
+ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
+	"IPCOMP_NONE",
+	"IPCOMP_OUI",
+	"IPCOMP_DEFLATE",
+	"IPCOMP_LZS",
+	"IPCOMP_LZJH"
+);
+

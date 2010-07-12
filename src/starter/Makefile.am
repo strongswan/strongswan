@@ -9,6 +9,7 @@ INCLUDES = \
 -I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/pluto \
 -I$(top_srcdir)/src/whack \
 -I$(top_srcdir)/src/stroke

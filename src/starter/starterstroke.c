@@ -40,15 +40,6 @@
 #define IPV6_LEN	16
 
 /**
- * Mode of an IPsec SA, must be the same as in charons kernel_ipsec.h
- */
-enum ipsec_mode_t {
-	MODE_TRANSPORT = 1,
-	MODE_TUNNEL,
-	MODE_BEET
-};
-
-/**
  * Authentication methods, must be the same as in charons authenticator.h
  */
 enum auth_method_t {

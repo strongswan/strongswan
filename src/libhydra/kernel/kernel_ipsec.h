@@ -26,6 +26,7 @@
 
 typedef enum ipsec_mode_t ipsec_mode_t;
 typedef enum policy_dir_t policy_dir_t;
+typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct mark_t mark_t;
@@ -35,7 +36,7 @@ typedef struct mark_t mark_t;
 #include <selectors/traffic_selector.h>
 
 /**
- * Mode of a CHILD_SA.
+ * Mode of an IPsec SA.
  */
 enum ipsec_mode_t {
 	/** transport mode, no inner address */
@@ -69,6 +70,22 @@ enum policy_dir_t {
  * enum names for policy_dir_t.
  */
 extern enum_name_t *policy_dir_names;
+
+/**
+ * IPComp transform IDs, as in RFC 4306
+ */
+enum ipcomp_transform_t {
+	IPCOMP_NONE = 0,
+	IPCOMP_OUI = 1,
+	IPCOMP_DEFLATE = 2,
+	IPCOMP_LZS = 3,
+	IPCOMP_LZJH = 4,
+};
+
+/**
+ * enum strings for ipcomp_transform_t.
+ */
+extern enum_name_t *ipcomp_transform_names;
 
 /**
  * A lifetime_cfg_t defines the lifetime limits of an SA.
