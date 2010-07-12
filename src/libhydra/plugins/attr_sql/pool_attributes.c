@@ -580,20 +580,18 @@ void status_attr(bool hexout)
 
 	/* enumerate over all attributes */
 	enumerator = db->query(db,
-					"SELECT identities.type, identities.data, "
-					"attribute_pools.name, attributes.type, attributes.value "
+					"SELECT attributes.type, attribute_pools.name, "
+					"identities.type, identities.data, attributes.value "
 					"FROM attributes "
 					"LEFT OUTER JOIN identities "
 					"ON attributes.identity = identities.id "
 					"LEFT OUTER JOIN attribute_pools "
-					"ON attributes.pool = attribute_pools.id "
-					"ORDER BY identities.type, identities.data, "
-					"attribute_pools.name, attributes.type",
-					DB_INT, DB_BLOB, DB_TEXT, DB_INT, DB_BLOB);
+					"ON attributes.pool = attribute_pools.id",
+					DB_INT, DB_TEXT, DB_INT, DB_BLOB, DB_BLOB);
 	if (enumerator)
 	{
-		while (enumerator->enumerate(enumerator, &identity_type,
-							&identity_chunk, &pool_name, &type, &value))
+		while (enumerator->enumerate(enumerator, &type,&pool_name,
+									 &identity_type, &identity_chunk, &value))
 		{
 			if (first)
 			{
