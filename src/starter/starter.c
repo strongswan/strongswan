@@ -300,6 +300,17 @@ int main (int argc, char **argv)
 
 	plog("Starting strongSwan "VERSION" IPsec [starter]...");
 
+	if (lib->settings->get_bool(lib->settings, "starter.load_warning", TRUE))
+	{
+		if (lib->settings->get_str(lib->settings, "charon.load", NULL) ||
+			lib->settings->get_str(lib->settings, "pluto.load", NULL))
+		{
+			plog("!! Your strongswan.conf contains manual plugin load options for");
+			plog("!! pluto and/or charon. This is not recommended, see");
+			plog("!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
+		}
+	}
+
 	/* verify that we can start */
 	if (getuid() != 0)
 	{
