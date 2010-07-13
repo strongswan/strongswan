@@ -82,10 +82,10 @@ static id_match_t has_subject(private_pubkey_cert_t *this,
 {
 	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		key_encoding_type_t type;
+		cred_encoding_type_t type;
 		chunk_t fingerprint;
 
-		for (type = 0; type < KEY_ENCODING_MAX; type++)
+		for (type = 0; type < CRED_ENCODING_MAX; type++)
 		{
 			if (this->key->get_fingerprint(this->key, type, &fingerprint) &&
 				chunk_equals(fingerprint, subject->get_encoding(subject)))
@@ -167,7 +167,7 @@ static chunk_t get_encoding(private_pubkey_cert_t *this)
 {
 	chunk_t encoding;
 
-	if (this->key->get_encoding(this->key, KEY_PUB_ASN1_DER, &encoding))
+	if (this->key->get_encoding(this->key, PUBKEY_ASN1_DER, &encoding))
 	{
 		return encoding;
 	}
@@ -221,7 +221,7 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	this->ref = 1;
 	this->key = key;
 	this->issuer = identification_create_from_encoding(ID_ANY, chunk_empty);
-	if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &fingerprint))
+	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &fingerprint))
 	{
 		this->subject = identification_create_from_encoding(ID_KEY_ID, fingerprint);
 	}

@@ -20,7 +20,7 @@
 /**
  * See header.
  */
-bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						va_list args)
 {
 	chunk_t asn1;
@@ -31,57 +31,57 @@ bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
 
 	switch (type)
 	{
-		case KEY_PUB_PEM:
+		case PUBKEY_PEM:
 			label ="PUBLIC KEY";
 			/* direct PKCS#1 PEM encoding */
-			if (key_encoding_args(args, KEY_PART_RSA_PUB_ASN1_DER,
-									&asn1, KEY_PART_END) ||
-				key_encoding_args(args, KEY_PART_ECDSA_PUB_ASN1_DER,
-									&asn1, KEY_PART_END))
+			if (cred_encoding_args(args, CRED_PART_RSA_PUB_ASN1_DER,
+									&asn1, CRED_PART_END) ||
+				cred_encoding_args(args, CRED_PART_ECDSA_PUB_ASN1_DER,
+									&asn1, CRED_PART_END))
 			{
 				break;
 			}
 			/* indirect PEM encoding from components */
-			if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-									KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+			if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+									CRED_PART_RSA_PUB_EXP, &e, CRED_PART_END))
 			{
-				if (lib->encoding->encode(lib->encoding, KEY_PUB_SPKI_ASN1_DER,
-									NULL, &asn1, KEY_PART_RSA_MODULUS, n,
-									KEY_PART_RSA_PUB_EXP, e, KEY_PART_END))
+				if (lib->encoding->encode(lib->encoding, PUBKEY_SPKI_ASN1_DER,
+									NULL, &asn1, CRED_PART_RSA_MODULUS, n,
+									CRED_PART_RSA_PUB_EXP, e, CRED_PART_END))
 				{
 					to_free = asn1;
 					break;
 				}
 			}
 			return FALSE;
-		case KEY_PRIV_PEM:
+		case PRIVKEY_PEM:
 			label ="RSA PRIVATE KEY";
 			/* direct PKCS#1 PEM encoding */
-			if (key_encoding_args(args, KEY_PART_RSA_PRIV_ASN1_DER,
-									&asn1, KEY_PART_END))
+			if (cred_encoding_args(args, CRED_PART_RSA_PRIV_ASN1_DER,
+									&asn1, CRED_PART_END))
 			{
 				break;
 			}
 			/* indirect PEM encoding from components */
-			if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-							KEY_PART_RSA_PUB_EXP, &e, KEY_PART_RSA_PRIV_EXP, &d,
-							KEY_PART_RSA_PRIME1, &p, KEY_PART_RSA_PRIME2, &q,
-							KEY_PART_RSA_EXP1, &exp1, KEY_PART_RSA_EXP2, &exp2,
-							KEY_PART_RSA_COEFF, &coeff, KEY_PART_END))
+			if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+						CRED_PART_RSA_PUB_EXP, &e, CRED_PART_RSA_PRIV_EXP, &d,
+						CRED_PART_RSA_PRIME1, &p, CRED_PART_RSA_PRIME2, &q,
+						CRED_PART_RSA_EXP1, &exp1, CRED_PART_RSA_EXP2, &exp2,
+						CRED_PART_RSA_COEFF, &coeff, CRED_PART_END))
 			{
-				if (lib->encoding->encode(lib->encoding, KEY_PRIV_ASN1_DER, NULL,
-							&asn1, KEY_PART_RSA_MODULUS, n,
-							KEY_PART_RSA_PUB_EXP, e, KEY_PART_RSA_PRIV_EXP, d,
-							KEY_PART_RSA_PRIME1, p, KEY_PART_RSA_PRIME2, q,
-							KEY_PART_RSA_EXP1, exp1, KEY_PART_RSA_EXP2, exp2,
-							KEY_PART_RSA_COEFF, coeff, KEY_PART_END))
+				if (lib->encoding->encode(lib->encoding, PRIVKEY_ASN1_DER, NULL,
+						&asn1, CRED_PART_RSA_MODULUS, n,
+						CRED_PART_RSA_PUB_EXP, e, CRED_PART_RSA_PRIV_EXP, d,
+						CRED_PART_RSA_PRIME1, p, CRED_PART_RSA_PRIME2, q,
+						CRED_PART_RSA_EXP1, exp1, CRED_PART_RSA_EXP2, exp2,
+						CRED_PART_RSA_COEFF, coeff, CRED_PART_END))
 				{
 					to_free = asn1;
 					break;
 				}
 			}
-			if (key_encoding_args(args, KEY_PART_ECDSA_PRIV_ASN1_DER,
-								   &asn1, KEY_PART_END))
+			if (cred_encoding_args(args, CRED_PART_ECDSA_PRIV_ASN1_DER,
+								   &asn1, CRED_PART_END))
 			{
 				label ="EC PRIVATE KEY";
 				break;

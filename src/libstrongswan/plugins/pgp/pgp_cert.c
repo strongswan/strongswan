@@ -347,7 +347,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 	else
 	{
 		/* V3 fingerprint is computed by public_key_t class */
-		if (!this->key->get_fingerprint(this->key, KEY_ID_PGPV3,
+		if (!this->key->get_fingerprint(this->key, KEYID_PGPV3,
 										&this->fingerprint))
 		{
 			return FALSE;

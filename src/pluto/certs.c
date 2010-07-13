@@ -318,11 +318,11 @@ void list_pgp_end_certs(bool utc)
 						key_type_names, key->get_type(key),
 						key->get_keysize(key) * BITS_PER_BYTE,
 						has_private_key(cert)? ", has private key" : "");
-				if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+				if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &keyid))
 				{
 					whack_log(RC_COMMENT, "  keyid:     %#B", &keyid);
 				}
-				if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
+				if (key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &keyid))
 				{
 					whack_log(RC_COMMENT, "  subjkey:   %#B", &keyid);
 				}

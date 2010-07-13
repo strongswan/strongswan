@@ -41,7 +41,7 @@ bool test_med_db()
 														KEY_ANY, id, NULL);
 	while (enumerator->enumerate(enumerator, &public, &auth))
 	{
-		good = public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &found);
+		good = public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &found);
 		if (good)
 		{
 			good = chunk_equals(id->get_encoding(id), found);

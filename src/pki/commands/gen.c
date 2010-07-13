@@ -20,7 +20,7 @@
  */
 static int gen()
 {
-	key_encoding_type_t form = KEY_PRIV_ASN1_DER;
+	cred_encoding_type_t form = PRIVKEY_ASN1_DER;
 	key_type_t type = KEY_RSA;
 	u_int size = 0;
 	private_key_t *key;

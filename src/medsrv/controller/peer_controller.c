@@ -139,8 +139,8 @@ static bool parse_public_key(private_peer_controller_t *this,
 		return FALSE;
 	}
 	/* TODO: use get_encoding() with an encoding type */
-	if (!public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id) ||
-		!public->get_encoding(public, KEY_PUB_SPKI_ASN1_DER, encoding))
+	if (!public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &id) ||
+		!public->get_encoding(public, PUBKEY_SPKI_ASN1_DER, encoding))
 	{
 		request->setf(request, "error=Encoding public key failed.");
 		return FALSE;

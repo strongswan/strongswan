@@ -23,7 +23,7 @@
  */
 static int pub()
 {
-	key_encoding_type_t form = KEY_PUB_SPKI_ASN1_DER;
+	cred_encoding_type_t form = PUBKEY_SPKI_ASN1_DER;
 	credential_type_t type = CRED_PRIVATE_KEY;
 	int subtype = KEY_RSA;
 	certificate_t *cert;

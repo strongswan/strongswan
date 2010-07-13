@@ -99,9 +99,9 @@ struct library_t {
 	credential_manager_t *credmgr;
 
 	/**
-	 * key encoding registry and factory
+	 * Credential encoding registry and factory
 	 */
-	key_encoding_t *encoding;
+	cred_encoding_t *encoding;
 
 	/**
 	 * URL fetching facility

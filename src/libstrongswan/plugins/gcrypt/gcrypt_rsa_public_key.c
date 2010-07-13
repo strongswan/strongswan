@@ -240,7 +240,7 @@ static size_t get_keysize(private_gcrypt_rsa_public_key_t *this)
  * Implementation of private_key_t.get_encoding
  */
 static bool get_encoding(private_gcrypt_rsa_public_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	chunk_t n, e;
 	bool success;
@@ -248,8 +248,8 @@ static bool get_encoding(private_gcrypt_rsa_public_key_t *this,
 	n = gcrypt_rsa_find_token(this->key, "n", NULL);
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
 	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e,
-							KEY_PART_END);
+							CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e,
+							CRED_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
 
@@ -260,7 +260,7 @@ static bool get_encoding(private_gcrypt_rsa_public_key_t *this,
  * Implementation of private_key_t.get_fingerprint
  */
 static bool get_fingerprint(private_gcrypt_rsa_public_key_t *this,
-							key_encoding_type_t type, chunk_t *fp)
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e;
 	bool success;
@@ -273,8 +273,8 @@ static bool get_fingerprint(private_gcrypt_rsa_public_key_t *this,
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
 
 	success = lib->encoding->encode(lib->encoding,
-								type, this, fp, KEY_PART_RSA_MODULUS, n,
-								KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+								type, this, fp, CRED_PART_RSA_MODULUS, n,
+								CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
 	return success;
@@ -338,9 +338,9 @@ gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_load(key_type_t type,
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
 	this->public.interface.equals = public_key_equals;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
-	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(public_key_t*, chunk_t fp))public_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
 

@@ -21,25 +21,25 @@
 #include <utils/hashtable.h>
 #include <threading/rwlock.h>
 
-typedef struct private_key_encoding_t private_key_encoding_t;
+typedef struct private_cred_encoding_t private_cred_encoding_t;
 
 /**
- * Private data of an key_encoding_t object.
+ * Private data of an cred_encoding_t object.
  */
-struct private_key_encoding_t {
+struct private_cred_encoding_t {
 
 	/**
-	 * Public key_encoding_t interface.
+	 * Public cred_encoding_t interface.
 	 */
-	key_encoding_t public;
+	cred_encoding_t public;
 
 	/**
 	 * cached encodings, a table for each encoding_type_t, containing chunk_t*
 	 */
-	hashtable_t *cache[KEY_ENCODING_MAX];
+	hashtable_t *cache[CRED_ENCODING_MAX];
 
 	/**
-	 * Registered encoding fuctions, key_encoder_t
+	 * Registered encoding fuctions, cred_encoder_t
 	 */
 	linked_list_t *encoders;
 
@@ -52,7 +52,7 @@ struct private_key_encoding_t {
 /**
  * See header.
  */
-bool key_encoding_args(va_list args, ...)
+bool cred_encoding_args(va_list args, ...)
 {
 	va_list parts, copy;
 	bool failed = FALSE;
@@ -61,12 +61,12 @@ bool key_encoding_args(va_list args, ...)
 
 	while (!failed)
 	{
-		key_encoding_part_t current, target;
+		cred_encoding_part_t current, target;
 		chunk_t *out, data;
 
 		/* get the part we are looking for */
-		target = va_arg(parts, key_encoding_part_t);
-		if (target == KEY_PART_END)
+		target = va_arg(parts, cred_encoding_part_t);
+		if (target == CRED_PART_END)
 		{
 			break;
 		}
@@ -75,8 +75,8 @@ bool key_encoding_args(va_list args, ...)
 		va_copy(copy, args);
 		while (!failed)
 		{
-			current = va_arg(copy, key_encoding_part_t);
-			if (current == KEY_PART_END)
+			current = va_arg(copy, cred_encoding_part_t);
+			if (current == CRED_PART_END)
 			{
 				failed = TRUE;
 				break;
@@ -111,14 +111,14 @@ static bool equals(void *key1, void *key2)
 }
 
 /**
- * Implementation of key_encoding_t.get_cache
+ * Implementation of cred_encoding_t.get_cache
  */
-static bool get_cache(private_key_encoding_t *this, key_encoding_type_t type,
+static bool get_cache(private_cred_encoding_t *this, cred_encoding_type_t type,
 					  void *cache, chunk_t *encoding)
 {
 	chunk_t *chunk;
 
-	if (type >= KEY_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || type < 0)
 	{
 		return FALSE;
 	}
@@ -133,18 +133,18 @@ static bool get_cache(private_key_encoding_t *this, key_encoding_type_t type,
 }
 
 /**
- * Implementation of key_encoding_t.encode
+ * Implementation of cred_encoding_t.encode
  */
-static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
+static bool encode(private_cred_encoding_t *this, cred_encoding_type_t type,
 				   void *cache, chunk_t *encoding, ...)
 {
 	enumerator_t *enumerator;
 	va_list args, copy;
-	key_encoder_t encode;
+	cred_encoder_t encode;
 	bool success = FALSE;
 	chunk_t *chunk;
 
-	if (type >= KEY_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || type < 0)
 	{
 		return FALSE;
 	}
@@ -187,14 +187,14 @@ static bool encode(private_key_encoding_t *this, key_encoding_type_t type,
 }
 
 /**
- * Implementation of key_encoding_t.cache
+ * Implementation of cred_encoding_t.cache
  */
-static void cache(private_key_encoding_t *this, key_encoding_type_t type,
+static void cache(private_cred_encoding_t *this, cred_encoding_type_t type,
 				  void *cache, chunk_t encoding)
 {
 	chunk_t *chunk;
 
-	if (type >= KEY_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || type < 0)
 	{
 		return free(encoding.ptr);
 	}
@@ -212,15 +212,15 @@ static void cache(private_key_encoding_t *this, key_encoding_type_t type,
 }
 
 /**
- * Implementation of key_encoding_t.clear_cache
+ * Implementation of cred_encoding_t.clear_cache
  */
-static void clear_cache(private_key_encoding_t *this, void *cache)
+static void clear_cache(private_cred_encoding_t *this, void *cache)
 {
-	key_encoding_type_t type;
+	cred_encoding_type_t type;
 	chunk_t *chunk;
 
 	this->lock->write_lock(this->lock);
-	for (type = 0; type < KEY_ENCODING_MAX; type++)
+	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
 		chunk = this->cache[type]->remove(this->cache[type], cache);
 		if (chunk)
@@ -233,9 +233,9 @@ static void clear_cache(private_key_encoding_t *this, void *cache)
 }
 
 /**
- * Implementation of key_encoding_t.add_encoder
+ * Implementation of cred_encoding_t.add_encoder
  */
-static void add_encoder(private_key_encoding_t *this, key_encoder_t encoder)
+static void add_encoder(private_cred_encoding_t *this, cred_encoder_t encoder)
 {
 	this->lock->write_lock(this->lock);
 	this->encoders->insert_last(this->encoders, encoder);
@@ -243,9 +243,9 @@ static void add_encoder(private_key_encoding_t *this, key_encoder_t encoder)
 }
 
 /**
- * Implementation of key_encoding_t.remove_encoder
+ * Implementation of cred_encoding_t.remove_encoder
  */
-static void remove_encoder(private_key_encoding_t *this, key_encoder_t encoder)
+static void remove_encoder(private_cred_encoding_t *this, cred_encoder_t encoder)
 {
 	this->lock->write_lock(this->lock);
 	this->encoders->remove(this->encoders, encoder, NULL);
@@ -253,18 +253,18 @@ static void remove_encoder(private_key_encoding_t *this, key_encoder_t encoder)
 }
 
 /**
- * Implementation of key_encoder_t.destroy.
+ * Implementation of cred_encoder_t.destroy.
  */
-static void destroy(private_key_encoding_t *this)
+static void destroy(private_cred_encoding_t *this)
 {
-	key_encoding_type_t type;
+	cred_encoding_type_t type;
 
-	for (type = 0; type < KEY_ENCODING_MAX; type++)
+	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
-		/* We explicitly do not free remaining encodings. All keys should
+		/* We explicitly do not free remaining encodings. All creds should
 		 * have gone now, and they are responsible for cleaning out their
 		 * cache entries. Not flushing here allows the leak detective to
-		 * complain if a key did not flush cached encodings. */
+		 * complain if a credential did not flush cached encodings. */
 		this->cache[type]->destroy(this->cache[type]);
 	}
 	this->encoders->destroy(this->encoders);
@@ -275,20 +275,20 @@ static void destroy(private_key_encoding_t *this)
 /**
  * See header
  */
-key_encoding_t *key_encoding_create()
+cred_encoding_t *cred_encoding_create()
 {
-	private_key_encoding_t *this = malloc_thing(private_key_encoding_t);
-	key_encoding_type_t type;
+	private_cred_encoding_t *this = malloc_thing(private_cred_encoding_t);
+	cred_encoding_type_t type;
 
-	this->public.encode = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
-	this->public.get_cache = (bool(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
-	this->public.cache = (void(*)(key_encoding_t*, key_encoding_type_t type, void *cache, chunk_t encoding))cache;
-	this->public.clear_cache = (void(*)(key_encoding_t*, void *cache))clear_cache;
-	this->public.add_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))add_encoder;
-	this->public.remove_encoder = (void(*)(key_encoding_t*, key_encoder_t encoder))remove_encoder;
-	this->public.destroy = (void(*)(key_encoding_t*))destroy;
+	this->public.encode = (bool(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
+	this->public.get_cache = (bool(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
+	this->public.cache = (void(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t encoding))cache;
+	this->public.clear_cache = (void(*)(cred_encoding_t*, void *cache))clear_cache;
+	this->public.add_encoder = (void(*)(cred_encoding_t*, cred_encoder_t encoder))add_encoder;
+	this->public.remove_encoder = (void(*)(cred_encoding_t*, cred_encoder_t encoder))remove_encoder;
+	this->public.destroy = (void(*)(cred_encoding_t*))destroy;
 
-	for (type = 0; type < KEY_ENCODING_MAX; type++)
+	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
 		this->cache[type] = hashtable_create(hash, equals, 8);
 	}

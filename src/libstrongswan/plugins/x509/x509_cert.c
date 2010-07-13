@@ -1274,7 +1274,7 @@ static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
 		chunk_t fingerprint;
 
 		if (this->public_key->get_fingerprint(this->public_key,
-					 				KEY_ID_PUBKEY_SHA1, &fingerprint))
+					 				KEYID_PUBKEY_SHA1, &fingerprint))
 		{
 			return fingerprint;
 		}
@@ -1528,7 +1528,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	scheme = signature_scheme_from_oid(cert->algorithm);
 
 	if (!cert->public_key->get_encoding(cert->public_key,
-										KEY_PUB_SPKI_ASN1_DER, &key_info))
+										PUBKEY_SPKI_ASN1_DER, &key_info))
 	{
 		return FALSE;
 	}
@@ -1642,7 +1642,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		chunk_t keyid;
 
 		if (cert->public_key->get_fingerprint(cert->public_key,
-											  KEY_ID_PUBKEY_SHA1, &keyid))
+											  KEYID_PUBKEY_SHA1, &keyid))
 		{
 			subjectKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 									asn1_build_known_oid(OID_SUBJECT_KEY_ID),
@@ -1656,7 +1656,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		chunk_t keyid;
 
-		if (sign_key->get_fingerprint(sign_key, KEY_ID_PUBKEY_SHA1, &keyid))
+		if (sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
 		{
 			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),

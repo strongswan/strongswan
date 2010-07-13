@@ -403,7 +403,7 @@ static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public
  * Implementation of private_key_t.get_encoding
  */
 static bool get_encoding(private_gmp_rsa_private_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 	bool success;
@@ -418,11 +418,11 @@ static bool get_encoding(private_gmp_rsa_private_key_t *this,
 	coeff = gmp_mpz_to_chunk(this->coeff);
 
 	success = lib->encoding->encode(lib->encoding,
-							type, NULL, encoding, KEY_PART_RSA_MODULUS, n,
-							KEY_PART_RSA_PUB_EXP, e, KEY_PART_RSA_PRIV_EXP, d,
-							KEY_PART_RSA_PRIME1, p, KEY_PART_RSA_PRIME2, q,
-							KEY_PART_RSA_EXP1, exp1, KEY_PART_RSA_EXP2, exp2,
-							KEY_PART_RSA_COEFF, coeff, KEY_PART_END);
+							type, NULL, encoding, CRED_PART_RSA_MODULUS, n,
+							CRED_PART_RSA_PUB_EXP, e, CRED_PART_RSA_PRIV_EXP, d,
+							CRED_PART_RSA_PRIME1, p, CRED_PART_RSA_PRIME2, q,
+							CRED_PART_RSA_EXP1, exp1, CRED_PART_RSA_EXP2, exp2,
+							CRED_PART_RSA_COEFF, coeff, CRED_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
 	chunk_clear(&d);
@@ -439,7 +439,7 @@ static bool get_encoding(private_gmp_rsa_private_key_t *this,
  * Implementation of private_key_t.get_fingerprint
  */
 static bool get_fingerprint(private_gmp_rsa_private_key_t *this,
-							key_encoding_type_t type, chunk_t *fp)
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e;
 	bool success;
@@ -452,7 +452,7 @@ static bool get_fingerprint(private_gmp_rsa_private_key_t *this,
 	e = gmp_mpz_to_chunk(this->e);
 
 	success = lib->encoding->encode(lib->encoding, type, this, fp,
-				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
 
@@ -601,9 +601,9 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
 	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
 	this->public.interface.belongs_to = (bool (*) (private_key_t*, public_key_t*))belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
 	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
 

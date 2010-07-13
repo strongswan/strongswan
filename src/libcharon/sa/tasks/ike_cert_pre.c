@@ -299,7 +299,7 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 			{
 				*req = certreq_payload_create_type(CERT_X509);
 			}
-			if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 			{
 				(*req)->add_keyid(*req, keyid);
 				DBG1(DBG_IKE, "sending cert request for \"%Y\"",

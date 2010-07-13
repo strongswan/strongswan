@@ -550,7 +550,7 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 	scheme = signature_scheme_from_oid(cert->algorithm);
 
 	if (!cert->public_key->get_encoding(cert->public_key,
-										KEY_PUB_SPKI_ASN1_DER, &key_info))
+										PUBKEY_SPKI_ASN1_DER, &key_info))
 	{
 		return FALSE;
 	}

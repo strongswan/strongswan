@@ -167,7 +167,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 	{
 		hasher_t *hasher;
 		identification_t *id;
-		key_encoding_type_t type;
+		cred_encoding_type_t type;
 		chunk_t hash, fingerprint;
 
 		/* check serial first, is cheaper */
@@ -188,7 +188,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 			switch (response->hashAlgorithm)
 			{
 				case OID_SHA1:
-					type = KEY_ID_PUBKEY_SHA1;
+					type = KEYID_PUBKEY_SHA1;
 					break;
 				default:
 					public->destroy(public);
@@ -698,7 +698,7 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 
 		key = issuer->get_public_key(issuer);
 		if (!key ||
-			!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+			!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint,
 						  this->responderId->get_encoding(this->responderId)))
 		{

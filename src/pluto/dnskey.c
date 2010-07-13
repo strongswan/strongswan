@@ -424,7 +424,7 @@ static err_t process_txt_rr_body(u_char *str, bool doit,
 				public_key_t *key = gi.key->public_key;
 
 				if (gi.gw_key_present &&
-					key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
+					key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &keyid))
 				{
 					DBG_log("gateway for %s is %s with key %#B",
 							client_id, gi.gw_id, &keyid);

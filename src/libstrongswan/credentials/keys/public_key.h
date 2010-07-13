@@ -23,7 +23,6 @@
 
 typedef struct public_key_t public_key_t;
 typedef enum key_type_t key_type_t;
-typedef enum key_id_type_t key_id_type_t;
 typedef enum signature_scheme_t signature_scheme_t;
 
 #include <library.h>
@@ -147,11 +146,11 @@ struct public_key_t {
 	/**
 	 * Get the fingerprint of the key.
 	 *
-	 * @param type		type of fingerprint, one of KEY_ID_*
+	 * @param type		type of fingerprint, one of KEYID_*
 	 * @param fp		fingerprint, points to internal data
 	 * @return			TRUE if fingerprint type supported
 	 */
-	bool (*get_fingerprint)(public_key_t *this, key_encoding_type_t type,
+	bool (*get_fingerprint)(public_key_t *this, cred_encoding_type_t type,
 							chunk_t *fp);
 
 	/**
@@ -165,11 +164,11 @@ struct public_key_t {
 	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
-	 * @param type		type of the encoding, one of KEY_PRIV_*
+	 * @param type		type of the encoding, one of PRIVKEY_*
 	 * @param encoding	encoding of the key, allocated
 	 * @return			TRUE if encoding supported
 	 */
-	bool (*get_encoding)(public_key_t *this, key_encoding_type_t type,
+	bool (*get_encoding)(public_key_t *this, cred_encoding_type_t type,
 						 chunk_t *encoding);
 
 	/**

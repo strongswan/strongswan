@@ -398,7 +398,7 @@ int main(int argc, char **argv)
 	transID           = chunk_empty;
 	fingerprint       = chunk_empty;
 	encoding          = chunk_empty;
-	pkcs10_encoding   = chunk_empty; 
+	pkcs10_encoding   = chunk_empty;
 	issuerAndSubject  = chunk_empty;
 	challengePassword = chunk_empty;
 	getCertInitial    = chunk_empty;
@@ -900,7 +900,7 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs1 object:")
 		)
-		if (!private_key->get_encoding(private_key, KEY_PRIV_ASN1_DER, &pkcs1) ||
+		if (!private_key->get_encoding(private_key, PRIVKEY_ASN1_DER, &pkcs1) ||
 			!chunk_write(pkcs1, path, "pkcs1", 0066, force))
 		{
 			exit_scepclient("could not write pkcs1 file '%s'", path);
@@ -964,7 +964,7 @@ int main(int argc, char **argv)
 	 */
 	{
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_enc);
-	
+
 		x509_ca_enc = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 										 BUILD_FROM_FILE, path, BUILD_END);
 		if (!x509_ca_enc)

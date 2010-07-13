@@ -90,11 +90,11 @@ struct private_key_t {
 	/**
 	 * Get the fingerprint of the key.
 	 *
-	 * @param type		type of fingerprint, one of KEY_ID_*
+	 * @param type		type of fingerprint, one of KEYID_*
 	 * @param fp		fingerprint, points to internal data
 	 * @return			TRUE if fingerprint type supported
 	 */
-	bool (*get_fingerprint)(private_key_t *this, key_encoding_type_t type,
+	bool (*get_fingerprint)(private_key_t *this, cred_encoding_type_t type,
 							chunk_t *fp);
 
 	/**
@@ -108,11 +108,11 @@ struct private_key_t {
 	/**
 	 * Get the key in an encoded form as a chunk.
 	 *
-	 * @param type		type of the encoding, one of KEY_PRIV_*
+	 * @param type		type of the encoding, one of PRIVKEY_*
 	 * @param encoding	encoding of the key, allocated
 	 * @return			TRUE if encoding supported
 	 */
-	bool (*get_encoding)(private_key_t *this, key_encoding_type_t type,
+	bool (*get_encoding)(private_key_t *this, cred_encoding_type_t type,
 						 chunk_t *encoding);
 
 	/**

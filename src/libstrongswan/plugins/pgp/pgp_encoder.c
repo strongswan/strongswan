@@ -25,8 +25,8 @@ static bool build_v3_fingerprint(chunk_t *encoding, va_list args)
 	hasher_t *hasher;
 	chunk_t n, e;
 
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+	if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+						   CRED_PART_RSA_PUB_EXP, &e, CRED_PART_END))
 	{
 		hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 		if (!hasher)
@@ -55,12 +55,12 @@ static bool build_v3_fingerprint(chunk_t *encoding, va_list args)
 /**
  * See header.
  */
-bool pgp_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
-						  va_list args)
+bool pgp_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
+						va_list args)
 {
 	switch (type)
 	{
-		case KEY_ID_PGPV3:
+		case KEYID_PGPV3:
 			return build_v3_fingerprint(encoding, args);
 		default:
 			return FALSE;

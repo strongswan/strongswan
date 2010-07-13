@@ -26,7 +26,7 @@
 /**
  * Encoding function for PKCS#1/ASN.1 fingerprints/key formats.
  */
-bool pkcs1_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pkcs1_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						  va_list args);
 
 #endif /** PKCS1_ENCODER_H_ @}*/

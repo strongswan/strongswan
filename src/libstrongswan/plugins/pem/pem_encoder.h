@@ -26,7 +26,7 @@
 /**
  * Encoding from ASN.1 to PEM format.
  */
-bool pem_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						va_list args);
 
 #endif /** PEM_ENCODER_H_ @}*/

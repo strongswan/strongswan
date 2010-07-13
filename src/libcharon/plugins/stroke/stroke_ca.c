@@ -401,11 +401,11 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 		/* list authkey and keyid */
 		if (public)
 		{
-			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+			if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 			{
 				fprintf(out, "  authkey:      %#B\n", &chunk);
 			}
-			if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &chunk))
 			{
 				fprintf(out, "  keyid:        %#B\n", &chunk);
 			}

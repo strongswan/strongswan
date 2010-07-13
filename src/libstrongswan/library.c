@@ -138,7 +138,7 @@ bool library_init(char *settings)
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
 	this->public.credmgr = credential_manager_create();
-	this->public.encoding = key_encoding_create();
+	this->public.encoding = cred_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();

@@ -213,7 +213,7 @@ METHOD(x509_t, get_subjectKeyIdentifier, chunk_t,
 	{
 		return this->subjectKeyIdentifier;
 	}
-	if (this->pubkey->get_fingerprint(this->pubkey, KEY_ID_PUBKEY_SHA1,
+	if (this->pubkey->get_fingerprint(this->pubkey, KEYID_PUBKEY_SHA1,
 									  &fingerprint))
 	{
 		return fingerprint;

@@ -308,7 +308,7 @@ static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
  * Implementation of private_key_t.get_encoding
  */
 static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	chunk_t cn, ce, cp, cq, cd, cu, cexp1 = chunk_empty, cexp2 = chunk_empty;
 	gcry_mpi_t p = NULL, q = NULL, d = NULL, exp1, exp2;
@@ -368,11 +368,11 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 	cu = gcrypt_rsa_find_token(this->key, "u", NULL);
 
 	success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
-							KEY_PART_RSA_MODULUS, cn,
-							KEY_PART_RSA_PUB_EXP, ce, KEY_PART_RSA_PRIV_EXP, cd,
-							KEY_PART_RSA_PRIME1, cp, KEY_PART_RSA_PRIME2, cq,
-							KEY_PART_RSA_EXP1, cexp1, KEY_PART_RSA_EXP2, cexp2,
-							KEY_PART_RSA_COEFF, cu, KEY_PART_END);
+						CRED_PART_RSA_MODULUS, cn,
+						CRED_PART_RSA_PUB_EXP, ce, CRED_PART_RSA_PRIV_EXP, cd,
+						CRED_PART_RSA_PRIME1, cp, CRED_PART_RSA_PRIME2, cq,
+						CRED_PART_RSA_EXP1, cexp1, CRED_PART_RSA_EXP2, cexp2,
+						CRED_PART_RSA_COEFF, cu, CRED_PART_END);
 	chunk_free(&cn);
 	chunk_free(&ce);
 	chunk_clear(&cd);
@@ -389,7 +389,7 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
  * Implementation of private_key_t.get_fingerprint
  */
 static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
-							key_encoding_type_t type, chunk_t *fp)
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e;
 	bool success;
@@ -402,8 +402,8 @@ static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
 	e = gcrypt_rsa_find_token(this->key, "e", NULL);
 
 	success = lib->encoding->encode(lib->encoding,
-								type, this, fp, KEY_PART_RSA_MODULUS, n,
-								KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+								type, this, fp, CRED_PART_RSA_MODULUS, n,
+								CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 	chunk_free(&n);
 	chunk_free(&e);
 	return success;
@@ -445,9 +445,9 @@ static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
 	this->public.interface.equals = private_key_equals;
 	this->public.interface.belongs_to = private_key_belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 

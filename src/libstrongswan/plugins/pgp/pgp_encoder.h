@@ -26,7 +26,7 @@
 /**
  * Encoding function for PGP fingerprints.
  */
-bool pgp_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pgp_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						va_list args);
 
 #endif /** PGP_ENCODER_H_ @}*/

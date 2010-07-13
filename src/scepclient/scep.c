@@ -281,7 +281,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	bool msb_set;
 	u_char *pos;
 
-	key->get_encoding(key, KEY_PUB_ASN1_DER, &keyEncoding);
+	key->get_encoding(key, PUBKEY_ASN1_DER, &keyEncoding);
 
 	keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),

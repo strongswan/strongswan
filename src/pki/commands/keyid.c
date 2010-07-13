@@ -99,11 +99,11 @@ static int keyid()
 	if (type == CRED_PRIVATE_KEY)
 	{
 		private = cred;
-		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &id))
+		if (private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &id))
 		{
 			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
-		if (private->get_fingerprint(private, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		if (private->get_fingerprint(private, KEYID_PUBKEY_INFO_SHA1, &id))
 		{
 			printf("subjectPublicKeyInfo hash: %#B\n", &id);
 		}
@@ -112,11 +112,11 @@ static int keyid()
 	else if (type == CRED_PUBLIC_KEY)
 	{
 		public = cred;
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &id))
 		{
 			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &id))
 		{
 			printf("subjectPublicKeyInfo hash: %#B\n", &id);
 		}
@@ -131,11 +131,11 @@ static int keyid()
 			fprintf(stderr, "extracting public key from certificate failed");
 			return 1;
 		}
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &id))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &id))
 		{
 			printf("subjectKeyIdentifier:      %#B\n", &id);
 		}
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &id))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &id))
 		{
 			printf("subjectPublicKeyInfo hash: %#B\n", &id);
 		}

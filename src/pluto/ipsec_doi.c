@@ -260,7 +260,7 @@ static linked_list_t* collect_rw_ca_candidates(struct msg_digest *md)
 				{
 					new_entry = FALSE;
 					break;
-				}					
+				}
 			}
 			enumerator->destroy(enumerator);
 
@@ -1568,7 +1568,7 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 
 	s->tried_cnt++;
 	scheme = oakley_to_signature_scheme(s->st->st_oakley.auth);
-	pub_key->get_fingerprint(pub_key, KEY_ID_PUBKEY_INFO_SHA1, &keyid);
+	pub_key->get_fingerprint(pub_key, KEYID_PUBKEY_INFO_SHA1, &keyid);
 
 	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
@@ -3542,7 +3542,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	struct state *const st = md->st;
 	pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
 	pb_stream id_pbs;   /* ID Payload; also used for hash calculation */
-	
+
 	connection_t *c = st->st_connection;
 	certpolicy_t cert_policy = c->spd.this.sendcert;
 	cert_t *mycert = c->spd.this.cert;
@@ -4900,7 +4900,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
 
-					/* inherit any virtual IP assigned by a Mode Config exchange */ 
+					/* inherit any virtual IP assigned by a Mode Config exchange */
 					if (p->spd.that.modecfg && c->spd.that.modecfg &&
 						subnetisaddr(his_net, (ip_address*)vip->get_sockaddr(vip)))
 					{

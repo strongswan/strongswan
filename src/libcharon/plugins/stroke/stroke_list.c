@@ -626,7 +626,7 @@ static void list_public_key(public_key_t *public, FILE *out)
 	identification_t *id;
 	auth_cfg_t *auth;
 
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
 		auth = auth_cfg_create();
@@ -640,11 +640,11 @@ static void list_public_key(public_key_t *public, FILE *out)
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * 8,
 			private ? ", has private key" : "");
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 	{
 		fprintf(out, "  keyid:     %#B\n", &keyid);
 	}
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
 	{
 		fprintf(out, "  subjkey:   %#B\n", &keyid);
 	}

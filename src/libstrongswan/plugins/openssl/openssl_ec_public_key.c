@@ -193,7 +193,7 @@ static size_t get_keysize(private_openssl_ec_public_key_t *this)
 /**
  * Calculate fingerprint from a EC_KEY, also used in ec private key.
  */
-bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
+bool openssl_ec_fingerprint(EC_KEY *ec, cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;
 	chunk_t key;
@@ -205,12 +205,12 @@ bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
 	}
 	switch (type)
 	{
-		case KEY_ID_PUBKEY_SHA1:
+		case KEYID_PUBKEY_SHA1:
 			key = chunk_alloc(i2o_ECPublicKey(ec, NULL));
 			p = key.ptr;
 			i2o_ECPublicKey(ec, &p);
 			break;
-		case KEY_ID_PUBKEY_INFO_SHA1:
+		case KEYID_PUBKEY_INFO_SHA1:
 			key = chunk_alloc(i2d_EC_PUBKEY(ec, NULL));
 			p = key.ptr;
 			i2d_EC_PUBKEY(ec, &p);
@@ -236,7 +236,7 @@ bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp)
  * Implementation of private_key_t.get_fingerprint.
  */
 static bool get_fingerprint(private_openssl_ec_public_key_t *this,
-							key_encoding_type_t type, chunk_t *fingerprint)
+							cred_encoding_type_t type, chunk_t *fingerprint)
 {
 	return openssl_ec_fingerprint(this->ec, type, fingerprint);
 }
@@ -245,14 +245,14 @@ static bool get_fingerprint(private_openssl_ec_public_key_t *this,
  * Implementation of private_key_t.get_encoding.
  */
 static bool get_encoding(private_openssl_ec_public_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
 
 	switch (type)
 	{
-		case KEY_PUB_SPKI_ASN1_DER:
-		case KEY_PUB_PEM:
+		case PUBKEY_SPKI_ASN1_DER:
+		case PUBKEY_PEM:
 		{
 			bool success = TRUE;
 
@@ -260,13 +260,13 @@ static bool get_encoding(private_openssl_ec_public_key_t *this,
 			p = encoding->ptr;
 			i2d_EC_PUBKEY(this->ec, &p);
 
-			if (type == KEY_PUB_PEM)
+			if (type == PUBKEY_PEM)
 			{
 				chunk_t asn1_encoding = *encoding;
 
-				success = lib->encoding->encode(lib->encoding, KEY_PUB_PEM,
-								NULL, encoding, KEY_PART_ECDSA_PUB_ASN1_DER,
-								asn1_encoding, KEY_PART_END);
+				success = lib->encoding->encode(lib->encoding, PUBKEY_PEM,
+								NULL, encoding, CRED_PART_ECDSA_PUB_ASN1_DER,
+								asn1_encoding, CRED_PART_END);
 				chunk_clear(&asn1_encoding);
 			}
 			return success;
@@ -313,9 +313,9 @@ static private_openssl_ec_public_key_t *create_empty()
 	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
 	this->public.interface.equals = public_key_equals;
-	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(public_key_t*, chunk_t fp))public_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(public_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
 

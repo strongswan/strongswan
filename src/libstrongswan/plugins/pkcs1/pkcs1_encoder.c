@@ -26,8 +26,8 @@ bool build_pub(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
 
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+	if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+						   CRED_PART_RSA_PUB_EXP, &e, CRED_PART_END))
 	{
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_wrap(ASN1_INTEGER, "c", n),
@@ -44,8 +44,8 @@ bool build_pub_info(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
 
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-						  KEY_PART_RSA_PUB_EXP, &e, KEY_PART_END))
+	if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+						   CRED_PART_RSA_PUB_EXP, &e, CRED_PART_END))
 	{
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
@@ -65,11 +65,11 @@ bool build_priv(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 
-	if (key_encoding_args(args, KEY_PART_RSA_MODULUS, &n,
-					KEY_PART_RSA_PUB_EXP, &e, KEY_PART_RSA_PRIV_EXP, &d,
-					KEY_PART_RSA_PRIME1, &p, KEY_PART_RSA_PRIME2, &q,
-					KEY_PART_RSA_EXP1, &exp1, KEY_PART_RSA_EXP2, &exp2,
-					KEY_PART_RSA_COEFF, &coeff, KEY_PART_END))
+	if (cred_encoding_args(args, CRED_PART_RSA_MODULUS, &n,
+					CRED_PART_RSA_PUB_EXP, &e, CRED_PART_RSA_PRIV_EXP, &d,
+					CRED_PART_RSA_PRIME1, &p, CRED_PART_RSA_PRIME2, &q,
+					CRED_PART_RSA_EXP1, &exp1, CRED_PART_RSA_EXP2, &exp2,
+					CRED_PART_RSA_COEFF, &coeff, CRED_PART_END))
 	{
 		*encoding = asn1_wrap(ASN1_SEQUENCE, "cmmssssss",
 						ASN1_INTEGER_0,
@@ -138,20 +138,20 @@ static bool build_sha1(chunk_t *encoding, va_list args)
 /**
  * See header.
  */
-bool pkcs1_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pkcs1_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						  va_list args)
 {
 	switch (type)
 	{
-		case KEY_ID_PUBKEY_INFO_SHA1:
+		case KEYID_PUBKEY_INFO_SHA1:
 			return build_info_sha1(encoding, args);
-		case KEY_ID_PUBKEY_SHA1:
+		case KEYID_PUBKEY_SHA1:
 			return build_sha1(encoding, args);
-		case KEY_PUB_ASN1_DER:
+		case PUBKEY_ASN1_DER:
 			return build_pub(encoding, args);
-		case KEY_PUB_SPKI_ASN1_DER:
+		case PUBKEY_SPKI_ASN1_DER:
 			return build_pub_info(encoding, args);
-		case KEY_PRIV_ASN1_DER:
+		case PRIVKEY_ASN1_DER:
 			return build_priv(encoding, args);
 		default:
 			return FALSE;

@@ -340,7 +340,7 @@ static public_key_t* get_public_key(private_agent_private_key_t *this)
  * Implementation of private_key_t.get_encoding
  */
 static bool get_encoding(private_agent_private_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	return FALSE;
 }
@@ -349,7 +349,7 @@ static bool get_encoding(private_agent_private_key_t *this,
  * Implementation of private_key_t.get_fingerprint
  */
 static bool get_fingerprint(private_agent_private_key_t *this,
-							key_encoding_type_t type, chunk_t *fp)
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e, key;
 
@@ -363,7 +363,7 @@ static bool get_fingerprint(private_agent_private_key_t *this,
 	n = read_string(&key);
 
 	return lib->encoding->encode(lib->encoding, type, this, fp,
-				KEY_PART_RSA_MODULUS, n, KEY_PART_RSA_PUB_EXP, e, KEY_PART_END);
+			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 }
 
 /**
@@ -429,9 +429,9 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
 	this->public.interface.belongs_to = private_key_belongs_to;
 	this->public.interface.equals = private_key_equals;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 

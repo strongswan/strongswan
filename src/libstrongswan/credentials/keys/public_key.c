@@ -47,7 +47,7 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ECDSA_521,
  */
 bool public_key_equals(public_key_t *this, public_key_t *other)
 {
-	key_encoding_type_t type;
+	cred_encoding_type_t type;
 	chunk_t a, b;
 
 	if (this == other)
@@ -55,7 +55,7 @@ bool public_key_equals(public_key_t *this, public_key_t *other)
 		return TRUE;
 	}
 
-	for (type = 0; type < KEY_ENCODING_MAX; type++)
+	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
 		if (this->get_fingerprint(this, type, &a) &&
 			other->get_fingerprint(other, type, &b))
@@ -71,10 +71,10 @@ bool public_key_equals(public_key_t *this, public_key_t *other)
  */
 bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint)
 {
-	key_encoding_type_t type;
+	cred_encoding_type_t type;
 	chunk_t current;
 
-	for (type = 0; type < KEY_ID_MAX; type++)
+	for (type = 0; type < KEYID_MAX; type++)
 	{
 		if (public->get_fingerprint(public, type, &current) &&
 			chunk_equals(current, fingerprint))

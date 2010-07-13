@@ -21,20 +21,20 @@
 /**
  * Convert a form string to a encoding type
  */
-bool get_form(char *form, key_encoding_type_t *type, bool pub)
+bool get_form(char *form, cred_encoding_type_t *type, bool pub)
 {
 	if (streq(form, "der"))
 	{
 		/* der encoded keys usually contain the complete SubjectPublicKeyInfo */
-		*type = pub ? KEY_PUB_SPKI_ASN1_DER : KEY_PRIV_ASN1_DER;
+		*type = pub ? PUBKEY_SPKI_ASN1_DER : PRIVKEY_ASN1_DER;
 	}
 	else if (streq(form, "pem"))
 	{
-		*type = pub ? KEY_PUB_PEM : KEY_PRIV_PEM;
+		*type = pub ? PUBKEY_PEM : PRIVKEY_PEM;
 	}
 	else if (streq(form, "pgp"))
 	{
-		*type = pub ? KEY_PUB_PGP : KEY_PRIV_PGP;
+		*type = pub ? PUBKEY_PGP : PRIVKEY_PGP;
 	}
 	else
 	{

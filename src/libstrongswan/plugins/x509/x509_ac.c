@@ -568,7 +568,7 @@ static chunk_t build_authorityKeyIdentifier(private_x509_ac_t *this)
 	public = this->signerCert->get_public_key(this->signerCert);
 	if (public)
 	{
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyIdentifier))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyIdentifier))
 		{
 			this->authKeyIdentifier = chunk_clone(keyIdentifier);
 		}
@@ -749,7 +749,7 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 	{
 		chunk_t fingerprint;
 
-		if (!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+		if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
 			return FALSE;

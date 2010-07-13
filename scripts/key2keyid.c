@@ -37,15 +37,15 @@ int main(int argc, char *argv[])
 		printf("parsed %d bits %N private key.\n",
 			   private->get_keysize(private)*8,
 			   key_type_names, private->get_type(private));
-		if (private->get_fingerprint(private, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+		if (private->get_fingerprint(private, KEYID_PUBKEY_INFO_SHA1, &chunk))
 		{
 			printf("subjectPublicKeyInfo keyid: %#B\n", &chunk);
 		}
-		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &chunk))
+		if (private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &chunk))
 		{
 			printf("subjectPublicKey keyid:     %#B\n", &chunk);
 		}
-		if (private->get_fingerprint(private, KEY_ID_PGPV3, &chunk))
+		if (private->get_fingerprint(private, KEYID_PGPV3, &chunk))
 		{
 			printf("PGP version 3 keyid:        %#B\n", &chunk);
 		}
@@ -67,15 +67,15 @@ int main(int argc, char *argv[])
 		printf("parsed %d bits %N public key.\n",
 			   public->get_keysize(public)*8,
 			   key_type_names, public->get_type(public));
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &chunk))
 		{
 			printf("subjectPublicKeyInfo keyid: %#B\n", &chunk);
 		}
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 		{
 			printf("subjectPublicKey keyid:     %#B\n", &chunk);
 		}
-		if (public->get_fingerprint(public, KEY_ID_PGPV3, &chunk))
+		if (public->get_fingerprint(public, KEYID_PGPV3, &chunk))
 		{
 			printf("PGP version 3 keyid:        %#B\n", &chunk);
 		}

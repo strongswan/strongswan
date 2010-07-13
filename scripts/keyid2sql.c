@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 								 BUILD_END);
 	if (private)
 	{
-		if (private->get_fingerprint(private, KEY_ID_PUBKEY_SHA1, &chunk))
+		if (private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &chunk))
 		{
 			printf("%d, X'", ID_KEY_ID);
 			for (n = 0; n < chunk.len; n++)
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	}
 	if (public)
 	{
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 		{
 			printf("%d, X'", ID_KEY_ID);
 			for (n = 0; n < chunk.len; n++)

@@ -227,7 +227,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	/* derive the authorityKeyIdentifier from the issuer's public key */
 	current = &issuer->interface;
 	public = current->get_public_key(current);
-	if (public && public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+	if (public && public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 	{
 		keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 	}
@@ -423,7 +423,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	/* derive the authorityKeyIdentifier from the issuer's public key */
 	current = &issuer->interface;
 	public = current->get_public_key(current);
-	if (public && public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+	if (public && public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &chunk))
 	{
 		keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 

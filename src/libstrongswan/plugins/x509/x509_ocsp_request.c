@@ -153,7 +153,7 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 		if (hasher)
 		{
-			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1,
+			if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1,
 										&issuerKeyHash))
 			{
 				enumerator_t *enumerator;

@@ -248,7 +248,7 @@ METHOD(certificate_t, issued_by, bool,
 	}
 	if (this->authKeyIdentifier.ptr && key)
 	{
-		if (!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+		if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
 			return FALSE;

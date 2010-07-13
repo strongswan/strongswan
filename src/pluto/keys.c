@@ -968,7 +968,7 @@ void free_preshared_secrets(void)
 		for (s = secrets; s != NULL; s = ns)
 		{
 			ns = s->next;
-			s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));		
+			s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));
 
 			switch (s->kind)
 			{
@@ -1238,7 +1238,7 @@ void add_public_key_from_cert(cert_t *cert , time_t until,
 
 		/* insert all subjectAltNames from X.509 certificates */
 		enumerator = x509->create_subjectAltName_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &id)) 
+		while (enumerator->enumerate(enumerator, &id))
 		{
 			if (id->get_type(id) != ID_ANY)
 			{
@@ -1327,7 +1327,7 @@ void list_public_keys(bool utc)
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
-		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 		{
 			whack_log(RC_COMMENT,"  keyid:     %#B", &keyid);
 		}

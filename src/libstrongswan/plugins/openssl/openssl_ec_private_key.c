@@ -51,7 +51,7 @@ struct private_openssl_ec_private_key_t {
 };
 
 /* from ec public key */
-bool openssl_ec_fingerprint(EC_KEY *ec, key_encoding_type_t type, chunk_t *fp);
+bool openssl_ec_fingerprint(EC_KEY *ec, cred_encoding_type_t type, chunk_t *fp);
 
 /**
  * Build a signature as in RFC 4754
@@ -221,7 +221,7 @@ static public_key_t* get_public_key(private_openssl_ec_private_key_t *this)
  * Implementation of private_key_t.get_fingerprint.
  */
 static bool get_fingerprint(private_openssl_ec_private_key_t *this,
-							key_encoding_type_t type, chunk_t *fingerprint)
+							cred_encoding_type_t type, chunk_t *fingerprint)
 {
 	return openssl_ec_fingerprint(this->ec, type, fingerprint);
 }
@@ -230,14 +230,14 @@ static bool get_fingerprint(private_openssl_ec_private_key_t *this,
  * Implementation of private_key_t.get_encoding.
  */
 static bool get_encoding(private_openssl_ec_private_key_t *this,
-						 key_encoding_type_t type, chunk_t *encoding)
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
 	u_char *p;
 
 	switch (type)
 	{
-		case KEY_PRIV_ASN1_DER:
-		case KEY_PRIV_PEM:
+		case PRIVKEY_ASN1_DER:
+		case PRIVKEY_PEM:
 		{
 			bool success = TRUE;
 
@@ -245,13 +245,13 @@ static bool get_encoding(private_openssl_ec_private_key_t *this,
 			p = encoding->ptr;
 			i2d_ECPrivateKey(this->ec, &p);
 
-			if (type == KEY_PRIV_PEM)
+			if (type == PRIVKEY_PEM)
 			{
 				chunk_t asn1_encoding = *encoding;
 
-				success = lib->encoding->encode(lib->encoding, KEY_PRIV_PEM,
-								NULL, encoding, KEY_PART_ECDSA_PRIV_ASN1_DER,
-								asn1_encoding, KEY_PART_END);
+				success = lib->encoding->encode(lib->encoding, PRIVKEY_PEM,
+								NULL, encoding, CRED_PART_ECDSA_PRIV_ASN1_DER,
+								asn1_encoding, CRED_PART_END);
 				chunk_clear(&asn1_encoding);
 			}
 			return success;
@@ -300,9 +300,9 @@ static private_openssl_ec_private_key_t *create_empty(void)
 	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
 	this->public.interface.equals = private_key_equals;
 	this->public.interface.belongs_to = private_key_belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *fp))get_fingerprint;
+	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
 	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, key_encoding_type_t type, chunk_t *encoding))get_encoding;
+	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
 	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
 
