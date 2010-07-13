@@ -314,6 +314,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_PKCS11
+  SUBDIRS += plugins/pkcs11
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs11/libstrongswan-pkcs11.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
