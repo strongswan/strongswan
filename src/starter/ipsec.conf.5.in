@@ -821,6 +821,25 @@ begin; acceptable values as for
 .BR 9m ).
 Relevant only locally, other end need not agree on it.
 .TP
+.B mark
+sets an XFRM mark of the form <value>[/<mask>] in the inbound and outbound
+IPsec SAs and policies (IKEv2 only). If the mask is missing then a default
+mask of
+.B 0xffffffff
+is assumed.
+.TP
+.B mark_in
+sets an XFRM mark of the form <value>[/<mask>] in the inbound IPsec SA and policy
+(IKEv2 only). If the mask is missing then a default mask of
+.B 0xffffffff
+is assumed.
+.TP
+.B mark_out
+sets an XFRM mark of the form <value>[/<mask>] in the outbound IPsec SA and policy
+(IKEv2 only). If the mask is missing then a default mask of
+.B 0xffffffff
+is assumed.
+.TP
 .B mobike
 enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
 .B yes
