@@ -241,6 +241,11 @@ then
     echo -n " --enable-farp" >> $INSTALLSHELL
 fi
 
+if [ "$USE_ADDRBLOCK" = "yes" ]
+then
+    echo -n " --enable-addrblock" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
