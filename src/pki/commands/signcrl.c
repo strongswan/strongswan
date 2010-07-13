@@ -102,6 +102,7 @@ static int read_serial(char *file, char *buf, int buflen)
  */
 static int sign_crl()
 {
+	cred_encoding_type_t form = CERT_ASN1_DER;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
 	certificate_t *ca = NULL, *crl = NULL;
@@ -224,6 +225,12 @@ static int sign_crl()
 					goto usage;
 				}
 				continue;
+			case 'f':
+				if (!get_form(arg, &form, CRED_CERTIFICATE))
+				{
+					return command_usage("invalid output format");
+				}
+				continue;
 			case EOF:
 				break;
 			default:
@@ -314,7 +321,7 @@ static int sign_crl()
 		error = "generating CRL failed";
 		goto error;
 	}
-	if (!crl->get_encoding(crl, CERT_ASN1_DER, &encoding))
+	if (!crl->get_encoding(crl, form, &encoding))
 	{
 		error = "encoding CRL failed";
 		goto error;
@@ -357,7 +364,7 @@ static void __attribute__ ((constructor))reg()
 		 "             superseded|cessation-of-operation|certificate-hold]",
 		 "   [--date timestamp]",
 		 "    --cert file | --serial hex ]*",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"cacert",	'c', 1, "CA certificate file"},
@@ -369,6 +376,7 @@ static void __attribute__ ((constructor))reg()
 			{"reason",	'r', 1, "reason for certificate revocation"},
 			{"date",	'd', 1, "revocation date as unix timestamp, default: now"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",	'f', 1, "encoding of generated crl, default: der"},
 		}
 	});
 }

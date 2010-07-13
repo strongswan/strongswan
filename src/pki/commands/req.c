@@ -27,6 +27,7 @@
  */
 static int req()
 {
+	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
 	hash_algorithm_t digest = HASH_SHA1;
 	certificate_t *cert = NULL;
@@ -81,6 +82,12 @@ static int req()
 			case 'p':
 				challenge_password = chunk_create(arg, strlen(arg));
 				continue;
+			case 'f':
+				if (!get_form(arg, &form, CRED_CERTIFICATE))
+				{
+					return command_usage("invalid output format");
+				}
+				continue;
 			case EOF:
 				break;
 			default:
@@ -128,7 +135,7 @@ static int req()
 		error = "generating certificate request failed";
 		goto end;
 	}
-	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+	if (!cert->get_encoding(cert, form, &encoding))
 	{
 		error = "encoding certificate request failed";
 		goto end;
@@ -169,7 +176,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--password challengePassword]",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
@@ -178,6 +185,7 @@ static void __attribute__ ((constructor))reg()
 			{"san",		'a', 1, "subjectAltName to include in cert request"},
 			{"password",'p', 1, "challengePassword to include in cert request"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",	'f', 1, "encoding of generated request, default: der"},
 		}
 	});
 }

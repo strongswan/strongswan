@@ -28,6 +28,7 @@
  */
 static int issue()
 {
+	cred_encoding_type_t form = CERT_ASN1_DER;
 	hash_algorithm_t digest = HASH_SHA1;
 	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
 	private_key_t *private = NULL;
@@ -107,7 +108,7 @@ static int issue()
 			case 'p':
 				pathlen = atoi(arg);
 				continue;
-			case 'f':
+			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
 					flags |= X509_SERVER_AUTH;
@@ -119,6 +120,12 @@ static int issue()
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
+				}
+				continue;
+			case 'f':
+				if (!get_form(arg, &form, CRED_CERTIFICATE))
+				{
+					return command_usage("invalid output format");
 				}
 				continue;
 			case 'u':
@@ -301,7 +308,7 @@ static int issue()
 		error = "generating certificate failed";
 		goto end;
 	}
-	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+	if (!cert->get_encoding(cert, form, &encoding))
 	{
 		error = "encoding certificate failed";
 		goto end;
@@ -351,7 +358,7 @@ static void __attribute__ ((constructor))reg()
 		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|ocspSigning]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "public key/request file to issue, default: stdin"},
@@ -364,10 +371,11 @@ static void __attribute__ ((constructor))reg()
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'f', 1, "include extendedKeyUsage flag"},
+			{"flag",	'e', 1, "include extendedKeyUsage flag"},
 			{"crl",		'u', 1, "CRL distribution point URI to include"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",	'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }

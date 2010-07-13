@@ -21,26 +21,59 @@
 /**
  * Convert a form string to a encoding type
  */
-bool get_form(char *form, cred_encoding_type_t *type, bool pub)
+bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type)
 {
 	if (streq(form, "der"))
 	{
-		/* der encoded keys usually contain the complete SubjectPublicKeyInfo */
-		*type = pub ? PUBKEY_SPKI_ASN1_DER : PRIVKEY_ASN1_DER;
+		switch (type)
+		{
+			case CRED_CERTIFICATE:
+				*enc = CERT_ASN1_DER;
+				return TRUE;
+			case CRED_PRIVATE_KEY:
+				*enc = PRIVKEY_ASN1_DER;
+				return TRUE;
+			case CRED_PUBLIC_KEY:
+				/* der encoded keys usually contain the complete
+				 * SubjectPublicKeyInfo */
+				*enc = PUBKEY_SPKI_ASN1_DER;
+				return TRUE;
+			default:
+				return FALSE;
+		}
 	}
 	else if (streq(form, "pem"))
 	{
-		*type = pub ? PUBKEY_PEM : PRIVKEY_PEM;
+		switch (type)
+		{
+			case CRED_CERTIFICATE:
+				*enc = CERT_PEM;
+				return TRUE;
+			case CRED_PRIVATE_KEY:
+				*enc = PRIVKEY_PEM;
+				return TRUE;
+			case CRED_PUBLIC_KEY:
+				*enc = PUBKEY_PEM;
+				return TRUE;
+			default:
+				return FALSE;
+		}
 	}
 	else if (streq(form, "pgp"))
 	{
-		*type = pub ? PUBKEY_PGP : PRIVKEY_PGP;
+		switch (type)
+		{
+			case CRED_PRIVATE_KEY:
+				*enc = PRIVKEY_PGP;
+				return TRUE;
+			case CRED_PUBLIC_KEY:
+				*enc = PUBKEY_PGP;
+				return TRUE;
+			default:
+				return FALSE;
+		}
 	}
-	else
-	{
-		return FALSE;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 /**

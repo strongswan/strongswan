@@ -67,7 +67,7 @@ static int pub()
 				}
 				continue;
 			case 'f':
-				if (!get_form(arg, &form, TRUE))
+				if (!get_form(arg, &form, CRED_PUBLIC_KEY))
 				{
 					return command_usage("invalid output format");
 				}

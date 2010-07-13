@@ -29,7 +29,7 @@
 /**
  * Convert a form string to a encoding type
  */
-bool get_form(char *form, cred_encoding_type_t *type, bool pub);
+bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type);
 
 /**
  * Convert a digest string to a hash algorithm

@@ -48,7 +48,7 @@ static int gen()
 				}
 				continue;
 			case 'f':
-				if (!get_form(arg, &form, FALSE))
+				if (!get_form(arg, &form, CRED_PRIVATE_KEY))
 				{
 					return command_usage("invalid key output format");
 				}
