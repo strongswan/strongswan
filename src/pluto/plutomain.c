@@ -79,6 +79,11 @@
 #include "whack_attribute.h"
 #include "pluto.h"
 
+/**
+ * Number of threads in the thread pool, if not specified in config.
+ */
+#define DEFAULT_THREADS 4
+
 static void usage(const char *mess)
 {
 	if (mess != NULL && *mess != '\0')
@@ -764,6 +769,10 @@ int main(int argc, char **argv)
 	/* loading attribute certificates (experimental) */
 	ac_load_certs();
 
+	lib->processor->set_threads(lib->processor,
+			lib->settings->get_int(lib->settings, "pluto.threads",
+								   DEFAULT_THREADS));
+
 	daily_log_event();
 	call_server();
 	return -1;  /* Shouldn't ever reach this */
@@ -779,6 +788,7 @@ int main(int argc, char **argv)
  */
 void exit_pluto(int status)
 {
+	lib->processor->set_threads(lib->processor, 0);
 	reset_globals();    /* needed because we may be called in odd state */
 	free_preshared_secrets();
 	free_remembered_public_keys();
