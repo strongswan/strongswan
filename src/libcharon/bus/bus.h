@@ -22,6 +22,7 @@
 #define BUS_H_
 
 typedef enum alert_t alert_t;
+typedef enum narrow_hook_t narrow_hook_t;
 typedef struct bus_t bus_t;
 
 #include <stdarg.h>
@@ -83,6 +84,31 @@ enum alert_t {
 	ALERT_RADIUS_NOT_RESPONDING,
 	/* a shutdown signal has been received, argument is a int with the signal */
 	ALERT_SHUTDOWN_SIGNAL,
+};
+
+/**
+ * Kind of narrow hook.
+ *
+ * There is a non-authenticated (IKE_AUTH) and a authenticated
+ * (CREATE_CHILD_SA) narrowing hook for the initiator. Only one of these
+ * hooks is invoked before the exchange.
+ * To verify the traffic selectors negotiated, each PRE hook has a POST
+ * counterpart that follows. POST hooks are invoked with an authenticated peer.
+ * It is usually not a good idea to narrow in the POST hooks,
+ * as the resulting traffic selector is not negotiated and results
+ * in non-matching policies.
+ */
+enum narrow_hook_t {
+	/** invoked as initiator before exchange, peer is not yet authenticated */
+	NARROW_INITIATOR_PRE_NOAUTH,
+	/** invoked as initiator before exchange, peer is authenticated */
+	NARROW_INITIATOR_PRE_AUTH,
+	/** invoked as responder during exchange, peer is authenticated */
+	NARROW_RESPONDER,
+	/** invoked as initiator after exchange, follows a INITIATOR_PRE_NOAUTH */
+	NARROW_INITIATOR_POST_NOAUTH,
+	/** invoked as initiator after exchange, follows a INITIATOR_PRE_AUTH */
+	NARROW_INITIATOR_POST_AUTH,
 };
 
 /**
@@ -215,6 +241,17 @@ struct bus_t {
 	 * @return			TRUE to establish IKE_SA, FALSE to send AUTH_FAILED
 	 */
 	bool (*authorize)(bus_t *this, bool final);
+
+	/**
+	 * CHILD_SA traffic selector narrowing hook.
+	 *
+	 * @param child_sa	CHILD_SA set up with these traffic selectors
+	 * @param type		type of hook getting invoked
+	 * @param local		list of local traffic selectors to narrow
+	 * @param remote	list of remote traffic selectors to narrow
+	 */
+	void (*narrow)(bus_t *this, child_sa_t *child_sa, narrow_hook_t type,
+				   linked_list_t *local, linked_list_t *remote);
 
 	/**
 	 * IKE_SA keymat hook.

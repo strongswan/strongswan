@@ -640,6 +640,38 @@ METHOD(bus_t, authorize, bool,
 	return success;
 }
 
+METHOD(bus_t, narrow, void,
+	private_bus_t *this, child_sa_t *child_sa, narrow_hook_t type,
+	linked_list_t *local, linked_list_t *remote)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+
+	ike_sa = this->thread_sa->get(this->thread_sa);
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->narrow)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->narrow(entry->listener, ike_sa, child_sa,
+									   type, local, remote);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, destroy, void,
 	private_bus_t *this)
 {
@@ -676,6 +708,7 @@ bus_t *bus_create()
 			.child_updown = _child_updown,
 			.child_rekey = _child_rekey,
 			.authorize = _authorize,
+			.narrow = _narrow,
 			.destroy = _destroy,
 		},
 		.listeners = linked_list_create(),

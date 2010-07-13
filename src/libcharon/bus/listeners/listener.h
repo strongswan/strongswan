@@ -173,6 +173,21 @@ struct listener_t {
 	 */
 	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa,
 					  bool final, bool *success);
+
+	/**
+	 * CHILD_SA traffic selector narrowing hook.
+	 *
+	 * This hook is invoked for each CHILD_SA and allows plugins to modify
+	 * the traffic selector list negotiated for this CHILD_SA.
+	 *
+	 * @param ike_sa	IKE_SA the created CHILD_SA is created in
+	 * @param child_sa	CHILD_SA set up with these traffic selectors
+	 * @param type		type of hook getting invoked
+	 * @param local		list of local traffic selectors to narrow
+	 * @param remote	list of remote traffic selectors to narrow
+	 */
+	bool (*narrow)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+				narrow_hook_t type, linked_list_t *local, linked_list_t *remote);
 };
 
 #endif /** LISTENER_H_ @}*/
