@@ -7,6 +7,13 @@ strongswan-4.4.1
 
 - The openssl plugin now supports X.509 certificate and CRL functions.
 
+- OCSP/CRL checking in IKEv2 has been moved to the revocation plugin, enabled
+  by default. Update manual load directives in strongswan.conf.
+
+- RFC3779 ipAddrBlock constraint checking has been moved to the addrblock
+  plugin, disabled by default. Enable it and update manual load directives
+  in strongswan.conf, if required.
+
 - The major refactoring of the IKEv1 Mode Config functionality now allows
   the transport and handling of any Mode Config attribute.
 
