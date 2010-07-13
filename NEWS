@@ -14,6 +14,11 @@ strongswan-4.4.1
   plugin, disabled by default. Enable it and update manual load directives
   in strongswan.conf, if required.
 
+- The pki utility supports CRL generation using the --signcrl command.
+
+- The ipsec pki --self, --issue and --req commands now support output in
+  PEM format using the --outform pem option.
+
 - The major refactoring of the IKEv1 Mode Config functionality now allows
   the transport and handling of any Mode Config attribute.
 
