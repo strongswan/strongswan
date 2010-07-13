@@ -15,7 +15,7 @@
 
 /**
  * @defgroup cert_validator cert_validator
- * @{ @ingroup ccredentials
+ * @{ @ingroup credentials
  */
 
 #ifndef CERT_VALIDATOR_H_
