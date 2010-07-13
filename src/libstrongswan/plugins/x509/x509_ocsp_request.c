@@ -250,7 +250,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 {
 	int oid;
 	signature_scheme_t scheme;
-	chunk_t certs, signature;
+	chunk_t certs, signature, encoding;
 
 	switch (this->key->get_type(this->key))
 	{
@@ -274,11 +274,11 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 		DBG1(DBG_LIB, "creating OCSP signature failed, skipped");
 		return chunk_empty;
 	}
-	if (this->cert)
+	if (this->cert &&
+		this->cert->get_encoding(this->cert, CERT_ASN1_DER, &encoding))
 	{
 		certs = asn1_wrap(ASN1_CONTEXT_C_0, "m",
-					asn1_wrap(ASN1_SEQUENCE, "m",
-						this->cert->get_encoding(this->cert)));
+					asn1_wrap(ASN1_SEQUENCE, "m", encoding));
 	}
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m",
 				asn1_wrap(ASN1_SEQUENCE, "cmm",
@@ -413,9 +413,16 @@ static bool get_validity(private_x509_ocsp_request_t *this, time_t *when,
 /**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_x509_ocsp_request_t *this)
+static bool get_encoding(private_x509_ocsp_request_t *this,
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
-	return chunk_clone(this->encoding);
+	if (type == CERT_ASN1_DER)
+	{
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
+	}
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+				CRED_PART_X509_OCSP_REQ_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
 /**
@@ -438,7 +445,10 @@ static bool equals(private_x509_ocsp_request_t *this, certificate_t *other)
 	{	/* skip allocation if we have the same implementation */
 		return chunk_equals(this->encoding, ((private_x509_ocsp_request_t*)other)->encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;
@@ -486,7 +496,7 @@ static private_x509_ocsp_request_t *create_empty()
 	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.interface.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.interface.get_encoding = (chunk_t(*)(certificate_t*))get_encoding;
+	this->public.interface.interface.get_encoding = (bool(*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.interface.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;

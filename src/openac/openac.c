@@ -501,11 +501,13 @@ int main(int argc, char **argv)
 		}
 
 		/* write the attribute certificate to file */
-		attr_chunk = attr_cert->get_encoding(attr_cert);
-		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
+		if (attr_cert->get_encoding(attr_cert, CERT_ASN1_DER, &attr_chunk))
 		{
-			write_serial(serial);
-			status = 0;
+			if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
+			{
+				write_serial(serial);
+				status = 0;
+			}
 		}
 	}
 	else

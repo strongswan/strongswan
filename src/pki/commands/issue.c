@@ -301,8 +301,7 @@ static int issue()
 		error = "generating certificate failed";
 		goto end;
 	}
-	encoding = cert->get_encoding(cert);
-	if (!encoding.ptr)
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 	{
 		error = "encoding certificate failed";
 		goto end;

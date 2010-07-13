@@ -587,9 +587,11 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
 			free(hex.ptr);
 
-			chunk = cert->get_encoding(cert);
-			chunk_write(chunk, buf, "crl", 022, TRUE);
-			free(chunk.ptr);
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
+			{
+				chunk_write(chunk, buf, "crl", 022, TRUE);
+				free(chunk.ptr);
+			}
 		}
 	}
 }

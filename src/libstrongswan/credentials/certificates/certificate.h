@@ -28,6 +28,7 @@ typedef enum cert_validation_t cert_validation_t;
 #include <library.h>
 #include <utils/identification.h>
 #include <credentials/keys/public_key.h>
+#include <credentials/cred_encoding.h>
 
 /**
  * Kind of a certificate_t
@@ -163,11 +164,14 @@ struct certificate_t {
 						 time_t *not_before, time_t *not_after);
 
 	/**
-	 * Get the certificate in an encoded form.
+	 * Get the certificate in an encoded form as a chunk.
 	 *
-	 * @return				allocated chunk of encoded cert
+	 * @param type		type of the encoding, one of CERT_*
+	 * @param encoding	encoding of the key, allocated
+	 * @return			TRUE if encoding supported
 	 */
-	chunk_t (*get_encoding)(certificate_t *this);
+	bool (*get_encoding)(certificate_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding);
 
 	/**
 	 * Check if two certificates are equal.

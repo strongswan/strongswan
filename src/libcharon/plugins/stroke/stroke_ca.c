@@ -357,12 +357,16 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 	{
 		if (section->certuribase && cert->issued_by(cert, section->cert))
 		{
-			chunk_t hash, encoded = cert->get_encoding(cert);
-			hasher->allocate_hash(hasher, encoded, &hash);
-			section->hashes->insert_last(section->hashes,
-					identification_create_from_encoding(ID_KEY_ID, hash));
-			chunk_free(&hash);
-			chunk_free(&encoded);
+			chunk_t hash, encoded;
+
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
+			{
+				hasher->allocate_hash(hasher, encoded, &hash);
+				section->hashes->insert_last(section->hashes,
+						identification_create_from_encoding(ID_KEY_ID, hash));
+				chunk_free(&hash);
+				chunk_free(&encoded);
+			}
 			break;
 		}
 	}

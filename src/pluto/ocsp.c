@@ -621,7 +621,7 @@ void list_ocsp_locations(ocsp_location_t *location, bool requests,
 				}
 				else
 				{
-					whack_log(RC_COMMENT, "  serial:    %#B, %s, until %T %s", 
+					whack_log(RC_COMMENT, "  serial:    %#B, %s, until %T %s",
 						&certinfo->serialNumber,
 						cert_status_names[certinfo->status],
  						&certinfo->nextUpdate, utc,
@@ -767,7 +767,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
  */
 static chunk_t build_signature(chunk_t tbsRequest)
 {
-	chunk_t sigdata, cert, certs;
+	chunk_t sigdata, cert, certs = chunk_empty;
 
 	if (ocsp_requestor_sc)
 	{
@@ -786,10 +786,12 @@ static chunk_t build_signature(chunk_t tbsRequest)
 	}
 
 	/* include our certificate */
-	cert = ocsp_requestor_cert->cert->get_encoding(ocsp_requestor_cert->cert);
-	certs = asn1_wrap(ASN1_CONTEXT_C_0, "m",
-				asn1_wrap(ASN1_SEQUENCE, "m", cert));
-
+	if (ocsp_requestor_cert->cert->get_encoding(ocsp_requestor_cert->cert,
+												CERT_ASN1_DER, &cert))
+	{
+		certs = asn1_wrap(ASN1_CONTEXT_C_0, "m",
+					asn1_wrap(ASN1_SEQUENCE, "m", cert));
+	}
 	/* build signature comprising algorithm, signature and cert */
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m"
 				, asn1_wrap(ASN1_SEQUENCE, "mmm"
@@ -1013,7 +1015,7 @@ static bool valid_ocsp_response(response_t *res)
 		{
 			plog("certificate is invalid (valid from %T to %T)",
 				 &not_before, FALSE, &not_after, FALSE);
-			
+
 			unlock_authcert_list("valid_ocsp_response");
 			return FALSE;
 		}
@@ -1154,7 +1156,7 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 					break;
 				}
 				x509 = (x509_t*)cert->cert;
-				
+
 				if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&
 					trust_authcert_candidate(cert, NULL))
 				{

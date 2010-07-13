@@ -393,11 +393,18 @@ METHOD(certificate_t, get_validity, bool,
 	return (t >= this->notBefore && t <= this->notAfter);
 }
 
-METHOD(certificate_t, get_encoding, chunk_t,
-	private_openssl_x509_t *this)
+METHOD(certificate_t, get_encoding, bool,
+	private_openssl_x509_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
-	return chunk_clone(this->encoding);
+	if (type == CERT_ASN1_DER)
+	{
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
+	}
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+						CRED_PART_X509_ASN1_DER, this->encoding, CRED_PART_END);
 }
+
 
 METHOD(certificate_t, equals, bool,
 	private_openssl_x509_t *this, certificate_t *other)
@@ -418,7 +425,10 @@ METHOD(certificate_t, equals, bool,
 		encoding = ((private_openssl_x509_t*)other)->encoding;
 		return chunk_equals(this->encoding, encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;

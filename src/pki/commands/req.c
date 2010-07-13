@@ -128,8 +128,7 @@ static int req()
 		error = "generating certificate request failed";
 		goto end;
 	}
-	encoding = cert->get_encoding(cert);
-	if (!encoding.ptr)
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 	{
 		error = "encoding certificate request failed";
 		goto end;

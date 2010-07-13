@@ -591,7 +591,7 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 	contentInfo_t pkcs7Data, signedData;
 	chunk_t authenticatedAttributes = chunk_empty;
 	chunk_t encryptedDigest = chunk_empty;
-	chunk_t signerInfo, cInfo, signature;
+	chunk_t signerInfo, cInfo, signature, encoding = chunk_empty;;
 	signature_scheme_t scheme = signature_scheme_from_oid(digest_alg);
 
 	if (attributes.ptr)
@@ -622,12 +622,13 @@ chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
 	pkcs7Data.content = (data.ptr == NULL)? chunk_empty
 				: asn1_simple_object(ASN1_OCTET_STRING, data);
 
+	cert->get_encoding(cert, CERT_ASN1_DER, &encoding);
 	signedData.type = OID_PKCS7_SIGNED_DATA;
 	signedData.content = asn1_wrap(ASN1_SEQUENCE, "cmmmm"
 				, ASN1_INTEGER_1
 				, asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_alg))
 				, pkcs7_build_contentInfo(&pkcs7Data)
-				, asn1_wrap(ASN1_CONTEXT_C_0, "m", cert->get_encoding(cert))
+				, asn1_wrap(ASN1_CONTEXT_C_0, "m", encoding)
 				, asn1_wrap(ASN1_SET, "m", signerInfo));
 
 	cInfo = pkcs7_build_contentInfo(&signedData);

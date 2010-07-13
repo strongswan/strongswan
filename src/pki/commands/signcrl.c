@@ -314,8 +314,7 @@ static int sign_crl()
 		error = "generating CRL failed";
 		goto error;
 	}
-	encoding = crl->get_encoding(crl);
-	if (!encoding.ptr)
+	if (!crl->get_encoding(crl, CERT_ASN1_DER, &encoding))
 	{
 		error = "encoding CRL failed";
 		goto error;

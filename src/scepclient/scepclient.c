@@ -866,7 +866,7 @@ int main(int argc, char **argv)
 		{
 			exit_scepclient("generating pkcs10 request failed");
 		}
-		pkcs10_encoding = pkcs10_req->get_encoding(pkcs10_req);
+		pkcs10_req->get_encoding(pkcs10_req, CERT_ASN1_DER, &pkcs10_encoding);
 		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10_encoding);
 		plog("  fingerprint:    %s", fingerprint.ptr);
 	}
@@ -941,8 +941,7 @@ int main(int argc, char **argv)
 	{
 		char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
 
-		encoding = x509_signer->get_encoding(x509_signer);
-		if (!encoding.ptr)
+		if (!x509_signer->get_encoding(x509_signer, CERT_ASN1_DER, &encoding))
 		{
 			exit_scepclient("encoding certificate failed");
 		}
@@ -1138,8 +1137,8 @@ int main(int argc, char **argv)
 				{
 					exit_scepclient("multiple certs received, only first stored");
 				}
-				encoding = cert->get_encoding(cert);
-				if (!chunk_write(encoding, path, "requested cert", 0022, force))
+				if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding) ||
+					!chunk_write(encoding, path, "requested cert", 0022, force))
 				{
 					exit_scepclient("could not write cert file '%s'", path);
 				}

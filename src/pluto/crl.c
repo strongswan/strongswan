@@ -202,9 +202,11 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex);
 		free(hex.ptr);
 
-		encoding = cert_crl->get_encoding(cert_crl);
-		chunk_write(encoding, buf, "crl", 022, TRUE);
-		free(encoding.ptr);
+		if (cert_crl->get_encoding(cert_crl, CERT_ASN1_DER, &encoding))
+		{
+			chunk_write(encoding, buf, "crl", 022, TRUE);
+			free(encoding.ptr);
+		}
 	}
 
 	/* is the fetched crl valid? */

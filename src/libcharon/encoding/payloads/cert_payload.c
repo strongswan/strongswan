@@ -320,7 +320,12 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
 			free(this);
 			return NULL;
 	}
-	this->data = cert->get_encoding(cert);
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &this->data))
+	{
+		DBG1(DBG_ENC, "encoding certificate for cert payload failed");
+		free(this);
+		return NULL;
+	}
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
 	return &this->public;
 }

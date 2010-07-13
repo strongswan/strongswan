@@ -72,7 +72,12 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 		return cert_payload_create_from_cert(cert);
 	}
 
-	encoded = cert->get_encoding(cert);
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
+	{
+		DBG1(DBG_IKE, "encoding certificate for cert payload failed");
+		hasher->destroy(hasher);
+		return NULL;
+	}
 	hasher->allocate_hash(hasher, encoded, &hash);
 	chunk_free(&encoded);
 	hasher->destroy(hasher);

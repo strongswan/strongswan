@@ -58,7 +58,12 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 		return NULL;
 	}
 
-	send = request->get_encoding(request);
+	if (!request->get_encoding(request, CERT_ASN1_DER, &send))
+	{
+		DBG1(DBG_CFG, "encoding ocsp request failed");
+		request->destroy(request);
+		return NULL;
+	}
 	request->destroy(request);
 
 	DBG1(DBG_CFG, "  requesting ocsp status from '%s' ...", url);

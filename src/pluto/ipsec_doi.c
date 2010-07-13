@@ -3645,7 +3645,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	}
 	if (send_cert)
 	{
-		bool success;
+		bool success = FALSE;
 		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 
@@ -3657,9 +3657,12 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = mycert->cert->get_encoding(mycert->cert);
-		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
-		free(cert_encoding.ptr);
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
 		if (!success)
 		{
 			return STF_INTERNAL_ERROR;
@@ -4086,7 +4089,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	}
 	if (send_cert)
 	{
-		bool success;
+		bool success = FALSE;
 		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 		struct isakmp_cert cert_hd;
@@ -4098,9 +4101,12 @@ main_inI3_outR3_tail(struct msg_digest *md
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = mycert->cert->get_encoding(mycert->cert);
-		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
-		free(cert_encoding.ptr);
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
 		if (!success)
 		{
 			return STF_INTERNAL_ERROR;

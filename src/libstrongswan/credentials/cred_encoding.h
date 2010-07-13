@@ -86,6 +86,13 @@ enum cred_encoding_type_t {
 	PUBKEY_PGP,
 	PRIVKEY_PGP,
 
+	/** ASN.1 DER encoded certificate */
+	CERT_ASN1_DER,
+	/** PEM encoded certificate */
+	CERT_PEM,
+	/** PGP Packet encoded certificate */
+	CERT_PGP_PKT,
+
 	CRED_ENCODING_MAX,
 };
 
@@ -117,6 +124,20 @@ enum cred_encoding_part_t {
 	CRED_PART_ECDSA_PUB_ASN1_DER,
 	/** a DER encoded ECDSA private key */
 	CRED_PART_ECDSA_PRIV_ASN1_DER,
+	/** a DER encoded X509 certificate */
+	CRED_PART_X509_ASN1_DER,
+	/** a DER encoded X509 CRL */
+	CRED_PART_X509_CRL_ASN1_DER,
+	/** a DER encoded X509 OCSP request */
+	CRED_PART_X509_OCSP_REQ_ASN1_DER,
+	/** a DER encoded X509 OCSP response */
+	CRED_PART_X509_OCSP_RES_ASN1_DER,
+	/** a DER encoded X509 attribute certificate */
+	CRED_PART_X509_AC_ASN1_DER,
+	/** a DER encoded PKCS10 certificate request */
+	CRED_PART_PKCS10_ASN1_DER,
+	/** a PGP encoded certificate */
+	CRED_PART_PGP_CERT,
 
 	CRED_PART_END,
 };
