@@ -12,6 +12,7 @@ endif
 
 libstrongswan_addrblock_la_SOURCES = \
 	addrblock_plugin.h addrblock_plugin.c \
+	addrblock_narrow.h addrblock_narrow.c \
 	addrblock_validator.h addrblock_validator.c
 
 libstrongswan_addrblock_la_LDFLAGS = -module -avoid-version

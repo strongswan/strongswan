@@ -15,8 +15,10 @@
 
 #include "addrblock_plugin.h"
 
-#include <library.h>
+#include <daemon.h>
+
 #include "addrblock_validator.h"
+#include "addrblock_narrow.h"
 
 typedef struct private_addrblock_plugin_t private_addrblock_plugin_t;
 
@@ -34,12 +36,19 @@ struct private_addrblock_plugin_t {
 	 * Validator implementation instance.
 	 */
 	addrblock_validator_t *validator;
+
+	/**
+	 * Listener to check TS list
+	 */
+	addrblock_narrow_t *narrower;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_addrblock_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->narrower->listener);
 	lib->credmgr->remove_validator(lib->credmgr, &this->validator->validator);
+	this->narrower->destroy(this->narrower);
 	this->validator->destroy(this->validator);
 	free(this);
 }
@@ -54,8 +63,10 @@ plugin_t *addrblock_plugin_create()
 	INIT(this,
 		.public.plugin.destroy = _destroy,
 		.validator = addrblock_validator_create(),
+		.narrower = addrblock_narrow_create(),
 	);
 	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
+	charon->bus->add_listener(charon->bus, &this->narrower->listener);
 
 	return &this->public.plugin;
 }
