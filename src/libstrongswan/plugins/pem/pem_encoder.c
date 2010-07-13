@@ -87,6 +87,25 @@ bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 				break;
 			}
 			return FALSE;
+		case CERT_PEM:
+			if (cred_encoding_args(args, CRED_PART_X509_ASN1_DER,
+								   &asn1, CRED_PART_END))
+			{	/* PEM encode x509 certificate */
+				label = "CERTIFICATE";
+				break;
+			}
+			if (cred_encoding_args(args, CRED_PART_X509_CRL_ASN1_DER,
+								   &asn1, CRED_PART_END))
+			{	/* PEM encode CRL */
+				label = "X509 CRL";
+				break;
+			}
+			if (cred_encoding_args(args, CRED_PART_PKCS10_ASN1_DER,
+								   &asn1, CRED_PART_END))
+			{	/* PEM encode PKCS10 certificate reqeuest */
+				label = "CERTIFICATE REQUEST";
+				break;
+			}
 		default:
 			return FALSE;
 	}
