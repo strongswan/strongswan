@@ -21,7 +21,7 @@
 #ifndef PGP_ENCODER_H_
 #define PGP_ENCODER_H_
 
-#include <credentials/keys/key_encoding.h>
+#include <credentials/cred_encoding.h>
 
 /**
  * Encoding function for PGP fingerprints.

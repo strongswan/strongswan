@@ -21,7 +21,7 @@
 #ifndef PEM_ENCODER_H_
 #define PEM_ENCODER_H_
 
-#include <credentials/keys/key_encoding.h>
+#include <credentials/cred_encoding.h>
 
 /**
  * Encoding from ASN.1 to PEM format.

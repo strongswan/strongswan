@@ -69,7 +69,7 @@
 #include "database/database_factory.h"
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
-#include "credentials/keys/key_encoding.h"
+#include "credentials/cred_encoding.h"
 
 typedef struct library_t library_t;
 

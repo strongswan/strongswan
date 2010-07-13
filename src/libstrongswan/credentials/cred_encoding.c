@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "key_encoding.h"
+#include "cred_encoding.h"
 
 #include <stdint.h>
 
