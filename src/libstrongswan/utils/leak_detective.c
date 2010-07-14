@@ -181,6 +181,8 @@ char *whitelist[] = {
 	"register_printf_specifier",
 	"syslog",
 	"vsyslog",
+	"__syslog_chk",
+	"__vsyslog_chk",
 	"getaddrinfo",
 	"setlocale",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
