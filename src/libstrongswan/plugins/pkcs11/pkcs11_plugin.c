@@ -16,6 +16,10 @@
 #include "pkcs11_plugin.h"
 
 #include <library.h>
+#include <debug.h>
+#include <utils/linked_list.h>
+
+#include "pkcs11_library.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -28,11 +32,17 @@ struct private_pkcs11_plugin_t {
 	 * public functions
 	 */
 	pkcs11_plugin_t public;
+
+	/**
+	 * List of loaded libraries
+	 */
+	linked_list_t *libs;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
+	this->libs->destroy_offset(this->libs, offsetof(pkcs11_library_t, destroy));
 	free(this);
 }
 
@@ -42,10 +52,33 @@ METHOD(plugin_t, destroy, void,
 plugin_t *pkcs11_plugin_create()
 {
 	private_pkcs11_plugin_t *this;
+	enumerator_t *enumerator;
+	char *module, *path;
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
+		.libs = linked_list_create(),
 	);
 
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+										"libstrongswan.plugins.pkcs11.modules");
+	while (enumerator->enumerate(enumerator, &module))
+	{
+		pkcs11_library_t *p11lib;
+
+		path = lib->settings->get_str(lib->settings,
+				"libstrongswan.plugins.pkcs11.modules.%s.path", NULL, module);
+		if (!path)
+		{
+			DBG1(DBG_CFG, "PKCS11 module '%s' misses library path", module);
+			continue;
+		}
+		p11lib = pkcs11_library_create(module, path);
+		if (p11lib)
+		{
+			this->libs->insert_last(this->libs, p11lib);
+		}
+	}
+	enumerator->destroy(enumerator);
 	return &this->public.plugin;
 }
