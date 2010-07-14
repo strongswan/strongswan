@@ -25,6 +25,8 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 
 #include "pkcs11.h"
 
+#include <enum.h>
+
 /**
  * A loaded and initialized PKCS#11 library.
  */
@@ -40,6 +42,11 @@ struct pkcs11_library_t {
 	 */
 	void (*destroy)(pkcs11_library_t *this);
 };
+
+/**
+ * Enum names for CK_RV return values
+ */
+extern enum_name_t *ck_rv_names;
 
 /**
  * Create a pkcs11_library instance.
