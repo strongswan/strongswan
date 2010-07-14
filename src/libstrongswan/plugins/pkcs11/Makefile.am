@@ -10,6 +10,7 @@ plugin_LTLIBRARIES = libstrongswan-pkcs11.la
 endif
 
 libstrongswan_pkcs11_la_SOURCES = \
-	pkcs11_plugin.h pkcs11_plugin.c pkcs11.h
+	pkcs11_plugin.h pkcs11_plugin.c pkcs11.h \
+	pkcs11_library.h pkcs11_library.c
 
 libstrongswan_pkcs11_la_LDFLAGS = -module -avoid-version
