@@ -215,6 +215,8 @@ char *whitelist[] = {
 	"gcry_check_version",
 	"gcry_randomize",
 	"gcry_create_nonce",
+	/* NSPR */
+	"PR_CallOnce",
 };
 
 /**
