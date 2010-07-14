@@ -56,6 +56,11 @@ struct pkcs11_library_t {
 extern enum_name_t *ck_rv_names;
 
 /**
+ * Enum names for CK_MECHANISM_TYPE values
+ */
+extern enum_name_t *ck_mech_names;
+
+/**
  * Trim/null terminate a string returned by the varius PKCS#11 functions.
  *
  * @param str		string to trim
