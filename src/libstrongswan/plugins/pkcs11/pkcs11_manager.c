@@ -40,6 +40,16 @@ struct private_pkcs11_manager_t {
 	 * List of loaded libraries, as lib_entry_t
 	 */
 	linked_list_t *libs;
+
+	/**
+	 * Slot event callback function
+	 */
+	pkcs11_manager_token_event_t cb;
+
+	/**
+	 * Slot event user data
+	 */
+	void *data;
 };
 
 /**
@@ -170,11 +180,13 @@ static void handle_slot(lib_entry_t *entry, CK_SLOT_ID slot)
 		DBG1(DBG_CFG, "  found token in slot '%s':%lu (%s)",
 			 entry->name, slot, info.slotDescription);
 		handle_token(entry, slot);
+		entry->this->cb(entry->this->data, entry->lib, slot, TRUE);
 	}
 	else
 	{
 		DBG1(DBG_CFG, "token removed from slot '%s':%lu (%s)",
 			 entry->name, slot, info.slotDescription);
+		entry->this->cb(entry->this->data, entry->lib, slot, FALSE);
 	}
 }
 
@@ -250,7 +262,8 @@ METHOD(pkcs11_manager_t, destroy, void,
 /**
  * See header
  */
-pkcs11_manager_t *pkcs11_manager_create()
+pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
+										void *data)
 {
 	private_pkcs11_manager_t *this;
 	enumerator_t *enumerator;
@@ -262,6 +275,8 @@ pkcs11_manager_t *pkcs11_manager_create()
 			.destroy = _destroy,
 		},
 		.libs = linked_list_create(),
+		.cb = cb,
+		.data = data,
 	);
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,

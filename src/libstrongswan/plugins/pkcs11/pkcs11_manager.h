@@ -23,6 +23,22 @@
 
 typedef struct pkcs11_manager_t pkcs11_manager_t;
 
+#include <library.h>
+
+#include "pkcs11_library.h"
+
+/**
+ * Token event callback function.
+ *
+ * @param data		user supplied data, as passed to pkcs11_manager_create()
+ * @param p11		loaded PKCS#11 library token belongs to
+ * @param slot		slot number the event occured in
+ * @param add		TRUE if token was added to the slot, FALSE if removed
+ */
+typedef void (*pkcs11_manager_token_event_t)(void *data, pkcs11_library_t *p11,
+											 CK_SLOT_ID slot, bool add);
+
+
 /**
  * Manages multiple PKCS#11 libraries with hot pluggable slots
  */
@@ -37,6 +53,7 @@ struct pkcs11_manager_t {
 /**
  * Create a pkcs11_manager instance.
  */
-pkcs11_manager_t *pkcs11_manager_create();
+pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
+										void *data);
 
 #endif /** PKCS11_MANAGER_H_ @}*/

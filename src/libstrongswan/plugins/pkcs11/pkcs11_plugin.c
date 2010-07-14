@@ -16,6 +16,7 @@
 #include "pkcs11_plugin.h"
 
 #include <library.h>
+#include <debug.h>
 
 #include "pkcs11_manager.h"
 
@@ -37,6 +38,14 @@ struct private_pkcs11_plugin_t {
 	pkcs11_manager_t *manager;
 };
 
+/**
+ * Token event callback function
+ */
+static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
+						   CK_SLOT_ID slot, bool add)
+{
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
@@ -53,8 +62,9 @@ plugin_t *pkcs11_plugin_create()
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
-		.manager = pkcs11_manager_create(),
 	);
+
+	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
 
 	return &this->public.plugin;
 }
