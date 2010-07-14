@@ -477,7 +477,7 @@ METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
 {
 	this->public.f->C_Finalize(NULL);
-	dlclose(this->handle);
+	//dlclose(this->handle);
 	free(this);
 }
 

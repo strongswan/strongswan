@@ -17,8 +17,11 @@
 
 #include <library.h>
 #include <debug.h>
+#include <utils/linked_list.h>
+#include <threading/mutex.h>
 
 #include "pkcs11_manager.h"
+#include "pkcs11_creds.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -36,6 +39,16 @@ struct private_pkcs11_plugin_t {
 	 * PKCS#11 library/slot manager
 	 */
 	pkcs11_manager_t *manager;
+
+	/**
+	 * List of credential sets, pkcs11_creds_t
+	 */
+	linked_list_t *creds;
+
+	/**
+	 * mutex to lock list
+	 */
+	mutex_t *mutex;
 };
 
 /**
@@ -44,12 +57,60 @@ struct private_pkcs11_plugin_t {
 static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
 						   CK_SLOT_ID slot, bool add)
 {
+	enumerator_t *enumerator;
+	pkcs11_creds_t *creds, *found = NULL;;
+
+	if (add)
+	{
+		creds = pkcs11_creds_create(p11, slot);
+		if (creds)
+		{
+			this->mutex->lock(this->mutex);
+			this->creds->insert_last(this->creds, creds);
+			this->mutex->unlock(this->mutex);
+			lib->credmgr->add_set(lib->credmgr, &creds->set);
+		}
+	}
+	else
+	{
+		this->mutex->lock(this->mutex);
+		enumerator = this->creds->create_enumerator(this->creds);
+		while (enumerator->enumerate(enumerator, &creds))
+		{
+			if (creds->get_library(creds) == p11 &&
+				creds->get_slot(creds) == slot)
+			{
+				found = creds;
+				this->creds->remove_at(this->creds, enumerator);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		this->mutex->unlock(this->mutex);
+
+		if (found)
+		{
+			lib->credmgr->remove_set(lib->credmgr, &found->set);
+			found->destroy(found);
+			/* flush the cache after a token is gone */
+			lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
+		}
+	}
 }
 
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
+	pkcs11_creds_t *creds;
+
+	while (this->creds->remove_last(this->creds, (void**)&creds) == SUCCESS)
+	{
+		lib->credmgr->remove_set(lib->credmgr, &creds->set);
+		creds->destroy(creds);
+	}
+	this->creds->destroy(this->creds);
 	this->manager->destroy(this->manager);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -62,6 +123,8 @@ plugin_t *pkcs11_plugin_create()
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
+		.creds = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
