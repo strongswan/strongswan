@@ -38,6 +38,13 @@ struct pkcs11_library_t {
 	CK_FUNCTION_LIST_PTR f;
 
 	/**
+	 * Get the name this instance was created with.
+	 *
+	 * @return		name, as passed to constructor
+	 */
+	char* (*get_name)(pkcs11_library_t *this);
+
+	/**
 	 * Destroy a pkcs11_library_t.
 	 */
 	void (*destroy)(pkcs11_library_t *this);

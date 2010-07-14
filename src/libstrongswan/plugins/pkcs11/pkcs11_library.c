@@ -186,7 +186,18 @@ struct private_pkcs11_library_t {
 	 * dlopen() handle
 	 */
 	void *handle;
+
+	/**
+	 * Name as passed to the constructor
+	 */
+	char *name;
 };
+
+METHOD(pkcs11_library_t, get_name, char*,
+	private_pkcs11_library_t *this)
+{
+	return this->name;
+}
 
 METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
@@ -334,8 +345,10 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 
 	INIT(this,
 		.public = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
+		.name = name,
 		.handle = dlopen(file, RTLD_LAZY),
 	);
 
