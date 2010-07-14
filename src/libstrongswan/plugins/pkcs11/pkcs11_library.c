@@ -19,6 +19,7 @@
 
 #include <library.h>
 #include <debug.h>
+#include <threading/mutex.h>
 
 typedef struct private_pkcs11_library_t private_pkcs11_library_t;
 
@@ -214,6 +215,48 @@ static void trim(char *str, int len)
 }
 
 /**
+ * Mutex creation callback
+ */
+static CK_RV CreateMutex(CK_VOID_PTR_PTR data)
+{
+	*data = mutex_create(MUTEX_TYPE_DEFAULT);
+	return CKR_OK;
+}
+
+/**
+ * Mutex destruction callback
+ */
+static CK_RV DestroyMutex(CK_VOID_PTR data)
+{
+	mutex_t *mutex = (mutex_t*)data;
+
+	mutex->destroy(mutex);
+	return CKR_OK;
+}
+
+/**
+ * Mutex lock callback
+ */
+static CK_RV LockMutex(CK_VOID_PTR data)
+{
+	mutex_t *mutex = (mutex_t*)data;
+
+	mutex->lock(mutex);
+	return CKR_OK;
+}
+
+/**
+ * Mutex unlock callback
+ */
+static CK_RV UnlockMutex(CK_VOID_PTR data)
+{
+	mutex_t *mutex = (mutex_t*)data;
+
+	mutex->unlock(mutex);
+	return CKR_OK;
+}
+
+/**
  * Initialize a PKCS#11 library
  */
 static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
@@ -221,6 +264,12 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 	CK_C_GetFunctionList pC_GetFunctionList;
 	CK_INFO info;
 	CK_RV rv;
+	CK_C_INITIALIZE_ARGS args = {
+		.CreateMutex = CreateMutex,
+		.DestroyMutex = DestroyMutex,
+		.LockMutex = LockMutex,
+		.UnlockMutex = UnlockMutex,
+	};
 
 	pC_GetFunctionList = dlsym(this->handle, "C_GetFunctionList");
 	if (!pC_GetFunctionList)
@@ -236,7 +285,13 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 		return FALSE;
 	}
 
-	rv = this->public.f->C_Initialize(NULL);
+	rv = this->public.f->C_Initialize(&args);
+	if (rv == CKR_CANT_LOCK)
+	{	/* try OS locking */
+		memset(&args, 0, sizeof(args));
+		args.flags = CKF_OS_LOCKING_OK;
+		rv = this->public.f->C_Initialize(&args);
+	}
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_Initialize() error for '%s': %N",
@@ -263,6 +318,10 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 		 sizeof(info.manufacturerID), info.manufacturerID,
 		 sizeof(info.libraryDescription), info.libraryDescription,
 		 info.libraryVersion.major, info.libraryVersion.minor);
+	if (args.flags & CKF_OS_LOCKING_OK)
+	{
+		DBG1(DBG_CFG, "  uses OS locking functions");
+	}
 	return TRUE;
 }
 
