@@ -208,13 +208,14 @@ METHOD(pkcs11_library_t, destroy, void,
 }
 
 /**
- * Trim a string
+ * See header
  */
-static void trim(char *str, int len)
+void pkcs11_library_trim(char *str, int len)
 {
 	int i;
 
-	for (i = len - 1; i > 0; i--)
+	str[len - 1] = '\0';
+	for (i = len - 2; i > 0; i--)
 	{
 		if (str[i] == ' ')
 		{
@@ -318,16 +319,15 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 		return FALSE;
 	}
 
-	trim(info.manufacturerID,
-		 strnlen(info.manufacturerID, sizeof(info.manufacturerID)));
-	trim(info.libraryDescription,
-		 strnlen(info.libraryDescription, sizeof(info.libraryDescription)));
+	pkcs11_library_trim(info.manufacturerID,
+			strnlen(info.manufacturerID, sizeof(info.manufacturerID)));
+	pkcs11_library_trim(info.libraryDescription,
+			strnlen(info.libraryDescription, sizeof(info.libraryDescription)));
 
 	DBG1(DBG_CFG, "loaded PKCS#11 v%d.%d library '%s' (%s)",
 		 info.cryptokiVersion.major, info.cryptokiVersion.minor, name, file);
-	DBG1(DBG_CFG, "  %.*s: %.*s v%d.%d",
-		 sizeof(info.manufacturerID), info.manufacturerID,
-		 sizeof(info.libraryDescription), info.libraryDescription,
+	DBG1(DBG_CFG, "  %s: %s v%d.%d",
+		 info.manufacturerID, info.libraryDescription,
 		 info.libraryVersion.major, info.libraryVersion.minor);
 	if (args.flags & CKF_OS_LOCKING_OK)
 	{

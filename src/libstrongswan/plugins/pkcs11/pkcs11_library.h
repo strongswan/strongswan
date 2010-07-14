@@ -56,6 +56,14 @@ struct pkcs11_library_t {
 extern enum_name_t *ck_rv_names;
 
 /**
+ * Trim/null terminate a string returned by the varius PKCS#11 functions.
+ *
+ * @param str		string to trim
+ * @param len		max length of the string
+ */
+void pkcs11_library_trim(char *str, int len);
+
+/**
  * Create a pkcs11_library instance.
  *
  * @param name		an arbitrary name, for debugging
