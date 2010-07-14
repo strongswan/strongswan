@@ -767,15 +767,15 @@ if test x$hmac = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
 	pluto_plugins=${pluto_plugins}" hmac"
 fi
+if test x$gmp = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
+	pluto_plugins=${pluto_plugins}" gmp"
+fi
 if test x$agent = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" agent"
 fi
 if test x$pkcs11 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pkcs11"
-fi
-if test x$gmp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
-	pluto_plugins=${pluto_plugins}" gmp"
 fi
 if test x$xauth = xtrue; then
 	pluto_plugins=${pluto_plugins}" xauth"
