@@ -1509,7 +1509,7 @@ static void schedule_expire(private_kernel_klips_ipsec_t *this,
 	expire->reqid = reqid;
 	expire->type = type;
 	job = callback_job_create((callback_job_cb_t)sa_expires, expire, free, NULL);
-	hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)job, time);
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)job, time);
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
@@ -2632,7 +2632,7 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

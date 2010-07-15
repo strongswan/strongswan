@@ -752,7 +752,7 @@ dhcp_socket_t *dhcp_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_dhcp,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

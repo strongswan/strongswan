@@ -23,7 +23,6 @@
 #include <linux/filter.h>
 #include <sys/ioctl.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -192,7 +191,7 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 
 	this->job = callback_job_create((callback_job_cb_t)receive_arp,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

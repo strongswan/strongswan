@@ -17,7 +17,6 @@
 
 #include <pthread.h>
 
-#include <hydra.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <utils/linked_list.h>
@@ -284,7 +283,7 @@ static void start_watchdog(private_ha_segments_t *this)
 {
 	this->job = callback_job_create((callback_job_cb_t)watchdog,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 }
 
 METHOD(ha_segments_t, handle_status, void,
@@ -346,7 +345,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	message->destroy(message);
 
 	/* schedule next invocation */
-	hydra->scheduler->schedule_job_ms(hydra->scheduler, (job_t*)
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
 									this->heartbeat_delay);

@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 
-#include <hydra.h>
 #include <threading/thread.h>
 #include <threading/thread_value.h>
 #include <threading/condvar.h>
@@ -163,7 +162,7 @@ METHOD(bus_t, listen_, void,
 
 	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, data.entry);
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
 	thread_cleanup_push((thread_cleanup_t)listener_cleanup, &data);
 	old = thread_cancelability(TRUE);

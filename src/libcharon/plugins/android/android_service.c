@@ -20,7 +20,6 @@
 
 #include "android_service.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -142,7 +141,7 @@ METHOD(listener_t, child_updown, bool,
 			 * callback, but from a different thread. we also delay it to avoid
 			 * a race condition during a regular shutdown */
 			job = callback_job_create(shutdown_callback, NULL, NULL, NULL);
-			hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)job, 1);
+			lib->scheduler->schedule_job(lib->scheduler, (job_t*)job, 1);
 			return FALSE;
 		}
 	}
@@ -379,7 +378,7 @@ android_service_t *android_service_create(android_creds_t *creds)
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 	this->job = callback_job_create((callback_job_cb_t)initiate, this,
 									NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

@@ -28,7 +28,6 @@
 #include <libxml/xmlwriter.h>
 
 #include <library.h>
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -703,7 +702,7 @@ static job_requeue_t dispatch(private_smp_t *this)
 	fdp = malloc_thing(int);
 	*fdp = fd;
 	job = callback_job_create((callback_job_cb_t)process, fdp, free, this->job);
-	hydra->processor->queue_job(hydra->processor, (job_t*)job);
+	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_DIRECT;
 }
@@ -762,7 +761,7 @@ plugin_t *smp_plugin_create()
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)dispatch, this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public.plugin;
 }

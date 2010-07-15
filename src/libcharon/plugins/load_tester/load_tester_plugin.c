@@ -222,7 +222,7 @@ plugin_t *load_tester_plugin_create()
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
-		hydra->processor->queue_job(hydra->processor,
+		lib->processor->queue_job(lib->processor,
 					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
 												this, NULL, NULL));
 	}

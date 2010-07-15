@@ -17,7 +17,6 @@
 
 #include <signal.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -60,7 +59,7 @@ static bool ike_state_change(private_load_tester_listener_t *this,
 
 		if (this->delete_after_established)
 		{
-			hydra->processor->queue_job(hydra->processor,
+			lib->processor->queue_job(lib->processor,
 									(job_t*)delete_ike_sa_job_create(id, TRUE));
 		}
 

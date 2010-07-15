@@ -18,7 +18,6 @@
 
 #include <math.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
@@ -275,7 +274,7 @@ METHOD(task_manager_t, retransmit, status_t,
 		this->initiating.retransmitted++;
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
-		hydra->scheduler->schedule_job_ms(hydra->scheduler, job, timeout);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, timeout);
 	}
 	return SUCCESS;
 }

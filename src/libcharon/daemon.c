@@ -32,7 +32,6 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <hydra.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
 
@@ -101,7 +100,7 @@ static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	hydra->processor->set_threads(hydra->processor, 0);
+	lib->processor->set_threads(lib->processor, 0);
 
 	/* close all IKE_SAs */
 	if (this->public.ike_sa_manager)
@@ -178,7 +177,7 @@ METHOD(daemon_t, start, void,
 	   private_daemon_t *this)
 {
 	/* start the engine, go multithreaded */
-	hydra->processor->set_threads(hydra->processor,
+	lib->processor->set_threads(lib->processor,
 						lib->settings->get_int(lib->settings, "charon.threads",
 											   DEFAULT_THREADS));
 }

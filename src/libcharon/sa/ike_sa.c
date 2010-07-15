@@ -470,8 +470,8 @@ METHOD(ike_sa_t, send_keepalive, void,
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
-	hydra->scheduler->schedule_job(hydra->scheduler, (job_t*)job,
-									this->keepalive_interval - diff);
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
+								 this->keepalive_interval - diff);
 }
 
 METHOD(ike_sa_t, get_ike_cfg, ike_cfg_t*,
@@ -605,7 +605,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	}
 	/* recheck in "interval" seconds */
 	job = (job_t*)send_dpd_job_create(this->ike_sa_id);
-	hydra->scheduler->schedule_job(hydra->scheduler, job, delay - diff);
+	lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
 	return SUCCESS;
 }
 
@@ -644,7 +644,7 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					this->stats[STAT_REKEY] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, FALSE);
-					hydra->scheduler->schedule_job(hydra->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
 				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
@@ -653,7 +653,7 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					this->stats[STAT_REAUTH] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
-					hydra->scheduler->schedule_job(hydra->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
 				}
 				t = this->peer_cfg->get_over_time(this->peer_cfg);
@@ -675,7 +675,7 @@ METHOD(ike_sa_t, set_state, void,
 					this->stats[STAT_DELETE] += t;
 					t = this->stats[STAT_DELETE] - this->stats[STAT_ESTABLISHED];
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-					hydra->scheduler->schedule_job(hydra->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
 
@@ -688,8 +688,8 @@ METHOD(ike_sa_t, set_state, void,
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			hydra->scheduler->schedule_job(hydra->scheduler, job,
-										   HALF_OPEN_IKE_SA_TIMEOUT);
+			lib->scheduler->schedule_job(lib->scheduler, job,
+										 HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
 		default:
@@ -1163,7 +1163,7 @@ METHOD(ike_sa_t, initiate, status_t,
 		{
 			/* mediated connection, initiate mediation process */
 			job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id);
-			hydra->processor->queue_job(hydra->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			return SUCCESS;
 		}
 #endif /* ME */
@@ -1262,8 +1262,8 @@ METHOD(ike_sa_t, process_message, status_t,
 			}
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			hydra->scheduler->schedule_job(hydra->scheduler, job,
-										   HALF_OPEN_IKE_SA_TIMEOUT);
+			lib->scheduler->schedule_job(lib->scheduler, job,
+										 HALF_OPEN_IKE_SA_TIMEOUT);
 		}
 		this->stats[STAT_INBOUND] = time_monotonic(NULL);
 		/* check if message is trustworthy, and update host information */
@@ -1709,7 +1709,7 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
-		hydra->processor->queue_job(hydra->processor,
+		lib->processor->queue_job(lib->processor,
 					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||
@@ -1718,7 +1718,7 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 		this->stats[STAT_REAUTH] = reauth_time;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
 			 " in %ds", lifetime, lifetime - reduction);
-		hydra->scheduler->schedule_job(hydra->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
 						lifetime - reduction);
 	}
@@ -1919,9 +1919,9 @@ METHOD(ike_sa_t, inherit, status_t,
 		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
-		hydra->scheduler->schedule_job(hydra->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE), reauth);
-		hydra->scheduler->schedule_job(hydra->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
 	/* we have to initate here, there may be new tasks to handle */

@@ -18,7 +18,6 @@
 
 #include <semaphore.h>
 
-#include <hydra.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
@@ -227,8 +226,8 @@ static void execute(private_callback_job_t *this)
 	thread_cancellation_point();
 	if (requeue)
 	{
-		hydra->processor->queue_job(hydra->processor,
-									 &this->public.job_interface);
+		lib->processor->queue_job(lib->processor,
+								  &this->public.job_interface);
 	}
 	thread_cleanup_pop(cleanup);
 }

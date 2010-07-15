@@ -16,7 +16,6 @@
 
 #include "ike_rekey.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
@@ -197,7 +196,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 		DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
 			 "starting reauthentication");
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		hydra->processor->queue_job(hydra->processor,
+		lib->processor->queue_job(lib->processor,
 				(job_t*)rekey_ike_sa_job_create(
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
@@ -218,7 +217,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
 										"trying again in %d seconds", retry);
 				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				hydra->scheduler->schedule_job(hydra->scheduler, job, retry);
+				lib->scheduler->schedule_job(lib->scheduler, job, retry);
 			}
 			return SUCCESS;
 		case NEED_MORE:
@@ -261,7 +260,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				/* peer should delete this SA. Add a timeout just in case. */
 				job_t *job = (job_t*)delete_ike_sa_job_create(
 						other->new_sa->get_id(other->new_sa), TRUE);
-				hydra->scheduler->schedule_job(hydra->scheduler, job, 10);
+				lib->scheduler->schedule_job(lib->scheduler, job, 10);
 				DBG1(DBG_IKE, "IKE_SA rekey collision won, deleting rekeyed IKE_SA");
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
 				other->new_sa = NULL;

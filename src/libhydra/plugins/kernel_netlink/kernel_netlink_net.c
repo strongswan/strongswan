@@ -254,7 +254,7 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 		job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
 										  (void*)(uintptr_t)(address ? 1 : 0),
 										  NULL, NULL);
-		hydra->scheduler->schedule_job_ms(hydra->scheduler, job, ROAM_DELAY);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 	}
 }
 
@@ -1492,7 +1492,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_events,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	if (init_address_list(this) != SUCCESS)
 	{

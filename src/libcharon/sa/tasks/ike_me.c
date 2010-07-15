@@ -693,7 +693,7 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			job_t *job = (job_t*)mediation_job_create(this->peer_id,
 					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,
 					this->connect_key, this->remote_endpoints, this->response);
-			hydra->processor->queue_job(hydra->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			break;
 		}
 		default:

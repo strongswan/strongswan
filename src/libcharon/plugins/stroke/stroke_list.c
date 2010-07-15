@@ -423,12 +423,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 #endif /* HAVE_MALLINFO */
 		fprintf(out, "  worker threads: %d idle of %d,",
-				hydra->processor->get_idle_threads(hydra->processor),
-				hydra->processor->get_total_threads(hydra->processor));
+				lib->processor->get_idle_threads(lib->processor),
+				lib->processor->get_total_threads(lib->processor));
 		fprintf(out, " job queue load: %d,",
-				hydra->processor->get_job_load(hydra->processor));
+				lib->processor->get_job_load(lib->processor));
 		fprintf(out, " scheduled events: %d\n",
-				hydra->scheduler->get_job_load(hydra->scheduler));
+				lib->scheduler->get_job_load(lib->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 		while (enumerator->enumerate(enumerator, &plugin))

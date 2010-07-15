@@ -18,7 +18,6 @@
 
 #include "medcli_config.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -365,7 +364,7 @@ static void schedule_autoinit(private_medcli_config_t *this)
 			if (peer_cfg)
 			{
 				/* schedule asynchronous initiation job */
-				hydra->processor->queue_job(hydra->processor,
+				lib->processor->queue_job(lib->processor,
 						(job_t*)callback_job_create(
 									(callback_job_cb_t)initiate_config,
 									peer_cfg, (void*)peer_cfg->destroy, NULL));

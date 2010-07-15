@@ -24,7 +24,6 @@
 
 #include "uci_control.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
@@ -295,7 +294,7 @@ uci_control_t *uci_control_create()
 	{
 		this->job = callback_job_create((callback_job_cb_t)receive,
 										this, NULL, NULL);
-		hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
 	}
 	return &this->public;
 }

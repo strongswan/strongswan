@@ -69,7 +69,7 @@ METHOD(kernel_listener_t, acquire, bool,
 		DBG1(DBG_KNL, "creating acquire job for policy with reqid {%u}", reqid);
 	}
 	job = (job_t*)acquire_job_create(reqid, src_ts, dst_ts);
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
 }
 
@@ -90,7 +90,7 @@ METHOD(kernel_listener_t, expire, bool,
 	{
 		job = (job_t*)rekey_child_sa_job_create(reqid, proto, spi);
 	}
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
 }
 
@@ -102,7 +102,7 @@ METHOD(kernel_listener_t, mapping, bool,
 	DBG1(DBG_KNL, "NAT mappings of ESP CHILD_SA with SPI %.8x and "
 				  "reqid {%u} changed, queuing update job", ntohl(spi), reqid);
 	job = (job_t*)update_sa_job_create(reqid, remote);
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
 }
 
@@ -117,7 +117,7 @@ METHOD(kernel_listener_t, migrate, bool,
 				  reqid, local);
 	job = (job_t*)migrate_job_create(reqid, src_ts, dst_ts, direction, local,
 									 remote);
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
 }
 
@@ -126,7 +126,7 @@ METHOD(kernel_listener_t, roam, bool,
 {
 	job_t *job;
 	job = (job_t*)roam_job_create(address);
-	hydra->processor->queue_job(hydra->processor, job);
+	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
 }
 

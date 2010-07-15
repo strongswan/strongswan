@@ -586,7 +586,7 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	ctx->this = this;
 	job = callback_job_create((callback_job_cb_t)process,
 							  ctx, (void*)stroke_job_context_destroy, this->job);
-	hydra->processor->queue_job(hydra->processor, (job_t*)job);
+	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_FAIR;
 }
@@ -684,7 +684,7 @@ stroke_socket_t *stroke_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);
-	hydra->processor->queue_job(hydra->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

@@ -17,7 +17,6 @@
 
 #include <math.h>
 
-#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
@@ -933,7 +932,7 @@ static void update_checklist_state(private_connect_manager_t *this,
 
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
 		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-		hydra->scheduler->schedule_job_ms(hydra->scheduler, job, ME_WAIT_TO_FINISH);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
 
@@ -1032,7 +1031,7 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms",
 		 retransmission, pair->id, rto);
 
-	hydra->scheduler->schedule_job_ms(hydra->scheduler, (job_t*)job, rto);
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1171,7 +1170,7 @@ static void schedule_checks(private_connect_manager_t *this, check_list_t *check
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
 	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-	hydra->scheduler->schedule_job_ms(hydra->scheduler, checklist->sender, time);
+	lib->scheduler->schedule_job_ms(lib->scheduler, checklist->sender, time);
 }
 
 /**
@@ -1223,7 +1222,7 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 
 			initiate_data_t *data = initiate_data_create(checklist, initiated);
 			job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiate_mediated, data, (callback_job_cleanup_t)initiate_data_destroy, NULL);
-			hydra->processor->queue_job(hydra->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			return;
 		}
 		else
@@ -1478,7 +1477,7 @@ static void check_and_initiate(private_connect_manager_t *this,
 	{
 		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa,
 															 waiting_sa);
-		hydra->processor->queue_job(hydra->processor, job);
+		lib->processor->queue_job(lib->processor, job);
 	}
 	iterator->destroy(iterator);
 
