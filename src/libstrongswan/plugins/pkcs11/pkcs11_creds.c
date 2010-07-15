@@ -127,34 +127,15 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		{CKA_TRUSTED, &trusted, sizeof(trusted)},
 	};
 	CK_OBJECT_HANDLE object;
-	CK_ULONG found;
-	CK_RV rv;
+	enumerator_t *enumerator;
 
-	rv = this->lib->f->C_FindObjectsInit(session, template, countof(template));
-	if (rv == CKR_OK)
+	enumerator = this->lib->create_object_enumerator(this->lib,
+										session, template, countof(template));
+	while (enumerator->enumerate(enumerator, &object))
 	{
-		while (TRUE)
-		{
-			rv = this->lib->f->C_FindObjects(session, &object, 1, &found);
-			if (rv == CKR_OK)
-			{
-				if (found == 1)
-				{
-					handle_certificate(this, session, object, trusted);
-				}
-				else
-				{
-					break;
-				}
-			}
-			else
-			{
-				DBG1(DBG_CFG, "C_FindObjects() error: %N", ck_rv_names, rv);
-				break;
-			}
-		}
+		handle_certificate(this, session, object, trusted);
 	}
-	this->lib->f->C_FindObjectsFinal(session);
+	enumerator->destroy(enumerator);
 }
 
 /**
