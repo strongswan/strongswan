@@ -473,6 +473,71 @@ METHOD(pkcs11_library_t, get_name, char*,
 	return this->name;
 }
 
+/**
+ * Object enumerator
+ */
+typedef struct {
+	/* implements enumerator_t */
+	enumerator_t public;
+	/* session */
+	CK_SESSION_HANDLE session;
+	/* pkcs11 library */
+	pkcs11_library_t *lib;
+} object_enumerator_t;
+
+METHOD(enumerator_t, object_enumerate, bool,
+	object_enumerator_t *this, CK_OBJECT_HANDLE *out)
+{
+	CK_OBJECT_HANDLE object;
+	CK_ULONG found;
+	CK_RV rv;
+
+	rv = this->lib->f->C_FindObjects(this->session, &object, 1, &found);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_FindObjects() failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	if (found)
+	{
+		*out = object;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(enumerator_t, object_destroy, void,
+	object_enumerator_t *this)
+{
+	this->lib->f->C_FindObjectsFinal(this->session);
+	free(this);
+}
+
+METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
+	private_pkcs11_library_t *this, CK_SESSION_HANDLE session,
+	CK_ATTRIBUTE_PTR tmpl, CK_ULONG count)
+{
+	object_enumerator_t *enumerator;
+	CK_RV rv;
+
+	rv = this->public.f->C_FindObjectsInit(session, tmpl, count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_FindObjectsInit() failed: %N", ck_rv_names, rv);
+		return enumerator_create_empty();
+	}
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_object_enumerate,
+			.destroy = _object_destroy,
+		},
+		.session = session,
+		.lib = &this->public,
+	);
+	return &enumerator->public;
+}
+
 METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
 {
@@ -620,6 +685,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
+			.create_object_enumerator = _create_object_enumerator,
 			.destroy = _destroy,
 		},
 		.name = name,

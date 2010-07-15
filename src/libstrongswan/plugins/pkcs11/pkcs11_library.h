@@ -26,6 +26,7 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 #include "pkcs11.h"
 
 #include <enum.h>
+#include <utils/enumerator.h>
 
 /**
  * A loaded and initialized PKCS#11 library.
@@ -40,9 +41,19 @@ struct pkcs11_library_t {
 	/**
 	 * Get the name this instance was created with.
 	 *
-	 * @return		name, as passed to constructor
+	 * @return			name, as passed to constructor
 	 */
 	char* (*get_name)(pkcs11_library_t *this);
+
+	/**
+	 * Create an enumerator over CK_OBJECT_HANDLE using a search template.
+	 *
+	 * @param session	session to use
+	 * @param tmpl		search template
+	 * @param count 	number of attributes in the search template
+	 */
+	enumerator_t* (*create_object_enumerator)(pkcs11_library_t *this,
+			CK_SESSION_HANDLE session, CK_ATTRIBUTE_PTR tmpl, CK_ULONG count);
 
 	/**
 	 * Destroy a pkcs11_library_t.
