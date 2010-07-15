@@ -22,6 +22,7 @@
 
 #include "pkcs11_manager.h"
 #include "pkcs11_creds.h"
+#include "pkcs11_private_key.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -103,6 +104,8 @@ METHOD(plugin_t, destroy, void,
 {
 	pkcs11_creds_t *creds;
 
+	lib->creds->remove_builder(lib->creds,
+							(builder_function_t)pkcs11_private_key_connect);
 	while (this->creds->remove_last(this->creds, (void**)&creds) == SUCCESS)
 	{
 		lib->credmgr->remove_set(lib->credmgr, &creds->set);
@@ -128,6 +131,9 @@ plugin_t *pkcs11_plugin_create()
 	);
 
 	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
+
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+							(builder_function_t)pkcs11_private_key_connect);
 
 	return &this->public.plugin;
 }
