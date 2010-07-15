@@ -189,7 +189,6 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 		plugin = load_plugin(this, path, token);
 		if (plugin)
 		{
-			/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
 			this->names->insert_last(this->names, token);
 		}
@@ -215,12 +214,13 @@ static void unload(private_plugin_loader_t *this)
 	plugin_t *plugin;
 	char *name;
 
-	while (this->plugins->remove_first(this->plugins,
+	/* unload plugins in reverse order */
+	while (this->plugins->remove_last(this->plugins,
 									   (void**)&plugin) == SUCCESS)
 	{
 		plugin->destroy(plugin);
 	}
-	while (this->names->remove_first(this->names, (void**)&name) == SUCCESS)
+	while (this->names->remove_last(this->names, (void**)&name) == SUCCESS)
 	{
 		free(name);
 	}
