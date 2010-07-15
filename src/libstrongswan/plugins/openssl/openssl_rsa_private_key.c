@@ -451,20 +451,27 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 {
 #ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
-	char *keyid = NULL, *pin = NULL;
+	char *keyid = NULL, *pin = NULL, *engine_id = NULL;
+	char keyname[64];
 	EVP_PKEY *key;
-	char *engine_id;
 	ENGINE *engine;
+	int slot = -1;
 
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_SMARTCARD_KEYID:
+			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, char*);
 				continue;
-			case BUILD_SMARTCARD_PIN:
+			case BUILD_PKCS11_PIN:
 				pin = va_arg(args, char*);
+				continue;
+			case BUILD_PKCS11_SLOT:
+				slot = va_arg(args, int);
+				continue;
+			case BUILD_PKCS11_MODULE:
+				engine_id = va_arg(args, char*);
 				continue;
 			case BUILD_END:
 				break;
@@ -478,8 +485,20 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		return NULL;
 	}
 
-	engine_id = lib->settings->get_str(lib->settings,
+	if (slot == -1)
+	{
+		snprintf(keyname, sizeof(keyname), "%s", keyid);
+	}
+	else
+	{
+		snprintf(keyname, sizeof(keyname), "%d:%s", slot, keyid);
+	}
+
+	if (!engine_id)
+	{
+		engine_id = lib->settings->get_str(lib->settings,
 						"libstrongswan.plugins.openssl.engine_id", "pkcs11");
+	}
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
@@ -499,11 +518,11 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		return NULL;
 	}
 
-	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
+	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
 	if (!key)
 	{
 		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
-			 "engine '%s'", keyid, engine_id);
+			 "engine '%s'", keyname, engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
@@ -512,6 +531,11 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	this = create_empty();
 	this->rsa = EVP_PKEY_get1_RSA(key);
 	this->engine = TRUE;
+	if (!this->rsa)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 #else /* OPENSSL_NO_ENGINE */

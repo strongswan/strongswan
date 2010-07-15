@@ -929,9 +929,14 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		else if (match("PIN", &token))
 		{
 			chunk_t sc = chunk_empty, secret = chunk_empty;
-			char smartcard[32], keyid[22], pin[32];
+			char smartcard[64], keyid[64], pin[64], module[64], *pos;
 			private_key_t *key;
 			u_int slot;
+			enum {
+				SC_FORMAT_SLOT_MODULE_KEYID,
+				SC_FORMAT_SLOT_KEYID,
+				SC_FORMAT_KEYID,
+			} format;
 
 			err_t ugh = extract_value(&sc, &line);
 
@@ -948,16 +953,31 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
 			smartcard[sizeof(smartcard) - 1] = '\0';
 
-			/* parse slot and key id. only two formats are supported.
-			 * first try %smartcard<slot>:<keyid> */
-			if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
+			/* parse slot and key id. Three formats are supported:
+			 * - %smartcard<slot>@<module>:<keyid>
+			 * - %smartcard<slot>:<keyid>
+			 * - %smartcard:<keyid>
+			 */
+			if (sscanf(smartcard, "%%smartcard%u@%s", &slot, module) == 2)
 			{
-				snprintf(smartcard, sizeof(smartcard), "%u:%s", slot, keyid);
+				pos = strchr(module, ':');
+				if (!pos)
+				{
+					DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is "
+						 "invalid", line_nr);
+					goto error;
+				}
+				*pos = '\0';
+				strcpy(keyid, pos + 1);
+				format = SC_FORMAT_SLOT_MODULE_KEYID;
 			}
-			/* then try %smartcard:<keyid> */
+			else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
+			{
+				format = SC_FORMAT_SLOT_KEYID;
+			}
 			else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
 			{
-				snprintf(smartcard, sizeof(smartcard), "%s", keyid);
+				format = SC_FORMAT_KEYID;
 			}
 			else
 			{
@@ -980,11 +1000,30 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 			pin[sizeof(pin) - 1] = '\0';
 
-			/* we assume an RSA key */
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-									 BUILD_SMARTCARD_KEYID, smartcard,
-									 BUILD_SMARTCARD_PIN, pin, BUILD_END);
-
+			switch (format)
+			{
+				case SC_FORMAT_SLOT_MODULE_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_SLOT, slot,
+									BUILD_PKCS11_MODULE, module,
+									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_PIN, pin, BUILD_END);
+					break;
+				case SC_FORMAT_SLOT_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_SLOT, slot,
+									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_PIN, pin, BUILD_END);
+					break;
+				case SC_FORMAT_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_PIN, pin, BUILD_END);
+					break;
+			}
 			if (key)
 			{
 				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);

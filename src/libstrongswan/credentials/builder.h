@@ -103,10 +103,14 @@ enum builder_part_t {
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
 	BUILD_REVOKED_ENUMERATOR,
-	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
-	BUILD_SMARTCARD_KEYID,
-	/** pin to access a key on a smartcard, null terminated char* */
-	BUILD_SMARTCARD_PIN,
+	/** friendly name of a PKCS#11 module, null terminated char* */
+	BUILD_PKCS11_MODULE,
+	/** slot specifier for a token in a PKCS#11 module, int */
+	BUILD_PKCS11_SLOT,
+	/** key ID of a key on a token, null terminated char* */
+	BUILD_PKCS11_KEYID,
+	/** pin to access a token, null terminated char* */
+	BUILD_PKCS11_PIN,
 	/** modulus (n) of a RSA key, chunk_t */
 	BUILD_RSA_MODULUS,
 	/** public exponent (e) of a RSA key, chunk_t */
