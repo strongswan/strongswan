@@ -48,12 +48,19 @@ struct pkcs11_library_t {
 	/**
 	 * Create an enumerator over CK_OBJECT_HANDLE using a search template.
 	 *
+	 * An optional attribute array is automatically filled in with the
+	 * objects associated attributes. If the value of an output attribute
+	 * is NULL, the value gets allocated/freed during enumeration.
+	 *
 	 * @param session	session to use
 	 * @param tmpl		search template
-	 * @param count 	number of attributes in the search template
+	 * @param tcount 	number of attributes in the search template
+	 * @param attr		attributes to read from object
+	 * @param acount	number of attributes to read
 	 */
 	enumerator_t* (*create_object_enumerator)(pkcs11_library_t *this,
-			CK_SESSION_HANDLE session, CK_ATTRIBUTE_PTR tmpl, CK_ULONG count);
+			CK_SESSION_HANDLE session, CK_ATTRIBUTE_PTR tmpl, CK_ULONG tcount,
+			CK_ATTRIBUTE_PTR attr, CK_ULONG acount);
 
 	/**
 	 * Destroy a pkcs11_library_t.

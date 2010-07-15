@@ -20,6 +20,7 @@
 #include <library.h>
 #include <debug.h>
 #include <threading/mutex.h>
+#include <utils/linked_list.h>
 
 typedef struct private_pkcs11_library_t private_pkcs11_library_t;
 
@@ -483,7 +484,68 @@ typedef struct {
 	CK_SESSION_HANDLE session;
 	/* pkcs11 library */
 	pkcs11_library_t *lib;
+	/* attributes to retreive */
+	CK_ATTRIBUTE_PTR attr;
+	/* number of attributes */
+	CK_ULONG count;
+	/* currently allocated attributes, to free */
+	linked_list_t *freelist;
 } object_enumerator_t;
+
+/**
+ * Free contents of attributes in a list
+ */
+static void free_attrs(object_enumerator_t *this)
+{
+	CK_ATTRIBUTE_PTR attr;
+
+	while (this->freelist->remove_last(this->freelist, (void**)&attr) == SUCCESS)
+	{
+		free(attr->pValue);
+		attr->pValue = NULL;
+		attr->ulValueLen = 0;
+	}
+}
+
+/**
+ * Get attributes for a given object during enumeration
+ */
+static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
+{
+	CK_RV rv;
+	int i;
+
+	free_attrs(this);
+
+	/* get length of objects first */
+	rv = this->lib->f->C_GetAttributeValue(this->session, object,
+										   this->attr, this->count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	/* allocate required chunks */
+	for (i = 0; i < this->count; i++)
+	{
+		if (this->attr[i].pValue == NULL &&
+			this->attr[i].ulValueLen != 0 && this->attr[i].ulValueLen != -1)
+		{
+			this->attr[i].pValue = malloc(this->attr[i].ulValueLen);
+			this->freelist->insert_last(this->freelist, &this->attr[i]);
+		}
+	}
+	/* get the data */
+	rv = this->lib->f->C_GetAttributeValue(this->session, object,
+										   this->attr, this->count);
+	if (rv != CKR_OK)
+	{
+		free_attrs(this);
+		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	return TRUE;
+}
 
 METHOD(enumerator_t, object_enumerate, bool,
 	object_enumerator_t *this, CK_OBJECT_HANDLE *out)
@@ -500,6 +562,13 @@ METHOD(enumerator_t, object_enumerate, bool,
 	}
 	if (found)
 	{
+		if (this->attr)
+		{
+			if (!get_attributes(this, object))
+			{
+				return FALSE;
+			}
+		}
 		*out = object;
 		return TRUE;
 	}
@@ -510,17 +579,20 @@ METHOD(enumerator_t, object_destroy, void,
 	object_enumerator_t *this)
 {
 	this->lib->f->C_FindObjectsFinal(this->session);
+	free_attrs(this);
+	this->freelist->destroy(this->freelist);
 	free(this);
 }
 
 METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 	private_pkcs11_library_t *this, CK_SESSION_HANDLE session,
-	CK_ATTRIBUTE_PTR tmpl, CK_ULONG count)
+	CK_ATTRIBUTE_PTR tmpl, CK_ULONG tcount,
+	CK_ATTRIBUTE_PTR attr, CK_ULONG acount)
 {
 	object_enumerator_t *enumerator;
 	CK_RV rv;
 
-	rv = this->public.f->C_FindObjectsInit(session, tmpl, count);
+	rv = this->public.f->C_FindObjectsInit(session, tmpl, tcount);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_FindObjectsInit() failed: %N", ck_rv_names, rv);
@@ -534,6 +606,9 @@ METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 		},
 		.session = session,
 		.lib = &this->public,
+		.attr = attr,
+		.count = acount,
+		.freelist = linked_list_create(),
 	);
 	return &enumerator->public;
 }

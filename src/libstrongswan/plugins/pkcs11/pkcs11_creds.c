@@ -52,68 +52,6 @@ struct private_pkcs11_creds_t {
 };
 
 /**
- * Handle a certificate object, optionally trusted
- */
-static void handle_certificate(private_pkcs11_creds_t *this,
-							CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object,
-							CK_BBOOL trusted)
-{
-	CK_ATTRIBUTE attrs[] = {
-		{CKA_VALUE, NULL, 0},
-		{CKA_LABEL, NULL, 0},
-	};
-	CK_RV rv;
-	certificate_t *cert;
-
-	rv = this->lib->f->C_GetAttributeValue(session, object,
-										   attrs, countof(attrs));
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
-		return;
-	}
-	if (attrs[0].ulValueLen)
-	{
-		attrs[0].pValue = malloc(attrs[0].ulValueLen);
-	}
-	if (attrs[1].ulValueLen)
-	{
-		attrs[1].pValue = malloc(attrs[1].ulValueLen);
-	}
-	rv = this->lib->f->C_GetAttributeValue(session, object,
-										   attrs, countof(attrs));
-	if (rv == CKR_OK)
-	{
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-				BUILD_BLOB_ASN1_DER,
-				chunk_create(attrs[0].pValue, attrs[0].ulValueLen),
-				BUILD_END);
-		if (cert)
-		{
-			DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
-				 trusted ? "" : "un", attrs[1].ulValueLen, attrs[1].pValue);
-			/* trusted certificates are also returned as untrusted */
-			this->untrusted->insert_last(this->untrusted, cert);
-			if (trusted)
-			{
-				this->trusted->insert_last(this->trusted, cert->get_ref(cert));
-			}
-		}
-		else
-		{
-			DBG1(DBG_CFG, "    loading cert '%.*s' failed",
-				 attrs[1].ulValueLen, attrs[1].pValue);
-		}
-	}
-	else
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
-	}
-	free(attrs[0].pValue);
-	free(attrs[1].pValue);
-}
-
-/**
  * Find certificates, optionally trusted
  */
 static void find_certificates(private_pkcs11_creds_t *this,
@@ -121,19 +59,41 @@ static void find_certificates(private_pkcs11_creds_t *this,
 {
 	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
 	CK_CERTIFICATE_TYPE type = CKC_X_509;
-	CK_ATTRIBUTE template[] = {
+	CK_ATTRIBUTE tmpl[] = {
 		{CKA_CLASS, &class, sizeof(class)},
 		{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
 		{CKA_TRUSTED, &trusted, sizeof(trusted)},
 	};
 	CK_OBJECT_HANDLE object;
+	CK_ATTRIBUTE attr[] = {
+		{CKA_VALUE, NULL, 0},
+		{CKA_LABEL, NULL, 0},
+	};
 	enumerator_t *enumerator;
+	certificate_t *cert;
 
 	enumerator = this->lib->create_object_enumerator(this->lib,
-										session, template, countof(template));
+							session, tmpl, countof(tmpl), attr, countof(attr));
 	while (enumerator->enumerate(enumerator, &object))
 	{
-		handle_certificate(this, session, object, trusted);
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							BUILD_BLOB_ASN1_DER,
+							chunk_create(attr[0].pValue, attr[0].ulValueLen),
+							BUILD_END);
+		if (!cert)
+		{
+			DBG1(DBG_CFG, "    loading cert '%.*s' failed",
+				 attr[1].ulValueLen, attr[1].pValue);
+			continue;
+		}
+		DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
+			 trusted ? "" : "un", attr[1].ulValueLen, attr[1].pValue);
+		/* trusted certificates are also returned as untrusted */
+		this->untrusted->insert_last(this->untrusted, cert);
+		if (trusted)
+		{
+			this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+		}
 	}
 	enumerator->destroy(enumerator);
 }
