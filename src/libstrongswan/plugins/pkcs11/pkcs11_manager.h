@@ -45,6 +45,13 @@ typedef void (*pkcs11_manager_token_event_t)(void *data, pkcs11_library_t *p11,
 struct pkcs11_manager_t {
 
 	/**
+	 * Create an enumerator over all tokens.
+	 *
+	 * @return			enumerator over (pkcs11_library_t*,CK_SLOT_ID)
+	 */
+	enumerator_t* (*create_token_enumerator)(pkcs11_manager_t *this);
+
+	/**
 	 * Destroy a pkcs11_manager_t.
 	 */
 	void (*destroy)(pkcs11_manager_t *this);
@@ -52,8 +59,20 @@ struct pkcs11_manager_t {
 
 /**
  * Create a pkcs11_manager instance.
+ *
+ * @param cb		token event callback function
+ * @param data		user data to pass to token event callback
+ * @return			instance
  */
 pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 										void *data);
+
+
+/**
+ * Get the singleton instance of the manager
+ *
+ * @return			instance, NULL if none available
+ */
+pkcs11_manager_t *pkcs11_manager_get();
 
 #endif /** PKCS11_MANAGER_H_ @}*/

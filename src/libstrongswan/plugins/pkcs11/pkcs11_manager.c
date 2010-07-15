@@ -58,8 +58,6 @@ struct private_pkcs11_manager_t {
 typedef struct {
 	/* back reference to this */
 	private_pkcs11_manager_t *this;
-	/* friendly name */
-	char *name;
 	/* associated library path */
 	char *path;
 	/* loaded library */
@@ -178,14 +176,14 @@ static void handle_slot(lib_entry_t *entry, CK_SLOT_ID slot)
 	if (info.flags & CKF_TOKEN_PRESENT)
 	{
 		DBG1(DBG_CFG, "  found token in slot '%s':%lu (%s)",
-			 entry->name, slot, info.slotDescription);
+			 entry->lib->get_name(entry->lib), slot, info.slotDescription);
 		handle_token(entry, slot);
 		entry->this->cb(entry->this->data, entry->lib, slot, TRUE);
 	}
 	else
 	{
 		DBG1(DBG_CFG, "token removed from slot '%s':%lu (%s)",
-			 entry->name, slot, info.slotDescription);
+			 entry->lib->get_name(entry->lib), slot, info.slotDescription);
 		entry->this->cb(entry->this->data, entry->lib, slot, FALSE);
 	}
 }
@@ -205,7 +203,7 @@ static job_requeue_t dispatch_slot_events(lib_entry_t *entry)
 	if (rv == CKR_FUNCTION_NOT_SUPPORTED || rv == CKR_NO_EVENT)
 	{
 		DBG1(DBG_CFG, "module '%s' does not support hot-plugging, cancelled",
-			 entry->name);
+			 entry->lib->get_name(entry->lib));
 		return JOB_REQUEUE_NONE;
 	}
 	if (rv == CKR_CRYPTOKI_NOT_INITIALIZED)
@@ -230,33 +228,130 @@ static void end_dispatch(lib_entry_t *entry)
 }
 
 /**
+ * Get the slot list of a library
+ */
+static CK_SLOT_ID_PTR get_slot_list(pkcs11_library_t *p11, CK_ULONG *out)
+{
+	CK_SLOT_ID_PTR slots;
+	CK_ULONG count;
+	CK_RV rv;
+
+	rv = p11->f->C_GetSlotList(TRUE, NULL, &count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetSlotList() failed: %N", ck_rv_names, rv);
+		return NULL;
+	}
+	if (count == 0)
+	{
+		return NULL;
+	}
+	slots = malloc(sizeof(CK_SLOT_ID) * count);
+	rv = p11->f->C_GetSlotList(TRUE, slots, &count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetSlotList() failed: %N", ck_rv_names, rv);
+		free(slots);
+		return NULL;
+	}
+	*out = count;
+	return slots;
+}
+
+/**
  * Query the slots for tokens
  */
 static void query_slots(lib_entry_t *entry)
 {
-	CK_ULONG token_count;
+	CK_ULONG count;
 	CK_SLOT_ID_PTR slots;
 	int i;
 
-	if (entry->lib->f->C_GetSlotList(TRUE, NULL, &token_count) == CKR_OK)
+	slots = get_slot_list(entry->lib, &count);
+	if (slots)
 	{
-		slots = malloc(sizeof(CK_SLOT_ID) * token_count);
-		if (entry->lib->f->C_GetSlotList(TRUE, slots, &token_count) == CKR_OK)
+		for (i = 0; i < count; i++)
 		{
-			for (i = 0; i < token_count; i++)
-			{
-				handle_slot(entry, slots[i]);
-			}
+			handle_slot(entry, slots[i]);
 		}
 		free(slots);
 	}
 }
+
+/**
+ * Token enumerator
+ */
+typedef struct {
+	/* implements enumerator */
+	enumerator_t public;
+	/* inner enumerator over PKCS#11 libraries */
+	enumerator_t *inner;
+	/* active library entry */
+	lib_entry_t *entry;
+	/* slot list with tokens */
+	CK_SLOT_ID_PTR slots;
+	/* number of slots */
+	CK_ULONG count;
+	/* current slot */
+	int current;
+} token_enumerator_t;
+
+METHOD(enumerator_t, enumerate_token, bool,
+	token_enumerator_t *this, pkcs11_library_t **out, CK_SLOT_ID *slot)
+{
+	if (this->current >= this->count)
+	{
+		free(this->slots);
+		this->slots = NULL;
+		this->current = 0;
+	}
+	while (!this->slots)
+	{
+		if (!this->inner->enumerate(this->inner, &this->entry))
+		{
+			return FALSE;
+		}
+		this->slots = get_slot_list(this->entry->lib, &this->count);
+	}
+	*out = this->entry->lib;
+	*slot = this->slots[this->current++];
+	return TRUE;
+}
+
+METHOD(enumerator_t, destroy_token, void,
+	token_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this->slots);
+	free(this);
+}
+
+METHOD(pkcs11_manager_t, create_token_enumerator, enumerator_t*,
+	private_pkcs11_manager_t *this)
+{
+	token_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_enumerate_token,
+			.destroy = _destroy_token,
+		},
+		.inner = this->libs->create_enumerator(this->libs),
+	);
+	return &enumerator->public;
+}
+
+/**
+ * Singleton instance
+ */
+static private_pkcs11_manager_t *singleton = NULL;
 
 METHOD(pkcs11_manager_t, destroy, void,
 	private_pkcs11_manager_t *this)
 {
 	this->libs->destroy_function(this->libs, (void*)lib_entry_destroy);
 	free(this);
+	singleton = NULL;
 }
 
 /**
@@ -272,6 +367,7 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 
 	INIT(this,
 		.public = {
+			.create_token_enumerator = _create_token_enumerator,
 			.destroy = _destroy,
 		},
 		.libs = linked_list_create(),
@@ -285,7 +381,6 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 	{
 		INIT(entry,
 			.this = this,
-			.name = module,
 		);
 
 		entry->path = lib->settings->get_str(lib->settings,
@@ -310,5 +405,16 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 		charon->processor->queue_job(charon->processor, (job_t*)entry->job);
 	}
 	enumerator->destroy(enumerator);
+
+	singleton = this;
+
 	return &this->public;
+}
+
+/**
+ * See header
+ */
+pkcs11_manager_t *pkcs11_manager_get()
+{
+	return (pkcs11_manager_t*)singleton;
 }

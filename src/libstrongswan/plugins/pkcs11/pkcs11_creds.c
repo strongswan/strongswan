@@ -279,7 +279,7 @@ pkcs11_creds_t *pkcs11_creds_create(pkcs11_library_t *p11, CK_SLOT_ID slot)
 
 	if (!load_certificates(this))
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
