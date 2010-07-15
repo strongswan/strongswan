@@ -43,6 +43,12 @@
  * @defgroup plugins plugins
  * @ingroup libstrongswan
  *
+ * @defgroup processing processing
+ * @ingroup libstrongswan
+ *
+ * @defgroup jobs jobs
+ * @ingroup processing
+ *
  * @defgroup threading threading
  * @ingroup libstrongswan
  *
@@ -64,6 +70,8 @@
 #include "settings.h"
 #include "integrity_checker.h"
 #include "plugins/plugin_loader.h"
+#include "processing/processor.h"
+#include "processing/scheduler.h"
 #include "crypto/crypto_factory.h"
 #include "fetcher/fetcher_manager.h"
 #include "database/database_factory.h"
@@ -117,6 +125,16 @@ struct library_t {
 	 * plugin loading facility
 	 */
 	plugin_loader_t *plugins;
+
+	/**
+	 * process jobs using a thread pool
+	 */
+	processor_t *processor;
+
+	/**
+	 * schedule jobs
+	 */
+	scheduler_t *scheduler;
 
 	/**
 	 * various settings loaded from settings file

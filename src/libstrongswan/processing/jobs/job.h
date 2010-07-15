@@ -16,7 +16,7 @@
 
 /**
  * @defgroup job job
- * @{ @ingroup hjobs
+ * @{ @ingroup jobs
  */
 
 #ifndef JOB_H_

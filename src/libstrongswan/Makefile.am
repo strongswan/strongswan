@@ -49,6 +49,11 @@ credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
+plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
+processing/jobs/job.h \
+processing/jobs/callback_job.c processing/jobs/callback_job.h \
+processing/processor.c processing/processor.h \
+processing/scheduler.c processing/scheduler.h \
 selectors/traffic_selector.c selectors/traffic_selector.h \
 threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \
@@ -64,8 +69,8 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/backtrace.c utils/backtrace.h \
-plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
+utils/backtrace.c utils/backtrace.h
+
 
 library.lo :	$(top_builddir)/config.status
 

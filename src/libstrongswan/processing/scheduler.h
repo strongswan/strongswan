@@ -17,7 +17,7 @@
 
 /**
  * @defgroup scheduler scheduler
- * @{ @ingroup hprocessing
+ * @{ @ingroup processing
  */
 
 #ifndef SCHEDULER_H_

@@ -65,6 +65,8 @@ void library_deinit()
 	detailed = lib->settings->get_bool(lib->settings,
 								"libstrongswan.leak_detective.detailed", TRUE);
 
+	this->public.scheduler->destroy(this->public.scheduler);
+	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
 	this->public.settings->destroy(this->public.settings);
 	this->public.credmgr->destroy(this->public.credmgr);
@@ -141,6 +143,8 @@ bool library_init(char *settings)
 	this->public.encoding = cred_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
+	this->public.processor = processor_create();
+	this->public.scheduler = scheduler_create();
 	this->public.plugins = plugin_loader_create();
 	this->public.integrity = NULL;
 

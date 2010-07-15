@@ -25,12 +25,6 @@
  * @defgroup hplugins plugins
  * @ingroup libhydra
  *
- * @defgroup hprocessing processing
- * @ingroup libhydra
- *
- * @defgroup hjobs jobs
- * @ingroup hprocessing
- *
  * @addtogroup libhydra
  * @{
  */
@@ -42,8 +36,6 @@ typedef struct hydra_t hydra_t;
 
 #include <attributes/attribute_manager.h>
 #include <kernel/kernel_interface.h>
-#include <processing/processor.h>
-#include <processing/scheduler.h>
 
 #include <library.h>
 
@@ -61,16 +53,6 @@ struct hydra_t {
 	 * kernel interface to communicate with kernel
 	 */
 	kernel_interface_t *kernel_interface;
-
-	/**
-	 * process jobs using a thread pool
-	 */
-	processor_t *processor;
-
-	/**
-	 * schedule jobs
-	 */
-	scheduler_t *scheduler;
 
 	/**
 	 * name of the daemon that initialized the library

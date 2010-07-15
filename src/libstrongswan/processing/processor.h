@@ -16,7 +16,7 @@
 
 /**
  * @defgroup processor processor
- * @{ @ingroup hprocessing
+ * @{ @ingroup processing
  */
 
 #ifndef PROCESSOR_H_
@@ -51,7 +51,7 @@ struct processor_t {
 	/**
 	 * Get the number of queued jobs.
 	 *
-	 * @returns 			number of items in queue
+	 * @return				number of items in queue
 	 */
 	u_int (*get_job_load) (processor_t *this);
 
@@ -60,7 +60,7 @@ struct processor_t {
 	 *
 	 * This function is non blocking and adds a job_t to the queue.
 	 *
-	 * @param job 			job to add to the queue
+	 * @param job			job to add to the queue
 	 */
 	void (*queue_job) (processor_t *this, job_t *job);
 

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup callback_job callback_job
- * @{ @ingroup hjobs
+ * @{ @ingroup jobs
  */
 
 #ifndef CALLBACK_JOB_H_

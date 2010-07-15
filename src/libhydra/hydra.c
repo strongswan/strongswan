@@ -43,8 +43,6 @@ void libhydra_deinit()
 	private_hydra_t *this = (private_hydra_t*)hydra;
 	this->public.attributes->destroy(this->public.attributes);
 	this->public.kernel_interface->destroy(this->public.kernel_interface);
-	this->public.scheduler->destroy(this->public.scheduler);
-	this->public.processor->destroy(this->public.processor);
 	free((void*)this->public.daemon);
 	free(this);
 	hydra = NULL;
@@ -61,14 +59,10 @@ bool libhydra_init(const char *daemon)
 		.public = {
 			.attributes = attribute_manager_create(),
 			.kernel_interface = kernel_interface_create(),
-			.processor = processor_create(),
 			.daemon = strdup(daemon ?: "libhydra"),
 		},
 	);
 	hydra = &this->public;
-
-	/* requires hydra->processor */
-	this->public.scheduler = scheduler_create();
 
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libhydra", libhydra_init))
