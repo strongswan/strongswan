@@ -241,6 +241,7 @@ int main (int argc, char **argv)
 	time_t last_reload;
 	bool no_fork = FALSE;
 	bool attach_gdb = FALSE;
+	bool load_warning = FALSE;
 
 	/* global variables defined in log.h */
 	log_to_stderr = TRUE;
@@ -299,6 +300,21 @@ int main (int argc, char **argv)
 	signal(SIGUSR1, fsig);
 
 	plog("Starting strongSwan "VERSION" IPsec [starter]...");
+
+#ifdef LOAD_WARNING
+	load_warning = TRUE;
+#endif
+
+	if (lib->settings->get_bool(lib->settings, "starter.load_warning", load_warning))
+	{
+		if (lib->settings->get_str(lib->settings, "charon.load", NULL) ||
+			lib->settings->get_str(lib->settings, "pluto.load", NULL))
+		{
+			plog("!! Your strongswan.conf contains manual plugin load options for");
+			plog("!! pluto and/or charon. This is recommended for experts only, see");
+			plog("!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
+		}
+	}
 
 	/* verify that we can start */
 	if (getuid() != 0)

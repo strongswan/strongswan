@@ -39,6 +39,10 @@ if USE_CHARON
   AM_CFLAGS += -DSTART_CHARON
 endif
 
+if USE_LOAD_WARNING
+  AM_CFLAGS += -DLOAD_WARNING
+endif
+
 ipsec.conf.5:	ipsec.conf.5.in
 		sed \
 		-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
