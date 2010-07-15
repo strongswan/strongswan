@@ -202,7 +202,7 @@ static job_requeue_t dispatch_slot_events(lib_entry_t *entry)
 	old = thread_cancelability(TRUE);
 	rv = entry->lib->f->C_WaitForSlotEvent(0, &slot, NULL);
 	thread_cancelability(old);
-	if (rv == CKR_NO_EVENT)
+	if (rv == CKR_FUNCTION_NOT_SUPPORTED || rv == CKR_NO_EVENT)
 	{
 		DBG1(DBG_CFG, "module '%s' does not support hot-plugging, cancelled",
 			 entry->name);
