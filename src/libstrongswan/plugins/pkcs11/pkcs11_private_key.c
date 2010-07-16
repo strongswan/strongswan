@@ -331,14 +331,33 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 }
 
 /**
+ * Try a login to the session
+ */
+static bool login(private_pkcs11_private_key_t *this, chunk_t pin, int slot)
+{
+	CK_RV rv;
+
+	rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "login to '%s':%d failed: %N",
+			 this->lib->get_name(this->lib), slot, ck_rv_names, rv);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * See header.
  */
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 {
 	private_pkcs11_private_key_t *this;
+	chunk_t (*cb)(void *data, int try) = NULL;
+	void *cb_data = NULL;
 	char *module = NULL;
 	chunk_t keyid, pin;
-	int slot = -1;
+	int slot = -1, try = 0;
 	CK_RV rv;
 
 	keyid = pin = chunk_empty;
@@ -351,6 +370,10 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 				continue;
 			case BUILD_PASSPHRASE:
 				pin = va_arg(args, chunk_t);
+				continue;
+			case BUILD_PASSPHRASE_CALLBACK:
+				cb = va_arg(args, void*);
+				cb_data = va_arg(args, void*);
 				continue;
 			case BUILD_PKCS11_SLOT:
 				slot = va_arg(args, int);
@@ -365,7 +388,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!keyid.len || !pin.len)
+	if (!keyid.len || (!pin.len && !cb))
 	{
 		return NULL;
 	}
@@ -421,13 +444,29 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 
-	rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
-	if (rv != CKR_OK)
+	if (pin.ptr)
 	{
-		DBG1(DBG_CFG, "login to '%s':%d failed: %N",
-			 module, slot, ck_rv_names, rv);
-		destroy(this);
-		return NULL;
+		if (!login(this, pin, slot))
+		{
+			destroy(this);
+			return NULL;
+		}
+	}
+	else
+	{
+		while (TRUE)
+		{
+			pin = cb(cb_data, ++try);
+			if (!pin.len)
+			{
+				destroy(this);
+				return NULL;
+			}
+			if (login(this, pin, slot))
+			{
+				break;
+			}
+		}
 	}
 
 	if (!find_key(this, keyid))
