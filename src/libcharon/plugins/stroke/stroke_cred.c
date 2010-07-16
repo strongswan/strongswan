@@ -14,10 +14,15 @@
  * for more details.
  */
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
 #include <glob.h>
 #include <libgen.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
 
 #include "stroke_cred.h"
 #include "stroke_shared_key.h"
@@ -1032,30 +1037,36 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 						 FILE *prompt)
 {
-	size_t bytes;
-	int line_nr = 0;
-	chunk_t chunk, src, line;
-	FILE *fd;
+	int line_nr = 0, fd;
+	chunk_t src, line;
 	private_key_t *private;
 	shared_key_t *shared;
+	struct stat sb;
+	void *addr;
 
 	DBG1(DBG_CFG, "loading secrets from '%s'", file);
-
-	fd = fopen(file, "r");
-	if (fd == NULL)
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
 	{
-		DBG1(DBG_CFG, "opening secrets file '%s' failed", file);
+		DBG1(DBG_CFG, "opening secrets file '%s' failed: %s", file,
+			 strerror(errno));
 		return;
 	}
-
-	/* TODO: do error checks */
-	fseek(fd, 0, SEEK_END);
-	chunk.len = ftell(fd);
-	rewind(fd);
-	chunk.ptr = malloc(chunk.len);
-	bytes = fread(chunk.ptr, 1, chunk.len, fd);
-	fclose(fd);
-	src = chunk;
+	if (fstat(fd, &sb) == -1)
+	{
+		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", file,
+			 strerror(errno));
+		close(fd);
+		return;
+	}
+	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		DBG1(DBG_LIB, "mapping '%s' failed: %s", file, strerror(errno));
+		close(fd);
+		return;
+	}
+	src = chunk_create(addr, sb.st_size);
 
 	if (level == 0)
 	{
@@ -1204,7 +1215,8 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	{
 		this->lock->unlock(this->lock);
 	}
-	chunk_clear(&chunk);
+	munmap(addr, sb.st_size);
+	close(fd);
 }
 
 /**
