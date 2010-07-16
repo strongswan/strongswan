@@ -218,6 +218,66 @@ static pkcs11_library_t* find_lib(char *module)
 }
 
 /**
+ * Find the PKCS#11 lib having a keyid, and optionally a slot
+ */
+static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot)
+{
+	pkcs11_manager_t *manager;
+	enumerator_t *enumerator;
+	pkcs11_library_t *p11, *found = NULL;
+	CK_SLOT_ID current;
+
+	manager = pkcs11_manager_get();
+	if (!manager)
+	{
+		return NULL;
+	}
+	enumerator = manager->create_token_enumerator(manager);
+	while (enumerator->enumerate(enumerator, &p11, &current))
+	{
+		if (*slot == -1 || *slot == current)
+		{
+			/* we look for a public key, it is usually readable without login */
+			CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+			CK_ATTRIBUTE tmpl[] = {
+				{CKA_CLASS, &class, sizeof(class)},
+				{CKA_ID, keyid.ptr, keyid.len},
+			};
+			CK_OBJECT_HANDLE object;
+			CK_SESSION_HANDLE session;
+			CK_RV rv;
+			enumerator_t *keys;
+
+			rv = p11->f->C_OpenSession(current, CKF_SERIAL_SESSION, NULL, NULL,
+									   &session);
+			if (rv != CKR_OK)
+			{
+				DBG1(DBG_CFG, "opening PKCS#11 session failed: %N",
+					 ck_rv_names, rv);
+				continue;
+			}
+			keys = p11->create_object_enumerator(p11, session,
+												 tmpl, countof(tmpl), NULL, 0);
+			if (keys->enumerate(keys, &object))
+			{
+				DBG1(DBG_CFG, "found key on PKCS#11 token '%s':%d",
+					 p11->get_name(p11), current);
+				found = p11;
+				*slot = current;
+			}
+			keys->destroy(keys);
+			p11->f->C_CloseSession(session);
+			if (found)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * Find the key on the token
  */
 static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
@@ -305,8 +365,8 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!keyid.len || !pin.len || !module || slot == -1)
-	{	/* we currently require all parameters, TODO: search for pubkeys */
+	if (!keyid.len || !pin.len)
+	{
 		return NULL;
 	}
 
@@ -328,12 +388,25 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		.ref = 1,
 	);
 
-	this->lib = find_lib(module);
-	if (!this->lib)
+	if (module && slot != -1)
 	{
-		DBG1(DBG_CFG, "PKCS#11 module '%s' not found", module);
-		free(this);
-		return NULL;
+		this->lib = find_lib(module);
+		if (!this->lib)
+		{
+			DBG1(DBG_CFG, "PKCS#11 module '%s' not found", module);
+			free(this);
+			return NULL;
+		}
+	}
+	else
+	{
+		this->lib = find_lib_by_keyid(keyid, &slot);
+		if (!this->lib)
+		{
+			DBG1(DBG_CFG, "no PKCS#11 module found having a keyid %#B", &keyid);
+			free(this);
+			return NULL;
+		}
 	}
 
 	rv = this->lib->f->C_OpenSession(slot, CKF_SERIAL_SESSION,
