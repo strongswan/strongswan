@@ -929,7 +929,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		else if (match("PIN", &token))
 		{
 			chunk_t sc = chunk_empty, secret = chunk_empty;
-			char smartcard[64], keyid[64], pin[64], module[64], *pos;
+			char smartcard[64], keyid[64], module[64], *pos;
 			private_key_t *key;
 			u_int slot;
 			enum {
@@ -997,8 +997,6 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 				DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
 				goto error;
 			}
-			snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
-			pin[sizeof(pin) - 1] = '\0';
 
 			switch (format)
 			{
@@ -1008,20 +1006,20 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 									BUILD_PKCS11_SLOT, slot,
 									BUILD_PKCS11_MODULE, module,
 									BUILD_PKCS11_KEYID, keyid,
-									BUILD_PKCS11_PIN, pin, BUILD_END);
+									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 				case SC_FORMAT_SLOT_KEYID:
 					key = lib->creds->create(lib->creds,
 									CRED_PRIVATE_KEY, KEY_ANY,
 									BUILD_PKCS11_SLOT, slot,
 									BUILD_PKCS11_KEYID, keyid,
-									BUILD_PKCS11_PIN, pin, BUILD_END);
+									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 				case SC_FORMAT_KEYID:
 					key = lib->creds->create(lib->creds,
 									CRED_PRIVATE_KEY, KEY_ANY,
 									BUILD_PKCS11_KEYID, keyid,
-									BUILD_PKCS11_PIN, pin, BUILD_END);
+									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 			}
 			if (key)
@@ -1029,7 +1027,6 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
 				this->private->insert_last(this->private, key);
 			}
-			memset(pin, 0, sizeof(pin));
 			chunk_clear(&secret);
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||

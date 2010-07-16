@@ -57,7 +57,7 @@ enum builder_part_t {
 	BUILD_BLOB_PGP,
 	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
-	/** passphrase for e.g. PEM decryption, chunk_t */
+	/** passphrase for e.g. PEM decryption, smartcard unlock, chunk_t */
 	BUILD_PASSPHRASE,
 	/** passphrase callback, chunk_t(*fn)(void *user, int try), void *user.
 	 *  The callback is invoked until the returned passphrase is accepted, or
@@ -109,8 +109,6 @@ enum builder_part_t {
 	BUILD_PKCS11_SLOT,
 	/** key ID of a key on a token, null terminated char* */
 	BUILD_PKCS11_KEYID,
-	/** pin to access a token, null terminated char* */
-	BUILD_PKCS11_PIN,
 	/** modulus (n) of a RSA key, chunk_t */
 	BUILD_RSA_MODULUS,
 	/** public exponent (e) of a RSA key, chunk_t */

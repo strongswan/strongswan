@@ -451,8 +451,9 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 {
 #ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
-	char *keyid = NULL, *pin = NULL, *engine_id = NULL;
-	char keyname[64];
+	char *keyid = NULL, *engine_id = NULL;
+	char keyname[64], pin[32];;
+	chunk_t secret = chunk_empty;
 	EVP_PKEY *key;
 	ENGINE *engine;
 	int slot = -1;
@@ -464,8 +465,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, char*);
 				continue;
-			case BUILD_PKCS11_PIN:
-				pin = va_arg(args, char*);
+			case BUILD_PASSPHRASE:
+				secret = va_arg(args, chunk_t);
 				continue;
 			case BUILD_PKCS11_SLOT:
 				slot = va_arg(args, int);
@@ -480,7 +481,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		}
 		break;
 	}
-	if (!keyid || !pin)
+	if (!keyid || !secret.len || !secret.ptr)
 	{
 		return NULL;
 	}
@@ -493,6 +494,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	{
 		snprintf(keyname, sizeof(keyname), "%d:%s", slot, keyid);
 	}
+	snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 
 	if (!engine_id)
 	{

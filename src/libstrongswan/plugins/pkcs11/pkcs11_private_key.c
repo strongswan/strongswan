@@ -276,10 +276,10 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 {
 	private_pkcs11_private_key_t *this;
-	char *keyid = NULL, *pin = NULL, *module = NULL;
+	char *keyid = NULL, *module = NULL;
 	int slot = -1;
 	CK_RV rv;
-	chunk_t chunk;
+	chunk_t chunk, pin = chunk_empty;
 
 	while (TRUE)
 	{
@@ -288,8 +288,8 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, char*);
 				continue;
-			case BUILD_PKCS11_PIN:
-				pin = va_arg(args, char*);
+			case BUILD_PASSPHRASE:
+				pin = va_arg(args, chunk_t);
 				continue;
 			case BUILD_PKCS11_SLOT:
 				slot = va_arg(args, int);
@@ -304,7 +304,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!keyid || !pin || !module || slot == -1)
+	if (!keyid || !pin.ptr || !pin.len || !module || slot == -1)
 	{	/* we currently require all parameters, TODO: search for pubkeys */
 		return NULL;
 	}
@@ -347,7 +347,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 
-	rv = this->lib->f->C_Login(this->session, CKU_USER, pin, strlen(pin));
+	rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "login to '%s':%d failed: %N",
