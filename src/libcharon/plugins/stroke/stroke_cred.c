@@ -932,6 +932,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			char smartcard[64], keyid[64], module[64], *pos;
 			private_key_t *key;
 			u_int slot;
+			chunk_t chunk;
 			enum {
 				SC_FORMAT_SLOT_MODULE_KEYID,
 				SC_FORMAT_SLOT_KEYID,
@@ -998,6 +999,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 				goto error;
 			}
 
+			chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
 			switch (format)
 			{
 				case SC_FORMAT_SLOT_MODULE_KEYID:
@@ -1005,23 +1007,24 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 									CRED_PRIVATE_KEY, KEY_ANY,
 									BUILD_PKCS11_SLOT, slot,
 									BUILD_PKCS11_MODULE, module,
-									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_KEYID, chunk,
 									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 				case SC_FORMAT_SLOT_KEYID:
 					key = lib->creds->create(lib->creds,
 									CRED_PRIVATE_KEY, KEY_ANY,
 									BUILD_PKCS11_SLOT, slot,
-									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_KEYID, chunk,
 									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 				case SC_FORMAT_KEYID:
 					key = lib->creds->create(lib->creds,
 									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_KEYID, keyid,
+									BUILD_PKCS11_KEYID, chunk,
 									BUILD_PASSPHRASE, secret, BUILD_END);
 					break;
 			}
+			free(chunk.ptr);
 			if (key)
 			{
 				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);

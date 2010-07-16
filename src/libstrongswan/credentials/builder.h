@@ -107,7 +107,7 @@ enum builder_part_t {
 	BUILD_PKCS11_MODULE,
 	/** slot specifier for a token in a PKCS#11 module, int */
 	BUILD_PKCS11_SLOT,
-	/** key ID of a key on a token, null terminated char* */
+	/** key ID of a key on a token, chunk_t */
 	BUILD_PKCS11_KEYID,
 	/** modulus (n) of a RSA key, chunk_t */
 	BUILD_RSA_MODULUS,

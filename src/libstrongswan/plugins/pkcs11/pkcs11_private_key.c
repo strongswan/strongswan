@@ -276,17 +276,18 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 {
 	private_pkcs11_private_key_t *this;
-	char *keyid = NULL, *module = NULL;
+	char *module = NULL;
+	chunk_t keyid, pin;
 	int slot = -1;
 	CK_RV rv;
-	chunk_t chunk, pin = chunk_empty;
 
+	keyid = pin = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_PKCS11_KEYID:
-				keyid = va_arg(args, char*);
+				keyid = va_arg(args, chunk_t);
 				continue;
 			case BUILD_PASSPHRASE:
 				pin = va_arg(args, chunk_t);
@@ -304,7 +305,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!keyid || !pin.ptr || !pin.len || !module || slot == -1)
+	if (!keyid.len || !pin.len || !module || slot == -1)
 	{	/* we currently require all parameters, TODO: search for pubkeys */
 		return NULL;
 	}
@@ -356,14 +357,11 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-	if (!find_key(this, chunk))
+	if (!find_key(this, keyid))
 	{
-		free(chunk.ptr);
 		destroy(this);
 		return NULL;
 	}
-	free(chunk.ptr);
 
 	return &this->public;
 }

@@ -451,9 +451,9 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 {
 #ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
-	char *keyid = NULL, *engine_id = NULL;
+	char *engine_id = NULL;
 	char keyname[64], pin[32];;
-	chunk_t secret = chunk_empty;
+	chunk_t secret = chunk_empty, keyid = chunk_empty;;
 	EVP_PKEY *key;
 	ENGINE *engine;
 	int slot = -1;
@@ -463,7 +463,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_PKCS11_KEYID:
-				keyid = va_arg(args, char*);
+				keyid = va_arg(args, chunk_t);
 				continue;
 			case BUILD_PASSPHRASE:
 				secret = va_arg(args, chunk_t);
@@ -481,19 +481,22 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		}
 		break;
 	}
-	if (!keyid || !secret.len || !secret.ptr)
+	if (!keyid.len || keyid.len > 40 || !secret.len)
 	{
 		return NULL;
 	}
 
-	if (slot == -1)
+	memset(keyname, 0, sizeof(keyname));
+	if (slot != -1)
 	{
-		snprintf(keyname, sizeof(keyname), "%s", keyid);
+		snprintf(keyname, sizeof(keyname), "%d:", slot);
 	}
-	else
+	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 4 / 3 + 1)
 	{
-		snprintf(keyname, sizeof(keyname), "%d:%s", slot, keyid);
+		return NULL;
 	}
+	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
+
 	snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 
 	if (!engine_id)
@@ -504,7 +507,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
-		DBG1(DBG_LIB, "engine '%s' is not available", engine_id);
+		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
 		return NULL;
 	}
 	if (!ENGINE_init(engine))
