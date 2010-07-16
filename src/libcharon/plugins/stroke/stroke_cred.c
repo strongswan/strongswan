@@ -679,7 +679,7 @@ typedef struct {
 } passphrase_cb_data_t;
 
 /**
- * Passphrase callback to read from whack fd
+ * Passphrase callback to read from stroke fd
  */
 chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
 {
@@ -698,6 +698,31 @@ chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
 	{
 		fprintf(data->prompt, "invalid passphrase\n");
 	}
+	fprintf(data->prompt, "Passphrase:\n");
+	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+	{
+		secret = chunk_create(data->buf, strlen(data->buf));
+		if (secret.len)
+		{	/* trim appended \n */
+			secret.len--;
+		}
+	}
+	return secret;
+}
+
+/**
+ * Smartcard PIN callback to read from stroke fd
+ */
+chunk_t smartcard_cb(passphrase_cb_data_t *data, int try)
+{
+	chunk_t secret = chunk_empty;;
+
+	if (try != 1)
+	{
+		fprintf(data->prompt, "invalid passphrase, aborting\n");
+		return chunk_empty;
+	}
+	fprintf(data->prompt, "Login to '%s' required\n", data->file);
 	fprintf(data->prompt, "Passphrase:\n");
 	if (fgets(data->buf, sizeof(data->buf), data->prompt))
 	{
@@ -898,10 +923,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			{
 				if (prompt)
 				{
-					passphrase_cb_data_t data;
-
-					data.prompt = prompt;
-					data.file = path;
+					passphrase_cb_data_t data = {
+						.prompt = prompt,
+						.file = path,
+					};
 					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 											 key_type, BUILD_FROM_FILE, path,
 											 BUILD_PASSPHRASE_CALLBACK,
@@ -930,7 +955,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		{
 			chunk_t sc = chunk_empty, secret = chunk_empty;
 			char smartcard[64], keyid[64], module[64], *pos;
-			private_key_t *key;
+			private_key_t *key = NULL;
 			u_int slot;
 			chunk_t chunk;
 			enum {
@@ -1000,29 +1025,71 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			}
 
 			chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-			switch (format)
+
+			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 			{
-				case SC_FORMAT_SLOT_MODULE_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_SLOT, slot,
-									BUILD_PKCS11_MODULE, module,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE, secret, BUILD_END);
-					break;
-				case SC_FORMAT_SLOT_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_SLOT, slot,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE, secret, BUILD_END);
-					break;
-				case SC_FORMAT_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE, secret, BUILD_END);
-					break;
+				if (prompt)
+				{
+					passphrase_cb_data_t data = {
+						.prompt = prompt,
+						.file = smartcard,
+					};
+
+					switch (format)
+					{
+						case SC_FORMAT_SLOT_MODULE_KEYID:
+							key = lib->creds->create(lib->creds,
+											CRED_PRIVATE_KEY, KEY_ANY,
+											BUILD_PKCS11_SLOT, slot,
+											BUILD_PKCS11_MODULE, module,
+											BUILD_PKCS11_KEYID, chunk,
+											BUILD_PASSPHRASE_CALLBACK,
+											smartcard_cb, &data, BUILD_END);
+							break;
+						case SC_FORMAT_SLOT_KEYID:
+							key = lib->creds->create(lib->creds,
+											CRED_PRIVATE_KEY, KEY_ANY,
+											BUILD_PKCS11_SLOT, slot,
+											BUILD_PKCS11_KEYID, chunk,
+											BUILD_PASSPHRASE_CALLBACK,
+											smartcard_cb, &data, BUILD_END);
+							break;
+						case SC_FORMAT_KEYID:
+							key = lib->creds->create(lib->creds,
+											CRED_PRIVATE_KEY, KEY_ANY,
+											BUILD_PKCS11_KEYID, chunk,
+											BUILD_PASSPHRASE_CALLBACK,
+											smartcard_cb, &data, BUILD_END);
+							break;
+					}
+				}
+			}
+			else
+			{
+				switch (format)
+				{
+					case SC_FORMAT_SLOT_MODULE_KEYID:
+						key = lib->creds->create(lib->creds,
+										CRED_PRIVATE_KEY, KEY_ANY,
+										BUILD_PKCS11_SLOT, slot,
+										BUILD_PKCS11_MODULE, module,
+										BUILD_PKCS11_KEYID, chunk,
+										BUILD_PASSPHRASE, secret, BUILD_END);
+						break;
+					case SC_FORMAT_SLOT_KEYID:
+						key = lib->creds->create(lib->creds,
+										CRED_PRIVATE_KEY, KEY_ANY,
+										BUILD_PKCS11_SLOT, slot,
+										BUILD_PKCS11_KEYID, chunk,
+										BUILD_PASSPHRASE, secret, BUILD_END);
+						break;
+					case SC_FORMAT_KEYID:
+						key = lib->creds->create(lib->creds,
+										CRED_PRIVATE_KEY, KEY_ANY,
+										BUILD_PKCS11_KEYID, chunk,
+										BUILD_PASSPHRASE, secret, BUILD_END);
+						break;
+				}
 			}
 			free(chunk.ptr);
 			if (key)
