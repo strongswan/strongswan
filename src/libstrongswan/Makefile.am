@@ -41,6 +41,7 @@ credentials/credential_manager.c credentials/credential_manager.h \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/sets/mem_cred.c credentials/sets/mem_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
