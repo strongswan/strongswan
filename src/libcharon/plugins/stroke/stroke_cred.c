@@ -736,6 +736,297 @@ chunk_t smartcard_cb(passphrase_cb_data_t *data, int try)
 }
 
 /**
+ * Load a smartcard with a PIN
+ */
+static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
+					 FILE *prompt)
+{
+	chunk_t sc = chunk_empty, secret = chunk_empty;
+	char smartcard[64], keyid[64], module[64], *pos;
+	private_key_t *key = NULL;
+	u_int slot;
+	chunk_t chunk;
+	enum {
+		SC_FORMAT_SLOT_MODULE_KEYID,
+		SC_FORMAT_SLOT_KEYID,
+		SC_FORMAT_KEYID,
+	} format;
+
+	err_t ugh = extract_value(&sc, &line);
+
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+		return FALSE;
+	}
+	if (sc.len == 0)
+	{
+		DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
+		return FALSE;
+	}
+	snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
+	smartcard[sizeof(smartcard) - 1] = '\0';
+
+	/* parse slot and key id. Three formats are supported:
+	 * - %smartcard<slot>@<module>:<keyid>
+	 * - %smartcard<slot>:<keyid>
+	 * - %smartcard:<keyid>
+	 */
+	if (sscanf(smartcard, "%%smartcard%u@%s", &slot, module) == 2)
+	{
+		pos = strchr(module, ':');
+		if (!pos)
+		{
+			DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is "
+				 "invalid", line_nr);
+			return FALSE;
+		}
+		*pos = '\0';
+		strcpy(keyid, pos + 1);
+		format = SC_FORMAT_SLOT_MODULE_KEYID;
+	}
+	else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
+	{
+		format = SC_FORMAT_SLOT_KEYID;
+	}
+	else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
+	{
+		format = SC_FORMAT_KEYID;
+	}
+	else
+	{
+		DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is not"
+				" supported or invalid", line_nr);
+		return FALSE;
+	}
+
+	if (!eat_whitespace(&line))
+	{
+		DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
+		return FALSE;
+	}
+	ugh = extract_secret(&secret, &line);
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
+		return FALSE;
+	}
+
+	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+
+	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	{
+		if (prompt)
+		{
+			passphrase_cb_data_t data = {
+				.prompt = prompt,
+				.file = smartcard,
+			};
+
+			switch (format)
+			{
+				case SC_FORMAT_SLOT_MODULE_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_SLOT, slot,
+									BUILD_PKCS11_MODULE, module,
+									BUILD_PKCS11_KEYID, chunk,
+									BUILD_PASSPHRASE_CALLBACK,
+									smartcard_cb, &data, BUILD_END);
+					break;
+				case SC_FORMAT_SLOT_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_SLOT, slot,
+									BUILD_PKCS11_KEYID, chunk,
+									BUILD_PASSPHRASE_CALLBACK,
+									smartcard_cb, &data, BUILD_END);
+					break;
+				case SC_FORMAT_KEYID:
+					key = lib->creds->create(lib->creds,
+									CRED_PRIVATE_KEY, KEY_ANY,
+									BUILD_PKCS11_KEYID, chunk,
+									BUILD_PASSPHRASE_CALLBACK,
+									smartcard_cb, &data, BUILD_END);
+					break;
+			}
+		}
+	}
+	else
+	{
+		switch (format)
+		{
+			case SC_FORMAT_SLOT_MODULE_KEYID:
+				key = lib->creds->create(lib->creds,
+								CRED_PRIVATE_KEY, KEY_ANY,
+								BUILD_PKCS11_SLOT, slot,
+								BUILD_PKCS11_MODULE, module,
+								BUILD_PKCS11_KEYID, chunk,
+								BUILD_PASSPHRASE, secret, BUILD_END);
+				break;
+			case SC_FORMAT_SLOT_KEYID:
+				key = lib->creds->create(lib->creds,
+								CRED_PRIVATE_KEY, KEY_ANY,
+								BUILD_PKCS11_SLOT, slot,
+								BUILD_PKCS11_KEYID, chunk,
+								BUILD_PASSPHRASE, secret, BUILD_END);
+				break;
+			case SC_FORMAT_KEYID:
+				key = lib->creds->create(lib->creds,
+								CRED_PRIVATE_KEY, KEY_ANY,
+								BUILD_PKCS11_KEYID, chunk,
+								BUILD_PASSPHRASE, secret, BUILD_END);
+				break;
+		}
+	}
+	free(chunk.ptr);
+	if (key)
+	{
+		DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
+		this->private->insert_last(this->private, key);
+	}
+	chunk_clear(&secret);
+	return TRUE;
+}
+
+/**
+ * Load a private key
+ */
+static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
+						 FILE *prompt, key_type_t key_type)
+{
+	char path[PATH_MAX];
+	chunk_t filename;
+	chunk_t secret = chunk_empty;
+	private_key_t *key = NULL;
+
+	err_t ugh = extract_value(&filename, &line);
+
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+		return FALSE;
+	}
+	if (filename.len == 0)
+	{
+		DBG1(DBG_CFG, "line %d: empty filename", line_nr);
+		return FALSE;
+	}
+	if (*filename.ptr == '/')
+	{
+		/* absolute path name */
+		snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
+	}
+	else
+	{
+		/* relative path name */
+		snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
+				 filename.len, filename.ptr);
+	}
+
+	/* check for optional passphrase */
+	if (eat_whitespace(&line))
+	{
+		ugh = extract_secret(&secret, &line);
+		if (ugh != NULL)
+		{
+			DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
+			return FALSE;
+		}
+	}
+	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	{
+		if (prompt)
+		{
+			passphrase_cb_data_t data = {
+				.prompt = prompt,
+				.file = path,
+			};
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+									 key_type, BUILD_FROM_FILE, path,
+									 BUILD_PASSPHRASE_CALLBACK,
+									 passphrase_cb, &data, BUILD_END);
+		}
+	}
+	else
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path,
+								 BUILD_PASSPHRASE, secret, BUILD_END);
+	}
+	if (key)
+	{
+		DBG1(DBG_CFG, "  loaded %N private key from '%s'",
+			 key_type_names, key->get_type(key), path);
+		this->private->insert_last(this->private, key);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
+	}
+	chunk_clear(&secret);
+	return TRUE;
+}
+
+/**
+ * Load a shared key
+ */
+static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
+						shared_key_type_t type, chunk_t ids)
+{
+	stroke_shared_key_t *shared_key;
+	chunk_t secret = chunk_empty;
+	bool any = TRUE;
+
+	err_t ugh = extract_secret(&secret, &line);
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
+		return FALSE;
+	}
+	shared_key = stroke_shared_key_create(type, secret);
+	DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
+		 ids.len > 0 ? (char*)ids.ptr : "%any");
+	DBG4(DBG_CFG, "  secret: %#B", &secret);
+
+	this->shared->insert_last(this->shared, shared_key);
+	while (ids.len > 0)
+	{
+		chunk_t id;
+		identification_t *peer_id;
+
+		ugh = extract_value(&id, &ids);
+		if (ugh != NULL)
+		{
+			DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+			return FALSE;
+		}
+		if (id.len == 0)
+		{
+			continue;
+		}
+
+		/* NULL terminate the ID string */
+		*(id.ptr + id.len) = '\0';
+		peer_id = identification_create_from_string(id.ptr);
+		if (peer_id->get_type(peer_id) == ID_ANY)
+		{
+			peer_id->destroy(peer_id);
+			continue;
+		}
+
+		shared_key->add_owner(shared_key, peer_id);
+		any = FALSE;
+	}
+	if (any)
+	{
+		shared_key->add_owner(shared_key,
+					identification_create_from_encoding(ID_ANY, chunk_empty));
+	}
+	return TRUE;
+}
+
+/**
  * reload ipsec.secrets
  */
 static void load_secrets(private_stroke_cred_t *this, char *file, int level,
@@ -869,299 +1160,46 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		else
 		{
 			DBG1(DBG_CFG, "line %d: missing ' : ' separator", line_nr);
-			goto error;
+			break;
 		}
 
 		if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
 		{
 			DBG1(DBG_CFG, "line %d: missing token", line_nr);
-			goto error;
+			break;
 		}
 		if (match("RSA", &token) || match("ECDSA", &token))
 		{
-			char path[PATH_MAX];
-			chunk_t filename;
-			chunk_t secret = chunk_empty;
-			private_key_t *key = NULL;
-			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
-
-			err_t ugh = extract_value(&filename, &line);
-
-			if (ugh != NULL)
+			if (!load_private(this, line, line_nr, prompt,
+							  match("RSA", &token) ? KEY_RSA : KEY_ECDSA))
 			{
-				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-				goto error;
+				break;
 			}
-			if (filename.len == 0)
-			{
-				DBG1(DBG_CFG, "line %d: empty filename", line_nr);
-				goto error;
-			}
-			if (*filename.ptr == '/')
-			{
-				/* absolute path name */
-				snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
-			}
-			else
-			{
-				/* relative path name */
-				snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
-						 filename.len, filename.ptr);
-			}
-
-			/* check for optional passphrase */
-			if (eat_whitespace(&line))
-			{
-				ugh = extract_secret(&secret, &line);
-				if (ugh != NULL)
-				{
-					DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
-					goto error;
-				}
-			}
-			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
-			{
-				if (prompt)
-				{
-					passphrase_cb_data_t data = {
-						.prompt = prompt,
-						.file = path,
-					};
-					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-											 key_type, BUILD_FROM_FILE, path,
-											 BUILD_PASSPHRASE_CALLBACK,
-											 passphrase_cb, &data, BUILD_END);
-				}
-			}
-			else
-			{
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-										 BUILD_FROM_FILE, path,
-										 BUILD_PASSPHRASE, secret, BUILD_END);
-			}
-			if (key)
-			{
-				DBG1(DBG_CFG, "  loaded %N private key from '%s'",
-					 key_type_names, key->get_type(key), path);
-				this->private->insert_last(this->private, key);
-			}
-			else
-			{
-				DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
-			}
-			chunk_clear(&secret);
 		}
 		else if (match("PIN", &token))
 		{
-			chunk_t sc = chunk_empty, secret = chunk_empty;
-			char smartcard[64], keyid[64], module[64], *pos;
-			private_key_t *key = NULL;
-			u_int slot;
-			chunk_t chunk;
-			enum {
-				SC_FORMAT_SLOT_MODULE_KEYID,
-				SC_FORMAT_SLOT_KEYID,
-				SC_FORMAT_KEYID,
-			} format;
-
-			err_t ugh = extract_value(&sc, &line);
-
-			if (ugh != NULL)
+			if (!load_pin(this, line, line_nr, prompt))
 			{
-				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-				goto error;
+				break;
 			}
-			if (sc.len == 0)
-			{
-				DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
-				goto error;
-			}
-			snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
-			smartcard[sizeof(smartcard) - 1] = '\0';
-
-			/* parse slot and key id. Three formats are supported:
-			 * - %smartcard<slot>@<module>:<keyid>
-			 * - %smartcard<slot>:<keyid>
-			 * - %smartcard:<keyid>
-			 */
-			if (sscanf(smartcard, "%%smartcard%u@%s", &slot, module) == 2)
-			{
-				pos = strchr(module, ':');
-				if (!pos)
-				{
-					DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is "
-						 "invalid", line_nr);
-					goto error;
-				}
-				*pos = '\0';
-				strcpy(keyid, pos + 1);
-				format = SC_FORMAT_SLOT_MODULE_KEYID;
-			}
-			else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
-			{
-				format = SC_FORMAT_SLOT_KEYID;
-			}
-			else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
-			{
-				format = SC_FORMAT_KEYID;
-			}
-			else
-			{
-				DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is not"
-						" supported or invalid", line_nr);
-				goto error;
-			}
-
-			if (!eat_whitespace(&line))
-			{
-				DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
-				goto error;
-			}
-			ugh = extract_secret(&secret, &line);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
-				goto error;
-			}
-
-			chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-
-			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
-			{
-				if (prompt)
-				{
-					passphrase_cb_data_t data = {
-						.prompt = prompt,
-						.file = smartcard,
-					};
-
-					switch (format)
-					{
-						case SC_FORMAT_SLOT_MODULE_KEYID:
-							key = lib->creds->create(lib->creds,
-											CRED_PRIVATE_KEY, KEY_ANY,
-											BUILD_PKCS11_SLOT, slot,
-											BUILD_PKCS11_MODULE, module,
-											BUILD_PKCS11_KEYID, chunk,
-											BUILD_PASSPHRASE_CALLBACK,
-											smartcard_cb, &data, BUILD_END);
-							break;
-						case SC_FORMAT_SLOT_KEYID:
-							key = lib->creds->create(lib->creds,
-											CRED_PRIVATE_KEY, KEY_ANY,
-											BUILD_PKCS11_SLOT, slot,
-											BUILD_PKCS11_KEYID, chunk,
-											BUILD_PASSPHRASE_CALLBACK,
-											smartcard_cb, &data, BUILD_END);
-							break;
-						case SC_FORMAT_KEYID:
-							key = lib->creds->create(lib->creds,
-											CRED_PRIVATE_KEY, KEY_ANY,
-											BUILD_PKCS11_KEYID, chunk,
-											BUILD_PASSPHRASE_CALLBACK,
-											smartcard_cb, &data, BUILD_END);
-							break;
-					}
-				}
-			}
-			else
-			{
-				switch (format)
-				{
-					case SC_FORMAT_SLOT_MODULE_KEYID:
-						key = lib->creds->create(lib->creds,
-										CRED_PRIVATE_KEY, KEY_ANY,
-										BUILD_PKCS11_SLOT, slot,
-										BUILD_PKCS11_MODULE, module,
-										BUILD_PKCS11_KEYID, chunk,
-										BUILD_PASSPHRASE, secret, BUILD_END);
-						break;
-					case SC_FORMAT_SLOT_KEYID:
-						key = lib->creds->create(lib->creds,
-										CRED_PRIVATE_KEY, KEY_ANY,
-										BUILD_PKCS11_SLOT, slot,
-										BUILD_PKCS11_KEYID, chunk,
-										BUILD_PASSPHRASE, secret, BUILD_END);
-						break;
-					case SC_FORMAT_KEYID:
-						key = lib->creds->create(lib->creds,
-										CRED_PRIVATE_KEY, KEY_ANY,
-										BUILD_PKCS11_KEYID, chunk,
-										BUILD_PASSPHRASE, secret, BUILD_END);
-						break;
-				}
-			}
-			free(chunk.ptr);
-			if (key)
-			{
-				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
-				this->private->insert_last(this->private, key);
-			}
-			chunk_clear(&secret);
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
 				 (match("NTLM", &token) && (type = SHARED_NT_HASH)) ||
 				 (match("XAUTH", &token) && (type = SHARED_EAP)))
 		{
-			stroke_shared_key_t *shared_key;
-			chunk_t secret = chunk_empty;
-			bool any = TRUE;
-
-			err_t ugh = extract_secret(&secret, &line);
-			if (ugh != NULL)
+			if (!load_shared(this, line, line_nr, type, ids))
 			{
-				DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
-				goto error;
-			}
-			shared_key = stroke_shared_key_create(type, secret);
-			DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
-				 ids.len > 0 ? (char*)ids.ptr : "%any");
-			DBG4(DBG_CFG, "  secret: %#B", &secret);
-
-			this->shared->insert_last(this->shared, shared_key);
-			while (ids.len > 0)
-			{
-				chunk_t id;
-				identification_t *peer_id;
-
-				ugh = extract_value(&id, &ids);
-				if (ugh != NULL)
-				{
-					DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-					goto error;
-				}
-				if (id.len == 0)
-				{
-					continue;
-				}
-
-				/* NULL terminate the ID string */
-				*(id.ptr + id.len) = '\0';
-				peer_id = identification_create_from_string(id.ptr);
-				if (peer_id->get_type(peer_id) == ID_ANY)
-				{
-					peer_id->destroy(peer_id);
-					continue;
-				}
-
-				shared_key->add_owner(shared_key, peer_id);
-				any = FALSE;
-			}
-			if (any)
-			{
-				shared_key->add_owner(shared_key,
-					identification_create_from_encoding(ID_ANY, chunk_empty));
+				break;
 			}
 		}
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either "
 				 "RSA, ECDSA, PSK, EAP, XAUTH or PIN", line_nr);
-			goto error;
+			break;
 		}
 	}
-error:
 	if (level == 0)
 	{
 		this->lock->unlock(this->lock);
