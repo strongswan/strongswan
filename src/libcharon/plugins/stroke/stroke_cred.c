@@ -30,6 +30,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ac.h>
+#include <credentials/sets/mem_cred.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <threading/rwlock.h>
@@ -751,6 +752,10 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	private_key_t *key = NULL;
 	u_int slot;
 	chunk_t chunk;
+	shared_key_t *shared;
+	identification_t *id;
+	mem_cred_t *mem;
+	callback_set_t *cb;
 	enum {
 		SC_FORMAT_SLOT_MODULE_KEYID,
 		SC_FORMAT_SLOT_KEYID,
@@ -816,81 +821,54 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
 		return FALSE;
 	}
-
-	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-
 	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 	{
 		if (prompt)
 		{
 			passphrase_cb_data_t data = {
 				.prompt = prompt,
-				.file = smartcard,
+				.file = path,
 			};
 
-			switch (format)
-			{
-				case SC_FORMAT_SLOT_MODULE_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_SLOT, slot,
-									BUILD_PKCS11_MODULE, module,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE_CALLBACK,
-									smartcard_cb, &data, BUILD_END);
-					break;
-				case SC_FORMAT_SLOT_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_SLOT, slot,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE_CALLBACK,
-									smartcard_cb, &data, BUILD_END);
-					break;
-				case SC_FORMAT_KEYID:
-					key = lib->creds->create(lib->creds,
-									CRED_PRIVATE_KEY, KEY_ANY,
-									BUILD_PKCS11_KEYID, chunk,
-									BUILD_PASSPHRASE_CALLBACK,
-									smartcard_cb, &data, BUILD_END);
-					break;
-			}
-		}
-	}
-	else
+	/* provide our pin in a temporary credential set */
+	shared = shared_key_create(SHARED_PIN, secret);
+	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+	id = identification_create_from_encoding(ID_KEY_ID, chunk);
+	set = mem_cred_create();
+	set->add_shared(set, shared, id, NULL);
+	lib->credmgr->add_local_set(lib->credmgr, &set->set);
+	/* unlock: smartcard needs the pin and potentially calls public set */
+	this->lock->unlock(this->lock);
+	switch (format)
 	{
-		switch (format)
-		{
-			case SC_FORMAT_SLOT_MODULE_KEYID:
-				key = lib->creds->create(lib->creds,
-								CRED_PRIVATE_KEY, KEY_ANY,
-								BUILD_PKCS11_SLOT, slot,
-								BUILD_PKCS11_MODULE, module,
-								BUILD_PKCS11_KEYID, chunk,
-								BUILD_PASSPHRASE, secret, BUILD_END);
-				break;
-			case SC_FORMAT_SLOT_KEYID:
-				key = lib->creds->create(lib->creds,
-								CRED_PRIVATE_KEY, KEY_ANY,
-								BUILD_PKCS11_SLOT, slot,
-								BUILD_PKCS11_KEYID, chunk,
-								BUILD_PASSPHRASE, secret, BUILD_END);
-				break;
-			case SC_FORMAT_KEYID:
-				key = lib->creds->create(lib->creds,
-								CRED_PRIVATE_KEY, KEY_ANY,
-								BUILD_PKCS11_KEYID, chunk,
-								BUILD_PASSPHRASE, secret, BUILD_END);
-				break;
-		}
+		case SC_FORMAT_SLOT_MODULE_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_SLOT, slot,
+							BUILD_PKCS11_MODULE, module,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
+		case SC_FORMAT_SLOT_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_SLOT, slot,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
+		case SC_FORMAT_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
 	}
-	free(chunk.ptr);
+	this->lock->write_lock(this->lock);
+	lib->credmgr->remove_local_set(lib->credmgr, &set->set);
+	set->destroy(set);
+
 	if (key)
 	{
 		DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
 		this->private->insert_last(this->private, key);
 	}
-	chunk_clear(&secret);
 	return TRUE;
 }
 

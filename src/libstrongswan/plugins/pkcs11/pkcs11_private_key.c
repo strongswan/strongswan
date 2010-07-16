@@ -331,13 +331,26 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 }
 
 /**
- * Try a login to the session
+ * Find a PIN and try to log in
  */
-static bool login(private_pkcs11_private_key_t *this, chunk_t pin, int slot)
+static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
 {
+	identification_t *id;
+	shared_key_t *shared;
+	chunk_t pin;
 	CK_RV rv;
 
+	id = identification_create_from_encoding(ID_KEY_ID, keyid);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_PIN, id, NULL);
+	id->destroy(id);
+	if (!shared)
+	{
+		DBG1(DBG_CFG, "no PIN found for PKCS#11 key %#B", keyid);
+		return FALSE;
+	}
+	pin = shared->get_key(shared);
 	rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
+	shared->destroy(shared);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "login to '%s':%d failed: %N",
@@ -353,27 +366,17 @@ static bool login(private_pkcs11_private_key_t *this, chunk_t pin, int slot)
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 {
 	private_pkcs11_private_key_t *this;
-	chunk_t (*cb)(void *data, int try) = NULL;
-	void *cb_data = NULL;
 	char *module = NULL;
-	chunk_t keyid, pin;
-	int slot = -1, try = 0;
+	chunk_t keyid = chunk_empty;
+	int slot = -1;
 	CK_RV rv;
 
-	keyid = pin = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, chunk_t);
-				continue;
-			case BUILD_PASSPHRASE:
-				pin = va_arg(args, chunk_t);
-				continue;
-			case BUILD_PASSPHRASE_CALLBACK:
-				cb = va_arg(args, void*);
-				cb_data = va_arg(args, void*);
 				continue;
 			case BUILD_PKCS11_SLOT:
 				slot = va_arg(args, int);
@@ -388,7 +391,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!keyid.len || (!pin.len && !cb))
+	if (!keyid.len)
 	{
 		return NULL;
 	}
@@ -444,29 +447,10 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 
-	if (pin.ptr)
+	if (!login(this, keyid, slot))
 	{
-		if (!login(this, pin, slot))
-		{
-			destroy(this);
-			return NULL;
-		}
-	}
-	else
-	{
-		while (TRUE)
-		{
-			pin = cb(cb_data, ++try);
-			if (!pin.len)
-			{
-				destroy(this);
-				return NULL;
-			}
-			if (login(this, pin, slot))
-			{
-				break;
-			}
-		}
+		destroy(this);
+		return NULL;
 	}
 
 	if (!find_key(this, keyid))
