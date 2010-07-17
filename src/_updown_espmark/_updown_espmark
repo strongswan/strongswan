@@ -115,8 +115,19 @@
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
 #              restricted on the peer side.
 #
-#		PLUTO_XAUTH_ID
-#				is an optional user ID employed by the XAUTH protocol
+#       PLUTO_XAUTH_ID
+#              is an optional user ID employed by the XAUTH protocol
+#
+#       PLUTO_MARK_IN
+#              is an optional XFRM mark set on the inbound IPsec SA
+#
+#       PLUTO_MARK_OUT
+#              is an optional XFRM mark set on the outbound IPsec SA
+#
+#       PLUTO_ESP_ENC
+#              contains the remote UDP port in the case of ESP_IN_UDP
+#              encapsulation
+#
 
 # logging of VPN connections
 #
