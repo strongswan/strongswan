@@ -115,7 +115,7 @@ METHOD(listener_t, child_updown, bool,
 	{
 		char command[1024];
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
-		char *pos, *virtual_ip, *iface, *mark_in, *mark_out;
+		char *pos, *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc;
 		mark_t mark;
 		bool is_host, is_ipv6;
 		FILE *shell;
@@ -197,6 +197,25 @@ METHOD(listener_t, child_updown, bool,
 			}
 		}
 
+		/* check for a NAT condition causing ESP_IN_UDP encapsulation */
+		if (ike_sa->has_condition(ike_sa, COND_NAT_ANY))
+		{
+			if (asprintf(&udp_enc, "PLUTO_UDP_ENC='%u' ",
+						 other->get_port(other)) < 0)
+			{
+				udp_enc = NULL;
+			}
+
+		}
+		else
+		{
+			if (asprintf(&udp_enc, "") < 0)
+			{
+				udp_enc = NULL;
+			}
+
+		}
+
 		if (up)
 		{
 			iface = charon->kernel_interface->get_interface(
@@ -244,6 +263,7 @@ METHOD(listener_t, child_updown, bool,
 				"%s"
 				"%s"
 				"%s"
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 is_host ? "-host" : "-client",
@@ -264,6 +284,7 @@ METHOD(listener_t, child_updown, bool,
 				 virtual_ip,
 				 mark_in,
 				 mark_out,
+				 udp_enc,
 				 config->get_hostaccess(config) ? "PLUTO_HOST_ACCESS='1' " : "",
 				 script);
 		free(my_client);
@@ -271,6 +292,7 @@ METHOD(listener_t, child_updown, bool,
 		free(virtual_ip);
 		free(mark_in);
 		free(mark_out);
+		free(udp_enc);
 		free(iface);
 
 		DBG3(DBG_CHD, "running updown script: %s", command);
