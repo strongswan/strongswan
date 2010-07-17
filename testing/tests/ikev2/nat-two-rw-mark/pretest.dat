@@ -7,9 +7,6 @@ moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_ALICE -p udp --sport 500  
 moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_VENUS -p udp --sport 500  -j SNAT --to PH_IP_MOON:520
 moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_ALICE -p udp --sport 4500 -j SNAT --to PH_IP_MOON:4510
 moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_VENUS -p udp --sport 4500 -j SNAT --to PH_IP_MOON:4520
-sun::echo 1 > /proc/sys/net/ipv4/ip_forward
-sun::iptables -t mangle -A PREROUTING -s PH_IP_MOON -p udp --sport 4510 -j MARK --set-mark 10
-sun::iptables -t mangle -A PREROUTING -s PH_IP_MOON -p udp --sport 4520 -j MARK --set-mark 20
 sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 10 -j SNAT --to 10.3.0.10
 sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 20 -j SNAT --to 10.3.0.20
 sun::iptables -t mangle -A PREROUTING -d 10.3.0.10 -j MARK --set-mark 10

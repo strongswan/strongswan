@@ -1,3 +1,4 @@
+sun::iptables -t mangle -v -n -L PREROUTING
 sun::ipsec stop
 alice::ipsec stop
 venus::ipsec stop
