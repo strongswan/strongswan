@@ -115,7 +115,8 @@ METHOD(listener_t, child_updown, bool,
 	{
 		char command[1024];
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
-		char *pos, *virtual_ip, *iface;
+		char *pos, *virtual_ip, *iface, *mark_in, *mark_out;
+		mark_t mark;
 		bool is_host, is_ipv6;
 		FILE *shell;
 
@@ -157,6 +158,42 @@ METHOD(listener_t, child_updown, bool,
 			if (asprintf(&virtual_ip, "") < 0)
 			{
 				virtual_ip = NULL;
+			}
+		}
+
+		/* check for the presence of an inbound mark */
+		mark = config->get_mark(config, TRUE);
+		if (mark.value)
+		{
+			if (asprintf(&mark_in, "PLUTO_MARK_IN='%u/0x%08x' ",
+						 mark.value, mark.mask ) < 0)
+			{
+				mark_in = NULL;
+			}
+		}
+		else
+		{
+			if (asprintf(&mark_in, "") < 0)
+			{
+				mark_in = NULL;
+			}
+		}
+
+		/* check for the presence of an outbound mark */
+		mark = config->get_mark(config, FALSE);
+		if (mark.value)
+		{
+			if (asprintf(&mark_out, "PLUTO_MARK_OUT='%u/0x%08x' ",
+						 mark.value, mark.mask ) < 0)
+			{
+				mark_out = NULL;
+			}
+		}
+		else
+		{
+			if (asprintf(&mark_out, "") < 0)
+			{
+				mark_out = NULL;
 			}
 		}
 
@@ -205,6 +242,8 @@ METHOD(listener_t, child_updown, bool,
 				"PLUTO_PEER_PROTOCOL='%u' "
 				"%s"
 				"%s"
+				"%s"
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 is_host ? "-host" : "-client",
@@ -223,11 +262,15 @@ METHOD(listener_t, child_updown, bool,
 				 other_ts->get_from_port(other_ts),
 				 other_ts->get_protocol(other_ts),
 				 virtual_ip,
+				 mark_in,
+				 mark_out,
 				 config->get_hostaccess(config) ? "PLUTO_HOST_ACCESS='1' " : "",
 				 script);
 		free(my_client);
 		free(other_client);
 		free(virtual_ip);
+		free(mark_in);
+		free(mark_out);
 		free(iface);
 
 		DBG3(DBG_CHD, "running updown script: %s", command);
