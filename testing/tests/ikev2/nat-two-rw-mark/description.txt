@@ -10,7 +10,7 @@ the <b>mark</b> parameter in ipsec.conf.
 <b>iptables -t mangle</b> rules are then used in the PREROUTING chain to mark the traffic to
 and from <b>alice</b> and <b>venus</b>, respectively.
 <p/>
-The iptables script designated by <b>leftupdown=/etc/mark_updown</b> automatically inserts 
-inbound mangle rules that mark the inbound ESP_IN_UDP packets as well as the IPsec-policy rules 
+The script designated by <b>leftupdown=/etc/mark_updown</b> automatically inserts 
+iptables mangle rules that mark the inbound ESP_IN_UDP packets as well as iptables IPsec-policy rules 
 that let pass the tunneled traffic. In order to test the tunnel, the NAT-ed hosts <b>alice</b> 
 and <b>venus</b> ping the client <b>bob</b> behind the gateway <b>sun</b>.
