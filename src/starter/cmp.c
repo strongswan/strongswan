@@ -66,6 +66,10 @@ starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 	VARCMP(policy);
 	VARCMP(addr_family);
 	VARCMP(tunnel_addr_family);
+	VARCMP(mark_in.value);
+	VARCMP(mark_in.mask);
+	VARCMP(mark_out.value);
+	VARCMP(mark_in.mask);
 
 	if (!starter_cmp_end(&c1->left, &c2->left))
 		return FALSE;
