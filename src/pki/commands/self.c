@@ -32,7 +32,7 @@ static int self()
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
-	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL;
+	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san, *ocsp;
 	int lifetime = 1095;
@@ -77,6 +77,9 @@ static int self()
 				continue;
 			case 'i':
 				file = arg;
+				continue;
+			case 'x':
+				keyid = arg;
 				continue;
 			case 'd':
 				dn = arg;
@@ -149,6 +152,15 @@ static int self()
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 									 BUILD_FROM_FILE, file, BUILD_END);
 	}
+	else if (keyid)
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+									 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
+	}
 	else
 	{
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
@@ -156,7 +168,7 @@ static int self()
 	}
 	if (!private)
 	{
-		error = "parsing private key failed";
+		error = "loading private key failed";
 		goto end;
 	}
 	public = private->get_public_key(private);
@@ -242,7 +254,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		self, 's', "self",
 		"create a self signed certificate",
-		{"[--in file] [--type rsa|ecdsa]",
+		{"[--in file | --keyid hex] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|ocspSigning]+",
@@ -250,6 +262,7 @@ static void __attribute__ ((constructor))reg()
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
+			{"keyid",	'x', 1, "keyid on smartcard of private key"},
 			{"type",	't', 1, "type of input key, default: rsa"},
 			{"dn",		'd', 1, "subject and issuer distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in certificate"},

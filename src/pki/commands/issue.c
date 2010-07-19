@@ -35,7 +35,7 @@ static int issue()
 	public_key_t *public = NULL;
 	bool pkcs10 = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
-	char *error = NULL;
+	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san, *cdps, *ocsp;
 	int lifetime = 1095;
@@ -84,6 +84,9 @@ static int issue()
 				continue;
 			case 'k':
 				cakey = arg;
+				continue;
+			case 'x':
+				keyid = arg;
 				continue;
 			case 'd':
 				dn = arg;
@@ -153,9 +156,9 @@ static int issue()
 		error = "--cacert is required";
 		goto usage;
 	}
-	if (!cakey)
+	if (!cakey && !keyid)
 	{
-		error = "--cakey is required";
+		error = "--cakey or --keyid is required";
 		goto usage;
 	}
 	if (dn)
@@ -190,12 +193,24 @@ static int issue()
 	}
 
 	DBG2(DBG_LIB, "Reading ca private key:");
-	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								 public->get_type(public),
-								 BUILD_FROM_FILE, cakey, BUILD_END);
+	if (cakey)
+	{
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+									 public->get_type(public),
+									 BUILD_FROM_FILE, cakey, BUILD_END);
+	}
+	else
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+									 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
+	}
 	if (!private)
 	{
-		error = "parsing CA private key failed";
+		error = "loading CA private key failed";
 		goto end;
 	}
 	if (!private->belongs_to(private, public))
@@ -354,8 +369,8 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
-		{"[--in file] [--type pub|pkcs10]",
-		 " --cacert file --cakey file --dn subject-dn [--san subjectAltName]+",
+		{"[--in file] [--type pub|pkcs10] --cakey file | --cakeyid hex",
+		 " --cacert file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
@@ -365,6 +380,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",	't', 1, "type of input, default: pub"},
 			{"cacert",	'c', 1, "CA certificate file"},
 			{"cakey",	'k', 1, "CA private key file"},
+			{"cakeyid",	'x', 1, "keyid on smartcard of CA private key"},
 			{"dn",		'd', 1, "distinguished name to include as subject"},
 			{"san",		'a', 1, "subjectAltName to include in certificate"},
 			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},

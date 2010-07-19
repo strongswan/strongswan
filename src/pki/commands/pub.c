@@ -30,7 +30,7 @@ static int pub()
 	private_key_t *private;
 	public_key_t *public;
 	chunk_t encoding;
-	char *file = NULL;
+	char *file = NULL, *keyid = NULL;
 	void *cred;
 	char *arg;
 
@@ -75,6 +75,9 @@ static int pub()
 			case 'i':
 				file = arg;
 				continue;
+			case 'x':
+				keyid = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -86,6 +89,15 @@ static int pub()
 	{
 		cred = lib->creds->create(lib->creds, type, subtype,
 									 BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else if (keyid)
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		cred = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+									 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	else
 	{
@@ -145,10 +157,12 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		pub, 'p', "pub",
 		"extract the public key from a private key/certificate",
-		{"[--in file] [--type rsa|ecdsa|pkcs10|x509] [--outform der|pem|pgp]"},
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|pkcs10|x509]",
+		 "[--outform der|pem|pgp]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
+			{"keyid",	'x', 1, "keyid on smartcard of private key"},
 			{"type",	't', 1, "type of credential, default: rsa"},
 			{"outform",	'f', 1, "encoding of extracted public key"},
 		}

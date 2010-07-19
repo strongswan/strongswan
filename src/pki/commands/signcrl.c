@@ -110,7 +110,7 @@ static int sign_crl()
 	x509_t *x509;
 	hash_algorithm_t digest = HASH_SHA1;
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
-	char serial[512], crl_serial[8];
+	char serial[512], crl_serial[8], *keyid = NULL;
 	int serial_len = 0;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
@@ -142,6 +142,9 @@ static int sign_crl()
 				continue;
 			case 'k':
 				cakey = arg;
+				continue;
+			case 'x':
+				keyid = arg;
 				continue;
 			case 'a':
 				lastupdate = arg;
@@ -245,9 +248,9 @@ static int sign_crl()
 		error = "--cacert is required";
 		goto usage;
 	}
-	if (!cakey)
+	if (!cakey && !keyid)
 	{
-		error = "--cakey is required";
+		error = "--cakey or --keyid is required";
 		goto usage;
 	}
 
@@ -270,12 +273,24 @@ static int sign_crl()
 		error = "extracting CA certificate public key failed";
 		goto error;
 	}
-	private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								 public->get_type(public),
-								 BUILD_FROM_FILE, cakey, BUILD_END);
+	if (cakey)
+	{
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+									 public->get_type(public),
+									 BUILD_FROM_FILE, cakey, BUILD_END);
+	}
+	else
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+									 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
+	}
 	if (!private)
 	{
-		error = "parsing CA private key failed";
+		error = "loading CA private key failed";
 		goto error;
 	}
 	if (!private->belongs_to(private, public))
@@ -359,7 +374,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		sign_crl, 'c', "signcrl",
 		"issue a CRL using a CA certificate and key",
-		{"--cacert file --cakey file --lifetime days",
+		{"--cacert file --cakey file | --cakeyid hex --lifetime days",
 		 "[  [--reason key-compromise|ca-compromise|affiliation-changed|",
 		 "             superseded|cessation-of-operation|certificate-hold]",
 		 "   [--date timestamp]",
@@ -369,6 +384,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",	'h', 0, "show usage information"},
 			{"cacert",	'c', 1, "CA certificate file"},
 			{"cakey",	'k', 1, "CA private key file"},
+			{"cakeyid",	'x', 1, "keyid on smartcard of CA private key"},
 			{"lifetime",'l', 1, "days the CRL gets a nextUpdate, default: 15"},
 			{"lastcrl",	'a', 1, "CRL of lastUpdate to copy revocations from"},
 			{"cert",	'z', 1, "certificate file to revoke"},
