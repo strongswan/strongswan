@@ -127,7 +127,7 @@ static int req()
 							  BUILD_SIGNING_KEY, private,
 							  BUILD_SUBJECT, id,
 							  BUILD_SUBJECT_ALTNAMES, san,
-							  BUILD_PASSPHRASE, challenge_password,
+							  BUILD_CHALLENGE_PWD, challenge_password,
 							  BUILD_DIGEST_ALG, digest,
 							  BUILD_END);
 	if (!cert)

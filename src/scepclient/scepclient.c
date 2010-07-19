@@ -859,7 +859,7 @@ int main(int argc, char **argv)
 						BUILD_SIGNING_KEY, private_key,
 						BUILD_SUBJECT, subject,
 						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
-						BUILD_PASSPHRASE, challengePassword,
+						BUILD_CHALLENGE_PWD, challengePassword,
 						BUILD_DIGEST_ALG, pkcs10_signature_alg,
 						BUILD_END);
 		if (!pkcs10_req)

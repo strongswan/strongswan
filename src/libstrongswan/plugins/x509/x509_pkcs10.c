@@ -684,7 +684,7 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 				enumerator->destroy(enumerator);
 				continue;
 			}
-			case BUILD_PASSPHRASE:
+			case BUILD_CHALLENGE_PWD:
 				cert->challengePassword = chunk_clone(va_arg(args, chunk_t));
 				continue;
 			case BUILD_DIGEST_ALG:
