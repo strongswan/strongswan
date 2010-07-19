@@ -1691,7 +1691,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_info->priority -= policy->sel.prefixlen_s * 10;
 	policy_info->priority -= policy->sel.proto ? 2 : 0;
 	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
-	policy_info->action = XFRM_POLICY_ALLOW;
+	policy_info->action = type != POLICY_DROP ? XFRM_POLICY_ALLOW
+											  : XFRM_POLICY_BLOCK;
 	policy_info->share = XFRM_SHARE_ANY;
 	this->mutex->unlock(this->mutex);
 
@@ -1706,55 +1707,58 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_info->lft.hard_use_expires_seconds = 0;
 
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
-	rthdr->rta_type = XFRMA_TMPL;
-	rthdr->rta_len = 0; /* actual length is set below */
 
-	struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
-
-	struct {
-		u_int8_t proto;
-		bool use;
-	} protos[] = {
-		{ IPPROTO_COMP, ipcomp != IPCOMP_NONE },
-		{ IPPROTO_ESP, spi != 0 },
-		{ IPPROTO_AH, ah_spi != 0 },
-	};
-
-	for (i = 0; i < countof(protos); i++)
+	if (type == POLICY_IPSEC)
 	{
-		if (!protos[i].use)
+		struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
+		struct {
+			u_int8_t proto;
+			bool use;
+		} protos[] = {
+			{ IPPROTO_COMP, ipcomp != IPCOMP_NONE },
+			{ IPPROTO_ESP, spi != 0 },
+			{ IPPROTO_AH, ah_spi != 0 },
+		};
+
+		rthdr->rta_type = XFRMA_TMPL;
+		rthdr->rta_len = 0; /* actual length is set below */
+
+		for (i = 0; i < countof(protos); i++)
 		{
-			continue;
+			if (!protos[i].use)
+			{
+				continue;
+			}
+
+			rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+			hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+			if (hdr->nlmsg_len > sizeof(request))
+			{
+				return FAILED;
+			}
+
+			tmpl->reqid = reqid;
+			tmpl->id.proto = protos[i].proto;
+			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
+			tmpl->mode = mode2kernel(mode);
+			tmpl->optional = protos[i].proto == IPPROTO_COMP &&
+							 direction != POLICY_OUT;
+			tmpl->family = src->get_family(src);
+
+			if (mode == MODE_TUNNEL)
+			{	/* only for tunnel mode */
+				host2xfrm(src, &tmpl->saddr);
+				host2xfrm(dst, &tmpl->id.daddr);
+			}
+
+			tmpl++;
+
+			/* use transport mode for other SAs */
+			mode = MODE_TRANSPORT;
 		}
 
-		rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-		hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return FAILED;
-		}
-
-		tmpl->reqid = reqid;
-		tmpl->id.proto = protos[i].proto;
-		tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-		tmpl->mode = mode2kernel(mode);
-		tmpl->optional = protos[i].proto == IPPROTO_COMP &&
-						 direction != POLICY_OUT;
-		tmpl->family = src->get_family(src);
-
-		if (mode == MODE_TUNNEL)
-		{	/* only for tunnel mode */
-			host2xfrm(src, &tmpl->saddr);
-			host2xfrm(dst, &tmpl->id.daddr);
-		}
-
-		tmpl++;
-
-		/* use transport mode for other SAs */
-		mode = MODE_TRANSPORT;
+		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
-
-	rthdr = XFRM_RTA_NEXT(rthdr);
 
 	if (mark.value)
 	{
