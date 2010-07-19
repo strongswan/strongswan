@@ -897,56 +897,6 @@ void show_states_status(bool all, const char *name)
 	free(array);
 }
 
-/* Given that we've used up a range of unused CPI's,
- * search for a new range of currently unused ones.
- * Note: this is very expensive when not trivial!
- * If we can't find one easily, choose 0 (a bad SPI,
- * no matter what order) indicating failure.
- */
-void find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi)
-{
-	int tries = 0;
-	cpi_t base = *latest_cpi;
-	cpi_t closest;
-	int i;
-
-startover:
-	closest = ~0;       /* not close at all */
-	for (i = 0; i < STATE_TABLE_SIZE; i++)
-	{
-		struct state *st;
-
-		for (st = statetable[i]; st != NULL; st = st->st_hashchain_next)
-		{
-			if (st->st_ipcomp.present)
-			{
-				cpi_t c = ntohl(st->st_ipcomp.our_spi) - base;
-
-				if (c < closest)
-				{
-					if (c == 0)
-					{
-						/* oops: next spot is occupied; start over */
-						if (++tries == 20)
-						{
-							/* FAILURE */
-							*latest_cpi = *first_busy_cpi = 0;
-							return;
-						}
-						base++;
-						if (base > IPCOMP_LAST_NEGOTIATED)
-							base = IPCOMP_FIRST_NEGOTIATED;
-						goto startover; /* really a tail call */
-					}
-					closest = c;
-				}
-			}
-		}
-	}
-	*latest_cpi = base; /* base is first in next free range */
-	*first_busy_cpi = closest + base;   /* and this is the roof */
-}
-
 /* Muck with high-order 16 bits of this SPI in order to make
  * the corresponding SAID unique.
  * Its low-order 16 bits hold a well-known IPCOMP CPI.

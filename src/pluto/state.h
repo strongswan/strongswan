@@ -267,7 +267,6 @@ extern struct state
 
 extern void show_states_status(bool all, const char *name);
 extern void for_each_state(void *(f)(struct state *, void *data), void *data);
-extern void find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi);
 extern ipsec_spi_t uniquify_his_cpi(ipsec_spi_t cpi, struct state *st);
 extern void fmt_state(bool all, struct state *st, time_t n
 					 , char *state_buf, size_t state_buf_len

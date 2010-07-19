@@ -287,47 +287,26 @@ ipsec_spi_t get_ipsec_spi(ipsec_spi_t avoid, int proto, struct spd_route *sr,
 /* Generate Unique CPI numbers.
  * The result is returned as an SPI (4 bytes) in network order!
  * The real bits are in the nework-low-order 2 bytes.
- * Modelled on get_ipsec_spi, but range is more limited:
- * 256-61439.
- * If we can't find one easily, return 0 (a bad SPI,
- * no matter what order) indicating failure.
  */
 ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 {
-	static cpi_t first_busy_cpi = 0, latest_cpi;
-	char text_said[SATOT_BUF];
-	rng_t *rng;
+	host_t *host_src, *host_dst;
+	u_int16_t cpi;
 
-	set_text_said(text_said, &sr->this.host_addr, 0, IPPROTO_COMP);
+	host_src = host_create_from_sockaddr((sockaddr_t*)&sr->that.host_addr);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)&sr->this.host_addr);
 
-	if (kernel_ops->get_spi)
+	if (hydra->kernel_interface->get_cpi(hydra->kernel_interface, host_src,
+										 host_dst, sr->reqid, &cpi) != SUCCESS)
+
 	{
-		return kernel_ops->get_spi(&sr->that.host_addr
-			, &sr->this.host_addr, IPPROTO_COMP, tunnel
-			, get_proto_reqid(sr->reqid, IPPROTO_COMP)
-			, IPCOMP_FIRST_NEGOTIATED, IPCOMP_LAST_NEGOTIATED
-			, text_said);
+		cpi = 0;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	while (!(IPCOMP_FIRST_NEGOTIATED <= first_busy_cpi && first_busy_cpi < IPCOMP_LAST_NEGOTIATED))
-	{
-		rng->get_bytes(rng, sizeof(first_busy_cpi), (u_char *)&first_busy_cpi);
-		latest_cpi = first_busy_cpi;
-	}
-	rng->destroy(rng);
+	host_src->destroy(host_src);
+	host_dst->destroy(host_dst);
 
-	latest_cpi++;
-
-	if (latest_cpi == first_busy_cpi)
-	{
-		find_my_cpi_gap(&latest_cpi, &first_busy_cpi);
-	}
-	if (latest_cpi > IPCOMP_LAST_NEGOTIATED)
-	{
-		latest_cpi = IPCOMP_FIRST_NEGOTIATED;
-	}
-	return htonl((ipsec_spi_t)latest_cpi);
+	return htonl((u_int32_t)ntohs(cpi));
 }
 
 /* Replace the shell metacharacters ', \, ", `, and $ in a character string
