@@ -65,8 +65,6 @@ extern const cert_t cert_empty;
  */
 extern bool no_cr_send;
 
-extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
-									   key_type_t type);
 extern cert_t* load_cert(char *filename, const char *label, x509_flag_t flags);
 extern cert_t* load_host_cert(char *filename);
 extern cert_t* load_ca_cert(char *filename);

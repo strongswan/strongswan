@@ -37,6 +37,8 @@
 #include <library.h>
 #include <asn1/asn1.h>
 #include <credentials/certificates/pgp_certificate.h>
+#include <credentials/sets/mem_cred.h>
+#include <credentials/sets/callback_cred.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -539,6 +541,123 @@ end:
 	return ugh;
 }
 
+/* struct used to prompt for a secret passphrase
+ * from a console with file descriptor fd
+ */
+typedef struct {
+	char secret[PROMPT_PASS_LEN+1];
+	bool prompt;
+	int fd;
+	int try;
+} prompt_pass_t;
+
+/**
+ * Passphrase callback to read from whack fd
+ */
+static shared_key_t* whack_pass_cb(prompt_pass_t *pass,
+								identification_t *me, identification_t *other,
+								id_match_t *match_me, id_match_t *match_other)
+{
+	int n;
+
+	if (pass->try > MAX_PROMPT_PASS_TRIALS)
+	{
+		whack_log(RC_LOG_SERIOUS, "invalid passphrase, too many trials");
+		return NULL;
+	}
+	if (pass->try == 1)
+	{
+		whack_log(RC_ENTERSECRET, "need passphrase for 'private key'");
+	}
+	else
+	{
+		whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
+	}
+	pass->try++;
+
+	n = read(pass->fd, pass->secret, PROMPT_PASS_LEN);
+	if (n == -1)
+	{
+		whack_log(RC_LOG_SERIOUS, "read(whackfd) failed");
+		return NULL;
+	}
+	pass->secret[n-1] = '\0';
+
+	if (strlen(pass->secret) == 0)
+	{
+		whack_log(RC_LOG_SERIOUS, "no passphrase entered, aborted");
+		return NULL;
+	}
+	if (match_me)
+	{
+		*match_me = ID_MATCH_PERFECT;
+	}
+	if (match_other)
+	{
+		*match_other = ID_MATCH_NONE;
+	}
+	return shared_key_create(SHARED_PRIVATE_KEY_PASS,
+				chunk_clone(chunk_create(pass->secret, strlen(pass->secret))));
+}
+
+/**
+ *  Loads a PKCS#1 or PGP private key file
+ */
+static private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
+									   key_type_t type)
+{
+	private_key_t *key = NULL;
+	char *path;
+
+	path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	if (pass && pass->prompt && pass->fd != NULL_FD)
+	{	/* use passphrase callback */
+		callback_cred_t *cb;
+
+		cb = callback_cred_create_shared((void*)whack_pass_cb, pass);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
+		cb->destroy(cb);
+		if (key)
+		{
+			whack_log(RC_SUCCESS, "valid passphrase");
+		}
+	}
+	else if (pass)
+	{	/* use a given passphrase */
+		mem_cred_t *mem;
+		shared_key_t *shared;
+
+		mem = mem_cred_create();
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
+				chunk_clone(chunk_create(pass->secret, strlen(pass->secret))));
+		mem->add_shared(mem, shared, NULL);
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
+	}
+	else
+	{	/* no passphrase */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+
+	}
+	if (key)
+	{
+		plog("  loaded private key from '%s'", filename);
+	}
+	else
+	{
+		plog("  syntax error in private key file");
+	}
+	return key;
+}
+
 /**
  * process a key file protected with optional passphrase which can either be
  * read from ipsec.secrets or prompted for by using whack
@@ -552,6 +671,7 @@ static err_t process_keyfile(private_key_t **key, key_type_t type, int whackfd)
 	memset(pass.secret,'\0', sizeof(pass.secret));
 	pass.prompt = FALSE;
 	pass.fd = whackfd;
+	pass.try = 1;
 
 	/* we expect the filename of a PKCS#1 private key file */
 

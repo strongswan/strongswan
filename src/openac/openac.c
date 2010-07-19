@@ -36,6 +36,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
+#include <credentials/sets/mem_cred.h>
 #include <utils/optionsfrom.h>
 
 #define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
@@ -437,10 +438,19 @@ int main(int argc, char **argv)
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
+		mem_cred_t *mem;
+		shared_key_t *shared;
+
+		mem = mem_cred_create();
+		lib->credmgr->add_set(lib->credmgr, &mem->set);
+		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
+								   chunk_clone(passphrase));
+		mem->add_shared(mem, shared, NULL);
 		signerKey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 									   BUILD_FROM_FILE, keyfile,
-									   BUILD_PASSPHRASE, passphrase,
 									   BUILD_END);
+		lib->credmgr->remove_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
 		if (signerKey == NULL)
 		{
 			goto end;

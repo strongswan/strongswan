@@ -167,8 +167,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 /**
  * Converts a PEM encoded file into its binary form (RFC 1421, RFC 934)
  */
-static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data,
-						   bool *pgp)
+static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -187,9 +186,10 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 	chunk_t dst    = *blob;
 	chunk_t line   = chunk_empty;
 	chunk_t iv     = chunk_empty;
-	chunk_t passphrase;
-	int try = 0;
 	u_char iv_buf[HASH_SIZE_MD5];
+	status_t status = NOT_FOUND;
+	enumerator_t *enumerator;
+	shared_key_t *shared;
 
 	dst.len = 0;
 	iv.ptr = iv_buf;
@@ -326,36 +326,35 @@ static status_t pem_to_bin(chunk_t *blob, chunk_t(*cb)(void*,int), void *cb_data
 	{
 		return SUCCESS;
 	}
-	if (!cb)
+
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+											SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
-		DBG1(DBG_LIB, "  missing passphrase");
-		return INVALID_ARG;
-	}
-	while (TRUE)
-	{
-		passphrase = cb(cb_data, ++try);
-		if (!passphrase.len || !passphrase.ptr)
+		chunk_t passphrase, chunk;
+
+		passphrase = shared->get_key(shared);
+		chunk = chunk_clone(*blob);
+		status = pem_decrypt(&chunk, alg, key_size, iv, passphrase);
+		if (status == SUCCESS)
 		{
-			return INVALID_ARG;
+			memcpy(blob->ptr, chunk.ptr, chunk.len);
+			blob->len = chunk.len;
 		}
-		switch (pem_decrypt(blob, alg, key_size, iv, passphrase))
-		{
-			case INVALID_ARG:
-				/* bad passphrase, retry */
-				continue;
-			case SUCCESS:
-				return SUCCESS;
-			default:
-				return FAILED;
+		free(chunk.ptr);
+		if (status != INVALID_ARG)
+		{	/* try again only if passphrase invalid */
+			break;
 		}
 	}
+	enumerator->destroy(enumerator);
+	return status;
 }
 
 /**
  * load the credential from a blob
  */
 static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
-							chunk_t(*cb)(void*,int), void *cb_data,
 							x509_flag_t flags)
 {
 	void *cred = NULL;
@@ -364,7 +363,7 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
 	blob = chunk_clone(blob);
 	if (!is_asn1(blob))
 	{
-		if (pem_to_bin(&blob, cb, cb_data, &pgp) != SUCCESS)
+		if (pem_to_bin(&blob, &pgp) != SUCCESS)
 		{
 			chunk_clear(&blob);
 			return NULL;
@@ -394,7 +393,6 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
  * load the credential from a file
  */
 static void *load_from_file(char *file, credential_type_t type, int subtype,
-							chunk_t(*cb)(void*,int), void *cb_data,
 							x509_flag_t flags)
 {
 	void *cred = NULL;
@@ -425,8 +423,7 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 		return NULL;
 	}
 
-	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype,
-						  cb, cb_data, flags);
+	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype, flags);
 
 	munmap(addr, sb.st_size);
 	close(fd);
@@ -437,7 +434,6 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
  * load the credential from a file descriptor
  */
 static void *load_from_fd(int fd, credential_type_t type, int subtype,
-						  chunk_t(*cb)(void*,int), void *cb_data,
 						  x509_flag_t flags)
 {
 	char buf[8096];
@@ -464,20 +460,7 @@ static void *load_from_fd(int fd, credential_type_t type, int subtype,
 			return NULL;
 		}
 	}
-	return load_from_blob(chunk_create(buf, total), type, subtype,
-						  cb, cb_data, flags);
-}
-
-/**
- * passphrase callback to use if passphrase given
- */
-static chunk_t given_passphrase_cb(chunk_t *passphrase, int try)
-{
-	if (try > 1)
-	{	/* try only once for given passphrases */
-		return chunk_empty;
-	}
-	return *passphrase;
+	return load_from_blob(chunk_create(buf, total), type, subtype, flags);
 }
 
 /**
@@ -487,9 +470,7 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 {
 	char *file = NULL;
 	int fd = -1;
-	chunk_t pem = chunk_empty, passphrase = chunk_empty;
-	chunk_t (*cb)(void *data, int try) = NULL;
-	void *cb_data = NULL;
+	chunk_t pem = chunk_empty;
 	int flags = 0;
 
 	while (TRUE)
@@ -505,18 +486,6 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 			case BUILD_BLOB_PEM:
 				pem = va_arg(args, chunk_t);
 				continue;
-			case BUILD_PASSPHRASE:
-				passphrase = va_arg(args, chunk_t);
-				if (passphrase.len && passphrase.ptr)
-				{
-					cb = (void*)given_passphrase_cb;
-					cb_data = &passphrase;
-				}
-				continue;
-			case BUILD_PASSPHRASE_CALLBACK:
-				cb = va_arg(args, chunk_t(*)(void*,int));
-				cb_data = va_arg(args, void*);
-				continue;
 			case BUILD_X509_FLAG:
 				flags = va_arg(args, int);
 				continue;
@@ -530,15 +499,15 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 
 	if (pem.len)
 	{
-		return load_from_blob(pem, type, subtype, cb, cb_data, flags);
+		return load_from_blob(pem, type, subtype, flags);
 	}
 	if (file)
 	{
-		return load_from_file(file, type, subtype, cb, cb_data, flags);
+		return load_from_file(file, type, subtype, flags);
 	}
 	if (fd != -1)
 	{
-		return load_from_fd(fd, type, subtype, cb, cb_data, flags);
+		return load_from_fd(fd, type, subtype, flags);
 	}
 	return NULL;
 }

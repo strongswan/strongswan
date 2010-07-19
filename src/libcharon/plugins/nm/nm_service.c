@@ -380,16 +380,15 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 			str = nm_setting_vpn_get_data_item(vpn, "userkey");
 			if (!agent && str)
 			{
-				chunk_t secret;
+				char *secret;
 
-				secret.ptr = (char*)nm_setting_vpn_get_secret(vpn, "password");
-				if (secret.ptr)
+				secret = (char*)nm_setting_vpn_get_secret(vpn, "password");
+				if (secret)
 				{
-					secret.len = strlen(secret.ptr);
+					priv->creds->set_key_password(priv->creds, secret);
 				}
 				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, str,
-								BUILD_PASSPHRASE, secret, BUILD_END);
+								KEY_RSA, BUILD_FROM_FILE, str, BUILD_END);
 				if (!private)
 				{
 					g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -524,17 +523,10 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 			if (path)
 			{
 				private_key_t *key;
-				chunk_t secret;
 
-				secret.ptr = (char*)nm_setting_vpn_get_secret(settings, "password");
-				if (secret.ptr)
-				{
-					secret.len = strlen(secret.ptr);
-				}
 				/* try to load/decrypt the private key */
 				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, path,
-								BUILD_PASSPHRASE, secret, BUILD_END);
+								KEY_RSA, BUILD_FROM_FILE, path, BUILD_END);
 				if (key)
 				{
 					key->destroy(key);

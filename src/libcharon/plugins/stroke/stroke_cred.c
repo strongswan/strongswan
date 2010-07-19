@@ -674,47 +674,57 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 }
 
 /**
- * Data to pass to passphrase_cb
+ * Data for passphrase callback
  */
 typedef struct {
 	/** socket we use for prompting */
 	FILE *prompt;
 	/** private key file */
-	char *file;
-	/** buffer for passphrase */
-	char buf[256];
+	char *path;
+	/** number of tries */
+	int try;
 } passphrase_cb_data_t;
 
 /**
- * Passphrase callback to read from stroke fd
+ * Callback function to receive Passphrases
  */
-chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
+static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
+								identification_t *me, identification_t *other,
+								id_match_t *match_me, id_match_t *match_other)
 {
-	chunk_t secret = chunk_empty;;
+	chunk_t secret;
+	char buf[256];
 
-	if (try > 5)
+	if (data->try > 1)
 	{
-		fprintf(data->prompt, "invalid passphrase, too many trials\n");
-		return chunk_empty;
+		if (data->try > 5)
+		{
+			fprintf(data->prompt, "PIN invalid, giving up.\n");
+			return NULL;
+		}
+		fprintf(data->prompt, "PIN invalid!\n");
 	}
-	if (try == 1)
-	{
-		fprintf(data->prompt, "Private key '%s' is encrypted\n", data->file);
-	}
-	else
-	{
-		fprintf(data->prompt, "invalid passphrase\n");
-	}
+	data->try++;
+	fprintf(data->prompt, "Private key '%s' is encrypted.\n", data->path);
 	fprintf(data->prompt, "Passphrase:\n");
-	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+	if (fgets(buf, sizeof(buf), data->prompt))
 	{
-		secret = chunk_create(data->buf, strlen(data->buf));
-		if (secret.len)
+		secret = chunk_create(buf, strlen(buf));
+		if (secret.len > 1)
 		{	/* trim appended \n */
 			secret.len--;
+			if (match_me)
+			{
+				*match_me = ID_MATCH_PERFECT;
+			}
+			if (match_other)
+			{
+				*match_other = ID_MATCH_NONE;
+			}
+			return shared_key_create(SHARED_PRIVATE_KEY_PASS, chunk_clone(secret));
 		}
 	}
-	return secret;
+	return NULL;
 }
 
 /**
@@ -748,7 +758,7 @@ static shared_key_t* pin_cb(pin_cb_data_t *data,
 
 	if (data->try > 1)
 	{
-		fprintf(data->prompt, "PIN invalid, giving up.\n", data->card);
+		fprintf(data->prompt, "PIN invalid, aborting.\n");
 		return NULL;
 	}
 	data->try++;
@@ -859,6 +869,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
 	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 	{
+		free(secret.ptr);
 		if (!prompt)
 		{	/* no IO channel to prompt, skip */
 			free(chunk.ptr);
@@ -933,8 +944,8 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 {
 	char path[PATH_MAX];
 	chunk_t filename;
-	chunk_t secret = chunk_empty;
-	private_key_t *key = NULL;
+	chunk_t secret;
+	private_key_t *key;
 
 	err_t ugh = extract_value(&filename, &line);
 
@@ -972,23 +983,53 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	}
 	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 	{
-		if (prompt)
+		callback_cred_t *cb = NULL;
+		passphrase_cb_data_t pp_data = {
+			.prompt = prompt,
+			.path = path,
+			.try = 1,
+		};
+
+		free(secret.ptr);
+		if (!prompt)
 		{
-			passphrase_cb_data_t data = {
-				.prompt = prompt,
-				.file = path,
-			};
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-									 key_type, BUILD_FROM_FILE, path,
-									 BUILD_PASSPHRASE_CALLBACK,
-									 passphrase_cb, &data, BUILD_END);
+			return TRUE;
 		}
+		/* use callback credential set to prompt for the passphrase */
+		pp_data.prompt = prompt;
+		pp_data.path = path;
+		pp_data.try = 1;
+		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+
+		/* unlock, as the builder might ask for a secret */
+		this->lock->unlock(this->lock);
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		this->lock->write_lock(this->lock);
+
+		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
+		cb->destroy(cb);
 	}
 	else
 	{
+		mem_cred_t *mem = NULL;
+		shared_key_t *shared;
+
+		/* provide our pin in a temporary credential set */
+		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS, secret);
+		mem = mem_cred_create();
+		mem->add_shared(mem, shared, NULL);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+
+		/* unlock, as the builder might ask for a secret */
+		this->lock->unlock(this->lock);
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-								 BUILD_FROM_FILE, path,
-								 BUILD_PASSPHRASE, secret, BUILD_END);
+								 BUILD_FROM_FILE, path, BUILD_END);
+		this->lock->write_lock(this->lock);
+
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
 	}
 	if (key)
 	{
@@ -1000,7 +1041,6 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	{
 		DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
 	}
-	chunk_clear(&secret);
 	return TRUE;
 }
 
