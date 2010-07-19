@@ -56,9 +56,8 @@ static char* push_string(stroke_msg_t *msg, char *string)
 static int send_stroke_msg (stroke_msg_t *msg)
 {
 	struct sockaddr_un ctl_addr;
-	int sock;
-	char buffer[512];
-	int byte_count;
+	int sock, byte_count;
+	char buffer[512], *pass;
 
 	ctl_addr.sun_family = AF_UNIX;
 	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
@@ -90,16 +89,29 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	while ((byte_count = read(sock, buffer, sizeof(buffer)-1)) > 0)
 	{
 		buffer[byte_count] = '\0';
-		printf("%s", buffer);
 
-		/* we prompt if we receive the "Passphrase:" magic keyword */
-		if (byte_count >= 12 &&
-			strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0)
+		/* we prompt if we receive the "Passphrase:"/"PIN:" magic keyword */
+		if ((byte_count >= 12 &&
+			 strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0) ||
+			(byte_count >= 5 &&
+			 strcmp(buffer + byte_count - 5, "PIN:\n") == 0))
 		{
-			if (fgets(buffer, sizeof(buffer), stdin))
+			/* remove trailing newline */
+			pass = strrchr(buffer, '\n');
+			if (pass)
 			{
-				ignore_result(write(sock, buffer, strlen(buffer)));
+				*pass = ' ';
 			}
+			pass = getpass(buffer);
+			if (pass)
+			{
+				ignore_result(write(sock, pass, strlen(pass)));
+				ignore_result(write(sock, "\n", 1));
+			}
+		}
+		else
+		{
+			printf("%s", buffer);
 		}
 	}
 	if (byte_count < 0)

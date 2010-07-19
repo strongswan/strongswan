@@ -185,6 +185,7 @@ char *whitelist[] = {
 	"__vsyslog_chk",
 	"getaddrinfo",
 	"setlocale",
+	"getpass",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
