@@ -340,7 +340,20 @@ static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
 	shared_key_t *shared;
 	chunk_t pin;
 	CK_RV rv;
+	CK_SESSION_INFO info;
 	bool found = FALSE, success = FALSE;
+
+	rv = this->lib->f->C_GetSessionInfo(this->session, &info);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetSessionInfo failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	if (info.state != CKS_RO_PUBLIC_SESSION &&
+		info.state != CKS_RW_PUBLIC_SESSION)
+	{	/* already logged in with another session, skip */
+		return TRUE;
+	}
 
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
