@@ -865,7 +865,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-	u_int16_t int_alg, chunk_t int_key,	ipsec_mode_t mode, u_int16_t ipcomp,
+	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool encap, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
@@ -1626,6 +1626,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	netlink_buf_t request;
 	struct xfrm_userpolicy_info *policy_info;
 	struct nlmsghdr *hdr;
+	int i;
 
 	/* create a policy */
 	policy = malloc_thing(policy_entry_t);
@@ -1706,29 +1707,26 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
 	rthdr->rta_type = XFRMA_TMPL;
-	rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-
-	hdr->nlmsg_len += rthdr->rta_len;
-	if (hdr->nlmsg_len > sizeof(request))
-	{
-		return FAILED;
-	}
+	rthdr->rta_len = 0; /* actual length is set below */
 
 	struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
 
-	if (ipcomp != IPCOMP_NONE)
+	struct {
+		u_int8_t proto;
+		bool use;
+	} protos[] = {
+		{ IPPROTO_COMP, ipcomp != IPCOMP_NONE },
+		{ IPPROTO_ESP, spi != 0 },
+		{ IPPROTO_AH, ah_spi != 0 },
+	};
+
+	for (i = 0; i < countof(protos); i++)
 	{
-		tmpl->reqid = reqid;
-		tmpl->id.proto = IPPROTO_COMP;
-		tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-		tmpl->mode = mode2kernel(mode);
-		tmpl->optional = direction != POLICY_OUT;
-		tmpl->family = src->get_family(src);
+		if (!protos[i].use)
+		{
+			continue;
+		}
 
-		host2xfrm(src, &tmpl->saddr);
-		host2xfrm(dst, &tmpl->id.daddr);
-
-		/* add an additional xfrm_user_tmpl */
 		rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
 		hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
 		if (hdr->nlmsg_len > sizeof(request))
@@ -1736,23 +1734,26 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			return FAILED;
 		}
 
+		tmpl->reqid = reqid;
+		tmpl->id.proto = protos[i].proto;
+		tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
+		tmpl->mode = mode2kernel(mode);
+		tmpl->optional = protos[i].proto == IPPROTO_COMP &&
+						 direction != POLICY_OUT;
+		tmpl->family = src->get_family(src);
+
+		if (mode == MODE_TUNNEL)
+		{	/* only for tunnel mode */
+			host2xfrm(src, &tmpl->saddr);
+			host2xfrm(dst, &tmpl->id.daddr);
+		}
+
 		tmpl++;
 
-		/* use transport mode for ESP if we have a tunnel mode IPcomp SA */
+		/* use transport mode for other SAs */
 		mode = MODE_TRANSPORT;
 	}
-	else
-	{
-		/* when using IPcomp, only the IPcomp SA uses tmp src/dst addresses */
-		host2xfrm(src, &tmpl->saddr);
-		host2xfrm(dst, &tmpl->id.daddr);
-	}
 
-	tmpl->reqid = reqid;
-	tmpl->id.proto = spi ? IPPROTO_ESP : IPPROTO_AH;
-	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-	tmpl->mode = mode2kernel(mode);
-	tmpl->family = src->get_family(src);
 	rthdr = XFRM_RTA_NEXT(rthdr);
 
 	if (mark.value)
