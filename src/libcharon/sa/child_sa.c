@@ -692,24 +692,24 @@ METHOD(child_sa_t, add_policies, status_t,
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->my_addr, this->other_addr, my_ts, other_ts,
-							POLICY_OUT, other_esp, other_ah, this->reqid,
-							this->mark_out, this->mode, this->ipcomp,
-							this->other_cpi, routed);
+							POLICY_OUT, POLICY_IPSEC, other_esp, other_ah,
+							this->reqid, this->mark_out, this->mode,
+							this->ipcomp, this->other_cpi, routed);
 
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_IN, my_esp, my_ah, this->reqid,
-							this->mark_in, this->mode, this->ipcomp,
-							this->my_cpi, routed);
+							POLICY_IN, POLICY_IPSEC, my_esp, my_ah,
+							this->reqid, this->mark_in, this->mode,
+							this->ipcomp, this->my_cpi, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_FWD, my_esp, my_ah, this->reqid,
-							this->mark_in, this->mode, this->ipcomp,
-							this->my_cpi, routed);
+							POLICY_FWD, POLICY_IPSEC, my_esp, my_ah,
+							this->reqid, this->mark_in, this->mode,
+							this->ipcomp, this->my_cpi, routed);
 			}
 
 			if (status != SUCCESS)
@@ -832,19 +832,19 @@ METHOD(child_sa_t, update, status_t,
 
 				/* reinstall updated policies */
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
-							me, other, my_ts, other_ts, POLICY_OUT,
-							other_esp, other_ah, this->reqid, this->mark_out,
-							this->mode, this->ipcomp, this->other_cpi, FALSE);
+						me, other, my_ts, other_ts, POLICY_OUT, POLICY_IPSEC,
+						other_esp, other_ah, this->reqid, this->mark_out,
+						this->mode, this->ipcomp, this->other_cpi, FALSE);
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
-							other, me, other_ts, my_ts, POLICY_IN,
-							my_esp, my_ah, this->reqid, this->mark_in,
-							this->mode, this->ipcomp, this->my_cpi, FALSE);
+						other, me, other_ts, my_ts, POLICY_IN, POLICY_IPSEC,
+						my_esp, my_ah, this->reqid, this->mark_in,
+						this->mode, this->ipcomp, this->my_cpi, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->add_policy(hydra->kernel_interface,
-							other, me, other_ts, my_ts, POLICY_FWD,
-							my_esp, my_ah, this->reqid, this->mark_in,
-							this->mode, this->ipcomp, this->my_cpi, FALSE);
+						other, me, other_ts, my_ts, POLICY_FWD, POLICY_IPSEC,
+						my_esp, my_ah, this->reqid, this->mark_in,
+						this->mode, this->ipcomp, this->my_cpi, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);

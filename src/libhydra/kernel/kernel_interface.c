@@ -131,7 +131,7 @@ METHOD(kernel_interface_t, del_sa, status_t,
 METHOD(kernel_interface_t, add_policy, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, u_int32_t ah_spi,
+	policy_dir_t direction, policy_type_t type, u_int32_t spi, u_int32_t ah_spi,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi,	bool routed)
 {
@@ -140,7 +140,8 @@ METHOD(kernel_interface_t, add_policy, status_t,
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->add_policy(this->ipsec, src, dst, src_ts, dst_ts,
-			direction, spi, ah_spi, reqid, mark, mode, ipcomp, cpi, routed);
+								   direction, type, spi, ah_spi, reqid, mark,
+								   mode, ipcomp, cpi, routed);
 }
 
 METHOD(kernel_interface_t, query_policy, status_t,

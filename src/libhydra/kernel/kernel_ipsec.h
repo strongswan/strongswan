@@ -26,6 +26,7 @@
 
 typedef enum ipsec_mode_t ipsec_mode_t;
 typedef enum policy_dir_t policy_dir_t;
+typedef enum policy_type_t policy_type_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
@@ -70,6 +71,18 @@ enum policy_dir_t {
  * enum names for policy_dir_t.
  */
 extern enum_name_t *policy_dir_names;
+
+/**
+ * Type of a policy.
+ */
+enum policy_type_t {
+	/** Normal IPsec policy */
+	POLICY_IPSEC = 1,
+	/** Passthrough policy (traffic is ignored by IPsec) */
+	POLICY_PASS,
+	/** Drop policy (traffic is discarded) */
+	POLICY_DROP,
+};
 
 /**
  * IPComp transform IDs, as in RFC 4306
@@ -258,6 +271,7 @@ struct kernel_ipsec_t {
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
+	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
 	 * @param spi			SPI of optional ESP SA
 	 * @param ah_spi		SPI of optional AH SA
 	 * @param reqid			unique ID of an SA to use to enforce policy
@@ -272,8 +286,8 @@ struct kernel_ipsec_t {
 							host_t *src, host_t *dst,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
-							policy_dir_t direction, u_int32_t spi,
-							u_int32_t ah_spi, u_int32_t reqid,
+							policy_dir_t direction, policy_type_t type,
+							u_int32_t spi, u_int32_t ah_spi, u_int32_t reqid,
 							mark_t mark, ipsec_mode_t mode,
 							u_int16_t ipcomp, u_int16_t cpi, bool routed);
 
