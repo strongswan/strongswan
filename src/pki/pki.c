@@ -16,7 +16,10 @@
 #include "command.h"
 #include "pki.h"
 
+#include <unistd.h>
+
 #include <debug.h>
+#include <credentials/sets/callback_cred.h>
 
 /**
  * Convert a form string to a encoding type
@@ -109,6 +112,67 @@ hash_algorithm_t get_digest(char *name)
 }
 
 /**
+ * Callback credential set pki uses
+ */
+static callback_cred_t *cb_set;
+
+/**
+ * Callback function to receive credentials
+ */
+static shared_key_t* cb(void *data, shared_key_type_t type,
+						identification_t *me, identification_t *other,
+						id_match_t *match_me, id_match_t *match_other)
+{
+	char buf[64], *label, *secret;
+
+	switch (type)
+	{
+		case SHARED_PIN:
+			label = "Smartcard PIN";
+			break;
+		case SHARED_PRIVATE_KEY_PASS:
+			label = "Private key passphrase";
+			break;
+		default:
+			return NULL;
+	}
+	snprintf(buf, sizeof(buf), "%s: ", label);
+	secret = getpass(buf);
+	if (secret)
+	{
+		if (match_me)
+		{
+			*match_me = ID_MATCH_PERFECT;
+		}
+		if (match_other)
+		{
+			*match_other = ID_MATCH_NONE;
+		}
+		return shared_key_create(type,
+							chunk_clone(chunk_create(secret, strlen(secret))));
+	}
+	return NULL;
+}
+
+/**
+ * Register PIN/Passphrase callback function
+ */
+static void add_callback()
+{
+	cb_set = callback_cred_create_shared(cb, NULL);
+	lib->credmgr->add_set(lib->credmgr, &cb_set->set);
+}
+
+/**
+ * Unregister PIN/Passphrase callback function
+ */
+static void remove_callback()
+{
+	lib->credmgr->remove_set(lib->credmgr, &cb_set->set);
+	cb_set->destroy(cb_set);
+}
+
+/**
  * Library initialization and operation parsing
  */
 int main(int argc, char *argv[])
@@ -129,6 +193,9 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+
+	add_callback();
+	atexit(remove_callback);
 	return command_dispatch(argc, argv);
 }
 
