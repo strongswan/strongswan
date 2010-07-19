@@ -1593,7 +1593,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, u_int8_t protocol,
+	policy_dir_t direction, u_int32_t spi, u_int32_t ah_spi,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool routed)
 {
@@ -1661,7 +1661,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* one or more sadb_x_ipsecrequest extensions are added to the sadb_x_policy extension */
 	req = (struct sadb_x_ipsecrequest*)(pol + 1);
-	req->sadb_x_ipsecrequest_proto = protocol;
+	req->sadb_x_ipsecrequest_proto = spi ? IPPROTO_ESP : IPPROTO_AH;
 	/* !!! the length of this struct MUST be in octets instead of 64 bit words */
 	req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
 	req->sadb_x_ipsecrequest_mode = mode2kernel(mode);

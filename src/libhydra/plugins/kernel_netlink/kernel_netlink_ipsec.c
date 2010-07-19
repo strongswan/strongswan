@@ -1617,7 +1617,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, u_int32_t spi, u_int8_t protocol,
+	policy_dir_t direction, u_int32_t spi, u_int32_t ah_spi,
 	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool routed)
 {
@@ -1749,7 +1749,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	tmpl->reqid = reqid;
-	tmpl->id.proto = protocol;
+	tmpl->id.proto = spi ? IPPROTO_ESP : IPPROTO_AH;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = mode2kernel(mode);
 	tmpl->family = src->get_family(src);
@@ -1943,7 +1943,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction,	mark_t mark,
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
 	bool unrouted)
 {
 	policy_entry_t *current, policy, *to_delete = NULL;

@@ -673,30 +673,41 @@ METHOD(child_sa_t, add_policies, status_t,
 
 	if (this->config->install_policy(this->config))
 	{
+		u_int32_t my_esp = 0, my_ah = 0, other_esp = 0, other_ah = 0;
+		if (this->protocol == PROTO_ESP)
+		{
+			my_esp = this->my_spi;
+			other_esp = this->other_spi;
+		}
+		else
+		{
+			my_ah = this->my_spi;
+			other_ah = this->other_spi;
+		}
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			/* install 3 policies: out, in and forward */
-			status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+			status |= hydra->kernel_interface->add_policy(
+							hydra->kernel_interface,
 							this->my_addr, this->other_addr, my_ts, other_ts,
-							POLICY_OUT, this->other_spi,
-							proto_ike2ip(this->protocol), this->reqid,
+							POLICY_OUT, other_esp, other_ah, this->reqid,
 							this->mark_out, this->mode, this->ipcomp,
 							this->other_cpi, routed);
 
-			status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+			status |= hydra->kernel_interface->add_policy(
+							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_IN, this->my_spi,
-							proto_ike2ip(this->protocol), this->reqid,
+							POLICY_IN, my_esp, my_ah, this->reqid,
 							this->mark_in, this->mode, this->ipcomp,
 							this->my_cpi, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
-				status |= hydra->kernel_interface->add_policy(hydra->kernel_interface,
+				status |= hydra->kernel_interface->add_policy(
+							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_FWD, this->my_spi,
-							proto_ike2ip(this->protocol), this->reqid,
+							POLICY_FWD, my_esp, my_ah, this->reqid,
 							this->mark_in, this->mode, this->ipcomp,
 							this->my_cpi, routed);
 			}
@@ -766,6 +777,17 @@ METHOD(child_sa_t, update, status_t,
 
 	if (this->config->install_policy(this->config))
 	{
+		u_int32_t my_esp = 0, my_ah = 0, other_esp = 0, other_ah = 0;
+		if (this->protocol == PROTO_ESP)
+		{
+			my_esp = this->my_spi;
+			other_esp = this->other_spi;
+		}
+		else
+		{
+			my_ah = this->my_spi;
+			other_ah = this->other_spi;
+		}
 		/* update policies */
 		if (!me->ip_equals(me, this->my_addr) ||
 			!other->ip_equals(other, this->other_addr))
@@ -811,21 +833,18 @@ METHOD(child_sa_t, update, status_t,
 				/* reinstall updated policies */
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							me, other, my_ts, other_ts, POLICY_OUT,
-							this->other_spi, proto_ike2ip(this->protocol),
-							this->reqid, this->mark_out, this->mode,
-							this->ipcomp, this->other_cpi, FALSE);
+							other_esp, other_ah, this->reqid, this->mark_out,
+							this->mode, this->ipcomp, this->other_cpi, FALSE);
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							other, me, other_ts, my_ts, POLICY_IN,
-							this->my_spi, proto_ike2ip(this->protocol),
-							this->reqid, this->mark_in, this->mode,
-							this->ipcomp, this->my_cpi, FALSE);
+							my_esp, my_ah, this->reqid, this->mark_in,
+							this->mode, this->ipcomp, this->my_cpi, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->add_policy(hydra->kernel_interface,
 							other, me, other_ts, my_ts, POLICY_FWD,
-							this->my_spi, proto_ike2ip(this->protocol),
-							this->reqid, this->mark_in, this->mode,
-							this->ipcomp, this->my_cpi, FALSE);
+							my_esp, my_ah, this->reqid, this->mark_in,
+							this->mode, this->ipcomp, this->my_cpi, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);
