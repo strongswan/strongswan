@@ -54,6 +54,16 @@ struct private_pkcs11_private_key_t {
 	CK_OBJECT_HANDLE object;
 
 	/**
+	 * Key requires reauthentication for each signature/decryption
+	 */
+	CK_BBOOL reauth;
+
+	/**
+	 * Keyid of the key we use
+	 */
+	identification_t *keyid;
+
+	/**
 	 * Associated public key
 	 */
 	public_key_t *pubkey;
@@ -104,6 +114,42 @@ static CK_MECHANISM_PTR scheme_to_mechanism(signature_scheme_t scheme)
 	return NULL;
 }
 
+/**
+ * Reauthenticate to do a signature
+ */
+static bool reauth(private_pkcs11_private_key_t *this)
+{
+	enumerator_t *enumerator;
+	shared_key_t *shared;
+	chunk_t pin;
+	CK_RV rv;
+	bool found = FALSE, success = FALSE;
+
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+												SHARED_PIN, this->keyid, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	{
+		found = TRUE;
+		pin = shared->get_key(shared);
+		rv = this->lib->f->C_Login(this->session, CKU_CONTEXT_SPECIFIC,
+								   pin.ptr, pin.len);
+		if (rv == CKR_OK)
+		{
+			success = TRUE;
+			break;
+		}
+		DBG1(DBG_CFG, "reauthentication login failed: %N", ck_rv_names, rv);
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		DBG1(DBG_CFG, "private key requires reauthentication, but no PIN found");
+		return FALSE;
+	}
+	return success;
+}
+
 METHOD(private_key_t, sign, bool,
 	private_pkcs11_private_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t *signature)
@@ -122,13 +168,18 @@ METHOD(private_key_t, sign, bool,
 	}
 	this->mutex->lock(this->mutex);
 	rv = this->lib->f->C_SignInit(this->session, mechanism, this->object);
+	if (this->reauth && !reauth(this))
+	{
+		return FALSE;
+	}
 	if (rv != CKR_OK)
 	{
 		this->mutex->unlock(this->mutex);
 		DBG1(DBG_LIB, "C_SignInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
-	buf = malloc(get_keysize(this));
+	len = get_keysize(this);
+	buf = malloc(len);
 	rv = this->lib->f->C_Sign(this->session, data.ptr, data.len, buf, &len);
 	this->mutex->unlock(this->mutex);
 	if (rv != CKR_OK)
@@ -184,6 +235,7 @@ METHOD(private_key_t, destroy, void,
 			this->pubkey->destroy(this->pubkey);
 		}
 		this->mutex->destroy(this->mutex);
+		this->keyid->destroy(this->keyid);
 		this->lib->f->C_CloseSession(this->session);
 		free(this);
 	}
@@ -289,8 +341,10 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	};
 	CK_OBJECT_HANDLE object;
 	CK_KEY_TYPE type;
+	CK_BBOOL reauth;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 		{CKA_MODULUS, NULL, 0},
 		{CKA_PUBLIC_EXPONENT, NULL, 0},
 	};
@@ -304,13 +358,13 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 		switch (type)
 		{
 			case CKK_RSA:
-				if (attr[0].ulValueLen == -1 || attr[1].ulValueLen == -1)
+				if (attr[2].ulValueLen == -1 || attr[3].ulValueLen == -1)
 				{
 					DBG1(DBG_CFG, "reading modulus/exponent from PKCS#1 failed");
 					break;
 				}
-				modulus = chunk_create(attr[1].pValue, attr[1].ulValueLen);
-				pubexp = chunk_create(attr[2].pValue, attr[2].ulValueLen);
+				modulus = chunk_create(attr[2].pValue, attr[2].ulValueLen);
+				pubexp = chunk_create(attr[3].pValue, attr[3].ulValueLen);
 				this->pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 									KEY_RSA, BUILD_RSA_MODULUS, modulus,
 									BUILD_RSA_PUB_EXP, pubexp, BUILD_END);
@@ -319,6 +373,7 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 					DBG1(DBG_CFG, "extracting public key from PKCS#11 RSA "
 						 "private key failed");
 				}
+				this->reauth = reauth;
 				this->object = object;
 				break;
 			default:
@@ -333,10 +388,9 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 /**
  * Find a PIN and try to log in
  */
-static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
+static bool login(private_pkcs11_private_key_t *this, int slot)
 {
 	enumerator_t *enumerator;
-	identification_t *id;
 	shared_key_t *shared;
 	chunk_t pin;
 	CK_RV rv;
@@ -355,9 +409,8 @@ static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
 		return TRUE;
 	}
 
-	id = identification_create_from_encoding(ID_KEY_ID, keyid);
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-														SHARED_PIN, id, NULL);
+												SHARED_PIN, this->keyid, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		found = TRUE;
@@ -372,11 +425,10 @@ static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
 			 this->lib->get_name(this->lib), slot, ck_rv_names, rv);
 	}
 	enumerator->destroy(enumerator);
-	id->destroy(id);
 
 	if (!found)
 	{
-		DBG1(DBG_CFG, "no PIN found for PKCS#11 key %#B", &keyid);
+		DBG1(DBG_CFG, "no PIN found for PKCS#11 key %Y", this->keyid);
 		return FALSE;
 	}
 	return success;
@@ -468,8 +520,9 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 	}
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->keyid = identification_create_from_encoding(ID_KEY_ID, keyid);
 
-	if (!login(this, keyid, slot))
+	if (!login(this, slot))
 	{
 		destroy(this);
 		return NULL;
