@@ -444,6 +444,48 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 }
 
 /**
+ * Login to engine with a PIN specified for a keyid
+ */
+static bool login(ENGINE *engine, chunk_t keyid)
+{
+	enumerator_t *enumerator;
+	shared_key_t *shared;
+	identification_t *id;
+	chunk_t key;
+	char pin[64];
+	bool found = FALSE, success = FALSE;
+
+	id = identification_create_from_encoding(ID_KEY_ID, keyid);
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+														SHARED_PIN, id, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	{
+		found = TRUE;
+		key = shared->get_key(shared);
+		if (snprintf(pin, sizeof(pin), "%.*s", key.len, key.ptr) >= sizeof(pin))
+		{
+			continue;
+		}
+		if (ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+		{
+			success = TRUE;
+			break;
+		}
+		else
+		{
+			DBG1(DBG_CFG, "setting PIN on engine failed");
+		}
+	}
+	enumerator->destroy(enumerator);
+	id->destroy(id);
+	if (!found)
+	{
+		DBG1(DBG_CFG, "no PIN found for %#B", &keyid);
+	}
+	return success;
+}
+
+/**
  * See header.
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
@@ -452,8 +494,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 #ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
 	char *engine_id = NULL;
-	char keyname[64], pin[32];;
-	chunk_t secret = chunk_empty, keyid = chunk_empty;;
+	char keyname[64];
+	chunk_t keyid = chunk_empty;;
 	EVP_PKEY *key;
 	ENGINE *engine;
 	int slot = -1;
@@ -464,9 +506,6 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		{
 			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, chunk_t);
-				continue;
-			case BUILD_PASSPHRASE:
-				secret = va_arg(args, chunk_t);
 				continue;
 			case BUILD_PKCS11_SLOT:
 				slot = va_arg(args, int);
@@ -481,7 +520,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		}
 		break;
 	}
-	if (!keyid.len || keyid.len > 40 || !secret.len)
+	if (!keyid.len || keyid.len > 40)
 	{
 		return NULL;
 	}
@@ -496,8 +535,6 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		return NULL;
 	}
 	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
-
-	snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 
 	if (!engine_id)
 	{
@@ -516,13 +553,12 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		ENGINE_free(engine);
 		return NULL;
 	}
-	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+	if (!login(engine, keyid))
 	{
-		DBG1(DBG_LIB, "failed to set PIN on engine '%s'", engine_id);
+		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
-
 	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
 	if (!key)
 	{

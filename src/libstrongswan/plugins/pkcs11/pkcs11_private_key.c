@@ -335,29 +335,38 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
  */
 static bool login(private_pkcs11_private_key_t *this, chunk_t keyid, int slot)
 {
+	enumerator_t *enumerator;
 	identification_t *id;
 	shared_key_t *shared;
 	chunk_t pin;
 	CK_RV rv;
+	bool found = FALSE, success = FALSE;
 
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_PIN, id, NULL);
-	id->destroy(id);
-	if (!shared)
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+														SHARED_PIN, id, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
-		DBG1(DBG_CFG, "no PIN found for PKCS#11 key %#B", keyid);
-		return FALSE;
-	}
-	pin = shared->get_key(shared);
-	rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
-	shared->destroy(shared);
-	if (rv != CKR_OK)
-	{
+		found = TRUE;
+		pin = shared->get_key(shared);
+		rv = this->lib->f->C_Login(this->session, CKU_USER, pin.ptr, pin.len);
+		if (rv == CKR_OK)
+		{
+			success = TRUE;
+			break;
+		}
 		DBG1(DBG_CFG, "login to '%s':%d failed: %N",
 			 this->lib->get_name(this->lib), slot, ck_rv_names, rv);
+	}
+	enumerator->destroy(enumerator);
+	id->destroy(id);
+
+	if (!found)
+	{
+		DBG1(DBG_CFG, "no PIN found for PKCS#11 key %#B", &keyid);
 		return FALSE;
 	}
-	return TRUE;
+	return success;
 }
 
 /**

@@ -31,6 +31,7 @@
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/sets/mem_cred.h>
+#include <credentials/sets/callback_cred.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <threading/rwlock.h>
@@ -717,28 +718,60 @@ chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
 }
 
 /**
- * Smartcard PIN callback to read from stroke fd
+ * Data for PIN callback
  */
-chunk_t smartcard_cb(passphrase_cb_data_t *data, int try)
-{
-	chunk_t secret = chunk_empty;;
+typedef struct {
+	/** socket we use for prompting */
+	FILE *prompt;
+	/** card label */
+	char *card;
+	/** card keyid */
+	chunk_t keyid;
+	/** number of tries */
+	int try;
+} pin_cb_data_t;
 
-	if (try != 1)
+/**
+ * Callback function to receive PINs
+ */
+static shared_key_t* pin_cb(pin_cb_data_t *data,
+							identification_t *me, identification_t *other,
+							id_match_t *match_me, id_match_t *match_other)
+{
+	chunk_t secret;
+	char buf[256];
+
+	if (!me || !chunk_equals(me->get_encoding(me), data->keyid))
 	{
-		fprintf(data->prompt, "invalid passphrase, aborting\n");
-		return chunk_empty;
+		return NULL;
 	}
-	fprintf(data->prompt, "Login to '%s' required\n", data->file);
-	fprintf(data->prompt, "Passphrase:\n");
-	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+
+	if (data->try > 1)
 	{
-		secret = chunk_create(data->buf, strlen(data->buf));
-		if (secret.len)
+		fprintf(data->prompt, "PIN invalid, giving up.\n", data->card);
+		return NULL;
+	}
+	data->try++;
+	fprintf(data->prompt, "Login to '%s' required\n", data->card);
+	fprintf(data->prompt, "PIN:\n");
+	if (fgets(buf, sizeof(buf), data->prompt))
+	{
+		secret = chunk_create(buf, strlen(buf));
+		if (secret.len > 1)
 		{	/* trim appended \n */
 			secret.len--;
+			if (match_me)
+			{
+				*match_me = ID_MATCH_PERFECT;
+			}
+			if (match_other)
+			{
+				*match_other = ID_MATCH_NONE;
+			}
+			return shared_key_create(SHARED_PIN, chunk_clone(secret));
 		}
 	}
-	return secret;
+	return NULL;
 }
 
 /**
@@ -754,8 +787,9 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	chunk_t chunk;
 	shared_key_t *shared;
 	identification_t *id;
-	mem_cred_t *mem;
-	callback_set_t *cb;
+	mem_cred_t *mem = NULL;
+	callback_cred_t *cb = NULL;
+	pin_cb_data_t pin_data;
 	enum {
 		SC_FORMAT_SLOT_MODULE_KEYID,
 		SC_FORMAT_SLOT_KEYID,
@@ -821,22 +855,33 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
 		return FALSE;
 	}
+
+	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
 	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 	{
-		if (prompt)
-		{
-			passphrase_cb_data_t data = {
-				.prompt = prompt,
-				.file = path,
-			};
+		if (!prompt)
+		{	/* no IO channel to prompt, skip */
+			free(chunk.ptr);
+			return TRUE;
+		}
+		/* use callback credential set to prompt for the pin */
+		pin_data.prompt = prompt;
+		pin_data.card = smartcard;
+		pin_data.keyid = chunk;
+		pin_data.try = 1;
+		cb = callback_cred_create_shared((void*)pin_cb, &pin_data);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+	}
+	else
+	{
+		/* provide our pin in a temporary credential set */
+		shared = shared_key_create(SHARED_PIN, secret);
+		id = identification_create_from_encoding(ID_KEY_ID, chunk);
+		mem = mem_cred_create();
+		mem->add_shared(mem, shared, id, NULL);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+	}
 
-	/* provide our pin in a temporary credential set */
-	shared = shared_key_create(SHARED_PIN, secret);
-	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
-	id = identification_create_from_encoding(ID_KEY_ID, chunk);
-	set = mem_cred_create();
-	set->add_shared(set, shared, id, NULL);
-	lib->credmgr->add_local_set(lib->credmgr, &set->set);
 	/* unlock: smartcard needs the pin and potentially calls public set */
 	this->lock->unlock(this->lock);
 	switch (format)
@@ -861,8 +906,16 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 			break;
 	}
 	this->lock->write_lock(this->lock);
-	lib->credmgr->remove_local_set(lib->credmgr, &set->set);
-	set->destroy(set);
+	if (mem)
+	{
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
+	}
+	if (cb)
+	{
+		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
+		cb->destroy(cb);
+	}
 
 	if (key)
 	{
