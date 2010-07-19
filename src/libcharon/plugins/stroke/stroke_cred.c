@@ -689,11 +689,17 @@ typedef struct {
  * Callback function to receive Passphrases
  */
 static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
+								shared_key_type_t type,
 								identification_t *me, identification_t *other,
 								id_match_t *match_me, id_match_t *match_other)
 {
 	chunk_t secret;
 	char buf[256];
+
+	if (type != SHARED_ANY && type != SHARED_PRIVATE_KEY_PASS)
+	{
+		return NULL;
+	}
 
 	if (data->try > 1)
 	{
@@ -744,12 +750,17 @@ typedef struct {
 /**
  * Callback function to receive PINs
  */
-static shared_key_t* pin_cb(pin_cb_data_t *data,
+static shared_key_t* pin_cb(pin_cb_data_t *data, shared_key_type_t type,
 							identification_t *me, identification_t *other,
 							id_match_t *match_me, id_match_t *match_other)
 {
 	chunk_t secret;
 	char buf[256];
+
+	if (type != SHARED_ANY && type != SHARED_PIN)
+	{
+		return NULL;
+	}
 
 	if (!me || !chunk_equals(me->get_encoding(me), data->keyid))
 	{

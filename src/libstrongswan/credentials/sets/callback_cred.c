@@ -49,6 +49,8 @@ typedef struct {
 	enumerator_t public;
 	/* backref to this */
 	private_callback_cred_t *this;
+	/* type if requested key */
+	shared_key_type_t type;
 	/* own identity to match */
 	identification_t *me;
 	/* other identity to match */
@@ -62,7 +64,7 @@ METHOD(enumerator_t, shared_enumerate, bool,
 	id_match_t *match_me, id_match_t *match_other)
 {
 	DESTROY_IF(this->current);
-	this->current = this->this->cb.shared(this->this->data,
+	this->current = this->this->cb.shared(this->this->data, this->type,
 								this->me, this->other, match_me, match_other);
 	if (this->current)
 	{
@@ -91,6 +93,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 			.destroy = _shared_destroy,
 		},
 		.this = this,
+		.type = type,
 		.me = me,
 		.other = other,
 	);

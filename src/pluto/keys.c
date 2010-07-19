@@ -554,11 +554,16 @@ typedef struct {
 /**
  * Passphrase callback to read from whack fd
  */
-static shared_key_t* whack_pass_cb(prompt_pass_t *pass,
+static shared_key_t* whack_pass_cb(prompt_pass_t *pass, shared_key_type_t type,
 								identification_t *me, identification_t *other,
 								id_match_t *match_me, id_match_t *match_other)
 {
 	int n;
+
+	if (type != SHARED_ANY && type != SHARED_PRIVATE_KEY_PASS)
+	{
+		return NULL;
+	}
 
 	if (pass->try > MAX_PROMPT_PASS_TRIALS)
 	{
