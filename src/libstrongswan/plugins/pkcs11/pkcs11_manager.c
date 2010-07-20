@@ -374,16 +374,21 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 			free(entry);
 			continue;
 		}
-
-		query_slots(entry);
 		this->libs->insert_last(this->libs, entry);
+	}
+	enumerator->destroy(enumerator);
+
+	singleton = this;
+
+	enumerator = this->libs->create_enumerator(this->libs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		query_slots(entry);
 		entry->job = callback_job_create((void*)dispatch_slot_events,
 										 entry, (void*)end_dispatch, NULL);
 		charon->processor->queue_job(charon->processor, (job_t*)entry->job);
 	}
 	enumerator->destroy(enumerator);
-
-	singleton = this;
 
 	return &this->public;
 }
