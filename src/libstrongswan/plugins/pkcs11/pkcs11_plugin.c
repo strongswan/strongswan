@@ -23,6 +23,7 @@
 #include "pkcs11_manager.h"
 #include "pkcs11_creds.h"
 #include "pkcs11_private_key.h"
+#include "pkcs11_hasher.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -111,6 +112,8 @@ METHOD(plugin_t, destroy, void,
 		lib->credmgr->remove_set(lib->credmgr, &creds->set);
 		creds->destroy(creds);
 	}
+	lib->crypto->remove_hasher(lib->crypto,
+							(hasher_constructor_t)pkcs11_hasher_create);
 	this->creds->destroy(this->creds);
 	this->manager->destroy(this->manager);
 	this->mutex->destroy(this->mutex);
@@ -129,6 +132,23 @@ plugin_t *pkcs11_plugin_create()
 		.creds = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
+
+	if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
+	{
+		lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+					(hasher_constructor_t)pkcs11_hasher_create);
+		lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)pkcs11_hasher_create);
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+					(hasher_constructor_t)pkcs11_hasher_create);
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+					(hasher_constructor_t)pkcs11_hasher_create);
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+					(hasher_constructor_t)pkcs11_hasher_create);
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+					(hasher_constructor_t)pkcs11_hasher_create);
+	}
 
 	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
 
