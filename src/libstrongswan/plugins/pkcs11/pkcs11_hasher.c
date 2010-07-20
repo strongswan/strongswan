@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include <debug.h>
+#include <threading/mutex.h>
 
 #include "pkcs11_manager.h"
 
@@ -52,6 +53,26 @@ struct private_pkcs11_hasher_t {
 	 * size of the hash
 	 */
 	size_t size;
+
+	/**
+	 * Mutex to lock the tokens hashing engine
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * do we have an initialized state?
+	 */
+	bool have_state;
+
+	/**
+	 * state buffer
+	 */
+	CK_BYTE_PTR state;
+
+	/**
+	 * Length of the state buffer
+	 */
+	CK_ULONG state_len;
 };
 
 METHOD(hasher_t, get_hash_size, size_t,
@@ -61,49 +82,65 @@ METHOD(hasher_t, get_hash_size, size_t,
 }
 
 /**
- * Try to handle errors
+ * Save the Operation state to host memory
  */
-static void handle_error(private_pkcs11_hasher_t *this, CK_RV rv)
+static void save_state(private_pkcs11_hasher_t *this)
 {
-	switch (rv)
+	CK_RV rv;
+
+	while (TRUE)
 	{
-		case CKR_SESSION_CLOSED:
-		case CKR_SESSION_HANDLE_INVALID:
-		case CKR_USER_NOT_LOGGED_IN:
-		case CKR_PIN_EXPIRED:
-		case CKR_OPERATION_NOT_INITIALIZED:
-			/* reopen session if we are in DigestInit? */
-		case CKR_CRYPTOKI_NOT_INITIALIZED:
-		case CKR_ARGUMENTS_BAD:
-		case CKR_DEVICE_ERROR:
-		case CKR_DEVICE_REMOVED:
-		case CKR_GENERAL_ERROR:
-		case CKR_MECHANISM_INVALID:
-		case CKR_MECHANISM_PARAM_INVALID:
-			DBG1(DBG_CFG, "PKCS#11 hasher fatal error: %N", ck_rv_names, rv);
-			abort();
-			break;
-		case CKR_FUNCTION_CANCELED:
-		case CKR_FUNCTION_FAILED:
-		case CKR_OPERATION_ACTIVE:
-		case CKR_HOST_MEMORY:
-		case CKR_DEVICE_MEMORY:
-			DBG1(DBG_CFG, "PKCS#11 hasher critical error: %N", ck_rv_names, rv);
-			sleep(1);
-			break;
+		if (!this->state)
+		{
+			rv = this->lib->f->C_GetOperationState(this->session, NULL,
+												   &this->state_len);
+			if (rv != CKR_OK)
+			{
+				break;
+			}
+			this->state = malloc(this->state_len);
+		}
+		rv = this->lib->f->C_GetOperationState(this->session, this->state,
+											   &this->state_len);
+		switch (rv)
+		{
+			case CKR_BUFFER_TOO_SMALL:
+				free(this->state);
+				this->state = NULL;
+				continue;
+			case CKR_OK:
+				this->have_state = TRUE;
+				return;
+			default:
+				break;
+		}
+		break;
 	}
+	DBG1(DBG_CFG, "C_GetOperationState() failed: %N", ck_rv_names, rv);
+	abort();
+}
+
+/**
+ * Load the Operation state from host memory
+ */
+static void load_state(private_pkcs11_hasher_t *this)
+{
+	CK_RV rv;
+
+	rv = this->lib->f->C_SetOperationState(this->session, this->state,
+						this->state_len, CK_INVALID_HANDLE, CK_INVALID_HANDLE);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_SetOperationState() failed: %N", ck_rv_names, rv);
+		abort();
+	}
+	this->have_state = FALSE;
 }
 
 METHOD(hasher_t, reset, void,
 	private_pkcs11_hasher_t *this)
 {
-	CK_RV rv;
-
-	while ((rv = this->lib->f->C_DigestInit(this->session,
-								this->mech)) != CKR_OK)
-	{
-		handle_error(this, rv);
-	}
+	this->have_state = FALSE;
 }
 
 METHOD(hasher_t, get_hash, void,
@@ -112,24 +149,45 @@ METHOD(hasher_t, get_hash, void,
 	CK_RV rv;
 	CK_ULONG len;
 
+	this->mutex->lock(this->mutex);
+	if (this->have_state)
+	{
+		load_state(this);
+	}
+	else
+	{
+		rv = this->lib->f->C_DigestInit(this->session, this->mech);
+		if (rv != CKR_OK)
+		{
+			DBG1(DBG_CFG, "C_DigestInit() failed: %N", ck_rv_names, rv);
+			abort();
+		}
+	}
 	if (chunk.len)
 	{
-		while ((rv = this->lib->f->C_DigestUpdate(this->session,
-									chunk.ptr, chunk.len)) != CKR_OK)
+		rv = this->lib->f->C_DigestUpdate(this->session, chunk.ptr, chunk.len);
+		if (rv != CKR_OK)
 		{
-			handle_error(this, rv);
+			DBG1(DBG_CFG, "C_DigestUpdate() failed: %N", ck_rv_names, rv);
+			abort();
 		}
 	}
 	if (hash)
 	{
 		len = this->size;
-		while ((rv = this->lib->f->C_DigestFinal(this->session,
-								hash, &len)) != CKR_OK)
+		rv = this->lib->f->C_DigestFinal(this->session,
+								hash, &len);
+		if (rv != CKR_OK)
 		{
-			handle_error(this, rv);
+			DBG1(DBG_CFG, "C_DigestFinal() failed: %N", ck_rv_names, rv);
+			abort();
 		}
-		reset(this);
 	}
+	else
+	{
+		save_state(this);
+	}
+	this->mutex->unlock(this->mutex);
 }
 
 METHOD(hasher_t, allocate_hash, void,
@@ -150,6 +208,7 @@ METHOD(hasher_t, destroy, void,
 	private_pkcs11_hasher_t *this)
 {
 	this->lib->f->C_CloseSession(this->session);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -239,7 +298,6 @@ static pkcs11_library_t* find_token(hash_algorithm_t algo,
 pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 {
 	private_pkcs11_hasher_t *this;
-	CK_RV rv;
 
 	INIT(this,
 		.public.hasher = {
@@ -249,6 +307,7 @@ pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 			.allocate_hash = _allocate_hash,
 			.destroy = _destroy,
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	this->lib = find_token(algo, &this->session, &this->mech, &this->size);
@@ -257,12 +316,6 @@ pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 		free(this);
 		return NULL;
 	}
-	rv = this->lib->f->C_DigestInit(this->session, this->mech);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_DigestInit() failed: %N", ck_rv_names, rv);
-		destroy(this);
-		return NULL;
-	}
+
 	return &this->public;
 }
