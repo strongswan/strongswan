@@ -63,6 +63,18 @@ struct pkcs11_library_t {
 			CK_ATTRIBUTE_PTR attr, CK_ULONG acount);
 
 	/**
+	 * Create an enumerator over supported mechanisms of a token.
+	 *
+	 * The resulting enumerator enumerates over the mechanism type, and if
+	 * a non-NULL pointer is given, over the mechanism info details.
+	 *
+	 * @param slot		slot of the token
+	 * @return			enumerator over (CK_MECHANISM_TYPE, CK_MECHANISM_INFO)
+	 */
+	enumerator_t* (*create_mechanism_enumerator)(pkcs11_library_t *this,
+												 CK_SLOT_ID slot);
+
+	/**
 	 * Destroy a pkcs11_library_t.
 	 */
 	void (*destroy)(pkcs11_library_t *this);

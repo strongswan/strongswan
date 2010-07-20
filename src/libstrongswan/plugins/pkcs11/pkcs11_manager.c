@@ -84,54 +84,31 @@ static void lib_entry_destroy(lib_entry_t *entry)
  */
 static void print_mechs(lib_entry_t *entry, CK_SLOT_ID slot)
 {
-	CK_MECHANISM_TYPE_PTR mechs;
+	enumerator_t *enumerator;
+	CK_MECHANISM_TYPE type;
 	CK_MECHANISM_INFO info;
-	CK_ULONG count;
-	CK_RV rv;
-	int i;
 
-	rv = entry->lib->f->C_GetMechanismList(slot, NULL, &count);
-	if (rv != CKR_OK)
+	enumerator = entry->lib->create_mechanism_enumerator(entry->lib, slot);
+	while (enumerator->enumerate(enumerator, &type, &info))
 	{
-		DBG1(DBG_CFG, "C_GetMechanismList() failed: %N", ck_rv_names, rv);
-		return;
+		DBG2(DBG_CFG, "      %N %lu-%lu [ %s%s%s%s%s%s%s%s%s%s%s%s%s]",
+			ck_mech_names, type,
+			info.ulMinKeySize, info.ulMaxKeySize,
+			info.flags & CKF_HW ? "HW " : "",
+			info.flags & CKF_ENCRYPT ? "ENCR " : "",
+			info.flags & CKF_DECRYPT ? "DECR " : "",
+			info.flags & CKF_DIGEST ? "DGST " : "",
+			info.flags & CKF_SIGN ? "SIGN " : "",
+			info.flags & CKF_SIGN_RECOVER ? "SIGN_RCVR " : "",
+			info.flags & CKF_VERIFY ? "VRFY " : "",
+			info.flags & CKF_VERIFY_RECOVER ? "VRFY_RCVR " : "",
+			info.flags & CKF_GENERATE ? "GEN " : "",
+			info.flags & CKF_GENERATE_KEY_PAIR ? "GEN_KEY_PAIR " : "",
+			info.flags & CKF_WRAP ? "WRAP " : "",
+			info.flags & CKF_UNWRAP ? "UNWRAP " : "",
+			info.flags & CKF_DERIVE ? "DERIVE " : "");
 	}
-	mechs = malloc(sizeof(CK_MECHANISM_TYPE) * count);
-	entry->lib->f->C_GetMechanismList(slot, mechs, &count);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetMechanismList() failed: %N", ck_rv_names, rv);
-		return;
-	}
-	for (i = 0; i < count; i++)
-	{
-		rv = entry->lib->f->C_GetMechanismInfo(slot, mechs[i], &info);
-		if (rv == CKR_OK)
-		{
-			DBG2(DBG_CFG, "      %N %lu-%lu [ %s%s%s%s%s%s%s%s%s%s%s%s%s]",
-				ck_mech_names, mechs[i],
-				info.ulMinKeySize, info.ulMaxKeySize,
-				info.flags & CKF_HW ? "HW " : "",
-				info.flags & CKF_ENCRYPT ? "ENCR " : "",
-				info.flags & CKF_DECRYPT ? "DECR " : "",
-				info.flags & CKF_DIGEST ? "DGST " : "",
-				info.flags & CKF_SIGN ? "SIGN " : "",
-				info.flags & CKF_SIGN_RECOVER ? "SIGN_RCVR " : "",
-				info.flags & CKF_VERIFY ? "VRFY " : "",
-				info.flags & CKF_VERIFY_RECOVER ? "VRFY_RCVR " : "",
-				info.flags & CKF_GENERATE ? "GEN " : "",
-				info.flags & CKF_GENERATE_KEY_PAIR ? "GEN_KEY_PAIR " : "",
-				info.flags & CKF_WRAP ? "WRAP " : "",
-				info.flags & CKF_UNWRAP ? "UNWRAP " : "",
-				info.flags & CKF_DERIVE ? "DERIVE " : "");
-		}
-		else
-		{
-			DBG1(DBG_CFG, "C_GetMechanismList(%N) failed: %N",
-				 ck_mech_names, mechs[i], ck_rv_names, rv);
-		}
-	}
-	free(mechs);
+	enumerator->destroy(enumerator);
 }
 
 /**

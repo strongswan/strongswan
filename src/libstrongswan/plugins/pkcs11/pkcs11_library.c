@@ -613,6 +613,89 @@ METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
+/**
+ * Enumerator over mechanisms
+ */
+typedef struct {
+	/* implements enumerator_t */
+	enumerator_t public;
+	/* PKCS#11 library */
+	pkcs11_library_t *lib;
+	/* slot of token */
+	CK_SLOT_ID slot;
+	/* mechanism type list */
+	CK_MECHANISM_TYPE_PTR mechs;
+	/* number of mechanism types */
+	CK_ULONG count;
+	/* current mechanism */
+	CK_ULONG current;
+} mechanism_enumerator_t;
+
+METHOD(enumerator_t, enumerate_mech, bool,
+	mechanism_enumerator_t *this, CK_MECHANISM_TYPE* type,
+	CK_MECHANISM_INFO *info)
+{
+	CK_RV rv;
+
+	if (this->current >= this->count)
+	{
+		return FALSE;
+	}
+	if (info)
+	{
+		rv = this->lib->f->C_GetMechanismInfo(this->slot,
+											  this->mechs[this->current], info);
+		if (rv != CKR_OK)
+		{
+			DBG1(DBG_CFG, "C_GetMechanismInfo() failed: %N", ck_rv_names, rv);
+			return FALSE;
+		}
+	}
+	*type = this->mechs[this->current++];
+	return TRUE;
+}
+
+METHOD(enumerator_t, destroy_mech, void,
+	mechanism_enumerator_t *this)
+{
+	free(this->mechs);
+	free(this);
+}
+
+METHOD(pkcs11_library_t, create_mechanism_enumerator, enumerator_t*,
+	private_pkcs11_library_t *this, CK_SLOT_ID slot)
+{
+	mechanism_enumerator_t *enumerator;
+	CK_RV rv;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_enumerate_mech,
+			.destroy = _destroy_mech,
+		},
+		.lib = &this->public,
+		.slot = slot,
+	);
+
+	rv = enumerator->lib->f->C_GetMechanismList(slot, NULL, &enumerator->count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetMechanismList() failed: %N", ck_rv_names, rv);
+		free(enumerator);
+		return enumerator_create_empty();
+	}
+	enumerator->mechs = malloc(sizeof(CK_MECHANISM_TYPE) * enumerator->count);
+	enumerator->lib->f->C_GetMechanismList(slot, enumerator->mechs,
+										   &enumerator->count);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetMechanismList() failed: %N", ck_rv_names, rv);
+		destroy_mech(enumerator);
+		return enumerator_create_empty();
+	}
+	return &enumerator->public;
+}
+
 METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
 {
@@ -761,6 +844,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 		.public = {
 			.get_name = _get_name,
 			.create_object_enumerator = _create_object_enumerator,
+			.create_mechanism_enumerator = _create_mechanism_enumerator,
 			.destroy = _destroy,
 		},
 		.name = name,
