@@ -1613,6 +1613,9 @@ static void flush(private_ike_sa_manager_t *this)
 	enumerator->destroy(enumerator);
 	charon->bus->set_sa(charon->bus, NULL);
 	unlock_all_segments(this);
+
+	this->rng->destroy(this->rng);
+	this->hasher->destroy(this->hasher);
 }
 
 /**
@@ -1652,8 +1655,6 @@ static void destroy(private_ike_sa_manager_t *this)
 	free(this->half_open_segments);
 	free(this->connected_peers_segments);
 
-	this->rng->destroy(this->rng);
-	this->hasher->destroy(this->hasher);
 	free(this);
 }
 

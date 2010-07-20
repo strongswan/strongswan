@@ -199,6 +199,8 @@ struct ike_sa_manager_t {
 	 * Delete all existing IKE_SAs and destroy them immediately.
 	 *
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
+	 * To a flush(), an immediate call to destroy() is mandatory; no other
+	 * method may be used.
 	 */
 	void (*flush)(ike_sa_manager_t *this);
 
