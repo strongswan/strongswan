@@ -233,13 +233,6 @@ void handle_timer_event(void)
 			init_secret();
 			break;
 
-#ifdef KLIPS
-		case EVENT_SHUNT_SCAN:
-			passert(st == NULL);
-			scan_proc_shunts();
-			break;
-#endif
-
 		case EVENT_LOG_DAILY:
 			daily_log_event();
 			break;

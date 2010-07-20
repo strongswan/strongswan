@@ -246,9 +246,6 @@ extern enum_name_t *timer_event_names;
 enum event_type {
 	EVENT_NULL, /* non-event */
 	EVENT_REINIT_SECRET,        /* Refresh cookie secret */
-#ifdef KLIPS
-	EVENT_SHUNT_SCAN,           /* scan shunt eroutes known to kernel */
-#endif
 	EVENT_SO_DISCARD,           /* discard unfinished state object */
 	EVENT_RETRANSMIT,           /* Retransmit packet */
 	EVENT_SA_REPLACE,           /* SA replacement event */
