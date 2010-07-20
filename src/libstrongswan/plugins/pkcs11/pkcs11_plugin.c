@@ -126,12 +126,17 @@ METHOD(plugin_t, destroy, void,
 plugin_t *pkcs11_plugin_create()
 {
 	private_pkcs11_plugin_t *this;
+	enumerator_t *enumerator;
+	pkcs11_library_t *p11;
+	CK_SLOT_ID slot;
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
 		.creds = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
+
+	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
 
 	if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
@@ -150,10 +155,15 @@ plugin_t *pkcs11_plugin_create()
 					(hasher_constructor_t)pkcs11_hasher_create);
 	}
 
-	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
-
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
 							(builder_function_t)pkcs11_private_key_connect);
+
+	enumerator = this->manager->create_token_enumerator(this->manager);
+	while (enumerator->enumerate(enumerator, &p11, &slot))
+	{
+		token_event_cb(this, p11, slot, TRUE);
+	}
+	enumerator->destroy(enumerator);
 
 	return &this->public.plugin;
 }

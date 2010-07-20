@@ -137,7 +137,7 @@ static void handle_token(lib_entry_t *entry, CK_SLOT_ID slot)
 /**
  * Handle slot changes
  */
-static void handle_slot(lib_entry_t *entry, CK_SLOT_ID slot)
+static void handle_slot(lib_entry_t *entry, CK_SLOT_ID slot, bool hot)
 {
 	CK_SLOT_INFO info;
 	CK_RV rv;
@@ -155,13 +155,19 @@ static void handle_slot(lib_entry_t *entry, CK_SLOT_ID slot)
 		DBG1(DBG_CFG, "  found token in slot '%s':%lu (%s)",
 			 entry->lib->get_name(entry->lib), slot, info.slotDescription);
 		handle_token(entry, slot);
-		entry->this->cb(entry->this->data, entry->lib, slot, TRUE);
+		if (hot)
+		{
+			entry->this->cb(entry->this->data, entry->lib, slot, TRUE);
+		}
 	}
 	else
 	{
 		DBG1(DBG_CFG, "token removed from slot '%s':%lu (%s)",
 			 entry->lib->get_name(entry->lib), slot, info.slotDescription);
-		entry->this->cb(entry->this->data, entry->lib, slot, FALSE);
+		if (hot)
+		{
+			entry->this->cb(entry->this->data, entry->lib, slot, FALSE);
+		}
 	}
 }
 
@@ -191,7 +197,7 @@ static job_requeue_t dispatch_slot_events(lib_entry_t *entry)
 	{
 		DBG1(DBG_CFG, "error in C_WaitForSlotEvent: %N", ck_rv_names, rv);
 	}
-	handle_slot(entry, slot);
+	handle_slot(entry, slot, TRUE);
 
 	return JOB_REQUEUE_DIRECT;
 }
@@ -249,7 +255,7 @@ static void query_slots(lib_entry_t *entry)
 	{
 		for (i = 0; i < count; i++)
 		{
-			handle_slot(entry, slots[i]);
+			handle_slot(entry, slots[i], FALSE);
 		}
 		free(slots);
 	}
