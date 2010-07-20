@@ -760,13 +760,6 @@ fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
-if test x$xcbc = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
-fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
-	pluto_plugins=${pluto_plugins}" hmac"
-fi
 if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
@@ -776,6 +769,13 @@ if test x$agent = xtrue; then
 fi
 if test x$pkcs11 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pkcs11"
+fi
+if test x$xcbc = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
+fi
+if test x$hmac = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
+	pluto_plugins=${pluto_plugins}" hmac"
 fi
 if test x$xauth = xtrue; then
 	pluto_plugins=${pluto_plugins}" xauth"
