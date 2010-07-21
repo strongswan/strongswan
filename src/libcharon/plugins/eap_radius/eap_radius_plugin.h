@@ -25,6 +25,7 @@
 #define EAP_RADIUS_PLUGIN_H_
 
 #include <plugins/plugin.h>
+#include <utils/enumerator.h>
 
 typedef struct eap_radius_plugin_t eap_radius_plugin_t;
 
@@ -41,5 +42,12 @@ struct eap_radius_plugin_t {
 	 */
 	plugin_t plugin;
 };
+
+/**
+ * Create an enumerator over all loaded RADIUS servers.
+ *
+ * @return			enumerator over radius_server_t
+ */
+enumerator_t *eap_radius_create_server_enumerator();
 
 #endif /** EAP_RADIUS_PLUGIN_H_ @}*/

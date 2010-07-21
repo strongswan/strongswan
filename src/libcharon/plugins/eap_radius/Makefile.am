@@ -13,6 +13,8 @@ endif
 libstrongswan_eap_radius_la_SOURCES = \
 	eap_radius_plugin.h eap_radius_plugin.c \
 	eap_radius.h eap_radius.c \
+	radius_server.h radius_server.c \
+	radius_socket.h radius_socket.c \
 	radius_client.h radius_client.c \
 	radius_message.h radius_message.c
 

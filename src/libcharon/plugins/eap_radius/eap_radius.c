@@ -53,11 +53,6 @@ struct private_eap_radius_t {
 	u_int32_t vendor;
 
 	/**
-	 * EAP MSK, if method established one
-	 */
-	chunk_t msk;
-
-	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
@@ -248,8 +243,6 @@ METHOD(eap_method_t, process, status_t,
 				status = FAILED;
 				break;
 			case RMC_ACCESS_ACCEPT:
-				this->msk = this->client->decrypt_msk(this->client,
-													  response, request);
 				if (this->class_group)
 				{
 					process_class(this, response);
@@ -277,11 +270,14 @@ METHOD(eap_method_t, get_type, eap_type_t,
 }
 
 METHOD(eap_method_t, get_msk, status_t,
-	private_eap_radius_t *this, chunk_t *msk)
+	private_eap_radius_t *this, chunk_t *out)
 {
-	if (this->msk.ptr)
+	chunk_t msk;
+
+	msk = this->client->get_msk(this->client);
+	if (msk.len)
 	{
-		*msk = this->msk;
+		*out = msk;
 		return SUCCESS;
 	}
 	return FAILED;
@@ -306,7 +302,6 @@ METHOD(eap_method_t, destroy, void,
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
 	this->client->destroy(this->client);
-	chunk_clear(&this->msk);
 	free(this);
 }
 

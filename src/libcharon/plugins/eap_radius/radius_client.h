@@ -29,19 +29,14 @@ typedef struct radius_client_t radius_client_t;
  * RADIUS client functionality.
  *
  * To communicate with a RADIUS server, create a client and send messages over
- * it. All instances share a fixed size pool of sockets. The client reserves
- * a socket during request() and releases it afterwards.
+ * it. The client allocates a socket from the best RADIUS server abailable.
  */
 struct radius_client_t {
 
 	/**
 	 * Send a RADIUS request and wait for the response.
 	 *
-	 * The client fills in RADIUS Message identifier, NAS-Identifier,
-	 * NAS-Port-Type, builds a Request-Authenticator and calculates the
-	 * Message-Authenticator attribute.
-	 * The received response gets verified using the Response-Identifier
-	 * and the Message-Authenticator attribute.
+	 * The client fills in NAS-Identifier nad NAS-Port-Type
 	 *
 	 * @param msg			RADIUS request message to send
 	 * @return				response, NULL if timed out/verification failed
@@ -49,14 +44,11 @@ struct radius_client_t {
 	radius_message_t* (*request)(radius_client_t *this, radius_message_t *msg);
 
 	/**
-	 * Decrypt the MSK encoded in a messages MS-MPPE-Send/Recv-Key.
+	 * Get the EAP MSK after successful RADIUS authentication.
 	 *
-	 * @param response		RADIUS response message containing attributes
-	 * @param request		associated RADIUS request message
-	 * @return				allocated MSK, empty chunk if none found
+	 * @return				MSK, allocated
 	 */
-	chunk_t (*decrypt_msk)(radius_client_t *this, radius_message_t *response,
-						   radius_message_t *request);
+	chunk_t (*get_msk)(radius_client_t *this);
 
 	/**
 	 * Destroy the client, release the socket.
@@ -65,24 +57,10 @@ struct radius_client_t {
 };
 
 /**
- * Create a RADIUS client, acquire a socket.
- *
- * This call might block if the socket pool is empty.
+ * Create a RADIUS client.
  *
  * @return			radius_client_t object
  */
 radius_client_t *radius_client_create();
-
-/**
- * Initialize the socket pool.
- *
- * @return 			TRUE if initialization successful
- */
-bool radius_client_init();
-
-/**
- * Cleanup the socket pool.
- */
-void radius_client_cleanup();
 
 #endif /** RADIUS_CLIENT_H_ @}*/
