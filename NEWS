@@ -7,7 +7,7 @@ strongswan-4.4.1
 
 - The PLUTO_MARK_IN and PLUTO_ESP_ENC environment variables can be used
    in the updown scripts to set marks on inbound ESP or ESP_IN_UDP packets.
- 
+
 - The openssl plugin now supports X.509 certificate and CRL functions.
 
 - OCSP/CRL checking in IKEv2 has been moved to the revocation plugin, enabled
@@ -24,6 +24,10 @@ strongswan-4.4.1
 
 - The major refactoring of the IKEv1 Mode Config functionality now allows
   the transport and handling of any Mode Config attribute.
+
+- The RADIUS proxy plugin eap-radius now supports multiple servers. Configured
+  servers are chosen randomly, with the option to prefer a servers. Not
+  responding servers are degraded in the selection process.
 
 - The ipsec pool tool manages arbitrary configuration attributes stored
   in an SQL database. ipsec pool --help gives the details.
