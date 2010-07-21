@@ -6,12 +6,13 @@ strongswan-4.4.1
   ikev2/nat-two-rw-mark, ikev2/rw-nat-mark-in-out and ikev2/net2net-psk-dscp.
 
 - The PLUTO_MARK_IN and PLUTO_ESP_ENC environment variables can be used
-   in the updown scripts to set marks on inbound ESP or ESP_IN_UDP packets.
+  in a user-specific updown script to set marks on inbound ESP or
+  ESP_IN_UDP packets.
 
 - The openssl plugin now supports X.509 certificate and CRL functions.
 
 - OCSP/CRL checking in IKEv2 has been moved to the revocation plugin, enabled
-  by default. Update manual load directives in strongswan.conf.
+  by default. Plase update manual load directives in strongswan.conf.
 
 - RFC3779 ipAddrBlock constraint checking has been moved to the addrblock
   plugin, disabled by default. Enable it and update manual load directives
@@ -26,8 +27,8 @@ strongswan-4.4.1
   the transport and handling of any Mode Config attribute.
 
 - The RADIUS proxy plugin eap-radius now supports multiple servers. Configured
-  servers are chosen randomly, with the option to prefer a servers. Not
-  responding servers are degraded in the selection process.
+  servers are chosen randomly, with the option to prefer a specific server.
+  Non-responding servers are degraded by the selection process.
 
 - The ipsec pool tool manages arbitrary configuration attributes stored
   in an SQL database. ipsec pool --help gives the details.
