@@ -518,6 +518,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
 			{	/* peer requested EAP, but current config does not match */
+				DBG1(DBG_IKE, "peer requested EAP, config inacceptable");
 				this->peer_cfg->destroy(this->peer_cfg);
 				this->peer_cfg = NULL;
 				if (!update_cfg_candidates(this, FALSE))
