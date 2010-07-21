@@ -215,13 +215,8 @@ typedef struct {
 	int left;
 } attribute_enumerator_t;
 
-
-/**
- * Implementation of attribute_enumerator_t.enumerate
- */
-static bool attribute_enumerate(attribute_enumerator_t *this,
-								int *type, chunk_t *data)
-
+METHOD(enumerator_t, attribute_enumerate, bool,
+	attribute_enumerator_t *this, int *type, chunk_t *data)
 {
 	if (this->left == 0)
 	{
@@ -241,10 +236,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of radius_message_t.create_enumerator
- */
-static enumerator_t* create_enumerator(private_radius_message_t *this)
+METHOD(radius_message_t, create_enumerator, enumerator_t*,
+	private_radius_message_t *this)
 {
 	attribute_enumerator_t *e;
 
@@ -252,20 +245,19 @@ static enumerator_t* create_enumerator(private_radius_message_t *this)
 	{
 		return enumerator_create_empty();
 	}
-
-	e = malloc_thing(attribute_enumerator_t);
-	e->public.enumerate = (void*)attribute_enumerate;
-	e->public.destroy = (void*)free;
-	e->next = (rattr_t*)this->msg->attributes;
-	e->left = ntohs(this->msg->length) - sizeof(rmsg_t);
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_attribute_enumerate,
+			.destroy = (void*)free,
+		},
+		.next = (rattr_t*)this->msg->attributes,
+		.left = ntohs(this->msg->length) - sizeof(rmsg_t),
+	);
 	return &e->public;
 }
 
-/**
- * Implementation of radius_message_t.add
- */
-static void add(private_radius_message_t *this, radius_attribute_type_t type,
-				chunk_t data)
+METHOD(radius_message_t, add, void,
+	private_radius_message_t *this, radius_attribute_type_t type, chunk_t data)
 {
 	rattr_t *attribute;
 
@@ -279,10 +271,8 @@ static void add(private_radius_message_t *this, radius_attribute_type_t type,
 	this->msg->length = htons(ntohs(this->msg->length) + attribute->length);
 }
 
-/**
- * Implementation of radius_message_t.sign
- */
-static void sign(private_radius_message_t *this, rng_t *rng, signer_t *signer)
+METHOD(radius_message_t, sign, void,
+	private_radius_message_t *this, rng_t *rng, signer_t *signer)
 {
 	char buf[HASH_SIZE_MD5];
 
@@ -297,11 +287,9 @@ static void sign(private_radius_message_t *this, rng_t *rng, signer_t *signer)
 				((u_char*)this->msg) + ntohs(this->msg->length) - HASH_SIZE_MD5);
 }
 
-/**
- * Implementation of radius_message_t.verify
- */
-static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
-				   chunk_t secret, hasher_t *hasher, signer_t *signer)
+METHOD(radius_message_t, verify, bool,
+	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
+	hasher_t *hasher, signer_t *signer)
 {
 	char buf[HASH_SIZE_MD5], res_auth[HASH_SIZE_MD5];
 	enumerator_t *enumerator;
@@ -369,51 +357,39 @@ static bool verify(private_radius_message_t *this, u_int8_t *req_auth,
 	return TRUE;
 }
 
-/**
- * Implementation of radius_message_t.get_code
- */
-static radius_message_code_t get_code(private_radius_message_t *this)
+METHOD(radius_message_t, get_code, radius_message_code_t,
+	private_radius_message_t *this)
 {
 	return this->msg->code;
 }
 
-/**
- * Implementation of radius_message_t.get_identifier
- */
-static u_int8_t get_identifier(private_radius_message_t *this)
+METHOD(radius_message_t, get_identifier, u_int8_t,
+	private_radius_message_t *this)
 {
 	return this->msg->identifier;
 }
 
-/**
- * Implementation of radius_message_t.set_identifier
- */
-static void set_identifier(private_radius_message_t *this, u_int8_t identifier)
+METHOD(radius_message_t, set_identifier, void,
+	private_radius_message_t *this, u_int8_t identifier)
 {
 	this->msg->identifier = identifier;
 }
 
-/**
- * Implementation of radius_message_t.get_authenticator
- */
-static u_int8_t* get_authenticator(private_radius_message_t *this)
+METHOD(radius_message_t, get_authenticator, u_int8_t*,
+	private_radius_message_t *this)
 {
 	return this->msg->authenticator;
 }
 
 
-/**
- * Implementation of radius_message_t.get_encoding
- */
-static chunk_t get_encoding(private_radius_message_t *this)
+METHOD(radius_message_t, get_encoding, chunk_t,
+	private_radius_message_t *this)
 {
 	return chunk_create((u_char*)this->msg, ntohs(this->msg->length));
 }
 
-/**
- * Implementation of radius_message_t.destroy.
- */
-static void destroy(private_radius_message_t *this)
+METHOD(radius_message_t, destroy, void,
+	private_radius_message_t *this)
 {
 	free(this->msg);
 	free(this);
@@ -424,18 +400,22 @@ static void destroy(private_radius_message_t *this)
  */
 static private_radius_message_t *radius_message_create()
 {
-	private_radius_message_t *this = malloc_thing(private_radius_message_t);
+	private_radius_message_t *this;
 
-	this->public.create_enumerator = (enumerator_t*(*)(radius_message_t*))create_enumerator;
-	this->public.add = (void(*)(radius_message_t*, radius_attribute_type_t,chunk_t))add;
-	this->public.get_code = (radius_message_code_t(*)(radius_message_t*))get_code;
-	this->public.get_identifier = (u_int8_t(*)(radius_message_t*))get_identifier;
-	this->public.set_identifier = (void(*)(radius_message_t*, u_int8_t identifier))set_identifier;
-	this->public.get_authenticator = (u_int8_t*(*)(radius_message_t*))get_authenticator;
-	this->public.get_encoding = (chunk_t(*)(radius_message_t*))get_encoding;
-	this->public.sign = (void(*)(radius_message_t*, rng_t *rng, signer_t *signer))sign;
-	this->public.verify = (bool(*)(radius_message_t*, u_int8_t *req_auth, chunk_t secret, hasher_t *hasher, signer_t *signer))verify;
-	this->public.destroy = (void(*)(radius_message_t*))destroy;
+	INIT(this,
+		.public = {
+			.create_enumerator = _create_enumerator,
+			.add = _add,
+			.get_code = _get_code,
+			.get_identifier = _get_identifier,
+			.set_identifier = _set_identifier,
+			.get_authenticator = _get_authenticator,
+			.get_encoding = _get_encoding,
+			.sign = _sign,
+			.verify = _verify,
+			.destroy = _destroy,
+		},
+	);
 
 	return this;
 }
@@ -447,10 +427,11 @@ radius_message_t *radius_message_create_request()
 {
 	private_radius_message_t *this = radius_message_create();
 
-	this->msg = malloc_thing(rmsg_t);
-	this->msg->code = RMC_ACCESS_REQUEST;
-	this->msg->identifier = 0;
-	this->msg->length = htons(sizeof(rmsg_t));
+	INIT(this->msg,
+		.code = RMC_ACCESS_REQUEST,
+		.identifier = 0,
+		.length = htons(sizeof(rmsg_t)),
+	);
 
 	return &this->public;
 }

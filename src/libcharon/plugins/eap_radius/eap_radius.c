@@ -145,10 +145,8 @@ static bool radius2ike(private_eap_radius_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of eap_method_t.initiate
- */
-static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate, status_t,
+	private_eap_radius_t *this, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
@@ -218,11 +216,8 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of eap_method_t.process
- */
-static status_t process(private_eap_radius_t *this,
-						eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process, status_t,
+	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
@@ -274,19 +269,15 @@ static status_t process(private_eap_radius_t *this,
 	return status;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_radius_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_radius_t *this, u_int32_t *vendor)
 {
 	*vendor = this->vendor;
 	return this->type;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_radius_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_radius_t *this, chunk_t *msk)
 {
 	if (this->msk.ptr)
 	{
@@ -296,10 +287,8 @@ static status_t get_msk(private_eap_radius_t *this, chunk_t *msk)
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_radius_t *this)
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_radius_t *this)
 {
 	switch (this->type)
 	{
@@ -311,10 +300,8 @@ static bool is_mutual(private_eap_radius_t *this)
 	}
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_radius_t *this)
+METHOD(eap_method_t, destroy, void,
+	private_eap_radius_t *this)
 {
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
@@ -328,15 +315,26 @@ static void destroy(private_eap_radius_t *this)
  */
 eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer)
 {
-	private_eap_radius_t *this = malloc_thing(private_eap_radius_t);
+	private_eap_radius_t *this;
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-
+	INIT(this,
+		.public.eap_method_interface = {
+			.initiate = _initiate,
+			.process = _process,
+			.get_type = _get_type,
+			.is_mutual = _is_mutual,
+			.get_msk = _get_msk,
+			.destroy = _destroy,
+		},
+		/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
+		.type = EAP_RADIUS,
+		.eap_start = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.eap_start", FALSE),
+		.id_prefix = lib->settings->get_str(lib->settings,
+								"charon.plugins.eap-radius.id_prefix", ""),
+		.class_group = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.class_group", FALSE),
+	);
 	this->client = radius_client_create();
 	if (!this->client)
 	{
@@ -345,16 +343,6 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	}
 	this->peer = peer->clone(peer);
 	this->server = server->clone(server);
-	/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
-	this->type = EAP_RADIUS;
-	this->vendor = 0;
-	this->msk = chunk_empty;
-	this->eap_start = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.eap_start", FALSE);
-	this->id_prefix = lib->settings->get_str(lib->settings,
-								"charon.plugins.eap-radius.id_prefix", "");
-	this->class_group = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.class_group", FALSE);
 	return &this->public;
 }
 

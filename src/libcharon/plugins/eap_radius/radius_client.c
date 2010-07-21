@@ -261,11 +261,8 @@ static void save_state(private_radius_client_t *this, radius_message_t *msg)
 	chunk_free(&this->state);
 }
 
-/**
- * Implementation of radius_client_t.request
- */
-static radius_message_t* request(private_radius_client_t *this,
-								 radius_message_t *req)
+METHOD(radius_client_t, request, radius_message_t*,
+	private_radius_client_t *this, radius_message_t *req)
 {
 	char virtual[] = {0x00,0x00,0x00,0x05};
 	entry_t *socket;
@@ -419,11 +416,9 @@ static chunk_t decrypt_mppe_key(private_radius_client_t *this, u_int16_t salt,
 	return chunk_clone(chunk_create(P.ptr + 1, *P.ptr));
 }
 
-/**
- * Implementation of radius_client_t.decrypt_msk
- */
-static chunk_t decrypt_msk(private_radius_client_t *this,
-						   radius_message_t *response, radius_message_t *request)
+METHOD(radius_client_t, decrypt_msk, chunk_t,
+	private_radius_client_t *this, radius_message_t *response,
+	radius_message_t *request)
 {
 	struct {
 		u_int32_t id;
@@ -468,10 +463,8 @@ static chunk_t decrypt_msk(private_radius_client_t *this,
 	return chunk_empty;
 }
 
-/**
- * Implementation of radius_client_t.destroy.
- */
-static void destroy(private_radius_client_t *this)
+METHOD(radius_client_t, destroy, void,
+	private_radius_client_t *this)
 {
 	free(this->state.ptr);
 	free(this);
@@ -482,13 +475,15 @@ static void destroy(private_radius_client_t *this)
  */
 radius_client_t *radius_client_create()
 {
-	private_radius_client_t *this = malloc_thing(private_radius_client_t);
+	private_radius_client_t *this;
 
-	this->public.request = (radius_message_t*(*)(radius_client_t*, radius_message_t *msg))request;
-	this->public.decrypt_msk = (chunk_t(*)(radius_client_t*, radius_message_t *, radius_message_t *))decrypt_msk;
-	this->public.destroy = (void(*)(radius_client_t*))destroy;
-
-	this->state = chunk_empty;
+	INIT(this,
+		.public = {
+			.request = _request,
+			.decrypt_msk = _decrypt_msk,
+			.destroy = _destroy,
+		},
+	);
 
 	return &this->public;
 }
