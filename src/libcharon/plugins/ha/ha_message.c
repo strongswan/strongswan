@@ -232,8 +232,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_EXTENSIONS:
 		case HA_INBOUND_SPI:
 		case HA_OUTBOUND_SPI:
-		case HA_INITIATE_MID:
-		case HA_RESPOND_MID:
+		case HA_MID:
 		{
 			u_int32_t val;
 
@@ -445,8 +444,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_EXTENSIONS:
 		case HA_INBOUND_SPI:
 		case HA_OUTBOUND_SPI:
-		case HA_INITIATE_MID:
-		case HA_RESPOND_MID:
+		case HA_MID:
 		{
 			if (this->buf.len < sizeof(u_int32_t))
 			{

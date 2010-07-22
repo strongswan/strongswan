@@ -204,19 +204,17 @@ METHOD(listener_t, message_hook, bool,
 		message->get_request(message))
 	{	/* we sync on requests, but skip it on IKE_SA_INIT */
 		ha_message_t *m;
-		u_int32_t mid;
 
-		m = ha_message_create(HA_IKE_UPDATE);
-		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-		mid = message->get_message_id(message) + 1;
 		if (incoming)
 		{
-			m->add_attribute(m, HA_RESPOND_MID, mid);
+			m = ha_message_create(HA_IKE_MID_RESPONDER);
 		}
 		else
 		{
-			m->add_attribute(m, HA_INITIATE_MID, mid);
+			m = ha_message_create(HA_IKE_MID_INITIATOR);
 		}
+		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+		m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
 		this->socket->push(this->socket, m);
 	}
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&

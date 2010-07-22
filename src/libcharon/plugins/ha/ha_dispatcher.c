@@ -265,12 +265,6 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				set_condition(ike_sa, value.u32, COND_CERTREQ_SEEN);
 				set_condition(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
 				break;
-			case HA_INITIATE_MID:
-				ike_sa->set_message_id(ike_sa, TRUE, value.u32);
-				break;
-			case HA_RESPOND_MID:
-				ike_sa->set_message_id(ike_sa, FALSE, value.u32);
-				break;
 			default:
 				break;
 		}
@@ -283,6 +277,46 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 			ike_sa->get_peer_cfg(ike_sa))
 		{
 			ike_sa->set_state(ike_sa, IKE_PASSIVE);
+		}
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+}
+
+/**
+ * Process messages of type IKE_MID_INITIATOR/RESPONDER
+ */
+static void process_ike_mid(private_ha_dispatcher_t *this,
+							   ha_message_t *message, bool initiator)
+{
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa = NULL;
+	u_int32_t mid = 0;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_IKE_ID:
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
+				break;
+			case HA_MID:
+				mid = value.u32;
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (ike_sa)
+	{
+		if (mid)
+		{
+			ike_sa->set_message_id(ike_sa, initiator, mid);
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
@@ -675,6 +709,12 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 			break;
 		case HA_IKE_UPDATE:
 			process_ike_update(this, message);
+			break;
+		case HA_IKE_MID_INITIATOR:
+			process_ike_mid(this, message, TRUE);
+			break;
+		case HA_IKE_MID_RESPONDER:
+			process_ike_mid(this, message, FALSE);
 			break;
 		case HA_IKE_DELETE:
 			process_ike_delete(this, message);

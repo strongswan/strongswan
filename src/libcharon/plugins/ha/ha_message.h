@@ -30,7 +30,7 @@
 /**
  * Protocol version of this implementation
  */
-#define HA_MESSAGE_VERSION 1
+#define HA_MESSAGE_VERSION 2
 
 typedef struct ha_message_t ha_message_t;
 typedef enum ha_message_type_t ha_message_type_t;
@@ -43,8 +43,12 @@ typedef union ha_message_value_t ha_message_value_t;
 enum ha_message_type_t {
 	/** add a completely new IKE_SA */
 	HA_IKE_ADD = 1,
-	/** update an existing IKE_SA (message IDs, address update, ...) */
+	/** update an existing IKE_SA (identities, address update, ...) */
 	HA_IKE_UPDATE,
+	/** update initiator message id */
+	HA_IKE_MID_INITIATOR,
+	/** update responder message id */
+	HA_IKE_MID_RESPONDER,
 	/** delete an existing IKE_SA */
 	HA_IKE_DELETE,
 	/** add a new CHILD_SA */
@@ -123,10 +127,8 @@ enum ha_message_attribute_t {
 	HA_LOCAL_TS,
 	/** traffic_selector_t*, remote traffic selector */
 	HA_REMOTE_TS,
-	/** u_int32_t, initiating message ID */
-	HA_INITIATE_MID,
-	/** u_int32_t, responding message ID */
-	HA_RESPOND_MID,
+	/** u_int32_t, message ID */
+	HA_MID,
 	/** u_int16_t, HA segment */
 	HA_SEGMENT,
 };
