@@ -700,9 +700,16 @@ static void process_resync(private_ha_dispatcher_t *this,
 static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 {
 	ha_message_t *message;
+	ha_message_type_t type;
 
 	message = this->socket->pull(this->socket);
-	switch (message->get_type(message))
+	type = message->get_type(message);
+	if (type != HA_STATUS)
+	{
+		DBG2(DBG_CFG, "received HA %N message", ha_message_type_names,
+			 message->get_type(message));
+	}
+	switch (type)
 	{
 		case HA_IKE_ADD:
 			process_ike_add(this, message);
@@ -738,8 +745,7 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 			process_resync(this, message);
 			break;
 		default:
-			DBG1(DBG_CFG, "received unknown HA message type %d",
-				 message->get_type(message));
+			DBG1(DBG_CFG, "received unknown HA message type %d", type);
 			break;
 	}
 	message->destroy(message);
