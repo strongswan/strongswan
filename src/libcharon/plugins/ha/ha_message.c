@@ -46,6 +46,20 @@ struct private_ha_message_t {
 	chunk_t buf;
 };
 
+ENUM(ha_message_type_names, HA_IKE_ADD, HA_RESYNC,
+	"IKE_ADD",
+	"IKE_UPDATE",
+	"IKE_MID_INITIATOR",
+	"IKE_MID_RESPONDER",
+	"IKE_DELETE",
+	"CHILD_ADD",
+	"CHILD_DELETE",
+	"SEGMENT_DROP",
+	"SEGMENT_TAKE",
+	"STATUS",
+	"RESYNC",
+);
+
 typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
 
 /**

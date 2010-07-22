@@ -66,6 +66,11 @@ enum ha_message_type_t {
 };
 
 /**
+ * Enum names for message types
+ */
+extern enum_name_t *ha_message_type_names;
+
+/**
  * Type of attributes contained in a message
  */
 enum ha_message_attribute_t {
