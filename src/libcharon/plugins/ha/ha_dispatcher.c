@@ -707,10 +707,8 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of ha_dispatcher_t.destroy.
- */
-static void destroy(private_ha_dispatcher_t *this)
+METHOD(ha_dispatcher_t, destroy, void,
+	private_ha_dispatcher_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
@@ -722,12 +720,16 @@ static void destroy(private_ha_dispatcher_t *this)
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 									  ha_segments_t *segments)
 {
-	private_ha_dispatcher_t *this = malloc_thing(private_ha_dispatcher_t);
+	private_ha_dispatcher_t *this;
 
-	this->public.destroy = (void(*)(ha_dispatcher_t*))destroy;
 
-	this->socket = socket;
-	this->segments = segments;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.segments = segments,
+	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

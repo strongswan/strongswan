@@ -78,10 +78,8 @@ struct private_ha_plugin_t {
 	ha_ctl_t *ctl;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_ha_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_ha_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
 	charon->bus->remove_listener(charon->bus, &this->segments->listener);
@@ -127,11 +125,9 @@ plugin_t *ha_plugin_create()
 		return NULL;
 	}
 
-	this = malloc_thing(private_ha_plugin_t);
-
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	this->tunnel = NULL;
-	this->ctl = NULL;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	if (secret)
 	{

@@ -88,10 +88,8 @@ static job_requeue_t send_message(job_data_t *data)
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of ha_socket_t.push
- */
-static void push(private_ha_socket_t *this, ha_message_t *message)
+METHOD(ha_socket_t, push, void,
+	private_ha_socket_t *this, ha_message_t *message)
 {
 	chunk_t chunk;
 
@@ -121,10 +119,8 @@ static void push(private_ha_socket_t *this, ha_message_t *message)
 	message->destroy(message);
 }
 
-/**
- * Implementation of ha_socket_t.pull
- */
-static ha_message_t *pull(private_ha_socket_t *this)
+METHOD(ha_socket_t, pull, ha_message_t*,
+	private_ha_socket_t *this)
 {
 	while (TRUE)
 	{
@@ -189,10 +185,8 @@ static bool open_socket(private_ha_socket_t *this)
 	return TRUE;
 }
 
-/**
- * Implementation of ha_socket_t.destroy.
- */
-static void destroy(private_ha_socket_t *this)
+METHOD(ha_socket_t, destroy, void,
+	private_ha_socket_t *this)
 {
 	if (this->fd != -1)
 	{
@@ -208,15 +202,18 @@ static void destroy(private_ha_socket_t *this)
  */
 ha_socket_t *ha_socket_create(char *local, char *remote)
 {
-	private_ha_socket_t *this = malloc_thing(private_ha_socket_t);
+	private_ha_socket_t *this;
 
-	this->public.push = (void(*)(ha_socket_t*, ha_message_t*))push;
-	this->public.pull = (ha_message_t*(*)(ha_socket_t*))pull;
-	this->public.destroy = (void(*)(ha_socket_t*))destroy;
-
-	this->local = host_create_from_dns(local, 0, HA_PORT);
-	this->remote = host_create_from_dns(remote, 0, HA_PORT);
-	this->fd = -1;
+	INIT(this,
+		.public = {
+			.push = _push,
+			.pull = _pull,
+			.destroy = _destroy,
+		},
+		.local = host_create_from_dns(local, 0, HA_PORT),
+		.remote = host_create_from_dns(remote, 0, HA_PORT),
+		.fd = -1,
+	);
 
 	if (!this->local || !this->remote)
 	{

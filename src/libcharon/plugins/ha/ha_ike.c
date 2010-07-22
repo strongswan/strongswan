@@ -62,12 +62,9 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 	return 0;
 }
 
-/**
- * Implementation of listener_t.ike_keys
- */
-static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
-					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-					 ike_sa_t *rekey)
+METHOD(listener_t, ike_keys, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
 {
 	ha_message_t *m;
 	chunk_t secret;
@@ -124,10 +121,8 @@ static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.ike_updown
- */
-static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
+METHOD(listener_t, ike_updown, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 {
 	ha_message_t *m;
 
@@ -189,21 +184,16 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.ike_rekey
- */
-static bool ike_rekey(private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
+METHOD(listener_t, ike_rekey, bool,
+	private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
 {
 	ike_updown(this, old, FALSE);
 	ike_updown(this, new, TRUE);
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.message
- */
-static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
-						 message_t *message, bool incoming)
+METHOD(listener_t, message_hook, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, message_t *message, bool incoming)
 {
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -250,10 +240,8 @@ static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
 	return TRUE;
 }
 
-/**
- * Implementation of ha_ike_t.destroy.
- */
-static void destroy(private_ha_ike_t *this)
+METHOD(ha_ike_t, destroy, void,
+	private_ha_ike_t *this)
 {
 	free(this);
 }
@@ -263,17 +251,21 @@ static void destroy(private_ha_ike_t *this)
  */
 ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 {
-	private_ha_ike_t *this = malloc_thing(private_ha_ike_t);
+	private_ha_ike_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
-	this->public.listener.ike_updown = (bool(*)(listener_t*,ike_sa_t *ike_sa, bool up))ike_updown;
-	this->public.listener.ike_rekey = (bool(*)(listener_t*,ike_sa_t *old, ike_sa_t *new))ike_rekey;
-	this->public.listener.message = (bool(*)(listener_t*, ike_sa_t *, message_t *,bool))message_hook;
-	this->public.destroy = (void(*)(ha_ike_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
+	INIT(this,
+		.public = {
+			.listener = {
+				.ike_keys = _ike_keys,
+				.ike_updown = _ike_updown,
+				.ike_rekey = _ike_rekey,
+				.message = _message_hook,
+			},
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+	);
 
 	return &this->public;
 }

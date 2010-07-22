@@ -51,10 +51,8 @@ struct private_ha_kernel_t {
 	u_int count;
 };
 
-/**
- * Implementation of ha_kernel_t.in_segment
- */
-static bool in_segment(private_ha_kernel_t *this, host_t *host, u_int segment)
+METHOD(ha_kernel_t, in_segment, bool,
+	private_ha_kernel_t *this, host_t *host, u_int segment)
 {
 	if (host->get_family(host) == AF_INET)
 	{
@@ -142,10 +140,8 @@ static segment_mask_t get_active(private_ha_kernel_t *this, char *file)
 	return mask;
 }
 
-/**
- * Implementation of ha_kernel_t.activate
- */
-static void activate(private_ha_kernel_t *this, u_int segment)
+METHOD(ha_kernel_t, activate, void,
+	private_ha_kernel_t *this, u_int segment)
 {
 	enumerator_t *enumerator;
 	char *file;
@@ -158,10 +154,8 @@ static void activate(private_ha_kernel_t *this, u_int segment)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of ha_kernel_t.deactivate
- */
-static void deactivate(private_ha_kernel_t *this, u_int segment)
+METHOD(ha_kernel_t, deactivate, void,
+	private_ha_kernel_t *this, u_int segment)
 {
 	enumerator_t *enumerator;
 	char *file;
@@ -199,10 +193,8 @@ static void disable_all(private_ha_kernel_t *this)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of ha_kernel_t.destroy.
- */
-static void destroy(private_ha_kernel_t *this)
+METHOD(ha_kernel_t, destroy, void,
+	private_ha_kernel_t *this)
 {
 	free(this);
 }
@@ -212,15 +204,18 @@ static void destroy(private_ha_kernel_t *this)
  */
 ha_kernel_t *ha_kernel_create(u_int count)
 {
-	private_ha_kernel_t *this = malloc_thing(private_ha_kernel_t);
+	private_ha_kernel_t *this;
 
-	this->public.in_segment = (bool(*)(ha_kernel_t*, host_t *host, u_int segment))in_segment;
-	this->public.activate = (void(*)(ha_kernel_t*, u_int segment))activate;
-	this->public.deactivate = (void(*)(ha_kernel_t*, u_int segment))deactivate;
-	this->public.destroy = (void(*)(ha_kernel_t*))destroy;
-
-	this->initval = 0;
-	this->count = count;
+	INIT(this,
+		.public = {
+			.in_segment = _in_segment,
+			.activate = _activate,
+			.deactivate = _deactivate,
+			.destroy = _destroy,
+		},
+		.initval = 0,
+		.count = count,
+	);
 
 	disable_all(this);
 

@@ -93,10 +93,8 @@ struct ts_encoding_t {
 	char encoding[];
 } __attribute__((packed));
 
-/**
- * Implementation of ha_message_t.get_type
- */
-static ha_message_type_t get_type(private_ha_message_t *this)
+METHOD(ha_message_t, get_type, ha_message_type_t,
+	private_ha_message_t *this)
 {
 	return this->buf.ptr[1];
 }
@@ -119,11 +117,8 @@ static void check_buf(private_ha_message_t *this, size_t len)
 	}
 }
 
-/**
- * Implementation of ha_message_t.add_attribute
- */
-static void add_attribute(private_ha_message_t *this,
-						  ha_message_attribute_t attribute, ...)
+METHOD(ha_message_t, add_attribute, void,
+	private_ha_message_t *this, ha_message_attribute_t attribute, ...)
 {
 	size_t len;
 	va_list args;
@@ -310,12 +305,9 @@ typedef struct {
 	void *cleanup_data;
 } attribute_enumerator_t;
 
-/**
- * Implementation of create_attribute_enumerator().enumerate
- */
-static bool attribute_enumerate(attribute_enumerator_t *this,
-								ha_message_attribute_t *attr_out,
-								ha_message_value_t *value)
+METHOD(enumerator_t, attribute_enumerate, bool,
+	attribute_enumerator_t *this, ha_message_attribute_t *attr_out,
+	ha_message_value_t *value)
 {
 	ha_message_attribute_t attr;
 
@@ -559,10 +551,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 	}
 }
 
-/**
- * Implementation of create_attribute_enumerator().destroy
- */
-static void enum_destroy(attribute_enumerator_t *this)
+METHOD(enumerator_t, enum_destroy, void,
+	attribute_enumerator_t *this)
 {
 	if (this->cleanup)
 	{
@@ -571,35 +561,30 @@ static void enum_destroy(attribute_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of ha_message_t.create_attribute_enumerator
- */
-static enumerator_t* create_attribute_enumerator(private_ha_message_t *this)
+METHOD(ha_message_t, create_attribute_enumerator, enumerator_t*,
+	private_ha_message_t *this)
 {
-	attribute_enumerator_t *e = malloc_thing(attribute_enumerator_t);
+	attribute_enumerator_t *e;
 
-	e->public.enumerate = (void*)attribute_enumerate;
-	e->public.destroy = (void*)enum_destroy;
-
-	e->buf = chunk_skip(this->buf, 2);
-	e->cleanup = NULL;
-	e->cleanup_data = NULL;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_attribute_enumerate,
+			.destroy = _enum_destroy,
+		},
+		.buf = chunk_skip(this->buf, 2),
+	);
 
 	return &e->public;
 }
 
-/**
- * Implementation of ha_message_t.get_encoding
- */
-static chunk_t get_encoding(private_ha_message_t *this)
+METHOD(ha_message_t, get_encoding, chunk_t,
+	private_ha_message_t *this)
 {
 	return this->buf;
 }
 
-/**
- * Implementation of ha_message_t.destroy.
- */
-static void destroy(private_ha_message_t *this)
+METHOD(ha_message_t, destroy, void,
+	private_ha_message_t *this)
 {
 	free(this->buf.ptr);
 	free(this);
@@ -608,14 +593,17 @@ static void destroy(private_ha_message_t *this)
 
 static private_ha_message_t *ha_message_create_generic()
 {
-	private_ha_message_t *this = malloc_thing(private_ha_message_t);
+	private_ha_message_t *this;
 
-	this->public.get_type = (ha_message_type_t(*)(ha_message_t*))get_type;
-	this->public.add_attribute = (void(*)(ha_message_t*, ha_message_attribute_t attribute, ...))add_attribute;
-	this->public.create_attribute_enumerator = (enumerator_t*(*)(ha_message_t*))create_attribute_enumerator;
-	this->public.get_encoding = (chunk_t(*)(ha_message_t*))get_encoding;
-	this->public.destroy = (void(*)(ha_message_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.get_type = _get_type,
+			.add_attribute = _add_attribute,
+			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_encoding = _get_encoding,
+			.destroy = _destroy,
+		},
+	);
 	return this;
 }
 

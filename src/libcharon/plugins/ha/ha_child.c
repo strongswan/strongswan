@@ -38,12 +38,9 @@ struct private_ha_child_t {
 	ha_tunnel_t *tunnel;
 };
 
-/**
- * Implementation of listener_t.child_keys
- */
-static bool child_keys(private_ha_child_t *this, ike_sa_t *ike_sa,
-					   child_sa_t *child_sa, diffie_hellman_t *dh,
-					   chunk_t nonce_i, chunk_t nonce_r)
+METHOD(listener_t, child_keys, bool,
+	private_ha_child_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
 	ha_message_t *m;
 	chunk_t secret;
@@ -110,11 +107,9 @@ static bool child_keys(private_ha_child_t *this, ike_sa_t *ike_sa,
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.child_state_change
- */
-static bool child_state_change(private_ha_child_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
+METHOD(listener_t, child_state_change, bool,
+	private_ha_child_t *this, ike_sa_t *ike_sa,
+	child_sa_t *child_sa, child_sa_state_t state)
 {
 	if (!ike_sa ||
 		ike_sa->get_state(ike_sa) == IKE_PASSIVE ||
@@ -142,10 +137,8 @@ static bool child_state_change(private_ha_child_t *this, ike_sa_t *ike_sa,
 	return TRUE;
 }
 
-/**
- * Implementation of ha_child_t.destroy.
- */
-static void destroy(private_ha_child_t *this)
+METHOD(ha_child_t, destroy, void,
+	private_ha_child_t *this)
 {
 	free(this);
 }
@@ -155,15 +148,19 @@ static void destroy(private_ha_child_t *this)
  */
 ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 {
-	private_ha_child_t *this = malloc_thing(private_ha_child_t);
+	private_ha_child_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.child_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
-	this->public.listener.child_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state))child_state_change;
-	this->public.destroy = (void(*)(ha_child_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
+	INIT(this,
+		.public = {
+			.listener = {
+				.child_keys = _child_keys,
+				.child_state_change = _child_state_change,
+			},
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+	);
 
 	return &this->public;
 }

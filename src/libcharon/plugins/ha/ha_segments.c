@@ -209,18 +209,14 @@ static void enable_disable_all(private_ha_segments_t *this, u_int segment,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of ha_segments_t.activate
- */
-static void activate(private_ha_segments_t *this, u_int segment, bool notify)
+METHOD(ha_segments_t, activate, void,
+	private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, TRUE, notify);
 }
 
-/**
- * Implementation of ha_segments_t.deactivate
- */
-static void deactivate(private_ha_segments_t *this, u_int segment, bool notify)
+METHOD(ha_segments_t, deactivate, void,
+	private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, FALSE, notify);
 }
@@ -249,10 +245,8 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 	return status;
 }
 
-/**
- * Implementation of ha_segments_t.resync
- */
-static void resync(private_ha_segments_t *this, u_int segment)
+METHOD(ha_segments_t, resync, void,
+	private_ha_segments_t *this, u_int segment)
 {
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
@@ -307,11 +301,8 @@ static void resync(private_ha_segments_t *this, u_int segment)
 	list->destroy(list);
 }
 
-/**
- * Implementation of listener_t.alert
- */
-static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
-					   alert_t alert, va_list args)
+METHOD(listener_t, alert_hook, bool,
+	private_ha_segments_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
 	{
@@ -373,10 +364,8 @@ static void start_watchdog(private_ha_segments_t *this)
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 }
 
-/**
- * Implementation of ha_segments_t.handle_status
- */
-static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
+METHOD(ha_segments_t, handle_status, void,
+	private_ha_segments_t *this, segment_mask_t mask)
 {
 	segment_mask_t missing;
 	int i;
@@ -441,10 +430,8 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of ha_segments_t.destroy.
- */
-static void destroy(private_ha_segments_t *this)
+METHOD(ha_segments_t, destroy, void,
+	private_ha_segments_t *this)
 {
 	if (this->job)
 	{
@@ -462,27 +449,25 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 								  ha_tunnel_t *tunnel, u_int count, u_int node,
 								  bool monitor, bool sync)
 {
-	private_ha_segments_t *this = malloc_thing(private_ha_segments_t);
+	private_ha_segments_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
-	this->public.activate = (void(*)(ha_segments_t*, u_int segment,bool))activate;
-	this->public.deactivate = (void(*)(ha_segments_t*, u_int segment,bool))deactivate;
-	this->public.resync = (void(*)(ha_segments_t*, u_int segment))resync;
-	this->public.handle_status = (void(*)(ha_segments_t*, segment_mask_t mask))handle_status;
-	this->public.destroy = (void(*)(ha_segments_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
-	this->kernel = kernel;
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->count = count;
-	this->node = node;
-	this->job = NULL;
-
-	/* initially all segments are deactivated */
-	this->active = 0;
+	INIT(this,
+		.public = {
+			.listener.alert = _alert_hook,
+			.activate = _activate,
+			.deactivate = _deactivate,
+			.resync = _resync,
+			.handle_status = _handle_status,
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+		.kernel = kernel,
+		.count = count,
+		.node = node,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+	);
 
 	if (monitor)
 	{
