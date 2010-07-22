@@ -35,7 +35,7 @@ struct ha_socket_t {
 	/**
 	 * Push synchronization information to the responsible node.
 	 *
-	 * @param message	message to send, gets destroyed by push()
+	 * @param message	message to send
 	 */
 	void (*push)(ha_socket_t *this, ha_message_t *message);
 

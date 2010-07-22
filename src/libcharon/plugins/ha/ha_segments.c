@@ -183,6 +183,7 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 		message = ha_message_create(type);
 		message->add_attribute(message, HA_SEGMENT, segment);
 		this->socket->push(this->socket, message);
+		message->destroy(message);
 	}
 }
 
@@ -221,113 +222,22 @@ METHOD(ha_segments_t, deactivate, void,
 	enable_disable_all(this, segment, FALSE, notify);
 }
 
-/**
- * Rekey all children of an IKE_SA
- */
-static status_t rekey_children(ike_sa_t *ike_sa)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	status_t status = SUCCESS;
-
-	iterator = ike_sa->create_child_sa_iterator(ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		DBG1(DBG_CFG, "resyncing CHILD_SA");
-		status = ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-										child_sa->get_spi(child_sa, TRUE));
-		if (status == DESTROY_ME)
-		{
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return status;
-}
-
-METHOD(ha_segments_t, resync, void,
-	private_ha_segments_t *this, u_int segment)
-{
-	ike_sa_t *ike_sa;
-	enumerator_t *enumerator;
-	linked_list_t *list;
-	ike_sa_id_t *id;
-
-	list = linked_list_create();
-	this->mutex->lock(this->mutex);
-
-	if (segment > 0 && segment <= this->count)
-	{
-		DBG1(DBG_CFG, "resyncing HA segment %d", segment);
-
-		/* we do the actual rekeying in a seperate loop to avoid rekeying
-		 * an SA twice. */
-		enumerator = charon->ike_sa_manager->create_enumerator(
-													charon->ike_sa_manager);
-		while (enumerator->enumerate(enumerator, &ike_sa))
-		{
-			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-				this->kernel->get_segment(this->kernel,
-									ike_sa->get_other_host(ike_sa)) == segment)
-			{
-				id = ike_sa->get_id(ike_sa);
-				list->insert_last(list, id->clone(id));
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	this->mutex->unlock(this->mutex);
-
-	while (list->remove_last(list, (void**)&id) == SUCCESS)
-	{
-		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
-		id->destroy(id);
-		if (ike_sa)
-		{
-			DBG1(DBG_CFG, "resyncing IKE_SA");
-			if (ike_sa->rekey(ike_sa) != DESTROY_ME)
-			{
-				if (rekey_children(ike_sa) != DESTROY_ME)
-				{
-					charon->ike_sa_manager->checkin(
-										charon->ike_sa_manager, ike_sa);
-					continue;
-				}
-			}
-			charon->ike_sa_manager->checkin_and_destroy(
-										charon->ike_sa_manager, ike_sa);
-		}
-	}
-	list->destroy(list);
-}
-
 METHOD(listener_t, alert_hook, bool,
 	private_ha_segments_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
 	{
-		deactivate(this, 0, TRUE);
+		if (this->job)
+		{
+			DBG1(DBG_CFG, "HA heartbeat active, dropping all segments");
+			deactivate(this, 0, TRUE);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "no HA heartbeat active, closing IKE_SAs");
+		}
 	}
 	return TRUE;
-}
-
-/**
- * Request a resync of all segments
- */
-static job_requeue_t request_resync(private_ha_segments_t *this)
-{
-	ha_message_t *message;
-	int i;
-
-	DBG1(DBG_CFG, "requesting HA resynchronization");
-
-	message = ha_message_create(HA_RESYNC);
-	for (i = 1; i <= this->count; i++)
-	{
-		message->add_attribute(message, HA_SEGMENT, i);
-	}
-	this->socket->push(this->socket, message);
-	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -422,6 +332,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	}
 
 	this->socket->push(this->socket, message);
+	message->destroy(message);
 
 	/* schedule next invocation */
 	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
@@ -449,7 +360,7 @@ METHOD(ha_segments_t, destroy, void,
  */
 ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 								  ha_tunnel_t *tunnel, u_int count, u_int node,
-								  bool monitor, bool sync)
+								  bool monitor)
 {
 	private_ha_segments_t *this;
 
@@ -458,7 +369,6 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 			.listener.alert = _alert_hook,
 			.activate = _activate,
 			.deactivate = _deactivate,
-			.resync = _resync,
 			.handle_status = _handle_status,
 			.destroy = _destroy,
 		},
@@ -475,14 +385,6 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	{
 		send_status(this);
 		start_watchdog(this);
-	}
-
-	if (sync)
-	{
-		/* request a resync as soon as we are up */
-		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
-						callback_job_create((callback_job_cb_t)request_resync,
-											this, NULL, NULL), 2);
 	}
 
 	return &this->public;

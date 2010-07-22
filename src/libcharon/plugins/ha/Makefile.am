@@ -17,6 +17,7 @@ libstrongswan_ha_la_SOURCES = \
   ha_tunnel.h ha_tunnel.c \
   ha_dispatcher.h ha_dispatcher.c \
   ha_segments.h ha_segments.c \
+  ha_cache.h ha_cache.c \
   ha_kernel.h ha_kernel.c \
   ha_ctl.h ha_ctl.c \
   ha_ike.h ha_ike.c \

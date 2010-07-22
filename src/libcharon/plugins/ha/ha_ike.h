@@ -21,13 +21,14 @@
 #ifndef HA_IKE_H_
 #define HA_IKE_H_
 
+typedef struct ha_ike_t ha_ike_t;
+
 #include "ha_socket.h"
 #include "ha_tunnel.h"
 #include "ha_segments.h"
+#include "ha_cache.h"
 
 #include <daemon.h>
-
-typedef struct ha_ike_t ha_ike_t;
 
 /**
  * Listener to synchronize IKE_SAs.
@@ -50,8 +51,10 @@ struct ha_ike_t {
  *
  * @param socket		socket to use for sending synchronization messages
  * @param tunnel		tunnel securing sync messages, if any
+ * @param cache			message cache
  * @return				IKE listener
  */
-ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel);
+ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+						ha_cache_t *cache);
 
 #endif /** HA_IKE_ @}*/

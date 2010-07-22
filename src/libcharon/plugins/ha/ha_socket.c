@@ -58,8 +58,8 @@ struct private_ha_socket_t {
  * Data to pass to the send_message() callback job
  */
 typedef struct {
-	ha_message_t *message;
-	private_ha_socket_t *this;
+	chunk_t chunk;
+	int fd;
 } job_data_t;
 
 /**
@@ -67,7 +67,7 @@ typedef struct {
  */
 static void job_data_destroy(job_data_t *this)
 {
-	this->message->destroy(this->message);
+	free(this->chunk.ptr);
 	free(this);
 }
 
@@ -76,12 +76,7 @@ static void job_data_destroy(job_data_t *this)
  */
 static job_requeue_t send_message(job_data_t *data)
 {
-	private_ha_socket_t *this;
-	chunk_t chunk;
-
-	this = data->this;
-	chunk = data->message->get_encoding(data->message);
-	if (send(this->fd, chunk.ptr, chunk.len, 0) < chunk.len)
+	if (send(data->fd, data->chunk.ptr, data->chunk.len, 0) < data->chunk.len)
 	{
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
@@ -105,9 +100,10 @@ METHOD(ha_socket_t, push, void,
 			/* Fallback to asynchronous transmission. This is required, as sendto()
 			 * is a blocking call if it acquires a policy. We could end up in a
 			 * deadlock, as we own an IKE_SA. */
-			data = malloc_thing(job_data_t);
-			data->message = message;
-			data->this = this;
+			INIT(data,
+				.chunk = chunk_clone(chunk),
+				.fd = this->fd,
+			);
 
 			job = callback_job_create((callback_job_cb_t)send_message,
 									  data, (void*)job_data_destroy, NULL);
@@ -116,7 +112,6 @@ METHOD(ha_socket_t, push, void,
 		}
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
-	message->destroy(message);
 }
 
 METHOD(ha_socket_t, pull, ha_message_t*,

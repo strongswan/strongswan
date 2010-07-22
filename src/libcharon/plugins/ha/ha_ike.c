@@ -36,6 +36,11 @@ struct private_ha_ike_t {
 	 * tunnel securing sync messages
 	 */
 	ha_tunnel_t *tunnel;
+
+	/**
+	 * message cache
+	 */
+	ha_cache_t *cache;
 };
 
 /**
@@ -117,6 +122,7 @@ METHOD(listener_t, ike_keys, bool,
 	chunk_clear(&secret);
 
 	this->socket->push(this->socket, m);
+	this->cache->cache(this->cache, ike_sa, m);
 
 	return TRUE;
 }
@@ -181,6 +187,7 @@ METHOD(listener_t, ike_updown, bool,
 		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 	}
 	this->socket->push(this->socket, m);
+	this->cache->cache(this->cache, ike_sa, m);
 	return TRUE;
 }
 
@@ -189,6 +196,17 @@ METHOD(listener_t, ike_rekey, bool,
 {
 	ike_updown(this, old, FALSE);
 	ike_updown(this, new, TRUE);
+	return TRUE;
+}
+
+METHOD(listener_t, ike_state_change, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, ike_sa_state_t new)
+{
+	/* clean up cache if a passive IKE_SA goes away */
+	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE && new == IKE_DESTROYING)
+	{
+		this->cache->delete(this->cache, ike_sa);
+	}
 	return TRUE;
 }
 
@@ -216,6 +234,7 @@ METHOD(listener_t, message_hook, bool,
 		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 		m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
 		this->socket->push(this->socket, m);
+		this->cache->cache(this->cache, ike_sa, m);
 	}
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		message->get_exchange_type(message) == IKE_AUTH &&
@@ -233,6 +252,7 @@ METHOD(listener_t, message_hook, bool,
 			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 			m->add_attribute(m, HA_REMOTE_VIP, vip);
 			this->socket->push(this->socket, m);
+			this->cache->cache(this->cache, ike_sa, m);
 		}
 	}
 	return TRUE;
@@ -247,7 +267,8 @@ METHOD(ha_ike_t, destroy, void,
 /**
  * See header
  */
-ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
+ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+						ha_cache_t *cache)
 {
 	private_ha_ike_t *this;
 
@@ -257,12 +278,14 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 				.ike_keys = _ike_keys,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
+				.ike_state_change = _ike_state_change,
 				.message = _message_hook,
 			},
 			.destroy = _destroy,
 		},
 		.socket = socket,
 		.tunnel = tunnel,
+		.cache = cache,
 	);
 
 	return &this->public;

@@ -36,6 +36,11 @@ struct private_ha_child_t {
 	 * tunnel securing sync messages
 	 */
 	ha_tunnel_t *tunnel;
+
+	/**
+	 * message cache
+	 */
+	ha_cache_t *cache;
 };
 
 METHOD(listener_t, child_keys, bool,
@@ -103,6 +108,7 @@ METHOD(listener_t, child_keys, bool,
 	enumerator->destroy(enumerator);
 
 	this->socket->push(this->socket, m);
+	m->destroy(m);
 
 	return TRUE;
 }
@@ -133,6 +139,7 @@ METHOD(listener_t, child_state_change, bool,
 		m->add_attribute(m, HA_INBOUND_SPI,
 						 child_sa->get_spi(child_sa, TRUE));
 		this->socket->push(this->socket, m);
+		m->destroy(m);
 	}
 	return TRUE;
 }
@@ -146,7 +153,8 @@ METHOD(ha_child_t, destroy, void,
 /**
  * See header
  */
-ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
+ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+							ha_cache_t *cache)
 {
 	private_ha_child_t *this;
 
@@ -160,6 +168,7 @@ ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
 		},
 		.socket = socket,
 		.tunnel = tunnel,
+		.cache = cache,
 	);
 
 	return &this->public;

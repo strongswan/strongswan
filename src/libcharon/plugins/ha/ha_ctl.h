@@ -22,6 +22,7 @@
 #define HA_CTL_H_
 
 #include "ha_segments.h"
+#include "ha_cache.h"
 
 typedef struct ha_ctl_t ha_ctl_t;
 
@@ -40,8 +41,9 @@ struct ha_ctl_t {
  * Create a ha_ctl instance.
  *
  * @param segments	segments to control
+ * @param cache		message cache for resynchronization
  * @return			HA control interface
  */
-ha_ctl_t *ha_ctl_create(ha_segments_t *segments);
+ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache);
 
 #endif /** HA_CTL_ @}*/

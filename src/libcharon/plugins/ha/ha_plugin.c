@@ -21,6 +21,7 @@
 #include "ha_dispatcher.h"
 #include "ha_segments.h"
 #include "ha_ctl.h"
+#include "ha_cache.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -76,6 +77,11 @@ struct private_ha_plugin_t {
 	 * Segment control interface via FIFO
 	 */
 	ha_ctl_t *ctl;
+
+	/**
+	 * Message cache for resynchronization
+	 */
+	ha_cache_t *cache;
 };
 
 METHOD(plugin_t, destroy, void,
@@ -88,6 +94,7 @@ METHOD(plugin_t, destroy, void,
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
+	this->cache->destroy(this->cache);
 	this->segments->destroy(this->segments);
 	this->kernel->destroy(this->kernel);
 	this->socket->destroy(this->socket);
@@ -142,14 +149,16 @@ plugin_t *ha_plugin_create()
 	}
 	this->kernel = ha_kernel_create(count);
 	this->segments = ha_segments_create(this->socket, this->kernel, this->tunnel,
-							count, strcmp(local, remote) > 0, monitor, resync);
+							count, strcmp(local, remote) > 0, monitor);
+	this->cache = ha_cache_create(this->kernel, this->socket, resync, count);
 	if (fifo)
 	{
-		this->ctl = ha_ctl_create(this->segments);
+		this->ctl = ha_ctl_create(this->segments, this->cache);
 	}
-	this->dispatcher = ha_dispatcher_create(this->socket, this->segments);
-	this->ike = ha_ike_create(this->socket, this->tunnel);
-	this->child = ha_child_create(this->socket, this->tunnel);
+	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
+											this->cache);
+	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
+	this->child = ha_child_create(this->socket, this->tunnel, this->cache);
 	charon->bus->add_listener(charon->bus, &this->segments->listener);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);

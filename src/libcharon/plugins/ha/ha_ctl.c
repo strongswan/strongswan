@@ -45,6 +45,11 @@ struct private_ha_ctl_t {
 	ha_segments_t *segments;
 
 	/**
+	 * Resynchronization message cache
+	 */
+	ha_cache_t *cache;
+
+	/**
 	 * FIFO reader thread
 	 */
 	callback_job_t *job;
@@ -84,7 +89,7 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 					this->segments->deactivate(this->segments, segment, TRUE);
 					break;
 				case '*':
-					this->segments->resync(this->segments, segment);
+					this->cache->resync(this->cache, segment);
 					break;
 				default:
 					break;
@@ -106,7 +111,7 @@ METHOD(ha_ctl_t, destroy, void,
 /**
  * See header
  */
-ha_ctl_t *ha_ctl_create(ha_segments_t *segments)
+ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 {
 	private_ha_ctl_t *this;
 
@@ -115,6 +120,7 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments)
 			.destroy = _destroy,
 		},
 		.segments = segments,
+		.cache = cache,
 	);
 
 	if (access(HA_FIFO, R_OK|W_OK) != 0)

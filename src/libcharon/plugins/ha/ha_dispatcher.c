@@ -41,6 +41,11 @@ struct private_ha_dispatcher_t {
 	ha_segments_t *segments;
 
 	/**
+	 * Cache for resync
+	 */
+	ha_cache_t *cache;
+
+	/**
 	 * Dispatcher job
 	 */
 	callback_job_t *job;
@@ -153,6 +158,8 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				old_sa = NULL;
 			}
 			ike_sa->set_state(ike_sa, IKE_CONNECTING);
+			this->cache->cache(this->cache, ike_sa, message);
+			message = NULL;
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 		else
@@ -167,6 +174,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, old_sa);
 	}
+	DESTROY_IF(message);
 }
 
 /**
@@ -276,9 +284,19 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 		if (ike_sa->get_state(ike_sa) == IKE_CONNECTING &&
 			ike_sa->get_peer_cfg(ike_sa))
 		{
+			DBG1(DBG_CFG, "installed HA passive IKE_SA '%s' %H[%Y]...%H[%Y]",
+				 ike_sa->get_name(ike_sa),
+				 ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
+				 ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 			ike_sa->set_state(ike_sa, IKE_PASSIVE);
 		}
+		this->cache->cache(this->cache, ike_sa, message);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "passive HA IKE_SA to update not found");
+		message->destroy(message);
 	}
 }
 
@@ -318,7 +336,12 @@ static void process_ike_mid(private_ha_dispatcher_t *this,
 		{
 			ike_sa->set_message_id(ike_sa, initiator, mid);
 		}
+		this->cache->cache(this->cache, ike_sa, message);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		message->destroy(message);
 	}
 }
 
@@ -331,7 +354,7 @@ static void process_ike_delete(private_ha_dispatcher_t *this,
 	ha_message_attribute_t attribute;
 	ha_message_value_t value;
 	enumerator_t *enumerator;
-	ike_sa_t *ike_sa;
+	ike_sa_t *ike_sa = NULL;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -341,17 +364,22 @@ static void process_ike_delete(private_ha_dispatcher_t *this,
 			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(
 									charon->ike_sa_manager, value.ike_sa_id);
-				if (ike_sa)
-				{
-					charon->ike_sa_manager->checkin_and_destroy(
-									charon->ike_sa_manager, ike_sa);
-				}
 				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (ike_sa)
+	{
+		this->cache->cache(this->cache, ike_sa, message);
+		charon->ike_sa_manager->checkin_and_destroy(
+						charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		message->destroy(message);
+	}
 }
 
 /**
@@ -465,6 +493,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	if (!ike_sa)
 	{
 		DBG1(DBG_CHD, "IKE_SA for HA CHILD_SA not found");
+		message->destroy(message);
 		return;
 	}
 	config = find_child_cfg(ike_sa, config_name);
@@ -472,6 +501,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	{
 		DBG1(DBG_CHD, "HA is missing nodes child configuration");
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		message->destroy(message);
 		return;
 	}
 
@@ -558,15 +588,19 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
 		remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		message->destroy(message);
 		return;
 	}
 
+	DBG1(DBG_CFG, "installed HA CHILD_SA '%s' %#R=== %#R",
+		 child_sa->get_name(child_sa), local_ts, remote_ts);
 	child_sa->add_policies(child_sa, local_ts, remote_ts);
 	local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
 	remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
 
 	child_sa->set_state(child_sa, CHILD_INSTALLED);
 	ike_sa->add_child_sa(ike_sa, child_sa);
+	message->destroy(message);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 }
 
@@ -580,6 +614,8 @@ static void process_child_delete(private_ha_dispatcher_t *this,
 	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
+	child_sa_t *child_sa;
+	u_int32_t spi = 0;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -591,20 +627,24 @@ static void process_child_delete(private_ha_dispatcher_t *this,
 														  value.ike_sa_id);
 				break;
 			case HA_INBOUND_SPI:
-				if (ike_sa)
-				{
-					ike_sa->destroy_child_sa(ike_sa, PROTO_ESP, value.u32);
-				}
+				spi = value.u32;
 				break;
 			default:
 				break;
 		}
 	}
+	enumerator->destroy(enumerator);
+
 	if (ike_sa)
 	{
+		child_sa = ike_sa->get_child_sa(ike_sa, PROTO_ESP, spi, TRUE);
+		if (child_sa)
+		{
+			ike_sa->destroy_child_sa(ike_sa, PROTO_ESP, spi);
+		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-	enumerator->destroy(enumerator);
+	message->destroy(message);
 }
 
 /**
@@ -639,6 +679,7 @@ static void process_segment(private_ha_dispatcher_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	message->destroy(message);
 }
 
 /**
@@ -667,6 +708,7 @@ static void process_status(private_ha_dispatcher_t *this,
 	enumerator->destroy(enumerator);
 
 	this->segments->handle_status(this->segments, mask);
+	message->destroy(message);
 }
 
 /**
@@ -685,13 +727,14 @@ static void process_resync(private_ha_dispatcher_t *this,
 		switch (attribute)
 		{
 			case HA_SEGMENT:
-				this->segments->resync(this->segments, value.u16);
+				this->cache->resync(this->cache, value.u16);
 				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	message->destroy(message);
 }
 
 /**
@@ -746,10 +789,9 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown HA message type %d", type);
+			message->destroy(message);
 			break;
 	}
-	message->destroy(message);
-
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -764,7 +806,7 @@ METHOD(ha_dispatcher_t, destroy, void,
  * See header
  */
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
-									  ha_segments_t *segments)
+									ha_segments_t *segments, ha_cache_t *cache)
 {
 	private_ha_dispatcher_t *this;
 
@@ -775,6 +817,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 		},
 		.socket = socket,
 		.segments = segments,
+		.cache = cache,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
