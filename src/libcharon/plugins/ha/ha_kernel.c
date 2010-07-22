@@ -51,8 +51,8 @@ struct private_ha_kernel_t {
 	u_int count;
 };
 
-METHOD(ha_kernel_t, in_segment, bool,
-	private_ha_kernel_t *this, host_t *host, u_int segment)
+METHOD(ha_kernel_t, get_segment, u_int,
+	private_ha_kernel_t *this, host_t *host)
 {
 	if (host->get_family(host) == AF_INET)
 	{
@@ -62,12 +62,9 @@ METHOD(ha_kernel_t, in_segment, bool,
 		addr = *(u_int32_t*)host->get_address(host).ptr;
 		hash = jhash_1word(ntohl(addr), this->initval);
 
-		if ((((u_int64_t)hash * this->count) >> 32) + 1 == segment)
-		{
-			return TRUE;
-		}
+		return (((u_int64_t)hash * this->count) >> 32) + 1;
 	}
-	return FALSE;
+	return 0;
 }
 
 /**
@@ -208,7 +205,7 @@ ha_kernel_t *ha_kernel_create(u_int count)
 
 	INIT(this,
 		.public = {
-			.in_segment = _in_segment,
+			.get_segment = _get_segment,
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.destroy = _destroy,

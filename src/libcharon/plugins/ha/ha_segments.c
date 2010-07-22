@@ -168,8 +168,8 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 			{
 				continue;
 			}
-			if (this->kernel->in_segment(this->kernel,
-									ike_sa->get_other_host(ike_sa), segment))
+			if (this->kernel->get_segment(this->kernel,
+									ike_sa->get_other_host(ike_sa)) == segment)
 			{
 				ike_sa->set_state(ike_sa, new);
 			}
@@ -267,8 +267,8 @@ METHOD(ha_segments_t, resync, void,
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
 			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-				this->kernel->in_segment(this->kernel,
-									ike_sa->get_other_host(ike_sa), segment))
+				this->kernel->get_segment(this->kernel,
+									ike_sa->get_other_host(ike_sa)) == segment)
 			{
 				id = ike_sa->get_id(ike_sa);
 				list->insert_last(list, id->clone(id));

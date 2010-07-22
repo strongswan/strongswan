@@ -31,13 +31,12 @@ typedef struct ha_kernel_t ha_kernel_t;
 struct ha_kernel_t {
 
 	/**
-	 * Check if a host is in a segment.
+	 * Get the segment a host is in.
 	 *
-	 * @param host		host to check
-	 * @param segment	segment
-	 * @return			TRUE if host belongs to segment
+	 * @param host		host to get segment for
+	 * @return			segment number
 	 */
-	bool (*in_segment)(ha_kernel_t *this, host_t *host, u_int segment);
+	u_int (*get_segment)(ha_kernel_t *this, host_t *host);
 
 	/**
 	 * Activate a segment at kernel level for all cluster addresses.
