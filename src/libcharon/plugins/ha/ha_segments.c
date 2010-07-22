@@ -319,6 +319,8 @@ static job_requeue_t request_resync(private_ha_segments_t *this)
 	ha_message_t *message;
 	int i;
 
+	DBG1(DBG_CFG, "requesting HA resynchronization");
+
 	message = ha_message_create(HA_RESYNC);
 	for (i = 1; i <= this->count; i++)
 	{
@@ -478,9 +480,9 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	if (sync)
 	{
 		/* request a resync as soon as we are up */
-		charon->processor->queue_job(charon->processor, (job_t*)
+		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
 						callback_job_create((callback_job_cb_t)request_resync,
-											this, NULL, NULL));
+											this, NULL, NULL), 2);
 	}
 
 	return &this->public;
