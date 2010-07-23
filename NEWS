@@ -33,6 +33,9 @@ strongswan-4.4.1
 - The ipsec pool tool manages arbitrary configuration attributes stored
   in an SQL database. ipsec pool --help gives the details.
 
+- The new eap-simaka-sql plugin acts as a backend for EAP-SIM and EAP-AKA,
+  reading triplets/quintuplets from an SQL database.
+
 
 strongswan-4.4.0
 ----------------
