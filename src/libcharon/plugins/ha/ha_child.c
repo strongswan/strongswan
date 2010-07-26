@@ -45,7 +45,7 @@ struct private_ha_child_t {
 
 METHOD(listener_t, child_keys, bool,
 	private_ha_child_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-	diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+	bool initiator, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
 	ha_message_t *m;
 	chunk_t secret;

@@ -444,8 +444,8 @@ METHOD(bus_t, ike_keys, void,
 }
 
 METHOD(bus_t, child_keys, void,
-	private_bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
-	chunk_t nonce_i, chunk_t nonce_r)
+	private_bus_t *this, child_sa_t *child_sa, bool initiator,
+	diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -464,7 +464,7 @@ METHOD(bus_t, child_keys, void,
 		}
 		entry->calling++;
 		keep = entry->listener->child_keys(entry->listener, ike_sa, child_sa,
-										   dh, nonce_i, nonce_r);
+										   initiator, dh, nonce_i, nonce_r);
 		entry->calling--;
 		if (!keep)
 		{

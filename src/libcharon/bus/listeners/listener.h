@@ -110,13 +110,15 @@ struct listener_t {
 	 *
 	 * @param ike_sa	IKE_SA the child sa belongs to
 	 * @param child_sa	CHILD_SA this keymat is used for
+	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
 	 * @param dh		diffie hellman shared secret
 	 * @param nonce_i	initiators nonce
 	 * @param nonce_r	responders nonce
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
+					   bool initiator, diffie_hellman_t *dh,
+					   chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
 	 * Hook called if an IKE_SA gets up or down.

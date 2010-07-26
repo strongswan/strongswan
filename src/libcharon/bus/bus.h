@@ -268,12 +268,13 @@ struct bus_t {
 	 * CHILD_SA keymat hook.
 	 *
 	 * @param child_sa	CHILD_SA this keymat is used for
+	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
 	 * @param dh		diffie hellman shared secret
 	 * @param nonce_i	initiators nonce
 	 * @param nonce_r	responders nonce
 	 */
-	void (*child_keys)(bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
-					   chunk_t nonce_i, chunk_t nonce_r);
+	void (*child_keys)(bus_t *this, child_sa_t *child_sa, bool initiator,
+					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
 	 * IKE_SA up/down hook.

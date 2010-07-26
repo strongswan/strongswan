@@ -489,8 +489,8 @@ static status_t select_and_install(private_child_create_t *this,
 		return NOT_FOUND;
 	}
 
-	charon->bus->child_keys(charon->bus, this->child_sa, this->dh,
-							nonce_i, nonce_r);
+	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
+							this->dh, nonce_i, nonce_r);
 
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
