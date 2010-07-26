@@ -98,6 +98,8 @@ enum ha_message_attribute_t {
 	HA_REMOTE_VIP,
 	/** host_t*, additional MOBIKE peer address */
 	HA_ADDITIONAL_ADDR,
+	/** u_int8_t, initiator of an exchange, TRUE for local */
+	HA_INITIATOR,
 	/** chunk_t, initiators nonce */
 	HA_NONCE_I,
 	/** chunk_t, responders nonce */

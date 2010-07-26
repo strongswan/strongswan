@@ -212,6 +212,7 @@ METHOD(ha_message_t, add_attribute, void,
 			break;
 		}
 		/* u_int8_t */
+		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
 		{
@@ -422,6 +423,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			return TRUE;
 		}
 		/* u_int8_t */
+		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
 		{

@@ -443,10 +443,12 @@ static void process_child_add(private_ha_dispatcher_t *this,
 			case HA_IKE_ID:
 				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
-				initiator = value.ike_sa_id->is_initiator(value.ike_sa_id);
 				break;
 			case HA_CONFIG_NAME:
 				config_name = value.str;
+				break;
+			case HA_INITIATOR:
+				initiator = value.u8;
 				break;
 			case HA_INBOUND_SPI:
 				inbound_spi = value.u32;

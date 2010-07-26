@@ -63,6 +63,7 @@ METHOD(listener_t, child_keys, bool,
 	m = ha_message_create(HA_CHILD_ADD);
 
 	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+	m->add_attribute(m, HA_INITIATOR, (u_int8_t)initiator);
 	m->add_attribute(m, HA_INBOUND_SPI, child_sa->get_spi(child_sa, TRUE));
 	m->add_attribute(m, HA_OUTBOUND_SPI, child_sa->get_spi(child_sa, FALSE));
 	m->add_attribute(m, HA_INBOUND_CPI, child_sa->get_cpi(child_sa, TRUE));
