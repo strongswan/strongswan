@@ -163,6 +163,7 @@ METHOD(ha_message_t, add_attribute, void,
 		/* identification_t* */
 		case HA_LOCAL_ID:
 		case HA_REMOTE_ID:
+		case HA_REMOTE_EAP_ID:
 		{
 			identification_encoding_t *enc;
 			identification_t *id;
@@ -360,6 +361,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		/* identification_t* */
 		case HA_LOCAL_ID:
 		case HA_REMOTE_ID:
+		case HA_REMOTE_EAP_ID:
 		{
 			identification_encoding_t *enc;
 

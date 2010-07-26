@@ -82,6 +82,8 @@ enum ha_message_attribute_t {
 	HA_LOCAL_ID,
 	/** identification_t*, remote identity */
 	HA_REMOTE_ID,
+	/** identification_t*, remote EAP identity */
+	HA_REMOTE_EAP_ID,
 	/** host_t*, local address */
 	HA_LOCAL_ADDR,
 	/** host_t*, remote address */

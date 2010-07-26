@@ -148,6 +148,7 @@ METHOD(listener_t, ike_updown, bool,
 		u_int32_t extension, condition;
 		host_t *addr;
 		ike_sa_id_t *id;
+		identification_t *eap_id;
 
 		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 
@@ -169,6 +170,11 @@ METHOD(listener_t, ike_updown, bool,
 		m->add_attribute(m, HA_IKE_ID, id);
 		m->add_attribute(m, HA_LOCAL_ID, ike_sa->get_my_id(ike_sa));
 		m->add_attribute(m, HA_REMOTE_ID, ike_sa->get_other_id(ike_sa));
+		eap_id = ike_sa->get_other_eap_id(ike_sa);
+		if (!eap_id->equals(eap_id, ike_sa->get_other_id(ike_sa)))
+		{
+			m->add_attribute(m, HA_REMOTE_EAP_ID, eap_id);
+		}
 		m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
 		m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
 		m->add_attribute(m, HA_CONDITIONS, condition);

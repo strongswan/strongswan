@@ -243,6 +243,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *peer_cfg = NULL;
+	auth_cfg_t *auth;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -263,6 +264,11 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				break;
 			case HA_REMOTE_ID:
 				ike_sa->set_other_id(ike_sa, value.id->clone(value.id));
+				break;
+			case HA_REMOTE_EAP_ID:
+				auth = auth_cfg_create();
+				auth->add(auth, AUTH_RULE_EAP_IDENTITY, value.id->clone(value.id));
+				ike_sa->add_auth_cfg(ike_sa, FALSE, auth);
 				break;
 			case HA_LOCAL_ADDR:
 				ike_sa->set_my_host(ike_sa, value.host->clone(value.host));
