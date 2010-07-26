@@ -22,8 +22,8 @@
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
-#define HEARTBEAT_DELAY 1000
-#define HEARTBEAT_TIMEOUT 2100
+#define DEFAULT_HEARTBEAT_DELAY 1000
+#define DEFAULT_HEARTBEAT_TIMEOUT 2100
 
 typedef struct private_ha_segments_t private_ha_segments_t;
 
@@ -81,6 +81,16 @@ struct private_ha_segments_t {
 	 * Node number
 	 */
 	u_int node;
+
+	/**
+	 * Interval we send hearbeats
+	 */
+	int heartbeat_delay;
+
+	/**
+	 * Timeout for heartbeats received from other node
+	 */
+	int heartbeat_timeout;
 };
 
 /**
@@ -252,7 +262,7 @@ static job_requeue_t watchdog(private_ha_segments_t *this)
 	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
-										HEARTBEAT_TIMEOUT);
+										this->heartbeat_timeout);
 	pthread_setcancelstate(oldstate, NULL);
 	pthread_cleanup_pop(TRUE);
 	if (timeout)
@@ -338,7 +348,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
-									HEARTBEAT_DELAY);
+									this->heartbeat_delay);
 
 	return JOB_REQUEUE_NONE;
 }
@@ -386,10 +396,16 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 		.node = node,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.heartbeat_delay = lib->settings->get_int(lib->settings,
+			"charon.plugins.ha.heartbeat_delay", DEFAULT_HEARTBEAT_DELAY),
+		.heartbeat_timeout = lib->settings->get_int(lib->settings,
+			"charon.plugins.ha.heartbeat_timeout", DEFAULT_HEARTBEAT_TIMEOUT),
 	);
 
 	if (monitor)
 	{
+		DBG1(DBG_CFG, "starting HA heartbeat, delay %dms, timeout %dms",
+			 this->heartbeat_delay, this->heartbeat_timeout);
 		send_status(this);
 		start_watchdog(this);
 	}
