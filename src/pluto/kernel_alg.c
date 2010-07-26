@@ -253,66 +253,6 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 }
 
 /**
- * Load kernel_alg arrays from /proc used in manual mode from klips/utils/spi.c
- */
-int kernel_alg_proc_read(void)
-{
-	int satype;
-	int supp_exttype;
-	int alg_id, ivlen, minbits, maxbits;
-	struct sadb_alg sadb_alg;
-	int ret;
-	char buf[128];
-
-	FILE *fp=fopen("/proc/net/pf_key_supported", "r");
-
-	if (!fp)
-		return -1;
-
-	kernel_alg_init();
-
-	while (fgets(buf, sizeof(buf), fp))
-	{
-		if (buf[0] != ' ') /* skip titles */
-			continue;
-
-		sscanf(buf, "%d %d %d %d %d %d"
-				,&satype, &supp_exttype
-				, &alg_id, &ivlen
-				, &minbits, &maxbits);
-
-		switch (satype)
-		{
-		case SADB_SATYPE_ESP:
-			switch(supp_exttype)
-			{
-			case SADB_EXT_SUPPORTED_AUTH:
-			case SADB_EXT_SUPPORTED_ENCRYPT:
-				sadb_alg.sadb_alg_id = alg_id;
-				sadb_alg.sadb_alg_ivlen = ivlen;
-				sadb_alg.sadb_alg_minbits = minbits;
-				sadb_alg.sadb_alg_maxbits = maxbits;
-				ret = kernel_alg_add(satype, supp_exttype, &sadb_alg);
-				DBG(DBG_CRYPT,
-					DBG_log("kernel_alg_proc_read() alg_id=%d, "
-							"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
-							"ret=%d"
-							, sadb_alg.sadb_alg_id
-							, sadb_alg.sadb_alg_ivlen
-							, sadb_alg.sadb_alg_minbits
-							, sadb_alg.sadb_alg_maxbits
-							, ret)
-				)
-			}
-		default:
-			continue;
-		}
-	}
-	fclose(fp);
-	return 0;
-}
-
-/**
  * Load kernel_alg arrays pluto's SADB_REGISTER user by pluto/kernel.c
  */
 void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)

@@ -33,7 +33,6 @@ extern bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg, struc
 extern u_int kernel_alg_esp_enc_keylen(u_int alg_id);
 extern bool kernel_alg_esp_auth_ok(u_int auth, struct alg_info_esp *nfo);
 extern u_int kernel_alg_esp_auth_keylen(u_int auth);
-extern int kernel_alg_proc_read(void);
 extern void kernel_alg_list(void);
 
 /* get sadb_alg for passed args */
