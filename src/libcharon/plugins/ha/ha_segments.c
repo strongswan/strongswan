@@ -343,6 +343,12 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+METHOD(ha_segments_t, is_active, bool,
+	private_ha_segments_t *this, u_int segment)
+{
+	return (this->active & SEGMENTS_BIT(segment)) != 0;
+}
+
 METHOD(ha_segments_t, destroy, void,
 	private_ha_segments_t *this)
 {
@@ -370,6 +376,7 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.handle_status = _handle_status,
+			.is_active = _is_active,
 			.destroy = _destroy,
 		},
 		.socket = socket,

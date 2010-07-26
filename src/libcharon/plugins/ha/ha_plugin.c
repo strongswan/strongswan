@@ -156,9 +156,10 @@ plugin_t *ha_plugin_create()
 		this->ctl = ha_ctl_create(this->segments, this->cache);
 	}
 	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
-											this->cache);
+											this->cache, this->kernel);
 	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
-	this->child = ha_child_create(this->socket, this->tunnel, this->cache);
+	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
+								  this->kernel);
 	charon->bus->add_listener(charon->bus, &this->segments->listener);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);

@@ -75,6 +75,14 @@ struct ha_segments_t {
 	void (*handle_status)(ha_segments_t *this, segment_mask_t mask);
 
 	/**
+	 * Check if a given segment is currently active.
+	 *
+	 * @param segment	segment to check
+	 * @return			TRUE if segment active
+	 */
+	bool (*is_active)(ha_segments_t *this, u_int segment);
+
+	/**
 	 * Destroy a ha_segments_t.
 	 */
 	void (*destroy)(ha_segments_t *this);

@@ -38,9 +38,14 @@ struct private_ha_child_t {
 	ha_tunnel_t *tunnel;
 
 	/**
-	 * message cache
+	 * Segment handling
 	 */
-	ha_cache_t *cache;
+	ha_segments_t *segments;
+
+	/**
+	 * Kernel helper
+	 */
+	ha_kernel_t *kernel;
 };
 
 METHOD(listener_t, child_keys, bool,
@@ -51,9 +56,10 @@ METHOD(listener_t, child_keys, bool,
 	chunk_t secret;
 	proposal_t *proposal;
 	u_int16_t alg, len;
-	linked_list_t *list;
+	linked_list_t *local_ts, *remote_ts;
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
+	u_int seg_i, seg_o;
 
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -93,20 +99,30 @@ METHOD(listener_t, child_keys, bool,
 		chunk_clear(&secret);
 	}
 
-	list = child_sa->get_traffic_selectors(child_sa, TRUE);
-	enumerator = list->create_enumerator(list);
+	local_ts = child_sa->get_traffic_selectors(child_sa, TRUE);
+	enumerator = local_ts->create_enumerator(local_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_LOCAL_TS, ts);
 	}
 	enumerator->destroy(enumerator);
-	list = child_sa->get_traffic_selectors(child_sa, FALSE);
-	enumerator = list->create_enumerator(list);
+	remote_ts = child_sa->get_traffic_selectors(child_sa, FALSE);
+	enumerator = remote_ts->create_enumerator(remote_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_REMOTE_TS, ts);
 	}
 	enumerator->destroy(enumerator);
+
+	seg_i = this->kernel->get_segment_spi(this->kernel,
+			ike_sa->get_my_host(ike_sa), child_sa->get_spi(child_sa, TRUE));
+	seg_o = this->kernel->get_segment_spi(this->kernel,
+			ike_sa->get_other_host(ike_sa), child_sa->get_spi(child_sa, FALSE));
+	DBG1(DBG_CFG, "handling HA CHILD_SA %s{%d} %#R=== %#R "
+		"(segment in: %d%s, out: %d%s)", child_sa->get_name(child_sa),
+		child_sa->get_reqid(child_sa), local_ts, remote_ts,
+		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
+		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
 
 	this->socket->push(this->socket, m);
 	m->destroy(m);
@@ -155,7 +171,7 @@ METHOD(ha_child_t, destroy, void,
  * See header
  */
 ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
-							ha_cache_t *cache)
+							ha_segments_t *segments, ha_kernel_t *kernel)
 {
 	private_ha_child_t *this;
 
@@ -169,7 +185,8 @@ ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 		},
 		.socket = socket,
 		.tunnel = tunnel,
-		.cache = cache,
+		.segments = segments,
+		.kernel = kernel,
 	);
 
 	return &this->public;

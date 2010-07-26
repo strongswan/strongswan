@@ -46,6 +46,11 @@ struct private_ha_dispatcher_t {
 	ha_cache_t *cache;
 
 	/**
+	 * Kernel helper
+	 */
+	ha_kernel_t *kernel;
+
+	/**
 	 * Dispatcher job
 	 */
 	callback_job_t *job;
@@ -428,6 +433,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
 	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
 	u_int16_t encr = ENCR_UNDEFINED, integ = AUTH_UNDEFINED, len = 0;
+	u_int seg_i, seg_o;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
@@ -594,8 +600,16 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		return;
 	}
 
-	DBG1(DBG_CFG, "installed HA CHILD_SA '%s' %#R=== %#R",
-		 child_sa->get_name(child_sa), local_ts, remote_ts);
+	seg_i = this->kernel->get_segment_spi(this->kernel,
+								ike_sa->get_my_host(ike_sa), inbound_spi);
+	seg_o = this->kernel->get_segment_spi(this->kernel,
+								ike_sa->get_other_host(ike_sa), outbound_spi);
+
+	DBG1(DBG_CFG, "installed HA CHILD_SA %s{%d} %#R=== %#R "
+		"(segment in: %d%s, out: %d%s)", child_sa->get_name(child_sa),
+		child_sa->get_reqid(child_sa), local_ts, remote_ts,
+		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
+		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
 	child_sa->add_policies(child_sa, local_ts, remote_ts);
 	local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
 	remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
@@ -808,7 +822,7 @@ METHOD(ha_dispatcher_t, destroy, void,
  * See header
  */
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
-									ha_segments_t *segments, ha_cache_t *cache)
+			ha_segments_t *segments, ha_cache_t *cache, ha_kernel_t *kernel)
 {
 	private_ha_dispatcher_t *this;
 
@@ -820,6 +834,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 		.socket = socket,
 		.segments = segments,
 		.cache = cache,
+		.kernel = kernel,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);

@@ -39,6 +39,15 @@ struct ha_kernel_t {
 	u_int (*get_segment)(ha_kernel_t *this, host_t *host);
 
 	/**
+	 * Get the segment a host/SPI is in, as used for CHILD_SA segmentation.
+	 *
+	 * @param host		host to get segment for
+	 * @param spi		SPI to include in hash
+	 * @return			segment number
+	 */
+	u_int (*get_segment_spi)(ha_kernel_t *this, host_t *host, u_int32_t spi);
+
+	/**
 	 * Activate a segment at kernel level for all cluster addresses.
 	 *
 	 * @param segment	segment to activate
