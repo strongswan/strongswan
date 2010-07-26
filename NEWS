@@ -36,6 +36,11 @@ strongswan-4.4.1
 - The new eap-simaka-sql plugin acts as a backend for EAP-SIM and EAP-AKA,
   reading triplets/quintuplets from an SQL database.
 
+- The High Availability plugin now supports Node reintegration without
+  IKE_SA rekeying. This allows clients without IKE_SA rekeying support
+  to keep connected during reintegration. Additionally, many other issues
+  have been fixed in the ha plugin.
+
 
 strongswan-4.4.0
 ----------------
