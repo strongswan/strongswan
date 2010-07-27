@@ -2546,31 +2546,32 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
 	connection_t *c = st->st_connection;
-	char text_said[SATOT_BUF];
-	struct kernel_sa sa;
-	ip_address
-		src = inbound? c->spd.that.host_addr : c->spd.this.host_addr,
-		dst = inbound? c->spd.this.host_addr : c->spd.that.host_addr;
+	host_t *host_src, *host_dst, *new_src, *new_dst;
+	mark_t mark_none = { 0, 0 };
+	bool result;
+	ipsec_spi_t spi = inbound ? st->st_esp.our_spi : st->st_esp.attrs.spi;
+	struct end *src = inbound ? &c->spd.that : &c->spd.this,
+			   *dst = inbound ? &c->spd.this : &c->spd.that;
 
-	ipsec_spi_t esp_spi = inbound? st->st_esp.our_spi : st->st_esp.attrs.spi;
+	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)&dst->host_addr);
 
-	u_int16_t
-		natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port,
-		natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
+	new_src = host_src->clone(host_src);
+	new_dst = host_dst->clone(host_dst);
+	new_src->set_port(new_src, src->host_port);
+	new_dst->set_port(new_dst, dst->host_port);
 
-	set_text_said(text_said, &dst, esp_spi, SA_ESP);
+	result = hydra->kernel_interface->update_sa(hydra->kernel_interface,
+					spi, IPPROTO_ESP, 0 /* cpi */, host_src, host_dst,
+					new_src, new_dst, TRUE /* encap */, TRUE /* new_encap */,
+					mark_none) == SUCCESS;
 
-	memset(&sa, 0, sizeof(sa));
-	sa.spi = esp_spi;
-	sa.src = &src;
-	sa.dst = &dst;
-	sa.text_said = text_said;
-	sa.authalg = alg_info_esp_aa2sadb(st->st_esp.attrs.auth);
-	sa.natt_sport = natt_sport;
-	sa.natt_dport = natt_dport;
-	sa.transid = st->st_esp.attrs.transid;
+	host_src->destroy(host_src);
+	host_dst->destroy(host_dst);
+	new_src->destroy(new_src);
+	new_dst->destroy(new_dst);
 
-	return kernel_ops->add_sa(&sa, TRUE);
+	return result;
 }
 #endif
 
