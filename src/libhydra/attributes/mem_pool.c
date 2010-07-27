@@ -225,9 +225,18 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 
 		/* check for a valid online lease, reassign */
 		offset = (uintptr_t)this->online->get(this->online, id);
-		if (offset && offset == host2offset(this, requested))
+		if (offset)
 		{
-			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+			if (offset == host2offset(this, requested))
+			{
+				DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "'%Y' already has an online lease, "
+					 "unable to assign address", id);
+				offset = 0;
+			}
 			break;
 		}
 
