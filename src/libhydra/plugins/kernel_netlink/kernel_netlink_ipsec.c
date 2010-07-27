@@ -1021,7 +1021,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 	}
 
-	if (int_alg  != AUTH_UNDEFINED)
+	if (int_alg != AUTH_UNDEFINED)
 	{
 		alg_name = lookup_algorithm(integrity_algs, int_alg);
 		if (alg_name == NULL)
@@ -1719,6 +1719,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			{ IPPROTO_ESP, spi != 0 },
 			{ IPPROTO_AH, ah_spi != 0 },
 		};
+		ipsec_mode_t proto_mode = mode;
 
 		rthdr->rta_type = XFRMA_TMPL;
 		rthdr->rta_len = 0; /* actual length is set below */
@@ -1740,12 +1741,12 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			tmpl->reqid = reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-			tmpl->mode = mode2kernel(mode);
+			tmpl->mode = mode2kernel(proto_mode);
 			tmpl->optional = protos[i].proto == IPPROTO_COMP &&
 							 direction != POLICY_OUT;
 			tmpl->family = src->get_family(src);
 
-			if (mode == MODE_TUNNEL)
+			if (proto_mode == MODE_TUNNEL)
 			{	/* only for tunnel mode */
 				host2xfrm(src, &tmpl->saddr);
 				host2xfrm(dst, &tmpl->id.daddr);
@@ -1754,7 +1755,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			tmpl++;
 
 			/* use transport mode for other SAs */
-			mode = MODE_TRANSPORT;
+			proto_mode = MODE_TRANSPORT;
 		}
 
 		rthdr = XFRM_RTA_NEXT(rthdr);
