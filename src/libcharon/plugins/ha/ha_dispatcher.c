@@ -15,7 +15,6 @@
 
 #include "ha_dispatcher.h"
 
-#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -205,34 +204,6 @@ static void set_extension(ike_sa_t *ike_sa, ike_extension_t set,
 }
 
 /**
- * For a virtual IP, try to reserve it in the pool.
- */
-static void reserve_vip(ike_sa_t *ike_sa, host_t *vip)
-{
-	host_t *acquired;
-	identification_t *id;
-	peer_cfg_t *peer_cfg;
-
-	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	if (peer_cfg)
-	{
-		DBG1(DBG_CFG, "trying to reserve virtual IP %H", vip);
-		id = ike_sa->get_other_eap_id(ike_sa);
-		acquired = hydra->attributes->acquire_address(hydra->attributes,
-									peer_cfg->get_pool(peer_cfg), id, vip);
-		if (acquired)
-		{
-			if (!vip->ip_equals(vip, acquired))
-			{	/* got a different IP, release */
-				hydra->attributes->release_address(hydra->attributes,
-									peer_cfg->get_pool(peer_cfg), acquired, id);
-			}
-			acquired->destroy(acquired);
-		}
-	}
-}
-
-/**
  * Process messages of type IKE_UPDATE
  */
 static void process_ike_update(private_ha_dispatcher_t *this,
@@ -281,7 +252,6 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				break;
 			case HA_REMOTE_VIP:
 				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
-				reserve_vip(ike_sa, value.host);
 				break;
 			case HA_ADDITIONAL_ADDR:
 				ike_sa->add_additional_address(ike_sa,
