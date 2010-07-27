@@ -208,8 +208,8 @@ METHOD(listener_t, ike_rekey, bool,
 METHOD(listener_t, ike_state_change, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, ike_sa_state_t new)
 {
-	/* clean up cache if a passive IKE_SA goes away */
-	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE && new == IKE_DESTROYING)
+	/* delete any remaining cache entry if IKE_SA gets destroyed */
+	if (new == IKE_DESTROYING)
 	{
 		this->cache->delete(this->cache, ike_sa);
 	}
