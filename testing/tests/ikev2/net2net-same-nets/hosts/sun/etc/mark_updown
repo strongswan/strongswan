@@ -147,8 +147,8 @@ custom:*)		# custom parameters (see above CAUTION comment)
 esac
 
 # define NETMAP
-SAME_NET="10.0.0.0/14"
-IN_NET="10.4.0.0/14"
+SAME_NET=$PLUTO_PEER_CLIENT
+IN_NET=$PLUTO_MY_CLIENT
 OUT_NET="10.8.0.0/14"
 
 # define internal interface
@@ -193,7 +193,11 @@ up-client:)
 	if [ -n "$PLUTO_MARK_OUT" ]
 	then
 	    iptables -t mangle -A PREROUTING $SET_MARK_OUT 
+	    iptables -t nat -A PREROUTING -i $INT_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -d $OUT_NET -j NETMAP --to $SAME_NET
 	    iptables -I FORWARD 1 -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT -j ACCEPT
+            iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+                     -s $SAME_NET -j NETMAP --to $IN_NET
 	fi
 	;;
 down-client:)

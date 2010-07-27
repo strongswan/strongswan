@@ -12,4 +12,4 @@ connection definition of <b>ipsec.conf</b> both on the inbound and outbound traf
 the necessary NETMAP operations and forward the tunneled traffic.
 <p/>
 In order to test both tunnel and firewall, client <b>alice</b> behind gateway <b>moon</b>
-pings client <b>bob</b> located behind gateway <b>sun</b>.
+pings client <b>bob</b> located behind gateway <b>sun</b> and vice versa.
