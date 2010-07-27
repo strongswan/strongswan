@@ -1,6 +1,10 @@
 /* crypto interfaces
+ *
+ * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2007-2009 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 1998-2001 D. Hugh Redelmeier
- * Copyright (C) 2007-2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -518,7 +522,7 @@ signature_scheme_t oakley_to_signature_scheme(int method)
 }
 
 /**
- * Table to map IKEv2 encryption algorithms to IKEv1 (or IKEv1 ESP)
+ * Table to map IKEv2 encryption algorithms to IKEv1 (or IKEv1 ESP) and back
  */
 struct {
 	encryption_algorithm_t alg;
@@ -578,9 +582,24 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 	return 0;
 }
 
+/**
+ * Converts IKEv1 ESP encryption to IKEv2 algorithm
+ */
+encryption_algorithm_t encryption_algorithm_from_esp(int esp)
+{
+	int i;
+	for (i = 0; i < countof(encr_map); i++)
+	{
+		if (encr_map[i].esp == esp)
+		{
+			return encr_map[i].alg;
+		}
+	}
+	return 0;
+}
 
 /**
- * Table to map IKEv2 integrity algorithms to IKEv1 (or IKEv1 ESP)
+ * Table to map IKEv2 integrity algorithms to IKEv1 (or IKEv1 ESP) and back
  */
 struct {
 	integrity_algorithm_t alg;
@@ -627,6 +646,22 @@ int esp_from_integrity_algorithm(integrity_algorithm_t alg)
 		if (auth_map[i].alg == alg)
 		{
 			return auth_map[i].esp;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Converts IKEv1 ESP authentication to IKEv2 integrity algorithm
+ */
+integrity_algorithm_t integrity_algorithm_from_esp(int esp)
+{
+	int i;
+	for (i = 0; i < countof(auth_map); i++)
+	{
+		if (auth_map[i].esp == esp)
+		{
+			return auth_map[i].alg;
 		}
 	}
 	return 0;

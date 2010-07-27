@@ -1,4 +1,9 @@
 /* crypto interfaces
+ *
+ * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2009 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 1998, 1999  D. Hugh Redelmeier.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -54,4 +59,6 @@ extern int oakley_from_encryption_algorithm(encryption_algorithm_t alg);
 extern int oakley_from_integrity_algorithm(integrity_algorithm_t alg);
 extern int esp_from_encryption_algorithm(encryption_algorithm_t alg);
 extern int esp_from_integrity_algorithm(integrity_algorithm_t alg);
+extern encryption_algorithm_t encryption_algorithm_from_esp(int esp);
+extern integrity_algorithm_t integrity_algorithm_from_esp(int esp);
 
