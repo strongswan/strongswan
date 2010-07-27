@@ -26,10 +26,10 @@ static struct encrypt_desc encrypt_desc_3des =
 	algo_id:         OAKLEY_3DES_CBC,
 	algo_next:       NULL,
 
-	enc_blocksize:	 DES_BLOCK_SIZE,
-	keydeflen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-	keyminlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
-	keymaxlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	enc_blocksize:   DES_BLOCK_SIZE,
+	keydeflen:       DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	keyminlen:       DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
+	keymaxlen:       DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 };
 
 #define  AES_KEY_MIN_LEN	128
@@ -38,14 +38,14 @@ static struct encrypt_desc encrypt_desc_3des =
 
 static struct encrypt_desc encrypt_desc_aes =
 {
-	algo_type: 	     IKE_ALG_ENCRYPT,
-	algo_id:   	     OAKLEY_AES_CBC,
-	algo_next: 	     NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_AES_CBC,
+	algo_next:       NULL,
 
-	enc_blocksize: 	 AES_BLOCK_SIZE,
-	keyminlen: 		 AES_KEY_MIN_LEN,
-	keydeflen: 		 AES_KEY_DEF_LEN,
-	keymaxlen: 		 AES_KEY_MAX_LEN,
+	enc_blocksize:   AES_BLOCK_SIZE,
+	keyminlen:       AES_KEY_MIN_LEN,
+	keydeflen:       AES_KEY_DEF_LEN,
+	keymaxlen:       AES_KEY_MAX_LEN,
 };
 
 #define  CAMELLIA_KEY_MIN_LEN	128
@@ -54,14 +54,14 @@ static struct encrypt_desc encrypt_desc_aes =
 
 static struct encrypt_desc encrypt_desc_camellia =
 {
-	algo_type: 	     IKE_ALG_ENCRYPT,
-	algo_id:   	     OAKLEY_CAMELLIA_CBC,
-	algo_next: 	     NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_CAMELLIA_CBC,
+	algo_next:       NULL,
 
-	enc_blocksize: 	 CAMELLIA_BLOCK_SIZE,
-	keyminlen: 		 CAMELLIA_KEY_MIN_LEN,
-	keydeflen: 		 CAMELLIA_KEY_DEF_LEN,
-	keymaxlen: 		 CAMELLIA_KEY_MAX_LEN,
+	enc_blocksize:   CAMELLIA_BLOCK_SIZE,
+	keyminlen:       CAMELLIA_KEY_MIN_LEN,
+	keydeflen:       CAMELLIA_KEY_DEF_LEN,
+	keymaxlen:       CAMELLIA_KEY_MAX_LEN,
 };
 
 #define  BLOWFISH_KEY_MIN_LEN	128
@@ -73,10 +73,10 @@ static struct encrypt_desc encrypt_desc_blowfish =
 	algo_id:         OAKLEY_BLOWFISH_CBC,
 	algo_next:       NULL,
 
-	enc_blocksize:	 BLOWFISH_BLOCK_SIZE,
-	keyminlen:		 BLOWFISH_KEY_MIN_LEN,
-	keydeflen:		 BLOWFISH_KEY_MIN_LEN,
-	keymaxlen:		 BLOWFISH_KEY_MAX_LEN,
+	enc_blocksize:   BLOWFISH_BLOCK_SIZE,
+	keyminlen:       BLOWFISH_KEY_MIN_LEN,
+	keydeflen:       BLOWFISH_KEY_MIN_LEN,
+	keymaxlen:       BLOWFISH_KEY_MAX_LEN,
 };
 
 #define  SERPENT_KEY_MIN_LEN	128
@@ -85,14 +85,14 @@ static struct encrypt_desc encrypt_desc_blowfish =
 
 static struct encrypt_desc encrypt_desc_serpent =
 {
-	algo_type: 	    IKE_ALG_ENCRYPT,
-	algo_id:   	    OAKLEY_SERPENT_CBC,
-	algo_next: 	    NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_SERPENT_CBC,
+	algo_next:       NULL,
 
 	enc_blocksize:   SERPENT_BLOCK_SIZE,
-	keyminlen:		 SERPENT_KEY_MIN_LEN,
-	keydeflen:		 SERPENT_KEY_DEF_LEN,
-	keymaxlen:		 SERPENT_KEY_MAX_LEN,
+	keyminlen:       SERPENT_KEY_MIN_LEN,
+	keydeflen:       SERPENT_KEY_DEF_LEN,
+	keymaxlen:       SERPENT_KEY_MAX_LEN,
 };
 
 #define  TWOFISH_KEY_MIN_LEN	128
@@ -101,62 +101,62 @@ static struct encrypt_desc encrypt_desc_serpent =
 
 static struct encrypt_desc encrypt_desc_twofish =
 {
-	algo_type: 	     IKE_ALG_ENCRYPT,
-	algo_id:   	     OAKLEY_TWOFISH_CBC,
-	algo_next: 	     NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_TWOFISH_CBC,
+	algo_next:       NULL,
 
-	enc_blocksize:	 TWOFISH_BLOCK_SIZE,
-	keydeflen:		 TWOFISH_KEY_MIN_LEN,
-	keyminlen:		 TWOFISH_KEY_DEF_LEN,
-	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
+	enc_blocksize:   TWOFISH_BLOCK_SIZE,
+	keydeflen:       TWOFISH_KEY_MIN_LEN,
+	keyminlen:       TWOFISH_KEY_DEF_LEN,
+	keymaxlen:       TWOFISH_KEY_MAX_LEN,
 };
 
 static struct encrypt_desc encrypt_desc_twofish_ssh =
 {
-	algo_type: 	     IKE_ALG_ENCRYPT,
-	algo_id:   	     OAKLEY_TWOFISH_CBC_SSH,
-	algo_next: 	     NULL,
+	algo_type:       IKE_ALG_ENCRYPT,
+	algo_id:         OAKLEY_TWOFISH_CBC_SSH,
+	algo_next:       NULL,
 
-	enc_blocksize:	 TWOFISH_BLOCK_SIZE,
-	keydeflen:		 TWOFISH_KEY_MIN_LEN,
-	keyminlen:		 TWOFISH_KEY_DEF_LEN,
-	keymaxlen:		 TWOFISH_KEY_MAX_LEN,
+	enc_blocksize:   TWOFISH_BLOCK_SIZE,
+	keydeflen:       TWOFISH_KEY_MIN_LEN,
+	keyminlen:       TWOFISH_KEY_DEF_LEN,
+	keymaxlen:       TWOFISH_KEY_MAX_LEN,
 };
 
 static struct hash_desc hash_desc_md5 =
 {
-	algo_type: IKE_ALG_HASH,
-	algo_id:   OAKLEY_MD5,
-	algo_next: NULL,
+	algo_type:        IKE_ALG_HASH,
+	algo_id:          OAKLEY_MD5,
+	algo_next:        NULL,
 	hash_digest_size: HASH_SIZE_MD5,
 };
 
 static struct hash_desc hash_desc_sha1 =
 {
-	algo_type: IKE_ALG_HASH,
-	algo_id:   OAKLEY_SHA,
-	algo_next: NULL,
+	algo_type:        IKE_ALG_HASH,
+	algo_id:          OAKLEY_SHA,
+	algo_next:        NULL,
 	hash_digest_size: HASH_SIZE_SHA1,
 };
 
 static struct hash_desc hash_desc_sha2_256 = {
-	algo_type: IKE_ALG_HASH,
-	algo_id:   OAKLEY_SHA2_256,
-	algo_next: NULL,
+	algo_type:        IKE_ALG_HASH,
+	algo_id:          OAKLEY_SHA2_256,
+	algo_next:        NULL,
 	hash_digest_size: HASH_SIZE_SHA256,
 };
 
 static struct hash_desc hash_desc_sha2_384 = {
-	algo_type: IKE_ALG_HASH,
-	algo_id:   OAKLEY_SHA2_384,
-	algo_next: NULL,
+	algo_type:        IKE_ALG_HASH,
+	algo_id:          OAKLEY_SHA2_384,
+	algo_next:        NULL,
 	hash_digest_size: HASH_SIZE_SHA384,
 };
 
 static struct hash_desc hash_desc_sha2_512 = {
-	algo_type: IKE_ALG_HASH,
-	algo_id:   OAKLEY_SHA2_512,
-	algo_next: NULL,
+	algo_type:        IKE_ALG_HASH,
+	algo_id:          OAKLEY_SHA2_512,
+	algo_next:        NULL,
 	hash_digest_size: HASH_SIZE_SHA512,
 };
 
@@ -518,57 +518,48 @@ signature_scheme_t oakley_to_signature_scheme(int method)
 }
 
 /**
+ * Table to map IKEv2 encryption algorithms to IKEv1 (or IKEv1 ESP)
+ */
+struct {
+	encryption_algorithm_t alg;
+	int oakley;
+	int esp;
+} encr_map[] = {
+	{ENCR_DES,                OAKLEY_DES_CBC,         ESP_DES       },
+	{ENCR_3DES,               OAKLEY_3DES_CBC,        ESP_3DES      },
+	{ENCR_RC5,                OAKLEY_RC5_R16_B64_CBC, ESP_RC5       },
+	{ENCR_IDEA,               OAKLEY_IDEA_CBC,        ESP_IDEA      },
+	{ENCR_CAST,               OAKLEY_CAST_CBC,        ESP_CAST      },
+	{ENCR_BLOWFISH,           OAKLEY_BLOWFISH_CBC,    ESP_BLOWFISH  },
+	{ENCR_AES_CBC,            OAKLEY_AES_CBC,         ESP_AES       },
+	{ENCR_CAMELLIA_CBC,       OAKLEY_CAMELLIA_CBC,    ESP_CAMELLIA  },
+	{ENCR_SERPENT_CBC,        OAKLEY_SERPENT_CBC,     ESP_SERPENT   },
+	{ENCR_TWOFISH_CBC,        OAKLEY_TWOFISH_CBC,     ESP_TWOFISH   },
+	{ENCR_NULL,               0,                      ESP_NULL      },
+	{ENCR_AES_CTR,            0,                      ESP_AES_CTR   },
+	{ENCR_AES_CCM_ICV8,       0,                      ESP_AES_CCM_8 },
+	{ENCR_AES_CCM_ICV12,      0,                      ESP_AES_CCM_12},
+	{ENCR_AES_CCM_ICV16,      0,                      ESP_AES_CCM_16},
+	{ENCR_AES_GCM_ICV8,       0,                      ESP_AES_GCM_8 },
+	{ENCR_AES_GCM_ICV12,      0,                      ESP_AES_GCM_12},
+	{ENCR_AES_GCM_ICV16,      0,                      ESP_AES_GCM_16},
+	{ENCR_NULL_AUTH_AES_GMAC, 0,                      ESP_AES_GMAC  },
+};
+
+/**
  * Converts IKEv2 encryption to IKEv1 encryption algorithm
  */
 int oakley_from_encryption_algorithm(encryption_algorithm_t alg)
 {
-	switch (alg)
+	int i;
+	for (i = 0; i < countof(encr_map); i++)
 	{
-		case ENCR_DES:
-			return OAKLEY_DES_CBC;
-		case ENCR_3DES:
-			return OAKLEY_3DES_CBC;
-		case ENCR_RC5:
-			return OAKLEY_RC5_R16_B64_CBC;
-		case ENCR_IDEA:
-			return OAKLEY_IDEA_CBC;
-		case ENCR_CAST:
-			return OAKLEY_CAST_CBC;
-		case ENCR_BLOWFISH:
-			return OAKLEY_BLOWFISH_CBC;
-		case ENCR_AES_CBC:
-			return OAKLEY_AES_CBC;
-		case ENCR_CAMELLIA_CBC:
-			return OAKLEY_CAMELLIA_CBC;
-		case ENCR_SERPENT_CBC:
-			return OAKLEY_SERPENT_CBC;
-	case ENCR_TWOFISH_CBC:
-			return OAKLEY_TWOFISH_CBC;
-		default:
-			return 0;
+		if (encr_map[i].alg == alg)
+		{
+			return encr_map[i].oakley;
+		}
 	}
-}
-
-/**
- * Converts IKEv2 integrity to IKEv1 hash algorithm
- */
-int oakley_from_integrity_algorithm(integrity_algorithm_t alg)
-{
-	switch (alg)
-	{
-		case AUTH_HMAC_MD5_96:
-			return OAKLEY_MD5;
-		case AUTH_HMAC_SHA1_96:
-			return OAKLEY_SHA;
-		case AUTH_HMAC_SHA2_256_128:
-			return OAKLEY_SHA2_256;
-		case AUTH_HMAC_SHA2_384_192:
-			return OAKLEY_SHA2_384;
-		case AUTH_HMAC_SHA2_512_256:
-			return OAKLEY_SHA2_512;
-		default:
-			return 0;
-	}
+	return 0;
 }
 
 /**
@@ -576,49 +567,53 @@ int oakley_from_integrity_algorithm(integrity_algorithm_t alg)
  */
 int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 {
-	switch (alg)
+	int i;
+	for (i = 0; i < countof(encr_map); i++)
 	{
-		case ENCR_DES:
-			return ESP_DES;
-		case ENCR_3DES:
-			return ESP_3DES;
-		case ENCR_RC5:
-			return ESP_RC5;
-		case ENCR_IDEA:
-			return ESP_IDEA;
-		case ENCR_CAST:
-			return ESP_CAST;
-		case ENCR_BLOWFISH:
-			return ESP_BLOWFISH;
-		case ENCR_NULL:
-			return ESP_NULL;
-		case ENCR_AES_CBC:
-			return ESP_AES;
-		case ENCR_AES_CTR:
-			return ESP_AES_CTR;
-		case ENCR_AES_CCM_ICV8:
-			return ESP_AES_CCM_8;
-		case ENCR_AES_CCM_ICV12:
-			return ESP_AES_CCM_12;
-		case ENCR_AES_CCM_ICV16:
-			return ESP_AES_CCM_16;
-		case ENCR_AES_GCM_ICV8:
-			return ESP_AES_GCM_8;
-		case ENCR_AES_GCM_ICV12:
-			return ESP_AES_GCM_12;
-		case ENCR_AES_GCM_ICV16:
-			return ESP_AES_GCM_16;
-		case ENCR_CAMELLIA_CBC:
-			return ESP_CAMELLIA;
-		case ENCR_NULL_AUTH_AES_GMAC:
-			return ESP_AES_GMAC;
-		case ENCR_SERPENT_CBC:
-			return ESP_SERPENT;
-		case ENCR_TWOFISH_CBC:
-			return ESP_TWOFISH;
-		default:
-			return 0;
+		if (encr_map[i].alg == alg)
+		{
+			return encr_map[i].esp;
+		}
 	}
+	return 0;
+}
+
+
+/**
+ * Table to map IKEv2 integrity algorithms to IKEv1 (or IKEv1 ESP)
+ */
+struct {
+	integrity_algorithm_t alg;
+	int oakley;
+	int esp;
+} auth_map[] = {
+	{AUTH_HMAC_MD5_96,       OAKLEY_MD5,      AUTH_ALGORITHM_HMAC_MD5        },
+	{AUTH_HMAC_SHA1_96,      OAKLEY_SHA,      AUTH_ALGORITHM_HMAC_SHA1       },
+	{AUTH_HMAC_SHA2_256_96,  0,               AUTH_ALGORITHM_HMAC_SHA2_256_96},
+	{AUTH_HMAC_SHA2_256_128, OAKLEY_SHA2_256, AUTH_ALGORITHM_HMAC_SHA2_256   },
+	{AUTH_HMAC_SHA2_384_192, OAKLEY_SHA2_384, AUTH_ALGORITHM_HMAC_SHA2_384   },
+	{AUTH_HMAC_SHA2_512_256, OAKLEY_SHA2_512, AUTH_ALGORITHM_HMAC_SHA2_512   },
+	{AUTH_AES_XCBC_96,       0,               AUTH_ALGORITHM_AES_XCBC_MAC    },
+	{AUTH_AES_128_GMAC,      0,               AUTH_ALGORITHM_AES_128_GMAC    },
+	{AUTH_AES_192_GMAC,      0,               AUTH_ALGORITHM_AES_192_GMAC    },
+	{AUTH_AES_256_GMAC,      0,               AUTH_ALGORITHM_AES_256_GMAC    },
+};
+
+
+/**
+ * Converts IKEv2 integrity to IKEv1 hash algorithm
+ */
+int oakley_from_integrity_algorithm(integrity_algorithm_t alg)
+{
+	int i;
+	for (i = 0; i < countof(auth_map); i++)
+	{
+		if (auth_map[i].alg == alg)
+		{
+			return auth_map[i].oakley;
+		}
+	}
+	return 0;
 }
 
 /**
@@ -626,29 +621,14 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
  */
 int esp_from_integrity_algorithm(integrity_algorithm_t alg)
 {
-	switch (alg)
+	int i;
+	for (i = 0; i < countof(auth_map); i++)
 	{
-		case AUTH_HMAC_MD5_96:
-			return AUTH_ALGORITHM_HMAC_MD5;
-		case AUTH_HMAC_SHA1_96:
-			return AUTH_ALGORITHM_HMAC_SHA1;
-		case AUTH_AES_XCBC_96:
-			return AUTH_ALGORITHM_AES_XCBC_MAC;
-		case AUTH_HMAC_SHA2_256_96:
-			return AUTH_ALGORITHM_HMAC_SHA2_256_96;
-		case AUTH_HMAC_SHA2_256_128:
-			return AUTH_ALGORITHM_HMAC_SHA2_256;
-		case AUTH_HMAC_SHA2_384_192:
-			return AUTH_ALGORITHM_HMAC_SHA2_384;
-		case AUTH_HMAC_SHA2_512_256:
-			return AUTH_ALGORITHM_HMAC_SHA2_512;
-		case AUTH_AES_128_GMAC:
-			return AUTH_ALGORITHM_AES_128_GMAC;
-		case AUTH_AES_192_GMAC:
-			return AUTH_ALGORITHM_AES_192_GMAC;
-		case AUTH_AES_256_GMAC:
-			return AUTH_ALGORITHM_AES_256_GMAC;
-		default:
-			return 0;
+		if (auth_map[i].alg == alg)
+		{
+			return auth_map[i].esp;
+		}
 	}
+	return 0;
 }
+
