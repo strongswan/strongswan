@@ -51,36 +51,58 @@ struct private_ha_kernel_t {
 	u_int count;
 };
 
-METHOD(ha_kernel_t, get_segment, u_int,
-	private_ha_kernel_t *this, host_t *host)
+/**
+ * Segmentate a calculated hash
+ */
+static u_int hash2segment(private_ha_kernel_t *this, u_int64_t hash)
+{
+	return ((hash * this->count) >> 32) + 1;
+}
+
+/**
+ * Get a host as an integer for hashing
+ */
+static u_int32_t host2int(host_t *host)
 {
 	if (host->get_family(host) == AF_INET)
 	{
-		unsigned long hash;
-		u_int32_t addr;
-
-		addr = *(u_int32_t*)host->get_address(host).ptr;
-		hash = jhash_1word(ntohl(addr), this->initval);
-
-		return (((u_int64_t)hash * this->count) >> 32) + 1;
+		return *(u_int32_t*)host->get_address(host).ptr;
 	}
 	return 0;
+}
+
+METHOD(ha_kernel_t, get_segment, u_int,
+	private_ha_kernel_t *this, host_t *host)
+{
+	unsigned long hash;
+	u_int32_t addr;
+
+	addr = host2int(host);
+	hash = jhash_1word(ntohl(addr), this->initval);
+
+	return hash2segment(this, hash);
 }
 
 METHOD(ha_kernel_t, get_segment_spi, u_int,
 	private_ha_kernel_t *this, host_t *host, u_int32_t spi)
 {
-	if (host->get_family(host) == AF_INET)
-	{
-		unsigned long hash;
-		u_int32_t addr;
+	unsigned long hash;
+	u_int32_t addr;
 
-		addr = *(u_int32_t*)host->get_address(host).ptr;
-		hash = jhash_2words(ntohl(addr), ntohl(spi), this->initval);
+	addr = host2int(host);
+	hash = jhash_2words(ntohl(addr), ntohl(spi), this->initval);
 
-		return (((u_int64_t)hash * this->count) >> 32) + 1;
-	}
-	return 0;
+	return hash2segment(this, hash);
+}
+
+METHOD(ha_kernel_t, get_segment_int, u_int,
+	private_ha_kernel_t *this, int n)
+{
+	unsigned long hash;
+
+	hash = jhash_1word(ntohl(n), this->initval);
+
+	return hash2segment(this, hash);
 }
 
 /**
@@ -223,6 +245,7 @@ ha_kernel_t *ha_kernel_create(u_int count)
 		.public = {
 			.get_segment = _get_segment,
 			.get_segment_spi = _get_segment_spi,
+			.get_segment_int = _get_segment_int,
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.destroy = _destroy,

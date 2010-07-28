@@ -48,6 +48,13 @@ struct ha_kernel_t {
 	u_int (*get_segment_spi)(ha_kernel_t *this, host_t *host, u_int32_t spi);
 
 	/**
+	 * Get the segment an arbitrary integer is in.
+	 *
+	 * @param n			integer to segmentate
+	 */
+	u_int (*get_segment_int)(ha_kernel_t *this, int n);
+
+	/**
 	 * Activate a segment at kernel level for all cluster addresses.
 	 *
 	 * @param segment	segment to activate
