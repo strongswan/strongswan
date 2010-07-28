@@ -42,6 +42,10 @@ strongswan-4.4.1
   reintegration. Additionally, many other issues have been fixed in the ha
   plugin.
 
+- Fixed a potential remote code execution vulnerability resulting from
+  the misuse of snprintf(). The vulnerability is exploitable by
+  unauthenticated users.
+
 
 strongswan-4.4.0
 ----------------
