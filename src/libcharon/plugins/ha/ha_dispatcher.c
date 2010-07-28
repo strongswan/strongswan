@@ -51,6 +51,11 @@ struct private_ha_dispatcher_t {
 	ha_kernel_t *kernel;
 
 	/**
+	 * HA enabled pool
+	 */
+	ha_attribute_t *attr;
+
+	/**
 	 * Dispatcher job
 	 */
 	callback_job_t *job;
@@ -215,6 +220,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *peer_cfg = NULL;
 	auth_cfg_t *auth;
+	bool received_vip = FALSE;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -252,6 +258,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				break;
 			case HA_REMOTE_VIP:
 				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
+				received_vip = TRUE;
 				break;
 			case HA_ADDITIONAL_ADDR:
 				ike_sa->add_additional_address(ike_sa,
@@ -300,6 +307,22 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				 ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 				 ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 			ike_sa->set_state(ike_sa, IKE_PASSIVE);
+		}
+		if (received_vip)
+		{
+			host_t *vip;
+			char *pool;
+
+			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+			if (peer_cfg && vip)
+			{
+				pool = peer_cfg->get_pool(peer_cfg);
+				if (pool)
+				{
+					this->attr->reserve(this->attr, pool, vip);
+				}
+			}
 		}
 		this->cache->cache(this->cache, ike_sa, message);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -828,7 +851,8 @@ METHOD(ha_dispatcher_t, destroy, void,
  * See header
  */
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
-			ha_segments_t *segments, ha_cache_t *cache, ha_kernel_t *kernel)
+									ha_segments_t *segments, ha_cache_t *cache,
+									ha_kernel_t *kernel, ha_attribute_t *attr)
 {
 	private_ha_dispatcher_t *this;
 
@@ -841,6 +865,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 		.segments = segments,
 		.cache = cache,
 		.kernel = kernel,
+		.attr = attr,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);

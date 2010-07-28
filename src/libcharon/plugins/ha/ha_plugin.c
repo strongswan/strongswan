@@ -22,8 +22,10 @@
 #include "ha_segments.h"
 #include "ha_ctl.h"
 #include "ha_cache.h"
+#include "ha_attribute.h"
 
 #include <daemon.h>
+#include <hydra.h>
 #include <config/child_cfg.h>
 
 typedef struct private_ha_plugin_t private_ha_plugin_t;
@@ -82,18 +84,25 @@ struct private_ha_plugin_t {
 	 * Message cache for resynchronization
 	 */
 	ha_cache_t *cache;
+
+	/**
+	 * Attribute provider
+	 */
+	ha_attribute_t *attr;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_ha_plugin_t *this)
 {
 	DESTROY_IF(this->ctl);
+	hydra->attributes->remove_provider(hydra->attributes, &this->attr->provider);
 	charon->bus->remove_listener(charon->bus, &this->segments->listener);
 	charon->bus->remove_listener(charon->bus, &this->ike->listener);
 	charon->bus->remove_listener(charon->bus, &this->child->listener);
 	this->ike->destroy(this->ike);
 	this->child->destroy(this->child);
 	this->dispatcher->destroy(this->dispatcher);
+	this->attr->destroy(this->attr);
 	this->cache->destroy(this->cache);
 	this->segments->destroy(this->segments);
 	this->kernel->destroy(this->kernel);
@@ -155,14 +164,16 @@ plugin_t *ha_plugin_create()
 	{
 		this->ctl = ha_ctl_create(this->segments, this->cache);
 	}
+	this->attr = ha_attribute_create(this->kernel, this->segments);
 	this->dispatcher = ha_dispatcher_create(this->socket, this->segments,
-											this->cache, this->kernel);
+										this->cache, this->kernel, this->attr);
 	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
 	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
 								  this->kernel);
 	charon->bus->add_listener(charon->bus, &this->segments->listener);
 	charon->bus->add_listener(charon->bus, &this->ike->listener);
 	charon->bus->add_listener(charon->bus, &this->child->listener);
+	hydra->attributes->add_provider(hydra->attributes, &this->attr->provider);
 
 	return &this->public.plugin;
 }

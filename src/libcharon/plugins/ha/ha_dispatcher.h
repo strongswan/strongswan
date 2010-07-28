@@ -25,6 +25,7 @@
 #include "ha_segments.h"
 #include "ha_cache.h"
 #include "ha_kernel.h"
+#include "ha_attribute.h"
 
 typedef struct ha_dispatcher_t ha_dispatcher_t;
 
@@ -46,9 +47,11 @@ struct ha_dispatcher_t {
  * @param segments		segments to control based on received messages
  * @param cache			message cache to use for resynchronization
  * @param kernel		kernel helper
+ * @param attr			HA enabled pool
  * @return				dispatcher object
  */
 ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
-			ha_segments_t *segments, ha_cache_t *cache, ha_kernel_t *kernel);
+									ha_segments_t *segments, ha_cache_t *cache,
+									ha_kernel_t *kernel, ha_attribute_t *attr);
 
 #endif /** HA_DISPATCHER_ @}*/
