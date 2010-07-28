@@ -1,3 +1,11 @@
+strongswan-4.3.7
+----------------
+
+- Fixed a potential remote code execution vulnerability resulting from
+  the misuse of snprintf(). The vulnerability is exploitable by
+  unauthenticated users.
+
+
 strongswan-4.3.6
 ----------------
 
