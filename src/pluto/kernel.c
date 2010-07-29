@@ -62,19 +62,13 @@
 #include "server.h"
 #include "whack.h"      /* for RC_LOG_SERIOUS */
 #include "keys.h"
+#include "crypto.h"
 #include "nat_traversal.h"
 #include "alg_info.h"
 #include "kernel_alg.h"
 
 
 bool can_do_IPcomp = TRUE;  /* can system actually perform IPCOMP? */
-
-/* How far can IPsec messages arrive out of order before the anti-replay
- * logic loses track and swats them?  64 is the best KLIPS can do.
- * And 32 is the best XFRM can do...
- */
-#define REPLAY_WINDOW   64
-#define REPLAY_WINDOW_XFRM      32
 
 /* test if the routes required for two different connections agree
  * It is assumed that the destination subnets agree; we are only
@@ -1388,244 +1382,114 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 							 &null_proto_info, op, opname) && ok;
 }
 
-/* Setup a pair of SAs. Code taken from setsa.c and spigrp.c, in
- * ipsec-0.5.
- */
-
 static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 {
-	/* Build an inbound or outbound SA */
-
+	host_t *host_src, *host_dst;
 	connection_t *c = st->st_connection;
-	ip_subnet src, dst;
-	ip_subnet src_client, dst_client;
-	ipsec_spi_t inner_spi = 0;
-	u_int proto = 0;
-	u_int satype = SADB_SATYPE_UNSPEC;
-	bool replace;
-
-	/* SPIs, saved for spigrouping or undoing, if necessary */
-	struct kernel_sa
-		said[EM_MAXRELSPIS],
-		*said_next = said;
-
-	char text_said[SATOT_BUF];
-	int encapsulation;
-
-	replace = inbound && (kernel_ops->get_spi != NULL);
-
-	src.maskbits = 0;
-	dst.maskbits = 0;
-
+	struct end *src, *dst;
+	ipsec_mode_t mode = MODE_TRANSPORT;
+	struct kernel_proto_info proto_info = { .mode = 0 };
+	lifetime_cfg_t lt_none = { .time = { .rekey = 0 } };
+	mark_t mark_none = { 0, 0 };
+	bool ok = TRUE;
+	/* SPIs, saved for undoing, if necessary */
+	struct kernel_sa said[EM_MAXRELSPIS], *said_next = said;
 	if (inbound)
 	{
-		src.addr = c->spd.that.host_addr;
-		dst.addr = c->spd.this.host_addr;
-		src_client = c->spd.that.client;
-		dst_client = c->spd.this.client;
+		src = &c->spd.that;
+		dst = &c->spd.this;
 	}
 	else
 	{
-		src.addr = c->spd.this.host_addr,
-		dst.addr = c->spd.that.host_addr;
-		src_client = c->spd.this.client;
-		dst_client = c->spd.that.client;
+		src = &c->spd.this;
+		dst = &c->spd.that;
 	}
 
-	encapsulation = ENCAPSULATION_MODE_TRANSPORT;
+	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)&dst->host_addr);
+
 	if (st->st_ah.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
 		|| st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
 		|| st->st_ipcomp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL)
 	{
-		encapsulation = ENCAPSULATION_MODE_TUNNEL;
+		mode = MODE_TUNNEL;
 	}
+
+	proto_info.mode = mode;
+	proto_info.reqid = c->spd.reqid;
 
 	memset(said, 0, sizeof(said));
-
-	/* If we are tunnelling, set up IP in IP pseudo SA */
-
-	if (kernel_ops->inbound_eroute)
-	{
-		inner_spi = 256;
-		proto = SA_IPIP;
-		satype = SADB_SATYPE_UNSPEC;
-	}
-	else if (encapsulation == ENCAPSULATION_MODE_TUNNEL)
-	{
-		/* XXX hack alert -- we SHOULD NOT HAVE TO HAVE A DIFFERENT SPI
-		 * XXX FOR IP-in-IP ENCAPSULATION!
-		 */
-
-		ipsec_spi_t ipip_spi;
-
-		/* Allocate an SPI for the tunnel.
-		 * Since our peer will never see this,
-		 * and it comes from its own number space,
-		 * it is purely a local implementation wart.
-		 */
-		{
-			static ipsec_spi_t last_tunnel_spi = IPSEC_DOI_SPI_OUR_MIN;
-
-			ipip_spi = htonl(++last_tunnel_spi);
-			if (inbound)
-			{
-				st->st_tunnel_in_spi = ipip_spi;
-			}
-			else
-			{
-				st->st_tunnel_out_spi = ipip_spi;
-			}
-		}
-
-		set_text_said(text_said
-			, &c->spd.that.host_addr, ipip_spi, SA_IPIP);
-
-		said_next->src = &src.addr;
-		said_next->dst = &dst.addr;
-		said_next->src_client = &src_client;
-		said_next->dst_client = &dst_client;
-		said_next->spi = ipip_spi;
-		said_next->satype = SADB_X_SATYPE_IPIP;
-		said_next->text_said = text_said;
-
-		if (!kernel_ops->add_sa(said_next, replace))
-			goto fail;
-
-		said_next++;
-
-		inner_spi = ipip_spi;
-		proto = SA_IPIP;
-		satype = SADB_X_SATYPE_IPIP;
-	}
 
 	/* set up IPCOMP SA, if any */
 
 	if (st->st_ipcomp.present)
 	{
-		ipsec_spi_t ipcomp_spi = inbound? st->st_ipcomp.our_spi : st->st_ipcomp.attrs.spi;
-		unsigned compalg;
+		ipsec_spi_t ipcomp_spi = inbound ? st->st_ipcomp.our_spi
+										 : st->st_ipcomp.attrs.spi;
 
 		switch (st->st_ipcomp.attrs.transid)
 		{
 			case IPCOMP_DEFLATE:
-				compalg = SADB_X_CALG_DEFLATE;
 				break;
 
 			default:
-				loglog(RC_LOG_SERIOUS, "IPCOMP transform %s not implemented"
-					, enum_name(&ipcomp_transformid_names, st->st_ipcomp.attrs.transid));
+				loglog(RC_LOG_SERIOUS, "IPCOMP transform %s not implemented",
+					   enum_name(&ipcomp_transformid_names,
+								 st->st_ipcomp.attrs.transid));
 				goto fail;
 		}
 
-		set_text_said(text_said, &dst.addr, ipcomp_spi, SA_COMP);
+		proto_info.cpi = htons(ntohl(ipcomp_spi));
+		proto_info.ipcomp = st->st_ipcomp.attrs.transid;
 
-		said_next->src = &src.addr;
-		said_next->dst = &dst.addr;
-		said_next->src_client = &src_client;
-		said_next->dst_client = &dst_client;
 		said_next->spi = ipcomp_spi;
-		said_next->satype = SADB_X_SATYPE_COMP;
-		said_next->compalg = compalg;
-		said_next->encapsulation = encapsulation;
-		said_next->reqid = c->spd.reqid + 2;
-		said_next->text_said = text_said;
+		said_next->proto = IPPROTO_COMP;
 
-		if (!kernel_ops->add_sa(said_next, replace))
+		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
+						host_dst, ipcomp_spi, said_next->proto, c->spd.reqid,
+						mark_none, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						AUTH_UNDEFINED, chunk_empty, mode,
+						st->st_ipcomp.attrs.transid, 0 /* cpi */, FALSE,
+						inbound, NULL, NULL) != SUCCESS)
 		{
 			goto fail;
 		}
 		said_next++;
-		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
+		mode = MODE_TRANSPORT;
 	}
 
 	/* set up ESP SA, if any */
 
 	if (st->st_esp.present)
 	{
-		ipsec_spi_t esp_spi = inbound? st->st_esp.our_spi : st->st_esp.attrs.spi;
-		u_char *esp_dst_keymat = inbound? st->st_esp.our_keymat : st->st_esp.peer_keymat;
+		ipsec_spi_t esp_spi = inbound ? st->st_esp.our_spi
+									  : st->st_esp.attrs.spi;
+		u_char *esp_dst_keymat = inbound ? st->st_esp.our_keymat
+										 : st->st_esp.peer_keymat;
+		bool encap = st->nat_traversal & NAT_T_DETECTED;
+		encryption_algorithm_t enc_alg;
+		integrity_algorithm_t auth_alg;
 		const struct esp_info *ei;
+		chunk_t enc_key, auth_key;
 		u_int16_t key_len;
 
-		static const struct esp_info esp_info[] = {
-			{ ESP_NULL, AUTH_ALGORITHM_HMAC_MD5,
-				0, HMAC_MD5_KEY_LEN,
-				SADB_EALG_NULL, SADB_AALG_MD5HMAC },
-			{ ESP_NULL, AUTH_ALGORITHM_HMAC_SHA1,
-				0, HMAC_SHA1_KEY_LEN,
-				SADB_EALG_NULL, SADB_AALG_SHA1HMAC },
-
-			{ ESP_DES, AUTH_ALGORITHM_NONE,
-				DES_CBC_BLOCK_SIZE, 0,
-				SADB_EALG_DESCBC, SADB_AALG_NONE },
-			{ ESP_DES, AUTH_ALGORITHM_HMAC_MD5,
-				DES_CBC_BLOCK_SIZE, HMAC_MD5_KEY_LEN,
-				SADB_EALG_DESCBC, SADB_AALG_MD5HMAC },
-			{ ESP_DES, AUTH_ALGORITHM_HMAC_SHA1,
-				DES_CBC_BLOCK_SIZE,
-				HMAC_SHA1_KEY_LEN, SADB_EALG_DESCBC, SADB_AALG_SHA1HMAC },
-
-			{ ESP_3DES, AUTH_ALGORITHM_NONE,
-				DES_CBC_BLOCK_SIZE * 3, 0,
-				SADB_EALG_3DESCBC, SADB_AALG_NONE },
-			{ ESP_3DES, AUTH_ALGORITHM_HMAC_MD5,
-				DES_CBC_BLOCK_SIZE * 3, HMAC_MD5_KEY_LEN,
-				SADB_EALG_3DESCBC, SADB_AALG_MD5HMAC },
-			{ ESP_3DES, AUTH_ALGORITHM_HMAC_SHA1,
-				DES_CBC_BLOCK_SIZE * 3, HMAC_SHA1_KEY_LEN,
-				SADB_EALG_3DESCBC, SADB_AALG_SHA1HMAC },
-		};
-
-		u_int8_t natt_type = 0;
-		u_int16_t natt_sport = 0;
-		u_int16_t natt_dport = 0;
-		ip_address natt_oa;
-
-		if (st->nat_traversal & NAT_T_DETECTED)
+		if ((ei = kernel_alg_esp_info(st->st_esp.attrs.transid,
+									  st->st_esp.attrs.auth)) == NULL)
 		{
-			natt_type = (st->nat_traversal & NAT_T_WITH_PORT_FLOATING) ?
-						 ESPINUDP_WITH_NON_ESP : ESPINUDP_WITH_NON_IKE;
-			natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port;
-			natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
-			natt_oa = st->nat_oa;
+			loglog(RC_LOG_SERIOUS, "ESP transform %s / auth %s"
+				   " not implemented yet",
+				   enum_name(&esp_transform_names, st->st_esp.attrs.transid),
+				   enum_name(&auth_alg_names, st->st_esp.attrs.auth));
+			goto fail;
 		}
 
-		for (ei = esp_info; ; ei++)
-		{
-			if (ei == &esp_info[countof(esp_info)])
-			{
-				/* Check for additional kernel alg */
-				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid,
-										st->st_esp.attrs.auth))!=NULL)
-				{
-					break;
-				}
-
-				/* note: enum_show may use a static buffer, so two
-				 * calls in one printf would be a mistake.
-				 * enum_name does the same job, without a static buffer,
-				 * assuming the name will be found.
-				 */
-				loglog(RC_LOG_SERIOUS, "ESP transform %s / auth %s not implemented yet"
-					, enum_name(&esp_transform_names, st->st_esp.attrs.transid)
-					, enum_name(&auth_alg_names, st->st_esp.attrs.auth));
-				goto fail;
-			}
-
-			if (st->st_esp.attrs.transid == ei->transid &&
-				st->st_esp.attrs.auth == ei->auth)
-			{
-				break;
-			}
-		}
-
-		key_len = st->st_esp.attrs.key_len/8;
+		key_len = st->st_esp.attrs.key_len / 8;
 		if (key_len)
 		{
 			/* XXX: must change to check valid _range_ key_len */
 			if (key_len > ei->enckeylen)
 			{
-				loglog(RC_LOG_SERIOUS, "ESP transform %s passed key_len=%d > %d",
+				loglog(RC_LOG_SERIOUS, "ESP transform %s: key_len=%d > %d",
 					enum_name(&esp_transform_names, st->st_esp.attrs.transid),
 					(int)key_len, (int)ei->enckeylen);
 				goto fail;
@@ -1668,197 +1532,94 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				break;
 		}
 
-		/* divide up keying material */
-		set_text_said(text_said, &dst.addr, esp_spi, SA_ESP);
-		said_next->src = &src.addr;
-		said_next->dst = &dst.addr;
-		said_next->src_client = &src_client;
-		said_next->dst_client = &dst_client;
-		said_next->spi = esp_spi;
-		said_next->satype = SADB_SATYPE_ESP;
-		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ?
-									REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
-		said_next->authalg = ei->authalg;
-		said_next->authkeylen = ei->authkeylen;
-		said_next->authkey = esp_dst_keymat + key_len;
-		said_next->encalg = ei->encryptalg;
-		said_next->enckeylen = key_len;
-		said_next->enckey = esp_dst_keymat;
-		said_next->encapsulation = encapsulation;
-		said_next->reqid = c->spd.reqid + 1;
-		said_next->natt_sport = natt_sport;
-		said_next->natt_dport = natt_dport;
-		said_next->transid = st->st_esp.attrs.transid;
-		said_next->natt_type = natt_type;
-		said_next->natt_oa = &natt_oa;
-		said_next->text_said = text_said;
+		if (encap)
+		{
+			host_src->set_port(host_src, src->host_port);
+			host_dst->set_port(host_dst, dst->host_port);
+			// st->nat_oa is currently unused
+		}
 
-		if (!kernel_ops->add_sa(said_next, replace))
+		/* divide up keying material */
+		enc_alg = encryption_algorithm_from_esp(st->st_esp.attrs.transid);
+		enc_key.ptr = esp_dst_keymat;
+		enc_key.len = key_len;
+		auth_alg = integrity_algorithm_from_esp(st->st_esp.attrs.auth);
+		auth_alg = auth_alg ? : AUTH_UNDEFINED;
+		auth_key.ptr = esp_dst_keymat + key_len;
+		auth_key.len = ei->authkeylen;
+
+		proto_info.esp_spi = esp_spi;
+		said_next->spi = esp_spi;
+		said_next->proto = IPPROTO_ESP;
+
+		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
+						host_dst, esp_spi, said_next->proto, c->spd.reqid,
+						mark_none, &lt_none, enc_alg, enc_key,
+						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
+						encap, inbound, NULL, NULL) != SUCCESS)
 		{
 			goto fail;
 		}
 		said_next++;
-		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
+		mode = MODE_TRANSPORT;
 	}
 
 	/* set up AH SA, if any */
 
 	if (st->st_ah.present)
 	{
-		ipsec_spi_t ah_spi = inbound? st->st_ah.our_spi : st->st_ah.attrs.spi;
-		u_char *ah_dst_keymat = inbound? st->st_ah.our_keymat : st->st_ah.peer_keymat;
+		ipsec_spi_t ah_spi = inbound ? st->st_ah.our_spi
+									 : st->st_ah.attrs.spi;
+		u_char *ah_dst_keymat = inbound ? st->st_ah.our_keymat
+										: st->st_ah.peer_keymat;
+		integrity_algorithm_t auth_alg;
+		chunk_t auth_key;
 
-		unsigned char authalg;
+		auth_alg = integrity_algorithm_from_esp(st->st_ah.attrs.auth);
+		auth_key.ptr = ah_dst_keymat;
+		auth_key.len = st->st_ah.keymat_len;
 
-		switch (st->st_ah.attrs.auth)
-		{
-			case AUTH_ALGORITHM_HMAC_MD5:
-				authalg = SADB_AALG_MD5HMAC;
-				break;
-			case AUTH_ALGORITHM_HMAC_SHA1:
-				authalg = SADB_AALG_SHA1HMAC;
-				break;
-			default:
-				loglog(RC_LOG_SERIOUS, "%s not implemented yet",
-					   enum_show(&auth_alg_names, st->st_ah.attrs.auth));
-			goto fail;
-		}
-
-		set_text_said(text_said, &dst.addr, ah_spi, SA_AH);
-		said_next->src = &src.addr;
-		said_next->dst = &dst.addr;
-		said_next->src_client = &src_client;
-		said_next->dst_client = &dst_client;
+		proto_info.ah_spi = ah_spi;
 		said_next->spi = ah_spi;
-		said_next->satype = SADB_SATYPE_AH;
-		said_next->replay_window = (kernel_ops->type == KERNEL_TYPE_KLIPS) ?
-									REPLAY_WINDOW : REPLAY_WINDOW_XFRM;
-		said_next->authalg = authalg;
-		said_next->authkeylen = st->st_ah.keymat_len;
-		said_next->authkey = ah_dst_keymat;
-		said_next->encapsulation = encapsulation;
-		said_next->reqid = c->spd.reqid;
-		said_next->text_said = text_said;
+		said_next->proto = IPPROTO_AH;
 
-		if (!kernel_ops->add_sa(said_next, replace))
+		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
+						host_dst, ah_spi, said_next->proto, c->spd.reqid,
+						mark_none, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
+						FALSE, inbound, NULL, NULL) != SUCCESS)
 		{
 			goto fail;
 		}
 		said_next++;
-		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
+		mode = MODE_TRANSPORT;
 	}
 
-	if (st->st_ah.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
-	|| st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
-	|| st->st_ipcomp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL)
+	if (inbound && c->spd.eroute_owner == SOS_NOBODY)
 	{
-		encapsulation = ENCAPSULATION_MODE_TUNNEL;
+		(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
+						  &dst->client, 256, SA_IPIP, SADB_SATYPE_UNSPEC,
+						  c->spd.this.protocol, &proto_info, 0, ERO_ADD_INBOUND,
+						  "add inbound");
 	}
 
-	if (kernel_ops->inbound_eroute ? c->spd.eroute_owner == SOS_NOBODY
-		: encapsulation == ENCAPSULATION_MODE_TUNNEL)
-	{
-		/* If inbound, and policy does not specifie DISABLEARRIVALCHECK,
-		 * tell KLIPS to enforce the IP addresses appropriate for this tunnel.
-		 * Note reversed ends.
-		 * Not much to be done on failure.
-		 */
-		if (inbound && (c->policy & POLICY_DISABLEARRIVALCHECK) == 0)
-		{
-			struct pfkey_proto_info proto_info[4];
-			int i = 0;
-
-			if (st->st_ipcomp.present)
-			{
-				proto_info[i].proto = IPPROTO_COMP;
-				proto_info[i].encapsulation = st->st_ipcomp.attrs.encapsulation;
-				proto_info[i].reqid = c->spd.reqid + 2;
-				i++;
-			}
-
-			if (st->st_esp.present)
-			{
-				proto_info[i].proto = IPPROTO_ESP;
-				proto_info[i].encapsulation = st->st_esp.attrs.encapsulation;
-				proto_info[i].reqid = c->spd.reqid + 1;
-				i++;
-			}
-
-			if (st->st_ah.present)
-			{
-				proto_info[i].proto = IPPROTO_AH;
-				proto_info[i].encapsulation = st->st_ah.attrs.encapsulation;
-				proto_info[i].reqid = c->spd.reqid;
-				i++;
-			}
-
-			proto_info[i].proto = 0;
-
-			if (kernel_ops->inbound_eroute
-				&& encapsulation == ENCAPSULATION_MODE_TUNNEL)
-			{
-				proto_info[0].encapsulation = ENCAPSULATION_MODE_TUNNEL;
-				for (i = 1; proto_info[i].proto; i++)
-				{
-					proto_info[i].encapsulation = ENCAPSULATION_MODE_TRANSPORT;
-				}
-			}
-
-			/* MCR - should be passed a spd_eroute structure here */
-			(void) raw_eroute(&c->spd.that.host_addr, &c->spd.that.client
-							  , &c->spd.this.host_addr, &c->spd.this.client
-							  , inner_spi, proto, satype, c->spd.this.protocol
-							  , proto_info, 0
-							  , ERO_ADD_INBOUND, "add inbound");
-		}
-	}
-
-	/* If there are multiple SPIs, group them. */
-
-	if (kernel_ops->grp_sa && said_next > &said[1])
-	{
-		struct kernel_sa *s;
-
-		/* group SAs, two at a time, inner to outer (backwards in said[])
-		 * The grouping is by pairs.  So if said[] contains ah esp ipip,
-		 * the grouping would be ipip:esp, esp:ah.
-		 */
-		for (s = said; s < said_next-1; s++)
-		{
-			char
-				text_said0[SATOT_BUF],
-				text_said1[SATOT_BUF];
-
-			/* group s[1] and s[0], in that order */
-
-			set_text_said(text_said0, s[0].dst, s[0].spi, s[0].proto);
-			set_text_said(text_said1, s[1].dst, s[1].spi, s[1].proto);
-
-			DBG(DBG_KLIPS, DBG_log("grouping %s and %s", text_said1, text_said0));
-
-			s[0].text_said = text_said0;
-			s[1].text_said = text_said1;
-
-			if (!kernel_ops->grp_sa(s + 1, s))
-			{
-				goto fail;
-			}
-		}
-		/* could update said, but it will not be used */
-	}
-
-	return TRUE;
+	goto cleanup;
 
 fail:
+	/* undo the done SPIs */
+	while (said_next-- != said)
 	{
-		/* undo the done SPIs */
-		while (said_next-- != said)
-		{
-			(void) del_spi(said_next->spi, said_next->proto, &src.addr,
-						   said_next->dst);
-		}
-		return FALSE;
+		hydra->kernel_interface->del_sa(hydra->kernel_interface, host_src,
+										host_dst, said_next->spi,
+										said_next->proto, 0 /* cpi */,
+										mark_none);
 	}
+	ok = FALSE;
+
+cleanup:
+	host_src->destroy(host_src);
+	host_dst->destroy(host_dst);
+	return ok;
 }
 
 static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
