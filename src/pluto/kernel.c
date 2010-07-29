@@ -177,6 +177,20 @@ static const struct pfkey_proto_info null_proto_info[2] = {
 		}
 };
 
+/**
+ * Helper function that converts an ip_subnet to a traffic_selector_t.
+ */
+static traffic_selector_t *traffic_selector_from_subnet(const ip_subnet *client,
+														const u_int8_t proto)
+{
+	traffic_selector_t *ts;
+	host_t *net;
+	net = host_create_from_sockaddr((sockaddr_t*)&client->addr);
+	ts = traffic_selector_create_from_subnet(net, client->maskbits, proto,
+											 portof(&client->addr));
+	return ts;
+}
+
 void record_and_initiate_opportunistic(const ip_subnet *ours,
 									   const ip_subnet *his,
 									   int transport_proto, const char *why)
