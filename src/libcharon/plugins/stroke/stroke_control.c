@@ -186,6 +186,11 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	}
 	else
 	{
+		if (!pos)
+		{
+			DBG1(DBG_CFG, "error parsing string");
+			return;
+		}
 		if (*(pos + 1) == '*')
 		{	/* is name[*] */
 			all = TRUE;
