@@ -2635,102 +2635,17 @@ bool update_ipsec_sa (struct state *st USED_BY_KLIPS)
  */
 bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 {
-	static const char procname[] = "/proc/net/ipsec_spi";
-	FILE *f;
-	char buf[1024];
+	time_t use_time;
 	u_int bytes;
 	int ret = TRUE;
 
 	passert(st != NULL);
 
-	f = fopen(procname, "r");
-	if (f == NULL)
+	if (get_sa_info(st, TRUE, &bytes, &use_time) && use_time != UNDEFINED_TIME)
 	{
-		/* Can't open the file, perhaps were are on 26sec? */
-		time_t use_time;
-
-		if (get_sa_info(st, TRUE, &bytes, &use_time) && use_time != UNDEFINED_TIME)
-		{
-			*idle_time = time(NULL) - use_time;
-			ret = *idle_time >= idle_max;
-		}
+		*idle_time = time(NULL) - use_time;
+		ret = *idle_time >= idle_max;
 	}
-	else
-	{
-		while (f != NULL)
-		{
-			char *line;
-			char text_said[SATOT_BUF];
-			u_int8_t proto = 0;
-			ip_address dst;
-			ip_said said;
-			ipsec_spi_t spi = 0;
-			static const char idle[] = "idle=";
 
-			dst = st->st_connection->spd.this.host_addr; /* inbound SA */
-			if (st->st_ah.present)
-			{
-				proto = SA_AH;
-				spi = st->st_ah.our_spi;
-			}
-			if (st->st_esp.present)
-			{
-				proto = SA_ESP;
-				spi = st->st_esp.our_spi;
-			}
-
-			if (proto == 0 && spi == 0)
-			{
-				ret = TRUE;
-				break;
-			}
-
-			initsaid(&dst, spi, proto, &said);
-			satot(&said, 'x', text_said, SATOT_BUF);
-
-			line = fgets(buf, sizeof(buf), f);
-			if (line == NULL)
-			{
-				/* Reached end of list */
-				ret = TRUE;
-				break;
-			}
-
-			if (strneq(line, text_said, strlen(text_said)))
-			{
-				/* we found a match, now try to find idle= */
-				char *p = strstr(line, idle);
-
-				if (p == NULL)
-				{
-					/* SAs which haven't been used yet don't have it */
-					ret = TRUE; /* it didn't have traffic */
-					break;
-				}
-				p += sizeof(idle)-1;
-				if (*p == '\0')
-				{
-					ret = TRUE; /* be paranoid */
-					break;
-				}
-				if (sscanf(p, "%d", (int *) idle_time) <= 0)
-				{
-					ret = TRUE;
-					break;
-				}
-				if (*idle_time >= idle_max)
-				{
-					ret = TRUE;
-					break;
-				}
-				else
-				{
-					ret = FALSE;
-					break;
-				}
-			}
-		}
-		fclose(f);
-	}
 	return ret;
 }
