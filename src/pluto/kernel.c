@@ -258,24 +258,6 @@ void record_and_initiate_opportunistic(const ip_subnet *ours,
 
 #endif /* KLIPS */
 
-static unsigned get_proto_reqid(unsigned base, int proto)
-{
-	switch (proto)
-	{
-	default:
-	case IPPROTO_COMP:
-		base++;
-		/* fall through */
-	case IPPROTO_ESP:
-		base++;
-		/* fall through */
-	case IPPROTO_AH:
-		break;
-	}
-
-	return base;
-}
-
 /* Generate Unique SPI numbers.
  *
  * The returned SPI is in network byte order.
