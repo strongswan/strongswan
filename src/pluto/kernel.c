@@ -164,17 +164,20 @@ static void set_text_said(char *text_said, const ip_address *dst,
 
 bool no_klips = FALSE;  /* don't actually use KLIPS */
 
-static const struct pfkey_proto_info null_proto_info[2] = {
-		{
-				proto: IPPROTO_ESP,
-				encapsulation: ENCAPSULATION_MODE_TRANSPORT,
-				reqid: 0
-		},
-		{
-				proto: 0,
-				encapsulation: 0,
-				reqid: 0
-		}
+/**
+ * Struct to store information about the SAs to install in the kernel
+ */
+struct kernel_proto_info {
+	ipsec_mode_t mode;
+	u_int32_t esp_spi;
+	u_int32_t ah_spi;
+	u_int32_t reqid;
+	u_int16_t ipcomp;
+	u_int16_t cpi;
+};
+
+static const struct kernel_proto_info null_proto_info = {
+	.mode = MODE_TRANSPORT,
 };
 
 /**
@@ -951,10 +954,10 @@ show_shunt_status(void)
 		whack_log(RC_COMMENT, BLANK_FORMAT);    /* spacer */
 }
 
-/* Setup an IPsec route entry.
+/**
+ * Setup an IPsec route entry.
  * op is one of the ERO_* operators.
  */
-
 static bool raw_eroute(const ip_address *this_host,
 					   const ip_subnet *this_client,
 					   const ip_address *that_host,
@@ -963,12 +966,20 @@ static bool raw_eroute(const ip_address *this_host,
 					   unsigned int proto,
 					   unsigned int satype,
 					   unsigned int transport_proto,
-					   const struct pfkey_proto_info *proto_info,
+					   const struct kernel_proto_info *pi,
 					   time_t use_lifetime,
 					   unsigned int op,
 					   const char *opname USED_BY_DEBUG)
 {
+	traffic_selector_t *ts_src, *ts_dst;
+	host_t *host_src, *host_dst;
+	policy_type_t type = POLICY_IPSEC;
+	policy_dir_t dir = POLICY_OUT;
+	mark_t mark_none = { 0, 0 };
 	char text_said[SATOT_BUF];
+	bool ok = TRUE, routed = FALSE,
+		 deleting = (op & ERO_MASK) == ERO_DELETE,
+		 replacing = op & (SADB_X_SAFLAGS_REPLACEFLOW << ERO_FLAG_SHIFT);
 
 	set_text_said(text_said, that_host, spi, proto);
 
@@ -986,9 +997,80 @@ static bool raw_eroute(const ip_address *this_host,
 				, text_said, transport_proto);
 		});
 
-	return kernel_ops->raw_eroute(this_host, this_client
-		, that_host, that_client, spi, satype, transport_proto, proto_info
-		, use_lifetime, op, text_said);
+	if (satype == SADB_X_SATYPE_INT)
+	{
+		switch (ntohl(spi))
+		{
+			case SPI_PASS:
+				type = POLICY_PASS;
+				break;
+			case SPI_DROP:
+			case SPI_REJECT:
+				type = POLICY_DROP;
+				break;
+			case SPI_TRAP:
+			case SPI_TRAPSUBNET:
+			case SPI_HOLD:
+				if (op & (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT))
+				{
+					return TRUE;
+				}
+				routed = TRUE;
+				break;
+		}
+	}
+
+	if (op & (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT))
+	{
+		dir = POLICY_IN;
+	}
+
+	host_src = host_create_from_sockaddr((sockaddr_t*)this_host);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)that_host);
+	ts_src = traffic_selector_from_subnet(this_client, transport_proto);
+	ts_dst = traffic_selector_from_subnet(that_client, transport_proto);
+
+	if (deleting || replacing)
+	{
+		hydra->kernel_interface->del_policy(hydra->kernel_interface,
+						ts_src, ts_dst, dir, mark_none, routed);
+	}
+
+	if (!deleting)
+	{
+		/* FIXME: use_lifetime? */
+		ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
+						host_src, host_dst, ts_src, ts_dst, dir, type,
+						pi->esp_spi, pi->ah_spi, pi->reqid, mark_none, pi->mode,
+						pi->ipcomp, pi->cpi, routed) == SUCCESS;
+	}
+
+	if (dir == POLICY_IN)
+	{	/* handle forward policy */
+		dir = POLICY_FWD;
+		if (deleting || replacing)
+		{
+			hydra->kernel_interface->del_policy(hydra->kernel_interface,
+						ts_src, ts_dst, dir, mark_none, routed);
+		}
+
+		if (!deleting && ok &&
+			(pi->mode == MODE_TUNNEL || satype == SADB_X_SATYPE_INT))
+		{
+			/* FIXME: use_lifetime? */
+			ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
+						host_src, host_dst, ts_src, ts_dst, dir, type,
+						pi->esp_spi, pi->ah_spi, pi->reqid, mark_none, pi->mode,
+						pi->ipcomp, pi->cpi, routed) == SUCCESS;
+		}
+	}
+
+	host_src->destroy(host_src);
+	host_dst->destroy(host_dst);
+	ts_src->destroy(ts_src);
+	ts_dst->destroy(ts_dst);
+
+	return ok;
 }
 
 /* test to see if %hold remains */
@@ -1034,10 +1116,10 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 		/* is there already a broad host-to-host bare shunt? */
 		if (bs_pp == NULL)
 		{
-			if (raw_eroute(null_host, &this_broad_client, null_host, &that_broad_client
-						   , htonl(shunt_spi), SA_INT, SADB_X_SATYPE_INT
-						   , 0, null_proto_info
-						   , SHUNT_PATIENCE, ERO_ADD, why))
+			if (raw_eroute(null_host, &this_broad_client, null_host,
+						   &that_broad_client, htonl(shunt_spi), SA_INT,
+						   SADB_X_SATYPE_INT, 0, &null_proto_info,
+						   SHUNT_PATIENCE, ERO_ADD, why))
 			{
 				struct bare_shunt *bs = malloc_thing(struct bare_shunt);
 
@@ -1059,10 +1141,9 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 		shunt_spi = SPI_HOLD;
 	}
 
-	if (raw_eroute(null_host, &this_client, null_host, &that_client
-				   , htonl(shunt_spi), SA_INT, SADB_X_SATYPE_INT
-				   , transport_proto, null_proto_info
-				   , SHUNT_PATIENCE, ERO_DELETE, why))
+	if (raw_eroute(null_host, &this_client, null_host, &that_client,
+				   htonl(shunt_spi), SA_INT, SADB_X_SATYPE_INT, transport_proto,
+				   &null_proto_info, SHUNT_PATIENCE, ERO_DELETE, why))
 	{
 		struct bare_shunt **bs_pp = bare_shunt_ptr(&this_client, &that_client
 										, transport_proto);
@@ -1079,7 +1160,7 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 
 static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 							  unsigned int proto, unsigned int satype,
-							  const struct pfkey_proto_info *proto_info,
+							  const struct kernel_proto_info *proto_info,
 							  unsigned int op, const char *opname)
 {
 	const ip_address *peer = &sr->that.host_addr;
@@ -1092,11 +1173,9 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 	{
 		peer = aftoinfo(addrtypeof(peer))->any;
 	}
-	return raw_eroute(&sr->this.host_addr, &sr->this.client
-					  , peer
-					  , &sr->that.client
-					  , spi, proto, satype
-					  , sr->this.protocol, proto_info, 0, op, buf2);
+	return raw_eroute(&sr->this.host_addr, &sr->this.client, peer,
+					  &sr->that.client, spi, proto, satype, sr->this.protocol,
+					  proto_info, 0, op, buf2);
 }
 
 /* assign a bare hold to a connection */
@@ -1139,18 +1218,17 @@ bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 	if (rn != ro)
 	{
 		if (erouted(ro)
-		? !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT
-				, null_proto_info
-				, ERO_REPLACE, "replace %trap with broad %hold")
-		: !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT
-				, null_proto_info
-				, ERO_ADD, "add broad %hold"))
+		? !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT,
+							 &null_proto_info, ERO_REPLACE,
+							 "replace %trap with broad %hold")
+		: !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT,
+							 &null_proto_info, ERO_ADD, "add broad %hold"))
 		{
 			return FALSE;
 		}
 	}
-	if (!replace_bare_shunt(src, dst, BOTTOM_PRIO, SPI_HOLD, FALSE
-	, transport_proto, "delete narrow %hold"))
+	if (!replace_bare_shunt(src, dst, BOTTOM_PRIO, SPI_HOLD, FALSE,
+							transport_proto, "delete narrow %hold"))
 	{
 		return FALSE;
 	}
@@ -1344,17 +1422,13 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 		}
 	}
 
-	ok = TRUE;
-	if (kernel_ops->inbound_eroute)
-	{
-		ok = raw_eroute(&c->spd.that.host_addr, &c->spd.that.client
-			, &c->spd.this.host_addr, &c->spd.this.client
-			, htonl(spi), SA_INT, SADB_X_SATYPE_INT
-			, 0, null_proto_info, 0
-			, op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
-	}
-	return eroute_connection(sr, htonl(spi), SA_INT, SADB_X_SATYPE_INT
-		, null_proto_info, op, opname) && ok;
+	ok = raw_eroute(&c->spd.that.host_addr, &c->spd.that.client,
+					&c->spd.this.host_addr, &c->spd.this.client, htonl(spi),
+					SA_INT, SADB_X_SATYPE_INT, 0, &null_proto_info, 0,
+					op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
+
+	return eroute_connection(sr, htonl(spi), SA_INT, SADB_X_SATYPE_INT,
+							 &null_proto_info, op, opname) && ok;
 }
 
 static bool del_spi(ipsec_spi_t spi, int proto,
@@ -2370,17 +2444,14 @@ bool route_and_eroute(connection_t *c USED_BY_KLIPS,
 				 */
 				struct bare_shunt *bs = *bspp;
 
-				(void) raw_eroute(&bs->said.dst /* should be useless */
-					, &bs->ours
-					, &bs->said.dst     /* should be useless */
-					, &bs->his
-					, bs->said.spi      /* network order */
-					, SA_INT
-					, SADB_X_SATYPE_INT
-					, 0
-					, null_proto_info
-					, SHUNT_PATIENCE
-					, ERO_REPLACE, "restore");
+				(void) raw_eroute(&bs->said.dst, /* should be useless */
+								  &bs->ours,
+								  &bs->said.dst, /* should be useless */
+								  &bs->his,
+								  bs->said.spi,  /* network order */
+								  SA_INT, SADB_X_SATYPE_INT, 0,
+								  &null_proto_info, SHUNT_PATIENCE,
+								  ERO_REPLACE, "restore");
 			}
 			else if (ero != NULL)
 			{
