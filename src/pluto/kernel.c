@@ -2643,7 +2643,7 @@ bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 
 	if (get_sa_info(st, TRUE, &bytes, &use_time) && use_time != UNDEFINED_TIME)
 	{
-		*idle_time = time(NULL) - use_time;
+		*idle_time = time_monotonic(NULL) - use_time;
 		ret = *idle_time >= idle_max;
 	}
 

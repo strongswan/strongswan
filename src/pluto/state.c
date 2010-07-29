@@ -782,7 +782,7 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 		}
 		if (st->st_esp.present)
 		{
-			time_t now = time(NULL);
+			time_t now = time_monotonic(NULL);
 
 			add_said(&c->spd.that.host_addr, st->st_esp.attrs.spi, SA_ESP);
 			add_sa_info(st, FALSE);
