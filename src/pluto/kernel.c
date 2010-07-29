@@ -1946,74 +1946,88 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
  */
 bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 {
-	char text_said[SATOT_BUF];
-	struct kernel_sa sa;
 	connection_t *c = st->st_connection;
+	traffic_selector_t *ts_src = NULL, *ts_dst = NULL;
+	host_t *host_src = NULL, *host_dst = NULL;
+	const struct end *src, *dst;
+	ipsec_spi_t spi;
+	mark_t mark_none = { 0, 0 };
+	u_int64_t bytes_kernel = 0;
+	bool result = FALSE;
 
 	*use_time = UNDEFINED_TIME;
 
-	if (kernel_ops->get_sa == NULL || !st->st_esp.present)
+	if (!st->st_esp.present)
 	{
-		return FALSE;
+		goto failed;
 	}
-	memset(&sa, 0, sizeof(sa));
-	sa.proto = SA_ESP;
 
 	if (inbound)
 	{
-		sa.src = &c->spd.that.host_addr;
-		sa.dst = &c->spd.this.host_addr;
-		sa.spi = st->st_esp.our_spi;
+		src = &c->spd.that;
+		dst = &c->spd.this;
+		spi = st->st_esp.our_spi;
 	}
 	else
 	{
-		sa.src = &c->spd.this.host_addr;
-		sa.dst = &c->spd.that.host_addr;
-		sa.spi = st->st_esp.attrs.spi;
+		src = &c->spd.this;
+		dst = &c->spd.that;
+		spi = st->st_esp.attrs.spi;
 	}
-	set_text_said(text_said, sa.dst, sa.spi, sa.proto);
 
-	sa.text_said = text_said;
+	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)&dst->host_addr);
 
-	DBG(DBG_KLIPS,
-		DBG_log("get %s", text_said)
-	)
-	if (!kernel_ops->get_sa(&sa, bytes))
+	switch(hydra->kernel_interface->query_sa(hydra->kernel_interface, host_src,
+											 host_dst, spi, IPPROTO_ESP,
+											 mark_none, &bytes_kernel))
 	{
-		return FALSE;
+		case FAILED:
+			goto failed;
+		case SUCCESS:
+			*bytes = bytes_kernel;
+			break;
+		case NOT_SUPPORTED:
+		default:
+			break;
 	}
-	DBG(DBG_KLIPS,
-		DBG_log("  current: %d bytes", *bytes)
-	)
 
 	if (st->st_serialno == c->spd.eroute_owner)
 	{
-		DBG(DBG_KLIPS,
-			DBG_log("get %sbound policy with reqid %u"
-				, inbound? "in":"out", (u_int)c->spd.reqid + 1)
-		)
-		sa.transport_proto = c->spd.this.protocol;
-		sa.encapsulation = st->st_esp.attrs.encapsulation;
+		u_int32_t time_kernel;
 
-		if (inbound)
+		ts_src = traffic_selector_from_subnet(&src->client, src->protocol);
+		ts_dst = traffic_selector_from_subnet(&dst->client, dst->protocol);
+
+		if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
+							ts_src, ts_dst, inbound ? POLICY_IN : POLICY_OUT,
+							mark_none, &time_kernel) != SUCCESS)
 		{
-			sa.src_client = &c->spd.that.client;
-			sa.dst_client = &c->spd.this.client;
+			goto failed;
 		}
-		else
+		*use_time = time_kernel;
+
+		if (inbound &&
+			st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL)
 		{
-			sa.src_client = &c->spd.this.client;
-			sa.dst_client = &c->spd.that.client;
+			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
+							ts_src, ts_dst, POLICY_FWD, mark_none,
+							&time_kernel) != SUCCESS)
+			{
+				goto failed;
+			}
+			*use_time = max(*use_time, time_kernel);
 		}
-		if (!kernel_ops->get_policy(&sa, inbound, use_time))
-		{
-			return FALSE;
-		}
-		DBG(DBG_KLIPS,
-			DBG_log("  use_time: %T", use_time, FALSE)
-		)
 	}
-	return TRUE;
+
+	result = TRUE;
+
+failed:
+	DESTROY_IF(host_src);
+	DESTROY_IF(host_dst);
+	DESTROY_IF(ts_src);
+	DESTROY_IF(ts_dst);
+	return result;
 }
 
 const struct kernel_ops *kernel_ops;
