@@ -49,8 +49,11 @@ typedef struct settings_t settings_t;
 	}
 	@endcode
  *
- * The values are accesses using the get() functions using dotted keys, e.g.
+ * The values are accessed using the get() functions using dotted keys, e.g.
  *   section-one.subsection.othervalue
+ *
+ * Currently only a limited set of printf format specifiers are supported
+ * (namely %s, %d and %N, see implementation for details).
  */
 struct settings_t {
 
