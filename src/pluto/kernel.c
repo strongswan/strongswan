@@ -1240,32 +1240,20 @@ bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 static bool sag_eroute(struct state *st, struct spd_route *sr,
 					   unsigned op, const char *opname)
 {
-	u_int inner_proto = 0;
-	u_int inner_satype = 0;
+	u_int inner_proto, inner_satype;
 	ipsec_spi_t inner_spi = 0;
-	struct pfkey_proto_info proto_info[4];
-	int i;
-	bool tunnel;
-
-	/* figure out the SPI and protocol (in two forms)
-	 * for the innermost transformation.
-	 */
-
-	i = sizeof(proto_info) / sizeof(proto_info[0]) - 1;
-	proto_info[i].proto = 0;
-	tunnel = FALSE;
+	struct kernel_proto_info proto_info = {
+		.mode = MODE_TRANSPORT,
+	};
+	bool tunnel = FALSE;
 
 	if (st->st_ah.present)
 	{
 		inner_spi = st->st_ah.attrs.spi;
 		inner_proto = SA_AH;
 		inner_satype = SADB_SATYPE_AH;
-
-		i--;
-		proto_info[i].proto = IPPROTO_AH;
-		proto_info[i].encapsulation = st->st_ah.attrs.encapsulation;
-		tunnel |= proto_info[i].encapsulation == ENCAPSULATION_MODE_TUNNEL;
-		proto_info[i].reqid = sr->reqid;
+		proto_info.ah_spi = inner_spi;
+		tunnel |= st->st_ah.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
 	if (st->st_esp.present)
@@ -1273,12 +1261,8 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_esp.attrs.spi;
 		inner_proto = SA_ESP;
 		inner_satype = SADB_SATYPE_ESP;
-
-		i--;
-		proto_info[i].proto = IPPROTO_ESP;
-		proto_info[i].encapsulation = st->st_esp.attrs.encapsulation;
-		tunnel |= proto_info[i].encapsulation == ENCAPSULATION_MODE_TUNNEL;
-		proto_info[i].reqid = sr->reqid + 1;
+		proto_info.esp_spi = inner_spi;
+		tunnel |= st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
 	if (st->st_ipcomp.present)
@@ -1286,37 +1270,28 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_ipcomp.attrs.spi;
 		inner_proto = SA_COMP;
 		inner_satype = SADB_X_SATYPE_COMP;
-
-		i--;
-		proto_info[i].proto = IPPROTO_COMP;
-		proto_info[i].encapsulation = st->st_ipcomp.attrs.encapsulation;
-		tunnel |= proto_info[i].encapsulation == ENCAPSULATION_MODE_TUNNEL;
-		proto_info[i].reqid = sr->reqid + 2;
+		proto_info.cpi = htons(ntohl(inner_spi));
+		proto_info.ipcomp = st->st_ipcomp.attrs.transid;
+		tunnel |= st->st_ipcomp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
-	if (i == sizeof(proto_info) / sizeof(proto_info[0]) - 1)
+	if (!inner_spi)
 	{
 		impossible();   /* no transform at all! */
 	}
 
 	if (tunnel)
 	{
-		int j;
-
 		inner_spi = st->st_tunnel_out_spi;
 		inner_proto = SA_IPIP;
 		inner_satype = SADB_X_SATYPE_IPIP;
-
-		proto_info[i].encapsulation = ENCAPSULATION_MODE_TUNNEL;
-		for (j = i + 1; proto_info[j].proto; j++)
-		{
-			proto_info[j].encapsulation = ENCAPSULATION_MODE_TRANSPORT;
-		}
+		proto_info.mode = MODE_TUNNEL;
 	}
 
-	return eroute_connection(sr
-		, inner_spi, inner_proto, inner_satype, proto_info + i
-		, op, opname);
+	proto_info.reqid = sr->reqid;
+
+	return eroute_connection(sr, inner_spi, inner_proto, inner_satype,
+							 &proto_info, op, opname);
 }
 
 /* compute a (host-order!) SPI to implement the policy in connection c */
