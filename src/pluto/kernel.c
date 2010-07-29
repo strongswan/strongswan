@@ -525,7 +525,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			, nexthop_str
 			, c->interface->vname
 			, sr->this.hostaccess? "PLUTO_HOST_ACCESS='1' " : ""
-			, sr->reqid + 1     /* ESP requid */
+			, sr->reqid
 			, me_str
 			, secure_myid_str
 			, myclient_str
