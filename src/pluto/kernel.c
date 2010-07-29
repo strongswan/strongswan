@@ -1406,26 +1406,6 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 							 &null_proto_info, op, opname) && ok;
 }
 
-static bool del_spi(ipsec_spi_t spi, int proto,
-					const ip_address *src, const ip_address *dest)
-{
-	char text_said[SATOT_BUF];
-	struct kernel_sa sa;
-
-	set_text_said(text_said, dest, spi, proto);
-
-	DBG(DBG_KLIPS, DBG_log("delete %s", text_said));
-
-	memset(&sa, 0, sizeof(sa));
-	sa.spi = spi;
-	sa.proto = proto;
-	sa.src = src;
-	sa.dst = dest;
-	sa.text_said = text_said;
-
-	return kernel_ops->del_sa(&sa);
-}
-
 /* Setup a pair of SAs. Code taken from setsa.c and spigrp.c, in
  * ipsec-0.5.
  */
@@ -1899,97 +1879,65 @@ fail:
 	}
 }
 
-/* teardown_ipsec_sa is a canibalized version of setup_ipsec_sa */
-
 static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 {
-	/* We need to delete AH, ESP, and IP in IP SPIs.
-	 * But if there is more than one, they have been grouped
-	 * so deleting any one will do.  So we just delete the
-	 * first one found.  It may or may not be the only one.
-	 */
 	connection_t *c = st->st_connection;
-	struct {
-		unsigned proto;
-		struct ipsec_proto_info *info;
-	} protos[4];
-	int i;
-	bool result;
+	const struct end *src, *dst;
+	host_t *host_src, *host_dst;
+	ipsec_spi_t spi;
+	mark_t mark_none = { 0, 0 };
+	bool result = TRUE;
 
-	i = 0;
-	if (kernel_ops->inbound_eroute && inbound
-		&& c->spd.eroute_owner == SOS_NOBODY)
+	if (inbound)
 	{
-		(void) raw_eroute(&c->spd.that.host_addr, &c->spd.that.client
-			, &c->spd.this.host_addr, &c->spd.this.client
-			, 256, IPSEC_PROTO_ANY, SADB_SATYPE_UNSPEC, c->spd.this.protocol
-			, null_proto_info, 0
-			, ERO_DEL_INBOUND, "delete inbound");
-	}
+		src = &c->spd.that;
+		dst = &c->spd.this;
 
-	if (!kernel_ops->grp_sa)
-	{
-		if (st->st_ah.present)
+		if (c->spd.eroute_owner == SOS_NOBODY)
 		{
-			protos[i].info = &st->st_ah;
-			protos[i].proto = SA_AH;
-			i++;
+			(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
+							  &dst->client, 256, IPSEC_PROTO_ANY,
+							  SADB_SATYPE_UNSPEC, c->spd.this.protocol,
+							  &null_proto_info, 0, ERO_DEL_INBOUND,
+							  "delete inbound");
 		}
-
-		if (st->st_esp.present)
-		{
-			protos[i].info = &st->st_esp;
-			protos[i].proto = SA_ESP;
-			i++;
-		}
-
-		if (st->st_ipcomp.present)
-		{
-			protos[i].info = &st->st_ipcomp;
-			protos[i].proto = SA_COMP;
-			i++;
-		}
-	}
-	else if (st->st_ah.present)
-	{
-		protos[i].info = &st->st_ah;
-		protos[i].proto = SA_AH;
-		i++;
-	}
-	else if (st->st_esp.present)
-	{
-		protos[i].info = &st->st_esp;
-		protos[i].proto = SA_ESP;
-		i++;
 	}
 	else
 	{
-		impossible();   /* neither AH nor ESP in outbound SA bundle! */
+		src = &c->spd.this;
+		dst = &c->spd.that;
 	}
-	protos[i].proto = 0;
 
-	result = TRUE;
-	for (i = 0; protos[i].proto; i++)
+	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
+	host_dst = host_create_from_sockaddr((sockaddr_t*)&dst->host_addr);
+
+	if (st->st_ah.present)
 	{
-		unsigned proto = protos[i].proto;
-		ipsec_spi_t spi;
-		const ip_address *src, *dst;
-
-		if (inbound)
-		{
-			spi = protos[i].info->our_spi;
-			src = &c->spd.that.host_addr;
-			dst = &c->spd.this.host_addr;
-		}
-		else
-		{
-			spi = protos[i].info->attrs.spi;
-			src = &c->spd.this.host_addr;
-			dst = &c->spd.that.host_addr;
-		}
-
-		result &= del_spi(spi, proto, src, dst);
+		spi = inbound ? st->st_ah.our_spi : st->st_ah.attrs.spi;
+		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
+								host_src, host_dst, spi, IPPROTO_AH,
+								0 /* cpi */, mark_none) == SUCCESS;
 	}
+
+	if (st->st_esp.present)
+	{
+		spi = inbound ? st->st_esp.our_spi : st->st_esp.attrs.spi;
+		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
+								host_src, host_dst, spi, IPPROTO_ESP,
+								0 /* cpi */, mark_none) == SUCCESS;
+	}
+
+	if (st->st_ipcomp.present)
+	{
+		spi = inbound ? st->st_ipcomp.our_spi : st->st_ipcomp.attrs.spi;
+		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
+								host_src, host_dst, spi, IPPROTO_COMP,
+								0 /* cpi */, mark_none) == SUCCESS;
+	}
+
+	host_src->destroy(host_src);
+	host_dst->destroy(host_dst);
+
 	return result;
 }
 
