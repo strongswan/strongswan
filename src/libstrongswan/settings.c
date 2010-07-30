@@ -88,12 +88,11 @@ struct kv_t {
 };
 
 /**
- * find a section by a given key, using buffered key, reusable buffer
+ * find a section by a given key
  */
-static section_t *find_section_buffered(section_t *section, char *key,
-										va_list args, char *buf, int len)
+static section_t *find_section(section_t *section, char *key, va_list args)
 {
-	char *pos;
+	char name[512], *pos;
 	enumerator_t *enumerator;
 	section_t *current, *found = NULL;
 
@@ -101,20 +100,21 @@ static section_t *find_section_buffered(section_t *section, char *key,
 	{
 		return NULL;
 	}
-	pos = strchr(key, '.');
+	if (vsnprintf(name, sizeof(name), key, args) >= sizeof(name))
+	{
+		return NULL;
+	}
+
+	pos = strchr(name, '.');
 	if (pos)
 	{
 		*pos = '\0';
 		pos++;
 	}
-	if (vsnprintf(buf, len, key, args) >= len)
-	{
-		return NULL;
-	}
 	enumerator = section->sections->create_enumerator(section->sections);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (streq(current->name, buf))
+		if (streq(current->name, name))
 		{
 			found = current;
 			break;
@@ -123,32 +123,14 @@ static section_t *find_section_buffered(section_t *section, char *key,
 	enumerator->destroy(enumerator);
 	if (found && pos)
 	{
-		return find_section_buffered(found, pos, args, buf, len);
+		return find_section(found, pos, args);
 	}
 	return found;
 }
 
-/**
- * find a section by a given key
- */
-static section_t *find_section(section_t *section, char *key, va_list args)
+static char *find_value(section_t *section, char *key, va_list args)
 {
-	char buf[128], keybuf[512];
-
-	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
-	{
-		return NULL;
-	}
-	return find_section_buffered(section, keybuf, args, buf, sizeof(buf));
-}
-
-/**
- * Find the string value for a key, using buffered key, reusable buffer
- */
-static char *find_value_buffered(section_t *section, char *key, va_list args,
-								 char *buf, int len)
-{
-	char *pos, *value = NULL;
+	char name[512], *pos, *value = NULL;
 	enumerator_t *enumerator;
 	kv_t *kv;
 	section_t *current, *found = NULL;
@@ -158,20 +140,20 @@ static char *find_value_buffered(section_t *section, char *key, va_list args,
 		return NULL;
 	}
 
-	pos = strchr(key, '.');
+	if (vsnprintf(name, sizeof(name), key, args) >= sizeof(name))
+	{
+		return NULL;
+	}
+
+	pos = strchr(name, '.');
 	if (pos)
 	{
 		*pos = '\0';
 		pos++;
-
-		if (vsnprintf(buf, len, key, args) >= len)
-		{
-			return NULL;
-		}
 		enumerator = section->sections->create_enumerator(section->sections);
 		while (enumerator->enumerate(enumerator, &current))
 		{
-			if (streq(current->name, buf))
+			if (streq(current->name, name))
 			{
 				found = current;
 				break;
@@ -180,19 +162,15 @@ static char *find_value_buffered(section_t *section, char *key, va_list args,
 		enumerator->destroy(enumerator);
 		if (found)
 		{
-			return find_value_buffered(found, pos, args, buf, len);
+			return find_value(found, pos, args);
 		}
 	}
 	else
 	{
-		if (vsnprintf(buf, len, key, args) >= len)
-		{
-			return NULL;
-		}
 		enumerator = section->kv->create_enumerator(section->kv);
 		while (enumerator->enumerate(enumerator, &kv))
 		{
-			if (streq(kv->key, buf))
+			if (streq(kv->key, name))
 			{
 				value = kv->value;
 				break;
@@ -201,20 +179,6 @@ static char *find_value_buffered(section_t *section, char *key, va_list args,
 		enumerator->destroy(enumerator);
 	}
 	return value;
-}
-
-/**
- * Find the string value for a key
- */
-static char *find_value(section_t *section, char *key, va_list args)
-{
-	char buf[128], keybuf[512];
-
-	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
-	{
-		return NULL;
-	}
-	return find_value_buffered(section, keybuf, args, buf, sizeof(buf));
 }
 
 /**
