@@ -626,27 +626,19 @@ int main(int argc, char **argv)
 		fflush(stdout);
 	}
 
-	/* Close everything but ctl_fd and (if needed) stderr.
-	 * There is some danger that a library that we don't know
-	 * about is using some fd that we don't know about.
-	 * I guess we'll soon find out.
+	/* Redirect stdin, stdout and stderr to /dev/null
 	 */
 	{
-		int i;
-
-		for (i = getdtablesize() - 1; i >= 0; i--)  /* Bad hack */
-		{
-			if ((!log_to_stderr || i != 2) && i != ctl_fd)
-				close(i);
-		}
-
-		/* make sure that stdin, stdout, stderr are reserved */
-		if (open("/dev/null", O_RDONLY) != 0)
+		int fd;
+		if ((fd = open("/dev/null", O_RDWR)) == -1)
 			abort();
-		if (dup2(0, 1) != 1)
+		if (dup2(fd, 0) != 0)
 			abort();
-		if (!log_to_stderr && dup2(0, 2) != 2)
+		if (dup2(fd, 1) != 1)
 			abort();
+		if (!log_to_stderr && dup2(fd, 2) != 2)
+			abort();
+		close(fd);
 	}
 
 	init_constants();
