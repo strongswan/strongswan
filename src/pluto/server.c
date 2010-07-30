@@ -56,6 +56,7 @@
 #include "adns.h"       /* needs <resolv.h> */
 #include "dnskey.h"     /* needs keys.h and adns.h */
 #include "whack.h"      /* for RC_LOG_SERIOUS */
+#include "pluto.h"
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -811,7 +812,7 @@ call_server(void)
 	{
 		fd_set readfds;
 		fd_set writefds;
-		int ndes;
+		int ndes, events_fd;
 
 		/* wait for next interesting thing */
 
@@ -852,6 +853,11 @@ call_server(void)
 					maxfd = adns_afd;
 				FD_SET(adns_afd, &readfds);
 			}
+
+			events_fd = pluto->events->get_event_fd(pluto->events);
+			if (maxfd < events_fd)
+				maxfd = events_fd;
+			FD_SET(events_fd, &readfds);
 
 #ifdef KLIPS
 			if (!no_klips)
@@ -943,6 +949,17 @@ call_server(void)
 					DBG_log(BLANK_FORMAT);
 					DBG_log("*received adns message"));
 				handle_adns_answer();
+				passert(GLOBALS_ARE_RESET());
+				ndes--;
+			}
+
+			if (FD_ISSET(events_fd, &readfds))
+			{
+				passert(ndes > 0);
+				DBG(DBG_CONTROL,
+					DBG_log(BLANK_FORMAT);
+					DBG_log("*handling asynchronous events"));
+				pluto->events->handle(pluto->events);
 				passert(GLOBALS_ARE_RESET());
 				ndes--;
 			}

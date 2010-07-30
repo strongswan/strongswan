@@ -31,6 +31,7 @@
 
 typedef struct pluto_t pluto_t;
 
+#include <event_queue.h>
 #include <xauth/xauth_manager.h>
 
 #include <library.h>
@@ -41,9 +42,15 @@ typedef struct pluto_t pluto_t;
 struct pluto_t {
 
 	/**
+	 * event queue (callbacks, executed by the pluto main thread)
+	 */
+	event_queue_t *events;
+
+	/**
 	 * manager for payload attributes
 	 */
 	xauth_manager_t *xauth;
+
 };
 
 /**

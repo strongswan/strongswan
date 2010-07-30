@@ -41,6 +41,7 @@ pluto_t *pluto;
 void pluto_deinit()
 {
 	private_pluto_t *this = (private_pluto_t*)pluto;
+	this->public.events->destroy(this->public.events);
 	this->public.xauth->destroy(this->public.xauth);
 	free(this);
 	pluto = NULL;
@@ -55,6 +56,7 @@ bool pluto_init(char *file)
 
 	INIT(this,
 		.public = {
+			.events = event_queue_create(),
 			.xauth = xauth_manager_create(),
 		},
 	);

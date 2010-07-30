@@ -18,6 +18,7 @@ db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
 dnskey.c dnskey.h \
+event_queue.c event_queue.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
 ike_alg.c ike_alg.h \
