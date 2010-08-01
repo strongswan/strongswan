@@ -414,7 +414,7 @@ struct alg_info_esp *alg_info_esp_create_from_str(char *alg_str)
 	alg_info_esp = malloc_thing (struct alg_info_esp);
 	zero(alg_info_esp);
 
-	pfs_name=index (alg_str, ';');
+	pfs_name=strchr(alg_str, ';');
 	if (pfs_name)
 	{
 		memcpy(esp_buf, alg_str, pfs_name-alg_str);
