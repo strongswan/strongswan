@@ -75,6 +75,15 @@ struct private_child_rekey_t {
 	 * colliding task, may be delete or rekey
 	 */
 	task_t *collision;
+
+	/**
+	 * Indicate that peer destroyed the redundant child from collision.
+	 * This happens if a peer's delete notification for the redundant
+	 * child gets processed before the rekey job. If so, we must not
+	 * touch the child created in the collision since it points to
+	 * memory already freed.
+	 */
+	bool other_child_destroyed;
 };
 
 /**
@@ -239,9 +248,13 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, "
 				 "deleting rekeyed child");
 			to_delete = this->child_sa;
-			/* disable close action for the redundand child */
-			child_sa = other->child_create->get_child(other->child_create);
-			child_sa->set_close_action(child_sa, ACTION_NONE);
+			/* don't touch child other created, it has already been deleted */
+			if (!this->other_child_destroyed)
+			{
+				/* disable close action for the redundand child */
+				child_sa = other->child_create->get_child(other->child_create);
+				child_sa->set_close_action(child_sa, ACTION_NONE);
+			}
 		}
 		else
 		{
@@ -380,6 +393,13 @@ static void collide(private_child_rekey_t *this, task_t *other)
 	else if (other->get_type(other) == CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
+		if (del->get_child(del) == this->child_create->get_child(this->child_create))
+		{
+			/* peer deletes redundant child created in collision */
+			this->other_child_destroyed = TRUE;
+			other->destroy(other);
+			return;
+		}
 		if (del == NULL || del->get_child(del) != this->child_sa)
 		{
 			/* not the same child => no collision */
@@ -466,6 +486,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 	this->spi = spi;
 	this->collision = NULL;
 	this->child_delete = NULL;
+	this->other_child_destroyed = FALSE;
 
 	return &this->public;
 }
