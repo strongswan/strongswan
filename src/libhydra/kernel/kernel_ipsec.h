@@ -29,6 +29,7 @@ typedef enum policy_dir_t policy_dir_t;
 typedef enum policy_type_t policy_type_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
+typedef struct ipsec_sa_cfg_t ipsec_sa_cfg_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct mark_t mark_t;
 
@@ -99,6 +100,30 @@ enum ipcomp_transform_t {
  * enum strings for ipcomp_transform_t.
  */
 extern enum_name_t *ipcomp_transform_names;
+
+/**
+ * This struct contains details about IPsec SA(s) tied to a policy.
+ */
+struct ipsec_sa_cfg_t {
+	/** mode of SA (tunnel, transport) */
+	ipsec_mode_t mode;
+	/** unique ID */
+	u_int32_t reqid;
+	/** details about ESP/AH */
+	struct {
+		/** TRUE if this protocol is used */
+		bool use;
+		/** SPI for ESP/AH */
+		u_int32_t spi;
+	} esp, ah;
+	/** details about IPComp */
+	struct {
+		/** the IPComp transform used */
+		u_int16_t transform;
+		/** CPI for IPComp */
+		u_int16_t cpi;
+	} ipcomp;
+};
 
 /**
  * A lifetime_cfg_t defines the lifetime limits of an SA.
@@ -272,13 +297,8 @@ struct kernel_ipsec_t {
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
-	 * @param spi			SPI of optional ESP SA
-	 * @param ah_spi		SPI of optional AH SA
-	 * @param reqid			unique ID of an SA to use to enforce policy
+	 * @param sa			details about the SA(s) tied to this policy
 	 * @param mark			mark for this policy
-	 * @param mode			mode of SA (tunnel, transport)
-	 * @param ipcomp		the IPComp transform used
-	 * @param cpi			CPI for IPComp
 	 * @param routed		TRUE, if this policy is routed in the kernel
 	 * @return				SUCCESS if operation completed
 	 */
@@ -287,9 +307,7 @@ struct kernel_ipsec_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, policy_type_t type,
-							u_int32_t spi, u_int32_t ah_spi, u_int32_t reqid,
-							mark_t mark, ipsec_mode_t mode,
-							u_int16_t ipcomp, u_int16_t cpi, bool routed);
+							ipsec_sa_cfg_t *sa, mark_t mark, bool routed);
 
 	/**
 	 * Query the use time of a policy.

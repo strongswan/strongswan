@@ -1617,9 +1617,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, u_int32_t spi, u_int32_t ah_spi,
-	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool routed)
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
+	mark_t mark, bool routed)
 {
 	policy_entry_t *current, *policy;
 	bool found = FALSE;
@@ -1715,11 +1714,11 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			u_int8_t proto;
 			bool use;
 		} protos[] = {
-			{ IPPROTO_COMP, ipcomp != IPCOMP_NONE },
-			{ IPPROTO_ESP, spi != 0 },
-			{ IPPROTO_AH, ah_spi != 0 },
+			{ IPPROTO_COMP, sa->ipcomp.transform != IPCOMP_NONE },
+			{ IPPROTO_ESP, sa->esp.use },
+			{ IPPROTO_AH, sa->ah.use },
 		};
-		ipsec_mode_t proto_mode = mode;
+		ipsec_mode_t proto_mode = sa->mode;
 
 		rthdr->rta_type = XFRMA_TMPL;
 		rthdr->rta_len = 0; /* actual length is set below */
@@ -1738,7 +1737,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 				return FAILED;
 			}
 
-			tmpl->reqid = reqid;
+			tmpl->reqid = sa->reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
@@ -1793,7 +1792,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->route == NULL && direction == POLICY_FWD &&
-		mode != MODE_TRANSPORT && this->install_routes)
+		sa->mode != MODE_TRANSPORT && this->install_routes)
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);
 

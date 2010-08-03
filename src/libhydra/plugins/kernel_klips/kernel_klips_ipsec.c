@@ -1969,13 +1969,13 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, u_int32_t spi, u_int32_t ah_spi,
-	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool routed)
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
+	mark_t mark, bool routed)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	policy_entry_t *policy, *found = NULL;
+	u_int32_t spi;
 	u_int8_t satype;
 	size_t len;
 
@@ -1986,8 +1986,10 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	/* tunnel mode policies direct the packets into the pseudo IPIP SA */
-	satype = (mode == MODE_TUNNEL) ? SADB_X_SATYPE_IPIP :
-									 proto2satype(spi ? IPPROTO_ESP : IPPROTO_AH);
+	satype = (sa->mode == MODE_TUNNEL) ? SADB_X_SATYPE_IPIP
+									   : proto2satype(sa->esp.use ? IPPROTO_ESP
+																  : IPPROTO_AH);
+	spi = sa->esp.use ? sa->esp.spi : sa->ah.spi;
 
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction);
@@ -2019,7 +2021,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 		/* the reqid is always set to the latest child SA that trapped this
 		 * policy. we will need this reqid upon receiving an acquire. */
-		policy->reqid = reqid;
+		policy->reqid = sa->reqid;
 
 		/* increase the trap counter */
 		policy->trapcount++;
@@ -2097,7 +2099,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		route_entry_t *route = malloc_thing(route_entry_t);
 		route->src_ip = NULL;
 
-		if (mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
+		if (sa->mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
 			this->install_routes)
 		{
 			hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,

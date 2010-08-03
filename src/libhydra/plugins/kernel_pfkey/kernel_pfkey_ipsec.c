@@ -1593,9 +1593,8 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, u_int32_t spi, u_int32_t ah_spi,
-	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool routed)
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
+	mark_t mark, bool routed)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1612,7 +1611,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	/* create a policy */
-	policy = create_policy_entry(src_ts, dst_ts, direction, reqid);
+	policy = create_policy_entry(src_ts, dst_ts, direction, sa->reqid);
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
@@ -1661,13 +1660,13 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* one or more sadb_x_ipsecrequest extensions are added to the sadb_x_policy extension */
 	req = (struct sadb_x_ipsecrequest*)(pol + 1);
-	req->sadb_x_ipsecrequest_proto = spi ? IPPROTO_ESP : IPPROTO_AH;
+	req->sadb_x_ipsecrequest_proto = sa->esp.use ? IPPROTO_ESP : IPPROTO_AH;
 	/* !!! the length of this struct MUST be in octets instead of 64 bit words */
 	req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
-	req->sadb_x_ipsecrequest_mode = mode2kernel(mode);
-	req->sadb_x_ipsecrequest_reqid = reqid;
+	req->sadb_x_ipsecrequest_mode = mode2kernel(sa->mode);
+	req->sadb_x_ipsecrequest_reqid = sa->reqid;
 	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
-	if (mode == MODE_TUNNEL)
+	if (sa->mode == MODE_TUNNEL)
 	{
 		len = hostcpy(req + 1, src);
 		req->sadb_x_ipsecrequest_len += len;
@@ -1741,7 +1740,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->route == NULL && direction == POLICY_FWD &&
-		mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
+		sa->mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
 		this->install_routes)
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);

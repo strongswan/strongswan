@@ -184,13 +184,8 @@ struct kernel_interface_t {
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
-	 * @param spi			SPI of optional ESP SA
-	 * @param ah_spi		SPI of optional AH SA
-	 * @param reqid			unique ID of an SA to use to enforce policy
+	 * @param sa			details about the SA(s) tied to this policy
 	 * @param mark			mark for this policy
-	 * @param mode			mode of SA (tunnel, transport)
-	 * @param ipcomp		the IPComp transform used
-	 * @param cpi			CPI for IPComp
 	 * @param routed		TRUE, if this policy is routed in the kernel
 	 * @return				SUCCESS if operation completed
 	 */
@@ -199,9 +194,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, policy_type_t type,
-							u_int32_t spi, u_int32_t ah_spi, u_int32_t reqid,
-							mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
-							u_int16_t cpi, bool routed);
+							ipsec_sa_cfg_t *sa, mark_t mark, bool routed);
 
 	/**
 	 * Query the use time of a policy.
