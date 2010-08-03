@@ -51,7 +51,7 @@ bool test_cert_x509()
 		return FALSE;
 	}
 
-	encoding = ca_cert->get_encoding(ca_cert);
+	ca_cert->get_encoding(ca_cert, CERT_ASN1_DER, &encoding);
 	parsed = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 						BUILD_BLOB_ASN1_DER, encoding,
 						BUILD_END);
@@ -81,7 +81,7 @@ bool test_cert_x509()
 		return FALSE;
 	}
 
-	encoding = peer_cert->get_encoding(peer_cert);
+	peer_cert->get_encoding(peer_cert, CERT_ASN1_DER, &encoding);
 	parsed = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 						BUILD_BLOB_ASN1_DER, encoding,
 						BUILD_END);
