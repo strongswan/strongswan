@@ -159,19 +159,13 @@ static void set_text_said(char *text_said, const ip_address *dst,
 bool no_klips = FALSE;  /* don't actually use KLIPS */
 
 /**
- * Struct to store information about the SAs to install in the kernel
+ * Default IPsec SA config (e.g. to install trap policies).
  */
-struct kernel_proto_info {
-	ipsec_mode_t mode;
-	u_int32_t esp_spi;
-	u_int32_t ah_spi;
-	u_int32_t reqid;
-	u_int16_t ipcomp;
-	u_int16_t cpi;
-};
-
-static const struct kernel_proto_info null_proto_info = {
+static ipsec_sa_cfg_t null_ipsec_sa = {
 	.mode = MODE_TRANSPORT,
+	.esp = {
+		.use = TRUE,
+	},
 };
 
 /**
@@ -942,7 +936,7 @@ static bool raw_eroute(const ip_address *this_host,
 					   unsigned int proto,
 					   unsigned int satype,
 					   unsigned int transport_proto,
-					   const struct kernel_proto_info *pi,
+					   ipsec_sa_cfg_t *sa,
 					   time_t use_lifetime,
 					   unsigned int op,
 					   const char *opname USED_BY_DEBUG)
@@ -1016,9 +1010,8 @@ static bool raw_eroute(const ip_address *this_host,
 	{
 		/* FIXME: use_lifetime? */
 		ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
-						host_src, host_dst, ts_src, ts_dst, dir, type,
-						pi->esp_spi, pi->ah_spi, pi->reqid, mark_none, pi->mode,
-						pi->ipcomp, pi->cpi, routed) == SUCCESS;
+						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
+						mark_none, routed) == SUCCESS;
 	}
 
 	if (dir == POLICY_IN)
@@ -1031,13 +1024,12 @@ static bool raw_eroute(const ip_address *this_host,
 		}
 
 		if (!deleting && ok &&
-			(pi->mode == MODE_TUNNEL || satype == SADB_X_SATYPE_INT))
+			(sa->mode == MODE_TUNNEL || satype == SADB_X_SATYPE_INT))
 		{
 			/* FIXME: use_lifetime? */
 			ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
-						host_src, host_dst, ts_src, ts_dst, dir, type,
-						pi->esp_spi, pi->ah_spi, pi->reqid, mark_none, pi->mode,
-						pi->ipcomp, pi->cpi, routed) == SUCCESS;
+						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
+						mark_none, routed) == SUCCESS;
 		}
 	}
 
@@ -1094,7 +1086,7 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 		{
 			if (raw_eroute(null_host, &this_broad_client, null_host,
 						   &that_broad_client, htonl(shunt_spi), SA_INT,
-						   SADB_X_SATYPE_INT, 0, &null_proto_info,
+						   SADB_X_SATYPE_INT, 0, &null_ipsec_sa,
 						   SHUNT_PATIENCE, ERO_ADD, why))
 			{
 				struct bare_shunt *bs = malloc_thing(struct bare_shunt);
@@ -1119,7 +1111,7 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 
 	if (raw_eroute(null_host, &this_client, null_host, &that_client,
 				   htonl(shunt_spi), SA_INT, SADB_X_SATYPE_INT, transport_proto,
-				   &null_proto_info, SHUNT_PATIENCE, ERO_DELETE, why))
+				   &null_ipsec_sa, SHUNT_PATIENCE, ERO_DELETE, why))
 	{
 		struct bare_shunt **bs_pp = bare_shunt_ptr(&this_client, &that_client
 										, transport_proto);
@@ -1136,8 +1128,8 @@ bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
 
 static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 							  unsigned int proto, unsigned int satype,
-							  const struct kernel_proto_info *proto_info,
-							  unsigned int op, const char *opname)
+							  ipsec_sa_cfg_t *sa, unsigned int op,
+							  const char *opname)
 {
 	const ip_address *peer = &sr->that.host_addr;
 	char buf2[256];
@@ -1151,7 +1143,7 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 	}
 	return raw_eroute(&sr->this.host_addr, &sr->this.client, peer,
 					  &sr->that.client, spi, proto, satype, sr->this.protocol,
-					  proto_info, 0, op, buf2);
+					  sa, 0, op, buf2);
 }
 
 /* assign a bare hold to a connection */
@@ -1195,10 +1187,10 @@ bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 	{
 		if (erouted(ro)
 		? !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT,
-							 &null_proto_info, ERO_REPLACE,
+							 &null_ipsec_sa, ERO_REPLACE,
 							 "replace %trap with broad %hold")
 		: !eroute_connection(sr, htonl(SPI_HOLD), SA_INT, SADB_X_SATYPE_INT,
-							 &null_proto_info, ERO_ADD, "add broad %hold"))
+							 &null_ipsec_sa, ERO_ADD, "add broad %hold"))
 		{
 			return FALSE;
 		}
@@ -1218,7 +1210,7 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 {
 	u_int inner_proto, inner_satype;
 	ipsec_spi_t inner_spi = 0;
-	struct kernel_proto_info proto_info = {
+	ipsec_sa_cfg_t sa = {
 		.mode = MODE_TRANSPORT,
 	};
 	bool tunnel = FALSE;
@@ -1228,7 +1220,8 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_ah.attrs.spi;
 		inner_proto = SA_AH;
 		inner_satype = SADB_SATYPE_AH;
-		proto_info.ah_spi = inner_spi;
+		sa.ah.use = TRUE;
+		sa.ah.spi = inner_spi;
 		tunnel |= st->st_ah.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
@@ -1237,7 +1230,8 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_esp.attrs.spi;
 		inner_proto = SA_ESP;
 		inner_satype = SADB_SATYPE_ESP;
-		proto_info.esp_spi = inner_spi;
+		sa.esp.use = TRUE;
+		sa.esp.spi = inner_spi;
 		tunnel |= st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
@@ -1246,12 +1240,12 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_ipcomp.attrs.spi;
 		inner_proto = SA_COMP;
 		inner_satype = SADB_X_SATYPE_COMP;
-		proto_info.cpi = htons(ntohl(inner_spi));
-		proto_info.ipcomp = st->st_ipcomp.attrs.transid;
+		sa.ipcomp.transform = st->st_ipcomp.attrs.transid;
+		sa.ipcomp.cpi = htons(ntohl(inner_spi));
 		tunnel |= st->st_ipcomp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 	}
 
-	if (!inner_spi)
+	if (!sa.ah.use && !sa.esp.use && !sa.ipcomp.transform)
 	{
 		impossible();   /* no transform at all! */
 	}
@@ -1261,13 +1255,13 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 		inner_spi = st->st_tunnel_out_spi;
 		inner_proto = SA_IPIP;
 		inner_satype = SADB_X_SATYPE_IPIP;
-		proto_info.mode = MODE_TUNNEL;
+		sa.mode = MODE_TUNNEL;
 	}
 
-	proto_info.reqid = sr->reqid;
+	sa.reqid = sr->reqid;
 
 	return eroute_connection(sr, inner_spi, inner_proto, inner_satype,
-							 &proto_info, op, opname);
+							 &sa, op, opname);
 }
 
 /* compute a (host-order!) SPI to implement the policy in connection c */
@@ -1375,11 +1369,11 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 
 	ok = raw_eroute(&c->spd.that.host_addr, &c->spd.that.client,
 					&c->spd.this.host_addr, &c->spd.this.client, htonl(spi),
-					SA_INT, SADB_X_SATYPE_INT, 0, &null_proto_info, 0,
+					SA_INT, SADB_X_SATYPE_INT, 0, &null_ipsec_sa, 0,
 					op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
 
 	return eroute_connection(sr, htonl(spi), SA_INT, SADB_X_SATYPE_INT,
-							 &null_proto_info, op, opname) && ok;
+							 &null_ipsec_sa, op, opname) && ok;
 }
 
 static bool setup_half_ipsec_sa(struct state *st, bool inbound)
@@ -1388,7 +1382,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	connection_t *c = st->st_connection;
 	struct end *src, *dst;
 	ipsec_mode_t mode = MODE_TRANSPORT;
-	struct kernel_proto_info proto_info = { .mode = 0 };
+	ipsec_sa_cfg_t sa = { .mode = 0 };
 	lifetime_cfg_t lt_none = { .time = { .rekey = 0 } };
 	mark_t mark_none = { 0, 0 };
 	bool ok = TRUE;
@@ -1415,8 +1409,8 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		mode = MODE_TUNNEL;
 	}
 
-	proto_info.mode = mode;
-	proto_info.reqid = c->spd.reqid;
+	sa.mode = mode;
+	sa.reqid = c->spd.reqid;
 
 	memset(said, 0, sizeof(said));
 
@@ -1439,8 +1433,8 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				goto fail;
 		}
 
-		proto_info.cpi = htons(ntohl(ipcomp_spi));
-		proto_info.ipcomp = st->st_ipcomp.attrs.transid;
+		sa.ipcomp.cpi = htons(ntohl(ipcomp_spi));
+		sa.ipcomp.transform = st->st_ipcomp.attrs.transid;
 
 		said_next->spi = ipcomp_spi;
 		said_next->proto = IPPROTO_COMP;
@@ -1548,7 +1542,9 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		auth_key.ptr = esp_dst_keymat + key_len;
 		auth_key.len = ei->authkeylen;
 
-		proto_info.esp_spi = esp_spi;
+		sa.esp.use = TRUE;
+		sa.esp.spi = esp_spi;
+
 		said_next->spi = esp_spi;
 		said_next->proto = IPPROTO_ESP;
 
@@ -1579,7 +1575,9 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		auth_key.ptr = ah_dst_keymat;
 		auth_key.len = st->st_ah.keymat_len;
 
-		proto_info.ah_spi = ah_spi;
+		sa.ah.use = TRUE;
+		sa.ah.spi = ah_spi;
+
 		said_next->spi = ah_spi;
 		said_next->proto = IPPROTO_AH;
 
@@ -1599,7 +1597,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	{
 		(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
 						  &dst->client, 256, SA_IPIP, SADB_SATYPE_UNSPEC,
-						  c->spd.this.protocol, &proto_info, 0, ERO_ADD_INBOUND,
+						  c->spd.this.protocol, &sa, 0, ERO_ADD_INBOUND,
 						  "add inbound");
 	}
 
@@ -1641,7 +1639,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 			(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
 							  &dst->client, 256, IPSEC_PROTO_ANY,
 							  SADB_SATYPE_UNSPEC, c->spd.this.protocol,
-							  &null_proto_info, 0, ERO_DEL_INBOUND,
+							  &null_ipsec_sa, 0, ERO_DEL_INBOUND,
 							  "delete inbound");
 		}
 	}
@@ -2130,7 +2128,7 @@ bool route_and_eroute(connection_t *c USED_BY_KLIPS,
 								  &bs->his,
 								  bs->said.spi,  /* network order */
 								  SA_INT, SADB_X_SATYPE_INT, 0,
-								  &null_proto_info, SHUNT_PATIENCE,
+								  &null_ipsec_sa, SHUNT_PATIENCE,
 								  ERO_REPLACE, "restore");
 			}
 			else if (ero != NULL)
