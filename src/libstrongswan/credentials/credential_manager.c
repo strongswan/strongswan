@@ -157,8 +157,10 @@ static enumerator_t *create_sets_enumerator(private_credential_manager_t *this)
 	linked_list_t *local;
 
 	INIT(enumerator,
-		.public.enumerate = (void*)_sets_enumerate,
-		.public.destroy = _sets_destroy,
+		.public = {
+			.enumerate = (void*)_sets_enumerate,
+			.destroy = _sets_destroy,
+		},
 		.global = this->sets->create_enumerator(this->sets),
 	);
 	local = this->local_sets->get(this->local_sets);

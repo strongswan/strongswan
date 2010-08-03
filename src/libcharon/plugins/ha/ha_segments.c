@@ -382,7 +382,9 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 
 	INIT(this,
 		.public = {
-			.listener.alert = _alert_hook,
+			.listener = {
+				.alert = _alert_hook,
+			},
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.handle_status = _handle_status,
