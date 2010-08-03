@@ -14,27 +14,27 @@
  */
 
 /**
- * @defgroup tls_protection tls_protection
- * @{ @ingroup tls
+ * @defgroup tls_fragmentation tls_fragmentation
+ * @{ @ingroup libtls
  */
 
-#ifndef TLS_PROTECTION_H_
-#define TLS_PROTECTION_H_
+#ifndef TLS_FRAGMENTATION_H_
+#define TLS_FRAGMENTATION_H_
 
-typedef struct tls_protection_t tls_protection_t;
+typedef struct tls_fragmentation_t tls_fragmentation_t;
 
 #include <library.h>
 
 #include "tls.h"
-#include "tls_compression.h"
+#include "tls_handshake.h"
 
 /**
- * TLS record protocol protection layer.
+ * TLS record protocol fragmentation layer.
  */
-struct tls_protection_t {
+struct tls_fragmentation_t {
 
 	/**
-	 * Process a protected TLS record, pass it to upper layers.
+	 * Process a fragmented TLS record, pass it to upper layers.
 	 *
 	 * @param type		type of the TLS record to process
 	 * @param data		associated TLS record data
@@ -43,11 +43,11 @@ struct tls_protection_t {
 	 *					- FAILED if TLS handshake failed
 	 *					- NEED_MORE if more invocations to process/build needed
 	 */
-	status_t (*process)(tls_protection_t *this,
+	status_t (*process)(tls_fragmentation_t *this,
 						tls_content_type_t type, chunk_t data);
 
 	/**
-	 * Query upper layer for TLS record, build protected record.
+	 * Query upper layer for TLS messages, build fragmented records.
 	 *
 	 * @param type		type of the built TLS record
 	 * @param data		allocated data of the built TLS record
@@ -57,34 +57,21 @@ struct tls_protection_t {
 	 *					- NEED_MORE if upper layers have more records to send
 	 *					- INVALID_STATE if more input records required
 	 */
-	status_t (*build)(tls_protection_t *this,
+	status_t (*build)(tls_fragmentation_t *this,
 					  tls_content_type_t *type, chunk_t *data);
 
 	/**
-	 * Set a new cipher, including encryption and integrity algorithms.
-	 *
-	 * @param inbound	TRUE to use cipher for inbound data, FALSE for outbound
-	 * @param signer	new signer to use, gets owned by protection layer
-	 * @param crypter	new crypter to use, gets owned by protection layer
-	 * @param iv		initial IV for crypter, gets owned by protection layer
+	 * Destroy a tls_fragmentation_t.
 	 */
-	void (*set_cipher)(tls_protection_t *this, bool inbound, signer_t *signer,
-					   crypter_t *crypter, chunk_t iv);
-
-	/**
-	 * Destroy a tls_protection_t.
-	 */
-	void (*destroy)(tls_protection_t *this);
+	void (*destroy)(tls_fragmentation_t *this);
 };
 
 /**
- * Create a tls_protection instance.
+ * Create a tls_fragmentation instance.
  *
- * @param tls				TLS context
- * @param compression		compression layer of TLS stack
- * @return					TLS protection layer.
+ * @param handshake			upper layer handshake protocol
+ * @return					TLS fragmentation layer.
  */
-tls_protection_t *tls_protection_create(tls_t *tls,
-										tls_compression_t *compression);
+tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake);
 
-#endif /** TLS_PROTECTION_H_ @}*/
+#endif /** TLS_FRAGMENTATION_H_ @}*/

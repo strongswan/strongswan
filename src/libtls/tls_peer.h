@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_peer tls_peer
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_PEER_H_

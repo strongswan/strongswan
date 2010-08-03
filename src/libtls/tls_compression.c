@@ -15,8 +15,6 @@
 
 #include "tls_compression.h"
 
-#include <daemon.h>
-
 typedef struct private_tls_compression_t private_tls_compression_t;
 
 /**

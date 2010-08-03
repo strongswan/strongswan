@@ -14,11 +14,13 @@
  */
 
 /**
- * @defgroup tlsgroup tls
- * @{ @ingroup eap_tls
+ * @defgroup libtls libtls
+ *
+ * @addtogroup libtls
+ * TLS implementation on top of libstrongswan
  *
  * @defgroup tls tls
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_H_

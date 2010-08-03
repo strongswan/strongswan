@@ -17,7 +17,7 @@
 
 #include "tls_reader.h"
 
-#include <daemon.h>
+#include <debug.h>
 
 typedef struct private_tls_fragmentation_t private_tls_fragmentation_t;
 

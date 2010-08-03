@@ -22,8 +22,6 @@
 #include "tls_server.h"
 #include "tls_peer.h"
 
-#include <daemon.h>
-
 ENUM_BEGIN(tls_version_names, SSL_2_0, SSL_2_0,
 	"SSLv2");
 ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_2, SSL_2_0,

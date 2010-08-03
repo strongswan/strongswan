@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_compression tls_compression
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_COMPRESSION_H_

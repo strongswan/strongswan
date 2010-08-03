@@ -12,6 +12,10 @@ if USE_SIMAKA
   SUBDIRS += libsimaka
 endif
 
+if USE_TLS
+  SUBDIRS += libtls
+endif
+
 if USE_FILE_CONFIG
   SUBDIRS += libfreeswan starter ipsec _copyright
 endif

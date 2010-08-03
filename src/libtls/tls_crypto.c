@@ -15,7 +15,7 @@
 
 #include "tls_crypto.h"
 
-#include <daemon.h>
+#include <debug.h>
 
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 

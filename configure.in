@@ -225,6 +225,10 @@ if test x$eap_sim = xtrue; then
 	simaka=true;
 fi
 
+if test x$eap_tls = xtrue; then
+	tls=true;
+fi
+
 if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse; then
 		sha1=true;
@@ -895,6 +899,7 @@ AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
+AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
@@ -955,6 +960,7 @@ AC_OUTPUT(
 	src/libhydra/plugins/resolve/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
+	src/libtls/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile

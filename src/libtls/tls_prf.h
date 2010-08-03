@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_prf tls_prf
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_PRF_H_

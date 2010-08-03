@@ -15,7 +15,7 @@
 
 #include "eap_tls.h"
 
-#include "tls/tls.h"
+#include <tls.h>
 
 #include <daemon.h>
 #include <library.h>

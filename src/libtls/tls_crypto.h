@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_crypto tls_crypto
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_CRYPTO_H_

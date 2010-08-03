@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,7 +15,7 @@
 
 #include "tls_reader.h"
 
-#include <daemon.h>
+#include <debug.h>
 
 typedef struct private_tls_reader_t private_tls_reader_t;
 

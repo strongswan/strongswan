@@ -15,7 +15,7 @@
 
 #include "tls_peer.h"
 
-#include <daemon.h>
+#include <debug.h>
 
 #include <time.h>
 

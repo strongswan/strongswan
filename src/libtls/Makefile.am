@@ -1,0 +1,15 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan
+
+noinst_LTLIBRARIES = libtls.la
+libtls_la_SOURCES = \
+	tls_protection.h tls_protection.c \
+	tls_compression.h tls_compression.c \
+	tls_fragmentation.h tls_fragmentation.c \
+	tls_crypto.h tls_crypto.c \
+	tls_prf.h tls_prf.c \
+	tls_reader.h tls_reader.c \
+	tls_writer.h tls_writer.c \
+	tls_peer.h tls_peer.c \
+	tls_server.h tls_server.c \
+	tls_handshake.h tls.h tls.c

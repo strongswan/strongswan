@@ -352,6 +352,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TLS
+if MONOLITHIC
+  # otherwise this library is linked to eap_tls
+  libcharon_la_LIBADD += $(top_builddir)/src/libtls/libtls.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
   PLUGINS += medsrv

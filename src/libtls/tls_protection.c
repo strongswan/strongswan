@@ -15,7 +15,7 @@
 
 #include "tls_protection.h"
 
-#include <daemon.h>
+#include <debug.h>
 
 typedef struct private_tls_protection_t private_tls_protection_t;
 

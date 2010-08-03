@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_writer tls_writer
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_WRITER_H_

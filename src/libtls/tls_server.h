@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tls_server tls_server
- * @{ @ingroup tls
+ * @{ @ingroup libtls
  */
 
 #ifndef TLS_SERVER_H_

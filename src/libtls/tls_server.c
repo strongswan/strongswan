@@ -17,7 +17,7 @@
 
 #include <time.h>
 
-#include <daemon.h>
+#include <debug.h>
 
 typedef struct private_tls_server_t private_tls_server_t;
 
