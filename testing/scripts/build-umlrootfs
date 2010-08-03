@@ -278,7 +278,7 @@ then
 fi
 
 echo "" >> $INSTALLSHELL
-echo "make" >> $INSTALLSHELL
+echo "make -j" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
 echo "ldconfig" >> $INSTALLSHELL
 
