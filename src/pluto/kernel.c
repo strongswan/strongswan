@@ -38,6 +38,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <crypto/rngs/rng.h>
+#include <kernel/kernel_listener.h>
 
 #ifdef KLIPS
 #include <signal.h>
@@ -66,6 +67,7 @@
 #include "nat_traversal.h"
 #include "alg_info.h"
 #include "kernel_alg.h"
+#include "pluto.h"
 
 
 bool can_do_IPcomp = TRUE;  /* can system actually perform IPCOMP? */
@@ -181,6 +183,22 @@ static traffic_selector_t *traffic_selector_from_subnet(const ip_subnet *client,
 											 portof(&client->addr));
 	return ts;
 }
+
+/**
+ * Helper function that converts a traffic_selector_t to an ip_subnet.
+ */
+static ip_subnet subnet_from_traffic_selector(traffic_selector_t *ts)
+{
+	ip_subnet subnet;
+	host_t *net;
+	u_int8_t mask;
+	ts->to_subnet(ts, &net, &mask);
+	subnet.addr = *(ip_address*)net->get_sockaddr(net);
+	subnet.maskbits = mask;
+	net->destroy(net);
+	return subnet;
+}
+
 
 void record_and_initiate_opportunistic(const ip_subnet *ours,
 									   const ip_subnet *his,
@@ -1773,17 +1791,63 @@ failed:
 
 const struct kernel_ops *kernel_ops;
 
+/**
+ * Data for acquire events
+ */
+typedef struct {
+	/** Subnets */
+	ip_subnet src, dst;
+	/** Transport protocol */
+	int proto;
+} acquire_data_t;
+
+/**
+ * Callback for acquire events (called by main thread)
+ */
+void handle_acquire(acquire_data_t *this)
+{
+	record_and_initiate_opportunistic(&this->src, &this->dst, this->proto,
+									  "%acquire");
+}
+
+/**
+ * Handler for kernel events (called by thread-pool thread)
+ */
+kernel_listener_t *kernel_handler;
+
+METHOD(kernel_listener_t, acquire, bool,
+	   kernel_listener_t *this, u_int32_t reqid,
+	   traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+{
+	if (src_ts && dst_ts)
+	{
+		acquire_data_t *data;
+		DBG(DBG_CONTROL,
+			DBG_log("creating acquire event for policy %R === %R "
+					"with reqid {%u}", src_ts, dst_ts, reqid));
+		INIT(data,
+			.src = subnet_from_traffic_selector(src_ts),
+			.dst = subnet_from_traffic_selector(dst_ts),
+			.proto = src_ts->get_protocol(src_ts),
+		);
+		pluto->events->queue(pluto->events, (void*)handle_acquire, data, free);
+	}
+	else
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("ignoring acquire without traffic selectors for policy "
+					"with reqid {%u}", reqid));
+	}
+	DESTROY_IF(src_ts);
+	DESTROY_IF(dst_ts);
+	return TRUE;
+}
+
 #endif /* KLIPS */
 
 void init_kernel(void)
 {
 #ifdef KLIPS
-
-	if (no_klips)
-	{
-		kernel_ops = &noklips_kernel_ops;
-		return;
-	}
 
 	init_pfkey();
 
@@ -1807,14 +1871,23 @@ void init_kernel(void)
 	}
 #endif
 
-	if (kernel_ops->init)
-	{
-		kernel_ops->init();
-	}
-
 	/* register SA types that we can negotiate */
 	can_do_IPcomp = FALSE;  /* until we get a response from KLIPS */
 	kernel_ops->pfkey_register();
+
+	INIT(kernel_handler,
+		.acquire = _acquire,
+	);
+	hydra->kernel_interface->add_listener(hydra->kernel_interface,
+										  kernel_handler);
+#endif
+}
+
+void kernel_finalize()
+{
+#ifdef KLIPS
+	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
+											 kernel_handler);
 #endif
 }
 

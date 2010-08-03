@@ -151,6 +151,7 @@ extern void record_and_initiate_opportunistic(const ip_subnet *
 											  , const char *why);
 
 extern void init_kernel(void);
+extern void kernel_finalize(void);
 
 extern bool trap_connection(struct connection *c);
 extern void unroute_connection(struct connection *c);

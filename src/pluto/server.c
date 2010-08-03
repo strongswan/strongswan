@@ -859,20 +859,6 @@ call_server(void)
 				maxfd = events_fd;
 			FD_SET(events_fd, &readfds);
 
-#ifdef KLIPS
-			if (!no_klips)
-			{
-				int fd = *kernel_ops->async_fdp;
-
-				if (kernel_ops->process_queue)
-					kernel_ops->process_queue();
-				if (maxfd < fd)
-					maxfd = fd;
-				passert(!FD_ISSET(fd, &readfds));
-				FD_SET(fd, &readfds);
-			}
-#endif
-
 			if (listening)
 			{
 				for (ifp = interfaces; ifp != NULL; ifp = ifp->next)
@@ -963,19 +949,6 @@ call_server(void)
 				passert(GLOBALS_ARE_RESET());
 				ndes--;
 			}
-
-#ifdef KLIPS
-			if (!no_klips && FD_ISSET(*kernel_ops->async_fdp, &readfds))
-			{
-				passert(ndes > 0);
-				DBG(DBG_CONTROL,
-					DBG_log(BLANK_FORMAT);
-					DBG_log("*received kernel message"));
-				kernel_ops->process_msg();
-				passert(GLOBALS_ARE_RESET());
-				ndes--;
-			}
-#endif
 
 			for (ifp = interfaces; ifp != NULL; ifp = ifp->next)
 			{

@@ -786,6 +786,7 @@ void exit_pluto(int status)
 	free_remembered_public_keys();
 	delete_every_connection();
 	whack_attribute_finalize(); /* free in-memory pools */
+	kernel_finalize();
 	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
