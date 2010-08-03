@@ -1437,17 +1437,17 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	timerclear(&this->last_roam);
 	this->routing_table = lib->settings->get_int(lib->settings,
-					"charon.routing_table", ROUTING_TABLE);
+					"%s.routing_table", ROUTING_TABLE, hydra->daemon);
 	this->routing_table_prio = lib->settings->get_int(lib->settings,
-					"charon.routing_table_prio", ROUTING_TABLE_PRIO);
+					"%s.routing_table_prio", ROUTING_TABLE_PRIO, hydra->daemon);
 	this->process_route = lib->settings->get_bool(lib->settings,
-					"charon.process_route", TRUE);
+					"%s.process_route", TRUE, hydra->daemon);
 	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
-					"charon.install_virtual_ip", TRUE);
+					"%s.install_virtual_ip", TRUE, hydra->daemon);
 
 	this->rt_exclude = linked_list_create();
 	exclude = lib->settings->get_str(lib->settings,
-					"charon.ignore_routing_tables", NULL);
+					"%s.ignore_routing_tables", NULL, hydra->daemon);
 	if (exclude)
 	{
 		char *token;

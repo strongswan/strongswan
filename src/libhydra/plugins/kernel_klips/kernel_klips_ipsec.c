@@ -316,7 +316,8 @@ static status_t attach_ipsec_dev(char* name, char *phys_name)
 	}
 
 	mtu = lib->settings->get_int(lib->settings,
-						"charon.plugins.kernel-klips.ipsec_dev_mtu", 0);
+						"%s.plugins.kernel-klips.ipsec_dev_mtu", 0,
+						hydra->daemon);
 	if (mtu <= 0)
 	{
 		/* guess MTU as physical MTU - ESP overhead [- NAT-T overhead]
@@ -1418,7 +1419,7 @@ static job_requeue_t receive_events(private_kernel_klips_ipsec_t *this)
 			 * longer period than configured as hard limit, we wouldn't be able
 			 * to rekey the SA and just receive the hard expire and thus delete
 			 * the SA.
-			 * To avoid this behavior and to make charon behave as with the
+			 * To avoid this behavior and to make the daemon behave as with the
 			 * other kernel plugins, we implement the expiration of SAs
 			 * ourselves. */
 			break;
@@ -1532,7 +1533,7 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	rng->get_bytes(rng, sizeof(spi_gen), (void*)&spi_gen);
 	rng->destroy(rng);
 
-	/* charon's SPIs lie within the range from 0xc0000000 to 0xcFFFFFFF */
+	/* allocated SPIs lie within the range from 0xc0000000 to 0xcFFFFFFF */
 	spi_gen = 0xc0000000 | (spi_gen & 0x0FFFFFFF);
 
 	*spi = htonl(spi_gen);
@@ -2488,8 +2489,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 {
 	int i, count = lib->settings->get_int(lib->settings,
-						"charon.plugins.kernel-klips.ipsec_dev_count",
-						DEFAULT_IPSEC_DEV_COUNT);
+						"%s.plugins.kernel-klips.ipsec_dev_count",
+						DEFAULT_IPSEC_DEV_COUNT, hydra->daemon);
 
 	for (i = 0; i < count; ++i)
 	{
@@ -2599,7 +2600,8 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
-												"charon.install_routes", TRUE),
+												  "%s.install_routes", TRUE,
+												  hydra->daemon),
 	);
 
 	/* initialize ipsec devices */

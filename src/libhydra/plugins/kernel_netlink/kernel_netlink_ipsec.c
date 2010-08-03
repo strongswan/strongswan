@@ -2167,7 +2167,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 									 (hashtable_equals_t)policy_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
-												"charon.install_routes", TRUE),
+												  "%s.install_routes", TRUE,
+												  hydra->daemon),
 	);
 
 	/* disable lifetimes for allocated SPIs in kernel */

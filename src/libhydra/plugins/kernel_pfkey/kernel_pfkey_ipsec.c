@@ -2133,7 +2133,8 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
-												"charon.install_routes", TRUE),
+												  "%s.install_routes", TRUE,
+												  hydra->daemon),
 	);
 
 	/* create a PF_KEY socket to communicate with the kernel */
