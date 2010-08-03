@@ -180,7 +180,7 @@ static traffic_selector_t *traffic_selector_from_subnet(const ip_subnet *client,
 	host_t *net;
 	net = host_create_from_sockaddr((sockaddr_t*)&client->addr);
 	ts = traffic_selector_create_from_subnet(net, client->maskbits, proto,
-											 portof(&client->addr));
+											 net->get_port(net));
 	return ts;
 }
 
