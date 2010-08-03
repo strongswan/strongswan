@@ -354,7 +354,7 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 	if (sync)
 	{
 		/* request a resync as soon as we are up */
-		charon->scheduler->schedule_job(charon->scheduler, (job_t*)
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 						callback_job_create((callback_job_cb_t)request_resync,
 											this, NULL, NULL), 1);
 	}

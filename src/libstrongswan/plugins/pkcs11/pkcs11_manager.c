@@ -21,7 +21,6 @@
 
 #include "pkcs11_library.h"
 
-#include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_pkcs11_manager_t private_pkcs11_manager_t;
@@ -392,7 +391,7 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 		query_slots(entry);
 		entry->job = callback_job_create((void*)dispatch_slot_events,
 										 entry, (void*)end_dispatch, NULL);
-		charon->processor->queue_job(charon->processor, (job_t*)entry->job);
+		lib->processor->queue_job(lib->processor, (job_t*)entry->job);
 	}
 	enumerator->destroy(enumerator);
 
