@@ -673,17 +673,32 @@ METHOD(child_sa_t, add_policies, status_t,
 
 	if (this->config->install_policy(this->config))
 	{
-		u_int32_t my_esp = 0, my_ah = 0, other_esp = 0, other_ah = 0;
+		ipsec_sa_cfg_t my_sa = {
+			.mode = this->mode,
+			.reqid = this->reqid,
+			.ipcomp = {
+				.transform = this->ipcomp,
+			},
+		}, other_sa = my_sa;
+
+		my_sa.ipcomp.cpi = this->my_cpi;
+		other_sa.ipcomp.cpi = this->other_cpi;
+
 		if (this->protocol == PROTO_ESP)
 		{
-			my_esp = this->my_spi;
-			other_esp = this->other_spi;
+			my_sa.esp.use = TRUE;
+			my_sa.esp.spi = this->my_spi;
+			other_sa.esp.use = TRUE;
+			other_sa.esp.spi = this->other_spi;
 		}
 		else
 		{
-			my_ah = this->my_spi;
-			other_ah = this->other_spi;
+			my_sa.ah.use = TRUE;
+			my_sa.ah.spi = this->my_spi;
+			other_sa.ah.use = TRUE;
+			other_sa.ah.spi = this->other_spi;
 		}
+
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -692,24 +707,21 @@ METHOD(child_sa_t, add_policies, status_t,
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->my_addr, this->other_addr, my_ts, other_ts,
-							POLICY_OUT, POLICY_IPSEC, other_esp, other_ah,
-							this->reqid, this->mark_out, this->mode,
-							this->ipcomp, this->other_cpi, routed);
+							POLICY_OUT, POLICY_IPSEC, &other_sa,
+							this->mark_out, routed);
 
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_IN, POLICY_IPSEC, my_esp, my_ah,
-							this->reqid, this->mark_in, this->mode,
-							this->ipcomp, this->my_cpi, routed);
+							POLICY_IN, POLICY_IPSEC, &my_sa,
+							this->mark_in, routed);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
-							POLICY_FWD, POLICY_IPSEC, my_esp, my_ah,
-							this->reqid, this->mark_in, this->mode,
-							this->ipcomp, this->my_cpi, routed);
+							POLICY_FWD, POLICY_IPSEC, &my_sa,
+							this->mark_in, routed);
 			}
 
 			if (status != SUCCESS)
@@ -777,17 +789,32 @@ METHOD(child_sa_t, update, status_t,
 
 	if (this->config->install_policy(this->config))
 	{
-		u_int32_t my_esp = 0, my_ah = 0, other_esp = 0, other_ah = 0;
+		ipsec_sa_cfg_t my_sa = {
+			.mode = this->mode,
+			.reqid = this->reqid,
+			.ipcomp = {
+				.transform = this->ipcomp,
+			},
+		}, other_sa = my_sa;
+
+		my_sa.ipcomp.cpi = this->my_cpi;
+		other_sa.ipcomp.cpi = this->other_cpi;
+
 		if (this->protocol == PROTO_ESP)
 		{
-			my_esp = this->my_spi;
-			other_esp = this->other_spi;
+			my_sa.esp.use = TRUE;
+			my_sa.esp.spi = this->my_spi;
+			other_sa.esp.use = TRUE;
+			other_sa.esp.spi = this->other_spi;
 		}
 		else
 		{
-			my_ah = this->my_spi;
-			other_ah = this->other_spi;
+			my_sa.ah.use = TRUE;
+			my_sa.ah.spi = this->my_spi;
+			other_sa.ah.use = TRUE;
+			other_sa.ah.spi = this->other_spi;
 		}
+
 		/* update policies */
 		if (!me->ip_equals(me, this->my_addr) ||
 			!other->ip_equals(other, this->other_addr))
@@ -833,18 +860,15 @@ METHOD(child_sa_t, update, status_t,
 				/* reinstall updated policies */
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, POLICY_IPSEC,
-						other_esp, other_ah, this->reqid, this->mark_out,
-						this->mode, this->ipcomp, this->other_cpi, FALSE);
+						&other_sa, this->mark_out, FALSE);
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_IN, POLICY_IPSEC,
-						my_esp, my_ah, this->reqid, this->mark_in,
-						this->mode, this->ipcomp, this->my_cpi, FALSE);
+						&my_sa, this->mark_in, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_FWD, POLICY_IPSEC,
-						my_esp, my_ah, this->reqid, this->mark_in,
-						this->mode, this->ipcomp, this->my_cpi, FALSE);
+						&my_sa, this->mark_in, FALSE);
 				}
 			}
 			enumerator->destroy(enumerator);
