@@ -119,10 +119,10 @@ cp $KERNELCONFIG .config
 cecho "!!"
 cecho "!! Making .config for kernel. You might be prompted for new parameters!"
 cecho "!!"
-make oldconfig ARCH=um >> $LOGFILE 2>&1
+make oldconfig ARCH=um SUBARCH=i386 >> $LOGFILE 2>&1
 
 cecho-n " * Now compiling uml kernel.."
-make linux ARCH=um  >> $LOGFILE 2>&1
+make linux ARCH=um SUBARCH=i386 >> $LOGFILE 2>&1
 cgecho "done"
 
 cecho-n " * Copying uml kernel to '${BUILDDIR}/linux-uml-${KERNELVERSION}'.."
