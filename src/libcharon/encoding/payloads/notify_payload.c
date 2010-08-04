@@ -53,7 +53,7 @@ ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICAT
 	"USE_ASSIGNED_HoA");
 ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
 	"ME_CONNECT_FAILED");
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, EAP_ONLY_AUTHENTICATION, ME_CONNECT_FAILED,
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -84,8 +84,9 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"TICKET_ACK",
 	"TICKET_NACK",
 	"TICKET_OPAQUE",
-	"LINK_ID");
-ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
+	"LINK_ID",
+	"USE_WESP_MODE",
+	"ROHC_SUPPORTED",
 	"EAP_ONLY_AUTHENTICATION");
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"USE_BEET_MODE");
@@ -129,7 +130,7 @@ ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHE
 	"ASSIGNED_HoA");
 ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
 	"ME_CONN_FAIL");
-ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, EAP_ONLY_AUTHENTICATION, ME_CONNECT_FAILED,
 	"INIT_CONTACT",
 	"SET_WINSIZE",
 	"ADD_TS_POSS",
@@ -160,8 +161,9 @@ ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"TKT_ACK",
 	"TKT_NACK",
 	"TKT_OPAK",
-	"LINK_ID");
-ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
+	"LINK_ID",
+	"WESP_MODE",
+	"ROHC_SUP",
 	"EAP_ONLY");
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"BEET_MODE");
@@ -238,29 +240,29 @@ struct private_notify_payload_t {
  */
 encoding_rule_t notify_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload) 		},
+	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload)		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},
+	{ FLAG,				offsetof(private_notify_payload_t, critical)			},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
+	{ RESERVED_BIT,	0														},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)		},
 	/* Protocol ID as 8 bit field*/
-	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id) 			},
+	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id)			},
 	/* SPI Size as 8 bit field*/
-	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size) 			},
+	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)			},
 	/* Notify message type as 16 bit field*/
 	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
 	/* SPI as variable length field*/
 	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
-	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data) 	}
+	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data)	}
 };
 
 /*
