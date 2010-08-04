@@ -955,7 +955,7 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 {
 	char path[PATH_MAX];
 	chunk_t filename;
-	chunk_t secret;
+	chunk_t secret = chunk_empty;
 	private_key_t *key;
 
 	err_t ugh = extract_value(&filename, &line);
