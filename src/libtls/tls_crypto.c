@@ -438,7 +438,7 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 							break;
 						case AUTH_HMAC_SHA2_256_256:
 							supported[count++] = TLS_RSA_WITH_AES_128_CBC_SHA256;
-							supported[count++] = TLS_RSA_WITH_AES_128_CBC_SHA256;
+							supported[count++] = TLS_RSA_WITH_AES_256_CBC_SHA256;
 							break;
 						default:
 							break;
