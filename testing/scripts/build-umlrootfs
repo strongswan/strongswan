@@ -127,6 +127,7 @@ echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
 echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
+echo -n " --disable-load-warning" >> $INSTALLSHELL
 
 if [ "$USE_LIBCURL" = "yes" ]
 then
@@ -169,6 +170,11 @@ fi
 if [ "$USE_EAP_RADIUS" = "yes" ]
 then
     echo -n " --enable-eap-radius" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_TLS" = "yes" ]
+then
+    echo -n " --enable-eap-tls" >> $INSTALLSHELL
 fi
 
 if [ "$USE_SQL" = "yes" ]
