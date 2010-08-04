@@ -1141,7 +1141,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		close(fd);
 		return;
 	}
-	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
 		DBG1(DBG_LIB, "mapping '%s' failed: %s", file, strerror(errno));
