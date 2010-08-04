@@ -130,9 +130,12 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		this->tls->set_version(this->tls, version);
 	}
 	suite = cipher;
+	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
+	DBG1(DBG_IKE, "received TLS cipher suite: %N", tls_cipher_suite_names, suite);
+
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))
 	{
-		DBG1(DBG_IKE, "received cipher suite inacceptable");
+		DBG1(DBG_IKE, "received TLS cipher suite inacceptable");
 		return FAILED;
 	}
 	this->state = STATE_HELLO_RECEIVED;
@@ -370,9 +373,11 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	writer->write_data8(writer, chunk_empty);
 
 	count = this->crypto->get_cipher_suites(this->crypto, &suite);
+	DBG2(DBG_IKE, "sending %d TLS cipher suites:", count);
 	writer->write_uint16(writer, count * 2);
 	for (i = 0; i < count; i++)
 	{
+		DBG2(DBG_IKE, "  %N", tls_cipher_suite_names, suite[i]);
 		writer->write_uint16(writer, suite[i]);
 	}
 	/* NULL compression only */
