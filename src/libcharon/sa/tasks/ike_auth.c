@@ -481,9 +481,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		{
 			this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
 		}
-		if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
-			message->get_notify(message, EAP_ONLY_AUTHENTICATION))
-		{	/* EAP-only has no official notify, accept only from strongSwan */
+		if (message->get_notify(message, EAP_ONLY_AUTHENTICATION))
+		{
 			this->ike_sa->enable_extension(this->ike_sa,
 										   EXT_EAP_ONLY_AUTHENTICATION);
 		}
