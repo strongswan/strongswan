@@ -468,7 +468,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 				}
 				default:
 				{
-					if (type < 16383)
+					if (type <= 16383)
 					{
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
