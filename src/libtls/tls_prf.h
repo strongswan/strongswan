@@ -57,7 +57,7 @@ struct tls_prf_t {
 /**
  * Create a tls_prf instance with specific algorithm as in TLS 1.2.
  *
- * @param hash			underlying PRF function to use
+ * @param prf			underlying PRF function to use
  * @return				TLS PRF algorithm
  */
 tls_prf_t *tls_prf_create_12(pseudo_random_function_t prf);

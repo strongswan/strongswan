@@ -79,6 +79,7 @@ struct radius_server_t {
  * @param server			server address
  * @param port				server port
  * @param nas_identifier	NAS-Identifier to use with this server
+ * @param secret			secret to use with this server
  * @param sockets			number of sockets to create in pool
  * @param preference		preference boost for this server
  */

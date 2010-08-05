@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup eap_tls eap_tls
+ * @defgroup eap_tls_i eap_tls
  * @{ @ingroup eap_tls
  */
 
