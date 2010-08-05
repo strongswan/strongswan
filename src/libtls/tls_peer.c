@@ -462,6 +462,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	public_key_t *public = NULL, *current;
+	certificate_t *cert;
 	enumerator_t *enumerator;
 	auth_cfg_t *auth;
 	rng_t *rng;
@@ -482,15 +483,18 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
 
-	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-									KEY_ANY, this->server, this->server_auth);
-	while (enumerator->enumerate(enumerator, &current, &auth))
+	cert = this->server_auth->get(this->server_auth, AUTH_HELPER_SUBJECT_CERT);
+	if (cert)
 	{
-		public = current->get_ref(current);
-		break;
+		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+						KEY_ANY, cert->get_subject(cert), this->server_auth);
+		while (enumerator->enumerate(enumerator, &current, &auth))
+		{
+			public = current->get_ref(current);
+			break;
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
-
 	if (!public)
 	{
 		DBG1(DBG_IKE, "no TLS public key found for server '%Y'", this->server);
