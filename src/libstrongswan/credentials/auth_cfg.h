@@ -62,6 +62,7 @@ enum eap_type_t {
 	EAP_GTC = 6,
 	EAP_TLS = 13,
 	EAP_SIM = 18,
+	EAP_TTLS = 21,
 	EAP_AKA = 23,
 	EAP_MSCHAPV2 = 26,
 	/** not a method, but an implementation providing different methods */
