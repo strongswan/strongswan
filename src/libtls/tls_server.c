@@ -131,15 +131,19 @@ static status_t process_client_hello(private_tls_server_t *this,
 
 	memcpy(this->client_random, random.ptr, sizeof(this->client_random));
 
+	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
 	if (version < this->tls->get_version(this->tls))
 	{
 		this->tls->set_version(this->tls, version);
 	}
+
 	count = ciphers.len / sizeof(u_int16_t);
 	suites = alloca(count * sizeof(tls_cipher_suite_t));
+	DBG2(DBG_IKE, "received %d TLS cipher suites:", count);
 	for (i = 0; i < count; i++)
 	{
 		suites[i] = untoh16(&ciphers.ptr[i * sizeof(u_int16_t)]);
+		DBG2(DBG_IKE, "  %N", tls_cipher_suite_names, suites[i]);
 	}
 	this->suite = this->crypto->select_cipher_suite(this->crypto, suites, count);
 	if (!this->suite)
@@ -366,6 +370,7 @@ METHOD(tls_handshake_t, process, status_t,
 static status_t send_server_hello(private_tls_server_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
+	tls_version_t version;
 	rng_t *rng;
 
 	htoun32(&this->server_random, time(NULL));
@@ -377,12 +382,20 @@ static status_t send_server_hello(private_tls_server_t *this,
 	rng->get_bytes(rng, sizeof(this->server_random) - 4, this->server_random + 4);
 	rng->destroy(rng);
 
-	writer->write_uint16(writer, this->tls->get_version(this->tls));
+	/* TLS version */
+	version = this->tls->get_version(this->tls);
+	DBG1(DBG_IKE, "sending TLS version: %N", tls_version_names, version);
+	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->server_random));
+
 	/* session identifier => none, we don't support session resumption */
 	writer->write_data8(writer, chunk_empty);
-	/* add selected suite */
+
+	/* add selected TLS cipher suite */
+	DBG1(DBG_IKE, "sending TLS cipher suite: %N", tls_cipher_suite_names,
+												  this->suite);
 	writer->write_uint16(writer, this->suite);
+
 	/* NULL compression only */
 	writer->write_uint8(writer, 0);
 

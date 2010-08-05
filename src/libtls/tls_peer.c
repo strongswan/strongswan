@@ -125,14 +125,14 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
+	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
 	if (version < this->tls->get_version(this->tls))
 	{
 		this->tls->set_version(this->tls, version);
 	}
-	suite = cipher;
-	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
-	DBG1(DBG_IKE, "received TLS cipher suite: %N", tls_cipher_suite_names, suite);
 
+	suite = cipher;
+	DBG1(DBG_IKE, "received TLS cipher suite: %N", tls_cipher_suite_names, suite);
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))
 	{
 		DBG1(DBG_IKE, "received TLS cipher suite inacceptable");
@@ -354,7 +354,8 @@ METHOD(tls_handshake_t, process, status_t,
 static status_t send_client_hello(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
-	tls_cipher_suite_t *suite;
+	tls_cipher_suite_t *suites;
+	tls_version_t version;
 	int count, i;
 	rng_t *rng;
 
@@ -367,19 +368,25 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	rng->get_bytes(rng, sizeof(this->client_random) - 4, this->client_random + 4);
 	rng->destroy(rng);
 
-	writer->write_uint16(writer, this->tls->get_version(this->tls));
+	/* TLS version */
+	version = this->tls->get_version(this->tls);
+	DBG1(DBG_IKE, "sending TLS version: %N", tls_version_names, version);
+	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->client_random));
+
 	/* session identifier => none */
 	writer->write_data8(writer, chunk_empty);
 
-	count = this->crypto->get_cipher_suites(this->crypto, &suite);
+	/* add TLS cipher suites */
+	count = this->crypto->get_cipher_suites(this->crypto, &suites);
 	DBG2(DBG_IKE, "sending %d TLS cipher suites:", count);
 	writer->write_uint16(writer, count * 2);
 	for (i = 0; i < count; i++)
 	{
-		DBG2(DBG_IKE, "  %N", tls_cipher_suite_names, suite[i]);
-		writer->write_uint16(writer, suite[i]);
+		DBG2(DBG_IKE, "  %N", tls_cipher_suite_names, suites[i]);
+		writer->write_uint16(writer, suites[i]);
 	}
+
 	/* NULL compression only */
 	writer->write_uint8(writer, 1);
 	writer->write_uint8(writer, 0);
