@@ -63,7 +63,9 @@ ENUM_NEXT(eap_type_short_names, EAP_TLS, EAP_TLS, EAP_GTC,
 	"TLS");
 ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_TLS,
 	"SIM");
-ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_SIM,
+ENUM_NEXT(eap_type_short_names, EAP_TTLS, EAP_TTLS, EAP_SIM,
+	"TTLS");
+ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_TTLS,
 	"AKA");
 ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
 	"MSCHAPV2");
