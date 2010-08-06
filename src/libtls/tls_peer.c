@@ -83,6 +83,11 @@ struct private_tls_peer_t {
 	char server_random[32];
 
 	/**
+	 * Does the server request a peer authentication?
+	 */
+	bool peer_auth_requested;
+
+	/**
 	 * Auth helper for peer authentication
 	 */
 	auth_cfg_t *peer_auth;
@@ -320,10 +325,10 @@ METHOD(tls_handshake_t, process, status_t,
 		case STATE_CERT_RECEIVED:
 			if (type == TLS_CERTIFICATE_REQUEST)
 			{
+				this->peer_auth_requested = TRUE;
 				return process_certreq(this, reader);
 			}
-			expected = TLS_CERTIFICATE_REQUEST;
-			break;
+			/* fall through since TLS_CERTIFICATE_REQUEST is optional */
 		case STATE_CERTREQ_RECEIVED:
 			if (type == TLS_SERVER_HELLO_DONE)
 			{
@@ -567,11 +572,22 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_INIT:
 			return send_client_hello(this, type, writer);
 		case STATE_HELLO_DONE:
-			return send_certificate(this, type, writer);
+			if (this->peer_auth_requested)
+			{
+				return send_certificate(this, type, writer);
+			}
+			/* otherwise fall through to next state */
 		case STATE_CERT_SENT:
 			return send_key_exchange(this, type, writer);
 		case STATE_KEY_EXCHANGE_SENT:
-			return send_certificate_verify(this, type, writer);
+			if (this->peer_auth_requested)
+			{
+				return send_certificate_verify(this, type, writer);
+			}
+			else
+			{
+				return INVALID_STATE;
+			}
 		case STATE_CIPHERSPEC_CHANGED_OUT:
 			return send_finished(this, type, writer);
 		default:
@@ -582,7 +598,8 @@ METHOD(tls_handshake_t, build, status_t,
 METHOD(tls_handshake_t, cipherspec_changed, bool,
 	private_tls_peer_t *this)
 {
-	if (this->state == STATE_VERIFY_SENT)
+	if ((this->peer_auth_requested && this->state == STATE_VERIFY_SENT) ||
+	   (!this->peer_auth_requested && this->state == STATE_KEY_EXCHANGE_SENT))
 	{
 		this->crypto->change_cipher(this->crypto, FALSE);
 		this->state = STATE_CIPHERSPEC_CHANGED_OUT;
@@ -633,6 +650,7 @@ tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
 		.crypto = crypto,
 		.peer = peer,
 		.server = server,
+		.peer_auth_requested = FALSE,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
 	);
