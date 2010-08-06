@@ -1,0 +1,17 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls
+
+AM_CFLAGS = -rdynamic
+
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-eap-ttls.la
+else
+plugin_LTLIBRARIES = libstrongswan-eap-ttls.la
+libstrongswan_eap_ttls_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
+endif
+
+libstrongswan_eap_ttls_la_SOURCES = \
+	eap_ttls_plugin.h eap_ttls_plugin.c eap_ttls.h eap_ttls.c
+
+libstrongswan_eap_ttls_la_LDFLAGS = -module -avoid-version

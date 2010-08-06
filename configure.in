@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.4.2)
+AC_INIT(strongSwan,4.4.2dr1)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
@@ -112,6 +112,7 @@ ARG_ENABL_SET([eap-aka],        [enable EAP AKA authentication module.])
 ARG_ENABL_SET([eap-aka-3gpp2],  [enable EAP AKA backend implementing 3GPP2 algorithms in software. Requires libgmp.])
 ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
 ARG_ENABL_SET([eap-tls],        [enable EAP TLS authenication module.])
+ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authenication module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
@@ -226,7 +227,7 @@ if test x$eap_sim = xtrue; then
 	simaka=true;
 fi
 
-if test x$eap_tls = xtrue; then
+if test x$eap_tls = xtrue -o x$eap_ttls = xtrue; then
 	tls=true;
 fi
 
@@ -857,6 +858,7 @@ AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA_3GPP2, test x$eap_aka_3gpp2 = xtrue)
 AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_TLS, test x$eap_tls = xtrue)
+AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
@@ -984,6 +986,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_simaka_reauth/Makefile
 	src/libcharon/plugins/eap_mschapv2/Makefile
 	src/libcharon/plugins/eap_tls/Makefile
+	src/libcharon/plugins/eap_ttls/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/kernel_netlink/Makefile
 	src/libcharon/plugins/kernel_pfkey/Makefile

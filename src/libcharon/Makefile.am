@@ -352,6 +352,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_TTLS
+  SUBDIRS += plugins/eap_ttls
+  PLUGINS += eap-ttls
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_ttls/libstrongswan-eap-ttls.la
+endif
+endif
+
 if USE_TLS
 if MONOLITHIC
   # otherwise this library is linked to eap_tls
