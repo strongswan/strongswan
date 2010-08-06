@@ -23,6 +23,7 @@
 #include "pkcs11_manager.h"
 #include "pkcs11_creds.h"
 #include "pkcs11_private_key.h"
+#include "pkcs11_public_key.h"
 #include "pkcs11_hasher.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
@@ -157,6 +158,8 @@ plugin_t *pkcs11_plugin_create()
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
 							(builder_function_t)pkcs11_private_key_connect);
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+							(builder_function_t)pkcs11_public_key_load);
 
 	enumerator = this->manager->create_token_enumerator(this->manager);
 	while (enumerator->enumerate(enumerator, &p11, &slot))
