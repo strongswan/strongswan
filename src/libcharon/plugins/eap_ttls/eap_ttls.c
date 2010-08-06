@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ * Copyright (C) 2010 Martin Willi, revosec AG
+ * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -82,6 +82,7 @@ typedef enum {
 	EAP_TTLS_LENGTH = (1<<7),
 	EAP_TTLS_MORE_FRAGS = (1<<6),
 	EAP_TTLS_START = (1<<5),
+	EAP_TTLS_VERSION = 0x07
 } eap_ttls_flags_t;
 
 /**
@@ -319,7 +320,7 @@ METHOD(eap_method_t, process, status_t,
 
 	if (++this->processed > MAX_EAP_TTLS_MESSAGE_COUNT)
 	{
-		DBG1(DBG_IKE, "EAP-TLS packet count exceeded");
+		DBG1(DBG_IKE, "EAP-TTLS packet count exceeded");
 		return FAILED;
 	}
 
@@ -329,10 +330,15 @@ METHOD(eap_method_t, process, status_t,
 	if (data.len < sizeof(eap_ttls_packet_t) ||
 		untoh16(&pkt->length) != data.len)
 	{
-		DBG1(DBG_IKE, "invalid EAP-TLS packet length");
+		DBG1(DBG_IKE, "invalid EAP-TTLS packet length");
 		return FAILED;
 	}
-	if (!(pkt->flags & EAP_TTLS_START))
+	if (pkt->flags & EAP_TTLS_START)
+	{
+		DBG1(DBG_IKE, "EAP-TTLS version is v%u",
+		pkt->flags & EAP_TTLS_VERSION);
+	}
+	else
 	{
 		if (data.len == sizeof(eap_ttls_packet_t))
 		{
@@ -358,7 +364,7 @@ METHOD(eap_method_t, process, status_t,
 		}
 		else if (this->input.len != this->inpos)
 		{
-			DBG1(DBG_IKE, "defragemented TLS message has invalid length");
+			DBG1(DBG_IKE, "defragmented TLS message has invalid length");
 			return FAILED;
 		}
 	}
