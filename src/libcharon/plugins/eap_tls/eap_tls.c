@@ -358,7 +358,7 @@ METHOD(eap_method_t, process, status_t,
 		}
 		else if (this->input.len != this->inpos)
 		{
-			DBG1(DBG_IKE, "defragemented TLS message has invalid length");
+			DBG1(DBG_IKE, "defragmented TLS message has invalid length");
 			return FAILED;
 		}
 	}
