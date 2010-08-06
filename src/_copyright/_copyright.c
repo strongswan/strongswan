@@ -20,7 +20,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+
 #include <freeswan.h>
+#include <library.h>
 
 char usage[] = "Usage: ipsec _copyright";
 struct option opts[] = {
@@ -39,6 +41,9 @@ main(int argc, char *argv[])
 	int errflg = 0;
 	const char **notice = ipsec_copyright_notice();
 	const char **co;
+
+	library_init(NULL);
+	atexit(library_deinit);
 
 	while ((opt = getopt_long(argc, argv, "", opts, NULL)) != EOF)
 		switch (opt) {
