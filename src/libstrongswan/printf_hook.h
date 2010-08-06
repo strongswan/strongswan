@@ -58,21 +58,25 @@ int vstr_wrapper_printf(const char *format, ...);
 int vstr_wrapper_fprintf(FILE *stream, const char *format, ...);
 int vstr_wrapper_sprintf(char *str, const char *format, ...);
 int vstr_wrapper_snprintf(char *str, size_t size, const char *format, ...);
+int vstr_wrapper_asprintf(char **str, const char *format, ...);
 
 int vstr_wrapper_vprintf(const char *format, va_list ap);
 int vstr_wrapper_vfprintf(FILE *stream, const char *format, va_list ap);
 int vstr_wrapper_vsprintf(char *str, const char *format, va_list ap);
 int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format, va_list ap);
+int vstr_wrapper_vasprintf(char **str, const char *format, va_list ap);
 
 #define printf vstr_wrapper_printf
 #define fprintf vstr_wrapper_fprintf
 #define sprintf vstr_wrapper_sprintf
 #define snprintf vstr_wrapper_snprintf
+#define asprintf vstr_wrapper_asprintf
 
 #define vprintf vstr_wrapper_vprintf
 #define vfprintf vstr_wrapper_vfprintf
 #define vsprintf vstr_wrapper_vsprintf
 #define vsnprintf vstr_wrapper_vsnprintf
+#define vasprintf vstr_wrapper_vasprintf
 
 #endif
 
@@ -83,7 +87,7 @@ int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format, va_list a
  * @param len		length of the buffer
  * @param spec		format specifier
  * @param args		arguments array
- * @return 			number of characters written
+ * @return			number of characters written
  */
 typedef int (*printf_hook_function_t)(char *dst, size_t len,
 									  printf_hook_spec_t *spec,

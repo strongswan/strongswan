@@ -265,6 +265,15 @@ int vstr_wrapper_snprintf(char *str, size_t size, const char *format, ...)
 	va_end(args);
 	return written;
 }
+int vstr_wrapper_asprintf(char **str, const char *format, ...)
+{
+	int written;
+	va_list args;
+	va_start(args, format);
+	written = vstr_wrapper_vasprintf(str, format, args);
+	va_end(args);
+	return written;
+}
 static inline int vstr_wrapper_vprintf_internal(int fd, const char *format,
 												va_list args)
 {
@@ -316,6 +325,26 @@ int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format,
 						   va_list args)
 {
 	return (size > 0) ? vstr_wrapper_vsnprintf_internal(str, size, format, args) : 0;
+}
+int vstr_wrapper_vasprintf(char **str, const char *format, va_list args)
+{
+	size_t len = 100;
+	int written;
+	*str = malloc(len);
+	while (TRUE)
+	{
+		va_list ac;
+		va_copy(ac, args);
+		written = vstr_wrapper_vsnprintf_internal(*str, len, format, ac);
+		va_end(ac);
+		if (written < len)
+		{
+			break;
+		}
+		len = written + 1;
+		*str = realloc(*str, len);
+	}
+	return written;
 }
 
 #endif
