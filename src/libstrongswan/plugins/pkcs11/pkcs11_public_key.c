@@ -95,6 +95,10 @@ METHOD(public_key_t, verify, bool,
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
+	if (sig.len && sig.ptr[0] == 0)
+	{	/* trim leading zero byte in sig */
+		sig = chunk_skip(sig, 1);
+	}
 	this->mutex->lock(this->mutex);
 	rv = this->lib->f->C_VerifyInit(this->session, mechanism, this->object);
 	if (rv != CKR_OK)
@@ -243,6 +247,7 @@ static private_pkcs11_public_key_t *create(key_type_t type, size_t k,
 		.session = session,
 		.object = object,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.ref = 1,
 	);
 
 	return this;
@@ -263,11 +268,6 @@ static private_pkcs11_public_key_t* find_rsa_key(chunk_t n, chunk_t e)
 	if (!manager)
 	{
 		return NULL;
-	}
-
-	if (n.len && n.ptr[0] == 0)
-	{	/* trim leading zero byte in modulus */
-		n = chunk_skip(n, 1);
 	}
 
 	enumerator = manager->create_token_enumerator(manager);
@@ -308,6 +308,92 @@ static private_pkcs11_public_key_t* find_rsa_key(chunk_t n, chunk_t e)
 }
 
 /**
+ * Create a key object in a suitable token session
+ */
+static private_pkcs11_public_key_t* create_rsa_key(chunk_t n, chunk_t e)
+{
+	private_pkcs11_public_key_t *this = NULL;
+	pkcs11_manager_t *manager;
+	enumerator_t *enumerator, *mechs;
+	pkcs11_library_t *p11;
+	CK_SLOT_ID slot;
+
+	manager = pkcs11_manager_get();
+	if (!manager)
+	{
+		return NULL;
+	}
+
+	enumerator = manager->create_token_enumerator(manager);
+	while (enumerator->enumerate(enumerator, &p11, &slot))
+	{
+		CK_MECHANISM_TYPE mech;
+		CK_MECHANISM_INFO info;
+		CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+		CK_KEY_TYPE type = CKK_RSA;
+		CK_ATTRIBUTE tmpl[] = {
+			{CKA_CLASS, &class, sizeof(class)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_MODULUS, n.ptr, n.len},
+			{CKA_PUBLIC_EXPONENT, e.ptr, e.len}
+		};
+		CK_OBJECT_HANDLE object;
+		CK_SESSION_HANDLE session;
+		CK_RV rv;
+
+		mechs = p11->create_mechanism_enumerator(p11, slot);
+		while (mechs->enumerate(mechs, &mech, &info))
+		{
+			if (!(info.flags & CKF_VERIFY))
+			{
+				continue;
+			}
+			switch (mech)
+			{
+				case CKM_RSA_PKCS:
+				case CKM_SHA1_RSA_PKCS:
+				case CKM_SHA256_RSA_PKCS:
+				case CKM_SHA384_RSA_PKCS:
+				case CKM_SHA512_RSA_PKCS:
+				case CKM_MD5_RSA_PKCS:
+					break;
+				default:
+					continue;
+			}
+			rv = p11->f->C_OpenSession(slot, CKF_SERIAL_SESSION, NULL, NULL,
+									   &session);
+			if (rv != CKR_OK)
+			{
+				DBG1(DBG_CFG, "opening PKCS#11 session failed: %N",
+					 ck_rv_names, rv);
+				continue;
+			}
+			rv = p11->f->C_CreateObject(session, tmpl, countof(tmpl), &object);
+			if (rv == CKR_OK)
+			{
+				this = create(KEY_RSA, n.len, p11, slot, session, object);
+				DBG2(DBG_CFG, "created RSA public key on token '%s':%d ",
+					 p11->get_name(p11), slot);
+				break;
+			}
+			else
+			{
+				DBG1(DBG_CFG, "creating RSA public key on token '%s':%d "
+					 "failed: %N", p11->get_name(p11), slot, ck_rv_names, rv);
+				p11->f->C_CloseSession(session);
+			}
+		}
+		mechs->destroy(mechs);
+		if (this)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return this;
+}
+
+/**
  * See header
  */
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
@@ -335,7 +421,16 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 	}
 	if (type == KEY_RSA && e.ptr && n.ptr)
 	{
+		if (n.len && n.ptr[0] == 0)
+		{	/* trim leading zero byte in modulus */
+			n = chunk_skip(n, 1);
+		}
 		this = find_rsa_key(n, e);
+		if (this)
+		{
+			return &this->public;
+		}
+		this = create_rsa_key(n, e);
 		if (this)
 		{
 			return &this->public;
