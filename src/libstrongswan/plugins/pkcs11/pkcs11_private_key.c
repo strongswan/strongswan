@@ -87,9 +87,9 @@ METHOD(private_key_t, get_keysize, size_t,
 }
 
 /**
- * Get the Cryptoki mechanism for a signature scheme
+ * See header.
  */
-static CK_MECHANISM_PTR scheme_to_mechanism(signature_scheme_t scheme)
+CK_MECHANISM_PTR pkcs11_scheme_to_mechanism(signature_scheme_t scheme)
 {
 	static struct {
 		signature_scheme_t scheme;
@@ -159,7 +159,7 @@ METHOD(private_key_t, sign, bool,
 	CK_ULONG len;
 	CK_RV rv;
 
-	mechanism = scheme_to_mechanism(scheme);
+	mechanism = pkcs11_scheme_to_mechanism(scheme);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",

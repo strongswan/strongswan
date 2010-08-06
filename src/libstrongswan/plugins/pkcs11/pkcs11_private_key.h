@@ -26,6 +26,8 @@ typedef struct pkcs11_private_key_t pkcs11_private_key_t;
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
+#include "pkcs11.h"
+
 /**
  * Private Key implementation on top of PKCS#11.
  */
@@ -47,5 +49,10 @@ struct pkcs11_private_key_t {
  * @return 			loaded key, NULL on failure
  */
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args);
+
+/**
+ * Get the Cryptoki mechanism for a signature scheme.
+ */
+CK_MECHANISM_PTR pkcs11_scheme_to_mechanism(signature_scheme_t scheme);
 
 #endif /** PKCS11_PRIVATE_KEY_H_ @}*/
