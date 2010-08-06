@@ -70,32 +70,53 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		{CKA_LABEL, NULL, 0},
 	};
 	enumerator_t *enumerator;
+	linked_list_t *raw;
 	certificate_t *cert;
+	struct {
+		chunk_t value;
+		chunk_t label;
+	} *entry;
 
+	raw = linked_list_create();
 	enumerator = this->lib->create_object_enumerator(this->lib,
 							session, tmpl, countof(tmpl), attr, countof(attr));
 	while (enumerator->enumerate(enumerator, &object))
 	{
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							BUILD_BLOB_ASN1_DER,
-							chunk_create(attr[0].pValue, attr[0].ulValueLen),
-							BUILD_END);
-		if (!cert)
-		{
-			DBG1(DBG_CFG, "    loading cert '%.*s' failed",
-				 attr[1].ulValueLen, attr[1].pValue);
-			continue;
-		}
-		DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
-			 trusted ? "" : "un", attr[1].ulValueLen, attr[1].pValue);
-		/* trusted certificates are also returned as untrusted */
-		this->untrusted->insert_last(this->untrusted, cert);
-		if (trusted)
-		{
-			this->trusted->insert_last(this->trusted, cert->get_ref(cert));
-		}
+		entry = malloc(sizeof(*entry));
+		entry->value = chunk_clone(
+							chunk_create(attr[0].pValue, attr[0].ulValueLen));
+		entry->label = chunk_clone(
+							chunk_create(attr[1].pValue, attr[1].ulValueLen));
+		raw->insert_last(raw, entry);
 	}
 	enumerator->destroy(enumerator);
+
+	while (raw->remove_first(raw, (void**)&entry) == SUCCESS)
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							BUILD_BLOB_ASN1_DER, entry->value,
+							BUILD_END);
+		if (cert)
+		{
+			DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
+				 trusted ? "" : "un", entry->label.len, entry->label.ptr);
+			/* trusted certificates are also returned as untrusted */
+			this->untrusted->insert_last(this->untrusted, cert);
+			if (trusted)
+			{
+				this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+			}
+		}
+		else
+		{
+			DBG1(DBG_CFG, "    loading cert '%.*s' failed",
+				 entry->label.len, entry->label.ptr);
+		}
+		free(entry->value.ptr);
+		free(entry->label.ptr);
+		free(entry);
+	}
+	raw->destroy(raw);
 }
 
 /**
