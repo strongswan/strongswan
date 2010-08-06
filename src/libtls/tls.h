@@ -162,9 +162,10 @@ struct tls_t {
  * @param is_server		TRUE to act as server, FALSE for client
  * @param server		server identity
  * @param peer			peer identity
+ * @param msk_label		ASCII string constant used as seed for MSK PRF
  * @return				TLS stack
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer);
+				  identification_t *peer, char *msk_label);
 
 #endif /** TLS_H_ @}*/

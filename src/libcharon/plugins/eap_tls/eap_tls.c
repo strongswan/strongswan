@@ -424,7 +424,8 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 		},
 		.is_server = is_server,
 	);
-	this->tls = tls_create(is_server, server, peer);
+	/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
+	this->tls = tls_create(is_server, server, peer, "client EAP encryption");
 
 	return &this->public;
 }

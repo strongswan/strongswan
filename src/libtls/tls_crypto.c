@@ -316,9 +316,14 @@ struct private_tls_crypto_t {
 	chunk_t iv_out;
 
 	/**
-	 * EAP-TLS MSK
+	 * EAP-[T]TLS MSK
 	 */
 	chunk_t msk;
+
+	/**
+	 * ASCII string constant used as seed for EAP-[T]TLS MSK PRF
+	 */
+	char *msk_label;
 };
 
 typedef struct {
@@ -855,7 +860,7 @@ METHOD(tls_crypto_t, derive_eap_msk, void,
 	seed = chunk_cata("cc", client_random, server_random);
 	free(this->msk.ptr);
 	this->msk = chunk_alloc(64);
-	this->prf->get_bytes(this->prf, "client EAP encryption", seed,
+	this->prf->get_bytes(this->prf, this->msk_label, seed,
 						 this->msk.len, this->msk.ptr);
 }
 
@@ -884,7 +889,7 @@ METHOD(tls_crypto_t, destroy, void,
 /**
  * See header
  */
-tls_crypto_t *tls_crypto_create(tls_t *tls)
+tls_crypto_t *tls_crypto_create(tls_t *tls, char *msk_label)
 {
 	private_tls_crypto_t *this;
 
@@ -904,6 +909,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.destroy = _destroy,
 		},
 		.tls = tls,
+		.msk_label = msk_label
 	);
 
 	build_cipher_suite_list(this);

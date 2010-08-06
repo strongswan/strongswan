@@ -359,7 +359,9 @@ struct tls_crypto_t {
 
 /**
  * Create a tls_crypto instance.
+ *
+ * @param msk_label		ASCII string constant used as seed for MSK PRF
  */
-tls_crypto_t *tls_crypto_create(tls_t *tls);
+tls_crypto_t *tls_crypto_create(tls_t *tls, char *msk_label);
 
 #endif /** TLS_CRYPTO_H_ @}*/

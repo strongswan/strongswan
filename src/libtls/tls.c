@@ -172,7 +172,7 @@ METHOD(tls_t, destroy, void,
  * See header
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer)
+				  identification_t *peer, char *msk_label)
 {
 	private_tls_t *this;
 
@@ -193,7 +193,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.peer = peer->clone(peer),
 	);
 
-	this->crypto = tls_crypto_create(&this->public);
+	this->crypto = tls_crypto_create(&this->public, msk_label);
 	if (is_server)
 	{
 		this->handshake = &tls_server_create(&this->public, this->crypto,
