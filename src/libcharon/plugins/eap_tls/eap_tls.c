@@ -120,6 +120,7 @@ METHOD(eap_method_t, initiate, status_t,
 		do {
 			pkt.identifier = random();
 		} while (!pkt.identifier);
+		DBG2(DBG_IKE, "sending TLS start packet");
 
 		*out = eap_payload_create_data(chunk_from_thing(pkt));
 		return NEED_MORE;
@@ -194,6 +195,7 @@ static eap_payload_t *create_ack(private_eap_tls_t *this, u_int8_t identifier)
 		.type = EAP_TLS,
 	};
 	htoun16(&pkt.length, sizeof(pkt));
+	DBG2(DBG_IKE, "sending TLS acknowledgement packet");
 
 	return eap_payload_create_data(chunk_from_thing(pkt));
 }
@@ -229,6 +231,7 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
 			pkt_len += EAP_TLS_FRAGMENT_LEN;
 			memcpy(start, this->output.ptr + this->outpos, EAP_TLS_FRAGMENT_LEN);
 			this->outpos += EAP_TLS_FRAGMENT_LEN;
+			DBG2(DBG_IKE, "sending TLS packet fragment");
 		}
 		else
 		{
@@ -237,6 +240,7 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
 				   this->output.len - this->outpos);
 			chunk_free(&this->output);
 			this->outpos = 0;
+			DBG2(DBG_IKE, "sending TLS packet");
 		}
 	}
 	htoun16(&pkt->length, pkt_len);
