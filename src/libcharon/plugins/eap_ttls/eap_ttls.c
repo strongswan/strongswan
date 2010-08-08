@@ -241,8 +241,12 @@ static eap_payload_t *read_buf(private_eap_ttls_t *this, u_int8_t identifier)
 				   this->output.len - this->outpos);
 			chunk_free(&this->output);
 			this->outpos = 0;
-			DBG2(DBG_IKE, "sending TLS packet or last fragment");
+			DBG2(DBG_IKE, "sending TLS packet");
 		}
+	}
+	else
+	{
+		DBG2(DBG_IKE, "sending TLS acknowledgement packet");
 	}
 	htoun16(&pkt->length, pkt_len);
 	return eap_payload_create_data(chunk_create(buf, pkt_len));

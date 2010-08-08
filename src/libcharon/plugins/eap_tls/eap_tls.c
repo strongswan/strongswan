@@ -243,6 +243,10 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
 			DBG2(DBG_IKE, "sending TLS packet");
 		}
 	}
+	else
+	{
+		DBG2(DBG_IKE, "sending TLS acknowledgement packet");
+	}
 	htoun16(&pkt->length, pkt_len);
 	return eap_payload_create_data(chunk_create(buf, pkt_len));
 }
