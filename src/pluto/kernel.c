@@ -1387,7 +1387,8 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 
 	ok = raw_eroute(&c->spd.that.host_addr, &c->spd.that.client,
 					&c->spd.this.host_addr, &c->spd.this.client, htonl(spi),
-					SA_INT, SADB_X_SATYPE_INT, 0, &null_ipsec_sa, 0,
+					SA_INT, SADB_X_SATYPE_INT, sr->this.protocol,
+					&null_ipsec_sa, 0,
 					op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
 
 	return eroute_connection(sr, htonl(spi), SA_INT, SADB_X_SATYPE_INT,
