@@ -133,6 +133,14 @@ static int custom_arginfo(const struct printf_info *info, size_t n, int *argtype
 #include <unistd.h> /* for STDOUT_FILENO */
 
 /**
+ * These are used below, whenever the public wrapper functions are called before
+ * initialization or after destruction.
+ */
+#undef vprintf
+#undef vfprintf
+#undef vsnprintf
+
+/**
  * Vstr custom format specifier callback function.
  */
 static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
@@ -177,13 +185,16 @@ static void vstr_fmt_add_handler(Vstr_conf *conf, printf_hook_handler_t *handler
 	switch(handler->numargs)
 	{
 		case 1:
-			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0], VSTR_TYPE_FMT_END);
+			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0],
+						 VSTR_TYPE_FMT_END);
 			break;
 		case 2:
-			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0], at[1], VSTR_TYPE_FMT_END);
+			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0],
+						 at[1], VSTR_TYPE_FMT_END);
 			break;
 		case 3:
-			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0], at[1], at[2], VSTR_TYPE_FMT_END);
+			vstr_fmt_add(conf, handler->name, custom_fmt_cb, at[0],
+						 at[1], at[2], VSTR_TYPE_FMT_END);
 			break;
 	}
 }
@@ -193,7 +204,7 @@ static void vstr_fmt_add_handler(Vstr_conf *conf, printf_hook_handler_t *handler
  */
 #include <threading/thread_value.h>
 
-static thread_value_t *vstr_conf;
+static thread_value_t *vstr_conf = NULL;
 
 static Vstr_conf *create_vstr_conf()
 {
@@ -216,12 +227,15 @@ static Vstr_conf *create_vstr_conf()
 
 static inline Vstr_conf *get_vstr_conf()
 {
-	Vstr_conf *conf;
-	conf = (Vstr_conf*)vstr_conf->get(vstr_conf);
-	if (!conf)
+	Vstr_conf *conf = NULL;
+	if (vstr_conf)
 	{
-		conf = create_vstr_conf();
-		vstr_conf->set(vstr_conf, conf);
+		conf = (Vstr_conf*)vstr_conf->get(vstr_conf);
+		if (!conf)
+		{
+			conf = create_vstr_conf();
+			vstr_conf->set(vstr_conf, conf);
+		}
 	}
 	return conf;
 }
@@ -274,11 +288,11 @@ int vstr_wrapper_asprintf(char **str, const char *format, ...)
 	va_end(args);
 	return written;
 }
-static inline int vstr_wrapper_vprintf_internal(int fd, const char *format,
+static inline int vstr_wrapper_vprintf_internal(Vstr_conf *conf, int fd,
+												const char *format,
 												va_list args)
 {
 	int written;
-	Vstr_conf *conf = get_vstr_conf();
 	Vstr_base *s = vstr_make_base(conf);
 	vstr_add_vfmt(s, 0, format, args);
 	written = s->len;
@@ -298,24 +312,39 @@ static inline int vstr_wrapper_vprintf_internal(int fd, const char *format,
 }
 int vstr_wrapper_vprintf(const char *format, va_list args)
 {
-	return vstr_wrapper_vprintf_internal(STDOUT_FILENO, format, args);
+	Vstr_conf *conf = get_vstr_conf();
+	if (conf)
+	{
+		return vstr_wrapper_vprintf_internal(conf, STDOUT_FILENO, format, args);
+	}
+	return vprintf(format, args);
 }
 int vstr_wrapper_vfprintf(FILE *stream, const char *format, va_list args)
 {
-	return vstr_wrapper_vprintf_internal(fileno(stream), format, args);
+	Vstr_conf *conf = get_vstr_conf();
+	if (conf)
+	{
+		return vstr_wrapper_vprintf_internal(conf, fileno(stream), format,
+											 args);
+	}
+	return vfprintf(stream, format, args);
 }
 static inline int vstr_wrapper_vsnprintf_internal(char *str, size_t size,
 												  const char *format,
 												  va_list args)
 {
-	int written;
 	Vstr_conf *conf = get_vstr_conf();
-	Vstr_base *s = vstr_make_base(conf);
-	vstr_add_vfmt(s, 0, format, args);
-	written = s->len;
-	vstr_export_cstr_buf(s, 1, s->len, str, (size > 0) ? size : s->len + 1);
-	vstr_free_base(s);
-	return written;
+	if (conf)
+	{
+		int written;
+		Vstr_base *s = vstr_make_base(conf);
+		vstr_add_vfmt(s, 0, format, args);
+		written = s->len;
+		vstr_export_cstr_buf(s, 1, s->len, str, (size > 0) ? size : s->len + 1);
+		vstr_free_base(s);
+		return written;
+	}
+	return vsnprintf(str, size, format, args);
 }
 int vstr_wrapper_vsprintf(char *str, const char *format, va_list args)
 {
@@ -346,7 +375,6 @@ int vstr_wrapper_vasprintf(char **str, const char *format, va_list args)
 	}
 	return written;
 }
-
 #endif
 
 /**
@@ -437,6 +465,7 @@ static void destroy(private_printf_hook_t *this)
 #ifdef USE_VSTR
 	/* freeing the Vstr_conf of the main thread */
 	vstr_conf->destroy(vstr_conf);
+	vstr_conf = NULL;
 	vstr_free_conf(conf);
 	vstr_exit();
 #endif
