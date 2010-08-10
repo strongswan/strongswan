@@ -79,23 +79,23 @@ int main(int argc, char *argv[])
 	{
 		switch (private->get_keysize(private))
 		{
-			case 32:
+			case 256:
 				scheme = SIGN_ECDSA_256;
 				break;
-			case 48:
+			case 384:
 				scheme = SIGN_ECDSA_384;
 				break;
-			case 66:
+			case 521:
 				scheme = SIGN_ECDSA_521;
 				break;
 			default:
 				printf("%d bit ECDSA private key size not supported",
-						private->get_keysize(private) * 8);
+						private->get_keysize(private));
 				exit(1);
 		}
 	}
 
-	printf("%4d bit %N: ", private->get_keysize(private)*8,
+	printf("%4d bit %N: ", private->get_keysize(private),
 		key_type_names, type);
 
 	sigs = malloc(sizeof(chunk_t) * rounds);

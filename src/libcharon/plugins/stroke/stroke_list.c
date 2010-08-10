@@ -638,7 +638,7 @@ static void list_public_key(public_key_t *public, FILE *out)
 
 	fprintf(out, "  pubkey:    %N %d bits%s\n",
 			key_type_names, public->get_type(public),
-			public->get_keysize(public) * 8,
+			public->get_keysize(public),
 			private ? ", has private key" : "");
 	if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 	{

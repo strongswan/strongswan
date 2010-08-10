@@ -155,10 +155,10 @@ METHOD(public_key_t, encrypt, bool,
 	return FALSE;
 }
 
-METHOD(public_key_t, get_keysize, size_t,
+METHOD(public_key_t, get_keysize, int,
 	private_openssl_rsa_public_key_t *this)
 {
-	return RSA_size(this->rsa);
+	return RSA_size(this->rsa) * 8;
 }
 
 /**

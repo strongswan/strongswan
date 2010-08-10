@@ -375,10 +375,10 @@ METHOD(public_key_t, encrypt_, bool,
 	return TRUE;
 }
 
-METHOD(public_key_t, get_keysize, size_t,
+METHOD(public_key_t, get_keysize, int,
 	private_gmp_rsa_public_key_t *this)
 {
-	return this->k;
+	return mpz_sizeinbase(this->n, 2);
 }
 
 METHOD(public_key_t, get_encoding, bool,

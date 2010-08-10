@@ -250,7 +250,7 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	{
 		free(digestInfo.ptr);
 		DBG1(DBG_LIB, "unable to sign %d bytes using a %dbit key", data.len,
-			 this->k * 8);
+			 mpz_sizeinbase(this->n, 2));
 		return FALSE;
 	}
 
@@ -356,10 +356,10 @@ end:
 	return success;
 }
 
-METHOD(private_key_t, get_keysize, size_t,
+METHOD(private_key_t, get_keysize, int,
 	private_gmp_rsa_private_key_t *this)
 {
-	return this->k;
+	return mpz_sizeinbase(this->n, 2);
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,

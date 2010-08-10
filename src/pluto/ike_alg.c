@@ -194,10 +194,8 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 
 		if (policy & POLICY_PUBKEY)
 		{
-			int auth_method = 0;
-			size_t key_size = 0;
+			int auth_method = 0, key_size = 0;
 			key_type_t key_type = KEY_ANY;
-
 
 			if (c->spd.this.cert)
 			{
@@ -205,7 +203,7 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 				public_key_t *key = certificate->get_public_key(certificate);
 
 				if (key == NULL)
-				{				
+				{
 					plog("ike alg: unable to retrieve my public key");
 					continue;
 				}
@@ -233,13 +231,13 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 				case KEY_ECDSA:
 					switch (key_size)
 					{
-						case 32:
+						case 256:
 							auth_method = OAKLEY_ECDSA_256;
 							break;
-						case 48:
+						case 384:
 							auth_method = OAKLEY_ECDSA_384;
 							break;
-						case 66:
+						case 521:
 							auth_method = OAKLEY_ECDSA_521;
 							break;
 						default:

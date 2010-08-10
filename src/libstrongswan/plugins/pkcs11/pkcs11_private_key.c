@@ -80,7 +80,7 @@ METHOD(private_key_t, get_type, key_type_t,
 	return this->pubkey->get_type(this->pubkey);
 }
 
-METHOD(private_key_t, get_keysize, size_t,
+METHOD(private_key_t, get_keysize, int,
 	private_pkcs11_private_key_t *this)
 {
 	return this->pubkey->get_keysize(this->pubkey);
@@ -178,7 +178,7 @@ METHOD(private_key_t, sign, bool,
 		DBG1(DBG_LIB, "C_SignInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
-	len = get_keysize(this);
+	len = (get_keysize(this) + 7) / 8;
 	buf = malloc(len);
 	rv = this->lib->f->C_Sign(this->session, data.ptr, data.len, buf, &len);
 	this->mutex->unlock(this->mutex);

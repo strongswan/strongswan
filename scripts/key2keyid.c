@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	if (private)
 	{
 		printf("parsed %d bits %N private key.\n",
-			   private->get_keysize(private)*8,
+			   private->get_keysize(private),
 			   key_type_names, private->get_type(private));
 		if (private->get_fingerprint(private, KEYID_PUBKEY_INFO_SHA1, &chunk))
 		{
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	if (public)
 	{
 		printf("parsed %d bits %N public key.\n",
-			   public->get_keysize(public)*8,
+			   public->get_keysize(public),
 			   key_type_names, public->get_type(public));
 		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &chunk))
 		{

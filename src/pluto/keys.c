@@ -1449,7 +1449,7 @@ void list_public_keys(bool utc)
 		whack_log(RC_COMMENT, "  identity: '%Y'", key->id);
 		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
-			public->get_keysize(public) * BITS_PER_BYTE,
+			public->get_keysize(public),
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
 		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))

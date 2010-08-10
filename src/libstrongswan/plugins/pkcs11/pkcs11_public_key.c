@@ -125,10 +125,10 @@ METHOD(public_key_t, encrypt, bool,
 	return FALSE;
 }
 
-METHOD(public_key_t, get_keysize, size_t,
+METHOD(public_key_t, get_keysize, int,
 	private_pkcs11_public_key_t *this)
 {
-	return this->k;
+	return this->k * 8;
 }
 
 /**

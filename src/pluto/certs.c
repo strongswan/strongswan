@@ -232,7 +232,7 @@ void list_pgp_end_certs(bool utc)
 
 				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 						key_type_names, key->get_type(key),
-						key->get_keysize(key) * BITS_PER_BYTE,
+						key->get_keysize(key),
 						has_private_key(cert)? ", has private key" : "");
 				if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &keyid))
 				{

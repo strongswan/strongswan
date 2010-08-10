@@ -165,11 +165,11 @@ struct public_key_t {
 	bool (*equals)(public_key_t *this, public_key_t *other);
 
 	/**
-	 * Get the strength of the key in bytes.
+	 * Get the strength of the key in bits.
 	 *
-	 * @return			strength of the key in bytes
+	 * @return			strength of the key in bits
 	 */
-	size_t (*get_keysize) (public_key_t *this);
+	int (*get_keysize) (public_key_t *this);
 
 	/**
 	 * Get the fingerprint of the key.

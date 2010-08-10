@@ -84,15 +84,15 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 			/* we try to deduct the signature scheme from the keysize */
 			switch (private->get_keysize(private))
 			{
-				case 32:
+				case 256:
 					scheme = SIGN_ECDSA_256;
 					auth_method = AUTH_ECDSA_256;
 					break;
-				case 48:
+				case 384:
 					scheme = SIGN_ECDSA_384;
 					auth_method = AUTH_ECDSA_384;
 					break;
-				case 66:
+				case 521:
 					scheme = SIGN_ECDSA_521;
 					auth_method = AUTH_ECDSA_521;
 					break;

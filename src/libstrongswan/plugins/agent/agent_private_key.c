@@ -306,10 +306,10 @@ METHOD(private_key_t, decrypt, bool,
 	return FALSE;
 }
 
-METHOD(private_key_t, get_keysize, size_t,
+METHOD(private_key_t, get_keysize, int,
 	private_agent_private_key_t *this)
 {
-	return this->key_size;
+	return this->key_size * 8;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,

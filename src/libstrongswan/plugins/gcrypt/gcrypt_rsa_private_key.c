@@ -277,10 +277,10 @@ METHOD(private_key_t, decrypt, bool,
 	return TRUE;
 }
 
-METHOD(private_key_t, get_keysize, size_t,
+METHOD(private_key_t, get_keysize, int,
 	private_gcrypt_rsa_private_key_t *this)
 {
-	return gcry_pk_get_nbits(this->key) / 8;
+	return gcry_pk_get_nbits(this->key);
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,

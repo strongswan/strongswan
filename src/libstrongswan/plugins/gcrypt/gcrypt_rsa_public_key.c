@@ -228,10 +228,10 @@ METHOD(public_key_t, encrypt_, bool,
 	return !!encrypted->len;
 }
 
-METHOD(public_key_t, get_keysize, size_t,
+METHOD(public_key_t, get_keysize, int,
 	private_gcrypt_rsa_public_key_t *this)
 {
-	return gcry_pk_get_nbits(this->key) / 8;
+	return gcry_pk_get_nbits(this->key);
 }
 
 METHOD(public_key_t, get_encoding, bool,

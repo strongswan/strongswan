@@ -807,7 +807,7 @@ int main(int argc, char **argv)
 	public_key = private_key->get_public_key(private_key);
 
 	/* check for minimum key length */
-	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS)
+	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS / BITS_PER_BYTE)
 	{
 		exit_scepclient("length of RSA key has to be at least %d bits"
 			,RSA_MIN_OCTETS * BITS_PER_BYTE);

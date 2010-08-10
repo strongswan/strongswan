@@ -29,7 +29,7 @@ static void print_pubkey(public_key_t *key)
 	chunk_t chunk;
 
 	printf("pubkey:    %N %d bits\n", key_type_names, key->get_type(key),
-		   key->get_keysize(key) * 8);
+		   key->get_keysize(key));
 	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &chunk))
 	{
 		printf("keyid:     %#B\n", &chunk);

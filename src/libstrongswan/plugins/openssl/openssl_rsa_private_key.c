@@ -173,10 +173,10 @@ METHOD(private_key_t, decrypt, bool,
 	return FALSE;
 }
 
-METHOD(private_key_t, get_keysize, size_t,
+METHOD(private_key_t, get_keysize, int,
 	private_openssl_rsa_private_key_t *this)
 {
-	return RSA_size(this->rsa);
+	return RSA_size(this->rsa) * 8;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,
