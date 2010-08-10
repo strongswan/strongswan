@@ -288,9 +288,23 @@ static int purge(stroke_keyword_t kw)
 	return send_stroke_msg(&msg);
 }
 
+static int export_flags[] = {
+	EXPORT_X509,
+};
+
+static int export(stroke_keyword_t kw, char *selector)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_EXPORT;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.export.selector = push_string(&msg, selector);
+	msg.export.flags = export_flags[kw - STROKE_EXPORT_FIRST];
+	return send_stroke_msg(&msg);
+}
+
 static int leases(stroke_keyword_t kw, char *pool, char *address)
 {
-
 	stroke_msg_t msg;
 
 	msg.type = STR_LEASES;
@@ -361,6 +375,8 @@ static void exit_usage(char *error)
 	printf("    stroke purgeocsp\n");
 	printf("  Purge IKE_SAs without a CHILD_SA:\n");
 	printf("    stroke purgeike\n");
+	printf("  Export credentials to the console:\n");
+	printf("    stroke exportx509 DN\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
@@ -477,6 +493,13 @@ int main(int argc, char *argv[])
 		case STROKE_PURGE_OCSP:
 		case STROKE_PURGE_IKE:
 			res = purge(token->kw);
+			break;
+		case STROKE_EXPORT_X509:
+			if (argc != 3)
+			{
+				exit_usage("\"exportx509\" needs a distinguished name");
+			}
+			res = export(token->kw, argv[2]);
 			break;
 		case STROKE_LEASES:
 			res = leases(token->kw, argc > 2 ? argv[2] : NULL,

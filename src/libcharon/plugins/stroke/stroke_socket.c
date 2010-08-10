@@ -353,6 +353,37 @@ static void stroke_purge(private_stroke_socket_t *this,
 }
 
 /**
+ * Export in-memory credentials
+ */
+static void stroke_export(private_stroke_socket_t *this,
+						  stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->export.selector);
+
+	if (msg->purge.flags & EXPORT_X509)
+	{
+		enumerator_t *enumerator;
+		identification_t *id;
+		certificate_t *cert;
+		chunk_t encoded;
+
+		id = identification_create_from_string(msg->export.selector);
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+												CERT_X509, KEY_ANY, id, FALSE);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			if (cert->get_encoding(cert, CERT_PEM, &encoded))
+			{
+				fprintf(out, "%.*s", encoded.len, encoded.ptr);
+				free(encoded.ptr);
+			}
+		}
+		enumerator->destroy(enumerator);
+		id->destroy(id);
+	}
+}
+
+/**
  * list pool leases
  */
 static void stroke_leases(private_stroke_socket_t *this,
@@ -524,6 +555,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_PURGE:
 			stroke_purge(this, msg, out);
+			break;
+		case STR_EXPORT:
+			stroke_export(this, msg, out);
 			break;
 		case STR_LEASES:
 			stroke_leases(this, msg, out);

@@ -56,4 +56,5 @@ rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP
 purgeike,        STROKE_PURGE_IKE
+exportx509,      STROKE_EXPORT_X509
 leases,          STROKE_LEASES
