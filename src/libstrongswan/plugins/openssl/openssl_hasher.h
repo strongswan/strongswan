@@ -31,9 +31,9 @@ typedef struct openssl_hasher_t openssl_hasher_t;
 struct openssl_hasher_t {
 
 	/**
-	 * The hasher_t interface.
+	 * Implements hasher_t interface.
 	 */
-	hasher_t hasher_interface;
+	hasher_t hasher;
 };
 
 /**

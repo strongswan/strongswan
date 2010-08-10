@@ -34,7 +34,7 @@ struct openssl_ec_public_key_t {
 	/**
 	 * Implements the public_key_t interface
 	 */
-	public_key_t interface;
+	public_key_t key;
 };
 
 /**

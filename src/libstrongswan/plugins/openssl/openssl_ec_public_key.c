@@ -130,19 +130,15 @@ static bool verify_der_signature(private_openssl_ec_public_key_t *this,
 	return valid;
 }
 
-/**
- * Implementation of public_key_t.get_type.
- */
-static key_type_t get_type(private_openssl_ec_public_key_t *this)
+METHOD(public_key_t, get_type, key_type_t,
+	private_openssl_ec_public_key_t *this)
 {
 	return KEY_ECDSA;
 }
 
-/**
- * Implementation of public_key_t.verify.
- */
-static bool verify(private_openssl_ec_public_key_t *this,
-				   signature_scheme_t scheme, chunk_t data, chunk_t signature)
+METHOD(public_key_t, verify, bool,
+	private_openssl_ec_public_key_t *this, signature_scheme_t scheme,
+	chunk_t data, chunk_t signature)
 {
 	switch (scheme)
 	{
@@ -172,20 +168,15 @@ static bool verify(private_openssl_ec_public_key_t *this,
 	}
 }
 
-/**
- * Implementation of public_key_t.get_keysize.
- */
-static bool encrypt_(private_openssl_ec_public_key_t *this,
-					 chunk_t crypto, chunk_t *plain)
+METHOD(public_key_t, encrypt, bool,
+	private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "EC public key encryption not implemented");
 	return FALSE;
 }
 
-/**
- * Implementation of public_key_t.get_keysize.
- */
-static size_t get_keysize(private_openssl_ec_public_key_t *this)
+METHOD(public_key_t, get_keysize, size_t,
+	private_openssl_ec_public_key_t *this)
 {
 	return EC_FIELD_ELEMENT_LEN(EC_KEY_get0_group(this->ec));
 }
@@ -232,20 +223,16 @@ bool openssl_ec_fingerprint(EC_KEY *ec, cred_encoding_type_t type, chunk_t *fp)
 	return TRUE;
 }
 
-/**
- * Implementation of private_key_t.get_fingerprint.
- */
-static bool get_fingerprint(private_openssl_ec_public_key_t *this,
-							cred_encoding_type_t type, chunk_t *fingerprint)
+METHOD(public_key_t, get_fingerprint, bool,
+	private_openssl_ec_public_key_t *this, cred_encoding_type_t type,
+	chunk_t *fingerprint)
 {
 	return openssl_ec_fingerprint(this->ec, type, fingerprint);
 }
 
-/**
- * Implementation of private_key_t.get_encoding.
- */
-static bool get_encoding(private_openssl_ec_public_key_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(public_key_t, get_encoding, bool,
+	private_openssl_ec_public_key_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	u_char *p;
 
@@ -276,19 +263,15 @@ static bool get_encoding(private_openssl_ec_public_key_t *this,
 	}
 }
 
-/**
- * Implementation of public_key_t.get_ref.
- */
-static public_key_t* get_ref(private_openssl_ec_public_key_t *this)
+METHOD(public_key_t, get_ref, public_key_t*,
+	private_openssl_ec_public_key_t *this)
 {
 	ref_get(&this->ref);
-	return &this->public.interface;
+	return &this->public.key;
 }
 
-/**
- * Implementation of openssl_ec_public_key.destroy.
- */
-static void destroy(private_openssl_ec_public_key_t *this)
+METHOD(public_key_t, destroy, void,
+	private_openssl_ec_public_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -306,21 +289,23 @@ static void destroy(private_openssl_ec_public_key_t *this)
  */
 static private_openssl_ec_public_key_t *create_empty()
 {
-	private_openssl_ec_public_key_t *this = malloc_thing(private_openssl_ec_public_key_t);
+	private_openssl_ec_public_key_t *this;
 
-	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
-	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
-	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
-	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
-	this->public.interface.equals = public_key_equals;
-	this->public.interface.get_fingerprint = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
-	this->public.interface.has_fingerprint = (bool(*)(public_key_t*, chunk_t fp))public_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(public_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
-	this->public.interface.get_ref = (public_key_t* (*)(public_key_t *this))get_ref;
-	this->public.interface.destroy = (void (*)(public_key_t *this))destroy;
-
-	this->ec = NULL;
-	this->ref = 1;
+	INIT(this,
+		.public.key = {
+			.get_type = _get_type,
+			.verify = _verify,
+			.encrypt = _encrypt,
+			.get_keysize = _get_keysize,
+			.equals = public_key_equals,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = public_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.ref = 1,
+	);
 
 	return this;
 }

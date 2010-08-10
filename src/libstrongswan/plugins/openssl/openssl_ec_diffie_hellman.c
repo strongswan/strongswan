@@ -165,7 +165,8 @@ error:
  *   of the Diffie-Hellman shared secret value is the same as that of the
  *   Diffie-Hellman public value."
  */
-static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this, chunk_t *shared_secret)
+static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this,
+							   chunk_t *shared_secret)
 {
 	const BIGNUM *priv_key;
 	EC_POINT *secret = NULL;
@@ -209,10 +210,8 @@ error:
 	return ret;
 }
 
-/**
- * Implementation of openssl_ec_diffie_hellman_t.set_other_public_value.
- */
-static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+METHOD(diffie_hellman_t, set_other_public_value, void,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
 	if (!chunk2ecp(this->ec_group, value, this->pub_key))
 	{
@@ -230,18 +229,14 @@ static void set_other_public_value(private_openssl_ec_diffie_hellman_t *this, ch
 	this->computed = TRUE;
 }
 
-/**
- * Implementation of openssl_ec_diffie_hellman_t.get_my_public_value.
- */
-static void get_my_public_value(private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
+METHOD(diffie_hellman_t, get_my_public_value, void,
+	private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
 	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
 }
 
-/**
- * Implementation of openssl_ec_diffie_hellman_t.get_shared_secret.
- */
-static status_t get_shared_secret(private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
+METHOD(diffie_hellman_t, get_shared_secret, status_t,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
@@ -251,18 +246,14 @@ static status_t get_shared_secret(private_openssl_ec_diffie_hellman_t *this, chu
 	return SUCCESS;
 }
 
-/**
- * Implementation of openssl_ec_diffie_hellman_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_openssl_ec_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+	private_openssl_ec_diffie_hellman_t *this)
 {
 	return this->group;
 }
 
-/**
- * Implementation of openssl_ec_diffie_hellman_t.destroy.
- */
-static void destroy(private_openssl_ec_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, destroy, void,
+	private_openssl_ec_diffie_hellman_t *this)
 {
 	EC_POINT_clear_free(this->pub_key);
 	EC_KEY_free(this->key);
@@ -275,13 +266,18 @@ static void destroy(private_openssl_ec_diffie_hellman_t *this)
  */
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
-	private_openssl_ec_diffie_hellman_t *this = malloc_thing(private_openssl_ec_diffie_hellman_t);
+	private_openssl_ec_diffie_hellman_t *this;
 
-	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
-	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
-	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
-	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
+	INIT(this,
+		.public.dh = {
+			.get_shared_secret = _get_shared_secret,
+			.set_other_public_value = _set_other_public_value,
+			.get_my_public_value = _get_my_public_value,
+			.get_dh_group = _get_dh_group,
+			.destroy = _destroy,
+		},
+		.group = group,
+	);
 
 	switch (group)
 	{
@@ -327,11 +323,6 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 		free(this);
 		return NULL;
 	}
-
-	this->group = group;
-	this->computed = FALSE;
-
-	this->shared_secret = chunk_empty;
 
 	return &this->public;
 }

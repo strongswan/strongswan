@@ -118,8 +118,11 @@ static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
 	return NULL;
 }
 
-static void crypt(private_openssl_crypter_t *this, chunk_t data,
-					chunk_t iv, chunk_t *dst, int enc)
+/**
+ * Do the actual en/decryption in an EVP context
+ */
+static void crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
+				  chunk_t *dst, int enc)
 {
 	int len;
 	u_char *out;
@@ -141,53 +144,38 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 	EVP_CIPHER_CTX_cleanup(&ctx);
 }
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_openssl_crypter_t *this, chunk_t data,
-						chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, decrypt, void,
+	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 0);
 }
 
-
-/**
- * Implementation of crypter_t.encrypt.
- */
-static void encrypt (private_openssl_crypter_t *this, chunk_t data,
-							chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, encrypt, void,
+	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 1);
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size(private_openssl_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_openssl_crypter_t *this)
 {
 	return this->cipher->block_size;
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size(private_openssl_crypter_t *this)
+METHOD(crypter_t, get_key_size, size_t,
+	private_openssl_crypter_t *this)
 {
 	return this->key.len;
 }
 
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key(private_openssl_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_openssl_crypter_t *this, chunk_t key)
 {
 	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
 }
 
-/**
- * Implementation of crypter_t.destroy.
- */
-static void destroy (private_openssl_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_openssl_crypter_t *this)
 {
 	free(this->key.ptr);
 	free(this);
@@ -201,7 +189,16 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 {
 	private_openssl_crypter_t *this;
 
-	this = malloc_thing(private_openssl_crypter_t);
+	INIT(this,
+		.public.crypter = {
+			.encrypt = _encrypt,
+			.decrypt = _decrypt,
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+	);
 
 	switch (algo)
 	{
@@ -267,13 +264,6 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 	}
 
 	this->key = chunk_alloc(key_size);
-
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
 
 	return &this->public;
 }

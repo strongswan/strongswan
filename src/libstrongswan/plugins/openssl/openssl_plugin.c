@@ -166,10 +166,8 @@ static void threading_cleanup()
 	mutex = NULL;
 }
 
-/**
- * Implementation of openssl_plugin_t.destroy
- */
-static void destroy(private_openssl_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_openssl_plugin_t *this)
 {
 	lib->crypto->remove_crypter(lib->crypto,
 					(crypter_constructor_t)openssl_crypter_create);
@@ -218,9 +216,11 @@ static void destroy(private_openssl_plugin_t *this)
  */
 plugin_t *openssl_plugin_create()
 {
-	private_openssl_plugin_t *this = malloc_thing(private_openssl_plugin_t);
+	private_openssl_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	threading_init();
 

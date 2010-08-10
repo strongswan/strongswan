@@ -31,9 +31,9 @@ typedef struct openssl_crypter_t openssl_crypter_t;
 struct openssl_crypter_t {
 
 	/**
-	 * The crypter_t interface.
+	 * Implements crypter_t interface.
 	 */
-	crypter_t crypter_interface;
+	crypter_t crypter;
 };
 
 /**

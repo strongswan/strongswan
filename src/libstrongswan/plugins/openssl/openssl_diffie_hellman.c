@@ -57,11 +57,8 @@ struct private_openssl_diffie_hellman_t {
 	bool computed;
 };
 
-/**
- * Implementation of openssl_diffie_hellman_t.get_my_public_value.
- */
-static void get_my_public_value(private_openssl_diffie_hellman_t *this,
-								chunk_t *value)
+METHOD(diffie_hellman_t, get_my_public_value, void,
+	private_openssl_diffie_hellman_t *this, chunk_t *value)
 {
 	*value = chunk_alloc(DH_size(this->dh));
 	memset(value->ptr, 0, value->len);
@@ -69,11 +66,8 @@ static void get_my_public_value(private_openssl_diffie_hellman_t *this,
 			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
 }
 
-/**
- * Implementation of openssl_diffie_hellman_t.get_shared_secret.
- */
-static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
-								  chunk_t *secret)
+METHOD(diffie_hellman_t, get_shared_secret, status_t,
+	private_openssl_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
@@ -88,11 +82,8 @@ static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
 }
 
 
-/**
- * Implementation of openssl_diffie_hellman_t.set_other_public_value.
- */
-static void set_other_public_value(private_openssl_diffie_hellman_t *this,
-								   chunk_t value)
+METHOD(diffie_hellman_t, set_other_public_value, void,
+	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
 	int len;
 
@@ -110,10 +101,8 @@ static void set_other_public_value(private_openssl_diffie_hellman_t *this,
 	this->computed = TRUE;
 }
 
-/**
- * Implementation of openssl_diffie_hellman_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_openssl_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+	private_openssl_diffie_hellman_t *this)
 {
 	return this->group;
 }
@@ -137,10 +126,8 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of openssl_diffie_hellman_t.destroy.
- */
-static void destroy(private_openssl_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, destroy, void,
+	private_openssl_diffie_hellman_t *this)
 {
 	BN_clear_free(this->pub_key);
 	DH_free(this->dh);
@@ -153,13 +140,17 @@ static void destroy(private_openssl_diffie_hellman_t *this)
  */
 openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group)
 {
-	private_openssl_diffie_hellman_t *this = malloc_thing(private_openssl_diffie_hellman_t);
+	private_openssl_diffie_hellman_t *this;
 
-	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
-	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
-	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
-	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
+	INIT(this,
+		.public.dh = {
+			.get_shared_secret = _get_shared_secret,
+			.set_other_public_value = _set_other_public_value,
+			.get_my_public_value = _get_my_public_value,
+			.get_dh_group = _get_dh_group,
+			.destroy = _destroy,
+		},
+	);
 
 	this->dh = DH_new();
 	if (!this->dh)
