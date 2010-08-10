@@ -169,7 +169,8 @@ METHOD(public_key_t, verify, bool,
 }
 
 METHOD(public_key_t, encrypt, bool,
-	private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
+	private_openssl_ec_public_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "EC public key encryption not implemented");
 	return FALSE;

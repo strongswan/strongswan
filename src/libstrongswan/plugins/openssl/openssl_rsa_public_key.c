@@ -148,7 +148,8 @@ METHOD(public_key_t, verify, bool,
 }
 
 METHOD(public_key_t, encrypt, bool,
-	private_openssl_rsa_public_key_t *this, chunk_t crypto, chunk_t *plain)
+	private_openssl_rsa_public_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "RSA public key encryption not implemented");
 	return FALSE;

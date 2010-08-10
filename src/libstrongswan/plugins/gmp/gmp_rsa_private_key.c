@@ -314,11 +314,18 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_gmp_rsa_private_key_t *this, chunk_t crypto, chunk_t *plain)
+	private_gmp_rsa_private_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	chunk_t em, stripped;
 	bool success = FALSE;
 
+	if (scheme != ENCRYPT_RSA_PKCS1)
+	{
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
+		return FALSE;
+	}
 	/* rsa decryption using PKCS#1 RSADP */
 	stripped = em = rsadp(this, crypto);
 

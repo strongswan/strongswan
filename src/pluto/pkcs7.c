@@ -407,7 +407,7 @@ bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
 			}
 			break;
 		case PKCS7_ENCRYPTED_KEY:
-			if (!key->decrypt(key, object, &symmetric_key))
+			if (!key->decrypt(key, ENCRYPT_RSA_PKCS1, object, &symmetric_key))
 			{
 				DBG1(DBG_LIB, "symmetric key could not be decrypted with rsa");
 				goto end;
@@ -710,7 +710,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 			chunk_free(&out);
 			return chunk_empty;
 		}
-		key->encrypt(key, symmetricKey, &protectedKey);
+		key->encrypt(key, ENCRYPT_RSA_PKCS1, symmetricKey, &protectedKey);
 		key->destroy(key);
 	}
 

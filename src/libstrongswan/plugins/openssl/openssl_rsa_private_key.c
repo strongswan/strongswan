@@ -166,7 +166,8 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_openssl_rsa_private_key_t *this, chunk_t crypto, chunk_t *plain)
+	private_openssl_rsa_private_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "RSA private key decryption not implemented");
 	return FALSE;

@@ -193,11 +193,18 @@ METHOD(public_key_t, verify, bool,
 }
 
 METHOD(public_key_t, encrypt_, bool,
-	private_gcrypt_rsa_public_key_t *this, chunk_t plain, chunk_t *encrypted)
+	private_gcrypt_rsa_public_key_t *this, encryption_scheme_t scheme,
+	chunk_t plain, chunk_t *encrypted)
 {
 	gcry_sexp_t in, out;
 	gcry_error_t err;
 
+	if (scheme != ENCRYPT_RSA_PKCS1)
+	{
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
+		return FALSE;
+	}
 	/* "pkcs1" uses PKCS 1.5 (section 8.1) block type 2 encryption:
 	 * 00 | 02 | RANDOM | 00 | DATA */
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(value %b))",

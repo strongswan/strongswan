@@ -228,7 +228,8 @@ static status_t process_key_exchange(private_tls_server_t *this,
 	}
 
 	if (!this->private ||
-		!this->private->decrypt(this->private, encrypted, &premaster))
+		!this->private->decrypt(this->private, ENCRYPT_RSA_PKCS1,
+								encrypted, &premaster))
 	{
 		DBG1(DBG_IKE, "decrypting Client Key Exchange data failed");
 		return FAILED;

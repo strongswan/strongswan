@@ -119,7 +119,8 @@ METHOD(public_key_t, verify, bool,
 }
 
 METHOD(public_key_t, encrypt, bool,
-	private_pkcs11_public_key_t *this, chunk_t plain, chunk_t *crypto)
+	private_pkcs11_public_key_t *this, encryption_scheme_t scheme,
+	chunk_t plain, chunk_t *crypto)
 {
 	return FALSE;
 }

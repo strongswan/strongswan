@@ -129,7 +129,7 @@ static bool sign_not_allowed(private_key_t *this, signature_scheme_t scheme,
 /**
  * Implementation of private_key_t.decrypt for signature-only keys
  */
-static bool decrypt_not_allowed(private_key_t *this,
+static bool decrypt_not_allowed(private_key_t *this, encryption_scheme_t scheme,
 								chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "decryption failed - signature only key");

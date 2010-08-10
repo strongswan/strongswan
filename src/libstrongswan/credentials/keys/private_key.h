@@ -51,11 +51,13 @@ struct private_key_t {
 	/**
 	 * Decrypt a chunk of data.
 	 *
+	 * @param scheme	expected encryption scheme used
 	 * @param crypto	chunk containing encrypted data
 	 * @param plain		where to allocate decrypted data
 	 * @return			TRUE if data decrypted and plaintext allocated
 	 */
-	bool (*decrypt)(private_key_t *this, chunk_t crypto, chunk_t *plain);
+	bool (*decrypt)(private_key_t *this, encryption_scheme_t scheme,
+					chunk_t crypto, chunk_t *plain);
 
 	/**
 	 * Get the strength of the key in bytes.

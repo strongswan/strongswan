@@ -505,7 +505,8 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 		DBG1(DBG_IKE, "no TLS public key found for server '%Y'", this->server);
 		return FAILED;
 	}
-	if (!public->encrypt(public, chunk_from_thing(premaster), &encrypted))
+	if (!public->encrypt(public, ENCRYPT_RSA_PKCS1,
+						 chunk_from_thing(premaster), &encrypted))
 	{
 		public->destroy(public);
 		DBG1(DBG_IKE, "encrypting TLS premaster secret failed");

@@ -24,6 +24,7 @@
 typedef struct public_key_t public_key_t;
 typedef enum key_type_t key_type_t;
 typedef enum signature_scheme_t signature_scheme_t;
+typedef enum encryption_scheme_t encryption_scheme_t;
 
 #include <library.h>
 #include <utils/identification.h>
@@ -97,6 +98,31 @@ enum signature_scheme_t {
 extern enum_name_t *signature_scheme_names;
 
 /**
+ * Encryption scheme for public key data encryption.
+ */
+enum encryption_scheme_t {
+	/** Unknown encryption scheme                                      */
+	ENCRYPT_UNKNOWN,
+	/** RSAES-PKCS1-v1_5 as in PKCS#1                                  */
+	ENCRYPT_RSA_PKCS1,
+	/** RSAES-OAEP as in PKCS#1, using SHA1 as hash, no label          */
+	ENCRYPT_RSA_OAEP_SHA1,
+	/** RSAES-OAEP as in PKCS#1, using SHA-224 as hash, no label       */
+	ENCRYPT_RSA_OAEP_SHA224,
+	/** RSAES-OAEP as in PKCS#1, using SHA-256 as hash, no label       */
+	ENCRYPT_RSA_OAEP_SHA256,
+	/** RSAES-OAEP as in PKCS#1, using SHA-384 as hash, no label       */
+	ENCRYPT_RSA_OAEP_SHA384,
+	/** RSAES-OAEP as in PKCS#1, using SHA-512 as hash, no label       */
+	ENCRYPT_RSA_OAEP_SHA512,
+};
+
+/**
+ * Enum names for encryption_scheme_t
+ */
+extern enum_name_t *encryption_scheme_names;
+
+/**
  * Abstract interface of a public key.
  */
 struct public_key_t {
@@ -122,11 +148,13 @@ struct public_key_t {
 	/**
 	 * Encrypt a chunk of data.
 	 *
+	 * @param scheme	encryption scheme to use
 	 * @param plain		chunk containing plaintext data
 	 * @param crypto	where to allocate encrypted data
 	 * @return 			TRUE if data successfully encrypted
 	 */
-	bool (*encrypt)(public_key_t *this, chunk_t plain, chunk_t *crypto);
+	bool (*encrypt)(public_key_t *this, encryption_scheme_t scheme,
+					chunk_t plain, chunk_t *crypto);
 
 	/**
 	 * Check if two public keys are equal.

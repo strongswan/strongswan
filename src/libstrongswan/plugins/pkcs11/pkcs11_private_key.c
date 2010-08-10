@@ -193,7 +193,8 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_pkcs11_private_key_t *this, chunk_t crypto, chunk_t *plain)
+	private_pkcs11_private_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	return FALSE;
 }

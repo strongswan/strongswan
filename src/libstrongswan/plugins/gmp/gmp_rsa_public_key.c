@@ -309,26 +309,32 @@ METHOD(public_key_t, verify, bool,
 #define MIN_PS_PADDING 8
 
 METHOD(public_key_t, encrypt_, bool,
-	private_gmp_rsa_public_key_t *this, chunk_t plain, chunk_t *crypto)
+	private_gmp_rsa_public_key_t *this, encryption_scheme_t scheme,
+	chunk_t plain, chunk_t *crypto)
 {
 	chunk_t em;
 	u_char *pos;
 	int padding, i;
 	rng_t *rng;
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (rng == NULL)
+	if (scheme != ENCRYPT_RSA_PKCS1)
 	{
-		DBG1(DBG_LIB, "no random generator available");
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
 		return FALSE;
 	}
-
 	/* number of pseudo-random padding octets */
 	padding = this->k - plain.len - 3;
 	if (padding < MIN_PS_PADDING)
 	{
 		DBG1(DBG_LIB, "pseudo-random padding must be at least %d octets",
 			 MIN_PS_PADDING);
+		return FALSE;
+	}
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng == NULL)
+	{
+		DBG1(DBG_LIB, "no random generator available");
 		return FALSE;
 	}
 
