@@ -33,10 +33,8 @@ struct private_gmp_plugin_t {
 	gmp_plugin_t public;
 };
 
-/**
- * Implementation of gmp_plugin_t.gmptroy
- */
-static void destroy(private_gmp_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_gmp_plugin_t *this)
 {
 	lib->crypto->remove_dh(lib->crypto,
 						(dh_constructor_t)gmp_diffie_hellman_create);
@@ -54,9 +52,11 @@ static void destroy(private_gmp_plugin_t *this)
  */
 plugin_t *gmp_plugin_create()
 {
-	private_gmp_plugin_t *this = malloc_thing(private_gmp_plugin_t);
+	private_gmp_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);

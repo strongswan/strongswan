@@ -34,7 +34,7 @@ struct gmp_rsa_private_key_t {
 	/**
 	 * Implements private_key_t interface
 	 */
-	private_key_t interface;
+	private_key_t key;
 };
 
 /**

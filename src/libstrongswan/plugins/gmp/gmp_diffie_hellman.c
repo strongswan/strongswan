@@ -85,10 +85,8 @@ struct private_gmp_diffie_hellman_t {
 	bool computed;
 };
 
-/**
- * Implementation of gmp_diffie_hellman_t.set_other_public_value.
- */
-static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t value)
+METHOD(diffie_hellman_t, set_other_public_value, void,
+	private_gmp_diffie_hellman_t *this, chunk_t value)
 {
 	mpz_t p_min_1;
 
@@ -146,10 +144,8 @@ static void set_other_public_value(private_gmp_diffie_hellman_t *this, chunk_t v
 	mpz_clear(p_min_1);
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_my_public_value.
- */
-static void get_my_public_value(private_gmp_diffie_hellman_t *this,chunk_t *value)
+METHOD(diffie_hellman_t, get_my_public_value, void,
+	private_gmp_diffie_hellman_t *this,chunk_t *value)
 {
 	value->len = this->p_len;
 	value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
@@ -159,10 +155,8 @@ static void get_my_public_value(private_gmp_diffie_hellman_t *this,chunk_t *valu
 	}
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_shared_secret.
- */
-static status_t get_shared_secret(private_gmp_diffie_hellman_t *this, chunk_t *secret)
+METHOD(diffie_hellman_t, get_shared_secret, status_t,
+	private_gmp_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
 	{
@@ -177,18 +171,14 @@ static status_t get_shared_secret(private_gmp_diffie_hellman_t *this, chunk_t *s
 	return SUCCESS;
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_gmp_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+	private_gmp_diffie_hellman_t *this)
 {
 	return this->group;
 }
 
-/**
- * Implementation of gmp_diffie_hellman_t.destroy.
- */
-static void destroy(private_gmp_diffie_hellman_t *this)
+METHOD(diffie_hellman_t, destroy, void,
+	private_gmp_diffie_hellman_t *this)
 {
 	mpz_clear(this->p);
 	mpz_clear(this->xa);
@@ -215,17 +205,18 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 		return NULL;
 	}
 
-	this = malloc_thing(private_gmp_diffie_hellman_t);
+	INIT(this,
+		.public.dh = {
+			.get_shared_secret = _get_shared_secret,
+			.set_other_public_value = _set_other_public_value,
+			.get_my_public_value = _get_my_public_value,
+			.get_dh_group = _get_dh_group,
+			.destroy = _destroy,
+		},
+		.group = group,
+		.p_len = params->prime.len,
+	);
 
-	/* public functions */
-	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
-	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
-	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
-	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-
-	/* private variables */
-	this->group = group;
 	mpz_init(this->p);
 	mpz_init(this->yb);
 	mpz_init(this->ya);
@@ -233,8 +224,6 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	mpz_init(this->zz);
 	mpz_init(this->g);
 
-	this->computed = FALSE;
-	this->p_len = params->prime.len;
 	mpz_import(this->p, params->prime.len, 1, 1, 1, 0, params->prime.ptr);
 	mpz_import(this->g, params->generator.len, 1, 1, 1, 0, params->generator.ptr);
 
