@@ -121,20 +121,6 @@ struct kernel_ops {
 
 extern const struct kernel_ops *kernel_ops;
 
-/* information from /proc/net/ipsec_eroute */
-
-struct eroute_info {
-	unsigned long count;
-	ip_subnet ours;
-	ip_subnet his;
-	ip_address dst;
-	ip_said     said;
-	int transport_proto;
-	struct eroute_info *next;
-};
-
-extern struct eroute_info *orphaned_holds;
-
 extern void show_shunt_status(void);
 #endif
 

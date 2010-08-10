@@ -447,19 +447,6 @@ pfkey_dequeue(void)
 		pfkey_iq_head = it->next;
 		free(it);
 	}
-
-	/* Handle any orphaned holds, but only if no pfkey input is pending.
-	 * For each, we initiate Opportunistic.
-	 * note: we don't need to advance the pointer because
-	 * record_and_initiate_opportunistic will remove the current
-	 * record each time we call it.
-	 */
-	while (orphaned_holds != NULL && !pfkey_input_ready())
-	  record_and_initiate_opportunistic(&orphaned_holds->ours
-										, &orphaned_holds->his
-										, orphaned_holds->transport_proto
-										, "%hold found-pfkey");
-
 }
 
 /* asynchronous messages directly from PF_KEY socket */

@@ -144,12 +144,6 @@ static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 #define DBG_bare_shunt(op, bs) {}
 #endif /* !DEBUG */
 
-/* The orphaned_holds table records %holds for which we
- * scan_proc_shunts found no representation of in any connection.
- * The corresponding ACQUIRE message might have been lost.
- */
-struct eroute_info *orphaned_holds = NULL;
-
 /* forward declaration */
 static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind, unsigned int op,
@@ -238,27 +232,6 @@ void record_and_initiate_opportunistic(const ip_subnet *ours,
 		networkof(ours, &src);
 		networkof(his, &dst);
 		initiate_opportunistic(&src, &dst, transport_proto, TRUE, NULL_FD);
-	}
-
-	/* if present, remove from orphaned_holds list.
-	 * NOTE: we do this last in case ours or his is a pointer into a member.
-	 */
-	{
-		struct eroute_info **pp, *p;
-
-		for (pp = &orphaned_holds; (p = *pp) != NULL; pp = &p->next)
-		{
-			if (samesubnet(ours, &p->ours)
-			&& samesubnet(his, &p->his)
-			&& transport_proto == p->transport_proto
-			&& portof(&ours->addr) == portof(&p->ours.addr)
-			&& portof(&his->addr) == portof(&p->his.addr))
-			{
-				*pp = p->next;
-				free(p);
-				break;
-			}
-		}
 	}
 }
 
