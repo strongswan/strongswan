@@ -33,7 +33,7 @@ struct gcrypt_hasher_t {
 	/**
 	 * The hasher_t interface.
 	 */
-	hasher_t hasher_interface;
+	hasher_t hasher;
 };
 
 /**

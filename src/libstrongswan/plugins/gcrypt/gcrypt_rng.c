@@ -35,11 +35,8 @@ struct private_gcrypt_rng_t {
 	rng_quality_t quality;
 };
 
-/**
- * Implementation of gcrypt_rng_t.get_bytes.
- */
-static void get_bytes(private_gcrypt_rng_t *this, size_t bytes,
-					  u_int8_t *buffer)
+METHOD(rng_t, get_bytes, void,
+	private_gcrypt_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	switch (this->quality)
 	{
@@ -55,20 +52,15 @@ static void get_bytes(private_gcrypt_rng_t *this, size_t bytes,
 	}
 }
 
-/**
- * Implementation of gcrypt_rng_t.allocate_bytes.
- */
-static void allocate_bytes(private_gcrypt_rng_t *this, size_t bytes,
-						   chunk_t *chunk)
+METHOD(rng_t, allocate_bytes, void,
+	private_gcrypt_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
 	get_bytes(this, chunk->len, chunk->ptr);
 }
 
-/**
- * Implementation of gcrypt_rng_t.destroy.
- */
-static void destroy(private_gcrypt_rng_t *this)
+METHOD(rng_t, destroy, void,
+	private_gcrypt_rng_t *this)
 {
 	free(this);
 }
@@ -90,13 +82,14 @@ gcrypt_rng_t *gcrypt_rng_create(rng_quality_t quality)
 			return NULL;
 	}
 
-	this = malloc_thing(private_gcrypt_rng_t);
-
-	this->public.rng.get_bytes = (void (*) (rng_t *, size_t, u_int8_t*)) get_bytes;
-	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
-	this->public.rng.destroy = (void (*) (rng_t *))destroy;
-
-	this->quality = quality;
+	INIT(this,
+		.public.rng = {
+			.get_bytes = _get_bytes,
+			.allocate_bytes = _allocate_bytes,
+			.destroy = _destroy,
+		},
+		.quality = quality,
+	);
 
 	return &this->public;
 }

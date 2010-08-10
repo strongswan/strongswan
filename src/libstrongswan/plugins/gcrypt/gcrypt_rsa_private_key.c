@@ -192,19 +192,15 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 	return !!signature->len;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.destroy.
- */
-static key_type_t get_type(private_gcrypt_rsa_private_key_t *this)
+METHOD(private_key_t, get_type, key_type_t,
+	private_gcrypt_rsa_private_key_t *this)
 {
 	return KEY_RSA;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.destroy.
- */
-static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme,
-				 chunk_t data, chunk_t *sig)
+METHOD(private_key_t, sign, bool,
+	private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme,
+	chunk_t data, chunk_t *sig)
 {
 	switch (scheme)
 	{
@@ -229,11 +225,8 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 	}
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.destroy.
- */
-static bool decrypt(private_gcrypt_rsa_private_key_t *this,
-					chunk_t encrypted, chunk_t *plain)
+METHOD(private_key_t, decrypt, bool,
+	private_gcrypt_rsa_private_key_t *this, chunk_t encrypted, chunk_t *plain)
 {
 	gcry_error_t err;
 	gcry_sexp_t in, out;
@@ -277,18 +270,14 @@ static bool decrypt(private_gcrypt_rsa_private_key_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.get_keysize.
- */
-static size_t get_keysize(private_gcrypt_rsa_private_key_t *this)
+METHOD(private_key_t, get_keysize, size_t,
+	private_gcrypt_rsa_private_key_t *this)
 {
 	return gcry_pk_get_nbits(this->key) / 8;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.get_public_key.
- */
-static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
+METHOD(private_key_t, get_public_key, public_key_t*,
+	private_gcrypt_rsa_private_key_t *this)
 {
 	chunk_t n, e;
 	public_key_t *public;
@@ -304,11 +293,9 @@ static public_key_t* get_public_key(private_gcrypt_rsa_private_key_t *this)
 	return public;
 }
 
-/**
- * Implementation of private_key_t.get_encoding
- */
-static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(private_key_t, get_encoding, bool,
+	private_gcrypt_rsa_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	chunk_t cn, ce, cp, cq, cd, cu, cexp1 = chunk_empty, cexp2 = chunk_empty;
 	gcry_mpi_t p = NULL, q = NULL, d = NULL, exp1, exp2;
@@ -385,11 +372,9 @@ static bool get_encoding(private_gcrypt_rsa_private_key_t *this,
 	return success;
 }
 
-/**
- * Implementation of private_key_t.get_fingerprint
- */
-static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
-							cred_encoding_type_t type, chunk_t *fp)
+METHOD(private_key_t, get_fingerprint, bool,
+	private_gcrypt_rsa_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *fp)
 {
 	chunk_t n, e;
 	bool success;
@@ -409,19 +394,15 @@ static bool get_fingerprint(private_gcrypt_rsa_private_key_t *this,
 	return success;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.get_ref.
- */
-static private_key_t* get_ref(private_gcrypt_rsa_private_key_t *this)
+METHOD(private_key_t, get_ref, private_key_t*,
+	private_gcrypt_rsa_private_key_t *this)
 {
 	ref_get(&this->ref);
-	return &this->public.interface;
+	return &this->public.key;
 }
 
-/**
- * Implementation of gcrypt_rsa_private_key.destroy.
- */
-static void destroy(private_gcrypt_rsa_private_key_t *this)
+METHOD(private_key_t, destroy, void,
+	private_gcrypt_rsa_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -434,25 +415,27 @@ static void destroy(private_gcrypt_rsa_private_key_t *this)
 /**
  * Internal generic constructor
  */
-static private_gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_create_empty()
+static private_gcrypt_rsa_private_key_t *create_empty()
 {
-	private_gcrypt_rsa_private_key_t *this = malloc_thing(private_gcrypt_rsa_private_key_t);
+	private_gcrypt_rsa_private_key_t *this;
 
-	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
-	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
-	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.equals = private_key_equals;
-	this->public.interface.belongs_to = private_key_belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
-	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
-	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
-
-	this->key = NULL;
-	this->ref = 1;
+	INIT(this,
+		.public.key = {
+			.get_type = _get_type,
+			.sign = _sign,
+			.decrypt = _decrypt,
+			.get_keysize = _get_keysize,
+			.get_public_key = _get_public_key,
+			.equals = private_key_equals,
+			.belongs_to = private_key_belongs_to,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = private_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.ref = 1,
+	);
 
 	return this;
 }
@@ -493,7 +476,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
 		DBG1(DBG_LIB, "building S-expression failed: %s", gpg_strerror(err));
 		return NULL;
 	}
-	this = gcrypt_rsa_private_key_create_empty();
+	this = create_empty();
 	err = gcry_pk_genkey(&this->key, param);
 	gcry_sexp_release(param);
 	if (err)
@@ -552,7 +535,7 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 		break;
 	}
 
-	this = gcrypt_rsa_private_key_create_empty();
+	this = create_empty();
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,

@@ -33,7 +33,7 @@ struct gcrypt_crypter_t {
 	/**
 	 * The crypter_t interface.
 	 */
-	crypter_t crypter_interface;
+	crypter_t crypter;
 };
 
 /**

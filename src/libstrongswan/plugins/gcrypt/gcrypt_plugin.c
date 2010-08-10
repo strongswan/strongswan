@@ -93,10 +93,8 @@ static struct gcry_thread_cbs thread_functions = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-/**
- * Implementation of gcrypt_plugin_t.destroy
- */
-static void destroy(private_gcrypt_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_gcrypt_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)gcrypt_hasher_create);
@@ -139,9 +137,9 @@ plugin_t *gcrypt_plugin_create()
 	}
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
-	this = malloc_thing(private_gcrypt_plugin_t);
-
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	/* hashers */
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,

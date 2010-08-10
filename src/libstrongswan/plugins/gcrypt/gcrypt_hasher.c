@@ -37,27 +37,20 @@ struct private_gcrypt_hasher_t {
 	gcry_md_hd_t hd;
 };
 
-/**
- * Implementation of hasher_t.get_hash_size.
- */
-static size_t get_hash_size(private_gcrypt_hasher_t *this)
+METHOD(hasher_t, get_hash_size, size_t,
+	private_gcrypt_hasher_t *this)
 {
 	return gcry_md_get_algo_dlen(gcry_md_get_algo(this->hd));
 }
 
-/**
- * Implementation of hasher_t.reset.
- */
-static void reset(private_gcrypt_hasher_t *this)
+METHOD(hasher_t, reset, void,
+	private_gcrypt_hasher_t *this)
 {
 	gcry_md_reset(this->hd);
 }
 
-/**
- * Implementation of hasher_t.get_hash.
- */
-static void get_hash(private_gcrypt_hasher_t *this, chunk_t chunk,
-					 u_int8_t *hash)
+METHOD(hasher_t, get_hash, void,
+	private_gcrypt_hasher_t *this, chunk_t chunk, u_int8_t *hash)
 {
 	gcry_md_write(this->hd, chunk.ptr, chunk.len);
 	if (hash)
@@ -67,11 +60,8 @@ static void get_hash(private_gcrypt_hasher_t *this, chunk_t chunk,
 	}
 }
 
-/**
- * Implementation of hasher_t.allocate_hash.
- */
-static void allocate_hash(private_gcrypt_hasher_t *this, chunk_t chunk,
-						  chunk_t *hash)
+METHOD(hasher_t, allocate_hash, void,
+	private_gcrypt_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	if (hash)
 	{
@@ -84,10 +74,8 @@ static void allocate_hash(private_gcrypt_hasher_t *this, chunk_t chunk,
 	}
 }
 
-/**
- * Implementation of hasher_t.destroy.
- */
-static void destroy (private_gcrypt_hasher_t *this)
+METHOD(hasher_t, destroy, void,
+	private_gcrypt_hasher_t *this)
 {
 	gcry_md_close(this->hd);
 	free(this);
@@ -132,7 +120,15 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 			return NULL;
 	}
 
-	this = malloc_thing(private_gcrypt_hasher_t);
+	INIT(this,
+		.public.hasher = {
+			.get_hash = _get_hash,
+			.allocate_hash = _allocate_hash,
+			.get_hash_size = _get_hash_size,
+			.reset = _reset,
+			.destroy = _destroy,
+		},
+	);
 
 	err = gcry_md_open(&this->hd, gcrypt_alg, 0);
 	if (err)
@@ -142,12 +138,6 @@ gcrypt_hasher_t *gcrypt_hasher_create(hash_algorithm_t algo)
 		free(this);
 		return NULL;
 	}
-
-	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
-	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
-	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
-	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
-	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 
 	return &this->public;
 }
