@@ -187,6 +187,15 @@ static identification_t *general_name2id(GENERAL_NAME *name)
 		}
 		case GEN_DIRNAME :
 			return openssl_x509_name2id(name->d.directoryName);
+		case GEN_OTHERNAME:
+			if (OBJ_obj2nid(name->d.otherName->type_id) == NID_ms_upn &&
+				name->d.otherName->value->type == V_ASN1_UTF8STRING)
+			{
+				return identification_create_from_encoding(ID_RFC822_ADDR,
+							openssl_asn1_str2chunk(
+								name->d.otherName->value->value.utf8string));
+			}
+			return NULL;
 		default:
 			return NULL;
 	}
