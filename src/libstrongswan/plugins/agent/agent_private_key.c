@@ -205,7 +205,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		{
 			break;;
 		}
-		if (pubkey && !private_key_belongs_to(&this->public.interface, pubkey))
+		if (pubkey && !private_key_belongs_to(&this->public.key, pubkey))
 		{
 			continue;
 		}
@@ -221,11 +221,9 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 	return FALSE;
 }
 
-/**
- * Implementation of agent_private_key.destroy.
- */
-static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
-				 chunk_t data, chunk_t *signature)
+METHOD(private_key_t, sign, bool,
+	private_agent_private_key_t *this, signature_scheme_t scheme,
+	chunk_t data, chunk_t *signature)
 {
 	u_int32_t len, flags;
 	char buf[2048];
@@ -294,36 +292,27 @@ static bool sign(private_agent_private_key_t *this, signature_scheme_t scheme,
 	return TRUE;
 }
 
-/**
- * Implementation of agent_private_key.destroy.
- */
-static key_type_t get_type(private_agent_private_key_t *this)
+METHOD(private_key_t, get_type, key_type_t,
+	private_agent_private_key_t *this)
 {
 	return KEY_RSA;
 }
 
-/**
- * Implementation of agent_private_key.destroy.
- */
-static bool decrypt(private_agent_private_key_t *this,
-					chunk_t crypto, chunk_t *plain)
+METHOD(private_key_t, decrypt, bool,
+	private_agent_private_key_t *this, chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "private key decryption not supported by ssh-agent");
 	return FALSE;
 }
 
-/**
- * Implementation of agent_private_key.destroy.
- */
-static size_t get_keysize(private_agent_private_key_t *this)
+METHOD(private_key_t, get_keysize, size_t,
+	private_agent_private_key_t *this)
 {
 	return this->key_size;
 }
 
-/**
- * Implementation of agent_private_key.get_public_key.
- */
-static public_key_t* get_public_key(private_agent_private_key_t *this)
+METHOD(private_key_t, get_public_key, public_key_t*,
+	private_agent_private_key_t *this)
 {
 	chunk_t key, n, e;
 
@@ -336,20 +325,15 @@ static public_key_t* get_public_key(private_agent_private_key_t *this)
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 }
 
-/**
- * Implementation of private_key_t.get_encoding
- */
-static bool get_encoding(private_agent_private_key_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(private_key_t, get_encoding, bool,
+	private_agent_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	return FALSE;
 }
 
-/**
- * Implementation of private_key_t.get_fingerprint
- */
-static bool get_fingerprint(private_agent_private_key_t *this,
-							cred_encoding_type_t type, chunk_t *fp)
+METHOD(private_key_t, get_fingerprint, bool,
+	private_agent_private_key_t *this, cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e, key;
 
@@ -366,19 +350,15 @@ static bool get_fingerprint(private_agent_private_key_t *this,
 			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 }
 
-/**
- * Implementation of agent_private_key.get_ref.
- */
-static private_agent_private_key_t* get_ref(private_agent_private_key_t *this)
+METHOD(private_key_t, get_ref, private_key_t*,
+	private_agent_private_key_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.key;
 }
 
-/**
- * Implementation of agent_private_key.destroy.
- */
-static void destroy(private_agent_private_key_t *this)
+METHOD(private_key_t, destroy, void,
+	private_agent_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -420,20 +400,23 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 		return FALSE;
 	}
 
-	this = malloc_thing(private_agent_private_key_t);
-
-	this->public.interface.get_type = (key_type_t (*)(private_key_t *this))get_type;
-	this->public.interface.sign = (bool (*)(private_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t *signature))sign;
-	this->public.interface.decrypt = (bool (*)(private_key_t *this, chunk_t crypto, chunk_t *plain))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t *this))get_keysize;
-	this->public.interface.get_public_key = (public_key_t* (*)(private_key_t *this))get_public_key;
-	this->public.interface.belongs_to = private_key_belongs_to;
-	this->public.interface.equals = private_key_equals;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
-	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*)(private_key_t *this))get_ref;
-	this->public.interface.destroy = (void (*)(private_key_t *this))destroy;
+	INIT(this,
+		.public.key = {
+			.get_type = _get_type,
+			.sign = _sign,
+			.decrypt = _decrypt,
+			.get_keysize = _get_keysize,
+			.get_public_key = _get_public_key,
+			.belongs_to = private_key_belongs_to,
+			.equals = private_key_equals,
+			.get_fingerprint = _get_fingerprint,
+			.has_fingerprint = private_key_has_fingerprint,
+			.get_encoding = _get_encoding,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.ref = 1,
+	);
 
 	this->socket = open_connection(path);
 	if (this->socket < 0)
@@ -441,9 +424,6 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 		free(this);
 		return NULL;
 	}
-	this->key = chunk_empty;
-	this->ref = 1;
-
 	if (!read_key(this, pubkey))
 	{
 		destroy(this);
