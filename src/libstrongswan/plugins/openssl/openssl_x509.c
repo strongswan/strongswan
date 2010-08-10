@@ -765,6 +765,38 @@ static bool parse_extensions(private_openssl_x509_t *this)
 }
 
 /**
+ * Parse ExtendedKeyUsage
+ */
+static void parse_extKeyUsage(private_openssl_x509_t *this)
+{
+	EXTENDED_KEY_USAGE *usage;
+	int i;
+
+	usage = X509_get_ext_d2i(this->x509, NID_ext_key_usage, NULL, NULL);
+	if (usage)
+	{
+		for (i = 0; i < sk_ASN1_OBJECT_num(usage); i++)
+		{
+			switch (OBJ_obj2nid(sk_ASN1_OBJECT_value(usage, i)))
+			{
+				case NID_server_auth:
+					this->flags |= X509_SERVER_AUTH;
+					break;
+				case NID_client_auth:
+					this->flags |= X509_CLIENT_AUTH;
+					break;
+				case NID_OCSP_sign:
+					this->flags |= X509_OCSP_SIGNER;
+					break;
+				default:
+					break;
+			}
+		}
+		sk_ASN1_OBJECT_pop_free(usage, ASN1_OBJECT_free);
+	}
+}
+
+/**
  * Parse a DER encoded x509 certificate
  */
 static bool parse_certificate(private_openssl_x509_t *this)
@@ -823,6 +855,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	{
 		return TRUE;
 	}
+	parse_extKeyUsage(this);
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
