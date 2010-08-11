@@ -89,7 +89,7 @@ METHOD(private_key_t, get_keysize, int,
 /**
  * See header.
  */
-CK_MECHANISM_PTR pkcs11_scheme_to_mechanism(signature_scheme_t scheme)
+CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme)
 {
 	static struct {
 		signature_scheme_t scheme;
@@ -101,6 +101,30 @@ CK_MECHANISM_PTR pkcs11_scheme_to_mechanism(signature_scheme_t scheme)
 		{SIGN_RSA_EMSA_PKCS1_SHA384,	{CKM_SHA384_RSA_PKCS,		NULL, 0}},
 		{SIGN_RSA_EMSA_PKCS1_SHA512,	{CKM_SHA512_RSA_PKCS,		NULL, 0}},
 		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,			NULL, 0}},
+	};
+	int i;
+
+	for (i = 0; i < countof(mappings); i++)
+	{
+		if (mappings[i].scheme == scheme)
+		{
+			return &mappings[i].mechanism;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * See header.
+ */
+CK_MECHANISM_PTR pkcs11_encryption_scheme_to_mech(encryption_scheme_t scheme)
+{
+	static struct {
+		encryption_scheme_t scheme;
+		CK_MECHANISM mechanism;
+	} mappings[] = {
+		{ENCRYPT_RSA_PKCS1,			{CKM_RSA_PKCS,				NULL, 0}},
+		{ENCRYPT_RSA_OAEP_SHA1,		{CKM_RSA_PKCS_OAEP,			NULL, 0}},
 	};
 	int i;
 
@@ -159,7 +183,7 @@ METHOD(private_key_t, sign, bool,
 	CK_ULONG len;
 	CK_RV rv;
 
-	mechanism = pkcs11_scheme_to_mechanism(scheme);
+	mechanism = pkcs11_signature_scheme_to_mech(scheme);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -194,9 +218,44 @@ METHOD(private_key_t, sign, bool,
 
 METHOD(private_key_t, decrypt, bool,
 	private_pkcs11_private_key_t *this, encryption_scheme_t scheme,
-	chunk_t crypto, chunk_t *plain)
+	chunk_t crypt, chunk_t *plain)
 {
-	return FALSE;
+	CK_MECHANISM_PTR mechanism;
+	CK_BYTE_PTR buf;
+	CK_ULONG len;
+	CK_RV rv;
+
+	mechanism = pkcs11_encryption_scheme_to_mech(scheme);
+	if (!mechanism)
+	{
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
+		return FALSE;
+	}
+	this->mutex->lock(this->mutex);
+	rv = this->lib->f->C_DecryptInit(this->session, mechanism, this->object);
+	if (this->reauth && !reauth(this))
+	{
+		return FALSE;
+	}
+	if (rv != CKR_OK)
+	{
+		this->mutex->unlock(this->mutex);
+		DBG1(DBG_LIB, "C_DecryptInit() failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	len = (get_keysize(this) + 7) / 8;
+	buf = malloc(len);
+	rv = this->lib->f->C_Decrypt(this->session, crypt.ptr, crypt.len, buf, &len);
+	this->mutex->unlock(this->mutex);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_LIB, "C_Decrypt() failed: %N", ck_rv_names, rv);
+		free(buf);
+		return FALSE;
+	}
+	*plain = chunk_create(buf, len);
+	return TRUE;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,

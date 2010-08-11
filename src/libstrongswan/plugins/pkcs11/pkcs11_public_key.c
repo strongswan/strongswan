@@ -81,6 +81,12 @@ METHOD(public_key_t, get_type, key_type_t,
 	return this->type;
 }
 
+METHOD(public_key_t, get_keysize, int,
+	private_pkcs11_public_key_t *this)
+{
+	return this->k * 8;
+}
+
 METHOD(public_key_t, verify, bool,
 	private_pkcs11_public_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t sig)
@@ -88,7 +94,7 @@ METHOD(public_key_t, verify, bool,
 	CK_MECHANISM_PTR mechanism;
 	CK_RV rv;
 
-	mechanism = pkcs11_scheme_to_mechanism(scheme);
+	mechanism = pkcs11_signature_scheme_to_mech(scheme);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -120,15 +126,40 @@ METHOD(public_key_t, verify, bool,
 
 METHOD(public_key_t, encrypt, bool,
 	private_pkcs11_public_key_t *this, encryption_scheme_t scheme,
-	chunk_t plain, chunk_t *crypto)
+	chunk_t plain, chunk_t *crypt)
 {
-	return FALSE;
-}
+	CK_MECHANISM_PTR mechanism;
+	CK_BYTE_PTR buf;
+	CK_ULONG len;
+	CK_RV rv;
 
-METHOD(public_key_t, get_keysize, int,
-	private_pkcs11_public_key_t *this)
-{
-	return this->k * 8;
+	mechanism = pkcs11_encryption_scheme_to_mech(scheme);
+	if (!mechanism)
+	{
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
+		return FALSE;
+	}
+	this->mutex->lock(this->mutex);
+	rv = this->lib->f->C_EncryptInit(this->session, mechanism, this->object);
+	if (rv != CKR_OK)
+	{
+		this->mutex->unlock(this->mutex);
+		DBG1(DBG_LIB, "C_EncryptInit() failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	len = (get_keysize(this) + 7) / 8;
+	buf = malloc(len);
+	rv = this->lib->f->C_Encrypt(this->session, plain.ptr, plain.len, buf, &len);
+	this->mutex->unlock(this->mutex);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_LIB, "C_Encrypt() failed: %N", ck_rv_names, rv);
+		free(buf);
+		return FALSE;
+	}
+	*crypt = chunk_create(buf, len);
+	return TRUE;
 }
 
 /**

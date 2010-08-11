@@ -53,6 +53,11 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args);
 /**
  * Get the Cryptoki mechanism for a signature scheme.
  */
-CK_MECHANISM_PTR pkcs11_scheme_to_mechanism(signature_scheme_t scheme);
+CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme);
+
+/**
+ * Get the Cryptoki mechanism for a encryption scheme.
+ */
+CK_MECHANISM_PTR pkcs11_encryption_scheme_to_mech(encryption_scheme_t scheme);
 
 #endif /** PKCS11_PRIVATE_KEY_H_ @}*/
