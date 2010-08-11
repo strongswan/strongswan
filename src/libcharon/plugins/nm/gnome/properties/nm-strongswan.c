@@ -142,6 +142,14 @@ static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *p
 			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
 			break;
 		case 2:
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
+			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			break;
+		case 3:
 			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-label"));
 			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-entry"));
 			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
@@ -199,6 +207,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = glade_xml_get_widget (priv->xml, "method-combo");
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/private key"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/ssh-agent"));
+	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Smartcard"));
 	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
 	value = nm_setting_vpn_get_data_item (settings, "method");
 	if (value) {
@@ -208,8 +217,11 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		if (g_strcmp0 (value, "agent") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
 		}
-		if (g_strcmp0 (value, "eap") == 0) {
+		if (g_strcmp0 (value, "smartcard") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 2);
+		}
+		if (g_strcmp0 (value, "eap") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
 		}
 	}
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
@@ -330,6 +342,9 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			str = "agent";
 			break;
 		case 2:
+			str = "smartcard";
+			break;
+		case 3:
 			widget = glade_xml_get_widget (priv->xml, "user-entry");
 			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 			if (str && strlen (str)) {

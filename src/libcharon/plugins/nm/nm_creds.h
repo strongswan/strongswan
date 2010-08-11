@@ -67,6 +67,14 @@ struct nm_creds_t {
 	void (*set_key_password)(nm_creds_t *this, char *password);
 
 	/**
+	 * Set the PIN to unlock a smartcard.
+	 *
+	 * @param keyid		keyid of the smartcard key
+	 * @param pin		PIN
+	 */
+	void (*set_pin)(nm_creds_t *this, chunk_t keyid, char *pin);
+
+	/**
 	 * Set the certificate and private key to use for client authentication.
 	 *
 	 * @param cert		client certificate

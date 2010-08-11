@@ -204,6 +204,59 @@ static bool ike_rekey(listener_t *listener, ike_sa_t *old, ike_sa_t *new)
 }
 
 /**
+ * Find a certificate for which we have a private key on a smartcard
+ */
+static identification_t *find_smartcard_key(NMStrongswanPluginPrivate *priv,
+											char *pin)
+{
+	enumerator_t *enumerator, *sans;
+	identification_t *id = NULL;
+	certificate_t *cert;
+	x509_t *x509;
+	private_key_t *key;
+	chunk_t keyid;
+
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+											CERT_X509, KEY_ANY, NULL, FALSE);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		x509 = (x509_t*)cert;
+
+		/* there might be a lot of certificates, filter them by usage */
+		if ((x509->get_flags(x509) & X509_CLIENT_AUTH) &&
+			!(x509->get_flags(x509) & X509_CA))
+		{
+			keyid = x509->get_subjectKeyIdentifier(x509);
+			if (keyid.ptr)
+			{
+				/* try to find a private key by the certificate keyid */
+				priv->creds->set_pin(priv->creds, keyid, pin);
+				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+								KEY_ANY, BUILD_PKCS11_KEYID, keyid, BUILD_END);
+				if (key)
+				{
+					/* prefer a more convenient subjectAltName */
+					sans = x509->create_subjectAltName_enumerator(x509);
+					if (!sans->enumerate(sans, &id))
+					{
+						id = cert->get_subject(cert);
+					}
+					id = id->clone(id);
+					sans->destroy(sans);
+
+					DBG1(DBG_CFG, "using smartcard certificate '%Y'", id);
+					priv->creds->set_cert_and_key(priv->creds,
+												  cert->get_ref(cert), key);
+					break;
+				}
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return id;
+}
+
+/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
@@ -224,7 +277,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
 	x509_t *x509;
-	bool agent = FALSE;
+	bool agent = FALSE, smartcard = FALSE;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = 10800 /* 3h */,
@@ -278,6 +331,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		else if (streq(str, "key"))
 		{
 			auth_class = AUTH_CLASS_PUBKEY;
+		}
+		else if (streq(str, "smartcard"))
+		{
+			auth_class = AUTH_CLASS_PUBKEY;
+			smartcard = TRUE;
 		}
 	}
 
@@ -338,9 +396,26 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 
 	if (auth_class == AUTH_CLASS_PUBKEY)
 	{
+		if (smartcard)
+		{
+			char *pin;
+
+			pin = (char*)nm_setting_vpn_get_secret(vpn, "password");
+			if (pin)
+			{
+				user = find_smartcard_key(priv, pin);
+			}
+			if (!user)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"no usable smartcard certificate found.");
+				gateway->destroy(gateway);
+				return FALSE;
+			}
+		}
 		/* ... or certificate/private key authenitcation */
-		str = nm_setting_vpn_get_data_item(vpn, "usercert");
-		if (str)
+		else if ((str = nm_setting_vpn_get_data_item(vpn, "usercert")))
 		{
 			public_key_t *public;
 			private_key_t *private = NULL;
@@ -532,6 +607,13 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 					key->destroy(key);
 					return FALSE;
 				}
+			}
+		}
+		else if streq(method, "smartcard")
+		{
+			if (nm_setting_vpn_get_secret(settings, "password"))
+			{
+				return FALSE;
 			}
 		}
 	}

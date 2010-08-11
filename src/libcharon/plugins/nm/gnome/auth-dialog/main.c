@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
 		g_object_unref (program);
 		return 1;
 	}
-	if (!strcmp(type, "eap") || !strcmp(type, "key"))
+	if (!strcmp(type, "eap") || !strcmp(type, "key") || !strcmp(type, "smartcard"))
 	{
 		pass = lookup_password(name, service);
 		if (!pass || retry)
@@ -172,14 +172,22 @@ int main (int argc, char *argv[])
 				dialog = gnome_password_dialog_new(_("VPN password required"),
 							_("EAP password required to establish VPN connection:"),
 							NULL, NULL, TRUE);
+				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
 			}
-			else
+			else if (!strcmp(type, "key"))
 			{
 				dialog = gnome_password_dialog_new(_("VPN password required"),
 							_("Private key decryption password required to establish VPN connection:"),
 							NULL, NULL, TRUE);
+				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
 			}
-			gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), TRUE);
+			else /* smartcard */
+			{
+				dialog = gnome_password_dialog_new(_("VPN password required"),
+							_("Smartcard PIN required to establish VPN connection:"),
+							NULL, NULL, TRUE);
+				gnome_password_dialog_set_show_remember(GNOME_PASSWORD_DIALOG(dialog), FALSE);
+			}
 			gnome_password_dialog_set_show_username(GNOME_PASSWORD_DIALOG(dialog), FALSE);
 			if (pass)
 			{
