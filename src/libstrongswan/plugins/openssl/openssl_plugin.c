@@ -24,6 +24,7 @@
 #include "openssl_plugin.h"
 
 #include <library.h>
+#include <debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include "openssl_util.h"
@@ -151,6 +152,31 @@ static void threading_init()
 }
 
 /**
+ * Seed the OpenSSL RNG, if required
+ */
+static bool seed_rng()
+{
+	rng_t *rng = NULL;
+	char buf[32];
+
+	while (RAND_status() != 1)
+	{
+		if (!rng)
+		{
+			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+			if (!rng)
+			{
+				return FALSE;
+			}
+		}
+		rng->get_bytes(rng, sizeof(buf), buf);
+		RAND_seed(buf, sizeof(buf));
+	}
+	DESTROY_IF(rng);
+	return TRUE;
+}
+
+/**
  * cleanup OpenSSL threading locks
  */
 static void threading_cleanup()
@@ -232,6 +258,13 @@ plugin_t *openssl_plugin_create()
 	ENGINE_load_builtin_engines();
 	ENGINE_register_all_complete();
 #endif /* OPENSSL_NO_ENGINE */
+
+	if (!seed_rng())
+	{
+		DBG1(DBG_CFG, "no RNG found to seed OpenSSL");
+		destroy(this);
+		return NULL;
+	}
 
 	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
