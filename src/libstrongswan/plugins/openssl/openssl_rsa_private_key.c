@@ -169,8 +169,33 @@ METHOD(private_key_t, decrypt, bool,
 	private_openssl_rsa_private_key_t *this, encryption_scheme_t scheme,
 	chunk_t crypto, chunk_t *plain)
 {
-	DBG1(DBG_LIB, "RSA private key decryption not implemented");
-	return FALSE;
+	int padding, len;
+	char *decrypted;
+
+	switch (scheme)
+	{
+		case ENCRYPT_RSA_PKCS1:
+			padding = RSA_PKCS1_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA1:
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		default:
+			DBG1(DBG_LIB, "encryption scheme %N not supported via openssl",
+				 encryption_scheme_names, scheme);
+			return FALSE;
+	}
+	decrypted = malloc(RSA_size(this->rsa));
+	len = RSA_private_decrypt(crypto.len, crypto.ptr, decrypted,
+							  this->rsa, padding);
+	if (len < 0)
+	{
+		DBG1(DBG_LIB, "RSA decryption failed");
+		free(decrypted);
+		return FALSE;
+	}
+	*plain = chunk_create(decrypted, len);
+	return TRUE;
 }
 
 METHOD(private_key_t, get_keysize, int,
