@@ -172,6 +172,11 @@ METHOD(socket_t, receiver, status_t,
 			DBG1(DBG_NET, "error reading from IPv4 socket: %s", strerror(errno));
 			return FAILED;
 		}
+		if (bytes_read == this->max_packet)
+		{
+			DBG1(DBG_NET, "receive buffer too small, packet discarded");
+			return FAILED;
+		}
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
 
 		/* read source/dest from raw IP/UDP header */

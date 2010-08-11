@@ -212,6 +212,11 @@ METHOD(socket_t, receiver, status_t,
 			DBG1(DBG_NET, "error reading socket: %s", strerror(errno));
 			return FAILED;
 		}
+		if (msg.msg_flags & MSG_TRUNC)
+		{
+			DBG1(DBG_NET, "receive buffer too small, packet discarded");
+			return FAILED;
+		}
 		DBG3(DBG_NET, "received packet %b", buffer, bytes_read);
 
 		if (bytes_read < MARKER_LEN)

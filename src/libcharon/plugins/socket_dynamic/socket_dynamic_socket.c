@@ -229,6 +229,11 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 		DBG1(DBG_NET, "error reading socket: %s", strerror(errno));
 		return NULL;
 	}
+	if (msg.msg_flags & MSG_TRUNC)
+	{
+		DBG1(DBG_NET, "receive buffer too small, packet discarded");
+		return NULL;
+	}
 	DBG3(DBG_NET, "received packet %b", buffer, len);
 
 	if (len < MARKER_LEN)
