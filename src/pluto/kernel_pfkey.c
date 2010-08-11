@@ -297,168 +297,6 @@ pfkey_get_response(pfkey_buf *buf, pfkey_seq_t seq)
 	return FALSE;
 }
 
-/* Process a SADB_REGISTER message from the kernel.
- * This will be a response to one of ours, but it may be asynchronous
- * (if kernel modules are loaded and unloaded).
- * Some sanity checking has already been performed.
- */
-static void
-klips_pfkey_register_response(const struct sadb_msg *msg)
-{
-	/* Find out what the kernel can support.
-	 * In fact, the only question at the moment
-	 * is whether it can support IPcomp.
-	 * So we ignore the rest.
-	 * ??? we really should pay attention to what transforms are supported.
-	 */
-	switch (msg->sadb_msg_satype)
-	{
-	case SADB_SATYPE_AH:
-		break;
-	case SADB_SATYPE_ESP:
-#ifndef NO_KERNEL_ALG
-		kernel_alg_register_pfkey(msg, sizeof (pfkey_buf));
-#endif
-		break;
-	case SADB_X_SATYPE_COMP:
-		/* ??? There ought to be an extension to list the
-		 * supported algorithms, but RFC 2367 doesn't
-		 * list one for IPcomp.  KLIPS uses SADB_X_CALG_DEFLATE.
-		 * Since we only implement deflate, we'll assume this.
-		 */
-		can_do_IPcomp = TRUE;
-		break;
-	case SADB_X_SATYPE_IPIP:
-		break;
-	default:
-		break;
-	}
-}
-
-/* Processs a SADB_ACQUIRE message from KLIPS.
- * Try to build an opportunistic connection!
- * See RFC 2367 "PF_KEY Key Management API, Version 2" 3.1.6
- * <base, address(SD), (address(P)), (identity(SD),) (sensitivity,) proposal>
- * - extensions for source and data IP addresses
- * - optional extensions for identity [not useful for us?]
- * - optional extension for sensitivity [not useful for us?]
- * - expension for proposal [not useful for us?]
- *
- * ??? We must use the sequence number in creating an SA.
- * We actually need to create up to 4 SAs each way.  Which one?
- * I guess it depends on the protocol present in the sadb_msg_satype.
- * For now, we'll ignore this requirement.
- *
- * ??? We need some mechanism to make sure that multiple ACQUIRE messages
- * don't cause a whole bunch of redundant negotiations.
- */
-static void
-process_pfkey_acquire(pfkey_buf *buf, struct sadb_ext *extensions[SADB_EXT_MAX + 1])
-{
-	struct sadb_address *srcx = (void *) extensions[SADB_EXT_ADDRESS_SRC];
-	struct sadb_address *dstx = (void *) extensions[SADB_EXT_ADDRESS_DST];
-	int src_proto = srcx->sadb_address_proto;
-	int dst_proto = dstx->sadb_address_proto;
-	ip_address *src = (ip_address*)&srcx[1];
-	ip_address *dst = (ip_address*)&dstx[1];
-	ip_subnet ours, his;
-	err_t ugh = NULL;
-
-	/* assumption: we're only catching our own outgoing packets
-	 * so source is our end and destination is the other end.
-	 * Verifying this is not actually convenient.
-	 *
-	 * This stylized control structure yields a complaint or
-	 * desired results.  For compactness, a pointer value is
-	 * treated as a boolean.  Logically, the structure is:
-	 * keep going as long as things are OK.
-	 */
-	if (buf->msg.sadb_msg_pid == 0      /* we only wish to hear from kernel */
-	&& !(ugh = src_proto == dst_proto? NULL : "src and dst protocols differ")
-	&& !(ugh = addrtypeof(src) == addrtypeof(dst)? NULL : "conflicting address types")
-	&& !(ugh = addrtosubnet(src, &ours))
-	&& !(ugh = addrtosubnet(dst, &his)))
-		record_and_initiate_opportunistic(&ours, &his, src_proto, "%acquire");
-
-	if (ugh != NULL)
-		plog("SADB_ACQUIRE message from KLIPS malformed: %s", ugh);
-
-}
-
-/* Handle PF_KEY messages from the kernel that are not dealt with
- * synchronously.  In other words, all but responses to PF_KEY messages
- * that we sent.
- */
-static void
-pfkey_async(pfkey_buf *buf)
-{
-	struct sadb_ext *extensions[SADB_EXT_MAX + 1];
-
-	if (pfkey_msg_parse(&buf->msg, NULL, extensions, EXT_BITS_OUT))
-	{
-		plog("pfkey_async:"
-			" unparseable PF_KEY message:"
-			" %s len=%d, errno=%d, seq=%d, pid=%d; message ignored"
-			, sparse_val_show(pfkey_type_names, buf->msg.sadb_msg_type)
-			, buf->msg.sadb_msg_len
-			, buf->msg.sadb_msg_errno
-			, buf->msg.sadb_msg_seq
-			, buf->msg.sadb_msg_pid);
-	}
-	else
-	{
-		DBG(DBG_CONTROL | DBG_KLIPS, DBG_log("pfkey_async:"
-			" %s len=%u, errno=%u, satype=%u, seq=%u, pid=%u"
-			, sparse_val_show(pfkey_type_names, buf->msg.sadb_msg_type)
-			, buf->msg.sadb_msg_len
-			, buf->msg.sadb_msg_errno
-			, buf->msg.sadb_msg_satype
-			, buf->msg.sadb_msg_seq
-			, buf->msg.sadb_msg_pid));
-
-		switch (buf->msg.sadb_msg_type)
-		{
-		case SADB_REGISTER:
-			kernel_ops->pfkey_register_response(&buf->msg);
-			break;
-		case SADB_ACQUIRE:
-			/* to simulate loss of ACQUIRE, delete this call */
-			process_pfkey_acquire(buf, extensions);
-			break;
-		case SADB_X_NAT_T_NEW_MAPPING:
-			process_pfkey_nat_t_new_mapping(&(buf->msg), extensions);
-			break;
-		default:
-			/* ignored */
-			break;
-		}
-	}
-}
-
-/* asynchronous messages from our queue */
-static void
-pfkey_dequeue(void)
-{
-	while (pfkey_iq_head != NULL)
-	{
-		pfkey_item *it = pfkey_iq_head;
-
-		pfkey_async(&it->buf);
-		pfkey_iq_head = it->next;
-		free(it);
-	}
-}
-
-/* asynchronous messages directly from PF_KEY socket */
-static void
-pfkey_event(void)
-{
-	pfkey_buf buf;
-
-	if (pfkey_get(&buf))
-		pfkey_async(&buf);
-}
-
 static bool
 pfkey_build(int error
 , const char *description
@@ -491,39 +329,6 @@ pfkey_msg_start(u_int8_t msg_type
 			, satype, 0, ++pfkey_seq, pid)
 		, description, text_said, extensions);
 }
-
-/* pfkey_build + pfkey_address_build */
-static bool
-pfkeyext_address(u_int16_t exttype
-, const ip_address *address
-, const char *description
-, const char *text_said
-, struct sadb_ext *extensions[SADB_EXT_MAX + 1])
-{
-	/* the following variable is only needed to silence
-	 * a warning caused by the fact that the argument
-	 * to sockaddrof is NOT pointer to const!
-	 */
-	ip_address t = *address;
-
-	return pfkey_build(pfkey_address_build(extensions + exttype
-			, exttype, 0, 0, sockaddrof(&t))
-		, description, text_said, extensions);
-}
-
-/* pfkey_build + pfkey_x_protocol_build */
-static bool
-pfkeyext_protocol(int transport_proto
-, const char *description
-, const char *text_said
-, struct sadb_ext *extensions[SADB_EXT_MAX + 1])
-{
-	return (transport_proto == 0)? TRUE
-		: pfkey_build(
-			pfkey_x_protocol_build(extensions + SADB_X_EXT_PROTOCOL, transport_proto)
-			, description, text_said, extensions);
-}
-
 
 /* Finish (building, sending, accepting response for) PF_KEY message.
  * If response isn't NULL, the response from the kernel will be
@@ -643,7 +448,37 @@ finish_pfkey_msg(struct sadb_ext *extensions[SADB_EXT_MAX + 1]
 	return success;
 }
 
-/*  register SA types that can be negotiated */
+/* Process a SADB_REGISTER message from the kernel.
+ * This will be a response to one of ours, but it may be asynchronous
+ * (if kernel modules are loaded and unloaded).
+ * Some sanity checking has already been performed.
+ */
+static void
+pfkey_register_response(const struct sadb_msg *msg)
+{
+	/* Find out what the kernel can support.
+	 */
+	switch (msg->sadb_msg_satype)
+	{
+	case SADB_SATYPE_ESP:
+#ifndef NO_KERNEL_ALG
+		kernel_alg_register_pfkey(msg, sizeof (pfkey_buf));
+#endif
+		break;
+	case SADB_X_SATYPE_COMP:
+		/* ??? There ought to be an extension to list the
+		 * supported algorithms, but RFC 2367 doesn't
+		 * list one for IPcomp.  KLIPS uses SADB_X_CALG_DEFLATE.
+		 * Since we only implement deflate, we'll assume this.
+		 */
+		can_do_IPcomp = TRUE;
+		break;
+	default:
+		break;
+	}
+}
+
+/**  register SA types that can be negotiated */
 void
 pfkey_register_proto(unsigned satype, const char *satypename)
 {
@@ -666,215 +501,6 @@ pfkey_register_proto(unsigned satype, const char *satypename)
 	}
 }
 
-static void
-klips_pfkey_register(void)
-{
-	pfkey_register_proto(SADB_SATYPE_AH, "AH");
-	pfkey_register_proto(SADB_SATYPE_ESP, "ESP");
-	can_do_IPcomp = FALSE;  /* until we get a response from KLIPS */
-	pfkey_register_proto(SADB_X_SATYPE_COMP, "IPCOMP");
-	pfkey_register_proto(SADB_X_SATYPE_IPIP, "IPIP");
-}
-
-static bool
-pfkey_raw_eroute(const ip_address *this_host
-				 , const ip_subnet *this_client
-				 , const ip_address *that_host
-				 , const ip_subnet *that_client
-				 , ipsec_spi_t spi
-				 , unsigned int satype
-				 , unsigned int transport_proto
-				 , const struct pfkey_proto_info *proto_info UNUSED
-				 , time_t use_lifetime UNUSED
-				 , unsigned int op
-				 , const char *text_said)
-{
-	struct sadb_ext *extensions[SADB_EXT_MAX + 1];
-	ip_address
-		sflow_ska,
-		dflow_ska,
-		smask_ska,
-		dmask_ska;
-	int sport = ntohs(portof(&this_client->addr));
-	int dport = ntohs(portof(&that_client->addr));
-
-	networkof(this_client, &sflow_ska);
-	maskof(this_client, &smask_ska);
-	setportof(sport ? ~0:0, &smask_ska);
-
-	networkof(that_client, &dflow_ska);
-	maskof(that_client, &dmask_ska);
-	setportof(dport ? ~0:0, &dmask_ska);
-
-	if (!pfkey_msg_start(op & ERO_MASK, satype
-					   , "pfkey_msg_hdr flow", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	if (op != ERO_DELETE)
-	{
-		if (!(pfkey_build(pfkey_sa_build(&extensions[SADB_EXT_SA]
-										 , SADB_EXT_SA
-										 , spi  /* in network order */
-										 , 0, 0, 0, 0, op >> ERO_FLAG_SHIFT)
-						  , "pfkey_sa add flow", text_said, extensions)
-
-			&& pfkeyext_address(SADB_EXT_ADDRESS_SRC, this_host
-				, "pfkey_addr_s add flow", text_said, extensions)
-
-			&& pfkeyext_address(SADB_EXT_ADDRESS_DST, that_host
-								, "pfkey_addr_d add flow", text_said
-								, extensions)))
-		{
-			return FALSE;
-		}
-	}
-
-	if (!pfkeyext_address(SADB_X_EXT_ADDRESS_SRC_FLOW, &sflow_ska
-						  , "pfkey_addr_sflow", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	if (!pfkeyext_address(SADB_X_EXT_ADDRESS_DST_FLOW, &dflow_ska
-						, "pfkey_addr_dflow", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	if (!pfkeyext_address(SADB_X_EXT_ADDRESS_SRC_MASK, &smask_ska
-						, "pfkey_addr_smask", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	if (!pfkeyext_address(SADB_X_EXT_ADDRESS_DST_MASK, &dmask_ska
-						, "pfkey_addr_dmask", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	if (!pfkeyext_protocol(transport_proto
-						, "pfkey_x_protocol", text_said, extensions))
-	{
-		return FALSE;
-	}
-
-	return finish_pfkey_msg(extensions, "flow", text_said, NULL);
-}
-
-static bool
-pfkey_add_sa(const struct kernel_sa *sa, bool replace)
-{
-	struct sadb_ext *extensions[SADB_EXT_MAX + 1];
-
-	return pfkey_msg_start(replace ? SADB_UPDATE : SADB_ADD, sa->satype
-		, "pfkey_msg_hdr Add SA", sa->text_said, extensions)
-
-	&& pfkey_build(pfkey_sa_build(&extensions[SADB_EXT_SA]
-			, SADB_EXT_SA
-			, sa->spi   /* in network order */
-			, sa->replay_window, SADB_SASTATE_MATURE
-			, sa->authalg, sa->encalg ? sa->encalg: sa->compalg, 0)
-		, "pfkey_sa Add SA", sa->text_said, extensions)
-
-	&& pfkeyext_address(SADB_EXT_ADDRESS_SRC, sa->src
-		, "pfkey_addr_s Add SA", sa->text_said, extensions)
-
-	&& pfkeyext_address(SADB_EXT_ADDRESS_DST, sa->dst
-		, "pfkey_addr_d Add SA", sa->text_said, extensions)
-
-	&& (sa->authkeylen == 0
-		|| pfkey_build(pfkey_key_build(&extensions[SADB_EXT_KEY_AUTH]
-				, SADB_EXT_KEY_AUTH, sa->authkeylen * BITS_PER_BYTE
-				, sa->authkey)
-			, "pfkey_key_a Add SA", sa->text_said, extensions))
-
-	&& (sa->enckeylen == 0
-		|| pfkey_build(pfkey_key_build(&extensions[SADB_EXT_KEY_ENCRYPT]
-				, SADB_EXT_KEY_ENCRYPT, sa->enckeylen * BITS_PER_BYTE
-				, sa->enckey)
-			, "pfkey_key_e Add SA", sa->text_said, extensions))
-
-	&& (sa->natt_type == 0
-		|| pfkey_build(pfkey_x_nat_t_type_build(
-				&extensions[SADB_X_EXT_NAT_T_TYPE], sa->natt_type),
-				"pfkey_nat_t_type Add ESP SA",  sa->text_said, extensions))
-	&& (sa->natt_sport == 0
-		|| pfkey_build(pfkey_x_nat_t_port_build(
-						&extensions[SADB_X_EXT_NAT_T_SPORT], SADB_X_EXT_NAT_T_SPORT,
-						sa->natt_sport), "pfkey_nat_t_sport Add ESP SA", sa->text_said,
-						extensions))
-	&& (sa->natt_dport == 0
-		|| pfkey_build(pfkey_x_nat_t_port_build(
-						&extensions[SADB_X_EXT_NAT_T_DPORT], SADB_X_EXT_NAT_T_DPORT,
-						sa->natt_dport), "pfkey_nat_t_dport Add ESP SA", sa->text_said,
-						extensions))
-	&& (sa->natt_type == 0 || isanyaddr(sa->natt_oa)
-		|| pfkeyext_address(SADB_X_EXT_NAT_T_OA, sa->natt_oa
-			, "pfkey_nat_t_oa Add ESP SA", sa->text_said, extensions))
-
-	&& finish_pfkey_msg(extensions, "Add SA", sa->text_said, NULL);
-
-}
-
-static bool
-pfkey_grp_sa(const struct kernel_sa *sa0, const struct kernel_sa *sa1)
-{
-	struct sadb_ext *extensions[SADB_EXT_MAX + 1];
-
-	return pfkey_msg_start(SADB_X_GRPSA, sa1->satype
-		, "pfkey_msg_hdr group", sa1->text_said, extensions)
-
-	&& pfkey_build(pfkey_sa_build(&extensions[SADB_EXT_SA]
-			, SADB_EXT_SA
-			, sa1->spi  /* in network order */
-			, 0, 0, 0, 0, 0)
-		, "pfkey_sa group", sa1->text_said, extensions)
-
-	&& pfkeyext_address(SADB_EXT_ADDRESS_DST, sa1->dst
-		, "pfkey_addr_d group", sa1->text_said, extensions)
-
-	&& pfkey_build(pfkey_x_satype_build(&extensions[SADB_X_EXT_SATYPE2]
-			, sa0->satype)
-		, "pfkey_satype group", sa0->text_said, extensions)
-
-	&& pfkey_build(pfkey_sa_build(&extensions[SADB_X_EXT_SA2]
-			, SADB_X_EXT_SA2
-			, sa0->spi  /* in network order */
-			, 0, 0, 0, 0, 0)
-		, "pfkey_sa2 group", sa0->text_said, extensions)
-
-	&& pfkeyext_address(SADB_X_EXT_ADDRESS_DST2, sa0->dst
-		, "pfkey_addr_d2 group", sa0->text_said, extensions)
-
-	&& finish_pfkey_msg(extensions, "group", sa1->text_said, NULL);
-}
-
-static bool
-pfkey_del_sa(const struct kernel_sa *sa)
-{
-	struct sadb_ext *extensions[SADB_EXT_MAX + 1];
-
-	return pfkey_msg_start(SADB_DELETE, proto2satype(sa->proto)
-		, "pfkey_msg_hdr delete SA", sa->text_said, extensions)
-
-	&& pfkey_build(pfkey_sa_build(&extensions[SADB_EXT_SA]
-			, SADB_EXT_SA
-			, sa->spi   /* in host order */
-			, 0, SADB_SASTATE_MATURE, 0, 0, 0)
-		, "pfkey_sa delete SA", sa->text_said, extensions)
-
-	&& pfkeyext_address(SADB_EXT_ADDRESS_SRC, sa->src
-		, "pfkey_addr_s delete SA", sa->text_said, extensions)
-
-	&& pfkeyext_address(SADB_EXT_ADDRESS_DST, sa->dst
-		, "pfkey_addr_d delete SA", sa->text_said, extensions)
-
-	&& finish_pfkey_msg(extensions, "Delete SA", sa->text_said, NULL);
-}
-
 void
 pfkey_close(void)
 {
@@ -889,23 +515,4 @@ pfkey_close(void)
 	close(pfkeyfd);
 	pfkeyfd = NULL_FD;
 }
-
-const struct kernel_ops klips_kernel_ops = {
-		type: KERNEL_TYPE_KLIPS,
-		async_fdp: &pfkeyfd,
-
-		pfkey_register: klips_pfkey_register,
-		pfkey_register_response: klips_pfkey_register_response,
-		process_queue: pfkey_dequeue,
-		process_msg: pfkey_event,
-		raw_eroute: pfkey_raw_eroute,
-		add_sa: pfkey_add_sa,
-		grp_sa: pfkey_grp_sa,
-		del_sa: pfkey_del_sa,
-		get_sa: NULL,
-		get_spi: NULL,
-		inbound_eroute: FALSE,
-		policy_lifetime: FALSE,
-		init: NULL
-};
 #endif /* KLIPS */

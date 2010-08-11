@@ -17,5 +17,4 @@
 extern void init_pfkey(void);
 extern void pfkey_register_proto(unsigned satype, const char *satypename);
 extern void pfkey_close(void);
-extern const struct kernel_ops klips_kernel_ops;
 #endif

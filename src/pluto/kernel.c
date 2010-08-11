@@ -1825,8 +1825,6 @@ void init_kernel(void)
 
 	init_pfkey();
 
-	kernel_ops = &klips_kernel_ops;
-
 #if defined(linux) && defined(KERNEL26_SUPPORT)
 	{
 		bool linux_ipsec = 0;
