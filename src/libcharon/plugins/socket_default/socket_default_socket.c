@@ -116,12 +116,17 @@ struct private_socket_default_socket_t {
 	 * IPv6 socket for NATT (4500)
 	 */
 	int ipv6_natt;
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 METHOD(socket_t, receiver, status_t,
 	private_socket_default_socket_t *this, packet_t **packet)
 {
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
@@ -195,7 +200,7 @@ METHOD(socket_t, receiver, status_t,
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
-		iov.iov_len = sizeof(buffer);
+		iov.iov_len = this->max_packet;
 		msg.msg_iov = &iov;
 		msg.msg_iovlen = 1;
 		msg.msg_control = ancillary;
@@ -351,12 +356,6 @@ METHOD(socket_t, sender, status_t,
 		if (data.len != 1 || data.ptr[0] != 0xFF)
 		{
 			/* add non esp marker to packet */
-			if (data.len > MAX_PACKET - MARKER_LEN)
-			{
-				DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-					 data.len);
-				return FAILED;
-			}
 			marked = chunk_alloc(data.len + MARKER_LEN);
 			memset(marked.ptr, 0, MARKER_LEN);
 			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -578,6 +577,8 @@ socket_default_socket_t *socket_default_socket_create()
 			},
 			.destroy = _destroy,
 		},
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 #ifdef __APPLE__

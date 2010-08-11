@@ -100,6 +100,11 @@ struct private_socket_dynamic_socket_t {
 	 * Notification pipe to signal receiver
 	 */
 	int notify[2];
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 /**
@@ -197,7 +202,7 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 {
 	host_t *source = NULL, *dest = NULL;
 	ssize_t len;
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *packet;
 	struct msghdr msg;
@@ -212,7 +217,7 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	msg.msg_name = &src;
 	msg.msg_namelen = sizeof(src);
 	iov.iov_base = buffer;
-	iov.iov_len = sizeof(buffer);
+	iov.iov_len = this->max_packet;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = ancillary;
@@ -495,12 +500,6 @@ METHOD(socket_t, sender, status_t,
 		!(data.len == 1 && data.ptr[0] == 0xFF))
 	{
 		/* add non esp marker to packet */
-		if (data.len > MAX_PACKET - MARKER_LEN)
-		{
-			DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-				 data.len);
-			return FAILED;
-		}
 		marked = chunk_alloc(data.len + MARKER_LEN);
 		memset(marked.ptr, 0, MARKER_LEN);
 		memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -604,6 +603,8 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 	if (pipe(this->notify) != 0)

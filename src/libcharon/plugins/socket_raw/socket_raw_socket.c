@@ -119,12 +119,17 @@ struct private_socket_raw_socket_t {
 	 * send socket on nat-t port for IPv6
 	 */
 	int send6_natt;
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 METHOD(socket_t, receiver, status_t,
 	private_socket_raw_socket_t *this, packet_t **packet)
 {
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *pkt;
 	struct udphdr *udp;
@@ -161,7 +166,7 @@ METHOD(socket_t, receiver, status_t,
 		struct iphdr *ip;
 		struct sockaddr_in src, dst;
 
-		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
+		bytes_read = recv(this->recv4, buffer, this->max_packet, 0);
 		if (bytes_read < 0)
 		{
 			DBG1(DBG_NET, "error reading from IPv4 socket: %s", strerror(errno));
@@ -216,7 +221,7 @@ METHOD(socket_t, receiver, status_t,
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
-		iov.iov_len = sizeof(buffer);
+		iov.iov_len = this->max_packet;
 		msg.msg_iov = &iov;
 		msg.msg_iovlen = 1;
 		msg.msg_control = ancillary;
@@ -343,12 +348,6 @@ METHOD(socket_t, sender, status_t,
 		if (data.len != 1 || data.ptr[0] != 0xFF)
 		{
 			/* add non esp marker to packet */
-			if (data.len > MAX_PACKET - MARKER_LEN)
-			{
-				DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-					 data.len);
-				return FAILED;
-			}
 			marked = chunk_alloc(data.len + MARKER_LEN);
 			memset(marked.ptr, 0, MARKER_LEN);
 			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -652,6 +651,8 @@ socket_raw_socket_t *socket_raw_socket_create()
 			},
 			.destroy = _destroy,
 		},
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 	this->recv4 = open_recv_socket(this, AF_INET);
