@@ -691,6 +691,10 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			{
 				conn->eap_type = 13;
 			}
+			else if (streq(kw->value, "ttls"))
+			{
+				conn->eap_type = 21;
+			}
 			else if (streq(kw->value, "mschapv2"))
 			{
 				conn->eap_type = 26;
