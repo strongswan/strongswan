@@ -226,6 +226,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 				status = this->application->build(this->application, msg);
 				if (status == INVALID_STATE)
 				{
+					*type = TLS_APPLICATION_DATA;
 					this->output = chunk_clone(msg->get_buf(msg));
 					if (this->output.len)
 					{
@@ -250,6 +251,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 						msg->write_data24(msg, writer->get_buf(writer));
 						break;
 					case INVALID_STATE:
+						*type = TLS_HANDSHAKE;
 						this->output = chunk_clone(msg->get_buf(msg));
 						break;
 					default:
@@ -269,8 +271,6 @@ METHOD(tls_fragmentation_t, build, status_t,
 
 	if (this->output.len)
 	{
-		*type = this->handshake->finished(this->handshake) ?
-					TLS_APPLICATION_DATA : TLS_HANDSHAKE;
 		if (this->output.len <= MAX_TLS_FRAGMENT_LEN)
 		{
 			*data = this->output;
