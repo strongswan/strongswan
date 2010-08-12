@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+#include <dlfcn.h>
+
 #include "crypto_tester.h"
 
 #include <debug.h>
@@ -65,6 +68,22 @@ struct private_crypto_tester_t {
 	 */
 	bool rng_true;
 };
+
+/**
+ * Get the name of a test vector, if available
+ */
+static const char* get_name(void *sym)
+{
+#ifdef HAVE_DLADDR
+	Dl_info dli;
+
+	if (dladdr(sym, &dli))
+	{
+		return dli.dli_sname;
+	}
+#endif
+	return "unknown";
+}
 
 /**
  * Implementation of crypto_tester_t.test_crypter
@@ -136,8 +155,8 @@ static bool test_crypter(private_crypto_tester_t *this,
 		crypter->destroy(crypter);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 encryption_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 encryption_algorithm_names, alg, get_name(vector));
 			break;
 		}
 	}
@@ -240,8 +259,8 @@ static bool test_signer(private_crypto_tester_t *this,
 		signer->destroy(signer);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 integrity_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 integrity_algorithm_names, alg, get_name(vector));
 			break;
 		}
 	}
@@ -330,8 +349,8 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 		hasher->destroy(hasher);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 hash_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 hash_algorithm_names, alg, get_name(vector));
 			break;
 		}
 	}
@@ -431,8 +450,8 @@ static bool test_prf(private_crypto_tester_t *this,
 		prf->destroy(prf);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 pseudo_random_function_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 pseudo_random_function_names, alg, get_name(vector));
 			break;
 		}
 	}
@@ -515,8 +534,8 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 		rng->destroy(rng);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 rng_quality_names, quality, tested);
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 rng_quality_names, quality, get_name(vector));
 			break;
 		}
 	}
