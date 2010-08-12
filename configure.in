@@ -661,53 +661,102 @@ if test x$integrity_test = xtrue; then
 	)
 fi
 
-dnl ==========================================================
-dnl  collect all plugins for libstrongswan, libhydra and pluto
-dnl ==========================================================
+dnl ==============================================
+dnl  collect plugin list for strongSwan components
+dnl ==============================================
 
 m4_include(m4/macros/add-plugin.m4)
 
-libstrongswan_plugins=
-libhydra_plugins=
+# plugin lists for all components
+libcharon_plugins=
 pluto_plugins=
+pool_plugins=
+openac_plugins=
+scepclient_plugins=
+pki_plugins=
+scripts_plugins=
+manager_plugins=
+medsrv_plugins=
 
-ADD_PLUGIN([test-vectors],         [libstrongswan pluto])
-ADD_PLUGIN([curl],                 [libstrongswan pluto])
-ADD_PLUGIN([ldap],                 [libstrongswan pluto])
-ADD_PLUGIN([aes],                  [libstrongswan pluto])
-ADD_PLUGIN([des],                  [libstrongswan pluto])
-ADD_PLUGIN([blowfish],             [libstrongswan pluto])
-ADD_PLUGIN([sha1],                 [libstrongswan pluto])
-ADD_PLUGIN([sha2],                 [libstrongswan pluto])
-ADD_PLUGIN([md4],                  [libstrongswan])
-ADD_PLUGIN([md5],                  [libstrongswan pluto])
-ADD_PLUGIN([random],               [libstrongswan pluto])
-ADD_PLUGIN([x509],                 [libstrongswan pluto])
-ADD_PLUGIN([revocation],           [libstrongswan])
-ADD_PLUGIN([pubkey],               [libstrongswan pluto])
-ADD_PLUGIN([pkcs1],                [libstrongswan pluto])
-ADD_PLUGIN([pgp],                  [libstrongswan pluto])
-ADD_PLUGIN([dnskey],               [libstrongswan pluto])
-ADD_PLUGIN([pem],                  [libstrongswan pluto])
-ADD_PLUGIN([mysql],                [libstrongswan pluto])
-ADD_PLUGIN([sqlite],               [libstrongswan pluto])
-ADD_PLUGIN([padlock],              [libstrongswan])
-ADD_PLUGIN([openssl],              [libstrongswan pluto])
-ADD_PLUGIN([gcrypt],               [libstrongswan pluto])
-ADD_PLUGIN([fips-prf],             [libstrongswan])
-ADD_PLUGIN([gmp],                  [libstrongswan pluto])
-ADD_PLUGIN([agent],                [libstrongswan])
-ADD_PLUGIN([pkcs11],               [libstrongswan])
-ADD_PLUGIN([xcbc],                 [libstrongswan])
-ADD_PLUGIN([hmac],                 [libstrongswan pluto])
+ADD_PLUGIN([test-vectors],         [libcharon pluto openac scepclient pki])
+ADD_PLUGIN([curl],                 [libcharon pluto scepclient])
+ADD_PLUGIN([ldap],                 [libcharon pluto scepclient])
+ADD_PLUGIN([mysql],                [libcharon pluto pool manager medsrv])
+ADD_PLUGIN([sqlite],               [libcharon pluto pool manager medsrv])
+ADD_PLUGIN([aes],                  [libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([des],                  [libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([blowfish],             [libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([sha1],                 [libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([sha2],                 [libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([md4],                  [libcharon openac manager scepclient pki])
+ADD_PLUGIN([md5],                  [libcharon pluto openac scepclient pki])
+ADD_PLUGIN([random],               [libcharon pluto openac scepclient pki medsrv])
+ADD_PLUGIN([x509],                 [libcharon pluto openac scepclient pki])
+ADD_PLUGIN([revocation],           [libcharon])
+ADD_PLUGIN([pubkey],               [libcharon])
+ADD_PLUGIN([pkcs1],                [libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([pgp],                  [libcharon pluto])
+ADD_PLUGIN([dnskey],               [pluto])
+ADD_PLUGIN([pem],                  [libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([padlock],              [libcharon])
+ADD_PLUGIN([openssl],              [libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([gcrypt],               [libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([fips-prf],             [libcharon])
+ADD_PLUGIN([gmp],                  [libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([agent],                [libcharon])
+ADD_PLUGIN([pkcs11],               [libcharon pki])
+ADD_PLUGIN([xcbc],                 [libcharon])
+ADD_PLUGIN([hmac],                 [libcharon pluto])
 ADD_PLUGIN([xauth],                [pluto])
-ADD_PLUGIN([attr],                 [hydra])
-ADD_PLUGIN([attr-sql],             [hydra])
-ADD_PLUGIN([resolve],              [hydra])
+ADD_PLUGIN([attr],                 [libcharon pluto])
+ADD_PLUGIN([attr-sql],             [libcharon pluto])
+ADD_PLUGIN([resolve],              [libcharon pluto])
+ADD_PLUGIN([load-tester],          [libcharon])
+ADD_PLUGIN([kernel-pfkey],         [libcharon])
+ADD_PLUGIN([kernel-pfroute],       [libcharon])
+ADD_PLUGIN([kernel-klips],         [libcharon])
+ADD_PLUGIN([kernel-netlink],       [libcharon])
+ADD_PLUGIN([socket-default],       [libcharon])
+ADD_PLUGIN([socket-raw],           [libcharon])
+ADD_PLUGIN([socket-dynamic],       [libcharon])
+ADD_PLUGIN([farp],                 [libcharon])
+ADD_PLUGIN([stroke],               [libcharon])
+ADD_PLUGIN([smp],                  [libcharon])
+ADD_PLUGIN([sql],                  [libcharon])
+ADD_PLUGIN([updown],               [libcharon])
+ADD_PLUGIN([eap-identity],         [libcharon])
+ADD_PLUGIN([eap-sim],              [libcharon])
+ADD_PLUGIN([eap-sim-file],         [libcharon])
+ADD_PLUGIN([eap-simaka-sql],       [libcharon])
+ADD_PLUGIN([eap-simaka-pseudonym], [libcharon])
+ADD_PLUGIN([eap-simaka-reauth],    [libcharon])
+ADD_PLUGIN([eap-aka],              [libcharon])
+ADD_PLUGIN([eap-aka-3gpp2],        [libcharon])
+ADD_PLUGIN([eap-md5],              [libcharon])
+ADD_PLUGIN([eap-gtc],              [libcharon])
+ADD_PLUGIN([eap-mschapv2],         [libcharon])
+ADD_PLUGIN([eap-radius],           [libcharon])
+ADD_PLUGIN([eap-tls],              [libcharon])
+ADD_PLUGIN([eap-ttls],             [libcharon])
+ADD_PLUGIN([medsrv],               [libcharon])
+ADD_PLUGIN([medcli],               [libcharon])
+ADD_PLUGIN([nm],                   [libcharon])
+ADD_PLUGIN([dhcp],                 [libcharon])
+ADD_PLUGIN([android],              [libcharon])
+ADD_PLUGIN([ha],                   [libcharon])
+ADD_PLUGIN([uci],                  [libcharon])
+ADD_PLUGIN([addrblock],            [libcharon])
+ADD_PLUGIN([unit-tester],          [libcharon])
 
-AC_SUBST(libstrongswan_plugins)
-AC_SUBST(libhydra_plugins)
+AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
+AC_SUBST(pool_plugins)
+AC_SUBST(openac_plugins)
+AC_SUBST(scepclient_plugins)
+AC_SUBST(pki_plugins)
+AC_SUBST(scripts_plugins)
+AC_SUBST(manager_plugins)
+AC_SUBST(medsrv_plugins)
 
 dnl =========================
 dnl  set Makefile.am vars

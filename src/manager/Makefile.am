@@ -17,7 +17,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_C
 AM_CFLAGS = -rdynamic \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DPLUGINS=\""${libstrongswan_plugins}\""
+  -DPLUGINS=\""${manager_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 manager_templatesdir = ${managerdir}/templates

@@ -14,7 +14,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
 AM_CFLAGS = -rdynamic \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DPLUGINS=\""${libstrongswan_plugins}\""
+  -DPLUGINS=\""${medsrv_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
 medsrv_templatesdir = ${medsrvdir}/templates

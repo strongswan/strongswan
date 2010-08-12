@@ -2,9 +2,6 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
 
-AM_CFLAGS = -rdynamic \
-  -DPLUGINS=\""${libstrongswan_plugins}\""
-
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-sql.la
 else

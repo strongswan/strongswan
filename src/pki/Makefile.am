@@ -16,4 +16,4 @@ pki.o :	$(top_builddir)/config.status
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
-	-DPLUGINS=\""${libstrongswan_plugins}\""
+	-DPLUGINS=\""${pki_plugins}\""

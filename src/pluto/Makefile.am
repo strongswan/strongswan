@@ -74,7 +74,7 @@ AM_CFLAGS = -rdynamic \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
--DPLUGINS=\""${pluto_plugins} ${libhydra_plugins}\"" \
+-DPLUGINS=\""${pluto_plugins}\"" \
 -DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
