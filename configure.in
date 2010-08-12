@@ -665,131 +665,45 @@ dnl ==========================================================
 dnl  collect all plugins for libstrongswan, libhydra and pluto
 dnl ==========================================================
 
+m4_include(m4/macros/add-plugin.m4)
+
 libstrongswan_plugins=
 libhydra_plugins=
 pluto_plugins=
 
-if test x$test_vectors = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" test-vectors"
-	pluto_plugins=${pluto_plugins}" test-vectors"
-fi
-if test x$curl = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" curl"
-	pluto_plugins=${pluto_plugins}" curl"
-fi
-if test x$ldap = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" ldap"
-	pluto_plugins=${pluto_plugins}" ldap"
-fi
-if test x$aes = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" aes"
-	pluto_plugins=${pluto_plugins}" aes"
-fi
-if test x$des = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" des"
-	pluto_plugins=${pluto_plugins}" des"
-fi
-if test x$blowfish = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" blowfish"
-	pluto_plugins=${pluto_plugins}" blowfish"
-fi
-if test x$sha1 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
-	pluto_plugins=${pluto_plugins}" sha1"
-fi
-if test x$sha2 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
-	pluto_plugins=${pluto_plugins}" sha2"
-fi
-if test x$md4 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md4"
-fi
-if test x$md5 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md5"
-	pluto_plugins=${pluto_plugins}" md5"
-fi
-if test x$random = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" random"
-	pluto_plugins=${pluto_plugins}" random"
-fi
-if test x$x509 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" x509"
-	pluto_plugins=${pluto_plugins}" x509"
-fi
-if test x$revocation = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" revocation"
-fi
-if test x$pubkey = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
-	pluto_plugins=${pluto_plugins}" pubkey"
-fi
-if test x$pkcs1 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pkcs1"
-	pluto_plugins=${pluto_plugins}" pkcs1"
-fi
-if test x$pgp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pgp"
-	pluto_plugins=${pluto_plugins}" pgp"
-fi
-if test x$dnskey = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" dnskey"
-	pluto_plugins=${pluto_plugins}" dnskey"
-fi
-if test x$pem = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pem"
-	pluto_plugins=${pluto_plugins}" pem"
-fi
-if test x$mysql = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
-	pluto_plugins=${pluto_plugins}" mysql"
-fi
-if test x$sqlite = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
-	pluto_plugins=${pluto_plugins}" sqlite"
-fi
-if test x$padlock = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
-fi
-if test x$openssl = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
-	pluto_plugins=${pluto_plugins}" openssl"
-fi
-if test x$gcrypt = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
-	pluto_plugins=${pluto_plugins}" gcrypt"
-fi
-if test x$fips_prf = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
-if test x$gmp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
-	pluto_plugins=${pluto_plugins}" gmp"
-fi
-if test x$agent = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" agent"
-fi
-if test x$pkcs11 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pkcs11"
-fi
-if test x$xcbc = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
-fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
-	pluto_plugins=${pluto_plugins}" hmac"
-fi
-if test x$xauth = xtrue; then
-	pluto_plugins=${pluto_plugins}" xauth"
-fi
-if test x$attr = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" attr"
-fi
-if test x$attr_sql = xtrue -o x$sql = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" attr-sql"
-fi
-if test x$resolve = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" resolve"
-fi
+ADD_PLUGIN([test-vectors],         [libstrongswan pluto])
+ADD_PLUGIN([curl],                 [libstrongswan pluto])
+ADD_PLUGIN([ldap],                 [libstrongswan pluto])
+ADD_PLUGIN([aes],                  [libstrongswan pluto])
+ADD_PLUGIN([des],                  [libstrongswan pluto])
+ADD_PLUGIN([blowfish],             [libstrongswan pluto])
+ADD_PLUGIN([sha1],                 [libstrongswan pluto])
+ADD_PLUGIN([sha2],                 [libstrongswan pluto])
+ADD_PLUGIN([md4],                  [libstrongswan])
+ADD_PLUGIN([md5],                  [libstrongswan pluto])
+ADD_PLUGIN([random],               [libstrongswan pluto])
+ADD_PLUGIN([x509],                 [libstrongswan pluto])
+ADD_PLUGIN([revocation],           [libstrongswan])
+ADD_PLUGIN([pubkey],               [libstrongswan pluto])
+ADD_PLUGIN([pkcs1],                [libstrongswan pluto])
+ADD_PLUGIN([pgp],                  [libstrongswan pluto])
+ADD_PLUGIN([dnskey],               [libstrongswan pluto])
+ADD_PLUGIN([pem],                  [libstrongswan pluto])
+ADD_PLUGIN([mysql],                [libstrongswan pluto])
+ADD_PLUGIN([sqlite],               [libstrongswan pluto])
+ADD_PLUGIN([padlock],              [libstrongswan])
+ADD_PLUGIN([openssl],              [libstrongswan pluto])
+ADD_PLUGIN([gcrypt],               [libstrongswan pluto])
+ADD_PLUGIN([fips-prf],             [libstrongswan])
+ADD_PLUGIN([gmp],                  [libstrongswan pluto])
+ADD_PLUGIN([agent],                [libstrongswan])
+ADD_PLUGIN([pkcs11],               [libstrongswan])
+ADD_PLUGIN([xcbc],                 [libstrongswan])
+ADD_PLUGIN([hmac],                 [libstrongswan pluto])
+ADD_PLUGIN([xauth],                [pluto])
+ADD_PLUGIN([attr],                 [hydra])
+ADD_PLUGIN([attr-sql],             [hydra])
+ADD_PLUGIN([resolve],              [hydra])
 
 AC_SUBST(libstrongswan_plugins)
 AC_SUBST(libhydra_plugins)
