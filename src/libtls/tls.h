@@ -33,6 +33,8 @@ typedef struct tls_t tls_t;
 
 #include <library.h>
 
+#include "tls_application.h"
+
 /**
  * TLS/SSL version numbers
  */
@@ -163,9 +165,11 @@ struct tls_t {
  * @param server		server identity
  * @param peer			peer identity
  * @param msk_label		ASCII string constant used as seed for MSK PRF
+ * @param application	higher layer application or NULL if none
  * @return				TLS stack
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer, char *msk_label);
+				  identification_t *peer, char *msk_label,
+				  tls_application_t *application);
 
 #endif /** TLS_H_ @}*/

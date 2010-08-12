@@ -74,6 +74,13 @@ struct tls_handshake_t {
 	bool (*change_cipherspec)(tls_handshake_t *this);
 
 	/**
+	 * Check if the finished message was decoded successfully.
+	 *
+	 * @return			TRUE if finished message was decoded successfully
+	 */
+	bool (*finished)(tls_handshake_t *this);
+
+	/**
 	 * Destroy a tls_handshake_t.
 	 */
 	void (*destroy)(tls_handshake_t *this);

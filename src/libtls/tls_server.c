@@ -583,6 +583,12 @@ METHOD(tls_handshake_t, change_cipherspec, bool,
 	return FALSE;
 }
 
+METHOD(tls_handshake_t, finished, bool,
+	private_tls_server_t *this)
+{
+	return this->state == STATE_FINISHED_SENT;
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_server_t *this)
 {
@@ -606,6 +612,7 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
 			.build = _build,
 			.cipherspec_changed = _cipherspec_changed,
 			.change_cipherspec = _change_cipherspec,
+			.finished = _finished,
 			.destroy = _destroy,
 		},
 		.tls = tls,

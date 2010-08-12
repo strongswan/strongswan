@@ -621,6 +621,12 @@ METHOD(tls_handshake_t, change_cipherspec, bool,
 	return FALSE;
 }
 
+METHOD(tls_handshake_t, finished, bool,
+	private_tls_peer_t *this)
+{
+	return this->state == STATE_COMPLETE;
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_peer_t *this)
 {
@@ -644,6 +650,7 @@ tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
 			.build = _build,
 			.cipherspec_changed = _cipherspec_changed,
 			.change_cipherspec = _change_cipherspec,
+			.finished = _finished,
 			.destroy = _destroy,
 		},
 		.state = STATE_INIT,

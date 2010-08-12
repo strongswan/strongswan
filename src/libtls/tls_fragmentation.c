@@ -55,6 +55,11 @@ struct private_tls_fragmentation_t {
 	 * Handshake output buffer
 	 */
 	chunk_t output;
+
+	/**
+	 * Upper layer application data protocol
+	 */
+	tls_application_t *application;
 };
 
 /**
@@ -133,6 +138,33 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Process TLS application data
+ */
+static status_t process_application(private_tls_fragmentation_t *this,
+									tls_reader_t *reader)
+{
+	while (reader->remaining(reader))
+	{
+		u_int32_t len;
+		chunk_t data;
+
+		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
+		{
+			DBG1(DBG_IKE, "TLS fragment has invalid length");
+			return FAILED;
+		}
+
+		len = reader->remaining(reader);
+		if (!reader->read_data(reader, len, &data))
+		{
+			return FAILED;
+		}
+		DBG1(DBG_IKE, "received TLS application data: %B", &data);
+	}
+	return NEED_MORE;
+}
+
 METHOD(tls_fragmentation_t, process, status_t,
 	private_tls_fragmentation_t *this, tls_content_type_t type, chunk_t data)
 {
@@ -158,8 +190,7 @@ METHOD(tls_fragmentation_t, process, status_t,
 			status = process_handshake(this, reader);
 			break;
 		case TLS_APPLICATION_DATA:
-			/* skip application data */
-			status = NEED_MORE;
+			status = process_application(this, reader);
 			break;
 		default:
 			DBG1(DBG_IKE, "received unknown TLS content type %d, ignored", type);
@@ -175,7 +206,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 {
 	tls_handshake_type_t hs_type;
 	tls_writer_t *writer, *msg;
-	status_t status;
+	status_t status = INVALID_STATE;
 
 	if (this->handshake->cipherspec_changed(this->handshake))
 	{
@@ -187,27 +218,47 @@ METHOD(tls_fragmentation_t, build, status_t,
 	if (!this->output.len)
 	{
 		msg = tls_writer_create(64);
-		do
+
+		if (this->handshake->finished(this->handshake))
 		{
-			writer = tls_writer_create(64);
-			status = this->handshake->build(this->handshake, &hs_type, writer);
-			switch (status)
+			if (this->application)
 			{
-				case NEED_MORE:
-					DBG2(DBG_IKE, "sending TLS %N message",
-								   tls_handshake_type_names, hs_type);
-					msg->write_uint8(msg, hs_type);
-					msg->write_data24(msg, writer->get_buf(writer));
-					break;
-				case INVALID_STATE:
+				status = this->application->build(this->application, msg);
+				if (status == INVALID_STATE)
+				{
 					this->output = chunk_clone(msg->get_buf(msg));
-					break;
-				default:
-					break;
+					if (this->output.len)
+					{
+						DBG2(DBG_IKE, "sending TLS application data: %B",
+									   &this->output);
+					}
+				}
 			}
-			writer->destroy(writer);
 		}
-		while (status == NEED_MORE);
+		else
+		{
+			do
+			{
+				writer = tls_writer_create(64);
+				status = this->handshake->build(this->handshake, &hs_type, writer);
+				switch (status)
+				{
+					case NEED_MORE:
+						DBG2(DBG_IKE, "sending TLS %N message",
+									   tls_handshake_type_names, hs_type);
+						msg->write_uint8(msg, hs_type);
+						msg->write_data24(msg, writer->get_buf(writer));
+						break;
+					case INVALID_STATE:
+						this->output = chunk_clone(msg->get_buf(msg));
+						break;
+					default:
+						break;
+				}
+				writer->destroy(writer);
+			}
+			while (status == NEED_MORE);
+		}
 
 		msg->destroy(msg);
 		if (status != INVALID_STATE)
@@ -218,7 +269,8 @@ METHOD(tls_fragmentation_t, build, status_t,
 
 	if (this->output.len)
 	{
-		*type = TLS_HANDSHAKE;
+		*type = this->handshake->finished(this->handshake) ?
+					TLS_APPLICATION_DATA : TLS_HANDSHAKE;
 		if (this->output.len <= MAX_TLS_FRAGMENT_LEN)
 		{
 			*data = this->output;
@@ -243,7 +295,8 @@ METHOD(tls_fragmentation_t, destroy, void,
 /**
  * See header
  */
-tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake)
+tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake,
+											  tls_application_t *application)
 {
 	private_tls_fragmentation_t *this;
 
@@ -254,6 +307,7 @@ tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake)
 			.destroy = _destroy,
 		},
 		.handshake = handshake,
+		.application = application,
 	);
 
 	return &this->public;

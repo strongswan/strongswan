@@ -110,6 +110,11 @@ struct private_tls_t {
 	 * TLS handshake protocol handler
 	 */
 	tls_handshake_t *handshake;
+
+	/**
+	 * TLS application data handler
+	 */
+	tls_application_t *application;
 };
 
 METHOD(tls_t, process, status_t,
@@ -164,6 +169,7 @@ METHOD(tls_t, destroy, void,
 	this->handshake->destroy(this->handshake);
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
+	DESTROY_IF(this->application);
 
 	free(this);
 }
@@ -172,7 +178,8 @@ METHOD(tls_t, destroy, void,
  * See header
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer, char *msk_label)
+				  identification_t *peer, char *msk_label,
+				  tls_application_t *application)
 {
 	private_tls_t *this;
 
@@ -191,6 +198,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.version = TLS_1_2,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
+		.application = application,
 	);
 
 	this->crypto = tls_crypto_create(&this->public, msk_label);
@@ -204,7 +212,8 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		this->handshake = &tls_peer_create(&this->public, this->crypto,
 										this->peer, this->server)->handshake;
 	}
-	this->fragmentation = tls_fragmentation_create(this->handshake);
+	this->fragmentation = tls_fragmentation_create(this->handshake,
+												   this->application);
 	this->compression = tls_compression_create(this->fragmentation);
 	this->protection = tls_protection_create(&this->public, this->compression);
 	this->crypto->set_protection(this->crypto, this->protection);

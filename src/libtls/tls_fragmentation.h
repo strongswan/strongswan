@@ -27,6 +27,7 @@ typedef struct tls_fragmentation_t tls_fragmentation_t;
 
 #include "tls.h"
 #include "tls_handshake.h"
+#include "tls_handshake.h"
 
 /**
  * TLS record protocol fragmentation layer.
@@ -70,8 +71,10 @@ struct tls_fragmentation_t {
  * Create a tls_fragmentation instance.
  *
  * @param handshake			upper layer handshake protocol
+ * @param application		upper layer application data or NULL
  * @return					TLS fragmentation layer.
  */
-tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake);
+tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake,
+											  tls_application_t *application);
 
 #endif /** TLS_FRAGMENTATION_H_ @}*/
