@@ -241,8 +241,8 @@ METHOD(tls_protection_t, build, status_t,
 
 				if (this->iv_out.len)
 				{	/* next record IV is last ciphertext block of this record */
-					memcpy(this->iv_out.ptr, data->ptr - this->iv_out.len,
-						   this->iv_out.len);
+					memcpy(this->iv_out.ptr, data->ptr + data->len -
+						   this->iv_out.len, this->iv_out.len);
 				}
 				else
 				{	/* prepend IV */
@@ -254,8 +254,8 @@ METHOD(tls_protection_t, build, status_t,
 				*data = chunk_cat("mm", *data, mac);
 			}
 		}
+		this->seq_out++;
 	}
-	this->seq_out++;
 	return status;
 }
 
