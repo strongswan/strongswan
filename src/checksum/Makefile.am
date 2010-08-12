@@ -14,13 +14,13 @@ checksum_builder_LDADD = \
 BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+	-DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\"" \
+	-DH_PLUGINS=\""${h_plugins}\"" -DH_PATH=\""${top_builddir}/src/libhydra/plugins\"" \
+	-DP_PLUGINS=\""${p_plugins}\"" -DP_PATH=\""${top_builddir}/src/pluto/plugins\"" \
+	-DC_PLUGINS=\""${c_plugins}\"" -DC_PATH=\""${top_builddir}/src/libcharon/plugins\""
 
-libs =	$(shell find $(top_builddir)/src/libstrongswan \
-			$(top_builddir)/src/libcharon \
-			$(top_builddir)/src/libhydra \
-			$(top_builddir)/src/pluto \
-			-name 'libstrongswan*.so')
+libs = $(top_builddir)/src/libstrongswan/.libs/libstrongswan.so
 
 if USE_LIBHYDRA
   libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
