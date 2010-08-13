@@ -42,6 +42,7 @@ enum encryption_algorithm_t {
 	ENCR_DES_IV32 =            9,
 	ENCR_NULL =               11,
 	ENCR_AES_CBC =            12,
+	/** CTR as specified for IPsec (RFC5930/RFC3686), nonce appended to key */
 	ENCR_AES_CTR =            13,
 	ENCR_AES_CCM_ICV8 =       14,
 	ENCR_AES_CCM_ICV12 =      15,
@@ -51,6 +52,7 @@ enum encryption_algorithm_t {
 	ENCR_AES_GCM_ICV16 =      20,
 	ENCR_NULL_AUTH_AES_GMAC = 21,
 	ENCR_CAMELLIA_CBC =       23,
+	/* CTR as specified for IPsec (RFC5529), nonce appended to key */
 	ENCR_CAMELLIA_CTR =       24,
 	ENCR_CAMELLIA_CCM_ICV8 =  25,
 	ENCR_CAMELLIA_CCM_ICV12 = 26,
@@ -109,6 +111,10 @@ struct crypter_t {
 	/**
 	 * Get the block size of the crypto algorithm.
 	 *
+	 * get_block_size() returns the smallest block the crypter can handle,
+	 * not the block size of the underlying crypto algorithm. For counter mode,
+	 * it is usually 1.
+	 *
 	 * @return				block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
@@ -122,6 +128,10 @@ struct crypter_t {
 
 	/**
 	 * Get the key size of the crypto algorithm.
+	 *
+	 * get_key_size() might return a key length different from the key
+	 * size passed to the factory constructor. For Counter Mode, the nonce
+	 * is handled as a part of the key material and is passed to set_key().
 	 *
 	 * @return				key size in bytes
 	 */

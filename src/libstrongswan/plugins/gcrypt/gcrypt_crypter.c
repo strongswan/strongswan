@@ -40,12 +40,43 @@ struct private_gcrypt_crypter_t {
 	 * gcrypt algorithm identifier
 	 */
 	int alg;
+
+	/**
+	 * are we using counter mode?
+	 */
+	bool ctr_mode;
+
+	/**
+	 * counter state
+	 */
+	struct {
+		char nonce[4];
+		char iv[8];
+		u_int32_t counter;
+	} __attribute__((packed)) ctr;
 };
+
+/**
+ * Set the IV for en/decryption
+ */
+static void set_iv(private_gcrypt_crypter_t *this, chunk_t iv)
+{
+	if (this->ctr_mode)
+	{
+		memcpy(this->ctr.iv, iv.ptr, sizeof(this->ctr.iv));
+		this->ctr.counter = htonl(1);
+		gcry_cipher_setctr(this->h, &this->ctr, sizeof(this->ctr));
+	}
+	else
+	{
+		gcry_cipher_setiv(this->h, iv.ptr, iv.len);
+	}
+}
 
 METHOD(crypter_t, decrypt, void,
 	private_gcrypt_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
-	gcry_cipher_setiv(this->h, iv.ptr, iv.len);
+	set_iv(this, iv);
 
 	if (dst)
 	{
@@ -61,7 +92,7 @@ METHOD(crypter_t, decrypt, void,
 METHOD(crypter_t, encrypt, void,
 	private_gcrypt_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
-	gcry_cipher_setiv(this->h, iv.ptr, iv.len);
+	set_iv(this, iv);
 
 	if (dst)
 	{
@@ -79,6 +110,10 @@ METHOD(crypter_t, get_block_size, size_t,
 {
 	size_t len = 0;
 
+	if (this->ctr_mode)
+	{	/* counter mode does not need any padding */
+		return 1;
+	}
 	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_BLKLEN, NULL, &len);
 	return len;
 }
@@ -88,6 +123,10 @@ METHOD(crypter_t, get_iv_size, size_t,
 {
 	size_t len = 0;
 
+	if (this->ctr_mode)
+	{
+		return sizeof(this->ctr.iv);
+	}
 	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_BLKLEN, NULL, &len);
 	return len;
 }
@@ -98,12 +137,23 @@ METHOD(crypter_t, get_key_size, size_t,
 	size_t len = 0;
 
 	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_KEYLEN, NULL, &len);
+	if (this->ctr_mode)
+	{
+		return len + sizeof(this->ctr.nonce);
+	}
 	return len;
 }
 
 METHOD(crypter_t, set_key, void,
 	private_gcrypt_crypter_t *this, chunk_t key)
 {
+	if (this->ctr_mode)
+	{
+		/* last 4 bytes are the nonce */
+		memcpy(this->ctr.nonce, key.ptr + key.len - sizeof(this->ctr.nonce),
+			   sizeof(this->ctr.nonce));
+		key.len -= sizeof(this->ctr.nonce);
+	}
 	gcry_cipher_setkey(this->h, key.ptr, key.len);
 }
 
@@ -150,8 +200,8 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			}
 			gcrypt_alg = GCRY_CIPHER_BLOWFISH;
 			break;
-		/* case ENCR_AES_CTR:
-			mode = GCRY_CIPHER_MODE_CTR; */
+		case ENCR_AES_CTR:
+			mode = GCRY_CIPHER_MODE_CTR;
 			/* fall */
 		case ENCR_AES_CBC:
 			switch (key_size)
@@ -169,8 +219,8 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 					return NULL;
 			}
 			break;
-		/* case ENCR_CAMELLIA_CTR:
-			mode = GCRY_CIPHER_MODE_CTR; */
+		case ENCR_CAMELLIA_CTR:
+			mode = GCRY_CIPHER_MODE_CTR;
 			/* fall */
 		case ENCR_CAMELLIA_CBC:
 			switch (key_size)
@@ -234,6 +284,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			.destroy = _destroy,
 		},
 		.alg = gcrypt_alg,
+		.ctr_mode = mode == GCRY_CIPHER_MODE_CTR,
 	);
 
 	err = gcry_cipher_open(&this->h, gcrypt_alg, mode, 0);
