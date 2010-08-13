@@ -41,11 +41,8 @@ struct private_hmac_signer_t {
 	size_t block_size;
 };
 
-/**
- * Implementation of signer_t.get_signature.
- */
-static void get_signature(private_hmac_signer_t *this,
-						  chunk_t data, u_int8_t *buffer)
+METHOD(signer_t, get_signature, void,
+	private_hmac_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
 	if (buffer == NULL)
 	{	/* append mode */
@@ -60,11 +57,8 @@ static void get_signature(private_hmac_signer_t *this,
 	}
 }
 
-/**
- * Implementation of signer_t.allocate_signature.
- */
-static void allocate_signature (private_hmac_signer_t *this,
-								chunk_t data, chunk_t *chunk)
+METHOD(signer_t, allocate_signature, void,
+	private_hmac_signer_t *this, chunk_t data, chunk_t *chunk)
 {
 	if (chunk == NULL)
 	{	/* append mode */
@@ -83,11 +77,8 @@ static void allocate_signature (private_hmac_signer_t *this,
 	}
 }
 
-/**
- * Implementation of signer_t.verify_signature.
- */
-static bool verify_signature(private_hmac_signer_t *this,
-							 chunk_t data, chunk_t signature)
+METHOD(signer_t, verify_signature, bool,
+	private_hmac_signer_t *this, chunk_t data, chunk_t signature)
 {
 	u_int8_t mac[this->hmac->get_block_size(this->hmac)];
 
@@ -100,38 +91,29 @@ static bool verify_signature(private_hmac_signer_t *this,
 	return memeq(signature.ptr, mac, this->block_size);
 }
 
-/**
- * Implementation of signer_t.get_key_size.
- */
-static size_t get_key_size(private_hmac_signer_t *this)
+METHOD(signer_t, get_key_size, size_t,
+	private_hmac_signer_t *this)
 {
 	return this->hmac->get_block_size(this->hmac);
 }
 
-/**
- * Implementation of signer_t.get_block_size.
- */
-static size_t get_block_size(private_hmac_signer_t *this)
+METHOD(signer_t, get_block_size, size_t,
+	private_hmac_signer_t *this)
 {
 	return this->block_size;
 }
 
-/**
- * Implementation of signer_t.set_key.
- */
-static void set_key(private_hmac_signer_t *this, chunk_t key)
+METHOD(signer_t, set_key, void,
+	private_hmac_signer_t *this, chunk_t key)
 {
 	this->hmac->set_key(this->hmac, key);
 }
 
-/**
- * Implementation of signer_t.destroy.
- */
-static status_t destroy(private_hmac_signer_t *this)
+METHOD(signer_t, destroy, void,
+	private_hmac_signer_t *this)
 {
 	this->hmac->destroy(this->hmac);
 	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -140,69 +122,69 @@ static status_t destroy(private_hmac_signer_t *this)
 hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 {
 	private_hmac_signer_t *this;
+	hmac_t *hmac;
 	size_t trunc;
-	hash_algorithm_t hash;
 
 	switch (algo)
 	{
 		case AUTH_HMAC_SHA1_96:
-			hash = HASH_SHA1;
+			hmac = hmac_create(HASH_SHA1);
 			trunc = 12;
 			break;
 		case AUTH_HMAC_SHA1_128:
-			hash = HASH_SHA1;
+			hmac = hmac_create(HASH_SHA1);
 			trunc = 16;
 			break;
 		case AUTH_HMAC_SHA1_160:
-			hash = HASH_SHA1;
+			hmac = hmac_create(HASH_SHA1);
 			trunc = 20;
 			break;
 		case AUTH_HMAC_MD5_96:
-			hash = HASH_MD5;
+			hmac = hmac_create(HASH_MD5);
 			trunc = 12;
 			break;
 		case AUTH_HMAC_MD5_128:
-			hash = HASH_MD5;
+			hmac = hmac_create(HASH_MD5);
 			trunc = 16;
 			break;
 		case AUTH_HMAC_SHA2_256_128:
-			hash = HASH_SHA256;
+			hmac = hmac_create(HASH_SHA256);
 			trunc = 16;
 			break;
 		case AUTH_HMAC_SHA2_384_192:
-			hash = HASH_SHA384;
+			hmac = hmac_create(HASH_SHA384);
 			trunc = 24;
 			break;
 		case AUTH_HMAC_SHA2_512_256:
-			hash = HASH_SHA512;
+			hmac = hmac_create(HASH_SHA512);
 			trunc = 32;
 			break;
 		case AUTH_HMAC_SHA2_256_256:
-			hash = HASH_SHA256;
+			hmac = hmac_create(HASH_SHA256);
 			trunc = 32;
 		default:
 			return NULL;
 	}
 
-	this = malloc_thing(private_hmac_signer_t);
-	this->hmac = hmac_create(hash);
-	if (this->hmac == NULL)
+	if (hmac == NULL)
 	{
-		free(this);
 		return NULL;
 	}
-	/* prevent invalid truncation */
-	this->block_size = min(trunc, this->hmac->get_block_size(this->hmac));
 
-	/* interface functions */
-	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
-	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
-	this->public.signer_interface.verify_signature = (bool (*) (signer_t*, chunk_t, chunk_t))verify_signature;
-	this->public.signer_interface.get_key_size = (size_t (*) (signer_t*))get_key_size;
-	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
-	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;
-	this->public.signer_interface.destroy = (void (*) (signer_t*))destroy;
+	INIT(this,
+		.public.signer = {
+			.get_signature = _get_signature,
+			.allocate_signature = _allocate_signature,
+			.verify_signature = _verify_signature,
+			.get_key_size = _get_key_size,
+			.get_block_size = _get_block_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.block_size = min(trunc, hmac->get_block_size(hmac)),
+		.hmac = hmac,
+	);
 
-	return &(this->public);
+	return &this->public;
 }
 

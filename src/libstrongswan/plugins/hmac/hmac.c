@@ -30,7 +30,7 @@ struct private_hmac_t {
 	/**
 	 * Public hmac_t interface.
 	 */
-	hmac_t hmac;
+	hmac_t public;
 
 	/**
 	 * Block size, as in RFC.
@@ -53,10 +53,8 @@ struct private_hmac_t {
 	chunk_t ipaded_key;
 };
 
-/**
- * Implementation of hmac_t.get_mac.
- */
-static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
+METHOD(hmac_t, get_mac, void,
+	private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* H(K XOR opad, H(K XOR ipad, text))
 	 *
@@ -91,37 +89,31 @@ static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 	}
 }
 
-/**
- * Implementation of hmac_t.allocate_mac.
- */
-static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
+METHOD(hmac_t, allocate_mac, void,
+	private_hmac_t *this, chunk_t data, chunk_t *out)
 {
 	/* allocate space and use get_mac */
 	if (out == NULL)
 	{
 		/* append mode */
-		this->hmac.get_mac(&(this->hmac), data, NULL);
+		get_mac(this, data, NULL);
 	}
 	else
 	{
 		out->len = this->h->get_hash_size(this->h);
 		out->ptr = malloc(out->len);
-		this->hmac.get_mac(&(this->hmac), data, out->ptr);
+		get_mac(this, data, out->ptr);
 	}
 }
 
-/**
- * Implementation of hmac_t.get_block_size.
- */
-static size_t get_block_size(private_hmac_t *this)
+METHOD(hmac_t, get_block_size, size_t,
+	private_hmac_t *this)
 {
 	return this->h->get_hash_size(this->h);
 }
 
-/**
- * Implementation of hmac_t.set_key.
- */
-static void set_key(private_hmac_t *this, chunk_t key)
+METHOD(hmac_t, set_key, void,
+	private_hmac_t *this, chunk_t key)
 {
 	int i;
 	u_int8_t buffer[this->b];
@@ -151,10 +143,8 @@ static void set_key(private_hmac_t *this, chunk_t key)
 	this->h->get_hash(this->h, this->ipaded_key, NULL);
 }
 
-/**
- * Implementation of hmac_t.destroy.
- */
-static void destroy(private_hmac_t *this)
+METHOD(hmac_t, destroy, void,
+	private_hmac_t *this)
 {
 	this->h->destroy(this->h);
 	free(this->opaded_key.ptr);
@@ -167,14 +157,17 @@ static void destroy(private_hmac_t *this)
  */
 hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 {
-	private_hmac_t *this = malloc_thing(private_hmac_t);
+	private_hmac_t *this;
 
-	/* set hmac_t methods */
-	this->hmac.get_mac = (void (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
-	this->hmac.allocate_mac = (void (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
-	this->hmac.get_block_size = (size_t (*)(hmac_t *))get_block_size;
-	this->hmac.set_key = (void (*)(hmac_t *,chunk_t))set_key;
-	this->hmac.destroy = (void (*)(hmac_t *))destroy;
+	INIT(this,
+		.public = {
+			.get_mac = _get_mac,
+			.allocate_mac = _allocate_mac,
+			.get_block_size = _get_block_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+	);
 
 	/* set b, according to hasher */
 	switch (hash_algorithm)
@@ -193,7 +186,6 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 			return NULL;
 	}
 
-	/* build the hasher */
 	this->h = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
 	if (this->h == NULL)
 	{
@@ -208,5 +200,5 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	this->ipaded_key.ptr = malloc(this->b);
 	this->ipaded_key.len = this->b;
 
-	return &(this->hmac);
+	return &this->public;
 }

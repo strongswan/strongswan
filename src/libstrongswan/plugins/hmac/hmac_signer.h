@@ -34,9 +34,9 @@ typedef struct hmac_signer_t hmac_signer_t;
 struct hmac_signer_t {
 
 	/**
-	 * generic signer_t interface for this signer
+	 * Implements signer_t interface.
 	 */
-	signer_t signer_interface;
+	signer_t signer;
 };
 
 /**
@@ -44,8 +44,7 @@ struct hmac_signer_t {
  *
  * HMAC signatures are often truncated to shorten them to a more usable, but
  * still secure enough length.
- * Block size must be equal or smaller then the hash algorithms
- * hash.
+ * Block size must be equal or smaller then the hash algorithms hash.
  *
  * @param algo		algorithm to implement
  * @return			hmac_signer_t, NULL if  not supported

@@ -35,9 +35,9 @@ typedef struct hmac_prf_t hmac_prf_t;
 struct hmac_prf_t {
 
 	/**
-	 * Generic prf_t interface for this hmac_prf_t class.
+	 * Implements prf_t interface.
 	 */
-	prf_t prf_interface;
+	prf_t prf;
 };
 
 /**
