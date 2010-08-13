@@ -14,15 +14,12 @@
  */
 
 #include "eap_identity_plugin.h"
-
 #include "eap_identity.h"
 
 #include <daemon.h>
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(eap_identity_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	eap_identity_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
 							   (eap_constructor_t)eap_identity_create_server);
@@ -36,9 +33,13 @@ static void destroy(eap_identity_plugin_t *this)
  */
 plugin_t *eap_identity_plugin_create()
 {
-	eap_identity_plugin_t *this = malloc_thing(eap_identity_plugin_t);
+	eap_identity_plugin_t *this;
 
-	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
 
 	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_SERVER,
 							(eap_constructor_t)eap_identity_create_server);

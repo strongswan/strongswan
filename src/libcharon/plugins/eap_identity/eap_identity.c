@@ -59,11 +59,8 @@ struct eap_identity_header_t {
 	u_int8_t data[];
 } __attribute__((__packed__));
 
-/**
- * Implementation of eap_method_t.process for the peer
- */
-static status_t process_peer(private_eap_identity_t *this,
-							 eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process_peer, status_t,
+	private_eap_identity_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t id;
 	eap_identity_header_t *hdr;
@@ -83,20 +80,15 @@ static status_t process_peer(private_eap_identity_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of eap_method_t.initiate for the peer
- */
-static status_t initiate_peer(private_eap_identity_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_peer, status_t,
+	private_eap_identity_t *this, eap_payload_t **out)
 {
 	/* peer never initiates */
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.process for the server
- */
-static status_t process_server(private_eap_identity_t *this,
-							   eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process_server, status_t,
+	private_eap_identity_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t data;
 
@@ -108,10 +100,8 @@ static status_t process_server(private_eap_identity_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of eap_method_t.initiate for the server
- */
-static status_t initiate_server(private_eap_identity_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_server, status_t,
+	private_eap_identity_t *this, eap_payload_t **out)
 {
 	eap_identity_header_t hdr;
 
@@ -125,19 +115,15 @@ static status_t initiate_server(private_eap_identity_t *this, eap_payload_t **ou
 	return NEED_MORE;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_identity_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_identity_t *this, u_int32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_IDENTITY;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_identity_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_identity_t *this, chunk_t *msk)
 {
 	if (this->identity.ptr)
 	{
@@ -147,43 +133,18 @@ static status_t get_msk(private_eap_identity_t *this, chunk_t *msk)
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_identity_t *this)
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_identity_t *this)
 {
 	return FALSE;
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_identity_t *this)
+METHOD(eap_method_t, destroy, void,
+	private_eap_identity_t *this)
 {
 	this->peer->destroy(this->peer);
 	free(this->identity.ptr);
 	free(this);
-}
-
-/**
- * Generic constructor
- */
-static private_eap_identity_t *eap_identity_create(identification_t *server,
-												   identification_t *peer)
-{
-	private_eap_identity_t *this = malloc_thing(private_eap_identity_t);
-
-	this->public.eap_method_interface.initiate = NULL;
-	this->public.eap_method_interface.process = NULL;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-
-	this->peer = peer->clone(peer);
-	this->identity = chunk_empty;
-
-	return this;
 }
 
 /*
@@ -192,11 +153,22 @@ static private_eap_identity_t *eap_identity_create(identification_t *server,
 eap_identity_t *eap_identity_create_peer(identification_t *server,
 										 identification_t *peer)
 {
-	private_eap_identity_t *this = eap_identity_create(server, peer);
+	private_eap_identity_t *this;
 
-	/* public functions */
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_peer;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_peer;
+	INIT(this,
+		.public =  {
+			.eap_method_interface = {
+				.initiate = _initiate_peer,
+				.process = _process_peer,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
+		},
+		.peer = peer->clone(peer),
+		.identity = chunk_empty,
+	);
 
 	return &this->public;
 }
@@ -207,11 +179,22 @@ eap_identity_t *eap_identity_create_peer(identification_t *server,
 eap_identity_t *eap_identity_create_server(identification_t *server,
 										   identification_t *peer)
 {
-	private_eap_identity_t *this = eap_identity_create(server, peer);
+	private_eap_identity_t *this;
 
-	/* public functions */
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_server;
+	INIT(this,
+		.public =  {
+			.eap_method_interface = {
+				.initiate = _initiate_server,
+				.process = _process_server,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
+		},
+		.peer = peer->clone(peer),
+		.identity = chunk_empty,
+	);
 
 	return &this->public;
 }
