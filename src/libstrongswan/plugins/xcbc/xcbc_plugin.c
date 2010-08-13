@@ -36,9 +36,9 @@ METHOD(plugin_t, destroy, void,
 	private_xcbc_plugin_t *this)
 {
 	lib->crypto->remove_prf(lib->crypto,
-							(prf_constructor_t)xcbc_prf_create);
+					(prf_constructor_t)xcbc_prf_create);
 	lib->crypto->remove_signer(lib->crypto,
-							   (signer_constructor_t)xcbc_signer_create);
+					(signer_constructor_t)xcbc_signer_create);
 	free(this);
 }
 
@@ -54,9 +54,13 @@ plugin_t *xcbc_plugin_create()
 	);
 
 	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,
-						 (prf_constructor_t)xcbc_prf_create);
+					(prf_constructor_t)xcbc_prf_create);
+	lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC,
+					(prf_constructor_t)xcbc_prf_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96,
-							(signer_constructor_t)xcbc_signer_create);
+					(signer_constructor_t)xcbc_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
+					(signer_constructor_t)xcbc_signer_create);
 
 	return &this->public.plugin;
 }

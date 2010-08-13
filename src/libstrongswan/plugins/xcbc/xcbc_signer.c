@@ -131,6 +131,10 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 			xcbc = xcbc_create(ENCR_AES_CBC, 16);
 			trunc = 12;
 			break;
+		case AUTH_CAMELLIA_XCBC_96:
+			xcbc = xcbc_create(ENCR_CAMELLIA_CBC, 16);
+			trunc = 12;
+			break;
 		default:
 			return NULL;
 	}

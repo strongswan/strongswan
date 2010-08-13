@@ -195,6 +195,9 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
 			 * not and therefore fixed key semantics apply to XCBC for key
 			 * derivation. */
+		case PRF_CAMELLIA128_XCBC:
+			/* draft-kanno-ipsecme-camellia-xcbc refers to rfc 4434, we
+			 * assume fixed key length. */
 			key_size = this->prf->get_key_size(this->prf)/2;
 			nonce_i.len = min(nonce_i.len, key_size);
 			nonce_r.len = min(nonce_r.len, key_size);
