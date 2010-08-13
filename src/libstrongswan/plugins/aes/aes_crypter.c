@@ -1331,11 +1331,8 @@ static void decrypt_block(const private_aes_crypter_t *this, const unsigned char
     state_out(out_blk, b0);
 }
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_aes_crypter_t *this, chunk_t data, chunk_t iv,
-					chunk_t *decrypted)
+METHOD(crypter_t, decrypt, void,
+	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	int pos;
 	const u_int32_t *iv_i;
@@ -1376,12 +1373,8 @@ static void decrypt(private_aes_crypter_t *this, chunk_t data, chunk_t iv,
 	}
 }
 
-
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted)
+METHOD(crypter_t, encrypt, void,
+	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	int pos;
 	const u_int32_t *iv_i;
@@ -1417,26 +1410,20 @@ static void encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv,
 	}
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size (private_aes_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_aes_crypter_t *this)
 {
 	return AES_BLOCK_SIZE;
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size (private_aes_crypter_t *this)
+METHOD(crypter_t, get_key_size, size_t,
+	private_aes_crypter_t *this)
 {
 	return this->key_size;
 }
 
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key (private_aes_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_aes_crypter_t *this, chunk_t key)
 {
 	u_int32_t    *kf, *kt, rci, f = 0;
 	u_int8_t *in_key = key.ptr;
@@ -1498,8 +1485,8 @@ static void set_key (private_aes_crypter_t *this, chunk_t key)
 	}
 
 	if(!f)
-    {
-		u_int32_t    i;
+	{
+		u_int32_t i;
 
 		kt = this->aes_d_key + nc * this->aes_Nrnd;
 		kf = this->aes_e_key;
@@ -1517,15 +1504,13 @@ static void set_key (private_aes_crypter_t *this, chunk_t key)
 			cpy(kt, kf);
 #endif
 			kt -= 2 * nc;
-        }
+		}
 		cpy(kt, kf);
-    }
+	}
 }
 
-/**
- * Implementation of crypter_t.destroy and aes_crypter_t.destroy.
- */
-static void destroy (private_aes_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_aes_crypter_t *this)
 {
 	free(this);
 }
@@ -1541,36 +1526,32 @@ aes_crypter_t *aes_crypter_create(encryption_algorithm_t algo, size_t key_size)
 	{
 		return NULL;
 	}
-
-	this = malloc_thing(private_aes_crypter_t);
+	switch (key_size)
+	{
+		case 32:
+		case 24:
+		case 16:
+			break;
+		default:
+			return NULL;
+	}
 
 	#if !defined(FIXED_TABLES)
 	if(!tab_gen) { gen_tabs(); tab_gen = 1; }
 	#endif
 
-	this->key_size = key_size;
-	switch(key_size)
-	{
-	case 32:        /* bytes */
-		this->aes_Nkey = 8;
-		break;
-	case 24:        /* bytes */
-		this->aes_Nkey = 6;
-		break;
-	case 16:        /* bytes */
-		this->aes_Nkey = 4;
-		break;
-	default:
-		free(this);
-		return NULL;
-	}
-
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
+	INIT(this,
+		.public.crypter = {
+			.encrypt = _encrypt,
+			.decrypt = _decrypt,
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.key_size = key_size,
+		.aes_Nkey = key_size / 4,
+	);
 
 	return &(this->public);
 }
