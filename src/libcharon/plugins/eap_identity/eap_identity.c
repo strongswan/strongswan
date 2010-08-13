@@ -71,7 +71,7 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
-	hdr->identifier = in->get_identifier(in);
+	hdr->identifier = in ? in->get_identifier(in) : 0;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, id.ptr, id.len);
