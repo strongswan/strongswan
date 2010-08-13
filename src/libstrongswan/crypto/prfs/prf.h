@@ -30,8 +30,7 @@ typedef struct prf_t prf_t;
 /**
  * Pseudo random function, as in IKEv2 RFC 3.3.2.
  *
- * PRF algorithms not defined in IKEv2 are allocated in "private use"
- * space.
+ * PRF algorithms not defined in IKEv2 are allocated in "private use" space.
  */
 enum pseudo_random_function_t {
 	PRF_UNDEFINED = 1024,
@@ -55,11 +54,12 @@ enum pseudo_random_function_t {
 	PRF_FIPS_SHA1_160 = 1025,
 	/** FIPS 186-2-change1, uses fixed output size of 160bit */
 	PRF_FIPS_DES = 1026,
-	/**
-	 * Keyed hash algorithm using SHA1, used in EAP-AKA:
+	/** Keyed hash algorithm using SHA1, used in EAP-AKA:
 	 * This PRF uses SHA1, but XORs the key into the IV. No "Final()" operation
 	 * is applied to the SHA1 state. */
 	PRF_KEYED_SHA1 = 1027,
+	/** draft-kanno-ipsecme-camellia-xcbc, not yet assigned by IANA */
+	PRF_CAMELLIA128_XCBC = 1028,
 };
 
 /**
