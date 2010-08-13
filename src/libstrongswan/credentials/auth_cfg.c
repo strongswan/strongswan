@@ -93,6 +93,38 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_SUBJECT_HASH_URL,
 	"HELPER_SUBJECT_HASH_URL",
 );
 
+/*
+ * See header
+ */
+eap_type_t eap_type_from_string(char *name)
+{
+	int i;
+	static struct {
+		char *name;
+		eap_type_t type;
+	} types[] = {
+		{"identity",	EAP_IDENTITY},
+		{"md5",			EAP_MD5},
+		{"otp",			EAP_OTP},
+		{"gtc",			EAP_GTC},
+		{"tls",			EAP_TLS},
+		{"ttls",		EAP_TTLS},
+		{"sim",			EAP_SIM},
+		{"aka",			EAP_AKA},
+		{"mschapv2",	EAP_MSCHAPV2},
+		{"radius",		EAP_RADIUS},
+	};
+
+	for (i = 0; i < countof(types); i++)
+	{
+		if (strcaseeq(name, types[i].name))
+		{
+			return types[i].type;
+		}
+	}
+	return 0;
+}
+
 typedef struct private_auth_cfg_t private_auth_cfg_t;
 
 /**

@@ -671,39 +671,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				}
 				break;
 			}
-			if (streq(kw->value, "aka"))
-			{
-				conn->eap_type = 23;
-			}
-			else if (streq(kw->value, "sim"))
-			{
-				conn->eap_type = 18;
-			}
-			else if (streq(kw->value, "md5"))
-			{
-				conn->eap_type = 4;
-			}
-			else if (streq(kw->value, "gtc"))
-			{
-				conn->eap_type = 6;
-			}
-			else if (streq(kw->value, "tls"))
-			{
-				conn->eap_type = 13;
-			}
-			else if (streq(kw->value, "ttls"))
-			{
-				conn->eap_type = 21;
-			}
-			else if (streq(kw->value, "mschapv2"))
-			{
-				conn->eap_type = 26;
-			}
-			else if (streq(kw->value, "radius"))
-			{	/* pseudo-type */
-				conn->eap_type = 253;
-			}
-			else
+			conn->eap_type = eap_type_from_string(kw->value);
+			if (conn->eap_type == 0)
 			{
 				conn->eap_type = atoi(kw->value);
 				if (conn->eap_type == 0)
