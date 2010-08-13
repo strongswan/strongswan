@@ -68,12 +68,9 @@ struct private_eap_manager_t {
 	rwlock_t *lock;
 };
 
-/**
- * Implementation of eap_manager_t.add_method.
- */
-static void add_method(private_eap_manager_t *this, eap_type_t type,
-					   u_int32_t vendor, eap_role_t role,
-					   eap_constructor_t constructor)
+METHOD(eap_manager_t, add_method, void,
+	private_eap_manager_t *this, eap_type_t type, u_int32_t vendor,
+	eap_role_t role, eap_constructor_t constructor)
 {
 	eap_entry_t *entry = malloc_thing(eap_entry_t);
 
@@ -87,10 +84,8 @@ static void add_method(private_eap_manager_t *this, eap_type_t type,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of eap_manager_t.remove_method.
- */
-static void remove_method(private_eap_manager_t *this, eap_constructor_t constructor)
+METHOD(eap_manager_t, remove_method, void,
+	private_eap_manager_t *this, eap_constructor_t constructor)
 {
 	enumerator_t *enumerator;
 	eap_entry_t *entry;
@@ -109,13 +104,9 @@ static void remove_method(private_eap_manager_t *this, eap_constructor_t constru
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of eap_manager_t.create_instance.
- */
-static eap_method_t* create_instance(private_eap_manager_t *this,
-									 eap_type_t type, u_int32_t vendor,
-									 eap_role_t role, identification_t *server,
-									 identification_t *peer)
+METHOD(eap_manager_t, create_instance, eap_method_t*,
+	private_eap_manager_t *this, eap_type_t type, u_int32_t vendor,
+	eap_role_t role, identification_t *server, identification_t *peer)
 {
 	enumerator_t *enumerator;
 	eap_entry_t *entry;
@@ -140,10 +131,8 @@ static eap_method_t* create_instance(private_eap_manager_t *this,
 	return method;
 }
 
-/**
- * Implementation of 2008_t.destroy
- */
-static void destroy(private_eap_manager_t *this)
+METHOD(eap_manager_t, destroy, void,
+	private_eap_manager_t *this)
 {
 	this->methods->destroy_function(this->methods, free);
 	this->lock->destroy(this->lock);
@@ -151,19 +140,22 @@ static void destroy(private_eap_manager_t *this)
 }
 
 /*
- * see header file
+ * See header
  */
 eap_manager_t *eap_manager_create()
 {
-	private_eap_manager_t *this = malloc_thing(private_eap_manager_t);
+	private_eap_manager_t *this;
 
-	this->public.add_method = (void(*)(eap_manager_t*, eap_type_t type, u_int32_t vendor, eap_role_t role, eap_constructor_t constructor))add_method;
-	this->public.remove_method = (void(*)(eap_manager_t*, eap_constructor_t constructor))remove_method;
-	this->public.create_instance = (eap_method_t*(*)(eap_manager_t*, eap_type_t type, u_int32_t vendor, eap_role_t role, identification_t*,identification_t*))create_instance;
-	this->public.destroy = (void(*)(eap_manager_t*))destroy;
-
-	this->methods = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	INIT(this,
+			.public = {
+				.add_method = _add_method,
+				.remove_method = _remove_method,
+				.create_instance = _create_instance,
+				.destroy = _destroy,
+			},
+			.methods = linked_list_create(),
+			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }
