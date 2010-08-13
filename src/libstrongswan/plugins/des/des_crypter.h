@@ -32,9 +32,9 @@ typedef struct des_crypter_t des_crypter_t;
 struct des_crypter_t {
 
 	/**
-	 * The crypter_t interface.
+	 * Implements crypter_t interface.
 	 */
-	crypter_t crypter_interface;
+	crypter_t crypter;
 };
 
 /**

@@ -31,10 +31,8 @@ struct private_des_plugin_t {
 	des_plugin_t public;
 };
 
-/**
- * Implementation of des_plugin_t.destroy
- */
-static void destroy(private_des_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_des_plugin_t *this)
 {
 	lib->crypto->remove_crypter(lib->crypto,
 								(crypter_constructor_t)des_crypter_create);
@@ -46,9 +44,11 @@ static void destroy(private_des_plugin_t *this)
  */
 plugin_t *des_plugin_create()
 {
-	private_des_plugin_t *this = malloc_thing(private_des_plugin_t);
+	private_des_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 							 (crypter_constructor_t)des_crypter_create);

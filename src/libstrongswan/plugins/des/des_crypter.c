@@ -1416,11 +1416,8 @@ static void des_ede3_cbc_encrypt(des_cblock *input, des_cblock *output, long len
 	tin[0]=tin[1]=0;
 }
 
-/**
- * Implementation of crypter_t.decrypt for DES.
- */
-static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-					chunk_t *decrypted)
+METHOD(crypter_t, decrypt, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	des_cblock ivb;
 	u_int8_t *out;
@@ -1437,11 +1434,8 @@ static void decrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 }
 
 
-/**
- * Implementation of crypter_t.decrypt for DES.
- */
-static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-						chunk_t *encrypted)
+METHOD(crypter_t, encrypt, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
 	u_int8_t *out;
@@ -1457,11 +1451,8 @@ static void encrypt(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					 data.len, this->ks, &ivb, DES_ENCRYPT);
 }
 
-/**
- * Implementation of crypter_t.decrypt for DES (ECB).
- */
-static void decrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-						chunk_t *decrypted)
+METHOD(crypter_t, decrypt_ecb, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	u_int8_t *out;
 
@@ -1475,11 +1466,8 @@ static void decrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					 data.len, this->ks, DES_DECRYPT);
 }
 
-/**
- * Implementation of crypter_t.decrypt for DES (ECB).
- */
-static void encrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-						chunk_t *encrypted)
+METHOD(crypter_t, encrypt_ecb, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	u_int8_t *out;
 
@@ -1493,11 +1481,8 @@ static void encrypt_ecb(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 					 data.len, this->ks, DES_ENCRYPT);
 }
 
-/**
- * Implementation of crypter_t.decrypt for 3DES.
- */
-static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *decrypted)
+METHOD(crypter_t, decrypt3, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	des_cblock ivb;
 	u_int8_t *out;
@@ -1514,11 +1499,8 @@ static void decrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 						 &ivb, DES_DECRYPT);
 }
 
-/**
- * Implementation of crypter_t.decrypt for 3DES.
- */
-static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted)
+METHOD(crypter_t, encrypt3, void,
+	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
 	u_int8_t *out;
@@ -1535,44 +1517,34 @@ static void encrypt3(private_des_crypter_t *this, chunk_t data, chunk_t iv,
 						  &ivb, DES_ENCRYPT);
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size (private_des_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_des_crypter_t *this)
 {
 	return sizeof(des_cblock);
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size (private_des_crypter_t *this)
+METHOD(crypter_t, get_key_size, size_t,
+	private_des_crypter_t *this)
 {
 	return this->key_size;
 }
 
-/**
- * Implementation of crypter_t.set_key for DES.
- */
-static void set_key(private_des_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_des_crypter_t *this, chunk_t key)
 {
 	des_set_key((des_cblock*)(key.ptr), &this->ks);
 }
 
-/**
- * Implementation of crypter_t.set_key for 3DES.
- */
-static void set_key3(private_des_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key3, void,
+	private_des_crypter_t *this, chunk_t key)
 {
 	des_set_key((des_cblock*)(key.ptr) + 0, &this->ks3[0]);
 	des_set_key((des_cblock*)(key.ptr) + 1, &this->ks3[1]);
 	des_set_key((des_cblock*)(key.ptr) + 2, &this->ks3[2]);
 }
 
-/**
- * Implementation of crypter_t.destroy and des_crypter_t.destroy.
- */
-static void destroy(private_des_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_des_crypter_t *this)
 {
 	free(this);
 }
@@ -1582,33 +1554,36 @@ static void destroy(private_des_crypter_t *this)
  */
 des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 {
-	private_des_crypter_t *this = malloc_thing(private_des_crypter_t);
+	private_des_crypter_t *this;
 
-	/* functions of crypter_t interface */
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
+	INIT(this,
+		.public.crypter = {
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.destroy = _destroy,
+		},
+	);
 
 	/* use functions depending on algorithm */
 	switch (algo)
 	{
 		case ENCR_DES:
 			this->key_size = sizeof(des_cblock);
-			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
+			this->public.crypter.set_key = _set_key;
+			this->public.crypter.encrypt = _encrypt;
+			this->public.crypter.decrypt = _decrypt;
 			break;
 		case ENCR_3DES:
 			this->key_size = 3 * sizeof(des_cblock);
-			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key3;
-			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt3;
-			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt3;
+			this->public.crypter.set_key = _set_key3;
+			this->public.crypter.encrypt = _encrypt3;
+			this->public.crypter.decrypt = _decrypt3;
 			break;
 		case ENCR_DES_ECB:
 			this->key_size = sizeof(des_cblock);
-			this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-			this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt_ecb;
-			this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt_ecb;
+			this->public.crypter.set_key = _set_key;
+			this->public.crypter.encrypt = _encrypt_ecb;
+			this->public.crypter.decrypt = _decrypt_ecb;
 			break;
 		default:
 			free(this);
