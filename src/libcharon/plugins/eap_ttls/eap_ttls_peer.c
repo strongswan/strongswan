@@ -16,6 +16,7 @@
 #include "eap_ttls_peer.h"
 
 #include <debug.h>
+#include <sa/authenticators/eap/eap_method.h>
 
 #define AVP_EAP_MESSAGE		79
 
@@ -42,11 +43,71 @@ struct private_eap_ttls_peer_t {
 	bool start_phase2;
 };
 
+/**
+ * Send an EAP-Message Attribute-Value Pair
+ */
+static void send_avp_eap_message(tls_writer_t *writer, chunk_t data)
+{
+	char zero_padding[] = { 0x00, 0x00, 0x00 };
+	chunk_t   avp_padding;
+	u_int8_t  avp_flags;
+	u_int32_t avp_len;
+
+	avp_flags = 0x40;
+	avp_len = 8 + data.len;
+	avp_padding = chunk_create(zero_padding, (4 - data.len) % 4);
+
+	writer->write_uint32(writer, AVP_EAP_MESSAGE);
+	writer->write_uint8(writer, avp_flags);
+	writer->write_uint24(writer, avp_len);
+	writer->write_data(writer, data);
+	writer->write_data(writer, avp_padding);
+}
+
+/**
+ * Process an EAP-Message Attribute-Value Pair
+ */
+static status_t process_avp_eap_message(tls_reader_t *reader, chunk_t *data)
+{
+	u_int32_t avp_code;
+	u_int8_t  avp_flags;
+	u_int32_t avp_len, data_len;
+
+	if (!reader->read_uint32(reader, &avp_code) ||
+		!reader->read_uint8(reader, &avp_flags) ||
+		!reader->read_uint24(reader, &avp_len))
+	{
+		DBG1(DBG_IKE, "received invalid AVP");
+		return FAILED;
+	}
+ 	if (avp_code != AVP_EAP_MESSAGE)
+	{
+		DBG1(DBG_IKE, "expected AVP_EAP_MESSAGE but received %u", avp_code);
+		return FAILED;
+	}
+	data_len = avp_len - 8;
+	if (!reader->read_data(reader, data_len + (4 - avp_len) % 4, data))
+	{
+		DBG1(DBG_IKE, "received insufficient AVP data");
+		return FAILED;
+	}
+	data->len = data_len;
+	return SUCCESS;	
+}
 
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_peer_t *this, tls_reader_t *reader)
 {
-	return NEED_MORE;
+	chunk_t data;
+	status_t status;
+
+	status = process_avp_eap_message(reader, &data);
+	if (status == FAILED)
+	{
+		return FAILED;
+	}
+	DBG2(DBG_IKE, "received EAP message: %B", &data);
+	return FAILED;
 }
 
 METHOD(tls_application_t, build, status_t,
@@ -55,15 +116,13 @@ METHOD(tls_application_t, build, status_t,
 	if (this->start_phase2)
 	{
 		chunk_t data = chunk_from_chars(
-			0x02, 0x00, 0x00, 10, 0x01, 'c', 'a', 'r', 'o', 'l', 0x00, 0x00);
-		u_int8_t avp_flags = 0x40;
-		u_int32_t avp_len;
+			EAP_RESPONSE, 0x00, 0x00, 25,
+			EAP_IDENTITY,
+			'c', 'a', 'r', 'o', 'l', '@', 's', 't', 'r', 'o', 'n', 'g',
+			's', 'w', 'a', 'n', '.', 'o', 'r', 'g');
 
-		avp_len = 8 + data.len - 2;
-		writer->write_uint32(writer, AVP_EAP_MESSAGE);
-		writer->write_uint8(writer, avp_flags);
-		writer->write_uint24(writer, avp_len);
-		writer->write_data(writer, data);
+		DBG2(DBG_IKE, "sending EAP message: %B", &data);
+		send_avp_eap_message(writer, data);
 		this->start_phase2 = FALSE;
 	}
 	return INVALID_STATE;
