@@ -623,6 +623,9 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			case AUTH_AES_XCBC_96:
 				prf = PRF_AES128_XCBC;
 				break;
+			case AUTH_CAMELLIA_XCBC_96:
+				prf = PRF_CAMELLIA128_XCBC;
+				break;
 			default:
 				prf = PRF_UNDEFINED;
 		}
