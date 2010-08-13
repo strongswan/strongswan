@@ -323,6 +323,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CTR
+  SUBDIRS += plugins/ctr
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ctr/libstrongswan-ctr.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
