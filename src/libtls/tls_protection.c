@@ -112,23 +112,24 @@ METHOD(tls_protection_t, process, status_t,
 		u_int8_t bs, padding_length;
 
 		bs = this->crypter_in->get_block_size(this->crypter_in);
-		if (data.len < bs || data.len % bs)
-		{
-			DBG1(DBG_IKE, "encrypted TLS record not multiple of block size");
-			return FAILED;
-		}
 		if (this->iv_in.len)
 		{	/* < TLSv1.1 uses IV from key derivation/last block */
+			if (data.len < bs || data.len % bs)
+			{
+				DBG1(DBG_IKE, "encrypted TLS record length invalid");
+				return FAILED;
+			}
 			iv = this->iv_in;
 			next_iv = chunk_clone(chunk_create(data.ptr + data.len - bs, bs));
 		}
 		else
 		{	/* TLSv1.1 uses random IVs, prepended to record */
-			iv = chunk_create(data.ptr, bs);
-			data = chunk_skip(data, bs);
-			if (data.len < bs)
+			iv.len = this->crypter_in->get_iv_size(this->crypter_in);
+			iv = chunk_create(data.ptr, iv.len);
+			data = chunk_skip(data, iv.len);
+			if (data.len < bs || data.len % bs)
 			{
-				DBG1(DBG_IKE, "TLS record too short to decrypt");
+				DBG1(DBG_IKE, "encrypted TLS record length invalid");
 				return FAILED;
 			}
 		}
@@ -231,7 +232,8 @@ METHOD(tls_protection_t, build, status_t,
 						free(data->ptr);
 						return FAILED;
 					}
-					this->rng->allocate_bytes(this->rng, bs, &iv);
+					iv.len = this->crypter_out->get_iv_size(this->crypter_out);
+					this->rng->allocate_bytes(this->rng, iv.len, &iv);
 				}
 
 				*data = chunk_cat("mmcc", *data, mac, padding,

@@ -741,6 +741,7 @@ static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 
 		crypter = this->crypto->get_crypter(this->crypto);
 		bs = crypter->get_block_size(crypter);
+		iv.len = crypter->get_iv_size(crypter);
 
 		/* add AT_PADDING attribute */
 		padding = bs - ((sizeof(encr_buf) - encr.len) % bs);
@@ -757,15 +758,15 @@ static eap_payload_t* generate(private_simaka_message_t *this, chunk_t sigdata)
 		/* add IV attribute */
 		hdr = (attr_hdr_t*)out.ptr;
 		hdr->type = AT_IV;
-		hdr->length = bs / 4 + 1;
+		hdr->length = iv.len / 4 + 1;
 		memset(out.ptr + 2, 0, 2);
 		out = chunk_skip(out, 4);
 
 		rng = this->crypto->get_rng(this->crypto);
-		rng->get_bytes(rng, bs, out.ptr);
+		rng->get_bytes(rng, iv.len, out.ptr);
 
-		iv = chunk_clonea(chunk_create(out.ptr, bs));
-		out = chunk_skip(out, bs);
+		iv = chunk_clonea(chunk_create(out.ptr, iv.len));
+		out = chunk_skip(out, iv.len);
 
 		/* inline encryption */
 		crypter->encrypt(crypter, encr, iv, NULL);

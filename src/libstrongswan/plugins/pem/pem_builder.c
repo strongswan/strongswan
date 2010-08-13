@@ -127,8 +127,8 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	}
 	crypter->set_key(crypter, key);
 
-	if (iv.len != crypter->get_block_size(crypter) ||
-		blob->len % iv.len)
+	if (iv.len != crypter->get_iv_size(crypter) ||
+		blob->len % crypter->get_block_size(crypter))
 	{
 		crypter->destroy(crypter);
 		DBG1(DBG_LIB, "  data size is not multiple of block size");

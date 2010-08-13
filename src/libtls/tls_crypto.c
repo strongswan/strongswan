@@ -772,7 +772,7 @@ METHOD(tls_crypto_t, derive_secrets, void,
 		eks = this->crypter_out->get_key_size(this->crypter_out);
 		if (this->tls->get_version(this->tls) < TLS_1_1)
 		{
-			ivs = this->crypter_out->get_block_size(this->crypter_out);
+			ivs = this->crypter_out->get_iv_size(this->crypter_out);
 		}
 	}
 	seed = chunk_cata("cc", server_random, client_random);

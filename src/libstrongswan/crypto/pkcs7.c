@@ -559,7 +559,7 @@ static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
 						DBG1(DBG_LIB, "IV could not be parsed");
 						goto end;
 					}
-					if (iv.len != crypter->get_block_size(crypter))
+					if (iv.len != crypter->get_iv_size(crypter))
 					{
 						DBG1(DBG_LIB, "IV has wrong length");
 						goto end;
@@ -752,7 +752,7 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 		rng->destroy(rng);
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-		rng->allocate_bytes(rng, crypter->get_block_size(crypter), &iv);
+		rng->allocate_bytes(rng, crypter->get_iv_size(crypter), &iv);
 		DBG4(DBG_LIB, "  initialization vector: %B", &iv);
 		rng->destroy(rng);
 	}

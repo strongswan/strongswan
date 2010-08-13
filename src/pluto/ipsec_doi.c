@@ -1753,7 +1753,7 @@ bool encrypt_message(pb_stream *pbs, struct state *st)
 	size_t enc_len = pbs_offset(pbs) - sizeof(struct isakmp_hdr);
 	chunk_t data, iv;
     char *new_iv;
-	size_t crypter_block_size;
+	size_t crypter_block_size, crypter_iv_size;
 	encryption_algorithm_t enc_alg;
 	crypter_t *crypter;
 
@@ -1761,6 +1761,7 @@ bool encrypt_message(pb_stream *pbs, struct state *st)
 	enc_alg = oakley_to_encryption_algorithm(st->st_oakley.encrypt);
 	crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
 	crypter_block_size = crypter->get_block_size(crypter);
+	crypter_iv_size = crypter->get_iv_size(crypter);
 
 	/* Pad up to multiple of encryption blocksize.
 	 * See the description associated with the definition of
@@ -1781,15 +1782,15 @@ bool encrypt_message(pb_stream *pbs, struct state *st)
 	data = chunk_create(enc_start, enc_len);
 
 	/* form iv by truncation */
-	st->st_new_iv_len = crypter_block_size;
+	st->st_new_iv_len = crypter_iv_size;
 	iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
 
 	crypter->set_key(crypter, st->st_enc_key);
 	crypter->encrypt(crypter, data, iv, NULL);
 	crypter->destroy(crypter);
 
-	new_iv = data.ptr + data.len - crypter_block_size;
-	memcpy(st->st_new_iv, new_iv, crypter_block_size);
+	new_iv = data.ptr + data.len - crypter_iv_size;
+	memcpy(st->st_new_iv, new_iv, crypter_iv_size);
 	update_iv(st);
 	DBG_cond_dump(DBG_CRYPT, "next IV:", st->st_iv, st->st_iv_len);
 	close_message(pbs);

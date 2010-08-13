@@ -1782,7 +1782,7 @@ process_packet(struct msg_digest **mdp)
 		 * the last phase 1 block, not the last block sent.
 		 */
 		{
-			size_t crypter_block_size;
+			size_t crypter_block_size, crypter_iv_size;
 			encryption_algorithm_t enc_alg;
 			crypter_t *crypter;
 			chunk_t data, iv;
@@ -1791,6 +1791,7 @@ process_packet(struct msg_digest **mdp)
 			enc_alg = oakley_to_encryption_algorithm(st->st_oakley.encrypt);
 			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
 			crypter_block_size = crypter->get_block_size(crypter);
+			crypter_iv_size = crypter->get_iv_size(crypter);
 
 			if (pbs_left(&md->message_pbs) % crypter_block_size != 0)
 			{
@@ -1817,17 +1818,17 @@ process_packet(struct msg_digest **mdp)
 			}
 
 			/* form iv by truncation */
-			st->st_new_iv_len = crypter_block_size;
+			st->st_new_iv_len = crypter_iv_size;
 			iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
-			new_iv = alloca(crypter_block_size);
-			memcpy(new_iv, data.ptr + data.len - crypter_block_size,
-				   crypter_block_size);
+			new_iv = alloca(crypter_iv_size);
+			memcpy(new_iv, data.ptr + data.len - crypter_iv_size,
+				   crypter_iv_size);
 
 			crypter->set_key(crypter, st->st_enc_key);
 			crypter->decrypt(crypter, data, iv, NULL);
 			crypter->destroy(crypter);
 
-		memcpy(st->st_new_iv, new_iv, crypter_block_size);
+			memcpy(st->st_new_iv, new_iv, crypter_iv_size);
 			if (restore_iv)
 			{
 				memcpy(st->st_new_iv, new_iv, new_iv_len);

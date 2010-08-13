@@ -121,7 +121,7 @@ static bool test_crypter(private_crypto_tester_t *this,
 
 		key = chunk_create(vector->key, crypter->get_key_size(crypter));
 		crypter->set_key(crypter, key);
-		iv = chunk_create(vector->iv, crypter->get_block_size(crypter));
+		iv = chunk_create(vector->iv, crypter->get_iv_size(crypter));
 
 		/* allocated encryption */
 		plain = chunk_create(vector->plain, vector->len);

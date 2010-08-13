@@ -473,7 +473,7 @@ end:
 			DBG1(DBG_LIB, "symmetric key length %d is wrong", symmetric_key.len);
 			goto failed;
 		}
-		if (iv.len != crypter->get_block_size(crypter))
+		if (iv.len != crypter->get_iv_size(crypter))
 		{
 			DBG1(DBG_LIB, "IV length %d is wrong", iv.len);
 			goto failed;
@@ -668,7 +668,7 @@ chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert, int enc_alg
 		rng->destroy(rng);
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-		rng->allocate_bytes(rng, crypter->get_block_size(crypter), &iv);
+		rng->allocate_bytes(rng, crypter->get_iv_size(crypter), &iv);
 		DBG4(DBG_LIB, "initialization vector: %B", &iv);
 		rng->destroy(rng);
 	}

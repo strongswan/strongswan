@@ -199,7 +199,7 @@ static void compute_length(private_encryption_payload_t *this)
 		block_size = this->crypter->get_block_size(this->crypter);
 		length += block_size - length % block_size;
 		/* add iv */
-		length += block_size;
+		length += this->crypter->get_iv_size(this->crypter);
 		/* add signature */
 		length += this->signer->get_block_size(this->signer);
 	}
@@ -355,7 +355,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	*(to_crypt.ptr + to_crypt.len - 1) = padding.len;
 
 	/* build iv */
-	iv.len = block_size;
+	iv.len = this->crypter->get_iv_size(this->crypter);
 	rng->allocate_bytes(rng, iv.len, &iv);
 	rng->destroy(rng);
 
@@ -450,17 +450,22 @@ static status_t decrypt(private_encryption_payload_t *this)
 	}
 
 	/* get IV */
-	iv.len = this->crypter->get_block_size(this->crypter);
-
+	iv.len = this->crypter->get_iv_size(this->crypter);
+	if (iv.len > this->encrypted.len)
+	{
+		DBG1(DBG_ENC, "could not decrypt, input too short");
+		return FAILED;
+	}
 	iv.ptr = this->encrypted.ptr;
 
-	/* point concatenated to data + padding + padding_length*/
+	/* point concatenated to data + padding + padding_length */
 	concatenated.ptr = this->encrypted.ptr + iv.len;
 	concatenated.len = this->encrypted.len - iv.len -
 								this->signer->get_block_size(this->signer);
 
 	/* concatenated must be a multiple of block_size of crypter */
-	if (concatenated.len < iv.len || concatenated.len % iv.len)
+	if (concatenated.len < iv.len ||
+		concatenated.len % this->crypter->get_block_size(this->crypter))
 	{
 		DBG1(DBG_ENC, "could not decrypt, invalid input");
 		return FAILED;
