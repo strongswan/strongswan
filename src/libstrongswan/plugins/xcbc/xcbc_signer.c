@@ -41,11 +41,8 @@ struct private_xcbc_signer_t {
 	size_t block_size;
 };
 
-/**
- * Implementation of signer_t.get_signature.
- */
-static void get_signature(private_xcbc_signer_t *this,
-						  chunk_t data, u_int8_t *buffer)
+METHOD(signer_t, get_signature, void,
+	private_xcbc_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
 	if (buffer == NULL)
 	{	/* append mode */
@@ -60,11 +57,8 @@ static void get_signature(private_xcbc_signer_t *this,
 	}
 }
 
-/**
- * Implementation of signer_t.allocate_signature.
- */
-static void allocate_signature (private_xcbc_signer_t *this,
-								chunk_t data, chunk_t *chunk)
+METHOD(signer_t, allocate_signature, void,
+	private_xcbc_signer_t *this, chunk_t data, chunk_t *chunk)
 {
 	if (chunk == NULL)
 	{	/* append mode */
@@ -83,11 +77,8 @@ static void allocate_signature (private_xcbc_signer_t *this,
 	}
 }
 
-/**
- * Implementation of signer_t.verify_signature.
- */
-static bool verify_signature(private_xcbc_signer_t *this,
-							 chunk_t data, chunk_t signature)
+METHOD(signer_t, verify_signature, bool,
+	private_xcbc_signer_t *this, chunk_t data, chunk_t signature)
 {
 	u_int8_t mac[this->xcbc->get_block_size(this->xcbc)];
 
@@ -100,38 +91,29 @@ static bool verify_signature(private_xcbc_signer_t *this,
 	return memeq(signature.ptr, mac, this->block_size);
 }
 
-/**
- * Implementation of signer_t.get_key_size.
- */
-static size_t get_key_size(private_xcbc_signer_t *this)
+METHOD(signer_t, get_key_size, size_t,
+	private_xcbc_signer_t *this)
 {
 	return this->xcbc->get_block_size(this->xcbc);
 }
 
-/**
- * Implementation of signer_t.get_block_size.
- */
-static size_t get_block_size(private_xcbc_signer_t *this)
+METHOD(signer_t, get_block_size, size_t,
+	private_xcbc_signer_t *this)
 {
 	return this->block_size;
 }
 
-/**
- * Implementation of signer_t.set_key.
- */
-static void set_key(private_xcbc_signer_t *this, chunk_t key)
+METHOD(signer_t, set_key, void,
+	private_xcbc_signer_t *this, chunk_t key)
 {
 	this->xcbc->set_key(this->xcbc, key);
 }
 
-/**
- * Implementation of signer_t.destroy.
- */
-static status_t destroy(private_xcbc_signer_t *this)
+METHOD(signer_t, destroy, void,
+	private_xcbc_signer_t *this)
 {
 	this->xcbc->destroy(this->xcbc);
 	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -157,18 +139,19 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 		return NULL;
 	}
 
-	this = malloc_thing(private_xcbc_signer_t);
-	this->xcbc = xcbc;
-	this->block_size = min(trunc, xcbc->get_block_size(xcbc));
-
-	/* interface functions */
-	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
-	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
-	this->public.signer_interface.verify_signature = (bool (*) (signer_t*, chunk_t, chunk_t))verify_signature;
-	this->public.signer_interface.get_key_size = (size_t (*) (signer_t*))get_key_size;
-	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
-	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;
-	this->public.signer_interface.destroy = (void (*) (signer_t*))destroy;
+	INIT(this,
+		.public.signer = {
+			.get_signature = _get_signature,
+			.allocate_signature = _allocate_signature,
+			.verify_signature = _verify_signature,
+			.get_key_size = _get_key_size,
+			.get_block_size = _get_block_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.xcbc = xcbc,
+		.block_size = min(trunc, xcbc->get_block_size(xcbc)),
+	);
 
 	return &this->public;
 }

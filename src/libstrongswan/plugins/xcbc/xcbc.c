@@ -27,10 +27,11 @@ typedef struct private_xcbc_t private_xcbc_t;
  * The variable names are the same as in the RFC.
  */
 struct private_xcbc_t {
+
 	/**
 	 * Public xcbc_t interface.
 	 */
-	xcbc_t xcbc;
+	xcbc_t public;
 
 	/**
 	 * Block size, in bytes
@@ -135,9 +136,9 @@ static void final(private_xcbc_t *this, u_int8_t *out)
 	if (this->remaining_bytes == this->b && !this->zero)
 	{
 		/* a) If the blocksize of M[n] is 128 bits:
-         *    XOR M[n] with E[n-1] and Key K2, then encrypt the result with
-         *    Key K1, yielding E[n].
-         */
+		 *    XOR M[n] with E[n-1] and Key K2, then encrypt the result with
+		 *    Key K1, yielding E[n].
+		 */
 		memxor(this->e, this->remaining, this->b);
 		memxor(this->e, this->k2, this->b);
 		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
@@ -147,20 +148,20 @@ static void final(private_xcbc_t *this, u_int8_t *out)
 		/* b) If the blocksize of M[n] is less than 128 bits:
 		 *
 		 *  i) Pad M[n] with a single "1" bit, followed by the number of
-         *     "0" bits (possibly none) required to increase M[n]'s
-         *     blocksize to 128 bits.
-         */
-        if (this->remaining_bytes < this->b)
-        {
-		    this->remaining[this->remaining_bytes] = 0x80;
-		    while (++this->remaining_bytes < this->b)
-		    {
-			    this->remaining[this->remaining_bytes] = 0x00;
-		    }
-        }
-        /*  ii) XOR M[n] with E[n-1] and Key K3, then encrypt the result
-         *      with Key K1, yielding E[n].
-         */
+		 *     "0" bits (possibly none) required to increase M[n]'s
+		 *     blocksize to 128 bits.
+		 */
+		if (this->remaining_bytes < this->b)
+		{
+			this->remaining[this->remaining_bytes] = 0x80;
+			while (++this->remaining_bytes < this->b)
+			{
+				this->remaining[this->remaining_bytes] = 0x00;
+			}
+		}
+		/*  ii) XOR M[n] with E[n-1] and Key K3, then encrypt the result
+		 *      with Key K1, yielding E[n].
+		 */
 		memxor(this->e, this->remaining, this->b);
 		memxor(this->e, this->k3, this->b);
 		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
@@ -174,10 +175,8 @@ static void final(private_xcbc_t *this, u_int8_t *out)
 	this->zero = TRUE;
 }
 
-/**
- * Implementation of xcbc_t.get_mac.
- */
-static void get_mac(private_xcbc_t *this, chunk_t data, u_int8_t *out)
+METHOD(xcbc_t, get_mac, void,
+	private_xcbc_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update E, do not process last block */
 	update(this, data);
@@ -188,18 +187,14 @@ static void get_mac(private_xcbc_t *this, chunk_t data, u_int8_t *out)
 	}
 }
 
-/**
- * Implementation of xcbc_t.get_block_size.
- */
-static size_t get_block_size(private_xcbc_t *this)
+METHOD(xcbc_t, get_block_size, size_t,
+	private_xcbc_t *this)
 {
 	return this->b;
 }
 
-/**
- * Implementation of xcbc_t.set_key.
- */
-static void set_key(private_xcbc_t *this, chunk_t key)
+METHOD(xcbc_t, set_key, void,
+	private_xcbc_t *this, chunk_t key)
 {
 	chunk_t iv, k1, lengthened;
 
@@ -228,11 +223,11 @@ static void set_key(private_xcbc_t *this, chunk_t key)
 
 	/*
 	 * (1) Derive 3 128-bit keys (K1, K2 and K3) from the 128-bit secret
-     *     key K, as follows:
-     *     K1 = 0x01010101010101010101010101010101 encrypted with Key K
-     *     K2 = 0x02020202020202020202020202020202 encrypted with Key K
-     *     K3 = 0x03030303030303030303030303030303 encrypted with Key K
-     */
+	 *     key K, as follows:
+	 *     K1 = 0x01010101010101010101010101010101 encrypted with Key K
+	 *     K2 = 0x02020202020202020202020202020202 encrypted with Key K
+	 *     K3 = 0x03030303030303030303030303030303 encrypted with Key K
+	 */
 	this->k1->set_key(this->k1, lengthened);
 	memset(this->k2, 0x02, this->b);
 	this->k1->encrypt(this->k1, chunk_create(this->k2, this->b), iv, NULL);
@@ -243,10 +238,8 @@ static void set_key(private_xcbc_t *this, chunk_t key)
 	this->k1->set_key(this->k1, k1);
 }
 
-/**
- * Implementation of xcbc_t.destroy.
- */
-static void destroy(private_xcbc_t *this)
+METHOD(xcbc_t, destroy, void,
+	private_xcbc_t *this)
 {
 	this->k1->destroy(this->k1);
 	free(this->k2);
@@ -263,35 +256,38 @@ xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_xcbc_t *this;
 	crypter_t *crypter;
+	u_int8_t b;
 
 	crypter = lib->crypto->create_crypter(lib->crypto, algo, key_size);
 	if (!crypter)
 	{
 		return NULL;
 	}
+	b = crypter->get_block_size(crypter);
 	/* input and output of crypter must be equal for xcbc */
-	if (crypter->get_block_size(crypter) != key_size)
+	if (b != key_size)
 	{
 		crypter->destroy(crypter);
 		return NULL;
 	}
 
-	this = malloc_thing(private_xcbc_t);
-	this->xcbc.get_mac = (void (*)(xcbc_t *,chunk_t,u_int8_t*))get_mac;
-	this->xcbc.get_block_size = (size_t (*)(xcbc_t *))get_block_size;
-	this->xcbc.set_key = (void (*)(xcbc_t *,chunk_t))set_key;
-	this->xcbc.destroy = (void (*)(xcbc_t *))destroy;
+	INIT(this,
+		.public = {
+			.get_mac = _get_mac,
+			.get_block_size = _get_block_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.b = b,
+		.k1 = crypter,
+		.k2 = malloc(b),
+		.k3 = malloc(b),
+		.e = malloc(b),
+		.remaining = malloc(b),
+		.zero = TRUE,
+	);
+	memset(this->e, 0, b);
 
-	this->b = crypter->get_block_size(crypter);
-	this->k1 = crypter;
-	this->k2 = malloc(this->b);
-	this->k3 = malloc(this->b);
-	this->e = malloc(this->b);
-	memset(this->e, 0, this->b);
-	this->remaining = malloc(this->b);
-	this->remaining_bytes = 0;
-	this->zero = TRUE;
-
-	return &this->xcbc;
+	return &this->public;
 }
 

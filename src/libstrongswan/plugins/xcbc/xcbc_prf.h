@@ -34,9 +34,9 @@ typedef struct xcbc_prf_t xcbc_prf_t;
 struct xcbc_prf_t {
 
 	/**
-	 * Generic prf_t interface for this xcbc_prf_t class.
+	 * Implements prf_t interface.
 	 */
-	prf_t prf_interface;
+	prf_t prf;
 };
 
 /**

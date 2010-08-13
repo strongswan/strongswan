@@ -35,18 +35,14 @@ struct private_xcbc_prf_t {
 	xcbc_t *xcbc;
 };
 
-/**
- * Implementation of prf_t.get_bytes.
- */
-static void get_bytes(private_xcbc_prf_t *this, chunk_t seed, u_int8_t *buffer)
+METHOD(prf_t, get_bytes, void,
+	private_xcbc_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
 	this->xcbc->get_mac(this->xcbc, seed, buffer);
 }
 
-/**
- * Implementation of prf_t.allocate_bytes.
- */
-static void allocate_bytes(private_xcbc_prf_t *this, chunk_t seed, chunk_t *chunk)
+METHOD(prf_t, allocate_bytes, void,
+	private_xcbc_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	if (chunk)
 	{
@@ -59,35 +55,27 @@ static void allocate_bytes(private_xcbc_prf_t *this, chunk_t seed, chunk_t *chun
 	}
 }
 
-/**
- * Implementation of prf_t.get_block_size.
- */
-static size_t get_block_size(private_xcbc_prf_t *this)
+METHOD(prf_t, get_block_size, size_t,
+	private_xcbc_prf_t *this)
 {
 	return this->xcbc->get_block_size(this->xcbc);
 }
 
-/**
- * Implementation of prf_t.get_block_size.
- */
-static size_t get_key_size(private_xcbc_prf_t *this)
+METHOD(prf_t, get_key_size, size_t,
+	private_xcbc_prf_t *this)
 {
 	/* in xcbc, block and key size are always equal */
 	return this->xcbc->get_block_size(this->xcbc);
 }
 
-/**
- * Implementation of prf_t.set_key.
- */
-static void set_key(private_xcbc_prf_t *this, chunk_t key)
+METHOD(prf_t, set_key, void,
+	private_xcbc_prf_t *this, chunk_t key)
 {
 	this->xcbc->set_key(this->xcbc, key);
 }
 
-/**
- * Implementation of prf_t.destroy.
- */
-static void destroy(private_xcbc_prf_t *this)
+METHOD(prf_t, destroy, void,
+	private_xcbc_prf_t *this)
 {
 	this->xcbc->destroy(this->xcbc);
 	free(this);
@@ -114,15 +102,17 @@ xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo)
 		return NULL;
 	}
 
-	this = malloc_thing(private_xcbc_prf_t);
-	this->xcbc = xcbc;
-
-	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
-	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
-	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
-	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
-	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
-	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
+	INIT(this,
+		.public.prf = {
+			.get_bytes = _get_bytes,
+			.allocate_bytes = _allocate_bytes,
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.xcbc = xcbc,
+	);
 
 	return &this->public;
 }

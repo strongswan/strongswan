@@ -31,9 +31,9 @@ typedef struct xcbc_signer_t xcbc_signer_t;
 struct xcbc_signer_t {
 
 	/**
-	 * generic signer_t interface for this signer
+	 * Implements signer_t interface.
 	 */
-	signer_t signer_interface;
+	signer_t signer;
 };
 
 /**
