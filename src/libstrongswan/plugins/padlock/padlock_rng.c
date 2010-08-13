@@ -69,11 +69,8 @@ static void rng(char *buf, int len, int quality)
 	}
 }
 
-/**
- * Implementation of padlock_rng_t.allocate_bytes.
- */
-static void allocate_bytes(private_padlock_rng_t *this, size_t bytes,
-						   chunk_t *chunk)
+METHOD(rng_t, allocate_bytes, void,
+	private_padlock_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	chunk->len = bytes;
 	/* padlock requires some additional bytes */
@@ -82,11 +79,8 @@ static void allocate_bytes(private_padlock_rng_t *this, size_t bytes,
 	rng(chunk->ptr, chunk->len, this->quality);
 }
 
-/**
- * Implementation of padlock_rng_t.get_bytes.
- */
-static void get_bytes(private_padlock_rng_t *this, size_t bytes,
-					  u_int8_t *buffer)
+METHOD(rng_t, get_bytes, void,
+	private_padlock_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	chunk_t chunk;
 
@@ -96,10 +90,8 @@ static void get_bytes(private_padlock_rng_t *this, size_t bytes,
 	chunk_clear(&chunk);
 }
 
-/**
- * Implementation of padlock_rng_t.destroy.
- */
-static void destroy(private_padlock_rng_t *this)
+METHOD(rng_t, destroy, void,
+	private_padlock_rng_t *this)
 {
 	free(this);
 }
@@ -109,11 +101,15 @@ static void destroy(private_padlock_rng_t *this)
  */
 padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 {
-	private_padlock_rng_t *this = malloc_thing(private_padlock_rng_t);
+	private_padlock_rng_t *this;
 
-	this->public.rng.get_bytes = (void (*) (rng_t *, size_t, u_int8_t*)) get_bytes;
-	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
-	this->public.rng.destroy = (void (*) (rng_t *))destroy;
+	INIT(this,
+		.public.rng = {
+			.get_bytes = _get_bytes,
+			.allocate_bytes = _allocate_bytes,
+			.destroy = _destroy,
+		},
+	);
 
 	/* map RNG quality to Padlock quality factor */
 	switch (quality)
@@ -127,8 +123,10 @@ padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 		case RNG_TRUE:
 			this->quality = PADLOCK_QF3;
 			break;
+		default:
+			free(this);
+			return NULL;
 	}
-
 	return &this->public;
 }
 

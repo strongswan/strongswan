@@ -34,7 +34,7 @@ struct padlock_sha1_hasher_t {
 	/**
 	 * Implements hasher_t interface.
 	 */
-	hasher_t hasher_interface;
+	hasher_t hasher;
 };
 
 /**

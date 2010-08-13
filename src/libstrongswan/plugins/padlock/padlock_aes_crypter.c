@@ -78,8 +78,8 @@ static void padlock_crypt(void *key, void *ctrl, void *src, void *dst,
 		: "eax", "ecx", "edx", "esi", "edi");
 }
 
-/*
- * Implementation of crypter_t.crypt
+/**
+ * Do encryption/decryption operation using Padlock control word
  */
 static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 				  chunk_t src, chunk_t *dst, bool enc)
@@ -107,53 +107,38 @@ static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 				  src.len / AES_BLOCK_SIZE, iv_aligned);
 }
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_padlock_aes_crypter_t *this, chunk_t data,
-						chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, decrypt, void,
+	private_padlock_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, TRUE);
 }
 
-
-/**
- * Implementation of crypter_t.encrypt.
- */
-static void encrypt (private_padlock_aes_crypter_t *this, chunk_t data,
-							chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, encrypt, void,
+	private_padlock_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, FALSE);
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size(private_padlock_aes_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_padlock_aes_crypter_t *this)
 {
 	return AES_BLOCK_SIZE;
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size(private_padlock_aes_crypter_t *this)
+METHOD(crypter_t, get_key_size, size_t,
+	private_padlock_aes_crypter_t *this)
 {
 	return this->key.len;
 }
 
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key(private_padlock_aes_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_padlock_aes_crypter_t *this, chunk_t key)
 {
 	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
 }
 
-/**
- * Implementation of crypter_t.destroy and aes_crypter_t.destroy.
- */
-static void destroy (private_padlock_aes_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_padlock_aes_crypter_t *this)
 {
 	free(this->key.ptr);
 	free(this);
@@ -171,9 +156,6 @@ padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 	{
 		return NULL;
 	}
-
-	this = malloc_thing(private_padlock_aes_crypter_t);
-
 	switch (key_size)
 	{
 		case 16:        /* AES 128 */
@@ -182,18 +164,19 @@ padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 		case 32:        /* AES-256 */
 			/* These need an expanded key, currently not supported, FALL */
 		default:
-			free(this);
 			return NULL;
 	}
 
-	this->key = chunk_alloc(key_size);
-
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-
+	INIT(this,
+		.public.crypter = {
+			.encrypt = _encrypt,
+			.decrypt = _decrypt,
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.key = chunk_alloc(key_size),
+	);
 	return &this->public;
 }

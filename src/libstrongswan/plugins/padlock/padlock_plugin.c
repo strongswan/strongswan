@@ -101,10 +101,8 @@ static padlock_feature_t get_padlock_features()
 	return 0;
 }
 
-/**
- * Implementation of aes_plugin_t.destroy
- */
-static void destroy(private_padlock_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_padlock_plugin_t *this)
 {
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
@@ -133,11 +131,13 @@ static void destroy(private_padlock_plugin_t *this)
  */
 plugin_t *padlock_plugin_create()
 {
-	private_padlock_plugin_t *this = malloc_thing(private_padlock_plugin_t);
+	private_padlock_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+		.features = get_padlock_features(),
+	);
 
-	this->features = get_padlock_features();
 	if (!this->features)
 	{
 		free(this);

@@ -32,9 +32,9 @@ typedef struct padlock_aes_crypter_t padlock_aes_crypter_t;
 struct padlock_aes_crypter_t {
 
 	/**
-	 * The crypter_t interface.
+	 * Implements crypter_t interface.
 	 */
-	crypter_t crypter_interface;
+	crypter_t crypter;
 };
 
 /**
