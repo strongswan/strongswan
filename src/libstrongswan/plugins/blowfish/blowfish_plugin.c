@@ -32,10 +32,8 @@ struct private_blowfish_plugin_t {
 	blowfish_plugin_t public;
 };
 
-/**
- * Implementation of blowfish_plugin_t.destroy
- */
-static void destroy(private_blowfish_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_blowfish_plugin_t *this)
 {
 	lib->crypto->remove_crypter(lib->crypto,
 								(crypter_constructor_t)blowfish_crypter_create);
@@ -47,9 +45,11 @@ static void destroy(private_blowfish_plugin_t *this)
  */
 plugin_t *blowfish_plugin_create()
 {
-	private_blowfish_plugin_t *this = malloc_thing(private_blowfish_plugin_t);
+	private_blowfish_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public.plugin.destroy = _destroy,
+	);
 
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
 							 (crypter_constructor_t)blowfish_crypter_create);

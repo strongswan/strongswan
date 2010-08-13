@@ -32,9 +32,9 @@ typedef struct blowfish_crypter_t blowfish_crypter_t;
 struct blowfish_crypter_t {
 
 	/**
-	 * The crypter_t interface.
+	 * Implements crypter_t interface.
 	 */
-	crypter_t crypter_interface;
+	crypter_t crypter;
 };
 
 /**

@@ -68,8 +68,6 @@ typedef struct private_blowfish_crypter_t private_blowfish_crypter_t;
 
 /**
  * Class implementing the Blowfish symmetric encryption algorithm.
- *
- * @ingroup crypters
  */
 struct private_blowfish_crypter_t {
 
@@ -89,11 +87,9 @@ struct private_blowfish_crypter_t {
 	u_int32_t key_size;
 };
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					chunk_t *decrypted)
+METHOD(crypter_t, decrypt, void,
+	private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
+	chunk_t *decrypted)
 {
 	u_int8_t *in, *out;
 
@@ -114,11 +110,9 @@ static void decrypt(private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	free(iv.ptr);
 }
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void encrypt (private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted)
+METHOD(crypter_t, encrypt, void,
+	private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
+	chunk_t *encrypted)
 {
 	u_int8_t *in, *out;
 
@@ -139,34 +133,26 @@ static void encrypt (private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	free(iv.ptr);
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size (private_blowfish_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_blowfish_crypter_t *this)
 {
 	return BLOWFISH_BLOCK_SIZE;
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size (private_blowfish_crypter_t *this)
+METHOD(crypter_t, get_key_size, size_t,
+	private_blowfish_crypter_t *this)
 {
 	return this->key_size;
 }
 
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key (private_blowfish_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_blowfish_crypter_t *this, chunk_t key)
 {
 	BF_set_key(&this->schedule, key.len , key.ptr);
 }
 
-/**
- * Implementation of crypter_t.destroy and blowfish_crypter_t.destroy.
- */
-static void destroy (private_blowfish_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_blowfish_crypter_t *this)
 {
 	free(this);
 }
@@ -183,15 +169,17 @@ blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo, size_t 
 		return NULL;
 	}
 
-	this = malloc_thing(private_blowfish_crypter_t);
+	INIT(this,
+		.public.crypter = {
+			.encrypt = _encrypt,
+			.decrypt = _decrypt,
+			.get_block_size = _get_block_size,
+			.get_key_size = _get_key_size,
+			.set_key = _set_key,
+			.destroy = _destroy,
+		},
+		.key_size = key_size,
+	);
 
-	this->key_size = key_size;
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
-
-	return &(this->public);
+	return &this->public;
 }
