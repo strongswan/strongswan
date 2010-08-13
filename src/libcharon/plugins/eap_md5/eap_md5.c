@@ -47,7 +47,7 @@ struct private_eap_md5_t {
 	chunk_t challenge;
 
 	/**
-	 * EAP message identififier
+	 * EAP message identifier
 	 */
 	u_int8_t identifier;
 };
