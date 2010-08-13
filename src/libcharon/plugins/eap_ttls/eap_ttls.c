@@ -456,5 +456,5 @@ eap_ttls_t *eap_ttls_create_peer(identification_t *server,
 							   identification_t *peer)
 {
 	return eap_ttls_create(server, peer, FALSE,
-						   &eap_ttls_peer_create(peer)->application);
+						   &eap_ttls_peer_create(server, peer)->application);
 }

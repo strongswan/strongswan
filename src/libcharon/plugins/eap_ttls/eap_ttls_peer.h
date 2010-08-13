@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup tls_peer tls_peer
- * @{ @ingroup libtls
+ * @defgroup eap_ttls_peer eap_ttls_peer
+ * @{ @ingroup eap_ttls
  */
 
 #ifndef EAP_TTLS_PEER_H_
@@ -41,6 +41,7 @@ struct eap_ttls_peer_t {
 /**
  * Create an eap_ttls_peer instance.
  */
-eap_ttls_peer_t *eap_ttls_peer_create(identification_t *peer);
+eap_ttls_peer_t *eap_ttls_peer_create(identification_t *server,
+									  identification_t *peer);
 
 #endif /** EAP_TTLS_PEER_H_ @}*/

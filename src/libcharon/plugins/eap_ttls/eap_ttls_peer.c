@@ -16,6 +16,8 @@
 #include "eap_ttls_peer.h"
 
 #include <debug.h>
+#include <daemon.h>
+
 #include <sa/authenticators/eap/eap_method.h>
 
 #define AVP_EAP_MESSAGE		79
@@ -31,6 +33,11 @@ struct private_eap_ttls_peer_t {
 	 * Public eap_ttls_peer_t interface.
 	 */
 	eap_ttls_peer_t public;
+
+	/**
+	 * Server identity
+	 */
+	identification_t *server;
 
 	/**
 	 * Peer identity
@@ -115,14 +122,27 @@ METHOD(tls_application_t, build, status_t,
 {
 	if (this->start_phase2)
 	{
-		chunk_t data = chunk_from_chars(
-			EAP_RESPONSE, 0x00, 0x00, 25,
-			EAP_IDENTITY,
-			'c', 'a', 'r', 'o', 'l', '@', 's', 't', 'r', 'o', 'n', 'g',
-			's', 'w', 'a', 'n', '.', 'o', 'r', 'g');
+		chunk_t data;
+		eap_method_t *method;
+		eap_payload_t *res;
 
+		/* generate an EAP Identity response */
+		method = charon->eap->create_instance(charon->eap, EAP_IDENTITY, 0,
+									EAP_PEER, this->server, this->peer);
+		if (!method)
+		{
+			DBG1(DBG_IKE, "EAP_IDENTITY method not available");
+			return FAILED;
+		}
+		method->process(method, NULL, &res);
+		method->destroy(method);
+
+		/* get the raw EAP message data */
+		data = res->get_data(res);
 		DBG2(DBG_IKE, "sending EAP message: %B", &data);
 		send_avp_eap_message(writer, data);
+
+		res->destroy(res);
 		this->start_phase2 = FALSE;
 	}
 	return INVALID_STATE;
@@ -131,13 +151,16 @@ METHOD(tls_application_t, build, status_t,
 METHOD(tls_application_t, destroy, void,
 	private_eap_ttls_peer_t *this)
 {
+	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	free(this);
 }
 
 /**
  * See header
  */
-eap_ttls_peer_t *eap_ttls_peer_create(identification_t *peer)
+eap_ttls_peer_t *eap_ttls_peer_create(identification_t *server,
+									  identification_t *peer)
 {
 	private_eap_ttls_peer_t *this;
 
@@ -147,7 +170,8 @@ eap_ttls_peer_t *eap_ttls_peer_create(identification_t *peer)
 			.build = _build,
 			.destroy = _destroy,
 		},
-		.peer = peer,
+		.server = server->clone(server),
+		.peer = peer->clone(peer),
 		.start_phase2 = TRUE,
 	);
 
