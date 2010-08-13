@@ -45,9 +45,19 @@ struct private_eap_ttls_peer_t {
 	identification_t *peer;
 
 	/**
-	 * EAP-TTLS state information
+	 * Current EAP-TTLS state
 	 */
 	bool start_phase2;
+
+	/**
+     * Current phase 2 EAP method 
+	 */
+	eap_method_t *method;
+
+	/**
+     * Pending outbound EAP message 
+	 */
+	eap_payload_t *out;
 };
 
 /**
@@ -107,6 +117,11 @@ METHOD(tls_application_t, process, status_t,
 {
 	chunk_t data;
 	status_t status;
+	payload_t *payload;
+	eap_payload_t *in;
+	eap_code_t code;
+	eap_type_t type;
+	u_int32_t vendor;
 
 	status = process_avp_eap_message(reader, &data);
 	if (status == FAILED)
@@ -114,36 +129,110 @@ METHOD(tls_application_t, process, status_t,
 		return FAILED;
 	}
 	DBG2(DBG_IKE, "received EAP message: %B", &data);
+
+	in = eap_payload_create_data(data);
+	payload = (payload_t*)in;
+
+	if (payload->verify(payload) != SUCCESS)
+	{
+		in->destroy(in);
+		return FAILED;
+	}
+	code = in->get_code(in);
+	type = in->get_type(in, &vendor);
+	DBG1(DBG_IKE, "received tunneled EAP-TTLS AVP [EAP/%N/%N]",
+				   eap_code_short_names, code, eap_type_short_names, type);
+
+	if (code != EAP_REQUEST)
+	{
+		in->destroy(in);
+		return FAILED;
+	}
+
+	if (this->method == NULL)
+	{
+		if (vendor)
+		{
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d",
+				 type, vendor);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "server requested %N authentication",
+				 eap_type_names, type);
+		}
+		this->method = charon->eap->create_instance(charon->eap, type, vendor,
+									EAP_PEER, this->server, this->peer);
+		if (!this->method)
+		{
+			u_int8_t identifier = in->get_identifier(in);
+
+			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
+			in->destroy(in);
+			this->out = eap_payload_create_nak(identifier);
+			in->destroy(in);
+			return NEED_MORE;
+		}
+	}
+		
+	type = this->method->get_type(this->method, &vendor);
+
+	if (this->method->process(this->method, in, &this->out) == NEED_MORE)
+	{
+		in->destroy(in);
+		return NEED_MORE;
+	}
+
+	if (vendor)
+	{
+		DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed", type, vendor);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
+	}
+	in->destroy(in);
 	return FAILED;
 }
 
 METHOD(tls_application_t, build, status_t,
 	private_eap_ttls_peer_t *this, tls_writer_t *writer)
 {
-	if (this->start_phase2)
-	{
-		chunk_t data;
-		eap_method_t *method;
-		eap_payload_t *res;
+	chunk_t data;
+	eap_code_t code;
+	eap_type_t type;
+	u_int32_t vendor;
 
+	if (this->method == NULL && this->start_phase2)
+	{
 		/* generate an EAP Identity response */
-		method = charon->eap->create_instance(charon->eap, EAP_IDENTITY, 0,
-									EAP_PEER, this->server, this->peer);
-		if (!method)
+		this->method = charon->eap->create_instance(charon->eap, EAP_IDENTITY,
+								 0,	EAP_PEER, this->server, this->peer);
+		if (this->method == NULL)
 		{
 			DBG1(DBG_IKE, "EAP_IDENTITY method not available");
 			return FAILED;
 		}
-		method->process(method, NULL, &res);
-		method->destroy(method);
+		this->method->process(this->method, NULL, &this->out);
+		this->method->destroy(this->method);
+		this->method = NULL;
+		this->start_phase2 = FALSE;
+	}
+
+	if (this->out)
+	{
+		code = this->out->get_code(this->out);
+		type = this->out->get_type(this->out, &vendor);
+		DBG1(DBG_IKE, "sending tunneled EAP-TTLS AVP [EAP/%N/%N]",
+						eap_code_short_names, code, eap_type_short_names, type);
 
 		/* get the raw EAP message data */
-		data = res->get_data(res);
+		data = this->out->get_data(this->out);
 		DBG2(DBG_IKE, "sending EAP message: %B", &data);
 		send_avp_eap_message(writer, data);
 
-		res->destroy(res);
-		this->start_phase2 = FALSE;
+		this->out->destroy(this->out);
+		this->out = NULL;
 	}
 	return INVALID_STATE;
 }
@@ -153,6 +242,8 @@ METHOD(tls_application_t, destroy, void,
 {
 	this->server->destroy(this->server);
 	this->peer->destroy(this->peer);
+	DESTROY_IF(this->method);
+	DESTROY_IF(this->out);
 	free(this);
 }
 
@@ -173,6 +264,8 @@ eap_ttls_peer_t *eap_ttls_peer_create(identification_t *server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.start_phase2 = TRUE,
+		.method = NULL,
+		.out = NULL,
 	);
 
 	return &this->public;
