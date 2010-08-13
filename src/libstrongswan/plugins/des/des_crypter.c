@@ -1523,6 +1523,12 @@ METHOD(crypter_t, get_block_size, size_t,
 	return sizeof(des_cblock);
 }
 
+METHOD(crypter_t, get_iv_size, size_t,
+	private_des_crypter_t *this)
+{
+	return sizeof(des_cblock);
+}
+
 METHOD(crypter_t, get_key_size, size_t,
 	private_des_crypter_t *this)
 {
@@ -1559,6 +1565,7 @@ des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 	INIT(this,
 		.public.crypter = {
 			.get_block_size = _get_block_size,
+			.get_iv_size = _get_iv_size,
 			.get_key_size = _get_key_size,
 			.destroy = _destroy,
 		},

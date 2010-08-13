@@ -83,6 +83,15 @@ METHOD(crypter_t, get_block_size, size_t,
 	return len;
 }
 
+METHOD(crypter_t, get_iv_size, size_t,
+	private_gcrypt_crypter_t *this)
+{
+	size_t len = 0;
+
+	gcry_cipher_algo_info(this->alg, GCRYCTL_GET_BLKLEN, NULL, &len);
+	return len;
+}
+
 METHOD(crypter_t, get_key_size, size_t,
 	private_gcrypt_crypter_t *this)
 {
@@ -219,6 +228,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			.encrypt = _encrypt,
 			.decrypt = _decrypt,
 			.get_block_size = _get_block_size,
+			.get_iv_size = _get_iv_size,
 			.get_key_size = _get_key_size,
 			.set_key = _set_key,
 			.destroy = _destroy,

@@ -81,8 +81,8 @@ struct crypter_t {
 	/**
 	 * Encrypt a chunk of data and allocate space for the encrypted value.
 	 *
-	 * The length of the iv must equal to get_block_size(), while the length
-	 * of data must be a multiple it.
+	 * The length of the iv must equal to get_iv_size(), while the length
+	 * of data must be a multiple of get_block_size().
 	 * If encrypted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to encrypt
@@ -95,8 +95,8 @@ struct crypter_t {
 	/**
 	 * Decrypt a chunk of data and allocate space for the decrypted value.
 	 *
-	 * The length of the iv must equal to get_block_size(), while the length
-	 * of data must be a multiple it.
+	 * The length of the iv must equal to get_iv_size(), while the length
+	 * of data must be a multiple of get_block_size().
 	 * If decrpyted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to decrypt
@@ -109,14 +109,21 @@ struct crypter_t {
 	/**
 	 * Get the block size of the crypto algorithm.
 	 *
-	 * @return					block size in bytes
+	 * @return				block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 
 	/**
+	 * Get the IV size of the crypto algorithm.
+	 *
+	 * @return				initialization vector size in bytes
+	 */
+	size_t (*get_iv_size)(crypter_t *this);
+
+	/**
 	 * Get the key size of the crypto algorithm.
 	 *
-	 * @return					key size in bytes
+	 * @return				key size in bytes
 	 */
 	size_t (*get_key_size) (crypter_t *this);
 
@@ -125,7 +132,7 @@ struct crypter_t {
 	 *
 	 * The length of the key must match get_key_size().
 	 *
-	 * @param key				key to set
+	 * @param key			key to set
 	 */
 	void (*set_key) (crypter_t *this, chunk_t key);
 

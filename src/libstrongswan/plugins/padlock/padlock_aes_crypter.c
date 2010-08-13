@@ -125,6 +125,12 @@ METHOD(crypter_t, get_block_size, size_t,
 	return AES_BLOCK_SIZE;
 }
 
+METHOD(crypter_t, get_iv_size, size_t,
+	private_padlock_aes_crypter_t *this)
+{
+	return AES_BLOCK_SIZE;
+}
+
 METHOD(crypter_t, get_key_size, size_t,
 	private_padlock_aes_crypter_t *this)
 {
@@ -172,6 +178,7 @@ padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 			.encrypt = _encrypt,
 			.decrypt = _decrypt,
 			.get_block_size = _get_block_size,
+			.get_iv_size = _get_iv_size,
 			.get_key_size = _get_key_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
