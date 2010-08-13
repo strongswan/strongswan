@@ -146,21 +146,19 @@ static status_t process_application(private_tls_fragmentation_t *this,
 {
 	while (reader->remaining(reader))
 	{
-		u_int32_t len;
-		chunk_t data;
+		status_t status;
 
 		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
 		{
 			DBG1(DBG_IKE, "TLS fragment has invalid length");
 			return FAILED;
 		}
-
-		len = reader->remaining(reader);
-		if (!reader->read_data(reader, len, &data))
+		DBG2(DBG_IKE, "received TLS application data");
+		status = this->application->process(this->application, reader);
+		if (status != NEED_MORE)
 		{
-			return FAILED;
+			return status;
 		}
-		DBG1(DBG_IKE, "received TLS application data: %B", &data);
 	}
 	return NEED_MORE;
 }
@@ -230,8 +228,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 					this->output = chunk_clone(msg->get_buf(msg));
 					if (this->output.len)
 					{
-						DBG2(DBG_IKE, "sending TLS application data: %B",
-									   &this->output);
+						DBG2(DBG_IKE, "sending TLS application data");
 					}
 				}
 			}
