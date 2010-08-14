@@ -177,6 +177,11 @@ then
     echo -n " --enable-eap-tls" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_TTLS" = "yes" ]
+then
+    echo -n " --enable-eap-ttls" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
@@ -250,6 +255,11 @@ fi
 if [ "$USE_ADDRBLOCK" = "yes" ]
 then
     echo -n " --enable-addrblock" >> $INSTALLSHELL
+fi
+
+if [ "$USE_CTR" = "yes" ]
+then
+    echo -n " --enable-ctr" >> $INSTALLSHELL
 fi
 
 echo "" >> $INSTALLSHELL
