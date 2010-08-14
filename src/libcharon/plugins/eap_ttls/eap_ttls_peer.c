@@ -128,8 +128,6 @@ METHOD(tls_application_t, process, status_t,
 	{
 		return FAILED;
 	}
-	DBG2(DBG_IKE, "received EAP message: %B", &data);
-
 	in = eap_payload_create_data(data);
 	payload = (payload_t*)in;
 
@@ -228,7 +226,6 @@ METHOD(tls_application_t, build, status_t,
 
 		/* get the raw EAP message data */
 		data = this->out->get_data(this->out);
-		DBG2(DBG_IKE, "sending EAP message: %B", &data);
 		send_avp_eap_message(writer, data);
 
 		this->out->destroy(this->out);
