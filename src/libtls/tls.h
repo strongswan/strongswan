@@ -161,15 +161,16 @@ struct tls_t {
 /**
  * Create a tls instance.
  *
- * @param is_server		TRUE to act as server, FALSE for client
- * @param server		server identity
- * @param peer			peer identity
- * @param msk_label		ASCII string constant used as seed for MSK PRF
- * @param application	higher layer application or NULL if none
- * @return				TLS stack
+ * @param is_server			TRUE to act as server, FALSE for client
+ * @param server			server identity
+ * @param peer				peer identity
+ * @param request_peer_auth	TRUE to request certificate-based peer authentication
+ * @param msk_label			ASCII string constant used as seed for MSK PRF
+ * @param application		higher layer application or NULL if none
+ * @return					TLS stack
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer, char *msk_label,
-				  tls_application_t *application);
+				  identification_t *peer, bool request_peer_auth,
+				  char *msk_label, tls_application_t *application);
 
 #endif /** TLS_H_ @}*/

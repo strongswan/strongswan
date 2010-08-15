@@ -84,6 +84,11 @@ struct private_tls_server_t {
 	char server_random[32];
 
 	/**
+	 * Does the server request a peer authentication?
+	 */
+	bool request_peer_auth;
+
+	/**
 	 * Auth helper for peer authentication
 	 */
 	auth_cfg_t *peer_auth;
@@ -332,8 +337,12 @@ METHOD(tls_handshake_t, process, status_t,
 			{
 				return process_certificate(this, reader);
 			}
-			expected = TLS_CERTIFICATE;
-			break;
+			if (this->request_peer_auth)
+			{
+				expected = TLS_CERTIFICATE;
+				break;
+			}
+			/* otherwise fall through to next state */
 		case STATE_CERT_RECEIVED:
 			if (type == TLS_CLIENT_KEY_EXCHANGE)
 			{
@@ -346,8 +355,15 @@ METHOD(tls_handshake_t, process, status_t,
 			{
 				return process_cert_verify(this, reader);
 			}
-			expected = TLS_CERTIFICATE_VERIFY;
-			break;
+			if (this->request_peer_auth)
+			{
+				expected = TLS_CERTIFICATE_VERIFY;
+				break;
+			}
+			else
+			{
+				return INVALID_STATE;
+			}
 		case STATE_CIPHERSPEC_CHANGED_IN:
 			if (type == TLS_FINISHED)
 			{
@@ -547,7 +563,11 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_HELLO_SENT:
 			return send_certificate(this, type, writer);
 		case STATE_CERT_SENT:
-			return send_certificate_request(this, type, writer);
+			if (this->request_peer_auth)
+			{
+				return send_certificate_request(this, type, writer);
+			}
+			/* otherwise fall through to next state */
 		case STATE_CERTREQ_SENT:
 			return send_hello_done(this, type, writer);
 		case STATE_CIPHERSPEC_CHANGED_OUT:
@@ -574,7 +594,8 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 METHOD(tls_handshake_t, change_cipherspec, bool,
 	private_tls_server_t *this)
 {
-	if (this->state == STATE_CERT_VERIFY_RECEIVED)
+	if ((this->request_peer_auth && this->state == STATE_CERT_VERIFY_RECEIVED) ||
+	   (!this->request_peer_auth && this->state == STATE_KEY_EXCHANGE_RECEIVED))
 	{
 		this->crypto->change_cipher(this->crypto, TRUE);
 		this->state = STATE_CIPHERSPEC_CHANGED_IN;
@@ -602,7 +623,8 @@ METHOD(tls_handshake_t, destroy, void,
  * See header
  */
 tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
-							identification_t *server, identification_t *peer)
+							identification_t *server, identification_t *peer,
+							bool request_peer_auth)
 {
 	private_tls_server_t *this;
 
@@ -620,6 +642,7 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
 		.server = server,
 		.peer = peer,
 		.state = STATE_INIT,
+		.request_peer_auth = request_peer_auth,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
 	);

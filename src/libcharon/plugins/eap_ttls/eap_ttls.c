@@ -441,8 +441,8 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 		.is_server = is_server,
 	);
 	/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
-	this->tls = tls_create(is_server, server, peer, "ttls keying material",
-						   application);
+	this->tls = tls_create(is_server, server, peer, FALSE,
+						   "ttls keying material", application);
 	return &this->public;
 }
 
