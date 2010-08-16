@@ -536,7 +536,7 @@ void check_orientations(void)
 				for (hp = host_pairs; hp != NULL; hp = hp->next)
 				{
 					if (sameaddr(&hp->him.addr, &i->addr)
-					&& (!no_klips || hp->him.port == pluto_port))
+						&& hp->him.port == pluto_port)
 					{
 						/* bad news: the whole chain of connections
 						 * hanging off this host pair has both sides
@@ -1884,7 +1884,7 @@ bool orient(connection_t *c)
 				{
 					/* check if this interface matches this end */
 					if (sameaddr(&sr->this.host_addr, &p->addr)
-					&& (!no_klips || sr->this.host_port == pluto_port))
+						&& sr->this.host_port == pluto_port)
 					{
 						if (oriented(*c))
 						{
@@ -1903,7 +1903,7 @@ bool orient(connection_t *c)
 
 					/* done with this interface if it doesn't match that end */
 					if (!(sameaddr(&sr->that.host_addr, &p->addr)
-					&& (!no_klips || sr->that.host_port == pluto_port)))
+						&& sr->that.host_port == pluto_port))
 						break;
 
 					/* swap ends and try again.

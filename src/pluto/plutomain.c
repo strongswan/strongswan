@@ -96,7 +96,6 @@ static void usage(const char *mess)
 			" \\\n\t"
 			"[--nofork]"
 			" [--stderrlog]"
-			" [--noklips]"
 			" [--nocrsend]"
 			" \\\n\t"
 			"[--strictcrlpolicy]"
@@ -300,7 +299,6 @@ int main(int argc, char **argv)
 			{ "optionsfrom", required_argument, NULL, '+' },
 			{ "nofork", no_argument, NULL, 'd' },
 			{ "stderrlog", no_argument, NULL, 'e' },
-			{ "noklips", no_argument, NULL, 'n' },
 			{ "nocrsend", no_argument, NULL, 'c' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
 			{ "crlcheckinterval", required_argument, NULL, 'x'},
@@ -400,10 +398,6 @@ int main(int argc, char **argv)
 
 		case 'e':       /* --stderrlog */
 			log_to_stderr_desired = TRUE;
-			continue;
-
-		case 'n':       /* --noklips */
-			no_klips = TRUE;
 			continue;
 
 		case 'c':       /* --nocrsend */

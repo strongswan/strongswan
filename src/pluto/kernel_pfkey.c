@@ -238,75 +238,71 @@ finish_pfkey_msg(struct sadb_ext *extensions[SADB_EXT_MAX + 1],
 					pfkey_msg->sadb_msg_seq, description, text_said);
 			DBG_dump(NULL, (void *) pfkey_msg, len));
 
-		if (!no_klips)
+		ssize_t r = write(pfkeyfd, pfkey_msg, len);
+
+		if (r != (ssize_t)len)
 		{
-			ssize_t r = write(pfkeyfd, pfkey_msg, len);
-
-			if (r != (ssize_t)len)
+			if (r < 0)
 			{
-				if (r < 0)
-				{
-					log_errno((e, "pfkey write() of %s message %u for %s %s"
-						" failed", sparse_val_show(pfkey_type_names,
-						pfkey_msg->sadb_msg_type), pfkey_msg->sadb_msg_seq,
-						description, text_said));
-				}
-				else
-				{
-					loglog(RC_LOG_SERIOUS, "ERROR: pfkey write() of %s message"
-						" %u for %s %s truncated: %ld instead of %ld",
-						sparse_val_show(pfkey_type_names,
-						pfkey_msg->sadb_msg_type), pfkey_msg->sadb_msg_seq,
-						description, text_said, (long)r, (long)len);
-				}
-				success = FALSE;
-
-				/* if we were compiled with debugging, but we haven't already
-				 * dumped the command, do so.
-				 */
-#ifdef DEBUG
-				if ((cur_debugging & DBG_KERNEL) == 0)
-					DBG_dump(NULL, (void *) pfkey_msg, len);
-#endif
+				log_errno((e, "pfkey write() of %s message %u for %s %s"
+						  " failed", sparse_val_show(pfkey_type_names,
+							pfkey_msg->sadb_msg_type), pfkey_msg->sadb_msg_seq,
+						  description, text_said));
 			}
 			else
 			{
-				/* Check response from kernel.
-				 * It ought to be an echo, perhaps with additional info.
-				 * If the caller wants it, response will point to space.
-				 */
-				pfkey_buf b;
-				pfkey_buf *bp = response != NULL? response : &b;
+				loglog(RC_LOG_SERIOUS, "ERROR: pfkey write() of %s message"
+					   " %u for %s %s truncated: %ld instead of %ld",
+					   sparse_val_show(pfkey_type_names,
+							pfkey_msg->sadb_msg_type), pfkey_msg->sadb_msg_seq,
+						description, text_said, (long)r, (long)len);
+			}
+			success = FALSE;
 
-				if (!pfkey_get_response(bp,
-							((struct sadb_msg *)extensions[0])->sadb_msg_seq))
-				{
-					loglog(RC_LOG_SERIOUS, "ERROR: no response to our PF_KEY %s"
-						" message for %s %s", sparse_val_show(pfkey_type_names,
-						pfkey_msg->sadb_msg_type), description, text_said);
-					success = FALSE;
-				}
-				else if (pfkey_msg->sadb_msg_type != bp->msg.sadb_msg_type)
-				{
-					loglog(RC_LOG_SERIOUS, "ERROR: response to our PF_KEY %s"
-						" message for %s %s was of wrong type (%s)",
-						sparse_name(pfkey_type_names, pfkey_msg->sadb_msg_type),
-						description, text_said,
-						sparse_val_show(pfkey_type_names,
-						bp->msg.sadb_msg_type));
-					success = FALSE;
-				}
-				else if (response == NULL && bp->msg.sadb_msg_errno != 0)
-				{
-					/* Kernel is signalling a problem */
-					loglog(RC_LOG_SERIOUS, "ERROR: PF_KEY %s response for %s %s"
-						" included errno %u: %s",
-						sparse_val_show(pfkey_type_names,
+			/* if we were compiled with debugging, but we haven't already
+			 * dumped the command, do so.
+			 */
+#ifdef DEBUG
+			if ((cur_debugging & DBG_KERNEL) == 0)
+				DBG_dump(NULL, (void *) pfkey_msg, len);
+#endif
+		}
+		else
+		{
+			/* Check response from kernel.
+			 * It ought to be an echo, perhaps with additional info.
+			 * If the caller wants it, response will point to space.
+			 */
+			pfkey_buf b;
+			pfkey_buf *bp = response != NULL? response : &b;
+
+			if (!pfkey_get_response(bp,
+						((struct sadb_msg *)extensions[0])->sadb_msg_seq))
+			{
+				loglog(RC_LOG_SERIOUS, "ERROR: no response to our PF_KEY %s"
+					   " message for %s %s", sparse_val_show(pfkey_type_names,
+							pfkey_msg->sadb_msg_type), description, text_said);
+				success = FALSE;
+			}
+			else if (pfkey_msg->sadb_msg_type != bp->msg.sadb_msg_type)
+			{
+				loglog(RC_LOG_SERIOUS, "ERROR: response to our PF_KEY %s"
+					   " message for %s %s was of wrong type (%s)",
+					   sparse_name(pfkey_type_names, pfkey_msg->sadb_msg_type),
+					   description, text_said, sparse_val_show(pfkey_type_names,
+							bp->msg.sadb_msg_type));
+				success = FALSE;
+			}
+			else if (response == NULL && bp->msg.sadb_msg_errno != 0)
+			{
+				/* Kernel is signalling a problem */
+				loglog(RC_LOG_SERIOUS, "ERROR: PF_KEY %s response for %s %s"
+					   " included errno %u: %s",
+					   sparse_val_show(pfkey_type_names,
 							pfkey_msg->sadb_msg_type), description, text_said,
-						(unsigned) bp->msg.sadb_msg_errno,
-						strerror(bp->msg.sadb_msg_errno));
-					success = FALSE;
-				}
+					   (unsigned) bp->msg.sadb_msg_errno,
+					   strerror(bp->msg.sadb_msg_errno));
+				success = FALSE;
 			}
 		}
 	}

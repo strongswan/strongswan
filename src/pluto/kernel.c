@@ -142,8 +142,6 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 static void set_text_said(char *text_said, const ip_address *dst,
 						  ipsec_spi_t spi, int proto);
 
-bool no_klips = FALSE;  /* don't actually use KLIPS */
-
 /**
  * Default IPsec SA config (e.g. to install trap policies).
  */
@@ -526,84 +524,81 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 	DBG(DBG_CONTROL, DBG_log("executing %s%s: %s"
 		, verb, verb_suffix, cmd));
 
-	if (!no_klips)
+	/* invoke the script, catching stderr and stdout
+	 * It may be of concern that some file descriptors will
+	 * be inherited.  For the ones under our control, we
+	 * have done fcntl(fd, F_SETFD, FD_CLOEXEC) to prevent this.
+	 * Any used by library routines (perhaps the resolver or syslog)
+	 * will remain.
+	 */
+	FILE *f = popen(cmd, "r");
+
+	if (f == NULL)
 	{
-		/* invoke the script, catching stderr and stdout
-		 * It may be of concern that some file descriptors will
-		 * be inherited.  For the ones under our control, we
-		 * have done fcntl(fd, F_SETFD, FD_CLOEXEC) to prevent this.
-		 * Any used by library routines (perhaps the resolver or syslog)
-		 * will remain.
-		 */
-		FILE *f = popen(cmd, "r");
+		loglog(RC_LOG_SERIOUS, "unable to popen %s%s command", verb, verb_suffix);
+		return FALSE;
+	}
 
-		if (f == NULL)
+	/* log any output */
+	for (;;)
+	{
+		/* if response doesn't fit in this buffer, it will be folded */
+		char resp[256];
+
+		if (fgets(resp, sizeof(resp), f) == NULL)
 		{
-			loglog(RC_LOG_SERIOUS, "unable to popen %s%s command", verb, verb_suffix);
-			return FALSE;
-		}
-
-		/* log any output */
-		for (;;)
-		{
-			/* if response doesn't fit in this buffer, it will be folded */
-			char resp[256];
-
-			if (fgets(resp, sizeof(resp), f) == NULL)
+			if (ferror(f))
 			{
-				if (ferror(f))
-				{
-					log_errno((e, "fgets failed on output of %s%s command"
-						, verb, verb_suffix));
-					return FALSE;
-				}
-				else
-				{
-					passert(feof(f));
-					break;
-				}
-			}
-			else
-			{
-				char *e = resp + strlen(resp);
-
-				if (e > resp && e[-1] == '\n')
-					e[-1] = '\0';       /* trim trailing '\n' */
-				plog("%s%s output: %s", verb, verb_suffix, resp);
-			}
-		}
-
-		/* report on and react to return code */
-		{
-			int r = pclose(f);
-
-			if (r == -1)
-			{
-				log_errno((e, "pclose failed for %s%s command"
+				log_errno((e, "fgets failed on output of %s%s command"
 					, verb, verb_suffix));
 				return FALSE;
 			}
-			else if (WIFEXITED(r))
-			{
-				if (WEXITSTATUS(r) != 0)
-				{
-					loglog(RC_LOG_SERIOUS, "%s%s command exited with status %d"
-						, verb, verb_suffix, WEXITSTATUS(r));
-					return FALSE;
-				}
-			}
-			else if (WIFSIGNALED(r))
-			{
-				loglog(RC_LOG_SERIOUS, "%s%s command exited with signal %d"
-					, verb, verb_suffix, WTERMSIG(r));
-				return FALSE;
-			}
 			else
 			{
-				loglog(RC_LOG_SERIOUS, "%s%s command exited with unknown status %d"
-					, verb, verb_suffix, r);
+				passert(feof(f));
+				break;
+			}
+		}
+		else
+		{
+			char *e = resp + strlen(resp);
+
+			if (e > resp && e[-1] == '\n')
+				e[-1] = '\0';       /* trim trailing '\n' */
+			plog("%s%s output: %s", verb, verb_suffix, resp);
+		}
+	}
+
+	/* report on and react to return code */
+	{
+		int r = pclose(f);
+
+		if (r == -1)
+		{
+			log_errno((e, "pclose failed for %s%s command"
+				, verb, verb_suffix));
+			return FALSE;
+		}
+		else if (WIFEXITED(r))
+		{
+			if (WEXITSTATUS(r) != 0)
+			{
+				loglog(RC_LOG_SERIOUS, "%s%s command exited with status %d"
+					, verb, verb_suffix, WEXITSTATUS(r));
 				return FALSE;
 			}
+		}
+		else if (WIFSIGNALED(r))
+		{
+			loglog(RC_LOG_SERIOUS, "%s%s command exited with signal %d"
+				, verb, verb_suffix, WTERMSIG(r));
+			return FALSE;
+		}
+		else
+		{
+			loglog(RC_LOG_SERIOUS, "%s%s command exited with unknown status %d"
+				, verb, verb_suffix, r);
+			return FALSE;
 		}
 	}
 	return TRUE;
@@ -648,10 +643,9 @@ static enum routability could_route(connection_t *c)
 	}
 
 	/* if routing would affect IKE messages, reject */
-	if (!no_klips
-	&& c->spd.this.host_port != NAT_T_IKE_FLOAT_PORT
-	&& c->spd.this.host_port != IKE_UDP_PORT
-	&& addrinsubnet(&c->spd.that.host_addr, &c->spd.that.client))
+	if (c->spd.this.host_port != NAT_T_IKE_FLOAT_PORT
+	 && c->spd.this.host_port != IKE_UDP_PORT
+	 && addrinsubnet(&c->spd.that.host_addr, &c->spd.that.client))
 	{
 		loglog(RC_LOG_SERIOUS, "cannot install route: peer is within its client");
 		return route_impossible;

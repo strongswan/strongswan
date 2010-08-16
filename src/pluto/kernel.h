@@ -14,7 +14,6 @@
 
 #include "connections.h"
 
-extern bool no_klips;   /* don't actually use KLIPS */
 extern bool can_do_IPcomp;  /* can system actually perform IPCOMP? */
 
 /* Declare eroute things early enough for uses.

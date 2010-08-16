@@ -15,7 +15,6 @@ ipsec pluto
 \fIfilename\fP]
 [\-\-nofork]
 [\-\-stderrlog]
-[\-\-noklips]
 [\-\-uniqueids]
 [\fB\-\-interface\fP \fIinterfacename\fP]
 [\-\-ikeport\ \c
@@ -1264,9 +1263,6 @@ disable ``daemon fork'' (default is to fork).  In addition, after the
 lock file and control socket are created, print the line ``Pluto
 initialized'' to standard out.
 .TP
-\fB\-\-noklips\fP
-don't actually implement negotiated IPsec SAs
-.TP
 \fB\-\-uniqueids\fP
 if this option has been selected, whenever a new ISAKMP SA is
 established, any connection with the same Peer ID but a different
@@ -1276,12 +1272,6 @@ then regained at another IP address.
 .TP
 \fB\-\-stderrlog\fP
 log goes to standard out {default is to use \fIsyslogd\fP(8))
-.LP
-For example
-.TP
-pluto \-\-secretsfile\ ipsec.secrets \-\-ctlbase\ pluto.base \-\-ikeport\ 8500 \-\-nofork \-\-noklips \-\-stderrlog
-.LP
-lets one test \fBpluto\fP without using the superuser account.
 .LP
 \fBpluto\fP is willing to produce a prodigious amount of debugging
 information.  To do so, it must be compiled with \-DDEBUG.  There are
