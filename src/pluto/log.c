@@ -862,9 +862,7 @@ void show_status(bool all, const char *name)
 	}
 	show_connections_status(all, name);
 	show_states_status(all, name);
-#ifdef KLIPS
 	show_shunt_status();
-#endif
 }
 
 /* ip_str: a simple to use variant of addrtot.

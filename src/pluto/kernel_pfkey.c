@@ -16,8 +16,6 @@
  * for more details.
  */
 
-#ifdef KLIPS
-
 #include <errno.h>
 #include <unistd.h>
 
@@ -384,4 +382,3 @@ pfkey_register(void)
 
 	close(pfkeyfd);
 }
-#endif /* KLIPS */

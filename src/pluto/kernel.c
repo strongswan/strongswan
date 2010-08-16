@@ -40,14 +40,12 @@
 #include <crypto/rngs/rng.h>
 #include <kernel/kernel_listener.h>
 
-#ifdef KLIPS
 #include <signal.h>
 #include <sys/time.h>   /* for select(2) */
 #include <sys/types.h>  /* for select(2) */
 #include <pfkeyv2.h>
 #include <pfkey.h>
 #include "kameipsec.h"
-#endif /* KLIPS */
 
 #include "constants.h"
 #include "defs.h"
@@ -76,12 +74,6 @@ bool can_do_IPcomp = TRUE;  /* can system actually perform IPCOMP? */
  */
 #define routes_agree(c, d) ((c)->interface == (d)->interface \
 		&& sameaddr(&(c)->spd.this.host_nexthop, &(d)->spd.this.host_nexthop))
-
-#ifndef KLIPS
-
-bool no_klips = TRUE;   /* don't actually use KLIPS */
-
-#else /* !KLIPS */
 
 /* bare (connectionless) shunt (eroute) table
  *
@@ -232,8 +224,6 @@ void record_and_initiate_opportunistic(const ip_subnet *ours,
 		initiate_opportunistic(&src, &dst, transport_proto, TRUE, NULL_FD);
 	}
 }
-
-#endif /* KLIPS */
 
 /* Generate Unique SPI numbers.
  *
@@ -536,7 +526,6 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 	DBG(DBG_CONTROL, DBG_log("executing %s%s: %s"
 		, verb, verb_suffix, cmd));
 
-#ifdef KLIPS
 	if (!no_klips)
 	{
 		/* invoke the script, catching stderr and stdout
@@ -617,7 +606,6 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			}
 		}
 	}
-#endif /* KLIPS */
 	return TRUE;
 }
 
@@ -683,7 +671,6 @@ static enum routability could_route(connection_t *c)
 									 using the eroute */
 	}
 
-#ifdef KLIPS
 	/* if there is an eroute for another connection, there is a problem */
 	if (ero != NULL && ero != c)
 	{
@@ -770,7 +757,6 @@ static enum routability could_route(connection_t *c)
 			return FALSE;       /* another connection already using the eroute */
 		}
 	}
-#endif /* KLIPS */
 	return route_easy;
 }
 
@@ -815,9 +801,7 @@ void unroute_connection(connection_t *c)
 		{
 			/* cannot handle a live one */
 			passert(sr->routing != RT_ROUTED_TUNNEL);
-#ifdef KLIPS
 			shunt_eroute(c, sr, RT_UNROUTED, ERO_DELETE, "delete");
-#endif
 		}
 
 		sr->routing = RT_UNROUTED;  /* do now so route_owner won't find us */
@@ -830,8 +814,6 @@ void unroute_connection(connection_t *c)
 	}
 }
 
-
-#ifdef KLIPS
 
 static void set_text_said(char *text_said, const ip_address *dst,
 						  ipsec_spi_t spi, int proto)
@@ -1813,11 +1795,8 @@ METHOD(kernel_listener_t, acquire, bool,
 	return TRUE;
 }
 
-#endif /* KLIPS */
-
 void init_kernel(void)
 {
-#ifdef KLIPS
 	/* register SA types that we can negotiate */
 	can_do_IPcomp = FALSE;  /* until we get a response from the kernel */
 	pfkey_register();
@@ -1827,15 +1806,12 @@ void init_kernel(void)
 	);
 	hydra->kernel_interface->add_listener(hydra->kernel_interface,
 										  kernel_handler);
-#endif
 }
 
 void kernel_finalize()
 {
-#ifdef KLIPS
 	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
 											 kernel_handler);
-#endif
 }
 
 /* Note: install_inbound_ipsec_sa is only used by the Responder.
@@ -1894,13 +1870,8 @@ bool install_inbound_ipsec_sa(struct state *st)
 			return FALSE;
 	}
 
-#ifdef KLIPS
 	/* (attempt to) actually set up the SAs */
 	return setup_half_ipsec_sa(st, TRUE);
-#else /* !KLIPS */
-	DBG(DBG_CONTROL, DBG_log("install_inbound_ipsec_sa()"));
-	return TRUE;
-#endif /* !KLIPS */
 }
 
 /* Install a route and then a prospective shunt eroute or an SA group eroute.
@@ -1908,11 +1879,8 @@ bool install_inbound_ipsec_sa(struct state *st)
  * Any SA Group must have already been created.
  * On failure, steps will be unwound.
  */
-bool route_and_eroute(connection_t *c USED_BY_KLIPS,
-					  struct spd_route *sr USED_BY_KLIPS,
-					  struct state *st USED_BY_KLIPS)
+bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 {
-#ifdef KLIPS
 	struct spd_route *esr;
 	struct spd_route *rosr;
 	connection_t *ero      /* who, if anyone, owns our eroute? */
@@ -2190,14 +2158,10 @@ bool route_and_eroute(connection_t *c USED_BY_KLIPS,
 
 		return FALSE;
 	}
-#else /* !KLIPS */
-	return TRUE;
-#endif /* !KLIPS */
 }
 
-bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
+bool install_ipsec_sa(struct state *st, bool inbound_also)
 {
-#ifdef KLIPS
 	struct spd_route *sr;
 
 	DBG(DBG_CONTROL, DBG_log("install_ipsec_sa() for #%ld: %s"
@@ -2247,21 +2211,6 @@ bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
 			}
 		}
 	}
-#else /* !KLIPS */
-	DBG(DBG_CONTROL, DBG_log("install_ipsec_sa() %s"
-		, inbound_also? "inbound and oubound" : "outbound only"));
-
-	switch (could_route(st->st_connection))
-	{
-		case route_easy:
-		case route_nearconflict:
-			break;
-		default:
-			return FALSE;
-	}
-
-
-#endif /* !KLIPS */
 
 	return TRUE;
 }
@@ -2270,10 +2219,8 @@ bool install_ipsec_sa(struct state *st, bool inbound_also USED_BY_KLIPS)
  * we may not succeed, but we bull ahead anyway because
  * we cannot do anything better by recognizing failure
  */
-void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
-					 bool inbound_only USED_BY_KLIPS)
+void delete_ipsec_sa(struct state *st, bool inbound_only)
 {
-#ifdef KLIPS
 	if (!inbound_only)
 	{
 		/* If the state is the eroute owner, we must adjust
@@ -2320,12 +2267,8 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 		(void) teardown_half_ipsec_sa(st, FALSE);
 	}
 	(void) teardown_half_ipsec_sa(st, TRUE);
-#else /* !KLIPS */
-	DBG(DBG_CONTROL, DBG_log("if I knew how, I'd eroute() and teardown_ipsec_sa()"));
-#endif /* !KLIPS */
 }
 
-#ifdef KLIPS
 static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
 	connection_t *c = st->st_connection;
@@ -2356,11 +2299,9 @@ static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 
 	return result;
 }
-#endif
 
-bool update_ipsec_sa (struct state *st USED_BY_KLIPS)
+bool update_ipsec_sa (struct state *st)
 {
-#ifdef KLIPS
 	if (IS_IPSEC_SA_ESTABLISHED(st->st_state))
 	{
 		if (st->st_esp.present && (
@@ -2383,10 +2324,6 @@ bool update_ipsec_sa (struct state *st USED_BY_KLIPS)
 		return FALSE;
 	}
 	return TRUE;
-#else /* !KLIPS */
-	DBG(DBG_CONTROL, DBG_log("if I knew how, I'd update_ipsec_sa()"));
-	return TRUE;
-#endif /* !KLIPS */
 }
 
 /* Check if there was traffic on given SA during the last idle_max

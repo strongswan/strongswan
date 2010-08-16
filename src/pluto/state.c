@@ -794,12 +794,10 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 			add_said(&c->spd.that.host_addr, st->st_ipcomp.attrs.spi, SA_COMP);
 			add_said(&c->spd.this.host_addr, st->st_ipcomp.our_spi, SA_COMP);
 		}
-#ifdef KLIPS
 		tunnel =  st->st_ah.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
 			   || st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL
 			   || st->st_ipcomp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL;
 		p += snprintf(p, p_end - p, "; %s", tunnel? "tunnel":"transport");
-#endif
 
 		snprintf(state_buf2, state_buf2_len
 			, "#%lu: \"%s\"%s%s"

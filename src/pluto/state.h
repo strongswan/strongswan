@@ -127,10 +127,8 @@ struct state
 	struct ipsec_proto_info st_ah;
 	struct ipsec_proto_info st_esp;
 	struct ipsec_proto_info st_ipcomp;
-#ifdef KLIPS
 	ipsec_spi_t        st_tunnel_in_spi;          /* KLUDGE */
 	ipsec_spi_t        st_tunnel_out_spi;         /* KLUDGE */
-#endif
 
 	const struct dh_desc *st_pfs_group;        /* group for Phase 2 PFS */
 

@@ -76,7 +76,7 @@ AM_CFLAGS = -rdynamic \
 -DPLUGINS=\""${pluto_plugins}\"" \
 -DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG
+-DPLUTO -DDEBUG
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \

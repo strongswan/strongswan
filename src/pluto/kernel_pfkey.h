@@ -13,10 +13,8 @@
  * for more details.
  */
 
-#ifdef KLIPS
 /**
  * Register our capabilities via PF_KEY, also learn the kernel's capabilities,
  * i.e. the supported algorithms.
  */
 void pfkey_register();
-#endif

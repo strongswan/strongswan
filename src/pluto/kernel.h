@@ -17,7 +17,6 @@
 extern bool no_klips;   /* don't actually use KLIPS */
 extern bool can_do_IPcomp;  /* can system actually perform IPCOMP? */
 
-#ifdef KLIPS
 /* Declare eroute things early enough for uses.
  *
  * Flags are encoded above the low-order byte of verbs.
@@ -76,7 +75,6 @@ struct kernel_sa {
 };
 
 extern void show_shunt_status(void);
-#endif
 
 /* A netlink header defines EM_MAXRELSPIS, the max number of SAs in a group.
  * Is there a PF_KEY equivalent?

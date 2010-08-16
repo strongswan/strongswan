@@ -21,12 +21,6 @@
 
 #include <chunk.h>
 
-#ifdef KLIPS
-# define USED_BY_KLIPS  /* ignore */
-#else
-# define USED_BY_KLIPS  UNUSED
-#endif
-
 #ifdef DEBUG
 # define USED_BY_DEBUG  /* ignore */
 #else

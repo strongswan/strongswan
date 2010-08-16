@@ -2147,7 +2147,6 @@ static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 		return;
 	}
 
-#ifdef KLIPS
 	if (b->held)
 	{
 		/* Replace HOLD with b->failure_shunt.
@@ -2166,7 +2165,6 @@ static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 			, b->transport_proto
 			, ugh);
 	}
-#endif
 }
 
 static void initiate_opportunistic_body(struct find_oppo_bundle *b
@@ -2203,7 +2201,6 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	 */
 	whack_log_fd = whackfd;
 
-#ifdef KLIPS
 	/* Discover and record whether %hold has gone away.
 	 * This could have happened while we were awaiting DNS.
 	 * We must check BEFORE any call to cannot_oppo.
@@ -2211,7 +2208,6 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	if (was_held)
 		cr->b.held = has_bare_hold(&cr->b.our_client, &cr->b.peer_client
 			, cr->b.transport_proto);
-#endif
 
 #ifdef DEBUG
 	/* if we're going to ignore the error, at least note it in debugging log */
@@ -2424,7 +2420,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		/* We've found a connection that can serve.
 		 * Do we have to initiate it?
 		 * Not if there is currently an IPSEC SA.
-		 * But if there is an IPSEC SA, then KLIPS would not
+		 * But if there is an IPSEC SA, then the kernel would not
 		 * have generated the acquire.  So we assume that there isn't one.
 		 * This may be redundant if a non-opportunistic
 		 * negotiation is already being attempted.
@@ -2445,13 +2441,11 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		/* otherwise, there is some kind of static conn that can handle
 		 * this connection, so we initiate it */
 
-#ifdef KLIPS
 		if (b->held)
 		{
 			/* what should we do on failure? */
 			(void) assign_hold(c, sr, b->transport_proto, &b->our_client, &b->peer_client);
 		}
-#endif
 		ipsecdoi_initiate(b->whackfd, c, c->policy, 1, SOS_NOBODY);
 		b->whackfd = NULL_FD;   /* protect from close */
 	}
@@ -2817,7 +2811,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 							"between %s and %s with %Y as peer",
 							 ocb, pcb, ac->gateways_from_dns->gw_id);
 
-#ifdef KLIPS
 					if (b->held)
 					{
 						/* Replace HOLD with PASS.
@@ -2830,7 +2823,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 							, TRUE, b->transport_proto
 							, "no suitable connection");
 					}
-#endif
 				}
 				else
 				{
@@ -2839,7 +2831,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					passert(c->gw_info != NULL);
 					passert(HAS_IPSEC_POLICY(c->policy));
 					passert(LHAS(LELEM(RT_UNROUTED) | LELEM(RT_ROUTED_PROSPECTIVE), c->spd.routing));
-#ifdef KLIPS
 					if (b->held)
 					{
 						/* what should we do on failure? */
@@ -2847,7 +2838,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 										   , b->transport_proto
 										   , &b->our_client, &b->peer_client);
 					}
-#endif
 					c->gw_info->key->last_tried_time = now();
 					ipsecdoi_initiate(b->whackfd, c, c->policy, 1, SOS_NOBODY);
 					b->whackfd = NULL_FD;       /* protect from close */
