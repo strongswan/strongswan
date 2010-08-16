@@ -317,7 +317,7 @@ extern const char *const debug_bit_names[];
 #define DBG_EMITTING    LELEM(3)        /* show encoding of messages */
 #define DBG_CONTROL     LELEM(4)        /* control flow within Pluto */
 #define DBG_LIFECYCLE   LELEM(5)        /* SA lifecycle */
-#define DBG_KLIPS       LELEM(6)        /* messages to KLIPS */
+#define DBG_KERNEL      LELEM(6)        /* messages to kernel */
 #define DBG_DNS         LELEM(7)        /* DNS activity */
 #define DBG_NATT        LELEM(8)        /* NAT-T */
 #define DBG_OPPO        LELEM(9)        /* opportunism */

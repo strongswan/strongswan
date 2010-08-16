@@ -148,7 +148,7 @@ pfkey_get(pfkey_buf *buf)
 		else if (buf->msg.sadb_msg_pid != (unsigned)pid)
 		{
 			/* not for us: ignore */
-			DBG(DBG_KLIPS,
+			DBG(DBG_KERNEL,
 				DBG_log("pfkey_get: ignoring PF_KEY %s message %u for process"
 						" %u", sparse_val_show(pfkey_type_names,
 											   buf->msg.sadb_msg_type),
@@ -156,7 +156,7 @@ pfkey_get(pfkey_buf *buf)
 		}
 		else
 		{
-			DBG(DBG_KLIPS,
+			DBG(DBG_KERNEL,
 				DBG_log("pfkey_get: %s message %u",
 						sparse_val_show(pfkey_type_names,
 										buf->msg.sadb_msg_type),
@@ -232,7 +232,7 @@ finish_pfkey_msg(struct sadb_ext *extensions[SADB_EXT_MAX + 1],
 	{
 		size_t len = pfkey_msg->sadb_msg_len * IPSEC_PFKEYv2_ALIGN;
 
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("finish_pfkey_msg: %s message %u for %s %s",
 					sparse_val_show(pfkey_type_names, pfkey_msg->sadb_msg_type),
 					pfkey_msg->sadb_msg_seq, description, text_said);
@@ -265,7 +265,7 @@ finish_pfkey_msg(struct sadb_ext *extensions[SADB_EXT_MAX + 1],
 				 * dumped the KLIPS command, do so.
 				 */
 #ifdef DEBUG
-				if ((cur_debugging & DBG_KLIPS) == 0)
+				if ((cur_debugging & DBG_KERNEL) == 0)
 					DBG_dump(NULL, (void *) pfkey_msg, len);
 #endif
 			}
@@ -360,7 +360,7 @@ pfkey_register_proto(unsigned satype, const char *satypename)
 	else
 	{
 		pfkey_register_response(&pfb.msg);
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("%s registered with kernel.", satypename));
 	}
 }

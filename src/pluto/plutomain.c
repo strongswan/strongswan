@@ -338,7 +338,7 @@ int main(int argc, char **argv)
 			{ "debug-emitting", no_argument, NULL, DBG_EMITTING + DBG_OFFSET },
 			{ "debug-control", no_argument, NULL, DBG_CONTROL + DBG_OFFSET },
 			{ "debug-lifecycle", no_argument, NULL, DBG_LIFECYCLE + DBG_OFFSET },
-			{ "debug-klips", no_argument, NULL, DBG_KLIPS + DBG_OFFSET },
+			{ "debug-klips", no_argument, NULL, DBG_KERNEL + DBG_OFFSET },
 			{ "debug-dns", no_argument, NULL, DBG_DNS + DBG_OFFSET },
 			{ "debug-oppo", no_argument, NULL, DBG_OPPO + DBG_OFFSET },
 			{ "debug-controlmore", no_argument, NULL, DBG_CONTROLMORE + DBG_OFFSET },

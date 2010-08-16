@@ -112,7 +112,7 @@ static struct bare_shunt *bare_shunts = NULL;
 #ifdef DEBUG
 static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 {
-	DBG(DBG_KLIPS,
+	DBG(DBG_KERNEL,
 		{
 			int ourport = ntohs(portof(&(bs)->ours.addr));
 			int hisport = ntohs(portof(&(bs)->his.addr));
@@ -924,7 +924,7 @@ static bool raw_eroute(const ip_address *this_host,
 
 	set_text_said(text_said, that_host, spi, proto);
 
-	DBG(DBG_CONTROL | DBG_KLIPS,
+	DBG(DBG_CONTROL | DBG_KERNEL,
 		{
 			int sport = ntohs(portof(&this_client->addr));
 			int dport = ntohs(portof(&that_client->addr));
