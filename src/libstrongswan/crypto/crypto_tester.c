@@ -85,11 +85,9 @@ static const char* get_name(void *sym)
 	return "unknown";
 }
 
-/**
- * Implementation of crypto_tester_t.test_crypter
- */
-static bool test_crypter(private_crypto_tester_t *this,
-	encryption_algorithm_t alg, size_t key_size, crypter_constructor_t create)
+METHOD(crypto_tester_t, test_crypter, bool,
+	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
+	crypter_constructor_t create)
 {
 	enumerator_t *enumerator;
 	crypter_test_vector_t *vector;
@@ -176,11 +174,9 @@ static bool test_crypter(private_crypto_tester_t *this,
 	return !failed;
 }
 
-/**
- * Implementation of crypto_tester_t.test_signer
- */
-static bool test_signer(private_crypto_tester_t *this,
-						integrity_algorithm_t alg, signer_constructor_t create)
+METHOD(crypto_tester_t, test_signer, bool,
+	private_crypto_tester_t *this, integrity_algorithm_t alg,
+	signer_constructor_t create)
 {
 	enumerator_t *enumerator;
 	signer_test_vector_t *vector;
@@ -280,11 +276,9 @@ static bool test_signer(private_crypto_tester_t *this,
 	return !failed;
 }
 
-/**
- * Implementation of hasher_t.test_hasher
- */
-static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
-						hasher_constructor_t create)
+METHOD(crypto_tester_t, test_hasher, bool,
+	private_crypto_tester_t *this, hash_algorithm_t alg,
+	hasher_constructor_t create)
 {
 	enumerator_t *enumerator;
 	hasher_test_vector_t *vector;
@@ -370,11 +364,9 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 	return !failed;
 }
 
-/**
- * Implementation of crypto_tester_t.test_prf
- */
-static bool test_prf(private_crypto_tester_t *this,
-					 pseudo_random_function_t alg, prf_constructor_t create)
+METHOD(crypto_tester_t, test_prf, bool,
+	private_crypto_tester_t *this, pseudo_random_function_t alg,
+	prf_constructor_t create)
 {
 	enumerator_t *enumerator;
 	prf_test_vector_t *vector;
@@ -471,11 +463,9 @@ static bool test_prf(private_crypto_tester_t *this,
 	return !failed;
 }
 
-/**
- * Implementation of crypto_tester_t.test_rng
- */
-static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
-					 rng_constructor_t create)
+METHOD(crypto_tester_t, test_rng, bool,
+	private_crypto_tester_t *this, rng_quality_t quality,
+	rng_constructor_t create)
 {
 	enumerator_t *enumerator;
 	rng_test_vector_t *vector;
@@ -555,55 +545,38 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 	return !failed;
 }
 
-/**
- * Implementation of crypter_tester_t.add_crypter_vector
- */
-static void add_crypter_vector(private_crypto_tester_t *this,
-							   crypter_test_vector_t *vector)
+METHOD(crypto_tester_t, add_crypter_vector, void,
+	private_crypto_tester_t *this, crypter_test_vector_t *vector)
 {
 	this->crypter->insert_last(this->crypter, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_signer_vector
- */
-static void add_signer_vector(private_crypto_tester_t *this,
-							  signer_test_vector_t *vector)
+METHOD(crypto_tester_t, add_signer_vector, void,
+	private_crypto_tester_t *this, signer_test_vector_t *vector)
 {
 	this->signer->insert_last(this->signer, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_hasher_vector
- */
-static void add_hasher_vector(private_crypto_tester_t *this,
-							  hasher_test_vector_t *vector)
+METHOD(crypto_tester_t, add_hasher_vector, void,
+	private_crypto_tester_t *this, hasher_test_vector_t *vector)
 {
 	this->hasher->insert_last(this->hasher, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_prf_vector
- */
-static void add_prf_vector(private_crypto_tester_t *this,
-						   prf_test_vector_t *vector)
+METHOD(crypto_tester_t, add_prf_vector, void,
+	private_crypto_tester_t *this, prf_test_vector_t *vector)
 {
 	this->prf->insert_last(this->prf, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_rng_vector
- */
-static void add_rng_vector(private_crypto_tester_t *this,
-						   rng_test_vector_t *vector)
+METHOD(crypto_tester_t, add_rng_vector, void,
+	private_crypto_tester_t *this, rng_test_vector_t *vector)
 {
 	this->rng->insert_last(this->rng, vector);
 }
 
-/**
- * Implementation of crypto_tester_t.destroy.
- */
-static void destroy(private_crypto_tester_t *this)
+METHOD(crypto_tester_t, destroy, void,
+	private_crypto_tester_t *this)
 {
 	this->crypter->destroy(this->crypter);
 	this->signer->destroy(this->signer);
@@ -618,30 +591,33 @@ static void destroy(private_crypto_tester_t *this)
  */
 crypto_tester_t *crypto_tester_create()
 {
-	private_crypto_tester_t *this = malloc_thing(private_crypto_tester_t);
+	private_crypto_tester_t *this;
 
-	this->public.test_crypter = (bool(*)(crypto_tester_t*, encryption_algorithm_t alg,size_t key_size, crypter_constructor_t create))test_crypter;
-	this->public.test_signer = (bool(*)(crypto_tester_t*, integrity_algorithm_t alg, signer_constructor_t create))test_signer;
-	this->public.test_hasher = (bool(*)(crypto_tester_t*, hash_algorithm_t alg, hasher_constructor_t create))test_hasher;
-	this->public.test_prf = (bool(*)(crypto_tester_t*, pseudo_random_function_t alg, prf_constructor_t create))test_prf;
-	this->public.test_rng = (bool(*)(crypto_tester_t*, rng_quality_t quality, rng_constructor_t create))test_rng;
-	this->public.add_crypter_vector = (void(*)(crypto_tester_t*, crypter_test_vector_t *vector))add_crypter_vector;
-	this->public.add_signer_vector = (void(*)(crypto_tester_t*, signer_test_vector_t *vector))add_signer_vector;
-	this->public.add_hasher_vector = (void(*)(crypto_tester_t*, hasher_test_vector_t *vector))add_hasher_vector;
-	this->public.add_prf_vector = (void(*)(crypto_tester_t*, prf_test_vector_t *vector))add_prf_vector;
-	this->public.add_rng_vector = (void(*)(crypto_tester_t*, rng_test_vector_t *vector))add_rng_vector;
-	this->public.destroy = (void(*)(crypto_tester_t*))destroy;
+	INIT(this,
+		.public = {
+			.test_crypter = _test_crypter,
+			.test_signer = _test_signer,
+			.test_hasher = _test_hasher,
+			.test_prf = _test_prf,
+			.test_rng = _test_rng,
+			.add_crypter_vector = _add_crypter_vector,
+			.add_signer_vector = _add_signer_vector,
+			.add_hasher_vector = _add_hasher_vector,
+			.add_prf_vector = _add_prf_vector,
+			.add_rng_vector = _add_rng_vector,
+			.destroy = _destroy,
+		},
+		.crypter = linked_list_create(),
+		.signer = linked_list_create(),
+		.hasher = linked_list_create(),
+		.prf = linked_list_create(),
+		.rng = linked_list_create(),
 
-	this->crypter = linked_list_create();
-	this->signer = linked_list_create();
-	this->hasher = linked_list_create();
-	this->prf = linked_list_create();
-	this->rng = linked_list_create();
-
-	this->required = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.required", FALSE);
-	this->rng_true = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.rng_true", FALSE);
+		.required = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.required", FALSE),
+		.rng_true = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.rng_true", FALSE),
+	);
 
 	return &this->public;
 }
