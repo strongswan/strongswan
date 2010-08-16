@@ -2176,7 +2176,7 @@ parse_ipsec_sa_body(
 #endif
 			if (!can_do_IPcomp)
 			{
-				plog("compression proposed by %s, but KLIPS is not configured with IPCOMP"
+				plog("compression proposed by %s, but kernel does not support IPCOMP"
 					, ip_str(&c->spd.that.host_addr));
 				continue;
 			}

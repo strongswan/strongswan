@@ -262,7 +262,7 @@ finish_pfkey_msg(struct sadb_ext *extensions[SADB_EXT_MAX + 1],
 				success = FALSE;
 
 				/* if we were compiled with debugging, but we haven't already
-				 * dumped the KLIPS command, do so.
+				 * dumped the command, do so.
 				 */
 #ifdef DEBUG
 				if ((cur_debugging & DBG_KERNEL) == 0)

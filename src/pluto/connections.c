@@ -1077,7 +1077,7 @@ void add_connection(const whack_message_t *wm)
 		if ((c->policy & POLICY_COMPRESS) && !can_do_IPcomp)
 		{
 			loglog(RC_COMMENT
-				, "ignoring --compress in \"%s\" because KLIPS is not configured to do IPCOMP"
+				, "ignoring --compress in \"%s\" because kernel does not support IPCOMP"
 				, c->name);
 		}
 

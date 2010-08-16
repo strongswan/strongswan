@@ -18,8 +18,6 @@ Usage:
 FEATURES
 --------
 
-o Load and unload KLIPS (ipsec.o kernel module)
-
 o Load modules of the native Linux 2.6 IPsec stack
 
 o Launch and monitor pluto
@@ -50,8 +48,7 @@ o /var/run/dynip/xxxx can be used to use a virtual interface name in
 
 o %auto can be used to automaticaly name the connections
 
-o kill -TERM can be used to stop FS. pluto will be stopped and KLIPS unloaded
-  (if it has been loaded).
+o kill -TERM can be used to stop FS. pluto will be stopped.
 
 o Can be used to start strongSwan and load lots of connections in a few
   seconds.

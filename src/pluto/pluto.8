@@ -256,10 +256,7 @@ In other words,
 .BR pluto
 can eliminate much of the work of manual keying.
 The actual
-secure transmission of packets is the responsibility of other parts of
-the system (see
-.BR KLIPS ,
-the companion implementation of IPsec).
+secure transmission of packets is the responsibility of the Linux kernel.
 \fIipsec_auto\fP(8) provides a more convenient interface to
 \fBpluto\fP and \fBwhack\fP.
 .SS IKE's Job
@@ -314,8 +311,8 @@ are considered policy and are left in the system administrator's hands.
 .SS Pluto
 .LP
 \fBpluto\fP is an implementation of IKE.  It runs as a daemon on a network
-node.  Currently, this network node must be a LINUX system running the
-\fBKLIPS\fP implementation of IPsec.
+node.  Currently, this network node must be a Linux 2.6 system running the
+native \fBNETKEY\fP IPsec stack.
 .LP
 \fBpluto\fP only implements a subset of IKE.  This is enough for it to
 interoperate with other instances of \fBpluto\fP, and many other IKE
@@ -331,13 +328,13 @@ peers with whom it is negotiating.
 .LP
 \fBpluto\fP initiates negotiation of a Security Association when it is
 manually prodded: the program \fBwhack\fP is run to trigger this.
-It will also initiate a negotiation when \fBKLIPS\fP traps an outbound packet
-for Opportunistic Encryption.
+It will also initiate a negotiation when the Linux kernel traps an outbound
+packet for Opportunistic Encryption.
 .LP
 \fBpluto\fP implements ISAKMP SAs itself.  After it has negotiated the
-characteristics of an IPsec SA, it directs \fBKLIPS\fP to implement it.
+characteristics of an IPsec SA, it directs the Linux kernel to implement it.
 It also invokes a script to adjust any firewall and issue \fIroute\fP(8)
-commands to direct IP packets through \fBKLIPS\fP.
+commands.
 .LP
 When \fBpluto\fP shuts down, it closes all Security Associations.
 .SS Before Running Pluto
@@ -345,8 +342,8 @@ When \fBpluto\fP shuts down, it closes all Security Associations.
 \fBpluto\fP runs as a daemon with userid root.  Before running it, a few
 things must be set up.
 .LP
-\fBpluto\fP requires \fBKLIPS\fP, the FreeS/WAN implementation of IPsec.
-All of the components of \fBKLIPS\fP and \fBpluto\fP should be installed.
+\fBpluto\fP requires a Linux 2.6 kernel with the modules for the native IPsec
+stack enabled.
 .LP
 \fBpluto\fP supports multiple public networks (that is, networks
 that are considered insecure and thus need to have their traffic
@@ -355,11 +352,8 @@ public interfaces to use by looking at all interfaces that are
 configured (the \fB\-\-interface\fP option can be used to limit
 the interfaces considered).
 It does this only when \fBwhack\fP tells it to \-\-listen,
-so the interfaces must be configured by then.  Each interface with a name of the form
-\fBipsec\fP[\fB0\fP-\fB9\fP] is taken as a \fBKLIPS\fP virtual public interface.
-Another network interface with the same IP address (there should be only
-one) is taken as the corresponding real public
-interface.  \fIifconfig\fP(8) with the \fB\-a\fP flag will show
+so the interfaces must be configured by then.
+\fIifconfig\fP(8) with the \fB\-a\fP flag will show
 the name and status of each network interface.
 .LP
 \fBpluto\fP requires a database of preshared secrets and RSA private keys.
@@ -368,33 +362,6 @@ This is described in the
 \fBpluto\fP is told of RSA public keys via \fBwhack\fP commands.
 If the connection is Opportunistic, and no RSA public key is known,
 \fBpluto\fP will attempt to fetch RSA keys using the Domain Name System.
-.SS Setting up \fBKLIPS\fP for \fBpluto\fP
-.LP
-The most basic network topology that \fBpluto\fP supports has two security
-gateways negotiating on behalf of client subnets.  The diagram of RGB's
-testbed is a good example (see \fIklips/doc/rgb_setup.txt\fP).
-.LP
-The file \fIINSTALL\fP in the base directory of this distribution
-explains how to start setting up the whole system, including \fBKLIPS\fP.
-.LP
-Make sure that the security gateways have routes to each other.  This
-is usually covered by the default route, but may require issuing
-.IR route (8)
-commands.  The route must go through a particular IP
-interface (we will assume it is \fIeth0\fP, but it need not be).  The
-interface that connects the security gateway to its client must be a
-different one.
-.LP
-It is necessary to issue a
-.IR ipsec_tncfg (8)
-command on each gateway.  The required command is:
-
-\ \ \ ipsec tncfg \-\-attach\ \-\-virtual\ ipsec0 \-\-physical\ eth0
-
-A command to set up the ipsec0 virtual interface will also need to be
-run.  It will have the same parameters as the command used to set up
-the physical interface to which it has just been connected using
-.IR ipsec_tncfg (8).
 .SS ipsec.secrets file
 .LP
 A \fBpluto\fP daemon and another IKE daemon (for example, another instance
@@ -473,13 +440,6 @@ corresponding to a particular connection.
 Often there is one representing an ISAKMP SA and another representing
 an IPsec SA.
 .LP
-\fBKLIPS\fP hooks into the routing code in a LINUX kernel.
-Traffic to be processed by an IPsec SA must be directed through
-\fBKLIPS\fP by routing commands.  Furthermore, the processing to be
-done is specified by \fIipsec eroute(8)\fP commands.
-\fBpluto\fP takes the responsibility of managing both of these special
-kinds of routes.
-.LP
 Each connection may be routed, and must be while it has an IPsec SA.
 The connection specifies the characteristics of the route: the
 interface on this machine, the ``gateway'' (the nexthop),
@@ -519,9 +479,9 @@ SA for the same connection already has an eroute, all its outgoing traffic
 is taken over by the new eroute.  The incoming traffic will still be
 processed.  This characteristic is exploited during rekeying.
 .LP
-All of these routing characteristics are expected change when
-\fBKLIPS\fP is modified to use the firewall hooks in the LINUX 2.4.x
-kernel.
+Some of these routing characteristics are specific to \fBKLIPS\fP, the FreeS/WAN
+implementation of IPsec and are not relevant when running pluto on the native
+Linux 2.6 IPsec stack.
 .SS Using Whack
 .LP
 \fBwhack\fP is used to command a running \fBpluto\fP.
@@ -691,7 +651,7 @@ Note that this has nothing to do with IKE authentication.
 .TP
 \fB\-\-compress\fP
 All proposed IPsec SAs will include IPCOMP (compression).
-This will be ignored if KLIPS is not configured with IPCOMP support.
+This will be ignored if the kernel is not configured with IPCOMP support.
 .TP
 \fB\-\-tunnel\fP
 the IPsec SA should use tunneling.  Implicit if the SA is for clients.
@@ -1351,8 +1311,8 @@ show \fBpluto\fP's decision making
 \fB\-\-debug-lifecycle\fP
 [this option is temporary] log more detail of lifecycle of SAs
 .TP
-\fB\-\-debug-klips\fP
-show \fBpluto\fP's interaction with \fBKLIPS\fP
+\fB\-\-debug-kernel\fP
+show \fBpluto\fP's interaction with the kernel
 .TP
 \fB\-\-debug-dns\fP
 show \fBpluto\fP's interaction with \fBDNS\fP for KEY and TXT records
@@ -1418,11 +1378,6 @@ system (\fBpluto\fP didn't send a reply because it wasn't happy with
 the previous message).
 .SS Notes
 .LP
-If \fBpluto\fP is compiled without \-DKLIPS, it negotiates Security
-Associations but never ask the kernel to put them in place and never
-makes routing changes.  This allows \fBpluto\fP to be tested on systems
-without \fBKLIPS\fP, but makes it rather useless.
-.LP
 Each IPsec SA is assigned an SPI, a 32-bit number used to refer to the SA.
 The IKE protocol lets the destination of the SA choose the SPI.
 The range 0 to 0xFF is reserved for IANA.
@@ -1469,7 +1424,7 @@ component.  The selection is controlled by the \-\-encrypt and
 .IP \(bu
 Each of these may be combined with IPCOMP Deflate compression,
 but only if the potential connection specifies compression and only
-if KLIPS is configured with IPCOMP support.
+if the kernel is configured with IPCOMP support.
 .IP \(bu
 The IPSEC SAs may be tunnel or transport mode, where appropriate.
 The \-\-tunnel flag controls this when \fBpluto\fP is initiating.
