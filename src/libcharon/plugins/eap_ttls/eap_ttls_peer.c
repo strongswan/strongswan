@@ -133,22 +133,30 @@ METHOD(tls_application_t, process, status_t,
 		return FAILED;
 	}
 
-	if (this->method->process(this->method, in, &this->out) == NEED_MORE)
-	{
-		in->destroy(in);
-		return NEED_MORE;
-	}
-
-	if (vendor)
-	{
-		DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed", type, vendor);
-	}
-	else
-	{
-		DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
-	}
+	status = this->method->process(this->method, in, &this->out);
 	in->destroy(in);
-	return FAILED;
+
+	switch (status)
+	{
+		case SUCCESS:
+			this->method->destroy(this->method);
+			this->method = NULL;
+			/* fall through to NEED_MORE since response must be sent */
+		case NEED_MORE:
+			return NEED_MORE;
+		case FAILED:
+		default:
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
+							   type, vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
+			}
+			return FAILED;
+ 	}		
 }
 
 METHOD(tls_application_t, build, status_t,

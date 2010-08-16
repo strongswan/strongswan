@@ -201,12 +201,23 @@ METHOD(tls_application_t, process, status_t,
 			DBG1(DBG_IKE, "%N phase2 authentication of '%Y' with %N successful",
 							eap_type_names, EAP_TTLS, this->peer,
 							eap_type_names, type);
+			this->method->destroy(this->method);
+			this->method = NULL;
 			break;
 		case NEED_MORE:
 			break;
 		case FAILED:
 		default:
-			DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
+			if (vendor)
+			{
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
+							   type, vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
+			}
+			return FAILED;
  	}		
 	return status;
 }
@@ -218,6 +229,24 @@ METHOD(tls_application_t, build, status_t,
 	eap_code_t code;
 	eap_type_t type;
 	u_int32_t vendor;
+
+	if (this->method == NULL && this->start_phase2 &&
+		lib->settings->get_bool(lib->settings,
+			 	"charon.plugins.eap-ttls.phase2_piggyback", FALSE))
+	{
+		/* generate an EAP Identity request which will be piggybacked right
+		 * onto the TLS Finished message thus initiating EAP-TTLS phase2
+		 */
+		this->method = charon->eap->create_instance(charon->eap, EAP_IDENTITY,
+								 0,	EAP_SERVER, this->server, this->peer);
+		if (this->method == NULL)
+		{
+			DBG1(DBG_IKE, "EAP_IDENTITY method not available");
+			return FAILED;
+		}
+		this->method->initiate(this->method, &this->out);
+		this->start_phase2 = FALSE;
+	}
 
 	if (this->out)
 	{
