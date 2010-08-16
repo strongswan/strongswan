@@ -1763,8 +1763,6 @@ failed:
 	return result;
 }
 
-const struct kernel_ops *kernel_ops;
-
 /**
  * Data for acquire events
  */
@@ -1822,25 +1820,6 @@ METHOD(kernel_listener_t, acquire, bool,
 void init_kernel(void)
 {
 #ifdef KLIPS
-
-#if defined(linux) && defined(KERNEL26_SUPPORT)
-	{
-		bool linux_ipsec = 0;
-		struct stat buf;
-
-		linux_ipsec = (stat("/proc/net/pfkey", &buf) == 0);
-		if (linux_ipsec)
-			{
-				plog("Using Linux 2.6 IPsec interface code");
-				kernel_ops = &linux_kernel_ops;
-			}
-		else
-			{
-				plog("Using KLIPS IPsec interface code");
-			}
-	}
-#endif
-
 	/* register SA types that we can negotiate */
 	can_do_IPcomp = FALSE;  /* until we get a response from the kernel */
 	pfkey_register();

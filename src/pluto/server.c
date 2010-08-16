@@ -468,7 +468,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 #endif
 
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-	if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 	{
 		struct sadb_x_policy policy;
 		int level, opt;
@@ -579,7 +578,6 @@ process_raw_ifaces(struct raw_iface *rifaces)
 					 * "after" allows us to avoid double reporting.
 					 */
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-					if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 					{
 						if (after)
 						{
@@ -604,7 +602,6 @@ process_raw_ifaces(struct raw_iface *rifaces)
 			continue;
 
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-		if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 		{
 			v = ifp;
 			goto add_entry;

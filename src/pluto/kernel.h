@@ -75,52 +75,6 @@ struct kernel_sa {
 		const char *text_said;
 };
 
-struct kernel_ops {
-		enum {
-				KERNEL_TYPE_NONE,
-				KERNEL_TYPE_KLIPS,
-				KERNEL_TYPE_LINUX,
-		} type;
-		bool inbound_eroute;
-		bool policy_lifetime;
-		int *async_fdp;
-
-		void (*init)(void);
-		void (*pfkey_register)(void);
-		void (*pfkey_register_response)(const struct sadb_msg *msg);
-		void (*process_queue)(void);
-		void (*process_msg)(void);
-		bool (*raw_eroute)(const ip_address *this_host,
-						   const ip_subnet *this_client,
-						   const ip_address *that_host,
-						   const ip_subnet *that_client,
-						   ipsec_spi_t spi,
-						   unsigned int satype,
-						   unsigned int transport_proto,
-						   const struct pfkey_proto_info *proto_info,
-						   time_t use_lifetime,
-						   unsigned int op,
-						   const char *text_said);
-		bool (*get_policy)(const struct kernel_sa *sa, bool inbound,
-						   time_t *use_time);
-		bool (*add_sa)(const struct kernel_sa *sa, bool replace);
-		bool (*grp_sa)(const struct kernel_sa *sa_outer,
-					   const struct kernel_sa *sa_inner);
-		bool (*del_sa)(const struct kernel_sa *sa);
-		bool (*get_sa)(const struct kernel_sa *sa, u_int *bytes);
-		ipsec_spi_t (*get_spi)(const ip_address *src,
-							   const ip_address *dst,
-							   int proto,
-							   bool tunnel_mode,
-							   unsigned reqid,
-							   ipsec_spi_t min,
-							   ipsec_spi_t max,
-							   const char *text_said);
-};
-
-
-extern const struct kernel_ops *kernel_ops;
-
 extern void show_shunt_status(void);
 #endif
 
