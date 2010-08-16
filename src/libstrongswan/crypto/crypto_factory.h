@@ -261,9 +261,10 @@ struct crypto_factory_t {
 	 * Add a test vector to the crypto factory.
 	 *
 	 * @param type			type of the test vector
-	 * @param ...			pointer to a test vector, defined in crypto_tester.h
+	 * @param vector		pointer to a test vector, defined in crypto_tester.h
 	 */
-	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type, ...);
+	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type,
+							void *vector);
 
 	/**
 	 * Destroy a crypto_factory instance.

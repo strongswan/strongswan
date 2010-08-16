@@ -98,11 +98,9 @@ struct private_crypto_factory_t {
 	rwlock_t *lock;
 };
 
-/**
- * Implementation of crypto_factory_t.create_crypter.
- */
-static crypter_t* create_crypter(private_crypto_factory_t *this,
-								 encryption_algorithm_t algo, size_t key_size)
+METHOD(crypto_factory_t, create_crypter, crypter_t*,
+	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	size_t key_size)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -132,11 +130,8 @@ static crypter_t* create_crypter(private_crypto_factory_t *this,
 	return crypter;
 }
 
-/**
- * Implementation of crypto_factory_t.create_signer.
- */
-static signer_t* create_signer(private_crypto_factory_t *this,
-							   integrity_algorithm_t algo)
+METHOD(crypto_factory_t, create_signer, signer_t*,
+	private_crypto_factory_t *this, integrity_algorithm_t algo)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -167,11 +162,8 @@ static signer_t* create_signer(private_crypto_factory_t *this,
 	return signer;
 }
 
-/**
- * Implementation of crypto_factory_t.create_hasher.
- */
-static hasher_t* create_hasher(private_crypto_factory_t *this,
-							   hash_algorithm_t algo)
+METHOD(crypto_factory_t, create_hasher, hasher_t*,
+	private_crypto_factory_t *this, hash_algorithm_t algo)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -201,11 +193,8 @@ static hasher_t* create_hasher(private_crypto_factory_t *this,
 	return hasher;
 }
 
-/**
- * Implementation of crypto_factory_t.create_prf.
- */
-static prf_t* create_prf(private_crypto_factory_t *this,
-						 pseudo_random_function_t algo)
+METHOD(crypto_factory_t, create_prf, prf_t*,
+	private_crypto_factory_t *this, pseudo_random_function_t algo)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -234,10 +223,8 @@ static prf_t* create_prf(private_crypto_factory_t *this,
 	return prf;
 }
 
-/**
- * Implementation of crypto_factory_t.create_rng.
- */
-static rng_t* create_rng(private_crypto_factory_t *this, rng_quality_t quality)
+METHOD(crypto_factory_t, create_rng, rng_t*,
+	private_crypto_factory_t *this, rng_quality_t quality)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -272,11 +259,8 @@ static rng_t* create_rng(private_crypto_factory_t *this, rng_quality_t quality)
 	return NULL;
 }
 
-/**
- * Implementation of crypto_factory_t.create_dh.
- */
-static diffie_hellman_t* create_dh(private_crypto_factory_t *this,
-								   diffie_hellman_group_t group)
+METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
+	private_crypto_factory_t *this, diffie_hellman_group_t group)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -300,12 +284,9 @@ static diffie_hellman_t* create_dh(private_crypto_factory_t *this,
 	return diffie_hellman;
 }
 
-/**
- * Implementation of crypto_factory_t.add_crypter.
- */
-static void add_crypter(private_crypto_factory_t *this,
-						encryption_algorithm_t algo,
-						crypter_constructor_t create)
+METHOD(crypto_factory_t, add_crypter, void,
+	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	crypter_constructor_t create)
 {
 	if (!this->test_on_add ||
 		this->tester->test_crypter(this->tester, algo, 0, create))
@@ -320,11 +301,8 @@ static void add_crypter(private_crypto_factory_t *this,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.remove_crypter.
- */
-static void remove_crypter(private_crypto_factory_t *this,
-						   crypter_constructor_t create)
+METHOD(crypto_factory_t, remove_crypter, void,
+	private_crypto_factory_t *this, crypter_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -343,11 +321,9 @@ static void remove_crypter(private_crypto_factory_t *this,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.add_signer.
- */
-static void add_signer(private_crypto_factory_t *this,
-					   integrity_algorithm_t algo, signer_constructor_t create)
+METHOD(crypto_factory_t, add_signer, void,
+	private_crypto_factory_t *this, integrity_algorithm_t algo,
+	signer_constructor_t create)
 {
 	if (!this->test_on_add ||
 		this->tester->test_signer(this->tester, algo, create))
@@ -362,11 +338,8 @@ static void add_signer(private_crypto_factory_t *this,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.remove_signer.
- */
-static void remove_signer(private_crypto_factory_t *this,
-						  signer_constructor_t create)
+METHOD(crypto_factory_t, remove_signer, void,
+	private_crypto_factory_t *this, signer_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -385,11 +358,9 @@ static void remove_signer(private_crypto_factory_t *this,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.add_hasher.
- */
-static void add_hasher(private_crypto_factory_t *this, hash_algorithm_t algo,
-					   hasher_constructor_t create)
+METHOD(crypto_factory_t, add_hasher, void,
+	private_crypto_factory_t *this, hash_algorithm_t algo,
+	hasher_constructor_t create)
 {
 	if (!this->test_on_add ||
 		this->tester->test_hasher(this->tester, algo, create))
@@ -404,11 +375,8 @@ static void add_hasher(private_crypto_factory_t *this, hash_algorithm_t algo,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.remove_hasher.
- */
-static void remove_hasher(private_crypto_factory_t *this,
-						  hasher_constructor_t create)
+METHOD(crypto_factory_t, remove_hasher, void,
+	private_crypto_factory_t *this, hasher_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -427,11 +395,9 @@ static void remove_hasher(private_crypto_factory_t *this,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.add_prf.
- */
-static void add_prf(private_crypto_factory_t *this,
-					pseudo_random_function_t algo, prf_constructor_t create)
+METHOD(crypto_factory_t, add_prf, void,
+	private_crypto_factory_t *this, pseudo_random_function_t algo,
+	prf_constructor_t create)
 {
 	if (!this->test_on_add ||
 		this->tester->test_prf(this->tester, algo, create))
@@ -446,10 +412,8 @@ static void add_prf(private_crypto_factory_t *this,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.remove_prf.
- */
-static void remove_prf(private_crypto_factory_t *this, prf_constructor_t create)
+METHOD(crypto_factory_t, remove_prf, void,
+	private_crypto_factory_t *this, prf_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -468,11 +432,9 @@ static void remove_prf(private_crypto_factory_t *this, prf_constructor_t create)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.add_rng.
- */
-static void add_rng(private_crypto_factory_t *this, rng_quality_t quality,
-					rng_constructor_t create)
+METHOD(crypto_factory_t, add_rng, void,
+	private_crypto_factory_t *this, rng_quality_t quality,
+	rng_constructor_t create)
 {
 	if (!this->test_on_add ||
 		this->tester->test_rng(this->tester, quality, create))
@@ -487,10 +449,8 @@ static void add_rng(private_crypto_factory_t *this, rng_quality_t quality,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.remove_rng.
- */
-static void remove_rng(private_crypto_factory_t *this, rng_constructor_t create)
+METHOD(crypto_factory_t, remove_rng, void,
+	private_crypto_factory_t *this, rng_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -509,11 +469,9 @@ static void remove_rng(private_crypto_factory_t *this, rng_constructor_t create)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.add_dh.
- */
-static void add_dh(private_crypto_factory_t *this, diffie_hellman_group_t group,
-				   dh_constructor_t create)
+METHOD(crypto_factory_t, add_dh, void,
+	private_crypto_factory_t *this, diffie_hellman_group_t group,
+	dh_constructor_t create)
 {
 	entry_t *entry = malloc_thing(entry_t);
 
@@ -524,10 +482,8 @@ static void add_dh(private_crypto_factory_t *this, diffie_hellman_group_t group,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of crypto_factory_t.remove_dh.
- */
-static void remove_dh(private_crypto_factory_t *this, dh_constructor_t create)
+METHOD(crypto_factory_t, remove_dh, void,
+	private_crypto_factory_t *this, dh_constructor_t create)
 {
 	entry_t *entry;
 	enumerator_t *enumerator;
@@ -591,10 +547,8 @@ static bool crypter_filter(void *n, entry_t **entry, encryption_algorithm_t *alg
 	return TRUE;
 }
 
-/**
- * Implementation of crypto_factory_t.create_crypter_enumerator
- */
-static enumerator_t* create_crypter_enumerator(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, create_crypter_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
 {
 	return create_enumerator(this, this->crypters, crypter_filter);
 }
@@ -608,10 +562,8 @@ static bool signer_filter(void *n, entry_t **entry, integrity_algorithm_t *algo)
 	return TRUE;
 }
 
-/**
- * Implementation of crypto_factory_t.create_signer_enumerator
- */
-static enumerator_t* create_signer_enumerator(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, create_signer_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
 {
 	return create_enumerator(this, this->signers, signer_filter);
 }
@@ -625,10 +577,8 @@ static bool hasher_filter(void *n, entry_t **entry, hash_algorithm_t *algo)
 	return TRUE;
 }
 
-/**
- * Implementation of crypto_factory_t.create_hasher_enumerator
- */
-static enumerator_t* create_hasher_enumerator(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, create_hasher_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
 {
 	return create_enumerator(this, this->hashers, hasher_filter);
 }
@@ -642,10 +592,8 @@ static bool prf_filter(void *n, entry_t **entry, pseudo_random_function_t *algo)
 	return TRUE;
 }
 
-/**
- * Implementation of crypto_factory_t.create_prf_enumerator
- */
-static enumerator_t* create_prf_enumerator(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
 {
 	return create_enumerator(this, this->prfs, prf_filter);
 }
@@ -659,19 +607,14 @@ static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group)
 	return TRUE;
 }
 
-/**
- * Implementation of crypto_factory_t.create_dh_enumerator
- */
-static enumerator_t* create_dh_enumerator(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, create_dh_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
 {
 	return create_enumerator(this, this->dhs, dh_filter);
 }
 
-/**
- * Implementation of crypto_factory_t.add_test_vector
- */
-static void add_test_vector(private_crypto_factory_t *this,
-							transform_type_t type, void *vector)
+METHOD(crypto_factory_t, add_test_vector, void,
+	private_crypto_factory_t *this, transform_type_t type, void *vector)
 {
 	switch (type)
 	{
@@ -691,10 +634,8 @@ static void add_test_vector(private_crypto_factory_t *this,
 	}
 }
 
-/**
- * Implementation of crypto_factory_t.destroy
- */
-static void destroy(private_crypto_factory_t *this)
+METHOD(crypto_factory_t, destroy, void,
+	private_crypto_factory_t *this)
 {
 	this->crypters->destroy_function(this->crypters, free);
 	this->signers->destroy_function(this->signers, free);
@@ -712,46 +653,49 @@ static void destroy(private_crypto_factory_t *this)
  */
 crypto_factory_t *crypto_factory_create()
 {
-	private_crypto_factory_t *this = malloc_thing(private_crypto_factory_t);
+	private_crypto_factory_t *this;
 
-	this->public.create_crypter = (crypter_t*(*)(crypto_factory_t*, encryption_algorithm_t, size_t))create_crypter;
-	this->public.create_signer = (signer_t*(*)(crypto_factory_t*, integrity_algorithm_t))create_signer;
-	this->public.create_hasher = (hasher_t*(*)(crypto_factory_t*, hash_algorithm_t))create_hasher;
-	this->public.create_prf = (prf_t*(*)(crypto_factory_t*, pseudo_random_function_t))create_prf;
-	this->public.create_rng = (rng_t*(*)(crypto_factory_t*, rng_quality_t quality))create_rng;
-	this->public.create_dh = (diffie_hellman_t*(*)(crypto_factory_t*, diffie_hellman_group_t group))create_dh;
-	this->public.add_crypter = (void(*)(crypto_factory_t*, encryption_algorithm_t algo, crypter_constructor_t create))add_crypter;
-	this->public.remove_crypter = (void(*)(crypto_factory_t*, crypter_constructor_t create))remove_crypter;
-	this->public.add_signer = (void(*)(crypto_factory_t*, integrity_algorithm_t algo, signer_constructor_t create))add_signer;
-	this->public.remove_signer = (void(*)(crypto_factory_t*, signer_constructor_t create))remove_signer;
-	this->public.add_hasher = (void(*)(crypto_factory_t*, hash_algorithm_t algo, hasher_constructor_t create))add_hasher;
-	this->public.remove_hasher = (void(*)(crypto_factory_t*, hasher_constructor_t create))remove_hasher;
-	this->public.add_prf = (void(*)(crypto_factory_t*, pseudo_random_function_t algo, prf_constructor_t create))add_prf;
-	this->public.remove_prf = (void(*)(crypto_factory_t*, prf_constructor_t create))remove_prf;
-	this->public.add_rng = (void(*)(crypto_factory_t*, rng_quality_t quality, rng_constructor_t create))add_rng;
-	this->public.remove_rng = (void(*)(crypto_factory_t*, rng_constructor_t create))remove_rng;
-	this->public.add_dh = (void(*)(crypto_factory_t*, diffie_hellman_group_t algo, dh_constructor_t create))add_dh;
-	this->public.remove_dh = (void(*)(crypto_factory_t*, dh_constructor_t create))remove_dh;
-	this->public.create_crypter_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_crypter_enumerator;
-	this->public.create_signer_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_signer_enumerator;
-	this->public.create_hasher_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_hasher_enumerator;
-	this->public.create_prf_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_prf_enumerator;
-	this->public.create_dh_enumerator = (enumerator_t*(*)(crypto_factory_t*))create_dh_enumerator;
-	this->public.add_test_vector = (void(*)(crypto_factory_t*, transform_type_t type, ...))add_test_vector;
-	this->public.destroy = (void(*)(crypto_factory_t*))destroy;
-
-	this->crypters = linked_list_create();
-	this->signers = linked_list_create();
-	this->hashers = linked_list_create();
-	this->prfs = linked_list_create();
-	this->rngs = linked_list_create();
-	this->dhs = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->tester = crypto_tester_create();
-	this->test_on_add = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.on_add", FALSE);
-	this->test_on_create = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.on_create", FALSE);
+	INIT(this,
+		.public = {
+			.create_crypter = _create_crypter,
+			.create_signer = _create_signer,
+			.create_hasher = _create_hasher,
+			.create_prf = _create_prf,
+			.create_rng = _create_rng,
+			.create_dh = _create_dh,
+			.add_crypter = _add_crypter,
+			.remove_crypter = _remove_crypter,
+			.add_signer = _add_signer,
+			.remove_signer = _remove_signer,
+			.add_hasher = _add_hasher,
+			.remove_hasher = _remove_hasher,
+			.add_prf = _add_prf,
+			.remove_prf = _remove_prf,
+			.add_rng = _add_rng,
+			.remove_rng = _remove_rng,
+			.add_dh = _add_dh,
+			.remove_dh = _remove_dh,
+			.create_crypter_enumerator = _create_crypter_enumerator,
+			.create_signer_enumerator = _create_signer_enumerator,
+			.create_hasher_enumerator = _create_hasher_enumerator,
+			.create_prf_enumerator = _create_prf_enumerator,
+			.create_dh_enumerator = _create_dh_enumerator,
+			.add_test_vector = _add_test_vector,
+			.destroy = _destroy,
+		},
+		.crypters = linked_list_create(),
+		.signers = linked_list_create(),
+		.hashers = linked_list_create(),
+		.prfs = linked_list_create(),
+		.rngs = linked_list_create(),
+		.dhs = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.tester = crypto_tester_create(),
+		.test_on_add = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.on_add", FALSE),
+		.test_on_create = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.on_create", FALSE),
+	);
 
 	return &this->public;
 }
