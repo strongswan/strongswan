@@ -44,7 +44,7 @@ struct eap_ttls_t {
  * @return			eap_ttls_t object
  */
 eap_ttls_t *eap_ttls_create_server(identification_t *server,
-								 identification_t *peer);
+								   identification_t *peer);
 
 /**
  * Creates the EAP method EAP-TTLS acting as peer.
@@ -54,6 +54,6 @@ eap_ttls_t *eap_ttls_create_server(identification_t *server,
  * @return			eap_ttls_t object
  */
 eap_ttls_t *eap_ttls_create_peer(identification_t *server,
-							   identification_t *peer);
+								 identification_t *peer);
 
 #endif /** EAP_TTLS_H_ @}*/

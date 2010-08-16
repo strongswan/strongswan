@@ -14,13 +14,12 @@
  */
 
 #include "eap_ttls_peer.h"
+#include "eap_ttls_avp.h"
 
 #include <debug.h>
 #include <daemon.h>
 
 #include <sa/authenticators/eap/eap_method.h>
-
-#define AVP_EAP_MESSAGE		79
 
 typedef struct private_eap_ttls_peer_t private_eap_ttls_peer_t;
 
@@ -58,59 +57,12 @@ struct private_eap_ttls_peer_t {
      * Pending outbound EAP message 
 	 */
 	eap_payload_t *out;
+
+	/**
+	 * AVP handler
+	 */
+	eap_ttls_avp_t *avp;
 };
-
-/**
- * Send an EAP-Message Attribute-Value Pair
- */
-static void send_avp_eap_message(tls_writer_t *writer, chunk_t data)
-{
-	char zero_padding[] = { 0x00, 0x00, 0x00 };
-	chunk_t   avp_padding;
-	u_int8_t  avp_flags;
-	u_int32_t avp_len;
-
-	avp_flags = 0x40;
-	avp_len = 8 + data.len;
-	avp_padding = chunk_create(zero_padding, (4 - data.len) % 4);
-
-	writer->write_uint32(writer, AVP_EAP_MESSAGE);
-	writer->write_uint8(writer, avp_flags);
-	writer->write_uint24(writer, avp_len);
-	writer->write_data(writer, data);
-	writer->write_data(writer, avp_padding);
-}
-
-/**
- * Process an EAP-Message Attribute-Value Pair
- */
-static status_t process_avp_eap_message(tls_reader_t *reader, chunk_t *data)
-{
-	u_int32_t avp_code;
-	u_int8_t  avp_flags;
-	u_int32_t avp_len, data_len;
-
-	if (!reader->read_uint32(reader, &avp_code) ||
-		!reader->read_uint8(reader, &avp_flags) ||
-		!reader->read_uint24(reader, &avp_len))
-	{
-		DBG1(DBG_IKE, "received invalid AVP");
-		return FAILED;
-	}
- 	if (avp_code != AVP_EAP_MESSAGE)
-	{
-		DBG1(DBG_IKE, "expected AVP_EAP_MESSAGE but received %u", avp_code);
-		return FAILED;
-	}
-	data_len = avp_len - 8;
-	if (!reader->read_data(reader, data_len + (4 - avp_len) % 4, data))
-	{
-		DBG1(DBG_IKE, "received insufficient AVP data");
-		return FAILED;
-	}
-	data->len = data_len;
-	return SUCCESS;	
-}
 
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_peer_t *this, tls_reader_t *reader)
@@ -120,10 +72,10 @@ METHOD(tls_application_t, process, status_t,
 	payload_t *payload;
 	eap_payload_t *in;
 	eap_code_t code;
-	eap_type_t type;
-	u_int32_t vendor;
+	eap_type_t type, received_type;
+	u_int32_t vendor, received_vendor;
 
-	status = process_avp_eap_message(reader, &data);
+	status = this->avp->process(this->avp, reader, &data);
 	if (status == FAILED)
 	{
 		return FAILED;
@@ -137,43 +89,49 @@ METHOD(tls_application_t, process, status_t,
 		return FAILED;
 	}
 	code = in->get_code(in);
-	type = in->get_type(in, &vendor);
+	received_type = in->get_type(in, &received_vendor);
 	DBG1(DBG_IKE, "received tunneled EAP-TTLS AVP [EAP/%N/%N]",
-				   eap_code_short_names, code, eap_type_short_names, type);
-
+					   		eap_code_short_names, code,
+							eap_type_short_names, received_type);
 	if (code != EAP_REQUEST)
 	{
+		DBG1(DBG_IKE, "%N expected", eap_code_names, EAP_REQUEST);
 		in->destroy(in);
 		return FAILED;
 	}
 
 	if (this->method == NULL)
 	{
-		if (vendor)
+		if (received_vendor)
 		{
 			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d",
-				 type, vendor);
+				 received_type, received_vendor);
 		}
 		else
 		{
 			DBG1(DBG_IKE, "server requested %N authentication",
-				 eap_type_names, type);
+				 eap_type_names, received_type);
 		}
-		this->method = charon->eap->create_instance(charon->eap, type, vendor,
+		this->method = charon->eap->create_instance(charon->eap,
+									received_type, received_vendor,
 									EAP_PEER, this->server, this->peer);
 		if (!this->method)
 		{
-			u_int8_t identifier = in->get_identifier(in);
-
-			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
-			in->destroy(in);
-			this->out = eap_payload_create_nak(identifier);
+			DBG1(DBG_IKE, "EAP method not supported");
+			this->out = eap_payload_create_nak(in->get_identifier(in));
 			in->destroy(in);
 			return NEED_MORE;
 		}
 	}
 		
 	type = this->method->get_type(this->method, &vendor);
+
+	if (type != received_type || vendor != received_vendor)
+	{
+		DBG1(DBG_IKE, "received invalid EAP request");
+		in->destroy(in);
+		return FAILED;
+	}
 
 	if (this->method->process(this->method, in, &this->out) == NEED_MORE)
 	{
@@ -226,7 +184,7 @@ METHOD(tls_application_t, build, status_t,
 
 		/* get the raw EAP message data */
 		data = this->out->get_data(this->out);
-		send_avp_eap_message(writer, data);
+		this->avp->build(this->avp, writer, data);
 
 		this->out->destroy(this->out);
 		this->out = NULL;
@@ -241,6 +199,7 @@ METHOD(tls_application_t, destroy, void,
 	this->peer->destroy(this->peer);
 	DESTROY_IF(this->method);
 	DESTROY_IF(this->out);
+	this->avp->destroy(this->avp);
 	free(this);
 }
 
@@ -263,6 +222,7 @@ eap_ttls_peer_t *eap_ttls_peer_create(identification_t *server,
 		.start_phase2 = TRUE,
 		.method = NULL,
 		.out = NULL,
+		.avp = eap_ttls_avp_create(),
 	);
 
 	return &this->public;

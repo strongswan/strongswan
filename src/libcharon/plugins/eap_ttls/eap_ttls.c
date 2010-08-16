@@ -15,6 +15,7 @@
 
 #include "eap_ttls.h"
 #include "eap_ttls_peer.h"
+#include "eap_ttls_server.h"
 
 #include <tls.h>
 
@@ -424,8 +425,8 @@ METHOD(eap_method_t, destroy, void,
  * Generic private constructor
  */
 static eap_ttls_t *eap_ttls_create(identification_t *server,
-								 identification_t *peer, bool is_server,
-								 tls_application_t *application)
+								   identification_t *peer, bool is_server,
+								   tls_application_t *application)
 {
 	private_eap_ttls_t *this;
 
@@ -447,13 +448,14 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 }
 
 eap_ttls_t *eap_ttls_create_server(identification_t *server,
-								 identification_t *peer)
+						  		   identification_t *peer)
 {
-	return eap_ttls_create(server, peer, TRUE, NULL);
+	return eap_ttls_create(server, peer, TRUE,
+						   &eap_ttls_server_create(server, peer)->application);
 }
 
 eap_ttls_t *eap_ttls_create_peer(identification_t *server,
-							   identification_t *peer)
+								 identification_t *peer)
 {
 	return eap_ttls_create(server, peer, FALSE,
 						   &eap_ttls_peer_create(server, peer)->application);
