@@ -1,5 +1,8 @@
-/* FreeS/WAN NAT-Traversal
- * Copyright (C) 2002-2003 Mathieu Lafon - Arkoon Network Security
+/*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2002-2003 Mathieu Lafon
+ * Arkoon Network Security
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -115,11 +118,8 @@ void nat_traversal_change_port_lookup(struct msg_digest *md, struct state *st);
 /**
  * New NAT mapping
  */
-#ifdef __PFKEY_V2_H
-void process_pfkey_nat_t_new_mapping(
-		struct sadb_msg *,
-		struct sadb_ext *[SADB_EXT_MAX + 1]);
-#endif
+void process_nat_t_new_mapping(u_int32_t reqid, u_int32_t spi,
+							   ip_address *new_end);
 
 /**
  * IKE port floating

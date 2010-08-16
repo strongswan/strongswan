@@ -1,6 +1,9 @@
-/* FreeS/WAN NAT-Traversal
- * Copyright (C) 2002-2005 Mathieu Lafon - Arkoon Network Security
- * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
+/*
+ * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2009 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2002-2005 Mathieu Lafon
+ * Arkoon Network Security
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,10 +26,6 @@
 #include <unistd.h>
 #include <signal.h>     /* used only if MSG_NOSIGNAL not defined */
 #include <sys/queue.h>
-
-#include <freeswan.h>
-#include <pfkeyv2.h>
-#include <pfkey.h>
 
 #include <library.h>
 #include <crypto/hashers/hasher.h>
@@ -796,80 +795,51 @@ void nat_traversal_change_port_lookup(struct msg_digest *md, struct state *st)
 	}
 }
 
-struct _new_klips_mapp_nfo {
-		struct sadb_sa *sa;
-		ip_address src, dst;
-		u_int16_t sport, dport;
+struct _new_kernel_mapp_nfo {
+		u_int32_t reqid;
+		u_int32_t spi;
+		ip_address *addr;
 };
 
-static void nat_t_new_klips_mapp (struct state *st, void *data)
+static void nat_t_new_kernel_mapp (struct state *st, void *data)
 {
 	connection_t *c = st->st_connection;
-	struct _new_klips_mapp_nfo *nfo = (struct _new_klips_mapp_nfo *)data;
+	struct _new_kernel_mapp_nfo *nfo = (struct _new_kernel_mapp_nfo *)data;
 
 	if (c != NULL && st->st_esp.present
-	&&  sameaddr(&c->spd.that.host_addr, &(nfo->src))
-	&&  st->st_esp.our_spi == nfo->sa->sadb_sa_spi)
+		&&  nfo->spi == st->st_esp.our_spi
+		&&  nfo->reqid == c->spd.reqid)
 	{
+		u_int16_t port = ntohs(portof(nfo->addr));
+
+		DBG(DBG_NATT, {
+			char text_said[SATOT_BUF];
+			char olda[ADDRTOT_BUF];
+			char newa[ADDRTOT_BUF];
+			ip_said said;
+
+			initsaid(&c->spd.that.host_addr, nfo->spi, SA_ESP, &said);
+			satot(&said, 0, text_said, SATOT_BUF);
+			addrtot(&c->spd.that.host_addr, 0, olda, ADDRTOT_BUF);
+			addrtot(nfo->addr, 0, newa, ADDRTOT_BUF);
+
+			DBG_log("new kernel mapping %s %s:%d %s:%d",
+					text_said, olda, c->spd.that.host_port, newa, port);
+		})
+
 		nat_traversal_new_mapping(&c->spd.that.host_addr, c->spd.that.host_port,
-								  &(nfo->dst), nfo->dport);
+								  nfo->addr, port);
 	}
 }
 
-void process_pfkey_nat_t_new_mapping(
-		struct sadb_msg *msg __attribute__ ((unused)),
-		struct sadb_ext *extensions[SADB_EXT_MAX + 1])
+void process_nat_t_new_mapping(u_int32_t reqid, u_int32_t spi,
+							   ip_address *new_end)
 {
-	struct _new_klips_mapp_nfo nfo;
-	struct sadb_address *srcx = (void *) extensions[SADB_EXT_ADDRESS_SRC];
-	struct sadb_address *dstx = (void *) extensions[SADB_EXT_ADDRESS_DST];
-	struct sockaddr *srca, *dsta;
-	err_t ugh = NULL;
-
-	nfo.sa = (void *) extensions[SADB_EXT_SA];
-
-	if (!nfo.sa || !srcx || !dstx)
-	{
-		plog("SADB_X_NAT_T_NEW_MAPPING message from KLIPS malformed: "
-				"got NULL params");
-		return;
-	}
-
-	srca = ((struct sockaddr *)(void *)&srcx[1]);
-	dsta = ((struct sockaddr *)(void *)&dstx[1]);
-
-	if (srca->sa_family != AF_INET || dsta->sa_family != AF_INET)
-	{
-		ugh = "only AF_INET supported";
-	}
-	else
-	{
-		char text_said[SATOT_BUF];
-		char _srca[ADDRTOT_BUF], _dsta[ADDRTOT_BUF];
-		ip_said said;
-
-		initaddr((const void *) &((const struct sockaddr_in *)srca)->sin_addr,
-						sizeof(((const struct sockaddr_in *)srca)->sin_addr),
-						srca->sa_family, &(nfo.src));
-		nfo.sport = ntohs(((const struct sockaddr_in *)srca)->sin_port);
-		initaddr((const void *) &((const struct sockaddr_in *)dsta)->sin_addr,
-						sizeof(((const struct sockaddr_in *)dsta)->sin_addr),
-						dsta->sa_family, &(nfo.dst));
-		nfo.dport = ntohs(((const struct sockaddr_in *)dsta)->sin_port);
-
-		DBG(DBG_NATT,
-			initsaid(&nfo.src, nfo.sa->sadb_sa_spi, SA_ESP, &said);
-			satot(&said, 0, text_said, SATOT_BUF);
-			addrtot(&nfo.src, 0, _srca, ADDRTOT_BUF);
-			addrtot(&nfo.dst, 0, _dsta, ADDRTOT_BUF);
-			DBG_log("new klips mapping %s %s:%d %s:%d",
-						text_said, _srca, nfo.sport, _dsta, nfo.dport);
-		)
-
-		for_each_state((void *)nat_t_new_klips_mapp, &nfo);
-	}
-
-	if (ugh != NULL)
-		plog("SADB_X_NAT_T_NEW_MAPPING message from KLIPS malformed: %s", ugh);
+	struct _new_kernel_mapp_nfo nfo = {
+		.reqid = reqid,
+		.spi = spi,
+		.addr = new_end,
+	};
+	for_each_state((void *)nat_t_new_kernel_mapp, &nfo);
 }
 

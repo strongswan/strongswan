@@ -1738,6 +1738,11 @@ failed:
 }
 
 /**
+ * Handler for kernel events (called by thread-pool thread)
+ */
+kernel_listener_t *kernel_handler;
+
+/**
  * Data for acquire events
  */
 typedef struct {
@@ -1755,11 +1760,6 @@ void handle_acquire(acquire_data_t *this)
 	record_and_initiate_opportunistic(&this->src, &this->dst, this->proto,
 									  "%acquire");
 }
-
-/**
- * Handler for kernel events (called by thread-pool thread)
- */
-kernel_listener_t *kernel_handler;
 
 METHOD(kernel_listener_t, acquire, bool,
 	   kernel_listener_t *this, u_int32_t reqid,
@@ -1789,6 +1789,41 @@ METHOD(kernel_listener_t, acquire, bool,
 	return TRUE;
 }
 
+/**
+ * Data for mapping events
+ */
+typedef struct {
+	/** reqid, spi of affected SA */
+	u_int32_t reqid, spi;
+	/** new endpont */
+	ip_address new_end;
+} mapping_data_t;
+
+/**
+ * Callback for mapping events (called by main thread)
+ */
+void handle_mapping(mapping_data_t *this)
+{
+	process_nat_t_new_mapping(this->reqid, this->spi, &this->new_end);
+}
+
+
+METHOD(kernel_listener_t, mapping, bool,
+	   kernel_listener_t *this, u_int32_t reqid, u_int32_t spi, host_t *remote)
+{
+	mapping_data_t *data;
+	DBG(DBG_CONTROL,
+		DBG_log("creating mapping event for SA with SPI %.8x and reqid {%u}",
+				spi, reqid));
+	INIT(data,
+		.reqid = reqid,
+		.spi = spi,
+		.new_end = *(ip_address*)remote->get_sockaddr(remote),
+	);
+	pluto->events->queue(pluto->events, (void*)handle_mapping, data, free);
+	return TRUE;
+}
+
 void init_kernel(void)
 {
 	/* register SA types that we can negotiate */
@@ -1797,6 +1832,7 @@ void init_kernel(void)
 
 	INIT(kernel_handler,
 		.acquire = _acquire,
+		.mapping = _mapping,
 	);
 	hydra->kernel_interface->add_listener(hydra->kernel_interface,
 										  kernel_handler);
