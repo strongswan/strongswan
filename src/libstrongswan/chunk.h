@@ -193,12 +193,12 @@ static inline void chunk_clear(chunk_t *chunk)
 /**
  * Allocate a chunk on the heap
  */
-#define chunk_alloc(bytes) ({size_t x = (bytes); chunk_create(malloc(x), x);})
+#define chunk_alloc(bytes) ({size_t x = (bytes); chunk_create(x ? malloc(x) : NULL, x);})
 
 /**
  * Allocate a chunk on the stack
  */
-#define chunk_alloca(bytes) ({size_t x = (bytes); chunk_create(alloca(x), x);})
+#define chunk_alloca(bytes) ({size_t x = (bytes); chunk_create(x ? alloca(x) : NULL, x);})
 
 /**
  * Clone a chunk on heap
@@ -208,7 +208,7 @@ static inline void chunk_clear(chunk_t *chunk)
 /**
  * Clone a chunk on stack
  */
-#define chunk_clonea(chunk) ({chunk_t x = (chunk); chunk_create_clone(alloca(x.len), x);})
+#define chunk_clonea(chunk) ({chunk_t x = (chunk); chunk_create_clone(x.len ? alloca(x.len) : NULL, x);})
 
 /**
  * Concatenate chunks into a chunk on heap
