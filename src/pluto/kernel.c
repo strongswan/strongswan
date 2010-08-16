@@ -1823,8 +1823,6 @@ void init_kernel(void)
 {
 #ifdef KLIPS
 
-	init_pfkey();
-
 #if defined(linux) && defined(KERNEL26_SUPPORT)
 	{
 		bool linux_ipsec = 0;
@@ -1844,8 +1842,8 @@ void init_kernel(void)
 #endif
 
 	/* register SA types that we can negotiate */
-	can_do_IPcomp = FALSE;  /* until we get a response from KLIPS */
-	kernel_ops->pfkey_register();
+	can_do_IPcomp = FALSE;  /* until we get a response from the kernel */
+	pfkey_register();
 
 	INIT(kernel_handler,
 		.acquire = _acquire,

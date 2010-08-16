@@ -1,6 +1,6 @@
-/* declarations of routines that interface with the kernel's pfkey mechanism
- * Copyright (C) 1998-2001  D. Hugh Redelmeier.
- * Copyright (C) 2003  Herbert Xu
+/*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,7 +14,9 @@
  */
 
 #ifdef KLIPS
-extern void init_pfkey(void);
-extern void pfkey_register_proto(unsigned satype, const char *satypename);
-extern void pfkey_close(void);
+/**
+ * Register our capabilities via PF_KEY, also learn the kernel's capabilities,
+ * i.e. the supported algorithms.
+ */
+void pfkey_register();
 #endif
