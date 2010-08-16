@@ -26,8 +26,6 @@ ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
 kernel.c kernel.h \
 kernel_alg.c kernel_alg.h \
-kernel_netlink.c kernel_netlink.h \
-kernel_noklips.c kernel_noklips.h \
 kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
