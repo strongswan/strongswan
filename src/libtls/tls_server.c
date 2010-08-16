@@ -18,6 +18,7 @@
 #include <time.h>
 
 #include <debug.h>
+#include <credentials/certificates/x509.h>
 
 typedef struct private_tls_server_t private_tls_server_t;
 
@@ -489,6 +490,7 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	tls_writer_t *authorities;
 	enumerator_t *enumerator;
 	certificate_t *cert;
+	x509_t *x509;
 	identification_t *id;
 
 	/* currently only RSA signatures are supported */
@@ -504,8 +506,12 @@ static status_t send_certificate_request(private_tls_server_t *this,
 												CERT_X509, KEY_RSA, NULL, TRUE);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
-		id = cert->get_subject(cert);
-		authorities->write_data16(authorities, id->get_encoding(id));
+		x509 = (x509_t*)cert;
+		if (x509->get_flags(x509) & X509_CA)
+		{
+			id = cert->get_subject(cert);
+			authorities->write_data16(authorities, id->get_encoding(id));
+		}
 	}
 	enumerator->destroy(enumerator);
 	writer->write_data16(writer, authorities->get_buf(authorities));
