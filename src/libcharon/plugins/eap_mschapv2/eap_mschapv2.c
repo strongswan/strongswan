@@ -818,7 +818,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
 	char *message, *token, *msg = NULL;
-	int message_len, error = 0, retryable;
+	int message_len, error = 0, retriable;
 	chunk_t challenge = chunk_empty;
 
 	data = in->get_data(in);
@@ -847,7 +847,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		else if (strneq(token, "R=", 2))
 		{
 			token += 2;
-			retryable = atoi(token);
+			retriable = atoi(token);
 		}
 		else if (strneq(token, "C=", 2))
 		{
@@ -880,17 +880,17 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		 mschapv2_error_names, error, sanitize(msg));
 
 	/**
-	 * at this point, if the error is retryable, we MAY retry the authentication
+	 * at this point, if the error is retriable, we MAY retry the authentication
 	 * or MAY send a Change Password packet.
 	 *
-	 * if the error is not retryable (or if we do neither of the above), we
+	 * if the error is not retriable (or if we do neither of the above), we
 	 * SHOULD send a Failure Response packet.
 	 * windows clients don't do that, and since windows server 2008 r2 behaves
 	 * pretty odd if we do send a Failure Response, we just don't send one
 	 * either. windows 7 actually sends a delete notify (which, according to the
 	 * logs, results in an error on windows server 2008 r2).
 	 *
-	 * btw, windows server 2008 r2 does not send non-retryable errors for e.g.
+	 * btw, windows server 2008 r2 does not send non-retriable errors for e.g.
 	 * a disabled account but returns the windows error code in a notify payload
 	 * of type 12345.
 	 */
