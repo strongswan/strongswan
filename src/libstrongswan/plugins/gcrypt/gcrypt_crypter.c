@@ -194,7 +194,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			gcrypt_alg = GCRY_CIPHER_CAST5;
 			break;
 		case ENCR_BLOWFISH:
-			if (key_size != 16)
+			if (key_size != 16 && key_size != 0)
 			{	/* gcrypt currently supports 128 bit blowfish only */
 				return NULL;
 			}
@@ -206,6 +206,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		case ENCR_AES_CBC:
 			switch (key_size)
 			{
+				case 0:
 				case 16:
 					gcrypt_alg = GCRY_CIPHER_AES128;
 					break;
@@ -226,6 +227,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 			switch (key_size)
 			{
 #ifdef HAVE_GCRY_CIPHER_CAMELLIA
+				case 0:
 				case 16:
 					gcrypt_alg = GCRY_CIPHER_CAMELLIA128;
 					break;
@@ -243,6 +245,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		case ENCR_SERPENT_CBC:
 			switch (key_size)
 			{
+				case 0:
 				case 16:
 					gcrypt_alg = GCRY_CIPHER_SERPENT128;
 					break;
@@ -259,6 +262,7 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 		case ENCR_TWOFISH_CBC:
 			switch (key_size)
 			{
+				case 0:
 				case 16:
 					gcrypt_alg = GCRY_CIPHER_TWOFISH128;
 					break;

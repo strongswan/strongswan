@@ -166,7 +166,8 @@ METHOD(crypter_t, destroy, void,
 /*
  * Described in header
  */
-blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo, size_t key_size)
+blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo,
+											size_t key_size)
 {
 	private_blowfish_crypter_t *this;
 
@@ -185,7 +186,7 @@ blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo, size_t 
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
-		.key_size = key_size,
+		.key_size = key_size ?: 16,
 	);
 
 	return &this->public;

@@ -1534,6 +1534,9 @@ aes_crypter_t *aes_crypter_create(encryption_algorithm_t algo, size_t key_size)
 	}
 	switch (key_size)
 	{
+		case 0:
+			key_size = 16;
+			break;
 		case 32:
 		case 24:
 		case 16:

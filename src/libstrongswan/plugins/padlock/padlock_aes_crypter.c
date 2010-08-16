@@ -164,6 +164,9 @@ padlock_aes_crypter_t *padlock_aes_crypter_create(encryption_algorithm_t algo,
 	}
 	switch (key_size)
 	{
+		case 0:
+			key_size = 16;
+			/* FALL */
 		case 16:        /* AES 128 */
 			break;
 		case 24:        /* AES-192 */
