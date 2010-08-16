@@ -670,12 +670,12 @@ METHOD(crypto_factory_t, add_test_vector, void,
 METHOD(crypto_factory_t, destroy, void,
 	private_crypto_factory_t *this)
 {
-	this->crypters->destroy_function(this->crypters, free);
-	this->signers->destroy_function(this->signers, free);
-	this->hashers->destroy_function(this->hashers, free);
-	this->prfs->destroy_function(this->prfs, free);
-	this->rngs->destroy_function(this->rngs, free);
-	this->dhs->destroy_function(this->dhs, free);
+	this->crypters->destroy(this->crypters);
+	this->signers->destroy(this->signers);
+	this->hashers->destroy(this->hashers);
+	this->prfs->destroy(this->prfs);
+	this->rngs->destroy(this->rngs);
+	this->dhs->destroy(this->dhs);
 	this->tester->destroy(this->tester);
 	this->lock->destroy(this->lock);
 	free(this);
