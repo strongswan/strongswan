@@ -22,8 +22,10 @@
 
 typedef struct entry_t entry_t;
 struct entry_t {
-	/** algorithm */
+	/* algorithm */
 	u_int algo;
+	/* benchmarked speed */
+	u_int speed;
 	/* constructor */
 	union {
 		crypter_constructor_t create_crypter;
@@ -32,6 +34,7 @@ struct entry_t {
 		prf_constructor_t create_prf;
 		rng_constructor_t create_rng;
 		dh_constructor_t create_dh;
+		void *create;
 	};
 };
 
@@ -93,6 +96,11 @@ struct private_crypto_factory_t {
 	bool test_on_create;
 
 	/**
+	 * run algorithm benchmark during registration
+	 */
+	bool bench;
+
+	/**
 	 * rwlock to lock access to modules
 	 */
 	rwlock_t *lock;
@@ -114,7 +122,7 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_crypter(this->tester, algo, key_size,
-											entry->create_crypter))
+											entry->create_crypter, NULL))
 			{
 				continue;
 			}
@@ -145,7 +153,7 @@ METHOD(crypto_factory_t, create_signer, signer_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_signer(this->tester, algo,
-										   entry->create_signer))
+										   entry->create_signer, NULL))
 			{
 				continue;
 			}
@@ -177,7 +185,7 @@ METHOD(crypto_factory_t, create_hasher, hasher_t*,
 		{
 			if (this->test_on_create && algo != HASH_PREFERRED &&
 				!this->tester->test_hasher(this->tester, algo,
-										   entry->create_hasher))
+										   entry->create_hasher, NULL))
 			{
 				continue;
 			}
@@ -207,7 +215,8 @@ METHOD(crypto_factory_t, create_prf, prf_t*,
 		if (entry->algo == algo)
 		{
 			if (this->test_on_create &&
-				!this->tester->test_prf(this->tester, algo, entry->create_prf))
+				!this->tester->test_prf(this->tester, algo,
+										entry->create_prf, NULL))
 			{
 				continue;
 			}
@@ -238,7 +247,8 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 		if (entry->algo >= quality && diff > entry->algo - quality)
 		{
 			if (this->test_on_create &&
-				!this->tester->test_rng(this->tester, quality, entry->create_rng))
+				!this->tester->test_rng(this->tester, quality,
+										entry->create_rng, NULL))
 			{
 				continue;
 			}
@@ -284,20 +294,61 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	return diffie_hellman;
 }
 
+/**
+ * Insert an algorithm entry to a list
+ */
+static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
+					  int algo, u_int speed, void *create)
+{
+	entry_t *entry, *current;
+	linked_list_t *tmp;
+	bool inserted = FALSE;
+
+	INIT(entry,
+		.algo = algo,
+		.speed = speed,
+	);
+	entry->create = create;
+
+	this->lock->write_lock(this->lock);
+	if (speed)
+	{	/* insert sorted by speed using a temporary list */
+		tmp = linked_list_create();
+		while (list->remove_first(list, (void**)&current) == SUCCESS)
+		{
+			tmp->insert_last(tmp, current);
+		}
+		while (tmp->remove_first(tmp, (void**)&current) == SUCCESS)
+		{
+			if (!inserted &&
+				current->algo == algo &&
+				current->speed < speed)
+			{
+				list->insert_last(list, entry);
+				inserted = TRUE;
+			}
+			list->insert_last(list, current);
+		}
+		tmp->destroy(tmp);
+	}
+	if (!inserted)
+	{
+		list->insert_last(list, entry);
+	}
+	this->lock->unlock(this->lock);
+}
+
 METHOD(crypto_factory_t, add_crypter, void,
 	private_crypto_factory_t *this, encryption_algorithm_t algo,
 	crypter_constructor_t create)
 {
-	if (!this->test_on_add ||
-		this->tester->test_crypter(this->tester, algo, 0, create))
-	{
-		entry_t *entry = malloc_thing(entry_t);
+	u_int speed = 0;
 
-		entry->algo = algo;
-		entry->create_crypter = create;
-		this->lock->write_lock(this->lock);
-		this->crypters->insert_last(this->crypters, entry);
-		this->lock->unlock(this->lock);
+	if (!this->test_on_add ||
+		this->tester->test_crypter(this->tester, algo, 0, create,
+								   this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->crypters, algo, speed, create);
 	}
 }
 
@@ -325,16 +376,13 @@ METHOD(crypto_factory_t, add_signer, void,
 	private_crypto_factory_t *this, integrity_algorithm_t algo,
 	signer_constructor_t create)
 {
-	if (!this->test_on_add ||
-		this->tester->test_signer(this->tester, algo, create))
-	{
-		entry_t *entry = malloc_thing(entry_t);
+	u_int speed = 0;
 
-		entry->algo = algo;
-		entry->create_signer = create;
-		this->lock->write_lock(this->lock);
-		this->signers->insert_last(this->signers, entry);
-		this->lock->unlock(this->lock);
+	if (!this->test_on_add ||
+		this->tester->test_signer(this->tester, algo, create,
+								  this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->signers, algo, speed, create);
 	}
 }
 
@@ -362,16 +410,13 @@ METHOD(crypto_factory_t, add_hasher, void,
 	private_crypto_factory_t *this, hash_algorithm_t algo,
 	hasher_constructor_t create)
 {
-	if (!this->test_on_add ||
-		this->tester->test_hasher(this->tester, algo, create))
-	{
-		entry_t *entry = malloc_thing(entry_t);
+	u_int speed = 0;
 
-		entry->algo = algo;
-		entry->create_hasher = create;
-		this->lock->write_lock(this->lock);
-		this->hashers->insert_last(this->hashers, entry);
-		this->lock->unlock(this->lock);
+	if (!this->test_on_add ||
+		this->tester->test_hasher(this->tester, algo, create,
+								  this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->hashers, algo, speed, create);
 	}
 }
 
@@ -399,16 +444,13 @@ METHOD(crypto_factory_t, add_prf, void,
 	private_crypto_factory_t *this, pseudo_random_function_t algo,
 	prf_constructor_t create)
 {
-	if (!this->test_on_add ||
-		this->tester->test_prf(this->tester, algo, create))
-	{
-		entry_t *entry = malloc_thing(entry_t);
+	u_int speed = 0;
 
-		entry->algo = algo;
-		entry->create_prf = create;
-		this->lock->write_lock(this->lock);
-		this->prfs->insert_last(this->prfs, entry);
-		this->lock->unlock(this->lock);
+	if (!this->test_on_add ||
+		this->tester->test_prf(this->tester, algo, create,
+							   this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->prfs, algo, speed, create);
 	}
 }
 
@@ -436,16 +478,13 @@ METHOD(crypto_factory_t, add_rng, void,
 	private_crypto_factory_t *this, rng_quality_t quality,
 	rng_constructor_t create)
 {
-	if (!this->test_on_add ||
-		this->tester->test_rng(this->tester, quality, create))
-	{
-		entry_t *entry = malloc_thing(entry_t);
+	u_int speed = 0;
 
-		entry->algo = quality;
-		entry->create_rng = create;
-		this->lock->write_lock(this->lock);
-		this->rngs->insert_last(this->rngs, entry);
-		this->lock->unlock(this->lock);
+	if (!this->test_on_add ||
+		this->tester->test_rng(this->tester, quality, create,
+							   this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->rngs, quality, speed, create);
 	}
 }
 
@@ -473,13 +512,7 @@ METHOD(crypto_factory_t, add_dh, void,
 	private_crypto_factory_t *this, diffie_hellman_group_t group,
 	dh_constructor_t create)
 {
-	entry_t *entry = malloc_thing(entry_t);
-
-	entry->algo = group;
-	entry->create_dh = create;
-	this->lock->write_lock(this->lock);
-	this->dhs->insert_last(this->dhs, entry);
-	this->lock->unlock(this->lock);
+	add_entry(this, this->dhs, group, 0, create);
 }
 
 METHOD(crypto_factory_t, remove_dh, void,
@@ -695,6 +728,8 @@ crypto_factory_t *crypto_factory_create()
 								"libstrongswan.crypto_test.on_add", FALSE),
 		.test_on_create = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.on_create", FALSE),
+		.bench = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.bench", FALSE),
 	);
 
 	return &this->public;

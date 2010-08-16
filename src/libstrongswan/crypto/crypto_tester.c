@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2009 Martin Willi
+ * Copyright (C) 2009-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,6 +16,7 @@
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <time.h>
 
 #include "crypto_tester.h"
 
@@ -67,6 +69,16 @@ struct private_crypto_tester_t {
 	 * should we run RNG_TRUE tests? Enough entropy?
 	 */
 	bool rng_true;
+
+	/**
+	 * time we test each algorithm
+	 */
+	int bench_time;
+
+	/**
+	 * size of buffer we use for benchmarking
+	 */
+	int bench_size;
 };
 
 /**
@@ -85,9 +97,69 @@ static const char* get_name(void *sym)
 	return "unknown";
 }
 
+/**
+ * Start a benchmark timer
+ */
+static void start_timing(struct timespec *start)
+{
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, start);
+}
+
+/**
+ * End a benchmark timer, return ms
+ */
+static u_int end_timing(struct timespec *start)
+{
+	struct timespec end;
+
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	return (end.tv_nsec - start->tv_nsec) / 1000000 +
+			(end.tv_sec - start->tv_sec) * 1000;
+}
+
+/**
+ * Benchmark a crypter
+ */
+static u_int bench_crypter(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, crypter_constructor_t create)
+{
+	crypter_t *crypter;
+
+	crypter = create(alg, 0);
+	if (crypter)
+	{
+		char iv[crypter->get_iv_size(crypter)];
+		char key[crypter->get_key_size(crypter)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		memset(iv, 0x56, sizeof(iv));
+		memset(key, 0x12, sizeof(key));
+		crypter->set_key(crypter, chunk_from_thing(key));
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			crypter->encrypt(crypter, buf, chunk_from_thing(iv), NULL);
+			crypter->decrypt(crypter, buf, chunk_from_thing(iv), NULL);
+			runs++;
+		}
+		free(buf.ptr);
+		crypter->destroy(crypter);
+
+		return runs;
+	}
+	return 0;
+}
+
 METHOD(crypto_tester_t, test_crypter, bool,
 	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
-	crypter_constructor_t create)
+	crypter_constructor_t create, u_int *speed)
 {
 	enumerator_t *enumerator;
 	crypter_test_vector_t *vector;
@@ -168,15 +240,63 @@ METHOD(crypto_tester_t, test_crypter, bool,
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 encryption_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_crypter(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 encryption_algorithm_names, alg, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 encryption_algorithm_names, alg, tested);
+		}
 	}
 	return !failed;
 }
 
+/**
+ * Benchmark a signer
+ */
+static u_int bench_signer(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, signer_constructor_t create)
+{
+	signer_t *signer;
+
+	signer = create(alg);
+	if (signer)
+	{
+		char key[signer->get_key_size(signer)];
+		char mac[signer->get_block_size(signer)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		memset(key, 0x12, sizeof(key));
+		signer->set_key(signer, chunk_from_thing(key));
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			signer->get_signature(signer, buf, mac);
+			signer->verify_signature(signer, buf, chunk_from_thing(mac));
+			runs++;
+		}
+		free(buf.ptr);
+		signer->destroy(signer);
+
+		return runs;
+	}
+	return 0;
+}
+
 METHOD(crypto_tester_t, test_signer, bool,
 	private_crypto_tester_t *this, integrity_algorithm_t alg,
-	signer_constructor_t create)
+	signer_constructor_t create, u_int *speed)
 {
 	enumerator_t *enumerator;
 	signer_test_vector_t *vector;
@@ -270,15 +390,58 @@ METHOD(crypto_tester_t, test_signer, bool,
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 integrity_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_signer(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 integrity_algorithm_names, alg, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 integrity_algorithm_names, alg, tested);
+		}
 	}
 	return !failed;
 }
 
+/**
+ * Benchmark a hasher
+ */
+static u_int bench_hasher(private_crypto_tester_t *this,
+	hash_algorithm_t alg, hasher_constructor_t create)
+{
+	hasher_t *hasher;
+
+	hasher = create(alg);
+	if (hasher)
+	{
+		char hash[hasher->get_hash_size(hasher)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			hasher->get_hash(hasher, buf, hash);
+			runs++;
+		}
+		free(buf.ptr);
+		hasher->destroy(hasher);
+
+		return runs;
+	}
+	return 0;
+}
+
 METHOD(crypto_tester_t, test_hasher, bool,
 	private_crypto_tester_t *this, hash_algorithm_t alg,
-	hasher_constructor_t create)
+	hasher_constructor_t create, u_int *speed)
 {
 	enumerator_t *enumerator;
 	hasher_test_vector_t *vector;
@@ -358,15 +521,58 @@ METHOD(crypto_tester_t, test_hasher, bool,
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 hash_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_hasher(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 hash_algorithm_names, alg, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 hash_algorithm_names, alg, tested);
+		}
 	}
 	return !failed;
 }
 
+/**
+ * Benchmark a PRF
+ */
+static u_int bench_prf(private_crypto_tester_t *this,
+					   pseudo_random_function_t alg, prf_constructor_t create)
+{
+	prf_t *prf;
+
+	prf = create(alg);
+	if (prf)
+	{
+		char bytes[prf->get_block_size(prf)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			prf->get_bytes(prf, buf, bytes);
+			runs++;
+		}
+		free(buf.ptr);
+		prf->destroy(prf);
+
+		return runs;
+	}
+	return 0;
+}
+
 METHOD(crypto_tester_t, test_prf, bool,
 	private_crypto_tester_t *this, pseudo_random_function_t alg,
-	prf_constructor_t create)
+	prf_constructor_t create, u_int *speed)
 {
 	enumerator_t *enumerator;
 	prf_test_vector_t *vector;
@@ -457,15 +663,55 @@ METHOD(crypto_tester_t, test_prf, bool,
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 pseudo_random_function_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_prf(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 pseudo_random_function_names, alg, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 pseudo_random_function_names, alg, tested);
+		}
 	}
 	return !failed;
 }
 
+/**
+ * Benchmark a RNG
+ */
+static u_int bench_rng(private_crypto_tester_t *this,
+					   rng_quality_t quality, rng_constructor_t create)
+{
+	rng_t *rng;
+
+	rng = create(quality);
+	if (rng)
+	{
+		struct timespec start;
+		chunk_t buf;
+		u_int runs;
+
+		runs = 0;
+		buf = chunk_alloc(this->bench_size);
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			rng->get_bytes(rng, buf.len, buf.ptr);
+			runs++;
+		}
+		free(buf.ptr);
+		rng->destroy(rng);
+
+		return runs;
+	}
+	return 0;
+}
+
 METHOD(crypto_tester_t, test_rng, bool,
 	private_crypto_tester_t *this, rng_quality_t quality,
-	rng_constructor_t create)
+	rng_constructor_t create, u_int *speed)
 {
 	enumerator_t *enumerator;
 	rng_test_vector_t *vector;
@@ -539,8 +785,17 @@ METHOD(crypto_tester_t, test_rng, bool,
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 rng_quality_names, quality, tested);
+		if (speed)
+		{
+			*speed = bench_rng(this, quality, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 rng_quality_names, quality, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 rng_quality_names, quality, tested);
+		}
 	}
 	return !failed;
 }
@@ -617,7 +872,14 @@ crypto_tester_t *crypto_tester_create()
 								"libstrongswan.crypto_test.required", FALSE),
 		.rng_true = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.rng_true", FALSE),
+		.bench_time = lib->settings->get_int(lib->settings,
+								"libstrongswan.crypto_test.bench_time", 50),
+		.bench_size = lib->settings->get_int(lib->settings,
+								"libstrongswan.crypto_test.bench_size", 1024),
 	);
+
+	/* enforce a block size of 16, should be fine for all algorithms */
+	this->bench_size = this->bench_size / 16 * 16;
 
 	return &this->public;
 }

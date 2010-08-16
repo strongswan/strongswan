@@ -116,46 +116,52 @@ struct crypto_tester_t {
 	 * @param alg			algorithm to test
 	 * @param key_size		key size to test, 0 for all
 	 * @param create		constructor function for the crypter
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_crypter)(crypto_tester_t *this, encryption_algorithm_t alg,
-						 size_t key_size, crypter_constructor_t create);
+						 size_t key_size, crypter_constructor_t create,
+						 u_int *speed);
 	/**
 	 * Test a signer algorithm.
 	 *
 	 * @param alg			algorithm to test
 	 * @param create		constructor function for the signer
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_signer)(crypto_tester_t *this, integrity_algorithm_t alg,
-						signer_constructor_t create);
+						signer_constructor_t create, u_int *speed);
 	/**
 	 * Test a hasher algorithm.
 	 *
 	 * @param alg			algorithm to test
 	 * @param create		constructor function for the hasher
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_hasher)(crypto_tester_t *this, hash_algorithm_t alg,
-						hasher_constructor_t create);
+						hasher_constructor_t create, u_int *speed);
 	/**
 	 * Test a PRF algorithm.
 	 *
 	 * @param alg			algorithm to test
 	 * @param create		constructor function for the PRF
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_prf)(crypto_tester_t *this, pseudo_random_function_t alg,
-					 prf_constructor_t create);
+					 prf_constructor_t create, u_int *speed);
 	/**
 	 * Test a RNG implementation.
 	 *
 	 * @param alg			algorithm to test
 	 * @param create		constructor function for the RNG
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_rng)(crypto_tester_t *this, rng_quality_t quality,
-					 rng_constructor_t create);
+					 rng_constructor_t create, u_int *speed);
 	/**
 	 * Add a test vector to test a crypter.
 	 *
