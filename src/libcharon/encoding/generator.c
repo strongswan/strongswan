@@ -463,24 +463,15 @@ static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
 	write_bytes_to_buffer(this, value->ptr, value->len);
 }
 
-METHOD(generator_t, write_to_chunk, void,
-	private_generator_t *this, chunk_t *data)
+METHOD(generator_t, get_chunk, chunk_t,
+	private_generator_t *this, u_int32_t **lenpos)
 {
-	u_int32_t len, val;
+	chunk_t data;
 
-	len = get_length(this);
-
-	/* write length into header length field */
-	if (this->header_length_position_offset > 0)
-	{
-		val = htonl(len);
-		write_bytes_to_buffer_at_offset(this, &val, sizeof(u_int32_t),
-										this->header_length_position_offset);
-	}
-	*data = chunk_alloc(len);
-	memcpy(data->ptr, this->buffer, len);
-
-	DBG3(DBG_ENC, "generated data of this generator %B", data);
+	*lenpos = (u_int32_t*)(this->buffer + this->header_length_position_offset);
+	data = chunk_create(this->buffer, get_length(this));
+	DBG3(DBG_ENC, "generated data of this generator %B", &data);
+	return data;
 }
 
 METHOD(generator_t, generate_payload, void,
@@ -864,7 +855,7 @@ generator_t *generator_create()
 
 	INIT(this,
 		.public = {
-			.write_to_chunk = _write_to_chunk,
+			.get_chunk = _get_chunk,
 			.generate_payload = _generate_payload,
 			.destroy = _destroy,
 		},

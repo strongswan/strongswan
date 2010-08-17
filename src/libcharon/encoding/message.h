@@ -32,8 +32,7 @@ typedef struct message_t message_t;
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/notify_payload.h>
 #include <utils/linked_list.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <crypto/aead.h>
 
 /**
  * This class is used to represent an IKEv2-Message.
@@ -201,14 +200,10 @@ struct message_t {
 	 * The body gets not only parsed, but rather it gets verified.
 	 * All payloads are verified if they are allowed to exist in the message
 	 * of this type and if their own structure is ok.
-	 * If there are encrypted payloads, they get decrypted via the supplied
-	 * crypter. Also the message integrity gets verified with the supplied
-	 * signer.
-	 * Crypter/signer can be omitted (by passing NULL) when no encryption
-	 * payload is expected.
+	 * If there are encrypted payloads, they get decrypted and verified using
+	 * the given aead transform (if given).
 	 *
-	 * @param crypter	crypter to decrypt encryption payloads
-	 * @param signer	signer to verifiy a message with an encryption payload
+	 * @param aead		aead transform to verify/decrypt message
 	 * @return
 	 * 					- SUCCESS if parsing successful
 	 * 					- NOT_SUPPORTED if ciritcal unknown payloads found
@@ -216,32 +211,28 @@ struct message_t {
 	 *					- PARSE_ERROR if message parsing failed
 	 * 					- VERIFY_ERROR if message verification failed (bad syntax)
 	 * 					- FAILED if integrity check failed
-	 * 					- INVALID_STATE if crypter/signer not supplied, but needed
+	 * 					- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*parse_body) (message_t *this, crypter_t *crypter, signer_t *signer);
+	status_t (*parse_body) (message_t *this, aead_t *aead);
 
 	/**
 	 * Generates the UDP packet of specific message.
 	 *
 	 * Payloads which must be encrypted are generated first and added to
-	 * an encryption payload. This encryption payload will get encrypted via
-	 * the supplied crypter. Then all other payloads and the header get generated.
-	 * After that, the checksum is added to the encryption payload over the full
-	 * message.
-	 * Crypter/signer can be omitted (by passing NULL) when no encryption
-	 * payload is expected.
-	 * Generation is only done once, multiple calls will just return a packet copy.
+	 * an encryption payload. This encryption payload will get encrypted and
+	 * signed via the supplied aead transform (if given).
+	 * Generation is only done once, multiple calls will just return a copy
+	 * of the packet.
 	 *
-	 * @param crypter	crypter to use when a payload must be encrypted
-	 * @param signer	signer to build a mac
+	 * @param aead		aead transform to encrypt/sign message
 	 * @param packet	copy of generated packet
 	 * @return
 	 * 					- SUCCESS if packet could be generated
 	 * 					- INVALID_STATE if exchange type is currently not set
 	 * 					- NOT_FOUND if no rules found for message generation
-	 * 					- INVALID_STATE if crypter/signer not supplied but needed.
+	 * 					- INVALID_STATE if aead not supplied but needed.
 	 */
-	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
+	status_t (*generate) (message_t *this, aead_t *aead, packet_t **packet);
 
 	/**
 	 * Gets the source host informations.
@@ -331,13 +322,8 @@ struct message_t {
 /**
  * Creates an message_t object from a incoming UDP Packet.
  *
- * @warning the given packet_t object is not copied and gets
- *			destroyed in message_t's destroy call.
- *
- * - exchange_type is set to NOT_SET
- * - original_initiator is set to TRUE
- * - is_request is set to TRUE
- * Call message_t.parse_header afterwards.
+ * The given packet gets owned by the message. The message is uninitialized,
+ * call parse_header() to populate header fields.
  *
  * @param packet		packet_t object which is assigned to message
  * @return 				message_t object

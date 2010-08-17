@@ -882,8 +882,7 @@ METHOD(ike_sa_t, generate_message, status_t,
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	return message->generate(message,
-				this->keymat->get_crypter(this->keymat, FALSE),
-				this->keymat->get_signer(this->keymat, FALSE), packet);
+				this->keymat->get_aead(this->keymat, FALSE), packet);
 }
 
 /**
@@ -1173,8 +1172,7 @@ METHOD(ike_sa_t, process_message, status_t,
 	is_request = message->get_request(message);
 
 	status = message->parse_body(message,
-								 this->keymat->get_crypter(this->keymat, TRUE),
-								 this->keymat->get_signer(this->keymat, TRUE));
+								 this->keymat->get_aead(this->keymat, TRUE));
 	if (status != SUCCESS)
 	{
 

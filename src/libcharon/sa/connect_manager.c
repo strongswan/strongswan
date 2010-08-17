@@ -1064,7 +1064,7 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	DBG2(DBG_IKE, "send ME_CONNECTAUTH %#B", &check->auth);
 
 	packet_t *packet;
-	if (message->generate(message, NULL, NULL, &packet) == SUCCESS)
+	if (message->generate(message, NULL, &packet) == SUCCESS)
 	{
 		charon->sender->send(charon->sender, packet->clone(packet));
 

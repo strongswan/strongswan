@@ -44,18 +44,20 @@ struct generator_t {
 	/**
 	 * Generates a specific payload from given payload object.
 	 *
-	 * Remember: Header and substructures are also handled as payloads.
-	 *
 	 * @param payload 		interface payload_t implementing object
 	 */
 	void (*generate_payload) (generator_t *this,payload_t *payload);
 
 	/**
-	 * Writes all generated data of the generator to a chunk.
+	 * Return a chunk for the currently generated data.
 	 *
-	 * @param data 		chunk to write the data to
+	 * The returned length pointer must be filled in with the length of
+	 * the generated chunk (in network order).
+	 *
+	 * @param lenpos		receives a pointer to fill in length value
+	 * @param return		chunk to internal buffer.
 	 */
-	void (*write_to_chunk) (generator_t *this,chunk_t *data);
+	chunk_t (*get_chunk) (generator_t *this, u_int32_t **lenpos);
 
 	/**
 	 * Destroys a generator_t object.

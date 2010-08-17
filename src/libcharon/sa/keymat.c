@@ -36,24 +36,14 @@ struct private_keymat_t {
 	bool initiator;
 
 	/**
-	 * inbound signer (verify)
+	 * inbound AEAD
 	 */
-	signer_t *signer_in;
+	aead_t *aead_in;
 
 	/**
-	 * outbound signer (sign)
+	 * outbound AEAD
 	 */
-	signer_t *signer_out;
-
-	/**
-	 * inbound crypter (decrypt)
-	 */
-	crypter_t *crypter_in;
-
-	/**
-	 * outbound crypter (encrypt)
-	 */
-	crypter_t *crypter_out;
+	aead_t *aead_out;
 
 	/**
 	 * General purpose PRF
@@ -140,6 +130,99 @@ METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	return lib->crypto->create_dh(lib->crypto, group);;
 }
 
+/**
+ * Derive IKE keys for a combined AEAD algorithm
+ */
+static bool derive_ike_aead(private_keymat_t *this, proposal_t *proposal,
+							prf_plus_t *prf_plus)
+{
+	return FALSE;
+}
+
+/**
+ * Derive IKE keys for traditional encryption and MAC algorithms
+ */
+static bool derive_ike_traditional(private_keymat_t *this, proposal_t *proposal,
+								   prf_plus_t *prf_plus)
+{
+	crypter_t *crypter_i, *crypter_r;
+	signer_t *signer_i, *signer_r;
+	u_int16_t alg, key_size;
+	chunk_t key;
+
+	/* SK_ai/SK_ar used for integrity protection */
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
+	{
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, INTEGRITY_ALGORITHM);
+		return FALSE;
+	}
+	signer_i = lib->crypto->create_signer(lib->crypto, alg);
+	signer_r = lib->crypto->create_signer(lib->crypto, alg);
+	if (signer_i == NULL || signer_r == NULL)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, INTEGRITY_ALGORITHM,
+			 integrity_algorithm_names ,alg);
+		return FALSE;
+	}
+	key_size = signer_i->get_key_size(signer_i);
+
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
+	signer_i->set_key(signer_i, key);
+	chunk_clear(&key);
+
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
+	signer_r->set_key(signer_r, key);
+	chunk_clear(&key);
+
+	/* SK_ei/SK_er used for encryption */
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
+	{
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, ENCRYPTION_ALGORITHM);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
+	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
+	if (crypter_i == NULL || crypter_r == NULL)
+	{
+		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
+			 transform_type_names, ENCRYPTION_ALGORITHM,
+			 encryption_algorithm_names, alg, key_size);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
+	key_size = crypter_i->get_key_size(crypter_i);
+
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
+	crypter_i->set_key(crypter_i, key);
+	chunk_clear(&key);
+
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	DBG4(DBG_IKE, "Sk_er secret %B", &key);
+	crypter_r->set_key(crypter_r, key);
+	chunk_clear(&key);
+
+	if (this->initiator)
+	{
+		this->aead_in = aead_create(crypter_r, signer_r);
+		this->aead_out = aead_create(crypter_i, signer_i);
+	}
+	else
+	{
+		this->aead_in = aead_create(crypter_i, signer_i);
+		this->aead_out = aead_create(crypter_r, signer_r);
+	}
+	return TRUE;
+}
+
 METHOD(keymat_t, derive_ike_keys, bool,
 	private_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
@@ -147,8 +230,6 @@ METHOD(keymat_t, derive_ike_keys, bool,
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
-	crypter_t *crypter_i, *crypter_r;
-	signer_t *signer_i, *signer_r;
 	prf_plus_t *prf_plus;
 	u_int16_t alg, key_size;
 	prf_t *rekey_prf = NULL;
@@ -251,50 +332,6 @@ METHOD(keymat_t, derive_ike_keys, bool,
 	prf_plus->allocate_bytes(prf_plus, key_size, &this->skd);
 	DBG4(DBG_IKE, "Sk_d secret %B", &this->skd);
 
-	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
-	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, INTEGRITY_ALGORITHM);
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
-	}
-	signer_i = lib->crypto->create_signer(lib->crypto, alg);
-	signer_r = lib->crypto->create_signer(lib->crypto, alg);
-	if (signer_i == NULL || signer_r == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, INTEGRITY_ALGORITHM,
-			 integrity_algorithm_names ,alg);
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
-	}
-	key_size = signer_i->get_key_size(signer_i);
-
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
-	signer_i->set_key(signer_i, key);
-	chunk_clear(&key);
-
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
-	signer_r->set_key(signer_r, key);
-	chunk_clear(&key);
-
-	if (this->initiator)
-	{
-		this->signer_in = signer_r;
-		this->signer_out = signer_i;
-	}
-	else
-	{
-		this->signer_in = signer_i;
-		this->signer_out = signer_r;
-	}
-
-	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
 	{
 		DBG1(DBG_IKE, "no %N selected",
@@ -303,38 +340,24 @@ METHOD(keymat_t, derive_ike_keys, bool,
 		DESTROY_IF(rekey_prf);
 		return FALSE;
 	}
-	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
-	if (crypter_i == NULL || crypter_r == NULL)
+
+	if (encryption_algorithm_is_aead(alg))
 	{
-		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
-			 transform_type_names, ENCRYPTION_ALGORITHM,
-			 encryption_algorithm_names, alg, key_size);
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
-	}
-	key_size = crypter_i->get_key_size(crypter_i);
-
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	crypter_i->set_key(crypter_i, key);
-	chunk_clear(&key);
-
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	crypter_r->set_key(crypter_r, key);
-	chunk_clear(&key);
-
-	if (this->initiator)
-	{
-		this->crypter_in = crypter_r;
-		this->crypter_out = crypter_i;
+		if (!derive_ike_aead(this, proposal, prf_plus))
+		{
+			prf_plus->destroy(prf_plus);
+			DESTROY_IF(rekey_prf);
+			return FALSE;
+		}
 	}
 	else
 	{
-		this->crypter_in = crypter_i;
-		this->crypter_out = crypter_r;
+		if (!derive_ike_traditional(this, proposal, prf_plus))
+		{
+			prf_plus->destroy(prf_plus);
+			DESTROY_IF(rekey_prf);
+			return FALSE;
+		}
 	}
 
 	/* SK_pi/SK_pr used for authentication => stored for later */
@@ -479,16 +502,10 @@ METHOD(keymat_t, get_skd, pseudo_random_function_t,
 	return this->prf_alg;
 }
 
-METHOD(keymat_t, get_signer, signer_t*,
+METHOD(keymat_t, get_aead, aead_t*,
 	private_keymat_t *this, bool in)
 {
-	return in ? this->signer_in : this->signer_out;
-}
-
-METHOD(keymat_t, get_crypter, crypter_t*,
-	private_keymat_t *this, bool in)
-{
-	return in ? this->crypter_in : this->crypter_out;
+	return in ? this->aead_in : this->aead_out;
 }
 
 METHOD(keymat_t, get_auth_octets, chunk_t,
@@ -550,10 +567,8 @@ METHOD(keymat_t, get_psk_sig, chunk_t,
 METHOD(keymat_t, destroy, void,
 	private_keymat_t *this)
 {
-	DESTROY_IF(this->signer_in);
-	DESTROY_IF(this->signer_out);
-	DESTROY_IF(this->crypter_in);
-	DESTROY_IF(this->crypter_out);
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
 	DESTROY_IF(this->prf);
 	chunk_clear(&this->skd);
 	chunk_clear(&this->skp_verify);
@@ -574,8 +589,7 @@ keymat_t *keymat_create(bool initiator)
 			.derive_ike_keys = _derive_ike_keys,
 			.derive_child_keys = _derive_child_keys,
 			.get_skd = _get_skd,
-			.get_signer = _get_signer,
-			.get_crypter = _get_crypter,
+			.get_aead = _get_aead,
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
 			.destroy = _destroy,

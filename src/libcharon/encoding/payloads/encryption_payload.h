@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,45 +26,30 @@
 typedef struct encryption_payload_t encryption_payload_t;
 
 #include <library.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <crypto/aead.h>
 #include <encoding/payloads/payload.h>
-#include <utils/linked_list.h>
 
 /**
  * Encrpytion payload length in bytes without IV and following data.
  */
 #define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
 
-
 /**
  * The encryption payload as described in RFC section 3.14.
- *
- * Before any crypt/decrypt/sign/verify operation can occur,
- * the transforms must be set. After that, a parsed encryption payload
- * can be decrypted, which also will parse the contained payloads.
- * Encryption is done the same way, added payloads will get generated
- * and then encrypted.
- * For signature building, there is the FULL packet needed. Meaning it
- * must be builded after generation of all payloads and the encryption
- * of the encryption payload.
- * Signature verificatin is done before decryption.
  */
 struct encryption_payload_t {
+
 	/**
 	 * Implements payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Creates an iterator for all contained payloads.
+	 * Get the payload length.
 	 *
-	 * iterator_t object has to get destroyed by the caller.
-	 *
-	 * @param forward 		iterator direction (TRUE: front to end)
-	 * return				created iterator_t object
+	 * @return			(expected) payload length
 	 */
-	 iterator_t *(*create_payload_iterator) (encryption_payload_t *this, bool forward);
+	size_t (*get_length)(encryption_payload_t *this);
 
 	/**
 	 * Adds a payload to this encryption payload.
@@ -73,89 +59,35 @@ struct encryption_payload_t {
 	void (*add_payload) (encryption_payload_t *this, payload_t *payload);
 
 	/**
-	 * Reove the last payload in the contained payload list.
+	 * Remove the first payload in the list
 	 *
 	 * @param payload		removed payload
-	 * @return
-	 * 						- SUCCESS, or
-	 * 						- NOT_FOUND if list empty
+	 * @return				payload, NULL if none left
 	 */
-	status_t (*remove_first_payload) (encryption_payload_t *this, payload_t **payload);
+	payload_t* (*remove_payload)(encryption_payload_t *this);
 
 	/**
-	 * Get the number of payloads.
+	 * Set the AEAD transform to use.
 	 *
-	 * @return				number of contained payloads
+	 * @param aead		aead transform to use
 	 */
-	size_t (*get_payload_count) (encryption_payload_t *this);
+	void (*set_transform) (encryption_payload_t *this, aead_t *aead);
 
 	/**
-	 * Set transforms to use.
+	 * Generate, encrypt and sign contained payloads.
 	 *
-	 * To decryption, encryption, signature building and verifying,
-	 * the payload needs a crypter and a signer object.
-	 *
-	 * @warning Do NOT call this function again after encryption, since
-	 * the signer must be the same while encrypting and signature building!
-	 *
-	 * @param crypter		crypter_t to use for data de-/encryption
-	 * @param signer		signer_t to use for data signing/verifying
+	 * @param assoc			associated data
+	 * @return				TRUE if encrypted
 	 */
-	void (*set_transforms) (encryption_payload_t *this, crypter_t *crypter, signer_t *signer);
+	bool (*encrypt) (encryption_payload_t *this, chunk_t assoc);
 
 	/**
-	 * Generate and encrypt contained payloads.
+	 * Decrypt, verify and parse contained payloads.
 	 *
-	 * This function generates the content for added payloads
-	 * and encrypts them. Signature is not built, since we need
-	 * additional data (the full message).
-	 *
-	 * @return				SUCCESS, or INVALID_STATE if transforms not set
+	 * @param assoc			associated data
+	 * @return				TRUE if decrypted and verified successfully
 	 */
-	status_t (*encrypt) (encryption_payload_t *this);
-
-	/**
-	 * Decrypt and parse contained payloads.
-	 *
-	 * This function decrypts the contained data. After,
-	 * the payloads are parsed internally and are accessible
-	 * via the iterator.
-	 *
-	 * @return
-	 * 						- SUCCESS, or
-	 * 						- INVALID_STATE if transforms not set, or
-	 * 						- FAILED if data is invalid
-	 */
-	status_t (*decrypt) (encryption_payload_t *this);
-
-	/**
-	 * Build the signature.
-	 *
-	 * The signature is built over the FULL message, so the header
-	 * and every payload (inclusive this one) must already be generated.
-	 * The generated message is supplied via the data paramater.
-	 *
-	 * @param data			chunk contains the already generated message
-	 * @return
-	 * 						- SUCCESS, or
-	 * 						- INVALID_STATE if transforms not set
-	 */
-	status_t (*build_signature) (encryption_payload_t *this, chunk_t data);
-
-	/**
-	 * Verify the signature.
-	 *
-	 * Since the signature is built over the full message, we need
-	 * this data to do the verification. The message data
-	 * is supplied via the data argument.
-	 *
-	 * @param data			chunk contains the message
-	 * @return
-	 * 						- SUCCESS, or
-	 * 						- FAILED if signature invalid, or
-	 * 						- INVALID_STATE if transforms not set
-	 */
-	status_t (*verify_signature) (encryption_payload_t *this, chunk_t data);
+	bool (*decrypt) (encryption_payload_t *this, chunk_t assoc);
 
 	/**
 	 * Destroys an encryption_payload_t object.
@@ -166,7 +98,7 @@ struct encryption_payload_t {
 /**
  * Creates an empty encryption_payload_t object.
  *
- * @return encryption_payload_t object
+ * @return			encryption_payload_t object
  */
 encryption_payload_t *encryption_payload_create(void);
 

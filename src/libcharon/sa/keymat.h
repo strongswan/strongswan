@@ -24,8 +24,7 @@
 #include <library.h>
 #include <utils/identification.h>
 #include <crypto/prfs/prf.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <crypto/aead.h>
 #include <config/proposal.h>
 #include <sa/ike_sa_id.h>
 
@@ -99,21 +98,13 @@ struct keymat_t {
 	 */
 	pseudo_random_function_t (*get_skd)(keymat_t *this, chunk_t *skd);
 
-	/**
-	 * Get a signer to sign/verify IKE messages.
-	 *
-	 * @param in		TRUE for inbound (verify), FALSE for outbound (sign)
-	 * @return			signer
-	 */
-	signer_t* (*get_signer)(keymat_t *this, bool in);
-
 	/*
-	 * Get a crypter to en-/decrypt IKE messages.
+	 * Get a AEAD transform to en-/decrypt and sign/verify IKE messages.
 	 *
 	 * @param in		TRUE for inbound (decrypt), FALSE for outbound (encrypt)
 	 * @return			crypter
 	 */
-	crypter_t* (*get_crypter)(keymat_t *this, bool in);
+	aead_t* (*get_aead)(keymat_t *this, bool in);
 
 	/**
 	 * Generate octets to use for authentication procedure (RFC4306 2.15).

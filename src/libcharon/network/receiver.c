@@ -146,7 +146,7 @@ static void send_notify(message_t *request, notify_type_t type, chunk_t data)
 		ike_sa_id->switch_initiator(ike_sa_id);
 		response->set_ike_sa_id(response, ike_sa_id);
 		response->add_notify(response, FALSE, type, data);
-		if (response->generate(response, NULL, NULL, &packet) == SUCCESS)
+		if (response->generate(response, NULL, &packet) == SUCCESS)
 		{
 			charon->sender->send(charon->sender, packet);
 			response->destroy(response);
