@@ -361,11 +361,10 @@ METHOD(crypto_tester_t, test_signer, bool,
 		/* signature to existing buffer, using append mode */
 		if (data.len > 2)
 		{
-			memset(mac.ptr, 0, mac.len);
 			signer->allocate_signature(signer, chunk_create(data.ptr, 1), NULL);
 			signer->get_signature(signer, chunk_create(data.ptr + 1, 1), NULL);
-			signer->get_signature(signer, chunk_skip(data, 2), mac.ptr);
-			if (!memeq(vector->mac, mac.ptr, mac.len))
+			if (!signer->verify_signature(signer, chunk_skip(data, 2),
+										  chunk_create(vector->mac, mac.len)))
 			{
 				failed = TRUE;
 			}

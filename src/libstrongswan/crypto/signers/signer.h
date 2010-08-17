@@ -106,6 +106,10 @@ struct signer_t {
 	/**
 	 * Verify a signature.
 	 *
+	 * To verify a signature of multiple chunks of data, pass the
+	 * data to get_signature() with a NULL buffer. verify_signature() acts
+	 * as a final call and includes all data fed to get_signature().
+	 *
 	 * @param data		a chunk containing the data to verify
 	 * @param signature	a chunk containing the signature
 	 * @return			TRUE, if signature is valid, FALSE otherwise
