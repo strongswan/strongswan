@@ -42,6 +42,16 @@
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
 
+/**
+ * Generating is done in a data buffer.
+ * This is the start size of this buffer in bytes.
+ */
+#define GENERATOR_DATA_BUFFER_SIZE 500
+
+/**
+ * Number of bytes to increase the buffer, if it is too small.
+ */
+#define GENERATOR_DATA_BUFFER_INCREASE_VALUE 500
 
 typedef struct private_generator_t private_generator_t;
 
@@ -453,36 +463,28 @@ static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
 	write_bytes_to_buffer(this, value->ptr, value->len);
 }
 
-/**
- * Implementation of private_generator_t.write_to_chunk.
- */
-static void write_to_chunk(private_generator_t *this,chunk_t *data)
+METHOD(generator_t, write_to_chunk, void,
+	private_generator_t *this, chunk_t *data)
 {
-	int data_length = get_length(this);
-	u_int32_t header_length_field = data_length;
+	u_int32_t len, val;
+
+	len = get_length(this);
 
 	/* write length into header length field */
 	if (this->header_length_position_offset > 0)
 	{
-		u_int32_t val = htonl(header_length_field);
+		val = htonl(len);
 		write_bytes_to_buffer_at_offset(this, &val, sizeof(u_int32_t),
 										this->header_length_position_offset);
 	}
-
-	if (this->current_bit > 0)
-	{
-		data_length++;
-	}
-	*data = chunk_alloc(data_length);
-	memcpy(data->ptr, this->buffer, data_length);
+	*data = chunk_alloc(len);
+	memcpy(data->ptr, this->buffer, len);
 
 	DBG3(DBG_ENC, "generated data of this generator %B", data);
 }
 
-/**
- * Implementation of private_generator_t.generate_payload.
- */
-static void generate_payload (private_generator_t *this,payload_t *payload)
+METHOD(generator_t, generate_payload, void,
+	private_generator_t *this,payload_t *payload)
 {
 	int i, offset_start;
 	size_t rule_count;
@@ -846,14 +848,11 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 		 this->out_position - this->buffer - offset_start);
 }
 
-/**
- * Implementation of generator_t.destroy.
- */
-static status_t destroy(private_generator_t *this)
+METHOD(generator_t, destroy, void,
+	private_generator_t *this)
 {
 	free(this->buffer);
 	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -863,26 +862,18 @@ generator_t *generator_create()
 {
 	private_generator_t *this;
 
-	this = malloc_thing(private_generator_t);
+	INIT(this,
+		.public = {
+			.write_to_chunk = _write_to_chunk,
+			.generate_payload = _generate_payload,
+			.destroy = _destroy,
+		},
+		.buffer = malloc(GENERATOR_DATA_BUFFER_SIZE),
+	);
 
-	/* initiate public functions */
-	this->public.generate_payload = (void(*)(generator_t*, payload_t *))generate_payload;
-	this->public.destroy = (void(*)(generator_t*)) destroy;
-	this->public.write_to_chunk = (void (*) (generator_t *,chunk_t *))write_to_chunk;
-
-	/* allocate memory for buffer */
-	this->buffer = malloc(GENERATOR_DATA_BUFFER_SIZE);
-
-	/* initiate private variables */
 	this->out_position = this->buffer;
 	this->roof_position = this->buffer + GENERATOR_DATA_BUFFER_SIZE;
-	this->data_struct = NULL;
-	this->current_bit = 0;
-	this->last_payload_length_position_offset = 0;
-	this->header_length_position_offset = 0;
-	this->attribute_format = FALSE;
-	this->attribute_length = 0;
 
-	return &(this->public);
+	return &this->public;
 }
 
