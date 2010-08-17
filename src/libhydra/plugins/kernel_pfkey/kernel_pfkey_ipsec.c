@@ -2137,6 +2137,11 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 												  hydra->daemon),
 	);
 
+	if (streq(hydra->daemon, "pluto"))
+	{	/* no routes for pluto, they are installed via updown script */
+		this->install_routes = FALSE;
+	}
+
 	/* create a PF_KEY socket to communicate with the kernel */
 	this->socket = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
 	if (this->socket <= 0)

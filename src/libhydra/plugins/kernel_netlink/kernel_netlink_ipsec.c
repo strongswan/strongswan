@@ -2171,6 +2171,11 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 												  hydra->daemon),
 	);
 
+	if (streq(hydra->daemon, "pluto"))
+	{	/* no routes for pluto, they are installed via updown script */
+		this->install_routes = FALSE;
+	}
+
 	/* disable lifetimes for allocated SPIs in kernel */
 	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
 	if (fd)
