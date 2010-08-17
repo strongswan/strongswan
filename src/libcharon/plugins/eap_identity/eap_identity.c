@@ -182,15 +182,13 @@ eap_identity_t *eap_identity_create_server(identification_t *server,
 	private_eap_identity_t *this;
 
 	INIT(this,
-		.public =  {
-			.eap_method_interface = {
-				.initiate = _initiate_server,
-				.process = _process_server,
-				.get_type = _get_type,
-				.is_mutual = _is_mutual,
-				.get_msk = _get_msk,
-				.destroy = _destroy,
-			},
+		.public.eap_method_interface = {
+			.initiate = _initiate_server,
+			.process = _process_server,
+			.get_type = _get_type,
+			.is_mutual = _is_mutual,
+			.get_msk = _get_msk,
+			.destroy = _destroy,
 		},
 		.peer = peer->clone(peer),
 		.identity = chunk_empty,
