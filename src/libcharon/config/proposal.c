@@ -254,28 +254,6 @@ static void strip_dh(private_proposal_t *this)
 }
 
 /**
- * Returns true if the given alg is an authenticated encryption algorithm
- */
-static bool is_authenticated_encryption(u_int16_t alg)
-{
-	switch(alg)
-	{
-		case ENCR_AES_CCM_ICV8:
-		case ENCR_AES_CCM_ICV12:
-		case ENCR_AES_CCM_ICV16:
-		case ENCR_AES_GCM_ICV8:
-		case ENCR_AES_GCM_ICV12:
-		case ENCR_AES_GCM_ICV16:
-		case ENCR_CAMELLIA_CCM_ICV8:
-		case ENCR_CAMELLIA_CCM_ICV12:
-		case ENCR_CAMELLIA_CCM_ICV16:
-		case ENCR_NULL_AUTH_AES_GMAC:
-			return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * Find a matching alg/keysize in two linked lists
  */
 static bool select_algo(linked_list_t *first, linked_list_t *second, bool priv,
@@ -366,7 +344,7 @@ static proposal_t *select_proposal(private_proposal_t *this,
 		return NULL;
 	}
 	/* select integrity algorithm */
-	if (!is_authenticated_encryption(algo))
+	if (!encryption_algorithm_is_aead(algo))
 	{
 		if (select_algo(this->integrity_algos, other->integrity_algos, private,
 						&add, &algo, &key_size))
@@ -565,7 +543,7 @@ static void check_proposal(private_proposal_t *this)
 	e = this->encryption_algos->create_enumerator(this->encryption_algos);
 	while (e->enumerate(e, &alg))
 	{
-		if (!is_authenticated_encryption(alg->algorithm))
+		if (!encryption_algorithm_is_aead(alg->algorithm))
 		{
 			all_aead = FALSE;
 			break;

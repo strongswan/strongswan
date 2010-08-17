@@ -159,4 +159,25 @@ int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size)
 	return oid;
 }
 
-
+/*
+ * Described in header.
+ */
+bool encryption_algorithm_is_aead(encryption_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
+		case ENCR_NULL_AUTH_AES_GMAC:
+		case ENCR_CAMELLIA_CCM_ICV8:
+		case ENCR_CAMELLIA_CCM_ICV12:
+		case ENCR_CAMELLIA_CCM_ICV16:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}

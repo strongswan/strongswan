@@ -170,4 +170,12 @@ encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size);
  */
 int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size);
 
+/**
+ * Check if an encryption algorithm identifier is an AEAD algorithm.
+ *
+ * @param alg			algorithm identifier
+ * @return				TRUE if it is an AEAD algorithm
+ */
+bool encryption_algorithm_is_aead(encryption_algorithm_t alg);
+
 #endif /** CRYPTER_H_ @}*/
