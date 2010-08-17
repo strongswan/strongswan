@@ -91,7 +91,6 @@ struct private_encryption_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_encryption_payload_t.
- *
  */
 encoding_rule_t encryption_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -109,7 +108,7 @@ encoding_rule_t encryption_payload_encodings[] = {
 	/* Length of the whole encryption payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_encryption_payload_t, payload_length)	},
 	/* encrypted data, stored in a chunk. contains iv, data, padding */
-	{ ENCRYPTED_DATA,	offsetof(private_encryption_payload_t, encrypted)			},
+	{ ENCRYPTED_DATA,	offsetof(private_encryption_payload_t, encrypted)		},
 };
 
 /*
@@ -131,65 +130,53 @@ encoding_rule_t encryption_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_encryption_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_encryption_payload_t *this)
 {
 	return SUCCESS;
 }
 
-/**
- * Implementation of payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_encryption_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_encryption_payload_t *this, encoding_rule_t **rules,
+	size_t *count)
 {
 	*rules = encryption_payload_encodings;
-	*rule_count = sizeof(encryption_payload_encodings) / sizeof(encoding_rule_t);
+	*count = countof(encryption_payload_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_type(private_encryption_payload_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_encryption_payload_t *this)
 {
 	return ENCRYPTED;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_encryption_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_encryption_payload_t *this)
 {
-	/* returns first contained payload here */
-	return (this->next_payload);
+	return this->next_payload;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_encryption_payload_t *this, payload_type_t type)
+{
+	/* the next payload is set during add */
 }
 
 /**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_encryption_payload_t *this, payload_type_t type)
-{
-	/* set next type is not allowed, since this payload MUST be the last one
-	 * and so nothing is done in here*/
-}
-
-/**
- * (re-)compute the lenght of the whole payload
+ * Compute the lenght of the whole payload
  */
 static void compute_length(private_encryption_payload_t *this)
 {
-	iterator_t *iterator;
-	payload_t *current_payload;
+	enumerator_t *enumerator;
+	payload_t *payload;
 	size_t block_size, length = 0;
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 
-	/* count payload length */
-	while (iterator->iterate(iterator, (void **) &current_payload))
+	enumerator = this->payloads->create_enumerator(this->payloads);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
-		length += current_payload->get_length(current_payload);
+		length += payload->get_length(payload);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	if (this->crypter && this->signer)
 	{
@@ -207,32 +194,27 @@ static void compute_length(private_encryption_payload_t *this)
 	this->payload_length = length;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_encryption_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_encryption_payload_t *this)
 {
 	compute_length(this);
 	return this->payload_length;
 }
 
-/**
- * Implementation of payload_t.create_payload_iterator.
- */
-static  iterator_t *create_payload_iterator (private_encryption_payload_t *this, bool forward)
+METHOD(encryption_payload_t, create_payload_iterator, iterator_t*,
+	private_encryption_payload_t *this, bool forward)
 {
-	return (this->payloads->create_iterator(this->payloads, forward));
+	return this->payloads->create_iterator(this->payloads, forward);
 }
 
-/**
- * Implementation of payload_t.add_payload.
- */
-static void add_payload(private_encryption_payload_t *this, payload_t *payload)
+METHOD(encryption_payload_t, add_payload, void,
+	private_encryption_payload_t *this, payload_t *payload)
 {
 	payload_t *last_payload;
+
 	if (this->payloads->get_count(this->payloads) > 0)
 	{
-		this->payloads->get_last(this->payloads,(void **) &last_payload);
+		this->payloads->get_last(this->payloads, (void **)&last_payload);
 		last_payload->set_next_type(last_payload, payload->get_type(payload));
 	}
 	else
@@ -240,22 +222,18 @@ static void add_payload(private_encryption_payload_t *this, payload_t *payload)
 		this->next_payload = payload->get_type(payload);
 	}
 	payload->set_next_type(payload, NO_PAYLOAD);
-	this->payloads->insert_last(this->payloads, (void*)payload);
+	this->payloads->insert_last(this->payloads, payload);
 	compute_length(this);
 }
 
-/**
- * Implementation of encryption_payload_t.remove_first_payload.
- */
-static status_t remove_first_payload(private_encryption_payload_t *this, payload_t **payload)
+METHOD(encryption_payload_t, remove_first_payload, status_t,
+	private_encryption_payload_t *this, payload_t **payload)
 {
 	return this->payloads->remove_first(this->payloads, (void**)payload);
 }
 
-/**
- * Implementation of encryption_payload_t.get_payload_count.
- */
-static size_t get_payload_count(private_encryption_payload_t *this)
+METHOD(encryption_payload_t, get_payload_count, size_t,
+	private_encryption_payload_t *this)
 {
 	return this->payloads->get_count(this->payloads);
 }
@@ -265,58 +243,42 @@ static size_t get_payload_count(private_encryption_payload_t *this)
  */
 static void generate(private_encryption_payload_t *this)
 {
-	payload_t *current_payload, *next_payload;
+	payload_t *current, *next;
 	generator_t *generator;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 
-	/* recalculate length before generating */
 	compute_length(this);
+	chunk_free(&this->decrypted);
 
-	/* create iterator */
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-
-	/* get first payload */
-	if (iterator->iterate(iterator, (void**)&current_payload))
+	enumerator = this->payloads->create_enumerator(this->payloads);
+	if (enumerator->enumerate(enumerator, &current))
 	{
-		this->next_payload = current_payload->get_type(current_payload);
+		this->next_payload = current->get_type(current);
+
+		generator = generator_create();
+		while (enumerator->enumerate(enumerator, &next))
+		{
+			current->set_next_type(current, next->get_type(next));
+			generator->generate_payload(generator, current);
+			current = next;
+		}
+		enumerator->destroy(enumerator);
+		current->set_next_type(current, NO_PAYLOAD);
+		generator->generate_payload(generator, current);
+
+		generator->write_to_chunk(generator, &this->decrypted);
+		generator->destroy(generator);
+		DBG2(DBG_ENC, "generated content in encryption payload");
 	}
 	else
 	{
-		/* no paylads? */
 		DBG2(DBG_ENC, "generating contained payloads, but none available");
-		free(this->decrypted.ptr);
-		this->decrypted = chunk_empty;
-		iterator->destroy(iterator);
-		return;
 	}
-
-	generator = generator_create();
-
-	/* build all payload, except last */
-	while(iterator->iterate(iterator, (void**)&next_payload))
-	{
-		current_payload->set_next_type(current_payload, next_payload->get_type(next_payload));
-		generator->generate_payload(generator, current_payload);
-		current_payload = next_payload;
-	}
-	iterator->destroy(iterator);
-
-	/* build last payload */
-	current_payload->set_next_type(current_payload, NO_PAYLOAD);
-	generator->generate_payload(generator, current_payload);
-
-	/* free already generated data */
-	free(this->decrypted.ptr);
-
-	generator->write_to_chunk(generator, &(this->decrypted));
-	generator->destroy(generator);
-	DBG2(DBG_ENC, "successfully generated content in encryption payload");
+	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of encryption_payload_t.encrypt.
- */
-static status_t encrypt(private_encryption_payload_t *this)
+METHOD(encryption_payload_t, encrypt, status_t,
+	private_encryption_payload_t *this)
 {
 	chunk_t iv, padding, to_crypt, result;
 	rng_t *rng;
@@ -393,48 +355,39 @@ static status_t parse(private_encryption_payload_t *this)
 {
 	parser_t *parser;
 	status_t status;
-	payload_type_t current_payload_type;
+	payload_type_t type;
 
-	/* build a parser on the decrypted data */
 	parser = parser_create(this->decrypted);
-
-	current_payload_type = this->next_payload;
-	/* parse all payloads */
-	while (current_payload_type != NO_PAYLOAD)
+	type = this->next_payload;
+	while (type != NO_PAYLOAD)
 	{
-		payload_t *current_payload;
+		payload_t *payload;
 
-		status = parser->parse_payload(parser, current_payload_type, (payload_t**)&current_payload);
+		status = parser->parse_payload(parser, type, &payload);
 		if (status != SUCCESS)
 		{
 			parser->destroy(parser);
 			return PARSE_ERROR;
 		}
-
-		status = current_payload->verify(current_payload);
+		status = payload->verify(payload);
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_ENC, "%N verification failed",
-				 payload_type_names, current_payload->get_type(current_payload));
-			current_payload->destroy(current_payload);
+				 payload_type_names, payload->get_type(payload));
+			payload->destroy(payload);
 			parser->destroy(parser);
 			return VERIFY_ERROR;
 		}
-
-		/* get next payload type */
-		current_payload_type = current_payload->get_next_type(current_payload);
-
-		this->payloads->insert_last(this->payloads,current_payload);
+		type = payload->get_next_type(payload);
+		this->payloads->insert_last(this->payloads, payload);
 	}
 	parser->destroy(parser);
-	DBG2(DBG_ENC, "succesfully parsed content of encryption payload");
+	DBG2(DBG_ENC, "parsed content of encryption payload");
 	return SUCCESS;
 }
 
-/**
- * Implementation of encryption_payload_t.encrypt.
- */
-static status_t decrypt(private_encryption_payload_t *this)
+METHOD(encryption_payload_t, decrypt, status_t,
+	private_encryption_payload_t *this)
 {
 	chunk_t iv, concatenated;
 	u_int8_t padding_length;
@@ -502,19 +455,15 @@ static status_t decrypt(private_encryption_payload_t *this)
 	return parse(this);
 }
 
-/**
- * Implementation of encryption_payload_t.set_transforms.
- */
-static void set_transforms(private_encryption_payload_t *this, crypter_t* crypter, signer_t* signer)
+METHOD(encryption_payload_t, set_transforms, void,
+	private_encryption_payload_t *this, crypter_t* crypter, signer_t* signer)
 {
 	this->signer = signer;
 	this->crypter = crypter;
 }
 
-/**
- * Implementation of encryption_payload_t.build_signature.
- */
-static status_t build_signature(private_encryption_payload_t *this, chunk_t data)
+METHOD(encryption_payload_t, build_signature, status_t,
+	private_encryption_payload_t *this, chunk_t data)
 {
 	chunk_t data_without_sig = data;
 	chunk_t sig;
@@ -533,10 +482,8 @@ static status_t build_signature(private_encryption_payload_t *this, chunk_t data
 	return SUCCESS;
 }
 
-/**
- * Implementation of encryption_payload_t.verify_signature.
- */
-static status_t verify_signature(private_encryption_payload_t *this, chunk_t data)
+METHOD(encryption_payload_t, verify_signature, status_t,
+	private_encryption_payload_t *this, chunk_t data)
 {
 	chunk_t sig, data_without_sig;
 	bool valid;
@@ -570,10 +517,8 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	return SUCCESS;
 }
 
-/**
- * Implementation of payload_t.destroy.
- */
-static void destroy(private_encryption_payload_t *this)
+METHOD2(payload_t, encryption_payload_t, destroy, void,
+	private_encryption_payload_t *this)
 {
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
 	free(this->encrypted.ptr);
@@ -586,39 +531,34 @@ static void destroy(private_encryption_payload_t *this)
  */
 encryption_payload_t *encryption_payload_create()
 {
-	private_encryption_payload_t *this = malloc_thing(private_encryption_payload_t);
+	private_encryption_payload_t *this;
 
-	/* payload_t interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.create_payload_iterator = _create_payload_iterator,
+			.add_payload = _add_payload,
+			.remove_first_payload = _remove_first_payload,
+			.get_payload_count = _get_payload_count,
+			.encrypt = _encrypt,
+			.decrypt = _decrypt,
+			.set_transforms = _set_transforms,
+			.build_signature = _build_signature,
+			.verify_signature = _verify_signature,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = ENCRYPTION_PAYLOAD_HEADER_LENGTH,
+		.payloads = linked_list_create(),
+	);
 
-	/* public functions */
-	this->public.create_payload_iterator = (iterator_t * (*) (encryption_payload_t *,bool)) create_payload_iterator;
-	this->public.add_payload = (void (*) (encryption_payload_t *,payload_t *)) add_payload;
-	this->public.remove_first_payload = (status_t (*)(encryption_payload_t*, payload_t **)) remove_first_payload;
-	this->public.get_payload_count = (size_t (*)(encryption_payload_t*)) get_payload_count;
-
-	this->public.encrypt = (status_t (*) (encryption_payload_t *)) encrypt;
-	this->public.decrypt = (status_t (*) (encryption_payload_t *)) decrypt;
-	this->public.set_transforms = (void (*) (encryption_payload_t*,crypter_t*,signer_t*)) set_transforms;
-	this->public.build_signature = (status_t (*) (encryption_payload_t*, chunk_t)) build_signature;
-	this->public.verify_signature = (status_t (*) (encryption_payload_t*, chunk_t)) verify_signature;
-	this->public.destroy = (void (*) (encryption_payload_t *)) destroy;
-
-	/* set default values of the fields */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length = ENCRYPTION_PAYLOAD_HEADER_LENGTH;
-	this->encrypted = chunk_empty;
-	this->decrypted = chunk_empty;
-	this->signer = NULL;
-	this->crypter = NULL;
-	this->payloads = linked_list_create();
-
-	return (&(this->public));
+	return &this->public;
 }
