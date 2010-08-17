@@ -134,23 +134,16 @@ static int lookup_keylen(keylen_entry_t *list, int algo)
 	return 0;
 }
 
-/**
- * Implementation of keymat_t.create_dh
- */
-static diffie_hellman_t* create_dh(private_keymat_t *this,
-								   diffie_hellman_group_t group)
+METHOD(keymat_t, create_dh, diffie_hellman_t*,
+	private_keymat_t *this, diffie_hellman_group_t group)
 {
 	return lib->crypto->create_dh(lib->crypto, group);;
 }
 
-/**
- * Implementation of keymat_t.derive_keys
- */
-static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
-							diffie_hellman_t *dh, chunk_t nonce_i,
-							chunk_t nonce_r, ike_sa_id_t *id,
-							pseudo_random_function_t rekey_function,
-							chunk_t rekey_skd)
+METHOD(keymat_t, derive_ike_keys, bool,
+	private_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
+	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
@@ -374,14 +367,10 @@ static bool derive_ike_keys(private_keymat_t *this, proposal_t *proposal,
 	return TRUE;
 }
 
-/**
- * Implementation of keymat_t.derive_child_keys
- */
-static bool derive_child_keys(private_keymat_t *this,
-							  proposal_t *proposal, diffie_hellman_t *dh,
-							  chunk_t nonce_i, chunk_t nonce_r,
-							  chunk_t *encr_i, chunk_t *integ_i,
-							  chunk_t *encr_r, chunk_t *integ_r)
+METHOD(keymat_t, derive_child_keys, bool,
+	private_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
+	chunk_t *encr_r, chunk_t *integ_r)
 {
 	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty;
@@ -483,37 +472,28 @@ static bool derive_child_keys(private_keymat_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of keymat_t.get_skd
- */
-static pseudo_random_function_t get_skd(private_keymat_t *this, chunk_t *skd)
+METHOD(keymat_t, get_skd, pseudo_random_function_t,
+	private_keymat_t *this, chunk_t *skd)
 {
 	*skd = this->skd;
 	return this->prf_alg;
 }
 
-/**
- * Implementation of keymat_t.get_signer
- */
-static signer_t* get_signer(private_keymat_t *this, bool in)
+METHOD(keymat_t, get_signer, signer_t*,
+	private_keymat_t *this, bool in)
 {
 	return in ? this->signer_in : this->signer_out;
 }
 
-/**
- * Implementation of keymat_t.get_crypter
- */
-static crypter_t* get_crypter(private_keymat_t *this, bool in)
+METHOD(keymat_t, get_crypter, crypter_t*,
+	private_keymat_t *this, bool in)
 {
 	return in ? this->crypter_in : this->crypter_out;
 }
 
-/**
- * Implementation of keymat_t.get_auth_octets
- */
-static chunk_t get_auth_octets(private_keymat_t *this, bool verify,
-							   chunk_t ike_sa_init, chunk_t nonce,
-							   identification_t *id)
+METHOD(keymat_t, get_auth_octets, chunk_t,
+	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+	chunk_t nonce, identification_t *id)
 {
 	chunk_t chunk, idx, octets;
 	chunk_t skp;
@@ -541,12 +521,9 @@ static chunk_t get_auth_octets(private_keymat_t *this, bool verify,
 #define IKEV2_KEY_PAD "Key Pad for IKEv2"
 #define IKEV2_KEY_PAD_LENGTH 17
 
-/**
- * Implementation of keymat_t.get_psk_sig
- */
-static chunk_t get_psk_sig(private_keymat_t *this, bool verify,
-						   chunk_t ike_sa_init, chunk_t nonce, chunk_t secret,
-						   identification_t *id)
+METHOD(keymat_t, get_psk_sig, chunk_t,
+	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+	chunk_t nonce, chunk_t secret, identification_t *id)
 {
 	chunk_t key_pad, key, sig, octets;
 
@@ -570,10 +547,8 @@ static chunk_t get_psk_sig(private_keymat_t *this, bool verify,
 	return sig;
 }
 
-/**
- * Implementation of keymat_t.destroy.
- */
-static void destroy(private_keymat_t *this)
+METHOD(keymat_t, destroy, void,
+	private_keymat_t *this)
 {
 	DESTROY_IF(this->signer_in);
 	DESTROY_IF(this->signer_out);
@@ -591,29 +566,23 @@ static void destroy(private_keymat_t *this)
  */
 keymat_t *keymat_create(bool initiator)
 {
-	private_keymat_t *this = malloc_thing(private_keymat_t);
+	private_keymat_t *this;
 
-	this->public.create_dh = (diffie_hellman_t*(*)(keymat_t*, diffie_hellman_group_t group))create_dh;
-	this->public.derive_ike_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id, pseudo_random_function_t,chunk_t))derive_ike_keys;
-	this->public.derive_child_keys = (bool(*)(keymat_t*, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r))derive_child_keys;
-	this->public.get_skd = (pseudo_random_function_t(*)(keymat_t*, chunk_t *skd))get_skd;
-	this->public.get_signer = (signer_t*(*)(keymat_t*, bool in))get_signer;
-	this->public.get_crypter = (crypter_t*(*)(keymat_t*, bool in))get_crypter;
-	this->public.get_auth_octets = (chunk_t(*)(keymat_t *, bool verify, chunk_t ike_sa_init, chunk_t nonce, identification_t *id))get_auth_octets;
-	this->public.get_psk_sig = (chunk_t(*)(keymat_t*, bool verify, chunk_t ike_sa_init, chunk_t nonce, chunk_t secret, identification_t *id))get_psk_sig;
-	this->public.destroy = (void(*)(keymat_t*))destroy;
-
-	this->initiator = initiator;
-
-	this->signer_in = NULL;
-	this->signer_out = NULL;
-	this->crypter_in = NULL;
-	this->crypter_out = NULL;
-	this->prf = NULL;
-	this->prf_alg = PRF_UNDEFINED;
-	this->skd = chunk_empty;
-	this->skp_verify = chunk_empty;
-	this->skp_build = chunk_empty;
+	INIT(this,
+		.public = {
+			.create_dh = _create_dh,
+			.derive_ike_keys = _derive_ike_keys,
+			.derive_child_keys = _derive_child_keys,
+			.get_skd = _get_skd,
+			.get_signer = _get_signer,
+			.get_crypter = _get_crypter,
+			.get_auth_octets = _get_auth_octets,
+			.get_psk_sig = _get_psk_sig,
+			.destroy = _destroy,
+		},
+		.initiator = initiator,
+		.prf_alg = PRF_UNDEFINED,
+	);
 
 	return &this->public;
 }
