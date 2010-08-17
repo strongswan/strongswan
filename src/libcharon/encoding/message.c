@@ -590,9 +590,9 @@ struct private_message_t {
 };
 
 /**
- * Implementation of private_message_t.set_message_rule.
+ * Set the message rule that applies to this message
  */
-static  status_t set_message_rule(private_message_t *this)
+static status_t set_message_rule(private_message_t *this)
 {
 	int i;
 
@@ -611,7 +611,7 @@ static  status_t set_message_rule(private_message_t *this)
 }
 
 /**
- * Implementation of private_message_t.get_payload_rule.
+ * Look up a payload rule
  */
 static status_t get_payload_rule(private_message_t *this,
 					payload_type_t payload_type, payload_rule_t **payload_rule)
@@ -631,124 +631,93 @@ static status_t get_payload_rule(private_message_t *this,
 	return NOT_FOUND;
 }
 
-/**
- * Implementation of message_t.set_ike_sa_id.
- */
-static void set_ike_sa_id(private_message_t *this,ike_sa_id_t *ike_sa_id)
+METHOD(message_t, set_ike_sa_id, void,
+	private_message_t *this,ike_sa_id_t *ike_sa_id)
 {
 	DESTROY_IF(this->ike_sa_id);
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 }
 
-/**
- * Implementation of message_t.get_ike_sa_id.
- */
-static ike_sa_id_t* get_ike_sa_id(private_message_t *this)
+METHOD(message_t, get_ike_sa_id, ike_sa_id_t*,
+	private_message_t *this)
 {
 	return this->ike_sa_id;
 }
 
-/**
- * Implementation of message_t.set_message_id.
- */
-static void set_message_id(private_message_t *this,u_int32_t message_id)
+METHOD(message_t, set_message_id, void,
+	private_message_t *this,u_int32_t message_id)
 {
 	this->message_id = message_id;
 }
 
-/**
- * Implementation of message_t.get_message_id.
- */
-static u_int32_t get_message_id(private_message_t *this)
+METHOD(message_t, get_message_id, u_int32_t,
+	private_message_t *this)
 {
 	return this->message_id;
 }
 
-/**
- * Implementation of message_t.get_initiator_spi.
- */
-static u_int64_t get_initiator_spi(private_message_t *this)
+METHOD(message_t, get_initiator_spi, u_int64_t,
+	private_message_t *this)
 {
 	return (this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 }
 
-/**
- * Implementation of message_t.get_responder_spi.
- */
-static u_int64_t get_responder_spi(private_message_t *this)
+METHOD(message_t, get_responder_spi, u_int64_t,
+	private_message_t *this)
 {
 	return (this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 }
 
-/**
- * Implementation of message_t.set_major_version.
- */
-static void set_major_version(private_message_t *this,u_int8_t major_version)
+METHOD(message_t, set_major_version, void,
+	private_message_t *this, u_int8_t major_version)
 {
 	this->major_version = major_version;
 }
 
-/**
- * Implementation of message_t.set_major_version.
- */
-static u_int8_t get_major_version(private_message_t *this)
+METHOD(message_t, get_major_version, u_int8_t,
+	private_message_t *this)
 {
 	return this->major_version;
 }
 
-/**
- * Implementation of message_t.set_minor_version.
- */
-static void set_minor_version(private_message_t *this,u_int8_t minor_version)
+METHOD(message_t, set_minor_version, void,
+	private_message_t *this,u_int8_t minor_version)
 {
 	this->minor_version = minor_version;
 }
 
-/**
- * Implementation of message_t.get_minor_version.
- */
-static u_int8_t get_minor_version(private_message_t *this)
+METHOD(message_t, get_minor_version, u_int8_t,
+	private_message_t *this)
 {
 	return this->minor_version;
 }
 
-/**
- * Implementation of message_t.set_exchange_type.
- */
-static void set_exchange_type(private_message_t *this,
-							  exchange_type_t exchange_type)
+METHOD(message_t, set_exchange_type, void,
+	private_message_t *this, exchange_type_t exchange_type)
 {
 	this->exchange_type = exchange_type;
 }
 
-/**
- * Implementation of message_t.get_exchange_type.
- */
-static exchange_type_t get_exchange_type(private_message_t *this)
+METHOD(message_t, get_exchange_type, exchange_type_t,
+	private_message_t *this)
 {
 	return this->exchange_type;
 }
 
-/**
- * Implementation of message_t.get_first_payload_type.
- */
-static payload_type_t get_first_payload_type(private_message_t *this)
+METHOD(message_t, get_first_payload_type, payload_type_t,
+	private_message_t *this)
 {
 	return this->first_payload;
 }
 
-/**
- * Implementation of message_t.set_request.
- */
-static void set_request(private_message_t *this, bool request)
+METHOD(message_t, set_request, void,
+	private_message_t *this, bool request)
 {
 	this->is_request = request;
 }
 
-/**
- * Implementation of message_t.get_request.
- */
-static exchange_type_t get_request(private_message_t *this)
+METHOD(message_t, get_request, bool,
+	private_message_t *this)
 {
 	return this->is_request;
 }
@@ -767,10 +736,8 @@ static bool is_encoded(private_message_t *this)
 	return TRUE;
 }
 
-/**
- * Implementation of message_t.add_payload.
- */
-static void add_payload(private_message_t *this, payload_t *payload)
+METHOD(message_t, add_payload, void,
+	private_message_t *this, payload_t *payload)
 {
 	payload_t *last_payload;
 
@@ -790,11 +757,8 @@ static void add_payload(private_message_t *this, payload_t *payload)
 		 payload_type_names, payload->get_type(payload));
 }
 
-/**
- * Implementation of message_t.add_notify.
- */
-static void add_notify(private_message_t *this, bool flush, notify_type_t type,
-					   chunk_t data)
+METHOD(message_t, add_notify, void,
+	private_message_t *this, bool flush, notify_type_t type, chunk_t data)
 {
 	notify_payload_t *notify;
 	payload_t *payload;
@@ -813,50 +777,38 @@ static void add_notify(private_message_t *this, bool flush, notify_type_t type,
 	add_payload(this, (payload_t*)notify);
 }
 
-/**
- * Implementation of message_t.set_source.
- */
-static void set_source(private_message_t *this, host_t *host)
+METHOD(message_t, set_source, void,
+	private_message_t *this, host_t *host)
 {
 	this->packet->set_source(this->packet, host);
 }
 
-/**
- * Implementation of message_t.set_destination.
- */
-static void set_destination(private_message_t *this, host_t *host)
+METHOD(message_t, set_destination, void,
+	private_message_t *this, host_t *host)
 {
 	this->packet->set_destination(this->packet, host);
 }
 
-/**
- * Implementation of message_t.get_source.
- */
-static host_t* get_source(private_message_t *this)
+METHOD(message_t, get_source, host_t*,
+	private_message_t *this)
 {
 	return this->packet->get_source(this->packet);
 }
 
-/**
- * Implementation of message_t.get_destination.
- */
-static host_t * get_destination(private_message_t *this)
+METHOD(message_t, get_destination, host_t*,
+	private_message_t *this)
 {
 	return this->packet->get_destination(this->packet);
 }
 
-/**
- * Implementation of message_t.create_payload_enumerator.
- */
-static enumerator_t *create_payload_enumerator(private_message_t *this)
+METHOD(message_t, create_payload_enumerator, enumerator_t*,
+	private_message_t *this)
 {
 	return this->payloads->create_enumerator(this->payloads);
 }
 
-/**
- * Implementation of message_t.get_payload.
- */
-static payload_t *get_payload(private_message_t *this, payload_type_t type)
+METHOD(message_t, get_payload, payload_t*,
+	private_message_t *this, payload_type_t type)
 {
 	payload_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -874,10 +826,8 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
 	return found;
 }
 
-/**
- * Implementation of message_t.get_notify
- */
-static notify_payload_t* get_notify(private_message_t *this, notify_type_t type)
+METHOD(message_t, get_notify, notify_payload_t*,
+	private_message_t *this, notify_type_t type)
 {
 	enumerator_t *enumerator;
 	notify_payload_t *notify = NULL;
@@ -1077,7 +1027,7 @@ static void order_payloads(private_message_t *this)
 }
 
 /**
- * Implementation of private_message_t.encrypt_payloads.
+ * Encrypt payload to an encryption payload
  */
 static status_t encrypt_payloads(private_message_t *this,
 								 crypter_t *crypter, signer_t* signer)
@@ -1152,11 +1102,9 @@ static status_t encrypt_payloads(private_message_t *this,
 	return status;
 }
 
-/**
- * Implementation of message_t.generate.
- */
-static status_t generate(private_message_t *this, crypter_t *crypter,
-						 signer_t* signer, packet_t **packet)
+METHOD(message_t, generate, status_t,
+	private_message_t *this, crypter_t *crypter, signer_t* signer,
+	packet_t **packet)
 {
 	generator_t *generator;
 	ike_header_t *ike_header;
@@ -1266,10 +1214,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter,
 	return SUCCESS;
 }
 
-/**
- * Implementation of message_t.get_packet.
- */
-static packet_t *get_packet(private_message_t *this)
+METHOD(message_t, get_packet, packet_t*,
+	private_message_t *this)
 {
 	if (this->packet == NULL)
 	{
@@ -1278,10 +1224,8 @@ static packet_t *get_packet(private_message_t *this)
 	return this->packet->clone(this->packet);
 }
 
-/**
- * Implementation of message_t.get_packet_data.
- */
-static chunk_t get_packet_data(private_message_t *this)
+METHOD(message_t, get_packet_data, chunk_t,
+	private_message_t *this)
 {
 	if (this->packet == NULL)
 	{
@@ -1290,10 +1234,8 @@ static chunk_t get_packet_data(private_message_t *this)
 	return chunk_clone(this->packet->get_data(this->packet));
 }
 
-/**
- * Implementation of message_t.parse_header.
- */
-static status_t parse_header(private_message_t *this)
+METHOD(message_t, parse_header, status_t,
+	private_message_t *this)
 {
 	ike_header_t *ike_header;
 	status_t status;
@@ -1355,10 +1297,10 @@ static status_t parse_header(private_message_t *this)
 }
 
 /**
- * Implementation of private_message_t.decrypt_and_verify_payloads.
+ * Decrypt payload from the encryption payload
  */
-static status_t decrypt_payloads(private_message_t *this, crypter_t *crypter,
-								 signer_t* signer)
+static status_t decrypt_payloads(private_message_t *this,
+								 crypter_t *crypter, signer_t* signer)
 {
 	bool current_payload_was_encrypted = FALSE;
 	payload_t *previous_payload = NULL;
@@ -1513,7 +1455,7 @@ static status_t decrypt_payloads(private_message_t *this, crypter_t *crypter,
 }
 
 /**
- * Implementation of private_message_t.verify.
+ * Verify a message and all payload according to message/payload rules
  */
 static status_t verify(private_message_t *this)
 {
@@ -1590,11 +1532,8 @@ static status_t verify(private_message_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of message_t.parse_body.
- */
-static status_t parse_body(private_message_t *this, crypter_t *crypter,
-						   signer_t *signer)
+METHOD(message_t, parse_body, status_t,
+	private_message_t *this, crypter_t *crypter, signer_t *signer)
 {
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type;
@@ -1674,10 +1613,8 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter,
 	return SUCCESS;
 }
 
-/**
- * Implementation of message_t.destroy.
- */
-static void destroy (private_message_t *this)
+METHOD(message_t, destroy, void,
+	private_message_t *this)
 {
 	DESTROY_IF(this->ike_sa_id);
 	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
@@ -1691,58 +1628,48 @@ static void destroy (private_message_t *this)
  */
 message_t *message_create_from_packet(packet_t *packet)
 {
-	private_message_t *this = malloc_thing(private_message_t);
+	private_message_t *this;
 
-	/* public functions */
-	this->public.set_major_version = (void(*)(message_t*, u_int8_t))set_major_version;
-	this->public.get_major_version = (u_int8_t(*)(message_t*))get_major_version;
-	this->public.set_minor_version = (void(*)(message_t*, u_int8_t))set_minor_version;
-	this->public.get_minor_version = (u_int8_t(*)(message_t*))get_minor_version;
-	this->public.set_message_id = (void(*)(message_t*, u_int32_t))set_message_id;
-	this->public.get_message_id = (u_int32_t(*)(message_t*))get_message_id;
-	this->public.get_initiator_spi = (u_int64_t(*)(message_t*))get_initiator_spi;
-	this->public.get_responder_spi = (u_int64_t(*)(message_t*))get_responder_spi;
-	this->public.set_ike_sa_id = (void(*)(message_t*, ike_sa_id_t *))set_ike_sa_id;
-	this->public.get_ike_sa_id = (ike_sa_id_t*(*)(message_t*))get_ike_sa_id;
-	this->public.set_exchange_type = (void(*)(message_t*, exchange_type_t))set_exchange_type;
-	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
-	this->public.get_first_payload_type = (payload_type_t(*)(message_t*))get_first_payload_type;
-	this->public.set_request = (void(*)(message_t*, bool))set_request;
-	this->public.get_request = (bool(*)(message_t*))get_request;
-	this->public.add_payload = (void(*)(message_t*,payload_t*))add_payload;
-	this->public.add_notify = (void(*)(message_t*,bool,notify_type_t,chunk_t))add_notify;
-	this->public.generate = (status_t (*) (message_t *,crypter_t*,signer_t*,packet_t**)) generate;
-	this->public.set_source = (void (*) (message_t*,host_t*)) set_source;
-	this->public.get_source = (host_t * (*) (message_t*)) get_source;
-	this->public.set_destination = (void (*) (message_t*,host_t*)) set_destination;
-	this->public.get_destination = (host_t * (*) (message_t*)) get_destination;
-	this->public.create_payload_enumerator = (enumerator_t * (*) (message_t *)) create_payload_enumerator;
-	this->public.get_payload = (payload_t * (*) (message_t *, payload_type_t)) get_payload;
-	this->public.get_notify = (notify_payload_t*(*)(message_t*, notify_type_t type))get_notify;
-	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
-	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
-	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
-	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
-	this->public.destroy = (void(*)(message_t*))destroy;
-
-	/* private values */
-	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
-	this->is_request = TRUE;
-	this->ike_sa_id = NULL;
-	this->first_payload = NO_PAYLOAD;
-	this->message_id = 0;
-
-	/* private values */
-	if (packet == NULL)
-	{
-		packet = packet_create();
-	}
-	this->message_rule = NULL;
-	this->packet = packet;
-	this->payloads = linked_list_create();
-
-	/* parser is created from data of packet */
-	this->parser = parser_create(this->packet->get_data(this->packet));
+	INIT(this,
+		.public = {
+			.set_major_version = _set_major_version,
+			.get_major_version = _get_major_version,
+			.set_minor_version = _set_minor_version,
+			.get_minor_version = _get_minor_version,
+			.set_message_id = _set_message_id,
+			.get_message_id = _get_message_id,
+			.get_initiator_spi = _get_initiator_spi,
+			.get_responder_spi = _get_responder_spi,
+			.set_ike_sa_id = _set_ike_sa_id,
+			.get_ike_sa_id = _get_ike_sa_id,
+			.set_exchange_type = _set_exchange_type,
+			.get_exchange_type = _get_exchange_type,
+			.get_first_payload_type = _get_first_payload_type,
+			.set_request = _set_request,
+			.get_request = _get_request,
+			.add_payload = _add_payload,
+			.add_notify = _add_notify,
+			.generate = _generate,
+			.set_source = _set_source,
+			.get_source = _get_source,
+			.set_destination = _set_destination,
+			.get_destination = _get_destination,
+			.create_payload_enumerator = _create_payload_enumerator,
+			.get_payload = _get_payload,
+			.get_notify = _get_notify,
+			.parse_header = _parse_header,
+			.parse_body = _parse_body,
+			.get_packet = _get_packet,
+			.get_packet_data = _get_packet_data,
+			.destroy = _destroy,
+		},
+		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
+		.is_request = TRUE,
+		.first_payload = NO_PAYLOAD,
+		.packet = packet,
+		.payloads = linked_list_create(),
+		.parser = parser_create(packet->get_data(packet)),
+	);
 
 	return (&this->public);
 }
@@ -1752,6 +1679,6 @@ message_t *message_create_from_packet(packet_t *packet)
  */
 message_t *message_create()
 {
-	return message_create_from_packet(NULL);
+	return message_create_from_packet(packet_create());
 }
 
