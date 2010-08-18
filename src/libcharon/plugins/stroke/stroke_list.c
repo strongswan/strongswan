@@ -1073,6 +1073,13 @@ static void list_algs(FILE *out)
 		fprintf(out, "%N ", integrity_algorithm_names, integrity);
 	}
 	enumerator->destroy(enumerator);
+	fprintf(out, "\n  aead:       ");
+	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption))
+	{
+		fprintf(out, "%N ", encryption_algorithm_names, encryption);
+	}
+	enumerator->destroy(enumerator);
 	fprintf(out, "\n  hasher:     ");
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &hash))
