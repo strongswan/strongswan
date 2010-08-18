@@ -41,6 +41,11 @@ struct private_crypto_tester_t {
 	linked_list_t *crypter;
 
 	/**
+	 * List of aead test vectors
+	 */
+	linked_list_t *aead;
+
+	/**
 	 * List of signer test vectors
 	 */
 	linked_list_t *signer;
@@ -243,6 +248,162 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		if (speed)
 		{
 			*speed = bench_crypter(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
+				 encryption_algorithm_names, alg, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
+				 encryption_algorithm_names, alg, tested);
+		}
+	}
+	return !failed;
+}
+
+/**
+ * Benchmark an aead transform
+ */
+static u_int bench_aead(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, aead_constructor_t create)
+{
+	aead_t *aead;
+
+	aead = create(alg, 0);
+	if (aead)
+	{
+		char iv[aead->get_iv_size(aead)];
+		char key[aead->get_key_size(aead)];
+		char assoc[4];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+		size_t icv;
+
+		memset(iv, 0x56, sizeof(iv));
+		memset(key, 0x12, sizeof(key));
+		memset(assoc, 0x78, sizeof(assoc));
+		aead->set_key(aead, chunk_from_thing(key));
+		icv = aead->get_icv_size(aead);
+
+		buf = chunk_alloc(this->bench_size + icv);
+		memset(buf.ptr, 0x34, buf.len);
+		buf.len -= icv;
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			aead->encrypt(aead, buf, chunk_from_thing(assoc),
+						  chunk_from_thing(iv), NULL);
+			aead->decrypt(aead, chunk_create(buf.ptr, buf.len + icv),
+						  chunk_from_thing(assoc), chunk_from_thing(iv), NULL);
+			runs++;
+		}
+		free(buf.ptr);
+		aead->destroy(aead);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_aead, bool,
+	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
+	aead_constructor_t create, u_int *speed)
+{
+	enumerator_t *enumerator;
+	aead_test_vector_t *vector;
+	bool failed = FALSE;
+	u_int tested = 0;
+
+	enumerator = this->aead->create_enumerator(this->aead);
+	while (enumerator->enumerate(enumerator, &vector))
+	{
+		aead_t *aead;
+		chunk_t key, plain, cipher, iv, assoc;
+		size_t icv;
+
+		if (vector->alg != alg)
+		{
+			continue;
+		}
+		if (key_size && key_size != vector->key_size)
+		{	/* test only vectors with a specific key size, if key size given */
+			continue;
+		}
+		aead = create(alg, vector->key_size);
+		if (!aead)
+		{	/* key size not supported... */
+			continue;
+		}
+
+		failed = FALSE;
+		tested++;
+
+		key = chunk_create(vector->key, aead->get_key_size(aead));
+		aead->set_key(aead, key);
+		iv = chunk_create(vector->iv, aead->get_iv_size(aead));
+		assoc = chunk_create(vector->adata, vector->alen);
+		icv = aead->get_icv_size(aead);
+
+		/* allocated encryption */
+		plain = chunk_create(vector->plain, vector->len);
+		aead->encrypt(aead, plain, assoc, iv, &cipher);
+		if (!memeq(vector->cipher, cipher.ptr, cipher.len))
+		{
+			failed = TRUE;
+		}
+		/* inline decryption */
+		if (!aead->decrypt(aead, cipher, assoc, iv, NULL))
+		{
+			failed = TRUE;
+		}
+		if (!memeq(vector->plain, cipher.ptr, cipher.len - icv))
+		{
+			failed = TRUE;
+		}
+		free(cipher.ptr);
+		/* allocated decryption */
+		cipher = chunk_create(vector->cipher, vector->len + icv);
+		if (!aead->decrypt(aead, cipher, assoc, iv, &plain))
+		{
+			plain = chunk_empty;
+			failed = TRUE;
+		}
+		else if (!memeq(vector->plain, plain.ptr, plain.len))
+		{
+			failed = TRUE;
+		}
+		plain.ptr = realloc(plain.ptr, plain.len + icv);
+		/* inline encryption */
+		aead->encrypt(aead, plain, assoc, iv, NULL);
+		if (!memeq(vector->cipher, plain.ptr, plain.len + icv))
+		{
+			failed = TRUE;
+		}
+		free(plain.ptr);
+
+		aead->destroy(aead);
+		if (failed)
+		{
+			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
+				 encryption_algorithm_names, alg, get_name(vector));
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!tested)
+	{
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
+			 this->required ? "disabled" : "enabled ",
+			 encryption_algorithm_names, alg);
+		return !this->required;
+	}
+	if (!failed)
+	{
+		if (speed)
+		{
+			*speed = bench_aead(this, alg, create);
 			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
 				 encryption_algorithm_names, alg, tested, *speed);
 		}
@@ -805,6 +966,12 @@ METHOD(crypto_tester_t, add_crypter_vector, void,
 	this->crypter->insert_last(this->crypter, vector);
 }
 
+METHOD(crypto_tester_t, add_aead_vector, void,
+	private_crypto_tester_t *this, aead_test_vector_t *vector)
+{
+	this->aead->insert_last(this->aead, vector);
+}
+
 METHOD(crypto_tester_t, add_signer_vector, void,
 	private_crypto_tester_t *this, signer_test_vector_t *vector)
 {
@@ -833,6 +1000,7 @@ METHOD(crypto_tester_t, destroy, void,
 	private_crypto_tester_t *this)
 {
 	this->crypter->destroy(this->crypter);
+	this->aead->destroy(this->aead);
 	this->signer->destroy(this->signer);
 	this->hasher->destroy(this->hasher);
 	this->prf->destroy(this->prf);
@@ -850,11 +1018,13 @@ crypto_tester_t *crypto_tester_create()
 	INIT(this,
 		.public = {
 			.test_crypter = _test_crypter,
+			.test_aead = _test_aead,
 			.test_signer = _test_signer,
 			.test_hasher = _test_hasher,
 			.test_prf = _test_prf,
 			.test_rng = _test_rng,
 			.add_crypter_vector = _add_crypter_vector,
+			.add_aead_vector = _add_aead_vector,
 			.add_signer_vector = _add_signer_vector,
 			.add_hasher_vector = _add_hasher_vector,
 			.add_prf_vector = _add_prf_vector,
@@ -862,6 +1032,7 @@ crypto_tester_t *crypto_tester_create()
 			.destroy = _destroy,
 		},
 		.crypter = linked_list_create(),
+		.aead = linked_list_create(),
 		.signer = linked_list_create(),
 		.hasher = linked_list_create(),
 		.prf = linked_list_create(),

@@ -26,6 +26,7 @@ typedef struct crypto_tester_t crypto_tester_t;
 #include <crypto/crypto_factory.h>
 
 typedef struct crypter_test_vector_t crypter_test_vector_t;
+typedef struct aead_test_vector_t aead_test_vector_t;
 typedef struct signer_test_vector_t signer_test_vector_t;
 typedef struct hasher_test_vector_t hasher_test_vector_t;
 typedef struct prf_test_vector_t prf_test_vector_t;
@@ -41,6 +42,27 @@ struct crypter_test_vector_t {
 	/** initialization vector, using crypters blocksize bytes */
 	u_char *iv;
 	/** length of plain and cipher text */
+	size_t len;
+	/** plain text */
+	u_char *plain;
+	/** cipher text */
+	u_char *cipher;
+};
+
+struct aead_test_vector_t {
+	/** encryption algorithm this vector tests */
+	encryption_algorithm_t alg;
+	/** key length to use, in bytes */
+	size_t key_size;
+	/** encryption key of test vector */
+	u_char *key;
+	/** initialization vector, using crypters blocksize bytes */
+	u_char *iv;
+	/** length of associated data */
+	size_t alen;
+	/** associated data */
+	u_char *adata;
+	/** length of plain text */
 	size_t len;
 	/** plain text */
 	u_char *plain;
@@ -114,13 +136,26 @@ struct crypto_tester_t {
 	 * Test a crypter algorithm, optionally using a specified key size.
 	 *
 	 * @param alg			algorithm to test
-	 * @param key_size		key size to test, 0 for all
+	 * @param key_size		key size to test, 0 for default
 	 * @param create		constructor function for the crypter
 	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_crypter)(crypto_tester_t *this, encryption_algorithm_t alg,
 						 size_t key_size, crypter_constructor_t create,
+						 u_int *speed);
+
+	/**
+	 * Test an aead algorithm, optionally using a specified key size.
+	 *
+	 * @param alg			algorithm to test
+	 * @param key_size		key size to test, 0 for default
+	 * @param create		constructor function for the aead transform
+	 * @param speed			speed test result, NULL to omit
+	 * @return				TRUE if test passed
+	 */
+	bool (*test_aead)(crypto_tester_t *this, encryption_algorithm_t alg,
+						 size_t key_size, aead_constructor_t create,
 						 u_int *speed);
 	/**
 	 * Test a signer algorithm.
@@ -169,6 +204,13 @@ struct crypto_tester_t {
 	 */
 	void (*add_crypter_vector)(crypto_tester_t *this,
 							   crypter_test_vector_t *vector);
+	/**
+	 * Add a test vector to test an aead transform.
+	 *
+	 * @param vector		pointer to test vector
+	 */
+	void (*add_aead_vector)(crypto_tester_t *this,
+							aead_test_vector_t *vector);
 	/**
 	 * Add a test vector to test a signer.
 	 *
