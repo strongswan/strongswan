@@ -331,6 +331,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CCM
+  SUBDIRS += plugins/ccm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ccm/libstrongswan-ccm.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
