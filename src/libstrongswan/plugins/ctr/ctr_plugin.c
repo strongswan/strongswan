@@ -49,7 +49,11 @@ plugin_t *ctr_plugin_create()
 	private_ctr_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR,

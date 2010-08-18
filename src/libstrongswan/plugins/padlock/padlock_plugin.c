@@ -134,7 +134,11 @@ plugin_t *padlock_plugin_create()
 	private_padlock_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.features = get_padlock_features(),
 	);
 

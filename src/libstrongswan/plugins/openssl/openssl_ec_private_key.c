@@ -286,19 +286,21 @@ static private_openssl_ec_private_key_t *create_empty(void)
 	private_openssl_ec_private_key_t *this;
 
 	INIT(this,
-		.public.key = {
-			.get_type = _get_type,
-			.sign = _sign,
-			.decrypt = _decrypt,
-			.get_keysize = _get_keysize,
-			.get_public_key = _get_public_key,
-			.equals = private_key_equals,
-			.belongs_to = private_key_belongs_to,
-			.get_fingerprint = _get_fingerprint,
-			.has_fingerprint = private_key_has_fingerprint,
-			.get_encoding = _get_encoding,
-			.get_ref = _get_ref,
-			.destroy = _destroy,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.sign = _sign,
+				.decrypt = _decrypt,
+				.get_keysize = _get_keysize,
+				.get_public_key = _get_public_key,
+				.equals = private_key_equals,
+				.belongs_to = private_key_belongs_to,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = private_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
 		},
 		.ref = 1,
 	);

@@ -149,14 +149,16 @@ ctr_ipsec_crypter_t *ctr_ipsec_crypter_create(encryption_algorithm_t algo,
 	}
 
 	INIT(this,
-		.public.crypter = {
-			.encrypt = _crypt,
-			.decrypt = _crypt,
-			.get_block_size = _get_block_size,
-			.get_iv_size = _get_iv_size,
-			.get_key_size = _get_key_size,
-			.set_key = _set_key,
-			.destroy = _destroy,
+		.public = {
+			.crypter = {
+				.encrypt = _crypt,
+				.decrypt = _crypt,
+				.get_block_size = _get_block_size,
+				.get_iv_size = _get_iv_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
 		},
 		.crypter = lib->crypto->create_crypter(lib->crypto, algo, key_size),
 	);

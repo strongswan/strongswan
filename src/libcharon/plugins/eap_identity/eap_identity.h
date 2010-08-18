@@ -33,7 +33,7 @@ struct eap_identity_t {
 	/**
 	 * Implemented eap_method_t interface.
 	 */
-	eap_method_t eap_method_interface;
+	eap_method_t eap_method;
 };
 
 /**

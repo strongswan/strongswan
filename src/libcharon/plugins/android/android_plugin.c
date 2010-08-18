@@ -79,8 +79,10 @@ plugin_t *android_plugin_create()
 	private_android_plugin_t *this;
 
 	INIT(this,
-		.public.plugin = {
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
 		},
 		.logger = android_logger_create(),
 		.handler = android_handler_create(),

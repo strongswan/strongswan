@@ -1563,11 +1563,13 @@ des_crypter_t *des_crypter_create(encryption_algorithm_t algo)
 	private_des_crypter_t *this;
 
 	INIT(this,
-		.public.crypter = {
-			.get_block_size = _get_block_size,
-			.get_iv_size = _get_iv_size,
-			.get_key_size = _get_key_size,
-			.destroy = _destroy,
+		.public = {
+			.crypter = {
+				.get_block_size = _get_block_size,
+				.get_iv_size = _get_iv_size,
+				.get_key_size = _get_key_size,
+				.destroy = _destroy,
+			},
 		},
 	);
 

@@ -305,7 +305,7 @@ static u_int policy_hash(policy_entry_t *key)
  */
 static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 {
-	return memeq(&key->sel, &other_key->sel, 
+	return memeq(&key->sel, &other_key->sel,
 				 sizeof(struct xfrm_selector) + sizeof(u_int32_t)) &&
 		   key->direction == other_key->direction;
 }
@@ -1379,7 +1379,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 				case NLMSG_ERROR:
 				{
 					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					
+
 					if (mark.value)
 					{
 						DBG1(DBG_KNL, "querying SAD entry with SPI %.8x  "
@@ -2202,18 +2202,20 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	int fd;
 
 	INIT(this,
-		.public.interface = {
-			.get_spi = _get_spi,
-			.get_cpi = _get_cpi,
-			.add_sa  = _add_sa,
-			.update_sa = _update_sa,
-			.query_sa = _query_sa,
-			.del_sa = _del_sa,
-			.add_policy = _add_policy,
-			.query_policy = _query_policy,
-			.del_policy = _del_policy,
-			.bypass_socket = _bypass_socket,
-			.destroy = _destroy,
+		.public = {
+			.interface = {
+				.get_spi = _get_spi,
+				.get_cpi = _get_cpi,
+				.add_sa  = _add_sa,
+				.update_sa = _update_sa,
+				.query_sa = _query_sa,
+				.del_sa = _del_sa,
+				.add_policy = _add_policy,
+				.query_policy = _query_policy,
+				.del_policy = _del_policy,
+				.bypass_socket = _bypass_socket,
+				.destroy = _destroy,
+			},
 		},
 		.policies = hashtable_create((hashtable_hash_t)policy_hash,
 									 (hashtable_equals_t)policy_equals, 32),

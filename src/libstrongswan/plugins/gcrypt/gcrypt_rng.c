@@ -83,10 +83,12 @@ gcrypt_rng_t *gcrypt_rng_create(rng_quality_t quality)
 	}
 
 	INIT(this,
-		.public.rng = {
-			.get_bytes = _get_bytes,
-			.allocate_bytes = _allocate_bytes,
-			.destroy = _destroy,
+		.public = {
+			.rng = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.destroy = _destroy,
+			},
 		},
 		.quality = quality,
 	);

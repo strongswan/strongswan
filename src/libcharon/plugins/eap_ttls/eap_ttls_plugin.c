@@ -38,7 +38,9 @@ plugin_t *eap_ttls_plugin_create()
 	eap_ttls_plugin_t *this;
 
 	INIT(this,
-		.plugin.destroy = _destroy,
+		.plugin = {
+			.destroy = _destroy,
+		},
 	);
 
 	charon->eap->add_method(charon->eap, EAP_TTLS, 0, EAP_SERVER,

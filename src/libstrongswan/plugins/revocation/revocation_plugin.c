@@ -52,7 +52,11 @@ plugin_t *revocation_plugin_create()
 	private_revocation_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.validator = revocation_validator_create(),
 	);
 	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);

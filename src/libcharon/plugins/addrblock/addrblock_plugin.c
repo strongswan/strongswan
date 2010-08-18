@@ -61,7 +61,11 @@ plugin_t *addrblock_plugin_create()
 	private_addrblock_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.validator = addrblock_validator_create(),
 		.narrower = addrblock_narrow_create(),
 	);

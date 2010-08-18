@@ -85,8 +85,10 @@ plugin_t *eap_simaka_sql_plugin_create()
 							"charon.plugins.eap-simaka-sql.remove_used", FALSE);
 
 	INIT(this,
-		.public.plugin =  {
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
 		},
 		.db = db,
 		.provider = eap_simaka_sql_provider_create(db, remove_used),

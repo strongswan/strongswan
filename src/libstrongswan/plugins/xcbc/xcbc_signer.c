@@ -144,14 +144,16 @@ xcbc_signer_t *xcbc_signer_create(integrity_algorithm_t algo)
 	}
 
 	INIT(this,
-		.public.signer = {
-			.get_signature = _get_signature,
-			.allocate_signature = _allocate_signature,
-			.verify_signature = _verify_signature,
-			.get_key_size = _get_key_size,
-			.get_block_size = _get_block_size,
-			.set_key = _set_key,
-			.destroy = _destroy,
+		.public = {
+			.signer = {
+				.get_signature = _get_signature,
+				.allocate_signature = _allocate_signature,
+				.verify_signature = _verify_signature,
+				.get_key_size = _get_key_size,
+				.get_block_size = _get_block_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
 		},
 		.xcbc = xcbc,
 		.block_size = min(trunc, xcbc->get_block_size(xcbc)),

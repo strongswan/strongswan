@@ -245,7 +245,11 @@ plugin_t *openssl_plugin_create()
 	private_openssl_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	threading_init();

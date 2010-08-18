@@ -47,7 +47,11 @@ plugin_t *agent_plugin_create()
 	private_agent_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,

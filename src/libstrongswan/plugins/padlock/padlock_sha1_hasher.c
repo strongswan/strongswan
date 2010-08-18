@@ -150,12 +150,14 @@ padlock_sha1_hasher_t *padlock_sha1_hasher_create(hash_algorithm_t algo)
 		return NULL;
 	}
 	INIT(this,
-		.public.hasher = {
-			.get_hash = _get_hash,
-			.allocate_hash = _allocate_hash,
-			.get_hash_size = _get_hash_size,
-			.reset = _reset,
-			.destroy = _destroy,
+		.public = {
+			.hasher = {
+				.get_hash = _get_hash,
+				.allocate_hash = _allocate_hash,
+				.get_hash_size = _get_hash_size,
+				.reset = _reset,
+				.destroy = _destroy,
+			},
 		},
 	);
 	return &this->public;

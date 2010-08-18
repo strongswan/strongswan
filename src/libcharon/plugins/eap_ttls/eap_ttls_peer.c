@@ -49,12 +49,12 @@ struct private_eap_ttls_peer_t {
 	bool start_phase2;
 
 	/**
-     * Current phase 2 EAP method 
+     * Current phase 2 EAP method
 	 */
 	eap_method_t *method;
 
 	/**
-     * Pending outbound EAP message 
+     * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -123,7 +123,7 @@ METHOD(tls_application_t, process, status_t,
 			return NEED_MORE;
 		}
 	}
-		
+
 	type = this->method->get_type(this->method, &vendor);
 
 	if (type != received_type || vendor != received_vendor)
@@ -156,7 +156,7 @@ METHOD(tls_application_t, process, status_t,
 				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
 			}
 			return FAILED;
- 	}		
+	}
 }
 
 METHOD(tls_application_t, build, status_t,
@@ -220,16 +220,16 @@ eap_ttls_peer_t *eap_ttls_peer_create(identification_t *server,
 	private_eap_ttls_peer_t *this;
 
 	INIT(this,
-		.public.application = {
-			.process = _process,
-			.build = _build,
-			.destroy = _destroy,
+		.public = {
+			.application = {
+				.process = _process,
+				.build = _build,
+				.destroy = _destroy,
+			},
 		},
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.start_phase2 = TRUE,
-		.method = NULL,
-		.out = NULL,
 		.avp = eap_ttls_avp_create(),
 	);
 

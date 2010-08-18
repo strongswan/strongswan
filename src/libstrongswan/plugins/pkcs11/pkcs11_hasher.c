@@ -300,12 +300,14 @@ pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 	private_pkcs11_hasher_t *this;
 
 	INIT(this,
-		.public.hasher = {
-			.get_hash_size = _get_hash_size,
-			.reset = _reset,
-			.get_hash = _get_hash,
-			.allocate_hash = _allocate_hash,
-			.destroy = _destroy,
+		.public = {
+			.hasher = {
+				.get_hash_size = _get_hash_size,
+				.reset = _reset,
+				.get_hash = _get_hash,
+				.allocate_hash = _allocate_hash,
+				.destroy = _destroy,
+			},
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);

@@ -652,13 +652,6 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 		.received_nonce = received_nonce,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
-		.msk = chunk_empty,
-		.method = NULL,
-		.eap_payload = NULL,
-		.eap_complete = FALSE,
-		.auth_complete = FALSE,
-		.eap_identity = NULL,
-		.require_mutual = FALSE,
 	);
 
 	return &this->public;
@@ -674,24 +667,19 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 	private_eap_authenticator_t *this;
 
 	INIT(this,
-		.public.authenticator = {
-			.build = _build_server,
-			.process = _process_server,
-			.is_mutual = _is_mutual,
-			.destroy = _destroy,
+		.public = {
+			.authenticator = {
+				.build = _build_server,
+				.process = _process_server,
+				.is_mutual = _is_mutual,
+				.destroy = _destroy,
+			},
 		},
 		.ike_sa = ike_sa,
 		.received_init = received_init,
 		.received_nonce = received_nonce,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
-		.msk = chunk_empty,
-		.method = NULL,
-		.eap_payload = NULL,
-		.eap_complete = FALSE,
-		.auth_complete = FALSE,
-		.eap_identity = NULL,
-		.require_mutual = FALSE,
 	);
 
 	return &this->public;

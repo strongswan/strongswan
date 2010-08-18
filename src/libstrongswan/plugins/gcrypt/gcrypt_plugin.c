@@ -138,7 +138,11 @@ plugin_t *gcrypt_plugin_create()
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	/* hashers */

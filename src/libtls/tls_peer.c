@@ -645,20 +645,21 @@ tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
 	private_tls_peer_t *this;
 
 	INIT(this,
-		.public.handshake = {
-			.process = _process,
-			.build = _build,
-			.cipherspec_changed = _cipherspec_changed,
-			.change_cipherspec = _change_cipherspec,
-			.finished = _finished,
-			.destroy = _destroy,
+		.public = {
+			.handshake = {
+				.process = _process,
+				.build = _build,
+				.cipherspec_changed = _cipherspec_changed,
+				.change_cipherspec = _change_cipherspec,
+				.finished = _finished,
+				.destroy = _destroy,
+			},
 		},
 		.state = STATE_INIT,
 		.tls = tls,
 		.crypto = crypto,
 		.peer = peer,
 		.server = server,
-		.peer_auth_requested = FALSE,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
 	);

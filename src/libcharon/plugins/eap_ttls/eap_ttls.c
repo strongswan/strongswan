@@ -431,13 +431,15 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 	private_eap_ttls_t *this;
 
 	INIT(this,
-		.public.eap_method = {
-			.initiate = _initiate,
-			.process = _process,
-			.get_type = _get_type,
-			.is_mutual = _is_mutual,
-			.get_msk = _get_msk,
-			.destroy = _destroy,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate,
+				.process = _process,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
 		},
 		.is_server = is_server,
 	);

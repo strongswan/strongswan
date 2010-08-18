@@ -50,7 +50,11 @@ plugin_t *xcbc_plugin_create()
 	private_xcbc_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,

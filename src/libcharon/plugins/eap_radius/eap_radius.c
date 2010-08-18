@@ -313,13 +313,15 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	private_eap_radius_t *this;
 
 	INIT(this,
-		.public.eap_method_interface = {
-			.initiate = _initiate,
-			.process = _process,
-			.get_type = _get_type,
-			.is_mutual = _is_mutual,
-			.get_msk = _get_msk,
-			.destroy = _destroy,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate,
+				.process = _process,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
 		},
 		/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
 		.type = EAP_RADIUS,

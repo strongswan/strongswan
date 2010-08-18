@@ -106,13 +106,15 @@ xcbc_prf_t *xcbc_prf_create(pseudo_random_function_t algo)
 	}
 
 	INIT(this,
-		.public.prf = {
-			.get_bytes = _get_bytes,
-			.allocate_bytes = _allocate_bytes,
-			.get_block_size = _get_block_size,
-			.get_key_size = _get_key_size,
-			.set_key = _set_key,
-			.destroy = _destroy,
+		.public = {
+			.prf = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.get_block_size = _get_block_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
 		},
 		.xcbc = xcbc,
 	);

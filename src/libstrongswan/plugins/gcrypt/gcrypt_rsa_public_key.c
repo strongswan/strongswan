@@ -322,17 +322,19 @@ gcrypt_rsa_public_key_t *gcrypt_rsa_public_key_load(key_type_t type,
 	}
 
 	INIT(this,
-		.public.key = {
-			.get_type = _get_type,
-			.verify = _verify,
-			.encrypt = _encrypt_,
-			.equals = public_key_equals,
-			.get_keysize = _get_keysize,
-			.get_fingerprint = _get_fingerprint,
-			.has_fingerprint = public_key_has_fingerprint,
-			.get_encoding = _get_encoding,
-			.get_ref = _get_ref,
-			.destroy = _destroy,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.verify = _verify,
+				.encrypt = _encrypt_,
+				.equals = public_key_equals,
+				.get_keysize = _get_keysize,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = public_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
 		},
 		.ref = 1,
 	);

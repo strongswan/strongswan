@@ -53,7 +53,11 @@ plugin_t *socket_raw_plugin_create()
 	private_socket_raw_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.socket = socket_raw_socket_create(),
 	);
 

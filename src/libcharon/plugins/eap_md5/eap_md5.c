@@ -236,7 +236,7 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 
 	INIT(this,
 		.public = {
-			.eap_method_interface = {
+			.eap_method = {
 				.initiate = _initiate_server,
 				.process = _process_server,
 				.get_type = _get_type,
@@ -247,8 +247,6 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 		},
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
-		.challenge = chunk_empty,
-		.identifier = 0,
 	);
 
 	/* generate a non-zero identifier */
@@ -267,18 +265,18 @@ eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer)
 	private_eap_md5_t *this;
 
 	INIT(this,
-		.public.eap_method_interface = {
-			.initiate = _initiate_peer,
-			.process = _process_peer,
-			.get_type = _get_type,
-			.is_mutual = _is_mutual,
-			.get_msk = _get_msk,
-			.destroy = _destroy,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate_peer,
+				.process = _process_peer,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
 		},
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
-		.challenge = chunk_empty,
-		.identifier = 0,
 	);
 
 	return &this->public;

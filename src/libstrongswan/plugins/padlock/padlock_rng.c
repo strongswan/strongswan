@@ -104,10 +104,12 @@ padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 	private_padlock_rng_t *this;
 
 	INIT(this,
-		.public.rng = {
-			.get_bytes = _get_bytes,
-			.allocate_bytes = _allocate_bytes,
-			.destroy = _destroy,
+		.public = {
+			.rng = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.destroy = _destroy,
+			},
 		},
 	);
 

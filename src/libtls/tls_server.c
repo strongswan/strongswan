@@ -635,13 +635,15 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
 	private_tls_server_t *this;
 
 	INIT(this,
-		.public.handshake = {
-			.process = _process,
-			.build = _build,
-			.cipherspec_changed = _cipherspec_changed,
-			.change_cipherspec = _change_cipherspec,
-			.finished = _finished,
-			.destroy = _destroy,
+		.public = {
+			.handshake = {
+				.process = _process,
+				.build = _build,
+				.cipherspec_changed = _cipherspec_changed,
+				.change_cipherspec = _change_cipherspec,
+				.finished = _finished,
+				.destroy = _destroy,
+			},
 		},
 		.tls = tls,
 		.crypto = crypto,

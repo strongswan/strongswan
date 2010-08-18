@@ -177,14 +177,16 @@ blowfish_crypter_t *blowfish_crypter_create(encryption_algorithm_t algo,
 	}
 
 	INIT(this,
-		.public.crypter = {
-			.encrypt = _encrypt,
-			.decrypt = _decrypt,
-			.get_block_size = _get_block_size,
-			.get_iv_size = _get_iv_size,
-			.get_key_size = _get_key_size,
-			.set_key = _set_key,
-			.destroy = _destroy,
+		.public = {
+			.crypter = {
+				.encrypt = _encrypt,
+				.decrypt = _decrypt,
+				.get_block_size = _get_block_size,
+				.get_iv_size = _get_iv_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
 		},
 		.key_size = key_size ?: 16,
 	);

@@ -143,12 +143,14 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 	private_openssl_diffie_hellman_t *this;
 
 	INIT(this,
-		.public.dh = {
-			.get_shared_secret = _get_shared_secret,
-			.set_other_public_value = _set_other_public_value,
-			.get_my_public_value = _get_my_public_value,
-			.get_dh_group = _get_dh_group,
-			.destroy = _destroy,
+		.public = {
+			.dh = {
+				.get_shared_secret = _get_shared_secret,
+				.set_other_public_value = _set_other_public_value,
+				.get_my_public_value = _get_my_public_value,
+				.get_dh_group = _get_dh_group,
+				.destroy = _destroy,
+			},
 		},
 	);
 

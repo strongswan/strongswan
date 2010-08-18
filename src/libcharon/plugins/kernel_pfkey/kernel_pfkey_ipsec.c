@@ -2154,18 +2154,20 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	private_kernel_pfkey_ipsec_t *this;
 
 	INIT(this,
-		.public.interface = {
-			.get_spi = _get_spi,
-			.get_cpi = _get_cpi,
-			.add_sa  = _add_sa,
-			.update_sa = _update_sa,
-			.query_sa = _query_sa,
-			.del_sa = _del_sa,
-			.add_policy = _add_policy,
-			.query_policy = _query_policy,
-			.del_policy = _del_policy,
-			.bypass_socket = _bypass_socket,
-			.destroy = _destroy,
+		.public = {
+			.interface = {
+				.get_spi = _get_spi,
+				.get_cpi = _get_cpi,
+				.add_sa  = _add_sa,
+				.update_sa = _update_sa,
+				.query_sa = _query_sa,
+				.del_sa = _del_sa,
+				.add_policy = _add_policy,
+				.query_policy = _query_policy,
+				.del_policy = _del_policy,
+				.bypass_socket = _bypass_socket,
+				.destroy = _destroy,
+			},
 		},
 		.policies = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),

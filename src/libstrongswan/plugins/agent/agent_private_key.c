@@ -402,19 +402,21 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 	}
 
 	INIT(this,
-		.public.key = {
-			.get_type = _get_type,
-			.sign = _sign,
-			.decrypt = _decrypt,
-			.get_keysize = _get_keysize,
-			.get_public_key = _get_public_key,
-			.belongs_to = private_key_belongs_to,
-			.equals = private_key_equals,
-			.get_fingerprint = _get_fingerprint,
-			.has_fingerprint = private_key_has_fingerprint,
-			.get_encoding = _get_encoding,
-			.get_ref = _get_ref,
-			.destroy = _destroy,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.sign = _sign,
+				.decrypt = _decrypt,
+				.get_keysize = _get_keysize,
+				.get_public_key = _get_public_key,
+				.belongs_to = private_key_belongs_to,
+				.equals = private_key_equals,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = private_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
 		},
 		.ref = 1,
 	);

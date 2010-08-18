@@ -383,7 +383,9 @@ receiver_t *receiver_create()
 	u_int32_t now = time_monotonic(NULL);
 
 	INIT(this,
-		.public.destroy = _destroy,
+		.public = {
+			.destroy = _destroy,
+		},
 		.secret_switch = now,
 		.secret_offset = random() % now,
 	);

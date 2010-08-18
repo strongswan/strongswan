@@ -132,7 +132,11 @@ plugin_t *pkcs11_plugin_create()
 	CK_SLOT_ID slot;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.creds = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);

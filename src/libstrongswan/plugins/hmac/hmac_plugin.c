@@ -50,7 +50,11 @@ plugin_t *hmac_plugin_create()
 	private_hmac_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256,

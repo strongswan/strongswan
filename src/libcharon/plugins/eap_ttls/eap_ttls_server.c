@@ -49,12 +49,12 @@ struct private_eap_ttls_server_t {
 	bool start_phase2;
 
 	/**
-     * Current phase 2 EAP method 
+     * Current phase 2 EAP method
 	 */
 	eap_method_t *method;
 
 	/**
-     * Pending outbound EAP message 
+     * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -118,7 +118,7 @@ METHOD(tls_application_t, process, status_t,
 			return FAILED;
 		}
 	}
-		
+
 	if (!received_vendor && received_type == EAP_IDENTITY)
 	{
 		chunk_t eap_id;
@@ -184,7 +184,7 @@ METHOD(tls_application_t, process, status_t,
  			return FAILED;
 		}
 	}
-		
+
 	if (this->method == 0)
 	{
 		DBG1(DBG_IKE, "no %N phase2 method installed", eap_type_names, EAP_TTLS);
@@ -194,7 +194,7 @@ METHOD(tls_application_t, process, status_t,
 
 	status = this->method->process(this->method, in, &this->out);
 	in->destroy(in);
-	
+
 	switch (status)
 	{
 		case SUCCESS:
@@ -218,7 +218,7 @@ METHOD(tls_application_t, process, status_t,
 				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
 			}
 			return FAILED;
- 	}		
+ 	}
 	return status;
 }
 
@@ -285,16 +285,16 @@ eap_ttls_server_t *eap_ttls_server_create(identification_t *server,
 	private_eap_ttls_server_t *this;
 
 	INIT(this,
-		.public.application = {
-			.process = _process,
-			.build = _build,
-			.destroy = _destroy,
+		.public = {
+			.application = {
+				.process = _process,
+				.build = _build,
+				.destroy = _destroy,
+			},
 		},
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.start_phase2 = TRUE,
-		.method = NULL,
-		.out = NULL,
 		.avp = eap_ttls_avp_create(),
 	);
 

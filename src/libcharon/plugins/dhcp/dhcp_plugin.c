@@ -62,7 +62,11 @@ plugin_t *dhcp_plugin_create()
 	private_dhcp_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.socket = dhcp_socket_create(),
 	);
 

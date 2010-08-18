@@ -48,7 +48,11 @@ plugin_t *blowfish_plugin_create()
 	private_blowfish_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,

@@ -142,7 +142,11 @@ plugin_t *ha_plugin_create()
 	}
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	if (secret)

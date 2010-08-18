@@ -151,7 +151,11 @@ plugin_t *eap_radius_plugin_create()
 	private_eap_radius_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.servers = linked_list_create(),
 	);
 

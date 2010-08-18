@@ -47,7 +47,11 @@ plugin_t *des_plugin_create()
 	private_des_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,

@@ -55,7 +55,11 @@ plugin_t *gmp_plugin_create()
 	private_gmp_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,

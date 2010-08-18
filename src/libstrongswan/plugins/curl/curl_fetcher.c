@@ -166,10 +166,12 @@ curl_fetcher_t *curl_fetcher_create()
 	private_curl_fetcher_t *this;
 
 	INIT(this,
-		.public.interface = {
-			.fetch = _fetch,
-			.set_option = _set_option,
-			.destroy = _destroy,
+		.public = {
+			.interface = {
+				.fetch = _fetch,
+				.set_option = _set_option,
+				.destroy = _destroy,
+			},
 		},
 		.curl = curl_easy_init(),
 	);

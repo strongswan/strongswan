@@ -123,12 +123,14 @@ ike_vendor_t *ike_vendor_create(ike_sa_t *ike_sa, bool initiator)
 	private_ike_vendor_t *this;
 
 	INIT(this,
-		.public.task = {
-			.build = _build,
-			.process = _process,
-			.migrate = _migrate,
-			.get_type = _get_type,
-			.destroy = _destroy,
+		.public = {
+			.task = {
+				.build = _build,
+				.process = _process,
+				.migrate = _migrate,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
 		},
 		.initiator = initiator,
 		.ike_sa = ike_sa,

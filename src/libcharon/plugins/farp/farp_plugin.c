@@ -60,7 +60,11 @@ plugin_t *farp_plugin_create()
 	private_farp_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 		.listener = farp_listener_create(),
 	);
 
