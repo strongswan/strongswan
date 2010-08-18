@@ -71,11 +71,11 @@ struct private_eap_ttls_t {
 };
 
 /** Size limit for a single TLS message */
-#define MAX_TLS_MESSAGE_LEN 16384
+#define MAX_TLS_MESSAGE_LEN 65536
 /** Size of a EAP-TLS fragment */
 #define EAP_TTLS_FRAGMENT_LEN 1014
 /** Maximum number of EAP-TLS messages/fragments allowed */
-#define MAX_EAP_TTLS_MESSAGE_COUNT 16
+#define MAX_EAP_TTLS_MESSAGE_COUNT 32
 
 /**
  * Flags of an EAP-TLS message
@@ -171,6 +171,9 @@ static bool write_buf(private_eap_ttls_t *this, eap_ttls_packet_t *pkt)
 		}
 		data = chunk_create((char*)(pkt + 1) + sizeof(msg_len),
 						pkt_len - sizeof(eap_ttls_packet_t) - sizeof(msg_len));
+		DBG2(DBG_IKE, "received EAP-TLS %s (%u bytes)",
+			(pkt->flags & EAP_TTLS_MORE_FRAGS) ? "fragment" : "packet", pkt_len);
+
 	}
 	else
 	{
@@ -234,7 +237,7 @@ static eap_payload_t *read_buf(private_eap_ttls_t *this, u_int8_t identifier)
 			pkt_len += EAP_TTLS_FRAGMENT_LEN;
 			memcpy(start, this->output.ptr + this->outpos, EAP_TTLS_FRAGMENT_LEN);
 			this->outpos += EAP_TTLS_FRAGMENT_LEN;
-			DBG2(DBG_IKE, "sending EAP-TLS packet fragment");
+			DBG2(DBG_IKE, "sending EAP-TLS fragment (%u bytes)", pkt_len);
 		}
 		else
 		{
@@ -243,7 +246,7 @@ static eap_payload_t *read_buf(private_eap_ttls_t *this, u_int8_t identifier)
 				   this->output.len - this->outpos);
 			chunk_free(&this->output);
 			this->outpos = 0;
-			DBG2(DBG_IKE, "sending EAP-TLS packet");
+			DBG2(DBG_IKE, "sending EAP-TLS packet (%u bytes)", pkt_len);
 		}
 	}
 	else
@@ -270,6 +273,8 @@ static status_t process_buf(private_eap_ttls_t *this)
 	{
 		in = (tls_record_t*)data.ptr;
 		len = untoh16(&in->length);
+		DBG2(DBG_IKE, "received TLS %N record (%u bytes)",
+			 tls_content_type_names, in->type, sizeof(tls_record_t) + len);
 		if (len > data.len - sizeof(tls_record_t))
 		{
 			DBG1(DBG_IKE, "TLS record length invalid");
@@ -318,6 +323,8 @@ static status_t process_buf(private_eap_ttls_t *this)
 		htoun16(&out.version, this->tls->get_version(this->tls));
 		htoun16(&out.length, data.len);
 		this->output = chunk_cat("mcm", this->output, header, data);
+		DBG2(DBG_IKE, "sending TLS %N record (%u bytes)",
+			 tls_content_type_names, type, sizeof(tls_record_t) + data.len);
 	}
 }
 
