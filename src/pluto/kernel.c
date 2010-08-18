@@ -75,65 +75,6 @@ bool can_do_IPcomp = TRUE;  /* can system actually perform IPCOMP? */
 #define routes_agree(c, d) ((c)->interface == (d)->interface \
 		&& sameaddr(&(c)->spd.this.host_nexthop, &(d)->spd.this.host_nexthop))
 
-/* bare (connectionless) shunt (eroute) table
- *
- * Bare shunts are those that don't "belong" to a connection.
- * This happens because some %trapped traffic hasn't yet or cannot be
- * assigned to a connection.  The usual reason is that we cannot discover
- * the peer SG.  Another is that even when the peer has been discovered,
- * it may be that no connection matches all the particulars.
- * We record them so that, with scanning, we can discover
- * which %holds are news and which others should expire.
- */
-
-#define SHUNT_SCAN_INTERVAL     (60 * 2)   /* time between scans of eroutes */
-
-/* SHUNT_PATIENCE only has resolution down to a multiple of the sample rate,
- * SHUNT_SCAN_INTERVAL.
- * By making SHUNT_PATIENCE an odd multiple of half of SHUNT_SCAN_INTERVAL,
- * we minimize the effects of jitter.
- */
-#define SHUNT_PATIENCE  (SHUNT_SCAN_INTERVAL * 15 / 2)  /* inactivity timeout */
-
-struct bare_shunt {
-	policy_prio_t policy_prio;
-	ip_subnet ours;
-	ip_subnet his;
-	ip_said said;
-	int transport_proto;
-	unsigned long count;
-	time_t last_activity;
-	char *why;
-	struct bare_shunt *next;
-};
-
-static struct bare_shunt *bare_shunts = NULL;
-
-#ifdef DEBUG
-static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
-{
-	DBG(DBG_KERNEL,
-		{
-			int ourport = ntohs(portof(&(bs)->ours.addr));
-			int hisport = ntohs(portof(&(bs)->his.addr));
-			char ourst[SUBNETTOT_BUF];
-			char hist[SUBNETTOT_BUF];
-			char sat[SATOT_BUF];
-			char prio[POLICY_PRIO_BUF];
-
-			subnettot(&(bs)->ours, 0, ourst, sizeof(ourst));
-			subnettot(&(bs)->his, 0, hist, sizeof(hist));
-			satot(&(bs)->said, 0, sat, sizeof(sat));
-			fmt_policy_prio(bs->policy_prio, prio);
-			DBG_log("%s bare shunt %p %s:%d -> %s:%d => %s:%d %s    %s"
-				, op, (const void *)(bs), ourst, ourport, hist, hisport
-				, sat, (bs)->transport_proto, prio, (bs)->why);
-		});
-}
-#else /* !DEBUG */
-#define DBG_bare_shunt(op, bs) {}
-#endif /* !DEBUG */
-
 /* forward declaration */
 static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind, unsigned int op,
@@ -186,41 +127,13 @@ void record_and_initiate_opportunistic(const ip_subnet *ours,
 									   const ip_subnet *his,
 									   int transport_proto, const char *why)
 {
+	ip_address src, dst;
 	passert(samesubnettype(ours, his));
 
-	/* Add to bare shunt list.
-	 * We need to do this because the shunt was installed by KLIPS
-	 * which can't do this itself.
-	 */
-	{
-		struct bare_shunt *bs = malloc_thing(struct bare_shunt);
-
-		bs->why = clone_str(why);
-		bs->ours = *ours;
-		bs->his = *his;
-		bs->transport_proto = transport_proto;
-		bs->policy_prio = BOTTOM_PRIO;
-
-		bs->said.proto = SA_INT;
-		bs->said.spi = htonl(SPI_HOLD);
-		bs->said.dst = *aftoinfo(subnettypeof(ours))->any;
-
-		bs->count = 0;
-		bs->last_activity = now();
-
-		bs->next = bare_shunts;
-		bare_shunts = bs;
-		DBG_bare_shunt("add", bs);
-	}
-
 	/* actually initiate opportunism */
-	{
-		ip_address src, dst;
-
-		networkof(ours, &src);
-		networkof(his, &dst);
-		initiate_opportunistic(&src, &dst, transport_proto, TRUE, NULL_FD);
-	}
+	networkof(ours, &src);
+	networkof(his, &dst);
+	initiate_opportunistic(&src, &dst, transport_proto, TRUE, NULL_FD);
 }
 
 /* Generate Unique SPI numbers.
@@ -818,76 +731,6 @@ static void set_text_said(char *text_said, const ip_address *dst,
 	satot(&said, 0, text_said, SATOT_BUF);
 }
 
-/* find an entry in the bare_shunt table.
- * Trick: return a pointer to the pointer to the entry;
- * this allows the entry to be deleted.
- */
-static struct bare_shunt** bare_shunt_ptr(const ip_subnet *ours,
-										  const ip_subnet *his,
-										  int transport_proto)
-{
-	struct bare_shunt *p, **pp;
-
-	for (pp = &bare_shunts; (p = *pp) != NULL; pp = &p->next)
-	{
-		if (samesubnet(ours, &p->ours)
-		&& samesubnet(his, &p->his)
-		&& transport_proto == p->transport_proto
-		&& portof(&ours->addr) == portof(&p->ours.addr)
-		&& portof(&his->addr) == portof(&p->his.addr))
-			return pp;
-	}
-	return NULL;
-}
-
-/* free a bare_shunt entry, given a pointer to the pointer */
-static void free_bare_shunt(struct bare_shunt **pp)
-{
-	if (pp == NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("delete bare shunt: null pointer")
-		)
-	}
-	else
-	{
-		struct bare_shunt *p = *pp;
-
-		*pp = p->next;
-		DBG_bare_shunt("delete", p);
-		free(p->why);
-		free(p);
-	}
-}
-
-void
-show_shunt_status(void)
-{
-	struct bare_shunt *bs;
-
-	for (bs = bare_shunts; bs != NULL; bs = bs->next)
-	{
-		/* Print interesting fields.  Ignore count and last_active. */
-
-		int ourport = ntohs(portof(&bs->ours.addr));
-		int hisport = ntohs(portof(&bs->his.addr));
-		char ourst[SUBNETTOT_BUF];
-		char hist[SUBNETTOT_BUF];
-		char sat[SATOT_BUF];
-		char prio[POLICY_PRIO_BUF];
-
-		subnettot(&(bs)->ours, 0, ourst, sizeof(ourst));
-		subnettot(&(bs)->his, 0, hist, sizeof(hist));
-		satot(&(bs)->said, 0, sat, sizeof(sat));
-		fmt_policy_prio(bs->policy_prio, prio);
-
-		whack_log(RC_COMMENT, "%s:%d -> %s:%d => %s:%d %s    %s"
-			, ourst, ourport, hist, hisport, sat, bs->transport_proto
-			, prio, bs->why);
-	}
-	if (bare_shunts != NULL)
-		whack_log(RC_COMMENT, BLANK_FORMAT);    /* spacer */
-}
 
 /**
  * Setup an IPsec route entry.
@@ -1006,91 +849,6 @@ static bool raw_eroute(const ip_address *this_host,
 	return ok;
 }
 
-/* test to see if %hold remains */
-bool has_bare_hold(const ip_address *src, const ip_address *dst,
-				   int transport_proto)
-{
-	ip_subnet this_client, that_client;
-	struct bare_shunt **bspp;
-
-	passert(addrtypeof(src) == addrtypeof(dst));
-	happy(addrtosubnet(src, &this_client));
-	happy(addrtosubnet(dst, &that_client));
-	bspp = bare_shunt_ptr(&this_client, &that_client, transport_proto);
-	return bspp != NULL
-		&& (*bspp)->said.proto == SA_INT && (*bspp)->said.spi == htonl(SPI_HOLD);
-}
-
-
-/* Replace (or delete) a shunt that is in the bare_shunts table.
- * Issues the PF_KEY commands and updates the bare_shunts table.
- */
-bool replace_bare_shunt(const ip_address *src, const ip_address *dst,
-						policy_prio_t policy_prio, ipsec_spi_t shunt_spi,
-						bool repl, unsigned int transport_proto, const char *why)
-{
-	ip_subnet this_client, that_client;
-	ip_subnet this_broad_client, that_broad_client;
-	const ip_address *null_host = aftoinfo(addrtypeof(src))->any;
-
-	passert(addrtypeof(src) == addrtypeof(dst));
-	happy(addrtosubnet(src, &this_client));
-	happy(addrtosubnet(dst, &that_client));
-	this_broad_client = this_client;
-	that_broad_client = that_client;
-	setportof(0, &this_broad_client.addr);
-	setportof(0, &that_broad_client.addr);
-
-	if (repl)
-	{
-		struct bare_shunt **bs_pp = bare_shunt_ptr(&this_broad_client
-												 , &that_broad_client, 0);
-
-		/* is there already a broad host-to-host bare shunt? */
-		if (bs_pp == NULL)
-		{
-			if (raw_eroute(null_host, &this_broad_client, null_host,
-						   &that_broad_client, htonl(shunt_spi), SA_INT,
-						   SADB_X_SATYPE_INT, 0, &null_ipsec_sa,
-						   SHUNT_PATIENCE, ERO_ADD, why))
-			{
-				struct bare_shunt *bs = malloc_thing(struct bare_shunt);
-
-				bs->ours = this_broad_client;
-				bs->his =  that_broad_client;
-				bs->transport_proto = 0;
-				bs->said.proto = SA_INT;
-				bs->why = clone_str(why);
-				bs->policy_prio = policy_prio;
-				bs->said.spi = htonl(shunt_spi);
-				bs->said.dst = *null_host;
-				bs->count = 0;
-				bs->last_activity = now();
-				bs->next = bare_shunts;
-				bare_shunts = bs;
-				DBG_bare_shunt("add", bs);
-			}
-		}
-		shunt_spi = SPI_HOLD;
-	}
-
-	if (raw_eroute(null_host, &this_client, null_host, &that_client,
-				   htonl(shunt_spi), SA_INT, SADB_X_SATYPE_INT, transport_proto,
-				   &null_ipsec_sa, SHUNT_PATIENCE, ERO_DELETE, why))
-	{
-		struct bare_shunt **bs_pp = bare_shunt_ptr(&this_client, &that_client
-										, transport_proto);
-
-		/* delete bare eroute */
-		free_bare_shunt(bs_pp);
-		return TRUE;
-	}
-	else
-	{
-		return FALSE;
-	}
-}
-
 static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 							  unsigned int proto, unsigned int satype,
 							  ipsec_sa_cfg_t *sa, unsigned int op,
@@ -1141,12 +899,11 @@ bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 		break;
 	}
 
-	/* we need a broad %hold, not the narrow one.
+	/* We need a broad %hold
 	 * First we ensure that there is a broad %hold.
 	 * There may already be one (race condition): no need to create one.
 	 * There may already be a %trap: replace it.
 	 * There may not be any broad eroute: add %hold.
-	 * Once the broad %hold is in place, delete the narrow one.
 	 */
 	if (rn != ro)
 	{
@@ -1159,11 +916,6 @@ bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 		{
 			return FALSE;
 		}
-	}
-	if (!replace_bare_shunt(src, dst, BOTTOM_PRIO, SPI_HOLD, FALSE,
-							transport_proto, "delete narrow %hold"))
-	{
-		return FALSE;
 	}
 	sr->routing = rn;
 	return TRUE;
@@ -1920,7 +1672,6 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 		, route_installed = FALSE;
 
 	connection_t *ero_top;
-	struct bare_shunt **bspp;
 
 	DBG(DBG_CONTROLMORE,
 		DBG_log("route_and_eroute with c: %s (next: %s) ero:%s esr:{%p} ro:%s rosr:{%p} and state: %lu"
@@ -1947,15 +1698,9 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 			break;
 #endif
 
-	bspp = (ero == NULL)
-		? bare_shunt_ptr(&sr->this.client, &sr->that.client, sr->this.protocol)
-		: NULL;
-
 	/* install the eroute */
 
-	passert(bspp == NULL || ero == NULL);       /* only one non-NULL */
-
-	if (bspp != NULL || ero != NULL)
+	if (ero != NULL)
 	{
 		/* We're replacing an eroute */
 
@@ -1981,7 +1726,6 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 				&& samesubnet(&esr->that.client, &sr->that.client));
 		}
 #endif
-		/* remember to free bspp iff we make it out of here alive */
 	}
 	else
 	{
@@ -2073,11 +1817,7 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 	{
 		/* Success! */
 
-		if (bspp != NULL)
-		{
-			free_bare_shunt(bspp);
-		}
-		else if (ero != NULL && ero != c)
+		if (ero != NULL && ero != c)
 		{
 			/* check if ero is an ancestor of c. */
 			connection_t *ero2;
@@ -2131,25 +1871,7 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 			 * Since there is nothing much to be done if the restoration
 			 * fails, ignore success or failure.
 			 */
-			if (bspp != NULL)
-			{
-				/* Restore old bare_shunt.
-				 * I don't think that this case is very likely.
-				 * Normally a bare shunt would have been assigned
-				 * to a connection before we've gotten this far.
-				 */
-				struct bare_shunt *bs = *bspp;
-
-				(void) raw_eroute(&bs->said.dst, /* should be useless */
-								  &bs->ours,
-								  &bs->said.dst, /* should be useless */
-								  &bs->his,
-								  bs->said.spi,  /* network order */
-								  SA_INT, SADB_X_SATYPE_INT, 0,
-								  &null_ipsec_sa, SHUNT_PATIENCE,
-								  ERO_REPLACE, "restore");
-			}
-			else if (ero != NULL)
+			if (ero != NULL)
 			{
 				/* restore ero's former glory */
 				if (esr->eroute_owner == SOS_NOBODY)

@@ -73,8 +73,6 @@ struct kernel_sa {
 		const char *text_said;
 };
 
-extern void show_shunt_status(void);
-
 /* A netlink header defines EM_MAXRELSPIS, the max number of SAs in a group.
  * Is there a PF_KEY equivalent?
  */
@@ -92,16 +90,6 @@ extern void kernel_finalize(void);
 
 extern bool trap_connection(struct connection *c);
 extern void unroute_connection(struct connection *c);
-
-extern bool has_bare_hold(const ip_address *src, const ip_address *dst
-						  , int transport_proto);
-
-extern bool replace_bare_shunt(const ip_address *src, const ip_address *dst
-							   , policy_prio_t policy_prio
-							   , ipsec_spi_t shunt_spi  /* in host order! */
-							   , bool repl
-							   , unsigned int transport_proto
-							   , const char *why);
 
 extern bool assign_hold(struct connection *c
 						, struct spd_route *sr

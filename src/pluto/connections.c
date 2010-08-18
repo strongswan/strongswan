@@ -2146,25 +2146,6 @@ static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 		}
 		return;
 	}
-
-	if (b->held)
-	{
-		/* Replace HOLD with b->failure_shunt.
-		 * If no b->failure_shunt specified, use SPI_PASS -- THIS MAY CHANGE.
-		 */
-		if (b->failure_shunt == 0)
-		{
-			DBG(DBG_OPPO, DBG_log("no explicit failure shunt for %s to %s; installing %%pass"
-								  , ocb, pcb));
-		}
-
-		(void) replace_bare_shunt(&b->our_client, &b->peer_client
-			, b->policy_prio
-			, b->failure_shunt
-			, b->failure_shunt != 0
-			, b->transport_proto
-			, ugh);
-	}
 }
 
 static void initiate_opportunistic_body(struct find_oppo_bundle *b
@@ -2200,14 +2181,6 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	 * neither need freeing.
 	 */
 	whack_log_fd = whackfd;
-
-	/* Discover and record whether %hold has gone away.
-	 * This could have happened while we were awaiting DNS.
-	 * We must check BEFORE any call to cannot_oppo.
-	 */
-	if (was_held)
-		cr->b.held = has_bare_hold(&cr->b.our_client, &cr->b.peer_client
-			, cr->b.transport_proto);
 
 #ifdef DEBUG
 	/* if we're going to ignore the error, at least note it in debugging log */
@@ -2810,19 +2783,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 							"no suitable connection for opportunism "
 							"between %s and %s with %Y as peer",
 							 ocb, pcb, ac->gateways_from_dns->gw_id);
-
-					if (b->held)
-					{
-						/* Replace HOLD with PASS.
-						 * The type of replacement *ought* to be
-						 * specified by policy.
-						 */
-						(void) replace_bare_shunt(&b->our_client, &b->peer_client
-							, BOTTOM_PRIO
-							, SPI_PASS  /* fail into PASS */
-							, TRUE, b->transport_proto
-							, "no suitable connection");
-					}
 				}
 				else
 				{
