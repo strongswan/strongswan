@@ -124,8 +124,8 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 		if (this->input.len == this->inpos)
 		{	/* message completely defragmented, process */
 			msg = tls_reader_create(this->input);
-			DBG2(DBG_IKE, "received TLS %N message",
-						   tls_handshake_type_names, this->type);
+			DBG2(DBG_IKE, "received TLS %N message (%u bytes)",
+				 tls_handshake_type_names, this->type, 4 + this->input.len);
 			status = this->handshake->process(this->handshake, this->type, msg);
 			msg->destroy(msg);
 			chunk_free(&this->input);
@@ -202,6 +202,7 @@ METHOD(tls_fragmentation_t, process, status_t,
 METHOD(tls_fragmentation_t, build, status_t,
 	private_tls_fragmentation_t *this, tls_content_type_t *type, chunk_t *data)
 {
+	chunk_t hs_data;
 	tls_handshake_type_t hs_type;
 	tls_writer_t *writer, *msg;
 	status_t status = INVALID_STATE;
@@ -242,10 +243,11 @@ METHOD(tls_fragmentation_t, build, status_t,
 				switch (status)
 				{
 					case NEED_MORE:
-						DBG2(DBG_IKE, "sending TLS %N message",
-									   tls_handshake_type_names, hs_type);
+						hs_data = writer->get_buf(writer);
 						msg->write_uint8(msg, hs_type);
-						msg->write_data24(msg, writer->get_buf(writer));
+						msg->write_data24(msg, hs_data);
+						DBG2(DBG_IKE, "sending TLS %N message (%u bytes)",
+							 tls_handshake_type_names, hs_type, 4 + hs_data.len);
 						break;
 					case INVALID_STATE:
 						*type = TLS_HANDSHAKE;
