@@ -29,6 +29,7 @@ struct entry_t {
 	/* constructor */
 	union {
 		crypter_constructor_t create_crypter;
+		aead_constructor_t create_aead;
 		signer_constructor_t create_signer;
 		hasher_constructor_t create_hasher;
 		prf_constructor_t create_prf;
@@ -54,6 +55,11 @@ struct private_crypto_factory_t {
 	 * registered crypters, as entry_t
 	 */
 	linked_list_t *crypters;
+
+	/**
+	 * registered aead transforms, as entry_t
+	 */
+	linked_list_t *aeads;
 
 	/**
 	 * registered signers, as entry_t
@@ -136,6 +142,38 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	return crypter;
+}
+
+METHOD(crypto_factory_t, create_aead, aead_t*,
+	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	size_t key_size)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	aead_t *aead = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->aeads->create_enumerator(this->aeads);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->algo == algo)
+		{
+			if (this->test_on_create &&
+				!this->tester->test_aead(this->tester, algo, key_size,
+										 entry->create_aead, NULL))
+			{
+				continue;
+			}
+			aead = entry->create_aead(algo, key_size);
+			if (aead)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return aead;
 }
 
 METHOD(crypto_factory_t, create_signer, signer_t*,
@@ -372,6 +410,40 @@ METHOD(crypto_factory_t, remove_crypter, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(crypto_factory_t, add_aead, void,
+	private_crypto_factory_t *this, encryption_algorithm_t algo,
+	aead_constructor_t create)
+{
+	u_int speed = 0;
+
+	if (!this->test_on_add ||
+		this->tester->test_aead(this->tester, algo, 0, create,
+								   this->bench ? &speed : NULL))
+	{
+		add_entry(this, this->aeads, algo, speed, create);
+	}
+}
+
+METHOD(crypto_factory_t, remove_aead, void,
+	private_crypto_factory_t *this, aead_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->aeads->create_enumerator(this->aeads);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_aead == create)
+		{
+			this->aeads->remove_at(this->aeads, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(crypto_factory_t, add_signer, void,
 	private_crypto_factory_t *this, integrity_algorithm_t algo,
 	signer_constructor_t create)
@@ -586,6 +658,12 @@ METHOD(crypto_factory_t, create_crypter_enumerator, enumerator_t*,
 	return create_enumerator(this, this->crypters, crypter_filter);
 }
 
+METHOD(crypto_factory_t, create_aead_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
+{
+	return create_enumerator(this, this->aeads, crypter_filter);
+}
+
 /**
  * Filter function to enumerate algorithm, not entry
  */
@@ -653,6 +731,8 @@ METHOD(crypto_factory_t, add_test_vector, void,
 	{
 		case ENCRYPTION_ALGORITHM:
 			return this->tester->add_crypter_vector(this->tester, vector);
+		case AEAD_ALGORITHM:
+			return this->tester->add_aead_vector(this->tester, vector);
 		case INTEGRITY_ALGORITHM:
 			return this->tester->add_signer_vector(this->tester, vector);
 		case HASH_ALGORITHM:
@@ -671,6 +751,7 @@ METHOD(crypto_factory_t, destroy, void,
 	private_crypto_factory_t *this)
 {
 	this->crypters->destroy(this->crypters);
+	this->aeads->destroy(this->aeads);
 	this->signers->destroy(this->signers);
 	this->hashers->destroy(this->hashers);
 	this->prfs->destroy(this->prfs);
@@ -691,6 +772,7 @@ crypto_factory_t *crypto_factory_create()
 	INIT(this,
 		.public = {
 			.create_crypter = _create_crypter,
+			.create_aead = _create_aead,
 			.create_signer = _create_signer,
 			.create_hasher = _create_hasher,
 			.create_prf = _create_prf,
@@ -698,6 +780,8 @@ crypto_factory_t *crypto_factory_create()
 			.create_dh = _create_dh,
 			.add_crypter = _add_crypter,
 			.remove_crypter = _remove_crypter,
+			.add_aead = _add_aead,
+			.remove_aead = _remove_aead,
 			.add_signer = _add_signer,
 			.remove_signer = _remove_signer,
 			.add_hasher = _add_hasher,
@@ -709,6 +793,7 @@ crypto_factory_t *crypto_factory_create()
 			.add_dh = _add_dh,
 			.remove_dh = _remove_dh,
 			.create_crypter_enumerator = _create_crypter_enumerator,
+			.create_aead_enumerator = _create_aead_enumerator,
 			.create_signer_enumerator = _create_signer_enumerator,
 			.create_hasher_enumerator = _create_hasher_enumerator,
 			.create_prf_enumerator = _create_prf_enumerator,
@@ -717,6 +802,7 @@ crypto_factory_t *crypto_factory_create()
 			.destroy = _destroy,
 		},
 		.crypters = linked_list_create(),
+		.aeads = linked_list_create(),
 		.signers = linked_list_create(),
 		.hashers = linked_list_create(),
 		.prfs = linked_list_create(),

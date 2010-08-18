@@ -25,6 +25,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 
 #include <library.h>
 #include <crypto/crypters/crypter.h>
+#include <crypto/aead.h>
 #include <crypto/signers/signer.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
@@ -37,6 +38,11 @@ typedef struct crypto_factory_t crypto_factory_t;
  */
 typedef crypter_t* (*crypter_constructor_t)(encryption_algorithm_t algo,
 											size_t key_size);
+/**
+ * Constructor function for aead transforms
+ */
+typedef aead_t* (*aead_constructor_t)(encryption_algorithm_t algo,
+									  size_t key_size);
 /**
  * Constructor function for signers
  */
@@ -76,6 +82,16 @@ struct crypto_factory_t {
 	 */
 	crypter_t* (*create_crypter)(crypto_factory_t *this,
 								 encryption_algorithm_t algo, size_t key_size);
+
+	/**
+	 * Create a aead instance.
+	 *
+	 * @param algo			encryption algorithm
+	 * @param key_size		length of the key in bytes
+	 * @return				aead_t instance, NULL if not supported
+	 */
+	aead_t* (*create_aead)(crypto_factory_t *this,
+						   encryption_algorithm_t algo, size_t key_size);
 
 	/**
 	 * Create a symmetric signer instance.
@@ -135,6 +151,23 @@ struct crypto_factory_t {
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_crypter)(crypto_factory_t *this, crypter_constructor_t create);
+
+	/**
+	 * Unregister a aead constructor.
+	 *
+	 * @param create		constructor function to unregister
+	 */
+	void (*remove_aead)(crypto_factory_t *this, aead_constructor_t create);
+
+	/**
+	 * Register a aead constructor.
+	 *
+	 * @param algo			algorithm to constructor
+	 * @param create		constructor function for that algorithm
+	 * @return
+	 */
+	void (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
+					 aead_constructor_t create);
 
 	/**
 	 * Register a signer constructor.
@@ -228,6 +261,13 @@ struct crypto_factory_t {
 	 * @return				enumerator over encryption_algorithm_t
 	 */
 	enumerator_t* (*create_crypter_enumerator)(crypto_factory_t *this);
+
+	/**
+	 * Create an enumerator over all registered aead algorithms.
+	 *
+	 * @return				enumerator over encryption_algorithm_t
+	 */
+	enumerator_t* (*create_aead_enumerator)(crypto_factory_t *this);
 
 	/**
 	 * Create an enumerator over all registered signer algorithms.
