@@ -15,7 +15,7 @@
 
 #include "gcm_aead.h"
 
-#include <debug.h>
+#include <limits.h>
 
 #define BLOCK_SIZE 16
 #define NONCE_SIZE 12
@@ -56,19 +56,39 @@ struct private_gcm_aead_t {
 };
 
 /**
+ * architecture specific macros to convert a "long" to network order
+ */
+#if ULONG_MAX == 4294967295UL
+#define htobelong htobe32
+#define belongtoh htobe32
+#elif ULONG_MAX == 18446744073709551615UL
+#define htobelong htobe64
+#define belongtoh htobe64
+#endif
+
+/**
  * Bitshift a block right by one bit
  */
-static void sr_block(u_char *block)
+static void sr_block(char *block)
 {
+	u_long *word = (u_long*)block;
 	int i;
 
-	for (i = BLOCK_SIZE - 1; i >= 0; i--)
+	for (i = 0; i < BLOCK_SIZE / sizeof(*word); i++)
 	{
-		block[i] = block[i] >> 1;
+		word[i] = htobelong(word[i]);
+	}
+	for (i = BLOCK_SIZE / sizeof(*word) - 1; i >= 0; i--)
+	{
+		word[i] >>= 1;
 		if (i != 0)
 		{
-			block[i] |= block[i - 1] << 7;
+			word[i] |= word[i - 1] << (sizeof(*word) * 8 - 1);
 		}
+	}
+	for (i = 0; i < BLOCK_SIZE / sizeof(*word); i++)
+	{
+		word[i] = belongtoh(word[i]);
 	}
 }
 
