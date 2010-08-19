@@ -138,6 +138,28 @@
 	static ret name(this, ##__VA_ARGS__)
 
 /**
+ * Architecture independent bitfield definition helpers (at least with GCC).
+ *
+ * Defines a bitfield with a type t and a fixed size of bitfield members, e.g.:
+ * BITFIELD2(u_int8_t,
+ *     low: 4,
+ *     high: 4,
+ * ) flags;
+ * The member defined first placed at bit 0.
+ */
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define BITFIELD2(t, a, b,...)			struct { t a; t b; __VA_ARGS__}
+#define BITFIELD3(t, a, b, c,...)		struct { t a; t b; t c; __VA_ARGS__}
+#define BITFIELD4(t, a, b, c, d,...)	struct { t a; t b; t c; t d; __VA_ARGS__}
+#define BITFIELD5(t, a, b, c, d, e,...)	struct { t a; t b; t c; t d; t e; __VA_ARGS__}
+#elif BYTE_ORDER == BIG_ENDIAN
+#define BITFIELD2(t, a, b,...)			struct { t b; t a; __VA_ARGS__}
+#define BITFIELD3(t, a, b, c,...)		struct { t c; t b; t a; __VA_ARGS__}
+#define BITFIELD4(t, a, b, c, d,...)	struct { t d; t c; t b; t a; __VA_ARGS__}
+#define BITFIELD5(t, a, b, c, d, e,...)	struct { t e; t d; t c; t b; t a; __VA_ARGS__}
+#endif
+
+/**
  * Macro to allocate a sized type.
  */
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
