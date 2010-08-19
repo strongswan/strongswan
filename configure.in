@@ -149,6 +149,7 @@ ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
 ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
@@ -718,6 +719,7 @@ ADD_PLUGIN([xcbc],                 [s libcharon])
 ADD_PLUGIN([hmac],                 [s libcharon pluto])
 ADD_PLUGIN([ctr],                  [s libcharon scripts])
 ADD_PLUGIN([ccm],                  [s libcharon scripts])
+ADD_PLUGIN([gcm],                  [s libcharon scripts])
 ADD_PLUGIN([xauth],                [p pluto])
 ADD_PLUGIN([attr],                 [h libcharon pluto])
 ADD_PLUGIN([attr-sql],             [h libcharon pluto])
@@ -811,6 +813,7 @@ AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
 AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
+AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 
 dnl charon plugins
 dnl ==============
@@ -944,6 +947,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/pkcs11/Makefile
 	src/libstrongswan/plugins/ctr/Makefile
 	src/libstrongswan/plugins/ccm/Makefile
+	src/libstrongswan/plugins/gcm/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile

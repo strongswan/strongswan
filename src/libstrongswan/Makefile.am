@@ -338,6 +338,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_GCM
+  SUBDIRS += plugins/gcm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gcm/libstrongswan-gcm.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
