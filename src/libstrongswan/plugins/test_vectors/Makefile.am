@@ -16,6 +16,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/aes_ctr.c \
 	test_vectors/aes_xcbc.c \
 	test_vectors/aes_ccm.c \
+	test_vectors/aes_gcm.c \
 	test_vectors/blowfish.c \
 	test_vectors/camellia_cbc.c \
 	test_vectors/camellia_ctr.c \
