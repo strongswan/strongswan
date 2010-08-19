@@ -153,7 +153,6 @@ static status_t process_application(private_tls_fragmentation_t *this,
 			DBG1(DBG_IKE, "TLS fragment has invalid length");
 			return FAILED;
 		}
-		DBG2(DBG_IKE, "received TLS application data");
 		status = this->application->process(this->application, reader);
 		if (status != NEED_MORE)
 		{
@@ -227,10 +226,6 @@ METHOD(tls_fragmentation_t, build, status_t,
 				{
 					*type = TLS_APPLICATION_DATA;
 					this->output = chunk_clone(msg->get_buf(msg));
-					if (this->output.len)
-					{
-						DBG2(DBG_IKE, "sending TLS application data");
-					}
 				}
 			}
 		}
