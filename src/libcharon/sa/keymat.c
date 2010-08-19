@@ -178,10 +178,11 @@ static bool derive_ike_aead(private_keymat_t *this, u_int16_t alg,
  * Derive IKE keys for traditional encryption and MAC algorithms
  */
 static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
-					u_int16_t key_size, u_int16_t int_alg, prf_plus_t *prf_plus)
+					u_int16_t enc_size, u_int16_t int_alg, prf_plus_t *prf_plus)
 {
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
+	size_t key_size;
 	chunk_t key;
 
 	/* SK_ai/SK_ar used for integrity protection */
@@ -207,8 +208,8 @@ static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
 	chunk_clear(&key);
 
 	/* SK_ei/SK_er used for encryption */
-	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, key_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, key_size / 8);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
