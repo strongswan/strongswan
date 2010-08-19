@@ -151,6 +151,7 @@ static u_int bench_crypter(private_crypto_tester_t *this,
 		while (end_timing(&start) < this->bench_time)
 		{
 			crypter->encrypt(crypter, buf, chunk_from_thing(iv), NULL);
+			runs++;
 			crypter->decrypt(crypter, buf, chunk_from_thing(iv), NULL);
 			runs++;
 		}
@@ -295,9 +296,10 @@ static u_int bench_aead(private_crypto_tester_t *this,
 		{
 			aead->encrypt(aead, buf, chunk_from_thing(assoc),
 						  chunk_from_thing(iv), NULL);
+			runs += 2;
 			aead->decrypt(aead, chunk_create(buf.ptr, buf.len + icv),
 						  chunk_from_thing(assoc), chunk_from_thing(iv), NULL);
-			runs++;
+			runs += 2;
 		}
 		free(buf.ptr);
 		aead->destroy(aead);
@@ -444,6 +446,7 @@ static u_int bench_signer(private_crypto_tester_t *this,
 		while (end_timing(&start) < this->bench_time)
 		{
 			signer->get_signature(signer, buf, mac);
+			runs++;
 			signer->verify_signature(signer, buf, chunk_from_thing(mac));
 			runs++;
 		}
