@@ -1,3 +1,12 @@
+
+strongswan-4.5.0
+----------------
+
+- Added new ctr, ccm and gcm plugins providing Counter, Counter with CBC-MAC
+  and Galois/Counter Modes based on existing CBC implementations. These
+  new plugins bring support for AES and Camellia Counter and CCM algorithms
+  and the AES GCM algorithms for use in IKEv2.
+
 strongswan-4.4.1
 ----------------
 
