@@ -137,11 +137,12 @@ static status_t process_client_hello(private_tls_server_t *this,
 
 	memcpy(this->client_random, random.ptr, sizeof(this->client_random));
 
-	if (version < this->tls->get_version(this->tls))
+	if (!this->tls->set_version(this->tls, version))
 	{
-		this->tls->set_version(this->tls, version);
+		DBG1(DBG_TLS, "negotiated version %N not supported",
+			 tls_version_names, version);
+		return FAILED;
 	}
-
 	count = ciphers.len / sizeof(u_int16_t);
 	suites = alloca(count * sizeof(tls_cipher_suite_t));
 	DBG2(DBG_TLS, "received %d TLS cipher suites:", count);

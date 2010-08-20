@@ -130,9 +130,11 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
-	if (version < this->tls->get_version(this->tls))
+	if (!this->tls->set_version(this->tls, version))
 	{
-		this->tls->set_version(this->tls, version);
+		DBG1(DBG_TLS, "negotiated version %N not supported",
+			 tls_version_names, version);
+		return FAILED;
 	}
 	suite = cipher;
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))

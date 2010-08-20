@@ -146,8 +146,9 @@ struct tls_t {
 	 * Set the negotiated TLS/SSL version.
 	 *
 	 * @param version	negotiated TLS version
+	 * @return			TRUE if version acceptable
 	 */
-	void (*set_version)(tls_t *this, tls_version_t version);
+	bool (*set_version)(tls_t *this, tls_version_t version);
 
 	/**
 	 * Get the purpose of this TLS stack instance.

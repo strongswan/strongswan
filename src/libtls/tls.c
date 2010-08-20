@@ -146,10 +146,25 @@ METHOD(tls_t, get_version, tls_version_t,
 	return this->version;
 }
 
-METHOD(tls_t, set_version, void,
+METHOD(tls_t, set_version, bool,
 	private_tls_t *this, tls_version_t version)
 {
-	this->version = version;
+	if (version > this->version)
+	{
+		return FALSE;
+	}
+	switch (version)
+	{
+		case TLS_1_0:
+		case TLS_1_1:
+		case TLS_1_2:
+			this->version = version;
+			return TRUE;
+		case SSL_2_0:
+		case SSL_3_0:
+		default:
+			return FALSE;
+	}
 }
 
 METHOD(tls_t, get_purpose, tls_purpose_t,
