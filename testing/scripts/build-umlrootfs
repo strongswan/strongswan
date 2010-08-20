@@ -262,6 +262,16 @@ then
     echo -n " --enable-ctr" >> $INSTALLSHELL
 fi
 
+if [ "$USE_CCM" = "yes" ]
+then
+    echo -n " --enable-ccm" >> $INSTALLSHELL
+fi
+
+if [ "$USE_GCM" = "yes" ]
+then
+    echo -n " --enable-gcm" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
