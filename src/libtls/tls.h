@@ -29,6 +29,7 @@
 typedef enum tls_version_t tls_version_t;
 typedef enum tls_content_type_t tls_content_type_t;
 typedef enum tls_handshake_type_t tls_handshake_type_t;
+typedef enum tls_purpose_t tls_purpose_t;
 typedef struct tls_t tls_t;
 
 #include <library.h>
@@ -88,6 +89,16 @@ enum tls_handshake_type_t {
 extern enum_name_t *tls_handshake_type_names;
 
 /**
+ * Purpose the TLS stack is initiated for.
+ */
+enum tls_purpose_t {
+	/** authentication in EAP-TLS */
+	TLS_PURPOSE_EAP_TLS,
+	/** outer authentication and protection in EAP-TTLS */
+	TLS_PURPOSE_EAP_TTLS,
+};
+
+/**
  * A bottom-up driven TLS stack, suitable for EAP implementations.
  */
 struct tls_t {
@@ -139,6 +150,13 @@ struct tls_t {
 	void (*set_version)(tls_t *this, tls_version_t version);
 
 	/**
+	 * Get the purpose of this TLS stack instance.
+	 *
+	 * @return			purpose given during construction
+	 */
+	tls_purpose_t (*get_purpose)(tls_t *this);
+
+	/**
 	 * Check if TLS negotiation completed successfully.
 	 *
 	 * @return			TRUE if TLS negotation and authentication complete
@@ -164,13 +182,12 @@ struct tls_t {
  * @param is_server			TRUE to act as server, FALSE for client
  * @param server			server identity
  * @param peer				peer identity
- * @param request_peer_auth	TRUE to request certificate-based peer authentication
- * @param msk_label			ASCII string constant used as seed for MSK PRF
+ * @param purpse			purpose this TLS stack instance is used for
  * @param application		higher layer application or NULL if none
  * @return					TLS stack
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer, bool request_peer_auth,
-				  char *msk_label, tls_application_t *application);
+				  identification_t *peer, tls_purpose_t purpose,
+				  tls_application_t *application);
 
 #endif /** TLS_H_ @}*/

@@ -440,9 +440,29 @@ static void filter_suite(private_tls_crypto_t *this,
 }
 
 /**
+ * Purge NULL encryption cipher suites from list
+ */
+static void filter_null_suites(private_tls_crypto_t *this,
+							   suite_algs_t suites[], int *count)
+{
+	int i, remaining = 0;
+
+	for (i = 0; i < *count; i++)
+	{
+		if (suites[i].encr != ENCR_NULL)
+		{
+			suites[remaining] = suites[i];
+			remaining++;
+		}
+	}
+	*count = remaining;
+}
+
+/**
  * Initialize the cipher suite list
  */
-static void build_cipher_suite_list(private_tls_crypto_t *this)
+static void build_cipher_suite_list(private_tls_crypto_t *this,
+									bool require_encryption)
 {
 	suite_algs_t suites[countof(suite_algs)];
 	int count = countof(suite_algs), i;
@@ -451,6 +471,10 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 	for (i = 0; i < count; i++)
 	{
 		suites[i] = suite_algs[i];
+	}
+	if (require_encryption)
+	{
+		filter_null_suites(this, suites, &count);
 	}
 	/* filter suite list by each algorithm */
 	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
@@ -872,7 +896,7 @@ METHOD(tls_crypto_t, destroy, void,
 /**
  * See header
  */
-tls_crypto_t *tls_crypto_create(tls_t *tls, char *msk_label)
+tls_crypto_t *tls_crypto_create(tls_t *tls)
 {
 	private_tls_crypto_t *this;
 
@@ -892,10 +916,20 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, char *msk_label)
 			.destroy = _destroy,
 		},
 		.tls = tls,
-		.msk_label = msk_label
 	);
 
-	build_cipher_suite_list(this);
-
+	switch (tls->get_purpose(tls))
+	{
+		case TLS_PURPOSE_EAP_TLS:
+			/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
+			this->msk_label = "client EAP encryption";
+			build_cipher_suite_list(this, FALSE);
+			break;
+		case TLS_PURPOSE_EAP_TTLS:
+			/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
+			this->msk_label = "ttls keying material";
+			build_cipher_suite_list(this, TRUE);
+			break;
+	}
 	return &this->public;
 }

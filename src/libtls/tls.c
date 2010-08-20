@@ -87,6 +87,11 @@ struct private_tls_t {
 	tls_version_t version;
 
 	/**
+	 * TLS stack purpose, as given to constructor
+	 */
+	tls_purpose_t purpose;
+
+	/**
 	 * TLS record protection layer
 	 */
 	tls_protection_t *protection;
@@ -147,6 +152,12 @@ METHOD(tls_t, set_version, void,
 	this->version = version;
 }
 
+METHOD(tls_t, get_purpose, tls_purpose_t,
+	private_tls_t *this)
+{
+	return this->purpose;
+}
+
 METHOD(tls_t, is_complete, bool,
 	private_tls_t *this)
 {
@@ -178,10 +189,19 @@ METHOD(tls_t, destroy, void,
  * See header
  */
 tls_t *tls_create(bool is_server, identification_t *server,
-				  identification_t *peer, bool request_peer_auth,
-				  char *msk_label, tls_application_t *application)
+				  identification_t *peer, tls_purpose_t purpose,
+				  tls_application_t *application)
 {
 	private_tls_t *this;
+
+	switch (purpose)
+	{
+		case TLS_PURPOSE_EAP_TLS:
+		case TLS_PURPOSE_EAP_TTLS:
+			break;
+		default:
+			return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -190,6 +210,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.is_server = _is_server,
 			.get_version = _get_version,
 			.set_version = _set_version,
+			.get_purpose = _get_purpose,
 			.is_complete = _is_complete,
 			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
@@ -199,19 +220,19 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.application = application,
+		.purpose = purpose,
 	);
 
-	this->crypto = tls_crypto_create(&this->public, msk_label);
+	this->crypto = tls_crypto_create(&this->public);
 	if (is_server)
 	{
 		this->handshake = &tls_server_create(&this->public, this->crypto,
-										this->server, this->peer,
-										request_peer_auth)->handshake;
+									this->server, this->peer)->handshake;
 	}
 	else
 	{
 		this->handshake = &tls_peer_create(&this->public, this->crypto,
-										this->peer, this->server)->handshake;
+									this->peer, this->server)->handshake;
 	}
 	this->fragmentation = tls_fragmentation_create(this->handshake,
 												   this->application);

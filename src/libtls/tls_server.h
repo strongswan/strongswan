@@ -43,7 +43,6 @@ struct tls_server_t {
  * Create a tls_server instance.
  */
 tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
-							identification_t *server, identification_t *peer,
-							bool request_peer_auth);
+							identification_t *server, identification_t *peer);
 
 #endif /** TLS_SERVER_H_ @}*/

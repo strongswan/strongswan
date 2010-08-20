@@ -629,8 +629,7 @@ METHOD(tls_handshake_t, destroy, void,
  * See header
  */
 tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
-							identification_t *server, identification_t *peer,
-							bool request_peer_auth)
+							identification_t *server, identification_t *peer)
 {
 	private_tls_server_t *this;
 
@@ -650,10 +649,17 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
 		.server = server,
 		.peer = peer,
 		.state = STATE_INIT,
-		.request_peer_auth = request_peer_auth,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
 	);
 
+	switch (tls->get_purpose(tls))
+	{
+		case TLS_PURPOSE_EAP_TLS:
+			this->request_peer_auth = TRUE;
+			break;
+		case TLS_PURPOSE_EAP_TTLS:
+			break;
+	}
 	return &this->public;
 }

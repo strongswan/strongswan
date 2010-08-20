@@ -23,7 +23,6 @@
 
 typedef struct tls_application_t tls_application_t;
 
-#include "tls.h"
 #include "tls_reader.h"
 #include "tls_writer.h"
 

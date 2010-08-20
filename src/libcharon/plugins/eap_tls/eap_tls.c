@@ -441,10 +441,13 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 		},
 		.is_server = is_server,
 	);
-	/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
-	this->tls = tls_create(is_server, server, peer, TRUE,
-						   "client EAP encryption", NULL);
 
+	this->tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TLS, NULL);
+	if (!this->tls)
+	{
+		free(this);
+		return NULL;
+	}
 	return &this->public;
 }
 
