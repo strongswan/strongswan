@@ -88,7 +88,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 
 		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
 		{
-			DBG1(DBG_IKE, "TLS fragment has invalid length");
+			DBG1(DBG_TLS, "TLS fragment has invalid length");
 			return FAILED;
 		}
 
@@ -102,7 +102,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 			this->type = type;
 			if (len > MAX_TLS_HANDSHAKE_LEN)
 			{
-				DBG1(DBG_IKE, "TLS handshake message exceeds maximum length");
+				DBG1(DBG_TLS, "TLS handshake message exceeds maximum length");
 				return FAILED;
 			}
 			chunk_free(&this->input);
@@ -124,7 +124,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 		if (this->input.len == this->inpos)
 		{	/* message completely defragmented, process */
 			msg = tls_reader_create(this->input);
-			DBG2(DBG_IKE, "received TLS %N message (%u bytes)",
+			DBG2(DBG_TLS, "received TLS %N message (%u bytes)",
 				 tls_handshake_type_names, this->type, 4 + this->input.len);
 			status = this->handshake->process(this->handshake, this->type, msg);
 			msg->destroy(msg);
@@ -150,7 +150,7 @@ static status_t process_application(private_tls_fragmentation_t *this,
 
 		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
 		{
-			DBG1(DBG_IKE, "TLS fragment has invalid length");
+			DBG1(DBG_TLS, "TLS fragment has invalid length");
 			return FAILED;
 		}
 		status = this->application->process(this->application, reader);
@@ -190,7 +190,7 @@ METHOD(tls_fragmentation_t, process, status_t,
 			status = process_application(this, reader);
 			break;
 		default:
-			DBG1(DBG_IKE, "received unknown TLS content type %d, ignored", type);
+			DBG1(DBG_TLS, "received unknown TLS content type %d, ignored", type);
 			status = NEED_MORE;
 			break;
 	}
@@ -241,7 +241,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 						hs_data = writer->get_buf(writer);
 						msg->write_uint8(msg, hs_type);
 						msg->write_data24(msg, hs_data);
-						DBG2(DBG_IKE, "sending TLS %N message (%u bytes)",
+						DBG2(DBG_TLS, "sending TLS %N message (%u bytes)",
 							 tls_handshake_type_names, hs_type, 4 + hs_data.len);
 						break;
 					case INVALID_STATE:

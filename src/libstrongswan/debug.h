@@ -50,6 +50,8 @@ enum debug_t {
 	DBG_NET,
 	/** message encoding/decoding */
 	DBG_ENC,
+	/** libtls */
+	DBG_TLS,
 	/** libstrongswan */
 	DBG_LIB,
 	/** number of groups */

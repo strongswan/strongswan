@@ -490,10 +490,10 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	this->suite_count = count;
 	this->suites = malloc(sizeof(tls_cipher_suite_t) * count);
 
-	DBG2(DBG_CFG, "%d supported TLS cipher suites:", count);
+	DBG2(DBG_TLS, "%d supported TLS cipher suites:", count);
 	for (i = 0; i < count; i++)
 	{
-		DBG2(DBG_CFG, "  %N", tls_cipher_suite_names, suites[i].suite);
+		DBG2(DBG_TLS, "  %N", tls_cipher_suite_names, suites[i].suite);
 		this->suites[i] = suites[i].suite;
 	}
 }
@@ -515,7 +515,7 @@ static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
 	algs = find_suite(suite);
 	if (!algs)
 	{
-		DBG1(DBG_IKE, "selected TLS suite not supported");
+		DBG1(DBG_TLS, "selected TLS suite not supported");
 		return FALSE;
 	}
 
@@ -530,7 +530,7 @@ static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
 	}
 	if (!this->prf)
 	{
-		DBG1(DBG_IKE, "selected TLS PRF not supported");
+		DBG1(DBG_TLS, "selected TLS PRF not supported");
 		return FALSE;
 	}
 
@@ -540,7 +540,7 @@ static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
 	this->signer_out = lib->crypto->create_signer(lib->crypto, algs->mac);
 	if (!this->signer_in || !this->signer_out)
 	{
-		DBG1(DBG_IKE, "selected TLS MAC %N not supported",
+		DBG1(DBG_TLS, "selected TLS MAC %N not supported",
 			 integrity_algorithm_names, algs->mac);
 		return FALSE;
 	}
@@ -559,7 +559,7 @@ static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
 												algs->encr, algs->encr_size);
 		if (!this->crypter_in || !this->crypter_out)
 		{
-			DBG1(DBG_IKE, "selected TLS crypter %N not supported",
+			DBG1(DBG_TLS, "selected TLS crypter %N not supported",
 				 encryption_algorithm_names, algs->encr);
 			return FALSE;
 		}
@@ -624,7 +624,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 		hasher = lib->crypto->create_hasher(lib->crypto, alg->hash);
 		if (!hasher)
 		{
-			DBG1(DBG_IKE, "%N not supported", hash_algorithm_names, alg->hash);
+			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, alg->hash);
 			return FALSE;
 		}
 		hasher->allocate_hash(hasher, this->handshake, hash);
@@ -638,7 +638,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 		if (!md5)
 		{
-			DBG1(DBG_IKE, "%N not supported", hash_algorithm_names, HASH_MD5);
+			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_MD5);
 			return FALSE;
 		}
 		md5->get_hash(md5, this->handshake, buf);
@@ -646,7 +646,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 		if (!sha1)
 		{
-			DBG1(DBG_IKE, "%N not supported", hash_algorithm_names, HASH_SHA1);
+			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_SHA1);
 			return FALSE;
 		}
 		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
@@ -704,7 +704,7 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 			!reader->read_uint8(reader, &alg) ||
 			!reader->read_data16(reader, &sig))
 		{
-			DBG1(DBG_IKE, "received invalid Certificate Verify");
+			DBG1(DBG_TLS, "received invalid Certificate Verify");
 			return FALSE;
 		}
 		/* TODO: map received hash/sig alg to signature scheme */
@@ -720,7 +720,7 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 
 		if (!reader->read_data16(reader, &sig))
 		{
-			DBG1(DBG_IKE, "received invalid Certificate Verify");
+			DBG1(DBG_TLS, "received invalid Certificate Verify");
 			return FALSE;
 		}
 		if (!hash_handshake(this, &hash))

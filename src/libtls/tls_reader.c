@@ -52,7 +52,7 @@ METHOD(tls_reader_t, read_uint8, bool,
 {
 	if (this->buf.len < 1)
 	{
-		DBG1(DBG_IKE, "%d bytes insufficient to parse uint%d TLS data",
+		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
 			 this->buf.len, 8);
 		return FALSE;
 	}
@@ -66,7 +66,7 @@ METHOD(tls_reader_t, read_uint16, bool,
 {
 	if (this->buf.len < 2)
 	{
-		DBG1(DBG_IKE, "%d bytes insufficient to parse uint%d TLS data",
+		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
 			 this->buf.len, 16);
 		return FALSE;
 	}
@@ -80,7 +80,7 @@ METHOD(tls_reader_t, read_uint24, bool,
 {
 	if (this->buf.len < 3)
 	{
-		DBG1(DBG_IKE, "%d bytes insufficient to parse uint%d TLS data",
+		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
 			 this->buf.len, 24);
 		return FALSE;
 	}
@@ -94,7 +94,7 @@ METHOD(tls_reader_t, read_uint32, bool,
 {
 	if (this->buf.len < 4)
 	{
-		DBG1(DBG_IKE, "%d bytes insufficient to parse uint%d TLS data",
+		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
 			 this->buf.len, 32);
 		return FALSE;
 	}
@@ -108,7 +108,7 @@ METHOD(tls_reader_t, read_data, bool,
 {
 	if (this->buf.len < len)
 	{
-		DBG1(DBG_IKE, "%d bytes insufficient to parse %d bytes TLS data",
+		DBG1(DBG_TLS, "%d bytes insufficient to parse %d bytes TLS data",
 			 this->buf.len, len);
 		return FALSE;
 	}

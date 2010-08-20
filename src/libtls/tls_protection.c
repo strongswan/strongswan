@@ -116,7 +116,7 @@ METHOD(tls_protection_t, process, status_t,
 		{	/* < TLSv1.1 uses IV from key derivation/last block */
 			if (data.len < bs || data.len % bs)
 			{
-				DBG1(DBG_IKE, "encrypted TLS record length invalid");
+				DBG1(DBG_TLS, "encrypted TLS record length invalid");
 				return FAILED;
 			}
 			iv = this->iv_in;
@@ -129,7 +129,7 @@ METHOD(tls_protection_t, process, status_t,
 			data = chunk_skip(data, iv.len);
 			if (data.len < bs || data.len % bs)
 			{
-				DBG1(DBG_IKE, "encrypted TLS record length invalid");
+				DBG1(DBG_TLS, "encrypted TLS record length invalid");
 				return FAILED;
 			}
 		}
@@ -144,7 +144,7 @@ METHOD(tls_protection_t, process, status_t,
 		padding_length = data.ptr[data.len - 1];
 		if (padding_length >= data.len)
 		{
-			DBG1(DBG_IKE, "invalid TLS record padding");
+			DBG1(DBG_TLS, "invalid TLS record padding");
 			return FAILED;
 		}
 		data.len -= padding_length + 1;
@@ -157,7 +157,7 @@ METHOD(tls_protection_t, process, status_t,
 		bs = this->signer_in->get_block_size(this->signer_in);
 		if (data.len <= bs)
 		{
-			DBG1(DBG_IKE, "TLS record too short to verify MAC");
+			DBG1(DBG_TLS, "TLS record too short to verify MAC");
 			return FAILED;
 		}
 		mac = chunk_skip(data, data.len - bs);
@@ -168,7 +168,7 @@ METHOD(tls_protection_t, process, status_t,
 		macdata = chunk_cat("mc", header, data);
 		if (!this->signer_in->verify_signature(this->signer_in, macdata, mac))
 		{
-			DBG1(DBG_IKE, "TLS record MAC verification failed");
+			DBG1(DBG_TLS, "TLS record MAC verification failed");
 			free(macdata.ptr);
 			return FAILED;
 		}
@@ -228,7 +228,7 @@ METHOD(tls_protection_t, build, status_t,
 				{	/* TLSv1.1 uses random IVs, prepended to record */
 					if (!this->rng)
 					{
-						DBG1(DBG_IKE, "no RNG supported to generate TLS IV");
+						DBG1(DBG_TLS, "no RNG supported to generate TLS IV");
 						free(data->ptr);
 						return FAILED;
 					}

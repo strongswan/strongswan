@@ -124,7 +124,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		!reader->read_uint8(reader, &compression) ||
 		(reader->remaining(reader) && !reader->read_data16(reader, &ext)))
 	{
-		DBG1(DBG_IKE, "received invalid ServerHello");
+		DBG1(DBG_TLS, "received invalid ServerHello");
 		return FAILED;
 	}
 
@@ -137,11 +137,11 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	suite = cipher;
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))
 	{
-		DBG1(DBG_IKE, "received TLS cipher suite %N inacceptable",
+		DBG1(DBG_TLS, "received TLS cipher suite %N inacceptable",
 			 tls_cipher_suite_names, suite);
 		return FAILED;
 	}
-	DBG1(DBG_IKE, "negotiated TLS version %N with suite %N",
+	DBG1(DBG_TLS, "negotiated TLS version %N with suite %N",
 		 tls_version_names, version, tls_cipher_suite_names, suite);
 	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
@@ -181,13 +181,13 @@ static status_t process_certificate(private_tls_peer_t *this,
 			{
 				this->server_auth->add(this->server_auth,
 									   AUTH_HELPER_SUBJECT_CERT, cert);
-				DBG1(DBG_IKE, "received TLS server certificate '%Y'",
+				DBG1(DBG_TLS, "received TLS server certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
 			}
 			else
 			{
-				DBG1(DBG_IKE, "received TLS intermediate certificate '%Y'",
+				DBG1(DBG_TLS, "received TLS intermediate certificate '%Y'",
 					 cert->get_subject(cert));
 				this->server_auth->add(this->server_auth,
 									   AUTH_HELPER_IM_CERT, cert);
@@ -195,7 +195,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "parsing TLS certificate failed, skipped");
+			DBG1(DBG_TLS, "parsing TLS certificate failed, skipped");
 		}
 	}
 	certs->destroy(certs);
@@ -245,12 +245,12 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 									  CERT_X509, KEY_ANY, id, TRUE);
 		if (cert)
 		{
-			DBG1(DBG_IKE, "received TLS cert request for '%Y", id);
+			DBG1(DBG_TLS, "received TLS cert request for '%Y", id);
 			this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received TLS cert request for unknown CA '%Y'", id);
+			DBG1(DBG_TLS, "received TLS cert request for unknown CA '%Y'", id);
 		}
 		id->destroy(id);
 	}
@@ -281,17 +281,17 @@ static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 
 	if (!reader->read_data(reader, sizeof(buf), &received))
 	{
-		DBG1(DBG_IKE, "received server finished too short");
+		DBG1(DBG_TLS, "received server finished too short");
 		return FAILED;
 	}
 	if (!this->crypto->calculate_finished(this->crypto, "server finished", buf))
 	{
-		DBG1(DBG_IKE, "calculating server finished failed");
+		DBG1(DBG_TLS, "calculating server finished failed");
 		return FAILED;
 	}
 	if (!chunk_equals(received, chunk_from_thing(buf)))
 	{
-		DBG1(DBG_IKE, "received server finished invalid");
+		DBG1(DBG_TLS, "received server finished invalid");
 		return FAILED;
 	}
 	this->state = STATE_COMPLETE;
@@ -344,11 +344,11 @@ METHOD(tls_handshake_t, process, status_t,
 			expected = TLS_FINISHED;
 			break;
 		default:
-			DBG1(DBG_IKE, "TLS %N not expected in current state",
+			DBG1(DBG_TLS, "TLS %N not expected in current state",
 				 tls_handshake_type_names, type);
 			return FAILED;
 	}
-	DBG1(DBG_IKE, "TLS %N expected, but received %N",
+	DBG1(DBG_TLS, "TLS %N expected, but received %N",
 		 tls_handshake_type_names, expected, tls_handshake_type_names, type);
 	return FAILED;
 }
@@ -383,11 +383,11 @@ static status_t send_client_hello(private_tls_peer_t *this,
 
 	/* add TLS cipher suites */
 	count = this->crypto->get_cipher_suites(this->crypto, &suites);
-	DBG2(DBG_IKE, "sending %d TLS cipher suites:", count);
+	DBG2(DBG_TLS, "sending %d TLS cipher suites:", count);
 	writer->write_uint16(writer, count * 2);
 	for (i = 0; i < count; i++)
 	{
-		DBG2(DBG_IKE, "  %N", tls_cipher_suite_names, suites[i]);
+		DBG2(DBG_TLS, "  %N", tls_cipher_suite_names, suites[i]);
 		writer->write_uint16(writer, suites[i]);
 	}
 
@@ -417,7 +417,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 										KEY_ANY, this->peer, this->peer_auth);
 	if (!this->private)
 	{
-		DBG1(DBG_IKE, "no TLS peer certificate found for '%Y'", this->peer);
+		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
 		return FAILED;
 	}
 
@@ -428,7 +428,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	{
 		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
 		{
-			DBG1(DBG_IKE, "sending TLS peer certificate '%Y'",
+			DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
 				 cert->get_subject(cert));
 			certs->write_data24(certs, data);
 			free(data.ptr);
@@ -441,7 +441,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 		{
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
 			{
-				DBG1(DBG_IKE, "sending TLS intermediate certificate '%Y'",
+				DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
@@ -476,7 +476,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
 	{
-		DBG1(DBG_IKE, "no suitable RNG found for TLS premaster secret");
+		DBG1(DBG_TLS, "no suitable RNG found for TLS premaster secret");
 		return FAILED;
 	}
 	rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2);
@@ -501,14 +501,14 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	}
 	if (!public)
 	{
-		DBG1(DBG_IKE, "no TLS public key found for server '%Y'", this->server);
+		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
 		return FAILED;
 	}
 	if (!public->encrypt(public, ENCRYPT_RSA_PKCS1,
 						 chunk_from_thing(premaster), &encrypted))
 	{
 		public->destroy(public);
-		DBG1(DBG_IKE, "encrypting TLS premaster secret failed");
+		DBG1(DBG_TLS, "encrypting TLS premaster secret failed");
 		return FAILED;
 	}
 
@@ -532,7 +532,7 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 	if (!this->private ||
 		!this->crypto->sign_handshake(this->crypto, this->private, writer))
 	{
-		DBG1(DBG_IKE, "creating TLS Certificate Verify signature failed");
+		DBG1(DBG_TLS, "creating TLS Certificate Verify signature failed");
 		return FAILED;
 	}
 
@@ -552,7 +552,7 @@ static status_t send_finished(private_tls_peer_t *this,
 
 	if (!this->crypto->calculate_finished(this->crypto, "client finished", buf))
 	{
-		DBG1(DBG_IKE, "calculating client finished data failed");
+		DBG1(DBG_TLS, "calculating client finished data failed");
 		return FAILED;
 	}
 
