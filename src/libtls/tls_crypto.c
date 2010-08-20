@@ -401,94 +401,71 @@ static suite_algs_t *find_suite(tls_cipher_suite_t suite)
 }
 
 /**
+ * Filter a suite list using a transform enumerator
+ */
+static void filter_suite(private_tls_crypto_t *this,
+						 suite_algs_t suites[], int *count, int offset,
+						 enumerator_t*(*create_enumerator)(crypto_factory_t*))
+{
+	suite_algs_t current;
+	int i, remaining = 0;
+	enumerator_t *enumerator;
+
+	memset(&current, 0, sizeof(current));
+	for (i = 0; i < *count; i++)
+	{
+		enumerator = create_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, ((char*)&current) + offset))
+		{
+			if ((suites[i].encr == ENCR_NULL ||
+				 !current.encr || current.encr == suites[i].encr) &&
+				(!current.mac  || current.mac  == suites[i].mac) &&
+				(!current.prf  || current.prf  == suites[i].prf) &&
+				(!current.hash || current.hash == suites[i].hash))
+			{
+				suites[remaining] = suites[i];
+				remaining++;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	*count = remaining;
+}
+
+/**
  * Initialize the cipher suite list
  */
 static void build_cipher_suite_list(private_tls_crypto_t *this)
 {
-	encryption_algorithm_t encr;
-	integrity_algorithm_t mac;
-	enumerator_t *encrs, *macs;
-	tls_cipher_suite_t supported[64], unique[64];
-	int count = 0, i, j;
+	suite_algs_t suites[countof(suite_algs)];
+	int count = countof(suite_algs), i;
 
-	/* we assume that we support RSA, but no DHE yet */
-	macs = lib->crypto->create_signer_enumerator(lib->crypto);
-	while (macs->enumerate(macs, &mac))
-	{
-		switch (mac)
-		{
-			case AUTH_HMAC_SHA1_160:
-				supported[count++] = TLS_RSA_WITH_NULL_SHA;
-				break;
-			case AUTH_HMAC_SHA2_256_256:
-				supported[count++] = TLS_RSA_WITH_NULL_SHA256;
-				break;
-			case AUTH_HMAC_MD5_128:
-				supported[count++] = TLS_RSA_WITH_NULL_MD5;
-				break;
-			default:
-				break;
-		}
-		encrs = lib->crypto->create_crypter_enumerator(lib->crypto);
-		while (encrs->enumerate(encrs, &encr))
-		{
-			switch (encr)
-			{
-				case ENCR_AES_CBC:
-					switch (mac)
-					{
-						case AUTH_HMAC_SHA1_160:
-							supported[count++] = TLS_RSA_WITH_AES_128_CBC_SHA;
-							supported[count++] = TLS_RSA_WITH_AES_256_CBC_SHA;
-							break;
-						case AUTH_HMAC_SHA2_256_256:
-							supported[count++] = TLS_RSA_WITH_AES_128_CBC_SHA256;
-							supported[count++] = TLS_RSA_WITH_AES_256_CBC_SHA256;
-							break;
-						default:
-							break;
-					}
-					break;
-				case ENCR_3DES:
-					switch (mac)
-					{
-						case AUTH_HMAC_SHA1_160:
-							supported[count++] = TLS_RSA_WITH_3DES_EDE_CBC_SHA;
-							break;
-						default:
-							break;
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		encrs->destroy(encrs);
-	}
-	macs->destroy(macs);
-
-	/* remove duplicates */
-	this->suite_count = 0;
+	/* copy all suites */
 	for (i = 0; i < count; i++)
 	{
-		bool match = FALSE;
-
-		for (j = 0; j < this->suite_count; j++)
-		{
-			if (supported[i] == unique[j])
-			{
-				match = TRUE;
-				break;
-			}
-		}
-		if (!match)
-		{
-			unique[this->suite_count++] = supported[i];
-		}
+		suites[i] = suite_algs[i];
 	}
+	/* filter suite list by each algorithm */
+	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
+				 lib->crypto->create_crypter_enumerator);
+	filter_suite(this, suites, &count, offsetof(suite_algs_t, mac),
+				 lib->crypto->create_signer_enumerator);
+	filter_suite(this, suites, &count, offsetof(suite_algs_t, prf),
+				 lib->crypto->create_prf_enumerator);
+	filter_suite(this, suites, &count, offsetof(suite_algs_t, hash),
+				 lib->crypto->create_hasher_enumerator);
+
+	DBG2(DBG_CFG, "%d supported TLS cipher suites:", count);
+	for (i = 0; i < count; i++)
+	{
+		DBG2(DBG_CFG, "  %N", tls_cipher_suite_names, suites[i]);
+	}
+
 	free(this->suites);
-	this->suites = malloc(sizeof(tls_cipher_suite_t) * this->suite_count);
-	memcpy(this->suites, unique, sizeof(tls_cipher_suite_t) * this->suite_count);
+	this->suite_count = count;
+	this->suites = malloc(sizeof(tls_cipher_suite_t) * count);
+	memcpy(this->suites, suites, sizeof(tls_cipher_suite_t) * this->suite_count);
 }
 
 METHOD(tls_crypto_t, get_cipher_suites, int,
