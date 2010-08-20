@@ -16,12 +16,14 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include <library.h>
+
 #include "enum.h"
 
 /**
- * get the name of an enum value in a enum_name_t list
+ * See header.
  */
-static char *enum_name(enum_name_t *e, int val)
+char *enum_to_name(enum_name_t *e, int val)
 {
 	do
 	{
@@ -35,6 +37,27 @@ static char *enum_name(enum_name_t *e, int val)
 }
 
 /**
+ * See header.
+ */
+int enum_from_name(enum_name_t *e, char *name)
+{
+	do
+	{
+		int i, count = e->last - e->first;
+
+		for (i = 0; i < count; i++)
+		{
+			if (strcaseeq(name, e->names[i]))
+			{
+				return e->first + i;
+			}
+		}
+	}
+	while ((e = e->next));
+	return -1;
+}
+
+/**
  * Described in header.
  */
 int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
@@ -43,7 +66,7 @@ int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
 	int val = *((int*)(args[1]));
 
-	char *name = enum_name(ed, val);
+	char *name = enum_to_name(ed, val);
 
 	if (name == NULL)
 	{

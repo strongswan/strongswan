@@ -107,6 +107,24 @@ struct enum_name_t {
 #define ENUM(name, first, last, ...) ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
 
 /**
+ * Convert a enum value to its string representation.
+ *
+ * @param e		enum names for this enum value
+ * @param val	enum value to get string for
+ * @return		string for enum, NULL if not found
+ */
+char *enum_to_name(enum_name_t *e, int val);
+
+/**
+ * Convert a enum string back to its enum value.
+ *
+ * @param e		enum names for this enum value
+ * @param name	name to get enum value for
+ * @return		enum value, -1 if not found
+ */
+int enum_from_name(enum_name_t *e, char *name);
+
+/**
  * printf hook function for enum_names_t.
  *
  * Arguments are:
