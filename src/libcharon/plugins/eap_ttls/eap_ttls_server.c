@@ -72,7 +72,7 @@ METHOD(tls_application_t, process, status_t,
 	payload_t *payload;
 	eap_payload_t *in;
 	eap_code_t code;
-	eap_type_t type, received_type;
+	eap_type_t type = EAP_NAK, received_type;
 	u_int32_t vendor, received_vendor;
 
 	status = this->avp->process(this->avp, reader, &data);
