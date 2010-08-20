@@ -395,21 +395,6 @@ static void stroke_leases(private_stroke_socket_t *this,
 	this->list->leases(this->list, msg, out);
 }
 
-debug_t get_group_from_name(char *type)
-{
-	if (strcaseeq(type, "any")) return DBG_ANY;
-	else if (strcaseeq(type, "mgr")) return DBG_MGR;
-	else if (strcaseeq(type, "ike")) return DBG_IKE;
-	else if (strcaseeq(type, "chd")) return DBG_CHD;
-	else if (strcaseeq(type, "job")) return DBG_JOB;
-	else if (strcaseeq(type, "cfg")) return DBG_CFG;
-	else if (strcaseeq(type, "knl")) return DBG_KNL;
-	else if (strcaseeq(type, "net")) return DBG_NET;
-	else if (strcaseeq(type, "enc")) return DBG_ENC;
-	else if (strcaseeq(type, "lib")) return DBG_LIB;
-	else return -1;
-}
-
 /**
  * set the verbosity debug output
  */
@@ -425,7 +410,7 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 
-	group = get_group_from_name(msg->loglevel.type);
+	group = enum_from_name(debug_names, msg->loglevel.type);
 	if (group < 0)
 	{
 		fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
