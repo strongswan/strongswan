@@ -130,19 +130,19 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
-	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
 	if (version < this->tls->get_version(this->tls))
 	{
 		this->tls->set_version(this->tls, version);
 	}
-
 	suite = cipher;
-	DBG1(DBG_IKE, "received TLS cipher suite: %N", tls_cipher_suite_names, suite);
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))
 	{
-		DBG1(DBG_IKE, "received TLS cipher suite inacceptable");
+		DBG1(DBG_IKE, "received TLS cipher suite %N inacceptable",
+			 tls_cipher_suite_names, suite);
 		return FAILED;
 	}
+	DBG1(DBG_IKE, "negotiated TLS version %N with suite %N",
+		 tls_version_names, version, tls_cipher_suite_names, suite);
 	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
 }
@@ -245,12 +245,12 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 									  CERT_X509, KEY_ANY, id, TRUE);
 		if (cert)
 		{
-			DBG1(DBG_IKE, "received cert request for '%Y", id);
+			DBG1(DBG_IKE, "received TLS cert request for '%Y", id);
 			this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received cert request for unknown CA '%Y'", id);
+			DBG1(DBG_IKE, "received TLS cert request for unknown CA '%Y'", id);
 		}
 		id->destroy(id);
 	}
@@ -375,7 +375,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 
 	/* TLS version */
 	version = this->tls->get_version(this->tls);
-	DBG1(DBG_IKE, "sending TLS version: %N", tls_version_names, version);
 	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->client_random));
 

@@ -137,7 +137,6 @@ static status_t process_client_hello(private_tls_server_t *this,
 
 	memcpy(this->client_random, random.ptr, sizeof(this->client_random));
 
-	DBG1(DBG_IKE, "received TLS version: %N", tls_version_names, version);
 	if (version < this->tls->get_version(this->tls))
 	{
 		this->tls->set_version(this->tls, version);
@@ -154,9 +153,11 @@ static status_t process_client_hello(private_tls_server_t *this,
 	this->suite = this->crypto->select_cipher_suite(this->crypto, suites, count);
 	if (!this->suite)
 	{
-		DBG1(DBG_IKE, "received cipher suite inacceptable");
+		DBG1(DBG_IKE, "received cipher suites inacceptable");
 		return FAILED;
 	}
+	DBG1(DBG_IKE, "negotiated TLS version %N with suite %N",
+		 tls_version_names, version, tls_cipher_suite_names, this->suite);
 	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
 }
@@ -402,7 +403,6 @@ static status_t send_server_hello(private_tls_server_t *this,
 
 	/* TLS version */
 	version = this->tls->get_version(this->tls);
-	DBG1(DBG_IKE, "sending TLS version: %N", tls_version_names, version);
 	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->server_random));
 
@@ -410,8 +410,8 @@ static status_t send_server_hello(private_tls_server_t *this,
 	writer->write_data8(writer, chunk_empty);
 
 	/* add selected TLS cipher suite */
-	DBG1(DBG_IKE, "sending TLS cipher suite: %N", tls_cipher_suite_names,
-												  this->suite);
+	DBG2(DBG_IKE, "sending TLS cipher suite: %N",
+		 tls_cipher_suite_names, this->suite);
 	writer->write_uint16(writer, this->suite);
 
 	/* NULL compression only */
@@ -510,6 +510,7 @@ static status_t send_certificate_request(private_tls_server_t *this,
 		if (x509->get_flags(x509) & X509_CA)
 		{
 			id = cert->get_subject(cert);
+			DBG1(DBG_IKE, "sending TLS cert request for '%Y'", id);
 			authorities->write_data16(authorities, id->get_encoding(id));
 		}
 	}
