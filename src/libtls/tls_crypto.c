@@ -486,16 +486,16 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	filter_suite(this, suites, &count, offsetof(suite_algs_t, hash),
 				 lib->crypto->create_hasher_enumerator);
 
-	DBG2(DBG_CFG, "%d supported TLS cipher suites:", count);
-	for (i = 0; i < count; i++)
-	{
-		DBG2(DBG_CFG, "  %N", tls_cipher_suite_names, suites[i]);
-	}
-
 	free(this->suites);
 	this->suite_count = count;
 	this->suites = malloc(sizeof(tls_cipher_suite_t) * count);
-	memcpy(this->suites, suites, sizeof(tls_cipher_suite_t) * this->suite_count);
+
+	DBG2(DBG_CFG, "%d supported TLS cipher suites:", count);
+	for (i = 0; i < count; i++)
+	{
+		DBG2(DBG_CFG, "  %N", tls_cipher_suite_names, suites[i].suite);
+		this->suites[i] = suites[i].suite;
+	}
 }
 
 METHOD(tls_crypto_t, get_cipher_suites, int,
