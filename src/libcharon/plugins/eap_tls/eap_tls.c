@@ -95,16 +95,6 @@ typedef struct __attribute__((packed)) {
 	u_int8_t flags;
 } eap_tls_packet_t;
 
-/**
- * TLS record
- */
-typedef struct __attribute__((packed)) {
-	u_int8_t type;
-	u_int16_t version;
-	u_int16_t length;
-	char data[];
-} tls_record_t;
-
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_tls_t *this, eap_payload_t **out)
 {
@@ -259,70 +249,18 @@ static eap_payload_t *read_buf(private_eap_tls_t *this, u_int8_t identifier)
  */
 static status_t process_buf(private_eap_tls_t *this)
 {
-	tls_record_t *in, out;
-	chunk_t data;
-	u_int16_t len;
 	status_t status;
 
-	/* pass input buffer to upper layer, record for record */
-	data = this->input;
-	while (data.len > sizeof(tls_record_t))
+	status = this->tls->process(this->tls, this->input);
+	if (status != NEED_MORE)
 	{
-		in = (tls_record_t*)data.ptr;
-		len = untoh16(&in->length);
-		DBG2(DBG_IKE, "received TLS %N record (%u bytes)",
-			 tls_content_type_names, in->type, sizeof(tls_record_t) + len);
-		if (len > data.len - sizeof(tls_record_t))
-		{
-			DBG1(DBG_IKE, "TLS record length invalid");
-			return FAILED;
-		}
-		if (untoh16(&in->version) < TLS_1_0)
-		{
-			DBG1(DBG_IKE, "%N invalid with EAP-TLS",
-				 tls_version_names, untoh16(&in->version));
-			return FAILED;
-		}
-
-		status = this->tls->process(this->tls, in->type,
-									chunk_create(in->data, len));
-		if (status != NEED_MORE)
-		{
-			return status;
-		}
-		data = chunk_skip(data, len + sizeof(tls_record_t));
+		return status;
 	}
 	chunk_free(&this->input);
 	this->inpos = 0;
 
-	/* read in records from upper layer, append to output buffer */
 	chunk_free(&this->output);
-	while (TRUE)
-	{
-		tls_content_type_t type;
-		chunk_t header = chunk_from_thing(out);
-
-		status = this->tls->build(this->tls, &type, &data);
-		switch (status)
-		{
-			case NEED_MORE:
-				break;
-			case INVALID_STATE:
-				/* invalid state means we need more input from peer first */
-				return NEED_MORE;
-			case SUCCESS:
-				return SUCCESS;
-			case FAILED:
-			default:
-				return FAILED;
-		}
-		out.type = type;
-		htoun16(&out.version, this->tls->get_version(this->tls));
-		htoun16(&out.length, data.len);
-		this->output = chunk_cat("mcm", this->output, header, data);
-		DBG2(DBG_IKE, "sending TLS %N record (%u bytes)",
-			 tls_content_type_names, type, sizeof(tls_record_t) + data.len);
-	}
+	return this->tls->build(this->tls, &this->output);
 }
 
 METHOD(eap_method_t, process, status_t,

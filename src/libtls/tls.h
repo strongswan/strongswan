@@ -106,29 +106,26 @@ enum tls_purpose_t {
 struct tls_t {
 
 	/**
-	 * Process a TLS record, pass it to upper layers.
+	 * Process one or more TLS records, pass it to upper layers.
 	 *
-	 * @param type		type of the TLS record to process
-	 * @param data		associated TLS record data
+	 * @param data		TLS record data, including headers
 	 * @return
 	 *					- SUCCESS if TLS negotiation complete
 	 *					- FAILED if TLS handshake failed
 	 *					- NEED_MORE if more invocations to process/build needed
 	 */
-	status_t (*process)(tls_t *this, tls_content_type_t type, chunk_t data);
+	status_t (*process)(tls_t *this, chunk_t data);
 
 	/**
 	 * Query upper layer for TLS record, build protected record.
 	 *
-	 * @param type		type of the built TLS record
 	 * @param data		allocated data of the built TLS record
 	 * @return
 	 *					- SUCCESS if TLS negotiation complete
 	 *					- FAILED if TLS handshake failed
-	 *					- NEED_MORE if upper layers have more records to send
-	 *					- INVALID_STATE if more input records required
+	 *					- NEED_MORE if more input records required
 	 */
-	status_t (*build)(tls_t *this, tls_content_type_t *type, chunk_t *data);
+	status_t (*build)(tls_t *this, chunk_t *data);
 
 	/**
 	 * Check if TLS stack is acting as a server.

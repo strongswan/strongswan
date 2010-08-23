@@ -15,6 +15,8 @@
 
 #include "tls.h"
 
+#include <debug.h>
+
 #include "tls_protection.h"
 #include "tls_compression.h"
 #include "tls_fragmentation.h"
@@ -127,16 +129,75 @@ struct private_tls_t {
 	tls_application_t *application;
 };
 
+/**
+ * TLS record
+ */
+typedef struct __attribute__((packed)) {
+	u_int8_t type;
+	u_int16_t version;
+	u_int16_t length;
+	char data[];
+} tls_record_t;
+
 METHOD(tls_t, process, status_t,
-	private_tls_t *this, tls_content_type_t type, chunk_t data)
+	private_tls_t *this, chunk_t data)
 {
-	return this->protection->process(this->protection, type, data);
+	tls_record_t *record;
+	u_int16_t len;
+	status_t status;
+
+	while (data.len > sizeof(tls_record_t))
+	{
+		record = (tls_record_t*)data.ptr;
+		len = untoh16(&record->length);
+
+		DBG2(DBG_TLS, "received TLS %N record (%u bytes)",
+			 tls_content_type_names, record->type, sizeof(tls_record_t) + len);
+		if (len > data.len - sizeof(tls_record_t))
+		{
+			DBG1(DBG_IKE, "TLS record length invalid");
+			return FAILED;
+		}
+		status = this->protection->process(this->protection, record->type,
+										   chunk_create(record->data, len));
+		if (status != NEED_MORE)
+		{
+			return status;
+		}
+		data = chunk_skip(data, len + sizeof(tls_record_t));
+	}
+
+	return NEED_MORE;
 }
 
 METHOD(tls_t, build, status_t,
-	private_tls_t *this, tls_content_type_t *type, chunk_t *data)
+	private_tls_t *this, chunk_t *data)
 {
-	return this->protection->build(this->protection, type, data);
+	tls_record_t record;
+	status_t status;
+
+	while (TRUE)
+	{
+		tls_content_type_t type;
+		chunk_t body;
+
+		status = this->protection->build(this->protection, &type, &body);
+		switch (status)
+		{
+			case INVALID_STATE:
+				return NEED_MORE;
+			case NEED_MORE:
+				break;
+			default:
+				return status;
+		}
+		record.type = type;
+		htoun16(&record.version, this->version);
+		htoun16(&record.length, body.len);
+		*data = chunk_cat("mcm", *data, chunk_from_thing(record), body);
+		DBG2(DBG_TLS, "sending TLS %N record (%u bytes)",
+			 tls_content_type_names, type, sizeof(tls_record_t) + body.len);
+	}
 }
 
 METHOD(tls_t, is_server, bool,
