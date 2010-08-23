@@ -355,6 +355,7 @@ int main(int argc, char *argv[])
 			{ "debug-knl", required_argument, &group, DBG_KNL },
 			{ "debug-net", required_argument, &group, DBG_NET },
 			{ "debug-enc", required_argument, &group, DBG_ENC },
+			{ "debug-tls", required_argument, &group, DBG_TLS },
 			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }
 		};
