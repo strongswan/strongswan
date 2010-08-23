@@ -56,14 +56,16 @@ struct private_gcm_aead_t {
 };
 
 /**
- * architecture specific macros to convert a "long" to network order
+ * Find a suiteable word size and network order conversion functions
  */
-#if ULONG_MAX == 4294967295UL
-#define htobelong htobe32
-#define belongtoh htobe32
-#elif ULONG_MAX == 18446744073709551615UL
-#define htobelong htobe64
-#define belongtoh htobe64
+#if ULONG_MAX == 18446744073709551615UL && defined(htobe64)
+#	define htobeword htobe64
+#	define bewordtoh be64toh
+#	define SHIFT_WORD_TYPE u_int64_t
+#else
+#	define htobeword htonl
+#	define bewordtoh ntohl
+#	define SHIFT_WORD_TYPE u_int32_t
 #endif
 
 /**
@@ -71,12 +73,12 @@ struct private_gcm_aead_t {
  */
 static void sr_block(char *block)
 {
-	u_long *word = (u_long*)block;
 	int i;
+	SHIFT_WORD_TYPE *word = (SHIFT_WORD_TYPE*)block;
 
 	for (i = 0; i < BLOCK_SIZE / sizeof(*word); i++)
 	{
-		word[i] = htobelong(word[i]);
+		word[i] = bewordtoh(word[i]);
 	}
 	for (i = BLOCK_SIZE / sizeof(*word) - 1; i >= 0; i--)
 	{
@@ -88,7 +90,7 @@ static void sr_block(char *block)
 	}
 	for (i = 0; i < BLOCK_SIZE / sizeof(*word); i++)
 	{
-		word[i] = belongtoh(word[i]);
+		word[i] = htobeword(word[i]);
 	}
 }
 
