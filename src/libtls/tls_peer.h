@@ -41,8 +41,14 @@ struct tls_peer_t {
 
 /**
  * Create a tls_peer instance.
+*
+ * @param tls		TLS stack
+ * @param crypto	TLS crypto helper
+ * @param alert		TLS alert handler
+ * @param peer		peer identity
+ * @param server	server identity
  */
-tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
+tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto, tls_alert_t *alert,
 							identification_t *peer, identification_t *server);
 
 #endif /** TLS_PEER_H_ @}*/

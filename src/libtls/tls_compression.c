@@ -54,7 +54,8 @@ METHOD(tls_compression_t, destroy, void,
 /**
  * See header
  */
-tls_compression_t *tls_compression_create(tls_fragmentation_t *fragmentation)
+tls_compression_t *tls_compression_create(tls_fragmentation_t *fragmentation,
+										  tls_alert_t *alert)
 {
 	private_tls_compression_t *this;
 

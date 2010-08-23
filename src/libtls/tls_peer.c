@@ -58,6 +58,11 @@ struct private_tls_peer_t {
 	tls_crypto_t *crypto;
 
 	/**
+	 * TLS alert handler
+	 */
+	tls_alert_t *alert;
+
+	/**
 	 * Peer identity
 	 */
 	identification_t *peer;
@@ -125,7 +130,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		(reader->remaining(reader) && !reader->read_data16(reader, &ext)))
 	{
 		DBG1(DBG_TLS, "received invalid ServerHello");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
@@ -134,14 +140,16 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	{
 		DBG1(DBG_TLS, "negotiated version %N not supported",
 			 tls_version_names, version);
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_PROTOCOL_VERSION);
+		return NEED_MORE;
 	}
 	suite = cipher;
 	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1))
 	{
 		DBG1(DBG_TLS, "received TLS cipher suite %N inacceptable",
 			 tls_cipher_suite_names, suite);
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
 	}
 	DBG1(DBG_TLS, "negotiated TLS version %N with suite %N",
 		 tls_version_names, version, tls_cipher_suite_names, suite);
@@ -165,15 +173,19 @@ static status_t process_certificate(private_tls_peer_t *this,
 
 	if (!reader->read_data24(reader, &data))
 	{
-		return FAILED;
+		DBG1(DBG_TLS, "certificate message header invalid");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	certs = tls_reader_create(data);
 	while (certs->remaining(certs))
 	{
 		if (!certs->read_data24(certs, &data))
 		{
+			DBG1(DBG_TLS, "certificate message invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			certs->destroy(certs);
-			return FAILED;
+			return NEED_MORE;
 		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB_ASN1_DER, data, BUILD_END);
@@ -198,6 +210,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 		else
 		{
 			DBG1(DBG_TLS, "parsing TLS certificate failed, skipped");
+			this->alert->add(this->alert, TLS_WARNING, TLS_BAD_CERTIFICATE);
 		}
 	}
 	certs->destroy(certs);
@@ -220,27 +233,35 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 
 	if (!reader->read_data8(reader, &types))
 	{
-		return FAILED;
+		DBG1(DBG_TLS, "certreq message header invalid");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
 		if (!reader->read_data16(reader, &hashsig))
 		{
-			return FAILED;
+			DBG1(DBG_TLS, "certreq message invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
 		}
 		/* TODO: store supported hashsig algorithms */
 	}
 	if (!reader->read_data16(reader, &data))
 	{
-		return FAILED;
+		DBG1(DBG_TLS, "certreq message invalid");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	authorities = tls_reader_create(data);
 	while (authorities->remaining(authorities))
 	{
 		if (!authorities->read_data16(authorities, &data))
 		{
+			DBG1(DBG_TLS, "certreq message invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			authorities->destroy(authorities);
-			return FAILED;
+			return NEED_MORE;
 		}
 		id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
 		cert = lib->credmgr->get_cert(lib->credmgr,
@@ -284,17 +305,20 @@ static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 	if (!reader->read_data(reader, sizeof(buf), &received))
 	{
 		DBG1(DBG_TLS, "received server finished too short");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	if (!this->crypto->calculate_finished(this->crypto, "server finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating server finished failed");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
 	}
 	if (!chunk_equals(received, chunk_from_thing(buf)))
 	{
 		DBG1(DBG_TLS, "received server finished invalid");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		return NEED_MORE;
 	}
 	this->state = STATE_COMPLETE;
 	this->crypto->derive_eap_msk(this->crypto,
@@ -348,11 +372,13 @@ METHOD(tls_handshake_t, process, status_t,
 		default:
 			DBG1(DBG_TLS, "TLS %N not expected in current state",
 				 tls_handshake_type_names, type);
-			return FAILED;
+			this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+			return NEED_MORE;
 	}
 	DBG1(DBG_TLS, "TLS %N expected, but received %N",
 		 tls_handshake_type_names, expected, tls_handshake_type_names, type);
-	return FAILED;
+	this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+	return NEED_MORE;
 }
 
 /**
@@ -370,7 +396,9 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
-		return FAILED;
+		DBG1(DBG_TLS, "no suitable RNG found to generate client random");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
 	}
 	rng->get_bytes(rng, sizeof(this->client_random) - 4, this->client_random + 4);
 	rng->destroy(rng);
@@ -420,7 +448,8 @@ static status_t send_certificate(private_tls_peer_t *this,
 	if (!this->private)
 	{
 		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
 	}
 
 	/* generate certificate payload */
@@ -640,7 +669,7 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
+tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto, tls_alert_t *alert,
 							identification_t *peer, identification_t *server)
 {
 	private_tls_peer_t *this;
@@ -659,6 +688,7 @@ tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto,
 		.state = STATE_INIT,
 		.tls = tls,
 		.crypto = crypto,
+		.alert = alert,
 		.peer = peer,
 		.server = server,
 		.peer_auth = auth_cfg_create(),

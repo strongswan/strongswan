@@ -60,6 +60,11 @@ struct private_tls_server_t {
 	tls_crypto_t *crypto;
 
 	/**
+	 * TLS alert handler
+	 */
+	tls_alert_t *alert;
+
+	/**
 	 * Server identity
 	 */
 	identification_t *server;
@@ -132,7 +137,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 		(reader->remaining(reader) && !reader->read_data16(reader, &ext)))
 	{
 		DBG1(DBG_TLS, "received invalid ClientHello");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 
 	memcpy(this->client_random, random.ptr, sizeof(this->client_random));
@@ -141,7 +147,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "negotiated version %N not supported",
 			 tls_version_names, version);
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_PROTOCOL_VERSION);
+		return NEED_MORE;
 	}
 	count = ciphers.len / sizeof(u_int16_t);
 	suites = alloca(count * sizeof(tls_cipher_suite_t));
@@ -155,7 +162,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 	if (!this->suite)
 	{
 		DBG1(DBG_TLS, "received cipher suites inacceptable");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
 	}
 	DBG1(DBG_TLS, "negotiated TLS version %N with suite %N",
 		 tls_version_names, version, tls_cipher_suite_names, this->suite);
@@ -179,15 +187,19 @@ static status_t process_certificate(private_tls_server_t *this,
 
 	if (!reader->read_data24(reader, &data))
 	{
-		return FAILED;
+		DBG1(DBG_TLS, "certificate message header invalid");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	certs = tls_reader_create(data);
 	while (certs->remaining(certs))
 	{
 		if (!certs->read_data24(certs, &data))
 		{
+			DBG1(DBG_TLS, "certificate message invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			certs->destroy(certs);
-			return FAILED;
+			return NEED_MORE;
 		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB_ASN1_DER, data, BUILD_END);
@@ -211,6 +223,7 @@ static status_t process_certificate(private_tls_server_t *this,
 		else
 		{
 			DBG1(DBG_TLS, "parsing TLS certificate failed, skipped");
+			this->alert->add(this->alert, TLS_WARNING, TLS_BAD_CERTIFICATE);
 		}
 	}
 	certs->destroy(certs);
@@ -232,7 +245,8 @@ static status_t process_key_exchange(private_tls_server_t *this,
 	if (!reader->read_data16(reader, &encrypted))
 	{
 		DBG1(DBG_TLS, "received invalid Client Key Exchange");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 
 	if (!this->private ||
@@ -240,7 +254,8 @@ static status_t process_key_exchange(private_tls_server_t *this,
 								encrypted, &premaster))
 	{
 		DBG1(DBG_TLS, "decrypting Client Key Exchange data failed");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		return NEED_MORE;
 	}
 	this->crypto->derive_secrets(this->crypto, premaster,
 								 chunk_from_thing(this->client_random),
@@ -282,7 +297,8 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
 			 this->peer);
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+		return NEED_MORE;
 	}
 
 	this->crypto->append_handshake(this->crypto,
@@ -303,17 +319,20 @@ static status_t process_finished(private_tls_server_t *this,
 	if (!reader->read_data(reader, sizeof(buf), &received))
 	{
 		DBG1(DBG_TLS, "received client finished too short");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
 	}
 	if (!this->crypto->calculate_finished(this->crypto, "client finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating client finished failed");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
 	}
 	if (!chunk_equals(received, chunk_from_thing(buf)))
 	{
 		DBG1(DBG_TLS, "received client finished invalid");
-		return FAILED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		return NEED_MORE;
 	}
 
 	this->crypto->append_handshake(this->crypto, TLS_FINISHED, received);
@@ -377,11 +396,13 @@ METHOD(tls_handshake_t, process, status_t,
 		default:
 			DBG1(DBG_TLS, "TLS %N not expected in current state",
 				 tls_handshake_type_names, type);
-			return FAILED;
+			this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+			return NEED_MORE;
 	}
 	DBG1(DBG_TLS, "TLS %N expected, but received %N",
 		 tls_handshake_type_names, expected, tls_handshake_type_names, type);
-	return FAILED;
+	this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+	return NEED_MORE;
 }
 
 /**
@@ -397,6 +418,7 @@ static status_t send_server_hello(private_tls_server_t *this,
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
+		DBG1(DBG_TLS, "no suitable RNG found to generate server random");
 		return FAILED;
 	}
 	rng->get_bytes(rng, sizeof(this->server_random) - 4, this->server_random + 4);
@@ -630,8 +652,9 @@ METHOD(tls_handshake_t, destroy, void,
 /**
  * See header
  */
-tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
-							identification_t *server, identification_t *peer)
+tls_server_t *tls_server_create(tls_t *tls,
+						tls_crypto_t *crypto, tls_alert_t *alert,
+						identification_t *server, identification_t *peer)
 {
 	private_tls_server_t *this;
 
@@ -648,6 +671,7 @@ tls_server_t *tls_server_create(tls_t *tls, tls_crypto_t *crypto,
 		},
 		.tls = tls,
 		.crypto = crypto,
+		.alert = alert,
 		.server = server,
 		.peer = peer,
 		.state = STATE_INIT,

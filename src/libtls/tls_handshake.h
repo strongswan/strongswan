@@ -38,9 +38,10 @@ struct tls_handshake_t {
 	 * @param type		TLS handshake message type
 	 * @param reader	TLS data buffer
 	 * @return
-	 *					- SUCCESS if handshake complete
-	 *					- FAILED if handshake failed
-	 *					- NEED_MORE if another invocation of process/build needed
+	 *					- SUCCESS if TLS negotiation complete
+	 *					- FAILED if a fatal TLS alert queued
+	 *					- NEED_MORE if more invocations to process/build needed
+	 *					- DESTROY_ME if a fatal TLS alert received
 	 */
 	status_t (*process)(tls_handshake_t *this,
 						tls_handshake_type_t type, tls_reader_t *reader);

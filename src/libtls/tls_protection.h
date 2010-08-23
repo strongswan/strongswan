@@ -21,12 +21,13 @@
 #ifndef TLS_PROTECTION_H_
 #define TLS_PROTECTION_H_
 
-typedef struct tls_protection_t tls_protection_t;
-
 #include <library.h>
 
 #include "tls.h"
+#include "tls_alert.h"
 #include "tls_compression.h"
+
+typedef struct tls_protection_t tls_protection_t;
 
 /**
  * TLS record protocol protection layer.
@@ -72,6 +73,13 @@ struct tls_protection_t {
 					   crypter_t *crypter, chunk_t iv);
 
 	/**
+	 * Set the TLS version negotiated, used for MAC calculation.
+	 *
+	 * @param version	TLS version negotiated
+	 */
+	void (*set_version)(tls_protection_t *this, tls_version_t version);
+
+	/**
 	 * Destroy a tls_protection_t.
 	 */
 	void (*destroy)(tls_protection_t *this);
@@ -80,11 +88,11 @@ struct tls_protection_t {
 /**
  * Create a tls_protection instance.
  *
- * @param tls				TLS context
  * @param compression		compression layer of TLS stack
+ * @param alert				TLS alert handler
  * @return					TLS protection layer.
  */
-tls_protection_t *tls_protection_create(tls_t *tls,
-										tls_compression_t *compression);
+tls_protection_t *tls_protection_create(tls_compression_t *compression,
+										tls_alert_t *alert);
 
 #endif /** TLS_PROTECTION_H_ @}*/

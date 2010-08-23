@@ -6,6 +6,7 @@ libtls_la_SOURCES = \
 	tls_protection.h tls_protection.c \
 	tls_compression.h tls_compression.c \
 	tls_fragmentation.h tls_fragmentation.c \
+	tls_alert.h tls_alert.c \
 	tls_crypto.h tls_crypto.c \
 	tls_prf.h tls_prf.c \
 	tls_reader.h tls_reader.c \

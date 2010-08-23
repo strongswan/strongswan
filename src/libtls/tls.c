@@ -107,6 +107,11 @@ struct private_tls_t {
 	tls_fragmentation_t *fragmentation;
 
 	/**
+	 * TLS alert handler
+	 */
+	tls_alert_t *alert;
+
+	/**
 	 * TLS crypto helper context
 	 */
 	tls_crypto_t *crypto;
@@ -159,6 +164,7 @@ METHOD(tls_t, set_version, bool,
 		case TLS_1_1:
 		case TLS_1_2:
 			this->version = version;
+			this->protection->set_version(this->protection, version);
 			return TRUE;
 		case SSL_2_0:
 		case SSL_3_0:
@@ -196,6 +202,7 @@ METHOD(tls_t, destroy, void,
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
 	DESTROY_IF(this->application);
+	this->alert->destroy(this->alert);
 
 	free(this);
 }
@@ -239,20 +246,21 @@ tls_t *tls_create(bool is_server, identification_t *server,
 	);
 
 	this->crypto = tls_crypto_create(&this->public);
+	this->alert = tls_alert_create();
 	if (is_server)
 	{
 		this->handshake = &tls_server_create(&this->public, this->crypto,
-									this->server, this->peer)->handshake;
+							this->alert, this->server, this->peer)->handshake;
 	}
 	else
 	{
 		this->handshake = &tls_peer_create(&this->public, this->crypto,
-									this->peer, this->server)->handshake;
+							this->alert, this->peer, this->server)->handshake;
 	}
-	this->fragmentation = tls_fragmentation_create(this->handshake,
+	this->fragmentation = tls_fragmentation_create(this->handshake, this->alert,
 												   this->application);
-	this->compression = tls_compression_create(this->fragmentation);
-	this->protection = tls_protection_create(&this->public, this->compression);
+	this->compression = tls_compression_create(this->fragmentation, this->alert);
+	this->protection = tls_protection_create(this->compression, this->alert);
 	this->crypto->set_protection(this->crypto, this->protection);
 
 	return &this->public;

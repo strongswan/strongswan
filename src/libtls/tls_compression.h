@@ -21,12 +21,13 @@
 #ifndef TLS_COMPRESSION_H_
 #define TLS_COMPRESSION_H_
 
-typedef struct tls_compression_t tls_compression_t;
-
 #include <library.h>
 
 #include "tls.h"
+#include "tls_alert.h"
 #include "tls_fragmentation.h"
+
+typedef struct tls_compression_t tls_compression_t;
 
 /**
  * TLS record protocol compression layer.
@@ -70,8 +71,10 @@ struct tls_compression_t {
  * Create a tls_compression instance.
  *
  * @param fragmentation		fragmentation layer of TLS stack
+ * @param alert				TLS alert handler
  * @return					TLS compression layer.
  */
-tls_compression_t *tls_compression_create(tls_fragmentation_t *fragmentation);
+tls_compression_t *tls_compression_create(tls_fragmentation_t *fragmentation,
+										  tls_alert_t *alert);
 
 #endif /** TLS_COMPRESSION_H_ @}*/
