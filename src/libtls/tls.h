@@ -96,6 +96,8 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TLS,
 	/** outer authentication and protection in EAP-TTLS */
 	TLS_PURPOSE_EAP_TTLS,
+	/** EAP-TTLS with client authentication */
+	TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH,
 };
 
 /**

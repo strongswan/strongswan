@@ -926,6 +926,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			build_cipher_suite_list(this, FALSE);
 			break;
 		case TLS_PURPOSE_EAP_TTLS:
+		case TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH:
 			/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
 			this->msk_label = "ttls keying material";
 			build_cipher_suite_list(this, TRUE);

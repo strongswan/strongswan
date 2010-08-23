@@ -682,6 +682,7 @@ tls_server_t *tls_server_create(tls_t *tls,
 	switch (tls->get_purpose(tls))
 	{
 		case TLS_PURPOSE_EAP_TLS:
+		case TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH:
 			this->request_peer_auth = TRUE;
 			break;
 		case TLS_PURPOSE_EAP_TTLS:
