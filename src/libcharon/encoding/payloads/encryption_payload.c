@@ -423,7 +423,7 @@ METHOD(encryption_payload_t, decrypt, bool,
 
 	plain = chunk_create(crypt.ptr, crypt.len - icv.len);
 	padding.len = plain.ptr[plain.len - 1] + 1;
-	if (padding.len >= plain.len)
+	if (padding.len > plain.len)
 	{
 		DBG1(DBG_ENC, "decrypting encryption payload failed, "
 			 "padding invalid %B", &crypt);
