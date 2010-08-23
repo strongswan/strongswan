@@ -66,6 +66,8 @@ utils/optionsfrom.c utils/optionsfrom.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
+library.lo :	$(top_builddir)/config.status
+
 libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
