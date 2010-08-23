@@ -824,7 +824,7 @@ METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
 }
 
 /**
- * Check if a certificate's keyid is contained in the auth helper
+ * Check if an helper contains a certificate as trust anchor
  */
 static bool auth_contains_cacert(auth_cfg_t *auth, certificate_t *cert)
 {
@@ -856,17 +856,10 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 	certificate_t *issuer, *current;
 	auth_cfg_t *trustchain;
 	int pathlen = 0;
+	bool has_anchor;
 
 	trustchain = auth_cfg_create();
-
-	current = auth->get(auth, AUTH_RULE_CA_CERT);
-	if (!current)
-	{
-		/* no trust anchor specified, return this cert only */
-		trustchain->add(trustchain, AUTH_RULE_SUBJECT_CERT,
-						subject->get_ref(subject));
-		return trustchain;
-	}
+	has_anchor = auth->get(auth, AUTH_RULE_CA_CERT) != NULL;
 	current = subject->get_ref(subject);
 	while (TRUE)
 	{
@@ -881,17 +874,33 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		}
 		else
 		{
+			if (!has_anchor &&
+				this->cache->issued_by(this->cache, current, current))
+			{	/* If no trust anchor specified, accept any CA */
+				trustchain->add(trustchain, AUTH_RULE_CA_CERT, current);
+				return trustchain;
+			}
 			trustchain->add(trustchain, AUTH_RULE_IM_CERT, current);
 		}
-		issuer = get_issuer_cert(this, current, FALSE);
-		if (!issuer || issuer->equals(issuer, current) ||
-			pathlen > MAX_TRUST_PATH_LEN)
+		if (pathlen++ > MAX_TRUST_PATH_LEN)
 		{
-			DESTROY_IF(issuer);
+			break;
+		}
+		issuer = get_issuer_cert(this, current, FALSE);
+		if (!issuer)
+		{
+			if (!has_anchor)
+			{	/* If no trust anchor specified, accept incomplete chains */
+				return trustchain;
+			}
+			break;
+		}
+		if (has_anchor && issuer->equals(issuer, current))
+		{
+			issuer->destroy(issuer);
 			break;
 		}
 		current = issuer;
-		pathlen++;
 	}
 	trustchain->destroy(trustchain);
 	return NULL;
