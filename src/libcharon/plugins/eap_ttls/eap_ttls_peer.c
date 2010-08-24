@@ -67,7 +67,7 @@ struct private_eap_ttls_peer_t {
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_peer_t *this, tls_reader_t *reader)
 {
-	chunk_t data;
+	chunk_t data = chunk_empty;
 	status_t status;
 	payload_t *payload;
 	eap_payload_t *in;
@@ -76,11 +76,19 @@ METHOD(tls_application_t, process, status_t,
 	u_int32_t vendor, received_vendor;
 
 	status = this->avp->process(this->avp, reader, &data);
-	if (status == FAILED)
+	switch (status)
 	{
-		return FAILED;
+		case SUCCESS:
+			break;
+		case NEED_MORE:
+			DBG1(DBG_IKE, "need more AVP data");
+			return NEED_MORE;
+		case FAILED:
+		default:
+			return FAILED;
 	}
 	in = eap_payload_create_data(data);
+	chunk_free(&data);
 	payload = (payload_t*)in;
 
 	if (payload->verify(payload) != SUCCESS)

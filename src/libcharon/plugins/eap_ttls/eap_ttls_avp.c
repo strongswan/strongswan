@@ -18,6 +18,7 @@
 #include <debug.h>
 
 #define AVP_EAP_MESSAGE		79
+#define AVP_HEADER_LEN		 8
 
 typedef struct private_eap_ttls_avp_t private_eap_ttls_avp_t;
 
@@ -30,6 +31,26 @@ struct private_eap_ttls_avp_t {
 	 * Public eap_ttls_avp_t interface.
 	 */
 	eap_ttls_avp_t public;
+
+	/**
+	 * AVP input buffer
+	 */
+	chunk_t input;
+
+	/**
+	 * Position in input buffer
+	 */
+	size_t inpos;
+
+	/**
+	 * process header (TRUE) or body (FALSE)
+	 */
+	bool process_header;
+
+	/**
+	 * Size of AVP data
+	 */
+	size_t data_len;
 };
 
 METHOD(eap_ttls_avp_t, build, void,
@@ -54,35 +75,92 @@ METHOD(eap_ttls_avp_t, build, void,
 METHOD(eap_ttls_avp_t, process, status_t,
 	private_eap_ttls_avp_t* this, tls_reader_t *reader, chunk_t *data)
 {
-	u_int32_t avp_code;
-	u_int8_t  avp_flags;
-	u_int32_t avp_len, data_len;
+	size_t len;
+	chunk_t buf;
 
-	if (!reader->read_uint32(reader, &avp_code) ||
-		!reader->read_uint8(reader, &avp_flags) ||
-		!reader->read_uint24(reader, &avp_len))
+	if (this->process_header)
 	{
-		DBG1(DBG_IKE, "received invalid AVP");
+		tls_reader_t *header;
+		u_int32_t avp_code;
+		u_int8_t  avp_flags;
+		u_int32_t avp_len;
+		bool success;
+
+		len = min(reader->remaining(reader), AVP_HEADER_LEN - this->inpos);
+		if (!reader->read_data(reader, len, &buf))
+		{
+			return FAILED;
+		}
+		if (this->input.len == 0)
+		{
+			/* start of a new AVP header */
+			this->input = chunk_alloc(AVP_HEADER_LEN);
+			memcpy(this->input.ptr, buf.ptr, len);
+			this->inpos = len;
+		}
+		else
+		{
+			memcpy(this->input.ptr + this->inpos, buf.ptr, len);
+			this->inpos += len;
+		}
+
+		if (this->inpos < AVP_HEADER_LEN)
+		{
+			return NEED_MORE;
+		}
+
+		/* parse AVP header */
+		header = tls_reader_create(this->input);	
+		success = header->read_uint32(header, &avp_code) &&
+				  header->read_uint8(header, &avp_flags) &&
+				  header->read_uint24(header, &avp_len);
+		header->destroy(header);
+		chunk_free(&this->input);
+		this->inpos = 0;
+
+		if (!success)
+		{
+			DBG1(DBG_IKE, "received invalid AVP header");
+			return FAILED;
+		}
+ 		if (avp_code != AVP_EAP_MESSAGE)
+		{
+			DBG1(DBG_IKE, "expected AVP_EAP_MESSAGE but received %u", avp_code);
+			return FAILED;
+		}
+		this->process_header = FALSE;
+		this->data_len = avp_len - 8;
+		this->input = chunk_alloc(this->data_len + (4 - avp_len) % 4);
+	}
+
+	/* process AVP data */
+	len = min(reader->remaining(reader), this->input.len - this->inpos);
+	if (!reader->read_data(reader, len, &buf))
+	{
 		return FAILED;
 	}
- 	if (avp_code != AVP_EAP_MESSAGE)
+	memcpy(this->input.ptr + this->inpos, buf.ptr, len);
+	this->inpos += len;
+	if (this->inpos < this->input.len)
 	{
-		DBG1(DBG_IKE, "expected AVP_EAP_MESSAGE but received %u", avp_code);
-		return FAILED;
+		return NEED_MORE;
 	}
-	data_len = avp_len - 8;
-	if (!reader->read_data(reader, data_len + (4 - avp_len) % 4, data))
-	{
-		DBG1(DBG_IKE, "received insufficient AVP data");
-		return FAILED;
-	}
-	data->len = data_len;
+
+	*data = this->input;
+	data->len = this->data_len;
+
+	/* preparing for next AVP */
+	this->input = chunk_empty;
+	this->inpos = 0;
+	this->process_header = TRUE;
+
 	return SUCCESS;	
 }
 
 METHOD(eap_ttls_avp_t, destroy, void,
 	private_eap_ttls_avp_t *this)
 {
+	chunk_free(&this->input);
 	free(this);
 }
 
@@ -99,6 +177,10 @@ eap_ttls_avp_t *eap_ttls_avp_create(void)
 			.build = _build,
 			.destroy = _destroy,
 		},
+		.input = chunk_empty,
+		.inpos = 0,
+		.process_header = TRUE,
+		.data_len = 0,
 	);
 
 	return &this->public;
