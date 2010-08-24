@@ -98,16 +98,6 @@ typedef struct __attribute__((packed)) {
 	u_int8_t flags;
 } eap_ttls_packet_t;
 
-/**
- * TLS record
- */
-typedef struct __attribute__((packed)) {
-	u_int8_t type;
-	u_int16_t version;
-	u_int16_t length;
-	char data[];
-} tls_record_t;
-
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_ttls_t *this, eap_payload_t **out)
 {
