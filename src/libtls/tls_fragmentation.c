@@ -211,7 +211,7 @@ static status_t process_application(private_tls_fragmentation_t *this,
 				continue;
 			case SUCCESS:
 				this->application_finished = TRUE;
-				/* FALL */
+				return SUCCESS;
 			case FAILED:
 			default:
 				this->alert->add(this->alert, TLS_FATAL, TLS_CLOSE_NOTIFY);
@@ -340,7 +340,7 @@ METHOD(tls_fragmentation_t, build, status_t,
 							break;
 						case SUCCESS:
 							this->application_finished = TRUE;
-							/* FALL */
+							return SUCCESS;
 						case FAILED:
 						default:
 							this->alert->add(this->alert, TLS_FATAL,

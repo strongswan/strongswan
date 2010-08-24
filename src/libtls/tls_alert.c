@@ -138,8 +138,15 @@ METHOD(tls_alert_t, get, bool,
 		this->consumed = TRUE;
 		*level = TLS_FATAL;
 		*desc = this->desc;
-		DBG1(DBG_TLS, "sending fatal TLS alert '%N'",
-			 tls_alert_desc_names, this->desc);
+		if (this->desc == TLS_CLOSE_NOTIFY)
+		{
+			DBG1(DBG_TLS, "sending TLS close notify");
+		}
+		else
+		{
+			DBG1(DBG_TLS, "sending fatal TLS alert '%N'",
+				 tls_alert_desc_names, this->desc);
+		}
 		return TRUE;
 	}
 	else
