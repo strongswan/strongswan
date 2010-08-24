@@ -98,6 +98,10 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TTLS,
 	/** EAP-TTLS with client authentication */
 	TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH,
+	/** non-EAP TLS without client authentication */
+	TLS_PURPOSE_GENERIC,
+	/** non-EAP TLS with client authentication */
+	TLS_PURPOSE_GENERIC_CLIENT_AUTH,
 };
 
 /**

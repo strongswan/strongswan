@@ -862,13 +862,16 @@ METHOD(tls_crypto_t, change_cipher, void,
 METHOD(tls_crypto_t, derive_eap_msk, void,
 	private_tls_crypto_t *this, chunk_t client_random, chunk_t server_random)
 {
-	chunk_t seed;
+	if (this->msk_label)
+	{
+		chunk_t seed;
 
-	seed = chunk_cata("cc", client_random, server_random);
-	free(this->msk.ptr);
-	this->msk = chunk_alloc(64);
-	this->prf->get_bytes(this->prf, this->msk_label, seed,
-						 this->msk.len, this->msk.ptr);
+		seed = chunk_cata("cc", client_random, server_random);
+		free(this->msk.ptr);
+		this->msk = chunk_alloc(64);
+		this->prf->get_bytes(this->prf, this->msk_label, seed,
+							 this->msk.len, this->msk.ptr);
+	}
 }
 
 METHOD(tls_crypto_t, get_eap_msk, chunk_t,
@@ -929,6 +932,10 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 		case TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH:
 			/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
 			this->msk_label = "ttls keying material";
+			build_cipher_suite_list(this, TRUE);
+			break;
+		case TLS_PURPOSE_GENERIC:
+		case TLS_PURPOSE_GENERIC_CLIENT_AUTH:
 			build_cipher_suite_list(this, TRUE);
 			break;
 	}
