@@ -59,6 +59,11 @@ struct private_tls_fragmentation_t {
 	alert_state_t state;
 
 	/**
+	 * Did the application layer complete successfully?
+	 */
+	bool application_finished;
+
+	/**
 	 * Handshake input buffer
 	 */
 	chunk_t input;
@@ -200,10 +205,17 @@ static status_t process_application(private_tls_fragmentation_t *this,
 			return NEED_MORE;
 		}
 		status = this->application->process(this->application, reader);
-		if (status != NEED_MORE)
+		switch (status)
 		{
-			this->alert->add(this->alert, TLS_FATAL, TLS_CLOSE_NOTIFY);
-			return NEED_MORE;
+			case NEED_MORE:
+				continue;
+			case SUCCESS:
+				this->application_finished = TRUE;
+				/* FALL */
+			case FAILED:
+			default:
+				this->alert->add(this->alert, TLS_FATAL, TLS_CLOSE_NOTIFY);
+				return NEED_MORE;
 		}
 	}
 	return NEED_MORE;
@@ -315,21 +327,33 @@ METHOD(tls_fragmentation_t, build, status_t,
 		{
 			if (this->application)
 			{
-				status = this->application->build(this->application, msg);
-				if (status == INVALID_STATE)
+				while (TRUE)
 				{
-					*type = TLS_APPLICATION_DATA;
-					this->output = chunk_clone(msg->get_buf(msg));
-				}
-				else if (status != NEED_MORE)
-				{
-					this->alert->add(this->alert, TLS_FATAL, TLS_CLOSE_NOTIFY);
-					if (check_alerts(this, data))
+					status = this->application->build(this->application, msg);
+					switch (status)
 					{
-						this->state = ALERT_SENDING;
-						*type = TLS_ALERT;
-						return NEED_MORE;
+						case NEED_MORE:
+							continue;
+						case INVALID_STATE:
+							*type = TLS_APPLICATION_DATA;
+							this->output = chunk_clone(msg->get_buf(msg));
+							break;
+						case SUCCESS:
+							this->application_finished = TRUE;
+							/* FALL */
+						case FAILED:
+						default:
+							this->alert->add(this->alert, TLS_FATAL,
+											 TLS_CLOSE_NOTIFY);
+							if (check_alerts(this, data))
+							{
+								this->state = ALERT_SENDING;
+								*type = TLS_ALERT;
+								msg->destroy(msg);
+								return NEED_MORE;
+							}
 					}
+					break;
 				}
 			}
 		}
@@ -382,6 +406,12 @@ METHOD(tls_fragmentation_t, build, status_t,
 	return status;
 }
 
+METHOD(tls_fragmentation_t, application_finished, bool,
+	private_tls_fragmentation_t *this)
+{
+	return this->application_finished;
+}
+
 METHOD(tls_fragmentation_t, destroy, void,
 	private_tls_fragmentation_t *this)
 {
@@ -402,6 +432,7 @@ tls_fragmentation_t *tls_fragmentation_create(tls_handshake_t *handshake,
 		.public = {
 			.process = _process,
 			.build = _build,
+			.application_finished = _application_finished,
 			.destroy = _destroy,
 		},
 		.handshake = handshake,

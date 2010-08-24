@@ -243,7 +243,15 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tls_t *this)
 {
-	return this->crypto->get_eap_msk(this->crypto).len != 0;
+	if (this->handshake->finished(this->handshake))
+	{
+		if (!this->application)
+		{
+			return TRUE;
+		}
+		return this->fragmentation->application_finished(this->fragmentation);
+	}
+	return FALSE;
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
