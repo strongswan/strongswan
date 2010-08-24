@@ -36,10 +36,115 @@ struct private_mem_cred_t {
 	rwlock_t *lock;
 
 	/**
+	 * List of trusted certificates, certificate_t
+	 */
+	linked_list_t *trusted;
+
+	/**
+	 * List of trusted and untrusted certificates, certificate_t
+	 */
+	linked_list_t *untrusted;
+
+	/**
 	 * List of shared keys, as shared_entry_t
 	 */
 	linked_list_t *shared;
 };
+
+/**
+ * Data for the certificate enumerator
+ */
+typedef struct {
+	rwlock_t *lock;
+	certificate_type_t cert;
+	key_type_t key;
+	identification_t *id;
+} cert_data_t;
+
+/**
+ * destroy cert_data
+ */
+static void cert_data_destroy(cert_data_t *data)
+{
+	data->lock->unlock(data->lock);
+	free(data);
+}
+
+/**
+ * filter function for certs enumerator
+ */
+static bool certs_filter(cert_data_t *data, certificate_t **in, certificate_t **out)
+{
+	public_key_t *public;
+	certificate_t *cert = *in;
+
+	if (data->cert == CERT_ANY || data->cert == cert->get_type(cert))
+	{
+		public = cert->get_public_key(cert);
+		if (public)
+		{
+			if (data->key == KEY_ANY || data->key == public->get_type(public))
+			{
+				if (public->has_fingerprint(public,
+											data->id->get_encoding(data->id)))
+				{
+					public->destroy(public);
+					*out = *in;
+					return TRUE;
+				}
+			}
+			public->destroy(public);
+		}
+		else if (data->key != KEY_ANY)
+		{
+			return FALSE;
+		}
+		if (data->id == NULL || cert->has_subject(cert, data->id))
+		{
+			*out = *in;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_mem_cred_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
+{
+	cert_data_t *data;
+	enumerator_t *enumerator;
+
+	INIT(data,
+		.lock = this->lock,
+		.cert = cert,
+		.key = key,
+		.id = id,
+	);
+	this->lock->read_lock(this->lock);
+	if (trusted)
+	{
+		enumerator = this->trusted->create_enumerator(this->trusted);
+	}
+	else
+	{
+		enumerator = this->untrusted->create_enumerator(this->untrusted);
+	}
+	return enumerator_create_filter(enumerator, (void*)certs_filter, data,
+									(void*)cert_data_destroy);
+}
+
+METHOD(mem_cred_t, add_cert, void,
+	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+{
+	this->lock->write_lock(this->lock);
+	if (trusted)
+	{
+		this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+	}
+	this->untrusted->insert_last(this->untrusted, cert);
+	this->lock->unlock(this->lock);
+}
 
 /**
  * Shared key entry
@@ -190,10 +295,13 @@ METHOD(mem_cred_t, add_shared, void,
 	this->lock->unlock(this->lock);
 }
 
-
 METHOD(mem_cred_t, destroy, void,
 	private_mem_cred_t *this)
 {
+	this->trusted->destroy_offset(this->trusted,
+								offsetof(certificate_t, destroy));
+	this->untrusted->destroy_offset(this->untrusted,
+								offsetof(certificate_t, destroy));
 	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -211,13 +319,16 @@ mem_cred_t *mem_cred_create()
 			.set = {
 				.create_shared_enumerator = _create_shared_enumerator,
 				.create_private_enumerator = (void*)return_null,
-				.create_cert_enumerator = (void*)return_null,
+				.create_cert_enumerator = _create_cert_enumerator,
 				.create_cdp_enumerator  = (void*)return_null,
 				.cache_cert = (void*)nop,
 			},
+			.add_cert = _add_cert,
 			.add_shared = _add_shared,
 			.destroy = _destroy,
 		},
+		.trusted = linked_list_create(),
+		.untrusted = linked_list_create(),
 		.shared = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);

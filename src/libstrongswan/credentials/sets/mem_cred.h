@@ -36,6 +36,14 @@ struct mem_cred_t {
 	credential_set_t set;
 
 	/**
+	 * Add a certificate to the credential set.
+	 *
+	 * @param trusted		TRUE to serve certificate as trusted
+	 * @param cert			certificate, reference gets owned by set
+	 */
+	void (*add_cert)(mem_cred_t *this, bool trusted, certificate_t *cert);
+
+	/**
 	 * Add a shared key to the credential set.
 	 *
 	 * @param shared		shared key to add, gets owned by set
