@@ -46,6 +46,11 @@ struct private_mem_cred_t {
 	linked_list_t *untrusted;
 
 	/**
+	 * List of private keys, private_key_t
+	 */
+	linked_list_t *keys;
+
+	/**
 	 * List of shared keys, as shared_entry_t
 	 */
 	linked_list_t *shared;
@@ -143,6 +148,67 @@ METHOD(mem_cred_t, add_cert, void,
 		this->trusted->insert_last(this->trusted, cert->get_ref(cert));
 	}
 	this->untrusted->insert_last(this->untrusted, cert);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Data for key enumerator
+ */
+typedef struct {
+	rwlock_t *lock;
+	key_type_t type;
+	identification_t *id;
+} key_data_t;
+
+/**
+ * Destroy key enumerator data
+ */
+static void key_data_destroy(key_data_t *data)
+{
+	data->lock->unlock(data->lock);
+	free(data);
+}
+
+/**
+ * filter function for private key enumerator
+ */
+static bool key_filter(key_data_t *data, private_key_t **in, private_key_t **out)
+{
+	private_key_t *key;
+
+	key = *in;
+	if (data->type == KEY_ANY || data->type == key->get_type(key))
+	{
+		if (data->id == NULL ||
+			key->has_fingerprint(key, data->id->get_encoding(data->id)))
+		{
+			*out = key;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	private_mem_cred_t *this, key_type_t type, identification_t *id)
+{
+	key_data_t *data;
+
+	INIT(data,
+		.lock = this->lock,
+		.type = type,
+		.id = id,
+	);
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(this->keys->create_enumerator(this->keys),
+							(void*)key_filter, data, (void*)key_data_destroy);
+}
+
+METHOD(mem_cred_t, add_key, void,
+	private_mem_cred_t *this, private_key_t *key)
+{
+	this->lock->write_lock(this->lock);
+	this->keys->insert_last(this->keys, key);
 	this->lock->unlock(this->lock);
 }
 
@@ -302,6 +368,7 @@ METHOD(mem_cred_t, destroy, void,
 								offsetof(certificate_t, destroy));
 	this->untrusted->destroy_offset(this->untrusted,
 								offsetof(certificate_t, destroy));
+	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
 	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -318,17 +385,19 @@ mem_cred_t *mem_cred_create()
 		.public = {
 			.set = {
 				.create_shared_enumerator = _create_shared_enumerator,
-				.create_private_enumerator = (void*)return_null,
+				.create_private_enumerator = _create_private_enumerator,
 				.create_cert_enumerator = _create_cert_enumerator,
 				.create_cdp_enumerator  = (void*)return_null,
 				.cache_cert = (void*)nop,
 			},
 			.add_cert = _add_cert,
+			.add_key = _add_key,
 			.add_shared = _add_shared,
 			.destroy = _destroy,
 		},
 		.trusted = linked_list_create(),
 		.untrusted = linked_list_create(),
+		.keys = linked_list_create(),
 		.shared = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
