@@ -413,11 +413,9 @@ static status_t send_client_hello(private_tls_peer_t *this,
 
 	/* add TLS cipher suites */
 	count = this->crypto->get_cipher_suites(this->crypto, &suites);
-	DBG2(DBG_TLS, "sending %d TLS cipher suites:", count);
 	writer->write_uint16(writer, count * 2);
 	for (i = 0; i < count; i++)
 	{
-		DBG2(DBG_TLS, "  %N", tls_cipher_suite_names, suites[i]);
 		writer->write_uint16(writer, suites[i]);
 	}
 

@@ -433,8 +433,6 @@ static status_t send_server_hello(private_tls_server_t *this,
 	writer->write_data8(writer, chunk_empty);
 
 	/* add selected TLS cipher suite */
-	DBG2(DBG_TLS, "sending TLS cipher suite: %N",
-		 tls_cipher_suite_names, this->suite);
 	writer->write_uint16(writer, this->suite);
 
 	/* NULL compression only */
