@@ -338,6 +338,12 @@ METHOD(eap_method_t, process, status_t,
 	{
 		*out = read_buf(this, pkt->identifier);
 	}
+	else if (status == FAILED && !this->is_server)
+	{	/* client sends an empty TLS message, waits for a EAP-Failure */
+		chunk_free(&this->output);
+		*out = read_buf(this, pkt->identifier);
+		return NEED_MORE;
+	}
 	return status;
 }
 
