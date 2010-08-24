@@ -63,7 +63,7 @@ struct private_tls_peer_t {
 	tls_alert_t *alert;
 
 	/**
-	 * Peer identity
+	 * Peer identity, NULL for no client authentication
 	 */
 	identification_t *peer;
 
@@ -86,11 +86,6 @@ struct private_tls_peer_t {
 	 * Hello random data selected by server
 	 */
 	char server_random[32];
-
-	/**
-	 * Does the server request a peer authentication?
-	 */
-	bool peer_auth_requested;
 
 	/**
 	 * Auth helper for peer authentication
@@ -219,7 +214,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 }
 
 /**
- * Process a Certificate message
+ * Process a Certificate Request message
  */
 static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 {
@@ -228,6 +223,13 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 	identification_t *id;
 	certificate_t *cert;
 
+	if (!this->peer)
+	{
+		DBG1(DBG_TLS, "server requested a certificate, but client "
+			 "authentication disabled");
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
+	}
 	this->crypto->append_handshake(this->crypto,
 								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
 
@@ -351,9 +353,9 @@ METHOD(tls_handshake_t, process, status_t,
 		case STATE_CERT_RECEIVED:
 			if (type == TLS_CERTIFICATE_REQUEST)
 			{
-				this->peer_auth_requested = TRUE;
 				return process_certreq(this, reader);
 			}
+			this->peer = NULL;
 			/* fall through since TLS_CERTIFICATE_REQUEST is optional */
 		case STATE_CERTREQ_RECEIVED:
 			if (type == TLS_SERVER_HELLO_DONE)
@@ -441,13 +443,15 @@ static status_t send_certificate(private_tls_peer_t *this,
 	tls_writer_t *certs;
 	chunk_t data;
 
-	this->private = lib->credmgr->get_private(lib->credmgr,
+	if (this->peer)
+	{
+		this->private = lib->credmgr->get_private(lib->credmgr,
 										KEY_ANY, this->peer, this->peer_auth);
+	}
 	if (!this->private)
 	{
 		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+		return FAILED;
 	}
 
 	/* generate certificate payload */
@@ -601,7 +605,7 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_INIT:
 			return send_client_hello(this, type, writer);
 		case STATE_HELLO_DONE:
-			if (this->peer_auth_requested)
+			if (this->peer)
 			{
 				return send_certificate(this, type, writer);
 			}
@@ -609,7 +613,7 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_CERT_SENT:
 			return send_key_exchange(this, type, writer);
 		case STATE_KEY_EXCHANGE_SENT:
-			if (this->peer_auth_requested)
+			if (this->peer)
 			{
 				return send_certificate_verify(this, type, writer);
 			}
@@ -627,8 +631,8 @@ METHOD(tls_handshake_t, build, status_t,
 METHOD(tls_handshake_t, cipherspec_changed, bool,
 	private_tls_peer_t *this)
 {
-	if ((this->peer_auth_requested && this->state == STATE_VERIFY_SENT) ||
-	   (!this->peer_auth_requested && this->state == STATE_KEY_EXCHANGE_SENT))
+	if ((this->peer && this->state == STATE_VERIFY_SENT) ||
+	   (!this->peer && this->state == STATE_KEY_EXCHANGE_SENT))
 	{
 		this->crypto->change_cipher(this->crypto, FALSE);
 		this->state = STATE_CIPHERSPEC_CHANGED_OUT;

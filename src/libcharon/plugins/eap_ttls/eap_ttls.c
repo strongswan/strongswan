@@ -405,6 +405,11 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 		.is_server = is_server,
 	);
 
+	if (is_server && !lib->settings->get_bool(lib->settings,
+							"charon.plugins.eap-ttls.request_peer_auth", FALSE))
+	{	/* don't request peer authentication */
+		peer = NULL;
+	}
 	this->tls = tls_create(is_server, server, peer,
 						   TLS_PURPOSE_EAP_TTLS, application);
 	if (!this->tls)

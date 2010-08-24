@@ -70,7 +70,7 @@ struct private_tls_server_t {
 	identification_t *server;
 
 	/**
-	 * Peer identity
+	 * Peer identity, NULL for no client authentication
 	 */
 	identification_t *peer;
 
@@ -88,11 +88,6 @@ struct private_tls_server_t {
 	 * Hello random data selected by server
 	 */
 	char server_random[32];
-
-	/**
-	 * Does the server request a peer authentication?
-	 */
-	bool request_peer_auth;
 
 	/**
 	 * Auth helper for peer authentication
@@ -359,7 +354,7 @@ METHOD(tls_handshake_t, process, status_t,
 			{
 				return process_certificate(this, reader);
 			}
-			if (this->request_peer_auth)
+			if (this->peer)
 			{
 				expected = TLS_CERTIFICATE;
 				break;
@@ -377,7 +372,7 @@ METHOD(tls_handshake_t, process, status_t,
 			{
 				return process_cert_verify(this, reader);
 			}
-			if (this->request_peer_auth)
+			if (this->peer)
 			{
 				expected = TLS_CERTIFICATE_VERIFY;
 				break;
@@ -591,7 +586,7 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_HELLO_SENT:
 			return send_certificate(this, type, writer);
 		case STATE_CERT_SENT:
-			if (this->request_peer_auth)
+			if (this->peer)
 			{
 				return send_certificate_request(this, type, writer);
 			}
@@ -622,8 +617,8 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 METHOD(tls_handshake_t, change_cipherspec, bool,
 	private_tls_server_t *this)
 {
-	if ((this->request_peer_auth && this->state == STATE_CERT_VERIFY_RECEIVED) ||
-	   (!this->request_peer_auth && this->state == STATE_KEY_EXCHANGE_RECEIVED))
+	if ((this->peer && this->state == STATE_CERT_VERIFY_RECEIVED) ||
+	   (!this->peer && this->state == STATE_KEY_EXCHANGE_RECEIVED))
 	{
 		this->crypto->change_cipher(this->crypto, TRUE);
 		this->state = STATE_CIPHERSPEC_CHANGED_IN;
@@ -677,16 +672,5 @@ tls_server_t *tls_server_create(tls_t *tls,
 		.server_auth = auth_cfg_create(),
 	);
 
-	switch (tls->get_purpose(tls))
-	{
-		case TLS_PURPOSE_EAP_TLS:
-		case TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH:
-		case TLS_PURPOSE_GENERIC_CLIENT_AUTH:
-			this->request_peer_auth = TRUE;
-			break;
-		case TLS_PURPOSE_EAP_TTLS:
-		case TLS_PURPOSE_GENERIC:
-			break;
-	}
 	return &this->public;
 }

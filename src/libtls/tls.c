@@ -268,7 +268,7 @@ METHOD(tls_t, destroy, void,
 	this->fragmentation->destroy(this->fragmentation);
 	this->crypto->destroy(this->crypto);
 	this->handshake->destroy(this->handshake);
-	this->peer->destroy(this->peer);
+	DESTROY_IF(this->peer);
 	this->server->destroy(this->server);
 	DESTROY_IF(this->application);
 	this->alert->destroy(this->alert);
@@ -309,7 +309,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.is_server = is_server,
 		.version = TLS_1_2,
 		.server = server->clone(server),
-		.peer = peer->clone(peer),
+		.peer = peer ? peer->clone(peer) : NULL,
 		.application = application,
 		.purpose = purpose,
 	);

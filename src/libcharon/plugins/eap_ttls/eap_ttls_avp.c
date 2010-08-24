@@ -110,7 +110,7 @@ METHOD(eap_ttls_avp_t, process, status_t,
 		}
 
 		/* parse AVP header */
-		header = tls_reader_create(this->input);	
+		header = tls_reader_create(this->input);
 		success = header->read_uint32(header, &avp_code) &&
 				  header->read_uint8(header, &avp_flags) &&
 				  header->read_uint24(header, &avp_len);
@@ -154,7 +154,7 @@ METHOD(eap_ttls_avp_t, process, status_t,
 	this->inpos = 0;
 	this->process_header = TRUE;
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(eap_ttls_avp_t, destroy, void,

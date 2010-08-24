@@ -96,12 +96,8 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TLS,
 	/** outer authentication and protection in EAP-TTLS */
 	TLS_PURPOSE_EAP_TTLS,
-	/** EAP-TTLS with client authentication */
-	TLS_PURPOSE_EAP_TTLS_CLIENT_AUTH,
-	/** non-EAP TLS without client authentication */
+	/** non-EAP TLS */
 	TLS_PURPOSE_GENERIC,
-	/** non-EAP TLS with client authentication */
-	TLS_PURPOSE_GENERIC_CLIENT_AUTH,
 };
 
 /**
@@ -185,7 +181,7 @@ struct tls_t {
  *
  * @param is_server			TRUE to act as server, FALSE for client
  * @param server			server identity
- * @param peer				peer identity
+ * @param peer				peer identity, NULL for no client authentication
  * @param purpse			purpose this TLS stack instance is used for
  * @param application		higher layer application or NULL if none
  * @return					TLS stack
