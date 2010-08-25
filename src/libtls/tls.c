@@ -176,6 +176,7 @@ METHOD(tls_t, build, status_t,
 	tls_record_t record;
 	status_t status;
 
+	*data = chunk_empty;
 	while (TRUE)
 	{
 		tls_content_type_t type;
