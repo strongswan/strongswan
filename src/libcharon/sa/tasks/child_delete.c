@@ -117,11 +117,10 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
 {
-	enumerator_t *payloads;
-	iterator_t *spis;
+	enumerator_t *payloads, *spis;
 	payload_t *payload;
 	delete_payload_t *delete_payload;
-	u_int32_t *spi;
+	u_int32_t spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
 
@@ -136,19 +135,19 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 			{
 				continue;
 			}
-			spis = delete_payload->create_spi_iterator(delete_payload);
-			while (spis->iterate(spis, (void**)&spi))
+			spis = delete_payload->create_spi_enumerator(delete_payload);
+			while (spis->enumerate(spis, &spi))
 			{
 				child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
-													  *spi, FALSE);
+													  spi, FALSE);
 				if (child_sa == NULL)
 				{
 					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x, "
-						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
+						 "but no such SA", protocol_id_names, protocol, ntohl(spi));
 					continue;
 				}
 				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
-						protocol_id_names, protocol, ntohl(*spi));
+					 protocol_id_names, protocol, ntohl(spi));
 
 				switch (child_sa->get_state(child_sa))
 				{
@@ -161,7 +160,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						if (!this->initiator)
 						{
 							this->ike_sa->destroy_child_sa(this->ike_sa,
-														   protocol, *spi);
+														   protocol, spi);
 							continue;
 						}
 					case CHILD_INSTALLED:

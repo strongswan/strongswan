@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -65,11 +66,6 @@ struct private_delete_payload_t {
 	 * The contained SPI's.
 	 */
 	chunk_t spis;
-
-	/**
-	 * List containing u_int32_t spis
-	 */
-	linked_list_t *spi_list;
 };
 
 /**
@@ -77,7 +73,6 @@ struct private_delete_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_delete_payload_t.
- *
  */
 encoding_rule_t delete_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -85,20 +80,20 @@ encoding_rule_t delete_payload_encodings[] = {
 	/* the critical bit */
 	{ FLAG,				offsetof(private_delete_payload_t, critical) 		},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
+	{ RESERVED_BIT,		0 													},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_delete_payload_t, payload_length)},
+	{ PAYLOAD_LENGTH,	offsetof(private_delete_payload_t, payload_length)	},
 	{ U_INT_8,			offsetof(private_delete_payload_t, protocol_id)		},
 	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
 	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
 	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
-	{ SPIS,			offsetof(private_delete_payload_t, spis) 				}
+	{ SPIS,				offsetof(private_delete_payload_t, spis) 			}
 };
 
 /*
@@ -115,10 +110,8 @@ encoding_rule_t delete_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_delete_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_delete_payload_t *this)
 {
 	switch (this->protocol_id)
 	{
@@ -147,112 +140,103 @@ static status_t verify(private_delete_payload_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of delete_payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_delete_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_delete_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = delete_payload_encodings;
-	*rule_count = sizeof(delete_payload_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(delete_payload_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_payload_type(private_delete_payload_t *this)
+METHOD(payload_t, get_payload_type, payload_type_t,
+	private_delete_payload_t *this)
 {
 	return DELETE;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_delete_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_delete_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_delete_payload_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_delete_payload_t *this,payload_type_t type)
 {
 	this->next_payload = type;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_delete_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_delete_payload_t *this)
 {
 	return this->payload_length;
 }
 
-/**
- * Implementation of delete_payload_t.get_protocol_id.
- */
-static protocol_id_t get_protocol_id (private_delete_payload_t *this)
+METHOD(delete_payload_t, get_protocol_id, protocol_id_t,
+	private_delete_payload_t *this)
 {
-	return (this->protocol_id);
+	return this->protocol_id;
 }
 
-/**
- * Implementation of delete_payload_t.add_spi.
- */
-static void add_spi(private_delete_payload_t *this, u_int32_t spi)
+METHOD(delete_payload_t, add_spi, void,
+	private_delete_payload_t *this, u_int32_t spi)
 {
-	/* only add SPIs if AH|ESP, ignore others */
-	if (this->protocol_id == PROTO_AH || this->protocol_id == PROTO_ESP)
+	switch (this->protocol_id)
 	{
-		this->spi_count += 1;
-		this->spis.len += this->spi_size;
-		this->spis.ptr = realloc(this->spis.ptr, this->spis.len);
-		*(u_int32_t*)(this->spis.ptr + (this->spis.len / this->spi_size - 1)) = spi;
-		if (this->spi_list)
-		{
-			/* reset SPI iterator list */
-			this->spi_list->destroy(this->spi_list);
-			this->spi_list = NULL;
-		}
+		case PROTO_AH:
+		case PROTO_ESP:
+			this->spi_count++;
+			this->spis = chunk_cat("mc", this->spis, chunk_from_thing(spi));
+			break;
+		default:
+			break;
 	}
 }
 
 /**
- * Implementation of delete_payload_t.create_spi_iterator.
+ * SPI enumerator implementation
  */
-static iterator_t* create_spi_iterator(private_delete_payload_t *this)
-{
-	int i;
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** remaining SPIs */
+	chunk_t spis;
+} spi_enumerator_t;
 
-	if (this->spi_list == NULL)
+METHOD(enumerator_t, spis_enumerate, bool,
+	spi_enumerator_t *this, u_int32_t *spi)
+{
+	if (this->spis.len >= sizeof(*spi))
 	{
-		this->spi_list = linked_list_create();
-		/* only parse SPIs if AH|ESP */
-		if (this->protocol_id == PROTO_AH || this->protocol_id == PROTO_ESP)
-		{
-			for (i = 0; i < this->spi_count; i++)
-			{
-				this->spi_list->insert_last(this->spi_list, this->spis.ptr + i *
-															this->spi_size);
-			}
-		}
+		memcpy(spi, this->spis.ptr, sizeof(*spi));
+		this->spis = chunk_skip(this->spis, sizeof(*spi));
+		return TRUE;
 	}
-	return this->spi_list->create_iterator(this->spi_list, TRUE);
+	return FALSE;
 }
 
-/**
- * Implementation of payload_t.destroy and delete_payload_t.destroy.
- */
-static void destroy(private_delete_payload_t *this)
+METHOD(delete_payload_t, create_spi_enumerator, enumerator_t*,
+	private_delete_payload_t *this)
 {
-	if (this->spis.ptr != NULL)
+	spi_enumerator_t *e;
+
+	if (this->spi_size != sizeof(u_int32_t))
 	{
-		chunk_free(&this->spis);
+		return enumerator_create_empty();
 	}
-	if (this->spi_list)
-	{
-		this->spi_list->destroy(this->spi_list);
-	}
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_spis_enumerate,
+			.destroy = (void*)free,
+		},
+		.spis = this->spis,
+	);
+	return &e->public;
+}
+
+METHOD2(payload_t, delete_payload_t, destroy, void,
+	private_delete_payload_t *this)
+{
+	free(this->spis.ptr);
 	free(this);
 }
 
@@ -261,32 +245,28 @@ static void destroy(private_delete_payload_t *this)
  */
 delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 {
-	private_delete_payload_t *this = malloc_thing(private_delete_payload_t);
+	private_delete_payload_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.destroy = (void (*) (delete_payload_t *)) destroy;
-	this->public.get_protocol_id = (protocol_id_t (*) (delete_payload_t *)) get_protocol_id;
-	this->public.add_spi = (void (*) (delete_payload_t *,u_int32_t))add_spi;
-	this->public.create_spi_iterator = (iterator_t* (*) (delete_payload_t *)) create_spi_iterator;
-
-	/* private variables */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length = DELETE_PAYLOAD_HEADER_LENGTH;
-	this->protocol_id = protocol_id;
-	this->spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0;
-	this->spi_count = 0;
-	this->spis = chunk_empty;
-	this->spi_list = NULL;
-
-	return (&this->public);
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_payload_type,
+				.destroy = _destroy,
+			},
+			.get_protocol_id = _get_protocol_id,
+			.add_spi = _add_spi,
+			.create_spi_enumerator = _create_spi_enumerator,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = DELETE_PAYLOAD_HEADER_LENGTH,
+		.protocol_id = protocol_id,
+		.spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0,
+	);
+	return &this->public;
 }

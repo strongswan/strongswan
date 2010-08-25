@@ -39,6 +39,7 @@ typedef struct delete_payload_t delete_payload_t;
  * The DELETE payload format is described in RFC section 3.11.
  */
 struct delete_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -59,13 +60,11 @@ struct delete_payload_t {
 	void (*add_spi) (delete_payload_t *this, u_int32_t spi);
 
 	/**
-	 * Get an iterator over the SPIs.
+	 * Get an enumerator over the SPIs in network order.
 	 *
-	 * The iterate() function returns a pointer to a u_int32_t SPI.
-	 *
-	 * @return				iterator over SPIs
+	 * @return				enumerator over SPIs, u_int32_t
 	 */
-	iterator_t *(*create_spi_iterator) (delete_payload_t *this);
+	enumerator_t *(*create_spi_enumerator) (delete_payload_t *this);
 
 	/**
 	 * Destroys an delete_payload_t object.
