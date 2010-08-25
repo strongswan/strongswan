@@ -185,6 +185,7 @@ METHOD(delete_payload_t, add_spi, void,
 		case PROTO_AH:
 		case PROTO_ESP:
 			this->spi_count++;
+			this->payload_length += sizeof(spi);
 			this->spis = chunk_cat("mc", this->spis, chunk_from_thing(spi));
 			break;
 		default:
