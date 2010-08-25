@@ -451,6 +451,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	if (!this->private)
 	{
 		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 
@@ -510,6 +511,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	if (!rng)
 	{
 		DBG1(DBG_TLS, "no suitable RNG found for TLS premaster secret");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 	rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2);
@@ -535,6 +537,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
 		return FAILED;
 	}
 	if (!public->encrypt(public, ENCRYPT_RSA_PKCS1,
@@ -542,6 +545,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	{
 		public->destroy(public);
 		DBG1(DBG_TLS, "encrypting TLS premaster secret failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_BAD_CERTIFICATE);
 		return FAILED;
 	}
 
@@ -566,6 +570,7 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 		!this->crypto->sign_handshake(this->crypto, this->private, writer))
 	{
 		DBG1(DBG_TLS, "creating TLS Certificate Verify signature failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 
@@ -586,6 +591,7 @@ static status_t send_finished(private_tls_peer_t *this,
 	if (!this->crypto->calculate_finished(this->crypto, "client finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating client finished data failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 

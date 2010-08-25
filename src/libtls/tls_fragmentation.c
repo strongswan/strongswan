@@ -330,6 +330,9 @@ static status_t build_handshake(private_tls_fragmentation_t *this)
 	return status;
 }
 
+/**
+ * Build TLS application data
+ */
 static status_t build_application(private_tls_fragmentation_t *this)
 {
 	tls_writer_t *msg;

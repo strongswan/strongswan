@@ -414,6 +414,7 @@ static status_t send_server_hello(private_tls_server_t *this,
 	if (!rng)
 	{
 		DBG1(DBG_TLS, "no suitable RNG found to generate server random");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 	rng->get_bytes(rng, sizeof(this->server_random) - 4, this->server_random + 4);
@@ -456,6 +457,7 @@ static status_t send_certificate(private_tls_server_t *this,
 	if (!this->private)
 	{
 		DBG1(DBG_TLS, "no TLS server certificate found for '%Y'", this->server);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 
@@ -563,6 +565,7 @@ static status_t send_finished(private_tls_server_t *this,
 	if (!this->crypto->calculate_finished(this->crypto, "server finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating server finished data failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return FAILED;
 	}
 
