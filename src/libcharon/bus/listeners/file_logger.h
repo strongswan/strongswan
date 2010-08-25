@@ -54,8 +54,9 @@ struct file_logger_t {
  *
  * @param out			FILE to write to
  * @param time_format	format of timestamp prefix, as in strftime()
+ * @param ike_name		TRUE to prefix the name of the IKE_SA
  * @return				file_logger_t object
  */
-file_logger_t *file_logger_create(FILE *out, char *time_format);
+file_logger_t *file_logger_create(FILE *out, char *time_format, bool ike_name);
 
 #endif /** FILE_LOGGER_H_ @}*/

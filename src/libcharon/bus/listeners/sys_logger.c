@@ -41,6 +41,11 @@ struct private_sys_logger_t {
 	 * Maximum level to log, for each group
 	 */
 	level_t levels[DBG_MAX];
+
+	/**
+	 * Print the name/# of the IKE_SA?
+	 */
+	bool ike_name;
 };
 
 /**
@@ -51,11 +56,25 @@ static bool log_(private_sys_logger_t *this, debug_t group, level_t level,
 {
 	if (level <= this->levels[group])
 	{
-		char buffer[8192];
+		char buffer[8192], namestr[128] = "";
 		char *current = buffer, *next;
 
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
+
+		if (this->ike_name && ike_sa)
+		{
+			if (ike_sa->get_peer_cfg(ike_sa))
+			{
+				snprintf(namestr, sizeof(namestr), " <%s|%d>",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+			}
+			else
+			{
+				snprintf(namestr, sizeof(namestr), " <%d>",
+					ike_sa->get_unique_id(ike_sa));
+			}
+		}
 
 		/* do a syslog with every line */
 		while (current)
@@ -65,8 +84,8 @@ static bool log_(private_sys_logger_t *this, debug_t group, level_t level,
 			{
 				*(next++) = '\0';
 			}
-			syslog(this->facility|LOG_INFO, "%.2d[%N] %s\n",
-				   thread, debug_names, group, current);
+			syslog(this->facility|LOG_INFO, "%.2d[%N]%s %s\n",
+				   thread, debug_names, group, namestr, current);
 			current = next;
 		}
 	}
@@ -104,7 +123,7 @@ static void destroy(private_sys_logger_t *this)
 /*
  * Described in header.
  */
-sys_logger_t *sys_logger_create(int facility)
+sys_logger_t *sys_logger_create(int facility, bool ike_name)
 {
 	private_sys_logger_t *this = malloc_thing(private_sys_logger_t);
 
@@ -116,6 +135,7 @@ sys_logger_t *sys_logger_create(int facility)
 
 	/* private variables */
 	this->facility = facility;
+	this->ike_name = ike_name;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
 
 	return &this->public;

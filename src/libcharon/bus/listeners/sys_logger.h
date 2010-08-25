@@ -53,8 +53,9 @@ struct sys_logger_t {
  * Constructor to create a sys_logger_t object.
  *
  * @param facility	syslog facility to use
+ * @param ike_name	TRUE to prefix the name of the IKE_SA
  * @return			sys_logger_t object
  */
-sys_logger_t *sys_logger_create(int facility);
+sys_logger_t *sys_logger_create(int facility, bool ike_name);
 
 #endif /** SYS_LOGGER_H_ @}*/

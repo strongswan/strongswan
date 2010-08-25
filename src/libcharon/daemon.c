@@ -213,7 +213,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	int loggers_defined = 0;
 	debug_t group;
 	level_t  def;
-	bool append;
+	bool append, ike_name;
 	FILE *file;
 
 	/* setup sysloggers */
@@ -222,13 +222,16 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	while (enumerator->enumerate(enumerator, &facility))
 	{
 		loggers_defined++;
+
+		ike_name = lib->settings->get_bool(lib->settings,
+								"charon.syslog.%s.ike_name", FALSE, facility);
 		if (streq(facility, "daemon"))
 		{
-			sys_logger = sys_logger_create(LOG_DAEMON);
+			sys_logger = sys_logger_create(LOG_DAEMON, ike_name);
 		}
 		else if (streq(facility, "auth"))
 		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV);
+			sys_logger = sys_logger_create(LOG_AUTHPRIV, ike_name);
 		}
 		else
 		{
@@ -282,7 +285,9 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		}
 		file_logger = file_logger_create(file,
 						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename));
+							"charon.filelog.%s.time_format", NULL, filename),
+						lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.ike_name", FALSE, filename));
 		def = lib->settings->get_int(lib->settings,
 									 "charon.filelog.%s.default", 1, filename);
 		for (group = 0; group < DBG_MAX; group++)
@@ -303,12 +308,12 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	if (!loggers_defined)
 	{
 		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout, NULL);
+		file_logger = file_logger_create(stdout, NULL, FALSE);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
 		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON);
+		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
@@ -322,7 +327,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		}
 
 		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
