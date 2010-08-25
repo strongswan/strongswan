@@ -84,6 +84,11 @@ struct private_tls_fragmentation_t {
 	chunk_t output;
 
 	/**
+	 * Type of data in output buffer
+	 */
+	tls_content_type_t output_type;
+
+	/**
 	 * Upper layer application data protocol
 	 */
 	tls_application_t *application;
@@ -288,12 +293,77 @@ static bool check_alerts(private_tls_fragmentation_t *this, chunk_t *data)
 	return FALSE;
 }
 
+/**
+ * Build hanshake message
+ */
+static status_t build_handshake(private_tls_fragmentation_t *this)
+{
+	tls_writer_t *hs, *msg;
+	tls_handshake_type_t type;
+	status_t status;
+
+	msg = tls_writer_create(64);
+	while (TRUE)
+	{
+		hs = tls_writer_create(64);
+		status = this->handshake->build(this->handshake, &type, hs);
+		switch (status)
+		{
+			case NEED_MORE:
+				msg->write_uint8(msg, type);
+				msg->write_data24(msg, hs->get_buf(hs));
+				DBG2(DBG_TLS, "sending TLS %N message (%u bytes)",
+					 tls_handshake_type_names, type, 4 + hs->get_buf(hs).len);
+				hs->destroy(hs);
+				continue;
+			case INVALID_STATE:
+				this->output_type = TLS_HANDSHAKE;
+				this->output = chunk_clone(msg->get_buf(msg));
+				break;
+			default:
+				break;
+		}
+		hs->destroy(hs);
+		break;
+	}
+	msg->destroy(msg);
+	return status;
+}
+
+static status_t build_application(private_tls_fragmentation_t *this)
+{
+	tls_writer_t *msg;
+	status_t status;
+
+	msg = tls_writer_create(64);
+	while (TRUE)
+	{
+		status = this->application->build(this->application, msg);
+		switch (status)
+		{
+			case NEED_MORE:
+				continue;
+			case INVALID_STATE:
+				this->output_type = TLS_APPLICATION_DATA;
+				this->output = chunk_clone(msg->get_buf(msg));
+				break;
+			case SUCCESS:
+				this->application_finished = TRUE;
+				break;
+			case FAILED:
+			default:
+				this->alert->add(this->alert, TLS_FATAL, TLS_CLOSE_NOTIFY);
+				break;
+		}
+		break;
+	}
+	msg->destroy(msg);
+	return status;
+}
+
 METHOD(tls_fragmentation_t, build, status_t,
 	private_tls_fragmentation_t *this, tls_content_type_t *type, chunk_t *data)
 {
-	chunk_t hs_data;
-	tls_handshake_type_t hs_type;
-	tls_writer_t *writer, *msg;
 	status_t status = INVALID_STATE;
 
 	switch (this->state)
@@ -318,81 +388,26 @@ METHOD(tls_fragmentation_t, build, status_t,
 		*data = chunk_clone(chunk_from_chars(0x01));
 		return NEED_MORE;
 	}
-
 	if (!this->output.len)
 	{
-		msg = tls_writer_create(64);
-
-		if (this->handshake->finished(this->handshake))
+		if (!this->handshake->finished(this->handshake))
 		{
-			if (this->application)
-			{
-				while (TRUE)
-				{
-					status = this->application->build(this->application, msg);
-					switch (status)
-					{
-						case NEED_MORE:
-							continue;
-						case INVALID_STATE:
-							*type = TLS_APPLICATION_DATA;
-							this->output = chunk_clone(msg->get_buf(msg));
-							break;
-						case SUCCESS:
-							this->application_finished = TRUE;
-							return SUCCESS;
-						case FAILED:
-						default:
-							this->alert->add(this->alert, TLS_FATAL,
-											 TLS_CLOSE_NOTIFY);
-							if (check_alerts(this, data))
-							{
-								this->state = ALERT_SENDING;
-								*type = TLS_ALERT;
-								msg->destroy(msg);
-								return NEED_MORE;
-							}
-					}
-					break;
-				}
-			}
+			status = build_handshake(this);
 		}
-		else
+		else if (this->application)
 		{
-			do
-			{
-				writer = tls_writer_create(64);
-				status = this->handshake->build(this->handshake, &hs_type, writer);
-				switch (status)
-				{
-					case NEED_MORE:
-						hs_data = writer->get_buf(writer);
-						msg->write_uint8(msg, hs_type);
-						msg->write_data24(msg, hs_data);
-						DBG2(DBG_TLS, "sending TLS %N message (%u bytes)",
-							 tls_handshake_type_names, hs_type, 4 + hs_data.len);
-						break;
-					case INVALID_STATE:
-						*type = TLS_HANDSHAKE;
-						this->output = chunk_clone(msg->get_buf(msg));
-						break;
-					default:
-						break;
-				}
-				writer->destroy(writer);
-			}
-			while (status == NEED_MORE);
+			status = build_application(this);
 		}
-
-		msg->destroy(msg);
-		if (status != INVALID_STATE)
+		if (check_alerts(this, data))
 		{
-			return status;
+			this->state = ALERT_SENDING;
+			*type = TLS_ALERT;
+			return NEED_MORE;
 		}
 	}
-
 	if (this->output.len)
 	{
+		*type = this->output_type;
 		if (this->output.len <= MAX_TLS_FRAGMENT_LEN)
 		{
 			*data = this->output;
