@@ -352,7 +352,7 @@ static status_t parse(private_encryption_payload_t *this, chunk_t plain)
 		if (parser->parse_payload(parser, type, &payload) != SUCCESS)
 		{
 			parser->destroy(parser);
-			return FALSE;
+			return PARSE_ERROR;
 		}
 		if (payload->verify(payload) != SUCCESS)
 		{
@@ -360,17 +360,17 @@ static status_t parse(private_encryption_payload_t *this, chunk_t plain)
 				 payload_type_names, payload->get_type(payload));
 			payload->destroy(payload);
 			parser->destroy(parser);
-			return FALSE;
+			return VERIFY_ERROR;
 		}
 		type = payload->get_next_type(payload);
 		this->payloads->insert_last(this->payloads, payload);
 	}
 	parser->destroy(parser);
 	DBG2(DBG_ENC, "parsed content of encryption payload");
-	return TRUE;
+	return SUCCESS;
 }
 
-METHOD(encryption_payload_t, decrypt, bool,
+METHOD(encryption_payload_t, decrypt, status_t,
 	private_encryption_payload_t *this, chunk_t assoc)
 {
 	chunk_t iv, plain, padding, icv, crypt;
@@ -379,7 +379,7 @@ METHOD(encryption_payload_t, decrypt, bool,
 	if (this->aead == NULL)
 	{
 		DBG1(DBG_ENC, "decrypting encryption payload failed, transform missing");
-		return FALSE;
+		return INVALID_STATE;
 	}
 
 	/* prepare data to authenticate-decrypt:
@@ -402,7 +402,7 @@ METHOD(encryption_payload_t, decrypt, bool,
 		(crypt.len - icv.len) % bs)
 	{
 		DBG1(DBG_ENC, "decrypting encryption payload failed, invalid length");
-		return FALSE;
+		return FAILED;
 	}
 
 	assoc = append_header(this, assoc);
@@ -417,7 +417,7 @@ METHOD(encryption_payload_t, decrypt, bool,
 	{
 		DBG1(DBG_ENC, "verifying encryption payload integrity failed");
 		free(assoc.ptr);
-		return FALSE;
+		return FAILED;
 	}
 	free(assoc.ptr);
 
@@ -427,7 +427,7 @@ METHOD(encryption_payload_t, decrypt, bool,
 	{
 		DBG1(DBG_ENC, "decrypting encryption payload failed, "
 			 "padding invalid %B", &crypt);
-		return FAILED;
+		return PARSE_ERROR;
 	}
 	plain.len -= padding.len;
 	padding.ptr = plain.ptr + plain.len;

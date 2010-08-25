@@ -1224,9 +1224,9 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 				break;
 			}
 			chunk.len -= encryption->get_length(encryption);
-			if (!encryption->decrypt(encryption, chunk))
+			status = encryption->decrypt(encryption, chunk);
+			if (status != SUCCESS)
 			{
-				status = VERIFY_ERROR;
 				break;
 			}
 

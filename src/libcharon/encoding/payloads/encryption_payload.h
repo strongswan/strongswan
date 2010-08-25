@@ -85,9 +85,13 @@ struct encryption_payload_t {
 	 * Decrypt, verify and parse contained payloads.
 	 *
 	 * @param assoc			associated data
-	 * @return				TRUE if decrypted and verified successfully
+	 * 						- SUCCESS if parsing successful
+	 *						- PARSE_ERROR if sub-payload parsing failed
+	 * 						- VERIFY_ERROR if sub-payload verification failed
+	 * 						- FAILED if integrity check failed
+	 * 						- INVALID_STATE if aead not supplied, but needed
 	 */
-	bool (*decrypt) (encryption_payload_t *this, chunk_t assoc);
+	status_t (*decrypt) (encryption_payload_t *this, chunk_t assoc);
 
 	/**
 	 * Destroys an encryption_payload_t object.
