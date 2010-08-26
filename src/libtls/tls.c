@@ -127,6 +127,16 @@ struct private_tls_t {
 	 * TLS application data handler
 	 */
 	tls_application_t *application;
+
+	/**
+	 * Allocated input buffer
+	 */
+	chunk_t input;
+
+	/**
+	 * Number of bytes read in input buffer
+	 */
+	size_t inpos;
 };
 
 /**
@@ -143,30 +153,68 @@ METHOD(tls_t, process, status_t,
 	private_tls_t *this, chunk_t data)
 {
 	tls_record_t *record;
-	u_int16_t len;
 	status_t status;
+	u_int len;
 
 	while (data.len > sizeof(tls_record_t))
 	{
-		record = (tls_record_t*)data.ptr;
-		len = untoh16(&record->length);
+		if (this->input.len == 0)
+		{
+			while (TRUE)
+			{
+				/* try to process records inline */
+				record = (tls_record_t*)data.ptr;
+				len = untoh16(&record->length);
 
-		DBG2(DBG_TLS, "received TLS %N record (%u bytes)",
-			 tls_content_type_names, record->type, sizeof(tls_record_t) + len);
-		if (len > data.len - sizeof(tls_record_t))
-		{
-			DBG1(DBG_IKE, "TLS record length invalid");
-			return FAILED;
+				if (len + sizeof(tls_record_t) > data.len)
+				{	/* not a full record, read to buffer */
+					this->input = chunk_alloc(len + sizeof(tls_record_t));
+					this->inpos = 0;
+					break;
+				}
+				DBG2(DBG_TLS, "processing TLS %N record (%d bytes)",
+					 tls_content_type_names, record->type, len);
+				status = this->protection->process(this->protection,
+								record->type, chunk_create(record->data, len));
+				if (status != NEED_MORE)
+				{
+					return status;
+				}
+				data = chunk_skip(data, len + sizeof(tls_record_t));
+				if (data.len == 0)
+				{
+					return NEED_MORE;
+				}
+			}
 		}
-		status = this->protection->process(this->protection, record->type,
-										   chunk_create(record->data, len));
-		if (status != NEED_MORE)
+		len = min(data.len, this->input.len - this->inpos);
+		memcpy(this->input.ptr + this->inpos, data.ptr, len);
+		data = chunk_skip(data, len);
+		this->inpos += len;
+		DBG2(DBG_TLS, "buffering %d bytes, %d bytes of %d byte record received",
+			 len, this->inpos, this->input.len);
+		if (this->input.len == this->inpos)
 		{
-			return status;
+			record = (tls_record_t*)this->input.ptr;
+			len = untoh16(&record->length);
+
+			DBG2(DBG_TLS, "processing buffered TLS %N record (%d bytes)",
+				 tls_content_type_names, record->type, len);
+			status = this->protection->process(this->protection,
+								record->type, chunk_create(record->data, len));
+			chunk_free(&this->input);
+			this->inpos = 0;
+			if (status != NEED_MORE)
+			{
+				return status;
+			}
 		}
-		data = chunk_skip(data, len + sizeof(tls_record_t));
 	}
-
+	if (data.len != 0)
+	{
+		DBG1(DBG_TLS, "received incomplete TLS record header");
+		return FAILED;
+	}
 	return NEED_MORE;
 }
 
@@ -273,6 +321,8 @@ METHOD(tls_t, destroy, void,
 	this->server->destroy(this->server);
 	DESTROY_IF(this->application);
 	this->alert->destroy(this->alert);
+
+	free(this->input.ptr);
 
 	free(this);
 }
