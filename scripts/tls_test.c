@@ -57,12 +57,12 @@ static int stream(int fd, tls_socket_t *tls)
 		{
 			if (!tls->read(tls, &data))
 			{
-				fprintf(stderr, "TLS read error\n");
+				DBG1(DBG_TLS, "TLS read error/end\n");
 				return 1;
 			}
 			if (data.len)
 			{
-				ignore_result(write(0, data.ptr, data.len));
+				ignore_result(write(1, data.ptr, data.len));
 				free(data.ptr);
 			}
 		}
@@ -80,7 +80,7 @@ static int stream(int fd, tls_socket_t *tls)
 			{
 				if (!tls->write(tls, chunk_create(buf, len)))
 				{
-					fprintf(stderr, "TLS write error\n");
+					DBG1(DBG_TLS, "TLS write error\n");
 					return 1;
 				}
 			}
@@ -99,7 +99,7 @@ static int client(int fd, host_t *host, identification_t *server)
 	if (connect(fd, host->get_sockaddr(host),
 				*host->get_sockaddr_len(host)) == -1)
 	{
-		fprintf(stderr, "connecting to %#H failed: %m\n", host);
+		DBG1(DBG_TLS, "connecting to %#H failed: %m\n", host);
 		return 1;
 	}
 	tls = tls_socket_create(FALSE, server, NULL, fd);
@@ -123,12 +123,12 @@ static int serve(int fd, host_t *host, identification_t *server, bool oneshot)
 	if (bind(fd, host->get_sockaddr(host),
 			 *host->get_sockaddr_len(host)) == -1)
 	{
-		fprintf(stderr, "binding to %#H failed: %m\n", host);
+		DBG1(DBG_TLS, "binding to %#H failed: %m\n", host);
 		return 1;
 	}
 	if (listen(fd, 1) == -1)
 	{
-		fprintf(stderr, "listen to %#H failed: %m\n", host);
+		DBG1(DBG_TLS, "listen to %#H failed: %m\n", host);
 		return 1;
 	}
 
@@ -137,10 +137,10 @@ static int serve(int fd, host_t *host, identification_t *server, bool oneshot)
 		cfd = accept(fd, host->get_sockaddr(host), host->get_sockaddr_len(host));
 		if (cfd == -1)
 		{
-			fprintf(stderr, "accept failed: %m\n");
+			DBG1(DBG_TLS, "accept failed: %m\n");
 			return 1;
 		}
-		fprintf(stderr, "%#H connected\n", host);
+		DBG1(DBG_TLS, "%#H connected\n", host);
 
 		tls = tls_socket_create(TRUE, server, NULL, cfd);
 		if (!tls)
@@ -148,7 +148,7 @@ static int serve(int fd, host_t *host, identification_t *server, bool oneshot)
 			return 1;
 		}
 		stream(cfd, tls);
-		fprintf(stderr, "%#H disconnected\n", host);
+		DBG1(DBG_TLS, "%#H disconnected\n", host);
 		tls->destroy(tls);
 	}
 	while (!oneshot);
@@ -172,7 +172,7 @@ static bool load_certificate(char *filename)
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (!cert)
 	{
-		fprintf(stderr, "loading certificate from '%s' failed\n", filename);
+		DBG1(DBG_TLS, "loading certificate from '%s' failed\n", filename);
 		return FALSE;
 	}
 	creds->add_cert(creds, TRUE, cert);
@@ -190,11 +190,29 @@ static bool load_key(char *filename)
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (!key)
 	{
-		fprintf(stderr, "loading key from '%s' failed\n", filename);
+		DBG1(DBG_TLS, "loading key from '%s' failed\n", filename);
 		return FALSE;
 	}
 	creds->add_key(creds, key);
 	return TRUE;
+}
+
+/**
+ * TLS debug level
+ */
+static level_t tls_level = 1;
+
+static void dbg_tls(debug_t group, level_t level, char *fmt, ...)
+{
+	if ((group == DBG_TLS && level <= tls_level) || level <= 1)
+	{
+		va_list args;
+
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
 }
 
 /**
@@ -213,6 +231,9 @@ static void cleanup()
 static void init()
 {
 	library_init(NULL);
+
+	dbg = dbg_tls;
+
 	lib->plugins->load(lib->plugins, NULL, PLUGINS);
 
 	creds = mem_cred_create();
@@ -241,6 +262,7 @@ int main(int argc, char *argv[])
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
 			{"oneshot",		no_argument,			NULL,		'o' },
+			{"debug",		required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
@@ -279,6 +301,9 @@ int main(int argc, char *argv[])
 			case 'o':
 				oneshot = TRUE;
 				continue;
+			case 'd':
+				tls_level = atoi(optarg);
+				continue;
 			default:
 				usage(stderr, argv[0]);
 				return 1;
@@ -299,13 +324,13 @@ int main(int argc, char *argv[])
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 	{
-		fprintf(stderr, "opening socket failed: %m\n");
+		DBG1(DBG_TLS, "opening socket failed: %m\n");
 		return 1;
 	}
 	host = host_create_from_dns(address, 0, port);
 	if (!host)
 	{
-		fprintf(stderr, "resolving hostname %s failed\n", address);
+		DBG1(DBG_TLS, "resolving hostname %s failed\n", address);
 		close(fd);
 		return 1;
 	}
