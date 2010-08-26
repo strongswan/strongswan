@@ -154,7 +154,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 			this->type = type;
 			if (len > MAX_TLS_HANDSHAKE_LEN)
 			{
-				DBG1(DBG_TLS, "TLS handshake message exceeds maximum length");
+				DBG1(DBG_TLS, "TLS handshake exceeds maximum length");
 				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 				return NEED_MORE;
 			}
@@ -179,8 +179,8 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 		if (this->input.len == this->inpos)
 		{	/* message completely defragmented, process */
 			msg = tls_reader_create(this->input);
-			DBG2(DBG_TLS, "received TLS %N message (%u bytes)",
-				 tls_handshake_type_names, this->type, 4 + this->input.len);
+			DBG2(DBG_TLS, "received TLS %N hanshake (%u bytes)",
+				 tls_handshake_type_names, this->type, this->input.len);
 			status = this->handshake->process(this->handshake, this->type, msg);
 			msg->destroy(msg);
 			chunk_free(&this->input);
@@ -312,8 +312,8 @@ static status_t build_handshake(private_tls_fragmentation_t *this)
 			case NEED_MORE:
 				msg->write_uint8(msg, type);
 				msg->write_data24(msg, hs->get_buf(hs));
-				DBG2(DBG_TLS, "sending TLS %N message (%u bytes)",
-					 tls_handshake_type_names, type, 4 + hs->get_buf(hs).len);
+				DBG2(DBG_TLS, "sending TLS %N handshake (%u bytes)",
+					 tls_handshake_type_names, type, hs->get_buf(hs).len);
 				hs->destroy(hs);
 				continue;
 			case INVALID_STATE:
