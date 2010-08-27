@@ -46,7 +46,7 @@
 #include <threading/thread.h>
 
 /* Maximum size of a packet */
-#define MAX_PACKET 5000
+#define MAX_PACKET 10000
 
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)

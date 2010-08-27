@@ -40,7 +40,7 @@
 #include <threading/thread.h>
 
 /* Maximum size of a packet */
-#define MAX_PACKET 5000
+#define MAX_PACKET 10000
 
 /* constants for packet handling */
 #define IP_LEN sizeof(struct iphdr)
