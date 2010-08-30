@@ -17,6 +17,7 @@
 
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/certificates/crl.h>
 #include <selectors/traffic_selector.h>
 
 #include <time.h>
@@ -202,6 +203,44 @@ static void print_x509(x509_t *x509)
 }
 
 /**
+ * Print CRL specific information
+ */
+static void print_crl(crl_t *crl)
+{
+	enumerator_t *enumerator;
+	time_t ts;
+	crl_reason_t reason;
+	chunk_t chunk;
+	int count = 0;
+	char buf[64];
+	struct tm tm;
+
+	chunk = crl->get_serial(crl);
+	printf("serial:    %#B\n", &chunk);
+	chunk = crl->get_authKeyIdentifier(crl);
+	printf("authKeyId: %#B\n", &chunk);
+
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))
+	{
+		count++;
+	}
+	enumerator->destroy(enumerator);
+
+	printf("%d revoked certificate%s%s\n", count,
+		   count == 1 ? "" : "s", count ? ":" : "");
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))
+	{
+		localtime_r(&ts, &tm);
+		strftime(buf, sizeof(buf), "%F %T", &tm);
+		printf("    %#B %N %s\n", &chunk, crl_reason_names, reason, buf);
+		count++;
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Print certificate information
  */
 static void print_cert(certificate_t *cert)
@@ -212,7 +251,10 @@ static void print_cert(certificate_t *cert)
 	now = time(NULL);
 
 	printf("cert:      %N\n", certificate_type_names, cert->get_type(cert));
-	printf("subject:  \"%Y\"\n", cert->get_subject(cert));
+	if (cert->get_type(cert) != CERT_X509_CRL)
+	{
+		printf("subject:  \"%Y\"\n", cert->get_subject(cert));
+	}
 	printf("issuer:   \"%Y\"\n", cert->get_issuer(cert));
 
 	cert->get_validity(cert, &now, &notBefore, &notAfter);
@@ -240,21 +282,19 @@ static void print_cert(certificate_t *cert)
 		case CERT_X509:
 			print_x509((x509_t*)cert);
 			break;
+		case CERT_X509_CRL:
+			print_crl((crl_t*)cert);
+			break;
 		default:
 			printf("parsing certificate subtype %N not implemented\n",
 				   certificate_type_names, cert->get_type(cert));
 			break;
 	}
-
 	key = cert->get_public_key(cert);
 	if (key)
 	{
 		print_pubkey(key);
 		key->destroy(key);
-	}
-	else
-	{
-		printf("unable to extract public key\n");
 	}
 }
 
@@ -279,6 +319,11 @@ static int print()
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509;
+				}
+				else if (streq(arg, "crl"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_X509_CRL;
 				}
 				else if (streq(arg, "pub"))
 				{
@@ -358,7 +403,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509|crl]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
