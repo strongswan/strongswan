@@ -182,7 +182,7 @@ struct tls_t {
  * @param is_server			TRUE to act as server, FALSE for client
  * @param server			server identity
  * @param peer				peer identity, NULL for no client authentication
- * @param purpse			purpose this TLS stack instance is used for
+ * @param purpose			purpose this TLS stack instance is used for
  * @param application		higher layer application or NULL if none
  * @return					TLS stack
  */
