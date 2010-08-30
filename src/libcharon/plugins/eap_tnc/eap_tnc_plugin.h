@@ -29,7 +29,7 @@
 typedef struct eap_tnc_plugin_t eap_tnc_plugin_t;
 
 /**
- * EAP-MD5 plugin
+ * EAP-TNC plugin
  */
 struct eap_tnc_plugin_t {
 
