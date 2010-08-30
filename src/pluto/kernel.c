@@ -250,7 +250,7 @@ static void escape_metachar(const char *src, char *dst, size_t dstlen)
 # define DEFAULT_UPDOWN "ipsec _updown"
 #endif
 
-static bool do_command(connection_t *c, struct spd_route *sr,
+static bool do_command(connection_t *c, struct spd_route *sr, struct state *st,
 					   const char *verb)
 {
 	char cmd[1536];     /* arbitrary limit on shell command length */
@@ -294,6 +294,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			peerclientnet_str[ADDRTOT_BUF],
 			peerclientmask_str[ADDRTOT_BUF],
 			peerca_str[BUF_LEN],
+			udp_encap[BUF_LEN] = "",
 			xauth_id_str[BUF_LEN] = "",
 			secure_myid_str[BUF_LEN] = "",
 			secure_peerid_str[BUF_LEN] = "",
@@ -324,6 +325,12 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			snprintf(n, sizeof(srcip_str)-strlen(srcip_str), "%H",
 						sr->this.host_srcip);
 			strncat(srcip_str, "' ", sizeof(srcip_str));
+		}
+
+		if (st && (st->nat_traversal & NAT_T_DETECTED))
+		{
+			snprintf(udp_encap, sizeof(udp_encap), "PLUTO_UDP_ENC='%u' ",
+					 sr->that.host_port);
 		}
 
 		addrtot(&sr->this.host_addr, 0, me_str, sizeof(me_str));
@@ -403,6 +410,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			"PLUTO_PEER_CA='%s' "
 			"%s"        /* optional PLUTO_MY_SRCIP */
 			"%s"        /* optional PLUTO_XAUTH_ID */
+			"%s"        /* optional PLUTO_UDP_ENC */
 			"%s"        /* actual script */
 			, verb, verb_suffix
 			, c->name
@@ -427,6 +435,7 @@ static bool do_command(connection_t *c, struct spd_route *sr,
 			, secure_peerca_str
 			, srcip_str
 			, xauth_id_str
+			, udp_encap
 			, sr->this.updown == NULL? DEFAULT_UPDOWN : sr->this.updown))
 		{
 			loglog(RC_LOG_SERIOUS, "%s%s command too long!", verb, verb_suffix);
@@ -716,7 +725,7 @@ void unroute_connection(connection_t *c)
 		/* only unroute if no other connection shares it */
 		if (routed(cr) && route_owner(c, NULL, NULL, NULL) == NULL)
 		{
-			(void) do_command(c, sr, "unroute");
+			(void) do_command(c, sr, NULL, "unroute");
 		}
 	}
 }
@@ -1755,7 +1764,7 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 		 */
 		firewall_notified = st == NULL  /* not a tunnel eroute */
 			|| sr->eroute_owner != SOS_NOBODY   /* already notified */
-			|| do_command(c, sr, "up"); /* go ahead and notify */
+			|| do_command(c, sr, st, "up"); /* go ahead and notify */
 	}
 
 	/* install the route */
@@ -1770,8 +1779,8 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 	else if (ro == NULL)
 	{
 		/* a new route: no deletion required, but preparation is */
-		(void) do_command(c, sr, "prepare");    /* just in case; ignore failure */
-		route_installed = do_command(c, sr, "route");
+		(void) do_command(c, sr, st, "prepare");    /* just in case; ignore failure */
+		route_installed = do_command(c, sr, st, "route");
 	}
 	else if (routed(sr->routing) || routes_agree(ro, c))
 	{
@@ -1790,13 +1799,13 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 		 */
 		if (sameaddr(&sr->this.host_nexthop, &esr->this.host_nexthop))
 		{
-			(void) do_command(ro, sr, "unroute");
-			route_installed = do_command(c, sr, "route");
+			(void) do_command(ro, sr, st, "unroute");
+			route_installed = do_command(c, sr, st, "route");
 		}
 		else
 		{
-			route_installed = do_command(c, sr, "route");
-			(void) do_command(ro, sr, "unroute");
+			route_installed = do_command(c, sr, st, "route");
+			(void) do_command(ro, sr, st, "unroute");
 		}
 
 		/* record unrouting */
@@ -1863,7 +1872,7 @@ bool route_and_eroute(connection_t *c, struct spd_route *sr, struct state *st)
 	{
 		/* Failure!  Unwind our work. */
 		if (firewall_notified && sr->eroute_owner == SOS_NOBODY)
-			(void) do_command(c, sr, "down");
+			(void) do_command(c, sr, st, "down");
 
 		if (eroute_installed)
 		{
@@ -1998,7 +2007,7 @@ void delete_ipsec_sa(struct state *st, bool inbound_only)
 				sr->routing = (c->policy & POLICY_FAIL_MASK) == POLICY_FAIL_NONE
 					? RT_ROUTED_PROSPECTIVE : RT_ROUTED_FAILURE;
 
-				(void) do_command(c, sr, "down");
+				(void) do_command(c, sr, st, "down");
 				if ((c->policy & POLICY_DONT_REKEY)	&& c->kind == CK_INSTANCE)
 				{
 					/* in this special case, even if the connection
