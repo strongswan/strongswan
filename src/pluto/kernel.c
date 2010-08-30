@@ -661,7 +661,7 @@ static enum routability could_route(connection_t *c)
 			loglog(RC_LOG_SERIOUS
 				, "cannot install eroute -- it is in use for \"%s\"%s #%lu"
 				, ero->name, inst, esr->eroute_owner);
-			return FALSE;       /* another connection already using the eroute */
+			return route_impossible;
 		}
 	}
 	return route_easy;
