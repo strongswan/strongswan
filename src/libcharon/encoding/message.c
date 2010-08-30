@@ -954,19 +954,13 @@ static void order_payloads(private_message_t *this)
 }
 
 /**
- * Wrap payloads in a encryption payload, if required
+ * Wrap payloads in a encryption payload
  */
 static encryption_payload_t* wrap_payloads(private_message_t *this)
 {
 	encryption_payload_t *encryption;
 	linked_list_t *payloads;
 	payload_t *current;
-
-	if (!this->rule->encrypted)
-	{
-		DBG2(DBG_ENC, "not encrypting payloads");
-		return NULL;
-	}
 
 	/* copy all payloads in a temporary list */
 	payloads = linked_list_create();
@@ -1013,7 +1007,7 @@ METHOD(message_t, generate, status_t,
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next;
-	encryption_payload_t *encryption;
+	encryption_payload_t *encryption = NULL;
 	enumerator_t *enumerator;
 	chunk_t chunk;
 	char str[256];
@@ -1049,7 +1043,14 @@ METHOD(message_t, generate, status_t,
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
-	encryption = wrap_payloads(this);
+	if (aead && this->rule->encrypted)
+	{
+		encryption = wrap_payloads(this);
+	}
+	else
+	{
+		DBG2(DBG_ENC, "not encrypting payloads");
+	}
 
 	ike_header = ike_header_create();
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
