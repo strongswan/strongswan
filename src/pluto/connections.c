@@ -3116,6 +3116,10 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 				{
 					continue;
 				}
+				if (src->mark_out.value != srd->mark_out.value)
+				{
+					continue;
+				}
 				passert(oriented(*d));
 				if (srd->routing > best_routing)
 				{
@@ -3133,6 +3137,10 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 					continue;
 				}
 				if (src->this.port != srd->this.port)
+				{
+					continue;
+				}
+				if (src->mark_in.value != srd->mark_in.value)
 				{
 					continue;
 				}
