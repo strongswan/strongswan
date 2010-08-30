@@ -294,6 +294,8 @@ static bool do_command(connection_t *c, struct spd_route *sr, struct state *st,
 			peerclientnet_str[ADDRTOT_BUF],
 			peerclientmask_str[ADDRTOT_BUF],
 			peerca_str[BUF_LEN],
+			mark_in[BUF_LEN] = "",
+			mark_out[BUF_LEN] = "",
 			udp_encap[BUF_LEN] = "",
 			xauth_id_str[BUF_LEN] = "",
 			secure_myid_str[BUF_LEN] = "",
@@ -325,6 +327,18 @@ static bool do_command(connection_t *c, struct spd_route *sr, struct state *st,
 			snprintf(n, sizeof(srcip_str)-strlen(srcip_str), "%H",
 						sr->this.host_srcip);
 			strncat(srcip_str, "' ", sizeof(srcip_str));
+		}
+
+		if (sr->mark_in.value)
+		{
+			snprintf(mark_in, sizeof(mark_in), "PLUTO_MARK_IN='%u/0x%08x' ",
+					 sr->mark_in.value, sr->mark_in.mask);
+		}
+
+		if (sr->mark_out.value)
+		{
+			snprintf(mark_out, sizeof(mark_out), "PLUTO_MARK_OUT='%u/0x%08x' ",
+					 sr->mark_out.value, sr->mark_out.mask);
 		}
 
 		if (st && (st->nat_traversal & NAT_T_DETECTED))
@@ -410,6 +424,8 @@ static bool do_command(connection_t *c, struct spd_route *sr, struct state *st,
 			"PLUTO_PEER_CA='%s' "
 			"%s"        /* optional PLUTO_MY_SRCIP */
 			"%s"        /* optional PLUTO_XAUTH_ID */
+			"%s"        /* optional PLUTO_MARK_IN */
+			"%s"        /* optional PLUTO_MARK_OUT */
 			"%s"        /* optional PLUTO_UDP_ENC */
 			"%s"        /* actual script */
 			, verb, verb_suffix
@@ -435,6 +451,8 @@ static bool do_command(connection_t *c, struct spd_route *sr, struct state *st,
 			, secure_peerca_str
 			, srcip_str
 			, xauth_id_str
+			, mark_in
+			, mark_out
 			, udp_encap
 			, sr->this.updown == NULL? DEFAULT_UPDOWN : sr->this.updown))
 		{
