@@ -264,7 +264,14 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
+			/* if peer supports NAT-T, we switch to port 4500 even
+			 * if no NAT is detected. can't be done later (when we would know
+			 * whether the peer supports MOBIKE) because there would be no
+			 * exchange to actually do the switch (other than a forced DPD). */
+			(peer_cfg->use_mobike(peer_cfg) &&
+			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
 		{
 			this->ike_sa->float_ports(this->ike_sa);
 		}
