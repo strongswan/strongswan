@@ -1357,7 +1357,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
  */
 static void process_check(private_connect_manager_t *this, message_t *message)
 {
-	if (message->parse_body(message, NULL, NULL) != SUCCESS)
+	if (message->parse_body(message, NULL) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
 			 exchange_type_names, message->get_exchange_type(message),
