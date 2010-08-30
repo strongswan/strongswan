@@ -182,6 +182,11 @@ then
     echo -n " --enable-eap-ttls" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_TNC" = "yes" ]
+then
+    echo -n " --enable-eap-tnc" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL

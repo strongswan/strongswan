@@ -113,6 +113,7 @@ ARG_ENABL_SET([eap-aka-3gpp2],  [enable EAP AKA backend implementing 3GPP2 algor
 ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
 ARG_ENABL_SET([eap-tls],        [enable EAP TLS authenication module.])
 ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authenication module.])
+ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
@@ -751,6 +752,7 @@ ADD_PLUGIN([eap-mschapv2],         [c libcharon])
 ADD_PLUGIN([eap-radius],           [c libcharon])
 ADD_PLUGIN([eap-tls],              [c libcharon])
 ADD_PLUGIN([eap-ttls],             [c libcharon])
+ADD_PLUGIN([eap-tnc],              [c libcharon])
 ADD_PLUGIN([medsrv],               [c libcharon])
 ADD_PLUGIN([medcli],               [c libcharon])
 ADD_PLUGIN([nm],                   [c libcharon])
@@ -843,6 +845,7 @@ AM_CONDITIONAL(USE_EAP_AKA_3GPP2, test x$eap_aka_3gpp2 = xtrue)
 AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_TLS, test x$eap_tls = xtrue)
 AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
+AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
@@ -974,6 +977,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_mschapv2/Makefile
 	src/libcharon/plugins/eap_tls/Makefile
 	src/libcharon/plugins/eap_ttls/Makefile
+	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/kernel_netlink/Makefile
 	src/libcharon/plugins/kernel_pfkey/Makefile
