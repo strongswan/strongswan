@@ -264,42 +264,9 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-
-#ifdef ME
-		/* if we are on a mediated connection we have already switched to
-		 * port 4500 and the correct destination port is already configured,
-		 * therefore we must not switch again */
-		if (peer_cfg->get_mediated_by(peer_cfg))
+		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 		{
-			return SUCCESS;
-		}
-#endif /* ME */
-
-		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
-#ifdef ME
-			/* if we are on a mediation connection we switch to port 4500 even
-			 * if no NAT is detected. */
-			peer_cfg->is_mediation(peer_cfg) ||
-#endif /* ME */
-			/* if peer supports NAT-T, we switch to port 4500 even
-			 * if no NAT is detected. MOBIKE requires this. */
-			(peer_cfg->use_mobike(peer_cfg) &&
-			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
-		{
-			host_t *me, *other;
-
-			/* do not switch if we have a custom port from mobike/NAT */
-			me = this->ike_sa->get_my_host(this->ike_sa);
-			if (me->get_port(me) == IKEV2_UDP_PORT)
-			{
-				me->set_port(me, IKEV2_NATT_PORT);
-			}
-			other = this->ike_sa->get_other_host(this->ike_sa);
-			if (other->get_port(other) == IKEV2_UDP_PORT)
-			{
-				other->set_port(other, IKEV2_NATT_PORT);
-			}
+			this->ike_sa->float_ports(this->ike_sa);
 		}
 	}
 

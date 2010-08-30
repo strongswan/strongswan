@@ -329,6 +329,14 @@ struct ike_sa_t {
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
 
 	/**
+	 * Float to port 4500 (e.g. if a NAT is detected).
+	 *
+	 * The port of either endpoint is changed only if it is currently
+	 * set to the default value of 500.
+	 */
+	void (*float_ports)(ike_sa_t *this);
+
+	/**
 	 * Update the IKE_SAs host.
 	 *
 	 * Hosts may be NULL to use current host.

@@ -454,6 +454,9 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 				DBG1(DBG_IKE, "server did not return a ME_MEDIATION, aborting");
 				return FAILED;
 			}
+			/* if we are on a mediation connection we switch to port 4500 even
+			 * if no NAT is detected. */
+			this->ike_sa->float_ports(this->ike_sa);
 			return NEED_MORE;
 		}
 		case IKE_AUTH:

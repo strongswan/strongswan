@@ -468,7 +468,18 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{
+		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+
 		process_payloads(this, message);
+
+		/* if peer supports NAT-T and MOBIKE, we switch to port 4500 even
+		 * if no NAT is detected. MOBIKE requires this. */
+		if (peer_cfg->use_mobike(peer_cfg) &&
+			this->ike_sa->supports_extension(this->ike_sa, EXT_NATT) &&
+			this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+		{
+			this->ike_sa->float_ports(this->ike_sa);
+		}
 		return SUCCESS;
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
