@@ -749,6 +749,7 @@ static bool raw_eroute(const ip_address *this_host,
 					   const ip_subnet *this_client,
 					   const ip_address *that_host,
 					   const ip_subnet *that_client,
+					   mark_t mark,
 					   ipsec_spi_t spi,
 					   unsigned int proto,
 					   unsigned int satype,
@@ -762,7 +763,6 @@ static bool raw_eroute(const ip_address *this_host,
 	host_t *host_src, *host_dst;
 	policy_type_t type = POLICY_IPSEC;
 	policy_dir_t dir = POLICY_OUT;
-	mark_t mark_none = { 0, 0 };
 	char text_said[SATOT_BUF];
 	bool ok = TRUE, routed = FALSE,
 		 deleting = (op & ERO_MASK) == ERO_DELETE,
@@ -820,7 +820,7 @@ static bool raw_eroute(const ip_address *this_host,
 	if (deleting || replacing)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, mark_none, routed);
+						ts_src, ts_dst, dir, mark, routed);
 	}
 
 	if (!deleting)
@@ -828,7 +828,7 @@ static bool raw_eroute(const ip_address *this_host,
 		/* FIXME: use_lifetime? */
 		ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
-						mark_none, routed) == SUCCESS;
+						mark, routed) == SUCCESS;
 	}
 
 	if (dir == POLICY_IN)
@@ -837,7 +837,7 @@ static bool raw_eroute(const ip_address *this_host,
 		if (deleting || replacing)
 		{
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, mark_none, routed);
+						ts_src, ts_dst, dir, mark, routed);
 		}
 
 		if (!deleting && ok &&
@@ -846,7 +846,7 @@ static bool raw_eroute(const ip_address *this_host,
 			/* FIXME: use_lifetime? */
 			ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
-						mark_none, routed) == SUCCESS;
+						mark, routed) == SUCCESS;
 		}
 	}
 
@@ -874,8 +874,8 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 		peer = aftoinfo(addrtypeof(peer))->any;
 	}
 	return raw_eroute(&sr->this.host_addr, &sr->this.client, peer,
-					  &sr->that.client, spi, proto, satype, sr->this.protocol,
-					  sa, 0, op, buf2);
+					  &sr->that.client, sr->mark_out, spi, proto, satype,
+					  sr->this.protocol, sa, 0, op, buf2);
 }
 
 /* assign a bare hold to a connection */
@@ -1093,9 +1093,9 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 		}
 	}
 
-	ok = raw_eroute(&c->spd.that.host_addr, &c->spd.that.client,
-					&c->spd.this.host_addr, &c->spd.this.client, htonl(spi),
-					SA_INT, SADB_X_SATYPE_INT, sr->this.protocol,
+	ok = raw_eroute(&sr->that.host_addr, &sr->that.client,
+					&sr->this.host_addr, &sr->this.client, sr->mark_in,
+					htonl(spi), SA_INT, SADB_X_SATYPE_INT, sr->this.protocol,
 					&null_ipsec_sa, 0,
 					op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
 
@@ -1111,7 +1111,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	ipsec_mode_t mode = MODE_TRANSPORT;
 	ipsec_sa_cfg_t sa = { .mode = 0 };
 	lifetime_cfg_t lt_none = { .time = { .rekey = 0 } };
-	mark_t mark_none = { 0, 0 };
+	mark_t mark;
 	bool ok = TRUE;
 	/* SPIs, saved for undoing, if necessary */
 	struct kernel_sa said[EM_MAXRELSPIS], *said_next = said;
@@ -1119,11 +1119,13 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	{
 		src = &c->spd.that;
 		dst = &c->spd.this;
+		mark = c->spd.mark_in;
 	}
 	else
 	{
 		src = &c->spd.this;
 		dst = &c->spd.that;
+		mark = c->spd.mark_out;
 	}
 
 	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
@@ -1168,7 +1170,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, ipcomp_spi, said_next->proto, c->spd.reqid,
-						mark_none, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						mark, &lt_none, ENCR_UNDEFINED, chunk_empty,
 						AUTH_UNDEFINED, chunk_empty, mode,
 						st->st_ipcomp.attrs.transid, 0 /* cpi */, FALSE,
 						inbound, NULL, NULL) != SUCCESS)
@@ -1277,7 +1279,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, esp_spi, said_next->proto, c->spd.reqid,
-						mark_none, &lt_none, enc_alg, enc_key,
+						mark, &lt_none, enc_alg, enc_key,
 						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
 						encap, inbound, NULL, NULL) != SUCCESS)
 		{
@@ -1310,7 +1312,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, ah_spi, said_next->proto, c->spd.reqid,
-						mark_none, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						mark, &lt_none, ENCR_UNDEFINED, chunk_empty,
 						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
 						FALSE, inbound, NULL, NULL) != SUCCESS)
 		{
@@ -1323,7 +1325,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	if (inbound && c->spd.eroute_owner == SOS_NOBODY)
 	{
 		(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
-						  &dst->client, 256, SA_IPIP, SADB_SATYPE_UNSPEC,
+						  &dst->client, mark, 256, SA_IPIP, SADB_SATYPE_UNSPEC,
 						  c->spd.this.protocol, &sa, 0, ERO_ADD_INBOUND,
 						  "add inbound");
 	}
@@ -1337,7 +1339,7 @@ fail:
 		hydra->kernel_interface->del_sa(hydra->kernel_interface, host_src,
 										host_dst, said_next->spi,
 										said_next->proto, 0 /* cpi */,
-										mark_none);
+										mark);
 	}
 	ok = FALSE;
 
@@ -1353,18 +1355,19 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 	const struct end *src, *dst;
 	host_t *host_src, *host_dst;
 	ipsec_spi_t spi;
-	mark_t mark_none = { 0, 0 };
+	mark_t mark;
 	bool result = TRUE;
 
 	if (inbound)
 	{
 		src = &c->spd.that;
 		dst = &c->spd.this;
+		mark = c->spd.mark_in;
 
 		if (c->spd.eroute_owner == SOS_NOBODY)
 		{
 			(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
-							  &dst->client, 256, IPSEC_PROTO_ANY,
+							  &dst->client, mark, 256, IPSEC_PROTO_ANY,
 							  SADB_SATYPE_UNSPEC, c->spd.this.protocol,
 							  &null_ipsec_sa, 0, ERO_DEL_INBOUND,
 							  "delete inbound");
@@ -1374,6 +1377,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 	{
 		src = &c->spd.this;
 		dst = &c->spd.that;
+		mark = c->spd.mark_out;
 	}
 
 	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
@@ -1384,7 +1388,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 		spi = inbound ? st->st_ah.our_spi : st->st_ah.attrs.spi;
 		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
 								host_src, host_dst, spi, IPPROTO_AH,
-								0 /* cpi */, mark_none) == SUCCESS;
+								0 /* cpi */, mark) == SUCCESS;
 	}
 
 	if (st->st_esp.present)
@@ -1392,7 +1396,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 		spi = inbound ? st->st_esp.our_spi : st->st_esp.attrs.spi;
 		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
 								host_src, host_dst, spi, IPPROTO_ESP,
-								0 /* cpi */, mark_none) == SUCCESS;
+								0 /* cpi */, mark) == SUCCESS;
 	}
 
 	if (st->st_ipcomp.present)
@@ -1400,7 +1404,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 		spi = inbound ? st->st_ipcomp.our_spi : st->st_ipcomp.attrs.spi;
 		result &= hydra->kernel_interface->del_sa(hydra->kernel_interface,
 								host_src, host_dst, spi, IPPROTO_COMP,
-								0 /* cpi */, mark_none) == SUCCESS;
+								0 /* cpi */, mark) == SUCCESS;
 	}
 
 	host_src->destroy(host_src);
@@ -1419,7 +1423,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 	host_t *host_src = NULL, *host_dst = NULL;
 	const struct end *src, *dst;
 	ipsec_spi_t spi;
-	mark_t mark_none = { 0, 0 };
+	mark_t mark;
 	u_int64_t bytes_kernel = 0;
 	bool result = FALSE;
 
@@ -1434,12 +1438,14 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 	{
 		src = &c->spd.that;
 		dst = &c->spd.this;
+		mark = c->spd.mark_in;
 		spi = st->st_esp.our_spi;
 	}
 	else
 	{
 		src = &c->spd.this;
 		dst = &c->spd.that;
+		mark = c->spd.mark_out;
 		spi = st->st_esp.attrs.spi;
 	}
 
@@ -1448,7 +1454,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 
 	switch(hydra->kernel_interface->query_sa(hydra->kernel_interface, host_src,
 											 host_dst, spi, IPPROTO_ESP,
-											 mark_none, &bytes_kernel))
+											 mark, &bytes_kernel))
 	{
 		case FAILED:
 			goto failed;
@@ -1469,7 +1475,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 
 		if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
 							ts_src, ts_dst, inbound ? POLICY_IN : POLICY_OUT,
-							mark_none, &time_kernel) != SUCCESS)
+							mark, &time_kernel) != SUCCESS)
 		{
 			goto failed;
 		}
@@ -1479,7 +1485,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 			st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TUNNEL)
 		{
 			if (hydra->kernel_interface->query_policy(hydra->kernel_interface,
-							ts_src, ts_dst, POLICY_FWD, mark_none,
+							ts_src, ts_dst, POLICY_FWD, mark,
 							&time_kernel) != SUCCESS)
 			{
 				goto failed;
@@ -2034,11 +2040,11 @@ static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
 	connection_t *c = st->st_connection;
 	host_t *host_src, *host_dst, *new_src, *new_dst;
-	mark_t mark_none = { 0, 0 };
-	bool result;
 	ipsec_spi_t spi = inbound ? st->st_esp.our_spi : st->st_esp.attrs.spi;
 	struct end *src = inbound ? &c->spd.that : &c->spd.this,
 			   *dst = inbound ? &c->spd.this : &c->spd.that;
+	mark_t mark = inbound ? c->spd.mark_in : c->spd.mark_out;
+	bool result;
 
 	host_src = host_create_from_sockaddr((sockaddr_t*)&src->host_addr);
 	host_dst = host_create_from_sockaddr((sockaddr_t*)&dst->host_addr);
@@ -2051,7 +2057,7 @@ static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 	result = hydra->kernel_interface->update_sa(hydra->kernel_interface,
 					spi, IPPROTO_ESP, 0 /* cpi */, host_src, host_dst,
 					new_src, new_dst, TRUE /* encap */, TRUE /* new_encap */,
-					mark_none) == SUCCESS;
+					mark) == SUCCESS;
 
 	host_src->destroy(host_src);
 	host_dst->destroy(host_dst);

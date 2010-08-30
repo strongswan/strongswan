@@ -168,6 +168,8 @@ struct spd_route {
 	so_serial_t eroute_owner;
 	enum routing_t routing;     /* level of routing in place */
 	uint32_t reqid;
+	mark_t mark_in;
+	mark_t mark_out;
 };
 
 typedef struct connection connection_t;
@@ -294,7 +296,7 @@ extern connection_t* find_connection_for_clients(struct spd_route **srp,
 												 const ip_address *peer_client,
 												 int transport_proto);
 extern void get_peer_ca_and_groups(connection_t *c,
-								   identification_t **peer_ca, 
+								   identification_t **peer_ca,
 								   ietf_attributes_t **peer_attributes);
 
 /* instantiating routines

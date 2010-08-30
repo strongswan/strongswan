@@ -1193,6 +1193,11 @@ void add_connection(const whack_message_t *wm)
 		c->spd.next = NULL;
 		c->spd.reqid = gen_reqid();
 
+		c->spd.mark_in.value = wm->mark_in.value;
+		c->spd.mark_in.mask = wm->mark_in.mask;
+		c->spd.mark_out.value = wm->mark_out.value;
+		c->spd.mark_out.mask = wm->mark_out.mask;
+
 		/* set internal fields */
 		c->instance_serial = 0;
 		c->ac_next = connections;
