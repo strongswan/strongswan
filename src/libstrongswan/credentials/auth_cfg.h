@@ -65,6 +65,7 @@ enum eap_type_t {
 	EAP_TTLS = 21,
 	EAP_AKA = 23,
 	EAP_MSCHAPV2 = 26,
+	EAP_TNC = 38,
 	/** not a method, but an implementation providing different methods */
 	EAP_RADIUS = 253,
 	EAP_EXPANDED = 254,

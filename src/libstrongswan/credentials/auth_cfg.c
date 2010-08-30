@@ -46,7 +46,9 @@ ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_TTLS,
 	"EAP_AKA");
 ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
 	"EAP_MSCHAPV2");
-ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
+ENUM_NEXT(eap_type_names, EAP_TNC, EAP_TNC, EAP_MSCHAPV2,
+	"EAP_TNC");
+ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_TNC,
 	"EAP_RADIUS",
 	"EAP_EXPANDED",
 	"EAP_EXPERIMENTAL");
@@ -69,7 +71,9 @@ ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_TTLS,
 	"AKA");
 ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
 	"MSCHAPV2");
-ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
+ENUM_NEXT(eap_type_short_names, EAP_TNC, EAP_TNC, EAP_MSCHAPV2,
+	"TNC");
+ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_TNC,
 	"RAD",
 	"EXP",
 	"XP");
@@ -112,6 +116,7 @@ eap_type_t eap_type_from_string(char *name)
 		{"sim",			EAP_SIM},
 		{"aka",			EAP_AKA},
 		{"mschapv2",	EAP_MSCHAPV2},
+		{"tnc",			EAP_TNC},
 		{"radius",		EAP_RADIUS},
 	};
 
