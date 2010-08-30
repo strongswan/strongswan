@@ -416,10 +416,19 @@ static bool parse_authKeyIdentifier_ext(private_openssl_crl_t *this,
 static bool parse_crlNumber_ext(private_openssl_crl_t *this,
 								X509_EXTENSION *ext)
 {
-	free(this->serial.ptr);
-	this->serial = chunk_clone(
-						openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext)));
-	return this->serial.len != 0;
+	chunk_t chunk;
+
+	chunk = openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext));
+	/* quick and dirty INTEGER unwrap */
+	if (chunk.len > 1 && chunk.ptr[0] == V_ASN1_INTEGER &&
+		chunk.ptr[1] == chunk.len - 2)
+	{
+		chunk = chunk_skip(chunk, 2);
+		free(this->serial.ptr);
+		this->serial = chunk_clone(chunk);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
