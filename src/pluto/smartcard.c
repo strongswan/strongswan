@@ -1078,7 +1078,7 @@ cert_t* scx_load_cert(const char *filename, smartcard_t **scp, bool *cached)
 	*scp = sc = scx_add(scx_parse_number_slot_id(number_slot_id));
 
 	/* is there a cached smartcard certificate? */
-	*cached = sc->last_cert && 
+	*cached = sc->last_cert &&
 			  (time(NULL) - sc->last_load) < SCX_CERT_CACHE_INTERVAL;
 
 	if (*cached)
@@ -1451,7 +1451,7 @@ bool scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen, u_char *out,
 			{
 				return FALSE;
 			}
-			key->encrypt(key, plain_text, &cipher_text);
+			key->encrypt(key, ENCRYPT_RSA_PKCS1, plain_text, &cipher_text);
 			key->destroy(key);
 
 			if (cipher_text.ptr == NULL)
