@@ -718,7 +718,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				if (*endptr != '\0')
 				{
 					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
-		    		cfg->err++;
+					cfg->err++;
 				}
 			}
 			break;
@@ -794,7 +794,7 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 				DBG(DBG_CONTROL,
 					DBG_log("  also=%s", kw->value)
 				)
-	    	}
+			}
 			continue;
 		}
 
