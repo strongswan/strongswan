@@ -362,7 +362,16 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			}
 		}
 		else
-		{	/* no second authentication round, fine */
+		{	/* no second authentication round, fine. But load certificates
+			 * for other purposes (EAP-TLS) */
+			if (cert)
+			{
+				certificate = this->cred->load_peer(this->cred, cert);
+				if (certificate)
+				{
+					certificate->destroy(certificate);
+				}
+			}
 			return NULL;
 		}
 	}
