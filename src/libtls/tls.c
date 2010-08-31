@@ -137,6 +137,16 @@ struct private_tls_t {
 	 * Number of bytes read in input buffer
 	 */
 	size_t inpos;
+
+	/**
+	 * Allocated output buffer
+	 */
+	chunk_t output;
+
+	/**
+	 * Number of bytes processed from output buffer
+	 */
+	size_t outpos;
 };
 
 /**
@@ -150,23 +160,27 @@ typedef struct __attribute__((packed)) {
 } tls_record_t;
 
 METHOD(tls_t, process, status_t,
-	private_tls_t *this, chunk_t data)
+	private_tls_t *this, void *buf, size_t buflen)
 {
 	tls_record_t *record;
 	status_t status;
 	u_int len;
 
-	while (data.len > sizeof(tls_record_t))
+	while (buflen)
 	{
 		if (this->input.len == 0)
 		{
+			if (buflen < sizeof(tls_record_t))
+			{
+				break;
+			}
 			while (TRUE)
 			{
 				/* try to process records inline */
-				record = (tls_record_t*)data.ptr;
+				record = buf;
 				len = untoh16(&record->length);
 
-				if (len + sizeof(tls_record_t) > data.len)
+				if (len + sizeof(tls_record_t) > buflen)
 				{	/* not a full record, read to buffer */
 					this->input = chunk_alloc(len + sizeof(tls_record_t));
 					this->inpos = 0;
@@ -180,16 +194,18 @@ METHOD(tls_t, process, status_t,
 				{
 					return status;
 				}
-				data = chunk_skip(data, len + sizeof(tls_record_t));
-				if (data.len == 0)
+				buf += len + sizeof(tls_record_t);
+				buflen -= len + sizeof(tls_record_t);
+				if (buflen == 0)
 				{
 					return NEED_MORE;
 				}
 			}
 		}
-		len = min(data.len, this->input.len - this->inpos);
-		memcpy(this->input.ptr + this->inpos, data.ptr, len);
-		data = chunk_skip(data, len);
+		len = min(buflen, this->input.len - this->inpos);
+		memcpy(this->input.ptr + this->inpos, buf, len);
+		buf += len;
+		buflen -= len;
 		this->inpos += len;
 		DBG2(DBG_TLS, "buffering %d bytes, %d bytes of %d byte record received",
 			 len, this->inpos, this->input.len);
@@ -210,7 +226,7 @@ METHOD(tls_t, process, status_t,
 			}
 		}
 	}
-	if (data.len != 0)
+	if (buflen != 0)
 	{
 		DBG1(DBG_TLS, "received incomplete TLS record header");
 		return FAILED;
@@ -219,34 +235,68 @@ METHOD(tls_t, process, status_t,
 }
 
 METHOD(tls_t, build, status_t,
-	private_tls_t *this, chunk_t *data)
+	private_tls_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
+	tls_content_type_t type;
 	tls_record_t record;
 	status_t status;
+	chunk_t data;
+	size_t len;
 
-	*data = chunk_empty;
-	while (TRUE)
+	len = *buflen;
+	if (this->output.len == 0)
 	{
-		tls_content_type_t type;
-		chunk_t body;
-
-		status = this->protection->build(this->protection, &type, &body);
-		switch (status)
+		/* query upper layers for new records, as many as we can get */
+		while (TRUE)
 		{
-			case INVALID_STATE:
-				return NEED_MORE;
-			case NEED_MORE:
-				break;
-			default:
-				return status;
+			status = this->protection->build(this->protection, &type, &data);
+			switch (status)
+			{
+				case NEED_MORE:
+					record.type = type;
+					htoun16(&record.version, this->version);
+					htoun16(&record.length, data.len);
+					this->output = chunk_cat("mcm", this->output,
+											 chunk_from_thing(record), data);
+					DBG2(DBG_TLS, "sending TLS %N record (%d bytes)",
+						 tls_content_type_names, type, data.len);
+					continue;
+				case INVALID_STATE:
+					if (this->output.len == 0)
+					{
+						return INVALID_STATE;
+					}
+					break;
+				default:
+					return status;
+			}
+			break;
 		}
-		record.type = type;
-		htoun16(&record.version, this->version);
-		htoun16(&record.length, body.len);
-		*data = chunk_cat("mcm", *data, chunk_from_thing(record), body);
-		DBG2(DBG_TLS, "sending TLS %N record (%u bytes)",
-			 tls_content_type_names, type, sizeof(tls_record_t) + body.len);
+		if (msglen)
+		{
+			*msglen = this->output.len;
+		}
 	}
+	else
+	{
+		DBG2(DBG_TLS, "sending %d bytes buffered fragment",
+			 min(*buflen, this->output.len - this->outpos));
+		if (msglen)
+		{
+			*msglen = 0;
+		}
+	}
+	len = min(len, this->output.len - this->outpos);
+	memcpy(buf, this->output.ptr + this->outpos, len);
+	this->outpos += len;
+	*buflen = len;
+	if (this->outpos == this->output.len)
+	{
+		chunk_free(&this->output);
+		this->outpos = 0;
+		return ALREADY_DONE;
+	}
+	return NEED_MORE;
 }
 
 METHOD(tls_t, is_server, bool,
@@ -323,6 +373,7 @@ METHOD(tls_t, destroy, void,
 	this->alert->destroy(this->alert);
 
 	free(this->input.ptr);
+	free(this->output.ptr);
 
 	free(this);
 }

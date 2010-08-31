@@ -108,24 +108,36 @@ struct tls_t {
 	/**
 	 * Process one or more TLS records, pass it to upper layers.
 	 *
-	 * @param data		TLS record data, including headers
+	 * @param buf		TLS record data, including headers
+	 * @param buflen	number of bytes in buf to process
 	 * @return
 	 *					- SUCCESS if TLS negotiation complete
 	 *					- FAILED if TLS handshake failed
 	 *					- NEED_MORE if more invocations to process/build needed
 	 */
-	status_t (*process)(tls_t *this, chunk_t data);
+	status_t (*process)(tls_t *this, void *buf, size_t buflen);
 
 	/**
-	 * Query upper layer for TLS record, build protected record.
+	 * Query upper layer for one or more TLS records, build fragments.
 	 *
-	 * @param data		allocated data of the built TLS record
+	 * The TLS stack automatically fragments the records to the given buffer
+	 * size. Fragmentation is indicated by the reclen ouput parameter and
+	 * the return value. For the first fragment of a TLS record, a non-zero
+	 * record length is returned in reclen. If more fragments follow, NEED_MORE
+	 * is returned. A return value of ALREADY_DONE indicates that the final
+	 * fragment has been returned.
+	 *
+	 * @param buf		buffer to write TLS record fragments to
+	 * @param buflen	size of buffer, receives bytes written
+	 * @param msglen	receives size of all TLS fragments
 	 * @return
 	 *					- SUCCESS if TLS negotiation complete
 	 *					- FAILED if TLS handshake failed
-	 *					- NEED_MORE if more input records required
+	 *					- INVALID_STATE if more input data required
+	 *					- NEED_MORE if more fragments available
+	 *					- ALREADY_DONE if the last available fragment returned
 	 */
-	status_t (*build)(tls_t *this, chunk_t *data);
+	status_t (*build)(tls_t *this, void *buf, size_t *buflen, size_t *msglen);
 
 	/**
 	 * Check if TLS stack is acting as a server.

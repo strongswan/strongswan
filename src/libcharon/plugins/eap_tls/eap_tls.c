@@ -251,7 +251,7 @@ static status_t process_buf(private_eap_tls_t *this)
 {
 	status_t status;
 
-	status = this->tls->process(this->tls, this->input);
+	status = this->tls->process(this->tls, this->input.ptr, this->input.len);
 	if (status != NEED_MORE)
 	{
 		return status;
@@ -260,7 +260,8 @@ static status_t process_buf(private_eap_tls_t *this)
 	this->inpos = 0;
 
 	chunk_free(&this->output);
-	return this->tls->build(this->tls, &this->output);
+	this->output = chunk_alloc(EAP_TLS_FRAGMENT_LEN);
+	return this->tls->build(this->tls, this->output.ptr, &this->output.len, NULL);
 }
 
 METHOD(eap_method_t, process, status_t,

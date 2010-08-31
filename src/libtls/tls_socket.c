@@ -96,25 +96,31 @@ METHOD(tls_application_t, build, status_t,
  */
 static bool exchange(private_tls_socket_t *this, bool wr)
 {
-	chunk_t data;
-	char buf[2048];
+	char buf[1024];
 	ssize_t len;
 	int round = 0;
 
 	for (round = 0; TRUE; round++)
 	{
-		if (this->tls->build(this->tls, &data) != NEED_MORE)
+		while (TRUE)
 		{
-			return FALSE;
-		}
-		if (data.len)
-		{
-			len = write(this->fd, data.ptr, data.len);
-			free(data.ptr);
-			if (len != data.len)
+			len = sizeof(buf);
+			switch (this->tls->build(this->tls, buf, &len, NULL))
 			{
-				return FALSE;
+				case NEED_MORE:
+				case ALREADY_DONE:
+					len = write(this->fd, buf, len);
+					if (len == -1)
+					{
+						return FALSE;
+					}
+					continue;
+				case INVALID_STATE:
+					break;
+				default:
+					return FALSE;
 			}
+			break;
 		}
 		if (wr)
 		{
@@ -139,7 +145,7 @@ static bool exchange(private_tls_socket_t *this, bool wr)
 		{
 			return FALSE;
 		}
-		if (this->tls->process(this->tls, chunk_create(buf, len)) != NEED_MORE)
+		if (this->tls->process(this->tls, buf, len) != NEED_MORE)
 		{
 			return FALSE;
 		}
