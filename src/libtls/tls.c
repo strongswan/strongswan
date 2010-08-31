@@ -236,7 +236,7 @@ METHOD(tls_t, process, status_t,
 		buf += len;
 		buflen -= len;
 		this->inpos += len;
-		DBG2(DBG_TLS, "buffering %d bytes, %d bytes of %d byte record received",
+		DBG2(DBG_TLS, "buffering %d bytes, %d bytes of %d byte TLS record received",
 			 len, this->inpos, this->input.len);
 		if (this->input.len == this->inpos)
 		{
