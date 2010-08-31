@@ -537,6 +537,11 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			{
 				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
 			}
+			id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
+			if (id)
+			{
+				cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
+			}
 		}
 
 		/* verify authentication data */

@@ -99,21 +99,29 @@ struct private_eap_authenticator_t {
 static eap_method_t *load_method(private_eap_authenticator_t *this,
 							eap_type_t type, u_int32_t vendor, eap_role_t role)
 {
-	identification_t *server, *peer;
+	identification_t *server, *peer, *aaa;
+	auth_cfg_t *auth;
 
 	if (role == EAP_SERVER)
 	{
 		server = this->ike_sa->get_my_id(this->ike_sa);
 		peer = this->ike_sa->get_other_id(this->ike_sa);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	}
 	else
 	{
 		server = this->ike_sa->get_other_id(this->ike_sa);
 		peer = this->ike_sa->get_my_id(this->ike_sa);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	}
 	if (this->eap_identity)
 	{
 		peer = this->eap_identity;
+	}
+	aaa = auth->get(auth, AUTH_RULE_AAA_IDENTITY);
+	if (aaa)
+	{
+		server = aaa;
 	}
 	return charon->eap->create_instance(charon->eap, type, vendor,
 										role, server, peer);
