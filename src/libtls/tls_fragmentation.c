@@ -179,7 +179,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 		if (this->input.len == this->inpos)
 		{	/* message completely defragmented, process */
 			msg = tls_reader_create(this->input);
-			DBG2(DBG_TLS, "received TLS %N hanshake (%u bytes)",
+			DBG2(DBG_TLS, "received TLS %N handshake (%u bytes)",
 				 tls_handshake_type_names, this->type, this->input.len);
 			status = this->handshake->process(this->handshake, this->type, msg);
 			msg->destroy(msg);
