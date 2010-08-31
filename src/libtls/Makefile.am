@@ -12,6 +12,7 @@ libtls_la_SOURCES = \
 	tls_reader.h tls_reader.c \
 	tls_writer.h tls_writer.c \
 	tls_socket.h tls_socket.c \
+	tls_eap.h tls_eap.c \
 	tls_peer.h tls_peer.c \
 	tls_server.h tls_server.c \
 	tls_handshake.h tls_application.h tls.h tls.c
