@@ -55,6 +55,15 @@ ENUM_NEXT(tls_handshake_type_names, TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_E
 	"Finished");
 ENUM_END(tls_handshake_type_names, TLS_FINISHED);
 
+/**
+ * TLS record
+ */
+typedef struct __attribute__((packed)) {
+	u_int8_t type;
+	u_int16_t version;
+	u_int16_t length;
+	char data[];
+} tls_record_t;
 
 typedef struct private_tls_t private_tls_t;
 
@@ -147,17 +156,17 @@ struct private_tls_t {
 	 * Number of bytes processed from output buffer
 	 */
 	size_t outpos;
-};
 
-/**
- * TLS record
- */
-typedef struct __attribute__((packed)) {
-	u_int8_t type;
-	u_int16_t version;
-	u_int16_t length;
-	char data[];
-} tls_record_t;
+	/**
+	 * Partial TLS record header received
+	 */
+	tls_record_t head;
+
+	/**
+	 * Position in partially received record header
+	 */
+	size_t headpos;
+};
 
 METHOD(tls_t, process, status_t,
 	private_tls_t *this, void *buf, size_t buflen)
@@ -166,12 +175,32 @@ METHOD(tls_t, process, status_t,
 	status_t status;
 	u_int len;
 
+	if (this->headpos)
+	{	/* have a partial TLS record header, try to complete it */
+		len = min(buflen, sizeof(this->head) - this->headpos);
+		memcpy(((char*)&this->head) + this->headpos, buf, len);
+		this->headpos += len;
+		buflen -= len;
+		buf += len;
+		if (this->headpos == sizeof(this->head))
+		{	/* header complete, allocate space with new header */
+			len = untoh16(&this->head.length);
+			this->input = chunk_alloc(len + sizeof(tls_record_t));
+			memcpy(this->input.ptr, &this->head, sizeof(this->head));
+			this->inpos = sizeof(this->head);
+			this->headpos = 0;
+		}
+	}
+
 	while (buflen)
 	{
 		if (this->input.len == 0)
 		{
 			if (buflen < sizeof(tls_record_t))
 			{
+				DBG2(DBG_TLS, "received incomplete TLS record header");
+				memcpy(&this->head, buf, buflen);
+				this->headpos = buflen;
 				break;
 			}
 			while (TRUE)
@@ -225,11 +254,6 @@ METHOD(tls_t, process, status_t,
 				return status;
 			}
 		}
-	}
-	if (buflen != 0)
-	{
-		DBG1(DBG_TLS, "received incomplete TLS record header");
-		return FAILED;
 	}
 	return NEED_MORE;
 }
