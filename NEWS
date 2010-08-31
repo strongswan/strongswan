@@ -770,7 +770,7 @@ strongswan-4.1.7
 
 - Preview of strongSwan Manager, a web based configuration and monitoring
   application. It uses a new XML control interface to query the IKEv2 daemon
-  (see http://trac.strongswan.org/wiki/Manager).
+  (see http://wiki.strongswan.org/wiki/Manager).
 
 - Experimental SQLite configuration backend which will provide the configuration
   interface for strongSwan Manager in future releases.
