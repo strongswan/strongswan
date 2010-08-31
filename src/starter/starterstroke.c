@@ -223,6 +223,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
 	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
+	msg.add_conn.aaa_identity = push_string(&msg, conn->aaa_identity);
 
 	if (conn->policy & POLICY_TUNNEL)
 	{

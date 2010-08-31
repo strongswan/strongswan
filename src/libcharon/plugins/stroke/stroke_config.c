@@ -502,6 +502,11 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			}
 			cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, identity);
 		}
+		if (msg->add_conn.aaa_identity)
+		{
+			cfg->add(cfg, AUTH_RULE_AAA_IDENTITY,
+				identification_create_from_string(msg->add_conn.aaa_identity));
+		}
 	}
 	else
 	{

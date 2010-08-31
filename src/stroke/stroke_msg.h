@@ -232,6 +232,7 @@ struct stroke_msg_t {
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;
 			char *eap_identity;
+			char *aaa_identity;
 			int mode;
 			int mobike;
 			int force_encap;

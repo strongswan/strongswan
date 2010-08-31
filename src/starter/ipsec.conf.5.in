@@ -228,6 +228,11 @@ Unless otherwise noted, for a connection to work,
 in general it is necessary for the two ends to agree exactly
 on the values of these parameters.
 .TP 14
+.B aaa_identity
+defines the identity of the AAA backend used during IKEv2 EAP authentication.
+This is required if the EAP client uses a method that verifies the server
+identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
+.TP
 .B ah
 AH authentication algorithm to be used
 for the connection, e.g.
