@@ -119,6 +119,7 @@ static void destroy_entry_value(entry_t *entry)
 	{
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		{
 			identification_t *id = (identification_t*)entry->value;
@@ -176,6 +177,7 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 				break;
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
@@ -241,6 +243,7 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 			return (void*)VALIDATION_FAILED;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
@@ -276,6 +279,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 			break;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
@@ -390,6 +394,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			}
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			{
 				identification_t *id1, *id2;
 
@@ -535,6 +540,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				}
 				case AUTH_RULE_IDENTITY:
 				case AUTH_RULE_EAP_IDENTITY:
+				case AUTH_RULE_AAA_IDENTITY:
 				case AUTH_RULE_GROUP:
 				{
 					identification_t *id = (identification_t*)value;
@@ -622,6 +628,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					}
 					case AUTH_RULE_IDENTITY:
 					case AUTH_RULE_EAP_IDENTITY:
+					case AUTH_RULE_AAA_IDENTITY:
 					case AUTH_RULE_GROUP:
 					{
 						identification_t *id1, *id2;
@@ -706,6 +713,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 		{
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			{
 				identification_t *id = (identification_t*)entry->value;

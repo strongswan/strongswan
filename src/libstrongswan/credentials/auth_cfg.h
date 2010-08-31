@@ -68,6 +68,8 @@ enum auth_rule_t {
 	AUTH_RULE_IDENTITY,
 	/** authentication class, auth_class_t */
 	AUTH_RULE_AUTH_CLASS,
+	/** AAA-backend identity for EAP methods supporting it, identification_t* */
+	AUTH_RULE_AAA_IDENTITY,
 	/** EAP identity to use within EAP-Identity exchange, identification_t* */
 	AUTH_RULE_EAP_IDENTITY,
 	/** EAP type to propose for peer authentication, eap_type_t */
