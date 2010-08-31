@@ -44,7 +44,7 @@ struct private_eap_tls_t {
 };
 
 /** Maximum number of EAP-TLS messages/fragments allowed */
-#define MAX_MESSAGE_COUNT 24
+#define MAX_MESSAGE_COUNT 32 
 /** Default size of a EAP-TLS fragment */
 #define MAX_FRAGMENT_LEN 1024
 
