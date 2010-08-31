@@ -189,6 +189,10 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 				return status;
 			}
 		}
+		if (this->alert->fatal(this->alert))
+		{
+			break;
+		}
 	}
 	return NEED_MORE;
 }
