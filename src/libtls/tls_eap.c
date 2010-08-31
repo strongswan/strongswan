@@ -22,8 +22,6 @@
 
 /** Size limit for a single TLS message */
 #define MAX_TLS_MESSAGE_LEN 65536
-/** Size of a EAP-TLS fragment */
-#define EAP_TLS_FRAGMENT_LEN 1014
 
 typedef struct private_tls_eap_t private_tls_eap_t;
 
@@ -56,6 +54,11 @@ struct private_tls_eap_t {
 	 * First fragment of a multi-fragment record?
 	 */
 	bool first_fragment;
+
+	/**
+	 * Maximum size of an outgoing EAP-TLS fragment
+	 */
+	size_t frag_size;
 };
 
 /**
@@ -139,7 +142,7 @@ static status_t process_pkt(private_tls_eap_t *this, eap_tls_packet_t *pkt)
 static status_t build_pkt(private_tls_eap_t *this,
 						  u_int8_t identifier, chunk_t *out)
 {
-	char buf[EAP_TLS_FRAGMENT_LEN];
+	char buf[this->frag_size];
 	eap_tls_packet_t *pkt;
 	size_t len, reclen;
 	status_t status;
@@ -293,7 +296,7 @@ METHOD(tls_eap_t, destroy, void,
  */
 tls_eap_t *tls_eap_create(eap_type_t type, bool is_server,
 						  identification_t *server, identification_t *peer,
-						  tls_application_t *application)
+						  tls_application_t *application, size_t frag_size)
 {
 	private_tls_eap_t *this;
 	tls_purpose_t purpose;
@@ -320,6 +323,7 @@ tls_eap_t *tls_eap_create(eap_type_t type, bool is_server,
 		.type = type,
 		.is_server = is_server,
 		.first_fragment = TRUE,
+		.frag_size = frag_size,
 		.tls = tls_create(is_server, server, peer, purpose, application),
 	);
 	if (!this->tls)

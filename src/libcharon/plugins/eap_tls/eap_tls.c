@@ -44,7 +44,9 @@ struct private_eap_tls_t {
 };
 
 /** Maximum number of EAP-TLS messages/fragments allowed */
-#define MAX_EAP_TLS_MESSAGE_COUNT 24
+#define MAX_MESSAGE_COUNT 24
+/** Default size of a EAP-TLS fragment */
+#define MAX_FRAGMENT_LEN 1024
 
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_tls_t *this, eap_payload_t **out)
@@ -66,10 +68,10 @@ METHOD(eap_method_t, process, status_t,
 	status_t status;
 	chunk_t data;
 
-	if (++this->processed > MAX_EAP_TLS_MESSAGE_COUNT)
+	if (++this->processed > MAX_MESSAGE_COUNT)
 	{
 		DBG1(DBG_IKE, "EAP-TLS packet count exceeded (%d > %d)",
-			 this->processed, MAX_EAP_TLS_MESSAGE_COUNT);
+			 this->processed, MAX_MESSAGE_COUNT);
 		return FAILED;
 	}
 	data = in->get_data(in);
@@ -120,6 +122,7 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 								 identification_t *peer, bool is_server)
 {
 	private_eap_tls_t *this;
+	size_t frag_size;
 
 	INIT(this,
 		.public = {
@@ -134,7 +137,10 @@ static eap_tls_t *eap_tls_create(identification_t *server,
 		},
 	);
 
-	this->tls_eap = tls_eap_create(EAP_TLS, is_server, server, peer, NULL);
+	frag_size = lib->settings->get_int(lib->settings,
+					"charon.plugins.eap-tls.fragment_size", MAX_FRAGMENT_LEN);
+	this->tls_eap = tls_eap_create(EAP_TLS, is_server, server, peer,
+								   NULL, frag_size);
 	if (!this->tls_eap)
 	{
 		free(this);
