@@ -23,10 +23,10 @@
 
 typedef struct eap_method_t eap_method_t;
 typedef enum eap_role_t eap_role_t;
-typedef enum eap_code_t eap_code_t;
 
 #include <library.h>
 #include <utils/identification.h>
+#include <eap/eap.h>
 #include <encoding/payloads/eap_payload.h>
 
 /**
@@ -40,26 +40,6 @@ enum eap_role_t {
  * enum names for eap_role_t.
  */
 extern enum_name_t *eap_role_names;
-
-/**
- * EAP code, type of an EAP message
- */
-enum eap_code_t {
-	EAP_REQUEST = 1,
-	EAP_RESPONSE = 2,
-	EAP_SUCCESS = 3,
-	EAP_FAILURE = 4,
-};
-
-/**
- * enum names for eap_code_t.
- */
-extern enum_name_t *eap_code_names;
-
-/**
- * short string enum names for eap_code_t.
- */
-extern enum_name_t *eap_code_short_names;
 
 /**
  * Interface of an EAP method for server and client side.

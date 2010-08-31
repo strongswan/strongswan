@@ -27,7 +27,6 @@
 typedef struct auth_cfg_t auth_cfg_t;
 typedef enum auth_rule_t auth_rule_t;
 typedef enum auth_class_t auth_class_t;
-typedef enum eap_type_t eap_type_t;
 
 /**
  * Class of authentication to use. This is different to auth_method_t in that
@@ -49,46 +48,6 @@ enum auth_class_t {
  * enum strings for auth_class_t
  */
 extern enum_name_t *auth_class_names;
-
-/**
- * EAP types, defines the EAP method implementation
- */
-enum eap_type_t {
-	EAP_IDENTITY = 1,
-	EAP_NOTIFICATION = 2,
-	EAP_NAK = 3,
-	EAP_MD5 = 4,
-	EAP_OTP = 5,
-	EAP_GTC = 6,
-	EAP_TLS = 13,
-	EAP_SIM = 18,
-	EAP_TTLS = 21,
-	EAP_AKA = 23,
-	EAP_MSCHAPV2 = 26,
-	EAP_TNC = 38,
-	/** not a method, but an implementation providing different methods */
-	EAP_RADIUS = 253,
-	EAP_EXPANDED = 254,
-	EAP_EXPERIMENTAL = 255,
-};
-
-/**
- * enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_names;
-
-/**
- * short string enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_short_names;
-
-/**
- * Lookup the EAP method type from a string.
- *
- * @param name		EAP method name (such as "md5", "aka")
- * @return			method type, 0 if unkown
- */
-eap_type_t eap_type_from_string(char *name);
 
 /**
  * Authentication config to use during authentication process.

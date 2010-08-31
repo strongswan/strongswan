@@ -19,6 +19,8 @@
 
 #include <freeswan.h>
 
+#include <eap/eap.h>
+
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
@@ -461,7 +463,7 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	}
 }
 
-static bool handle_mark(char *value, mark_t *mark)	
+static bool handle_mark(char *value, mark_t *mark)
 {
 	char *pos, *endptr;
 
@@ -856,7 +858,7 @@ static void load_also_conns(starter_conn_t *conn, also_t *also,
 /*
  * find a conn included by also
  */
-static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn, 
+static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
 								 starter_config_t *cfg)
 {
 	starter_conn_t *c = cfg->conn_first;

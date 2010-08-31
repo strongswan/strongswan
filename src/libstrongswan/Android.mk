@@ -49,6 +49,7 @@ credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+eap/eap.h eap/eap.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \
 threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \

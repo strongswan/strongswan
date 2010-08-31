@@ -15,20 +15,6 @@
 
 #include "eap_method.h"
 
-ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
-	"EAP_REQUEST",
-	"EAP_RESPONSE",
-	"EAP_SUCCESS",
-	"EAP_FAILURE",
-);
-
-ENUM(eap_code_short_names, EAP_REQUEST, EAP_FAILURE,
-	"REQ",
-	"RES",
-	"SUCC",
-	"FAIL",
-);
-
 ENUM(eap_role_names, EAP_SERVER, EAP_PEER,
 	"EAP_SERVER",
 	"EAP_PEER",

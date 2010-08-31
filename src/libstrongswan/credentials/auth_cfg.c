@@ -20,6 +20,7 @@
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
 
 ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
@@ -28,107 +29,6 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
 	"pre-shared key",
 	"EAP",
 );
-
-ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
-	"EAP_IDENTITY",
-	"EAP_NOTIFICATION",
-	"EAP_NAK",
-	"EAP_MD5",
-	"EAP_OTP",
-	"EAP_GTC");
-ENUM_NEXT(eap_type_names, EAP_TLS, EAP_TLS, EAP_GTC,
-	"EAP_TLS");
-ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_TLS,
-	"EAP_SIM");
-ENUM_NEXT(eap_type_names, EAP_TTLS, EAP_TTLS, EAP_SIM,
-	"EAP_TTLS");
-ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_TTLS,
-	"EAP_AKA");
-ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"EAP_MSCHAPV2");
-ENUM_NEXT(eap_type_names, EAP_TNC, EAP_TNC, EAP_MSCHAPV2,
-	"EAP_TNC");
-ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_TNC,
-	"EAP_RADIUS",
-	"EAP_EXPANDED",
-	"EAP_EXPERIMENTAL");
-ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
-
-ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
-	"ID",
-	"NTF",
-	"NAK",
-	"MD5",
-	"OTP",
-	"GTC");
-ENUM_NEXT(eap_type_short_names, EAP_TLS, EAP_TLS, EAP_GTC,
-	"TLS");
-ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_TLS,
-	"SIM");
-ENUM_NEXT(eap_type_short_names, EAP_TTLS, EAP_TTLS, EAP_SIM,
-	"TTLS");
-ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_TTLS,
-	"AKA");
-ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"MSCHAPV2");
-ENUM_NEXT(eap_type_short_names, EAP_TNC, EAP_TNC, EAP_MSCHAPV2,
-	"TNC");
-ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_TNC,
-	"RAD",
-	"EXP",
-	"XP");
-ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
-
-ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_SUBJECT_HASH_URL,
-	"RULE_IDENTITY",
-	"RULE_AUTH_CLASS",
-	"RULE_EAP_IDENTITY",
-	"RULE_EAP_TYPE",
-	"RULE_EAP_VENDOR",
-	"RULE_CA_CERT",
-	"RULE_IM_CERT",
-	"RULE_SUBJECT_CERT",
-	"RULE_CRL_VALIDATION",
-	"RULE_OCSP_VALIDATION",
-	"RULE_GROUP",
-	"HELPER_IM_CERT",
-	"HELPER_SUBJECT_CERT",
-	"HELPER_IM_HASH_URL",
-	"HELPER_SUBJECT_HASH_URL",
-);
-
-/*
- * See header
- */
-eap_type_t eap_type_from_string(char *name)
-{
-	int i;
-	static struct {
-		char *name;
-		eap_type_t type;
-	} types[] = {
-		{"identity",	EAP_IDENTITY},
-		{"md5",			EAP_MD5},
-		{"otp",			EAP_OTP},
-		{"gtc",			EAP_GTC},
-		{"tls",			EAP_TLS},
-		{"ttls",		EAP_TTLS},
-		{"sim",			EAP_SIM},
-		{"aka",			EAP_AKA},
-		{"mschapv2",	EAP_MSCHAPV2},
-		{"tnc",			EAP_TNC},
-		{"radius",		EAP_RADIUS},
-	};
-
-	for (i = 0; i < countof(types); i++)
-	{
-		if (strcaseeq(name, types[i].name))
-		{
-			return types[i].type;
-		}
-	}
-	return 0;
-}
 
 typedef struct private_auth_cfg_t private_auth_cfg_t;
 
