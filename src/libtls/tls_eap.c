@@ -171,7 +171,7 @@ static status_t build_pkt(private_tls_eap_t *this,
 	{
 		case NEED_MORE:
 			pkt->flags |= EAP_TLS_MORE_FRAGS;
-			kind = "non-first fragment";
+			kind = "further fragment";
 			if (this->first_fragment)
 			{
 				this->first_fragment = FALSE;
@@ -229,7 +229,8 @@ METHOD(tls_eap_t, process, status_t,
 	if (in.len < sizeof(eap_tls_packet_t) ||
 		untoh16(&pkt->length) != in.len)
 	{
-		DBG1(DBG_IKE, "invalid EAP-TLS packet length");
+		DBG1(DBG_IKE, "invalid %N packet length",
+			 eap_type_names, this->type);
 		return FAILED;
 	}
 	if (pkt->flags & EAP_TLS_START)
