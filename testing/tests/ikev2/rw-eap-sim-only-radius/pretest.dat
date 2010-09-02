@@ -4,9 +4,6 @@ dave::/etc/init.d/iptables start 2> /dev/null
 moon::rm /etc/ipsec.d/cacerts/*
 carol::rm /etc/ipsec.d/cacerts/*
 dave::rm /etc/ipsec.d/cacerts/*
-alice::cat /etc/raddb/clients.conf
-alice::cat /etc/raddb/eap.conf
-alice::cat /etc/raddb/proxy.conf
 alice::cat /etc/raddb/triplets.dat
 alice::/etc/init.d/radiusd start
 moon::ipsec start
