@@ -329,6 +329,13 @@ struct tls_crypto_t {
 										tls_cipher_suite_t *suites, int count);
 
 	/**
+	 * Get the Diffie-Hellman group to use, if any.
+	 *
+	 * @return				Diffie Hellman group, ord MODP_NONE
+	 */
+	diffie_hellman_group_t (*get_dh_group)(tls_crypto_t *this);
+
+	/**
 	 * Write the list of supported hash/sig algorithms to writer.
 	 *
 	 * @param writer		writer to write supported hash/sig algorithms
