@@ -64,6 +64,12 @@ struct credential_factory_t {
 	 */
 	void* (*create)(credential_factory_t *this, credential_type_t type,
 					int subtype, ...);
+	/**
+	 * Create an enumerator over registered builder functions.
+	 *
+	 * @return				enumerator (credential_type_t, int, build_function_t)
+	 */
+	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this);
 
 	/**
 	 * Register a credential builder function.

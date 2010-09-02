@@ -149,6 +149,31 @@ METHOD(credential_factory_t, create, void*,
 	return construct;
 }
 
+/**
+ * Filter function for builder enumerator
+ */
+static bool builder_filter(void *null, entry_t **entry, credential_type_t *type,
+						   void *dummy1, int *subtype,
+						   void *dummy2, builder_function_t *constructor)
+{
+	*type = (*entry)->type;
+	*subtype = (*entry)->subtype;
+	if (constructor)
+	{
+		*constructor = (*entry)->constructor;
+	}
+	return TRUE;
+}
+
+METHOD(credential_factory_t, create_builder_enumerator, enumerator_t*,
+	private_credential_factory_t *this)
+{
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(
+				this->constructors->create_enumerator(this->constructors),
+				(void*)builder_filter, this->lock, (void*)this->lock->unlock);
+}
+
 METHOD(credential_factory_t, destroy, void,
 	private_credential_factory_t *this)
 {
@@ -168,6 +193,7 @@ credential_factory_t *credential_factory_create()
 	INIT(this,
 		.public = {
 			.create = _create,
+			.create_builder_enumerator = _create_builder_enumerator,
 			.add_builder = _add_builder,
 			.remove_builder = _remove_builder,
 			.destroy = _destroy,
