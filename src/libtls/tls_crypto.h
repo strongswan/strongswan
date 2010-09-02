@@ -285,6 +285,27 @@ enum tls_signature_algorithm_t {
 extern enum_name_t *tls_signature_algorithm_names;
 
 /**
+ * TLS ClientCertificateType
+ */
+enum tls_client_certificate_type_t {
+	TLS_RSA_SIGN =			1,
+	TLS_DSA_SIGN =			2,
+	TLS_RSA_FIXED_DH =		3,
+	TLS_DSS_FIXED_DH =		4,
+	TLS_RSA_EPHEMERAL_DH =	5,
+	TLS_DSS_EPHEMERAL_DH =	6,
+	TLS_FORTEZZA_DMS =		20,
+	TLS_ECDSA_SIGN =		64,
+	TLS_RSA_FIXED_ECDH =	65,
+	TLS_ECDSA_FIXED_ECDH =	66,
+};
+
+/**
+ * Enum names for tls_client_certificate_type_t
+ */
+extern enum_name_t *tls_client_certificate_type_names;
+
+/**
  * TLS crypto helper functions.
  */
 struct tls_crypto_t {

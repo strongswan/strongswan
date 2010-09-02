@@ -254,6 +254,25 @@ ENUM(tls_signature_algorithm_names, TLS_SIG_RSA, TLS_SIG_ECDSA,
 	"ECDSA",
 );
 
+ENUM_BEGIN(tls_client_certificate_type_names,
+		   TLS_RSA_SIGN, TLS_DSS_EPHEMERAL_DH,
+	"RSA_SIGN",
+	"DSA_SIGN",
+	"RSA_FIXED_DH",
+	"DSS_FIXED_DH",
+	"RSA_EPHEMERAL_DH",
+	"DSS_EPHEMERAL_DH");
+ENUM_NEXT(tls_client_certificate_type_names,
+		  TLS_FORTEZZA_DMS, TLS_FORTEZZA_DMS, TLS_DSS_EPHEMERAL_DH,
+	"FORTEZZA_DMS");
+ENUM_NEXT(tls_client_certificate_type_names,
+		  TLS_ECDSA_SIGN, TLS_ECDSA_FIXED_ECDH, TLS_FORTEZZA_DMS,
+	"ECDSA_SIGN",
+	"RSA_FIXED_ECDH",
+	"ECDSA_FIXED_ECDH");
+ENUM_END(tls_client_certificate_type_names, TLS_ECDSA_FIXED_ECDH);
+
+
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 
 /**
