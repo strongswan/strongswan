@@ -102,6 +102,16 @@ struct private_tls_peer_t {
 	 * Peer private key
 	 */
 	private_key_t *private;
+
+	/**
+	 * List of server-supported hashsig algorithms
+	 */
+	chunk_t hashsig;
+
+	/**
+	 * List of server-supported client certificate types
+	 */
+	chunk_t cert_types;
 };
 
 /**
@@ -283,6 +293,7 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
+	this->cert_types = chunk_clone(types);
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
 		if (!reader->read_data16(reader, &hashsig))
@@ -291,7 +302,7 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			return NEED_MORE;
 		}
-		/* TODO: store supported hashsig algorithms */
+		this->hashsig = chunk_clone(hashsig);
 	}
 	if (!reader->read_data16(reader, &data))
 	{
@@ -476,6 +487,45 @@ static status_t send_client_hello(private_tls_peer_t *this,
 }
 
 /**
+ * Find a private key suitable to sign Certificate Verify
+ */
+static private_key_t *find_private_key(private_tls_peer_t *this)
+{
+	private_key_t *key = NULL;
+	tls_reader_t *reader;
+	key_type_t type;
+	u_int8_t cert;
+
+	if (!this->peer)
+	{
+		return NULL;
+	}
+	reader = tls_reader_create(this->cert_types);
+	while (reader->remaining(reader) && reader->read_uint8(reader, &cert))
+	{
+		switch (cert)
+		{
+			case TLS_RSA_SIGN:
+				type = KEY_RSA;
+				break;
+			case TLS_ECDSA_SIGN:
+				type = KEY_ECDSA;
+				break;
+			default:
+				continue;
+		}
+		key = lib->credmgr->get_private(lib->credmgr, type,
+										this->peer, this->peer_auth);
+		if (key)
+		{
+			break;
+		}
+	}
+	reader->destroy(reader);
+	return key;
+}
+
+/**
  * Send Certificate
  */
 static status_t send_certificate(private_tls_peer_t *this,
@@ -487,11 +537,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	tls_writer_t *certs;
 	chunk_t data;
 
-	if (this->peer)
-	{
-		this->private = lib->credmgr->get_private(lib->credmgr,
-										KEY_ANY, this->peer, this->peer_auth);
-	}
+	this->private = find_private_key(this);
 	if (!this->private)
 	{
 		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
@@ -611,7 +657,8 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	if (!this->private ||
-		!this->crypto->sign_handshake(this->crypto, this->private, writer))
+		!this->crypto->sign_handshake(this->crypto, this->private,
+									  writer, this->hashsig))
 	{
 		DBG1(DBG_TLS, "creating TLS Certificate Verify signature failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -715,6 +762,8 @@ METHOD(tls_handshake_t, destroy, void,
 	DESTROY_IF(this->private);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
+	free(this->hashsig.ptr);
+	free(this->cert_types.ptr);
 	free(this);
 }
 

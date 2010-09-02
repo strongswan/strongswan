@@ -349,10 +349,11 @@ struct tls_crypto_t {
 	 *
 	 * @param key			private key to use for signature
 	 * @param writer		TLS writer to write signature to
+	 * @param hashsig		list of TLS1.2 hash/sig algorithms to select from
 	 * @return				TRUE if signature create successfully
 	 */
 	bool (*sign_handshake)(tls_crypto_t *this, private_key_t *key,
-						   tls_writer_t *writer);
+						   tls_writer_t *writer, chunk_t hashsig);
 
 	/**
 	 * Verify the signature over handshake data using a given public key.

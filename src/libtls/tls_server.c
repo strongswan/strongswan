@@ -500,6 +500,69 @@ static status_t send_certificate(private_tls_server_t *this,
 }
 
 /**
+ * Create a list of supported certificate types and hash/sig algorithms
+ */
+static void get_supported_algorithms(private_tls_server_t *this,
+									 tls_writer_t *writer)
+{
+	tls_writer_t *supported;
+
+	supported = tls_writer_create(4);
+	/* we propose both RSA and ECDSA */
+	supported->write_uint8(supported, TLS_RSA_SIGN);
+	supported->write_uint8(supported, TLS_ECDSA_SIGN);
+	writer->write_data8(writer, supported->get_buf(supported));
+	supported->destroy(supported);
+
+	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	{
+		enumerator_t *enumerator;
+		hash_algorithm_t alg;
+		tls_hash_algorithm_t hash;
+
+		supported = tls_writer_create(32);
+		enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+		while (enumerator->enumerate(enumerator, &alg))
+		{
+			switch (alg)
+			{
+				case HASH_MD5:
+					hash = TLS_HASH_MD5;
+					break;
+				case HASH_SHA1:
+					hash = TLS_HASH_SHA1;
+					break;
+				case HASH_SHA224:
+					hash = TLS_HASH_SHA224;
+					break;
+				case HASH_SHA256:
+					hash = TLS_HASH_SHA256;
+					break;
+				case HASH_SHA384:
+					hash = TLS_HASH_SHA384;
+					break;
+				case HASH_SHA512:
+					hash = TLS_HASH_SHA512;
+					break;
+				default:
+					continue;
+			}
+			supported->write_uint8(supported, hash);
+			supported->write_uint8(supported, TLS_SIG_RSA);
+			if (alg != HASH_MD5 && alg != HASH_SHA224)
+			{
+				supported->write_uint8(supported, hash);
+				supported->write_uint8(supported, TLS_SIG_ECDSA);
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		writer->write_data16(writer, supported->get_buf(supported));
+		supported->destroy(supported);
+	}
+}
+
+/**
  * Send Certificate Request
  */
 static status_t send_certificate_request(private_tls_server_t *this,
@@ -511,13 +574,7 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	x509_t *x509;
 	identification_t *id;
 
-	/* currently only RSA signatures are supported */
-	writer->write_data8(writer, chunk_from_chars(1));
-	if (this->tls->get_version(this->tls) >= TLS_1_2)
-	{
-		/* enforce RSA with SHA1 signatures */
-		writer->write_data16(writer, chunk_from_chars(2, 1));
-	}
+	get_supported_algorithms(this, writer);
 
 	authorities = tls_writer_create(64);
 	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,

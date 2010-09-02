@@ -692,36 +692,130 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 	return TRUE;
 }
 
-METHOD(tls_crypto_t, sign_handshake, bool,
-	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer)
+/**
+ * Get the signature scheme from a TLS 1.2 hash/sig algorithm pair
+ */
+static signature_scheme_t hashsig_to_scheme(key_type_t type,
+					tls_hash_algorithm_t hash, tls_signature_algorithm_t sig)
 {
-	chunk_t sig, hash;
+	switch (sig)
+	{
+		case TLS_SIG_RSA:
+			if (type != KEY_RSA)
+			{
+				return SIGN_UNKNOWN;
+			}
+			switch (hash)
+			{
+				case TLS_HASH_MD5:
+					return SIGN_RSA_EMSA_PKCS1_MD5;
+				case TLS_HASH_SHA1:
+					return SIGN_RSA_EMSA_PKCS1_SHA1;
+				case TLS_HASH_SHA224:
+					return SIGN_RSA_EMSA_PKCS1_SHA224;
+				case TLS_HASH_SHA256:
+					return SIGN_RSA_EMSA_PKCS1_SHA256;
+				case TLS_HASH_SHA384:
+					return SIGN_RSA_EMSA_PKCS1_SHA384;
+				case TLS_HASH_SHA512:
+					return SIGN_RSA_EMSA_PKCS1_SHA512;
+				default:
+					return SIGN_UNKNOWN;
+			}
+		case TLS_SIG_ECDSA:
+			if (type != KEY_ECDSA)
+			{
+				return SIGN_UNKNOWN;
+			}
+			switch (hash)
+			{
+				case TLS_HASH_SHA224:
+					return SIGN_ECDSA_WITH_SHA1_DER;
+				case TLS_HASH_SHA256:
+					return SIGN_ECDSA_WITH_SHA256_DER;
+				case TLS_HASH_SHA384:
+					return SIGN_ECDSA_WITH_SHA384_DER;
+				case TLS_HASH_SHA512:
+					return SIGN_ECDSA_WITH_SHA512_DER;
+				default:
+					return SIGN_UNKNOWN;
+			}
+		default:
+			return SIGN_UNKNOWN;
+	}
+}
 
+METHOD(tls_crypto_t, sign_handshake, bool,
+	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer,
+	chunk_t hashsig)
+{
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
-		/* TODO: use supported algorithms instead of fixed SHA1/RSA */
-		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_SHA1, this->handshake, &sig))
+		signature_scheme_t scheme;
+		tls_reader_t *reader;
+		u_int8_t hash, alg;
+		chunk_t sig;
+		bool done = FALSE;
+
+		reader = tls_reader_create(hashsig);
+		while (reader->remaining(reader) >= 2)
 		{
+			if (reader->read_uint8(reader, &hash) &&
+				reader->read_uint8(reader, &alg))
+			{
+				scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
+				if (scheme != SIGN_UNKNOWN &&
+					key->sign(key, scheme, this->handshake, &sig))
+				{
+					done = TRUE;
+					break;
+				}
+			}
+		}
+		reader->destroy(reader);
+		if (!done)
+		{
+			DBG1(DBG_TLS, "none of the proposed hash/sig algorithms supported");
 			return FALSE;
 		}
-		writer->write_uint8(writer, 2);
-		writer->write_uint8(writer, 1);
+		DBG2(DBG_TLS, "signed handshake data with %N/%N",
+			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
+		writer->write_uint8(writer, hash);
+		writer->write_uint8(writer, alg);
 		writer->write_data16(writer, sig);
 		free(sig.ptr);
 	}
 	else
 	{
-		if (!hash_handshake(this, &hash))
+		chunk_t sig, hash;
+
+		switch (key->get_type(key))
 		{
-			return FALSE;
-		}
-		if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
-		{
-			free(hash.ptr);
-			return FALSE;
+			case KEY_RSA:
+				if (!hash_handshake(this, &hash))
+				{
+					return FALSE;
+				}
+				if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
+				{
+					free(hash.ptr);
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "signed handshake data with SHA1+MD5/RSA");
+				free(hash.ptr);
+				break;
+			case KEY_ECDSA:
+				if (!key->sign(key, SIGN_ECDSA_WITH_SHA1_DER,
+							   this->handshake, &sig))
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "signed handshake data with SHA1/ECDSA");
+				break;
+			default:
+				return FALSE;
 		}
 		writer->write_data16(writer, sig);
-		free(hash.ptr);
 		free(sig.ptr);
 	}
 	return TRUE;
@@ -732,6 +826,7 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
+		signature_scheme_t scheme = SIGN_UNKNOWN;
 		u_int8_t hash, alg;
 		chunk_t sig;
 
@@ -742,12 +837,20 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 			DBG1(DBG_TLS, "received invalid Certificate Verify");
 			return FALSE;
 		}
-		/* TODO: map received hash/sig alg to signature scheme */
-		if (hash != 2 || alg != 1 ||
-			!key->verify(key, SIGN_RSA_EMSA_PKCS1_SHA1, this->handshake, sig))
+		scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
+		if (scheme == SIGN_UNKNOWN)
+		{
+			DBG1(DBG_TLS, "Certificate Verify algorithms %N/%N not supported",
+				 tls_hash_algorithm_names, hash,
+				 tls_signature_algorithm_names, alg);
+			return FALSE;
+		}
+		if (!key->verify(key, scheme, this->handshake, sig))
 		{
 			return FALSE;
 		}
+		DBG2(DBG_TLS, "verified handshake data with %N/%N",
+			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
 	}
 	else
 	{
@@ -758,16 +861,33 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 			DBG1(DBG_TLS, "received invalid Certificate Verify");
 			return FALSE;
 		}
-		if (!hash_handshake(this, &hash))
+		switch (key->get_type(key))
 		{
-			return FALSE;
+			case KEY_RSA:
+				if (!hash_handshake(this, &hash))
+				{
+					return FALSE;
+				}
+				if (!key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig))
+				{
+					free(hash.ptr);
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "verified handshake data with SHA1+MD5/RSA");
+				free(hash.ptr);
+				break;
+			case KEY_ECDSA:
+				if (!key->verify(key, SIGN_ECDSA_WITH_SHA1_DER,
+								 this->handshake, sig))
+				{
+					free(hash.ptr);
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "verified handshake data with SHA1/ECDSA");
+				break;
+			default:
+				return FALSE;
 		}
-		if (!key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig))
-		{
-			free(hash.ptr);
-			return FALSE;
-		}
-		free(hash.ptr);
 	}
 	return TRUE;
 }
