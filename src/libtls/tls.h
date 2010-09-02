@@ -101,6 +101,19 @@ enum tls_purpose_t {
 };
 
 /**
+ * TLS Hello extension types.
+ */
+enum tls_extension_t {
+	/** supported signature algorithms */
+	TLS_EXT_SIGNATURE_ALGORITHMS = 13,
+};
+
+/**
+ * Enum names for tls_extension_t
+ */
+extern enum_name_t *tls_extension_names;
+
+/**
  * A bottom-up driven TLS stack, suitable for EAP implementations.
  */
 struct tls_t {
