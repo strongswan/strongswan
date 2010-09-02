@@ -95,7 +95,8 @@ struct private_stroke_cred_t {
 typedef struct {
 	private_stroke_cred_t *this;
 	identification_t *id;
-	certificate_type_t type;
+	certificate_type_t cert;
+	key_type_t key;
 } id_data_t;
 
 /**
@@ -116,15 +117,18 @@ static bool private_filter(id_data_t *data,
 	private_key_t *key;
 
 	key = *in;
-	if (data->id == NULL)
+	if (data->key == KEY_ANY || data->key == key->get_type(key))
 	{
-		*out = key;
-		return TRUE;
-	}
-	if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
-	{
-		*out = key;
-		return TRUE;
+		if (data->id == NULL)
+		{
+			*out = key;
+			return TRUE;
+		}
+		if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
+		{
+			*out = key;
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -140,6 +144,7 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
+	data->key = type;
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->private->create_enumerator(this->private),
@@ -155,7 +160,7 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public_key_t *public;
 	certificate_t *cert = *in;
 
-	if (data->type != CERT_ANY && data->type != cert->get_type(cert))
+	if (data->cert != CERT_ANY && data->cert != cert->get_type(cert))
 	{
 		return FALSE;
 	}
@@ -168,11 +173,14 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
+		if (data->key == KEY_ANY || data->key != public->get_type(public))
 		{
-			public->destroy(public);
-			*out = *in;
-			return TRUE;
+			if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
+			{
+				public->destroy(public);
+				*out = *in;
+				return TRUE;
+			}
 		}
 		public->destroy(public);
 	}
@@ -195,7 +203,8 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
-	data->type = cert;
+	data->cert = cert;
+	data->key = key;
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->certs->create_enumerator(this->certs),
