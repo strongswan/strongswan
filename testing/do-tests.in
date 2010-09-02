@@ -521,6 +521,48 @@ do
 
 	done
 
+	for host in $RADIUSHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+
+	    for file in clients.conf eap.conf radiusd.conf proxy.conf users
+	    do
+		scp $HOSTLOGIN:/etc/raddb/$file \
+		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
+	    done
+
+	    scp $HOSTLOGIN:/var/log/radius/radius.log \
+	    	$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
+
+	    chmod a+r $TESTRESULTDIR/*
+	    cat >> $TESTRESULTDIR/index.html <<@EOF
+    <h3>$host</h3>
+      <table border="0" cellspacing="0" width="600">
+      <tr>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.clients.conf">clients.conf</a></li>
+	    <li><a href="$host.radiusd.conf">radiusd.conf</a></li>
+	  </ul>
+	</td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.eap.conf">eap.conf</a></li>
+	    <li><a href="$host.radius.log">radius.log</a></li>
+	  </ul>
+      </td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.proxy.conf">proxy.conf</a></li>
+	    <li><a href="$host.users">users</a></li>
+	  </ul>
+      </td>
+    </tr>
+    </table>
+@EOF
+
+	done
+
 	cat >> $TESTRESULTDIR/index.html <<@EOF
   </td></tr>
   <tr><td align="right">
