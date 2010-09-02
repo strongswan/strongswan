@@ -307,8 +307,6 @@ METHOD(tls_t, build, status_t,
 	}
 	else
 	{
-		DBG2(DBG_TLS, "sending %d bytes buffered fragment",
-			 min(*buflen, this->output.len - this->outpos));
 		if (msglen)
 		{
 			*msglen = 0;
