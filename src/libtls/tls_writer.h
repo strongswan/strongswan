@@ -66,14 +66,14 @@ struct tls_writer_t {
 	void (*write_data)(tls_writer_t *this, chunk_t value);
 
 	/**
-	 * Append a chunk of data with a 16-bit length header.
+	 * Append a chunk of data with a 8-bit length header.
 	 *
 	 * @param value		value to append
 	 */
 	void (*write_data8)(tls_writer_t *this, chunk_t value);
 
 	/**
-	 * Append a chunk of data with a 8-bit length header.
+	 * Append a chunk of data with a 16-bit length header.
 	 *
 	 * @param value		value to append
 	 */
