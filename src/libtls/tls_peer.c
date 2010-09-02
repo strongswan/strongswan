@@ -29,6 +29,7 @@ typedef enum {
 	STATE_HELLO_DONE,
 	STATE_CERT_SENT,
 	STATE_CERT_RECEIVED,
+	STATE_KEY_EXCHANGE_RECEIVED,
 	STATE_CERTREQ_RECEIVED,
 	STATE_KEY_EXCHANGE_SENT,
 	STATE_VERIFY_SENT,
@@ -102,6 +103,11 @@ struct private_tls_peer_t {
 	 * Peer private key
 	 */
 	private_key_t *private;
+
+	/**
+	 * DHE exchange
+	 */
+	diffie_hellman_t *dh;
 
 	/**
 	 * List of server-supported hashsig algorithms
@@ -268,6 +274,128 @@ static status_t process_certificate(private_tls_peer_t *this,
 }
 
 /**
+ * Find a trusted public key to encrypt/verify key exchange data
+ */
+static public_key_t *find_public_key(private_tls_peer_t *this)
+{
+	public_key_t *public = NULL, *current;
+	certificate_t *cert;
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+
+	cert = this->server_auth->get(this->server_auth, AUTH_HELPER_SUBJECT_CERT);
+	if (cert)
+	{
+		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+						KEY_ANY, cert->get_subject(cert), this->server_auth);
+		while (enumerator->enumerate(enumerator, &current, &auth))
+		{
+			public = current->get_ref(current);
+			break;
+		}
+		enumerator->destroy(enumerator);
+	}
+	return public;
+}
+
+/**
+ * Process a Key Exchange message using MODP Diffie Hellman
+ */
+static status_t process_modp_key_exchange(private_tls_peer_t *this,
+										  tls_reader_t *reader)
+{
+	chunk_t prime, generator, pub, chunk;
+	public_key_t *public;
+
+	chunk = reader->peek(reader);
+	if (!reader->read_data16(reader, &prime) ||
+		!reader->read_data16(reader, &generator) ||
+		!reader->read_data16(reader, &pub))
+	{
+		DBG1(DBG_TLS, "received invalid Server Key Exchange");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+	public = find_public_key(this);
+	if (!public)
+	{
+		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+		return NEED_MORE;
+	}
+
+	chunk.len = 2 + prime.len + 2 + generator.len + 2 + pub.len;
+	chunk = chunk_cat("ccc", chunk_from_thing(this->client_random),
+					  chunk_from_thing(this->server_random), chunk);
+	if (!this->crypto->verify(this->crypto, public, reader, chunk))
+	{
+		public->destroy(public);
+		free(chunk.ptr);
+		DBG1(DBG_TLS, "verifying DH parameters failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_BAD_CERTIFICATE);
+		return NEED_MORE;
+	}
+	public->destroy(public);
+	free(chunk.ptr);
+
+	this->dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM,
+									  generator, prime);
+	if (!this->dh)
+	{
+		DBG1(DBG_TLS, "custom DH parameters not supported");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->dh->set_other_public_value(this->dh, pub);
+
+	this->state = STATE_KEY_EXCHANGE_RECEIVED;
+	return NEED_MORE;
+}
+
+/**
+ * Process a Server Key Exchange
+ */
+static status_t process_key_exchange(private_tls_peer_t *this,
+									 tls_reader_t *reader)
+{
+	diffie_hellman_group_t group;
+
+	this->crypto->append_handshake(this->crypto,
+								TLS_SERVER_KEY_EXCHANGE, reader->peek(reader));
+
+	group = this->crypto->get_dh_group(this->crypto);
+	/* check if the suite used a MODP or a ECP group */
+	switch (group)
+	{
+		case MODP_NONE:
+			DBG1(DBG_TLS, "received Server Key Exchange, but not required "
+				 "for current suite");
+			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			return NEED_MORE;
+		case MODP_768_BIT:
+		case MODP_1024_BIT:
+		case MODP_1536_BIT:
+		case MODP_2048_BIT:
+		case MODP_3072_BIT:
+		case MODP_4096_BIT:
+		case MODP_6144_BIT:
+		case MODP_8192_BIT:
+		case MODP_1024_160:
+		case MODP_2048_224:
+		case MODP_2048_256:
+			return process_modp_key_exchange(this, reader);
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+			/* TODO */
+		default:
+			return FAILED;
+	}
+}
+
+/**
  * Process a Certificate Request message
  */
 static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
@@ -406,6 +534,12 @@ METHOD(tls_handshake_t, process, status_t,
 			expected = TLS_CERTIFICATE;
 			break;
 		case STATE_CERT_RECEIVED:
+			if (type == TLS_SERVER_KEY_EXCHANGE)
+			{
+				return process_key_exchange(this, reader);
+			}
+			/* fall through since TLS_SERVER_KEY_EXCHANGE is optional */
+		case STATE_KEY_EXCHANGE_RECEIVED:
 			if (type == TLS_CERTIFICATE_REQUEST)
 			{
 				return process_certreq(this, reader);
@@ -550,7 +684,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	{
 		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return FAILED;
+		return NEED_MORE;
 	}
 
 	/* generate certificate payload */
@@ -592,15 +726,12 @@ static status_t send_certificate(private_tls_peer_t *this,
 }
 
 /**
- * Send client key exchange
+ * Send client key exchange, using premaster encryption
  */
-static status_t send_key_exchange(private_tls_peer_t *this,
+static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
-	public_key_t *public = NULL, *current;
-	certificate_t *cert;
-	enumerator_t *enumerator;
-	auth_cfg_t *auth;
+	public_key_t *public;
 	rng_t *rng;
 	char premaster[48];
 	chunk_t encrypted;
@@ -610,7 +741,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	{
 		DBG1(DBG_TLS, "no suitable RNG found for TLS premaster secret");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return FAILED;
+		return NEED_MORE;
 	}
 	rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2);
 	rng->destroy(rng);
@@ -620,23 +751,12 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
 
-	cert = this->server_auth->get(this->server_auth, AUTH_HELPER_SUBJECT_CERT);
-	if (cert)
-	{
-		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-						KEY_ANY, cert->get_subject(cert), this->server_auth);
-		while (enumerator->enumerate(enumerator, &current, &auth))
-		{
-			public = current->get_ref(current);
-			break;
-		}
-		enumerator->destroy(enumerator);
-	}
+	public = find_public_key(this);
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
 		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
-		return FAILED;
+		return NEED_MORE;
 	}
 	if (!public->encrypt(public, ENCRYPT_RSA_PKCS1,
 						 chunk_from_thing(premaster), &encrypted))
@@ -644,9 +764,8 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 		public->destroy(public);
 		DBG1(DBG_TLS, "encrypting TLS premaster secret failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_BAD_CERTIFICATE);
-		return FAILED;
+		return NEED_MORE;
 	}
-
 	public->destroy(public);
 
 	writer->write_data16(writer, encrypted);
@@ -656,6 +775,48 @@ static status_t send_key_exchange(private_tls_peer_t *this,
 	this->state = STATE_KEY_EXCHANGE_SENT;
 	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
+}
+
+/**
+ * Send client key exchange, using DHE exchange
+ */
+static status_t send_key_exchange_dhe(private_tls_peer_t *this,
+							tls_handshake_type_t *type, tls_writer_t *writer)
+{
+	chunk_t premaster, pub;
+
+	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
+	{
+		DBG1(DBG_TLS, "calculating premaster from DH failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->crypto->derive_secrets(this->crypto, premaster,
+								 chunk_from_thing(this->client_random),
+								 chunk_from_thing(this->server_random));
+	chunk_clear(&premaster);
+
+	this->dh->get_my_public_value(this->dh, &pub);
+	writer->write_data16(writer, pub);
+	free(pub.ptr);
+
+	*type = TLS_CLIENT_KEY_EXCHANGE;
+	this->state = STATE_KEY_EXCHANGE_SENT;
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
+	return NEED_MORE;
+}
+
+/**
+ * Send client key exchange, depending on suite
+ */
+static status_t send_key_exchange(private_tls_peer_t *this,
+							tls_handshake_type_t *type, tls_writer_t *writer)
+{
+	if (this->dh)
+	{
+		return send_key_exchange_dhe(this, type, writer);
+	}
+	return send_key_exchange_encrypt(this, type, writer);
 }
 
 /**
@@ -670,7 +831,7 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 	{
 		DBG1(DBG_TLS, "creating TLS Certificate Verify signature failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return FAILED;
+		return NEED_MORE;
 	}
 
 	*type = TLS_CERTIFICATE_VERIFY;
@@ -691,7 +852,7 @@ static status_t send_finished(private_tls_peer_t *this,
 	{
 		DBG1(DBG_TLS, "calculating client finished data failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return FAILED;
+		return NEED_MORE;
 	}
 
 	writer->write_data(writer, chunk_from_thing(buf));
@@ -768,6 +929,7 @@ METHOD(tls_handshake_t, destroy, void,
 	private_tls_peer_t *this)
 {
 	DESTROY_IF(this->private);
+	DESTROY_IF(this->dh);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
