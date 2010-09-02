@@ -23,6 +23,8 @@
 
 typedef struct tls_crypto_t tls_crypto_t;
 typedef enum tls_cipher_suite_t tls_cipher_suite_t;
+typedef enum tls_hash_algorithm_t tls_hash_algorithm_t;
+typedef enum tls_signature_algorithm_t tls_signature_algorithm_t;
 
 #include "tls.h"
 #include "tls_prf.h"
@@ -249,6 +251,38 @@ enum tls_cipher_suite_t {
  * Enum names for tls_cipher_suite_t
  */
 extern enum_name_t *tls_cipher_suite_names;
+
+/**
+ * TLS HashAlgorithm identifiers
+ */
+enum tls_hash_algorithm_t {
+	TLS_HASH_NONE =		0,
+	TLS_HASH_MD5 =		1,
+	TLS_HASH_SHA1 =		2,
+	TLS_HASH_SHA224 =	3,
+	TLS_HASH_SHA256 =	4,
+	TLS_HASH_SHA384 =	5,
+	TLS_HASH_SHA512 =	6,
+};
+
+/**
+ * Enum names for tls_hash_algorithm_t
+ */
+extern enum_name_t *tls_hash_algorithm_names;
+
+/**
+ * TLS SignatureAlgorithm identifiers
+ */
+enum tls_signature_algorithm_t {
+	TLS_SIG_RSA =		1,
+	TLS_SIG_DSA =		2,
+	TLS_SIG_ECDSA =		3,
+};
+
+/**
+ * Enum names for tls_signature_algorithm_t
+ */
+extern enum_name_t *tls_signature_algorithm_names;
 
 /**
  * TLS crypto helper functions.

@@ -238,6 +238,22 @@ ENUM_NEXT(tls_cipher_suite_names, TLS_ECDH_ECDSA_WITH_NULL_SHA,
 	"TLS_ECDHE_PSK_WITH_NULL_SHA384");
 ENUM_END(tls_cipher_suite_names, TLS_ECDHE_PSK_WITH_NULL_SHA384);
 
+ENUM(tls_hash_algorithm_names, TLS_HASH_NONE, TLS_HASH_SHA512,
+	"NONE",
+	"MD5",
+	"SHA1",
+	"SHA224",
+	"SHA256",
+	"SHA384",
+	"SHA512",
+);
+
+ENUM(tls_signature_algorithm_names, TLS_SIG_RSA, TLS_SIG_ECDSA,
+	"RSA",
+	"DSA",
+	"ECDSA",
+);
+
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 
 /**
