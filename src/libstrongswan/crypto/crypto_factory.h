@@ -65,8 +65,11 @@ typedef rng_t* (*rng_constructor_t)(rng_quality_t quality);
 
 /**
  * Constructor function for diffie hellman
+ *
+ * The DH constructor accepts additional arguments for:
+ * - MODP_CUSTOM: chunk_t generator, chunk_t prime
  */
-typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group);
+typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group, ...);
 
 /**
  * Handles crypto modules and creates instances.
@@ -129,11 +132,13 @@ struct crypto_factory_t {
 	/**
 	 * Create a diffie hellman instance.
 	 *
+	 * Additional arguments are passed to the DH constructor.
+	 *
 	 * @param group			diffie hellman group
 	 * @return				diffie_hellman_t instance, NULL if not supported
 	 */
 	diffie_hellman_t* (*create_dh)(crypto_factory_t *this,
-								   diffie_hellman_group_t group);
+								   diffie_hellman_group_t group, ...);
 
 	/**
 	 * Register a crypter constructor.

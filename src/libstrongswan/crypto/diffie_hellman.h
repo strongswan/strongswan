@@ -57,6 +57,8 @@ enum diffie_hellman_group_t {
 	ECP_224_BIT   = 26,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL = 1024,
+	/** MODP group with custon generator, prime */
+	MODP_CUSTOM = 1025,
 };
 
 /**

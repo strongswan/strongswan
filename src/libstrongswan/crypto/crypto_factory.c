@@ -308,7 +308,7 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 }
 
 METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
-	private_crypto_factory_t *this, diffie_hellman_group_t group)
+	private_crypto_factory_t *this, diffie_hellman_group_t group, ...)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -320,7 +320,21 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	{
 		if (entry->algo == group)
 		{
-			diffie_hellman = entry->create_dh(group);
+			if (group == MODP_CUSTOM)
+			{
+				va_list args;
+				chunk_t g, p;
+
+				va_start(args, group);
+				g = va_arg(args, chunk_t);
+				p = va_arg(args, chunk_t);
+				va_end(args);
+				diffie_hellman = entry->create_dh(MODP_CUSTOM, g, p);
+			}
+			else
+			{
+				diffie_hellman = entry->create_dh(group);
+			}
 			if (diffie_hellman)
 			{
 				break;
