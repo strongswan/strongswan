@@ -944,7 +944,7 @@ synonym for
 .BR margintime .
 .TP
 .B reqid
-sets the reqid for a given connection to a pre-configured fixed value (IKEv2 only).
+sets the reqid for a given connection to a pre-configured fixed value.
 .TP
 .B type
 the type of the connection; currently the accepted values
