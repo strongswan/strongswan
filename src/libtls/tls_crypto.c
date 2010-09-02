@@ -624,6 +624,55 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 	return 0;
 }
 
+METHOD(tls_crypto_t, get_signature_algorithms, void,
+	private_tls_crypto_t *this, tls_writer_t *writer)
+{
+	tls_writer_t *supported;
+	enumerator_t *enumerator;
+	hash_algorithm_t alg;
+	tls_hash_algorithm_t hash;
+
+	supported = tls_writer_create(32);
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &alg))
+	{
+		switch (alg)
+		{
+			case HASH_MD5:
+				hash = TLS_HASH_MD5;
+				break;
+			case HASH_SHA1:
+				hash = TLS_HASH_SHA1;
+				break;
+			case HASH_SHA224:
+				hash = TLS_HASH_SHA224;
+				break;
+			case HASH_SHA256:
+				hash = TLS_HASH_SHA256;
+				break;
+			case HASH_SHA384:
+				hash = TLS_HASH_SHA384;
+				break;
+			case HASH_SHA512:
+				hash = TLS_HASH_SHA512;
+				break;
+			default:
+				continue;
+		}
+		supported->write_uint8(supported, hash);
+		supported->write_uint8(supported, TLS_SIG_RSA);
+		if (alg != HASH_MD5 && alg != HASH_SHA224)
+		{
+			supported->write_uint8(supported, hash);
+			supported->write_uint8(supported, TLS_SIG_ECDSA);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	writer->write_data16(writer, supported->get_buf(supported));
+	supported->destroy(supported);
+}
+
 METHOD(tls_crypto_t, set_protection, void,
 	private_tls_crypto_t *this, tls_protection_t *protection)
 {
@@ -642,9 +691,9 @@ METHOD(tls_crypto_t, append_handshake, void,
 }
 
 /**
- * Create a hash of the stored handshake data
+ * Create a hash using the suites HASH algorithm
  */
-static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
+static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
@@ -662,7 +711,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, alg->hash);
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, this->handshake, hash);
+		hasher->allocate_hash(hasher, data, hash);
 		hasher->destroy(hasher);
 	}
 	else
@@ -676,7 +725,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_MD5);
 			return FALSE;
 		}
-		md5->get_hash(md5, this->handshake, buf);
+		md5->get_hash(md5, data, buf);
 		md5->destroy(md5);
 		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 		if (!sha1)
@@ -684,7 +733,7 @@ static bool hash_handshake(private_tls_crypto_t *this, chunk_t *hash)
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_SHA1);
 			return FALSE;
 		}
-		sha1->get_hash(sha1, this->handshake, buf + HASH_SIZE_MD5);
+		sha1->get_hash(sha1, data, buf + HASH_SIZE_MD5);
 		sha1->destroy(sha1);
 
 		*hash = chunk_clone(chunk_from_thing(buf));
@@ -745,9 +794,9 @@ static signature_scheme_t hashsig_to_scheme(key_type_t type,
 	}
 }
 
-METHOD(tls_crypto_t, sign_handshake, bool,
+METHOD(tls_crypto_t, sign, bool,
 	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer,
-	chunk_t hashsig)
+	chunk_t data, chunk_t hashsig)
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
@@ -757,6 +806,11 @@ METHOD(tls_crypto_t, sign_handshake, bool,
 		chunk_t sig;
 		bool done = FALSE;
 
+		if (!hashsig.len)
+		{	/* fallback if none given */
+			hashsig = chunk_from_chars(
+				TLS_HASH_SHA1, TLS_SIG_RSA, TLS_HASH_SHA1, TLS_SIG_ECDSA);
+		}
 		reader = tls_reader_create(hashsig);
 		while (reader->remaining(reader) >= 2)
 		{
@@ -765,7 +819,7 @@ METHOD(tls_crypto_t, sign_handshake, bool,
 			{
 				scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
 				if (scheme != SIGN_UNKNOWN &&
-					key->sign(key, scheme, this->handshake, &sig))
+					key->sign(key, scheme, data, &sig))
 				{
 					done = TRUE;
 					break;
@@ -778,7 +832,7 @@ METHOD(tls_crypto_t, sign_handshake, bool,
 			DBG1(DBG_TLS, "none of the proposed hash/sig algorithms supported");
 			return FALSE;
 		}
-		DBG2(DBG_TLS, "signed handshake data with %N/%N",
+		DBG2(DBG_TLS, "created signature with %N/%N",
 			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
 		writer->write_uint8(writer, hash);
 		writer->write_uint8(writer, alg);
@@ -788,29 +842,29 @@ METHOD(tls_crypto_t, sign_handshake, bool,
 	else
 	{
 		chunk_t sig, hash;
+		bool done;
 
 		switch (key->get_type(key))
 		{
 			case KEY_RSA:
-				if (!hash_handshake(this, &hash))
+				if (!hash_data(this, data, &hash))
 				{
 					return FALSE;
 				}
-				if (!key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig))
-				{
-					free(hash.ptr);
-					return FALSE;
-				}
-				DBG2(DBG_TLS, "signed handshake data with SHA1+MD5/RSA");
+				done = key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig);
 				free(hash.ptr);
+				if (!done)
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "created signature with MD5+SHA1/RSA");
 				break;
 			case KEY_ECDSA:
-				if (!key->sign(key, SIGN_ECDSA_WITH_SHA1_DER,
-							   this->handshake, &sig))
+				if (!key->sign(key, SIGN_ECDSA_WITH_SHA1_DER, data, &sig))
 				{
 					return FALSE;
 				}
-				DBG2(DBG_TLS, "signed handshake data with SHA1/ECDSA");
+				DBG2(DBG_TLS, "created signature with SHA1/ECDSA");
 				break;
 			default:
 				return FALSE;
@@ -821,8 +875,9 @@ METHOD(tls_crypto_t, sign_handshake, bool,
 	return TRUE;
 }
 
-METHOD(tls_crypto_t, verify_handshake, bool,
-	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader)
+METHOD(tls_crypto_t, verify, bool,
+	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader,
+	chunk_t data)
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
@@ -834,62 +889,74 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 			!reader->read_uint8(reader, &alg) ||
 			!reader->read_data16(reader, &sig))
 		{
-			DBG1(DBG_TLS, "received invalid Certificate Verify");
+			DBG1(DBG_TLS, "received invalid signature");
 			return FALSE;
 		}
 		scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
 		if (scheme == SIGN_UNKNOWN)
 		{
-			DBG1(DBG_TLS, "Certificate Verify algorithms %N/%N not supported",
+			DBG1(DBG_TLS, "signature algorithms %N/%N not supported",
 				 tls_hash_algorithm_names, hash,
 				 tls_signature_algorithm_names, alg);
 			return FALSE;
 		}
-		if (!key->verify(key, scheme, this->handshake, sig))
+		if (!key->verify(key, scheme, data, sig))
 		{
 			return FALSE;
 		}
-		DBG2(DBG_TLS, "verified handshake data with %N/%N",
+		DBG2(DBG_TLS, "verified signature with %N/%N",
 			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
 	}
 	else
 	{
 		chunk_t sig, hash;
+		bool done;
 
 		if (!reader->read_data16(reader, &sig))
 		{
-			DBG1(DBG_TLS, "received invalid Certificate Verify");
+			DBG1(DBG_TLS, "received invalid signature");
 			return FALSE;
 		}
 		switch (key->get_type(key))
 		{
 			case KEY_RSA:
-				if (!hash_handshake(this, &hash))
+				if (!hash_data(this, data, &hash))
 				{
 					return FALSE;
 				}
-				if (!key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig))
-				{
-					free(hash.ptr);
-					return FALSE;
-				}
-				DBG2(DBG_TLS, "verified handshake data with SHA1+MD5/RSA");
+				done = key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig);
 				free(hash.ptr);
+				if (!done)
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "verified signature data with MD5+SHA1/RSA");
 				break;
 			case KEY_ECDSA:
-				if (!key->verify(key, SIGN_ECDSA_WITH_SHA1_DER,
-								 this->handshake, sig))
+				if (!key->verify(key, SIGN_ECDSA_WITH_SHA1_DER, data, sig))
 				{
-					free(hash.ptr);
 					return FALSE;
 				}
-				DBG2(DBG_TLS, "verified handshake data with SHA1/ECDSA");
+				DBG2(DBG_TLS, "verified signature with SHA1/ECDSA");
 				break;
 			default:
 				return FALSE;
 		}
 	}
 	return TRUE;
+}
+
+METHOD(tls_crypto_t, sign_handshake, bool,
+	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer,
+	chunk_t hashsig)
+{
+	return sign(this, key, writer, this->handshake, hashsig);
+}
+
+METHOD(tls_crypto_t, verify_handshake, bool,
+	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader)
+{
+	return verify(this, key, reader, this->handshake);
 }
 
 METHOD(tls_crypto_t, calculate_finished, bool,
@@ -901,7 +968,7 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 	{
 		return FALSE;
 	}
-	if (!hash_handshake(this, &seed))
+	if (!hash_data(this, this->handshake, &seed))
 	{
 		return FALSE;
 	}
@@ -1062,8 +1129,11 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 		.public = {
 			.get_cipher_suites = _get_cipher_suites,
 			.select_cipher_suite = _select_cipher_suite,
+			.get_signature_algorithms = _get_signature_algorithms,
 			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
+			.sign = _sign,
+			.verify = _verify,
 			.sign_handshake = _sign_handshake,
 			.verify_handshake = _verify_handshake,
 			.calculate_finished = _calculate_finished,

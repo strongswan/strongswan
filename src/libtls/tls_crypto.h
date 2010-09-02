@@ -329,6 +329,13 @@ struct tls_crypto_t {
 										tls_cipher_suite_t *suites, int count);
 
 	/**
+	 * Write the list of supported hash/sig algorithms to writer.
+	 *
+	 * @param writer		writer to write supported hash/sig algorithms
+	 */
+	void (*get_signature_algorithms)(tls_crypto_t *this, tls_writer_t *writer);
+
+	/**
 	 * Set the protection layer of the TLS stack to control it.
 	 *
 	 * @param protection		protection layer to work on
@@ -343,6 +350,29 @@ struct tls_crypto_t {
 	 */
 	void (*append_handshake)(tls_crypto_t *this,
 							 tls_handshake_type_t type, chunk_t data);
+
+	/**
+	 * Sign a blob of data, append signature to writer.
+	 *
+	 * @param key			private key to use for signature
+	 * @param writer		TLS writer to write signature to
+	 * @param data			data to sign
+	 * @param hashsig		list of TLS1.2 hash/sig algorithms to select from
+	 * @return				TRUE if signature create successfully
+	 */
+	bool (*sign)(tls_crypto_t *this, private_key_t *key,
+				 tls_writer_t *writer, chunk_t data, chunk_t hashsig);
+
+	/**
+	 * Verify a blob of data, read signature from a reader.
+	 *
+	 * @param key			public key to verify signature with
+	 * @param reader		TLS reader to read signature from
+	 * @param data			data to verify signature
+	 * @return				TRUE if signature valid
+	 */
+	bool (*verify)(tls_crypto_t *this, public_key_t *key,
+				   tls_reader_t *reader, chunk_t data);
 
 	/**
 	 * Create a signature of the handshake data using a given private key.
