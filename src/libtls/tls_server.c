@@ -28,6 +28,7 @@ typedef enum {
 	STATE_HELLO_RECEIVED,
 	STATE_HELLO_SENT,
 	STATE_CERT_SENT,
+	STATE_KEY_EXCHANGE_SENT,
 	STATE_CERTREQ_SENT,
 	STATE_HELLO_DONE,
 	STATE_CERT_RECEIVED,
@@ -103,6 +104,11 @@ struct private_tls_server_t {
 	 * Peer private key
 	 */
 	private_key_t *private;
+
+	/**
+	 * DHE exchange
+	 */
+	diffie_hellman_t *dh;
 
 	/**
 	 * Selected TLS cipher suite
@@ -269,10 +275,10 @@ static status_t process_certificate(private_tls_server_t *this,
 }
 
 /**
- * Process Client Key Exchange
+ * Process Client Key Exchange, using premaster encryption
  */
-static status_t process_key_exchange(private_tls_server_t *this,
-									 tls_reader_t *reader)
+static status_t process_key_exchange_encrypted(private_tls_server_t *this,
+											   tls_reader_t *reader)
 {
 	chunk_t encrypted, decrypted;
 	char premaster[48];
@@ -326,6 +332,53 @@ static status_t process_key_exchange(private_tls_server_t *this,
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
+}
+
+/**
+ * Process client key exchange, using DHE exchange
+ */
+static status_t process_key_exchange_dhe(private_tls_server_t *this,
+										 tls_reader_t *reader)
+{
+	chunk_t premaster, pub;
+
+	this->crypto->append_handshake(this->crypto,
+								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
+
+	if (!reader->read_data16(reader, &pub))
+	{
+		DBG1(DBG_TLS, "received invalid Client Key Exchange");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+	this->dh->set_other_public_value(this->dh, pub);
+	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
+	{
+		DBG1(DBG_TLS, "calculating premaster from DH failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+
+	this->crypto->derive_secrets(this->crypto, premaster,
+								 chunk_from_thing(this->client_random),
+								 chunk_from_thing(this->server_random));
+	chunk_clear(&premaster);
+
+	this->state = STATE_KEY_EXCHANGE_RECEIVED;
+	return NEED_MORE;
+}
+
+/**
+ * Process Client Key Exchange
+ */
+static status_t process_key_exchange(private_tls_server_t *this,
+									 tls_reader_t *reader)
+{
+	if (this->dh)
+	{
+		return process_key_exchange_dhe(this, reader);
+	}
+	return process_key_exchange_encrypted(this, reader);
 }
 
 /**
@@ -613,6 +666,56 @@ static status_t send_certificate_request(private_tls_server_t *this,
 }
 
 /**
+ * Send Server key Exchange
+ */
+static status_t send_server_key_exchange(private_tls_server_t *this,
+							tls_handshake_type_t *type, tls_writer_t *writer,
+							diffie_hellman_group_t group)
+{
+	diffie_hellman_params_t *params;
+	chunk_t chunk;
+
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		DBG1(DBG_TLS, "no parameters found for DH group %N",
+			 diffie_hellman_group_names, group);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->dh = lib->crypto->create_dh(lib->crypto, group);
+	if (!this->dh)
+	{
+		DBG1(DBG_TLS, "DH group %N not supported",
+			 diffie_hellman_group_names, group);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+
+	writer->write_data16(writer, params->prime);
+	writer->write_data16(writer, params->generator);
+	this->dh->get_my_public_value(this->dh, &chunk);
+	writer->write_data16(writer, chunk);
+	free(chunk.ptr);
+
+	chunk = chunk_cat("ccc", chunk_from_thing(this->client_random),
+				chunk_from_thing(this->server_random), writer->get_buf(writer));
+	if (!this->private || !this->crypto->sign(this->crypto, this->private,
+											  writer, chunk, this->hashsig))
+	{
+		DBG1(DBG_TLS, "signing DH parameters failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		free(chunk.ptr);
+		return NEED_MORE;
+	}
+	free(chunk.ptr);
+	*type = TLS_SERVER_KEY_EXCHANGE;
+	this->state = STATE_KEY_EXCHANGE_SENT;
+	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
+	return NEED_MORE;
+}
+
+/**
  * Send Hello Done
  */
 static status_t send_hello_done(private_tls_server_t *this,
@@ -652,6 +755,8 @@ static status_t send_finished(private_tls_server_t *this,
 METHOD(tls_handshake_t, build, status_t,
 	private_tls_server_t *this, tls_handshake_type_t *type, tls_writer_t *writer)
 {
+	diffie_hellman_group_t group;
+
 	switch (this->state)
 	{
 		case STATE_HELLO_RECEIVED:
@@ -659,6 +764,13 @@ METHOD(tls_handshake_t, build, status_t,
 		case STATE_HELLO_SENT:
 			return send_certificate(this, type, writer);
 		case STATE_CERT_SENT:
+			group = this->crypto->get_dh_group(this->crypto);
+			if (group)
+			{
+				return send_server_key_exchange(this, type, writer, group);
+			}
+			/* otherwise fall through to next state */
+		case STATE_KEY_EXCHANGE_SENT:
 			if (this->peer)
 			{
 				return send_certificate_request(this, type, writer);
@@ -710,6 +822,7 @@ METHOD(tls_handshake_t, destroy, void,
 	private_tls_server_t *this)
 {
 	DESTROY_IF(this->private);
+	DESTROY_IF(this->dh);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
