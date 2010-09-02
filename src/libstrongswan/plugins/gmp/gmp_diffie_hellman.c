@@ -189,21 +189,15 @@ METHOD(diffie_hellman_t, destroy, void,
 	free(this);
 }
 
-/*
- * Described in header.
+/**
+ * Generic internal constructor
  */
-gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
+static gmp_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
+											size_t exp_len, chunk_t g, chunk_t p)
 {
 	private_gmp_diffie_hellman_t *this;
-	diffie_hellman_params_t *params;
-	rng_t *rng;
 	chunk_t random;
-
-	params = diffie_hellman_get_params(group);
-	if (!params)
-	{
-		return NULL;
-	}
+	rng_t *rng;
 
 	INIT(this,
 		.public = {
@@ -216,7 +210,7 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 			},
 		},
 		.group = group,
-		.p_len = params->prime.len,
+		.p_len = p.len,
 	);
 
 	mpz_init(this->p);
@@ -225,9 +219,8 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	mpz_init(this->xa);
 	mpz_init(this->zz);
 	mpz_init(this->g);
-
-	mpz_import(this->p, params->prime.len, 1, 1, 1, 0, params->prime.ptr);
-	mpz_import(this->g, params->generator.len, 1, 1, 1, 0, params->generator.ptr);
+	mpz_import(this->g, g.len, 1, 1, 1, 0, g.ptr);
+	mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
@@ -238,10 +231,10 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 		return NULL;
 	}
 
-	rng->allocate_bytes(rng, params->exp_len, &random);
+	rng->allocate_bytes(rng, exp_len, &random);
 	rng->destroy(rng);
 
-	if (params->exp_len == this->p_len)
+	if (exp_len == this->p_len)
 	{
 		/* achieve bitsof(p)-1 by setting MSB to 0 */
 		*random.ptr &= 0x7F;
@@ -256,3 +249,29 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
+gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
+{
+	diffie_hellman_params_t *params;
+
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		return NULL;
+	}
+	return create_generic(group, params->exp_len,
+						  params->generator, params->prime);
+}
+
+
+gmp_diffie_hellman_t *gmp_diffie_hellman_create_custom(
+							diffie_hellman_group_t group, chunk_t g, chunk_t p)
+{
+	if (group == MODP_CUSTOM)
+	{
+		return create_generic(MODP_CUSTOM, p.len, g, p);
+	}
+	return NULL;
+}

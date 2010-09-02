@@ -38,6 +38,8 @@ METHOD(plugin_t, destroy, void,
 {
 	lib->crypto->remove_dh(lib->crypto,
 						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->remove_dh(lib->crypto,
+						(dh_constructor_t)gmp_diffie_hellman_create_custom);
 	lib->creds->remove_builder(lib->creds,
 						(builder_function_t)gmp_rsa_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
@@ -84,6 +86,9 @@ plugin_t *gmp_plugin_create()
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);
+
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM,
+						(dh_constructor_t)gmp_diffie_hellman_create_custom);
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 						(builder_function_t)gmp_rsa_private_key_gen);
