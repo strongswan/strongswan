@@ -108,6 +108,11 @@ struct private_tls_server_t {
 	 * Selected TLS cipher suite
 	 */
 	tls_cipher_suite_t suite;
+
+	/**
+	 * Offered TLS version of the client
+	 */
+	tls_version_t client_version;
 };
 
 /**
@@ -161,7 +166,9 @@ static status_t process_client_hello(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 	DBG1(DBG_TLS, "negotiated TLS version %N with suite %N",
-		 tls_version_names, version, tls_cipher_suite_names, this->suite);
+		 tls_version_names, this->tls->get_version(this->tls),
+		 tls_cipher_suite_names, this->suite);
+	this->client_version = version;
 	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
 }
@@ -232,7 +239,9 @@ static status_t process_certificate(private_tls_server_t *this,
 static status_t process_key_exchange(private_tls_server_t *this,
 									 tls_reader_t *reader)
 {
-	chunk_t encrypted, premaster;
+	chunk_t encrypted, decrypted;
+	char premaster[48];
+	rng_t *rng;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
@@ -244,18 +253,41 @@ static status_t process_key_exchange(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
-	if (!this->private ||
-		!this->private->decrypt(this->private, ENCRYPT_RSA_PKCS1,
-								encrypted, &premaster))
+	htoun16(premaster, this->client_version);
+	/* pre-randomize premaster for failure cases */
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
-		DBG1(DBG_TLS, "decrypting Client Key Exchange data failed");
-		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		DBG1(DBG_TLS, "creating RNG failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->crypto->derive_secrets(this->crypto, premaster,
+	rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2);
+	rng->destroy(rng);
+
+	if (this->private &&
+		this->private->decrypt(this->private,
+							   ENCRYPT_RSA_PKCS1, encrypted, &decrypted))
+	{
+		if (decrypted.len == sizeof(premaster) &&
+			untoh16(decrypted.ptr) == this->client_version)
+		{
+			memcpy(premaster + 2, decrypted.ptr + 2, sizeof(premaster) - 2);
+		}
+		else
+		{
+			DBG1(DBG_TLS, "decrypted premaster has invalid length/version");
+		}
+		chunk_clear(&decrypted);
+	}
+	else
+	{
+		DBG1(DBG_TLS, "decrypting Client Key Exchange failed");
+	}
+
+	this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
-	chunk_clear(&premaster);
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
