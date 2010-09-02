@@ -445,6 +445,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	tls_cipher_suite_t *suites;
+	tls_writer_t *extensions;
 	tls_version_t version;
 	int count, i;
 	rng_t *rng;
@@ -479,6 +480,13 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	/* NULL compression only */
 	writer->write_uint8(writer, 1);
 	writer->write_uint8(writer, 0);
+
+	/* signature algorithms extension */
+	extensions = tls_writer_create(32);
+	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
+	this->crypto->get_signature_algorithms(this->crypto, extensions);
+	writer->write_data16(writer, extensions->get_buf(extensions));
+	extensions->destroy(extensions);
 
 	*type = TLS_CLIENT_HELLO;
 	this->state = STATE_HELLO_SENT;

@@ -113,6 +113,11 @@ struct private_tls_server_t {
 	 * Offered TLS version of the client
 	 */
 	tls_version_t client_version;
+
+	/**
+	 * Hash and signature algorithms supported by peer
+	 */
+	chunk_t hashsig;
 };
 
 /**
@@ -121,8 +126,9 @@ struct private_tls_server_t {
 static status_t process_client_hello(private_tls_server_t *this,
 									 tls_reader_t *reader)
 {
-	u_int16_t version;
+	u_int16_t version, extension;
 	chunk_t random, session, ciphers, compression, ext = chunk_empty;
+	tls_reader_t *extensions;
 	tls_cipher_suite_t *suites;
 	int count, i;
 
@@ -139,6 +145,35 @@ static status_t process_client_hello(private_tls_server_t *this,
 		DBG1(DBG_TLS, "received invalid ClientHello");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
+	}
+
+	if (ext.len)
+	{
+		extensions = tls_reader_create(ext);
+		while (extensions->remaining(extensions))
+		{
+			if (!extensions->read_uint16(extensions, &extension))
+			{
+				DBG1(DBG_TLS, "received invalid ClientHello Extensions");
+				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				extensions->destroy(extensions);
+				return NEED_MORE;
+			}
+			DBG1(DBG_TLS, "recieved TLS %N extension",
+				 tls_extension_names, extension);
+			switch (extension)
+			{
+				case TLS_EXT_SIGNATURE_ALGORITHMS:
+					if (extensions->read_data16(extensions, &ext))
+					{
+						this->hashsig = chunk_clone(ext);
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		extensions->destroy(extensions);
 	}
 
 	memcpy(this->client_random, random.ptr, sizeof(this->client_random));
@@ -677,6 +712,7 @@ METHOD(tls_handshake_t, destroy, void,
 	DESTROY_IF(this->private);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
+	free(this->hashsig.ptr);
 	free(this);
 }
 
