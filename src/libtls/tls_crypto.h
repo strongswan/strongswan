@@ -376,10 +376,12 @@ struct tls_crypto_t {
 	 *
 	 * @param suites		list of candidates to select from
 	 * @param count			number of suites
+	 * @param key			key type used, or KEY_ANY
 	 * @return				selected suite, 0 if none acceptable
 	 */
 	tls_cipher_suite_t (*select_cipher_suite)(tls_crypto_t *this,
-										tls_cipher_suite_t *suites, int count);
+										tls_cipher_suite_t *suites, int count,
+										key_type_t key);
 
 	/**
 	 * Get the Diffie-Hellman group to use, if any.

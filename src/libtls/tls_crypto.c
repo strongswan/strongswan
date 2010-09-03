@@ -397,9 +397,10 @@ struct private_tls_crypto_t {
 
 typedef struct {
 	tls_cipher_suite_t suite;
+	key_type_t key;
+	diffie_hellman_group_t dh;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
-	diffie_hellman_group_t dh;
 	integrity_algorithm_t mac;
 	encryption_algorithm_t encr;
 	size_t encr_size;
@@ -410,87 +411,108 @@ typedef struct {
  */
 static suite_algs_t suite_algs[] = {
 	{ TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_2048_BIT,
+		KEY_RSA, MODP_2048_BIT,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 16
 	},
 	{ TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_3072_BIT,
+		KEY_RSA, MODP_3072_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 16
 	},
 	{ TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_3072_BIT,
+		KEY_RSA, MODP_3072_BIT,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 32
 	},
 	{ TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_4096_BIT,
+		KEY_RSA, MODP_4096_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32
 	},
 	{ TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_2048_BIT,
+		KEY_RSA, MODP_2048_BIT,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 16
 	},
 	{ TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_3072_BIT,
+		KEY_RSA, MODP_3072_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 16
 	},
 	{ TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_3072_BIT,
+		KEY_RSA, MODP_3072_BIT,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 32
 	},
 	{ TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_4096_BIT,
+		KEY_RSA, MODP_4096_BIT,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 32
 	},
 	{ TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_2048_BIT,
+		KEY_RSA, MODP_2048_BIT,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_3DES, 0
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 16
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 16
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 32
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 16
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 16
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 32
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 32
 	},
 	{ TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_3DES, 0
 	},
 	{ TLS_RSA_WITH_NULL_SHA,
-		HASH_SHA1, PRF_HMAC_SHA1, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA1, PRF_HMAC_SHA1,
 		AUTH_HMAC_SHA1_160, ENCR_NULL, 0
 	},
 	{ TLS_RSA_WITH_NULL_SHA256,
-		HASH_SHA256, PRF_HMAC_SHA2_256, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_NULL, 0
 	},
 	{ TLS_RSA_WITH_NULL_MD5,
-		HASH_MD5, PRF_HMAC_MD5, MODP_NONE,
+		KEY_RSA, MODP_NONE,
+		HASH_MD5, PRF_HMAC_MD5,
 		AUTH_HMAC_MD5_128, ENCR_NULL, 0
 	},
 };
@@ -614,17 +636,8 @@ METHOD(tls_crypto_t, get_cipher_suites, int,
 /**
  * Create crypto primitives
  */
-static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
+static bool create_ciphers(private_tls_crypto_t *this, suite_algs_t *algs)
 {
-	suite_algs_t *algs;
-
-	algs = find_suite(suite);
-	if (!algs)
-	{
-		DBG1(DBG_TLS, "selected TLS suite not supported");
-		return FALSE;
-	}
-
 	DESTROY_IF(this->prf);
 	if (this->tls->get_version(this->tls) < TLS_1_2)
 	{
@@ -674,8 +687,10 @@ static bool create_ciphers(private_tls_crypto_t *this, tls_cipher_suite_t suite)
 }
 
 METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
-	private_tls_crypto_t *this, tls_cipher_suite_t *suites, int count)
+	private_tls_crypto_t *this, tls_cipher_suite_t *suites, int count,
+	key_type_t key)
 {
+	suite_algs_t *algs;
 	int i, j;
 
 	for (i = 0; i < this->suite_count; i++)
@@ -684,10 +699,17 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 		{
 			if (this->suites[i] == suites[j])
 			{
-				if (create_ciphers(this, this->suites[i]))
+				algs = find_suite(this->suites[i]);
+				if (algs)
 				{
-					this->suite = this->suites[i];
-					return this->suite;
+					if (key == KEY_ANY || key == algs->key)
+					{
+						if (create_ciphers(this, algs))
+						{
+							this->suite = this->suites[i];
+							return this->suite;
+						}
+					}
 				}
 			}
 		}

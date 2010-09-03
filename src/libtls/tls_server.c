@@ -137,6 +137,58 @@ struct private_tls_server_t {
 };
 
 /**
+ * Find a cipher suite and a server key
+ */
+static bool select_suite_and_key(private_tls_server_t *this,
+								 tls_cipher_suite_t *suites, int count)
+{
+	private_key_t *key;
+	key_type_t type;
+
+	key = lib->credmgr->get_private(lib->credmgr, KEY_ANY, this->server,
+									this->server_auth);
+	if (!key)
+	{
+		DBG1(DBG_TLS, "no usable TLS server certificate found for '%Y'",
+			 this->server);
+		return FALSE;
+	}
+	this->suite = this->crypto->select_cipher_suite(this->crypto,
+											suites, count, key->get_type(key));
+	if (!this->suite)
+	{	/* no match for this key, try to find another type */
+		if (key->get_type(key) == KEY_ECDSA)
+		{
+			type = KEY_RSA;
+		}
+		else
+		{
+			type = KEY_ECDSA;
+		}
+		key->destroy(key);
+
+		this->suite = this->crypto->select_cipher_suite(this->crypto,
+											suites, count, type);
+		if (!this->suite)
+		{
+			DBG1(DBG_TLS, "received cipher suites inacceptable");
+			return FALSE;
+		}
+		this->server_auth->destroy(this->server_auth);
+		this->server_auth = auth_cfg_create();
+		key = lib->credmgr->get_private(lib->credmgr, type, this->server,
+										this->server_auth);
+		if (!key)
+		{
+			DBG1(DBG_TLS, "received cipher suites inacceptable");
+			return FALSE;
+		}
+	}
+	this->private = key;
+	return TRUE;
+}
+
+/**
  * Process client hello message
  */
 static status_t process_client_hello(private_tls_server_t *this,
@@ -216,10 +268,9 @@ static status_t process_client_hello(private_tls_server_t *this,
 		suites[i] = untoh16(&ciphers.ptr[i * sizeof(u_int16_t)]);
 		DBG2(DBG_TLS, "  %N", tls_cipher_suite_names, suites[i]);
 	}
-	this->suite = this->crypto->select_cipher_suite(this->crypto, suites, count);
-	if (!this->suite)
+
+	if (!select_suite_and_key(this, suites, count))
 	{
-		DBG1(DBG_TLS, "received cipher suites inacceptable");
 		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 		return NEED_MORE;
 	}
@@ -602,15 +653,6 @@ static status_t send_certificate(private_tls_server_t *this,
 	auth_rule_t rule;
 	tls_writer_t *certs;
 	chunk_t data;
-
-	this->private = lib->credmgr->get_private(lib->credmgr,
-									KEY_ANY, this->server, this->server_auth);
-	if (!this->private)
-	{
-		DBG1(DBG_TLS, "no TLS server certificate found for '%Y'", this->server);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return FAILED;
-	}
 
 	/* generate certificate payload */
 	certs = tls_writer_create(256);
