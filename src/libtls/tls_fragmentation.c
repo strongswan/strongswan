@@ -314,6 +314,10 @@ static status_t build_handshake(private_tls_fragmentation_t *this)
 		switch (status)
 		{
 			case NEED_MORE:
+				if (this->alert->fatal(this->alert))
+				{
+					break;
+				}
 				msg->write_uint8(msg, type);
 				msg->write_data24(msg, hs->get_buf(hs));
 				DBG2(DBG_TLS, "sending TLS %N handshake (%u bytes)",
