@@ -136,9 +136,9 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 
 void init_builder(void)
 {
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT, FALSE,
 							(builder_function_t)builder_load_cert);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL, FALSE,
 							(builder_function_t)builder_load_crl);
 }
 

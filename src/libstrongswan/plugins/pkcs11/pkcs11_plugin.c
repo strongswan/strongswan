@@ -160,9 +160,9 @@ plugin_t *pkcs11_plugin_create()
 					(hasher_constructor_t)pkcs11_hasher_create);
 	}
 
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
 							(builder_function_t)pkcs11_private_key_connect);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 							(builder_function_t)pkcs11_public_key_load);
 
 	enumerator = this->manager->create_token_enumerator(this->manager);

@@ -64,18 +64,21 @@ struct entry_t {
 	credential_type_t type;
 	/** subtype of credential, e.g. certificate_type_t */
 	int subtype;
+	/** registered with final flag? */
+	bool final;
 	/** builder function */
 	builder_function_t constructor;
 };
 
 METHOD(credential_factory_t, add_builder, void,
 	private_credential_factory_t *this, credential_type_t type, int subtype,
-	builder_function_t constructor)
+	bool final, builder_function_t constructor)
 {
 	entry_t *entry = malloc_thing(entry_t);
 
 	entry->type = type;
 	entry->subtype = subtype;
+	entry->final = final;
 	entry->constructor = constructor;
 	this->lock->write_lock(this->lock);
 	this->constructors->insert_last(this->constructors, entry);
@@ -153,16 +156,15 @@ METHOD(credential_factory_t, create, void*,
  * Filter function for builder enumerator
  */
 static bool builder_filter(void *null, entry_t **entry, credential_type_t *type,
-						   void *dummy1, int *subtype,
-						   void *dummy2, builder_function_t *constructor)
+						   void *dummy1, int *subtype)
 {
-	*type = (*entry)->type;
-	*subtype = (*entry)->subtype;
-	if (constructor)
+	if ((*entry)->final)
 	{
-		*constructor = (*entry)->constructor;
+		*type = (*entry)->type;
+		*subtype = (*entry)->subtype;
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(credential_factory_t, create_builder_enumerator, enumerator_t*,

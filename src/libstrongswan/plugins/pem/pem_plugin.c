@@ -57,49 +57,49 @@ plugin_t *pem_plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	/* register private key PEM decoding builders */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
 							(builder_function_t)pem_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 							(builder_function_t)pem_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA, FALSE,
 							(builder_function_t)pem_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_DSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_DSA, FALSE,
 							(builder_function_t)pem_private_key_load);
 
 	/* register public key PEM decoding builders */
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 							(builder_function_t)pem_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, FALSE,
 							(builder_function_t)pem_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA, FALSE,
 							(builder_function_t)pem_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_DSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_DSA, FALSE,
 							(builder_function_t)pem_public_key_load);
 
 	/* register certificate PEM decoding builders */
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_ANY,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_ANY, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG, FALSE,
 							(builder_function_t)pem_certificate_load);
 
 	/* register pluto specific certificate formats */
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT, FALSE,
 							(builder_function_t)pem_certificate_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CRL, FALSE,
 							(builder_function_t)pem_certificate_load);
 
 	/* register PEM encoder */

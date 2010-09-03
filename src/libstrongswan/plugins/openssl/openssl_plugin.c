@@ -353,31 +353,31 @@ plugin_t *openssl_plugin_create()
 						(dh_constructor_t)openssl_diffie_hellman_create);
 
 	/* rsa */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 					(builder_function_t)openssl_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 					(builder_function_t)openssl_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
 					(builder_function_t)openssl_rsa_private_key_connect);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 					(builder_function_t)openssl_rsa_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 					(builder_function_t)openssl_rsa_public_key_load);
 
 #ifndef OPENSSL_NO_EC
 	/* ecdsa */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA, TRUE,
 					(builder_function_t)openssl_ec_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA, FALSE,
 					(builder_function_t)openssl_ec_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA, TRUE,
 					(builder_function_t)openssl_ec_public_key_load);
 #endif /* OPENSSL_NO_EC */
 
 	/* X509 certificates */
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, TRUE,
 					(builder_function_t)openssl_x509_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, TRUE,
 					(builder_function_t)openssl_crl_load);
 
 	return &this->public.plugin;

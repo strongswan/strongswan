@@ -50,9 +50,9 @@ plugin_t *dnskey_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 							(builder_function_t)dnskey_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, FALSE,
 							(builder_function_t)dnskey_public_key_load);
 
 	return &this->public.plugin;

@@ -54,7 +54,7 @@ plugin_t *agent_plugin_create()
 		},
 	);
 
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 							(builder_function_t)agent_private_key_open);
 	return &this->public.plugin;
 }

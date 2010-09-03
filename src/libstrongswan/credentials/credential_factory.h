@@ -64,21 +64,21 @@ struct credential_factory_t {
 	 */
 	void* (*create)(credential_factory_t *this, credential_type_t type,
 					int subtype, ...);
-	/**
-	 * Create an enumerator over registered builder functions.
-	 *
-	 * @return				enumerator (credential_type_t, int, build_function_t)
-	 */
-	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this);
 
 	/**
 	 * Register a credential builder function.
 	 *
+	 * The final flag indicates if the registered builder can build such
+	 * a credential itself the most common encoding, without the need
+	 * for an additional builder.
+	 *
 	 * @param type			type of credential the builder creates
+	 * @param subtype		subtype of the credential, type specific
+	 * @param final			TRUE if this build does not invoke other builders
 	 * @param constructor	builder constructor function to register
 	 */
 	void (*add_builder)(credential_factory_t *this,
-						credential_type_t type, int subtype,
+						credential_type_t type, int subtype, bool final,
 						builder_function_t constructor);
 	/**
 	 * Unregister a credential builder function.
@@ -87,6 +87,16 @@ struct credential_factory_t {
 	 */
 	void (*remove_builder)(credential_factory_t *this,
 						   builder_function_t constructor);
+
+	/**
+	 * Create an enumerator over registered builder types.
+	 *
+	 * The enumerator returns only builder types registered with the final
+	 * flag set.
+	 *
+	 * @return				enumerator (credential_type_t, int subtype)
+	 */
+	enumerator_t* (*create_builder_enumerator)(credential_factory_t *this);
 
 	/**
 	 * Destroy a credential_factory instance.

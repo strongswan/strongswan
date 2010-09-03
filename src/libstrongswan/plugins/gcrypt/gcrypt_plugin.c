@@ -224,11 +224,11 @@ plugin_t *gcrypt_plugin_create()
 					(dh_constructor_t)gcrypt_dh_create_custom);
 
 	/* RSA */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 					(builder_function_t)gcrypt_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 					(builder_function_t)gcrypt_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 					(builder_function_t)gcrypt_rsa_public_key_load);
 
 	return &this->public.plugin;

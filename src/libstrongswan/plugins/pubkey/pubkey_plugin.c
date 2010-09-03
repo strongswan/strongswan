@@ -50,7 +50,7 @@ plugin_t *pubkey_plugin_create()
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY, FALSE,
 							(builder_function_t)pubkey_cert_wrap);
 
 	return &this->public.plugin;

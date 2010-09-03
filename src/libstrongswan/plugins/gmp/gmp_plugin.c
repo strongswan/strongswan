@@ -90,11 +90,11 @@ plugin_t *gmp_plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM,
 						(dh_constructor_t)gmp_diffie_hellman_create_custom);
 
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 						(builder_function_t)gmp_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 						(builder_function_t)gmp_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 						(builder_function_t)gmp_rsa_public_key_load);
 
 	return &this->public.plugin;
