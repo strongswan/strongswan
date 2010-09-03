@@ -409,23 +409,12 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 										 tls_reader_t *reader)
 {
 	chunk_t premaster, pub;
-	bool ec = FALSE;
+	bool ec;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
 
-	switch (this->dh->get_dh_group(this->dh))
-	{
-		case ECP_256_BIT:
-		case ECP_384_BIT:
-		case ECP_521_BIT:
-		case ECP_192_BIT:
-		case ECP_224_BIT:
-			ec = TRUE;
-			break;
-		default:
-			break;
-	}
+	ec = diffie_hellman_group_is_ec(this->dh->get_dh_group(this->dh));
 	if ((ec && !reader->read_data8(reader, &pub)) ||
 		(!ec && !reader->read_data16(reader, &pub)))
 	{
@@ -823,36 +812,30 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 	diffie_hellman_params_t *params = NULL;
 	chunk_t chunk;
 
-	switch (group)
+	if (diffie_hellman_group_is_ec(group))
 	{
-		case ECP_256_BIT:
-		case ECP_384_BIT:
-		case ECP_521_BIT:
-		case ECP_192_BIT:
-		case ECP_224_BIT:
-			if (!peer_supports_ec_group(this, group) &&
-				!find_supported_group(this, &group))
-			{
-				DBG1(DBG_TLS, "no EC group supported by client and server");
-				this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-				return NEED_MORE;
-			}
-			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, ec_group_to_curve(group));
-			break;
-		default:
-			/* MODP groups */
-			params = diffie_hellman_get_params(group);
-			if (!params)
-			{
-				DBG1(DBG_TLS, "no parameters found for DH group %N",
-					 diffie_hellman_group_names, group);
-				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-				return NEED_MORE;
-			}
-			writer->write_data16(writer, params->prime);
-			writer->write_data16(writer, params->generator);
-			break;
+		if (!peer_supports_ec_group(this, group) &&
+			!find_supported_group(this, &group))
+		{
+			DBG1(DBG_TLS, "no EC group supported by client and server");
+			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			return NEED_MORE;
+		}
+		writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+		writer->write_uint16(writer, ec_group_to_curve(group));
+	}
+	else
+	{
+		params = diffie_hellman_get_params(group);
+		if (!params)
+		{
+			DBG1(DBG_TLS, "no parameters found for DH group %N",
+				 diffie_hellman_group_names, group);
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			return NEED_MORE;
+		}
+		writer->write_data16(writer, params->prime);
+		writer->write_data16(writer, params->generator);
 	}
 	this->dh = lib->crypto->create_dh(lib->crypto, group);
 	if (!this->dh)

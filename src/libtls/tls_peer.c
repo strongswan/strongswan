@@ -458,35 +458,18 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 								TLS_SERVER_KEY_EXCHANGE, reader->peek(reader));
 
 	group = this->crypto->get_dh_group(this->crypto);
-	/* check if the suite used a MODP or a ECP group */
-	switch (group)
+	if (group == MODP_NONE)
 	{
-		case MODP_NONE:
-			DBG1(DBG_TLS, "received Server Key Exchange, but not required "
-				 "for current suite");
-			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-			return NEED_MORE;
-		case MODP_768_BIT:
-		case MODP_1024_BIT:
-		case MODP_1536_BIT:
-		case MODP_2048_BIT:
-		case MODP_3072_BIT:
-		case MODP_4096_BIT:
-		case MODP_6144_BIT:
-		case MODP_8192_BIT:
-		case MODP_1024_160:
-		case MODP_2048_224:
-		case MODP_2048_256:
-			return process_modp_key_exchange(this, reader);
-		case ECP_256_BIT:
-		case ECP_384_BIT:
-		case ECP_521_BIT:
-		case ECP_192_BIT:
-		case ECP_224_BIT:
-			return process_ec_key_exchange(this, reader);
-		default:
-			return FAILED;
+		DBG1(DBG_TLS, "received Server Key Exchange, but not required "
+			 "for current suite");
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
 	}
+	if (diffie_hellman_group_is_ec(group))
+	{
+		return process_ec_key_exchange(this, reader);
+	}
+	return process_modp_key_exchange(this, reader);
 }
 
 /**
