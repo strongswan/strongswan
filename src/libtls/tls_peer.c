@@ -352,6 +352,100 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 	return NEED_MORE;
 }
 
+
+/**
+ * Process a Key Exchange message using EC Diffie Hellman
+ */
+static status_t process_ec_key_exchange(private_tls_peer_t *this,
+										tls_reader_t *reader)
+{
+	diffie_hellman_group_t group;
+	public_key_t *public;
+	u_int8_t type;
+	u_int16_t curve;
+	chunk_t pub, chunk;
+
+	chunk = reader->peek(reader);
+	if (!reader->read_uint8(reader, &type))
+	{
+		DBG1(DBG_TLS, "received invalid Server Key Exchange");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+	if (type != TLS_ECC_NAMED_CURVE)
+	{
+		DBG1(DBG_TLS, "ECDH curve type %N not supported",
+			 tls_ecc_curve_type_names, type);
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
+	}
+	if (!reader->read_uint16(reader, &curve) ||
+		!reader->read_data8(reader, &pub))
+	{
+		DBG1(DBG_TLS, "received invalid Server Key Exchange");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+	switch (curve)
+	{
+		case TLS_SECP256R1:
+			group = ECP_256_BIT;
+			break;
+		case TLS_SECP384R1:
+			group = ECP_384_BIT;
+			break;
+		case TLS_SECP521R1:
+			group = ECP_521_BIT;
+			break;
+		case TLS_SECP192R1:
+			group = ECP_192_BIT;
+			break;
+		case TLS_SECP224R1:
+			group = ECP_224_BIT;
+			break;
+		default:
+			DBG1(DBG_TLS, "ECDH curve %N not supported",
+				 tls_named_curve_names, curve);
+			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			return NEED_MORE;
+	}
+
+	public = find_public_key(this);
+	if (!public)
+	{
+		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+		return NEED_MORE;
+	}
+
+	chunk.len = 4 + pub.len;
+	chunk = chunk_cat("ccc", chunk_from_thing(this->client_random),
+					  chunk_from_thing(this->server_random), chunk);
+	if (!this->crypto->verify(this->crypto, public, reader, chunk))
+	{
+		public->destroy(public);
+		free(chunk.ptr);
+		DBG1(DBG_TLS, "verifying DH parameters failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_BAD_CERTIFICATE);
+		return NEED_MORE;
+	}
+	public->destroy(public);
+	free(chunk.ptr);
+
+	this->dh = lib->crypto->create_dh(lib->crypto, group);
+	if (!this->dh)
+	{
+		DBG1(DBG_TLS, "DH group %N not supported",
+			 diffie_hellman_group_names, group);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->dh->set_other_public_value(this->dh, pub);
+
+	this->state = STATE_KEY_EXCHANGE_RECEIVED;
+	return NEED_MORE;
+}
+
 /**
  * Process a Server Key Exchange
  */
@@ -389,7 +483,7 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 		case ECP_521_BIT:
 		case ECP_192_BIT:
 		case ECP_224_BIT:
-			/* TODO */
+			return process_ec_key_exchange(this, reader);
 		default:
 			return FAILED;
 	}
@@ -797,7 +891,14 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 	chunk_clear(&premaster);
 
 	this->dh->get_my_public_value(this->dh, &pub);
-	writer->write_data16(writer, pub);
+	if (this->dh->get_dh_group(this->dh) == MODP_CUSTOM)
+	{
+		writer->write_data16(writer, pub);
+	}
+	else
+	{	/* ECP uses 8bit length header only */
+		writer->write_data8(writer, pub);
+	}
 	free(pub.ptr);
 
 	*type = TLS_CLIENT_KEY_EXCHANGE;
