@@ -341,11 +341,25 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 										 tls_reader_t *reader)
 {
 	chunk_t premaster, pub;
+	bool ec = FALSE;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
 
-	if (!reader->read_data16(reader, &pub))
+	switch (this->dh->get_dh_group(this->dh))
+	{
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+			ec = TRUE;
+			break;
+		default:
+			break;
+	}
+	if ((ec && !reader->read_data8(reader, &pub)) ||
+		(!ec && !reader->read_data16(reader, &pub)))
 	{
 		DBG1(DBG_TLS, "received invalid Client Key Exchange");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
@@ -672,17 +686,9 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer,
 							diffie_hellman_group_t group)
 {
-	diffie_hellman_params_t *params;
+	diffie_hellman_params_t *params = NULL;
 	chunk_t chunk;
 
-	params = diffie_hellman_get_params(group);
-	if (!params)
-	{
-		DBG1(DBG_TLS, "no parameters found for DH group %N",
-			 diffie_hellman_group_names, group);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
-	}
 	this->dh = lib->crypto->create_dh(lib->crypto, group);
 	if (!this->dh)
 	{
@@ -691,11 +697,51 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-
-	writer->write_data16(writer, params->prime);
-	writer->write_data16(writer, params->generator);
+	switch (group)
+	{
+		case ECP_256_BIT:
+			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+			writer->write_uint16(writer, TLS_SECP256R1);
+			break;
+		case ECP_384_BIT:
+			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+			writer->write_uint16(writer, TLS_SECP384R1);
+			break;
+		case ECP_521_BIT:
+			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+			writer->write_uint16(writer, TLS_SECP521R1);
+			break;
+		case ECP_192_BIT:
+			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+			writer->write_uint16(writer, TLS_SECP192R1);
+			break;
+		case ECP_224_BIT:
+			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
+			writer->write_uint16(writer, TLS_SECP224R1);
+			break;
+		default:
+			/* MODP groups */
+			params = diffie_hellman_get_params(group);
+			if (!params)
+			{
+				DBG1(DBG_TLS, "no parameters found for DH group %N",
+					 diffie_hellman_group_names, group);
+				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+				return NEED_MORE;
+			}
+			writer->write_data16(writer, params->prime);
+			writer->write_data16(writer, params->generator);
+			break;
+	}
 	this->dh->get_my_public_value(this->dh, &chunk);
-	writer->write_data16(writer, chunk);
+	if (params)
+	{
+		writer->write_data16(writer, chunk);
+	}
+	else
+	{	/* 8bit header for EC groups */
+		writer->write_data8(writer, chunk);
+	}
 	free(chunk.ptr);
 
 	chunk = chunk_cat("ccc", chunk_from_thing(this->client_random),
