@@ -162,6 +162,11 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 		case AUTH_HMAC_SHA2_256_256:
 			hmac = hmac_create(HASH_SHA256);
 			trunc = 32;
+			break;
+		case AUTH_HMAC_SHA2_384_384:
+			hmac = hmac_create(HASH_SHA384);
+			trunc = 48;
+			break;
 		default:
 			return NULL;
 	}
