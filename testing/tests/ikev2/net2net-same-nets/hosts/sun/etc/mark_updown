@@ -124,7 +124,7 @@
 #       PLUTO_MARK_OUT
 #              is an optional XFRM mark set on the outbound IPsec SA
 #
-#       PLUTO_ESP_ENC
+#       PLUTO_UDP_ENC
 #              contains the remote UDP port in the case of ESP_IN_UDP
 #              encapsulation
 #
