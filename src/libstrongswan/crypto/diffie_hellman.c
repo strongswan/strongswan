@@ -442,3 +442,20 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
 	return NULL;
 }
 
+/**
+ * See header.
+ */
+bool diffie_hellman_group_is_ec(diffie_hellman_group_t group)
+{
+	switch (group)
+	{
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}

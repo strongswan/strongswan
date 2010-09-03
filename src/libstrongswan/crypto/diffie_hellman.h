@@ -147,4 +147,12 @@ struct diffie_hellman_params_t {
  */
 diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group);
 
+/**
+ * Check if a given DH group is an ECDH group
+ *
+ * @param group			group to check
+ * @return				TUE if group is an ECP group
+ */
+bool diffie_hellman_group_is_ec(diffie_hellman_group_t group);
+
 #endif /** DIFFIE_HELLMAN_H_ @}*/
