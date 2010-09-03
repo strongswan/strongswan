@@ -272,6 +272,40 @@ ENUM_NEXT(tls_client_certificate_type_names,
 	"ECDSA_FIXED_ECDH");
 ENUM_END(tls_client_certificate_type_names, TLS_ECDSA_FIXED_ECDH);
 
+ENUM(tls_ecc_curve_type_names, TLS_ECC_EXPLICIT_PRIME, TLS_ECC_NAMED_CURVE,
+	"EXPLICIT_PRIME",
+	"EXPLICIT_CHAR2",
+	"NAMED_CURVE",
+);
+
+ENUM(tls_named_curve_names, TLS_SECT163K1, TLS_SECP521R1,
+	"SECT163K1",
+	"SECT163R1",
+	"SECT163R2",
+	"SECT193R1",
+	"SECT193R2",
+	"SECT233K1",
+	"SECT233R1",
+	"SECT239K1",
+	"SECT283K1",
+	"SECT283R1",
+	"SECT409K1",
+	"SECT409R1",
+	"SECT571K1",
+	"SECT571R1",
+	"SECP160K1",
+	"SECP160R1",
+	"SECP160R2",
+	"SECP192K1",
+	"SECP192R1",
+	"SECP224K1",
+	"SECP224R1",
+	"SECP256K1",
+	"SECP256R1",
+	"SECP384R1",
+	"SECP521R1",
+);
+
 
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 

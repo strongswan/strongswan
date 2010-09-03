@@ -25,6 +25,9 @@ typedef struct tls_crypto_t tls_crypto_t;
 typedef enum tls_cipher_suite_t tls_cipher_suite_t;
 typedef enum tls_hash_algorithm_t tls_hash_algorithm_t;
 typedef enum tls_signature_algorithm_t tls_signature_algorithm_t;
+typedef enum tls_client_certificate_type_t tls_client_certificate_type_t;
+typedef enum tls_ecc_curve_type_t tls_ecc_curve_type_t;
+typedef enum tls_named_curve_t tls_named_curve_t;
 
 #include "tls.h"
 #include "tls_prf.h"
@@ -304,6 +307,56 @@ enum tls_client_certificate_type_t {
  * Enum names for tls_client_certificate_type_t
  */
 extern enum_name_t *tls_client_certificate_type_names;
+
+/**
+ * TLS EccCurveType
+ */
+enum tls_ecc_curve_type_t {
+	TLS_ECC_EXPLICIT_PRIME =	1,
+	TLS_ECC_EXPLICIT_CHAR2 =	2,
+	TLS_ECC_NAMED_CURVE =		3,
+};
+
+/**
+ * Enum names for tls_ecc_curve_type_t
+ */
+extern enum_name_t *tls_ecc_curve_type_names;
+
+/**
+ * TLS Named Curve identifiers
+ */
+enum tls_named_curve_t {
+	TLS_SECT163K1 =		 1,
+	TLS_SECT163R1 =		 2,
+	TLS_SECT163R2 =		 3,
+	TLS_SECT193R1 =		 4,
+	TLS_SECT193R2 =		 5,
+	TLS_SECT233K1 =		 6,
+	TLS_SECT233R1 =		 7,
+	TLS_SECT239K1 =		 8,
+	TLS_SECT283K1 =		 9,
+	TLS_SECT283R1 =		10,
+	TLS_SECT409K1 =		11,
+	TLS_SECT409R1 =		12,
+	TLS_SECT571K1 =		13,
+	TLS_SECT571R1 =		14,
+	TLS_SECP160K1 =		15,
+	TLS_SECP160R1 =		16,
+	TLS_SECP160R2 =		17,
+	TLS_SECP192K1 =		18,
+	TLS_SECP192R1 =		19,
+	TLS_SECP224K1 =		20,
+	TLS_SECP224R1 =		21,
+	TLS_SECP256K1 =		22,
+	TLS_SECP256R1 =		23,
+	TLS_SECP384R1 =		24,
+	TLS_SECP521R1 =		25,
+};
+
+/**
+ * Enum names for tls_named_curve_t
+ */
+extern enum_name_t *tls_named_curve_names;
 
 /**
  * TLS crypto helper functions.
