@@ -138,7 +138,8 @@ METHOD(diffie_hellman_t, destroy, void,
 /*
  * Described in header.
  */
-openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group)
+openssl_diffie_hellman_t *openssl_diffie_hellman_create(
+							diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_openssl_diffie_hellman_t *this;
 
@@ -166,11 +167,19 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 	this->pub_key = BN_new();
 	this->shared_secret = chunk_empty;
 
-	/* find a modulus according to group */
-	if (set_modulus(this) != SUCCESS)
+	if (group == MODP_CUSTOM)
 	{
-		destroy(this);
-		return NULL;
+		this->dh->p = BN_bin2bn(p.ptr, p.len, NULL);
+		this->dh->g = BN_bin2bn(g.ptr, g.len, NULL);
+	}
+	else
+	{
+		/* find a modulus according to group */
+		if (set_modulus(this) != SUCCESS)
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	/* generate my public and private values */

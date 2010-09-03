@@ -40,9 +40,12 @@ struct openssl_diffie_hellman_t {
  * Creates a new openssl_diffie_hellman_t object.
  *
  * @param group			Diffie Hellman group number to use
+ * @param g				custom generator, if MODP_CUSTOM
+ * @param p				custom prime, if MODP_CUSTOM
  * @return				openssl_diffie_hellman_t object, NULL if not supported
  */
-openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t group);
+openssl_diffie_hellman_t *openssl_diffie_hellman_create(
+							diffie_hellman_group_t group, chunk_t g, chunk_t p);
 
 #endif /** OPENSSL_DIFFIE_HELLMAN_H_ @}*/
 

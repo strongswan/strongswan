@@ -349,6 +349,8 @@ plugin_t *openssl_plugin_create()
 						(dh_constructor_t)openssl_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
 						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM,
+						(dh_constructor_t)openssl_diffie_hellman_create);
 
 	/* rsa */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
