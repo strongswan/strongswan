@@ -396,6 +396,13 @@ struct tls_crypto_t {
 	void (*get_signature_algorithms)(tls_crypto_t *this, tls_writer_t *writer);
 
 	/**
+	 * Write the list of supported elliptic curves to writer.
+	 *
+	 * @param writer		writer to write elliptic curves to
+	 */
+	void (*get_curves)(tls_crypto_t *this, tls_writer_t *writer);
+
+	/**
 	 * Set the protection layer of the TLS stack to control it.
 	 *
 	 * @param protection		protection layer to work on

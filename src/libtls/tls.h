@@ -104,6 +104,10 @@ enum tls_purpose_t {
  * TLS Hello extension types.
  */
 enum tls_extension_t {
+	/** supported elliptic curves */
+	TLS_EXT_ELLIPTIC_CURVES = 10,
+	/** supported point formats */
+	TLS_EXT_EC_POINT_FORMATS = 11,
 	/** supported signature algorithms */
 	TLS_EXT_SIGNATURE_ALGORITHMS = 13,
 };

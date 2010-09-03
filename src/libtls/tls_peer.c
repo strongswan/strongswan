@@ -709,10 +709,14 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	writer->write_uint8(writer, 1);
 	writer->write_uint8(writer, 0);
 
-	/* signature algorithms extension */
 	extensions = tls_writer_create(32);
+
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
 	this->crypto->get_signature_algorithms(this->crypto, extensions);
+
+	extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
+	this->crypto->get_curves(this->crypto, extensions);
+
 	writer->write_data16(writer, extensions->get_buf(extensions));
 	extensions->destroy(extensions);
 

@@ -124,6 +124,16 @@ struct private_tls_server_t {
 	 * Hash and signature algorithms supported by peer
 	 */
 	chunk_t hashsig;
+
+	/**
+	 * Elliptic curves supported by peer
+	 */
+	chunk_t curves;
+
+	/**
+	 * Did we receive the curves from the client?
+	 */
+	bool curves_received;
 };
 
 /**
@@ -173,6 +183,13 @@ static status_t process_client_hello(private_tls_server_t *this,
 					if (extensions->read_data16(extensions, &ext))
 					{
 						this->hashsig = chunk_clone(ext);
+					}
+					break;
+				case TLS_EXT_ELLIPTIC_CURVES:
+					this->curves_received = TRUE;
+					if (extensions->read_data16(extensions, &ext))
+					{
+						this->curves = chunk_clone(ext);
 					}
 					break;
 				default:
@@ -680,6 +697,81 @@ static status_t send_certificate_request(private_tls_server_t *this,
 }
 
 /**
+ * Get the TLS curve of a given EC DH group
+ */
+static tls_named_curve_t ec_group_to_curve(diffie_hellman_group_t group)
+{
+	switch (group)
+	{
+		case ECP_256_BIT:
+			return TLS_SECP256R1;
+		case ECP_384_BIT:
+			return TLS_SECP384R1;
+		case ECP_521_BIT:
+			return TLS_SECP521R1;
+		case ECP_192_BIT:
+			return TLS_SECP192R1;
+		case ECP_224_BIT:
+			return TLS_SECP224R1;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Check if the peer supports a given TLS EC group
+ */
+bool peer_supports_ec_group(private_tls_server_t *this,
+							diffie_hellman_group_t group)
+{
+	tls_reader_t *reader;
+	u_int16_t curve, current;
+
+	if (!this->curves_received)
+	{	/* none received, assume yes */
+		return TRUE;
+	}
+	curve = ec_group_to_curve(group);
+	reader = tls_reader_create(this->curves);
+	while (reader->remaining(reader) && reader->read_uint16(reader, &current))
+	{
+		if (current == curve)
+		{
+			reader->destroy(reader);
+			return TRUE;
+		}
+	}
+	reader->destroy(reader);
+	return FALSE;
+}
+
+/**
+ * Try to find a group supported by both, client and server
+ */
+static bool find_supported_group(private_tls_server_t *this,
+							diffie_hellman_group_t *group)
+{
+	diffie_hellman_group_t groups[] = {
+		ECP_256_BIT,
+		ECP_384_BIT,
+		ECP_521_BIT,
+		ECP_224_BIT,
+		ECP_192_BIT,
+	};
+	int i;
+
+	for (i = 0; i < countof(groups); i++)
+	{
+		if (peer_supports_ec_group(this, groups[i]))
+		{
+			*group = groups[i];
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Send Server key Exchange
  */
 static status_t send_server_key_exchange(private_tls_server_t *this,
@@ -689,35 +781,22 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 	diffie_hellman_params_t *params = NULL;
 	chunk_t chunk;
 
-	this->dh = lib->crypto->create_dh(lib->crypto, group);
-	if (!this->dh)
-	{
-		DBG1(DBG_TLS, "DH group %N not supported",
-			 diffie_hellman_group_names, group);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
-	}
 	switch (group)
 	{
 		case ECP_256_BIT:
-			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, TLS_SECP256R1);
-			break;
 		case ECP_384_BIT:
-			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, TLS_SECP384R1);
-			break;
 		case ECP_521_BIT:
-			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, TLS_SECP521R1);
-			break;
 		case ECP_192_BIT:
-			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, TLS_SECP192R1);
-			break;
 		case ECP_224_BIT:
+			if (!peer_supports_ec_group(this, group) &&
+				!find_supported_group(this, &group))
+			{
+				DBG1(DBG_TLS, "no EC group supported by client and server");
+				this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+				return NEED_MORE;
+			}
 			writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-			writer->write_uint16(writer, TLS_SECP224R1);
+			writer->write_uint16(writer, ec_group_to_curve(group));
 			break;
 		default:
 			/* MODP groups */
@@ -732,6 +811,14 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 			writer->write_data16(writer, params->prime);
 			writer->write_data16(writer, params->generator);
 			break;
+	}
+	this->dh = lib->crypto->create_dh(lib->crypto, group);
+	if (!this->dh)
+	{
+		DBG1(DBG_TLS, "DH group %N not supported",
+			 diffie_hellman_group_names, group);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
 	}
 	this->dh->get_my_public_value(this->dh, &chunk);
 	if (params)
@@ -872,6 +959,7 @@ METHOD(tls_handshake_t, destroy, void,
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
+	free(this->curves.ptr);
 	free(this);
 }
 

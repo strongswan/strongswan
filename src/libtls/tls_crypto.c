@@ -757,6 +757,19 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 	supported->destroy(supported);
 }
 
+METHOD(tls_crypto_t, get_curves, void,
+	private_tls_crypto_t *this, tls_writer_t *writer)
+{
+	u_int16_t curves[] = {
+		htons(TLS_SECP256R1),
+		htons(TLS_SECP384R1),
+		htons(TLS_SECP521R1),
+		htons(TLS_SECP192R1),
+		htons(TLS_SECP224R1),
+	};
+	writer->write_data16(writer, chunk_from_thing(curves));
+}
+
 METHOD(tls_crypto_t, set_protection, void,
 	private_tls_crypto_t *this, tls_protection_t *protection)
 {
@@ -1215,6 +1228,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.select_cipher_suite = _select_cipher_suite,
 			.get_dh_group = _get_dh_group,
 			.get_signature_algorithms = _get_signature_algorithms,
+			.get_curves = _get_curves,
 			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
 			.sign = _sign,

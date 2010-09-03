@@ -55,7 +55,10 @@ ENUM_NEXT(tls_handshake_type_names, TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_E
 	"Finished");
 ENUM_END(tls_handshake_type_names, TLS_FINISHED);
 
-ENUM(tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS, TLS_EXT_SIGNATURE_ALGORITHMS,
+ENUM(tls_extension_names, TLS_EXT_ELLIPTIC_CURVES, TLS_EXT_SIGNATURE_ALGORITHMS,
+	"elliptic curves",
+	"ec point formats",
+	"(12)",
 	"signature algorithms",
 );
 
