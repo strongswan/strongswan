@@ -398,11 +398,13 @@ struct tls_crypto_t {
 	void (*get_signature_algorithms)(tls_crypto_t *this, tls_writer_t *writer);
 
 	/**
-	 * Write the list of supported elliptic curves to writer.
+	 * Create an enumerator over supported ECDH groups.
 	 *
-	 * @param writer		writer to write elliptic curves to
+	 * Enumerates over (diffie_hellman_group_t, tls_named_curve_t)
+	 *
+	 * @return				enumerator
 	 */
-	void (*get_curves)(tls_crypto_t *this, tls_writer_t *writer);
+	enumerator_t* (*create_ec_enumerator)(tls_crypto_t *this);
 
 	/**
 	 * Set the protection layer of the TLS stack to control it.

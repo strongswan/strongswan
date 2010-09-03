@@ -352,6 +352,28 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Get the EC group for a TLS named curve
+ */
+static diffie_hellman_group_t curve_to_ec_group(private_tls_peer_t *this,
+												tls_named_curve_t curve)
+{
+	diffie_hellman_group_t group;
+	tls_named_curve_t current;
+	enumerator_t *enumerator;
+
+	enumerator = this->crypto->create_ec_enumerator(this->crypto);
+	while (enumerator->enumerate(enumerator, &group, &current))
+	{
+		if (current == curve)
+		{
+			enumerator->destroy(enumerator);
+			return group;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return 0;
+}
 
 /**
  * Process a Key Exchange message using EC Diffie Hellman
@@ -386,28 +408,14 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	switch (curve)
+
+	group = curve_to_ec_group(this, curve);
+	if (!group)
 	{
-		case TLS_SECP256R1:
-			group = ECP_256_BIT;
-			break;
-		case TLS_SECP384R1:
-			group = ECP_384_BIT;
-			break;
-		case TLS_SECP521R1:
-			group = ECP_521_BIT;
-			break;
-		case TLS_SECP192R1:
-			group = ECP_192_BIT;
-			break;
-		case TLS_SECP224R1:
-			group = ECP_224_BIT;
-			break;
-		default:
-			DBG1(DBG_TLS, "ECDH curve %N not supported",
-				 tls_named_curve_names, curve);
-			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-			return NEED_MORE;
+		DBG1(DBG_TLS, "ECDH curve %N not supported",
+			 tls_named_curve_names, curve);
+		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+		return NEED_MORE;
 	}
 
 	public = find_public_key(this);
@@ -656,8 +664,10 @@ static status_t send_client_hello(private_tls_peer_t *this,
 							tls_handshake_type_t *type, tls_writer_t *writer)
 {
 	tls_cipher_suite_t *suites;
-	tls_writer_t *extensions;
+	tls_writer_t *extensions, *curves = NULL;
 	tls_version_t version;
+	tls_named_curve_t curve;
+	enumerator_t *enumerator;
 	int count, i;
 	rng_t *rng;
 
@@ -697,8 +707,23 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
 	this->crypto->get_signature_algorithms(this->crypto, extensions);
 
-	extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
-	this->crypto->get_curves(this->crypto, extensions);
+	/* add supported Elliptic Curves, if any */
+	enumerator = this->crypto->create_ec_enumerator(this->crypto);
+	while (enumerator->enumerate(enumerator, NULL, &curve))
+	{
+		if (!curves)
+		{
+			extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
+			curves = tls_writer_create(16);
+		}
+		curves->write_uint16(curves, curve);
+	}
+	enumerator->destroy(enumerator);
+	if (curves)
+	{
+		extensions->write_data16(extensions, curves->get_buf(curves));
+		curves->destroy(curves);
+	}
 
 	writer->write_data16(writer, extensions->get_buf(extensions));
 	extensions->destroy(extensions);

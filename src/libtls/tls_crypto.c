@@ -839,17 +839,53 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 	supported->destroy(supported);
 }
 
-METHOD(tls_crypto_t, get_curves, void,
-	private_tls_crypto_t *this, tls_writer_t *writer)
+/**
+ * Mapping groups to TLS named curves
+ */
+static struct {
+	diffie_hellman_group_t group;
+	tls_named_curve_t curve;
+} curves[] = {
+	{ ECP_256_BIT, TLS_SECP256R1},
+	{ ECP_384_BIT, TLS_SECP384R1},
+	{ ECP_521_BIT, TLS_SECP521R1},
+	{ ECP_224_BIT, TLS_SECP224R1},
+	{ ECP_192_BIT, TLS_SECP192R1},
+};
+
+/**
+ * Filter EC groups, add TLS curve
+ */
+static bool group_filter(void *null,
+						diffie_hellman_group_t *in, diffie_hellman_group_t *out,
+						void* dummy1, tls_named_curve_t *curve)
 {
-	u_int16_t curves[] = {
-		htons(TLS_SECP256R1),
-		htons(TLS_SECP384R1),
-		htons(TLS_SECP521R1),
-		htons(TLS_SECP192R1),
-		htons(TLS_SECP224R1),
-	};
-	writer->write_data16(writer, chunk_from_thing(curves));
+	int i;
+
+	for (i = 0; i < countof(curves); i++)
+	{
+		if (curves[i].group == *in)
+		{
+			if (out)
+			{
+				*out = curves[i].group;
+			}
+			if (curve)
+			{
+				*curve = curves[i].curve;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
+	private_tls_crypto_t *this)
+{
+	return enumerator_create_filter(
+					lib->crypto->create_dh_enumerator(lib->crypto),
+					(void*)group_filter, NULL, NULL);
 }
 
 METHOD(tls_crypto_t, set_protection, void,
@@ -1310,7 +1346,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.select_cipher_suite = _select_cipher_suite,
 			.get_dh_group = _get_dh_group,
 			.get_signature_algorithms = _get_signature_algorithms,
-			.get_curves = _get_curves,
+			.create_ec_enumerator = _create_ec_enumerator,
 			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
 			.sign = _sign,

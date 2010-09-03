@@ -730,39 +730,38 @@ static status_t send_certificate_request(private_tls_server_t *this,
 /**
  * Get the TLS curve of a given EC DH group
  */
-static tls_named_curve_t ec_group_to_curve(diffie_hellman_group_t group)
+static tls_named_curve_t ec_group_to_curve(private_tls_server_t *this,
+										   diffie_hellman_group_t group)
 {
-	switch (group)
+	diffie_hellman_group_t current;
+	tls_named_curve_t curve;
+	enumerator_t *enumerator;
+
+	enumerator = this->crypto->create_ec_enumerator(this->crypto);
+	while (enumerator->enumerate(enumerator, &current, &curve))
 	{
-		case ECP_256_BIT:
-			return TLS_SECP256R1;
-		case ECP_384_BIT:
-			return TLS_SECP384R1;
-		case ECP_521_BIT:
-			return TLS_SECP521R1;
-		case ECP_192_BIT:
-			return TLS_SECP192R1;
-		case ECP_224_BIT:
-			return TLS_SECP224R1;
-		default:
-			return 0;
+		if (current == group)
+		{
+			enumerator->destroy(enumerator);
+			return curve;
+		}
 	}
+	enumerator->destroy(enumerator);
+	return 0;
 }
 
 /**
- * Check if the peer supports a given TLS EC group
+ * Check if the peer supports a given TLS curve
  */
-bool peer_supports_ec_group(private_tls_server_t *this,
-							diffie_hellman_group_t group)
+bool peer_supports_curve(private_tls_server_t *this, tls_named_curve_t curve)
 {
 	tls_reader_t *reader;
-	u_int16_t curve, current;
+	u_int16_t current;
 
 	if (!this->curves_received)
 	{	/* none received, assume yes */
 		return TRUE;
 	}
-	curve = ec_group_to_curve(group);
 	reader = tls_reader_create(this->curves);
 	while (reader->remaining(reader) && reader->read_uint16(reader, &current))
 	{
@@ -777,28 +776,25 @@ bool peer_supports_ec_group(private_tls_server_t *this,
 }
 
 /**
- * Try to find a group supported by both, client and server
+ * Try to find a curve supported by both, client and server
  */
-static bool find_supported_group(private_tls_server_t *this,
-							diffie_hellman_group_t *group)
+static bool find_supported_curve(private_tls_server_t *this,
+								 tls_named_curve_t *curve)
 {
-	diffie_hellman_group_t groups[] = {
-		ECP_256_BIT,
-		ECP_384_BIT,
-		ECP_521_BIT,
-		ECP_224_BIT,
-		ECP_192_BIT,
-	};
-	int i;
+	tls_named_curve_t current;
+	enumerator_t *enumerator;
 
-	for (i = 0; i < countof(groups); i++)
+	enumerator = this->crypto->create_ec_enumerator(this->crypto);
+	while (enumerator->enumerate(enumerator, NULL, &current))
 	{
-		if (peer_supports_ec_group(this, groups[i]))
+		if (peer_supports_curve(this, current))
 		{
-			*group = groups[i];
+			*curve = current;
+			enumerator->destroy(enumerator);
 			return TRUE;
 		}
 	}
+	enumerator->destroy(enumerator);
 	return FALSE;
 }
 
@@ -810,19 +806,21 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 							diffie_hellman_group_t group)
 {
 	diffie_hellman_params_t *params = NULL;
+	tls_named_curve_t curve;
 	chunk_t chunk;
 
 	if (diffie_hellman_group_is_ec(group))
 	{
-		if (!peer_supports_ec_group(this, group) &&
-			!find_supported_group(this, &group))
+		curve = ec_group_to_curve(this, group);
+		if (!curve || (!peer_supports_curve(this, curve) &&
+					   !find_supported_curve(this, &curve)))
 		{
 			DBG1(DBG_TLS, "no EC group supported by client and server");
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
 		}
 		writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
-		writer->write_uint16(writer, ec_group_to_curve(group));
+		writer->write_uint16(writer, curve);
 	}
 	else
 	{
