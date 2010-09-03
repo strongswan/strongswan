@@ -340,6 +340,16 @@ struct private_tls_crypto_t {
 	tls_cipher_suite_t suite;
 
 	/**
+	 * RSA supported?
+	 */
+	bool rsa;
+
+	/**
+	 * ECDSA supported?
+	 */
+	bool ecdsa;
+
+	/**
 	 * TLS context
 	 */
 	tls_t *tls;
@@ -647,6 +657,26 @@ static void filter_null_suites(private_tls_crypto_t *this,
 }
 
 /**
+ * Purge suites using a given key type
+ */
+static void filter_key_suites(private_tls_crypto_t *this,
+							  suite_algs_t suites[], int *count, key_type_t key)
+{
+	int i, remaining = 0;
+
+	DBG2(DBG_TLS, "disabling %N suites, no backend found", key_type_names, key);
+	for (i = 0; i < *count; i++)
+	{
+		if (suites[i].key != key)
+		{
+			suites[remaining] = suites[i];
+			remaining++;
+		}
+	}
+	*count = remaining;
+}
+
+/**
  * Initialize the cipher suite list
  */
 static void build_cipher_suite_list(private_tls_crypto_t *this,
@@ -664,6 +694,15 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	{
 		filter_null_suites(this, suites, &count);
 	}
+	if (!this->rsa)
+	{
+		filter_key_suites(this, suites, &count, KEY_RSA);
+	}
+	if (!this->ecdsa)
+	{
+		filter_key_suites(this, suites, &count, KEY_ECDSA);
+	}
+
 	/* filter suite list by each algorithm */
 	filter_suite(this, suites, &count, offsetof(suite_algs_t, encr),
 				 lib->crypto->create_crypter_enumerator);
@@ -825,10 +864,13 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 			default:
 				continue;
 		}
-		supported->write_uint8(supported, hash);
-		supported->write_uint8(supported, TLS_SIG_RSA);
-		if (alg != HASH_MD5 && alg != HASH_SHA224)
+		if (this->rsa)
 		{
+			supported->write_uint8(supported, hash);
+			supported->write_uint8(supported, TLS_SIG_RSA);
+		}
+		if (this->ecdsa && alg != HASH_MD5 && alg != HASH_SHA224)
+		{	/* currently we have no signature scheme for MD5/SHA224 */
 			supported->write_uint8(supported, hash);
 			supported->write_uint8(supported, TLS_SIG_ECDSA);
 		}
@@ -1339,6 +1381,9 @@ METHOD(tls_crypto_t, destroy, void,
 tls_crypto_t *tls_crypto_create(tls_t *tls)
 {
 	private_tls_crypto_t *this;
+	enumerator_t *enumerator;
+	credential_type_t type;
+	int subtype;
 
 	INIT(this,
 		.public = {
@@ -1362,6 +1407,26 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 		},
 		.tls = tls,
 	);
+
+	enumerator = lib->creds->create_builder_enumerator(lib->creds);
+	while (enumerator->enumerate(enumerator, &type, &subtype))
+	{
+		if (type == CRED_PUBLIC_KEY)
+		{
+			switch (subtype)
+			{
+				case KEY_RSA:
+					this->rsa = TRUE;
+					break;
+				case KEY_ECDSA:
+					this->ecdsa = TRUE;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	switch (tls->get_purpose(tls))
 	{
