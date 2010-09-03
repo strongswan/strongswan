@@ -168,21 +168,15 @@ METHOD(diffie_hellman_t, destroy, void,
 }
 
 /*
- * Described in header.
+ * Generic internal constructor
  */
-gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
+gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
+							chunk_t g, chunk_t p)
 {
 	private_gcrypt_dh_t *this;
-	diffie_hellman_params_t *params;
 	gcry_error_t err;
 	chunk_t random;
 	rng_t *rng;
-
-	params = diffie_hellman_get_params(group);
-	if (!params)
-	{
-		return NULL;
-	}
 
 	INIT(this,
 		.public = {
@@ -195,18 +189,16 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 			},
 		},
 		.group = group,
-		.p_len = params->prime.len,
+		.p_len = p.len,
 	);
-	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG,
-						params->prime.ptr, params->prime.len, NULL);
+	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG, p.ptr, p.len, NULL);
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi modulus failed: %s", gpg_strerror(err));
 		free(this);
 		return NULL;
 	}
-	err = gcry_mpi_scan(&this->g, GCRYMPI_FMT_USG,
-						params->generator.ptr, params->generator.len, NULL);
+	err = gcry_mpi_scan(&this->g, GCRYMPI_FMT_USG, g.ptr, g.len, NULL);
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi generator failed: %s", gpg_strerror(err));
@@ -218,7 +210,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (rng)
 	{	/* prefer external randomizer */
-		rng->allocate_bytes(rng, params->exp_len, &random);
+		rng->allocate_bytes(rng, exp_len, &random);
 		rng->destroy(rng);
 		err = gcry_mpi_scan(&this->xa, GCRYMPI_FMT_USG,
 							random.ptr, random.len, NULL);
@@ -234,13 +226,13 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	}
 	else
 	{	/* fallback to gcrypt internal randomizer, shouldn't ever happen */
-		this->xa = gcry_mpi_new(params->exp_len * 8);
-		gcry_mpi_randomize(this->xa, params->exp_len * 8, GCRY_STRONG_RANDOM);
+		this->xa = gcry_mpi_new(exp_len * 8);
+		gcry_mpi_randomize(this->xa, exp_len * 8, GCRY_STRONG_RANDOM);
 	}
-	if (params->exp_len == this->p_len)
+	if (exp_len == this->p_len)
 	{
 		/* achieve bitsof(p)-1 by setting MSB to 0 */
-		gcry_mpi_clear_bit(this->xa, params->exp_len * 8 - 1);
+		gcry_mpi_clear_bit(this->xa, exp_len * 8 - 1);
 	}
 
 	this->ya = gcry_mpi_new(this->p_len * 8);
@@ -250,3 +242,33 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	return &this->public;
 }
 
+
+/*
+ * Described in header.
+ */
+gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
+{
+
+	diffie_hellman_params_t *params;
+
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		return NULL;
+	}
+	return create_generic(group, params->exp_len,
+						  params->generator, params->prime);
+}
+
+/*
+ * Described in header.
+ */
+gcrypt_dh_t *gcrypt_dh_create_custom(diffie_hellman_group_t group,
+									 chunk_t g, chunk_t p)
+{
+	if (group == MODP_CUSTOM)
+	{
+		return create_generic(group, p.len, g, p);
+	}
+	return NULL;
+}

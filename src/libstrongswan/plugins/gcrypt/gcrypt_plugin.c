@@ -104,6 +104,8 @@ METHOD(plugin_t, destroy, void,
 					(rng_constructor_t)gcrypt_rng_create);
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->remove_dh(lib->crypto,
+					(dh_constructor_t)gcrypt_dh_create_custom);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)gcrypt_rsa_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
@@ -218,6 +220,8 @@ plugin_t *gcrypt_plugin_create()
 					(dh_constructor_t)gcrypt_dh_create);
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
 					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM,
+					(dh_constructor_t)gcrypt_dh_create_custom);
 
 	/* RSA */
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
