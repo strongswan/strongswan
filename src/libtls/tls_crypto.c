@@ -625,7 +625,9 @@ static void filter_suite(private_tls_crypto_t *this,
 				 !current.encr || current.encr == suites[i].encr) &&
 				(!current.mac  || current.mac  == suites[i].mac) &&
 				(!current.prf  || current.prf  == suites[i].prf) &&
-				(!current.hash || current.hash == suites[i].hash))
+				(!current.hash || current.hash == suites[i].hash) &&
+				(suites[i].dh == MODP_NONE ||
+				 !current.dh   || current.dh   == suites[i].dh))
 			{
 				suites[remaining] = suites[i];
 				remaining++;
@@ -712,6 +714,8 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 				 lib->crypto->create_prf_enumerator);
 	filter_suite(this, suites, &count, offsetof(suite_algs_t, hash),
 				 lib->crypto->create_hasher_enumerator);
+	filter_suite(this, suites, &count, offsetof(suite_algs_t, dh),
+				 lib->crypto->create_dh_enumerator);
 
 	free(this->suites);
 	this->suite_count = count;
