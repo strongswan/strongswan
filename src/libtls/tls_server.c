@@ -419,10 +419,10 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
-	if (pub.ptr[0] != TLS_ECP_UNCOMPRESSED)
+	if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
 	{
 		DBG1(DBG_TLS, "DH point format '%N' not supported",
-			 tls_ecp_format_names, pub.ptr[0]);
+			 tls_ansi_point_format_names, pub.ptr[0]);
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
@@ -857,7 +857,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 	else
 	{	/* ECP uses 8bit length header only, but a point format */
 		writer->write_uint8(writer, chunk.len + 1);
-		writer->write_uint8(writer, TLS_ECP_UNCOMPRESSED);
+		writer->write_uint8(writer, TLS_ANSI_UNCOMPRESSED);
 		writer->write_data(writer, chunk);
 	}
 	free(chunk.ptr);

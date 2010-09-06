@@ -306,7 +306,7 @@ ENUM(tls_named_curve_names, TLS_SECT163K1, TLS_SECP521R1,
 	"SECP521R1",
 );
 
-ENUM(tls_ecp_format_names, TLS_ECP_COMPRESSED, TLS_ECP_HYBRID_Y,
+ENUM(tls_ansi_point_format_names, TLS_ANSI_COMPRESSED, TLS_ANSI_HYBRID_Y,
 	"compressed",
 	"compressed y",
 	"uncompressed",
