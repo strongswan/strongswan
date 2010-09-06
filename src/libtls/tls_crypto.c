@@ -315,6 +315,13 @@ ENUM(tls_ansi_point_format_names, TLS_ANSI_COMPRESSED, TLS_ANSI_HYBRID_Y,
 	"hybrid y",
 );
 
+ENUM(tls_ec_point_format_names,
+	 TLS_EC_POINT_UNCOMPRESSED, TLS_EC_POINT_ANSIX962_COMPRESSED_CHAR2,
+	"uncompressed",
+	"ansiX962 compressed prime",
+	"ansiX962 compressed char2",
+);
+
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 
 /**

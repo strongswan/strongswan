@@ -28,6 +28,8 @@ typedef enum tls_signature_algorithm_t tls_signature_algorithm_t;
 typedef enum tls_client_certificate_type_t tls_client_certificate_type_t;
 typedef enum tls_ecc_curve_type_t tls_ecc_curve_type_t;
 typedef enum tls_named_curve_t tls_named_curve_t;
+typedef enum tls_ansi_point_format_t tls_ansi_point_format_t;
+typedef enum tls_ec_point_format_t tls_ec_point_format_t;
 
 #include "tls.h"
 #include "tls_prf.h"
@@ -373,6 +375,20 @@ enum tls_ansi_point_format_t {
  * Enum names for tls_ansi_point_format_t.
  */
 extern enum_name_t *tls_ansi_point_format_names;
+
+/**
+ * EC Point format, TLS specific identifiers.
+ */
+enum tls_ec_point_format_t {
+	TLS_EC_POINT_UNCOMPRESSED = 0,
+	TLS_EC_POINT_ANSIX962_COMPRESSED_PRIME = 1,
+	TLS_EC_POINT_ANSIX962_COMPRESSED_CHAR2 = 2,
+};
+
+/**
+ * Enum names for tls_ec_point_format_t.
+ */
+extern enum_name_t *tls_ec_point_format_names;
 
 /**
  * TLS crypto helper functions.
