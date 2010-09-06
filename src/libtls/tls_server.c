@@ -220,29 +220,25 @@ static status_t process_client_hello(private_tls_server_t *this,
 		extensions = tls_reader_create(ext);
 		while (extensions->remaining(extensions))
 		{
-			if (!extensions->read_uint16(extensions, &extension))
+			if (!extensions->read_uint16(extensions, &extension) ||
+				!extensions->read_data16(extensions, &ext))
 			{
 				DBG1(DBG_TLS, "received invalid ClientHello Extensions");
 				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 				extensions->destroy(extensions);
 				return NEED_MORE;
 			}
-			DBG1(DBG_TLS, "received TLS %N extension",
+			DBG1(DBG_TLS, "received TLS '%N' extension",
 				 tls_extension_names, extension);
+			DBG3(DBG_TLS, "%B", &ext);
 			switch (extension)
 			{
 				case TLS_EXT_SIGNATURE_ALGORITHMS:
-					if (extensions->read_data16(extensions, &ext))
-					{
-						this->hashsig = chunk_clone(ext);
-					}
+					this->hashsig = chunk_clone(ext);
 					break;
 				case TLS_EXT_ELLIPTIC_CURVES:
 					this->curves_received = TRUE;
-					if (extensions->read_data16(extensions, &ext))
-					{
-						this->curves = chunk_clone(ext);
-					}
+					this->curves = chunk_clone(ext);
 					break;
 				default:
 					break;
