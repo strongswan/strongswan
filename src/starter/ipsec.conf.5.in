@@ -835,14 +835,14 @@ mask of
 is assumed.
 .TP
 .B mark_in
-sets an XFRM mark of the form <value>[/<mask>] in the inbound IPsec SA and policy
-(IKEv2 only). If the mask is missing then a default mask of
+sets an XFRM mark of the form <value>[/<mask>] in the inbound IPsec SA and
+policy. If the mask is missing then a default mask of
 .B 0xffffffff
 is assumed.
 .TP
 .B mark_out
-sets an XFRM mark of the form <value>[/<mask>] in the outbound IPsec SA and policy
-(IKEv2 only). If the mask is missing then a default mask of
+sets an XFRM mark of the form <value>[/<mask>] in the outbound IPsec SA and
+policy. If the mask is missing then a default mask of
 .B 0xffffffff
 is assumed.
 .TP
