@@ -168,7 +168,7 @@ METHOD(tls_protection_t, process, status_t,
 		u_int8_t bs;
 
 		bs = this->signer_in->get_block_size(this->signer_in);
-		if (data.len <= bs)
+		if (data.len < bs)
 		{
 			DBG1(DBG_TLS, "TLS record too short to verify MAC");
 			this->alert->add(this->alert, TLS_FATAL, TLS_BAD_RECORD_MAC);
