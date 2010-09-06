@@ -855,6 +855,37 @@ static void filter_mac_config_suites(private_tls_crypto_t *this,
 }
 
 /**
+ * Filter for specific suites specified in strongswan.conf
+ */
+static void filter_specific_config_suites(private_tls_crypto_t *this,
+										  suite_algs_t suites[], int *count)
+{
+	enumerator_t *enumerator;
+	int i, remaining = 0, suite;
+	char *token, *config;
+
+	config = lib->settings->get_str(lib->settings, "libtls.suites", NULL);
+	if (config)
+	{
+		for (i = 0; i < *count; i++)
+		{
+			enumerator = enumerator_create_token(config, ",", " ");
+			while (enumerator->enumerate(enumerator, &token))
+			{
+				suite = enum_from_name(tls_cipher_suite_names, token);
+				if (suite == suites[i].suite)
+				{
+					suites[remaining++] = suites[i];
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		*count = remaining;
+	}
+}
+
+/**
  * Initialize the cipher suite list
  */
 static void build_cipher_suite_list(private_tls_crypto_t *this,
@@ -897,6 +928,7 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 	filter_key_exchange_config_suites(this, suites, &count);
 	filter_cipher_config_suites(this, suites, &count);
 	filter_mac_config_suites(this, suites, &count);
+	filter_specific_config_suites(this, suites, &count);
 
 	free(this->suites);
 	this->suite_count = count;
