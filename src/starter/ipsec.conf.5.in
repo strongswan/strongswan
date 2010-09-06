@@ -829,7 +829,7 @@ Relevant only locally, other end need not agree on it.
 .TP
 .B mark
 sets an XFRM mark of the form <value>[/<mask>] in the inbound and outbound
-IPsec SAs and policies (IKEv2 only). If the mask is missing then a default
+IPsec SAs and policies. If the mask is missing then a default
 mask of
 .B 0xffffffff
 is assumed.
