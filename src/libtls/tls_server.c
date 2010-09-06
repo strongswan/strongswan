@@ -815,6 +815,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
 		}
+		DBG2(DBG_TLS, "selected ECDH group %N", tls_named_curve_names, curve);
 		writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
 		writer->write_uint16(writer, curve);
 	}
@@ -828,6 +829,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			return NEED_MORE;
 		}
+		DBG2(DBG_TLS, "selected DH group %N", diffie_hellman_group_names, group);
 		writer->write_data16(writer, params->prime);
 		writer->write_data16(writer, params->generator);
 	}
