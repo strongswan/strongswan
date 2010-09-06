@@ -701,7 +701,7 @@ ADD_PLUGIN([sha1],                 [s libcharon pluto openac scepclient pki scri
 ADD_PLUGIN([sha2],                 [s libcharon pluto openac scepclient pki scripts medsrv])
 ADD_PLUGIN([md4],                  [s libcharon openac manager scepclient pki])
 ADD_PLUGIN([md5],                  [s libcharon pluto openac scepclient pki])
-ADD_PLUGIN([random],               [s libcharon pluto openac scepclient pki medsrv])
+ADD_PLUGIN([random],               [s libcharon pluto openac scepclient pki scripts medsrv])
 ADD_PLUGIN([x509],                 [s libcharon pluto openac scepclient pki scripts])
 ADD_PLUGIN([revocation],           [s libcharon])
 ADD_PLUGIN([pubkey],               [s libcharon])
