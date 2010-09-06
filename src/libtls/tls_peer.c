@@ -731,6 +731,12 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	{
 		extensions->write_data16(extensions, curves->get_buf(curves));
 		curves->destroy(curves);
+
+		/* if we support curves, add point format extension */
+		extensions->write_uint16(extensions, TLS_EXT_EC_POINT_FORMATS);
+		extensions->write_uint16(extensions, 2);
+		extensions->write_uint8(extensions, 1);
+		extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
 	}
 
 	writer->write_data16(writer, extensions->get_buf(extensions));
