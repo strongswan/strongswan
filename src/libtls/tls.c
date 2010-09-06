@@ -44,23 +44,36 @@ ENUM_BEGIN(tls_handshake_type_names, TLS_HELLO_REQUEST, TLS_SERVER_HELLO,
 	"HelloRequest",
 	"ClientHello",
 	"ServerHello");
-ENUM_NEXT(tls_handshake_type_names, TLS_CERTIFICATE, TLS_CLIENT_KEY_EXCHANGE, TLS_SERVER_HELLO,
+ENUM_NEXT(tls_handshake_type_names,
+		TLS_CERTIFICATE, TLS_CLIENT_KEY_EXCHANGE, TLS_SERVER_HELLO,
 	"Certificate",
 	"ServerKeyExchange",
 	"CertificateRequest",
 	"ServerHelloDone",
 	"CertificateVerify",
 	"ClientKeyExchange");
-ENUM_NEXT(tls_handshake_type_names, TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_EXCHANGE,
+ENUM_NEXT(tls_handshake_type_names,
+		TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_EXCHANGE,
 	"Finished");
 ENUM_END(tls_handshake_type_names, TLS_FINISHED);
 
-ENUM(tls_extension_names, TLS_EXT_ELLIPTIC_CURVES, TLS_EXT_SIGNATURE_ALGORITHMS,
+ENUM_BEGIN(tls_extension_names, TLS_EXT_SERVER_NAME, TLS_EXT_STATUS_REQUEST,
+	"server name",
+	"max fragment length",
+	"client certificate url",
+	"trusted ca keys",
+	"truncated hmac",
+	"status request");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_ELLIPTIC_CURVES, TLS_EXT_EC_POINT_FORMATS,
+		TLS_EXT_STATUS_REQUEST,
 	"elliptic curves",
-	"ec point formats",
-	"(12)",
-	"signature algorithms",
-);
+	"ec point formats");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_SIGNATURE_ALGORITHMS, TLS_EXT_SIGNATURE_ALGORITHMS,
+		TLS_EXT_EC_POINT_FORMATS,
+	"signature algorithms");
+ENUM_END(tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
 
 /**
  * TLS record

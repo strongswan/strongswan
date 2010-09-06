@@ -104,11 +104,23 @@ enum tls_purpose_t {
  * TLS Hello extension types.
  */
 enum tls_extension_t {
-	/** supported elliptic curves */
+	/** Server name the client wants to talk to */
+	TLS_EXT_SERVER_NAME = 0,
+	/** request a maximum fragment size */
+	TLS_EXT_MAX_FRAGMENT_LENGTH = 1,
+	/** indicate client certificate URL support */
+	TLS_EXT_CLIENT_CERTIFICATE_URL = 2,
+	/** list of CA the client trusts */
+	TLS_EXT_TRUSTED_CA_KEYS = 3,
+	/** request MAC truncation to 80-bit */
+	TLS_EXT_TRUNCATED_HMAC = 4,
+	/** list of OCSP responders the client trusts */
+	TLS_EXT_STATUS_REQUEST = 5,
+	/** list of supported elliptic curves */
 	TLS_EXT_ELLIPTIC_CURVES = 10,
 	/** supported point formats */
 	TLS_EXT_EC_POINT_FORMATS = 11,
-	/** supported signature algorithms */
+	/** list supported signature algorithms */
 	TLS_EXT_SIGNATURE_ALGORITHMS = 13,
 };
 
