@@ -359,6 +359,22 @@ enum tls_named_curve_t {
 extern enum_name_t *tls_named_curve_names;
 
 /**
+ * EC Point format, ANSI X9.62.
+ */
+enum tls_ecp_format_t {
+	TLS_ECP_COMPRESSED =	2,
+	TLS_ECP_COMPRESSED_Y =	3,
+	TLS_ECP_UNCOMPRESSED =	4,
+	TLS_ECP_HYBRID =		6,
+	TLS_ECP_HYBRID_Y =		7,
+};
+
+/**
+ * Enum names for tls_ecp_format_t.
+ */
+extern enum_name_t *tls_ecp_format_names;
+
+/**
  * TLS crypto helper functions.
  */
 struct tls_crypto_t {

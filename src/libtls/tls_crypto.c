@@ -306,6 +306,14 @@ ENUM(tls_named_curve_names, TLS_SECT163K1, TLS_SECP521R1,
 	"SECP521R1",
 );
 
+ENUM(tls_ecp_format_names, TLS_ECP_COMPRESSED, TLS_ECP_HYBRID_Y,
+	"compressed",
+	"compressed y",
+	"uncompressed",
+	"uncompressed y",
+	"hybrid",
+	"hybrid y",
+);
 
 typedef struct private_tls_crypto_t private_tls_crypto_t;
 

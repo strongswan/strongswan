@@ -412,13 +412,21 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 
 	ec = diffie_hellman_group_is_ec(this->dh->get_dh_group(this->dh));
 	if ((ec && !reader->read_data8(reader, &pub)) ||
-		(!ec && !reader->read_data16(reader, &pub)))
+		(!ec && (!reader->read_data16(reader, &pub) || pub.len == 0)))
 	{
 		DBG1(DBG_TLS, "received invalid Client Key Exchange");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->set_other_public_value(this->dh, pub);
+
+	if (pub.ptr[0] != TLS_ECP_UNCOMPRESSED)
+	{
+		DBG1(DBG_TLS, "DH point format '%N' not supported",
+			 tls_ecp_format_names, pub.ptr[0]);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1));
 	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
 	{
 		DBG1(DBG_TLS, "calculating premaster from DH failed");
@@ -847,8 +855,10 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 		writer->write_data16(writer, chunk);
 	}
 	else
-	{	/* 8bit header for EC groups */
-		writer->write_data8(writer, chunk);
+	{	/* ECP uses 8bit length header only, but a point format */
+		writer->write_uint8(writer, chunk.len + 1);
+		writer->write_uint8(writer, TLS_ECP_UNCOMPRESSED);
+		writer->write_data(writer, chunk);
 	}
 	free(chunk.ptr);
 

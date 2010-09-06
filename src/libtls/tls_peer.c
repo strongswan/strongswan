@@ -402,7 +402,7 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 	if (!reader->read_uint16(reader, &curve) ||
-		!reader->read_data8(reader, &pub))
+		!reader->read_data8(reader, &pub) || pub.len == 0)
 	{
 		DBG1(DBG_TLS, "received invalid Server Key Exchange");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
@@ -448,7 +448,15 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->dh->set_other_public_value(this->dh, pub);
+
+	if (pub.ptr[0] != TLS_ECP_UNCOMPRESSED)
+	{
+		DBG1(DBG_TLS, "DH point format '%N' not supported",
+			 tls_ecp_format_names, pub.ptr[0]);
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1));
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
@@ -908,8 +916,10 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 		writer->write_data16(writer, pub);
 	}
 	else
-	{	/* ECP uses 8bit length header only */
-		writer->write_data8(writer, pub);
+	{	/* ECP uses 8bit length header only, but a point format */
+		writer->write_uint8(writer, pub.len + 1);
+		writer->write_uint8(writer, TLS_ECP_UNCOMPRESSED);
+		writer->write_data(writer, pub);
 	}
 	free(pub.ptr);
 
