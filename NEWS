@@ -7,6 +7,16 @@ strongswan-4.5.0
   new plugins bring support for AES and Camellia Counter and CCM algorithms
   and the AES GCM algorithms for use in IKEv2.
 
+- Implemented a general purpose TLS stack based on crypto and credential
+  primitives of libstrongswan. libtls supports TLS versions 1.0, 1.1 and 1.2,
+  ECDHE-ECDSA/RSA, DHE-RSA and RSA key exchange algorithms and RSA/ECDSA based
+  client authentication.
+
+- Based on libtls, the eap-tls plugin brings certificate based EAP
+  authentication for client and server. It is compatible to Windows 7 IKEv2
+  Smartcard authentication or the OpenSSL based FreeRADIUS EAP-TLS backend.
+
+
 strongswan-4.4.1
 ----------------
 
