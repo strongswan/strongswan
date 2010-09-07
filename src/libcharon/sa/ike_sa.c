@@ -857,10 +857,8 @@ METHOD(ike_sa_t, update_hosts, void,
 
 		if (!other->equals(other, this->other_host))
 		{
-			/* update others adress if we are NOT NATed,
-			 * and allow port changes if we are NATed */
-			if (!has_condition(this, COND_NAT_HERE) ||
-				other->ip_equals(other, this->other_host))
+			/* update others adress if we are NOT NATed */
+			if (!has_condition(this, COND_NAT_HERE))
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;
