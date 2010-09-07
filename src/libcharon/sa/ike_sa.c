@@ -1239,15 +1239,12 @@ METHOD(ike_sa_t, process_message, status_t,
 	}
 	else
 	{
-		host_t *me, *other;
-
-		me = message->get_destination(message);
-		other = message->get_source(message);
-
 		/* if this IKE_SA is virgin, we check for a config */
 		if (this->ike_cfg == NULL)
 		{
 			job_t *job;
+			host_t *me = message->get_destination(message),
+				   *other = message->get_source(message);
 			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
 														  me, other);
 			if (this->ike_cfg == NULL)
@@ -1264,16 +1261,8 @@ METHOD(ike_sa_t, process_message, status_t,
 										 HALF_OPEN_IKE_SA_TIMEOUT);
 		}
 		this->stats[STAT_INBOUND] = time_monotonic(NULL);
-		/* check if message is trustworthy, and update host information */
-		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
-			message->get_exchange_type(message) != IKE_SA_INIT)
-		{
-			if (!supports_extension(this, EXT_MOBIKE))
-			{	/* with MOBIKE, we do no implicit updates */
-				update_hosts(this, me, other);
-			}
-		}
-		status = this->task_manager->process_message(this->task_manager, message);
+		status = this->task_manager->process_message(this->task_manager,
+													 message);
 		if (message->get_exchange_type(message) == IKE_AUTH &&
 			this->state == IKE_ESTABLISHED &&
 			lib->settings->get_bool(lib->settings,

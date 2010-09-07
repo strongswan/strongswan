@@ -883,11 +883,21 @@ METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
 	u_int32_t mid = msg->get_message_id(msg);
+	host_t *me = msg->get_destination(msg), *other = msg->get_source(msg);
 
 	if (msg->get_request(msg))
 	{
 		if (mid == this->responding.mid)
 		{
+			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
+				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
+				msg->get_exchange_type(msg) != IKE_SA_INIT)
+			{	/* only do host updates based on verified messages */
+				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+				{	/* with MOBIKE, we do no implicit updates */
+					this->ike_sa->update_hosts(this->ike_sa, me, other);
+				}
+			}
 			charon->bus->message(charon->bus, msg, TRUE);
 			if (process_request(this, msg) != SUCCESS)
 			{
@@ -920,6 +930,15 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (mid == this->initiating.mid)
 		{
+			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
+				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
+				msg->get_exchange_type(msg) != IKE_SA_INIT)
+			{	/* only do host updates based on verified messages */
+				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+				{	/* with MOBIKE, we do no implicit updates */
+					this->ike_sa->update_hosts(this->ike_sa, me, other);
+				}
+			}
 			charon->bus->message(charon->bus, msg, TRUE);
 			if (process_response(this, msg) != SUCCESS)
 			{
