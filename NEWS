@@ -9,7 +9,7 @@ strongswan-4.5.0
 
 - The new pkcs11 plugin brings full Smartcard support to the IKEv2 daemon and
   the pki utility using one or more PKCS#11 libraries. It currently supports
-  RSA private and public key operations and loads X509 certificates from
+  RSA private and public key operations and loads X.509 certificates from
   tokens.
 
 - Implemented a general purpose TLS stack based on crypto and credential
@@ -19,7 +19,7 @@ strongswan-4.5.0
 
 - Based on libtls, the eap-tls plugin brings certificate based EAP
   authentication for client and server. It is compatible to Windows 7 IKEv2
-  Smartcard authentication or the OpenSSL based FreeRADIUS EAP-TLS backend.
+  Smartcard authentication and the OpenSSL based FreeRADIUS EAP-TLS backend.
 
 
 strongswan-4.4.1
