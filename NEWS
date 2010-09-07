@@ -7,6 +7,11 @@ strongswan-4.5.0
   new plugins bring support for AES and Camellia Counter and CCM algorithms
   and the AES GCM algorithms for use in IKEv2.
 
+- The new pkcs11 plugin brings full Smartcard support to the IKEv2 daemon and
+  the pki utility using one or more PKCS#11 libraries. It currently supports
+  RSA private and public key operations and loads X509 certificates from
+  tokens.
+
 - Implemented a general purpose TLS stack based on crypto and credential
   primitives of libstrongswan. libtls supports TLS versions 1.0, 1.1 and 1.2,
   ECDHE-ECDSA/RSA, DHE-RSA and RSA key exchange algorithms and RSA/ECDSA based
