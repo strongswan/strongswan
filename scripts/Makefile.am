@@ -3,7 +3,10 @@ AM_CFLAGS = \
 -DPLUGINS="\"${scripts_plugins}\""
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql \
-	thread_analysis dh_speed pubkey_speed crypt_burn tls_test
+	thread_analysis dh_speed pubkey_speed crypt_burn
+if USE_TLS
+	noinst_PROGRAMS += tls_test
+endif
 bin2array_SOURCES = bin2array.c
 bin2sql_SOURCES = bin2sql.c
 id2sql_SOURCES = id2sql.c
