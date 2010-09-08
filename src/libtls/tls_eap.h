@@ -25,7 +25,7 @@ typedef struct tls_eap_t tls_eap_t;
 
 #include <eap/eap.h>
 
-#include "tls_application.h"
+#include "tls.h"
 
 /**
  * TLS over EAP helper, as used by EAP-TLS and EAP-TTLS.
@@ -33,7 +33,7 @@ typedef struct tls_eap_t tls_eap_t;
 struct tls_eap_t {
 
 	/**
-	 * Initiate TLS over EAP exchange (as client).
+	 * Initiate TLS/TTLS/TNC over EAP exchange (as client).
 	 *
 	 * @param out			allocated EAP packet data to send
 	 * @return
@@ -43,7 +43,7 @@ struct tls_eap_t {
 	status_t (*initiate)(tls_eap_t *this, chunk_t *out);
 
 	/**
-	 * Process a received EAP-TLS/TTLS packet, create response.
+	 * Process a received EAP-TLS/TTLS/TNC packet, create response.
 	 *
 	 * @param in			EAP packet data to process
 	 * @param out			allocated EAP packet data to send
@@ -71,14 +71,9 @@ struct tls_eap_t {
  * Create a tls_eap instance.
  *
  * @param type				EAP type, EAP-TLS or EAP-TTLS
- * @param is_server			role
- * @param server			server identity
- * @param peer				peer identity, NULL to omit peer authentication
- * @param application		TLS application layer, if any
+ * @param tls				TLS implementation
  * @param frag_size			maximum size of a TLS fragment we send
  */
-tls_eap_t *tls_eap_create(eap_type_t type, bool is_server,
-						  identification_t *server, identification_t *peer,
-						  tls_application_t *application, size_t frag_size);
+tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size);
 
 #endif /** TLS_EAP_H_ @}*/

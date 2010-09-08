@@ -98,6 +98,8 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TTLS,
 	/** non-EAP TLS */
 	TLS_PURPOSE_GENERIC,
+	/** EAP binding for TNC */
+	TLS_PURPOSE_EAP_TNC
 };
 
 /**

@@ -71,6 +71,9 @@ typedef enum {
 	EAP_TTLS_VERSION = (0x07),
 } eap_tls_flags_t;
 
+#define EAP_TTLS_SUPPORTED_VERSION	0
+#define EAP_TNC_SUPPORTED_VERSION	1
+
 /**
  * EAP-TLS/TTLS packet format
  */
@@ -92,6 +95,17 @@ METHOD(tls_eap_t, initiate, status_t,
 			.code = EAP_REQUEST,
 			.flags = EAP_TLS_START,
 		};
+		switch (this->type)
+		{
+			case EAP_TTLS:
+				pkt.flags |= EAP_TTLS_SUPPORTED_VERSION;
+				break;
+			case EAP_TNC:
+				pkt.flags |= EAP_TNC_SUPPORTED_VERSION;
+				break;
+			default:
+				break;
+		}
 		htoun16(&pkt.length, sizeof(eap_tls_packet_t));
 		do
 		{	/* start with non-zero random identifier */
@@ -154,9 +168,21 @@ static status_t build_pkt(private_tls_eap_t *this,
 	pkt->type = this->type;
 	pkt->flags = 0;
 
+	switch (this->type)
+	{
+		case EAP_TTLS:
+			pkt->flags |= EAP_TTLS_SUPPORTED_VERSION;
+			break;
+		case EAP_TNC:
+			pkt->flags |= EAP_TNC_SUPPORTED_VERSION;
+			break;
+		default:
+			break;
+	}
+
 	if (this->first_fragment)
 	{
-		pkt->flags = EAP_TLS_LENGTH;
+		pkt->flags |= EAP_TLS_LENGTH;
 		len = sizeof(buf) - sizeof(eap_tls_packet_t) - sizeof(u_int32_t);
 		status = this->tls->build(this->tls, buf + sizeof(eap_tls_packet_t) +
 								  sizeof(u_int32_t), &len, &reclen);
@@ -235,9 +261,9 @@ METHOD(tls_eap_t, process, status_t,
 	}
 	if (pkt->flags & EAP_TLS_START)
 	{
-		if (this->type == EAP_TTLS)
+		if (this->type == EAP_TTLS || this->type == EAP_TNC)
 		{
-			DBG1(DBG_TLS, "EAP-TTLS version is v%u",
+			DBG1(DBG_TLS, "%N version is v%u", eap_type_names, this->type,
 				 pkt->flags & EAP_TTLS_VERSION);
 		}
 	}
@@ -295,24 +321,9 @@ METHOD(tls_eap_t, destroy, void,
 /**
  * See header
  */
-tls_eap_t *tls_eap_create(eap_type_t type, bool is_server,
-						  identification_t *server, identification_t *peer,
-						  tls_application_t *application, size_t frag_size)
+tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size)
 {
 	private_tls_eap_t *this;
-	tls_purpose_t purpose;
-
-	switch (type)
-	{
-		case EAP_TLS:
-			purpose = TLS_PURPOSE_EAP_TLS;
-			break;
-		case EAP_TTLS:
-			purpose = TLS_PURPOSE_EAP_TTLS;
-			break;
-		default:
-			return NULL;
-	};
 
 	INIT(this,
 		.public = {
@@ -322,15 +333,11 @@ tls_eap_t *tls_eap_create(eap_type_t type, bool is_server,
 			.destroy = _destroy,
 		},
 		.type = type,
-		.is_server = is_server,
+		.is_server = tls->is_server(tls),
 		.first_fragment = TRUE,
 		.frag_size = frag_size,
-		.tls = tls_create(is_server, server, peer, purpose, application),
+		.tls = tls,
 	);
-	if (!this->tls)
-	{
-		free(this);
-		return NULL;
-	}
+
 	return &this->public;
 }

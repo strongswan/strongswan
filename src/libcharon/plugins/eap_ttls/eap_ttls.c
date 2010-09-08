@@ -126,6 +126,7 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 {
 	private_eap_ttls_t *this;
 	size_t frag_size;
+	tls_t *tls;
 
 	INIT(this,
 		.public = {
@@ -146,8 +147,13 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 	}
 	frag_size = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN);
-	this->tls_eap = tls_eap_create(EAP_TTLS, is_server, server, peer,
-								   application, frag_size);
+	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS, application);
+	if (!tls)
+	{
+		free(this);
+		return NULL;
+	}
+	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size);
 	if (!this->tls_eap)
 	{
 		application->destroy(application);
