@@ -35,11 +35,6 @@ struct private_eap_ttls_t {
 	eap_ttls_t public;
 
 	/**
-	 * Number of EAP-TLS messages processed so far
-	 */
-	int processed;
-
-	/**
 	 * TLS stack, wrapped by EAP helper
 	 */
 	tls_eap_t *tls_eap;
@@ -70,12 +65,6 @@ METHOD(eap_method_t, process, status_t,
 	status_t status;
 	chunk_t data;
 
-	if (++this->processed > MAX_MESSAGE_COUNT)
-	{
-		DBG1(DBG_IKE, "EAP-TTLS packet count exceeded (%d > %d)",
-			 this->processed, MAX_MESSAGE_COUNT);
-		return FAILED;
-	}
 	data = in->get_data(in);
 	status = this->tls_eap->process(this->tls_eap, data, &data);
 	if (status == NEED_MORE)
@@ -126,6 +115,7 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 {
 	private_eap_ttls_t *this;
 	size_t frag_size;
+	int max_msg_count;
 	tls_t *tls;
 
 	INIT(this,
@@ -147,8 +137,10 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 	}
 	frag_size = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN);
+	max_msg_count = lib->settings->get_int(lib->settings,
+					"charon.plugins.eap-ttls.max_message_count", MAX_MESSAGE_COUNT);
 	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS, application);
-	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size);
+	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size, max_msg_count);
 	if (!this->tls_eap)
 	{
 		application->destroy(application);

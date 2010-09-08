@@ -36,7 +36,7 @@ struct private_tls_eap_t {
 	tls_eap_t public;
 
 	/**
-	 * Type of EAP method, EAP-TLS or EAP-TTLS
+	 * Type of EAP method, EAP-TLS, EAP-TTLS, or EAP-TNC
 	 */
 	eap_type_t type;
 
@@ -59,6 +59,16 @@ struct private_tls_eap_t {
 	 * Maximum size of an outgoing EAP-TLS fragment
 	 */
 	size_t frag_size;
+
+	/**
+	 * Number of EAP messages/fragments processed so far
+	 */
+	int processed;
+
+	/**
+	 * Maximum number of processed EAP messages/fragments 
+	 */
+	int max_msg_count;
 };
 
 /**
@@ -251,6 +261,14 @@ METHOD(tls_eap_t, process, status_t,
 	eap_tls_packet_t *pkt;
 	status_t status;
 
+	if (++this->processed > this->max_msg_count)
+	{
+		DBG1(DBG_IKE, "%N packet count exceeded (%d > %d)",
+			 eap_type_names, this->type,
+			 this->processed, this->max_msg_count);
+		return FAILED;
+	}
+
 	pkt = (eap_tls_packet_t*)in.ptr;
 	if (in.len < sizeof(eap_tls_packet_t) ||
 		untoh16(&pkt->length) != in.len)
@@ -321,7 +339,8 @@ METHOD(tls_eap_t, destroy, void,
 /**
  * See header
  */
-tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size)
+tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
+						  int max_msg_count)
 {
 	private_tls_eap_t *this;
 
@@ -341,6 +360,7 @@ tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size)
 		.is_server = tls->is_server(tls),
 		.first_fragment = TRUE,
 		.frag_size = frag_size,
+		.max_msg_count = max_msg_count,
 		.tls = tls,
 	);
 

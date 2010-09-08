@@ -73,7 +73,9 @@ struct tls_eap_t {
  * @param type				EAP type, EAP-TLS or EAP-TTLS
  * @param tls				TLS implementation
  * @param frag_size			maximum size of a TLS fragment we send
+ * @param max_msg_count		maximum number of processed messages
  */
-tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size);
+tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
+						  int max_msg_count);
 
 #endif /** TLS_EAP_H_ @}*/
