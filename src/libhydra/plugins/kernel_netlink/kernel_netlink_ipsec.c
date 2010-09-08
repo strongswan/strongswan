@@ -183,6 +183,8 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV12,	"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
+	{ENCR_SERPENT_CBC,			"serpent"			},
+	{ENCR_TWOFISH_CBC,			"twofish"			},
 	{END_OF_LIST,				NULL				}
 };
 
