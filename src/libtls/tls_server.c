@@ -419,14 +419,18 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
-	if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+	if (ec)
 	{
-		DBG1(DBG_TLS, "DH point format '%N' not supported",
-			 tls_ansi_point_format_names, pub.ptr[0]);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+		if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+		{
+			DBG1(DBG_TLS, "DH point format '%N' not supported",
+				 tls_ansi_point_format_names, pub.ptr[0]);
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			return NEED_MORE;
+		}
+		pub = chunk_skip(pub, 1);
 	}
-	this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1));
+	this->dh->set_other_public_value(this->dh, pub);
 	if (this->dh->get_shared_secret(this->dh, &premaster) != SUCCESS)
 	{
 		DBG1(DBG_TLS, "calculating premaster from DH failed");
