@@ -143,11 +143,6 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	frag_size = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN);
 	tnc_if_tnccs = tnc_if_tnccs_create(is_server, TLS_PURPOSE_EAP_TNC);
-	if (!tnc_if_tnccs)
-	{
-		free(this);
-		return NULL;
-	}
 	this->tls_eap = tls_eap_create(EAP_TNC, tnc_if_tnccs, frag_size);
 	if (!this->tls_eap)
 	{

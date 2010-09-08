@@ -325,6 +325,11 @@ tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size)
 {
 	private_tls_eap_t *this;
 
+	if (!tls)
+	{
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.initiate = _initiate,
