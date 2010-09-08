@@ -1667,6 +1667,8 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 		case TLS_PURPOSE_GENERIC:
 			build_cipher_suite_list(this, TRUE);
 			break;
+		default:
+			break;
 	}
 	return &this->public;
 }
