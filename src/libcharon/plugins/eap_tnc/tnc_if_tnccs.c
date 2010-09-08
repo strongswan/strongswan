@@ -50,7 +50,15 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnc_if_tnccs_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	char output[] = "Hello World";
+	char output[] = 
+		"<?xml version=\"1.0\"?> "
+		"<TNCCS-Batch BatchId=\"1\" Recipient=\"TNCS\" "
+		"xmlns=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\" "
+		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+		"xsi:schemaLocation=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# "
+		"https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">	"
+		"</TNCCS-Batch>";
+
 	size_t len = strlen(output);
 	
 	/* TODO */
