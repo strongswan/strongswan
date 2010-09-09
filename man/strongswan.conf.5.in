@@ -10,17 +10,423 @@ from this file.
 The file is hard to parse and only
 .I ipsec starter
 is capable of doing so. As the number of components of the strongSwan project
-is continually growing, a more flexible configuration file was needed, one that 
+is continually growing, a more flexible configuration file was needed, one that
 is easy to extend and can be used by all components. With strongSwan 4.2.1
 .IR strongswan.conf (5)
 was introduced which meets these requirements.
 
+.SH SYNTAX
+The format of the strongswan.conf file consists of hierarchical
+.B sections
+and a list of
+.B key/value pairs
+in each section. Each section has a name, followed by C-Style curly brackets
+defining the section body. Each section body contains a set of subsections
+and key/value pairs:
+.PP
+.EX
+	settings := (section|keyvalue)*
+	section  := name { settings }
+	keyvalue := key = value\\n
+.EE
+.PP
+Values must be terminated by a newline.
+.PP
+Comments are possible using the \fB#\fP-character, but be careful: The parser
+implementation is currently limited and does not like brackets in comments.
+.PP
+Section names and keys may contain any printable character except:
+.PP
+.EX
+	. { } # \\n \\t space
+.EE
+.PP
+An example file in this format might look like this:
+.PP
+.EX
+	a = b
+	section-one {
+		somevalue = asdf
+		subsection {
+			othervalue = xxx
+		}
+		# yei, a comment
+		yetanother = zz
+	}
+	section-two {
+		x = 12
+	}
+.EE
+.PP
+Indentation is optional, you may use tabs or spaces.
+
+.SH READING VALUES
+Values are accessed using a dot-separated section list and a key.
+With reference to the example above, accessing
+.B section-one.subsection.othervalue
+will return
+.BR xxx .
+
+.SH DEFINED KEYS
+The following keys are currently defines (using dot notation). The default
+value (if any) is listed in brackets after the key.
+
+.SS charon section
+.TP
+.BR charon.block_threshold " [5]"
+Maximum number of half-open IKE_SAs for a single peer IP
+.TP
+.BR charon.close_ike_on_child_failure " [no]"
+Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed
+.TP
+.BR charon.cookie_threshold " [10]"
+Number of half-open IKE_SAs that activate the cookie mechanism
+.TP
+.BR charon.dns1
+.TQ
+.BR charon.dns2
+DNS servers assigned to peer via configuration payload (CP)
+.TP
+.BR charon.dos_protection " [yes]"
+Enable Denial of Service protection using cookies and aggressiveness checks
+.TP
+.BR charon.hash_and_url " [no]"
+Enable hash and URL support
+.TP
+.BR charon.ikesa_table_segments " [1]"
+Number of exclusively locked segments in the hash table
+.TP
+.BR charon.ikesa_table_size " [1]"
+Size of the IKE_SA hash table
+.TP
+.BR charon.inactivity_close_ike " [no]"
+Whether to close IKE_SA if the only CHILD_SA closed due to inactivity
+.TP
+.BR charon.install_routes " [yes]"
+Install routes into a separate routing table for established IPsec tunnels
+.TP
+.BR charon.keep_alive " [20s]"
+NAT keep alive interval
+.TP
+.BR charon.load
+Plugins to load in IKEv2 charon daemon
+.TP
+.BR charon.multiple_authentication " [yes]"
+Enable multiple authentication exchanges (RFC 4739)
+.TP
+.BR charon.nbns1
+.TQ
+.BR charon.nbns2
+WINS servers assigned to peer via configuration payload (CP)
+.TP
+.BR charon.process_route " [yes]"
+Process RTM_NEWROUTE and RTM_DELROUTE events
+.TP
+.BR charon.retransmit_base " [1.8]"
+Base to use for calculating exponential back off
+.TP
+.BR charon.retransmit_timeout " [4.0]
+Timeout in seconds before sending first retransmit
+.TP
+.BR charon.retransmit_tries " [5]"
+Number of times to retransmit a packet before giving up
+.TP
+.BR charon.reuse_ikesa " [yes]
+Initiate CHILD_SA within existing IKE_SAs
+.TP
+.BR charon.routing_table
+Numerical routing table to install routes to
+.TP
+.BR charon.routing_table_prio
+Priority of the routing table
+.TP
+.BR charon.send_vendor_id " [no]
+Send strongSwan vendor ID payload
+.TP
+.BR charon.threads " [16]"
+Number of worker threads in charon
+.SS charon.plugins subsection
+.TP
+.BR charon.plugins.dhcp.identity_lease " [no]"
+Derive user-defined MAC address from hash of IKEv2 identity
+.TP
+.BR charon.plugins.dhcp.server " [255.255.255.255]"
+DHCP server unicast or broadcast IP address
+.TP
+.BR charon.plugins.eap-aka.request_identity " [yes]"
+.TP
+.BR charon.plugins.eap-aka-3ggp2.seq_check
+.TP
+.BR charon.plugins.eap-gtc.pam_service " [login]"
+PAM service to be used for authentication
+.TP
+.BR charon.plugins.eap-radius.secret
+Shared secret between RADIUS and NAS
+.TP
+.BR charon.plugins.eap-radius.server
+IP/Hostname of RADIUS server
+.TP
+.BR charon.plugins.eap-radius.port " [1812]"
+Port of RADIUS server (authentication)
+.TP
+.BR charon.plugins.eap-radius.sockets " [5]"
+Number of sockets (ports) to use, increase for high load
+.TP
+.BR charon.plugins.eap-radius.nas_identifier " [strongSwan]"
+NAS-Identifier to include in RADIUS messages
+.TP
+.BR charon.plugins.eap-radius.eap_start " [no]"
+Send EAP-Start instead of EAP-Identity to start RADIUS conversation
+.TP
+.BR charon.plugins.eap-radius.id_prefix
+Prefix to EAP-Identity, some AAA servers use a IMSI prefix to select the EAP method
+.TP
+.BR charon.plugins.eap-sim.request_identity " [yes]"
+
+.TP
+.BR charon.plugins.eap-tls.fragment_size " [1024]"
+Maximum size of an EAP-TLS packet
+.TP
+.BR charon.plugins.eap-tls.max_message_count " [32]"
+Maximum number of processed EAP-TLS packets
+.TP
+.BR charon.plugins.eap-ttls.fragment_size " [1024]"
+Maximum size of an EAP-TTLS packet
+.TP
+.BR charon.plugins.eap-ttls.max_message_count " [32]"
+Maximum number of processed EAP-TTLS packets
+.TP
+.BR charon.plugins.eap-ttls.phase2_method " [md5]"
+Phase2 EAP client authentication method
+.TP
+.BR charon.plugins.eap-ttls.phase2_piggyback " [no]"
+Phase2 EAP Identity request piggybacked by server onto TLS Finished message
+.TP
+.BR charon.plugins.eap-ttls.request_peer_auth " [no]"
+Request peer authentication based on a client certificate
+.TP
+.BR charon.plugins.ha.fifo_interface " [yes]"
+
+.TP
+.BR charon.plugins.ha.local
+
+.TP
+.BR charon.plugins.ha.monitor " [yes]"
+
+.TP
+.BR charon.plugins.ha.remote
+
+.TP
+.BR charon.plugins.ha.resync " [yes]"
+
+.TP
+.BR charon.plugins.ha.secret
+
+.TP
+.BR charon.plugins.ha.segment_count " [1]"
+
+.TP
+.BR charon.plugins.kernel-klips.ipsec_dev_mtu " [0]"
+Set MTU of ipsecN device
+.TP
+.BR charon.plugins.load-tester.enable " [no]"
+Enable the load testing plugin
+.TP
+.BR charon.plugins.load-tester.initiators " [0]"
+Number of concurrent initiator threads to use in load test
+.TP
+.BR charon.plugins.load-tester.iterations " [1]"
+Number of IKE_SAs to initate to self by each initiator in load test
+.TP
+.BR charon.plugins.load-tester.delay " [0]"
+Delay between initiatons for each thread
+.TP
+.BR charon.plugins.load-tester.proposal " [aes128-sha1-modp1024]"
+IKE proposal to use in load test
+.TP
+.BR charon.plugins.load-tester.initiator_auth " [pubkey]"
+Authentication method(s) the intiator uses
+.TP
+.BR charon.plugins.load-tester.responder_auth " [pubkey]"
+Authentication method(s) the responder uses
+.TP
+.BR charon.plugins.load-tester.fake_kernel " [no]"
+Fake the kernel interface to allow load-testing against self
+.TP
+.BR charon.plugins.load-tester.delete_after_established " [no]"
+Delete an IKE_SA as soon as it has been established
+.TP
+.BR charon.plugins.load-tester.request_virtual_ip " [no]"
+Request an INTERNAL_IPV4_ADDR from the server
+.TP
+.BR charon.plugins.load-tester.pool
+Provide INTERNAL_IPV4_ADDRs from a named pool
+.TP
+.BR charon.plugins.load-tester.remote " [127.0.0.1]"
+Address to initiation connections to
+.TP
+.BR charon.plugins.load-tester.ike_rekey " [0]"
+Seconds to start IKE_SA rekeying after setup
+.TP
+.BR charon.plugins.load-tester.child_rekey " [600]"
+Seconds to start CHILD_SA rekeying after setup
+.TP
+.BR charon.plugins.resolve.file " [/etc/resolv.conf]"
+File where to add DNS server entries
+.TP
+.BR charon.plugins.sql.database
+Database URI for charons SQL plugin
+.TP
+.BR charon.plugins.sql.loglevel " [-1]"
+Loglevel for logging to SQL database
+.SS libstrongswan section
+.TP
+.BR libstrongswan.dh_exponent_ansi_x9_42 " [yes]"
+Use ANSI X9.42 DH exponent size or optimum size matched to cryptographical strength
+.TP
+.BR libstrongswan.crypto_test.on_add " [no]"
+Test crypto algorithms during registration
+.TP
+.BR libstrongswan.crypto_test.on_create " [no]"
+Test crypto algorithms on each crypto primitive instantiation
+.TP
+.BR libstrongswan.crypto_test.required " [no]"
+Strictly require at least one test vector to enable an algorithm
+.TP
+.BR libstrongswan.crypto_test.rng_true " [no]"
+Whether to test RNG with TRUE quality; requires a lot of entropy
+.TP
+.BR libstrongswan.ecp_x_coordinate_only " [yes]"
+Compliance with the errata for RFC 4753
+.TP
+.BR libstrongswan.integrity_test " [no]"
+Check daemon, libstrongswan and plugin integrity at startup
+.SS libstrongswan.plugins subsection
+.TP
+.BR libstrongswan.plugins.attr-sql.database
+Database URI for attr-sql plugin used by charon and pluto
+.TP
+.BR libstrongswan.plugins.attr-sql.lease_history " [yes]"
+Enable logging of SQL IP pool leases
+.TP
+.BR libstrongswan.plugins.gcrypt.quick_random " [no]"
+Use faster random numbers in gcrypt; for testing only, produces weak keys!
+.TP
+.BR libstrongswan.plugins.openssl.engine_id " [pkcs11]"
+ENGINE ID to use in the OpenSSL plugin
+.TP
+.BR libstrongswan.plugins.x509.enforce_critical " [no]"
+Discard certificates with unsupported or unknown critical extensions
+.SS libtls section
+.TP
+.BR libtls.cipher
+List of TLS encryption ciphers
+.TP
+.BR libtls.key_exchange
+List of TLS key exchange methods
+.TP
+.BR libtls.mac
+List of TLS MAC algorithms
+.SS manager section
+.TP
+.BR manager.database
+Credential database URI for manager
+.TP
+.BR manager.debug " [no]"
+Enable debugging in manager
+.TP
+.BR manager.load
+Plugins to load in manager
+.TP
+.BR manager.socket
+FastCGI socket of manager, to run it statically
+.TP
+.BR manager.threads " [10]"
+Threads to use for request handling
+.TP
+.BR manager.timeout " [15m]"
+Session timeout for manager
+.SS mediation client section
+.TP
+.BR medcli.database
+Mediation client database URI
+.TP
+.BR medcli.dpd " [5m]"
+DPD timeout to use in mediation client plugin
+.TP
+.BR medcli.rekey " [20m]"
+Rekeying time on mediation connections in mediation client plugin
+.SS mediation server section
+.TP
+.BR medsrv.database
+Mediation server database URI
+.TP
+.BR medsrv.debug " [no]"
+Debugging in mediation server web application
+.TP
+.BR medsrv.dpd " [5m]"
+DPD timeout to use in mediation server plugin
+.TP
+.BR medsrv.load
+Plugins to load in mediation server plugin
+.TP
+.BR medsrv.password_length " [6]"
+Minimum password length required for mediation server user accounts
+.TP
+.BR medsrv.rekey " [20m]"
+Rekeying time on mediation connections in mediation server plugin
+.TP
+.BR medsrv.socket
+Run Mediation server web application statically on socket
+.TP
+.BR medsrv.threads " [5]"
+Number of thread for mediation service web application
+.TP
+.BR medsrv.timeout " [15m]"
+Session timeout for mediation service
+.SS openac section
+.TP
+.BR openac.load
+Plugins to load in ipsec openac tool
+.SS pki section
+.TP
+.BR pki.load
+Plugins to load in ipsec pki tool
+.SS pluto section
+.TP
+.BR pluto.dns1
+.TQ
+.BR pluto.dns2
+DNS servers assigned to peer via configuration payload (CP)
+.TP
+.BR pluto.load
+Plugins to load in IKEv1 pluto daemon
+.TP
+.BR pluto.nbns1
+.TQ
+.BR pluto.nbns2
+WINS servers assigned to peer via configuration payload (CP)
+.SS pool section
+.TP
+.BR pool.load
+Plugins to load in ipsec pool tool
+.SS scepclient section
+.TP
+.BR scepclient.load
+Plugins to load in ipsec scepclient tool
+.SS starter section
+.TP
+.BR starter.load_warning " [yes]"
+Disable charon/pluto plugin load option warning
+
 .SH FILES
-.nf
 /etc/strongswan.conf
 
 .SH SEE ALSO
 ipsec.conf (5), ipsec.secrets (5)
 .SH HISTORY
-Written for the strongSwan project <http://www.strongswan.org> by
-Tobias Brunner, Andreas Steffen and Martin Willi.
+Written for the
+.UR http://www.strongswan.org
+strongSwan project
+.UE
+by Tobias Brunner, Andreas Steffen and Martin Willi.
