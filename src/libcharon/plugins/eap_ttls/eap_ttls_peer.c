@@ -147,11 +147,15 @@ METHOD(tls_application_t, process, status_t,
 	switch (status)
 	{
 		case SUCCESS:
-			/* fall through to NEED_MORE since response must be sent */
-		case NEED_MORE:
-			/* TODO support multiple EAP request/response exchanges */
 			this->method->destroy(this->method);
 			this->method = NULL;
+			return NEED_MORE;
+		case NEED_MORE:
+			if (type != EAP_TNC)
+			{
+				this->method->destroy(this->method);
+				this->method = NULL;
+			}
 			return NEED_MORE;
 		case FAILED:
 		default:

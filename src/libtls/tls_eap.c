@@ -72,13 +72,13 @@ struct private_tls_eap_t {
 };
 
 /**
- * Flags of an EAP-TLS/TTLS message
+ * Flags of an EAP-TLS/TTLS/TNC message
  */
 typedef enum {
-	EAP_TLS_LENGTH = (1<<7),
-	EAP_TLS_MORE_FRAGS = (1<<6),
-	EAP_TLS_START = (1<<5),
-	EAP_TTLS_VERSION = (0x07),
+	EAP_TLS_LENGTH = (1<<7),		/* shared with EAP-TTLS/TNC */
+	EAP_TLS_MORE_FRAGS = (1<<6),	/* shared with EAP-TTLS/TNC */
+	EAP_TLS_START = (1<<5),			/* shared with EAP-TTLS/TNC */
+	EAP_TTLS_VERSION = (0x07),		/* shared with EAP-TNC      */
 } eap_tls_flags_t;
 
 #define EAP_TTLS_SUPPORTED_VERSION	0
