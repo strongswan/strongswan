@@ -1624,6 +1624,7 @@ void kernel_finalize()
 {
 	hydra->kernel_interface->remove_listener(hydra->kernel_interface,
 											 kernel_handler);
+	free(kernel_handler);
 }
 
 /* Note: install_inbound_ipsec_sa is only used by the Responder.
