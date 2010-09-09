@@ -90,6 +90,9 @@ DNS servers assigned to peer via configuration payload (CP)
 .BR charon.dos_protection " [yes]"
 Enable Denial of Service protection using cookies and aggressiveness checks
 .TP
+.BR charon.filelog
+Section to define file loggers, see LOGGER CONFIGURATION.
+.TP
 .BR charon.hash_and_url " [no]"
 Enable hash and URL support
 .TP
@@ -142,6 +145,9 @@ Priority of the routing table
 .TP
 .BR charon.send_vendor_id " [no]
 Send strongSwan vendor ID payload
+.TP
+.BR charon.syslog
+Section to define syslog loggers, see LOGGER CONFIGURATION.
 .TP
 .BR charon.threads " [16]"
 Number of worker threads in charon
@@ -418,6 +424,149 @@ Plugins to load in ipsec scepclient tool
 .TP
 .BR starter.load_warning " [yes]"
 Disable charon/pluto plugin load option warning
+
+.SH LOGGER CONFIGURATION
+The options described below provide a much more flexible way to configure
+loggers for the IKEv2 daemon charon than using the
+.B charondebug
+option in
+.BR ipsec.conf (5).
+.PP
+.B Please note
+that if any loggers are specified in strongswan.conf,
+.B charondebug
+does not have any effect.
+.PP
+There are currently two types of loggers defined:
+.TP
+.B File loggers
+Log directly to a file and are defined by specifying the full path to the
+file as subsection in the
+.B charon.filelog
+section. To log to the console the two special filenames
+.BR stdout " and " stderr
+can be used.
+.TP
+.B Syslog loggers
+Log into a syslog facility and are defined by specifying the facility to log to
+as the name of a subsection in the
+.B charon.syslog
+section. The following facilities are currently supported:
+.BR daemon " and " auth .
+.PP
+Multiple loggers can be defined for each type with different log verbosity for
+the different subsystems of the daemon.
+.SS Options
+.TP
+.BR charon.filelog.<filename>.default " [1]"
+.TQ
+.BR charon.syslog.<facility>.default
+Specifies the default loglevel to be used for subsystems for which no specific
+loglevel is defined.
+.TP
+.BR charon.filelog.<filename>.<subsystem> " [<default>]"
+.TQ
+.BR charon.syslog.<facility>.<subsystem>
+Defines the loglevel for the given subsystem.
+.TP
+.BR charon.filelog.<filename>.append " [yes]"
+If this option is enabled log entries are appended to the existing file
+.TP
+.BR charon.filelog.<filename>.flush_line " [no]"
+Enabling this option disables block buffering and enables line buffering.
+.TP
+.BR charon.filelog.<filename>.ike_name " [no]"
+.TQ
+.BR charon.syslog.<facility>.ike_name
+Prefix each log entry with the connection name and a unique numerical
+identifier for each IKE_SA.
+.TP
+.BR charon.filelog.<filename>.time_format
+Prefix each log entry with a timestamp. The option accepts a format string as
+passed to
+.BR strftime (3).
+
+.SS Subsystems
+.TP
+.B dmn
+Main daemon setup/cleanup/signal handling
+.TP
+.B mgr
+IKE_SA manager, handling synchronization for IKE_SA access
+.TP
+.B ike
+IKE_SA
+.TP
+.B chd
+CHILD_SA
+.TP
+.B job
+Jobs queueing/processing and thread pool management
+.TP
+.B cfg
+Configuration management and plugins
+.TP
+.B knl
+IPsec/Networking kernel interface
+.TP
+.B net
+IKE network communication
+.TP
+.B enc
+Packet encoding/decoding encryption/decryption operations
+.TP
+.B tls
+libtls library messages
+.TP
+.B lib
+libstrongwan library messages
+.SS Loglevels
+.TP
+.B -1
+Absolutely silent
+.TP
+.B 0
+Very basic auditing logs, (e.g. SA up/SA down)
+.TP
+.B 1
+Generic control flow with errors, a good default to see whats going on
+.TP
+.B 2
+More detailed debugging control flow
+.TP
+.B 3
+Including RAW data dumps in Hex
+.TP
+.B 4
+Also include sensitive material in dumps, e.g. keys
+.SS Example
+.PP
+.EX
+	charon {
+		filelog {
+			/var/log/charon.log {
+				time_format = %b %e %T
+				append = no
+				default = 1
+			}
+			stderr {
+				ike = 2
+				knl = 3
+				ike_name = yes
+			}
+		}
+		syslog {
+			# enable logging to LOG_DAEMON, use defaults
+			daemon {
+			}
+			# minimalistic IKE auditing logging to LOG_AUTHPRIV
+			auth {
+				default = -1
+				ike = 0
+			}
+		}
+	}
+.EE
 
 .SH IKEv2 RETRANSMISSION
 Retransmission timeouts in the IKEv2 daemon charon can be configured globally
