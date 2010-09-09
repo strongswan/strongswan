@@ -295,10 +295,23 @@ METHOD(certificate_t, has_subject, id_match_t,
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
+	chunk_t encoding;
 
 	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		if (chunk_equals(this->hash, subject->get_encoding(subject)))
+		encoding = subject->get_encoding(subject);
+
+		if (chunk_equals(this->hash, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->subjectKeyIdentifier.len &&
+			chunk_equals(this->subjectKeyIdentifier, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->pubkey &&
+			this->pubkey->has_fingerprint(this->pubkey, encoding))
 		{
 			return ID_MATCH_PERFECT;
 		}
