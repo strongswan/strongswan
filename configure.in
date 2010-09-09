@@ -920,6 +920,7 @@ dnl ==============================
 
 AC_OUTPUT(
 	Makefile
+	man/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile

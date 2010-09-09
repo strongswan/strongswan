@@ -88,9 +88,7 @@ _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
-CLEANFILES = ipsec.secrets.5
-dist_man_MANS = pluto.8 ipsec.secrets.5
-EXTRA_DIST = ipsec.secrets.5.in
+dist_man_MANS = pluto.8
 
 # compile options
 #################
@@ -136,9 +134,4 @@ SUBDIRS = .
 if USE_XAUTH
   SUBDIRS += plugins/xauth
 endif
-
-ipsec.secrets.5 : ipsec.secrets.5.in
-	sed \
-	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-	$(srcdir)/$@.in > $@
 

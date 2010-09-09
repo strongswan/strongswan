@@ -24,9 +24,8 @@ AM_CFLAGS = \
 -DDEBUG
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
-EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf ipsec.conf.5.in
-dist_man_MANS = ipsec.conf.5 starter.8
-CLEANFILES = ipsec.conf.5
+EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
+dist_man_MANS = starter.8
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
@@ -43,11 +42,6 @@ endif
 if USE_LOAD_WARNING
   AM_CFLAGS += -DLOAD_WARNING
 endif
-
-ipsec.conf.5:	ipsec.conf.5.in
-		sed \
-		-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-		$(srcdir)/$@.in > $@
 
 lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
 		$(LEX) $(srcdir)/parser.l
