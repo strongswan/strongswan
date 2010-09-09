@@ -43,7 +43,10 @@ struct private_tnc_if_tnccs_t {
 METHOD(tls_t, process, status_t,
 	private_tnc_if_tnccs_t *this, void *buf, size_t buflen)
 {
+	chunk_t in = { buf, buflen };
+
 	/* TODO */
+	DBG1(DBG_IKE, "received TNCCS-Batch: %B", &in);
 	return NEED_MORE;
 }
 
@@ -51,17 +54,19 @@ METHOD(tls_t, build, status_t,
 	private_tnc_if_tnccs_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
 	char output[] = 
-		"<?xml version=\"1.0\"?> "
-		"<TNCCS-Batch BatchId=\"1\" Recipient=\"TNCS\" "
-		"xmlns=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\" "
-		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
-		"xsi:schemaLocation=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# "
-		"https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">	"
-		"</TNCCS-Batch>";
+		"<?xml version=\"1.0\"?>\n"
+		"<TNCCS-Batch BatchId=\"1\" Recipient=\"TNCS\"\n"
+		"xmlns=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\"\n"
+		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+		"xsi:schemaLocation=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\n"
+		"https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">\n"
+		"</TNCCS-Batch>\n";
 
 	size_t len = strlen(output);
-	
+	chunk_t out = { output, len };	
+
 	/* TODO */
+	DBG1(DBG_IKE, "sending TNCCS-Batch: %B", &out);
 	*buflen = len;
 	*msglen = len;
 	memcpy(buf, output, len);
@@ -85,7 +90,7 @@ METHOD(tls_t, is_complete, bool,
 	private_tnc_if_tnccs_t *this)
 {
 	/* TODO */
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
