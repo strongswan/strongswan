@@ -26,7 +26,7 @@
 typedef struct led_listener_t led_listener_t;
 
 /**
- * Listener to register the set of IPs we spoof ARP responses for.
+ * Listener that controls LEDs based on IKEv2 activity/state.
  */
 struct led_listener_t {
 
