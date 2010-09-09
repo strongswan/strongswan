@@ -1,0 +1,26 @@
+.TH STRONGSWAN.CONF 5 "2010-09-09" "@IPSEC_VERSION@" "strongSwan"
+.SH NAME
+strongswan.conf \- strongSwan configuration file
+.SH DESCRIPTION
+While the
+.IR ipsec.conf (5)
+configuration file is well suited to define IPsec related configuration
+parameters, it is not useful for other strongSwan applications to read options
+from this file.
+The file is hard to parse and only
+.I ipsec starter
+is capable of doing so. As the number of components of the strongSwan project
+is continually growing, a more flexible configuration file was needed, one that 
+is easy to extend and can be used by all components. With strongSwan 4.2.1
+.IR strongswan.conf (5)
+was introduced which meets these requirements.
+
+.SH FILES
+.nf
+/etc/strongswan.conf
+
+.SH SEE ALSO
+ipsec.conf (5), ipsec.secrets (5)
+.SH HISTORY
+Written for the strongSwan project <http://www.strongswan.org> by
+Tobias Brunner, Andreas Steffen and Martin Willi.
