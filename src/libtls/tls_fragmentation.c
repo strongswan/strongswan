@@ -393,14 +393,14 @@ METHOD(tls_fragmentation_t, build, status_t,
 		*type = TLS_ALERT;
 		return NEED_MORE;
 	}
-	if (this->handshake->cipherspec_changed(this->handshake))
-	{
-		*type = TLS_CHANGE_CIPHER_SPEC;
-		*data = chunk_clone(chunk_from_chars(0x01));
-		return NEED_MORE;
-	}
 	if (!this->output.len)
 	{
+		if (this->handshake->cipherspec_changed(this->handshake))
+		{
+			*type = TLS_CHANGE_CIPHER_SPEC;
+			*data = chunk_clone(chunk_from_chars(0x01));
+			return NEED_MORE;
+		}
 		if (!this->handshake->finished(this->handshake))
 		{
 			status = build_handshake(this);
