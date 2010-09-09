@@ -123,7 +123,7 @@ WINS servers assigned to peer via configuration payload (CP)
 Process RTM_NEWROUTE and RTM_DELROUTE events
 .TP
 .BR charon.retransmit_base " [1.8]"
-Base to use for calculating exponential back off
+Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION below
 .TP
 .BR charon.retransmit_timeout " [4.0]
 Timeout in seconds before sending first retransmit
@@ -418,6 +418,43 @@ Plugins to load in ipsec scepclient tool
 .TP
 .BR starter.load_warning " [yes]"
 Disable charon/pluto plugin load option warning
+
+.SH IKEv2 RETRANSMISSION
+Retransmission timeouts in the IKEv2 daemon charon can be configured globally
+using the three keys listed below:
+.PP
+.RS
+.nf
+.BR charon.retransmit_base " [1.8]"
+.BR charon.retransmit_timeout " [4.0]"
+.BR charon.retransmit_tries " [5]"
+.fi
+.RE
+.PP
+The following algorithm is used to calculate the timeout:
+.PP
+.EX
+	relative timeout = retransmit_timeout * retransmit_base ^ (n-1)
+.EE
+.PP
+Where
+.I n
+is the current retransmission count.
+.PP
+Using the default values, packets are retransmitted in:
+
+.TS
+l r r
+---
+lB r r.
+Retransmission	Relative Timeout	Absolute Timeout
+1	4s	4s
+2	7s	11s
+3	13s	24s
+4	23s	47s
+5	42s	89s
+giving up	76s	165s
+.TE
 
 .SH FILES
 /etc/strongswan.conf
