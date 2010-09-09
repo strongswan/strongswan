@@ -64,31 +64,96 @@ struct private_eap_ttls_peer_t {
 	eap_ttls_avp_t *avp;
 };
 
+/**
+ * EAP packet format
+ */
+typedef struct __attribute__((packed)) {
+	u_int8_t code;
+	u_int8_t identifier;
+	u_int16_t length;
+	u_int8_t type;
+	u_int8_t data;
+} eap_packet_t;
+
+#define MAX_RADIUS_ATTRIBUTE_SIZE	253
+
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_peer_t *this, tls_reader_t *reader)
 {
-	chunk_t data = chunk_empty;
+	chunk_t avp_data = chunk_empty;
+	chunk_t eap_data = chunk_empty;
 	status_t status;
 	payload_t *payload;
 	eap_payload_t *in;
+	eap_packet_t *pkt;
 	eap_code_t code;
 	eap_type_t type, received_type;
 	u_int32_t vendor, received_vendor;
+	u_int16_t eap_len;
+	size_t eap_pos = 0;
+	bool concatenated = FALSE;
 
-	status = this->avp->process(this->avp, reader, &data);
-	switch (status)
+	do
 	{
-		case SUCCESS:
-			break;
-		case NEED_MORE:
-			DBG1(DBG_IKE, "need more AVP data");
-			return NEED_MORE;
-		case FAILED:
-		default:
+		status = this->avp->process(this->avp, reader, &avp_data);
+		switch (status)
+		{
+			case SUCCESS:
+				break;
+			case NEED_MORE:
+				DBG1(DBG_IKE, "need more AVP data");
+				return NEED_MORE;
+			case FAILED:
+			default:
+				return FAILED;
+		}
+
+		if (eap_data.len == 0)
+		{
+			if (avp_data.len < 4)
+			{
+				DBG1(DBG_IKE, "AVP size to small to contain EAP header");
+				chunk_free(&avp_data);
+				return FAILED;
+			}
+			pkt = (eap_packet_t*)avp_data.ptr;
+			eap_len = untoh16(&pkt->length);
+
+			if (eap_len <= avp_data.len)
+			{
+				/* standard:  EAP packet contained in a single AVP */
+				eap_data = avp_data;
+				break;
+			}
+			else if (avp_data.len == MAX_RADIUS_ATTRIBUTE_SIZE)
+			{
+				/* non-standard: EAP packet segmented into multiple AVPs */
+				eap_data = chunk_alloc(eap_len);
+				concatenated = TRUE;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "non-radius segmentation of EAP packet into AVPs");
+				chunk_free(&avp_data);
+				return FAILED;
+			}
+		}
+
+		if (avp_data.len > eap_data.len - eap_pos)
+		{
+			DBG1(DBG_IKE, "AVP size to large to fit into EAP packet");
+			chunk_free(&avp_data);
+			chunk_free(&eap_data);
 			return FAILED;
+		}
+		memcpy(eap_data.ptr + eap_pos, avp_data.ptr, avp_data.len);
+		eap_pos += avp_data.len;
+		chunk_free(&avp_data);
 	}
-	in = eap_payload_create_data(data);
-	chunk_free(&data);
+	while (eap_pos < eap_data.len);
+ 		
+	in = eap_payload_create_data(eap_data);
+	chunk_free(&eap_data);
 	payload = (payload_t*)in;
 
 	if (payload->verify(payload) != SUCCESS)
@@ -98,7 +163,8 @@ METHOD(tls_application_t, process, status_t,
 	}
 	code = in->get_code(in);
 	received_type = in->get_type(in, &received_vendor);
-	DBG1(DBG_IKE, "received tunneled EAP-TTLS AVP [EAP/%N/%N]",
+	DBG1(DBG_IKE, "received tunneled EAP-TTLS AVP%s [EAP/%N/%N]",
+							concatenated ? "s" : "",
 					   		eap_code_short_names, code,
 							eap_type_short_names, received_type);
 	if (code != EAP_REQUEST)
