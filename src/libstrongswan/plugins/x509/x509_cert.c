@@ -1099,6 +1099,11 @@ static identification_t* get_issuer(private_x509_cert_t *this)
 }
 
 /**
+ * Forward declaration
+ */
+static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this);
+
+/**
  * Implementation of certificate_t.has_subject.
  */
 static id_match_t has_subject(private_x509_cert_t *this, identification_t *subject)
@@ -1107,14 +1112,19 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	enumerator_t *enumerator;
 	id_match_t match, best;
 
-	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_KEY_ID)
+	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		if (chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
+		chunk_t keyid = subject->get_encoding(subject);
+
+		if (this->encoding_hash.ptr && chunk_equals(this->encoding_hash, keyid))
 		{
 			return ID_MATCH_PERFECT;
 		}
-	}
-
+		if (chunk_equals(get_subjectKeyIdentifier(this), keyid))
+		{
+			return ID_MATCH_PERFECT;
+		}
+	}		
 	best = this->subject->matches(this->subject, subject);
 	enumerator = this->subjectAltNames->create_enumerator(this->subjectAltNames);
 	while (enumerator->enumerate(enumerator, &current))
