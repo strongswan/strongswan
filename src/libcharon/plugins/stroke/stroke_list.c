@@ -1027,9 +1027,10 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
  */
 static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 {
-	bool first = TRUE;
+	bool first = TRUE, ok;
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
+	time_t produced, usable, now = time(NULL);
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
@@ -1040,8 +1041,20 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 			fprintf(out, "\n");
 			first = FALSE;
 		}
-
 		fprintf(out, "  signer:   \"%Y\"\n", cert->get_issuer(cert));
+
+		/* check validity */
+		ok = cert->get_validity(cert, &now, &produced, &usable);
+		fprintf(out, "  validity:  produced at %T\n", &produced, utc);
+		fprintf(out, "             usable till %T, ", &usable, utc);
+		if (ok)
+		{
+			fprintf(out, "ok\n");
+		}
+		else
+		{
+			fprintf(out, "expired (%V ago)\n", &now, &usable);
+		}
 	}
 	enumerator->destroy(enumerator);
 }
