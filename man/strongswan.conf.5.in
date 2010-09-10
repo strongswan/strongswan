@@ -68,7 +68,7 @@ will return
 .BR xxx .
 
 .SH DEFINED KEYS
-The following keys are currently defines (using dot notation). The default
+The following keys are currently defined (using dot notation). The default
 value (if any) is listed in brackets after the key.
 
 .SS charon section
@@ -91,7 +91,7 @@ DNS servers assigned to peer via configuration payload (CP)
 Enable Denial of Service protection using cookies and aggressiveness checks
 .TP
 .BR charon.filelog
-Section to define file loggers, see LOGGER CONFIGURATION.
+Section to define file loggers, see LOGGER CONFIGURATION
 .TP
 .BR charon.hash_and_url " [no]"
 Enable hash and URL support
@@ -126,7 +126,7 @@ WINS servers assigned to peer via configuration payload (CP)
 Process RTM_NEWROUTE and RTM_DELROUTE events
 .TP
 .BR charon.retransmit_base " [1.8]"
-Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION below
+Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
 .TP
 .BR charon.retransmit_timeout " [4.0]
 Timeout in seconds before sending first retransmit
@@ -147,7 +147,7 @@ Priority of the routing table
 Send strongSwan vendor ID payload
 .TP
 .BR charon.syslog
-Section to define syslog loggers, see LOGGER CONFIGURATION.
+Section to define syslog loggers, see LOGGER CONFIGURATION
 .TP
 .BR charon.threads " [16]"
 Number of worker threads in charon
@@ -235,47 +235,8 @@ Request peer authentication based on a client certificate
 .BR charon.plugins.kernel-klips.ipsec_dev_mtu " [0]"
 Set MTU of ipsecN device
 .TP
-.BR charon.plugins.load-tester.enable " [no]"
-Enable the load testing plugin
-.TP
-.BR charon.plugins.load-tester.initiators " [0]"
-Number of concurrent initiator threads to use in load test
-.TP
-.BR charon.plugins.load-tester.iterations " [1]"
-Number of IKE_SAs to initate to self by each initiator in load test
-.TP
-.BR charon.plugins.load-tester.delay " [0]"
-Delay between initiatons for each thread
-.TP
-.BR charon.plugins.load-tester.proposal " [aes128-sha1-modp1024]"
-IKE proposal to use in load test
-.TP
-.BR charon.plugins.load-tester.initiator_auth " [pubkey]"
-Authentication method(s) the intiator uses
-.TP
-.BR charon.plugins.load-tester.responder_auth " [pubkey]"
-Authentication method(s) the responder uses
-.TP
-.BR charon.plugins.load-tester.fake_kernel " [no]"
-Fake the kernel interface to allow load-testing against self
-.TP
-.BR charon.plugins.load-tester.delete_after_established " [no]"
-Delete an IKE_SA as soon as it has been established
-.TP
-.BR charon.plugins.load-tester.request_virtual_ip " [no]"
-Request an INTERNAL_IPV4_ADDR from the server
-.TP
-.BR charon.plugins.load-tester.pool
-Provide INTERNAL_IPV4_ADDRs from a named pool
-.TP
-.BR charon.plugins.load-tester.remote " [127.0.0.1]"
-Address to initiation connections to
-.TP
-.BR charon.plugins.load-tester.ike_rekey " [0]"
-Seconds to start IKE_SA rekeying after setup
-.TP
-.BR charon.plugins.load-tester.child_rekey " [600]"
-Seconds to start CHILD_SA rekeying after setup
+.BR charon.plugins.load-tester
+Section to configure the load-tester plugin, see LOAD TESTS
 .TP
 .BR charon.plugins.resolve.file " [/etc/resolv.conf]"
 File where to add DNS server entries
@@ -563,6 +524,174 @@ Also include sensitive material in dumps, e.g. keys
 			auth {
 				default = -1
 				ike = 0
+			}
+		}
+	}
+.EE
+
+.SH LOAD TESTS
+To do stability testing and performance optimizations, the IKEv2 daemon charon
+provides the load-tester plugin. This plugin allows to setup thousands of
+tunnels concurrently against the daemon itself or a remote host.
+.PP
+.B WARNING:
+Never enable the load-testing plugin on productive systems. It provides
+preconfigured credentials and allows an attacker to authenticate as any user.
+.SS Options
+.TP
+.BR charon.plugins.load-tester.child_rekey " [600]"
+Seconds to start CHILD_SA rekeying after setup
+.TP
+.BR charon.plugins.load-tester.delay " [0]"
+Delay between initiatons for each thread
+.TP
+.BR charon.plugins.load-tester.delete_after_established " [no]"
+Delete an IKE_SA as soon as it has been established
+.TP
+.BR charon.plugins.load-tester.enable " [no]"
+Enable the load testing plugin
+.TP
+.BR charon.plugins.load-tester.fake_kernel " [no]"
+Fake the kernel interface to allow load-testing against self
+.TP
+.BR charon.plugins.load-tester.ike_rekey " [0]"
+Seconds to start IKE_SA rekeying after setup
+.TP
+.BR charon.plugins.load-tester.initiators " [0]"
+Number of concurrent initiator threads to use in load test
+.TP
+.BR charon.plugins.load-tester.initiator_auth " [pubkey]"
+Authentication method(s) the intiator uses
+.TP
+.BR charon.plugins.load-tester.iterations " [1]"
+Number of IKE_SAs to initate by each initiator in load test
+.TP
+.BR charon.plugins.load-tester.pool
+Provide INTERNAL_IPV4_ADDRs from a named pool
+.TP
+.BR charon.plugins.load-tester.proposal " [aes128-sha1-modp1024]"
+IKE proposal to use in load test
+.TP
+.BR charon.plugins.load-tester.remote " [127.0.0.1]"
+Address to initiation connections to
+.TP
+.BR charon.plugins.load-tester.responder_auth " [pubkey]"
+Authentication method(s) the responder uses
+.TP
+.BR charon.plugins.load-tester.request_virtual_ip " [no]"
+Request an INTERNAL_IPV4_ADDR from the server
+.TP
+.BR charon.plugins.load-tester.shutdown_when_complete " [no]"
+Shutdown the daemon after all IKE_SA have been established
+.SS Configuration details
+For public key authentication, the responder uses the
+.B \(dqCN=srv, OU=load-test, O=strongSwan\(dq
+identity. For the initiator, each connection attempt uses a different identity
+in the form
+.BR "\(dqCN=c1-r1, OU=load-test, O=strongSwan\(dq" ,
+where the first number inidicates the client number, the second the
+authentication round (if multiple authentication is used).
+.PP
+For PSK authentication, FQDN identities are used. The server uses
+.BR srv.strongswan.org ,
+the client uses an identity in the form
+.BR c1-r1.strongswan.org .
+.PP
+For EAP authentication, the client uses a NAI in the form
+.BR 100000000010001@strongswan.org .
+.PP
+To configure multiple authentication, concatenate multiple methods using, e.g.
+.EX
+	initiator_auth = pubkey|psk|eap-md5|eap-aka
+.EE
+.PP
+The responder uses a hardcoded certificate based on a 1024-bit RSA key.
+This certificate additionally serves as CA certificate. A peer uses the same
+private key, but generates client certificates on demand signed by the CA
+certificate. Install the Responder/CA certificate on the remote host to
+authenticate all clients.
+.PP
+To speed up testing, the load tester plugin implements a special Diffie-Hellman
+implementation called modpnull. By setting
+.EX
+	proposal = aes128-sha1-modpnull
+.EE
+this wicked fast DH implementation is used. It does not provide any security
+at all, but allows to run tests without DH calculation overhead.
+.SS Examples
+.PP
+In the simplest case, the daemon initiates IKE_SAs against itself using the
+loopback interface. This will actually establish double the number of IKE_SAs,
+as the daemon is initiator and responder for each IKE_SA at the same time.
+Installation of IPsec SAs would fails, as each SA gets installed twice. To
+simulate the correct behavior, a fake kernel interface can be enabled which does
+not install the IPsec SAs at the kernel level.
+.PP
+A simple loopback configuration might look like this:
+.PP
+.EX
+	charon {
+		# create new IKE_SAs for each CHILD_SA to simulate
+		# different clients
+		reuse_ikesa = no
+		# turn off denial of service protection
+		dos_protection = no
+
+		plugins {
+			load-tester {
+				# enable the plugin
+				enable = yes
+				# use 4 threads to initiate connections
+				# simultaneously
+				initiators = 4
+				# each thread initiates 1000 connections
+				iterations = 1000
+				# delay each initiation in each thread by 20ms
+				delay = 20
+				# enable the fake kernel interface to
+				# avoid SA conflicts
+				fake_kernel = yes
+			}
+		}
+	}
+.EE
+.PP
+This will initiate 4000 IKE_SAs within 20 seconds. You may increase the delay
+value if your box can not handle that much load, or decrease it to put more
+load on it. If the daemon starts retransmitting messages your box probably can
+not handle all connection attempts.
+.PP
+The plugin also allows to test against a remote host. This might help to test
+against a real world configuration. A connection setup to do stress testing of
+a gateway might look like this:
+.PP
+.EX
+	charon {
+		reuse_ikesa = no
+		threads = 32
+
+		plugins {
+			load-tester {
+				enable = yes
+				# 10000 connections, ten in parallel
+				initiators = 10
+				iterations = 1000
+				# use a delay of 100ms, overall time is:
+				# iterations * delay = 100s
+				delay = 100
+				# address of the gateway
+				remote = 1.2.3.4
+				# IKE-proposal to use
+				proposal = aes128-sha1-modp1024
+				# use faster PSK authentication instead
+				# of 1024bit RSA
+				initiator_auth = psk
+				responder_auth = psk
+				# request a virtual IP using configuration
+				# payloads
+				request_virtual_ip = yes
+				# enable CHILD_SA every 60s
+				child_rekey = 60
 			}
 		}
 	}
