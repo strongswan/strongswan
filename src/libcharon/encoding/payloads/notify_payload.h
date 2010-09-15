@@ -64,6 +64,9 @@ enum notify_type_t {
 	UNEXPECTED_NAT_DETECTED = 41,
 	/* mobile IPv6 bootstrapping, RFC 5026 */
 	USE_ASSIGNED_HoA = 42,
+	/* IKEv2 RFC 5996 */
+	TEMPORARY_FAILURE = 43,
+	CHILD_SA_NOT_FOUND = 44,
 
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
