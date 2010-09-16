@@ -113,7 +113,7 @@ enum notify_type_t {
 	USE_WESP_MODE = 16415,
 	/* robust header compression, RFC 5857 */
 	ROHC_SUPPORTED = 16416,
-	/* RFC-ietf-ipsecme-eap-mutual, assigned by IANA */
+	/* EAP-only authentication, RFC 5998 */
 	EAP_ONLY_AUTHENTICATION = 16417,
 
 	/* BEET mode, not even a draft yet. private use */
