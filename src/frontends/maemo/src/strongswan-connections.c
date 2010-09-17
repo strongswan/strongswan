@@ -139,6 +139,10 @@ strongswan_connections_init (StrongswanConnections *connections)
 								   CONFIG_DIR_NAME,
 								   CONFIG_FILE_NAME,
 								   NULL);
+	/* ensure that the directory exists */
+	gchar *dir = g_path_get_dirname (priv->path);
+	g_mkdir_with_parents (dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	g_free (dir);
 
 	priv->connections = g_hash_table_new_full (g_str_hash,
 											   g_str_equal,
