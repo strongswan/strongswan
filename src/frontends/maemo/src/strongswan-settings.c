@@ -73,6 +73,7 @@ edit_connection (gpointer *parent, StrongswanConnection *conn)
 	GtkWidget *name = hildon_entry_new (HILDON_SIZE_AUTO);
 	hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (name), "Connection Name");
 	hildon_gtk_entry_set_input_mode (GTK_ENTRY (name),
+									 HILDON_GTK_INPUT_MODE_AUTOCAP |
 									 HILDON_GTK_INPUT_MODE_ALPHA |
 									 HILDON_GTK_INPUT_MODE_NUMERIC);
 	GtkWidget *ncap = hildon_caption_new (group,
@@ -84,6 +85,8 @@ edit_connection (gpointer *parent, StrongswanConnection *conn)
 
 	GtkWidget *host = hildon_entry_new (HILDON_SIZE_AUTO);
 	hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (host), "Hostname / IP");
+	hildon_gtk_entry_set_input_mode (GTK_ENTRY (host),
+									 HILDON_GTK_INPUT_MODE_FULL);
 	GtkWidget *hcap = hildon_caption_new (group,
 										  "Host",
 										  host,
@@ -108,6 +111,8 @@ edit_connection (gpointer *parent, StrongswanConnection *conn)
 
 	GtkWidget *user = hildon_entry_new (HILDON_SIZE_AUTO);
 	hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (user), "Username");
+	hildon_gtk_entry_set_input_mode (GTK_ENTRY (user),
+									 HILDON_GTK_INPUT_MODE_FULL);
 	GtkWidget *ucap = hildon_caption_new (group,
 										  "Username",
 										  user,
