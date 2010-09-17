@@ -123,7 +123,6 @@ button_clicked (HildonButton *button,  StrongswanStatus *plugin)
 								TRUE);
 		hildon_picker_button_set_selector (HILDON_PICKER_BUTTON (button),
 										   HILDON_TOUCH_SELECTOR (selector));
-		g_object_unref (model);
 
 		button = hildon_button_new_with_text (
 								HILDON_SIZE_FINGER_HEIGHT |
