@@ -24,6 +24,7 @@
 
 struct _StrongswanConnectionPrivate
 {
+	gchar *orig_name;
 	gchar *name;
 	gchar *host;
 	gchar *cert;
@@ -114,15 +115,6 @@ strongswan_connection_init (StrongswanConnection *connection)
 }
 
 static void
-strongswan_connection_constructed (GObject *object)
-{
-	if (G_OBJECT_CLASS (strongswan_connection_parent_class)->constructed)
-	{
-		G_OBJECT_CLASS (strongswan_connection_parent_class)->constructed (object);
-	}
-}
-
-static void
 strongswan_connection_dispose (GObject *object)
 {
 	G_OBJECT_CLASS (strongswan_connection_parent_class)->dispose (object);
@@ -132,6 +124,7 @@ static void
 strongswan_connection_finalize (GObject *object)
 {
 	StrongswanConnectionPrivate *priv = STRONGSWAN_CONNECTION (object)->priv;
+	g_free (priv->orig_name);
 	g_free (priv->name);
 	g_free (priv->host);
 	g_free (priv->cert);
@@ -145,7 +138,6 @@ strongswan_connection_class_init (StrongswanConnectionClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-	object_class->constructed = strongswan_connection_constructed;
 	object_class->get_property = strongswan_connection_get_property;
 	object_class->set_property = strongswan_connection_set_property;
 	object_class->dispose = strongswan_connection_dispose;
@@ -166,7 +158,6 @@ strongswan_connection_class_init (StrongswanConnectionClass *klass)
 	g_object_class_install_property (object_class, PROP_CERT,
 			g_param_spec_string ("cert", "Gateway or CA certificate",
 								 "The certificate of the gateway or the CA",
-
 								 NULL,
 								 G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
@@ -185,6 +176,37 @@ strongswan_connection_class_init (StrongswanConnectionClass *klass)
 	g_type_class_add_private (klass, sizeof (StrongswanConnectionPrivate));
 }
 
+static inline gchar *
+get_string_from_key_file (GKeyFile *key_file,
+						  const gchar *name,
+						  const gchar *key)
+{
+	GError *error = NULL;
+	gchar *value;
+	value = g_key_file_get_string (key_file, name, key, &error);
+	if (error)
+	{
+		g_warning ("Failed to read %s/%s from key file: %s",
+				   name, key, error->message);
+		g_error_free (error);
+	}
+	return value;
+}
+
+static void
+strongswan_connection_update_from_key_file (GKeyFile *key_file,
+											StrongswanConnection *connection)
+{
+	StrongswanConnectionPrivate *priv = connection->priv;
+	gchar *name = priv->name;
+
+	priv->orig_name = g_strdup (name);
+	priv->host = get_string_from_key_file (key_file, name, "host");
+	priv->cert = get_string_from_key_file (key_file, name, "cert");
+	priv->user = get_string_from_key_file (key_file, name, "user");
+	priv->pass = get_string_from_key_file (key_file, name, "pass");
+}
+
 StrongswanConnection *
 strongswan_connection_new (const gchar *name)
 {
@@ -194,5 +216,47 @@ strongswan_connection_new (const gchar *name)
 						 NULL);
 	g_return_val_if_fail (conn->priv != NULL, NULL);
 	return conn;
+}
+
+StrongswanConnection *
+strongswan_connection_new_from_key_file (GKeyFile *key_file,
+										 const gchar *name)
+{
+	StrongswanConnection *conn = strongswan_connection_new (name);
+	g_return_val_if_fail (conn != NULL, NULL);
+	strongswan_connection_update_from_key_file (key_file, conn);
+	return conn;
+}
+
+void
+strongswan_connection_save_to_key_file (GKeyFile *key_file,
+										StrongswanConnection *connection)
+{
+	StrongswanConnectionPrivate *priv = connection->priv;
+	gchar *name = priv->name;
+
+	if (priv->orig_name && strcmp (name, priv->orig_name))
+	{
+		g_key_file_remove_group (key_file, priv->orig_name, NULL);
+		g_free (priv->orig_name);
+		priv->orig_name = g_strdup (name);
+	}
+
+	if (priv->host)
+	{
+		g_key_file_set_string (key_file, name, "host", priv->host);
+	}
+	if (priv->cert)
+	{
+		g_key_file_set_string (key_file, name, "cert", priv->cert);
+	}
+	if (priv->user)
+	{
+		g_key_file_set_string (key_file, name, "user", priv->user);
+	}
+	if (priv->pass)
+	{
+		g_key_file_set_string (key_file, name, "pass", priv->pass);
+	}
 }
 
