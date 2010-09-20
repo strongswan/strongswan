@@ -14,6 +14,7 @@
  */
 
 #include <hildon/hildon.h>
+#include <libosso.h>
 
 #include "strongswan-status.h"
 #include "strongswan-connections.h"
@@ -22,6 +23,11 @@
 	(G_TYPE_INSTANCE_GET_PRIVATE ((object), \
 								  STRONGSWAN_TYPE_STATUS, \
 								  StrongswanStatusPrivate))
+
+#define OSSO_CHARON_NAME	"charon"
+#define OSSO_CHARON_SERVICE	"org.strongswan."OSSO_CHARON_NAME
+#define OSSO_CHARON_OBJECT	"/org/strongswan/"OSSO_CHARON_NAME
+#define OSSO_CHARON_IFACE	"org.strongswan."OSSO_CHARON_NAME
 
 #define ICON_SIZE_STATUS 18
 #define ICON_SIZE_BUTTON 48
@@ -40,6 +46,8 @@ struct _StrongswanStatusPrivate
 	GtkWidget *image;
 	GtkWidget *selector;
 	GtkWidget *box;
+
+	osso_context_t *context;
 
 	StrongswanConnections *conns;
 
@@ -161,6 +169,12 @@ strongswan_status_init (StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = STRONGSWAN_STATUS_GET_PRIVATE (plugin);
 	plugin->priv = priv;
+
+	priv->context = osso_initialize (OSSO_STATUS_SERVICE, "0.0.1", TRUE, NULL);
+	if (!priv->context)
+	{
+		return;
+	}
 
 	priv->conns = strongswan_connections_new ();
 
