@@ -625,6 +625,11 @@ if test x$android = xtrue; then
 	AC_SUBST(DLLIB)
 fi
 
+if test x$maemo = xtrue; then
+	dbusservicedir="/usr/share/dbus-1/system-services"
+	AC_SUBST(dbusservicedir)
+fi
+
 if test x$nm = xtrue; then
 	PKG_CHECK_EXISTS([libnm-glib],
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],

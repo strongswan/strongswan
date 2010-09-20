@@ -15,3 +15,7 @@ libstrongswan_maemo_la_SOURCES = \
 
 libstrongswan_maemo_la_LDFLAGS = -module -avoid-version
 
+dbusservice_DATA = org.strongswan.charon.service
+
+EXTRA_DIST = $(dbusservice_DATA)
+
