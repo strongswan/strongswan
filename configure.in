@@ -626,6 +626,9 @@ if test x$android = xtrue; then
 fi
 
 if test x$maemo = xtrue; then
+	PKG_CHECK_MODULES(maemo, [glib-2.0 gthread-2.0 libosso osso-af-settings])
+	AC_SUBST(maemo_CFLAGS)
+	AC_SUBST(maemo_LIBS)
 	dbusservicedir="/usr/share/dbus-1/system-services"
 	AC_SUBST(dbusservicedir)
 fi

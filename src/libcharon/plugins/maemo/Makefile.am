@@ -14,6 +14,7 @@ libstrongswan_maemo_la_SOURCES = \
 	maemo_plugin.h maemo_plugin.c
 
 libstrongswan_maemo_la_LDFLAGS = -module -avoid-version
+libstrongswan_maemo_la_LIBADD  = ${maemo_LIBS}
 
 dbusservice_DATA = org.strongswan.charon.service
 
