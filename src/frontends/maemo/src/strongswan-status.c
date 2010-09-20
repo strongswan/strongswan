@@ -146,22 +146,36 @@ button_clicked (HildonButton *button,  StrongswanStatus *plugin)
 	gtk_widget_show_all (priv->dialog);
 }
 
+static GdkPixbuf*
+load_icon (GtkIconTheme *theme, const gchar *name, gint size)
+{
+	GdkPixbuf *icon = NULL;
+	GdkPixbuf *loaded = gtk_icon_theme_load_icon (theme, name, size,
+												  GTK_ICON_LOOKUP_NO_SVG, NULL);
+	if (loaded)
+	{	/* so we don't have to listen for theme changes, we copy the icon */
+		icon = gdk_pixbuf_copy (loaded);
+		g_object_unref (loaded);
+	}
+	return icon;
+}
+
 static void
 load_icons (StrongswanStatusPrivate *priv)
 {
 	GtkIconTheme *theme = gtk_icon_theme_get_default ();
-	priv->icons.status_open = gtk_icon_theme_load_icon (theme,
-								"strongswan_lock_open",
-								ICON_SIZE_STATUS, GTK_ICON_LOOKUP_NO_SVG, NULL);
-	priv->icons.status_close = gtk_icon_theme_load_icon (theme,
-								"strongswan_lock_close",
-								ICON_SIZE_STATUS, GTK_ICON_LOOKUP_NO_SVG, NULL);
-	priv->icons.button_open = gtk_icon_theme_load_icon (theme,
-								"strongswan_lock_open",
-								ICON_SIZE_BUTTON, GTK_ICON_LOOKUP_NO_SVG, NULL);
-	priv->icons.button_close = gtk_icon_theme_load_icon (theme,
-								"strongswan_lock_close",
-								ICON_SIZE_BUTTON, GTK_ICON_LOOKUP_NO_SVG, NULL);
+	priv->icons.status_open = load_icon (theme, "strongswan_lock_open",
+										 ICON_SIZE_STATUS);
+	priv->icons.status_close = load_icon (theme, "strongswan_lock_close",
+										  ICON_SIZE_STATUS);
+	priv->icons.button_open = load_icon (theme, "strongswan_lock_open",
+										 ICON_SIZE_BUTTON);
+	priv->icons.button_close = load_icon (theme, "strongswan_lock_close",
+										  ICON_SIZE_BUTTON);
+	if (!priv->icons.status_open || !priv->icons.button_open)
+	{
+		hildon_banner_show_information (NULL, NULL, "failed to load icons");
+	}
 }
 
 static void
