@@ -63,7 +63,7 @@ static void
 dialog_response (GtkDialog *dialog, gint response_id, StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = plugin->priv;
-	g_object_unref (priv->dialog);
+	gtk_widget_destroy (priv->dialog);
 	priv->dialog = NULL;
 }
 
@@ -224,10 +224,6 @@ strongswan_status_dispose (GObject *object)
 	if (priv->conns)
 	{
 		priv->conns = (g_object_unref (priv->conns), NULL);
-	}
-	if (priv->dialog)
-	{
-		priv->dialog = (g_object_unref (priv->dialog), NULL);
 	}
 	if (priv->icons.status_open)
 	{
