@@ -158,6 +158,7 @@ ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
+ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
@@ -773,6 +774,7 @@ ADD_PLUGIN([dhcp],                 [c libcharon])
 ADD_PLUGIN([android],              [c libcharon])
 ADD_PLUGIN([ha],                   [c libcharon])
 ADD_PLUGIN([led],                  [c libcharon])
+ADD_PLUGIN([maemo],                [c libcharon])
 ADD_PLUGIN([uci],                  [c libcharon])
 ADD_PLUGIN([addrblock],            [c libcharon])
 ADD_PLUGIN([unit-tester],          [c libcharon])
@@ -839,6 +841,7 @@ AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
+AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
@@ -1021,6 +1024,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile
