@@ -220,7 +220,11 @@ static gint dbus_req_handler(const gchar *interface, const gchar *method,
 							 GArray *arguments, private_maemo_plugin_t *this,
 							 osso_rpc_t *retval)
 {
-	if (streq(method, "Connect"))
+	if (streq(method, "Start"))
+	{	/* void start (void), dummy function to start charon as root */
+		return OSSO_OK;
+	}
+	else if (streq(method, "Connect"))
 	{	/* bool connect (name, host, cert, user, pass) */
 		retval->value.b = initiate_connection(this, arguments);
 		retval->type = DBUS_TYPE_BOOLEAN;
