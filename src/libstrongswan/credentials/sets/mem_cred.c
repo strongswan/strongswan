@@ -90,7 +90,7 @@ static bool certs_filter(cert_data_t *data, certificate_t **in, certificate_t **
 		{
 			if (data->key == KEY_ANY || data->key == public->get_type(public))
 			{
-				if (public->has_fingerprint(public,
+				if (data->id && public->has_fingerprint(public,
 											data->id->get_encoding(data->id)))
 				{
 					public->destroy(public);
