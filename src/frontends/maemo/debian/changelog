@@ -1,0 +1,6 @@
+strongswan-applet (1.0.0-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Tobias Brunner <tobias@strongswan.org>  Fri,  4 Jun 2010 11:02:47 +0200
+

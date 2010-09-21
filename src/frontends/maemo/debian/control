@@ -1,0 +1,15 @@
+Source: strongswan-applet
+Section: user/network
+Priority: extra
+Maintainer: Tobias Brunner <tobias@strongswan.org>
+Build-Depends: debhelper (>= 5), autotools-dev
+Standards-Version: 3.7.2
+
+Package: strongswan-applet
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A frontend for the strongSwan IKEv2/IPsec VPN solution
+ A frontend to configure and control the strongSwan
+ IKEv2/IPsec VPN solution.  Currently only EAP Authentication
+ is supported.
+
