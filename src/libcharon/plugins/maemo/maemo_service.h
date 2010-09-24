@@ -21,12 +21,19 @@
 #ifndef MAEMO_SERVICE_H_
 #define MAEMO_SERVICE_H_
 
+#include <bus/listeners/listener.h>
+
 typedef struct maemo_service_t maemo_service_t;
 
 /**
  * Maemo connection management.
  */
 struct maemo_service_t {
+
+	/**
+	 * Implements listener_t.
+	 */
+	listener_t listener;
 
 	/**
 	 * Destroy a maemo_service_t.

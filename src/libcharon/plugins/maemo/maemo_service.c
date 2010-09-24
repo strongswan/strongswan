@@ -60,6 +60,11 @@ struct private_maemo_service_t {
 	osso_context_t *context;
 
 	/**
+	 * current IKE_SA
+	 */
+	ike_sa_t *ike_sa;
+
+	/**
 	 * Name of the current connection
 	 */
 	gchar *current;
@@ -75,6 +80,36 @@ static gint change_status(private_maemo_service_t *this, int status)
 						DBUS_TYPE_INT32, status,
 						DBUS_TYPE_INVALID);
 	return res;
+}
+
+METHOD(listener_t, ike_updown, bool,
+	   private_maemo_service_t *this, ike_sa_t *ike_sa, bool up)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, child_state_change, bool,
+	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	   child_sa_state_t state)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, child_updown, bool,
+	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	   bool up)
+{
+	return TRUE;
+}
+
+METHOD(listener_t, ike_rekey, bool,
+	   private_maemo_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		this->ike_sa = new;
+	}
+	return TRUE;
 }
 
 static gboolean initiate_connection(private_maemo_service_t *this,
@@ -285,6 +320,7 @@ METHOD(maemo_service_t, destroy, void,
 	{
 		osso_deinitialize(this->context);
 	}
+	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
 	free(this);
@@ -300,6 +336,12 @@ maemo_service_t *maemo_service_create()
 
 	INIT(this,
 		.public = {
+			.listener = {
+				.ike_updown = _ike_updown,
+				.child_state_change = _child_state_change,
+				.child_updown = _child_updown,
+				.ike_rekey = _ike_rekey,
+			},
 			.destroy = _destroy,
 		},
 		.creds = mem_cred_create(),
@@ -333,6 +375,8 @@ maemo_service_t *maemo_service_create()
 	{
 		g_thread_init(NULL);
 	}
+
+	charon->bus->add_listener(charon->bus, &this->public.listener);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
