@@ -107,6 +107,24 @@ update_status_menu (StrongswanStatus *plugin)
 }
 
 static void
+update_dialog_connecting (StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+
+	gtk_widget_set_sensitive (priv->box, FALSE);
+	hildon_gtk_window_set_progress_indicator (GTK_WINDOW (priv->dialog), 1);
+}
+
+static void
+update_dialog_default (StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+
+	gtk_widget_set_sensitive (priv->box, TRUE);
+	hildon_gtk_window_set_progress_indicator (GTK_WINDOW (priv->dialog), 0);
+}
+
+static void
 dialog_response (GtkDialog *dialog, gint response_id, StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = plugin->priv;
@@ -155,20 +173,50 @@ connect_callback (const gchar* interface, const gchar* method,
 
 	if (priv->dialog)
 	{
-		gtk_widget_set_sensitive (priv->box, TRUE);
-		hildon_gtk_window_set_progress_indicator (GTK_WINDOW (priv->dialog), 0);
-
+		update_dialog_default (plugin);
 		gtk_dialog_response (GTK_DIALOG (priv->dialog), GTK_RESPONSE_OK);
 	}
 }
 
-static void
-update_dialog_connecting (StrongswanStatus *plugin)
+static gboolean
+get_password (StrongswanStatus *plugin, gchar **password)
 {
 	StrongswanStatusPrivate *priv = plugin->priv;
+	gboolean result = FALSE;
 
-	gtk_widget_set_sensitive (priv->box, FALSE);
-	hildon_gtk_window_set_progress_indicator (GTK_WINDOW (priv->dialog), 1);
+	GtkWidget *dialog = gtk_dialog_new_with_buttons (
+									"Connecting...",
+									GTK_WINDOW(priv->dialog),
+									GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
+									GTK_STOCK_CANCEL,
+									GTK_RESPONSE_CANCEL,
+									GTK_STOCK_OK,
+									GTK_RESPONSE_OK,
+									NULL);
+	GtkWidget *vbox = GTK_DIALOG (dialog)->vbox;
+	GtkSizeGroup *group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+
+	GtkWidget *pass = hildon_entry_new (HILDON_SIZE_AUTO);
+	hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (pass), "Password");
+	hildon_gtk_entry_set_input_mode (GTK_ENTRY (pass),
+									 HILDON_GTK_INPUT_MODE_FULL |
+									 HILDON_GTK_INPUT_MODE_INVISIBLE);
+	GtkWidget *pcap = hildon_caption_new (group,
+										  "Password",
+										  pass,
+										  NULL,
+										  HILDON_CAPTION_OPTIONAL);
+	gtk_box_pack_start (GTK_BOX (vbox), pcap, TRUE, TRUE, 0);
+	gtk_widget_show_all (dialog);
+
+	gint retval = gtk_dialog_run (GTK_DIALOG (dialog));
+	if (retval == GTK_RESPONSE_OK)
+	{
+		*password = g_strdup (gtk_entry_get_text (GTK_ENTRY (pass)));
+		result = TRUE;
+	}
+	gtk_widget_destroy (dialog);
+	return result;
 }
 
 static void
@@ -216,11 +264,17 @@ connect_clicked (HildonButton *button, StrongswanStatus *plugin)
 	}
 
 	gchar *c_host, *c_cert, *c_user, *c_pass;
+
+	if (!get_password (plugin, &c_pass))
+	{
+		update_dialog_default (plugin);
+		return;
+	}
+
 	g_object_get (conn,
 				  "host", &c_host,
 				  "cert", &c_cert,
 				  "user", &c_user,
-				  "pass", &c_pass,
 				  NULL);
 
 	osso_rpc_async_run (priv->context,

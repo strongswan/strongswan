@@ -120,44 +120,29 @@ edit_connection (gpointer *parent, StrongswanConnection *conn)
 										  HILDON_CAPTION_OPTIONAL);
 	gtk_box_pack_start (GTK_BOX (vbox), ucap, TRUE, TRUE, 0);
 
-	GtkWidget *pass = hildon_entry_new (HILDON_SIZE_AUTO);
-	hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (pass), "Password");
-	hildon_gtk_entry_set_input_mode (GTK_ENTRY (pass),
-									 HILDON_GTK_INPUT_MODE_FULL |
-									 HILDON_GTK_INPUT_MODE_INVISIBLE);
-	GtkWidget *pcap = hildon_caption_new (group,
-										  "Password",
-										  pass,
-										  NULL,
-										  HILDON_CAPTION_OPTIONAL);
-	gtk_box_pack_start (GTK_BOX (vbox), pcap, TRUE, TRUE, 0);
-
 	if (conn)
 	{
-		gchar *c_name, *c_host, *c_cert, *c_user, *c_pass;
+		gchar *c_name, *c_host, *c_cert, *c_user;
 		g_object_get (conn,
 					  "name", &c_name,
 					  "host", &c_host,
 					  "cert", &c_cert,
 					  "user", &c_user,
-					  "pass", &c_pass,
 					  NULL);
 		gtk_entry_set_text (GTK_ENTRY (name), c_name);
 		gtk_entry_set_text (GTK_ENTRY (host), c_host);
 		hildon_button_set_value (HILDON_BUTTON (cert),
 								 c_cert ? c_cert : "None");
 		gtk_entry_set_text (GTK_ENTRY (user), c_user);
-		gtk_entry_set_text (GTK_ENTRY (pass), c_pass);
 		g_free (c_name);
 		g_free (c_host);
 		g_free (c_cert);
 		g_free (c_user);
-		g_free (c_pass);
 	}
 
-	gtk_widget_show_all(dialog);
+	gtk_widget_show_all (dialog);
 
-	guint retval = gtk_dialog_run (GTK_DIALOG (dialog));
+	gint retval = gtk_dialog_run (GTK_DIALOG (dialog));
 	if (retval == GTK_RESPONSE_OK)
 	{
 		const gchar *c_name, *c_cert;
@@ -173,7 +158,6 @@ edit_connection (gpointer *parent, StrongswanConnection *conn)
 					  "host", gtk_entry_get_text (GTK_ENTRY (host)),
 					  "cert", c_cert,
 					  "user", gtk_entry_get_text (GTK_ENTRY (user)),
-					  "pass", gtk_entry_get_text (GTK_ENTRY (pass)),
 					  NULL);
 		strongswan_connections_save_connection (ListDialog.conns, conn);
 	}

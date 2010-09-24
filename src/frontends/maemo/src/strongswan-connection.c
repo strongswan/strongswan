@@ -29,7 +29,6 @@ struct _StrongswanConnectionPrivate
 	gchar *host;
 	gchar *cert;
 	gchar *user;
-	gchar *pass;
 };
 
 enum
@@ -39,7 +38,6 @@ enum
 	PROP_HOST,
 	PROP_CERT,
 	PROP_USER,
-	PROP_PASS,
 };
 
 #ifndef USE_DYNAMIC_TYPES
@@ -73,9 +71,6 @@ strongswan_connection_get_property (GObject		*object,
 		case PROP_USER:
 			g_value_set_string (value, priv->user);
 			break;
-		case PROP_PASS:
-			g_value_set_string (value, priv->pass);
-			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
@@ -106,10 +101,6 @@ strongswan_connection_set_property (GObject			*object,
 			g_free (priv->user);
 			priv->user = g_value_dup_string (value);
 			break;
-		case PROP_PASS:
-			g_free (priv->pass);
-			priv->pass = g_value_dup_string (value);
-			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 			break;
@@ -137,7 +128,6 @@ strongswan_connection_finalize (GObject *object)
 	g_free (priv->host);
 	g_free (priv->cert);
 	g_free (priv->user);
-	g_free (priv->pass);
 	G_OBJECT_CLASS (strongswan_connection_parent_class)->finalize (object);
 }
 
@@ -172,12 +162,6 @@ strongswan_connection_class_init (StrongswanConnectionClass *klass)
 	g_object_class_install_property (object_class, PROP_USER,
 			g_param_spec_string ("user", "Username",
 								 "The username for EAP authentication",
-								 NULL,
-								 G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-	g_object_class_install_property (object_class, PROP_PASS,
-			g_param_spec_string ("pass", "Password",
-								 "The password for EAP authentication",
 								 NULL,
 								 G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
@@ -219,7 +203,6 @@ strongswan_connection_update_from_key_file (GKeyFile *key_file,
 	priv->host = get_string_from_key_file (key_file, name, "host");
 	priv->cert = get_string_from_key_file (key_file, name, "cert");
 	priv->user = get_string_from_key_file (key_file, name, "user");
-	priv->pass = get_string_from_key_file (key_file, name, "pass");
 }
 
 StrongswanConnection *
@@ -268,10 +251,6 @@ strongswan_connection_save_to_key_file (GKeyFile *key_file,
 	if (priv->user)
 	{
 		g_key_file_set_string (key_file, name, "user", priv->user);
-	}
-	if (priv->pass)
-	{
-		g_key_file_set_string (key_file, name, "pass", priv->pass);
 	}
 }
 
