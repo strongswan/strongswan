@@ -361,15 +361,31 @@ METHOD(mem_cred_t, add_shared, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(mem_cred_t, clear, void,
+	private_mem_cred_t *this)
+{
+	this->lock->write_lock(this->lock);
+	this->trusted->destroy_offset(this->trusted,
+								  offsetof(certificate_t, destroy));
+	this->untrusted->destroy_offset(this->untrusted,
+									offsetof(certificate_t, destroy));
+	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
+	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
+	this->trusted = linked_list_create();
+	this->untrusted = linked_list_create();
+	this->keys = linked_list_create();
+	this->shared = linked_list_create();
+	this->lock->unlock(this->lock);
+}
+
 METHOD(mem_cred_t, destroy, void,
 	private_mem_cred_t *this)
 {
-	this->trusted->destroy_offset(this->trusted,
-								offsetof(certificate_t, destroy));
-	this->untrusted->destroy_offset(this->untrusted,
-								offsetof(certificate_t, destroy));
-	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
-	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
+	_clear(this);
+	this->trusted->destroy(this->trusted);
+	this->untrusted->destroy(this->untrusted);
+	this->keys->destroy(this->keys);
+	this->shared->destroy(this->shared);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -393,6 +409,7 @@ mem_cred_t *mem_cred_create()
 			.add_cert = _add_cert,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
+			.clear = _clear,
 			.destroy = _destroy,
 		},
 		.trusted = linked_list_create(),

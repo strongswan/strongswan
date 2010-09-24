@@ -59,6 +59,11 @@ struct mem_cred_t {
 	void (*add_shared)(mem_cred_t *this, shared_key_t *shared, ...);
 
 	/**
+	 * Clear all credentials from the credential set.
+	 */
+	void (*clear)(mem_cred_t *this);
+
+	/**
 	 * Destroy a mem_cred_t.
 	 */
 	void (*destroy)(mem_cred_t *this);
