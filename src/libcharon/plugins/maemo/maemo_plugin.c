@@ -22,6 +22,11 @@
 #include <credentials/sets/mem_cred.h>
 #include <processing/jobs/callback_job.h>
 
+#define OSSO_STATUS_NAME	"status"
+#define OSSO_STATUS_SERVICE	"org.strongswan."OSSO_STATUS_NAME
+#define OSSO_STATUS_OBJECT	"/org/strongswan/"OSSO_STATUS_NAME
+#define OSSO_STATUS_IFACE	"org.strongswan."OSSO_STATUS_NAME
+
 #define OSSO_CHARON_NAME	"charon"
 #define OSSO_CHARON_SERVICE	"org.strongswan."OSSO_CHARON_NAME
 #define OSSO_CHARON_OBJECT	"/org/strongswan/"OSSO_CHARON_NAME
@@ -60,6 +65,17 @@ struct private_maemo_plugin_t {
 	gchar *current;
 
 };
+
+static gint change_status(private_maemo_plugin_t *this, int status)
+{
+	osso_rpc_t retval;
+	gint res;
+	res = osso_rpc_run (this->context, OSSO_STATUS_SERVICE, OSSO_STATUS_OBJECT,
+						OSSO_STATUS_IFACE, "StatusChanged", &retval,
+						DBUS_TYPE_INT32, status,
+						DBUS_TYPE_INVALID);
+	return res;
+}
 
 static gboolean initiate_connection(private_maemo_plugin_t *this,
 									GArray *arguments)

@@ -16,6 +16,8 @@
 #include <hildon/hildon.h>
 #include <libosso.h>
 
+#include <string.h>
+
 #include "strongswan-status.h"
 #include "strongswan-connections.h"
 
@@ -23,6 +25,11 @@
 	(G_TYPE_INSTANCE_GET_PRIVATE ((object), \
 								  STRONGSWAN_TYPE_STATUS, \
 								  StrongswanStatusPrivate))
+
+#define OSSO_STATUS_NAME	"status"
+#define OSSO_STATUS_SERVICE	"org.strongswan."OSSO_STATUS_NAME
+#define OSSO_STATUS_OBJECT	"/org/strongswan/"OSSO_STATUS_NAME
+#define OSSO_STATUS_IFACE	"org.strongswan."OSSO_STATUS_NAME
 
 #define OSSO_CHARON_NAME	"charon"
 #define OSSO_CHARON_SERVICE	"org.strongswan."OSSO_CHARON_NAME
@@ -423,6 +430,26 @@ button_clicked (HildonButton *button,  StrongswanStatus *plugin)
 	gtk_widget_show_all (priv->dialog);
 }
 
+static gint
+dbus_req_handler(const gchar *interface, const gchar *method,
+				 GArray *arguments, StrongswanStatus  *plugin,
+				 osso_rpc_t *retval)
+{
+	if (!strcmp (method, "StatusChanged") && arguments->len == 1)
+	{
+		int status = 0;
+		osso_rpc_t *arg = &g_array_index(arguments, osso_rpc_t, 0);
+		if (arg->type == DBUS_TYPE_INT32)
+		{
+			status = arg->value.i;
+		}
+		gchar *msg = g_strdup_printf ("Status changed to %d...", status);
+		hildon_banner_show_information (NULL, NULL, msg);
+		g_free(msg);
+	}
+	return OSSO_OK;
+}
+
 static GdkPixbuf*
 load_icon (GtkIconTheme *theme, const gchar *name, gint size)
 {
@@ -463,6 +490,17 @@ strongswan_status_init (StrongswanStatus *plugin)
 
 	priv->context = osso_initialize (OSSO_STATUS_SERVICE, "0.0.1", TRUE, NULL);
 	if (!priv->context)
+	{
+		return;
+	}
+	osso_return_t result;
+	result = osso_rpc_set_cb_f (priv->context,
+								OSSO_STATUS_SERVICE,
+								OSSO_STATUS_OBJECT,
+								OSSO_STATUS_IFACE,
+								(osso_rpc_cb_f*)dbus_req_handler,
+								plugin);
+	if (result != OSSO_OK)
 	{
 		return;
 	}
