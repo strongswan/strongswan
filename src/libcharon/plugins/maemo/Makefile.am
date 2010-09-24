@@ -11,7 +11,8 @@ plugin_LTLIBRARIES = libstrongswan-maemo.la
 endif
 
 libstrongswan_maemo_la_SOURCES = \
-	maemo_plugin.h maemo_plugin.c
+	maemo_plugin.h maemo_plugin.c \
+	maemo_service.h maemo_service.c
 
 libstrongswan_maemo_la_LDFLAGS = -module -avoid-version
 libstrongswan_maemo_la_LIBADD  = ${maemo_LIBS}
