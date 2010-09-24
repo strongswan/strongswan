@@ -198,6 +198,8 @@ static gboolean initiate_connection(private_maemo_plugin_t *this,
 											 0, "255.255.255.255", 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
+	/* get an additional reference because initiate consumes one */
+	child_cfg->get_ref(child_cfg);
 
 	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 controller_cb_empty, NULL) != SUCCESS)
