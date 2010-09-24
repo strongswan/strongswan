@@ -125,6 +125,8 @@ static gboolean initiate_connection(private_maemo_plugin_t *this,
 
 	DBG1(DBG_CFG, "received initiate for connection '%s'", this->current);
 
+	this->creds->clear(this->creds);
+
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_FROM_FILE, cacert, BUILD_END);
 	if (cert)
