@@ -297,6 +297,7 @@ void delete_connection(connection_t *c, bool relations)
 {
 	modecfg_attribute_t *ca;
 	connection_t *old_cur_connection;
+	identification_t *client_id;
 
 	old_cur_connection = cur_connection == c? NULL : cur_connection;
 #ifdef DEBUG
@@ -367,12 +368,14 @@ void delete_connection(connection_t *c, bool relations)
 		free(c->spd.that.virt);
 	}
 
+	client_id = (c->xauth_identity) ? c->xauth_identity : c->spd.that.id;
+
 	/* release virtual IP address lease if any */
 	if (c->spd.that.modecfg && c->spd.that.pool &&
 		!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))
 	{
 		hydra->attributes->release_address(hydra->attributes, c->spd.that.pool,
-										   c->spd.that.host_srcip, c->spd.that.id);
+										   c->spd.that.host_srcip, client_id);
 	}
 
 	/* release requested attributes if any */
@@ -388,7 +391,7 @@ void delete_connection(connection_t *c, bool relations)
 		while (c->attributes->remove_last(c->attributes, (void **)&ca) == SUCCESS)
 		{
 			hydra->attributes->release(hydra->attributes, ca->handler,
-									   c->spd.that.id, ca->type, ca->value);
+									   client_id, ca->type, ca->value);
 			modecfg_attribute_destroy(ca);
 		}
 		c->attributes->destroy(c->attributes);
