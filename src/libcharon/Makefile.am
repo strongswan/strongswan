@@ -86,7 +86,9 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h
+sa/tasks/task.c sa/tasks/task.h \
+tnccs/tnccs.c tnccs/tnccs.h \
+tnccs/tnccs_manager.h tnccs/tnccs_manager.c
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -309,6 +311,13 @@ if USE_TLS
 if MONOLITHIC
   # otherwise this library is linked to eap_tls
   libcharon_la_LIBADD += $(top_builddir)/src/libtls/libtls.la
+endif
+endif
+
+if USE_TNCCS_11
+  SUBDIRS += plugins/tnccs_11
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_tnc/libstrongswan-tnccs-11.la
 endif
 endif
 

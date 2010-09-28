@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,25 +13,35 @@
  * for more details.
  */
 
-/**
- * @defgroup tnc_if_tnccs tnc_if_tnccs
- * @{ @ingroup tnc_if_tnccs
+#include "tnccs_11_plugin.h"
+#include "tnccs_11.h"
+
+#include <daemon.h>
+
+METHOD(plugin_t, destroy, void,
+	tnccs_11_plugin_t *this)
+{
+	charon->tnccs->remove_method(charon->tnccs,
+								(tnccs_constructor_t)tnccs_11_create);
+	free(this);
+}
+
+/*
+ * see header file
  */
+plugin_t *tnccs_11_plugin_create()
+{
+	tnccs_11_plugin_t *this;
 
-#ifndef TNC_IF_TNCCS_H_
-#define TNC_IF_TNCCS_H_
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
 
-#include <library.h>
+	charon->tnccs->add_method(charon->tnccs, TNCCS_1_1, 
+							 (tnccs_constructor_t)tnccs_11_create);
 
-#include <tls.h>
+	return &this->plugin;
+}
 
-/**
- * Create an instance of the TNC IF-TNCCS 1.1 protocol handler.
- *
- * @param is_server			TRUE to act as server, FALSE for client
- * @param purpose			purpose this TLS stack instance is used for
- * @return					TNC_IF_TNCCS stack
- */
-tls_t *tnc_if_tnccs_create(bool is_server, tls_purpose_t purpose);
-
-#endif /** TNC_IF_TNCCS_H_ @}*/

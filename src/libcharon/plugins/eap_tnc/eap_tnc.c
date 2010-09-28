@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,7 +14,6 @@
  */
 
 #include "eap_tnc.h"
-#include "tnc_if_tnccs.h"
 
 #include <tls_eap.h>
 
@@ -115,7 +114,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	private_eap_tnc_t *this;
 	size_t frag_size;
 	int max_msg_count;
-	tls_t *tnc_if_tnccs;
+	tnccs_t *tnccs;
 
 	INIT(this,
 		.public = {
@@ -134,8 +133,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 					"charon.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT);
-	tnc_if_tnccs = tnc_if_tnccs_create(is_server, TLS_PURPOSE_EAP_TNC);
-	this->tls_eap = tls_eap_create(EAP_TNC, tnc_if_tnccs, frag_size, max_msg_count);
+	tnccs = charon->tnccs->create_instance(charon->tnccs, TNCCS_1_1, is_server);
+	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size, max_msg_count);
 	if (!this->tls_eap)
 	{
 		free(this);

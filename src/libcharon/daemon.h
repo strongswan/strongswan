@@ -149,6 +149,7 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
+#include <tnccs/tnccs_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -234,6 +235,11 @@ struct daemon_t {
 	 * SIM manager to maintain (U)SIM cards/providers
 	 */
 	sim_manager_t *sim;
+
+	/**
+	 * TNCCS manager to maintain registered TNCCS protocols
+	 */
+	tnccs_manager_t *tnccs;
 
 #ifdef ME
 	/**

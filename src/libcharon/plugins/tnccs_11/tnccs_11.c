@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Andreas Steffen
- * Copyright (C) 2010 HSR Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,16 +13,16 @@
  * for more details.
  */
 
-#include "tnc_if_tnccs.h"
+#include "tnccs_11.h"
 
 #include <debug.h>
 
-typedef struct private_tnc_if_tnccs_t private_tnc_if_tnccs_t;
+typedef struct private_tnccs_11_t private_tnccs_11_t;
 
 /**
- * Private data of a tnc_if_tnccs_t object.
+ * Private data of a tnccs_11_t object.
  */
-struct private_tnc_if_tnccs_t {
+struct private_tnccs_11_t {
 
 	/**
 	 * Public tls_t interface.
@@ -30,18 +30,13 @@ struct private_tnc_if_tnccs_t {
 	tls_t public;
 
 	/**
-	 * Role this TNC IF-TNCCS stack acts as.
+	 * Role this TNCCS protocol stack acts as.
 	 */
 	bool is_server;
-
-	/**
-	 * TLS stack purpose, as given to constructor
-	 */
-	tls_purpose_t purpose;
 };
 
 METHOD(tls_t, process, status_t,
-	private_tnc_if_tnccs_t *this, void *buf, size_t buflen)
+	private_tnccs_11_t *this, void *buf, size_t buflen)
 {
 	chunk_t in = { buf, buflen };
 
@@ -51,7 +46,7 @@ METHOD(tls_t, process, status_t,
 }
 
 METHOD(tls_t, build, status_t,
-	private_tnc_if_tnccs_t *this, void *buf, size_t *buflen, size_t *msglen)
+	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
 	char output[] = 
 		"<?xml version=\"1.0\"?>\n"
@@ -75,32 +70,32 @@ METHOD(tls_t, build, status_t,
 }
 
 METHOD(tls_t, is_server, bool,
-	private_tnc_if_tnccs_t *this)
+	private_tnccs_11_t *this)
 {
 	return this->is_server;
 }
 
 METHOD(tls_t, get_purpose, tls_purpose_t,
-	private_tnc_if_tnccs_t *this)
+	private_tnccs_11_t *this)
 {
-	return this->purpose;
+	return TLS_PURPOSE_EAP_TNC;
 }
 
 METHOD(tls_t, is_complete, bool,
-	private_tnc_if_tnccs_t *this)
+	private_tnccs_11_t *this)
 {
 	/* TODO */
 	return FALSE;
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
-	private_tnc_if_tnccs_t *this)
+	private_tnccs_11_t *this)
 {
 	return chunk_empty;
 }
 
 METHOD(tls_t, destroy, void,
-	private_tnc_if_tnccs_t *this)
+	private_tnccs_11_t *this)
 {
 	free(this);
 }
@@ -108,17 +103,9 @@ METHOD(tls_t, destroy, void,
 /**
  * See header
  */
-tls_t *tnc_if_tnccs_create(bool is_server, tls_purpose_t purpose)
+tls_t *tnccs_11_create(bool is_server)
 {
-	private_tnc_if_tnccs_t *this;
-
-	switch (purpose)
-	{
-		case TLS_PURPOSE_EAP_TNC:
-			break;
-		default:
-			return NULL;
-	}
+	private_tnccs_11_t *this;
 
 	INIT(this,
 		.public = {
@@ -131,7 +118,6 @@ tls_t *tnc_if_tnccs_create(bool is_server, tls_purpose_t purpose)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.purpose = purpose,
 	);
 
 	return &this->public;

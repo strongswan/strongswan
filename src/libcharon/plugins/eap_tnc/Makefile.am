@@ -12,7 +12,6 @@ libstrongswan_eap_tnc_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
 libstrongswan_eap_tnc_la_SOURCES = \
-	eap_tnc_plugin.h eap_tnc_plugin.c eap_tnc.h eap_tnc.c \
-	tnc_if_tnccs.h tnc_if_tnccs.c
+	eap_tnc_plugin.h eap_tnc_plugin.c eap_tnc.h eap_tnc.c
 
 libstrongswan_eap_tnc_la_LDFLAGS = -module -avoid-version
