@@ -15,7 +15,24 @@
 
 #include "tnccs_11.h"
 
+#include <libtnctncc.h>
+
 #include <debug.h>
+
+static chunk_t tncc_output;
+
+/**
+ * Define callback function called by the libtnc library
+ */
+TNC_Result TNC_TNCC_SendBatch(libtnc_tncc_connection* conn, 
+							  const char* messageBuffer, size_t messageLength)
+{
+	chunk_free(&tncc_output);
+	tncc_output = chunk_alloc(messageLength);
+	memcpy(tncc_output.ptr, messageBuffer, messageLength);
+
+	return TNC_RESULT_SUCCESS;
+}
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;
 
@@ -30,9 +47,14 @@ struct private_tnccs_11_t {
 	tls_t public;
 
 	/**
-	 * Role this TNCCS protocol stack acts as.
+	 * TNCC if TRUE, TNCS if FALSE
 	 */
 	bool is_server;
+
+	/**
+	 * TNCC Connection to IMCs
+	 */
+	libtnc_tncc_connection* tncc_connection;
 };
 
 METHOD(tls_t, process, status_t,
@@ -48,23 +70,34 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	char output[] = 
-		"<?xml version=\"1.0\"?>\n"
-		"<TNCCS-Batch BatchId=\"1\" Recipient=\"TNCS\"\n"
-		"xmlns=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\"\n"
-		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-		"xsi:schemaLocation=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\n"
-		"https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">\n"
-		"</TNCCS-Batch>\n";
+	size_t len = *buflen;
 
-	size_t len = strlen(output);
-	chunk_t out = { output, len };	
-
-	/* TODO */
-	DBG1(DBG_IKE, "sending TNCCS-Batch: %B", &out);
+	if (!this->is_server && !this->tncc_connection)
+	{
+		this->tncc_connection = libtnc_tncc_CreateConnection(NULL);
+		if (!this->tncc_connection)
+		{
+			DBG1(DBG_IKE, "TNCC CreateConnection failed");
+			return FAILED;
+		}
+		DBG1(DBG_IKE, "assigned TNC ConnectionID: %d",
+			 this->tncc_connection->connectionID);
+		if (libtnc_tncc_BeginSession(this->tncc_connection) != TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IKE, "TNCC BeginSession failed");
+			return FAILED;
+		}
+	}
+		
+	if (msglen)
+	{
+		*msglen = tncc_output.len;
+	}
+	DBG1(DBG_IKE, "sending TNCCS-Batch: %B", &tncc_output);
+	len = min(len, tncc_output.len);
+	memcpy(buf, tncc_output.ptr, len);
+	chunk_free(&tncc_output);
 	*buflen = len;
-	*msglen = len;
-	memcpy(buf, output, len);
 
 	return ALREADY_DONE;
 }
@@ -97,6 +130,14 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
+	if (!this->is_server)
+	{
+		if (this->tncc_connection)
+		{
+			libtnc_tncc_DeleteConnection(this->tncc_connection);
+		}
+		libtnc_tncc_Terminate();
+	}
 	free(this);
 }
 
@@ -120,5 +161,22 @@ tls_t *tnccs_11_create(bool is_server)
 		.is_server = is_server,
 	);
 
+	if (!is_server)
+	{
+		int imc_count;
+
+		imc_count = libtnc_imc_load_config("/etc/tnc_config");
+		if (imc_count < 0)
+		{
+			free(this);
+			DBG1(DBG_IKE, "TNC IMC initialization failed");
+			return NULL;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "loaded %d TNC IMC instances", imc_count);
+		}
+		libtnc_tncc_PreferredLanguage("en");
+	}
 	return &this->public;
 }
