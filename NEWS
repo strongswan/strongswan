@@ -21,6 +21,11 @@ strongswan-4.5.0
   authentication for client and server. It is compatible to Windows 7 IKEv2
   Smartcard authentication and the OpenSSL based FreeRADIUS EAP-TLS backend.
 
+- Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
+  identity was different from the IKE identity.
+
+- Added man page for strongswan.conf
+
 
 strongswan-4.4.1
 ----------------
