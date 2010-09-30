@@ -318,6 +318,12 @@ METHOD(maemo_service_t, destroy, void,
 	}
 	if (this->context)
 	{
+		osso_rpc_unset_cb_f(this->context,
+							OSSO_CHARON_SERVICE,
+							OSSO_CHARON_OBJECT,
+							OSSO_CHARON_IFACE,
+							(osso_rpc_cb_f*)dbus_req_handler,
+							this);
 		osso_deinitialize(this->context);
 	}
 	charon->bus->remove_listener(charon->bus, &this->public.listener);

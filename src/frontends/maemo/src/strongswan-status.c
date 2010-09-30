@@ -532,34 +532,30 @@ strongswan_status_init (StrongswanStatus *plugin)
 	gtk_widget_show_all (GTK_WIDGET (plugin));
 }
 
+#define UNREF_IF(obj) do { \
+	if (obj) { obj = (g_object_unref (obj), NULL); } \
+} while(0)
+
 static void
 strongswan_status_dispose (GObject *object)
 {
 	StrongswanStatusPrivate *priv = STRONGSWAN_STATUS (object)->priv;
-	if (priv->conns)
+	if (priv->context)
 	{
-		priv->conns = (g_object_unref (priv->conns), NULL);
+		osso_rpc_unset_cb_f (priv->context,
+							 OSSO_STATUS_SERVICE,
+							 OSSO_STATUS_OBJECT,
+							 OSSO_STATUS_IFACE,
+							 (osso_rpc_cb_f*)dbus_req_handler,
+							 STRONGSWAN_STATUS (object));
+		osso_deinitialize (priv->context);
+		priv->context = NULL;
 	}
-	if (priv->icons.status_open)
-	{
-		g_object_unref (priv->icons.status_open);
-		priv->icons.status_open = NULL;
-	}
-	if (priv->icons.status_close)
-	{
-		g_object_unref (priv->icons.status_close);
-		priv->icons.status_close = NULL;
-	}
-	if (priv->icons.button_open)
-	{
-		g_object_unref (priv->icons.button_open);
-		priv->icons.button_open = NULL;
-	}
-	if (priv->icons.button_close)
-	{
-		g_object_unref (priv->icons.button_close);
-		priv->icons.button_close = NULL;
-	}
+	UNREF_IF(priv->conns);
+	UNREF_IF(priv->icons.status_open);
+	UNREF_IF(priv->icons.status_close);
+	UNREF_IF(priv->icons.button_open);
+	UNREF_IF(priv->icons.button_close);
 	G_OBJECT_CLASS (strongswan_status_parent_class)->dispose (object);
 }
 
