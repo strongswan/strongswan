@@ -230,6 +230,7 @@ get_password (StrongswanStatus *plugin, gchar **password)
 									GTK_STOCK_OK,
 									GTK_RESPONSE_OK,
 									NULL);
+	gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
 	GtkWidget *vbox = GTK_DIALOG (dialog)->vbox;
 	GtkSizeGroup *group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
 
