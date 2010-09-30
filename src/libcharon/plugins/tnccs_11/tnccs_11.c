@@ -60,17 +60,26 @@ struct private_tnccs_11_t {
 METHOD(tls_t, process, status_t,
 	private_tnccs_11_t *this, void *buf, size_t buflen)
 {
-	chunk_t in = { buf, buflen };
-
 	/* TODO */
-	DBG1(DBG_IKE, "received TNCCS-Batch: %B", &in);
+	DBG1(DBG_IKE, "received TNCCS Batch with %u bytes:", buflen);
+	DBG1(DBG_IKE, "%.*s", buflen, buf);
+
+	if (!this->is_server)
+	{
+		if (libtnc_tncc_ReceiveBatch(this->tncc_connection, buf, buflen) !=
+			TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IKE, "TNCC ReceiveBatch failed");
+			return FAILED;
+		}
+	}
 	return NEED_MORE;
 }
 
 METHOD(tls_t, build, status_t,
 	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	size_t len = *buflen;
+	size_t len;
 
 	if (!this->is_server && !this->tncc_connection)
 	{
@@ -89,17 +98,26 @@ METHOD(tls_t, build, status_t,
 		}
 	}
 		
+	len = *buflen;
+	len = min(len, tncc_output.len);
+	*buflen = len;
 	if (msglen)
 	{
 		*msglen = tncc_output.len;
 	}
-	DBG1(DBG_IKE, "sending TNCCS-Batch: %B", &tncc_output);
-	len = min(len, tncc_output.len);
-	memcpy(buf, tncc_output.ptr, len);
-	chunk_free(&tncc_output);
-	*buflen = len;
 
-	return ALREADY_DONE;
+	if (tncc_output.len)
+	{
+		DBG1(DBG_IKE, "sending TNCCS Batch with %d bytes:", tncc_output.len);
+		DBG1(DBG_IKE, "%.*s", tncc_output.len, tncc_output.ptr);
+		memcpy(buf, tncc_output.ptr, len);
+		chunk_free(&tncc_output);
+		return ALREADY_DONE;
+	}
+	else
+	{
+		return INVALID_STATE;
+	}
 }
 
 METHOD(tls_t, is_server, bool,
@@ -117,7 +135,6 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tnccs_11_t *this)
 {
-	/* TODO */
 	return FALSE;
 }
 
