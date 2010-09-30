@@ -32,6 +32,14 @@
 #define OSSO_CHARON_OBJECT	"/org/strongswan/"OSSO_CHARON_NAME
 #define OSSO_CHARON_IFACE	"org.strongswan."OSSO_CHARON_NAME
 
+typedef enum {
+	VPN_STATUS_DISCONNECTED,
+	VPN_STATUS_CONNECTING,
+	VPN_STATUS_CONNECTED,
+	VPN_STATUS_AUTH_FAILED,
+	VPN_STATUS_CONNECTION_FAILED,
+} vpn_status_t;
+
 typedef struct private_maemo_service_t private_maemo_service_t;
 
 /**
@@ -60,9 +68,14 @@ struct private_maemo_service_t {
 	osso_context_t *context;
 
 	/**
-	 * current IKE_SA
+	 * Current IKE_SA
 	 */
 	ike_sa_t *ike_sa;
+
+	/**
+	 * Status of the current connection
+	 */
+	vpn_status_t status;
 
 	/**
 	 * Name of the current connection
@@ -75,6 +88,7 @@ static gint change_status(private_maemo_service_t *this, int status)
 {
 	osso_rpc_t retval;
 	gint res;
+	this->status = status;
 	res = osso_rpc_run (this->context, OSSO_STATUS_SERVICE, OSSO_STATUS_OBJECT,
 						OSSO_STATUS_IFACE, "StatusChanged", &retval,
 						DBUS_TYPE_INT32, status,
@@ -85,6 +99,13 @@ static gint change_status(private_maemo_service_t *this, int status)
 METHOD(listener_t, ike_updown, bool,
 	   private_maemo_service_t *this, ike_sa_t *ike_sa, bool up)
 {
+	/* this callback is only registered during initiation, so if the IKE_SA
+	 * goes down we assume an authentication error */
+	if (this->ike_sa == ike_sa && !up)
+	{
+		change_status(this, VPN_STATUS_AUTH_FAILED);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -92,6 +113,12 @@ METHOD(listener_t, child_state_change, bool,
 	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   child_sa_state_t state)
 {
+	/* this call back is only registered during initiation */
+	if (this->ike_sa == ike_sa && state == CHILD_DESTROYING)
+	{
+		change_status(this, VPN_STATUS_CONNECTION_FAILED);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -99,6 +126,21 @@ METHOD(listener_t, child_updown, bool,
 	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   bool up)
 {
+	if (this->ike_sa == ike_sa)
+	{
+		if (up)
+		{
+			/* disable hooks registered to catch initiation failures */
+			this->public.listener.ike_updown = NULL;
+			this->public.listener.child_state_change = NULL;
+			change_status(this, VPN_STATUS_CONNECTED);
+		}
+		else
+		{
+			change_status(this, VPN_STATUS_CONNECTION_FAILED);
+			return FALSE;
+		}
+	}
 	return TRUE;
 }
 
@@ -112,12 +154,39 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+static void disconnect(private_maemo_service_t *this)
+{
+	ike_sa_t *ike_sa;
+	u_int id;
+
+	if (!this->current)
+	{
+		return;
+	}
+
+	/* avoid status updates, as this is called from the Glib main loop */
+	charon->bus->remove_listener(charon->bus, &this->public.listener);
+
+	ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
+													  this->current, FALSE);
+	if (ike_sa)
+	{
+		id = ike_sa->get_unique_id(ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		charon->controller->terminate_ike(charon->controller, id,
+										  NULL, NULL);
+	}
+	this->current = (g_free(this->current), NULL);
+	this->status = VPN_STATUS_DISCONNECTED;
+}
+
 static gboolean initiate_connection(private_maemo_service_t *this,
 									GArray *arguments)
 {
 	gint i;
 	gchar *hostname = NULL, *cacert = NULL, *username = NULL, *password = NULL;
 	identification_t *gateway = NULL, *user = NULL;
+	ike_sa_t *ike_sa;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -132,11 +201,12 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 		}
 	};
 
-	if (this->current)
+	if (this->status == VPN_STATUS_CONNECTED ||
+		this->status == VPN_STATUS_CONNECTING)
 	{
-		DBG1(DBG_CFG, "currently connected to '%s', disconnect first",
+		DBG1(DBG_CFG, "currently connected to '%s', disconnecting first",
 			 this->current);
-		return FALSE;
+		disconnect (this);
 	}
 
 	if (arguments->len != 5)
@@ -151,12 +221,12 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 		if (arg->type != DBUS_TYPE_STRING)
 		{
 			DBG1(DBG_CFG, "invalid argument [%d]: %d", i, arg->type);
-			this->current = (g_free(this->current), NULL);
 			return FALSE;
 		}
 		switch (i)
 		{
 			case 0: /* name */
+				this->current = (g_free(this->current), NULL);
 				this->current = g_strdup(arg->value.s);
 				break;
 			case 1: /* hostname */
@@ -236,36 +306,33 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	/* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
 
-	if (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 controller_cb_empty, NULL) != SUCCESS)
+	/* get us an IKE_SA */
+	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
+														peer_cfg);
+	if (!ike_sa->get_peer_cfg(ike_sa))
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+	}
+	peer_cfg->destroy(peer_cfg);
+
+	/* store the IKE_SA, so we can track its progress */
+	this->ike_sa = ike_sa;
+	this->status = VPN_STATUS_CONNECTING;
+	this->public.listener.ike_updown = _ike_updown;
+	this->public.listener.child_state_change = _child_state_change;
+	charon->bus->add_listener(charon->bus, &this->public.listener);
+
+	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
-		this->current = (g_free(this->current), NULL);
+		charon->bus->remove_listener(charon->bus, &this->public.listener);
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+													ike_sa);
+		this->status = VPN_STATUS_CONNECTION_FAILED;
 		return FALSE;
 	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return TRUE;
-}
-
-static void disconnect(private_maemo_service_t *this)
-{
-	ike_sa_t *ike_sa;
-	u_int id;
-
-	if (!this->current)
-	{
-		return;
-	}
-
-	ike_sa = charon->ike_sa_manager->checkout_by_name(charon->ike_sa_manager,
-													  this->current, FALSE);
-	if (ike_sa)
-	{
-		id = ike_sa->get_unique_id(ike_sa);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		charon->controller->terminate_ike(charon->controller, id,
-										  NULL, NULL);
-	}
-	this->current = (g_free(this->current), NULL);
 }
 
 /**
@@ -329,6 +396,7 @@ METHOD(maemo_service_t, destroy, void,
 	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
+	this->current = (g_free(this->current), NULL);
 	free(this);
 }
 
@@ -381,8 +449,6 @@ maemo_service_t *maemo_service_create()
 	{
 		g_thread_init(NULL);
 	}
-
-	charon->bus->add_listener(charon->bus, &this->public.listener);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
