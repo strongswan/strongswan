@@ -44,6 +44,8 @@ typedef enum
 	STATUS_DISCONNECTED,
 	STATUS_CONNECTING,
 	STATUS_CONNECTED,
+	STATUS_AUTH_FAILED,
+	STATUS_CONNECTION_FAILED,
 } StrongswanConnectionStatus;
 
 struct _StrongswanStatusPrivate
@@ -80,6 +82,7 @@ update_status_menu (StrongswanStatus *plugin)
 	StrongswanStatusPrivate *priv = plugin->priv;
 	switch (priv->status)
 	{
+		default:
 		case STATUS_DISCONNECTED:
 		{
 			hildon_button_set_value (HILDON_BUTTON (priv->button),
@@ -140,37 +143,61 @@ dialog_response (GtkDialog *dialog, gint response_id, StrongswanStatus *plugin)
 }
 
 static void
-connect_callback (const gchar* interface, const gchar* method,
-				  osso_rpc_t *retval, StrongswanStatus *plugin)
+handle_status_change (StrongswanStatus *plugin,
+					  StrongswanConnectionStatus status,
+					  gchar *message)
 {
-	gchar *msg = NULL;
 	StrongswanStatusPrivate *priv = plugin->priv;
+	gchar *msg = NULL;
 
-	if (retval->type == DBUS_TYPE_STRING)
-	{	/* unfortunately, this is the only indication that an error occured
-		 * for asynchronous calls */
-		msg = g_strdup_printf ("Failed to initiate connection: %s",
-							   retval->value.s);
-	}
-	else if (retval->type != DBUS_TYPE_BOOLEAN)
+	switch (status)
 	{
-		msg = g_strdup_printf ("Failed to initiate connection: return type");
-	}
-	else if (!retval->value.b)
-	{
-		msg = g_strdup_printf ("Failed to connect to %s", priv->current);
+		case STATUS_CONNECTION_FAILED:
+		{
+			if (priv->status == STATUS_CONNECTED)
+			{
+				msg = g_strdup_printf ("Lost connection to %s", priv->current);
+			}
+			else if (message)
+			{
+				msg = g_strdup_printf ("Failed to connect to %s: %s",
+									   priv->current, message);
+			}
+			else
+			{
+				msg = g_strdup_printf ("Failed to connect to %s",
+									   priv->current);
+			}
+			status = STATUS_DISCONNECTED;
+			break;
+		}
+		case STATUS_AUTH_FAILED:
+		{
+			msg = g_strdup_printf ("Failed to connect to %s: authentication "
+								   "failed", priv->current);
+			status = STATUS_DISCONNECTED;
+			/* TODO: show password dialog again? */
+			break;
+		}
+		case STATUS_CONNECTED:
+		{
+			msg = g_strdup_printf ("Successfully connected to %s",
+								   priv->current);
+			break;
+		}
+		default:
+		case STATUS_DISCONNECTED:
+		{
+			msg = g_strdup_printf ("Disconnected from %s", priv->current);
+			break;
+		}
 	}
 
-	if (msg)
+	priv->status = status;
+
+	if (status == STATUS_DISCONNECTED)
 	{
-		/* connecting failed */
 		priv->current = (g_free (priv->current), NULL);
-		priv->status = STATUS_DISCONNECTED;
-	}
-	else
-	{
-		msg = g_strdup_printf ("Successfully connected to %s", priv->current);
-		priv->status = STATUS_CONNECTED;
 	}
 
 	hildon_banner_show_information (NULL, NULL, msg);
@@ -181,7 +208,10 @@ connect_callback (const gchar* interface, const gchar* method,
 	if (priv->dialog)
 	{
 		update_dialog_default (plugin);
-		gtk_dialog_response (GTK_DIALOG (priv->dialog), GTK_RESPONSE_OK);
+		if (status == STATUS_CONNECTED)
+		{
+			gtk_dialog_response (GTK_DIALOG (priv->dialog), GTK_RESPONSE_OK);
+		}
 	}
 }
 
@@ -230,6 +260,8 @@ static void
 connect_clicked (HildonButton *button, StrongswanStatus *plugin)
 {
 	StrongswanStatusPrivate *priv = plugin->priv;
+	osso_return_t result;
+	osso_rpc_t retval;
 
 	priv->current = hildon_touch_selector_get_current_text (
 									HILDON_TOUCH_SELECTOR (priv->selector));
@@ -241,18 +273,12 @@ connect_clicked (HildonButton *button, StrongswanStatus *plugin)
 															priv->conns,
 															priv->current);
 	if (!conn)
-	{	/* emulate a callback call */
-		osso_rpc_t retval;
-		retval.type = DBUS_TYPE_STRING;
-		retval.value.s = g_strdup ("not found");
-		connect_callback (NULL, NULL, &retval, plugin);
-		osso_rpc_free_val (&retval);
+	{
+		handle_status_change (plugin, STATUS_CONNECTION_FAILED, "not found");
 		return;
 	}
 
 	/* this call on the system bus is only needed to start charon as root */
-	osso_rpc_t retval;
-	osso_return_t result;
 	result = osso_rpc_run_system (priv->context,
 								  OSSO_CHARON_SERVICE,
 								  OSSO_CHARON_OBJECT,
@@ -263,10 +289,8 @@ connect_clicked (HildonButton *button, StrongswanStatus *plugin)
 	osso_rpc_free_val (&retval);
 	if (result != OSSO_OK)
 	{
-		retval.type = DBUS_TYPE_STRING;
-		retval.value.s = g_strdup ("couldn't connect to charon");
-		connect_callback (NULL, NULL, &retval, plugin);
-		osso_rpc_free_val (&retval);
+		handle_status_change (plugin, STATUS_CONNECTION_FAILED,
+							  "couldn't connect to charon");
 		return;
 	}
 
@@ -284,24 +308,32 @@ connect_clicked (HildonButton *button, StrongswanStatus *plugin)
 				  "user", &c_user,
 				  NULL);
 
-	osso_rpc_async_run (priv->context,
-						OSSO_CHARON_SERVICE,
-						OSSO_CHARON_OBJECT,
-						OSSO_CHARON_IFACE,
-						"Connect",
-						(osso_rpc_async_f*)connect_callback,
-						plugin,
-						DBUS_TYPE_STRING, priv->current,
-						DBUS_TYPE_STRING, c_host,
-						DBUS_TYPE_STRING, c_cert,
-						DBUS_TYPE_STRING, c_user,
-						DBUS_TYPE_STRING, c_pass,
-						DBUS_TYPE_INVALID);
+	result = osso_rpc_run (priv->context,
+						   OSSO_CHARON_SERVICE,
+						   OSSO_CHARON_OBJECT,
+						   OSSO_CHARON_IFACE,
+						   "Connect",
+						   &retval,
+						   DBUS_TYPE_STRING, priv->current,
+						   DBUS_TYPE_STRING, c_host,
+						   DBUS_TYPE_STRING, c_cert,
+						   DBUS_TYPE_STRING, c_user,
+						   DBUS_TYPE_STRING, c_pass,
+						   DBUS_TYPE_INVALID);
 
 	g_free (c_host);
 	g_free (c_cert);
 	g_free (c_user);
 	g_free (c_pass);
+
+	if (result != OSSO_OK || !retval.value.b)
+	{
+		handle_status_change (plugin, STATUS_CONNECTION_FAILED,
+							  "initiation failed");
+		osso_rpc_free_val (&retval);
+		return;
+	}
+	osso_rpc_free_val (&retval);
 }
 
 static void
@@ -415,6 +447,7 @@ button_clicked (HildonButton *button,  StrongswanStatus *plugin)
 
 	switch (priv->status)
 	{
+		default:
 		case STATUS_DISCONNECTED:
 			setup_dialog_disconnected (plugin);
 			break;
@@ -443,9 +476,7 @@ dbus_req_handler(const gchar *interface, const gchar *method,
 		{
 			status = arg->value.i;
 		}
-		gchar *msg = g_strdup_printf ("Status changed to %d...", status);
-		hildon_banner_show_information (NULL, NULL, msg);
-		g_free(msg);
+		handle_status_change (plugin, status, NULL);
 	}
 	return OSSO_OK;
 }
