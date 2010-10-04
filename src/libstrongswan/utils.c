@@ -28,7 +28,7 @@
 #include "enum.h"
 #include "debug.h"
 
-ENUM(status_names, SUCCESS, DESTROY_ME,
+ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
 	"FAILED",
 	"OUT_OF_RES",
