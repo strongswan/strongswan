@@ -250,6 +250,17 @@ static chunk_t create_ack(private_tls_eap_t *this, u_int8_t identifier)
 		.type = this->type,
 	};
 	htoun16(&pkt.length, sizeof(pkt));
+	switch (this->type)
+	{
+		case EAP_TTLS:
+			pkt.flags |= EAP_TTLS_SUPPORTED_VERSION;
+		break;
+		case EAP_TNC:
+			pkt.flags |= EAP_TNC_SUPPORTED_VERSION;
+			break;
+		default:
+			break;
+	}
 	DBG2(DBG_TLS, "sending %N acknowledgement packet",
 		 eap_type_names, this->type);
 	return chunk_clone(chunk_from_thing(pkt));
