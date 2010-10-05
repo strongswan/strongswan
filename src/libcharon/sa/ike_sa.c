@@ -1717,10 +1717,65 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 	}
 }
 
+/**
+ * Check if the current combination of source and destination address is still
+ * valid.
+ */
+static bool is_current_path_valid(private_ike_sa_t *this)
+{
+	bool valid = FALSE;
+	host_t *src;
+	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+											this->other_host, this->my_host);
+	if (src)
+	{
+		if (src->ip_equals(src, this->my_host))
+		{
+			valid = TRUE;
+		}
+		src->destroy(src);
+	}
+	return valid;
+}
+
+/**
+ * Check if we have any path avialable for this IKE SA.
+ */
+static bool is_any_path_valid(private_ike_sa_t *this)
+{
+	bool valid = FALSE;
+	enumerator_t *enumerator;
+	host_t *src, *addr;
+	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
+	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+												   this->other_host, NULL);
+	if (!src)
+	{
+		enumerator = this->additional_addresses->create_enumerator(
+												this->additional_addresses);
+		while (enumerator->enumerate(enumerator, &addr))
+		{
+			DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+			src = hydra->kernel_interface->get_source_addr(
+									hydra->kernel_interface, addr, NULL);
+			if (src)
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	if (src)
+	{
+		valid = TRUE;
+		src->destroy(src);
+	}
+	return valid;
+}
+
 METHOD(ike_sa_t, roam, status_t,
 	private_ike_sa_t *this, bool address)
 {
-	host_t *src;
 	ike_mobike_t *mobike;
 
 	switch (this->state)
@@ -1741,60 +1796,27 @@ METHOD(ike_sa_t, roam, status_t,
 			DBG1(DBG_IKE, "sending address list update using MOBIKE");
 			mobike = ike_mobike_create(&this->public, TRUE);
 			mobike->addresses(mobike);
-			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			this->task_manager->queue_task(this->task_manager,
+										   (task_t*)mobike);
 			return this->task_manager->initiate(this->task_manager);
 		}
 		return SUCCESS;
 	}
 
 	/* keep existing path if possible */
-	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
-											this->other_host, this->my_host);
-	if (src)
+	if (is_current_path_valid(this))
 	{
-		if (src->ip_equals(src, this->my_host))
-		{
-			DBG2(DBG_IKE, "keeping connection path %H - %H",
-				 src, this->other_host);
-			src->destroy(src);
-			set_condition(this, COND_STALE, FALSE);
-			return SUCCESS;
-		}
-		src->destroy(src);
-
+		DBG2(DBG_IKE, "keeping connection path %H - %H",
+			 this->my_host, this->other_host);
+		set_condition(this, COND_STALE, FALSE);
+		return SUCCESS;
 	}
-	else
+	if (!is_any_path_valid(this))
 	{
-		/* check if we find a route at all */
-		enumerator_t *enumerator;
-		host_t *addr;
-
-		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
-													   this->other_host, NULL);
-		if (!src)
-		{
-			enumerator = this->additional_addresses->create_enumerator(
-													this->additional_addresses);
-			while (enumerator->enumerate(enumerator, &addr))
-			{
-				DBG1(DBG_IKE, "looking for a route to %H ...", addr);
-				src = hydra->kernel_interface->get_source_addr(
-										hydra->kernel_interface, addr, NULL);
-				if (src)
-				{
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
-		}
-		if (!src)
-		{
-			DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
-				 this->other_host);
-			set_condition(this, COND_STALE, TRUE);
-			return SUCCESS;
-		}
-		src->destroy(src);
+		DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
+			 this->other_host);
+		set_condition(this, COND_STALE, TRUE);
+		return SUCCESS;
 	}
 	set_condition(this, COND_STALE, FALSE);
 
