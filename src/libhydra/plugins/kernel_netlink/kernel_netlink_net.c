@@ -735,6 +735,42 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
+ * get the first non-virtual ip address on the given interface.
+ * returned host is a clone, has to be freed by caller.
+ */
+static host_t *get_interface_address(private_kernel_netlink_net_t *this,
+									 int ifindex, int family)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	host_t *ip = NULL;
+
+	this->mutex->lock(this->mutex);
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (iface->ifindex == ifindex)
+		{
+			addrs = iface->addrs->create_enumerator(iface->addrs);
+			while (addrs->enumerate(addrs, &addr))
+			{
+				if (!addr->virtual && addr->ip->get_family(addr->ip) == family)
+				{
+					ip = addr->ip->clone(addr->ip);
+					break;
+				}
+			}
+			addrs->destroy(addrs);
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	this->mutex->unlock(this->mutex);
+	return ip;
+}
+
+/**
  * Check if an interface with a given index is up
  */
 static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
@@ -925,8 +961,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					continue;
 				}
 				if (rta_src.ptr)
-				{
-					/* got a source address */
+				{	/* got a source address */
 					new_src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
 					if (new_src)
 					{
@@ -940,6 +975,18 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 							src = new_src;
 							best = msg->rtm_dst_len;
 						}
+					}
+					continue;
+				}
+				if (rta_oif)
+				{	/* no source, but an interface. Get address from it. */
+					new_src = get_interface_address(this, rta_oif,
+													msg->rtm_family);
+					if (new_src)
+					{
+						DESTROY_IF(src);
+						src = new_src;
+						best = msg->rtm_dst_len;
 					}
 					continue;
 				}
