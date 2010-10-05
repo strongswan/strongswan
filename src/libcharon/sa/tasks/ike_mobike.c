@@ -71,6 +71,11 @@ struct private_ike_mobike_t {
 	 * include address list update
 	 */
 	bool address;
+
+	/**
+	 * additional addresses got updated
+	 */
+	bool addresses_updated;
 };
 
 /**
@@ -154,6 +159,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				host = host_create_from_chunk(family, data, 0);
 				DBG2(DBG_IKE, "got additional MOBIKE peer address: %H", host);
 				this->ike_sa->add_additional_address(this->ike_sa, host);
+				this->addresses_updated = TRUE;
 				break;
 			}
 			case UPDATE_SA_ADDRESSES:
@@ -164,6 +170,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			case NO_ADDITIONAL_ADDRESSES:
 			{
 				flush_additional_addresses(this);
+				this->addresses_updated = TRUE;
 				break;
 			}
 			case NAT_DETECTION_SOURCE_IP:
@@ -411,6 +418,19 @@ METHOD(task_t, process_r, status_t,
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
+		}
+		if (this->addresses_updated && this->ike_sa->has_condition(this->ike_sa,
+												COND_ORIGINAL_INITIATOR))
+		{
+			host_t *other = message->get_source(message);
+			host_t *other_old = this->ike_sa->get_other_host(this->ike_sa);
+			if (!other->equals(other, other_old))
+			{
+				DBG1(DBG_IKE, "remote address changed from %H to %H", other_old,
+					 other);
+				this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
+				this->update = TRUE;
+			}
 		}
 	}
 	return NEED_MORE;
