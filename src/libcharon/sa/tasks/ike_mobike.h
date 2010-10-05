@@ -46,6 +46,11 @@ struct ike_mobike_t {
 	task_t task;
 
 	/**
+	 * Use the task to update the list of additional addresses.
+	 */
+	void (*addresses)(ike_mobike_t *this);
+
+	/**
 	 * Use the task to roam to other addresses.
 	 *
 	 * @param address		TRUE to include address list update

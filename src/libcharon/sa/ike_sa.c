@@ -1740,6 +1740,7 @@ METHOD(ike_sa_t, roam, status_t,
 		{
 			DBG1(DBG_IKE, "sending address list update using MOBIKE");
 			mobike = ike_mobike_create(&this->public, TRUE);
+			mobike->addresses(mobike);
 			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 			return this->task_manager->initiate(this->task_manager);
 		}

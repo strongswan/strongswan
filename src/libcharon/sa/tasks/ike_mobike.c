@@ -540,6 +540,14 @@ METHOD(task_t, process_i, status_t,
 	return NEED_MORE;
 }
 
+METHOD(ike_mobike_t, addresses, void,
+	   private_ike_mobike_t *this)
+{
+	this->address = TRUE;
+	this->ike_sa->set_pending_updates(this->ike_sa,
+						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+}
+
 METHOD(ike_mobike_t, roam, void,
 	   private_ike_mobike_t *this, bool address)
 {
@@ -556,7 +564,6 @@ METHOD(ike_mobike_t, dpd, void,
 	{
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	}
-	this->address = FALSE;
 	this->ike_sa->set_pending_updates(this->ike_sa,
 						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
@@ -609,6 +616,7 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.addresses = _addresses,
 			.roam = _roam,
 			.dpd = _dpd,
 			.transmit = _transmit,
@@ -616,7 +624,6 @@ ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 		},
 		.ike_sa = ike_sa,
 		.initiator = initiator,
-		.address = TRUE,
 	);
 
 	if (initiator)
