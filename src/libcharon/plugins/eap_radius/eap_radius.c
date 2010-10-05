@@ -20,6 +20,8 @@
 
 #include <daemon.h>
 
+#define TUNNEL_TYPE_ESP		9
+
 typedef struct private_eap_radius_t private_eap_radius_t;
 
 /**
@@ -71,6 +73,11 @@ struct private_eap_radius_t {
 	 * Handle the Class attribute as group membership information?
 	 */
 	bool class_group;
+
+	/**
+	 * Handle the Filter-Id attribute as IPsec CHILD_SA name?
+	 */
+	bool filter_id;
 };
 
 /**
@@ -211,6 +218,51 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 	enumerator->destroy(enumerator);
 }
 
+/**
+ * Handle the Filter-Id attribute as IPsec CHILD_SA name
+ */
+static void process_filter(private_eap_radius_t *this, radius_message_t *msg)
+{
+	enumerator_t *enumerator;
+	chunk_t data, filter_id;
+	int type;
+	u_int8_t tunnel_tag;
+	u_int32_t tunnel_type;
+	bool is_esp_tunnel = FALSE;
+
+	enumerator = msg->create_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case RAT_TUNNEL_TYPE:
+				if (data.len != 4)
+				{
+					continue;
+				}
+				tunnel_tag = *data.ptr;
+				*data.ptr = 0x00;
+				tunnel_type = untoh32(data.ptr);
+				DBG1(DBG_IKE, "received RADIUS attribute Tunnel-Type: "
+							  "tag = %u, value = %u", tunnel_tag, tunnel_type); 
+				is_esp_tunnel = (tunnel_type == TUNNEL_TYPE_ESP);
+				break;
+			case RAT_FILTER_ID:
+				filter_id = data;
+				DBG1(DBG_IKE, "received RADIUS attribute Filter-Id: "
+							  "'%.*s'", filter_id.len, filter_id.ptr); 
+				break;
+			default:
+				break;
+		}
+		if (is_esp_tunnel && filter_id.len)
+		{
+			/* TODO filter_id specifies CHILD_SA to be installed */
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(eap_method_t, process, status_t,
 	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
@@ -246,6 +298,10 @@ METHOD(eap_method_t, process, status_t,
 				if (this->class_group)
 				{
 					process_class(this, response);
+				}
+				if (this->filter_id)
+				{
+					process_filter(this, response);
 				}
 				status = SUCCESS;
 				break;
@@ -331,6 +387,9 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 								"charon.plugins.eap-radius.id_prefix", ""),
 		.class_group = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-radius.class_group", FALSE),
+		.filter_id = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.filter_id", FALSE),
+		
 	);
 	this->client = radius_client_create();
 	if (!this->client)
