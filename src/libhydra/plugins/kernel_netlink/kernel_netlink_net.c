@@ -223,6 +223,42 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 }
 
 /**
+ * get the first non-virtual ip address on the given interface.
+ * returned host is a clone, has to be freed by caller.
+ */
+static host_t *get_interface_address(private_kernel_netlink_net_t *this,
+									 int ifindex, int family)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	host_t *ip = NULL;
+
+	this->mutex->lock(this->mutex);
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (iface->ifindex == ifindex)
+		{
+			addrs = iface->addrs->create_enumerator(iface->addrs);
+			while (addrs->enumerate(addrs, &addr))
+			{
+				if (!addr->virtual && addr->ip->get_family(addr->ip) == family)
+				{
+					ip = addr->ip->clone(addr->ip);
+					break;
+				}
+			}
+			addrs->destroy(addrs);
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	this->mutex->unlock(this->mutex);
+	return ip;
+}
+
+/**
  * callback function that raises the delayed roam event
  */
 static job_requeue_t roam_event(uintptr_t address)
@@ -483,6 +519,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	struct rtmsg* msg = (struct rtmsg*)(NLMSG_DATA(hdr));
 	struct rtattr *rta = RTM_RTA(msg);
 	size_t rtasize = RTM_PAYLOAD(hdr);
+	u_int32_t rta_oif = 0;
 	host_t *host = NULL;
 
 	/* ignore routes added by us */
@@ -499,8 +536,18 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 				host = host_create_from_chunk(msg->rtm_family,
 							chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)), 0);
 				break;
+			case RTA_OIF:
+				if (RTA_PAYLOAD(rta) == sizeof(rta_oif))
+				{
+					rta_oif = *(u_int32_t*)RTA_DATA(rta);
+				}
+				break;
 		}
 		rta = RTA_NEXT(rta, rtasize);
+	}
+	if (!host && rta_oif)
+	{
+		host = get_interface_address(this, rta_oif, msg->rtm_family);
 	}
 	if (host)
 	{
@@ -735,42 +782,6 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
- * get the first non-virtual ip address on the given interface.
- * returned host is a clone, has to be freed by caller.
- */
-static host_t *get_interface_address(private_kernel_netlink_net_t *this,
-									 int ifindex, int family)
-{
-	enumerator_t *ifaces, *addrs;
-	iface_entry_t *iface;
-	addr_entry_t *addr;
-	host_t *ip = NULL;
-
-	this->mutex->lock(this->mutex);
-	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (ifaces->enumerate(ifaces, &iface))
-	{
-		if (iface->ifindex == ifindex)
-		{
-			addrs = iface->addrs->create_enumerator(iface->addrs);
-			while (addrs->enumerate(addrs, &addr))
-			{
-				if (!addr->virtual && addr->ip->get_family(addr->ip) == family)
-				{
-					ip = addr->ip->clone(addr->ip);
-					break;
-				}
-			}
-			addrs->destroy(addrs);
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	this->mutex->unlock(this->mutex);
-	return ip;
-}
-
-/**
  * Check if an interface with a given index is up
  */
 static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
@@ -979,7 +990,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					continue;
 				}
 				if (rta_oif)
-				{	/* no source, but an interface. Get address from it. */
+				{	/* no src or gtw, but an interface. Get address from it. */
 					new_src = get_interface_address(this, rta_oif,
 													msg->rtm_family);
 					if (new_src)
