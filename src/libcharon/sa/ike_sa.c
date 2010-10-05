@@ -1788,20 +1788,6 @@ METHOD(ike_sa_t, roam, status_t,
 		default:
 			break;
 	}
-	/* responder just updates the peer about changed address config */
-	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
-	{
-		if (supports_extension(this, EXT_MOBIKE) && address)
-		{
-			DBG1(DBG_IKE, "sending address list update using MOBIKE");
-			mobike = ike_mobike_create(&this->public, TRUE);
-			mobike->addresses(mobike);
-			this->task_manager->queue_task(this->task_manager,
-										   (task_t*)mobike);
-			return this->task_manager->initiate(this->task_manager);
-		}
-		return SUCCESS;
-	}
 
 	/* keep existing path if possible */
 	if (is_current_path_valid(this))
@@ -1834,14 +1820,29 @@ METHOD(ike_sa_t, roam, status_t,
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))
 	{
-		DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+		{	/* responder updates the peer about changed address config */
+			DBG1(DBG_IKE, "sending address list update using MOBIKE, "
+				 "implicitly requesting an address change");
+			address = TRUE;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		}
 		mobike = ike_mobike_create(&this->public, TRUE);
 		mobike->roam(mobike, address);
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
+
 	/* ... reauth if not */
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+	{	/* responder does not reauthenticate */
+		set_condition(this, COND_STALE, TRUE);
+		return SUCCESS;
+	}
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
 	return reauth(this);
 }
 
