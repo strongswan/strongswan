@@ -224,7 +224,7 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 static void process_filter(private_eap_radius_t *this, radius_message_t *msg)
 {
 	enumerator_t *enumerator;
-	chunk_t data, filter_id;
+	chunk_t data, filter_id = chunk_empty;
 	int type;
 	u_int8_t tunnel_tag;
 	u_int32_t tunnel_type;
@@ -255,12 +255,13 @@ static void process_filter(private_eap_radius_t *this, radius_message_t *msg)
 			default:
 				break;
 		}
-		if (is_esp_tunnel && filter_id.len)
-		{
-			/* TODO filter_id specifies CHILD_SA to be installed */
-		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (is_esp_tunnel && filter_id.len)
+	{
+		/* TODO filter_id specifies name of CHILD_SA to be installed */
+	}
 }
 
 METHOD(eap_method_t, process, status_t,
