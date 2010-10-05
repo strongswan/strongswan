@@ -221,13 +221,13 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 /**
  * Handle the Filter-Id attribute as IPsec CHILD_SA name
  */
-static void process_filter(private_eap_radius_t *this, radius_message_t *msg)
+static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 {
 	enumerator_t *enumerator;
-	chunk_t data, filter_id = chunk_empty;
 	int type;
 	u_int8_t tunnel_tag;
 	u_int32_t tunnel_type;
+	chunk_t filter_id = chunk_empty, data;
 	bool is_esp_tunnel = FALSE;
 
 	enumerator = msg->create_enumerator(msg);
@@ -260,7 +260,17 @@ static void process_filter(private_eap_radius_t *this, radius_message_t *msg)
 
 	if (is_esp_tunnel && filter_id.len)
 	{
-		/* TODO filter_id specifies name of CHILD_SA to be installed */
+		identification_t *id;
+		ike_sa_t *ike_sa;
+		auth_cfg_t *auth;
+
+		ike_sa = charon->bus->get_sa(charon->bus);
+		if (ike_sa)
+		{
+			auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+			id = identification_create_from_data(filter_id);
+			auth->add(auth, AUTH_RULE_GROUP, id);
+		}
 	}
 }
 
@@ -302,7 +312,7 @@ METHOD(eap_method_t, process, status_t,
 				}
 				if (this->filter_id)
 				{
-					process_filter(this, response);
+					process_filter_id(this, response);
 				}
 				status = SUCCESS;
 				break;
