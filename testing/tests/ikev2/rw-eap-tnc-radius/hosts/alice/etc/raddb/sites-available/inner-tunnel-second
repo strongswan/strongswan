@@ -18,13 +18,13 @@ post-auth {
 	if (control:TNC-Status == "Access") {
 		update reply {
 			Tunnel-Type := ESP 
-			Filter-Id := "rw-access"
+			Filter-Id := "access"
 		}
 	}
 	elsif (control:TNC-Status == "Isolate") {
 		update reply {
 			Tunnel-Type := ESP 
-			Filter-Id := "rw-isolate"	
+			Filter-Id := "isolate"	
 		}
 	}
 
