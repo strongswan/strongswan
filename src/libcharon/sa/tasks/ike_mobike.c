@@ -270,26 +270,19 @@ static void update_children(private_ike_mobike_t *this)
 }
 
 /**
- * Apply port of old address if it equals new, port otherwise
+ * Apply the port of the old host, if its ip equals the new, use port otherwise.
  */
-static void apply_port(private_ike_mobike_t *this, host_t *host, host_t *old,
-					   u_int16_t port)
+static void apply_port(host_t *host, host_t *old, u_int16_t port)
 {
 	if (host->ip_equals(host, old))
 	{
-		host->set_port(host, old->get_port(old));
+		port = old->get_port(old);
 	}
-	else
+	else if (port == IKEV2_UDP_PORT)
 	{
-		if (port == IKEV2_UDP_PORT)
-		{
-			host->set_port(host, IKEV2_NATT_PORT);
-		}
-		else
-		{
-			host->set_port(host, port);
-		}
+		port = IKEV2_NATT_PORT;
 	}
+	host->set_port(host, port);
 }
 
 /**
@@ -315,7 +308,7 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 									hydra->kernel_interface, other_old, NULL);
 	if (me)
 	{
-		apply_port(this, me, me_old, ike_cfg->get_my_port(ike_cfg));
+		apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg));
 		DBG1(DBG_IKE, "checking original path %#H - %#H", me, other_old);
 		copy = packet->clone(packet);
 		copy->set_source(copy, me);
@@ -335,9 +328,9 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 				continue;
 			}
 			/* reuse port for an active address, 4500 otherwise */
-			apply_port(this, me, me_old, ike_cfg->get_my_port(ike_cfg));
+			apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg));
 			other = other->clone(other);
-			apply_port(this, other, other_old, ike_cfg->get_other_port(ike_cfg));
+			apply_port(other, other_old, ike_cfg->get_other_port(ike_cfg));
 			DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 			copy = packet->clone(packet);
 			copy->set_source(copy, me);
