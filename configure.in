@@ -116,6 +116,7 @@ ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
+ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -760,6 +761,7 @@ ADD_PLUGIN([eap-tls],              [c libcharon])
 ADD_PLUGIN([eap-ttls],             [c libcharon])
 ADD_PLUGIN([eap-tnc],              [c libcharon])
 ADD_PLUGIN([tnccs-11],             [c libcharon])
+ADD_PLUGIN([tnccs-20],             [c libcharon])
 ADD_PLUGIN([medsrv],               [c libcharon])
 ADD_PLUGIN([medcli],               [c libcharon])
 ADD_PLUGIN([nm],                   [c libcharon])
@@ -857,6 +859,7 @@ AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
 AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
+AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
@@ -995,6 +998,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/tnccs_11/Makefile
+	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile

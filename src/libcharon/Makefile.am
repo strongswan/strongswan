@@ -321,6 +321,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNCCS_20
+  SUBDIRS += plugins/tnccs_20
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_tnc/libstrongswan-tnccs-20.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 if MONOLITHIC
