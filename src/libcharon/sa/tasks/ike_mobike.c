@@ -342,7 +342,8 @@ METHOD(ike_mobike_t, transmit, void,
 METHOD(task_t, build_i, status_t,
 	   private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_message_id(message) == 1)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_message_id(message) == 1)
 	{	/* only in first IKE_AUTH */
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
@@ -369,7 +370,8 @@ METHOD(task_t, build_i, status_t,
 		}
 		if (this->update)
 		{
-			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
+			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES,
+								chunk_empty);
 			build_cookie(this, message);
 			update_children(this);
 		}
@@ -388,7 +390,8 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r, status_t,
 	   private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_message_id(message) == 1)
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_message_id(message) == 1)
 	{	/* only first IKE_AUTH */
 		process_payloads(this, message);
 	}
