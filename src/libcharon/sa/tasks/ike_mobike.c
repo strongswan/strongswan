@@ -543,7 +543,13 @@ METHOD(task_t, process_i, status_t,
 			}
 			if (this->update)
 			{
-				/* start the update with the same task */
+				if (!this->ike_sa->has_condition(this->ike_sa,
+												 COND_ORIGINAL_INITIATOR))
+				{
+					update_children(this);
+					return SUCCESS;
+				}
+				/* original initiator starts the update with the same task */
 				this->check = FALSE;
 				this->address = FALSE;
 				if (this->natd)
