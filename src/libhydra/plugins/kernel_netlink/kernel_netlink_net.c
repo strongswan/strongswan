@@ -522,8 +522,9 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	u_int32_t rta_oif = 0;
 	host_t *host = NULL;
 
-	/* ignore routes added by us */
-	if (msg->rtm_table && msg->rtm_table == this->routing_table)
+	/* ignore routes added by us or in the local routing table (local addrs) */
+	if (msg->rtm_table && (msg->rtm_table == this->routing_table ||
+						   msg->rtm_table == RT_TABLE_LOCAL))
 	{
 		return;
 	}
