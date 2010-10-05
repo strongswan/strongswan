@@ -163,6 +163,7 @@ METHOD(tls_t, destroy, void,
  */
 tls_t *tnccs_11_create(bool is_server)
 {
+	char *tnc_config, *pref_lang;
 	private_tnccs_11_t *this;
 
 	INIT(this,
@@ -178,11 +179,16 @@ tls_t *tnccs_11_create(bool is_server)
 		.is_server = is_server,
 	);
 
+	tnc_config = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnccs-11.tnc_config", "/etc/tnc_config");
+	pref_lang = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnccs-11.preferred_language", "en");
+
 	if (!is_server)
 	{
 		int imc_count;
 
-		imc_count = libtnc_imc_load_config("/etc/tnc_config");
+		imc_count = libtnc_imc_load_config(tnc_config);
 		if (imc_count < 0)
 		{
 			free(this);
@@ -193,7 +199,7 @@ tls_t *tnccs_11_create(bool is_server)
 		{
 			DBG1(DBG_IKE, "loaded %d TNC IMC instances", imc_count);
 		}
-		libtnc_tncc_PreferredLanguage("en");
+		libtnc_tncc_PreferredLanguage(pref_lang);
 	}
 	return &this->public;
 }
