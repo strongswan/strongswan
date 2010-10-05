@@ -1809,8 +1809,19 @@ METHOD(ike_sa_t, roam, status_t,
 		DBG2(DBG_IKE, "keeping connection path %H - %H",
 			 this->my_host, this->other_host);
 		set_condition(this, COND_STALE, FALSE);
+
+		if (supports_extension(this, EXT_MOBIKE) && address)
+		{	/* if any addresses changed, send an updated list */
+			DBG1(DBG_IKE, "sending address list update using MOBIKE");
+			mobike = ike_mobike_create(&this->public, TRUE);
+			mobike->addresses(mobike);
+			this->task_manager->queue_task(this->task_manager,
+										   (task_t*)mobike);
+			return this->task_manager->initiate(this->task_manager);
+		}
 		return SUCCESS;
 	}
+
 	if (!is_any_path_valid(this))
 	{
 		DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
