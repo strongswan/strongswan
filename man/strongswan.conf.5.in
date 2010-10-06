@@ -311,7 +311,7 @@ Request peer authentication based on a client certificate
 
 .TP
 .BR charon.plugins.ha.remote
-
+ 
 .TP
 .BR charon.plugins.ha.resync " [yes]"
 
@@ -345,6 +345,12 @@ Database URI for charons SQL plugin
 .TP
 .BR charon.plugins.sql.loglevel " [-1]"
 Loglevel for logging to SQL database
+.TP
+.BR charon.plugins.tnccs-11.preferred_language " [en]"
+Preferred language for TNC recommendations
+.TP
+.BR charon.plugins.tnccs-11.tnc_config " [/etc/tnc_config]"
+TNC IMC/IMV configuration directory
 .SS libstrongswan section
 .TP
 .BR libstrongswan.crypto_test.bench " [no]"
