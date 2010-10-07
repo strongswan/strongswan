@@ -44,9 +44,14 @@ struct private_eap_ttls_server_t {
 	identification_t *peer;
 
 	/**
-	 * Current EAP-TTLS state
+	 * Current EAP-TTLS phase2 state
 	 */
 	bool start_phase2;
+
+	/**
+	 * Current EAP-TTLS phase2 TNC state
+	 */
+	bool start_phase2_tnc;
 
 	/**
      * Current phase 2 EAP method
@@ -210,6 +215,25 @@ METHOD(tls_application_t, process, status_t,
 							eap_type_names, type);
 			this->method->destroy(this->method);
 			this->method = NULL;
+
+			/* continue phase2 with EAP-TNC? */
+			if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
+			 	"charon.plugins.eap-ttls.phase2_tnc", FALSE))
+			{
+				DBG1(DBG_IKE, "phase2 method %N selected",
+					 eap_type_names, EAP_TNC);
+				this->method = charon->eap->create_instance(charon->eap, EAP_TNC,
+									0, EAP_SERVER, this->server, this->peer);
+				if (this->method == NULL)
+				{
+					DBG1(DBG_IKE, "%N method not available",
+						 eap_type_names, EAP_TNC);
+					return FAILED;
+				}
+				this->method->initiate(this->method, &this->out);
+				this->start_phase2 = FALSE;
+				return NEED_MORE;
+			}
 			break;
 		case NEED_MORE:
 			break;
@@ -248,7 +272,8 @@ METHOD(tls_application_t, build, status_t,
 								 0,	EAP_SERVER, this->server, this->peer);
 		if (this->method == NULL)
 		{
-			DBG1(DBG_IKE, "EAP_IDENTITY method not available");
+			DBG1(DBG_IKE, "%N method not available",
+				 eap_type_names, EAP_IDENTITY);
 			return FAILED;
 		}
 		this->method->initiate(this->method, &this->out);
@@ -302,6 +327,7 @@ eap_ttls_server_t *eap_ttls_server_create(identification_t *server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.start_phase2 = TRUE,
+		.start_phase2_tnc = TRUE,
 		.avp = eap_ttls_avp_create(),
 	);
 
