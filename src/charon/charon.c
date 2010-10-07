@@ -283,7 +283,7 @@ static void usage(const char *msg)
 					"         [--version]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
-					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib)\n"
+					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|tls|lib)\n"
 					"           <level>: log verbosity (-1 = silent, 0 = audit, 1 = control,\n"
 					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
 					"\n"
