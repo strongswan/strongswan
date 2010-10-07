@@ -285,10 +285,8 @@ static void apply_port(host_t *host, host_t *old, u_int16_t port)
 	host->set_port(host, port);
 }
 
-/**
- * Implementation of ike_mobike_t.transmit
- */
-static void transmit(private_ike_mobike_t *this, packet_t *packet)
+METHOD(ike_mobike_t, transmit, void,
+	   private_ike_mobike_t *this, packet_t *packet)
 {
 	host_t *me, *other, *me_old, *other_old;
 	iterator_t *iterator;
@@ -341,10 +339,8 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 	iterator->destroy(iterator);
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t build_i(private_ike_mobike_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	   private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* only in first IKE_AUTH */
@@ -389,10 +385,8 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_mobike_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	   private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* only first IKE_AUTH */
@@ -419,10 +413,8 @@ static status_t process_r(private_ike_mobike_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_mobike_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	   private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -454,10 +446,8 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_mobike_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	   private_ike_mobike_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -547,21 +537,17 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of ike_mobike_t.roam.
- */
-static void roam(private_ike_mobike_t *this, bool address)
+METHOD(ike_mobike_t, roam, void,
+	   private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
 	this->address = address;
 	this->ike_sa->set_pending_updates(this->ike_sa,
-							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
 
-/**
- * Implementation of ike_mobike_t.dpd
- */
-static void dpd(private_ike_mobike_t *this)
+METHOD(ike_mobike_t, dpd, void,
+	   private_ike_mobike_t *this)
 {
 	if (!this->natd)
 	{
@@ -569,29 +555,23 @@ static void dpd(private_ike_mobike_t *this)
 	}
 	this->address = FALSE;
 	this->ike_sa->set_pending_updates(this->ike_sa,
-							this->ike_sa->get_pending_updates(this->ike_sa) + 1);
+						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 }
 
-/**
- * Implementation of ike_mobike_t.is_probing.
- */
-static bool is_probing(private_ike_mobike_t *this)
+METHOD(ike_mobike_t, is_probing, bool,
+	   private_ike_mobike_t *this)
 {
 	return this->check;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_mobike_t *this)
+METHOD(task_t, get_type, task_type_t,
+	   private_ike_mobike_t *this)
 {
 	return IKE_MOBIKE;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_mobike_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	   private_ike_mobike_t *this, ike_sa_t *ike_sa)
 {
 	chunk_free(&this->cookie2);
 	this->ike_sa = ike_sa;
@@ -601,10 +581,8 @@ static void migrate(private_ike_mobike_t *this, ike_sa_t *ike_sa)
 	}
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_mobike_t *this)
+METHOD(task_t, destroy, void,
+	   private_ike_mobike_t *this)
 {
 	chunk_free(&this->cookie2);
 	if (this->natd)
@@ -619,34 +597,35 @@ static void destroy(private_ike_mobike_t *this)
  */
 ike_mobike_t *ike_mobike_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_mobike_t *this = malloc_thing(private_ike_mobike_t);
+	private_ike_mobike_t *this;
 
-	this->public.roam = (void(*)(ike_mobike_t*,bool))roam;
-	this->public.dpd = (void(*)(ike_mobike_t*))dpd;
-	this->public.transmit = (void(*)(ike_mobike_t*,packet_t*))transmit;
-	this->public.is_probing = (bool(*)(ike_mobike_t*))is_probing;
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+			.roam = _roam,
+			.dpd = _dpd,
+			.transmit = _transmit,
+			.is_probing = _is_probing,
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+		.address = TRUE,
+	);
 
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
 	else
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
 	}
-
-	this->ike_sa = ike_sa;
-	this->initiator = initiator;
-	this->update = FALSE;
-	this->check = FALSE;
-	this->address = TRUE;
-	this->cookie2 = chunk_empty;
-	this->natd = NULL;
 
 	return &this->public;
 }
