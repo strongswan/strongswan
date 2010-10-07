@@ -231,7 +231,7 @@ METHOD(tls_application_t, process, status_t,
 					return FAILED;
 				}
 				this->method->initiate(this->method, &this->out);
-				this->start_phase2 = FALSE;
+				this->start_phase2_tnc = FALSE;
 				return NEED_MORE;
 			}
 			break;
