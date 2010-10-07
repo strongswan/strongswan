@@ -382,7 +382,7 @@ METHOD(task_t, build_i, status_t,
 			build_cookie(this, message);
 			update_children(this);
 		}
-		if (this->address)
+		if (this->address && !this->check)
 		{
 			build_address_list(this, message);
 		}
@@ -543,20 +543,22 @@ METHOD(task_t, process_i, status_t,
 			}
 			if (this->update)
 			{
+				/* use the same task to ... */
 				if (!this->ike_sa->has_condition(this->ike_sa,
 												 COND_ORIGINAL_INITIATOR))
-				{
+				{	/*... send an updated list of addresses as responder */
 					update_children(this);
-					return SUCCESS;
+					this->update = FALSE;
 				}
-				/* original initiator starts the update with the same task */
+				else
+				{	/* ... send the update as original initiator */
+					if (this->natd)
+					{
+						this->natd->task.destroy(&this->natd->task);
+					}
+					this->natd = ike_natd_create(this->ike_sa, this->initiator);
+				}
 				this->check = FALSE;
-				this->address = FALSE;
-				if (this->natd)
-				{
-					this->natd->task.destroy(&this->natd->task);
-				}
-				this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
 			}
