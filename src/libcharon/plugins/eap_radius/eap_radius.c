@@ -244,13 +244,13 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 				*data.ptr = 0x00;
 				tunnel_type = untoh32(data.ptr);
 				DBG1(DBG_IKE, "received RADIUS attribute Tunnel-Type: "
-							  "tag = %u, value = %u", tunnel_tag, tunnel_type); 
+							  "tag = %u, value = %u", tunnel_tag, tunnel_type);
 				is_esp_tunnel = (tunnel_type == TUNNEL_TYPE_ESP);
 				break;
 			case RAT_FILTER_ID:
 				filter_id = data;
 				DBG1(DBG_IKE, "received RADIUS attribute Filter-Id: "
-							  "'%.*s'", filter_id.len, filter_id.ptr); 
+							  "'%.*s'", filter_id.len, filter_id.ptr);
 				break;
 			default:
 				break;
@@ -314,12 +314,13 @@ METHOD(eap_method_t, process, status_t,
 				{
 					process_filter_id(this, response);
 				}
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' successful",
+					 this->peer);
 				status = SUCCESS;
 				break;
 			case RMC_ACCESS_REJECT:
 			default:
-				DBG1(DBG_CFG, "received %N from RADIUS server",
-					 radius_message_code_names, response->get_code(response));
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' failed", this->peer);
 				status = FAILED;
 				break;
 		}
@@ -400,7 +401,7 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 								"charon.plugins.eap-radius.class_group", FALSE),
 		.filter_id = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-radius.filter_id", FALSE),
-		
+
 	);
 	this->client = radius_client_create();
 	if (!this->client)
