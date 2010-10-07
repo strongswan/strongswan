@@ -314,17 +314,31 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNC_IMC
+  SUBDIRS += plugins/tnc_imc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc_imc.la
+endif
+endif
+
+if USE_TNC_IMV
+  SUBDIRS += plugins/tnc_imv
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc_imv.la
+endif
+endif
+
 if USE_TNCCS_11
   SUBDIRS += plugins/tnccs_11
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/eap_tnc/libstrongswan-tnccs-11.la
+  libcharon_la_LIBADD += plugins/tnccs_11/libstrongswan-tnccs-11.la
 endif
 endif
 
 if USE_TNCCS_20
   SUBDIRS += plugins/tnccs_20
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/eap_tnc/libstrongswan-tnccs-20.la
+  libcharon_la_LIBADD += plugins/tnccs_20/libstrongswan-tnccs-20.la
 endif
 endif
 

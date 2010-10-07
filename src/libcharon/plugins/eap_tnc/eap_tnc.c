@@ -40,7 +40,7 @@ struct private_eap_tnc_t {
 
 
 /** Maximum number of EAP-TNC messages/fragments allowed */
-#define MAX_MESSAGE_COUNT 2 
+#define MAX_MESSAGE_COUNT 10 
 /** Default size of a EAP-TNC fragment */
 #define MAX_FRAGMENT_LEN 50000
 

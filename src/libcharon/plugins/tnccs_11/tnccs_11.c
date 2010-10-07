@@ -16,20 +16,31 @@
 #include "tnccs_11.h"
 
 #include <libtnctncc.h>
+#include <libtnctncs.h>
 
 #include <debug.h>
 
-static chunk_t tncc_output;
+static chunk_t output;
 
 /**
- * Define callback function called by the libtnc library
+ * Define callback functions called by the libtnc library
  */
 TNC_Result TNC_TNCC_SendBatch(libtnc_tncc_connection* conn, 
 							  const char* messageBuffer, size_t messageLength)
 {
-	chunk_free(&tncc_output);
-	tncc_output = chunk_alloc(messageLength);
-	memcpy(tncc_output.ptr, messageBuffer, messageLength);
+	chunk_free(&output);
+	output = chunk_alloc(messageLength);
+	memcpy(output.ptr, messageBuffer, messageLength);
+
+	return TNC_RESULT_SUCCESS;
+}
+
+TNC_Result TNC_TNCS_SendBatch(libtnc_tncs_connection* conn, 
+							  const char* messageBuffer, size_t messageLength)
+{
+	chunk_free(&output);
+	output = chunk_alloc(messageLength);
+	memcpy(output.ptr, messageBuffer, messageLength);
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -55,16 +66,46 @@ struct private_tnccs_11_t {
 	 * TNCC Connection to IMCs
 	 */
 	libtnc_tncc_connection* tncc_connection;
+
+	/**
+	 * TNCS Connection to IMVs
+	 */
+	libtnc_tncs_connection* tncs_connection;
 };
 
 METHOD(tls_t, process, status_t,
 	private_tnccs_11_t *this, void *buf, size_t buflen)
 {
-	/* TODO */
+	if (this->is_server && !this->tncs_connection)
+	{
+		this->tncs_connection = libtnc_tncs_CreateConnection(NULL);
+		if (!this->tncs_connection)
+		{
+			DBG1(DBG_IKE, "TNCS CreateConnection failed");
+			return FAILED;
+		}
+		DBG1(DBG_IKE, "assigned TNCS Connection ID: %d",
+			 this->tncs_connection->connectionID);
+		if (libtnc_tncs_BeginSession(this->tncs_connection) != TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IKE, "TNCS BeginSession failed");
+			return FAILED;
+		}
+	}
+
 	DBG1(DBG_IKE, "received TNCCS Batch with %u bytes:", buflen);
 	DBG1(DBG_IKE, "%.*s", buflen, buf);
 
-	if (!this->is_server)
+	if (this->is_server)
+	{
+		if (libtnc_tncs_ReceiveBatch(this->tncs_connection, buf, buflen) !=
+			TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IKE, "TNCS ReceiveBatch failed");
+			return FAILED;
+		}
+	}
+	else
 	{
 		if (libtnc_tncc_ReceiveBatch(this->tncc_connection, buf, buflen) !=
 			TNC_RESULT_SUCCESS)
@@ -89,7 +130,7 @@ METHOD(tls_t, build, status_t,
 			DBG1(DBG_IKE, "TNCC CreateConnection failed");
 			return FAILED;
 		}
-		DBG1(DBG_IKE, "assigned TNC ConnectionID: %d",
+		DBG1(DBG_IKE, "assigned TNCC Connection ID: %d",
 			 this->tncc_connection->connectionID);
 		if (libtnc_tncc_BeginSession(this->tncc_connection) != TNC_RESULT_SUCCESS)
 		{
@@ -99,19 +140,19 @@ METHOD(tls_t, build, status_t,
 	}
 		
 	len = *buflen;
-	len = min(len, tncc_output.len);
+	len = min(len, output.len);
 	*buflen = len;
 	if (msglen)
 	{
-		*msglen = tncc_output.len;
+		*msglen = output.len;
 	}
 
-	if (tncc_output.len)
+	if (output.len)
 	{
-		DBG1(DBG_IKE, "sending TNCCS Batch with %d bytes:", tncc_output.len);
-		DBG1(DBG_IKE, "%.*s", tncc_output.len, tncc_output.ptr);
-		memcpy(buf, tncc_output.ptr, len);
-		chunk_free(&tncc_output);
+		DBG1(DBG_IKE, "sending TNCCS Batch with %d bytes:", output.len);
+		DBG1(DBG_IKE, "%.*s", output.len, output.ptr);
+		memcpy(buf, output.ptr, len);
+		chunk_free(&output);
 		return ALREADY_DONE;
 	}
 	else
@@ -135,7 +176,20 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tnccs_11_t *this)
 {
-	return FALSE;
+	TNC_IMV_Action_Recommendation* rec = NULL;
+	TNC_IMV_Evaluation_Result* eval = NULL;
+	
+	if (libtnc_tncs_HaveRecommendation(this->tncs_connection, rec, eval) ==
+		TNC_RESULT_SUCCESS)
+	{
+		DBG1(DBG_IKE, "have recommendation");
+		return TRUE;
+	}
+	else
+	{
+		DBG1(DBG_IKE, "no recommendation");
+		return FALSE;
+	}
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
@@ -147,7 +201,14 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
-	if (!this->is_server)
+	if (this->is_server)
+	{
+		if (this->tncs_connection)
+		{
+			/* libtnc_tncs_DeleteConnection(this->tncs_connection); */
+		}
+	}
+	else
 	{
 		if (this->tncc_connection)
 		{
@@ -179,27 +240,5 @@ tls_t *tnccs_11_create(bool is_server)
 		.is_server = is_server,
 	);
 
-	tnc_config = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnccs-11.tnc_config", "/etc/tnc_config");
-	pref_lang = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnccs-11.preferred_language", "en");
-
-	if (!is_server)
-	{
-		int imc_count;
-
-		imc_count = libtnc_imc_load_config(tnc_config);
-		if (imc_count < 0)
-		{
-			free(this);
-			DBG1(DBG_IKE, "TNC IMC initialization failed");
-			return NULL;
-		}
-		else
-		{
-			DBG1(DBG_IKE, "loaded %d TNC IMC instances", imc_count);
-		}
-		libtnc_tncc_PreferredLanguage(pref_lang);
-	}
 	return &this->public;
 }
