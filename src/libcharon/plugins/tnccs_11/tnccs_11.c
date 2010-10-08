@@ -20,7 +20,59 @@
 
 #include <debug.h>
 
-static chunk_t output;
+#define TNC_SEND_BUFFER_SIZE	32
+
+static chunk_t tnc_send_buffer[TNC_SEND_BUFFER_SIZE];
+
+/**
+ * Buffers TNCCS batch to be sent (TODO make the buffer scalable)
+ */
+static TNC_Result buffer_batch(u_int32_t id, const char *data, size_t len)
+{
+	if (id >= TNC_SEND_BUFFER_SIZE)
+	{
+		DBG1(DBG_IKE, "TNCCS Batch with Connection ID %u cannot be stored in "
+					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
+		return TNC_RESULT_FATAL;
+	}
+	if (tnc_send_buffer[id].ptr)
+	{
+		DBG1(DBG_IKE, "send buffer slot for Connection ID %u is already "
+					  "occupied", id);
+		return TNC_RESULT_FATAL;
+	}
+	tnc_send_buffer[id] = chunk_alloc(len);
+	memcpy(tnc_send_buffer[id].ptr, data, len);
+
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Retrieves TNCCS batch to be sent
+ */
+static bool retrieve_batch(u_int32_t id, chunk_t *batch)
+{
+	if (id >= TNC_SEND_BUFFER_SIZE)
+	{
+		DBG1(DBG_IKE, "TNCCS Batch with Connection ID %u cannot be retrieved from "
+					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
+		return FALSE;
+	}
+
+	*batch = tnc_send_buffer[id];
+	return TRUE;
+}
+
+/**
+ * Frees TNCCS batch that was sent
+ */
+static void free_batch(u_int32_t id)
+{
+	if (id < TNC_SEND_BUFFER_SIZE)
+	{
+		chunk_free(&tnc_send_buffer[id]);
+	}
+}
 
 /**
  * Define callback functions called by the libtnc library
@@ -28,21 +80,13 @@ static chunk_t output;
 TNC_Result TNC_TNCC_SendBatch(libtnc_tncc_connection* conn, 
 							  const char* messageBuffer, size_t messageLength)
 {
-	chunk_free(&output);
-	output = chunk_alloc(messageLength);
-	memcpy(output.ptr, messageBuffer, messageLength);
-
-	return TNC_RESULT_SUCCESS;
+	return buffer_batch(conn->connectionID, messageBuffer, messageLength);
 }
 
 TNC_Result TNC_TNCS_SendBatch(libtnc_tncs_connection* conn, 
 							  const char* messageBuffer, size_t messageLength)
 {
-	chunk_free(&output);
-	output = chunk_alloc(messageLength);
-	memcpy(output.ptr, messageBuffer, messageLength);
-
-	return TNC_RESULT_SUCCESS;
+	return buffer_batch(conn->connectionID, messageBuffer, messageLength);
 }
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;
@@ -76,6 +120,8 @@ struct private_tnccs_11_t {
 METHOD(tls_t, process, status_t,
 	private_tnccs_11_t *this, void *buf, size_t buflen)
 {
+	u_int32_t conn_id;
+
 	if (this->is_server && !this->tncs_connection)
 	{
 		this->tncs_connection = libtnc_tncs_CreateConnection(NULL);
@@ -84,16 +130,19 @@ METHOD(tls_t, process, status_t,
 			DBG1(DBG_IKE, "TNCS CreateConnection failed");
 			return FAILED;
 		}
-		DBG1(DBG_IKE, "assigned TNCS Connection ID: %d",
-			 this->tncs_connection->connectionID);
+		DBG1(DBG_IKE, "assigned TNCS Connection ID %u",
+					   this->tncs_connection->connectionID);
 		if (libtnc_tncs_BeginSession(this->tncs_connection) != TNC_RESULT_SUCCESS)
 		{
 			DBG1(DBG_IKE, "TNCS BeginSession failed");
 			return FAILED;
 		}
 	}
+	conn_id = this->is_server ? this->tncs_connection->connectionID
+							  : this->tncc_connection->connectionID;
 
-	DBG1(DBG_IKE, "received TNCCS Batch with %u bytes:", buflen);
+	DBG1(DBG_IKE, "received TNCCS Batch of %u bytes for Connection ID %u:",
+				   buflen, conn_id);
 	DBG1(DBG_IKE, "%.*s", buflen, buf);
 
 	if (this->is_server)
@@ -120,6 +169,8 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
+	chunk_t batch;
+	u_int32_t conn_id;
 	size_t len;
 
 	if (!this->is_server && !this->tncc_connection)
@@ -130,29 +181,36 @@ METHOD(tls_t, build, status_t,
 			DBG1(DBG_IKE, "TNCC CreateConnection failed");
 			return FAILED;
 		}
-		DBG1(DBG_IKE, "assigned TNCC Connection ID: %d",
-			 this->tncc_connection->connectionID);
+		DBG1(DBG_IKE, "assigned TNCC Connection ID %u",
+					   this->tncc_connection->connectionID);
 		if (libtnc_tncc_BeginSession(this->tncc_connection) != TNC_RESULT_SUCCESS)
 		{
 			DBG1(DBG_IKE, "TNCC BeginSession failed");
 			return FAILED;
 		}
 	}
-		
+	conn_id = this->is_server ? this->tncs_connection->connectionID
+							  : this->tncc_connection->connectionID;
+	
+	if (!retrieve_batch(conn_id, &batch))
+	{
+		return FAILED;
+	}
 	len = *buflen;
-	len = min(len, output.len);
+	len = min(len, batch.len);
 	*buflen = len;
 	if (msglen)
 	{
-		*msglen = output.len;
+		*msglen = batch.len;
 	}
 
-	if (output.len)
+	if (batch.len)
 	{
-		DBG1(DBG_IKE, "sending TNCCS Batch with %d bytes:", output.len);
-		DBG1(DBG_IKE, "%.*s", output.len, output.ptr);
-		memcpy(buf, output.ptr, len);
-		chunk_free(&output);
+		DBG1(DBG_IKE, "sending TNCCS Batch of %d bytes for Connection ID %u:",
+					   batch.len, conn_id);
+		DBG1(DBG_IKE, "%.*s", batch.len, batch.ptr);
+		memcpy(buf, batch.ptr, len);
+		free_batch(conn_id);
 		return ALREADY_DONE;
 	}
 	else
@@ -224,7 +282,6 @@ METHOD(tls_t, destroy, void,
  */
 tls_t *tnccs_11_create(bool is_server)
 {
-	char *tnc_config, *pref_lang;
 	private_tnccs_11_t *this;
 
 	INIT(this,
