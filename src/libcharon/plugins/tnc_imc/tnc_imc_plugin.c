@@ -41,10 +41,11 @@ plugin_t *tnc_imc_plugin_create()
 		},
 	);
 
-	tnc_config = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
 	pref_lang = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imc.preferred_language", "en");
+	tnc_config = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
+
 	imc_count = libtnc_imc_load_config(tnc_config);
 	if (imc_count < 0)
 	{
@@ -54,7 +55,8 @@ plugin_t *tnc_imc_plugin_create()
 	}
 	else
 	{
-		DBG1(DBG_IKE, "loaded %d TNC IMC%s", imc_count, (imc_count > 1)? "s":"");
+		DBG1(DBG_IKE, "loaded %d TNC IMC%s", imc_count,
+											(imc_count == 1) ? "":"s");
 		libtnc_tncc_PreferredLanguage(pref_lang);
 	}
 

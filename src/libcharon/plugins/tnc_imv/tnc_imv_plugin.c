@@ -52,7 +52,8 @@ plugin_t *tnc_imv_plugin_create()
 	}
 	else
 	{
-		DBG1(DBG_IKE, "loaded %d TNC IMV%s", imv_count, (imv_count > 1)? "s":"");
+		DBG1(DBG_IKE, "loaded %d TNC IMV%s", imv_count,
+											(imv_count == 1) ? "":"s");
 	}
 
 	return &this->plugin;
