@@ -32,7 +32,7 @@ static TNC_Result buffer_batch(u_int32_t id, const char *data, size_t len)
 {
 	if (id >= TNC_SEND_BUFFER_SIZE)
 	{
-		DBG1(DBG_IKE, "TNCCS Batch with Connection ID %u cannot be stored in "
+		DBG1(DBG_IKE, "TNCCS Batch for Connection ID %u cannot be stored in "
 					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
 		return TNC_RESULT_FATAL;
 	}
@@ -55,7 +55,7 @@ static bool retrieve_batch(u_int32_t id, chunk_t *batch)
 {
 	if (id >= TNC_SEND_BUFFER_SIZE)
 	{
-		DBG1(DBG_IKE, "TNCCS Batch with Connection ID %u cannot be retrieved from "
+		DBG1(DBG_IKE, "TNCCS Batch for Connection ID %u cannot be retrieved from "
 					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
 		return FALSE;
 	}
@@ -142,7 +142,7 @@ METHOD(tls_t, process, status_t,
 	conn_id = this->is_server ? this->tncs_connection->connectionID
 							  : this->tncc_connection->connectionID;
 
-	DBG1(DBG_IKE, "received TNCCS Batch of %u bytes for Connection ID %u:",
+	DBG1(DBG_IKE, "received TNCCS Batch (%u bytes) for Connection ID %u:",
 				   buflen, conn_id);
 	DBG1(DBG_IKE, "%.*s", buflen, buf);
 
@@ -207,7 +207,7 @@ METHOD(tls_t, build, status_t,
 
 	if (batch.len)
 	{
-		DBG1(DBG_IKE, "sending TNCCS Batch of %d bytes for Connection ID %u:",
+		DBG1(DBG_IKE, "sending TNCCS Batch (%d bytes) for Connection ID %u:",
 					   batch.len, conn_id);
 		DBG1(DBG_IKE, "%.*s", batch.len, batch.ptr);
 		memcpy(buf, batch.ptr, len);
