@@ -18,7 +18,7 @@ post-auth {
 	if (control:TNC-Status == "Access") {
 		update reply {
 			Tunnel-Type := ESP 
-			Filter-Id := "access"
+			Filter-Id := "allow"
 		}
 	}
 	elsif (control:TNC-Status == "Isolate") {
