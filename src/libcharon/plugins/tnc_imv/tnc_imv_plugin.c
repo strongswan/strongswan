@@ -32,7 +32,6 @@ METHOD(plugin_t, destroy, void,
 plugin_t *tnc_imv_plugin_create()
 {
 	char *tnc_config;
-	int imv_count;
 	tnc_imv_plugin_t *this;
 
 	INIT(this,
@@ -43,17 +42,11 @@ plugin_t *tnc_imv_plugin_create()
 
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imv.tnc_config", "/etc/tnc_config");
-	imv_count = libtnc_imv_load_config(tnc_config);
-	if (imv_count < 0)
+	if (libtnc_tncs_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
 	{
 		free(this);
 		DBG1(DBG_IKE, "TNC IMV initialization failed");
 		return NULL;
-	}
-	else
-	{
-		DBG1(DBG_IKE, "loaded %d TNC IMV%s", imv_count,
-											(imv_count == 1) ? "":"s");
 	}
 
 	return &this->plugin;

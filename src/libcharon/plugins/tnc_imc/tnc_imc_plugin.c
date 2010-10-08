@@ -32,7 +32,6 @@ METHOD(plugin_t, destroy, void,
 plugin_t *tnc_imc_plugin_create()
 {
 	char *tnc_config, *pref_lang;
-	int imc_count;
 	tnc_imc_plugin_t *this;
 
 	INIT(this,
@@ -46,18 +45,11 @@ plugin_t *tnc_imc_plugin_create()
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
 
-	imc_count = libtnc_imc_load_config(tnc_config);
-	if (imc_count < 0)
+	if (libtnc_tncc_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
 	{
 		free(this);
 		DBG1(DBG_IKE, "TNC IMC initialization failed");
 		return NULL;
-	}
-	else
-	{
-		DBG1(DBG_IKE, "loaded %d TNC IMC%s", imc_count,
-											(imc_count == 1) ? "":"s");
-		libtnc_tncc_PreferredLanguage(pref_lang);
 	}
 
 	return &this->plugin;
