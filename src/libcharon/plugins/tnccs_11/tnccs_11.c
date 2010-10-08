@@ -18,6 +18,7 @@
 #include <libtnctncc.h>
 #include <libtnctncs.h>
 
+#include <daemon.h>
 #include <debug.h>
 
 #define TNC_SEND_BUFFER_SIZE	32
@@ -234,18 +235,44 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tnccs_11_t *this)
 {
-	TNC_IMV_Action_Recommendation* rec = NULL;
-	TNC_IMV_Evaluation_Result* eval = NULL;
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	char *group;
+	identification_t *id;
+	ike_sa_t *ike_sa;
+	auth_cfg_t *auth;
 	
-	if (libtnc_tncs_HaveRecommendation(this->tncs_connection, rec, eval) ==
+	if (libtnc_tncs_HaveRecommendation(this->tncs_connection, &rec, &eval) ==
 		TNC_RESULT_SUCCESS)
 	{
-		DBG1(DBG_IKE, "have recommendation");
+		switch (rec)
+		{
+			case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+				DBG1(DBG_IKE, "TNC recommendation is allow");
+				group = "allow";
+				break;				
+			case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+				DBG1(DBG_IKE, "TNC recommendation is isolate");
+				group = "isolate";
+				break;
+			case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+			case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+			default:
+				DBG1(DBG_IKE, "TNC recommendation is none");
+				return FALSE;
+		}
+		ike_sa = charon->bus->get_sa(charon->bus);
+		if (ike_sa)
+		{
+			auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+			id = identification_create_from_string(group);
+			auth->add(auth, AUTH_RULE_GROUP, id);
+			DBG1(DBG_IKE, "added group membership '%s'", group);
+		}
 		return TRUE;
 	}
 	else
 	{
-		DBG1(DBG_IKE, "no recommendation");
 		return FALSE;
 	}
 }
@@ -263,7 +290,7 @@ METHOD(tls_t, destroy, void,
 	{
 		if (this->tncs_connection)
 		{
-			/* libtnc_tncs_DeleteConnection(this->tncs_connection); */
+			libtnc_tncs_DeleteConnection(this->tncs_connection);
 		}
 	}
 	else
