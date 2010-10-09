@@ -45,7 +45,7 @@ plugin_t *tnc_imv_plugin_create()
 	if (libtnc_tncs_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
 	{
 		free(this);
-		DBG1(DBG_IKE, "TNC IMV initialization failed");
+		DBG1(DBG_TNC, "TNC IMV initialization failed");
 		return NULL;
 	}
 

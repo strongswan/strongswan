@@ -283,7 +283,7 @@ static void usage(const char *msg)
 					"         [--version]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
-					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|tls|lib)\n"
+					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|tnc|tls|lib)\n"
 					"           <level>: log verbosity (-1 = silent, 0 = audit, 1 = control,\n"
 					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
 					"\n"
@@ -355,6 +355,7 @@ int main(int argc, char *argv[])
 			{ "debug-knl", required_argument, &group, DBG_KNL },
 			{ "debug-net", required_argument, &group, DBG_NET },
 			{ "debug-enc", required_argument, &group, DBG_ENC },
+			{ "debug-tnc", required_argument, &group, DBG_TNC },
 			{ "debug-tls", required_argument, &group, DBG_TLS },
 			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }

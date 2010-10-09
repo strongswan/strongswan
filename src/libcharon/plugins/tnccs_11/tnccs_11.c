@@ -32,13 +32,13 @@ static TNC_Result buffer_batch(u_int32_t id, const char *data, size_t len)
 {
 	if (id >= TNC_SEND_BUFFER_SIZE)
 	{
-		DBG1(DBG_IKE, "TNCCS Batch for Connection ID %u cannot be stored in "
+		DBG1(DBG_TNC, "TNCCS Batch for Connection ID %u cannot be stored in "
 					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
 		return TNC_RESULT_FATAL;
 	}
 	if (tnc_send_buffer[id].ptr)
 	{
-		DBG1(DBG_IKE, "send buffer slot for Connection ID %u is already "
+		DBG1(DBG_TNC, "send buffer slot for Connection ID %u is already "
 					  "occupied", id);
 		return TNC_RESULT_FATAL;
 	}
@@ -55,7 +55,7 @@ static bool retrieve_batch(u_int32_t id, chunk_t *batch)
 {
 	if (id >= TNC_SEND_BUFFER_SIZE)
 	{
-		DBG1(DBG_IKE, "TNCCS Batch for Connection ID %u cannot be retrieved from "
+		DBG1(DBG_TNC, "TNCCS Batch for Connection ID %u cannot be retrieved from "
 					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
 		return FALSE;
 	}
@@ -128,30 +128,30 @@ METHOD(tls_t, process, status_t,
 		this->tncs_connection = libtnc_tncs_CreateConnection(NULL);
 		if (!this->tncs_connection)
 		{
-			DBG1(DBG_IKE, "TNCS CreateConnection failed");
+			DBG1(DBG_TNC, "TNCS CreateConnection failed");
 			return FAILED;
 		}
-		DBG1(DBG_IKE, "assigned TNCS Connection ID %u",
+		DBG1(DBG_TNC, "assigned TNCS Connection ID %u",
 					   this->tncs_connection->connectionID);
 		if (libtnc_tncs_BeginSession(this->tncs_connection) != TNC_RESULT_SUCCESS)
 		{
-			DBG1(DBG_IKE, "TNCS BeginSession failed");
+			DBG1(DBG_TNC, "TNCS BeginSession failed");
 			return FAILED;
 		}
 	}
 	conn_id = this->is_server ? this->tncs_connection->connectionID
 							  : this->tncc_connection->connectionID;
 
-	DBG1(DBG_IKE, "received TNCCS Batch (%u bytes) for Connection ID %u:",
+	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
 				   buflen, conn_id);
-	DBG1(DBG_IKE, "%.*s", buflen, buf);
+	DBG3(DBG_TNC, "%.*s", buflen, buf);
 
 	if (this->is_server)
 	{
 		if (libtnc_tncs_ReceiveBatch(this->tncs_connection, buf, buflen) !=
 			TNC_RESULT_SUCCESS)
 		{
-			DBG1(DBG_IKE, "TNCS ReceiveBatch failed");
+			DBG1(DBG_TNC, "TNCS ReceiveBatch failed");
 			return FAILED;
 		}
 	}
@@ -160,7 +160,7 @@ METHOD(tls_t, process, status_t,
 		if (libtnc_tncc_ReceiveBatch(this->tncc_connection, buf, buflen) !=
 			TNC_RESULT_SUCCESS)
 		{
-			DBG1(DBG_IKE, "TNCC ReceiveBatch failed");
+			DBG1(DBG_TNC, "TNCC ReceiveBatch failed");
 			return FAILED;
 		}
 	}
@@ -179,14 +179,14 @@ METHOD(tls_t, build, status_t,
 		this->tncc_connection = libtnc_tncc_CreateConnection(NULL);
 		if (!this->tncc_connection)
 		{
-			DBG1(DBG_IKE, "TNCC CreateConnection failed");
+			DBG1(DBG_TNC, "TNCC CreateConnection failed");
 			return FAILED;
 		}
-		DBG1(DBG_IKE, "assigned TNCC Connection ID %u",
+		DBG1(DBG_TNC, "assigned TNCC Connection ID %u",
 					   this->tncc_connection->connectionID);
 		if (libtnc_tncc_BeginSession(this->tncc_connection) != TNC_RESULT_SUCCESS)
 		{
-			DBG1(DBG_IKE, "TNCC BeginSession failed");
+			DBG1(DBG_TNC, "TNCC BeginSession failed");
 			return FAILED;
 		}
 	}
@@ -207,9 +207,9 @@ METHOD(tls_t, build, status_t,
 
 	if (batch.len)
 	{
-		DBG1(DBG_IKE, "sending TNCCS Batch (%d bytes) for Connection ID %u:",
+		DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
 					   batch.len, conn_id);
-		DBG1(DBG_IKE, "%.*s", batch.len, batch.ptr);
+		DBG3(DBG_TNC, "%.*s", batch.len, batch.ptr);
 		memcpy(buf, batch.ptr, len);
 		free_batch(conn_id);
 		return ALREADY_DONE;
@@ -248,17 +248,17 @@ METHOD(tls_t, is_complete, bool,
 		switch (rec)
 		{
 			case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-				DBG1(DBG_IKE, "TNC recommendation is allow");
+				DBG1(DBG_TNC, "TNC recommendation is allow");
 				group = "allow";
 				break;				
 			case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-				DBG1(DBG_IKE, "TNC recommendation is isolate");
+				DBG1(DBG_TNC, "TNC recommendation is isolate");
 				group = "isolate";
 				break;
 			case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 			case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
 			default:
-				DBG1(DBG_IKE, "TNC recommendation is none");
+				DBG1(DBG_TNC, "TNC recommendation is none");
 				return FALSE;
 		}
 		ike_sa = charon->bus->get_sa(charon->bus);
@@ -267,7 +267,7 @@ METHOD(tls_t, is_complete, bool,
 			auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 			id = identification_create_from_string(group);
 			auth->add(auth, AUTH_RULE_GROUP, id);
-			DBG1(DBG_IKE, "added group membership '%s'", group);
+			DBG1(DBG_TNC, "added group membership '%s' based on TNC recommendation", group);
 		}
 		return TRUE;
 	}

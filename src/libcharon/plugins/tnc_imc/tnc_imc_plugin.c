@@ -48,7 +48,7 @@ plugin_t *tnc_imc_plugin_create()
 	if (libtnc_tncc_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
 	{
 		free(this);
-		DBG1(DBG_IKE, "TNC IMC initialization failed");
+		DBG1(DBG_TNC, "TNC IMC initialization failed");
 		return NULL;
 	}
 

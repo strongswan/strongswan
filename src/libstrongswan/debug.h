@@ -50,6 +50,8 @@ enum debug_t {
 	DBG_NET,
 	/** message encoding/decoding */
 	DBG_ENC,
+	/** trusted network connect */
+	DBG_TNC,
 	/** libtls */
 	DBG_TLS,
 	/** libstrongswan */
