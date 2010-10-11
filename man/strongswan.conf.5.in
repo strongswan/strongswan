@@ -274,7 +274,7 @@ Maximum number of processed EAP-TLS packets
 .BR charon.plugins.eap-tnc.fragment_size " [50000]"
 Maximum size of an EAP-TNC packet
 .TP
-.BR charon.plugins.eap-tnc.max_message_count " [2]"
+.BR charon.plugins.eap-tnc.max_message_count " [10]"
 Maximum number of processed EAP-TNC packets
 .TP
 .BR charon.plugins.eap-ttls.fragment_size " [1024]"
@@ -288,6 +288,9 @@ Phase2 EAP client authentication method
 .TP
 .BR charon.plugins.eap-ttls.phase2_piggyback " [no]"
 Phase2 EAP Identity request piggybacked by server onto TLS Finished message
+.TP
+.BR charon.plugins.eap-ttls.phase2_tnc " [no]"
+Start phase2 EAP TNC protocol after successful client authentication
 .TP
 .BR charon.plugins.eap-ttls.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
@@ -346,11 +349,14 @@ Database URI for charons SQL plugin
 .BR charon.plugins.sql.loglevel " [-1]"
 Loglevel for logging to SQL database
 .TP
-.BR charon.plugins.tnccs-11.preferred_language " [en]"
+.BR charon.plugins.tnc-imc.preferred_language " [en]"
 Preferred language for TNC recommendations
 .TP
-.BR charon.plugins.tnccs-11.tnc_config " [/etc/tnc_config]"
-TNC IMC/IMV configuration directory
+.BR charon.plugins.tnc-imc.tnc_config " [/etc/tnc_config]"
+TNC IMC configuration directory
+.TP
+.BR charon.plugins.tnc-imv.tnc_config " [/etc/tnc_config]"
+TNC IMV configuration directory
 .SS libstrongswan section
 .TP
 .BR libstrongswan.crypto_test.bench " [no]"
