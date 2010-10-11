@@ -223,6 +223,19 @@ option in
 .BR charon.plugins.eap-radius.eap_start " [no]"
 Send EAP-Start instead of EAP-Identity to start RADIUS conversation
 .TP
+.BR charon.plugins.eap-radius.filter_id " [no]"
+If the RADIUS
+.I tunnel_type
+attribute with value
+.B ESP
+is received, use the
+.I filter_id 
+attribute sent in the RADIUS-Accept message as group membership information that
+is compared to the groups specified in the
+.B rightgroups
+option in
+.B ipsec.conf (5).
+.TP
 .BR charon.plugins.eap-radius.id_prefix
 Prefix to EAP-Identity, some AAA servers use a IMSI prefix to select the
 EAP method
