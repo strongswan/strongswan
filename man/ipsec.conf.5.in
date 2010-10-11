@@ -450,10 +450,13 @@ are initiated with pluto, those marked with
 with charon. An incoming request from the remote peer is handled by the correct
 daemon, unaffected from the
 .B keyexchange
-setting. The default value
+setting. Starting with strongSwan 4.5 the default value
 .B ike
-currently is a synonym for
-.BR ikev1 .
+is a synonym for
+.BR ikev2 ,
+whereas in older strongSwan releases
+.B ikev1
+was assumed.
 .TP
 .B keyingtries
 how many attempts (a whole number or \fB%forever\fP) should be made to
