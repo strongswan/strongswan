@@ -307,24 +307,46 @@ static char hex2bin(char hex)
 chunk_t chunk_from_hex(chunk_t hex, char *buf)
 {
 	int i, len;
+	u_char *ptr;
 	bool odd = FALSE;
 
-	len = (hex.len / 2);
-	if (hex.len % 2)
+   /* subtract the number of optional ':' separation characters */
+	len = hex.len;
+	ptr = hex.ptr;
+ 	for (i = 0; i < hex.len; i++)
+	{
+		if (*ptr++ == ':')
+		{
+			len--;
+		}
+	}
+
+	/* compute the number of binary bytes */
+	if (len % 2)
 	{
 		odd = TRUE;
 		len++;
 	}
+	len /= 2;
+
+	/* allocate buffer memory unless provided by caller */
 	if (!buf)
 	{
 		buf = malloc(len);
 	}
+
 	/* buffer is filled from the right */
 	memset(buf, 0, len);
 	hex.ptr += hex.len;
+
 	for (i = len - 1; i >= 0; i--)
 	{
-		buf[i] = hex2bin(*(--hex.ptr));
+		/* skip separation characters */
+		if (*(--hex.ptr) == ':')
+		{
+			--hex.ptr;
+		}
+		buf[i] = hex2bin(*hex.ptr);
 		if (i > 0 || !odd)
 		{
 			buf[i] |= hex2bin(*(--hex.ptr)) << 4;
