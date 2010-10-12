@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -27,12 +28,29 @@ typedef struct cowfs_t cowfs_t;
 struct cowfs_t {
 
 	/**
-	 * Set an additional copy on write overlay.
+	 * Adds an additional copy on write overlay.
+	 *
+	 * If the path was already added as overlay, it is moved to the top.
 	 *
 	 * @param path		path of the overlay
-	 * @return 			FALSE if failed
+	 * @return			FALSE, if failed
 	 */
-	bool (*set_overlay)(cowfs_t *this, char *path);
+	bool (*add_overlay)(cowfs_t *this, char *path);
+
+	/**
+	 * Remove the specified copy on write overlay.
+	 *
+	 * @param path		path of the overlay
+	 * @return			FALSE, if not found
+	 */
+	bool (*del_overlay)(cowfs_t *this, char *path);
+
+	/**
+	 * Remove the most recently added copy on write overlay.
+	 *
+	 * @return			FALSE, if no overlay was found
+	 */
+	bool (*pop_overlay)(cowfs_t *this);
 
 	/**
 	 * Stop, umount and destroy a cowfs FUSE filesystem.

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2007 Miklos Szeredi
@@ -35,6 +36,8 @@
 #include <library.h>
 #include <debug.h>
 #include <threading/thread.h>
+#include <threading/rwlock.h>
+#include <utils/linked_list.h>
 
 /** define _XOPEN_SOURCE 500 fails when using libstrongswan, define popen */
 extern ssize_t pread(int fd, void *buf, size_t count, off_t offset);
@@ -55,17 +58,65 @@ struct private_cowfs_t {
 	char *master;
 	/** host filesystem path */
 	char *host;
-	/** overlay filesystem path */
-	char *over;
+	/** overlay filesystems */
+	linked_list_t *overlays;
+	/** lock for overlays */
+	rwlock_t *lock;
 	/** fd of read only master filesystem */
 	int master_fd;
 	/** copy on write overlay to master */
 	int host_fd;
-	/** optional COW overlay */
-	int over_fd;
 	/** thread processing FUSE */
 	thread_t *thread;
 };
+
+typedef struct overlay_t overlay_t;
+
+/**
+ * data for overlay filesystems
+ */
+struct overlay_t {
+	/** path to overlay */
+	char *path;
+	/** overlay fd */
+	int fd;
+};
+
+/**
+ * destroy an overlay
+ */
+static void overlay_destroy(overlay_t *this)
+{
+	close(this->fd);
+	free(this->path);
+	free(this);
+}
+
+/**
+ * compare two overlays by path
+ */
+static bool overlay_equals(overlay_t *this, overlay_t *other)
+{
+	return streq(this->path, other->path);
+}
+
+/**
+ * remove and destroy the overlay with the given absolute path.
+ * returns FALSE, if not found.
+ */
+static bool overlay_remove(private_cowfs_t *this, char *path)
+{
+	overlay_t over, *current;
+	over.path = path;
+	if (this->overlays->find_first(this->overlays,
+			(linked_list_match_t)overlay_equals, (void**)&current, &over) != SUCCESS)
+	{
+		return FALSE;
+	}
+	this->overlays->remove(this->overlays, current, NULL);
+	overlay_destroy(current);
+	return TRUE;
+}
 
 /**
  * get this pointer stored in fuse context
@@ -95,12 +146,25 @@ static void rel(const char **path)
  */
 static int get_rd(const char *path)
 {
+	overlay_t *over;
+	enumerator_t *enumerator;
 	private_cowfs_t *this = get_this();
 
-	if (this->over_fd > 0 && faccessat(this->over_fd, path, F_OK, 0) == 0)
+	this->lock->read_lock(this->lock);
+	enumerator = this->overlays->create_enumerator(this->overlays);
+	while (enumerator->enumerate(enumerator, (void**)&over))
 	{
-		return this->over_fd;
+		if (faccessat(over->fd, path, F_OK, 0) == 0)
+		{
+			int fd = over->fd;
+			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
+			return fd;
+		}
 	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
 	if (faccessat(this->host_fd, path, F_OK, 0) == 0)
 	{
 		return this->host_fd;
@@ -113,12 +177,16 @@ static int get_rd(const char *path)
  */
 static int get_wr(const char *path)
 {
+	overlay_t *over;
 	private_cowfs_t *this = get_this();
-	if (this->over_fd > 0)
+	int fd = this->host_fd;
+	this->lock->read_lock(this->lock);
+	if (this->overlays->get_first(this->overlays, (void**)&over) == SUCCESS)
 	{
-		return this->over_fd;
+		fd = over->fd;
 	}
-	return this->host_fd;
+	this->lock->unlock(this->lock);
+	return fd;
 }
 
 /**
@@ -287,17 +355,29 @@ static DIR* get_dir(char *dir, const char *subdir)
  */
 static bool contains_dir(DIR *d, char *dirname)
 {
-	if (d)
-	{
-		struct dirent *ent;
+	struct dirent *ent;
 
-		rewinddir(d);
-		while ((ent = readdir(d)))
+	rewinddir(d);
+	while ((ent = readdir(d)))
+	{
+		if (streq(ent->d_name, dirname))
 		{
-			if (streq(ent->d_name, dirname))
-			{
-				return TRUE;
-			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * check if one of the higher overlays contains a directory
+ */
+static bool overlays_contain_dir(DIR **d, char *dirname)
+{
+	for (; *d; ++d)
+	{
+		if (contains_dir(*d, dirname))
+		{
+			return TRUE;
 		}
 	}
 	return FALSE;
@@ -309,56 +389,54 @@ static bool contains_dir(DIR *d, char *dirname)
 static int cowfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 						 off_t offset, struct fuse_file_info *fi)
 {
+#define ADD_DIR(overlay, base, path) ({\
+	DIR *dir = get_dir(base, path);\
+	if (dir) { *(--overlay) = dir; }\
+})
 	private_cowfs_t *this = get_this();
-	DIR *d1, *d2, *d3;
+	int count;
+	DIR **d, **overlays;
 	struct stat st;
 	struct dirent *ent;
+	overlay_t *over;
+	enumerator_t *enumerator;
 
 	memset(&st, 0, sizeof(st));
 
-	d1 = get_dir(this->master, path);
-	d2 = get_dir(this->host, path);
-	d3 = get_dir(this->over, path);
+	this->lock->read_lock(this->lock);
+	/* create a null-terminated array of DIR objects for all overlays (including
+	 * the master and host layer). the order is from bottom to top */
+	count = this->overlays->get_count(this->overlays) + 2;
+	overlays = calloc(count + 1, sizeof(DIR*));
+	d = &overlays[count];
 
-	if (d1)
+	enumerator = this->overlays->create_enumerator(this->overlays);
+	while (enumerator->enumerate(enumerator, (void**)&over))
 	{
-		while ((ent = readdir(d1)))
+		ADD_DIR(d, over->path, path);
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	ADD_DIR(d, this->host, path);
+	ADD_DIR(d, this->master, path);
+
+	for (; *d; ++d)
+	{
+		rewinddir(*d);
+		while((ent = readdir(*d)))
 		{
-			if (!contains_dir(d2, ent->d_name) &&
-				!contains_dir(d3, ent->d_name))
+			if (!overlays_contain_dir(d + 1, ent->d_name))
 			{
 				st.st_ino = ent->d_ino;
 				st.st_mode = ent->d_type << 12;
 				filler(buf, ent->d_name, &st, 0);
 			}
 		}
-		closedir(d1);
+		closedir(*d);
 	}
-	if (d2)
-	{
-		rewinddir(d2);
-		while ((ent = readdir(d2)))
-		{
-			if (!contains_dir(d3, ent->d_name))
-			{
-				st.st_ino = ent->d_ino;
-				st.st_mode = ent->d_type << 12;
-				filler(buf, ent->d_name, &st, 0);
-			}
-		}
-		closedir(d2);
-	}
-	if (d3)
-	{
-		rewinddir(d3);
-		while ((ent = readdir(d3)))
-		{
-			st.st_ino = ent->d_ino;
-			st.st_mode = ent->d_type << 12;
-			filler(buf, ent->d_name, &st, 0);
-		}
-		closedir(d3);
-	}
+
+	free(overlays);
 	return 0;
 }
 
@@ -758,30 +836,53 @@ static struct fuse_operations cowfs_operations = {
 };
 
 /**
- * Implementation of cowfs_t.set_overlay.
+ * Implementation of cowfs_t.add_overlay.
  */
-static bool set_overlay(private_cowfs_t *this, char *path)
+static bool add_overlay(private_cowfs_t *this, char *path)
 {
-	if (this->over)
+	overlay_t *over = malloc_thing(overlay_t);
+	over->fd = open(path, O_RDONLY | O_DIRECTORY);
+	if (over->fd < 0)
 	{
-		free(this->over);
-		this->over = NULL;
+		DBG1(DBG_LIB, "failed to open overlay directory '%s': %m", path);
+		free(over);
+		return FALSE;
 	}
-	if (this->over_fd > 0)
+	over->path = realpath(path, NULL);
+	this->lock->write_lock(this->lock);
+	overlay_remove(this, over->path);
+	this->overlays->insert_first(this->overlays, over);
+	this->lock->unlock(this->lock);
+	return TRUE;
+}
+
+/**
+ * Implementation of cowfs_t.del_overlay.
+ */
+static bool del_overlay(private_cowfs_t *this, char *path)
+{
+	bool removed;
+	char real[PATH_MAX];
+	this->lock->write_lock(this->lock);
+	removed = overlay_remove(this, realpath(path, real));
+	this->lock->unlock(this->lock);
+	return removed;
+}
+
+/**
+ * Implementation of cowfs_t.pop_overlay.
+ */
+static bool pop_overlay(private_cowfs_t *this)
+{
+	overlay_t *over;
+	this->lock->write_lock(this->lock);
+	if (this->overlays->remove_first(this->overlays, (void**)&over) != SUCCESS)
 	{
-		close(this->over_fd);
-		this->over_fd = -1;
+		this->lock->unlock(this->lock);
+		return FALSE;
 	}
-	if (path)
-	{
-		this->over_fd = open(path, O_RDONLY | O_DIRECTORY);
-		if (this->over_fd < 0)
-		{
-			DBG1(DBG_LIB, "failed to open overlay directory '%s': %m", path);
-			return FALSE;
-		}
-		this->over = strdup(path);
-	}
+	this->lock->unlock(this->lock);
+	overlay_destroy(over);
 	return TRUE;
 }
 
@@ -794,16 +895,13 @@ static void destroy(private_cowfs_t *this)
 	fuse_unmount(this->mount, this->chan);
 	this->thread->join(this->thread);
 	fuse_destroy(this->fuse);
+	this->lock->destroy(this->lock);
+	this->overlays->destroy_function(this->overlays, (void*)overlay_destroy);
 	free(this->mount);
 	free(this->master);
 	free(this->host);
-	free(this->over);
 	close(this->master_fd);
 	close(this->host_fd);
-	if (this->over_fd > 0)
-	{
-		close(this->over_fd);
-	}
 	free(this);
 }
 
@@ -815,7 +913,9 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	struct fuse_args args = {0, NULL, 0};
 	private_cowfs_t *this = malloc_thing(private_cowfs_t);
 
-	this->public.set_overlay = (bool(*)(cowfs_t*, char *path))set_overlay;
+	this->public.add_overlay = (bool(*)(cowfs_t*, char *path))add_overlay;
+	this->public.del_overlay = (bool(*)(cowfs_t*, char *path))del_overlay;
+	this->public.pop_overlay = (bool(*)(cowfs_t*))pop_overlay;
 	this->public.destroy = (void(*)(cowfs_t*))destroy;
 
 	this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
@@ -833,7 +933,6 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 		free(this);
 		return NULL;
 	}
-	this->over_fd = -1;
 
 	this->chan = fuse_mount(mount, &args);
 	if (this->chan == NULL)
@@ -860,13 +959,16 @@ cowfs_t *cowfs_create(char *master, char *host, char *mount)
 	this->mount = strdup(mount);
 	this->master = strdup(master);
 	this->host = strdup(host);
-	this->over = NULL;
+	this->overlays = linked_list_create();
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	this->thread = thread_create((thread_main_t)fuse_loop, this->fuse);
 	if (!this->thread)
 	{
 		DBG1(DBG_LIB, "creating thread to handle FUSE failed");
 		fuse_unmount(mount, this->chan);
+		this->lock->destroy(this->lock);
+		this->overlays->destroy(this->overlays);
 		free(this->mount);
 		free(this->master);
 		free(this->host);
