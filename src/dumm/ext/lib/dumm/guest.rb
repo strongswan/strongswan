@@ -1,5 +1,5 @@
 =begin
-  Copyright (C) 2008-2009 Tobias Brunner
+  Copyright (C) 2008-2010 Tobias Brunner
   Hochschule fuer Technik Rapperswil
 
   This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@ module Dumm
       end
       Guest[id]
     end
-    
+
     # accessor for interfaces
     # e.g. guest.eth0 instead of guest["eth0"]
     def method_missing(id, *args)
@@ -32,7 +32,7 @@ module Dumm
       end
       self[id]
     end
-    
+
     # remove all overlays, delete all interfaces
     def reset
       while pop_overlay; end
@@ -40,17 +40,13 @@ module Dumm
         i.delete
       }
     end
-    
+
     # has the guest booted up?
     def booted?
-      begin
-        exec("pgrep getty")
-      rescue
-        return false
-      end
-      return true
+      exec("pgrep getty")
+      execstatus == 0
     end
-    
+
     # wait until the guest has booted
     def boot
       while not booted?

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -240,11 +240,9 @@ static VALUE guest_exec(VALUE self, VALUE cmd)
 
 	block = rb_block_given_p();
 	Data_Get_Struct(self, guest_t, guest);
-	if ((ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
-					"exec %s", StringValuePtr(cmd))) != 0)
-	{
-		rb_raise(rb_eRuntimeError, "executing command failed (%d)", ret);
-	}
+	ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
+						  "exec %s", StringValuePtr(cmd));
+	rb_iv_set(self, "@execstatus", INT2NUM(ret));
 	return self;
 }
 
@@ -411,6 +409,8 @@ static void guest_init()
 	rb_define_method(rbc_guest, "add_overlay", guest_add_overlay, 1);
 	rb_define_method(rbc_guest, "del_overlay", guest_del_overlay, 1);
 	rb_define_method(rbc_guest, "pop_overlay", guest_pop_overlay, 0);
+
+	rb_define_attr(rbc_guest, "execstatus", 1, 0);
 }
 
 /**
