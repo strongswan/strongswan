@@ -1,0 +1,6 @@
+strongswan (4.5.0-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Tobias Brunner <tobias@strongswan.org>  Thu, 14 Oct 2010 17:31:43 +0200
+

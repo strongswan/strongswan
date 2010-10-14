@@ -1,0 +1,13 @@
+Source: strongswan
+Section: user/network
+Priority: extra
+Maintainer: Tobias Brunner <tobias@strongswan.org>
+Build-Depends: debhelper (>= 5), autotools-dev
+Standards-Version: 3.7.2
+
+Package: strongswan
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: strongSwan IKEv2 VPN
+ strongSwan is an IKEv2/IPsec-based VPN solution.
+
