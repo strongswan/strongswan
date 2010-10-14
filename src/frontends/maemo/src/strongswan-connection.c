@@ -248,6 +248,10 @@ strongswan_connection_save_to_key_file (GKeyFile *key_file,
 	{
 		g_key_file_set_string (key_file, name, "cert", priv->cert);
 	}
+	else
+	{
+		g_key_file_remove_key (key_file, name, "cert", NULL);
+	}
 	if (priv->user)
 	{
 		g_key_file_set_string (key_file, name, "user", priv->user);

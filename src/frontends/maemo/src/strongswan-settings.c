@@ -35,17 +35,47 @@ struct {
 } ListDialog = { 0, };
 
 /**
+ * Callback if no certificate should be selected
+ */
+void no_certificate(HildonButton *button, gpointer user_data)
+{
+	gtk_dialog_response (GTK_DIALOG (user_data), GTK_RESPONSE_REJECT);
+}
+
+/**
  * Callback to select a certificate
  */
 void select_cert(HildonButton *button, gpointer user_data)
 {
 	GtkWidget *selector = hildon_file_chooser_dialog_new (GTK_WINDOW (user_data), GTK_FILE_CHOOSER_ACTION_OPEN);
+	GtkWidget *nocert = hildon_button_new (HILDON_SIZE_FINGER_HEIGHT |
+										   HILDON_SIZE_AUTO_WIDTH,
+										   HILDON_BUTTON_ARRANGEMENT_VERTICAL);
+	hildon_button_set_text (HILDON_BUTTON (nocert),
+							"No certificate",
+							"Use system-wide CA certificates");
+	hildon_button_set_alignment (HILDON_BUTTON (nocert), 0, 0.5, 1, 1);
+	g_signal_connect (nocert, "clicked", G_CALLBACK (no_certificate), selector);
+	hildon_file_chooser_dialog_add_extra (HILDON_FILE_CHOOSER_DIALOG (selector),
+										  nocert);
 	gtk_widget_show_all (selector);
-	if (gtk_dialog_run (GTK_DIALOG (selector)) == GTK_RESPONSE_OK)
+
+	switch (gtk_dialog_run (GTK_DIALOG (selector)))
 	{
-		gchar *file = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (selector));
-		hildon_button_set_value (button, file);
-		g_free(file);
+		case GTK_RESPONSE_OK:
+		{
+			gchar *file = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (selector));
+			hildon_button_set_value (button, file);
+			g_free(file);
+			break;
+		}
+		case GTK_RESPONSE_REJECT:
+		{
+			hildon_button_set_value (button, "None");
+			break;
+		}
+		default:
+			break;
 	}
 	gtk_widget_destroy (selector);
 }
