@@ -45,7 +45,7 @@ then
     for host in `ls $TESTSDIR/$testname/hosts`
     do
 	eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-	scp -r $TESTSDIR/$testname/hosts/$host/etc $HOSTLOGIN:/ > /dev/null 2>&1
+	scp $SSHCONF -r $TESTSDIR/$testname/hosts/$host/etc $HOSTLOGIN:/ > /dev/null 2>&1
     done
 fi
 
@@ -57,7 +57,7 @@ fi
 for host in $IPSECHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-    ssh $HOSTLOGIN 'rm -f /var/log/auth.log /var/log/daemon.log; \
+    ssh $SSHCONF $HOSTLOGIN 'rm -f /var/log/auth.log /var/log/daemon.log; \
 		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
 done
 
@@ -69,6 +69,6 @@ done
 for host in $RADIUSHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-    ssh $HOSTLOGIN 'rm -f /var/log/radius/radius.log; \
+    ssh $SSHCONF $HOSTLOGIN 'rm -f /var/log/radius/radius.log; \
 		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
 done
