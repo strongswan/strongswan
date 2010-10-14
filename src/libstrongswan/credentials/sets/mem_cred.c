@@ -139,15 +139,25 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 									(void*)cert_data_destroy);
 }
 
+static bool certificate_equals(certificate_t *item, certificate_t *cert)
+{
+	return item->equals(item, cert);
+}
+
 METHOD(mem_cred_t, add_cert, void,
 	private_mem_cred_t *this, bool trusted, certificate_t *cert)
 {
 	this->lock->write_lock(this->lock);
-	if (trusted)
+	if (this->untrusted->find_last(this->untrusted,
+				(linked_list_match_t)certificate_equals, NULL, cert) != SUCCESS)
 	{
-		this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+		if (trusted)
+		{
+			this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+		}
+		this->untrusted->insert_last(this->untrusted, cert->get_ref(cert));
 	}
-	this->untrusted->insert_last(this->untrusted, cert);
+	cert->destroy(cert);
 	this->lock->unlock(this->lock);
 }
 
