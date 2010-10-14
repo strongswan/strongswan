@@ -21,6 +21,15 @@ strongswan-4.5.0
   authentication for client and server. It is compatible to Windows 7 IKEv2
   Smartcard authentication and the OpenSSL based FreeRADIUS EAP-TLS backend.
 
+- Implemented the TNCCS 1.1 Trusted Network Connect protocol using the
+  libtnc library on the strongSwan client and server side via the tnccs_11
+  plugin and optionally connecting to a TNC@FHH-enhanced FreeRADIUS AAA server.
+  Depending on the resulting TNC Recommendation, strongSwan clients are granted
+  access to a network behind a strongSwan gateway (allow), are put into a
+  remediation zone (isolate) or are blocked (none), respectively. Any number 
+  of Integrity Measurement Collector/Verifier pairs can be attached
+  via the tnc-imc and tnc-imv charon plugins.
+
 - Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
   identity was different from the IKE identity.
 
