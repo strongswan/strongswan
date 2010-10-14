@@ -15,6 +15,7 @@
 
 #include <glib.h>
 #include <libosso.h>
+#include <sys/stat.h>
 
 #include "maemo_service.h"
 
@@ -31,6 +32,11 @@
 #define OSSO_CHARON_SERVICE	"org.strongswan."OSSO_CHARON_NAME
 #define OSSO_CHARON_OBJECT	"/org/strongswan/"OSSO_CHARON_NAME
 #define OSSO_CHARON_IFACE	"org.strongswan."OSSO_CHARON_NAME
+
+#define MAEMO_COMMON_CA_DIR	"/etc/certs/common-ca"
+#define MAEMO_USER_CA_DIR	"/home/user/.maemosec-certs/wifi-ca"
+/* there is also an smime-ca and an ssl-ca sub-directory and the same for
+ * ...-user, which store end user/server certificates */
 
 typedef enum {
 	VPN_STATUS_DISCONNECTED,
@@ -154,6 +160,44 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+/**
+ * load all CA certificates in the given directory
+ */
+static void load_ca_dir(private_maemo_service_t *this, char *dir)
+{
+	enumerator_t *enumerator;
+	char *rel, *abs;
+	struct stat st;
+
+	enumerator = enumerator_create_directory(dir);
+	if (enumerator)
+	{
+		while (enumerator->enumerate(enumerator, &rel, &abs, &st))
+		{
+			if (rel[0] != '.')
+			{
+				if (S_ISREG(st.st_mode))
+				{
+					certificate_t *cert;
+					cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+											  CERT_X509, BUILD_FROM_FILE, abs,
+											  BUILD_END);
+					if (!cert)
+					{
+						DBG1(DBG_CFG, "loading CA certificate '%s' failed",
+							 abs);
+						continue;
+					}
+					DBG2(DBG_CFG, "loaded CA certificate '%Y'",
+						 cert->get_subject(cert));
+					this->creds->add_cert(this->creds, TRUE, cert);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
 static void disconnect(private_maemo_service_t *this)
 {
 	ike_sa_t *ike_sa;
@@ -248,17 +292,25 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 
 	this->creds->clear(this->creds);
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_FROM_FILE, cacert, BUILD_END);
-	if (cert)
+	if (cacert && !streq(cacert, ""))
 	{
-		this->creds->add_cert(this->creds, TRUE, cert);
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, cacert, BUILD_END);
+		if (cert)
+		{
+			this->creds->add_cert(this->creds, TRUE, cert);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "failed to load CA certificate");
+		}
+		/* if this is a server cert we could use the cert subject as id */
 	}
 	else
 	{
-		DBG1(DBG_CFG, "failed to load CA certificate");
+		load_ca_dir(this, MAEMO_COMMON_CA_DIR);
+		load_ca_dir(this, MAEMO_USER_CA_DIR);
 	}
-	/* if this is a server cert we could use the cert subject as id */
 
 	gateway = identification_create_from_string(hostname);
 	DBG1(DBG_CFG, "using CA certificate, gateway identitiy '%Y'", gateway);
