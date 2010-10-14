@@ -880,6 +880,7 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 {
 	const ip_address *peer = &sr->that.host_addr;
 	char buf2[256];
+	bool ok;
 
 	snprintf(buf2, sizeof(buf2)
 			 , "eroute_connection %s", opname);
@@ -888,9 +889,13 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 	{
 		peer = aftoinfo(addrtypeof(peer))->any;
 	}
+	ok = raw_eroute(peer, &sr->that.client,
+					&sr->this.host_addr, &sr->this.client, sr->mark_in,
+					spi, proto, satype, sr->this.protocol,
+					sa, op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), buf2);
 	return raw_eroute(&sr->this.host_addr, &sr->this.client, peer,
 					  &sr->that.client, sr->mark_out, spi, proto, satype,
-					  sr->this.protocol, sa, op, buf2);
+					  sr->this.protocol, sa, op, buf2) && ok;
 }
 
 /* assign a bare hold to a connection */
@@ -1049,7 +1054,6 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 	 * The SPI signifies the kind of shunt.
 	 */
 	ipsec_spi_t spi = shunt_policy_spi(c, rt_kind == RT_ROUTED_PROSPECTIVE);
-	bool ok;
 
 	if (spi == 0)
 	{
@@ -1108,14 +1112,8 @@ static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 		}
 	}
 
-	ok = raw_eroute(&sr->that.host_addr, &sr->that.client,
-					&sr->this.host_addr, &sr->this.client, sr->mark_in,
-					htonl(spi), SA_INT, SADB_X_SATYPE_INT, sr->this.protocol,
-					&null_ipsec_sa,
-					op | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT), opname);
-
 	return eroute_connection(sr, htonl(spi), SA_INT, SADB_X_SATYPE_INT,
-							 &null_ipsec_sa, op, opname) && ok;
+							 &null_ipsec_sa, op, opname);
 }
 
 static bool setup_half_ipsec_sa(struct state *st, bool inbound)
@@ -1337,14 +1335,6 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		mode = MODE_TRANSPORT;
 	}
 
-	if (inbound && c->spd.eroute_owner == SOS_NOBODY)
-	{
-		(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
-						  &dst->client, mark, 256, SA_IPIP, SADB_SATYPE_UNSPEC,
-						  c->spd.this.protocol, &sa, ERO_ADD_INBOUND,
-						  "add inbound");
-	}
-
 	goto cleanup;
 
 fail:
@@ -1378,15 +1368,6 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 		src = &c->spd.that;
 		dst = &c->spd.this;
 		mark = c->spd.mark_in;
-
-		if (c->spd.eroute_owner == SOS_NOBODY)
-		{
-			(void) raw_eroute(&src->host_addr, &src->client, &dst->host_addr,
-							  &dst->client, mark, 256, IPSEC_PROTO_ANY,
-							  SADB_SATYPE_UNSPEC, c->spd.this.protocol,
-							  &null_ipsec_sa, ERO_DEL_INBOUND,
-							  "delete inbound");
-		}
 	}
 	else
 	{

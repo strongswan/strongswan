@@ -30,8 +30,6 @@ extern bool can_do_IPcomp;  /* can system actually perform IPCOMP? */
 #define ERO_DELETE      SADB_X_DELFLOW
 #define ERO_ADD SADB_X_ADDFLOW
 #define ERO_REPLACE     (SADB_X_ADDFLOW | (SADB_X_SAFLAGS_REPLACEFLOW << ERO_FLAG_SHIFT))
-#define ERO_ADD_INBOUND (SADB_X_ADDFLOW | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT))
-#define ERO_DEL_INBOUND (SADB_X_DELFLOW | (SADB_X_SAFLAGS_INFLOW << ERO_FLAG_SHIFT))
 
 struct pfkey_proto_info {
 		int proto;
