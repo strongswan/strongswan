@@ -8,6 +8,7 @@ dave::cat /var/log/daemon.log::server requested EAP_TTLS authentication::YES
 dave::cat /var/log/daemon.log::server requested EAP_MD5 authentication::YES
 dave::cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
+moon::cat /var/log/daemon.log::RADIUS authentication of 'dave@strongswan.org' failed::YES
 moon::cat /var/log/daemon.log::EAP method EAP_TTLS failed for peer dave@strongswan.org::YES
 moon::ipsec statusall::rw-eap.*ESTABLISHED.*carol@strongswan.org::YES
 moon::ipsec statusall::rw-eap.*ESTABLISHED.*dave@strongswan.org::NO
