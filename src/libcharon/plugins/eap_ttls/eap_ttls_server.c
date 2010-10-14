@@ -69,6 +69,71 @@ struct private_eap_ttls_server_t {
 	eap_ttls_avp_t *avp;
 };
 
+/**
+ * Start EAP client authentication protocol
+ */
+static status_t start_phase2_auth(private_eap_ttls_server_t *this)
+{
+	char *eap_type_str;
+	eap_type_t type;
+
+	eap_type_str = lib->settings->get_str(lib->settings,
+					 	"charon.plugins.eap-ttls.phase2_method", "md5");
+	type = eap_type_from_string(eap_type_str);
+	if (type == 0)
+	{
+		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
+		return FAILED;
+	}
+	DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, type);
+		this->method = charon->eap->create_instance(charon->eap, type, 0,
+								EAP_SERVER, this->server, this->peer);
+	if (this->method == NULL)
+	{
+		DBG1(DBG_IKE, "%N method not available", eap_type_names, type);
+		return FAILED;
+	}
+	if (this->method->initiate(this->method, &this->out) == NEED_MORE)
+	{
+		return NEED_MORE;
+	}
+	else
+	{
+		DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
+			return FAILED;
+	}
+}
+
+/**
+ * If configured, start EAP-TNC protocol
+ */
+static status_t start_phase2_tnc(private_eap_ttls_server_t *this)
+{
+	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
+					 	"charon.plugins.eap-ttls.phase2_tnc", FALSE))
+	{
+		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
+		this->method = charon->eap->create_instance(charon->eap, EAP_TNC,
+									0, EAP_SERVER, this->server, this->peer);
+		if (this->method == NULL)
+		{
+			DBG1(DBG_IKE, "%N method not available", eap_type_names, EAP_TNC);
+			return FAILED;
+		}
+		this->start_phase2_tnc = FALSE;
+		if (this->method->initiate(this->method, &this->out) == NEED_MORE)
+		{
+			return NEED_MORE;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "%N method failed", eap_type_names, EAP_TNC);
+			return FAILED;
+		}
+	}
+	return SUCCESS;
+}
+
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_server_t *this, tls_reader_t *reader)
 {
@@ -134,7 +199,6 @@ METHOD(tls_application_t, process, status_t,
 	if (!received_vendor && received_type == EAP_IDENTITY)
 	{
 		chunk_t eap_id;
-		char * eap_type_str;
 
 		if (this->method == NULL)
 		{
@@ -169,31 +233,14 @@ METHOD(tls_application_t, process, status_t,
 		this->method = NULL;
 
 		/* Start Phase 2 of EAP-TTLS authentication */
-		eap_type_str = lib->settings->get_str(lib->settings,
-						 	"charon.plugins.eap-ttls.phase2_method", "md5");
-		type = eap_type_from_string(eap_type_str);
-		if (type == 0)
+		if (lib->settings->get_bool(lib->settings,
+					 	"charon.plugins.eap-ttls.request_peer_auth", FALSE))
 		{
-			DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
-			return FAILED;
-		}
-		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, type);
-
-		this->method = charon->eap->create_instance(charon->eap, type, 0,
-									EAP_SERVER, this->server, this->peer);
-		if (this->method == NULL)
-		{
-			DBG1(DBG_IKE, "%N method not available", eap_type_names, type);
-			return FAILED;
-		}
-		if (this->method->initiate(this->method, &this->out) == NEED_MORE)
-		{
-			return NEED_MORE;
+			return start_phase2_tnc(this);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
- 			return FAILED;
+			return start_phase2_auth(this);
 		}
 	}
 
@@ -217,24 +264,7 @@ METHOD(tls_application_t, process, status_t,
 			this->method = NULL;
 
 			/* continue phase2 with EAP-TNC? */
-			if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
-			 	"charon.plugins.eap-ttls.phase2_tnc", FALSE))
-			{
-				DBG1(DBG_IKE, "phase2 method %N selected",
-					 eap_type_names, EAP_TNC);
-				this->method = charon->eap->create_instance(charon->eap, EAP_TNC,
-									0, EAP_SERVER, this->server, this->peer);
-				if (this->method == NULL)
-				{
-					DBG1(DBG_IKE, "%N method not available",
-						 eap_type_names, EAP_TNC);
-					return FAILED;
-				}
-				this->method->initiate(this->method, &this->out);
-				this->start_phase2_tnc = FALSE;
-				return NEED_MORE;
-			}
-			break;
+			return start_phase2_tnc(this);
 		case NEED_MORE:
 			break;
 		case FAILED:
