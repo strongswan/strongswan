@@ -274,9 +274,17 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 {
 	packet_t *packet;
 	message_t *message;
+	status_t status;
 
 	/* read in a packet */
-	if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
+	status = charon->socket->receive(charon->socket, &packet);
+	if (status == NOT_SUPPORTED)
+	{
+		/* the processor destroys this job  */
+		this->job = NULL;
+		return JOB_REQUEUE_NONE;
+	}
+	else if (status != SUCCESS)
 	{
 		DBG2(DBG_NET, "receiving from socket failed!");
 		return JOB_REQUEUE_FAIR;
@@ -368,7 +376,10 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 METHOD(receiver_t, destroy, void,
 	private_receiver_t *this)
 {
-	this->job->cancel(this->job);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	free(this);
