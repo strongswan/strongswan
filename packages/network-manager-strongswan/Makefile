@@ -1,5 +1,5 @@
 
-SOURCE:=../../src/charon/plugins/nm/gnome
+SOURCE:=../../src/frontends/gnome
 VERSION:=1.1.0rc1
 
 source:	prepare
