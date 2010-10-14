@@ -1,7 +1,7 @@
 noinst_SCRIPTS = do-tests
 CLEANFILES = do-tests
 EXTRA_DIST = do-tests.in make-testing start-testing stop-testing \
-             testing.conf hosts images scripts tests INSTALL README
+             testing.conf ssh_config hosts images scripts tests INSTALL README
 
 do-tests : do-tests.in
 	sed \
