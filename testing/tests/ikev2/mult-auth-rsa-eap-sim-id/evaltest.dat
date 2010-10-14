@@ -13,7 +13,7 @@ moon::cat /var/log/daemon.log::authentication of .*dave@strongswan.org.* with RS
 dave::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA signature successful::YES
 dave::cat /var/log/daemon.log::server requested EAP_SIM authentication::YES
 moon::cat /var/log/daemon.log::received EAP identity .*228060123456002::YES
-moon::cat /var/log/daemon.log::received Access-Reject from RADIUS server::YES
+moon::cat /var/log/daemon.log::RADIUS authentication of '228060123456002' failed::YES
 moon::cat /var/log/daemon.log::EAP method EAP_SIM failed for peer 228060123456002@strongswan.org::YES
 moon::ipsec statusall::rw-mult.*ESTABLISHED.*228060123456002@strongswan.org::NO
 dave::cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
