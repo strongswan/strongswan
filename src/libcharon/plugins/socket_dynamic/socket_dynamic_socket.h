@@ -35,10 +35,6 @@ struct socket_dynamic_socket_t {
 	 */
 	socket_t socket;
 
-	/**
-	 * Destroy a socket_dynamic_socket_t.
-	 */
-	void (*destroy)(socket_dynamic_socket_t *this);
 };
 
 /**
