@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -612,7 +613,7 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 	return skt;
 }
 
-METHOD(socket_raw_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_raw_socket_t *this)
 {
 	if (this->recv4)
@@ -654,8 +655,8 @@ socket_raw_socket_t *socket_raw_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
 		.max_packet = lib->settings->get_int(lib->settings,
 										"charon.max_packet", MAX_PACKET),

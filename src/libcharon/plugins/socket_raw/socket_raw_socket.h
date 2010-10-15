@@ -41,10 +41,6 @@ struct socket_raw_socket_t {
 	 */
 	socket_t socket;
 
-	/**
-	 * Destroy a socket_raw_socket_t.
-	 */
-	void (*destroy)(socket_raw_socket_t *this);
 };
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -546,7 +546,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	return skt;
 }
 
-METHOD(socket_default_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_default_socket_t *this)
 {
 	if (this->ipv4)
@@ -580,8 +580,8 @@ socket_default_socket_t *socket_default_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
 		.max_packet = lib->settings->get_int(lib->settings,
 										"charon.max_packet", MAX_PACKET),

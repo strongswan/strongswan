@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,6 +31,11 @@ typedef struct socket_t socket_t;
 #include <utils/enumerator.h>
 
 /**
+ * Constructor prototype for sockets.
+ */
+typedef socket_t *(*socket_constructor_t)();
+
+/**
  * Socket interface definition.
  */
 struct socket_t {
@@ -42,8 +48,8 @@ struct socket_t {
 	 *
 	 * @param packet		pinter gets address from allocated packet_t
 	 * @return
-	 * 						- SUCCESS when packet successfully received
-	 * 						- FAILED when unable to receive
+	 *						- SUCCESS when packet successfully received
+	 *						- FAILED when unable to receive
 	 */
 	status_t (*receive) (socket_t *this, packet_t **packet);
 
@@ -55,10 +61,15 @@ struct socket_t {
 	 *
 	 * @param packet		packet_t to send
 	 * @return
-	 * 						- SUCCESS when packet successfully sent
-	 * 						- FAILED when unable to send
+	 *						- SUCCESS when packet successfully sent
+	 *						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_t *this, packet_t *packet);
+
+	/**
+	 * Destroy a socket implementation.
+	 */
+	void (*destroy) (socket_t *this);
 };
 
 #endif /** SOCKET_H_ @}*/

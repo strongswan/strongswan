@@ -35,10 +35,6 @@ struct socket_default_socket_t {
 	 */
 	socket_t socket;
 
-	/**
-	 * Destroy a socket_default_socket_t.
-	 */
-	void (*destroy)(socket_default_socket_t *this);
 };
 
 /**

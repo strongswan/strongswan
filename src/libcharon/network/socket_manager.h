@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -51,14 +53,18 @@ struct socket_manager_t {
 	status_t (*send) (socket_manager_t *this, packet_t *packet);
 
 	/**
-	 * Register a socket implementation.
+	 * Register a socket constructor.
+	 *
+	 * @param create		constructor for the socket
 	 */
-	void (*add_socket)(socket_manager_t *this, socket_t *socket);
+	void (*add_socket)(socket_manager_t *this, socket_constructor_t create);
 
 	/**
-	 * Unregister a registered socket implementation.
+	 * Unregister a registered socket constructor.
+	 *
+	 * @param create		constructor for the socket
 	 */
-	void (*remove_socket)(socket_manager_t *this, socket_t *socket);
+	void (*remove_socket)(socket_manager_t *this, socket_constructor_t create);
 
 	/**
 	 * Destroy a socket_manager_t.

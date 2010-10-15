@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -33,9 +35,19 @@ struct private_socket_manager_t {
 	socket_manager_t public;
 
 	/**
-	 * List of registered socket
+	 * List of registered socket constructors
 	 */
 	linked_list_t *sockets;
+
+	/**
+	 * Instantiated socket implementation
+	 */
+	socket_t *socket;
+
+	/**
+	 * The constructor used to create the current socket
+	 */
+	socket_constructor_t create;
 
 	/**
 	 * Lock for sockets list
@@ -46,11 +58,9 @@ struct private_socket_manager_t {
 METHOD(socket_manager_t, receiver, status_t,
 	private_socket_manager_t *this, packet_t **packet)
 {
-	socket_t *socket;
 	status_t status;
-
 	this->lock->read_lock(this->lock);
-	if (this->sockets->get_first(this->sockets, (void**)&socket) != SUCCESS)
+	if (!this->socket)
 	{
 		DBG1(DBG_NET, "no socket implementation registered, receiving failed");
 		this->lock->unlock(this->lock);
@@ -58,7 +68,7 @@ METHOD(socket_manager_t, receiver, status_t,
 	}
 	/* receive is blocking and the thread can be cancelled */
 	thread_cleanup_push((thread_cleanup_t)this->lock->unlock, this->lock);
-	status = socket->receive(socket, packet);
+	status = this->socket->receive(this->socket, packet);
 	thread_cleanup_pop(TRUE);
 	return status;
 }
@@ -66,40 +76,67 @@ METHOD(socket_manager_t, receiver, status_t,
 METHOD(socket_manager_t, sender, status_t,
 	private_socket_manager_t *this, packet_t *packet)
 {
-	socket_t *socket;
 	status_t status;
-
 	this->lock->read_lock(this->lock);
-	if (this->sockets->get_first(this->sockets, (void**)&socket) != SUCCESS)
+	if (!this->socket)
 	{
 		DBG1(DBG_NET, "no socket implementation registered, sending failed");
 		this->lock->unlock(this->lock);
 		return NOT_SUPPORTED;
 	}
-	status = socket->send(socket, packet);
+	status = this->socket->send(this->socket, packet);
 	this->lock->unlock(this->lock);
 	return status;
 }
 
+static void create_socket(private_socket_manager_t *this)
+{
+	socket_constructor_t create;
+	/* remove constructors in order to avoid trying to create broken ones
+	 * multiple times */
+	while (this->sockets->remove_first(this->sockets,
+									   (void**)&create) == SUCCESS)
+	{
+		this->socket = create();
+		if (this->socket)
+		{
+			this->create = create;
+			break;
+		}
+	}
+}
+
 METHOD(socket_manager_t, add_socket, void,
-	private_socket_manager_t *this, socket_t *socket)
+	private_socket_manager_t *this, socket_constructor_t create)
 {
 	this->lock->write_lock(this->lock);
-	this->sockets->insert_last(this->sockets, socket);
+	this->sockets->insert_last(this->sockets, create);
+	if (!this->socket)
+	{
+		create_socket(this);
+	}
 	this->lock->unlock(this->lock);
 }
 
 METHOD(socket_manager_t, remove_socket, void,
-	private_socket_manager_t *this, socket_t *socket)
+	private_socket_manager_t *this, socket_constructor_t create)
 {
 	this->lock->write_lock(this->lock);
-	this->sockets->remove(this->sockets, socket, NULL);
+	this->sockets->remove(this->sockets, create, NULL);
+	if (this->create == create)
+	{
+		this->socket->destroy(this->socket);
+		this->socket = NULL;
+		this->create = NULL;
+		create_socket(this);
+	}
 	this->lock->unlock(this->lock);
 }
 
 METHOD(socket_manager_t, destroy, void,
 	private_socket_manager_t *this)
 {
+	DESTROY_IF(this->socket);
 	this->sockets->destroy(this->sockets);
 	this->lock->destroy(this->lock);
 	free(this);

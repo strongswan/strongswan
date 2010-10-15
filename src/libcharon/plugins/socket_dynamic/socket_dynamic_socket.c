@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -572,7 +572,7 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
-METHOD(socket_dynamic_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_dynamic_socket_t *this)
 {
 	enumerator_t *enumerator;
@@ -605,8 +605,8 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.max_packet = lib->settings->get_int(lib->settings,
