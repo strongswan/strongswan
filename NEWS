@@ -36,6 +36,14 @@ strongswan-4.5.0
   of Integrity Measurement Collector/Verifier pairs can be attached
   via the tnc-imc and tnc-imv charon plugins.
 
+- The RADIUS plugin eap-radius now supports multiple RADIUS servers for
+  redundant setups. Servers are selected by a defined priority, server load and
+  availability.
+
+- The simple led plugin controls hardware LEDs through the Linux LED subsystem.
+  It currently shows activity of the IKE daemon and is a good example how to
+  implement a simple event listener.
+
 - Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
   identity was different from the IKE identity.
 
