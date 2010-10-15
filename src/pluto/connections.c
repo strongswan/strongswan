@@ -874,7 +874,8 @@ static void load_end_certificate(char *filename, struct end *dst)
 		/* cache the certificate that was last retrieved from the smartcard */
 		if (dst->sc)
 		{
-			if (!certificate->equals(certificate, dst->sc->last_cert->cert))
+			if (!dst->sc->last_cert ||
+			    !certificate->equals(certificate, dst->sc->last_cert->cert))
 			{
 				lock_certs_and_keys("load_end_certificates");
 				cert_release(dst->sc->last_cert);
