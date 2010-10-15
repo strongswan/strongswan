@@ -4,9 +4,9 @@ strongswan-4.5.0
 
 - IMPORTANT: the default keyexchange mode 'ike' is changing with release 4.5
   from 'ikev1' to 'ikev2', thus commemorating the five year anniversary of the
-  IKEv2 RFC 4706 and its mature successor RFC 5996. The time has definitively
+  IKEv2 RFC 4306 and its mature successor RFC 5996. The time has definitively
   come for IKEv1 to go into retirement and to cede its place to the much more
-  robust, powerful and versatile IKEv2 protocol! 
+  robust, powerful and versatile IKEv2 protocol!
 
 - Added new ctr, ccm and gcm plugins providing Counter, Counter with CBC-MAC
   and Galois/Counter Modes based on existing CBC implementations. These
@@ -32,7 +32,7 @@ strongswan-4.5.0
   plugin and optionally connecting to a TNC@FHH-enhanced FreeRADIUS AAA server.
   Depending on the resulting TNC Recommendation, strongSwan clients are granted
   access to a network behind a strongSwan gateway (allow), are put into a
-  remediation zone (isolate) or are blocked (none), respectively. Any number 
+  remediation zone (isolate) or are blocked (none), respectively. Any number
   of Integrity Measurement Collector/Verifier pairs can be attached
   via the tnc-imc and tnc-imv charon plugins.
 
