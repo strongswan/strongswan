@@ -36,6 +36,13 @@ strongswan-4.5.0
   of Integrity Measurement Collector/Verifier pairs can be attached
   via the tnc-imc and tnc-imv charon plugins.
 
+- The IKEv1 daemon pluto now uses the same kernel interfaces as the IKEv2
+  daemon charon. As a result of this, pluto now supports xfrm marks which
+  were introduced in charon with 4.4.1.
+
+- Applets for Maemo 5 (Nokia) allow to easily configure and control IKEv2
+  based VPN connections with EAP authentication on supported devices.
+
 - The RADIUS plugin eap-radius now supports multiple RADIUS servers for
   redundant setups. Servers are selected by a defined priority, server load and
   availability.
@@ -43,6 +50,11 @@ strongswan-4.5.0
 - The simple led plugin controls hardware LEDs through the Linux LED subsystem.
   It currently shows activity of the IKE daemon and is a good example how to
   implement a simple event listener.
+
+- Improved MOBIKE behavior in several corner cases, for instance, if the
+  initial responder moves to a different address.
+
+- Fixed left-/rightnexthop option, which was broken since 4.4.0.
 
 - Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
   identity was different from the IKE identity.
