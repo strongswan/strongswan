@@ -54,7 +54,7 @@ struct tnccs_manager_t {
 	 * Create a new TNCCS protocol instance.
 	 *
 	 * @param type			type of the TNCCS protocol
-	 * @is_server			TRUE if TNC Server, FALSE if TNC Client
+	 * @param is_server		TRUE if TNC Server, FALSE if TNC Client
 	 * @return				TNCCS protocol instance, NULL if no constructor found
 	 */
 	tnccs_t* (*create_instance)(tnccs_manager_t *this, tnccs_type_t type,

@@ -40,11 +40,11 @@ enum tnccs_type_t {
 extern enum_name_t *tnccs_type_names;
 
 typedef struct tnccs_t tnccs_t;
- 
+
 /**
  * Constructor definition for a pluggable TNCCS protocol implementation.
  *
- * @is_server			TRUE if TNC Server, FALSE if TNC Client
+ * @param is_server		TRUE if TNC Server, FALSE if TNC Client
  * @return				implementation of the tnccs_t interface
  */
 typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);

@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup tnccs_11 tnccs_11
+ * @defgroup tnccs_11_h tnccs_11
  * @{ @ingroup tnccs_11
  */
 
