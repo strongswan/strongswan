@@ -734,7 +734,7 @@ void fmt_state(bool all, struct state *st, time_t n, char *state_buf,
 		, st->st_serialno
 		, c->name, inst
 		, enum_name(&state_names, st->st_state)
-		, state_story[st->st_state - STATE_MAIN_R0]
+		, state_story[st->st_state]
 		, timer_event_names, st->st_event->ev_type
 		, delta
 		, np1, np2, eo, dpd);

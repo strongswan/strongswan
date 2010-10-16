@@ -368,11 +368,6 @@ extern const char *const state_story[];
 enum state_kind {
 	STATE_UNDEFINED,    /* 0 -- most likely accident */
 
-	/*  Opportunism states: see "Opportunistic Encryption" 2.2 */
-
-	OPPO_ACQUIRE,       /* got an ACQUIRE message for this pair */
-	OPPO_GW_DISCOVERED, /* got TXT specifying gateway */
-
 	/* IKE states */
 
 	STATE_MAIN_R0,
