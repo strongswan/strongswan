@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "2010-05-30" "@IPSEC_VERSION@" "strongSwan"
+.TH IPSEC.CONF 5 "2010-10-19" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -430,7 +430,7 @@ In IKEv2, multiple algorithms and proposals may be included, such as
 .TP
 .B ikelifetime
 how long the keying channel of a connection (ISAKMP or IKE SA)
-should last before being renegotiated.
+should last before being renegotiated. Also see EXPIRY/REKEY below.
 .TP
 .B installpolicy
 decides whether IPsec policies are installed in the kernel by the IKEv2
@@ -808,7 +808,7 @@ The two ends need not exactly agree on
 .BR lifetime ,
 although if they do not,
 there will be some clutter of superseded connections on the end
-which thinks the lifetime is longer.
+which thinks the lifetime is longer. Also see EXPIRY/REKEY below.
 .TP
 .B marginbytes
 how many bytes before IPsec SA expiry (see
@@ -828,7 +828,8 @@ begin; acceptable values as for
 .B lifetime
 (default
 .BR 9m ).
-Relevant only locally, other end need not agree on it.
+Relevant only locally, other end need not agree on it. Also see EXPIRY/REKEY
+below.
 .TP
 .B mark
 sets an XFRM mark of the form <value>[/<mask>] in the inbound and outbound
@@ -940,7 +941,8 @@ or
 The value
 .B 0%
 will suppress randomization.
-Relevant only locally, other end need not agree on it.
+Relevant only locally, other end need not agree on it. Also see EXPIRY/REKEY
+below.
 .TP
 .B rekeymargin
 synonym for
@@ -1318,6 +1320,82 @@ must be used to denote no interfaces.
 .B overridemtu
 value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
 overriding IPsec's (large) default.
+.SH IKEv2 EXPIRY/REKEY
+The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
+after a specific amount of time. For IPsec SAs this can also happen after a
+specified number of transmitted packets or transmitted bytes. The following
+settings can be used to configure this:
+.TS
+l r l r,- - - -,lB s lB s,a r a r.
+Setting	Default	Setting	Default
+IKE SA	IPsec SA
+ikelifetime	3h	lifebytes	-
+		lifepackets	-
+		lifetime	1h
+.TE
+.SS Rekeying
+IKE SAs as well as IPsec SAs can be rekeyed before they expire. This can be
+configured using the following settings:
+.TS
+l r l r,- - - -,lB s lB s,a r a r.
+Setting	Default	Setting	Default
+IKE and IPsec SA	IPsec SA
+margintime	9m	marginbytes	-
+		marginpackets	-
+.TE
+.SS Randomization
+To avoid collisions the specified margins are increased randomly before
+subtracting them from the expiration limits (see formula below). This is
+controlled by the
+.B rekeyfuzz
+setting:
+.TS
+l r,- -,lB s,a r.
+Setting	Default
+IKE and IPsec SA
+rekeyfuzz	100%
+.TE
+.PP
+Randomization can be disabled by setting
+.BR rekeyfuzz " to " 0% .
+.SS Formula
+The following formula is used to calculate the rekey time of IPsec SAs:
+.PP
+.EX
+ rekeytime = lifetime - (margintime + random(0, margintime * rekeyfuzz))
+.EE
+.PP
+It applies equally to IKE SAs and byte and packet limits for IPsec SAs.
+.SS Example
+Let's consider the default configuration:
+.PP
+.EX
+	lifetime = 1h
+	margintime = 9m
+	rekeyfuzz = 100%
+.EE
+.PP
+From the formula above follows that the rekey time lies between:
+.PP
+.EX
+	rekeytime_min = 1h - (9m + 9m) = 42m
+	rekeytime_max = 1h - (9m + 0m) = 51m
+.EE
+.PP
+Thus, the daemon will attempt to rekey the IPsec SA at a random time
+between 42 and 51 minutes after establishing the SA. Or, in other words,
+between 9 and 18 minutes before the SA expires.
+.SS Notes
+.IP \[bu]
+Since the rekeying of an SA needs some time, the margin values must not be
+too low.
+.IP \[bu]
+The value
+.B margin... + margin... * rekeyfuzz
+must not exceed the original limit. For example, specifying
+.B margintime = 30m
+in the default configuration is a bad idea as there is a chance that the rekey
+time equals zero and, thus, rekeying gets disabled.
 .SH FILES
 .nf
 /etc/ipsec.conf
