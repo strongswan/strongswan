@@ -233,6 +233,9 @@ defines the identity of the AAA backend used during IKEv2 EAP authentication.
 This is required if the EAP client uses a method that verifies the server
 identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 .TP
+.BR also " = <name>"
+includes conn section
+.BR <name> .
 .TP
 .BR auth " = " esp " | ah"
 whether authentication should be done as part of
@@ -247,9 +250,9 @@ The IKEv2 daemon currently supports ESP only.
 .BR authby " = " pubkey " | rsasig | ecdsasig | psk | eap | never | xauth..."
 how the two security gateways should authenticate each other;
 acceptable values are
-.B secret
-or
 .B psk
+or
+.B secret
 for pre-shared secrets,
 .B pubkey
 (the default) for public key signatures as well as the synonyms
@@ -360,6 +363,9 @@ dead peers.
 defines the timeout interval, after which all connections to a peer are deleted
 in case of inactivity. This only applies to IKEv1, in IKEv2 the default
 retransmission timeout applies, as every exchange is used to detect dead peers.
+See
+.IR strongswan.conf (5)
+for a description of the IKEv2 retransmission timeout.
 .TP
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
@@ -401,7 +407,7 @@ defined, the IKEv2 identity will be used as EAP identity.
 .BR esp " = <cipher suites>"
 comma-separated list of ESP encryption/authentication algorithms to be used
 for the connection, e.g.
-.BR 3des-md5 .
+.BR aes128-sha256 .
 The notation is
 .BR encryption-integrity-[dh-group] .
 .br
@@ -411,7 +417,7 @@ is specified, CHILD_SA setup and rekeying include a separate diffe hellman
 exchange (IKEv2 only).
 .TP
 .BR forceencaps " = yes | " no
-Force UDP encapsulation for ESP packets even if no NAT situation is detected.
+force UDP encapsulation for ESP packets even if no NAT situation is detected.
 This may help to surmount restrictive firewalls. In order to force the peer to
 encapsulate packets, NAT detection payloads are faked (IKEv2 only).
 .TP
@@ -715,18 +721,18 @@ or
 or
 .BR yes ,
 and
-.BR ifasked ,
+.BR ifasked " (the default),"
 the latter meaning that the peer must send a certificate request payload in
 order to get a certificate in return.
 .TP
 .BR leftsourceip " = %config | %cfg | %modeconfig | %modecfg | <ip address>"
 The internal source IP to use in a tunnel, also known as virtual IP. If the
 value is one of the synonyms
-.BR %modeconfig ,
-.BR %modecfg ,
 .BR %config ,
-or
 .BR %cfg ,
+.BR %modeconfig ,
+or
+.BR %modecfg ,
 an address is requested from the peer. In IKEv2, a statically defined address
 is also requested, since the server may change it.
 .TP
@@ -962,12 +968,14 @@ signifying that no IPsec processing should be done at all;
 .BR drop ,
 signifying that packets should be discarded; and
 .BR reject ,
-signifying that packets should be discarded and a diagnostic ICMP returned.
+signifying that packets should be discarded and a diagnostic ICMP returned
+.RB ( reject
+is currently not supported by the NETKEY stack of the Linux 2.6 kernel).
 The IKEv2 daemon charon currently supports
 .BR tunnel ,
 .BR transport ,
 and
-.BR tunnel_proxy
+.BR transport_proxy
 connection types, only.
 .TP
 .BR xauth " = " client " | server"
@@ -1013,6 +1021,10 @@ of this connection will be used as peer ID.
 .SH "CA SECTIONS"
 This are optional sections that can be used to assign special
 parameters to a Certification Authority (CA).
+.TP
+.BR also " = <name>"
+includes ca section
+.BR <name> .
 .TP
 .BR auto " = " ignore " | add"
 currently can have either the value
@@ -1087,7 +1099,7 @@ Accepted values are
 .B yes
 and
 .B no
-(the default).
+(the default). Only relevant for IKEv1, as CRLs are always cached in IKEv2.
 .TP
 .BR charonstart " = " yes " | no"
 whether to start the IKEv2 charon daemon or not.
@@ -1153,7 +1165,7 @@ Accepted values are
 and
 .B no
 (the default).
-Used by IKEv1 only, NAT traversal always being active in IKEv2.
+Used by IKEv1 only, NAT traversal is always being active in IKEv2.
 .TP
 .BR nocrsend " = yes | " no
 no certificate request payloads will be sent.
@@ -1246,6 +1258,9 @@ Acceptable values for types are
 and the level is one of
 .B -1, 0, 1, 2, 3, 4
 (for silent, audit, control, controlmore, raw, private).
+For more flexibility see LOGGER CONFIGURATION in
+.IR strongswan.conf (5).
+
 .SH IKEv2 EXPIRY/REKEY
 The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
 after a specific amount of time. For IPsec SAs this can also happen after a
