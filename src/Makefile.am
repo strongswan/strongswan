@@ -8,6 +8,10 @@ if USE_LIBHYDRA
   SUBDIRS += libhydra
 endif
 
+if USE_LIBCHARON
+  SUBDIRS += libcharon
+endif
+
 if USE_SIMAKA
   SUBDIRS += libsimaka
 endif
@@ -25,7 +29,7 @@ if USE_PLUTO
 endif
 
 if USE_CHARON
-  SUBDIRS += libcharon charon
+  SUBDIRS += charon
 endif
 
 if USE_STROKE
@@ -38,6 +42,10 @@ endif
 
 if USE_TOOLS
   SUBDIRS += libfreeswan openac scepclient pki
+endif
+
+if USE_CONFTEST
+  SUBDIRS += conftest
 endif
 
 if USE_DUMM

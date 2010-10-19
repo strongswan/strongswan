@@ -143,6 +143,7 @@ ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon alw
 ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
 ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
@@ -916,8 +917,10 @@ AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
@@ -1053,6 +1056,7 @@ AC_OUTPUT(
 	src/manager/Makefile
 	src/medsrv/Makefile
 	src/checksum/Makefile
+	src/conftest/Makefile
 	scripts/Makefile
 	testing/Makefile
 )
