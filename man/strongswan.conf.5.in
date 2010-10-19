@@ -901,7 +901,7 @@ giving up	76s	165s
 /etc/strongswan.conf
 
 .SH SEE ALSO
-ipsec.conf (5), ipsec.secrets (5)
+ipsec.conf(5), ipsec.secrets(5), ipsec(8)
 .SH HISTORY
 Written for the
 .UR http://www.strongswan.org

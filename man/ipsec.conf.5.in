@@ -1406,7 +1406,7 @@ time equals zero and, thus, rekeying gets disabled.
 /etc/ipsec.d/crls
 
 .SH SEE ALSO
-ipsec(8), pluto(8), starter(8)
+strongswan.conf(5), ipsec.secrets(5), ipsec(8), pluto(8)
 .SH HISTORY
 Originally written for the FreeS/WAN project by Henry Spencer.
 Updated and extended for the strongSwan project <http://www.strongswan.org> by
