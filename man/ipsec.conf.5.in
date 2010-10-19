@@ -233,10 +233,6 @@ defines the identity of the AAA backend used during IKEv2 EAP authentication.
 This is required if the EAP client uses a method that verifies the server
 identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 .TP
-.B ah
-AH authentication algorithm to be used
-for the connection, e.g.
-.B hmac-md5.
 .TP
 .B auth
 whether authentication should be done as part of
@@ -1104,13 +1100,6 @@ The default is
 .B yes
 if starter was compiled with IKEv2 support.
 .TP
-.B dumpdir
-in what directory should things started by \fBipsec starter\fR
-(notably the Pluto and Charon daemons) be allowed to dump core?
-The empty value (the default) means they are not
-allowed to.
-This feature is currently not yet supported by \fBipsec starter\fR.
-.TP
 .B plutostart
 whether to start the IKEv1 Pluto daemon or not.
 Accepted values are
@@ -1276,50 +1265,6 @@ Acceptable values for types are
 and the level is one of
 .B -1, 0, 1, 2, 3, 4
 (for silent, audit, control, controlmore, raw, private).
-.PP
-The following
-.B config section
-parameters only make sense if the KLIPS IPsec stack
-is used instead of the default NETKEY stack of the Linux 2.6 kernel:
-.TP
-.B fragicmp
-whether a tunnel's need to fragment a packet should be reported
-back with an ICMP message,
-in an attempt to make the sender lower his PMTU estimate;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-.TP
-.B hidetos
-whether a tunnel packet's TOS field should be set to
-.B 0
-rather than copied from the user packet inside;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no
-.TP
-.B interfaces
-virtual and physical interfaces for IPsec to use:
-a single
-\fIvirtual\fB=\fIphysical\fR pair, a (quoted!) list of pairs separated
-by white space, or
-.BR %none .
-One of the pairs may be written as
-.BR %defaultroute ,
-which means: find the interface \fId\fR that the default route points to,
-and then act as if the value was ``\fBipsec0=\fId\fR''.
-.B %defaultroute
-is the default;
-.B %none
-must be used to denote no interfaces.
-.TP
-.B overridemtu
-value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
-overriding IPsec's (large) default.
 .SH IKEv2 EXPIRY/REKEY
 The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
 after a specific amount of time. For IPsec SAs this can also happen after a
