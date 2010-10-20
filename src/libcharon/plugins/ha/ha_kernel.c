@@ -216,6 +216,11 @@ static void disable_all(private_ha_kernel_t *this)
 	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
 	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
 	{
+		if (chown(file, charon->uid, charon->gid) != 0)
+		{
+			DBG1(DBG_CFG, "changing ClusterIP permissions failed: %s",
+				 strerror(errno));
+		}
 		active = get_active(this, file);
 		for (i = 1; i <= this->count; i++)
 		{
