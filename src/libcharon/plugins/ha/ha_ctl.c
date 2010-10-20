@@ -114,6 +114,7 @@ METHOD(ha_ctl_t, destroy, void,
 ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 {
 	private_ha_ctl_t *this;
+	mode_t old;
 
 	INIT(this,
 		.public = {
@@ -125,11 +126,18 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 
 	if (access(HA_FIFO, R_OK|W_OK) != 0)
 	{
-		if (mkfifo(HA_FIFO, 600) != 0)
+		old = umask(~(S_IRWXU | S_IRWXG));
+		if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
 		{
 			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
 				 HA_FIFO, strerror(errno));
 		}
+		umask(old);
+	}
+	if (chown(HA_FIFO, charon->uid, charon->gid) != 0)
+	{
+		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
+			 strerror(errno));
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)dispatch_fifo,
