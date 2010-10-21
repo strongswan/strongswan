@@ -16,6 +16,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/conf.h>
+#include <openssl/rand.h>
 #include <openssl/crypto.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
