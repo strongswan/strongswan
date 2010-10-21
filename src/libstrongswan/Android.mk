@@ -23,6 +23,7 @@ crypto/signers/signer.c crypto/signers/signer.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
 crypto/crypto_tester.c crypto/crypto_tester.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/aead.c crypto/aead.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
