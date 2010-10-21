@@ -371,7 +371,7 @@ METHOD(mem_cred_t, add_shared, void,
 	this->lock->unlock(this->lock);
 }
 
-METHOD(mem_cred_t, clear, void,
+METHOD(mem_cred_t, clear_, void,
 	private_mem_cred_t *this)
 {
 	this->lock->write_lock(this->lock);
@@ -391,7 +391,7 @@ METHOD(mem_cred_t, clear, void,
 METHOD(mem_cred_t, destroy, void,
 	private_mem_cred_t *this)
 {
-	_clear(this);
+	clear_(this);
 	this->trusted->destroy(this->trusted);
 	this->untrusted->destroy(this->untrusted);
 	this->keys->destroy(this->keys);
@@ -419,7 +419,7 @@ mem_cred_t *mem_cred_create()
 			.add_cert = _add_cert,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
-			.clear = _clear,
+			.clear = _clear_,
 			.destroy = _destroy,
 		},
 		.trusted = linked_list_create(),
