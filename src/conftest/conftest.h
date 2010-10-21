@@ -23,6 +23,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <daemon.h>
+#include <credentials/sets/mem_cred.h>
 
 typedef struct conftest_t conftest_t;
 
@@ -40,6 +41,21 @@ struct conftest_t {
 	 * Test specific configuration
 	 */
 	settings_t *test;
+
+	/**
+	 * Directory containing suite files
+	 */
+	char *suite_dir;
+
+	/**
+	 * Directory containing test files
+	 */
+	char *test_dir;
+
+	/**
+	 * Credentials loaded from configuration
+	 */
+	mem_cred_t *creds;
 };
 
 /**

@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <getopt.h>
+#include <libgen.h>
 
 #include "conftest.h"
 
@@ -57,7 +58,7 @@ static void usage(char *error)
  */
 static void segv_handler(int signal)
 {
-	fprintf(stderr, "thread %u received %d", thread_current_id(), signal);
+	fprintf(stderr, "thread %u received %d\n", thread_current_id(), signal);
 	abort();
 }
 
@@ -85,6 +86,63 @@ static bool load_configs(char *suite_file, char *test_file)
 	}
 	conftest->suite = settings_create(suite_file);
 	conftest->test = settings_create(test_file);
+	suite_file = dirname(suite_file);
+	test_file = dirname(test_file);
+	conftest->suite_dir = strdup(suite_file);
+	conftest->test_dir = strdup(test_file);
+	return TRUE;
+}
+
+/**
+ * Load certificates from the confiuguration file
+ */
+static bool load_certs()
+{
+	enumerator_t *enumerator;
+	char *key, *value;
+	certificate_t *cert;
+
+	if (chdir(conftest->suite_dir) != 0)
+	{
+		fprintf(stderr, "opening suite directory '%s' failed",
+				conftest->suite_dir);
+		return FALSE;
+	}
+
+	enumerator = conftest->suite->create_key_value_enumerator(
+											conftest->suite, "certs.trusted");
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, value, BUILD_END);
+		if (!cert)
+		{
+			fprintf(stderr, "loading trusted certificate "
+					"'%s' from '%s' failed\n", key, value);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		conftest->creds->add_cert(conftest->creds, TRUE, cert);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = conftest->suite->create_key_value_enumerator(
+											conftest->suite, "certs.untrusted");
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, value, BUILD_END);
+		if (!cert)
+		{
+			fprintf(stderr, "loading untrusted certificate "
+					"'%s' from '%s' failed\n", key, value);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		conftest->creds->add_cert(conftest->creds, FALSE, cert);
+	}
+	enumerator->destroy(enumerator);
+
 	return TRUE;
 }
 
@@ -95,6 +153,10 @@ static void cleanup()
 {
 	DESTROY_IF(conftest->suite);
 	DESTROY_IF(conftest->test);
+	lib->credmgr->remove_set(lib->credmgr, &conftest->creds->set);
+	conftest->creds->destroy(conftest->creds);
+	free(conftest->suite_dir);
+	free(conftest->test_dir);
 	free(conftest);
 	libcharon_deinit();
 	libhydra_deinit();
@@ -133,11 +195,15 @@ int main(int argc, char *argv[])
 	}
 
 	INIT(conftest,
+		.creds = mem_cred_create(),
 	);
 	logger = file_logger_create(stdout, NULL, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
 	charon->bus->add_listener(charon->bus, &logger->listener);
 	charon->file_loggers->insert_last(charon->file_loggers, logger);
+
+	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
+	conftest->hooks = linked_list_create();
 
 	atexit(cleanup);
 
@@ -177,8 +243,11 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-
 	if (!charon->initialize(charon))
+	{
+		return 1;
+	}
+	if (!load_certs(suite_file))
 	{
 		return 1;
 	}
