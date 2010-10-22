@@ -74,20 +74,21 @@ void cert_free(cert_t *cert)
 cert_t* cert_add(cert_t *cert)
 {
 	certificate_t *certificate = cert->cert;
-	cert_t *c = certs;
+	cert_t *c;
 
-	while (c != NULL)
+	lock_certs_and_keys("cert_add");
+
+	for (c = certs; c != NULL; c = c->next)
 	{
-		if (certificate->equals(certificate, c->cert)) /* already in chain, free cert */
-		{
+		if (certificate->equals(certificate, c->cert))
+		{	/* already in chain, free cert */
+			unlock_certs_and_keys("cert_add");
 			cert_free(cert);
 			return c;
 		}
-		c = c->next;
 	}
 
 	/* insert new cert at the root of the chain */
-	lock_certs_and_keys("cert_add");
 	cert->next = certs;
 	certs = cert;
 	DBG(DBG_CONTROL | DBG_PARSING,
