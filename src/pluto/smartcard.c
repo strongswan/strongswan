@@ -502,9 +502,9 @@ static cert_t* scx_find_cert_object(CK_SESSION_HANDLE session,
 	*cert = cert_empty;
 	cert->smartcard = TRUE;
 	cert->cert = lib->creds->create(lib->creds,
-							  		CRED_CERTIFICATE, CERT_X509,
-							  		BUILD_BLOB_ASN1_DER, blob,
-							  		BUILD_END);
+									CRED_CERTIFICATE, CERT_X509,
+									BUILD_BLOB_ASN1_DER, blob,
+									BUILD_END);
 	if (cert->cert)
 	{
 		return cert;
@@ -539,6 +539,7 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		CK_ULONG obj_count = 0;
 		time_t valid_until;
 		smartcard_t *sc;
+		cert_t *cert;
 		certificate_t *certificate;
 		x509_t *x509;
 
@@ -559,8 +560,8 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		*sc = empty_sc;
 		sc->any_slot = FALSE;
 		sc->slot  = slot;
-		sc->last_cert = scx_find_cert_object(session, object, sc);
-		if (sc->last_cert == NULL)
+		cert = scx_find_cert_object(session, object, sc);
+		if (!cert)
 		{
 			scx_free(sc);
 			continue;
@@ -571,9 +572,10 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		/* check validity of certificate */
-		certificate = sc->last_cert->cert;
+		certificate = cert->cert;
 		if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
 		{
+			cert_free(cert);
 			scx_free(sc);
 			continue;
 		}
@@ -582,17 +584,17 @@ static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		sc = scx_add(sc);
-		x509 = (x509_t*)certificate;
 
 		/* put end entity and ca certificates into different chains */
+		x509 = (x509_t*)certificate;
 		if (x509->get_flags(x509) & X509_CA)
 		{
-			sc->last_cert = add_authcert(sc->last_cert, X509_CA);
+			sc->last_cert = add_authcert(cert, X509_CA);
 		}
 		else
 		{
-			add_public_key_from_cert(sc->last_cert, valid_until, DAL_LOCAL);
-			sc->last_cert = cert_add(sc->last_cert);
+			add_public_key_from_cert(cert, valid_until, DAL_LOCAL);
+			sc->last_cert = cert_add(cert);
 		}
 
 		cert_share(sc->last_cert);
