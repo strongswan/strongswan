@@ -1205,7 +1205,7 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	bool on;
 	int found = 0;
 
-	fprintf(out, "Leases in pool '%s', usage: %lu/%lu, %lu online\n",
+	fprintf(out, "Leases in pool '%s', usage: %u/%u, %u online\n",
 			pool, online + offline, size, online);
 	enumerator = this->attribute->create_lease_enumerator(this->attribute, pool);
 	while (enumerator && enumerator->enumerate(enumerator, &id, &lease, &on))
