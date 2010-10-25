@@ -419,7 +419,7 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 		close_output_pbs(&attrval);
 	}
 	enumerator->destroy(enumerator);
-	close_message(&strattr);
+	close_output_pbs(&strattr);
 	
 	modecfg_hash(r_hashval, r_hash_start, rbody->cur, st);
 	close_message(rbody);
