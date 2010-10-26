@@ -13,14 +13,17 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <getopt.h>
+#include <dlfcn.h>
 #include <libgen.h>
 
 #include "conftest.h"
+#include "hooks/hook.h"
 
 #include <threading/thread.h>
 
@@ -32,19 +35,8 @@ conftest_t *conftest;
 /**
  * Print usage information
  */
-static void usage(char *error)
+static void usage(FILE *out)
 {
-	FILE *out = stdout;
-
-	if (error)
-	{
-		out = stderr;
-		fprintf(out, "%s\n", error);
-	}
-	else
-	{
-		fprintf(out, "strongSwan %s conftest\n", VERSION);
-	}
 	fprintf(out, "Usage:\n");
 	fprintf(out, "  --help           show usage information\n");
 	fprintf(out, "  --version        show conftest version\n");
@@ -147,14 +139,59 @@ static bool load_certs()
 }
 
 /**
+ * Load configured hooks
+ */
+static bool load_hooks()
+{
+	enumerator_t *enumerator;
+	char *name, buf[64];
+	hook_t *(*create)(void);
+	hook_t *hook;
+
+	enumerator = conftest->test->create_section_enumerator(conftest->test,
+														   "hooks");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		snprintf(buf, sizeof(buf), "%s_hook_create", name);
+		create = dlsym(RTLD_DEFAULT, buf);
+		if (create)
+		{
+			hook = create();
+			if (hook)
+			{
+				conftest->hooks->insert_last(conftest->hooks, hook);
+				charon->bus->add_listener(charon->bus, &hook->listener);
+			}
+		}
+		else
+		{
+			fprintf(stderr, "dlsym() for hook '%s' failed: %s\n", name, dlerror());
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * atexit() cleanup handler
  */
 static void cleanup()
 {
+	hook_t *hook;
+
 	DESTROY_IF(conftest->suite);
 	DESTROY_IF(conftest->test);
 	lib->credmgr->remove_set(lib->credmgr, &conftest->creds->set);
 	conftest->creds->destroy(conftest->creds);
+	while (conftest->hooks->remove_last(conftest->hooks,
+										(void**)&hook) == SUCCESS)
+	{
+		charon->bus->remove_listener(charon->bus, &hook->listener);
+		hook->destroy(hook);
+	}
+	conftest->hooks->destroy(conftest->hooks);
 	free(conftest->suite_dir);
 	free(conftest->test_dir);
 	free(conftest);
@@ -221,7 +258,7 @@ int main(int argc, char *argv[])
 			case EOF:
 				break;
 			case 'h':
-				usage(NULL);
+				usage(stdout);
 				return 0;
 			case 'v':
 				printf("strongSwan %s conftest\n", VERSION);
@@ -233,7 +270,7 @@ int main(int argc, char *argv[])
 				test_file = optarg;
 				continue;
 			default:
-				usage("Invalid option.");
+				usage(stderr);
 				return 1;
 		}
 		break;
@@ -248,6 +285,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	if (!load_certs(suite_file))
+	{
+		return 1;
+	}
+	if (!load_hooks())
 	{
 		return 1;
 	}

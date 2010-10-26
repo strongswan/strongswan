@@ -56,6 +56,11 @@ struct conftest_t {
 	 * Credentials loaded from configuration
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * Loaded hooks
+	 */
+	linked_list_t *hooks;
 };
 
 /**
