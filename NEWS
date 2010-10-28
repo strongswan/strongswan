@@ -59,6 +59,13 @@ strongswan-4.5.0
 - Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
   identity was different from the IKE identity.
 
+- Fixed the alignment of ModeConfig messages on 4-byte boundaries in the
+  case where the attributes are not a multiple of 4 bytes (e.g. Cisco's
+  UNITY_BANNER).
+
+- Fixed the interoperability of the socket_raw and socket_default
+  charon plugins.
+
 - Added man page for strongswan.conf
 
 
