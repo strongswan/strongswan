@@ -42,27 +42,11 @@ typedef struct proposal_substructure_t proposal_substructure_t;
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
  */
 struct proposal_substructure_t {
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-
-	/**
-	 * Creates an iterator of stored transform_substructure_t objects.
-	 *
-	 * @param forward		iterator direction (TRUE: front to end)
-	 * @return				created iterator_t object
-	 */
-	iterator_t *(*create_transform_substructure_iterator) (
-								proposal_substructure_t *this, bool forward);
-
-	/**
-	 * Adds a transform_substructure_t object to this object.
-	 *
-	 * @param transform 	transform_substructure_t object to add
-	 */
-	void (*add_transform_substructure) (proposal_substructure_t *this,
-										transform_substructure_t *transform);
 
 	/**
 	 * Sets the proposal number of current proposal.
@@ -71,27 +55,12 @@ struct proposal_substructure_t {
 	 */
 	void (*set_proposal_number) (proposal_substructure_t *this,
 								 u_int8_t proposal_number);
-
 	/**
 	 * get proposal number of current proposal.
 	 *
 	 * @return 			proposal number of current proposal substructure.
 	 */
 	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
-
-	/**
-	 * get the number of transforms in current proposal.
-	 *
-	 * @return 			transform count in current proposal
-	 */
-	size_t (*get_transform_count) (proposal_substructure_t *this);
-
-	/**
-	 * get size of the set spi in bytes.
-	 *
-	 * @return 			size of the spi in bytes
-	 */
-	size_t (*get_spi_size) (proposal_substructure_t *this);
 
 	/**
 	 * Sets the protocol id of current proposal.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,20 +24,18 @@
 #include <utils/linked_list.h>
 #include <daemon.h>
 
-
 /**
  * IKEv1 Value for a proposal payload.
  */
 #define PROPOSAL_TYPE_VALUE 2
 
-
 typedef struct private_proposal_substructure_t private_proposal_substructure_t;
 
 /**
  * Private data of an proposal_substructure_t object.
- *
  */
 struct private_proposal_substructure_t {
+
 	/**
 	 * Public proposal_substructure_t interface.
 	 */
@@ -92,24 +90,24 @@ struct private_proposal_substructure_t {
  */
 encoding_rule_t proposal_substructure_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload) 		},
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload)		},
 	/* Reserved Byte is skipped */
-	{ RESERVED_BYTE,		0															},
+	{ RESERVED_BYTE,	0															},
 	/* Length of the whole proposal substructure payload*/
-	{ PAYLOAD_LENGTH,		offsetof(private_proposal_substructure_t, proposal_length) 	},
+	{ PAYLOAD_LENGTH,	offsetof(private_proposal_substructure_t, proposal_length)	},
 	/* proposal number is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, proposal_number) 	},
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, proposal_number)	},
 	/* protocol ID is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, protocol_id)		},
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, protocol_id)		},
 	/* SPI Size has its own type */
-	{ SPI_SIZE,				offsetof(private_proposal_substructure_t, spi_size)			},
+	{ SPI_SIZE,			offsetof(private_proposal_substructure_t, spi_size)			},
 	/* Number of transforms is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, transforms_count)	},
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, transforms_count)	},
 	/* SPI is a chunk of variable size*/
-	{ SPI,					offsetof(private_proposal_substructure_t, spi)				},
+	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
 	/* Transforms are stored in a transform substructure,
 	   offset points to a linked_list_t pointer */
-	{ TRANSFORMS,			offsetof(private_proposal_substructure_t, transforms) 		}
+	{ TRANSFORMS,		offsetof(private_proposal_substructure_t, transforms)		}
 };
 
 /*
@@ -128,16 +126,14 @@ encoding_rule_t proposal_substructure_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_proposal_substructure_t *this)
+METHOD(payload_t, verify, status_t,
+	private_proposal_substructure_t *this)
 {
 	status_t status = SUCCESS;
-	iterator_t *iterator;
-	payload_t *current_transform;
+	enumerator_t *enumerator;
+	payload_t *current;
 
-	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
+	if (this->next_payload != NO_PAYLOAD && this->next_payload != 2)
 	{
 		/* must be 0 or 2 */
 		DBG1(DBG_ENC, "inconsistent next payload");
@@ -169,61 +165,46 @@ static status_t verify(private_proposal_substructure_t *this)
 			}
 			break;
 		default:
-			DBG1(DBG_ENC, "invalid proposal protocol (%d)", this->protocol_id);
-			return FAILED;
+			break;
 	}
-	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		/* reserved are not supported */
-		DBG1(DBG_ENC, "invalid protocol");
-		return FAILED;
-	}
-
-	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	while(iterator->iterate(iterator, (void**)&current_transform))
-	{
-		status = current_transform->verify(current_transform);
+		status = current->verify(current);
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_ENC, "TRANSFORM_SUBSTRUCTURE verification failed");
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	/* proposal number is checked in SA payload */
 	return status;
 }
 
-/**
- * Implementation of payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_proposal_substructure_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_proposal_substructure_t *this, encoding_rule_t **rules,
+	size_t *rule_count)
 {
 	*rules = proposal_substructure_encodings;
-	*rule_count = sizeof(proposal_substructure_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(proposal_substructure_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_type(private_proposal_substructure_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_proposal_substructure_t *this)
 {
 	return PROPOSAL_SUBSTRUCTURE;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_proposal_substructure_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_proposal_substructure_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_proposal_substructure_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_proposal_substructure_t *this, payload_type_t type)
 {
 }
 
@@ -250,145 +231,88 @@ static void compute_length(private_proposal_substructure_t *this)
 	this->proposal_length = length;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_proposal_substructure_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_proposal_substructure_t *this)
 {
 	compute_length(this);
 	return this->proposal_length;
 }
 
 /**
- * Implementation of proposal_substructure_t.create_transform_substructure_iterator.
+ * Add a transform substructure to the proposal
  */
-static iterator_t *create_transform_substructure_iterator (private_proposal_substructure_t *this,bool forward)
+static void add_transform_substructure(private_proposal_substructure_t *this,
+									   transform_substructure_t *transform)
 {
-	return (this->transforms->create_iterator(this->transforms,forward));
-}
-
-/**
- * Implementation of proposal_substructure_t.add_transform_substructure.
- */
-static void add_transform_substructure (private_proposal_substructure_t *this,transform_substructure_t *transform)
-{
-	status_t status;
 	if (this->transforms->get_count(this->transforms) > 0)
 	{
-		transform_substructure_t *last_transform;
-		status = this->transforms->get_last(this->transforms,(void **) &last_transform);
-		/* last transform is now not anymore last one */
-		last_transform->set_is_last_transform(last_transform,FALSE);
+		transform_substructure_t *last;
 
+		this->transforms->get_last(this->transforms, (void **)&last);
+		last->set_is_last_transform(last, FALSE);
 	}
 	transform->set_is_last_transform(transform,TRUE);
-
-	this->transforms->insert_last(this->transforms,(void *) transform);
+	this->transforms->insert_last(this->transforms, transform);
 	compute_length(this);
 }
 
-/**
- * Implementation of proposal_substructure_t.proposal_substructure_t.
- */
-static void set_is_last_proposal (private_proposal_substructure_t *this, bool is_last)
+METHOD(proposal_substructure_t, set_is_last_proposal, void,
+	private_proposal_substructure_t *this, bool is_last)
 {
-	this->next_payload = (is_last) ? 0: PROPOSAL_TYPE_VALUE;
+	this->next_payload = is_last ? 0 : PROPOSAL_TYPE_VALUE;
 }
 
-/**
- * Implementation of proposal_substructure_t.set_proposal_number.
- */
-static void set_proposal_number(private_proposal_substructure_t *this,u_int8_t proposal_number)
+METHOD(proposal_substructure_t, set_proposal_number, void,
+	private_proposal_substructure_t *this,u_int8_t proposal_number)
 {
 	this->proposal_number = proposal_number;
 }
 
-/**
- * Implementation of proposal_substructure_t.get_proposal_number.
- */
-static u_int8_t get_proposal_number (private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, get_proposal_number, u_int8_t,
+	private_proposal_substructure_t *this)
 {
-	return (this->proposal_number);
+	return this->proposal_number;
 }
 
-/**
- * Implementation of proposal_substructure_t.set_protocol_id.
- */
-static void set_protocol_id(private_proposal_substructure_t *this,u_int8_t protocol_id)
+METHOD(proposal_substructure_t, set_protocol_id, void,
+	private_proposal_substructure_t *this,u_int8_t protocol_id)
 {
 	this->protocol_id = protocol_id;
 }
 
-/**
- * Implementation of proposal_substructure_t.get_protocol_id.
- */
-static u_int8_t get_protocol_id(private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, get_protocol_id, u_int8_t,
+	private_proposal_substructure_t *this)
 {
-	return (this->protocol_id);
+	return this->protocol_id;
 }
 
-/**
- * Implementation of proposal_substructure_t.set_spi.
- */
-static void set_spi(private_proposal_substructure_t *this, chunk_t spi)
+METHOD(proposal_substructure_t, set_spi, void,
+	private_proposal_substructure_t *this, chunk_t spi)
 {
-	/* first delete already set spi value */
-	if (this->spi.ptr != NULL)
-	{
-		free(this->spi.ptr);
-		this->spi.ptr = NULL;
-		this->spi.len = 0;
-		compute_length(this);
-	}
-
-	this->spi.ptr = clalloc(spi.ptr,spi.len);
-	this->spi.len = spi.len;
+	free(this->spi.ptr);
+	this->spi = chunk_clone(spi);
 	this->spi_size = spi.len;
 	compute_length(this);
 }
 
-/**
- * Implementation of proposal_substructure_t.get_spi.
- */
-static chunk_t get_spi(private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, get_spi, chunk_t,
+	private_proposal_substructure_t *this)
 {
-	chunk_t spi;
-	spi.ptr = this->spi.ptr;
-	spi.len = this->spi.len;
-
-	return spi;
+	return this->spi;
 }
 
-/**
- * Implementation of proposal_substructure_t.get_transform_count.
- */
-static size_t get_transform_count (private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, get_proposal, proposal_t*,
+	private_proposal_substructure_t *this)
 {
-	return this->transforms->get_count(this->transforms);
-}
-
-/**
- * Implementation of proposal_substructure_t.get_spi_size.
- */
-static size_t get_spi_size (private_proposal_substructure_t *this)
-{
-	return this->spi.len;
-}
-
-/**
- * Implementation of proposal_substructure_t.get_proposal.
- */
-proposal_t* get_proposal(private_proposal_substructure_t *this)
-{
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	transform_substructure_t *transform;
 	proposal_t *proposal;
 	u_int64_t spi;
 
 	proposal = proposal_create(this->protocol_id);
 
-	iterator = this->transforms->create_iterator(this->transforms, TRUE);
-	while (iterator->iterate(iterator, (void**)&transform))
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &transform))
 	{
 		transform_type_t transform_type;
 		u_int16_t transform_id;
@@ -400,7 +324,7 @@ proposal_t* get_proposal(private_proposal_substructure_t *this)
 
 		proposal->add_algorithm(proposal, transform_type, transform_id, key_length);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	switch (this->spi.len)
 	{
@@ -418,42 +342,36 @@ proposal_t* get_proposal(private_proposal_substructure_t *this)
 	return proposal;
 }
 
-/**
- * Implementation of proposal_substructure_t.clone.
- */
-static private_proposal_substructure_t* clone_(private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, clone_, proposal_substructure_t*,
+	private_proposal_substructure_t *this)
 {
 	private_proposal_substructure_t *clone;
-	iterator_t *transforms;
-	transform_substructure_t *current_transform;
+	enumerator_t *enumerator;
+	transform_substructure_t *current;
 
-	clone = (private_proposal_substructure_t *) proposal_substructure_create();
+	clone = (private_proposal_substructure_t*)proposal_substructure_create();
 	clone->next_payload = this->next_payload;
 	clone->proposal_number = this->proposal_number;
 	clone->protocol_id = this->protocol_id;
 	clone->spi_size = this->spi_size;
 	if (this->spi.ptr != NULL)
 	{
-		clone->spi.ptr = clalloc(this->spi.ptr,this->spi.len);
+		clone->spi.ptr = clalloc(this->spi.ptr, this->spi.len);
 		clone->spi.len = this->spi.len;
 	}
-
-	transforms = this->transforms->create_iterator(this->transforms,FALSE);
-	while (transforms->iterate(transforms, (void**)&current_transform))
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		current_transform = current_transform->clone(current_transform);
-		clone->public.add_transform_substructure(&clone->public, current_transform);
+		current = current->clone(current);
+		add_transform_substructure(clone, current);
 	}
-	transforms->destroy(transforms);
+	enumerator->destroy(enumerator);
 
-	return clone;
+	return &clone->public;
 }
 
-/**
- * Implements payload_t's and proposal_substructure_t's destroy function.
- * See #payload_s.destroy or proposal_substructure_s.destroy for description.
- */
-static void destroy(private_proposal_substructure_t *this)
+METHOD2(payload_t, proposal_substructure_t, destroy, void,
+	private_proposal_substructure_t *this)
 {
 	this->transforms->destroy_offset(this->transforms,
 									 offsetof(transform_substructure_t, destroy));
@@ -466,53 +384,42 @@ static void destroy(private_proposal_substructure_t *this)
  */
 proposal_substructure_t *proposal_substructure_create()
 {
-	private_proposal_substructure_t *this = malloc_thing(private_proposal_substructure_t);
+	private_proposal_substructure_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.set_proposal_number = _set_proposal_number,
+			.get_proposal_number = _get_proposal_number,
+			.set_protocol_id = _set_protocol_id,
+			.get_protocol_id = _get_protocol_id,
+			.set_is_last_proposal = _set_is_last_proposal,
+			.get_proposal = _get_proposal,
+			.set_spi = _set_spi,
+			.get_spi = _get_spi,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.transforms = linked_list_create(),
+	);
 
-
-	/* public functions */
-	this->public.create_transform_substructure_iterator = (iterator_t* (*) (proposal_substructure_t *,bool)) create_transform_substructure_iterator;
-	this->public.add_transform_substructure = (void (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
-	this->public.set_proposal_number = (void (*) (proposal_substructure_t *,u_int8_t))set_proposal_number;
-	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;
-	this->public.set_protocol_id = (void (*) (proposal_substructure_t *,u_int8_t))set_protocol_id;
-	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
-	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
-	this->public.get_proposal = (proposal_t* (*) (proposal_substructure_t*))get_proposal;
-	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
-	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
-	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
-	this->public.get_spi_size = (size_t (*) (proposal_substructure_t *)) get_spi_size;
-	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone_;
-	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
-
-	/* set default values of the fields */
-	this->next_payload = NO_PAYLOAD;
-	this->proposal_length = 0;
-	this->proposal_number = 0;
-	this->protocol_id = 0;
-	this->transforms_count = 0;
-	this->spi_size = 0;
-	this->spi.ptr = NULL;
-	this->spi.len = 0;
-
-	this->transforms = linked_list_create();
-
-	return (&(this->public));
+	return &this->public;
 }
 
 /*
  * Described in header.
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal)
+proposal_substructure_t *proposal_substructure_create_from_proposal(
+														proposal_t *proposal)
 {
 	transform_substructure_t *transform;
 	private_proposal_substructure_t *this;
