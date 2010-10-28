@@ -309,7 +309,7 @@ METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 	proposal_t *proposal;
 	u_int64_t spi;
 
-	proposal = proposal_create(this->protocol_id);
+	proposal = proposal_create(this->protocol_id, this->proposal_number);
 
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
@@ -498,7 +498,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 		default:
 			break;
 	}
-	this->proposal_number = 0;
+	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proposal->get_protocol(proposal);
 
 	return &this->public;

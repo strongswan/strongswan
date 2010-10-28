@@ -161,6 +161,13 @@ struct proposal_t {
 	void (*set_spi) (proposal_t *this, u_int64_t spi);
 
 	/**
+	 * Get the proposal number, as encoded in SA payload
+	 *
+	 * @return				proposal number
+	 */
+	u_int (*get_number)(proposal_t *this);
+
+	/**
 	 * Check for the eqality of two proposals.
 	 *
 	 * @param other			other proposal to check for equality
@@ -185,9 +192,10 @@ struct proposal_t {
  * Create a child proposal for AH, ESP or IKE.
  *
  * @param protocol			protocol, such as PROTO_ESP
+ * @param number			proposal number, as encoded in SA payload
  * @return 					proposal_t object
  */
-proposal_t *proposal_create(protocol_id_t protocol);
+proposal_t *proposal_create(protocol_id_t protocol, u_int number);
 
 /**
  * Create a default proposal if nothing further specified.

@@ -204,8 +204,15 @@ METHOD(sa_payload_t, add_proposal, void,
 		last->set_is_last_proposal(last, FALSE);
 	}
 	substruct->set_is_last_proposal(substruct, TRUE);
-	substruct->set_proposal_number(substruct, count + 1);
-	this->proposals->insert_last(this->proposals, proposal);
+	if (proposal->get_number(proposal))
+	{	/* use the selected proposals number, if any */
+		substruct->set_proposal_number(substruct, proposal->get_number(proposal));
+	}
+	else
+	{
+		substruct->set_proposal_number(substruct, count + 1);
+	}
+	this->proposals->insert_last(this->proposals, substruct);
 	compute_length(this);
 }
 

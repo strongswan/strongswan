@@ -87,6 +87,11 @@ struct private_proposal_t {
 	 * senders SPI
 	 */
 	u_int64_t spi;
+
+	/**
+	 * Proposal number
+	 */
+	u_int number;
 };
 
 /**
@@ -311,7 +316,7 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		return NULL;
 	}
 
-	selected = proposal_create(this->protocol);
+	selected = proposal_create(this->protocol, other->number);
 
 	/* select encryption algorithm */
 	if (select_algo(this->encryption_algos, other->encryption_algos, private,
@@ -473,6 +478,12 @@ static bool algo_list_equals(linked_list_t *l1, linked_list_t *l2)
 	return equals;
 }
 
+METHOD(proposal_t, get_number, u_int,
+	private_proposal_t *this)
+{
+	return this->number;
+}
+
 METHOD(proposal_t, equals, bool,
 	private_proposal_t *this, proposal_t *other_pub)
 {
@@ -493,8 +504,9 @@ METHOD(proposal_t, equals, bool,
 METHOD(proposal_t, clone_, proposal_t*,
 	private_proposal_t *this)
 {
-	private_proposal_t *clone = (private_proposal_t*)proposal_create(this->protocol);
+	private_proposal_t *clone;
 
+	clone = (private_proposal_t*)proposal_create(this->protocol, 0);
 	clone_algo_list(this->encryption_algos, clone->encryption_algos);
 	clone_algo_list(this->integrity_algos, clone->integrity_algos);
 	clone_algo_list(this->prf_algos, clone->prf_algos);
@@ -502,6 +514,7 @@ METHOD(proposal_t, clone_, proposal_t*,
 	clone_algo_list(this->esns, clone->esns);
 
 	clone->spi = this->spi;
+	clone->number = this->number;
 
 	return &clone->public;
 }
@@ -685,7 +698,7 @@ METHOD(proposal_t, destroy, void,
 /*
  * Describtion in header-file
  */
-proposal_t *proposal_create(protocol_id_t protocol)
+proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 {
 	private_proposal_t *this;
 
@@ -700,11 +713,13 @@ proposal_t *proposal_create(protocol_id_t protocol)
 			.get_protocol = _get_protocol,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
+			.get_number = _get_number,
 			.equals = _equals,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.protocol = protocol,
+		.number = number,
 		.encryption_algos = linked_list_create(),
 		.integrity_algos = linked_list_create(),
 		.prf_algos = linked_list_create(),
@@ -837,7 +852,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
  */
 proposal_t *proposal_create_default(protocol_id_t protocol)
 {
-	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);
 
 	switch (protocol)
 	{
@@ -872,7 +887,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
 {
-	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);
 	chunk_t string = {(void*)algs, strlen(algs)};
 	chunk_t alg;
 	status_t status = SUCCESS;
