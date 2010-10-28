@@ -40,31 +40,11 @@ typedef struct sa_payload_t sa_payload_t;
  * The SA Payload format is described in RFC section 3.3.
  */
 struct sa_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-
-	/**
-	 * Creates an iterator of stored proposal_substructure_t objects.
-	 *
-	 * When deleting an proposal using this iterator,
-	 * the length of this transform substructure has to be refreshed
-	 * by calling get_length()!
-	 *
-	 * @param forward 		iterator direction (TRUE: front to end)
-	 * @return				created iterator_t object
-	 */
-	iterator_t *(*create_proposal_substructure_iterator) (sa_payload_t *this,
-														  bool forward);
-
-	/**
-	 * Adds a proposal_substructure_t object to this object.
-	 *
-	 * @param proposal  		proposal_substructure_t object to add
-	 */
-	void (*add_proposal_substructure) (sa_payload_t *this,
-									   proposal_substructure_t *proposal);
 
 	/**
 	 * Gets the proposals in this payload as a list.
