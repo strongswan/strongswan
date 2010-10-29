@@ -89,21 +89,25 @@ static bool load_configs(char *suite_file, char *test_file)
 /**
  * Load certificates from the confiuguration file
  */
-static bool load_certs()
+static bool load_certs(settings_t *settings, char *dir)
 {
 	enumerator_t *enumerator;
-	char *key, *value;
+	char *key, *value, wd[PATH_MAX];
 	certificate_t *cert;
 
-	if (chdir(conftest->suite_dir) != 0)
+	if (getcwd(wd, sizeof(wd)) == NULL)
 	{
-		fprintf(stderr, "opening suite directory '%s' failed",
-				conftest->suite_dir);
+		fprintf(stderr, "getting cwd failed: %s\n", strerror(errno));
+		return FALSE;
+	}
+	if (chdir(dir) != 0)
+	{
+		fprintf(stderr, "opening directory '%s' failed: %s\n",
+				dir, strerror(errno));
 		return FALSE;
 	}
 
-	enumerator = conftest->suite->create_key_value_enumerator(
-											conftest->suite, "certs.trusted");
+	enumerator = settings->create_key_value_enumerator(settings, "certs.trusted");
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -119,8 +123,7 @@ static bool load_certs()
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = conftest->suite->create_key_value_enumerator(
-											conftest->suite, "certs.untrusted");
+	enumerator = settings->create_key_value_enumerator(settings, "certs.untrusted");
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -136,6 +139,12 @@ static bool load_certs()
 	}
 	enumerator->destroy(enumerator);
 
+	if (chdir(wd) != 0)
+	{
+		fprintf(stderr, "opening directory '%s' failed: %s\n",
+				wd, strerror(errno));
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -292,7 +301,8 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-	if (!load_certs(suite_file))
+	if (!load_certs(conftest->suite, suite_file) ||
+		!load_certs(conftest->test, test_file))
 	{
 		return 1;
 	}
