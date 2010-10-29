@@ -559,13 +559,6 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	time_t diff, delay;
 
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
-
-	if (delay == 0)
-	{
-		/* DPD disabled */
-		return SUCCESS;
-	}
-
 	if (this->task_manager->busy(this->task_manager))
 	{
 		/* an exchange is in the air, no need to start a DPD check */
@@ -578,7 +571,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		last_in = get_use_time(this, TRUE);
 		now = time_monotonic(NULL);
 		diff = now - last_in;
-		if (diff >= delay)
+		if (!delay || diff >= delay)
 		{
 			/* to long ago, initiate dead peer detection */
 			task_t *task;
@@ -604,8 +597,11 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		}
 	}
 	/* recheck in "interval" seconds */
-	job = (job_t*)send_dpd_job_create(this->ike_sa_id);
-	lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
+	if (delay)
+	{
+		job = (job_t*)send_dpd_job_create(this->ike_sa_id);
+		lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
+	}
 	return SUCCESS;
 }
 
@@ -680,7 +676,10 @@ METHOD(ike_sa_t, set_state, void,
 				}
 
 				/* start DPD checks */
-				send_dpd(this);
+				if (this->peer_cfg->get_dpd(this->peer_cfg))
+				{
+					send_dpd(this);
+				}
 			}
 			break;
 		}
