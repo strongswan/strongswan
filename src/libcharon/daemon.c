@@ -19,9 +19,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <time.h>
-#include <errno.h>
 
 #ifdef CAPABILITIES
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -34,10 +32,6 @@
 #include <library.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
-
-#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
-#define LOG_AUTHPRIV LOG_AUTH
-#endif
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -202,155 +196,9 @@ static void print_plugins()
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
-/**
- * Initialize logging
- */
-static void initialize_loggers(private_daemon_t *this, bool use_stderr,
-							   level_t levels[])
-{
-	sys_logger_t *sys_logger;
-	file_logger_t *file_logger;
-	enumerator_t *enumerator;
-	char *facility, *filename;
-	int loggers_defined = 0;
-	debug_t group;
-	level_t  def;
-	bool append, ike_name;
-	FILE *file;
-
-	/* setup sysloggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.syslog");
-	while (enumerator->enumerate(enumerator, &facility))
-	{
-		loggers_defined++;
-
-		ike_name = lib->settings->get_bool(lib->settings,
-								"charon.syslog.%s.ike_name", FALSE, facility);
-		if (streq(facility, "daemon"))
-		{
-			sys_logger = sys_logger_create(LOG_DAEMON, ike_name);
-		}
-		else if (streq(facility, "auth"))
-		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV, ike_name);
-		}
-		else
-		{
-			continue;
-		}
-		def = lib->settings->get_int(lib->settings,
-									 "charon.syslog.%s.default", 1, facility);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.syslog.%s.%N", def,
-									   facility, debug_lower_names, group));
-		}
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-	}
-	enumerator->destroy(enumerator);
-
-	/* and file loggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.filelog");
-	while (enumerator->enumerate(enumerator, &filename))
-	{
-		loggers_defined++;
-		if (streq(filename, "stderr"))
-		{
-			file = stderr;
-		}
-		else if (streq(filename, "stdout"))
-		{
-			file = stdout;
-		}
-		else
-		{
-			append = lib->settings->get_bool(lib->settings,
-									"charon.filelog.%s.append", TRUE, filename);
-			file = fopen(filename, append ? "a" : "w");
-			if (file == NULL)
-			{
-				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
-					 filename, strerror(errno));
-				continue;
-			}
-			if (lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.flush_line", FALSE, filename))
-			{
-				setlinebuf(file);
-			}
-		}
-		file_logger = file_logger_create(file,
-						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename),
-						lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.ike_name", FALSE, filename));
-		def = lib->settings->get_int(lib->settings,
-									 "charon.filelog.%s.default", 1, filename);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			file_logger->set_level(file_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.filelog.%s.%N", def,
-									   filename, debug_lower_names, group));
-		}
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-
-	}
-	enumerator->destroy(enumerator);
-
-	/* set up legacy style default loggers provided via command-line */
-	if (!loggers_defined)
-	{
-		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout, NULL, FALSE);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group, levels[group]);
-			if (use_stderr)
-			{
-				file_logger->set_level(file_logger, group, levels[group]);
-			}
-		}
-
-		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
-	}
-}
-
 METHOD(daemon_t, initialize, bool,
-	   private_daemon_t *this, bool syslog, level_t levels[])
+	private_daemon_t *this)
 {
-	/* for uncritical pseudo random numbers */
-	srandom(time(NULL) + getpid());
-
-	/* setup bus and it's listeners first to enable log output */
-	this->public.bus = bus_create();
-	/* set up hook to log dbg message in library via charons message bus */
-	dbg_old = dbg;
-	dbg = dbg_bus;
-
-	initialize_loggers(this, !syslog, levels);
-
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	if (lib->integrity)
@@ -418,6 +266,7 @@ private_daemon_t *daemon_create()
 			.drop_capabilities = _drop_capabilities,
 			.initialize = _initialize,
 			.start = _start,
+			.bus = bus_create(),
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
 		},
@@ -442,7 +291,6 @@ private_daemon_t *daemon_create()
  */
 void libcharon_deinit()
 {
-
 	destroy((private_daemon_t*)charon);
 	charon = NULL;
 }
@@ -456,6 +304,13 @@ bool libcharon_init()
 
 	this = daemon_create();
 	charon = &this->public;
+
+	/* for uncritical pseudo random numbers */
+	srandom(time(NULL) + getpid());
+
+	/* set up hook to log dbg message in library via charons message bus */
+	dbg_old = dbg;
+	dbg = dbg_bus;
 
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,

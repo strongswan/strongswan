@@ -26,6 +26,8 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <syslog.h>
+#include <errno.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <pwd.h>
@@ -42,6 +44,9 @@
 #include <private/android_filesystem_config.h>
 #endif
 
+#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
+#define LOG_AUTHPRIV LOG_AUTH
+#endif
 
 /**
  * PID file, in which charon stores its process id
@@ -268,6 +273,134 @@ static void unlink_pidfile()
 	unlink(PID_FILE);
 }
 
+/**
+ * Initialize logging
+ */
+static void initialize_loggers(bool use_stderr, level_t levels[])
+{
+	sys_logger_t *sys_logger;
+	file_logger_t *file_logger;
+	enumerator_t *enumerator;
+	char *facility, *filename;
+	int loggers_defined = 0;
+	debug_t group;
+	level_t  def;
+	bool append, ike_name;
+	FILE *file;
+
+	/* setup sysloggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.syslog");
+	while (enumerator->enumerate(enumerator, &facility))
+	{
+		loggers_defined++;
+
+		ike_name = lib->settings->get_bool(lib->settings,
+								"charon.syslog.%s.ike_name", FALSE, facility);
+		if (streq(facility, "daemon"))
+		{
+			sys_logger = sys_logger_create(LOG_DAEMON, ike_name);
+		}
+		else if (streq(facility, "auth"))
+		{
+			sys_logger = sys_logger_create(LOG_AUTHPRIV, ike_name);
+		}
+		else
+		{
+			continue;
+		}
+		def = lib->settings->get_int(lib->settings,
+									 "charon.syslog.%s.default", 1, facility);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.syslog.%s.%N", def,
+									   facility, debug_lower_names, group));
+		}
+		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
+		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+	}
+	enumerator->destroy(enumerator);
+
+	/* and file loggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.filelog");
+	while (enumerator->enumerate(enumerator, &filename))
+	{
+		loggers_defined++;
+		if (streq(filename, "stderr"))
+		{
+			file = stderr;
+		}
+		else if (streq(filename, "stdout"))
+		{
+			file = stdout;
+		}
+		else
+		{
+			append = lib->settings->get_bool(lib->settings,
+									"charon.filelog.%s.append", TRUE, filename);
+			file = fopen(filename, append ? "a" : "w");
+			if (file == NULL)
+			{
+				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
+					 filename, strerror(errno));
+				continue;
+			}
+			if (lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.flush_line", FALSE, filename))
+			{
+				setlinebuf(file);
+			}
+		}
+		file_logger = file_logger_create(file,
+						lib->settings->get_str(lib->settings,
+							"charon.filelog.%s.time_format", NULL, filename),
+						lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.ike_name", FALSE, filename));
+		def = lib->settings->get_int(lib->settings,
+									 "charon.filelog.%s.default", 1, filename);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			file_logger->set_level(file_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.filelog.%s.%N", def,
+									   filename, debug_lower_names, group));
+		}
+		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
+		charon->bus->add_listener(charon->bus, &file_logger->listener);
+
+	}
+	enumerator->destroy(enumerator);
+
+	/* set up legacy style default loggers provided via command-line */
+	if (!loggers_defined)
+	{
+		/* set up default stdout file_logger */
+		file_logger = file_logger_create(stdout, NULL, FALSE);
+		charon->bus->add_listener(charon->bus, &file_logger->listener);
+		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
+		/* set up default daemon sys_logger */
+		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
+		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group, levels[group]);
+			if (use_stderr)
+			{
+				file_logger->set_level(file_logger, group, levels[group]);
+			}
+		}
+
+		/* set up default auth sys_logger */
+		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
+		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
+		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
+	}
+}
 
 /**
  * print command line usage and exit
@@ -395,8 +528,10 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	initialize_loggers(!use_syslog, levels);
+
 	/* initialize daemon */
-	if (!charon->initialize(charon, use_syslog, levels))
+	if (!charon->initialize(charon))
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		goto deinit;

@@ -298,7 +298,7 @@ struct daemon_t {
 	/**
 	 * Initialize the daemon.
 	 */
-	bool (*initialize)(daemon_t *this, bool syslog, level_t levels[]);
+	bool (*initialize)(daemon_t *this);
 
 	/**
 	 * Starts the daemon, i.e. spawns the threads of the thread pool.
@@ -316,6 +316,9 @@ extern daemon_t *charon;
 
 /**
  * Initialize libcharon and create the "charon" instance of daemon_t.
+ *
+ * This function initializes the bus, listeners can be registered before
+ * calling initialize().
  *
  * @return		FALSE if integrity check failed
  */
