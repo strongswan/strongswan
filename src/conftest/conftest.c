@@ -255,6 +255,7 @@ static void cleanup()
 	DESTROY_IF(conftest->test);
 	lib->credmgr->remove_set(lib->credmgr, &conftest->creds->set);
 	conftest->creds->destroy(conftest->creds);
+	DESTROY_IF(conftest->actions);
 	while (conftest->hooks->remove_last(conftest->hooks,
 										(void**)&hook) == SUCCESS)
 	{
@@ -378,6 +379,7 @@ int main(int argc, char *argv[])
 	charon->backends->add_backend(charon->backends, &conftest->config->backend);
 	conftest->config->load(conftest->config, conftest->suite);
 	conftest->config->load(conftest->config, conftest->test);
+	conftest->actions = actions_create();
 
 	/* set up thread specific handlers */
 	action.sa_handler = segv_handler;

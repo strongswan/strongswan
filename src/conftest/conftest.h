@@ -26,6 +26,7 @@
 #include <credentials/sets/mem_cred.h>
 
 #include "config.h"
+#include "actions.h"
 
 typedef struct conftest_t conftest_t;
 
@@ -68,6 +69,11 @@ struct conftest_t {
 	 * Loaded hooks
 	 */
 	linked_list_t *hooks;
+
+	/**
+	 * Action handling
+	 */
+	actions_t *actions;
 };
 
 /**

@@ -2,7 +2,8 @@ ipsec_PROGRAMS = conftest
 
 AM_CFLAGS = -rdynamic
 
-conftest_SOURCES = conftest.c conftest.h config.c config.h hooks/hook.h
+conftest_SOURCES = conftest.c conftest.h config.c config.h hooks/hook.h \
+	actions.c actions.h
 
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
