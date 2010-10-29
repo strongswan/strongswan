@@ -564,6 +564,41 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 /*
  * Described in header.
  */
+host_t *host_create_from_subnet(char *string, int *bits)
+{
+	char *pos, buf[64];
+	host_t *net;
+
+	pos = strchr(string, '/');
+	if (pos)
+	{
+		if (pos - string >= sizeof(buf))
+		{
+			return NULL;
+		}
+		strncpy(buf, string, pos - string);
+		buf[pos - string] = '\0';
+		*bits = atoi(pos + 1);
+		return host_create_from_string(buf, 0);
+	}
+	net = host_create_from_string(buf, 0);
+	if (net)
+	{
+		if (net->get_family(net) == AF_INET)
+		{
+			*bits = 32;
+		}
+		else
+		{
+			*bits = 128;
+		}
+	}
+	return net;
+}
+
+/*
+ * Described in header.
+ */
 host_t *host_create_any(int family)
 {
 	private_host_t *this = host_create_empty();
