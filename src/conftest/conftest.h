@@ -25,6 +25,8 @@
 #include <daemon.h>
 #include <credentials/sets/mem_cred.h>
 
+#include "config.h"
+
 typedef struct conftest_t conftest_t;
 
 /**
@@ -56,6 +58,11 @@ struct conftest_t {
 	 * Credentials loaded from configuration
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * Configurations loaded from config
+	 */
+	config_t *config;
 
 	/**
 	 * Loaded hooks

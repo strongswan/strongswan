@@ -23,6 +23,7 @@
 #include <libgen.h>
 
 #include "conftest.h"
+#include "config.h"
 #include "hooks/hook.h"
 
 #include <threading/thread.h>
@@ -192,6 +193,12 @@ static void cleanup()
 		hook->destroy(hook);
 	}
 	conftest->hooks->destroy(conftest->hooks);
+	if (conftest->config)
+	{
+		charon->backends->remove_backend(charon->backends,
+										 &conftest->config->backend);
+		conftest->config->destroy(conftest->config);
+	}
 	free(conftest->suite_dir);
 	free(conftest->test_dir);
 	free(conftest);
@@ -241,6 +248,7 @@ int main(int argc, char *argv[])
 
 	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
 	conftest->hooks = linked_list_create();
+	conftest->config = config_create();
 
 	atexit(cleanup);
 
@@ -292,6 +300,9 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
+	charon->backends->add_backend(charon->backends, &conftest->config->backend);
+	conftest->config->load(conftest->config, conftest->suite);
+	conftest->config->load(conftest->config, conftest->test);
 
 	/* set up thread specific handlers */
 	action.sa_handler = segv_handler;
