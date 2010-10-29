@@ -149,6 +149,66 @@ static bool load_certs(settings_t *settings, char *dir)
 }
 
 /**
+ * Load private keys from the confiuguration file
+ */
+static bool load_keys(settings_t *settings, char *dir)
+{
+	enumerator_t *enumerator;
+	char *type, *value, wd[PATH_MAX];
+	private_key_t *key;
+	key_type_t key_type;
+
+	if (getcwd(wd, sizeof(wd)) == NULL)
+	{
+		fprintf(stderr, "getting cwd failed: %s\n", strerror(errno));
+		return FALSE;
+	}
+	if (chdir(dir) != 0)
+	{
+		fprintf(stderr, "opening directory '%s' failed: %s\n",
+				dir, strerror(errno));
+		return FALSE;
+	}
+
+	enumerator = settings->create_key_value_enumerator(settings, "keys");
+	while (enumerator->enumerate(enumerator, &type, &value))
+	{
+		if (strcaseeq(type, "ecdsa"))
+		{
+			key_type = KEY_ECDSA;
+		}
+		else if (strcaseeq(type, "rsa"))
+		{
+			key_type = KEY_RSA;
+		}
+		else
+		{
+			fprintf(stderr, "unkown key type: '%s'\n", type);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, value, BUILD_END);
+		if (!key)
+		{
+			fprintf(stderr, "loading %s key from '%s' failed\n", type, value);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		conftest->creds->add_key(conftest->creds, key);
+	}
+	enumerator->destroy(enumerator);
+
+	if (chdir(wd) != 0)
+	{
+		fprintf(stderr, "opening directory '%s' failed: %s\n",
+				wd, strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Load configured hooks
  */
 static bool load_hooks()
@@ -303,6 +363,11 @@ int main(int argc, char *argv[])
 	}
 	if (!load_certs(conftest->suite, suite_file) ||
 		!load_certs(conftest->test, test_file))
+	{
+		return 1;
+	}
+	if (!load_keys(conftest->suite, suite_file) ||
+		!load_keys(conftest->test, test_file))
 	{
 		return 1;
 	}
