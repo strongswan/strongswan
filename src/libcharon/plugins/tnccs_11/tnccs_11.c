@@ -242,7 +242,8 @@ METHOD(tls_t, is_complete, bool,
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
 	
-	if (libtnc_tncs_HaveRecommendation(this->tncs_connection, &rec, &eval) ==
+	if (this->is_server &&
+		libtnc_tncs_HaveRecommendation(this->tncs_connection, &rec, &eval) ==
 		TNC_RESULT_SUCCESS)
 	{
 		switch (rec)
@@ -299,7 +300,6 @@ METHOD(tls_t, destroy, void,
 		{
 			libtnc_tncc_DeleteConnection(this->tncc_connection);
 		}
-		libtnc_tncc_Terminate();
 	}
 	free(this);
 }
