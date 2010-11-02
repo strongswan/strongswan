@@ -265,8 +265,11 @@ static void cleanup()
 	conftest->hooks->destroy(conftest->hooks);
 	if (conftest->config)
 	{
-		charon->backends->remove_backend(charon->backends,
-										 &conftest->config->backend);
+		if (charon->backends)
+		{
+			charon->backends->remove_backend(charon->backends,
+											 &conftest->config->backend);
+		}
 		conftest->config->destroy(conftest->config);
 	}
 	free(conftest->suite_dir);
