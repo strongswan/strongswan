@@ -365,13 +365,13 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-	if (!load_certs(conftest->suite, suite_file) ||
-		!load_certs(conftest->test, test_file))
+	if (!load_certs(conftest->suite, conftest->suite_dir) ||
+		!load_certs(conftest->test, conftest->test_dir))
 	{
 		return 1;
 	}
-	if (!load_keys(conftest->suite, suite_file) ||
-		!load_keys(conftest->test, test_file))
+	if (!load_keys(conftest->suite, conftest->suite_dir) ||
+		!load_keys(conftest->test, conftest->test_dir))
 	{
 		return 1;
 	}
