@@ -287,6 +287,13 @@ struct message_t {
 	enumerator_t * (*create_payload_enumerator) (message_t *this);
 
 	/**
+	 * Remove the payload at the current enumerator position.
+	 *
+	 * @param enumerator	enumerator created by create_payload_enumerator()
+	 */
+	void (*remove_payload_at)(message_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Find a payload of a specific type.
 	 *
 	 * Returns the first occurance.

@@ -737,6 +737,12 @@ METHOD(message_t, create_payload_enumerator, enumerator_t*,
 	return this->payloads->create_enumerator(this->payloads);
 }
 
+METHOD(message_t, remove_payload_at, void,
+	private_message_t *this, enumerator_t *enumerator)
+{
+	this->payloads->remove_at(this->payloads, enumerator);
+}
+
 METHOD(message_t, get_payload, payload_t*,
 	private_message_t *this, payload_type_t type)
 {
@@ -1466,6 +1472,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.set_destination = _set_destination,
 			.get_destination = _get_destination,
 			.create_payload_enumerator = _create_payload_enumerator,
+			.remove_payload_at = _remove_payload_at,
 			.get_payload = _get_payload,
 			.get_notify = _get_notify,
 			.parse_header = _parse_header,
