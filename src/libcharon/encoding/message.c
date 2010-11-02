@@ -490,6 +490,11 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+	 * Sorting of message disabled?
+	 */
+	bool sort_disabled;
+
+	/**
 	 * Message ID of this message.
 	 */
 	u_int32_t message_id;
@@ -1001,6 +1006,12 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 	return encryption;
 }
 
+METHOD(message_t, disable_sort, void,
+	private_message_t *this)
+{
+	this->sort_disabled = TRUE;
+}
+
 METHOD(message_t, generate, status_t,
 	private_message_t *this, aead_t *aead, packet_t **packet)
 {
@@ -1039,7 +1050,10 @@ METHOD(message_t, generate, status_t,
 		return NOT_SUPPORTED;
 	}
 
-	order_payloads(this);
+	if (!this->sort_disabled)
+	{
+		order_payloads(this);
+	}
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
@@ -1445,6 +1459,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_request = _get_request,
 			.add_payload = _add_payload,
 			.add_notify = _add_notify,
+			.disable_sort = _disable_sort,
 			.generate = _generate,
 			.set_source = _set_source,
 			.get_source = _get_source,

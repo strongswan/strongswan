@@ -181,6 +181,11 @@ struct message_t {
 						chunk_t data);
 
 	/**
+	 * Disable automatic payload sorting for this message.
+	 */
+	void (*disable_sort)(message_t *this);
+
+	/**
 	 * Parses header of message.
 	 *
 	 * Begins parisng of a message created via message_create_from_packet().
