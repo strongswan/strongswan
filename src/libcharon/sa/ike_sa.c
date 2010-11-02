@@ -892,6 +892,7 @@ METHOD(ike_sa_t, generate_message, status_t,
 {
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
+	charon->bus->message(charon->bus, message, FALSE);
 	return message->generate(message,
 				this->keymat->get_aead(this->keymat, FALSE), packet);
 }

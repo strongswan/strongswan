@@ -465,7 +465,6 @@ METHOD(task_manager_t, initiate, status_t,
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
 
-	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -654,7 +653,6 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
-	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	message->destroy(message);
