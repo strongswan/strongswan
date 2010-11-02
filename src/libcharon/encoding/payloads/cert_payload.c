@@ -343,3 +343,15 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 	return &this->public;
 }
 
+/*
+ * Described in header
+ */
+cert_payload_t *cert_payload_create_custom(cert_encoding_t type, chunk_t data)
+{
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
+
+	this->encoding = type;
+	this->data = data;
+	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->data.len;
+	return &this->public;
+}
