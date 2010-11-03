@@ -32,6 +32,7 @@ unroute,         STROKE_UNROUTE
 up,              STROKE_UP
 down,            STROKE_DOWN
 down-srcip,      STROKE_DOWN_SRCIP
+rekey,           STROKE_REKEY
 loglevel,        STROKE_LOGLEVEL
 status,          STROKE_STATUS
 statusall,       STROKE_STATUSALL

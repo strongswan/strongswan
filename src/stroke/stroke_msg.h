@@ -183,6 +183,8 @@ struct stroke_msg_t {
 		STR_TERMINATE,
 		/* terminate connection by peers srcip/virtual ip */
 		STR_TERMINATE_SRCIP,
+		/* rekey a connection */
+		STR_REKEY,
 		/* show connection status */
 		STR_STATUS,
 		/* show verbose connection status */
@@ -215,7 +217,7 @@ struct stroke_msg_t {
 		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
-		} initiate, route, unroute, terminate, status, del_conn, del_ca;
+		} initiate, route, unroute, terminate, rekey, status, del_conn, del_ca;
 
 		/* data for STR_TERMINATE_SRCIP */
 		struct {

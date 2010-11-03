@@ -17,6 +17,8 @@
 
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 
 typedef struct private_stroke_control_t private_stroke_control_t;
 
@@ -137,75 +139,90 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 }
 
 /**
- * Implementation of stroke_control_t.terminate.
+ * Parse a terminate/rekey specifier
  */
-static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+static bool parse_specifier(char *string, u_int32_t *id,
+							char **name, bool *child, bool *all)
 {
-	char *string, *pos = NULL, *name = NULL;
-	u_int32_t id = 0;
-	bool child, all = FALSE;
 	int len;
-	ike_sa_t *ike_sa;
-	enumerator_t *enumerator;
-	linked_list_t *ike_list, *child_list;
-	stroke_log_info_t info;
-	uintptr_t del;
+	char *pos = NULL;
 
-	string = msg->terminate.name;
+	*id = 0;
+	*name = NULL;
+	*all = FALSE;
 
 	len = strlen(string);
 	if (len < 1)
 	{
-		DBG1(DBG_CFG, "error parsing string");
-		return;
+		return FALSE;
 	}
 	switch (string[len-1])
 	{
 		case '}':
-			child = TRUE;
+			*child = TRUE;
 			pos = strchr(string, '{');
 			break;
 		case ']':
-			child = FALSE;
+			*child = FALSE;
 			pos = strchr(string, '[');
 			break;
 		default:
-			name = string;
-			child = FALSE;
+			*name = string;
+			*child = FALSE;
 			break;
 	}
 
-	if (name)
+	if (*name)
 	{
 		/* is a single name */
 	}
 	else if (pos == string + len - 2)
 	{	/* is name[] or name{} */
 		string[len-2] = '\0';
-		name = string;
+		*name = string;
 	}
 	else
 	{
 		if (!pos)
 		{
-			DBG1(DBG_CFG, "error parsing string");
-			return;
+			return FALSE;
 		}
 		if (*(pos + 1) == '*')
 		{	/* is name[*] */
-			all = TRUE;
+			*all = TRUE;
 			*pos = '\0';
-			name = string;
+			*name = string;
 		}
 		else
 		{	/* is name[123] or name{23} */
-			id = atoi(pos + 1);
-			if (id == 0)
+			*id = atoi(pos + 1);
+			if (*id == 0)
 			{
-				DBG1(DBG_CFG, "error parsing string");
-				return;
+				return FALSE;
 			}
 		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of stroke_control_t.terminate.
+ */
+static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *ike_list, *child_list;
+	stroke_log_info_t info;
+	uintptr_t del;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
 	}
 
 	info.out = out;
@@ -291,6 +308,68 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	}
 	ike_list->destroy(ike_list);
 	child_list->destroy(child_list);
+}
+
+/**
+ * Implementation of stroke_control_t.rekey.
+ */
+static void rekey(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all, finished = FALSE;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
+	}
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		child_sa_t *child_sa;
+		iterator_t *children;
+
+		if (child)
+		{
+			children = ike_sa->create_child_sa_iterator(ike_sa);
+			while (children->iterate(children, (void**)&child_sa))
+			{
+				if ((name && streq(name, child_sa->get_name(child_sa))) ||
+					(id && id == child_sa->get_reqid(child_sa)))
+				{
+					lib->processor->queue_job(lib->processor,
+						(job_t*)rekey_child_sa_job_create(
+								child_sa->get_reqid(child_sa),
+								child_sa->get_protocol(child_sa),
+								child_sa->get_spi(child_sa, TRUE)));
+					if (!all)
+					{
+						finished = TRUE;
+						break;
+					}
+				}
+			}
+			children->destroy(children);
+		}
+		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
+				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		{
+			lib->processor->queue_job(lib->processor,
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+			if (!all)
+			{
+				finished = TRUE;
+			}
+		}
+		if (finished)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -486,6 +565,7 @@ stroke_control_t *stroke_control_create()
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
 	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
 	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
+	this->public.rekey = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))rekey;
 	this->public.purge_ike = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))purge_ike;
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;

@@ -54,6 +54,13 @@ struct stroke_control_t {
 	void (*terminate_srcip)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
 
 	/**
+	 * Rekey a connection.
+	 *
+	 * @param msg		stroke message
+	 */
+	void (*rekey)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
+
+	/**
 	 * Delete IKE_SAs without a CHILD_SA.
 	 *
 	 * @param msg		stroke message
