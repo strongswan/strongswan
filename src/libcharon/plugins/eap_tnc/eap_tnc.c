@@ -114,6 +114,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	private_eap_tnc_t *this;
 	size_t frag_size;
 	int max_msg_count;
+	char* protocol;
+	tnccs_type_t type;
 	tnccs_t *tnccs;
 
 	INIT(this,
@@ -133,7 +135,10 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 					"charon.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT);
-	tnccs = charon->tnccs->create_instance(charon->tnccs, TNCCS_1_1, is_server);
+	protocol = lib->settings->get_str(lib->settings,
+					"charon.plugins.eap-tnc.protocol", "tnccs-1.1");
+	type = strcaseeq(protocol, "tnccs-2.0") ? TNCCS_2_0 : TNCCS_1_1;
+	tnccs = charon->tnccs->create_instance(charon->tnccs, type, is_server);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size, max_msg_count);
 	if (!this->tls_eap)
 	{
