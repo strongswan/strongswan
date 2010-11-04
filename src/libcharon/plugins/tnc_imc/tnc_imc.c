@@ -86,7 +86,7 @@ imc_t* tnc_imc_create(char* name, char *filename, TNC_IMCID id)
 
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
- 
+
 	this->public.initialize = dlsym(handle, "TNC_IMC_Initialize");
 	if (!this->public.initialize)
     {
@@ -105,7 +105,7 @@ imc_t* tnc_imc_create(char* name, char *filename, TNC_IMCID id)
 		free(this);
 		return NULL;
 	}
-    this->public.receive_message = 
+    this->public.receive_message =
 						dlsym(handle, "TNC_IMC_ReceiveMessage");
     this->public.batch_ending =
 						dlsym(handle, "TNC_IMC_BatchEnding");

@@ -99,7 +99,7 @@ imv_t* tnc_imv_create(char *name, char *filename, TNC_IMVID id)
 		free(this);
 		return NULL;
 	}
-    this->public.receive_message = 
+    this->public.receive_message =
 						dlsym(handle, "TNC_IMV_ReceiveMessage");
     this->public.batch_ending =
 						dlsym(handle, "TNC_IMV_BatchEnding");

@@ -58,7 +58,7 @@ struct imc_t {
 
 	/**
 	 * The TNC Client calls this function to indicate that an Integrity Check
-	 * Handshake is beginning and solicit messages from IMCs for the first batch. 
+	 * Handshake is beginning and solicit messages from IMCs for the first batch.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
 	 * @param connectionID		Network connection ID assigned by TNCC

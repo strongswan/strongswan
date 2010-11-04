@@ -33,7 +33,7 @@ struct imv_t {
 	 * identifier that the IMV must use when calling TNC Server callback functions.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param minVersion		Minimum API version supported 
+	 * @param minVersion		Minimum API version supported
 	 * @param maxVersion		Maximum API version supported by TNCS
 	 * @param OutActualVersion	Mutually supported API version number
 	 * @result					TNC result code

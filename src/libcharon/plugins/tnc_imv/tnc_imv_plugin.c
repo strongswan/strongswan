@@ -61,15 +61,15 @@ plugin_t *tnc_imv_plugin_create()
 	if (imv)
 	{
 		/* Initialize the module */
-	  	if (imv->initialize(next_id, TNC_IFIMV_VERSION_1, TNC_IFIMV_VERSION_1, 
+		if (imv->initialize(next_id, TNC_IFIMV_VERSION_1, TNC_IFIMV_VERSION_1,
 							&version) != TNC_RESULT_SUCCESS)
-   		{
+		{
 			DBG1(DBG_TNC, "could not initialize IMV '%s'\n",
 						   imv->get_name(imv));
 			imv->destroy(imv);
 		}
 		else
-    	{
+		{
 			charon->imvs->insert_last(charon->imvs, imv);
 			next_id++;
 		}

@@ -45,7 +45,6 @@ plugin_t *tnc_imc_plugin_create()
 	char *tnc_config, *pref_lang, *name, *filename;
 	tnc_imc_plugin_t *this;
 	imc_t *imc;
-	
 
 	INIT(this,
 		.plugin = {
@@ -64,15 +63,15 @@ plugin_t *tnc_imc_plugin_create()
 	if (imc)
 	{
 		/* Initialize the module */
-	  	if (imc->initialize(next_id, TNC_IFIMC_VERSION_1, TNC_IFIMC_VERSION_1, 
+		if (imc->initialize(next_id, TNC_IFIMC_VERSION_1, TNC_IFIMC_VERSION_1,
 							&version) != TNC_RESULT_SUCCESS)
-   		{
+		{
 			DBG1(DBG_TNC, "could not initialize IMC '%s'\n",
 						   imc->get_name(imc));
 			imc->destroy(imc);
 		}
 		else
-    	{
+		{
 			charon->imcs->insert_last(charon->imcs, imc);
 			next_id++;
 		}
