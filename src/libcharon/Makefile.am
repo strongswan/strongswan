@@ -87,8 +87,10 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnccs/tnccs.c tnccs/tnccs.h \
-tnccs/tnccs_manager.h tnccs/tnccs_manager.c
+tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h \
+tnc/imc/imc.h tnc/imv/imv.h \
+tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
+tnc/tnccs/tnccs_manager.h tnc/tnccs/tnccs_manager.c
 
 daemon.lo :		$(top_builddir)/config.status
 

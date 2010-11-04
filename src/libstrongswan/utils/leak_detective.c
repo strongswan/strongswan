@@ -218,6 +218,8 @@ char *whitelist[] = {
 	"gcry_create_nonce",
 	/* NSPR */
 	"PR_CallOnce",
+	/* libapr */
+	"apr_pool_create_ex",
 };
 
 /**

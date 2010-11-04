@@ -14,15 +14,24 @@
  */
 
 #include "tnc_imc_plugin.h"
-
-#include <libtnctncc.h>
+#include "tnc_imc.h"
 
 #include <daemon.h>
 
 METHOD(plugin_t, destroy, void,
 	tnc_imc_plugin_t *this)
 {
-	libtnc_tncc_Terminate();
+	imc_t *imc;
+
+	while (charon->imcs->remove_last(charon->imcs, (void**)&imc) == SUCCESS)
+	{
+		if (imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_TNC, "IMC '%s' not terminated successfully",
+						   imc->get_name(imc));
+		}
+		imc->destroy(imc);
+	}
 	free(this);
 }
 
@@ -31,8 +40,12 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imc_plugin_create()
 {
-	char *tnc_config, *pref_lang;
+	TNC_IMCID next_id = 1;
+	TNC_Version version;
+	char *tnc_config, *pref_lang, *name, *filename;
 	tnc_imc_plugin_t *this;
+	imc_t *imc;
+	
 
 	INIT(this,
 		.plugin = {
@@ -45,13 +58,25 @@ plugin_t *tnc_imc_plugin_create()
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
 
-	if (libtnc_tncc_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
+	name = "Dummy";
+	filename = "/usr/local/lib/libdummyimc.so";
+	imc = tnc_imc_create(name, filename, next_id);
+	if (imc)
 	{
-		free(this);
-		DBG1(DBG_TNC, "TNC IMC initialization failed");
-		return NULL;
+		/* Initialize the module */
+	  	if (imc->initialize(next_id, TNC_IFIMC_VERSION_1, TNC_IFIMC_VERSION_1, 
+							&version) != TNC_RESULT_SUCCESS)
+   		{
+			DBG1(DBG_TNC, "could not initialize IMC '%s'\n",
+						   imc->get_name(imc));
+			imc->destroy(imc);
+		}
+		else
+    	{
+			charon->imcs->insert_last(charon->imcs, imc);
+			next_id++;
+		}
 	}
-
 	return &this->plugin;
 }
 

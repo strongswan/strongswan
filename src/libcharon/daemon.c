@@ -128,6 +128,10 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
 
+	/* destroy lists of TNC IMCs and IMVs */
+	DESTROY_IF(this->public.imcs);
+	DESTROY_IF(this->public.imvs);
+
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
 	DESTROY_IF(this->public.bus);
@@ -420,6 +424,8 @@ private_daemon_t *daemon_create()
 			.start = _start,
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
+			.imcs = linked_list_create(),
+			.imvs = linked_list_create(),
 		},
 	);
 
