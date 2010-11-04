@@ -25,7 +25,8 @@ METHOD(plugin_t, destroy, void,
 
 	while (charon->imcs->remove_last(charon->imcs, (void**)&imc) == SUCCESS)
 	{
-		if (imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
+		if (imc->terminate &&
+			imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
 		{
 			DBG1(DBG_TNC, "IMC '%s' not terminated successfully",
 						   imc->get_name(imc));

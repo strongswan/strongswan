@@ -25,7 +25,8 @@ METHOD(plugin_t, destroy, void,
 
 	while (charon->imvs->remove_last(charon->imvs, (void**)&imv) == SUCCESS)
 	{
-		if (imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
+		if (imv->terminate &&
+			imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
 		{
 			DBG1(DBG_TNC, "IMV '%s' not terminated successfully",
 						   imv->get_name(imv));
