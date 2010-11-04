@@ -22,6 +22,7 @@
 #define TNCCS_MANAGER_H_
 
 #include "tnccs.h"
+#include "tncif.h"
 
 typedef struct tnccs_manager_t tnccs_manager_t;
 
@@ -59,6 +60,21 @@ struct tnccs_manager_t {
 	 */
 	tnccs_t* (*create_instance)(tnccs_manager_t *this, tnccs_type_t type,
 								bool is_server);
+
+	/**
+	 * Create a TNCCS connection and assign a unique connection ID
+	 *
+	 * @param tnccs			TNCCS connection instance
+	 * @result				assigned connection ID
+	 */
+	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs);
+
+	/**
+	 * Remove a TNCCS connection using its connection ID.
+	 *
+	 * @param id			connection ID of the connection to be removed
+	 */
+	void (*remove_connection)(tnccs_manager_t *this, TNC_ConnectionID id);
 
 	/**
 	 * Destroy a tnccs_manager instance.

@@ -15,11 +15,13 @@
 
 #include "tnccs_manager.h"
 
+#include <debug.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_tnccs_manager_t private_tnccs_manager_t;
 typedef struct tnccs_entry_t tnccs_entry_t;
+typedef struct tnccs_connection_entry_t tnccs_connection_entry_t;
 
 /**
  * TNCCS constructor entry
@@ -38,6 +40,22 @@ struct tnccs_entry_t {
 };
 
 /**
+ * TNCCS connection entry
+ */
+struct tnccs_connection_entry_t {
+
+	/**
+	 * TNCCS connection ID
+	 */
+	TNC_ConnectionID id;
+
+	/**
+	 * TNCCS instance
+	 */
+	tnccs_t *tnccs;
+};
+
+/**
  * private data of tnccs_manager
  */
 struct private_tnccs_manager_t {
@@ -48,14 +66,25 @@ struct private_tnccs_manager_t {
 	tnccs_manager_t public;
 
 	/**
-	 * list of tnccs_entry_t's
+	 * list of TNCCS protocol entries
 	 */
 	linked_list_t *protocols;
 
 	/**
-	 * rwlock to lock methods
+	 * connection ID counter
+	 */
+	TNC_ConnectionID connection_id;
+
+	/**
+	 * list of TNCCS connection entries
+	 */
+	linked_list_t *connections;
+
+	/**
+	 * rwlock to lock TNCCS protocol and connection entries
 	 */
 	rwlock_t *lock;
+
 };
 
 METHOD(tnccs_manager_t, add_method, void,
@@ -117,10 +146,48 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	return protocol;
 }
 
+METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
+	private_tnccs_manager_t *this, tnccs_t *tnccs)
+{
+	tnccs_connection_entry_t *entry = malloc_thing(tnccs_connection_entry_t);
+
+	entry->id = ++this->connection_id;
+	entry->tnccs = tnccs;
+
+	this->lock->write_lock(this->lock);
+	this->connections->insert_last(this->connections, entry);
+	this->lock->unlock(this->lock);
+
+	DBG1(DBG_TNC, "assigned TNCCS Connection ID %u", entry->id);
+	return entry->id;
+}
+
+METHOD(tnccs_manager_t, remove_connection, void,
+	private_tnccs_manager_t *this, TNC_ConnectionID id)
+{
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == entry->id)
+		{
+			this->connections->remove_at(this->connections, enumerator);
+			free(entry);
+			DBG1(DBG_TNC, "removed TNCCS Connection ID %u", id);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(tnccs_manager_t, destroy, void,
 	private_tnccs_manager_t *this)
 {
 	this->protocols->destroy_function(this->protocols, free);
+	this->connections->destroy_function(this->connections, free);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -137,9 +204,12 @@ tnccs_manager_t *tnccs_manager_create()
 				.add_method = _add_method,
 				.remove_method = _remove_method,
 				.create_instance = _create_instance,
+				.create_connection = _create_connection,
+				.remove_connection = _remove_connection,
 				.destroy = _destroy,
 			},
 			.protocols = linked_list_create(),
+			.connections = linked_list_create(),
 			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
