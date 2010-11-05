@@ -86,6 +86,7 @@ ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
 ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
@@ -735,6 +736,7 @@ ADD_PLUGIN([hmac],                 [s libcharon pluto scripts])
 ADD_PLUGIN([ctr],                  [s libcharon scripts])
 ADD_PLUGIN([ccm],                  [s libcharon scripts])
 ADD_PLUGIN([gcm],                  [s libcharon scripts])
+ADD_PLUGIN([af-alg],               [s libcharon pluto openac scepclient pki scripts medsrv])
 ADD_PLUGIN([xauth],                [p pluto])
 ADD_PLUGIN([attr],                 [h libcharon pluto])
 ADD_PLUGIN([attr-sql],             [h libcharon pluto])
@@ -836,6 +838,7 @@ AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
 AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
+AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 
 dnl charon plugins
 dnl ==============
@@ -978,6 +981,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ctr/Makefile
 	src/libstrongswan/plugins/ccm/Makefile
 	src/libstrongswan/plugins/gcm/Makefile
+	src/libstrongswan/plugins/af_alg/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
