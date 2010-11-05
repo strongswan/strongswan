@@ -40,6 +40,12 @@ struct private_tnc_imc_t {
 	TNC_IMCID id;
 };
 
+METHOD(imc_t, set_id, void,
+	private_tnc_imc_t *this, TNC_IMCID id)
+{
+	this->id = id;
+}
+
 METHOD(imc_t, get_id, TNC_IMCID,
 	private_tnc_imc_t *this)
 {
@@ -62,14 +68,16 @@ METHOD(imc_t, destroy, void,
 /**
  * Described in header.
  */
-imc_t* tnc_imc_create(char* name, char *filename, TNC_IMCID id)
+imc_t* tnc_imc_create(char* name, char *filename)
 {
 	private_tnc_imc_t *this;
 	void *handle;
 
 	INIT(this,
 		.public = {
+			.set_id = _set_id,
 			.get_id = _get_id,
+			.get_name = _get_name,
 			.destroy = _destroy,
         },
 	);
@@ -79,7 +87,6 @@ imc_t* tnc_imc_create(char* name, char *filename, TNC_IMCID id)
 	{
 		DBG1(DBG_TNC, "IMC '%s' failed to load from '%s': %s",
 					   name, filename, dlerror());
-		free(this->name);
 		free(this);
 		return NULL;
 	}
@@ -120,10 +127,105 @@ imc_t* tnc_imc_create(char* name, char *filename, TNC_IMCID id)
 		free(this);
 		return NULL;
 	}
-	DBG2(DBG_TNC, "IMC '%s' loaded successfully with ID %u", name, id);
 	this->name = strdup(name);
-	this->id = id;
 
 	return &this->public;
 }
 
+/**
+ * Called by the IMC to inform a TNCC about the set of message types the IMC
+ * is able to receive
+ */
+TNC_Result TNC_TNCC_ReportMessageTypes(TNC_IMCID imc_id,
+									   TNC_MessageTypeList supported_types,
+									   TNC_UInt32 type_count)
+{
+	DBG2(DBG_TNC,"TNCC_ReportMessageTypes %u %u", imc_id, type_count);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMC to ask a TNCC to retry an Integrity Check Handshake
+ */
+TNC_Result TNC_TNCC_RequestHandshakeRetry(TNC_IMCID imc_id,
+										  TNC_ConnectionID connection_id,
+										  TNC_RetryReason reason)
+{
+	DBG2(DBG_TNC,"TNCC_RequestHandshakeRetry %u %u", imc_id, connection_id);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMC when an IMC-IMV message is to be sent
+ */
+TNC_Result TNC_TNCC_SendMessage(TNC_IMCID imc_id,
+								TNC_ConnectionID connection_id,
+								TNC_BufferReference message,
+								TNC_UInt32 message_len,
+								TNC_MessageType message_type)
+{
+	DBG2(DBG_TNC,"TNCC_SendMessage %u %u '%s' %u %0x", imc_id, connection_id,
+				  message, message_len, message_type);
+
+	/*
+	-----TNCCS 2.0-----
+    tnc_tncc_connection* conn;
+
+    conn = libtnc_array_index(&connections, connectionID);
+    
+    TNC_MessageSubtype message_type = messageType             & TNC_SUBTYPE_ANY;
+    TNC_VendorID       message_vendor_id = (messageType >> 8) & TNC_VENDORID_ANY;
+    
+    chunk_t pa_message = tnc_create_pa_message(FALSE, message_vendor_id,
+									message_type, 0, 0, message, messageLength); 
+        
+    if(conn->current_batch.len)
+    {
+	  chunk_t batch = conn->current_batch;
+	  htoun32(batch.ptr + 4,batch.len + pa_message.len);
+	  conn->current_batch = chunk_cat("cc", batch, pa_message);
+
+    }
+    else
+    {
+	  chunk_t header = tnc_create_batch_header(TNCCS_BATCH_TYPE_CDATA, false);
+	  
+	  htoun32(header.ptr + 4,header.len + pa_message.len);
+	  conn->current_batch = chunk_cat("cc", header, pa_message);
+
+    }
+    -----TNCCS 1.1-----
+    libtnc_mutex_lock();
+    conn = libtnc_array_index(&connections, connectionID);
+    libtnc_mutex_unlock();
+    return libtnc_tncc_add_imc_imv_message(conn, message, messageLength, messageType);
+	*/
+ 
+    return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMC when it needs a function pointer
+ */
+TNC_Result TNC_TNCC_BindFunction(TNC_IMCID id,
+								 char *function_name,
+								 void **function_pointer)
+{
+	if (streq(function_name, "TNC_TNCC_ReportMessageTypes"))
+	{
+		*function_pointer = (void*)TNC_TNCC_ReportMessageTypes;
+	}
+    else if (streq(function_name, "TNC_TNCC_RequestHandshakeRetry"))
+	{
+		*function_pointer = (void*)TNC_TNCC_RequestHandshakeRetry;
+	}
+    else if (streq(function_name, "TNC_TNCC_SendMessage"))
+	{
+		*function_pointer = (void*)TNC_TNCC_SendMessage;
+	}
+    else
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+    return TNC_RESULT_SUCCESS;
+}

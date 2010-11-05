@@ -11,7 +11,8 @@ plugin_LTLIBRARIES = libstrongswan-tnc-imv.la
 endif
 
 libstrongswan_tnc_imv_la_SOURCES = \
-	tnc_imv_plugin.h tnc_imv_plugin.c tnc_imv.h tnc_imv.c
+	tnc_imv_plugin.h tnc_imv_plugin.c tnc_imv.h tnc_imv.c \
+	tnc_imv_manager.h tnc_imv_manager.c
 
 libstrongswan_tnc_imv_la_LDFLAGS = -module -avoid-version
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010 Sansar Choinyanbuu
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,8 +16,9 @@
 #include "tnccs_20.h"
 
 #include <debug.h>
-
-static chunk_t tncc_output;
+#include <daemon.h>
+#include <tnc/tncif.h>
+#include <tnc/tnccs/tnccs.h>
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;
 
@@ -35,17 +36,54 @@ struct private_tnccs_20_t {
 	 * TNCC if TRUE, TNCS if FALSE
 	 */
 	bool is_server;
+
+	/**
+	 * Connection ID assigned to this TNCCS connection
+	 */
+	TNC_ConnectionID connection_id;
 };
 
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
+	if (this->is_server && !this->connection_id)
+	{
+		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
+															  (tnccs_t*)this);
+		charon->imvs->notify_connection_change(charon->imvs,
+							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+	}
+	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
+				   buflen, this->connection_id);
+	DBG3(DBG_TNC, "%.*s", buflen, buf);
+
 	return NEED_MORE;
 }
 
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
+	char *msg;
+
+	if (!this->is_server && !this->connection_id)
+	{
+		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
+															  (tnccs_t*)this);
+		charon->imcs->notify_connection_change(charon->imcs,
+							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+		charon->imcs->notify_connection_change(charon->imcs,
+							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+	}
+
+	msg = this->is_server ? "tncs-tncc 2.0" : "tncc-tncs 2.0";
+	DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
+				   strlen(msg), this->connection_id);
+	DBG3(DBG_TNC, "%s", msg);
+	*msglen = strlen(msg);
+	memcpy(buf, msg, *msglen);
+	*buflen = *msglen;
+
 	return ALREADY_DONE;
 }
 
@@ -76,6 +114,7 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
 	free(this);
 }
 

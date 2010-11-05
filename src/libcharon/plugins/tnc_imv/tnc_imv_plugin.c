@@ -14,6 +14,7 @@
  */
 
 #include "tnc_imv_plugin.h"
+#include "tnc_imv_manager.h"
 #include "tnc_imv.h"
 
 #include <daemon.h>
@@ -21,18 +22,7 @@
 METHOD(plugin_t, destroy, void,
 	tnc_imv_plugin_t *this)
 {
-	imv_t *imv;
-
-	while (charon->imvs->remove_last(charon->imvs, (void**)&imv) == SUCCESS)
-	{
-		if (imv->terminate &&
-			imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "IMV '%s' not terminated successfully",
-						   imv->get_name(imv));
-		}
-		imv->destroy(imv);
-	}
+	charon->imvs->destroy(charon->imvs);
 	free(this);
 }
 
@@ -41,8 +31,6 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imv_plugin_create()
 {
-	TNC_IMVID next_id = 1;
-	TNC_Version version;
 	char *tnc_config, *name, *filename;
 	tnc_imv_plugin_t *this;
 	imv_t *imv;
@@ -56,23 +44,18 @@ plugin_t *tnc_imv_plugin_create()
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imv.tnc_config", "/etc/tnc_config");
 
+	/* Create IMV manager */
+	charon->imvs = tnc_imv_manager_create();
+
+	/* Create and register IMVs */
 	name = "Dummy";
 	filename = "/usr/local/lib/libdummyimv.so";
-	imv = tnc_imv_create(name, filename, next_id);
+	imv = tnc_imv_create(name, filename);
 	if (imv)
 	{
-		/* Initialize the module */
-		if (imv->initialize(next_id, TNC_IFIMV_VERSION_1, TNC_IFIMV_VERSION_1,
-							&version) != TNC_RESULT_SUCCESS)
+		if (!charon->imvs->add(charon->imvs, imv))
 		{
-			DBG1(DBG_TNC, "could not initialize IMV '%s'\n",
-						   imv->get_name(imv));
 			imv->destroy(imv);
-		}
-		else
-		{
-			charon->imvs->insert_last(charon->imvs, imv);
-			next_id++;
 		}
 	}
 	return &this->plugin;

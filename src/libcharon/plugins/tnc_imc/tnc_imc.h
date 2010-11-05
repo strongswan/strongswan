@@ -29,9 +29,8 @@
  *
  * @param name			name of the IMC
  * @param filename		path to the dynamic IMC library
- * @param id			ID of the IMC
  * @return				instance of the imc_t interface
  */
-imc_t* tnc_imc_create(char *name, char *filename, TNC_IMCID id);
+imc_t* tnc_imc_create(char *name, char *filename);
 
 #endif /** TNC_IMC_H_ @}*/

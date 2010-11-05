@@ -122,6 +122,13 @@ struct imv_t {
 										TNC_TNCS_BindFunctionPointer bindFunction);
 
 	/**
+	 * Sets the ID of an imv_t object.
+	 *
+	 * @param id				IMV ID to be assigned
+	 */
+	void (*set_id)(imv_t *this, TNC_IMVID id);
+
+	/**
 	 * Returns the ID of an imv_t object.
 	 *
 	 * @result					IMV ID assigned by TNCS

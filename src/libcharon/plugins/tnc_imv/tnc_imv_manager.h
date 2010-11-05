@@ -15,22 +15,18 @@
 
 /**
  *
- * @defgroup tnc_imv tnc_imv
+ * @defgroup tnc_imv_manager tnc_imv_manager
  * @{ @ingroup tnc_imv
  */
 
-#ifndef TNC_IMV_H_
-#define TNC_IMV_H_
+#ifndef TNC_IMV_MANAGER_H_
+#define TNC_IMV_MANAGER_H_
 
-#include <tnc/imv/imv.h>
+#include <tnc/imv/imv_manager.h>
 
 /**
- * Create an Integrity Measurement Verifier.
- *
- * @param name			name of the IMV
- * @param filename		path to the dynamic IMV library
- * @return				instance of the imv_t interface
+ * Create an IMC manager instance.
  */
-imv_t* tnc_imv_create(char *name, char *filename);
+imv_manager_t *tnc_imv_manager_create();
 
-#endif /** TNC_IMV_H_ @}*/
+#endif /** TNC_IMV_MANAGER_H_ @}*/

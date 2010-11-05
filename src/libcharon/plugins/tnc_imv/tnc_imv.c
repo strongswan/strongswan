@@ -40,10 +40,22 @@ struct private_tnc_imv_t {
 	TNC_IMVID id;
 };
 
+METHOD(imv_t, set_id, void,
+	private_tnc_imv_t *this, TNC_IMVID id)
+{
+	this->id = id;
+}
+
 METHOD(imv_t, get_id, TNC_IMVID,
 	private_tnc_imv_t *this)
 {
 	return this->id;
+}
+
+METHOD(imv_t, get_name, char*,
+	private_tnc_imv_t *this)
+{
+	return this->name;
 }
 
 METHOD(imv_t, destroy, void,
@@ -56,14 +68,16 @@ METHOD(imv_t, destroy, void,
 /**
  * Described in header.
  */
-imv_t* tnc_imv_create(char *name, char *filename, TNC_IMVID id)
+imv_t* tnc_imv_create(char *name, char *filename)
 {
 	private_tnc_imv_t *this;
 	void *handle;
 
 	INIT(this,
 		.public = {
+			.set_id = _set_id,
 			.get_id = _get_id,
+			.get_name = _get_name,
 			.destroy = _destroy,
         },
 	);
@@ -114,10 +128,87 @@ imv_t* tnc_imv_create(char *name, char *filename, TNC_IMVID id)
 		free(this);
 		return NULL;
 	}
-	DBG2(DBG_TNC, "IMV '%s' loaded successfully with ID %u", name, id);
 	this->name = strdup(name);
-	this->id = id;
 
 	return &this->public;
 }
 
+/**
+ * Called by the IMV to inform a TNCS about the set of message types the IMV
+ * is able to receive
+ */
+TNC_Result TNC_TNCS_ReportMessageTypes(TNC_IMVID imv_id,
+									   TNC_MessageTypeList supported_types,
+									   TNC_UInt32 type_count)
+{
+	DBG2(DBG_TNC,"TNCS_ReportMessageTypes %u %u", imv_id, type_count);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMV to ask a TNCS to retry an Integrity Check Handshake
+ */
+TNC_Result TNC_TNCS_RequestHandshakeRetry(TNC_IMVID imv_id,
+										  TNC_ConnectionID connection_id,
+										  TNC_RetryReason reason)
+{
+	DBG2(DBG_TNC,"TNCS_RequestHandshakeRetry %u %u", imv_id, connection_id);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMV when an IMV-IMC message is to be sent
+ */
+TNC_Result TNC_TNCS_SendMessage(TNC_IMVID imv_id,
+								TNC_ConnectionID connection_id,
+								TNC_BufferReference message,
+								TNC_UInt32 message_len,
+								TNC_MessageType message_type)
+{
+	DBG2(DBG_TNC,"TNCS_SendMessage %u %u '%s' %u %0x", imv_id, connection_id,
+				  message, message_len, message_type);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMV to deliver its IMV Action Recommendation and IMV Evaluation
+ * Result to the TNCS
+ */
+TNC_Result TNC_TNCS_ProvideRecommendation(TNC_IMVID imv_id,
+								TNC_ConnectionID connection_id,
+								TNC_IMV_Action_Recommendation recommendation,
+								TNC_IMV_Evaluation_Result evaluation)
+{
+	DBG2(DBG_TNC,"TNCS_ProvideRecommendation %u %u", imv_id, connection_id);
+	return TNC_RESULT_SUCCESS;
+}
+
+/**
+ * Called by the IMV when it needs a function pointer
+ */
+TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
+								 char *function_name,
+								 void **function_pointer)
+{
+	if (streq(function_name, "TNC_TNCS_ReportMessageTypes"))
+	{
+		*function_pointer = (void*)TNC_TNCS_ReportMessageTypes;
+	}
+    else if (streq(function_name, "TNC_TNCS_RequestHandshakeRetry"))
+	{
+		*function_pointer = (void*)TNC_TNCS_RequestHandshakeRetry;
+	}
+    else if (streq(function_name, "TNC_TNCS_SendMessage"))
+	{
+		*function_pointer = (void*)TNC_TNCS_SendMessage;
+	}
+    else if (streq(function_name, "TNC_TNCS_ProvideRecommendation"))
+	{
+		*function_pointer = (void*)TNC_TNCS_ProvideRecommendation;
+	}
+    else
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+    return TNC_RESULT_SUCCESS;
+}

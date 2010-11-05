@@ -149,6 +149,8 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
+#include <tnc/imc/imc_manager.h>
+#include <tnc/imv/imv_manager.h>
 #include <tnc/tnccs/tnccs_manager.h>
 
 #ifdef ME
@@ -237,19 +239,19 @@ struct daemon_t {
 	sim_manager_t *sim;
 
 	/**
+	 * TNC IMC manager controlling Integrity Measurement Collectors
+	 */
+	imc_manager_t *imcs;
+
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+
+	/**
 	 * TNCCS manager to maintain registered TNCCS protocols
 	 */
 	tnccs_manager_t *tnccs;
-
-	/**
-	 * A list of installed TNC Integrity Measurement Collectors
-	 */
-	linked_list_t *imcs;
-
-	/**
-	 * A list of installed TNC Integrity Measurement Verifiers
-	 */
-	linked_list_t *imvs;
 
 #ifdef ME
 	/**

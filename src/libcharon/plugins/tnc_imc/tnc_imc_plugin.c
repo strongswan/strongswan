@@ -14,6 +14,7 @@
  */
 
 #include "tnc_imc_plugin.h"
+#include "tnc_imc_manager.h"
 #include "tnc_imc.h"
 
 #include <daemon.h>
@@ -21,18 +22,7 @@
 METHOD(plugin_t, destroy, void,
 	tnc_imc_plugin_t *this)
 {
-	imc_t *imc;
-
-	while (charon->imcs->remove_last(charon->imcs, (void**)&imc) == SUCCESS)
-	{
-		if (imc->terminate &&
-			imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "IMC '%s' not terminated successfully",
-						   imc->get_name(imc));
-		}
-		imc->destroy(imc);
-	}
+	charon->imcs->destroy(charon->imcs);
 	free(this);
 }
 
@@ -41,8 +31,6 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imc_plugin_create()
 {
-	TNC_IMCID next_id = 1;
-	TNC_Version version;
 	char *tnc_config, *pref_lang, *name, *filename;
 	tnc_imc_plugin_t *this;
 	imc_t *imc;
@@ -58,23 +46,18 @@ plugin_t *tnc_imc_plugin_create()
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
 
+	/* Create IMC manager */
+	charon->imcs = tnc_imc_manager_create();
+
+	/* Create and register IMCs */
 	name = "Dummy";
 	filename = "/usr/local/lib/libdummyimc.so";
-	imc = tnc_imc_create(name, filename, next_id);
+	imc = tnc_imc_create(name, filename);
 	if (imc)
 	{
-		/* Initialize the module */
-		if (imc->initialize(next_id, TNC_IFIMC_VERSION_1, TNC_IFIMC_VERSION_1,
-							&version) != TNC_RESULT_SUCCESS)
+		if (!charon->imcs->add(charon->imcs, imc))
 		{
-			DBG1(DBG_TNC, "could not initialize IMC '%s'\n",
-						   imc->get_name(imc));
 			imc->destroy(imc);
-		}
-		else
-		{
-			charon->imcs->insert_last(charon->imcs, imc);
-			next_id++;
 		}
 	}
 	return &this->plugin;

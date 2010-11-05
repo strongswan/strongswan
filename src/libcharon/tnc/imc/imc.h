@@ -18,8 +18,8 @@
  * @{ @ingroup libcharon
  */
 
-#ifndef IMV_H_
-#define IMV_H_
+#ifndef IMC_H_
+#define IMC_H_
 
 #include <tnc/tncifimc.h>
 
@@ -122,9 +122,16 @@ struct imc_t {
 										TNC_TNCC_BindFunctionPointer bindFunction);
 
 	/**
+	 * Sets the ID of an imc_t object.
+	 *
+	 * @param id				IMC ID to be assigned
+	 */
+	void (*set_id)(imc_t *this, TNC_IMCID id);
+
+	/**
 	 * Returns the ID of an imc_t object.
 	 *
-	 * @result					IMC ID assigned by TNCC
+	 * @result					assigned IMC ID
 	 */
 	TNC_IMCID (*get_id)(imc_t *this);
 
@@ -141,4 +148,4 @@ struct imc_t {
 	void (*destroy)(imc_t *this);
 };
 
-#endif /** IMV_H_ @}*/
+#endif /** IMC_H_ @}*/
