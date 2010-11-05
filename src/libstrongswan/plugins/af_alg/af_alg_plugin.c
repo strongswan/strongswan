@@ -18,6 +18,7 @@
 #include <library.h>
 
 #include "af_alg_hasher.h"
+#include "af_alg_signer.h"
 
 typedef struct private_af_alg_plugin_t private_af_alg_plugin_t;
 
@@ -37,6 +38,8 @@ METHOD(plugin_t, destroy, void,
 {
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->remove_signer(lib->crypto,
+					(signer_constructor_t)af_alg_signer_create);
 
 	free(this);
 }
@@ -70,6 +73,33 @@ plugin_t *af_alg_plugin_create()
 					(hasher_constructor_t)af_alg_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 					(hasher_constructor_t)af_alg_hasher_create);
+
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_96,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96,
+					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
+					(signer_constructor_t)af_alg_signer_create);
 
 	return &this->public.plugin;
 }
