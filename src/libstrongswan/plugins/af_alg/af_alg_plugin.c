@@ -17,6 +17,8 @@
 
 #include <library.h>
 
+#include "af_alg_hasher.h"
+
 typedef struct private_af_alg_plugin_t private_af_alg_plugin_t;
 
 /**
@@ -33,6 +35,9 @@ struct private_af_alg_plugin_t {
 METHOD(plugin_t, destroy, void,
 	private_af_alg_plugin_t *this)
 {
+	lib->crypto->remove_hasher(lib->crypto,
+					(hasher_constructor_t)af_alg_hasher_create);
+
 	free(this);
 }
 
@@ -50,6 +55,21 @@ plugin_t *af_alg_plugin_create()
 			},
 		},
 	);
+
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)af_alg_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+					(hasher_constructor_t)af_alg_hasher_create);
 
 	return &this->public.plugin;
 }

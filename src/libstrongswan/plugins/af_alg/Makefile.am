@@ -1,5 +1,5 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
@@ -10,6 +10,7 @@ plugin_LTLIBRARIES = libstrongswan-af-alg.la
 endif
 
 libstrongswan_af_alg_la_SOURCES = \
-	af_alg_plugin.h af_alg_plugin.c
+	af_alg_plugin.h af_alg_plugin.c \
+	af_alg_hasher.h af_alg_hasher.c
 
 libstrongswan_af_alg_la_LDFLAGS = -module -avoid-version
