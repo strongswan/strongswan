@@ -19,6 +19,7 @@
 
 #include "af_alg_hasher.h"
 #include "af_alg_signer.h"
+#include "af_alg_crypter.h"
 
 typedef struct private_af_alg_plugin_t private_af_alg_plugin_t;
 
@@ -40,6 +41,8 @@ METHOD(plugin_t, destroy, void,
 					(hasher_constructor_t)af_alg_hasher_create);
 	lib->crypto->remove_signer(lib->crypto,
 					(signer_constructor_t)af_alg_signer_create);
+	lib->crypto->remove_crypter(lib->crypto,
+					(crypter_constructor_t)af_alg_crypter_create);
 
 	free(this);
 }
@@ -100,6 +103,19 @@ plugin_t *af_alg_plugin_create()
 					(signer_constructor_t)af_alg_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
 					(signer_constructor_t)af_alg_signer_create);
+
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR,
+					(crypter_constructor_t)af_alg_crypter_create);
 
 	return &this->public.plugin;
 }
