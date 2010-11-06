@@ -41,7 +41,24 @@ struct private_tnccs_20_t {
 	 * Connection ID assigned to this TNCCS connection
 	 */
 	TNC_ConnectionID connection_id;
+
+	/**
+	 * Batch being constructed
+	 */
+	chunk_t batch;
 };
+
+METHOD(tnccs_t, send_message, void,
+	private_tnccs_20_t* this, TNC_BufferReference message,
+							  TNC_UInt32 message_len,
+							  TNC_MessageType message_type)
+{
+	chunk_t msg = { message, message_len },
+			batch = this->batch;
+
+	DBG1(DBG_TNC, "TNCCS 2.0 send message");
+	this->batch = chunk_cat("mc", batch, msg);
+}
 
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
@@ -49,7 +66,7 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-															  (tnccs_t*)this);
+												(tnccs_t*)this, _send_message);
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 	}
@@ -63,12 +80,15 @@ METHOD(tls_t, process, status_t,
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	char *msg;
+	char *msg = this->is_server ? "|tncs->tncc 2.0|" : "|tncc->tncs 2.0|";
+	size_t len;
+
+	this->batch = chunk_clone(chunk_create(msg, strlen(msg)));
 
 	if (!this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-															  (tnccs_t*)this);
+												(tnccs_t*)this, _send_message);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
@@ -76,13 +96,15 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
 
-	msg = this->is_server ? "tncs-tncc 2.0" : "tncc-tncs 2.0";
+	len = this->batch.len;
+	*msglen = len;
+	*buflen = len;
+	memcpy(buf, this->batch.ptr, len);
+
 	DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
-				   strlen(msg), this->connection_id);
-	DBG3(DBG_TNC, "%s", msg);
-	*msglen = strlen(msg);
-	memcpy(buf, msg, *msglen);
-	*buflen = *msglen;
+				   len, this->connection_id);
+	DBG3(DBG_TNC, "%.*s", len, buf);
+	chunk_free(&this->batch);
 
 	return ALREADY_DONE;
 }
@@ -115,6 +137,7 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	free(this->batch.ptr);
 	free(this);
 }
 

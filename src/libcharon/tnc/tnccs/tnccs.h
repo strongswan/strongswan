@@ -21,9 +21,11 @@
 #ifndef TNCCS_H_
 #define TNCCS_H_
 
-typedef enum tnccs_type_t tnccs_type_t;
-
 #include <library.h>
+
+#include <tnc/tncif.h>
+
+typedef enum tnccs_type_t tnccs_type_t;
 
 /**
  * Type of TNC Client/Server protocol
@@ -48,5 +50,17 @@ typedef struct tnccs_t tnccs_t;
  * @return				implementation of the tnccs_t interface
  */
 typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
+
+/**
+ * Callback function adding a message to a TNCCS batch
+ *
+ * @param message		message to be added
+ * @param message_len	message length
+ * @param message_type	message type
+ */
+typedef void (*tnccs_send_message_t)(tnccs_t* tncss,
+									 TNC_BufferReference message,
+									 TNC_UInt32 message_len,
+									 TNC_MessageType message_type);
 
 #endif /** TNC_H_ @}*/

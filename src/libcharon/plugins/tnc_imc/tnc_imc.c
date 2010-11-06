@@ -18,7 +18,7 @@
 #include <dlfcn.h>
 
 #include <debug.h>
-#include <library.h>
+#include <daemon.h>
 
 typedef struct private_tnc_imc_t private_tnc_imc_t;
 
@@ -166,42 +166,8 @@ TNC_Result TNC_TNCC_SendMessage(TNC_IMCID imc_id,
 {
 	DBG2(DBG_TNC,"TNCC_SendMessage %u %u '%s' %u %0x", imc_id, connection_id,
 				  message, message_len, message_type);
-
-	/*
-	-----TNCCS 2.0-----
-    tnc_tncc_connection* conn;
-
-    conn = libtnc_array_index(&connections, connectionID);
-    
-    TNC_MessageSubtype message_type = messageType             & TNC_SUBTYPE_ANY;
-    TNC_VendorID       message_vendor_id = (messageType >> 8) & TNC_VENDORID_ANY;
-    
-    chunk_t pa_message = tnc_create_pa_message(FALSE, message_vendor_id,
-									message_type, 0, 0, message, messageLength); 
-        
-    if(conn->current_batch.len)
-    {
-	  chunk_t batch = conn->current_batch;
-	  htoun32(batch.ptr + 4,batch.len + pa_message.len);
-	  conn->current_batch = chunk_cat("cc", batch, pa_message);
-
-    }
-    else
-    {
-	  chunk_t header = tnc_create_batch_header(TNCCS_BATCH_TYPE_CDATA, false);
-	  
-	  htoun32(header.ptr + 4,header.len + pa_message.len);
-	  conn->current_batch = chunk_cat("cc", header, pa_message);
-
-    }
-    -----TNCCS 1.1-----
-    libtnc_mutex_lock();
-    conn = libtnc_array_index(&connections, connectionID);
-    libtnc_mutex_unlock();
-    return libtnc_tncc_add_imc_imv_message(conn, message, messageLength, messageType);
-	*/
- 
-    return TNC_RESULT_SUCCESS;
+	return charon->tnccs->send_message(charon->tnccs, connection_id, message,
+									   message_len, message_type);
 }
 
 /**

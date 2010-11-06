@@ -65,9 +65,11 @@ struct tnccs_manager_t {
 	 * Create a TNCCS connection and assign a unique connection ID
 	 *
 	 * @param tnccs			TNCCS connection instance
+	 * @param send_message	callback function adding a message to a TNCCS batch
 	 * @result				assigned connection ID
 	 */
-	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs);
+	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
+										  tnccs_send_message_t send_message);
 
 	/**
 	 * Remove a TNCCS connection using its connection ID.
@@ -75,6 +77,20 @@ struct tnccs_manager_t {
 	 * @param id			connection ID of the connection to be removed
 	 */
 	void (*remove_connection)(tnccs_manager_t *this, TNC_ConnectionID id);
+
+	/**
+	 * Add an IMC/IMV message to the batch of a given connection ID.
+	 *
+	 * @param id			target connection ID
+	 * @param message		message to be added
+	 * @param message_len	message length
+	 * @param message_type	message type
+	 * @result				return code
+	 */
+	TNC_Result (*send_message)(tnccs_manager_t *this, TNC_ConnectionID id,
+												TNC_BufferReference message,
+												TNC_UInt32 message_len,
+												TNC_MessageType message_type);
 
 	/**
 	 * Destroy a tnccs_manager instance.

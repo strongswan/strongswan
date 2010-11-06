@@ -53,6 +53,11 @@ struct tnccs_connection_entry_t {
 	 * TNCCS instance
 	 */
 	tnccs_t *tnccs;
+
+	/** TNCCS send message function
+	 *
+	 */
+	tnccs_send_message_t send_message;
 };
 
 /**
@@ -147,12 +152,14 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 }
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
-	private_tnccs_manager_t *this, tnccs_t *tnccs)
+	private_tnccs_manager_t *this, tnccs_t *tnccs,
+	tnccs_send_message_t send_message)
 {
 	tnccs_connection_entry_t *entry = malloc_thing(tnccs_connection_entry_t);
 
 	entry->id = ++this->connection_id;
 	entry->tnccs = tnccs;
+	entry->send_message = send_message;
 
 	this->lock->write_lock(this->lock);
 	this->connections->insert_last(this->connections, entry);
@@ -183,6 +190,39 @@ METHOD(tnccs_manager_t, remove_connection, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(tnccs_manager_t, send_message, TNC_Result,
+	private_tnccs_manager_t *this, TNC_ConnectionID id,
+								   TNC_BufferReference message,
+								   TNC_UInt32 message_len,
+								   TNC_MessageType message_type)
+{
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+	tnccs_send_message_t send_message;
+	tnccs_t *tnccs = NULL;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == entry->id)
+		{
+			tnccs = entry->tnccs;
+			send_message = entry->send_message;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	if (tnccs)
+	{
+		send_message(tnccs, message, message_len, message_type);
+		return TNC_RESULT_SUCCESS;
+	 }
+	return TNC_RESULT_FATAL;
+}
+
 METHOD(tnccs_manager_t, destroy, void,
 	private_tnccs_manager_t *this)
 {
@@ -206,6 +246,7 @@ tnccs_manager_t *tnccs_manager_create()
 				.create_instance = _create_instance,
 				.create_connection = _create_connection,
 				.remove_connection = _remove_connection,
+				.send_message = _send_message,
 				.destroy = _destroy,
 			},
 			.protocols = linked_list_create(),
