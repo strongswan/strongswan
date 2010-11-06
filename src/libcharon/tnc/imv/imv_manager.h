@@ -48,6 +48,20 @@ struct imv_manager_t {
 	void (*notify_connection_change)(imv_manager_t *this,
 									 TNC_ConnectionID id,
 									 TNC_ConnectionState state);
+
+	/**
+	 * Sets the supported message types reported by a given IMV
+	 *
+	 * @param id				ID of reporting IMV
+	 * @param supported_types	List of messages type supported by IMV
+	 * @param type_count		Number of supported message types
+	 * @return					TNC result code
+	 */
+	TNC_Result (*set_message_types)(imv_manager_t *this,
+									TNC_IMVID id,
+									TNC_MessageTypeList supported_types,
+									TNC_UInt32 type_count);
+
 	/**
 	 * Destroy an IMV manager and all its controlled instances.
 	 */

@@ -66,7 +66,7 @@ struct tnccs_manager_t {
 	 *
 	 * @param tnccs			TNCCS connection instance
 	 * @param send_message	callback function adding a message to a TNCCS batch
-	 * @result				assigned connection ID
+	 * @return				assigned connection ID
 	 */
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message);
@@ -85,7 +85,7 @@ struct tnccs_manager_t {
 	 * @param message		message to be added
 	 * @param message_len	message length
 	 * @param message_type	message type
-	 * @result				return code
+	 * @return				return code
 	 */
 	TNC_Result (*send_message)(tnccs_manager_t *this, TNC_ConnectionID id,
 												TNC_BufferReference message,

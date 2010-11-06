@@ -57,6 +57,19 @@ struct imc_manager_t {
 	void (*begin_handshake)(imc_manager_t *this, TNC_ConnectionID id);
 
 	/**
+	 * Sets the supported message types reported by a given IMC
+	 *
+	 * @param id				ID of reporting IMC
+	 * @param supported_types	List of messages type supported by IMC
+	 * @param type_count		Number of supported message types
+	 * @return					TNC result code
+	 */
+	TNC_Result (*set_message_types)(imc_manager_t *this,
+									TNC_IMCID id,
+									TNC_MessageTypeList supported_types,
+									TNC_UInt32 type_count);
+
+	/**
 	 * Destroy an IMC manager and all its controlled instances.
 	 */
 	void (*destroy)(imc_manager_t *this);

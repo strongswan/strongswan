@@ -36,7 +36,7 @@ struct imv_t {
 	 * @param minVersion		Minimum API version supported
 	 * @param maxVersion		Maximum API version supported by TNCS
 	 * @param OutActualVersion	Mutually supported API version number
-	 * @result					TNC result code
+	 * @return				TNC result code
 	 */
 	TNC_Result (*initialize)(TNC_IMVID imvID,
 							 TNC_Version minVersion,
@@ -50,7 +50,7 @@ struct imv_t {
 	 * @param imvID				IMV ID assigned by TNCS
 	 * @param connectionID		Network connection ID assigned by TNCS
 	 * @param newState			New network connection state
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*notify_connection_change)(TNC_IMVID imvID,
 										   TNC_ConnectionID connectionID,
@@ -63,7 +63,7 @@ struct imv_t {
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
 	 * @param connectionID		Network connection ID assigned by TNCS
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*solicit_recommendation)(TNC_IMVID imvID,
 										 TNC_ConnectionID connectionID);
@@ -79,7 +79,7 @@ struct imv_t {
 	 * @param message			Reference to buffer containing message
 	 * @param messageLength		Number of octets in message
 	 * @param messageType		Message type of message
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*receive_message)(TNC_IMVID imvID,
 								  TNC_ConnectionID connectionID,
@@ -94,7 +94,7 @@ struct imv_t {
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
 	 * @param connectionID		Network connection ID assigned by TNCS
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*batch_ending)(TNC_IMVID imvID,
 							   TNC_ConnectionID connectionID);
@@ -103,7 +103,7 @@ struct imv_t {
 	 * The TNC Server calls this function to close down the IMV.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*terminate)(TNC_IMVID imvID);
 
@@ -116,7 +116,7 @@ struct imv_t {
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
 	 * @param bindFunction		Pointer to TNC_TNCS_BindFunction
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_bind_function)(TNC_IMVID imvID,
 										TNC_TNCS_BindFunctionPointer bindFunction);
@@ -131,16 +131,25 @@ struct imv_t {
 	/**
 	 * Returns the ID of an imv_t object.
 	 *
-	 * @result					IMV ID assigned by TNCS
+	 * @return					IMV ID assigned by TNCS
 	 */
 	TNC_IMVID (*get_id)(imv_t *this);
 
 	/**
 	 * Returns the name of an imv_t object.
 	 *
-	 * @result					name of IMV
+	 * @return					name of IMV
 	 */
 	char* (*get_name)(imv_t *this);
+
+	/**
+	 * Sets the supported message types of an imv_t object.
+	 *
+	 * @param supported_types	List of messages type supported by IMV
+	 * @param type_count		Number of supported message types
+	 */
+	void (*set_message_types)(imv_t *this, TNC_MessageTypeList supported_types,
+										   TNC_UInt32 type_count);
 
 	/**
 	 * Destroys an imv_t object.

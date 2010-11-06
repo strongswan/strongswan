@@ -27,7 +27,8 @@ TNC_Result TNC_TNCS_ReportMessageTypes(TNC_IMVID imv_id,
 									   TNC_UInt32 type_count)
 {
 	DBG2(DBG_TNC,"TNCS_ReportMessageTypes %u %u", imv_id, type_count);
-	return TNC_RESULT_SUCCESS;
+	return charon->imvs->set_message_types(charon->imvs, imv_id,
+										   supported_types, type_count);
 }
 
 /**

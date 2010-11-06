@@ -101,6 +101,30 @@ METHOD(imc_manager_t, begin_handshake, void,
 	enumerator->destroy(enumerator);
 }
 
+METHOD(imc_manager_t, set_message_types, TNC_Result,
+	private_tnc_imc_manager_t *this, TNC_IMCID id,
+									 TNC_MessageTypeList supported_types,
+									 TNC_UInt32 type_count)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+	TNC_Result result = TNC_RESULT_FATAL;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (id == imc->get_id(imc))
+		{
+			imc->set_message_types(imc, supported_types, type_count);
+			result = TNC_RESULT_SUCCESS;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return result;
+}
+
+
 METHOD(imc_manager_t, destroy, void,
 	private_tnc_imc_manager_t *this)
 {
@@ -132,6 +156,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 			.add = _add,
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,
+			.set_message_types = _set_message_types,
 			.destroy = _destroy,
         },
 		.imcs = linked_list_create(),

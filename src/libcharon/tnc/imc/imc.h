@@ -36,7 +36,7 @@ struct imc_t {
 	 * @param minVersion		Minimum API version supported by TNCC
 	 * @param maxVersion		Maximum API version supported by TNCC
 	 * @param OutActualVersion	Mutually supported API version number
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*initialize)(TNC_IMCID imcID,
 							 TNC_Version minVersion,
@@ -50,7 +50,7 @@ struct imc_t {
 	 * @param imcID				IMC ID assigned by TNCC
 	 * @param connectionID		Network connection ID assigned by TNCC
 	 * @param newState			New network connection state
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*notify_connection_change)(TNC_IMCID imcID,
 										   TNC_ConnectionID connectionID,
@@ -62,7 +62,7 @@ struct imc_t {
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
 	 * @param connectionID		Network connection ID assigned by TNCC
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*begin_handshake)(TNC_IMCID imcID,
 								  TNC_ConnectionID connectionID);
@@ -78,7 +78,7 @@ struct imc_t {
 	 * @param message			Reference to buffer containing message
 	 * @param messageLength		Number of octets in message
 	 * @param messageType		Message type of message
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*receive_message)(TNC_IMCID imcID,
 								  TNC_ConnectionID connectionID,
@@ -93,7 +93,7 @@ struct imc_t {
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
 	 * @param connectionID		Network connection ID assigned by TNCC
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*batch_ending)(TNC_IMCID imcID,
 							   TNC_ConnectionID connectionID);
@@ -103,7 +103,7 @@ struct imc_t {
 	 * complete or the IMC reports TNC_RESULT_FATAL.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*terminate)(TNC_IMCID imcID);
 
@@ -116,7 +116,7 @@ struct imc_t {
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
 	 * @param bindFunction		Pointer to TNC_TNCC_BindFunction
-	 * @result					TNC result code
+	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_bind_function)(TNC_IMCID imcID,
 										TNC_TNCC_BindFunctionPointer bindFunction);
@@ -131,16 +131,25 @@ struct imc_t {
 	/**
 	 * Returns the ID of an imc_t object.
 	 *
-	 * @result					assigned IMC ID
+	 * @return					assigned IMC ID
 	 */
 	TNC_IMCID (*get_id)(imc_t *this);
 
 	/**
 	 * Returns the name of an imc_t object.
 	 *
-	 * @result					name of IMC
+	 * @return					name of IMC
 	 */
 	char* (*get_name)(imc_t *this);
+
+	/**
+	 * Sets the supported message types of an imc_t object.
+	 *
+	 * @param supported_types	List of messages type supported by IMC
+	 * @param type_count		Number of supported message types
+	 */
+	void (*set_message_types)(imc_t *this, TNC_MessageTypeList supported_types,
+										   TNC_UInt32 type_count);
 
 	/**
 	 * Destroys an imc_t object.

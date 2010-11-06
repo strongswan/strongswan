@@ -38,6 +38,16 @@ struct private_tnc_imc_t {
 	 * ID of loaded IMC
 	 */
 	TNC_IMCID id;
+
+	/**
+	 * List of message types supported by IMC
+	 */
+	TNC_MessageTypeList supported_types;
+
+	/**
+	 * Number of supported message types
+	 */
+	TNC_UInt32 type_count;
 };
 
 METHOD(imc_t, set_id, void,
@@ -58,10 +68,27 @@ METHOD(imc_t, get_name, char*,
 	return this->name;
 }
 
+METHOD(imc_t, set_message_types, void,
+	private_tnc_imc_t *this, TNC_MessageTypeList supported_types,
+							 TNC_UInt32 type_count)
+{
+	free(this->supported_types);
+	this->supported_types = NULL;
+	this->type_count = type_count;
+	if (type_count && supported_types)
+	{
+		size_t size = type_count * sizeof(TNC_MessageType);
+
+		this->supported_types = malloc(size);
+		memcpy(this->supported_types, supported_types, size);
+	}
+}
+
 METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
 	free(this->name);
+	free(this->supported_types);
 	free(this);
 }
 
@@ -78,6 +105,7 @@ imc_t* tnc_imc_create(char* name, char *filename)
 			.set_id = _set_id,
 			.get_id = _get_id,
 			.get_name = _get_name,
+			.set_message_types = _set_message_types,
 			.destroy = _destroy,
         },
 	);
