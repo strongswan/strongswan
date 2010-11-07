@@ -63,6 +63,9 @@ METHOD(tnccs_t, send_message, void,
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
+	char *pos;
+	size_t len;
+
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
@@ -73,14 +76,34 @@ METHOD(tls_t, process, status_t,
 	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
 				   buflen, this->connection_id);
 	DBG3(DBG_TNC, "%.*s", buflen, buf);
-
+	pos = strchr(buf, '|');
+	if (pos)
+	{
+		pos++;
+		len = buflen - ((char*)buf - pos);
+	}
+	else
+	{
+		pos = buf;
+		len = buflen;
+	}
+	if (this->is_server)
+	{
+		charon->imvs->receive_message(charon->imvs, this->connection_id,
+									  pos, len, 0x0080ab31);
+	}
+	else
+	{
+		charon->imcs->receive_message(charon->imcs, this->connection_id,
+									  pos, len, 0x0080ab31);
+	}
 	return NEED_MORE;
 }
 
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	char *msg = this->is_server ? "|tncs->tncc 2.0|" : "|tncc->tncs 2.0|";
+	char *msg = this->is_server ? "tncs->tncc 2.0|" : "tncc->tncs 2.0|";
 	size_t len;
 
 	this->batch = chunk_clone(chunk_create(msg, strlen(msg)));

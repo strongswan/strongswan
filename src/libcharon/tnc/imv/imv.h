@@ -23,6 +23,8 @@
 
 #include <tnc/tncifimv.h>
 
+#include <library.h>
+
 typedef struct imv_t imv_t;
 
 struct imv_t {
@@ -150,6 +152,14 @@ struct imv_t {
 	 */
 	void (*set_message_types)(imv_t *this, TNC_MessageTypeList supported_types,
 										   TNC_UInt32 type_count);
+
+	/**
+	 * Check if the IMV supports a given message type.
+	 *
+	 * @param message_type		message type
+	 * @return					TRUE if supported
+	 */
+	bool (*type_supported)(imv_t *this, TNC_MessageType message_type);
 
 	/**
 	 * Destroys an imv_t object.

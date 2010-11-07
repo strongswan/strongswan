@@ -84,6 +84,33 @@ METHOD(imv_t, set_message_types, void,
 	}
 }
 
+METHOD(imv_t, type_supported, bool,
+	private_tnc_imv_t *this, TNC_MessageType message_type)
+{
+	TNC_VendorID msg_vid, vid;
+	TNC_MessageSubtype msg_subtype, subtype;
+	int i;
+
+    msg_vid = (message_type >> 8) & TNC_VENDORID_ANY;
+	msg_subtype = message_type & TNC_SUBTYPE_ANY;
+
+	for (i = 0; i < this->type_count; i++)
+	{
+	    vid = (this->supported_types[i] >> 8) & TNC_VENDORID_ANY;
+	    subtype = this->supported_types[i] & TNC_SUBTYPE_ANY;
+
+	    if (this->supported_types[i] == message_type
+		|| (subtype == TNC_SUBTYPE_ANY
+			&& (msg_vid == vid || vid == TNC_VENDORID_ANY))
+		|| (vid == TNC_VENDORID_ANY 
+		    && (msg_subtype == subtype || subtype == TNC_SUBTYPE_ANY)))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
@@ -106,6 +133,7 @@ imv_t* tnc_imv_create(char *name, char *filename)
 			.get_id = _get_id,
 			.get_name = _get_name,
 			.set_message_types = _set_message_types,
+			.type_supported = _type_supported,
 			.destroy = _destroy,
         },
 	);

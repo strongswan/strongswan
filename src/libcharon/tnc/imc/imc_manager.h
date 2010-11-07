@@ -70,6 +70,20 @@ struct imc_manager_t {
 									TNC_UInt32 type_count);
 
 	/**
+	 * Delivers a message to interested IMCs.
+	 *
+	 * @param connection_id		ID of connection over which message was received
+	 * @param message			message
+	 * @param message_len		message length
+	 * @param message_type		message type
+	 */
+	void (*receive_message)(imc_manager_t *this,
+							TNC_ConnectionID connection_id,
+							TNC_BufferReference message,
+							TNC_UInt32 message_len,
+							TNC_MessageType message_type);
+
+	/**
 	 * Destroy an IMC manager and all its controlled instances.
 	 */
 	void (*destroy)(imc_manager_t *this);

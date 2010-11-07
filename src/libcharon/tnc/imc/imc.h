@@ -23,6 +23,8 @@
 
 #include <tnc/tncifimc.h>
 
+#include <library.h>
+
 typedef struct imc_t imc_t;
 
 struct imc_t {
@@ -150,6 +152,14 @@ struct imc_t {
 	 */
 	void (*set_message_types)(imc_t *this, TNC_MessageTypeList supported_types,
 										   TNC_UInt32 type_count);
+
+	/**
+	 * Check if the IMC supports a given message type.
+	 *
+	 * @param message_type		message type
+	 * @return					TRUE if supported
+	 */
+	bool (*type_supported)(imc_t *this, TNC_MessageType message_type);
 
 	/**
 	 * Destroys an imc_t object.
