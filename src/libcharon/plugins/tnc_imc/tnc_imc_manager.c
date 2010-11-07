@@ -59,6 +59,9 @@ METHOD(imc_manager_t, add, bool,
 					   imc->get_name(imc));
 		return FALSE;
 	}
+	this->imcs->insert_last(this->imcs, imc);
+	this->next_imc_id++;
+
     if (imc->provide_bind_function(imc->get_id(imc), TNC_TNCC_BindFunction)
 			!= TNC_RESULT_SUCCESS)
 	{
@@ -66,8 +69,6 @@ METHOD(imc_manager_t, add, bool,
 					   imc->get_name(imc));
 		return FALSE;
 	}
-	this->imcs->insert_last(this->imcs, imc);
-	this->next_imc_id++;
 
 	return TRUE;
 }

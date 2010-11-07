@@ -59,6 +59,9 @@ METHOD(imv_manager_t, add, bool,
 					   imv->get_name(imv));
 		return FALSE;
 	}
+	this->imvs->insert_last(this->imvs, imv);
+	this->next_imv_id++;
+
     if (imv->provide_bind_function(imv->get_id(imv), TNC_TNCS_BindFunction)
 			!= TNC_RESULT_SUCCESS)
 	{
@@ -66,8 +69,6 @@ METHOD(imv_manager_t, add, bool,
 					   imv->get_name(imv));
 		return FALSE;
 	}
-	this->imvs->insert_last(this->imvs, imv);
-	this->next_imv_id++;
 	return TRUE;
 }
 

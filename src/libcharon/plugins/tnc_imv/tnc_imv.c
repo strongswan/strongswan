@@ -88,6 +88,7 @@ METHOD(imv_t, set_message_types, void,
 		this->supported_types = malloc(size);
 		memcpy(this->supported_types, supported_types, size);
 	}
+	DBG2(DBG_TNC, "IMV %u supports %u message types", this->id, type_count);
 }
 
 METHOD(imv_t, type_supported, bool,

@@ -24,7 +24,7 @@
 #include <tnc/tncifimc.h>
 #include <library.h>
 
-/typedef struct imc_t imc_t;
+typedef struct imc_t imc_t;
 
 /**
  * Controls a single Integrity Measurement Collector (IMC)
