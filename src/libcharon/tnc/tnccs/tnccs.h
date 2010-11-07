@@ -21,9 +21,8 @@
 #ifndef TNCCS_H_
 #define TNCCS_H_
 
-#include <library.h>
-
 #include <tnc/tncif.h>
+#include <library.h>
 
 typedef enum tnccs_type_t tnccs_type_t;
 
@@ -63,4 +62,4 @@ typedef void (*tnccs_send_message_t)(tnccs_t* tncss,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type);
 
-#endif /** TNC_H_ @}*/
+#endif /** TNCCS_H_ @}*/

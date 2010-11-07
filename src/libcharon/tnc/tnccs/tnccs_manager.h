@@ -22,7 +22,6 @@
 #define TNCCS_MANAGER_H_
 
 #include "tnccs.h"
-#include "tncif.h"
 
 typedef struct tnccs_manager_t tnccs_manager_t;
 
@@ -87,10 +86,11 @@ struct tnccs_manager_t {
 	 * @param message_type	message type
 	 * @return				return code
 	 */
-	TNC_Result (*send_message)(tnccs_manager_t *this, TNC_ConnectionID id,
-												TNC_BufferReference message,
-												TNC_UInt32 message_len,
-												TNC_MessageType message_type);
+	TNC_Result (*send_message)(tnccs_manager_t *this,
+							   TNC_ConnectionID id,
+							   TNC_BufferReference message,
+							   TNC_UInt32 message_len,
+							   TNC_MessageType message_type);
 
 	/**
 	 * Destroy a tnccs_manager instance.
