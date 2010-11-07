@@ -22,6 +22,9 @@
 
 typedef struct private_tnc_imv_t private_tnc_imv_t;
 
+/**
+ * Private data of an imv_t object.
+ */
 struct private_tnc_imv_t {
 
 	/**
@@ -72,8 +75,11 @@ METHOD(imv_t, set_message_types, void,
 	private_tnc_imv_t *this, TNC_MessageTypeList supported_types,
 							 TNC_UInt32 type_count)
 {
+	/* Free an existing MessageType list */
 	free(this->supported_types);
 	this->supported_types = NULL;
+
+	/* Store the new MessageType list */
 	this->type_count = type_count;
 	if (type_count && supported_types)
 	{

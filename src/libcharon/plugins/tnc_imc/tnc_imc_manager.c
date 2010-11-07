@@ -24,6 +24,9 @@
 
 typedef struct private_tnc_imc_manager_t private_tnc_imc_manager_t;
 
+/**
+ * Private data of an imc_manager_t object.
+ */
 struct private_tnc_imc_manager_t {
 
 	/**
