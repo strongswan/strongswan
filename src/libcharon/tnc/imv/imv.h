@@ -22,11 +22,13 @@
 #define IMV_H_
 
 #include <tnc/tncifimv.h>
-
 #include <library.h>
 
 typedef struct imv_t imv_t;
 
+/**
+ * Controls a single Integrity Measurement Verifier (IMV)
+ */
 struct imv_t {
 
 	/**
@@ -35,10 +37,10 @@ struct imv_t {
 	 * identifier that the IMV must use when calling TNC Server callback functions.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param minVersion		Minimum API version supported
-	 * @param maxVersion		Maximum API version supported by TNCS
-	 * @param OutActualVersion	Mutually supported API version number
-	 * @return				TNC result code
+	 * @param minVersion		minimum API version supported
+	 * @param maxVersion		maximum API version supported by TNCS
+	 * @param OutActualVersion	mutually supported API version number
+	 * @return					TNC result code
 	 */
 	TNC_Result (*initialize)(TNC_IMVID imvID,
 							 TNC_Version minVersion,
@@ -50,8 +52,8 @@ struct imv_t {
 	 * the network connection identified by connectionID has changed to newState.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		Network connection ID assigned by TNCS
-	 * @param newState			New network connection state
+	 * @param connectionID		network connection ID assigned by TNCS
+	 * @param newState			new network connection state
 	 * @return					TNC result code
 	 */
 	TNC_Result (*notify_connection_change)(TNC_IMVID imvID,
@@ -64,7 +66,7 @@ struct imv_t {
 	 * recommendations from IMVs that have not yet provided a recommendation.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		Network connection ID assigned by TNCS
+	 * @param connectionID		network connection ID assigned by TNCS
 	 * @return					TNC result code
 	 */
 	TNC_Result (*solicit_recommendation)(TNC_IMVID imvID,
@@ -77,10 +79,10 @@ struct imv_t {
 	 * is indicated by messageType.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		Network connection ID assigned by TNCS
-	 * @param message			Reference to buffer containing message
-	 * @param messageLength		Number of octets in message
-	 * @param messageType		Message type of message
+	 * @param connectionID		network connection ID assigned by TNCS
+	 * @param message			reference to buffer containing message
+	 * @param messageLength		number of octets in message
+	 * @param messageType		message type of message
 	 * @return					TNC result code
 	 */
 	TNC_Result (*receive_message)(TNC_IMVID imvID,
@@ -95,7 +97,7 @@ struct imv_t {
 	 * to send a message in the batch of IMV messages currently being collected.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		Network connection ID assigned by TNCS
+	 * @param connectionID		network connection ID assigned by TNCS
 	 * @return					TNC result code
 	 */
 	TNC_Result (*batch_ending)(TNC_IMVID imvID,
@@ -117,7 +119,7 @@ struct imv_t {
 	 * pointers to any other TNCS functions.
 	 *
 	 * @param imvID				IMV ID assigned by TNCS
-	 * @param bindFunction		Pointer to TNC_TNCS_BindFunction
+	 * @param bindFunction		pointer to TNC_TNCS_BindFunction
 	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_bind_function)(TNC_IMVID imvID,
@@ -147,8 +149,8 @@ struct imv_t {
 	/**
 	 * Sets the supported message types of an imv_t object.
 	 *
-	 * @param supported_types	List of messages type supported by IMV
-	 * @param type_count		Number of supported message types
+	 * @param supported_types	list of messages type supported by IMV
+	 * @param type_count		number of supported message types
 	 */
 	void (*set_message_types)(imv_t *this, TNC_MessageTypeList supported_types,
 										   TNC_UInt32 type_count);

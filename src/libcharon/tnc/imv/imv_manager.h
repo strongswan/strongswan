@@ -35,8 +35,8 @@ struct imv_manager_t {
 	/**
 	 * Add an IMV instance
 	 *
-	 * @param imv			IMV instance
-	 * @return				TRUE if initialization successful
+	 * @param imv				IMV instance
+	 * @return					TRUE if initialization successful
 	 */
 	bool (*add)(imv_manager_t *this, imv_t *imv);
 
@@ -53,8 +53,8 @@ struct imv_manager_t {
 	 * Sets the supported message types reported by a given IMV
 	 *
 	 * @param id				ID of reporting IMV
-	 * @param supported_types	List of messages type supported by IMV
-	 * @param type_count		Number of supported message types
+	 * @param supported_types	list of messages type supported by IMV
+	 * @param type_count		number of supported message types
 	 * @return					TNC result code
 	 */
 	TNC_Result (*set_message_types)(imv_manager_t *this,

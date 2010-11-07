@@ -35,8 +35,8 @@ struct imc_manager_t {
 	/**
 	 * Add an IMC instance
 	 *
-	 * @param imc			IMC instance
-	 * @return				TRUE if initialization successful
+	 * @param imc				IMC instance
+	 * @return					TRUE if initialization successful
 	 */
 	 bool (*add)(imc_manager_t *this, imc_t *imc);
 
@@ -52,7 +52,7 @@ struct imc_manager_t {
 	/**
 	 * Begin a handshake between the IMCs and a connection
 	 *
-	 * @param id			Connection ID
+	 * @param id				Connection ID
 	 */
 	void (*begin_handshake)(imc_manager_t *this, TNC_ConnectionID id);
 
@@ -60,8 +60,8 @@ struct imc_manager_t {
 	 * Sets the supported message types reported by a given IMC
 	 *
 	 * @param id				ID of reporting IMC
-	 * @param supported_types	List of messages type supported by IMC
-	 * @param type_count		Number of supported message types
+	 * @param supported_types	list of messages type supported by IMC
+	 * @param type_count		number of supported message types
 	 * @return					TNC result code
 	 */
 	TNC_Result (*set_message_types)(imc_manager_t *this,

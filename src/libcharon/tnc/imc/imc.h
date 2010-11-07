@@ -22,11 +22,13 @@
 #define IMC_H_
 
 #include <tnc/tncifimc.h>
-
 #include <library.h>
 
-typedef struct imc_t imc_t;
+/typedef struct imc_t imc_t;
 
+/**
+ * Controls a single Integrity Measurement Collector (IMC)
+ */
 struct imc_t {
 
 	/**
@@ -35,9 +37,9 @@ struct imc_t {
 	 * identifier that the IMC must use when calling TNC Client callback functions.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @param minVersion		Minimum API version supported by TNCC
-	 * @param maxVersion		Maximum API version supported by TNCC
-	 * @param OutActualVersion	Mutually supported API version number
+	 * @param minVersion		minimum API version supported by TNCC
+	 * @param maxVersion		maximum API version supported by TNCC
+	 * @param OutActualVersion	mutually supported API version number
 	 * @return					TNC result code
 	 */
 	TNC_Result (*initialize)(TNC_IMCID imcID,
@@ -50,8 +52,8 @@ struct imc_t {
 	 * the network connection identified by connectionID has changed to newState.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @param connectionID		Network connection ID assigned by TNCC
-	 * @param newState			New network connection state
+	 * @param connectionID		network connection ID assigned by TNCC
+	 * @param newState			new network connection state
 	 * @return					TNC result code
 	 */
 	TNC_Result (*notify_connection_change)(TNC_IMCID imcID,
@@ -63,7 +65,7 @@ struct imc_t {
 	 * Handshake is beginning and solicit messages from IMCs for the first batch.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @param connectionID		Network connection ID assigned by TNCC
+	 * @param connectionID		network connection ID assigned by TNCC
 	 * @return					TNC result code
 	 */
 	TNC_Result (*begin_handshake)(TNC_IMCID imcID,
@@ -76,10 +78,10 @@ struct imc_t {
 	 * is indicated by messageType.
 	 *
 	 * @param imcID				IMC ID assigned by TNCS
-	 * @param connectionID		Network connection ID assigned by TNCC
-	 * @param message			Reference to buffer containing message
-	 * @param messageLength		Number of octets in message
-	 * @param messageType		Message type of message
+	 * @param connectionID		network connection ID assigned by TNCC
+	 * @param message			reference to buffer containing message
+	 * @param messageLength		number of octets in message
+	 * @param messageType		message type of message
 	 * @return					TNC result code
 	 */
 	TNC_Result (*receive_message)(TNC_IMCID imcID,
@@ -94,7 +96,7 @@ struct imc_t {
 	 * to send a message in the batch of IMC messages currently being collected.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @param connectionID		Network connection ID assigned by TNCC
+	 * @param connectionID		network connection ID assigned by TNCC
 	 * @return					TNC result code
 	 */
 	TNC_Result (*batch_ending)(TNC_IMCID imcID,
@@ -117,7 +119,7 @@ struct imc_t {
 	 * pointers to any other TNCS functions.
 	 *
 	 * @param imcID				IMC ID assigned by TNCC
-	 * @param bindFunction		Pointer to TNC_TNCC_BindFunction
+	 * @param bindFunction		pointer to TNC_TNCC_BindFunction
 	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_bind_function)(TNC_IMCID imcID,
@@ -147,8 +149,8 @@ struct imc_t {
 	/**
 	 * Sets the supported message types of an imc_t object.
 	 *
-	 * @param supported_types	List of messages type supported by IMC
-	 * @param type_count		Number of supported message types
+	 * @param supported_types	list of messages type supported by IMC
+	 * @param type_count		number of supported message types
 	 */
 	void (*set_message_types)(imc_t *this, TNC_MessageTypeList supported_types,
 										   TNC_UInt32 type_count);
