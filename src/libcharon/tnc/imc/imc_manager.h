@@ -49,6 +49,13 @@ struct imc_manager_t {
 	imc_t* (*remove)(imc_manager_t *this, TNC_IMCID id);
 
 	/**
+	 * Return the number of registered IMCs
+	 *
+	 * @return					number of IMCs
+	 */
+	int (*get_count)(imc_manager_t *this);
+
+	/**
 	 * Notify all IMC instances
 	 *
 	 * @param state			communicate the state a connection has reached

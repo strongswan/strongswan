@@ -93,6 +93,12 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	return NULL;
 }
 
+METHOD(imv_manager_t, get_count, int,
+	private_tnc_imv_manager_t *this)
+{
+	return this->imvs->get_count(this->imvs);
+}
+
 METHOD(imv_manager_t, notify_connection_change, void,
 	private_tnc_imv_manager_t *this, TNC_ConnectionID id,
 									 TNC_ConnectionState state)
@@ -185,6 +191,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.get_count = _get_count,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
 			.receive_message = _receive_message,

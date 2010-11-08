@@ -93,6 +93,12 @@ METHOD(imc_manager_t, remove_, imc_t*,
 	return NULL;
 }
 
+METHOD(imc_manager_t, get_count, int,
+	private_tnc_imc_manager_t *this)
+{
+	return this->imcs->get_count(this->imcs);
+}
+
 METHOD(imc_manager_t, notify_connection_change, void,
 	private_tnc_imc_manager_t *this, TNC_ConnectionID id,
 									 TNC_ConnectionState state)
@@ -199,6 +205,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.get_count = _get_count,
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,
 			.set_message_types = _set_message_types,

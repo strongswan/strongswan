@@ -49,6 +49,13 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
+	 * Return the number of registered IMVs
+	 *
+	 * @return					number of IMVs
+	 */
+	int (*get_count)(imv_manager_t *this);
+
+	/**
 	 * Notify all IMV instances
 	 *
 	 * @param state			communicate the state a connection has reached
