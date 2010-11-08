@@ -158,13 +158,15 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	private_tnccs_manager_t *this, tnccs_t *tnccs,
-	tnccs_send_message_t send_message)
+	tnccs_send_message_t send_message,
+	tnccs_provide_recommendation_t provide_recommendation)
 {
 	tnccs_connection_entry_t *entry = malloc_thing(tnccs_connection_entry_t);
 
 	entry->id = ++this->connection_id;
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
+	entry->provide_recommendation = provide_recommendation;
 
 	this->lock->write_lock(this->lock);
 	this->connections->insert_last(this->connections, entry);
