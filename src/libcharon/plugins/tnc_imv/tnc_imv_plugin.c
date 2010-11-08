@@ -47,15 +47,27 @@ plugin_t *tnc_imv_plugin_create()
 	/* Create IMV manager */
 	charon->imvs = tnc_imv_manager_create();
 
-	/* Create and register IMVs */
-	name = "Dummy";
-	filename = "/usr/local/lib/libdummyimv.so";
-	imv = tnc_imv_create(name, filename);
-	if (imv)
+	/**
+	 * Create, register and initialize IMVs
+	 * Abort if one of the IMVs fails to initialize successfully
+	 */
 	{
+		name = "Dummy";
+		filename = "/usr/local/lib/libdummyimv.so";
+		imv = tnc_imv_create(name, filename);
+
+		if (!imv)
+		{
+			charon->imvs->destroy(charon->imvs);
+			free(this);
+			return NULL;
+		}
 		if (!charon->imvs->add(charon->imvs, imv))
 		{
 			imv->destroy(imv);
+			charon->imvs->destroy(charon->imvs);
+			free(this);
+			return NULL;
 		}
 	}
 	return &this->plugin;

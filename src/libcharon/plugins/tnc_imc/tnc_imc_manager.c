@@ -90,11 +90,12 @@ METHOD(imc_manager_t, remove_, imc_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
+	return NULL;
 }
 
 METHOD(imc_manager_t, notify_connection_change, void,
 	private_tnc_imc_manager_t *this, TNC_ConnectionID id,
-	TNC_ConnectionState state)
+									 TNC_ConnectionState state)
 {
 	enumerator_t *enumerator;
 	imc_t *imc;
@@ -208,8 +209,5 @@ imc_manager_t* tnc_imc_manager_create(void)
 		.next_imc_id = 1,
 	);
 
-
 	return &this->public;
 }
-
-

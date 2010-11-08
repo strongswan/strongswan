@@ -49,15 +49,26 @@ plugin_t *tnc_imc_plugin_create()
 	/* Create IMC manager */
 	charon->imcs = tnc_imc_manager_create();
 
-	/* Create and register IMCs */
-	name = "Dummy";
-	filename = "/usr/local/lib/libdummyimc.so";
-	imc = tnc_imc_create(name, filename);
-	if (imc)
+	/**
+	 * Create, register and initialize IMCs
+	 * Abort if one of the IMCs fails to initialize successfully
+	 */
 	{
+		name = "Dummy";
+		filename = "/usr/local/lib/libdummyimc.so";
+		imc = tnc_imc_create(name, filename);
+		if (!imc)
+		{
+			charon->imcs->destroy(charon->imcs);
+			free(this);
+			return NULL;
+		}
 		if (!charon->imcs->add(charon->imcs, imc))
 		{
 			imc->destroy(imc);
+			charon->imcs->destroy(charon->imcs);
+			free(this);
+			return NULL;
 		}
 	}
 	return &this->plugin;

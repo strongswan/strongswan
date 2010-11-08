@@ -70,6 +70,7 @@ METHOD(imv_manager_t, add, bool,
 		this->imvs->remove_last(this->imvs, (void**)&imv);
 		return FALSE;
 	}
+
 	return TRUE;
 }
 
@@ -89,6 +90,7 @@ METHOD(imv_manager_t, remove_, imv_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
+	return NULL;
 }
 
 METHOD(imv_manager_t, notify_connection_change, void,
@@ -192,8 +194,5 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.next_imv_id = 1,
 	);
 
-
 	return &this->public;
 }
-
-

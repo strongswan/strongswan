@@ -46,7 +46,7 @@ struct imv_manager_t {
 	 * @param id				ID of IMV instance
 	 * @return					removed IMC instance
 	 */
-	void (*remove)(imv_manager_t *this, TNC_IMVID id);
+	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
 	 * Notify all IMV instances
