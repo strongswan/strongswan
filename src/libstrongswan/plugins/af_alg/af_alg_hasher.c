@@ -14,17 +14,7 @@
  */
 
 #include "af_alg_hasher.h"
-
-#include <unistd.h>
-#include <errno.h>
-#include <linux/socket.h>
-#include <linux/if_alg.h>
-
-#include <debug.h>
-
-#ifndef AF_ALG
-#define AF_ALG		38
-#endif /* AF_ALG */
+#include "af_alg_ops.h"
 
 typedef struct private_af_alg_hasher_t private_af_alg_hasher_t;
 
@@ -39,14 +29,9 @@ struct private_af_alg_hasher_t {
 	af_alg_hasher_t public;
 
 	/**
-	 * Transform fd
+	 * AF_ALG operations
 	 */
-	int tfm;
-
-	/**
-	 * Current operation fd, -1 if none
-	 */
-	int op;
+	af_alg_ops_t *ops;
 
 	/**
 	 * Size of the hash
@@ -57,7 +42,7 @@ struct private_af_alg_hasher_t {
 /**
  * Get the kernel algorithm string and hash size for our identifier
  */
-static size_t lookup_alg(hash_algorithm_t algo, char *name)
+static size_t lookup_alg(hash_algorithm_t algo, char **name)
 {
 	static struct {
 		hash_algorithm_t id;
@@ -78,7 +63,7 @@ static size_t lookup_alg(hash_algorithm_t algo, char *name)
 	{
 		if (algs[i].id == algo)
 		{
-			strcpy(name, algs[i].name);
+			*name = algs[i].name;
 			return algs[i].size;
 		}
 	}
@@ -94,50 +79,13 @@ METHOD(hasher_t, get_hash_size, size_t,
 METHOD(hasher_t, reset, void,
 	private_af_alg_hasher_t *this)
 {
-	if (this->op != -1)
-	{
-		close(this->op);
-		this->op = -1;
-	}
+	this->ops->reset(this->ops);
 }
 
 METHOD(hasher_t, get_hash, void,
 	private_af_alg_hasher_t *this, chunk_t chunk, u_int8_t *hash)
 {
-	ssize_t len;
-
-	while (this->op == -1)
-	{
-		this->op = accept(this->tfm, NULL, 0);
-		if (this->op == -1)
-		{
-			DBG1(DBG_LIB, "opening AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
-		}
-	}
-	do
-	{
-		len = send(this->op, chunk.ptr, chunk.len, hash ? 0 : MSG_MORE);
-		if (len == -1)
-		{
-			DBG1(DBG_LIB, "writing to AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
-		}
-		else
-		{
-			chunk = chunk_skip(chunk, len);
-		}
-	}
-	while (chunk.len);
-	if (hash)
-	{
-		while (read(this->op, hash, this->size) != this->size)
-		{
-			DBG1(DBG_LIB, "reading AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
-		}
-		reset(this);
-	}
+	this->ops->hash(this->ops, chunk, hash, this->size);
 }
 
 METHOD(hasher_t, allocate_hash, void,
@@ -157,11 +105,7 @@ METHOD(hasher_t, allocate_hash, void,
 METHOD(hasher_t, destroy, void,
 	private_af_alg_hasher_t *this)
 {
-	if (this->op != -1)
-	{
-		close(this->op);
-	}
-	close(this->tfm);
+	this->ops->destroy(this->ops);
 	free(this);
 }
 
@@ -171,13 +115,10 @@ METHOD(hasher_t, destroy, void,
 af_alg_hasher_t *af_alg_hasher_create(hash_algorithm_t algo)
 {
 	private_af_alg_hasher_t *this;
-	struct sockaddr_alg sa = {
-		.salg_family = AF_ALG,
-		.salg_type = "hash",
-	};
+	char *name;
 	size_t size;
 
-	size = lookup_alg(algo, sa.salg_name);
+	size = lookup_alg(algo, &name);
 	if (!size)
 	{	/* not supported by kernel */
 		return NULL;
@@ -193,22 +134,12 @@ af_alg_hasher_t *af_alg_hasher_create(hash_algorithm_t algo)
 				.destroy = _destroy,
 			},
 		},
-		.tfm = socket(AF_ALG, SOCK_SEQPACKET, 0),
-		.op = -1,
+		.ops = af_alg_ops_create("hash", name),
 		.size = size,
 	);
-
-	if (this->tfm == -1)
+	if (!this->ops)
 	{
-		DBG1(DBG_LIB, "opening AF_ALG socket failed: %s", strerror(errno));
 		free(this);
-		return NULL;
-	}
-	if (bind(this->tfm, (struct sockaddr*)&sa, sizeof(sa)) == -1)
-	{
-		DBG1(DBG_LIB, "binding AF_ALG socket for '%s' failed: %s",
-			 sa.salg_name, strerror(errno));
-		destroy(this);
 		return NULL;
 	}
 	return &this->public;
