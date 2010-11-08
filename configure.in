@@ -607,10 +607,6 @@ if test x$gcrypt = xtrue; then
 	)
 fi
 
-if test x$tnccs_11 = xtrue -o x$tnc_imc = xtrue -o x$tnc_imv = xtrue; then
-	AC_CHECK_HEADER([libtnc.h],,[AC_MSG_ERROR([libtnc header libtnc.h not found!])])
-fi
-
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
