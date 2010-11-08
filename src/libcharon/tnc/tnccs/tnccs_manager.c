@@ -58,6 +58,11 @@ struct tnccs_connection_entry_t {
 	 *
 	 */
 	tnccs_send_message_t send_message;
+
+	/** TNCS provide recommendation function
+	 *
+	 */
+	tnccs_provide_recommendation_t provide_recommendation;
 };
 
 /**
@@ -198,7 +203,7 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
-	tnccs_send_message_t send_message;
+	tnccs_send_message_t send_message = NULL;
 	tnccs_t *tnccs = NULL;
 
 	this->lock->write_lock(this->lock);
@@ -215,9 +220,42 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (tnccs)
+	if (tnccs && send_message)
 	{
 		send_message(tnccs, message, message_len, message_type);
+		return TNC_RESULT_SUCCESS;
+	 }
+	return TNC_RESULT_FATAL;
+}
+
+METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
+	private_tnccs_manager_t *this, TNC_IMVID imv_id,
+								   TNC_ConnectionID id,
+								   TNC_IMV_Action_Recommendation recommendation,
+								   TNC_IMV_Evaluation_Result evaluation)
+{
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+	tnccs_provide_recommendation_t provide_recommendation = NULL;
+	tnccs_t *tnccs = NULL;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == entry->id)
+		{
+			tnccs = entry->tnccs;
+			provide_recommendation = entry->provide_recommendation;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	if (tnccs && provide_recommendation)
+	{
+		provide_recommendation(tnccs, imv_id, recommendation, evaluation);
 		return TNC_RESULT_SUCCESS;
 	 }
 	return TNC_RESULT_FATAL;
@@ -247,6 +285,7 @@ tnccs_manager_t *tnccs_manager_create()
 				.create_connection = _create_connection,
 				.remove_connection = _remove_connection,
 				.send_message = _send_message,
+				.provide_recommendation = _provide_recommendation,
 				.destroy = _destroy,
 			},
 			.protocols = linked_list_create(),

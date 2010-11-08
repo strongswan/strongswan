@@ -22,6 +22,7 @@
 #define TNCCS_H_
 
 #include <tnc/tncif.h>
+#include <tnc/tncifimv.h>
 #include <library.h>
 
 typedef enum tnccs_type_t tnccs_type_t;
@@ -53,13 +54,27 @@ typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
 /**
  * Callback function adding a message to a TNCCS batch
  *
- * @param message		message to be added
- * @param message_len	message length
- * @param message_type	message type
+ * @param message			message to be added
+ * @param message_len		message length
+ * @param message_type		message type
  */
 typedef void (*tnccs_send_message_t)(tnccs_t* tncss,
 									 TNC_BufferReference message,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type);
+
+
+/**
+ * Callback function delivering an IMV Action Recommendation and
+ * IMV Evaluation Result to the TNCS
+ *
+ * @param imv_id			ID of the IMV providing the recommendation
+ * @param recommendation	action recommendation
+ * @param evaluation		evaluation result
+ */
+typedef void (*tnccs_provide_recommendation_t)(tnccs_t* tncss,
+								TNC_IMVID imv_id,
+								TNC_IMV_Action_Recommendation recommendation,
+								TNC_IMV_Evaluation_Result evaluation);
 
 #endif /** TNCCS_H_ @}*/

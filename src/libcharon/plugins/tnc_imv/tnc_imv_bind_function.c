@@ -67,7 +67,8 @@ TNC_Result TNC_TNCS_ProvideRecommendation(TNC_IMVID imv_id,
 								TNC_IMV_Evaluation_Result evaluation)
 {
 	DBG2(DBG_TNC,"TNCS_ProvideRecommendation %u %u", imv_id, connection_id);
-	return TNC_RESULT_SUCCESS;
+	return charon->tnccs->provide_recommendation(charon->tnccs, imv_id,
+							connection_id, recommendation, evaluation);
 }
 
 /**

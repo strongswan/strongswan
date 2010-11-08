@@ -61,14 +61,18 @@ struct tnccs_manager_t {
 								bool is_server);
 
 	/**
-	 * Create a TNCCS connection and assign a unique connection ID
+	 * Create a TNCCS connection and assign a unique connection ID as well as
+	 * callback functions for adding a message to a TNCCS batch and delivering
+	 * an IMV recommendation, respectively
 	 *
-	 * @param tnccs			TNCCS connection instance
-	 * @param send_message	callback function adding a message to a TNCCS batch
-	 * @return				assigned connection ID
+	 * @param tnccs						TNCCS connection instance
+	 * @param send_message				TNCCS callback function 
+	 * @param provide_recommendation	TNCS callback function 
+	 * @return							assigned connection ID
 	 */
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
-										  tnccs_send_message_t send_message);
+						 tnccs_send_message_t send_message,
+						 tnccs_provide_recommendation_t provide_recommendation);
 
 	/**
 	 * Remove a TNCCS connection using its connection ID.
@@ -91,6 +95,20 @@ struct tnccs_manager_t {
 							   TNC_BufferReference message,
 							   TNC_UInt32 message_len,
 							   TNC_MessageType message_type);
+
+	/**
+	 * Deliver an IMV Action Recommendation and IMV Evaluation Result to the TNCS
+	 *
+	 * @param imv_id			ID of the IMV providing the recommendation
+	 * @param connection_id		target connection ID
+	 * @param recommendation	action recommendation
+	 * @param evaluation		evaluation result
+	 */
+	TNC_Result (*provide_recommendation)(tnccs_manager_t *this,
+								TNC_IMVID imv_id,
+								TNC_ConnectionID connection_id,
+								TNC_IMV_Action_Recommendation recommendation,
+								TNC_IMV_Evaluation_Result evaluation);
 
 	/**
 	 * Destroy a tnccs_manager instance.

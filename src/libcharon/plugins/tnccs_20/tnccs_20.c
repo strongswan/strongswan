@@ -60,6 +60,14 @@ METHOD(tnccs_t, send_message, void,
 	this->batch = chunk_cat("mc", batch, msg);
 }
 
+METHOD(tnccs_t, provide_recommendation, void,
+	private_tnccs_20_t* this, TNC_IMVID imv_id,
+							  TNC_IMV_Action_Recommendation recommendation,
+							  TNC_IMV_Evaluation_Result evaluation)
+{
+	DBG1(DBG_TNC, "TNCCS 2.0 provide recommendation");
+}
+
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
@@ -69,7 +77,8 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-												(tnccs_t*)this, _send_message);
+										(tnccs_t*)this,
+						 				_send_message, _provide_recommendation);
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 	}
@@ -111,7 +120,7 @@ METHOD(tls_t, build, status_t,
 	if (!this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-												(tnccs_t*)this, _send_message);
+										(tnccs_t*)this, _send_message, NULL);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
