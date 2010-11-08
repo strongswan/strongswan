@@ -175,6 +175,23 @@ METHOD(imc_manager_t, receive_message, void,
 	enumerator->destroy(enumerator);
 }
 
+METHOD(imc_manager_t, batch_ending, void,
+	private_tnc_imc_manager_t *this, TNC_ConnectionID id)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (imc->batch_ending)
+		{
+			imc->batch_ending(imc->get_id(imc), id);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(imc_manager_t, destroy, void,
 	private_tnc_imc_manager_t *this)
 {
@@ -210,6 +227,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 			.begin_handshake = _begin_handshake,
 			.set_message_types = _set_message_types,
 			.receive_message = _receive_message,
+			.batch_ending = _batch_ending,
 			.destroy = _destroy,
         },
 		.imcs = linked_list_create(),

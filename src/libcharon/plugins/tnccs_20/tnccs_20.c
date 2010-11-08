@@ -100,11 +100,13 @@ METHOD(tls_t, process, status_t,
 	{
 		charon->imvs->receive_message(charon->imvs, this->connection_id,
 									  pos, len, 0x0080ab31);
+		charon->imvs->batch_ending(charon->imvs, this->connection_id);
 	}
 	else
 	{
 		charon->imcs->receive_message(charon->imcs, this->connection_id,
 									  pos, len, 0x0080ab31);
+		charon->imcs->batch_ending(charon->imcs, this->connection_id);
 	}
 	return NEED_MORE;
 }

@@ -140,6 +140,20 @@ METHOD(imv_manager_t, set_message_types, TNC_Result,
 	return result;
 }
 
+METHOD(imv_manager_t, solicit_recommendation, void,
+	private_tnc_imv_manager_t *this, TNC_ConnectionID id)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		imv->solicit_recommendation(imv->get_id(imv), id);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(imv_manager_t, receive_message, void,
 	private_tnc_imv_manager_t *this, TNC_ConnectionID connection_id,
 									 TNC_BufferReference message,
@@ -156,6 +170,23 @@ METHOD(imv_manager_t, receive_message, void,
 		{
 			imv->receive_message(imv->get_id(imv), connection_id,
 								 message, message_len, message_type);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(imv_manager_t, batch_ending, void,
+	private_tnc_imv_manager_t *this, TNC_ConnectionID id)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		if (imv->batch_ending)
+		{
+			imv->batch_ending(imv->get_id(imv), id);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -194,7 +225,9 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.get_count = _get_count,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
+			.solicit_recommendation = _solicit_recommendation,
 			.receive_message = _receive_message,
+			.batch_ending = _batch_ending,
 			.destroy = _destroy,
         },
 		.imvs = linked_list_create(),

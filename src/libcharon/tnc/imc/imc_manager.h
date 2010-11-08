@@ -67,7 +67,7 @@ struct imc_manager_t {
 	/**
 	 * Begin a handshake between the IMCs and a connection
 	 *
-	 * @param id				Connection ID
+	 * @param id				connection ID
 	 */
 	void (*begin_handshake)(imc_manager_t *this, TNC_ConnectionID id);
 
@@ -97,6 +97,15 @@ struct imc_manager_t {
 							TNC_BufferReference message,
 							TNC_UInt32 message_len,
 							TNC_MessageType message_type);
+
+	/**
+	 * Notify all IMCs that all IMV messages received in a batch have been
+	 * delivered and this is the IMCs last chance to send a message in the
+	 * batch of IMC messages currently being collected.
+	 *
+	 * @param id				connection ID
+	 */
+	void (*batch_ending)(imc_manager_t *this, TNC_ConnectionID id);
 
 	/**
 	 * Destroy an IMC manager and all its controlled instances.

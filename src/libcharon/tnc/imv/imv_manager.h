@@ -78,6 +78,13 @@ struct imv_manager_t {
 									TNC_UInt32 type_count);
 
 	/**
+	 * Solicit recommendations from IMVs that have not yet provided one
+	 *
+	 * @param id				connection ID
+	 */
+	void (*solicit_recommendation)(imv_manager_t *this, TNC_ConnectionID id);
+
+	/**
 	 * Delivers a message to interested IMVs.
 	 *
 	 * @param connection_id		ID of connection over which message was received
@@ -90,6 +97,15 @@ struct imv_manager_t {
 							TNC_BufferReference message,
 							TNC_UInt32 message_len,
 							TNC_MessageType message_type);
+
+	/**
+	 * Notify all IMVs that all IMC messages received in a batch have been
+	 * delivered and this is the IMVs last chance to send a message in the
+	 * batch of IMV messages currently being collected.
+	 *
+	 * @param id				connection ID
+	 */
+	void (*batch_ending)(imv_manager_t *this, TNC_ConnectionID id);
 
 	/**
 	 * Destroy an IMV manager and all its controlled instances.
