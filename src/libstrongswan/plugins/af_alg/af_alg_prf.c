@@ -50,24 +50,48 @@ struct private_af_alg_prf_t {
 };
 
 /**
+ * Algorithm database
+ */
+static struct {
+	pseudo_random_function_t id;
+	char *name;
+	size_t block_size;
+	bool xcbc;
+} algs[] = {
+	{PRF_HMAC_SHA1,			"hmac(sha1)",		20,		FALSE,	},
+	{PRF_HMAC_SHA2_256,		"hmac(sha256)",		32,		FALSE,	},
+	{PRF_HMAC_MD5,			"hmac(md5)",		16,		FALSE,	},
+	{PRF_HMAC_SHA2_384,		"hmac(sha384)",		48,		FALSE,	},
+	{PRF_HMAC_SHA2_512,		"hmac(sha512)",		64,		FALSE,	},
+	{PRF_AES128_XCBC,		"xcbc(aes)",		16,		TRUE,	},
+	{PRF_CAMELLIA128_XCBC,	"xcbc(camellia)",	16,		TRUE,	},
+};
+
+/**
+ * See header.
+ */
+void af_alg_prf_probe()
+{
+	af_alg_ops_t *ops;
+	int i;
+
+	for (i = 0; i < countof(algs); i++)
+	{
+		ops = af_alg_ops_create("hash", algs[i].name);
+		if (ops)
+		{
+			ops->destroy(ops);
+			lib->crypto->add_prf(lib->crypto, algs[i].id, "af_alg",
+							(prf_constructor_t)af_alg_prf_create);
+		}
+	}
+}
+
+/**
  * Get the kernel algorithm string and block size for our identifier
  */
 static size_t lookup_alg(integrity_algorithm_t algo, char **name, bool *xcbc)
 {
-	static struct {
-		integrity_algorithm_t id;
-		char *name;
-		size_t block_size;
-		bool xcbc;
-	} algs[] = {
-		{PRF_HMAC_MD5,			"hmac(md5)",		16,		FALSE,	},
-		{PRF_HMAC_SHA1,			"hmac(sha1)",		20,		FALSE,	},
-		{PRF_HMAC_SHA2_256,		"hmac(sha256)",		32,		FALSE,	},
-		{PRF_HMAC_SHA2_384,		"hmac(sha384)",		48,		FALSE,	},
-		{PRF_HMAC_SHA2_512,		"hmac(sha512)",		64,		FALSE,	},
-		{PRF_AES128_XCBC,		"xcbc(aes)",		16,		TRUE,	},
-		{PRF_CAMELLIA128_XCBC,	"xcbc(camellia)",	16,		TRUE,	},
-	};
 	int i;
 
 	for (i = 0; i < countof(algs); i++)

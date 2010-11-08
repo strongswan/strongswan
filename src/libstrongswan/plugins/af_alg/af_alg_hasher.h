@@ -44,4 +44,9 @@ struct af_alg_hasher_t {
  */
 af_alg_hasher_t *af_alg_hasher_create(hash_algorithm_t algo);
 
+/**
+ * Probe algorithms and register af_alg_hasher_create().
+ */
+void af_alg_hasher_probe();
+
 #endif /** af_alg_HASHER_H_ @}*/

@@ -40,23 +40,47 @@ struct private_af_alg_hasher_t {
 };
 
 /**
+ * Algorithm database
+ */
+static struct {
+	hash_algorithm_t id;
+	char *name;
+	size_t size;
+} algs[] = {
+	{HASH_SHA1,			"sha1",			HASH_SIZE_SHA1		},
+	{HASH_MD5,			"md5",			HASH_SIZE_MD5 		},
+	{HASH_SHA224,		"sha224",		HASH_SIZE_SHA224	},
+	{HASH_SHA256,		"sha256",		HASH_SIZE_SHA256	},
+	{HASH_SHA384,		"sha384",		HASH_SIZE_SHA384	},
+	{HASH_SHA512,		"sha512",		HASH_SIZE_SHA512	},
+	{HASH_MD4,			"md4",			HASH_SIZE_MD4 		},
+};
+
+/**
+ * See header.
+ */
+void af_alg_hasher_probe()
+{
+	af_alg_ops_t *ops;
+	int i;
+
+	for (i = 0; i < countof(algs); i++)
+	{
+		ops = af_alg_ops_create("hash", algs[i].name);
+		if (ops)
+		{
+			ops->destroy(ops);
+			lib->crypto->add_hasher(lib->crypto, algs[i].id, "af_alg",
+							(hasher_constructor_t)af_alg_hasher_create);
+		}
+	}
+}
+
+/**
  * Get the kernel algorithm string and hash size for our identifier
  */
 static size_t lookup_alg(hash_algorithm_t algo, char **name)
 {
-	static struct {
-		hash_algorithm_t id;
-		char *name;
-		size_t size;
-	} algs[] = {
-		{HASH_MD4 ,			"md4",			HASH_SIZE_MD4 		},
-		{HASH_MD5 ,			"md5",			HASH_SIZE_MD5 		},
-		{HASH_SHA1,			"sha1",			HASH_SIZE_SHA1		},
-		{HASH_SHA224,		"sha224",		HASH_SIZE_SHA224	},
-		{HASH_SHA256,		"sha256",		HASH_SIZE_SHA256	},
-		{HASH_SHA384,		"sha384",		HASH_SIZE_SHA384	},
-		{HASH_SHA512,		"sha512",		HASH_SIZE_SHA512	},
-	};
 	int i;
 
 	for (i = 0; i < countof(algs); i++)

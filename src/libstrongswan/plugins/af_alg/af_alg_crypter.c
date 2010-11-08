@@ -50,46 +50,75 @@ struct private_af_alg_crypter_t {
 };
 
 /**
+ * Algorithm database
+ */
+static struct {
+	encryption_algorithm_t id;
+	char *name;
+	size_t block_size;
+	/* key size of the algorithm */
+	size_t key_size;
+	/* size of the keying material (key + nonce for ctr mode) */
+	size_t keymat_size;
+	size_t iv_size;
+} algs[] = {
+	{ENCR_DES,			"cbc(des)",					 8,	 8,	 8,	 8,	},
+	{ENCR_3DES,			"cbc(des3_ede)",			 8,	24,	24,	 8,	},
+	{ENCR_AES_CBC,		"cbc(aes)",					16,	16,	16,	16,	},
+	{ENCR_AES_CBC,		"cbc(aes)",					16,	24,	24,	16,	},
+	{ENCR_AES_CBC,		"cbc(aes)",					16,	32,	32,	16,	},
+	{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	16,	20,	 8,	},
+	{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	24,	28,	 8,	},
+	{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	32,	36,	 8,	},
+	{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	16,	16,	16,	},
+	{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	24,	24,	16,	},
+	{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	32,	32,	16,	},
+	{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	16,	20,	 8,	},
+	{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	24,	28,	 8,	},
+	{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	32,	36,	 8,	},
+	{ENCR_CAST,			"cbc(cast5)",				 8,	16,	16,	 8,	},
+	{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	16,	16,	 8,	},
+	{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	24,	24,	 8,	},
+	{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	32,	32,	 8,	},
+	{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	16,	16,	16,	},
+	{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	24,	24,	16,	},
+	{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	32,	32,	16,	},
+	{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	16,	16,	16,	},
+	{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	24,	24,	16,	},
+	{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	32,	32,	16,	},
+};
+
+/**
+ * See header.
+ */
+void af_alg_crypter_probe()
+{
+	encryption_algorithm_t prev = -1;
+	af_alg_ops_t *ops;
+	int i;
+
+	for (i = 0; i < countof(algs); i++)
+	{
+		if (prev != algs[i].id)
+		{
+			ops = af_alg_ops_create("skcipher", algs[i].name);
+			if (ops)
+			{
+				ops->destroy(ops);
+				lib->crypto->add_crypter(lib->crypto, algs[i].id, "af_alg",
+								(crypter_constructor_t)af_alg_crypter_create);
+			}
+		}
+		prev = algs[i].id;
+	}
+}
+
+/**
  * Get the kernel algorithm string and block/key size for our identifier
  */
 static size_t lookup_alg(encryption_algorithm_t algo, char **name,
 						 size_t key_size, size_t *keymat_size, size_t *iv_size)
 {
-	static struct {
-		encryption_algorithm_t id;
-		char *name;
-		size_t block_size;
-		/* key size of the algorithm */
-		size_t key_size;
-		/* size of the keying material (key + nonce for ctr mode) */
-		size_t keymat_size;
-		size_t iv_size;
-	} algs[] = {
-		{ENCR_DES,			"cbc(des)",					 8,	 8,	 8,	 8,	},
-		{ENCR_3DES,			"cbc(des3_ede)",			 8,	24,	24,	 8,	},
-		{ENCR_AES_CBC,		"cbc(aes)",					16,	16,	16,	16,	},
-		{ENCR_AES_CBC,		"cbc(aes)",					16,	24,	24,	16,	},
-		{ENCR_AES_CBC,		"cbc(aes)",					16,	32,	32,	16,	},
-		{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	16,	20,	 8,	},
-		{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	24,	28,	 8,	},
-		{ENCR_AES_CTR,		"rfc3686(ctr(aes))",		 1,	32,	36,	 8,	},
-		{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	16,	16,	16,	},
-		{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	24,	24,	16,	},
-		{ENCR_CAMELLIA_CBC,	"cbc(camellia)",			16,	32,	32,	16,	},
-		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	16,	20,	 8,	},
-		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	24,	28,	 8,	},
-		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	32,	36,	 8,	},
-		{ENCR_CAST,			"cbc(cast5)",				 8,	16,	16,	 8,	},
-		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	16,	16,	 8,	},
-		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	24,	24,	 8,	},
-		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	32,	32,	 8,	},
-		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	16,	16,	16,	},
-		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	24,	24,	16,	},
-		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	32,	32,	16,	},
-		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	16,	16,	16,	},
-		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	24,	24,	16,	},
-		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	32,	32,	16,	},
-	};
 	int i;
 
 	for (i = 0; i < countof(algs); i++)

@@ -65,83 +65,10 @@ plugin_t *af_alg_plugin_create()
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
-					(hasher_constructor_t)af_alg_hasher_create);
-
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_96,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
-					(signer_constructor_t)af_alg_signer_create);
-
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA1,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_384,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_512,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC,
-					(prf_constructor_t)af_alg_prf_create);
-
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC,
-					(crypter_constructor_t)af_alg_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
-					(crypter_constructor_t)af_alg_crypter_create);
+	af_alg_hasher_probe();
+	af_alg_signer_probe();
+	af_alg_prf_probe();
+	af_alg_crypter_probe();
 
 	return &this->public.plugin;
 }

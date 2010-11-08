@@ -44,4 +44,9 @@ struct af_alg_prf_t {
  */
 af_alg_prf_t *af_alg_prf_create(pseudo_random_function_t algo);
 
+/**
+ * Probe algorithms and register af_alg_prf_create().
+ */
+void af_alg_prf_probe();
+
 #endif /** AF_ALG_PRF_H_ @}*/

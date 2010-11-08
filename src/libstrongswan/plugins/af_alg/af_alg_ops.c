@@ -212,8 +212,11 @@ af_alg_ops_t *af_alg_ops_create(char *type, char *alg)
 	}
 	if (bind(this->tfm, (struct sockaddr*)&sa, sizeof(sa)) == -1)
 	{
-		DBG1(DBG_LIB, "binding AF_ALG socket for '%s' failed: %s",
-			 sa.salg_name, strerror(errno));
+		if (errno != ENOENT)
+		{	/* fail silently if algorithm not supported */
+			DBG1(DBG_LIB, "binding AF_ALG socket for '%s' failed: %s",
+				 sa.salg_name, strerror(errno));
+		}
 		destroy(this);
 		return NULL;
 	}

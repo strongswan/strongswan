@@ -44,4 +44,9 @@ struct af_alg_signer_t {
  */
 af_alg_signer_t *af_alg_signer_create(integrity_algorithm_t algo);
 
+/**
+ * Probe algorithms and register af_alg_signer_create().
+ */
+void af_alg_signer_probe();
+
 #endif /** AF_ALG_SIGNER_H_ @}*/
