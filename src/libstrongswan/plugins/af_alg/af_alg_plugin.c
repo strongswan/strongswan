@@ -134,6 +134,14 @@ plugin_t *af_alg_plugin_create()
 					(crypter_constructor_t)af_alg_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR,
 					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC,
+					(crypter_constructor_t)af_alg_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
+					(crypter_constructor_t)af_alg_crypter_create);
 
 	return &this->public.plugin;
 }

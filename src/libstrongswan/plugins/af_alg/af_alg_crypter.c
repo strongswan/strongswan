@@ -79,6 +79,16 @@ static size_t lookup_alg(encryption_algorithm_t algo, char **name,
 		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	16,	20,	 8,	},
 		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	24,	28,	 8,	},
 		{ENCR_CAMELLIA_CTR,	"rfc3686(ctr(camellia))",	 1,	32,	36,	 8,	},
+		{ENCR_CAST,			"cbc(cast5)",				 8,	16,	16,	 8,	},
+		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	16,	16,	 8,	},
+		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	24,	24,	 8,	},
+		{ENCR_BLOWFISH,		"cbc(blowfish)",			 8,	32,	32,	 8,	},
+		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	16,	16,	16,	},
+		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	24,	24,	16,	},
+		{ENCR_SERPENT_CBC,	"cbc(serpent)",				16,	32,	32,	16,	},
+		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	16,	16,	16,	},
+		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	24,	24,	16,	},
+		{ENCR_TWOFISH_CBC,	"cbc(twofish)",				16,	32,	32,	16,	},
 	};
 	int i;
 
