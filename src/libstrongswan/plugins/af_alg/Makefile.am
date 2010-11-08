@@ -14,6 +14,7 @@ libstrongswan_af_alg_la_SOURCES = \
 	af_alg_ops.h af_alg_ops.c \
 	af_alg_hasher.h af_alg_hasher.c \
 	af_alg_signer.h af_alg_signer.c \
+	af_alg_prf.h af_alg_prf.c \
 	af_alg_crypter.h af_alg_crypter.c
 
 libstrongswan_af_alg_la_LDFLAGS = -module -avoid-version
