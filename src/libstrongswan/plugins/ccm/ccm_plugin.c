@@ -49,23 +49,34 @@ METHOD(plugin_t, destroy, void,
 plugin_t *ccm_plugin_create()
 {
 	private_ccm_plugin_t *this;
+	crypter_t *crypter;
 
 	INIT(this,
 		.public.plugin.destroy = _destroy,
 	);
 
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV8, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV12, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV16, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV8, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV12, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV16, plugin_name,
-					(aead_constructor_t)ccm_aead_create);
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 0);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV8, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV12, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV16, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+	}
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 0);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV8, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV12, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV16, plugin_name,
+						(aead_constructor_t)ccm_aead_create);
+	}
 
 	return &this->public.plugin;
 }

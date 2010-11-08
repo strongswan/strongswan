@@ -47,6 +47,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *fips_prf_plugin_create()
 {
 	private_fips_prf_plugin_t *this;
+	prf_t *prf;
 
 	INIT(this,
 		.public = {
@@ -56,8 +57,13 @@ plugin_t *fips_prf_plugin_create()
 		},
 	);
 
-	lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160, plugin_name,
-						 (prf_constructor_t)fips_prf_create);
+	prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);
+	if (prf)
+	{
+		prf->destroy(prf);
+		lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160, plugin_name,
+							 (prf_constructor_t)fips_prf_create);
+	}
 
 	return &this->public.plugin;
 }

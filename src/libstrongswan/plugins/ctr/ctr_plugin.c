@@ -49,6 +49,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *ctr_plugin_create()
 {
 	private_ctr_plugin_t *this;
+	crypter_t *crypter;
 
 	INIT(this,
 		.public = {
@@ -58,10 +59,19 @@ plugin_t *ctr_plugin_create()
 		},
 	);
 
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, plugin_name,
-					(crypter_constructor_t)ctr_ipsec_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, plugin_name,
-					(crypter_constructor_t)ctr_ipsec_crypter_create);
-
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, plugin_name,
+						(crypter_constructor_t)ctr_ipsec_crypter_create);
+	}
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 16);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, plugin_name,
+						(crypter_constructor_t)ctr_ipsec_crypter_create);
+	}
 	return &this->public.plugin;
 }
