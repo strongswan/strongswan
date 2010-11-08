@@ -41,6 +41,14 @@ struct imc_manager_t {
 	 bool (*add)(imc_manager_t *this, imc_t *imc);
 
 	/**
+	 * Remove an IMC instance from the list and return it
+	 *
+	 * @param id				ID of IMC instance
+	 * @return					removed IMC instance
+	 */
+	imc_t* (*remove)(imc_manager_t *this, TNC_IMCID id);
+
+	/**
 	 * Notify all IMC instances
 	 *
 	 * @param state			communicate the state a connection has reached

@@ -67,10 +67,29 @@ METHOD(imc_manager_t, add, bool,
 	{
 		DBG1(DBG_TNC, "could not provide bind function for IMC '%s'",
 					   imc->get_name(imc));
+		this->imcs->remove_last(this->imcs, (void**)&imc);
 		return FALSE;
 	}
 
 	return TRUE;
+}
+
+METHOD(imc_manager_t, remove_, imc_t*,
+	private_tnc_imc_manager_t *this, TNC_IMCID id)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (id == imc->get_id(imc))
+		{
+			this->imcs->remove_at(this->imcs, enumerator);
+			return imc;
+		}
+	}
+	enumerator->destroy(enumerator);
 }
 
 METHOD(imc_manager_t, notify_connection_change, void,
@@ -178,6 +197,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 	INIT(this,
 		.public = {
 			.add = _add,
+			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,
 			.set_message_types = _set_message_types,

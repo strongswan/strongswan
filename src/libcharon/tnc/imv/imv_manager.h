@@ -41,6 +41,14 @@ struct imv_manager_t {
 	bool (*add)(imv_manager_t *this, imv_t *imv);
 
 	/**
+	 * Remove an IMV instance from the list and return it
+	 *
+	 * @param id				ID of IMV instance
+	 * @return					removed IMC instance
+	 */
+	void (*remove)(imv_manager_t *this, TNC_IMVID id);
+
+	/**
 	 * Notify all IMV instances
 	 *
 	 * @param state			communicate the state a connection has reached

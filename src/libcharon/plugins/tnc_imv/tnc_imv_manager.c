@@ -67,9 +67,28 @@ METHOD(imv_manager_t, add, bool,
 	{
 		DBG1(DBG_TNC, "could not provide bind function for IMV '%s'",
 					   imv->get_name(imv));
+		this->imvs->remove_last(this->imvs, (void**)&imv);
 		return FALSE;
 	}
 	return TRUE;
+}
+
+METHOD(imv_manager_t, remove_, imv_t*,
+	private_tnc_imv_manager_t *this, TNC_IMVID id)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		if (id == imv->get_id(imv))
+		{
+			this->imvs->remove_at(this->imvs, enumerator);
+			return imv;
+		}
+	}
+	enumerator->destroy(enumerator);
 }
 
 METHOD(imv_manager_t, notify_connection_change, void,
@@ -163,6 +182,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 	INIT(this,
 		.public = {
 			.add = _add,
+			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
 			.receive_message = _receive_message,
