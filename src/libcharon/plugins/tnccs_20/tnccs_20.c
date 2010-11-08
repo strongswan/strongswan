@@ -78,7 +78,7 @@ METHOD(tls_t, process, status_t,
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
 										(tnccs_t*)this,
-						 				_send_message, _provide_recommendation);
+										_send_message, _provide_recommendation);
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 	}

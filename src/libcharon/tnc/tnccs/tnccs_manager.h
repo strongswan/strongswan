@@ -66,8 +66,8 @@ struct tnccs_manager_t {
 	 * an IMV recommendation, respectively
 	 *
 	 * @param tnccs						TNCCS connection instance
-	 * @param send_message				TNCCS callback function 
-	 * @param provide_recommendation	TNCS callback function 
+	 * @param send_message				TNCCS callback function
+	 * @param provide_recommendation	TNCS callback function
 	 * @return							assigned connection ID
 	 */
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
