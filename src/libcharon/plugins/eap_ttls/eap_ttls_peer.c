@@ -196,6 +196,7 @@ METHOD(tls_application_t, process, status_t,
 			in->destroy(in);
 			return NEED_MORE;
 		}
+		this->start_phase2 = FALSE;
 	}
 
 	type = this->method->get_type(this->method, &vendor);
