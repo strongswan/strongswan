@@ -897,6 +897,10 @@ METHOD(task_manager_t, process_message, status_t,
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);
+			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
+			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
+				return SUCCESS;
+			}
 			if (process_request(this, msg) != SUCCESS)
 			{
 				flush(this);
@@ -938,6 +942,10 @@ METHOD(task_manager_t, process_message, status_t,
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);
+			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
+			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
+				return SUCCESS;
+			}
 			if (process_response(this, msg) != SUCCESS)
 			{
 				flush(this);
