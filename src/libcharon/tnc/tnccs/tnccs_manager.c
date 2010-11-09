@@ -81,6 +81,11 @@ struct private_tnccs_manager_t {
 	linked_list_t *protocols;
 
 	/**
+	 * rwlock to lock the TNCCS protocol entries
+	 */
+	rwlock_t *protocol_lock;
+
+	/**
 	 * connection ID counter
 	 */
 	TNC_ConnectionID connection_id;
@@ -91,9 +96,9 @@ struct private_tnccs_manager_t {
 	linked_list_t *connections;
 
 	/**
-	 * rwlock to lock TNCCS protocol and connection entries
+	 * rwlock to lock TNCCS connection entries
 	 */
-	rwlock_t *lock;
+	rwlock_t *connection_lock;
 
 };
 
@@ -101,14 +106,15 @@ METHOD(tnccs_manager_t, add_method, void,
 	private_tnccs_manager_t *this, tnccs_type_t type,
 	tnccs_constructor_t constructor)
 {
-	tnccs_entry_t *entry = malloc_thing(tnccs_entry_t);
+	tnccs_entry_t *entry;
 
+	entry = malloc_thing(tnccs_entry_t);
 	entry->type = type;
 	entry->constructor = constructor;
 
-	this->lock->write_lock(this->lock);
+	this->protocol_lock->write_lock(this->protocol_lock);
 	this->protocols->insert_last(this->protocols, entry);
-	this->lock->unlock(this->lock);
+	this->protocol_lock->unlock(this->protocol_lock);
 }
 
 METHOD(tnccs_manager_t, remove_method, void,
@@ -117,7 +123,7 @@ METHOD(tnccs_manager_t, remove_method, void,
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
 
-	this->lock->write_lock(this->lock);
+	this->protocol_lock->write_lock(this->protocol_lock);
 	enumerator = this->protocols->create_enumerator(this->protocols);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -128,7 +134,7 @@ METHOD(tnccs_manager_t, remove_method, void,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	this->protocol_lock->unlock(this->protocol_lock);
 }
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
@@ -138,7 +144,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	tnccs_entry_t *entry;
 	tnccs_t *protocol = NULL;
 
-	this->lock->read_lock(this->lock);
+	this->protocol_lock->read_lock(this->protocol_lock);
 	enumerator = this->protocols->create_enumerator(this->protocols);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -152,7 +158,8 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	this->protocol_lock->unlock(this->protocol_lock);
+
 	return protocol;
 }
 
@@ -161,16 +168,17 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	tnccs_send_message_t send_message,
 	tnccs_provide_recommendation_t provide_recommendation)
 {
-	tnccs_connection_entry_t *entry = malloc_thing(tnccs_connection_entry_t);
+	tnccs_connection_entry_t *entry;
 
-	entry->id = ++this->connection_id;
+	entry = malloc_thing(tnccs_connection_entry_t);
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
 	entry->provide_recommendation = provide_recommendation;
 
-	this->lock->write_lock(this->lock);
+	this->connection_lock->write_lock(this->connection_lock);
+	entry->id = ++this->connection_id;
 	this->connections->insert_last(this->connections, entry);
-	this->lock->unlock(this->lock);
+	this->connection_lock->unlock(this->connection_lock);
 
 	DBG1(DBG_TNC, "assigned TNCCS Connection ID %u", entry->id);
 	return entry->id;
@@ -182,7 +190,7 @@ METHOD(tnccs_manager_t, remove_connection, void,
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 
-	this->lock->write_lock(this->lock);
+	this->connection_lock->write_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -194,7 +202,7 @@ METHOD(tnccs_manager_t, remove_connection, void,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	this->connection_lock->unlock(this->connection_lock);
 }
 
 METHOD(tnccs_manager_t, send_message, TNC_Result,
@@ -208,7 +216,7 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 	tnccs_send_message_t send_message = NULL;
 	tnccs_t *tnccs = NULL;
 
-	this->lock->write_lock(this->lock);
+	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -220,7 +228,7 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	this->connection_lock->unlock(this->connection_lock);
 
 	if (tnccs && send_message)
 	{
@@ -241,7 +249,7 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 	tnccs_provide_recommendation_t provide_recommendation = NULL;
 	tnccs_t *tnccs = NULL;
 
-	this->lock->write_lock(this->lock);
+	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -253,7 +261,7 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	this->connection_lock->unlock(this->connection_lock);
 
 	if (tnccs && provide_recommendation)
 	{
@@ -267,8 +275,9 @@ METHOD(tnccs_manager_t, destroy, void,
 	private_tnccs_manager_t *this)
 {
 	this->protocols->destroy_function(this->protocols, free);
+	this->protocol_lock->destroy(this->protocol_lock);
 	this->connections->destroy_function(this->connections, free);
-	this->lock->destroy(this->lock);
+	this->connection_lock->destroy(this->connection_lock);
 	free(this);
 }
 
@@ -292,7 +301,8 @@ tnccs_manager_t *tnccs_manager_create()
 			},
 			.protocols = linked_list_create(),
 			.connections = linked_list_create(),
-			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+			.protocol_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+			.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;
