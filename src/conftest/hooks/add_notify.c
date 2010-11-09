@@ -111,7 +111,7 @@ METHOD(hook_t, destroy, void,
 /**
  * Create the IKE_AUTH fill hook
  */
-hook_t *add_notify_hook_create(void)
+hook_t *add_notify_hook_create(char *name)
 {
 	private_add_notify_t *this;
 
@@ -123,17 +123,17 @@ hook_t *add_notify_hook_create(void)
 			.destroy = _destroy,
 		},
 		.req = conftest->test->get_bool(conftest->test,
-										"hooks.add_notify.request", TRUE),
+										"hooks.%s.request", TRUE, name),
 		.id = conftest->test->get_int(conftest->test,
-										"hooks.add_notify.id", 0),
+										"hooks.%s.id", 0, name),
 		.type = conftest->test->get_str(conftest->test,
-										"hooks.add_notify.type", ""),
+										"hooks.%s.type", "", name),
 		.data = conftest->test->get_str(conftest->test,
-										"hooks.add_notify.data", ""),
+										"hooks.%s.data", "", name),
 		.spi = conftest->test->get_int(conftest->test,
-										"hooks.add_notify.spi", 0),
+										"hooks.%s.spi", 0, name),
 		.esp = conftest->test->get_bool(conftest->test,
-										"hooks.add_notify.esp", FALSE),
+										"hooks.%s.esp", FALSE, name),
 	);
 
 	return &this->hook;

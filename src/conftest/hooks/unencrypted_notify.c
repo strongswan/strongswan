@@ -126,7 +126,7 @@ METHOD(hook_t, destroy, void,
 /**
  * Create the IKE_AUTH fill hook
  */
-hook_t *unencrypted_notify_hook_create(void)
+hook_t *unencrypted_notify_hook_create(char *name)
 {
 	private_unencrypted_notify_t *this;
 
@@ -138,15 +138,15 @@ hook_t *unencrypted_notify_hook_create(void)
 			.destroy = _destroy,
 		},
 		.id = conftest->test->get_int(conftest->test,
-										"hooks.unencrypted_notify.id", 2),
+										"hooks.%s.id", 2, name),
 		.type = conftest->test->get_str(conftest->test,
-										"hooks.unencrypted_notify.type", ""),
+										"hooks.%s.type", "", name),
 		.data = conftest->test->get_str(conftest->test,
-										"hooks.unencrypted_notify.data", ""),
+										"hooks.%s.data", "", name),
 		.spi = conftest->test->get_int(conftest->test,
-										"hooks.unencrypted_notify.spi", 0),
+										"hooks.%s.spi", 0, name),
 		.esp = conftest->test->get_bool(conftest->test,
-										"hooks.unencrypted_notify.esp", FALSE),
+										"hooks.%s.esp", FALSE, name),
 	);
 
 	return &this->hook;

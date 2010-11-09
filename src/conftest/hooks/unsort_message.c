@@ -110,7 +110,7 @@ METHOD(hook_t, destroy, void,
 /**
  * Create the IKE_AUTH fill hook
  */
-hook_t *unsort_message_hook_create(void)
+hook_t *unsort_message_hook_create(char *name)
 {
 	private_unsort_message_t *this;
 
@@ -122,11 +122,11 @@ hook_t *unsort_message_hook_create(void)
 			.destroy = _destroy,
 		},
 		.req = conftest->test->get_bool(conftest->test,
-										"hooks.unsort_message.request", TRUE),
+										"hooks.%s.request", TRUE, name),
 		.id = conftest->test->get_int(conftest->test,
-										"hooks.unsort_message.id", 0),
+										"hooks.%s.id", 0, name),
 		.order = conftest->test->get_str(conftest->test,
-										"hooks.unsort_message.order", ""),
+										"hooks.%s.order", "", name),
 	);
 
 	return &this->hook;

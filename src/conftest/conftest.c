@@ -214,19 +214,27 @@ static bool load_keys(settings_t *settings, char *dir)
 static bool load_hooks()
 {
 	enumerator_t *enumerator;
-	char *name, buf[64];
-	hook_t *(*create)(void);
+	char *name, *pos, buf[64];
+	hook_t *(*create)(char*);
 	hook_t *hook;
 
 	enumerator = conftest->test->create_section_enumerator(conftest->test,
 														   "hooks");
 	while (enumerator->enumerate(enumerator, &name))
 	{
-		snprintf(buf, sizeof(buf), "%s_hook_create", name);
+		pos = strchr(name, '-');
+		if (pos)
+		{
+			snprintf(buf, sizeof(buf), "%.*s_hook_create", pos - name, name);
+		}
+		else
+		{
+			snprintf(buf, sizeof(buf), "%s_hook_create", name);
+		}
 		create = dlsym(RTLD_DEFAULT, buf);
 		if (create)
 		{
-			hook = create();
+			hook = create(name);
 			if (hook)
 			{
 				conftest->hooks->insert_last(conftest->hooks, hook);

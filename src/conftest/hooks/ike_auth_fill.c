@@ -121,7 +121,7 @@ METHOD(hook_t, destroy, void,
 /**
  * Create the IKE_AUTH fill hook
  */
-hook_t *ike_auth_fill_hook_create(void)
+hook_t *ike_auth_fill_hook_create(char *name)
 {
 	private_ike_auth_fill_t *this;
 
@@ -133,11 +133,11 @@ hook_t *ike_auth_fill_hook_create(void)
 			.destroy = _destroy,
 		},
 		.req = conftest->test->get_bool(conftest->test,
-										"hooks.ike_auth_fill.request", TRUE),
+										"hooks.%s.request", TRUE, name),
 		.id = conftest->test->get_int(conftest->test,
-										"hooks.ike_auth_fill.id", 1),
+										"hooks.%s.id", 1, name),
 		.bytes = conftest->test->get_int(conftest->test,
-										"hooks.ike_auth_fill.bytes", 0),
+										"hooks.%s.bytes", 0, name),
 	);
 
 	return &this->hook;

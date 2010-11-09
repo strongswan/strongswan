@@ -66,7 +66,7 @@ METHOD(hook_t, destroy, void,
 /**
  * Create the ignore_message hook
  */
-hook_t *ignore_message_hook_create(void)
+hook_t *ignore_message_hook_create(char *name)
 {
 	private_ignore_message_t *this;
 
@@ -78,11 +78,11 @@ hook_t *ignore_message_hook_create(void)
 			.destroy = _destroy,
 		},
 		.in = conftest->test->get_bool(conftest->test,
-										"hooks.ignore_message.inbound", TRUE),
+										"hooks.%s.inbound", TRUE, name),
 		.req = conftest->test->get_bool(conftest->test,
-										"hooks.ignore_message.request", TRUE),
+										"hooks.%s.request", TRUE, name),
 		.id = conftest->test->get_int(conftest->test,
-										"hooks.ignore_message.id", 0),
+										"hooks.%s.id", 0, name),
 	);
 
 	return &this->hook;
