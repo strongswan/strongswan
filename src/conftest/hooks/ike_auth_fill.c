@@ -107,6 +107,7 @@ METHOD(listener_t, message, bool,
 			memset(data.ptr, 0x12, data.len);
 			pld = cert_payload_create_custom(201, data);
 			message->add_payload(message, &pld->payload_interface);
+			DBG1(DBG_CFG, "inserting %d dummy bytes certificate payload", diff);
 		}
 	}
 	return TRUE;
