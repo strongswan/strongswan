@@ -110,6 +110,12 @@ static bool load_certs(settings_t *settings, char *dir)
 	enumerator = settings->create_key_value_enumerator(settings, "certs.trusted");
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
+		if (!strcaseeq(key, "x509"))
+		{
+			fprintf(stderr, "certificate type '%s' not supported\n", key);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_FROM_FILE, value, BUILD_END);
 		if (!cert)
@@ -126,6 +132,12 @@ static bool load_certs(settings_t *settings, char *dir)
 	enumerator = settings->create_key_value_enumerator(settings, "certs.untrusted");
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
+		if (!strcaseeq(key, "x509"))
+		{
+			fprintf(stderr, "certificate type '%s' not supported\n", key);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_FROM_FILE, value, BUILD_END);
 		if (!cert)
