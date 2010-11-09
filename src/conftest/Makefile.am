@@ -17,4 +17,4 @@ conftest_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	-lm $(PTHREADLIB) $(DLLIB)
 
-EXTRA_DIST = suiteb
+EXTRA_DIST = suiteb README

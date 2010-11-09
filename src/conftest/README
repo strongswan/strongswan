@@ -1,0 +1,224 @@
+
+
+             conftest - an IKEv2 conformance testing framework
+             =================================================
+
+
+1. Introduction
+---------------
+
+conftest is a conformance testing framework for IKEv2 and related protocols,
+based on the strongSwan IKEv2 daemon charon. It uses a specialized configuration
+and control front-end, but links against the mainstream strongSwan IKEv2 stack.
+
+The conftest framework can test other implementations of IKEv2 and related
+standards. It can inject or mangle packets to test the behavior of other
+implementations under certain conditions.
+
+2. Test suites
+--------------
+
+The framework can use different sets of conformance tests, called test suites.
+Each test suite contains a global suite configuration file, usually named
+suite.conf. It contains the global settings for all tests in this suite, mostly
+credentials and connection definitions.
+
+A test suite consists of several test cases. Each test has its own configuration
+file, often called test.conf. The test configuration file may contain test
+specific credentials and connection definitions, but primarily defines actions
+and hooks. Actions trigger certain protocol specific operations, such as
+initiating or terminating a tunnel. Hooks are used to change the behavior of
+the IKE stack, most likely to stress some factors of the IKE protocol and
+provoke unintended behavior in the tested platform.
+
+3. Configuration syntax
+-----------------------
+
+Both the suite and the test specific configuration file use the same syntax.
+It is the same as used by the strongswan.conf file used to configure the
+strongSwan software suite.
+
+The syntax is as follows:
+
+ settings := (section|keyvalue)*
+ section  := name { settings }
+ keyvalue := key = value\n
+
+Settings contain zero or more sub-sections or key/value pairs. A section
+consists of a name, followed by curly open and close brackets. The value in the
+key/value pair starts after the equal sign and is terminated by the end of the
+line.
+
+4. Connections
+--------------
+
+Both the suite and test configuration may contain connection definitions under
+the configs section. Each IKE_SA configuration has a sub-section. Each IKE_SA
+sub-section contains one or more CHILD_SA configuration sub-sections:
+
+configs {
+    ike-a {
+        # ... ike options
+        child-a1 {
+            # ... child options
+        }
+        child-a2 {
+            # ...
+        }
+    }
+}
+
+Configuration names can be chosen arbitrary, but should be unique within the
+same file.
+
+The IKE_SA configuration uses the following options (as key/value pairs):
+
+  lhost:    Address (IP or Hostname) of this host
+  rhost:    Address (IP or Hostname) of tested host
+  lid:      IKEv2 identifier of this host
+  rid:      IKEv2 identifier of tested host
+  proposal: IKE_SA proposal list, comma separated, e.g.:
+            aes128-sha1-modp2048,3des-md5-sha1-modp1024-modp1536
+            Supported algorithm names are defined under
+            src/libstrongswan/crypt/proposal/proposal_keywords.txt
+
+The following CHILD_SA specific configuration options are supported:
+
+  lts:      Local side traffic selectors, comma separated CIDR subnets
+  rts:      Remote side traffic selectors, comma separated CIDR subnets
+
+5. Credentials
+--------------
+
+Credentials may be defined globally in the suite or locally in the test specific
+configuration file. Certificates files are defined in the certs section, either
+in the trusted or in the untrusted section. Trusted certificates are trust
+anchors, usually root CA certificates. Untrusted certificates do not build a
+trust anchor and usually contain intermediate or end entity certificates.
+
+Certificates files are loaded relative to the configuration file path and may
+be encoded either in plain ASN.1 DER or in PEM format. The name of the key/value
+pair is used to specify the type of the certificate, usually x509.
+
+Private keys can be defined in the suite or test config file under the keys
+section. The name of the key/value pair must be either rsa or ecdsa, the
+specified file may be encoded in ASN.1 DER or unencrypted PEM.
+
+certs {
+    trusted {
+        x509 = ca.pem
+    }
+    untrusted {
+        x509 = /path/to/cert.pem
+    }
+}
+keys {
+    ecdsa = /path/to/key.pem
+}
+
+6. Actions
+----------
+
+The actions section in the test specific configuration file defines
+the IKEv2 protocol actions to trigger. Currently, the following actions
+are supported and take these arguments (as key/value pairs):
+
+  initiate:    Initiate an IKE- and CHILD_SA
+               config: name of the CHILD_SA configuration to initiate
+               delay: Delay to trigger action after startup
+  rekey_ike:   Rekey an IKE_SA
+               config: name of originating IKE_SA configuration
+               delay: Delay to trigger action after startup
+  rekey_child: Rekey an CHILD_SA
+               config: name of originating CHILD_SA configuration
+               delay: Delay to trigger action after startup
+  liveness:    Do a liveness check (DPD) on the IKE_SA
+               config: name of originating IKE_SA configuration
+               delay: Delay to trigger action after startup
+  close_ike:   Close an IKE_SA
+               config: name of originating IKE_SA configuration
+               delay: Delay to trigger action after startup
+  close_child: Close a CHILD_SA
+               config: name of originating IKE_SA configuration
+               delay: Delay to trigger action after startup
+
+To trigger the same action multiple times, the action sections must be named
+uniquely. Append an arbitrary string to the action name. The following example
+initiates a connection and rekeys it twice:
+
+actions {
+    initiate {
+        config = child-a1
+    }
+    rekey_ike-1 {
+        config = ike-a
+        delay = 3
+    }
+    rekey_ike-2 {
+        config = ike-a
+        delay = 6
+    }
+}
+
+7. Hooks
+--------
+
+The hooks section section in the test configuration defines different hooks
+to use to mangle packets or trigger other protocol modifications. These
+hook functions are implemented in the hooks folder of conftest.
+
+Currently, the following hooks are defined with the following options:
+
+  ignore_message:     Ignore a specific message, simulating packet loss
+    inbound:          yes to ignore incoming, no for outgoing messages
+    request:          yes to ignore requests, no for responses
+    id:               IKEv2 message identifier of message to ignore
+  add_notify:         Add a notify to a message
+    request:          yes to include in request, no in response
+    id:               IKEv2 message identifier of message to add notify
+    type:             notify type to add, names defined in notify_type_names
+                      under src/libcharon/encoding/payloads/notify_payload.c
+    data:             notification data to add, prepend 0x to interpret the
+                      string as hex string
+    spi:              SPI to use in notify
+    esp:              yes to send an ESP protocol notify, no for IKE
+  unencrypted_notify: Send an unencrypted message with a notify after
+                      establishing an IKE_SA
+    id:               IKEv2 message identifier of message to send
+    type:             notify type to add, names defined in notify_type_names
+                      under src/libcharon/encoding/payloads/notify_payload.c
+    data:             notification data to add, prepend 0x to interpret the
+                      string as hex string
+    spi:              SPI to use in notify
+    esp:              yes to send an ESP protocol notify, no for IKE
+  unsort_message:     reorder the payloads in a message
+    request:          yes to reorder requests messages, no for responses
+    id:               IKEv2 message identifier of message to reorder
+    order:            payload order, space separated payload names as defined
+                      in payload_type_short_names under
+                      src/libcharon/encoding/payloads/payload.c
+  ike_auth_fill:      Fill up IKE_AUTH message to a given size using CERT
+                      a payload.
+    request:          yes to fill requests messages, no for responses
+    id:               IKEv2 message identifier of message to fill up
+    bytes:            number of bytes the final IKE_AUTH message should have
+
+8. Invoking
+-----------
+
+Compile time options required depend on the test suite. A minimalistic
+strongSwan build with the OpenSSL crypto backend can be configured with:
+
+./configure --sysconfdir=/etc --disable-pluto --disable-scripts \
+  --disable-tools --disable-stroke --disable-aes --disable-des --disable-md5 \
+  --disable-sha1 --disable-sha2 --disable-fips-prf --disable-gmp \
+  --disable-pubkey --disable-pgp --disable-dnskey --disable-updown \
+  --disable-attr --disable-resolve --enable-openssl --enable-conftest \
+  --enable-gcm --enable-ccm --enable-ctr
+
+The conftest utility is installed by default under /usr/local/libexec/ipsec/,
+but can be invoked with the ipsec helper script. It takes a suite specific
+configuration file after the --suite option and a test specific file with
+the --test option:
+
+  ipsec conftest --suite suite.conf --test 1.1.1/test.conf
