@@ -38,6 +38,11 @@ struct private_tnc_imv_t {
 	char *name;
 
 	/**
+	 * Handle of loaded IMV
+	 */
+	void *handle;
+
+	/**
 	 * ID of loaded IMV
 	 */
 	TNC_IMVID id;
@@ -121,8 +126,9 @@ METHOD(imv_t, type_supported, bool,
 METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
-	free(this->name);
+	dlclose(this->handle);
 	free(this->supported_types);
+	free(this->name);
 	free(this);
 }
 
@@ -132,7 +138,6 @@ METHOD(imv_t, destroy, void,
 imv_t* tnc_imv_create(char *name, char *filename)
 {
 	private_tnc_imv_t *this;
-	void *handle;
 
 	INIT(this,
 		.public = {
@@ -145,8 +150,8 @@ imv_t* tnc_imv_create(char *name, char *filename)
         },
 	);
 
-	handle = dlopen(filename, RTLD_NOW);
-	if (handle == NULL)
+	this->handle = dlopen(filename, RTLD_NOW);
+	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMV '%s' failed to load from '%s': %s",
 					   name, filename, dlerror());
@@ -154,40 +159,40 @@ imv_t* tnc_imv_create(char *name, char *filename)
 		return NULL;
 	}
 
-	/* we do not store or free dlopen() handles, leak_detective requires
-	 * the modules to keep loaded until leak report */
-
-	this->public.initialize = dlsym(handle, "TNC_IMV_Initialize");
+	this->public.initialize = dlsym(this->handle, "TNC_IMV_Initialize");
 	if (!this->public.initialize)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_Initialize in %s: %s\n",
 					   filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
 	this->public.notify_connection_change =
-						dlsym(handle, "TNC_IMV_NotifyConnectionChange");
+						dlsym(this->handle, "TNC_IMV_NotifyConnectionChange");
     this->public.solicit_recommendation =
-						dlsym(handle, "TNC_IMV_SolicitRecommendation");
+						dlsym(this->handle, "TNC_IMV_SolicitRecommendation");
 	if (!this->public.solicit_recommendation)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_SolicitRecommendation in %s: %s\n",
 					   filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
     this->public.receive_message =
-						dlsym(handle, "TNC_IMV_ReceiveMessage");
+						dlsym(this->handle, "TNC_IMV_ReceiveMessage");
     this->public.batch_ending =
-						dlsym(handle, "TNC_IMV_BatchEnding");
+						dlsym(this->handle, "TNC_IMV_BatchEnding");
     this->public.terminate =
-						dlsym(handle, "TNC_IMV_Terminate");
+						dlsym(this->handle, "TNC_IMV_Terminate");
     this->public.provide_bind_function =
-						dlsym(handle, "TNC_IMV_ProvideBindFunction");
+						dlsym(this->handle, "TNC_IMV_ProvideBindFunction");
     if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_ProvideBindFunction in %s: %s\n",
 					  filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}

@@ -38,6 +38,11 @@ struct private_tnc_imc_t {
 	char *name;
 
 	/**
+	 * Handle of loaded IMC
+	 */
+	void *handle;
+
+	/**
 	 * ID of loaded IMC
 	 */
 	TNC_IMCID id;
@@ -121,8 +126,9 @@ METHOD(imc_t, type_supported, bool,
 METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
-	free(this->name);
+	dlclose(this->handle);
 	free(this->supported_types);
+	free(this->name);
 	free(this);
 }
 
@@ -132,7 +138,6 @@ METHOD(imc_t, destroy, void,
 imc_t* tnc_imc_create(char* name, char *filename)
 {
 	private_tnc_imc_t *this;
-	void *handle;
 
 	INIT(this,
 		.public = {
@@ -145,8 +150,8 @@ imc_t* tnc_imc_create(char* name, char *filename)
         },
 	);
 
-	handle = dlopen(filename, RTLD_NOW);
-	if (handle == NULL)
+	this->handle = dlopen(filename, RTLD_NOW);
+	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMC '%s' failed to load from '%s': %s",
 					   name, filename, dlerror());
@@ -154,39 +159,42 @@ imc_t* tnc_imc_create(char* name, char *filename)
 		return NULL;
 	}
 
-	/* we do not store or free dlopen() handles, leak_detective requires
+	/* we do not store or free dlopen() this->handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
 
-	this->public.initialize = dlsym(handle, "TNC_IMC_Initialize");
+	this->public.initialize = dlsym(this->handle, "TNC_IMC_Initialize");
 	if (!this->public.initialize)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_Initialize in %s: %s\n",
 					   filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
 	this->public.notify_connection_change =
-						 dlsym(handle, "TNC_IMC_NotifyConnectionChange");
-    this->public.begin_handshake = dlsym(handle, "TNC_IMC_BeginHandshake");
+						 dlsym(this->handle, "TNC_IMC_NotifyConnectionChange");
+    this->public.begin_handshake = dlsym(this->handle, "TNC_IMC_BeginHandshake");
 	if (!this->public.begin_handshake)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_BeginHandshake in %s: %s\n",
 					   filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
     this->public.receive_message =
-						dlsym(handle, "TNC_IMC_ReceiveMessage");
+						dlsym(this->handle, "TNC_IMC_ReceiveMessage");
     this->public.batch_ending =
-						dlsym(handle, "TNC_IMC_BatchEnding");
+						dlsym(this->handle, "TNC_IMC_BatchEnding");
     this->public.terminate =
-						dlsym(handle, "TNC_IMC_Terminate");
+						dlsym(this->handle, "TNC_IMC_Terminate");
     this->public.provide_bind_function =
-						dlsym(handle, "TNC_IMC_ProvideBindFunction");
+						dlsym(this->handle, "TNC_IMC_ProvideBindFunction");
     if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_ProvideBindFunction in %s: %s\n",
 					  filename, dlerror());
+		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
