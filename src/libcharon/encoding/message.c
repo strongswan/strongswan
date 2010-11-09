@@ -131,6 +131,7 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
+	{CERTIFICATE_REQUEST,			1,	1,						FALSE,	FALSE},
 	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
 };
 
@@ -1279,7 +1280,7 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 			{
 				DBG1(DBG_ENC, "payload type %N was not encrypted",
 					 payload_type_names, type);
-				status = VERIFY_ERROR;
+				status = FAILED;
 				break;
 			}
 		}
@@ -1380,7 +1381,7 @@ METHOD(message_t, parse_body, status_t,
 		{
 			DBG1(DBG_ENC, "payload type %N could not be parsed",
 				 payload_type_names, type);
-			return PARSE_ERROR;
+			return this->exchange_type == IKE_SA_INIT ? PARSE_ERROR : FAILED;
 		}
 
 		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
@@ -1390,7 +1391,7 @@ METHOD(message_t, parse_body, status_t,
 			DBG1(DBG_ENC, "%N payload verification failed",
 				 payload_type_names, type);
 			payload->destroy(payload);
-			return VERIFY_ERROR;
+			return this->exchange_type == IKE_SA_INIT ? VERIFY_ERROR : FAILED;
 		}
 
 		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
@@ -1408,14 +1409,11 @@ METHOD(message_t, parse_body, status_t,
 		type = payload->get_next_type(payload);
 	}
 
-	if (type == ENCRYPTED)
+	status = decrypt_payloads(this, aead);
+	if (status != SUCCESS)
 	{
-		status = decrypt_payloads(this, aead);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_ENC, "could not decrypt payloads");
-			return status;
-		}
+		DBG1(DBG_ENC, "could not decrypt payloads");
+		return status;
 	}
 
 	status = verify(this);
