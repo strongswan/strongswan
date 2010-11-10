@@ -1295,6 +1295,7 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
  */
 static status_t verify(private_message_t *this)
 {
+	bool complete = FALSE;
 	int i;
 
 	DBG2(DBG_ENC, "verifying message structure");
@@ -1343,15 +1344,15 @@ static status_t verify(private_message_t *this)
 		}
 		enumerator->destroy(enumerator);
 
-		if (found < rule->min_occurence)
+		if (!complete && found < rule->min_occurence)
 		{
 			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
 				 payload_type_names, rule->type, rule->min_occurence, found);
 			return VERIFY_ERROR;
 		}
-		if (rule->sufficient)
+		if (found && rule->sufficient)
 		{
-			return SUCCESS;
+			complete = TRUE;
 		}
 	}
 	return SUCCESS;
