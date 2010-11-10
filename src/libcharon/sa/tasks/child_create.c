@@ -1110,7 +1110,21 @@ METHOD(task_t, process_i, status_t,
 					return NEED_MORE;
 				}
 				default:
+				{
+					if (message->get_exchange_type(message) == CREATE_CHILD_SA)
+					{	/* handle notifies if not handled in IKE_AUTH */
+						if (type <= 16383)
+						{
+							DBG1(DBG_IKE, "received %N notify error",
+								 notify_type_names, type);
+							enumerator->destroy(enumerator);
+							return SUCCESS;
+						}
+						DBG2(DBG_IKE, "received %N notify",
+							 notify_type_names, type);
+					}
 					break;
+				}
 			}
 		}
 	}
