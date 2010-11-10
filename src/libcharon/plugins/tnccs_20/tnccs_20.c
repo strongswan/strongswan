@@ -72,6 +72,11 @@ struct private_tnccs_20_t {
 	chunk_t batch;
 
 	/**
+	 * Mutex locking the batch in construction
+	 */
+	mutex_t *batch_mutex;
+
+	/**
 	 * Action Recommendations and Evaluations Results provided by IMVs 
 	 */
 	linked_list_t *recommendations;
@@ -87,11 +92,12 @@ METHOD(tnccs_t, send_message, void,
 							  TNC_UInt32 message_len,
 							  TNC_MessageType message_type)
 {
-	chunk_t msg = { message, message_len },
-			batch = this->batch;
+	chunk_t msg = { message, message_len };
 
 	DBG1(DBG_TNC, "TNCCS 2.0 send message");
-	this->batch = chunk_cat("mc", batch, msg);
+	this->batch_mutex->lock(this->batch_mutex);
+	this->batch = chunk_cat("mc", this->batch, msg);
+	this->batch_mutex->unlock(this->batch_mutex);
 }
 
 METHOD(tnccs_t, provide_recommendation, void,
@@ -181,7 +187,9 @@ METHOD(tls_t, build, status_t,
 	char *msg = this->is_server ? "tncs->tncc 2.0|" : "tncc->tncs 2.0|";
 	size_t len;
 
+	this->batch_mutex->lock(this->batch_mutex);
 	this->batch = chunk_cat("cm", chunk_create(msg, strlen(msg)), this->batch);
+	this->batch_mutex->unlock(this->batch_mutex);
 
 	if (!this->is_server && !this->connection_id)
 	{
@@ -194,15 +202,17 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
 
+	this->batch_mutex->lock(this->batch_mutex);
 	len = this->batch.len;
 	*msglen = len;
 	*buflen = len;
 	memcpy(buf, this->batch.ptr, len);
+	chunk_free(&this->batch);
+	this->batch_mutex->unlock(this->batch_mutex);
 
 	DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
 				   len, this->connection_id);
 	DBG3(DBG_TNC, "%.*s", len, buf);
-	chunk_free(&this->batch);
 
 	return ALREADY_DONE;
 }
@@ -237,6 +247,7 @@ METHOD(tls_t, destroy, void,
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
 	this->recommendations->destroy_function(this->recommendations, free);
 	this->recommendation_mutex->destroy(this->recommendation_mutex);
+	this->batch_mutex->destroy(this->batch_mutex);
 	free(this->batch.ptr);
 	free(this);
 }
@@ -261,6 +272,7 @@ tls_t *tnccs_20_create(bool is_server)
 		.is_server = is_server,
 		.recommendations = linked_list_create(),
 		.recommendation_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.batch_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	return &this->public;
