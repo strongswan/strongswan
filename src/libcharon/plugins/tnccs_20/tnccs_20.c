@@ -18,9 +18,32 @@
 #include <debug.h>
 #include <daemon.h>
 #include <tnc/tncif.h>
+#include <tnc/tncifimv_names.h>
 #include <tnc/tnccs/tnccs.h>
 
+typedef struct recommendation_entry_t recommendation_entry_t;
 typedef struct private_tnccs_20_t private_tnccs_20_t;
+
+/**
+ * Recommendation entry
+ */
+struct recommendation_entry_t {
+
+	/**
+	 * IMV ID
+	 */
+	TNC_IMVID id;
+
+	/**
+	 * Action Recommendation provided by IMV instance
+	 */
+  TNC_IMV_Action_Recommendation rec;
+
+	/**
+	 * Evaluation Result provided by IMV instance
+	 */
+  TNC_IMV_Evaluation_Result eval;
+};
 
 /**
  * Private data of a tnccs_20_t object.
@@ -46,6 +69,11 @@ struct private_tnccs_20_t {
 	 * Batch being constructed
 	 */
 	chunk_t batch;
+
+	/**
+	 * Action Recommendations and Evaluations Results provided by IMVs 
+	 */
+	linked_list_t *recommendations;
 };
 
 METHOD(tnccs_t, send_message, void,
@@ -61,11 +89,38 @@ METHOD(tnccs_t, send_message, void,
 }
 
 METHOD(tnccs_t, provide_recommendation, void,
-	private_tnccs_20_t* this, TNC_IMVID imv_id,
-							  TNC_IMV_Action_Recommendation recommendation,
-							  TNC_IMV_Evaluation_Result evaluation)
+	private_tnccs_20_t* this, TNC_IMVID id,
+							  TNC_IMV_Action_Recommendation rec,
+							  TNC_IMV_Evaluation_Result eval)
 {
-	DBG1(DBG_TNC, "TNCCS 2.0 provide recommendation");
+	enumerator_t *enumerator;
+	recommendation_entry_t *entry;
+	bool found = FALSE;
+
+	DBG2(DBG_TNC, "IMV %u provides recommendation '%N' and evaluation '%N'",
+		 id, action_recommendation_names, rec, evaluation_result_names, eval);
+
+	enumerator = this->recommendations->create_enumerator(this->recommendations);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->id == id)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		entry = malloc_thing(recommendation_entry_t);
+		entry->id = id;
+		this->recommendations->insert_last(this->recommendations, entry);
+	}
+
+	/* Assign provided action recommendation and evaluation result */
+	entry->rec = rec;
+	entry->eval = eval;
 }
 
 METHOD(tls_t, process, status_t,
@@ -171,6 +226,7 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	this->recommendations->destroy_function(this->recommendations, free);
 	free(this->batch.ptr);
 	free(this);
 }
@@ -193,6 +249,7 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
+		.recommendations = linked_list_create(),
 	);
 
 	return &this->public;
