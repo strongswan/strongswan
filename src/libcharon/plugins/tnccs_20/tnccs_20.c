@@ -152,13 +152,14 @@ METHOD(tls_t, process, status_t,
 	if (pos)
 	{
 		pos++;
-		len = buflen - ((char*)buf - pos);
+		len = buflen - (pos - (char*)buf);
 	}
 	else
 	{
 		pos = buf;
 		len = buflen;
 	}
+	DBG1(DBG_TNC, "received message '%.*s'", len, pos);
 	if (this->is_server)
 	{
 		charon->imvs->receive_message(charon->imvs, this->connection_id,
