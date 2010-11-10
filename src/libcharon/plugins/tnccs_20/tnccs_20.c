@@ -17,6 +17,7 @@
 
 #include <debug.h>
 #include <daemon.h>
+#include <threading/mutex.h>
 #include <tnc/tncif.h>
 #include <tnc/tncifimv_names.h>
 #include <tnc/tnccs/tnccs.h>
@@ -74,6 +75,11 @@ struct private_tnccs_20_t {
 	 * Action Recommendations and Evaluations Results provided by IMVs 
 	 */
 	linked_list_t *recommendations;
+
+	/**
+	 * Mutex locking the recommendations list
+	 */
+	mutex_t *recommendation_mutex;
 };
 
 METHOD(tnccs_t, send_message, void,
@@ -100,6 +106,7 @@ METHOD(tnccs_t, provide_recommendation, void,
 	DBG2(DBG_TNC, "IMV %u provides recommendation '%N' and evaluation '%N'",
 		 id, action_recommendation_names, rec, evaluation_result_names, eval);
 
+	this->recommendation_mutex->lock(this->recommendation_mutex);
 	enumerator = this->recommendations->create_enumerator(this->recommendations);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -121,6 +128,7 @@ METHOD(tnccs_t, provide_recommendation, void,
 	/* Assign provided action recommendation and evaluation result */
 	entry->rec = rec;
 	entry->eval = eval;
+	this->recommendation_mutex->unlock(this->recommendation_mutex);
 }
 
 METHOD(tls_t, process, status_t,
@@ -227,6 +235,7 @@ METHOD(tls_t, destroy, void,
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
 	this->recommendations->destroy_function(this->recommendations, free);
+	this->recommendation_mutex->destroy(this->recommendation_mutex);
 	free(this->batch.ptr);
 	free(this);
 }
@@ -250,6 +259,7 @@ tls_t *tnccs_20_create(bool is_server)
 		},
 		.is_server = is_server,
 		.recommendations = linked_list_create(),
+		.recommendation_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	return &this->public;
