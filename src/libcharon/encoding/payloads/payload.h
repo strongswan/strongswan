@@ -137,7 +137,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
-	HEADER = 140,
+	HEADER = 256,
 
 	/**
 	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -145,7 +145,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a proposal substructure like a payload.
 	 */
-	PROPOSAL_SUBSTRUCTURE = 141,
+	PROPOSAL_SUBSTRUCTURE = 257,
 
 	/**
 	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -153,7 +153,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform substructure like a payload.
 	 */
-	TRANSFORM_SUBSTRUCTURE = 142,
+	TRANSFORM_SUBSTRUCTURE = 258,
 
 	/**
 	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
@@ -161,7 +161,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
-	TRANSFORM_ATTRIBUTE = 143,
+	TRANSFORM_ATTRIBUTE = 259,
 
 	/**
 	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -169,7 +169,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform selector like a payload.
 	 */
-	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
+	TRAFFIC_SELECTOR_SUBSTRUCTURE = 260,
 
 	/**
 	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
@@ -177,7 +177,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
-	CONFIGURATION_ATTRIBUTE = 145,
+	CONFIGURATION_ATTRIBUTE = 261,
 };
 
 /**
