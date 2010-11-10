@@ -53,6 +53,11 @@ struct private_add_payload_t {
 	 * Set critical bit of the payload
 	 */
 	bool critical;
+
+	/**
+	 * True to replace existing payload of this type
+	 */
+	bool replace;
 };
 
 METHOD(listener_t, message, bool,
@@ -63,7 +68,9 @@ METHOD(listener_t, message, bool,
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
-		unknown_payload_t *payload;
+		unknown_payload_t *unknown;
+		payload_t *payload;
+		enumerator_t *enumerator;
 		chunk_t data = chunk_empty;
 		payload_type_t type;
 
@@ -77,6 +84,20 @@ METHOD(listener_t, message, bool,
 				return TRUE;
 			}
 		}
+		if (this->replace)
+		{
+			enumerator = message->create_payload_enumerator(message);
+			while (enumerator->enumerate(enumerator, &payload))
+			{
+				if (payload->get_type(payload) == type)
+				{
+					message->remove_payload_at(message, enumerator);
+					payload->destroy(payload);
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
 		if (strncasecmp(this->data, "0x", 2) == 0)
 		{
 			data = chunk_skip(chunk_create(this->data, strlen(this->data)), 2);
@@ -86,8 +107,8 @@ METHOD(listener_t, message, bool,
 		{
 			data = chunk_clone(chunk_create(this->data, strlen(this->data)));
 		}
-		payload = unknown_payload_create_data(type, this->critical, data);
-		message->add_payload(message, &payload->payload_interface);
+		unknown = unknown_payload_create_data(type, this->critical, data);
+		message->add_payload(message, &unknown->payload_interface);
 	}
 	return TRUE;
 }
@@ -122,6 +143,8 @@ hook_t *add_payload_hook_create(char *name)
 										"hooks.%s.data", "", name),
 		.critical = conftest->test->get_bool(conftest->test,
 										"hooks.%s.critical", FALSE, name),
+		.replace = conftest->test->get_bool(conftest->test,
+										"hooks.%s.replace", FALSE, name),
 	);
 
 	return &this->hook;
