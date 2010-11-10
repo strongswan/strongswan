@@ -466,12 +466,23 @@ struct private_pkcs11_library_t {
 	 * Name as passed to the constructor
 	 */
 	char *name;
+
+	/**
+	 * Supported feature set
+	 */
+	pkcs11_feature_t features;
 };
 
 METHOD(pkcs11_library_t, get_name, char*,
 	private_pkcs11_library_t *this)
 {
 	return this->name;
+}
+
+METHOD(pkcs11_library_t, get_features, pkcs11_feature_t,
+	private_pkcs11_library_t *this)
+{
+	return this->features;
 }
 
 /**
@@ -766,6 +777,27 @@ static CK_RV UnlockMutex(CK_VOID_PTR data)
 }
 
 /**
+ * Check if the library has at least a given cryptoki version
+ */
+static bool has_version(CK_INFO *info, int major, int minor)
+{
+	return info->cryptokiVersion.major > major ||
+			(info->cryptokiVersion.major == major &&
+			 info->cryptokiVersion.minor >= minor);
+}
+
+/**
+ * Check for optional PKCS#11 library functionality
+ */
+static void check_features(private_pkcs11_library_t *this, CK_INFO *info)
+{
+	if (has_version(info, 2, 20))
+	{
+		this->features |= PKCS11_TRUSTED_CERTS;
+	}
+}
+
+/**
  * Initialize a PKCS#11 library
  */
 static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
@@ -830,6 +862,8 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 	{
 		DBG1(DBG_CFG, "  uses OS locking functions");
 	}
+
+	check_features(this, &info);
 	return TRUE;
 }
 
@@ -843,6 +877,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
+			.get_features = _get_features,
 			.create_object_enumerator = _create_object_enumerator,
 			.create_mechanism_enumerator = _create_mechanism_enumerator,
 			.destroy = _destroy,

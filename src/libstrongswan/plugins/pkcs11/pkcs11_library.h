@@ -21,12 +21,21 @@
 #ifndef PKCS11_LIBRARY_H_
 #define PKCS11_LIBRARY_H_
 
+typedef enum pkcs11_feature_t pkcs11_feature_t;
 typedef struct pkcs11_library_t pkcs11_library_t;
 
 #include "pkcs11.h"
 
 #include <enum.h>
 #include <utils/enumerator.h>
+
+/**
+ * Optional PKCS#11 features some libraries support, some not
+ */
+enum pkcs11_feature_t {
+	/** CKA_TRUSTED attribute supported for certificate objects */
+	PKCS11_TRUSTED_CERTS = (1<<0),
+};
 
 /**
  * A loaded and initialized PKCS#11 library.
@@ -44,6 +53,13 @@ struct pkcs11_library_t {
 	 * @return			name, as passed to constructor
 	 */
 	char* (*get_name)(pkcs11_library_t *this);
+
+	/**
+	 * Get the feature set supported by this library.
+	 *
+	 * @return			ORed set of features supported
+	 */
+	pkcs11_feature_t (*get_features)(pkcs11_library_t *this);
 
 	/**
 	 * Create an enumerator over CK_OBJECT_HANDLE using a search template.
