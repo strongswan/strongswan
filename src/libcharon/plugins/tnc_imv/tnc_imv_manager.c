@@ -55,8 +55,7 @@ METHOD(imv_manager_t, add, bool,
 	if (imv->initialize(imv->get_id(imv), TNC_IFIMV_VERSION_1,
 		TNC_IFIMV_VERSION_1, &version) != TNC_RESULT_SUCCESS)
 	{
-		DBG1(DBG_TNC, "could not initialize IMV '%s'",
-					   imv->get_name(imv));
+		DBG1(DBG_TNC, "IMV \"%s\" failed to initialize", imv->get_name(imv));
 		return FALSE;
 	}
 	this->imvs->insert_last(this->imvs, imv);
@@ -65,7 +64,7 @@ METHOD(imv_manager_t, add, bool,
     if (imv->provide_bind_function(imv->get_id(imv), TNC_TNCS_BindFunction)
 			!= TNC_RESULT_SUCCESS)
 	{
-		DBG1(DBG_TNC, "could not provide bind function for IMV '%s'",
+		DBG1(DBG_TNC, "IMV \"%s\" could failed to obtain bind function",
 					   imv->get_name(imv));
 		this->imvs->remove_last(this->imvs, (void**)&imv);
 		return FALSE;
@@ -202,7 +201,7 @@ METHOD(imv_manager_t, destroy, void,
 		if (imv->terminate &&
 			imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
 		{
-			DBG1(DBG_TNC, "IMV '%s' not terminated successfully",
+			DBG1(DBG_TNC, "IMV \"%s\" not terminated successfully",
 						   imv->get_name(imv));
 		}
 		imv->destroy(imv);

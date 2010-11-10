@@ -17,7 +17,128 @@
 #include "tnc_imv_manager.h"
 #include "tnc_imv.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+
 #include <daemon.h>
+#include <utils/lexparser.h>
+
+/**
+ * load IMVs from a configuration file
+ */
+static bool load_imvs(char *filename)
+{
+	int fd, line_nr = 0;
+	chunk_t src, line;
+	struct stat sb;
+	void *addr;
+
+	DBG1(DBG_TNC, "loading IMVs from '%s'", filename);
+	fd = open(filename, O_RDONLY);
+	if (fd == -1)
+	{
+		DBG1(DBG_TNC, "opening configuration file '%s' failed: %s", filename,
+			 strerror(errno));
+		return FALSE;
+	}
+	if (fstat(fd, &sb) == -1)
+	{
+		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", filename,
+			 strerror(errno));
+		close(fd);
+		return FALSE;
+	}
+	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		DBG1(DBG_LIB, "mapping '%s' failed: %s", filename, strerror(errno));
+		close(fd);
+		return FALSE;
+	}
+	src = chunk_create(addr, sb.st_size);
+
+	while (fetchline(&src, &line))
+	{
+		char *name, *path;
+		chunk_t token;
+		imv_t *imv;
+
+		line_nr++;
+
+		/* skip comments or empty lines */
+		if (*line.ptr == '#' || !eat_whitespace(&line))
+		{
+			continue;
+		}
+
+		/* determine keyword */
+		if (!extract_token(&token, ' ', &line))
+		{
+			DBG1(DBG_TNC, "line %d: keyword must be followed by a space",
+						   line_nr);
+			return FALSE;
+		}
+
+		/* only interested in IMVs */
+		if (!match("IMV", &token))
+		{
+			continue;
+		}
+
+		/* advance to the IMV name and extract it */
+		if (!extract_token(&token, '"', &line) ||
+			!extract_token(&token, '"', &line))
+		{
+			DBG1(DBG_TNC, "line %d: IMV name must be set in double quotes",
+						   line_nr);
+			return FALSE;
+		}
+
+		/* copy the IMV name */
+		name = malloc(token.len + 1);
+		memcpy(name, token.ptr, token.len);
+		name[token.len] = '\0';
+
+		/* advance to the IMV path and extract it */
+		if (!eat_whitespace(&line))
+		{
+			DBG1(DBG_TNC, "line %d: IMV path is missing", line_nr);
+			free(name);
+			return FALSE;
+		}
+		if (!extract_token(&token, ' ', &line))
+		{
+			token = line;
+		}
+
+		/* copy the IMV path */
+		path = malloc(token.len + 1);
+		memcpy(path, token.ptr, token.len);
+		path[token.len] = '\0';
+
+		/* load and register IMV instance */
+		imv = tnc_imv_create(name, path);
+		if (!imv)
+		{
+			free(name);
+			free(path);
+			return FALSE;
+		}
+		if (!charon->imvs->add(charon->imvs, imv))
+		{
+			imv->destroy(imv);
+			return FALSE;
+		}
+		DBG1(DBG_TNC, "IMV \"%s\" loaded from '%s'", name, path);
+	}
+	munmap(addr, sb.st_size);
+	close(fd);
+	return TRUE;
+}
 
 METHOD(plugin_t, destroy, void,
 	tnc_imv_plugin_t *this)
@@ -31,9 +152,8 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imv_plugin_create()
 {
-	char *tnc_config, *name, *filename;
+	char *tnc_config;
 	tnc_imv_plugin_t *this;
-	imv_t *imv;
 
 	INIT(this,
 		.plugin = {
@@ -47,28 +167,12 @@ plugin_t *tnc_imv_plugin_create()
 	/* Create IMV manager */
 	charon->imvs = tnc_imv_manager_create();
 
-	/**
-	 * Create, register and initialize IMVs
-	 * Abort if one of the IMVs fails to initialize successfully
-	 */
+	/* Load IMVs and abort if not all instances initalize successfully */
+	if (!load_imvs(tnc_config))
 	{
-		name = "Dummy";
-		filename = "/usr/local/lib/libdummyimv.so";
-		imv = tnc_imv_create(name, filename);
-
-		if (!imv)
-		{
-			charon->imvs->destroy(charon->imvs);
-			free(this);
-			return NULL;
-		}
-		if (!charon->imvs->add(charon->imvs, imv))
-		{
-			imv->destroy(imv);
-			charon->imvs->destroy(charon->imvs);
-			free(this);
-			return NULL;
-		}
+		charon->imvs->destroy(charon->imvs);
+		free(this);
+		return NULL;
 	}
 	return &this->plugin;
 }

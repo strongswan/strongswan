@@ -33,6 +33,11 @@ struct private_tnc_imv_t {
 	imv_t public;
 
 	/**
+	 * Path of loaded IMV
+	 */
+	char *path;
+
+	/**
 	 * Name of loaded IMV
 	 */
 	char *name;
@@ -129,13 +134,14 @@ METHOD(imv_t, destroy, void,
 	dlclose(this->handle);
 	free(this->supported_types);
 	free(this->name);
+	free(this->path);
 	free(this);
 }
 
 /**
  * Described in header.
  */
-imv_t* tnc_imv_create(char *name, char *filename)
+imv_t* tnc_imv_create(char *name, char *path)
 {
 	private_tnc_imv_t *this;
 
@@ -148,13 +154,14 @@ imv_t* tnc_imv_create(char *name, char *filename)
 			.type_supported = _type_supported,
 			.destroy = _destroy,
         },
+		.name = name,
+		.path = path,
 	);
 
-	this->handle = dlopen(filename, RTLD_NOW);
+	this->handle = dlopen(path, RTLD_NOW);
 	if (!this->handle)
 	{
-		DBG1(DBG_TNC, "IMV '%s' failed to load from '%s': %s",
-					   name, filename, dlerror());
+		DBG1(DBG_TNC, "IMV \"%s\" failed to load: %s", name, dlerror());
 		free(this);
 		return NULL;
 	}
@@ -163,7 +170,7 @@ imv_t* tnc_imv_create(char *name, char *filename)
 	if (!this->public.initialize)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_Initialize in %s: %s\n",
-					   filename, dlerror());
+					   path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
@@ -175,7 +182,7 @@ imv_t* tnc_imv_create(char *name, char *filename)
 	if (!this->public.solicit_recommendation)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_SolicitRecommendation in %s: %s\n",
-					   filename, dlerror());
+					   path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
@@ -191,12 +198,11 @@ imv_t* tnc_imv_create(char *name, char *filename)
     if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_ProvideBindFunction in %s: %s\n",
-					  filename, dlerror());
+					  path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
-	this->name = strdup(name);
 
 	return &this->public;
 }

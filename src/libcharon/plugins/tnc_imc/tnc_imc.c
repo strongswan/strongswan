@@ -33,6 +33,11 @@ struct private_tnc_imc_t {
 	imc_t public;
 
 	/**
+	 * Path of loaded IMC
+	 */
+	char *path;
+
+	/**
 	 * Name of loaded IMC
 	 */
 	char *name;
@@ -129,13 +134,14 @@ METHOD(imc_t, destroy, void,
 	dlclose(this->handle);
 	free(this->supported_types);
 	free(this->name);
+	free(this->path);
 	free(this);
 }
 
 /**
  * Described in header.
  */
-imc_t* tnc_imc_create(char* name, char *filename)
+imc_t* tnc_imc_create(char *name, char *path)
 {
 	private_tnc_imc_t *this;
 
@@ -148,25 +154,23 @@ imc_t* tnc_imc_create(char* name, char *filename)
 			.type_supported = _type_supported,
 			.destroy = _destroy,
         },
+		.name = name,
+		.path = path,
 	);
 
-	this->handle = dlopen(filename, RTLD_NOW);
+	this->handle = dlopen(path, RTLD_NOW);
 	if (!this->handle)
 	{
-		DBG1(DBG_TNC, "IMC '%s' failed to load from '%s': %s",
-					   name, filename, dlerror());
+		DBG1(DBG_TNC, "IMC \"%s\" failed to load: %s", name, dlerror());
 		free(this);
 		return NULL;
 	}
-
-	/* we do not store or free dlopen() this->handles, leak_detective requires
-	 * the modules to keep loaded until leak report */
 
 	this->public.initialize = dlsym(this->handle, "TNC_IMC_Initialize");
 	if (!this->public.initialize)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_Initialize in %s: %s\n",
-					   filename, dlerror());
+					   path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
@@ -177,7 +181,7 @@ imc_t* tnc_imc_create(char* name, char *filename)
 	if (!this->public.begin_handshake)
     {
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_BeginHandshake in %s: %s\n",
-					   filename, dlerror());
+					   path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
@@ -193,12 +197,11 @@ imc_t* tnc_imc_create(char* name, char *filename)
     if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_ProvideBindFunction in %s: %s\n",
-					  filename, dlerror());
+					  path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
-	this->name = strdup(name);
 
 	return &this->public;
 }
