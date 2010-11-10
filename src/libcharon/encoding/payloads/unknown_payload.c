@@ -97,6 +97,10 @@ encoding_rule_t unknown_payload_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_unknown_payload_t *this)
 {
+	if (this->payload_length != UNKNOWN_PAYLOAD_HEADER_LENGTH + this->data.len)
+	{
+		return FAILED;
+	}
 	return SUCCESS;
 }
 
@@ -192,6 +196,7 @@ unknown_payload_t *unknown_payload_create_data(payload_type_t type,
 	this = (private_unknown_payload_t*)unknown_payload_create(type);
 	this->data = data;
 	this->critical = critical;
+	this->payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH + data.len;
 
 	return &this->public;
 }
