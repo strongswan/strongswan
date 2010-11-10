@@ -70,10 +70,11 @@ struct unknown_payload_t {
 };
 
 /**
- * Creates an empty unknown_payload_t object.
+ * Creates an empty unknown_payload_t.
  *
- * @return unknown_payload_t object
+ * @param		type of the payload
+ * @return		unknown_payload_t object
  */
-unknown_payload_t *unknown_payload_create(void);
+unknown_payload_t *unknown_payload_create(payload_type_t type);
 
 #endif /** UNKNOWN_PAYLOAD_H_ @}*/

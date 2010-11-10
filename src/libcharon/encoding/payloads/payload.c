@@ -59,25 +59,23 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, N
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
+ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"TRANSFORM_SUBSTRUCTURE",
 	"TRANSFORM_ATTRIBUTE",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-	"CONFIGURATION_ATTRIBUTE",
-	"UNKNOWN_PAYLOAD");
+	"CONFIGURATION_ATTRIBUTE");
 #else
-ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
+ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"TRANSFORM_SUBSTRUCTURE",
 	"TRANSFORM_ATTRIBUTE",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-	"CONFIGURATION_ATTRIBUTE",
-	"UNKNOWN_PAYLOAD");
+	"CONFIGURATION_ATTRIBUTE");
 #endif /* ME */
-ENUM_END(payload_type_names, UNKNOWN_PAYLOAD);
+ENUM_END(payload_type_names, CONFIGURATION_ATTRIBUTE);
 
 /* short forms of payload names */
 ENUM_BEGIN(payload_type_short_names, NO_PAYLOAD, NO_PAYLOAD,
@@ -102,25 +100,23 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICAT
 #ifdef ME
 ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
+ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
 	"HDR",
 	"PROP",
 	"TRANS",
 	"TRANSATTR",
 	"TSSUB",
-	"CPATTR",
-	"??");
+	"CPATTR");
 #else
-ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
+ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
 	"HDR",
 	"PROP",
 	"TRANS",
 	"TRANSATTR",
 	"TSSUB",
-	"CPATTR",
-	"??");
+	"CPATTR");
 #endif /* ME */
-ENUM_END(payload_type_short_names, UNKNOWN_PAYLOAD);
+ENUM_END(payload_type_short_names, CONFIGURATION_ATTRIBUTE);
 
 /*
  * see header
@@ -178,7 +174,25 @@ payload_t *payload_create(payload_type_t type)
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:
-			return (payload_t*)unknown_payload_create();
+			return (payload_t*)unknown_payload_create(type);
 	}
 }
 
+/**
+ * See header.
+ */
+bool payload_is_known(payload_type_t type)
+{
+	if (type == HEADER ||
+		(type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION))
+	{
+		return TRUE;
+	}
+#ifdef ME
+	if (type == ID_PEER)
+	{
+		return TRUE;
+	}
+#endif
+	return FALSE;
+}

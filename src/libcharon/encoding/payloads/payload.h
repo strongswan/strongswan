@@ -178,16 +178,7 @@ enum payload_type_t{
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 145,
-
-	/**
-	 * A unknown payload has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a unknown payload.
-	 */
-	UNKNOWN_PAYLOAD = 146,
 };
-
 
 /**
  * enum names for payload_type_t.
@@ -268,5 +259,13 @@ struct payload_t {
  * @return			payload_t object
  */
 payload_t *payload_create(payload_type_t type);
+
+/**
+ * Check if a specific payload is implemented, or handled as unkown payload.
+ *
+ * @param type		type of the payload to check
+ * @return			FALSE if payload type handled as unkown payload
+ */
+bool payload_is_known(payload_type_t type);
 
 #endif /** PAYLOAD_H_ @}*/

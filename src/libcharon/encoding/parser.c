@@ -387,12 +387,6 @@ static status_t parse_payload(private_parser_t *this,
 	DBG3(DBG_ENC, "parsing payload from %b",
 		 this->byte_pos, this->input_roof - this->byte_pos);
 
-	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
-	{
-		DBG1(DBG_ENC, "  payload type %d is unknown, handling as %N",
-			 payload_type, payload_type_names, UNKNOWN_PAYLOAD);
-	}
-
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
 

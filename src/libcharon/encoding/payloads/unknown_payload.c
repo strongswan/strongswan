@@ -31,6 +31,11 @@ struct private_unknown_payload_t {
 	unknown_payload_t public;
 
 	/**
+	 * Type of this payload
+	 */
+	payload_type_t type;
+
+	/**
 	 * Next payload type.
 	 */
 	u_int8_t next_payload;
@@ -105,7 +110,7 @@ METHOD(payload_t, get_encoding_rules, void,
 METHOD(payload_t, get_payload_type, payload_type_t,
 	private_unknown_payload_t *this)
 {
-	return UNKNOWN_PAYLOAD;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -148,7 +153,7 @@ METHOD2(payload_t, unknown_payload_t, destroy, void,
 /*
  * Described in header
  */
-unknown_payload_t *unknown_payload_create()
+unknown_payload_t *unknown_payload_create(payload_type_t type)
 {
 	private_unknown_payload_t *this;
 
@@ -169,6 +174,7 @@ unknown_payload_t *unknown_payload_create()
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH,
+		.type = type,
 	);
 
 	return &this->public;

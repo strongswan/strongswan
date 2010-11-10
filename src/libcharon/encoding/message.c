@@ -1273,7 +1273,7 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 			}
 			encryption->destroy(encryption);
 		}
-		if (type != UNKNOWN_PAYLOAD && !was_encrypted)
+		if (payload_is_known(type) && !was_encrypted)
 		{
 			rule = get_payload_rule(this, type);
 			if (!rule || rule->encrypted)
@@ -1315,14 +1315,13 @@ static status_t verify(private_message_t *this)
 			unknown_payload_t *unknown;
 
 			type = payload->get_type(payload);
-			if (type == UNKNOWN_PAYLOAD)
+			if (!payload_is_known(type))
 			{
-				/* unknown payloads are ignored if they are not critical */
 				unknown = (unknown_payload_t*)payload;
 				if (unknown->is_critical(unknown))
 				{
-					DBG1(DBG_ENC, "%N is not supported, but its critical!",
-						 payload_type_names, type);
+					DBG1(DBG_ENC, "payload type %N is not supported, "
+						 "but its critical!", payload_type_names, type);
 					enumerator->destroy(enumerator);
 					return NOT_SUPPORTED;
 				}
