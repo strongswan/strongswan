@@ -13,7 +13,8 @@ libstrongswan_tnccs_20_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
 libstrongswan_tnccs_20_la_SOURCES = \
-	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c
+	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c \
+	tnccs_20_types.h tnccs_20_types.c
 
 libstrongswan_tnccs_20_la_LDFLAGS = -module -avoid-version
 
