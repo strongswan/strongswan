@@ -117,7 +117,7 @@ METHOD(tls_t, build, status_t,
 	char *msg = this->is_server ? "tncs->tncc 2.0|" : "tncc->tncs 2.0|";
 	size_t len;
 
-	this->batch = chunk_clone(chunk_create(msg, strlen(msg)));
+	this->batch = chunk_cat("cm", chunk_create(msg, strlen(msg)), this->batch);
 
 	if (!this->is_server && !this->connection_id)
 	{
