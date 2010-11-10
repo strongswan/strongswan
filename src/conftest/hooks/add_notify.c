@@ -85,7 +85,7 @@ METHOD(listener_t, message, bool,
 			data = chunk_skip(chunk_create(this->data, strlen(this->data)), 2);
 			data = chunk_from_hex(data, NULL);
 		}
-		else if (data.len)
+		else if (this->data && strlen(this->data))
 		{
 			data = chunk_clone(chunk_create(this->data, strlen(this->data)));
 		}
