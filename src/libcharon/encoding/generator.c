@@ -41,6 +41,7 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+#include <encoding/payloads/unknown_payload.h>
 
 /**
  * Generating is done in a data buffer.
@@ -566,6 +567,7 @@ METHOD(generator_t, generate_payload, void,
 			case CONFIGURATION_ATTRIBUTE_VALUE:
 			case VID_DATA:
 			case EAP_DATA:
+			case UNKNOWN_DATA:
 			{
 				u_int32_t payload_length_position_offset;
 				u_int16_t length_of_payload;
@@ -608,6 +610,8 @@ METHOD(generator_t, generate_payload, void,
 					case EAP_DATA:
 						header_length = EAP_PAYLOAD_HEADER_LENGTH;
 						break;
+					case UNKNOWN_DATA:
+						header_length = UNKNOWN_PAYLOAD_HEADER_LENGTH;
 					default:
 						break;
 				}
