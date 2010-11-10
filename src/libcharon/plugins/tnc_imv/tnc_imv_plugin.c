@@ -133,7 +133,8 @@ static bool load_imvs(char *filename)
 			imv->destroy(imv);
 			return FALSE;
 		}
-		DBG1(DBG_TNC, "IMV \"%s\" loaded from '%s'", name, path);
+		DBG1(DBG_TNC, "IMV %u \"%s\" loaded from '%s'", imv->get_id(imv),
+														name, path);
 	}
 	munmap(addr, sb.st_size);
 	close(fd);
