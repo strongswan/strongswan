@@ -5,7 +5,7 @@ AM_CFLAGS = -rdynamic
 conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/hook.h hooks/ike_auth_fill.c hooks/unsort_message.c \
 	hooks/add_notify.c hooks/unencrypted_notify.c hooks/ignore_message.c \
-	hooks/add_payload.c
+	hooks/add_payload.c hooks/set_critical.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
