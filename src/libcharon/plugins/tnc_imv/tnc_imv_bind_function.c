@@ -26,7 +26,6 @@ TNC_Result TNC_TNCS_ReportMessageTypes(TNC_IMVID imv_id,
 									   TNC_MessageTypeList supported_types,
 									   TNC_UInt32 type_count)
 {
-	DBG2(DBG_TNC,"TNCS_ReportMessageTypes %u %u", imv_id, type_count);
 	return charon->imvs->set_message_types(charon->imvs, imv_id,
 										   supported_types, type_count);
 }
@@ -38,7 +37,7 @@ TNC_Result TNC_TNCS_RequestHandshakeRetry(TNC_IMVID imv_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_RetryReason reason)
 {
-	DBG2(DBG_TNC,"TNCS_RequestHandshakeRetry %u %u", imv_id, connection_id);
+	DBG2(DBG_TNC,"TNCS_RequestHandshakeRetry not supported yet");
 	return TNC_RESULT_SUCCESS;
 }
 
@@ -51,8 +50,6 @@ TNC_Result TNC_TNCS_SendMessage(TNC_IMVID imv_id,
 								TNC_UInt32 message_len,
 								TNC_MessageType message_type)
 {
-	DBG2(DBG_TNC,"TNCS_SendMessage %u %u '%s' %u %0x", imv_id, connection_id,
-				  message, message_len, message_type);
 	return charon->tnccs->send_message(charon->tnccs, connection_id, message,
 									   message_len, message_type);
 }
@@ -66,7 +63,6 @@ TNC_Result TNC_TNCS_ProvideRecommendation(TNC_IMVID imv_id,
 								TNC_IMV_Action_Recommendation recommendation,
 								TNC_IMV_Evaluation_Result evaluation)
 {
-	DBG2(DBG_TNC,"TNCS_ProvideRecommendation %u %u", imv_id, connection_id);
 	return charon->tnccs->provide_recommendation(charon->tnccs, imv_id,
 							connection_id, recommendation, evaluation);
 }
