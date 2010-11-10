@@ -56,6 +56,16 @@ struct imv_manager_t {
 	int (*get_count)(imv_manager_t *this);
 
 	/**
+	 * Enforce the TNC recommendation on the IKE_SA by either inserting an
+	 * allow|isolate group membership rule (TRUE) or by blocking access (FALSE)
+	 *
+	 * @param void				TNC action recommendation
+	 * @return					TRUE for allow|isolate, FALSE for none
+	 */
+	bool (*enforce_recommendation)(imv_manager_t *this,
+								   TNC_IMV_Action_Recommendation rec);
+
+	/**
 	 * Notify all IMV instances
 	 *
 	 * @param state			communicate the state a connection has reached

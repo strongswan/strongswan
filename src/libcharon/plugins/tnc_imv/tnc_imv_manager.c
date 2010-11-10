@@ -19,8 +19,7 @@
 #include <tnc/tncifimv.h>
 
 #include <debug.h>
-#include <library.h>
-#include <utils/linked_list.h>
+#include <daemon.h>
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;
 
@@ -97,6 +96,42 @@ METHOD(imv_manager_t, get_count, int,
 {
 	return this->imvs->get_count(this->imvs);
 }
+
+METHOD(imv_manager_t, enforce_recommendation, bool,
+	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec)
+{
+	char *group;
+	identification_t *id;
+	ike_sa_t *ike_sa;
+	auth_cfg_t *auth;
+
+	switch (rec)
+	{
+		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+			DBG1(DBG_TNC, "TNC recommendation is allow");
+			group = "allow";
+			break;	
+		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+			DBG1(DBG_TNC, "TNC recommendation is isolate");
+			group = "isolate";
+			break;
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+		default:
+			DBG1(DBG_TNC, "TNC recommendation is none");
+			return FALSE;
+	}
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
+	{
+		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+		id = identification_create_from_string(group);
+		auth->add(auth, AUTH_RULE_GROUP, id);
+		DBG1(DBG_TNC, "TNC added group membership '%s'", group);
+	}
+	return TRUE;
+}
+
 
 METHOD(imv_manager_t, notify_connection_change, void,
 	private_tnc_imv_manager_t *this, TNC_ConnectionID id,
@@ -222,6 +257,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.get_count = _get_count,
+			.enforce_recommendation = _enforce_recommendation,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
 			.solicit_recommendation = _solicit_recommendation,
