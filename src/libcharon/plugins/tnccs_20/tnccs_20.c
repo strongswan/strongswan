@@ -87,6 +87,16 @@ struct private_tnccs_20_t {
 	mutex_t *recommendation_mutex;
 };
 
+static bool have_recommendation(private_tnccs_20_t *this,
+								TNC_IMV_Action_Recommendation *rec,
+								TNC_IMV_Evaluation_Result *eval)
+{
+	/* TODO */
+	*rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
+	*eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+	return TRUE;
+}
+
 METHOD(tnccs_t, send_message, void,
 	private_tnccs_20_t* this, TNC_BufferReference message,
 							  TNC_UInt32 message_len,
@@ -232,7 +242,17 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tnccs_20_t *this)
 {
-	return FALSE;
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+
+	if (this->is_server && have_recommendation(this, &rec, &eval))
+	{
+		return charon->imvs->enforce_recommendation(charon->imvs, rec);
+	}
+	else
+	{
+		return FALSE;
+	}
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
