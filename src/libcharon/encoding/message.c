@@ -1313,21 +1313,9 @@ static status_t verify(private_message_t *this)
 		while (enumerator->enumerate(enumerator, &payload))
 		{
 			payload_type_t type;
-			unknown_payload_t *unknown;
 
 			type = payload->get_type(payload);
-			if (!payload_is_known(type))
-			{
-				unknown = (unknown_payload_t*)payload;
-				if (unknown->is_critical(unknown))
-				{
-					DBG1(DBG_ENC, "payload type %N is not supported, "
-						 "but its critical!", payload_type_names, type);
-					enumerator->destroy(enumerator);
-					return NOT_SUPPORTED;
-				}
-			}
-			else if (type == rule->type)
+			if (type == rule->type)
 			{
 				found++;
 				DBG2(DBG_ENC, "found payload of type %N",

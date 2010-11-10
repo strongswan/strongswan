@@ -211,8 +211,6 @@ struct message_t {
 	 * @param aead		aead transform to verify/decrypt message
 	 * @return
 	 * 					- SUCCESS if parsing successful
-	 * 					- NOT_SUPPORTED if ciritcal unknown payloads found
-	 * 					- NOT_SUPPORTED if message type is not supported!
 	 *					- PARSE_ERROR if message parsing failed
 	 * 					- VERIFY_ERROR if message verification failed (bad syntax)
 	 * 					- FAILED if integrity check failed

@@ -1008,6 +1008,19 @@ METHOD(task_manager_t, busy, bool,
 	return (this->active_tasks->get_count(this->active_tasks) > 0);
 }
 
+METHOD(task_manager_t, incr_mid, void,
+	private_task_manager_t *this, bool initiate)
+{
+	if (initiate)
+	{
+		this->initiating.mid++;
+	}
+	else
+	{
+		this->responding.mid++;
+	}
+}
+
 METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
@@ -1091,6 +1104,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 			.queue_task = _queue_task,
 			.initiate = _initiate,
 			.retransmit = _retransmit,
+			.incr_mid = _incr_mid,
 			.reset = _reset,
 			.adopt_tasks = _adopt_tasks,
 			.busy = _busy,
