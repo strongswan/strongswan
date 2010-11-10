@@ -179,3 +179,19 @@ unknown_payload_t *unknown_payload_create(payload_type_t type)
 
 	return &this->public;
 }
+
+
+/*
+ * Described in header
+ */
+unknown_payload_t *unknown_payload_create_data(payload_type_t type,
+											   bool critical, chunk_t data)
+{
+	private_unknown_payload_t *this;
+
+	this = (private_unknown_payload_t*)unknown_payload_create(type);
+	this->data = data;
+	this->critical = critical;
+
+	return &this->public;
+}
