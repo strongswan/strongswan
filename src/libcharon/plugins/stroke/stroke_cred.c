@@ -1234,7 +1234,6 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)
 			{
 				DBG1(DBG_CFG, "expanding file expression '%s' failed", pattern);
-				globfree(&buf);
 			}
 			else
 			{
