@@ -450,13 +450,26 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 }
 
 /**
+ * create a section with the given name
+ */
+static section_t *section_create(char *name)
+{
+	section_t *this;
+	INIT(this,
+		.name = name,
+		.sections = linked_list_create(),
+		.kv = linked_list_create(),
+	);
+	return this;
+}
+
+/**
  * destroy a section
  */
 static void section_destroy(section_t *this)
 {
 	this->kv->destroy_function(this->kv, free);
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
-
 	free(this);
 }
 
@@ -537,16 +550,10 @@ static char parse(char **text, char *skip, char *term, char *br, char **token)
 /**
  * Parse a section
  */
-static section_t* parse_section(char **text, char *name)
+static bool parse_section(char **text, section_t *section)
 {
-	section_t *sub, *section;
 	bool finished = FALSE;
 	char *key, *value, *inner;
-
-	section = malloc_thing(section_t);
-	section->name = name;
-	section->sections = linked_list_create();
-	section->kv = linked_list_create();
 
 	while (!finished)
 	{
@@ -555,12 +562,15 @@ static section_t* parse_section(char **text, char *name)
 			case '{':
 				if (parse(text, "\t ", "}", "{", &inner))
 				{
-					sub = parse_section(&inner, key);
-					if (sub)
+					section_t *sub = section_create(key);
+					if (parse_section(&inner, sub))
 					{
 						section->sections->insert_last(section->sections, sub);
 						continue;
 					}
+					section_destroy(sub);
+					DBG1(DBG_LIB, "parsing subsection '%s' failed", key);
+					break;
 				}
 				DBG1(DBG_LIB, "matching '}' not found near %s", *text);
 				break;
@@ -582,10 +592,9 @@ static section_t* parse_section(char **text, char *name)
 				finished = TRUE;
 				continue;
 		}
-		section_destroy(section);
-		return NULL;
+		return FALSE;
 	}
-	return section;
+	return TRUE;
 }
 
 METHOD(settings_t, destroy, void,
@@ -646,11 +655,13 @@ settings_t *settings_create(char *file)
 	fclose(fd);
 
 	pos = this->text;
-	this->top = parse_section(&pos, NULL);
-	if (this->top == NULL)
+	this->top = section_create(NULL);
+	if (!parse_section(&pos, this->top))
 	{
 		free(this->text);
 		this->text = NULL;
+		section_destroy(this->top);
+		this->top = NULL;
 	}
 	return &this->public;
 }
