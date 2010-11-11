@@ -474,6 +474,22 @@ static void section_destroy(section_t *this)
 }
 
 /**
+ * callback to find a section by name
+ */
+static bool section_find(section_t *this, char *name)
+{
+	return streq(this->name, name);
+}
+
+/**
+ * callback to find a kv pair by key
+ */
+static bool kv_find(kv_t *this, char *key)
+{
+	return streq(this->key, key);
+}
+
+/**
  * parse text, truncate "skip" chars, delimited by term respecting brackets.
  *
  * Chars in "skip" are truncated at the beginning and the end of the resulting
@@ -562,13 +578,27 @@ static bool parse_section(char **text, section_t *section)
 			case '{':
 				if (parse(text, "\t ", "}", "{", &inner))
 				{
-					section_t *sub = section_create(key);
-					if (parse_section(&inner, sub))
+					section_t *sub;
+					if (section->sections->find_first(section->sections,
+											(linked_list_match_t)section_find,
+											(void**)&sub, key) != SUCCESS)
 					{
-						section->sections->insert_last(section->sections, sub);
-						continue;
+						sub = section_create(key);
+						if (parse_section(&inner, sub))
+						{
+							section->sections->insert_last(section->sections,
+														   sub);
+							continue;
+						}
+						section_destroy(sub);
 					}
-					section_destroy(sub);
+					else
+					{	/* extend the existing section */
+						if (parse_section(&inner, sub))
+						{
+							continue;
+						}
+					}
 					DBG1(DBG_LIB, "parsing subsection '%s' failed", key);
 					break;
 				}
@@ -577,10 +607,21 @@ static bool parse_section(char **text, section_t *section)
 			case '=':
 				if (parse(text, "\t ", "\n", NULL, &value))
 				{
-					kv_t *kv = malloc_thing(kv_t);
-					kv->key = key;
-					kv->value = value;
-					section->kv->insert_last(section->kv, kv);
+					kv_t *kv;
+					if (section->kv->find_first(section->kv,
+								(linked_list_match_t)kv_find,
+								(void**)&kv, key) != SUCCESS)
+					{
+						INIT(kv,
+							.key = key,
+							.value = value,
+						);
+						section->kv->insert_last(section->kv, kv);
+					}
+					else
+					{	/* replace with the most recently read value */
+						kv->value = value;
+					}
 					continue;
 				}
 				DBG1(DBG_LIB, "parsing value failed near %s", *text);
