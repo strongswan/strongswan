@@ -543,9 +543,6 @@ static section_t* parse_section(char **text, char *name)
 	bool finished = FALSE;
 	char *key, *value, *inner;
 
-	static int lev = 0;
-	lev++;
-
 	section = malloc_thing(section_t);
 	section->name = name;
 	section->sections = linked_list_create();
