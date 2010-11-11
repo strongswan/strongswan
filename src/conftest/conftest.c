@@ -400,8 +400,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	charon->backends->add_backend(charon->backends, &conftest->config->backend);
-	conftest->config->load(conftest->config, conftest->suite);
 	conftest->config->load(conftest->config, conftest->test);
+	conftest->config->load(conftest->config, conftest->suite);
 	conftest->actions = actions_create();
 
 	/* set up thread specific handlers */
