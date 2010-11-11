@@ -153,7 +153,7 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imc_plugin_create()
 {
-	char *tnc_config, *pref_lang;
+	char *tnc_config;
 	tnc_imc_plugin_t *this;
 
 	INIT(this,
@@ -162,15 +162,12 @@ plugin_t *tnc_imc_plugin_create()
 		},
 	);
 
-	pref_lang = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imc.preferred_language", "en");
-	tnc_config = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
-
 	/* Create IMC manager */
 	charon->imcs = tnc_imc_manager_create();
 
 	/* Load IMCs and abort if not all instances initalize successfully */
+	tnc_config = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
 	if (!load_imcs(tnc_config))
 	{
 		charon->imcs->destroy(charon->imcs);

@@ -56,6 +56,13 @@ struct imc_manager_t {
 	int (*get_count)(imc_manager_t *this);
 
 	/**
+	 * Return the preferred language for recommendations
+	 *
+	 * @return					preferred language string
+	 */
+	char* (*get_preferred_language)(imc_manager_t *this);
+
+	/**
 	 * Notify all IMC instances
 	 *
 	 * @param state			communicate the state a connection has reached
