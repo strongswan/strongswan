@@ -45,9 +45,9 @@ struct private_settings_t {
 	section_t *top;
 
 	/**
-	 * allocated file text
+	 * text of loaded files
 	 */
-	char *text;
+	linked_list_t *files;
 };
 
 /**
@@ -638,6 +638,48 @@ static bool parse_section(char **text, section_t *section)
 	return TRUE;
 }
 
+/**
+ * parse a file and add the settings to the given section.
+ */
+static bool parse_file(private_settings_t *this, char *file, section_t *section)
+{
+	bool success;
+	char *text, *pos;
+	FILE *fd;
+	int len;
+
+	DBG2(DBG_LIB, "loading config file '%s'", file);
+	fd = fopen(file, "r");
+	if (fd == NULL)
+	{
+		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
+		return FALSE;
+	}
+	fseek(fd, 0, SEEK_END);
+	len = ftell(fd);
+	rewind(fd);
+	text = malloc(len + 1);
+	text[len] = '\0';
+	if (fread(text, 1, len, fd) != len)
+	{
+		free(text);
+		return FALSE;
+	}
+	fclose(fd);
+
+	pos = text;
+	success = parse_section(&pos, section);
+	if (!success)
+	{
+		free(text);
+	}
+	else
+	{
+		this->files->insert_last(this->files, text);
+	}
+	return success;
+}
+
 METHOD(settings_t, destroy, void,
 	private_settings_t *this)
 {
@@ -645,7 +687,7 @@ METHOD(settings_t, destroy, void,
 	{
 		section_destroy(this->top);
 	}
-	free(this->text);
+	this->files->destroy_function(this->files, (void*)free);
 	free(this);
 }
 
@@ -655,9 +697,6 @@ METHOD(settings_t, destroy, void,
 settings_t *settings_create(char *file)
 {
 	private_settings_t *this;
-	char *pos;
-	FILE *fd;
-	int len;
 
 	INIT(this,
 		.public = {
@@ -670,37 +709,17 @@ settings_t *settings_create(char *file)
 			.create_key_value_enumerator = _create_key_value_enumerator,
 			.destroy = _destroy,
 		},
+		.files = linked_list_create(),
 	);
 
 	if (file == NULL)
 	{
 		file = STRONGSWAN_CONF;
 	}
-	fd = fopen(file, "r");
-	if (fd == NULL)
-	{
-		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
-		return &this->public;
-	}
-	fseek(fd, 0, SEEK_END);
-	len = ftell(fd);
-	rewind(fd);
-	this->text = malloc(len + 1);
-	this->text[len] = '\0';
-	if (fread(this->text, 1, len, fd) != len)
-	{
-		free(this->text);
-		this->text = NULL;
-		return &this->public;
-	}
-	fclose(fd);
 
-	pos = this->text;
 	this->top = section_create(NULL);
-	if (!parse_section(&pos, this->top))
+	if (!parse_file(this, file, this->top))
 	{
-		free(this->text);
-		this->text = NULL;
 		section_destroy(this->top);
 		this->top = NULL;
 	}
