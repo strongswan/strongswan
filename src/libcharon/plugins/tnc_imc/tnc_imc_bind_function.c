@@ -26,7 +26,6 @@ TNC_Result TNC_TNCC_ReportMessageTypes(TNC_IMCID imc_id,
 									   TNC_MessageTypeList supported_types,
 									   TNC_UInt32 type_count)
 {
-	DBG2(DBG_TNC,"TNCC_ReportMessageTypes %u %u", imc_id, type_count);
 	return charon->imcs->set_message_types(charon->imcs, imc_id,
 										   supported_types, type_count);
 }
@@ -38,8 +37,8 @@ TNC_Result TNC_TNCC_RequestHandshakeRetry(TNC_IMCID imc_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_RetryReason reason)
 {
-	DBG2(DBG_TNC,"TNCC_RequestHandshakeRetry %u %u", imc_id, connection_id);
-	return TNC_RESULT_SUCCESS;
+	DBG2(DBG_TNC,"TNCC_RequestHandshakeRetry not supported yet");
+	return TNC_RESULT_CANT_RESPOND;
 }
 
 /**
@@ -51,8 +50,6 @@ TNC_Result TNC_TNCC_SendMessage(TNC_IMCID imc_id,
 								TNC_UInt32 message_len,
 								TNC_MessageType message_type)
 {
-	DBG2(DBG_TNC,"TNCC_SendMessage %u %u '%s' %u %0x", imc_id, connection_id,
-				  message, message_len, message_type);
 	return charon->tnccs->send_message(charon->tnccs, connection_id, message,
 									   message_len, message_type);
 }
