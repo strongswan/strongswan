@@ -251,10 +251,22 @@ METHOD(ike_header_t, get_maj_version, u_int8_t,
 	return this->maj_version;
 }
 
+METHOD(ike_header_t, set_maj_version, void,
+	private_ike_header_t *this, u_int8_t major)
+{
+	this->maj_version = major;
+}
+
 METHOD(ike_header_t, get_min_version, u_int8_t,
 	private_ike_header_t *this)
 {
 	return this->min_version;
+}
+
+METHOD(ike_header_t, set_min_version, void,
+	private_ike_header_t *this, u_int8_t minor)
+{
+	this->min_version = minor;
 }
 
 METHOD(ike_header_t, get_response_flag, bool,
@@ -340,7 +352,9 @@ ike_header_t *ike_header_create()
 			.get_responder_spi = _get_responder_spi,
 			.set_responder_spi = _set_responder_spi,
 			.get_maj_version = _get_maj_version,
+			.set_maj_version = _set_maj_version,
 			.get_min_version = _get_min_version,
+			.set_min_version = _set_min_version,
 			.get_response_flag = _get_response_flag,
 			.set_response_flag = _set_response_flag,
 			.get_version_flag = _get_version_flag,
