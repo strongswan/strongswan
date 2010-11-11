@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,12 +19,16 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
+#include <glob.h>
+#include <libgen.h>
 
 #include "settings.h"
 
 #include "debug.h"
 #include "utils/linked_list.h"
 
+#define MAX_INCLUSION_LEVEL		10
 
 typedef struct private_settings_t private_settings_t;
 typedef struct section_t section_t;
@@ -564,15 +569,76 @@ static char parse(char **text, char *skip, char *term, char *br, char **token)
 }
 
 /**
+ * Check if "text" starts with "pattern".
+ * Characters in "skip" are skipped first. If found, TRUE is returned and "text"
+ * is modified to point to the character right after "pattern".
+ */
+static bool starts_with(char **text, char *skip, char *pattern)
+{
+	char *pos = *text;
+	int len = strlen(pattern);
+	while (strchr(skip, *pos))
+	{
+		pos++;
+		if (!*pos)
+		{
+			return FALSE;
+		}
+	}
+	if (strlen(pos) < len || !strneq(pos, pattern, len))
+	{
+		return FALSE;
+	}
+	*text = pos + len;
+	return TRUE;
+}
+
+/**
+ * Check if what follows in "text" is an include statement.
+ * If this function returns TRUE, "text" will point to the character right after
+ * the include pattern, which is returned in "pattern".
+ */
+static bool parse_include(char **text, char **pattern)
+{
+	char *pos = *text;
+	if (!starts_with(&pos, "\n\t ", "include"))
+	{
+		return FALSE;
+	}
+	if (starts_with(&pos, "\t ", "="))
+	{	/* ignore "include = value" */
+		return FALSE;
+	}
+	*text = pos;
+	return parse(text, "\t ", "\n", NULL, pattern) != 0;
+}
+
+/**
+ * Forward declaration.
+ */
+static bool parse_files(private_settings_t *this, char *file, int level,
+						char *pattern, section_t *section);
+
+/**
  * Parse a section
  */
-static bool parse_section(char **text, section_t *section)
+static bool parse_section(private_settings_t *this, char *file, int level,
+						  char **text, section_t *section)
 {
 	bool finished = FALSE;
 	char *key, *value, *inner;
 
 	while (!finished)
 	{
+		if (parse_include(text, &value))
+		{
+			if (!parse_files(this, file, level, value, section))
+			{
+				DBG1(DBG_LIB, "failed to include '%s'", value);
+				return FALSE;
+			}
+			continue;
+		}
 		switch (parse(text, "\t\n ", "{=#", NULL, &key))
 		{
 			case '{':
@@ -584,7 +650,7 @@ static bool parse_section(char **text, section_t *section)
 											(void**)&sub, key) != SUCCESS)
 					{
 						sub = section_create(key);
-						if (parse_section(&inner, sub))
+						if (parse_section(this, file, level, &inner, sub))
 						{
 							section->sections->insert_last(section->sections,
 														   sub);
@@ -594,7 +660,7 @@ static bool parse_section(char **text, section_t *section)
 					}
 					else
 					{	/* extend the existing section */
-						if (parse_section(&inner, sub))
+						if (parse_section(this, file, level, &inner, sub))
 						{
 							continue;
 						}
@@ -639,9 +705,10 @@ static bool parse_section(char **text, section_t *section)
 }
 
 /**
- * parse a file and add the settings to the given section.
+ * Parse a file and add the settings to the given section.
  */
-static bool parse_file(private_settings_t *this, char *file, section_t *section)
+static bool parse_file(private_settings_t *this, char *file, int level,
+					   section_t *section)
 {
 	bool success;
 	char *text, *pos;
@@ -668,7 +735,7 @@ static bool parse_file(private_settings_t *this, char *file, section_t *section)
 	fclose(fd);
 
 	pos = text;
-	success = parse_section(&pos, section);
+	success = parse_section(this, file, level, &pos, section);
 	if (!success)
 	{
 		free(text);
@@ -677,6 +744,76 @@ static bool parse_file(private_settings_t *this, char *file, section_t *section)
 	{
 		this->files->insert_last(this->files, text);
 	}
+	return success;
+}
+
+/**
+ * Load the files matching "pattern", which is resolved with glob(3).
+ * If the pattern is relative, the directory of "file" is used as base.
+ */
+static bool parse_files(private_settings_t *this, char *file, int level,
+						char *pattern, section_t *section)
+{
+	bool success = TRUE;
+	int status;
+	glob_t buf;
+	char **expanded, pat[PATH_MAX];
+
+	if (level > MAX_INCLUSION_LEVEL)
+	{
+		DBG1(DBG_LIB, "maximum level of %d includes reached, ignored",
+			 MAX_INCLUSION_LEVEL);
+		return TRUE;
+	}
+
+	if (!strlen(pattern))
+	{
+		DBG2(DBG_LIB, "empty include pattern, ignored");
+		return TRUE;
+	}
+
+	if (!file || pattern[0] == '/')
+	{	/* absolute path */
+		if (snprintf(pat, sizeof(pat), "%s", pattern) >= sizeof(pat))
+		{
+			DBG1(DBG_LIB, "include pattern too long, ignored");
+			return TRUE;
+		}
+	}
+	else
+	{	/* base relative paths to the directory of the current file */
+		char *dir = strdup(file);
+		dir = dirname(dir);
+		if (snprintf(pat, sizeof(pat), "%s/%s", dir, pattern) >= sizeof(pat))
+		{
+			DBG1(DBG_LIB, "include pattern too long, ignored");
+			free(dir);
+			return TRUE;
+		}
+		free(dir);
+	}
+	status = glob(pat, GLOB_ERR, NULL, &buf);
+	if (status == GLOB_NOMATCH)
+	{
+		DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
+	}
+	else if (status != 0)
+	{
+		DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
+		success = FALSE;
+	}
+	else
+	{
+		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+		{
+			success &= parse_file(this, *expanded, level + 1, section);
+			if (!success)
+			{
+				break;
+			}
+		}
+	}
+	globfree(&buf);
 	return success;
 }
 
@@ -718,7 +855,7 @@ settings_t *settings_create(char *file)
 	}
 
 	this->top = section_create(NULL);
-	if (!parse_file(this, file, this->top))
+	if (!parse_files(this, NULL, 0, file, this->top))
 	{
 		section_destroy(this->top);
 		this->top = NULL;
