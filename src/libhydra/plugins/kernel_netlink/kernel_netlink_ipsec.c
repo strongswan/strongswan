@@ -1813,6 +1813,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 			if (route->if_name)
 			{
+				DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
+					 src_ts, route->gateway, route->src_ip, route->if_name);
 				switch (hydra->kernel_interface->add_route(
 									hydra->kernel_interface, route->dst_net,
 									route->prefixlen, route->gateway,
