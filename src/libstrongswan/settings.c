@@ -27,6 +27,7 @@
 
 #include "debug.h"
 #include "utils/linked_list.h"
+#include "threading/rwlock.h"
 
 #define MAX_INCLUSION_LEVEL		10
 
@@ -53,6 +54,11 @@ struct private_settings_t {
 	 * contents of loaded files
 	 */
 	linked_list_t *files;
+
+	/**
+	 * lock to safely access the settings
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -182,17 +188,23 @@ static section_t *find_section_buffered(section_t *section,
 }
 
 /**
- * find a section by a given key
+ * Find a section by a given key (thread-safe).
  */
-static section_t *find_section(section_t *section, char *key, va_list args)
+static section_t *find_section(private_settings_t *this, section_t *section,
+							   char *key, va_list args)
 {
 	char buf[128], keybuf[512];
+	section_t *found;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-	return find_section_buffered(section, keybuf, keybuf, args, buf, sizeof(buf));
+	this->lock->read_lock(this->lock);
+	found = find_section_buffered(section, keybuf, keybuf, args, buf,
+								  sizeof(buf));
+	this->lock->unlock(this->lock);
+	return found;
 }
 
 /**
@@ -257,17 +269,22 @@ static char *find_value_buffered(section_t *section,
 }
 
 /**
- * Find the string value for a key
+ * Find the string value for a key (thread-safe).
  */
-static char *find_value(section_t *section, char *key, va_list args)
+static char *find_value(private_settings_t *this, section_t *section,
+						char *key, va_list args)
 {
-	char buf[128], keybuf[512];
+	char buf[128], keybuf[512], *value;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-	return find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf));
+	this->lock->read_lock(this->lock);
+	value = find_value_buffered(section, keybuf, keybuf, args, buf,
+								sizeof(buf));
+	this->lock->unlock(this->lock);
+	return value;
 }
 
 METHOD(settings_t, get_str, char*,
@@ -277,7 +294,7 @@ METHOD(settings_t, get_str, char*,
 	va_list args;
 
 	va_start(args, def);
-	value = find_value(this->top, key, args);
+	value = find_value(this, this->top, key, args);
 	va_end(args);
 	if (value)
 	{
@@ -293,7 +310,7 @@ METHOD(settings_t, get_bool, bool,
 	va_list args;
 
 	va_start(args, def);
-	value = find_value(this->top, key, args);
+	value = find_value(this, this->top, key, args);
 	va_end(args);
 	if (value)
 	{
@@ -323,7 +340,7 @@ METHOD(settings_t, get_int, int,
 	va_list args;
 
 	va_start(args, def);
-	value = find_value(this->top, key, args);
+	value = find_value(this, this->top, key, args);
 	va_end(args);
 	if (value)
 	{
@@ -345,7 +362,7 @@ METHOD(settings_t, get_double, double,
 	va_list args;
 
 	va_start(args, def);
-	value = find_value(this->top, key, args);
+	value = find_value(this, this->top, key, args);
 	va_end(args);
 	if (value)
 	{
@@ -367,7 +384,7 @@ METHOD(settings_t, get_time, u_int32_t,
 	va_list args;
 
 	va_start(args, def);
-	value = find_value(this->top, key, args);
+	value = find_value(this, this->top, key, args);
 	va_end(args);
 	if (value)
 	{
@@ -412,16 +429,17 @@ METHOD(settings_t, create_section_enumerator, enumerator_t*,
 	va_list args;
 
 	va_start(args, key);
-	section = find_section(this->top, key, args);
+	section = find_section(this, this->top, key, args);
 	va_end(args);
 
 	if (!section)
 	{
 		return enumerator_create_empty();
 	}
+	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
-					section->sections->create_enumerator(section->sections),
-					(void*)section_filter, NULL, NULL);
+				section->sections->create_enumerator(section->sections),
+				(void*)section_filter, this->lock, (void*)this->lock->unlock);
 }
 
 /**
@@ -442,16 +460,17 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	va_list args;
 
 	va_start(args, key);
-	section = find_section(this->top, key, args);
+	section = find_section(this, this->top, key, args);
 	va_end(args);
 
 	if (!section)
 	{
 		return enumerator_create_empty();
 	}
+	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 					section->kv->create_enumerator(section->kv),
-					(void*)kv_filter, NULL, NULL);
+					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
 }
 
 /**
@@ -881,6 +900,7 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 		return FALSE;
 	}
 
+	this->lock->write_lock(this->lock);
 	/* extend parent section */
 	section_extend(parent, section);
 	/* move contents of loaded files to main store */
@@ -888,6 +908,7 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	{
 		this->files->insert_last(this->files, text);
 	}
+	this->lock->unlock(this->lock);
 
 	section_destroy(section);
 	files->destroy(files);
@@ -922,6 +943,7 @@ METHOD(settings_t, destroy, void,
 {
 	section_destroy(this->top);
 	this->files->destroy_function(this->files, (void*)free);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -947,6 +969,7 @@ settings_t *settings_create(char *file)
 		},
 		.top = section_create(NULL),
 		.files = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	if (file == NULL)
