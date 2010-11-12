@@ -128,6 +128,39 @@ struct settings_t {
 												 char *section, ...);
 
 	/**
+	 * Load settings from the files matching the given pattern.
+	 *
+	 * Existing sections are extended, existing values replaced, by those found
+	 * in the loaded files.
+	 *
+	 * @note If any of the files matching the pattern fails to load, no settings
+	 * are added at all. So it's all or nothing.
+	 *
+	 * @param pattern	file pattern
+	 * @return			TRUE, if settings were loaded successfully
+	 */
+	bool (*load_files)(settings_t *this, char *pattern);
+
+	/**
+	 * Load settings from the files matching the given pattern.
+	 *
+	 * Existing sections are extended, existing values replaced, by those found
+	 * in the loaded files.
+	 *
+	 * All settings are loaded relative to the given section.
+	 *
+	 * @note If any of the files matching the pattern fails to load, no settings
+	 * are added at all. So it's all or nothing.
+	 *
+	 * @param pattern	file pattern
+	 * @param section	section name of parent section, printf style
+	 * @param ...		argument list for section
+	 * @return			TRUE, if section is found and settings were loaded successfully
+	 */
+	bool (*load_files_section)(settings_t *this, char *pattern,
+							   char *section, ...);
+
+	/**
 	 * Destroy a settings instance.
 	 */
 	void (*destroy)(settings_t *this);

@@ -50,7 +50,7 @@ struct private_settings_t {
 	section_t *top;
 
 	/**
-	 * text of loaded files
+	 * contents of loaded files
 	 */
 	linked_list_t *files;
 };
@@ -271,7 +271,7 @@ static char *find_value(section_t *section, char *key, va_list args)
 }
 
 METHOD(settings_t, get_str, char*,
-	private_settings_t *this, char *key, char *def, ...)
+	   private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
 	va_list args;
@@ -287,7 +287,7 @@ METHOD(settings_t, get_str, char*,
 }
 
 METHOD(settings_t, get_bool, bool,
-	private_settings_t *this, char *key, bool def, ...)
+	   private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
 	va_list args;
@@ -316,7 +316,7 @@ METHOD(settings_t, get_bool, bool,
 }
 
 METHOD(settings_t, get_int, int,
-	private_settings_t *this, char *key, int def, ...)
+	   private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	int intval;
@@ -338,7 +338,7 @@ METHOD(settings_t, get_int, int,
 }
 
 METHOD(settings_t, get_double, double,
-	private_settings_t *this, char *key, double def, ...)
+	   private_settings_t *this, char *key, double def, ...)
 {
 	char *value;
 	double dval;
@@ -360,7 +360,7 @@ METHOD(settings_t, get_double, double,
 }
 
 METHOD(settings_t, get_time, u_int32_t,
-	private_settings_t *this, char *key, u_int32_t def, ...)
+	   private_settings_t *this, char *key, u_int32_t def, ...)
 {
 	char *value, *endptr;
 	u_int32_t timeval;
@@ -406,7 +406,7 @@ static bool section_filter(void *null, section_t **in, char **out)
 }
 
 METHOD(settings_t, create_section_enumerator, enumerator_t*,
-	private_settings_t *this, char *key, ...)
+	   private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -436,7 +436,7 @@ static bool kv_filter(void *null, kv_t **in, char **key,
 }
 
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
-	private_settings_t *this, char *key, ...)
+	   private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -616,13 +616,13 @@ static bool parse_include(char **text, char **pattern)
 /**
  * Forward declaration.
  */
-static bool parse_files(private_settings_t *this, char *file, int level,
+static bool parse_files(linked_list_t *files, char *file, int level,
 						char *pattern, section_t *section);
 
 /**
  * Parse a section
  */
-static bool parse_section(private_settings_t *this, char *file, int level,
+static bool parse_section(linked_list_t *files, char *file, int level,
 						  char **text, section_t *section)
 {
 	bool finished = FALSE;
@@ -632,7 +632,7 @@ static bool parse_section(private_settings_t *this, char *file, int level,
 	{
 		if (parse_include(text, &value))
 		{
-			if (!parse_files(this, file, level, value, section))
+			if (!parse_files(files, file, level, value, section))
 			{
 				DBG1(DBG_LIB, "failed to include '%s'", value);
 				return FALSE;
@@ -650,7 +650,7 @@ static bool parse_section(private_settings_t *this, char *file, int level,
 											(void**)&sub, key) != SUCCESS)
 					{
 						sub = section_create(key);
-						if (parse_section(this, file, level, &inner, sub))
+						if (parse_section(files, file, level, &inner, sub))
 						{
 							section->sections->insert_last(section->sections,
 														   sub);
@@ -660,7 +660,7 @@ static bool parse_section(private_settings_t *this, char *file, int level,
 					}
 					else
 					{	/* extend the existing section */
-						if (parse_section(this, file, level, &inner, sub))
+						if (parse_section(files, file, level, &inner, sub))
 						{
 							continue;
 						}
@@ -707,7 +707,7 @@ static bool parse_section(private_settings_t *this, char *file, int level,
 /**
  * Parse a file and add the settings to the given section.
  */
-static bool parse_file(private_settings_t *this, char *file, int level,
+static bool parse_file(linked_list_t *files, char *file, int level,
 					   section_t *section)
 {
 	bool success;
@@ -735,14 +735,14 @@ static bool parse_file(private_settings_t *this, char *file, int level,
 	fclose(fd);
 
 	pos = text;
-	success = parse_section(this, file, level, &pos, section);
+	success = parse_section(files, file, level, &pos, section);
 	if (!success)
 	{
 		free(text);
 	}
 	else
 	{
-		this->files->insert_last(this->files, text);
+		files->insert_last(files, text);
 	}
 	return success;
 }
@@ -751,7 +751,7 @@ static bool parse_file(private_settings_t *this, char *file, int level,
  * Load the files matching "pattern", which is resolved with glob(3).
  * If the pattern is relative, the directory of "file" is used as base.
  */
-static bool parse_files(private_settings_t *this, char *file, int level,
+static bool parse_files(linked_list_t *files, char *file, int level,
 						char *pattern, section_t *section)
 {
 	bool success = TRUE;
@@ -806,7 +806,7 @@ static bool parse_files(private_settings_t *this, char *file, int level,
 	{
 		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 		{
-			success &= parse_file(this, *expanded, level + 1, section);
+			success &= parse_file(files, *expanded, level + 1, section);
 			if (!success)
 			{
 				break;
@@ -817,13 +817,110 @@ static bool parse_files(private_settings_t *this, char *file, int level,
 	return success;
 }
 
-METHOD(settings_t, destroy, void,
-	private_settings_t *this)
+/**
+ * Recursivly extends "base" with "extension".
+ */
+static void section_extend(section_t *base, section_t *extension)
 {
-	if (this->top)
+	enumerator_t *sections, *values;
+	section_t *sec;
+	kv_t *kv;
+
+	sections = extension->sections->create_enumerator(extension->sections);
+	while (sections->enumerate(sections, (void**)&sec))
 	{
-		section_destroy(this->top);
+		section_t *found;
+		if (base->sections->find_first(base->sections,
+					(linked_list_match_t)section_find, (void**)&found,
+					sec->name) == SUCCESS)
+		{
+			section_extend(found, sec);
+		}
+		else
+		{
+			extension->sections->remove_at(extension->sections, sections);
+			base->sections->insert_last(base->sections, sec);
+		}
 	}
+	sections->destroy(sections);
+
+	values = extension->kv->create_enumerator(extension->kv);
+	while (values->enumerate(values, (void**)&kv))
+	{
+		kv_t *found;
+		if (base->kv->find_first(base->kv, (linked_list_match_t)kv_find,
+					(void**)&found, kv->key) == SUCCESS)
+		{
+			found->value = kv->value;
+		}
+		else
+		{
+			extension->kv->remove_at(extension->kv, values);
+			base->kv->insert_last(base->kv, kv);
+		}
+	}
+	values->destroy(values);
+}
+
+/**
+ * Load settings from files matching the given file pattern.
+ * All sections and values are added relative to "parent".
+ * All files (even included ones) have to be loaded successfully.
+ */
+static bool load_files_internal(private_settings_t *this, section_t *parent,
+								char *pattern)
+{
+	char *text;
+	linked_list_t *files = linked_list_create();
+	section_t *section = section_create(NULL);
+
+	if (!parse_files(files, NULL, 0, pattern, section))
+	{
+		files->destroy_function(files, (void*)free);
+		section_destroy(section);
+		return FALSE;
+	}
+
+	/* extend parent section */
+	section_extend(parent, section);
+	/* move contents of loaded files to main store */
+	while (files->remove_first(files, (void**)&text) == SUCCESS)
+	{
+		this->files->insert_last(this->files, text);
+	}
+
+	section_destroy(section);
+	files->destroy(files);
+	return TRUE;
+}
+
+METHOD(settings_t, load_files, bool,
+	   private_settings_t *this, char *pattern)
+{
+	return load_files_internal(this, this->top, pattern);
+}
+
+METHOD(settings_t, load_files_section, bool,
+	   private_settings_t *this, char *pattern, char *key, ...)
+{
+	section_t *section;
+	va_list args;
+
+	va_start(args, key);
+	section = find_section(this, this->top, key, args);
+	va_end(args);
+
+	if (!section)
+	{
+		return FALSE;
+	}
+	return load_files_internal(this, section, pattern);
+}
+
+METHOD(settings_t, destroy, void,
+	   private_settings_t *this)
+{
+	section_destroy(this->top);
 	this->files->destroy_function(this->files, (void*)free);
 	free(this);
 }
@@ -844,8 +941,11 @@ settings_t *settings_create(char *file)
 			.get_bool = _get_bool,
 			.create_section_enumerator = _create_section_enumerator,
 			.create_key_value_enumerator = _create_key_value_enumerator,
+			.load_files = _load_files,
+			.load_files_section = _load_files_section,
 			.destroy = _destroy,
 		},
+		.top = section_create(NULL),
 		.files = linked_list_create(),
 	);
 
@@ -854,12 +954,8 @@ settings_t *settings_create(char *file)
 		file = STRONGSWAN_CONF;
 	}
 
-	this->top = section_create(NULL);
-	if (!parse_files(this, NULL, 0, file, this->top))
-	{
-		section_destroy(this->top);
-		this->top = NULL;
-	}
+	load_files(this, file);
+
 	return &this->public;
 }
 
