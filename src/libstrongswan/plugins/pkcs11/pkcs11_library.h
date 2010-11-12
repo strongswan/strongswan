@@ -119,8 +119,9 @@ void pkcs11_library_trim(char *str, int len);
  *
  * @param name		an arbitrary name, for debugging
  * @param file		pkcs11 library file to dlopen()
+ * @param os_lock	enforce OS Locking for this library
  * @return			library abstraction
  */
-pkcs11_library_t *pkcs11_library_create(char *name, char *file);
+pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_lock);
 
 #endif /** PKCS11_LIBRARY_H_ @}*/

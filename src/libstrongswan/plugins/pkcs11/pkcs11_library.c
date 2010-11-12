@@ -800,7 +800,8 @@ static void check_features(private_pkcs11_library_t *this, CK_INFO *info)
 /**
  * Initialize a PKCS#11 library
  */
-static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
+static bool initialize(private_pkcs11_library_t *this, char *name, char *file,
+					   bool os_locking)
 {
 	CK_C_GetFunctionList pC_GetFunctionList;
 	CK_INFO info;
@@ -825,10 +826,16 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 			 name, ck_rv_names, rv);
 		return FALSE;
 	}
-
-	rv = this->public.f->C_Initialize(&args);
+	if (os_locking)
+	{
+		rv = CKR_CANT_LOCK;
+	}
+	else
+	{
+		rv = this->public.f->C_Initialize(&args);
+	}
 	if (rv == CKR_CANT_LOCK)
-	{	/* try OS locking */
+	{	/* fallback to OS locking */
 		memset(&args, 0, sizeof(args));
 		args.flags = CKF_OS_LOCKING_OK;
 		rv = this->public.f->C_Initialize(&args);
@@ -870,7 +877,7 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 /**
  * See header
  */
-pkcs11_library_t *pkcs11_library_create(char *name, char *file)
+pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 {
 	private_pkcs11_library_t *this;
 
@@ -893,7 +900,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 		return NULL;
 	}
 
-	if (!initialize(this, name, file))
+	if (!initialize(this, name, file, os_locking))
 	{
 		dlclose(this->handle);
 		free(this);

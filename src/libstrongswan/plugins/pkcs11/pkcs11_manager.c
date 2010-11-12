@@ -373,7 +373,10 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 			free(entry);
 			continue;
 		}
-		entry->lib = pkcs11_library_create(module, entry->path);
+		entry->lib = pkcs11_library_create(module, entry->path,
+						lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.modules.%s.os_locking",
+							FALSE, module));
 		if (!entry->lib)
 		{
 			free(entry);
