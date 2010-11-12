@@ -105,7 +105,7 @@ static section_t *section_create(char *name)
 {
 	section_t *this;
 	INIT(this,
-		.name = name,
+		.name = name ? strdup(name) : NULL,
 		.sections = linked_list_create(),
 		.kv = linked_list_create(),
 	);
@@ -119,6 +119,7 @@ static void section_destroy(section_t *this)
 {
 	this->kv->destroy_function(this->kv, free);
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	free(this->name);
 	free(this);
 }
 
@@ -187,10 +188,12 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 }
 
 /**
- * find a section by a given key, using buffered key, reusable buffer
+ * Find a section by a given key, using buffered key, reusable buffer.
+ * If "ensure" is TRUE, the sections are created if they don't exist.
  */
 static section_t *find_section_buffered(section_t *section,
-					char *start, char *key, va_list args, char *buf, int len)
+					char *start, char *key, va_list args, char *buf, int len,
+					bool ensure)
 {
 	char *pos;
 	section_t *found = NULL;
@@ -211,12 +214,17 @@ static section_t *find_section_buffered(section_t *section,
 	}
 	if (section->sections->find_first(section->sections,
 									  (linked_list_match_t)section_find,
-									  (void**)&found, buf) == SUCCESS)
+									  (void**)&found, buf) != SUCCESS)
 	{
-		if (pos)
+		if (ensure)
 		{
-			return find_section_buffered(found, start, pos, args, buf, len);
+			found = section_create(buf);
+			section->sections->insert_last(section->sections, found);
 		}
+	}
+	if (found && pos)
+	{
+		return find_section_buffered(found, start, pos, args, buf, len, ensure);
 	}
 	return found;
 }
@@ -236,7 +244,28 @@ static section_t *find_section(private_settings_t *this, section_t *section,
 	}
 	this->lock->read_lock(this->lock);
 	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf));
+								  sizeof(buf), FALSE);
+	this->lock->unlock(this->lock);
+	return found;
+}
+
+/**
+ * Ensure that the section with the given key exists (thread-safe).
+ */
+static section_t *ensure_section(private_settings_t *this, section_t *section,
+								 char *key, va_list args)
+{
+	char buf[128], keybuf[512];
+	section_t *found;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return NULL;
+	}
+	/* we might have to change the tree */
+	this->lock->write_lock(this->lock);
+	found = find_section_buffered(section, keybuf, keybuf, args, buf,
+								  sizeof(buf), TRUE);
 	this->lock->unlock(this->lock);
 	return found;
 }
@@ -424,7 +453,7 @@ METHOD(settings_t, get_time, u_int32_t,
 					timeval *= 60;
 					break;
 				case 's':		/* time in seconds */
-					default:
+				default:
 					break;
 			}
 			return timeval;
@@ -920,7 +949,7 @@ METHOD(settings_t, load_files_section, bool,
 	va_list args;
 
 	va_start(args, key);
-	section = find_section(this, this->top, key, args);
+	section = ensure_section(this, this->top, key, args);
 	va_end(args);
 
 	if (!section)

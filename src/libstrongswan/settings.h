@@ -180,7 +180,7 @@ struct settings_t {
 	 * in the loaded files.
 	 *
 	 * @note If any of the files matching the pattern fails to load, no settings
-	 * are added at all. So it's all or nothing.
+	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
 	 * @return			TRUE, if settings were loaded successfully
@@ -193,15 +193,16 @@ struct settings_t {
 	 * Existing sections are extended, existing values replaced, by those found
 	 * in the loaded files.
 	 *
-	 * All settings are loaded relative to the given section.
+	 * All settings are loaded relative to the given section. The section is
+	 * created, if it does not yet exist.
 	 *
 	 * @note If any of the files matching the pattern fails to load, no settings
-	 * are added at all. So it's all or nothing.
+	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
 	 * @param section	section name of parent section, printf style
 	 * @param ...		argument list for section
-	 * @return			TRUE, if section is found and settings were loaded successfully
+	 * @return			TRUE, if settings were loaded successfully
 	 */
 	bool (*load_files_section)(settings_t *this, char *pattern,
 							   char *section, ...);
