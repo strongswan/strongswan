@@ -241,6 +241,9 @@ struct connected_peers_t {
 	/** remote identity */
 	identification_t *other_id;
 
+	/** ip address family of peer */
+	int family;
+
 	/** list of ike_sa_id_t objects of IKE_SAs between the two identities */
 	linked_list_t *sas;
 };
@@ -257,10 +260,12 @@ static void connected_peers_destroy(connected_peers_t *this)
  * Function that matches connected_peers_t objects by the given ids.
  */
 static bool connected_peers_match(connected_peers_t *connected_peers,
-							identification_t *my_id, identification_t *other_id)
+							identification_t *my_id, identification_t *other_id,
+							uintptr_t family)
 {
 	return my_id->equals(my_id, connected_peers->my_id) &&
-		   other_id->equals(other_id, connected_peers->other_id);
+		   other_id->equals(other_id, connected_peers->other_id) &&
+		   family == connected_peers->family;
 }
 
 typedef struct segment_t segment_t;
@@ -786,7 +791,8 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 	{
 		connected_peers_t *current;
 		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-					(void**)&current, entry->my_id, entry->other_id) == SUCCESS)
+				(void**)&current, entry->my_id, entry->other_id,
+				(uintptr_t)entry->other->get_family(entry->other)) == SUCCESS)
 		{
 			connected_peers = current;
 			if (connected_peers->sas->find_first(connected_peers->sas,
@@ -804,6 +810,7 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 		connected_peers = malloc_thing(connected_peers_t);
 		connected_peers->my_id = entry->my_id->clone(entry->my_id);
 		connected_peers->other_id = entry->other_id->clone(entry->other_id);
+		connected_peers->family = entry->other->get_family(entry->other);
 		connected_peers->sas = linked_list_create();
 		list->insert_last(list, connected_peers);
 	}
@@ -832,7 +839,8 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 		enumerator_t *enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &current))
 		{
-			if (connected_peers_match(current, entry->my_id, entry->other_id))
+			if (connected_peers_match(current, entry->my_id, entry->other_id,
+						(uintptr_t)entry->other->get_family(entry->other)))
 			{
 				ike_sa_id_t *ike_sa_id;
 				enumerator_t *inner = current->sas->create_enumerator(current->sas);
@@ -1419,9 +1427,12 @@ static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	if ((list = this->connected_peers_table[row]) != NULL)
 	{
 		connected_peers_t *current;
+		host_t *other_host;
 
+		other_host = ike_sa->get_other_host(ike_sa);
 		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-							 (void**)&current, me, other) == SUCCESS)
+					(void**)&current, me, other,
+					(uintptr_t)other_host->get_family(other_host)) == SUCCESS)
 		{
 			/* clone the list, so we can release the lock */
 			duplicate_ids = current->sas->clone_offset(current->sas,
