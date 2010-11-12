@@ -99,6 +99,46 @@ struct kv_t {
 };
 
 /**
+ * create a section with the given name
+ */
+static section_t *section_create(char *name)
+{
+	section_t *this;
+	INIT(this,
+		.name = name,
+		.sections = linked_list_create(),
+		.kv = linked_list_create(),
+	);
+	return this;
+}
+
+/**
+ * destroy a section
+ */
+static void section_destroy(section_t *this)
+{
+	this->kv->destroy_function(this->kv, free);
+	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	free(this);
+}
+
+/**
+ * callback to find a section by name
+ */
+static bool section_find(section_t *this, char *name)
+{
+	return streq(this->name, name);
+}
+
+/**
+ * callback to find a kv pair by key
+ */
+static bool kv_find(kv_t *this, char *key)
+{
+	return streq(this->key, key);
+}
+
+/**
  * Print a format key, but consume already processed arguments
  */
 static bool print_key(char *buf, int len, char *start, char *key, va_list args)
@@ -153,8 +193,7 @@ static section_t *find_section_buffered(section_t *section,
 					char *start, char *key, va_list args, char *buf, int len)
 {
 	char *pos;
-	enumerator_t *enumerator;
-	section_t *current, *found = NULL;
+	section_t *found = NULL;
 
 	if (section == NULL)
 	{
@@ -170,19 +209,14 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		return NULL;
 	}
-	enumerator = section->sections->create_enumerator(section->sections);
-	while (enumerator->enumerate(enumerator, &current))
+	if (section->sections->find_first(section->sections,
+									  (linked_list_match_t)section_find,
+									  (void**)&found, buf) == SUCCESS)
 	{
-		if (streq(current->name, buf))
+		if (pos)
 		{
-			found = current;
-			break;
+			return find_section_buffered(found, start, pos, args, buf, len);
 		}
-	}
-	enumerator->destroy(enumerator);
-	if (found && pos)
-	{
-		return find_section_buffered(found, start, pos, args, buf, len);
 	}
 	return found;
 }
@@ -214,9 +248,8 @@ static char *find_value_buffered(section_t *section,
 					char *start, char *key, va_list args, char *buf, int len)
 {
 	char *pos, *value = NULL;
-	enumerator_t *enumerator;
 	kv_t *kv;
-	section_t *current, *found = NULL;
+	section_t *found = NULL;
 
 	if (section == NULL)
 	{
@@ -233,17 +266,9 @@ static char *find_value_buffered(section_t *section,
 		{
 			return NULL;
 		}
-		enumerator = section->sections->create_enumerator(section->sections);
-		while (enumerator->enumerate(enumerator, &current))
-		{
-			if (streq(current->name, buf))
-			{
-				found = current;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-		if (found)
+		if (section->sections->find_first(section->sections,
+										  (linked_list_match_t)section_find,
+										  (void**)&found, buf) == SUCCESS)
 		{
 			return find_value_buffered(found, start, pos, args, buf, len);
 		}
@@ -254,16 +279,11 @@ static char *find_value_buffered(section_t *section,
 		{
 			return NULL;
 		}
-		enumerator = section->kv->create_enumerator(section->kv);
-		while (enumerator->enumerate(enumerator, &kv))
+		if (section->kv->find_first(section->kv, (linked_list_match_t)kv_find,
+									(void**)&kv, buf) == SUCCESS)
 		{
-			if (streq(kv->key, buf))
-			{
-				value = kv->value;
-				break;
-			}
+			value = kv->value;
 		}
-		enumerator->destroy(enumerator);
 	}
 	return value;
 }
@@ -471,46 +491,6 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	return enumerator_create_filter(
 					section->kv->create_enumerator(section->kv),
 					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
-}
-
-/**
- * create a section with the given name
- */
-static section_t *section_create(char *name)
-{
-	section_t *this;
-	INIT(this,
-		.name = name,
-		.sections = linked_list_create(),
-		.kv = linked_list_create(),
-	);
-	return this;
-}
-
-/**
- * destroy a section
- */
-static void section_destroy(section_t *this)
-{
-	this->kv->destroy_function(this->kv, free);
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
-	free(this);
-}
-
-/**
- * callback to find a section by name
- */
-static bool section_find(section_t *this, char *name)
-{
-	return streq(this->name, name);
-}
-
-/**
- * callback to find a kv pair by key
- */
-static bool kv_find(kv_t *this, char *key)
-{
-	return streq(this->key, key);
 }
 
 /**
@@ -841,12 +821,12 @@ static bool parse_files(linked_list_t *files, char *file, int level,
  */
 static void section_extend(section_t *base, section_t *extension)
 {
-	enumerator_t *sections, *values;
+	enumerator_t *enumerator;
 	section_t *sec;
 	kv_t *kv;
 
-	sections = extension->sections->create_enumerator(extension->sections);
-	while (sections->enumerate(sections, (void**)&sec))
+	enumerator = extension->sections->create_enumerator(extension->sections);
+	while (enumerator->enumerate(enumerator, (void**)&sec))
 	{
 		section_t *found;
 		if (base->sections->find_first(base->sections,
@@ -857,14 +837,14 @@ static void section_extend(section_t *base, section_t *extension)
 		}
 		else
 		{
-			extension->sections->remove_at(extension->sections, sections);
+			extension->sections->remove_at(extension->sections, enumerator);
 			base->sections->insert_last(base->sections, sec);
 		}
 	}
-	sections->destroy(sections);
+	enumerator->destroy(enumerator);
 
-	values = extension->kv->create_enumerator(extension->kv);
-	while (values->enumerate(values, (void**)&kv))
+	enumerator = extension->kv->create_enumerator(extension->kv);
+	while (enumerator->enumerate(enumerator, (void**)&kv))
 	{
 		kv_t *found;
 		if (base->kv->find_first(base->kv, (linked_list_match_t)kv_find,
@@ -874,11 +854,11 @@ static void section_extend(section_t *base, section_t *extension)
 		}
 		else
 		{
-			extension->kv->remove_at(extension->kv, values);
+			extension->kv->remove_at(extension->kv, enumerator);
 			base->kv->insert_last(base->kv, kv);
 		}
 	}
-	values->destroy(values);
+	enumerator->destroy(enumerator);
 }
 
 /**
