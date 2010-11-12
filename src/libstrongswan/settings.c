@@ -644,6 +644,12 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 				if (parse(text, "\t ", "}", "{", &inner))
 				{
 					section_t *sub;
+					if (!strlen(key))
+					{
+						DBG1(DBG_LIB, "skipping section without name in '%s'",
+							 section->name);
+						continue;
+					}
 					if (section->sections->find_first(section->sections,
 											(linked_list_match_t)section_find,
 											(void**)&sub, key) != SUCCESS)
@@ -673,6 +679,12 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 				if (parse(text, "\t ", "\n", NULL, &value))
 				{
 					kv_t *kv;
+					if (!strlen(key))
+					{
+						DBG1(DBG_LIB, "skipping value without key in '%s'",
+							 section->name);
+						continue;
+					}
 					if (section->kv->find_first(section->kv,
 								(linked_list_match_t)kv_find,
 								(void**)&kv, key) != SUCCESS)
