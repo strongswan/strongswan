@@ -87,13 +87,54 @@ static bool load_configs(char *suite_file, char *test_file)
 }
 
 /**
+ * Load trusted/untrusted certificates
+ */
+static bool load_trusted_cert(settings_t *settings, bool trusted)
+{
+	enumerator_t *enumerator;
+	char *key, *value;
+
+	enumerator = settings->create_key_value_enumerator(settings,
+								trusted ? "certs.trusted" : "certs.untrusted");
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		certificate_t *cert = NULL;
+
+		if (strcaseeq(key, "x509"))
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							CERT_X509, BUILD_FROM_FILE, value, BUILD_END);
+		}
+		else if (strcaseeq(key, "crl"))
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							CERT_X509_CRL, BUILD_FROM_FILE, value, BUILD_END);
+		}
+		else
+		{
+			fprintf(stderr, "certificate type '%s' not supported\n", key);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		if (!cert)
+		{
+			fprintf(stderr, "loading %strusted certificate '%s' from '%s' "
+					"failed\n", trusted ? "" : "un", key, value);
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		conftest->creds->add_cert(conftest->creds, trusted, cert);
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * Load certificates from the confiuguration file
  */
 static bool load_certs(settings_t *settings, char *dir)
 {
-	enumerator_t *enumerator;
-	char *key, *value, wd[PATH_MAX];
-	certificate_t *cert;
+	char wd[PATH_MAX];
 
 	if (getcwd(wd, sizeof(wd)) == NULL)
 	{
@@ -107,49 +148,11 @@ static bool load_certs(settings_t *settings, char *dir)
 		return FALSE;
 	}
 
-	enumerator = settings->create_key_value_enumerator(settings, "certs.trusted");
-	while (enumerator->enumerate(enumerator, &key, &value))
+	if (!load_trusted_cert(settings, TRUE) ||
+		!load_trusted_cert(settings, FALSE))
 	{
-		if (!strcaseeq(key, "x509"))
-		{
-			fprintf(stderr, "certificate type '%s' not supported\n", key);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, value, BUILD_END);
-		if (!cert)
-		{
-			fprintf(stderr, "loading trusted certificate "
-					"'%s' from '%s' failed\n", key, value);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		conftest->creds->add_cert(conftest->creds, TRUE, cert);
+		return FALSE;
 	}
-	enumerator->destroy(enumerator);
-
-	enumerator = settings->create_key_value_enumerator(settings, "certs.untrusted");
-	while (enumerator->enumerate(enumerator, &key, &value))
-	{
-		if (!strcaseeq(key, "x509"))
-		{
-			fprintf(stderr, "certificate type '%s' not supported\n", key);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-								  BUILD_FROM_FILE, value, BUILD_END);
-		if (!cert)
-		{
-			fprintf(stderr, "loading untrusted certificate "
-					"'%s' from '%s' failed\n", key, value);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		conftest->creds->add_cert(conftest->creds, FALSE, cert);
-	}
-	enumerator->destroy(enumerator);
 
 	if (chdir(wd) != 0)
 	{
