@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,11 +31,11 @@ typedef struct settings_t settings_t;
  * Generic configuration options read from a config file.
  *
  * The syntax is quite simple:
- *
+ * @code
  * settings := (section|keyvalue)*
  * section  := name { settings }
  * keyvalue := key = value\n
- *
+ * @endcode
  * E.g.:
  * @code
 	a = b
@@ -54,6 +55,51 @@ typedef struct settings_t settings_t;
  *
  * Currently only a limited set of printf format specifiers are supported
  * (namely %s, %d and %N, see implementation for details).
+ *
+ * \section includes Including other files
+ * Other files can be included, using the include statement e.g.
+ * @code
+ *   include /somepath/subconfig.conf
+ * @endcode
+ * Shell patterns like *.conf are possible.
+ *
+ * If the path is relative, the directory of the file containing the include
+ * statement is used as base.
+ *
+ * Sections loaded from included files extend previously loaded sections,
+ * already existing values are replaced.
+ *
+ * All settings included from files are added relative to the section the
+ * include statment is in.
+ *
+ * The following files result in the same final config as above:
+ *
+ * @code
+	a = b
+	section-one {
+		somevalue = before include
+		include include.conf
+	}
+	include two.conf
+	@endcode
+ * include.conf
+ * @code
+	somevalue = asdf
+	subsection {
+		othervalue = yyy
+	}
+	yetanother = zz
+	@endcode
+ * two.conf
+ * @code
+	section-one {
+		subsection {
+			othervalue = xxx
+		}
+	}
+	section-two {
+	}
+	@endcode
  */
 struct settings_t {
 

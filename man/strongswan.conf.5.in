@@ -67,6 +67,61 @@ With reference to the example above, accessing
 will return
 .BR xxx .
 
+.SH INCLUDING FILES
+Using the
+.B include
+statement it is possible to include other files into strongswan.conf, e.g.
+.PP
+.EX
+	include /some/path/*.conf
+.EE
+.PP
+If the file name is not an absolute path, it is considered to be relative
+to the directory of the file containing the include statement. The file name
+may include shell wildcards (see
+.IR sh (1)).
+Also, such inclusions can be nested.
+.PP
+Sections loaded from included files
+.I extend
+previously loaded sections; already existing values are
+.IR replaced .
+It is important to note that settings are added relative to the section the
+include statment is in.
+.PP
+As an example, the following three files result in the same final
+config as the one given above:
+.PP
+.EX
+	a = b
+	section-one {
+		somevalue = before include
+		include include.conf
+	}
+	include other.conf
+
+include.conf:
+	# settings loaded from this file are added to section-one
+	# the following replaces the previous value
+	somevalue = asdf
+	subsection {
+		othervalue = yyy
+	}
+	yetanother = zz
+
+other.conf:
+	# this extends section-one and subsection
+	section-one {
+		subsection {
+			# this replaces the previous value
+			othervalue = xxx
+		}
+	}
+	section-two {
+		x = 12
+	}
+.EE
+
 .SH DEFINED KEYS
 The following keys are currently defined (using dot notation). The default
 value (if any) is listed in brackets after the key.
