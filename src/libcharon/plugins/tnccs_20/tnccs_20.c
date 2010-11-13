@@ -19,32 +19,9 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <tnc/tncif.h>
-#include <tnc/tncifimv_names.h>
 #include <tnc/tnccs/tnccs.h>
 
-typedef struct recommendation_entry_t recommendation_entry_t;
 typedef struct private_tnccs_20_t private_tnccs_20_t;
-
-/**
- * Recommendation entry
- */
-struct recommendation_entry_t {
-
-	/**
-	 * IMV ID
-	 */
-	TNC_IMVID id;
-
-	/**
-	 * Action Recommendation provided by IMV instance
-	 */
-  TNC_IMV_Action_Recommendation rec;
-
-	/**
-	 * Evaluation Result provided by IMV instance
-	 */
-  TNC_IMV_Evaluation_Result eval;
-};
 
 /**
  * Private data of a tnccs_20_t object.
@@ -74,28 +51,13 @@ struct private_tnccs_20_t {
 	/**
 	 * Mutex locking the batch in construction
 	 */
-	mutex_t *batch_mutex;
+	mutex_t *mutex;
 
 	/**
-	 * Action Recommendations and Evaluations Results provided by IMVs 
+	 * Set of IMV recommendations  (TNC Server only)
 	 */
-	linked_list_t *recommendations;
-
-	/**
-	 * Mutex locking the recommendations list
-	 */
-	mutex_t *recommendation_mutex;
+	recommendations_t *recs;
 };
-
-static bool have_recommendation(private_tnccs_20_t *this,
-								TNC_IMV_Action_Recommendation *rec,
-								TNC_IMV_Evaluation_Result *eval)
-{
-	/* TODO */
-	*rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
-	*eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
-	return TRUE;
-}
 
 METHOD(tnccs_t, send_message, void,
 	private_tnccs_20_t* this, TNC_BufferReference message,
@@ -105,46 +67,9 @@ METHOD(tnccs_t, send_message, void,
 	chunk_t msg = { message, message_len };
 
 	DBG1(DBG_TNC, "TNCCS 2.0 send message");
-	this->batch_mutex->lock(this->batch_mutex);
+	this->mutex->lock(this->mutex);
 	this->batch = chunk_cat("mc", this->batch, msg);
-	this->batch_mutex->unlock(this->batch_mutex);
-}
-
-METHOD(tnccs_t, provide_recommendation, void,
-	private_tnccs_20_t* this, TNC_IMVID id,
-							  TNC_IMV_Action_Recommendation rec,
-							  TNC_IMV_Evaluation_Result eval)
-{
-	enumerator_t *enumerator;
-	recommendation_entry_t *entry;
-	bool found = FALSE;
-
-	DBG2(DBG_TNC, "IMV %u provides recommendation '%N' and evaluation '%N'",
-		 id, action_recommendation_names, rec, evaluation_result_names, eval);
-
-	this->recommendation_mutex->lock(this->recommendation_mutex);
-	enumerator = this->recommendations->create_enumerator(this->recommendations);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->id == id)
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (!found)
-	{
-		entry = malloc_thing(recommendation_entry_t);
-		entry->id = id;
-		this->recommendations->insert_last(this->recommendations, entry);
-	}
-
-	/* Assign provided action recommendation and evaluation result */
-	entry->rec = rec;
-	entry->eval = eval;
-	this->recommendation_mutex->unlock(this->recommendation_mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 METHOD(tls_t, process, status_t,
@@ -156,8 +81,11 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-										(tnccs_t*)this,
-										_send_message, _provide_recommendation);
+								(tnccs_t*)this,	_send_message,  &this->recs);
+		if (!this->connection_id)
+		{
+			return FAILED;
+		}
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 	}
@@ -197,14 +125,18 @@ METHOD(tls_t, build, status_t,
 	char *msg = this->is_server ? "tncs->tncc 2.0|" : "tncc->tncs 2.0|";
 	size_t len;
 
-	this->batch_mutex->lock(this->batch_mutex);
+	this->mutex->lock(this->mutex);
 	this->batch = chunk_cat("cm", chunk_create(msg, strlen(msg)), this->batch);
-	this->batch_mutex->unlock(this->batch_mutex);
+	this->mutex->unlock(this->mutex);
 
 	if (!this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
 										(tnccs_t*)this, _send_message, NULL);
+		if (!this->connection_id)
+		{
+			return FAILED;
+		}
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
@@ -212,13 +144,13 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
 
-	this->batch_mutex->lock(this->batch_mutex);
+	this->mutex->lock(this->mutex);
 	len = this->batch.len;
 	*msglen = len;
 	*buflen = len;
 	memcpy(buf, this->batch.ptr, len);
 	chunk_free(&this->batch);
-	this->batch_mutex->unlock(this->batch_mutex);
+	this->mutex->unlock(this->mutex);
 
 	DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
 				   len, this->connection_id);
@@ -245,7 +177,7 @@ METHOD(tls_t, is_complete, bool,
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 
-	if (this->is_server && have_recommendation(this, &rec, &eval))
+	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
 		return charon->imvs->enforce_recommendation(charon->imvs, rec);
 	}
@@ -265,9 +197,7 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
-	this->recommendations->destroy_function(this->recommendations, free);
-	this->recommendation_mutex->destroy(this->recommendation_mutex);
-	this->batch_mutex->destroy(this->batch_mutex);
+	this->mutex->destroy(this->mutex);
 	free(this->batch.ptr);
 	free(this);
 }
@@ -290,9 +220,7 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.recommendations = linked_list_create(),
-		.recommendation_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.batch_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	return &this->public;

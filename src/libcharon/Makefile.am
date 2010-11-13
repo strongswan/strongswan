@@ -88,9 +88,9 @@ sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
 tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h \
-tnc/tncifimv_names.h tnc/tncifimv_names.c\
+tnc/tncifimv_names.h tnc/tncifimv_names.c \
 tnc/imc/imc.h tnc/imc/imc_manager.h \
-tnc/imv/imv.h tnc/imv/imv_manager.h \
+tnc/imv/imv.h tnc/imv/imv_manager.h tnc/imv/imv_recommendations.h \
 tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
 tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 

@@ -19,14 +19,15 @@
  * @{ @ingroup tnc_imv
  */
 
-#ifndef TNC_IMV_MANAGER_H_
-#define TNC_IMV_MANAGER_H_
+#ifndef TNC_IMV_RECOMMENDATIONS_H_
+#define TNC_IMV_RECOMMENDATIONS_H_
 
-#include <tnc/imv/imv_manager.h>
+#include <tnc/imv/imv_recommendations.h>
+#include <utils/linked_list.h>
 
 /**
- * Create an IMV manager instance.
+ * Create an IMV empty recommendations instance
  */
-imv_manager_t *tnc_imv_manager_create();
+recommendations_t *tnc_imv_recommendations_create();
 
-#endif /** TNC_IMV_MANAGER_H_ @}*/
+#endif /** TNC_IMV_RECOMMENDATIONS_H_ @}*/

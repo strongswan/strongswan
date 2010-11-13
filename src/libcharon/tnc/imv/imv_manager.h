@@ -22,6 +22,7 @@
 #define IMV_MANAGER_H_
 
 #include "imv.h"
+#include "imv_recommendations.h"
 
 #include <library.h>
 
@@ -49,11 +50,11 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
-	 * Return the number of registered IMVs
+	 * Create an empty set of IMV recommendations and evaluations
 	 *
-	 * @return					number of IMVs
+	 * @return					instance of a recommendations_t list
 	 */
-	int (*get_count)(imv_manager_t *this);
+	recommendations_t* (*create_recommendations)(imv_manager_t *this);
 
 	/**
 	 * Enforce the TNC recommendation on the IKE_SA by either inserting an

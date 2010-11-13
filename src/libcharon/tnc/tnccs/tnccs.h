@@ -63,18 +63,4 @@ typedef void (*tnccs_send_message_t)(tnccs_t* tncss,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type);
 
-
-/**
- * Callback function delivering an IMV Action Recommendation and
- * IMV Evaluation Result to the TNCS
- *
- * @param imv_id			ID of the IMV providing the recommendation
- * @param recommendation	action recommendation
- * @param evaluation		evaluation result
- */
-typedef void (*tnccs_provide_recommendation_t)(tnccs_t* tncss,
-								TNC_IMVID imv_id,
-								TNC_IMV_Action_Recommendation recommendation,
-								TNC_IMV_Evaluation_Result evaluation);
-
 #endif /** TNCCS_H_ @}*/

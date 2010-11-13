@@ -23,6 +23,8 @@
 
 #include "tnccs.h"
 
+#include <tnc/imv/imv_recommendations.h>
+
 typedef struct tnccs_manager_t tnccs_manager_t;
 
 /**
@@ -61,18 +63,18 @@ struct tnccs_manager_t {
 								bool is_server);
 
 	/**
-	 * Create a TNCCS connection and assign a unique connection ID as well as
-	 * callback functions for adding a message to a TNCCS batch and delivering
-	 * an IMV recommendation, respectively
+	 * Create a TNCCS connection and assign a unique connection ID as well a
+	 * callback function for adding a message to a TNCCS batch and create
+	 * an empty set for collecting IMV recommendations
 	 *
 	 * @param tnccs						TNCCS connection instance
 	 * @param send_message				TNCCS callback function
-	 * @param provide_recommendation	TNCS callback function
+	 * @param recs						pointer to IMV recommendation set
 	 * @return							assigned connection ID
 	 */
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
-						 tnccs_send_message_t send_message,
-						 tnccs_provide_recommendation_t provide_recommendation);
+										  tnccs_send_message_t send_message,
+						 				  recommendations_t **recs);
 
 	/**
 	 * Remove a TNCCS connection using its connection ID.

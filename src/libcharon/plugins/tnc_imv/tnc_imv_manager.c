@@ -14,14 +14,18 @@
  */
 
 #include "tnc_imv_manager.h"
+#include "tnc_imv_recommendations.h"
 
 #include <tnc/imv/imv_manager.h>
 #include <tnc/tncifimv.h>
+#include <tnc/tncifimv_names.h>
 
 #include <debug.h>
 #include <daemon.h>
+#include <threading/mutex.h>
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;
+
 
 /**
  * Private data of an imv_manager_t object.
@@ -91,10 +95,10 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	return NULL;
 }
 
-METHOD(imv_manager_t, get_count, int,
+METHOD(imv_manager_t, create_recommendations, recommendations_t*,
 	private_tnc_imv_manager_t *this)
 {
-	return this->imvs->get_count(this->imvs);
+	return tnc_imv_recommendations_create(this->imvs);
 }
 
 METHOD(imv_manager_t, enforce_recommendation, bool,
@@ -256,7 +260,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
-			.get_count = _get_count,
+			.create_recommendations = _create_recommendations,
 			.enforce_recommendation = _enforce_recommendation,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,

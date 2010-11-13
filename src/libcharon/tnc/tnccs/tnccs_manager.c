@@ -15,7 +15,10 @@
 
 #include "tnccs_manager.h"
 
+#include <tnc/imv/imv_recommendations.h>
+
 #include <debug.h>
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
@@ -59,10 +62,10 @@ struct tnccs_connection_entry_t {
 	 */
 	tnccs_send_message_t send_message;
 
-	/** TNCS provide recommendation function
+	/** collection of IMV recommendations
 	 *
 	 */
-	tnccs_provide_recommendation_t provide_recommendation;
+	recommendations_t *recs;
 };
 
 /**
@@ -164,17 +167,37 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 }
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
-	private_tnccs_manager_t *this, tnccs_t *tnccs,
-	tnccs_send_message_t send_message,
-	tnccs_provide_recommendation_t provide_recommendation)
+	private_tnccs_manager_t *this, tnccs_t *tnccs, 
+	tnccs_send_message_t send_message, recommendations_t **recs)
 {
 	tnccs_connection_entry_t *entry;
 
 	entry = malloc_thing(tnccs_connection_entry_t);
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
-	entry->provide_recommendation = provide_recommendation;
-
+	if (recs)
+	{
+		/* we assume a TNC Server needing recommendations from IMVs */
+		if (!charon->imvs)
+		{
+ 			DBG1(DBG_TNC, "no IMV manager available!");
+			free(entry);
+			return 0;
+		}
+		entry->recs = charon->imvs->create_recommendations(charon->imvs);
+		*recs = entry->recs;
+	}
+	else
+	{
+		/* we assume a TNC Client */
+		if (!charon->imcs)
+		{
+			DBG1(DBG_TNC, "no IMC manager available!");
+			free(entry);
+			return 0;
+		}
+		entry->recs = NULL;
+	}
 	this->connection_lock->write_lock(this->connection_lock);
 	entry->id = ++this->connection_id;
 	this->connections->insert_last(this->connections, entry);
@@ -197,6 +220,10 @@ METHOD(tnccs_manager_t, remove_connection, void,
 		if (id == entry->id)
 		{
 			this->connections->remove_at(this->connections, enumerator);
+			if (entry->recs)
+			{
+				entry->recs->destroy(entry->recs);
+			}
 			free(entry);
 			DBG1(DBG_TNC, "removed TNCCS Connection ID %u", id);
 		}
@@ -241,13 +268,12 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 	private_tnccs_manager_t *this, TNC_IMVID imv_id,
 								   TNC_ConnectionID id,
-								   TNC_IMV_Action_Recommendation recommendation,
-								   TNC_IMV_Evaluation_Result evaluation)
+								   TNC_IMV_Action_Recommendation rec,
+								   TNC_IMV_Evaluation_Result eval)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
-	tnccs_provide_recommendation_t provide_recommendation = NULL;
-	tnccs_t *tnccs = NULL;
+	recommendations_t *recs = NULL;
 
 	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
@@ -255,17 +281,16 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 	{
 		if (id == entry->id)
 		{
-			tnccs = entry->tnccs;
-			provide_recommendation = entry->provide_recommendation;
+			recs = entry->recs;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->connection_lock->unlock(this->connection_lock);
 
-	if (tnccs && provide_recommendation)
+	if (recs)
 	{
-		provide_recommendation(tnccs, imv_id, recommendation, evaluation);
+		recs->provide_recommendation(recs, imv_id, rec, eval);
 		return TNC_RESULT_SUCCESS;
 	 }
 	return TNC_RESULT_FATAL;
