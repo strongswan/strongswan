@@ -282,6 +282,8 @@ imv_manager_t* tnc_imv_manager_create(void)
 				lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imv.recommendation_policy", "any"));
 	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_NONE;
+	DBG1(DBG_TNC, "TNC recommendation policy is '%N'",
+				   recommendation_policy_names, this->policy);
 
 	return &this->public;
 }
