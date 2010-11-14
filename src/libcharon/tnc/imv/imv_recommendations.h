@@ -24,6 +24,17 @@
 #include <tnc/tncifimv.h>
 #include <library.h>
 
+typedef enum recommendation_policy_t recommendation_policy_t;
+
+enum recommendation_policy_t {
+	RECOMMENDATION_POLICY_NONE,
+	RECOMMENDATION_POLICY_ANY,
+	RECOMMENDATION_POLICY_ALL
+};
+
+extern enum_name_t *recommendation_policy_names;
+
+
 typedef struct recommendations_t recommendations_t;
 
 /**

@@ -46,6 +46,11 @@ struct private_tnc_imv_manager_t {
 	 * Next IMV ID to be assigned
 	 */
 	TNC_IMVID next_imv_id;
+
+	/**
+	 * Policy defining how to derive final recommendation from individual ones
+	 */
+	recommendation_policy_t policy;
 };
 
 METHOD(imv_manager_t, add, bool,
@@ -255,6 +260,7 @@ METHOD(imv_manager_t, destroy, void,
 imv_manager_t* tnc_imv_manager_create(void)
 {
 	private_tnc_imv_manager_t *this;
+	recommendation_policy_t policy;
 
 	INIT(this,
 		.public = {
@@ -272,6 +278,10 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.imvs = linked_list_create(),
 		.next_imv_id = 1,
 	);
+	policy = enum_from_name(recommendation_policy_names,
+				lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-imv.recommendation_policy", "any"));
+	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_NONE;
 
 	return &this->public;
 }
