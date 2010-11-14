@@ -172,6 +172,7 @@ plugin_t *tnc_imv_plugin_create()
 	if (!load_imvs(tnc_config))
 	{
 		charon->imvs->destroy(charon->imvs);
+		charon->imvs = NULL;
 		free(this);
 		return NULL;
 	}

@@ -171,6 +171,7 @@ plugin_t *tnc_imc_plugin_create()
 	if (!load_imcs(tnc_config))
 	{
 		charon->imcs->destroy(charon->imcs);
+		charon->imcs = NULL;
 		free(this);
 		return NULL;
 	}
