@@ -50,6 +50,13 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
+	 * Get the configured recommendation policy
+	 *
+	 * @return					configured recommendation policy
+	 */
+	recommendation_policy_t (*get_recommendation_policy)(imv_manager_t *this);
+
+	/**
 	 * Create an empty set of IMV recommendations and evaluations
 	 *
 	 * @return					instance of a recommendations_t list

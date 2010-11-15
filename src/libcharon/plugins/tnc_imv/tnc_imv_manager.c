@@ -100,6 +100,12 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	return NULL;
 }
 
+METHOD(imv_manager_t, get_recommendation_policy, recommendation_policy_t,
+	private_tnc_imv_manager_t *this)
+{
+	return this->policy;
+}
+
 METHOD(imv_manager_t, create_recommendations, recommendations_t*,
 	private_tnc_imv_manager_t *this)
 {
@@ -266,6 +272,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.get_recommendation_policy = _get_recommendation_policy,
 			.create_recommendations = _create_recommendations,
 			.enforce_recommendation = _enforce_recommendation,
 			.notify_connection_change = _notify_connection_change,
@@ -280,8 +287,8 @@ imv_manager_t* tnc_imv_manager_create(void)
 	);
 	policy = enum_from_name(recommendation_policy_names,
 				lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imv.recommendation_policy", "any"));
-	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_NONE;
+					"charon.plugins.tnc-imv.recommendation_policy", "default"));
+	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_DEFAULT;
 	DBG1(DBG_TNC, "TNC recommendation policy is '%N'",
 				   recommendation_policy_names, this->policy);
 

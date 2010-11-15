@@ -15,9 +15,9 @@
 
 #include "imv_recommendations.h"
 
-ENUM(recommendation_policy_names, RECOMMENDATION_POLICY_NONE,
+ENUM(recommendation_policy_names, RECOMMENDATION_POLICY_DEFAULT,
 								  RECOMMENDATION_POLICY_ALL,
-	"none",
+	"default",
 	"any",
 	"all"
 );

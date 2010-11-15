@@ -19,6 +19,7 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <tnc/tncif.h>
+#include <tnc/tncifimv_names.h>
 #include <tnc/tnccs/tnccs.h>
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;
@@ -179,6 +180,9 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
+		DBG2(DBG_TNC, "Final recommendation '%N' and evaluation '%N'",
+			 action_recommendation_names, rec, evaluation_result_names, eval);
+
 		return charon->imvs->enforce_recommendation(charon->imvs, rec);
 	}
 	else

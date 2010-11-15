@@ -27,7 +27,7 @@
 typedef enum recommendation_policy_t recommendation_policy_t;
 
 enum recommendation_policy_t {
-	RECOMMENDATION_POLICY_NONE,
+	RECOMMENDATION_POLICY_DEFAULT,
 	RECOMMENDATION_POLICY_ANY,
 	RECOMMENDATION_POLICY_ALL
 };
