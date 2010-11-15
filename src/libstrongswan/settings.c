@@ -352,15 +352,11 @@ METHOD(settings_t, get_str, char*,
 	return def;
 }
 
-METHOD(settings_t, get_bool, bool,
-	   private_settings_t *this, char *key, bool def, ...)
+/**
+ * Described in header
+ */
+inline bool settings_value_as_bool(char *value, bool def)
 {
-	char *value;
-	va_list args;
-
-	va_start(args, def);
-	value = find_value(this, this->top, key, args);
-	va_end(args);
 	if (value)
 	{
 		if (strcaseeq(value, "true") ||
@@ -381,16 +377,24 @@ METHOD(settings_t, get_bool, bool,
 	return def;
 }
 
-METHOD(settings_t, get_int, int,
-	   private_settings_t *this, char *key, int def, ...)
+METHOD(settings_t, get_bool, bool,
+	   private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
-	int intval;
 	va_list args;
 
 	va_start(args, def);
 	value = find_value(this, this->top, key, args);
 	va_end(args);
+	return settings_value_as_bool(value, def);
+}
+
+/**
+ * Described in header
+ */
+inline int settings_value_as_int(char *value, int def)
+{
+	int intval;
 	if (value)
 	{
 		errno = 0;
@@ -403,16 +407,24 @@ METHOD(settings_t, get_int, int,
 	return def;
 }
 
-METHOD(settings_t, get_double, double,
-	   private_settings_t *this, char *key, double def, ...)
+METHOD(settings_t, get_int, int,
+	   private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
-	double dval;
 	va_list args;
 
 	va_start(args, def);
 	value = find_value(this, this->top, key, args);
 	va_end(args);
+	return settings_value_as_int(value, def);
+}
+
+/**
+ * Described in header
+ */
+inline double settings_value_as_double(char *value, double def)
+{
+	double dval;
 	if (value)
 	{
 		errno = 0;
@@ -425,16 +437,25 @@ METHOD(settings_t, get_double, double,
 	return def;
 }
 
-METHOD(settings_t, get_time, u_int32_t,
-	   private_settings_t *this, char *key, u_int32_t def, ...)
+METHOD(settings_t, get_double, double,
+	   private_settings_t *this, char *key, double def, ...)
 {
-	char *value, *endptr;
-	u_int32_t timeval;
+	char *value;
 	va_list args;
 
 	va_start(args, def);
 	value = find_value(this, this->top, key, args);
 	va_end(args);
+	return settings_value_as_double(value, def);
+}
+
+/**
+ * Described in header
+ */
+inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
+{
+	char *endptr;
+	u_int32_t timeval;
 	if (value)
 	{
 		errno = 0;
@@ -460,6 +481,18 @@ METHOD(settings_t, get_time, u_int32_t,
 		}
 	}
 	return def;
+}
+
+METHOD(settings_t, get_time, u_int32_t,
+	   private_settings_t *this, char *key, u_int32_t def, ...)
+{
+	char *value;
+	va_list args;
+
+	va_start(args, def);
+	value = find_value(this, this->top, key, args);
+	va_end(args);
+	return settings_value_as_time(value, def);
 }
 
 /**

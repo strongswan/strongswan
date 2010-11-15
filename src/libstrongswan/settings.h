@@ -28,6 +28,46 @@ typedef struct settings_t settings_t;
 #include "utils/enumerator.h"
 
 /**
+ * Convert a string value returned by a key/value enumerator to a boolean.
+ *
+ * @see settings_t.create_key_value_enumerator()
+ * @see settings_t.get_bool()
+ * @param value			the string value
+ * @param def			the default value, if value is NULL or invalid
+ */
+bool settings_value_as_bool(char *value, bool def);
+
+/**
+ * Convert a string value returned by a key/value enumerator to an integer.
+ *
+ * @see settings_t.create_key_value_enumerator()
+ * @see settings_t.get_int()
+ * @param value			the string value
+ * @param def			the default value, if value is NULL or invalid
+ */
+int settings_value_as_int(char *value, int def);
+
+/**
+ * Convert a string value returned by a key/value enumerator to a double.
+ *
+ * @see settings_t.create_key_value_enumerator()
+ * @see settings_t.get_double()
+ * @param value			the string value
+ * @param def			the default value, if value is NULL or invalid
+ */
+double settings_value_as_double(char *value, double def);
+
+/**
+ * Convert a string value returned by a key/value enumerator to a time value.
+ *
+ * @see settings_t.create_key_value_enumerator()
+ * @see settings_t.get_time()
+ * @param value			the string value
+ * @param def			the default value, if value is NULL or invalid
+ */
+u_int32_t settings_value_as_time(char *value, u_int32_t def);
+
+/**
  * Generic configuration options read from a config file.
  *
  * The syntax is quite simple:
@@ -167,7 +207,7 @@ struct settings_t {
 	 * Create an enumerator over key/value pairs in a section.
 	 *
 	 * @param section	section name to list key/value pairs of, printf style
-	 * @param ...		argmuent list for section
+	 * @param ...		argument list for section
 	 * @return			enumerator over (char *key, char *value)
 	 */
 	enumerator_t* (*create_key_value_enumerator)(settings_t *this,
