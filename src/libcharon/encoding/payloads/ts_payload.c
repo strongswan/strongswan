@@ -206,7 +206,6 @@ static void compute_length (private_ts_payload_t *this)
  */
 static size_t get_length(private_ts_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
@@ -233,6 +232,7 @@ static void add_traffic_selector_substructure (private_ts_payload_t *this,traffi
 {
 	this->traffic_selectors->insert_last(this->traffic_selectors,traffic_selector);
 	this->number_of_traffic_selectors = this->traffic_selectors->get_count(this->traffic_selectors);
+	compute_length(this);
 }
 
 /**

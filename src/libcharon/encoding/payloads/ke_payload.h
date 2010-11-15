@@ -56,15 +56,6 @@ struct ke_payload_t {
 	chunk_t (*get_key_exchange_data) (ke_payload_t *this);
 
 	/**
-	 * Sets the key exchange data of this KE payload.
-	 *
-	 * Value is getting copied.
-	 *
-	 * @param key_exchange_data chunk_t pointing to the value to set
-	 */
-	void (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
-
-	/**
 	 * Gets the Diffie-Hellman Group Number of this KE payload.
 	 *
 	 * @return 					DH Group Number of this payload

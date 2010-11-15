@@ -146,7 +146,7 @@ static payload_type_t get_type(private_ke_payload_t *this)
  */
 static payload_type_t get_next_type(private_ke_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -163,6 +163,7 @@ static void set_next_type(private_ke_payload_t *this,payload_type_t type)
 static void compute_length(private_ke_payload_t *this)
 {
 	size_t length = KE_PAYLOAD_HEADER_LENGTH;
+
 	if (this->key_exchange_data.ptr != NULL)
 	{
 		length += this->key_exchange_data.len;
@@ -175,7 +176,6 @@ static void compute_length(private_ke_payload_t *this)
  */
 static size_t get_length(private_ke_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
@@ -184,26 +184,7 @@ static size_t get_length(private_ke_payload_t *this)
  */
 static chunk_t get_key_exchange_data(private_ke_payload_t *this)
 {
-	return (this->key_exchange_data);
-}
-
-/**
- * Implementation of ke_payload_t.set_key_exchange_data.
- */
-static void set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchange_data)
-{
-	/* destroy existing data first */
-	if (this->key_exchange_data.ptr != NULL)
-	{
-		/* free existing value */
-		free(this->key_exchange_data.ptr);
-		this->key_exchange_data.ptr = NULL;
-		this->key_exchange_data.len = 0;
-
-	}
-
-	this->key_exchange_data = chunk_clone(key_exchange_data);
-	compute_length(this);
+	return this->key_exchange_data;
 }
 
 /**
@@ -240,7 +221,6 @@ ke_payload_t *ke_payload_create()
 
 	/* public functions */
 	this->public.get_key_exchange_data = (chunk_t (*) (ke_payload_t *)) get_key_exchange_data;
-	this->public.set_key_exchange_data = (void (*) (ke_payload_t *,chunk_t)) set_key_exchange_data;
 	this->public.get_dh_group_number = (diffie_hellman_group_t (*) (ke_payload_t *)) get_dh_group_number;
 	this->public.set_dh_group_number =(void (*) (ke_payload_t *,diffie_hellman_group_t)) set_dh_group_number;
 	this->public.destroy = (void (*) (ke_payload_t *)) destroy;

@@ -234,7 +234,6 @@ static void compute_length(private_proposal_substructure_t *this)
 METHOD(payload_t, get_length, size_t,
 	private_proposal_substructure_t *this)
 {
-	compute_length(this);
 	return this->proposal_length;
 }
 
@@ -366,6 +365,7 @@ METHOD(proposal_substructure_t, clone_, proposal_substructure_t*,
 		add_transform_substructure(clone, current);
 	}
 	enumerator->destroy(enumerator);
+	compute_length(clone);
 
 	return &clone->public;
 }
@@ -409,6 +409,7 @@ proposal_substructure_t *proposal_substructure_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
+		.proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH,
 		.transforms = linked_list_create(),
 	);
 
@@ -500,6 +501,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	}
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proposal->get_protocol(proposal);
+	compute_length(this);
 
 	return &this->public;
 }

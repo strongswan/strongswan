@@ -203,7 +203,6 @@ static void compute_length (private_transform_substructure_t *this)
  */
 static size_t get_length(private_transform_substructure_t *this)
 {
-	compute_length(this);
 	return this->transform_length;
 }
 

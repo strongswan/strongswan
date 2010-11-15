@@ -185,7 +185,6 @@ static void compute_length(private_sa_payload_t *this)
 METHOD(payload_t, get_length, size_t,
 	private_sa_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 

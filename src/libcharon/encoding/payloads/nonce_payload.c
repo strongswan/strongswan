@@ -78,7 +78,7 @@ encoding_rule_t nonce_payload_encodings[] = {
 	/* Length of the whole nonce payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length) 	},
 	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
-	{ NONCE_DATA,			offsetof(private_nonce_payload_t, nonce) 		}
+	{ NONCE_DATA,		offsetof(private_nonce_payload_t, nonce) 			},
 };
 
 /*                           1                   2                   3
@@ -97,12 +97,10 @@ encoding_rule_t nonce_payload_encodings[] = {
  */
 static status_t verify(private_nonce_payload_t *this)
 {
-	if ((this->nonce.len < 16) || ((this->nonce.len > 256)))
+	if (this->nonce.len < 16 || this->nonce.len > 256)
 	{
-		/* nonce length is wrong */
 		return FAILED;
 	}
-
 	return SUCCESS;
 }
 
@@ -111,8 +109,7 @@ static status_t verify(private_nonce_payload_t *this)
  */
 static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 {
-	this->nonce.ptr = clalloc(nonce.ptr, nonce.len);
-	this->nonce.len = nonce.len;
+	this->nonce = chunk_clone(nonce);
 	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
 	return SUCCESS;
 }
@@ -122,10 +119,7 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
  */
 static chunk_t get_nonce(private_nonce_payload_t *this)
 {
-	chunk_t nonce;
-	nonce.ptr = clalloc(this->nonce.ptr,this->nonce.len);
-	nonce.len = this->nonce.len;
-	return nonce;
+	return chunk_clone(this->nonce);
 }
 
 /**
@@ -150,7 +144,7 @@ static payload_type_t get_type(private_nonce_payload_t *this)
  */
 static payload_type_t get_next_type(private_nonce_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
 /**
@@ -162,19 +156,10 @@ static void set_next_type(private_nonce_payload_t *this,payload_type_t type)
 }
 
 /**
- * recompute the length of the payload.
- */
-static void compute_length(private_nonce_payload_t *this)
-{
-	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + this->nonce.len;
-}
-
-/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_nonce_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
@@ -187,7 +172,6 @@ static void destroy(private_nonce_payload_t *this)
 	{
 		free(this->nonce.ptr);
 	}
-
 	free(this);
 }
 

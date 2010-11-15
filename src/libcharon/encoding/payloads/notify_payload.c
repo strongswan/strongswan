@@ -459,7 +459,6 @@ static void compute_length (private_notify_payload_t *this)
  */
 static size_t get_length(private_notify_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
