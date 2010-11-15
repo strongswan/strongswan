@@ -1194,7 +1194,10 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 				DBG1(DBG_IKE, "establishing mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
 			}
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, sa);
+			else
+			{
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, sa);
+			}
 		}
 		iterator->destroy(iterator);
 	}
