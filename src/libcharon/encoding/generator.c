@@ -90,20 +90,10 @@ struct private_generator_t {
 	 */
 	void *data_struct;
 
-	/*
-	 * Last payload length position offset in the buffer.
-	 */
-	u_int32_t last_payload_length_position_offset;
-
 	/**
 	 * Offset of the header length field in the buffer.
 	 */
-	u_int32_t header_length_position_offset;
-
-	/**
-	 * Last SPI size.
-	 */
-	u_int8_t last_spi_size;
+	u_int32_t header_length_offset;
 
 	/**
 	 * Attribute format of the last generated transform attribute.
@@ -190,33 +180,6 @@ static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
 		*(this->out_position) = *(read_position);
 		read_position++;
 		this->out_position++;
-	}
-}
-
-/**
- * Writes a specific amount of byte into the buffer at a specific offset.
- */
-static void write_bytes_to_buffer_at_offset(private_generator_t *this,
-						void *bytes, int number_of_bytes, u_int32_t offset)
-{
-	int i;
-	u_int8_t *read_position = (u_int8_t *)bytes;
-	u_int8_t *write_position;
-	u_int32_t free_space_after_offset = get_size(this) - offset;
-
-	/* check first if enough space for new data is available */
-	if (number_of_bytes > free_space_after_offset)
-	{
-		make_space_available(this,
-							 (number_of_bytes - free_space_after_offset) * 8);
-	}
-
-	write_position = this->buffer + offset;
-	for (i = 0; i < number_of_bytes; i++)
-	{
-		*write_position = *read_position;
-		read_position++;
-		write_position++;
 	}
 }
 
@@ -469,7 +432,7 @@ METHOD(generator_t, get_chunk, chunk_t,
 {
 	chunk_t data;
 
-	*lenpos = (u_int32_t*)(this->buffer + this->header_length_position_offset);
+	*lenpos = (u_int32_t*)(this->buffer + this->header_length_offset);
 	data = chunk_create(this->buffer, get_length(this));
 	DBG3(DBG_ENC, "generated data of this generator %B", &data);
 	return data;
@@ -485,8 +448,6 @@ METHOD(generator_t, generate_payload, void,
 
 	this->data_struct = payload;
 	payload_type = payload->get_type(payload);
-	/* spi size has to get reseted */
-	this->last_spi_size = 0;
 
 	offset_start = this->out_position - this->buffer;
 
@@ -510,52 +471,29 @@ METHOD(generator_t, generate_payload, void,
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
-			{
 				generate_u_int_type(this, rules[i].type, rules[i].offset);
 				break;
-			}
 			case RESERVED_BIT:
-			{
 				generate_reserved_field(this, 1);
 				break;
-			}
 			case RESERVED_BYTE:
-			{
 				generate_reserved_field(this, 8);
 				break;
-			}
 			case FLAG:
-			{
 				generate_flag(this, rules[i].offset);
 				break;
-			}
 			case PAYLOAD_LENGTH:
-			{
-				this->last_payload_length_position_offset = get_offset(this);
 				generate_u_int_type(this, U_INT_16,rules[i].offset);
 				break;
-			}
 			case HEADER_LENGTH:
-			{
-				this->header_length_position_offset = get_offset(this);
+				this->header_length_offset = get_offset(this);
 				generate_u_int_type(this ,U_INT_32, rules[i].offset);
 				break;
-			}
 			case SPI_SIZE:
 				generate_u_int_type(this, U_INT_8, rules[i].offset);
-				this->last_spi_size = *((u_int8_t *)(this->data_struct +
-													 rules[i].offset));
 				break;
 			case ADDRESS:
-			{
-				generate_from_chunk(this, rules[i].offset);
-				break;
-			}
 			case SPI:
-			{
-				generate_from_chunk(this, rules[i].offset);
-				break;
-			}
 			case KEY_EXCHANGE_DATA:
 			case NOTIFICATION_DATA:
 			case NONCE_DATA:
@@ -567,267 +505,57 @@ METHOD(generator_t, generate_payload, void,
 			case CONFIGURATION_ATTRIBUTE_VALUE:
 			case VID_DATA:
 			case EAP_DATA:
+			case ENCRYPTED_DATA:
 			case UNKNOWN_DATA:
-			{
-				u_int32_t payload_length_position_offset;
-				u_int16_t length_of_payload;
-				u_int16_t header_length = 0;
-				u_int16_t length_in_network_order;
-
-				switch(rules[i].type)
-				{
-					case KEY_EXCHANGE_DATA:
-						header_length = KE_PAYLOAD_HEADER_LENGTH;
-						break;
-					case NOTIFICATION_DATA:
-						header_length = NOTIFY_PAYLOAD_HEADER_LENGTH +
-														this->last_spi_size;
-						break;
-					case NONCE_DATA:
-						header_length = NONCE_PAYLOAD_HEADER_LENGTH;
-						break;
-					case ID_DATA:
-						header_length = ID_PAYLOAD_HEADER_LENGTH;
-						break;
-					case AUTH_DATA:
-						header_length = AUTH_PAYLOAD_HEADER_LENGTH;
-						break;
-					case CERT_DATA:
-						header_length = CERT_PAYLOAD_HEADER_LENGTH;
-						break;
-					case CERTREQ_DATA:
-						header_length = CERTREQ_PAYLOAD_HEADER_LENGTH;
-						break;
-					case SPIS:
-						header_length = DELETE_PAYLOAD_HEADER_LENGTH;
-						break;
-					case VID_DATA:
-						header_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH;
-						break;
-					case CONFIGURATION_ATTRIBUTE_VALUE:
-						header_length = CONFIGURATION_ATTRIBUTE_HEADER_LENGTH;
-						break;
-					case EAP_DATA:
-						header_length = EAP_PAYLOAD_HEADER_LENGTH;
-						break;
-					case UNKNOWN_DATA:
-						header_length = UNKNOWN_PAYLOAD_HEADER_LENGTH;
-					default:
-						break;
-				}
 				generate_from_chunk(this, rules[i].offset);
-
-				payload_length_position_offset =
-									this->last_payload_length_position_offset;
-
-				length_of_payload = header_length +
-						((chunk_t *)(this->data_struct + rules[i].offset))->len;
-
-				length_in_network_order = htons(length_of_payload);
-				write_bytes_to_buffer_at_offset(this, &length_in_network_order,
-							sizeof(u_int16_t), payload_length_position_offset);
 				break;
-			}
 			case PROPOSALS:
-			{
-				u_int32_t payload_length_position_offset =
-									this->last_payload_length_position_offset;
-				/* Length of SA_PAYLOAD is calculated */
-				u_int16_t length_of_sa_payload = SA_PAYLOAD_HEADER_LENGTH;
-				u_int16_t int16_val;
-				linked_list_t *proposals = *((linked_list_t **)
-										(this->data_struct + rules[i].offset));
-				iterator_t *iterator;
-				payload_t *current_proposal;
-
-				iterator = proposals->create_iterator(proposals,TRUE);
-				while (iterator->iterate(iterator, (void**)&current_proposal))
-				{
-					u_int32_t before_generate_position_offset;
-					u_int32_t after_generate_position_offset;
-
-					before_generate_position_offset = get_offset(this);
-					generate_payload(this, current_proposal);
-					after_generate_position_offset = get_offset(this);
-					length_of_sa_payload += (after_generate_position_offset -
-											 before_generate_position_offset);
-				}
-				iterator->destroy(iterator);
-
-				int16_val = htons(length_of_sa_payload);
-				write_bytes_to_buffer_at_offset(this, &int16_val,
-							sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case TRANSFORMS:
-			{
-				u_int32_t payload_length_position_offset =
-									this->last_payload_length_position_offset;
-				u_int16_t length_of_proposal =
-					PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->last_spi_size;
-				u_int16_t int16_val;
-				linked_list_t *transforms = *((linked_list_t **)
-										(this->data_struct + rules[i].offset));
-				iterator_t *iterator;
-				payload_t *current_transform;
-
-				iterator = transforms->create_iterator(transforms,TRUE);
-				while (iterator->iterate(iterator, (void**)&current_transform))
-				{
-					u_int32_t before_generate_position_offset;
-					u_int32_t after_generate_position_offset;
-
-					before_generate_position_offset = get_offset(this);
-					generate_payload(this, current_transform);
-					after_generate_position_offset = get_offset(this);
-
-					length_of_proposal += (after_generate_position_offset -
-										   before_generate_position_offset);
-				}
-				iterator->destroy(iterator);
-
-				int16_val = htons(length_of_proposal);
-				write_bytes_to_buffer_at_offset(this, &int16_val,
-							sizeof(u_int16_t), payload_length_position_offset);
-				break;
-			}
 			case TRANSFORM_ATTRIBUTES:
-			{
-				u_int32_t transform_length_position_offset =
-									this->last_payload_length_position_offset;
-				u_int16_t length_of_transform =
-									TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
-				u_int16_t int16_val;
-				linked_list_t *transform_attributes =*((linked_list_t **)
-									(this->data_struct + rules[i].offset));
-				iterator_t *iterator;
-				payload_t *current_attribute;
-
-				iterator = transform_attributes->create_iterator(
-													transform_attributes, TRUE);
-				while (iterator->iterate(iterator, (void**)&current_attribute))
-				{
-					u_int32_t before_generate_position_offset;
-					u_int32_t after_generate_position_offset;
-
-					before_generate_position_offset = get_offset(this);
-					generate_payload(this, current_attribute);
-					after_generate_position_offset = get_offset(this);
-
-					length_of_transform += (after_generate_position_offset -
-											before_generate_position_offset);
-				}
-
-				iterator->destroy(iterator);
-
-				int16_val = htons(length_of_transform);
-				write_bytes_to_buffer_at_offset(this, &int16_val,
-							sizeof(u_int16_t),transform_length_position_offset);
-				break;
-			}
 			case CONFIGURATION_ATTRIBUTES:
+			case TRAFFIC_SELECTORS:
 			{
-				u_int32_t configurations_length_position_offset =
-									this->last_payload_length_position_offset;
-				u_int16_t length_of_configurations = CP_PAYLOAD_HEADER_LENGTH;
-				u_int16_t int16_val;
-				linked_list_t *configuration_attributes = *((linked_list_t **)
+				linked_list_t *proposals;
+				enumerator_t *enumerator;
+				payload_t *proposal;
+
+				proposals = *((linked_list_t **)
 										(this->data_struct + rules[i].offset));
-				iterator_t *iterator;
-				payload_t *current_attribute;
-
-				iterator = configuration_attributes->create_iterator(
-												configuration_attributes,TRUE);
-				while (iterator->iterate(iterator, (void**)&current_attribute))
+				enumerator = proposals->create_enumerator(proposals);
+				while (enumerator->enumerate(enumerator, &proposal))
 				{
-					u_int32_t before_generate_position_offset;
-					u_int32_t after_generate_position_offset;
-
-					before_generate_position_offset = get_offset(this);
-					generate_payload(this, current_attribute);
-					after_generate_position_offset = get_offset(this);
-
-					length_of_configurations += after_generate_position_offset -
-											before_generate_position_offset;
+					generate_payload(this, proposal);
 				}
-
-				iterator->destroy(iterator);
-
-				int16_val = htons(length_of_configurations);
-				write_bytes_to_buffer_at_offset(this, &int16_val,
-					 sizeof(u_int16_t),configurations_length_position_offset);
+				enumerator->destroy(enumerator);
 				break;
 			}
 			case ATTRIBUTE_FORMAT:
-			{
 				generate_flag(this, rules[i].offset);
 				/* Attribute format is a flag which is stored in context*/
 				this->attribute_format =
 							*((bool *)(this->data_struct + rules[i].offset));
 				break;
-			}
-
 			case ATTRIBUTE_LENGTH_OR_VALUE:
-			{
-				if (this->attribute_format == FALSE)
+				if (this->attribute_format)
+				{
+					generate_u_int_type(this, U_INT_16, rules[i].offset);
+				}
+				else
 				{
 					generate_u_int_type(this, U_INT_16, rules[i].offset);
 					/* this field hold the length of the attribute */
 					this->attribute_length =
 						*((u_int16_t *)(this->data_struct + rules[i].offset));
 				}
-				else
-				{
-					generate_u_int_type(this, U_INT_16, rules[i].offset);
-				}
 				break;
-			}
 			case ATTRIBUTE_VALUE:
 			{
-				if (this->attribute_format == FALSE)
+				if (!this->attribute_format)
 				{
 					DBG2(DBG_ENC, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					generate_from_chunk(this, rules[i].offset);
 				}
-				break;
-			}
-			case TRAFFIC_SELECTORS:
-			{
-				u_int32_t payload_length_position_offset =
-									this->last_payload_length_position_offset;
-				u_int16_t length_of_ts_payload = TS_PAYLOAD_HEADER_LENGTH;
-				u_int16_t int16_val;
-				linked_list_t *traffic_selectors = *((linked_list_t **)
-										(this->data_struct + rules[i].offset));
-				iterator_t *iterator;
-				payload_t *current_tss;
-
-				iterator = traffic_selectors->create_iterator(
-													traffic_selectors,TRUE);
-				while (iterator->iterate(iterator, (void **)&current_tss))
-				{
-					u_int32_t before_generate_position_offset;
-					u_int32_t after_generate_position_offset;
-
-					before_generate_position_offset = get_offset(this);
-					generate_payload(this, current_tss);
-					after_generate_position_offset = get_offset(this);
-
-					length_of_ts_payload += (after_generate_position_offset -
-											 before_generate_position_offset);
-				}
-				iterator->destroy(iterator);
-
-				int16_val = htons(length_of_ts_payload);
-				write_bytes_to_buffer_at_offset(this, &int16_val,
-							sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
-
-			case ENCRYPTED_DATA:
-			{
-				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
 			default:
