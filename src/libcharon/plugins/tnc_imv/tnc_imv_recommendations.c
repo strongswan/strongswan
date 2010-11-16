@@ -16,6 +16,7 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <tnc/tncifimv_names.h>
+#include <tnc/imv/imv.h>
 #include <tnc/imv/imv_recommendations.h>
 
 typedef struct private_tnc_imv_recommendations_t private_tnc_imv_recommendations_t;
@@ -238,7 +239,7 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 	private_tnc_imv_recommendations_t *this;
 	recommendation_entry_t *entry;
 	enumerator_t *enumerator;
-	TNC_IMVID id;
+	imv_t *imv;
 
 	INIT(this,
 		.public = {
@@ -250,10 +251,10 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 	);
 
 	enumerator = imv_list->create_enumerator(imv_list);
-	while (enumerator->enumerate(enumerator, &id))
+	while (enumerator->enumerate(enumerator, &imv))
 	{
 		entry = malloc_thing(recommendation_entry_t);
-		entry->id = id;
+		entry->id = imv->get_id(imv);
 		entry->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
 		entry->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 		this->recs->insert_last(this->recs, entry);		
