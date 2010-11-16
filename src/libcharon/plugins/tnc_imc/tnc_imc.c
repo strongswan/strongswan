@@ -158,7 +158,7 @@ imc_t* tnc_imc_create(char *name, char *path)
 		.path = path,
 	);
 
-	this->handle = dlopen(path, RTLD_NOW);
+	this->handle = dlopen(path, RTLD_LAZY);
 	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to load: %s", name, dlerror());

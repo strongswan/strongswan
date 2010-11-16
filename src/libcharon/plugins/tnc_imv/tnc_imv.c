@@ -158,7 +158,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 		.path = path,
 	);
 
-	this->handle = dlopen(path, RTLD_NOW);
+	this->handle = dlopen(path, RTLD_LAZY);
 	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMV \"%s\" failed to load: %s", name, dlerror());
