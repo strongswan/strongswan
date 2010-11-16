@@ -61,6 +61,11 @@ struct private_tnc_imv_recommendations_t {
 	 * list of recommendations and evaluations provided by IMVs 
 	 */
 	linked_list_t *recs;
+
+	/**
+	 * Preferred language for remediation messages
+	 */
+	chunk_t preferred_language;
 };
 
 METHOD(recommendations_t, provide_recommendation, TNC_Result,
@@ -251,11 +256,24 @@ METHOD(recommendations_t, have_recommendation, bool,
 	return TRUE;
 }
 
+METHOD(recommendations_t, get_preferred_language, chunk_t,
+	private_tnc_imv_recommendations_t *this)
+{
+	return this->preferred_language;
+}
+
+METHOD(recommendations_t, set_preferred_language, void,
+	private_tnc_imv_recommendations_t *this, chunk_t pref_lang)
+{
+	chunk_free(&this->preferred_language);
+	this->preferred_language = chunk_clone(pref_lang);
+}
 
 METHOD(recommendations_t, destroy, void,
 	private_tnc_imv_recommendations_t *this)
 {
 	this->recs->destroy_function(this->recs, free);
+	free(this->preferred_language.ptr);
 	free(this);
 }
 
@@ -273,6 +291,8 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 		.public = {
 			.provide_recommendation = _provide_recommendation,
 			.have_recommendation = _have_recommendation,
+			.get_preferred_language = _get_preferred_language,
+			.set_preferred_language = _set_preferred_language,
 			.destroy = _destroy,
         },
 		.recs = linked_list_create(),

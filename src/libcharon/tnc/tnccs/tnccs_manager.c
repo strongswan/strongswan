@@ -57,13 +57,13 @@ struct tnccs_connection_entry_t {
 	 */
 	tnccs_t *tnccs;
 
-	/** TNCCS send message function
-	 *
+	/**
+	 * TNCCS send message function
 	 */
 	tnccs_send_message_t send_message;
 
-	/** collection of IMV recommendations
-	 *
+	/**
+	 * collection of IMV recommendations
 	 */
 	recommendations_t *recs;
 };
@@ -296,6 +296,65 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 	return TNC_RESULT_FATAL;
 }
 
+METHOD(tnccs_manager_t, get_attribute, TNC_Result,
+	private_tnccs_manager_t *this, TNC_IMVID imv_id,
+								   TNC_ConnectionID id,
+								   TNC_AttributeID attribute_id,
+								   TNC_UInt32 buffer_len,
+								   TNC_BufferReference buffer,
+								   TNC_UInt32 *out_value_len)
+{
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+	recommendations_t *recs = NULL;
+
+	if (attribute_id != TNC_ATTRIBUTEID_PREFERRED_LANGUAGE)
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+
+	this->connection_lock->read_lock(this->connection_lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == entry->id)
+		{
+			recs = entry->recs;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->connection_lock->unlock(this->connection_lock);
+
+	if (recs)
+	{
+		chunk_t pref_lang;
+
+		pref_lang = recs->get_preferred_language(recs);
+		if (pref_lang.len == 0)
+		{
+			return TNC_RESULT_INVALID_PARAMETER;
+		}
+		*out_value_len = pref_lang.len;
+		if (buffer && buffer_len <= pref_lang.len)
+		{
+			memcpy(buffer, pref_lang.ptr, pref_lang.len);
+		}
+		return TNC_RESULT_SUCCESS;
+	 }
+	return TNC_RESULT_INVALID_PARAMETER;
+}
+
+METHOD(tnccs_manager_t, set_attribute, TNC_Result,
+	private_tnccs_manager_t *this, TNC_IMVID imv_id,
+								   TNC_ConnectionID id,
+								   TNC_AttributeID attribute_id,
+								   TNC_UInt32 buffer_len,
+								   TNC_BufferReference buffer)
+{
+	return TNC_RESULT_INVALID_PARAMETER;
+}
+
 METHOD(tnccs_manager_t, destroy, void,
 	private_tnccs_manager_t *this)
 {
@@ -322,6 +381,8 @@ tnccs_manager_t *tnccs_manager_create()
 				.remove_connection = _remove_connection,
 				.send_message = _send_message,
 				.provide_recommendation = _provide_recommendation,
+				.get_attribute = _get_attribute,
+				.set_attribute = _set_attribute,
 				.destroy = _destroy,
 			},
 			.protocols = linked_list_create(),

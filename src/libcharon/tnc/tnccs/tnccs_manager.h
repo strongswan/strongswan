@@ -67,10 +67,10 @@ struct tnccs_manager_t {
 	 * callback function for adding a message to a TNCCS batch and create
 	 * an empty set for collecting IMV recommendations
 	 *
-	 * @param tnccs						TNCCS connection instance
-	 * @param send_message				TNCCS callback function
-	 * @param recs						pointer to IMV recommendation set
-	 * @return							assigned connection ID
+	 * @param tnccs				TNCCS connection instance
+	 * @param send_message		TNCCS callback function
+	 * @param recs				pointer to IMV recommendation set
+	 * @return					assigned connection ID
 	 */
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message,
@@ -79,38 +79,77 @@ struct tnccs_manager_t {
 	/**
 	 * Remove a TNCCS connection using its connection ID.
 	 *
-	 * @param id			connection ID of the connection to be removed
+	 * @param id				connection ID of the connection to be removed
 	 */
 	void (*remove_connection)(tnccs_manager_t *this, TNC_ConnectionID id);
 
 	/**
 	 * Add an IMC/IMV message to the batch of a given connection ID.
 	 *
-	 * @param id			target connection ID
-	 * @param message		message to be added
-	 * @param message_len	message length
-	 * @param message_type	message type
-	 * @return				return code
+	 * @param id				target connection ID
+	 * @param msg				message to be added
+	 * @param msg_len			message length
+	 * @param msg_type			message type
+	 * @return					return code
 	 */
 	TNC_Result (*send_message)(tnccs_manager_t *this,
 							   TNC_ConnectionID id,
-							   TNC_BufferReference message,
-							   TNC_UInt32 message_len,
-							   TNC_MessageType message_type);
+							   TNC_BufferReference msg,
+							   TNC_UInt32 msg_len,
+							   TNC_MessageType msg_type);
 
 	/**
 	 * Deliver an IMV Action Recommendation and IMV Evaluation Result to the TNCS
 	 *
 	 * @param imv_id			ID of the IMV providing the recommendation
-	 * @param connection_id		target connection ID
-	 * @param recommendation	action recommendation
-	 * @param evaluation		evaluation result
+	 * @param connection_id		ID of target connection
+	 * @param rec				action recommendation
+	 * @param eval				evaluation result
+	 * @return					return code
 	 */
 	TNC_Result (*provide_recommendation)(tnccs_manager_t *this,
+										 TNC_IMVID imv_id,
+										 TNC_ConnectionID connection_id,
+										 TNC_IMV_Action_Recommendation rec,
+										 TNC_IMV_Evaluation_Result eval);
+
+	/**
+	 * Get the value of an attribute associated with a connection or with the
+	 * TNCS as a whole.
+	 *
+	 * @param imv_id			ID of the IMV requesting the attribute
+	 * @param connection_id		ID of target connection
+	 * @param attribute_id		ID of the requested attribute
+	 * @param buffer_len		length of the buffer in bytes
+	 * @param buffer			pointer to the buffer
+	 * @param out_value_len		actual length of the returned attribute
+	 * @return					return code
+	 */
+	TNC_Result (*get_attribute)(tnccs_manager_t *this,
+							   TNC_IMVID imv_id,
+							   TNC_ConnectionID connection_id,
+							   TNC_AttributeID attribute_id,
+							   TNC_UInt32 buffer_len,
+							   TNC_BufferReference buffer,
+							   TNC_UInt32 *out_value_len);
+
+	/**
+	 * Set the value of an attribute associated with a connection or with the
+	 * TNCS as a whole.
+	 *
+	 * @param imv_id			ID of the IMV setting the attribute
+	 * @param connection_id		ID of target connection
+	 * @param attribute_id		ID of the attribute to be set
+	 * @param buffer_len		length of the buffer in bytes
+	 * @param buffer			pointer to the buffer
+	 * @return					return code
+	 */
+	TNC_Result (*set_attribute)(tnccs_manager_t *this,
 								TNC_IMVID imv_id,
 								TNC_ConnectionID connection_id,
-								TNC_IMV_Action_Recommendation recommendation,
-								TNC_IMV_Evaluation_Result evaluation);
+								TNC_AttributeID attribute_id,
+								TNC_UInt32 buffer_len,
+								TNC_BufferReference buffer);
 
 	/**
 	 * Destroy a tnccs_manager instance.

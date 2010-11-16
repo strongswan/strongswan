@@ -45,18 +45,41 @@ struct recommendations_t {
 	/**
 	 * Deliver an IMV action recommendation and IMV evaluation result to the TNCS
 	 *
-	 * @param imv_id			ID of the IMV providing the recommendation
-	 * @param recommendation	action recommendation
-	 * @param evaluation		evaluation result
+	 * @param imv_id		ID of the IMV providing the recommendation
+	 * @param rec			action recommendation
+	 * @param eval			evaluation result
+	 * @return				return code
 	 */
 	TNC_Result (*provide_recommendation)(recommendations_t *this,
 										 TNC_IMVID imv_id,
 										 TNC_IMV_Action_Recommendation rec,
 										 TNC_IMV_Evaluation_Result eval);
 
+	/**
+	 * If all IMVs provided a recommendation, derive a consolidated action
+	 * recommendation and evaluation result based on a configured policy
+	 *
+	 * @param rec			action recommendation
+	 * @param eval			evaluation result
+	 * @return				TRUE if all IMVs provided a recommendation
+	 */
 	bool (*have_recommendation)(recommendations_t *this,
 								TNC_IMV_Action_Recommendation *rec,
 								TNC_IMV_Evaluation_Result *eval);
+
+	/**
+	 * Get the preferred language for remediation messages
+	 *
+	 * @return				preferred language
+	 */
+	chunk_t (*get_preferred_language)(recommendations_t *this);
+
+	/**
+	 * Set the preferred language for remediation messages
+	 *
+	 * @param pref_lang		preferred language
+	 */
+	void (*set_preferred_language)(recommendations_t *this, chunk_t pref_lang);
 
 	/**
 	 * Destroys an imv_t object.

@@ -68,6 +68,35 @@ TNC_Result TNC_TNCS_ProvideRecommendation(TNC_IMVID imv_id,
 }
 
 /**
+ * Called by the IMV to get the value of an attribute associated with a
+ * connection or with the TNCS as a whole.
+ */
+TNC_Result TNC_TNCS_GetAttribute(TNC_IMVID imv_id,
+								 TNC_ConnectionID connection_id,
+								 TNC_AttributeID attribute_id,
+								 TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer,
+								 TNC_UInt32 *out_value_len)
+{
+	return charon->tnccs->get_attribute(charon->tnccs, imv_id, connection_id,
+							attribute_id, buffer_len, buffer, out_value_len);
+}
+
+/**
+ * Called by the IMV to set the value of an attribute associated with a
+ * connection or with the TNCS as a whole.
+ */
+TNC_Result TNC_TNCS_SetAttribute(TNC_IMVID imv_id,
+								 TNC_ConnectionID connection_id,
+								 TNC_AttributeID attribute_id,
+								 TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer)
+{
+	return charon->tnccs->set_attribute(charon->tnccs, imv_id, connection_id,
+										attribute_id, buffer_len, buffer);
+}
+
+/**
  * Called by the IMV when it needs a function pointer
  */
 TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
@@ -89,6 +118,14 @@ TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
     else if (streq(function_name, "TNC_TNCS_ProvideRecommendation"))
 	{
 		*function_pointer = (void*)TNC_TNCS_ProvideRecommendation;
+	}
+    else if (streq(function_name, "TNC_TNCS_GetAttribute"))
+	{
+		*function_pointer = (void*)TNC_TNCS_GetAttribute;
+	}
+    else if (streq(function_name, "TNC_TNCS_SetAttribute"))
+	{
+		*function_pointer = (void*)TNC_TNCS_SetAttribute;
 	}
     else
 	{
