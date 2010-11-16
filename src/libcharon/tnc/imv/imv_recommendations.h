@@ -82,6 +82,26 @@ struct recommendations_t {
 	void (*set_preferred_language)(recommendations_t *this, chunk_t pref_lang);
 
 	/**
+	 * Set the reason string
+	 *
+	 * @param id			ID of IMV setting the reason string
+	 * @param reason		reason string
+	 * @result				return code
+	 */
+	TNC_Result (*set_reason_string)(recommendations_t *this, TNC_IMVID id,
+									chunk_t reason);
+
+	/**
+	 * Set the language for reason strings
+	 *
+	 * @param id			ID of IMV setting the reason language
+	 * @param reason_lang	reason language
+	 * @result				return code
+	 */
+	TNC_Result (*set_reason_language)(recommendations_t *this, TNC_IMVID id,
+									  chunk_t reason_lang);
+
+	/**
 	 * Destroys an imv_t object.
 	 */
 	void (*destroy)(recommendations_t *this);

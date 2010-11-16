@@ -352,6 +352,42 @@ METHOD(tnccs_manager_t, set_attribute, TNC_Result,
 								   TNC_UInt32 buffer_len,
 								   TNC_BufferReference buffer)
 {
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+	recommendations_t *recs = NULL;
+
+	if (attribute_id != TNC_ATTRIBUTEID_REASON_STRING &&
+		attribute_id != TNC_ATTRIBUTEID_REASON_LANGUAGE)
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+
+	this->connection_lock->read_lock(this->connection_lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == entry->id)
+		{
+			recs = entry->recs;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->connection_lock->unlock(this->connection_lock);
+
+	if (recs)
+	{
+		chunk_t attribute = { buffer, buffer_len };
+
+		if (attribute_id == TNC_ATTRIBUTEID_REASON_STRING)
+		{
+			return recs->set_reason_string(recs, imv_id, attribute);
+		}
+		else
+		{
+			return recs->set_reason_language(recs, imv_id, attribute);
+		}
+	}
 	return TNC_RESULT_INVALID_PARAMETER;
 }
 

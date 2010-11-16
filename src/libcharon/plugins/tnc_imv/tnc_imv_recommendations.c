@@ -39,12 +39,22 @@ struct recommendation_entry_t {
 	/**
 	 * Action Recommendation provided by IMV instance
 	 */
-  TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Action_Recommendation rec;
 
 	/**
 	 * Evaluation Result provided by IMV instance
 	 */
-  TNC_IMV_Evaluation_Result eval;
+	TNC_IMV_Evaluation_Result eval;
+
+	/**
+	 * Reason string provided by IMV instance
+	 */
+	chunk_t reason;
+
+	/**
+	 * Reason language provided by IMV instance
+	 */
+	chunk_t reason_language;	
 };
 
 /**
@@ -269,10 +279,62 @@ METHOD(recommendations_t, set_preferred_language, void,
 	this->preferred_language = chunk_clone(pref_lang);
 }
 
+METHOD(recommendations_t, set_reason_string, TNC_Result,
+	private_tnc_imv_recommendations_t *this, TNC_IMVID id, chunk_t reason)
+{
+	enumerator_t *enumerator;
+	recommendation_entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = this->recs->create_enumerator(this->recs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->id == id)
+		{
+			found = TRUE;
+			free(entry->reason.ptr);
+			entry->reason = chunk_clone(reason);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found ? TNC_RESULT_SUCCESS : TNC_RESULT_INVALID_PARAMETER;
+}
+
+METHOD(recommendations_t, set_reason_language, TNC_Result,
+	private_tnc_imv_recommendations_t *this, TNC_IMVID id, chunk_t reason_lang)
+{
+	enumerator_t *enumerator;
+	recommendation_entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = this->recs->create_enumerator(this->recs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->id == id)
+		{
+			found = TRUE;
+			free(entry->reason_language.ptr);
+			entry->reason_language = chunk_clone(reason_lang);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found ? TNC_RESULT_SUCCESS : TNC_RESULT_INVALID_PARAMETER;
+}
+
 METHOD(recommendations_t, destroy, void,
 	private_tnc_imv_recommendations_t *this)
 {
-	this->recs->destroy_function(this->recs, free);
+	recommendation_entry_t *entry;
+
+	while (this->recs->remove_last(this->recs, (void**)&entry))
+	{
+		free(entry->reason.ptr);
+		free(entry->reason_language.ptr);
+		free(entry);
+	}
+	this->recs->destroy(this->recs);
 	free(this->preferred_language.ptr);
 	free(this);
 }
@@ -293,6 +355,9 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 			.have_recommendation = _have_recommendation,
 			.get_preferred_language = _get_preferred_language,
 			.set_preferred_language = _set_preferred_language,
+			.set_reason_string = _set_reason_string,
+			.set_reason_language = _set_reason_language,
+
 			.destroy = _destroy,
         },
 		.recs = linked_list_create(),
