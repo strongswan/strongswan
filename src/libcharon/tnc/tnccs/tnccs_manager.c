@@ -308,7 +308,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	tnccs_connection_entry_t *entry;
 	recommendations_t *recs = NULL;
 
-	if (attribute_id != TNC_ATTRIBUTEID_PREFERRED_LANGUAGE)
+	if (id == TNC_CONNECTIONID_ANY ||
+		attribute_id != TNC_ATTRIBUTEID_PREFERRED_LANGUAGE)
 	{
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
@@ -356,8 +357,9 @@ METHOD(tnccs_manager_t, set_attribute, TNC_Result,
 	tnccs_connection_entry_t *entry;
 	recommendations_t *recs = NULL;
 
-	if (attribute_id != TNC_ATTRIBUTEID_REASON_STRING &&
-		attribute_id != TNC_ATTRIBUTEID_REASON_LANGUAGE)
+	if (id == TNC_CONNECTIONID_ANY ||
+		(attribute_id != TNC_ATTRIBUTEID_REASON_STRING &&
+		 attribute_id != TNC_ATTRIBUTEID_REASON_LANGUAGE))
 	{
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
