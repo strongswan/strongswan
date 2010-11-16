@@ -86,14 +86,18 @@ struct tnccs_manager_t {
 	/**
 	 * Add an IMC/IMV message to the batch of a given connection ID.
 	 *
-	 * @param id				target connection ID
+	 * @param imc_id			ID of IMC or TNC_IMCID_ANY
+	 * @param imv_id			ID of IMV or TNC_IMVID_ANY
+	 * @param connection_id		ID of target connection
 	 * @param msg				message to be added
 	 * @param msg_len			message length
 	 * @param msg_type			message type
 	 * @return					return code
 	 */
 	TNC_Result (*send_message)(tnccs_manager_t *this,
-							   TNC_ConnectionID id,
+							   TNC_IMCID imc_id,
+							   TNC_IMVID imv_id,
+							   TNC_ConnectionID connection_id,
 							   TNC_BufferReference msg,
 							   TNC_UInt32 msg_len,
 							   TNC_MessageType msg_type);

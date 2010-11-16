@@ -233,10 +233,11 @@ METHOD(tnccs_manager_t, remove_connection, void,
 }
 
 METHOD(tnccs_manager_t, send_message, TNC_Result,
-	private_tnccs_manager_t *this, TNC_ConnectionID id,
-								   TNC_BufferReference message,
-								   TNC_UInt32 message_len,
-								   TNC_MessageType message_type)
+	private_tnccs_manager_t *this, TNC_IMCID imc_id, TNC_IMVID imv_id,
+								   TNC_ConnectionID id,
+								   TNC_BufferReference msg,
+								   TNC_UInt32 msg_len,
+								   TNC_MessageType msg_type)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
@@ -259,7 +260,7 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 
 	if (tnccs && send_message)
 	{
-		send_message(tnccs, message, message_len, message_type);
+		send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
 		return TNC_RESULT_SUCCESS;
 	 }
 	return TNC_RESULT_FATAL;

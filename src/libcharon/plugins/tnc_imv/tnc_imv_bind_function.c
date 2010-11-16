@@ -18,6 +18,8 @@
 #include <debug.h>
 #include <daemon.h>
 
+#define TNC_IMCID_ANY	0xffff
+
 /**
  * Called by the IMV to inform a TNCS about the set of message types the IMV
  * is able to receive
@@ -46,12 +48,12 @@ TNC_Result TNC_TNCS_RequestHandshakeRetry(TNC_IMVID imv_id,
  */
 TNC_Result TNC_TNCS_SendMessage(TNC_IMVID imv_id,
 								TNC_ConnectionID connection_id,
-								TNC_BufferReference message,
-								TNC_UInt32 message_len,
-								TNC_MessageType message_type)
+								TNC_BufferReference msg,
+								TNC_UInt32 msg_len,
+								TNC_MessageType msg_type)
 {
-	return charon->tnccs->send_message(charon->tnccs, connection_id, message,
-									   message_len, message_type);
+	return charon->tnccs->send_message(charon->tnccs, TNC_IMCID_ANY, imv_id,
+									   connection_id, msg, msg_len, msg_type);
 }
 
 /**

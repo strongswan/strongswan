@@ -22,6 +22,7 @@
 #define TNCCS_H_
 
 #include <tnc/tncif.h>
+#include <tnc/tncifimc.h>
 #include <tnc/tncifimv.h>
 #include <library.h>
 
@@ -54,13 +55,16 @@ typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
 /**
  * Callback function adding a message to a TNCCS batch
  *
- * @param message			message to be added
- * @param message_len		message length
- * @param message_type		message type
+ * @param imc_id		ID of IMC or TNC_IMCID_ANY
+ * @param imc_id		ID of IMV or TNC_IMVID_ANY
+ * @param msg			message to be added
+ * @param msg_len		message length
+ * @param msg_type		message type
  */
-typedef void (*tnccs_send_message_t)(tnccs_t* tncss,
-									 TNC_BufferReference message,
-									 TNC_UInt32 message_len,
-									 TNC_MessageType message_type);
+typedef void (*tnccs_send_message_t)(tnccs_t* tncss, TNC_IMCID imc_id,
+													 TNC_IMVID imv_id,
+									 				 TNC_BufferReference msg,
+													 TNC_UInt32 msg_len,
+													 TNC_MessageType msg_type);
 
 #endif /** TNCCS_H_ @}*/

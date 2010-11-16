@@ -61,7 +61,8 @@ struct private_tnccs_20_t {
 };
 
 METHOD(tnccs_t, send_message, void,
-	private_tnccs_20_t* this, TNC_BufferReference message,
+	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
+							  TNC_BufferReference message,
 							  TNC_UInt32 message_len,
 							  TNC_MessageType message_type)
 {
