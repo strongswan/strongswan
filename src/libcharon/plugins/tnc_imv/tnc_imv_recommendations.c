@@ -14,7 +14,6 @@
 
 #include <debug.h>
 #include <daemon.h>
-#include <threading/mutex.h>
 #include <tnc/tncifimv_names.h>
 #include <tnc/imv/imv.h>
 #include <tnc/imv/imv_recommendations.h>
