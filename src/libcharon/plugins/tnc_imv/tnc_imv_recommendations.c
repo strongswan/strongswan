@@ -328,7 +328,7 @@ METHOD(recommendations_t, destroy, void,
 {
 	recommendation_entry_t *entry;
 
-	while (this->recs->remove_last(this->recs, (void**)&entry))
+	while (this->recs->remove_last(this->recs, (void**)&entry) == SUCCESS)
 	{
 		free(entry->reason.ptr);
 		free(entry->reason_language.ptr);
