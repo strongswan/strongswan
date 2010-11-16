@@ -248,7 +248,7 @@ static void destroy(private_processor_t *this)
 /*
  * Described in header.
  */
-processor_t *processor_create(size_t pool_size)
+processor_t *processor_create()
 {
 	private_processor_t *this = malloc_thing(private_processor_t);
 
