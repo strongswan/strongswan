@@ -303,17 +303,21 @@ METHOD(tls_eap_t, process, status_t,
 			DBG2(DBG_TLS, "received %N acknowledgement packet",
 				 eap_type_names, this->type);
 			status = build_pkt(this, pkt->identifier, out);
-			if (status == INVALID_STATE &&
-				this->tls->is_complete(this->tls))
+			if (status == INVALID_STATE && this->tls->is_complete(this->tls))
 			{
 				return SUCCESS;
 			}
 			return status;
 		}
 		status = process_pkt(this, pkt);
-		if (status != NEED_MORE)
+		switch (status)
 		{
-			return status;
+			case NEED_MORE:
+				break;
+			case SUCCESS:
+				return this->tls->is_complete(this->tls) ? SUCCESS : FAILED;
+			default:
+				return status;
 		}
 	}
 	status = build_pkt(this, pkt->identifier, out);
