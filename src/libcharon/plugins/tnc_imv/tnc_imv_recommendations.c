@@ -275,7 +275,7 @@ METHOD(recommendations_t, get_preferred_language, chunk_t,
 METHOD(recommendations_t, set_preferred_language, void,
 	private_tnc_imv_recommendations_t *this, chunk_t pref_lang)
 {
-	chunk_free(&this->preferred_language);
+	free(this->preferred_language.ptr);
 	this->preferred_language = chunk_clone(pref_lang);
 }
 
@@ -285,6 +285,9 @@ METHOD(recommendations_t, set_reason_string, TNC_Result,
 	enumerator_t *enumerator;
 	recommendation_entry_t *entry;
 	bool found = FALSE;
+
+	DBG2(DBG_TNC, "IMV %u is setting reason string to '%.*s'",
+		 id, reason.len, reason.ptr);
 
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -307,6 +310,9 @@ METHOD(recommendations_t, set_reason_language, TNC_Result,
 	enumerator_t *enumerator;
 	recommendation_entry_t *entry;
 	bool found = FALSE;
+
+	DBG2(DBG_TNC, "IMV %u is setting reason language to '%.*s'",
+		 id, reason_lang.len, reason_lang.ptr);
 
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -371,6 +377,8 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 		entry->have_recommendation = FALSE;
 		entry->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
 		entry->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+		entry->reason = chunk_empty;
+		entry->reason_language = chunk_empty;
 		this->recs->insert_last(this->recs, entry);		
 	}
 	enumerator->destroy(enumerator);	
