@@ -32,6 +32,11 @@ struct recommendation_entry_t {
 	TNC_IMVID id;
 
 	/**
+	 * Received a recommendation message from this IMV?
+	 */
+	bool have_recommendation;
+
+	/**
 	 * Action Recommendation provided by IMV instance
 	 */
   TNC_IMV_Action_Recommendation rec;
@@ -76,6 +81,7 @@ METHOD(recommendations_t, provide_recommendation, TNC_Result,
 		if (entry->id == id)
 		{
 			found = TRUE;
+			entry->have_recommendation = TRUE;
 			entry->rec = rec;
 			entry->eval = eval;
 			break;
@@ -109,8 +115,7 @@ METHOD(recommendations_t, have_recommendation, bool,
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION ||
-			entry->eval == TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
+		if (!entry->have_recommendation)
 		{
 			incomplete = TRUE;
 			break;
@@ -120,94 +125,118 @@ METHOD(recommendations_t, have_recommendation, bool,
 			final_rec = entry->rec;
 			final_eval = entry->eval;
 			first = FALSE;
+			continue;
 		}
 		switch (policy)
 		{
 			case RECOMMENDATION_POLICY_DEFAULT:
-				/* Consolidate action recommendations */
-				if (entry->rec == TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS)
+				switch (entry->rec)
 				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
+					case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+						final_rec = entry->rec;
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+						if (final_rec != TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS)
+						{
+							final_rec = entry->rec;
+						};
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+						if (final_rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
+						{
+							final_rec = entry->rec;
+						};
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+						break;
 				}
-				else if (entry->rec == TNC_IMV_ACTION_RECOMMENDATION_ISOLATE &&
-						 final_rec != TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS)
+				switch (entry->eval)
 				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
-				}
-				else
-				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
-				}
-
-				/* Consolidate evaluation results */
-				if (entry->eval == TNC_IMV_EVALUATION_RESULT_ERROR)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_ERROR;
-				}
-				else if (entry->eval ==	TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_ERROR)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR;
-				}
-				else if (entry->eval ==  TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_ERROR &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
-				}
-				else if (entry->eval ==	TNC_IMV_EVALUATION_RESULT_COMPLIANT)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+					case TNC_IMV_EVALUATION_RESULT_ERROR:
+						final_eval = entry->eval;
+						break;
+					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
+						if (final_eval != TNC_IMV_EVALUATION_RESULT_ERROR)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
+						if (final_eval != TNC_IMV_EVALUATION_RESULT_ERROR &&
+							final_eval != TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_COMPLIANT:
+						if (final_eval == TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_DONT_KNOW:
+						break;
 				}
 				break;
+
 			case RECOMMENDATION_POLICY_ALL:
-				/* Consolidate action recommendations */
 				if (entry->rec != final_rec)
 				{
 					final_rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
 				}
-
-				/* Consolidate evaluation results */
 				if (entry->eval != final_eval)
 				{
 					final_eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 				}
 				break;
-			case RECOMMENDATION_POLICY_ANY:
-				/* Consolidate action recommendations */
-				if (entry->rec == TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
-				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
-				}
-				else if (entry->rec == TNC_IMV_ACTION_RECOMMENDATION_ISOLATE &&
-						 final_rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
-				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
-				}
-				else
-				{
-					final_rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
-				}
 
-				/* Consolidate evaluation results */
-				if (entry->eval == TNC_IMV_EVALUATION_RESULT_COMPLIANT)
+			case RECOMMENDATION_POLICY_ANY:
+				switch (entry->rec)
 				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
+					case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+						final_rec = entry->rec;
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+						if (final_rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
+						{
+							final_rec = entry->rec;
+						};
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+						if (final_rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
+						{
+							final_rec = entry->rec;
+						};
+						break;
+					case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+						break;
 				}
-				else if (entry->eval ==	TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_COMPLIANT)
+				switch (entry->eval)
 				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR;
-				}
-				else if (entry->eval ==  TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_COMPLIANT &&
-						 final_eval != TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR;
-				}
-				else if (entry->eval ==	TNC_IMV_EVALUATION_RESULT_ERROR)
-				{
-					final_eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+					case TNC_IMV_EVALUATION_RESULT_COMPLIANT:
+						final_eval = entry->eval;
+						break;
+					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR:
+						if (final_eval != TNC_IMV_EVALUATION_RESULT_COMPLIANT)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR:
+						if (final_eval != TNC_IMV_EVALUATION_RESULT_COMPLIANT &&
+							final_eval != TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_ERROR:
+						if (final_eval == TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
+						{
+							final_eval = entry->eval;
+						}
+						break;
+					case TNC_IMV_EVALUATION_RESULT_DONT_KNOW:
+						break;
 				}
 		}
 	}
@@ -254,6 +283,7 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 	{
 		entry = malloc_thing(recommendation_entry_t);
 		entry->id = imv->get_id(imv);
+		entry->have_recommendation = FALSE;
 		entry->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
 		entry->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 		this->recs->insert_last(this->recs, entry);		
