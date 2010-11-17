@@ -180,7 +180,7 @@
                 0x01         ""
                   0x02       ""
                     0x02     ""
-                    0x4B     "TCGID"					OID_TCGID
+                      0x4B   "TCGID"					OID_TCGID
       0x05                   "security"
         0x05                 "mechanisms"
           0x07               "id-pkix"
