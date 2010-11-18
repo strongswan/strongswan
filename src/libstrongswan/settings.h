@@ -194,6 +194,51 @@ struct settings_t {
 	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
 
 	/**
+	 * Set a string value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param value		value to set (gets cloned)
+	 * @param ...		argument list for key
+	 */
+	void (*set_str)(settings_t *this, char *key, char *value, ...);
+
+	/**
+	 * Set a boolean value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param value		value to set
+	 * @param ...		argument list for key
+	 */
+	void (*set_bool)(settings_t *this, char *key, bool value, ...);
+
+	/**
+	 * Set an integer value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param value		value to set
+	 * @param ...		argument list for key
+	 */
+	void (*set_int)(settings_t *this, char *key, int value, ...);
+
+	/**
+	 * Set an double value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param value		value to set
+	 * @param ...		argument list for key
+	 */
+	void (*set_double)(settings_t *this, char *key, double value, ...);
+
+	/**
+	 * Set a time value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param def		value to set
+	 * @param ...		argument list for key
+	 */
+	void (*set_time)(settings_t *this, char *key, u_int32_t value, ...);
+
+	/**
 	 * Create an enumerator over subsection names of a section.
 	 *
 	 * @param section	section including parents, printf style format

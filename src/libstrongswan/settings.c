@@ -51,9 +51,9 @@ struct private_settings_t {
 	section_t *top;
 
 	/**
-	 * contents of loaded files
+	 * contents of loaded files and in-memory settings (char*)
 	 */
-	linked_list_t *files;
+	linked_list_t *contents;
 
 	/**
 	 * lock to safely access the settings
@@ -376,6 +376,41 @@ static char *find_value(private_settings_t *this, section_t *section,
 	return value;
 }
 
+/**
+ * Set a value to a copy of the given string (thread-safe).
+ */
+static void set_value(private_settings_t *this, section_t *section,
+					  char *key, va_list args, char *value)
+{
+	char buf[128], keybuf[512];
+	kv_t *kv;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return;
+	}
+	this->lock->write_lock(this->lock);
+	kv = find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf),
+							 TRUE);
+	if (kv)
+	{
+		if (!value)
+		{
+			kv->value = NULL;
+		}
+		else if (kv->value && (strlen(value) <= strlen(kv->value)))
+		{	/* overwrite in-place, if possible */
+			strcpy(kv->value, value);
+		}
+		else
+		{	/* otherwise clone the string and store it in the cache */
+			kv->value = strdup(value);
+			this->contents->insert_last(this->contents, kv->value);
+		}
+	}
+	this->lock->unlock(this->lock);
+}
+
 METHOD(settings_t, get_str, char*,
 	   private_settings_t *this, char *key, char *def, ...)
 {
@@ -533,6 +568,63 @@ METHOD(settings_t, get_time, u_int32_t,
 	value = find_value(this, this->top, key, args);
 	va_end(args);
 	return settings_value_as_time(value, def);
+}
+
+METHOD(settings_t, set_str, void,
+	   private_settings_t *this, char *key, char *value, ...)
+{
+	va_list args;
+	va_start(args, value);
+	set_value(this, this->top, key, args, value);
+	va_end(args);
+}
+
+METHOD(settings_t, set_bool, void,
+	   private_settings_t *this, char *key, bool value, ...)
+{
+	va_list args;
+	va_start(args, value);
+	set_value(this, this->top, key, args, value ? "1" : "0");
+	va_end(args);
+}
+
+METHOD(settings_t, set_int, void,
+	   private_settings_t *this, char *key, int value, ...)
+{
+	char val[16];
+	va_list args;
+	va_start(args, value);
+	if (snprintf(val, sizeof(val), "%d", value) < sizeof(val))
+	{
+		set_value(this, this->top, key, args, val);
+	}
+	va_end(args);
+}
+
+METHOD(settings_t, set_double, void,
+	   private_settings_t *this, char *key, double value, ...)
+{
+	char val[64];
+	va_list args;
+	va_start(args, value);
+	if (snprintf(val, sizeof(val), "%f", value) < sizeof(val))
+	{
+		set_value(this, this->top, key, args, val);
+	}
+	va_end(args);
+}
+
+METHOD(settings_t, set_time, void,
+	   private_settings_t *this, char *key, u_int32_t value, ...)
+{
+	char val[16];
+	va_list args;
+	va_start(args, value);
+	if (snprintf(val, sizeof(val), "%u", value) < sizeof(val))
+	{
+		set_value(this, this->top, key, args, val);
+	}
+	va_end(args);
 }
 
 /**
@@ -717,13 +809,13 @@ static bool parse_include(char **text, char **pattern)
 /**
  * Forward declaration.
  */
-static bool parse_files(linked_list_t *files, char *file, int level,
+static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section);
 
 /**
  * Parse a section
  */
-static bool parse_section(linked_list_t *files, char *file, int level,
+static bool parse_section(linked_list_t *contents, char *file, int level,
 						  char **text, section_t *section)
 {
 	bool finished = FALSE;
@@ -733,7 +825,7 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 	{
 		if (parse_include(text, &value))
 		{
-			if (!parse_files(files, file, level, value, section))
+			if (!parse_files(contents, file, level, value, section))
 			{
 				DBG1(DBG_LIB, "failed to include '%s'", value);
 				return FALSE;
@@ -757,7 +849,7 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 											(void**)&sub, key) != SUCCESS)
 					{
 						sub = section_create(key);
-						if (parse_section(files, file, level, &inner, sub))
+						if (parse_section(contents, file, level, &inner, sub))
 						{
 							section->sections->insert_last(section->sections,
 														   sub);
@@ -767,7 +859,7 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 					}
 					else
 					{	/* extend the existing section */
-						if (parse_section(files, file, level, &inner, sub))
+						if (parse_section(contents, file, level, &inner, sub))
 						{
 							continue;
 						}
@@ -817,7 +909,7 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 /**
  * Parse a file and add the settings to the given section.
  */
-static bool parse_file(linked_list_t *files, char *file, int level,
+static bool parse_file(linked_list_t *contents, char *file, int level,
 					   section_t *section)
 {
 	bool success;
@@ -845,14 +937,14 @@ static bool parse_file(linked_list_t *files, char *file, int level,
 	fclose(fd);
 
 	pos = text;
-	success = parse_section(files, file, level, &pos, section);
+	success = parse_section(contents, file, level, &pos, section);
 	if (!success)
 	{
 		free(text);
 	}
 	else
 	{
-		files->insert_last(files, text);
+		contents->insert_last(contents, text);
 	}
 	return success;
 }
@@ -861,7 +953,7 @@ static bool parse_file(linked_list_t *files, char *file, int level,
  * Load the files matching "pattern", which is resolved with glob(3).
  * If the pattern is relative, the directory of "file" is used as base.
  */
-static bool parse_files(linked_list_t *files, char *file, int level,
+static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section)
 {
 	bool success = TRUE;
@@ -916,7 +1008,7 @@ static bool parse_files(linked_list_t *files, char *file, int level,
 	{
 		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 		{
-			success &= parse_file(files, *expanded, level + 1, section);
+			success &= parse_file(contents, *expanded, level + 1, section);
 			if (!success)
 			{
 				break;
@@ -981,12 +1073,12 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 								char *pattern)
 {
 	char *text;
-	linked_list_t *files = linked_list_create();
+	linked_list_t *contents = linked_list_create();
 	section_t *section = section_create(NULL);
 
-	if (!parse_files(files, NULL, 0, pattern, section))
+	if (!parse_files(contents, NULL, 0, pattern, section))
 	{
-		files->destroy_function(files, (void*)free);
+		contents->destroy_function(contents, (void*)free);
 		section_destroy(section);
 		return FALSE;
 	}
@@ -995,14 +1087,14 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	/* extend parent section */
 	section_extend(parent, section);
 	/* move contents of loaded files to main store */
-	while (files->remove_first(files, (void**)&text) == SUCCESS)
+	while (contents->remove_first(contents, (void**)&text) == SUCCESS)
 	{
-		this->files->insert_last(this->files, text);
+		this->contents->insert_last(this->contents, text);
 	}
 	this->lock->unlock(this->lock);
 
 	section_destroy(section);
-	files->destroy(files);
+	contents->destroy(contents);
 	return TRUE;
 }
 
@@ -1033,7 +1125,7 @@ METHOD(settings_t, destroy, void,
 	   private_settings_t *this)
 {
 	section_destroy(this->top);
-	this->files->destroy_function(this->files, (void*)free);
+	this->contents->destroy_function(this->contents, (void*)free);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -1052,6 +1144,11 @@ settings_t *settings_create(char *file)
 			.get_double = _get_double,
 			.get_time = _get_time,
 			.get_bool = _get_bool,
+			.set_str = _set_str,
+			.set_int = _set_int,
+			.set_double = _set_double,
+			.set_time = _set_time,
+			.set_bool = _set_bool,
 			.create_section_enumerator = _create_section_enumerator,
 			.create_key_value_enumerator = _create_key_value_enumerator,
 			.load_files = _load_files,
@@ -1059,7 +1156,7 @@ settings_t *settings_create(char *file)
 			.destroy = _destroy,
 		},
 		.top = section_create(NULL),
-		.files = linked_list_create(),
+		.contents = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
