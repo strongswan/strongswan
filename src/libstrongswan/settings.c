@@ -359,17 +359,17 @@ inline bool settings_value_as_bool(char *value, bool def)
 {
 	if (value)
 	{
-		if (strcaseeq(value, "true") ||
-			strcaseeq(value, "enabled") ||
+		if (strcaseeq(value, "1") ||
 			strcaseeq(value, "yes") ||
-			strcaseeq(value, "1"))
+			strcaseeq(value, "true") ||
+			strcaseeq(value, "enabled"))
 		{
 			return TRUE;
 		}
-		else if (strcaseeq(value, "false") ||
-				 strcaseeq(value, "disabled") ||
+		else if (strcaseeq(value, "0") ||
 				 strcaseeq(value, "no") ||
-				 strcaseeq(value, "0"))
+				 strcaseeq(value, "false") ||
+				 strcaseeq(value, "disabled"))
 		{
 			return FALSE;
 		}
