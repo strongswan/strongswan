@@ -99,6 +99,28 @@ struct kv_t {
 };
 
 /**
+ * create a key/value pair
+ */
+static kv_t *kv_create(char *key, char *value)
+{
+	kv_t *this;
+	INIT(this,
+		.key = strdup(key),
+		.value = value,
+	);
+	return this;
+}
+
+/**
+ * destroy a key/value pair
+ */
+static void kv_destroy(kv_t *this)
+{
+	free(this->key);
+	free(this);
+}
+
+/**
  * create a section with the given name
  */
 static section_t *section_create(char *name)
@@ -117,7 +139,7 @@ static section_t *section_create(char *name)
  */
 static void section_destroy(section_t *this)
 {
-	this->kv->destroy_function(this->kv, free);
+	this->kv->destroy_function(this->kv, (void*)kv_destroy);
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
 	free(this->name);
 	free(this);
@@ -271,13 +293,15 @@ static section_t *ensure_section(private_settings_t *this, section_t *section,
 }
 
 /**
- * Find the string value for a key, using buffered key, reusable buffer
+ * Find the key/value pair for a key, using buffered key, reusable buffer
+ * If "ensure" is TRUE, the sections (and key/value pair) are created if they
+ * don't exist.
  */
-static char *find_value_buffered(section_t *section,
-					char *start, char *key, va_list args, char *buf, int len)
+static kv_t *find_value_buffered(section_t *section, char *start, char *key,
+								 va_list args, char *buf, int len, bool ensure)
 {
-	char *pos, *value = NULL;
-	kv_t *kv;
+	char *pos;
+	kv_t *kv = NULL;
 	section_t *found = NULL;
 
 	if (section == NULL)
@@ -297,10 +321,17 @@ static char *find_value_buffered(section_t *section,
 		}
 		if (section->sections->find_first(section->sections,
 										  (linked_list_match_t)section_find,
-										  (void**)&found, buf) == SUCCESS)
+										  (void**)&found, buf) != SUCCESS)
 		{
-			return find_value_buffered(found, start, pos, args, buf, len);
+			if (!ensure)
+			{
+				return NULL;
+			}
+			found = section_create(buf);
+			section->sections->insert_last(section->sections, found);
 		}
+		return find_value_buffered(found, start, pos, args, buf, len,
+								   ensure);
 	}
 	else
 	{
@@ -309,12 +340,16 @@ static char *find_value_buffered(section_t *section,
 			return NULL;
 		}
 		if (section->kv->find_first(section->kv, (linked_list_match_t)kv_find,
-									(void**)&kv, buf) == SUCCESS)
+									(void**)&kv, buf) != SUCCESS)
 		{
-			value = kv->value;
+			if (ensure)
+			{
+				kv = kv_create(buf, NULL);
+				section->kv->insert_last(section->kv, kv);
+			}
 		}
 	}
-	return value;
+	return kv;
 }
 
 /**
@@ -323,15 +358,20 @@ static char *find_value_buffered(section_t *section,
 static char *find_value(private_settings_t *this, section_t *section,
 						char *key, va_list args)
 {
-	char buf[128], keybuf[512], *value;
+	char buf[128], keybuf[512], *value = NULL;
+	kv_t *kv;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
 	this->lock->read_lock(this->lock);
-	value = find_value_buffered(section, keybuf, keybuf, args, buf,
-								sizeof(buf));
+	kv = find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf),
+							 FALSE);
+	if (kv)
+	{
+		value = kv->value;
+	}
 	this->lock->unlock(this->lock);
 	return value;
 }
@@ -751,10 +791,7 @@ static bool parse_section(linked_list_t *files, char *file, int level,
 								(linked_list_match_t)kv_find,
 								(void**)&kv, key) != SUCCESS)
 					{
-						INIT(kv,
-							.key = key,
-							.value = value,
-						);
+						kv = kv_create(key, value);
 						section->kv->insert_last(section->kv, kv);
 					}
 					else
