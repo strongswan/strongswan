@@ -35,6 +35,8 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 enum pkcs11_feature_t {
 	/** CKA_TRUSTED attribute supported for certificate objects */
 	PKCS11_TRUSTED_CERTS = (1<<0),
+	/** CKA_ALWAYS_AUTHENTICATE attribute supported for private keys */
+	PKCS11_ALWAYS_AUTH_KEYS = (1<<1),
 };
 
 /**

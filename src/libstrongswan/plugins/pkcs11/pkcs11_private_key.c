@@ -401,18 +401,24 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	};
 	CK_OBJECT_HANDLE object;
 	CK_KEY_TYPE type;
-	CK_BBOOL reauth;
+	CK_BBOOL reauth = FALSE;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
-		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 		{CKA_MODULUS, NULL, 0},
 		{CKA_PUBLIC_EXPONENT, NULL, 0},
+		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 	};
 	enumerator_t *enumerator;
 	chunk_t modulus, pubexp;
+	int count = countof(attr);
 
+	/* do not use CKA_ALWAYS_AUTHENTICATE if not supported */
+	if (!(this->lib->get_features(this->lib) & PKCS11_ALWAYS_AUTH_KEYS))
+	{
+		count--;
+	}
 	enumerator = this->lib->create_object_enumerator(this->lib,
-						this->session, tmpl, countof(tmpl), attr, countof(attr));
+							this->session, tmpl, countof(tmpl), attr, count);
 	if (enumerator->enumerate(enumerator, &object))
 	{
 		switch (type)

@@ -794,6 +794,7 @@ static void check_features(private_pkcs11_library_t *this, CK_INFO *info)
 	if (has_version(info, 2, 20))
 	{
 		this->features |= PKCS11_TRUSTED_CERTS;
+		this->features |= PKCS11_ALWAYS_AUTH_KEYS;
 	}
 }
 
