@@ -806,11 +806,14 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file,
 	CK_C_GetFunctionList pC_GetFunctionList;
 	CK_INFO info;
 	CK_RV rv;
-	CK_C_INITIALIZE_ARGS args = {
+	static CK_C_INITIALIZE_ARGS args = {
 		.CreateMutex = CreateMutex,
 		.DestroyMutex = DestroyMutex,
 		.LockMutex = LockMutex,
 		.UnlockMutex = UnlockMutex,
+	};
+	static CK_C_INITIALIZE_ARGS args_os = {
+		.flags = CKF_OS_LOCKING_OK,
 	};
 
 	pC_GetFunctionList = dlsym(this->handle, "C_GetFunctionList");
@@ -836,9 +839,8 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file,
 	}
 	if (rv == CKR_CANT_LOCK)
 	{	/* fallback to OS locking */
-		memset(&args, 0, sizeof(args));
-		args.flags = CKF_OS_LOCKING_OK;
-		rv = this->public.f->C_Initialize(&args);
+		os_locking = TRUE;
+		rv = this->public.f->C_Initialize(&args_os);
 	}
 	if (rv != CKR_OK)
 	{
@@ -865,7 +867,7 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file,
 	DBG1(DBG_CFG, "  %s: %s v%d.%d",
 		 info.manufacturerID, info.libraryDescription,
 		 info.libraryVersion.major, info.libraryVersion.minor);
-	if (args.flags & CKF_OS_LOCKING_OK)
+	if (os_locking)
 	{
 		DBG1(DBG_CFG, "  uses OS locking functions");
 	}
