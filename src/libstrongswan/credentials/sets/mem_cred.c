@@ -405,6 +405,17 @@ METHOD(mem_cred_t, add_shared, void,
 	add_shared_list(this, shared, owners);
 }
 
+METHOD(mem_cred_t, clear_secrets, void,
+	private_mem_cred_t *this)
+{
+	this->lock->write_lock(this->lock);
+	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
+	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
+	this->keys = linked_list_create();
+	this->shared = linked_list_create();
+	this->lock->unlock(this->lock);
+}
+
 METHOD(mem_cred_t, clear_, void,
 	private_mem_cred_t *this)
 {
@@ -413,13 +424,11 @@ METHOD(mem_cred_t, clear_, void,
 								  offsetof(certificate_t, destroy));
 	this->untrusted->destroy_offset(this->untrusted,
 									offsetof(certificate_t, destroy));
-	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
-	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
 	this->trusted = linked_list_create();
 	this->untrusted = linked_list_create();
-	this->keys = linked_list_create();
-	this->shared = linked_list_create();
 	this->lock->unlock(this->lock);
+
+	clear_secrets(this);
 }
 
 METHOD(mem_cred_t, destroy, void,
@@ -456,6 +465,7 @@ mem_cred_t *mem_cred_create()
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,
 			.clear = _clear_,
+			.clear_secrets = _clear_secrets,
 			.destroy = _destroy,
 		},
 		.trusted = linked_list_create(),

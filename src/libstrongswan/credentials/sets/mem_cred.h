@@ -87,6 +87,12 @@ struct mem_cred_t {
 	void (*clear)(mem_cred_t *this);
 
 	/**
+	 * Clear the secrets (private and shared keys, not the certificates) from
+	 * the credential set.
+	 */
+	void (*clear_secrets)(mem_cred_t *this);
+
+	/**
 	 * Destroy a mem_cred_t.
 	 */
 	void (*destroy)(mem_cred_t *this);
