@@ -146,12 +146,23 @@ static bool certificate_equals(certificate_t *item, certificate_t *cert)
 	return item->equals(item, cert);
 }
 
-METHOD(mem_cred_t, add_cert, void,
-	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+/**
+ * Add a certificate the the cache. Returns a reference to "cert" or a
+ * previously cached certificate that equals "cert".
+ */
+static certificate_t *add_cert_internal(private_mem_cred_t *this, bool trusted,
+										certificate_t *cert)
 {
+	certificate_t *cached;
 	this->lock->write_lock(this->lock);
 	if (this->untrusted->find_last(this->untrusted,
-				(linked_list_match_t)certificate_equals, NULL, cert) != SUCCESS)
+								   (linked_list_match_t)certificate_equals,
+								   (void**)&cached, cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+		cert = cached->get_ref(cached);
+	}
+	else
 	{
 		if (trusted)
 		{
@@ -159,8 +170,21 @@ METHOD(mem_cred_t, add_cert, void,
 		}
 		this->untrusted->insert_last(this->untrusted, cert->get_ref(cert));
 	}
-	cert->destroy(cert);
 	this->lock->unlock(this->lock);
+	return cert;
+}
+
+METHOD(mem_cred_t, add_cert, void,
+	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+{
+	certificate_t *cached = add_cert_internal(this, trusted, cert);
+	cached->destroy(cached);
+}
+
+METHOD(mem_cred_t, add_cert_ref, certificate_t*,
+	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+{
+	return add_cert_internal(this, trusted, cert);
 }
 
 /**
@@ -427,6 +451,7 @@ mem_cred_t *mem_cred_create()
 				.cache_cert = (void*)nop,
 			},
 			.add_cert = _add_cert,
+			.add_cert_ref = _add_cert_ref,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,

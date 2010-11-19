@@ -47,6 +47,17 @@ struct mem_cred_t {
 	void (*add_cert)(mem_cred_t *this, bool trusted, certificate_t *cert);
 
 	/**
+	 * Add a certificate to the credential set, returning a reference to it or
+	 * to a cached duplicate.
+	 *
+	 * @param trusted		TRUE to serve certificate as trusted
+	 * @param cert			certificate, reference gets owned by set
+	 * @return				reference to cert or a previously cached duplicate
+	 */
+	certificate_t *(*add_cert_ref)(mem_cred_t *this, bool trusted,
+								   certificate_t *cert);
+
+	/**
 	 * Add a private key to the credential set.
 	 *
 	 * @param key			key, reference gets owned by set
