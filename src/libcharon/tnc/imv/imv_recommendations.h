@@ -102,6 +102,13 @@ struct recommendations_t {
 									  chunk_t reason_lang);
 
 	/**
+	 * Enumerates over all IMVs sending a reason string.
+	 * Format:  TNC_IMVID *id, chunk_t *reason, chunk_t *reason_language
+	 *
+	 * @return				enumerator
+	 */
+	enumerator_t* (*create_reason_enumerator)(recommendations_t *this);
+	/**
 	 * Destroys an imv_t object.
 	 */
 	void (*destroy)(recommendations_t *this);

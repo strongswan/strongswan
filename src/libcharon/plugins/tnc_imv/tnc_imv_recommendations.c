@@ -329,6 +329,33 @@ METHOD(recommendations_t, set_reason_language, TNC_Result,
 	return found ? TNC_RESULT_SUCCESS : TNC_RESULT_INVALID_PARAMETER;
 }
 
+/**
+ * Enumerate reason and reason_language, not recommendation entries
+ */
+static bool reason_filter(void *null, recommendation_entry_t **entry,
+						 TNC_IMVID *id, void *i2, chunk_t *reason, void *i3,
+						 chunk_t *reason_language)
+{
+	if ((*entry)->reason.len)
+	{
+		*id = (*entry)->id;
+		*reason = (*entry)->reason;
+		*reason_language = (*entry)->reason_language;
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	} 
+}
+
+METHOD(recommendations_t, create_reason_enumerator, enumerator_t*,
+	private_tnc_imv_recommendations_t *this)
+{
+	return enumerator_create_filter(this->recs->create_enumerator(this->recs),
+					(void*)reason_filter, NULL, NULL);
+}
+
 METHOD(recommendations_t, destroy, void,
 	private_tnc_imv_recommendations_t *this)
 {
@@ -363,7 +390,7 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 			.set_preferred_language = _set_preferred_language,
 			.set_reason_string = _set_reason_string,
 			.set_reason_language = _set_reason_language,
-
+			.create_reason_enumerator = _create_reason_enumerator,
 			.destroy = _destroy,
         },
 		.recs = linked_list_create(),
