@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -24,6 +26,7 @@
 typedef struct mem_cred_t mem_cred_t;
 
 #include <credentials/credential_set.h>
+#include <utils/linked_list.h>
 
 /**
  * Generic in-memory credential set.
@@ -54,9 +57,18 @@ struct mem_cred_t {
 	 * Add a shared key to the credential set.
 	 *
 	 * @param shared		shared key to add, gets owned by set
-	 * @param ...			NULL terminated list of owners identification_t*
+	 * @param ...			NULL terminated list of owners (identification_t*)
 	 */
 	void (*add_shared)(mem_cred_t *this, shared_key_t *shared, ...);
+
+	/**
+	 * Add a shared key to the credential set.
+	 *
+	 * @param shared		shared key to add, gets owned by set
+	 * @param owners		list of owners (identification_t*), gets owned
+	 */
+	void (*add_shared_list)(mem_cred_t *this, shared_key_t *shared,
+							linked_list_t *owners);
 
 	/**
 	 * Clear all credentials from the credential set.

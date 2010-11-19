@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperwsil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -342,17 +344,27 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 						(void*)shared_filter, data, (void*)shared_data_destroy);
 }
 
-METHOD(mem_cred_t, add_shared, void,
-	private_mem_cred_t *this, shared_key_t *shared, ...)
+METHOD(mem_cred_t, add_shared_list, void,
+	private_mem_cred_t *this, shared_key_t *shared, linked_list_t* owners)
 {
 	shared_entry_t *entry;
-	identification_t *id;
-	va_list args;
 
 	INIT(entry,
 		.shared = shared,
-		.owners = linked_list_create(),
+		.owners = owners,
 	);
+
+	this->lock->write_lock(this->lock);
+	this->shared->insert_last(this->shared, entry);
+	this->lock->unlock(this->lock);
+}
+
+METHOD(mem_cred_t, add_shared, void,
+	private_mem_cred_t *this, shared_key_t *shared, ...)
+{
+	identification_t *id;
+	linked_list_t *owners = linked_list_create();
+	va_list args;
 
 	va_start(args, shared);
 	do
@@ -360,15 +372,13 @@ METHOD(mem_cred_t, add_shared, void,
 		id = va_arg(args, identification_t*);
 		if (id)
 		{
-			entry->owners->insert_last(entry->owners, id);
+			owners->insert_last(owners, id);
 		}
 	}
 	while (id);
 	va_end(args);
 
-	this->lock->write_lock(this->lock);
-	this->shared->insert_last(this->shared, entry);
-	this->lock->unlock(this->lock);
+	add_shared_list(this, shared, owners);
 }
 
 METHOD(mem_cred_t, clear_, void,
@@ -419,6 +429,7 @@ mem_cred_t *mem_cred_create()
 			.add_cert = _add_cert,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
+			.add_shared_list = _add_shared_list,
 			.clear = _clear_,
 			.destroy = _destroy,
 		},
