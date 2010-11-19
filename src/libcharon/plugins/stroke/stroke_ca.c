@@ -113,6 +113,7 @@ static void ca_section_destroy(ca_section_t *this)
 	this->crl->destroy_function(this->crl, free);
 	this->ocsp->destroy_function(this->ocsp, free);
 	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
+	this->cert->destroy(this->cert);
 	free(this->certuribase);
 	free(this->name);
 	free(this);
