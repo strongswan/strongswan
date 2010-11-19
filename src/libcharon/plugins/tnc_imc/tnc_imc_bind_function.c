@@ -39,8 +39,8 @@ TNC_Result TNC_TNCC_RequestHandshakeRetry(TNC_IMCID imc_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_RetryReason reason)
 {
-	DBG2(DBG_TNC,"TNCC_RequestHandshakeRetry not supported yet");
-	return TNC_RESULT_CANT_RESPOND;
+	return charon->tnccs->request_handshake_retry(charon->tnccs, TRUE, imc_id,
+												  connection_id, reason);
 }
 
 /**

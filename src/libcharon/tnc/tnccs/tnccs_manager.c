@@ -63,6 +63,11 @@ struct tnccs_connection_entry_t {
 	tnccs_send_message_t send_message;
 
 	/**
+	 * TNCCS request handshake retry flag
+	 */
+	bool *request_handshake_retry;
+
+	/**
 	 * collection of IMV recommendations
 	 */
 	recommendations_t *recs;
@@ -168,13 +173,15 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	private_tnccs_manager_t *this, tnccs_t *tnccs, 
-	tnccs_send_message_t send_message, recommendations_t **recs)
+	tnccs_send_message_t send_message, bool* request_handshake_retry,
+	recommendations_t **recs)
 {
 	tnccs_connection_entry_t *entry;
 
 	entry = malloc_thing(tnccs_connection_entry_t);
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
+	entry->request_handshake_retry = request_handshake_retry;
 	if (recs)
 	{
 		/* we assume a TNC Server needing recommendations from IMVs */
@@ -230,6 +237,40 @@ METHOD(tnccs_manager_t, remove_connection, void,
 	}
 	enumerator->destroy(enumerator);
 	this->connection_lock->unlock(this->connection_lock);
+}
+
+METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
+	private_tnccs_manager_t *this, bool is_imc, TNC_UInt32 imcv_id,
+												TNC_ConnectionID id,
+												TNC_RetryReason reason)
+{
+	enumerator_t *enumerator;
+	tnccs_connection_entry_t *entry;
+
+	if (id == TNC_CONNECTIONID_ANY)
+	{
+		DBG2(DBG_TNC, "%s %u requests handshake retry for all connections "
+					  "(reason: %u)", is_imc ? "IMC":"IMV", reason);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "%s %u requests handshake retry for connection ID %u "
+					  "(reason: %u)", is_imc ? "IMC":"IMV", id, reason);
+	}
+	this->connection_lock->read_lock(this->connection_lock);
+	enumerator = this->connections->create_enumerator(this->connections);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (id == TNC_CONNECTIONID_ANY || id == entry->id)
+		{
+			*entry->request_handshake_retry = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->connection_lock->unlock(this->connection_lock);
+
+	return TNC_RESULT_SUCCESS;
 }
 
 METHOD(tnccs_manager_t, send_message, TNC_Result,
@@ -418,6 +459,7 @@ tnccs_manager_t *tnccs_manager_create()
 				.create_instance = _create_instance,
 				.create_connection = _create_connection,
 				.remove_connection = _remove_connection,
+				.request_handshake_retry = _request_handshake_retry,
 				.send_message = _send_message,
 				.provide_recommendation = _provide_recommendation,
 				.get_attribute = _get_attribute,
