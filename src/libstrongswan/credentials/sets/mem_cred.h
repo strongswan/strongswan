@@ -26,6 +26,7 @@
 typedef struct mem_cred_t mem_cred_t;
 
 #include <credentials/credential_set.h>
+#include <credentials/certificates/crl.h>
 #include <utils/linked_list.h>
 
 /**
@@ -56,6 +57,15 @@ struct mem_cred_t {
 	 */
 	certificate_t *(*add_cert_ref)(mem_cred_t *this, bool trusted,
 								   certificate_t *cert);
+
+	/**
+	 * Add an X.509 CRL to the credential set.
+	 *
+	 * @param crl			CRL, gets owned by set
+	 * @return				TRUE, if the CRL is newer than an existing one (or
+	 *						new at all)
+	 */
+	bool (*add_crl)(mem_cred_t *this, crl_t *crl);
 
 	/**
 	 * Add a private key to the credential set.

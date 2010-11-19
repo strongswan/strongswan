@@ -187,6 +187,65 @@ METHOD(mem_cred_t, add_cert_ref, certificate_t*,
 	return add_cert_internal(this, trusted, cert);
 }
 
+METHOD(mem_cred_t, add_crl, bool,
+	private_mem_cred_t *this, crl_t *crl)
+{
+	certificate_t *current, *cert = &crl->certificate;
+	enumerator_t *enumerator;
+	bool new = TRUE;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->untrusted->create_enumerator(this->untrusted);
+	while (enumerator->enumerate(enumerator, (void**)&current))
+	{
+		if (current->get_type(current) != CERT_X509_CRL)
+		{
+			bool found = FALSE;
+			crl_t *crl_c = (crl_t*)current;
+			chunk_t authkey = crl->get_authKeyIdentifier(crl);
+			chunk_t authkey_c = crl_c->get_authKeyIdentifier(crl_c);
+
+			/* compare authorityKeyIdentifiers if available */
+			if (chunk_equals(authkey, authkey_c))
+			{
+				found = TRUE;
+			}
+			else
+			{
+				identification_t *issuer = cert->get_issuer(cert);
+				identification_t *issuer_c = current->get_issuer(current);
+
+				/* otherwise compare issuer distinguished names */
+				if (issuer->equals(issuer, issuer_c))
+				{
+					found = TRUE;
+				}
+			}
+			if (found)
+			{
+				new = crl_is_newer(crl, crl_c);
+				if (new)
+				{
+					this->untrusted->remove_at(this->untrusted, enumerator);
+				}
+				else
+				{
+					cert->destroy(cert);
+				}
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (new)
+	{
+		this->untrusted->insert_last(this->untrusted, cert);
+	}
+	this->lock->unlock(this->lock);
+	return new;
+}
+
 /**
  * Data for key enumerator
  */
@@ -461,6 +520,7 @@ mem_cred_t *mem_cred_create()
 			},
 			.add_cert = _add_cert,
 			.add_cert_ref = _add_cert_ref,
+			.add_crl = _add_crl,
 			.add_key = _add_key,
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,
