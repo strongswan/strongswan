@@ -292,6 +292,11 @@ then
     echo -n " --enable-gcm" >> $INSTALLSHELL
 fi
 
+if [ "$USE_HA" = "yes" ]
+then
+    echo -n " --enable-ha" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make -j" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
