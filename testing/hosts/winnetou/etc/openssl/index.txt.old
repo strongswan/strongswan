@@ -31,3 +31,4 @@ V	141123125153Z		1E	unknown	/C=CH/O=Linux strongSwan/OU=OCSP Signing Authority/C
 V	150226210530Z		1F	unknown	/C=CH/O=Linux strongSwan/OU=Authorization Authority/CN=aa@strongswan.org
 V	190404095350Z		20	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
 V	190404095433Z		21	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
+V	150803083841Z		22	unknown	/C=CH/O=Linux strongSwan/CN=aaa.strongswan.org

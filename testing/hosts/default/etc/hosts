@@ -18,8 +18,10 @@
 10.1.0.40	dave2.strongswan.org	dave2
 10.1.0.50	carol3.strongswan.org	carol3
 10.1.0.51	dave3.strongswan.org	dave3
+10.1.0.5	mars1.strongswan.org	mars1	# virtual gateway
 10.1.0.1	moon1.strongswan.org	moon1
 192.168.0.1	moon.strongswan.org	moon
+192.168.0.5	mars.strongswan.org	mars	# virtual gateway
 192.168.0.50	alice1.strongswan.org	alice1
 192.168.0.100	carol.strongswan.org	carol
 10.3.0.1	carol1.strongswan.org	carol1

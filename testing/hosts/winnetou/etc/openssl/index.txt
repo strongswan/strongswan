@@ -32,3 +32,4 @@ V	150226210530Z		1F	unknown	/C=CH/O=Linux strongSwan/OU=Authorization Authority/
 V	190404095350Z		20	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
 V	190404095433Z		21	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
 V	150803083841Z		22	unknown	/C=CH/O=Linux strongSwan/CN=aaa.strongswan.org
+V	151119165922Z		23	unknown	/C=CH/O=Linux strongSwan/OU=Virtual VPN Gateway/CN=mars.strongswan.org
