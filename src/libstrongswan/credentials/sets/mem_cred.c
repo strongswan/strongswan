@@ -155,9 +155,9 @@ static certificate_t *add_cert_internal(private_mem_cred_t *this, bool trusted,
 {
 	certificate_t *cached;
 	this->lock->write_lock(this->lock);
-	if (this->untrusted->find_last(this->untrusted,
-								   (linked_list_match_t)certificate_equals,
-								   (void**)&cached, cert) == SUCCESS)
+	if (this->untrusted->find_first(this->untrusted,
+									(linked_list_match_t)certificate_equals,
+									(void**)&cached, cert) == SUCCESS)
 	{
 		cert->destroy(cert);
 		cert = cached->get_ref(cached);
@@ -166,9 +166,9 @@ static certificate_t *add_cert_internal(private_mem_cred_t *this, bool trusted,
 	{
 		if (trusted)
 		{
-			this->trusted->insert_last(this->trusted, cert->get_ref(cert));
+			this->trusted->insert_first(this->trusted, cert->get_ref(cert));
 		}
-		this->untrusted->insert_last(this->untrusted, cert->get_ref(cert));
+		this->untrusted->insert_first(this->untrusted, cert->get_ref(cert));
 	}
 	this->lock->unlock(this->lock);
 	return cert;
@@ -240,7 +240,7 @@ METHOD(mem_cred_t, add_crl, bool,
 
 	if (new)
 	{
-		this->untrusted->insert_last(this->untrusted, cert);
+		this->untrusted->insert_first(this->untrusted, cert);
 	}
 	this->lock->unlock(this->lock);
 	return new;
@@ -303,7 +303,7 @@ METHOD(mem_cred_t, add_key, void,
 	private_mem_cred_t *this, private_key_t *key)
 {
 	this->lock->write_lock(this->lock);
-	this->keys->insert_last(this->keys, key);
+	this->keys->insert_first(this->keys, key);
 	this->lock->unlock(this->lock);
 }
 
@@ -438,7 +438,7 @@ METHOD(mem_cred_t, add_shared_list, void,
 	);
 
 	this->lock->write_lock(this->lock);
-	this->shared->insert_last(this->shared, entry);
+	this->shared->insert_first(this->shared, entry);
 	this->lock->unlock(this->lock);
 }
 
@@ -455,7 +455,7 @@ METHOD(mem_cred_t, add_shared, void,
 		id = va_arg(args, identification_t*);
 		if (id)
 		{
-			owners->insert_last(owners, id);
+			owners->insert_first(owners, id);
 		}
 	}
 	while (id);
