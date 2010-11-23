@@ -210,16 +210,6 @@ METHOD(daemon_t, initialize, bool,
 		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
 
-	/* load secrets, ca certificates and crls */
-	this->public.controller = controller_create();
-	this->public.eap = eap_manager_create();
-	this->public.sim = sim_manager_create();
-	this->public.tnccs = tnccs_manager_create();
-	this->public.backends = backend_manager_create();
-	this->public.socket = socket_manager_create();
-	this->public.traps = trap_manager_create();
-	this->kernel_handler = kernel_handler_create();
-
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
@@ -271,6 +261,15 @@ private_daemon_t *daemon_create()
 			.sys_loggers = linked_list_create(),
 		},
 	);
+	charon = &this->public;
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
+	this->public.sim = sim_manager_create();
+	this->public.tnccs = tnccs_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.socket = socket_manager_create();
+	this->public.traps = trap_manager_create();
+	this->kernel_handler = kernel_handler_create();
 
 #ifdef CAPABILITIES
 #ifdef CAPABILITIES_LIBCAP
@@ -303,7 +302,6 @@ bool libcharon_init()
 	private_daemon_t *this;
 
 	this = daemon_create();
-	charon = &this->public;
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
