@@ -157,6 +157,28 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 #endif
 
 /**
+ * Check if a plugin is already loaded
+ */
+static bool plugin_loaded(private_plugin_loader_t *this, char *name)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	char *current;
+
+	enumerator = this->names->create_enumerator(this->names);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (streq(name, current))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * Implementation of plugin_loader_t.load_plugins.
  */
 static bool load(private_plugin_loader_t *this, char *path, char *list)
@@ -185,6 +207,11 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 		{
 			critical = TRUE;
 			token[len-1] = '\0';
+		}
+		if (plugin_loaded(this, token))
+		{
+			free(token);
+			continue;
 		}
 		plugin = load_plugin(this, path, token);
 		if (plugin)
