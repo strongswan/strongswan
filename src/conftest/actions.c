@@ -47,7 +47,7 @@ static job_requeue_t initiate(char *config)
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, config);
 	if (!peer_cfg)
 	{
-		DBG1(DBG_CFG, "initiating '%s' failed, config not found");
+		DBG1(DBG_CFG, "initiating '%s' failed, config not found", config);
 		return JOB_REQUEUE_NONE;
 	}
 	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
