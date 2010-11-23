@@ -1,5 +1,7 @@
 /*
+ * Copyright (C) 2010 Sansar Choinyanbuu
  * Copyright (C) 2010 Andreas Steffen
+ *
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -227,6 +229,7 @@ pb_tnc_message_t *pb_pa_message_create_from_data(chunk_t data)
 			.get_exclusive_flag = _get_exclusive_flag,
 			.set_exclusive_flag = _set_exclusive_flag,
 		},
+		.type = PB_MSG_PA,
 		.encoding = chunk_clone(data),
 	);
 
@@ -259,6 +262,7 @@ pb_tnc_message_t *pb_pa_message_create(u_int32_t vendor_id, u_int32_t subtype,
 			.get_exclusive_flag = _get_exclusive_flag,
 			.set_exclusive_flag = _set_exclusive_flag,
 		},
+		.type = PB_MSG_PA,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
 		.collector_id = collector_id,
