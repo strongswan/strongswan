@@ -384,6 +384,11 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
+	if (!lib->plugins->load(lib->plugins, NULL,
+			conftest->test->get_str(conftest->test, "preload", "")))
+	{
+		return 1;
+	}
 	if (!charon->initialize(charon))
 	{
 		return 1;
