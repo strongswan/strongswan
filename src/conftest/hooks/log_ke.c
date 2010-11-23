@@ -36,7 +36,7 @@ METHOD(listener_t, message, bool,
 {
 	if (incoming)
 	{
-		enumerator_t *enumerator, *proposals;
+		enumerator_t *enumerator;
 		payload_t *payload;
 		ke_payload_t *ke;
 
