@@ -142,13 +142,17 @@ static child_cfg_t *load_child_config(private_config_t *this,
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 	traffic_selector_t *ts;
+	ipsec_mode_t mode = MODE_TUNNEL;
 	host_t *net;
 	char *token;
 	int bits;
 
-	child_cfg = child_cfg_create(child, &lifetime, NULL, FALSE,
-						settings->get_bool(settings, "configs.%s.%s.transport",
-										   FALSE, config, child),
+	if (settings->get_bool(settings, "configs.%s.%s.transport",
+						   FALSE, config, child))
+	{
+		mode = MODE_TRANSPORT;
+	}
+	child_cfg = child_cfg_create(child, &lifetime, NULL, FALSE, mode,
 						ACTION_NONE, ACTION_NONE, FALSE, 0, 0, NULL, NULL);
 
 	token = settings->get_str(settings, "configs.%s.%s.proposal",
