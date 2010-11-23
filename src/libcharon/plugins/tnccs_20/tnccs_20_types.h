@@ -57,7 +57,8 @@ enum pb_tnc_msg_type_t {
 	PB_MSG_REMEDIATION_PARAMETERS =		4,
 	PB_MSG_ERROR =						5,
 	PB_MSG_LANGUAGE_PREFERENCE =		6,
-	PB_MSG_REASON_STRING =				7
+	PB_MSG_REASON_STRING =				7,
+	PB_MSG_ROOF =						7
 };
 
 /**
