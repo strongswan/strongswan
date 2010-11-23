@@ -8,7 +8,7 @@ conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/add_payload.c hooks/set_critical.c hooks/force_cookie.c \
 	hooks/set_ike_version.c hooks/pretend_auth.c hooks/set_length.c \
 	hooks/log_proposals.c hooks/set_proposal_number.c hooks/log_ke.c \
-	hooks/log_id.c
+	hooks/log_id.c hooks/custom_proposal.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
