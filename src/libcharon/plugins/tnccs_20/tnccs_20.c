@@ -101,7 +101,7 @@ static chunk_t build_pb_tnc_msg(pb_tnc_msg_type_t msg_type, chunk_t msg_value)
 	writer->write_uint32(writer, msg_type);
 	writer->write_uint32(writer, msg_len);
 	msg_header = writer->get_buf(writer);
-	msg = chunk_cat("cm", msg_header, msg_value);
+	msg = chunk_cat("cc", msg_header, msg_value);
 	writer->destroy(writer);
 
 	DBG2(DBG_TNC, "building %N message (%u bytes)", pb_tnc_msg_type_names,
@@ -186,6 +186,7 @@ METHOD(tnccs_t, send_message, void,
 
 	pb_pa_msg = pb_pa_message_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
 									 chunk_create(msg, msg_len));
+	pb_pa_msg->build(pb_pa_msg);
 	pb_tnc_msg = build_pb_tnc_msg(PB_MSG_PA, pb_pa_msg->get_encoding(pb_pa_msg));
 	pb_pa_msg->destroy(pb_pa_msg);
 
@@ -266,6 +267,7 @@ METHOD(tls_t, process, status_t,
 		if (status != SUCCESS)
 		{
 			msg->destroy(msg);
+			reader->destroy(reader);
 			return status;
 		}
 
@@ -282,7 +284,7 @@ METHOD(tls_t, process, status_t,
 				vendor_id = pb_pa_msg->get_vendor_id(pb_pa_msg, &subtype);
 				msg_type = (vendor_id << 8) | subtype;
 				msg_body = pb_pa_msg->get_body(pb_pa_msg);
-
+				DBG2(DBG_TNC, "message type: 0x%08x", msg_type);
 				if (this->is_server)
 				{
 					charon->imvs->receive_message(charon->imvs,
