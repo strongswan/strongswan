@@ -54,8 +54,14 @@ METHOD(listener_t, message, bool,
 				proposals = list->create_enumerator(list);
 				while (proposals->enumerate(proposals, &proposal))
 				{
-					DBG1(DBG_CFG, "  %d: %P",
-						 proposal->get_number(proposal), proposal);
+					u_int64_t spi = proposal->get_spi(proposal);
+
+					if (proposal->get_protocol(proposal) != PROTO_IKE)
+					{
+						spi = htonl(spi);
+					}
+					DBG1(DBG_CFG, "  %d (SPI 0x%llx): %P",
+						 proposal->get_number(proposal), spi, proposal);
 				}
 				proposals->destroy(proposals);
 				list->destroy_offset(list, offsetof(proposal_t, destroy));
