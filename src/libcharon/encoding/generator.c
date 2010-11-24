@@ -198,10 +198,13 @@ static void generate_u_int_type(private_generator_t *this,
 			number_of_bits = 4;
 			break;
 		case TS_TYPE:
+		case RESERVED_BYTE:
+		case SPI_SIZE:
 		case U_INT_8:
 			number_of_bits = 8;
 			break;
 		case U_INT_16:
+		case PAYLOAD_LENGTH:
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 			number_of_bits = 16;
 			break;
@@ -265,6 +268,8 @@ static void generate_u_int_type(private_generator_t *this,
 			break;
 		}
 		case TS_TYPE:
+		case RESERVED_BYTE:
+		case SPI_SIZE:
 		case U_INT_8:
 		{
 			/* 8 bit values are written as they are */
@@ -302,6 +307,7 @@ static void generate_u_int_type(private_generator_t *this,
 
 		}
 		case U_INT_16:
+		case PAYLOAD_LENGTH:
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
@@ -331,49 +337,6 @@ static void generate_u_int_type(private_generator_t *this,
 				 encoding_type_names, int_type);
 			return;
 		}
-	}
-}
-
-/**
- * Generate a reserved bit or byte
- */
-static void generate_reserved_field(private_generator_t *this, int bits)
-{
-	/* only one bit or 8 bit fields are supported */
-	if (bits != 1 && bits != 8)
-	{
-		DBG1(DBG_ENC, "reserved field of %d bits cannot be generated", bits);
-		return ;
-	}
-	make_space_available(this, bits);
-
-	if (bits == 1)
-	{
-		u_int8_t reserved_bit = ~(1 << (7 - this->current_bit));
-
-		*(this->out_position) = *(this->out_position) & reserved_bit;
-		if (this->current_bit == 0)
-		{
-			/* memory must be zero */
-			*(this->out_position) = 0x00;
-		}
-		this->current_bit++;
-		if (this->current_bit >= 8)
-		{
-			this->current_bit = this->current_bit % 8;
-			this->out_position++;
-		}
-	}
-	else
-	{
-		if (this->current_bit > 0)
-		{
-			DBG1(DBG_ENC, "reserved field cannot be written cause "
-				 "alignement of current bit is %d", this->current_bit);
-			return;
-		}
-		*(this->out_position) = 0x00;
-		this->out_position++;
 	}
 }
 
@@ -467,30 +430,22 @@ METHOD(generator_t, generate_payload, void,
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
+			case PAYLOAD_LENGTH:
 			case IKE_SPI:
+			case RESERVED_BYTE:
+			case SPI_SIZE:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
 			case CONFIGURATION_ATTRIBUTE_LENGTH:
 				generate_u_int_type(this, rules[i].type, rules[i].offset);
 				break;
 			case RESERVED_BIT:
-				generate_reserved_field(this, 1);
-				break;
-			case RESERVED_BYTE:
-				generate_reserved_field(this, 8);
-				break;
 			case FLAG:
 				generate_flag(this, rules[i].offset);
 				break;
-			case PAYLOAD_LENGTH:
-				generate_u_int_type(this, U_INT_16,rules[i].offset);
-				break;
 			case HEADER_LENGTH:
 				this->header_length_offset = get_offset(this);
-				generate_u_int_type(this ,U_INT_32, rules[i].offset);
-				break;
-			case SPI_SIZE:
-				generate_u_int_type(this, U_INT_8, rules[i].offset);
+				generate_u_int_type(this, U_INT_32, rules[i].offset);
 				break;
 			case ADDRESS:
 			case SPI:

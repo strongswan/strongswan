@@ -409,6 +409,7 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case U_INT_8:
+			case RESERVED_BYTE:
 			{
 				if (!parse_uint8(this, rule_number, output + rule->offset))
 				{
@@ -427,6 +428,7 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case U_INT_32:
+			case HEADER_LENGTH:
 			{
 				if (!parse_uint32(this, rule_number, output + rule->offset))
 				{
@@ -445,23 +447,6 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case RESERVED_BIT:
-			{
-				if (!parse_bit(this, rule_number, NULL))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-			case RESERVED_BYTE:
-			{
-				if (!parse_uint8(this, rule_number, NULL))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
 			case FLAG:
 			{
 				if (!parse_bit(this, rule_number, output + rule->offset))
@@ -481,15 +466,6 @@ static status_t parse_payload(private_parser_t *this,
 				/* parsed u_int16 should be aligned */
 				payload_length = *(u_int16_t*)(output + rule->offset);
 				if (payload_length < UNKNOWN_PAYLOAD_HEADER_LENGTH)
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-			case HEADER_LENGTH:
-			{
-				if (!parse_uint32(this, rule_number, output + rule->offset))
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
