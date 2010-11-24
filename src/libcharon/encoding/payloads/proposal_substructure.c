@@ -213,22 +213,18 @@ METHOD(payload_t, set_next_type, void,
  */
 static void compute_length(private_proposal_substructure_t *this)
 {
-	iterator_t *iterator;
-	payload_t *current_transform;
-	size_t transforms_count = 0;
-	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
+	enumerator_t *enumerator;
+	payload_t *transform;
 
-	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	while (iterator->iterate(iterator, (void**)&current_transform))
+	this->transforms_count = 0;
+	this->proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->spi.len;
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &transform))
 	{
-		length += current_transform->get_length(current_transform);
-		transforms_count++;
+		this->proposal_length += transform->get_length(transform);
+		this->transforms_count++;
 	}
-	iterator->destroy(iterator);
-
-	length += this->spi.len;
-	this->transforms_count = transforms_count;
-	this->proposal_length = length;
+	enumerator->destroy(enumerator);
 }
 
 METHOD(payload_t, get_length, size_t,
