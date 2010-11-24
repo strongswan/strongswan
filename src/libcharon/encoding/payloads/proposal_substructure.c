@@ -341,35 +341,6 @@ METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 	return proposal;
 }
 
-METHOD(proposal_substructure_t, clone_, proposal_substructure_t*,
-	private_proposal_substructure_t *this)
-{
-	private_proposal_substructure_t *clone;
-	enumerator_t *enumerator;
-	transform_substructure_t *current;
-
-	clone = (private_proposal_substructure_t*)proposal_substructure_create();
-	clone->next_payload = this->next_payload;
-	clone->proposal_number = this->proposal_number;
-	clone->protocol_id = this->protocol_id;
-	clone->spi_size = this->spi_size;
-	if (this->spi.ptr != NULL)
-	{
-		clone->spi.ptr = clalloc(this->spi.ptr, this->spi.len);
-		clone->spi.len = this->spi.len;
-	}
-	enumerator = this->transforms->create_enumerator(this->transforms);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		current = current->clone(current);
-		add_transform_substructure(clone, current);
-	}
-	enumerator->destroy(enumerator);
-	compute_length(clone);
-
-	return &clone->public;
-}
-
 METHOD2(payload_t, proposal_substructure_t, destroy, void,
 	private_proposal_substructure_t *this)
 {
@@ -405,7 +376,6 @@ proposal_substructure_t *proposal_substructure_create()
 			.get_proposal = _get_proposal,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
-			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,

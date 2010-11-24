@@ -111,13 +111,6 @@ struct proposal_substructure_t {
 	proposal_t * (*get_proposal) (proposal_substructure_t *this);
 
 	/**
-	 * Clones an proposal_substructure_t object.
-	 *
-	 * @return		cloned object
-	 */
-	proposal_substructure_t* (*clone) (proposal_substructure_t *this);
-
-	/**
 	 * Destroys an proposal_substructure_t object.
 	 */
 	void (*destroy) (proposal_substructure_t *this);
