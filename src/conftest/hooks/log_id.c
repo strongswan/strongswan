@@ -38,7 +38,8 @@ METHOD(listener_t, message, bool,
 	{
 		enumerator_t *enumerator;
 		payload_t *payload;
-		id_payload_t *id;
+		id_payload_t *id_payload;
+		identification_t *id;
 		chunk_t data;
 
 		enumerator = message->create_payload_enumerator(message);
@@ -47,12 +48,14 @@ METHOD(listener_t, message, bool,
 			if (payload->get_type(payload) == ID_INITIATOR ||
 				payload->get_type(payload) == ID_RESPONDER)
 			{
-				id = (id_payload_t*)payload;
-				data = id->get_data(id);
+				id_payload = (id_payload_t*)payload;
+				id = id_payload->get_identification(id_payload);
+				data = id->get_encoding(id);
 
 				DBG1(DBG_CFG, "%N: %N %B",
 					 payload_type_short_names, payload->get_type(payload),
-					 id_type_names, id->get_id_type(id), &data);
+					 id_type_names, id->get_type(id), &data);
+				id->destroy(id);
 			}
 		}
 		enumerator->destroy(enumerator);
