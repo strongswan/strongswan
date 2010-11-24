@@ -56,6 +56,7 @@ METHOD(listener_t, message, bool,
 		enumerator_t *msg, *types;
 		payload_t *payload;
 		payload_type_t type;
+		bool *critical;
 		char *name;
 
 		types = enumerator_create_token(this->payloads, " ", "");
@@ -76,17 +77,10 @@ METHOD(listener_t, message, bool,
 			{
 				if (type == payload->get_type(payload))
 				{
-					encoding_rule_t *rules;
-					size_t count;
-					int i;
-
-					payload->get_encoding_rules(payload, &rules, &count);
-					for (i = 0; i < count; i++)
+					critical = payload_get_field(payload, FLAG, 0);
+					if (critical)
 					{
-						if (rules[i].type == FLAG)
-						{
-							*(bool*)(((void*)payload) + rules[i].offset) = TRUE;
-						}
+						*critical = TRUE;
 					}
 				}
 			}
