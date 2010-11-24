@@ -491,6 +491,11 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+	 * Reserved bits in IKE header
+	 */
+	bool reserved[5];
+
+	/**
 	 * Sorting of message disabled?
 	 */
 	bool sort_disabled;
@@ -651,6 +656,25 @@ METHOD(message_t, get_request, bool,
 	private_message_t *this)
 {
 	return this->is_request;
+}
+
+METHOD(message_t, get_reserved_header_bit, bool,
+	private_message_t *this, u_int nr)
+{
+	if (nr < countof(this->reserved))
+	{
+		return this->reserved[nr];
+	}
+	return FALSE;
+}
+
+METHOD(message_t, set_reserved_header_bit, void,
+	private_message_t *this, u_int nr)
+{
+	if (nr < countof(this->reserved))
+	{
+		this->reserved[nr] = TRUE;
+	}
 }
 
 /**
@@ -1030,6 +1054,8 @@ METHOD(message_t, generate, status_t,
 	chunk_t chunk;
 	char str[256];
 	u_int32_t *lenpos;
+	bool *reserved;
+	int i;
 
 	if (is_encoded(this))
 	{	/* already generated, return a new packet clone */
@@ -1085,6 +1111,16 @@ METHOD(message_t, generate, status_t,
 						this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header,
 						this->ike_sa_id->get_responder_spi(this->ike_sa_id));
+
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		reserved = payload_get_field(&ike_header->payload_interface,
+									 RESERVED_BIT, i);
+		if (reserved)
+		{
+			*reserved = this->reserved[i];
+		}
+	}
 
 	generator = generator_create();
 
@@ -1154,6 +1190,8 @@ METHOD(message_t, parse_header, status_t,
 {
 	ike_header_t *ike_header;
 	status_t status;
+	bool *reserved;
+	int i;
 
 	DBG2(DBG_ENC, "parsing header of message");
 
@@ -1188,7 +1226,15 @@ METHOD(message_t, parse_header, status_t,
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
-
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		reserved = payload_get_field(&ike_header->payload_interface,
+									 RESERVED_BIT, i);
+		if (reserved)
+		{
+			this->reserved[i] = *reserved;
+		}
+	}
 	DBG2(DBG_ENC, "parsed a %N %s", exchange_type_names, this->exchange_type,
 		 this->is_request ? "request" : "response");
 
@@ -1451,6 +1497,8 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_first_payload_type = _get_first_payload_type,
 			.set_request = _set_request,
 			.get_request = _get_request,
+			.get_reserved_header_bit = _get_reserved_header_bit,
+			.set_reserved_header_bit = _set_reserved_header_bit,
 			.add_payload = _add_payload,
 			.add_notify = _add_notify,
 			.disable_sort = _disable_sort,

@@ -154,6 +154,21 @@ struct message_t {
 	bool (*get_request) (message_t *this);
 
 	/**
+	 * Get a reserved bit in the IKE header.
+	 *
+	 * @param nr			reserved bit to get in IKE header, 0-4
+	 * @return				TRUE if bit is set
+	 */
+	bool (*get_reserved_header_bit)(message_t *this, u_int nr);
+
+	/**
+	 * Set a reserved bit in the IKE header.
+	 *
+	 * @param nr			reserved bit to set in IKE header, 0-4
+	 */
+	void (*set_reserved_header_bit)(message_t *this, u_int nr);
+
+	/**
 	 * Append a payload to the message.
 	 *
 	 * If the payload must be encrypted is not specified here. Encryption
