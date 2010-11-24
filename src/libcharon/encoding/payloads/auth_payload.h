@@ -62,27 +62,14 @@ struct auth_payload_t {
 	/**
 	 * Set the AUTH data.
 	 *
-	 * Data gets cloned.
-	 *
-	 * @param data			AUTH data as chunk_t
+	 * @param data			AUTH data as chunk_t, gets cloned
 	 */
 	void (*set_data) (auth_payload_t *this, chunk_t data);
 
 	/**
 	 * Get the AUTH data.
 	 *
-	 * Returned data are a copy of the internal one.
-	 *
-	 * @return				AUTH data as chunk_t
-	 */
-	chunk_t (*get_data_clone) (auth_payload_t *this);
-
-	/**
-	 * Get the AUTH data.
-	 *
-	 * Returned data are NOT copied
-	 *
-	 * @return				AUTH data as chunk_t
+	 * @return				AUTH data as chunk_t, internal data
 	 */
 	chunk_t (*get_data) (auth_payload_t *this);
 

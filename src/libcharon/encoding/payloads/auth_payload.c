@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,7 +18,6 @@
 #include "auth_payload.h"
 
 #include <encoding/payloads/encodings.h>
-
 
 typedef struct private_auth_payload_t private_auth_payload_t;
 
@@ -66,27 +66,27 @@ struct private_auth_payload_t {
  */
 encoding_rule_t auth_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_auth_payload_t, critical) 		},
+	{ FLAG,				offsetof(private_auth_payload_t, critical)		},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
-	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
+	{ RESERVED_BIT,		0												},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)},
 	/* 1 Byte AUTH type*/
 	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)	},
 	/* 3 reserved bytes */
-	{ RESERVED_BYTE,	0 												},
-	{ RESERVED_BYTE,	0 												},
-	{ RESERVED_BYTE,	0 												},
+	{ RESERVED_BYTE,	0												},
+	{ RESERVED_BYTE,	0												},
+	{ RESERVED_BYTE,	0												},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
-	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data) 	}
+	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data)	}
 };
 
 /*
@@ -103,125 +103,73 @@ encoding_rule_t auth_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_auth_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_auth_payload_t *this)
 {
-	if (this->auth_method == 0 ||
-		(this->auth_method >= 4 && this->auth_method <= 8) ||
-		(this->auth_method >= 12 && this->auth_method <= 200))
-	{
-		/* reserved IDs */
-		return FAILED;
-	}
 	return SUCCESS;
 }
 
-/**
- * Implementation of auth_payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_auth_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_auth_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = auth_payload_encodings;
-	*rule_count = sizeof(auth_payload_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(auth_payload_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_payload_type(private_auth_payload_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_auth_payload_t *this)
 {
 	return AUTHENTICATION;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_auth_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_auth_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_auth_payload_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_auth_payload_t *this, payload_type_t type)
 {
 	this->next_payload = type;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_auth_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_auth_payload_t *this)
 {
 	return this->payload_length;
 }
 
-/**
- * Implementation of auth_payload_t.set_auth_method.
- */
-static void set_auth_method (private_auth_payload_t *this, auth_method_t method)
+METHOD(auth_payload_t, set_auth_method, void,
+	private_auth_payload_t *this, auth_method_t method)
 {
 	this->auth_method = method;
 }
 
-/**
- * Implementation of auth_payload_t.get_auth_method.
- */
-static auth_method_t get_auth_method (private_auth_payload_t *this)
+METHOD(auth_payload_t, get_auth_method, auth_method_t,
+	private_auth_payload_t *this)
 {
-	return (this->auth_method);
+	return this->auth_method;
 }
 
-/**
- * Implementation of auth_payload_t.set_data.
- */
-static void set_data (private_auth_payload_t *this, chunk_t data)
+METHOD(auth_payload_t, set_data, void,
+	private_auth_payload_t *this, chunk_t data)
 {
-	if (this->auth_data.ptr != NULL)
-	{
-		chunk_free(&(this->auth_data));
-	}
-	this->auth_data.ptr = clalloc(data.ptr,data.len);
-	this->auth_data.len = data.len;
+	free(this->auth_data.ptr);
+	this->auth_data = chunk_clone(data);
 	this->payload_length = AUTH_PAYLOAD_HEADER_LENGTH + this->auth_data.len;
 }
 
-/**
- * Implementation of auth_payload_t.get_data.
- */
-static chunk_t get_data (private_auth_payload_t *this)
+METHOD(auth_payload_t, get_data, chunk_t,
+	private_auth_payload_t *this)
 {
-	return (this->auth_data);
+	return this->auth_data;
 }
 
-/**
- * Implementation of auth_payload_t.get_data_clone.
- */
-static chunk_t get_data_clone (private_auth_payload_t *this)
+METHOD2(payload_t, auth_payload_t, destroy, void,
+	private_auth_payload_t *this)
 {
-	chunk_t cloned_data;
-	if (this->auth_data.ptr == NULL)
-	{
-		return (this->auth_data);
-	}
-	cloned_data.ptr = clalloc(this->auth_data.ptr,this->auth_data.len);
-	cloned_data.len = this->auth_data.len;
-	return cloned_data;
-}
-
-/**
- * Implementation of payload_t.destroy and auth_payload_t.destroy.
- */
-static void destroy(private_auth_payload_t *this)
-{
-	if (this->auth_data.ptr != NULL)
-	{
-		chunk_free(&(this->auth_data));
-	}
-
+	free(this->auth_data.ptr);
 	free(this);
 }
 
@@ -230,30 +178,27 @@ static void destroy(private_auth_payload_t *this)
  */
 auth_payload_t *auth_payload_create()
 {
-	private_auth_payload_t *this = malloc_thing(private_auth_payload_t);
+	private_auth_payload_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.destroy = (void (*) (auth_payload_t *)) destroy;
-	this->public.set_auth_method = (void (*) (auth_payload_t *,auth_method_t)) set_auth_method;
-	this->public.get_auth_method = (auth_method_t (*) (auth_payload_t *)) get_auth_method;
-	this->public.set_data = (void (*) (auth_payload_t *,chunk_t)) set_data;
-	this->public.get_data_clone = (chunk_t (*) (auth_payload_t *)) get_data_clone;
-	this->public.get_data = (chunk_t (*) (auth_payload_t *)) get_data;
-
-	/* private variables */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length =AUTH_PAYLOAD_HEADER_LENGTH;
-	this->auth_data = chunk_empty;
-
-	return (&(this->public));
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.set_auth_method = _set_auth_method,
+			.get_auth_method = _get_auth_method,
+			.set_data = _set_data,
+			.get_data = _get_data,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = AUTH_PAYLOAD_HEADER_LENGTH,
+	);
+	return &this->public;
 }
