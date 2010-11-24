@@ -891,6 +891,11 @@ METHOD(ike_sa_t, update_hosts, void,
 METHOD(ike_sa_t, generate_message, status_t,
 	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
+	if (message->is_encoded(message))
+	{	/* already done */
+		*packet = message->get_packet(message);
+		return SUCCESS;
+	}
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	charon->bus->message(charon->bus, message, FALSE);

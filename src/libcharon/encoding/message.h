@@ -258,6 +258,13 @@ struct message_t {
 	status_t (*generate) (message_t *this, aead_t *aead, packet_t **packet);
 
 	/**
+	 * Check if the message has already been encoded using generate().
+	 *
+	 * @return			TRUE if message has been encoded
+	 */
+	bool (*is_encoded)(message_t *this);
+
+	/**
 	 * Gets the source host informations.
 	 *
 	 * @warning Returned host_t object is not getting cloned,

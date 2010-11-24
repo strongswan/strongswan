@@ -688,18 +688,10 @@ METHOD(message_t, set_reserved_header_bit, void,
 	}
 }
 
-/**
- * Is this message in an encoded form?
- */
-static bool is_encoded(private_message_t *this)
+METHOD(message_t, is_encoded, bool,
+	private_message_t *this)
 {
-	chunk_t data = this->packet->get_data(this->packet);
-
-	if (data.ptr == NULL)
-	{
-		return FALSE;
-	}
-	return TRUE;
+	return this->packet->get_data(this->packet).ptr != NULL;
 }
 
 METHOD(message_t, add_payload, void,
@@ -1067,12 +1059,6 @@ METHOD(message_t, generate, status_t,
 	u_int32_t *lenpos;
 	bool *reserved;
 	int i;
-
-	if (is_encoded(this))
-	{	/* already generated, return a new packet clone */
-		*packet = this->packet->clone(this->packet);
-		return SUCCESS;
-	}
 
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -1516,6 +1502,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.add_notify = _add_notify,
 			.disable_sort = _disable_sort,
 			.generate = _generate,
+			.is_encoded = _is_encoded,
 			.set_source = _set_source,
 			.get_source = _get_source,
 			.set_destination = _set_destination,
