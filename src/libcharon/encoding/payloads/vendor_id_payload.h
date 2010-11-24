@@ -50,6 +50,11 @@ struct vendor_id_payload_t {
 	 * @return		VID data, pointing to an internal chunk_t
 	 */
 	chunk_t (*get_data)(vendor_id_payload_t *this);
+
+	/**
+	 * Destroy Vendor ID payload.
+	 */
+	void (*destroy)(vendor_id_payload_t *this);
 };
 
 /**
