@@ -40,56 +40,14 @@ typedef struct id_payload_t id_payload_t;
  * The ID payload format is described in RFC section 3.5.
  */
 struct id_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Set the ID type.
-	 *
-	 * @param type			Type of ID
-	 */
-	void (*set_id_type) (id_payload_t *this, id_type_t type);
-
-	/**
-	 * Get the ID type.
-	 *
-	 * @return				type of the ID
-	 */
-	id_type_t (*get_id_type) (id_payload_t *this);
-
-	/**
-	 * Set the ID data.
-	 *
-	 * Data are getting cloned.
-	 *
-	 * @param data			ID data as chunk_t
-	 */
-	void (*set_data) (id_payload_t *this, chunk_t data);
-
-	/**
-	 * Get the ID data.
-	 *
-	 * Returned data are a copy of the internal one
-	 *
-	 * @return				ID data as chunk_t
-	 */
-	chunk_t (*get_data_clone) (id_payload_t *this);
-
-	/**
-	 * Get the ID data.
-	 *
-	 * Returned data are NOT copied.
-	 *
-	 * @return				ID data as chunk_t
-	 */
-	chunk_t (*get_data) (id_payload_t *this);
-
-	/**
 	 * Creates an identification object of this id payload.
-	 *
-	 * Returned object has to get destroyed by the caller.
 	 *
 	 * @return				identification_t object
 	 */
