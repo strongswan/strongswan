@@ -43,6 +43,16 @@ struct private_auth_payload_t {
 	bool critical;
 
 	/**
+	 * Reserved bits
+	 */
+	bool reserved_bit[7];
+
+	/**
+	 * Reserved bytes
+	 */
+	u_int8_t reserved_byte[3];
+
+	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -66,25 +76,25 @@ struct private_auth_payload_t {
  */
 encoding_rule_t auth_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload)		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_auth_payload_t, critical)		},
-	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
-	{ RESERVED_BIT,		0												},
+	{ FLAG,				offsetof(private_auth_payload_t, critical)			},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[6])	},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)},
+	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)	},
 	/* 1 Byte AUTH type*/
-	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)	},
+	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)		},
 	/* 3 reserved bytes */
-	{ RESERVED_BYTE,	0												},
-	{ RESERVED_BYTE,	0												},
-	{ RESERVED_BYTE,	0												},
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[0])	},
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[1])	},
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[2])	},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
 	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data)	}
 };

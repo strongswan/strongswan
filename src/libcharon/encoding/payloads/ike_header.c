@@ -84,6 +84,11 @@ struct private_ike_header_t {
 	} flags;
 
 	/**
+	 * Reserved bits of IKE header
+	 */
+	bool reserved[5];
+
+	/**
 	 * Associated Message-ID.
 	 */
 	u_int32_t message_id;
@@ -128,17 +133,17 @@ encoding_rule_t ike_header_encodings[] = {
 	{ U_INT_4,		offsetof(private_ike_header_t, min_version)		},
 	/* 8 Bit for the exchange type */
 	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type) 	},
-	/* 2 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 												},
-	{ RESERVED_BIT,	0 												},
+	/* 2 Bit reserved bits */
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[0])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[1])		},
 	/* 3 Bit flags, stored in the fields response, version and initiator */
 	{ FLAG,			offsetof(private_ike_header_t, flags.response)	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.version)	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.initiator)	},
-	/* 3 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 												},
-	{ RESERVED_BIT,	0 												},
-	{ RESERVED_BIT,	0 												},
+	/* 3 Bit reserved bits */
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[2])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[3])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[4])		},
 	/* 4 Byte message id, stored in the field message_id */
 	{ U_INT_32,		offsetof(private_ike_header_t, message_id) 		},
 	/* 4 Byte length fied, stored in the field length */

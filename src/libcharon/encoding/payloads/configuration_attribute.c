@@ -36,6 +36,11 @@ struct private_configuration_attribute_t {
 	configuration_attribute_t public;
 
 	/**
+	 * Reserved bit
+	 */
+	bool reserved;
+
+	/**
 	 * Type of the attribute.
 	 */
 	u_int16_t type;
@@ -58,8 +63,8 @@ struct private_configuration_attribute_t {
  * private_configuration_attribute_t.
  */
 encoding_rule_t configuration_attribute_encodings[] = {
-
-	{ RESERVED_BIT,						0													},
+	/* 1 reserved bit */
+	{ RESERVED_BIT,						offsetof(private_configuration_attribute_t, reserved)},
 	/* type of the attribute as 15 bit unsigned integer */
 	{ ATTRIBUTE_TYPE,					offsetof(private_configuration_attribute_t, type)	},
 	/* Length of attribute value */

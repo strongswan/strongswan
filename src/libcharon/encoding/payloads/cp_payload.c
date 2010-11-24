@@ -52,6 +52,16 @@ struct private_cp_payload_t {
 	bool critical;
 
 	/**
+	 * Reserved bits
+	 */
+	bool reserved_bit[7];
+
+	/**
+	 * Reserved bytes
+	 */
+	u_int8_t reserved_byte[3];
+
+	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -78,22 +88,23 @@ encoding_rule_t cp_payload_encodings[] = {
 	{ U_INT_8,					offsetof(private_cp_payload_t, next_payload)	},
 	/* the critical bit */
 	{ FLAG,						offsetof(private_cp_payload_t, critical)		},
-	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
-	{ RESERVED_BIT,				0												},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[6])	},
 	/* Length of the whole CP payload*/
 	{ PAYLOAD_LENGTH,			offsetof(private_cp_payload_t, payload_length)	},
 	/* Proposals are stored in a proposal substructure,
 	   offset points to a linked_list_t pointer */
 	{ U_INT_8,					offsetof(private_cp_payload_t, type)			},
-	{ RESERVED_BYTE,0 															},
-	{ RESERVED_BYTE,0															},
-	{ RESERVED_BYTE,0															},
+	/* 3 reserved bytes */
+	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[0])},
+	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[1])},
+	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[2])},
 	{ CONFIGURATION_ATTRIBUTES,	offsetof(private_cp_payload_t, attributes)		}
 };
 

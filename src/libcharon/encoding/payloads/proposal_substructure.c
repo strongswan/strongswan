@@ -47,6 +47,11 @@ struct private_proposal_substructure_t {
 	u_int8_t  next_payload;
 
 	/**
+	 * reserved byte
+	 */
+	u_int8_t reserved;
+
+	/**
 	 * Length of this payload.
 	 */
 	u_int16_t proposal_length;
@@ -91,8 +96,8 @@ struct private_proposal_substructure_t {
 encoding_rule_t proposal_substructure_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload)		},
-	/* Reserved Byte is skipped */
-	{ RESERVED_BYTE,	0															},
+	/* 1 Reserved Byte */
+	{ RESERVED_BYTE,	offsetof(private_proposal_substructure_t, reserved)			},
 	/* Length of the whole proposal substructure payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_proposal_substructure_t, proposal_length)	},
 	/* proposal number is a number of 8 bit */

@@ -41,6 +41,10 @@ struct private_transform_substructure_t {
 	 * Next payload type.
 	 */
 	u_int8_t  next_payload;
+	/**
+	 * Reserved bytes
+	 */
+	u_int8_t reserved[2];
 
 	/**
 	 * Length of this payload.
@@ -72,14 +76,14 @@ struct private_transform_substructure_t {
 encoding_rule_t transform_substructure_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,				offsetof(private_transform_substructure_t, next_payload)	},
-	/* Reserved Byte is skipped */
-	{ RESERVED_BYTE,		0															},
+	/* 1 Reserved Byte */
+	{ RESERVED_BYTE,		offsetof(private_transform_substructure_t, reserved[0])		},
 	/* Length of the whole transform substructure*/
 	{ PAYLOAD_LENGTH,		offsetof(private_transform_substructure_t, transform_length)},
 	/* transform type is a number of 8 bit */
 	{ U_INT_8,				offsetof(private_transform_substructure_t, transform_type)	},
-	/* Reserved Byte is skipped */
-	{ RESERVED_BYTE,		0															},
+	/* 1 Reserved Byte */
+	{ RESERVED_BYTE,		offsetof(private_transform_substructure_t, reserved[1])		},
 	/* tranform ID is a number of 8 bit */
 	{ U_INT_16,				offsetof(private_transform_substructure_t, transform_id)	},
 	/* Attributes are stored in a transform attribute,

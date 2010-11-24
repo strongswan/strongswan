@@ -46,6 +46,11 @@ struct private_unknown_payload_t {
 	bool critical;
 
 	/**
+	 * Reserved bits
+	 */
+	bool reserved[7];
+
+	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -68,14 +73,14 @@ encoding_rule_t unknown_payload_encodings[] = {
 	{ U_INT_8,			offsetof(private_unknown_payload_t, next_payload)	},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_unknown_payload_t, critical)		},
-	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
-	{ RESERVED_BIT,		0													},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[0])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[1])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[2])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[3])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[4])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[5])	},
+	{ RESERVED_BIT,		offsetof(private_unknown_payload_t, reserved[6])	},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_unknown_payload_t, payload_length)	},
 	/* some unknown data bytes, length is defined in PAYLOAD_LENGTH */

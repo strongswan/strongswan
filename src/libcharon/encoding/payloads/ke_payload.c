@@ -44,6 +44,16 @@ struct private_ke_payload_t {
 	bool critical;
 
 	/**
+	 * Reserved bits
+	 */
+	bool reserved_bit[7];
+
+	/**
+	 * Reserved bytes
+	 */
+	u_int8_t reserved_byte[2];
+
+	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -70,20 +80,21 @@ encoding_rule_t ke_payload_encodings[] = {
 	{ U_INT_8,				offsetof(private_ke_payload_t, next_payload)	},
 	/* the critical bit */
 	{ FLAG,					offsetof(private_ke_payload_t, critical)		},
-	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
-	{ RESERVED_BIT,			0												},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,			offsetof(private_ke_payload_t, reserved_bit[6])	},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,		offsetof(private_ke_payload_t, payload_length)	},
 	/* DH Group number as 16 bit field*/
 	{ U_INT_16,				offsetof(private_ke_payload_t, dh_group_number)	},
-	{ RESERVED_BYTE,		0												},
-	{ RESERVED_BYTE,		0												},
+	/* 2 reserved bytes */
+	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[0])},
+	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[1])},
 	/* Key Exchange Data is from variable size */
 	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data)}
 };

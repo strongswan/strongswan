@@ -74,6 +74,21 @@ struct auth_payload_t {
 	chunk_t (*get_data) (auth_payload_t *this);
 
 	/**
+	 * Get the value of a reserved bit.
+	 *
+	 * @param nr			number of the reserved bit, 0-6
+	 * @return				TRUE if bit was set, FALSE to clear
+	 */
+	bool (*get_reserved_bit)(auth_payload_t *this, u_int nr);
+
+	/**
+	 * Set one of the reserved bits.
+	 *
+	 * @param nr			number of the reserved bit, 0-6
+	 */
+	void (*set_reserved_bit)(auth_payload_t *this, u_int nr);
+
+	/**
 	 * Destroys an auth_payload_t object.
 	 */
 	void (*destroy) (auth_payload_t *this);
