@@ -196,3 +196,23 @@ bool payload_is_known(payload_type_t type)
 #endif
 	return FALSE;
 }
+
+/**
+ * See header.
+ */
+void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip)
+{
+	encoding_rule_t *rule;
+	size_t count;
+	int i;
+
+	payload->get_encoding_rules(payload, &rule, &count);
+	for (i = 0; i < count; i++)
+	{
+		if (rule[i].type == type && skip-- == 0)
+		{
+			return ((char*)payload) + rule[i].offset;
+		}
+	}
+	return NULL;
+}

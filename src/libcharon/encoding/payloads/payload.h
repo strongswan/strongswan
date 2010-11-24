@@ -268,4 +268,14 @@ payload_t *payload_create(payload_type_t type);
  */
 bool payload_is_known(payload_type_t type);
 
+/**
+ * Get the value field in a payload using encoding rules.
+ *
+ * @param payload	payload to look up a field
+ * @param type		encoding rule type to look up
+ * @param skip		number rules of type to skip, 0 to get first
+ * @return			type specific value pointer, NULL if not found
+ */
+void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip);
+
 #endif /** PAYLOAD_H_ @}*/
