@@ -292,6 +292,12 @@ METHOD(ike_header_t, get_version_flag, bool,
 	return this->flags.version;
 }
 
+METHOD(ike_header_t, set_version_flag, void,
+	private_ike_header_t *this, bool version)
+{
+	this->flags.version = version;
+}
+
 METHOD(ike_header_t, get_initiator_flag, bool,
 	private_ike_header_t *this)
 {
@@ -363,6 +369,7 @@ ike_header_t *ike_header_create()
 			.get_response_flag = _get_response_flag,
 			.set_response_flag = _set_response_flag,
 			.get_version_flag = _get_version_flag,
+			.set_version_flag = _set_version_flag,
 			.get_initiator_flag = _get_initiator_flag,
 			.set_initiator_flag = _set_initiator_flag,
 			.get_exchange_type = _get_exchange_type,

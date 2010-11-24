@@ -154,6 +154,11 @@ struct message_t {
 	bool (*get_request) (message_t *this);
 
 	/**
+	 * Set the version flag in the IKE header.
+	 */
+	void (*set_version_flag)(message_t *this);
+
+	/**
 	 * Get a reserved bit in the IKE header.
 	 *
 	 * @param nr			reserved bit to get in IKE header, 0-4

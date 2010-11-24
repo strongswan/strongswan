@@ -491,6 +491,11 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+	 * Higher version supported?
+	 */
+	bool version_flag;
+
+	/**
 	 * Reserved bits in IKE header
 	 */
 	bool reserved[5];
@@ -656,6 +661,12 @@ METHOD(message_t, get_request, bool,
 	private_message_t *this)
 {
 	return this->is_request;
+}
+
+METHOD(message_t, set_version_flag, void,
+	private_message_t *this)
+{
+	this->version_flag = TRUE;
 }
 
 METHOD(message_t, get_reserved_header_bit, bool,
@@ -1105,6 +1116,7 @@ METHOD(message_t, generate, status_t,
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
+	ike_header->set_version_flag(ike_header, this->version_flag);
 	ike_header->set_initiator_flag(ike_header,
 						this->ike_sa_id->is_initiator(this->ike_sa_id));
 	ike_header->set_initiator_spi(ike_header,
@@ -1497,6 +1509,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_first_payload_type = _get_first_payload_type,
 			.set_request = _set_request,
 			.get_request = _get_request,
+			.set_version_flag = _set_version_flag,
 			.get_reserved_header_bit = _get_reserved_header_bit,
 			.set_reserved_header_bit = _set_reserved_header_bit,
 			.add_payload = _add_payload,

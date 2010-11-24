@@ -176,12 +176,20 @@ struct ike_header_t {
 	 * @param response		response flag
 	 */
 	void (*set_response_flag) (ike_header_t *this, bool response);
+
 	/**
 	 * Get "higher version supported"-flag.
 	 *
 	 * @return 				version flag
 	 */
 	bool (*get_version_flag) (ike_header_t *this);
+
+	/**
+	 * Set the "higher version supported"-flag.
+	 *
+	 * @param version		flag value
+	 */
+	void (*set_version_flag)(ike_header_t *this, bool version);
 
 	/**
 	 * Get the initiator flag.
