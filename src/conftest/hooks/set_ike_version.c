@@ -48,6 +48,11 @@ struct private_set_ike_version_t {
 	 * Minor version to set
 	 */
 	int minor;
+
+	/**
+	 * Higher version supported?
+	 */
+	bool higher;
 };
 
 METHOD(listener_t, message, bool,
@@ -62,6 +67,10 @@ METHOD(listener_t, message, bool,
 			 this->id, this->major, this->minor);
 		message->set_major_version(message, this->major);
 		message->set_minor_version(message, this->minor);
+		if (this->higher)
+		{
+			message->set_version_flag(message);
+		}
 	}
 	return TRUE;
 }
@@ -94,6 +103,8 @@ hook_t *set_ike_version_hook_create(char *name)
 										"hooks.%s.major", 2, name),
 		.minor = conftest->test->get_int(conftest->test,
 										"hooks.%s.minor", 0, name),
+		.higher = conftest->test->get_bool(conftest->test,
+										"hooks.%s.higher", FALSE, name),
 	);
 
 	return &this->hook;
