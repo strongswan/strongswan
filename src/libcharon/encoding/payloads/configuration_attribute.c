@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2009 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,14 +23,13 @@
 #include <library.h>
 #include <daemon.h>
 
-
 typedef struct private_configuration_attribute_t private_configuration_attribute_t;
 
 /**
  * Private data of an configuration_attribute_t object.
- *
  */
 struct private_configuration_attribute_t {
+
 	/**
 	 * Public configuration_attribute_t interface.
 	 */
@@ -80,10 +80,8 @@ encoding_rule_t configuration_attribute_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_configuration_attribute_t *this)
+METHOD(payload_t, verify, status_t,
+	private_configuration_attribute_t *this)
 {
 	bool failed = FALSE;
 
@@ -151,69 +149,51 @@ static status_t verify(private_configuration_attribute_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_configuration_attribute_t *this,
-							   encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_configuration_attribute_t *this, encoding_rule_t **rules,
+	size_t *rule_count)
 {
 	*rules = configuration_attribute_encodings;
-	*rule_count = sizeof(configuration_attribute_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(configuration_attribute_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_type(private_configuration_attribute_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_configuration_attribute_t *this)
 {
 	return CONFIGURATION_ATTRIBUTE;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_configuration_attribute_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_configuration_attribute_t *this)
 {
 	return NO_PAYLOAD;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_configuration_attribute_t *this,
-						  payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_configuration_attribute_t *this, payload_type_t type)
 {
 }
 
-/**
- * Implementation of configuration_attribute_t.get_length.
- */
-static size_t get_length(private_configuration_attribute_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_configuration_attribute_t *this)
 {
 	return this->value.len + CONFIGURATION_ATTRIBUTE_HEADER_LENGTH;
 }
 
-/**
- * Implementation of configuration_attribute_t.get_type.
- */
-static configuration_attribute_type_t get_configuration_attribute_type(
-									private_configuration_attribute_t *this)
+METHOD(configuration_attribute_t, get_cattr_type, configuration_attribute_type_t,
+	private_configuration_attribute_t *this)
 {
 	return this->type;
 }
 
-/**
- * Implementation of configuration_attribute_t.get_value.
- */
-static chunk_t get_value(private_configuration_attribute_t *this)
+METHOD(configuration_attribute_t, get_value, chunk_t,
+	private_configuration_attribute_t *this)
 {
 	return this->value;
 }
 
-/**
- * Implementation of configuration_attribute_t.destroy and payload_t.destroy.
- */
-static void destroy(private_configuration_attribute_t *this)
+METHOD2(payload_t, configuration_attribute_t, destroy, void,
+	private_configuration_attribute_t *this)
 {
 	free(this->value.ptr);
 	free(this);
@@ -226,23 +206,22 @@ configuration_attribute_t *configuration_attribute_create()
 {
 	private_configuration_attribute_t *this;
 
-	this = malloc_thing(private_configuration_attribute_t);
-	this->public.payload_interface.verify = (status_t(*)(payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void(*)(payload_t *, encoding_rule_t **, size_t *) )get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t(*)(payload_t *))get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t(*)(payload_t *))get_next_type;
-	this->public.payload_interface.set_next_type = (void(*)(payload_t *,payload_type_t))set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t(*)(payload_t *))get_type;
-	this->public.payload_interface.destroy = (void(*)(payload_t*))destroy;
-
-	this->public.get_value = (chunk_t(*)(configuration_attribute_t *))get_value;
-	this->public.get_type = (configuration_attribute_type_t(*)(configuration_attribute_t *))get_configuration_attribute_type;
-	this->public.destroy = (void (*)(configuration_attribute_t*))destroy;
-
-	this->type = 0;
-	this->value = chunk_empty;
-	this->length = 0;
-
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.get_value = _get_value,
+			.get_type = _get_cattr_type,
+			.destroy = _destroy,
+		},
+	);
 	return &this->public;
 }
 
