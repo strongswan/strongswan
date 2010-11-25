@@ -42,10 +42,12 @@ struct psk_authenticator_t {
  * @param ike_sa			associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_init			sent IKE_SA_INIT message data
+ * @param reserved			reserved bytes of ID payload
  * @return					PSK authenticator
  */
 psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_init);
+									chunk_t received_nonce, chunk_t sent_init,
+									char reserved[3]);
 
 /**
  * Create an authenticator to verify PSK signatures.
@@ -53,9 +55,11 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
  * @param ike_sa			associated ike_sa
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data
+ * @param reserved			reserved bytes of ID payload
  * @return					PSK authenticator
  */
 psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
-									chunk_t sent_nonce, chunk_t received_init);
+									chunk_t sent_nonce, chunk_t received_init,
+									char reserved[3]);
 
 #endif /** PSK_AUTHENTICATOR_H_ @}*/

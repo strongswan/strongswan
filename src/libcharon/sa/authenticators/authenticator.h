@@ -130,12 +130,14 @@ struct authenticator_t {
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data
  * @param sent_init			sent IKE_SA_INIT message data
+ * @param reserved			reserved bytes of the ID payload
  * @return					authenticator, NULL if not supported
  */
 authenticator_t *authenticator_create_builder(
 									ike_sa_t *ike_sa, auth_cfg_t *cfg,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init);
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3]);
 
 /**
  * Create an authenticator to verify signatures.
@@ -146,11 +148,13 @@ authenticator_t *authenticator_create_builder(
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data
  * @param sent_init			sent IKE_SA_INIT message data
+ * @param reserved			reserved bytes of the ID payload
  * @return					authenticator, NULL if not supported
  */
 authenticator_t *authenticator_create_verifier(
 									ike_sa_t *ike_sa, message_t *message,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init);
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3]);
 
 #endif /** AUTHENTICATOR_H_ @}*/

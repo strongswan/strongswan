@@ -40,6 +40,11 @@ struct private_pretend_auth_t {
 	identification_t *id;
 
 	/**
+	 * reserved bytes of ID payload
+	 */
+	char reserved[3];
+
+	/**
 	 * IKE_SA_INIT data for signature
 	 */
 	chunk_t ike_init;
@@ -232,7 +237,7 @@ static bool build_auth(private_pretend_auth_t *this,
 	}
 	keymat = ike_sa->get_keymat(ike_sa);
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_init,
-									 this->nonce, this->id);
+									 this->nonce, this->id, this->reserved);
 	if (!private->sign(private, scheme, octets, &auth_data))
 	{
 		chunk_free(&octets);

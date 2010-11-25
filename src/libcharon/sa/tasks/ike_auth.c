@@ -68,6 +68,11 @@ struct private_ike_auth_t {
 	packet_t *other_packet;
 
 	/**
+	 * Reserved bytes of ID payload
+	 */
+	char reserved[3];
+
+	/**
 	 * currently active authenticator, to authenticate us
 	 */
 	authenticator_t *my_auth;
@@ -157,6 +162,24 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	/* keep a copy of the received packet */
 	this->other_packet = message->get_packet(message);
 	return NEED_MORE;
+}
+
+/**
+ * Get and store reserved bytes of id_payload, required for AUTH payload
+ */
+static void get_reserved_id_bytes(private_ike_auth_t *this, id_payload_t *id)
+{
+	u_int8_t *byte;
+	int i;
+
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		byte = payload_get_field(&id->payload_interface, RESERVED_BYTE, i);
+		if (byte)
+		{
+			this->reserved[i] = *byte;
+		}
+	}
 }
 
 /**
@@ -398,13 +421,15 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		}
 		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 		id_payload = id_payload_create_from_identification(ID_INITIATOR, id);
+		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
 		/* build authentication data */
 		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 							this->other_nonce, this->my_nonce,
 							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
+							this->my_packet->get_data(this->my_packet),
+							this->reserved);
 		if (!this->my_auth)
 		{
 			return FAILED;
@@ -498,6 +523,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			return FAILED;
 		}
 		id = id_payload->get_identification(id_payload);
+		get_reserved_id_bytes(this, id_payload);
 		this->ike_sa->set_other_id(this->ike_sa, id);
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 		cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
@@ -548,7 +574,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		this->other_auth = authenticator_create_verifier(this->ike_sa,
 							message, this->other_nonce, this->my_nonce,
 							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
+							this->my_packet->get_data(this->my_packet),
+							this->reserved);
 		if (!this->other_auth)
 		{
 			this->authentication_failed = TRUE;
@@ -662,6 +689,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		}
 
 		id_payload = id_payload_create_from_identification(ID_RESPONDER, id);
+		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
 		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_EAP)
@@ -682,7 +710,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 								this->other_nonce, this->my_nonce,
 								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet));
+								this->my_packet->get_data(this->my_packet),
+								this->reserved);
 			if (!this->my_auth)
 			{
 				message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
@@ -857,6 +886,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				return FAILED;
 			}
 			id = id_payload->get_identification(id_payload);
+			get_reserved_id_bytes(this, id_payload);
 			this->ike_sa->set_other_id(this->ike_sa, id);
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
@@ -867,7 +897,8 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				this->other_auth = authenticator_create_verifier(this->ike_sa,
 								message, this->other_nonce, this->my_nonce,
 								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet));
+								this->my_packet->get_data(this->my_packet),
+								this->reserved);
 				if (!this->other_auth)
 				{
 					return FAILED;

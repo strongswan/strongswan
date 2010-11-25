@@ -58,6 +58,11 @@ struct private_eap_authenticator_t {
 	chunk_t sent_init;
 
 	/**
+	 * Reserved bytes of ID payload
+	 */
+	char reserved[3];
+
+	/**
 	 * Current EAP method processing
 	 */
 	eap_method_t *method;
@@ -422,7 +427,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	auth_data = keymat->get_psk_sig(keymat, TRUE, init, nonce,
-									this->msk, other_id);
+									this->msk, other_id, this->reserved);
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
@@ -458,7 +463,8 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
-	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, my_id);
+	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce,
+									this->msk, my_id, this->reserved);
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
 	auth_payload->set_data(auth_payload, auth_data);
@@ -642,7 +648,8 @@ METHOD(authenticator_t, destroy, void,
  */
 eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init)
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3])
 {
 	private_eap_authenticator_t *this;
 
@@ -661,6 +668,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
 	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
 	return &this->public;
 }
@@ -670,7 +678,8 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
  */
 eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init)
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3])
 {
 	private_eap_authenticator_t *this;
 
@@ -689,6 +698,7 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
 	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
 	return &this->public;
 }

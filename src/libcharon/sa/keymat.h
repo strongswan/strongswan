@@ -117,10 +117,12 @@ struct keymat_t {
 	 * @param ike_sa_init	encoded ike_sa_init message
 	 * @param nonce			nonce value
 	 * @param id			identity
+	 * @param reserved		reserved bytes of id_payload
 	 * @return				authentication octets
 	 */
 	chunk_t (*get_auth_octets)(keymat_t *this, bool verify, chunk_t ike_sa_init,
-							   chunk_t nonce, identification_t *id);
+							   chunk_t nonce, identification_t *id,
+							   char reserved[3]);
 	/**
 	 * Build the shared secret signature used for PSK and EAP authentication.
 	 *
@@ -133,10 +135,12 @@ struct keymat_t {
 	 * @param nonce			nonce value
 	 * @param secret		optional secret to include into signature
 	 * @param id			identity
+	 * @param reserved		reserved bytes of id_payload
 	 * @return				signature octets
 	 */
 	chunk_t (*get_psk_sig)(keymat_t *this, bool verify, chunk_t ike_sa_init,
-						   chunk_t nonce, chunk_t secret, identification_t *id);
+						   chunk_t nonce, chunk_t secret,
+						   identification_t *id, char reserved[3]);
 	/**
 	 * Destroy a keymat_t.
 	 */
