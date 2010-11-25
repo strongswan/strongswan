@@ -36,10 +36,8 @@ struct private_resolve_plugin_t {
 	resolve_handler_t *handler;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_resolve_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_resolve_plugin_t *this)
 {
 	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->handler->destroy(this->handler);
@@ -51,10 +49,16 @@ static void destroy(private_resolve_plugin_t *this)
  */
 plugin_t *resolve_plugin_create()
 {
-	private_resolve_plugin_t *this = malloc_thing(private_resolve_plugin_t);
+	private_resolve_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	this->handler = resolve_handler_create();
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy
+			},
+		},
+		.handler = resolve_handler_create(),
+	);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
