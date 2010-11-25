@@ -247,6 +247,14 @@ bool return_false()
 }
 
 /**
+ * returns FAILED
+ */
+status_t return_failed()
+{
+	return FAILED;
+}
+
+/**
  * nop operation
  */
 void nop()
