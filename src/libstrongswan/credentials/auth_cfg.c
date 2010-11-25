@@ -147,6 +147,8 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			break;
 	}
 }
@@ -172,6 +174,8 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
 				/* integer type */
 				enumerator->current->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
@@ -237,6 +241,8 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_RULE_EAP_TYPE:
 			return (void*)EAP_NAK;
 		case AUTH_RULE_EAP_VENDOR:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			return (void*)0;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
@@ -274,6 +280,8 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			/* integer type */
 			entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
@@ -473,6 +481,20 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				e2->destroy(e2);
 				break;
 			}
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
+			{
+				if ((uintptr_t)value > (uintptr_t)get(this, t1))
+				{
+					success = FALSE;
+					if (log_error)
+					{
+						DBG1(DBG_CFG, "constraint requires %d bit public key "
+							 "strength", value);
+					}
+				}
+				break;
+			}
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -534,6 +556,8 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_AUTH_CLASS:
 				case AUTH_RULE_EAP_TYPE:
 				case AUTH_RULE_EAP_VENDOR:
+				case AUTH_RULE_RSA_STRENGTH:
+				case AUTH_RULE_ECDSA_STRENGTH:
 				{
 					add(this, type, (uintptr_t)value);
 					break;
@@ -600,6 +624,8 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_EAP_VENDOR:
 					case AUTH_RULE_CRL_VALIDATION:
 					case AUTH_RULE_OCSP_VALIDATION:
+					case AUTH_RULE_RSA_STRENGTH:
+					case AUTH_RULE_ECDSA_STRENGTH:
 					{
 						if (i1->value == i2->value)
 						{
@@ -741,6 +767,8 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
 				clone->add(clone, entry->type, (uintptr_t)entry->value);
 				break;
 		}

@@ -551,6 +551,67 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 }
 
 /**
+ * Get the strength of the weakest key in a trustchain
+ */
+static void calculate_trustchain_strength(auth_cfg_t *auth)
+{
+	enumerator_t *enumerator;
+	uintptr_t strength = 0;
+	key_type_t type = KEY_ANY;
+	certificate_t *cert;
+	public_key_t *key;
+	auth_rule_t rule;
+
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &rule, &cert))
+	{
+		switch (rule)
+		{
+			case AUTH_RULE_SUBJECT_CERT:
+			case AUTH_RULE_IM_CERT:
+			case AUTH_RULE_CA_CERT:
+			{
+				key = cert->get_public_key(cert);
+				if (!key || (type != KEY_ANY && type != key->get_type(key)))
+				{	/* no key, or different key families */
+					DESTROY_IF(key);
+					enumerator->destroy(enumerator);
+					return;
+				}
+				type = key->get_type(key);
+				if (!strength)
+				{
+					strength = key->get_keysize(key);
+				}
+				else
+				{
+					strength = min(strength, key->get_keysize(key));
+				}
+				key->destroy(key);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (strength)
+	{
+		switch (type)
+		{
+			case KEY_RSA:
+				auth->add(auth, AUTH_RULE_RSA_STRENGTH, strength);
+				break;
+			case KEY_ECDSA:
+				auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+/**
  * try to verify the trust chain of subject, return TRUE if trusted
  */
 static bool verify_trust_chain(private_credential_manager_t *this,
@@ -685,6 +746,7 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			{
 				this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
 								this->pretrusted->get_ref(this->pretrusted));
+				calculate_trustchain_strength(this->auth);
 				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
@@ -710,7 +772,10 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
 							   this->online))
 		{
+			this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
+							current->get_ref(current));
 			*cert = current;
+			calculate_trustchain_strength(this->auth);
 			if (auth)
 			{
 				*auth = this->auth;
