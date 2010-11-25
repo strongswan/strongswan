@@ -54,7 +54,7 @@ plugin_t *resolve_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
-				.destroy = _destroy
+				.destroy = _destroy,
 			},
 		},
 		.handler = resolve_handler_create(),

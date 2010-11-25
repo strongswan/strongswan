@@ -51,8 +51,8 @@ plugin_t *kernel_klips_plugin_create()
 		.public = {
 			.plugin = {
 				.destroy = _destroy,
-			}
-		}
+			},
+		},
 	);
 	hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)kernel_klips_ipsec_create);

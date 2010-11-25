@@ -71,10 +71,10 @@ plugin_t *attr_sql_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
-				.destroy = _destroy
+				.destroy = _destroy,
 			},
 		},
-		.db = lib->db->create(lib->db, uri)
+		.db = lib->db->create(lib->db, uri),
 	);
 
 	if (!this->db)

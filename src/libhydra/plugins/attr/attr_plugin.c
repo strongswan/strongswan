@@ -57,7 +57,7 @@ plugin_t *attr_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.provider = attr_provider_create()
+		.provider = attr_provider_create(),
 	);
 	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
 
