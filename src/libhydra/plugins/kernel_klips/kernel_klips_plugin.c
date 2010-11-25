@@ -45,7 +45,7 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *kernel_klips_plugin_create()
 {
-	private_kernel_klips_plugin_t *this = malloc_thing(private_kernel_klips_plugin_t);
+	private_kernel_klips_plugin_t *this;
 
 	INIT(this,
 		.public = {
