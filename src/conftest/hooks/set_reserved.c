@@ -15,7 +15,7 @@
 
 #include "hook.h"
 
-#include <encoding/payloads/unknown_payload.h>
+#include <encoding/payloads/sa_payload.h>
 
 typedef struct private_set_reserved_t private_set_reserved_t;
 
@@ -45,6 +45,122 @@ struct private_set_reserved_t {
 	char *name;
 };
 
+/**
+ * Set reserved bit of a payload
+ */
+static void set_bit(private_set_reserved_t *this, message_t *message,
+					payload_type_t type, u_int nr)
+{
+	enumerator_t *payloads;
+	payload_t *payload;
+	bool *bit;
+
+	if (type == HEADER)
+	{
+		message->set_reserved_header_bit(message, nr);
+		DBG1(DBG_CFG, "setting reserved bit %d of %N",
+			  nr, payload_type_short_names, type);
+	}
+	else
+	{
+		payloads = message->create_payload_enumerator(message);
+		while (payloads->enumerate(payloads, &payload))
+		{
+			if (payload->get_type(payload) == type)
+			{
+				bit = payload_get_field(payload, RESERVED_BIT, nr);
+				if (bit)
+				{
+					DBG1(DBG_CFG, "setting reserved bit %d of %N",
+						 nr, payload_type_short_names, type);
+					*bit = TRUE;
+				}
+			}
+		}
+		payloads->destroy(payloads);
+	}
+}
+
+/**
+ * Set reserved byte of a payload
+ */
+static void set_byte(private_set_reserved_t *this, message_t *message,
+					payload_type_t type, u_int nr, u_int8_t byteval)
+{
+	enumerator_t *payloads;
+	payload_t *payload;
+	u_int8_t *byte;
+
+	if (type == TRANSFORM_SUBSTRUCTURE || type == PROPOSAL_SUBSTRUCTURE)
+	{
+		enumerator_t *transforms, *proposals;
+		transform_substructure_t *transform;
+		proposal_substructure_t *proposal;
+		sa_payload_t *sa;
+
+		payloads = message->create_payload_enumerator(message);
+		while (payloads->enumerate(payloads, &payload))
+		{
+			if (payload->get_type(payload) == SECURITY_ASSOCIATION)
+			{
+				sa = (sa_payload_t*)payload;
+				proposals = sa->create_substructure_enumerator(sa);
+				while (proposals->enumerate(proposals, &proposal))
+				{
+					if (type == PROPOSAL_SUBSTRUCTURE)
+					{
+						byte = payload_get_field(&proposal->payload_interface,
+												 RESERVED_BYTE, nr);
+						if (byte)
+						{
+							DBG1(DBG_CFG, "setting reserved byte %d of %N to %d",
+								 nr, payload_type_short_names, type, byteval);
+							*byte = byteval;
+						}
+					}
+					else if (type == TRANSFORM_SUBSTRUCTURE)
+					{
+						transforms = proposal->create_substructure_enumerator(
+																	proposal);
+						while (transforms->enumerate(transforms, &transform))
+						{
+							byte = payload_get_field(&transform->payload_interface,
+													 RESERVED_BYTE, nr);
+							if (byte)
+							{
+								DBG1(DBG_CFG, "setting reserved byte %d of %N to %d",
+									 nr, payload_type_short_names, type, byteval);
+								*byte = byteval;
+							}
+						}
+						transforms->destroy(transforms);
+					}
+				}
+				proposals->destroy(proposals);
+			}
+		}
+		payloads->destroy(payloads);
+	}
+	else
+	{
+		payloads = message->create_payload_enumerator(message);
+		while (payloads->enumerate(payloads, &payload))
+		{
+			if (payload->get_type(payload) == type)
+			{
+				byte = payload_get_field(payload, RESERVED_BYTE, nr);
+				if (byte)
+				{
+					DBG1(DBG_CFG, "setting reserved byte %d of %N to %d",
+						  nr, payload_type_short_names, type, byteval);
+					*byte = byteval;
+				}
+			}
+		}
+		payloads->destroy(payloads);
+	}
+}
+
 METHOD(listener_t, message, bool,
 	private_set_reserved_t *this, ike_sa_t *ike_sa, message_t *message,
 	bool incoming)
@@ -53,12 +169,10 @@ METHOD(listener_t, message, bool,
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
-		enumerator_t *bits, *bytes, *types, *payloads;
+		enumerator_t *bits, *bytes, *types;
 		payload_type_t type;
-		payload_t *payload;
 		char *nr, *name;
-		bool *bit;
-		u_int8_t *byte, byteval;
+		u_int8_t byteval;
 
 		types = conftest->test->create_section_enumerator(conftest->test,
 													"hooks.%s", this->name);
@@ -79,28 +193,7 @@ METHOD(listener_t, message, bool,
 			bits = enumerator_create_token(nr, ",", " ");
 			while (bits->enumerate(bits, &nr))
 			{
-				if (type == HEADER)
-				{
-					message->set_reserved_header_bit(message, atoi(nr));
-					DBG1(DBG_CFG, "setting reserved bit %s of %N",
-						  nr, payload_type_short_names, type);
-					continue;
-				}
-				payloads = message->create_payload_enumerator(message);
-				while (payloads->enumerate(payloads, &payload))
-				{
-					if (payload->get_type(payload) == type)
-					{
-						bit = payload_get_field(payload, RESERVED_BIT, atoi(nr));
-						if (bit)
-						{
-							DBG1(DBG_CFG, "setting reserved bit %s of %N",
-								  nr, payload_type_short_names, type);
-							*bit = TRUE;
-						}
-					}
-				}
-				payloads->destroy(payloads);
+				set_bit(this, message, type, atoi(nr));
 			}
 			bits->destroy(bits);
 
@@ -111,21 +204,7 @@ METHOD(listener_t, message, bool,
 			bytes = enumerator_create_token(nr, ",", " ");
 			while (bytes->enumerate(bytes, &nr))
 			{
-				payloads = message->create_payload_enumerator(message);
-				while (payloads->enumerate(payloads, &payload))
-				{
-					if (payload->get_type(payload) == type)
-					{
-						byte = payload_get_field(payload, RESERVED_BYTE, atoi(nr));
-						if (byte)
-						{
-							DBG1(DBG_CFG, "setting reserved byte %s of %N to %d",
-								  nr, payload_type_short_names, type, byteval);
-							*byte = byteval;
-						}
-					}
-				}
-				payloads->destroy(payloads);
+				set_byte(this, message, type, atoi(nr), byteval);
 			}
 			bytes->destroy(bytes);
 		}
