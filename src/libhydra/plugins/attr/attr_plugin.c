@@ -49,7 +49,7 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *attr_plugin_create()
 {
-	private_attr_plugin_t *this = malloc_thing(private_attr_plugin_t);
+	private_attr_plugin_t *this;
 
 	INIT(this,
 		.public = {
