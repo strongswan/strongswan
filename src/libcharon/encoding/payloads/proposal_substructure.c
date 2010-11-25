@@ -342,6 +342,12 @@ METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 	return proposal;
 }
 
+METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
+	private_proposal_substructure_t *this)
+{
+	return this->transforms->create_enumerator(this->transforms);
+}
+
 METHOD2(payload_t, proposal_substructure_t, destroy, void,
 	private_proposal_substructure_t *this)
 {
@@ -375,6 +381,7 @@ proposal_substructure_t *proposal_substructure_create()
 			.get_protocol_id = _get_protocol_id,
 			.set_is_last_proposal = _set_is_last_proposal,
 			.get_proposal = _get_proposal,
+			.create_substructure_enumerator = _create_substructure_enumerator,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
 			.destroy = _destroy,

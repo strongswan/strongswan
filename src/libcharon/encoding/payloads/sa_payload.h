@@ -61,6 +61,13 @@ struct sa_payload_t {
 	void (*add_proposal) (sa_payload_t *this, proposal_t *proposal);
 
 	/**
+	 * Create an enumerator over all proposal substructures.
+	 *
+	 * @return					enumerator over proposal_substructure_t
+	 */
+	enumerator_t* (*create_substructure_enumerator)(sa_payload_t *this);
+
+	/**
 	 * Destroys an sa_payload_t object.
 	 */
 	void (*destroy) (sa_payload_t *this);

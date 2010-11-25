@@ -262,6 +262,12 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	return list;
 }
 
+METHOD(sa_payload_t, create_substructure_enumerator, enumerator_t*,
+	private_sa_payload_t *this)
+{
+	return this->proposals->create_enumerator(this->proposals);
+}
+
 METHOD2(payload_t, sa_payload_t, destroy, void,
 	private_sa_payload_t *this)
 {
@@ -290,6 +296,7 @@ sa_payload_t *sa_payload_create()
 			},
 			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
+			.create_substructure_enumerator = _create_substructure_enumerator,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,

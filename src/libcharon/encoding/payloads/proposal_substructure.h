@@ -111,6 +111,13 @@ struct proposal_substructure_t {
 	proposal_t * (*get_proposal) (proposal_substructure_t *this);
 
 	/**
+	 * Create an enumerator over transform substructures.
+	 *
+	 * @return			enumerator over transform_substructure_t
+	 */
+	enumerator_t* (*create_substructure_enumerator)(proposal_substructure_t *this);
+
+	/**
 	 * Destroys an proposal_substructure_t object.
 	 */
 	void (*destroy) (proposal_substructure_t *this);
