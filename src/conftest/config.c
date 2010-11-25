@@ -244,6 +244,7 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	enumerator_t *enumerator;
 	identification_t *lid, *rid;
 	char *child;
+	uintptr_t strength;
 
 	ike_cfg = load_ike_config(this, settings, config);
 	peer_cfg = peer_cfg_create(config, 2, ike_cfg, CERT_ALWAYS_SEND,
@@ -261,6 +262,16 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	rid = identification_create_from_string(
 				settings->get_str(settings, "configs.%s.rid", "%any", config));
+	strength = settings->get_int(settings, "configs.%s.rsa_strength", 0);
+	if (strength)
+	{
+		auth->add(auth, AUTH_RULE_RSA_STRENGTH, strength);
+	}
+	strength = settings->get_int(settings, "configs.%s.ecdsa_strength", 0);
+	if (strength)
+	{
+		auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
+	}
 	auth->add(auth, AUTH_RULE_IDENTITY, rid);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
