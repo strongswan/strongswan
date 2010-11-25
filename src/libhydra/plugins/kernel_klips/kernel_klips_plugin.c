@@ -32,10 +32,8 @@ struct private_kernel_klips_plugin_t {
 	kernel_klips_plugin_t public;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_kernel_klips_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_kernel_klips_plugin_t *this)
 {
 	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)kernel_klips_ipsec_create);
@@ -49,8 +47,13 @@ plugin_t *kernel_klips_plugin_create()
 {
 	private_kernel_klips_plugin_t *this = malloc_thing(private_kernel_klips_plugin_t);
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			}
+		}
+	);
 	hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)kernel_klips_ipsec_create);
 
