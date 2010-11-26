@@ -62,7 +62,7 @@ static bool private_enumerator_enumerate(private_enumerator_t *this,
 	while (this->inner->enumerate(this->inner, &type, &blob))
 	{
 		this->current = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-										   BUILD_BLOB_ASN1_DER, blob,
+										   BUILD_BLOB_PEM, blob,
 										   BUILD_END);
 		if (this->current)
 		{
@@ -148,7 +148,7 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 	while (this->inner->enumerate(this->inner, &type, &blob))
 	{
 		this->current = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-										   BUILD_BLOB_ASN1_DER, blob,
+										   BUILD_BLOB_PEM, blob,
 										   BUILD_END);
 		if (this->current)
 		{
