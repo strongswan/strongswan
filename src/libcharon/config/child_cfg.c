@@ -129,26 +129,20 @@ struct private_child_cfg_t {
 	bool install_policy;
 };
 
-/**
- * Implementation of child_cfg_t.get_name.
- */
-static char *get_name(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_name, char*,
+	private_child_cfg_t *this)
 {
 	return this->name;
 }
 
-/**
- * Implementation of child_cfg_t.add_proposal.
- */
-static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
+METHOD(child_cfg_t, add_proposal, void,
+	private_child_cfg_t *this, proposal_t *proposal)
 {
 	this->proposals->insert_last(this->proposals, proposal);
 }
 
-/**
- * Implementation of child_cfg_t.get_proposals.
- */
-static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
+METHOD(child_cfg_t, get_proposals, linked_list_t*,
+	private_child_cfg_t *this, bool strip_dh)
 {
 	enumerator_t *enumerator;
 	proposal_t *current;
@@ -169,12 +163,9 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 	return proposals;
 }
 
-/**
- * Implementation of child_cfg_t.select_proposal.
- */
-static proposal_t* select_proposal(private_child_cfg_t*this,
-								   linked_list_t *proposals, bool strip_dh,
-								   bool private)
+METHOD(child_cfg_t, select_proposal, proposal_t*,
+	private_child_cfg_t*this, linked_list_t *proposals, bool strip_dh,
+	bool private)
 {
 	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
@@ -219,11 +210,8 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 	return selected;
 }
 
-/**
- * Implementation of child_cfg_t.add_traffic_selector.
- */
-static void add_traffic_selector(private_child_cfg_t *this, bool local,
-								 traffic_selector_t *ts)
+METHOD(child_cfg_t, add_traffic_selector, void,
+	private_child_cfg_t *this, bool local, traffic_selector_t *ts)
 {
 	if (local)
 	{
@@ -235,12 +223,8 @@ static void add_traffic_selector(private_child_cfg_t *this, bool local,
 	}
 }
 
-/**
- * Implementation of child_cfg_t.get_traffic_selectors.
- */
-static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool local,
-											linked_list_t *supplied,
-											host_t *host)
+METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
+	private_child_cfg_t *this, bool local, linked_list_t *supplied,	host_t *host)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
@@ -346,18 +330,14 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	return result;
 }
 
-/**
- * Implementation of child_cfg_t.get_updown.
- */
-static char* get_updown(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_updown, char*,
+	private_child_cfg_t *this)
 {
 	return this->updown;
 }
 
-/**
- * Implementation of child_cfg_t.get_hostaccess.
- */
-static bool get_hostaccess(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_hostaccess, bool,
+	private_child_cfg_t *this)
 {
 	return this->hostaccess;
 }
@@ -378,10 +358,8 @@ static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
 }
 #define APPLY_JITTER(l) l.rekey = apply_jitter(l.rekey, l.jitter)
 
-/**
- * Implementation of child_cfg_t.get_lifetime.
- */
-static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_lifetime, lifetime_cfg_t*,
+	private_child_cfg_t *this)
 {
 	lifetime_cfg_t *lft = malloc_thing(lifetime_cfg_t);
 	memcpy(lft, &this->lifetime, sizeof(lifetime_cfg_t));
@@ -391,34 +369,26 @@ static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
 	return lft;
 }
 
-/**
- * Implementation of child_cfg_t.get_mode.
- */
-static ipsec_mode_t get_mode(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_mode, ipsec_mode_t,
+	private_child_cfg_t *this)
 {
 	return this->mode;
 }
 
-/**
- * Implementation of child_cfg_t.get_dpd_action.
- */
-static action_t get_dpd_action(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_dpd_action, action_t,
+	private_child_cfg_t *this)
 {
 	return this->dpd_action;
 }
 
-/**
- * Implementation of child_cfg_t.get_close_action.
- */
-static action_t get_close_action(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_close_action, action_t,
+	private_child_cfg_t *this)
 {
 	return this->close_action;
 }
 
-/**
- * Implementation of child_cfg_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
+	private_child_cfg_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
@@ -436,77 +406,58 @@ static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 	return dh_group;
 }
 
-/**
- * Implementation of child_cfg_t.use_ipcomp.
- */
-static bool use_ipcomp(private_child_cfg_t *this)
+METHOD(child_cfg_t, use_ipcomp, bool,
+	private_child_cfg_t *this)
 {
 	return this->use_ipcomp;
 }
 
-/**
- * Implementation of child_cfg_t.get_inactivity.
- */
-static u_int32_t get_inactivity(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_inactivity, u_int32_t,
+	private_child_cfg_t *this)
 {
 	return this->inactivity;
 }
 
-/**
- * Implementation of child_cfg_t.get_reqid.
- */
-static u_int32_t get_reqid(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_reqid, u_int32_t,
+	private_child_cfg_t *this)
 {
 	return this->reqid;
 }
 
-/**
- * Implementation of child_cfg_t.get_mark.
- */
-static mark_t get_mark(private_child_cfg_t *this, bool inbound)
+METHOD(child_cfg_t, get_mark, mark_t,
+	private_child_cfg_t *this, bool inbound)
 {
 	return inbound ? this->mark_in : this->mark_out;
 }
 
-/**
- * Implementation of child_cfg_t.set_mipv6_options.
- */
-static void set_mipv6_options(private_child_cfg_t *this, bool proxy_mode,
-														 bool install_policy)
+METHOD(child_cfg_t, set_mipv6_options, void,
+	private_child_cfg_t *this, bool proxy_mode, bool install_policy)
 {
 	this->proxy_mode = proxy_mode;
 	this->install_policy = install_policy;
 }
 
-/**
- * Implementation of child_cfg_t.use_proxy_mode.
- */
-static bool use_proxy_mode(private_child_cfg_t *this)
+METHOD(child_cfg_t, use_proxy_mode, bool,
+	private_child_cfg_t *this)
 {
 	return this->proxy_mode;
 }
 
-/**
- * Implementation of child_cfg_t.install_policy.
- */
-static bool install_policy(private_child_cfg_t *this)
+METHOD(child_cfg_t, install_policy, bool,
+	private_child_cfg_t *this)
 {
 	return this->install_policy;
 }
 
-/**
- * Implementation of child_cfg_t.get_ref.
- */
-static child_cfg_t* get_ref(private_child_cfg_t *this)
+METHOD(child_cfg_t, get_ref, child_cfg_t*,
+	private_child_cfg_t *this)
 {
 	ref_get(&this->refcount);
 	return &this->public;
 }
 
-/**
- * Implements child_cfg_t.destroy.
- */
-static void destroy(private_child_cfg_t *this)
+METHOD(child_cfg_t, destroy, void,
+	private_child_cfg_t *this)
 {
 	if (ref_put(&this->refcount))
 	{
@@ -532,66 +483,59 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  u_int32_t inactivity, u_int32_t reqid,
 							  mark_t *mark_in, mark_t *mark_out)
 {
-	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
+	private_child_cfg_t *this;
 
-	this->public.get_name = (char* (*) (child_cfg_t*))get_name;
-	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
-	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
-	this->public.add_proposal = (void (*) (child_cfg_t*,proposal_t*))add_proposal;
-	this->public.get_proposals = (linked_list_t* (*) (child_cfg_t*,bool))get_proposals;
-	this->public.select_proposal = (proposal_t* (*) (child_cfg_t*,linked_list_t*,bool,bool))select_proposal;
-	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
-	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
-	this->public.get_mode = (ipsec_mode_t (*) (child_cfg_t *))get_mode;
-	this->public.get_dpd_action = (action_t (*) (child_cfg_t *))get_dpd_action;
-	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
-	this->public.get_lifetime = (lifetime_cfg_t* (*) (child_cfg_t *))get_lifetime;
-	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
-	this->public.set_mipv6_options = (void (*) (child_cfg_t*,bool,bool))set_mipv6_options;
-	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
-	this->public.get_inactivity = (u_int32_t (*) (child_cfg_t *))get_inactivity;
-	this->public.get_reqid = (u_int32_t (*) (child_cfg_t *))get_reqid;
-	this->public.get_mark = (mark_t (*) (child_cfg_t *,bool))get_mark;
-	this->public.use_proxy_mode = (bool (*) (child_cfg_t *))use_proxy_mode;
-	this->public.install_policy = (bool (*) (child_cfg_t *))install_policy;
-	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
-	this->public.destroy = (void (*) (child_cfg_t*))destroy;
-
-	this->name = strdup(name);
-	this->updown = updown ? strdup(updown) : NULL;
-	this->hostaccess = hostaccess;
-	this->mode = mode;
-	this->dpd_action = dpd_action;
-	this->close_action = close_action;
-	this->use_ipcomp = ipcomp;
-	this->inactivity = inactivity;
-	this->reqid = reqid;
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.add_traffic_selector = _add_traffic_selector,
+			.get_traffic_selectors = _get_traffic_selectors,
+			.add_proposal = _add_proposal,
+			.get_proposals = _get_proposals,
+			.select_proposal = _select_proposal,
+			.get_updown = _get_updown,
+			.get_hostaccess = _get_hostaccess,
+			.get_mode = _get_mode,
+			.get_dpd_action = _get_dpd_action,
+			.get_close_action = _get_close_action,
+			.get_lifetime = _get_lifetime,
+			.get_dh_group = _get_dh_group,
+			.set_mipv6_options = _set_mipv6_options,
+			.use_ipcomp = _use_ipcomp,
+			.get_inactivity = _get_inactivity,
+			.get_reqid = _get_reqid,
+			.get_mark = _get_mark,
+			.use_proxy_mode = _use_proxy_mode,
+			.install_policy = _install_policy,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.name = strdup(name),
+		.updown = updown ? strdup(updown) : NULL,
+		.hostaccess = hostaccess,
+		.mode = mode,
+		.start_action = start_action,
+		.dpd_action = dpd_action,
+		.close_action = close_action,
+		.use_ipcomp = ipcomp,
+		.inactivity = inactivity,
+		.reqid = reqid,
+		.proxy_mode = FALSE,
+		.install_policy = TRUE,
+		.refcount = 1,
+		.proposals = linked_list_create(),
+		.my_ts = linked_list_create(),
+		.other_ts = linked_list_create(),
+	);
 
 	if (mark_in)
 	{
 		this->mark_in = *mark_in;
 	}
-	else
-	{
-		this->mark_in.value = 0;
-		this->mark_in.mask  = 0;
-	}
 	if (mark_out)
 	{
 		this->mark_out = *mark_out;
 	}
-	else
-	{
-		this->mark_out.value = 0;
-		this->mark_out.mask  = 0;
-	}
-
-	this->proxy_mode = FALSE;
-	this->install_policy = TRUE;
-	this->refcount = 1;
-	this->proposals = linked_list_create();
-	this->my_ts = linked_list_create();
-	this->other_ts = linked_list_create();
 	memcpy(&this->lifetime, lifetime, sizeof(lifetime_cfg_t));
 
 	return &this->public;
