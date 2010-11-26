@@ -207,11 +207,8 @@ static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data
 	return enumerator;
 }
 
-/**
- * Implementation of credential_set_t.create_cdp_enumerator.
- */
-static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
-								certificate_type_t type, identification_t *id)
+METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
+	private_stroke_ca_t *this, certificate_type_t type, identification_t *id)
 {
 	cdp_data_t *data;
 
@@ -235,10 +232,9 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl : (void*)create_inner_cdp,
 			data, (void*)cdp_data_destroy);
 }
-/**
- * Implementation of stroke_ca_t.add.
- */
-static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
+
+METHOD(stroke_ca_t, add, void,
+	private_stroke_ca_t *this, stroke_msg_t *msg)
 {
 	certificate_t *cert;
 	ca_section_t *ca;
@@ -279,10 +275,8 @@ static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
 	}
 }
 
-/**
- * Implementation of stroke_ca_t.del.
- */
-static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
+METHOD(stroke_ca_t, del, void,
+	private_stroke_ca_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
 	ca_section_t *ca = NULL;
@@ -336,10 +330,8 @@ static void list_uris(linked_list_t *list, char *label, FILE *out)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of stroke_ca_t.check_for_hash_and_url.
- */
-static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cert)
+METHOD(stroke_ca_t, check_for_hash_and_url, void,
+	private_stroke_ca_t *this, certificate_t* cert)
 {
 	ca_section_t *section;
 	enumerator_t *enumerator;
@@ -376,10 +368,8 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 	hasher->destroy(hasher);
 }
 
-/**
- * Implementation of stroke_ca_t.list.
- */
-static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_ca_t, list, void,
+	private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 {
 	bool first = TRUE;
 	ca_section_t *section;
@@ -426,10 +416,8 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of stroke_ca_t.destroy
- */
-static void destroy(private_stroke_ca_t *this)
+METHOD(stroke_ca_t, destroy, void,
+	private_stroke_ca_t *this)
 {
 	this->sections->destroy_function(this->sections, (void*)ca_section_destroy);
 	this->lock->destroy(this->lock);
@@ -441,22 +429,27 @@ static void destroy(private_stroke_ca_t *this)
  */
 stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 {
-	private_stroke_ca_t *this = malloc_thing(private_stroke_ca_t);
+	private_stroke_ca_t *this;
 
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)return_null;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)create_cdp_enumerator;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.add = (void(*)(stroke_ca_t*, stroke_msg_t *msg))add;
-	this->public.del = (void(*)(stroke_ca_t*, stroke_msg_t *msg))del;
-	this->public.list = (void(*)(stroke_ca_t*, stroke_msg_t *msg, FILE *out))list;
-	this->public.check_for_hash_and_url = (void(*)(stroke_ca_t*, certificate_t*))check_for_hash_and_url;
-	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
-
-	this->sections = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->cred = cred;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_private_enumerator = (void*)return_null,
+				.create_cert_enumerator = (void*)return_null,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = _create_cdp_enumerator,
+				.cache_cert = (void*)nop,
+			},
+			.add = _add,
+			.del = _del,
+			.list = _list,
+			.check_for_hash_and_url = _check_for_hash_and_url,
+			.destroy = _destroy,
+		},
+		.sections = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.cred = cred,
+	);
 
 	return &this->public;
 }
