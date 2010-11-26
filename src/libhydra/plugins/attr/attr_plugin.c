@@ -36,10 +36,8 @@ struct private_attr_plugin_t {
 	attr_provider_t *provider;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_attr_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_attr_plugin_t *this)
 {
 	hydra->attributes->remove_provider(hydra->attributes, &this->provider->provider);
 	this->provider->destroy(this->provider);
@@ -51,11 +49,16 @@ static void destroy(private_attr_plugin_t *this)
  */
 plugin_t *attr_plugin_create()
 {
-	private_attr_plugin_t *this = malloc_thing(private_attr_plugin_t);
+	private_attr_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
-	this->provider = attr_provider_create();
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.provider = attr_provider_create(),
+	);
 	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
 
 	return &this->public.plugin;

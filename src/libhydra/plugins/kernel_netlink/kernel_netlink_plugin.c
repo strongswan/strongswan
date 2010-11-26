@@ -33,10 +33,8 @@ struct private_kernel_netlink_plugin_t {
 	kernel_netlink_plugin_t public;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_kernel_netlink_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_kernel_netlink_plugin_t *this)
 {
 	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
 					(kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
@@ -50,10 +48,15 @@ static void destroy(private_kernel_netlink_plugin_t *this)
  */
 plugin_t *kernel_netlink_plugin_create()
 {
-	private_kernel_netlink_plugin_t *this = malloc_thing(private_kernel_netlink_plugin_t);
+	private_kernel_netlink_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 	hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 					(kernel_ipsec_constructor_t)kernel_netlink_ipsec_create);
 	hydra->kernel_interface->add_net_interface(hydra->kernel_interface,
