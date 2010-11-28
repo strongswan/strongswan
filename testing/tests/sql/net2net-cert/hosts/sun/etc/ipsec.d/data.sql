@@ -109,9 +109,9 @@ INSERT INTO ike_configs (
 );
 
 INSERT INTO peer_configs (
-  name, ike_cfg, local_id, remote_id, mobike
+  name, ike_cfg, local_id, remote_id, mobike, dpd_delay
 ) VALUES (
-  'net-net', 1, 5, 4, 0
+  'net-net', 1, 5, 4, 0, 0
 );
 
 INSERT INTO child_configs (

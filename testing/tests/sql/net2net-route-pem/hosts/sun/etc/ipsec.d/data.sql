@@ -109,27 +109,27 @@ INSERT INTO ike_configs (
 );
 
 INSERT INTO peer_configs (
-  name, ike_cfg, local_id, remote_id, mobike
+  name, ike_cfg, local_id, remote_id, mobike, dpd_delay
 ) VALUES (
-  'net-net', 1, 5, 4, 0
+  'net-net', 1, 5, 4, 0, 30
 );
 
 INSERT INTO child_configs (
-  name, updown, start_action
+  name, updown, start_action, dpd_action
 ) VALUES (
-  'net-1', 'ipsec _updown iptables', 1
+  'net-1', 'ipsec _updown iptables', 1, 1
 );
 
 INSERT INTO child_configs (
-  name, updown, start_action
+  name, updown, start_action, dpd_action
 ) VALUES (
-  'net-2', 'ipsec _updown iptables', 1
+  'net-2', 'ipsec _updown iptables', 1, 1
 );
 
 INSERT INTO child_configs (
-  name, updown, start_action
+  name, updown, start_action, dpd_action
 ) VALUES (
-  'net-3', 'ipsec _updown iptables', 0
+  'net-3', 'ipsec _updown iptables', 0, 0
 );
 
 INSERT INTO peer_config_child_config (
