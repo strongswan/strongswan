@@ -20,6 +20,7 @@ CREATE TABLE `child_configs` (
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
   `hostaccess` tinyint(1) unsigned NOT NULL default '0',
   `mode` tinyint(4) unsigned NOT NULL default '2',
+  `start_action` tinyint(4) unsigned NOT NULL default '0'
   `dpd_action` tinyint(4) unsigned NOT NULL default '0',
   `close_action` tinyint(4) unsigned NOT NULL default '0',
   `ipcomp` tinyint(4) unsigned NOT NULL default '0',

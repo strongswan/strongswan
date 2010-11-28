@@ -32,14 +32,15 @@ typedef struct child_cfg_t child_cfg_t;
 #include <kernel/kernel_ipsec.h>
 
 /**
- * Action to take when DPD detected/connection gets closed by peer.
+ * Action to take when connection is loaded, DPD is detected or
+ * connection gets closed by peer.
  */
 enum action_t {
 	/** No action */
 	ACTION_NONE,
-	/** Route config to reestablish on demand */
+	/** Route config to establish or reestablish on demand */
 	ACTION_ROUTE,
-	/** Restart config immediately */
+	/** Start or restart config immediately */
 	ACTION_RESTART,
 };
 
@@ -169,6 +170,13 @@ struct child_cfg_t {
 	ipsec_mode_t (*get_mode) (child_cfg_t *this);
 
 	/**
+	 * Action to take to start CHILD_SA.
+	 *
+	 * @return				start action
+	 */
+	action_t (*get_start_action) (child_cfg_t *this);
+
+	/**
 	 * Action to take on DPD.
 	 *
 	 * @return				DPD action
@@ -276,6 +284,7 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
+ * @param start_action		start action
  * @param dpd_action		DPD action
  * @param close_action		close action
  * @param ipcomp			use IPComp, if peer supports it
@@ -287,9 +296,9 @@ struct child_cfg_t {
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
-							  ipsec_mode_t mode, action_t dpd_action,
-							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity, u_int32_t reqid,
+							  ipsec_mode_t mode, action_t start_action,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
 							  mark_t *mark_in, mark_t *mark_out);
 
 #endif /** CHILD_CFG_H_ @}*/

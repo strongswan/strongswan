@@ -80,6 +80,11 @@ struct private_child_cfg_t {
 	ipsec_mode_t mode;
 
 	/**
+	 * action to take to start CHILD_SA
+	 */
+	action_t start_action;
+
+	/**
 	 * action to take on DPD
 	 */
 	action_t dpd_action;
@@ -375,6 +380,12 @@ METHOD(child_cfg_t, get_mode, ipsec_mode_t,
 	return this->mode;
 }
 
+METHOD(child_cfg_t, get_start_action, action_t,
+	private_child_cfg_t *this)
+{
+	return this->start_action;
+}
+
 METHOD(child_cfg_t, get_dpd_action, action_t,
 	private_child_cfg_t *this)
 {
@@ -478,9 +489,9 @@ METHOD(child_cfg_t, destroy, void,
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
-							  ipsec_mode_t mode, action_t dpd_action,
-							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity, u_int32_t reqid,
+							  ipsec_mode_t mode, action_t start_action,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
 							  mark_t *mark_in, mark_t *mark_out)
 {
 	private_child_cfg_t *this;
@@ -496,6 +507,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.get_updown = _get_updown,
 			.get_hostaccess = _get_hostaccess,
 			.get_mode = _get_mode,
+			.get_start_action = _get_start_action,
 			.get_dpd_action = _get_dpd_action,
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,

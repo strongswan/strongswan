@@ -19,6 +19,7 @@ CREATE TABLE child_configs (
   updown TEXT DEFAULT NULL,
   hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '2',
+  start_action INTEGER NOT NULL DEFAULT '0',
   dpd_action INTEGER NOT NULL DEFAULT '0',
   close_action INTEGER NOT NULL DEFAULT '0',
   ipcomp INTEGER NOT NULL DEFAULT '0'
