@@ -389,10 +389,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 	return NULL;
 }
 
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_sql_config_t *this, char *name)
+METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
+	private_sql_config_t *this, char *name)
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
@@ -462,11 +460,8 @@ static void ike_enumerator_destroy(ike_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_sql_config_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_sql_config_t *this, host_t *me, host_t *other)
 {
 	ike_enumerator_t *e = malloc_thing(ike_enumerator_t);
 
@@ -530,12 +525,8 @@ static void peer_enumerator_destroy(peer_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
-												identification_t *me,
-												identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	private_sql_config_t *this, identification_t *me, identification_t *other)
 {
 	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
 
@@ -572,10 +563,8 @@ static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
 	return &e->public;
 }
 
-/**
- * Implementation of sql_config_t.destroy.
- */
-static void destroy(private_sql_config_t *this)
+METHOD(sql_config_t, destroy, void,
+	private_sql_config_t *this)
 {
 	free(this);
 }
@@ -585,14 +574,19 @@ static void destroy(private_sql_config_t *this)
  */
 sql_config_t *sql_config_create(database_t *db)
 {
-	private_sql_config_t *this = malloc_thing(private_sql_config_t);
+	private_sql_config_t *this;
 
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(sql_config_t*))destroy;
-
-	this->db = db;
+	INIT(this,
+		.public = {
+			.backend = {
+				.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+				.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+				.get_peer_cfg_by_name = _get_peer_cfg_by_name,
+			},
+			.destroy = _destroy,
+		},
+		.db = db
+	);
 
 	return &this->public;
 }
