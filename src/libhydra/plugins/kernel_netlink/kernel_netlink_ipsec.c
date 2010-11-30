@@ -866,7 +866,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
-	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool encap, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
@@ -882,7 +882,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	if (ipcomp != IPCOMP_NONE && cpi != 0)
 	{
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
-		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
+		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark, tfc,
 			   &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
 			   mode, ipcomp, 0, FALSE, inbound, NULL, NULL);
 		ipcomp = IPCOMP_NONE;
@@ -1151,6 +1151,24 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
 		mrk->v = mark.value;
 		mrk->m = mark.mask;
+		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
+
+	if (tfc)
+	{
+		u_int32_t *tfcpad;
+
+		rthdr->rta_type = XFRMA_TFCPAD;
+		rthdr->rta_len = RTA_LENGTH(sizeof(u_int32_t));
+
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+
+		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
+		*tfcpad = tfc;
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 

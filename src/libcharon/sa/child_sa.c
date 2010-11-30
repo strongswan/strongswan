@@ -566,6 +566,7 @@ METHOD(child_sa_t, install, status_t,
 	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
+	u_int32_t tfc = 0;
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
@@ -639,7 +640,7 @@ METHOD(child_sa_t, install, status_t,
 
 	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
-				inbound ? this->mark_in : this->mark_out,
+				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->encap, update, src_ts, dst_ts);
 

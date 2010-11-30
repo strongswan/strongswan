@@ -1183,7 +1183,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, ipcomp_spi, said_next->proto, c->spd.reqid,
-						mark, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						mark, 0, &lt_none, ENCR_UNDEFINED, chunk_empty,
 						AUTH_UNDEFINED, chunk_empty, mode,
 						st->st_ipcomp.attrs.transid, 0 /* cpi */, FALSE,
 						inbound, NULL, NULL) != SUCCESS)
@@ -1292,7 +1292,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, esp_spi, said_next->proto, c->spd.reqid,
-						mark, &lt_none, enc_alg, enc_key,
+						mark, 0, &lt_none, enc_alg, enc_key,
 						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
 						encap, inbound, NULL, NULL) != SUCCESS)
 		{
@@ -1325,7 +1325,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 		if (hydra->kernel_interface->add_sa(hydra->kernel_interface, host_src,
 						host_dst, ah_spi, said_next->proto, c->spd.reqid,
-						mark, &lt_none, ENCR_UNDEFINED, chunk_empty,
+						mark, 0, &lt_none, ENCR_UNDEFINED, chunk_empty,
 						auth_alg, auth_key, mode, IPCOMP_NONE, 0 /* cpi */,
 						FALSE, inbound, NULL, NULL) != SUCCESS)
 		{
