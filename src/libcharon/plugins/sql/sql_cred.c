@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -36,6 +37,7 @@ struct private_sql_cred_t {
 	 */
 	database_t *db;
 };
+
 
 /**
  * enumerator over private keys
@@ -115,6 +117,7 @@ METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	}
 	return &e->public;
 }
+
 
 /**
  * enumerator over certificates
@@ -199,6 +202,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	}
 	return &e->public;
 }
+
 
 /**
  * enumerator over shared keys
@@ -310,6 +314,109 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	return &e->public;
 }
 
+
+/**
+ * enumerator over CDPs
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** inner SQL enumerator */
+	enumerator_t *inner;
+	/** currently enumerated string */
+	char *current;
+} cdp_enumerator_t;
+
+/**
+ * types of CDPs
+ */
+typedef enum {
+	/** any available CDP */
+	CDP_TYPE_ANY = 0,
+	/** CRL */
+	CDP_TYPE_CRL,
+	/** OCSP Responder */
+	CDP_TYPE_OCSP,
+} cdp_type_t;
+
+METHOD(enumerator_t, cdp_enumerator_enumerate, bool,
+	   cdp_enumerator_t *this, char **uri)
+{
+	char *text;
+
+	free(this->current);
+	while (this->inner->enumerate(this->inner, &text))
+	{
+		*uri = this->current = strdup(text);
+		return TRUE;
+	}
+	this->current = NULL;
+	return FALSE;
+}
+
+METHOD(enumerator_t, cdp_enumerator_destroy, void,
+	   cdp_enumerator_t *this)
+{
+	free(this->current);
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
+	   private_sql_cred_t *this, certificate_type_t type, identification_t *id)
+{
+	cdp_enumerator_t *e;
+	cdp_type_t cdp_type;
+
+	switch (type)
+	{	/* we serve CRLs and OCSP responders */
+		case CERT_X509_CRL:
+			cdp_type = CDP_TYPE_CRL;
+			break;
+		case CERT_X509_OCSP_RESPONSE:
+			cdp_type = CDP_TYPE_OCSP;
+			break;
+		case CERT_ANY:
+			cdp_type = CDP_TYPE_ANY;
+			break;
+		default:
+			return NULL;
+	}
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_cdp_enumerator_enumerate,
+			.destroy = _cdp_enumerator_destroy,
+		},
+	);
+	if (id && id->get_type(id) != ID_ANY)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT dp.uri FROM certificate_distribution_points AS dp "
+				"JOIN certificate_authorities AS ca ON ca.id = dp.ca "
+				"JOIN certificates AS c ON c.id = ca.certificate "
+				"JOIN certificate_identity AS ci ON c.id = ci.certificate "
+				"JOIN identities AS i ON ci.identity = i.id "
+				"WHERE i.type = ? AND i.data = ? AND (? OR dp.type = ?)",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_INT, cdp_type == CDP_TYPE_ANY, DB_INT, cdp_type,
+				DB_TEXT);
+	}
+	else
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT dp.uri FROM certificate_distribution_points AS dp "
+				"WHERE (? OR dp.type = ?)",
+				DB_INT, cdp_type == CDP_TYPE_ANY, DB_INT, cdp_type,
+				DB_TEXT);
+	}
+	if (!e->inner)
+	{
+		free(e);
+		return NULL;
+	}
+	return &e->public;
+}
+
 METHOD(credential_set_t, cache_cert, void,
 	   private_sql_cred_t *this, certificate_t *cert)
 {
@@ -335,7 +442,7 @@ sql_cred_t *sql_cred_create(database_t *db)
 				.create_private_enumerator = _create_private_enumerator,
 				.create_cert_enumerator = _create_cert_enumerator,
 				.create_shared_enumerator = _create_shared_enumerator,
-				.create_cdp_enumerator = (void*)return_null,
+				.create_cdp_enumerator = _create_cdp_enumerator,
 				.cache_cert = _cache_cert,
 			},
 			.destroy = _destroy,
