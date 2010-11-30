@@ -39,17 +39,17 @@ CREATE INDEX child_config_traffic_selector_all ON child_config_traffic_selector 
   child_cfg, traffic_selector
 );
 
-DROP TABLE IF EXISTS algorithms;
-CREATE TABLE algorithms (
+DROP TABLE IF EXISTS proposals;
+CREATE TABLE proposals (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  algorithm TEXT NOT NULL
+  proposal TEXT NOT NULL
 );
 
-DROP TABLE IF EXISTS child_config_algorithm;
-CREATE TABLE child_config_algorithm (
+DROP TABLE IF EXISTS child_config_proposal;
+CREATE TABLE child_config_proposal (
   child_cfg INTEGER NOT NULL,
   prio INTEGER NOT NULL,
-  alg INTEGER NOT NULL
+  prop INTEGER NOT NULL
 );
 
 DROP TABLE IF EXISTS ike_configs;
@@ -61,11 +61,11 @@ CREATE TABLE ike_configs (
   remote TEXT NOT NULL
 );
 
-DROP TABLE IF EXISTS ike_config_algorithm;
-CREATE TABLE ike_config_algorithm (
+DROP TABLE IF EXISTS ike_config_proposal;
+CREATE TABLE ike_config_proposal (
   ike_cfg INTEGER NOT NULL,
   prio INTEGER NOT NULL,
-  alg INTEGER NOT NULL
+  prop INTEGER NOT NULL
 );
 
 DROP TABLE IF EXISTS peer_configs;

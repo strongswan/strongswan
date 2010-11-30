@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Martin Willi
+ * Copyright (C) 2010 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -126,19 +127,19 @@ static void add_esp_proposals(private_sql_config_t *this,
 {
 	enumerator_t *e;
 	proposal_t *proposal;
-	char *alg;
+	char *prop;
 	bool use_default = TRUE;
 
 	e = this->db->query(this->db,
-			"SELECT algorithm "
-			"FROM algorithms JOIN child_config_algorithm ON id = alg "
+			"SELECT proposal "
+			"FROM proposals JOIN child_config_proposal ON id = prop "
 			"WHERE child_cfg = ? ORDER BY prio",
 			DB_INT, id, DB_TEXT);
 	if (e)
 	{
-		while (e->enumerate(e, &alg))
+		while (e->enumerate(e, &prop))
 		{
-			proposal = proposal_create_from_string(PROTO_ESP, alg);
+			proposal = proposal_create_from_string(PROTO_ESP, prop);
 			child->add_proposal(child, proposal);
 			use_default = FALSE;
 		}
@@ -209,19 +210,19 @@ static void add_ike_proposals(private_sql_config_t *this,
 {
 	enumerator_t *e;
 	proposal_t *proposal;
-	char *alg;
+	char *prop;
 	bool use_default = TRUE;
 
 	e = this->db->query(this->db,
-			"SELECT algorithm "
-			"FROM algorithms JOIN ike_config_algorithm ON id = alg "
+			"SELECT proposal "
+			"FROM proposals JOIN ike_config_proposal ON id = prop "
 			"WHERE ike_cfg = ? ORDER BY prio",
 			DB_INT, id, DB_TEXT);
 	if (e)
 	{
-		while (e->enumerate(e, &alg))
+		while (e->enumerate(e, &prop))
 		{
-			proposal = proposal_create_from_string(PROTO_IKE, alg);
+			proposal = proposal_create_from_string(PROTO_IKE, prop);
 			ike_cfg->add_proposal(ike_cfg, proposal);
 			use_default = FALSE;
 		}

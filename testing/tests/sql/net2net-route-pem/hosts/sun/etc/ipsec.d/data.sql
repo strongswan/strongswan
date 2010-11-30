@@ -100,10 +100,10 @@ INSERT INTO private_key_identity (
   1, 6 
 );
 
-/* Algorithms */
+/* Proposals */
 
-INSERT INTO algorithms (
-  algorithm
+INSERT INTO proposals (
+  proposal
 ) VALUES (
   'aes128-sha256-modp3072'
 );
@@ -116,8 +116,8 @@ INSERT INTO ike_configs (
   'PH_IP_SUN', 'PH_IP_MOON'
 );
 
-INSERT INTO ike_config_algorithm (
-  ike_cfg, prio, alg
+INSERT INTO ike_config_proposal (
+  ike_cfg, prio, prop
 ) VALUES (
   1, 1, 1
 );
@@ -164,20 +164,20 @@ INSERT INTO peer_config_child_config (
   1, 3
 );
 
-INSERT INTO child_config_algorithm (
-  child_cfg, prio, alg
+INSERT INTO child_config_proposal (
+  child_cfg, prio, prop
 ) VALUES (
   1, 1, 1
 );
 
-INSERT INTO child_config_algorithm (
-  child_cfg, prio, alg
+INSERT INTO child_config_proposal (
+  child_cfg, prio, prop
 ) VALUES (
   2, 1, 1
 );
 
-INSERT INTO child_config_algorithm (
-  child_cfg, prio, alg
+INSERT INTO child_config_proposal (
+  child_cfg, prio, prop
 ) VALUES (
   3, 1, 1
 );
