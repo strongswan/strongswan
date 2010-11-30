@@ -247,6 +247,7 @@ struct stroke_msg_t {
 			int proxy_mode;
 			int install_policy;
 			u_int32_t reqid;
+			u_int32_t tfc;
 
 			crl_policy_t crl_policy;
 			int unique;

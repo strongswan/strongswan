@@ -102,9 +102,10 @@ typedef enum {
 	KW_MARK,
 	KW_MARK_IN,
 	KW_MARK_OUT,
+	KW_TFC,
 
 #define KW_CONN_FIRST   KW_CONN_SETUP
-#define KW_CONN_LAST    KW_MARK_OUT
+#define KW_CONN_LAST    KW_TFC
 
    /* ca section keywords */
 	KW_CA_NAME,

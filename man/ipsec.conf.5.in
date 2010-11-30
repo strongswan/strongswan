@@ -953,6 +953,13 @@ synonym for
 .BR reqid " = <number>"
 sets the reqid for a given connection to a pre-configured fixed value.
 .TP
+.BR tfc " = <value>"
+number of bytes to pad ESP payload data to. Traffic Flow Confidentiality
+is currently supported in IKEv2 and applies to outgoing packets only. The
+special value
+.BR %mtu
+fills up ESP packets with padding to have the size of the MTU.
+.TP
 .BR type " = " tunnel " | transport | transport_proxy | passthrough | drop"
 the type of the connection; currently the accepted values
 are

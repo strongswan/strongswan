@@ -705,6 +705,23 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				cfg->err++;
 			}
 			break;
+		case KW_TFC:
+			if (streq(kw->value, "%mtu"))
+			{
+				conn->tfc = -1;
+			}
+			else
+			{
+				char *endptr;
+
+				conn->tfc = strtoul(kw->value, &endptr, 10);
+				if (*endptr != '\0')
+				{
+					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					cfg->err++;
+				}
+			}
+			break;
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{
