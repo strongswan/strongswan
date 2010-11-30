@@ -175,6 +175,24 @@ CREATE TABLE shared_secret_identity (
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
+DROP TABLE IF EXISTS certificate_authorities;
+CREATE TABLE certificate_authorities (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `certificate` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS certificate_distribution_points;
+CREATE TABLE certificate_distribution_points (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `ca` int(10) unsigned NOT NULL,
+  `type` tinyint(3) unsigned NOT NULL,
+  `uri` varchar(256) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   `id` int(10) unsigned NOT NULL auto_increment,
