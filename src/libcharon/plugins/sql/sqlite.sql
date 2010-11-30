@@ -41,6 +41,20 @@ CREATE INDEX child_config_traffic_selector_all ON child_config_traffic_selector 
   child_cfg, traffic_selector
 );
 
+DROP TABLE IF EXISTS algorithms;
+CREATE TABLE algorithms (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  algorithm TEXT NOT NULL
+);
+
+
+DROP TABLE IF EXISTS child_config_algorithm;
+CREATE TABLE child_config_algorithm (
+  child_cfg INTEGER NOT NULL,
+  prio INTEGER NOT NULL,
+  alg INTEGER NOT NULL
+);
+
 
 DROP TABLE IF EXISTS ike_configs;
 CREATE TABLE ike_configs (
@@ -49,6 +63,14 @@ CREATE TABLE ike_configs (
   force_encap INTEGER NOT NULL DEFAULT '0',
   local TEXT NOT NULL,
   remote TEXT NOT NULL
+);
+
+
+DROP TABLE IF EXISTS ike_config_algorithm;
+CREATE TABLE ike_config_algorithm (
+  ike_cfg INTEGER NOT NULL,
+  prio INTEGER NOT NULL,
+  alg INTEGER NOT NULL
 );
 
 

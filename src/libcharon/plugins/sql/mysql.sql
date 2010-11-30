@@ -38,6 +38,21 @@ CREATE TABLE `child_config_traffic_selector` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
+DROP TABLE IF EXISTS `algorithms`;
+CREATE TABLE `algorithms` (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `algorithm` varchar(128) NOT NULL
+);
+
+
+DROP TABLE IF EXISTS `child_config_algorithm`;
+CREATE TABLE `child_config_algorithm` (
+  `child_cfg` int(10) unsigned NOT NULL,
+  `prio` smallint(5) unsigned NOT NULL,
+  `alg` int(10) unsigned NOT NULL
+);
+
+
 DROP TABLE IF EXISTS `ike_configs`;
 CREATE TABLE `ike_configs` (
   `id` int(10) unsigned NOT NULL auto_increment,
@@ -47,6 +62,14 @@ CREATE TABLE `ike_configs` (
   `remote` varchar(128) collate utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
+DROP TABLE IF EXISTS `ike_config_algorithm`;
+CREATE TABLE `ike_config_algorithm` (
+  `ike_cfg` int(10) unsigned NOT NULL,
+  `prio` smallint(5) unsigned NOT NULL,
+  `alg` int(10) unsigned NOT NULL
+);
 
 
 DROP TABLE IF EXISTS `peer_configs`;

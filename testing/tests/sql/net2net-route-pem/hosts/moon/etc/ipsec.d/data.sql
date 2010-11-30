@@ -100,12 +100,26 @@ INSERT INTO private_key_identity (
   1, 6 
 );
 
+/* Algorithms */
+
+INSERT INTO algorithms (
+  algorithm
+) VALUES (
+  'aes128-sha256-modp3072'
+);
+
 /* Configurations */
 
 INSERT INTO ike_configs (
   local, remote
 ) VALUES (
   'PH_IP_MOON', 'PH_IP_SUN'
+);
+
+INSERT INTO ike_config_algorithm (
+  ike_cfg, prio, alg
+) VALUES (
+  1, 1, 1
 );
 
 INSERT INTO peer_configs (
@@ -148,6 +162,24 @@ INSERT INTO peer_config_child_config (
   peer_cfg, child_cfg
 ) VALUES (
   1, 3
+);
+
+INSERT INTO child_config_algorithm (
+  child_cfg, prio, alg
+) VALUES (
+  1, 1, 1
+);
+
+INSERT INTO child_config_algorithm (
+  child_cfg, prio, alg
+) VALUES (
+  2, 1, 1
+);
+
+INSERT INTO child_config_algorithm (
+  child_cfg, prio, alg
+) VALUES (
+  3, 1, 1
 );
 
 INSERT INTO traffic_selectors (

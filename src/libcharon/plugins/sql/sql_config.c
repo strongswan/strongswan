@@ -38,13 +38,13 @@ struct private_sql_config_t {
 };
 
 /**
- * forward declaration
+ * Forward declaration
  */
 static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 								  identification_t *me, identification_t *other);
 
 /**
- * build a traffic selector from a SQL query
+ * Build a traffic selector from an SQL query
  */
 static traffic_selector_t *build_traffic_selector(private_sql_config_t *this,
 												  enumerator_t *e, bool *local)
@@ -119,7 +119,39 @@ static void add_traffic_selectors(private_sql_config_t *this,
 }
 
 /**
- * build a Child configuration from a SQL query
+ * Add ESP proposals to a child config
+ */
+static void add_esp_proposals(private_sql_config_t *this,
+							  child_cfg_t *child, int id)
+{
+	enumerator_t *e;
+	proposal_t *proposal;
+	char *alg;
+	bool use_default = TRUE;
+
+	e = this->db->query(this->db,
+			"SELECT algorithm "
+			"FROM algorithms JOIN child_config_algorithm ON id = alg "
+			"WHERE child_cfg = ? ORDER BY prio",
+			DB_INT, id, DB_TEXT);
+	if (e)
+	{
+		while (e->enumerate(e, &alg))
+		{
+			proposal = proposal_create_from_string(PROTO_ESP, alg);
+			child->add_proposal(child, proposal);
+			use_default = FALSE;
+		}
+		e->destroy(e);
+	}
+	if (use_default)
+	{
+		child->add_proposal(child, proposal_create_default(PROTO_ESP));
+	}
+}
+
+/**
+ * Build a child config from an SQL query
  */
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
@@ -136,8 +168,7 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 		};
 		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
 									 start, dpd, close, ipcomp, 0, 0, NULL, NULL);
-		/* TODO: read proposal from db */
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;
 	}
@@ -171,29 +202,60 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 }
 
 /**
- * build a ike configuration from a SQL query
+ * Add IKE proposals to an IKE config
+ */
+static void add_ike_proposals(private_sql_config_t *this,
+							  ike_cfg_t *ike_cfg, int id)
+{
+	enumerator_t *e;
+	proposal_t *proposal;
+	char *alg;
+	bool use_default = TRUE;
+
+	e = this->db->query(this->db,
+			"SELECT algorithm "
+			"FROM algorithms JOIN ike_config_algorithm ON id = alg "
+			"WHERE ike_cfg = ? ORDER BY prio",
+			DB_INT, id, DB_TEXT);
+	if (e)
+	{
+		while (e->enumerate(e, &alg))
+		{
+			proposal = proposal_create_from_string(PROTO_IKE, alg);
+			ike_cfg->add_proposal(ike_cfg, proposal);
+			use_default = FALSE;
+		}
+		e->destroy(e);
+	}
+	if (use_default)
+	{
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+	}
+}
+
+/**
+ * Build an IKE config from an SQL query
  */
 static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 								host_t *my_host, host_t *other_host)
 {
-	int certreq, force_encap;
+	int id, certreq, force_encap;
 	char *local, *remote;
 
-	while (e->enumerate(e, &certreq, &force_encap, &local, &remote))
+	while (e->enumerate(e, &id, &certreq, &force_encap, &local, &remote))
 	{
 		ike_cfg_t *ike_cfg;
 
 		ike_cfg = ike_cfg_create(certreq, force_encap,
 								 local, IKEV2_UDP_PORT, remote, IKEV2_UDP_PORT);
-		/* TODO: read proposal from db */
-		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		add_ike_proposals(this, ike_cfg, id);
 		return ike_cfg;
 	}
 	return NULL;
 }
 
 /**
- * Query a IKE config by its id
+ * Query an IKE config by its id
  */
 static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 {
@@ -201,10 +263,10 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 	ike_cfg_t *ike_cfg = NULL;
 
 	e = this->db->query(this->db,
-			"SELECT certreq, force_encap, local, remote "
+			"SELECT id, certreq, force_encap, local, remote "
 			"FROM ike_configs WHERE id = ?",
 			DB_INT, id,
-			DB_INT, DB_INT, DB_TEXT, DB_TEXT);
+			DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
 	if (e)
 	{
 		ike_cfg = build_ike_cfg(this, e, NULL, NULL);
@@ -247,7 +309,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 }
 
 /**
- * build a peer configuration from a SQL query
+ * Build a peer config from an SQL query
  */
 static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 								  identification_t *me, identification_t *other)
@@ -415,9 +477,9 @@ static enumerator_t* create_ike_cfg_enumerator(private_sql_config_t *this,
 	e->public.destroy = (void*)ike_enumerator_destroy;
 
 	e->inner = this->db->query(this->db,
-			"SELECT certreq, force_encap, local, remote "
+			"SELECT id, certreq, force_encap, local, remote "
 			"FROM ike_configs",
-			DB_INT, DB_INT, DB_TEXT, DB_TEXT);
+			DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
 	if (!e->inner)
 	{
 		free(e);
