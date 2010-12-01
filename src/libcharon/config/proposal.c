@@ -560,6 +560,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 
 	if (token == NULL)
 	{
+		DBG1(DBG_CFG, "algorithm '%.*s' not recognized", alg.len, alg.ptr);
 		return FAILED;
 	}
 

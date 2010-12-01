@@ -140,6 +140,11 @@ static void add_esp_proposals(private_sql_config_t *this,
 		while (e->enumerate(e, &prop))
 		{
 			proposal = proposal_create_from_string(PROTO_ESP, prop);
+			if (!proposal)
+			{
+				DBG1(DBG_CFG, "could not create ESP proposal from '%s'", prop);
+				break;
+			}
 			child->add_proposal(child, proposal);
 			use_default = FALSE;
 		}
@@ -223,6 +228,11 @@ static void add_ike_proposals(private_sql_config_t *this,
 		while (e->enumerate(e, &prop))
 		{
 			proposal = proposal_create_from_string(PROTO_IKE, prop);
+			if (!proposal)
+			{
+				DBG1(DBG_CFG, "could not create IKE proposal from '%s'", prop);
+				break;
+			}
 			ike_cfg->add_proposal(ike_cfg, proposal);
 			use_default = FALSE;
 		}
