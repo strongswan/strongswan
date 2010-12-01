@@ -15,6 +15,7 @@
 
 #include "hook.h"
 
+#include <encoding/generator.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/id_payload.h>
@@ -58,28 +59,31 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	signature_scheme_t scheme;
 	keymat_t *keymat;
 	identification_t *id;
-	id_payload_t *id_payload;
 	char reserved[3];
-	u_int8_t *byte;
-	int i;
+	generator_t *generator;
+	chunk_t data;
+	u_int32_t *lenpos;
 
-	id_payload = (id_payload_t*)message->get_payload(message,
+	payload = message->get_payload(message,
 					message->get_request(message) ? ID_INITIATOR : ID_RESPONDER);
-	if (!id_payload)
+	if (!payload)
 	{
 		DBG1(DBG_CFG, "ID payload not found to rebuild AUTH");
 		return FALSE;
 	}
-	id = id_payload->get_identification(id_payload);
-	for (i = 0; i < countof(reserved); i++)
+
+	generator = generator_create();
+	generator->generate_payload(generator, payload);
+	data = generator->get_chunk(generator, &lenpos);
+	if (data.len < 8)
 	{
-		byte = payload_get_field(&id_payload->payload_interface,
-								 RESERVED_BYTE, i);
-		if (byte)
-		{
-			reserved[i] = *byte;
-		}
+		DBG1(DBG_CFG, "ID payload invalid to rebuild AUTH");
+		generator->destroy(generator);
+		return FALSE;
 	}
+	memcpy(reserved, data.ptr + 5, 3);
+	id = identification_create_from_encoding(data.ptr[4], chunk_skip(data, 8));
+	generator->destroy(generator);
 
 	auth = auth_cfg_create();
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
