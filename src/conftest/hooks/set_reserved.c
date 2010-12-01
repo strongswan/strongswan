@@ -16,9 +16,6 @@
 #include "hook.h"
 
 #include <encoding/payloads/sa_payload.h>
-#include <encoding/payloads/nonce_payload.h>
-#include <encoding/payloads/auth_payload.h>
-#include <encoding/payloads/id_payload.h>
 
 typedef struct private_set_reserved_t private_set_reserved_t;
 
@@ -46,136 +43,7 @@ struct private_set_reserved_t {
 	 * Hook name
 	 */
 	char *name;
-
-	/**
-	 * Our IKE_SA_INIT data, required to rebuild AUTH
-	 */
-	chunk_t ike_init;
-
-	/**
-	 * Received NONCE, required to rebuild AUTH
-	 */
-	chunk_t nonce;
 };
-
-/**
- * Rebuild our AUTH data
- */
-static bool rebuild_auth(private_set_reserved_t *this, ike_sa_t *ike_sa,
-						 message_t *message)
-{
-	enumerator_t *enumerator;
-	chunk_t octets, auth_data;
-	private_key_t *private;
-	auth_cfg_t *auth;
-	payload_t *payload;
-	auth_payload_t *auth_payload;
-	auth_method_t auth_method;
-	signature_scheme_t scheme;
-	keymat_t *keymat;
-	identification_t *id;
-	id_payload_t *id_payload;
-	char reserved[3];
-	u_int8_t *byte;
-	int i;
-
-	id_payload = (id_payload_t*)message->get_payload(message,
-					message->get_request(message) ? ID_INITIATOR : ID_RESPONDER);
-	if (!id_payload)
-	{
-		DBG1(DBG_CFG, "ID payload not found to rebuild AUTH");
-		return FALSE;
-	}
-	id = id_payload->get_identification(id_payload);
-	for (i = 0; i < countof(reserved); i++)
-	{
-		byte = payload_get_field(&id_payload->payload_interface,
-								 RESERVED_BYTE, i);
-		if (byte)
-		{
-			reserved[i] = *byte;
-		}
-	}
-
-	auth = auth_cfg_create();
-	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
-	auth->destroy(auth);
-	if (private == NULL)
-	{
-		DBG1(DBG_CFG, "no private key found for '%Y' to rebuild AUTH", id);
-		id->destroy(id);
-		return FALSE;
-	}
-
-	switch (private->get_type(private))
-	{
-		case KEY_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			auth_method = AUTH_RSA;
-			break;
-		case KEY_ECDSA:
-			/* we try to deduct the signature scheme from the keysize */
-			switch (private->get_keysize(private))
-			{
-				case 256:
-					scheme = SIGN_ECDSA_256;
-					auth_method = AUTH_ECDSA_256;
-					break;
-				case 384:
-					scheme = SIGN_ECDSA_384;
-					auth_method = AUTH_ECDSA_384;
-					break;
-				case 521:
-					scheme = SIGN_ECDSA_521;
-					auth_method = AUTH_ECDSA_521;
-					break;
-				default:
-					DBG1(DBG_CFG, "%d bit ECDSA private key size not supported",
-							private->get_keysize(private));
-					id->destroy(id);
-					return FALSE;
-			}
-			break;
-		default:
-			DBG1(DBG_CFG, "private key of type %N not supported",
-					key_type_names, private->get_type(private));
-			id->destroy(id);
-			return FALSE;
-	}
-	keymat = ike_sa->get_keymat(ike_sa);
-	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_init,
-									 this->nonce, id, reserved);
-	if (!private->sign(private, scheme, octets, &auth_data))
-	{
-		chunk_free(&octets);
-		private->destroy(private);
-		id->destroy(id);
-		return FALSE;
-	}
-	auth_payload = auth_payload_create();
-	auth_payload->set_auth_method(auth_payload, auth_method);
-	auth_payload->set_data(auth_payload, auth_data);
-	chunk_free(&auth_data);
-	chunk_free(&octets);
-	private->destroy(private);
-
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
-	{
-		if (payload->get_type(payload) == AUTHENTICATION)
-		{
-			message->remove_payload_at(message, enumerator);
-			payload->destroy(payload);
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	message->add_payload(message, (payload_t*)auth_payload);
-	DBG1(DBG_CFG, "rebuilding AUTH payload for '%Y' with %N",
-		 id, auth_method_names, auth_method);
-	id->destroy(id);
-	return TRUE;
-}
 
 /**
  * Set reserved bit of a payload
@@ -217,7 +85,7 @@ static void set_bit(private_set_reserved_t *this, message_t *message,
  * Set reserved byte of a payload
  */
 static void set_byte(private_set_reserved_t *this, message_t *message,
-					 payload_type_t type, u_int nr, u_int8_t byteval)
+					payload_type_t type, u_int nr, u_int8_t byteval)
 {
 	enumerator_t *payloads;
 	payload_t *payload;
@@ -293,60 +161,6 @@ static void set_byte(private_set_reserved_t *this, message_t *message,
 	}
 }
 
-/**
- * Mangle reserved bits and bytes. Returns TRUE if IKE_AUTH must be rebuilt
- */
-static bool set_reserved(private_set_reserved_t *this, message_t *message)
-{
-	enumerator_t *bits, *bytes, *types;
-	payload_type_t type;
-	char *nr, *name;
-	u_int8_t byteval;
-	bool rebuild = FALSE;
-
-	types = conftest->test->create_section_enumerator(conftest->test,
-												"hooks.%s", this->name);
-	while (types->enumerate(types, &name))
-	{
-		type = atoi(name);
-		if (!type)
-		{
-			type = enum_from_name(payload_type_short_names, name);
-			if (type == -1)
-			{
-				DBG1(DBG_CFG, "invalid payload name '%s'", name);
-				break;
-			}
-		}
-		nr = conftest->test->get_str(conftest->test,
-							"hooks.%s.%s.bits", "", this->name, name);
-		bits = enumerator_create_token(nr, ",", " ");
-		while (bits->enumerate(bits, &nr))
-		{
-			set_bit(this, message, type, atoi(nr));
-		}
-		bits->destroy(bits);
-
-		nr = conftest->test->get_str(conftest->test,
-							"hooks.%s.%s.bytes", "", this->name, name);
-		byteval = conftest->test->get_int(conftest->test,
-							"hooks.%s.%s.byteval", 255, this->name, name);
-		bytes = enumerator_create_token(nr, ",", " ");
-		while (bytes->enumerate(bytes, &nr))
-		{
-			set_byte(this, message, type, atoi(nr), byteval);
-		}
-		bytes->destroy(bytes);
-		if ((this->req && type == ID_INITIATOR) ||
-			(!this->req && type == ID_RESPONDER))
-		{
-			rebuild = TRUE;
-		}
-	}
-	types->destroy(types);
-	return rebuild;
-}
-
 METHOD(listener_t, message, bool,
 	private_set_reserved_t *this, ike_sa_t *ike_sa, message_t *message,
 	bool incoming)
@@ -355,39 +169,46 @@ METHOD(listener_t, message, bool,
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
-		if (set_reserved(this, message))
-		{
-			if (message->get_message_id(message) == 1)
-			{
-				rebuild_auth(this, ike_sa, message);
-			}
-		}
-	}
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
-		if (incoming)
-		{
-			nonce_payload_t *nonce;
+		enumerator_t *bits, *bytes, *types;
+		payload_type_t type;
+		char *nr, *name;
+		u_int8_t byteval;
 
-			nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
-			if (nonce)
-			{
-				free(this->nonce.ptr);
-				this->nonce = nonce->get_nonce(nonce);
-			}
-		}
-		else
+		types = conftest->test->create_section_enumerator(conftest->test,
+													"hooks.%s", this->name);
+		while (types->enumerate(types, &name))
 		{
-			packet_t *packet;
-
-			if (message->generate(message, NULL, &packet) == SUCCESS)
+			type = atoi(name);
+			if (!type)
 			{
-				free(this->ike_init.ptr);
-				this->ike_init = chunk_clone(packet->get_data(packet));
-				packet->destroy(packet);
+				type = enum_from_name(payload_type_short_names, name);
+				if (type == -1)
+				{
+					DBG1(DBG_CFG, "invalid payload name '%s'", name);
+					break;
+				}
 			}
+			nr = conftest->test->get_str(conftest->test,
+								"hooks.%s.%s.bits", "", this->name, name);
+			bits = enumerator_create_token(nr, ",", " ");
+			while (bits->enumerate(bits, &nr))
+			{
+				set_bit(this, message, type, atoi(nr));
+			}
+			bits->destroy(bits);
 
+			nr = conftest->test->get_str(conftest->test,
+								"hooks.%s.%s.bytes", "", this->name, name);
+			byteval = conftest->test->get_int(conftest->test,
+								"hooks.%s.%s.byteval", 255, this->name, name);
+			bytes = enumerator_create_token(nr, ",", " ");
+			while (bytes->enumerate(bytes, &nr))
+			{
+				set_byte(this, message, type, atoi(nr), byteval);
+			}
+			bytes->destroy(bytes);
 		}
+		types->destroy(types);
 	}
 	return TRUE;
 }
@@ -395,8 +216,6 @@ METHOD(listener_t, message, bool,
 METHOD(hook_t, destroy, void,
 	private_set_reserved_t *this)
 {
-	free(this->ike_init.ptr);
-	free(this->nonce.ptr);
 	free(this->name);
 	free(this);
 }
