@@ -105,7 +105,7 @@ INSERT INTO private_key_identity (
 INSERT INTO proposals (
   proposal
 ) VALUES (
-  'aes128-sha256-modp3072'
+  'aes128-aes192-aes256-sha256-sha384-sha512-modp3072-modp4096-modp8192'
 );
 
 /* Configurations */
