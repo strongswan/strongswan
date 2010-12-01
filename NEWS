@@ -1,3 +1,11 @@
+strongswan-4.5.1
+----------------
+
+- IKE and ESP proposals can now be stored in an SQL database using a
+  new proposals table. The start_action field in the child_configs
+  tables allows the automatic starting or routing of connections stored
+  in an SQL database.
+
 
 strongswan-4.5.0
 ----------------
