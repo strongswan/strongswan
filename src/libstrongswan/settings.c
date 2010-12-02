@@ -265,10 +265,8 @@ static char *find_value(section_t *section, char *key, va_list args)
 	return find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf));
 }
 
-/**
- * Implementation of settings_t.get.
- */
-static char* get_str(private_settings_t *this, char *key, char *def, ...)
+METHOD(settings_t, get_str, char*,
+	private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
 	va_list args;
@@ -283,10 +281,8 @@ static char* get_str(private_settings_t *this, char *key, char *def, ...)
 	return def;
 }
 
-/**
- * Implementation of settings_t.get_bool.
- */
-static bool get_bool(private_settings_t *this, char *key, bool def, ...)
+METHOD(settings_t, get_bool, bool,
+	private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
 	va_list args;
@@ -314,10 +310,8 @@ static bool get_bool(private_settings_t *this, char *key, bool def, ...)
 	return def;
 }
 
-/**
- * Implementation of settings_t.get_int.
- */
-static int get_int(private_settings_t *this, char *key, int def, ...)
+METHOD(settings_t, get_int, int,
+	private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	int intval;
@@ -338,10 +332,8 @@ static int get_int(private_settings_t *this, char *key, int def, ...)
 	return def;
 }
 
-/**
- * Implementation of settings_t.get_double.
- */
-static double get_double(private_settings_t *this, char *key, double def, ...)
+METHOD(settings_t, get_double, double,
+	private_settings_t *this, char *key, double def, ...)
 {
 	char *value;
 	double dval;
@@ -362,10 +354,8 @@ static double get_double(private_settings_t *this, char *key, double def, ...)
 	return def;
 }
 
-/**
- * Implementation of settings_t.get_time.
- */
-static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ...)
+METHOD(settings_t, get_time, u_int32_t,
+	private_settings_t *this, char *key, u_int32_t def, ...)
 {
 	char *value, *endptr;
 	u_int32_t timeval;
@@ -410,11 +400,8 @@ static bool section_filter(void *null, section_t **in, char **out)
 	return TRUE;
 }
 
-/**
- * Implementation of settings_t.create_section_enumerator
- */
-static enumerator_t* create_section_enumerator(private_settings_t *this,
-											   char *key, ...)
+METHOD(settings_t, create_section_enumerator, enumerator_t*,
+	private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -443,11 +430,8 @@ static bool kv_filter(void *null, kv_t **in, char **key,
 	return TRUE;
 }
 
-/**
- * Implementation of settings_t.create_key_value_enumerator
- */
-static enumerator_t* create_key_value_enumerator(private_settings_t *this,
-												 char *key, ...)
+METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
+	private_settings_t *this, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -607,10 +591,8 @@ static section_t* parse_section(char **text, char *name)
 	return section;
 }
 
-/**
- * Implementation of settings_t.destroy
- */
-static void destroy(private_settings_t *this)
+METHOD(settings_t, destroy, void,
+	private_settings_t *this)
 {
 	if (this->top)
 	{
@@ -630,18 +612,18 @@ settings_t *settings_create(char *file)
 	FILE *fd;
 	int len;
 
-	this = malloc_thing(private_settings_t);
-	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
-	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
-	this->public.get_double = (double(*)(settings_t*, char *key, double def, ...))get_double;
-	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
-	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
-	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
-	this->public.create_key_value_enumerator = (enumerator_t*(*)(settings_t*, char *key, ...))create_key_value_enumerator;
-	this->public.destroy = (void(*)(settings_t*))destroy;
-
-	this->top = NULL;
-	this->text = NULL;
+	INIT(this,
+		.public = {
+			.get_str = _get_str,
+			.get_int = _get_int,
+			.get_double = _get_double,
+			.get_time = _get_time,
+			.get_bool = _get_bool,
+			.create_section_enumerator = _create_section_enumerator,
+			.create_key_value_enumerator = _create_key_value_enumerator,
+			.destroy = _destroy,
+		},
+	);
 
 	if (file == NULL)
 	{
