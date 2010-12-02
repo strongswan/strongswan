@@ -36,7 +36,7 @@ static int issue()
 	bool pkcs10 = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
-	identification_t *id = NULL;
+	identification_t *id = NULL, *crl_issuer = NULL;;
 	linked_list_t *san, *cdps, *ocsp;
 	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
@@ -133,6 +133,9 @@ static int issue()
 				continue;
 			case 'u':
 				cdps->insert_last(cdps, arg);
+				continue;
+			case 'I':
+				crl_issuer = identification_create_from_string(arg);
 				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
@@ -316,6 +319,7 @@ static int issue()
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
 					BUILD_PATHLEN, pathlen,
+					BUILD_CRL_ISSUER, crl_issuer,
 					BUILD_CRL_DISTRIBUTION_POINTS, cdps,
 					BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
 	if (!cert)
@@ -344,6 +348,7 @@ end:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
+	DESTROY_IF(crl_issuer);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -358,6 +363,7 @@ usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
+	DESTROY_IF(crl_issuer);
 	return command_usage(error);
 }
 
@@ -375,23 +381,24 @@ static void __attribute__ ((constructor))reg()
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "public key/request file to issue, default: stdin"},
-			{"type",	't', 1, "type of input, default: pub"},
-			{"cacert",	'c', 1, "CA certificate file"},
-			{"cakey",	'k', 1, "CA private key file"},
-			{"cakeyid",	'x', 1, "keyid on smartcard of CA private key"},
-			{"dn",		'd', 1, "distinguished name to include as subject"},
-			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",	's', 1, "serial number in hex, default: random"},
-			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'e', 1, "include extendedKeyUsage flag"},
-			{"crl",		'u', 1, "CRL distribution point URI to include"},
-			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",	'f', 1, "encoding of generated cert, default: der"},
+			{"help",		'h', 0, "show usage information"},
+			{"in",			'i', 1, "public key/request file to issue, default: stdin"},
+			{"type",		't', 1, "type of input, default: pub"},
+			{"cacert",		'c', 1, "CA certificate file"},
+			{"cakey",		'k', 1, "CA private key file"},
+			{"cakeyid",		'x', 1, "keyid on smartcard of CA private key"},
+			{"dn",			'd', 1, "distinguished name to include as subject"},
+			{"san",			'a', 1, "subjectAltName to include in certificate"},
+			{"lifetime",	'l', 1, "days the certificate is valid, default: 1095"},
+			{"serial",		's', 1, "serial number in hex, default: random"},
+			{"ca",			'b', 0, "include CA basicConstraint, default: no"},
+			{"pathlen",		'p', 1, "set path length constraint"},
+			{"flag",		'e', 1, "include extendedKeyUsage flag"},
+			{"crl",			'u', 1, "CRL distribution point URI to include"},
+			{"crlissuer",	'I', 1, "CRL Issuer for CRL at distribution point"},
+			{"ocsp",		'o', 1, "OCSP AuthorityInfoAccess URI to include"},
+			{"digest",		'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",		'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }
