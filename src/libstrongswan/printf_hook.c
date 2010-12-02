@@ -377,10 +377,8 @@ int vstr_wrapper_vasprintf(char **str, const char *format, va_list args)
 }
 #endif
 
-/**
- * Implementation of printf_hook_t.add_handler.
- */
-static void add_handler(private_printf_hook_t *this, char spec,
+METHOD(printf_hook_t, add_handler, void,
+	private_printf_hook_t *this, char spec,
 						printf_hook_function_t hook, ...)
 {
 	int i = -1;
@@ -439,10 +437,8 @@ static void add_handler(private_printf_hook_t *this, char spec,
 	}
 }
 
-/**
- * Implementation of printf_hook_t.destroy
- */
-static void destroy(private_printf_hook_t *this)
+METHOD(printf_hook_t, destroy, void,
+	private_printf_hook_t *this)
 {
 	int i;
 #ifdef USE_VSTR
@@ -477,10 +473,14 @@ static void destroy(private_printf_hook_t *this)
  */
 printf_hook_t *printf_hook_create()
 {
-	private_printf_hook_t *this = malloc_thing(private_printf_hook_t);
+	private_printf_hook_t *this;
 
-	this->public.add_handler = (void(*)(printf_hook_t*, char, printf_hook_function_t, ...))add_handler;
-	this->public.destroy = (void(*)(printf_hook_t*))destroy;
+	INIT(this,
+		.public = {
+			.add_handler = _add_handler,
+			.destroy = _destroy,
+		},
+	);
 
 	memset(printf_hooks, 0, sizeof(printf_hooks));
 
