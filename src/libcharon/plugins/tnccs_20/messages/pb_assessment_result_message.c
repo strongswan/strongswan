@@ -1,0 +1,170 @@
+/*
+ * Copyright (C) 2010 Sansar Choinyambuu
+ * HSR Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#include "pb_assessment_result_message.h"
+
+#include <tls_writer.h>
+#include <tls_reader.h>
+#include <debug.h>
+
+typedef struct private_pb_assessment_result_message_t private_pb_assessment_result_message_t;
+
+/**
+ *   PB-Assessment-Result message (see section 4.6 of RFC 5793)
+ *
+ *                          1                   2                   3
+ *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *     |                       Assessment Result                       |
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+
+#define ASSESSMENT_RESULT_MESSAGE_SIZE	4
+
+/**
+ * Private data of a pb_assessment_result_message_t object.
+ *
+ */
+struct private_pb_assessment_result_message_t {
+	/**
+	 * Public pb_assessment_result_message_t interface.
+	 */
+	pb_assessment_result_message_t public;
+
+	/**
+	 * PB-TNC message type
+	 */
+	pb_tnc_msg_type_t type;
+
+	/**
+	 * Assessment result code
+	 */
+	u_int32_t assessment_result;
+
+	/**
+	 * Encoded message
+	 */
+	chunk_t encoding;
+};
+
+METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
+	private_pb_assessment_result_message_t *this)
+{
+	return this->type;
+}
+
+METHOD(pb_tnc_message_t, get_encoding, chunk_t,
+	private_pb_assessment_result_message_t *this)
+{
+	return this->encoding;
+}
+	
+METHOD(pb_tnc_message_t, build, void,
+	private_pb_assessment_result_message_t *this)
+{
+	tls_writer_t *writer;
+
+	/* build message */
+	writer = tls_writer_create(ASSESSMENT_RESULT_MESSAGE_SIZE);
+	writer->write_uint32(writer, this->assessment_result);
+	free(this->encoding.ptr);
+	this->encoding = writer->get_buf(writer);
+	this->encoding = chunk_clone(this->encoding);
+	writer->destroy(writer);
+}
+
+METHOD(pb_tnc_message_t, process, status_t,
+	private_pb_assessment_result_message_t *this)
+{
+	tls_reader_t *reader;
+
+	if (this->encoding.len < ASSESSMENT_RESULT_MESSAGE_SIZE)
+	{
+		DBG1(DBG_TNC,"%N message is shorter than message size of %u bytes",
+				pb_tnc_msg_type_names, PB_MSG_ASSESSMENT_RESULT, 
+				ASSESSMENT_RESULT_MESSAGE_SIZE);
+		return FAILED;	
+	}
+
+	/* process message */
+	reader = tls_reader_create(this->encoding);
+	reader->read_uint32(reader, &this->assessment_result);
+
+	reader->destroy(reader);
+	return SUCCESS;
+}
+
+METHOD(pb_tnc_message_t, destroy, void,
+	private_pb_assessment_result_message_t *this)
+{
+	free(this->encoding.ptr);
+	free(this);
+}
+
+METHOD(pb_assessment_result_message_t, get_assessment_result, u_int32_t,
+	private_pb_assessment_result_message_t *this)
+{
+	return this->assessment_result;
+}
+
+/**
+ * See header
+ */
+pb_tnc_message_t *pb_assessment_result_message_create_from_data(chunk_t data)
+{
+	private_pb_assessment_result_message_t *this;
+
+	INIT(this,
+		.public = {
+			.pb_interface = {
+				.get_type = _get_type,
+				.get_encoding = _get_encoding,
+				.build = _build,
+				.process = _process,
+				.destroy = _destroy,
+			},
+			.get_assessment_result = _get_assessment_result,
+		},
+		.type = PB_MSG_ASSESSMENT_RESULT,
+		.encoding = chunk_clone(data),
+	);
+
+	return &this->public.pb_interface;
+}
+
+/**
+ * See header
+ */
+pb_tnc_message_t *pb_assessment_result_message_create(u_int32_t assessment_result)
+{
+	private_pb_assessment_result_message_t *this;
+
+	INIT(this,
+		.public = {
+			.pb_interface = {
+				.get_type = _get_type,
+				.get_encoding = _get_encoding,
+				.build = _build,
+				.process = _process,
+				.destroy = _destroy,
+			},
+			.get_assessment_result = _get_assessment_result,
+		},
+		.type = PB_MSG_ASSESSMENT_RESULT,
+		.assessment_result = assessment_result,
+	);
+
+	return &this->public.pb_interface;
+}

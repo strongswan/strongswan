@@ -15,6 +15,11 @@
 
 #include "pb_tnc_message.h"
 #include "pb_pa_message.h"
+#include "pb_error_message.h"
+#include "pb_language_preference_message.h"
+#include "pb_assessment_result_message.h"
+#include "pb_access_recommendation_message.h"
+#include "pb_reason_string_message.h"
 
 #include <library.h>
 
@@ -28,20 +33,19 @@ pb_tnc_message_t* pb_tnc_message_create(pb_tnc_msg_type_t type, chunk_t value)
 		case PB_MSG_PA:
 			return pb_pa_message_create_from_data(value);
 		case PB_MSG_ERROR:
-			return NULL; /* TODO */
+			return pb_error_message_create_from_data(value);
 		case PB_MSG_EXPERIMENTAL:
-			return NULL; /* TODO */
+			return NULL;
 		case PB_MSG_LANGUAGE_PREFERENCE:
-			return NULL; /* TODO */
+			return pb_language_preference_message_create_from_data(value);
 		case PB_MSG_ASSESSMENT_RESULT:
-			return NULL; /* TODO */
+			return pb_assessment_result_message_create_from_data(value);
 		case PB_MSG_ACCESS_RECOMMENDATION:
-			return NULL; /* TODO */
+			return pb_access_recommendation_message_create_from_data(value);
 		case PB_MSG_REMEDIATION_PARAMETERS:
-			return NULL; /* TODO */
+			return NULL;
 		case PB_MSG_REASON_STRING:
-			return NULL; /* TODO */
+			return pb_reason_string_message_create_from_data(value);
 	}
 	return NULL;
 }
-
