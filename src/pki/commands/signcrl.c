@@ -262,9 +262,9 @@ static int sign_crl()
 		goto error;
 	}
 	x509 = (x509_t*)ca;
-	if (!(x509->get_flags(x509) & X509_CA))
+	if (!(x509->get_flags(x509) & (X509_CA | X509_CRL_SIGN)))
 	{
-		error = "CA certificate misses CA basicConstraint";
+		error = "CA certificate misses CA basicConstraint / CRLSign keyUsage";
 		goto error;
 	}
 	public = ca->get_public_key(ca);
