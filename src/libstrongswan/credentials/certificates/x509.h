@@ -52,11 +52,6 @@ enum x509_flag_t {
 };
 
 /**
- * enum names for x509 flags
- */
-extern enum_name_t *x509_flag_names;
-
-/**
  * X.509 certificate interface.
  *
  * This interface adds additional methods to the certificate_t type to
