@@ -85,7 +85,9 @@ struct entry_t {
 	chunk_t init_hash;
 
 	/**
-	 * remote host address, required for DoS detection
+	 * remote host address, required for DoS detection and duplicate
+	 * checking (host with same my_id and other_id is *not* considered
+	 * a duplicate if the address family differs)
 	 */
 	host_t *other;
 
@@ -1326,6 +1328,10 @@ static void checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	{
 		entry->my_id = my_id->clone(my_id);
 		entry->other_id = other_id->clone(other_id);
+		if (!entry->other)
+		{
+			entry->other = other->clone(other);
+		}
 		put_connected_peers(this, entry);
 	}
 
