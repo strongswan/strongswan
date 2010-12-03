@@ -621,6 +621,60 @@ end:
 }
 
 /**
+ * Extract KeyUsage flags
+ */
+static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
+{
+	enum {
+		KU_DIGITAL_SIGNATURE =	0,
+		KU_NON_REPUDIATION =	1,
+		KU_KEY_ENCIPHERMENT =	2,
+		KU_DATA_ENCIPHERMENT =	3,
+		KU_KEY_AGREEMENT =		4,
+		KU_KEY_CERT_SIGN =		5,
+		KU_CRL_SIGN =			6,
+		KU_ENCIPHER_ONLY =		7,
+		KU_DECIPHER_ONLY =		8,
+	};
+
+	if (asn1_unwrap(&blob, &blob) == ASN1_BIT_STRING && blob.len)
+	{
+		int bit, byte, unused = blob.ptr[0];
+
+		blob = chunk_skip(blob, 1);
+		for (byte = 0; byte < blob.len; byte++)
+		{
+			for (bit = 0; bit < 8; bit++)
+			{
+				if (byte == blob.len - 1 && bit > (7 - unused))
+				{
+					break;
+				}
+				if (blob.ptr[byte] & 1 << (7 - bit))
+				{
+					switch (byte * 8 + bit)
+					{
+						case KU_CRL_SIGN:
+							this->flags |= X509_CRL_SIGN;
+							break;
+						case KU_KEY_CERT_SIGN:
+							/* we use the caBasicConstraint, MUST be set */
+						case KU_DIGITAL_SIGNATURE:
+						case KU_NON_REPUDIATION:
+						case KU_KEY_ENCIPHERMENT:
+						case KU_DATA_ENCIPHERMENT:
+						case KU_KEY_AGREEMENT:
+						case KU_ENCIPHER_ONLY:
+						case KU_DECIPHER_ONLY:
+							break;
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
  * ASN.1 definition of a extendedKeyUsage extension
  */
 static const asn1Object_t extendedKeyUsageObjects[] = {
@@ -632,7 +686,7 @@ static const asn1Object_t extendedKeyUsageObjects[] = {
 #define EXT_KEY_USAGE_PURPOSE_ID	1
 
 /**
- * Extracts extendedKeyUsage OIDs - currently only OCSP_SIGING is returned
+ * Extracts extendedKeyUsage OIDs
  */
 static void parse_extendedKeyUsage(chunk_t blob, int level0,
 								   private_x509_cert_t *this)
@@ -1060,7 +1114,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						parse_authorityInfoAccess(object, level, this);
 						break;
 					case OID_KEY_USAGE:
-						/* TODO parse the flags */
+						parse_keyUsage(object, this);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
 						parse_extendedKeyUsage(object, level, this);
@@ -1609,7 +1663,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
 	chunk_t ocspSigning = chunk_empty;
 	chunk_t basicConstraints = chunk_empty;
-	chunk_t keyUsage = chunk_empty;
+	chunk_t keyUsage = chunk_empty, keyUsageBits = chunk_empty;
 	chunk_t subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
@@ -1745,13 +1799,20 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 											asn1_wrap(ASN1_BOOLEAN, "c",
 												chunk_from_chars(0xFF)),
 											pathLenConstraint)));
+		/* set CertificateSign and implicitly CRLsign */
+		keyUsageBits = chunk_from_chars(0x01, 0x06);
+	}
+	else if (cert->flags & X509_CRL_SIGN)
+	{
+		keyUsageBits = chunk_from_chars(0x01, 0x02);
+	}
+	if (keyUsageBits.len)
+	{
 		keyUsage = asn1_wrap(ASN1_SEQUENCE, "mmm",
-								asn1_build_known_oid(OID_KEY_USAGE),
-								asn1_wrap(ASN1_BOOLEAN, "c",
-									chunk_from_chars(0xFF)),
-								asn1_wrap(ASN1_OCTET_STRING, "m",
-										asn1_wrap(ASN1_BIT_STRING, "c",
-												chunk_from_chars(0x01, 0x06))));
+						asn1_build_known_oid(OID_KEY_USAGE),
+						asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
+						asn1_wrap(ASN1_OCTET_STRING, "m",
+							asn1_wrap(ASN1_BIT_STRING, "c", keyUsageBits)));
 	}
 
 	/* add serverAuth extendedKeyUsage flag */
@@ -1780,7 +1841,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */
-	if (cert->flags & (X509_CA | X509_OCSP_SIGNER))
+	if (cert->flags & (X509_CA | X509_OCSP_SIGNER | X509_CRL_SIGN))
 	{
 		chunk_t keyid;
 
