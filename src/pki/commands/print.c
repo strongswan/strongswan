@@ -105,6 +105,10 @@ static void print_x509(x509_t *x509)
 	{
 		printf("CA ");
 	}
+	if (flags & X509_CRL_SIGN)
+	{
+		printf("CRLSign ");
+	}
 	if (flags & X509_AA)
 	{
 		printf("AA ");

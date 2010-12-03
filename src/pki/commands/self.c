@@ -113,6 +113,10 @@ static int self()
 				{
 					flags |= X509_CLIENT_AUTH;
 				}
+				else if (streq(arg, "crlSign"))
+				{
+					flags |= X509_CRL_SIGN;
+				}
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
@@ -257,7 +261,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file | --keyid hex] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-		 "[--flag serverAuth|clientAuth|ocspSigning]+",
+		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
