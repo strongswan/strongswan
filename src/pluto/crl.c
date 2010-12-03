@@ -376,7 +376,7 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point))
+		while (enumerator->enumerate(enumerator, &point, NULL))
 		{
 			add_distribution_point(crluris, point);
 		}
@@ -416,7 +416,7 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point))
+		while (enumerator->enumerate(enumerator, &point, NULL))
 		{
 			add_distribution_point(x509crl->distributionPoints, point);
 		}

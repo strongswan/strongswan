@@ -133,17 +133,22 @@ static void print_x509(x509_t *x509)
 
 	first = TRUE;
 	enumerator = x509->create_crl_uri_enumerator(x509);
-	while (enumerator->enumerate(enumerator, &uri))
+	while (enumerator->enumerate(enumerator, &uri, &id))
 	{
 		if (first)
 		{
-			printf("CRL URIs:  %s\n", uri);
+			printf("CRL URIs:  %s", uri);
 			first = FALSE;
 		}
 		else
 		{
-			printf("           %s\n", uri);
+			printf("           %s", uri);
 		}
+		if (id)
+		{
+			printf(" (CRL issuer: %Y)", id);
+		}
+		printf("\n");
 	}
 	enumerator->destroy(enumerator);
 

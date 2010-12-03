@@ -112,9 +112,9 @@ struct x509_t {
 	enumerator_t* (*create_subjectAltName_enumerator)(x509_t *this);
 
 	/**
-	 * Create an enumerator over all CRL URIs.
+	 * Create an enumerator over all CRL URIs and CRL Issuers.
 	 *
-	 * @return			enumerator over URIs as char*
+	 * @return			enumerator over URIs (char*, identificiation_t*)
 	 */
 	enumerator_t* (*create_crl_uri_enumerator)(x509_t *this);
 

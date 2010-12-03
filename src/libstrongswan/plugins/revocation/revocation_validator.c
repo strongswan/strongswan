@@ -476,8 +476,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
 		enumerator = subject->create_crl_uri_enumerator(subject);
-
-		while (enumerator->enumerate(enumerator, &uri))
+		while (enumerator->enumerate(enumerator, &uri, NULL))
 		{
 			current = fetch_crl(uri);
 			if (current)
