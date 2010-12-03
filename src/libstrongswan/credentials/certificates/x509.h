@@ -49,6 +49,8 @@ enum x509_flag_t {
 	X509_SELF_SIGNED =		(1<<5),
 	/** cert has an ipAddrBlocks extension */
 	X509_IP_ADDR_BLOCKS =	(1<<6),
+	/** cert has CRL sign key usage */
+	X509_CRL_SIGN =			(1<<7),
 };
 
 /**
