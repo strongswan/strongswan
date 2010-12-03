@@ -625,7 +625,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 
 	x509 = (x509_t*)cert;
 
-	this->issuer = cert->get_issuer(cert);
+	this->issuer = cert->get_subject(cert);
 	this->issuer = this->issuer->clone(this->issuer);
 
 	this->authKeyIdentifier = chunk_clone(x509->get_subjectKeyIdentifier(x509));
