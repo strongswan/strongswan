@@ -48,7 +48,7 @@ struct private_pb_access_recommendation_message_t {
 	 * PB-TNC message type
 	 */
 	pb_tnc_msg_type_t type;
-	
+
 	/**
 	 * Access recommendation code
 	 */
@@ -71,7 +71,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_access_recommendation_message_t *this)
 {
@@ -96,9 +96,9 @@ METHOD(pb_tnc_message_t, process, status_t,
 	if (this->encoding.len < ACCESS_RECOMMENDATION_MESSAGE_SIZE)
 	{
 		DBG1(DBG_TNC,"%N message is shorter than message size of %u bytes",
-				pb_tnc_msg_type_names, PB_MSG_ACCESS_RECOMMENDATION, 
+				pb_tnc_msg_type_names, PB_MSG_ACCESS_RECOMMENDATION,
 				ACCESS_RECOMMENDATION_MESSAGE_SIZE);
-		return FAILED;	
+		return FAILED;
 	}
 
 	/* process message */

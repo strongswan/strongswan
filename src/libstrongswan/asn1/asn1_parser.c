@@ -278,7 +278,7 @@ asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob)
 			.set_flags = _set_flags,
 			.success = _success,
 			.destroy = _destroy,
-		},		
+		},
 		.objects = objects,
 		.blobs[0] = blob,
 		.line = -1,

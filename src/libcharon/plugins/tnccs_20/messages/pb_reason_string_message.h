@@ -41,21 +41,21 @@ struct pb_reason_string_message_t {
 	 * @return			Length of reason string
 	 */
 	chunk_t (*get_reason_string_length)(pb_reason_string_message_t *this);
-	
+
 	/**
 	 * Get Reason String
 	 *
 	 * @return			Reason string
 	 */
 	chunk_t (*get_reason_string)(pb_reason_string_message_t *this);
-	
+
 	/**
 	 * Get Reason String Language Code Length
 	 *
 	 * @return			Length of language code
 	 */
 	chunk_t (*get_language_code_length)(pb_reason_string_message_t *this);
-	
+
 	/**
 	 * Get Reason String Language Code
 	 *

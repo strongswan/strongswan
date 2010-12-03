@@ -51,22 +51,22 @@ struct private_pb_reason_string_message_t {
 	 * PB-TNC message type
 	 */
 	pb_tnc_msg_type_t type;
-	
+
 	/**
 	 * Reason string length
 	 */
 	u_int32_t reason_string_length;
-	
+
 	/**
 	 * Reason string
 	 */
 	chunk_t reason_string;
-	
+
 	/**
 	 * Language code length
 	 */
 	u_int8_t language_code_length;
-	
+
 	/**
 	 * Language code
 	 */
@@ -89,7 +89,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_reason_string_message_t *this)
 {
@@ -99,7 +99,7 @@ METHOD(pb_tnc_message_t, build, void,
 	writer = tls_writer_create(REASON_STRING_HEADER_SIZE);
 	writer->write_uint32(writer, this->reason_string_length);
 	writer->write_data(writer, this->reason_string);
-	
+
 	writer->write_uint8(writer, this->language_code_length);
 	writer->write_data(writer, this->language_code);
 
@@ -117,16 +117,16 @@ METHOD(pb_tnc_message_t, process, status_t,
 	if (this->encoding.len < REASON_STRING_HEADER_SIZE)
 	{
 		DBG1(DBG_TNC,"%N message is shorter than header size of %u bytes",
-				pb_tnc_msg_type_names, PB_MSG_REASON_STRING, 
+				pb_tnc_msg_type_names, PB_MSG_REASON_STRING,
 				REASON_STRING_HEADER_SIZE);
-		return FAILED;	
+		return FAILED;
 	}
 
 	/* process message */
 	reader = tls_reader_create(this->encoding);
 	reader->read_uint32(reader, &this->reason_string_length);
 	reader->read_data(reader, this->reason_string_length, &this->reason_string);
-	
+
 	reader->read_uint8(reader, &this->language_code_length);
 	reader->read_data(reader, this->language_code_length, &this->language_code);
 

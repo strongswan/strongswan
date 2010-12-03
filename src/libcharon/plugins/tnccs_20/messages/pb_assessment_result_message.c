@@ -70,7 +70,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_assessment_result_message_t *this)
 {
@@ -93,9 +93,9 @@ METHOD(pb_tnc_message_t, process, status_t,
 	if (this->encoding.len < ASSESSMENT_RESULT_MESSAGE_SIZE)
 	{
 		DBG1(DBG_TNC,"%N message is shorter than message size of %u bytes",
-				pb_tnc_msg_type_names, PB_MSG_ASSESSMENT_RESULT, 
+				pb_tnc_msg_type_names, PB_MSG_ASSESSMENT_RESULT,
 				ASSESSMENT_RESULT_MESSAGE_SIZE);
-		return FAILED;	
+		return FAILED;
 	}
 
 	/* process message */

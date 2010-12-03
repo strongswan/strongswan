@@ -45,7 +45,7 @@ struct private_pb_language_preference_message_t {
 	 * PB-TNC message type
 	 */
 	pb_tnc_msg_type_t type;
-	
+
 	/**
 	 * Language preference
 	 */
@@ -68,7 +68,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_language_preference_message_t *this)
 {
@@ -93,7 +93,7 @@ METHOD(pb_tnc_message_t, process, status_t,
 	{
 		/* process message */
 		reader = tls_reader_create(this->encoding);
-		reader->read_data(reader, this->encoding.len, 
+		reader->read_data(reader, this->encoding.len,
 				  &this->language_preference);
 		this->language_preference = chunk_clone(this->language_preference);
 		reader->destroy(reader);

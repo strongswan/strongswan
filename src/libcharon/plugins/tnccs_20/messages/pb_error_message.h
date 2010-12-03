@@ -75,16 +75,16 @@ struct pb_error_message_t {
  * Create a PB-Error message from parameters
  *
  * @param vendor_id			Error Code Vendor ID
- * @param error_code			Error Code		
+ * @param error_code		Error Code
  */
 pb_tnc_message_t* pb_error_message_create(u_int32_t vendor_id,
-						pb_tnc_error_code_t error_code);					
+						pb_tnc_error_code_t error_code);		
 /**
  * Create a PB-Error message from parameters
  *
  * @param vendor_id			Error Code Vendor ID
- * @param error_code			Error Code		
- * @param error_parameters		Error parameters
+ * @param error_code		Error Code
+ * @param error_parameters	Error parameters
  */
 pb_tnc_message_t* pb_error_message_create_with_parameter(u_int32_t vendor_id,
 						pb_tnc_error_code_t error_code,
@@ -92,7 +92,7 @@ pb_tnc_message_t* pb_error_message_create_with_parameter(u_int32_t vendor_id,
 /**
  * Create an unprocessed PB-Error message from raw data
  *
-  * @param data		PB-Error message data
+ * @param data				PB-Error message data
  */
 pb_tnc_message_t* pb_error_message_create_from_data(chunk_t data);
 

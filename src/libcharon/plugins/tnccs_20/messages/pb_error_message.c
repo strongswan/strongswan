@@ -93,7 +93,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_error_message_t *this)
 {
@@ -101,7 +101,7 @@ METHOD(pb_tnc_message_t, build, void,
 
 	/* build message header */
 	writer = tls_writer_create(ERROR_HEADER_SIZE);
-	writer->write_uint8 (writer, this->fatal ? 
+	writer->write_uint8 (writer, this->fatal ?
 		ERROR_FLAG_FATAL : ERROR_FLAG_NONE);
 	writer->write_uint24(writer, this->vendor_id);
 	writer->write_uint16(writer, this->error_code);
@@ -109,21 +109,21 @@ METHOD(pb_tnc_message_t, build, void,
 
 	/* create encoding by concatenating message header and message body */
 	free(this->encoding.ptr);
-	
-	if(this->error_parameters) 
+
+	if(this->error_parameters)
 	{
 		if(this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
 		{
 			/* Bad version */
-			writer->write_uint8(writer, this->error_parameters); 
+			writer->write_uint8(writer, this->error_parameters);
 			writer->write_uint8(writer, 2); /* Max version */
 			writer->write_uint8(writer, 2); /* Min version */
 			writer->write_uint8(writer, 0); /* Reserved */
 		}
-		else 
+		else
 		{
 			/* Error parameters */
-			writer->write_uint32(writer, this->error_parameters); 
+			writer->write_uint32(writer, this->error_parameters);
 		}
 	}
 	this->encoding = writer->get_buf(writer);
@@ -143,7 +143,7 @@ METHOD(pb_tnc_message_t, process, status_t,
 	{
 		DBG1(DBG_TNC,"%N message is shorter than header size of %u bytes",
 			 pb_tnc_msg_type_names, PB_MSG_ERROR, ERROR_HEADER_SIZE);
-		return FAILED;	
+		return FAILED;
 	}
 
 	/* process message header */
@@ -268,7 +268,7 @@ pb_tnc_message_t *pb_error_message_create_with_parameter(u_int32_t vendor_id,
 											u_int32_t error_parameters)
 {
 	private_pb_error_message_t *this;
-	
+
 	INIT(this,
 		.public = {
 			.pb_interface = {

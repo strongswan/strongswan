@@ -106,7 +106,7 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 {
 	return this->encoding;
 }
-	
+
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_pa_message_t *this)
 {
@@ -139,7 +139,7 @@ METHOD(pb_tnc_message_t, process, status_t,
 	{
 		DBG1(DBG_TNC,"%N message is shorter than header size of %u bytes",
 			 pb_tnc_msg_type_names, PB_MSG_PA, PB_PA_HEADER_SIZE);
-		return FAILED;	
+		return FAILED;
 	}
 
 	/* process message header */
