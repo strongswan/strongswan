@@ -55,11 +55,8 @@ struct private_random_rng_t {
 	char *file;
 };
 
-/**
- * Implementation of random_rng_t.get_bytes.
- */
-static void get_bytes(private_random_rng_t *this, size_t bytes,
-					  u_int8_t *buffer)
+METHOD(rng_t, get_bytes, void,
+	private_random_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	size_t done;
 	ssize_t got;
@@ -81,20 +78,15 @@ static void get_bytes(private_random_rng_t *this, size_t bytes,
 	}
 }
 
-/**
- * Implementation of random_rng_t.allocate_bytes.
- */
-static void allocate_bytes(private_random_rng_t *this, size_t bytes,
-						   chunk_t *chunk)
+METHOD(rng_t, allocate_bytes, void,
+	private_random_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
 	get_bytes(this, chunk->len, chunk->ptr);
 }
 
-/**
- * Implementation of random_rng_t.destroy.
- */
-static void destroy(private_random_rng_t *this)
+METHOD(rng_t, destroy, void,
+	private_random_rng_t *this)
 {
 	close(this->dev);
 	free(this);
@@ -105,12 +97,17 @@ static void destroy(private_random_rng_t *this)
  */
 random_rng_t *random_rng_create(rng_quality_t quality)
 {
-	private_random_rng_t *this = malloc_thing(private_random_rng_t);
+	private_random_rng_t *this;
 
-	/* public functions */
-	this->public.rng.get_bytes = (void (*) (rng_t *, size_t, u_int8_t*)) get_bytes;
-	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
-	this->public.rng.destroy = (void (*) (rng_t *))destroy;
+	INIT(this,
+		.public = {
+			.rng = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	if (quality == RNG_TRUE)
 	{

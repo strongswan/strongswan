@@ -31,10 +31,8 @@ struct private_random_plugin_t {
 	random_plugin_t public;
 };
 
-/**
- * Implementation of random_plugin_t.gmptroy
- */
-static void destroy(private_random_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_random_plugin_t *this)
 {
 	lib->crypto->remove_rng(lib->crypto,
 							(rng_constructor_t)random_rng_create);
@@ -46,9 +44,15 @@ static void destroy(private_random_plugin_t *this)
  */
 plugin_t *random_plugin_create()
 {
-	private_random_plugin_t *this = malloc_thing(private_random_plugin_t);
+	private_random_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->crypto->add_rng(lib->crypto, RNG_STRONG,
 						 (rng_constructor_t)random_rng_create);
