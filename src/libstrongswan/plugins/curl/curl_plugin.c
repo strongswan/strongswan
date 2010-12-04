@@ -34,10 +34,8 @@ struct private_curl_plugin_t {
 	curl_plugin_t public;
 };
 
-/**
- * Implementation of curl_plugin_t.curltroy
- */
-static void destroy(private_curl_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_curl_plugin_t *this)
 {
 	lib->fetcher->remove_fetcher(lib->fetcher,
 								 (fetcher_constructor_t)curl_fetcher_create);
@@ -51,9 +49,15 @@ static void destroy(private_curl_plugin_t *this)
 plugin_t *curl_plugin_create()
 {
 	CURLcode res;
-	private_curl_plugin_t *this = malloc_thing(private_curl_plugin_t);
+	private_curl_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	res = curl_global_init(CURL_GLOBAL_NOTHING);
 	if (res == CURLE_OK)
