@@ -337,7 +337,7 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	{
 		DBG1(DBG_LIB, "opening SQLite database '%s' failed: %s",
 			 file, sqlite3_errmsg(this->db));
-		destroy(this);
+		_destroy(this);
 		return NULL;
 	}
 
