@@ -100,8 +100,8 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 }
 
 
-static status_t fetch(private_ldap_fetcher_t *this, char *url,
-					  chunk_t *result, va_list args)
+METHOD(fetcher_t, fetch, status_t,
+	private_ldap_fetcher_t *this, char *url, chunk_t *result)
 {
 	LDAP *ldap;
 	LDAPURLDesc *lurl;
@@ -166,10 +166,8 @@ static status_t fetch(private_ldap_fetcher_t *this, char *url,
 }
 
 
-/**
- * Implementation of fetcher_t.set_option.
- */
-static bool set_option(private_ldap_fetcher_t *this, fetcher_option_t option, ...)
+METHOD(fetcher_t, set_option, bool,
+	private_ldap_fetcher_t *this, fetcher_option_t option, ...)
 {
 	va_list args;
 
@@ -186,10 +184,8 @@ static bool set_option(private_ldap_fetcher_t *this, fetcher_option_t option, ..
 	}
 }
 
-/**
- * Implements ldap_fetcher_t.destroy
- */
-static void destroy(private_ldap_fetcher_t *this)
+METHOD(fetcher_t, destroy, void,
+	private_ldap_fetcher_t *this)
 {
 	free(this);
 }
@@ -199,13 +195,18 @@ static void destroy(private_ldap_fetcher_t *this)
  */
 ldap_fetcher_t *ldap_fetcher_create()
 {
-	private_ldap_fetcher_t *this = malloc_thing(private_ldap_fetcher_t);
+	private_ldap_fetcher_t *this;
 
-	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
-	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
-	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-
-	this->timeout = DEFAULT_TIMEOUT;
+	INIT(this,
+		.public = {
+			.interface = {
+				.fetch = _fetch,
+				.set_option = _set_option,
+				.destroy = _destroy,
+			},
+		},
+		.timeout = DEFAULT_TIMEOUT,
+	);
 
 	return &this->public;
 }
