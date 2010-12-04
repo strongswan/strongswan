@@ -213,10 +213,8 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 	return TRUE;
 }
 
-/**
- * Implementation of database_t.query.
- */
-static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
+METHOD(database_t, query, enumerator_t*,
+	private_sqlite_database_t *this, char *sql, ...)
 {
 	sqlite3_stmt *stmt;
 	va_list args;
@@ -248,10 +246,8 @@ static enumerator_t* query(private_sqlite_database_t *this, char *sql, ...)
 	return (enumerator_t*)enumerator;
 }
 
-/**
- * Implementation of database_t.execute.
- */
-static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
+METHOD(database_t, execute, int,
+	private_sqlite_database_t *this, int *rowid, char *sql, ...)
 {
 	sqlite3_stmt *stmt;
 	int affected = -1;
@@ -283,10 +279,8 @@ static int execute(private_sqlite_database_t *this, int *rowid, char *sql, ...)
 	return affected;
 }
 
-/**
- * Implementation of database_t.get_driver
- */
-static db_driver_t get_driver(private_sqlite_database_t *this)
+METHOD(database_t, get_driver, db_driver_t,
+	private_sqlite_database_t *this)
 {
 	return DB_SQLITE;
 }
@@ -302,10 +296,8 @@ static int busy_handler(private_sqlite_database_t *this, int count)
 	return 1;
 }
 
-/**
- * Implementation of database_t.destroy
- */
-static void destroy(private_sqlite_database_t *this)
+METHOD(database_t, destroy, void,
+	private_sqlite_database_t *this)
 {
 	sqlite3_close(this->db);
 	this->mutex->destroy(this->mutex);
@@ -329,14 +321,17 @@ sqlite_database_t *sqlite_database_create(char *uri)
 	}
 	file = uri + 9;
 
-	this = malloc_thing(private_sqlite_database_t);
-
-	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
-	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
-	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
-	this->public.db.destroy = (void(*)(database_t*))destroy;
-
-	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
+	INIT(this,
+		.public = {
+			.db = {
+				.query = _query,
+				.execute = _execute,
+				.get_driver = _get_driver,
+				.destroy = _destroy,
+			},
+		},
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+	);
 
 	if (sqlite3_open(file, &this->db) != SQLITE_OK)
 	{
