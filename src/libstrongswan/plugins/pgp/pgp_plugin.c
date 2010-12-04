@@ -33,10 +33,8 @@ struct private_pgp_plugin_t {
 	pgp_plugin_t public;
 };
 
-/**
- * Implementation of pgp_plugin_t.pgptroy
- */
-static void destroy(private_pgp_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_pgp_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
 							(builder_function_t)pgp_public_key_load);
@@ -56,10 +54,15 @@ static void destroy(private_pgp_plugin_t *this)
  */
 plugin_t *pgp_plugin_create()
 {
-	private_pgp_plugin_t *this = malloc_thing(private_pgp_plugin_t);
+	private_pgp_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 							(builder_function_t)pgp_public_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, FALSE,
@@ -68,10 +71,8 @@ plugin_t *pgp_plugin_create()
 							(builder_function_t)pgp_private_key_load);
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 							(builder_function_t)pgp_private_key_load);
-
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_GPG, FALSE,
 							(builder_function_t)pgp_cert_load);
-
 	lib->encoding->add_encoder(lib->encoding, pgp_encoder_encode);
 
 	return &this->public.plugin;
