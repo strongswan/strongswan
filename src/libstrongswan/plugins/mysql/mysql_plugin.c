@@ -32,10 +32,8 @@ struct private_mysql_plugin_t {
 	mysql_plugin_t public;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_mysql_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_mysql_plugin_t *this)
 {
 	lib->db->remove_database(lib->db,
 							 (database_constructor_t)mysql_database_create);
@@ -56,8 +54,13 @@ plugin_t *mysql_plugin_create()
 		return NULL;
 	}
 
-	this = malloc_thing(private_mysql_plugin_t);
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->db->add_database(lib->db,
 						  (database_constructor_t)mysql_database_create);
