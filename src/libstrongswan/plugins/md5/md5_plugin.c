@@ -31,10 +31,8 @@ struct private_md5_plugin_t {
 	md5_plugin_t public;
 };
 
-/**
- * Implementation of md5_plugin_t.destroy
- */
-static void destroy(private_md5_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_md5_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 							   (hasher_constructor_t)md5_hasher_create);
@@ -46,9 +44,15 @@ static void destroy(private_md5_plugin_t *this)
  */
 plugin_t *md5_plugin_create()
 {
-	private_md5_plugin_t *this = malloc_thing(private_md5_plugin_t);
+	private_md5_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
 							(hasher_constructor_t)md5_hasher_create);
