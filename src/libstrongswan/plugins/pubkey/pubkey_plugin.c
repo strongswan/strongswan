@@ -31,10 +31,8 @@ struct private_pubkey_plugin_t {
 	pubkey_plugin_t public;
 };
 
-/**
- * Implementation of pubkey_plugin_t.pubkeytroy
- */
-static void destroy(private_pubkey_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_pubkey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
 							(builder_function_t)pubkey_cert_wrap);
@@ -46,9 +44,15 @@ static void destroy(private_pubkey_plugin_t *this)
  */
 plugin_t *pubkey_plugin_create()
 {
-	private_pubkey_plugin_t *this = malloc_thing(private_pubkey_plugin_t);
+	private_pubkey_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY, FALSE,
 							(builder_function_t)pubkey_cert_wrap);
