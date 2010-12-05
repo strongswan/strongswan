@@ -161,6 +161,20 @@ CREATE TABLE shared_secret_identity (
   PRIMARY KEY (shared_secret, identity)
 );
 
+DROP TABLE IF EXISTS certificate_authorities;
+CREATE TABLE certificate_authorities (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  certificate INTEGER NOT NULL
+);
+
+DROP TABLE IF EXISTS certificate_distribution_points;
+CREATE TABLE certificate_distribution_points (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  ca INTEGER NOT NULL,
+  type INTEGER NOT NULL,
+  uri TEXT NOT NULL
+);
+
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
