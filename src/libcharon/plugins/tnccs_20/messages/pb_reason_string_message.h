@@ -36,25 +36,11 @@ struct pb_reason_string_message_t {
 	pb_tnc_message_t pb_interface;
 
 	/**
-	 * Get Reason String Length
-	 *
-	 * @return			Length of reason string
-	 */
-	chunk_t (*get_reason_string_length)(pb_reason_string_message_t *this);
-
-	/**
 	 * Get Reason String
 	 *
 	 * @return			Reason string
 	 */
 	chunk_t (*get_reason_string)(pb_reason_string_message_t *this);
-
-	/**
-	 * Get Reason String Language Code Length
-	 *
-	 * @return			Length of language code
-	 */
-	chunk_t (*get_language_code_length)(pb_reason_string_message_t *this);
 
 	/**
 	 * Get Reason String Language Code
@@ -71,7 +57,7 @@ struct pb_reason_string_message_t {
   * @param language_code	Language code
  */
 pb_tnc_message_t* pb_reason_string_message_create(chunk_t reason_string,
-							chunk_t language_code);
+												  chunk_t language_code);
 
 /**
  * Create an unprocessed PB-Reason-String message from raw data

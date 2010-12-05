@@ -53,19 +53,9 @@ struct private_pb_reason_string_message_t {
 	pb_tnc_msg_type_t type;
 
 	/**
-	 * Reason string length
-	 */
-	u_int32_t reason_string_length;
-
-	/**
 	 * Reason string
 	 */
 	chunk_t reason_string;
-
-	/**
-	 * Language code length
-	 */
-	u_int8_t language_code_length;
 
 	/**
 	 * Language code
@@ -97,10 +87,10 @@ METHOD(pb_tnc_message_t, build, void,
 
 	/* build message */
 	writer = tls_writer_create(REASON_STRING_HEADER_SIZE);
-	writer->write_uint32(writer, this->reason_string_length);
+	writer->write_uint32(writer, this->reason_string.len);
 	writer->write_data(writer, this->reason_string);
 
-	writer->write_uint8(writer, this->language_code_length);
+	writer->write_uint8(writer, this->language_code.len);
 	writer->write_data(writer, this->language_code);
 
 	free(this->encoding.ptr);
@@ -113,6 +103,8 @@ METHOD(pb_tnc_message_t, process, status_t,
 	private_pb_reason_string_message_t *this)
 {
 	tls_reader_t *reader;
+	u_int32_t reason_string_length;
+	u_int8_t language_code_length;
 
 	if (this->encoding.len < REASON_STRING_HEADER_SIZE)
 	{
@@ -124,11 +116,13 @@ METHOD(pb_tnc_message_t, process, status_t,
 
 	/* process message */
 	reader = tls_reader_create(this->encoding);
-	reader->read_uint32(reader, &this->reason_string_length);
-	reader->read_data(reader, this->reason_string_length, &this->reason_string);
+	reader->read_uint32(reader, &reason_string_length);
+	reader->read_data(reader, reason_string_length, &this->reason_string);
+	this->reason_string = chunk_clone(this->reason_string);
 
-	reader->read_uint8(reader, &this->language_code_length);
-	reader->read_data(reader, this->language_code_length, &this->language_code);
+	reader->read_uint8(reader, &language_code_length);
+	reader->read_data(reader, language_code_length, &this->language_code);
+	this->language_code = chunk_clone(this->language_code);
 
 	reader->destroy(reader);
 	return SUCCESS;
@@ -143,22 +137,10 @@ METHOD(pb_tnc_message_t, destroy, void,
 	free(this);
 }
 
-METHOD(pb_reason_string_message_t, get_reason_string_length, u_int32_t,
-	private_pb_reason_string_message_t *this)
-{
-	return this->reason_string_length;
-}
-
 METHOD(pb_reason_string_message_t, get_reason_string, chunk_t,
 	private_pb_reason_string_message_t *this)
 {
 	return this->reason_string;
-}
-
-METHOD(pb_reason_string_message_t, get_language_code_length, u_int8_t,
-	private_pb_reason_string_message_t *this)
-{
-	return this->language_code_length;
 }
 
 METHOD(pb_reason_string_message_t, get_language_code, chunk_t,
@@ -183,9 +165,7 @@ pb_tnc_message_t *pb_reason_string_message_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_reason_string_length = _get_reason_string_length,
 			.get_reason_string = _get_reason_string,
-			.get_language_code_length = _get_language_code_length,
 			.get_language_code = _get_language_code,
 		},
 		.type = PB_MSG_REASON_STRING,
@@ -212,16 +192,12 @@ pb_tnc_message_t *pb_reason_string_message_create(chunk_t reason_string,
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_reason_string_length = _get_reason_string_length,
 			.get_reason_string = _get_reason_string,
-			.get_language_code_length = _get_language_code_length,
 			.get_language_code = _get_language_code,
 		},
 		.type = PB_MSG_REASON_STRING,
-		.reason_string_length = reason_string.len,
-		.reason_string = reason_string,
-		.language_code_length = language_code.len,
-		.language_code = language_code,
+		.reason_string = chunk_clone(reason_string),
+		.language_code = chunk_clone(language_code),
 	);
 
 	return &this->public.pb_interface;
