@@ -103,8 +103,6 @@ METHOD(pb_tnc_message_t, process, status_t,
 	private_pb_reason_string_message_t *this)
 {
 	tls_reader_t *reader;
-	u_int32_t reason_string_length;
-	u_int8_t language_code_length;
 
 	if (this->encoding.len < REASON_STRING_HEADER_SIZE)
 	{
@@ -116,12 +114,18 @@ METHOD(pb_tnc_message_t, process, status_t,
 
 	/* process message */
 	reader = tls_reader_create(this->encoding);
-	reader->read_uint32(reader, &reason_string_length);
-	reader->read_data(reader, reason_string_length, &this->reason_string);
+	if (!reader->read_data32(reader, &this->reason_string))
+	{
+		DBG1(DBG_TNC, "Could not parse reason string");
+		return FAILED;
+	};
 	this->reason_string = chunk_clone(this->reason_string);
 
-	reader->read_uint8(reader, &language_code_length);
-	reader->read_data(reader, language_code_length, &this->language_code);
+	if (!reader->read_data8(reader, &this->language_code))
+	{
+		DBG1(DBG_TNC, "Could not parse language code");
+		return FAILED;
+	};
 	this->language_code = chunk_clone(this->language_code);
 
 	reader->destroy(reader);
