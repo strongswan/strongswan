@@ -167,7 +167,7 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 	child_cfg_t *child_cfg;
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
-						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, %reqid))
+						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
 	{
 		lifetime_cfg_t lft = {
 			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
