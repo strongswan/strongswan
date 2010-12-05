@@ -75,7 +75,7 @@ METHOD(pb_tnc_message_t, build, void,
 	tls_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(0);
+	writer = tls_writer_create(16);
 	writer->write_data(writer, this->language_preference);
 
 	free(this->encoding.ptr);
@@ -94,7 +94,7 @@ METHOD(pb_tnc_message_t, process, status_t,
 		/* process message */
 		reader = tls_reader_create(this->encoding);
 		reader->read_data(reader, this->encoding.len,
-				  &this->language_preference);
+								 &this->language_preference);
 		this->language_preference = chunk_clone(this->language_preference);
 		reader->destroy(reader);
 	}
