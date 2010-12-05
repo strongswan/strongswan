@@ -38,7 +38,7 @@ typedef struct private_pb_error_message_t private_pb_error_message_t;
 
 #define ERROR_FLAG_NONE		0x00
 #define ERROR_FLAG_FATAL	(1<<7)
-#define ERROR_RESERVED	 	0x00
+#define ERROR_RESERVED	 	0x0000
 #define ERROR_HEADER_SIZE	8
 
 /**
@@ -110,9 +110,9 @@ METHOD(pb_tnc_message_t, build, void,
 	/* create encoding by concatenating message header and message body */
 	free(this->encoding.ptr);
 
-	if(this->error_parameters)
+	if (this->error_parameters)
 	{
-		if(this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
+		if (this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
 		{
 			/* Bad version */
 			writer->write_uint8(writer, this->error_parameters);
