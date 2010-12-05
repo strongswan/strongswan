@@ -161,19 +161,20 @@ static void add_esp_proposals(private_sql_config_t *this,
  */
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
-	int id, lifetime, rekeytime, jitter, hostaccess, mode, ipcomp;
+	int id, lifetime, rekeytime, jitter, hostaccess, mode, ipcomp, reqid;
 	int start, dpd, close;
 	char *name, *updown;
 	child_cfg_t *child_cfg;
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
-						&hostaccess, &mode, &start, &dpd, &close, &ipcomp))
+						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, %reqid))
 	{
 		lifetime_cfg_t lft = {
 			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
 		};
 		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
-									 start, dpd, close, ipcomp, 0, 0, NULL, NULL);
+									 start, dpd, close, ipcomp, 0, reqid,
+									 NULL, NULL);
 		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;
@@ -190,12 +191,12 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	child_cfg_t *child_cfg;
 
 	e = this->db->query(this->db,
-			"SELECT id, name, lifetime, rekeytime, jitter, updown, "
-			"hostaccess, mode, start_action, dpd_action, close_action, ipcomp "
+			"SELECT id, name, lifetime, rekeytime, jitter, updown, hostaccess, "
+			"mode, start_action, dpd_action, close_action, ipcomp, reqid "
 			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
 			"WHERE peer_cfg = ?",
 			DB_INT, id,
-			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT,
+			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
 	if (e)
 	{
