@@ -21,7 +21,11 @@ if USE_TLS
 endif
 
 if USE_FILE_CONFIG
-  SUBDIRS += libfreeswan starter ipsec _copyright
+  SUBDIRS += libfreeswan starter
+endif
+
+if USE_IPSEC_SCRIPT
+  SUBDIRS += ipsec _copyright
 endif
 
 if USE_PLUTO
