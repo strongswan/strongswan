@@ -145,10 +145,8 @@ static void start_all_connections(void)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of stroke_control_t.initiate.
- */
-static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, initiate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -197,9 +195,6 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 	}
 }
 
-/**
- * Parse a terminate/rekey specifier
- */
 static bool parse_specifier(char *string, u_int32_t *id,
 							char **name, bool *child, bool *all)
 {
@@ -264,10 +259,8 @@ static bool parse_specifier(char *string, u_int32_t *id,
 	return TRUE;
 }
 
-/**
- * Implementation of stroke_control_t.terminate.
- */
-static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, terminate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	char *name;
 	u_int32_t id;
@@ -369,10 +362,8 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	child_list->destroy(child_list);
 }
 
-/**
- * Implementation of stroke_control_t.rekey.
- */
-static void rekey(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, rekey, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	char *name;
 	u_int32_t id;
@@ -431,11 +422,8 @@ static void rekey(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of stroke_control_t.terminate_srcip.
- */
-static void terminate_srcip(private_stroke_control_t *this,
-							stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, terminate_srcip, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -500,10 +488,8 @@ static void terminate_srcip(private_stroke_control_t *this,
 	DESTROY_IF(end);
 }
 
-/**
- * Implementation of stroke_control_t.purge_ike
- */
-static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, purge_ike, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	enumerator_t *enumerator;
 	iterator_t *iterator;
@@ -540,10 +526,8 @@ static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	list->destroy(list);
 }
 
-/**
- * Implementation of stroke_control_t.route.
- */
-static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, route, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -581,10 +565,8 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 	child_cfg->destroy(child_cfg);
 }
 
-/**
- * Implementation of stroke_control_t.unroute.
- */
-static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, unroute, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
@@ -606,10 +588,8 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 }
 
-/**
- * Implementation of stroke_control_t.destroy
- */
-static void destroy(private_stroke_control_t *this)
+METHOD(stroke_control_t, destroy, void,
+	private_stroke_control_t *this)
 {
 	free(this);
 }
@@ -619,16 +599,20 @@ static void destroy(private_stroke_control_t *this)
  */
 stroke_control_t *stroke_control_create()
 {
-	private_stroke_control_t *this = malloc_thing(private_stroke_control_t);
+	private_stroke_control_t *this;
 
-	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
-	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
-	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
-	this->public.rekey = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))rekey;
-	this->public.purge_ike = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))purge_ike;
-	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
-	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
-	this->public.destroy = (void(*)(stroke_control_t*))destroy;
+	INIT(this,
+		.public = {
+			.initiate = _initiate,
+			.terminate = _terminate,
+			.terminate_srcip = _terminate_srcip,
+			.rekey = _rekey,
+			.purge_ike = _purge_ike,
+			.route = _route,
+			.unroute = _unroute,
+			.destroy = _destroy,
+		},
+	);
 
 	return &this->public;
 }
