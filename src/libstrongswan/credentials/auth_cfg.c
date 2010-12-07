@@ -366,38 +366,45 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
 			{
-				cert_validation_t validated, required;
+				uintptr_t validated;
 
-				required = (uintptr_t)value;
-				validated = (uintptr_t)get(this, t1);
-				switch (required)
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &validated))
 				{
-					case VALIDATION_FAILED:
-						/* no constraint */
-						break;
-					case VALIDATION_SKIPPED:
-						if (validated == VALIDATION_SKIPPED)
+					if (t2 == t1)
+					{
+						switch ((uintptr_t)value)
 						{
-							break;
+							case VALIDATION_FAILED:
+								/* no constraint */
+								break;
+							case VALIDATION_SKIPPED:
+								if (validated == VALIDATION_SKIPPED)
+								{
+									break;
+								}
+								/* FALL */
+							case VALIDATION_GOOD:
+								if (validated == VALIDATION_GOOD)
+								{
+									break;
+								}
+								/* FALL */
+							default:
+								success = FALSE;
+								if (log_error)
+								{
+									DBG1(DBG_CFG, "constraint check failed: "
+										 "%N is %N, but requires at least %N",
+										 auth_rule_names, t1,
+										 cert_validation_names, validated,
+										 cert_validation_names, (uintptr_t)value);
+								}
+								break;
 						}
-						/* FALL */
-					case VALIDATION_GOOD:
-						if (validated == VALIDATION_GOOD)
-						{
-							break;
-						}
-						/* FALL */
-					default:
-						success = FALSE;
-						if (log_error)
-						{
-							DBG1(DBG_CFG, "constraint check failed: %N is %N, "
-								 "but requires at least %N", auth_rule_names,
-								 t1, cert_validation_names, validated,
-								 cert_validation_names, required);
-						}
-						break;
+					}
 				}
+				e2->destroy(e2);
 				break;
 			}
 			case AUTH_RULE_IDENTITY:
@@ -484,15 +491,44 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			{
-				if ((uintptr_t)value > (uintptr_t)get(this, t1))
+				uintptr_t strength;
+
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &strength))
 				{
-					success = FALSE;
-					if (log_error)
+					if (t2 == t1)
 					{
-						DBG1(DBG_CFG, "constraint requires %d bit public key "
-							 "strength", value);
+						if ((uintptr_t)value > strength)
+						{
+							success = FALSE;
+							if (log_error)
+							{
+								DBG1(DBG_CFG, "constraint requires %d bit "
+									 "public keys, but %d bit key used",
+									 (uintptr_t)value, strength);
+							}
+						}
+					}
+					else if (t2 == AUTH_RULE_RSA_STRENGTH)
+					{
+						success = FALSE;
+						if (log_error)
+						{
+							DBG1(DBG_CFG, "constraint requires %d bit ECDSA, "
+								 "but RSA used", (uintptr_t)value);
+						}
+					}
+					else if (t2 == AUTH_RULE_ECDSA_STRENGTH)
+					{
+						success = FALSE;
+						if (log_error)
+						{
+							DBG1(DBG_CFG, "constraint requires %d bit RSA, "
+								 "but ECDSA used", (uintptr_t)value);
+						}
 					}
 				}
+				e2->destroy(e2);
 				break;
 			}
 			case AUTH_HELPER_IM_CERT:
