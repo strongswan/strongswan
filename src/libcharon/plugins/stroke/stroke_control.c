@@ -194,7 +194,9 @@ METHOD(stroke_control_t, initiate, void,
 									 (controller_cb_t)stroke_log, &info);
 	}
 }
-
+/**
+ * Parse a terminate/rekey specifier
+ */
 static bool parse_specifier(char *string, u_int32_t *id,
 							char **name, bool *child, bool *all)
 {
