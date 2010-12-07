@@ -914,8 +914,6 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 {
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
-	entry_t *entry;
-	u_int segment;
 
 	if (initiator)
 	{
@@ -926,23 +924,12 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 		ike_sa_id = ike_sa_id_create(0, get_next_spi(this), FALSE);
 	}
 	ike_sa = ike_sa_create(ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
 
 	DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
 			ike_sa->get_unique_id(ike_sa));
 
-	if (!initiator)
-	{
-		ike_sa_id->destroy(ike_sa_id);
-		return ike_sa;
-	}
-
-	entry = entry_create();
-	entry->ike_sa_id = ike_sa_id;
-	entry->ike_sa = ike_sa;
-	segment = put_entry(this, entry);
-	entry->checked_out = TRUE;
-	unlock_single_segment(this, segment);
-	return entry->ike_sa;
+	return ike_sa;
 }
 
 /**
