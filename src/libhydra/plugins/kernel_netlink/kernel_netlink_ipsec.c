@@ -58,8 +58,8 @@
 #endif /*IPV6_XFRM_POLICY*/
 
 /** default priority of installed policies */
-#define PRIO_LOW 3000
-#define PRIO_HIGH 2000
+#define PRIO_LOW 1024
+#define PRIO_HIGH 512
 
 /**
  * map the limit for bytes and packets to XFRM_INF per default
@@ -1687,11 +1687,16 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
 	policy_info->sel = policy->sel;
 	policy_info->dir = policy->direction;
-	/* calculate priority based on source selector size, small size = high prio */
+
+	/* calculate priority based on selector size, small size = high prio */
 	policy_info->priority = routed ? PRIO_LOW : PRIO_HIGH;
-	policy_info->priority -= policy->sel.prefixlen_s * 10;
-	policy_info->priority -= policy->sel.proto ? 2 : 0;
-	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
+	policy_info->priority -= policy->sel.prefixlen_s;
+	policy_info->priority -= policy->sel.prefixlen_d;
+	policy_info->priority <<= 2; /* make some room for the two flags */
+	policy_info->priority += policy->sel.sport_mask ||
+							 policy->sel.dport_mask ? 0 : 2;
+	policy_info->priority += policy->sel.proto ? 0 : 1;
+
 	policy_info->action = type != POLICY_DROP ? XFRM_POLICY_ALLOW
 											  : XFRM_POLICY_BLOCK;
 	policy_info->share = XFRM_SHARE_ANY;
