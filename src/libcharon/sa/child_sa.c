@@ -591,6 +591,8 @@ METHOD(child_sa_t, install, status_t,
 		dst = this->other_addr;
 		this->other_spi = spi;
 		this->other_cpi = cpi;
+
+		tfc = this->config->get_tfc(this->config);
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",

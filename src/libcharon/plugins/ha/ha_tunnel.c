@@ -224,7 +224,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 
 	child_cfg = child_cfg_create("ha", &lifetime, NULL, TRUE, MODE_TRANSPORT,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL);
+								 0, 0, NULL, NULL, 0);
 	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);

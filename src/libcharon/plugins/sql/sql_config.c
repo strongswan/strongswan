@@ -174,7 +174,7 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 		};
 		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
 									 start, dpd, close, ipcomp, 0, reqid,
-									 NULL, NULL);
+									 NULL, NULL, 0);
 		add_esp_proposals(this, child_cfg, id);
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;

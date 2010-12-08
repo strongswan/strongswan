@@ -183,7 +183,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL);
+								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
@@ -262,7 +262,7 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL);
+								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));

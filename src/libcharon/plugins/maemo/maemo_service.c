@@ -347,7 +347,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 
 	child_cfg = child_cfg_create(this->current, &lifetime, NULL /* updown */,
 								 TRUE, MODE_TUNNEL, ACTION_NONE, ACTION_NONE,
-								 ACTION_NONE, FALSE, 0, 0, NULL, NULL);
+								 ACTION_NONE, FALSE, 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);

@@ -228,6 +228,13 @@ struct child_cfg_t {
 	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
 
 	/**
+	 * Get the TFC padding value to use for CHILD_SA.
+	 *
+	 * @return				TFC padding, 0 to disable, -1 for MTU
+	 */
+	u_int32_t (*get_tfc)(child_cfg_t *this);
+
+	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
@@ -292,6 +299,7 @@ struct child_cfg_t {
  * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
  * @param mark_in			optional inbound mark (can be NULL)
  * @param mark_out			optional outbound mark (can be NULL)
+ * @param tfc				TFC padding size, 0 to disable, -1 to pad to PMTU
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
@@ -299,6 +307,6 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  ipsec_mode_t mode, action_t start_action,
 							  action_t dpd_action, action_t close_action,
 							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out);
+							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc);
 
 #endif /** CHILD_CFG_H_ @}*/

@@ -123,6 +123,12 @@ struct private_child_cfg_t {
 	 * Optional mark to install outbound CHILD_SA with
 	 */
 	mark_t mark_out;
+
+	/**
+	 * Traffic Flow Confidentiality padding, if enabled
+	 */
+	u_int32_t tfc;
+
 	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
 	 */
@@ -441,6 +447,12 @@ METHOD(child_cfg_t, get_mark, mark_t,
 	return inbound ? this->mark_in : this->mark_out;
 }
 
+METHOD(child_cfg_t, get_tfc, u_int32_t,
+	private_child_cfg_t *this)
+{
+	return this->tfc;
+}
+
 METHOD(child_cfg_t, set_mipv6_options, void,
 	private_child_cfg_t *this, bool proxy_mode, bool install_policy)
 {
@@ -492,7 +504,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  ipsec_mode_t mode, action_t start_action,
 							  action_t dpd_action, action_t close_action,
 							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out)
+							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc)
 {
 	private_child_cfg_t *this;
 
@@ -517,6 +529,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_mark = _get_mark,
+			.get_tfc = _get_tfc,
 			.use_proxy_mode = _use_proxy_mode,
 			.install_policy = _install_policy,
 			.get_ref = _get_ref,
@@ -538,6 +551,7 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 		.proposals = linked_list_create(),
 		.my_ts = linked_list_create(),
 		.other_ts = linked_list_create(),
+		.tfc = tfc,
 	);
 
 	if (mark_in)
