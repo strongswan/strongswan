@@ -160,7 +160,7 @@ pb_tnc_message_t *pb_language_preference_message_create(chunk_t language_prefere
 			.get_language_preference = _get_language_preference,
 		},
 		.type = PB_MSG_LANGUAGE_PREFERENCE,
-		.language_preference = language_preference,
+		.language_preference = chunk_clone(language_preference),
 	);
 
 	return &this->public.pb_interface;
