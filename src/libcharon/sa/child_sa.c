@@ -559,7 +559,7 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 
 METHOD(child_sa_t, install, status_t,
 	   private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
-	   u_int16_t cpi, bool inbound, linked_list_t *my_ts,
+	   u_int16_t cpi, bool inbound, bool tfcv3, linked_list_t *my_ts,
 	   linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
@@ -592,7 +592,10 @@ METHOD(child_sa_t, install, status_t,
 		this->other_spi = spi;
 		this->other_cpi = cpi;
 
-		tfc = this->config->get_tfc(this->config);
+		if (tfcv3)
+		{
+			tfc = this->config->get_tfc(this->config);
+		}
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",

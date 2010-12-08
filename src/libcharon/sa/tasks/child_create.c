@@ -117,6 +117,11 @@ struct private_child_create_t {
 	ipsec_mode_t mode;
 
 	/**
+	 * peer accepts TFC padding for this SA
+	 */
+	bool tfcv3;
+
+	/**
 	 * IPComp transform to use
 	 */
 	ipcomp_transform_t ipcomp;
@@ -455,17 +460,21 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		if (this->initiator)
 		{
-			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
-					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
+			status_i = this->child_sa->install(this->child_sa,
+							encr_r, integ_r, this->my_spi, this->my_cpi,
+							TRUE, this->tfcv3, my_ts, other_ts);
+			status_o = this->child_sa->install(this->child_sa,
+							encr_i, integ_i, this->other_spi, this->other_cpi,
+							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 		else
 		{
-			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
-					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
+			status_i = this->child_sa->install(this->child_sa,
+							encr_i, integ_i, this->my_spi, this->my_cpi,
+							TRUE, this->tfcv3, my_ts, other_ts);
+			status_o = this->child_sa->install(this->child_sa,
+							encr_r, integ_r, this->other_spi, this->other_cpi,
+							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 	}
 	chunk_clear(&integ_i);
@@ -631,7 +640,13 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 						 ipcomp_transform_names, ipcomp);
 					break;
 			}
+			break;
 		}
+		case ESP_TFC_PADDING_NOT_SUPPORTED:
+			DBG1(DBG_IKE, "received %N, not using ESPv3 TFC padding",
+				 notify_type_names, notify->get_notify_type(notify));
+			this->tfcv3 = FALSE;
+			break;
 		default:
 			break;
 	}
@@ -1310,6 +1325,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 	this->keymat = ike_sa->get_keymat(ike_sa);
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
+	this->tfcv3 = TRUE;
 	this->ipcomp = IPCOMP_NONE;
 	this->ipcomp_received = IPCOMP_NONE;
 	this->my_spi = 0;
