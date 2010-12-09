@@ -206,6 +206,93 @@ METHOD(pb_tnc_batch_t, build, void,
 	writer->destroy(writer);
 }
 
+/*
+ * Implements the PB-TNC state machine in receive direction
+ */
+static bool state_transition_upon_receive(pb_tnc_state_t *state,
+										  pb_tnc_batch_type_t batch_type,
+										  bool is_server)
+{
+	switch (*state)
+	{
+		case PB_STATE_INIT:
+			if (is_server && batch_type == PB_BATCH_CDATA)
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (!is_server && batch_type == PB_BATCH_SDATA)
+			{
+				*state = PB_STATE_CLIENT_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_SERVER_WORKING:
+			if (!is_server && batch_type == PB_BATCH_SDATA)
+			{
+				*state = PB_STATE_CLIENT_WORKING;
+				break;
+			}
+			if (!is_server && batch_type == PB_BATCH_RESULT)
+			{
+				*state = PB_STATE_DECIDED;
+				break;
+			}
+			if ((is_server && batch_type == PB_BATCH_CRETRY) ||
+			   (!is_server && batch_type == PB_BATCH_SRETRY))
+			{
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_CLIENT_WORKING:
+			if (is_server && batch_type == PB_BATCH_CDATA)
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (is_server && batch_type == PB_BATCH_CRETRY)
+			{
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_DECIDED:
+			if ((is_server && batch_type == PB_BATCH_CRETRY) ||
+			   (!is_server && batch_type == PB_BATCH_SRETRY))
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_END:
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				break;
+			}
+			return FALSE;
+	}
+	return TRUE;
+}
+
 static status_t process_batch_header(private_pb_tnc_batch_t *this,
 									 pb_tnc_state_t *state)
 {
@@ -214,7 +301,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	pb_error_message_t *err_msg;
 	u_int8_t version, flags, reserved, type;
 	u_int32_t batch_len;
-	bool directionality, unexpected_batch_type = FALSE;
+	bool directionality;
 
 	if (this->encoding.len < PB_TNC_BATCH_HEADER_SIZE)
 	{
@@ -270,88 +357,8 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 		err_msg->set_offset(err_msg, 3);
 		goto fatal;
 	}
-	switch (*state)
-	{
-		case PB_STATE_INIT:
-			if (this->is_server && this->type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (!this->is_server && this->type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (this->type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			unexpected_batch_type = TRUE;
-			break;
-		case PB_STATE_SERVER_WORKING:
-			if (!this->is_server && this->type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (!this->is_server && this->type == PB_BATCH_RESULT)
-			{
-				*state = PB_STATE_DECIDED;
-				break;
-			}
-			if ((this->is_server && this->type == PB_BATCH_CRETRY) ||
-			   (!this->is_server && this->type == PB_BATCH_SRETRY))
-			{
-				break;
-			}
-			if (this->type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			unexpected_batch_type = TRUE;
-			break;
-		case PB_STATE_CLIENT_WORKING:
-			if (this->is_server && this->type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (this->is_server && this->type == PB_BATCH_CRETRY)
-			{
-				break;
-			}
-			if (this->type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			unexpected_batch_type = TRUE;
-			break;
-		case PB_STATE_DECIDED:
-			if ((this->is_server && this->type == PB_BATCH_CRETRY) ||
-			   (!this->is_server && this->type == PB_BATCH_SRETRY))
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (this->type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			unexpected_batch_type = TRUE;
-			break;
-		case PB_STATE_END:
-			if (this->type == PB_BATCH_CLOSE)
-			{
-				break;
-			}
-			unexpected_batch_type = TRUE;
-	}
-	if (unexpected_batch_type)
+
+	if (!state_transition_upon_receive(state, this->type, this->is_server))
 	{
 		DBG1(DBG_TNC, "Unexpected PB-TNC Batch Type: %N",
 					   pb_tnc_batch_type_names, this->type);
