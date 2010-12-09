@@ -1693,7 +1693,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
 	chunk_t ocspSigning = chunk_empty;
-	chunk_t basicConstraints = chunk_empty;
+	chunk_t basicConstraints = chunk_empty, nameConstraints = chunk_empty;
 	chunk_t keyUsage = chunk_empty, keyUsageBits = chunk_empty;
 	chunk_t subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
@@ -1900,15 +1900,53 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 									asn1_wrap(ASN1_CONTEXT_S_0, "c", keyid))));
 		}
 	}
+
+	if (cert->permitted_names->get_count(cert->permitted_names) ||
+		cert->excluded_names->get_count(cert->excluded_names))
+	{
+		chunk_t permitted = chunk_empty, excluded = chunk_empty, subtree;
+		identification_t *id;
+
+		enumerator = create_name_constraint_enumerator(cert, TRUE);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			subtree = asn1_wrap(ASN1_SEQUENCE, "m", build_generalName(id));
+			permitted = chunk_cat("mm", permitted, subtree);
+		}
+		enumerator->destroy(enumerator);
+		if (permitted.ptr)
+		{
+			permitted = asn1_wrap(ASN1_CONTEXT_C_0, "m", permitted);
+		}
+
+		enumerator = create_name_constraint_enumerator(cert, FALSE);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			subtree = asn1_wrap(ASN1_SEQUENCE, "m", build_generalName(id));
+			excluded = chunk_cat("mm", excluded, subtree);
+		}
+		enumerator->destroy(enumerator);
+		if (excluded.ptr)
+		{
+			excluded = asn1_wrap(ASN1_CONTEXT_C_1, "m", excluded);
+		}
+
+		nameConstraints = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_NAME_CONSTRAINTS),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "mm",
+									permitted, excluded)));
+	}
+
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
-		crlDistributionPoints.ptr)
+		crlDistributionPoints.ptr || nameConstraints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmm",
 							basicConstraints, keyUsage, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
-							authorityInfoAccess));
+							authorityInfoAccess, nameConstraints));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -2079,6 +2117,38 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 					cert->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
 				}
 				continue;
+			case BUILD_PERMITTED_NAME_CONSTRAINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				identification_t *constraint;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &constraint))
+				{
+					cert->permitted_names->insert_last(cert->permitted_names,
+												constraint->clone(constraint));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_EXCLUDED_NAME_CONSTRAINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				identification_t *constraint;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &constraint))
+				{
+					cert->excluded_names->insert_last(cert->excluded_names,
+												constraint->clone(constraint));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
 			case BUILD_NOT_BEFORE_TIME:
 				cert->notBefore = va_arg(args, time_t);
 				continue;

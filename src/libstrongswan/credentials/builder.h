@@ -95,6 +95,10 @@ enum builder_part_t {
 	BUILD_OCSP_ACCESS_LOCATIONS,
 	/** certificate path length constraint */
 	BUILD_PATHLEN,
+	/** permitted X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_PERMITTED_NAME_CONSTRAINTS,
+	/** excluded X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_EXCLUDED_NAME_CONSTRAINTS,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
