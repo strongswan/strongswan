@@ -819,6 +819,62 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 }
 
 /**
+ * ASN.1 definition of nameConstraints
+ */
+static const asn1Object_t nameConstraintsObjects[] = {
+	{ 0, "nameConstraints",			ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
+	{ 1,   "permittedSubtrees",		ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_LOOP	}, /*  1 */
+	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  2 */
+	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  3 */
+	{ 1,   "excludedSubtrees",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_LOOP	}, /*  4 */
+	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  5 */
+	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  6 */
+	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /*  7 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
+};
+#define NAME_CONSTRAINT_PERMITTED 2
+#define NAME_CONSTRAINT_EXCLUDED  5
+
+/**
+ * Parse permitted/excluded nameConstraints
+ */
+static void parse_nameConstraints(chunk_t blob, int level0,
+								  private_x509_cert_t *this)
+{
+	asn1_parser_t *parser;
+	identification_t *id;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(nameConstraintsObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case NAME_CONSTRAINT_PERMITTED:
+				id = parse_generalName(object, parser->get_level(parser) + 1);
+				if (id)
+				{
+					this->permitted_names->insert_last(this->permitted_names, id);
+				}
+				break;
+			case NAME_CONSTRAINT_EXCLUDED:
+				id = parse_generalName(object, parser->get_level(parser) + 1);
+				if (id)
+				{
+					this->excluded_names->insert_last(this->excluded_names, id);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
  * ASN.1 definition of ipAddrBlocks according to RFC 3779
  */
 static const asn1Object_t ipAddrBlocksObjects[] = {
@@ -1126,6 +1182,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_IP_ADDR_BLOCKS:
 						parse_ipAddrBlocks(object, level, this);
+						break;
+					case OID_NAME_CONSTRAINTS:
+						parse_nameConstraints(object, level, this);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
