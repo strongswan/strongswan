@@ -128,6 +128,14 @@ struct x509_t {
 	 * @return			enumerator over ipAddrBlocks as traffic_selector_t*
 	 */
 	enumerator_t* (*create_ipAddrBlock_enumerator)(x509_t *this);
+
+	/**
+	 * Create an enumerator over name constraints.
+	 *
+	 * @param perm		TRUE for permitted, FALSE for excluded subtrees
+	 * @return			enumerator over subtrees as identification_t
+	 */
+	enumerator_t* (*create_name_constraint_enumerator)(x509_t *this, bool perm);
 };
 
 #endif /** X509_H_ @}*/

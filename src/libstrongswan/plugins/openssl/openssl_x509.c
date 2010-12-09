@@ -579,6 +579,7 @@ static private_openssl_x509_t *create_empty()
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
 				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
+				.create_name_constraint_enumerator = (void*)enumerator_create_empty,
 			},
 		},
 		.subjectAltNames = linked_list_create(),

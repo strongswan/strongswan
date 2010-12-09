@@ -132,6 +132,16 @@ struct private_x509_cert_t {
 	linked_list_t *ipAddrBlocks;
 
 	/**
+	 * List of permitted name constraints
+	 */
+	linked_list_t *permitted_names;
+
+	/**
+	 * List of exluced name constraints
+	 */
+	linked_list_t *excluded_names;
+
+	/**
 	 * certificate's embedded public key
 	 */
 	public_key_t *public_key;
@@ -1465,6 +1475,16 @@ METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
 	return this->ipAddrBlocks->create_enumerator(this->ipAddrBlocks);
 }
 
+METHOD(x509_t, create_name_constraint_enumerator, enumerator_t*,
+	private_x509_cert_t *this, bool perm)
+{
+	if (perm)
+	{
+		return this->permitted_names->create_enumerator(this->permitted_names);
+	}
+	return this->excluded_names->create_enumerator(this->excluded_names);
+}
+
 METHOD(certificate_t, destroy, void,
 	private_x509_cert_t *this)
 {
@@ -1474,7 +1494,12 @@ METHOD(certificate_t, destroy, void,
 									offsetof(identification_t, destroy));
 		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
-		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks, offsetof(traffic_selector_t, destroy));
+		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
+										offsetof(traffic_selector_t, destroy));
+		this->permitted_names->destroy_offset(this->permitted_names,
+										offsetof(identification_t, destroy));
+		this->excluded_names->destroy_offset(this->excluded_names,
+										offsetof(identification_t, destroy));
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -1524,6 +1549,7 @@ static private_x509_cert_t* create_empty(void)
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
 				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
+				.create_name_constraint_enumerator = _create_name_constraint_enumerator,
 			},
 		},
 		.version = 1,
@@ -1531,6 +1557,8 @@ static private_x509_cert_t* create_empty(void)
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
 		.ipAddrBlocks = linked_list_create(),
+		.permitted_names = linked_list_create(),
+		.excluded_names = linked_list_create(),
 		.pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT,
 		.ref = 1,
 	);
