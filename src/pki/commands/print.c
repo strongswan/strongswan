@@ -178,6 +178,31 @@ static void print_x509(x509_t *x509)
 		printf("pathlen:   %d\n", len);
 	}
 
+	first = TRUE;
+	enumerator = x509->create_name_constraint_enumerator(x509, TRUE);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		if (first)
+		{
+			printf("Permitted NameConstraints:\n");
+			first = FALSE;
+		}
+		printf("           %Y\n", id);
+	}
+	enumerator->destroy(enumerator);
+	first = TRUE;
+	enumerator = x509->create_name_constraint_enumerator(x509, FALSE);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		if (first)
+		{
+			printf("Excluded NameConstraints:\n");
+			first = FALSE;
+		}
+		printf("           %Y\n", id);
+	}
+	enumerator->destroy(enumerator);
+
 	chunk = x509->get_authKeyIdentifier(x509);
 	if (chunk.ptr)
 	{
