@@ -34,7 +34,7 @@ static int self()
 	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
-	linked_list_t *san, *ocsp;
+	linked_list_t *san, *ocsp, *permitted, *excluded;
 	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
@@ -45,6 +45,8 @@ static int self()
 
 	san = linked_list_create();
 	ocsp = linked_list_create();
+	permitted = linked_list_create();
+	excluded = linked_list_create();
 
 	while (TRUE)
 	{
@@ -103,6 +105,14 @@ static int self()
 				continue;
 			case 'p':
 				pathlen = atoi(arg);
+				continue;
+			case 'n':
+				permitted->insert_last(permitted,
+									   identification_create_from_string(arg));
+				continue;
+			case 'N':
+				excluded->insert_last(excluded,
+									  identification_create_from_string(arg));
 				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
@@ -210,7 +220,9 @@ static int self()
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
 						BUILD_PATHLEN, pathlen, BUILD_SUBJECT_ALTNAMES, san,
-						BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
+						BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
+						BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
+						BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded, BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -233,6 +245,8 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	ocsp->destroy(ocsp);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -246,6 +260,8 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	ocsp->destroy(ocsp);
 	return command_usage(error);
 }
@@ -262,22 +278,25 @@ static void __attribute__ ((constructor))reg()
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
+		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "private key input file, default: stdin"},
-			{"keyid",	'x', 1, "keyid on smartcard of private key"},
-			{"type",	't', 1, "type of input key, default: rsa"},
-			{"dn",		'd', 1, "subject and issuer distinguished name"},
-			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",	's', 1, "serial number in hex, default: random"},
-			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'e', 1, "include extendedKeyUsage flag"},
-			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",	'f', 1, "encoding of generated cert, default: der"},
+			{"help",		'h', 0, "show usage information"},
+			{"in",			'i', 1, "private key input file, default: stdin"},
+			{"keyid",		'x', 1, "keyid on smartcard of private key"},
+			{"type",		't', 1, "type of input key, default: rsa"},
+			{"dn",			'd', 1, "subject and issuer distinguished name"},
+			{"san",			'a', 1, "subjectAltName to include in certificate"},
+			{"lifetime",	'l', 1, "days the certificate is valid, default: 1095"},
+			{"serial",		's', 1, "serial number in hex, default: random"},
+			{"ca",			'b', 0, "include CA basicConstraint, default: no"},
+			{"pathlen",		'p', 1, "set path length constraint"},
+			{"nc-permitted",'n', 1, "add permitted NameConstraint"},
+			{"nc-excluded",	'N', 1, "add excluded NameConstraint"},
+			{"flag",		'e', 1, "include extendedKeyUsage flag"},
+			{"ocsp",		'o', 1, "OCSP AuthorityInfoAccess URI to include"},
+			{"digest",		'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",		'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }

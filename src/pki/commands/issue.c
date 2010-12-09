@@ -37,7 +37,7 @@ static int issue()
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL, *crl_issuer = NULL;;
-	linked_list_t *san, *cdps, *ocsp;
+	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded;
 	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
@@ -50,6 +50,8 @@ static int issue()
 	san = linked_list_create();
 	cdps = linked_list_create();
 	ocsp = linked_list_create();
+	permitted = linked_list_create();
+	excluded = linked_list_create();
 
 	while (TRUE)
 	{
@@ -110,6 +112,14 @@ static int issue()
 				continue;
 			case 'p':
 				pathlen = atoi(arg);
+				continue;
+			case 'n':
+				permitted->insert_last(permitted,
+									   identification_create_from_string(arg));
+				continue;
+			case 'N':
+				excluded->insert_last(excluded,
+									  identification_create_from_string(arg));
 				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
@@ -325,7 +335,9 @@ static int issue()
 					BUILD_PATHLEN, pathlen,
 					BUILD_CRL_ISSUER, crl_issuer,
 					BUILD_CRL_DISTRIBUTION_POINTS, cdps,
-					BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
+					BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
+					BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
+					BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded, BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -350,6 +362,8 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
 	DESTROY_IF(crl_issuer);
@@ -365,6 +379,8 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
 	DESTROY_IF(crl_issuer);
@@ -383,6 +399,7 @@ static void __attribute__ ((constructor))reg()
 		 " --cacert file --dn subject-dn [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
+		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -397,6 +414,8 @@ static void __attribute__ ((constructor))reg()
 			{"serial",		's', 1, "serial number in hex, default: random"},
 			{"ca",			'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",		'p', 1, "set path length constraint"},
+			{"nc-permitted",'n', 1, "add permitted NameConstraint"},
+			{"nc-excluded",	'N', 1, "add excluded NameConstraint"},
 			{"flag",		'e', 1, "include extendedKeyUsage flag"},
 			{"crl",			'u', 1, "CRL distribution point URI to include"},
 			{"crlissuer",	'I', 1, "CRL Issuer for CRL at distribution point"},

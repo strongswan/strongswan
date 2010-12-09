@@ -201,7 +201,7 @@ int command_usage(char *error)
 		}
 		for (i = 0; cmds[active].options[i].name; i++)
 		{
-			fprintf(out, "        --%-8s (-%c)  %s\n",
+			fprintf(out, "        --%-12s (-%c)  %s\n",
 					cmds[active].options[i].name, cmds[active].options[i].op,
 					cmds[active].options[i].desc);
 		}
