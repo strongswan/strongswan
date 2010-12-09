@@ -182,6 +182,92 @@ METHOD(tls_t, process, status_t,
 	return NEED_MORE;
 }
 
+/*
+ * Implements the PB-TNC state machine in send direction
+ */
+static bool state_transition_upon_send(pb_tnc_state_t *state,
+									   pb_tnc_batch_type_t batch_type)
+{
+	switch (*state)
+	{
+		case PB_STATE_INIT:
+			if (batch_type == PB_BATCH_CDATA)
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_SDATA)
+			{
+				*state = PB_STATE_CLIENT_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_SERVER_WORKING:
+			if (batch_type == PB_BATCH_SDATA)
+			{
+				*state = PB_STATE_CLIENT_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_RESULT)
+			{
+				*state = PB_STATE_DECIDED;
+				break;
+			}
+			if (batch_type == PB_BATCH_CRETRY ||
+				batch_type == PB_BATCH_SRETRY)
+			{
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_CLIENT_WORKING:
+			if (batch_type == PB_BATCH_CDATA)
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_CRETRY)
+			{
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_DECIDED:
+			if (batch_type == PB_BATCH_CRETRY ||
+				batch_type == PB_BATCH_SRETRY)
+			{
+				*state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				*state = PB_STATE_END;
+				break;
+			}
+			return FALSE;
+		case PB_STATE_END:
+			if (batch_type == PB_BATCH_CLOSE)
+			{
+				break;
+			}
+			return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
@@ -220,101 +306,12 @@ METHOD(tls_t, build, status_t,
 		pb_tnc_state_t old_state;
 		status_t status;
  		chunk_t data;
-		bool unexpected_batch_type = FALSE;
 
 		batch_type = this->batch->get_type(this->batch);
 		old_state = this->state;
-		
-		switch (this->state)
-		{
-			case PB_STATE_INIT:
-				if (batch_type == PB_BATCH_CDATA)
-				{
-					this->state = PB_STATE_SERVER_WORKING;
-					break;
-				}
-				if (batch_type == PB_BATCH_SDATA)
-				{
-					this->state = PB_STATE_CLIENT_WORKING;
-					break;
-				}
-				if (batch_type == PB_BATCH_CLOSE)
-				{
-					this->state = PB_STATE_END;
-					break;
-				}
-				unexpected_batch_type = TRUE;
-				break;
-			case PB_STATE_SERVER_WORKING:
-				if (batch_type == PB_BATCH_SDATA)
-				{
-					this->state = PB_STATE_CLIENT_WORKING;
-					break;
-				}
-				if (batch_type == PB_BATCH_RESULT)
-				{
-					this->state = PB_STATE_DECIDED;
-					break;
-				}
-				if (batch_type == PB_BATCH_CRETRY ||
-			   		batch_type == PB_BATCH_SRETRY)
-				{
-					break;
-				}
-				if (batch_type == PB_BATCH_CLOSE)
-				{
-					this->state = PB_STATE_END;
-					break;
-				}
-				unexpected_batch_type = TRUE;
-				break;
-			case PB_STATE_CLIENT_WORKING:
-				if (batch_type == PB_BATCH_CDATA)
-				{
-					this->state = PB_STATE_SERVER_WORKING;
-					break;
-				}
-				if (batch_type == PB_BATCH_CRETRY)
-				{
-					break;
-				}
-				if (batch_type == PB_BATCH_CLOSE)
-				{
-					this->state = PB_STATE_END;
-					break;
-				}
-				unexpected_batch_type = TRUE;
-				break;
-			case PB_STATE_DECIDED:
-				if (batch_type == PB_BATCH_CRETRY ||
-					batch_type == PB_BATCH_SRETRY)
-				{
-					this->state = PB_STATE_SERVER_WORKING;
-					break;
-				}
-				if (batch_type == PB_BATCH_CLOSE)
-				{
-					this->state = PB_STATE_END;
-					break;
-				}
-				unexpected_batch_type = TRUE;
-				break;
-			case PB_STATE_END:
-				if (batch_type == PB_BATCH_CLOSE)
-				{
-					break;
-				}
-				unexpected_batch_type = TRUE;
-		}
-
 		this->mutex->lock(this->mutex);
-		if (unexpected_batch_type)
-		{
-			DBG1(DBG_TNC, "cancelling unexpected PB-TNC Batch Type: %N",
-				 pb_tnc_batch_type_names, batch_type);
-			status = INVALID_STATE;
-		}
-		else
+
+		if (state_transition_upon_send(&this->state, batch_type))
 		{
 			this->batch->build(this->batch);
 			data = this->batch->get_encoding(this->batch);
@@ -328,6 +325,13 @@ METHOD(tls_t, build, status_t,
 			memcpy(buf, data.ptr, data.len);
 			status = ALREADY_DONE;
 		}
+		else
+		{
+			DBG1(DBG_TNC, "cancelling unexpected PB-TNC Batch Type: %N",
+				 pb_tnc_batch_type_names, batch_type);
+			status = INVALID_STATE;
+		}
+
 		this->batch->destroy(this->batch);
 		this->batch = NULL;
 		this->mutex->unlock(this->mutex);
