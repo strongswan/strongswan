@@ -23,6 +23,17 @@
 
 #include <library.h>
 
+ENUM(pb_tnc_msg_type_names, PB_MSG_EXPERIMENTAL, PB_MSG_REASON_STRING,
+	"PB-Experimental",
+	"PB-PA",
+	"PB-Assessment-Result",
+	"PB-Access-Recommendation",
+	"PB-Remediation-Parameters",
+	"PB-Error",
+	"PB-Language-Preference",
+	"PB-Reason-String"
+);
+
 /**
  * See header
  */

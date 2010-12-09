@@ -15,38 +15,9 @@
 
 #include "tnccs_20_types.h"
 
-ENUM(pb_tnc_batch_type_names, PB_BATCH_CDATA, PB_BATCH_CLOSE,
-	"CDATA",
-	"SDATA",
-	"RESULT",
-	"CRETRY",
-	"SRETRY",
-	"CLOSE"
-);
-
-ENUM(pb_tnc_msg_type_names, PB_MSG_EXPERIMENTAL, PB_MSG_REASON_STRING,
-	"PB-Experimental",
-	"PB-PA",
-	"PB-Assessment-Result",
-	"PB-Access-Recommendation",
-	"PB-Remediation-Parameters",
-	"PB-Error",
-	"PB-Language-Preference",
-	"PB-Reason-String"
-);
-
 ENUM(pb_tnc_remed_param_type_names, PB_REMEDIATION_URI, PB_REMEDIATION_STRING,
 	"Remediation-URI",
 	"Remediation-String"
-);
-
-ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
-						  PB_ERROR_VERSION_NOT_SUPPORTED,
-	"Unexpected Batch Type",
-	"Invalid Parameter",
-	"Local Error"
-	"Unsupported Mandatory Message",
-	"Version Not Supported"
 );
 
 ENUM(pa_tnc_subtype_names, PA_SUBTYPE_TESTING, PA_SUBTYPE_NEA_CLIENT,

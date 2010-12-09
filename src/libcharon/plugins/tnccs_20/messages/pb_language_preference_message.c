@@ -31,6 +31,9 @@ typedef struct private_pb_language_preference_message_t private_pb_language_pref
  *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
+#define PB_LANG_PREFIX			"Accept-Language: "
+#define PB_LANG_PREFIX_LEN		strlen(PB_LANG_PREFIX)
+
 /**
  * Private data of a private_pb_language_preference_message_t object.
  *
@@ -72,34 +75,28 @@ METHOD(pb_tnc_message_t, get_encoding, chunk_t,
 METHOD(pb_tnc_message_t, build, void,
 	private_pb_language_preference_message_t *this)
 {
-	tls_writer_t *writer;
-
-	/* build message */
-	writer = tls_writer_create(16);
-	writer->write_data(writer, this->language_preference);
-
-	free(this->encoding.ptr);
-	this->encoding = writer->get_buf(writer);
-	this->encoding = chunk_clone(this->encoding);
-	writer->destroy(writer);
+	this->encoding = chunk_cat("cc",
+		 	 			chunk_create(PB_LANG_PREFIX, PB_LANG_PREFIX_LEN),
+						this->language_preference);
 }
 
 METHOD(pb_tnc_message_t, process, status_t,
 	private_pb_language_preference_message_t *this)
 {
-	tls_reader_t *reader;
+	chunk_t lang;
 
-	if (this->encoding.len)
+	if (this->encoding.len >= PB_LANG_PREFIX_LEN &&
+		memeq(this->encoding.ptr, PB_LANG_PREFIX, PB_LANG_PREFIX_LEN))
 	{
-		/* process message */
-		reader = tls_reader_create(this->encoding);
-		reader->read_data(reader, this->encoding.len,
-								 &this->language_preference);
-		this->language_preference = chunk_clone(this->language_preference);
-		reader->destroy(reader);
+		lang = chunk_skip(this->encoding, PB_LANG_PREFIX_LEN);
+		this->language_preference = lang.len ? chunk_clone(lang) : chunk_empty;
+		return SUCCESS;
 	}
-
-	return SUCCESS;
+	else
+    {
+		/* TODO generate non-fatal PB-TNC error msg */
+		return VERIFY_ERROR;
+	}
 }
 
 METHOD(pb_tnc_message_t, destroy, void,

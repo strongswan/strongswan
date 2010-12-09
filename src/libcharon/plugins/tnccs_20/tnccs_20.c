@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Sansar Choinyanbuu
+ * Copyright (C) 2010 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,8 +16,11 @@
 
 #include "tnccs_20.h"
 #include "tnccs_20_types.h"
+#include "batch/pb_tnc_batch.h"
 #include "messages/pb_tnc_message.h"
 #include "messages/pb_pa_message.h"
+#include "messages/pb_error_message.h"
+#include "messages/pb_language_preference_message.h"
 
 #include <debug.h>
 #include <daemon.h>
@@ -43,14 +47,19 @@ struct private_tnccs_20_t {
 	bool is_server;
 
 	/**
+	 * PB-TNC State Machine
+	 */
+	pb_tnc_state_t state;
+
+	/**
 	 * Connection ID assigned to this TNCCS connection
 	 */
 	TNC_ConnectionID connection_id;
 
 	/**
-	 * Batch being constructed
+	 * PB-TNC batch being constructed
 	 */
-	chunk_t batch;
+	pb_tnc_batch_t *batch;
 
 	/**
 	 * Mutex locking the batch in construction
@@ -68,141 +77,50 @@ struct private_tnccs_20_t {
 	recommendations_t *recs;
 };
 
-/**
- *   PB-TNC Message (see section 4.2 of RFC 5793)
- *
- *      0                   1                   2                   3
- *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *     |     Flags     |               PB-TNC Vendor ID                |
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *     |                       PB-TNC Message Type                     |
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *     |                      PB-TNC Message Length                    |
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *     |               PB-TNC Message Value (Variable Length)          |
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- */
-
-#define PB_TNC_HEADER_SIZE		12
-#define PB_TNC_NOSKIP_FLAG		(1<<7)
-#define PB_TNC_IETF_VENDOR_ID	0x000000
-
-static chunk_t build_pb_tnc_msg(pb_tnc_msg_type_t msg_type, chunk_t msg_value)
-{
-	chunk_t msg, msg_header;
-	tls_writer_t *writer;
-	size_t msg_len;
-
-	msg_len = PB_TNC_HEADER_SIZE + msg_value.len;
-	writer = tls_writer_create(PB_TNC_HEADER_SIZE);
-	writer->write_uint8 (writer, PB_TNC_NOSKIP_FLAG);
-	writer->write_uint24(writer, PB_TNC_IETF_VENDOR_ID);
-	writer->write_uint32(writer, msg_type);
-	writer->write_uint32(writer, msg_len);
-	msg_header = writer->get_buf(writer);
-	msg = chunk_cat("cc", msg_header, msg_value);
-	writer->destroy(writer);
-
-	DBG2(DBG_TNC, "building %N message (%u bytes)", pb_tnc_msg_type_names,
-													msg_type, msg_len);
-	DBG3(DBG_TNC,"%B", &msg);
-
-	return msg;
-}
-
-static status_t process_pb_tnc_msg(tls_reader_t *reader,
-								   pb_tnc_message_t **pb_tnc_msg)
-{
-	u_int8_t flags;
-	u_int32_t vendor_id, msg_type;
-	size_t msg_len;
-	chunk_t msg, msg_value;
-
-	msg = reader->peek(reader);
-
-	if (msg.len < PB_TNC_HEADER_SIZE)
-	{
-		DBG1(DBG_TNC, "%u bytes insufficient to parse PB-TNC message header",
-					   msg.len);
-		return FAILED;
-	}
-	reader->read_uint8 (reader, &flags);
-	reader->read_uint24(reader, &vendor_id);
-	reader->read_uint32(reader, &msg_type);
-	reader->read_uint32(reader, &msg_len);
-
-	DBG2(DBG_TNC, "processing PB-TNC message (%u bytes)", msg_len);
-
-	if (msg_len < PB_TNC_HEADER_SIZE)
-	{
-		DBG1(DBG_TNC, "%u bytes too small for PB-TNC message length", msg_len);
-		return FAILED;
-	}
-	if (msg_len > msg.len)
-	{
-		DBG1(DBG_TNC, "%u bytes insufficient to parse PB-TNC message", msg.len);
-		return FAILED;
-	}
-	msg.len = msg_len;
-	DBG3(DBG_TNC, "%B", &msg);
-	reader->read_data(reader, msg_len - PB_TNC_HEADER_SIZE, &msg_value);
-
-	if (vendor_id != PB_TNC_IETF_VENDOR_ID || msg_type > PB_MSG_ROOF)
-	{
-		if (flags & PB_TNC_NOSKIP_FLAG)
-		{
-			DBG1(DBG_TNC, "cannot process PB-TNC message with Vendor ID 0x%06x "
-						  " and type 0x%08x", vendor_id, msg);
-			return FAILED;
-		}
-		else
-		{
-			DBG1(DBG_TNC, "ignore PB-TNC message with Vendor ID 0x%06x "
-						  " and type 0x%08x", vendor_id, msg);
-			return INVALID_STATE;
-		}
-	}
-	DBG2(DBG_TNC, "processing %N message (%u bytes)", pb_tnc_msg_type_names,
-				   msg_type, msg_value.len);
-	*pb_tnc_msg = pb_tnc_message_create(msg_type, msg_value);
-
-	return SUCCESS;
-}
-
 METHOD(tnccs_t, send_message, void,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
 							  TNC_MessageType msg_type)
 {
-	pb_tnc_message_t *pb_pa_msg;
-	chunk_t pb_tnc_msg;
     TNC_MessageSubtype msg_sub_type;
-    TNC_VendorID       msg_vendor_id;
+    TNC_VendorID msg_vendor_id;
+	pb_tnc_message_t *pb_tnc_msg;
+	pb_tnc_batch_type_t batch_type;
 
 	msg_sub_type =   msg_type       & TNC_SUBTYPE_ANY;
 	msg_vendor_id = (msg_type >> 8) & TNC_VENDORID_ANY;
 
-	pb_pa_msg = pb_pa_message_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
-									 chunk_create(msg, msg_len));
-	pb_pa_msg->build(pb_pa_msg);
-	pb_tnc_msg = build_pb_tnc_msg(PB_MSG_PA, pb_pa_msg->get_encoding(pb_pa_msg));
-	pb_pa_msg->destroy(pb_pa_msg);
+	pb_tnc_msg = pb_pa_message_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
+									  chunk_create(msg, msg_len));
 
+	/* adding PA message to SDATA or CDATA batch only */
+	batch_type = this->is_server ? PB_BATCH_SDATA : PB_BATCH_CDATA;
 	this->mutex->lock(this->mutex);
-	this->batch = chunk_cat("mm", this->batch, pb_tnc_msg);
+	if (!this->batch)
+	{
+		this->batch = pb_tnc_batch_create(this->is_server, batch_type);
+	}
+	if (this->batch->get_type(this->batch) == batch_type)
+	{
+		this->batch->add_message(this->batch, pb_tnc_msg);
+	}
+	else
+	{
+		pb_tnc_msg->destroy(pb_tnc_msg);
+	}
 	this->mutex->unlock(this->mutex);
 }
 
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
-	tls_reader_t *reader;
-	pb_tnc_message_t *msg = NULL;
+	chunk_t data;
+	pb_tnc_batch_t *batch;
+	pb_tnc_message_t *msg;
+	pb_tnc_state_t old_state;
+	enumerator_t *enumerator;
 	status_t status;
-	char *pos;
-	size_t len;
 
 	if (this->is_server && !this->connection_id)
 	{
@@ -215,105 +133,43 @@ METHOD(tls_t, process, status_t,
 		}
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+	}
+	data = chunk_create(buf, buflen);
+	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
+				   data.len, this->connection_id);
+	DBG3(DBG_TNC, "%B", &data);  
+	batch = pb_tnc_batch_create_from_data(this->is_server, data);
 
-		/* Test reason enumerator */
-		{
-			chunk_t reason, reason_2 = { "virus alarm", 11 };
-			chunk_t reason_lang, reason_lang_2 = { "en, ru", 6 };
-			TNC_IMVID id;
-			enumerator_t *enumerator;
-
-			this->recs->set_reason_string(this->recs, 2, reason_2);
-			this->recs->set_reason_language(this->recs, 2, reason_lang_2);
-
-			enumerator = this->recs->create_reason_enumerator(this->recs);
-			while (enumerator->enumerate(enumerator, &id, &reason, &reason_lang))
+	old_state = this->state;
+	status = batch->process(batch, &this->state);
+	if (this->state != old_state)
+	{
+		DBG2(DBG_TNC, "PB-TNC state transition from '%N' to '%N'",
+			 pb_tnc_state_names, old_state, pb_tnc_state_names, this->state);
+	}
+	switch (status)
+	{
+		case SUCCESS:
+		default:
+			break;
+		case FAILED:
+			if (this->batch)
 			{
-				DBG1(DBG_TNC, "IMV %u: reason = '%.*s', lang = '%.*s'",
-					 id, reason.len, reason.ptr, reason_lang.len, reason_lang.ptr);
+				DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
+					pb_tnc_batch_type_names, this->batch->get_type(this->batch));
+				this->batch->destroy(this->batch);
+			 }
+			this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CLOSE);
+			/* fall through */
+		case VERIFY_ERROR:
+			enumerator = batch->create_error_enumerator(batch);
+			while (enumerator->enumerate(enumerator, &msg))
+			{
+				this->batch->add_message(this->batch, msg->get_ref(msg));
 			}
 			enumerator->destroy(enumerator);
-		}
 	}
-	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
-				   buflen, this->connection_id);
-
-	pos = strchr(buf, '|');
-	if (pos)
-	{
-		pos++;
-		len = buflen - (pos - (char*)buf);
-	}
-	else
-	{
-		pos = buf;
-		len = buflen;
-	}
-	reader = tls_reader_create(chunk_create(pos, len));
-	while (reader->remaining(reader) > 0)
-	{
-		switch (process_pb_tnc_msg(reader, &msg))
-		{
-			case SUCCESS:
-				break;
-			case INVALID_STATE:
-				continue;
-			default:
-				reader->destroy(reader);
-				return FAILED;
-		}
-
-		status = msg->process(msg);
-		if (status != SUCCESS)
-		{
-			msg->destroy(msg);
-			reader->destroy(reader);
-			return status;
-		}
-
-		switch (msg->get_type(msg))
-		{
-			case PB_MSG_PA:
-			{
-				TNC_MessageType msg_type;
-				u_int32_t vendor_id, subtype;
-				chunk_t msg_body;
-				pb_pa_message_t *pb_pa_msg;
-
-				pb_pa_msg = (pb_pa_message_t*)msg;
-				vendor_id = pb_pa_msg->get_vendor_id(pb_pa_msg, &subtype);
-				msg_type = (vendor_id << 8) | subtype;
-				msg_body = pb_pa_msg->get_body(pb_pa_msg);
-				DBG2(DBG_TNC, "message type: 0x%08x", msg_type);
-				if (this->is_server)
-				{
-					charon->imvs->receive_message(charon->imvs,
-						 		this->connection_id, msg_body.ptr, msg_body.len,
-								msg_type);
-				}
-				else
-				{
-					charon->imcs->receive_message(charon->imcs,
-						 		this->connection_id, msg_body.ptr, msg_body.len,
-								msg_type);
-				}
-				break;
-			}
-			case PB_MSG_ERROR:
-				break;
-			case PB_MSG_EXPERIMENTAL:
-				break;
-			case PB_MSG_LANGUAGE_PREFERENCE:
-				break;
-			case PB_MSG_ASSESSMENT_RESULT:
-			case PB_MSG_ACCESS_RECOMMENDATION:
-			case PB_MSG_REMEDIATION_PARAMETERS:
-			case PB_MSG_REASON_STRING:
-				break;
-		}
-		msg->destroy(msg);
-	}
-	reader->destroy(reader);
+	batch->destroy(batch);
 
 	if (this->is_server)
 	{
@@ -323,22 +179,17 @@ METHOD(tls_t, process, status_t,
 	{
 		charon->imcs->batch_ending(charon->imcs, this->connection_id);
 	}
-
 	return NEED_MORE;
 }
 
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
-	char *msg = this->is_server ? "tncs->tncc 2.0|" : "tncc->tncs 2.0|";
-	size_t len;
-
-	this->mutex->lock(this->mutex);
-	this->batch = chunk_cat("cm", chunk_create(msg, strlen(msg)), this->batch);
-	this->mutex->unlock(this->mutex);
-
 	if (!this->is_server && !this->connection_id)
 	{
+		pb_tnc_message_t *msg;
+		char *pref_lang;
+
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
 										(tnccs_t*)this, _send_message,
 										&this->request_handshake_retry, NULL);
@@ -346,6 +197,16 @@ METHOD(tls_t, build, status_t,
 		{
 			return FAILED;
 		}
+
+		/* Create PB-TNC Language Preference Message */
+		pref_lang = charon->imcs->get_preferred_language(charon->imcs);
+		msg = pb_language_preference_message_create(chunk_create(pref_lang,
+													strlen(pref_lang)));
+		this->mutex->lock(this->mutex);
+		this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CDATA);
+		this->batch->add_message(this->batch, msg);
+		this->mutex->unlock(this->mutex);
+
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
@@ -353,18 +214,136 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
 
-	this->mutex->lock(this->mutex);
-	len = this->batch.len;
-	*msglen = len;
-	*buflen = len;
-	memcpy(buf, this->batch.ptr, len);
-	chunk_free(&this->batch);
-	this->mutex->unlock(this->mutex);
+	if (this->batch)
+	{
+		pb_tnc_batch_type_t batch_type;
+		pb_tnc_state_t old_state;
+		status_t status;
+ 		chunk_t data;
+		bool unexpected_batch_type = FALSE;
 
-	DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
-				   len, this->connection_id);
+		batch_type = this->batch->get_type(this->batch);
+		old_state = this->state;
+		
+		switch (this->state)
+		{
+			case PB_STATE_INIT:
+				if (batch_type == PB_BATCH_CDATA)
+				{
+					this->state = PB_STATE_SERVER_WORKING;
+					break;
+				}
+				if (batch_type == PB_BATCH_SDATA)
+				{
+					this->state = PB_STATE_CLIENT_WORKING;
+					break;
+				}
+				if (batch_type == PB_BATCH_CLOSE)
+				{
+					this->state = PB_STATE_END;
+					break;
+				}
+				unexpected_batch_type = TRUE;
+				break;
+			case PB_STATE_SERVER_WORKING:
+				if (batch_type == PB_BATCH_SDATA)
+				{
+					this->state = PB_STATE_CLIENT_WORKING;
+					break;
+				}
+				if (batch_type == PB_BATCH_RESULT)
+				{
+					this->state = PB_STATE_DECIDED;
+					break;
+				}
+				if (batch_type == PB_BATCH_CRETRY ||
+			   		batch_type == PB_BATCH_SRETRY)
+				{
+					break;
+				}
+				if (batch_type == PB_BATCH_CLOSE)
+				{
+					this->state = PB_STATE_END;
+					break;
+				}
+				unexpected_batch_type = TRUE;
+				break;
+			case PB_STATE_CLIENT_WORKING:
+				if (batch_type == PB_BATCH_CDATA)
+				{
+					this->state = PB_STATE_SERVER_WORKING;
+					break;
+				}
+				if (batch_type == PB_BATCH_CRETRY)
+				{
+					break;
+				}
+				if (batch_type == PB_BATCH_CLOSE)
+				{
+					this->state = PB_STATE_END;
+					break;
+				}
+				unexpected_batch_type = TRUE;
+				break;
+			case PB_STATE_DECIDED:
+				if (batch_type == PB_BATCH_CRETRY ||
+					batch_type == PB_BATCH_SRETRY)
+				{
+					this->state = PB_STATE_SERVER_WORKING;
+					break;
+				}
+				if (batch_type == PB_BATCH_CLOSE)
+				{
+					this->state = PB_STATE_END;
+					break;
+				}
+				unexpected_batch_type = TRUE;
+				break;
+			case PB_STATE_END:
+				if (batch_type == PB_BATCH_CLOSE)
+				{
+					break;
+				}
+				unexpected_batch_type = TRUE;
+		}
 
-	return ALREADY_DONE;
+		this->mutex->lock(this->mutex);
+		if (unexpected_batch_type)
+		{
+			DBG1(DBG_TNC, "cancelling unexpected PB-TNC Batch Type: %N",
+				 pb_tnc_batch_type_names, batch_type);
+			status = INVALID_STATE;
+		}
+		else
+		{
+			this->batch->build(this->batch);
+			data = this->batch->get_encoding(this->batch);
+			DBG1(DBG_TNC, "sending PB-TNC %N Batch (%d bytes) for Connection ID %u",
+						   pb_tnc_batch_type_names, batch_type, data.len,
+						   this->connection_id);
+			DBG3(DBG_TNC, "%B", &data);
+
+			*msglen = data.len;
+			*buflen = data.len;
+			memcpy(buf, data.ptr, data.len);
+			status = ALREADY_DONE;
+		}
+		this->batch->destroy(this->batch);
+		this->batch = NULL;
+		this->mutex->unlock(this->mutex);
+
+		if (this->state != old_state)
+		{
+			DBG2(DBG_TNC, "PB-TNC state transition from '%N' to '%N'",
+				 pb_tnc_state_names, old_state, pb_tnc_state_names, this->state);
+		}
+		return status;
+	}
+	else
+	{
+		DBG1(DBG_TNC, "no TNCCS Batch to send");
+		return INVALID_STATE;
+	}
 }
 
 METHOD(tls_t, is_server, bool,
@@ -409,7 +388,7 @@ METHOD(tls_t, destroy, void,
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
 	this->mutex->destroy(this->mutex);
-	free(this->batch.ptr);
+	DESTROY_IF(this->batch);
 	free(this);
 }
 
@@ -431,6 +410,7 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
+		.state = PB_STATE_INIT,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 

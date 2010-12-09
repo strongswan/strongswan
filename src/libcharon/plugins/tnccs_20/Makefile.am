@@ -14,6 +14,7 @@ endif
 libstrongswan_tnccs_20_la_SOURCES = \
 	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c \
 	tnccs_20_types.h tnccs_20_types.c \
+	batch/pb_tnc_batch.h batch/pb_tnc_batch.c \
 	messages/pb_tnc_message.h messages/pb_tnc_message.c \
 	messages/pb_pa_message.h messages/pb_pa_message.c \
 	messages/pb_assessment_result_message.h messages/pb_assessment_result_message.c \

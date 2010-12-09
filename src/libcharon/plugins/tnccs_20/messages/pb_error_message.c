@@ -16,9 +16,19 @@
 #include "pb_error_message.h"
 #include "../tnccs_20_types.h"
 
+#include <debug.h>
 #include <tls_writer.h>
 #include <tls_reader.h>
-#include <debug.h>
+#include <tnc/tnccs/tnccs.h>
+
+ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
+							  PB_ERROR_VERSION_NOT_SUPPORTED,
+	"Unexpected Batch Type",
+	"Invalid Parameter",
+	"Local Error",
+	"Unsupported Mandatory Message",
+	"Version Not Supported"
+);
 
 typedef struct private_pb_error_message_t private_pb_error_message_t;
 
@@ -72,14 +82,24 @@ struct private_pb_error_message_t {
 	u_int16_t error_code;
 
 	/**
-	 * PB Error Parameters
+	 * PB Error Offset
 	 */
-	u_int32_t error_parameters;
+	u_int32_t error_offset;
+
+	/**
+	 * Bad PB-TNC version received 
+	 */
+	u_int8_t bad_version;
 
 	/**
 	 * Encoded message
 	 */
 	chunk_t encoding;
+
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
@@ -102,30 +122,27 @@ METHOD(pb_tnc_message_t, build, void,
 	/* build message header */
 	writer = tls_writer_create(ERROR_HEADER_SIZE);
 	writer->write_uint8 (writer, this->fatal ?
-		ERROR_FLAG_FATAL : ERROR_FLAG_NONE);
+						 ERROR_FLAG_FATAL : ERROR_FLAG_NONE);
 	writer->write_uint24(writer, this->vendor_id);
 	writer->write_uint16(writer, this->error_code);
 	writer->write_uint16(writer, ERROR_RESERVED);
 
-	/* create encoding by concatenating message header and message body */
-	free(this->encoding.ptr);
-
-	if (this->error_parameters)
+	/* build message body */
+	if (this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
 	{
-		if (this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
-		{
-			/* Bad version */
-			writer->write_uint8(writer, this->error_parameters);
-			writer->write_uint8(writer, 2); /* Max version */
-			writer->write_uint8(writer, 2); /* Min version */
-			writer->write_uint8(writer, 0); /* Reserved */
-		}
-		else
-		{
-			/* Error parameters */
-			writer->write_uint32(writer, this->error_parameters);
-		}
+		/* Bad version */
+		writer->write_uint8(writer, this->bad_version);
+		writer->write_uint8(writer, PB_TNC_VERSION); /* Max version */
+		writer->write_uint8(writer, PB_TNC_VERSION); /* Min version */
+		writer->write_uint8(writer, 0x00);           /* Reserved */
 	}
+	else
+	{
+		/* Error Offset */
+		writer->write_uint32(writer, this->error_offset);
+	}
+
+	free(this->encoding.ptr);
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
 	writer->destroy(writer);
@@ -134,9 +151,8 @@ METHOD(pb_tnc_message_t, build, void,
 METHOD(pb_tnc_message_t, process, status_t,
 	private_pb_error_message_t *this)
 {
-	u_int8_t flags;
+	u_int8_t flags, max_version, min_version;
 	u_int16_t reserved;
-	size_t error_parameters_len;
 	tls_reader_t *reader;
 
 	if (this->encoding.len < ERROR_HEADER_SIZE)
@@ -152,22 +168,47 @@ METHOD(pb_tnc_message_t, process, status_t,
 	reader->read_uint24(reader, &this->vendor_id);
 	reader->read_uint16(reader, &this->error_code);
 	reader->read_uint16(reader, &reserved);
+	this->fatal = (flags & ERROR_FLAG_FATAL) != ERROR_FLAG_NONE;
 
-	/* process error parameters */
-	error_parameters_len = reader->remaining(reader);
-	if (error_parameters_len)
+	if (this->vendor_id == IETF_VENDOR_ID && reader->remaining(reader) == 4)
 	{
-		reader->read_uint32(reader, &this->error_parameters);
+		if (this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
+		{
+			reader->read_uint8(reader, &this->bad_version);
+			reader->read_uint8(reader, &max_version);
+			reader->read_uint8(reader, &min_version);
+		}
+		else
+		{
+			reader->read_uint32(reader, &this->error_offset);
+		}
 	}
 	reader->destroy(reader);
+
 	return SUCCESS;
+}
+
+METHOD(pb_tnc_message_t, get_ref, pb_tnc_message_t*,
+	private_pb_error_message_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pb_interface;
 }
 
 METHOD(pb_tnc_message_t, destroy, void,
 	private_pb_error_message_t *this)
 {
-	free(this->encoding.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->encoding.ptr);
+		free(this);
+	}
+}
+
+METHOD(pb_error_message_t, get_fatal_flag, bool,
+	private_pb_error_message_t *this)
+{
+	return this->fatal;
 }
 
 METHOD(pb_error_message_t, get_vendor_id, u_int32_t,
@@ -182,22 +223,64 @@ METHOD(pb_error_message_t, get_error_code, u_int16_t,
 	return this->error_code;
 }
 
-METHOD(pb_error_message_t, get_parameters, u_int32_t,
+METHOD(pb_error_message_t, get_offset, u_int32_t,
 	private_pb_error_message_t *this)
 {
-	return this->error_parameters;
+	return this->error_offset;
 }
 
-METHOD(pb_error_message_t, get_fatal_flag, bool,
+METHOD(pb_error_message_t, set_offset, void,
+	private_pb_error_message_t *this, u_int32_t offset)
+{
+	this->error_offset = offset;
+}
+
+METHOD(pb_error_message_t, get_bad_version, u_int8_t,
 	private_pb_error_message_t *this)
 {
-	return this->fatal;
+	return this->bad_version;
 }
 
-METHOD(pb_error_message_t, set_fatal_flag, void,
-	private_pb_error_message_t *this, bool fatal)
+METHOD(pb_error_message_t, set_bad_version, void,
+	private_pb_error_message_t *this, u_int8_t version)
 {
-	this->fatal = fatal;
+	this->bad_version = version;
+}
+
+/**
+ * See header
+ */
+pb_tnc_message_t* pb_error_message_create(bool fatal, u_int32_t vendor_id,
+										  pb_tnc_error_code_t error_code)
+{
+	private_pb_error_message_t *this;
+
+	INIT(this,
+		.public = {
+			.pb_interface = {
+				.get_type = _get_type,
+				.get_encoding = _get_encoding,
+				.build = _build,
+				.process = _process,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+			.get_fatal_flag = _get_fatal_flag,
+			.get_vendor_id = _get_vendor_id,
+			.get_error_code = _get_error_code,
+			.get_offset = _get_offset,
+			.set_offset = _set_offset,
+			.get_bad_version = _get_bad_version,
+			.set_bad_version = _set_bad_version,
+		},
+		.type = PB_MSG_ERROR,
+		.ref = 1,
+		.fatal = fatal,
+		.vendor_id = vendor_id,
+		.error_code = error_code,
+	);
+
+	return &this->public.pb_interface;
 }
 
 /**
@@ -214,81 +297,22 @@ pb_tnc_message_t *pb_error_message_create_from_data(chunk_t data)
 				.get_encoding = _get_encoding,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
+			.get_fatal_flag = _get_fatal_flag,
 			.get_vendor_id = _get_vendor_id,
 			.get_error_code = _get_error_code,
-			.get_parameters = _get_parameters,
-			.get_fatal_flag = _get_fatal_flag,
-			.set_fatal_flag = _set_fatal_flag,
+			.get_offset = _get_offset,
+			.set_offset = _set_offset,
+			.get_bad_version = _get_bad_version,
+			.set_bad_version = _set_bad_version,
 		},
 		.type = PB_MSG_ERROR,
+		.ref = 1,
 		.encoding = chunk_clone(data),
 	);
 
 	return &this->public.pb_interface;
 }
 
-/**
- * See header
- */
-pb_tnc_message_t *pb_error_message_create(u_int32_t vendor_id,
-						pb_tnc_error_code_t error_code)
-{
-	private_pb_error_message_t *this;
-
-	INIT(this,
-		.public = {
-			.pb_interface = {
-				.get_type = _get_type,
-				.get_encoding = _get_encoding,
-				.build = _build,
-				.process = _process,
-				.destroy = _destroy,
-			},
-			.get_vendor_id = _get_vendor_id,
-			.get_error_code = _get_error_code,
-			.get_parameters = _get_parameters,
-			.get_fatal_flag = _get_fatal_flag,
-			.set_fatal_flag = _set_fatal_flag,
-		},
-		.type = PB_MSG_ERROR,
-		.vendor_id = vendor_id,
-		.error_code = error_code,
-	);
-
-	return &this->public.pb_interface;
-}
-
-/**
- * See header
- */
-pb_tnc_message_t *pb_error_message_create_with_parameter(u_int32_t vendor_id,
-											pb_tnc_error_code_t error_code,
-											u_int32_t error_parameters)
-{
-	private_pb_error_message_t *this;
-
-	INIT(this,
-		.public = {
-			.pb_interface = {
-				.get_type = _get_type,
-				.get_encoding = _get_encoding,
-				.build = _build,
-				.process = _process,
-				.destroy = _destroy,
-			},
-			.get_vendor_id = _get_vendor_id,
-			.get_error_code = _get_error_code,
-			.get_parameters = _get_parameters,
-			.get_fatal_flag = _get_fatal_flag,
-			.set_fatal_flag = _set_fatal_flag,
-		},
-		.type = PB_MSG_ERROR,
-		.vendor_id = vendor_id,
-		.error_code = error_code,
-		.error_parameters = error_parameters,
-	);
-
-	return &this->public.pb_interface;
-}

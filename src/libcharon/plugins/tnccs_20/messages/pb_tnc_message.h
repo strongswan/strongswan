@@ -24,6 +24,28 @@
 #include <library.h>
 #include <tnccs_20_types.h>
 
+typedef enum pb_tnc_msg_type_t pb_tnc_msg_type_t;
+
+/**
+ * PB-TNC Message Types as defined in section 4.3 of RFC 5793
+ */
+enum pb_tnc_msg_type_t {
+	PB_MSG_EXPERIMENTAL =				0,
+	PB_MSG_PA =							1,
+	PB_MSG_ASSESSMENT_RESULT =			2,
+	PB_MSG_ACCESS_RECOMMENDATION =		3,
+	PB_MSG_REMEDIATION_PARAMETERS =		4,
+	PB_MSG_ERROR =						5,
+	PB_MSG_LANGUAGE_PREFERENCE =		6,
+	PB_MSG_REASON_STRING =				7,
+	PB_MSG_ROOF =						7
+};
+
+/**
+ * enum name for pb_tnc_msg_type_t.
+ */
+extern enum_name_t *pb_tnc_msg_type_names;
+
 typedef struct pb_tnc_message_t pb_tnc_message_t;
 
 /**
@@ -59,6 +81,13 @@ struct pb_tnc_message_t {
 	 * @return					return processing status
 	 */
 	status_t (*process)(pb_tnc_message_t *this);
+
+	/**
+	 * Get a new reference to the message.
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	pb_tnc_message_t* (*get_ref)(pb_tnc_message_t *this);
 
 	/**
 	 * Destroys a pb_tnc_message_t object.
