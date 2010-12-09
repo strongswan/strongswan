@@ -233,6 +233,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CONSTRAINTS
+  SUBDIRS += plugins/constraints
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/constraints/libstrongswan-constraints.la
+endif
+endif
+
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 if MONOLITHIC

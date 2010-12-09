@@ -79,6 +79,7 @@ ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementa
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
+ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
 ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
@@ -720,6 +721,7 @@ ADD_PLUGIN([md5],                  [s libcharon pluto openac scepclient pki])
 ADD_PLUGIN([random],               [s libcharon pluto openac scepclient pki scripts medsrv])
 ADD_PLUGIN([x509],                 [s libcharon pluto openac scepclient pki scripts])
 ADD_PLUGIN([revocation],           [s libcharon])
+ADD_PLUGIN([constraints],          [s libcharon])
 ADD_PLUGIN([pubkey],               [s libcharon])
 ADD_PLUGIN([pkcs1],                [s libcharon pluto openac scepclient pki scripts manager medsrv])
 ADD_PLUGIN([pgp],                  [s libcharon pluto])
@@ -822,6 +824,7 @@ AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
+AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
@@ -968,6 +971,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/revocation/Makefile
+	src/libstrongswan/plugins/constraints/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
