@@ -471,23 +471,6 @@ static bool check_certificate(private_credential_manager_t *this,
 			 &not_before, FALSE, &not_after, FALSE);
 		return FALSE;
 	}
-	if (issuer->get_type(issuer) == CERT_X509 &&
-		subject->get_type(subject) == CERT_X509)
-	{
-		int pathlen_constraint;
-		x509_t *x509;
-
-		/* check path length constraint */
-		x509 = (x509_t*)issuer;
-		pathlen_constraint = x509->get_pathLenConstraint(x509);
-		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
-			pathlen > pathlen_constraint)
-		{
-			DBG1(DBG_CFG, "path length of %d violates constraint of %d",
-				 pathlen, pathlen_constraint);
-			return FALSE;
-		}
-	}
 
 	enumerator = this->validators->create_enumerator(this->validators);
 	while (enumerator->enumerate(enumerator, &validator))
