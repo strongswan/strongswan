@@ -1000,11 +1000,6 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_SIGNATURE						25
 
 /**
- * forward declaration
- */
-static bool issued_by(private_x509_cert_t *this, certificate_t *issuer);
-
-/**
  * Parses an X.509v3 certificate
  */
 static bool parse_certificate(private_x509_cert_t *this)
@@ -1169,7 +1164,9 @@ end:
 		hasher_t *hasher;
 
 		/* check if the certificate is self-signed */
-		if (issued_by(this, &this->public.interface.interface))
+		if (this->public.interface.interface.issued_by(
+											&this->public.interface.interface,
+											&this->public.interface.interface))
 		{
 			this->flags |= X509_SELF_SIGNED;
 		}
@@ -1186,34 +1183,26 @@ end:
 	return success;
 }
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_cert_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_cert_t *this)
 {
 	return CERT_X509;
 }
 
-/**
- * Implementation of certificate_t.get_subject
- */
-static identification_t* get_subject(private_x509_cert_t *this)
+METHOD(certificate_t, get_subject, identification_t*,
+	private_x509_cert_t *this)
 {
 	return this->subject;
 }
 
-/**
- * Implementation of certificate_t.get_issuer
- */
-static identification_t* get_issuer(private_x509_cert_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_cert_t *this)
 {
 	return this->issuer;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_subject(private_x509_cert_t *this, identification_t *subject)
+METHOD(certificate_t, has_subject, id_match_t,
+	private_x509_cert_t *this, identification_t *subject)
 {
 	identification_t *current;
 	enumerator_t *enumerator;
@@ -1254,19 +1243,15 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	return best;
 }
 
-/**
- * Implementation of certificate_t.has_issuer.
- */
-static id_match_t has_issuer(private_x509_cert_t *this, identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_cert_t *this, identification_t *issuer)
 {
 	/* issuerAltNames currently not supported */
 	return this->issuer->matches(this->issuer, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by.
- */
-static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_cert_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -1313,37 +1298,23 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 	return valid;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_x509_cert_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_cert_t *this)
 {
 	this->public_key->get_ref(this->public_key);
 	return this->public_key;
 }
 
-/**
- * Implementation of certificate_t.get_ref
- */
-static private_x509_cert_t* get_ref(private_x509_cert_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_cert_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface.interface;
 }
 
-/**
- * Implementation of x509_cert_t.get_flags.
- */
-static x509_flag_t get_flags(private_x509_cert_t *this)
-{
-	return this->flags;
-}
-
-/**
- * Implementation of x509_cert_t.get_validity.
- */
-static bool get_validity(private_x509_cert_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_cert_t *this, time_t *when, time_t *not_before,
+	time_t *not_after)
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -1358,11 +1329,8 @@ static bool get_validity(private_x509_cert_t *this, time_t *when,
 	return (t >= this->notBefore && t <= this->notAfter);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static bool get_encoding(private_x509_cert_t *this, cred_encoding_type_t type,
-						 chunk_t *encoding)
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_cert_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
 	if (type == CERT_ASN1_DER)
 	{
@@ -1373,10 +1341,8 @@ static bool get_encoding(private_x509_cert_t *this, cred_encoding_type_t type,
 						CRED_PART_X509_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_cert_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_cert_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -1402,18 +1368,20 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of x509_t.get_serial.
- */
-static chunk_t get_serial(private_x509_cert_t *this)
+METHOD(x509_t, get_flags, x509_flag_t,
+	private_x509_cert_t *this)
+{
+	return this->flags;
+}
+
+METHOD(x509_t, get_serial, chunk_t,
+	private_x509_cert_t *this)
 {
 	return this->serialNumber;
 }
 
-/**
- * Implementation of x509_t.get_subjectKeyIdentifier.
- */
-static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
+METHOD(x509_t, get_subjectKeyIdentifier, chunk_t,
+	private_x509_cert_t *this)
 {
 	if (this->subjectKeyIdentifier.ptr)
 	{
@@ -1435,34 +1403,26 @@ static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
 	}
 }
 
-/**
- * Implementation of x509_t.get_authKeyIdentifier.
- */
-static chunk_t get_authKeyIdentifier(private_x509_cert_t *this)
+METHOD(x509_t, get_authKeyIdentifier, chunk_t,
+	private_x509_cert_t *this)
 {
 	return this->authKeyIdentifier;
 }
 
-/**
- * Implementation of x509_t.get_pathLenConstraint.
- */
-static int get_pathLenConstraint(private_x509_cert_t *this)
+METHOD(x509_t, get_pathLenConstraint, int,
+	private_x509_cert_t *this)
 {
 	return this->pathLenConstraint;
 }
 
-/**
- * Implementation of x509_cert_t.create_subjectAltName_enumerator.
- */
-static enumerator_t* create_subjectAltName_enumerator(private_x509_cert_t *this)
+METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
 {
 	return this->subjectAltNames->create_enumerator(this->subjectAltNames);
 }
 
-/**
- * Implementation of x509_cert_t.create_ocsp_uri_enumerator.
- */
-static enumerator_t* create_ocsp_uri_enumerator(private_x509_cert_t *this)
+METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
 {
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
 }
@@ -1491,28 +1451,22 @@ static enumerator_t *crl_enum_create(crl_uri_t *entry)
 								(void*)crl_enum_filter, entry->issuer, NULL);
 }
 
-/**
- * Implementation of x509_cert_t.create_crl_uri_enumerator.
- */
-static enumerator_t* create_crl_uri_enumerator(private_x509_cert_t *this)
+METHOD(x509_t, create_crl_uri_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
 {
 	return enumerator_create_nested(
 							this->crl_uris->create_enumerator(this->crl_uris),
 							(void*)crl_enum_create, NULL, NULL);
 }
 
-/**
- * Implementation of x509_cert_t.create_ipAddrBlock_enumerator.
- */
-static enumerator_t* create_ipAddrBlock_enumerator(private_x509_cert_t *this)
+METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
 {
 	return this->ipAddrBlocks->create_enumerator(this->ipAddrBlocks);
 }
 
-/**
- * Implementation of certificate_t.destroy.
- */
-static void destroy(private_x509_cert_t *this)
+METHOD(certificate_t, destroy, void,
+	private_x509_cert_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -1542,54 +1496,44 @@ static void destroy(private_x509_cert_t *this)
  */
 static private_x509_cert_t* create_empty(void)
 {
-	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
+	private_x509_cert_t *this;
 
-	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
-	this->public.interface.interface.get_subject = (identification_t* (*) (certificate_t*))get_subject;
-	this->public.interface.interface.get_issuer = (identification_t* (*) (certificate_t*))get_issuer;
-	this->public.interface.interface.has_subject = (id_match_t (*) (certificate_t*, identification_t*))has_subject;
-	this->public.interface.interface.has_issuer = (id_match_t (*) (certificate_t*, identification_t*))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
-	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
-	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.get_encoding = (bool (*) (certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
-	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
-	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
-	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
-	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
-	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
-	this->public.interface.get_subjectKeyIdentifier = (chunk_t (*)(x509_t*))get_subjectKeyIdentifier;
-	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(x509_t*))get_authKeyIdentifier;
-	this->public.interface.get_pathLenConstraint = (int (*)(x509_t*))get_pathLenConstraint;
-	this->public.interface.create_subjectAltName_enumerator = (enumerator_t* (*)(x509_t*))create_subjectAltName_enumerator;
-	this->public.interface.create_crl_uri_enumerator = (enumerator_t* (*)(x509_t*))create_crl_uri_enumerator;
-	this->public.interface.create_ocsp_uri_enumerator = (enumerator_t* (*)(x509_t*))create_ocsp_uri_enumerator;
-	this->public.interface.create_ipAddrBlock_enumerator = (enumerator_t* (*)(x509_t*))create_ipAddrBlock_enumerator;
-
-	this->encoding = chunk_empty;
-	this->encoding_hash = chunk_empty;
-	this->tbsCertificate = chunk_empty;
-	this->version = 1;
-	this->serialNumber = chunk_empty;
-	this->notBefore = 0;
-	this->notAfter = 0;
-	this->public_key = NULL;
-	this->subject = NULL;
-	this->issuer = NULL;
-	this->subjectAltNames = linked_list_create();
-	this->crl_uris = linked_list_create();
-	this->ocsp_uris = linked_list_create();
-	this->ipAddrBlocks = linked_list_create();
-	this->subjectKeyIdentifier = chunk_empty;
-	this->authKeyIdentifier = chunk_empty;
-	this->authKeySerialNumber = chunk_empty;
-	this->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
-	this->algorithm = 0;
-	this->signature = chunk_empty;
-	this->flags = 0;
-	this->ref = 1;
-	this->parsed = FALSE;
-
+	INIT(this,
+		.public = {
+			.interface = {
+				.interface = {
+					.get_type = _get_type,
+					.get_subject = _get_subject,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_subject,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_flags = _get_flags,
+				.get_serial = _get_serial,
+				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
+				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.get_pathLenConstraint = _get_pathLenConstraint,
+				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
+				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
+				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
+				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
+			},
+		},
+		.version = 1,
+		.subjectAltNames = linked_list_create(),
+		.crl_uris = linked_list_create(),
+		.ocsp_uris = linked_list_create(),
+		.ipAddrBlocks = linked_list_create(),
+		.pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT,
+		.ref = 1,
+	);
 	return this;
 }
 
