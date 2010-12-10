@@ -130,8 +130,8 @@ METHOD(pb_tnc_batch_t, get_encoding, chunk_t,
 METHOD(pb_tnc_batch_t, add_message, void,
 	private_pb_tnc_batch_t *this, pb_tnc_message_t* msg)
 {
-	DBG2(DBG_TNC, "  adding %N Message", pb_tnc_msg_type_names,
-										 msg->get_type(msg));
+	DBG2(DBG_TNC, "adding %N Message", pb_tnc_msg_type_names,
+									   msg->get_type(msg));
 	this->messages->insert_last(this->messages, msg);
 }
 
@@ -369,8 +369,8 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 	{
 		if (flags & PB_TNC_FLAG_NOSKIP)
 		{
-			DBG1(DBG_TNC, "cannot process PB-TNC Message with Vendor ID 0x%06x "
-						  " and type 0x%08x", vendor_id, msg_type);
+			DBG1(DBG_TNC, "reject PB-TNC Message (Vendor ID 0x%06x / "
+						  "Type 0x%08x)", vendor_id, msg_type);
 			msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									PB_ERROR_UNSUPPORTED_MANDATORY_MESSAGE);
 			err_msg = (pb_error_message_t*)msg;
@@ -379,8 +379,8 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 		}
 		else
 		{
-			DBG1(DBG_TNC, "ignore PB-TNC Message with Vendor ID 0x%06x "
-						  " and type 0x%08x", vendor_id, msg_type);
+			DBG1(DBG_TNC, "ignore PB-TNC Message (Vendor ID 0x%06x / "
+						  "Type 0x%08x)", vendor_id, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;
 		}

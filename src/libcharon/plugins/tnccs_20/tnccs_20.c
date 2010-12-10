@@ -167,7 +167,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 
 			rec_msg = (pb_access_recommendation_message_t*)msg;
 			rec = rec_msg->get_access_recommendation(rec_msg);
-			DBG1(DBG_TNC, "access_recommendation is '%N'",
+			DBG1(DBG_TNC, "access recommendation is '%N'",
 						   action_recommendation_names, rec);
 				break;
 		}
@@ -408,14 +408,49 @@ METHOD(tls_t, build, status_t,
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	/**
-	 * if the DECIDED state has been reached, close down the TNCCS connection
-	 * by sending an empty CLOSE batch unless a CRETRY batch is under way
-	 */
-	if (this->state_machine->get_state(this->state_machine) == PB_STATE_DECIDED &&
-	   !this->batch)
+	if (!this->batch)
 	{
-		this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CLOSE);
+		pb_tnc_state_t state;
+
+		state = this->state_machine->get_state(this->state_machine);
+
+		if (this->is_server)
+		{
+			if (state == PB_STATE_SERVER_WORKING)
+			{
+				TNC_IMV_Action_Recommendation rec;
+				TNC_IMV_Evaluation_Result eval;
+				pb_tnc_message_t *msg;
+
+				/* Is an overall recommendation available? */
+				if (!this->recs->have_recommendation(this->recs, &rec, &eval))
+				{
+					charon->imvs->solicit_recommendation(charon->imvs,
+														 this->connection_id);
+				}
+				if (this->recs->have_recommendation(this->recs, &rec, &eval))
+				{
+					this->batch = pb_tnc_batch_create(this->is_server,
+													  PB_BATCH_RESULT);
+					msg = pb_assessment_result_message_create(eval);
+					this->batch->add_message(this->batch, msg);
+					msg = pb_access_recommendation_message_create(rec);
+					this->batch->add_message(this->batch, msg);
+				}
+			}
+		}
+		else
+		{
+			/**
+			 * if the DECIDED state has been reached and no CRETRY is under way
+			 * or if a CLOSE batch with error messages has been received,
+			 * reply with an empty CLOSE batch.
+			 */
+			if (state == PB_STATE_DECIDED || state == PB_STATE_END)
+			{
+				this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CLOSE);
+			}
+		}
 	}
 
 	if (this->batch)
@@ -479,7 +514,7 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		DBG2(DBG_TNC, "Final recommendation '%N' and evaluation '%N'",
+		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
 			 action_recommendation_names, rec, evaluation_result_names, eval);
 
 		return charon->imvs->enforce_recommendation(charon->imvs, rec);
