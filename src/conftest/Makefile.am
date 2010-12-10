@@ -10,7 +10,7 @@ conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/log_proposals.c hooks/set_proposal_number.c hooks/log_ke.c \
 	hooks/log_id.c hooks/custom_proposal.c hooks/set_ike_spi.c \
 	hooks/set_ike_request.c hooks/set_reserved.c hooks/set_ike_initiator.c \
-	hooks/log_ts.c hooks/rebuild_auth.c
+	hooks/log_ts.c hooks/rebuild_auth.c hooks/reset_seq.c
 
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
