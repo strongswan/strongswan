@@ -325,7 +325,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	/* Version */
 	if (version != PB_TNC_VERSION)
 	{
-		DBG1(DBG_TNC, "Unsupported TNCCS Batch Version 0x%01x", version);
+		DBG1(DBG_TNC, "unsupported TNCCS Batch Version 0x%01x", version);
 		msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									  PB_ERROR_VERSION_NOT_SUPPORTED);
 		err_msg = (pb_error_message_t*)msg;
@@ -337,7 +337,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	directionality = (flags & PB_TNC_BATCH_FLAG_D) != PB_TNC_BATCH_FLAG_NONE;
 	if (directionality == this->is_server)
 	{
-		DBG1(DBG_TNC, "Wrong Directionality: Batch is from a PB %s",
+		DBG1(DBG_TNC, "wrong Directionality: Batch is from a PB %s",
 			 directionality ? "Server" : "Client");
 		msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									  PB_ERROR_INVALID_PARAMETER);
@@ -350,7 +350,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	this->type = type & 0x0F;
 	if (this->type > PB_BATCH_ROOF)
 	{
-		DBG1(DBG_TNC, "Unknown PB-TNC Batch Type: %d", this->type);
+		DBG1(DBG_TNC, "unknown PB-TNC Batch Type: %d", this->type);
 		msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									  PB_ERROR_INVALID_PARAMETER);
 		err_msg = (pb_error_message_t*)msg;
@@ -360,7 +360,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 
 	if (!state_transition_upon_receive(state, this->type, this->is_server))
 	{
-		DBG1(DBG_TNC, "Unexpected PB-TNC Batch Type: %N",
+		DBG1(DBG_TNC, "unexpected PB-TNC Batch Type: %N",
 					   pb_tnc_batch_type_names, this->type);
 		msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									  PB_ERROR_UNEXPECTED_BATCH_TYPE);
@@ -523,7 +523,8 @@ METHOD(pb_tnc_batch_t, process, status_t,
 	{
 		return FAILED;
 	}
-	
+	DBG1(DBG_TNC, "processing PB-TNC %N Batch", pb_tnc_batch_type_names,
+												this->type);
 	while (this->offset < this->encoding.len)
 	{
 		status = process_tnc_message(this);

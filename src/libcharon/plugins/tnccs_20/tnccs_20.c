@@ -195,31 +195,38 @@ static status_t handle_messages(private_tnccs_20_t *this, pb_tnc_batch_t *batch)
 
 				if (vendor_id == IETF_VENDOR_ID)
 				{
-					DBG1(DBG_TNC, "%s PB-TNC Error: %N",
-						 fatal ? "fatal" : "non-fatal",
-						 pb_tnc_error_code_names, error_code);
-
 					switch (error_code)
 					{
 						case PB_ERROR_INVALID_PARAMETER:
 						case PB_ERROR_UNSUPPORTED_MANDATORY_MESSAGE:
-							DBG1(DBG_TNC, "  at an offset of %u bytes",
+							DBG1(DBG_TNC, "received %s PB-TNC Error '%N' "
+										  "(offset %u bytes)",
+										  fatal ? "fatal" : "non-fatal",
+										  pb_tnc_error_code_names, error_code,
 										  err_msg->get_offset(err_msg));
 							break;
 						case PB_ERROR_VERSION_NOT_SUPPORTED:
-							DBG1(DBG_TNC, "  with bad version 0x%02x",
+							DBG1(DBG_TNC, "received %s PB-TNC Error '%N' "
+										  "caused by bad version 0x%02x",
+										  fatal ? "fatal" : "non-fatal",
+										  pb_tnc_error_code_names, error_code,
 										  err_msg->get_bad_version(err_msg));
 							break;
 						case PB_ERROR_UNEXPECTED_BATCH_TYPE:
 						case PB_ERROR_LOCAL_ERROR:
 						default:
+							DBG1(DBG_TNC, "received %s PB-TNC Error '%N'",
+										  fatal ? "fatal" : "non-fatal",
+										  pb_tnc_error_code_names, error_code);
 							break;
 					}
 				}
 				else
 				{
-					DBG1(DBG_TNC, "%s PB-TNC Error (%u) with Vendor ID 0x%06x",
-						 fatal ? "fatal" : "non-fatal", error_code, vendor_id);
+					DBG1(DBG_TNC, "received %s PB-TNC Error (%u) "
+								  "with Vendor ID 0x%06x",
+								  fatal ? "fatal" : "non-fatal",
+								  error_code, vendor_id);
 				}
 				break;
 			}
