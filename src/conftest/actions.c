@@ -273,7 +273,7 @@ static void load_action(settings_t *settings, char *action)
 
 	for (i = 0; i < countof(actions); i++)
 	{
-		if (strncasecmp(actions[i].name, action, strlen(actions[i].name)) == 0)
+		if (strncaseeq(actions[i].name, action, strlen(actions[i].name)))
 		{
 			int delay;
 			char *config;

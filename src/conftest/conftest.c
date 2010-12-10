@@ -100,7 +100,7 @@ static bool load_trusted_cert(settings_t *settings, bool trusted)
 	{
 		certificate_t *cert = NULL;
 
-		if (strcaseeq(key, "x509"))
+		if (strncaseeq(key, "x509"))
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							CERT_X509, BUILD_FROM_FILE, value, BUILD_END);

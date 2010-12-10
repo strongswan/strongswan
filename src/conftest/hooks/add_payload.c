@@ -98,7 +98,7 @@ METHOD(listener_t, message, bool,
 			}
 			enumerator->destroy(enumerator);
 		}
-		if (strncasecmp(this->data, "0x", 2) == 0)
+		if (strncaseeq(this->data, "0x", 2))
 		{
 			data = chunk_skip(chunk_create(this->data, strlen(this->data)), 2);
 			data = chunk_from_hex(data, NULL);
