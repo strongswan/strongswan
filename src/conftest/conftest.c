@@ -89,7 +89,7 @@ static bool load_configs(char *suite_file, char *test_file)
 /**
  * Load trusted/untrusted certificates
  */
-static bool load_trusted_cert(settings_t *settings, bool trusted)
+static bool load_cert(settings_t *settings, bool trusted)
 {
 	enumerator_t *enumerator;
 	char *key, *value;
@@ -100,12 +100,12 @@ static bool load_trusted_cert(settings_t *settings, bool trusted)
 	{
 		certificate_t *cert = NULL;
 
-		if (strncaseeq(key, "x509"))
+		if (strncaseeq(key, "x509", strlen("x509")))
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							CERT_X509, BUILD_FROM_FILE, value, BUILD_END);
 		}
-		else if (strcaseeq(key, "crl"))
+		else if (strncaseeq(key, "crl", strlen("crl")))
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							CERT_X509_CRL, BUILD_FROM_FILE, value, BUILD_END);
@@ -148,8 +148,8 @@ static bool load_certs(settings_t *settings, char *dir)
 		return FALSE;
 	}
 
-	if (!load_trusted_cert(settings, TRUE) ||
-		!load_trusted_cert(settings, FALSE))
+	if (!load_cert(settings, TRUE) ||
+		!load_cert(settings, FALSE))
 	{
 		return FALSE;
 	}
@@ -188,11 +188,11 @@ static bool load_keys(settings_t *settings, char *dir)
 	enumerator = settings->create_key_value_enumerator(settings, "keys");
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
-		if (strcaseeq(type, "ecdsa"))
+		if (strncaseeq(type, "ecdsa", strlen("ecdsa")))
 		{
 			key_type = KEY_ECDSA;
 		}
-		else if (strcaseeq(type, "rsa"))
+		else if (strncaseeq(type, "rsa", strlen("rsa")))
 		{
 			key_type = KEY_RSA;
 		}
