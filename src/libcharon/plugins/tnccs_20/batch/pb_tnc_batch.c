@@ -382,7 +382,7 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 			DBG1(DBG_TNC, "ignore PB-TNC Message with Vendor ID 0x%06x "
 						  " and type 0x%08x", vendor_id, msg_type);
 			this->offset += msg_len;
-			return INVALID_STATE;
+			return SUCCESS;
 		}
 	}
 
@@ -391,10 +391,23 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 		 msg_type == PB_MSG_REMEDIATION_PARAMETERS) &&
 		 this->type != PB_BATCH_RESULT)
 	{
-		DBG1(DBG_TNC,"ignore %N Message not received within RESULT batch",
-					  pb_tnc_msg_type_names, msg_type);
-		this->offset += msg_len;
-		return INVALID_STATE;
+		if (this->is_server)
+		{
+			DBG1(DBG_TNC,"reject %N Message received from a PB-TNC Client",
+						  pb_tnc_msg_type_names, msg_type);
+			msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
+										  PB_ERROR_INVALID_PARAMETER);
+			err_msg = (pb_error_message_t*)msg;
+			err_msg->set_offset(err_msg, this->offset);
+			goto fatal;
+		}
+		else
+		{
+			DBG1(DBG_TNC,"ignore %N Message not received within RESULT batch",
+						  pb_tnc_msg_type_names, msg_type);
+			this->offset += msg_len;
+			return SUCCESS;
+		}
 	}
 
 	DBG2(DBG_TNC, "processing %N Message (%u bytes)", pb_tnc_msg_type_names,
@@ -425,7 +438,7 @@ METHOD(pb_tnc_batch_t, process, status_t,
 	status_t status;
 
 	status = process_batch_header(this, state_machine);
-	if (status == FAILED)
+	if (status != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -433,13 +446,19 @@ METHOD(pb_tnc_batch_t, process, status_t,
 												this->type);
 	while (this->offset < this->encoding.len)
 	{
-		status = process_tnc_message(this);
-		if (status == FAILED)
+		switch (process_tnc_message(this))
 		{
-			return FAILED;
+			case FAILED:
+				return FAILED;
+			case VERIFY_ERROR:
+				status = VERIFY_ERROR;
+				break;
+			case SUCCESS:
+			default:
+				break;
 		}
 	}
-	return SUCCESS;
+	return status;
 }
 
 METHOD(pb_tnc_batch_t, create_msg_enumerator, enumerator_t*,
