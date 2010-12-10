@@ -17,20 +17,13 @@
 #include "tnccs_20_types.h"
 #include "pb_tnc_batch.h"
 #include "messages/pb_error_message.h"
+#include "state_machine/pb_tnc_state_machine.h"
 
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <tls_writer.h>
 #include <tls_reader.h>
 #include <tnc/tnccs/tnccs.h>
-
-ENUM(pb_tnc_state_names, PB_STATE_INIT, PB_STATE_END,
-	"Init",
-	"Server Working",
-	"Client Working",
-	"Decided",
-	"End"
-);
 
 ENUM(pb_tnc_batch_type_names, PB_BATCH_CDATA, PB_BATCH_CLOSE,
 	"CDATA",
@@ -206,95 +199,8 @@ METHOD(pb_tnc_batch_t, build, void,
 	writer->destroy(writer);
 }
 
-/*
- * Implements the PB-TNC state machine in receive direction
- */
-static bool state_transition_upon_receive(pb_tnc_state_t *state,
-										  pb_tnc_batch_type_t batch_type,
-										  bool is_server)
-{
-	switch (*state)
-	{
-		case PB_STATE_INIT:
-			if (is_server && batch_type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (!is_server && batch_type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_SERVER_WORKING:
-			if (!is_server && batch_type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (!is_server && batch_type == PB_BATCH_RESULT)
-			{
-				*state = PB_STATE_DECIDED;
-				break;
-			}
-			if ((is_server && batch_type == PB_BATCH_CRETRY) ||
-			   (!is_server && batch_type == PB_BATCH_SRETRY))
-			{
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_CLIENT_WORKING:
-			if (is_server && batch_type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (is_server && batch_type == PB_BATCH_CRETRY)
-			{
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_DECIDED:
-			if ((is_server && batch_type == PB_BATCH_CRETRY) ||
-			   (!is_server && batch_type == PB_BATCH_SRETRY))
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_END:
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				break;
-			}
-			return FALSE;
-	}
-	return TRUE;
-}
-
 static status_t process_batch_header(private_pb_tnc_batch_t *this,
-									 pb_tnc_state_t *state)
+									 pb_tnc_state_machine_t *state_machine)
 {
 	tls_reader_t *reader;
 	pb_tnc_message_t *msg;
@@ -358,7 +264,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 		goto fatal;
 	}
 
-	if (!state_transition_upon_receive(state, this->type, this->is_server))
+	if (!state_machine->receive_batch(state_machine, this->type))
 	{
 		DBG1(DBG_TNC, "unexpected PB-TNC Batch Type: %N",
 					   pb_tnc_batch_type_names, this->type);
@@ -514,11 +420,11 @@ fatal:
 }
 
 METHOD(pb_tnc_batch_t, process, status_t,
-	private_pb_tnc_batch_t *this, pb_tnc_state_t *state)
+	private_pb_tnc_batch_t *this, pb_tnc_state_machine_t *state_machine)
 {
 	status_t status;
 
-	status = process_batch_header(this, state);
+	status = process_batch_header(this, state_machine);
 	if (status == FAILED)
 	{
 		return FAILED;

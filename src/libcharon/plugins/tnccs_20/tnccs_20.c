@@ -24,6 +24,7 @@
 #include "messages/pb_access_recommendation_message.h"
 #include "messages/pb_reason_string_message.h"
 #include "messages/pb_language_preference_message.h"
+#include "state_machine/pb_tnc_state_machine.h"
 
 #include <debug.h>
 #include <daemon.h>
@@ -52,7 +53,7 @@ struct private_tnccs_20_t {
 	/**
 	 * PB-TNC State Machine
 	 */
-	pb_tnc_state_t state;
+	pb_tnc_state_machine_t *state_machine;
 
 	/**
 	 * Connection ID assigned to this TNCCS connection
@@ -272,7 +273,6 @@ METHOD(tls_t, process, status_t,
 	chunk_t data;
 	pb_tnc_batch_t *batch;
 	pb_tnc_message_t *msg;
-	pb_tnc_state_t old_state = this->state;
 	enumerator_t *enumerator;
 	status_t status;
 
@@ -294,13 +294,7 @@ METHOD(tls_t, process, status_t,
 				   data.len, this->connection_id);
 	DBG3(DBG_TNC, "%B", &data);  
 	batch = pb_tnc_batch_create_from_data(this->is_server, data);
-	status = batch->process(batch, &this->state);
-
-	if (this->state != old_state)
-	{
-		DBG2(DBG_TNC, "PB-TNC state transition from '%N' to '%N'",
-			 pb_tnc_state_names, old_state, pb_tnc_state_names, this->state);
-	}
+	status = batch->process(batch, this->state_machine);
 
 	switch (status)
 	{
@@ -343,92 +337,6 @@ METHOD(tls_t, process, status_t,
 	return NEED_MORE;
 }
 
-/*
- * Implements the PB-TNC state machine in send direction
- */
-static bool state_transition_upon_send(pb_tnc_state_t *state,
-									   pb_tnc_batch_type_t batch_type)
-{
-	switch (*state)
-	{
-		case PB_STATE_INIT:
-			if (batch_type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_SERVER_WORKING:
-			if (batch_type == PB_BATCH_SDATA)
-			{
-				*state = PB_STATE_CLIENT_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_RESULT)
-			{
-				*state = PB_STATE_DECIDED;
-				break;
-			}
-			if (batch_type == PB_BATCH_CRETRY ||
-				batch_type == PB_BATCH_SRETRY)
-			{
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_CLIENT_WORKING:
-			if (batch_type == PB_BATCH_CDATA)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_CRETRY)
-			{
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_DECIDED:
-			if (batch_type == PB_BATCH_CRETRY ||
-				batch_type == PB_BATCH_SRETRY)
-			{
-				*state = PB_STATE_SERVER_WORKING;
-				break;
-			}
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				*state = PB_STATE_END;
-				break;
-			}
-			return FALSE;
-		case PB_STATE_END:
-			if (batch_type == PB_BATCH_CLOSE)
-			{
-				break;
-			}
-			return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
@@ -464,15 +372,13 @@ METHOD(tls_t, build, status_t,
 	if (this->batch)
 	{
 		pb_tnc_batch_type_t batch_type;
-		pb_tnc_state_t old_state;
 		status_t status;
  		chunk_t data;
 
-		batch_type = this->batch->get_type(this->batch);
-		old_state = this->state;
 		this->mutex->lock(this->mutex);
+		batch_type = this->batch->get_type(this->batch);
 
-		if (state_transition_upon_send(&this->state, batch_type))
+		if (this->state_machine->send_batch(this->state_machine, batch_type))
 		{
 			this->batch->build(this->batch);
 			data = this->batch->get_encoding(this->batch);
@@ -497,11 +403,6 @@ METHOD(tls_t, build, status_t,
 		this->batch = NULL;
 		this->mutex->unlock(this->mutex);
 
-		if (this->state != old_state)
-		{
-			DBG2(DBG_TNC, "PB-TNC state transition from '%N' to '%N'",
-				 pb_tnc_state_names, old_state, pb_tnc_state_names, this->state);
-		}
 		return status;
 	}
 	else
@@ -552,6 +453,7 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
 	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	this->state_machine->destroy(this->state_machine);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
 	free(this);
@@ -575,7 +477,7 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.state = PB_STATE_INIT,
+		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 

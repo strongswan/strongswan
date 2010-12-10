@@ -21,29 +21,13 @@
 #ifndef PB_TNC_BATCH_H_
 #define PB_TNC_BATCH_H_
 
+typedef enum pb_tnc_batch_type_t pb_tnc_batch_type_t;
+typedef struct pb_tnc_batch_t pb_tnc_batch_t;
+
 #include "messages/pb_tnc_message.h"
+#include "state_machine/pb_tnc_state_machine.h"
 
 #include <library.h>
-
-typedef enum pb_tnc_state_t pb_tnc_state_t;
-
-/**
- * PB-TNC States (State machine) as defined in section 3.2 of RFC 5793
- */
-enum pb_tnc_state_t {
-	PB_STATE_INIT,
-	PB_STATE_SERVER_WORKING,
-	PB_STATE_CLIENT_WORKING,
-	PB_STATE_DECIDED,
-	PB_STATE_END,
-};
-
-/**
- * enum name for pb_tnc_state_t.
- */
-extern enum_name_t *pb_tnc_state_names;
-
-typedef enum pb_tnc_batch_type_t pb_tnc_batch_type_t;
 
 /**
   * PB-TNC Batch Types as defined in section 4.1 of RFC 5793
@@ -57,8 +41,6 @@ enum pb_tnc_batch_type_t {
 	PB_BATCH_CLOSE =	6,
 	PB_BATCH_ROOF =		6
 };
-
-typedef struct pb_tnc_batch_t pb_tnc_batch_t;
 
 /**
  * enum name for pb_tnc_batch_type_t.
@@ -99,10 +81,11 @@ struct pb_tnc_batch_t {
 	/**
 	 * Process the PB-TNC Batch
 	 *
-	 * @param				in: current state, out: new state
+	 * @param				PB-TNC state machine
 	 * @return				return processing status
 	 */
-	status_t (*process)(pb_tnc_batch_t *this, pb_tnc_state_t *state);
+	status_t (*process)(pb_tnc_batch_t *this,
+						pb_tnc_state_machine_t *state_machine);
 
 	/**
 	 * Enumerates over all PB-TNC Messages
