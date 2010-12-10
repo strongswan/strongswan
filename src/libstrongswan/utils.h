@@ -57,7 +57,7 @@
 #define streq(x,y) (strcmp(x, y) == 0)
 
 /**
- * Macro compares two strings for equality
+ * Macro compares two strings for equality, length limited
  */
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
@@ -65,6 +65,11 @@
  * Macro compares two strings for equality ignoring case
  */
 #define strcaseeq(x,y) (strcasecmp(x, y) == 0)
+
+/**
+ * Macro compares two strings for equality ignoring case, length limited
+ */
+#define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
 
 /**
  * Macro compares two binary blobs for equality
