@@ -20,6 +20,9 @@
 #include "messages/pb_tnc_message.h"
 #include "messages/pb_pa_message.h"
 #include "messages/pb_error_message.h"
+#include "messages/pb_assessment_result_message.h"
+#include "messages/pb_access_recommendation_message.h"
+#include "messages/pb_reason_string_message.h"
 #include "messages/pb_language_preference_message.h"
 
 #include <debug.h>
@@ -112,13 +115,157 @@ METHOD(tnccs_t, send_message, void,
 	this->mutex->unlock(this->mutex);
 }
 
+static status_t handle_messages(private_tnccs_20_t *this, pb_tnc_batch_t *batch)
+{
+	enumerator_t *enumerator;
+	pb_tnc_message_t *msg;
+
+	enumerator = batch->create_msg_enumerator(batch);
+	while (enumerator->enumerate(enumerator, &msg))
+	{
+		switch (msg->get_type(msg))
+		{
+			case PB_MSG_EXPERIMENTAL:
+				/* for experiments */
+				break;
+			case PB_MSG_PA:
+			{
+				pb_pa_message_t *pa_msg;
+				TNC_MessageType msg_type;
+				u_int32_t vendor_id, subtype;
+				chunk_t msg_body;
+
+				pa_msg = (pb_pa_message_t*)msg;
+				vendor_id = pa_msg->get_vendor_id(pa_msg, &subtype);
+				msg_type = (vendor_id << 8) | (subtype & 0xff);
+				msg_body = pa_msg->get_body(pa_msg);
+
+				DBG2(DBG_TNC, "handling message type 0x%08x", msg_type);
+
+				if (this->is_server)
+				{
+					charon->imvs->receive_message(charon->imvs,
+					this->connection_id, msg_body.ptr, msg_body.len, msg_type);
+				}
+				else
+				{
+					charon->imcs->receive_message(charon->imcs,
+					this->connection_id, msg_body.ptr, msg_body.len,msg_type);
+				}
+				break;
+			}
+			case PB_MSG_ASSESSMENT_RESULT:
+			{
+				pb_assessment_result_message_t *assess_msg;
+				u_int32_t result;
+
+				assess_msg = (pb_assessment_result_message_t*)msg;
+				result = assess_msg->get_assessment_result(assess_msg);
+				DBG1(DBG_TNC, "assessment result is '%N'",
+							   evaluation_result_names, result);
+				break;
+			}
+			case PB_MSG_ACCESS_RECOMMENDATION:
+			{
+				pb_access_recommendation_message_t *rec_msg;
+				u_int16_t rec;
+
+				rec_msg = (pb_access_recommendation_message_t*)msg;
+				rec = rec_msg->get_access_recommendation(rec_msg);
+				DBG1(DBG_TNC, "access_recommendation is '%N'",
+							   action_recommendation_names, rec);
+				break;
+			}
+			case PB_MSG_REMEDIATION_PARAMETERS:
+			{
+				/* TODO : Remediation parameters message processing */
+				break;
+			}
+			case PB_MSG_ERROR:
+			{
+				pb_error_message_t *err_msg;
+				bool fatal;
+				u_int32_t vendor_id;
+				u_int16_t error_code;
+
+				err_msg = (pb_error_message_t*)msg;
+				fatal = err_msg->get_fatal_flag(err_msg);
+				vendor_id = err_msg->get_vendor_id(err_msg);
+				error_code = err_msg->get_error_code(err_msg);
+
+				if (vendor_id == IETF_VENDOR_ID)
+				{
+					DBG1(DBG_TNC, "%s PB-TNC Error: %N",
+						 fatal ? "fatal" : "non-fatal",
+						 pb_tnc_error_code_names, error_code);
+
+					switch (error_code)
+					{
+						case PB_ERROR_INVALID_PARAMETER:
+						case PB_ERROR_UNSUPPORTED_MANDATORY_MESSAGE:
+							DBG1(DBG_TNC, "  at an offset of %u bytes",
+										  err_msg->get_offset(err_msg));
+							break;
+						case PB_ERROR_VERSION_NOT_SUPPORTED:
+							DBG1(DBG_TNC, "  with bad version 0x%02x",
+										  err_msg->get_bad_version(err_msg));
+							break;
+						case PB_ERROR_UNEXPECTED_BATCH_TYPE:
+						case PB_ERROR_LOCAL_ERROR:
+						default:
+							break;
+					}
+				}
+				else
+				{
+					DBG1(DBG_TNC, "%s PB-TNC Error (%u) with Vendor ID 0x%06x",
+						 fatal ? "fatal" : "non-fatal", error_code, vendor_id);
+				}
+				break;
+			}
+			case PB_MSG_LANGUAGE_PREFERENCE:
+			{
+				pb_language_preference_message_t *lang_msg;
+				chunk_t lang;
+
+				lang_msg = (pb_language_preference_message_t*)msg;
+				lang = lang_msg->get_language_preference(lang_msg);
+
+				DBG2(DBG_TNC, "setting language preference '%.*s'",
+							   lang.len, lang.ptr);
+				this->recs->set_preferred_language(this->recs, lang);
+				break;
+			}
+			case PB_MSG_REASON_STRING:
+			{
+				pb_reason_string_message_t *reason_msg;
+				chunk_t reason_string, language_code;
+
+				reason_msg = (pb_reason_string_message_t*)msg;
+				reason_string = reason_msg->get_reason_string(reason_msg);
+				language_code = reason_msg->get_language_code(reason_msg);
+				DBG2(DBG_TNC, "reason string: '%.*s", reason_string.len,
+													  reason_string.ptr);
+				DBG2(DBG_TNC, "language code: '%.*s", language_code.len,
+													  language_code.ptr);
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return SUCCESS;
+}
+
 METHOD(tls_t, process, status_t,
 	private_tnccs_20_t *this, void *buf, size_t buflen)
 {
 	chunk_t data;
 	pb_tnc_batch_t *batch;
 	pb_tnc_message_t *msg;
-	pb_tnc_state_t old_state;
+	pb_tnc_state_t old_state = this->state;
 	enumerator_t *enumerator;
 	status_t status;
 
@@ -134,25 +281,35 @@ METHOD(tls_t, process, status_t,
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 	}
+
 	data = chunk_create(buf, buflen);
 	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
 				   data.len, this->connection_id);
 	DBG3(DBG_TNC, "%B", &data);  
 	batch = pb_tnc_batch_create_from_data(this->is_server, data);
-
-	old_state = this->state;
 	status = batch->process(batch, &this->state);
+
 	if (this->state != old_state)
 	{
 		DBG2(DBG_TNC, "PB-TNC state transition from '%N' to '%N'",
 			 pb_tnc_state_names, old_state, pb_tnc_state_names, this->state);
 	}
+
 	switch (status)
 	{
 		case SUCCESS:
-		default:
+			handle_messages(this, batch);
+			if (this->is_server)
+			{
+				charon->imvs->batch_ending(charon->imvs, this->connection_id);
+			}
+			else
+			{
+				charon->imcs->batch_ending(charon->imcs, this->connection_id);
+			}
 			break;
 		case FAILED:
+			this->mutex->lock(this->mutex);
 			if (this->batch)
 			{
 				DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
@@ -160,25 +317,22 @@ METHOD(tls_t, process, status_t,
 				this->batch->destroy(this->batch);
 			 }
 			this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CLOSE);
+			this->mutex->unlock(this->mutex);
 			/* fall through */
 		case VERIFY_ERROR:
 			enumerator = batch->create_error_enumerator(batch);
 			while (enumerator->enumerate(enumerator, &msg))
 			{
+				this->mutex->lock(this->mutex);
 				this->batch->add_message(this->batch, msg->get_ref(msg));
+				this->mutex->unlock(this->mutex);
 			}
 			enumerator->destroy(enumerator);
+		default:
+			break;
 	}
 	batch->destroy(batch);
 
-	if (this->is_server)
-	{
-		charon->imvs->batch_ending(charon->imvs, this->connection_id);
-	}
-	else
-	{
-		charon->imcs->batch_ending(charon->imcs, this->connection_id);
-	}
 	return NEED_MORE;
 }
 

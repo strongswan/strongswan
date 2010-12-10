@@ -463,7 +463,7 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 	{
 		if (flags & PB_TNC_FLAG_NOSKIP)
 		{
-			DBG1(DBG_TNC, "cannot process PB-TNC message with Vendor ID 0x%06x "
+			DBG1(DBG_TNC, "cannot process PB-TNC Message with Vendor ID 0x%06x "
 						  " and type 0x%08x", vendor_id, msg_type);
 			msg = pb_error_message_create(TRUE, IETF_VENDOR_ID,
 									PB_ERROR_UNSUPPORTED_MANDATORY_MESSAGE);
@@ -473,11 +473,22 @@ static status_t process_tnc_message(private_pb_tnc_batch_t *this)
 		}
 		else
 		{
-			DBG1(DBG_TNC, "ignore PB-TNC message with Vendor ID 0x%06x "
+			DBG1(DBG_TNC, "ignore PB-TNC Message with Vendor ID 0x%06x "
 						  " and type 0x%08x", vendor_id, msg_type);
 			this->offset += msg_len;
 			return INVALID_STATE;
 		}
+	}
+
+	if ((msg_type == PB_MSG_ASSESSMENT_RESULT ||
+		 msg_type == PB_MSG_ACCESS_RECOMMENDATION ||
+		 msg_type == PB_MSG_REMEDIATION_PARAMETERS) &&
+		 this->type != PB_BATCH_RESULT)
+	{
+		DBG1(DBG_TNC,"ignore %N Message not received within RESULT batch",
+					  pb_tnc_msg_type_names, msg_type);
+		this->offset += msg_len;
+		return INVALID_STATE;
 	}
 
 	DBG2(DBG_TNC, "processing %N Message (%u bytes)", pb_tnc_msg_type_names,
