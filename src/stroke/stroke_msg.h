@@ -108,9 +108,9 @@ enum purge_flag_t {
 	/** purge IKE_SAs without a CHILD_SA */
 	PURGE_IKE =			0x0002,
 	/** purge CRL cache entries */
-	PURGE_CRL =			0x0004,
+	PURGE_CRLS =		0x0004,
 	/** purge X509 cache entries */
-	PURGE_X509 =		0x0008,
+	PURGE_CERTS =		0x0008,
 };
 
 typedef enum export_flag_t export_flag_t;

@@ -56,8 +56,8 @@ rereadacerts,    STROKE_REREAD_ACERTS
 rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP
-purgecrl,        STROKE_PURGE_CRL
-purgex509,       STROKE_PURGE_X509
+purgecrls,       STROKE_PURGE_CRLS
+purgecerts,      STROKE_PURGE_CERTS
 purgeike,        STROKE_PURGE_IKE
 exportx509,      STROKE_EXPORT_X509
 leases,          STROKE_LEASES
