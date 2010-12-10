@@ -408,6 +408,21 @@ METHOD(tls_t, build, status_t,
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
+	/* Is there a handshake retry request? */
+	if (this->request_handshake_retry)
+	{
+		if (this->batch)
+		{
+			DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
+				pb_tnc_batch_type_names, this->batch->get_type(this->batch));
+			this->batch->destroy(this->batch);
+		 }
+		this->batch = pb_tnc_batch_create(this->is_server, this->is_server ?
+										  PB_BATCH_SRETRY : PB_BATCH_CRETRY);
+		this->request_handshake_retry = FALSE;
+		status = ALREADY_DONE;
+	}
+
 	if (!this->batch)
 	{
 		pb_tnc_state_t state;
