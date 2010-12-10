@@ -1,0 +1,140 @@
+From b8002cf263df995dee041729ce387308c78e12a9 Mon Sep 17 00:00:00 2001
+From: Martin Willi <martin@strongswan.org>
+Date: Fri, 10 Dec 2010 15:22:40 +0100
+Subject: [PATCH] Use ESP padding length for TFC padding
+
+---
+ net/ipv4/esp4.c |   30 ++++++++----------------------
+ net/ipv6/esp6.c |   30 ++++++++----------------------
+ 2 files changed, 16 insertions(+), 44 deletions(-)
+
+diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+index e42a905..6881f68 100644
+--- a/net/ipv4/esp4.c
++++ b/net/ipv4/esp4.c
+@@ -23,8 +23,6 @@ struct esp_skb_cb {
+
+ #define ESP_SKB_CB(__skb) ((struct esp_skb_cb *)&((__skb)->cb[0]))
+
+-static u32 esp4_get_mtu(struct xfrm_state *x, int mtu);
+-
+ /*
+  * Allocate an AEAD request structure with extra space for SG and IV.
+  *
+@@ -120,7 +118,6 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+	int clen;
+	int alen;
+	int plen;
+-	int tfclen;
+	int nfrags;
+
+	/* skb is pure payload to encrypt */
+@@ -130,23 +127,16 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+	esp = x->data;
+	aead = esp->aead;
+	alen = crypto_aead_authsize(aead);
+-
+-	tfclen = 0;
+-	if (x->tfcpad) {
+-		struct xfrm_dst *dst = (struct xfrm_dst *)skb_dst(skb);
+-		u32 padto;
+-
+-		padto = min(x->tfcpad, esp4_get_mtu(x, dst->child_mtu_cached));
+-		if (skb->len < padto)
+-			tfclen = padto - skb->len;
+-	}
+	blksize = ALIGN(crypto_aead_blocksize(aead), 4);
+-	clen = ALIGN(skb->len + 2 + tfclen, blksize);
+-	if (esp->padlen)
+-		clen = ALIGN(clen, esp->padlen);
+-	plen = clen - skb->len - tfclen;
++	clen = ALIGN(max_t(u32, skb->len, x->tfcpad) + 2 , blksize);
++	if (clen - skb->len - 2 > 255) {
++		clen = ALIGN(skb->len + 255 + 2, blksize);
++		if (clen - skb->len - 2 > 255)
++			clen -= blksize;
++	}
++	plen = clen - skb->len;
+
+-	err = skb_cow_data(skb, tfclen + plen + alen, &trailer);
++	err = skb_cow_data(skb, plen + alen, &trailer);
+	if (err < 0)
+		goto error;
+	nfrags = err;
+@@ -162,10 +152,6 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+
+	/* Fill padding... */
+	tail = skb_tail_pointer(trailer);
+-	if (tfclen) {
+-		memset(tail, 0, tfclen);
+-		tail += tfclen;
+-	}
+	do {
+		int i;
+		for (i = 0; i < plen - 2; i++)
+diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
+index 1b5c982..e95de5f 100644
+--- a/net/ipv6/esp6.c
++++ b/net/ipv6/esp6.c
+@@ -49,8 +49,6 @@ struct esp_skb_cb {
+
+ #define ESP_SKB_CB(__skb) ((struct esp_skb_cb *)&((__skb)->cb[0]))
+
+-static u32 esp6_get_mtu(struct xfrm_state *x, int mtu);
+-
+ /*
+  * Allocate an AEAD request structure with extra space for SG and IV.
+  *
+@@ -143,7 +141,6 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+	int clen;
+	int alen;
+	int plen;
+-	int tfclen;
+	int nfrags;
+	u8 *iv;
+	u8 *tail;
+@@ -154,23 +151,16 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+
+	aead = esp->aead;
+	alen = crypto_aead_authsize(aead);
+-
+-	tfclen = 0;
+-	if (x->tfcpad) {
+-		struct xfrm_dst *dst = (struct xfrm_dst *)skb_dst(skb);
+-		u32 padto;
+-
+-		padto = min(x->tfcpad, esp6_get_mtu(x, dst->child_mtu_cached));
+-		if (skb->len < padto)
+-			tfclen = padto - skb->len;
+-	}
+	blksize = ALIGN(crypto_aead_blocksize(aead), 4);
+-	clen = ALIGN(skb->len + 2 + tfclen, blksize);
+-	if (esp->padlen)
+-		clen = ALIGN(clen, esp->padlen);
+-	plen = clen - skb->len - tfclen;
++	clen = ALIGN(max_t(u32, skb->len, x->tfcpad) + 2 , blksize);
++	if (clen - skb->len - 2 > 255) {
++		clen = ALIGN(skb->len + 255 + 2, blksize);
++		if (clen - skb->len - 2 > 255)
++			clen -= blksize;
++	}
++	plen = clen - skb->len;
+
+-	err = skb_cow_data(skb, tfclen + plen + alen, &trailer);
++	err = skb_cow_data(skb, plen + alen, &trailer);
+	if (err < 0)
+		goto error;
+	nfrags = err;
+@@ -186,10 +176,6 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+
+	/* Fill padding... */
+	tail = skb_tail_pointer(trailer);
+-	if (tfclen) {
+-		memset(tail, 0, tfclen);
+-		tail += tfclen;
+-	}
+	do {
+		int i;
+		for (i = 0; i < plen - 2; i++)
+--
+1.7.1

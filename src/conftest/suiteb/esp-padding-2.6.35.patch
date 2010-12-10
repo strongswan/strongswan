@@ -1,0 +1,228 @@
+From 3a220e3671b5751365492c81010e8eca0d170187 Mon Sep 17 00:00:00 2001
+From: Martin Willi <martin@strongswan.org>
+Date: Mon, 29 Nov 2010 11:55:26 +0100
+Subject: [PATCH] Add ESP padding
+
+---
+ include/linux/xfrm.h |    1 +
+ include/net/xfrm.h   |    1 +
+ net/ipv4/esp4.c      |   24 +++++++++++++-----------
+ net/ipv6/esp6.c      |   24 +++++++++++++-----------
+ net/xfrm/xfrm_user.c |   19 +++++++++++++++++--
+ 5 files changed, 45 insertions(+), 24 deletions(-)
+
+diff --git a/include/linux/xfrm.h b/include/linux/xfrm.h
+index b971e38..930fdd2 100644
+--- a/include/linux/xfrm.h
++++ b/include/linux/xfrm.h
+@@ -283,6 +283,7 @@ enum xfrm_attr_type_t {
+	XFRMA_KMADDRESS,        /* struct xfrm_user_kmaddress */
+	XFRMA_ALG_AUTH_TRUNC,	/* struct xfrm_algo_auth */
+	XFRMA_MARK,		/* struct xfrm_mark */
++	XFRMA_TFCPAD,		/* __u32 */
+	__XFRMA_MAX
+
+ #define XFRMA_MAX (__XFRMA_MAX - 1)
+diff --git a/include/net/xfrm.h b/include/net/xfrm.h
+index fc8f36d..3de9ec2 100644
+--- a/include/net/xfrm.h
++++ b/include/net/xfrm.h
+@@ -143,6 +143,7 @@ struct xfrm_state {
+	struct xfrm_id		id;
+	struct xfrm_selector	sel;
+	struct xfrm_mark	mark;
++	u32			tfcpad;
+
+	u32			genid;
+
+diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+index 14ca1f1..6881f68 100644
+--- a/net/ipv4/esp4.c
++++ b/net/ipv4/esp4.c
+@@ -117,25 +117,27 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+	int blksize;
+	int clen;
+	int alen;
++	int plen;
+	int nfrags;
+
+	/* skb is pure payload to encrypt */
+
+	err = -ENOMEM;
+
+-	/* Round to block size */
+-	clen = skb->len;
+-
+	esp = x->data;
+	aead = esp->aead;
+	alen = crypto_aead_authsize(aead);
+-
+	blksize = ALIGN(crypto_aead_blocksize(aead), 4);
+-	clen = ALIGN(clen + 2, blksize);
+-	if (esp->padlen)
+-		clen = ALIGN(clen, esp->padlen);
++	clen = ALIGN(max_t(u32, skb->len, x->tfcpad) + 2 , blksize);
++	if (clen - skb->len - 2 > 255) {
++		clen = ALIGN(skb->len + 255 + 2, blksize);
++		if (clen - skb->len - 2 > 255)
++			clen -= blksize;
++	}
++	plen = clen - skb->len;
+
+-	if ((err = skb_cow_data(skb, clen - skb->len + alen, &trailer)) < 0)
++	err = skb_cow_data(skb, plen + alen, &trailer);
++	if (err < 0)
+		goto error;
+	nfrags = err;
+
+@@ -152,11 +154,11 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+	tail = skb_tail_pointer(trailer);
+	do {
+		int i;
+-		for (i=0; i<clen-skb->len - 2; i++)
++		for (i = 0; i < plen - 2; i++)
+			tail[i] = i + 1;
+	} while (0);
+-	tail[clen - skb->len - 2] = (clen - skb->len) - 2;
+-	tail[clen - skb->len - 1] = *skb_mac_header(skb);
++	tail[plen - 2] = plen - 2;
++	tail[plen - 1] = *skb_mac_header(skb);
+	pskb_put(skb, trailer, clen - skb->len + alen);
+
+	skb_push(skb, -skb_network_offset(skb));
+diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
+index ee9b93b..e95de5f 100644
+--- a/net/ipv6/esp6.c
++++ b/net/ipv6/esp6.c
+@@ -140,6 +140,7 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+	int blksize;
+	int clen;
+	int alen;
++	int plen;
+	int nfrags;
+	u8 *iv;
+	u8 *tail;
+@@ -148,18 +149,19 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+	/* skb is pure payload to encrypt */
+	err = -ENOMEM;
+
+-	/* Round to block size */
+-	clen = skb->len;
+-
+	aead = esp->aead;
+	alen = crypto_aead_authsize(aead);
+-
+	blksize = ALIGN(crypto_aead_blocksize(aead), 4);
+-	clen = ALIGN(clen + 2, blksize);
+-	if (esp->padlen)
+-		clen = ALIGN(clen, esp->padlen);
++	clen = ALIGN(max_t(u32, skb->len, x->tfcpad) + 2 , blksize);
++	if (clen - skb->len - 2 > 255) {
++		clen = ALIGN(skb->len + 255 + 2, blksize);
++		if (clen - skb->len - 2 > 255)
++			clen -= blksize;
++	}
++	plen = clen - skb->len;
+
+-	if ((err = skb_cow_data(skb, clen - skb->len + alen, &trailer)) < 0)
++	err = skb_cow_data(skb, plen + alen, &trailer);
++	if (err < 0)
+		goto error;
+	nfrags = err;
+
+@@ -176,11 +178,11 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+	tail = skb_tail_pointer(trailer);
+	do {
+		int i;
+-		for (i=0; i<clen-skb->len - 2; i++)
++		for (i = 0; i < plen - 2; i++)
+			tail[i] = i + 1;
+	} while (0);
+-	tail[clen-skb->len - 2] = (clen - skb->len) - 2;
+-	tail[clen - skb->len - 1] = *skb_mac_header(skb);
++	tail[plen - 2] = plen - 2;
++	tail[plen - 1] = *skb_mac_header(skb);
+	pskb_put(skb, trailer, clen - skb->len + alen);
+
+	skb_push(skb, -skb_network_offset(skb));
+diff --git a/net/xfrm/xfrm_user.c b/net/xfrm/xfrm_user.c
+index ba59983..b943639 100644
+--- a/net/xfrm/xfrm_user.c
++++ b/net/xfrm/xfrm_user.c
+@@ -148,7 +148,8 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
+		     !attrs[XFRMA_ALG_AUTH_TRUNC]) ||
+		    attrs[XFRMA_ALG_AEAD]	||
+		    attrs[XFRMA_ALG_CRYPT]	||
+-		    attrs[XFRMA_ALG_COMP])
++		    attrs[XFRMA_ALG_COMP]	||
++		    attrs[XFRMA_TFCPAD])
+			goto out;
+		break;
+
+@@ -165,6 +166,9 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
+		     attrs[XFRMA_ALG_CRYPT]) &&
+		    attrs[XFRMA_ALG_AEAD])
+			goto out;
++		if (attrs[XFRMA_TFCPAD] &&
++		    p->mode != XFRM_MODE_TUNNEL)
++			goto out;
+		break;
+
+	case IPPROTO_COMP:
+@@ -172,7 +176,8 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
+		    attrs[XFRMA_ALG_AEAD]	||
+		    attrs[XFRMA_ALG_AUTH]	||
+		    attrs[XFRMA_ALG_AUTH_TRUNC]	||
+-		    attrs[XFRMA_ALG_CRYPT])
++		    attrs[XFRMA_ALG_CRYPT]	||
++		    attrs[XFRMA_TFCPAD])
+			goto out;
+		break;
+
+@@ -186,6 +191,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
+		    attrs[XFRMA_ALG_CRYPT]	||
+		    attrs[XFRMA_ENCAP]		||
+		    attrs[XFRMA_SEC_CTX]	||
++		    attrs[XFRMA_TFCPAD]		||
+		    !attrs[XFRMA_COADDR])
+			goto out;
+		break;
+@@ -439,6 +445,9 @@ static struct xfrm_state *xfrm_state_construct(struct net *net,
+			goto error;
+	}
+
++	if (attrs[XFRMA_TFCPAD])
++		x->tfcpad = nla_get_u32(attrs[XFRMA_TFCPAD]);
++
+	if (attrs[XFRMA_COADDR]) {
+		x->coaddr = kmemdup(nla_data(attrs[XFRMA_COADDR]),
+				    sizeof(*x->coaddr), GFP_KERNEL);
+@@ -688,6 +697,9 @@ static int copy_to_user_state_extra(struct xfrm_state *x,
+	if (x->encap)
+		NLA_PUT(skb, XFRMA_ENCAP, sizeof(*x->encap), x->encap);
+
++	if (x->tfcpad)
++		NLA_PUT_U32(skb, XFRMA_TFCPAD, x->tfcpad);
++
+	if (xfrm_mark_put(skb, &x->mark))
+		goto nla_put_failure;
+
+@@ -2122,6 +2134,7 @@ static const struct nla_policy xfrma_policy[XFRMA_MAX+1] = {
+	[XFRMA_MIGRATE]		= { .len = sizeof(struct xfrm_user_migrate) },
+	[XFRMA_KMADDRESS]	= { .len = sizeof(struct xfrm_user_kmaddress) },
+	[XFRMA_MARK]		= { .len = sizeof(struct xfrm_mark) },
++	[XFRMA_TFCPAD]		= { .type = NLA_U32 },
+ };
+
+ static struct xfrm_link {
+@@ -2301,6 +2314,8 @@ static inline size_t xfrm_sa_len(struct xfrm_state *x)
+		l += nla_total_size(sizeof(*x->calg));
+	if (x->encap)
+		l += nla_total_size(sizeof(*x->encap));
++	if (x->tfcpad)
++		l += nla_total_size(sizeof(x->tfcpad));
+	if (x->security)
+		l += nla_total_size(sizeof(struct xfrm_user_sec_ctx) +
+				    x->security->ctx_len);
+--
+1.7.1
