@@ -116,6 +116,9 @@ METHOD(tnccs_t, send_message, void,
 	this->mutex->unlock(this->mutex);
 }
 
+/**
+ * Handle a single PB-TNC message according to its type
+ */
 static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 {
 	switch (msg->get_type(msg))
@@ -233,7 +236,8 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 			lang_msg = (pb_language_preference_message_t*)msg;
 			lang = lang_msg->get_language_preference(lang_msg);
 
-			DBG2(DBG_TNC, "setting language preference '%.*s'", lang.len, lang.ptr);
+			DBG2(DBG_TNC, "setting language preference to '%.*s'",
+						   lang.len, lang.ptr);
 			this->recs->set_preferred_language(this->recs, lang);
 			break;
 		}
@@ -245,15 +249,30 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 			reason_msg = (pb_reason_string_message_t*)msg;
 			reason_string = reason_msg->get_reason_string(reason_msg);
 			language_code = reason_msg->get_language_code(reason_msg);
-			DBG2(DBG_TNC, "reason string: '%.*s", reason_string.len,
-												  reason_string.ptr);
-			DBG2(DBG_TNC, "language code: '%.*s", language_code.len,
-												  language_code.ptr);
+			DBG2(DBG_TNC, "reason string is '%.*s", reason_string.len,
+													reason_string.ptr);
+			DBG2(DBG_TNC, "language code is '%.*s", language_code.len,
+													language_code.ptr);
 			break;
 		}
 		default:
 			break;
 	}
+}
+
+/**
+ *  Build a CRETRY or SRETRY Batch 
+ */
+static void build_retry_batch(private_tnccs_20_t *this)
+{
+	if (this->batch)
+	{
+		DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
+			pb_tnc_batch_type_names, this->batch->get_type(this->batch));
+		this->batch->destroy(this->batch);
+	 }
+	this->batch = pb_tnc_batch_create(this->is_server,
+						this->is_server ? PB_BATCH_SRETRY : PB_BATCH_CRETRY);
 }
 
 METHOD(tls_t, process, status_t,
@@ -296,14 +315,9 @@ METHOD(tls_t, process, status_t,
 
 		if (batch_type == PB_BATCH_CRETRY)
 		{
+			/* Send an SRETRY Batch in response */
 			this->mutex->lock(this->mutex);
-			if (this->batch)
-			{
-				DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
-					pb_tnc_batch_type_names, this->batch->get_type(this->batch));
-				this->batch->destroy(this->batch);
-			 }
-			this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_SRETRY);
+			build_retry_batch(this);
 			this->mutex->unlock(this->mutex);
 		}
 		else if (batch_type == PB_BATCH_SRETRY)
@@ -371,11 +385,48 @@ METHOD(tls_t, process, status_t,
 	return NEED_MORE;
 }
 
+/**
+ *  Build a RESULT Batch if a final recommendation is available
+ */
+static void check_and_build_recommendation(private_tnccs_20_t *this)
+{
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	TNC_IMVID id;
+	chunk_t reason, language;
+	enumerator_t *enumerator;
+	pb_tnc_message_t *msg;
+
+	if (!this->recs->have_recommendation(this->recs, &rec, &eval))
+	{
+		charon->imvs->solicit_recommendation(charon->imvs, this->connection_id);
+	}
+	if (this->recs->have_recommendation(this->recs, &rec, &eval))
+	{
+		this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_RESULT);
+
+		msg = pb_assessment_result_message_create(eval);
+		this->batch->add_message(this->batch, msg);
+
+		msg = pb_access_recommendation_message_create(rec);
+		this->batch->add_message(this->batch, msg);
+
+		enumerator = this->recs->create_reason_enumerator(this->recs);
+		while (enumerator->enumerate(enumerator, &id, &reason, &language))
+		{
+			msg = pb_reason_string_message_create(reason, language);
+			this->batch->add_message(this->batch, msg);
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
 METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
 	status_t status;
 
+	/* Initialize the connection */
 	if (!this->is_server && !this->connection_id)
 	{
 		pb_tnc_message_t *msg;
@@ -408,19 +459,12 @@ METHOD(tls_t, build, status_t,
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	/* Is there a handshake retry request? */
 	if (this->request_handshake_retry)
 	{
-		if (this->batch)
-		{
-			DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
-				pb_tnc_batch_type_names, this->batch->get_type(this->batch));
-			this->batch->destroy(this->batch);
-		 }
-		this->batch = pb_tnc_batch_create(this->is_server, this->is_server ?
-										  PB_BATCH_SRETRY : PB_BATCH_CRETRY);
+		build_retry_batch(this);
+
+		/* Reset the flag for the next handshake retry request */
 		this->request_handshake_retry = FALSE;
-		status = ALREADY_DONE;
 	}
 
 	if (!this->batch)
@@ -428,30 +472,11 @@ METHOD(tls_t, build, status_t,
 		pb_tnc_state_t state;
 
 		state = this->state_machine->get_state(this->state_machine);
-
 		if (this->is_server)
 		{
 			if (state == PB_STATE_SERVER_WORKING)
 			{
-				TNC_IMV_Action_Recommendation rec;
-				TNC_IMV_Evaluation_Result eval;
-				pb_tnc_message_t *msg;
-
-				/* Is an overall recommendation available? */
-				if (!this->recs->have_recommendation(this->recs, &rec, &eval))
-				{
-					charon->imvs->solicit_recommendation(charon->imvs,
-														 this->connection_id);
-				}
-				if (this->recs->have_recommendation(this->recs, &rec, &eval))
-				{
-					this->batch = pb_tnc_batch_create(this->is_server,
-													  PB_BATCH_RESULT);
-					msg = pb_assessment_result_message_create(eval);
-					this->batch->add_message(this->batch, msg);
-					msg = pb_access_recommendation_message_create(rec);
-					this->batch->add_message(this->batch, msg);
-				}
+				check_and_build_recommendation(this);
 			}
 		}
 		else
