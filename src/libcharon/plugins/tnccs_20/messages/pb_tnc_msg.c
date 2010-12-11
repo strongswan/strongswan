@@ -13,13 +13,15 @@
  * for more details.
  */
 
-#include "pb_tnc_message.h"
-#include "pb_pa_message.h"
-#include "pb_error_message.h"
-#include "pb_language_preference_message.h"
-#include "pb_assessment_result_message.h"
-#include "pb_access_recommendation_message.h"
-#include "pb_reason_string_message.h"
+#include "pb_tnc_msg.h"
+#include "pb_experimental_msg.h"
+#include "pb_pa_msg.h"
+#include "pb_error_msg.h"
+#include "pb_language_preference_msg.h"
+#include "pb_assessment_result_msg.h"
+#include "pb_access_recommendation_msg.h"
+#include "pb_remediation_parameters_msg.h"
+#include "pb_reason_string_msg.h"
 
 #include <library.h>
 
@@ -34,29 +36,40 @@ ENUM(pb_tnc_msg_type_names, PB_MSG_EXPERIMENTAL, PB_MSG_REASON_STRING,
 	"PB-Reason-String"
 );
 
+pb_tnc_msg_info_t pb_tnc_msg_infos[] = {
+	{ 12, FALSE, FALSE, TRUE_OR_FALSE },
+	{ 24, FALSE, FALSE, TRUE  },
+	{ 16, TRUE,  TRUE,  TRUE  },
+	{ 16, TRUE,  TRUE,  FALSE },
+	{ 20, FALSE, TRUE,  FALSE },
+	{ 20, FALSE, FALSE, TRUE  },
+	{ 12, FALSE, FALSE, FALSE },
+	{ 17, FALSE, TRUE,  FALSE },
+};
+
 /**
  * See header
  */
-pb_tnc_message_t* pb_tnc_message_create(pb_tnc_msg_type_t type, chunk_t value)
+pb_tnc_msg_t* pb_tnc_msg_create_from_data(pb_tnc_msg_type_t type, chunk_t value)
 {
 	switch (type)
 	{
 		case PB_MSG_PA:
-			return pb_pa_message_create_from_data(value);
+			return pb_pa_msg_create_from_data(value);
 		case PB_MSG_ERROR:
-			return pb_error_message_create_from_data(value);
+			return pb_error_msg_create_from_data(value);
 		case PB_MSG_EXPERIMENTAL:
-			return NULL;
+			return pb_experimental_msg_create_from_data(value);
 		case PB_MSG_LANGUAGE_PREFERENCE:
-			return pb_language_preference_message_create_from_data(value);
+			return pb_language_preference_msg_create_from_data(value);
 		case PB_MSG_ASSESSMENT_RESULT:
-			return pb_assessment_result_message_create_from_data(value);
+			return pb_assessment_result_msg_create_from_data(value);
 		case PB_MSG_ACCESS_RECOMMENDATION:
-			return pb_access_recommendation_message_create_from_data(value);
+			return pb_access_recommendation_msg_create_from_data(value);
 		case PB_MSG_REMEDIATION_PARAMETERS:
-			return NULL;
+			return pb_remediation_parameters_msg_create_from_data(value);
 		case PB_MSG_REASON_STRING:
-			return pb_reason_string_message_create_from_data(value);
+			return pb_reason_string_msg_create_from_data(value);
 	}
 	return NULL;
 }

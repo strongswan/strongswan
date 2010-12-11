@@ -14,33 +14,49 @@
  */
 
 /**
- * @defgroup pb_access_recommendation_message pb_access_recommendation_message
+ * @defgroup pb_access_recommendation_msg pb_access_recommendation_msg
  * @{ @ingroup tnccs_20
  */
 
-#ifndef PB_ACCESS_RECOMMENDATION_MESSAGE_H_
-#define PB_ACCESS_RECOMMENDATION_MESSAGE_H_
+#ifndef PB_ACCESS_RECOMMENDATION_MSG_H_
+#define PB_ACCESS_RECOMMENDATION_MSG_H_
 
-#include "pb_tnc_message.h"
+typedef enum pb_access_recommendation_code_t pb_access_recommendation_code_t;
+typedef struct pb_access_recommendation_msg_t pb_access_recommendation_msg_t;
 
-typedef struct pb_access_recommendation_message_t pb_access_recommendation_message_t;
+#include "pb_tnc_msg.h"
+
+/**
+ * PB Access Recommendation Codes as defined in section 4.7 of RFC 5793
+ */
+enum pb_access_recommendation_code_t {
+	PB_REC_ACCESS_ALLOWED =	1,
+	PB_REC_ACCESS_DENIED =	2,
+	PB_REC_QUARANTINED =	3,
+};
+
+/**
+ * enum name for pb_access_recommendation_code_t.
+ */
+extern enum_name_t *pb_access_recommendation_code_names;
+
 
 /**
  * Classs representing the PB-Access-Recommendation message type.
  */
-struct pb_access_recommendation_message_t {
+struct pb_access_recommendation_msg_t {
 
 	/**
 	 * PB-TNC Message interface
 	 */
-	pb_tnc_message_t pb_interface;
+	pb_tnc_msg_t pb_interface;
 
 	/**
 	 * Get PB Access Recommendation
 	 *
 	 * @return			PB Access Recommendation
 	 */
-	u_int16_t (*get_access_recommendation)(pb_access_recommendation_message_t *this);
+	u_int16_t (*get_access_recommendation)(pb_access_recommendation_msg_t *this);
 };
 
 /**
@@ -48,13 +64,13 @@ struct pb_access_recommendation_message_t {
  *
  * @param access_recommendation		Access Recommendation code
  */
-pb_tnc_message_t* pb_access_recommendation_message_create(u_int16_t recommendation);
+pb_tnc_msg_t* pb_access_recommendation_msg_create(u_int16_t recommendation);
 
 /**
  * Create an unprocessed PB-Access-Recommendation message from raw data
  *
   * @param data		PB-Access-Recommendation message data
  */
-pb_tnc_message_t* pb_access_recommendation_message_create_from_data(chunk_t data);
+pb_tnc_msg_t* pb_access_recommendation_msg_create_from_data(chunk_t data);
 
-#endif /** PB_PA_MESSAGE_H_ @}*/
+#endif /** PB_PA_MSG_H_ @}*/

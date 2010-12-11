@@ -14,13 +14,8 @@
  */
 
 #include "pb_tnc_state_machine.h"
-#include "messages/pb_error_message.h"
 
 #include <debug.h>
-#include <utils/linked_list.h>
-#include <tls_writer.h>
-#include <tls_reader.h>
-#include <tnc/tnccs/tnccs.h>
 
 ENUM(pb_tnc_state_names, PB_STATE_INIT, PB_STATE_END,
 	"Init",

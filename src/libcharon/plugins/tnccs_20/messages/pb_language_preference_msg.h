@@ -14,33 +14,33 @@
  */
 
 /**
- * @defgroup pb_language_preference_message pb_language_preference_message
+ * @defgroup pb_language_preference_msg pb_language_preference_msg
  * @{ @ingroup tnccs_20
  */
 
-#ifndef PB_LANGUAGE_PREFERENCE_MESSAGE_H_
-#define PB_LANGUAGE_PREFERENCE_MESSAGE_H_
+#ifndef PB_LANGUAGE_PREFERENCE_MSG_H_
+#define PB_LANGUAGE_PREFERENCE_MSG_H_
 
-#include "pb_tnc_message.h"
+typedef struct pb_language_preference_msg_t pb_language_preference_msg_t;
 
-typedef struct pb_language_preference_message_t pb_language_preference_message_t;
+#include "pb_tnc_msg.h"
 
 /**
  * Classs representing the PB-Language-Preference message type.
  */
-struct pb_language_preference_message_t {
+struct pb_language_preference_msg_t {
 
 	/**
 	 * PB-TNC Message interface
 	 */
-	pb_tnc_message_t pb_interface;
+	pb_tnc_msg_t pb_interface;
 
 	/**
 	 * Get PB Language Preference
 	 *
 	 * @return			Language preference
 	 */
-	chunk_t (*get_language_preference)(pb_language_preference_message_t *this);
+	chunk_t (*get_language_preference)(pb_language_preference_msg_t *this);
 };
 
 /**
@@ -48,13 +48,13 @@ struct pb_language_preference_message_t {
  *
  * @param language_preference		Preferred language(s)
  */
-pb_tnc_message_t* pb_language_preference_message_create(chunk_t language_preference);
+pb_tnc_msg_t* pb_language_preference_msg_create(chunk_t language_preference);
 
 /**
  * Create an unprocessed PB-Language-Preference message from raw data
  *
   * @param data		PB-Language-Preference message data
  */
-pb_tnc_message_t* pb_language_preference_message_create_from_data(chunk_t data);
+pb_tnc_msg_t* pb_language_preference_msg_create_from_data(chunk_t data);
 
-#endif /** PB_PA_MESSAGE_H_ @}*/
+#endif /** PB_PA_MSG_H_ @}*/

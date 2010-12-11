@@ -24,7 +24,7 @@
 typedef enum pb_tnc_batch_type_t pb_tnc_batch_type_t;
 typedef struct pb_tnc_batch_t pb_tnc_batch_t;
 
-#include "messages/pb_tnc_message.h"
+#include "messages/pb_tnc_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <library.h>
@@ -71,7 +71,7 @@ struct pb_tnc_batch_t {
 	 *
 	 * @param msg			PB-TNC message to be addedd
 	 */
-	void (*add_message)(pb_tnc_batch_t *this, pb_tnc_message_t* msg);
+	void (*add_msg)(pb_tnc_batch_t *this, pb_tnc_msg_t* msg);
 
 	/**
 	 * Build the PB-TNC Batch

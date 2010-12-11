@@ -13,13 +13,19 @@
  * for more details.
  */
 
-#include "pb_access_recommendation_message.h"
+#include "pb_access_recommendation_msg.h"
 
 #include <tls_writer.h>
 #include <tls_reader.h>
 #include <debug.h>
 
-typedef struct private_pb_access_recommendation_message_t private_pb_access_recommendation_message_t;
+ENUM(pb_access_recommendation_code_names, PB_REC_ACCESS_ALLOWED, PB_REC_QUARANTINED,
+	"Access Allowed",
+	"Access Denied",
+	"Quarantined"
+);
+
+typedef struct private_pb_access_recommendation_msg_t private_pb_access_recommendation_msg_t;
 
 /**
  *   PB-Access-Recommendation message (see section 4.7 of RFC 5793)
@@ -32,17 +38,16 @@ typedef struct private_pb_access_recommendation_message_t private_pb_access_reco
  */
 
 #define ACCESS_RECOMMENDATION_RESERVED	 	0x0000
-#define ACCESS_RECOMMENDATION_MESSAGE_SIZE	4
-
+#define ACCESS_RECOMMENDATION_MSG_SIZE		4
 /**
- * Private data of a private_pb_access_recommendation_message_t object.
+ * Private data of a private_pb_access_recommendation_msg_t object.
  *
  */
-struct private_pb_access_recommendation_message_t {
+struct private_pb_access_recommendation_msg_t {
 	/**
-	 * Public pb_access_recommendation_message_t interface.
+	 * Public pb_access_recommendation_msg_t interface.
 	 */
-	pb_access_recommendation_message_t public;
+	pb_access_recommendation_msg_t public;
 
 	/**
 	 * PB-TNC message type
@@ -60,25 +65,25 @@ struct private_pb_access_recommendation_message_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+	private_pb_access_recommendation_msg_t *this)
 {
 	return this->type;
 }
 
-METHOD(pb_tnc_message_t, get_encoding, chunk_t,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
+	private_pb_access_recommendation_msg_t *this)
 {
 	return this->encoding;
 }
 
-METHOD(pb_tnc_message_t, build, void,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_tnc_msg_t, build, void,
+	private_pb_access_recommendation_msg_t *this)
 {
 	tls_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(ACCESS_RECOMMENDATION_MESSAGE_SIZE);
+	writer = tls_writer_create(ACCESS_RECOMMENDATION_MSG_SIZE);
 	writer->write_uint16(writer, ACCESS_RECOMMENDATION_RESERVED);
 	writer->write_uint16(writer, this->recommendation);
 	free(this->encoding.ptr);
@@ -87,38 +92,39 @@ METHOD(pb_tnc_message_t, build, void,
 	writer->destroy(writer);
 }
 
-METHOD(pb_tnc_message_t, process, status_t,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_tnc_msg_t, process, status_t,
+	private_pb_access_recommendation_msg_t *this, u_int32_t *offset)
 {
 	tls_reader_t *reader;
 	u_int16_t reserved;
-
-	if (this->encoding.len < ACCESS_RECOMMENDATION_MESSAGE_SIZE)
-	{
-		DBG1(DBG_TNC,"%N message is shorter than message size of %u bytes",
-				pb_tnc_msg_type_names, PB_MSG_ACCESS_RECOMMENDATION,
-				ACCESS_RECOMMENDATION_MESSAGE_SIZE);
-		return FAILED;
-	}
 
 	/* process message */
 	reader = tls_reader_create(this->encoding);
 	reader->read_uint16(reader, &reserved);
 	reader->read_uint16(reader, &this->recommendation);
-
 	reader->destroy(reader);
+
+	if (this->recommendation < PB_REC_ACCESS_ALLOWED ||
+		this->recommendation > PB_REC_QUARANTINED)
+	{
+		DBG1(DBG_TNC, "invalid access recommendation code (%u)",
+					   this->recommendation);
+		*offset = 2;
+		return FAILED;
+	}
+		
 	return SUCCESS;
 }
 
-METHOD(pb_tnc_message_t, destroy, void,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_tnc_msg_t, destroy, void,
+	private_pb_access_recommendation_msg_t *this)
 {
 	free(this->encoding.ptr);
 	free(this);
 }
 
-METHOD(pb_access_recommendation_message_t, get_access_recommendation, u_int16_t,
-	private_pb_access_recommendation_message_t *this)
+METHOD(pb_access_recommendation_msg_t, get_access_recommendation, u_int16_t,
+	private_pb_access_recommendation_msg_t *this)
 {
 	return this->recommendation;
 }
@@ -126,9 +132,9 @@ METHOD(pb_access_recommendation_message_t, get_access_recommendation, u_int16_t,
 /**
  * See header
  */
-pb_tnc_message_t *pb_access_recommendation_message_create_from_data(chunk_t data)
+pb_tnc_msg_t *pb_access_recommendation_msg_create_from_data(chunk_t data)
 {
-	private_pb_access_recommendation_message_t *this;
+	private_pb_access_recommendation_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -151,9 +157,9 @@ pb_tnc_message_t *pb_access_recommendation_message_create_from_data(chunk_t data
 /**
  * See header
  */
-pb_tnc_message_t *pb_access_recommendation_message_create(u_int16_t recommendation)
+pb_tnc_msg_t *pb_access_recommendation_msg_create(u_int16_t recommendation)
 {
-	private_pb_access_recommendation_message_t *this;
+	private_pb_access_recommendation_msg_t *this;
 
 	INIT(this,
 		.public = {

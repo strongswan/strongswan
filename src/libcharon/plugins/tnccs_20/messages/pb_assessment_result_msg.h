@@ -14,33 +14,33 @@
  */
 
 /**
- * @defgroup pb_assessment_result_message pb_assessment_result_message
+ * @defgroup pb_assessment_result_msg pb_assessment_result_msg
  * @{ @ingroup tnccs_20
  */
 
-#ifndef PB_ASSESSMENT_RESULT_MESSAGE_H_
-#define PB_ASSESSMENT_RESULT_MESSAGE_H_
+#ifndef PB_ASSESSMENT_RESULT_MSG_H_
+#define PB_ASSESSMENT_RESULT_MSG_H_
 
-#include "pb_tnc_message.h"
+typedef struct pb_assessment_result_msg_t pb_assessment_result_msg_t;
 
-typedef struct pb_assessment_result_message_t pb_assessment_result_message_t;
+#include "pb_tnc_msg.h"
 
 /**
  * Classs representing the PB-Assessment-Result message type.
  */
-struct pb_assessment_result_message_t {
+struct pb_assessment_result_msg_t {
 
 	/**
 	 * PB-TNC Message interface
 	 */
-	pb_tnc_message_t pb_interface;
+	pb_tnc_msg_t pb_interface;
 
 	/**
 	 * Get PB Assessment result
 	 *
 	 * @return			PB Assessment result
 	 */
-	u_int32_t (*get_assessment_result)(pb_assessment_result_message_t *this);
+	u_int32_t (*get_assessment_result)(pb_assessment_result_msg_t *this);
 };
 
 /**
@@ -48,13 +48,13 @@ struct pb_assessment_result_message_t {
  *
  * @param assessment_result		Assessment result code
  */
-pb_tnc_message_t* pb_assessment_result_message_create(u_int32_t assessment_result);
+pb_tnc_msg_t* pb_assessment_result_msg_create(u_int32_t assessment_result);
 
 /**
  * Create an unprocessed PB-Assessment-Result message from raw data
  *
   * @param data		PB-Assessment-Result message data
  */
-pb_tnc_message_t* pb_assessment_result_message_create_from_data(chunk_t data);
+pb_tnc_msg_t* pb_assessment_result_msg_create_from_data(chunk_t data);
 
-#endif /** PB_PA_MESSAGE_H_ @}*/
+#endif /** PB_PA_MSG_H_ @}*/

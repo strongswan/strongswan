@@ -13,8 +13,7 @@
  * for more details.
  */
 
-#include "pb_error_message.h"
-#include "../tnccs_20_types.h"
+#include "pb_error_msg.h"
 
 #include <debug.h>
 #include <tls_writer.h>
@@ -30,7 +29,7 @@ ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
 	"Version Not Supported"
 );
 
-typedef struct private_pb_error_message_t private_pb_error_message_t;
+typedef struct private_pb_error_msg_t private_pb_error_msg_t;
 
 /**
  *   PB-Error message (see section 4.9 of RFC 5793)
@@ -52,14 +51,14 @@ typedef struct private_pb_error_message_t private_pb_error_message_t;
 #define ERROR_HEADER_SIZE	8
 
 /**
- * Private data of a pb_error_message_t object.
+ * Private data of a pb_error_msg_t object.
  *
  */
-struct private_pb_error_message_t {
+struct private_pb_error_msg_t {
 	/**
-	 * Public pb_error_message_t interface.
+	 * Public pb_error_msg_t interface.
 	 */
-	pb_error_message_t public;
+	pb_error_msg_t public;
 
 	/**
 	 * PB-TNC message type
@@ -102,20 +101,20 @@ struct private_pb_error_message_t {
 	refcount_t ref;
 };
 
-METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+	private_pb_error_msg_t *this)
 {
 	return this->type;
 }
 
-METHOD(pb_tnc_message_t, get_encoding, chunk_t,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
+	private_pb_error_msg_t *this)
 {
 	return this->encoding;
 }
 
-METHOD(pb_tnc_message_t, build, void,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, build, void,
+	private_pb_error_msg_t *this)
 {
 	tls_writer_t *writer;
 
@@ -148,8 +147,8 @@ METHOD(pb_tnc_message_t, build, void,
 	writer->destroy(writer);
 }
 
-METHOD(pb_tnc_message_t, process, status_t,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, process, status_t,
+	private_pb_error_msg_t *this, u_int32_t *offset)
 {
 	u_int8_t flags, max_version, min_version;
 	u_int16_t reserved;
@@ -188,15 +187,15 @@ METHOD(pb_tnc_message_t, process, status_t,
 	return SUCCESS;
 }
 
-METHOD(pb_tnc_message_t, get_ref, pb_tnc_message_t*,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, get_ref, pb_tnc_msg_t*,
+	private_pb_error_msg_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pb_interface;
 }
 
-METHOD(pb_tnc_message_t, destroy, void,
-	private_pb_error_message_t *this)
+METHOD(pb_tnc_msg_t, destroy, void,
+	private_pb_error_msg_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -205,44 +204,38 @@ METHOD(pb_tnc_message_t, destroy, void,
 	}
 }
 
-METHOD(pb_error_message_t, get_fatal_flag, bool,
-	private_pb_error_message_t *this)
+METHOD(pb_error_msg_t, get_fatal_flag, bool,
+	private_pb_error_msg_t *this)
 {
 	return this->fatal;
 }
 
-METHOD(pb_error_message_t, get_vendor_id, u_int32_t,
-	private_pb_error_message_t *this)
+METHOD(pb_error_msg_t, get_vendor_id, u_int32_t,
+	private_pb_error_msg_t *this)
 {
 	return this->vendor_id;
 }
 
-METHOD(pb_error_message_t, get_error_code, u_int16_t,
-	private_pb_error_message_t *this)
+METHOD(pb_error_msg_t, get_error_code, u_int16_t,
+	private_pb_error_msg_t *this)
 {
 	return this->error_code;
 }
 
-METHOD(pb_error_message_t, get_offset, u_int32_t,
-	private_pb_error_message_t *this)
+METHOD(pb_error_msg_t, get_offset, u_int32_t,
+	private_pb_error_msg_t *this)
 {
 	return this->error_offset;
 }
 
-METHOD(pb_error_message_t, set_offset, void,
-	private_pb_error_message_t *this, u_int32_t offset)
-{
-	this->error_offset = offset;
-}
-
-METHOD(pb_error_message_t, get_bad_version, u_int8_t,
-	private_pb_error_message_t *this)
+METHOD(pb_error_msg_t, get_bad_version, u_int8_t,
+	private_pb_error_msg_t *this)
 {
 	return this->bad_version;
 }
 
-METHOD(pb_error_message_t, set_bad_version, void,
-	private_pb_error_message_t *this, u_int8_t version)
+METHOD(pb_error_msg_t, set_bad_version, void,
+	private_pb_error_msg_t *this, u_int8_t version)
 {
 	this->bad_version = version;
 }
@@ -250,10 +243,10 @@ METHOD(pb_error_message_t, set_bad_version, void,
 /**
  * See header
  */
-pb_tnc_message_t* pb_error_message_create(bool fatal, u_int32_t vendor_id,
-										  pb_tnc_error_code_t error_code)
+pb_tnc_msg_t* pb_error_msg_create(bool fatal, u_int32_t vendor_id,
+								  pb_tnc_error_code_t error_code)
 {
-	private_pb_error_message_t *this;
+	private_pb_error_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -269,7 +262,6 @@ pb_tnc_message_t* pb_error_message_create(bool fatal, u_int32_t vendor_id,
 			.get_vendor_id = _get_vendor_id,
 			.get_error_code = _get_error_code,
 			.get_offset = _get_offset,
-			.set_offset = _set_offset,
 			.get_bad_version = _get_bad_version,
 			.set_bad_version = _set_bad_version,
 		},
@@ -286,9 +278,11 @@ pb_tnc_message_t* pb_error_message_create(bool fatal, u_int32_t vendor_id,
 /**
  * See header
  */
-pb_tnc_message_t *pb_error_message_create_from_data(chunk_t data)
+pb_tnc_msg_t* pb_error_msg_create_with_offset(bool fatal, u_int32_t vendor_id,
+											  pb_tnc_error_code_t error_code,
+											  u_int32_t error_offset)
 {
-	private_pb_error_message_t *this;
+	private_pb_error_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -304,7 +298,41 @@ pb_tnc_message_t *pb_error_message_create_from_data(chunk_t data)
 			.get_vendor_id = _get_vendor_id,
 			.get_error_code = _get_error_code,
 			.get_offset = _get_offset,
-			.set_offset = _set_offset,
+			.get_bad_version = _get_bad_version,
+			.set_bad_version = _set_bad_version,
+		},
+		.type = PB_MSG_ERROR,
+		.ref = 1,
+		.fatal = fatal,
+		.vendor_id = vendor_id,
+		.error_code = error_code,
+		.error_offset = error_offset,
+	);
+
+	return &this->public.pb_interface;
+}
+
+/**
+ * See header
+ */
+pb_tnc_msg_t *pb_error_msg_create_from_data(chunk_t data)
+{
+	private_pb_error_msg_t *this;
+
+	INIT(this,
+		.public = {
+			.pb_interface = {
+				.get_type = _get_type,
+				.get_encoding = _get_encoding,
+				.build = _build,
+				.process = _process,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+			.get_fatal_flag = _get_fatal_flag,
+			.get_vendor_id = _get_vendor_id,
+			.get_error_code = _get_error_code,
+			.get_offset = _get_offset,
 			.get_bad_version = _get_bad_version,
 			.set_bad_version = _set_bad_version,
 		},

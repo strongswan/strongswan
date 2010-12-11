@@ -15,15 +15,15 @@
  */
 
 #include "tnccs_20.h"
-#include "tnccs_20_types.h"
 #include "batch/pb_tnc_batch.h"
-#include "messages/pb_tnc_message.h"
-#include "messages/pb_pa_message.h"
-#include "messages/pb_error_message.h"
-#include "messages/pb_assessment_result_message.h"
-#include "messages/pb_access_recommendation_message.h"
-#include "messages/pb_reason_string_message.h"
-#include "messages/pb_language_preference_message.h"
+#include "messages/pb_tnc_msg.h"
+#include "messages/pb_pa_msg.h"
+#include "messages/pb_error_msg.h"
+#include "messages/pb_assessment_result_msg.h"
+#include "messages/pb_access_recommendation_msg.h"
+#include "messages/pb_remediation_parameters_msg.h"
+#include "messages/pb_reason_string_msg.h"
+#include "messages/pb_language_preference_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <debug.h>
@@ -71,6 +71,11 @@ struct private_tnccs_20_t {
 	mutex_t *mutex;
 
 	/**
+	 * Flag set while processingn
+	 */
+	bool fatal_error;
+
+	/**
 	 * Flag set by IMC/IMV RequestHandshakeRetry() function
 	 */
 	bool request_handshake_retry;
@@ -81,7 +86,7 @@ struct private_tnccs_20_t {
 	recommendations_t *recs;
 };
 
-METHOD(tnccs_t, send_message, void,
+METHOD(tnccs_t, send_msg, void,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
@@ -89,13 +94,13 @@ METHOD(tnccs_t, send_message, void,
 {
     TNC_MessageSubtype msg_sub_type;
     TNC_VendorID msg_vendor_id;
-	pb_tnc_message_t *pb_tnc_msg;
+	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
 
 	msg_sub_type =   msg_type       & TNC_SUBTYPE_ANY;
 	msg_vendor_id = (msg_type >> 8) & TNC_VENDORID_ANY;
 
-	pb_tnc_msg = pb_pa_message_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
+	pb_tnc_msg = pb_pa_msg_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
 									  chunk_create(msg, msg_len));
 
 	/* adding PA message to SDATA or CDATA batch only */
@@ -107,7 +112,7 @@ METHOD(tnccs_t, send_message, void,
 	}
 	if (this->batch->get_type(this->batch) == batch_type)
 	{
-		this->batch->add_message(this->batch, pb_tnc_msg);
+		this->batch->add_msg(this->batch, pb_tnc_msg);
 	}
 	else
 	{
@@ -119,21 +124,21 @@ METHOD(tnccs_t, send_message, void,
 /**
  * Handle a single PB-TNC message according to its type
  */
-static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
+static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 {
 	switch (msg->get_type(msg))
 	{
 		case PB_MSG_EXPERIMENTAL:
-			/* for experiments */
+			/* nothing to do */
 			break;
 		case PB_MSG_PA:
 		{
-			pb_pa_message_t *pa_msg;
+			pb_pa_msg_t *pa_msg;
 			TNC_MessageType msg_type;
 			u_int32_t vendor_id, subtype;
 			chunk_t msg_body;
 
-			pa_msg = (pb_pa_message_t*)msg;
+			pa_msg = (pb_pa_msg_t*)msg;
 			vendor_id = pa_msg->get_vendor_id(pa_msg, &subtype);
 			msg_type = (vendor_id << 8) | (subtype & 0xff);
 			msg_body = pa_msg->get_body(pa_msg);
@@ -154,10 +159,10 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 		}
 		case PB_MSG_ASSESSMENT_RESULT:
 		{
-			pb_assessment_result_message_t *assess_msg;
+			pb_assessment_result_msg_t *assess_msg;
 			u_int32_t result;
 
-			assess_msg = (pb_assessment_result_message_t*)msg;
+			assess_msg = (pb_assessment_result_msg_t*)msg;
 			result = assess_msg->get_assessment_result(assess_msg);
 			DBG1(DBG_TNC, "assessment result is '%N'",
 						   evaluation_result_names, result);
@@ -165,13 +170,13 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 		}
 		case PB_MSG_ACCESS_RECOMMENDATION:
 		{
-			pb_access_recommendation_message_t *rec_msg;
-			u_int16_t rec;
+			pb_access_recommendation_msg_t *rec_msg;
+			pb_access_recommendation_code_t rec;
 
-			rec_msg = (pb_access_recommendation_message_t*)msg;
+			rec_msg = (pb_access_recommendation_msg_t*)msg;
 			rec = rec_msg->get_access_recommendation(rec_msg);
 			DBG1(DBG_TNC, "access recommendation is '%N'",
-						   action_recommendation_names, rec);
+						   pb_access_recommendation_code_names, rec);
 				break;
 		}
 		case PB_MSG_REMEDIATION_PARAMETERS:
@@ -181,22 +186,27 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 		}
 		case PB_MSG_ERROR:
 		{
-			pb_error_message_t *err_msg;
+			pb_error_msg_t *err_msg;
 			bool fatal;
 			u_int32_t vendor_id;
 			u_int16_t error_code;
 
-			err_msg = (pb_error_message_t*)msg;
+			err_msg = (pb_error_msg_t*)msg;
 			fatal = err_msg->get_fatal_flag(err_msg);
 			vendor_id = err_msg->get_vendor_id(err_msg);
 			error_code = err_msg->get_error_code(err_msg);
+
+			if (fatal)
+			{
+				this->fatal_error = TRUE;
+			}
 
 			if (vendor_id == IETF_VENDOR_ID)
 			{
 				switch (error_code)
 				{
 					case PB_ERROR_INVALID_PARAMETER:
-					case PB_ERROR_UNSUPPORTED_MANDATORY_MESSAGE:
+					case PB_ERROR_UNSUPPORTED_MANDATORY_MSG:
 						DBG1(DBG_TNC, "received %s PB-TNC Error '%N' "
 									  "(offset %u bytes)",
 									  fatal ? "fatal" : "non-fatal",
@@ -230,10 +240,10 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 		}
 		case PB_MSG_LANGUAGE_PREFERENCE:
 		{
-			pb_language_preference_message_t *lang_msg;
+			pb_language_preference_msg_t *lang_msg;
 			chunk_t lang;
 
-			lang_msg = (pb_language_preference_message_t*)msg;
+			lang_msg = (pb_language_preference_msg_t*)msg;
 			lang = lang_msg->get_language_preference(lang_msg);
 
 			DBG2(DBG_TNC, "setting language preference to '%.*s'",
@@ -243,10 +253,10 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_message_t *msg)
 		}
 		case PB_MSG_REASON_STRING:
 		{
-			pb_reason_string_message_t *reason_msg;
+			pb_reason_string_msg_t *reason_msg;
 			chunk_t reason_string, language_code;
 
-			reason_msg = (pb_reason_string_message_t*)msg;
+			reason_msg = (pb_reason_string_msg_t*)msg;
 			reason_string = reason_msg->get_reason_string(reason_msg);
 			language_code = reason_msg->get_language_code(reason_msg);
 			DBG2(DBG_TNC, "reason string is '%.*s", reason_string.len,
@@ -280,14 +290,14 @@ METHOD(tls_t, process, status_t,
 {
 	chunk_t data;
 	pb_tnc_batch_t *batch;
-	pb_tnc_message_t *msg;
+	pb_tnc_msg_t *msg;
 	enumerator_t *enumerator;
 	status_t status;
 
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-								(tnccs_t*)this,	_send_message,
+								(tnccs_t*)this,	_send_msg,
 								&this->request_handshake_retry, &this->recs);
 		if (!this->connection_id)
 		{
@@ -307,7 +317,7 @@ METHOD(tls_t, process, status_t,
 	if (status != FAILED)
 	{
 		enumerator_t *enumerator;
-		pb_tnc_message_t *msg;
+		pb_tnc_msg_t *msg;
 		pb_tnc_batch_type_t batch_type;
 		bool empty = TRUE;
 
@@ -331,7 +341,7 @@ METHOD(tls_t, process, status_t,
 		enumerator = batch->create_msg_enumerator(batch);
 		while (enumerator->enumerate(enumerator, &msg))
 		{
-			handle_message(this, msg);
+			handle_msg(this, msg);
 			empty = FALSE;
 		}
 		enumerator->destroy(enumerator);
@@ -340,7 +350,16 @@ METHOD(tls_t, process, status_t,
 		if (this->is_server && batch_type == PB_BATCH_CLOSE && empty)
 		{
 			batch->destroy(batch);
-			return SUCCESS;
+			if (this->fatal_error)
+			{
+				DBG1(DBG_TNC, "a fatal PB-TNC Error occurred, "
+							  "terminating connection");
+				return FAILED;
+			}
+			else
+			{
+				return SUCCESS;
+			}
 		}
 
 		if (this->is_server)
@@ -356,6 +375,7 @@ METHOD(tls_t, process, status_t,
 	switch (status)
 	{
 		case FAILED:
+			this->fatal_error = TRUE;
 			this->mutex->lock(this->mutex);
 			if (this->batch)
 			{
@@ -371,7 +391,7 @@ METHOD(tls_t, process, status_t,
 			while (enumerator->enumerate(enumerator, &msg))
 			{
 				this->mutex->lock(this->mutex);
-				this->batch->add_message(this->batch, msg->get_ref(msg));
+				this->batch->add_msg(this->batch, msg->get_ref(msg));
 				this->mutex->unlock(this->mutex);
 			}
 			enumerator->destroy(enumerator);
@@ -395,7 +415,7 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 	TNC_IMVID id;
 	chunk_t reason, language;
 	enumerator_t *enumerator;
-	pb_tnc_message_t *msg;
+	pb_tnc_msg_t *msg;
 
 	if (!this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
@@ -405,17 +425,21 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 	{
 		this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_RESULT);
 
-		msg = pb_assessment_result_message_create(eval);
-		this->batch->add_message(this->batch, msg);
+		msg = pb_assessment_result_msg_create(eval);
+		this->batch->add_msg(this->batch, msg);
 
-		msg = pb_access_recommendation_message_create(rec);
-		this->batch->add_message(this->batch, msg);
+		/**
+		 * IMV Action Recommendation and PB Access Recommendation codes
+		 * are shifted by one.
+		 */
+		msg = pb_access_recommendation_msg_create(rec + 1);
+		this->batch->add_msg(this->batch, msg);
 
 		enumerator = this->recs->create_reason_enumerator(this->recs);
 		while (enumerator->enumerate(enumerator, &id, &reason, &language))
 		{
-			msg = pb_reason_string_message_create(reason, language);
-			this->batch->add_message(this->batch, msg);
+			msg = pb_reason_string_msg_create(reason, language);
+			this->batch->add_msg(this->batch, msg);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -429,11 +453,11 @@ METHOD(tls_t, build, status_t,
 	/* Initialize the connection */
 	if (!this->is_server && !this->connection_id)
 	{
-		pb_tnc_message_t *msg;
+		pb_tnc_msg_t *msg;
 		char *pref_lang;
 
 		this->connection_id = charon->tnccs->create_connection(charon->tnccs,
-										(tnccs_t*)this, _send_message,
+										(tnccs_t*)this, _send_msg,
 										&this->request_handshake_retry, NULL);
 		if (!this->connection_id)
 		{
@@ -442,11 +466,11 @@ METHOD(tls_t, build, status_t,
 
 		/* Create PB-TNC Language Preference Message */
 		pref_lang = charon->imcs->get_preferred_language(charon->imcs);
-		msg = pb_language_preference_message_create(chunk_create(pref_lang,
+		msg = pb_language_preference_msg_create(chunk_create(pref_lang,
 													strlen(pref_lang)));
 		this->mutex->lock(this->mutex);
 		this->batch = pb_tnc_batch_create(this->is_server, PB_BATCH_CDATA);
-		this->batch->add_message(this->batch, msg);
+		this->batch->add_msg(this->batch, msg);
 		this->mutex->unlock(this->mutex);
 
 		charon->imcs->notify_connection_change(charon->imcs,
@@ -454,6 +478,13 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+	}
+
+	if (this->is_server && this->fatal_error &&
+		this->state_machine->get_state(this->state_machine) == PB_STATE_END)
+	{
+		DBG1(DBG_TNC, "a fatal PB-TNC Error occurred, terminating connection");
+		return FAILED;
 	}
 
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */

@@ -14,17 +14,20 @@
  */
 
 /**
- * @defgroup pb_tnc_message pb_tnc_message
+ * @defgroup pb_tnc_msg pb_tnc_msg
  * @{ @ingroup tnccs_20
  */
 
-#ifndef PB_TNC_MESSAGE_H_
-#define PB_TNC_MESSAGE_H_
-
-#include <library.h>
-#include <tnccs_20_types.h>
+#ifndef PB_TNC_MSG_H_
+#define PB_TNC_MSG_H_
 
 typedef enum pb_tnc_msg_type_t pb_tnc_msg_type_t;
+typedef struct pb_tnc_msg_info_t pb_tnc_msg_info_t;
+typedef struct pb_tnc_msg_t pb_tnc_msg_t;
+
+#include <library.h>
+
+#define PB_TNC_VERSION		2
 
 /**
  * PB-TNC Message Types as defined in section 4.3 of RFC 5793
@@ -46,7 +49,22 @@ enum pb_tnc_msg_type_t {
  */
 extern enum_name_t *pb_tnc_msg_type_names;
 
-typedef struct pb_tnc_message_t pb_tnc_message_t;
+/**
+ * Information entry describing a PB-TNC Message Type
+ */
+struct pb_tnc_msg_info_t {
+	u_int32_t min_size;
+	bool      exact_size;
+	bool      in_result_batch;
+	bool      has_noskip_flag;
+};
+
+#define	TRUE_OR_FALSE	2
+
+/**
+ * Information on PB-TNC Message Types
+ */
+extern pb_tnc_msg_info_t pb_tnc_msg_infos[];
 
 /**
  * Generic interface for all PB-TNC message types.
@@ -54,45 +72,46 @@ typedef struct pb_tnc_message_t pb_tnc_message_t;
  * To handle all messages in a generic way, this interface
  * must be implemented by each message type.
  */
-struct pb_tnc_message_t {
+struct pb_tnc_msg_t {
 
 	/**
 	 * Get the PB-TNC Message Type
 	 *
 	 * @return					 PB-TNC Message Type
 	 */
-	pb_tnc_msg_type_t (*get_type)(pb_tnc_message_t *this);
+	pb_tnc_msg_type_t (*get_type)(pb_tnc_msg_t *this);
 
 	/**
 	 * Get the encoding of the PB-TNC Message Value
 	 *
 	 * @return					encoded PB-TNC Message Value
 	 */
-	chunk_t (*get_encoding)(pb_tnc_message_t *this);
+	chunk_t (*get_encoding)(pb_tnc_msg_t *this);
 
 	/**
 	 * Build the PB-TNC Message Value
 	 */
-	void (*build)(pb_tnc_message_t *this);
+	void (*build)(pb_tnc_msg_t *this);
 
 	/**
 	 * Process the PB-TNC Message Value
 	 *
+	 * @param					relative offset where an error occurred
 	 * @return					return processing status
 	 */
-	status_t (*process)(pb_tnc_message_t *this);
+	status_t (*process)(pb_tnc_msg_t *this, u_int32_t *offset);
 
 	/**
 	 * Get a new reference to the message.
 	 *
 	 * @return			this, with an increased refcount
 	 */
-	pb_tnc_message_t* (*get_ref)(pb_tnc_message_t *this);
+	pb_tnc_msg_t* (*get_ref)(pb_tnc_msg_t *this);
 
 	/**
-	 * Destroys a pb_tnc_message_t object.
+	 * Destroys a pb_tnc_msg_t object.
 	 */
-	void (*destroy)(pb_tnc_message_t *this);
+	void (*destroy)(pb_tnc_msg_t *this);
 };
 
 /**
@@ -104,6 +123,6 @@ struct pb_tnc_message_t {
  * @param type		PB-TNC message type
  * @param value		PB-TNC message value
  */
-pb_tnc_message_t* pb_tnc_message_create(pb_tnc_msg_type_t type, chunk_t value);
+pb_tnc_msg_t* pb_tnc_msg_create_from_data(pb_tnc_msg_type_t type, chunk_t value);
 
-#endif /** PB_TNC_MESSAGE_H_ @}*/
+#endif /** PB_TNC_MSG_H_ @}*/

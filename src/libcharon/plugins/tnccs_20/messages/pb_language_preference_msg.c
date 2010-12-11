@@ -13,13 +13,13 @@
  * for more details.
  */
 
-#include "pb_language_preference_message.h"
+#include "pb_language_preference_msg.h"
 
 #include <tls_writer.h>
 #include <tls_reader.h>
 #include <debug.h>
 
-typedef struct private_pb_language_preference_message_t private_pb_language_preference_message_t;
+typedef struct private_pb_language_preference_msg_t private_pb_language_preference_msg_t;
 
 /**
  *   PB-Language-Preference message (see section 4.10 of RFC 5793)
@@ -35,14 +35,14 @@ typedef struct private_pb_language_preference_message_t private_pb_language_pref
 #define PB_LANG_PREFIX_LEN		strlen(PB_LANG_PREFIX)
 
 /**
- * Private data of a private_pb_language_preference_message_t object.
+ * Private data of a private_pb_language_preference_msg_t object.
  *
  */
-struct private_pb_language_preference_message_t {
+struct private_pb_language_preference_msg_t {
 	/**
-	 * Public pb_access_recommendation_message_t interface.
+	 * Public pb_access_recommendation_msg_t interface.
 	 */
-	pb_language_preference_message_t public;
+	pb_language_preference_msg_t public;
 
 	/**
 	 * PB-TNC message type
@@ -60,28 +60,28 @@ struct private_pb_language_preference_message_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+	private_pb_language_preference_msg_t *this)
 {
 	return this->type;
 }
 
-METHOD(pb_tnc_message_t, get_encoding, chunk_t,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
+	private_pb_language_preference_msg_t *this)
 {
 	return this->encoding;
 }
 
-METHOD(pb_tnc_message_t, build, void,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_tnc_msg_t, build, void,
+	private_pb_language_preference_msg_t *this)
 {
 	this->encoding = chunk_cat("cc",
 		 	 			chunk_create(PB_LANG_PREFIX, PB_LANG_PREFIX_LEN),
 						this->language_preference);
 }
 
-METHOD(pb_tnc_message_t, process, status_t,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_tnc_msg_t, process, status_t,
+	private_pb_language_preference_msg_t *this, u_int32_t *offset)
 {
 	chunk_t lang;
 
@@ -90,25 +90,36 @@ METHOD(pb_tnc_message_t, process, status_t,
 	{
 		lang = chunk_skip(this->encoding, PB_LANG_PREFIX_LEN);
 		this->language_preference = lang.len ? chunk_clone(lang) : chunk_empty;
-		return SUCCESS;
 	}
 	else
     {
-		/* TODO generate non-fatal PB-TNC error msg */
-		return VERIFY_ERROR;
+		DBG1(DBG_TNC, "language preference must be preceded by '%s'",
+					   PB_LANG_PREFIX);
+		*offset = 0;
+		return FAILED;
 	}
+
+	if (this->language_preference.len &&
+		this->language_preference.ptr[this->language_preference.len-1] == '\0')
+	{
+		DBG1(DBG_TNC, "language preference must not be null terminated");
+		*offset = PB_LANG_PREFIX_LEN + this->language_preference.len - 1;
+		return FAILED;
+	}
+
+	return SUCCESS;
 }
 
-METHOD(pb_tnc_message_t, destroy, void,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_tnc_msg_t, destroy, void,
+	private_pb_language_preference_msg_t *this)
 {
 	free(this->encoding.ptr);
 	free(this->language_preference.ptr);
 	free(this);
 }
 
-METHOD(pb_language_preference_message_t, get_language_preference, chunk_t,
-	private_pb_language_preference_message_t *this)
+METHOD(pb_language_preference_msg_t, get_language_preference, chunk_t,
+	private_pb_language_preference_msg_t *this)
 {
 	return this->language_preference;
 }
@@ -116,9 +127,9 @@ METHOD(pb_language_preference_message_t, get_language_preference, chunk_t,
 /**
  * See header
  */
-pb_tnc_message_t *pb_language_preference_message_create_from_data(chunk_t data)
+pb_tnc_msg_t *pb_language_preference_msg_create_from_data(chunk_t data)
 {
-	private_pb_language_preference_message_t *this;
+	private_pb_language_preference_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -141,9 +152,9 @@ pb_tnc_message_t *pb_language_preference_message_create_from_data(chunk_t data)
 /**
  * See header
  */
-pb_tnc_message_t *pb_language_preference_message_create(chunk_t language_preference)
+pb_tnc_msg_t *pb_language_preference_msg_create(chunk_t language_preference)
 {
-	private_pb_language_preference_message_t *this;
+	private_pb_language_preference_msg_t *this;
 
 	INIT(this,
 		.public = {

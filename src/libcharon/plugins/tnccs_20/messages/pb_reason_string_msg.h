@@ -14,40 +14,40 @@
  */
 
 /**
- * @defgroup pb_reason_string_message pb_reason_string_message
+ * @defgroup pb_reason_string_msg pb_reason_string_msg
  * @{ @ingroup tnccs_20
  */
 
-#ifndef PB_REASON_STRING_MESSAGE_H_
-#define PB_REASON_STRING_MESSAGE_H_
+#ifndef PB_REASON_STRING_MSG_H_
+#define PB_REASON_STRING_MSG_H_
 
-#include "pb_tnc_message.h"
+typedef struct pb_reason_string_msg_t pb_reason_string_msg_t;
 
-typedef struct pb_reason_string_message_t pb_reason_string_message_t;
+#include "pb_tnc_msg.h"
 
 /**
  * Classs representing the PB-Reason-String message type.
  */
-struct pb_reason_string_message_t {
+struct pb_reason_string_msg_t {
 
 	/**
 	 * PB-TNC Message interface
 	 */
-	pb_tnc_message_t pb_interface;
+	pb_tnc_msg_t pb_interface;
 
 	/**
 	 * Get Reason String
 	 *
 	 * @return			Reason string
 	 */
-	chunk_t (*get_reason_string)(pb_reason_string_message_t *this);
+	chunk_t (*get_reason_string)(pb_reason_string_msg_t *this);
 
 	/**
 	 * Get Reason String Language Code
 	 *
 	 * @return			Language code
 	 */
-	chunk_t (*get_language_code)(pb_reason_string_message_t *this);
+	chunk_t (*get_language_code)(pb_reason_string_msg_t *this);
 };
 
 /**
@@ -56,14 +56,14 @@ struct pb_reason_string_message_t {
  * @param reason_string		Reason string
   * @param language_code	Language code
  */
-pb_tnc_message_t* pb_reason_string_message_create(chunk_t reason_string,
-												  chunk_t language_code);
+pb_tnc_msg_t* pb_reason_string_msg_create(chunk_t reason_string,
+										  chunk_t language_code);
 
 /**
  * Create an unprocessed PB-Reason-String message from raw data
  *
   * @param data		PB-Reason-String message data
  */
-pb_tnc_message_t* pb_reason_string_message_create_from_data(chunk_t data);
+pb_tnc_msg_t* pb_reason_string_msg_create_from_data(chunk_t data);
 
-#endif /** PB_PA_MESSAGE_H_ @}*/
+#endif /** PB_PA_MSG_H_ @}*/

@@ -13,13 +13,14 @@
  * for more details.
  */
 
-#include "pb_assessment_result_message.h"
+#include "pb_assessment_result_msg.h"
 
 #include <tls_writer.h>
 #include <tls_reader.h>
+#include <tnc/tncifimv.h>
 #include <debug.h>
 
-typedef struct private_pb_assessment_result_message_t private_pb_assessment_result_message_t;
+typedef struct private_pb_assessment_result_msg_t private_pb_assessment_result_msg_t;
 
 /**
  *   PB-Assessment-Result message (see section 4.6 of RFC 5793)
@@ -31,17 +32,17 @@ typedef struct private_pb_assessment_result_message_t private_pb_assessment_resu
  *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define ASSESSMENT_RESULT_MESSAGE_SIZE	4
+#define ASSESSMENT_RESULT_MSG_SIZE	4
 
 /**
- * Private data of a pb_assessment_result_message_t object.
+ * Private data of a pb_assessment_result_msg_t object.
  *
  */
-struct private_pb_assessment_result_message_t {
+struct private_pb_assessment_result_msg_t {
 	/**
-	 * Public pb_assessment_result_message_t interface.
+	 * Public pb_assessment_result_msg_t interface.
 	 */
-	pb_assessment_result_message_t public;
+	pb_assessment_result_msg_t public;
 
 	/**
 	 * PB-TNC message type
@@ -59,25 +60,25 @@ struct private_pb_assessment_result_message_t {
 	chunk_t encoding;
 };
 
-METHOD(pb_tnc_message_t, get_type, pb_tnc_msg_type_t,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_tnc_msg_t, get_type, pb_tnc_msg_type_t,
+	private_pb_assessment_result_msg_t *this)
 {
 	return this->type;
 }
 
-METHOD(pb_tnc_message_t, get_encoding, chunk_t,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
+	private_pb_assessment_result_msg_t *this)
 {
 	return this->encoding;
 }
 
-METHOD(pb_tnc_message_t, build, void,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_tnc_msg_t, build, void,
+	private_pb_assessment_result_msg_t *this)
 {
 	tls_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(ASSESSMENT_RESULT_MESSAGE_SIZE);
+	writer = tls_writer_create(ASSESSMENT_RESULT_MSG_SIZE);
 	writer->write_uint32(writer, this->assessment_result);
 	free(this->encoding.ptr);
 	this->encoding = writer->get_buf(writer);
@@ -85,36 +86,37 @@ METHOD(pb_tnc_message_t, build, void,
 	writer->destroy(writer);
 }
 
-METHOD(pb_tnc_message_t, process, status_t,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_tnc_msg_t, process, status_t,
+	private_pb_assessment_result_msg_t *this, u_int32_t *offset)
 {
 	tls_reader_t *reader;
-
-	if (this->encoding.len < ASSESSMENT_RESULT_MESSAGE_SIZE)
-	{
-		DBG1(DBG_TNC,"%N message is shorter than message size of %u bytes",
-				pb_tnc_msg_type_names, PB_MSG_ASSESSMENT_RESULT,
-				ASSESSMENT_RESULT_MESSAGE_SIZE);
-		return FAILED;
-	}
 
 	/* process message */
 	reader = tls_reader_create(this->encoding);
 	reader->read_uint32(reader, &this->assessment_result);
-
 	reader->destroy(reader);
+
+	if (this->assessment_result < TNC_IMV_EVALUATION_RESULT_COMPLIANT ||
+		this->assessment_result > TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
+	{
+		DBG1(DBG_TNC, "invalid assessment result (%u)",
+					   this->assessment_result);
+		*offset = 0;
+		return FAILED;
+	}
+		
 	return SUCCESS;
 }
 
-METHOD(pb_tnc_message_t, destroy, void,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_tnc_msg_t, destroy, void,
+	private_pb_assessment_result_msg_t *this)
 {
 	free(this->encoding.ptr);
 	free(this);
 }
 
-METHOD(pb_assessment_result_message_t, get_assessment_result, u_int32_t,
-	private_pb_assessment_result_message_t *this)
+METHOD(pb_assessment_result_msg_t, get_assessment_result, u_int32_t,
+	private_pb_assessment_result_msg_t *this)
 {
 	return this->assessment_result;
 }
@@ -122,9 +124,9 @@ METHOD(pb_assessment_result_message_t, get_assessment_result, u_int32_t,
 /**
  * See header
  */
-pb_tnc_message_t *pb_assessment_result_message_create_from_data(chunk_t data)
+pb_tnc_msg_t *pb_assessment_result_msg_create_from_data(chunk_t data)
 {
-	private_pb_assessment_result_message_t *this;
+	private_pb_assessment_result_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -147,9 +149,9 @@ pb_tnc_message_t *pb_assessment_result_message_create_from_data(chunk_t data)
 /**
  * See header
  */
-pb_tnc_message_t *pb_assessment_result_message_create(u_int32_t assessment_result)
+pb_tnc_msg_t *pb_assessment_result_msg_create(u_int32_t assessment_result)
 {
-	private_pb_assessment_result_message_t *this;
+	private_pb_assessment_result_msg_t *this;
 
 	INIT(this,
 		.public = {
