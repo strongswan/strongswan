@@ -308,7 +308,7 @@ METHOD(tls_t, process, status_t,
 	}
 
 	data = chunk_create(buf, buflen);
-	DBG1(DBG_TNC, "received TNCCS batch (%u bytes) for connection ID %u",
+	DBG1(DBG_TNC, "received TNCCS batch (%u bytes) for Connection ID %u",
 				   data.len, this->connection_id);
 	DBG3(DBG_TNC, "%B", &data);  
 	batch = pb_tnc_batch_create_from_data(this->is_server, data);
@@ -535,7 +535,7 @@ METHOD(tls_t, build, status_t,
 		{
 			this->batch->build(this->batch);
 			data = this->batch->get_encoding(this->batch);
-			DBG1(DBG_TNC, "sending PB-TNC %N batch (%d bytes) for connection ID %u",
+			DBG1(DBG_TNC, "sending PB-TNC %N batch (%d bytes) for Connection ID %u",
 						   pb_tnc_batch_type_names, batch_type, data.len,
 						   this->connection_id);
 			DBG3(DBG_TNC, "%B", &data);
