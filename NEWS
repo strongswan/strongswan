@@ -1,10 +1,21 @@
 strongswan-4.5.1
 ----------------
 
+- Sansar Choinyambuu implemented the RFC 5793 Posture Broker Protocol (BP)
+  compatible with Trusted Network Connect (TNC). The TNCCS 2.0 protocol
+  requires the tnccs_20, tnc_imc and tnc_imv plugins but dose not depend
+  on the libtnc library. Any available IMV/IMC pairs conforming to the
+  Trusted Computing Group's TNC-IF-IMV/IMC 1.2 interface specification
+  can be loaded via /etc/tnc_config. 
+
 - IKE and ESP proposals can now be stored in an SQL database using a
   new proposals table. The start_action field in the child_configs
   tables allows the automatic starting or routing of connections stored
   in an SQL database.
+
+- The new certificate_authorities and certificate_distribution_points
+  tables make it possible to store CRL and OCSP Certificate Distribution
+  points in an SQL database.
 
 
 strongswan-4.5.0
