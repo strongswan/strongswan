@@ -198,7 +198,7 @@ METHOD(mem_cred_t, add_crl, bool,
 	enumerator = this->untrusted->create_enumerator(this->untrusted);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		if (current->get_type(current) != CERT_X509_CRL)
+		if (current->get_type(current) == CERT_X509_CRL)
 		{
 			bool found = FALSE;
 			crl_t *crl_c = (crl_t*)current;
