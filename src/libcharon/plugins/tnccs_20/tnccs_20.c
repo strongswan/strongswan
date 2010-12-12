@@ -164,7 +164,7 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 
 			assess_msg = (pb_assessment_result_msg_t*)msg;
 			result = assess_msg->get_assessment_result(assess_msg);
-			DBG1(DBG_TNC, "assessment result is '%N'",
+			DBG1(DBG_TNC, "PB-TNC assessment result is '%N'",
 						   evaluation_result_names, result);
 			break;
 		}
@@ -175,7 +175,7 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 
 			rec_msg = (pb_access_recommendation_msg_t*)msg;
 			rec = rec_msg->get_access_recommendation(rec_msg);
-			DBG1(DBG_TNC, "access recommendation is '%N'",
+			DBG1(DBG_TNC, "PB-TNC access recommendation is '%N'",
 						   pb_access_recommendation_code_names, rec);
 				break;
 		}
@@ -271,13 +271,13 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 }
 
 /**
- *  Build a CRETRY or SRETRY Batch 
+ *  Build a CRETRY or SRETRY batch 
  */
 static void build_retry_batch(private_tnccs_20_t *this)
 {
 	if (this->batch)
 	{
-		DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
+		DBG1(DBG_TNC, "cancelling PB-TNC %N batch",
 			pb_tnc_batch_type_names, this->batch->get_type(this->batch));
 		this->batch->destroy(this->batch);
 	 }
@@ -308,7 +308,7 @@ METHOD(tls_t, process, status_t,
 	}
 
 	data = chunk_create(buf, buflen);
-	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
+	DBG1(DBG_TNC, "received TNCCS batch (%u bytes) for connection ID %u",
 				   data.len, this->connection_id);
 	DBG3(DBG_TNC, "%B", &data);  
 	batch = pb_tnc_batch_create_from_data(this->is_server, data);
@@ -325,7 +325,7 @@ METHOD(tls_t, process, status_t,
 
 		if (batch_type == PB_BATCH_CRETRY)
 		{
-			/* Send an SRETRY Batch in response */
+			/* Send an SRETRY batch in response */
 			this->mutex->lock(this->mutex);
 			build_retry_batch(this);
 			this->mutex->unlock(this->mutex);
@@ -346,7 +346,7 @@ METHOD(tls_t, process, status_t,
 		}
 		enumerator->destroy(enumerator);
 
-		/* received an empty CLOSE Batch from PB-TNC Client */
+		/* received an empty CLOSE batch from PB-TNC client */
 		if (this->is_server && batch_type == PB_BATCH_CLOSE && empty)
 		{
 			batch->destroy(batch);
@@ -379,7 +379,7 @@ METHOD(tls_t, process, status_t,
 			this->mutex->lock(this->mutex);
 			if (this->batch)
 			{
-				DBG1(DBG_TNC, "cancelling PB-TNC %N Batch",
+				DBG1(DBG_TNC, "cancelling PB-TNC %N batch",
 					pb_tnc_batch_type_names, this->batch->get_type(this->batch));
 				this->batch->destroy(this->batch);
 			 }
@@ -406,7 +406,7 @@ METHOD(tls_t, process, status_t,
 }
 
 /**
- *  Build a RESULT Batch if a final recommendation is available
+ *  Build a RESULT batch if a final recommendation is available
  */
 static void check_and_build_recommendation(private_tnccs_20_t *this)
 {
@@ -464,7 +464,7 @@ METHOD(tls_t, build, status_t,
 			return FAILED;
 		}
 
-		/* Create PB-TNC Language Preference Message */
+		/* Create PB-TNC Language Preference message */
 		pref_lang = charon->imcs->get_preferred_language(charon->imcs);
 		msg = pb_language_preference_msg_create(chunk_create(pref_lang,
 													strlen(pref_lang)));
@@ -515,7 +515,7 @@ METHOD(tls_t, build, status_t,
 			/**
 			 * if the DECIDED state has been reached and no CRETRY is under way
 			 * or if a CLOSE batch with error messages has been received,
-			 * reply with an empty CLOSE batch.
+			 * a PB-TNC client replies with an empty CLOSE batch.
 			 */
 			if (state == PB_STATE_DECIDED || state == PB_STATE_END)
 			{
@@ -535,7 +535,7 @@ METHOD(tls_t, build, status_t,
 		{
 			this->batch->build(this->batch);
 			data = this->batch->get_encoding(this->batch);
-			DBG1(DBG_TNC, "sending PB-TNC %N Batch (%d bytes) for Connection ID %u",
+			DBG1(DBG_TNC, "sending PB-TNC %N batch (%d bytes) for connection ID %u",
 						   pb_tnc_batch_type_names, batch_type, data.len,
 						   this->connection_id);
 			DBG3(DBG_TNC, "%B", &data);
@@ -547,7 +547,7 @@ METHOD(tls_t, build, status_t,
 		}
 		else
 		{
-			DBG1(DBG_TNC, "cancelling unexpected PB-TNC Batch Type: %N",
+			DBG1(DBG_TNC, "cancelling unexpected PB-TNC batch type: %N",
 				 pb_tnc_batch_type_names, batch_type);
 			status = INVALID_STATE;
 		}
@@ -557,7 +557,7 @@ METHOD(tls_t, build, status_t,
 	}
 	else
 	{
-		DBG1(DBG_TNC, "no TNCCS Batch to send");
+		DBG1(DBG_TNC, "no TNCCS batch to send");
 		status = INVALID_STATE;
 	}
 	this->mutex->unlock(this->mutex);

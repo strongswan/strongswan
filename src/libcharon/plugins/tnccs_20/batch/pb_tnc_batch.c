@@ -129,7 +129,7 @@ METHOD(pb_tnc_batch_t, get_encoding, chunk_t,
 METHOD(pb_tnc_batch_t, add_msg, void,
 	private_pb_tnc_batch_t *this, pb_tnc_msg_t* msg)
 {
-	DBG2(DBG_TNC, "adding %N Message", pb_tnc_msg_type_names,
+	DBG2(DBG_TNC, "adding %N message", pb_tnc_msg_type_names,
 									   msg->get_type(msg));
 	this->messages->insert_last(this->messages, msg);
 }
@@ -219,7 +219,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	/* Version */
 	if (version != PB_TNC_VERSION)
 	{
-		DBG1(DBG_TNC, "unsupported TNCCS Batch Version 0x%01x", version);
+		DBG1(DBG_TNC, "unsupported TNCCS batch version 0x%01x", version);
 		msg = pb_error_msg_create(TRUE, IETF_VENDOR_ID,
 								  PB_ERROR_VERSION_NOT_SUPPORTED);
 		err_msg = (pb_error_msg_t*)msg;
@@ -231,8 +231,8 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	directionality = (flags & PB_TNC_BATCH_FLAG_D) != PB_TNC_BATCH_FLAG_NONE;
 	if (directionality == this->is_server)
 	{
-		DBG1(DBG_TNC, "wrong Directionality: Batch is from a PB %s",
-			 directionality ? "Server" : "Client");
+		DBG1(DBG_TNC, "wrong Directionality: batch is from a PB %s",
+			 directionality ? "server" : "client");
 		msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
 							PB_ERROR_INVALID_PARAMETER, 1);
 		goto fatal;
@@ -242,7 +242,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	this->type = type & 0x0F;
 	if (this->type > PB_BATCH_ROOF)
 	{
-		DBG1(DBG_TNC, "unknown PB-TNC Batch Type: %d", this->type);
+		DBG1(DBG_TNC, "unknown PB-TNC batch type: %d", this->type);
 		msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
 							PB_ERROR_INVALID_PARAMETER, 3);
 		goto fatal;
@@ -250,7 +250,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 
 	if (!state_machine->receive_batch(state_machine, this->type))
 	{
-		DBG1(DBG_TNC, "unexpected PB-TNC Batch Type: %N",
+		DBG1(DBG_TNC, "unexpected PB-TNC batch type: %N",
 					   pb_tnc_batch_type_names, this->type);
 		msg = pb_error_msg_create(TRUE, IETF_VENDOR_ID,
 								  PB_ERROR_UNEXPECTED_BATCH_TYPE);
@@ -324,7 +324,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 	if (msg_type == PB_TNC_RESERVED_MSG_TYPE)
 	{
-		DBG1(DBG_TNC, "PB-TNC Message Type 0x%08x is reserved",
+		DBG1(DBG_TNC, "PB-TNC message Type 0x%08x is reserved",
 			 PB_TNC_RESERVED_MSG_TYPE);
 		msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
 							PB_ERROR_INVALID_PARAMETER, this->offset + 4);
@@ -345,7 +345,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 		if (noskip_flag)
 		{
-			DBG1(DBG_TNC, "reject PB-TNC Message (Vendor ID 0x%06x / "
+			DBG1(DBG_TNC, "reject PB-TNC message (Vendor ID 0x%06x / "
 						  "Type 0x%08x)", vendor_id, msg_type);
 			msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
 							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
@@ -353,7 +353,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		}
 		else
 		{
-			DBG1(DBG_TNC, "ignore PB-TNC Message (Vendor ID 0x%06x / "
+			DBG1(DBG_TNC, "ignore PB-TNC message (Vendor ID 0x%06x / "
 						  "Type 0x%08x)", vendor_id, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;
@@ -364,7 +364,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		if (pb_tnc_msg_infos[msg_type].has_noskip_flag != TRUE_OR_FALSE &&
 			pb_tnc_msg_infos[msg_type].has_noskip_flag != noskip_flag)
 		{
-			DBG1(DBG_TNC, "%N Message must%s have NOSKIP flag set",
+			DBG1(DBG_TNC, "%N message must%s have NOSKIP flag set",
 				 pb_tnc_msg_type_names, msg_type,
 				 pb_tnc_msg_infos[msg_type].has_noskip_flag ? "" : " not");
 			msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
@@ -376,7 +376,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		   (pb_tnc_msg_infos[msg_type].exact_size &&
 			msg_len != pb_tnc_msg_infos[msg_type].min_size))
 		{
-			DBG1(DBG_TNC, "%N Message length must be %s %u bytes but is %u bytes",
+			DBG1(DBG_TNC, "%N message length must be %s %u bytes but is %u bytes",
 				 pb_tnc_msg_type_names, msg_type,
 				 pb_tnc_msg_infos[msg_type].exact_size ? "exactly" : "at least",
 				 pb_tnc_msg_infos[msg_type].min_size, msg_len);
@@ -391,7 +391,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	{
 		if (this->is_server)
 		{
-			DBG1(DBG_TNC,"reject %N Message received from a PB-TNC Client",
+			DBG1(DBG_TNC,"reject %N message received from a PB-TNC client",
 						  pb_tnc_msg_type_names, msg_type);
 			msg = pb_error_msg_create_with_offset(TRUE, IETF_VENDOR_ID,
 								PB_ERROR_INVALID_PARAMETER, this->offset);
@@ -399,17 +399,16 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		}
 		else
 		{
-			DBG1(DBG_TNC,"ignore %N Message not received within RESULT batch",
+			DBG1(DBG_TNC,"ignore %N message not received within RESULT batch",
 						  pb_tnc_msg_type_names, msg_type);
 			this->offset += msg_len;
 			return SUCCESS;
 		}
 	}
 
-	DBG2(DBG_TNC, "processing %N Message (%u bytes)", pb_tnc_msg_type_names,
+	DBG2(DBG_TNC, "processing %N message (%u bytes)", pb_tnc_msg_type_names,
 				   msg_type, msg_len);
 	data.len = msg_len;
-	DBG3(DBG_TNC, "%B", &data);
 	msg_value = chunk_skip(data, PB_TNC_HEADER_SIZE);
 	pb_tnc_msg = pb_tnc_msg_create_from_data(msg_type, msg_value);
 
@@ -444,7 +443,7 @@ METHOD(pb_tnc_batch_t, process, status_t,
 	{
 		return FAILED;
 	}
-	DBG1(DBG_TNC, "processing PB-TNC %N Batch", pb_tnc_batch_type_names,
+	DBG1(DBG_TNC, "processing PB-TNC %N batch", pb_tnc_batch_type_names,
 												this->type);
 	while (this->offset < this->encoding.len)
 	{
@@ -510,7 +509,7 @@ pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type)
 		.errors = linked_list_create(),
 	);
 
-	DBG2(DBG_TNC, "creating PB-TNC %N Batch", pb_tnc_batch_type_names, type);
+	DBG2(DBG_TNC, "creating PB-TNC %N batch", pb_tnc_batch_type_names, type);
 
 	return &this->public;
 }
