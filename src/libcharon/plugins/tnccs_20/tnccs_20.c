@@ -124,7 +124,7 @@ METHOD(tnccs_t, send_msg, void,
 /**
  * Handle a single PB-TNC message according to its type
  */
-static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
+static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 {
 	switch (msg->get_type(msg))
 	{
@@ -143,7 +143,7 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			msg_type = (vendor_id << 8) | (subtype & 0xff);
 			msg_body = pa_msg->get_body(pa_msg);
 
-			DBG2(DBG_TNC, "handling message type 0x%08x", msg_type);
+			DBG2(DBG_TNC, "handling PB-PA message type 0x%08x", msg_type);
 
 			if (this->is_server)
 			{
@@ -207,14 +207,14 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 				{
 					case PB_ERROR_INVALID_PARAMETER:
 					case PB_ERROR_UNSUPPORTED_MANDATORY_MSG:
-						DBG1(DBG_TNC, "received %s PB-TNC Error '%N' "
+						DBG1(DBG_TNC, "received %s PB-TNC error '%N' "
 									  "(offset %u bytes)",
 									  fatal ? "fatal" : "non-fatal",
 									  pb_tnc_error_code_names, error_code,
 									  err_msg->get_offset(err_msg));
 						break;
 					case PB_ERROR_VERSION_NOT_SUPPORTED:
-						DBG1(DBG_TNC, "received %s PB-TNC Error '%N' "
+						DBG1(DBG_TNC, "received %s PB-TNC error '%N' "
 									  "caused by bad version 0x%02x",
 									  fatal ? "fatal" : "non-fatal",
 									  pb_tnc_error_code_names, error_code,
@@ -223,7 +223,7 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 					case PB_ERROR_UNEXPECTED_BATCH_TYPE:
 					case PB_ERROR_LOCAL_ERROR:
 					default:
-						DBG1(DBG_TNC, "received %s PB-TNC Error '%N'",
+						DBG1(DBG_TNC, "received %s PB-TNC error '%N'",
 									  fatal ? "fatal" : "non-fatal",
 									  pb_tnc_error_code_names, error_code);
 						break;
@@ -231,7 +231,7 @@ static void handle_msg(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			}
 			else
 			{
-				DBG1(DBG_TNC, "received %s PB-TNC Error (%u) "
+				DBG1(DBG_TNC, "received %s PB-TNC error (%u) "
 							  "with Vendor ID 0x%06x",
 							  fatal ? "fatal" : "non-fatal",
 							  error_code, vendor_id);
@@ -341,7 +341,7 @@ METHOD(tls_t, process, status_t,
 		enumerator = batch->create_msg_enumerator(batch);
 		while (enumerator->enumerate(enumerator, &msg))
 		{
-			handle_msg(this, msg);
+			handle_message(this, msg);
 			empty = FALSE;
 		}
 		enumerator->destroy(enumerator);
@@ -352,7 +352,7 @@ METHOD(tls_t, process, status_t,
 			batch->destroy(batch);
 			if (this->fatal_error)
 			{
-				DBG1(DBG_TNC, "a fatal PB-TNC Error occurred, "
+				DBG1(DBG_TNC, "a fatal PB-TNC error occurred, "
 							  "terminating connection");
 				return FAILED;
 			}
@@ -483,7 +483,7 @@ METHOD(tls_t, build, status_t,
 	if (this->is_server && this->fatal_error &&
 		this->state_machine->get_state(this->state_machine) == PB_STATE_END)
 	{
-		DBG1(DBG_TNC, "a fatal PB-TNC Error occurred, terminating connection");
+		DBG1(DBG_TNC, "a fatal PB-TNC error occurred, terminating connection");
 		return FAILED;
 	}
 
