@@ -620,7 +620,7 @@ METHOD(child_sa_t, install, status_t,
 		lifetime->time.rekey = 0;
 	}
 
-	if (this->mode == MODE_BEET)
+	if (this->mode == MODE_BEET || this->mode == MODE_TRANSPORT)
 	{
 		/* BEET requires the bound address from the traffic selectors.
 		 * TODO: We add just the first traffic selector for now, as the

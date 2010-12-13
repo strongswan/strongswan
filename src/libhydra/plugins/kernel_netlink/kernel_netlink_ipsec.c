@@ -920,6 +920,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			sa->flags |= XFRM_STATE_AF_UNSPEC;
 			break;
 		case MODE_BEET:
+		case MODE_TRANSPORT:
 			if(src_ts && dst_ts)
 			{
 				sa->sel = ts2selector(src_ts, dst_ts);
