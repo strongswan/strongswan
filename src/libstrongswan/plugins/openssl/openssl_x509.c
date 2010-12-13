@@ -899,6 +899,13 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	{
 		return FALSE;
 	}
+	if (X509_get_version(this->x509) < 0 || X509_get_version(this->x509) > 2)
+	{
+		DBG1(DBG_LIB, "unsupported x509 version: %d",
+			 X509_get_version(this->x509) + 1);
+		return FALSE;
+	}
+
 	this->subject = openssl_x509_name2id(X509_get_subject_name(this->x509));
 	this->issuer = openssl_x509_name2id(X509_get_issuer_name(this->x509));
 
