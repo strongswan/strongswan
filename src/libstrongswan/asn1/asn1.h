@@ -115,6 +115,22 @@ int asn1_known_oid(chunk_t object);
 chunk_t asn1_build_known_oid(int n);
 
 /**
+ * Convert human readable OID to ASN.1 DER encoding, without OID header.
+ *
+ * @param str		OID string (e.g. 1.2.345.67.8)
+ * @return			allocated ASN.1 encoded OID, chunk_empty on error
+ */
+chunk_t asn1_oid_from_string(char *str);
+
+/**
+ * Convert a DER encoded ASN.1 OID to a human readable string.
+ *
+ * @param oid		DER encoded OID, without header
+ * @return			human readable OID string, allocated, NULL on error
+ */
+char* asn1_oid_to_string(chunk_t oid);
+
+/**
  * Returns the length of an ASN.1 object
  * The blob pointer is advanced past the tag length fields
  *

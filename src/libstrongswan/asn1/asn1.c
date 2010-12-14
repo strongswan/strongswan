@@ -126,6 +126,100 @@ chunk_t asn1_build_known_oid(int n)
 /*
  * Defined in header.
  */
+chunk_t asn1_oid_from_string(char *str)
+{
+	enumerator_t *enumerator;
+	u_char buf[32];
+	char *end;
+	int i = 0, pos = 0;
+	u_int val, first = 0;
+
+	enumerator = enumerator_create_token(str, ".", "");
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		val = strtoul(str, &end, 10);
+		if (end == str || pos > countof(buf))
+		{
+			pos = 0;
+			break;
+		}
+		switch (i++)
+		{
+			case 0:
+				first = val;
+				break;
+			case 1:
+				buf[pos++] = first * 40 + val;
+				break;
+			default:
+				if (val < 128)
+				{
+					buf[pos++] = val;
+				}
+				else
+				{
+					buf[pos++] = 128 | (val >> 7);
+					buf[pos++] = (val % 256) & 0x7F;
+				}
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return chunk_clone(chunk_create(buf, pos));
+}
+
+/*
+ * Defined in header.
+ */
+char *asn1_oid_to_string(chunk_t oid)
+{
+	char buf[64], *pos = buf;
+	int len;
+	u_int val;
+
+	if (!oid.len)
+	{
+		return NULL;
+	}
+	val = oid.ptr[0] / 40;
+	len = snprintf(buf, sizeof(buf), "%d.%d", val, oid.ptr[0] - val * 40);
+	oid = chunk_skip(oid, 1);
+	if (len < 0 || len >= sizeof(buf))
+	{
+		return NULL;
+	}
+	pos += len;
+
+	while (oid.len)
+	{
+		if (oid.ptr[0] < 128)
+		{
+			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", oid.ptr[0]);
+			oid = chunk_skip(oid, 1);
+		}
+		else
+		{
+			if (oid.len == 1)
+			{
+				return NULL;
+			}
+			val = ((u_int)(oid.ptr[0] & 0x7F) << 7) + oid.ptr[1];
+			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", val);
+			oid = chunk_skip(oid, 2);
+		}
+		if (len < 0 || len >= sizeof(buf) + buf - pos)
+		{
+			return NULL;
+		}
+		pos += len;
+	}
+	return strdup(buf);
+}
+
+/*
+ * Defined in header.
+ */
 size_t asn1_length(chunk_t *blob)
 {
 	u_char n;
