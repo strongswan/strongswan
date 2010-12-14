@@ -2,7 +2,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtls
 AM_CFLAGS = \
 -DPLUGINS="\"${scripts_plugins}\""
 
-noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql \
+noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn
 
 if USE_TLS
@@ -17,6 +17,7 @@ bin2sql_SOURCES = bin2sql.c
 id2sql_SOURCES = id2sql.c
 key2keyid_SOURCES = key2keyid.c
 keyid2sql_SOURCES = keyid2sql.c
+oid2der_SOURCES = oid2der.c
 thread_analysis_SOURCES = thread_analysis.c
 dh_speed_SOURCES = dh_speed.c
 pubkey_speed_SOURCES = pubkey_speed.c
@@ -24,6 +25,7 @@ crypt_burn_SOURCES = crypt_burn.c
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 keyid2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+oid2der_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 crypt_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
