@@ -51,7 +51,7 @@
     0x1D                     "certificateIssuer"
     0x1E                     "nameConstraints"			OID_NAME_CONSTRAINTS
     0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
-    0x20                     "certificatePolicies"
+    0x20                     "certificatePolicies"		OID_CERTIFICATE_POLICIES
       0x00                   "anyPolicy"				OID_ANY_POLICY
     0x21                     "policyMappings"
     0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
@@ -192,8 +192,8 @@
               0x03           "qcStatements"
               0x07           "ipAddrBlocks"				OID_IP_ADDR_BLOCKS
             0x02             "id-qt"
-              0x01           "cps"
-              0x02           "unotice"
+              0x01           "cps"						OID_POLICY_QUALIFIER_CPS
+              0x02           "unotice"					OID_POLICY_QUALIFIER_UNOTICE
             0x03             "id-kp"
               0x01           "serverAuth"				OID_SERVER_AUTH
               0x02           "clientAuth"				OID_CLIENT_AUTH
