@@ -20,6 +20,16 @@
 #include <utils/linked_list.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <asn1/asn1.h>
+
+/**
+ * Free cert policy with OID
+ */
+static void destroy_cert_policy(x509_cert_policy_t *policy)
+{
+	free(policy->oid.ptr);
+	free(policy);
+}
 
 /**
  * Create a self signed certificate.
@@ -34,19 +44,21 @@ static int self()
 	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
-	linked_list_t *san, *ocsp, *permitted, *excluded;
+	linked_list_t *san, *ocsp, *permitted, *excluded, *policies;
 	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
+	x509_cert_policy_t *policy = NULL;
 	char *arg;
 
 	san = linked_list_create();
 	ocsp = linked_list_create();
 	permitted = linked_list_create();
 	excluded = linked_list_create();
+	policies = linked_list_create();
 
 	while (TRUE)
 	{
@@ -113,6 +125,35 @@ static int self()
 			case 'N':
 				excluded->insert_last(excluded,
 									  identification_create_from_string(arg));
+				continue;
+			case 'P':
+			{
+				chunk_t oid;
+
+				oid = asn1_oid_from_string(arg);
+				if (!oid.len)
+				{
+					return command_usage("--cert-policy OID invalid");
+				}
+				INIT(policy,
+					.oid = oid,
+				);
+				policies->insert_last(policies, policy);
+				continue;
+			}
+			case 'C':
+				if (!policy)
+				{
+					return command_usage("--cps-uri must follow a --cert-policy");
+				}
+				policy->cps_uri = arg;
+				continue;
+			case 'U':
+				if (!policy)
+				{
+					return command_usage("--user-notice must follow a --cert-policy");
+				}
+				policy->unotice_text = arg;
 				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
@@ -222,7 +263,8 @@ static int self()
 						BUILD_PATHLEN, pathlen, BUILD_SUBJECT_ALTNAMES, san,
 						BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
 						BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
-						BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded, BUILD_END);
+						BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
+						BUILD_CERTIFICATE_POLICIES, policies, BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -247,6 +289,7 @@ end:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
+	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	ocsp->destroy(ocsp);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -262,6 +305,7 @@ usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
+	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	ocsp->destroy(ocsp);
 	return command_usage(error);
 }
@@ -279,6 +323,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
+		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -293,6 +338,9 @@ static void __attribute__ ((constructor))reg()
 			{"pathlen",		'p', 1, "set path length constraint"},
 			{"nc-permitted",'n', 1, "add permitted NameConstraint"},
 			{"nc-excluded",	'N', 1, "add excluded NameConstraint"},
+			{"cert-policy",	'P', 1, "certificatePolicy OID to include"},
+			{"cps-uri",		'C', 1, "Certification Practice statement URI for certificatePolicy"},
+			{"user-notice",	'U', 1, "user notice for certificatePolicy"},
 			{"flag",		'e', 1, "include extendedKeyUsage flag"},
 			{"ocsp",		'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",		'g', 1, "digest for signature creation, default: sha1"},

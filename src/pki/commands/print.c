@@ -15,6 +15,7 @@
 
 #include "pki.h"
 
+#include <asn1/asn1.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
@@ -74,6 +75,7 @@ static void print_x509(x509_t *x509)
 	char *uri;
 	int len;
 	x509_flag_t flags;
+	x509_cert_policy_t *policy;
 
 	chunk = x509->get_serial(x509);
 	printf("serial:    %#B\n", &chunk);
@@ -200,6 +202,39 @@ static void print_x509(x509_t *x509)
 			first = FALSE;
 		}
 		printf("           %Y\n", id);
+	}
+	enumerator->destroy(enumerator);
+
+	first = TRUE;
+	enumerator = x509->create_cert_policy_enumerator(x509);
+	while (enumerator->enumerate(enumerator, &policy))
+	{
+		char *oid;
+
+		if (first)
+		{
+			printf("CertificatePolicies:\n");
+			first = FALSE;
+		}
+		oid = asn1_oid_to_string(policy->oid);
+		if (oid)
+		{
+			printf("           %s\n", oid);
+			free(oid);
+		}
+		else
+		{
+			printf("           %#B\n", &policy->oid);
+		}
+		if (policy->cps_uri)
+		{
+			printf("             CPS: %s\n", policy->cps_uri);
+		}
+		if (policy->unotice_text)
+		{
+			printf("             Notice: %s\n", policy->unotice_text);
+
+		}
 	}
 	enumerator->destroy(enumerator);
 
