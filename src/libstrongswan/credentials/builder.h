@@ -99,6 +99,8 @@ enum builder_part_t {
 	BUILD_PERMITTED_NAME_CONSTRAINTS,
 	/** excluded X509 name constraints, linked_list_t* of identification_t* */
 	BUILD_EXCLUDED_NAME_CONSTRAINTS,
+	/** certificatePolicy OIDs, linked_list_t* of x509_cert_policy_t* */
+	BUILD_CERTIFICATE_POLICIES,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */

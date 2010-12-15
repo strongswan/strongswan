@@ -27,6 +27,7 @@
 #define X509_NO_PATH_LEN_CONSTRAINT		-1
 
 typedef struct x509_t x509_t;
+typedef struct x509_cert_policy_t x509_cert_policy_t;
 typedef enum x509_flag_t x509_flag_t;
 
 /**
@@ -51,6 +52,18 @@ enum x509_flag_t {
 	X509_IP_ADDR_BLOCKS =	(1<<6),
 	/** cert has CRL sign key usage */
 	X509_CRL_SIGN =			(1<<7),
+};
+
+/**
+ * X.509 certPolicy extension.
+ */
+struct x509_cert_policy_t {
+	/** OID of certPolicy */
+	chunk_t oid;
+	/** Certification Practice Statement URI qualifier */
+	char *cps_uri;
+	/** UserNotice Text qualifier */
+	char *unotice_text;
 };
 
 /**
@@ -136,6 +149,13 @@ struct x509_t {
 	 * @return			enumerator over subtrees as identification_t
 	 */
 	enumerator_t* (*create_name_constraint_enumerator)(x509_t *this, bool perm);
+
+	/**
+	 * Create an enumerator over certificate policies.
+	 *
+	 * @return			enumerator over x509_cert_policy_t
+	 */
+	enumerator_t* (*create_cert_policy_enumerator)(x509_t *this);
 };
 
 #endif /** X509_H_ @}*/

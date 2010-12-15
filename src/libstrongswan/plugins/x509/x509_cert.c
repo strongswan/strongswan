@@ -142,6 +142,11 @@ struct private_x509_cert_t {
 	linked_list_t *excluded_names;
 
 	/**
+	 * List of certificatePolicies, as x509_cert_policy_t
+	 */
+	linked_list_t *cert_policies;
+
+	/**
 	 * certificate's embedded public key
 	 */
 	public_key_t *public_key;
@@ -225,6 +230,17 @@ static void crl_uri_destroy(crl_uri_t *this)
 {
 	this->uris->destroy_function(this->uris, free);
 	DESTROY_IF(this->issuer);
+	free(this);
+}
+
+/**
+ * Destroy a CertificatePolicy
+ */
+static void cert_policy_destroy(x509_cert_policy_t *this)
+{
+	free(this->oid.ptr);
+	free(this->cps_uri);
+	free(this->unotice_text);
 	free(this);
 }
 
@@ -875,6 +891,75 @@ static void parse_nameConstraints(chunk_t blob, int level0,
 }
 
 /**
+ * ASN.1 definition of a certificatePolicies extension
+ */
+static const asn1Object_t certificatePoliciesObject[] = {
+	{ 0, "certificatePolicies",		ASN1_SEQUENCE,	ASN1_LOOP			}, /*  0 */
+	{ 1,   "policyInformation",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  1 */
+	{ 2,     "policyId",			ASN1_OID,		ASN1_BODY			}, /*  2 */
+	{ 2,     "qualifier",			ASN1_SEQUENCE,	ASN1_OPT|ASN1_BODY	}, /*  3 */
+	{ 3,       "qualifierInfo",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  4 */
+	{ 4,         "qualifierId",		ASN1_OID,		ASN1_BODY			}, /*  5 */
+	{ 4,         "cPSuri",			ASN1_IA5STRING,	ASN1_OPT|ASN1_BODY	}, /*  6 */
+	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /*  7 */
+	{ 4,         "userNotice",		ASN1_SEQUENCE,	ASN1_OPT|ASN1_NONE	}, /*  8 */
+	{ 5,           "explicitText",	ASN1_EOC,		ASN1_RAW			}, /*  9 */
+	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /* 10 */
+	{ 2,      "end opt",			ASN1_EOC,		ASN1_END			}, /* 12 */
+	{ 0, "end loop",				ASN1_EOC,		ASN1_END			}, /* 13 */
+	{ 0, "exit",					ASN1_EOC,		ASN1_EXIT			}
+};
+#define CERT_POLICY_ID				2
+#define CERT_POLICY_QUALIFIER_ID	5
+#define CERT_POLICY_CPS_URI			6
+#define CERT_POLICY_EXPLICIT_TEXT	9
+
+/**
+ * Parse certificatePolicies
+ */
+static void parse_certificatePolicies(chunk_t blob, int level0,
+									  private_x509_cert_t *this)
+{
+	x509_cert_policy_t *policy = NULL;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID, qualifier = OID_UNKNOWN;
+
+	parser = asn1_parser_create(certificatePoliciesObject, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case CERT_POLICY_ID:
+				INIT(policy,
+					.oid = chunk_clone(object),
+				);
+				this->cert_policies->insert_last(this->cert_policies, policy);
+				break;
+			case CERT_POLICY_QUALIFIER_ID:
+				qualifier = asn1_known_oid(object);
+				break;
+			case CERT_POLICY_CPS_URI:
+				if (policy && !policy->cps_uri && object.len &&
+					qualifier == OID_POLICY_QUALIFIER_CPS &&
+					chunk_printable(object, NULL, 0))
+				{
+					policy->cps_uri = strndup(object.ptr, object.len);
+				}
+				break;
+			case CERT_POLICY_EXPLICIT_TEXT:
+				/* TODO */
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
  * ASN.1 definition of ipAddrBlocks according to RFC 3779
  */
 static const asn1Object_t ipAddrBlocksObjects[] = {
@@ -1185,6 +1270,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_NAME_CONSTRAINTS:
 						parse_nameConstraints(object, level, this);
+						break;
+					case OID_CERTIFICATE_POLICIES:
+						parse_certificatePolicies(object, level, this);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -1544,6 +1632,12 @@ METHOD(x509_t, create_name_constraint_enumerator, enumerator_t*,
 	return this->excluded_names->create_enumerator(this->excluded_names);
 }
 
+METHOD(x509_t, create_cert_policy_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+{
+	return this->cert_policies->create_enumerator(this->cert_policies);
+}
+
 METHOD(certificate_t, destroy, void,
 	private_x509_cert_t *this)
 {
@@ -1559,6 +1653,8 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->excluded_names->destroy_offset(this->excluded_names,
 										offsetof(identification_t, destroy));
+		this->cert_policies->destroy_function(this->cert_policies,
+											  (void*)cert_policy_destroy);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -1609,6 +1705,7 @@ static private_x509_cert_t* create_empty(void)
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
 				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
 				.create_name_constraint_enumerator = _create_name_constraint_enumerator,
+				.create_cert_policy_enumerator = _create_cert_policy_enumerator,
 			},
 		},
 		.version = 1,
@@ -1618,6 +1715,7 @@ static private_x509_cert_t* create_empty(void)
 		.ipAddrBlocks = linked_list_create(),
 		.permitted_names = linked_list_create(),
 		.excluded_names = linked_list_create(),
+		.cert_policies = linked_list_create(),
 		.pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT,
 		.ref = 1,
 	);
@@ -1692,7 +1790,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 {
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
-	chunk_t ocspSigning = chunk_empty;
+	chunk_t ocspSigning = chunk_empty, certPolicies = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, nameConstraints = chunk_empty;
 	chunk_t keyUsage = chunk_empty, keyUsageBits = chunk_empty;
 	chunk_t subjectAltNames = chunk_empty;
@@ -1938,15 +2036,57 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 									permitted, excluded)));
 	}
 
+	if (cert->cert_policies->get_count(cert->cert_policies))
+	{
+		x509_cert_policy_t *policy;
+
+		enumerator = create_cert_policy_enumerator(cert);
+		while (enumerator->enumerate(enumerator, &policy))
+		{
+			chunk_t chunk = chunk_empty, cps = chunk_empty, notice = chunk_empty;
+
+			if (policy->cps_uri)
+			{
+				cps = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_POLICY_QUALIFIER_CPS),
+						asn1_wrap(ASN1_IA5STRING, "c",
+							chunk_create(policy->cps_uri,
+										 strlen(policy->cps_uri))));
+			}
+			if (policy->unotice_text)
+			{
+				notice = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_POLICY_QUALIFIER_UNOTICE),
+							asn1_wrap(ASN1_SEQUENCE, "m",
+								asn1_wrap(ASN1_VISIBLESTRING, "c",
+									chunk_create(policy->unotice_text,
+										strlen(policy->unotice_text)))));
+			}
+			if (cps.len || notice.len)
+			{
+				chunk = asn1_wrap(ASN1_SEQUENCE, "mm", cps, notice);
+			}
+			chunk = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OID, "c", policy->oid), chunk);
+			certPolicies = chunk_cat("mm", certPolicies, chunk);
+		}
+		enumerator->destroy(enumerator);
+
+		certPolicies = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_CERTIFICATE_POLICIES),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m", certPolicies)));
+	}
+
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
 		crlDistributionPoints.ptr || nameConstraints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmm",
 							basicConstraints, keyUsage, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
-							authorityInfoAccess, nameConstraints));
+							authorityInfoAccess, nameConstraints, certPolicies));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -2145,6 +2285,26 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				{
 					cert->excluded_names->insert_last(cert->excluded_names,
 												constraint->clone(constraint));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_CERTIFICATE_POLICIES:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				x509_cert_policy_t *policy, *in;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(policy,
+						.oid = chunk_clone(in->oid),
+						.cps_uri = strdupnull(in->cps_uri),
+						.unotice_text = strdupnull(in->unotice_text),
+					);
+					cert->cert_policies->insert_last(cert->cert_policies, policy);
 				}
 				enumerator->destroy(enumerator);
 				continue;
