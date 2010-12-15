@@ -39,7 +39,7 @@ static bool check_pathlen(x509_t *issuer, int pathlen)
 	int pathlen_constraint;
 
 	pathlen_constraint = issuer->get_pathLenConstraint(issuer);
-	if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+	if (pathlen_constraint != X509_NO_CONSTRAINT &&
 		pathlen > pathlen_constraint)
 	{
 		DBG1(DBG_CFG, "path length of %d violates constraint of %d",

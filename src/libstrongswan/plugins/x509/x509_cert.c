@@ -1800,7 +1800,7 @@ static private_x509_cert_t* create_empty(void)
 		.excluded_names = linked_list_create(),
 		.cert_policies = linked_list_create(),
 		.policy_mappings = linked_list_create(),
-		.pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT,
+		.pathLenConstraint = X509_NO_CONSTRAINT,
 		.ref = 1,
 	);
 	return this;
@@ -1997,7 +1997,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		chunk_t pathLenConstraint = chunk_empty;
 
-		if (cert->pathLenConstraint != X509_NO_PATH_LEN_CONSTRAINT)
+		if (cert->pathLenConstraint != X509_NO_CONSTRAINT)
 		{
 			char pathlen = (char)cert->pathLenConstraint;
 
@@ -2361,7 +2361,7 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				cert->pathLenConstraint = va_arg(args, int);
 				if (cert->pathLenConstraint < 0 || cert->pathLenConstraint > 127)
 				{
-					cert->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
+					cert->pathLenConstraint = X509_NO_CONSTRAINT;
 				}
 				continue;
 			case BUILD_PERMITTED_NAME_CONSTRAINTS:

@@ -176,7 +176,7 @@ static void print_x509(x509_t *x509)
 	enumerator->destroy(enumerator);
 
 	len = x509->get_pathLenConstraint(x509);
-	if (len != X509_NO_PATH_LEN_CONSTRAINT)
+	if (len != X509_NO_CONSTRAINT)
 	{
 		printf("pathlen:   %d\n", len);
 	}

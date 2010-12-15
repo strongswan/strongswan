@@ -59,7 +59,7 @@ static int issue()
 	identification_t *id = NULL, *crl_issuer = NULL;;
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
-	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
+	int pathlen = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;

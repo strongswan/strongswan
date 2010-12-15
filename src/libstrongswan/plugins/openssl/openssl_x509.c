@@ -581,7 +581,7 @@ static private_openssl_x509_t *create_empty()
 		.issuerAltNames = linked_list_create(),
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
-		.pathlen = X509_NO_PATH_LEN_CONSTRAINT,
+		.pathlen = X509_NO_CONSTRAINT,
 		.ref = 1,
 	);
 
