@@ -76,6 +76,7 @@ static void print_x509(x509_t *x509)
 	int len;
 	x509_flag_t flags;
 	x509_cert_policy_t *policy;
+	x509_policy_mapping_t *mapping;
 
 	chunk = x509->get_serial(x509);
 	printf("serial:    %#B\n", &chunk);
@@ -235,6 +236,25 @@ static void print_x509(x509_t *x509)
 			printf("             Notice: %s\n", policy->unotice_text);
 
 		}
+	}
+	enumerator->destroy(enumerator);
+
+	first = TRUE;
+	enumerator = x509->create_policy_mapping_enumerator(x509);
+	while (enumerator->enumerate(enumerator, &mapping))
+	{
+		char *issuer_oid, *subject_oid;
+
+		if (first)
+		{
+			printf("PolicyMappings:\n");
+			first = FALSE;
+		}
+		issuer_oid = asn1_oid_to_string(mapping->issuer);
+		subject_oid = asn1_oid_to_string(mapping->subject);
+		printf("           %s => %s\n", issuer_oid, subject_oid);
+		free(issuer_oid);
+		free(subject_oid);
 	}
 	enumerator->destroy(enumerator);
 

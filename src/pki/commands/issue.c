@@ -34,6 +34,16 @@ static void destroy_cert_policy(x509_cert_policy_t *policy)
 }
 
 /**
+ * Free policy mapping
+ */
+static void destroy_policy_mapping(x509_policy_mapping_t *mapping)
+{
+	free(mapping->issuer.ptr);
+	free(mapping->subject.ptr);
+	free(mapping);
+}
+
+/**
  * Issue a certificate using a CA certificate and key
  */
 static int issue()
@@ -47,7 +57,7 @@ static int issue()
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL, *crl_issuer = NULL;;
-	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies;
+	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
@@ -64,6 +74,7 @@ static int issue()
 	permitted = linked_list_create();
 	excluded = linked_list_create();
 	policies = linked_list_create();
+	mappings = linked_list_create();
 
 	while (TRUE)
 	{
@@ -140,7 +151,8 @@ static int issue()
 				oid = asn1_oid_from_string(arg);
 				if (!oid.len)
 				{
-					return command_usage("--cert-policy OID invalid");
+					error = "--cert-policy OID invalid";
+					goto usage;
 				}
 				INIT(policy,
 					.oid = oid,
@@ -151,17 +163,43 @@ static int issue()
 			case 'C':
 				if (!policy)
 				{
-					return command_usage("--cps-uri must follow a --cert-policy");
+					error = "--cps-uri must follow a --cert-policy";
+					goto usage;
 				}
 				policy->cps_uri = arg;
 				continue;
 			case 'U':
 				if (!policy)
 				{
-					return command_usage("--user-notice must follow a --cert-policy");
+					error = "--user-notice must follow a --cert-policy";
+					goto usage;
 				}
 				policy->unotice_text = arg;
 				continue;
+			case 'M':
+			{
+				char *pos = strchr(arg, ':');
+				x509_policy_mapping_t *mapping;
+				chunk_t subject_oid, issuer_oid;
+
+				if (pos)
+				{
+					*pos++ = '\0';
+					issuer_oid = asn1_oid_from_string(arg);
+					subject_oid = asn1_oid_from_string(pos);
+				}
+				if (!pos || !issuer_oid.len || !subject_oid.len)
+				{
+					error = "--policy-map OIDs invalid";
+					goto usage;
+				}
+				INIT(mapping,
+					.issuer = issuer_oid,
+					.subject = subject_oid,
+				);
+				mappings->insert_last(mappings, mapping);
+				continue;
+			}
 			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
@@ -183,7 +221,8 @@ static int issue()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-					return command_usage("invalid output format");
+					error = "invalid output format";
+					goto usage;
 				}
 				continue;
 			case 'u':
@@ -379,7 +418,9 @@ static int issue()
 					BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
 					BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
 					BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
-					BUILD_CERTIFICATE_POLICIES, policies, BUILD_END);
+					BUILD_CERTIFICATE_POLICIES, policies,
+					BUILD_POLICY_MAPPINGS, mappings,
+					BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -407,6 +448,7 @@ end:
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
+	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
 	DESTROY_IF(crl_issuer);
@@ -425,6 +467,7 @@ usage:
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
+	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	cdps->destroy(cdps);
 	ocsp->destroy(ocsp);
 	DESTROY_IF(crl_issuer);
@@ -445,6 +488,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
+		 "[--policy-map issuer-oid:subject-oid]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -464,6 +508,7 @@ static void __attribute__ ((constructor))reg()
 			{"cert-policy",	'P', 1, "certificatePolicy OID to include"},
 			{"cps-uri",		'C', 1, "Certification Practice statement URI for certificatePolicy"},
 			{"user-notice",	'U', 1, "user notice for certificatePolicy"},
+			{"policy-map",	'M', 1, "policyMapping from issuer to subject OID"},
 			{"flag",		'e', 1, "include extendedKeyUsage flag"},
 			{"crl",			'u', 1, "CRL distribution point URI to include"},
 			{"crlissuer",	'I', 1, "CRL Issuer for CRL at distribution point"},
