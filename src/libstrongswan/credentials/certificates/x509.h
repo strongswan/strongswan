@@ -28,6 +28,7 @@
 
 typedef struct x509_t x509_t;
 typedef struct x509_cert_policy_t x509_cert_policy_t;
+typedef struct x509_policy_mapping_t x509_policy_mapping_t;
 typedef enum x509_flag_t x509_flag_t;
 
 /**
@@ -64,6 +65,16 @@ struct x509_cert_policy_t {
 	char *cps_uri;
 	/** UserNotice Text qualifier */
 	char *unotice_text;
+};
+
+/**
+ * X.509 policyMapping extension
+ */
+struct x509_policy_mapping_t {
+	/** OID of issuerDomainPolicy */
+	chunk_t issuer;
+	/** OID of subjectDomainPolicy */
+	chunk_t subject;
 };
 
 /**
@@ -156,6 +167,13 @@ struct x509_t {
 	 * @return			enumerator over x509_cert_policy_t
 	 */
 	enumerator_t* (*create_cert_policy_enumerator)(x509_t *this);
+
+	/**
+	 * Create an enumerator over policy mappings.
+	 *
+	 * @return			enumerator over x509_policy_mapping
+	 */
+	enumerator_t* (*create_policy_mapping_enumerator)(x509_t *this);
 };
 
 #endif /** X509_H_ @}*/

@@ -147,6 +147,11 @@ struct private_x509_cert_t {
 	linked_list_t *cert_policies;
 
 	/**
+	 * List of policyMappings, as x509_policy_mapping_t
+	 */
+	linked_list_t *policy_mappings;
+
+	/**
 	 * certificate's embedded public key
 	 */
 	public_key_t *public_key;
@@ -242,6 +247,16 @@ static void cert_policy_destroy(x509_cert_policy_t *this)
 	free(this->cps_uri);
 	free(this->unotice_text);
 	free(this);
+}
+
+/**
+ * Free policy mapping
+ */
+static void policy_mapping_destroy(x509_policy_mapping_t *mapping)
+{
+	free(mapping->issuer.ptr);
+	free(mapping->subject.ptr);
+	free(mapping);
 }
 
 /**
@@ -960,6 +975,62 @@ static void parse_certificatePolicies(chunk_t blob, int level0,
 }
 
 /**
+ * ASN.1 definition of a policyMappings extension
+ */
+static const asn1Object_t policyMappingsObjects[] = {
+	{ 0, "policyMappings",			ASN1_SEQUENCE,	ASN1_LOOP			}, /*  0 */
+	{ 1,   "policyMapping",			ASN1_SEQUENCE,	ASN1_NONE			}, /*  1 */
+	{ 2,     "issuerPolicy",		ASN1_OID,		ASN1_BODY			}, /*  2 */
+	{ 2,     "subjectPolicy",		ASN1_OID,		ASN1_BODY			}, /*  3 */
+	{ 0, "end loop",				ASN1_EOC,		ASN1_END			}, /*  4 */
+	{ 0, "exit",					ASN1_EOC,		ASN1_EXIT			}
+};
+#define POLICY_MAPPING			1
+#define POLICY_MAPPING_ISSUER	2
+#define POLICY_MAPPING_SUBJECT	3
+
+/**
+ * Parse policyMappings
+ */
+static void parse_policyMappings(chunk_t blob, int level0,
+								 private_x509_cert_t *this)
+{
+	x509_policy_mapping_t *map = NULL;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(policyMappingsObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case POLICY_MAPPING:
+				INIT(map);
+				this->policy_mappings->insert_last(this->policy_mappings, map);
+				break;
+			case POLICY_MAPPING_ISSUER:
+				if (map && !map->issuer.len)
+				{
+					map->issuer = chunk_clone(object);
+				}
+				break;
+			case POLICY_MAPPING_SUBJECT:
+				if (map && !map->subject.len)
+				{
+					map->subject = chunk_clone(object);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
  * ASN.1 definition of ipAddrBlocks according to RFC 3779
  */
 static const asn1Object_t ipAddrBlocksObjects[] = {
@@ -1273,6 +1344,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_CERTIFICATE_POLICIES:
 						parse_certificatePolicies(object, level, this);
+						break;
+					case OID_POLICY_MAPPINGS:
+						parse_policyMappings(object, level, this);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -1638,6 +1712,12 @@ METHOD(x509_t, create_cert_policy_enumerator, enumerator_t*,
 	return this->cert_policies->create_enumerator(this->cert_policies);
 }
 
+METHOD(x509_t, create_policy_mapping_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+{
+	return this->policy_mappings->create_enumerator(this->policy_mappings);
+}
+
 METHOD(certificate_t, destroy, void,
 	private_x509_cert_t *this)
 {
@@ -1655,6 +1735,8 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->cert_policies->destroy_function(this->cert_policies,
 											  (void*)cert_policy_destroy);
+		this->policy_mappings->destroy_function(this->policy_mappings,
+											  (void*)policy_mapping_destroy);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -1706,6 +1788,7 @@ static private_x509_cert_t* create_empty(void)
 				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
 				.create_name_constraint_enumerator = _create_name_constraint_enumerator,
 				.create_cert_policy_enumerator = _create_cert_policy_enumerator,
+				.create_policy_mapping_enumerator = _create_policy_mapping_enumerator,
 			},
 		},
 		.version = 1,
@@ -1716,6 +1799,7 @@ static private_x509_cert_t* create_empty(void)
 		.permitted_names = linked_list_create(),
 		.excluded_names = linked_list_create(),
 		.cert_policies = linked_list_create(),
+		.policy_mappings = linked_list_create(),
 		.pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT,
 		.ref = 1,
 	);
@@ -1793,7 +1877,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t ocspSigning = chunk_empty, certPolicies = chunk_empty;
 	chunk_t basicConstraints = chunk_empty, nameConstraints = chunk_empty;
 	chunk_t keyUsage = chunk_empty, keyUsageBits = chunk_empty;
-	chunk_t subjectAltNames = chunk_empty;
+	chunk_t subjectAltNames = chunk_empty, policyMappings = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	identification_t *issuer, *subject;
@@ -2078,15 +2162,38 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								asn1_wrap(ASN1_SEQUENCE, "m", certPolicies)));
 	}
 
+	if (cert->policy_mappings->get_count(cert->policy_mappings))
+	{
+		x509_policy_mapping_t *mapping;
+
+		enumerator = create_policy_mapping_enumerator(cert);
+		while (enumerator->enumerate(enumerator, &mapping))
+		{
+			chunk_t chunk;
+
+			chunk = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OID, "c", mapping->issuer),
+						asn1_wrap(ASN1_OID, "c", mapping->subject));
+			policyMappings = chunk_cat("mm", policyMappings, chunk);
+		}
+		enumerator->destroy(enumerator);
+
+		policyMappings = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_POLICY_MAPPINGS),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m", policyMappings)));
+	}
+
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
 		crlDistributionPoints.ptr || nameConstraints.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmm",
 							basicConstraints, keyUsage, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
-							authorityInfoAccess, nameConstraints, certPolicies));
+							authorityInfoAccess, nameConstraints, certPolicies,
+							policyMappings));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -2305,6 +2412,26 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 						.unotice_text = strdupnull(in->unotice_text),
 					);
 					cert->cert_policies->insert_last(cert->cert_policies, policy);
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_POLICY_MAPPINGS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				x509_policy_mapping_t* mapping, *in;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(mapping,
+						.issuer = chunk_clone(in->issuer),
+						.subject = chunk_clone(in->subject),
+					);
+					cert->policy_mappings->insert_last(cert->policy_mappings,
+													   mapping);
 				}
 				enumerator->destroy(enumerator);
 				continue;

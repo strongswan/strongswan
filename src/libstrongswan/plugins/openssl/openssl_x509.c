@@ -574,6 +574,7 @@ static private_openssl_x509_t *create_empty()
 				.create_ipAddrBlock_enumerator = (void*)enumerator_create_empty,
 				.create_name_constraint_enumerator = (void*)enumerator_create_empty,
 				.create_cert_policy_enumerator = (void*)enumerator_create_empty,
+				.create_policy_mapping_enumerator = (void*)enumerator_create_empty,
 			},
 		},
 		.subjectAltNames = linked_list_create(),
