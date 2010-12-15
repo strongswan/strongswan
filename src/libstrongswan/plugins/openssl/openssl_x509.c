@@ -277,6 +277,12 @@ METHOD(x509_t, get_pathLenConstraint, int,
 	return this->pathlen;
 }
 
+METHOD(x509_t, get_policyConstraint, int,
+	private_openssl_x509_t *this, bool inhibit)
+{
+	return X509_NO_CONSTRAINT;
+}
+
 METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
 	private_openssl_x509_t *this)
 {
@@ -568,6 +574,7 @@ static private_openssl_x509_t *create_empty()
 				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
 				.get_pathLenConstraint = _get_pathLenConstraint,
+				.get_policyConstraint = _get_policyConstraint,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,

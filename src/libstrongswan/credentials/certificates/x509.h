@@ -121,9 +121,17 @@ struct x509_t {
 	/**
 	 * Get an optional path length constraint.
 	 *
-	 * @return			pathLenConstraint, -1 if no constraint exists
+	 * @return			pathLenConstraint, X509_NO_CONSTRAINT if none found
 	 */
 	int (*get_pathLenConstraint)(x509_t *this);
+
+	/**
+	 * Get a policyConstraint, inhibitPolicyMapping or requireExplicitPolicy.
+	 *
+	 * @param inhibit	TRUE to get inhibitPolicyMapping
+	 * @return			constraint, X509_NO_CONSTRAINT if none found
+	 */
+	int (*get_policyConstraint)(x509_t *this, bool inhibit);
 
 	/**
 	 * Create an enumerator over all subjectAltNames.
@@ -174,6 +182,8 @@ struct x509_t {
 	 * @return			enumerator over x509_policy_mapping
 	 */
 	enumerator_t* (*create_policy_mapping_enumerator)(x509_t *this);
+
+
 };
 
 #endif /** X509_H_ @}*/

@@ -103,6 +103,10 @@ enum builder_part_t {
 	BUILD_CERTIFICATE_POLICIES,
 	/** policyMapping OIDs, linked_list_t* of x509_policy_mapping_t* */
 	BUILD_POLICY_MAPPINGS,
+	/** requireExplicitPolicy constraint, int */
+	BUILD_POLICY_CONSTRAINT_EXPLICIT,
+	/** inhibitPolicyMapping constraint, int */
+	BUILD_POLICY_CONSTRAINT_INHIBIT,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */

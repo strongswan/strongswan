@@ -55,7 +55,7 @@
       0x00                   "anyPolicy"				OID_ANY_POLICY
     0x21                     "policyMappings"			OID_POLICY_MAPPINGS
     0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
-    0x24                     "policyConstraints"
+    0x24                     "policyConstraints"		OID_POLICY_CONSTRAINTS
     0x25                     "extendedKeyUsage"			OID_EXTENDED_KEY_USAGE
       0x00                   "anyExtendedKeyUsage"
     0x2E                     "freshestCRL"				OID_FRESHEST_CRL
