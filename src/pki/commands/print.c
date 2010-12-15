@@ -258,6 +258,22 @@ static void print_x509(x509_t *x509)
 	}
 	enumerator->destroy(enumerator);
 
+	if (x509->get_policyConstraint(x509, FALSE) != X509_NO_CONSTRAINT ||
+		x509->get_policyConstraint(x509, TRUE) != X509_NO_CONSTRAINT)
+	{
+		printf("PolicyConstraints:\n");
+		if (x509->get_policyConstraint(x509, FALSE) != X509_NO_CONSTRAINT)
+		{
+			printf("           requireExplicitPolicy: %d\n",
+				   x509->get_policyConstraint(x509, FALSE));
+		}
+		if (x509->get_policyConstraint(x509, TRUE) != X509_NO_CONSTRAINT)
+		{
+			printf("           inhibitPolicyMapping: %d\n",
+				   x509->get_policyConstraint(x509, TRUE));
+		}
+	}
+
 	chunk = x509->get_authKeyIdentifier(x509);
 	if (chunk.ptr)
 	{

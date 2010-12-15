@@ -60,6 +60,7 @@ static int issue()
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT;
+	int inhibit_policy = X509_NO_CONSTRAINT, explicit_policy = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
@@ -200,6 +201,12 @@ static int issue()
 				mappings->insert_last(mappings, mapping);
 				continue;
 			}
+			case 'E':
+				explicit_policy = atoi(arg);
+				continue;
+			case 'H':
+				inhibit_policy = atoi(arg);
+				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
@@ -420,6 +427,8 @@ static int issue()
 					BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
 					BUILD_CERTIFICATE_POLICIES, policies,
 					BUILD_POLICY_MAPPINGS, mappings,
+					BUILD_POLICY_CONSTRAINT_INHIBIT, inhibit_policy,
+					BUILD_POLICY_CONSTRAINT_EXPLICIT, explicit_policy,
 					BUILD_END);
 	if (!cert)
 	{
@@ -489,32 +498,35 @@ static void __attribute__ ((constructor))reg()
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
 		 "[--policy-map issuer-oid:subject-oid]",
+		 "[--policy-explicit len] [--policy-inhibit len] ",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
-			{"help",		'h', 0, "show usage information"},
-			{"in",			'i', 1, "public key/request file to issue, default: stdin"},
-			{"type",		't', 1, "type of input, default: pub"},
-			{"cacert",		'c', 1, "CA certificate file"},
-			{"cakey",		'k', 1, "CA private key file"},
-			{"cakeyid",		'x', 1, "keyid on smartcard of CA private key"},
-			{"dn",			'd', 1, "distinguished name to include as subject"},
-			{"san",			'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",	'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",		's', 1, "serial number in hex, default: random"},
-			{"ca",			'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",		'p', 1, "set path length constraint"},
-			{"nc-permitted",'n', 1, "add permitted NameConstraint"},
-			{"nc-excluded",	'N', 1, "add excluded NameConstraint"},
-			{"cert-policy",	'P', 1, "certificatePolicy OID to include"},
-			{"cps-uri",		'C', 1, "Certification Practice statement URI for certificatePolicy"},
-			{"user-notice",	'U', 1, "user notice for certificatePolicy"},
-			{"policy-map",	'M', 1, "policyMapping from issuer to subject OID"},
-			{"flag",		'e', 1, "include extendedKeyUsage flag"},
-			{"crl",			'u', 1, "CRL distribution point URI to include"},
-			{"crlissuer",	'I', 1, "CRL Issuer for CRL at distribution point"},
-			{"ocsp",		'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",		'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",		'f', 1, "encoding of generated cert, default: der"},
+			{"help",			'h', 0, "show usage information"},
+			{"in",				'i', 1, "public key/request file to issue, default: stdin"},
+			{"type",			't', 1, "type of input, default: pub"},
+			{"cacert",			'c', 1, "CA certificate file"},
+			{"cakey",			'k', 1, "CA private key file"},
+			{"cakeyid",			'x', 1, "keyid on smartcard of CA private key"},
+			{"dn",				'd', 1, "distinguished name to include as subject"},
+			{"san",				'a', 1, "subjectAltName to include in certificate"},
+			{"lifetime",		'l', 1, "days the certificate is valid, default: 1095"},
+			{"serial",			's', 1, "serial number in hex, default: random"},
+			{"ca",				'b', 0, "include CA basicConstraint, default: no"},
+			{"pathlen",			'p', 1, "set path length constraint"},
+			{"nc-permitted",	'n', 1, "add permitted NameConstraint"},
+			{"nc-excluded",		'N', 1, "add excluded NameConstraint"},
+			{"cert-policy",		'P', 1, "certificatePolicy OID to include"},
+			{"cps-uri",			'C', 1, "Certification Practice statement URI for certificatePolicy"},
+			{"user-notice",		'U', 1, "user notice for certificatePolicy"},
+			{"policy-mapping",	'M', 1, "policyMapping from issuer to subject OID"},
+			{"policy-explicit",	'E', 1, "requireExplicitPolicy constraint"},
+			{"policy-inhibit",	'H', 1, "inhibitPolicyMapping constraint"},
+			{"flag",			'e', 1, "include extendedKeyUsage flag"},
+			{"crl",				'u', 1, "CRL distribution point URI to include"},
+			{"crlissuer",		'I', 1, "CRL Issuer for CRL at distribution point"},
+			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
+			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }
