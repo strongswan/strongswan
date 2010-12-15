@@ -127,7 +127,7 @@ static section_t *section_create(char *name)
 {
 	section_t *this;
 	INIT(this,
-		.name = name ? strdup(name) : NULL,
+		.name = strdupnull(name),
 		.sections = linked_list_create(),
 		.kv = linked_list_create(),
 	);

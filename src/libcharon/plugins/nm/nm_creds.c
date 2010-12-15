@@ -400,7 +400,7 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 	DESTROY_IF(this->user);
 	this->user = id->clone(id);
 	free(this->pass);
-	this->pass = password ? strdup(password) : NULL;
+	this->pass = strdupnull(password);
 	this->lock->unlock(this->lock);
 }
 
@@ -411,7 +411,7 @@ static void set_key_password(private_nm_creds_t *this, char *password)
 {
 	this->lock->write_lock(this->lock);
 	free(this->keypass);
-	this->keypass = password ? strdup(password) : NULL;
+	this->keypass = strdupnull(password);
 	this->lock->unlock(this->lock);
 }
 
@@ -423,7 +423,7 @@ static void set_pin(private_nm_creds_t *this, chunk_t keyid, char *pin)
 	this->lock->write_lock(this->lock);
 	free(this->keypass);
 	free(this->keyid.ptr);
-	this->keypass = pin ? strdup(pin) : NULL;
+	this->keypass = strdupnull(pin);
 	this->keyid = chunk_clone(keyid);
 	this->lock->unlock(this->lock);
 }

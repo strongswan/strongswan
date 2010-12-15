@@ -120,7 +120,7 @@ static char *getenv_cb(void *null, const char *key)
 	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	value = FCGX_GetParam(key, this->req.envp);
-	return value ? strdup(value) : NULL;
+	return strdupnull(value);
 }
 
 /**

@@ -72,6 +72,11 @@
 #define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
 
 /**
+ * NULL-safe strdup variant
+ */
+#define strdupnull(x) ({ char *_x = x; _x ? strdup(_x) : NULL; })
+
+/**
  * Macro compares two binary blobs for equality
  */
 #define memeq(x,y,len) (memcmp(x, y, len) == 0)

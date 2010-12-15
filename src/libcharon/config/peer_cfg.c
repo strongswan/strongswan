@@ -682,7 +682,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->use_mobike = mobike;
 	this->dpd = dpd;
 	this->virtual_ip = virtual_ip;
-	this->pool = pool ? strdup(pool) : NULL;
+	this->pool = strdupnull(pool);
 	this->local_auth = linked_list_create();
 	this->remote_auth = linked_list_create();
 	this->refcount = 1;
