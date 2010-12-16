@@ -247,7 +247,7 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	child_cfg_t *child_cfg;
 	enumerator_t *enumerator;
 	identification_t *lid, *rid;
-	char *child;
+	char *child, *policy;
 	uintptr_t strength;
 
 	ike_cfg = load_ike_config(this, settings, config);
@@ -275,6 +275,11 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	if (strength)
 	{
 		auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
+	}
+	policy = settings->get_str(settings, "configs.%s.cert_policy", NULL, config);
+	if (policy)
+	{
+		auth->add(auth, AUTH_RULE_CERT_POLICY, strdup(policy));
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, rid);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
