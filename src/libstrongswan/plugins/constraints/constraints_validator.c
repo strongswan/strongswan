@@ -255,52 +255,92 @@ static bool check_name_constraints(certificate_t *subject, x509_t *issuer)
 }
 
 /**
+ * Check if an issuer certificate has a given policy OID
+ */
+static bool has_policy(x509_t *issuer, chunk_t oid)
+{
+	chunk_t any_policy = chunk_from_chars(0x55,0x1d,0x20,0x00);
+	x509_policy_mapping_t *mapping;
+	x509_cert_policy_t *policy;
+	enumerator_t *enumerator;
+
+	enumerator = issuer->create_cert_policy_enumerator(issuer);
+	while (enumerator->enumerate(enumerator, &policy))
+	{
+		if (chunk_equals(oid, policy->oid) ||
+			chunk_equals(any_policy, policy->oid))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* fall back to a mapped policy */
+	enumerator = issuer->create_policy_mapping_enumerator(issuer);
+	while (enumerator->enumerate(enumerator, &mapping))
+	{
+		if (chunk_equals(mapping->subject, oid))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
+/**
  * Check certificatePolicies
  */
 static bool check_policy(x509_t *subject, x509_t *issuer, auth_cfg_t *auth)
 {
-	chunk_t any_policy = chunk_from_chars(0x55,0x1d,0x20,0x00);
-	certificate_t *cert = (certificate_t*)issuer;
-	enumerator_t *spols, *ipols;
-	x509_cert_policy_t *spol, *ipol;
-	bool found = TRUE;
+	certificate_t *cert = (certificate_t*)subject;
+	x509_policy_mapping_t *mapping;
+	x509_cert_policy_t *policy;
+	enumerator_t *enumerator;
 	char *oid;
 
-	spols = subject->create_cert_policy_enumerator(subject);
-	while (spols->enumerate(spols, &spol))
+	/* verify if policyMappings in subject are valid */
+	enumerator = subject->create_policy_mapping_enumerator(subject);
+	while (enumerator->enumerate(enumerator, &mapping))
 	{
-		found = FALSE;
-		ipols = issuer->create_cert_policy_enumerator(issuer);
-		while (ipols->enumerate(ipols, &ipol))
+		if (!has_policy(issuer, mapping->issuer))
 		{
-			if (chunk_equals(spol->oid, ipol->oid) ||
-				chunk_equals(ipol->oid, any_policy))
-			{
-				found = TRUE;
-				break;
-			}
-		}
-		ipols->destroy(ipols);
-		if (!found)
-		{
-			oid = asn1_oid_to_string(spol->oid);
-			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
-				 oid, cert->get_subject(cert));
+			oid = asn1_oid_to_string(mapping->issuer);
+			DBG1(DBG_CFG, "certificate '%Y' maps policy from %s, but issuer "
+				 "misses it", cert->get_subject(cert), oid);
 			free(oid);
-			break;
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = subject->create_cert_policy_enumerator(subject);
+	while (enumerator->enumerate(enumerator, &policy))
+	{
+		if (!has_policy(issuer, policy->oid))
+		{
+			oid = asn1_oid_to_string(policy->oid);
+			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
+				 oid, cert->get_issuer(cert));
+			free(oid);
+			enumerator->destroy(enumerator);
+			return FALSE;
 		}
 		if (auth)
 		{
-			oid = asn1_oid_to_string(spol->oid);
+			oid = asn1_oid_to_string(policy->oid);
 			if (oid)
 			{
 				auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
 			}
 		}
 	}
-	spols->destroy(spols);
+	enumerator->destroy(enumerator);
 
-	return found;
+	return TRUE;
 }
 
 METHOD(cert_validator_t, validate, bool,
