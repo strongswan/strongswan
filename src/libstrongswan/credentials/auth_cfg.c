@@ -136,6 +136,7 @@ static void destroy_entry_value(entry_t *entry)
 			cert->destroy(cert);
 			break;
 		}
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		{
@@ -186,6 +187,7 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
+			case AUTH_RULE_CERT_POLICY:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -254,6 +256,7 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -292,6 +295,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -531,6 +535,28 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				e2->destroy(e2);
 				break;
 			}
+			case AUTH_RULE_CERT_POLICY:
+			{
+				char *oid1, *oid2;
+
+				oid1 = (char*)value;
+				success = FALSE;
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &oid2))
+				{
+					if (t2 == t1 && streq(oid1, oid2))
+					{
+						success = TRUE;
+						break;
+					}
+				}
+				e2->destroy(e2);
+				if (!success && log_error)
+				{
+					DBG1(DBG_CFG, "constraint requires cert policy %s", oid1);
+				}
+				break;
+			}
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -608,6 +634,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 					add(this, type, id->clone(id));
 					break;
 				}
+				case AUTH_RULE_CERT_POLICY:
 				case AUTH_HELPER_IM_HASH_URL:
 				case AUTH_HELPER_SUBJECT_HASH_URL:
 				{
@@ -705,6 +732,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 						}
 						continue;
 					}
+					case AUTH_RULE_CERT_POLICY:
 					case AUTH_HELPER_IM_HASH_URL:
 					case AUTH_HELPER_SUBJECT_HASH_URL:
 					{
@@ -792,6 +820,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 				clone->add(clone, entry->type, cert->get_ref(cert));
 				break;
 			}
+			case AUTH_RULE_CERT_POLICY:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			{

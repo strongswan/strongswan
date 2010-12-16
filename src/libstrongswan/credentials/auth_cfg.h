@@ -94,6 +94,8 @@ enum auth_rule_t {
 	AUTH_RULE_RSA_STRENGTH,
 	/** required ECDSA public key strength, u_int in bits */
 	AUTH_RULE_ECDSA_STRENGTH,
+	/** certificatePolicy constraint, numerical OID as char* */
+	AUTH_RULE_CERT_POLICY,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,
