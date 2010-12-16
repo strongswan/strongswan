@@ -16,6 +16,7 @@
 #include "constraints_validator.h"
 
 #include <debug.h>
+#include <asn1/asn1.h>
 #include <credentials/certificates/x509.h>
 
 typedef struct private_constraints_validator_t private_constraints_validator_t;
@@ -253,6 +254,55 @@ static bool check_name_constraints(certificate_t *subject, x509_t *issuer)
 	return TRUE;
 }
 
+/**
+ * Check certificatePolicies
+ */
+static bool check_policy(x509_t *subject, x509_t *issuer, auth_cfg_t *auth)
+{
+	chunk_t any_policy = chunk_from_chars(0x55,0x1d,0x20,0x00);
+	certificate_t *cert = (certificate_t*)issuer;
+	enumerator_t *spols, *ipols;
+	x509_cert_policy_t *spol, *ipol;
+	bool found = TRUE;
+	char *oid;
+
+	spols = subject->create_cert_policy_enumerator(subject);
+	while (spols->enumerate(spols, &spol))
+	{
+		found = FALSE;
+		ipols = issuer->create_cert_policy_enumerator(issuer);
+		while (ipols->enumerate(ipols, &ipol))
+		{
+			if (chunk_equals(spol->oid, ipol->oid) ||
+				chunk_equals(ipol->oid, any_policy))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		ipols->destroy(ipols);
+		if (!found)
+		{
+			oid = asn1_oid_to_string(spol->oid);
+			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
+				 oid, cert->get_subject(cert));
+			free(oid);
+			break;
+		}
+		if (auth)
+		{
+			oid = asn1_oid_to_string(spol->oid);
+			if (oid)
+			{
+				auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
+			}
+		}
+	}
+	spols->destroy(spols);
+
+	return found;
+}
+
 METHOD(cert_validator_t, validate, bool,
 	private_constraints_validator_t *this, certificate_t *subject,
 	certificate_t *issuer, bool online, int pathlen, auth_cfg_t *auth)
@@ -265,6 +315,10 @@ METHOD(cert_validator_t, validate, bool,
 			return FALSE;
 		}
 		if (!check_name_constraints(subject, (x509_t*)issuer))
+		{
+			return FALSE;
+		}
+		if (!check_policy((x509_t*)subject, (x509_t*)issuer, auth))
 		{
 			return FALSE;
 		}
