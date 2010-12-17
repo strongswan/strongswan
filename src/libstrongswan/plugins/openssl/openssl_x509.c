@@ -137,7 +137,7 @@ struct private_openssl_x509_t {
 	linked_list_t *issuerAltNames;
 
 	/**
-	 * List of CRL URIs, as crl_uri_t
+	 * List of CRL URIs, as x509_cdp_t
 	 */
 	linked_list_t *crl_uris;
 
@@ -153,32 +153,11 @@ struct private_openssl_x509_t {
 };
 
 /**
- * CRL URIs with associated issuer
- */
-typedef struct {
-	identification_t *issuer;
-	linked_list_t *uris;
-} crl_uri_t;
-
-/**
- * Create a new issuer entry
- */
-static crl_uri_t *crl_uri_create()
-{
-	crl_uri_t *this;
-
-	INIT(this,
-		.uris = linked_list_create(),
-	);
-	return this;
-}
-
-/**
  * Destroy a CRL URI struct
  */
-static void crl_uri_destroy(crl_uri_t *this)
+static void crl_uri_destroy(x509_cdp_t *this)
 {
-	this->uris->destroy_function(this->uris, free);
+	free(this->uri);
 	DESTROY_IF(this->issuer);
 	free(this);
 }
@@ -289,36 +268,10 @@ METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
 	return this->subjectAltNames->create_enumerator(this->subjectAltNames);
 }
 
-/**
- * Convert enumerator value from entry to (uri, issuer)
- */
-static bool crl_enum_filter(identification_t *issuer_in,
-							char **uri_in, char **uri_out,
-							void *none_in, identification_t **issuer_out)
-{
-	*uri_out = *uri_in;
-	if (issuer_out)
-	{
-		*issuer_out = issuer_in;
-	}
-	return TRUE;
-}
-
-/**
- * Create inner enumerator over URIs
- */
-static enumerator_t *crl_enum_create(crl_uri_t *entry)
-{
-	return enumerator_create_filter(entry->uris->create_enumerator(entry->uris),
-								(void*)crl_enum_filter, entry->issuer, NULL);
-}
-
 METHOD(x509_t, create_crl_uri_enumerator, enumerator_t*,
 	private_openssl_x509_t *this)
 {
-	return enumerator_create_nested(
-							this->crl_uris->create_enumerator(this->crl_uris),
-							(void*)crl_enum_create, NULL, NULL);
+	return this->crl_uris->create_enumerator(this->crl_uris);
 }
 
 METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
@@ -660,9 +613,10 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 {
 	CRL_DIST_POINTS *cdps;
 	DIST_POINT *cdp;
-	identification_t *id;
+	identification_t *id, *issuer;
+	x509_cdp_t *entry;
 	char *uri;
-	int i, j, point_num, name_num;
+	int i, j, k, point_num, name_num, issuer_num;
 
 	cdps = X509V3_EXT_d2i(ext);
 	if (!cdps)
@@ -675,11 +629,6 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 		cdp = sk_DIST_POINT_value(cdps, i);
 		if (cdp)
 		{
-			crl_uri_t *entry;
-
-			entry = crl_uri_create();
-			this->crl_uris->insert_last(this->crl_uris, entry);
-
 			if (cdp->distpoint && cdp->distpoint->type == 0 &&
 				cdp->distpoint->name.fullname)
 			{
@@ -692,25 +641,38 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 					{
 						if (asprintf(&uri, "%Y", id) > 0)
 						{
-							entry->uris->insert_last(entry->uris, uri);
+							if (cdp->CRLissuer)
+							{
+								issuer_num = sk_GENERAL_NAME_num(cdp->CRLissuer);
+								for (k = 0; k < issuer_num; k++)
+								{
+									issuer = general_name2id(
+										sk_GENERAL_NAME_value(cdp->CRLissuer, k));
+									if (issuer)
+									{
+										INIT(entry,
+											.uri = strdup(uri),
+											.issuer = issuer,
+										);
+										this->crl_uris->insert_last(
+														this->crl_uris, entry);
+									}
+								}
+								free(uri);
+							}
+							else
+							{
+								INIT(entry,
+									.uri = uri,
+								);
+								this->crl_uris->insert_last(this->crl_uris, entry);
+							}
 						}
 						id->destroy(id);
 					}
 				}
 			}
-			if (cdp->CRLissuer)
-			{
-				name_num = sk_GENERAL_NAME_num(cdp->CRLissuer);
-				for (j = 0; j < name_num; j++)
-				{
-					id = general_name2id(sk_GENERAL_NAME_value(cdp->CRLissuer, j));
-					if (id)
-					{	/* get only one */
-						entry->issuer = id;
-						break;
-					}
-				}
-			}
+
 			DIST_POINT_free(cdp);
 		}
 	}

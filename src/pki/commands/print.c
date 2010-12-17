@@ -75,6 +75,7 @@ static void print_x509(x509_t *x509)
 	char *uri;
 	int len;
 	x509_flag_t flags;
+	x509_cdp_t *cdp;
 	x509_cert_policy_t *policy;
 	x509_policy_mapping_t *mapping;
 
@@ -140,20 +141,20 @@ static void print_x509(x509_t *x509)
 
 	first = TRUE;
 	enumerator = x509->create_crl_uri_enumerator(x509);
-	while (enumerator->enumerate(enumerator, &uri, &id))
+	while (enumerator->enumerate(enumerator, &cdp))
 	{
 		if (first)
 		{
-			printf("CRL URIs:  %s", uri);
+			printf("CRL URIs:  %s", cdp->uri);
 			first = FALSE;
 		}
 		else
 		{
-			printf("           %s", uri);
+			printf("           %s", cdp->uri);
 		}
-		if (id)
+		if (cdp->issuer)
 		{
-			printf(" (CRL issuer: %Y)", id);
+			printf(" (CRL issuer: %Y)", cdp->issuer);
 		}
 		printf("\n");
 	}

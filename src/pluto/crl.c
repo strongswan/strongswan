@@ -352,7 +352,7 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 	x509crl_t *x509crl;
 	ca_info_t *ca;
 	enumerator_t *enumerator;
-	char *point;
+	x509_cdp_t *cdp;
 
 	ca = get_ca_info(issuer, authKeyID);
 
@@ -376,9 +376,9 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point, NULL))
+		while (enumerator->enumerate(enumerator, &cdp))
 		{
-			add_distribution_point(crluris, point);
+			add_distribution_point(crluris, cdp->uri);
 		}
 		enumerator->destroy(enumerator);
 
@@ -416,9 +416,9 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point, NULL))
+		while (enumerator->enumerate(enumerator, &cdp))
 		{
-			add_distribution_point(x509crl->distributionPoints, point);
+			add_distribution_point(x509crl->distributionPoints, cdp->uri);
 		}
 		enumerator->destroy(enumerator);
 

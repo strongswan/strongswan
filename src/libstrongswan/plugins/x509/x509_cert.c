@@ -117,7 +117,7 @@ struct private_x509_cert_t {
 	linked_list_t *subjectAltNames;
 
 	/**
-	 * List of crlDistributionPoints as crl_uri_t
+	 * List of crlDistributionPoints as x509_cdp_t*
 	 */
 	linked_list_t *crl_uris;
 
@@ -217,33 +217,11 @@ static const chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
 );
 
 /**
- * CRL URIs with associated issuer
+ * Destroy a CertificateDistributionPoint
  */
-typedef struct {
-	identification_t *issuer;
-	linked_list_t *uris;
-} crl_uri_t;
-
-/**
- * Create a new issuer entry
- */
-static crl_uri_t *crl_uri_create(identification_t *issuer)
+static void crl_uri_destroy(x509_cdp_t *this)
 {
-	crl_uri_t *this;
-
-	INIT(this,
-		.issuer = issuer ? issuer->clone(issuer) : NULL,
-		.uris = linked_list_create(),
-	);
-	return this;
-}
-
-/**
- * Destroy a CRL URI struct
- */
-static void crl_uri_destroy(crl_uri_t *this)
-{
-	this->uris->destroy_function(this->uris, free);
+	free(this->uri);
 	DESTROY_IF(this->issuer);
 	free(this);
 }
@@ -796,19 +774,63 @@ static const asn1Object_t crlDistributionPointsObjects[] = {
 #define CRL_DIST_POINTS_ISSUER		10
 
 /**
+ * Add entry to the list of each pairing of URI and Issuer
+ */
+static void add_cdps(linked_list_t *list, linked_list_t *uris,
+					 linked_list_t *issuers)
+{
+	identification_t *issuer, *id;
+	enumerator_t *enumerator;
+	x509_cdp_t *cdp;
+	char *uri;
+
+	while (uris->remove_last(uris, (void**)&id) == SUCCESS)
+	{
+		if (asprintf(&uri, "%Y", id) > 0)
+		{
+			if (issuers->get_count(issuers))
+			{
+				enumerator = issuers->create_enumerator(issuers);
+				while (enumerator->enumerate(enumerator, &issuer))
+				{
+					INIT(cdp,
+						.uri = strdup(uri),
+						.issuer = issuer->clone(issuer),
+					);
+					list->insert_last(list, cdp);
+				}
+				enumerator->destroy(enumerator);
+				free(uri);
+			}
+			else
+			{
+				INIT(cdp,
+					.uri = uri,
+				);
+				list->insert_last(list, cdp);
+			}
+		}
+		id->destroy(id);
+	}
+	while (issuers->remove_last(issuers, (void**)&id) == SUCCESS)
+	{
+		id->destroy(id);
+	}
+}
+
+/**
  * Extracts one or several crlDistributionPoints into a list
  */
-static void parse_crlDistributionPoints(chunk_t blob, int level0,
-										private_x509_cert_t *this)
+void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
+									  linked_list_t *list)
 {
+	linked_list_t *uris, *issuers;
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	crl_uri_t *entry = NULL;
-	identification_t *id;
-	char *uri;
-	linked_list_t *list = linked_list_create();
 
+	uris = linked_list_create();
+	issuers = linked_list_create();
 	parser = asn1_parser_create(crlDistributionPointsObjects, blob);
 	parser->set_top_level(parser, level0);
 
@@ -817,46 +839,26 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 		switch (objectID)
 		{
 			case CRL_DIST_POINTS:
-				entry = crl_uri_create(NULL);
-				this->crl_uris->insert_last(this->crl_uris, entry);
+				add_cdps(list, uris, issuers);
 				break;
 			case CRL_DIST_POINTS_FULLNAME:
-				if (entry)
-				{
-					x509_parse_generalNames(object, parser->get_level(parser)+1,
-											TRUE, list);
-					while (list->remove_last(list, (void**)&id) == SUCCESS)
-					{
-						if (asprintf(&uri, "%Y", id) > 0)
-						{
-							entry->uris->insert_last(entry->uris, uri);
-						}
-						id->destroy(id);
-					}
-				}
+				x509_parse_generalNames(object, parser->get_level(parser) + 1,
+										TRUE, uris);
 				break;
 			case CRL_DIST_POINTS_ISSUER:
-				if (entry)
-				{
-					x509_parse_generalNames(object, parser->get_level(parser)+1,
-											TRUE, list);
-					while (list->remove_last(list, (void**)&id) == SUCCESS)
-					{
-						if (!entry->issuer)
-						{
-							entry->issuer = id;
-						}
-						else
-						{
-							id->destroy(id);
-						}
-					}
-				}
+				x509_parse_generalNames(object, parser->get_level(parser) + 1,
+										TRUE, issuers);
+				break;
+			default:
 				break;
 		}
 	}
 	parser->destroy(parser);
-	list->destroy(list);
+
+	add_cdps(list, uris, issuers);
+
+	uris->destroy(uris);
+	issuers->destroy(issuers);
 }
 
 /**
@@ -1391,7 +1393,8 @@ static bool parse_certificate(private_x509_cert_t *this)
 						parse_basicConstraints(object, level, this);
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
-						parse_crlDistributionPoints(object, level, this);
+						x509_parse_crlDistributionPoints(object, level,
+														 this->crl_uris);
 						break;
 					case OID_AUTHORITY_KEY_ID:
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
@@ -1741,36 +1744,10 @@ METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
 }
 
-/**
- * Convert enumerator value from entry to (uri, issuer)
- */
-static bool crl_enum_filter(identification_t *issuer_in,
-							char **uri_in, char **uri_out,
-							void *none_in, identification_t **issuer_out)
-{
-	*uri_out = *uri_in;
-	if (issuer_out)
-	{
-		*issuer_out = issuer_in;
-	}
-	return TRUE;
-}
-
-/**
- * Create inner enumerator over URIs
- */
-static enumerator_t *crl_enum_create(crl_uri_t *entry)
-{
-	return enumerator_create_filter(entry->uris->create_enumerator(entry->uris),
-								(void*)crl_enum_filter, entry->issuer, NULL);
-}
-
 METHOD(x509_t, create_crl_uri_enumerator, enumerator_t*,
 	private_x509_cert_t *this)
 {
-	return enumerator_create_nested(
-							this->crl_uris->create_enumerator(this->crl_uris),
-							(void*)crl_enum_create, NULL, NULL);
+	return this->crl_uris->create_enumerator(this->crl_uris);
 }
 
 METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
@@ -1968,11 +1945,11 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty;
 	identification_t *issuer, *subject;
-	crl_uri_t *entry;
+	x509_cdp_t *cdp;
 	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
-	enumerator_t *enumerator, *uris;
+	enumerator_t *enumerator;
 	char *uri;
 
 	subject = cert->subject;
@@ -2023,28 +2000,21 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 
 	/* encode CRL distribution points extension */
 	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
-	while (enumerator->enumerate(enumerator, &entry))
+	while (enumerator->enumerate(enumerator, &cdp))
 	{
-		chunk_t distributionPoint, gn;
-		chunk_t crlIssuer = chunk_empty, gns = chunk_empty;
+		chunk_t distributionPoint, crlIssuer = chunk_empty;
 
-		if (entry->issuer)
+		if (cdp->issuer)
 		{
 			crlIssuer = asn1_wrap(ASN1_CONTEXT_C_2, "m",
-							build_generalName(entry->issuer));
+							build_generalName(cdp->issuer));
 		}
-		uris = entry->uris->create_enumerator(entry->uris);
-		while (uris->enumerate(uris, &uri))
-		{
-			gn = asn1_wrap(ASN1_CONTEXT_S_6, "c", chunk_create(uri, strlen(uri)));
-			gns = chunk_cat("mm", gns, gn);
-		}
-		uris->destroy(uris);
-
 		distributionPoint = asn1_wrap(ASN1_SEQUENCE, "mm",
-								asn1_wrap(ASN1_CONTEXT_C_0, "m",
-									asn1_wrap(ASN1_CONTEXT_C_0, "m", gns)),
-								crlIssuer);
+					asn1_wrap(ASN1_CONTEXT_C_0, "m",
+						asn1_wrap(ASN1_CONTEXT_C_0, "m",
+							asn1_wrap(ASN1_CONTEXT_S_6, "c",
+								chunk_create(cdp->uri, strlen(cdp->uri))))),
+					crlIssuer);
 		crlDistributionPoints = chunk_cat("mm", crlDistributionPoints,
 										  distributionPoint);
 	}
@@ -2385,7 +2355,6 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 	private_x509_cert_t *cert;
 	certificate_t *sign_cert = NULL;
 	private_key_t *sign_key = NULL;
-	identification_t *crl_issuer = NULL;
 	hash_algorithm_t digest_alg = HASH_SHA1;
 
 	cert = create_empty();
@@ -2430,26 +2399,19 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 			{
 				enumerator_t *enumerator;
 				linked_list_t *list;
-				crl_uri_t *entry;
-				char *uri;
+				x509_cdp_t *in, *cdp;
 
 				list = va_arg(args, linked_list_t*);
-				if (list->get_count(list))
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
 				{
-					entry = crl_uri_create(crl_issuer);
-					enumerator = list->create_enumerator(list);
-					while (enumerator->enumerate(enumerator, &uri))
-					{
-						entry->uris->insert_last(entry->uris, strdup(uri));
-					}
-					enumerator->destroy(enumerator);
-					cert->crl_uris->insert_last(cert->crl_uris, entry);
+					INIT(cdp,
+						.uri = strdup(in->uri),
+						.issuer = in->issuer ? in->issuer->clone(in->issuer) : NULL,
+					);
+					cert->crl_uris->insert_last(cert->crl_uris, cdp);
 				}
-				continue;
-			}
-			case BUILD_CRL_ISSUER:
-			{
-				crl_issuer = va_arg(args, identification_t*);
+				enumerator->destroy(enumerator);
 				continue;
 			}
 			case BUILD_OCSP_ACCESS_LOCATIONS:

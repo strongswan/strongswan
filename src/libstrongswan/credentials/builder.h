@@ -87,10 +87,8 @@ enum builder_part_t {
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */
 	BUILD_CERT,
-	/** CRL distribution point URIs, linked_list_t* containing char* */
+	/** CRL distribution point URIs, x509_cdp_t* */
 	BUILD_CRL_DISTRIBUTION_POINTS,
-	/** CRL issuer for all distribution points follow up, identification_t* */
-	BUILD_CRL_ISSUER,
 	/** OCSP AuthorityInfoAccess locations, linked_list_t* containing char* */
 	BUILD_OCSP_ACCESS_LOCATIONS,
 	/** certificate path length constraint */

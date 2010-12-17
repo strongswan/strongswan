@@ -44,6 +44,15 @@ static void destroy_policy_mapping(x509_policy_mapping_t *mapping)
 }
 
 /**
+ * Free a CRL DistributionPoint
+ */
+static void destroy_cdp(x509_cdp_t *this)
+{
+	DESTROY_IF(this->issuer);
+	free(this);
+}
+
+/**
  * Issue a certificate using a CA certificate and key
  */
 static int issue()
@@ -56,7 +65,7 @@ static int issue()
 	bool pkcs10 = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
-	identification_t *id = NULL, *crl_issuer = NULL;;
+	identification_t *id = NULL;
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT;
@@ -66,6 +75,7 @@ static int issue()
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
 	x509_t *x509;
+	x509_cdp_t *cdp = NULL;
 	x509_cert_policy_t *policy = NULL;
 	char *arg;
 
@@ -233,10 +243,18 @@ static int issue()
 				}
 				continue;
 			case 'u':
-				cdps->insert_last(cdps, arg);
+				INIT(cdp,
+					.uri = strdup(arg),
+				);
+				cdps->insert_last(cdps, cdp);
 				continue;
 			case 'I':
-				crl_issuer = identification_create_from_string(arg);
+				if (!cdp || cdp->issuer)
+				{
+					error = "--crlissuer must follow a --crl";
+					goto usage;
+				}
+				cdp->issuer = identification_create_from_string(arg);
 				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
@@ -420,7 +438,6 @@ static int issue()
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
 					BUILD_PATHLEN, pathlen,
-					BUILD_CRL_ISSUER, crl_issuer,
 					BUILD_CRL_DISTRIBUTION_POINTS, cdps,
 					BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
 					BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
@@ -458,9 +475,8 @@ end:
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
-	cdps->destroy(cdps);
+	cdps->destroy_function(cdps, (void*)destroy_cdp);
 	ocsp->destroy(ocsp);
-	DESTROY_IF(crl_issuer);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -477,9 +493,8 @@ usage:
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
-	cdps->destroy(cdps);
+	cdps->destroy_function(cdps, (void*)destroy_cdp);
 	ocsp->destroy(ocsp);
-	DESTROY_IF(crl_issuer);
 	return command_usage(error);
 }
 
@@ -493,7 +508,7 @@ static void __attribute__ ((constructor))reg()
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10] --cakey file | --cakeyid hex",
 		 " --cacert file --dn subject-dn [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
+		 "[--lifetime days] [--serial hex] [--crl uri [--crlissuer i] ]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",

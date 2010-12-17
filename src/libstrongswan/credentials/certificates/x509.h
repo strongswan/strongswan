@@ -29,6 +29,7 @@
 typedef struct x509_t x509_t;
 typedef struct x509_cert_policy_t x509_cert_policy_t;
 typedef struct x509_policy_mapping_t x509_policy_mapping_t;
+typedef struct x509_cdp_t x509_cdp_t;
 typedef enum x509_flag_t x509_flag_t;
 
 /**
@@ -75,6 +76,16 @@ struct x509_policy_mapping_t {
 	chunk_t issuer;
 	/** OID of subjectDomainPolicy */
 	chunk_t subject;
+};
+
+/**
+ * X.509 CRL distributionPoint
+ */
+struct x509_cdp_t {
+	/** CDP URI, as string */
+	char *uri;
+	/** CRL issuer */
+	identification_t *issuer;
 };
 
 /**
@@ -143,7 +154,7 @@ struct x509_t {
 	/**
 	 * Create an enumerator over all CRL URIs and CRL Issuers.
 	 *
-	 * @return			enumerator over URIs (char*, identificiation_t*)
+	 * @return			enumerator over x509_cdp_t
 	 */
 	enumerator_t* (*create_crl_uri_enumerator)(x509_t *this);
 

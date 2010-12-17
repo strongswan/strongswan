@@ -486,13 +486,13 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 								   auth_cfg_t *auth)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	identification_t *id;
 	certificate_t *best = NULL;
+	identification_t *id;
+	x509_cdp_t *cdp;
 	bool uri_found = FALSE;
 	certificate_t *current;
 	enumerator_t *enumerator;
 	chunk_t chunk;
-	char *uri;
 
 	/* use issuers subjectKeyIdentifier to find a cached CRL / fetch from CDP */
 	chunk = issuer->get_subjectKeyIdentifier(issuer);
@@ -506,11 +506,11 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	/* find a cached CRL or fetch via configured CDP via CRLIssuer */
 	enumerator = subject->create_crl_uri_enumerator(subject);
 	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
-		   enumerator->enumerate(enumerator, &uri, &id))
+		   enumerator->enumerate(enumerator, &cdp))
 	{
 		if (id)
 		{
-			valid = find_crl(subject, id, auth, &best, &uri_found);
+			valid = find_crl(subject, cdp->issuer, auth, &best, &uri_found);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -519,17 +519,17 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
 		enumerator = subject->create_crl_uri_enumerator(subject);
-		while (enumerator->enumerate(enumerator, &uri, &id))
+		while (enumerator->enumerate(enumerator, &cdp))
 		{
 			uri_found = TRUE;
-			current = fetch_crl(uri);
+			current = fetch_crl(cdp->uri);
 			if (current)
 			{
-				if (id && !current->has_issuer(current, id))
+				if (cdp->issuer && !current->has_issuer(current, cdp->issuer))
 				{
 					DBG1(DBG_CFG, "issuer of fetched CRL '%Y' does not match "
 						 "certificates CRL issuer '%Y'",
-						 current->get_issuer(current), id);
+						 current->get_issuer(current), cdp->issuer);
 					current->destroy(current);
 					continue;
 				}
