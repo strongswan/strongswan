@@ -258,35 +258,41 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 			case CRL_OBJ_EXTN_VALUE:
-				{
-					int extn_oid = asn1_known_oid(extnID);
+			{
+				int extn_oid = asn1_known_oid(extnID);
 
-					if (revoked && extn_oid == OID_CRL_REASON_CODE)
-					{
-						if (*object.ptr == ASN1_ENUMERATED &&
-							asn1_length(&object) == 1)
+				switch (extn_oid)
+				{
+					case OID_CRL_REASON_CODE:
+						if (revoked)
 						{
-							revoked->reason = *object.ptr;
+							if (object.len && *object.ptr == ASN1_ENUMERATED &&
+								asn1_length(&object) == 1)
+							{
+								revoked->reason = *object.ptr;
+							}
+							DBG2(DBG_LIB, "  '%N'", crl_reason_names,
+								 revoked->reason);
 						}
-						DBG2(DBG_LIB, "  '%N'", crl_reason_names,
-							 revoked->reason);
-					}
-					else if (extn_oid == OID_AUTHORITY_KEY_ID)
-					{
-						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
-														level, &this->authKeySerialNumber);
-					}
-					else if (extn_oid == OID_CRL_NUMBER)
-					{
+						break;
+					case OID_AUTHORITY_KEY_ID:
+						this->authKeyIdentifier =
+							x509_parse_authorityKeyIdentifier(
+									object, level, &this->authKeySerialNumber);
+						break;
+					case OID_CRL_NUMBER:
 						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
 													  level, "crlNumber"))
 						{
 							goto end;
 						}
 						this->crlNumber = object;
-					}
+						break;
+					default:
+						break;
 				}
 				break;
+			}
 			case CRL_OBJ_ALGORITHM:
 			{
 				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
