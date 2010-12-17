@@ -458,7 +458,12 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					ok = parse_crlNumber_ext(this, ext);
 					break;
 				default:
-					ok = TRUE;
+					ok = X509_EXTENSION_get_critical(ext) != 0;
+					if (!ok)
+					{
+						DBG1(DBG_LIB, "found unsupported critical X.509 "
+							 "CRL extension");
+					}
 					break;
 			}
 			if (!ok)
