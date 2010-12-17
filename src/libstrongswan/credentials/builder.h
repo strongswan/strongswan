@@ -109,6 +109,8 @@ enum builder_part_t {
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
 	BUILD_REVOKED_ENUMERATOR,
+	/** Base CRL serial for a delta CRL, chunk_t, */
+	BUILD_BASE_CRL,
 	/** PKCS#10 challenge password */
 	BUILD_CHALLENGE_PWD,
 	/** friendly name of a PKCS#11 module, null terminated char* */

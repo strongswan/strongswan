@@ -382,6 +382,8 @@ static private_openssl_crl_t *create_empty()
 				},
 				.get_serial = _get_serial,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.is_delta_crl = (void*)return_false,
+				.create_delta_crl_uri_enumerator = (void*)enumerator_create_empty,
 				.create_enumerator = _create_enumerator,
 			},
 		},

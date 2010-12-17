@@ -72,6 +72,21 @@ struct crl_t {
 	chunk_t (*get_authKeyIdentifier)(crl_t *this);
 
 	/**
+	 * Is this CRL a delta CRL?
+	 *
+	 * @param base_crl	gets to baseCrlNumber, if this is a delta CRL
+	 * @return			TRUE if delta CRL
+	 */
+	bool (*is_delta_crl)(crl_t *this, chunk_t *base_crl);
+
+	/**
+	 * Create an enumerator over Freshest CRL distribution points and issuers.
+	 *
+	 * @return			enumerator over x509_cdp_t
+	 */
+	enumerator_t* (*create_delta_crl_uri_enumerator)(crl_t *this);
+
+	/**
 	 * Create an enumerator over all revoked certificates.
 	 *
 	 * The enumerator takes 3 pointer arguments:

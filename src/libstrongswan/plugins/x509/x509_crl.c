@@ -100,6 +100,11 @@ struct private_x509_crl_t {
 	linked_list_t *revoked;
 
 	/**
+	 * List of Freshest CRL distribution points
+	 */
+	linked_list_t *crl_uris;
+
+	/**
 	 * Authority Key Identifier
 	 */
 	chunk_t authKeyIdentifier;
@@ -108,6 +113,11 @@ struct private_x509_crl_t {
 	 * Authority Key Serial Number
 	 */
 	chunk_t authKeySerialNumber;
+
+	/**
+	 * Number of BaseCRL, if a delta CRL
+	 */
+	chunk_t baseCrlNumber;
 
 	/**
 	 * Signature algorithm
@@ -133,9 +143,19 @@ struct private_x509_crl_t {
 /**
  * from x509_cert
  */
-extern chunk_t x509_parse_authorityKeyIdentifier(
-								chunk_t blob, int level0,
-								chunk_t *authKeySerialNumber);
+extern chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
+												 chunk_t *authKeySerialNumber);
+
+/**
+ * from x509_cert
+ */
+extern void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
+											 linked_list_t *list);
+
+/**
+ * from x509_cert
+ */
+extern chunk_t x509_build_crlDistributionPoints(linked_list_t *list, int extn);
 
 /**
   * ASN.1 definition of an X.509 certificate revocation list
@@ -288,6 +308,18 @@ static bool parse(private_x509_crl_t *this)
 						}
 						this->crlNumber = object;
 						break;
+					case OID_FRESHEST_CRL:
+						x509_parse_crlDistributionPoints(object, level,
+														 this->crl_uris);
+						break;
+					case OID_DELTA_CRL_INDICATOR:
+						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
+													level, "deltaCrlIndicator"))
+						{
+							goto end;
+						}
+						this->baseCrlNumber = object;
+						break;
 					default:
 						if (critical && lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.x509.enforce_critical", FALSE))
@@ -356,6 +388,26 @@ METHOD(crl_t, get_authKeyIdentifier, chunk_t,
 	private_x509_crl_t *this)
 {
 	return this->authKeyIdentifier;
+}
+
+METHOD(crl_t, is_delta_crl, bool,
+	private_x509_crl_t *this, chunk_t *base_crl)
+{
+	if (this->baseCrlNumber.len)
+	{
+		if (base_crl)
+		{
+			*base_crl = this->baseCrlNumber;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(crl_t, create_delta_crl_uri_enumerator, enumerator_t*,
+	private_x509_crl_t *this)
+{
+	return this->crl_uris->create_enumerator(this->crl_uris);
 }
 
 METHOD(crl_t, create_enumerator, enumerator_t*,
@@ -515,18 +567,30 @@ static void revoked_destroy(revoked_t *revoked)
 	free(revoked);
 }
 
+/**
+ * Destroy a CDP entry
+ */
+static void cdp_destroy(x509_cdp_t *this)
+{
+	free(this->uri);
+	DESTROY_IF(this->issuer);
+	free(this);
+}
+
 METHOD(certificate_t, destroy, void,
 	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
 		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
+		this->crl_uris->destroy_function(this->crl_uris, (void*)cdp_destroy);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
 		if (this->generated)
 		{
 			free(this->crlNumber.ptr);
+			free(this->baseCrlNumber.ptr);
 			free(this->signature.ptr);
 			free(this->tbsCertList.ptr);
 		}
@@ -560,10 +624,13 @@ static private_x509_crl_t* create_empty(void)
 				},
 				.get_serial = _get_serial,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.is_delta_crl = _is_delta_crl,
+				.create_delta_crl_uri_enumerator = _create_delta_crl_uri_enumerator,
 				.create_enumerator = _create_enumerator,
 			},
 		},
 		.revoked = linked_list_create(),
+		.crl_uris = linked_list_create(),
 		.ref = 1,
 	);
 	return this;
@@ -632,6 +699,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 					 private_key_t *key, hash_algorithm_t digest_alg)
 {
 	chunk_t extensions = chunk_empty, certList = chunk_empty, serial;
+	chunk_t crlDistributionPoints = chunk_empty, baseCrlNumber = chunk_empty;
 	enumerator_t *enumerator;
 	crl_reason_t reason;
 	time_t date;
@@ -674,8 +742,21 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 	}
 	enumerator->destroy(enumerator);
 
+	crlDistributionPoints = x509_build_crlDistributionPoints(this->crl_uris,
+															 OID_FRESHEST_CRL);
+
+	if (this->baseCrlNumber.len)
+	{
+		baseCrlNumber =  asn1_wrap(ASN1_SEQUENCE, "mmm",
+							asn1_build_known_oid(OID_DELTA_CRL_INDICATOR),
+							asn1_wrap(ASN1_BOOLEAN, "c",
+								chunk_from_chars(0xFF)),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_integer("c", this->baseCrlNumber)));
+	}
+
 	extensions = asn1_wrap(ASN1_CONTEXT_C_0, "m",
-					asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_wrap(ASN1_SEQUENCE, "mmmm",
 						asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
 							asn1_wrap(ASN1_OCTET_STRING, "m",
@@ -685,9 +766,8 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 						asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_CRL_NUMBER),
 							asn1_wrap(ASN1_OCTET_STRING, "m",
-								asn1_integer("c", this->crlNumber))
-							)
-						));
+								asn1_integer("c", this->crlNumber))),
+						crlDistributionPoints, baseCrlNumber));
 
 	this->tbsCertList = asn1_wrap(ASN1_SEQUENCE, "cmcmmmm",
 							ASN1_INTEGER_1,
@@ -750,6 +830,29 @@ x509_crl_t *x509_crl_gen(certificate_type_t type, va_list args)
 			case BUILD_REVOKED_ENUMERATOR:
 				read_revoked(crl, va_arg(args, enumerator_t*));
 				continue;
+			case BUILD_BASE_CRL:
+				crl->baseCrlNumber = va_arg(args, chunk_t);
+				crl->baseCrlNumber = chunk_clone(crl->baseCrlNumber);
+				break;
+			case BUILD_CRL_DISTRIBUTION_POINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				x509_cdp_t *in, *cdp;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(cdp,
+						.uri = strdup(in->uri),
+						.issuer = in->issuer ? in->issuer->clone(in->issuer) : NULL,
+					);
+					crl->crl_uris->insert_last(crl->crl_uris, cdp);
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
 			case BUILD_END:
 				break;
 			default:
