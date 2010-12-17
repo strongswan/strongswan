@@ -318,13 +318,40 @@ static void print_crl(crl_t *crl)
 	crl_reason_t reason;
 	chunk_t chunk;
 	int count = 0;
+	bool first;
 	char buf[64];
 	struct tm tm;
+	x509_cdp_t *cdp;
 
 	chunk = crl->get_serial(crl);
 	printf("serial:    %#B\n", &chunk);
+	if (crl->is_delta_crl(crl, &chunk))
+	{
+		printf("delta CRL: for serial %#B\n", &chunk);
+	}
 	chunk = crl->get_authKeyIdentifier(crl);
 	printf("authKeyId: %#B\n", &chunk);
+
+	first = TRUE;
+	enumerator = crl->create_delta_crl_uri_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &cdp))
+	{
+		if (first)
+		{
+			printf("freshest:  %s", cdp->uri);
+			first = FALSE;
+		}
+		else
+		{
+			printf("           %s", cdp->uri);
+		}
+		if (cdp->issuer)
+		{
+			printf(" (CRL issuer: %Y)", cdp->issuer);
+		}
+		printf("\n");
+	}
+	enumerator->destroy(enumerator);
 
 	enumerator = crl->create_enumerator(crl);
 	while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))

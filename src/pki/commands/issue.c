@@ -244,7 +244,7 @@ static int issue()
 				continue;
 			case 'u':
 				INIT(cdp,
-					.uri = strdup(arg),
+					.uri = arg,
 				);
 				cdps->insert_last(cdps, cdp);
 				continue;
