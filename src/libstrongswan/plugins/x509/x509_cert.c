@@ -1930,6 +1930,47 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 }
 
 /**
+ * Encode CRL distribution points extension from a x509_cdp_t list
+ */
+chunk_t x509_build_crlDistributionPoints(linked_list_t *list, int extn)
+{
+	chunk_t crlDistributionPoints = chunk_empty;
+	enumerator_t *enumerator;
+	x509_cdp_t *cdp;
+
+	if (list->get_count(list) == 0)
+	{
+		return chunk_empty;
+	}
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &cdp))
+	{
+		chunk_t distributionPoint, crlIssuer = chunk_empty;
+
+		if (cdp->issuer)
+		{
+			crlIssuer = asn1_wrap(ASN1_CONTEXT_C_2, "m",
+							build_generalName(cdp->issuer));
+		}
+		distributionPoint = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_wrap(ASN1_CONTEXT_C_0, "m",
+						asn1_wrap(ASN1_CONTEXT_C_0, "m",
+							asn1_wrap(ASN1_CONTEXT_S_6, "c",
+								chunk_create(cdp->uri, strlen(cdp->uri))))),
+					crlIssuer);
+		crlDistributionPoints = chunk_cat("mm", crlDistributionPoints,
+										  distributionPoint);
+	}
+	enumerator->destroy(enumerator);
+
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(extn),
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
+}
+
+/**
  * Generate and sign a new certificate
  */
 static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
@@ -1945,7 +1986,6 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty;
 	identification_t *issuer, *subject;
-	x509_cdp_t *cdp;
 	chunk_t key_info;
 	signature_scheme_t scheme;
 	hasher_t *hasher;
@@ -1998,34 +2038,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* encode subjectAltNames */
 	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
 
-	/* encode CRL distribution points extension */
-	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
-	while (enumerator->enumerate(enumerator, &cdp))
-	{
-		chunk_t distributionPoint, crlIssuer = chunk_empty;
-
-		if (cdp->issuer)
-		{
-			crlIssuer = asn1_wrap(ASN1_CONTEXT_C_2, "m",
-							build_generalName(cdp->issuer));
-		}
-		distributionPoint = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_wrap(ASN1_CONTEXT_C_0, "m",
-						asn1_wrap(ASN1_CONTEXT_C_0, "m",
-							asn1_wrap(ASN1_CONTEXT_S_6, "c",
-								chunk_create(cdp->uri, strlen(cdp->uri))))),
-					crlIssuer);
-		crlDistributionPoints = chunk_cat("mm", crlDistributionPoints,
-										  distributionPoint);
-	}
-	enumerator->destroy(enumerator);
-	if (crlDistributionPoints.ptr)
-	{
-		crlDistributionPoints = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_build_known_oid(OID_CRL_DISTRIBUTION_POINTS),
-						asn1_wrap(ASN1_OCTET_STRING, "m",
-							asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
-	}
+	crlDistributionPoints = x509_build_crlDistributionPoints(cert->crl_uris,
+												OID_CRL_DISTRIBUTION_POINTS);
 
 	/* encode OCSP URIs in authorityInfoAccess extension */
 	enumerator = cert->ocsp_uris->create_enumerator(cert->ocsp_uris);
