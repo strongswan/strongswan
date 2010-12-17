@@ -60,13 +60,6 @@ An example file in this format might look like this:
 .PP
 Indentation is optional, you may use tabs or spaces.
 
-.SH READING VALUES
-Values are accessed using a dot-separated section list and a key.
-With reference to the example above, accessing
-.B section-one.subsection.othervalue
-will return
-.BR xxx .
-
 .SH INCLUDING FILES
 Using the
 .B include
@@ -87,7 +80,7 @@ Sections loaded from included files
 previously loaded sections; already existing values are
 .IR replaced .
 It is important to note that settings are added relative to the section the
-include statment is in.
+include statement is in.
 .PP
 As an example, the following three files result in the same final
 config as the one given above:
@@ -121,6 +114,13 @@ other.conf:
 		x = 12
 	}
 .EE
+
+.SH READING VALUES
+Values are accessed using a dot-separated section list and a key.
+With reference to the example above, accessing
+.B section-one.subsection.othervalue
+will return
+.BR xxx .
 
 .SH DEFINED KEYS
 The following keys are currently defined (using dot notation). The default
