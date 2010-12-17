@@ -17,6 +17,18 @@ strongswan-4.5.1
   tables make it possible to store CRL and OCSP Certificate Distribution
   points in an SQL database.
 
+- The new 'include' statement allows to recursively include other files in
+  strongswan.conf.  Existing sections and values are thereby extended and
+  replaced, respectively.
+
+- Due to the changes in the parser for strongswan.conf, the configuration
+  syntax for the attr plugin has changed.  Previously, it was possible to
+  specify multiple values of a specific attribute type by adding multiple
+  key/value pairs with the same key (e.g. dns) to the plugins.attr section.
+  Because values with the same key now replace previously defined values
+  this is not possible anymore.  As an alternative, multiple values can be
+  specified by separating them with a comma (e.g. dns = 1.2.3.4, 2.3.4.5).
+
 
 strongswan-4.5.0
 ----------------
