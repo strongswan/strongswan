@@ -28,6 +28,8 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 
+static const char *plugin_name = "load_tester";
+
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;
 
 /**
@@ -189,7 +191,7 @@ plugin_t *load_tester_plugin_create()
 	this = malloc_thing(private_load_tester_plugin_t);
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
-	lib->crypto->add_dh(lib->crypto, MODP_NULL,
+	lib->crypto->add_dh(lib->crypto, MODP_NULL, plugin_name,
 						(dh_constructor_t)load_tester_diffie_hellman_create);
 
 	this->delay = lib->settings->get_int(lib->settings,

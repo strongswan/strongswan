@@ -19,6 +19,8 @@
 #include "sha1_hasher.h"
 #include "sha1_prf.h"
 
+static const char *plugin_name = "sha1";
+
 typedef struct private_sha1_plugin_t private_sha1_plugin_t;
 
 /**
@@ -57,9 +59,9 @@ plugin_t *sha1_plugin_create()
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
 							(hasher_constructor_t)sha1_hasher_create);
-	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
+	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1, plugin_name,
 							(prf_constructor_t)sha1_prf_create);
 
 	return &this->public.plugin;

@@ -26,6 +26,8 @@
 #include "pkcs11_public_key.h"
 #include "pkcs11_hasher.h"
 
+static const char *plugin_name = "pkcs11";
+
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
 /**
@@ -146,17 +148,17 @@ plugin_t *pkcs11_plugin_create()
 	if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
 	{
-		lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+		lib->crypto->add_hasher(lib->crypto, HASH_MD2, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+		lib->crypto->add_hasher(lib->crypto, HASH_MD5, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA256, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA384, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA512, plugin_name,
 					(hasher_constructor_t)pkcs11_hasher_create);
 	}
 

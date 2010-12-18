@@ -22,12 +22,14 @@
 struct ike_alg {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
+	const char *plugin_name;
 	struct ike_alg *algo_next;
 };
 
 struct encrypt_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
+	const char *plugin_name;
 	struct ike_alg *algo_next;
 
 	size_t enc_blocksize;
@@ -39,6 +41,7 @@ struct encrypt_desc {
 struct hash_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
+	const char *plugin_name;
 	struct ike_alg *algo_next;
 
 	size_t hash_digest_size;
@@ -47,6 +50,7 @@ struct hash_desc {
 struct dh_desc {
 	u_int16_t algo_type;
 	u_int16_t algo_id;
+	const char *plugin_name;
 	struct ike_alg *algo_next;
 
 	size_t ke_size;
@@ -57,7 +61,7 @@ struct dh_desc {
 #define IKE_ALG_DH_GROUP		2
 #define IKE_ALG_MAX             IKE_ALG_DH_GROUP
 
-extern int ike_alg_add(struct ike_alg *a);
+extern int ike_alg_add(struct ike_alg *a, const char *plugin_name);
 extern struct hash_desc *ike_alg_get_hasher(u_int alg);
 extern struct encrypt_desc *ike_alg_get_crypter(u_int alg);
 extern struct dh_desc *ike_alg_get_dh_group(u_int alg);

@@ -741,9 +741,10 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	integrity_algorithm_t integrity;
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
+	const char *plugin_name;
 
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &encryption))
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 	{
 		switch (encryption)
 		{
@@ -778,7 +779,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &integrity))
+	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
 	{
 		switch (integrity)
 		{
@@ -797,7 +798,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &prf))
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
 		switch (prf)
 		{
@@ -816,7 +817,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &group))
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
 		switch (group)
 		{

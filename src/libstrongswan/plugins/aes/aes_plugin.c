@@ -18,6 +18,8 @@
 #include <library.h>
 #include "aes_crypter.h"
 
+static const char *plugin_name = "aes";
+
 typedef struct private_aes_plugin_t private_aes_plugin_t;
 
 /**
@@ -54,7 +56,7 @@ plugin_t *aes_plugin_create()
 		},
 	);
 
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, plugin_name,
 							 (crypter_constructor_t)aes_crypter_create);
 
 	return &this->public.plugin;

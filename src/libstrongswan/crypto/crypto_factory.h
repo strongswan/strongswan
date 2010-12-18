@@ -144,11 +144,12 @@ struct crypto_factory_t {
 	 * Register a crypter constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_crypter)(crypto_factory_t *this, encryption_algorithm_t algo,
-						crypter_constructor_t create);
+						const char *plugin_name, crypter_constructor_t create);
 
 	/**
 	 * Unregister a crypter constructor.
@@ -168,21 +169,23 @@ struct crypto_factory_t {
 	 * Register a aead constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
-					 aead_constructor_t create);
+					 const char *plugin_name, aead_constructor_t create);
 
 	/**
 	 * Register a signer constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_signer)(crypto_factory_t *this, integrity_algorithm_t algo,
-					   signer_constructor_t create);
+					    const char *plugin_name, signer_constructor_t create);
 
 	/**
 	 * Unregister a signer constructor.
@@ -198,11 +201,12 @@ struct crypto_factory_t {
 	 * create_hasher(HASH_PREFERRED).
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_hasher)(crypto_factory_t *this, hash_algorithm_t algo,
-					   hasher_constructor_t create);
+					   const char *plugin_name, hasher_constructor_t create);
 
 	/**
 	 * Unregister a hasher constructor.
@@ -215,11 +219,12 @@ struct crypto_factory_t {
 	 * Register a prf constructor.
 	 *
 	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_prf)(crypto_factory_t *this, pseudo_random_function_t algo,
-					prf_constructor_t create);
+					const char *plugin_name, prf_constructor_t create);
 
 	/**
 	 * Unregister a prf constructor.
@@ -232,9 +237,11 @@ struct crypto_factory_t {
 	 * Register a source of randomness.
 	 *
 	 * @param quality		quality of randomness this RNG serves
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for such a quality
 	 */
-	void (*add_rng)(crypto_factory_t *this, rng_quality_t quality, rng_constructor_t create);
+	void (*add_rng)(crypto_factory_t *this, rng_quality_t quality,
+					const char *plugin_name, rng_constructor_t create);
 
 	/**
 	 * Unregister a source of randomness.
@@ -247,11 +254,12 @@ struct crypto_factory_t {
 	 * Register a diffie hellman constructor.
 	 *
 	 * @param group			dh group to constructor
+	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return
 	 */
 	void (*add_dh)(crypto_factory_t *this, diffie_hellman_group_t group,
-				   dh_constructor_t create);
+				   const char *plugin_name, dh_constructor_t create);
 
 	/**
 	 * Unregister a diffie hellman constructor.
@@ -301,6 +309,13 @@ struct crypto_factory_t {
 	 * @return				enumerator over diffie_hellman_group_t
 	 */
 	enumerator_t* (*create_dh_enumerator)(crypto_factory_t *this);
+
+	/**
+	 * Create an enumerator over all registered random generators.
+	 *
+	 * @return				enumerator over rng_quality_t
+	 */
+	enumerator_t* (*create_rng_enumerator)(crypto_factory_t *this);
 
 	/**
 	 * Add a test vector to the crypto factory.

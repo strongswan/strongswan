@@ -72,7 +72,7 @@ static struct ike_alg *ike_alg_find(u_int algo_type, u_int algo_id,
 /**
  * "raw" ike_alg list adding function
  */
-int ike_alg_add(struct ike_alg* a)
+int ike_alg_add(struct ike_alg* a, const char *plugin_name)
 {
 	if (a->algo_type > IKE_ALG_MAX)
 	{
@@ -96,6 +96,7 @@ int ike_alg_add(struct ike_alg* a)
 			e = *ep;
 		}
 		*ep = a;
+		a->plugin_name = plugin_name;
 		a->algo_next = e;
 		return 0;
 	}
@@ -308,7 +309,10 @@ fail:
  */
 void ike_alg_list(void)
 {
-	char buf[BUF_LEN];
+	rng_quality_t quality;
+	enumerator_t *enumerator;
+	const char *plugin_name;
+	char buf[1024];
 	char *pos;
 	int n, len;
 	struct ike_alg *a;
@@ -322,7 +326,8 @@ void ike_alg_list(void)
 	len = BUF_LEN;
 	for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_enc_names, a->algo_id));
+	    n = snprintf(pos, len, " %s[%s]", enum_name(&oakley_enc_names,
+					 a->algo_id), a->plugin_name);
 		pos += n;
 		len -= n;
 		if (len <= 0)
@@ -337,7 +342,8 @@ void ike_alg_list(void)
 	len = BUF_LEN;
 	for (a = ike_alg_base[IKE_ALG_HASH]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_hash_names, a->algo_id));
+	    n = snprintf(pos, len, " %s[%s]", enum_name(&oakley_hash_names,
+					 a->algo_id), a->plugin_name);
 		pos += n;
 		len -= n;
 		if (len <= 0)
@@ -352,7 +358,8 @@ void ike_alg_list(void)
 	len = BUF_LEN;
 	for (a = ike_alg_base[IKE_ALG_DH_GROUP]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_group_names, a->algo_id));
+	    n = snprintf(pos, len, " %s[%s]", enum_name(&oakley_group_names,
+					 a->algo_id), a->plugin_name);
 		pos += n;
 		len -= n;
 		if (len <= 0)
@@ -361,6 +368,24 @@ void ike_alg_list(void)
 		}
 	}
 	whack_log(RC_COMMENT, "  dh-group:  %s", buf);
+
+	pos = buf;
+	*pos = '\0';
+	len = BUF_LEN;
+	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
+	{
+	    n = snprintf(pos, len, " %N[%s]", rng_quality_names, quality, 
+					 plugin_name);
+		pos += n;
+		len -= n;
+		if (len <= 0)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	whack_log(RC_COMMENT, "  random-gen:%s", buf);
 }
 
 /**

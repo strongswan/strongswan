@@ -19,6 +19,8 @@
 
 #include "ctr_ipsec_crypter.h"
 
+static const char *plugin_name = "ctr";
+
 typedef struct private_ctr_plugin_t private_ctr_plugin_t;
 
 /**
@@ -56,9 +58,9 @@ plugin_t *ctr_plugin_create()
 		},
 	);
 
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, plugin_name,
 					(crypter_constructor_t)ctr_ipsec_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR,
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, plugin_name,
 					(crypter_constructor_t)ctr_ipsec_crypter_create);
 
 	return &this->public.plugin;

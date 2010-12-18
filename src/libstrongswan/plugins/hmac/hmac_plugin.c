@@ -19,6 +19,8 @@
 #include "hmac_signer.h"
 #include "hmac_prf.h"
 
+static const char *plugin_name = "hmac";
+
 typedef struct private_hmac_plugin_t private_hmac_plugin_t;
 
 /**
@@ -57,36 +59,36 @@ plugin_t *hmac_plugin_create()
 		},
 	);
 
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256,
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256, plugin_name,
 						 (prf_constructor_t)hmac_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA1,
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA1, plugin_name,
 						 (prf_constructor_t)hmac_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5,
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5, plugin_name,
 						 (prf_constructor_t)hmac_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_384,
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_384, plugin_name,
 						 (prf_constructor_t)hmac_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_512,
+	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_512, plugin_name,
 						 (prf_constructor_t)hmac_prf_create);
 
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256,
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256, plugin_name,
 							(signer_constructor_t)hmac_signer_create);
 
 	return &this->public.plugin;

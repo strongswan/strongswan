@@ -18,6 +18,8 @@
 #include <library.h>
 #include "sha2_hasher.h"
 
+static const char *plugin_name = "sha2";
+
 typedef struct private_sha2_plugin_t private_sha2_plugin_t;
 
 /**
@@ -54,13 +56,13 @@ plugin_t *sha2_plugin_create()
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, plugin_name,
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, plugin_name,
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, plugin_name,
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, plugin_name,
 							(hasher_constructor_t)sha2_hasher_create);
 
 	return &this->public.plugin;

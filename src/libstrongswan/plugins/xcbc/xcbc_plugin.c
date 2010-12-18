@@ -19,6 +19,8 @@
 #include "xcbc_signer.h"
 #include "xcbc_prf.h"
 
+static const char *plugin_name = "xcbc";
+
 typedef struct private_xcbc_plugin_t private_xcbc_plugin_t;
 
 /**
@@ -57,13 +59,13 @@ plugin_t *xcbc_plugin_create()
 		},
 	);
 
-	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,
+	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC, plugin_name,
 					(prf_constructor_t)xcbc_prf_create);
-	lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC,
+	lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC, plugin_name,
 					(prf_constructor_t)xcbc_prf_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96,
+	lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96, plugin_name,
 					(signer_constructor_t)xcbc_signer_create);
-	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
+	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96, plugin_name,
 					(signer_constructor_t)xcbc_signer_create);
 
 	return &this->public.plugin;

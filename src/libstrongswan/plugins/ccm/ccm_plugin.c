@@ -19,6 +19,8 @@
 
 #include "ccm_aead.h"
 
+static const char *plugin_name = "ccm";
+
 typedef struct private_ccm_plugin_t private_ccm_plugin_t;
 
 /**
@@ -52,17 +54,17 @@ plugin_t *ccm_plugin_create()
 		.public.plugin.destroy = _destroy,
 	);
 
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV8,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV8, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV12,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV12, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV16,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV16, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV8,
+	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV8, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV12,
+	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV12, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV16,
+	lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV16, plugin_name,
 					(aead_constructor_t)ccm_aead_create);
 
 	return &this->public.plugin;

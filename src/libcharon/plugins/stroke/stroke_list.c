@@ -1070,49 +1070,64 @@ static void list_algs(FILE *out)
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
+	rng_quality_t quality;
+	const char *plugin_name;
 
 	fprintf(out, "\n");
 	fprintf(out, "List of registered IKEv2 Algorithms:\n");
 	fprintf(out, "\n  encryption: ");
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &encryption))
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 	{
-		fprintf(out, "%N ", encryption_algorithm_names, encryption);
+		fprintf(out, "%N[%s] ", encryption_algorithm_names, encryption,
+								plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  integrity:  ");
 	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &integrity))
+	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
 	{
-		fprintf(out, "%N ", integrity_algorithm_names, integrity);
+		fprintf(out, "%N[%s] ", integrity_algorithm_names, integrity,
+								plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  aead:       ");
 	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &encryption))
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 	{
-		fprintf(out, "%N ", encryption_algorithm_names, encryption);
+		fprintf(out, "%N[%s] ", encryption_algorithm_names, encryption,
+								plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  hasher:     ");
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &hash))
+	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
 	{
-		fprintf(out, "%N ", hash_algorithm_names, hash);
+		fprintf(out, "%N[%s] ", hash_algorithm_names, hash,
+								plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  prf:        ");
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &prf))
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
-		fprintf(out, "%N ", pseudo_random_function_names, prf);
+		fprintf(out, "%N[%s] ", pseudo_random_function_names, prf,
+								plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  dh-group:   ");
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &group))
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
-		fprintf(out, "%N ", diffie_hellman_group_names, group);
+		fprintf(out, "%N[%s] ", diffie_hellman_group_names, group,
+								plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  random-gen: ");
+	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
+	{
+		fprintf(out, "%N[%s] ", rng_quality_names, quality, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n");

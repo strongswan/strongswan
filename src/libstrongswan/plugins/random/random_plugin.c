@@ -18,6 +18,8 @@
 #include <library.h>
 #include "random_rng.h"
 
+static const char *plugin_name = "random";
+
 typedef struct private_random_plugin_t private_random_plugin_t;
 
 /**
@@ -54,9 +56,9 @@ plugin_t *random_plugin_create()
 		},
 	);
 
-	lib->crypto->add_rng(lib->crypto, RNG_STRONG,
+	lib->crypto->add_rng(lib->crypto, RNG_STRONG, plugin_name,
 						 (rng_constructor_t)random_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_TRUE,
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE, plugin_name,
 						 (rng_constructor_t)random_rng_create);
 
 	return &this->public.plugin;

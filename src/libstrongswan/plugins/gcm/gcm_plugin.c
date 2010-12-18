@@ -19,6 +19,8 @@
 
 #include "gcm_aead.h"
 
+static const char *plugin_name = "gcm";
+
 typedef struct private_gcm_plugin_t private_gcm_plugin_t;
 
 /**
@@ -52,11 +54,11 @@ plugin_t *gcm_plugin_create()
 		.public.plugin.destroy = _destroy,
 	);
 
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV8,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV8, plugin_name,
 					(aead_constructor_t)gcm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV12,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV12, plugin_name,
 					(aead_constructor_t)gcm_aead_create);
-	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV16,
+	lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV16, plugin_name,
 					(aead_constructor_t)gcm_aead_create);
 
 	return &this->public.plugin;

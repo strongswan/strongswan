@@ -18,6 +18,8 @@
 #include <library.h>
 #include "fips_prf.h"
 
+static const char *plugin_name = "fips_prf";
+
 typedef struct private_fips_prf_plugin_t private_fips_prf_plugin_t;
 
 /**
@@ -54,7 +56,7 @@ plugin_t *fips_prf_plugin_create()
 		},
 	);
 
-	lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160,
+	lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160, plugin_name,
 						 (prf_constructor_t)fips_prf_create);
 
 	return &this->public.plugin;

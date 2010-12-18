@@ -23,6 +23,8 @@
 #include <library.h>
 #include <debug.h>
 
+static const char *plugin_name = "padlock";
+
 typedef struct private_padlock_plugin_t private_padlock_plugin_t;
 typedef enum padlock_feature_t padlock_feature_t;
 
@@ -161,21 +163,21 @@ plugin_t *padlock_plugin_create()
 
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
-		lib->crypto->add_rng(lib->crypto, RNG_TRUE,
+		lib->crypto->add_rng(lib->crypto, RNG_TRUE, plugin_name,
 						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_STRONG,
+		lib->crypto->add_rng(lib->crypto, RNG_STRONG, plugin_name,
 						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_WEAK,
+		lib->crypto->add_rng(lib->crypto, RNG_WEAK, plugin_name,
 						(rng_constructor_t)padlock_rng_create);
 	}
 	if (this->features & PADLOCK_ACE2_ENABLED)
 	{
-		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, plugin_name,
 						(crypter_constructor_t)padlock_aes_crypter_create);
 	}
 	if (this->features & PADLOCK_PHE_ENABLED)
 	{
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
 						(hasher_constructor_t)padlock_sha1_hasher_create);
 	}
 	return &this->public.plugin;

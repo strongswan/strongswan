@@ -18,6 +18,8 @@
 #include <library.h>
 #include "md4_hasher.h"
 
+static const char *plugin_name = "md4";
+
 typedef struct private_md4_plugin_t private_md4_plugin_t;
 
 /**
@@ -54,7 +56,7 @@ plugin_t *md4_plugin_create()
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4, plugin_name,
 							(hasher_constructor_t)md4_hasher_create);
 
 	return &this->public.plugin;

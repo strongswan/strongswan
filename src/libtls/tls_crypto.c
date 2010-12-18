@@ -626,6 +626,7 @@ static void filter_suite(private_tls_crypto_t *this,
 						 suite_algs_t suites[], int *count, int offset,
 						 enumerator_t*(*create_enumerator)(crypto_factory_t*))
 {
+	const char *plugin_name;
 	suite_algs_t current;
 	int i, remaining = 0;
 	enumerator_t *enumerator;
@@ -634,7 +635,8 @@ static void filter_suite(private_tls_crypto_t *this,
 	for (i = 0; i < *count; i++)
 	{
 		enumerator = create_enumerator(lib->crypto);
-		while (enumerator->enumerate(enumerator, ((char*)&current) + offset))
+		while (enumerator->enumerate(enumerator, ((char*)&current) + offset),
+												 &plugin_name)
 		{
 			if ((suites[i].encr == ENCR_NULL ||
 				 !current.encr || current.encr == suites[i].encr) &&
@@ -1060,10 +1062,11 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 	enumerator_t *enumerator;
 	hash_algorithm_t alg;
 	tls_hash_algorithm_t hash;
+	const char *plugin_name;
 
 	supported = tls_writer_create(32);
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &alg))
+	while (enumerator->enumerate(enumerator, &alg, &plugin_name))
 	{
 		switch (alg)
 		{
