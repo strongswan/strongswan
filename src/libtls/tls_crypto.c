@@ -628,15 +628,16 @@ static void filter_suite(private_tls_crypto_t *this,
 {
 	const char *plugin_name;
 	suite_algs_t current;
-	int i, remaining = 0;
+	int *current_alg, i, remaining = 0;
 	enumerator_t *enumerator;
 
 	memset(&current, 0, sizeof(current));
+	current_alg = (int*)((char*)&current + offset);
+
 	for (i = 0; i < *count; i++)
 	{
 		enumerator = create_enumerator(lib->crypto);
-		while (enumerator->enumerate(enumerator, ((char*)&current) + offset),
-												 &plugin_name)
+		while (enumerator->enumerate(enumerator, current_alg, &plugin_name))
 		{
 			if ((suites[i].encr == ENCR_NULL ||
 				 !current.encr || current.encr == suites[i].encr) &&
