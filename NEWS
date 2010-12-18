@@ -29,6 +29,9 @@ strongswan-4.5.1
   this is not possible anymore.  As an alternative, multiple values can be
   specified by separating them with a comma (e.g. dns = 1.2.3.4, 2.3.4.5).
 
+- ipsec listalgs now appends (set in square brackets) to each crypto
+  algorithm listed the plugin that registered the function.
+
 
 strongswan-4.5.0
 ----------------
