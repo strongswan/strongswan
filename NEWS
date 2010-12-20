@@ -6,7 +6,7 @@ strongswan-4.5.1
   requires the tnccs_20, tnc_imc and tnc_imv plugins but dose not depend
   on the libtnc library. Any available IMV/IMC pairs conforming to the
   Trusted Computing Group's TNC-IF-IMV/IMC 1.2 interface specification
-  can be loaded via /etc/tnc_config. 
+  can be loaded via /etc/tnc_config.
 
 - IKE and ESP proposals can now be stored in an SQL database using a
   new proposals table. The start_action field in the child_configs
@@ -31,6 +31,10 @@ strongswan-4.5.1
 
 - ipsec listalgs now appends (set in square brackets) to each crypto
   algorithm listed the plugin that registered the function.
+
+- Traffic Flow Confidentiality padding supported with Linux 2.6.38 can be used
+  by the IKEv2 daemon. The ipsec.conf 'tfc' keyword pads all packets to a given
+  boundary, the special value '%mtu' pads all packets to the path MTU.
 
 
 strongswan-4.5.0
