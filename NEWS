@@ -36,6 +36,10 @@ strongswan-4.5.1
   by the IKEv2 daemon. The ipsec.conf 'tfc' keyword pads all packets to a given
   boundary, the special value '%mtu' pads all packets to the path MTU.
 
+- The new af-alg plugin can use various crypto primitives of the Linux Crypto
+  API using the AF_ALG interface introduced with 2.6.38. This removes the need
+  for additional userland implementations of symmetric cipher, hash, hmac and
+  xcbc algorithms.
 
 strongswan-4.5.0
 ----------------
