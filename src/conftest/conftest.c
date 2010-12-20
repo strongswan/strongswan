@@ -77,12 +77,9 @@ static bool load_configs(char *suite_file, char *test_file)
 				test_file, strerror(errno));
 		return FALSE;
 	}
-	conftest->suite = settings_create(suite_file);
-	conftest->test = settings_create(test_file);
-	suite_file = dirname(suite_file);
-	test_file = dirname(test_file);
-	conftest->suite_dir = strdup(suite_file);
-	conftest->test_dir = strdup(test_file);
+	conftest->test = settings_create(suite_file);
+	conftest->test->load_files(conftest->test, test_file);
+	conftest->suite_dir = strdup(dirname(suite_file));
 	return TRUE;
 }
 
@@ -274,7 +271,6 @@ static void cleanup()
 {
 	hook_t *hook;
 
-	DESTROY_IF(conftest->suite);
 	DESTROY_IF(conftest->test);
 	lib->credmgr->remove_set(lib->credmgr, &conftest->creds->set);
 	conftest->creds->destroy(conftest->creds);
@@ -296,7 +292,6 @@ static void cleanup()
 		conftest->config->destroy(conftest->config);
 	}
 	free(conftest->suite_dir);
-	free(conftest->test_dir);
 	free(conftest);
 	libcharon_deinit();
 	libhydra_deinit();
@@ -393,13 +388,11 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-	if (!load_certs(conftest->suite, conftest->suite_dir) ||
-		!load_certs(conftest->test, conftest->test_dir))
+	if (!load_certs(conftest->test, conftest->suite_dir))
 	{
 		return 1;
 	}
-	if (!load_keys(conftest->suite, conftest->suite_dir) ||
-		!load_keys(conftest->test, conftest->test_dir))
+	if (!load_keys(conftest->test, conftest->suite_dir))
 	{
 		return 1;
 	}
@@ -409,7 +402,6 @@ int main(int argc, char *argv[])
 	}
 	charon->backends->add_backend(charon->backends, &conftest->config->backend);
 	conftest->config->load(conftest->config, conftest->test);
-	conftest->config->load(conftest->config, conftest->suite);
 	conftest->actions = actions_create();
 
 	/* set up thread specific handlers */

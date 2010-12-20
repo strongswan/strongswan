@@ -36,12 +36,7 @@ typedef struct conftest_t conftest_t;
 struct conftest_t {
 
 	/**
-	 * Global testsuite configuration
-	 */
-	settings_t *suite;
-
-	/**
-	 * Test specific configuration
+	 * Merged suite/test configuration
 	 */
 	settings_t *test;
 
@@ -49,11 +44,6 @@ struct conftest_t {
 	 * Directory containing suite files
 	 */
 	char *suite_dir;
-
-	/**
-	 * Directory containing test files
-	 */
-	char *test_dir;
 
 	/**
 	 * Credentials loaded from configuration
