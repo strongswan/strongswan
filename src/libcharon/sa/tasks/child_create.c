@@ -1298,7 +1298,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 	{
 		this->public.task.build = _build_i;
 		this->public.task.process = _process_i;
- 		this->initiator = TRUE;
+		this->initiator = TRUE;
 		config->get_ref(config);
 	}
 	else
