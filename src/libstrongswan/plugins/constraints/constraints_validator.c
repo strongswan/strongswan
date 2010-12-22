@@ -346,7 +346,8 @@ static bool check_policy(x509_t *subject, x509_t *issuer, int pathlen,
 
 METHOD(cert_validator_t, validate, bool,
 	private_constraints_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, int pathlen, auth_cfg_t *auth)
+	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	auth_cfg_t *auth)
 {
 	if (issuer->get_type(issuer) == CERT_X509 &&
 		subject->get_type(subject) == CERT_X509)

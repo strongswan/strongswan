@@ -452,8 +452,8 @@ static void cache_queue(private_credential_manager_t *this)
  * check a certificate for its lifetime
  */
 static bool check_certificate(private_credential_manager_t *this,
-							  certificate_t *subject, certificate_t *issuer,
-							  bool online, int pathlen, auth_cfg_t *auth)
+				certificate_t *subject, certificate_t *issuer, bool online,
+				int pathlen, bool trusted, auth_cfg_t *auth)
 {
 	time_t not_before, not_after;
 	cert_validator_t *validator;
@@ -476,7 +476,7 @@ static bool check_certificate(private_credential_manager_t *this,
 	while (enumerator->enumerate(enumerator, &validator))
 	{
 		if (!validator->validate(validator, subject, issuer,
-								 online, pathlen, auth))
+								 online, pathlen, trusted, auth))
 		{
 			enumerator->destroy(enumerator);
 			return FALSE;
@@ -622,7 +622,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
-		if (!check_certificate(this, current, issuer, online, pathlen, auth))
+		if (!check_certificate(this, current, issuer, online,
+							   pathlen, trusted, auth))
 		{
 			trusted = FALSE;
 			issuer->destroy(issuer);

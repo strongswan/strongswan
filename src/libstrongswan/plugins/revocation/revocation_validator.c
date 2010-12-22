@@ -568,7 +568,8 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 
 METHOD(cert_validator_t, validate, bool,
 	private_revocation_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, int pathlen, auth_cfg_t *auth)
+	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	auth_cfg_t *auth)
 {
 	if (subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509 &&
