@@ -256,11 +256,15 @@ static bool check_name_constraints(certificate_t *subject, x509_t *issuer)
 }
 
 /**
+ * Special OID for anyPolicy
+ */
+static chunk_t any_policy = chunk_from_chars(0x55,0x1d,0x20,0x00);
+
+/**
  * Check if an issuer certificate has a given policy OID
  */
 static bool has_policy(x509_t *issuer, chunk_t oid)
 {
-	chunk_t any_policy = chunk_from_chars(0x55,0x1d,0x20,0x00);
 	x509_policy_mapping_t *mapping;
 	x509_cert_policy_t *policy;
 	enumerator_t *enumerator;
@@ -372,9 +376,9 @@ static bool has_policy_chain(linked_list_t *chain, x509_t *subject, int len)
 }
 
 /**
- * Check len certificates in trustchain have policyMappings
+ * Check len certificates in trustchain to have no policyMappings
  */
-static bool has_policy_mapping(linked_list_t *chain, int len)
+static bool has_no_policy_mapping(linked_list_t *chain, int len)
 {
 	enumerator_t *enumerator, *mappings;
 	x509_policy_mapping_t *mapping;
@@ -401,6 +405,38 @@ static bool has_policy_mapping(linked_list_t *chain, int len)
 }
 
 /**
+ * Check len certificates in trustchain to have no anyPolicies
+ */
+static bool has_no_any_policy(linked_list_t *chain, int len)
+{
+	enumerator_t *enumerator, *policies;
+	x509_cert_policy_t *policy;
+	certificate_t *cert;
+	x509_t *x509;
+	bool valid = TRUE;
+
+	enumerator = chain->create_enumerator(chain);
+	while (len-- > 0 && enumerator->enumerate(enumerator, &x509))
+	{
+		policies = x509->create_cert_policy_enumerator(x509);
+		while (policies->enumerate(policies, &policy))
+		{
+			if (chunk_equals(policy->oid, any_policy))
+			{
+				cert = (certificate_t*)x509;
+				DBG1(DBG_CFG, "found anyPolicy in certificate '%Y', but "
+					 "inhibitAnyPolicy in effect", cert->get_subject(cert));
+				valid = FALSE;
+				break;
+			}
+		}
+		policies->destroy(policies);
+	}
+	enumerator->destroy(enumerator);
+	return valid;
+}
+
+/**
  * Check requireExplicitPolicy and inhibitPolicyMapping constraints
  */
 static bool check_policy_constraints(x509_t *issuer, int pathlen,
@@ -419,7 +455,7 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 			certificate_t *cert;
 			auth_rule_t rule;
 			x509_t *x509;
-			int len = 0, expl;
+			int len = 0, expl, inh;
 
 			/* prepare trustchain to validate */
 			chain = linked_list_create();
@@ -452,16 +488,25 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 			}
 			enumerator->destroy(enumerator);
 
-			/* search for inhibitPolicyMapping constraints */
+			/* search for inhibitPolicyMapping/inhibitAnyPolicy constraints */
 			len = 0;
 			chain->insert_first(chain, subject);
 			enumerator = chain->create_enumerator(chain);
 			while (enumerator->enumerate(enumerator, &x509))
 			{
-				expl = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
-				if (expl != X509_NO_CONSTRAINT)
+				inh = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
+				if (inh != X509_NO_CONSTRAINT)
 				{
-					if (!has_policy_mapping(chain, len - expl))
+					if (!has_no_policy_mapping(chain, len - inh))
+					{
+						valid = FALSE;
+						break;
+					}
+				}
+				inh = x509->get_constraint(x509, X509_INHIBIT_ANY_POLICY);
+				if (inh != X509_NO_CONSTRAINT)
+				{
+					if (!has_no_any_policy(chain, len - inh))
 					{
 						valid = FALSE;
 						break;
