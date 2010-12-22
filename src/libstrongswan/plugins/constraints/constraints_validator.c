@@ -17,6 +17,7 @@
 
 #include <debug.h>
 #include <asn1/asn1.h>
+#include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
 
 typedef struct private_constraints_validator_t private_constraints_validator_t;
@@ -291,9 +292,9 @@ static bool has_policy(x509_t *issuer, chunk_t oid)
 }
 
 /**
- * Check certificatePolicies
+ * Check certificatePolicies.
  */
-static bool check_policy(x509_t *subject, x509_t *issuer, int pathlen,
+static bool check_policy(x509_t *subject, x509_t *issuer, bool check,
 						 auth_cfg_t *auth)
 {
 	certificate_t *cert = (certificate_t*)subject;
@@ -318,30 +319,112 @@ static bool check_policy(x509_t *subject, x509_t *issuer, int pathlen,
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = subject->create_cert_policy_enumerator(subject);
-	while (enumerator->enumerate(enumerator, &policy))
+	if (check)
 	{
-		if (!has_policy(issuer, policy->oid))
+		enumerator = subject->create_cert_policy_enumerator(subject);
+		while (enumerator->enumerate(enumerator, &policy))
 		{
-			oid = asn1_oid_to_string(policy->oid);
-			DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
-				 oid, cert->get_issuer(cert));
-			free(oid);
-			enumerator->destroy(enumerator);
-			return FALSE;
-		}
-		if (pathlen == 0)
-		{
-			oid = asn1_oid_to_string(policy->oid);
-			if (oid)
+			if (!has_policy(issuer, policy->oid))
 			{
-				auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
+				oid = asn1_oid_to_string(policy->oid);
+				DBG1(DBG_CFG, "policy %s missing in issuing certificate '%Y'",
+					 oid, cert->get_issuer(cert));
+				free(oid);
+				enumerator->destroy(enumerator);
+				return FALSE;
+			}
+			if (auth)
+			{
+				oid = asn1_oid_to_string(policy->oid);
+				if (oid)
+				{
+					auth->add(auth, AUTH_RULE_CERT_POLICY, oid);
+				}
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 
 	return TRUE;
+}
+
+/**
+ * Check len certificates in trustchain for inherited policies
+ */
+static bool has_policy_chain(linked_list_t *chain, x509_t *subject, int len)
+{
+	enumerator_t *enumerator;
+	x509_t *issuer;
+	bool valid = TRUE;
+
+	enumerator = chain->create_enumerator(chain);
+	while (len-- > 0 && enumerator->enumerate(enumerator, &issuer))
+	{
+		if (!check_policy(subject, issuer, TRUE, NULL))
+		{
+			valid = FALSE;
+			break;
+		}
+		subject = issuer;
+	}
+	enumerator->destroy(enumerator);
+	return valid;
+}
+
+/**
+ * Check if required explicit policies are given in a path
+ */
+static bool check_explicit_policy(x509_t *issuer, int pathlen, auth_cfg_t *auth)
+{
+	certificate_t *subject;
+	bool valid = TRUE;
+
+	subject = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (subject)
+	{
+		if (subject->get_type(subject) == CERT_X509)
+		{
+			enumerator_t *enumerator;
+			linked_list_t *chain;
+			certificate_t *cert;
+			auth_rule_t rule;
+			x509_t *x509;
+			int len = 0, expl;
+
+			/* prepare trustchain to validate */
+			chain = linked_list_create();
+			enumerator = auth->create_enumerator(auth);
+			while (enumerator->enumerate(enumerator, &rule, &cert))
+			{
+				if (rule == AUTH_RULE_IM_CERT &&
+					cert->get_type(cert) == CERT_X509)
+				{
+					chain->insert_last(chain, cert);
+				}
+			}
+			enumerator->destroy(enumerator);
+			chain->insert_last(chain, issuer);
+
+			/* search for requireExplicitPolicy constraints */
+			enumerator = chain->create_enumerator(chain);
+			while (enumerator->enumerate(enumerator, &x509))
+			{
+				expl = x509->get_policyConstraint(x509, FALSE);
+				if (expl != X509_NO_CONSTRAINT)
+				{
+					if (!has_policy_chain(chain, (x509_t*)subject, len - expl))
+					{
+						valid = FALSE;
+						break;
+					}
+				}
+				len++;
+			}
+			enumerator->destroy(enumerator);
+			chain->destroy(chain);
+		}
+	}
+	return valid;
 }
 
 METHOD(cert_validator_t, validate, bool,
@@ -360,9 +443,16 @@ METHOD(cert_validator_t, validate, bool,
 		{
 			return FALSE;
 		}
-		if (!check_policy((x509_t*)subject, (x509_t*)issuer, pathlen, auth))
+		if (!check_policy((x509_t*)subject, (x509_t*)issuer, !pathlen, auth))
 		{
 			return FALSE;
+		}
+		if (anchor)
+		{
+			if (!check_explicit_policy((x509_t*)issuer, pathlen, auth))
+			{
+				return FALSE;
+			}
 		}
 	}
 	return TRUE;
