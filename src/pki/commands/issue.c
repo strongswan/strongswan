@@ -69,7 +69,7 @@ static int issue()
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
-	int inhibit_policy = X509_NO_CONSTRAINT, explicit_policy = X509_NO_CONSTRAINT;
+	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
@@ -212,10 +212,10 @@ static int issue()
 				continue;
 			}
 			case 'E':
-				explicit_policy = atoi(arg);
+				require_explicit = atoi(arg);
 				continue;
 			case 'H':
-				inhibit_policy = atoi(arg);
+				inhibit_mapping = atoi(arg);
 				continue;
 			case 'A':
 				inhibit_any = atoi(arg);
@@ -447,9 +447,9 @@ static int issue()
 					BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
 					BUILD_CERTIFICATE_POLICIES, policies,
 					BUILD_POLICY_MAPPINGS, mappings,
-					BUILD_POLICY_CONSTRAINT_INHIBIT, inhibit_policy,
-					BUILD_POLICY_CONSTRAINT_EXPLICIT, explicit_policy,
-					BUILD_POLICY_CONSTRAINT_INHIBIT_ANY, inhibit_any,
+					BUILD_POLICY_REQUIRE_EXPLICIT, require_explicit,
+					BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
+					BUILD_POLICY_INHIBIT_ANY, inhibit_any,
 					BUILD_END);
 	if (!cert)
 	{

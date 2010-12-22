@@ -179,17 +179,17 @@ struct private_x509_cert_t {
 	/**
 	 * requireExplicitPolicy Constraint
 	 */
-	char explicit_policy_constraint;
+	char require_explicit;
 
 	/**
 	 * inhibitPolicyMapping Constraint
 	 */
-	char inhibit_policy_constraint;
+	char inhibit_mapping;
 
 	/**
 	 * inhibitAnyPolicy Constraint
 	 */
-	char inhibit_any_policy;
+	char inhibit_any;
 
 	/**
 	 * x509 constraints and other flags
@@ -1089,10 +1089,10 @@ static void parse_policyConstraints(chunk_t blob, int level0,
 		switch (objectID)
 		{
 			case POLICY_CONSTRAINT_EXPLICIT:
-				this->explicit_policy_constraint = parse_constraint(object);
+				this->require_explicit = parse_constraint(object);
 				break;
 			case POLICY_CONSTRAINT_INHIBIT:
-				this->inhibit_policy_constraint = parse_constraint(object);
+				this->inhibit_mapping = parse_constraint(object);
 				break;
 			default:
 				break;
@@ -1429,7 +1429,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						{
 							goto end;
 						}
-						this->inhibit_any_policy = parse_constraint(object);
+						this->inhibit_any = parse_constraint(object);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -1731,11 +1731,11 @@ METHOD(x509_t, get_constraint, int,
 		case X509_PATH_LEN:
 			return this->pathLenConstraint;
 		case X509_REQUIRE_EXPLICIT_POLICY:
-			return this->explicit_policy_constraint;
+			return this->require_explicit;
 		case X509_INHIBIT_POLICY_MAPPING:
-			return this->inhibit_policy_constraint;
+			return this->inhibit_mapping;
 		case X509_INHIBIT_ANY_POLICY:
-			return this->inhibit_any_policy;
+			return this->inhibit_any;
 		default:
 			return X509_NO_CONSTRAINT;
 	}
@@ -1870,9 +1870,9 @@ static private_x509_cert_t* create_empty(void)
 		.cert_policies = linked_list_create(),
 		.policy_mappings = linked_list_create(),
 		.pathLenConstraint = X509_NO_CONSTRAINT,
-		.explicit_policy_constraint = X509_NO_CONSTRAINT,
-		.inhibit_policy_constraint = X509_NO_CONSTRAINT,
-		.inhibit_any_policy = X509_NO_CONSTRAINT,
+		.require_explicit = X509_NO_CONSTRAINT,
+		.inhibit_mapping = X509_NO_CONSTRAINT,
+		.inhibit_any = X509_NO_CONSTRAINT,
 		.ref = 1,
 	);
 	return this;
@@ -2263,22 +2263,22 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								asn1_wrap(ASN1_SEQUENCE, "m", policyMappings)));
 	}
 
-	if (cert->inhibit_policy_constraint != X509_NO_CONSTRAINT ||
-		cert->explicit_policy_constraint != X509_NO_CONSTRAINT)
+	if (cert->inhibit_mapping != X509_NO_CONSTRAINT ||
+		cert->require_explicit != X509_NO_CONSTRAINT)
 	{
 		chunk_t inhibit = chunk_empty, explicit = chunk_empty;
 
-		if (cert->explicit_policy_constraint != X509_NO_CONSTRAINT)
+		if (cert->require_explicit != X509_NO_CONSTRAINT)
 		{
 			explicit = asn1_wrap(ASN1_CONTEXT_C_0, "m",
 						asn1_integer("c",
-							chunk_from_thing(cert->explicit_policy_constraint)));
+							chunk_from_thing(cert->require_explicit)));
 		}
-		if (cert->inhibit_policy_constraint != X509_NO_CONSTRAINT)
+		if (cert->inhibit_mapping != X509_NO_CONSTRAINT)
 		{
 			inhibit = asn1_wrap(ASN1_CONTEXT_C_1, "m",
 						asn1_integer("c",
-							chunk_from_thing(cert->inhibit_policy_constraint)));
+							chunk_from_thing(cert->inhibit_mapping)));
 		}
 		policyConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
 						asn1_build_known_oid(OID_POLICY_CONSTRAINTS),
@@ -2288,14 +2288,14 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								explicit, inhibit)));
 	}
 
-	if (cert->inhibit_any_policy != X509_NO_CONSTRAINT)
+	if (cert->inhibit_any != X509_NO_CONSTRAINT)
 	{
 		inhibitAnyPolicy = asn1_wrap(ASN1_SEQUENCE, "mmm",
 				asn1_build_known_oid(OID_INHIBIT_ANY_POLICY),
 				asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
 				asn1_wrap(ASN1_OCTET_STRING, "m",
 					asn1_integer("c",
-						chunk_from_thing(cert->inhibit_any_policy))));
+						chunk_from_thing(cert->inhibit_any))));
 	}
 
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
@@ -2542,14 +2542,14 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				enumerator->destroy(enumerator);
 				continue;
 			}
-			case BUILD_POLICY_CONSTRAINT_EXPLICIT:
-				cert->explicit_policy_constraint = va_arg(args, int);
+			case BUILD_POLICY_REQUIRE_EXPLICIT:
+				cert->require_explicit = va_arg(args, int);
 				continue;
-			case BUILD_POLICY_CONSTRAINT_INHIBIT:
-				cert->inhibit_policy_constraint = va_arg(args, int);
+			case BUILD_POLICY_INHIBIT_MAPPING:
+				cert->inhibit_mapping = va_arg(args, int);
 				continue;
-			case BUILD_POLICY_CONSTRAINT_INHIBIT_ANY:
-				cert->inhibit_any_policy = va_arg(args, int);
+			case BUILD_POLICY_INHIBIT_ANY:
+				cert->inhibit_any = va_arg(args, int);
 				continue;
 			case BUILD_NOT_BEFORE_TIME:
 				cert->notBefore = va_arg(args, time_t);
