@@ -261,8 +261,10 @@ static void print_x509(x509_t *x509)
 
 	explicit = x509->get_constraint(x509, X509_REQUIRE_EXPLICIT_POLICY);
 	inhibit = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
+	len = x509->get_constraint(x509, X509_INHIBIT_ANY_POLICY);
 
-	if (explicit != X509_NO_CONSTRAINT || inhibit != X509_NO_CONSTRAINT)
+	if (explicit != X509_NO_CONSTRAINT || inhibit != X509_NO_CONSTRAINT ||
+		len != X509_NO_CONSTRAINT)
 	{
 		printf("PolicyConstraints:\n");
 		if (explicit != X509_NO_CONSTRAINT)
@@ -272,6 +274,10 @@ static void print_x509(x509_t *x509)
 		if (inhibit != X509_NO_CONSTRAINT)
 		{
 			printf("           inhibitPolicyMapping: %d\n", inhibit);
+		}
+		if (len != X509_NO_CONSTRAINT)
+		{
+			printf("           inhibitAnyPolicy: %d\n", len);
 		}
 	}
 

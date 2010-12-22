@@ -68,7 +68,7 @@ static int issue()
 	identification_t *id = NULL;
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
-	int pathlen = X509_NO_CONSTRAINT;
+	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
 	int inhibit_policy = X509_NO_CONSTRAINT, explicit_policy = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
@@ -216,6 +216,9 @@ static int issue()
 				continue;
 			case 'H':
 				inhibit_policy = atoi(arg);
+				continue;
+			case 'A':
+				inhibit_any = atoi(arg);
 				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
@@ -446,6 +449,7 @@ static int issue()
 					BUILD_POLICY_MAPPINGS, mappings,
 					BUILD_POLICY_CONSTRAINT_INHIBIT, inhibit_policy,
 					BUILD_POLICY_CONSTRAINT_EXPLICIT, explicit_policy,
+					BUILD_POLICY_CONSTRAINT_INHIBIT_ANY, inhibit_any,
 					BUILD_END);
 	if (!cert)
 	{
@@ -513,7 +517,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
 		 "[--policy-map issuer-oid:subject-oid]",
-		 "[--policy-explicit len] [--policy-inhibit len] ",
+		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -536,6 +540,7 @@ static void __attribute__ ((constructor))reg()
 			{"policy-mapping",	'M', 1, "policyMapping from issuer to subject OID"},
 			{"policy-explicit",	'E', 1, "requireExplicitPolicy constraint"},
 			{"policy-inhibit",	'H', 1, "inhibitPolicyMapping constraint"},
+			{"policy-any",		'A', 1, "inhibitAnyPolicy constraint"},
 			{"flag",			'e', 1, "include extendedKeyUsage flag"},
 			{"crl",				'u', 1, "CRL distribution point URI to include"},
 			{"crlissuer",		'I', 1, "CRL Issuer for CRL at distribution point"},
