@@ -299,6 +299,55 @@ static void cleanup()
 }
 
 /**
+ * Load log levels for a logger from section
+ */
+static void load_log_levels(file_logger_t *logger, char *section)
+{
+	debug_t group;
+	level_t  def;
+
+	def = conftest->test->get_int(conftest->test, "log.%s.default", 1, section);
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		logger->set_level(logger, group,
+					conftest->test->get_int(conftest->test, "log.%s.%N", def,
+											section, debug_lower_names, group));
+	}
+}
+
+/**
+ * Load logger configuration
+ */
+static void load_loggers(file_logger_t *logger)
+{
+	enumerator_t *enumerator;
+	char *section;
+	FILE *file;
+
+	load_log_levels(logger, "stdout");
+
+	enumerator = conftest->test->create_section_enumerator(conftest->test, "log");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		if (!streq(section, "stdout"))
+		{
+			file = fopen(section, "w");
+			if (file == NULL)
+			{
+				fprintf(stderr, "opening file %s for logging failed: %s",
+						section, strerror(errno));
+				continue;
+			}
+			logger = file_logger_create(file, NULL, FALSE);
+			load_log_levels(logger, section);
+			charon->bus->add_listener(charon->bus, &logger->listener);
+			charon->file_loggers->insert_last(charon->file_loggers, logger);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Main function, starts the conftest daemon.
  */
 int main(int argc, char *argv[])
@@ -332,6 +381,7 @@ int main(int argc, char *argv[])
 	INIT(conftest,
 		.creds = mem_cred_create(),
 	);
+
 	logger = file_logger_create(stdout, NULL, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
 	charon->bus->add_listener(charon->bus, &logger->listener);
@@ -379,6 +429,8 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
+	load_loggers(logger);
+
 	if (!lib->plugins->load(lib->plugins, NULL,
 			conftest->test->get_str(conftest->test, "preload", "")))
 	{
