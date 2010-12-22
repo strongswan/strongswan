@@ -372,9 +372,39 @@ static bool has_policy_chain(linked_list_t *chain, x509_t *subject, int len)
 }
 
 /**
- * Check if required explicit policies are given in a path
+ * Check len certificates in trustchain have policyMappings
  */
-static bool check_explicit_policy(x509_t *issuer, int pathlen, auth_cfg_t *auth)
+static bool has_policy_mapping(linked_list_t *chain, int len)
+{
+	enumerator_t *enumerator, *mappings;
+	x509_policy_mapping_t *mapping;
+	certificate_t *cert;
+	x509_t *x509;
+	bool valid = TRUE;
+
+	enumerator = chain->create_enumerator(chain);
+	while (len-- > 0 && enumerator->enumerate(enumerator, &x509))
+	{
+		mappings = x509->create_policy_mapping_enumerator(x509);
+		valid = !mappings->enumerate(mappings, &mapping);
+		mappings->destroy(mappings);
+		if (!valid)
+		{
+			cert = (certificate_t*)x509;
+			DBG1(DBG_CFG, "found policyMapping in certificate '%Y', but "
+				 "inhibitPolicyMapping in effect", cert->get_subject(cert));
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return valid;
+}
+
+/**
+ * Check requireExplicitPolicy and inhibitPolicyMapping constraints
+ */
+static bool check_policy_constraints(x509_t *issuer, int pathlen,
+									 auth_cfg_t *auth)
 {
 	certificate_t *subject;
 	bool valid = TRUE;
@@ -421,6 +451,26 @@ static bool check_explicit_policy(x509_t *issuer, int pathlen, auth_cfg_t *auth)
 				len++;
 			}
 			enumerator->destroy(enumerator);
+
+			/* search for inhibitPolicyMapping constraints */
+			len = 0;
+			chain->insert_first(chain, subject);
+			enumerator = chain->create_enumerator(chain);
+			while (enumerator->enumerate(enumerator, &x509))
+			{
+				expl = x509->get_policyConstraint(x509, TRUE);
+				if (expl != X509_NO_CONSTRAINT)
+				{
+					if (!has_policy_mapping(chain, len - expl))
+					{
+						valid = FALSE;
+						break;
+					}
+				}
+				len++;
+			}
+			enumerator->destroy(enumerator);
+
 			chain->destroy(chain);
 		}
 	}
@@ -449,7 +499,7 @@ METHOD(cert_validator_t, validate, bool,
 		}
 		if (anchor)
 		{
-			if (!check_explicit_policy((x509_t*)issuer, pathlen, auth))
+			if (!check_policy_constraints((x509_t*)issuer, pathlen, auth))
 			{
 				return FALSE;
 			}
