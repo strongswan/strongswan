@@ -576,7 +576,8 @@ METHOD(cert_validator_t, validate, bool,
 	{
 		DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 					   subject->get_subject(subject));
-		switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
+		switch (check_ocsp((x509_t*)subject, (x509_t*)issuer,
+						   pathlen ? NULL : auth))
 		{
 			case VALIDATION_GOOD:
 				DBG1(DBG_CFG, "certificate status is good");
@@ -594,7 +595,8 @@ METHOD(cert_validator_t, validate, bool,
 				DBG1(DBG_CFG, "ocsp check failed, fallback to crl");
 				break;
 		}
-		switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth))
+		switch (check_crl((x509_t*)subject, (x509_t*)issuer,
+						  pathlen ? NULL : auth))
 		{
 			case VALIDATION_GOOD:
 				DBG1(DBG_CFG, "certificate status is good");

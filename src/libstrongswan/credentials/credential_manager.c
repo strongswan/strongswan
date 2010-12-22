@@ -622,8 +622,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
-		if (!check_certificate(this, current, issuer, online, pathlen,
-							   current == subject ? auth : NULL))
+		if (!check_certificate(this, current, issuer, online, pathlen, auth))
 		{
 			trusted = FALSE;
 			issuer->destroy(issuer);

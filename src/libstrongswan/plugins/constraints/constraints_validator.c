@@ -293,7 +293,8 @@ static bool has_policy(x509_t *issuer, chunk_t oid)
 /**
  * Check certificatePolicies
  */
-static bool check_policy(x509_t *subject, x509_t *issuer, auth_cfg_t *auth)
+static bool check_policy(x509_t *subject, x509_t *issuer, int pathlen,
+						 auth_cfg_t *auth)
 {
 	certificate_t *cert = (certificate_t*)subject;
 	x509_policy_mapping_t *mapping;
@@ -329,7 +330,7 @@ static bool check_policy(x509_t *subject, x509_t *issuer, auth_cfg_t *auth)
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}
-		if (auth)
+		if (pathlen == 0)
 		{
 			oid = asn1_oid_to_string(policy->oid);
 			if (oid)
@@ -358,7 +359,7 @@ METHOD(cert_validator_t, validate, bool,
 		{
 			return FALSE;
 		}
-		if (!check_policy((x509_t*)subject, (x509_t*)issuer, auth))
+		if (!check_policy((x509_t*)subject, (x509_t*)issuer, pathlen, auth))
 		{
 			return FALSE;
 		}
