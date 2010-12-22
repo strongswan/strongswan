@@ -476,6 +476,10 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	{
 		return host_create_any_port(af ? af : AF_INET6, port);
 	}
+	if (af == AF_INET && strchr(string, ':'))
+	{	/* do not try to convert v6 addresses for v4 family */
+		return NULL;
+	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = af;
