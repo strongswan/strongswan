@@ -67,6 +67,8 @@ enum x509_constraint_t {
 	X509_INHIBIT_POLICY_MAPPING,
 	/** requireExplicitPolicy policyConstraint */
 	X509_REQUIRE_EXPLICIT_POLICY,
+	/** inhibitAnyPolicy constraint */
+	X509_INHIBIT_ANY_POLICY,
 };
 
 /**

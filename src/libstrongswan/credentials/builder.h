@@ -105,6 +105,8 @@ enum builder_part_t {
 	BUILD_POLICY_CONSTRAINT_EXPLICIT,
 	/** inhibitPolicyMapping constraint, int */
 	BUILD_POLICY_CONSTRAINT_INHIBIT,
+	/** inhibitAnyPolicy constraint, int */
+	BUILD_POLICY_CONSTRAINT_INHIBIT_ANY,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
