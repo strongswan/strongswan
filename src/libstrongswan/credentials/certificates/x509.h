@@ -31,6 +31,7 @@ typedef struct x509_cert_policy_t x509_cert_policy_t;
 typedef struct x509_policy_mapping_t x509_policy_mapping_t;
 typedef struct x509_cdp_t x509_cdp_t;
 typedef enum x509_flag_t x509_flag_t;
+typedef enum x509_constraint_t x509_constraint_t;
 
 /**
  * X.509 certificate flags.
@@ -54,6 +55,18 @@ enum x509_flag_t {
 	X509_IP_ADDR_BLOCKS =	(1<<6),
 	/** cert has CRL sign key usage */
 	X509_CRL_SIGN =			(1<<7),
+};
+
+/**
+ * Different numerical X.509 constraints.
+ */
+enum x509_constraint_t {
+	/** pathLenConstraint basicConstraints */
+	X509_PATH_LEN,
+	/** inhibitPolicyMapping policyConstraint */
+	X509_INHIBIT_POLICY_MAPPING,
+	/** requireExplicitPolicy policyConstraint */
+	X509_REQUIRE_EXPLICIT_POLICY,
 };
 
 /**
@@ -130,19 +143,12 @@ struct x509_t {
 	chunk_t (*get_authKeyIdentifier)(x509_t *this);
 
 	/**
-	 * Get an optional path length constraint.
+	 * Get a numerical X.509 constraint.
 	 *
-	 * @return			pathLenConstraint, X509_NO_CONSTRAINT if none found
-	 */
-	int (*get_pathLenConstraint)(x509_t *this);
-
-	/**
-	 * Get a policyConstraint, inhibitPolicyMapping or requireExplicitPolicy.
-	 *
-	 * @param inhibit	TRUE to get inhibitPolicyMapping
+	 * @param type		type of constraint to get
 	 * @return			constraint, X509_NO_CONSTRAINT if none found
 	 */
-	int (*get_policyConstraint)(x509_t *this, bool inhibit);
+	int (*get_constraint)(x509_t *this, x509_constraint_t type);
 
 	/**
 	 * Create an enumerator over all subjectAltNames.

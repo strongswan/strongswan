@@ -1716,20 +1716,20 @@ METHOD(x509_t, get_authKeyIdentifier, chunk_t,
 	return this->authKeyIdentifier;
 }
 
-METHOD(x509_t, get_pathLenConstraint, int,
-	private_x509_cert_t *this)
+METHOD(x509_t, get_constraint, int,
+	private_x509_cert_t *this, x509_constraint_t type)
 {
-	return this->pathLenConstraint;
-}
-
-METHOD(x509_t, get_policyConstraint, int,
-	private_x509_cert_t *this, bool inhibit)
-{
-	if (inhibit)
+	switch (type)
 	{
-		return this->inhibit_policy_constraint;
+		case X509_PATH_LEN:
+			return this->pathLenConstraint;
+		case X509_REQUIRE_EXPLICIT_POLICY:
+			return this->explicit_policy_constraint;
+		case X509_INHIBIT_POLICY_MAPPING:
+			return this->inhibit_policy_constraint;
+		default:
+			return X509_NO_CONSTRAINT;
 	}
-	return this->explicit_policy_constraint;
 }
 
 METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
@@ -1841,8 +1841,7 @@ static private_x509_cert_t* create_empty(void)
 				.get_serial = _get_serial,
 				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-				.get_pathLenConstraint = _get_pathLenConstraint,
-				.get_policyConstraint = _get_policyConstraint,
+				.get_constraint = _get_constraint,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,

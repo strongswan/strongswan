@@ -73,7 +73,7 @@ static void print_x509(x509_t *x509)
 	chunk_t chunk;
 	bool first;
 	char *uri;
-	int len;
+	int len, explicit, inhibit;
 	x509_flag_t flags;
 	x509_cdp_t *cdp;
 	x509_cert_policy_t *policy;
@@ -176,7 +176,7 @@ static void print_x509(x509_t *x509)
 	}
 	enumerator->destroy(enumerator);
 
-	len = x509->get_pathLenConstraint(x509);
+	len = x509->get_constraint(x509, X509_PATH_LEN);
 	if (len != X509_NO_CONSTRAINT)
 	{
 		printf("pathlen:   %d\n", len);
@@ -259,19 +259,19 @@ static void print_x509(x509_t *x509)
 	}
 	enumerator->destroy(enumerator);
 
-	if (x509->get_policyConstraint(x509, FALSE) != X509_NO_CONSTRAINT ||
-		x509->get_policyConstraint(x509, TRUE) != X509_NO_CONSTRAINT)
+	explicit = x509->get_constraint(x509, X509_REQUIRE_EXPLICIT_POLICY);
+	inhibit = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
+
+	if (explicit != X509_NO_CONSTRAINT || inhibit != X509_NO_CONSTRAINT)
 	{
 		printf("PolicyConstraints:\n");
-		if (x509->get_policyConstraint(x509, FALSE) != X509_NO_CONSTRAINT)
+		if (explicit != X509_NO_CONSTRAINT)
 		{
-			printf("           requireExplicitPolicy: %d\n",
-				   x509->get_policyConstraint(x509, FALSE));
+			printf("           requireExplicitPolicy: %d\n", explicit);
 		}
-		if (x509->get_policyConstraint(x509, TRUE) != X509_NO_CONSTRAINT)
+		if (inhibit != X509_NO_CONSTRAINT)
 		{
-			printf("           inhibitPolicyMapping: %d\n",
-				   x509->get_policyConstraint(x509, TRUE));
+			printf("           inhibitPolicyMapping: %d\n", inhibit);
 		}
 	}
 

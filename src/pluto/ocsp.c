@@ -1045,7 +1045,7 @@ static bool valid_ocsp_response(response_t *res)
 		)
 
 		/* check path length constraint */
-		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		pathlen_constraint = x509->get_constraint(x509, X509_PATH_LEN);
 		if (pathlen_constraint != X509_NO_CONSTRAINT &&
 			pathlen > pathlen_constraint)
 		{

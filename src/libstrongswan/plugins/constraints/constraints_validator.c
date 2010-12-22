@@ -40,7 +40,7 @@ static bool check_pathlen(x509_t *issuer, int pathlen)
 {
 	int pathlen_constraint;
 
-	pathlen_constraint = issuer->get_pathLenConstraint(issuer);
+	pathlen_constraint = issuer->get_constraint(issuer, X509_PATH_LEN);
 	if (pathlen_constraint != X509_NO_CONSTRAINT &&
 		pathlen > pathlen_constraint)
 	{
@@ -439,7 +439,7 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 			enumerator = chain->create_enumerator(chain);
 			while (enumerator->enumerate(enumerator, &x509))
 			{
-				expl = x509->get_policyConstraint(x509, FALSE);
+				expl = x509->get_constraint(x509, X509_REQUIRE_EXPLICIT_POLICY);
 				if (expl != X509_NO_CONSTRAINT)
 				{
 					if (!has_policy_chain(chain, (x509_t*)subject, len - expl))
@@ -458,7 +458,7 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 			enumerator = chain->create_enumerator(chain);
 			while (enumerator->enumerate(enumerator, &x509))
 			{
-				expl = x509->get_policyConstraint(x509, TRUE);
+				expl = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
 				if (expl != X509_NO_CONSTRAINT)
 				{
 					if (!has_policy_mapping(chain, len - expl))
