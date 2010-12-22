@@ -578,6 +578,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	auth = auth_cfg_create();
 	get_key_strength(subject, auth);
 	current = subject->get_ref(subject);
+	auth->add(auth, AUTH_RULE_SUBJECT_CERT, current->get_ref(current));
 
 	for (pathlen = 0; pathlen <= MAX_TRUST_PATH_LEN; pathlen++)
 	{
@@ -702,8 +703,6 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->online))
 			{
-				this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
-								this->pretrusted->get_ref(this->pretrusted));
 				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
@@ -729,8 +728,6 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
 							   this->online))
 		{
-			this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
-							current->get_ref(current));
 			*cert = current;
 			if (auth)
 			{
