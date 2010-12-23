@@ -457,15 +457,15 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 		{
 			*uri_found = TRUE;
 			current = fetch_crl(uri);
-			if (!current->has_issuer(current, issuer))
-			{
-				DBG1(DBG_CFG, "issuer of fetched CRL '%Y' does not match CRL "
-					 "issuer '%Y'", current->get_issuer(current), issuer);
-				current->destroy(current);
-				continue;
-			}
 			if (current)
 			{
+				if (!current->has_issuer(current, issuer))
+				{
+					DBG1(DBG_CFG, "issuer of fetched CRL '%Y' does not match CRL "
+						 "issuer '%Y'", current->get_issuer(current), issuer);
+					current->destroy(current);
+					continue;
+				}
 				*best = get_better_crl(current, *best, subject,
 									   &valid, auth, TRUE);
 				if (*best && valid != VALIDATION_STALE)
