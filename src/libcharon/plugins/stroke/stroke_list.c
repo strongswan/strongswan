@@ -977,6 +977,10 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		{
 			fprintf(out, "  serial:    %#B\n", &chunk);
 		}
+		if (crl->is_delta_crl(crl, &chunk))
+		{
+			fprintf(out, "  delta for: %#B\n", &chunk);
+		}
 
 		/* count the number of revoked certificates */
 		{
