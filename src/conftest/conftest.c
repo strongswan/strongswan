@@ -27,6 +27,7 @@
 #include "hooks/hook.h"
 
 #include <threading/thread.h>
+#include <credentials/certificates/x509.h>
 
 /**
  * Conftest globals struct
@@ -218,6 +219,48 @@ static bool load_keys(settings_t *settings, char *dir)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+/**
+ * Load certificate distribution points
+ */
+static void load_cdps(settings_t *settings)
+{
+	enumerator_t *enumerator;
+	identification_t *id;
+	char *ca, *uri, *section;
+	x509_t *x509;
+
+	enumerator = settings->create_section_enumerator(settings, "cdps");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		if (!strncaseeq(section, "crl", strlen("crl")))
+		{
+			fprintf(stderr, "unknown cdp type '%s', ignored\n", section);
+			continue;
+		}
+
+		uri = settings->get_str(settings, "cdps.%s.uri", NULL, section);
+		ca = settings->get_str(settings, "cdps.%s.ca", NULL, section);
+		if (!ca || !uri)
+		{
+			fprintf(stderr, "cdp '%s' misses ca/uri, ignored\n", section);
+			continue;
+		}
+		x509 = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							CERT_X509, BUILD_FROM_FILE, ca, BUILD_END);
+		if (!x509)
+		{
+			fprintf(stderr, "loading cdp '%s' ca failed, ignored\n", section);
+			continue;
+		}
+		id = identification_create_from_encoding(ID_KEY_ID,
+									x509->get_subjectKeyIdentifier(x509));
+		conftest->creds->add_cdp(conftest->creds, CERT_X509_CRL, id, uri);
+		DESTROY_IF((certificate_t*)x509);
+		id->destroy(id);
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -448,6 +491,7 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
+	load_cdps(conftest->test);
 	if (!load_hooks())
 	{
 		return 1;
