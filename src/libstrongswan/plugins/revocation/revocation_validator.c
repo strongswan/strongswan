@@ -362,13 +362,32 @@ static bool verify_crl(certificate_t *crl, auth_cfg_t *auth)
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
-		x509_t *subject, cert_validation_t *valid, auth_cfg_t *auth, bool cache)
+					x509_t *subject, cert_validation_t *valid, auth_cfg_t *auth,
+					bool cache, crl_t *base)
 {
 	enumerator_t *enumerator;
 	time_t revocation, valid_until;
 	crl_reason_t reason;
 	chunk_t serial;
-	crl_t *crl;
+	crl_t *crl = (crl_t*)cand;
+
+	if (base)
+	{
+		if (!crl->is_delta_crl(crl, &serial) ||
+			!chunk_equals(serial, base->get_serial(base)))
+		{
+			cand->destroy(cand);
+			return best;
+		}
+	}
+	else
+	{
+		if (crl->is_delta_crl(crl, NULL))
+		{
+			cand->destroy(cand);
+			return best;
+		}
+	}
 
 	/* check CRL signature */
 	if (!verify_crl(cand, auth))
@@ -378,7 +397,6 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		return best;
 	}
 
-	crl = (crl_t*)cand;
 	enumerator = crl->create_enumerator(crl);
 	while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
 	{
@@ -426,20 +444,22 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
  * Find or fetch a certificate for a given crlIssuer
  */
 static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
-						auth_cfg_t *auth, certificate_t **best, bool *uri_found)
+								  auth_cfg_t *auth, crl_t *base,
+								  certificate_t **best, bool *uri_found)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	enumerator_t *enumerator;
 	certificate_t *current;
 	char *uri;
 
-	/* find a cached crl */
+	/* find a cached (delta) crl */
 	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
 										CERT_X509_CRL, KEY_ANY, issuer, FALSE);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		*best = get_better_crl(current, *best, subject, &valid, auth, FALSE);
+		*best = get_better_crl(current, *best, subject, &valid,
+							   auth, FALSE, base);
 		if (*best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached crl");
@@ -449,7 +469,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 	enumerator->destroy(enumerator);
 
 	/* fallback to fetching crls from credential sets cdps */
-	if (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
+	if (!base && valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED)
 	{
 		enumerator = lib->credmgr->create_cdp_enumerator(lib->credmgr,
 														 CERT_X509_CRL, issuer);
@@ -467,7 +487,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 					continue;
 				}
 				*best = get_better_crl(current, *best, subject,
-									   &valid, auth, TRUE);
+									   &valid, auth, TRUE, base);
 				if (*best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -478,6 +498,76 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 	}
 	return valid;
 }
+
+/**
+ * Look for a delta CRL for a given base CRL
+ */
+static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
+					crl_t *base, cert_validation_t base_valid, auth_cfg_t *auth)
+{
+	cert_validation_t valid = VALIDATION_SKIPPED;
+	certificate_t *best = NULL, *current;
+	enumerator_t *enumerator;
+	identification_t *id;
+	x509_cdp_t *cdp;
+	chunk_t chunk;
+	bool uri;
+
+	/* find cached delta CRL via subjectKeyIdentifier */
+	chunk = issuer->get_subjectKeyIdentifier(issuer);
+	if (chunk.len)
+	{
+		id = identification_create_from_encoding(ID_KEY_ID, chunk);
+		valid = find_crl(subject, id, auth, base, &best, &uri);
+		id->destroy(id);
+	}
+
+	/* find delta CRL by CRLIssuer */
+	enumerator = subject->create_crl_uri_enumerator(subject);
+	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
+		   enumerator->enumerate(enumerator, &cdp))
+	{
+		if (cdp->issuer)
+		{
+			valid = find_crl(subject, cdp->issuer, auth, base, &best, &uri);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* fetch from URIs found in Freshest CRL extension */
+	enumerator = base->create_delta_crl_uri_enumerator(base);
+	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
+		   enumerator->enumerate(enumerator, &cdp))
+	{
+		current = fetch_crl(cdp->uri);
+		if (current)
+		{
+			if (cdp->issuer && !current->has_issuer(current, cdp->issuer))
+			{
+				DBG1(DBG_CFG, "issuer of fetched delta CRL '%Y' does not match "
+					 "certificates CRL issuer '%Y'",
+					 current->get_issuer(current), cdp->issuer);
+				current->destroy(current);
+				continue;
+			}
+			best = get_better_crl(current, best, subject, &valid,
+								  auth, TRUE, base);
+			if (best && valid != VALIDATION_STALE)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (best)
+	{
+		best->destroy(best);
+		return valid;
+	}
+	return base_valid;
+}
+
 
 /**
  * validate a x509 certificate using CRL
@@ -499,7 +589,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, auth, &best, &uri_found);
+		valid = find_crl(subject, id, auth, NULL, &best, &uri_found);
 		id->destroy(id);
 	}
 
@@ -508,9 +598,10 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
 		   enumerator->enumerate(enumerator, &cdp))
 	{
-		if (id)
+		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, auth, &best, &uri_found);
+			valid = find_crl(subject, cdp->issuer, auth, NULL,
+							 &best, &uri_found);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -534,7 +625,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 					continue;
 				}
 				best = get_better_crl(current, best, subject, &valid,
-									  auth, TRUE);
+									  auth, TRUE, NULL);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -542,6 +633,12 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 			}
 		}
 		enumerator->destroy(enumerator);
+	}
+
+	/* look for delta CRLs */
+	if (best && (valid == VALIDATION_GOOD || valid == VALIDATION_STALE))
+	{
+		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid, auth);
 	}
 
 	/* an uri was found, but no result. switch validation state to failed */
