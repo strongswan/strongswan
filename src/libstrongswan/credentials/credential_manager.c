@@ -657,6 +657,14 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 }
 
 /**
+ * List find match function for certificates
+ */
+static bool cert_equals(certificate_t *a, certificate_t *b)
+{
+	return a->equals(a, b);
+}
+
+/**
  * enumerator for trusted certificates
  */
 typedef struct {
@@ -676,6 +684,8 @@ typedef struct {
 	certificate_t *pretrusted;
 	/** currently enumerating auth config */
 	auth_cfg_t *auth;
+	/** list of failed candidates */
+	linked_list_t *failed;
 } trusted_enumerator_t;
 
 METHOD(enumerator_t, trusted_enumerate, bool,
@@ -723,6 +733,12 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			continue;
 		}
 
+		if (this->failed->find_first(this->failed, (void*)cert_equals,
+									 NULL, current) == SUCCESS)
+		{	/* check each candidate only once */
+			continue;
+		}
+
 		DBG1(DBG_CFG, "  using certificate \"%Y\"",
 			 current->get_subject(current));
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
@@ -735,6 +751,7 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			}
 			return TRUE;
 		}
+		this->failed->insert_last(this->failed, current->get_ref(current));
 	}
 	return FALSE;
 }
@@ -745,6 +762,7 @@ METHOD(enumerator_t, trusted_destroy, void,
 	DESTROY_IF(this->pretrusted);
 	DESTROY_IF(this->auth);
 	DESTROY_IF(this->candidates);
+	this->failed->destroy_offset(this->failed, offsetof(certificate_t, destroy));
 	free(this);
 }
 
@@ -763,6 +781,7 @@ METHOD(credential_manager_t, create_trusted_enumerator, enumerator_t*,
 		.type = type,
 		.id = id,
 		.online = online,
+		.failed = linked_list_create(),
 	);
 	return &enumerator->public;
 }
