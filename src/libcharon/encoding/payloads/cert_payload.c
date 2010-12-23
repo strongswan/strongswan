@@ -206,13 +206,21 @@ METHOD(cert_payload_t, get_cert_encoding, cert_encoding_t,
 METHOD(cert_payload_t, get_cert, certificate_t*,
 	private_cert_payload_t *this)
 {
-	if (this->encoding != ENC_X509_SIGNATURE)
+	int type;
+
+	switch (this->encoding)
 	{
-		return NULL;
+		case ENC_X509_SIGNATURE:
+			type = CERT_X509;
+			break;
+		case ENC_CRL:
+			type = CERT_X509_CRL;
+			break;
+		default:
+			return NULL;
 	}
-	return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB_ASN1_DER, this->data,
-							  BUILD_END);
+	return lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+							  BUILD_BLOB_ASN1_DER, this->data, BUILD_END);
 }
 
 METHOD(cert_payload_t, get_hash, chunk_t,

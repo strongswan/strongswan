@@ -253,11 +253,19 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					}
 					break;
 				}
+				case ENC_CRL:
+					cert = cert_payload->get_cert(cert_payload);
+					if (cert)
+					{
+						DBG1(DBG_IKE, "received CRL \"%Y\"",
+							 cert->get_subject(cert));
+						auth->add(auth, AUTH_HELPER_REVOCATION_CERT, cert);
+					}
+					break;
 				case ENC_PKCS7_WRAPPED_X509:
 				case ENC_PGP:
 				case ENC_DNS_SIGNED_KEY:
 				case ENC_KERBEROS_TOKEN:
-				case ENC_CRL:
 				case ENC_ARL:
 				case ENC_SPKI:
 				case ENC_X509_ATTRIBUTE:
