@@ -281,11 +281,13 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 	chunk_t oid_data, data, printable;
 	u_char type;
 	int oid, written;
-	bool finished = FALSE;
+	bool finished = FALSE, empty = TRUE;
 
 	e = create_rdn_enumerator(dn);
 	while (e->enumerate(e, &oid_data, &type, &data))
 	{
+		empty = FALSE;
+
 		oid = asn1_known_oid(oid_data);
 
 		if (oid == OID_UNKNOWN)
@@ -329,7 +331,11 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 			break;
 		}
 	}
-	if (!finished)
+	if (empty)
+	{
+		snprintf(buf, len, "");
+	}
+	else if (!finished)
 	{
 		snprintf(buf, len, "(invalid ID_DER_ASN1_DN)");
 	}
