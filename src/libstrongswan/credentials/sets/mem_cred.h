@@ -90,6 +90,15 @@ struct mem_cred_t {
 	 */
 	void (*add_shared_list)(mem_cred_t *this, shared_key_t *shared,
 							linked_list_t *owners);
+	/**
+	 * Add a certificate distribution point to the set.
+	 *
+	 * @param type			type of the certificate
+	 * @param id			certificate ID CDP has a cert for, gets cloned
+	 * @param uri			CDP URI, gets strduped
+	 */
+	void (*add_cdp)(mem_cred_t *this, certificate_type_t type,
+					identification_t *id, char *uri);
 
 	/**
 	 * Clear all credentials from the credential set.
