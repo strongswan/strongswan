@@ -41,6 +41,11 @@ struct private_rebuild_auth_t {
 	 * Received NONCE, required to rebuild AUTH
 	 */
 	chunk_t nonce;
+
+	/**
+	 * ID to use for key lookup, if not from IDi
+	 */
+	identification_t *id;
 };
 
 /**
@@ -86,11 +91,13 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	generator->destroy(generator);
 
 	auth = auth_cfg_create();
-	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
+	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY,
+										this->id ?: id, auth);
 	auth->destroy(auth);
 	if (private == NULL)
 	{
-		DBG1(DBG_CFG, "no private key found for '%Y' to rebuild AUTH", id);
+		DBG1(DBG_CFG, "no private key found for '%Y' to rebuild AUTH",
+			 this->id ?: id);
 		id->destroy(id);
 		return FALSE;
 	}
@@ -206,6 +213,7 @@ METHOD(hook_t, destroy, void,
 {
 	free(this->ike_init.ptr);
 	free(this->nonce.ptr);
+	DESTROY_IF(this->id);
 	free(this);
 }
 
@@ -215,6 +223,7 @@ METHOD(hook_t, destroy, void,
 hook_t *rebuild_auth_hook_create(char *name)
 {
 	private_rebuild_auth_t *this;
+	char *id;
 
 	INIT(this,
 		.hook = {
@@ -224,6 +233,11 @@ hook_t *rebuild_auth_hook_create(char *name)
 			.destroy = _destroy,
 		},
 	);
+	id = conftest->test->get_str(conftest->test, "hooks.%s.key", NULL, name);
+	if (id)
+	{
+		this->id = identification_create_from_string(id);
+	}
 
 	return &this->hook;
 }
