@@ -105,6 +105,8 @@ enum auth_rule_t {
 	AUTH_HELPER_IM_HASH_URL,
 	/** Hash and URL of a end-entity certificate, char* */
 	AUTH_HELPER_SUBJECT_HASH_URL,
+	/** revocation certificate (CRL, OCSP), certificate_t* */
+	AUTH_HELPER_REVOCATION_CERT,
 };
 
 /**

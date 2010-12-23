@@ -131,6 +131,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
+		case AUTH_HELPER_REVOCATION_CERT:
 		{
 			certificate_t *cert = (certificate_t*)entry->value;
 			cert->destroy(cert);
@@ -192,6 +193,7 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
+			case AUTH_HELPER_REVOCATION_CERT:
 				/* pointer type */
 				enumerator->current->value = va_arg(args, void*);
 				break;
@@ -261,6 +263,7 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
+		case AUTH_HELPER_REVOCATION_CERT:
 		default:
 			return NULL;
 	}
@@ -300,6 +303,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
+		case AUTH_HELPER_REVOCATION_CERT:
 			/* pointer type */
 			entry->value = va_arg(args, void*);
 			break;
@@ -561,6 +565,7 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
+			case AUTH_HELPER_REVOCATION_CERT:
 				/* skip helpers */
 				continue;
 		}
@@ -607,6 +612,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_SUBJECT_CERT:
 				case AUTH_HELPER_IM_CERT:
 				case AUTH_HELPER_SUBJECT_CERT:
+				case AUTH_HELPER_REVOCATION_CERT:
 				{
 					certificate_t *cert = (certificate_t*)value;
 
@@ -702,6 +708,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_SUBJECT_CERT:
 					case AUTH_HELPER_IM_CERT:
 					case AUTH_HELPER_SUBJECT_CERT:
+					case AUTH_HELPER_REVOCATION_CERT:
 					{
 						certificate_t *c1, *c2;
 
@@ -815,6 +822,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
+			case AUTH_HELPER_REVOCATION_CERT:
 			{
 				certificate_t *cert = (certificate_t*)entry->value;
 				clone->add(clone, entry->type, cert->get_ref(cert));
