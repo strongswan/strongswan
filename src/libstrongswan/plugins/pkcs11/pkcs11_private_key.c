@@ -424,13 +424,13 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 		switch (type)
 		{
 			case CKK_RSA:
-				if (attr[2].ulValueLen == -1 || attr[3].ulValueLen == -1)
+				if (attr[1].ulValueLen == -1 || attr[2].ulValueLen == -1)
 				{
 					DBG1(DBG_CFG, "reading modulus/exponent from PKCS#1 failed");
 					break;
 				}
-				modulus = chunk_create(attr[2].pValue, attr[2].ulValueLen);
-				pubexp = chunk_create(attr[3].pValue, attr[3].ulValueLen);
+				modulus = chunk_create(attr[1].pValue, attr[1].ulValueLen);
+				pubexp = chunk_create(attr[2].pValue, attr[2].ulValueLen);
 				this->pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 									KEY_RSA, BUILD_RSA_MODULUS, modulus,
 									BUILD_RSA_PUB_EXP, pubexp, BUILD_END);
