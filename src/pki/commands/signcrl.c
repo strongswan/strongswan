@@ -332,6 +332,8 @@ static int sign_crl()
 			error = "loading base CRL failed";
 			goto error;
 		}
+		memcpy(crl_serial, lastcrl->get_serial(lastcrl).ptr,
+			   min(lastcrl->get_serial(lastcrl).len, sizeof(crl_serial)));
 		baseCrlNumber = chunk_clone(lastcrl->get_serial(lastcrl));
 		DESTROY_IF((certificate_t*)lastcrl);
 		lastcrl = NULL;
