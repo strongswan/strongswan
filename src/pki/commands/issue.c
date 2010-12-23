@@ -270,12 +270,6 @@ static int issue()
 		}
 		break;
 	}
-
-	if (!pkcs10 && !dn)
-	{
-		error = "--dn is required";
-		goto usage;
-	}
 	if (!cacert)
 	{
 		error = "--cacert is required";
@@ -286,7 +280,7 @@ static int issue()
 		error = "--cakey or --keyid is required";
 		goto usage;
 	}
-	if (dn)
+	if (dn && *dn)
 	{
 		id = identification_create_from_string(dn);
 		if (id->get_type(id) != ID_DER_ASN1_DN)
@@ -294,6 +288,11 @@ static int issue()
 			error = "supplied --dn is not a distinguished name";
 			goto end;
 		}
+	}
+	else
+	{
+		id = identification_create_from_encoding(ID_DER_ASN1_DN,
+										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
 
 	DBG2(DBG_LIB, "Reading ca certificate:");
@@ -511,7 +510,7 @@ static void __attribute__ ((constructor))reg()
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10] --cakey file | --cakeyid hex",
-		 " --cacert file --dn subject-dn [--san subjectAltName]+",
+		 " --cacert file [--dn subject-dn] [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri [--crlissuer i] ]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
