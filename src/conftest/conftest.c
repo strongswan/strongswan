@@ -229,12 +229,21 @@ static void load_cdps(settings_t *settings)
 	enumerator_t *enumerator;
 	identification_t *id;
 	char *ca, *uri, *section;
+	certificate_type_t type;
 	x509_t *x509;
 
 	enumerator = settings->create_section_enumerator(settings, "cdps");
 	while (enumerator->enumerate(enumerator, &section))
 	{
-		if (!strncaseeq(section, "crl", strlen("crl")))
+		if (strncaseeq(section, "crl", strlen("crl")))
+		{
+			type = CERT_X509_CRL;
+		}
+		else if (strncaseeq(section, "ocsp", strlen("ocsp")))
+		{
+			type = CERT_X509_OCSP_RESPONSE;
+		}
+		else
 		{
 			fprintf(stderr, "unknown cdp type '%s', ignored\n", section);
 			continue;
@@ -256,7 +265,7 @@ static void load_cdps(settings_t *settings)
 		}
 		id = identification_create_from_encoding(ID_KEY_ID,
 									x509->get_subjectKeyIdentifier(x509));
-		conftest->creds->add_cdp(conftest->creds, CERT_X509_CRL, id, uri);
+		conftest->creds->add_cdp(conftest->creds, type, id, uri);
 		DESTROY_IF((certificate_t*)x509);
 		id->destroy(id);
 	}
