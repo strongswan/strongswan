@@ -33,6 +33,8 @@
 #define SOL_ALG 279
 #endif /* SOL_ALG */
 
+extern const char *af_alg_plugin_name;
+
 typedef struct af_alg_ops_t af_alg_ops_t;
 
 /**

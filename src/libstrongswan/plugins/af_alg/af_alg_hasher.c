@@ -70,7 +70,7 @@ void af_alg_hasher_probe()
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_hasher(lib->crypto, algs[i].id, "af_alg",
+			lib->crypto->add_hasher(lib->crypto, algs[i].id, af_alg_plugin_name,
 							(hasher_constructor_t)af_alg_hasher_create);
 		}
 	}

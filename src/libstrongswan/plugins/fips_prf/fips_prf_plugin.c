@@ -18,7 +18,7 @@
 #include <library.h>
 #include "fips_prf.h"
 
-static const char *plugin_name = "fips_prf";
+static const char *plugin_name = "fips-prf";
 
 typedef struct private_fips_prf_plugin_t private_fips_prf_plugin_t;
 

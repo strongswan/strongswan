@@ -82,7 +82,7 @@ void af_alg_signer_probe()
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_signer(lib->crypto, algs[i].id, "af_alg",
+			lib->crypto->add_signer(lib->crypto, algs[i].id, af_alg_plugin_name,
 							(signer_constructor_t)af_alg_signer_create);
 		}
 	}

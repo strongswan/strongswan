@@ -81,7 +81,7 @@ void af_alg_prf_probe()
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_prf(lib->crypto, algs[i].id, "af_alg",
+			lib->crypto->add_prf(lib->crypto, algs[i].id, af_alg_plugin_name,
 							(prf_constructor_t)af_alg_prf_create);
 		}
 	}
