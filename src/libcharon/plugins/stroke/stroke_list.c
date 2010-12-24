@@ -36,6 +36,8 @@
 #define CRL_WARNING_INTERVAL	7	/* days */
 #define AC_WARNING_INTERVAL		1	/* day */
 
+#define MAX_ALG_LINE          120   /* characters */
+
 typedef struct private_stroke_list_t private_stroke_list_t;
 
 /**
@@ -1058,6 +1060,25 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 }
 
 /**
+ * Print the name of an algorithm plus the name of the plugin that registered it
+ */
+static void print_alg(FILE *out, int *len, enum_name_t *alg_names, int alg_type,
+					  const char *plugin_name)
+{
+	char alg_name[BUF_LEN];
+	int alg_name_len;
+	
+	alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type, plugin_name);
+	if (*len + alg_name_len > MAX_ALG_LINE)
+	{
+		fprintf(out, "\n             ");
+		*len = 13;	
+	}
+	fprintf(out, "%s", alg_name);
+	*len += alg_name_len;
+}
+
+/**
  * List of registered cryptographical algorithms
  */
 static void list_algs(FILE *out)
@@ -1070,62 +1091,64 @@ static void list_algs(FILE *out)
 	diffie_hellman_group_t group;
 	rng_quality_t quality;
 	const char *plugin_name;
+	int len;
 
 	fprintf(out, "\n");
 	fprintf(out, "List of registered IKEv2 Algorithms:\n");
-	fprintf(out, "\n  encryption: ");
+	fprintf(out, "\n  encryption:");
+	len = 13;
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", encryption_algorithm_names, encryption,
-								plugin_name);
+		print_alg(out, &len, encryption_algorithm_names, encryption, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  integrity:  ");
+	fprintf(out, "\n  integrity: ");
+	len = 13;
 	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", integrity_algorithm_names, integrity,
-								plugin_name);
+		print_alg(out, &len, integrity_algorithm_names, integrity, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  aead:       ");
+	fprintf(out, "\n  aead:      ");
+	len = 13;
 	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", encryption_algorithm_names, encryption,
-								plugin_name);
+		print_alg(out, &len, encryption_algorithm_names, encryption, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  hasher:     ");
+	fprintf(out, "\n  hasher:    ");
+	len = 13;
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", hash_algorithm_names, hash,
-								plugin_name);
+		print_alg(out, &len, hash_algorithm_names, hash, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  prf:        ");
+	fprintf(out, "\n  prf:       ");
+	len = 13;
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", pseudo_random_function_names, prf,
-								plugin_name);
+		print_alg(out, &len, pseudo_random_function_names, prf, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  dh-group:   ");
+	fprintf(out, "\n  dh-group:  ");
+	len = 13;
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", diffie_hellman_group_names, group,
-								plugin_name);
+		print_alg(out, &len, diffie_hellman_group_names, group, plugin_name);
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "\n  random-gen: ");
+	fprintf(out, "\n  random-gen:");
+	len = 13;
 	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
 	{
-		fprintf(out, "%N[%s] ", rng_quality_names, quality, plugin_name);
+		print_alg(out, &len, rng_quality_names, quality, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n");
