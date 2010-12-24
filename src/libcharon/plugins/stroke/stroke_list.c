@@ -388,10 +388,8 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of stroke_list_t.status.
- */
-static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
+METHOD(stroke_list_t, status, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
 {
 	enumerator_t *enumerator, *children;
 	ike_cfg_t *ike_cfg;
@@ -1133,10 +1131,8 @@ static void list_algs(FILE *out)
 	fprintf(out, "\n");
 }
 
-/**
- * Implementation of stroke_list_t.list.
- */
-static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_list_t, list, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
 	linked_list_t *cert_list = NULL;
 
@@ -1239,10 +1235,8 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	}
 }
 
-/**
- * Implementation of stroke_list_t.leases
- */
-static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_list_t, leases, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
 	enumerator_t *enumerator;
 	u_int size, offline, online;
@@ -1279,10 +1273,8 @@ static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	DESTROY_IF(address);
 }
 
-/**
- * Implementation of stroke_list_t.destroy
- */
-static void destroy(private_stroke_list_t *this)
+METHOD(stroke_list_t, destroy, void,
+	private_stroke_list_t *this)
 {
 	free(this);
 }
@@ -1292,15 +1284,19 @@ static void destroy(private_stroke_list_t *this)
  */
 stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 {
-	private_stroke_list_t *this = malloc_thing(private_stroke_list_t);
+	private_stroke_list_t *this;
 
-	this->public.list = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))list;
-	this->public.status = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out,bool))status;
-	this->public.leases = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))leases;
-	this->public.destroy = (void(*)(stroke_list_t*))destroy;
+	INIT(this,
+		.public = {
 
-	this->uptime = time_monotonic(NULL);
-	this->attribute = attribute;
+			.list = _list,
+			.status = _status,
+			.leases = _leases,
+			.destroy = _destroy,
+		},
+		.uptime = time_monotonic(NULL),
+		.attribute = attribute,
+	);
 
 	return &this->public;
 }
