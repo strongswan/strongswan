@@ -188,7 +188,8 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		}
 		crypter = create(alg, vector->key_size);
 		if (!crypter)
-		{	DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
+		{
+			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
 				 encryption_algorithm_names, alg, plugin_name,
 				 BITS_PER_BYTE * vector->key_size);
 			continue;
@@ -337,7 +338,10 @@ METHOD(crypto_tester_t, test_aead, bool,
 		}
 		aead = create(alg, vector->key_size);
 		if (!aead)
-		{	/* key size not supported... */
+		{
+			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
+				 encryption_algorithm_names, alg, plugin_name,
+				 BITS_PER_BYTE * vector->key_size);
 			continue;
 		}
 
