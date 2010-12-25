@@ -352,6 +352,7 @@ METHOD(crypto_tester_t, test_aead, bool,
 			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
 				 encryption_algorithm_names, alg, plugin_name,
 				 BITS_PER_BYTE * vector->key_size);
+			failed = TRUE;
 			continue;
 		}
 
