@@ -192,6 +192,7 @@ METHOD(crypto_tester_t, test_crypter, bool,
 			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
 				 encryption_algorithm_names, alg, plugin_name,
 				 BITS_PER_BYTE * vector->key_size);
+			failed = TRUE;
 			continue;
 		}
 
@@ -242,10 +243,19 @@ METHOD(crypto_tester_t, test_crypter, bool,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 encryption_algorithm_names, alg, plugin_name);
-		return !this->required;
+		if (failed)
+		{
+			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
+				 encryption_algorithm_names, alg, plugin_name);
+			return FALSE;              
+		}
+		else
+		{
+			DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
+				 this->required ? "disabled" : "enabled ",
+				 encryption_algorithm_names, alg, plugin_name);
+			return !this->required;
+		}
 	}
 	if (!failed)
 	{
@@ -402,10 +412,19 @@ METHOD(crypto_tester_t, test_aead, bool,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 encryption_algorithm_names, alg, plugin_name);
-		return !this->required;
+		if (failed)
+		{
+			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
+				 encryption_algorithm_names, alg, plugin_name);
+			return FALSE;              
+		}
+		else
+		{
+			DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
+				 this->required ? "disabled" : "enabled ",
+				 encryption_algorithm_names, alg, plugin_name);
+			return !this->required;
+		}
 	}
 	if (!failed)
 	{
