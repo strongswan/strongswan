@@ -36,8 +36,6 @@
 #define CRL_WARNING_INTERVAL	7	/* days */
 #define AC_WARNING_INTERVAL		1	/* day */
 
-#define MAX_ALG_LINE          120   /* characters */
-
 typedef struct private_stroke_list_t private_stroke_list_t;
 
 /**
@@ -1069,7 +1067,7 @@ static void print_alg(FILE *out, int *len, enum_name_t *alg_names, int alg_type,
 	int alg_name_len;
 	
 	alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type, plugin_name);
-	if (*len + alg_name_len > MAX_ALG_LINE)
+	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
 	{
 		fprintf(out, "\n             ");
 		*len = 13;	

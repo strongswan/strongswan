@@ -33,6 +33,8 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/diffie_hellman.h>
 #include <crypto/transform.h>
 
+#define CRYPTO_MAX_ALG_LINE          120   /* characters */
+
 /**
  * Constructor function for crypters
  */
