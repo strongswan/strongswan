@@ -29,9 +29,9 @@ static const char *co[] = {
  "    Roger Wegmann, Simon Zwahlen,",
  "    ZHW Zuercher Hochschule Winterthur (Switzerland).",
  "",
- "    Philip Boetschi, Tobias Brunner, Sansar Choinyambuu, Adrian Doerig,"
- "    Andreas Eigenmann, Fabian Hartmann, Noah Heusser, Jan Hutter,"
- "    Thomas Kallenberg, Daniel Roethlisberger, Joel Stillhart, Martin Willi,"
+ "    Philip Boetschi, Tobias Brunner, Sansar Choinyambuu, Adrian Doerig,",
+ "    Andreas Eigenmann, Fabian Hartmann, Noah Heusser, Jan Hutter,",
+ "    Thomas Kallenberg, Daniel Roethlisberger, Joel Stillhart, Martin Willi,",
  "    Daniel Wydler, Andreas Steffen,",
  "    HSR Hochschule fuer Technik Rapperswil (Switzerland).",
  "",
