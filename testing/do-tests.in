@@ -343,6 +343,7 @@ do
 	#
 
 	$DIR/scripts/load-testconfig $testname
+	unset RADIUSHOSTS
 	source $TESTDIR/test.conf
 
 
