@@ -110,7 +110,7 @@ struct pb_tnc_batch_t {
 /**
  * Create an empty PB-TNC Batch of a given type
  *
- * @parame is_server		TRUE if server, FALSE if client
+ * @param is_server			TRUE if server, FALSE if client
  * @param type				PB-TNC batch type
  */
 pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type);
@@ -118,7 +118,7 @@ pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type);
 /**
  * Create an unprocessed PB-TNC Batch from data
  *
- * @parame is_server		TRUE if server, FALSE if client
+ * @param is_server			TRUE if server, FALSE if client
  * @param  data				encoded PB-TNC batch
  */
 pb_tnc_batch_t* pb_tnc_batch_create_from_data(bool is_server, chunk_t data);
