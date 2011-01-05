@@ -51,6 +51,12 @@ strongswan-4.5.1
   or drop messages and much more. It is enabled using the --enable-conftest
   ./configure switch.
 
+- The new libstrongswan constraints plugin provides advanced X.509 constraint
+  checking. In additon to X.509 pathLen constraints, the plugin checks for
+  nameConstraints and certificatePolicies, including policyMappings and
+  policyConstraints. The x509 certificate plugin and the pki tool have been
+  enhanced to support these extensions.
+
 strongswan-4.5.0
 ----------------
 
