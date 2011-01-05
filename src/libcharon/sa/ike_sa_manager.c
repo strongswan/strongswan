@@ -1394,7 +1394,7 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 }
 
 METHOD(ike_sa_manager_t, check_uniqueness, bool,
-	private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+	private_ike_sa_manager_t *this, ike_sa_t *ike_sa, bool force_replace)
 {
 	bool cancel = FALSE;
 	peer_cfg_t *peer_cfg;
@@ -1408,7 +1408,7 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 
 	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 	policy = peer_cfg->get_unique_policy(peer_cfg);
-	if (policy == UNIQUE_NO)
+	if (policy == UNIQUE_NO && !force_replace)
 	{
 		return FALSE;
 	}
@@ -1454,6 +1454,13 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 		duplicate = checkout(this, duplicate_id);
 		if (!duplicate)
 		{
+			continue;
+		}
+		if (force_replace)
+		{
+			DBG1(DBG_IKE, "destroying duplicate IKE_SA for peer '%Y', "
+				 "received INITIAL_CONTACT", other);
+			checkin_and_destroy(this, duplicate);
 			continue;
 		}
 		peer_cfg = duplicate->get_peer_cfg(duplicate);

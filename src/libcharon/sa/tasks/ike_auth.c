@@ -106,6 +106,11 @@ struct private_ike_auth_t {
 	 * should we send a AUTHENTICATION_FAILED notify?
 	 */
 	bool authentication_failed;
+
+	/**
+	 * received an INITIAL_CONTACT?
+	 */
+	bool initial_contact;
 };
 
 /**
@@ -612,6 +617,14 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			return NEED_MORE;
 	}
 
+	/* If authenticated (with non-EAP) and received INITIAL_CONTACT,
+	 * delete any existing IKE_SAs with that peer. */
+	if (message->get_message_id(message) == 1 &&
+		message->get_notify(message, INITIAL_CONTACT))
+	{
+		this->initial_contact = TRUE;
+	}
+
 	/* store authentication information */
 	cfg = auth_cfg_create();
 	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
@@ -705,6 +718,13 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
+		if (this->initial_contact)
+		{
+			charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+													 this->ike_sa, TRUE);
+			this->initial_contact = FALSE;
+		}
+
 		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_EAP)
 		{	/* EAP-only authentication */
 			if (!this->ike_sa->supports_extension(this->ike_sa,
@@ -786,7 +806,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (!this->do_another_auth && !this->expect_another_auth)
 	{
 		if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-													 this->ike_sa))
+													 this->ike_sa, FALSE))
 		{
 			DBG1(DBG_IKE, "cancelling IKE_SA setup due uniqueness policy");
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,

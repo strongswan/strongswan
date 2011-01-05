@@ -106,10 +106,12 @@ struct ike_sa_manager_t {
 	 * deadlocks occur otherwise.
 	 *
 	 * @param ike_sa			ike_sa to check
+	 * @param force_replace		replace existing SAs, regardless of unique policy
 	 * @return					TRUE, if the given IKE_SA has duplicates and
 	 * 							should be deleted
 	 */
-	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
+	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa,
+							 bool force_replace);
 
 	/**
 	 * Check if we already have a connected IKE_SA between two identities.
