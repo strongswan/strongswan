@@ -43,7 +43,7 @@ enum  pb_tnc_error_code_t {
 extern enum_name_t *pb_tnc_error_code_names;
 
 /**
- * Classs representing the PB-Error message type.
+ * Class representing the PB-Error message type.
  */
 struct pb_error_msg_t {
 

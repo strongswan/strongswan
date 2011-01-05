@@ -40,7 +40,7 @@ enum pb_tnc_remed_param_type_t {
 extern enum_name_t *pb_tnc_remed_param_type_names;
 
 /**
- * Classs representing the PB-Remediation-Parameters message type.
+ * Class representing the PB-Remediation-Parameters message type.
  */
 struct pb_remediation_parameters_msg_t {
 

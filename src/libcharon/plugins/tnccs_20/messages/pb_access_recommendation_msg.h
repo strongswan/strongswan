@@ -42,7 +42,7 @@ extern enum_name_t *pb_access_recommendation_code_names;
 
 
 /**
- * Classs representing the PB-Access-Recommendation message type.
+ * Class representing the PB-Access-Recommendation message type.
  */
 struct pb_access_recommendation_msg_t {
 

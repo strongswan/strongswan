@@ -47,7 +47,7 @@ typedef struct pb_pa_msg_t pb_pa_msg_t;
 extern enum_name_t *pa_tnc_subtype_names;
 
 /**
- * Classs representing the PB-PA message type.
+ * Class representing the PB-PA message type.
  */
 struct pb_pa_msg_t {
 
