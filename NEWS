@@ -45,6 +45,12 @@ strongswan-4.5.1
   responder. The notify is sent when initiating configurations with a unique
   policy, set in ipsec.conf via the global 'uniqueids' option.
 
+- The conftest conformance testing framework enables the IKEv2 stack to perform
+  many tests using a distinct tool and configuration frontend. Various hooks
+  can alter reserved bits, flags, add custom notifies and proposals, reorder
+  or drop messages and much more. It is enabled using the --enable-conftest
+  ./configure switch.
+
 strongswan-4.5.0
 ----------------
 
