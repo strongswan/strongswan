@@ -51,7 +51,7 @@ typedef struct private_pb_remediation_parameters_msg_t private_pb_remediation_pa
  */
 
 /**
- * Private data of a private_pb_remediation_parameters_msg_t object.
+ * Private data of a pb_remediation_parameters_msg_t object.
  *
  */
 struct private_pb_remediation_parameters_msg_t {

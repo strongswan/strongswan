@@ -18,7 +18,7 @@
 typedef struct private_pb_experimental_msg_t private_pb_experimental_msg_t;
 
 /**
- * Private data of a private_pb_experimental_msg_t object.
+ * Private data of a pb_experimental_msg_t object.
  *
  */
 struct private_pb_experimental_msg_t {

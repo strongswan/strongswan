@@ -35,7 +35,7 @@ typedef struct private_pb_language_preference_msg_t private_pb_language_preferen
 #define PB_LANG_PREFIX_LEN		strlen(PB_LANG_PREFIX)
 
 /**
- * Private data of a private_pb_language_preference_msg_t object.
+ * Private data of a pb_language_preference_msg_t object.
  *
  */
 struct private_pb_language_preference_msg_t {
