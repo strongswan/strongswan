@@ -57,6 +57,9 @@ strongswan-4.5.1
   policyConstraints. The x509 certificate plugin and the pki tool have been
   enhanced to support these extensions.
 
+- The revocation and x509 libstrongswan plugins and the pki tool gained basic
+  support for delta CRLs.
+
 strongswan-4.5.0
 ----------------
 
