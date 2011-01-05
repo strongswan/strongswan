@@ -539,10 +539,17 @@ METHOD(tls_t, build, status_t,
 						   pb_tnc_batch_type_names, batch_type, data.len,
 						   this->connection_id);
 			DBG3(DBG_TNC, "%B", &data);
-
 			*msglen = data.len;
-			*buflen = data.len;
-			memcpy(buf, data.ptr, data.len);
+
+			if (data.len > *buflen)
+			{
+				DBG1(DBG_TNC, "Fragmentation of PB-TNC Batch not supported yet");
+			}
+			else
+			{
+				*buflen = data.len;
+			}				
+			memcpy(buf, data.ptr, *buflen);
 			status = ALREADY_DONE;
 		}
 		else
@@ -557,7 +564,7 @@ METHOD(tls_t, build, status_t,
 	}
 	else
 	{
-		DBG1(DBG_TNC, "no TNCCS batch to send");
+		DBG1(DBG_TNC, "no PB-TNC batch to send");
 		status = INVALID_STATE;
 	}
 	this->mutex->unlock(this->mutex);
