@@ -1320,9 +1320,8 @@ METHOD(ike_sa_manager_t, checkin, void,
 		segment = put_entry(this, entry);
 	}
 
-	/* apply identities for duplicate test (only as responder) */
-	if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
-		ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+	/* apply identities for duplicate test */
+	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		entry->my_id == NULL && entry->other_id == NULL)
 	{
 		entry->my_id = my_id->clone(my_id);
@@ -1377,8 +1376,7 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 		{
 			remove_half_open(this, entry);
 		}
-		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
-			entry->my_id && entry->other_id)
+		if (entry->my_id && entry->other_id)
 		{
 			remove_connected_peers(this, entry);
 		}
@@ -1502,6 +1500,34 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 	return cancel;
 }
 
+METHOD(ike_sa_manager_t, has_contact, bool,
+	private_ike_sa_manager_t *this, identification_t *me,
+	identification_t *other, int family)
+{
+	linked_list_t *list;
+	u_int row, segment;
+	rwlock_t *lock;
+	bool found = FALSE;
+
+	row = chunk_hash_inc(other->get_encoding(other),
+						 chunk_hash(me->get_encoding(me))) & this->table_mask;
+	segment = row & this->segment_mask;
+	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
+	lock->read_lock(lock);
+	list = this->connected_peers_table[row];
+	if (list)
+	{
+		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
+							 NULL, me, other, family) == SUCCESS)
+		{
+			found = TRUE;
+		}
+	}
+	lock->unlock(lock);
+
+	return found;
+}
+
 METHOD(ike_sa_manager_t, get_half_open_count, int,
 	private_ike_sa_manager_t *this, host_t *ip)
 {
@@ -1608,8 +1634,7 @@ METHOD(ike_sa_manager_t, flush, void,
 		{
 			remove_half_open(this, entry);
 		}
-		if (!entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
-			entry->my_id && entry->other_id)
+		if (entry->my_id && entry->other_id)
 		{
 			remove_connected_peers(this, entry);
 		}
@@ -1686,6 +1711,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 			.checkout_by_id = _checkout_by_id,
 			.checkout_by_name = _checkout_by_name,
 			.check_uniqueness = _check_uniqueness,
+			.has_contact = _has_contact,
 			.create_enumerator = _create_enumerator,
 			.checkin = _checkin,
 			.checkin_and_destroy = _checkin_and_destroy,

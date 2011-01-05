@@ -112,6 +112,17 @@ struct ike_sa_manager_t {
 	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
 
 	/**
+	 * Check if we already have a connected IKE_SA between two identities.
+	 *
+	 * @param me				own identity
+	 * @param other				remote identity
+	 * @param family			address family to include in uniqueness check
+	 * @return					TRUE if we have a connected IKE_SA
+	 */
+	bool (*has_contact)(ike_sa_manager_t *this, identification_t *me,
+						identification_t *other, int family);
+
+	/**
 	 * Check out an IKE_SA a unique ID.
 	 *
 	 * Every IKE_SA and every CHILD_SA is uniquely identified by an ID.

@@ -390,7 +390,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	/* check if an authenticator is in progress */
 	if (this->my_auth == NULL)
 	{
-		identification_t *id;
+		identification_t *idi, *idr = NULL;
 		id_payload_t *id_payload;
 
 		/* clean up authentication config from a previous round */
@@ -401,28 +401,41 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		cfg = get_auth_cfg(this, FALSE);
 		if (cfg)
 		{
-			id = cfg->get(cfg, AUTH_RULE_IDENTITY);
-			if (id && !id->contains_wildcards(id))
+			idr = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			if (idr && !idr->contains_wildcards(idr))
 			{
-				this->ike_sa->set_other_id(this->ike_sa, id->clone(id));
+				this->ike_sa->set_other_id(this->ike_sa, idr->clone(idr));
 				id_payload = id_payload_create_from_identification(
-															ID_RESPONDER, id);
+															ID_RESPONDER, idr);
 				message->add_payload(message, (payload_t*)id_payload);
 			}
 		}
 		/* add IDi */
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		cfg->merge(cfg, get_auth_cfg(this, TRUE), TRUE);
-		id = cfg->get(cfg, AUTH_RULE_IDENTITY);
-		if (!id)
+		idi = cfg->get(cfg, AUTH_RULE_IDENTITY);
+		if (!idi)
 		{
 			DBG1(DBG_CFG, "configuration misses IDi");
 			return FAILED;
 		}
-		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
-		id_payload = id_payload_create_from_identification(ID_INITIATOR, id);
+		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
+		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
+
+		if (idr && message->get_message_id(message) == 1 &&
+			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO)
+		{
+			host_t *host;
+
+			host = this->ike_sa->get_other_host(this->ike_sa);
+			if (!charon->ike_sa_manager->has_contact(charon->ike_sa_manager,
+											idi, idr, host->get_family(host)))
+			{
+				message->add_notify(message, FALSE, INITIAL_CONTACT, chunk_empty);
+			}
+		}
 
 		/* build authentication data */
 		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
