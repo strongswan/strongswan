@@ -543,7 +543,7 @@ METHOD(tls_t, build, status_t,
 
 			if (data.len > *buflen)
 			{
-				DBG1(DBG_TNC, "Fragmentation of PB-TNC Batch not supported yet");
+				DBG1(DBG_TNC, "fragmentation of PB-TNC batch not supported yet");
 			}
 			else
 			{
