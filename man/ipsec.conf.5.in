@@ -544,8 +544,13 @@ for public key authentication (RSA/ECDSA),
 .B psk
 for pre-shared key authentication and
 .B eap
-to (require the) use of the Extensible Authentication Protocol. In the case
-of
+to (require the) use of the Extensible Authentication Protocol.
+To require a trustchain public key strength for the remote side, specify the
+key type followed by the strength in bits (for example
+.BR rsa-2048
+or
+.BR ecdsa-256 ).
+For
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,

@@ -445,11 +445,22 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 
 	/* authentication metod (class, actually) */
 	if (streq(auth, "pubkey") ||
-		streq(auth, "rsasig") || streq(auth, "rsa") ||
-		streq(auth, "ecdsasig") || streq(auth, "ecdsa"))
+		strneq(auth, "rsa", strlen("rsa")) ||
+		strneq(auth, "ecdsa", strlen("ecdsa")))
 	{
+		u_int strength;
+
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
+
+		if (sscanf(auth, "rsa-%d", &strength) == 1)
+		{
+			cfg->add(cfg, AUTH_RULE_RSA_STRENGTH, (uintptr_t)strength);
+		}
+		if (sscanf(auth, "ecdsa-%d", &strength) == 1)
+		{
+			cfg->add(cfg, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
+		}
 	}
 	else if (streq(auth, "psk") || streq(auth, "secret"))
 	{
