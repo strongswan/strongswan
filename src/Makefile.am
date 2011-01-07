@@ -8,16 +8,16 @@ if USE_LIBHYDRA
   SUBDIRS += libhydra
 endif
 
-if USE_LIBCHARON
-  SUBDIRS += libcharon
-endif
-
 if USE_SIMAKA
   SUBDIRS += libsimaka
 endif
 
 if USE_TLS
   SUBDIRS += libtls
+endif
+
+if USE_LIBCHARON
+  SUBDIRS += libcharon
 endif
 
 if USE_FILE_CONFIG
