@@ -17,17 +17,17 @@
 
 #include <debug.h>
 
-typedef struct private_tnccs_reason_strings_t private_tnccs_reason_strings_t;
+typedef struct private_tnccs_reason_strings_msg_t private_tnccs_reason_strings_msg_t;
 
 /**
- * Private data of a tnccs_reason_strings_t object.
+ * Private data of a tnccs_reason_strings_msg_t object.
  *
  */
-struct private_tnccs_reason_strings_t {
+struct private_tnccs_reason_strings_msg_t {
 	/**
-	 * Public tnccs_reason_strings_t interface.
+	 * Public tnccs_reason_strings_msg_t interface.
 	 */
-	tnccs_reason_strings_t public;
+	tnccs_reason_strings_msg_t public;
 
 	/**
 	 * TNCCS message type
@@ -51,27 +51,27 @@ struct private_tnccs_reason_strings_t {
 };
 
 METHOD(tnccs_msg_t, get_type, tnccs_msg_type_t,
-	private_tnccs_reason_strings_t *this)
+	private_tnccs_reason_strings_msg_t *this)
 {
 	return this->type;
 }
 
 METHOD(tnccs_msg_t, get_node, xmlNodePtr,
-	private_tnccs_reason_strings_t *this)
+	private_tnccs_reason_strings_msg_t *this)
 {
 	return this->node;
 }
 
 METHOD(tnccs_msg_t, destroy, void,
-	private_tnccs_reason_strings_t *this)
+	private_tnccs_reason_strings_msg_t *this)
 {
 	free(this->language);
 	free(this->reason);
 	free(this);
 }
 
-METHOD(tnccs_reason_strings_t, get_reason, char*,
-	private_tnccs_reason_strings_t *this, char **language)
+METHOD(tnccs_reason_strings_msg_t, get_reason, char*,
+	private_tnccs_reason_strings_msg_t *this, char **language)
 {
 	*language = this->language;
 
@@ -81,9 +81,9 @@ METHOD(tnccs_reason_strings_t, get_reason, char*,
 /**
  * See header
  */
-tnccs_msg_t *tnccs_reason_strings_create_from_node(xmlNodePtr node)
+tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node)
 {
-	private_tnccs_reason_strings_t *this;
+	private_tnccs_reason_strings_msg_t *this;
 
 	INIT(this,
 		.public = {
@@ -104,9 +104,9 @@ tnccs_msg_t *tnccs_reason_strings_create_from_node(xmlNodePtr node)
 /**
  * See header
  */
-tnccs_msg_t *tnccs_reason_strings_create(char *language, char *reason)
+tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason)
 {
-	private_tnccs_reason_strings_t *this;
+	private_tnccs_reason_strings_msg_t *this;
 	xmlNodePtr n, n2, n3;
 
 	INIT(this,

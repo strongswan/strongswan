@@ -14,21 +14,21 @@
  */
 
 /**
- * @defgroup tnccs_reason_strings tnccs_reason_strings
+ * @defgroup tnccs_reason_strings_msg tnccs_reason_strings_msg
  * @{ @ingroup tnccs_11
  */
 
-#ifndef TNCCS_REASON_STRINGS_H_
-#define TNCCS_REASON_STRINGS_H_
+#ifndef TNCCS_REASON_STRINGS_MSG_H_
+#define TNCCS_REASON_STRINGS_MSG_H_
 
-typedef struct tnccs_reason_strings_t tnccs_reason_strings_t;
+typedef struct tnccs_reason_strings_msg_t tnccs_reason_strings_msg_t;
 
 #include "tnccs_msg.h"
 
 /**
  * Class representing the TNCCS-ReasonStrings message type
  */
-struct tnccs_reason_strings_t {
+struct tnccs_reason_strings_msg_t {
 
 	/**
 	 * TNCCS Message interface
@@ -41,7 +41,7 @@ struct tnccs_reason_strings_t {
 	 * @param language		reason language
 	 * @return				reason string
 	 */
-	char* (*get_reason)(tnccs_reason_strings_t *this, char **language);
+	char* (*get_reason)(tnccs_reason_strings_msg_t *this, char **language);
 };
 
 /**
@@ -49,7 +49,7 @@ struct tnccs_reason_strings_t {
  *
  * @param msg_node			XML-encoded message node
  */
-tnccs_msg_t *tnccs_reason_strings_create_from_node(xmlNodePtr node);
+tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node);
 
 /**
  * Create a TNCCS-ReasonStrings message from parameters
@@ -57,6 +57,6 @@ tnccs_msg_t *tnccs_reason_strings_create_from_node(xmlNodePtr node);
  * @param language			reason language
  * @param reason			reason string
  */
-tnccs_msg_t *tnccs_reason_strings_create(char *language, char *reason);
+tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason);
 
-#endif /** TNCCS_REASON_STRINGS_H_ @}*/
+#endif /** TNCCS_REASON_STRINGS_MSG_H_ @}*/
