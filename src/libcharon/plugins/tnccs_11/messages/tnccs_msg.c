@@ -15,7 +15,11 @@
 
 #include "tnccs_msg.h"
 #include "imc_imv_msg.h"
+#include "tnccs_error_msg.h"
 #include "tnccs_preferred_language_msg.h"
+#include "tnccs_reason_strings_msg.h"
+#include "tnccs_recommendation_msg.h"
+#include "tnccs_tncs_contact_info_msg.h"
 
 #include <library.h>
 #include <debug.h>
@@ -57,6 +61,7 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node)
 				found = TRUE;
 				break;
 			}
+			cur = cur->next;
 		}
 		if (!found)
 		{
