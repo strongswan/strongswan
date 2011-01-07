@@ -151,6 +151,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->ca);
 	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
+	pop_string(msg, &end->cert_policy);
 	pop_string(msg, &end->updown);
 
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);

@@ -429,6 +429,20 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator->destroy(enumerator);
 	}
 
+	/* certificatePolicies */
+	if (end->cert_policy)
+	{
+		enumerator_t *enumerator;
+		char *policy;
+
+		enumerator = enumerator_create_token(end->cert_policy, ",", " ");
+		while (enumerator->enumerate(enumerator, &policy))
+		{
+			cfg->add(cfg, AUTH_RULE_CERT_POLICY, strdup(policy));
+		}
+		enumerator->destroy(enumerator);
+	}
+
 	/* authentication metod (class, actually) */
 	if (streq(auth, "pubkey") ||
 		streq(auth, "rsasig") || streq(auth, "rsa") ||

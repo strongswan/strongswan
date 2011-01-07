@@ -598,6 +598,10 @@ Same as
 .B leftcert,
 but for the second authentication round (IKEv2 only).
 .TP
+.BR leftcertpolicy " = <OIDs>"
+Comma separated list of certificate policy OIDs the peers certificate must have.
+OIDs are specified using the numerical dotted representation (IKEv2 only).
+.TP
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
 (including masquerading) using iptables for traffic from \fIleftsubnet\fR,

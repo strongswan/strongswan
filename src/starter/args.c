@@ -273,6 +273,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_end_t, rsakey), NULL                              },
 	{ ARG_STR,  offsetof(starter_end_t, cert), NULL                                },
 	{ ARG_STR,  offsetof(starter_end_t, cert2), NULL                               },
+	{ ARG_STR,  offsetof(starter_end_t, cert_policy), NULL                         },
 	{ ARG_ENUM, offsetof(starter_end_t, sendcert), LST_sendcert                    },
 	{ ARG_STR,  offsetof(starter_end_t, ca), NULL                                  },
 	{ ARG_STR,  offsetof(starter_end_t, ca2), NULL                                 },

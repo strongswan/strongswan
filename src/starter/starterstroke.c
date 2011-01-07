@@ -171,6 +171,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->id2 = push_string(msg, conn_end->id2);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->cert2 = push_string(msg, conn_end->cert2);
+	msg_end->cert_policy = push_string(msg, conn_end->cert_policy);
 	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);

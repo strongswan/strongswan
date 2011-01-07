@@ -64,6 +64,7 @@ struct starter_end {
 		char            *ca;
 		char            *ca2;
 		char            *groups;
+		char            *cert_policy;
 		char            *iface;
 		ip_address      addr;
 		u_int           ikeport;
