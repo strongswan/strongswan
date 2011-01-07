@@ -1,8 +1,6 @@
 /*
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
- * Copyright (C) 2009 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010 Martin Willi, revosec AG
+ * Copyright (C) 2009 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -90,7 +88,8 @@ static bool check_addrblock(x509_t *subject, x509_t *issuer)
 
 METHOD(cert_validator_t, validate, bool,
 	private_addrblock_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, int pathlen, auth_cfg_t *auth)
+	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	auth_cfg_t *auth)
 {
 	if (subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
