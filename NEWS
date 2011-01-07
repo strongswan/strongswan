@@ -55,7 +55,11 @@ strongswan-4.5.1
   checking. In additon to X.509 pathLen constraints, the plugin checks for
   nameConstraints and certificatePolicies, including policyMappings and
   policyConstraints. The x509 certificate plugin and the pki tool have been
-  enhanced to support these extensions.
+  enhanced to support these extensions. The new left/rightcertpolicy ipsec.conf
+  connection keywords take OIDs a peer certificate must have.
+
+- The left/rightauth ipsec.conf keywords accept values with a minimum strength
+  for trustchain public keys in bits, such as rsa-2048 or ecdsa-256.
 
 - The revocation and x509 libstrongswan plugins and the pki tool gained basic
   support for delta CRLs.
