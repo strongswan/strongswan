@@ -14,6 +14,7 @@
  */
 
 #include "tnccs_batch.h"
+#include "messages/tnccs_error_msg.h"
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -47,6 +48,11 @@ struct private_tnccs_batch_t {
 	 * linked list of TNCCS messages
 	 */
 	linked_list_t *messages;
+
+	/**
+	 * linked list of TNCCS error messages
+	 */
+	linked_list_t *errors;
 
 	/**
 	 * XML document
@@ -92,7 +98,9 @@ METHOD(tnccs_batch_t, build, void,
 METHOD(tnccs_batch_t, process, status_t,
 	private_tnccs_batch_t *this)
 {
-	tnccs_msg_t *tnccs_msg;
+	tnccs_msg_t *tnccs_msg, *msg;
+	tnccs_error_type_t error_type = TNCCS_ERROR_OTHER;
+	char *error_msg, buf[BUF_LEN];
     xmlNodePtr cur;
     xmlNsPtr ns;
     xmlChar *batchid, *recipient;
@@ -103,16 +111,18 @@ METHOD(tnccs_batch_t, process, status_t,
 	this->doc = xmlParseMemory(this->encoding.ptr, this->encoding.len);
 	if (!this->doc)
 	{
-		DBG1(DBG_TNC, "failed to parse XML message");
-		return FAILED;
+		error_type = TNCCS_ERROR_MALFORMED_BATCH;
+		error_msg = "failed to parse XML message";
+		goto fatal;
 	}
 
 	/* check out the XML document */
 	cur = xmlDocGetRootElement(this->doc);
     if (!cur)
 	{
-		DBG1(DBG_TNC, "empty XML document");
-		return FAILED;
+		error_type = TNCCS_ERROR_MALFORMED_BATCH;
+		error_msg = "empty XML document";
+		goto fatal;
 	}
 
 	/* check TNCCS namespace */
@@ -120,24 +130,28 @@ METHOD(tnccs_batch_t, process, status_t,
 				"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#");
 	if (!ns)
 	{
-		DBG1(DBG_TNC, "TNCCS namespace not found");
-		return FAILED;
+		error_type = TNCCS_ERROR_MALFORMED_BATCH;
+		error_msg = "TNCCS namespace not found";
+		goto fatal;
 	}
 
 	/* check XML document type */
 	if (xmlStrcmp(cur->name, (const xmlChar*)"TNCCS-Batch"))
 	{
-		DBG1(DBG_TNC, "wrong XML document type '%s', expected TNCCS-Batch",
-					  cur->name);
-		return FAILED;
+		error_type = TNCCS_ERROR_MALFORMED_BATCH;
+		error_msg = buf;
+		snprintf(buf, BUF_LEN, "wrong XML document type '%s', expected TNCCS-Batch",
+								cur->name);
+		goto fatal;
     }
 
 	/* check presence of BatchID property */
 	batchid = xmlGetProp(cur, (const xmlChar*)"BatchId");
 	if (!batchid)
     {
-		DBG1(DBG_TNC, "BatchId is missing");
-		return FAILED;
+		error_type = TNCCS_ERROR_INVALID_BATCH_ID;
+		error_msg = "BatchId is missing";
+		goto fatal;
 	}
 
 	/* check BatchID */
@@ -145,27 +159,35 @@ METHOD(tnccs_batch_t, process, status_t,
 	xmlFree(batchid);
 	if (batch_id != this->batch_id)
 	{
-		DBG1(DBG_TNC, "BatchID %d expected, got %d", this->batch_id, batch_id);
-		return FAILED;
+		error_type = TNCCS_ERROR_INVALID_BATCH_ID;
+		error_msg = buf;
+		snprintf(buf, BUF_LEN, "BatchId %d expected, got %d", this->batch_id,
+															  batch_id);
+		goto fatal;
 	}
 
 	/* check presence of Recipient property */
 	recipient = xmlGetProp(cur, (const xmlChar*)"Recipient");
 	if (!recipient)
 	{
-		DBG1(DBG_TNC, "Recipient is missing");
-		return FAILED;
+		error_type = TNCCS_ERROR_INVALID_RECIPIENT_TYPE;
+		error_msg = "Recipient is missing";
+		goto fatal;
 	}
 
 	/* check recipient */
 	if (!streq((char*)recipient, this->is_server ? "TNCS" : "TNCC"))
 	{
-		DBG1(DBG_TNC, "message recipient expected '%s', got '%s'",
-			 this->is_server ? "TNCS" : "TNCC", (char*)recipient);
+		error_type = TNCCS_ERROR_INVALID_RECIPIENT_TYPE;
+		error_msg =	buf;
+		snprintf(buf, BUF_LEN, "message recipient expected '%s', got '%s'",
+				 this->is_server ? "TNCS" : "TNCC", (char*)recipient);
 	    xmlFree(recipient);
-		return FAILED;
+		goto fatal;
 	}
 	xmlFree(recipient);
+
+	DBG2(DBG_TNC, "processing TNCCS Batch #%d", batch_id);
 
 	/* Now walk the tree, handling message nodes as we go */
 	for (cur = cur->xmlChildrenNode; cur != NULL; cur = cur->next)
@@ -190,6 +212,8 @@ METHOD(tnccs_batch_t, process, status_t,
 			continue;
 		}
 
+		DBG2(DBG_TNC, "processing %N message", tnccs_msg_type_names,
+											   tnccs_msg->get_type(tnccs_msg));
 		status = tnccs_msg->process(tnccs_msg);
 		if (status == FAILED)
 		{
@@ -199,6 +223,13 @@ METHOD(tnccs_batch_t, process, status_t,
 		this->messages->insert_last(this->messages, tnccs_msg);
 	}
 	return SUCCESS;
+
+fatal:
+	DBG1(DBG_TNC, "%s", error_msg);
+	msg = tnccs_error_msg_create(error_type, error_msg);
+	this->errors->insert_last(this->errors, msg);
+	return FAILED;
+
 }
 
 METHOD(tnccs_batch_t, create_msg_enumerator, enumerator_t*,
@@ -211,6 +242,8 @@ METHOD(tnccs_batch_t, destroy, void,
 	private_tnccs_batch_t *this)
 {
 	this->messages->destroy_offset(this->messages,
+								   offsetof(tnccs_msg_t, destroy));
+	this->errors->destroy_offset(this->errors,
 								   offsetof(tnccs_msg_t, destroy));
     xmlFreeDoc(this->doc);
 	free(this->encoding.ptr);
@@ -238,6 +271,7 @@ tnccs_batch_t* tnccs_batch_create(bool is_server, int batch_id)
 		},
 		.is_server = is_server,
 		.messages = linked_list_create(),
+		.errors = linked_list_create(),
 		.batch_id = batch_id,
 		.doc = xmlNewDoc(BAD_CAST "1.0"),
 	);
@@ -276,6 +310,7 @@ tnccs_batch_t* tnccs_batch_create_from_data(bool is_server, int batch_id, chunk_
 		.is_server = is_server,
 		.batch_id = batch_id,
 		.messages = linked_list_create(),
+		.errors = linked_list_create(),
 		.encoding = chunk_clone(data),
 	);
 
