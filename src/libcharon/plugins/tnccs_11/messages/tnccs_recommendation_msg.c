@@ -57,6 +57,12 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
+METHOD(tnccs_msg_t, process, status_t,
+	private_tnccs_recommendation_msg_t *this)
+{
+	return SUCCESS;
+}
+
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_recommendation_msg_t *this)
 {
@@ -81,6 +87,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_recommendation = _get_recommendation,
@@ -106,6 +113,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_recommendation = _get_recommendation,

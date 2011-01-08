@@ -71,6 +71,12 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
+METHOD(tnccs_msg_t, process, status_t,
+	private_tnccs_error_msg_t *this)
+{
+	return SUCCESS;
+}
+
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_error_msg_t *this)
 {
@@ -98,6 +104,7 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_message = _get_message,
@@ -122,6 +129,7 @@ tnccs_msg_t *tnccs_error_msg_create(tnccs_error_type_t type, char *msg)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_message = _get_message,

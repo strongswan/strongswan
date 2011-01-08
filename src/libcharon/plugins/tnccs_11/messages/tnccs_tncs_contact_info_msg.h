@@ -46,8 +46,7 @@ tnccs_msg_t *tnccs_tncs_contact_info_msg_create_from_node(xmlNodePtr node);
 /**
  * Create a TNCCS-TNCSContactInfo message from parameters
  *
- * @param language			preferred language string
  */
-tnccs_msg_t *tnccs_tncs_contact_info_msg_create(char *language);
+tnccs_msg_t *tnccs_tncs_contact_info_msg_create(void);
 
 #endif /** TNCCS_TNCS_CONTACT_INFO_MSG_H_ @}*/

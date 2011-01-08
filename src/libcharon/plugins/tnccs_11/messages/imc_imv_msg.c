@@ -66,6 +66,12 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
+METHOD(tnccs_msg_t, process, status_t,
+	private_imc_imv_msg_t *this)
+{
+	return SUCCESS;
+}
+
 /**
  * Converts message data into multiple base64-encoded lines 
  */
@@ -131,6 +137,7 @@ tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_msg_type = _get_msg_type,
@@ -158,6 +165,7 @@ tnccs_msg_t *imc_imv_msg_create(TNC_MessageType msg_type, chunk_t msg_body)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
+				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_msg_type = _get_msg_type,
