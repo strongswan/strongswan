@@ -57,12 +57,6 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
-METHOD(tnccs_msg_t, process, status_t,
-	private_tnccs_preferred_language_msg_t *this)
-{
-	return SUCCESS;
-}
-
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_preferred_language_msg_t *this)
 {
@@ -79,16 +73,17 @@ METHOD(tnccs_preferred_language_msg_t, get_preferred_language, char*,
 /**
  * See header
  */
-tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node)
+tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node,
+													linked_list_t *errors)
 {
 	private_tnccs_preferred_language_msg_t *this;
+	xmlChar *language;
 
 	INIT(this,
 		.public = {
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_preferred_language = _get_preferred_language,
@@ -96,6 +91,10 @@ tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node)
 		.type = TNCCS_MSG_PREFERRED_LANGUAGE,
 		.node = node,
 	);
+
+	language = xmlNodeGetContent(node);
+	this->preferred_language = strdup((char*)language);
+	xmlFree(language);
 
 	return &this->public.tnccs_msg_interface;
 }
@@ -113,7 +112,6 @@ tnccs_msg_t *tnccs_preferred_language_msg_create(char *language)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_preferred_language = _get_preferred_language,

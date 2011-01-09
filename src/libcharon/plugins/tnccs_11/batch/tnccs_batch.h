@@ -67,6 +67,13 @@ struct tnccs_batch_t {
 	enumerator_t* (*create_msg_enumerator)(tnccs_batch_t *this);
 
 	/**
+	 * Enumerates over all parsing errors
+	 *
+	 * @return				return error enumerator
+	 */
+	enumerator_t* (*create_error_enumerator)(tnccs_batch_t *this);
+
+	/**
 	 * Destroys a tnccs_batch_t object.
 	 */
 	void (*destroy)(tnccs_batch_t *this);

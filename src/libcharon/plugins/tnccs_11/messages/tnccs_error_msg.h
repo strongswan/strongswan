@@ -56,8 +56,8 @@ struct tnccs_error_msg_t {
 	/**
 	 * Get error message and type
 	 *
-	 * @param type			TNCCS error type
-	 * @return				arbitrary error message
+	 * @param type		TNCCS error type
+	 * @return			arbitrary error message
 	 */
 	char* (*get_message)(tnccs_error_msg_t *this, tnccs_error_type_t *type);
 };
@@ -65,7 +65,7 @@ struct tnccs_error_msg_t {
 /**
  * Create a TNCCS-Error message from XML-encoded message node
  *
- * @param msg_node			XML-encoded message node
+ * @param msg_node		XML-encoded message node
  */
 tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node);
 

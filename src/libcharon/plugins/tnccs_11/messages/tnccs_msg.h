@@ -25,6 +25,7 @@ typedef enum tnccs_msg_type_t tnccs_msg_type_t;
 typedef struct tnccs_msg_t tnccs_msg_t;
 
 #include <library.h>
+#include <utils/linked_list.h>
 #include <libxml/parser.h>
 
 /**
@@ -75,19 +76,27 @@ struct tnccs_msg_t {
 	status_t (*process)(tnccs_msg_t *this);
 
 	/**
+	 * Get a new reference to the message.
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	tnccs_msg_t* (*get_ref)(tnccs_msg_t *this);
+
+	/**
 	 * Destroys a tnccs_msg_t object.
 	 */
 	void (*destroy)(tnccs_msg_t *this);
 };
 
 /**
- * Create an unprocessed TNCCS message
+ * Create a pre-processed TNCCS message
  *
  * Useful for the parser which wants a generic constructor for all
  * tnccs_msg_t types.
  *
  * @param node		TNCCS message node
+ * @param errors	linked list of TNCCS error messages
  */
-tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node);
+tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors);
 
 #endif /** TNCCS_MSG_H_ @}*/

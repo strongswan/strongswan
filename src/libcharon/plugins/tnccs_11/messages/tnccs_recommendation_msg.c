@@ -14,6 +14,7 @@
  */
 
 #include "tnccs_recommendation_msg.h"
+#include "tnccs_error_msg.h"
 
 #include <debug.h>
 
@@ -57,12 +58,6 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
-METHOD(tnccs_msg_t, process, status_t,
-	private_tnccs_recommendation_msg_t *this)
-{
-	return SUCCESS;
-}
-
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_recommendation_msg_t *this)
 {
@@ -78,16 +73,20 @@ METHOD(tnccs_recommendation_msg_t, get_recommendation, TNC_IMV_Action_Recommenda
 /**
  * See header
  */
-tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node)
+tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
+													   linked_list_t *errors)
 {
 	private_tnccs_recommendation_msg_t *this;
+	xmlChar *rec_string;
+	char *error_msg, buf[BUF_LEN];
+	tnccs_error_type_t error_type = TNCCS_ERROR_MALFORMED_BATCH;
+	tnccs_msg_t *msg;
 
 	INIT(this,
 		.public = {
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_recommendation = _get_recommendation,
@@ -96,7 +95,41 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node)
 		.node = node,
 	);
 
+	rec_string = xmlGetProp(node, (const xmlChar*)"type");
+	if (!rec_string)
+	{
+		error_msg = "type property in TNCCS-Recommendation is missing";
+		goto fatal;
+	}		
+	else if (streq((char*)rec_string, "allow"))
+	{
+		this->rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
+	}
+	else if (streq((char*)rec_string, "isolate"))
+	{
+		this->rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
+	}
+	else if (streq((char*)rec_string, "none"))
+	{
+		this->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
+	}
+	else
+	{
+		error_msg = buf;
+		snprintf(buf, BUF_LEN, "unsupported type property value '%s' "
+							   "in TNCCS-Recommendation", rec_string);
+		xmlFree(rec_string);
+		goto fatal;
+	}
+	xmlFree(rec_string);
+	
 	return &this->public.tnccs_msg_interface;
+
+fatal:
+	msg = tnccs_error_msg_create(error_type, error_msg);
+	errors->insert_last(errors, msg);
+	_destroy(this);
+	return NULL;
 }
 
 /**
@@ -106,14 +139,13 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 {
 	private_tnccs_recommendation_msg_t *this;
 	xmlNodePtr n, n2;
-	char *recommendation_string;
+	char *rec_string;
 
 	INIT(this,
 		.public = {
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
 				.destroy = _destroy,
 			},
 			.get_recommendation = _get_recommendation,
@@ -134,19 +166,19 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 	switch (rec)
 	{
 		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-			recommendation_string = "allow";
+			rec_string = "allow";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-			recommendation_string = "isolate";
+			rec_string = "isolate";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
 		default:
-			recommendation_string = "none";
+			rec_string = "none";
 	}
 
 	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNodeSetContent(n2, BAD_CAST recommendation_string);
+	xmlNodeSetContent(n2, BAD_CAST rec_string);
 	xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;

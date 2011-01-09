@@ -57,6 +57,11 @@ struct private_tnccs_error_msg_t {
 	 * Error message
 	 */
 	char *error_msg;
+
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(tnccs_msg_t, get_type, tnccs_msg_type_t,
@@ -71,17 +76,21 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 	return this->node;
 }
 
-METHOD(tnccs_msg_t, process, status_t,
+METHOD(tnccs_msg_t, get_ref, tnccs_msg_t*,
 	private_tnccs_error_msg_t *this)
 {
-	return SUCCESS;
+	ref_get(&this->ref);
+	return &this->public.tnccs_msg_interface;
 }
 
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_error_msg_t *this)
 {
-	free(this->error_msg);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->error_msg);
+		free(this);
+	}
 }
 
 METHOD(tnccs_error_msg_t, get_message, char*,
@@ -98,20 +107,41 @@ METHOD(tnccs_error_msg_t, get_message, char*,
 tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 {
 	private_tnccs_error_msg_t *this;
-
+	xmlChar *error_type_name, *error_msg;
+	
 	INIT(this,
 		.public = {
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_message = _get_message,
 		},
 		.type = TNCCS_MSG_ERROR,
 		.node = node,
+		.error_type = TNCCS_ERROR_OTHER,
 	);
+
+	error_type_name = xmlGetProp(node, (const xmlChar*)"type");
+	if (error_type_name)
+	{
+		this->error_type = enum_from_name(tnccs_error_type_names,
+										  (char*)error_type_name);
+		if (this->error_type == -1)
+		{
+			this->error_type = TNCCS_ERROR_OTHER;
+		}
+		xmlFree(error_type_name);
+	}
+
+	error_msg = xmlNodeGetContent(node);
+	if (error_msg)
+	{
+		this->error_msg = strdup((char*)error_msg);
+		xmlFree(error_msg);
+	}
 
 	return &this->public.tnccs_msg_interface;
 }
@@ -129,7 +159,7 @@ tnccs_msg_t *tnccs_error_msg_create(tnccs_error_type_t type, char *msg)
 			.tnccs_msg_interface = {
 				.get_type = _get_type,
 				.get_node = _get_node,
-				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_message = _get_message,
@@ -140,18 +170,20 @@ tnccs_msg_t *tnccs_error_msg_create(tnccs_error_type_t type, char *msg)
 		.error_msg  = strdup(msg),
 	);
 
-     n = xmlNewNode(NULL, BAD_CAST "Type");
-    xmlNodeSetContent(n, BAD_CAST "00000002");
-    xmlAddChild(this->node, n);
+	DBG1(DBG_TNC, "%s", msg);
 
-    n = xmlNewNode(NULL, BAD_CAST "XML");
-    xmlAddChild(this->node, n);
+	n = xmlNewNode(NULL, BAD_CAST "Type");
+	xmlNodeSetContent(n, BAD_CAST "00000002");
+	xmlAddChild(this->node, n);
 
-    n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-    xmlNewProp(n2, BAD_CAST "type",
+	n = xmlNewNode(NULL, BAD_CAST "XML");
+	xmlAddChild(this->node, n);
+
+	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
+	xmlNewProp(n2, BAD_CAST "type",
 				   BAD_CAST enum_to_name(tnccs_error_type_names, type));
-    xmlNodeSetContent(n2, BAD_CAST msg);
-    xmlAddChild(n, n2);
+	xmlNodeSetContent(n2, BAD_CAST msg);
+	xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;
 }

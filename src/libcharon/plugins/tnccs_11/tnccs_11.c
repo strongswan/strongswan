@@ -17,7 +17,10 @@
 #include "batch/tnccs_batch.h"
 #include "messages/tnccs_msg.h"
 #include "messages/imc_imv_msg.h"
+#include "messages/tnccs_error_msg.h"
 #include "messages/tnccs_preferred_language_msg.h"
+#include "messages/tnccs_reason_strings_msg.h"
+#include "messages/tnccs_recommendation_msg.h"
 
 #include <daemon.h>
 #include <debug.h>
@@ -62,6 +65,16 @@ struct private_tnccs_11_t {
 	 * Mutex locking the batch in construction
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Flag set while processing
+	 */
+	bool fatal_error;
+
+	/**
+	 * Flag set by TNCCS-Recommendation message
+	 */
+	bool delete_state;
 
 	/**
 	 * Flag set by IMC/IMV RequestHandshakeRetry() function
@@ -125,6 +138,54 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			}
 			break;
 		}
+		case TNCCS_MSG_RECOMMENDATION:
+		{
+			tnccs_recommendation_msg_t *rec_msg;
+			TNC_IMV_Action_Recommendation rec;
+			TNC_ConnectionState state = TNC_CONNECTION_STATE_ACCESS_NONE;
+
+			rec_msg = (tnccs_recommendation_msg_t*)msg;
+			rec = rec_msg->get_recommendation(rec_msg);
+			if (this->is_server)
+			{
+				DBG1(DBG_TNC, "ignoring NCCS-Recommendation message from "
+							  " TNC client");
+				break;
+			}
+			DBG1(DBG_TNC, "TNC recommendation is '%N'",
+						   action_recommendation_names, rec);
+			switch (rec)
+			{
+				case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+					state = TNC_CONNECTION_STATE_ACCESS_ALLOWED;
+					break;
+				case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+					state = TNC_CONNECTION_STATE_ACCESS_ISOLATED;
+					break;
+				case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+				default:
+					state = TNC_CONNECTION_STATE_ACCESS_NONE;
+			}
+			charon->imcs->notify_connection_change(charon->imcs,
+												   this->connection_id, state);
+			this->delete_state = TRUE;
+			break;
+		}
+		case TNCCS_MSG_ERROR:
+		{
+			tnccs_error_msg_t *err_msg;
+			tnccs_error_type_t error_type;
+			char *error_msg;
+
+			err_msg = (tnccs_error_msg_t*)msg;
+			error_msg = err_msg->get_message(err_msg, &error_type);
+			DBG1(DBG_TNC, "received TNCCS-Error '%N': %s",
+				 tnccs_error_type_names, error_type, error_msg);
+
+			/* we assume that all errors are fatal */
+			this->fatal_error = TRUE;
+			break;
+		}
 		case TNCCS_MSG_PREFERRED_LANGUAGE:
 		{
 			tnccs_preferred_language_msg_t *lang_msg;
@@ -148,6 +209,8 @@ METHOD(tls_t, process, status_t,
 {
 	chunk_t data;
 	tnccs_batch_t *batch;
+	tnccs_msg_t *msg;
+	enumerator_t *enumerator;
 	status_t status;
 
 	if (this->is_server && !this->connection_id)
@@ -170,11 +233,28 @@ METHOD(tls_t, process, status_t,
 	batch = tnccs_batch_create_from_data(this->is_server, ++this->batch_id, data);
 	status = batch->process(batch);
 
-	if (status != FAILED)
+	if (status == FAILED)
 	{
-		enumerator_t *enumerator;
-		tnccs_msg_t *msg;
+		this->fatal_error = TRUE;
+		this->mutex->lock(this->mutex);
+		if (this->batch)
+		{
+			DBG1(DBG_TNC, "cancelling TNCCS batch");
+			this->batch->destroy(this->batch);
+		 }
+		this->batch = tnccs_batch_create(this->is_server, this->batch_id);
 
+		/* add error messages to outbound batch */
+		enumerator = batch->create_error_enumerator(batch);
+		while (enumerator->enumerate(enumerator, &msg))
+		{
+			this->batch->add_msg(this->batch, msg->get_ref(msg));
+		}
+		enumerator->destroy(enumerator);
+		this->mutex->unlock(this->mutex);
+	}
+	else
+	{
 		enumerator = batch->create_msg_enumerator(batch);
 		while (enumerator->enumerate(enumerator, &msg))
 		{
@@ -182,6 +262,22 @@ METHOD(tls_t, process, status_t,
 		}
 		enumerator->destroy(enumerator);
 
+		/* received any TNCCS-Error messages */
+		if (this->fatal_error)
+		{
+			DBG1(DBG_TNC, "a fatal TNCCS-Error occurred, terminating connection");
+			batch->destroy(batch);
+			return FAILED;
+		}
+
+		if (this->is_server)
+		{
+			charon->imvs->batch_ending(charon->imvs, this->connection_id);
+		}
+		else
+		{
+			charon->imcs->batch_ending(charon->imcs, this->connection_id);
+		}
 	}
 	batch->destroy(batch);
 

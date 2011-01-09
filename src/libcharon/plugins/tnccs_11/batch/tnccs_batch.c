@@ -106,8 +106,6 @@ METHOD(tnccs_batch_t, process, status_t,
     xmlChar *batchid, *recipient;
 	int batch_id;
 
-	status_t status;
-
 	this->doc = xmlParseMemory(this->encoding.ptr, this->encoding.len);
 	if (!this->doc)
 	{
@@ -206,36 +204,40 @@ METHOD(tnccs_batch_t, process, status_t,
 			continue;
 		}
 
-		tnccs_msg = tnccs_msg_create_from_node(cur);
+		tnccs_msg = tnccs_msg_create_from_node(cur, this->errors);
+
+		/* exit if a message parsing error occurred */
+		if (this->errors->get_count(this->errors) > 0)
+		{
+			return FAILED;
+		}
+
+		/* ignore unrecognized messages */
 		if (!tnccs_msg)
 		{
 			continue;
 		}
 
-		DBG2(DBG_TNC, "processing %N message", tnccs_msg_type_names,
-											   tnccs_msg->get_type(tnccs_msg));
-		status = tnccs_msg->process(tnccs_msg);
-		if (status == FAILED)
-		{
-			tnccs_msg->destroy(tnccs_msg);
-			return FAILED;
-		}
 		this->messages->insert_last(this->messages, tnccs_msg);
 	}
 	return SUCCESS;
 
 fatal:
-	DBG1(DBG_TNC, "%s", error_msg);
 	msg = tnccs_error_msg_create(error_type, error_msg);
 	this->errors->insert_last(this->errors, msg);
 	return FAILED;
-
 }
 
 METHOD(tnccs_batch_t, create_msg_enumerator, enumerator_t*,
 	private_tnccs_batch_t *this)
 {
 	return this->messages->create_enumerator(this->messages);
+}
+
+METHOD(tnccs_batch_t, create_error_enumerator, enumerator_t*,
+	private_tnccs_batch_t *this)
+{
+	return this->errors->create_enumerator(this->errors);
 }
 
 METHOD(tnccs_batch_t, destroy, void,
@@ -267,6 +269,7 @@ tnccs_batch_t* tnccs_batch_create(bool is_server, int batch_id)
 			.build = _build,
 			.process = _process,
 			.create_msg_enumerator = _create_msg_enumerator,
+			.create_error_enumerator = _create_error_enumerator,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
@@ -305,6 +308,7 @@ tnccs_batch_t* tnccs_batch_create_from_data(bool is_server, int batch_id, chunk_
 			.build = _build,
 			.process = _process,
 			.create_msg_enumerator = _create_msg_enumerator,
+			.create_error_enumerator = _create_error_enumerator,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,

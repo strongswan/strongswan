@@ -49,8 +49,10 @@ struct tnccs_preferred_language_msg_t {
  * Create a TNCCS-PreferredLanguage message from XML-encoded message node
  *
  * @param msg_node			XML-encoded message node
+ * @param errors			linked list of TNCCS error messages
  */
-tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node);
+tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node,
+													linked_list_t *errors);
 
 /**
  * Create a TNCCS-PreferredLanguage message from parameters
