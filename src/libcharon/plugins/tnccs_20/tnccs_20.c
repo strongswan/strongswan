@@ -71,7 +71,7 @@ struct private_tnccs_20_t {
 	mutex_t *mutex;
 
 	/**
-	 * Flag set while processingn
+	 * Flag set while processing
 	 */
 	bool fatal_error;
 
@@ -172,12 +172,26 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 		{
 			pb_access_recommendation_msg_t *rec_msg;
 			pb_access_recommendation_code_t rec;
+			TNC_ConnectionState state = TNC_CONNECTION_STATE_ACCESS_NONE;
 
 			rec_msg = (pb_access_recommendation_msg_t*)msg;
 			rec = rec_msg->get_access_recommendation(rec_msg);
 			DBG1(DBG_TNC, "PB-TNC access recommendation is '%N'",
 						   pb_access_recommendation_code_names, rec);
-				break;
+			switch (rec)
+			{
+				case PB_REC_ACCESS_ALLOWED:
+					state = TNC_CONNECTION_STATE_ACCESS_ALLOWED;
+					break;
+				case PB_REC_ACCESS_DENIED:
+					state = TNC_CONNECTION_STATE_ACCESS_NONE;
+					break;
+				case PB_REC_QUARANTINED:
+					state = TNC_CONNECTION_STATE_ACCESS_ISOLATED;
+			}
+			charon->imcs->notify_connection_change(charon->imcs,
+												   this->connection_id, state);
+			break;
 		}
 		case PB_MSG_REMEDIATION_PARAMETERS:
 		{
