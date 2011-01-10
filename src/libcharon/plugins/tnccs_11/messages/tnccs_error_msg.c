@@ -120,6 +120,7 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 			.get_message = _get_message,
 		},
 		.type = TNCCS_MSG_ERROR,
+		.ref = 1,
 		.node = node,
 		.error_type = TNCCS_ERROR_OTHER,
 	);
@@ -165,6 +166,7 @@ tnccs_msg_t *tnccs_error_msg_create(tnccs_error_type_t type, char *msg)
 			.get_message = _get_message,
 		},
 		.type = TNCCS_MSG_ERROR,
+		.ref = 1,
 		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
 		.error_type = type,
 		.error_msg  = strdup(msg),
