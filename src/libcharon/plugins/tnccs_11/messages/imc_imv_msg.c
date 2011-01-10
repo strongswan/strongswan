@@ -64,6 +64,14 @@ static chunk_t encode_base64(chunk_t data)
 	u_char *pos;
 	size_t b64_chars, b64_lines;
 
+	/* handle empty message data object */
+	if (data.len == 0)
+	{
+		encoding = chunk_alloc(1);
+		*encoding.ptr = '\0';
+		return encoding;
+	}
+
 	/* compute and allocate maximum size of base64 object */
 	b64_chars = 4 * ((data.len + 2) / 3);
 	b64_lines = (data.len + BYTES_PER_LINE - 1) / BYTES_PER_LINE;
