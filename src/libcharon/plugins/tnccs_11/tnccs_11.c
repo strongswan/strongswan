@@ -179,7 +179,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 
 			err_msg = (tnccs_error_msg_t*)msg;
 			error_msg = err_msg->get_message(err_msg, &error_type);
-			DBG1(DBG_TNC, "received TNCCS-Error '%N': %s",
+			DBG1(DBG_TNC, "received '%N' TNCCS-Error: %s",
 				 tnccs_error_type_names, error_type, error_msg);
 
 			/* we assume that all errors are fatal */
@@ -241,8 +241,9 @@ METHOD(tls_t, process, status_t,
 		{
 			DBG1(DBG_TNC, "cancelling TNCCS batch");
 			this->batch->destroy(this->batch);
+			this->batch_id--;
 		 }
-		this->batch = tnccs_batch_create(this->is_server, this->batch_id);
+		this->batch = tnccs_batch_create(this->is_server, ++this->batch_id);
 
 		/* add error messages to outbound batch */
 		enumerator = batch->create_error_enumerator(batch);
