@@ -178,7 +178,8 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 	}
 
 	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNodeSetContent(n2, BAD_CAST rec_string);
+    xmlNewProp(n2, BAD_CAST "type", BAD_CAST rec_string);
+	xmlNodeSetContent(n2, "");
 	xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;
