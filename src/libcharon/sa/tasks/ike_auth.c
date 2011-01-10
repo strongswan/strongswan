@@ -429,8 +429,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
-		if (idr && message->get_message_id(message) == 1 &&
-			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO)
+		if (idr && message->get_message_id(message))
 		{
 			host_t *host;
 
