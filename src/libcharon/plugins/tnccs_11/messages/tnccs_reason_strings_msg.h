@@ -41,7 +41,7 @@ struct tnccs_reason_strings_msg_t {
 	 * @param language		reason language
 	 * @return				reason string
 	 */
-	char* (*get_reason)(tnccs_reason_strings_msg_t *this, char **language);
+	chunk_t (*get_reason)(tnccs_reason_strings_msg_t *this, chunk_t *language);
 };
 
 /**
@@ -56,9 +56,9 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 /**
  * Create a TNCCS-ReasonStrings message from parameters
  *
- * @param language			reason language
  * @param reason			reason string
+ * @param language			reason language
  */
-tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason);
+tnccs_msg_t *tnccs_reason_strings_msg_create(chunk_t reason, chunk_t language);
 
 #endif /** TNCCS_REASON_STRINGS_MSG_H_ @}*/

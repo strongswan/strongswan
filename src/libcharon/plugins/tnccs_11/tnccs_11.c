@@ -285,6 +285,43 @@ METHOD(tls_t, process, status_t,
 	return NEED_MORE;
 }
 
+/**
+ *  Add a recommendation message if a final recommendation is available
+ */
+static void check_and_build_recommendation(private_tnccs_11_t *this)
+{
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	TNC_IMVID id;
+	chunk_t reason, language;
+	enumerator_t *enumerator;
+	tnccs_msg_t *msg;
+
+	if (!this->recs->have_recommendation(this->recs, &rec, &eval))
+	{
+		charon->imvs->solicit_recommendation(charon->imvs, this->connection_id);
+	}
+	if (this->recs->have_recommendation(this->recs, &rec, &eval))
+	{
+		if (!this->batch)
+		{
+			this->batch = tnccs_batch_create(this->is_server, ++this->batch_id);
+		}
+
+		msg = tnccs_recommendation_msg_create(rec);
+		this->batch->add_msg(this->batch, msg);
+
+		/* currently we just send the first Reason String */
+		enumerator = this->recs->create_reason_enumerator(this->recs);
+		if (enumerator->enumerate(enumerator, &id, &reason, &language))
+		{
+			msg = tnccs_reason_strings_msg_create(reason, language);
+			this->batch->add_msg(this->batch, msg);
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
 METHOD(tls_t, build, status_t,
 	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
@@ -321,6 +358,11 @@ METHOD(tls_t, build, status_t,
 	
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
+
+	if (this->is_server && (!this->batch || this->fatal_error))
+	{
+		check_and_build_recommendation(this);
+	}
 
 	if (this->batch)
 	{

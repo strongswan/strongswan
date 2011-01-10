@@ -40,14 +40,14 @@ struct private_tnccs_reason_strings_msg_t {
 	xmlNodePtr node;
 
 	/**
-	 * Reason Language
-	 */
-	char* language;
-
-	/**
 	 * Reason String
 	 */
-	char* reason;
+	chunk_t reason;
+
+	/**
+	 * Reason Language
+	 */
+	chunk_t language;
 };
 
 METHOD(tnccs_msg_t, get_type, tnccs_msg_type_t,
@@ -65,13 +65,13 @@ METHOD(tnccs_msg_t, get_node, xmlNodePtr,
 METHOD(tnccs_msg_t, destroy, void,
 	private_tnccs_reason_strings_msg_t *this)
 {
-	free(this->language);
-	free(this->reason);
+	free(this->reason.ptr);
+	free(this->language.ptr);
 	free(this);
 }
 
-METHOD(tnccs_reason_strings_msg_t, get_reason, char*,
-	private_tnccs_reason_strings_msg_t *this, char **language)
+METHOD(tnccs_reason_strings_msg_t, get_reason, chunk_t,
+	private_tnccs_reason_strings_msg_t *this, chunk_t *language)
 {
 	*language = this->language;
 
@@ -105,7 +105,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 /**
  * See header
  */
-tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason)
+tnccs_msg_t *tnccs_reason_strings_msg_create(chunk_t reason, chunk_t language)
 {
 	private_tnccs_reason_strings_msg_t *this;
 	xmlNodePtr n, n2, n3;
@@ -121,9 +121,13 @@ tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason)
 		},
 		.type = TNCCS_MSG_REASON_STRINGS,
 		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
-		.language = strdup(language),
-		.reason = strdup(reason),
+		.reason = chunk_create_clone(malloc(reason.len + 1), reason),
+		.language = chunk_create_clone(malloc(language.len + 1), language),
 	);
+
+	/* add NULL termination for XML string representation */
+	this->reason.ptr[this->reason.len] = '\0';
+	this->language.ptr[this->language.len] = '\0';
 
 	/* add the message type number in hex */
 	n = xmlNewNode(NULL, BAD_CAST "Type");
@@ -134,13 +138,11 @@ tnccs_msg_t *tnccs_reason_strings_msg_create(char *language, char *reason)
 	xmlAddChild(this->node, n);
 
 	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNodeSetContent(n2, BAD_CAST language);
-	xmlAddChild(n, n2);
 
     /* could add multiple reasons here, if we had them */
     n3 = xmlNewNode(NULL, BAD_CAST "ReasonString");
-    xmlNewProp(n3, BAD_CAST "xml:lang", BAD_CAST language);
-    xmlNodeSetContent(n3, BAD_CAST reason);
+    xmlNewProp(n3, BAD_CAST "xml:lang", BAD_CAST this->language.ptr);
+    xmlNodeSetContent(n3, BAD_CAST this->reason.ptr);
     xmlAddChild(n2, n3);
 
 	return &this->public.tnccs_msg_interface;
