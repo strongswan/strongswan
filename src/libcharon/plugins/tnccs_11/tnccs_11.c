@@ -199,6 +199,19 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 									chunk_create(lang, strlen(lang)));
 			break;
 		}
+		case TNCCS_MSG_REASON_STRINGS:
+		{
+			tnccs_reason_strings_msg_t *reason_msg;
+			chunk_t reason_string, reason_lang;
+
+			reason_msg = (tnccs_reason_strings_msg_t*)msg;
+			reason_string = reason_msg->get_reason(reason_msg, &reason_lang);
+			DBG2(DBG_TNC, "reason string is '%.*s",   reason_string.len,
+													  reason_string.ptr);
+			DBG2(DBG_TNC, "reason language is '%.*s", reason_lang.len,
+													  reason_lang.ptr);
+			break;
+		}
 		default:
 			break;
 	}
@@ -319,6 +332,9 @@ static void check_and_build_recommendation(private_tnccs_11_t *this)
 			this->batch->add_msg(this->batch, msg);
 		}
 		enumerator->destroy(enumerator);
+
+		/* we have reache the final state */
+		this->delete_state = TRUE;
 	}
 }
 
@@ -359,7 +375,8 @@ METHOD(tls_t, build, status_t,
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	if (this->is_server && (!this->batch || this->fatal_error))
+	if (this->is_server && !this->delete_state &&
+	   (!this->batch || this->fatal_error))
 	{
 		check_and_build_recommendation(this);
 	}
