@@ -880,8 +880,12 @@ static status_t process_request(private_task_manager_t *this,
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	u_int32_t mid = msg->get_message_id(msg);
-	host_t *me = msg->get_destination(msg), *other = msg->get_source(msg);
+	host_t *me, *other;
+	u_int32_t mid;
+
+	mid = msg->get_message_id(msg);
+	me = msg->get_destination(msg);
+	other = msg->get_source(msg);
 
 	if (msg->get_request(msg))
 	{
@@ -911,15 +915,15 @@ METHOD(task_manager_t, process_message, status_t,
 		else if ((mid == this->responding.mid - 1) && this->responding.packet)
 		{
 			packet_t *clone;
-			host_t *me, *other;
+			host_t *host;
 
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
 			clone = this->responding.packet->clone(this->responding.packet);
-			me = msg->get_destination(msg);
-			other = msg->get_source(msg);
-			clone->set_source(clone, me->clone(me));
-			clone->set_destination(clone, other->clone(other));
+			host = msg->get_destination(msg);
+			clone->set_source(clone, host->clone(host));
+			host = msg->get_source(msg);
+			clone->set_destination(clone, host->clone(host));
 			charon->sender->send(charon->sender, clone);
 		}
 		else
