@@ -459,7 +459,7 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
 	dhcp_transaction_t *transaction = NULL;
 	enumerator_t *enumerator;
-	host_t *offer, *server;
+	host_t *offer, *server = NULL;
 
 	offer = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->your_address), 0);
@@ -500,7 +500,7 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 						chunk_create((char*)&option->data[pos], 4));
 				}
 			}
-			if (option->type == DHCP_SERVER_ID && option->len == 4)
+			if (!server && option->type == DHCP_SERVER_ID && option->len == 4)
 			{
 				server = host_create_from_chunk(AF_INET,
 							chunk_create(option->data, 4), DHCP_SERVER_PORT);
@@ -515,12 +515,11 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 		}
 		DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 		transaction->set_address(transaction, offer->clone(offer));
-		transaction->set_server(transaction, server->clone(server));
+		transaction->set_server(transaction, server);
 	}
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
 	offer->destroy(offer);
-	server->destroy(server);
 }
 
 /**
