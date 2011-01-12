@@ -897,7 +897,7 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
+					this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);
@@ -942,7 +942,7 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
+					this->ike_sa->update_hosts(this->ike_sa, me, other, FALSE);
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);

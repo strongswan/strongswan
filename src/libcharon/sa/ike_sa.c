@@ -825,7 +825,7 @@ METHOD(ike_sa_t, float_ports, void,
 }
 
 METHOD(ike_sa_t, update_hosts, void,
-	private_ike_sa_t *this, host_t *me, host_t *other)
+	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
 {
 	bool update = FALSE;
 
@@ -858,7 +858,7 @@ METHOD(ike_sa_t, update_hosts, void,
 		if (!other->equals(other, this->other_host))
 		{
 			/* update others adress if we are NOT NATed */
-			if (!has_condition(this, COND_NAT_HERE))
+			if (force || !has_condition(this, COND_NAT_HERE))
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;

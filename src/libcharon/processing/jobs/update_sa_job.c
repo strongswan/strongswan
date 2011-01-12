@@ -71,7 +71,7 @@ static void execute(private_update_sa_job_t *this)
 		if (ike_sa->has_condition(ike_sa, COND_NAT_THERE) &&
 			!ike_sa->has_condition(ike_sa, COND_NAT_HERE))
 		{
-			ike_sa->update_hosts(ike_sa, NULL, this->new);
+			ike_sa->update_hosts(ike_sa, NULL, this->new, FALSE);
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}

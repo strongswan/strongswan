@@ -343,8 +343,9 @@ struct ike_sa_t {
 	 *
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
+	 * @param force			force update
 	 */
-	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other, bool force);
 
 	/**
 	 * Get the own identification.
