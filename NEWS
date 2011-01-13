@@ -42,7 +42,8 @@ strongswan-4.5.1
   xcbc algorithms.
 
 - The IKEv2 daemon supports the INITIAL_CONTACT notify as initiator and
-  responder.
+  responder. The notify is sent when initiating configurations with a unique
+  policy, set in ipsec.conf via the global 'uniqueids' option.
 
 - The conftest conformance testing framework enables the IKEv2 stack to perform
   many tests using a distinct tool and configuration frontend. Various hooks
