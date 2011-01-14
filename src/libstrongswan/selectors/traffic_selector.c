@@ -393,13 +393,15 @@ static bool equals(private_traffic_selector_t *this, private_traffic_selector_t 
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-			if (memeq(this->from4, other->from4, sizeof(this->from4)))
+			if (memeq(this->from4, other->from4, sizeof(this->from4)) &&
+				memeq(this->to4, other->to4, sizeof(this->to4)))
 			{
 				return TRUE;
 			}
 			break;
 		case TS_IPV6_ADDR_RANGE:
-			if (memeq(this->from6, other->from6, sizeof(this->from6)))
+			if (memeq(this->from6, other->from6, sizeof(this->from6)) &&
+				memeq(this->to6, other->to6, sizeof(this->to6)))
 			{
 				return TRUE;
 			}
