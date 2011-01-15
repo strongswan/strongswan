@@ -22,9 +22,11 @@
 #include <time.h>
 
 #ifdef CAPABILITIES
-#ifdef HAVE_SYS_CAPABILITY_H
-#include <sys/capability.h>
-#endif /* HAVE_SYS_CAPABILITY_H */
+# ifdef HAVE_SYS_CAPABILITY_H
+#  include <sys/capability.h>
+# elif defined(CAPABILITIES_NATIVE)
+#  include <linux/capability.h>
+# endif /* CAPABILITIES_NATIVE */
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
@@ -56,7 +58,7 @@ struct private_daemon_t {
 	cap_t caps;
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-	struct __user_cap_data_struct caps;
+	struct __user_cap_data_struct caps[2];
 #endif /* CAPABILITIES_NATIVE */
 
 };
@@ -141,9 +143,16 @@ METHOD(daemon_t, keep_cap, void,
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-	this->caps.effective |= 1 << cap;
-	this->caps.permitted |= 1 << cap;
-	this->caps.inheritable |= 1 << cap;
+	int i = 0;
+
+	if (cap >= 32)
+	{
+		i++;
+		cap -= 32;
+	}
+	this->caps[i].effective |= 1 << cap;
+	this->caps[i].permitted |= 1 << cap;
+	this->caps[i].inheritable |= 1 << cap;
 #endif /* CAPABILITIES_NATIVE */
 }
 
@@ -158,9 +167,15 @@ METHOD(daemon_t, drop_capabilities, bool,
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
 	struct __user_cap_header_struct header = {
-		.version = _LINUX_CAPABILITY_VERSION,
+#if defined(_LINUX_CAPABILITY_VERSION_3)
+		.version = _LINUX_CAPABILITY_VERSION_3,
+#elif defined(_LINUX_CAPABILITY_VERSION_2)
+		.version = _LINUX_CAPABILITY_VERSION_2,
+#else
+		.version = _LINUX_CAPABILITY_VERSION_1,
+#endif
 	};
-	if (capset(&header, &this->caps) != 0)
+	if (capset(&header, this->caps) != 0)
 	{
 		return FALSE;
 	}
