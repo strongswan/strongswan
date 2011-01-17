@@ -230,6 +230,8 @@ char *whitelist[] = {
 	"g_socket_connection_factory_lookup_type",
 	/* libgpg */
 	"gpg_err_init",
+	/* gnutls */
+	"gnutls_global_init",
 };
 
 /**
