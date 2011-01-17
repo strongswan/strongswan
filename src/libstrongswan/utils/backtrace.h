@@ -41,12 +41,13 @@ struct backtrace_t {
 	void (*log)(backtrace_t *this, FILE *file, bool detailed);
 
 	/**
-	 * Check if the backtrace contains a frame in a specific function.
+	 * Check if the backtrace contains a frame having a function in a list.
 	 *
-	 * @param		function name
-	 * @return		TRUE if function is in the stack
+	 * @param		function name array
+	 * @param		number of elements in function array
+	 * @return		TRUE if one of the functions is in the stack
 	 */
-	bool (*contains_function)(backtrace_t *this, char *function);
+	bool (*contains_function)(backtrace_t *this, char *function[], int count);
 
 	/**
 	 * Destroy a backtrace instance.

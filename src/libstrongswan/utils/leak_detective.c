@@ -233,22 +233,6 @@ char *whitelist[] = {
 };
 
 /**
- * check if a stack frame contains functions listed above
- */
-static bool is_whitelisted(backtrace_t *backtrace)
-{
-	int i;
-	for (i = 0; i < sizeof(whitelist)/sizeof(char*); i++)
-	{
-		if (backtrace->contains_function(backtrace, whitelist[i]))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-/**
  * Report leaks at library destruction
  */
 static void report(private_leak_detective_t *this, bool detailed)
@@ -260,7 +244,8 @@ static void report(private_leak_detective_t *this, bool detailed)
 
 		for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 		{
-			if (is_whitelisted(hdr->backtrace))
+			if (hdr->backtrace->contains_function(hdr->backtrace,
+											whitelist, countof(whitelist)))
 			{
 				whitelisted++;
 			}
