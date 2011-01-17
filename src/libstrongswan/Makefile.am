@@ -282,6 +282,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SOUP
+  SUBDIRS += plugins/soup
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/soup/libstrongswan-soup.la
+endif
+endif
+
 if USE_LDAP
   SUBDIRS += plugins/ldap
 if MONOLITHIC

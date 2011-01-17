@@ -66,6 +66,7 @@ AC_ARG_WITH(
 m4_include(m4/macros/enable-disable.m4)
 
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
 ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
@@ -498,6 +499,12 @@ if test x$curl = xtrue; then
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
+if test x$soup = xtrue; then
+	PKG_CHECK_MODULES(soup, [libsoup-2.4])
+	AC_SUBST(soup_CFLAGS)
+	AC_SUBST(soup_LIBS)
+fi
+
 if test x$xml = xtrue; then
 	PKG_CHECK_MODULES(xml, [libxml-2.0])
 	AC_SUBST(xml_CFLAGS)
@@ -689,8 +696,9 @@ h_plugins=
 s_plugins=
 
 ADD_PLUGIN([test-vectors],         [s libcharon pluto openac scepclient pki])
-ADD_PLUGIN([curl],                 [s libcharon pluto scepclient])
-ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient])
+ADD_PLUGIN([curl],                 [s libcharon pluto scepclient scripts])
+ADD_PLUGIN([soup],                 [s libcharon pluto scripts])
+ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient scripts])
 ADD_PLUGIN([mysql],                [s libcharon pluto pool manager medsrv])
 ADD_PLUGIN([sqlite],               [s libcharon pluto pool manager medsrv])
 ADD_PLUGIN([aes],                  [s libcharon pluto openac scepclient pki scripts])
@@ -793,6 +801,7 @@ dnl libstrongswan plugins
 dnl =====================
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
+AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
@@ -960,6 +969,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
+	src/libstrongswan/plugins/soup/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
