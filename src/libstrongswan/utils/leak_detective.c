@@ -220,6 +220,16 @@ char *whitelist[] = {
 	"PR_CallOnce",
 	/* libapr */
 	"apr_pool_create_ex",
+	/* glib */
+	"g_type_init_with_debug_flags",
+	"g_type_register_static",
+	"g_type_class_ref",
+	"g_type_create_instance",
+	"g_type_add_interface_static",
+	"g_type_interface_add_prerequisite",
+	"g_socket_connection_factory_lookup_type",
+	/* libgpg */
+	"gpg_err_init",
 };
 
 /**
