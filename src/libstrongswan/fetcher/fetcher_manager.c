@@ -92,7 +92,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 		va_start(args, response);
 		while (good)
 		{
-			opt = va_arg(args, fetcher_option_t);
+			opt = va_arg(args, int);
 			switch (opt)
 			{
 				case FETCH_REQUEST_DATA:
@@ -109,7 +109,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 					good = fetcher->set_option(fetcher, opt, va_arg(args, u_int));
 					continue;
 				case FETCH_END:
-					break;;
+					break;
 			}
 			break;
 		}
