@@ -9,3 +9,4 @@ dh_speed
 pubkey_speed
 crypt_burn
 tls_test
+fetch
