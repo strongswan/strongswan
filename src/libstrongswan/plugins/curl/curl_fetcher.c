@@ -104,6 +104,7 @@ METHOD(fetcher_t, fetch, status_t,
 METHOD(fetcher_t, set_option, bool,
 	private_curl_fetcher_t *this, fetcher_option_t option, ...)
 {
+	bool supported = TRUE;
 	va_list args;
 
 	va_start(args, option);
@@ -115,7 +116,7 @@ METHOD(fetcher_t, set_option, bool,
 
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, (char*)data.ptr);
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, data.len);
-			return TRUE;
+			break;
 		}
 		case FETCH_REQUEST_TYPE:
 		{
@@ -124,30 +125,33 @@ METHOD(fetcher_t, set_option, bool,
 
 			snprintf(header, BUF_LEN, "Content-Type: %s", request_type);
 			this->headers = curl_slist_append(this->headers, header);
-			return TRUE;
+			break;
 		}
 		case FETCH_REQUEST_HEADER:
 		{
 			char *header = va_arg(args, char*);
 
 			this->headers = curl_slist_append(this->headers, header);
-			return TRUE;
+			break;
 		}
 		case FETCH_HTTP_VERSION_1_0:
 		{
 			curl_easy_setopt(this->curl, CURLOPT_HTTP_VERSION,
 							 CURL_HTTP_VERSION_1_0);
-			return TRUE;
+			break;
 		}
 		case FETCH_TIMEOUT:
 		{
 			curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT,
 							 va_arg(args, u_int));
-			return TRUE;
+			break;
 		}
 		default:
-			return FALSE;
+			supported = FALSE;
+			break;
 	}
+	va_end(args);
+	return supported;
 }
 
 METHOD(fetcher_t, destroy, void,
