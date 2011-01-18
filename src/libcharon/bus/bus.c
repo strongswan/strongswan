@@ -227,13 +227,13 @@ static bool log_cb(entry_t *entry, log_data_t *data)
 		{
 			entry->blocker = FALSE;
 			entry->condvar->signal(entry->condvar);
+			entry->calling--;
 		}
 		else
 		{
 			entry_destroy(entry);
 		}
 		va_end(args);
-		entry->calling--;
 		return TRUE;
 	}
 	va_end(args);
