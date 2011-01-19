@@ -226,7 +226,7 @@ tls_writer_t *tls_writer_create(u_int32_t bufsize)
 			.get_buf = _get_buf,
 			.destroy = _destroy,
 		},
-		.increase = bufsize ?: 32,
+		.increase = bufsize ? max(bufsize, 4) : 32,
 	);
 	if (bufsize)
 	{
