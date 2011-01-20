@@ -907,9 +907,12 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
  */
 static u_int64_t get_spi(private_ike_sa_manager_t *this)
 {
-	u_int64_t spi;
+	u_int64_t spi = 0;
 
-	this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi);
+	if (this->rng)
+	{
+		this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi);
+	}
 	return spi;
 }
 
@@ -975,7 +978,8 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	DBG2(DBG_MGR, "checkout IKE_SA by message");
 
 	if (message->get_request(message) &&
-		message->get_exchange_type(message) == IKE_SA_INIT)
+		message->get_exchange_type(message) == IKE_SA_INIT &&
+		this->hasher)
 	{
 		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
 		chunk_t data, hash;
@@ -1653,7 +1657,9 @@ METHOD(ike_sa_manager_t, flush, void,
 	unlock_all_segments(this);
 
 	this->rng->destroy(this->rng);
+	this->rng = NULL;
 	this->hasher->destroy(this->hasher);
+	this->hasher = NULL;
 }
 
 METHOD(ike_sa_manager_t, destroy, void,
