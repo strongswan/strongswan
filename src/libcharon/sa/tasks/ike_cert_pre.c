@@ -76,6 +76,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 			{
 				certreq_payload_t *certreq = (certreq_payload_t*)payload;
 				enumerator_t *enumerator;
+				u_int unknown = 0;
 				chunk_t keyid;
 
 				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
@@ -103,12 +104,18 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 					}
 					else
 					{
-						DBG1(DBG_IKE, "received cert request for unknown ca "
+						DBG2(DBG_IKE, "received cert request for unknown ca "
 									  "with keyid %Y", id);
+						unknown++;
 					}
 					id->destroy(id);
 				}
 				enumerator->destroy(enumerator);
+				if (unknown)
+				{
+					DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
+						 unknown);
+				}
 				break;
 			}
 			case NOTIFY:
