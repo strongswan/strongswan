@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,11 +13,35 @@
  * for more details.
  */
 
-#include "tnccs.h"
+#include "tnccs_dynamic_plugin.h"
+#include "tnccs_dynamic.h"
 
-ENUM(tnccs_type_names, TNCCS_UNKNOWN, TNCCS_2_0,
-	"unknown TNCCS",
-	"TNCCS 1.1",
-	"TNCCS SOH",
-	"TNCCS 2.0",
-);
+#include <daemon.h>
+
+METHOD(plugin_t, destroy, void,
+	tnccs_dynamic_plugin_t *this)
+{
+	charon->tnccs->remove_method(charon->tnccs,
+								(tnccs_constructor_t)tnccs_dynamic_create);
+	free(this);
+}
+
+/*
+ * see header file
+ */
+plugin_t *tnccs_dynamic_plugin_create()
+{
+	tnccs_dynamic_plugin_t *this;
+
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
+
+	charon->tnccs->add_method(charon->tnccs, TNCCS_DYNAMIC, 
+							 (tnccs_constructor_t)tnccs_dynamic_create);
+
+	return &this->plugin;
+}
+

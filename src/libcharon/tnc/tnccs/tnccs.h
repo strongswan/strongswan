@@ -39,9 +39,11 @@ typedef enum tnccs_type_t tnccs_type_t;
  * Type of TNC Client/Server protocol
  */
 enum tnccs_type_t {
+	TNCCS_UNKNOWN,
 	TNCCS_1_1,
 	TNCCS_SOH,
-	TNCCS_2_0
+	TNCCS_2_0,
+	TNCCS_DYNAMIC
 };
 
 /**

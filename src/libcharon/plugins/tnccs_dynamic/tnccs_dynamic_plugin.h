@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,11 +13,30 @@
  * for more details.
  */
 
-#include "tnccs.h"
+/**
+ * @defgroup tnccs_dynamic tnccs_dynamic
+ * @ingroup cplugins
+ *
+ * @defgroup tnccs_dynamic_plugin tnccs_dynamic_plugin
+ * @{ @ingroup tnccs_dynamic
+ */
 
-ENUM(tnccs_type_names, TNCCS_UNKNOWN, TNCCS_2_0,
-	"unknown TNCCS",
-	"TNCCS 1.1",
-	"TNCCS SOH",
-	"TNCCS 2.0",
-);
+#ifndef TNCCS_DYNAMIC_PLUGIN_H_
+#define TNCCS_DYNAMIC_PLUGIN_H_
+
+#include <plugins/plugin.h>
+
+typedef struct tnccs_dynamic_plugin_t tnccs_dynamic_plugin_t;
+
+/**
+ * EAP-TNC plugin
+ */
+struct tnccs_dynamic_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** TNCCS_DYNAMIC_PLUGIN_H_ @}*/

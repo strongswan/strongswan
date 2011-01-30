@@ -347,6 +347,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNCCS_DYNAMIC
+  SUBDIRS += plugins/tnccs_dynamic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 if MONOLITHIC

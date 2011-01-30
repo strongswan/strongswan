@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,11 +13,24 @@
  * for more details.
  */
 
-#include "tnccs.h"
+/**
+ * @defgroup tnccs_dynamic_h tnccs_dynamic
+ * @{ @ingroup tnccs_dynamic
+ */
 
-ENUM(tnccs_type_names, TNCCS_UNKNOWN, TNCCS_2_0,
-	"unknown TNCCS",
-	"TNCCS 1.1",
-	"TNCCS SOH",
-	"TNCCS 2.0",
-);
+#ifndef TNCCS_DYNAMIC_H_
+#define TNCCS_DYNAMIC_H_
+
+#include <library.h>
+
+#include <tls.h>
+
+/**
+ * Create an instance of a dynamic TNC IF-TNCCS protocol handler.
+ *
+ * @param is_server			TRUE to act as TNC Server, FALSE for TNC Client
+ * @return					dynamic TNC IF-TNCCS protocol stack
+ */
+tls_t *tnccs_dynamic_create(bool is_server);
+
+#endif /** TNCCS_DYNAMIC_H_ @}*/

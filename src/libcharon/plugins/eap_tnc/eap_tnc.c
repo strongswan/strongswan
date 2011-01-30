@@ -18,7 +18,7 @@
 #include <tls_eap.h>
 
 #include <daemon.h>
-#include <library.h>
+#include <debug.h>
 
 typedef struct private_eap_tnc_t private_eap_tnc_t;
 
@@ -137,7 +137,24 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 					"charon.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT);
 	protocol = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-tnc.protocol", "tnccs-1.1");
-	type = strcaseeq(protocol, "tnccs-2.0") ? TNCCS_2_0 : TNCCS_1_1;
+	if (strcaseeq(protocol, "tnccs-2.0"))
+	{
+		type = TNCCS_2_0;
+	}
+	else if (strcaseeq(protocol, "tnccs-1.1"))
+	{
+		type = TNCCS_1_1;
+	}
+	else if (strcaseeq(protocol, "tnccs-dynamic") && is_server)
+	{
+		type = TNCCS_DYNAMIC;
+	}
+	else
+	{
+		DBG1(DBG_TNC, "TNCCS protocol '%s' not supported", protocol);
+		free(this);
+		return NULL;
+	}
 	tnccs = charon->tnccs->create_instance(charon->tnccs, type, is_server);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size, max_msg_count);
 	if (!this->tls_eap)
