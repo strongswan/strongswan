@@ -3,10 +3,18 @@ strongswan-4.5.1
 
 - Sansar Choinyambuu implemented the RFC 5793 Posture Broker Protocol (BP)
   compatible with Trusted Network Connect (TNC). The TNCCS 2.0 protocol
-  requires the tnccs_20, tnc_imc and tnc_imv plugins but dose not depend
+  requires the tnccs_20, tnc_imc and tnc_imv plugins but does not depend
   on the libtnc library. Any available IMV/IMC pairs conforming to the
   Trusted Computing Group's TNC-IF-IMV/IMC 1.2 interface specification
   can be loaded via /etc/tnc_config.
+
+- Re-implemented the TNCCS 1.1 protocol by using the tnc_imc and tnc_imv
+  in place of the external libtnc library.
+
+- The tnccs_dynamic plugin loaded on a TNC server in addition to the
+  tnccs_11 and tnccs_20 plugins, dynamically detects the IF-TNCCS
+  protocol version used by a TNC client and invokes an instance of
+  the corresponding protocol stack.
 
 - IKE and ESP proposals can now be stored in an SQL database using a
   new proposals table. The start_action field in the child_configs
@@ -63,6 +71,7 @@ strongswan-4.5.1
 
 - The revocation and x509 libstrongswan plugins and the pki tool gained basic
   support for delta CRLs.
+
 
 strongswan-4.5.0
 ----------------
