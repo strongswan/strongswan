@@ -202,6 +202,16 @@ then
     echo -n " --enable-tnccs-11" >> $INSTALLSHELL
 fi
 
+if [ "$USE_TNCCS_20" = "yes" ]
+then
+    echo -n " --enable-tnccs-20" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNCCS_DYNAMIC" = "yes" ]
+then
+    echo -n " --enable-tnccs-dynamic" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
@@ -295,6 +305,11 @@ fi
 if [ "$USE_HA" = "yes" ]
 then
     echo -n " --enable-ha" >> $INSTALLSHELL
+fi
+
+if [ "$USE_CISCO_QUIRKS" = "yes" ]
+then
+    echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
 fi
 
 echo "" >> $INSTALLSHELL
