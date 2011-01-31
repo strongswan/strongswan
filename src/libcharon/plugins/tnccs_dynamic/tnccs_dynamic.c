@@ -36,6 +36,12 @@ struct private_tnccs_dynamic_t {
 	tls_t *tls;
 };
 
+/**
+ * Determine the version of the IF-TNCCS protocol used by analyzing the first
+ * byte of the TNCCS batch received from a TNC Client according to the rules
+ * defined by section 3.5 "Interoperability with older IF-TNCCS versions" of
+ * the TCG TNC IF-TNCCS TLV Bindings Version 2.0 standard.
+ */
 tnccs_type_t determine_tnccs_protocol(char version)
 {
 	switch (version)
