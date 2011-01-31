@@ -67,10 +67,10 @@ do
 	    \$SWITCH_${host} \
 	    mem=${MEM}M con=pty con0=fd:0,fd:1" &
         cgecho "done"
+        sleep 15
     fi
     let "x0+=dx"
     let "y0+=dy"
-    sleep 15
 done
 
 if [ -z "$BOOTING_HOSTS" ]
