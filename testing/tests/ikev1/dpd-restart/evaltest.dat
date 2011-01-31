@@ -1,7 +1,7 @@
 moon::ipsec status::STATE_MAIN_I4 (ISAKMP SA established)::YES
 carol::iptables -I INPUT 1 -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
-moon::sleep 35::no output expected::NO
-carol::iptables -D INPUT 1::no output expected::NO
+carol::sleep 35::no output expected::NO
+carol::iptables -D INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
 moon::cat /var/log/auth.log::inserting event EVENT_DPD::YES
 moon::cat /var/log/auth.log::DPD: No response from peer - declaring peer dead::YES
 moon::cat /var/log/auth.log::DPD: Terminating all SAs using this connection::YES

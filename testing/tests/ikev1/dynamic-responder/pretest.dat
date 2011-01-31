@@ -10,4 +10,4 @@ moon::sleep 1
 carol::iptables -D INPUT  -i eth0 -p udp --dport 500 --sport 500 -j ACCEPT
 carol::iptables -D OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
 dave::ipsec up moon
-dave::sleep 1
+dave::sleep 2 
