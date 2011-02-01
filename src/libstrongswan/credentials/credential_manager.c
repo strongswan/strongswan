@@ -716,6 +716,11 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
+				if (!this->auth->get(this->auth, AUTH_RULE_SUBJECT_CERT))
+				{	/* add cert to auth info, if not returned by trustchain */
+					this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
+									this->pretrusted->get_ref(this->pretrusted));
+				}
 				if (auth)
 				{
 					*auth = this->auth;
