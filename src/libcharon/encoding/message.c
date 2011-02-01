@@ -1249,6 +1249,31 @@ METHOD(message_t, parse_header, status_t,
 }
 
 /**
+ * Check if a payload is for a mediation extension connectivity check
+ */
+static bool is_connectivity_check(private_message_t *this, payload_t *payload)
+{
+#ifdef ME
+	if (this->exchange_type == INFORMATIONAL &&
+		payload->get_type(payload) == NOTIFY)
+	{
+		notify_payload_t *notify = (notify_payload_t*)payload;
+
+		switch (notify->get_notify_type(notify))
+		{
+			case ME_CONNECTID:
+			case ME_ENDPOINT:
+			case ME_CONNECTAUTH:
+				return TRUE;
+			default:
+				break;
+		}
+	}
+#endif /* !ME */
+	return FALSE;
+}
+
+/**
  * Decrypt payload from the encryption payload
  */
 static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
@@ -1319,7 +1344,8 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 			}
 			encryption->destroy(encryption);
 		}
-		if (payload_is_known(type) && !was_encrypted)
+		if (payload_is_known(type) && !was_encrypted &&
+			!is_connectivity_check(this, payload))
 		{
 			rule = get_payload_rule(this, type);
 			if (!rule || rule->encrypted)
