@@ -357,10 +357,8 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 	return this->peer_cfg != NULL;
 }
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg;
 
@@ -484,10 +482,8 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg, *cand;
 	id_payload_t *id_payload;
@@ -656,10 +652,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg;
 
@@ -834,10 +828,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -1028,18 +1020,14 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_auth_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_auth_t *this)
 {
 	return IKE_AUTHENTICATE;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_auth_t *this, ike_sa_t *ike_sa)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -1062,10 +1050,8 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	this->candidates = linked_list_create();
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_auth_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_auth_t *this)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -1083,37 +1069,29 @@ static void destroy(private_ike_auth_t *this)
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_auth_t *this = malloc_thing(private_ike_auth_t);
+	private_ike_auth_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.build = _build_r,
+				.process = _process_r,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+		.candidates = linked_list_create(),
+		.do_another_auth = TRUE,
+		.expect_another_auth = TRUE,
+	);
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
-	else
-	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-	}
-
-	this->ike_sa = ike_sa;
-	this->initiator = initiator;
-	this->my_nonce = chunk_empty;
-	this->other_nonce = chunk_empty;
-	this->my_packet = NULL;
-	this->other_packet = NULL;
-	this->peer_cfg = NULL;
-	this->candidates = linked_list_create();
-	this->my_auth = NULL;
-	this->other_auth = NULL;
-	this->do_another_auth = TRUE;
-	this->expect_another_auth = TRUE;
-	this->authentication_failed = FALSE;
-
 	return &this->public;
 }
 
