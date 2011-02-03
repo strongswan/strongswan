@@ -96,6 +96,11 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		{
 			match += MATCH_ANY;
 		}
+		else
+		{
+			me_cand->destroy(me_cand);
+			return MATCH_NONE;
+		}
 		me_cand->destroy(me_cand);
 	}
 	else
@@ -118,6 +123,11 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		else if (other_cand->is_anyaddr(other_cand))
 		{
 			match += MATCH_ANY;
+		}
+		else
+		{
+			other_cand->destroy(other_cand);
+			return MATCH_NONE;
 		}
 		other_cand->destroy(other_cand);
 	}
