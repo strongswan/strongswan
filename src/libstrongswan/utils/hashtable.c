@@ -249,6 +249,7 @@ METHOD(hashtable_t, put, void*,
 			{
 				old_value = pair->value;
 				pair->value = value;
+				pair->key = key;
 				break;
 			}
 		}
