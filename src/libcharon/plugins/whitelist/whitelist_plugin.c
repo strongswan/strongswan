@@ -16,6 +16,7 @@
 #include "whitelist_plugin.h"
 
 #include "whitelist_listener.h"
+#include "whitelist_control.h"
 
 #include <daemon.h>
 
@@ -35,6 +36,11 @@ struct private_whitelist_plugin_t {
 	 * Listener checking whitelist entries during authorization
 	 */
 	whitelist_listener_t *listener;
+
+	/**
+	 * Whitelist control socket
+	 */
+	whitelist_control_t *control;
 };
 
 METHOD(plugin_t, destroy, void,
@@ -42,6 +48,7 @@ METHOD(plugin_t, destroy, void,
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
+	DESTROY_IF(this->control);
 	free(this);
 }
 
@@ -60,6 +67,7 @@ plugin_t *whitelist_plugin_create()
 		},
 		.listener = whitelist_listener_create(),
 	);
+	this->control = whitelist_control_create(this->listener);
 
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
