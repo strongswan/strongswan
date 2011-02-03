@@ -16,3 +16,6 @@ libstrongswan_whitelist_la_SOURCES = whitelist_plugin.h whitelist_plugin.c \
 	whitelist_control.h whitelist_control.c
 
 libstrongswan_whitelist_la_LDFLAGS = -module -avoid-version
+
+ipsec_PROGRAMS = whitelist
+whitelist_SOURCES = whitelist.c
