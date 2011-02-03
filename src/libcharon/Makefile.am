@@ -403,6 +403,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WHITELIST
+  SUBDIRS += plugins/whitelist
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/whitelist/libstrongswan-whitelist.la
+endif
+endif
+
 if USE_LED
   SUBDIRS += plugins/led
 if MONOLITHIC
