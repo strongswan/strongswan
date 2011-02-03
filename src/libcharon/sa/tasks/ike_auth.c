@@ -621,11 +621,6 @@ METHOD(task_t, process_r, status_t,
 		this->initial_contact = TRUE;
 	}
 
-	/* store authentication information */
-	cfg = auth_cfg_create();
-	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
-
 	/* another auth round done, invoke authorize hook */
 	if (!charon->bus->authorize(charon->bus, FALSE))
 	{
@@ -633,6 +628,11 @@ METHOD(task_t, process_r, status_t,
 		this->authentication_failed = TRUE;
 		return NEED_MORE;
 	}
+
+	/* store authentication information */
+	cfg = auth_cfg_create();
+	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
+	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 
 	if (!update_cfg_candidates(this, FALSE))
 	{
@@ -949,17 +949,17 @@ METHOD(task_t, process_i, status_t,
 			this->other_auth->destroy(this->other_auth);
 			this->other_auth = NULL;
 		}
-		/* store authentication information, reset authenticator */
-		cfg = auth_cfg_create();
-		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
-
 		/* another auth round done, invoke authorize hook */
 		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
 			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
 			return FAILED;
 		}
+
+		/* store authentication information, reset authenticator */
+		cfg = auth_cfg_create();
+		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
+		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 	}
 
 	if (this->my_auth)
