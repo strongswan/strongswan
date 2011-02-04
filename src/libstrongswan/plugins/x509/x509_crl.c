@@ -226,7 +226,7 @@ static bool parse(private_x509_crl_t *this)
 	int objectID;
 	int sig_alg = OID_UNKNOWN;
 	bool success = FALSE;
-	bool critical;
+	bool critical = FALSE;
 	revoked_t *revoked = NULL;
 
 	parser = asn1_parser_create(crlObjects, this->encoding);
