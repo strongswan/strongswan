@@ -115,12 +115,11 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, child_state_change, bool,
-	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-	   child_sa_state_t state)
+METHOD(listener_t, ike_state_change, bool,
+	   private_maemo_service_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
 	/* this call back is only registered during initiation */
-	if (this->ike_sa == ike_sa && state == CHILD_DESTROYING)
+	if (this->ike_sa == ike_sa && state == IKE_DESTROYING)
 	{
 		change_status(this, VPN_STATUS_CONNECTION_FAILED);
 		return FALSE;
@@ -138,7 +137,7 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
-			this->public.listener.child_state_change = NULL;
+			this->public.listener.ike_state_change = NULL;
 			change_status(this, VPN_STATUS_CONNECTED);
 		}
 		else
@@ -371,7 +370,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	this->ike_sa = ike_sa;
 	this->status = VPN_STATUS_CONNECTING;
 	this->public.listener.ike_updown = _ike_updown;
-	this->public.listener.child_state_change = _child_state_change;
+	this->public.listener.ike_state_change = _ike_state_change;
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
@@ -464,7 +463,7 @@ maemo_service_t *maemo_service_create()
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
-				.child_state_change = _child_state_change,
+				.ike_state_change = _ike_state_change,
 				.child_updown = _child_updown,
 				.ike_rekey = _ike_rekey,
 			},
