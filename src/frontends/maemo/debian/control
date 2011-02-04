@@ -7,9 +7,8 @@ Standards-Version: 3.7.2
 
 Package: strongswan-applet
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: A frontend for the strongSwan IKEv2/IPsec VPN solution
+Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan
+Description: A frontend for the strongSwan IPsec VPN solution
  A frontend to configure and control the strongSwan
- IKEv2/IPsec VPN solution.  Currently only EAP Authentication
- is supported.
-
+ IPsec VPN solution.  Currently only IKEv2 with EAP
+ Authentication (Username/Password) is supported.
