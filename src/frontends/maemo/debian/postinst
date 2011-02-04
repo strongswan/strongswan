@@ -18,6 +18,8 @@ set -e
 # the debian-policy package
 
 gtk-update-icon-cache -f /usr/share/icons/hicolor
+# change event is not triggered otherwise
+touch /usr/share/icons/hicolor
 
 case "$1" in
     configure)
