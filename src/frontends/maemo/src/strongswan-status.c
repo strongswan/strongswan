@@ -39,6 +39,10 @@
 #define ICON_SIZE_STATUS 18
 #define ICON_SIZE_BUTTON 48
 
+#define UNREF_IF(obj) do { \
+	if (obj) { obj = (g_object_unref (obj), NULL); } \
+} while(0)
+
 typedef enum
 {
 	STATUS_DISCONNECTED,
@@ -485,14 +489,8 @@ dbus_req_handler(const gchar *interface, const gchar *method,
 static GdkPixbuf*
 load_icon (GtkIconTheme *theme, const gchar *name, gint size)
 {
-	GdkPixbuf *icon = NULL;
-	GdkPixbuf *loaded = gtk_icon_theme_load_icon (theme, name, size,
-												  GTK_ICON_LOOKUP_NO_SVG, NULL);
-	if (loaded)
-	{	/* so we don't have to listen for theme changes, we copy the icon */
-		icon = gdk_pixbuf_copy (loaded);
-		g_object_unref (loaded);
-	}
+	GdkPixbuf *icon = gtk_icon_theme_load_icon (theme, name, size,
+												GTK_ICON_LOOKUP_NO_SVG, NULL);
 	return icon;
 }
 
@@ -508,10 +506,18 @@ load_icons (StrongswanStatusPrivate *priv)
 										 ICON_SIZE_BUTTON);
 	priv->icons.button_close = load_icon (theme, "strongswan_lock_close",
 										  ICON_SIZE_BUTTON);
-	if (!priv->icons.status_open || !priv->icons.button_open)
-	{
-		hildon_banner_show_information (NULL, NULL, "failed to load icons");
-	}
+}
+
+static void
+icon_theme_changed (GtkIconTheme *theme, StrongswanStatus *plugin)
+{
+	StrongswanStatusPrivate *priv = plugin->priv;
+	UNREF_IF(priv->icons.status_open);
+	UNREF_IF(priv->icons.status_close);
+	UNREF_IF(priv->icons.button_open);
+	UNREF_IF(priv->icons.button_close);
+	load_icons (priv);
+	update_status_menu (plugin);
 }
 
 static void
@@ -539,6 +545,9 @@ strongswan_status_init (StrongswanStatus *plugin)
 
 	priv->conns = strongswan_connections_new ();
 
+	g_signal_connect_object (gtk_icon_theme_get_default (), "changed",
+							 G_CALLBACK (icon_theme_changed), plugin, 0);
+
 	load_icons(priv);
 
 	hd_status_plugin_item_set_status_area_icon (HD_STATUS_PLUGIN_ITEM (plugin),
@@ -563,10 +572,6 @@ strongswan_status_init (StrongswanStatus *plugin)
 
 	gtk_widget_show_all (GTK_WIDGET (plugin));
 }
-
-#define UNREF_IF(obj) do { \
-	if (obj) { obj = (g_object_unref (obj), NULL); } \
-} while(0)
 
 static void
 strongswan_status_dispose (GObject *object)
