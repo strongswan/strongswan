@@ -460,7 +460,9 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					ok = parse_crlNumber_ext(this, ext);
 					break;
 				default:
-					ok = X509_EXTENSION_get_critical(ext) != 0;
+					ok = X509_EXTENSION_get_critical(ext) == 0 ||
+						 !lib->settings->get_bool(lib->settings,
+								"libstrongswan.x509.enforce_critical", TRUE);
 					if (!ok)
 					{
 						DBG1(DBG_LIB, "found unsupported critical X.509 "

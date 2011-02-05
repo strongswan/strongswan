@@ -1443,9 +1443,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					default:
 						if (critical && lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.x509.enforce_critical", FALSE))
+							"libstrongswan.x509.enforce_critical", TRUE))
 						{
-							DBG1(DBG_LIB, "critical %s extension not supported",
+							DBG1(DBG_LIB, "critical '%s' extension not supported",
 								 (extn_oid == OID_UNKNOWN) ? "unknown" :
 								 (char*)oid_names[extn_oid].name);
 							goto end;

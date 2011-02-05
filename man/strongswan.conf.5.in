@@ -460,6 +460,9 @@ Check daemon, libstrongswan and plugin integrity at startup
 .TP
 .BR libstrongswan.leak_detective.detailed " [yes]"
 Includes source file names and line numbers in leak detective output
+.TP
+.BR libstrongswan.x509.enforce_critical " [yes]"
+Discard certificates with unsupported or unknown critical extensions
 .SS libstrongswan.plugins subsection
 .TP
 .BR libstrongswan.plugins.attr-sql.database
@@ -475,13 +478,8 @@ Use faster random numbers in gcrypt; for testing only, produces weak keys!
 ENGINE ID to use in the OpenSSL plugin
 .TP
 .BR libstrongswan.plugins.pkcs11.modules
-
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
-
-.TP
-.BR libstrongswan.plugins.x509.enforce_critical " [no]"
-Discard certificates with unsupported or unknown critical extensions
 .SS libtls section
 .TP
 .BR libtls.cipher

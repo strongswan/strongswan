@@ -804,7 +804,9 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					ok = parse_crlDistributionPoints_ext(this, ext);
 					break;
 				default:
-					ok = X509_EXTENSION_get_critical(ext) == 0;
+					ok = X509_EXTENSION_get_critical(ext) == 0 ||
+						 !lib->settings->get_bool(lib->settings,
+								"libstrongswan.x509.enforce_critical", TRUE);
 					if (!ok)
 					{
 						DBG1(DBG_LIB, "found unsupported critical X.509 extension");
@@ -916,7 +918,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 
 	if (!parse_extensions(this))
 	{
-		return TRUE;
+		return FALSE;
 	}
 	parse_extKeyUsage(this);
 
