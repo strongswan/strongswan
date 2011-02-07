@@ -1147,7 +1147,7 @@ read_packet(struct msg_digest *md)
 	}
 	else if (from_ugh != NULL)
 	{
-		plog("recvfrom on %s returned misformed source sockaddr: %s"
+		plog("recvfrom on %s returned malformed source sockaddr: %s"
 			, ifp->rname, from_ugh);
 		return FALSE;
 	}

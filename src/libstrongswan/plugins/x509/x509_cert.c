@@ -648,7 +648,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 						}
 						break;
 					default:
-						/* unkown accessMethod, ignoring */
+						/* unknown accessMethod, ignoring */
 						break;
 				}
 				break;

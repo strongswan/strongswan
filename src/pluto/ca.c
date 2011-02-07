@@ -629,7 +629,7 @@ void add_ca_info(const whack_message_t *msg)
 			if (strncasecmp(msg->ocspuri, "http", 4) == 0)
 				ca->ocspuri = clone_str(msg->ocspuri);
 			else
-				plog("  ignoring ocspuri with unkown protocol");
+				plog("  ignoring ocspuri with unknown protocol");
 		}
 
 		/* add crl uris */

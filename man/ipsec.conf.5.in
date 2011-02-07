@@ -594,7 +594,7 @@ sets
 to the distinguished name of the certificate's subject and
 .B leftca
 to the distinguished name of the certificate's issuer.
-The left participant's ID can be overriden by specifying a
+The left participant's ID can be overridden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
 .TP

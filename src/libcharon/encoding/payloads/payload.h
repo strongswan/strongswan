@@ -261,10 +261,10 @@ struct payload_t {
 payload_t *payload_create(payload_type_t type);
 
 /**
- * Check if a specific payload is implemented, or handled as unkown payload.
+ * Check if a specific payload is implemented, or handled as unknown payload.
  *
  * @param type		type of the payload to check
- * @return			FALSE if payload type handled as unkown payload
+ * @return			FALSE if payload type handled as unknown payload
  */
 bool payload_is_known(payload_type_t type);
 

@@ -196,7 +196,7 @@ static bool load_keys(settings_t *settings, char *dir)
 		}
 		else
 		{
-			fprintf(stderr, "unkown key type: '%s'\n", type);
+			fprintf(stderr, "unknown key type: '%s'\n", type);
 			enumerator->destroy(enumerator);
 			return FALSE;
 		}

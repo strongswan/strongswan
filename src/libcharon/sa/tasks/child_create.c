@@ -967,7 +967,7 @@ METHOD(task_t, build_r, status_t,
 				case INTERNAL_ADDRESS_FAILURE:
 				case FAILED_CP_REQUIRED:
 				{
-					DBG1(DBG_IKE,"configuration payload negotation "
+					DBG1(DBG_IKE,"configuration payload negotiation "
 						 "failed, no CHILD_SA built");
 					enumerator->destroy(enumerator);
 					handle_child_sa_failure(this, message);

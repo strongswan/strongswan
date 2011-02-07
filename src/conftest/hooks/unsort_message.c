@@ -85,7 +85,7 @@ METHOD(listener_t, message, bool,
 			}
 			else
 			{
-				DBG1(DBG_CFG, "unkown payload to sort: '%s', skipped", name);
+				DBG1(DBG_CFG, "unknown payload to sort: '%s', skipped", name);
 			}
 		}
 		order->destroy(order);
