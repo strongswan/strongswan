@@ -1,3 +1,9 @@
+strongswan-applet (1.0.1-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Tobias Brunner <tobias@strongswan.org>  Mon, 07 Feb 2011 10:34:53 +0100
+
 strongswan-applet (1.0.0-1) unstable; urgency=low
 
   * Initial release

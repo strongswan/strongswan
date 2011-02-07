@@ -1,7 +1,7 @@
 SOURCE:=../../
 BUILD:=build
 VERSION:=$(shell sed -n 's/AC_INIT(.*,\s*\(.*\))/\1/p' $(SOURCE)/configure.in)
-TARGETVERSION:=$(VERSION)
+TARGETVERSION:=4.5.0+$(VERSION)
 ORIGNAME:=strongswan-$(VERSION)
 ORIGSRC:=$(BUILD)/strongswan_$(TARGETVERSION).orig.tar.gz
 
