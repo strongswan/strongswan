@@ -206,12 +206,6 @@ void setportof(int port, ip_address *dst);
 struct sockaddr *sockaddrof(ip_address *src);
 size_t sockaddrlenof(const ip_address *src);
 
-/* PRNG */
-void prng_init(struct prng *prng, const unsigned char *key, size_t keylen);
-void prng_bytes(struct prng *prng, unsigned char *dst, size_t dstlen);
-unsigned long prng_count(struct prng *prng);
-void prng_final(struct prng *prng);
-
 /* odds and ends */
 const char **ipsec_copyright_notice(void);
 
