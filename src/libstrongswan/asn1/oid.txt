@@ -176,7 +176,7 @@
                   0x03       "msUPN"					OID_USER_PRINCIPAL_NAME
             0xA0             ""
               0x2A           "ITA"
-                0x01         "strongSwan"
+                0x01         "strongSwan"				OID_STRONGSWAN
           0x89               ""
             0x31             ""
               0x01           ""
