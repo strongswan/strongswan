@@ -2,7 +2,8 @@ Source: strongswan
 Section: user/network
 Priority: extra
 Maintainer: Tobias Brunner <tobias@strongswan.org>
-Build-Depends: debhelper (>= 5), autotools-dev
+Build-Depends: debhelper (>= 5), autotools-dev, libssl-dev (>= 0.9.8),
+               libglib2.0-dev, libosso-dev, osso-af-settings
 Standards-Version: 3.7.2
 
 Package: strongswan
