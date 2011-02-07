@@ -545,9 +545,6 @@ strongswan_status_init (StrongswanStatus *plugin)
 
 	priv->conns = strongswan_connections_new ();
 
-	g_signal_connect_object (gtk_icon_theme_get_default (), "changed",
-							 G_CALLBACK (icon_theme_changed), plugin, 0);
-
 	load_icons(priv);
 
 	hd_status_plugin_item_set_status_area_icon (HD_STATUS_PLUGIN_ITEM (plugin),
@@ -571,6 +568,9 @@ strongswan_status_init (StrongswanStatus *plugin)
 	g_signal_connect (button, "clicked", G_CALLBACK (button_clicked), plugin);
 
 	gtk_widget_show_all (GTK_WIDGET (plugin));
+
+	g_signal_connect (gtk_icon_theme_get_default (), "changed",
+					  G_CALLBACK (icon_theme_changed), plugin);
 }
 
 static void
