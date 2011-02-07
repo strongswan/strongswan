@@ -289,11 +289,6 @@ static int issue()
 			goto end;
 		}
 	}
-	else
-	{
-		id = identification_create_from_encoding(ID_DER_ASN1_DN,
-										chunk_from_chars(ASN1_SEQUENCE, 0));
-	}
 
 	DBG2(DBG_LIB, "Reading ca certificate:");
 	ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -428,6 +423,12 @@ static int issue()
 	{
 		error = "parsing public key failed";
 		goto end;
+	}
+
+	if (!id)
+	{
+		id = identification_create_from_encoding(ID_DER_ASN1_DN,
+										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
 
 	not_before = time(NULL);
