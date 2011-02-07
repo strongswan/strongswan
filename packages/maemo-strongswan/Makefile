@@ -5,11 +5,17 @@ TARGETVERSION:=$(VERSION)
 ORIGNAME:=strongswan-$(VERSION)
 ORIGSRC:=$(BUILD)/strongswan_$(TARGETVERSION).orig.tar.gz
 
-package: $(ORIGSRC)
-	debchange -b -v $(TARGETVERSION)-1
-	cp -R debian $(BUILD)/$(ORIGNAME)
+package: $(ORIGSRC) prepare
 	cd $(BUILD)/$(ORIGNAME) && \
 	dpkg-buildpackage -rfakeroot -sa > /dev/null
+
+source: $(ORIGSRC) prepare
+	cd $(BUILD)/$(ORIGNAME) && \
+	dpkg-buildpackage -rfakeroot -sa -S > /dev/null
+
+prepare:
+	debchange -b -v $(TARGETVERSION)-1
+	cp -R debian $(BUILD)/$(ORIGNAME)
 
 $(ORIGSRC): $(SOURCE)/Makefile | $(BUILD)
 	make -j -C $(SOURCE) dist-gzip > /dev/null
@@ -28,4 +34,4 @@ $(BUILD):
 clean:
 	rm -Rf $(BUILD)
 
-.PHONY:	package clean
+.PHONY:	package source prepare clean
