@@ -214,7 +214,7 @@ static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
-			 encryption_algorithm_names, enc_alg, key_size);
+			 encryption_algorithm_names, enc_alg, enc_size);
 		signer_i->destroy(signer_i);
 		signer_r->destroy(signer_r);
 		return FALSE;
