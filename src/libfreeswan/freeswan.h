@@ -288,24 +288,6 @@ rangetoa(
 );
 #define	RANGETOA_BUF	34	/* large enough for worst case result */
 
-/* data types for SA conversion functions */
-
-/* SAs */
-const char *			/* NULL for success, else string literal */
-atosa(
-	const char *src,
-	size_t srclen,		/* 0 means strlen(src) */
-	struct sa_id *sa
-);
-size_t				/* space needed for full conversion */
-satoa(
-	struct sa_id sa,
-	int format,		/* character; 0 means default */
-	char *dst,
-	size_t dstlen
-);
-#define	SATOA_BUF	(3+ULTOA_BUF+ADDRTOA_BUF)
-
 /* generic data, e.g. keys */
 const char *			/* NULL for success, else string literal */
 atobytes(
