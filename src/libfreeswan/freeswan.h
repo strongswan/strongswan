@@ -158,11 +158,6 @@ err_t ttodatav(const char *src, size_t srclen, int base,
 
 size_t datatot(const char *src, size_t srclen, int format, char *buf,
 								size_t buflen);
-size_t keyblobtoid(const unsigned char *src, size_t srclen, char *dst,
-								size_t dstlen);
-size_t splitkeytoid(const unsigned char *e, size_t elen, const unsigned char *m,
-					size_t mlen, char *dst, size_t dstlen);
-#define	KEYID_BUF		10	/* up to 9 text digits plus NUL */
 err_t ttoprotoport(char *src, size_t src_len, u_int8_t *proto, u_int16_t *port,
 							bool *has_port_wildcard);
 
