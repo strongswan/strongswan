@@ -25,7 +25,6 @@ AM_CFLAGS = \
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
-dist_man_MANS = starter.8
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
