@@ -1009,7 +1009,7 @@ specifies the name of the operation to be performed
 \fBup-host\fP, \fBup-client\fP,
 \fBdown-host\fP, or \fBdown-client\fP).  If the address family for
 security gateway to security gateway communications is IPv6, then
-a suffix of -v6 is added to the verb.
+a suffix of \-v6 is added to the verb.
 .TP
 \fBPLUTO_CONNECTION\fP
 is the name of the connection for which we are routing.
@@ -1571,7 +1571,7 @@ rejected with ECONNREFUSED (kernel supplied no details)''.  John
 Denker suggests that this command is useful for tracking down the
 source of these problems:
 .br
-	tcpdump -i eth0 icmp[0] != 8 and icmp[0] != 0
+	tcpdump \-i eth0 icmp[0] != 8 and icmp[0] != 0
 .br
 Substitute your public interface for eth0 if it is different.
 .LP
