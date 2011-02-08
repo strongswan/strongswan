@@ -30,7 +30,7 @@
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <tnc/tncif.h>
-#include <tnc/tncifimv_names.h>
+#include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;
@@ -165,7 +165,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			assess_msg = (pb_assessment_result_msg_t*)msg;
 			result = assess_msg->get_assessment_result(assess_msg);
 			DBG1(DBG_TNC, "PB-TNC assessment result is '%N'",
-						   evaluation_result_names, result);
+				 TNC_IMV_Evaluation_Result_names, result);
 			break;
 		}
 		case PB_MSG_ACCESS_RECOMMENDATION:
@@ -607,7 +607,8 @@ METHOD(tls_t, is_complete, bool,
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
 		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 action_recommendation_names, rec, evaluation_result_names, eval);
+			 TNC_IMV_Action_Recommendation_names, rec,
+			 TNC_IMV_Evaluation_Result_names, eval);
 
 		return charon->imvs->enforce_recommendation(charon->imvs, rec);
 	}

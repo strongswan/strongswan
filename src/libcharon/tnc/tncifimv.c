@@ -13,17 +13,24 @@
  * for more details.
  */
 
-/**
- * @defgroup tncifimv_names tncifimv_names
- * @{ @ingroup tnc
- */
+#include "tncifimv.h"
 
-#ifndef TNCIFIMV_NAMES_H_
-#define TNCIFIMV_NAMES_H_
+ENUM(TNC_IMV_Action_Recommendation_names,
+	TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+	TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+	"allow",
+	"no access",
+	"isolate",
+	"no recommendation"
+);
 
-#include <library.h>
+ENUM(TNC_IMV_Evaluation_Result_names,
+	TNC_IMV_EVALUATION_RESULT_COMPLIANT,
+	TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
+	"compliant",
+	"non-compliant minor",
+	"non-compliant major",
+	"error",
+	"don't know"
+);
 
-extern enum_name_t *action_recommendation_names;
-extern enum_name_t *evaluation_result_names;
-
-#endif /** TNCIFIMV_NAMES_H_ @}*/

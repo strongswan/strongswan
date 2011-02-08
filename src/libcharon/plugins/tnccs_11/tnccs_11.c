@@ -26,7 +26,7 @@
 #include <debug.h>
 #include <threading/mutex.h>
 #include <tnc/tncif.h>
-#include <tnc/tncifimv_names.h>
+#include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;
@@ -153,7 +153,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 				break;
 			}
 			DBG1(DBG_TNC, "TNC recommendation is '%N'",
-						   action_recommendation_names, rec);
+				 TNC_IMV_Action_Recommendation_names, rec);
 			switch (rec)
 			{
 				case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
@@ -436,7 +436,8 @@ METHOD(tls_t, is_complete, bool,
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
 		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 action_recommendation_names, rec, evaluation_result_names, eval);
+			 TNC_IMV_Action_Recommendation_names, rec,
+			 TNC_IMV_Evaluation_Result_names, eval);
 
 		return charon->imvs->enforce_recommendation(charon->imvs, rec);
 	}

@@ -14,7 +14,7 @@
 
 #include <debug.h>
 #include <daemon.h>
-#include <tnc/tncifimv_names.h>
+#include <tnc/tncifimv.h>
 #include <tnc/imv/imv.h>
 #include <tnc/imv/imv_recommendations.h>
 
@@ -87,8 +87,9 @@ METHOD(recommendations_t, provide_recommendation, TNC_Result,
 	recommendation_entry_t *entry;
 	bool found = FALSE;
 
-	DBG2(DBG_TNC, "IMV %u provides recommendation '%N' and evaluation '%N'",
-		 id, action_recommendation_names, rec, evaluation_result_names, eval);
+	DBG2(DBG_TNC, "IMV %u provides recommendation '%N' and evaluation '%N'", id,
+		 TNC_IMV_Action_Recommendation_names, rec,
+		 TNC_IMV_Evaluation_Result_names, eval);
 
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))
