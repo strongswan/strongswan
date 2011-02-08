@@ -1,3 +1,9 @@
+strongswan-applet (1.0.1-2) unstable; urgency=low
+
+  * Exclude static libraries from package
+
+ -- Tobias Brunner <tobias@strongswan.org>  Tue, 08 Feb 2011 16:15:07 +0100
+
 strongswan-applet (1.0.1-1) unstable; urgency=low
 
   * New upstream release

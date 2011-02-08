@@ -45,14 +45,11 @@ build: build-arch build-indep
 
 build-arch: build-arch-stamp
 build-arch-stamp:  config.status
-
-	# Add here commands to compile the arch part of the package.
-	#$(MAKE)
+	$(MAKE)
 	touch $@
 
 build-indep: build-indep-stamp
 build-indep-stamp:  config.status
-
 	# Add here commands to compile the indep part of the package.
 	#$(MAKE) doc
 	touch $@
@@ -62,7 +59,6 @@ clean:
 	dh_testroot
 	rm -f build-arch-stamp build-indep-stamp #CONFIGURE-STAMP#
 
-	# Add here commands to clean up after the build process.
 	-$(MAKE) distclean
 ifneq "$(wildcard /usr/share/misc/config.sub)" ""
 	cp -f /usr/share/misc/config.sub config.sub
@@ -71,33 +67,18 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
 
-
 	dh_clean
 
-install: install-indep install-arch
-install-indep:
+install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k -i
-	dh_installdirs -i
+	dh_clean -k
+	dh_installdirs
 
-	# Add here commands to install the indep part of the package into
-	# debian/<package>-doc.
-	#INSTALLDOC#
+	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp install
 
-	dh_install -i
+	dh_install --list-missing --sourcedir=debian/tmp
 
-install-arch:
-	dh_testdir
-	dh_testroot
-	dh_clean -k -s
-	dh_installdirs -s
-
-	# Add here commands to install the arch part of the package into
-	# debian/tmp.
-	$(MAKE) DESTDIR=$(CURDIR)/debian/strongswan-applet install
-
-	dh_install -s
 # Must not depend on anything. This is to be called by
 # binary-arch/binary-indep
 # in another 'make' thread.
@@ -130,12 +111,12 @@ binary-common:
 	dh_md5sums
 	dh_builddeb
 # Build architecture independant packages using the common target.
-binary-indep: build-indep install-indep
+binary-indep: build-indep install
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 # Build architecture dependant packages using the common target.
-binary-arch: build-arch install-arch
+binary-arch: build-arch install
 	$(MAKE) -f debian/rules DH_OPTIONS=-s binary-common
 
 binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch
+.PHONY: build clean binary-indep binary-arch binary install
