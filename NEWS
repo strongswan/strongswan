@@ -1,3 +1,8 @@
+- The whitelist plugin for the IKEv2 daemon maintains an in-memory identity
+  whitelist. Any connection attempt of peers not whitelisted will get rejected.
+  The 'ipsec whitelist' utility provides a simple command line frontend for
+  whitelist administration.
+
 strongswan-4.5.1
 ----------------
 
