@@ -5,13 +5,11 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 
 AM_CFLAGS = -rdynamic
 
-libstrongswan_tnccs_11_la_LIBADD = -ltnc
-
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnccs-11.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-11.la
-libstrongswan_tnccs_11_la_LIBADD += $(top_builddir)/src/libtls/libtls.la
+libstrongswan_tnccs_11_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
 libstrongswan_tnccs_11_la_SOURCES = \
