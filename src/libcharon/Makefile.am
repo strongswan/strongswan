@@ -321,14 +321,14 @@ endif
 if USE_TNC_IMC
   SUBDIRS += plugins/tnc_imc
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc_imc.la
+  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc-imc.la
 endif
 endif
 
 if USE_TNC_IMV
   SUBDIRS += plugins/tnc_imv
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc_imv.la
+  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
 endif
 endif
 
