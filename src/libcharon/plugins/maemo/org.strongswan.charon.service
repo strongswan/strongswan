@@ -1,4 +1,0 @@
-[D-BUS Service]
-Name=org.strongswan.charon
-Exec=/usr/bin/run-standalone.sh /usr/libexec/ipsec/charon
-User=root
