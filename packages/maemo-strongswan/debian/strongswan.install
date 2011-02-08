@@ -1,0 +1,29 @@
+# config
+etc
+# libraries
+usr/lib/libstrongswan.so*
+usr/lib/libhydra.so*
+usr/lib/libcharon.so*
+# starter etc.
+usr/sbin/ipsec
+usr/lib/ipsec/starter
+usr/lib/ipsec/_copyright
+usr/share/man/man8/ipsec.8
+usr/share/man/man5/ipsec.conf.5
+usr/share/man/man5/ipsec.secrets.5
+# updown
+usr/lib/ipsec/_updown
+usr/lib/ipsec/_updown_espmark
+usr/share/man/man8/_updown.8
+usr/share/man/man8/_updown_espmark.8
+# charon
+usr/share/dbus-1/system-services
+usr/lib/ipsec/charon
+usr/lib/ipsec/stroke
+usr/share/man/man5/strongswan.conf.5
+# pluto
+usr/lib/ipsec/pluto
+usr/lib/ipsec/_pluto_adns
+usr/lib/ipsec/whack
+usr/lib/ipsec/plugins/libstrongswan-xauth.so*
+usr/share/man/man8/pluto.8
