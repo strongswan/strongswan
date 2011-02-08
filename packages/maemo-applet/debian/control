@@ -14,7 +14,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan
 Description: A frontend for the strongSwan IPsec VPN solution
  A frontend to configure and control the strongSwan
  IPsec VPN solution.  Currently only IKEv2 with EAP
- Authentication (Username/Password) is supported.
+ authentication (username/password) is supported.
 XSBC-Maemo-Display-Name: strongSwan IPsec VPN Applet
 XSBC-Bugtracker: http://wiki.strongswan.org/projects/strongswan/issues
 XB-Maemo-Icon-26:
