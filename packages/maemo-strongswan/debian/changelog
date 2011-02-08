@@ -1,3 +1,10 @@
+strongswan (4.5.0+4.5.1rc2-2) unstable; urgency=low
+
+  * Exclude static libraries from package
+  * Use automatic optification
+
+ -- Tobias Brunner <tobias@strongswan.org>  Tue, 08 Feb 2011 12:23:40 +0100
+
 strongswan (4.5.0+4.5.1rc2-1) unstable; urgency=low
 
   * New upstream release
