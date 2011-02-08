@@ -234,7 +234,7 @@ if test x$fips_prf = xtrue; then
 	fi
 fi
 
-if test x$smp = xtrue; then
+if test x$smp = xtrue -o x$tnccs_11 = xtrue; then
 	xml=true
 fi
 

@@ -1,9 +1,10 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
-	`xml2-config --cflags`
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls ${xml_CFLAGS}
 
 AM_CFLAGS = -rdynamic
+
+libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnccs-11.la
