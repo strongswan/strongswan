@@ -371,7 +371,7 @@ METHOD(tls_t, build, status_t,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
-	
+
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
@@ -399,7 +399,7 @@ METHOD(tls_t, build, status_t,
 		else
 		{
 			*buflen = data.len;
-		}				
+		}
 		memcpy(buf, data.ptr, *buflen);
 		this->batch->destroy(this->batch);
 		this->batch = NULL;
@@ -412,7 +412,7 @@ METHOD(tls_t, build, status_t,
 	}
 	this->mutex->unlock(this->mutex);
 
-	return status;	
+	return status;
 }
 
 METHOD(tls_t, is_server, bool,

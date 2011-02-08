@@ -108,19 +108,19 @@ METHOD(imv_t, type_supported, bool,
 	TNC_MessageSubtype msg_subtype, subtype;
 	int i;
 
-    msg_vid = (message_type >> 8) & TNC_VENDORID_ANY;
+	msg_vid = (message_type >> 8) & TNC_VENDORID_ANY;
 	msg_subtype = message_type & TNC_SUBTYPE_ANY;
 
 	for (i = 0; i < this->type_count; i++)
 	{
-	    vid = (this->supported_types[i] >> 8) & TNC_VENDORID_ANY;
-	    subtype = this->supported_types[i] & TNC_SUBTYPE_ANY;
+		vid = (this->supported_types[i] >> 8) & TNC_VENDORID_ANY;
+		subtype = this->supported_types[i] & TNC_SUBTYPE_ANY;
 
-	    if (this->supported_types[i] == message_type
+		if (this->supported_types[i] == message_type
 		|| (subtype == TNC_SUBTYPE_ANY
 			&& (msg_vid == vid || vid == TNC_VENDORID_ANY))
-		|| (vid == TNC_VENDORID_ANY 
-		    && (msg_subtype == subtype || subtype == TNC_SUBTYPE_ANY)))
+		|| (vid == TNC_VENDORID_ANY
+			&& (msg_subtype == subtype || subtype == TNC_SUBTYPE_ANY)))
 		{
 			return TRUE;
 		}
@@ -153,7 +153,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 			.set_message_types = _set_message_types,
 			.type_supported = _type_supported,
 			.destroy = _destroy,
-        },
+		},
 		.name = name,
 		.path = path,
 	);
@@ -168,7 +168,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 
 	this->public.initialize = dlsym(this->handle, "TNC_IMV_Initialize");
 	if (!this->public.initialize)
-    {
+	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_Initialize in %s: %s\n",
 					   path, dlerror());
 		dlclose(this->handle);
@@ -177,25 +177,25 @@ imv_t* tnc_imv_create(char *name, char *path)
 	}
 	this->public.notify_connection_change =
 						dlsym(this->handle, "TNC_IMV_NotifyConnectionChange");
-    this->public.solicit_recommendation =
+	this->public.solicit_recommendation =
 						dlsym(this->handle, "TNC_IMV_SolicitRecommendation");
 	if (!this->public.solicit_recommendation)
-    {
+	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_SolicitRecommendation in %s: %s\n",
 					   path, dlerror());
 		dlclose(this->handle);
 		free(this);
 		return NULL;
 	}
-    this->public.receive_message =
+	this->public.receive_message =
 						dlsym(this->handle, "TNC_IMV_ReceiveMessage");
-    this->public.batch_ending =
+	this->public.batch_ending =
 						dlsym(this->handle, "TNC_IMV_BatchEnding");
-    this->public.terminate =
+	this->public.terminate =
 						dlsym(this->handle, "TNC_IMV_Terminate");
-    this->public.provide_bind_function =
+	this->public.provide_bind_function =
 						dlsym(this->handle, "TNC_IMV_ProvideBindFunction");
-    if (!this->public.provide_bind_function)
+	if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_ProvideBindFunction in %s: %s\n",
 					  path, dlerror());

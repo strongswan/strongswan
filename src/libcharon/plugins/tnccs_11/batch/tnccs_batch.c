@@ -38,7 +38,7 @@ struct private_tnccs_batch_t {
 	 * Batch ID
 	 */
 	int batch_id;
-	
+
 	/**
 	 * TNCC if TRUE, TNCS if FALSE
 	 */
@@ -75,7 +75,7 @@ METHOD(tnccs_batch_t, add_msg, void,
 	private_tnccs_batch_t *this, tnccs_msg_t* msg)
 {
 	xmlNodePtr root;
-	
+
 	DBG2(DBG_TNC, "adding %N message", tnccs_msg_type_names,
 									   msg->get_type(msg));
 	this->messages->insert_last(this->messages, msg);
@@ -86,13 +86,13 @@ METHOD(tnccs_batch_t, add_msg, void,
 METHOD(tnccs_batch_t, build, void,
 	private_tnccs_batch_t *this)
 {
-    xmlChar *xmlbuf;
-    int buf_size;
+	xmlChar *xmlbuf;
+	int buf_size;
 
 	xmlDocDumpFormatMemory(this->doc, &xmlbuf, &buf_size, 1);
 	this->encoding = chunk_create((u_char*)xmlbuf, buf_size);
-    this->encoding = chunk_clone(this->encoding);
-    xmlFree(xmlbuf);
+	this->encoding = chunk_clone(this->encoding);
+	xmlFree(xmlbuf);
 }
 
 METHOD(tnccs_batch_t, process, status_t,
@@ -101,9 +101,9 @@ METHOD(tnccs_batch_t, process, status_t,
 	tnccs_msg_t *tnccs_msg, *msg;
 	tnccs_error_type_t error_type = TNCCS_ERROR_OTHER;
 	char *error_msg, buf[BUF_LEN];
-    xmlNodePtr cur;
-    xmlNsPtr ns;
-    xmlChar *batchid, *recipient;
+	xmlNodePtr cur;
+	xmlNsPtr ns;
+	xmlChar *batchid, *recipient;
 	int batch_id;
 
 	this->doc = xmlParseMemory(this->encoding.ptr, this->encoding.len);
@@ -116,7 +116,7 @@ METHOD(tnccs_batch_t, process, status_t,
 
 	/* check out the XML document */
 	cur = xmlDocGetRootElement(this->doc);
-    if (!cur)
+	if (!cur)
 	{
 		error_type = TNCCS_ERROR_MALFORMED_BATCH;
 		error_msg = "empty XML document";
@@ -141,12 +141,12 @@ METHOD(tnccs_batch_t, process, status_t,
 		snprintf(buf, BUF_LEN, "wrong XML document type '%s', expected TNCCS-Batch",
 								cur->name);
 		goto fatal;
-    }
+	}
 
 	/* check presence of BatchID property */
 	batchid = xmlGetProp(cur, (const xmlChar*)"BatchId");
 	if (!batchid)
-    {
+	{
 		error_type = TNCCS_ERROR_INVALID_BATCH_ID;
 		error_msg = "BatchId is missing";
 		goto fatal;
@@ -180,7 +180,7 @@ METHOD(tnccs_batch_t, process, status_t,
 		error_msg =	buf;
 		snprintf(buf, BUF_LEN, "message recipient expected '%s', got '%s'",
 				 this->is_server ? "TNCS" : "TNCC", (char*)recipient);
-	    xmlFree(recipient);
+		xmlFree(recipient);
 		goto fatal;
 	}
 	xmlFree(recipient);
@@ -247,7 +247,7 @@ METHOD(tnccs_batch_t, destroy, void,
 								   offsetof(tnccs_msg_t, destroy));
 	this->errors->destroy_offset(this->errors,
 								   offsetof(tnccs_msg_t, destroy));
-    xmlFreeDoc(this->doc);
+	xmlFreeDoc(this->doc);
 	free(this->encoding.ptr);
 	free(this);
 }

@@ -54,7 +54,7 @@ struct recommendation_entry_t {
 	/**
 	 * Reason language provided by IMV instance
 	 */
-	chunk_t reason_language;	
+	chunk_t reason_language;
 };
 
 /**
@@ -68,7 +68,7 @@ struct private_tnc_imv_recommendations_t {
 	recommendations_t public;
 
 	/**
-	 * list of recommendations and evaluations provided by IMVs 
+	 * list of recommendations and evaluations provided by IMVs
 	 */
 	linked_list_t *recs;
 
@@ -347,7 +347,7 @@ static bool reason_filter(void *null, recommendation_entry_t **entry,
 	else
 	{
 		return FALSE;
-	} 
+	}
 }
 
 METHOD(recommendations_t, create_reason_enumerator, enumerator_t*,
@@ -393,7 +393,7 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 			.set_reason_language = _set_reason_language,
 			.create_reason_enumerator = _create_reason_enumerator,
 			.destroy = _destroy,
-        },
+		},
 		.recs = linked_list_create(),
 	);
 
@@ -407,9 +407,9 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 		entry->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 		entry->reason = chunk_empty;
 		entry->reason_language = chunk_empty;
-		this->recs->insert_last(this->recs, entry);		
+		this->recs->insert_last(this->recs, entry);
 	}
-	enumerator->destroy(enumerator);	
+	enumerator->destroy(enumerator);
 
 	return &this->public;
 }

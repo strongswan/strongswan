@@ -59,71 +59,70 @@ typedef TNC_UInt32 TNC_IMV_Action_Recommendation;
 typedef TNC_UInt32 TNC_IMV_Evaluation_Result;
 typedef TNC_UInt32 TNC_AttributeID;
 
-
 /* Function pointers */
 
 typedef TNC_Result (*TNC_IMV_InitializePointer)(
-    TNC_IMVID imvID,
-    TNC_Version minVersion,
-    TNC_Version maxVersion,
-    TNC_Version *pOutActualVersion);
+	TNC_IMVID imvID,
+	TNC_Version minVersion,
+	TNC_Version maxVersion,
+	TNC_Version *pOutActualVersion);
 typedef TNC_Result (*TNC_IMV_NotifyConnectionChangePointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
-    TNC_ConnectionState newState);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_ConnectionState newState);
 typedef TNC_Result (*TNC_IMV_ReceiveMessagePointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
-    TNC_BufferReference message,
-    TNC_UInt32 messageLength,
-    TNC_MessageType messageType);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_BufferReference message,
+	TNC_UInt32 messageLength,
+	TNC_MessageType messageType);
 typedef TNC_Result (*TNC_IMV_SolicitRecommendationPointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID);
 typedef TNC_Result (*TNC_IMV_BatchEndingPointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID);
 typedef TNC_Result (*TNC_IMV_TerminatePointer)(
-    TNC_IMVID imvID);
+	TNC_IMVID imvID);
 typedef TNC_Result (*TNC_TNCS_ReportMessageTypesPointer)(
-    TNC_IMVID imvID,
-    TNC_MessageTypeList supportedTypes,
-    TNC_UInt32 typeCount);
+	TNC_IMVID imvID,
+	TNC_MessageTypeList supportedTypes,
+	TNC_UInt32 typeCount);
 typedef TNC_Result (*TNC_TNCS_SendMessagePointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
-    TNC_BufferReference message,
-    TNC_UInt32 messageLength,
-    TNC_MessageType messageType);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_BufferReference message,
+	TNC_UInt32 messageLength,
+	TNC_MessageType messageType);
 typedef TNC_Result (*TNC_TNCS_RequestHandshakeRetryPointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
-    TNC_RetryReason reason);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_RetryReason reason);
 typedef TNC_Result (*TNC_TNCS_ProvideRecommendationPointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
-    TNC_IMV_Action_Recommendation recommendation,
-    TNC_IMV_Evaluation_Result evaluation);
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_IMV_Action_Recommendation recommendation,
+	TNC_IMV_Evaluation_Result evaluation);
 typedef TNC_Result (*TNC_TNCS_GetAttributePointer)(
-    TNC_IMVID imvID,
+	TNC_IMVID imvID,
 TNC_ConnectionID connectionID,
 TNC_AttributeID attributeID,
-    TNC_UInt32 bufferLength,
-    TNC_BufferReference buffer,
-    TNC_UInt32 *pOutValueLength);
+	TNC_UInt32 bufferLength,
+	TNC_BufferReference buffer,
+	TNC_UInt32 *pOutValueLength);
 typedef TNC_Result (*TNC_TNCS_SetAttributePointer)(
-    TNC_IMVID imvID,
-    TNC_ConnectionID connectionID,
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
 TNC_AttributeID attributeID,
-    TNC_UInt32 bufferLength,
-    TNC_BufferReference buffer);
+	TNC_UInt32 bufferLength,
+	TNC_BufferReference buffer);
 typedef TNC_Result (*TNC_TNCS_BindFunctionPointer)(
-    TNC_IMVID imvID,
-    char *functionName,
-    void **pOutfunctionPointer);
+	TNC_IMVID imvID,
+	char *functionName,
+	void **pOutfunctionPointer);
 typedef TNC_Result (*TNC_IMV_ProvideBindFunctionPointer)(
-    TNC_IMVID imvID,
-    TNC_TNCS_BindFunctionPointer bindFunction);
+	TNC_IMVID imvID,
+	TNC_TNCS_BindFunctionPointer bindFunction);
 
 /* Version Numbers */
 

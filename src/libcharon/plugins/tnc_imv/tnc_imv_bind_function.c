@@ -109,29 +109,29 @@ TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
 	{
 		*function_pointer = (void*)TNC_TNCS_ReportMessageTypes;
 	}
-    else if (streq(function_name, "TNC_TNCS_RequestHandshakeRetry"))
+	else if (streq(function_name, "TNC_TNCS_RequestHandshakeRetry"))
 	{
 		*function_pointer = (void*)TNC_TNCS_RequestHandshakeRetry;
 	}
-    else if (streq(function_name, "TNC_TNCS_SendMessage"))
+	else if (streq(function_name, "TNC_TNCS_SendMessage"))
 	{
 		*function_pointer = (void*)TNC_TNCS_SendMessage;
 	}
-    else if (streq(function_name, "TNC_TNCS_ProvideRecommendation"))
+	else if (streq(function_name, "TNC_TNCS_ProvideRecommendation"))
 	{
 		*function_pointer = (void*)TNC_TNCS_ProvideRecommendation;
 	}
-    else if (streq(function_name, "TNC_TNCS_GetAttribute"))
+	else if (streq(function_name, "TNC_TNCS_GetAttribute"))
 	{
 		*function_pointer = (void*)TNC_TNCS_GetAttribute;
 	}
-    else if (streq(function_name, "TNC_TNCS_SetAttribute"))
+	else if (streq(function_name, "TNC_TNCS_SetAttribute"))
 	{
 		*function_pointer = (void*)TNC_TNCS_SetAttribute;
 	}
-    else
+	else
 	{
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
-    return TNC_RESULT_SUCCESS;
+	return TNC_RESULT_SUCCESS;
 }

@@ -68,7 +68,7 @@ METHOD(imv_manager_t, add, bool,
 	this->imvs->insert_last(this->imvs, imv);
 	this->next_imv_id++;
 
-    if (imv->provide_bind_function(imv->get_id(imv), TNC_TNCS_BindFunction)
+	if (imv->provide_bind_function(imv->get_id(imv), TNC_TNCS_BindFunction)
 			!= TNC_RESULT_SUCCESS)
 	{
 		DBG1(DBG_TNC, "IMV \"%s\" could failed to obtain bind function",
@@ -124,7 +124,7 @@ METHOD(imv_manager_t, enforce_recommendation, bool,
 		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
 			DBG1(DBG_TNC, "TNC recommendation is allow");
 			group = "allow";
-			break;	
+			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
 			DBG1(DBG_TNC, "TNC recommendation is isolate");
 			group = "isolate";
@@ -280,7 +280,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.receive_message = _receive_message,
 			.batch_ending = _batch_ending,
 			.destroy = _destroy,
-        },
+		},
 		.imvs = linked_list_create(),
 		.next_imv_id = 1,
 	);

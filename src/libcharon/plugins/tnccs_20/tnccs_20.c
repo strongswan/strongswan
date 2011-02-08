@@ -92,8 +92,8 @@ METHOD(tnccs_t, send_msg, void,
 							  TNC_UInt32 msg_len,
 							  TNC_MessageType msg_type)
 {
-    TNC_MessageSubtype msg_sub_type;
-    TNC_VendorID msg_vendor_id;
+	TNC_MessageSubtype msg_sub_type;
+	TNC_VendorID msg_vendor_id;
 	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
 
@@ -285,7 +285,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 }
 
 /**
- *  Build a CRETRY or SRETRY batch 
+ *  Build a CRETRY or SRETRY batch
  */
 static void build_retry_batch(private_tnccs_20_t *this)
 {
@@ -324,7 +324,7 @@ METHOD(tls_t, process, status_t,
 	data = chunk_create(buf, buflen);
 	DBG1(DBG_TNC, "received TNCCS batch (%u bytes) for Connection ID %u",
 				   data.len, this->connection_id);
-	DBG3(DBG_TNC, "%B", &data);  
+	DBG3(DBG_TNC, "%B", &data);
 	batch = pb_tnc_batch_create_from_data(this->is_server, data);
 	status = batch->process(batch, this->state_machine);
 
@@ -562,7 +562,7 @@ METHOD(tls_t, build, status_t,
 			else
 			{
 				*buflen = data.len;
-			}				
+			}
 			memcpy(buf, data.ptr, *buflen);
 			status = ALREADY_DONE;
 		}

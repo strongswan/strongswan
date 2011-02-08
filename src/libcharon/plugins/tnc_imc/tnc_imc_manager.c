@@ -61,7 +61,7 @@ METHOD(imc_manager_t, add, bool,
 	this->imcs->insert_last(this->imcs, imc);
 	this->next_imc_id++;
 
-    if (imc->provide_bind_function(imc->get_id(imc), TNC_TNCC_BindFunction)
+	if (imc->provide_bind_function(imc->get_id(imc), TNC_TNCC_BindFunction)
 			!= TNC_RESULT_SUCCESS)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to obtain bind function",
@@ -229,7 +229,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 			.receive_message = _receive_message,
 			.batch_ending = _batch_ending,
 			.destroy = _destroy,
-        },
+		},
 		.imcs = linked_list_create(),
 		.next_imc_id = 1,
 	);

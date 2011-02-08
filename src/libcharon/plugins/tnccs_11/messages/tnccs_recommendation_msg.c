@@ -100,7 +100,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
 	{
 		error_msg = "type property in TNCCS-Recommendation is missing";
 		goto fatal;
-	}		
+	}
 	else if (streq((char*)rec_string, "allow"))
 	{
 		this->rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
@@ -122,7 +122,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
 		goto fatal;
 	}
 	xmlFree(rec_string);
-	
+
 	return &this->public.tnccs_msg_interface;
 
 fatal:
@@ -178,7 +178,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 	}
 
 	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-    xmlNewProp(n2, BAD_CAST "type", BAD_CAST rec_string);
+	xmlNewProp(n2, BAD_CAST "type", BAD_CAST rec_string);
 	xmlNodeSetContent(n2, "");
 	xmlAddChild(n, n2);
 

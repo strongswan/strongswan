@@ -56,7 +56,7 @@ struct private_imc_imv_msg_t {
 };
 
 /**
- * Encodes message data into multiple base64-encoded lines 
+ * Encodes message data into multiple base64-encoded lines
  */
 static chunk_t encode_base64(chunk_t data)
 {
@@ -98,7 +98,7 @@ static chunk_t encode_base64(chunk_t data)
 }
 
 /**
- * Decodes message data from multiple base64-encoded lines 
+ * Decodes message data from multiple base64-encoded lines
  */
 static chunk_t decode_base64(chunk_t data)
 {
@@ -183,15 +183,15 @@ tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node, linked_list_t *errors
 		if (streq((char*)cur->name, "Type") && cur->ns == ns)
 		{
 			content = xmlNodeGetContent(cur);
-		    this->msg_type = strtoul((char*)content, NULL, 16);
-		    xmlFree(content);
+			this->msg_type = strtoul((char*)content, NULL, 16);
+			xmlFree(content);
 		}
 		else if (streq((char*)cur->name, "Base64") && cur->ns == ns)
 		{
 			content = xmlNodeGetContent(cur);
 			b64_body = chunk_create((char*)content, strlen((char*)content));
 			this->msg_body = decode_base64(b64_body);
-		    xmlFree(content);
+			xmlFree(content);
 		}
 		cur = cur->next;
 	}
@@ -220,7 +220,7 @@ tnccs_msg_t *imc_imv_msg_create(TNC_MessageType msg_type, chunk_t msg_body)
 			.get_msg_body = _get_msg_body,
 		},
 		.type = IMC_IMV_MSG,
-   		.node = xmlNewNode(NULL, BAD_CAST "IMC-IMV-Message"),
+		.node = xmlNewNode(NULL, BAD_CAST "IMC-IMV-Message"),
 		.msg_type = msg_type,
 		.msg_body = chunk_clone(msg_body),
 	);

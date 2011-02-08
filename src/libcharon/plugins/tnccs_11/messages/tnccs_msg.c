@@ -59,10 +59,10 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors)
 		{
 			if (streq((char*)cur->name, "Type") && cur->ns == ns)
 			{
-		    	xmlChar *content = xmlNodeGetContent(cur);
+				xmlChar *content = xmlNodeGetContent(cur);
 
-			    type = strtol((char*)content, NULL, 16);
-		    	xmlFree(content);
+				type = strtol((char*)content, NULL, 16);
+				xmlFree(content);
 				found = TRUE;
 			}
 			else if (streq((char*)cur->name, "XML") && cur->ns == ns)
@@ -83,18 +83,18 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors)
 		}
 		cur = xml_msg_node;
 
-	    /* skip empty and blank nodes */
-    	while (cur && xmlIsBlankNode(cur))
+		/* skip empty and blank nodes */
+		while (cur && xmlIsBlankNode(cur))
 		{
 			cur = cur->next;
 		}
-   		if (!cur)
+		if (!cur)
 		{
 			error_msg = "XML node is empty";
 			goto fatal;
 		}
 
-		/* check if TNCCS message type and node name agree */ 
+		/* check if TNCCS message type and node name agree */
 		if (type >= TNCCS_MSG_RECOMMENDATION && type <= TNCCS_MSG_ROOF)
 		{
 			DBG2(DBG_TNC, "processing %N message", tnccs_msg_type_names, type);
