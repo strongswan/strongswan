@@ -15,7 +15,7 @@
 
 /**
  *
- * @defgroup tnc_imv tnc_imv
+ * @defgroup tnc_imv_t tnc_imv
  * @{ @ingroup tnc_imv
  */
 

@@ -47,7 +47,7 @@ struct tnccs_reason_strings_msg_t {
 /**
  * Create a TNCCS-ReasonStrings message from XML-encoded message node
  *
- * @param msg_node			XML-encoded message node
+ * @param node				XML-encoded message node
  * @param errors			linked list of TNCCS error messages
  */
 tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,

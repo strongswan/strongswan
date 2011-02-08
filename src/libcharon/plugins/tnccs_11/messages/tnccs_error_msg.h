@@ -65,7 +65,7 @@ struct tnccs_error_msg_t {
 /**
  * Create a TNCCS-Error message from XML-encoded message node
  *
- * @param msg_node		XML-encoded message node
+ * @param node			XML-encoded message node
  */
 tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node);
 

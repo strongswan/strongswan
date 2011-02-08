@@ -62,7 +62,7 @@ struct pb_access_recommendation_msg_t {
 /**
  * Create a PB-Access-Recommendation message from parameters
  *
- * @param access_recommendation		Access Recommendation code
+ * @param recommendation	Access Recommendation code
  */
 pb_tnc_msg_t* pb_access_recommendation_msg_create(u_int16_t recommendation);
 

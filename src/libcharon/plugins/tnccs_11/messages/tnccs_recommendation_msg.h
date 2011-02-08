@@ -48,7 +48,7 @@ struct tnccs_recommendation_msg_t {
 /**
  * Create a TNCCS-Recommendation message from XML-encoded message node
  *
- * @param msg_node			XML-encoded message node
+ * @param node				XML-encoded message node
  * @param errors			linked list of TNCCS error messages
  */
 tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
@@ -59,6 +59,6 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
  *
  * @param rec				Action Recommendation
  */
-tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation);
+tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec);
 
 #endif /** TNCCS_RECOMMENDATION_MSG_H_ @}*/

@@ -55,7 +55,7 @@ struct imc_imv_msg_t {
 /**
  * Create an IMC-IMV message from XML-encoded message node
  *
- * @param msg_node			XML-encoded message node
+ * @param node				XML-encoded message node
  * @param errors			linked list of TNCCS error messages
 */
 tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node, linked_list_t *errors);
@@ -64,7 +64,7 @@ tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node, linked_list_t *errors
  * Create an IMC-IMV message from parameters
  *
  * @param msg_type			IMC-IMV message type
- * @param msg_body			IMC-IMV message body		
+ * @param msg_body			IMC-IMV message body
  */
 tnccs_msg_t *imc_imv_msg_create(TNC_MessageType msg_type, chunk_t msg_body);
 
