@@ -6,6 +6,7 @@ Build-Depends: debhelper (>= 5), autotools-dev, libhildon1-dev,
                libhildonfm2-dev, hildon-control-panel-dev,
                libhildondesktop1-dev, osso-af-settings
 Standards-Version: 3.7.2
+Homepage: http://www.strongswan.org
 
 Package: strongswan-applet
 Architecture: any
