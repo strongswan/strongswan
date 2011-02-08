@@ -15,7 +15,10 @@
 
 /**
  * @defgroup tnccs tnccs
- * @{ @ingroup libcharon
+ * @ingroup tnc
+ *
+ * @defgroup tnccst tnccs
+ * @{ @ingroup tnccs
  */
 
 #ifndef TNCCS_H_

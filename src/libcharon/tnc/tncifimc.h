@@ -14,51 +14,42 @@
  *   notice, this list of conditions and the following disclaimer.
  * - Redistributions in binary form must reproduce the above copyright
  *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the  
+ *   the documentation and/or other materials provided with the
  *   distribution.
  * - Neither the name of the Trusted Computing Group nor the names of
- *   its contributors may be used to endorse or promote products 
- *   derived from this software without specific prior written 
+ *   its contributors may be used to endorse or promote products
+ *   derived from this software without specific prior written
  *   permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Contact the Trusted Computing Group at 
- * admin@trustedcomputinggroup.org for information on specification 
+ * Contact the Trusted Computing Group at
+ * admin@trustedcomputinggroup.org for information on specification
  * licensing through membership agreements.
  *
- * Any marks and brands contained herein are the property of their 
+ * Any marks and brands contained herein are the property of their
  * respective owners.
  *
  */
 
-#ifndef _TNCIFIMC_H
-#define _TNCIFIMC_H
+/**
+ * @defgroup tncifimc tncifimc
+ * @{ @ingroup tnc
+ */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef WIN32
-#ifdef TNC_IMC_EXPORTS
-#define TNC_IMC_API __declspec(dllexport)
-#else
-#define TNC_IMC_API __declspec(dllimport)
-#endif
-#else
-#define TNC_IMC_API
-#endif
+#ifndef TNCIFIMC_H_
+#define TNCIFIMC_H_
 
 #include "tncif.h"
 
@@ -129,36 +120,36 @@ typedef TNC_Result (*TNC_IMC_ProvideBindFunctionPointer)(
 
 /* IMC Functions */
 
-TNC_IMC_API TNC_Result TNC_IMC_Initialize(
+TNC_Result TNC_IMC_Initialize(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_Version minVersion,
 /*in*/  TNC_Version maxVersion,
 /*out*/ TNC_Version *pOutActualVersion);
 
-TNC_IMC_API TNC_Result TNC_IMC_NotifyConnectionChange(
+TNC_Result TNC_IMC_NotifyConnectionChange(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_ConnectionID connectionID,
 /*in*/  TNC_ConnectionState newState);
 
-TNC_IMC_API TNC_Result TNC_IMC_BeginHandshake(
+TNC_Result TNC_IMC_BeginHandshake(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_ConnectionID connectionID);
 
-TNC_IMC_API TNC_Result TNC_IMC_ReceiveMessage(
+TNC_Result TNC_IMC_ReceiveMessage(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_ConnectionID connectionID,
 /*in*/  TNC_BufferReference messageBuffer,
 /*in*/  TNC_UInt32 messageLength,
 /*in*/  TNC_MessageType messageType);
 
-TNC_IMC_API TNC_Result TNC_IMC_BatchEnding(
+TNC_Result TNC_IMC_BatchEnding(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_ConnectionID connectionID);
 
-TNC_IMC_API TNC_Result TNC_IMC_Terminate(
+TNC_Result TNC_IMC_Terminate(
 /*in*/  TNC_IMCID imcID);
 
-TNC_IMC_API TNC_Result TNC_IMC_ProvideBindFunction(
+TNC_Result TNC_IMC_ProvideBindFunction(
 /*in*/  TNC_IMCID imcID,
 /*in*/  TNC_TNCC_BindFunctionPointer bindFunction);
 
@@ -186,8 +177,4 @@ TNC_Result TNC_TNCC_BindFunction(
 /*in*/  char *functionName,
 /*out*/ void **pOutfunctionPointer);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif /** TNCIFIMC_H_ @}*/

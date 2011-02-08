@@ -15,7 +15,10 @@
 
 /**
  * @defgroup imc imc
- * @{ @ingroup libcharon
+ * @ingroup tnc
+ *
+ * @defgroup imct imc
+ * @{ @ingroup imc
  */
 
 #ifndef IMC_H_

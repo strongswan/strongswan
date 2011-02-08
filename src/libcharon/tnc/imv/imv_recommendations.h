@@ -15,7 +15,7 @@
 
 /**
  * @defgroup imv_recommendations imv_recommendations
- * @{ @ingroup libcharon
+ * @{ @ingroup imv
  */
 
 #ifndef IMV_RECOMMENDATIONS_H_

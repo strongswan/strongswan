@@ -15,7 +15,10 @@
 
 /**
  * @defgroup imv imv
- * @{ @ingroup libcharon
+ * @ingroup tnc
+ *
+ * @defgroup imvt imv
+ * @{ @ingroup imv
  */
 
 #ifndef IMV_H_

@@ -14,31 +14,31 @@
  *   notice, this list of conditions and the following disclaimer.
  * - Redistributions in binary form must reproduce the above copyright
  *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the  
+ *   the documentation and/or other materials provided with the
  *   distribution.
  * - Neither the name of the Trusted Computing Group nor the names of
- *   its contributors may be used to endorse or promote products 
- *   derived from this software without specific prior written 
+ *   its contributors may be used to endorse or promote products
+ *   derived from this software without specific prior written
  *   permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * Contact the Trusted Computing Group at 
- * admin@trustedcomputinggroup.org for information on specification 
+ * Contact the Trusted Computing Group at
+ * admin@trustedcomputinggroup.org for information on specification
  * licensing through membership agreements.
  *
- * Any marks and brands contained herein are the property of their 
+ * Any marks and brands contained herein are the property of their
  * respective owners.
  *
  * Trusted Network Connect IF-IMC/IF-IMV API version 1.00 Revision 3
@@ -47,11 +47,17 @@
  * extracted from tncifimc.h and tncifimv.h
  * Feb 12, 2007
  */
-#ifndef _TNCIF_H
-#define _TNCIF_H
-#ifdef __cplusplus
-extern "C" {
-#endif
+
+/**
+ * @defgroup tnc tnc
+ * @ingroup libcharon
+ *
+ * @defgroup tncif tncif
+ * @{ @ingroup tnc
+ */
+
+#ifndef TNCIF_H_
+#define TNCIF_H_
 
 /* Basic Types */
 typedef unsigned long TNC_UInt32;
@@ -97,7 +103,4 @@ typedef TNC_UInt32 TNC_Result;
 /* Message Subtype Values */
 #define TNC_SUBTYPE_ANY ((TNC_MessageSubtype) 0xff)
 
-#ifdef __cplusplus
-}
-#endif
-#endif
+#endif /** TNCIF_H_ @}*/

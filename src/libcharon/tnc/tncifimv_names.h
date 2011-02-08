@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tncifimv_names tncifimv_names
- * @{ @ingroup libcharon
+ * @{ @ingroup tnc
  */
 
 #ifndef TNCIFIMV_NAMES_H_
