@@ -122,7 +122,7 @@ METHOD(pb_tnc_msg_t, build, void,
 }
 
 METHOD(pb_tnc_msg_t, process, status_t,
-	private_pb_remediation_parameters_msg_t *this, size_t *offset)
+	private_pb_remediation_parameters_msg_t *this, u_int32_t *offset)
 {
 	tls_reader_t *reader;
 
