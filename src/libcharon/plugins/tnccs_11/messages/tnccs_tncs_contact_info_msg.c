@@ -86,7 +86,7 @@ tnccs_msg_t *tnccs_tncs_contact_info_msg_create_from_node(xmlNodePtr node,
 tnccs_msg_t *tnccs_tncs_contact_info_msg_create(void)
 {
 	private_tnccs_tncs_contact_info_msg_t *this;
-	xmlNodePtr n, n2;
+	xmlNodePtr n /*, n2 */;
 
 	INIT(this,
 		.public = {
