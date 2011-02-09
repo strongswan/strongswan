@@ -15,6 +15,7 @@
 
 #include "duplicheck_plugin.h"
 
+#include "duplicheck_notify.h"
 #include "duplicheck_listener.h"
 
 #include <daemon.h>
@@ -35,12 +36,18 @@ struct private_duplicheck_plugin_t {
 	 * Listener doing duplicate checks
 	 */
 	duplicheck_listener_t *listener;
+
+	/**
+	 * Notification sender facility
+	 */
+	duplicheck_notify_t *notify;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_duplicheck_plugin_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	this->notify->destroy(this->notify);
 	this->listener->destroy(this->listener);
 	free(this);
 }
@@ -58,9 +65,15 @@ plugin_t *duplicheck_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.listener = duplicheck_listener_create(),
+		.notify = duplicheck_notify_create(),
 	);
 
+	if (!this->notify)
+	{
+		free(this);
+		return NULL;
+	}
+	this->listener = duplicheck_listener_create(this->notify);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;

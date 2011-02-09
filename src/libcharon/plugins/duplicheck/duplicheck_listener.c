@@ -34,6 +34,11 @@ struct private_duplicheck_listener_t {
 	duplicheck_listener_t public;
 
 	/**
+	 * Socket to send notifications to
+	 */
+	duplicheck_notify_t *notify;
+
+	/**
 	 * Mutex to lock hashtables
 	 */
 	mutex_t *mutex;
@@ -176,6 +181,7 @@ METHOD(listener_t, message_hook, bool,
 						(job_t*)delete_ike_sa_job_create(entry->sa, TRUE));
 				entry_destroy(entry);
 			}
+			this->notify->send(this->notify, id);
 		}
 	}
 	return TRUE;
@@ -211,7 +217,7 @@ METHOD(duplicheck_listener_t, destroy, void,
 /**
  * See header
  */
-duplicheck_listener_t *duplicheck_listener_create()
+duplicheck_listener_t *duplicheck_listener_create(duplicheck_notify_t *notify)
 {
 	private_duplicheck_listener_t *this;
 
@@ -224,6 +230,7 @@ duplicheck_listener_t *duplicheck_listener_create()
 			},
 			.destroy = _destroy,
 		},
+		.notify = notify,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.active = hashtable_create((hashtable_hash_t)hash,
 								   (hashtable_equals_t)equals, 32),

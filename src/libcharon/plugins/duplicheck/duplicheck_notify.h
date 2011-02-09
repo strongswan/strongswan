@@ -14,41 +14,38 @@
  */
 
 /**
- * @defgroup duplicheck_listener duplicheck_listener
+ * @defgroup duplicheck_notify duplicheck_notify
  * @{ @ingroup duplicheck
  */
 
-#ifndef DUPLICHECK_LISTENER_H_
-#define DUPLICHECK_LISTENER_H_
+#ifndef DUPLICHECK_NOTIFY_H_
+#define DUPLICHECK_NOTIFY_H_
 
-#include "duplicheck_notify.h"
+#include <utils/identification.h>
 
-#include <bus/listeners/listener.h>
-
-typedef struct duplicheck_listener_t duplicheck_listener_t;
+typedef struct duplicheck_notify_t duplicheck_notify_t;
 
 /**
- * Listener checking for duplicates.
+ * Sends notifications over a unix socket when duplicates are detected.
  */
-struct duplicheck_listener_t {
+struct duplicheck_notify_t {
 
 	/**
-	 * Implements listener_t interface.
+	 * Send a notification message if duplicate IKE_SA detected.
+	 *
+	 * @param id		identity a duplicate tunnel has been detected
 	 */
-	listener_t listener;
+	void (*send)(duplicheck_notify_t *this, identification_t *id);
 
 	/**
-	 * Destroy a duplicheck_listener_t.
+	 * Destroy a duplicheck_notify_t.
 	 */
-	void (*destroy)(duplicheck_listener_t *this);
+	void (*destroy)(duplicheck_notify_t *this);
 };
 
 /**
- * Create a duplicheck_listener instance.
- *
- * @param notify		socket to send notifications to
- * @return				listener
+ * Create a duplicheck_notify instance.
  */
-duplicheck_listener_t *duplicheck_listener_create(duplicheck_notify_t *notify);
+duplicheck_notify_t *duplicheck_notify_create();
 
-#endif /** DUPLICHECK_LISTENER_H_ @}*/
+#endif /** DUPLICHECK_NOTIFY_H_ @}*/
