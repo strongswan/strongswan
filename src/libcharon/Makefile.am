@@ -53,6 +53,7 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \

@@ -34,6 +34,7 @@
 #include <library.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
+#include <processing/jobs/start_action_job.h>
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -245,6 +246,9 @@ METHOD(daemon_t, initialize, bool,
 	{
 		return FALSE;
 	}
+
+	/* Queue start_action job */
+	lib->processor->queue_job(lib->processor, (job_t*)start_action_job_create());
 
 #ifdef ME
 	this->public.connect_manager = connect_manager_create();

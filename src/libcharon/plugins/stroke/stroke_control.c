@@ -92,71 +92,12 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 	return found;
 }
 
-/**
- * Handles all connections that must be either started or routed
- * Currently only for connections stored in an SQL database
- * Connection defined in ipsec.conf are started via stroke commands
- */
-static void start_all_connections(void)
-{
-	enumerator_t *enumerator, *children;
-	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
-	char *name;
-
-	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
-	while (enumerator->enumerate(enumerator, &peer_cfg))
-	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
-		{
-			continue;
-		}
-
-		children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-		while (children->enumerate(children, &child_cfg))
-		{
-			name = child_cfg->get_name(child_cfg);
-
-			switch (child_cfg->get_start_action(child_cfg))
-			{
-				case ACTION_RESTART:
-					charon->controller->initiate(charon->controller,
-												 peer_cfg->get_ref(peer_cfg),
-												 child_cfg->get_ref(child_cfg),
-												 NULL, NULL);
-					break;
-				case ACTION_ROUTE:
-					if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
-					{
-						DBG1(DBG_CFG, "configuration '%s' routed", name);
-					}
-					else
-					{
-						DBG1(DBG_CFG, "routing configuration '%s' failed", name);
-					}
-					break;
-				case ACTION_NONE:
-					break;
-			}
-		}
-		children->destroy(children);
-	}
-	enumerator->destroy(enumerator);
-}
-
 METHOD(stroke_control_t, initiate, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	stroke_log_info_t info;
-
-	if (streq(msg->initiate.name, "%startall"))
-	{
-		start_all_connections();
-		return;
-	}
 
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->initiate.name);
