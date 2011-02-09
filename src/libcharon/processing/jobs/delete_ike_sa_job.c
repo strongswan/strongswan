@@ -76,8 +76,8 @@ METHOD(job_t, execute, void,
 		}
 		else
 		{
-			/* destroy only if not ESTABLISHED */
-			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
+			/* destroy IKE_SA did not complete connecting phase */
+			if (ike_sa->get_state(ike_sa) != IKE_CONNECTING)
 			{
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 			}
