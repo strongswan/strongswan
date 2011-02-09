@@ -417,6 +417,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_DUPLICHECK
+  SUBDIRS += plugins/duplicheck
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/duplicheck/libstrongswan-duplicheck.la
+endif
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
 if MONOLITHIC
