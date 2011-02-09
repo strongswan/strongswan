@@ -16,3 +16,6 @@ libstrongswan_duplicheck_la_SOURCES = duplicheck_plugin.h duplicheck_plugin.c \
 	duplicheck_notify.h duplicheck_notify.c
 
 libstrongswan_duplicheck_la_LDFLAGS = -module -avoid-version
+
+ipsec_PROGRAMS = duplicheck
+duplicheck_SOURCES = duplicheck.c
