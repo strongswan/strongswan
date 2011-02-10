@@ -89,7 +89,7 @@ METHOD(job_t, execute, void,
 			}
 		}
 	}
-	_destroy(this);
+	destroy(this);
 }
 
 /*

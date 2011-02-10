@@ -78,7 +78,7 @@ METHOD(job_t, execute, void,
 		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
-	free(this);
+	destroy(this);
 }
 
 /*

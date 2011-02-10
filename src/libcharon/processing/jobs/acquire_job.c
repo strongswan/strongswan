@@ -58,7 +58,7 @@ METHOD(job_t, execute, void,
 {
 	charon->traps->acquire(charon->traps, this->reqid,
 						   this->src_ts, this->dst_ts);
-	_destroy(this);
+	destroy(this);
 }
 
 /*

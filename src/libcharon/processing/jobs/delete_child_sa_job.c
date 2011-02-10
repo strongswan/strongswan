@@ -70,7 +70,7 @@ METHOD(job_t, execute, void,
 
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-	_destroy(this);
+	destroy(this);
 }
 
 /*
