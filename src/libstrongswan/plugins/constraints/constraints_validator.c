@@ -38,7 +38,7 @@ struct private_constraints_validator_t {
  */
 static bool check_pathlen(x509_t *issuer, int pathlen)
 {
-	int pathlen_constraint;
+	u_int pathlen_constraint;
 
 	pathlen_constraint = issuer->get_constraint(issuer, X509_PATH_LEN);
 	if (pathlen_constraint != X509_NO_CONSTRAINT &&
@@ -439,7 +439,7 @@ static bool has_no_any_policy(linked_list_t *chain, int len)
 /**
  * Check requireExplicitPolicy and inhibitPolicyMapping constraints
  */
-static bool check_policy_constraints(x509_t *issuer, int pathlen,
+static bool check_policy_constraints(x509_t *issuer, u_int pathlen,
 									 auth_cfg_t *auth)
 {
 	certificate_t *subject;
@@ -455,7 +455,8 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 			certificate_t *cert;
 			auth_rule_t rule;
 			x509_t *x509;
-			int len = 0, expl, inh;
+			int len = 0;
+			u_int expl, inh;
 
 			/* prepare trustchain to validate */
 			chain = linked_list_create();
@@ -524,7 +525,7 @@ static bool check_policy_constraints(x509_t *issuer, int pathlen,
 
 METHOD(cert_validator_t, validate, bool,
 	private_constraints_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
 	if (issuer->get_type(issuer) == CERT_X509 &&

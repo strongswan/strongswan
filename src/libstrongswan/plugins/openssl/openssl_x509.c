@@ -84,7 +84,7 @@ struct private_openssl_x509_t {
 	/**
 	 * Pathlen constraint
 	 */
-	int pathlen;
+	u_char pathlen;
 
 	/**
 	 * certificate subject
@@ -250,7 +250,7 @@ METHOD(x509_t, get_authKeyIdentifier, chunk_t,
 	return chunk_empty;
 }
 
-METHOD(x509_t, get_constraint, int,
+METHOD(x509_t, get_constraint, u_int,
 	private_openssl_x509_t *this, x509_constraint_t type)
 {
 	switch (type)
@@ -586,6 +586,7 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 									   X509_EXTENSION *ext)
 {
 	BASIC_CONSTRAINTS *constraints;
+	long pathlen;
 
 	constraints = (BASIC_CONSTRAINTS*)X509V3_EXT_d2i(ext);
 	if (constraints)
@@ -596,7 +597,10 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 		}
 		if (constraints->pathlen)
 		{
-			this->pathlen = ASN1_INTEGER_get(constraints->pathlen);
+			
+			pathlen = ASN1_INTEGER_get(constraints->pathlen);
+			this->pathlen = (pathlen >= 0 && pathlen < 128) ?
+							 pathlen : X509_NO_CONSTRAINT;
 		}
 		BASIC_CONSTRAINTS_free(constraints);
 		return TRUE;

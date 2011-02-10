@@ -174,22 +174,22 @@ struct private_x509_cert_t {
 	/**
 	 * Path Length Constraint
 	 */
-	char pathLenConstraint;
+	u_char pathLenConstraint;
 
 	/**
 	 * requireExplicitPolicy Constraint
 	 */
-	char require_explicit;
+	u_char require_explicit;
 
 	/**
 	 * inhibitPolicyMapping Constraint
 	 */
-	char inhibit_mapping;
+	u_char inhibit_mapping;
 
 	/**
 	 * inhibitAnyPolicy Constraint
 	 */
-	char inhibit_any;
+	u_char inhibit_any;
 
 	/**
 	 * x509 constraints and other flags
@@ -255,14 +255,14 @@ static void policy_mapping_destroy(x509_policy_mapping_t *mapping)
 /**
  * Parse a length constraint from an unwrapped integer
  */
-static int parse_constraint(chunk_t object)
+static u_int parse_constraint(chunk_t object)
 {
 	switch (object.len)
 	{
 		case 0:
 			return 0;
 		case 1:
-			return object.ptr[0];
+			return (object.ptr[0] & 0x80) ? X509_NO_CONSTRAINT : object.ptr[0];
 		default:
 			return X509_NO_CONSTRAINT;
 	}
@@ -1723,7 +1723,7 @@ METHOD(x509_t, get_authKeyIdentifier, chunk_t,
 	return this->authKeyIdentifier;
 }
 
-METHOD(x509_t, get_constraint, int,
+METHOD(x509_t, get_constraint, u_int,
 	private_x509_cert_t *this, x509_constraint_t type)
 {
 	switch (type)
@@ -2390,6 +2390,7 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 	certificate_t *sign_cert = NULL;
 	private_key_t *sign_key = NULL;
 	hash_algorithm_t digest_alg = HASH_SHA1;
+	u_int constraint;
 
 	cert = create_empty();
 	while (TRUE)
@@ -2464,11 +2465,9 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				continue;
 			}
 			case BUILD_PATHLEN:
-				cert->pathLenConstraint = va_arg(args, int);
-				if (cert->pathLenConstraint < 0 || cert->pathLenConstraint > 127)
-				{
-					cert->pathLenConstraint = X509_NO_CONSTRAINT;
-				}
+				constraint = va_arg(args, u_int);
+				cert->pathLenConstraint = (constraint < 128) ?
+										   constraint : X509_NO_CONSTRAINT;
 				continue;
 			case BUILD_PERMITTED_NAME_CONSTRAINTS:
 			{
@@ -2543,13 +2542,19 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				continue;
 			}
 			case BUILD_POLICY_REQUIRE_EXPLICIT:
-				cert->require_explicit = va_arg(args, int);
+				constraint = va_arg(args, u_int);
+				cert->require_explicit = (constraint < 128) ?
+										  constraint : X509_NO_CONSTRAINT;
 				continue;
 			case BUILD_POLICY_INHIBIT_MAPPING:
-				cert->inhibit_mapping = va_arg(args, int);
+				constraint = va_arg(args, u_int);
+				cert->inhibit_mapping = (constraint < 128) ?
+										 constraint : X509_NO_CONSTRAINT;
 				continue;
 			case BUILD_POLICY_INHIBIT_ANY:
-				cert->inhibit_any = va_arg(args, int);
+				constraint = va_arg(args, u_int);
+				cert->inhibit_any = (constraint < 128) ?
+									 constraint : X509_NO_CONSTRAINT;
 				continue;
 			case BUILD_NOT_BEFORE_TIME:
 				cert->notBefore = va_arg(args, time_t);

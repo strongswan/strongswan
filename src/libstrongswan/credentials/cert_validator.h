@@ -45,7 +45,7 @@ struct cert_validator_t {
 	 * @param auth			container for resulting authentication info
 	 */
 	bool (*validate)(cert_validator_t *this, certificate_t *subject,
-					 certificate_t *issuer, bool online, int pathlen,
+					 certificate_t *issuer, bool online, u_int pathlen,
 					 bool anchor, auth_cfg_t *auth);
 };
 

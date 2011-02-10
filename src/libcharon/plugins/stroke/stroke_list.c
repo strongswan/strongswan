@@ -754,7 +754,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			enumerator_t *enumerator;
 			identification_t *altName;
 			bool first_altName = TRUE;
-			int pathlen;
+			u_int pathlen;
 			chunk_t serial, authkey;
 			time_t notBefore, notAfter;
 			public_key_t *public;
@@ -837,7 +837,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			pathlen = x509->get_constraint(x509, X509_PATH_LEN);
 			if (pathlen != X509_NO_CONSTRAINT)
 			{
-				fprintf(out, "  pathlen:   %d\n", pathlen);
+				fprintf(out, "  pathlen:   %u\n", pathlen);
 			}
 
 			/* list optional ipAddrBlocks */

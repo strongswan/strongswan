@@ -24,7 +24,8 @@
 #include <utils/enumerator.h>
 #include <credentials/certificates/certificate.h>
 
-#define X509_NO_CONSTRAINT		-1
+/* constraints are currently restricted to the range 0..127 */
+#define X509_NO_CONSTRAINT	255
 
 typedef struct x509_t x509_t;
 typedef struct x509_cert_policy_t x509_cert_policy_t;
@@ -150,7 +151,7 @@ struct x509_t {
 	 * @param type		type of constraint to get
 	 * @return			constraint, X509_NO_CONSTRAINT if none found
 	 */
-	int (*get_constraint)(x509_t *this, x509_constraint_t type);
+	u_int (*get_constraint)(x509_t *this, x509_constraint_t type);
 
 	/**
 	 * Create an enumerator over all subjectAltNames.
