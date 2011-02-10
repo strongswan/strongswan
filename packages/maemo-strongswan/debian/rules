@@ -24,6 +24,8 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 CONFIG_OPTIONS = \
 	--prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib \
 	--disable-tools --disable-scripts \
+	--disable-fips-prf --disable-pubkey --disable-attr \
+	--disable-constraints --disable-revocation \
 	--disable-sha1 --disable-sha2 --disable-aes --disable-des \
 	--disable-md5 --disable-gmp --disable-pgp --disable-dnskey \
 	--enable-openssl --enable-monolithic --enable-eap-identity \
