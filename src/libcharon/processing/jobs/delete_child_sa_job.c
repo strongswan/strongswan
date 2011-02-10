@@ -46,18 +46,14 @@ struct private_delete_child_sa_job_t {
 	u_int32_t spi;
 };
 
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_delete_child_sa_job_t *this)
+METHOD(job_t, destroy, void,
+	private_delete_child_sa_job_t *this)
 {
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_delete_child_sa_job_t *this)
+METHOD(job_t, execute, void,
+	private_delete_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 
@@ -74,7 +70,7 @@ static void execute(private_delete_child_sa_job_t *this)
 
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-	destroy(this);
+	_destroy(this);
 }
 
 /*
@@ -84,16 +80,19 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 												  protocol_id_t protocol,
 												  u_int32_t spi)
 {
-	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
+	private_delete_child_sa_job_t *this;
 
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-
-	/* private variables */
-	this->reqid = reqid;
-	this->protocol = protocol;
-	this->spi = spi;
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.reqid = reqid,
+		.protocol = protocol,
+		.spi = spi,
+	);
 
 	return &this->public;
 }
