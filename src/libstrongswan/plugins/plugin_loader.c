@@ -50,62 +50,77 @@ struct private_plugin_loader_t {
 	linked_list_t *names;
 };
 
-#ifdef MONOLITHIC
 /**
- * load a single plugin in monolithic mode
+ * create a plugin
+ * returns: NOT_FOUND, if the constructor was not found
+ *          FAILED, if the plugin could not be constructed
  */
-static plugin_t* load_plugin(private_plugin_loader_t *this,
-							 char *path, char *name)
+static status_t create_plugin(private_plugin_loader_t *this, void *handle,
+							  char *name, bool integrity, plugin_t **plugin)
 {
 	char create[128];
-	plugin_t *plugin;
 	plugin_constructor_t constructor;
 
 	if (snprintf(create, sizeof(create), "%s_plugin_create",
 				 name) >= sizeof(create))
 	{
-		return NULL;
+		return FAILED;
 	}
 	translate(create, "-", "_");
-	constructor = dlsym(RTLD_DEFAULT, create);
+	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
+		DBG2(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
 			 create);
-		return NULL;
+		return NOT_FOUND;
 	}
-	plugin = constructor();
-	if (plugin == NULL)
+	if (integrity && lib->integrity)
+	{
+		if (!lib->integrity->check_segment(lib->integrity, name, constructor))
+		{
+			DBG1(DBG_LIB, "plugin '%s': failed segment integrity test", name);
+			return FAILED;
+		}
+		DBG1(DBG_LIB, "plugin '%s': passed file and segment integrity tests",
+			 name);
+	}
+	*plugin = constructor();
+	if (*plugin == NULL)
 	{
 		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
 			 create);
-		return NULL;
+		return FAILED;
 	}
 	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
-
-	return plugin;
+	return SUCCESS;
 }
-#else
+
 /**
  * load a single plugin
  */
 static plugin_t* load_plugin(private_plugin_loader_t *this,
 							 char *path, char *name)
 {
-	char create[128];
 	char file[PATH_MAX];
 	void *handle;
 	plugin_t *plugin;
-	plugin_constructor_t constructor;
+
+	switch (create_plugin(this, RTLD_DEFAULT, name, FALSE, &plugin))
+	{
+		case SUCCESS:
+			return plugin;
+		case NOT_FOUND:
+			/* try to load the plugin from a file */
+			break;
+		default:
+			return NULL;
+	}
 
 	if (snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path,
-				 name) >= sizeof(file) ||
-		snprintf(create, sizeof(create), "%s_plugin_create",
-				 name) >= sizeof(create))
+				 name) >= sizeof(file))
 	{
 		return NULL;
 	}
-	translate(create, "-", "_");
 	if (lib->integrity)
 	{
 		if (!lib->integrity->check_file(lib->integrity, name, file))
@@ -121,40 +136,15 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
 		return NULL;
 	}
-	constructor = dlsym(handle, create);
-	if (constructor == NULL)
+	if (create_plugin(this, handle, name, TRUE, &plugin) != SUCCESS)
 	{
-		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
-			 create);
 		dlclose(handle);
 		return NULL;
 	}
-	if (lib->integrity)
-	{
-		if (!lib->integrity->check_segment(lib->integrity, name, constructor))
-		{
-			DBG1(DBG_LIB, "plugin '%s': failed segment integrity test", name);
-			dlclose(handle);
-			return NULL;
-		}
-		DBG1(DBG_LIB, "plugin '%s': passed file and segment integrity tests",
-			 name);
-	}
-	plugin = constructor();
-	if (plugin == NULL)
-	{
-		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
-			 create);
-		dlclose(handle);
-		return NULL;
-	}
-	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
-
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
 	return plugin;
 }
-#endif
 
 /**
  * Check if a plugin is already loaded
@@ -187,12 +177,10 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 	char *token;
 	bool critical_failed = FALSE;
 
-#ifndef MONOLITHIC
 	if (path == NULL)
 	{
 		path = PLUGINDIR;
 	}
-#endif
 
 	enumerator = enumerator_create_token(list, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
