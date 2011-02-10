@@ -41,19 +41,15 @@ struct private_delete_ike_sa_job_t {
 };
 
 
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_delete_ike_sa_job_t *this)
+METHOD(job_t, destroy, void,
+	private_delete_ike_sa_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_delete_ike_sa_job_t *this)
+METHOD(job_t, execute, void,
+	private_delete_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 
@@ -93,7 +89,7 @@ static void execute(private_delete_ike_sa_job_t *this)
 			}
 		}
 	}
-	destroy(this);
+	_destroy(this);
 }
 
 /*
@@ -102,15 +98,18 @@ static void execute(private_delete_ike_sa_job_t *this)
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 											  bool delete_if_established)
 {
-	private_delete_ike_sa_job_t *this = malloc_thing(private_delete_ike_sa_job_t);
+	private_delete_ike_sa_job_t *this;
 
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*)(job_t *)) destroy;;
-
-	/* private variables */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->delete_if_established = delete_if_established;
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+		.delete_if_established = delete_if_established,
+	);
 
 	return &(this->public);
 }
