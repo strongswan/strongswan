@@ -902,6 +902,7 @@ static void process_secret(secret_t *s, int whackfd)
 	{
 		loglog(RC_LOG_SERIOUS, "\"%s\" line %d: %s"
 			, flp->filename, flp->lino, ugh);
+		s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));
 		free(s);
 	}
 	else if (flushline("expected record boundary in key"))
@@ -1010,8 +1011,11 @@ static void process_secret_records(int whackfd)
 					if (!shift())
 					{
 						/* unexpected Record Boundary or EOF */
-						loglog(RC_LOG_SERIOUS, "\"%s\" line %d: unexpected end of id list"
-							, flp->filename, flp->lino);
+						loglog(RC_LOG_SERIOUS, "\"%s\" line %d: unexpected end"
+							   " of id list", flp->filename, flp->lino);
+						s->ids->destroy_offset(s->ids,
+										offsetof(identification_t, destroy));
+						free(s);
 						break;
 					}
 				}
