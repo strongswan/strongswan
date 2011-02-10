@@ -40,19 +40,15 @@ struct private_retransmit_job_t {
 	ike_sa_id_t *ike_sa_id;
 };
 
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_retransmit_job_t *this)
+METHOD(job_t, destroy, void,
+	private_retransmit_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_retransmit_job_t *this)
+METHOD(job_t, execute, void,
+	private_retransmit_job_t *this)
 {
 	ike_sa_t *ike_sa;
 
@@ -79,15 +75,18 @@ static void execute(private_retransmit_job_t *this)
  */
 retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
 {
-	private_retransmit_job_t *this = malloc_thing(private_retransmit_job_t);
+	private_retransmit_job_t *this;
 
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-
-	/* private variables */
-	this->message_id = message_id;
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.message_id = message_id,
+		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+	);
 
 	return &this->public;
 }
