@@ -132,7 +132,7 @@ encoding_rule_t ike_header_encodings[] = {
 	/* 4 Bit minor version, stored in the field min_version */
 	{ U_INT_4,		offsetof(private_ike_header_t, min_version)		},
 	/* 8 Bit for the exchange type */
-	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type) 	},
+	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type)	},
 	/* 2 Bit reserved bits */
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[0])		},
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[1])		},
@@ -145,9 +145,9 @@ encoding_rule_t ike_header_encodings[] = {
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[3])		},
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[4])		},
 	/* 4 Byte message id, stored in the field message_id */
-	{ U_INT_32,		offsetof(private_ike_header_t, message_id) 		},
+	{ U_INT_32,		offsetof(private_ike_header_t, message_id)		},
 	/* 4 Byte length fied, stored in the field length */
-	{ HEADER_LENGTH,offsetof(private_ike_header_t, length) 			},
+	{ HEADER_LENGTH,offsetof(private_ike_header_t, length)			},
 };
 
 
@@ -381,8 +381,10 @@ ike_header_t *ike_header_create()
 		.maj_version = IKE_MAJOR_VERSION,
 		.min_version = IKE_MINOR_VERSION,
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
-		.flags.initiator = TRUE,
-		.flags.version = HIGHER_VERSION_SUPPORTED_FLAG,
+		.flags = {
+			.initiator = TRUE,
+			.version = HIGHER_VERSION_SUPPORTED_FLAG,
+		},
 		.length = IKE_HEADER_LENGTH,
 	);
 
