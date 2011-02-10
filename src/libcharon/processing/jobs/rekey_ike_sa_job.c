@@ -39,19 +39,15 @@ struct private_rekey_ike_sa_job_t {
 	bool reauth;
 };
 
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_rekey_ike_sa_job_t *this)
+METHOD(job_t, destroy, void,
+	private_rekey_ike_sa_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_rekey_ike_sa_job_t *this)
+METHOD(job_t, execute, void,
+	private_rekey_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status = SUCCESS;
@@ -90,15 +86,18 @@ static void execute(private_rekey_ike_sa_job_t *this)
  */
 rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth)
 {
-	private_rekey_ike_sa_job_t *this = malloc_thing(private_rekey_ike_sa_job_t);
+	private_rekey_ike_sa_job_t *this;
 
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-
-	/* private variables */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->reauth = reauth;
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+		.reauth = reauth,
+	);
 
 	return &(this->public);
 }
