@@ -1,3 +1,9 @@
+strongswan (4.5.1-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Tobias Brunner <tobias@strongswan.org>  Fri, 11 Feb 2011 10:35:41 +0100
+
 strongswan (4.5.0+4.5.1rc2-2) unstable; urgency=low
 
   * Exclude static libraries from package
