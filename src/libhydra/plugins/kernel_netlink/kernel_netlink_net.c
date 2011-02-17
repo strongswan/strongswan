@@ -652,7 +652,8 @@ static void address_enumerator_destroy(address_enumerator_t *data)
 /**
  * filter for addresses
  */
-static bool filter_addresses(address_enumerator_t *data, addr_entry_t** in, host_t** out)
+static bool filter_addresses(address_enumerator_t *data,
+							 addr_entry_t** in, host_t** out)
 {
 	if (!data->include_virtual_ips && (*in)->virtual)
 	{	/* skip virtual interfaces added by us */
@@ -669,16 +670,19 @@ static bool filter_addresses(address_enumerator_t *data, addr_entry_t** in, host
 /**
  * enumerator constructor for interfaces
  */
-static enumerator_t *create_iface_enumerator(iface_entry_t *iface, address_enumerator_t *data)
+static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
+											 address_enumerator_t *data)
 {
-	return enumerator_create_filter(iface->addrs->create_enumerator(iface->addrs),
+	return enumerator_create_filter(
+				iface->addrs->create_enumerator(iface->addrs),
 				(void*)filter_addresses, data, NULL);
 }
 
 /**
  * filter for interfaces
  */
-static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in, iface_entry_t** out)
+static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
+							  iface_entry_t** out)
 {
 	if (!data->include_down_ifaces && !((*in)->flags & IFF_UP))
 	{	/* skip interfaces not up */
@@ -688,11 +692,9 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in, if
 	return TRUE;
 }
 
-/**
- * implementation of kernel_net_t.create_address_enumerator
- */
-static enumerator_t *create_address_enumerator(private_kernel_netlink_net_t *this,
-		bool include_down_ifaces, bool include_virtual_ips)
+METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
+	private_kernel_netlink_net_t *this,
+	bool include_down_ifaces, bool include_virtual_ips)
 {
 	address_enumerator_t *data = malloc_thing(address_enumerator_t);
 	data->this = this;
@@ -701,15 +703,15 @@ static enumerator_t *create_address_enumerator(private_kernel_netlink_net_t *thi
 
 	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(
-				enumerator_create_filter(this->ifaces->create_enumerator(this->ifaces),
-							(void*)filter_interfaces, data, NULL),
-				(void*)create_iface_enumerator, data, (void*)address_enumerator_destroy);
+				enumerator_create_filter(
+					this->ifaces->create_enumerator(this->ifaces),
+					(void*)filter_interfaces, data, NULL),
+				(void*)create_iface_enumerator, data,
+				(void*)address_enumerator_destroy);
 }
 
-/**
- * implementation of kernel_net_t.get_interface_name
- */
-static char *get_interface_name(private_kernel_netlink_net_t *this, host_t* ip)
+METHOD(kernel_net_t, get_interface_name, char*,
+	private_kernel_netlink_net_t *this, host_t* ip)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
@@ -1036,19 +1038,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	return src;
 }
 
-/**
- * Implementation of kernel_net_t.get_source_addr.
- */
-static host_t* get_source_addr(private_kernel_netlink_net_t *this,
-							   host_t *dest, host_t *src)
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
 	return get_route(this, dest, FALSE, src);
 }
 
-/**
- * Implementation of kernel_net_t.get_nexthop.
- */
-static host_t* get_nexthop(private_kernel_netlink_net_t *this, host_t *dest)
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_kernel_netlink_net_t *this, host_t *dest)
 {
 	return get_route(this, dest, TRUE, NULL);
 }
@@ -1086,11 +1083,8 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 	return this->socket->send_ack(this->socket, hdr);
 }
 
-/**
- * Implementation of kernel_net_t.add_ip.
- */
-static status_t add_ip(private_kernel_netlink_net_t *this,
-						host_t *virtual_ip, host_t *iface_ip)
+METHOD(kernel_net_t, add_ip, status_t,
+	private_kernel_netlink_net_t *this, host_t *virtual_ip, host_t *iface_ip)
 {
 	iface_entry_t *iface;
 	addr_entry_t *addr;
@@ -1165,10 +1159,8 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 	return FAILED;
 }
 
-/**
- * Implementation of kernel_net_t.del_ip.
- */
-static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
+METHOD(kernel_net_t, del_ip, status_t,
+	private_kernel_netlink_net_t *this, host_t *virtual_ip)
 {
 	iface_entry_t *iface;
 	addr_entry_t *addr;
@@ -1296,21 +1288,17 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 	return this->socket->send_ack(this->socket, hdr);
 }
 
-/**
- * Implementation of kernel_net_t.add_route.
- */
-static status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
-		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
+METHOD(kernel_net_t, add_route, status_t,
+	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
 				dst_net, prefixlen, gateway, src_ip, if_name);
 }
 
-/**
- * Implementation of kernel_net_t.del_route.
- */
-static status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
-		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
+METHOD(kernel_net_t, del_route, status_t,
+	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
+	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
 				gateway, src_ip, if_name);
@@ -1441,10 +1429,8 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	return this->socket->send_ack(this->socket, hdr);
 }
 
-/**
- * Implementation of kernel_netlink_net_t.destroy.
- */
-static void destroy(private_kernel_netlink_net_t *this)
+METHOD(kernel_net_t, destroy, void,
+	private_kernel_netlink_net_t *this)
 {
 	if (this->routing_table)
 	{
@@ -1474,37 +1460,41 @@ static void destroy(private_kernel_netlink_net_t *this)
  */
 kernel_netlink_net_t *kernel_netlink_net_create()
 {
-	private_kernel_netlink_net_t *this = malloc_thing(private_kernel_netlink_net_t);
+	private_kernel_netlink_net_t *this;
 	struct sockaddr_nl addr;
 	enumerator_t *enumerator;
 	char *exclude;
 
-	/* public functions */
-	this->public.interface.get_interface = (char*(*)(kernel_net_t*,host_t*))get_interface_name;
-	this->public.interface.create_address_enumerator = (enumerator_t*(*)(kernel_net_t*,bool,bool))create_address_enumerator;
-	this->public.interface.get_source_addr = (host_t*(*)(kernel_net_t*, host_t *dest, host_t *src))get_source_addr;
-	this->public.interface.get_nexthop = (host_t*(*)(kernel_net_t*, host_t *dest))get_nexthop;
-	this->public.interface.add_ip = (status_t(*)(kernel_net_t*,host_t*,host_t*)) add_ip;
-	this->public.interface.del_ip = (status_t(*)(kernel_net_t*,host_t*)) del_ip;
-	this->public.interface.add_route = (status_t(*)(kernel_net_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) add_route;
-	this->public.interface.del_route = (status_t(*)(kernel_net_t*,chunk_t,u_int8_t,host_t*,host_t*,char*)) del_route;
-	this->public.interface.destroy = (void(*)(kernel_net_t*)) destroy;
-
-	/* private members */
-	this->ifaces = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.interface = {
+				.get_interface = _get_interface_name,
+				.create_address_enumerator = _create_address_enumerator,
+				.get_source_addr = _get_source_addr,
+				.get_nexthop = _get_nexthop,
+				.add_ip = _add_ip,
+				.del_ip = _del_ip,
+				.add_route = _add_route,
+				.del_route = _del_route,
+				.destroy = _destroy,
+			},
+		},
+		.socket = netlink_socket_create(NETLINK_ROUTE),
+		.rt_exclude = linked_list_create(),
+		.ifaces = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.routing_table = lib->settings->get_int(lib->settings,
+				"%s.routing_table", ROUTING_TABLE, hydra->daemon),
+		.routing_table_prio = lib->settings->get_int(lib->settings,
+				"%s.routing_table_prio", ROUTING_TABLE_PRIO, hydra->daemon),
+		.process_route = lib->settings->get_bool(lib->settings,
+				"%s.process_route", TRUE, hydra->daemon),
+		.install_virtual_ip = lib->settings->get_bool(lib->settings,
+				"%s.install_virtual_ip", TRUE, hydra->daemon),
+	);
 	timerclear(&this->last_roam);
-	this->routing_table = lib->settings->get_int(lib->settings,
-					"%s.routing_table", ROUTING_TABLE, hydra->daemon);
-	this->routing_table_prio = lib->settings->get_int(lib->settings,
-					"%s.routing_table_prio", ROUTING_TABLE_PRIO, hydra->daemon);
-	this->process_route = lib->settings->get_bool(lib->settings,
-					"%s.process_route", TRUE, hydra->daemon);
-	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
-					"%s.install_virtual_ip", TRUE, hydra->daemon);
 
-	this->rt_exclude = linked_list_create();
 	exclude = lib->settings->get_str(lib->settings,
 					"%s.ignore_routing_tables", NULL, hydra->daemon);
 	if (exclude)
@@ -1525,9 +1515,6 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		}
 		enumerator->destroy(enumerator);
 	}
-
-	this->socket = netlink_socket_create(NETLINK_ROUTE);
-	this->job = NULL;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
