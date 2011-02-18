@@ -165,6 +165,7 @@ char *whitelist[] = {
 	"__gmtime_r",
 	"localtime_r",
 	"tzset",
+	"time_printf_hook",
 	"inet_ntoa",
 	"strerror",
 	"getprotobyname",
@@ -190,6 +191,7 @@ char *whitelist[] = {
 	"dlopen",
 	"dlerror",
 	"dlclose",
+	"dlsym",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
