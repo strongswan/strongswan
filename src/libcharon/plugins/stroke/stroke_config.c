@@ -409,7 +409,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 		else
 		{
-			DBG1(DBG_CFG, "CA certificate %s not found, discarding CA "
+			DBG1(DBG_CFG, "CA certificate \"%s\" not found, discarding CA "
 				 "constraint", ca);
 		}
 	}
