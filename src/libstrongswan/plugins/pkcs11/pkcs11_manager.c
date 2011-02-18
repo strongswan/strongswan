@@ -369,7 +369,7 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 				"libstrongswan.plugins.pkcs11.modules.%s.path", NULL, module);
 		if (!entry->path)
 		{
-			DBG1(DBG_CFG, "PKCS11 module '%s' misses library path", module);
+			DBG1(DBG_CFG, "PKCS11 module '%s' lacks library path", module);
 			free(entry);
 			continue;
 		}
