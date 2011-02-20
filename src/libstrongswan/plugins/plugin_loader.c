@@ -70,8 +70,6 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG2(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
-			 create);
 		return NOT_FOUND;
 	}
 	if (integrity && lib->integrity)
