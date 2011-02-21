@@ -424,6 +424,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_COUPLING
+  SUBDIRS += plugins/coupling
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/coupling/libstrongswan-coupling.la
+endif
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
 if MONOLITHIC
