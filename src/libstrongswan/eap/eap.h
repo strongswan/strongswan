@@ -62,6 +62,8 @@ enum eap_type_t {
 	EAP_AKA = 23,
 	EAP_MSCHAPV2 = 26,
 	EAP_TNC = 38,
+	/** select EAP method dynamically based on i.e. EAP-Identity */
+	EAP_DYNAMIC = 252,
 	/** not a method, but an implementation providing different methods */
 	EAP_RADIUS = 253,
 	EAP_EXPANDED = 254,
