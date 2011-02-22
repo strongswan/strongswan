@@ -137,11 +137,6 @@ METHOD(listener_t, ike_updown, bool,
 	else
 	{
 		this->mutex->lock(this->mutex);
-		entry = this->active->remove(this->active, id);
-		if (entry)
-		{
-			entry_destroy(entry);
-		}
 		entry = this->checking->remove(this->checking, id);
 		this->mutex->unlock(this->mutex);
 		if (entry)
@@ -149,6 +144,16 @@ METHOD(listener_t, ike_updown, bool,
 			DBG1(DBG_CFG, "delete for duplicate IKE_SA '%Y' timed out, "
 				 "keeping new IKE_SA", id);
 			entry_destroy(entry);
+		}
+		else
+		{
+			this->mutex->lock(this->mutex);
+			entry = this->active->remove(this->active, id);
+			this->mutex->unlock(this->mutex);
+			if (entry)
+			{
+				entry_destroy(entry);
+			}
 		}
 	}
 	return TRUE;
