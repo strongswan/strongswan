@@ -331,6 +331,8 @@ static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
 		return terminate_ike_execute(&job);
 	}
 	charon->bus->listen(charon->bus, &job.listener.public, (job_t*)&job);
+	/* checkin of the ike_sa happend in the thread that executed the job */
+	charon->bus->set_sa(charon->bus, NULL);
 	return job.listener.status;
 }
 
@@ -417,6 +419,8 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 		return terminate_child_execute(&job);
 	}
 	charon->bus->listen(charon->bus, &job.listener.public, (job_t*)&job);
+	/* checkin of the ike_sa happend in the thread that executed the job */
+	charon->bus->set_sa(charon->bus, NULL);
 	return job.listener.status;
 }
 
