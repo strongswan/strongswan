@@ -91,11 +91,26 @@ static bool equals(identification_t *a, identification_t *b)
 }
 
 METHOD(listener_t, ike_rekey, bool,
-	private_duplicheck_listener_t *this, ike_sa_t *new, ike_sa_t *old)
+	private_duplicheck_listener_t *this, ike_sa_t *old, ike_sa_t *new)
 {
+	identification_t *id;
+	ike_sa_id_t *sa;
+	entry_t *entry;
+
+	sa = new->get_id(new);
+	id = new->get_other_id(new);
+
+	INIT(entry,
+		.id = id->clone(id),
+		.sa = sa->clone(sa),
+	);
 	this->mutex->lock(this->mutex);
-	/* TODO update entires */
+	entry = this->active->put(this->active, entry->id, entry);
 	this->mutex->unlock(this->mutex);
+	if (entry)
+	{
+		entry_destroy(entry);
+	}
 	return TRUE;
 }
 
