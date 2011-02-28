@@ -1989,6 +1989,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
+	this->task_manager->destroy(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (this->attributes->remove_last(this->attributes,
@@ -2006,7 +2007,6 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->task_manager->destroy(this->task_manager);
 	this->keymat->destroy(this->keymat);
 
 	if (this->my_virtual_ip)

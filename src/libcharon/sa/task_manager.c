@@ -161,12 +161,12 @@ static void flush(private_task_manager_t *this)
 {
 	this->queued_tasks->destroy_offset(this->queued_tasks,
 										offsetof(task_t, destroy));
+	this->queued_tasks = linked_list_create();
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
+	this->passive_tasks = linked_list_create();
 	this->active_tasks->destroy_offset(this->active_tasks,
 										offsetof(task_t, destroy));
-	this->queued_tasks = linked_list_create();
-	this->passive_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 }
 
