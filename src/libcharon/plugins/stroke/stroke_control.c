@@ -95,31 +95,57 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 METHOD(stroke_control_t, initiate, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
+	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
+	enumerator_t *enumerator;
 	stroke_log_info_t info;
 
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->initiate.name);
-	if (peer_cfg == NULL)
+	if (peer_cfg)
 	{
-		DBG1(DBG_CFG, "no config named '%s'\n", msg->initiate.name);
-		return;
-	}
-	if (peer_cfg->get_ike_version(peer_cfg) != 2)
-	{
-		DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-			 peer_cfg->get_ike_version(peer_cfg));
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
+		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		{
+			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
+				 peer_cfg->get_ike_version(peer_cfg));
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
 
-	child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
-	if (child_cfg == NULL)
+		child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no child config named '%s'", msg->initiate.name);
+			fprintf(out, "no child config named '%s'\n", msg->initiate.name);
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+	}
+	else
 	{
-		DBG1(DBG_CFG, "no child config named '%s'\n", msg->initiate.name);
-		peer_cfg->destroy(peer_cfg);
-		return;
+		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+													NULL, NULL, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
+		{
+			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			{
+				continue;
+			}
+			child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
+			if (child_cfg)
+			{
+				peer_cfg->get_ref(peer_cfg);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no config named '%s'", msg->initiate.name);
+			fprintf(out, "no config named '%s'\n", msg->initiate.name);
+			return;
+		}
 	}
 
 	if (msg->output_verbosity < 0)
@@ -473,37 +499,65 @@ METHOD(stroke_control_t, purge_ike, void,
 METHOD(stroke_control_t, route, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
+	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
+	enumerator_t *enumerator;
 
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->route.name);
-	if (peer_cfg == NULL)
+	if (peer_cfg)
 	{
-		fprintf(out, "no config named '%s'\n", msg->route.name);
-		return;
-	}
-	if (peer_cfg->get_ike_version(peer_cfg) != 2)
-	{
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
+		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		{
+			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
+				 peer_cfg->get_ike_version(peer_cfg));
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
 
-	child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
-	if (child_cfg == NULL)
+		child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no child config named '%s'", msg->route.name);
+			fprintf(out, "no child config named '%s'\n", msg->route.name);
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+	}
+	else
 	{
-		fprintf(out, "no child config named '%s'\n", msg->route.name);
-		peer_cfg->destroy(peer_cfg);
-		return;
+		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+													NULL, NULL, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
+		{
+			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			{
+				continue;
+			}
+			child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
+			if (child_cfg)
+			{
+				peer_cfg->get_ref(peer_cfg);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no config named '%s'", msg->route.name);
+			fprintf(out, "no config named '%s'\n", msg->route.name);
+			return;
+		}
 	}
 
 	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
 	{
-		fprintf(out, "configuration '%s' routed\n", msg->route.name);
+		fprintf(out, "'%s' routed\n", msg->route.name);
 	}
 	else
 	{
-		fprintf(out, "routing configuration '%s' failed\n", msg->route.name);
+		fprintf(out, "routing '%s' failed\n", msg->route.name);
 	}
 	peer_cfg->destroy(peer_cfg);
 	child_cfg->destroy(child_cfg);
