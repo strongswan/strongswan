@@ -978,7 +978,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			rthdr->rta_type = XFRMA_ALG_AEAD;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_key.len);
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1009,7 +1009,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			rthdr->rta_type = XFRMA_ALG_CRYPT;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1045,7 +1045,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			rthdr->rta_type = XFRMA_ALG_AUTH_TRUNC;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_auth) + int_key.len);
 
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1064,7 +1064,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			rthdr->rta_type = XFRMA_ALG_AUTH;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_key.len);
 
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1092,7 +1092,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			 ipcomp_transform_names, ipcomp);
 
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1112,7 +1112,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_ENCAP;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1142,7 +1142,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1161,7 +1161,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_TFCPAD;
 		rthdr->rta_len = RTA_LENGTH(sizeof(u_int32_t));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1315,7 +1315,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1422,7 +1422,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1594,7 +1594,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta->rta_type = XFRMA_ENCAP;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
 
-		hdr->nlmsg_len += rta->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1614,7 +1614,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta->rta_type = XFRMA_REPLAY_VAL;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
 
-		hdr->nlmsg_len += rta->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1757,7 +1757,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			}
 
 			rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-			hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+			hdr->nlmsg_len += RTA_ALIGN(RTA_LENGTH(sizeof(struct xfrm_user_tmpl)));
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1793,7 +1793,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1912,7 +1912,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -2054,7 +2054,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
