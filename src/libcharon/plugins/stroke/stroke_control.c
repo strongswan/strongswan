@@ -92,13 +92,33 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 	return found;
 }
 
+/**
+ * call the charon controller to initiate the connection
+ */
+static void charon_initiate(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+							stroke_msg_t *msg, FILE *out)
+{
+	if (msg->output_verbosity < 0)
+	{
+		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
+									 NULL, NULL);
+	}
+	else
+	{
+		stroke_log_info_t info = { msg->output_verbosity, out };
+
+		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
+									 (controller_cb_t)stroke_log, &info);
+	}
+}
+
 METHOD(stroke_control_t, initiate, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
-	stroke_log_info_t info;
+	bool empty = TRUE;
 
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->initiate.name);
@@ -115,8 +135,20 @@ METHOD(stroke_control_t, initiate, void,
 		child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 		if (child_cfg == NULL)
 		{
-			DBG1(DBG_CFG, "no child config named '%s'", msg->initiate.name);
-			fprintf(out, "no child config named '%s'\n", msg->initiate.name);
+			enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+			while (enumerator->enumerate(enumerator, &child_cfg))
+			{
+				empty = FALSE;
+				charon_initiate(peer_cfg->get_ref(peer_cfg),
+								child_cfg->get_ref(child_cfg), msg, out);
+			}
+			enumerator->destroy(enumerator);
+
+			if (empty)
+			{
+				DBG1(DBG_CFG, "no child config named '%s'", msg->initiate.name);
+				fprintf(out, "no child config named '%s'\n", msg->initiate.name);
+			}
 			peer_cfg->destroy(peer_cfg);
 			return;
 		}
@@ -147,19 +179,7 @@ METHOD(stroke_control_t, initiate, void,
 			return;
 		}
 	}
-
-	if (msg->output_verbosity < 0)
-	{
-		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 NULL, NULL);
-	}
-	else
-	{
-		info.out = out;
-		info.level = msg->output_verbosity;
-		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 (controller_cb_t)stroke_log, &info);
-	}
+	charon_initiate(peer_cfg, child_cfg, msg, out);
 }
 
 /**
@@ -496,12 +516,29 @@ METHOD(stroke_control_t, purge_ike, void,
 	list->destroy(list);
 }
 
+/**
+ * call charon to install a trap
+ */
+static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+						 char *name, FILE *out)
+{
+	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+	{
+		fprintf(out, "'%s' routed\n", name);
+	}
+	else
+	{
+		fprintf(out, "routing '%s' failed\n", name);
+	}
+}
+
 METHOD(stroke_control_t, route, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	child_cfg_t *child_cfg = NULL;
 	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
+	bool empty = TRUE;
 
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->route.name);
@@ -518,8 +555,20 @@ METHOD(stroke_control_t, route, void,
 		child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
 		if (child_cfg == NULL)
 		{
-			DBG1(DBG_CFG, "no child config named '%s'", msg->route.name);
-			fprintf(out, "no child config named '%s'\n", msg->route.name);
+			enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+			while (enumerator->enumerate(enumerator, &child_cfg))
+			{
+				empty = FALSE;
+				charon_route(peer_cfg, child_cfg, child_cfg->get_name(child_cfg),
+							 out);
+			}
+			enumerator->destroy(enumerator);
+
+			if (empty)
+			{
+				DBG1(DBG_CFG, "no child config named '%s'", msg->route.name);
+				fprintf(out, "no child config named '%s'\n", msg->route.name);
+			}
 			peer_cfg->destroy(peer_cfg);
 			return;
 		}
@@ -550,15 +599,7 @@ METHOD(stroke_control_t, route, void,
 			return;
 		}
 	}
-
-	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
-	{
-		fprintf(out, "'%s' routed\n", msg->route.name);
-	}
-	else
-	{
-		fprintf(out, "routing '%s' failed\n", msg->route.name);
-	}
+	charon_route(peer_cfg, child_cfg, msg->route.name, out);
 	peer_cfg->destroy(peer_cfg);
 	child_cfg->destroy(child_cfg);
 }
