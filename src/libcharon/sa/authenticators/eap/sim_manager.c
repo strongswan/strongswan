@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <threading/rwlock.h>
 
 typedef struct private_sim_manager_t private_sim_manager_t;
 
@@ -44,6 +45,11 @@ struct private_sim_manager_t {
 	 * list of added hooks
 	 */
 	linked_list_t *hooks;
+
+	/**
+	 * lock for lists above
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -51,7 +57,9 @@ struct private_sim_manager_t {
  */
 static void add_card(private_sim_manager_t *this, sim_card_t *card)
 {
+	this->lock->write_lock(this->lock);
 	this->cards->insert_last(this->cards, card);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -59,7 +67,9 @@ static void add_card(private_sim_manager_t *this, sim_card_t *card)
  */
 static void remove_card(private_sim_manager_t *this, sim_card_t *card)
 {
+	this->lock->write_lock(this->lock);
 	this->cards->remove(this->cards, card, NULL);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -73,17 +83,20 @@ static bool card_get_triplet(private_sim_manager_t *this, identification_t *id,
 	sim_card_t *card;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		if (card->get_triplet(card, id, rand, sres, kc))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 		tried++;
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM cards, but none has triplets for '%Y'",
 		 tried, id);
 	return FALSE;
@@ -103,6 +116,7 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 	status_t status = NOT_FOUND;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -112,6 +126,7 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 			case SUCCESS:
 			case INVALID_STATE:
 				enumerator->destroy(enumerator);
+				this->lock->unlock(this->lock);
 				return status;
 			case NOT_SUPPORTED:
 			case FAILED:
@@ -121,6 +136,7 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM cards, but none has quintuplets for '%Y'",
 		 tried, id);
 	return status;
@@ -135,16 +151,19 @@ static bool card_resync(private_sim_manager_t *this, identification_t *id,
 	enumerator_t *enumerator;
 	sim_card_t *card;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		if (card->resync(card, id, rand, auts))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
@@ -159,12 +178,14 @@ static void card_set_pseudonym(private_sim_manager_t *this,
 
 	DBG1(DBG_IKE, "storing pseudonym '%Y' for '%Y'", pseudonym, id);
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		card->set_pseudonym(card, id, pseudonym);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -177,6 +198,7 @@ static identification_t* card_get_pseudonym(private_sim_manager_t *this,
 	sim_card_t *card;
 	identification_t *pseudonym = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -189,6 +211,7 @@ static identification_t* card_get_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return pseudonym;
 }
 
@@ -205,12 +228,14 @@ static void card_set_reauth(private_sim_manager_t *this, identification_t *id,
 	DBG1(DBG_IKE, "storing next reauthentication identity '%Y' for '%Y'",
 		 next, id);
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		card->set_reauth(card, id, next, mk, counter);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -224,6 +249,7 @@ static identification_t* card_get_reauth(private_sim_manager_t *this,
 	sim_card_t *card;
 	identification_t *reauth = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -236,6 +262,7 @@ static identification_t* card_get_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return reauth;
 }
 
@@ -244,7 +271,9 @@ static identification_t* card_get_reauth(private_sim_manager_t *this,
  */
 static void add_provider(private_sim_manager_t *this, sim_provider_t *provider)
 {
+	this->lock->write_lock(this->lock);
 	this->providers->insert_last(this->providers, provider);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -253,7 +282,9 @@ static void add_provider(private_sim_manager_t *this, sim_provider_t *provider)
 static void remove_provider(private_sim_manager_t *this,
 							sim_provider_t *provider)
 {
+	this->lock->write_lock(this->lock);
 	this->providers->remove(this->providers, provider, NULL);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -267,17 +298,20 @@ static bool provider_get_triplet(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->get_triplet(provider, id, rand, sres, kc))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 		tried++;
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
 		 tried, id);
 	return FALSE;
@@ -296,6 +330,7 @@ static bool provider_get_quintuplet(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -303,10 +338,12 @@ static bool provider_get_quintuplet(private_sim_manager_t *this,
 									 ck, ik, autn))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM providers, but none had a quintuplet for '%Y'",
 		 tried, id);
 	return FALSE;
@@ -321,16 +358,19 @@ static bool provider_resync(private_sim_manager_t *this, identification_t *id,
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->resync(provider, id, rand, auts))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
@@ -344,6 +384,7 @@ static identification_t* provider_is_pseudonym(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	identification_t *permanent = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -356,6 +397,7 @@ static identification_t* provider_is_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return permanent;
 }
 
@@ -369,6 +411,7 @@ static identification_t* provider_gen_pseudonym(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	identification_t *pseudonym = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -380,6 +423,7 @@ static identification_t* provider_gen_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return pseudonym;
 }
 
@@ -394,6 +438,7 @@ static identification_t* provider_is_reauth(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	identification_t *permanent = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -406,6 +451,7 @@ static identification_t* provider_is_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return permanent;
 }
 
@@ -419,6 +465,7 @@ static identification_t* provider_gen_reauth(private_sim_manager_t *this,
 	sim_provider_t *provider;
 	identification_t *reauth = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -430,6 +477,7 @@ static identification_t* provider_gen_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return reauth;
 }
 
@@ -438,7 +486,9 @@ static identification_t* provider_gen_reauth(private_sim_manager_t *this,
  */
 static void add_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
 {
+	this->lock->write_lock(this->lock);
 	this->hooks->insert_last(this->hooks, hooks);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -446,7 +496,9 @@ static void add_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
  */
 static void remove_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
 {
+	this->lock->write_lock(this->lock);
 	this->hooks->remove(this->hooks, hooks, NULL);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -458,12 +510,14 @@ static void message_hook(private_sim_manager_t *this,
 	enumerator_t *enumerator;
 	sim_hooks_t *hooks;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
 	while (enumerator->enumerate(enumerator, &hooks))
 	{
 		hooks->message(hooks, message, inbound, decrypted);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -475,12 +529,14 @@ static void key_hook(private_sim_manager_t *this,
 	enumerator_t *enumerator;
 	sim_hooks_t *hooks;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
 	while (enumerator->enumerate(enumerator, &hooks))
 	{
 		hooks->keys(hooks, k_encr, k_auth);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -491,6 +547,7 @@ static void destroy(private_sim_manager_t *this)
 	this->cards->destroy(this->cards);
 	this->providers->destroy(this->providers);
 	this->hooks->destroy(this->hooks);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -528,6 +585,7 @@ sim_manager_t *sim_manager_create()
 	this->cards = linked_list_create();
 	this->providers = linked_list_create();
 	this->hooks = linked_list_create();
+	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	return &this->public;
 }
