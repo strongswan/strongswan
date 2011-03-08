@@ -57,7 +57,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 				int oid = asn1_parse_algorithmIdentifier(object,
 										parser->get_level(parser)+1, NULL);
 
-				if (oid == OID_RSA_ENCRYPTION)
+				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP)
 				{
 					type = KEY_RSA;
 				}
