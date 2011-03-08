@@ -358,4 +358,10 @@
                   0x06       "recipientNonce"			OID_PKI_RECIPIENT_NONCE
                   0x07       "transID"					OID_PKI_TRANS_ID
                   0x08       "extensionReq"
-
+0x67                         ""
+  0x81                       ""
+    0x05                     ""
+      0x02                   "tcg-attribute"
+        0x01                 "tcg-at-tpmManufacturer"	OID_TPM_MANUFACTURER
+        0x02                 "tcg-at-tpmModel"			OID_TPM_MODEL
+        0x03                 "tcg-at-tpmVersion"		OID_TPM_VERSION
