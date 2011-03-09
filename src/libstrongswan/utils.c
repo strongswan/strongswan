@@ -287,7 +287,7 @@ bool ref_put(refcount_t *ref)
 	bool more_refs;
 
 	pthread_mutex_lock(&ref_mutex);
-	more_refs = --(*ref);
+	more_refs = --(*ref) > 0;
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
 }
