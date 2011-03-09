@@ -183,36 +183,30 @@ char *asn1_oid_to_string(chunk_t oid)
 		return NULL;
 	}
 	val = oid.ptr[0] / 40;
-	len = snprintf(buf, sizeof(buf), "%d.%d", val, oid.ptr[0] - val * 40);
+	len = snprintf(buf, sizeof(buf), "%u.%u", val, oid.ptr[0] - val * 40);
 	oid = chunk_skip(oid, 1);
 	if (len < 0 || len >= sizeof(buf))
 	{
 		return NULL;
 	}
 	pos += len;
+	val = 0;
 
 	while (oid.len)
 	{
+		val = (val << 7) + (u_int)(oid.ptr[0] & 0x7f);
+
 		if (oid.ptr[0] < 128)
 		{
-			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", oid.ptr[0]);
-			oid = chunk_skip(oid, 1);
-		}
-		else
-		{
-			if (oid.len == 1)
+			len = snprintf(pos, sizeof(buf) + buf - pos, ".%u", val);
+			if (len < 0 || len >= sizeof(buf) + buf - pos)
 			{
 				return NULL;
 			}
-			val = ((u_int)(oid.ptr[0] & 0x7F) << 7) + oid.ptr[1];
-			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", val);
-			oid = chunk_skip(oid, 2);
+			pos += len;
+			val = 0;
 		}
-		if (len < 0 || len >= sizeof(buf) + buf - pos)
-		{
-			return NULL;
-		}
-		pos += len;
+		oid = chunk_skip(oid, 1);
 	}
 	return strdup(buf);
 }
