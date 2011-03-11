@@ -365,3 +365,4 @@
         0x01                 "tcg-at-tpmManufacturer"	OID_TPM_MANUFACTURER
         0x02                 "tcg-at-tpmModel"			OID_TPM_MODEL
         0x03                 "tcg-at-tpmVersion"		OID_TPM_VERSION
+        0x0F                 "tcg-at-tpmIdLabel"		OID_TPM_ID_LABEL
