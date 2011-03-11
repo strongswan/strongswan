@@ -208,7 +208,7 @@ char *asn1_oid_to_string(chunk_t oid)
 		}
 		oid = chunk_skip(oid, 1);
 	}
-	return strdup(buf);
+	return (val == 0) ? strdup(buf) : NULL;
 }
 
 /*
@@ -462,12 +462,22 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 	{
 		case ASN1_OID:
 			oid = asn1_known_oid(object);
-			if (oid != OID_UNKNOWN)
+			if (oid == OID_UNKNOWN)
+			{
+				char *oid_str = asn1_oid_to_string(object);
+
+				if (!oid_str)
+				{
+					break;
+				}
+				DBG2(DBG_LIB, "  %s", oid_str);
+				free(oid_str);
+			}
+			else
 			{
 				DBG2(DBG_LIB, "  '%s'", oid_names[oid].name);
-				return;
 			}
-			break;
+			return;
 		case ASN1_UTF8STRING:
 		case ASN1_IA5STRING:
 		case ASN1_PRINTABLESTRING:
