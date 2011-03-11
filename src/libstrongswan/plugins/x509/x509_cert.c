@@ -937,15 +937,15 @@ static const asn1Object_t certificatePoliciesObject[] = {
 	{ 0, "certificatePolicies",		ASN1_SEQUENCE,	ASN1_LOOP			}, /*  0 */
 	{ 1,   "policyInformation",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  1 */
 	{ 2,     "policyId",			ASN1_OID,		ASN1_BODY			}, /*  2 */
-	{ 2,     "qualifier",			ASN1_SEQUENCE,	ASN1_OPT|ASN1_BODY	}, /*  3 */
+	{ 2,     "qualifiers",			ASN1_SEQUENCE,	ASN1_OPT|ASN1_LOOP	}, /*  3 */
 	{ 3,       "qualifierInfo",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  4 */
 	{ 4,         "qualifierId",		ASN1_OID,		ASN1_BODY			}, /*  5 */
 	{ 4,         "cPSuri",			ASN1_IA5STRING,	ASN1_OPT|ASN1_BODY	}, /*  6 */
 	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /*  7 */
-	{ 4,         "userNotice",		ASN1_SEQUENCE,	ASN1_OPT|ASN1_NONE	}, /*  8 */
+	{ 4,         "userNotice",		ASN1_SEQUENCE,	ASN1_OPT|ASN1_BODY	}, /*  8 */
 	{ 5,           "explicitText",	ASN1_EOC,		ASN1_RAW			}, /*  9 */
 	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /* 10 */
-	{ 2,      "end opt",			ASN1_EOC,		ASN1_END			}, /* 12 */
+	{ 2,      "end opt/loop",		ASN1_EOC,		ASN1_END			}, /* 12 */
 	{ 0, "end loop",				ASN1_EOC,		ASN1_END			}, /* 13 */
 	{ 0, "exit",					ASN1_EOC,		ASN1_EXIT			}
 };
@@ -1117,7 +1117,7 @@ static const asn1Object_t ipAddrBlocksObjects[] = {
 	{ 4,         "min",             ASN1_BIT_STRING,    ASN1_BODY           }, /*  9 */
 	{ 4,         "max",             ASN1_BIT_STRING,    ASN1_BODY           }, /* 10 */
 	{ 3,       "end choice",        ASN1_EOC,           ASN1_END            }, /* 11 */
-	{ 2,     "end choice/loop",     ASN1_EOC,           ASN1_END            }, /* 12 */
+	{ 2,     "end opt/loop",        ASN1_EOC,           ASN1_END            }, /* 12 */
 	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 13 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
