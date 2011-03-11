@@ -1,7 +1,16 @@
+strongswan-4.5.2
+----------------
+
 - The whitelist plugin for the IKEv2 daemon maintains an in-memory identity
   whitelist. Any connection attempt of peers not whitelisted will get rejected.
   The 'ipsec whitelist' utility provides a simple command line frontend for
   whitelist administration.
+
+- In the case that the peer config and child config don't have the same name
+  (usually in SQL database defined connections), ipsec up|route <peer config>
+  starts|routes all associated child configs and ipsec up|route <child config>
+  only starts|routes the specific child config.
+
 
 strongswan-4.5.1
 ----------------
