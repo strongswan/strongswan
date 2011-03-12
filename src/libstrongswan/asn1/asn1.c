@@ -129,10 +129,10 @@ chunk_t asn1_build_known_oid(int n)
 chunk_t asn1_oid_from_string(char *str)
 {
 	enumerator_t *enumerator;
-	u_char buf[32];
+	u_char buf[64];
 	char *end;
-	int i = 0, pos = 0;
-	u_int val, first = 0;
+	int i = 0, pos = 0, shift;
+	u_int val, shifted_val, first = 0;
 
 	enumerator = enumerator_create_token(str, ".", "");
 	while (enumerator->enumerate(enumerator, &str))
@@ -152,16 +152,17 @@ chunk_t asn1_oid_from_string(char *str)
 				buf[pos++] = first * 40 + val;
 				break;
 			default:
-				if (val < 128)
+				shift = 28;		/* sufficient to handle 32 bit node numbers */
+				while (shift)
 				{
-					buf[pos++] = val;
+					shifted_val = val >> shift;
+					shift -= 7;
+					if (shifted_val)	/* do not encode leading zeroes */
+					{
+						buf[pos++] = 0x80 | (shifted_val & 0x7F);
+					}
 				}
-				else
-				{
-					buf[pos++] = 128 | (val >> 7);
-					buf[pos++] = (val % 256) & 0x7F;
-				}
-				break;
+				buf[pos++] = val & 0x7F;
 		}
 	}
 	enumerator->destroy(enumerator);
