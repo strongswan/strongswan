@@ -67,10 +67,8 @@ struct private_ike_rekey_t {
 	task_t *collision;
 };
 
-/**
- * Implementation of task_t.build for initiator, after rekeying
- */
-static status_t build_i_delete(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, build_i_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	/* update exchange type to INFORMATIONAL for the delete */
 	message->set_exchange_type(message, INFORMATIONAL);
@@ -78,18 +76,14 @@ static status_t build_i_delete(private_ike_rekey_t *this, message_t *message)
 	return this->ike_delete->task.build(&this->ike_delete->task, message);
 }
 
-/**
- * Implementation of task_t.process for initiator, after rekeying
- */
-static status_t process_i_delete(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_i_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	return this->ike_delete->task.process(&this->ike_delete->task, message);
 }
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	host_t *other_host;
@@ -112,10 +106,8 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	iterator_t *iterator;
@@ -156,10 +148,8 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	if (this->new_sa == NULL)
 	{
@@ -186,10 +176,8 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
 	return SUCCESS;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
@@ -299,30 +287,27 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 
 	/* rekeying successful, delete the IKE_SA using a subtask */
 	this->ike_delete = ike_delete_create(this->ike_sa, TRUE);
-	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
-	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
+	this->public.task.build = _build_i_delete;
+	this->public.task.process = _process_i_delete;
 
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_rekey_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_rekey_t *this)
 {
 	return IKE_REKEY;
 }
 
-static void collide(private_ike_rekey_t* this, task_t *other)
+METHOD(ike_rekey_t, collide, void,
+	private_ike_rekey_t* this, task_t *other)
 {
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_rekey_t *this, ike_sa_t *ike_sa)
 {
 	if (this->ike_init)
 	{
@@ -348,10 +333,8 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 	this->ike_delete = NULL;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_rekey_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_rekey_t *this)
 {
 	if (this->new_sa)
 	{
@@ -387,29 +370,27 @@ static void destroy(private_ike_rekey_t *this)
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_rekey_t *this = malloc_thing(private_ike_rekey_t);
+	private_ike_rekey_t *this;
 
-	this->public.collide = (void(*)(ike_rekey_t*,task_t*))collide;
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.build = _build_r,
+				.process = _process_r,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+			.collide = _collide,
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+	);
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
-	else
-	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-	}
-
-	this->ike_sa = ike_sa;
-	this->new_sa = NULL;
-	this->ike_init = NULL;
-	this->ike_delete = NULL;
-	this->initiator = initiator;
-	this->collision = NULL;
 
 	return &this->public;
 }
