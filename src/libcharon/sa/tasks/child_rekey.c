@@ -412,6 +412,8 @@ static void collide(private_child_rekey_t *this, task_t *other)
 		other->destroy(other);
 		return;
 	}
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, CHILD_REKEY,
+		 task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }

@@ -912,9 +912,8 @@ struct ike_sa_t {
 	 * As this call may initiate inherited tasks, a status is returned.
 	 *
 	 * @param other			other task to inherit from
-	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
-	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
+	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Reset the IKE_SA, useable when initiating fails

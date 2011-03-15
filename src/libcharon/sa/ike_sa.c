@@ -1896,7 +1896,7 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
-METHOD(ike_sa_t, inherit, status_t,
+METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
@@ -1977,8 +1977,6 @@ METHOD(ike_sa_t, inherit, status_t,
 		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
-	/* we have to initate here, there may be new tasks to handle */
-	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, destroy, void,
