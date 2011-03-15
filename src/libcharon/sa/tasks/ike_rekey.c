@@ -67,6 +67,18 @@ struct private_ike_rekey_t {
 	task_t *collision;
 };
 
+METHOD(task_t, process_r_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
+{
+	return this->ike_delete->task.process(&this->ike_delete->task, message);
+}
+
+METHOD(task_t, build_r_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
+{
+	return this->ike_delete->task.build(&this->ike_delete->task, message);
+}
+
 METHOD(task_t, build_i_delete, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
@@ -173,7 +185,12 @@ METHOD(task_t, build_r, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
-	return SUCCESS;
+	/* rekeying successful, delete the IKE_SA using a subtask */
+	this->ike_delete = ike_delete_create(this->ike_sa, FALSE);
+	this->public.task.build = _build_r_delete;
+	this->public.task.process = _process_r_delete;
+
+	return NEED_MORE;
 }
 
 METHOD(task_t, process_i, status_t,
