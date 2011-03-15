@@ -136,8 +136,9 @@ static void process_jobs(private_processor_t *this)
 		thread_cleanup_pop(FALSE);
 		this->mutex->lock(this->mutex);
 	}
+	this->total_threads--;
+	this->thread_terminated->signal(this->thread_terminated);
 	this->mutex->unlock(this->mutex);
-	restart(this);
 }
 
 /**
