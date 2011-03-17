@@ -11,6 +11,8 @@ strongswan-4.5.2
   starts|routes all associated child configs and ipsec up|route <child config>
   only starts|routes the specific child config.
 
+- fixed the encoding and parsing of X.509 certificate policy statements (CPS).
+
 
 strongswan-4.5.1
 ----------------
