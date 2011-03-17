@@ -59,6 +59,12 @@ plugin_t *duplicheck_plugin_create()
 {
 	private_duplicheck_plugin_t *this;
 
+	if (!lib->settings->get_bool(lib->settings,
+								 "charon.plugins.duplicheck.enabled", TRUE))
+	{
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
