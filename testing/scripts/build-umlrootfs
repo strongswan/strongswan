@@ -307,6 +307,11 @@ then
     echo -n " --enable-ha" >> $INSTALLSHELL
 fi
 
+if [ "$USE_AF_ALG" = "yes" ]
+then
+    echo -n " --enable-af-alg" >> $INSTALLSHELL
+fi
+
 if [ "$USE_CISCO_QUIRKS" = "yes" ]
 then
     echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
