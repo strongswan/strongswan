@@ -138,6 +138,12 @@ static void dispatch(private_whitelist_control_t *this,
 		case WHITELIST_FLUSH:
 			this->listener->flush(this->listener, id);
 			break;
+		case WHITELIST_ENABLE:
+			this->listener->set_active(this->listener, TRUE);
+			break;
+		case WHITELIST_DISABLE:
+			this->listener->set_active(this->listener, FALSE);
+			break;
 		default:
 			DBG1(DBG_CFG, "received unknown whitelist command");
 			break;

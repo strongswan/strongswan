@@ -40,6 +40,11 @@ struct private_whitelist_listener_t {
 	 * Hashtable with whitelisted identities
 	 */
 	hashtable_t *ids;
+
+	/**
+	 * Whitelist checking enabled
+	 */
+	bool enabled;
 };
 
 /**
@@ -63,7 +68,7 @@ METHOD(listener_t, authorize, bool,
 	bool final, bool *success)
 {
 	/* check each authentication round */
-	if (!final)
+	if (this->enabled && !final)
 	{
 		bool whitelisted = FALSE;
 		identification_t *id;
@@ -153,6 +158,13 @@ METHOD(whitelist_listener_t, flush, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(whitelist_listener_t, set_active, void,
+	private_whitelist_listener_t *this, bool enable)
+{
+	DBG1(DBG_CFG, "whitelist functionality %sabled", enable ? "en" : "dis");
+	this->enabled = enable;
+}
+
 METHOD(whitelist_listener_t, destroy, void,
 	private_whitelist_listener_t *this)
 {
@@ -186,11 +198,14 @@ whitelist_listener_t *whitelist_listener_create()
 			.remove = _remove_,
 			.create_enumerator = _create_enumerator,
 			.flush = _flush,
+			.set_active = _set_active,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.ids = hashtable_create((hashtable_hash_t)hash,
 								(hashtable_equals_t)equals, 32),
+		.enabled = lib->settings->get_bool(lib->settings,
+								"charon.plugins.whitelist.enabled", TRUE),
 	);
 
 	return &this->public;

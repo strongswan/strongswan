@@ -169,6 +169,14 @@ int main(int argc, char *argv[])
 	{
 		return send_msg(WHITELIST_LIST, argc == 3 ? argv[2] : "%any");
 	}
+	if (argc == 2 && strcmp(argv[1], "enable") == 0)
+	{
+		return send_msg(WHITELIST_ENABLE, "");
+	}
+	if (argc == 2 && strcmp(argv[1], "disable") == 0)
+	{
+		return send_msg(WHITELIST_DISABLE, "");
+	}
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "  %s add <identity>\n", argv[0]);
 	fprintf(stderr, "  %s remove <identity>\n", argv[0]);
@@ -176,5 +184,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "  %s remove-from <file>\n", argv[0]);
 	fprintf(stderr, "  %s flush [<pattern>]\n", argv[0]);
 	fprintf(stderr, "  %s list [<pattern>]\n", argv[0]);
+	fprintf(stderr, "  %s enable\n", argv[0]);
+	fprintf(stderr, "  %s disable\n", argv[0]);
 	return 1;
 }

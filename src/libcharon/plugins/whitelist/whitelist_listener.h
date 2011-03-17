@@ -67,6 +67,13 @@ struct whitelist_listener_t {
 	void (*flush)(whitelist_listener_t *this, identification_t *id);
 
 	/**
+	 * Enable/Disable whitelist checking.
+	 *
+	 * @param enable	TRUE to enable, FALSE to disable
+	 */
+	void (*set_active)(whitelist_listener_t *this, bool enable);
+
+	/**
 	 * Destroy a whitelist_listener_t.
 	 */
 	void (*destroy)(whitelist_listener_t *this);

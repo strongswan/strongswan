@@ -39,6 +39,10 @@ enum {
 	WHITELIST_END = 4,
 	/* flush identities matching id */
 	WHITELIST_FLUSH = 5,
+	/* enable whitelist checking */
+	WHITELIST_ENABLE = 6,
+	/* disable whitelist checking */
+	WHITELIST_DISABLE = 7,
 };
 
 /**
