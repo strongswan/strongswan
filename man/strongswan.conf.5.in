@@ -257,6 +257,9 @@ Derive user-defined MAC address from hash of IKEv2 identity
 .BR charon.plugins.dhcp.server " [255.255.255.255]"
 DHCP server unicast or broadcast IP address
 .TP
+.BR charon.plugins.duplicheck.enable " [yes]"
+enable loaded duplicheck plugin
+.TP
 .BR charon.plugins.eap-aka.request_identity " [yes]"
 
 .TP
@@ -425,6 +428,9 @@ TNC IMC configuration directory
 .TP
 .BR charon.plugins.tnc-imv.tnc_config " [/etc/tnc_config]"
 TNC IMV configuration directory
+.TP
+.BR charon.plugins.whitelist.enable " [yes]"
+enable loaded whitelist plugin
 .SS libstrongswan section
 .TP
 .BR libstrongswan.crypto_test.bench " [no]"
