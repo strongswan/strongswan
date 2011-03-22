@@ -55,6 +55,7 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
@@ -63,6 +64,8 @@ sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
 sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
+sa/authenticators/eap/sim_card.h sa/authenticators/eap/sim_provider.h \
+sa/authenticators/eap/sim_hooks.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -89,8 +92,12 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnccs/tnccs.c tnccs/tnccs.h \
-tnccs/tnccs_manager.h tnccs/tnccs_manager.c
+tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+tnc/imc/imc.h tnc/imc/imc_manager.h \
+tnc/imv/imv.h tnc/imv/imv_manager.h \
+tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
+tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
+tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 
 # adding the plugin source files
 
