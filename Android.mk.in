@@ -55,6 +55,7 @@ strongswan_CFLAGS := \
 	-DROUTING_TABLE_PRIO=220 \
 	-DVERSION=\"@PACKAGE_VERSION@\" \
 	-DPLUGINS='"$(strongswan_PLUGINS)"' \
+	-DPLUGINDIR=\"/system/bin/ipsec\" \
 	-DIPSEC_DIR=\"/system/bin\" \
 	-DIPSEC_PIDDIR=\"/data/misc/vpn\" \
 	-DSTRONGSWAN_CONF=\"/system/etc/strongswan.conf\" \
