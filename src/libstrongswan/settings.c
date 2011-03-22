@@ -20,11 +20,14 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#include <glob.h>
 #include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif /* HAVE_GLOB_H */
 
 #include "settings.h"
 
@@ -969,16 +972,15 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 }
 
 /**
- * Load the files matching "pattern", which is resolved with glob(3).
+ * Load the files matching "pattern", which is resolved with glob(3), if
+ * available.
  * If the pattern is relative, the directory of "file" is used as base.
  */
 static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section)
 {
 	bool success = TRUE;
-	int status;
-	glob_t buf;
-	char **expanded, pat[PATH_MAX];
+	char pat[PATH_MAX];
 
 	if (level > MAX_INCLUSION_LEVEL)
 	{
@@ -1013,28 +1015,39 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 		}
 		free(dir);
 	}
-	status = glob(pat, GLOB_ERR, NULL, &buf);
-	if (status == GLOB_NOMATCH)
+#ifdef HAVE_GLOB_H
 	{
-		DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
-	}
-	else if (status != 0)
-	{
-		DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
-		success = FALSE;
-	}
-	else
-	{
-		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+		int status;
+		glob_t buf;
+
+		status = glob(pat, GLOB_ERR, NULL, &buf);
+		if (status == GLOB_NOMATCH)
 		{
-			success &= parse_file(contents, *expanded, level + 1, section);
-			if (!success)
+			DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
+		}
+		else if (status != 0)
+		{
+			DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
+			success = FALSE;
+		}
+		else
+		{
+			char **expanded;
+			for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 			{
-				break;
+				success &= parse_file(contents, *expanded, level + 1, section);
+				if (!success)
+				{
+					break;
+				}
 			}
 		}
+		globfree(&buf);
 	}
-	globfree(&buf);
+#else /* HAVE_GLOB_H */
+	/* if glob(3) is not available, try to load pattern directly */
+	success = parse_file(contents, pat, level + 1, section);
+#endif /* HAVE_GLOB_H */
 	return success;
 }
 

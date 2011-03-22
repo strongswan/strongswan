@@ -348,7 +348,7 @@ AC_CHECK_FUNCS(prctl)
 
 AC_CHECK_FUNCS(mallinfo)
 
-AC_CHECK_HEADERS(sys/sockio.h)
+AC_CHECK_HEADERS(sys/sockio.h glob.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
