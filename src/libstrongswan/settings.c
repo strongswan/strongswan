@@ -22,6 +22,9 @@
 #include <limits.h>
 #include <glob.h>
 #include <libgen.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "settings.h"
 
@@ -914,14 +917,30 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 {
 	bool success;
 	char *text, *pos;
+	struct stat st;
 	FILE *fd;
 	int len;
 
 	DBG2(DBG_LIB, "loading config file '%s'", file);
+	if (stat(file, &st) == -1)
+	{
+		if (errno == ENOENT)
+		{
+			DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
+			return TRUE;
+		}
+		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
+		return FALSE;
+	}
+	else if (!S_ISREG(st.st_mode))
+	{
+		DBG1(DBG_LIB, "'%s' is not a regular file", file);
+		return FALSE;
+	}
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
+		DBG1(DBG_LIB, "'%s' is not readable", file);
 		return FALSE;
 	}
 	fseek(fd, 0, SEEK_END);
