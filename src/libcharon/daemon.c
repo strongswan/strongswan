@@ -172,8 +172,10 @@ METHOD(daemon_t, drop_capabilities, bool,
 		.version = _LINUX_CAPABILITY_VERSION_3,
 #elif defined(_LINUX_CAPABILITY_VERSION_2)
 		.version = _LINUX_CAPABILITY_VERSION_2,
-#else
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
 		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
+		.version = _LINUX_CAPABILITY_VERSION,
 #endif
 	};
 	if (capset(&header, this->caps) != 0)
