@@ -52,7 +52,7 @@ struct whitelist_msg_t {
 	/** message type */
 	int type;
 	/** null terminated identity */
-	char id[64];
+	char id[128];
 };
 
 #endif /** WHITELIST_MSG_H_ @}*/
