@@ -285,9 +285,9 @@ static int reread(stroke_keyword_t kw)
 
 static int purge_flags[] = {
 	PURGE_OCSP,
-	PURGE_IKE,
 	PURGE_CRLS,
 	PURGE_CERTS,
+	PURGE_IKE,
 };
 
 static int purge(stroke_keyword_t kw)

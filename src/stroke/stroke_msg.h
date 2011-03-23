@@ -105,12 +105,12 @@ enum purge_flag_t {
 	PURGE_NONE =		0x0000,
 	/** purge ocsp cache entries */
 	PURGE_OCSP =		0x0001,
-	/** purge IKE_SAs without a CHILD_SA */
-	PURGE_IKE =			0x0002,
 	/** purge CRL cache entries */
-	PURGE_CRLS =		0x0004,
+	PURGE_CRLS =		0x0002,
 	/** purge X509 cache entries */
-	PURGE_CERTS =		0x0008,
+	PURGE_CERTS =		0x0004,
+	/** purge IKE_SAs without a CHILD_SA */
+	PURGE_IKE =			0x0008,
 };
 
 typedef enum export_flag_t export_flag_t;
