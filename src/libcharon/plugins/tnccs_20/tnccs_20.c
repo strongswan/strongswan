@@ -608,11 +608,7 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 TNC_IMV_Action_Recommendation_names, rec,
-			 TNC_IMV_Evaluation_Result_names, eval);
-
-		return charon->imvs->enforce_recommendation(charon->imvs, rec);
+		return charon->imvs->enforce_recommendation(charon->imvs, rec, eval);
 	}
 	else
 	{

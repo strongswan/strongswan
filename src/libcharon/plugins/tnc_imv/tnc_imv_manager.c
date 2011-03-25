@@ -112,36 +112,56 @@ METHOD(imv_manager_t, create_recommendations, recommendations_t*,
 }
 
 METHOD(imv_manager_t, enforce_recommendation, bool,
-	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec)
+	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec,
+									 TNC_IMV_Evaluation_Result eval)
 {
 	char *group;
 	identification_t *id;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
+	bool no_access = FALSE;
+
+	DBG1(DBG_TNC, "final recommendation is '%N' and evaluation is '%N'",
+		 TNC_IMV_Action_Recommendation_names, rec,
+		 TNC_IMV_Evaluation_Result_names, eval);
 
 	switch (rec)
 	{
 		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-			DBG1(DBG_TNC, "TNC recommendation is allow");
 			group = "allow";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-			DBG1(DBG_TNC, "TNC recommendation is isolate");
 			group = "isolate";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
 		default:
-			DBG1(DBG_TNC, "TNC recommendation is none");
-			return FALSE;
+			group = "no access";
+			no_access = TRUE;
+			break;
 	}
+
 	ike_sa = charon->bus->get_sa(charon->bus);
-	if (ike_sa)
+	if (!ike_sa)
 	{
+		DBG1(DBG_TNC, "policy enforcement point did not find IKE_SA");
+		return FALSE;
+	}
+
+	id = ike_sa->get_other_id(ike_sa);
+	DBG0(DBG_TNC, "policy enforced on peer '%Y' is '%s'", id, group);
+
+	if (no_access)
+	{
+		return FALSE;
+	}
+	else
+	{	
 		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 		id = identification_create_from_string(group);
 		auth->add(auth, AUTH_RULE_GROUP, id);
-		DBG1(DBG_TNC, "TNC added group membership '%s'", group);
+		DBG1(DBG_TNC, "policy enforcement point added group membership '%s'",
+			 group);
 	}
 	return TRUE;
 }
