@@ -43,6 +43,13 @@ ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing tabl
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 
+if test -n "$PKG_CONFIG"; then
+	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+fi
+ARG_WITH_SET([systemdsystemunitdir], [$systemdsystemunitdir_default], [directory for systemd service files])
+AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno])
+AC_SUBST(systemdsystemunitdir)
+
 AC_ARG_WITH(
 	[xauth-module],
 	AS_HELP_STRING([--with-xauth-module=lib],[set the path to the XAUTH module]),
@@ -957,6 +964,8 @@ dnl ==============================
 AC_OUTPUT(
 	Makefile
 	man/Makefile
+	init/Makefile
+	init/systemd/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile

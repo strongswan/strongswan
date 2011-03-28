@@ -1,4 +1,4 @@
-SUBDIRS = src man testing
+SUBDIRS = src man init testing
 
 if USE_SCRIPTS
   SUBDIRS += scripts

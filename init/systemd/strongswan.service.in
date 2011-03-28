@@ -1,0 +1,10 @@
+[Unit]
+Description=strongSwan IPsec
+After=syslog.target
+
+[Service]
+ExecStart=@SBINDIR@/ipsec start --nofork
+StandardOutput=syslog
+
+[Install]
+WantedBy=multi-user.target
