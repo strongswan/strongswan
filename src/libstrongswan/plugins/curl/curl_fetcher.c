@@ -43,22 +43,33 @@ struct private_curl_fetcher_t {
 	 * Optional HTTP headers
 	 */
 	struct curl_slist *headers;
+
+	/**
+	 * Callback function
+	 */
+	fetcher_callback_t cb;
 };
 
 /**
- * writes data into a dynamically resizeable chunk_t
+ * Data to pass to curl callback
  */
-static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
+typedef struct {
+	fetcher_callback_t cb;
+	void *user;
+} cb_data_t;
+
+/**
+ * Curl callback function, invokes fetcher_callback_t function
+ */
+static size_t curl_cb(void *ptr, size_t size, size_t nmemb, cb_data_t *data)
 {
 	size_t realsize = size * nmemb;
 
-	data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
-	if (data->ptr)
+	if (data->cb(data->user, chunk_create(ptr, realsize)))
 	{
-		memcpy(&data->ptr[data->len], ptr, realsize);
-		data->len += realsize;
+		return realsize;
 	}
-	return realsize;
+	return 0;
 }
 
 METHOD(fetcher_t, fetch, status_t,
@@ -66,9 +77,15 @@ METHOD(fetcher_t, fetch, status_t,
 {
 	char error[CURL_ERROR_SIZE];
 	status_t status;
-	chunk_t *result = userdata;
+	cb_data_t data = {
+		.cb = this->cb,
+		.user = userdata,
+	};
 
-	*result = chunk_empty;
+	if (this->cb == fetcher_default_callback)
+	{
+		*(chunk_t*)userdata = chunk_empty;
+	}
 
 	if (curl_easy_setopt(this->curl, CURLOPT_URL, uri) != CURLE_OK)
 	{	/* URL type not supported by curl */
@@ -78,8 +95,8 @@ METHOD(fetcher_t, fetch, status_t,
 	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
 	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_TIMEOUT);
-	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)append);
-	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void*)result);
+	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)curl_cb);
+	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, &data);
 	if (this->headers)
 	{
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
@@ -147,6 +164,11 @@ METHOD(fetcher_t, set_option, bool,
 							 va_arg(args, u_int));
 			break;
 		}
+		case FETCH_CALLBACK:
+		{
+			this->cb = va_arg(args, fetcher_callback_t);
+			break;
+		}
 		default:
 			supported = FALSE;
 			break;
@@ -179,6 +201,7 @@ curl_fetcher_t *curl_fetcher_create()
 			},
 		},
 		.curl = curl_easy_init(),
+		.cb = fetcher_default_callback,
 	);
 
 	if (!this->curl)
