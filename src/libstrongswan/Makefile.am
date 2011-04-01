@@ -46,7 +46,7 @@ credentials/sets/callback_cred.c credentials/sets/callback_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
-fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
 processing/jobs/job.h \

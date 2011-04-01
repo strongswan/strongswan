@@ -31,17 +31,20 @@ typedef struct fetcher_manager_t fetcher_manager_t;
 struct fetcher_manager_t {
 
 	/**
-	 * Fetch data from URI into chunk.
+	 * Fetch data from URI.
 	 *
 	 * The variable argument list contains fetcher_option_t's, followed
 	 * by a option specific data argument.
+	 * If no FETCH_CALLBACK function is given as option, userdata must be
+	 * a chunk_t*. This chunk gets allocated, accumulated data using the
+	 * fetcher_default_callback() function.
 	 *
 	 * @param uri			URI to fetch from
-	 * @param result		chunk which receives allocated data
+	 * @param userdata		userdata to pass to callback function.
 	 * @param options		FETCH_END terminated fetcher_option_t arguments
 	 * @return				status indicating result of fetch
 	 */
-	status_t (*fetch)(fetcher_manager_t *this, char *url, chunk_t *response, ...);
+	status_t (*fetch)(fetcher_manager_t *this, char *url, void *userdata, ...);
 
 	/**
 	 * Register a fetcher implementation.

@@ -59,7 +59,7 @@ static void entry_destroy(entry_t *entry)
 }
 
 METHOD(fetcher_manager_t, fetch, status_t,
-	private_fetcher_manager_t *this, char *url, chunk_t *response, ...)
+	private_fetcher_manager_t *this, char *url, void *userdata, ...)
 {
 	enumerator_t *enumerator;
 	status_t status = NOT_SUPPORTED;
@@ -86,25 +86,31 @@ METHOD(fetcher_manager_t, fetch, status_t,
 		{
 			continue;
 		}
-		va_start(args, response);
+		va_start(args, userdata);
 		while (good)
 		{
 			opt = va_arg(args, int);
 			switch (opt)
 			{
 				case FETCH_REQUEST_DATA:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, chunk_t));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, chunk_t));
 					continue;
 				case FETCH_REQUEST_TYPE:
 				case FETCH_REQUEST_HEADER:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, char*));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, char*));
 					continue;
 				case FETCH_HTTP_VERSION_1_0:
 					good = fetcher->set_option(fetcher, opt);
 					continue;
 				case FETCH_TIMEOUT:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, u_int));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, u_int));
 					continue;
+				case FETCH_CALLBACK:
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, fetcher_callback_t));
 				case FETCH_END:
 					break;
 			}
@@ -117,7 +123,7 @@ METHOD(fetcher_manager_t, fetch, status_t,
 			continue;
 		}
 
-		status = fetcher->fetch(fetcher, url, response);
+		status = fetcher->fetch(fetcher, url, userdata);
 		fetcher->destroy(fetcher);
 		/* try another fetcher only if this one does not support that URL */
 		if (status == NOT_SUPPORTED)

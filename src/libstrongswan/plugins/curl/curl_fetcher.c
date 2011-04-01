@@ -62,10 +62,11 @@ static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
 }
 
 METHOD(fetcher_t, fetch, status_t,
-	private_curl_fetcher_t *this, char *uri, chunk_t *result)
+	private_curl_fetcher_t *this, char *uri, void *userdata)
 {
 	char error[CURL_ERROR_SIZE];
 	status_t status;
+	chunk_t *result = userdata;
 
 	*result = chunk_empty;
 

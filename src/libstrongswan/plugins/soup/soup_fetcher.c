@@ -61,11 +61,12 @@ struct private_soup_fetcher_t {
 };
 
 METHOD(fetcher_t, fetch, status_t,
-	private_soup_fetcher_t *this, char *uri, chunk_t *result)
+	private_soup_fetcher_t *this, char *uri, void *userdata)
 {
 	SoupSession *session;
 	SoupMessage *message;
 	status_t status = FAILED;
+	chunk_t *result = userdata;
 
 	message = soup_message_new(this->method, uri);
 	if (!message)

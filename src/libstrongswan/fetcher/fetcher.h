@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,6 +26,23 @@ typedef struct fetcher_t fetcher_t;
 typedef enum fetcher_option_t fetcher_option_t;
 
 #include <stdarg.h>
+#include <chunk.h>
+
+/**
+ * Constructor function which creates fetcher instances.
+ *
+ * @return			fetcher instance
+ */
+typedef fetcher_t* (*fetcher_constructor_t)();
+
+/**
+ * Callback function used with FETCH_CALLBACK.
+ *
+ * @param userdata	userdata passed to fetcher_t.fetch()
+ * @param chunk		chunk with next chunk of data
+ * @return			TRUE to continue with transfer, FALSE to abort
+ */
+typedef bool (*fetcher_callback_t)(void *userdata, chunk_t chunk);
 
 #include <library.h>
 
@@ -64,17 +82,18 @@ enum fetcher_option_t {
 	FETCH_TIMEOUT,
 
 	/**
+	 * Callback to invoke with each chunk of data.
+	 * Additional argument fetch_callback_t.
+	 * If this option is not given, the fetcher_default_callback is used,
+	 * which accumulates the data into an allocated chunk.
+	 */
+	FETCH_CALLBACK,
+
+	/**
 	 * end of fetching options
 	 */
 	FETCH_END,
 };
-
-/**
- * Constructor function which creates fetcher instances.
- *
- * @return			fetcher instance
- */
-typedef fetcher_t* (*fetcher_constructor_t)();
 
 /**
  * Fetcher interface, an implementation fetches data from an URL.
@@ -87,15 +106,18 @@ struct fetcher_t {
 	 * The fetcher returns NOT_SUPPORTED to indicate that it is uncappable
 	 * to handle such URLs. Other return values indicate a failure, and
 	 * fetching of that URL gets cancelled.
+	 * If no FETCH_CALLBACK function is set as option, userdata must be
+	 * a chunk_t*. This chunk gets allocated, accumulated data using the
+	 * fetcher_default_callback() function.
 	 *
 	 * @param uri		URI to fetch from
-	 * @param result	chunk which receives allocated data
+	 * @param userdata	userdata to pass to callback function.
 	 * @return
 	 *					- SUCCESS if fetch was successful
 	 * 					- NOT_SUPPORTED if fetcher does not support such URLs
 	 *					- FAILED, NOT_FOUND, PARSE_ERROR on failure
 	 */
-	status_t (*fetch)(fetcher_t *this, char *uri, chunk_t *result);
+	status_t (*fetch)(fetcher_t *this, char *uri, void *userdata);
 
 	/**
 	 * Set a fetcher option, as defined in fetcher_option_t.
@@ -113,5 +135,14 @@ struct fetcher_t {
 	 */
 	void (*destroy)(fetcher_t *this);
 };
+
+/**
+ * Default fetcher callback function, accumulates data to a chunk.
+ *
+ * @param userdata		chunk for allocated data, empty on first invocation
+ * @param chunk			current chunk of data
+ * @return				FALSE if chunk too large to allocate
+ */
+bool fetcher_default_callback(void *userdata, chunk_t chunk);
 
 #endif /** FETCHER_H_ @}*/
