@@ -8,14 +8,16 @@ dave::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP 
 dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
 moon::cat /var/log/daemon.log::TNCCS 1.1 protocol detected dynamically::YES
 moon::cat /var/log/daemon.log::assigned TNCCS Connection ID 1::YES
-moon::cat /var/log/daemon.log::Final recommendation is 'allow' and evaluation is 'compliant'::YES
-moon::cat /var/log/daemon.log::added group membership 'allow'::YES
+moon::cat /var/log/daemon.log::final recommendation is 'allow' and evaluation is 'compliant'::YES
+moon::cat /var/log/auth.log::policy enforced on peer 'carol@strongswan.org' is 'allow'::YES
+moon::cat /var/log/daemon.log::policy enforcement point added group membership 'allow'::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
 moon::cat /var/log/daemon.log::removed TNCCS Connection ID 1::YES
 moon::cat /var/log/daemon.log::TNCCS 2.0 protocol detected dynamically::YES
 moon::cat /var/log/daemon.log::assigned TNCCS Connection ID 2::YES
-moon::cat /var/log/daemon.log::Final recommendation is 'isolate' and evaluation is 'non-compliant minor'::YES
-moon::cat /var/log/daemon.log::added group membership 'isolate'::YES
+moon::cat /var/log/daemon.log::final recommendation is 'isolate' and evaluation is 'non-compliant minor'::YES
+moon::cat /var/log/auth.log::policy enforced on peer 'dave@strongswan.org' is 'isolate'::YES
+moon::cat /var/log/daemon.log::policy enforcement point added group membership 'isolate'::YES
 moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP successful::YES
 moon::cat /var/log/daemon.log::removed TNCCS Connection ID 2::YES
 moon::ipsec statusall::rw-allow.*10.1.0.0/28 === 192.168.0.100/32::YES
