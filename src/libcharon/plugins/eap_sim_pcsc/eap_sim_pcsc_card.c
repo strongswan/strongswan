@@ -87,11 +87,9 @@ static bool decode_imsi_ef(unsigned char *input, int input_len, char *output)
 	return TRUE;
 }
 
-/**
- * Implementation of sim_card_t.get_triplet
- */
-static bool get_triplet(private_eap_sim_pcsc_card_t *this,
-						identification_t *id, char *rand, char *sres, char *kc)
+METHOD(sim_card_t, get_triplet, bool,
+	private_eap_sim_pcsc_card_t *this, identification_t *id,
+	char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	status_t found = FALSE;
 	LONG rv;
@@ -319,18 +317,16 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 	return found;
 }
 
-/**
- * Implementation of sim_card_t.get_quintuplet
- */
-static status_t get_quintuplet()
+METHOD(sim_card_t, get_quintuplet, status_t,
+	private_eap_sim_pcsc_card_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
+	char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len)
 {
 	return NOT_SUPPORTED;
 }
 
-/**
- * Implementation of eap_sim_pcsc_card_t.destroy.
- */
-static void destroy(private_eap_sim_pcsc_card_t *this)
+METHOD(eap_sim_pcsc_card_t, destroy, void,
+	private_eap_sim_pcsc_card_t *this)
 {
 	free(this);
 }
@@ -340,16 +336,22 @@ static void destroy(private_eap_sim_pcsc_card_t *this)
  */
 eap_sim_pcsc_card_t *eap_sim_pcsc_card_create()
 {
-	private_eap_sim_pcsc_card_t *this = malloc_thing(private_eap_sim_pcsc_card_t);
+	private_eap_sim_pcsc_card_t *this;
 
-	this->public.card.get_triplet = (bool(*)(sim_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
-	this->public.card.get_quintuplet = (status_t(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))get_quintuplet;
-	this->public.card.resync = (bool(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.card.get_pseudonym = (identification_t*(*)(sim_card_t*, identification_t *perm))return_null;
-	this->public.card.set_pseudonym = (void(*)(sim_card_t*, identification_t *id, identification_t *pseudonym))nop;
-	this->public.card.get_reauth = (identification_t*(*)(sim_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
-	this->public.card.set_reauth = (void(*)(sim_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
-	this->public.destroy = (void(*)(eap_sim_pcsc_card_t*))destroy;
+	INIT(this,
+		.public = {
+			.card = {
+				.get_triplet = _get_triplet,
+				.get_quintuplet = _get_quintuplet,
+				.resync = (void*)return_false,
+				.get_pseudonym = (void*)return_null,
+				.set_pseudonym = (void*)nop,
+				.get_reauth = (void*)return_null,
+				.set_reauth = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+	);
 
 	return &this->public;
 }

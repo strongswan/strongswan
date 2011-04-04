@@ -17,12 +17,12 @@
 
 #include <daemon.h>
 
-typedef struct private_eap_sim_pcsc_t private_eap_sim_pcsc_t;
+typedef struct private_eap_sim_pcsc_plugin_t private_eap_sim_pcsc_plugin_t;
 
 /**
  * Private data of an eap_sim_pcsc_t object.
  */
-struct private_eap_sim_pcsc_t {
+struct private_eap_sim_pcsc_plugin_t {
 
 	/**
 	 * Public eap_sim_pcsc_plugin_t interface.
@@ -35,10 +35,8 @@ struct private_eap_sim_pcsc_t {
 	eap_sim_pcsc_card_t *card;
 };
 
-/**
- * Implementation of eap_sim_pcsc_t.destroy.
- */
-static void destroy(private_eap_sim_pcsc_t *this)
+METHOD(plugin_t, destroy, void,
+	private_eap_sim_pcsc_plugin_t *this)
 {
 	charon->sim->remove_card(charon->sim, &this->card->card);
 	this->card->destroy(this->card);
@@ -50,10 +48,16 @@ static void destroy(private_eap_sim_pcsc_t *this)
  */
 plugin_t *eap_sim_pcsc_plugin_create()
 {
-	private_eap_sim_pcsc_t *this = malloc_thing(private_eap_sim_pcsc_t);
+	private_eap_sim_pcsc_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	this->card = eap_sim_pcsc_card_create();
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.card = eap_sim_pcsc_card_create(),
+	);
 	charon->sim->add_card(charon->sim, &this->card->card);
 
 	return &this->public.plugin;
