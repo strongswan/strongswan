@@ -1,8 +1,8 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon ${pcsclite_CFLAGS}
+	-I$(top_srcdir)/src/libcharon
 
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${sysconfdir}\"
+AM_CFLAGS = -rdynamic ${pcsclite_CFLAGS}
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-sim-pcsc.la

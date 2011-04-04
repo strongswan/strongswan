@@ -63,7 +63,8 @@ static bool decode_imsi_ef(unsigned char *input, int input_len, char *output)
 	};
 	int i;
 
-	/* Check length byte matches how many bytes we have, and that input is correct length for an IMSI */
+	/* Check length byte matches how many bytes we have, and that input
+	 * is correct length for an IMSI */
 	if (input[0] != input_len-1 || input_len < 2 || input_len > 9)
 	{
 		return FALSE;
@@ -110,7 +111,7 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		DBG1(DBG_IKE, "SCardEstablishContext: %s", pcsc_stringify_error(rv));
 		return FALSE;
 	}
-	
+
 	rv = SCardListReaders(hContext, NULL, NULL, &dwReaders);
 	if (rv != SCARD_S_SUCCESS)
 	{
@@ -124,10 +125,12 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 	{
 		DBG1(DBG_IKE, "SCardListReaders: %s", pcsc_stringify_error(rv));
 		return FALSE;
-	}		
+	}
 
-	/* mszReaders is a multi-string of readers, separated by '\0' and terminated by an additional '\0' */
-	for (cur_reader = mszReaders; *cur_reader != '\0' && found == FALSE; cur_reader += strlen(cur_reader)+1)
+	/* mszReaders is a multi-string of readers, separated by '\0' and
+	 * terminated by an additional '\0' */
+	for (cur_reader = mszReaders; *cur_reader != '\0' && found == FALSE;
+		 cur_reader += strlen(cur_reader) + 1)
 	{
 		DWORD dwActiveProtocol = -1;
 		SCARDHANDLE hCard;
@@ -135,18 +138,18 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		SCARD_IO_REQUEST pioRecvPci;
 		BYTE pbRecvBuffer[64];
 		DWORD dwRecvLength;
-		char imsi[SIM_IMSI_MAX_LEN+1];
+		char imsi[SIM_IMSI_MAX_LEN + 1];
 
 		/* See GSM 11.11 for SIM APDUs */
 		BYTE pbSelectMF[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x3f, 0x00 };
 		BYTE pbSelectDFGSM[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x7f, 0x20 };
 		BYTE pbSelectIMSI[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x6f, 0x07 };
 		BYTE pbReadBinary[] = { 0xa0, 0xb0, 0x00, 0x00, 0x09 };
-		BYTE pbRunGSMAlgorithm[] = { 0xa0, 0x88, 0x00, 0x00, 0x10, /*RAND*/ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+		BYTE pbRunGSMAlgorithm[5 + SIM_RAND_LEN] = { 0xa0, 0x88, 0x00, 0x00, 0x10 };
 		BYTE pbGetResponse[] = { 0xa0, 0xc0, 0x00, 0x00, 0x0c };
 
 		/* Copy RAND into APDU */
-		memcpy(pbRunGSMAlgorithm+5, rand, SIM_RAND_LEN);
+		memcpy(pbRunGSMAlgorithm + 5, rand, SIM_RAND_LEN);
 
 		rv = SCardConnect(hContext, cur_reader, SCARD_SHARE_SHARED,
 			SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwActiveProtocol);
@@ -172,13 +175,14 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		/* APDU: Select MF */
 		dwRecvLength = sizeof(pbRecvBuffer);
 		rv = SCardTransmit(hCard, pioSendPci, pbSelectMF, sizeof(pbSelectMF),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
 			DBG1(DBG_IKE, "Select MF failed: %b", pbRecvBuffer, dwRecvLength);
 			continue;
@@ -187,13 +191,14 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		/* APDU: Select DF GSM */
 		dwRecvLength = sizeof(pbRecvBuffer);
 		rv = SCardTransmit(hCard, pioSendPci, pbSelectDFGSM, sizeof(pbSelectDFGSM),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
 			DBG1(DBG_IKE, "Select DF GSM failed: %b", pbRecvBuffer, dwRecvLength);
 			continue;
@@ -202,13 +207,14 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		/* APDU: Select IMSI */
 		dwRecvLength = sizeof(pbRecvBuffer);
 		rv = SCardTransmit(hCard, pioSendPci, pbSelectIMSI, sizeof(pbSelectIMSI),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
 			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer, dwRecvLength);
 			continue;
@@ -217,26 +223,29 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		/* APDU: Read Binary (of IMSI) */
 		dwRecvLength = sizeof(pbRecvBuffer);
 		rv = SCardTransmit(hCard, pioSendPci, pbReadBinary, sizeof(pbReadBinary),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS)
 		{
 			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer, dwRecvLength);
 			continue;
 		}
 
-		if (!decode_imsi_ef(pbRecvBuffer, dwRecvLength-APDU_STATUS_LEN, imsi) )
+		if (!decode_imsi_ef(pbRecvBuffer, dwRecvLength-APDU_STATUS_LEN, imsi))
 		{
-			DBG1(DBG_IKE, "Couldn't decode IMSI EF: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Couldn't decode IMSI EF: %b",
+				 pbRecvBuffer, dwRecvLength);
 			continue;
 		}
 
-		/* The IMSI could be post/prefixed in the full NAI, so just make sure it's in there */
-		if( !(strlen(full_nai) && strstr(full_nai, imsi)) )
+		/* The IMSI could be post/prefixed in the full NAI, so just make sure
+		 * it's in there */
+		if (!(strlen(full_nai) && strstr(full_nai, imsi)))
 		{
 			DBG1(DBG_IKE, "Not the SIM we're looking for, IMSI: %s", imsi);
 			continue;
@@ -244,37 +253,41 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 
 		/* APDU: Run GSM Algorithm */
 		dwRecvLength = sizeof(pbRecvBuffer);
-		rv = SCardTransmit(hCard, pioSendPci, pbRunGSMAlgorithm, sizeof(pbRunGSMAlgorithm),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+		rv = SCardTransmit(hCard, pioSendPci,
+						   pbRunGSMAlgorithm, sizeof(pbRunGSMAlgorithm),
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
-			DBG1(DBG_IKE, "Run GSM Algorithm failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Run GSM Algorithm failed: %b",
+				 pbRecvBuffer, dwRecvLength);
 			continue;
 		}
 
 		/* APDU: Get Response (of Run GSM Algorithm) */
 		dwRecvLength = sizeof(pbRecvBuffer);
 		rv = SCardTransmit(hCard, pioSendPci, pbGetResponse, sizeof(pbGetResponse),
-			&pioRecvPci, pbRecvBuffer, &dwRecvLength);
+						   &pioRecvPci, pbRecvBuffer, &dwRecvLength);
 		if (rv != SCARD_S_SUCCESS)
 		{
 			DBG1(DBG_IKE, "SCardTransmit: %s", pcsc_stringify_error(rv));
 			continue;
 		}
 
-		if( dwRecvLength < APDU_STATUS_LEN || pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS )
+		if (dwRecvLength < APDU_STATUS_LEN ||
+			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS)
 		{
 			DBG1(DBG_IKE, "Get Response failed: %b", pbRecvBuffer, dwRecvLength);
 			continue;
 		}
 
 		/* Extract out Kc and SRES from response */
-		if( dwRecvLength == SIM_SRES_LEN + SIM_KC_LEN + APDU_STATUS_LEN )
+		if (dwRecvLength == SIM_SRES_LEN + SIM_KC_LEN + APDU_STATUS_LEN)
 		{
 			memcpy(sres, pbRecvBuffer, SIM_SRES_LEN);
 			memcpy(kc, pbRecvBuffer+4, SIM_KC_LEN);
@@ -283,7 +296,8 @@ static bool get_triplet(private_eap_sim_pcsc_card_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "Get Response incorrect length: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Get Response incorrect length: %b",
+				 pbRecvBuffer, dwRecvLength);
 			continue;
 		}
 
