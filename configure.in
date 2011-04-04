@@ -112,6 +112,7 @@ ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
 ARG_ENABL_SET([eap-sim],        [enable SIM authentication module for EAP.])
 ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
+ARG_ENABL_SET([eap-sim-pcsc],   [enable EAP-SIM backend based on a smartcard reader. Requires libpcsclite.])
 ARG_ENABL_SET([eap-simaka-sql], [enable EAP-SIM/AKA backend based on a triplet/quintuplet SQL database.])
 ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plugin.])
 ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
@@ -632,6 +633,12 @@ if test x$maemo = xtrue; then
 	AC_SUBST(dbusservicedir)
 fi
 
+if test x$eap_sim_pcsc = xtrue; then
+	PKG_CHECK_MODULES(pcsclite, [libpcsclite])
+	AC_SUBST(pcsclite_CFLAGS)
+	AC_SUBST(pcsclite_LIBS)
+fi
+
 if test x$nm = xtrue; then
 	PKG_CHECK_EXISTS([libnm-glib],
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],
@@ -761,6 +768,7 @@ ADD_PLUGIN([updown],               [c libcharon])
 ADD_PLUGIN([eap-identity],         [c libcharon])
 ADD_PLUGIN([eap-sim],              [c libcharon])
 ADD_PLUGIN([eap-sim-file],         [c libcharon])
+ADD_PLUGIN([eap-sim-pcsc],         [c libcharon])
 ADD_PLUGIN([eap-simaka-sql],       [c libcharon])
 ADD_PLUGIN([eap-simaka-pseudonym], [c libcharon])
 ADD_PLUGIN([eap-simaka-reauth],    [c libcharon])
@@ -872,6 +880,7 @@ AM_CONDITIONAL(USE_DUPLICHECK, test x$duplicheck = xtrue)
 AM_CONDITIONAL(USE_COUPLING, test x$coupling = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
+AM_CONDITIONAL(USE_EAP_SIM_PCSC, test x$eap_sim_pcsc = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_SQL, test x$eap_simaka_sql = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_REAUTH, test x$eap_simaka_reauth = xtrue)
@@ -1027,6 +1036,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_gtc/Makefile
 	src/libcharon/plugins/eap_sim/Makefile
 	src/libcharon/plugins/eap_sim_file/Makefile
+	src/libcharon/plugins/eap_sim_pcsc/Makefile
 	src/libcharon/plugins/eap_simaka_sql/Makefile
 	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
 	src/libcharon/plugins/eap_simaka_reauth/Makefile

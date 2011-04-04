@@ -223,6 +223,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_SIM_PCSC
+  SUBDIRS += plugins/eap_sim_pcsc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_sim_pcsc/libstrongswan-eap-sim-pcsc.la
+endif
+endif
+
 if USE_EAP_SIMAKA_SQL
   SUBDIRS += plugins/eap_simaka_sql
 if MONOLITHIC
