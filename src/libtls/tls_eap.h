@@ -62,6 +62,21 @@ struct tls_eap_t {
 	chunk_t (*get_msk)(tls_eap_t *this);
 
 	/**
+	 * Get the current EAP identifier.
+	 *
+	 * @return				identifier
+	 */
+	u_int8_t (*get_identifier)(tls_eap_t *this);
+
+	/**
+	 * Set the EAP identifier to a deterministic value, overwriting
+	 * the randomly initialized default value.
+	 *
+	 * @param identifier	EAP identifier
+	 */
+	void (*set_identifier) (tls_eap_t *this, u_int8_t identifier);
+
+	/**
 	 * Destroy a tls_eap_t.
 	 */
 	void (*destroy)(tls_eap_t *this);
