@@ -372,8 +372,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 	{
 		if (vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d",
-				 type, vendor);
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d ",
+				 		  "(id: %u)", type, vendor, in->get_identifier(in));
 		}
 		else
 		{
