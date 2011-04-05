@@ -218,6 +218,18 @@ METHOD(eap_method_t, is_mutual, bool,
 	return FALSE;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_md5_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_md5_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD(eap_method_t, destroy, void,
 	private_eap_md5_t *this)
 {
@@ -242,6 +254,8 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},

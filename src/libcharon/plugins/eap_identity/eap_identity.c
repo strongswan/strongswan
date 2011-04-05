@@ -39,6 +39,11 @@ struct private_eap_identity_t {
 	 * received identity chunk
 	 */
 	chunk_t identity;
+
+	/**
+	 * EAP identifier
+	 */
+	u_int8_t identifier;
 };
 
 typedef struct eap_identity_header_t eap_identity_header_t;
@@ -68,10 +73,13 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	id = this->peer->get_encoding(this->peer);
 	len = sizeof(eap_identity_header_t) + id.len;
-
+	if (in)
+	{
+		this->identifier = in->get_identifier(in);
+	}
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
-	hdr->identifier = in ? in->get_identifier(in) : 0;
+	hdr->identifier = this->identifier;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, id.ptr, id.len);
@@ -106,7 +114,7 @@ METHOD(eap_method_t, initiate_server, status_t,
 	eap_identity_header_t hdr;
 
 	hdr.code = EAP_REQUEST;
-	hdr.identifier = 0;
+	hdr.identifier = this->identifier;
 	hdr.length = htons(sizeof(eap_identity_header_t));
 	hdr.type = EAP_IDENTITY;
 
@@ -131,6 +139,18 @@ METHOD(eap_method_t, get_msk, status_t,
 		return SUCCESS;
 	}
 	return FAILED;
+}
+
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_identity_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_identity_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
 }
 
 METHOD(eap_method_t, is_mutual, bool,
@@ -163,6 +183,8 @@ eap_identity_t *eap_identity_create_peer(identification_t *server,
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},
