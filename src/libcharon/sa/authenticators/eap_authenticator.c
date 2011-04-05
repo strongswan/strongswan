@@ -187,12 +187,13 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 		{
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method",
-							  type, vendor);
+				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method (id: %u)",
+					 type, vendor, out->get_identifier(out));
 			}
 			else
 			{
-				DBG1(DBG_IKE, "initiating %N method", eap_type_names, type);
+				DBG1(DBG_IKE, "initiating %N method (id: %u)", eap_type_names,
+					 type, out->get_identifier(out));
 			}
 			return out;
 		}
@@ -376,8 +377,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "server requested %N authentication",
-				 eap_type_names, type);
+			DBG1(DBG_IKE, "server requested %N authentication (id: %u)",
+				 eap_type_names, type, in->get_identifier(in));
 		}
 		this->method = load_method(this, type, vendor, EAP_PEER);
 		if (!this->method)
