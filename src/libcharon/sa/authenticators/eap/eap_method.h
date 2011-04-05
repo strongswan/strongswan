@@ -113,12 +113,27 @@ struct eap_method_t {
 	 * Not all EAP methods establish a shared secret. For implementations of
 	 * the EAP-Identity method, get_msk() returns the received identity.
 	 *
-	 * @param msk		chunk receiving internal stored MSK
+	 * @param msk			chunk receiving internal stored MSK
 	 * @return
-	 *					- SUCCESS, or
-	 * 					- FAILED, if MSK not established (yet)
+	 *						- SUCCESS, or
+	 * 						- FAILED, if MSK not established (yet)
 	 */
 	status_t (*get_msk) (eap_method_t *this, chunk_t *msk);
+
+	/**
+	 * Get the current EAP identifier.
+	 *
+	 * @return				current EAP identifier
+	 */
+	u_int8_t (*get_identifier) (eap_method_t *this);
+
+	/**
+	 * Set the EAP identifier to a deterministic value, overwriting
+	 * the randomly initialized default value.
+	 *
+	 * @param identifier	current EAP identifier
+	 */
+	void (*set_identifier) (eap_method_t *this, u_int8_t identifier);
 
 	/**
 	 * Destroys a eap_method_t object.
