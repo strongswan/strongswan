@@ -55,6 +55,11 @@ struct private_eap_radius_t {
 	u_int32_t vendor;
 
 	/**
+	 * EAP message identifier
+	 */
+	u_int8_t identifier;
+
+	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
@@ -107,7 +112,7 @@ static void add_eap_identity(private_eap_radius_t *this,
 
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
-	hdr->identifier = 0;
+	hdr->identifier = this->identifier;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, prefix.ptr, prefix.len);
@@ -351,6 +356,18 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_radius_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_radius_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD(eap_method_t, is_mutual, bool,
 	private_eap_radius_t *this)
 {
@@ -388,6 +405,8 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},
