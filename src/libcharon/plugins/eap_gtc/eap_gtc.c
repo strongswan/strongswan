@@ -174,10 +174,11 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	/* TODO: According to the draft we should "SASLprep" password, RFC4013. */
 
+	this->identifier = in->get_identifier(in);
 	res = alloca(sizeof(eap_gtc_header_t) + len);
 	res->length = htons(sizeof(eap_gtc_header_t) + len);
 	res->code = EAP_RESPONSE;
-	res->identifier = in->get_identifier(in);
+	res->identifier = this->identifier;
 	res->type = EAP_GTC;
 	memcpy(res->data, key.ptr, len);
 
