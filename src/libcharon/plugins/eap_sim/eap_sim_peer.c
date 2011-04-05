@@ -56,6 +56,11 @@ struct private_eap_sim_peer_t {
 	identification_t *reauth;
 
 	/**
+	 * EAP message identifier
+	 */
+	u_int8_t identifier;
+
+	/**
 	 * EAP-SIM crypto helper
 	 */
 	simaka_crypto_t *crypto;
@@ -98,7 +103,7 @@ static chunk_t version = chunk_from_chars(0x00,0x01);
  * Create a SIM_CLIENT_ERROR
  */
 static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
-							u_int8_t identifier, simaka_client_error_t code)
+										  simaka_client_error_t code)
 {
 	simaka_message_t *message;
 	eap_payload_t *out;
@@ -106,7 +111,7 @@ static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
 
 	DBG1(DBG_IKE, "sending client error '%N'", simaka_client_error_names, code);
 
-	message = simaka_message_create(FALSE, identifier, EAP_SIM,
+	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_CLIENT_ERROR, this->crypto);
 	encoded = htons(code);
 	message->add_attribute(message, AT_CLIENT_ERROR_CODE,
@@ -164,8 +169,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 			default:
 				if (!simaka_attribute_skippable(type))
 				{
-					*out = create_client_error(this, in->get_identifier(in),
-											   SIM_UNABLE_TO_PROCESS);
+					*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
@@ -177,8 +181,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	if (!supported)
 	{
 		DBG1(DBG_IKE, "server does not support EAP-SIM version number 1");
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNSUPPORTED_VERSION);
+		*out = create_client_error(this, SIM_UNSUPPORTED_VERSION);
 		return NEED_MORE;
 	}
 
@@ -214,7 +217,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	free(this->nonce.ptr);
 	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
 
-	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_START, this->crypto);
 	if (!this->reauth)
 	{
@@ -261,8 +264,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 			default:
 				if (!simaka_attribute_skippable(type))
 				{
-					*out = create_client_error(this, in->get_identifier(in),
-											   SIM_UNABLE_TO_PROCESS);
+					*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
@@ -277,8 +279,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		memeq(rands.ptr, rands.ptr + SIM_RAND_LEN, SIM_RAND_LEN))
 	{
 		DBG1(DBG_IKE, "no valid AT_RAND received");
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_INSUFFICIENT_CHALLENGES);
+		*out = create_client_error(this, SIM_INSUFFICIENT_CHALLENGES);
 		return NEED_MORE;
 	}
 	/* get two or three KCs/SRESes from SIM using RANDs */
@@ -290,8 +291,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 										   rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
-			*out = create_client_error(this, in->get_identifier(in),
-									   SIM_UNABLE_TO_PROCESS);
+			*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 			return NEED_MORE;
 		}
 		DBG3(DBG_IKE, "got triplet for RAND %b\n  Kc %b\n  SRES %b",
@@ -316,8 +316,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	 * parse() again after key derivation, reading encrypted attributes */
 	if (!in->verify(in, this->nonce) || !in->parse(in))
 	{
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 
@@ -345,7 +344,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	enumerator->destroy(enumerator);
 
 	/* build response with AT_MAC, built over "EAP packet | n*SRES" */
-	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	*out = message->generate(message, sreses);
 	message->destroy(message);
@@ -379,8 +378,7 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 	{
 		DBG1(DBG_IKE, "received %N, but not expected",
 			 simaka_subtype_names, SIM_REAUTHENTICATION);
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 
@@ -390,8 +388,7 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 	/* verify MAC and parse again with decryption key */
 	if (!in->verify(in, chunk_empty) || !in->parse(in))
 	{
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 
@@ -412,8 +409,7 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 			default:
 				if (!simaka_attribute_skippable(type))
 				{
-					*out = create_client_error(this, in->get_identifier(in),
-											   SIM_UNABLE_TO_PROCESS);
+					*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 					enumerator->destroy(enumerator);
 					return NEED_MORE;
 				}
@@ -425,12 +421,11 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 	if (!nonce.len || !counter.len)
 	{
 		DBG1(DBG_IKE, "EAP-SIM/Request/Re-Authentication message incomplete");
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 
-	message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_REAUTHENTICATION, this->crypto);
 	if (counter_too_small(this, counter))
 	{
@@ -503,15 +498,14 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 
 	if (success)
 	{	/* empty notification reply */
-		message = simaka_message_create(FALSE, in->get_identifier(in), EAP_SIM,
+		message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 										SIM_NOTIFICATION, this->crypto);
 		*out = message->generate(message, chunk_empty);
 		message->destroy(message);
 	}
 	else
 	{
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 	}
 	return NEED_MORE;
 }
@@ -522,18 +516,19 @@ METHOD(eap_method_t, process, status_t,
 	simaka_message_t *message;
 	status_t status;
 
+	/* store received EAP message identifier */
+	this->identifier = in->get_identifier(in);
+
 	message = simaka_message_create_from_payload(in, this->crypto);
 	if (!message)
 	{
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 	if (!message->parse(message))
 	{
 		message->destroy(message);
-		*out = create_client_error(this, in->get_identifier(in),
-								   SIM_UNABLE_TO_PROCESS);
+		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 		return NEED_MORE;
 	}
 	switch (message->get_subtype(message))
@@ -553,8 +548,7 @@ METHOD(eap_method_t, process, status_t,
 		default:
 			DBG1(DBG_IKE, "unable to process EAP-SIM subtype %N",
 				 simaka_subtype_names, message->get_subtype(message));
-			*out = create_client_error(this, in->get_identifier(in),
-									   SIM_UNABLE_TO_PROCESS);
+			*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
 			status = NEED_MORE;
 			break;
 	}
@@ -585,6 +579,18 @@ METHOD(eap_method_t, get_msk, status_t,
 		return SUCCESS;
 	}
 	return FAILED;
+}
+
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_sim_peer_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_sim_peer_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
 }
 
 METHOD(eap_method_t, is_mutual, bool,
@@ -622,6 +628,8 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},
