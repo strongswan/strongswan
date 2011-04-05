@@ -96,6 +96,8 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TLS,
 	/** outer authentication and protection in EAP-TTLS */
 	TLS_PURPOSE_EAP_TTLS,
+	/** outer authentication and protection in EAP-PEAP */
+	TLS_PURPOSE_EAP_PEAP,
 	/** non-EAP TLS */
 	TLS_PURPOSE_GENERIC,
 	/** EAP binding for TNC */
