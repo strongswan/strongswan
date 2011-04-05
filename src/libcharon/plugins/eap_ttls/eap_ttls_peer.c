@@ -64,17 +64,6 @@ struct private_eap_ttls_peer_t {
 	eap_ttls_avp_t *avp;
 };
 
-/**
- * EAP packet format
- */
-typedef struct __attribute__((packed)) {
-	u_int8_t code;
-	u_int8_t identifier;
-	u_int16_t length;
-	u_int8_t type;
-	u_int8_t data;
-} eap_packet_t;
-
 #define MAX_RADIUS_ATTRIBUTE_SIZE	253
 
 METHOD(tls_application_t, process, status_t,
