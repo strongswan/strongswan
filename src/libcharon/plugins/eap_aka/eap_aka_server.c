@@ -57,7 +57,7 @@ struct private_eap_aka_server_t {
 	identification_t *reauth;
 
 	/**
-	 * EAP identifier value
+	 * EAP message identifier
 	 */
 	u_int8_t identifier;
 
@@ -622,6 +622,18 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_aka_server_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_aka_server_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD(eap_method_t, is_mutual, bool,
 	private_eap_aka_server_t *this)
 {
@@ -659,6 +671,8 @@ eap_aka_server_t *eap_aka_server_create(identification_t *server,
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},
