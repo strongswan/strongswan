@@ -516,11 +516,8 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 	return NEED_MORE;
 }
 
-/**
- * Implementation of eap_method_t.process
- */
-static status_t process(private_eap_sim_peer_t *this,
-						eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process, status_t,
+	private_eap_sim_peer_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	simaka_message_t *message;
 	status_t status;
@@ -565,28 +562,22 @@ static status_t process(private_eap_sim_peer_t *this,
 	return status;
 }
 
-/**
- * Implementation of eap_method_t.initiate
- */
-static status_t initiate(private_eap_sim_peer_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate, status_t,
+	private_eap_sim_peer_t *this, eap_payload_t **out)
 {
 	/* peer never initiates */
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_sim_peer_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_sim_peer_t *this, u_int32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_SIM;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_sim_peer_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_sim_peer_t *this, chunk_t *msk)
 {
 	if (this->msk.ptr)
 	{
@@ -596,18 +587,14 @@ static status_t get_msk(private_eap_sim_peer_t *this, chunk_t *msk)
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_sim_peer_t *this)
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_sim_peer_t *this)
 {
 	return TRUE;
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_sim_peer_t *this)
+METHOD(eap_method_t, destroy, void,
+	private_eap_sim_peer_t *this)
 {
 	this->permanent->destroy(this->permanent);
 	DESTROY_IF(this->pseudonym);
@@ -625,28 +612,30 @@ static void destroy(private_eap_sim_peer_t *this)
 eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 									identification_t *peer)
 {
-	private_eap_sim_peer_t *this = malloc_thing(private_eap_sim_peer_t);
+	private_eap_sim_peer_t *this;
 
-	this->public.interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
-	this->public.interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
-	this->public.interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.interface.destroy = (void(*)(eap_method_t*))destroy;
+	INIT(this,
+		.public = {
+			.interface = {
+				.initiate = _initiate,
+				.process = _process,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
+		},
+		.crypto = simaka_crypto_create(),
+	);
 
-	this->crypto = simaka_crypto_create();
 	if (!this->crypto)
 	{
 		free(this);
 		return NULL;
 	}
+
 	this->permanent = peer->clone(peer);
-	this->pseudonym = NULL;
-	this->reauth = NULL;
 	this->tries = MAX_TRIES;
-	this->version_list = chunk_empty;
-	this->nonce = chunk_empty;
-	this->msk = chunk_empty;
 
 	return &this->public;
 }
