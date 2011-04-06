@@ -314,6 +314,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_PEAP
+  SUBDIRS += plugins/eap_peap
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_peap/libstrongswan-eap-peap.la
+endif
+endif
+
 if USE_EAP_TNC
   SUBDIRS += plugins/eap_tnc
 if MONOLITHIC
