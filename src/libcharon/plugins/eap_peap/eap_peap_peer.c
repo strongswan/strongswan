@@ -125,6 +125,18 @@ METHOD(tls_application_t, process, status_t,
 		return NEED_MORE;
 	}
 
+	/* yet another phase2 authentication? */
+	if (this->ph2_method)
+	{
+		type = this->ph2_method->get_type(this->ph2_method, &vendor);
+
+		if (type != received_type || vendor != received_vendor)
+		{
+			this->ph2_method->destroy(this->ph2_method);
+			this->ph2_method = NULL;
+		}
+	}
+
 	if (this->ph2_method == NULL)
 	{
 		if (received_vendor)
@@ -148,16 +160,8 @@ METHOD(tls_application_t, process, status_t,
 			in->destroy(in);
 			return NEED_MORE;
 		}
+		type = this->ph2_method->get_type(this->ph2_method, &vendor);
 		this->start_phase2 = FALSE;
-	}
-
-	type = this->ph2_method->get_type(this->ph2_method, &vendor);
-
-	if (type != received_type || vendor != received_vendor)
-	{
-		DBG1(DBG_IKE, "received invalid EAP request");
-		in->destroy(in);
-		return FAILED;
 	}
 
 	status = this->ph2_method->process(this->ph2_method, in, &this->out);
@@ -168,13 +172,8 @@ METHOD(tls_application_t, process, status_t,
 		case SUCCESS:
 			this->ph2_method->destroy(this->ph2_method);
 			this->ph2_method = NULL;
-			return NEED_MORE;
+			/* fall through to NEED_MORE */
 		case NEED_MORE:
-			if (type != EAP_TNC)
-			{
-				this->ph2_method->destroy(this->ph2_method);
-				this->ph2_method = NULL;
-			}
 			return NEED_MORE;
 		case FAILED:
 		default:
