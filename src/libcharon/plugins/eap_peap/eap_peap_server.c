@@ -86,7 +86,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	eap_type_t type;
 
 	eap_type_str = lib->settings->get_str(lib->settings,
-					 	"charon.plugins.eap-peap.phase2_method", "md5");
+					 	"charon.plugins.eap-peap.phase2_method", "mschapv2");
 	type = eap_type_from_string(eap_type_str);
 	if (type == 0)
 	{
