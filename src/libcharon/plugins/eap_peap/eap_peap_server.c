@@ -350,7 +350,7 @@ METHOD(tls_application_t, build, status_t,
 
 		/* synchronize EAP message identifiers of inner protocol with outer */
 		this->ph2_method->set_identifier(this->ph2_method,
-					this->ph1_method->get_identifier(this->ph1_method) + 1);
+					this->ph1_method->get_identifier(this->ph1_method));
 
 		this->ph2_method->initiate(this->ph2_method, &this->out);
 		this->start_phase2 = FALSE;
