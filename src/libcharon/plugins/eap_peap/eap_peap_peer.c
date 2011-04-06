@@ -130,12 +130,12 @@ METHOD(tls_application_t, process, status_t,
 		if (received_vendor)
 		{
 			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
-						  "(id: %u)", received_type, received_vendor,
+						  "(id 0x%02X", received_type, received_vendor,
 						   in->get_identifier(in));
 		}
 		else
 		{
-			DBG1(DBG_IKE, "server requested %N authentication (id: %u)",
+			DBG1(DBG_IKE, "server requested %N authentication (id 0x%02X)",
 				 eap_type_names, received_type, in->get_identifier(in));
 		}
 		this->ph2_method = charon->eap->create_instance(charon->eap,
