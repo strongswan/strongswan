@@ -70,8 +70,8 @@ static bool decode_imsi_ef(unsigned char *input, int input_len, char *output)
 		return FALSE;
 	}
 
-	/* Check type byte is IMSI */
-	if ((input[1] & 0xf) != 0x9)
+	/* Check type byte is IMSI (bottom 3 bits == 001) */
+	if ((input[1] & 0x07) != 0x01)
 	{
 		return FALSE;
 	}
