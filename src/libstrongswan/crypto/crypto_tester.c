@@ -247,7 +247,7 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		{
 			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
 				 encryption_algorithm_names, alg, plugin_name);
-			return FALSE;              
+			return FALSE;
 		}
 		else
 		{
@@ -263,7 +263,7 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		{
 			*speed = bench_crypter(this, alg, create);
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, tested, plugin_name, *speed);
+				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
 		}
 		else
 		{
@@ -417,7 +417,7 @@ METHOD(crypto_tester_t, test_aead, bool,
 		{
 			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
 				 encryption_algorithm_names, alg, plugin_name);
-			return FALSE;              
+			return FALSE;
 		}
 		else
 		{
