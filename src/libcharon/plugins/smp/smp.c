@@ -707,10 +707,8 @@ static job_requeue_t dispatch(private_smp_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of itnerface_t.destroy.
- */
-static void destroy(private_smp_t *this)
+METHOD(plugin_t, destroy, void,
+	private_smp_t *this)
 {
 	this->job->cancel(this->job);
 	close(this->socket);
@@ -723,10 +721,16 @@ static void destroy(private_smp_t *this)
 plugin_t *smp_plugin_create()
 {
 	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
-	private_smp_t *this = malloc_thing(private_smp_t);
+	private_smp_t *this;
 	mode_t old;
 
-	this->public.plugin.destroy = (void (*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);

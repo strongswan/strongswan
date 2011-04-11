@@ -50,10 +50,8 @@ struct private_eap_sim_file_t {
 	eap_sim_file_triplets_t *triplets;
 };
 
-/**
- * Implementation of eap_sim_file_t.destroy.
- */
-static void destroy(private_eap_sim_file_t *this)
+METHOD(plugin_t, destroy, void,
+	private_eap_sim_file_t *this)
 {
 	charon->sim->remove_card(charon->sim, &this->card->card);
 	charon->sim->remove_provider(charon->sim, &this->provider->provider);
@@ -68,12 +66,18 @@ static void destroy(private_eap_sim_file_t *this)
  */
 plugin_t *eap_sim_file_plugin_create()
 {
-	private_eap_sim_file_t *this = malloc_thing(private_eap_sim_file_t);
+	private_eap_sim_file_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.triplets = eap_sim_file_triplets_create(TRIPLET_FILE),
+		.provider = eap_sim_file_provider_create(this->triplets),
+	);
 
-	this->triplets = eap_sim_file_triplets_create(TRIPLET_FILE);
-	this->provider = eap_sim_file_provider_create(this->triplets);
 	if (!this->provider)
 	{
 		this->triplets->destroy(this->triplets);

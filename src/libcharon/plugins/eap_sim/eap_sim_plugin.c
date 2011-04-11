@@ -20,10 +20,8 @@
 
 #include <daemon.h>
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(eap_sim_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	eap_sim_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
 							   (eap_constructor_t)eap_sim_server_create);
@@ -37,9 +35,13 @@ static void destroy(eap_sim_plugin_t *this)
  */
 plugin_t *eap_sim_plugin_create()
 {
-	eap_sim_plugin_t *this = malloc_thing(eap_sim_plugin_t);
+	eap_sim_plugin_t *this;
 
-	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
 
 	charon->eap->add_method(charon->eap, EAP_SIM, 0, EAP_SERVER,
 							(eap_constructor_t)eap_sim_server_create);

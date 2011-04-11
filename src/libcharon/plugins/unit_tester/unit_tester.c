@@ -92,10 +92,8 @@ static void run_tests(private_unit_tester_t *this)
 		 success, run, failed, skipped);
 }
 
-/**
- * Implementation of 2007_t.destroy
- */
-static void destroy(private_unit_tester_t *this)
+METHOD(plugin_t, destroy, void,
+	private_unit_tester_t *this)
 {
 	free(this);
 }
@@ -105,9 +103,15 @@ static void destroy(private_unit_tester_t *this)
  */
 plugin_t *unit_tester_plugin_create()
 {
-	private_unit_tester_t *this = malloc_thing(private_unit_tester_t);
+	private_unit_tester_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	run_tests(this);
 

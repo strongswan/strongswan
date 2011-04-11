@@ -146,10 +146,8 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_load_tester_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_load_tester_plugin_t *this)
 {
 	this->iterations = -1;
 	this->mutex->lock(this->mutex);
@@ -188,32 +186,37 @@ plugin_t *load_tester_plugin_create()
 		return NULL;
 	}
 
-	this = malloc_thing(private_load_tester_plugin_t);
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.delay = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.delay", 0),
+		.iterations = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.iterations", 1),
+		.initiators = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.initiators", 0),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.config = load_tester_config_create(),
+		.creds = load_tester_creds_create(),
+		.listener = load_tester_listener_create(shutdown_on),
+	);
 
 	lib->crypto->add_dh(lib->crypto, MODP_NULL, plugin_name,
 						(dh_constructor_t)load_tester_diffie_hellman_create);
+	charon->backends->add_backend(charon->backends, &this->config->backend);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
-	this->delay = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.delay", 0);
-	this->iterations = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.iterations", 1);
-	this->initiators = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.initiators", 0);
 	if (lib->settings->get_bool(lib->settings,
 					"charon.plugins.load-tester.shutdown_when_complete", 0))
 	{
 		shutdown_on = this->iterations * this->initiators;
 	}
 
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->config = load_tester_config_create();
-	this->creds = load_tester_creds_create();
-	this->listener = load_tester_listener_create(shutdown_on);
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	if (lib->settings->get_bool(lib->settings,
 					"charon.plugins.load-tester.fake_kernel", FALSE))

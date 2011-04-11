@@ -22,10 +22,8 @@
 /* missing in cababilities.h */
 #define CAP_AUDIT_WRITE 29
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(eap_gtc_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	eap_gtc_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
 							   (eap_constructor_t)eap_gtc_create_server);
@@ -39,9 +37,13 @@ static void destroy(eap_gtc_plugin_t *this)
  */
 plugin_t *eap_gtc_plugin_create()
 {
-	eap_gtc_plugin_t *this = malloc_thing(eap_gtc_plugin_t);
+	eap_gtc_plugin_t *this;
 
-	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
 
 	/* required for PAM authentication */
 	charon->keep_cap(charon, CAP_AUDIT_WRITE);

@@ -54,10 +54,8 @@ struct private_medcli_plugin_t {
 	medcli_listener_t *listener;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_medcli_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_medcli_plugin_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
@@ -75,9 +73,15 @@ static void destroy(private_medcli_plugin_t *this)
 plugin_t *medcli_plugin_create()
 {
 	char *uri;
-	private_medcli_plugin_t *this = malloc_thing(private_medcli_plugin_t);
+	private_medcli_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	uri = lib->settings->get_str(lib->settings,
 								 "medcli.database", NULL);

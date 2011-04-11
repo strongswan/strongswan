@@ -48,10 +48,8 @@ struct private_eap_aka_3gpp2_t {
 	eap_aka_3gpp2_functions_t *functions;
 };
 
-/**
- * Implementation of eap_aka_3gpp2_t.destroy.
- */
-static void destroy(private_eap_aka_3gpp2_t *this)
+METHOD(plugin_t, destroy, void,
+	private_eap_aka_3gpp2_t *this)
 {
 	charon->sim->remove_card(charon->sim, &this->card->card);
 	charon->sim->remove_provider(charon->sim, &this->provider->provider);
@@ -66,11 +64,17 @@ static void destroy(private_eap_aka_3gpp2_t *this)
  */
 plugin_t *eap_aka_3gpp2_plugin_create()
 {
-	private_eap_aka_3gpp2_t *this = malloc_thing(private_eap_aka_3gpp2_t);
+	private_eap_aka_3gpp2_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		this->functions = eap_aka_3gpp2_functions_create();
+	);
 
-	this->functions = eap_aka_3gpp2_functions_create();
 	if (!this->functions)
 	{
 		free(this);

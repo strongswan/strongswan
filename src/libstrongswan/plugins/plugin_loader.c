@@ -258,7 +258,7 @@ plugin_loader_t *plugin_loader_create()
 
 	INIT(this,
 		.public = {
-			.load = _load,
+			.load = _load_plugins,
 			.unload = _unload,
 			.create_plugin_enumerator = _create_plugin_enumerator,
 			.destroy = _destroy,

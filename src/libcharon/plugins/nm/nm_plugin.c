@@ -67,10 +67,8 @@ static job_requeue_t run(private_nm_plugin_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_nm_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_nm_plugin_t *this)
 {
 	if (this->loop)
 	{
@@ -96,22 +94,27 @@ static void destroy(private_nm_plugin_t *this)
  */
 plugin_t *nm_plugin_create()
 {
-	private_nm_plugin_t *this = malloc_thing(private_nm_plugin_t);
+	private_nm_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
-	this->loop = NULL;
 	g_type_init ();
 	if (!g_thread_supported())
 	{
 		g_thread_init(NULL);
 	}
 
-	this->creds = nm_creds_create();
-	this->handler = nm_handler_create();
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.creds = nm_creds_create(),
+		.handler = nm_handler_create(),
+		.plugin = nm_strongswan_plugin_new(this->creds, this->handler),
+	);
+
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
-	this->plugin = nm_strongswan_plugin_new(this->creds, this->handler);
 	if (!this->plugin)
 	{
 		DBG1(DBG_CFG, "DBUS binding failed");

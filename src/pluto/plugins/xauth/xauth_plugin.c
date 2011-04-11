@@ -18,10 +18,9 @@
 #include "xauth_plugin.h"
 #include "xauth_default_provider.h"
 #include "xauth_default_verifier.h"
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(xauth_plugin_t *this)
+
+METHOD(plugin_t, destroy, void,
+	xauth_plugin_t *this)
 {
 	free(this);
 }
@@ -31,9 +30,13 @@ static void destroy(xauth_plugin_t *this)
  */
 plugin_t *xauth_plugin_create()
 {
-	xauth_plugin_t *this = malloc_thing(xauth_plugin_t);
+	xauth_plugin_t *this;
 
-	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.plugin = {
+			.destroy = _destroy,
+		},
+	);
 
 	pluto->xauth->add_provider(pluto->xauth, xauth_default_provider_create());
 	pluto->xauth->add_verifier(pluto->xauth, xauth_default_verifier_create());

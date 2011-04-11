@@ -36,10 +36,8 @@ struct private_updown_plugin_t {
 	updown_listener_t *listener;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_updown_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_updown_plugin_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
@@ -51,11 +49,17 @@ static void destroy(private_updown_plugin_t *this)
  */
 plugin_t *updown_plugin_create()
 {
-	private_updown_plugin_t *this = malloc_thing(private_updown_plugin_t);
+	private_updown_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.listener = updown_listener_create(),
+	);
 
-	this->listener = updown_listener_create();
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;
