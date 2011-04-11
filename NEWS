@@ -13,6 +13,13 @@ strongswan-4.5.2
 
 - fixed the encoding and parsing of X.509 certificate policy statements (CPS).
 
+- Duncan Salerno contributed the eap-sim-pcsc plugin implementing a
+  pcsc-lite based SIM card backend.
+
+- The eap-peap plugin implements the EAP PEAP protocol. Interoperates
+  successfully with a FreeRADIUS server but not yet with a Windows 7 
+  Agile VPN client.
+
 
 strongswan-4.5.1
 ----------------
