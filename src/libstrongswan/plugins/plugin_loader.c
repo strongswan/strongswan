@@ -166,10 +166,8 @@ static bool plugin_loaded(private_plugin_loader_t *this, char *name)
 	return found;
 }
 
-/**
- * Implementation of plugin_loader_t.load_plugins.
- */
-static bool load(private_plugin_loader_t *this, char *path, char *list)
+METHOD(plugin_loader_t, load_plugins, bool,
+	private_plugin_loader_t *this, char *path, char *list)
 {
 	enumerator_t *enumerator;
 	char *token;
@@ -219,10 +217,8 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 	return !critical_failed;
 }
 
-/**
- * Implementation of plugin_loader_t.unload
- */
-static void unload(private_plugin_loader_t *this)
+METHOD(plugin_loader_t, unload, void,
+	private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
 	char *name;
@@ -239,18 +235,14 @@ static void unload(private_plugin_loader_t *this)
 	}
 }
 
-/**
- * Implementation of plugin_loader_t.create_plugin_enumerator
- */
-static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
+METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
+	private_plugin_loader_t *this)
 {
 	return this->names->create_enumerator(this->names);
 }
 
-/**
- * Implementation of plugin_loader_t.destroy
- */
-static void destroy(private_plugin_loader_t *this)
+METHOD(plugin_loader_t, destroy, void,
+	private_plugin_loader_t *this)
 {
 	this->plugins->destroy_offset(this->plugins, offsetof(plugin_t, destroy));
 	this->names->destroy_function(this->names, free);
@@ -262,15 +254,18 @@ static void destroy(private_plugin_loader_t *this)
  */
 plugin_loader_t *plugin_loader_create()
 {
-	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
+	private_plugin_loader_t *this;
 
-	this->public.load = (bool(*)(plugin_loader_t*, char *path, char *prefix))load;
-	this->public.unload = (void(*)(plugin_loader_t*))unload;
-	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
-	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
-
-	this->plugins = linked_list_create();
-	this->names = linked_list_create();
+	INIT(this,
+		.public = {
+			.load = _load,
+			.unload = _unload,
+			.create_plugin_enumerator = _create_plugin_enumerator,
+			.destroy = _destroy,
+		},
+		.plugins = linked_list_create(),
+		.names = linked_list_create(),
+	);
 
 	return &this->public;
 }
