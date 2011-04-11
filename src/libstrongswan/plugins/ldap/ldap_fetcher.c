@@ -101,7 +101,7 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 
 
 METHOD(fetcher_t, fetch, status_t,
-	private_ldap_fetcher_t *this, char *url, chunk_t *result)
+	private_ldap_fetcher_t *this, char *url, void *userdata)
 {
 	LDAP *ldap;
 	LDAPURLDesc *lurl;
@@ -110,6 +110,7 @@ METHOD(fetcher_t, fetch, status_t,
 	int ldap_version = LDAP_VERSION3;
 	struct timeval timeout;
 	status_t status = FAILED;
+	chunk_t *result = userdata;
 
 	if (!strneq(url, "ldap", 4))
 	{
