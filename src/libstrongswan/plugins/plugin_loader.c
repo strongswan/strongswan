@@ -230,6 +230,52 @@ METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 	return this->plugins->create_enumerator(this->plugins);
 }
 
+/**
+ * Reload a plugin by name, NULL for all
+ */
+static u_int reload_by_name(private_plugin_loader_t *this, char *name)
+{
+	u_int reloaded = 0;
+	enumerator_t *enumerator;
+	plugin_t *plugin;
+
+	enumerator = create_plugin_enumerator(this);
+	while (enumerator->enumerate(enumerator, &plugin))
+	{
+		if (name == NULL || streq(name, plugin->get_name(plugin)))
+		{
+			if (plugin->reload(plugin))
+			{
+				DBG2(DBG_LIB, "reloaded configuration of '%s' plugin",
+					 plugin->get_name(plugin));
+				reloaded++;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return reloaded;
+}
+
+METHOD(plugin_loader_t, reload, u_int,
+	private_plugin_loader_t *this, char *list)
+{
+	u_int reloaded = 0;
+	enumerator_t *enumerator;
+	char *name;
+
+	if (list == NULL)
+	{
+		return reload_by_name(this, NULL);
+	}
+	enumerator = enumerator_create_token(list, " ", "");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		reloaded += reload_by_name(this, name);
+	}
+	enumerator->destroy(enumerator);
+	return reloaded;
+}
+
 METHOD(plugin_loader_t, destroy, void,
 	private_plugin_loader_t *this)
 {
@@ -247,6 +293,7 @@ plugin_loader_t *plugin_loader_create()
 	INIT(this,
 		.public = {
 			.load = _load_plugins,
+			.reload = _reload,
 			.unload = _unload,
 			.create_plugin_enumerator = _create_plugin_enumerator,
 			.destroy = _destroy,
