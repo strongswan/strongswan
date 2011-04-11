@@ -37,6 +37,12 @@ struct private_coupling_plugin_t {
 	coupling_validator_t *validator;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_coupling_plugin_t *this)
+{
+	return "coupling";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_coupling_plugin_t *this)
 {
@@ -55,6 +61,7 @@ plugin_t *coupling_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

@@ -37,6 +37,12 @@ struct private_led_plugin_t {
 	led_listener_t *listener;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_led_plugin_t *this)
+{
+	return "led";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_led_plugin_t *this)
 {
@@ -55,6 +61,7 @@ plugin_t *led_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

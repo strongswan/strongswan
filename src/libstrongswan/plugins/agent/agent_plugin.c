@@ -31,6 +31,12 @@ struct private_agent_plugin_t {
 	agent_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_agent_plugin_t *this)
+{
+	return "agent";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_agent_plugin_t *this)
 {
@@ -49,6 +55,7 @@ plugin_t *agent_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

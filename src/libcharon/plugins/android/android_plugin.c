@@ -54,11 +54,16 @@ struct private_android_plugin_t {
 	 * Service that interacts with the Android Settings frontend
 	 */
 	android_service_t *service;
-
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_android_plugin_t *this)
+{
+	return "android";
+}
+
 METHOD(plugin_t, destroy, void,
-	   private_android_plugin_t *this)
+	private_android_plugin_t *this)
 {
 	hydra->attributes->remove_handler(hydra->attributes,
 									  &this->handler->handler);
@@ -81,6 +86,7 @@ plugin_t *android_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

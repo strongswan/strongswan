@@ -402,7 +402,8 @@ METHOD(stroke_list_t, status, void,
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
-		char *plugin, *pool;
+		plugin_t *plugin;
+		char *pool;
 		host_t *host;
 		u_int32_t dpd;
 		time_t since, now;
@@ -431,7 +432,7 @@ METHOD(stroke_list_t, status, void,
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 		while (enumerator->enumerate(enumerator, &plugin))
 		{
-			fprintf(out, "%s ", plugin);
+			fprintf(out, "%s ", plugin->get_name(plugin));
 		}
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
@@ -1069,12 +1070,12 @@ static void print_alg(FILE *out, int *len, enum_name_t *alg_names, int alg_type,
 {
 	char alg_name[BUF_LEN];
 	int alg_name_len;
-	
+
 	alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type, plugin_name);
 	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
 	{
 		fprintf(out, "\n             ");
-		*len = 13;	
+		*len = 13;
 	}
 	fprintf(out, "%s", alg_name);
 	*len += alg_name_len;

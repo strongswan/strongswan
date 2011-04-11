@@ -49,9 +49,9 @@ struct plugin_loader_t {
 	void (*unload)(plugin_loader_t *this);
 
 	/**
-	 * Create an enumerator over all loaded plugin names.
+	 * Create an enumerator over all loaded plugins.
 	 *
-	 * @return				enumerator over char*
+	 * @return				enumerator over plugin_t*
 	 */
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
 

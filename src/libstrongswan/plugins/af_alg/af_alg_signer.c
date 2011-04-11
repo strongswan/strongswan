@@ -71,7 +71,7 @@ static struct {
 /**
  * See header.
  */
-void af_alg_signer_probe()
+void af_alg_signer_probe(char *plugin)
 {
 	af_alg_ops_t *ops;
 	int i;
@@ -82,7 +82,7 @@ void af_alg_signer_probe()
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_signer(lib->crypto, algs[i].id, af_alg_plugin_name,
+			lib->crypto->add_signer(lib->crypto, algs[i].id, plugin,
 							(signer_constructor_t)af_alg_signer_create);
 		}
 	}

@@ -40,8 +40,13 @@ struct private_attr_sql_plugin_t {
 	 * configuration attributes
 	 */
 	sql_attribute_t *attribute;
-
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_attr_sql_plugin_t *this)
+{
+	return "attr-sql";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_attr_sql_plugin_t *this)
@@ -71,6 +76,7 @@ plugin_t *attr_sql_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

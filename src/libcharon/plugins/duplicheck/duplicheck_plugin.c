@@ -43,6 +43,12 @@ struct private_duplicheck_plugin_t {
 	duplicheck_notify_t *notify;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_duplicheck_plugin_t *this)
+{
+	return "duplicheck";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_duplicheck_plugin_t *this)
 {
@@ -68,6 +74,7 @@ plugin_t *duplicheck_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

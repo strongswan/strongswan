@@ -35,6 +35,12 @@ struct private_af_alg_plugin_t {
 	af_alg_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_af_alg_plugin_t *this)
+{
+	return "af-alg";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_af_alg_plugin_t *this)
 {
@@ -60,15 +66,16 @@ plugin_t *af_alg_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	af_alg_hasher_probe();
-	af_alg_signer_probe();
-	af_alg_prf_probe();
-	af_alg_crypter_probe();
+	af_alg_hasher_probe(get_name(this));
+	af_alg_signer_probe(get_name(this));
+	af_alg_prf_probe(get_name(this));
+	af_alg_crypter_probe(get_name(this));
 
 	return &this->public.plugin;
 }

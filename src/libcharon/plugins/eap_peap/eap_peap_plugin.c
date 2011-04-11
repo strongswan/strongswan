@@ -19,6 +19,11 @@
 
 #include <daemon.h>
 
+METHOD(plugin_t, get_name, char*,
+	eap_peap_plugin_t *this)
+{
+	return "eap-peap";
+}
 
 METHOD(plugin_t, destroy, void,
 	eap_peap_plugin_t *this)
@@ -39,6 +44,7 @@ plugin_t *eap_peap_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

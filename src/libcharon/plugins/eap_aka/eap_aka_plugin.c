@@ -20,6 +20,12 @@
 
 #include <daemon.h>
 
+METHOD(plugin_t, get_name, char*,
+	eap_aka_plugin_t *this)
+{
+	return "eap-aka";
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_aka_plugin_t *this)
 {
@@ -39,6 +45,7 @@ plugin_t *eap_aka_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

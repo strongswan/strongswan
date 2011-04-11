@@ -48,7 +48,9 @@ af_alg_crypter_t *af_alg_crypter_create(encryption_algorithm_t algo,
 
 /**
  * Probe algorithms and register af_alg_crypter_create().
+ *
+ * @param plugin		plugin name to register algorithms for
  */
-void af_alg_crypter_probe();
+void af_alg_crypter_probe(char *plugin);
 
 #endif /** AF_ALG_CRYPTER_H_ @}*/

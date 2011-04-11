@@ -36,6 +36,12 @@ struct private_attr_plugin_t {
 	attr_provider_t *provider;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_attr_plugin_t *this)
+{
+	return "attr";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_attr_plugin_t *this)
 {
@@ -54,6 +60,7 @@ plugin_t *attr_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

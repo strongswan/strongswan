@@ -18,8 +18,6 @@
 #include <library.h>
 #include "random_rng.h"
 
-static const char *plugin_name = "random";
-
 typedef struct private_random_plugin_t private_random_plugin_t;
 
 /**
@@ -32,6 +30,12 @@ struct private_random_plugin_t {
 	 */
 	random_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_random_plugin_t *this)
+{
+	return "random";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_random_plugin_t *this)
@@ -51,14 +55,15 @@ plugin_t *random_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	lib->crypto->add_rng(lib->crypto, RNG_STRONG, plugin_name,
+	lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
 						 (rng_constructor_t)random_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_TRUE, plugin_name,
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
 						 (rng_constructor_t)random_rng_create);
 
 	return &this->public.plugin;

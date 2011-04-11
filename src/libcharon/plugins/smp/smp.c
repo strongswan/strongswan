@@ -707,6 +707,12 @@ static job_requeue_t dispatch(private_smp_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
+METHOD(plugin_t, get_name, char*,
+	private_smp_t *this)
+{
+	return "smp";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_smp_t *this)
 {
@@ -727,6 +733,7 @@ plugin_t *smp_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

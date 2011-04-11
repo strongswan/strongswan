@@ -19,6 +19,12 @@
 #include "xauth_default_provider.h"
 #include "xauth_default_verifier.h"
 
+METHOD(plugin_t, get_name, char*,
+	xauth_plugin_t *this)
+{
+	return "xauth";
+}
+
 METHOD(plugin_t, destroy, void,
 	xauth_plugin_t *this)
 {
@@ -34,6 +40,7 @@ plugin_t *xauth_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

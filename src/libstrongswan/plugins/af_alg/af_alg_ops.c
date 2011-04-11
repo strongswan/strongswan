@@ -21,8 +21,6 @@
 
 #include <debug.h>
 
-const char *af_alg_plugin_name = "af-alg";
-
 typedef struct private_af_alg_ops_t private_af_alg_ops_t;
 
 /**

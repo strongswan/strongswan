@@ -32,6 +32,12 @@ struct private_mysql_plugin_t {
 	mysql_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_mysql_plugin_t *this)
+{
+	return "mysql";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_mysql_plugin_t *this)
 {
@@ -57,6 +63,7 @@ plugin_t *mysql_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

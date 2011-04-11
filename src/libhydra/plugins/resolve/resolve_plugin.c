@@ -36,6 +36,12 @@ struct private_resolve_plugin_t {
 	resolve_handler_t *handler;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_resolve_plugin_t *this)
+{
+	return "resolve";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_resolve_plugin_t *this)
 {
@@ -54,6 +60,7 @@ plugin_t *resolve_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

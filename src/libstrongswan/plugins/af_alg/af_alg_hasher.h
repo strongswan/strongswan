@@ -46,7 +46,9 @@ af_alg_hasher_t *af_alg_hasher_create(hash_algorithm_t algo);
 
 /**
  * Probe algorithms and register af_alg_hasher_create().
+ *
+ * @param plugin		plugin name to register algorithms for
  */
-void af_alg_hasher_probe();
+void af_alg_hasher_probe(char *plugin);
 
 #endif /** af_alg_HASHER_H_ @}*/

@@ -36,6 +36,12 @@ struct private_stroke_plugin_t {
 	stroke_socket_t *socket;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_stroke_plugin_t *this)
+{
+	return "stroke";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_stroke_plugin_t *this)
 {
@@ -53,6 +59,7 @@ plugin_t *stroke_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

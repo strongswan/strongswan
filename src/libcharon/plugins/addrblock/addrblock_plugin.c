@@ -43,6 +43,12 @@ struct private_addrblock_plugin_t {
 	addrblock_narrow_t *narrower;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_addrblock_plugin_t *this)
+{
+	return "addrblock";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_addrblock_plugin_t *this)
 {
@@ -63,6 +69,7 @@ plugin_t *addrblock_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

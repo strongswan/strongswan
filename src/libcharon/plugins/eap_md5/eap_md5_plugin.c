@@ -18,6 +18,12 @@
 
 #include <daemon.h>
 
+METHOD(plugin_t, get_name, char*,
+	eap_md5_plugin_t *this)
+{
+	return "eap-md5";
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_md5_plugin_t *this)
 {
@@ -37,6 +43,7 @@ plugin_t *eap_md5_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

@@ -31,6 +31,12 @@ struct private_ldap_plugin_t {
 	ldap_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_ldap_plugin_t *this)
+{
+	return "ldap";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ldap_plugin_t *this)
 {
@@ -49,6 +55,7 @@ plugin_t *ldap_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

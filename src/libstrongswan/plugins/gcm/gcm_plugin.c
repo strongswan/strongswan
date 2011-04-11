@@ -19,8 +19,6 @@
 
 #include "gcm_aead.h"
 
-static const char *plugin_name = "gcm";
-
 typedef struct private_gcm_plugin_t private_gcm_plugin_t;
 
 /**
@@ -33,6 +31,12 @@ struct private_gcm_plugin_t {
 	 */
 	gcm_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_gcm_plugin_t *this)
+{
+	return "gcm";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_gcm_plugin_t *this)
@@ -52,18 +56,23 @@ plugin_t *gcm_plugin_create()
 	crypter_t *crypter;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 0);
 	if (crypter)
 	{
 		crypter->destroy(crypter);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV8, plugin_name,
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV8, get_name(this),
 						(aead_constructor_t)gcm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV12, plugin_name,
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV12, get_name(this),
 						(aead_constructor_t)gcm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV16, plugin_name,
+		lib->crypto->add_aead(lib->crypto, ENCR_AES_GCM_ICV16, get_name(this),
 						(aead_constructor_t)gcm_aead_create);
 	}
 

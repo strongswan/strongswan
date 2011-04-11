@@ -70,7 +70,7 @@ static struct {
 /**
  * See header.
  */
-void af_alg_prf_probe()
+void af_alg_prf_probe(char *plugin)
 {
 	af_alg_ops_t *ops;
 	int i;
@@ -81,7 +81,7 @@ void af_alg_prf_probe()
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_prf(lib->crypto, algs[i].id, af_alg_plugin_name,
+			lib->crypto->add_prf(lib->crypto, algs[i].id, plugin,
 							(prf_constructor_t)af_alg_prf_create);
 		}
 	}

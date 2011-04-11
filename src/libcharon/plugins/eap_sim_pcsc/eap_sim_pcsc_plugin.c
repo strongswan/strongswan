@@ -35,6 +35,12 @@ struct private_eap_sim_pcsc_plugin_t {
 	eap_sim_pcsc_card_t *card;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_eap_sim_pcsc_plugin_t *this)
+{
+	return "eap-sim-pcsc";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_pcsc_plugin_t *this)
 {
@@ -53,6 +59,7 @@ plugin_t *eap_sim_pcsc_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

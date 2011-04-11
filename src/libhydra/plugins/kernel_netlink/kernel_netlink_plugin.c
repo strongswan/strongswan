@@ -33,6 +33,12 @@ struct private_kernel_netlink_plugin_t {
 	kernel_netlink_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_kernel_netlink_plugin_t *this)
+{
+	return "kernel-netlink";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_kernel_netlink_plugin_t *this)
 {
@@ -53,6 +59,7 @@ plugin_t *kernel_netlink_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

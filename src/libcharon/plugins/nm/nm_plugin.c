@@ -67,6 +67,12 @@ static job_requeue_t run(private_nm_plugin_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+METHOD(plugin_t, get_name, char*,
+	private_nm_plugin_t *this)
+{
+	return "nm";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_nm_plugin_t *this)
 {
@@ -105,6 +111,7 @@ plugin_t *nm_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

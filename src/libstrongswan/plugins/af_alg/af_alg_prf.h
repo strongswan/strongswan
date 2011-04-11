@@ -46,7 +46,9 @@ af_alg_prf_t *af_alg_prf_create(pseudo_random_function_t algo);
 
 /**
  * Probe algorithms and register af_alg_prf_create().
+ *
+ * @param plugin		plugin name to register algorithms for
  */
-void af_alg_prf_probe();
+void af_alg_prf_probe(char *plugin);
 
 #endif /** AF_ALG_PRF_H_ @}*/

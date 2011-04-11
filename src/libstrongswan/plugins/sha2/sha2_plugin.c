@@ -18,8 +18,6 @@
 #include <library.h>
 #include "sha2_hasher.h"
 
-static const char *plugin_name = "sha2";
-
 typedef struct private_sha2_plugin_t private_sha2_plugin_t;
 
 /**
@@ -32,6 +30,12 @@ struct private_sha2_plugin_t {
 	 */
 	sha2_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_sha2_plugin_t *this)
+{
+	return "sha2";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_sha2_plugin_t *this)
@@ -51,18 +55,19 @@ plugin_t *sha2_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, plugin_name,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, get_name(this),
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, plugin_name,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, plugin_name,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
 							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, plugin_name,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
 							(hasher_constructor_t)sha2_hasher_create);
 
 	return &this->public.plugin;

@@ -36,6 +36,12 @@ struct private_updown_plugin_t {
 	updown_listener_t *listener;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_updown_plugin_t *this)
+{
+	return "updown";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_updown_plugin_t *this)
 {
@@ -54,6 +60,7 @@ plugin_t *updown_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

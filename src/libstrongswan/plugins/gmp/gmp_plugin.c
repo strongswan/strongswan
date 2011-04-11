@@ -20,8 +20,6 @@
 #include "gmp_rsa_private_key.h"
 #include "gmp_rsa_public_key.h"
 
-static const char *plugin_name = "gmp";
-
 typedef struct private_gmp_plugin_t private_gmp_plugin_t;
 
 /**
@@ -34,6 +32,12 @@ struct private_gmp_plugin_t {
 	 */
 	gmp_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_gmp_plugin_t *this)
+{
+	return "gmp";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_gmp_plugin_t *this)
@@ -61,35 +65,36 @@ plugin_t *gmp_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_224, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_224, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_256, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_256, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_160, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_160, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create);
 
-	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, plugin_name,
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, get_name(this),
 						(dh_constructor_t)gmp_diffie_hellman_create_custom);
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,

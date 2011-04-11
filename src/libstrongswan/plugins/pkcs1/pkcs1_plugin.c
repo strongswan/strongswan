@@ -32,6 +32,12 @@ struct private_pkcs1_plugin_t {
 	pkcs1_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_pkcs1_plugin_t *this)
+{
+	return "pkcs1";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pkcs1_plugin_t *this)
 {
@@ -55,6 +61,7 @@ plugin_t *pkcs1_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

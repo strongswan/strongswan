@@ -141,6 +141,12 @@ static bool load_imcs(char *filename)
 	return TRUE;
 }
 
+METHOD(plugin_t, get_name, char*,
+	tnc_imc_plugin_t *this)
+{
+	return "tnc-imc";
+}
+
 METHOD(plugin_t, destroy, void,
 	tnc_imc_plugin_t *this)
 {
@@ -158,6 +164,7 @@ plugin_t *tnc_imc_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

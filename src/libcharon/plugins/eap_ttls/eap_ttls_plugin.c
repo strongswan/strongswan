@@ -19,6 +19,11 @@
 
 #include <daemon.h>
 
+METHOD(plugin_t, get_name, char*,
+	eap_ttls_plugin_t *this)
+{
+	return "eap-ttls";
+}
 
 METHOD(plugin_t, destroy, void,
 	eap_ttls_plugin_t *this)
@@ -39,6 +44,7 @@ plugin_t *eap_ttls_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

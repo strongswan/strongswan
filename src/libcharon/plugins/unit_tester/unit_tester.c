@@ -92,6 +92,12 @@ static void run_tests(private_unit_tester_t *this)
 		 success, run, failed, skipped);
 }
 
+METHOD(plugin_t, get_name, char*,
+	private_unit_tester_plugin_t *this)
+{
+	return "unit-tester";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_unit_tester_t *this)
 {
@@ -108,6 +114,7 @@ plugin_t *unit_tester_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

@@ -104,6 +104,12 @@ struct private_test_vectors_plugin_t {
 	test_vectors_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_test_vectors_plugin_t *this)
+{
+	return "test-vectors";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_test_vectors_plugin_t *this)
 {
@@ -121,6 +127,7 @@ plugin_t *test_vectors_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

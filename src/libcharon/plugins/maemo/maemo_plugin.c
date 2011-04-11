@@ -34,11 +34,16 @@ struct private_maemo_plugin_t {
 	 * service
 	 */
 	maemo_service_t *service;
-
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_maemo_plugin_t *this)
+{
+	return "maemo";
+}
+
 METHOD(plugin_t, destroy, void,
-	   private_maemo_plugin_t *this)
+	private_maemo_plugin_t *this)
 {
 	this->service->destroy(this->service);
 	free(this);
@@ -54,6 +59,7 @@ plugin_t *maemo_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

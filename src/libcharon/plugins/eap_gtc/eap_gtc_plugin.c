@@ -22,6 +22,12 @@
 /* missing in cababilities.h */
 #define CAP_AUDIT_WRITE 29
 
+METHOD(plugin_t, get_name, char*,
+	eap_gtc_plugin_t *this)
+{
+	return "eap-gtc";
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_gtc_plugin_t *this)
 {
@@ -41,6 +47,7 @@ plugin_t *eap_gtc_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);

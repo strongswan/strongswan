@@ -239,7 +239,8 @@ options_t *options;
  */
 static void print_plugins()
 {
-	char buf[BUF_LEN], *plugin;
+	char buf[BUF_LEN];
+	plugin_t *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
 
@@ -247,7 +248,7 @@ static void print_plugins()
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
-		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
+		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin->get_name(plugin));
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);

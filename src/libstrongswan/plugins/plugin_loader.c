@@ -43,11 +43,6 @@ struct private_plugin_loader_t {
 	 * list of loaded plugins
 	 */
 	linked_list_t *plugins;
-
-	/**
-	 * names of loaded plugins
-	 */
-	linked_list_t *names;
 };
 
 /**
@@ -151,12 +146,12 @@ static bool plugin_loaded(private_plugin_loader_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
-	char *current;
+	plugin_t *plugin;
 
-	enumerator = this->names->create_enumerator(this->names);
-	while (enumerator->enumerate(enumerator, &current))
+	enumerator = this->plugins->create_enumerator(this->plugins);
+	while (enumerator->enumerate(enumerator, &plugin))
 	{
-		if (streq(name, current))
+		if (streq(plugin->get_name(plugin), name))
 		{
 			found = TRUE;
 			break;
@@ -201,7 +196,6 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		if (plugin)
 		{
 			this->plugins->insert_last(this->plugins, plugin);
-			this->names->insert_last(this->names, token);
 		}
 		else
 		{
@@ -210,8 +204,8 @@ METHOD(plugin_loader_t, load_plugins, bool,
 				critical_failed = TRUE;
 				DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
 			}
-			free(token);
 		}
+		free(token);
 	}
 	enumerator->destroy(enumerator);
 	return !critical_failed;
@@ -221,7 +215,6 @@ METHOD(plugin_loader_t, unload, void,
 	private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
-	char *name;
 
 	/* unload plugins in reverse order */
 	while (this->plugins->remove_last(this->plugins,
@@ -229,23 +222,18 @@ METHOD(plugin_loader_t, unload, void,
 	{
 		plugin->destroy(plugin);
 	}
-	while (this->names->remove_last(this->names, (void**)&name) == SUCCESS)
-	{
-		free(name);
-	}
 }
 
 METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 	private_plugin_loader_t *this)
 {
-	return this->names->create_enumerator(this->names);
+	return this->plugins->create_enumerator(this->plugins);
 }
 
 METHOD(plugin_loader_t, destroy, void,
 	private_plugin_loader_t *this)
 {
 	this->plugins->destroy_offset(this->plugins, offsetof(plugin_t, destroy));
-	this->names->destroy_function(this->names, free);
 	free(this);
 }
 
@@ -264,7 +252,6 @@ plugin_loader_t *plugin_loader_create()
 			.destroy = _destroy,
 		},
 		.plugins = linked_list_create(),
-		.names = linked_list_create(),
 	);
 
 	return &this->public;

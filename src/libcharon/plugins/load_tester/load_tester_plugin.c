@@ -146,6 +146,12 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+METHOD(plugin_t, get_name, char*,
+	private_load_tester_plugin_t *this)
+{
+	return "load-tester";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_load_tester_plugin_t *this)
 {
@@ -189,6 +195,7 @@ plugin_t *load_tester_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

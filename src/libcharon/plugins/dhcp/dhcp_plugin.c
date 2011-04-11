@@ -44,6 +44,12 @@ struct private_dhcp_plugin_t {
 	dhcp_provider_t *provider;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_dhcp_plugin_t *this)
+{
+	return "dhcp";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_dhcp_plugin_t *this)
 {
@@ -64,6 +70,7 @@ plugin_t *dhcp_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

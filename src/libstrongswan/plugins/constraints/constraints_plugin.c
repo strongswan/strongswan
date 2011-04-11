@@ -36,6 +36,12 @@ struct private_constraints_plugin_t {
 	constraints_validator_t *validator;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_constraints_plugin_t *this)
+{
+	return "constraints";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_constraints_plugin_t *this)
 {
@@ -54,6 +60,7 @@ plugin_t *constraints_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

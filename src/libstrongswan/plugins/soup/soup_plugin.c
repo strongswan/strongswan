@@ -34,6 +34,12 @@ struct private_soup_plugin_t {
 	soup_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_soup_plugin_t *this)
+{
+	return "soup";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_soup_plugin_t *this)
 {
@@ -58,6 +64,7 @@ plugin_t *soup_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

@@ -58,6 +58,12 @@ struct private_uci_plugin_t {
 	uci_control_t *control;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_uci_plugin_t *this)
+{
+	return "uci";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_uci_plugin_t *this)
 {
@@ -80,6 +86,7 @@ plugin_t *uci_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},

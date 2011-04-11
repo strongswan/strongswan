@@ -88,7 +88,7 @@ static bool check_addrblock(x509_t *subject, x509_t *issuer)
 
 METHOD(cert_validator_t, validate, bool,
 	private_addrblock_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
 	if (subject->get_type(subject) == CERT_X509 &&
@@ -114,7 +114,9 @@ addrblock_validator_t *addrblock_validator_create()
 
 	INIT(this,
 		.public = {
-			.validator.validate = _validate,
+			.validator = {
+				.validate = _validate,
+			},
 			.destroy = _destroy,
 		},
 	);

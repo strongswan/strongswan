@@ -18,8 +18,6 @@
 #include <library.h>
 #include "md4_hasher.h"
 
-static const char *plugin_name = "md4";
-
 typedef struct private_md4_plugin_t private_md4_plugin_t;
 
 /**
@@ -32,6 +30,12 @@ struct private_md4_plugin_t {
 	 */
 	md4_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_md4_plugin_t *this)
+{
+	return "md4";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_md4_plugin_t *this)
@@ -51,12 +55,13 @@ plugin_t *md4_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4, plugin_name,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4, get_name(this),
 							(hasher_constructor_t)md4_hasher_create);
 
 	return &this->public.plugin;

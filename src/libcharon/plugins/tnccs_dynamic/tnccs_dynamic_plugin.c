@@ -18,6 +18,12 @@
 
 #include <daemon.h>
 
+METHOD(plugin_t, get_name, char*,
+	tnccs_dynamic_plugin_t *this)
+{
+	return "tnccs-dynamic";
+}
+
 METHOD(plugin_t, destroy, void,
 	tnccs_dynamic_plugin_t *this)
 {
@@ -35,11 +41,12 @@ plugin_t *tnccs_dynamic_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
 			.destroy = _destroy,
 		},
 	);
 
-	charon->tnccs->add_method(charon->tnccs, TNCCS_DYNAMIC, 
+	charon->tnccs->add_method(charon->tnccs, TNCCS_DYNAMIC,
 							 (tnccs_constructor_t)tnccs_dynamic_create);
 
 	return &this->plugin;

@@ -31,6 +31,12 @@ struct private_sqlite_plugin_t {
 	sqlite_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_sqlite_plugin_t *this)
+{
+	return "sqlite";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_sqlite_plugin_t *this)
 {
@@ -49,6 +55,7 @@ plugin_t *sqlite_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
 				.destroy = _destroy,
 			},
 		},
