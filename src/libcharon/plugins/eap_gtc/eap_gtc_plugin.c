@@ -48,6 +48,7 @@ plugin_t *eap_gtc_plugin_create()
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
+			.reload = (void*)return_false,
 			.destroy = _destroy,
 		},
 	);

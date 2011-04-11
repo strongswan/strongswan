@@ -70,6 +70,7 @@ plugin_t *addrblock_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
