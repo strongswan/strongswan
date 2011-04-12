@@ -494,7 +494,6 @@ static err_t process_rsa_secret(private_key_t **key)
 		if (ugh)
 		{
 			ugh = builddiag("RSA data malformed (%s): %s", ugh, tok);
-			part++;
 			goto end;
 		}
 		rsa_chunk[part] = chunk_create(buf, sz);
