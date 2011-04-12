@@ -1119,6 +1119,11 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	linked_list_t *contents = linked_list_create();
 	section_t *section = section_create(NULL);
 
+	if (pattern == NULL)
+	{
+		pattern = STRONGSWAN_CONF;
+	}
+
 	if (!parse_files(contents, NULL, 0, pattern, section))
 	{
 		contents->destroy_function(contents, (void*)free);
@@ -1206,11 +1211,6 @@ settings_t *settings_create(char *file)
 		.contents = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-
-	if (file == NULL)
-	{
-		file = STRONGSWAN_CONF;
-	}
 
 	load_files(this, file, FALSE);
 
