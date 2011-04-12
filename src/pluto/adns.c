@@ -224,6 +224,7 @@ worker(int qfd, int afd)
 
 		a.amagic = ADNS_A_MAGIC;
 		a.serial = q.serial;
+		a.continuation = NULL;
 
 		a.result = res_nquery(statp, q.name_buf, C_IN, q.type, a.ans, sizeof(a.ans));
 		a.h_errno_val = h_errno;
