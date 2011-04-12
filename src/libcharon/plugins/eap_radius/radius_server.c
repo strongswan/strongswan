@@ -80,6 +80,11 @@ struct private_radius_server_t {
 	 * Retry counter for unreachable servers
 	 */
 	int retry;
+
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(radius_server_t, get_socket, radius_socket_t*,
@@ -153,15 +158,26 @@ METHOD(radius_server_t, get_address, host_t*,
 	return this->host;
 }
 
+METHOD(radius_server_t, get_ref, radius_server_t*,
+	private_radius_server_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
+}
+
+
 METHOD(radius_server_t, destroy, void,
 	private_radius_server_t *this)
 {
-	DESTROY_IF(this->host);
-	this->mutex->destroy(this->mutex);
-	this->condvar->destroy(this->condvar);
-	this->sockets->destroy_offset(this->sockets,
-								  offsetof(radius_socket_t, destroy));
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		DESTROY_IF(this->host);
+		this->mutex->destroy(this->mutex);
+		this->condvar->destroy(this->condvar);
+		this->sockets->destroy_offset(this->sockets,
+									  offsetof(radius_socket_t, destroy));
+		free(this);
+	}
 }
 
 /**
@@ -180,6 +196,7 @@ radius_server_t *radius_server_create(char *server, u_int16_t port,
 			.get_nas_identifier = _get_nas_identifier,
 			.get_preference = _get_preference,
 			.get_address = _get_address,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.reachable = TRUE,
@@ -190,6 +207,7 @@ radius_server_t *radius_server_create(char *server, u_int16_t port,
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.host = host_create_from_dns(server, 0, port),
 		.preference = preference,
+		.ref = 1,
 	);
 
 	if (!this->host)

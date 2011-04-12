@@ -68,6 +68,13 @@ struct radius_server_t {
 	host_t* (*get_address)(radius_server_t *this);
 
 	/**
+	 * Increase reference count of this server.
+	 *
+	 * @return			this
+	 */
+	radius_server_t* (*get_ref)(radius_server_t *this);
+
+	/**
 	 * Destroy a radius_server_t.
 	 */
 	void (*destroy)(radius_server_t *this);

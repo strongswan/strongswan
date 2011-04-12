@@ -128,6 +128,7 @@ METHOD(radius_client_t, get_msk, chunk_t,
 METHOD(radius_client_t, destroy, void,
 	private_radius_client_t *this)
 {
+	this->server->destroy(this->server);
 	chunk_clear(&this->msk);
 	free(this->state.ptr);
 	free(this);
@@ -162,7 +163,8 @@ radius_client_t *radius_client_create()
 			DBG2(DBG_CFG, "RADIUS server %H is candidate: %d",
 				 server->get_address(server), current);
 			best = current;
-			this->server = server;
+			DESTROY_IF(this->server);
+			this->server = server->get_ref(server);
 		}
 		else
 		{

@@ -20,6 +20,7 @@
 #include "radius_server.h"
 
 #include <daemon.h>
+#include <threading/rwlock.h>
 
 /**
  * Default RADIUS server port, when not configured
@@ -42,6 +43,11 @@ struct private_eap_radius_plugin_t {
 	 * List of RADIUS servers
 	 */
 	linked_list_t *servers;
+
+	/**
+	 * Lock for server list
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -49,26 +55,10 @@ struct private_eap_radius_plugin_t {
  */
 static private_eap_radius_plugin_t *instance = NULL;
 
-METHOD(plugin_t, get_name, char*,
-	private_eap_radius_plugin_t *this)
-{
-	return "eap-radius";
-}
-
-METHOD(plugin_t, destroy, void,
-	private_eap_radius_plugin_t *this)
-{
-	charon->eap->remove_method(charon->eap, (eap_constructor_t)eap_radius_create);
-	this->servers->destroy_offset(this->servers,
-								  offsetof(radius_server_t, destroy));
-	free(this);
-	instance = NULL;
-}
-
 /**
  * Load RADIUS servers from configuration
  */
-static bool load_servers(private_eap_radius_plugin_t *this)
+static void load_servers(private_eap_radius_plugin_t *this)
 {
 	enumerator_t *enumerator;
 	radius_server_t *server;
@@ -84,7 +74,7 @@ static bool load_servers(private_eap_radius_plugin_t *this)
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "no RADUIS secret defined");
-			return FALSE;
+			return;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-radius.nas_identifier", "strongSwan");
@@ -97,10 +87,10 @@ static bool load_servers(private_eap_radius_plugin_t *this)
 		if (!server)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
-			return FALSE;
+			return;
 		}
 		this->servers->insert_last(this->servers, server);
-		return TRUE;
+		return;
 	}
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
@@ -141,12 +131,38 @@ static bool load_servers(private_eap_radius_plugin_t *this)
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->servers->get_count(this->servers) == 0)
-	{
-		DBG1(DBG_CFG, "no valid RADIUS server configuration found");
-		return FALSE;
-	}
+	DBG1(DBG_CFG, "loaded %d RADIUS server configuration%s",
+		 this->servers->get_count(this->servers),
+		 this->servers->get_count(this->servers) == 1 ? "" : "s");
+}
+
+METHOD(plugin_t, get_name, char*,
+	private_eap_radius_plugin_t *this)
+{
+	return "eap-radius";
+}
+
+METHOD(plugin_t, reload, bool,
+	private_eap_radius_plugin_t *this)
+{
+	this->lock->write_lock(this->lock);
+	this->servers->destroy_offset(this->servers,
+								  offsetof(radius_server_t, destroy));
+	this->servers = linked_list_create();
+	load_servers(this);
+	this->lock->unlock(this->lock);
 	return TRUE;
+}
+
+METHOD(plugin_t, destroy, void,
+	private_eap_radius_plugin_t *this)
+{
+	charon->eap->remove_method(charon->eap, (eap_constructor_t)eap_radius_create);
+	this->servers->destroy_offset(this->servers,
+								  offsetof(radius_server_t, destroy));
+	this->lock->destroy(this->lock);
+	free(this);
+	instance = NULL;
 }
 
 /*
@@ -160,18 +176,16 @@ plugin_t *eap_radius_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},
 		.servers = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
-	if (!load_servers(this))
-	{
-		destroy(this);
-		return NULL;
-	}
+	load_servers(this);
+
 	charon->eap->add_method(charon->eap, EAP_RADIUS, 0,
 							EAP_SERVER, (eap_constructor_t)eap_radius_create);
 
@@ -187,7 +201,10 @@ enumerator_t *eap_radius_create_server_enumerator()
 {
 	if (instance)
 	{
-		return instance->servers->create_enumerator(instance->servers);
+		instance->lock->read_lock(instance->lock);
+		return enumerator_create_cleaner(
+					instance->servers->create_enumerator(instance->servers),
+					(void*)instance->lock->unlock, instance->lock);
 	}
 	return enumerator_create_empty();
 }
