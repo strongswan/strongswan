@@ -109,7 +109,16 @@ static void run()
 		{
 			case SIGHUP:
 			{
-				DBG1(DBG_DMN, "signal of type SIGHUP received. Ignored");
+				DBG1(DBG_DMN, "signal of type SIGHUP received. Reloading "
+					 "configuration");
+				if (lib->settings->load_files(lib->settings, NULL, FALSE))
+				{
+					lib->plugins->reload(lib->plugins, NULL);
+				}
+				else
+				{
+					DBG1(DBG_DMN, "reloading config failed, keeping old");
+				}
 				break;
 			}
 			case SIGINT:
