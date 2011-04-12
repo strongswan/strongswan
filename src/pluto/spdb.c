@@ -881,7 +881,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
 		lset_t seen_attrs = 0;
 		lset_t seen_durations = 0;
 		u_int16_t life_type = 0;
-		struct oakley_trans_attrs ta;
+		struct oakley_trans_attrs ta = { .encrypter = NULL };
 		err_t ugh = NULL;       /* set to diagnostic when problem detected */
 
 		/* initialize only optional field in ta */
