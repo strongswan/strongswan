@@ -261,22 +261,25 @@ struct settings_t {
 	/**
 	 * Load settings from the files matching the given pattern.
 	 *
-	 * Existing sections are extended, existing values replaced, by those found
-	 * in the loaded files.
+	 * If merge is TRUE, existing sections are extended, existing values
+	 * replaced, by those found in the loaded files. If it is FALSE, existing
+	 * sections are purged before reading the new config.
 	 *
 	 * @note If any of the files matching the pattern fails to load, no settings
 	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
+	 * @param merge		TRUE to merge config with existing values
 	 * @return			TRUE, if settings were loaded successfully
 	 */
-	bool (*load_files)(settings_t *this, char *pattern);
+	bool (*load_files)(settings_t *this, char *pattern, bool merge);
 
 	/**
 	 * Load settings from the files matching the given pattern.
 	 *
-	 * Existing sections are extended, existing values replaced, by those found
-	 * in the loaded files.
+	 * If merge is TRUE, existing sections are extended, existing values
+	 * replaced, by those found in the loaded files. If it is FALSE, existing
+	 * sections are purged before reading the new config.
 	 *
 	 * All settings are loaded relative to the given section. The section is
 	 * created, if it does not yet exist.
@@ -285,11 +288,12 @@ struct settings_t {
 	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
+	 * @param merge		TRUE to merge config with existing values
 	 * @param section	section name of parent section, printf style
 	 * @param ...		argument list for section
 	 * @return			TRUE, if settings were loaded successfully
 	 */
-	bool (*load_files_section)(settings_t *this, char *pattern,
+	bool (*load_files_section)(settings_t *this, char *pattern, bool merge,
 							   char *section, ...);
 
 	/**

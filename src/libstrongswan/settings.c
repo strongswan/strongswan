@@ -152,6 +152,17 @@ static void section_destroy(section_t *this)
 }
 
 /**
+ * Purge contents of a section
+ */
+static void section_purge(section_t *this)
+{
+	this->kv->destroy_function(this->kv, (void*)kv_destroy);
+	this->kv = linked_list_create();
+	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	this->sections = linked_list_create();
+}
+
+/**
  * callback to find a section by name
  */
 static bool section_find(section_t *this, char *name)
@@ -1102,7 +1113,7 @@ static void section_extend(section_t *base, section_t *extension)
  * All files (even included ones) have to be loaded successfully.
  */
 static bool load_files_internal(private_settings_t *this, section_t *parent,
-								char *pattern)
+								char *pattern, bool merge)
 {
 	char *text;
 	linked_list_t *contents = linked_list_create();
@@ -1116,6 +1127,10 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	}
 
 	this->lock->write_lock(this->lock);
+	if (!merge)
+	{
+		section_purge(parent);
+	}
 	/* extend parent section */
 	section_extend(parent, section);
 	/* move contents of loaded files to main store */
@@ -1131,13 +1146,13 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 }
 
 METHOD(settings_t, load_files, bool,
-	   private_settings_t *this, char *pattern)
+	   private_settings_t *this, char *pattern, bool merge)
 {
-	return load_files_internal(this, this->top, pattern);
+	return load_files_internal(this, this->top, pattern, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
-	   private_settings_t *this, char *pattern, char *key, ...)
+	   private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1150,7 +1165,7 @@ METHOD(settings_t, load_files_section, bool,
 	{
 		return FALSE;
 	}
-	return load_files_internal(this, section, pattern);
+	return load_files_internal(this, section, pattern, merge);
 }
 
 METHOD(settings_t, destroy, void,
@@ -1197,7 +1212,7 @@ settings_t *settings_create(char *file)
 		file = STRONGSWAN_CONF;
 	}
 
-	load_files(this, file);
+	load_files(this, file, FALSE);
 
 	return &this->public;
 }
