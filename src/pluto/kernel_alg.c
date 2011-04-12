@@ -404,7 +404,7 @@ static void print_alg(char *buf, int *len, enum_names *alg_names, int alg_type)
 {
 	char alg_name[BUF_LEN];
 	int alg_name_len;
-	
+
 	alg_name_len = sprintf(alg_name, " %s", enum_name(alg_names, alg_type));
 	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
 	{
@@ -633,12 +633,11 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
  *      malloced pointer (this quirk allows easier spdb.c change)
  */
 struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
-									 lset_t policy )
+									 lset_t policy)
 {
 	const struct esp_info *esp_info;
 	struct esp_info tmp_esp_info;
 	struct db_context *ctx_new = NULL;
-	struct db_prop  *prop;
 	u_int trans_cnt = esp_ealg_num * esp_aalg_num;
 
 	if (!(policy & POLICY_ENCRYPT))     /* not possible, I think  */
@@ -659,7 +658,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 			kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
 		}
 	}
-	prop = db_prop_get(ctx_new);
 	return ctx_new;
 }
 

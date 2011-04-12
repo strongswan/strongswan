@@ -116,7 +116,7 @@ static void release(private_resolve_handler_t *this, identification_t *server,
 					configuration_attribute_type_t type, chunk_t data)
 {
 	FILE *in, *out;
-	char line[1024], matcher[512], *pos;
+	char line[1024], matcher[512];
 	host_t *addr;
 	int family;
 
@@ -148,7 +148,7 @@ static void release(private_resolve_handler_t *this, identification_t *server,
 					 addr, server);
 
 			/* copy all, but matching line */
-			while ((pos = fgets(line, sizeof(line), in)))
+			while (fgets(line, sizeof(line), in))
 			{
 				if (strneq(line, matcher, strlen(matcher)))
 				{

@@ -149,7 +149,6 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 	struct alg_info_ike *ai = c->alg_info_ike;
 	struct db_context *db_ctx = NULL;
 	struct ike_info *ike_info;
-	struct encrypt_desc *enc_desc;
 	u_int ealg, halg, modp, eklen = 0;
 	int i;
 
@@ -191,7 +190,6 @@ struct db_context *ike_alg_db_new(connection_t *c, lset_t policy)
 					enum_show(&oakley_group_names, modp));
 			continue;
 		}
-		enc_desc = ike_alg_get_crypter(ealg);
 
 		if (policy & POLICY_PUBKEY)
 		{
@@ -312,7 +310,7 @@ static void print_alg(char *buf, int *len, enum_names *alg_names, int alg_type,
 {
 	char alg_name[BUF_LEN];
 	int alg_name_len;
-	
+
 	alg_name_len = sprintf(alg_name, " %s[%s]", enum_name(alg_names, alg_type),
 						   plugin_name);
 	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
