@@ -122,7 +122,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 
 	/* check for sanity of string pointer and string */
 	if (string < (char**)msg ||
-		string > (char**)msg + sizeof(stroke_msg_t) ||
+		string > (char**)((char*)msg + sizeof(stroke_msg_t)) ||
 		(unsigned long)*string < (unsigned long)((char*)msg->buffer - (char*)msg) ||
 		(unsigned long)*string > msg->length)
 	{
