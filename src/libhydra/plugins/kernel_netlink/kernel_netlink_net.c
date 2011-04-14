@@ -534,6 +534,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 		switch (rta->rta_type)
 		{
 			case RTA_PREFSRC:
+				DESTROY_IF(host);
 				host = host_create_from_chunk(msg->rtm_family,
 							chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)), 0);
 				break;
