@@ -770,7 +770,7 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 					/* note dirty trick to suppress ~ at start of format
 					 * if we know what state to blame.
 					 */
-					if ((packet_len == 1) && (buffer[0] = 0xff)
+					if ((packet_len == 1) && (buffer[0] == 0xff)
 #ifdef DEBUG
 						&& ((cur_debugging & DBG_NATT) == 0)
 #endif
