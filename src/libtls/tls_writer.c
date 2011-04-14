@@ -143,7 +143,7 @@ METHOD(tls_writer_t, wrap8, void,
 	{
 		increase(this);
 	}
-	memmove(this->buf.ptr + 1, this->buf.ptr, 1);
+	memmove(this->buf.ptr + 1, this->buf.ptr, this->used);
 	this->buf.ptr[0] = this->used;
 	this->used += 1;
 }
@@ -155,7 +155,7 @@ METHOD(tls_writer_t, wrap16, void,
 	{
 		increase(this);
 	}
-	memmove(this->buf.ptr + 2, this->buf.ptr, 2);
+	memmove(this->buf.ptr + 2, this->buf.ptr, this->used);
 	htoun16(this->buf.ptr, this->used);
 	this->used += 2;
 }
@@ -169,7 +169,7 @@ METHOD(tls_writer_t, wrap24, void,
 	{
 		increase(this);
 	}
-	memmove(this->buf.ptr + 3, this->buf.ptr, 3);
+	memmove(this->buf.ptr + 3, this->buf.ptr, this->used);
 
 	len = htonl(this->used);
 	memcpy(this->buf.ptr, ((char*)&len) + 1, 3);
@@ -183,7 +183,7 @@ METHOD(tls_writer_t, wrap32, void,
 	{
 		increase(this);
 	}
-	memmove(this->buf.ptr + 4, this->buf.ptr, 4);
+	memmove(this->buf.ptr + 4, this->buf.ptr, this->used);
 	htoun32(this->buf.ptr, this->used);
 	this->used += 4;
 }
