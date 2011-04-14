@@ -189,11 +189,11 @@ static char* get_string(private_ietf_attributes_t *this)
 
 					if (oid == OID_UNKNOWN)
 					{
-						written = snprintf(pos, len, "0x#B", &attr->value);
+						written = snprintf(pos, len, "0x%#B", &attr->value);
 					}
 					else
 					{
-						written = snprintf(pos, len, "%s", oid_names[oid]);
+						written = snprintf(pos, len, "%s", oid_names[oid].name);
 					}
 					break;
 				}
