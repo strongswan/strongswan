@@ -768,6 +768,8 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		if (ugh != NULL)
 		{
 			DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+			shared_key->destroy(shared_key);
+			owners->destroy_offset(owners, offsetof(identification_t, destroy));
 			return FALSE;
 		}
 		if (id.len == 0)
