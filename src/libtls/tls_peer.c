@@ -502,8 +502,6 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 	{
 		DBG1(DBG_TLS, "server requested a certificate, but client "
 			 "authentication disabled");
-		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-		return NEED_MORE;
 	}
 	this->crypto->append_handshake(this->crypto,
 								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
@@ -541,19 +539,22 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 			authorities->destroy(authorities);
 			return NEED_MORE;
 		}
-		id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
-		cert = lib->credmgr->get_cert(lib->credmgr,
-									  CERT_X509, KEY_ANY, id, TRUE);
-		if (cert)
+		if (this->peer)
 		{
-			DBG1(DBG_TLS, "received TLS cert request for '%Y", id);
-			this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
+			id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
+			cert = lib->credmgr->get_cert(lib->credmgr,
+										  CERT_X509, KEY_ANY, id, TRUE);
+			if (cert)
+			{
+				DBG1(DBG_TLS, "received TLS cert request for '%Y", id);
+				this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
+			}
+			else
+			{
+				DBG1(DBG_TLS, "received TLS cert request for unknown CA '%Y'", id);
+			}
+			id->destroy(id);
 		}
-		else
-		{
-			DBG1(DBG_TLS, "received TLS cert request for unknown CA '%Y'", id);
-		}
-		id->destroy(id);
 	}
 	authorities->destroy(authorities);
 	this->state = STATE_CERTREQ_RECEIVED;
