@@ -1443,11 +1443,11 @@ static connection_t *instantiate(connection_t *c, const ip_address *him,
 
 	connect_to_host_pair(d);
 
-	return d;
 	if (sameaddr(&d->spd.that.host_addr, &d->spd.this.host_nexthop))
 	{
 		d->spd.this.host_nexthop = *him;
 	}
+	return d;
 }
 
 connection_t *rw_instantiate(connection_t *c, const ip_address *him,
