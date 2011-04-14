@@ -337,16 +337,16 @@ open_peerlog(connection_t *c)
 
 		/* copy IP address, turning : and . into / */
 		{
-			char c, *p, *q;
+			char ch, *p, *q;
 
 			p = peername;
 			q = dname;
 			do {
-				c = *p++;
-				if (c == '.' || c == ':')
-					c = '/';
-				*q++ = c;
-			} while (c != '\0');
+				ch = *p++;
+				if (ch == '.' || ch == ':')
+					ch = '/';
+				*q++ = ch;
+			} while (ch != '\0');
 		}
 
 		lf_len = peernamelen * 2
