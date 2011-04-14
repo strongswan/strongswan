@@ -118,7 +118,7 @@ static char* connection_name(starter_conn_t *conn)
 
 	if (streq(conn->name, "%auto"))
 	{
-		sprintf(buf, "conn_%ld", conn->id);
+		sprintf(buf, "conn_%lu", conn->id);
 		return buf;
 	}
 	return conn->name;
