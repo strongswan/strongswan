@@ -586,7 +586,7 @@ static void resize(char *name, host_t *end)
 			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
 	}
 	commit_transaction();
-	printf("done.\n", count);
+	printf("done.\n");
 
 }
 
