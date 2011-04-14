@@ -85,7 +85,8 @@ static int req()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-					return command_usage("invalid output format");
+					error = "invalid output format";
+					goto usage;
 				}
 				continue;
 			case EOF:
