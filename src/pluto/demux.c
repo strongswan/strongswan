@@ -1142,13 +1142,14 @@ read_packet(struct msg_digest *md)
 				, ifp->rname
 				, ip_str(&md->sender), (unsigned)md->sender_port));
 		}
-
+		free(buffer);
 		return FALSE;
 	}
 	else if (from_ugh != NULL)
 	{
 		plog("recvfrom on %s returned malformed source sockaddr: %s"
 			, ifp->rname, from_ugh);
+		free(buffer);
 		return FALSE;
 	}
 	cur_from = &md->sender;
@@ -1162,6 +1163,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u too small packet (%d)"
 				, ip_str(cur_from), (unsigned) cur_from_port, packet_len);
+			free(buffer);
 			return FALSE;
 		}
 		memcpy(&non_esp, buffer, sizeof(u_int32_t));
@@ -1169,6 +1171,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u has no Non-ESP marker"
 				, ip_str(cur_from), (unsigned) cur_from_port);
+			free(buffer);
 			return FALSE;
 		}
 		packet_len -= sizeof(u_int32_t);
