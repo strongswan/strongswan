@@ -966,7 +966,9 @@ malloc_md(void)
 	 * - .note = NOTHING_WRONG
 	 * - .encrypted = FALSE
 	 */
-	static const struct msg_digest blank_md;
+	static const struct msg_digest blank_md = {
+		.next = NULL,
+	};
 
 	if (md == NULL)
 	{

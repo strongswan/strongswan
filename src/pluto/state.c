@@ -166,7 +166,10 @@ static struct state **state_hash(const u_char *icookie, const u_char *rcookie,
  */
 struct state *new_state(void)
 {
-	static const struct state blank_state;      /* initialized all to zero & NULL */
+	/* initialized all to zero & NULL */
+	static const struct state blank_state = {
+		.st_serialno = 0,
+	};
 	static so_serial_t next_so = SOS_FIRST;
 	struct state *st;
 
