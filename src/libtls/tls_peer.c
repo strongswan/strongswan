@@ -817,39 +817,42 @@ static status_t send_certificate(private_tls_peer_t *this,
 	this->private = find_private_key(this);
 	if (!this->private)
 	{
-		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y', "
+			 "skipping client authentication", this->peer);
+		this->peer = NULL;
 	}
 
 	/* generate certificate payload */
 	certs = tls_writer_create(256);
-	cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
-	if (cert)
+	if (this->peer)
 	{
-		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
-		{
-			DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
-				 cert->get_subject(cert));
-			certs->write_data24(certs, data);
-			free(data.ptr);
-		}
-	}
-	enumerator = this->peer_auth->create_enumerator(this->peer_auth);
-	while (enumerator->enumerate(enumerator, &rule, &cert))
-	{
-		if (rule == AUTH_RULE_IM_CERT)
+		cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
 		{
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
 			{
-				DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
+				DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
 			}
 		}
+		enumerator = this->peer_auth->create_enumerator(this->peer_auth);
+		while (enumerator->enumerate(enumerator, &rule, &cert))
+		{
+			if (rule == AUTH_RULE_IM_CERT)
+			{
+				if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+				{
+					DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
+						 cert->get_subject(cert));
+					certs->write_data24(certs, data);
+					free(data.ptr);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 
 	writer->write_data24(writer, certs->get_buf(certs));
 	certs->destroy(certs);
