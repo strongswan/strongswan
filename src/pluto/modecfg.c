@@ -120,9 +120,10 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 				int family;
 
 				family = (ca->type == INTERNAL_IP4_ADDRESS) ? AF_INET : AF_INET6;
+				DESTROY_IF(requested_vip);
 				requested_vip = (ca->value.len) ?
 								host_create_from_chunk(family, ca->value, 0) :
-					 			host_create_any(family);
+								host_create_any(family);
 				plog("peer requested virtual IP %H", requested_vip);
 				break;
 			}
@@ -166,7 +167,7 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 	requested_vip->destroy(requested_vip);
 
 	/* if we have a virtual IP address - send it */
-	if (!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))  
+	if (!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))
 	{
 		vip = c->spd.that.host_srcip;
 		plog("assigning virtual IP %H to peer", vip);
@@ -179,7 +180,7 @@ static void get_attributes(connection_t *c, linked_list_t *ca_list)
 
 		/* set the remote client subnet to virtual IP */
 		c->spd.that.client.addr     = *(ip_address*)vip->get_sockaddr(vip);
-		c->spd.that.client.maskbits = (family == AF_INET) ? 32 : 128; 
+		c->spd.that.client.maskbits = (family == AF_INET) ? 32 : 128;
 		c->spd.that.has_client      = TRUE;
 	}
 
@@ -264,8 +265,8 @@ static bool set_attributes(connection_t *c, linked_list_t *ca_list)
 					setportof(0, &c->spd.this.client.addr);
 					c->spd.this.has_client = TRUE;
 
-					vip_set = TRUE;	
-				}	
+					vip_set = TRUE;
+				}
 				continue;
 			case APPLICATION_VERSION:
 #ifdef CISCO_QUIRKS
@@ -420,7 +421,7 @@ static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
 	}
 	enumerator->destroy(enumerator);
 	close_output_pbs(&strattr);
-	
+
 	modecfg_hash(r_hashval, r_hash_start, rbody->cur, st);
 	close_message(rbody);
 	encrypt_message(rbody, st);
@@ -653,7 +654,7 @@ static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
 			ca_list->destroy_function(ca_list, (void*)modecfg_attribute_destroy);
 			return stat;
 		}
-			
+
 		/* discard the parsed attributes and look for another payload */
 		while (ca_list->remove_last(ca_list, (void **)&ca) == SUCCESS) {}
 	}
@@ -670,7 +671,7 @@ stf_status modecfg_send_request(struct state *st)
 {
 	connection_t *c = st->st_connection;
 	stf_status stat;
-	modecfg_attribute_t *ca; 
+	modecfg_attribute_t *ca;
 	enumerator_t *enumerator;
 	int family;
 	chunk_t value;
@@ -685,7 +686,7 @@ stf_status modecfg_send_request(struct state *st)
 								   value);
 	ca_list->insert_last(ca_list, ca);
 
-	register_attribute_handlers(c);	
+	register_attribute_handlers(c);
 	enumerator = c->requested->create_enumerator(c->requested);
 	while (enumerator->enumerate(enumerator, &ca))
 	{
@@ -800,7 +801,7 @@ stf_status modecfg_send_set(struct state *st)
  * Used in ModeCfg push mode on the client (initiator)
  *   called in demux.c from STATE_MODE_CFG_I0
  *   client <- CFG_SET
- *   client -> CFG_ACK 
+ *   client -> CFG_ACK
  *   STF_OK transitions to  STATE_MODE_CFG_I3
  */
 stf_status modecfg_inI0(struct msg_digest *md)
@@ -865,7 +866,7 @@ stf_status modecfg_inI0(struct msg_digest *md)
 /**
  * Used in ModeCfg push mode on the server (responder)
  *   called in demux.c from STATE_MODE_CFG_R3
- *   server <- CFG_ACK 
+ *   server <- CFG_ACK
  *   STF_OK transitions to  STATE_MODE_CFG_R4
  */
 stf_status modecfg_inR3(struct msg_digest *md)
@@ -1140,7 +1141,7 @@ stf_status xauth_inR1(struct msg_digest *md)
 													  xauth_user_name.ptr)
 		)
 		DESTROY_IF(c->xauth_identity);
-		c->xauth_identity = identification_create_from_data(xauth_user_name);		
+		c->xauth_identity = identification_create_from_data(xauth_user_name);
 
 		DBG(DBG_PRIVATE,
 			DBG_log("peer xauth user password is '%.*s'", xauth_user_password.len,
