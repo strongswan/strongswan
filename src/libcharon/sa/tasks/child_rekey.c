@@ -382,7 +382,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 	if (other->get_type(other) == CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
-		if (rekey == NULL || rekey->child_sa != this->child_sa)
+		if (rekey->child_sa != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
@@ -399,7 +399,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 			other->destroy(other);
 			return;
 		}
-		if (del == NULL || del->get_child(del) != this->child_sa)
+		if (del->get_child(del) != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
