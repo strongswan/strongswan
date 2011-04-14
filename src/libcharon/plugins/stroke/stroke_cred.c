@@ -280,7 +280,7 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 
 			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
-			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
+			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex.ptr);
 			free(hex.ptr);
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))

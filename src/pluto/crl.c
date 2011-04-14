@@ -163,7 +163,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 		{
 			/* keep any known CRL distribution points */
 			add_distribution_points(x509crl->distributionPoints,
-					 				oldcrl->distributionPoints);
+									oldcrl->distributionPoints);
 
 			/* now delete the old CRL */
 			free_first_crl();
@@ -199,7 +199,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 		chunk_t hex, encoding;
 
 		hex = chunk_to_hex(crl->get_authKeyIdentifier(crl), NULL, FALSE);
-		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex);
+		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex.ptr);
 		free(hex.ptr);
 
 		if (cert_crl->get_encoding(cert_crl, CERT_ASN1_DER, &encoding))
