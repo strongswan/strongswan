@@ -45,7 +45,7 @@ struct in_addr *addrp;
 {
 	struct addrinfo hints, *res;
 	struct netent *ne = NULL;
-	const char *oops;
+	const char *oops, *msg = NULL;
 #	define	HEXLEN	10	/* strlen("0x11223344") */
 #	ifndef ATOADDRBUF
 #	define	ATOADDRBUF	100
@@ -84,10 +84,18 @@ struct in_addr *addrp;
 
 	/* next, check that it's a vaguely legal name */
 	for (q = p; *q != '\0'; q++)
+	{
 		if (!isprint(*q))
-			return "unprintable character in name";
+		{
+			msg = "unprintable character in name";
+			goto error;
+		}
+	}
 	if (strspn(p, namechars) != srclen)
-		return "illegal (non-DNS-name) character in name";
+	{
+		msg = "illegal (non-DNS-name) character in name";
+		goto error;
+	}
 
 	/* try as host name, failing that as /etc/networks network name */
 	memset(&hints, 0, sizeof(hints));
@@ -98,11 +106,8 @@ struct in_addr *addrp;
 		ne = getnetbyname(p);
 		if (ne == NULL)
 		{
-			if (p != namebuf)
-			{
-				FREE(p);
-			}
-			return "name lookup failed";
+			msg = "name lookup failed";
+			goto error;
 		}
 		addrp->s_addr = htonl(ne->n_net);
 	}
@@ -113,12 +118,13 @@ struct in_addr *addrp;
 		freeaddrinfo(res);
 	}
 
+error:
 	if (p != namebuf)
 	{
 		FREE(p);
 	}
 
-	return NULL;
+	return msg;
 }
 
 /*
