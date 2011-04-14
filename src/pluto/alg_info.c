@@ -539,7 +539,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 				buflen -= np;
 				if (esp_info->esp_ealg_keylen)
 				{
-					np = snprintf(ptr, buflen, "_%u", esp_info->esp_ealg_keylen);
+					np = snprintf(ptr, buflen, "_%zu", esp_info->esp_ealg_keylen);
 					ptr += np;
 					buflen -= np;
 				}
@@ -571,7 +571,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 			buflen -= np;
 			if (ike_info->ike_eklen)
 			{
-				np = snprintf(ptr, buflen, "_%u", ike_info->ike_eklen);
+				np = snprintf(ptr, buflen, "_%zu", ike_info->ike_eklen);
 				ptr += np;
 				buflen -= np;
 			}
