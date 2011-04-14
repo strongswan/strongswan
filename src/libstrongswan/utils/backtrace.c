@@ -80,7 +80,7 @@ static void log_(private_backtrace_t *this, FILE *file, bool detailed)
 			}
 			if (info.dli_sname)
 			{
-				fprintf(file, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%x) [%p]\n",
+				fprintf(file, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%tx) [%p]\n",
 						info.dli_fname, info.dli_fbase, info.dli_sname,
 						this->frames[i] - info.dli_saddr, this->frames[i]);
 			}
