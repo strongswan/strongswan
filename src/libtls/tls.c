@@ -73,7 +73,11 @@ ENUM_NEXT(tls_extension_names,
 		TLS_EXT_SIGNATURE_ALGORITHMS, TLS_EXT_SIGNATURE_ALGORITHMS,
 		TLS_EXT_EC_POINT_FORMATS,
 	"signature algorithms");
-ENUM_END(tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_RENEGOTIATION_INFO, TLS_EXT_RENEGOTIATION_INFO,
+		TLS_EXT_SIGNATURE_ALGORITHMS,
+	"renegotiation info");
+ENUM_END(tls_extension_names, TLS_EXT_RENEGOTIATION_INFO);
 
 /**
  * TLS record

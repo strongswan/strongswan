@@ -126,6 +126,8 @@ enum tls_extension_t {
 	TLS_EXT_EC_POINT_FORMATS = 11,
 	/** list supported signature algorithms */
 	TLS_EXT_SIGNATURE_ALGORITHMS = 13,
+	/** cryptographic binding for RFC 5746 renegotiation indication */
+	TLS_EXT_RENEGOTIATION_INFO = 65281,
 };
 
 /**
