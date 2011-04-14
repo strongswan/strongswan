@@ -625,5 +625,6 @@ host_t *host_create_any(int family)
 		default:
 			break;
 	}
+	free(this);
 	return NULL;
 }
