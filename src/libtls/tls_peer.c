@@ -738,6 +738,20 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		extensions->write_uint8(extensions, 1);
 		extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
 	}
+	if (this->server->get_type(this->server) == ID_FQDN)
+	{
+		tls_writer_t *names;
+
+		DBG2(DBG_TLS, "sending Server Name Indication for '%Y'", this->server);
+
+		names = tls_writer_create(8);
+		names->write_uint8(names, TLS_NAME_TYPE_HOST_NAME);
+		names->write_data16(names, this->server->get_encoding(this->server));
+		names->wrap16(names);
+		extensions->write_uint16(extensions, TLS_EXT_SERVER_NAME);
+		extensions->write_data16(extensions, names->get_buf(names));
+		names->destroy(names);
+	}
 
 	writer->write_data16(writer, extensions->get_buf(extensions));
 	extensions->destroy(extensions);

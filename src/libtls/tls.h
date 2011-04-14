@@ -130,6 +130,10 @@ enum tls_extension_t {
 	TLS_EXT_RENEGOTIATION_INFO = 65281,
 };
 
+enum tls_name_type_t {
+	TLS_NAME_TYPE_HOST_NAME = 0,
+};
+
 /**
  * Enum names for tls_extension_t
  */
