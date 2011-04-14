@@ -201,6 +201,9 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->transaction_id = transaction->get_id(transaction);
 	if (chunk_equals(broadcast, this->dst->get_address(this->dst)))
 	{
+		/* Set broadcast flag to get broadcasted replies, as we actually
+		 * do not own the MAC we request an address for. */
+		dhcp->flags = htons(0x8000);
 		/* TODO: send with 0.0.0.0 source address */
 	}
 	else
