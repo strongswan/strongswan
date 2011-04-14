@@ -147,7 +147,7 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		char *pos = cfg->setup.charondebug;
 		char *buf_pos = buffer;
 
-		while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
+		while (pos && sscanf(pos, "%3s %d,", type, &level) == 2)
 		{
 			snprintf(buf_pos, buffer + sizeof(buffer) - buf_pos, "--debug-%s", type);
 			arg[argc++] = buf_pos;
