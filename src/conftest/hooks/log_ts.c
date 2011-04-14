@@ -38,7 +38,6 @@ METHOD(listener_t, message, bool,
 	{
 		enumerator_t *enumerator;
 		payload_t *payload;
-		linked_list_t *list;
 		ts_payload_t *ts;
 
 		enumerator = message->create_payload_enumerator(message);
@@ -48,10 +47,29 @@ METHOD(listener_t, message, bool,
 				payload->get_type(payload) == TRAFFIC_SELECTOR_RESPONDER)
 			{
 				ts = (ts_payload_t*)payload;
-				list = ts->get_traffic_selectors(ts);
+				host_t *from, *to;
+				linked_list_t *list;
+				enumerator_t *tsenum;
+				traffic_selector_t *selector;
 
-				DBG1(DBG_CFG, "received %N: %#R",
-					 payload_type_short_names, payload->get_type(payload), list);
+				list = ts->get_traffic_selectors(ts);
+				tsenum = list->create_enumerator(list);
+				while (tsenum->enumerate(tsenum, &selector))
+				{
+					from = host_create_from_chunk(AF_UNSPEC,
+									selector->get_from_address(selector), 0);
+					to = host_create_from_chunk(AF_UNSPEC,
+									selector->get_to_address(selector), 0);
+
+					DBG1(DBG_CFG, "received %N: %N %H-%H proto %u port %u-%u",
+						 payload_type_short_names, payload->get_type(payload),
+						 ts_type_name, selector->get_type(selector),
+						 from, to, selector->get_protocol(selector),
+						 selector->get_from_port(selector),
+						 selector->get_to_port(selector));
+				}
+				tsenum->destroy(tsenum);
+
 				list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
 			}
 		}
