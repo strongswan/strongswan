@@ -238,7 +238,8 @@ static int sign_crl()
 				}
 				else
 				{
-					return command_usage( "invalid revocation reason");
+					error = "invalid revocation reason";
+					goto usage;
 				}
 				continue;
 			case 'd':
@@ -252,7 +253,8 @@ static int sign_crl()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-					return command_usage("invalid output format");
+					error = "invalid output format";
+					goto usage;
 				}
 				continue;
 			case EOF:
