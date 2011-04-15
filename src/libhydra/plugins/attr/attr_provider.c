@@ -61,11 +61,9 @@ static bool attr_enum_filter(void *null, attribute_entry_t **in,
 	return TRUE;
 }
 
-/**
- * Implementation of attribute_provider_t.create_attribute_enumerator
- */
-static enumerator_t* create_attribute_enumerator(private_attr_provider_t *this,
-								char *pool, identification_t *id, host_t *vip)
+METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
+	private_attr_provider_t *this, char *pool,
+	identification_t *id, host_t *vip)
 {
 	if (vip)
 	{
@@ -76,10 +74,8 @@ static enumerator_t* create_attribute_enumerator(private_attr_provider_t *this,
 	return enumerator_create_empty();
 }
 
-/**
- * Implementation of attr_provider_t.destroy
- */
-static void destroy(private_attr_provider_t *this)
+METHOD(attr_provider_t, destroy, void,
+	private_attr_provider_t *this)
 {
 	attribute_entry_t *entry;
 
@@ -246,14 +242,17 @@ attr_provider_t *attr_provider_create(database_t *db)
 	private_attr_provider_t *this;
 	int i;
 
-	this = malloc_thing(private_attr_provider_t);
-
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))return_null;
-	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))return_false;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, char *names, identification_t *id, host_t *vip))create_attribute_enumerator;
-	this->public.destroy = (void(*)(attr_provider_t*))destroy;
-
-	this->attributes = linked_list_create();
+	INIT(this,
+		.public = {
+			.provider = {
+				.acquire_address = (void*)return_null,
+				.release_address = (void*)return_false,
+				.create_attribute_enumerator = _create_attribute_enumerator,
+			},
+			.destroy = _destroy,
+		},
+		.attributes = linked_list_create(),
+	);
 
 	for (i = 1; i <= SERVER_MAX; i++)
 	{
