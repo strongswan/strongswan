@@ -17,8 +17,12 @@ strongswan-4.5.2
   pcsc-lite based SIM card backend.
 
 - The eap-peap plugin implements the EAP PEAP protocol. Interoperates
-  successfully with a FreeRADIUS server but not yet with a Windows 7 
+  successfully with a FreeRADIUS server but not yet with a Windows 7
   Agile VPN client.
+
+- The IKEv2 daemon charon rereads strongswan.conf on SIGHUP and instructs
+  all plugins to reload. Currently only the eap-radius and the attr plugins
+  support configuration reloading.
 
 
 strongswan-4.5.1
