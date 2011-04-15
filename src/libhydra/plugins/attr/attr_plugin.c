@@ -42,6 +42,13 @@ METHOD(plugin_t, get_name, char*,
 	return "attr";
 }
 
+METHOD(plugin_t, reload, bool,
+	private_attr_plugin_t *this)
+{
+	this->provider->reload(this->provider);
+	return TRUE;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_attr_plugin_t *this)
 {
@@ -61,7 +68,7 @@ plugin_t *attr_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},

@@ -21,6 +21,7 @@
 #include <hydra.h>
 #include <debug.h>
 #include <utils/linked_list.h>
+#include <threading/rwlock.h>
 
 #define SERVER_MAX		2
 
@@ -41,6 +42,11 @@ struct private_attr_provider_t {
 	 * List of attributes, attribute_entry_t
 	 */
 	linked_list_t *attributes;
+
+	/**
+	 * Lock for attribute list
+	 */
+	rwlock_t *lock;
 };
 
 struct attribute_entry_t {
@@ -49,6 +55,15 @@ struct attribute_entry_t {
 	/** attribute value */
 	chunk_t value;
 };
+
+/**
+ * Destroy an entry
+ */
+static void attribute_destroy(attribute_entry_t *this)
+{
+	free(this->value.ptr);
+	free(this);
+}
 
 /**
  * convert enumerator value from attribute_entry
@@ -67,9 +82,10 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 {
 	if (vip)
 	{
+		this->lock->read_lock(this->lock);
 		return enumerator_create_filter(
-						this->attributes->create_enumerator(this->attributes),
-						(void*)attr_enum_filter, NULL, NULL);
+				this->attributes->create_enumerator(this->attributes),
+				(void*)attr_enum_filter, this->lock, (void*)this->lock->unlock);
 	}
 	return enumerator_create_empty();
 }
@@ -77,15 +93,9 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 METHOD(attr_provider_t, destroy, void,
 	private_attr_provider_t *this)
 {
-	attribute_entry_t *entry;
-
-	while (this->attributes->remove_last(this->attributes,
-										 (void**)&entry) == SUCCESS)
-	{
-		free(entry->value.ptr);
-		free(entry);
-	}
-	this->attributes->destroy(this->attributes);
+	this->attributes->destroy_function(this->attributes,
+									   (void*)attribute_destroy);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -125,6 +135,8 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 			entry->type = type;
 			entry->value = chunk_clone(host->get_address(host));
 			host->destroy(host);
+			DBG2(DBG_CFG, "loaded legacy entry attribute %N: %#B",
+				 configuration_attribute_type_names, entry->type, &entry->value);
 			this->attributes->insert_last(this->attributes, entry);
 		}
 	}
@@ -154,6 +166,13 @@ static void load_entries(private_attr_provider_t *this)
 {
 	enumerator_t *enumerator, *tokens;
 	char *key, *value, *token;
+	int i;
+
+	for (i = 1; i <= SERVER_MAX; i++)
+	{
+		add_legacy_entry(this, "dns", i, INTERNAL_IP4_DNS);
+		add_legacy_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
+	}
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
 											"%s.plugins.attr", hydra->daemon);
@@ -227,11 +246,30 @@ static void load_entries(private_attr_provider_t *this)
 				}
 			}
 			host->destroy(host);
+			DBG2(DBG_CFG, "loaded attribute %N: %#B",
+				 configuration_attribute_type_names, entry->type, &entry->value);
 			this->attributes->insert_last(this->attributes, entry);
 		}
 		tokens->destroy(tokens);
 	}
 	enumerator->destroy(enumerator);
+}
+
+METHOD(attr_provider_t, reload, void,
+	private_attr_provider_t *this)
+{
+	this->lock->write_lock(this->lock);
+
+	this->attributes->destroy_function(this->attributes, (void*)attribute_destroy);
+	this->attributes = linked_list_create();
+
+	load_entries(this);
+
+	DBG1(DBG_CFG, "loaded %d entr%s for attr plugin configuration",
+		 this->attributes->get_count(this->attributes),
+		 this->attributes->get_count(this->attributes) == 1 ? "y" : "ies");
+
+	this->lock->unlock(this->lock);
 }
 
 /*
@@ -240,7 +278,6 @@ static void load_entries(private_attr_provider_t *this)
 attr_provider_t *attr_provider_create(database_t *db)
 {
 	private_attr_provider_t *this;
-	int i;
 
 	INIT(this,
 		.public = {
@@ -249,16 +286,12 @@ attr_provider_t *attr_provider_create(database_t *db)
 				.release_address = (void*)return_false,
 				.create_attribute_enumerator = _create_attribute_enumerator,
 			},
+			.reload = _reload,
 			.destroy = _destroy,
 		},
 		.attributes = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-
-	for (i = 1; i <= SERVER_MAX; i++)
-	{
-		add_legacy_entry(this, "dns", i, INTERNAL_IP4_DNS);
-		add_legacy_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
-	}
 
 	load_entries(this);
 

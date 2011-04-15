@@ -36,6 +36,11 @@ struct attr_provider_t {
 	attribute_provider_t provider;
 
 	/**
+	 * Reload configuration from strongswan.conf.
+	 */
+	void (*reload)(attr_provider_t *this);
+
+	/**
 	 * Destroy a attr_provider instance.
 	 */
 	void (*destroy)(attr_provider_t *this);
