@@ -53,7 +53,12 @@ METHOD(eap_peap_avp_t, build, void,
 
 	pkt = (eap_packet_t*)data.ptr;
 
-	if (pkt->code == EAP_SUCCESS || pkt->code == EAP_FAILURE)
+	if (pkt->code == EAP_REQUEST && pkt->type == EAP_IDENTITY)
+	{
+		/* uncompressed EAP Identity request */
+		avp_data = data;
+	}
+	else if (pkt->code == EAP_SUCCESS || pkt->code == EAP_FAILURE)
 	{
 		code = (this->is_server) ? EAP_REQUEST : EAP_RESPONSE;
 		writer->write_uint8(writer, code);
@@ -86,26 +91,35 @@ METHOD(eap_peap_avp_t, process, status_t,
 	}
 	pkt = (eap_packet_t*)avp_data.ptr;
 
-	if (len == 11 && pkt->code == code && untoh16(&pkt->length) == len && 
-		pkt->type == EAP_MSTLV)
+	if (len > 4 && pkt->code == code && untoh16(&pkt->length) == len)
 	{
-		if (memeq(&pkt->data, MS_AVP_Success.ptr, MS_AVP_Success.len))
+		if (len == 5 && pkt->type == EAP_IDENTITY)
 		{
-			DBG2(DBG_IKE, "MS Success Result AVP");
-			code = EAP_SUCCESS;
+			/* uncompressed EAP Identity request */
+			*data = chunk_clone(avp_data);
+			return SUCCESS;
 		}
-		else if (memeq(&pkt->data, MS_AVP_Failure.ptr, MS_AVP_Failure.len))
+		else if (len == 11 && pkt->type == EAP_MSTLV)
 		{
-			DBG2(DBG_IKE, "MS Failure Result AVP");
-			code = EAP_FAILURE;
+			/* currently only MS Success/Failure AVPs are supported */
+			if (memeq(&pkt->data, MS_AVP_Success.ptr, MS_AVP_Success.len))
+			{
+				DBG2(DBG_IKE, "MS Success Result AVP");
+				code = EAP_SUCCESS;
+			}
+			else if (memeq(&pkt->data, MS_AVP_Failure.ptr, MS_AVP_Failure.len))
+			{
+				DBG2(DBG_IKE, "MS Failure Result AVP");
+				code = EAP_FAILURE;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "unknown MS AVP message");
+				return FAILED;
+			}
+			identifier = pkt->identifier;
+			len = 0;
 		}
-		else
-		{
-			DBG1(DBG_IKE, "unknown MS AVP message");
-			return FAILED;
-		}
-		identifier = pkt->identifier;
-		len = 0;
 	}
 
 	*data = chunk_alloc(4 + len);
