@@ -42,11 +42,6 @@ struct private_eap_peap_peer_t {
 	identification_t *peer;
 
 	/**
-	 * Current EAP-PEAP state
-	 */
-	bool start_phase2;
-
-	/**
      * Outer phase 1 EAP method
 	 */
 	eap_method_t *ph1_method;
@@ -161,7 +156,6 @@ METHOD(tls_application_t, process, status_t,
 			return NEED_MORE;
 		}
 		type = this->ph2_method->get_type(this->ph2_method, &vendor);
-		this->start_phase2 = FALSE;
 	}
 
 	status = this->ph2_method->process(this->ph2_method, in, &this->out);
@@ -197,27 +191,6 @@ METHOD(tls_application_t, build, status_t,
 	eap_code_t code;
 	eap_type_t type;
 	u_int32_t vendor;
-
-	if (this->ph2_method == NULL && this->start_phase2)
-	{
-		/* generate an EAP Identity response */
-		this->ph2_method = charon->eap->create_instance(charon->eap, EAP_IDENTITY,
-								 0,	EAP_PEER, this->server, this->peer);
-		if (this->ph2_method == NULL)
-		{
-			DBG1(DBG_IKE, "EAP_IDENTITY method not available");
-			return FAILED;
-		}
-	
-		/* synchronize EAP message identifiers of inner protocol with outer */
-		this->ph2_method->set_identifier(this->ph2_method,
-							this->ph1_method->get_identifier(this->ph1_method));
-
-		this->ph2_method->process(this->ph2_method, NULL, &this->out);
-		this->ph2_method->destroy(this->ph2_method);
-		this->ph2_method = NULL;
-		this->start_phase2 = FALSE;
-	}
 
 	if (this->out)
 	{
@@ -276,7 +249,6 @@ eap_peap_peer_t *eap_peap_peer_create(identification_t *server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
 		.ph1_method = eap_method,
-		.start_phase2 = TRUE,
 		.avp = eap_peap_avp_create(FALSE),
 	);
 

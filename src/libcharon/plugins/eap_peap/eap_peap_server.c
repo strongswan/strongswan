@@ -52,6 +52,11 @@ struct private_eap_peap_server_t {
 	bool start_phase2_tnc;
 
 	/**
+	 * Starts phase 2 with EAP Identity request
+	 */
+	bool start_phase2_id;
+
+	/**
 	 * Final EAP-PEAP phase2 result
 	 */
 	eap_code_t phase2_result;
@@ -332,12 +337,12 @@ METHOD(tls_application_t, build, status_t,
 	eap_type_t type;
 	u_int32_t vendor;
 
-	if (this->ph2_method == NULL && this->start_phase2 &&
-		lib->settings->get_bool(lib->settings,
-			 	"charon.plugins.eap-peap.phase2_piggyback", FALSE))
+	if (this->ph2_method == NULL && this->start_phase2 && this->start_phase2_id)
 	{
-		/* generate an EAP Identity request which will be piggybacked right
-		 * onto the TLS Finished message thus initiating EAP-PEAP phase2
+		/*
+		 * Start Phase 2 with an EAP Identity request either piggybacked right
+		 * onto the TLS Finished payload or delayed after the reception of an
+		 * empty EAP Acknowledge message.
 		 */
 		this->ph2_method = charon->eap->create_instance(charon->eap, EAP_IDENTITY,
 								 0,	EAP_SERVER, this->server, this->peer);
@@ -355,6 +360,8 @@ METHOD(tls_application_t, build, status_t,
 		this->ph2_method->initiate(this->ph2_method, &this->out);
 		this->start_phase2 = FALSE;
 	}
+	
+	this->start_phase2_id = TRUE;
 
 	if (this->out)
 	{
@@ -415,6 +422,8 @@ eap_peap_server_t *eap_peap_server_create(identification_t *server,
 		.ph1_method = eap_method,
 		.start_phase2 = TRUE,
 		.start_phase2_tnc = TRUE,
+		.start_phase2_id = lib->settings->get_bool(lib->settings,
+			 				"charon.plugins.eap-peap.phase2_piggyback", FALSE),
 		.phase2_result = EAP_FAILURE,
 		.avp = eap_peap_avp_create(TRUE),
 	);
