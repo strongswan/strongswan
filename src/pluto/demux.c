@@ -1666,7 +1666,7 @@ process_packet(struct msg_digest **mdp)
 	 * Look up the appropriate microcode based on state and
 	 * possibly Oakley Auth type.
 	 */
-	passert(STATE_IKE_FLOOR <= from_state && from_state <= STATE_IKE_ROOF);
+	passert(STATE_IKE_FLOOR <= from_state && from_state < STATE_IKE_ROOF);
 	smc = ike_microcode_index[from_state - STATE_IKE_FLOOR];
 
 	if (st != NULL)
