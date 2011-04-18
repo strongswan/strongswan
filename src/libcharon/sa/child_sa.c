@@ -563,6 +563,7 @@ METHOD(child_sa_t, install, status_t,
 	   linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
+	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
 	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
@@ -608,6 +609,8 @@ METHOD(child_sa_t, install, status_t,
 								  &enc_alg, &size);
 	this->proposal->get_algorithm(this->proposal, INTEGRITY_ALGORITHM,
 								  &int_alg, &size);
+	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
+								  &esn, NULL);
 
 	lifetime = this->config->get_lifetime(this->config);
 
@@ -647,7 +650,7 @@ METHOD(child_sa_t, install, status_t,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
-				this->ipcomp, cpi, this->encap, FALSE, update, src_ts, dst_ts);
+				this->ipcomp, cpi, this->encap, esn, update, src_ts, dst_ts);
 
 	free(lifetime);
 
