@@ -112,7 +112,7 @@
                 0x05         "signingTime"				OID_PKCS9_SIGNING_TIME
                 0x06         "counterSignature"
                 0x07         "challengePassword"		OID_CHALLENGE_PASSWORD
-                0x08         "unstructuredAddress"
+                0x08         "unstructuredAddress"		OID_UNSTRUCTURED_ADDRESS
                 0x0E         "extensionRequest"			OID_EXTENSION_REQUEST
                 0x0F         "S/MIME Capabilities"
             0x02             "digestAlgorithm"
