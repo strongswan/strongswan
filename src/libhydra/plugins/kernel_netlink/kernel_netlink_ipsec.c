@@ -353,9 +353,14 @@ struct private_kernel_netlink_ipsec_t {
 	bool install_routes;
 
 	/**
-	 * Size of the replay window
+	 * Size of the replay window, in packets
 	 */
 	u_int32_t replay_window;
+
+	/**
+	 * Size of the replay window bitmap, in bytes
+	 */
+	u_int32_t replay_bmp;
 };
 
 /**
@@ -1199,8 +1204,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			replay = (struct xfrm_replay_state_esn*)RTA_DATA(rthdr);
 			/* bmp_len contains number uf __u32's */
-			replay->bmp_len = (this->replay_window + sizeof(u_int32_t) * 8 - 1)
-								/ (sizeof(u_int32_t) * 8);
+			replay->bmp_len = this->replay_bmp;
 			replay->replay_window = this->replay_window;
 
 			rthdr = XFRM_RTA_NEXT(rthdr);
@@ -1232,11 +1236,14 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 }
 
 /**
- * Get the replay state (i.e. sequence numbers) of an SA.
+ * Get the ESN replay state (i.e. sequence numbers) of an SA.
+ *
+ * Allocates into one the replay state structure we get from the kernel.
  */
-static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
-						  u_int32_t spi, u_int8_t protocol, host_t *dst,
-						  struct xfrm_replay_state *replay)
+static void get_replay_state(private_kernel_netlink_ipsec_t *this,
+							 u_int32_t spi, u_int8_t protocol, host_t *dst,
+							 struct xfrm_replay_state_esn **replay_esn,
+							 struct xfrm_replay_state **replay)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1247,7 +1254,8 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x", ntohl(spi));
+	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
+		 ntohl(spi));
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1291,32 +1299,30 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 		}
 	}
 
-	if (out_aevent == NULL)
+	if (out_aevent)
 	{
-		DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
-					  ntohl(spi));
-		free(out);
-		return FAILED;
-	}
-
-	rta = XFRM_RTA(out, struct xfrm_aevent_id);
-	rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
-	while(RTA_OK(rta, rtasize))
-	{
-		if (rta->rta_type == XFRMA_REPLAY_VAL &&
-			RTA_PAYLOAD(rta) == sizeof(struct xfrm_replay_state))
+		rta = XFRM_RTA(out, struct xfrm_aevent_id);
+		rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
+		while (RTA_OK(rta, rtasize))
 		{
-			memcpy(replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
-			free(out);
-			return SUCCESS;
+			if (rta->rta_type == XFRMA_REPLAY_VAL &&
+				RTA_PAYLOAD(rta) == sizeof(**replay))
+			{
+				*replay = malloc(RTA_PAYLOAD(rta));
+				memcpy(*replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			}
+			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
+				RTA_PAYLOAD(rta) >= sizeof(**replay_esn) + this->replay_bmp)
+			{
+				*replay_esn = malloc(RTA_PAYLOAD(rta));
+				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			}
+			rta = RTA_NEXT(rta, rtasize);
 		}
-		rta = RTA_NEXT(rta, rtasize);
 	}
-
-	DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
-				  ntohl(spi));
 	free(out);
-	return FAILED;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
@@ -1515,8 +1521,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct rtattr *rta;
 	size_t rtasize;
 	struct xfrm_encap_tmpl* tmpl = NULL;
-	bool got_replay_state = FALSE;
-	struct xfrm_replay_state replay;
+	struct xfrm_replay_state *replay = NULL;
+	struct xfrm_replay_state_esn *replay_esn = NULL;
+	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
 	if (cpi)
@@ -1572,22 +1579,16 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	if (out_sa == NULL)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
-	/* try to get the replay state */
-	if (get_replay_state(this, spi, protocol, dst, &replay) == SUCCESS)
-	{
-		got_replay_state = TRUE;
-	}
+	get_replay_state(this, spi, protocol, dst, &replay_esn, &replay);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
@@ -1640,7 +1641,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
@@ -1652,30 +1653,55 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta = XFRM_RTA_NEXT(rta);
 	}
 
-	if (got_replay_state)
-	{	/* copy the replay data if available */
+	if (replay_esn)
+	{
+		rta->rta_type = XFRMA_REPLAY_ESN_VAL;
+		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
+								  this->replay_bmp);
+
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			goto failed;
+		}
+		memcpy(RTA_DATA(rta), replay_esn,
+			   sizeof(struct xfrm_replay_state_esn) + this->replay_bmp);
+
+		rta = XFRM_RTA_NEXT(rta);
+	}
+	else if (replay)
+	{
 		rta->rta_type = XFRMA_REPLAY_VAL;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
 
 		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
-		memcpy(RTA_DATA(rta), &replay, sizeof(replay));
+		memcpy(RTA_DATA(rta), replay, sizeof(replay));
 
 		rta = XFRM_RTA_NEXT(rta);
+	}
+	else
+	{
+		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry "
+			 "with SPI %.8x", ntohl(spi));
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
+
+	status = SUCCESS;
+failed:
+	free(replay);
+	free(replay_esn);
 	free(out);
 
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
@@ -2242,6 +2268,9 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.replay_window = lib->settings->get_int(lib->settings,
 					"%s.replay_window", DEFAULT_REPLAY_WINDOW, hydra->daemon),
 	);
+
+	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
+													(sizeof(u_int32_t) * 8);
 
 	if (streq(hydra->daemon, "pluto"))
 	{	/* no routes for pluto, they are installed via updown script */
