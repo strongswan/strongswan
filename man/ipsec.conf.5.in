@@ -409,12 +409,20 @@ comma-separated list of ESP encryption/authentication algorithms to be used
 for the connection, e.g.
 .BR aes128-sha256 .
 The notation is
-.BR encryption-integrity-[dh-group] .
+.BR encryption-integrity[-dhgroup][-esnmodes] .
 .br
 If
 .B dh-group
 is specified, CHILD_SA setup and rekeying include a separate diffe hellman
-exchange (IKEv2 only).
+exchange (IKEv2 only). Valid
+.B esnmodes
+(IKEv2 only) are
+.B esn
+and
+.B noesn.
+Specifying both negotiates Extended Sequence number support with the peer,
+the defaut is
+.B noesn.
 .TP
 .BR forceencaps " = yes | " no
 force UDP encapsulation for ESP packets even if no NAT situation is detected.
