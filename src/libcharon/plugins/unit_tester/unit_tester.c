@@ -93,7 +93,7 @@ static void run_tests(private_unit_tester_t *this)
 }
 
 METHOD(plugin_t, get_name, char*,
-	private_unit_tester_plugin_t *this)
+	private_unit_tester_t *this)
 {
 	return "unit-tester";
 }
