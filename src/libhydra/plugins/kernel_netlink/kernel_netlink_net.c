@@ -350,7 +350,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 				entry->addrs = linked_list_create();
 				this->ifaces->insert_last(this->ifaces, entry);
 			}
-			memcpy(entry->ifname, name, IFNAMSIZ);
+			strncpy(entry->ifname, name, IFNAMSIZ);
 			entry->ifname[IFNAMSIZ-1] = '\0';
 			if (event)
 			{
