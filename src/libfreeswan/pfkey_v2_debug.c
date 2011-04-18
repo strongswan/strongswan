@@ -54,10 +54,11 @@ static char *pfkey_sadb_ext_strings[]={
   "X-source-mask",                /* SADB_X_EXT_ADDRESS_SRC_MASK   23 */
   "X-dest-mask",                  /* SADB_X_EXT_ADDRESS_DST_MASK   24 */
   "X-set-debug",                  /* SADB_X_EXT_DEBUG              25 */
-  "X-NAT-T-type",                 /* SADB_X_EXT_NAT_T_TYPE         26 */
-  "X-NAT-T-sport",                /* SADB_X_EXT_NAT_T_SPORT        27 */
-  "X-NAT-T-dport",                /* SADB_X_EXT_NAT_T_DPORT        28 */
-  "X-NAT-T-OA",                   /* SADB_X_EXT_NAT_T_OA           29 */
+  "X-protocol",                   /* SADB_X_EXT_PROTOCOL           26 */
+  "X-NAT-T-type",                 /* SADB_X_EXT_NAT_T_TYPE         27 */
+  "X-NAT-T-sport",                /* SADB_X_EXT_NAT_T_SPORT        28 */
+  "X-NAT-T-dport",                /* SADB_X_EXT_NAT_T_DPORT        29 */
+  "X-NAT-T-OA",                   /* SADB_X_EXT_NAT_T_OA           30 */
 };
 
 const char *
@@ -72,23 +73,24 @@ pfkey_v2_sadb_ext_string(int ext)
 
 
 static char *pfkey_sadb_type_strings[]={
-	"reserved",                     /* SADB_RESERVED      */
-	"getspi",                       /* SADB_GETSPI        */
-	"update",                       /* SADB_UPDATE        */
-	"add",                          /* SADB_ADD           */
-	"delete",                       /* SADB_DELETE        */
-	"get",                          /* SADB_GET           */
-	"acquire",                      /* SADB_ACQUIRE       */
-	"register",                     /* SADB_REGISTER      */
-	"expire",                       /* SADB_EXPIRE        */
-	"flush",                        /* SADB_FLUSH         */
-	"dump",                         /* SADB_DUMP          */
-	"x-promisc",                    /* SADB_X_PROMISC     */
-	"x-pchange",                    /* SADB_X_PCHANGE     */
-	"x-groupsa",                    /* SADB_X_GRPSA       */
-	"x-addflow(eroute)",            /* SADB_X_ADDFLOW     */
-	"x-delflow(eroute)",            /* SADB_X_DELFLOW     */
-	"x-debug",                      /* SADB_X_DEBUG       */
+	"reserved",                     /* SADB_RESERVED            */
+	"getspi",                       /* SADB_GETSPI              */
+	"update",                       /* SADB_UPDATE              */
+	"add",                          /* SADB_ADD                 */
+	"delete",                       /* SADB_DELETE              */
+	"get",                          /* SADB_GET                 */
+	"acquire",                      /* SADB_ACQUIRE             */
+	"register",                     /* SADB_REGISTER            */
+	"expire",                       /* SADB_EXPIRE              */
+	"flush",                        /* SADB_FLUSH               */
+	"dump",                         /* SADB_DUMP                */
+	"x-promisc",                    /* SADB_X_PROMISC           */
+	"x-pchange",                    /* SADB_X_PCHANGE           */
+	"x-groupsa",                    /* SADB_X_GRPSA             */
+	"x-addflow(eroute)",            /* SADB_X_ADDFLOW           */
+	"x-delflow(eroute)",            /* SADB_X_DELFLOW           */
+	"x-debug",                      /* SADB_X_DEBUG             */
+	"x-nat-t-new-mapping",          /* SADB_X_NAT_T_NEW_MAPPING */
 };
 
 const char *
