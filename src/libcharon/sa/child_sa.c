@@ -647,7 +647,7 @@ METHOD(child_sa_t, install, status_t,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
 				inbound ? this->mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
-				this->ipcomp, cpi, this->encap, update, src_ts, dst_ts);
+				this->ipcomp, cpi, this->encap, FALSE, update, src_ts, dst_ts);
 
 	free(lifetime);
 

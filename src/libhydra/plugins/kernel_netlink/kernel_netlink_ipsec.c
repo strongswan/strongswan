@@ -868,7 +868,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool encap, bool inbound,
+	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
 	netlink_buf_t request;
@@ -884,7 +884,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark, tfc,
 			   &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
-			   mode, ipcomp, 0, FALSE, inbound, NULL, NULL);
+			   mode, ipcomp, 0, FALSE, FALSE, inbound, NULL, NULL);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;

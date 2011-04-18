@@ -81,8 +81,8 @@ METHOD(kernel_interface_t, add_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key,	ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool encap, bool inbound, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts)
+	u_int16_t cpi, bool encap, bool esn, bool inbound,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	if (!this->ipsec)
 	{
@@ -90,7 +90,7 @@ METHOD(kernel_interface_t, add_sa, status_t,
 	}
 	return this->ipsec->add_sa(this->ipsec, src, dst, spi, protocol, reqid,
 			mark, tfc, lifetime, enc_alg, enc_key, int_alg, int_key, mode,
-			ipcomp, cpi, encap, inbound, src_ts, dst_ts);
+			ipcomp, cpi, encap, esn, inbound, src_ts, dst_ts);
 }
 
 METHOD(kernel_interface_t, update_sa, status_t,
