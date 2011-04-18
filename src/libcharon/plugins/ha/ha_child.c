@@ -91,6 +91,10 @@ METHOD(listener_t, child_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_INTEG, alg);
 	}
+	if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, &alg, NULL))
+	{
+		m->add_attribute(m, HA_ESN, alg);
+	}
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	if (dh && dh->get_shared_secret(dh, &secret) == SUCCESS)

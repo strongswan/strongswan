@@ -234,6 +234,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_INBOUND_CPI:
 		case HA_OUTBOUND_CPI:
 		case HA_SEGMENT:
+		case HA_ESN:
 		{
 			u_int16_t val;
 
@@ -447,6 +448,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_INBOUND_CPI:
 		case HA_OUTBOUND_CPI:
 		case HA_SEGMENT:
+		case HA_ESN:
 		{
 			if (this->buf.len < sizeof(u_int16_t))
 			{

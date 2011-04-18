@@ -140,6 +140,8 @@ enum ha_message_attribute_t {
 	HA_MID,
 	/** u_int16_t, HA segment */
 	HA_SEGMENT,
+	/** u_int16_t, Extended Sequence numbers */
+	HA_ESN,
 };
 
 /**

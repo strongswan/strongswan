@@ -462,6 +462,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
 	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
 	u_int16_t encr = ENCR_UNDEFINED, integ = AUTH_UNDEFINED, len = 0;
+	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
 	u_int seg_i, seg_o;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
@@ -512,6 +513,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 			case HA_ALG_INTEG:
 				integ = value.u16;
 				break;
+			case HA_ESN:
+				esn = value.u16;
+				break;
 			case HA_NONCE_I:
 				nonce_i = value.chunk;
 				break;
@@ -558,6 +562,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	{
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
+	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 	keymat = ike_sa->get_keymat(ike_sa);
 
 	if (!keymat->derive_child_keys(keymat, proposal, secret.ptr ? &dh : NULL,
