@@ -61,6 +61,9 @@
 #define PRIO_LOW 1024
 #define PRIO_HIGH 512
 
+/** default replay window size, if not set using charon.replay_window */
+#define DEFAULT_REPLAY_WINDOW 32
+
 /**
  * map the limit for bytes and packets to XFRM_INF per default
  */
@@ -348,6 +351,11 @@ struct private_kernel_netlink_ipsec_t {
 	 * whether to install routes along policies
 	 */
 	bool install_routes;
+
+	/**
+	 * Size of the replay window
+	 */
+	u_int32_t replay_window;
 };
 
 /**
@@ -930,7 +938,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			break;
 	}
 
-	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
 	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->bytes.rekey);
 	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->bytes.life);
@@ -1170,6 +1177,42 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
 		*tfcpad = tfc;
 		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
+
+	if (protocol != IPPROTO_COMP)
+	{
+		if (esn || this->replay_window > DEFAULT_REPLAY_WINDOW)
+		{
+			/* for ESN or larger replay windows we need the new
+			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
+			struct xfrm_replay_state_esn *replay;
+
+			rthdr->rta_type = XFRMA_REPLAY_ESN_VAL;
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
+										(this->replay_window + 7) / 8);
+
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
+			if (hdr->nlmsg_len > sizeof(request))
+			{
+				return FAILED;
+			}
+
+			replay = (struct xfrm_replay_state_esn*)RTA_DATA(rthdr);
+			/* bmp_len contains number uf __u32's */
+			replay->bmp_len = (this->replay_window + sizeof(u_int32_t) * 8 - 1)
+								/ (sizeof(u_int32_t) * 8);
+			replay->replay_window = this->replay_window;
+
+			rthdr = XFRM_RTA_NEXT(rthdr);
+			if (esn)
+			{
+				sa->flags |= XFRM_STATE_ESN;
+			}
+		}
+		else
+		{
+			sa->replay_window = DEFAULT_REPLAY_WINDOW;
+		}
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -2195,8 +2238,9 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 									 (hashtable_equals_t)policy_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
-												  "%s.install_routes", TRUE,
-												  hydra->daemon),
+					"%s.install_routes", TRUE, hydra->daemon),
+		.replay_window = lib->settings->get_int(lib->settings,
+					"%s.replay_window", DEFAULT_REPLAY_WINDOW, hydra->daemon),
 	);
 
 	if (streq(hydra->daemon, "pluto"))
