@@ -45,4 +45,17 @@ enum transform_type_t {
  */
 extern enum_name_t *transform_type_names;
 
+/**
+ * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
+ */
+enum extended_sequence_numbers_t {
+	NO_EXT_SEQ_NUMBERS = 0,
+	EXT_SEQ_NUMBERS = 1
+};
+
+/**
+ * enum strings for extended_sequence_numbers_t.
+ */
+extern enum_name_t *extended_sequence_numbers_names;
+
 #endif /** TRANSFORM_H_ @}*/

@@ -35,11 +35,6 @@ ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
 	"ESP",
 );
 
-ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
-	"NO_EXT_SEQ",
-	"EXT_SEQ",
-);
-
 typedef struct private_proposal_t private_proposal_t;
 typedef struct algorithm_t algorithm_t;
 
