@@ -425,7 +425,8 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		lock_authcert_list("verify_by_crl");
 
 		issuer_cert = get_authcert(issuer, authKeyID, X509_CA);
-		trusted = cert_crl->issued_by(cert_crl, issuer_cert->cert);
+		trusted = issuer_cert ? cert_crl->issued_by(cert_crl, issuer_cert->cert)
+							  : FALSE;
 
 		unlock_authcert_list("verify_by_crl");
 
