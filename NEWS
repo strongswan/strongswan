@@ -24,6 +24,17 @@ strongswan-4.5.2
   all plugins to reload. Currently only the eap-radius and the attr plugins
   support configuration reloading.
 
+- Added userland support to the IKEv2 daemon for Extended Sequence Numbers
+  support coming with Linux 2.6.39. To enable ESN on a connection, add
+  the 'esn' keyword to the proposal. The default proposal uses 32-bit sequence
+  numbers only ('noesn'), and the same value is used if no ESN mode is
+  specified. To negotiate ESN support with the peer, include both, e.g.
+  esp=aes128-sha1-esn-noesn.
+
+- In addition to ESN, Linux 2.6.39 gained support for replay windows larger
+  than 32 packets. The new global strongswan.conf option 'charon.replay_window'
+  configures the size of the replay window, in packets.
+
 
 strongswan-4.5.1
 ----------------
