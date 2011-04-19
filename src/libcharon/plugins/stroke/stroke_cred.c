@@ -536,7 +536,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 			return FALSE;
 		}
 		*pos = '\0';
-		strcpy(keyid, pos + 1);
+		strncpy(keyid, pos + 1, sizeof(keyid));
 		format = SC_FORMAT_SLOT_MODULE_KEYID;
 	}
 	else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
