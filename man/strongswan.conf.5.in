@@ -204,6 +204,9 @@ Delay request messages
 .BR charon.receive_delay_type " [0]"
 Specific IKEv2 message type to delay, 0 for any
 .TP
+.BR charon.replay_window " [32]"
+Size of the AH/ESP replay window, in packets.
+.TP
 .BR charon.retransmit_base " [1.8]"
 Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
 .TP
@@ -307,7 +310,7 @@ If the RADIUS
 attribute with value
 .B ESP
 is received, use the
-.I filter_id 
+.I filter_id
 attribute sent in the RADIUS-Accept message as group membership information that
 is compared to the groups specified in the
 .B rightgroups
@@ -405,7 +408,7 @@ Request peer authentication based on a client certificate
 
 .TP
 .BR charon.plugins.ha.remote
- 
+
 .TP
 .BR charon.plugins.ha.resync " [yes]"
 
