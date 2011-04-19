@@ -1155,6 +1155,7 @@ int main(int argc, char **argv)
 
 		case OPT_STATUSALL:     /* --statusall */
 			msg.whack_statusall = TRUE;
+			/* fall through */
 
 		case OPT_STATUS:        /* --status */
 			msg.whack_status = TRUE;

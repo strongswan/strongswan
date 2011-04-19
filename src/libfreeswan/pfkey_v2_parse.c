@@ -1247,6 +1247,7 @@ pfkey_msg_parse(struct sadb_msg *pfkey_msg,
 				  pfkey_msg->sadb_msg_type,
 				  pfkey_v2_sadb_type_string(pfkey_msg->sadb_msg_type));
 		}
+		/* fall through */
 	case SADB_ACQUIRE:
 	case SADB_REGISTER:
 	case SADB_EXPIRE:

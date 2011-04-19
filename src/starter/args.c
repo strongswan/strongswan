@@ -542,6 +542,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 				}
 			}
 		}
+		/* fall through */
 	default:
 		return TRUE;
 	}

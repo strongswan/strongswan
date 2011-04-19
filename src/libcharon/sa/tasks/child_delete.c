@@ -163,6 +163,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 														   protocol, spi);
 							continue;
 						}
+						/* fall through */
 					case CHILD_INSTALLED:
 						if (!this->initiator)
 						{	/* reestablish installed children if required */
