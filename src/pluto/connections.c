@@ -673,7 +673,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 		}
 		else if (subnetisnone(&this->client))
 		{
-			strcpy(client, "?");
+			strncpy(client, "?", sizeof(client));
 		}
 		else
 		{
@@ -685,7 +685,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 		/* we are mode config client, or a server with a pool */
 		client_sep = "===";
 		client[0] = '%';
-		strcpy(client+1, this->pool ? this->pool : "modecfg");
+		strncpy(client+1, this->pool ?: "modecfg", sizeof(client)-1);
 	}
 
 	/* host */

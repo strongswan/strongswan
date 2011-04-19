@@ -77,7 +77,7 @@ size_t dstlen;
 			break;			/* NOTE BREAK OUT */
 		}
 	if (pre == NULL) {		/* unknown protocol */
-		strcpy(unk, "unk");
+		strncpy(unk, "unk", sizeof(unk));
 		(void) ultot((unsigned char)sa->proto, 10, unk+strlen(unk),
 						sizeof(unk)-strlen(unk));
 		pre = unk;
@@ -86,9 +86,9 @@ size_t dstlen;
 	if (strcmp(pre, PASSTHROUGHTYPE) == 0 &&
 					sa->spi == PASSTHROUGHSPI &&
 					isunspecaddr(&sa->dst)) {
-		strcpy(buf, (addrtypeof(&sa->dst) == AF_INET) ?
+		strncpy(buf, (addrtypeof(&sa->dst) == AF_INET) ?
 							PASSTHROUGH4NAME :
-							PASSTHROUGH6NAME);
+							PASSTHROUGH6NAME, sizeof(buf));
 		len = strlen(buf);
 	}
 
@@ -104,13 +104,13 @@ size_t dstlen;
 		default:	p = NULL;	break;
 		}
 		if (p != NULL) {
-			strcpy(buf, p);
+			strncpy(buf, p, sizeof(buf));
 			len = strlen(buf);
 		}
 	}
 
 	if (len == 0) {			/* general case needed */
-		strcpy(buf, pre);
+		strncpy(buf, pre, sizeof(buf));
 		len = strlen(buf);
 		if (showversion) {
 			*(buf+len) = (addrtypeof(&sa->dst) == AF_INET) ? '.' :
@@ -126,7 +126,7 @@ size_t dstlen;
 	if (dst != NULL) {
 		if (len > dstlen)
 			*(buf+dstlen-1) = '\0';
-		strcpy(dst, buf);
+		strncpy(dst, buf, dstlen);
 	}
 	return len;
 }
