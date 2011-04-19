@@ -591,7 +591,7 @@ static u_int32_t decode_long_duration(pb_stream *pbs)
 	if (pbs_left(pbs) > sizeof(val))
 	{
 		/* "clamp" too large value to max representable value */
-		val -= 1;       /* portable way to get to maximum value */
+		val = UINT32_MAX;
 		DBG(DBG_PARSING, DBG_log("   too large duration clamped to: %lu"
 			, (unsigned long)val));
 	}
