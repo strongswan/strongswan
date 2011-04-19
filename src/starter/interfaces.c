@@ -153,6 +153,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 			}
 
 			strncpy(defaultroute->iface, req.ifr_name, IFNAMSIZ);
+			defaultroute->iface[IFNAMSIZ-1] = '\0';
 			defaultroute->addr.u.v4 = *((struct sockaddr_in *) &req.ifr_addr);
 			defaultroute->nexthop.u.v4.sin_family = AF_INET;
 
