@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 				continue;
 
 			case 'p':	/* --key */
-				if (strlen(optarg) > BUF_LEN)
+				if (strlen(optarg) >= BUF_LEN)
 				{
 					usage("passphrase too long");
 					goto end;
