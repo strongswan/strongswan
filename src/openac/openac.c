@@ -491,7 +491,8 @@ int main(int argc, char **argv)
 	notAfter =  (notAfter  == UNDEFINED_TIME) ? time(NULL) + validity : notAfter;
 
 	/* build and parse attribute certificate */
-	if (userCert != NULL && signerCert != NULL && signerKey != NULL)
+	if (userCert != NULL && signerCert != NULL && signerKey != NULL &&
+		outfile != NULL)
 	{
 		/* read the serial number and increment it by one */
 		serial = read_serial();
@@ -523,7 +524,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		usage("some of the mandatory parameters --usercert --cert --key "
+		usage("some of the mandatory parameters --usercert --cert --key --out "
 			  "are missing");
 	}
 
