@@ -2196,9 +2196,9 @@ static void decode_cert(struct msg_digest *md)
 			cert_t x509cert = cert_empty;
 
 			x509cert.cert = lib->creds->create(lib->creds,
-							  				   CRED_CERTIFICATE, CERT_X509,
-							  				   BUILD_BLOB_ASN1_DER, blob,
-							  				   BUILD_END);
+											   CRED_CERTIFICATE, CERT_X509,
+											   BUILD_BLOB_ASN1_DER, blob,
+											   BUILD_END);
 			if (x509cert.cert)
 			{
 				if (verify_x509cert(&x509cert, strict_crl_policy, &valid_until))
@@ -3824,7 +3824,7 @@ main_id_and_auth(struct msg_digest *md
 	case XAUTHInitRSA:
 	case XAUTHRespRSA:
 		r = check_signature(KEY_RSA, peer, st, hash,
-				 			&md->chain[ISAKMP_NEXT_SIG]->pbs,
+							&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
 							kc == NULL ? NULL : kc->ac.keys_from_dns,
 #endif /* USE_KEYRR */
@@ -5851,6 +5851,7 @@ dpd_timeout(struct state *st)
 
 		/* caching the connection name before deletion */
 		strncpy(cname, c->name, BUF_LEN);
+		cname[BUF_LEN-1] = '\0';
 
 		if (c->kind == CK_INSTANCE)
 		{
