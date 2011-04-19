@@ -1020,6 +1020,7 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT)
 	{
+		bool stored = FALSE;
 		certificate_t *cert;
 		enumerator_t  *enumerator;
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
@@ -1129,7 +1130,6 @@ int main(int argc, char **argv)
 		enumerator = certs->create_enumerator(certs);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			bool stored = FALSE;
 			x509_t *x509 = (x509_t*)cert;
 
 			if (!(x509->get_flags(x509) & X509_CA))
