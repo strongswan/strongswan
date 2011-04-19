@@ -331,7 +331,7 @@ static bool matches(private_ietf_attributes_t *this, private_ietf_attributes_t *
 	/* look for at least one common attribute */
 	while (TRUE)
 	{
-		bool cmp = attr_a->compare(attr_a, attr_b);
+		int cmp = attr_a->compare(attr_a, attr_b);
 
 		if (cmp == 0)
 		{
