@@ -289,6 +289,7 @@ static void insert_before(private_iterator_t * iterator, void *item)
 	if (iterator->current == NULL)
 	{
 		iterator->list->public.insert_first(&(iterator->list->public), item);
+		return;
 	}
 
 	element_t *element = element_create(item);
