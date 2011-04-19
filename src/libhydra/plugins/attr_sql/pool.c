@@ -1004,6 +1004,7 @@ static void do_args(int argc, char *argv[])
 				break;
 			case '1':
 				operation = OP_STATUS_ATTR;
+				break;
 			case 'u':
 				utc = TRUE;
 				continue;
