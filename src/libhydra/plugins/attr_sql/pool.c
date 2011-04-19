@@ -407,7 +407,8 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 		fprintf(stderr, "invalid address '%s'.\n", address_str);
 		return FALSE;
 	}
-	if (family && *family && *family != address->get_family(address))
+	if (family && *family != AF_UNSPEC &&
+		*family != address->get_family(address))
 	{
 		fprintf(stderr, "invalid address family '%s'.\n", address_str);
 		return FALSE;
@@ -423,7 +424,10 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 		fprintf(stderr, "inserting address '%s' failed.\n", address_str);
 		return FALSE;
 	}
-	*family = address->get_family(address);
+	if (family)
+	{
+		*family = address->get_family(address);
+	}
 	address->destroy(address);
 
 	return TRUE;
