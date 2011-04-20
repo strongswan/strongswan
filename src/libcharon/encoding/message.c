@@ -131,7 +131,7 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
-	{CERTIFICATE_REQUEST,			1,	1,						FALSE,	FALSE},
+	{CERTIFICATE_REQUEST,			0,	1,						FALSE,	FALSE},
 	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
 };
 
