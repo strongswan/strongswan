@@ -45,6 +45,16 @@
 #define MAX_DELETE_PAYLOADS 20
 
 /**
+ * Max number of certificate payloads per IKEv2 Message
+ */
+#define MAX_CERT_PAYLOADS 8
+
+/**
+ * Max number of Vendor ID payloads per IKEv2 Message
+ */
+#define MAX_VID_PAYLOADS 20
+
+/**
  * A payload rule defines the rules for a payload
  * in a specific message rule. It defines if and how
  * many times a payload must/can occur in a message
@@ -104,7 +114,7 @@ static payload_rule_t ike_sa_init_i_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
-	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 };
 
 /**
@@ -132,7 +142,7 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
 	{CERTIFICATE_REQUEST,			0,	1,						FALSE,	FALSE},
-	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 };
 
 /**
@@ -160,7 +170,7 @@ static payload_rule_t ike_auth_i_rules[] = {
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
-	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
+	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
 	{CERTIFICATE_REQUEST,			0,	1,						TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
 #ifdef ME
@@ -173,7 +183,7 @@ static payload_rule_t ike_auth_i_rules[] = {
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 #endif /* ME */
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -213,13 +223,13 @@ static payload_rule_t ike_auth_r_rules[] = {
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
-	{CERTIFICATE,					0,	4,						TRUE,	FALSE},
+	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
 	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -256,7 +266,7 @@ static payload_rule_t informational_i_rules[] = {
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
 	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -281,7 +291,7 @@ static payload_rule_t informational_r_rules[] = {
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
 	{DELETE,						0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -310,7 +320,7 @@ static payload_rule_t create_child_sa_i_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -343,7 +353,7 @@ static payload_rule_t create_child_sa_r_rules[] = {
 	{TRAFFIC_SELECTOR_INITIATOR,	0,	1,						TRUE,	FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,	0,	1,						TRUE,	FALSE},
 	{CONFIGURATION,					0,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE},
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
 
 /**
@@ -372,7 +382,7 @@ static payload_rule_t me_connect_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{ID_PEER,						1,	1,						TRUE,	FALSE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE}
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
 };
 
 /**
@@ -391,7 +401,7 @@ static payload_order_t me_connect_i_order[] = {
 static payload_rule_t me_connect_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{VENDOR_ID,						0,	10,						TRUE,	FALSE}
+	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		TRUE,	FALSE}
 };
 
 /**
