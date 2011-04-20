@@ -518,7 +518,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
 		return FALSE;
 	}
-	snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
+	snprintf(smartcard, sizeof(smartcard), "%.*s", (int)sc.len, sc.ptr);
 	smartcard[sizeof(smartcard) - 1] = '\0';
 
 	/* parse slot and key id. Three formats are supported:
@@ -660,13 +660,13 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	if (*filename.ptr == '/')
 	{
 		/* absolute path name */
-		snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
+		snprintf(path, sizeof(path), "%.*s", (int)filename.len, filename.ptr);
 	}
 	else
 	{
 		/* relative path name */
 		snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
-				 filename.len, filename.ptr);
+				 (int)filename.len, filename.ptr);
 	}
 
 	/* check for optional passphrase */
@@ -876,7 +876,8 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 					DBG1(DBG_CFG, "include pattern too long, ignored");
 					continue;
 				}
-				snprintf(pattern, sizeof(pattern), "%.*s", line.len, line.ptr);
+				snprintf(pattern, sizeof(pattern), "%.*s",
+						 (int)line.len, line.ptr);
 			}
 			else
 			{	/* use directory of current file if relative */
@@ -890,7 +891,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 					continue;
 				}
 				snprintf(pattern, sizeof(pattern), "%s/%.*s",
-						 dir, line.len, line.ptr);
+						 dir, (int)line.len, line.ptr);
 				free(dir);
 			}
 			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)

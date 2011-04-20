@@ -241,7 +241,7 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 	/* clean up */
 	DESTROY_IF(addr);
 
-	/* is the attribute type numeric? */	
+	/* is the attribute type numeric? */
 	*type = strtol(name, &endptr, 10);
 
 	if (*endptr != '\0')
@@ -262,7 +262,7 @@ static bool parse_attributes(char *name, char *value, value_type_t *value_type,
 	}
 	return TRUE;
 }
- 
+
 /**
  * Lookup/insert an attribute pool by name
  */
@@ -541,11 +541,11 @@ void del_attr(char *name, char *pool, char *identity,
 			}
 		}
 		else
-		{	
+		{
 			if (value_type == VALUE_ADDR)
 			{
 				host_t *server = host_create_from_chunk(AF_UNSPEC, blob, 0);
-	
+
 				fprintf(stderr, "the %s server %H%s was not found.\n", name,
 								 server, id_pool_str);
 				server->destroy(server);
@@ -630,7 +630,7 @@ void status_attr(bool hexout)
 					if (type == attr_info[i].type)
 					{
 						value_type = attr_info[i].value_type;
-						break; 
+						break;
 					}
 				}
 			}
@@ -671,8 +671,8 @@ void status_attr(bool hexout)
 					}
 					break;
 				case VALUE_STRING:
-					printf("\"%.*s\"\n", value.len, value.ptr);
-					break;					
+					printf("\"%.*s\"\n", (int)value.len, value.ptr);
+					break;
 				case VALUE_HEX:
 				default:
 					printf(" %#B\n", &value);
@@ -692,13 +692,13 @@ void show_attr(void)
 	for (i = 0; i < countof(attr_info); i++)
 	{
 		char value_name[10];
-		
-		
+
+
 		snprintf(value_name, sizeof(value_name), "%N",
 			value_type_names, attr_info[i].value_type);
-	
-		printf("%-20s  --%-6s  (%N", 
-				attr_info[i].keyword, value_name, 
+
+		printf("%-20s  --%-6s  (%N",
+				attr_info[i].keyword, value_name,
 				configuration_attribute_type_names, attr_info[i].type);
 
 		if (attr_info[i].type_ip6)

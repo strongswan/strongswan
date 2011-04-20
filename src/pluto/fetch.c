@@ -309,8 +309,9 @@ static char* complete_uri(char *distPoint, const char *ldaphost)
 					char uri[BUF_LEN];
 
 					/* insert the ldaphost into the uri */
-					snprintf(uri, BUF_LEN, "%.*s%s%.*s", strlen(distPoint)-len,
-							 distPoint, ldaphost, len, symbol);
+					snprintf(uri, BUF_LEN, "%.*s%s%.*s",
+							 (int)strlen(distPoint) - len, distPoint, ldaphost,
+							 len, symbol);
 					return strdup(uri);
 				}
 			}

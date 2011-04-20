@@ -133,7 +133,7 @@ static void write_serial(chunk_t serial)
 
 		DBG1(DBG_LIB, "  serial number is %#B", &serial);
 		hex_serial = chunk_to_hex(serial, NULL, FALSE);
-		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
+		fprintf(fd, "%.*s\n", (int)hex_serial.len, hex_serial.ptr);
 		fclose(fd);
 		free(hex_serial.ptr);
 	}

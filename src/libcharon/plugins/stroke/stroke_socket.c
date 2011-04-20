@@ -396,7 +396,7 @@ static void stroke_export(private_stroke_socket_t *this,
 		{
 			if (cert->get_encoding(cert, CERT_PEM, &encoded))
 			{
-				fprintf(out, "%.*s", encoded.len, encoded.ptr);
+				fprintf(out, "%.*s", (int)encoded.len, encoded.ptr);
 				free(encoded.ptr);
 			}
 		}
