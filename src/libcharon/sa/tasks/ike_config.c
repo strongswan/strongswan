@@ -317,7 +317,7 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
 
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (config && this->virtual_ip)
+		if (this->virtual_ip)
 		{
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
 			if (config->get_pool(config))
