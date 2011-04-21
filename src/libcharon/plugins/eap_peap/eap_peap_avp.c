@@ -53,12 +53,7 @@ METHOD(eap_peap_avp_t, build, void,
 
 	pkt = (eap_packet_t*)data.ptr;
 
-	if (pkt->code == EAP_REQUEST && pkt->type == EAP_IDENTITY)
-	{
-		/* uncompressed EAP Identity request */
-		avp_data = data;
-	}
-	else if (pkt->code == EAP_SUCCESS || pkt->code == EAP_FAILURE)
+	if (pkt->code == EAP_SUCCESS || pkt->code == EAP_FAILURE)
 	{
 		code = (this->is_server) ? EAP_REQUEST : EAP_RESPONSE;
 		writer->write_uint8(writer, code);
@@ -95,13 +90,12 @@ METHOD(eap_peap_avp_t, process, status_t,
 	{
 		if (len == 5 && pkt->type == EAP_IDENTITY)
 		{
-			/* uncompressed EAP Identity request */
+			DBG2(DBG_IKE, "uncompressed EAP Identity request");
 			*data = chunk_clone(avp_data);
 			return SUCCESS;
 		}
 		else if (len == 11 && pkt->type == EAP_MSTLV)
 		{
-			/* currently only MS Success/Failure AVPs are supported */
 			if (memeq(&pkt->data, MS_AVP_Success.ptr, MS_AVP_Success.len))
 			{
 				DBG2(DBG_IKE, "MS Success Result AVP");
