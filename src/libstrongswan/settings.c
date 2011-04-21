@@ -453,14 +453,10 @@ METHOD(settings_t, alloc_str, char*,
 	va_start(args, def);
 	/* additional lock to savely strdup */
 	this->lock->read_lock(this->lock);
-	value = strdupnull(find_value(this, this->top, key, args));
+	value = strdupnull(find_value(this, this->top, key, args) ?: def);
 	this->lock->unlock(this->lock);
 	va_end(args);
-	if (value)
-	{
-		return value;
-	}
-	return def;
+	return value;
 }
 
 /**
