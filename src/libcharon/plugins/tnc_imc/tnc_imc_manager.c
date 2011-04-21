@@ -43,11 +43,6 @@ struct private_tnc_imc_manager_t {
 	 * Next IMC ID to be assigned
 	 */
 	TNC_IMCID next_imc_id;
-
-	/**
-	 * Preferred language
-	 */
-	char *preferred_language;
 };
 
 METHOD(imc_manager_t, add, bool,
@@ -100,7 +95,8 @@ METHOD(imc_manager_t, remove_, imc_t*,
 METHOD(imc_manager_t, get_preferred_language, char*,
 	private_tnc_imc_manager_t *this)
 {
-	return this->preferred_language;
+	return lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-imc.preferred_language", "en");
 }
 
 METHOD(imc_manager_t, notify_connection_change, void,
@@ -212,7 +208,6 @@ METHOD(imc_manager_t, destroy, void,
 		imc->destroy(imc);
 	}
 	this->imcs->destroy(this->imcs);
-	free(this->preferred_language);
 	free(this);
 }
 
@@ -237,8 +232,6 @@ imc_manager_t* tnc_imc_manager_create(void)
 		},
 		.imcs = linked_list_create(),
 		.next_imc_id = 1,
-		.preferred_language = lib->settings->alloc_str(lib->settings,
-					"charon.plugins.tnc-imc.preferred_language", "en");
 	);
 
 	return &this->public;

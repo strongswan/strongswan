@@ -444,21 +444,6 @@ METHOD(settings_t, get_str, char*,
 	return def;
 }
 
-METHOD(settings_t, alloc_str, char*,
-	private_settings_t *this, char *key, char *def, ...)
-{
-	char *value;
-	va_list args;
-
-	va_start(args, def);
-	/* additional lock to savely strdup */
-	this->lock->read_lock(this->lock);
-	value = strdupnull(find_value(this, this->top, key, args) ?: def);
-	this->lock->unlock(this->lock);
-	va_end(args);
-	return value;
-}
-
 /**
  * Described in header
  */
@@ -1207,7 +1192,6 @@ settings_t *settings_create(char *file)
 	INIT(this,
 		.public = {
 			.get_str = _get_str,
-			.alloc_str = _alloc_str,
 			.get_int = _get_int,
 			.get_double = _get_double,
 			.get_time = _get_time,

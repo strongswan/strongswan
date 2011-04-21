@@ -301,7 +301,7 @@ radius_socket_t *radius_socket_create(host_t *host, chunk_t secret)
 		destroy(this);
 		return NULL;
 	}
-	this->secret = chunk_clone(secret);
+	this->secret = secret;
 	this->signer->set_key(this->signer, secret);
 	/* we use a random identifier, helps if we restart often */
 	this->identifier = random();

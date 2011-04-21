@@ -40,7 +40,7 @@ struct private_eap_tnc_t {
 
 
 /** Maximum number of EAP-TNC messages/fragments allowed */
-#define MAX_MESSAGE_COUNT 10
+#define MAX_MESSAGE_COUNT 10 
 /** Default size of a EAP-TNC fragment */
 #define MAX_FRAGMENT_LEN 50000
 
@@ -149,7 +149,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 					"charon.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT);
-	protocol = lib->settings->alloc_str(lib->settings,
+	protocol = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-tnc.protocol", "tnccs-1.1");
 	if (strcaseeq(protocol, "tnccs-2.0"))
 	{
@@ -166,11 +166,9 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	else
 	{
 		DBG1(DBG_TNC, "TNCCS protocol '%s' not supported", protocol);
-		free(protocol);
 		free(this);
 		return NULL;
 	}
-	free(protocol);
 	tnccs = charon->tnccs->create_instance(charon->tnccs, type, is_server);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size, max_msg_count);
 	if (!this->tls_eap)

@@ -550,34 +550,36 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 
 	if (!engine_id)
 	{
-		engine_id = lib->settings->alloc_str(lib->settings,
+		engine_id = lib->settings->get_str(lib->settings,
 						"libstrongswan.plugins.openssl.engine_id", "pkcs11");
 	}
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
 		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
-		goto engine_failed;
+		return NULL;
 	}
 	if (!ENGINE_init(engine))
 	{
 		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
-		goto engine_failed;
+		ENGINE_free(engine);
+		return NULL;
 	}
 	if (!login(engine, keyid))
 	{
 		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
-		goto engine_failed;
+		ENGINE_free(engine);
+		return NULL;
 	}
 	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
 	if (!key)
 	{
 		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
 			 "engine '%s'", keyname, engine_id);
-		goto engine_failed;
+		ENGINE_free(engine);
+		return NULL;
 	}
 	ENGINE_free(engine);
-	free(engine_id);
 
 	this = create_empty();
 	this->rsa = EVP_PKEY_get1_RSA(key);
@@ -592,12 +594,5 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 #else /* OPENSSL_NO_ENGINE */
 	return NULL;
 #endif /* OPENSSL_NO_ENGINE */
-engine_failed:
-	if (engine)
-	{
-		ENGINE_free(engine);
-	}
-	free(engine_id);
-	return NULL;
 }
 

@@ -54,12 +54,12 @@ struct private_eap_ttls_server_t {
 	bool start_phase2_tnc;
 
 	/**
-	 * Current phase 2 EAP method
+     * Current phase 2 EAP method
 	 */
 	eap_method_t *method;
 
 	/**
-	 * Pending outbound EAP message
+     * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -77,10 +77,9 @@ static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 	char *eap_type_str;
 	eap_type_t type;
 
-	eap_type_str = lib->settings->alloc_str(lib->settings,
+	eap_type_str = lib->settings->get_str(lib->settings,
 					 	"charon.plugins.eap-ttls.phase2_method", "md5");
 	type = eap_type_from_string(eap_type_str);
-	free(eap_type_str);
 	if (type == 0)
 	{
 		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
