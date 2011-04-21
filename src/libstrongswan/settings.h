@@ -146,12 +146,30 @@ struct settings_t {
 	/**
 	 * Get a settings value as a string.
 	 *
+	 * This functions returns a string held by settings_t. It is not thread
+	 * save, a thread calling load_files might free the returned string at
+	 * any time. Use the thread save alloc_str if a different thread might
+	 * call load_files() or set_str().
+	 *
 	 * @param key		key including sections, printf style format
 	 * @param def		value returned if key not found
 	 * @param ...		argument list for key
-	 * @return			value pointing to internal string
+	 * @return			value pointing to internal string, not to be freed
 	 */
 	char* (*get_str)(settings_t *this, char *key, char *def, ...);
+
+	/**
+	 * Get a settings value as a string, thread save variant.
+	 *
+	 * This function is identical to get_str, but is thread save. It allocates
+	 * a copy for the returned string which must be freed.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
+	 * @return			allocated string, to be free
+	 */
+	char* (*alloc_str)(settings_t *this, char *key, char *def, ...);
 
 	/**
 	 * Get a boolean yes|no, true|false value.
