@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -54,6 +55,13 @@ struct private_tls_eap_t {
 	 * Role
 	 */
 	bool is_server;
+
+	/**
+	 * If FALSE include the total length of an EAP message
+	 * in the first fragment of fragmented messages only.
+	 * If TRUE also include the length in non-fragmented messages.
+	 */
+	bool include_length;
 
 	/**
 	 * First fragment of a multi-fragment record?
@@ -128,8 +136,10 @@ METHOD(tls_eap_t, initiate, status_t,
 		htoun16(&pkt.length, sizeof(eap_tls_packet_t));
 		pkt.identifier = this->identifier;
 
-		DBG2(DBG_IKE, "sending %N start packet", eap_type_names, this->type);
 		*out = chunk_clone(chunk_from_thing(pkt));
+		DBG2(DBG_IKE, "sending %N start packet (%u bytes)",
+					   eap_type_names, this->type, sizeof(eap_tls_packet_t));
+		DBG3(DBG_IKE, "%B", out);
 		return NEED_MORE;
 	}
 	return FAILED;
@@ -203,7 +213,6 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 
 	if (this->first_fragment)
 	{
-		pkt->flags |= EAP_TLS_LENGTH;
 		len = sizeof(buf) - sizeof(eap_tls_packet_t) - sizeof(u_int32_t);
 		status = this->tls->build(this->tls, buf + sizeof(eap_tls_packet_t) +
 								  sizeof(u_int32_t), &len, &reclen);
@@ -221,13 +230,21 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 			kind = "further fragment";
 			if (this->first_fragment)
 			{
+		        pkt->flags |= EAP_TLS_LENGTH;
 				this->first_fragment = FALSE;
 				kind = "first fragment";
 			}
 			break;
 		case ALREADY_DONE:
-			kind = "packet";
-			if (!this->first_fragment)
+			if (this->first_fragment)
+			{
+				if (this->include_length)
+				{
+					pkt->flags |= EAP_TLS_LENGTH;
+				}
+				kind = "packet";
+			}
+			else
 			{
 				this->first_fragment = TRUE;
 				kind = "final fragment";
@@ -236,17 +253,27 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 		default:
 			return status;
 	}
-	DBG2(DBG_TLS, "sending %N %s (%u bytes)",
-		 eap_type_names, this->type, kind, len);
 	if (reclen)
 	{
-		htoun32(pkt + 1, reclen);
-		len += sizeof(u_int32_t);
-		pkt->flags |= EAP_TLS_LENGTH;
+		if (pkt->flags & EAP_TLS_LENGTH)
+		{ 
+			htoun32(pkt + 1, reclen);
+			len += sizeof(u_int32_t);
+			pkt->flags |= EAP_TLS_LENGTH;
+		}
+		else
+		{
+			/* get rid of the reserved length field */
+			memcpy(buf+sizeof(eap_packet_t),
+				   buf+sizeof(eap_packet_t)+sizeof(u_int32_t), len);	
+		}
 	}
 	len += sizeof(eap_tls_packet_t);
 	htoun16(&pkt->length, len);
 	*out = chunk_clone(chunk_create(buf, len));
+	DBG2(DBG_TLS, "sending %N %s (%u bytes)",
+				   eap_type_names, this->type, kind, len);
+	DBG3(DBG_TLS, "%B", out);
 	return NEED_MORE;
 }
 
@@ -308,7 +335,11 @@ METHOD(tls_eap_t, process, status_t,
 	}
 
 	/* update EAP identifier */
-	this->identifier = pkt->identifier;
+	if (!this->is_server)
+	{
+		this->identifier = pkt->identifier;
+	}
+	DBG3(DBG_TLS, "%N payload %B", eap_type_names, this->type, &in);
 
 	if (pkt->flags & EAP_TLS_START)
 	{
@@ -390,7 +421,7 @@ METHOD(tls_eap_t, destroy, void,
  * See header
  */
 tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
-						  int max_msg_count)
+						  int max_msg_count, bool include_length)
 {
 	private_tls_eap_t *this;
 
@@ -413,6 +444,7 @@ tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
 		.first_fragment = TRUE,
 		.frag_size = frag_size,
 		.max_msg_count = max_msg_count,
+		.include_length = include_length,
 		.tls = tls,
 	);
 

@@ -128,6 +128,7 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 	private_eap_ttls_t *this;
 	size_t frag_size;
 	int max_msg_count;
+	bool include_length;
 	tls_t *tls;
 
 	INIT(this,
@@ -153,8 +154,11 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 					"charon.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-ttls.max_message_count", MAX_MESSAGE_COUNT);
-	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS, application);
-	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size, max_msg_count);
+	include_length = lib->settings->get_bool(lib->settings,
+					"charon.plugins.eap-ttls.include_length", TRUE);
+ 	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS, application);
+	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size, max_msg_count,
+												  include_length);
 	if (!this->tls_eap)
 	{
 		application->destroy(application);

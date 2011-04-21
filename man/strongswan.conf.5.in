@@ -279,6 +279,9 @@ Maximum size of an EAP-PEAP packet
 .BR charon.plugins.eap-peap.max_message_count " [32]"
 Maximum number of processed EAP-PEAP packets
 .TP
+.BR charon.plugins.eap-peap.include_length " [no]"
+Include length in non-fragmented EAP-PEAP packets
+.TP
 .BR charon.plugins.eap-peap.phase2_method " [mschapv2]"
 Phase2 EAP client authentication method
 .TP
@@ -365,17 +368,26 @@ Maximum size of an EAP-TLS packet
 .BR charon.plugins.eap-tls.max_message_count " [32]"
 Maximum number of processed EAP-TLS packets
 .TP
+.BR charon.plugins.eap-tls.include_length " [yes]"
+Include length in non-fragmented EAP-TLS packets
+.TP
 .BR charon.plugins.eap-tnc.fragment_size " [50000]"
 Maximum size of an EAP-TNC packet
 .TP
 .BR charon.plugins.eap-tnc.max_message_count " [10]"
 Maximum number of processed EAP-TNC packets
 .TP
+.BR charon.plugins.eap-tnc.include_length " [yes]"
+Include length in non-fragmented EAP-TNC packets
+.TP
 .BR charon.plugins.eap-ttls.fragment_size " [1024]"
 Maximum size of an EAP-TTLS packet
 .TP
 .BR charon.plugins.eap-ttls.max_message_count " [32]"
 Maximum number of processed EAP-TTLS packets
+.TP
+.BR charon.plugins.eap-ttls.include_length " [yes]"
+Include length in non-fragmented EAP-TTLS packets
 .TP
 .BR charon.plugins.eap-ttls.phase2_method " [md5]"
 Phase2 EAP client authentication method
