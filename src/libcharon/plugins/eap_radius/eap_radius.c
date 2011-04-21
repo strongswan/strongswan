@@ -387,6 +387,7 @@ METHOD(eap_method_t, destroy, void,
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
 	this->client->destroy(this->client);
+	free(this->id_prefix);
 	free(this);
 }
 
@@ -414,7 +415,7 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 		.type = EAP_RADIUS,
 		.eap_start = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-radius.eap_start", FALSE),
-		.id_prefix = lib->settings->get_str(lib->settings,
+		.id_prefix = lib->settings->alloc_str(lib->settings,
 								"charon.plugins.eap-radius.id_prefix", ""),
 		.class_group = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-radius.class_group", FALSE),
@@ -425,6 +426,7 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->client = radius_client_create();
 	if (!this->client)
 	{
+		free(this->id_prefix);
 		free(this);
 		return NULL;
 	}

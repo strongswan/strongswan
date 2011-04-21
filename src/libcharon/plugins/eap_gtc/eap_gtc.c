@@ -217,13 +217,15 @@ METHOD(eap_method_t, process_server, status_t,
 	memcpy(password, data.ptr, data.len);
 	password[data.len] = '\0';
 
-	service = lib->settings->get_str(lib->settings,
+	service = lib->settings->alloc_str(lib->settings,
 						"charon.plugins.eap-gtc.pam_service", GTC_PAM_SERVICE);
 
 	if (!authenticate(service, user, password))
 	{
+		free(service);
 		return FAILED;
 	}
+	free(service);
 	return SUCCESS;
 }
 

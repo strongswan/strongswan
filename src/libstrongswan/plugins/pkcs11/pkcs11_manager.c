@@ -74,7 +74,8 @@ static void lib_entry_destroy(lib_entry_t *entry)
 	{
 		entry->job->cancel(entry->job);
 	}
-	entry->lib->destroy(entry->lib);
+	DESTROY_IF(entry->lib);
+	free(entry->path);
 	free(entry);
 }
 
@@ -365,12 +366,12 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 			.this = this,
 		);
 
-		entry->path = lib->settings->get_str(lib->settings,
+		entry->path = lib->settings->alloc_str(lib->settings,
 				"libstrongswan.plugins.pkcs11.modules.%s.path", NULL, module);
 		if (!entry->path)
 		{
 			DBG1(DBG_CFG, "PKCS11 module '%s' lacks library path", module);
-			free(entry);
+			lib_entry_destroy(entry);
 			continue;
 		}
 		entry->lib = pkcs11_library_create(module, entry->path,
@@ -379,7 +380,7 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 							FALSE, module));
 		if (!entry->lib)
 		{
-			free(entry);
+			lib_entry_destroy(entry);
 			continue;
 		}
 		this->libs->insert_last(this->libs, entry);

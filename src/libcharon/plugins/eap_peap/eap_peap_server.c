@@ -62,17 +62,17 @@ struct private_eap_peap_server_t {
 	eap_code_t phase2_result;
 
 	/**
-     * Outer phase 1 EAP method
+	 * Outer phase 1 EAP method
 	 */
 	eap_method_t *ph1_method;
 
 	/**
-     * Current phase 2 EAP method
+	 * Current phase 2 EAP method
 	 */
 	eap_method_t *ph2_method;
 
 	/**
-     * Pending outbound EAP message
+	 * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -90,9 +90,10 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	char *eap_type_str;
 	eap_type_t type;
 
-	eap_type_str = lib->settings->get_str(lib->settings,
+	eap_type_str = lib->settings->alloc_str(lib->settings,
 					 	"charon.plugins.eap-peap.phase2_method", "mschapv2");
 	type = eap_type_from_string(eap_type_str);
+	free(eap_type_str);
 	if (type == 0)
 	{
 		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
@@ -302,8 +303,8 @@ METHOD(tls_application_t, process, status_t,
 			this->ph2_method->destroy(this->ph2_method);
 			this->ph2_method = NULL;
 
-			/* EAP-PEAP requires the sending of an inner EAP_SUCCESS message */	
-			this->phase2_result = EAP_SUCCESS;		
+			/* EAP-PEAP requires the sending of an inner EAP_SUCCESS message */
+			this->phase2_result = EAP_SUCCESS;
 			this->out = eap_payload_create_code(this->phase2_result, 1 +
 				 			this->ph1_method->get_identifier(this->ph1_method));
 			return NEED_MORE;
@@ -321,7 +322,7 @@ METHOD(tls_application_t, process, status_t,
 				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
 			}
 			/* EAP-PEAP requires the sending of an inner EAP_FAILURE message */
-			this->phase2_result = EAP_FAILURE;			
+			this->phase2_result = EAP_FAILURE;
 			this->out = eap_payload_create_code(this->phase2_result, 1 +
 				 			this->ph1_method->get_identifier(this->ph1_method));
 			return NEED_MORE;
@@ -360,7 +361,7 @@ METHOD(tls_application_t, build, status_t,
 		this->ph2_method->initiate(this->ph2_method, &this->out);
 		this->start_phase2 = FALSE;
 	}
-	
+
 	this->start_phase2_id = TRUE;
 
 	if (this->out)

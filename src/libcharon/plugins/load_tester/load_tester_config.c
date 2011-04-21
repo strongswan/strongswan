@@ -279,6 +279,10 @@ static void destroy(private_load_tester_config_t *this)
 	this->peer_cfg->destroy(this->peer_cfg);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->vip);
+	free(this->pool);
+	free(this->remote);
+	free(this->initiator_auth);
+	free(this->responder_auth);
 	free(this);
 }
 
@@ -300,9 +304,9 @@ load_tester_config_t *load_tester_config_create()
 	{
 		this->vip = host_create_from_string("0.0.0.0", 0);
 	}
-	this->pool = lib->settings->get_str(lib->settings,
+	this->pool = lib->settings->alloc_str(lib->settings,
 				"charon.plugins.load-tester.pool", NULL);
-	this->remote = lib->settings->get_str(lib->settings,
+	this->remote = lib->settings->alloc_str(lib->settings,
 				"charon.plugins.load-tester.remote", "127.0.0.1");
 
 	this->proposal = proposal_create_from_string(PROTO_IKE,
@@ -318,9 +322,9 @@ load_tester_config_t *load_tester_config_create()
 	this->child_rekey = lib->settings->get_int(lib->settings,
 				"charon.plugins.load-tester.child_rekey", 600);
 
-	this->initiator_auth = lib->settings->get_str(lib->settings,
+	this->initiator_auth = lib->settings->alloc_str(lib->settings,
 				"charon.plugins.load-tester.initiator_auth", "pubkey");
-	this->responder_auth = lib->settings->get_str(lib->settings,
+	this->responder_auth = lib->settings->alloc_str(lib->settings,
 				"charon.plugins.load-tester.responder_auth", "pubkey");
 
 	this->port = lib->settings->get_int(lib->settings,

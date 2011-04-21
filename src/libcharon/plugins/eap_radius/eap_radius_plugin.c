@@ -65,18 +65,19 @@ static void load_servers(private_eap_radius_plugin_t *this)
 	char *nas_identifier, *secret, *address, *section;
 	int port, sockets, preference;
 
-	address = lib->settings->get_str(lib->settings,
+	address = lib->settings->alloc_str(lib->settings,
 					"charon.plugins.eap-radius.server", NULL);
 	if (address)
 	{	/* legacy configuration */
-		secret = lib->settings->get_str(lib->settings,
+		secret = lib->settings->alloc_str(lib->settings,
 					"charon.plugins.eap-radius.secret", NULL);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "no RADUIS secret defined");
+			free(address);
 			return;
 		}
-		nas_identifier = lib->settings->get_str(lib->settings,
+		nas_identifier = lib->settings->alloc_str(lib->settings,
 					"charon.plugins.eap-radius.nas_identifier", "strongSwan");
 		port = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-radius.port", RADIUS_PORT);
@@ -84,6 +85,9 @@ static void load_servers(private_eap_radius_plugin_t *this)
 					"charon.plugins.eap-radius.sockets", 1);
 		server = radius_server_create(address, port, nas_identifier,
 									  secret, sockets, 0);
+		free(address);
+		free(nas_identifier);
+		free(secret);
 		if (!server)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
@@ -97,21 +101,22 @@ static void load_servers(private_eap_radius_plugin_t *this)
 										"charon.plugins.eap-radius.servers");
 	while (enumerator->enumerate(enumerator, &section))
 	{
-		address = lib->settings->get_str(lib->settings,
+		address = lib->settings->alloc_str(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.address", NULL, section);
 		if (!address)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses address, skipped", section);
 			continue;
 		}
-		secret = lib->settings->get_str(lib->settings,
+		secret = lib->settings->alloc_str(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.secret", NULL, section);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses secret, skipped", section);
+			free(address);
 			continue;
 		}
-		nas_identifier = lib->settings->get_str(lib->settings,
+		nas_identifier = lib->settings->alloc_str(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.nas_identifier",
 			"strongSwan", section);
 		port = lib->settings->get_int(lib->settings,
@@ -122,6 +127,9 @@ static void load_servers(private_eap_radius_plugin_t *this)
 			"charon.plugins.eap-radius.servers.%s.preference", 0, section);
 		server = radius_server_create(address, port, nas_identifier,
 									  secret, sockets, preference);
+		free(address);
+		free(nas_identifier);
+		free(secret);
 		if (!server)
 		{
 			DBG1(DBG_CFG, "loading RADIUS server '%s' failed, skipped", section);

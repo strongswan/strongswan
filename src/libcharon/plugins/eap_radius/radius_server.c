@@ -176,6 +176,7 @@ METHOD(radius_server_t, destroy, void,
 		this->condvar->destroy(this->condvar);
 		this->sockets->destroy_offset(this->sockets,
 									  offsetof(radius_socket_t, destroy));
+		free(this->nas_identifier.ptr);
 		free(this);
 	}
 }
@@ -200,7 +201,8 @@ radius_server_t *radius_server_create(char *server, u_int16_t port,
 			.destroy = _destroy,
 		},
 		.reachable = TRUE,
-		.nas_identifier = chunk_create(nas_identifier, strlen(nas_identifier)),
+		.nas_identifier = chunk_clone(chunk_create(nas_identifier,
+												   strlen(nas_identifier))),
 		.socket_count = sockets,
 		.sockets = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),

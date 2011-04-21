@@ -109,8 +109,8 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 	host_t *host;
 	char *str;
 
-	str = lib->settings->get_str(lib->settings, "%s.%s%d", NULL, hydra->daemon,
-								 key, nr);
+	str = lib->settings->alloc_str(lib->settings, "%s.%s%d", NULL,
+								   hydra->daemon, key, nr);
 	if (str)
 	{
 		host = host_create_from_string(str, 0);
@@ -139,6 +139,7 @@ static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
 				 configuration_attribute_type_names, entry->type, &entry->value);
 			this->attributes->insert_last(this->attributes, entry);
 		}
+		free(str);
 	}
 }
 

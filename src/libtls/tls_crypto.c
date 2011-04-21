@@ -706,7 +706,7 @@ static void filter_key_exchange_config_suites(private_tls_crypto_t *this,
 	int i, remaining = 0;
 	char *token, *config;
 
-	config = lib->settings->get_str(lib->settings, "libtls.key_exchange", NULL);
+	config = lib->settings->alloc_str(lib->settings, "libtls.key_exchange", NULL);
 	if (config)
 	{
 		for (i = 0; i < *count; i++)
@@ -747,6 +747,7 @@ static void filter_key_exchange_config_suites(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 		}
 		*count = remaining;
+		free(config);
 	}
 }
 
@@ -760,7 +761,7 @@ static void filter_cipher_config_suites(private_tls_crypto_t *this,
 	int i, remaining = 0;
 	char *token, *config;
 
-	config = lib->settings->get_str(lib->settings, "libtls.cipher", NULL);
+	config = lib->settings->alloc_str(lib->settings, "libtls.cipher", NULL);
 	if (config)
 	{
 		for (i = 0; i < *count; i++)
@@ -812,6 +813,7 @@ static void filter_cipher_config_suites(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 		}
 		*count = remaining;
+		free(config);
 	}
 }
 
@@ -825,7 +827,7 @@ static void filter_mac_config_suites(private_tls_crypto_t *this,
 	int i, remaining = 0;
 	char *token, *config;
 
-	config = lib->settings->get_str(lib->settings, "libtls.mac", NULL);
+	config = lib->settings->alloc_str(lib->settings, "libtls.mac", NULL);
 	if (config)
 	{
 		for (i = 0; i < *count; i++)
@@ -861,6 +863,7 @@ static void filter_mac_config_suites(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 		}
 		*count = remaining;
+		free(config);
 	}
 }
 
@@ -874,7 +877,7 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 	int i, remaining = 0, suite;
 	char *token, *config;
 
-	config = lib->settings->get_str(lib->settings, "libtls.suites", NULL);
+	config = lib->settings->alloc_str(lib->settings, "libtls.suites", NULL);
 	if (config)
 	{
 		for (i = 0; i < *count; i++)
@@ -892,6 +895,7 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 		}
 		*count = remaining;
+		free(config);
 	}
 }
 

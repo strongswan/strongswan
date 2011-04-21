@@ -228,6 +228,7 @@ static enumerator_t* create_attribute_enumerator(private_resolve_handler_t *this
 static void destroy(private_resolve_handler_t *this)
 {
 	this->mutex->destroy(this->mutex);
+	free(this->file);
 	free(this);
 }
 
@@ -244,7 +245,7 @@ resolve_handler_t *resolve_handler_create()
 	this->public.destroy = (void(*)(resolve_handler_t*))destroy;
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->file = lib->settings->get_str(lib->settings,
+	this->file = lib->settings->alloc_str(lib->settings,
 								"%s.plugins.resolve.file", RESOLV_CONF, hydra->daemon);
 
 	return &this->public;
