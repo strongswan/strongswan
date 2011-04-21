@@ -137,9 +137,9 @@ METHOD(tls_eap_t, initiate, status_t,
 		pkt.identifier = this->identifier;
 
 		*out = chunk_clone(chunk_from_thing(pkt));
-		DBG2(DBG_IKE, "sending %N start packet (%u bytes)",
+		DBG2(DBG_TLS, "sending %N start packet (%u bytes)",
 					   eap_type_names, this->type, sizeof(eap_tls_packet_t));
-		DBG3(DBG_IKE, "%B", out);
+		DBG3(DBG_TLS, "%B", out);
 		return NEED_MORE;
 	}
 	return FAILED;
@@ -321,7 +321,7 @@ METHOD(tls_eap_t, process, status_t,
 
 	if (++this->processed > this->max_msg_count)
 	{
-		DBG1(DBG_IKE, "%N packet count exceeded (%d > %d)",
+		DBG1(DBG_TLS, "%N packet count exceeded (%d > %d)",
 			 eap_type_names, this->type,
 			 this->processed, this->max_msg_count);
 		return FAILED;
@@ -330,7 +330,7 @@ METHOD(tls_eap_t, process, status_t,
 	pkt = (eap_tls_packet_t*)in.ptr;
 	if (in.len < sizeof(eap_tls_packet_t) || untoh16(&pkt->length) != in.len)
 	{
-		DBG1(DBG_IKE, "invalid %N packet length", eap_type_names, this->type);
+		DBG1(DBG_TLS, "invalid %N packet length", eap_type_names, this->type);
 		return FAILED;
 	}
 
