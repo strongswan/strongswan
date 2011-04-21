@@ -34,7 +34,7 @@ struct radius_socket_t {
 
 	/**
 	 * Send a RADIUS request, wait for response.
-
+	 *
 	 * The socket fills in RADIUS Message identifier, builds a
 	 * Request-Authenticator and calculates the Message-Authenticator
 	 * attribute.
@@ -66,9 +66,11 @@ struct radius_socket_t {
 /**
  * Create a radius_socket instance.
  *
- * @param host		RADIUS server address to connect to
+ * @param address	server name
+ * @param port		server port
  * @param secret	RADIUS secret
  */
-radius_socket_t *radius_socket_create(host_t *host, chunk_t secret);
+radius_socket_t *radius_socket_create(char *address, u_int16_t port,
+									  chunk_t secret);
 
 #endif /** RADIUS_SOCKET_H_ @}*/

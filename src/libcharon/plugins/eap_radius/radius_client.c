@@ -98,13 +98,14 @@ METHOD(radius_client_t, request, radius_message_t*,
 		req->add(req, RAT_STATE, this->state);
 	}
 	socket = this->server->get_socket(this->server);
-	DBG1(DBG_CFG, "sending RADIUS %N to %#H", radius_message_code_names,
-		 req->get_code(req), this->server->get_address(this->server));
+	DBG1(DBG_CFG, "sending RADIUS %N to server '%s'", radius_message_code_names,
+		 req->get_code(req), this->server->get_name(this->server));
 	res = socket->request(socket, req);
 	if (res)
 	{
-		DBG1(DBG_CFG, "received RADIUS %N from %#H", radius_message_code_names,
-			 res->get_code(res), this->server->get_address(this->server));
+		DBG1(DBG_CFG, "received RADIUS %N from server '%s'",
+			 radius_message_code_names, res->get_code(res),
+			 this->server->get_name(this->server));
 		save_state(this, res);
 		if (res->get_code(res) == RMC_ACCESS_ACCEPT)
 		{
@@ -160,16 +161,16 @@ radius_client_t *radius_client_create()
 			/* for two with equal preference, 50-50 chance */
 			(current == best && random() % 2 == 0))
 		{
-			DBG2(DBG_CFG, "RADIUS server %H is candidate: %d",
-				 server->get_address(server), current);
+			DBG2(DBG_CFG, "RADIUS server '%s' is candidate: %d",
+				 server->get_name(server), current);
 			best = current;
 			DESTROY_IF(this->server);
 			this->server = server->get_ref(server);
 		}
 		else
 		{
-			DBG2(DBG_CFG, "RADIUS server %H skipped: %d",
-				 server->get_address(server), current);
+			DBG2(DBG_CFG, "RADIUS server '%s' skipped: %d",
+				 server->get_name(server), current);
 		}
 	}
 	enumerator->destroy(enumerator);

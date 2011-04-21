@@ -183,6 +183,7 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	if (this->method)
 	{
 		action = "initiating";
+		type = this->method->get_type(this->method, &vendor);
 		if (this->method->initiate(this->method, &out) == NEED_MORE)
 		{
 			if (vendor)

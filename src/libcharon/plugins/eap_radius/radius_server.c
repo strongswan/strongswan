@@ -32,11 +32,6 @@ struct private_radius_server_t {
 	radius_server_t public;
 
 	/**
-	 * RADIUS server address
-	 */
-	host_t *host;
-
-	/**
 	 * list of radius sockets, as radius_socket_t
 	 */
 	linked_list_t *sockets;
@@ -57,9 +52,9 @@ struct private_radius_server_t {
 	condvar_t *condvar;
 
 	/**
-	 * RADIUS secret
+	 * Server name
 	 */
-	chunk_t secret;
+	char *name;
 
 	/**
 	 * NAS-Identifier
@@ -152,10 +147,10 @@ METHOD(radius_server_t, get_preference, int,
 	return pref;
 }
 
-METHOD(radius_server_t, get_address, host_t*,
+METHOD(radius_server_t, get_name, char*,
 	private_radius_server_t *this)
 {
-	return this->host;
+	return this->name;
 }
 
 METHOD(radius_server_t, get_ref, radius_server_t*,
@@ -171,12 +166,10 @@ METHOD(radius_server_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		DESTROY_IF(this->host);
 		this->mutex->destroy(this->mutex);
 		this->condvar->destroy(this->condvar);
 		this->sockets->destroy_offset(this->sockets,
 									  offsetof(radius_socket_t, destroy));
-		free(this->nas_identifier.ptr);
 		free(this);
 	}
 }
@@ -184,7 +177,7 @@ METHOD(radius_server_t, destroy, void,
 /**
  * See header
  */
-radius_server_t *radius_server_create(char *server, u_int16_t port,
+radius_server_t *radius_server_create(char *name, char *address, u_int16_t port,
 				char *nas_identifier, char *secret, int sockets, int preference)
 {
 	private_radius_server_t *this;
@@ -196,7 +189,7 @@ radius_server_t *radius_server_create(char *server, u_int16_t port,
 			.put_socket = _put_socket,
 			.get_nas_identifier = _get_nas_identifier,
 			.get_preference = _get_preference,
-			.get_address = _get_address,
+			.get_name = _get_name,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
@@ -206,19 +199,14 @@ radius_server_t *radius_server_create(char *server, u_int16_t port,
 		.sockets = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.host = host_create_from_dns(server, 0, port),
+		.name = name,
 		.preference = preference,
 		.ref = 1,
 	);
 
-	if (!this->host)
-	{
-		destroy(this);
-		return NULL;
-	}
 	while (sockets--)
 	{
-		socket = radius_socket_create(this->host,
+		socket = radius_socket_create(address, port,
 									  chunk_create(secret, strlen(secret)));
 		if (!socket)
 		{

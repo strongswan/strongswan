@@ -49,6 +49,16 @@ struct private_radius_socket_t {
 	int fd;
 
 	/**
+	 * Server address
+	 */
+	char *address;
+
+	/**
+	 * Server port
+	 */
+	u_int16_t port;
+
+	/**
 	 * current RADIUS identifier
 	 */
 	u_int8_t identifier;
@@ -74,6 +84,45 @@ struct private_radius_socket_t {
 	chunk_t secret;
 };
 
+/**
+ * Check or establish RADIUS connection
+ */
+static bool check_connection(private_radius_socket_t *this)
+{
+	if (this->fd == -1)
+	{
+		host_t *server;
+
+		server = host_create_from_dns(this->address, AF_UNSPEC, this->port);
+		if (!server)
+		{
+			DBG1(DBG_CFG, "resolving RADIUS server address '%s' failed",
+				 this->address);
+			return FALSE;
+		}
+		this->fd = socket(server->get_family(server), SOCK_DGRAM, IPPROTO_UDP);
+		if (this->fd == -1)
+		{
+			DBG1(DBG_CFG, "opening RADIUS socket for %#H failed: %s",
+				 server, strerror(errno));
+			server->destroy(server);
+			return FALSE;
+		}
+		if (connect(this->fd, server->get_sockaddr(server),
+					*server->get_sockaddr_len(server)) < 0)
+		{
+			DBG1(DBG_CFG, "connecting RADIUS socket to %#H failed: %s",
+				 server, strerror(errno));
+			server->destroy(server);
+			close(this->fd);
+			this->fd = -1;
+			return FALSE;
+		}
+		server->destroy(server);
+	}
+	return TRUE;
+}
+
 METHOD(radius_socket_t, request, radius_message_t*,
 	private_radius_socket_t *this, radius_message_t *request)
 {
@@ -84,6 +133,11 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	request->set_identifier(request, this->identifier++);
 	/* sign the request */
 	request->sign(request, this->rng, this->signer);
+
+	if (!check_connection(this))
+	{
+		return NULL;
+	}
 
 	data = request->get_encoding(request);
 	/* timeout after 2, 3, 4, 5 seconds */
@@ -257,15 +311,18 @@ METHOD(radius_socket_t, destroy, void,
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->rng);
-	chunk_clear(&this->secret);
-	close(this->fd);
+	if (this->fd != -1)
+	{
+		close(this->fd);
+	}
 	free(this);
 }
 
 /**
  * See header
  */
-radius_socket_t *radius_socket_create(host_t *host, chunk_t secret)
+radius_socket_t *radius_socket_create(char *address, u_int16_t port,
+									  chunk_t secret)
 {
 	private_radius_socket_t *this;
 
@@ -275,23 +332,11 @@ radius_socket_t *radius_socket_create(host_t *host, chunk_t secret)
 			.decrypt_msk = _decrypt_msk,
 			.destroy = _destroy,
 		},
+		.address = address,
+		.port = port,
+		.fd = -1,
 	);
 
-	this->fd = socket(host->get_family(host), SOCK_DGRAM, IPPROTO_UDP);
-	if (this->fd < 0)
-	{
-		DBG1(DBG_CFG, "opening RADIUS socket failed: %s", strerror(errno));
-		free(this);
-		return NULL;
-	}
-	if (connect(this->fd, host->get_sockaddr(host),
-				*host->get_sockaddr_len(host)) < 0)
-	{
-		DBG1(DBG_CFG, "connecting RADIUS socket failed");
-		close(this->fd);
-		free(this);
-		return NULL;
-	}
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	this->signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128);
 	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);

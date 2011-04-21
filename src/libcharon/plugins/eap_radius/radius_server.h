@@ -61,11 +61,11 @@ struct radius_server_t {
 	int (*get_preference)(radius_server_t *this);
 
 	/**
-	 * Get the address of the RADIUS server.
+	 * Get the name of the RADIUS server.
 	 *
-	 * @return			address, internal data
+	 * @return			server name
 	 */
-	host_t* (*get_address)(radius_server_t *this);
+	char* (*get_name)(radius_server_t *this);
 
 	/**
 	 * Increase reference count of this server.
@@ -83,14 +83,15 @@ struct radius_server_t {
 /**
  * Create a radius_server instance.
  *
- * @param server			server address
+ * @param name				server name
+ * @param address			server address
  * @param port				server port
  * @param nas_identifier	NAS-Identifier to use with this server
  * @param secret			secret to use with this server
  * @param sockets			number of sockets to create in pool
  * @param preference		preference boost for this server
  */
-radius_server_t *radius_server_create(char *server, u_int16_t port,
+radius_server_t *radius_server_create(char *name, char *address, u_int16_t port,
 			char *nas_identifier, char *secret, int sockets, int preference);
 
 #endif /** RADIUS_SERVER_H_ @}*/

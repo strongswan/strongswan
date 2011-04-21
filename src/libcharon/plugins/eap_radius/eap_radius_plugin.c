@@ -82,7 +82,7 @@ static void load_servers(private_eap_radius_plugin_t *this)
 					"charon.plugins.eap-radius.port", RADIUS_PORT);
 		sockets = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-radius.sockets", 1);
-		server = radius_server_create(address, port, nas_identifier,
+		server = radius_server_create(address, address, port, nas_identifier,
 									  secret, sockets, 0);
 		if (!server)
 		{
@@ -120,7 +120,7 @@ static void load_servers(private_eap_radius_plugin_t *this)
 			"charon.plugins.eap-radius.servers.%s.sockets", 1, section);
 		preference = lib->settings->get_int(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.preference", 0, section);
-		server = radius_server_create(address, port, nas_identifier,
+		server = radius_server_create(section, address, port, nas_identifier,
 									  secret, sockets, preference);
 		if (!server)
 		{
