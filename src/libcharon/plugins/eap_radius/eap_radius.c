@@ -144,9 +144,12 @@ static bool radius2ike(private_eap_radius_t *this,
 	if (message.len)
 	{
 		*out = payload = eap_payload_create_data(message);
-		free(message.ptr);
+
 		/* apply EAP method selected by RADIUS server */
 		this->type = payload->get_type(payload, &this->vendor);
+
+		DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &message);
+		free(message.ptr);
 		return TRUE;
 	}
 	return FALSE;
@@ -289,6 +292,8 @@ METHOD(eap_method_t, process, status_t,
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
 	data = in->get_data(in);
+	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
+ 
 	/* fragment data suitable for RADIUS (not more than 253 bytes) */
 	while (data.len > 253)
 	{
