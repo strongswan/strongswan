@@ -117,10 +117,8 @@ static bool enumerator_enumerate(triplet_enumerator_t *e, identification_t **ims
 	return FALSE;
 }
 
-/**
- * Implementation of eap_sim_file_triplets_t.create_enumerator
- */
-static enumerator_t* create_enumerator(private_eap_sim_file_triplets_t *this)
+METHOD(eap_sim_file_triplets_t, create_enumerator, enumerator_t*,
+	private_eap_sim_file_triplets_t *this)
 {
 	triplet_enumerator_t *enumerator = malloc_thing(triplet_enumerator_t);
 
@@ -230,10 +228,8 @@ static void read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 		 this->triplets->get_count(this->triplets), path);
 }
 
-/**
- * Implementation of eap_sim_file_triplets_t.destroy.
- */
-static void destroy(private_eap_sim_file_triplets_t *this)
+METHOD(eap_sim_file_triplets_t, destroy, void,
+	private_eap_sim_file_triplets_t *this)
 {
 	this->triplets->destroy_function(this->triplets, (void*)triplet_destroy);
 	this->mutex->destroy(this->mutex);
@@ -245,14 +241,16 @@ static void destroy(private_eap_sim_file_triplets_t *this)
  */
 eap_sim_file_triplets_t *eap_sim_file_triplets_create(char *file)
 {
-	private_eap_sim_file_triplets_t *this = malloc_thing(private_eap_sim_file_triplets_t);
+	private_eap_sim_file_triplets_t *this;
 
-	this->public.create_enumerator = (enumerator_t*(*)(eap_sim_file_triplets_t*))create_enumerator;
-	this->public.destroy = (void(*)(eap_sim_file_triplets_t*))destroy;
-
-	this->triplets = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-
+	INIT(this,
+		.public = {
+			.create_enumerator = _create_enumerator,
+			.destroy = _destroy,
+		},
+		.triplets = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+	);
 	read_triplets(this, file);
 
 	return &this->public;

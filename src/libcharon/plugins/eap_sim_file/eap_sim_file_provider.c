@@ -35,11 +35,9 @@ struct private_eap_sim_file_provider_t {
 	eap_sim_file_triplets_t *triplets;
 };
 
-/**
- * Implementation of sim_provider_t.get_triplet
- */
-static bool get_triplet(private_eap_sim_file_provider_t *this,
-						identification_t *id, char *rand, char *sres, char *kc)
+METHOD(sim_provider_t, get_triplet, bool,
+	 private_eap_sim_file_provider_t *this, identification_t *id,
+	 char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	enumerator_t *enumerator;
 	identification_t *cand;
@@ -61,10 +59,8 @@ static bool get_triplet(private_eap_sim_file_provider_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of eap_sim_file_provider_t.destroy.
- */
-static void destroy(private_eap_sim_file_provider_t *this)
+METHOD(eap_sim_file_provider_t, destroy, void,
+	private_eap_sim_file_provider_t *this)
 {
 	free(this);
 }
@@ -75,18 +71,23 @@ static void destroy(private_eap_sim_file_provider_t *this)
 eap_sim_file_provider_t *eap_sim_file_provider_create(
 											eap_sim_file_triplets_t *triplets)
 {
-	private_eap_sim_file_provider_t *this = malloc_thing(private_eap_sim_file_provider_t);
+	private_eap_sim_file_provider_t *this;
 
-	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))get_triplet;
-	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
-	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.provider.is_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
-	this->public.provider.gen_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
-	this->public.provider.is_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))return_null;
-	this->public.provider.gen_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))return_null;
-	this->public.destroy = (void(*)(eap_sim_file_provider_t*))destroy;
-
-	this->triplets = triplets;
+	INIT(this,
+		.public = {
+			.provider = {
+				.get_triplet = _get_triplet,
+				.get_quintuplet = (void*)return_false,
+				.resync = (void*)return_false,
+				.is_pseudonym = (void*)return_null,
+				.gen_pseudonym = (void*)return_null,
+				.is_reauth = (void*)return_null,
+				.gen_reauth = (void*)return_null,
+			},
+			.destroy = _destroy,
+		},
+		.triplets = triplets,
+	);
 
 	return &this->public;
 }
