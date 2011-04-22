@@ -83,9 +83,9 @@ plugin_t *eap_sim_file_plugin_create()
 			},
 		},
 		.triplets = eap_sim_file_triplets_create(TRIPLET_FILE),
-		.provider = eap_sim_file_provider_create(this->triplets),
 	);
 
+	this->provider = eap_sim_file_provider_create(this->triplets);
 	if (!this->provider)
 	{
 		this->triplets->destroy(this->triplets);
