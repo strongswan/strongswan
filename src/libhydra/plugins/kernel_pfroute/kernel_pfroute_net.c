@@ -524,7 +524,7 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 	return NULL;
 }
 
-MEHTOD(kernel_net_t, get_nexthop, host_t*,
+METHOD(kernel_net_t, get_nexthop, host_t*,
 	private_kernel_pfroute_net_t *this, host_t *dest)
 {
 	return NULL;
@@ -645,7 +645,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 	return SUCCESS;
 }
 
-METHOD(kernel__net_t, destroy, void,
+METHOD(kernel_net_t, destroy, void,
 	private_kernel_pfroute_net_t *this)
 {
 	if (this->job)
