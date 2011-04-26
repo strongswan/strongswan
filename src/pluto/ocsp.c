@@ -192,7 +192,7 @@ static const asn1Object_t basicResponseObjects[] = {
 	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
 																	ASN1_DEF  }, /* 16 */
 	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
-	{ 4,         "end loop",				ASN1_EOC,				ASN1_END  }, /* 18 */
+	{ 3,       "end loop",					ASN1_EOC,				ASN1_END  }, /* 18 */
 	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
 	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
 	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
