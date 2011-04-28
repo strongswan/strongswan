@@ -288,7 +288,7 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 	TNC_VendorID msg_vid;
 	TNC_MessageSubtype msg_subtype;
 
-    msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
+	msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
 	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
 	if (msg_vid == TNC_VENDORID_ANY || msg_subtype == TNC_SUBTYPE_ANY)
