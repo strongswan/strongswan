@@ -160,6 +160,7 @@ METHOD(imc_manager_t, receive_message, void,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type)
 {
+	bool type_supported = FALSE;
 	enumerator_t *enumerator;
 	imc_t *imc;
 
@@ -168,11 +169,16 @@ METHOD(imc_manager_t, receive_message, void,
 	{
 		if (imc->receive_message && imc->type_supported(imc, message_type))
 		{
+			type_supported = TRUE;
 			imc->receive_message(imc->get_id(imc), connection_id,
 								 message, message_len, message_type);
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (!type_supported)
+	{
+		DBG2(DBG_TNC, "IMC_IMV message type 0x%08x not supported", message_type);
+	}
 }
 
 METHOD(imc_manager_t, batch_ending, void,
