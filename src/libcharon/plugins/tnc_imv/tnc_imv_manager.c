@@ -245,7 +245,7 @@ METHOD(imv_manager_t, receive_message, void,
 	enumerator->destroy(enumerator);
 	if (!type_supported)
 	{
-		DBG2(DBG_TNC, "IMC_IMV message type 0x%08x not supported", message_type);
+		DBG2(DBG_TNC, "message type 0x%08x not supported by any IMV", message_type);
 	}
 }
 

@@ -116,7 +116,7 @@ METHOD(imv_t, set_message_types, void,
 		memcpy(this->supported_types, supported_types, size);
 	}
 	*pos = '\0';
-	DBG2(DBG_TNC, "IMC %u supports %u message types:%s",
+	DBG2(DBG_TNC, "IMV %u supports %u message types:%s",
 				  this->id, type_count, buf);
 }
 
