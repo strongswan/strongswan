@@ -1573,7 +1573,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #endif /* ME */
 		))
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due to asymmetric setup");
 		return FAILED;
 	}
 
