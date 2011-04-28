@@ -279,11 +279,23 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 								   TNC_BufferReference msg,
 								   TNC_UInt32 msg_len,
 								   TNC_MessageType msg_type)
+
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 	tnccs_send_message_t send_message = NULL;
 	tnccs_t *tnccs = NULL;
+	TNC_VendorID msg_vid;
+	TNC_MessageSubtype msg_subtype;
+
+    msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
+	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+
+	if (msg_vid == TNC_VENDORID_ANY || msg_subtype == TNC_SUBTYPE_ANY)
+	{
+		DBG1(DBG_TNC, "not sending message of invalid type 0x%08x", msg_type);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 
 	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
