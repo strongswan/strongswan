@@ -212,6 +212,8 @@ struct stroke_msg_t {
 		STR_LEASES,
 		/* export credentials */
 		STR_EXPORT,
+		/* print memory usage details */
+		STR_MEMUSAGE,
 		/* more to come */
 	} type;
 

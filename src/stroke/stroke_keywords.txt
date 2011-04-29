@@ -61,3 +61,4 @@ purgecerts,      STROKE_PURGE_CERTS
 purgeike,        STROKE_PURGE_IKE
 exportx509,      STROKE_EXPORT_X509
 leases,          STROKE_LEASES
+memusage,        STROKE_MEMUSAGE

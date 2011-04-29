@@ -326,6 +326,15 @@ static int leases(stroke_keyword_t kw, char *pool, char *address)
 	return send_stroke_msg(&msg);
 }
 
+static int memusage()
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_MEMUSAGE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	return send_stroke_msg(&msg);
+}
+
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
@@ -529,6 +538,9 @@ int main(int argc, char *argv[])
 		case STROKE_LEASES:
 			res = leases(token->kw, argc > 2 ? argv[2] : NULL,
 						 argc > 3 ? argv[3] : NULL);
+			break;
+		case STROKE_MEMUSAGE:
+			res = memusage();
 			break;
 		default:
 			exit_usage(NULL);

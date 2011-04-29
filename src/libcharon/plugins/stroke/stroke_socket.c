@@ -418,6 +418,18 @@ static void stroke_leases(private_stroke_socket_t *this,
 }
 
 /**
+ * Show memory usage
+ */
+static void stroke_memusage(private_stroke_socket_t *this,
+							stroke_msg_t *msg, FILE *out)
+{
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->usage(lib->leak_detective, out);
+	}
+}
+
+/**
  * set the verbosity debug output
  */
 static void stroke_loglevel(private_stroke_socket_t *this,
@@ -571,6 +583,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_LEASES:
 			stroke_leases(this, msg, out);
+			break;
+		case STR_MEMUSAGE:
+			stroke_memusage(this, msg, out);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
