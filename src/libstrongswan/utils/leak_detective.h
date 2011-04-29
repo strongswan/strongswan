@@ -43,6 +43,13 @@ struct leak_detective_t {
 	void (*report)(leak_detective_t *this, bool detailed);
 
 	/**
+	 * Report current memory usage to out.
+	 *
+	 * @param out			target to write usage report to
+	 */
+	void (*usage)(leak_detective_t *this, FILE *out);
+
+	/**
 	 * Destroy a leak_detective instance.
 	 */
 	void (*destroy)(leak_detective_t *this);

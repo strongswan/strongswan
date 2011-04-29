@@ -34,6 +34,7 @@
 #include <library.h>
 #include <debug.h>
 #include <utils/backtrace.h>
+#include <utils/hashtable.h>
 
 typedef struct private_leak_detective_t private_leak_detective_t;
 
@@ -311,6 +312,98 @@ static void uninstall_hooks()
 }
 
 /**
+ * Hashtable hash function
+ */
+static u_int hash(backtrace_t *key)
+{
+	enumerator_t *enumerator;
+	void *addr;
+	u_int hash = 0;
+
+	enumerator = key->create_frame_enumerator(key);
+	while (enumerator->enumerate(enumerator, &addr))
+	{
+		hash = chunk_hash_inc(chunk_from_thing(addr), hash);
+	}
+	enumerator->destroy(enumerator);
+
+	return hash;
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals(backtrace_t *a, backtrace_t *b)
+{
+	return a->equals(a, b);
+}
+
+METHOD(leak_detective_t, usage, void,
+	private_leak_detective_t *this, FILE *out)
+{
+	int oldpolicy, thresh;
+	pthread_t thread_id = pthread_self();
+	struct sched_param oldparams, params;
+	memory_header_t *hdr;
+	enumerator_t *enumerator;
+	hashtable_t *entries;
+	struct {
+		/** associated backtrace */
+		backtrace_t *backtrace;
+		/** total size of all allocations */
+		size_t bytes;
+		/** number of allocations */
+		u_int count;
+	} *entry;
+
+	thresh = lib->settings->get_int(lib->settings,
+					"libstrongswan.leak_detective.usage_threshold", 10240);
+
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+	uninstall_hooks();
+
+	entries = hashtable_create((hashtable_hash_t)hash,
+							   (hashtable_equals_t)equals, 1024);
+
+	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
+	{
+		entry = entries->get(entries, hdr->backtrace);
+		if (entry)
+		{
+			entry->bytes += hdr->bytes;
+			entry->count++;
+		}
+		else
+		{
+			INIT(entry,
+				.backtrace = hdr->backtrace,
+				.bytes = hdr->bytes,
+				.count = 1,
+			);
+			entries->put(entries, hdr->backtrace, entry);
+		}
+	}
+	enumerator = entries->create_enumerator(entries);
+	while (enumerator->enumerate(enumerator, NULL, &entry))
+	{
+		if (entry->bytes >= thresh)
+		{
+			fprintf(out, "%d bytes total, %d allocations,  %d bytes average:\n",
+					entry->bytes, entry->count, entry->bytes / entry->count);
+			entry->backtrace->log(entry->backtrace, out, TRUE);
+		}
+		free(entry);
+	}
+	enumerator->destroy(enumerator);
+	entries->destroy(entries);
+
+	install_hooks();
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
+}
+
+/**
  * Hook function for malloc()
  */
 void *malloc_hook(size_t bytes, const void *caller)
@@ -510,6 +603,7 @@ leak_detective_t *leak_detective_create()
 	INIT(this,
 		.public = {
 			.report = _report,
+			.usage = _usage,
 			.destroy = _destroy,
 		},
 	);
