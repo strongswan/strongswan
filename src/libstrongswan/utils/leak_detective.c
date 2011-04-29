@@ -236,10 +236,8 @@ char *whitelist[] = {
 	"gnutls_global_init",
 };
 
-/**
- * Report leaks at library destruction
- */
-static void report(private_leak_detective_t *this, bool detailed)
+METHOD(leak_detective_t, report, void,
+	private_leak_detective_t *this, bool detailed)
 {
 	if (lib->leak_detective)
 	{
@@ -492,10 +490,8 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	return hdr + 1;
 }
 
-/**
- * Implementation of leak_detective_t.destroy
- */
-static void destroy(private_leak_detective_t *this)
+METHOD(leak_detective_t, destroy, void,
+	private_leak_detective_t *this)
 {
 	if (installed)
 	{
@@ -509,10 +505,14 @@ static void destroy(private_leak_detective_t *this)
  */
 leak_detective_t *leak_detective_create()
 {
-	private_leak_detective_t *this = malloc_thing(private_leak_detective_t);
+	private_leak_detective_t *this;
 
-	this->public.report = (void(*)(leak_detective_t*,bool))report;
-	this->public.destroy = (void(*)(leak_detective_t*))destroy;
+	INIT(this,
+		.public = {
+			.report = _report,
+			.destroy = _destroy,
+		},
+	);
 
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
