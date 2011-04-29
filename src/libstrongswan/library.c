@@ -40,13 +40,6 @@ struct private_library_t {
 	 * public functions
 	 */
 	library_t public;
-
-#ifdef LEAK_DETECTIVE
-	/**
-	 * Memory leak detective, if enabled
-	 */
-	leak_detective_t *detective;
-#endif /* LEAK_DETECTIVE */
 };
 
 /**
@@ -81,13 +74,11 @@ void library_deinit()
 		this->public.integrity->destroy(this->public.integrity);
 	}
 
-#ifdef LEAK_DETECTIVE
-	if (this->detective)
+	if (lib->leak_detective)
 	{
-		this->detective->report(this->detective, detailed);
-		this->detective->destroy(this->detective);
+		lib->leak_detective->report(lib->leak_detective, detailed);
+		lib->leak_detective->destroy(lib->leak_detective);
 	}
-#endif /* LEAK_DETECTIVE */
 
 	threads_deinit();
 
@@ -106,10 +97,9 @@ bool library_init(char *settings)
 
 	threads_init();
 
-	lib->leak_detective = FALSE;
-
+	lib->leak_detective = NULL;
 #ifdef LEAK_DETECTIVE
-	this->detective = leak_detective_create();
+	lib->leak_detective = leak_detective_create();
 #endif /* LEAK_DETECTIVE */
 
 	pfh = printf_hook_create();

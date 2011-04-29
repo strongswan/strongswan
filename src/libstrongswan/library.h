@@ -78,6 +78,7 @@
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
 #include "credentials/cred_encoding.h"
+#include "utils/leak_detective.h"
 
 typedef struct library_t library_t;
 
@@ -147,9 +148,9 @@ struct library_t {
 	integrity_checker_t *integrity;
 
 	/**
-	 * is leak detective running?
+	 * Leak detective, if built and enabled
 	 */
-	bool leak_detective;
+	leak_detective_t *leak_detective;
 };
 
 /**

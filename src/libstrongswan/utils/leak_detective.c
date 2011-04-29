@@ -526,7 +526,6 @@ leak_detective_t *leak_detective_create()
 			fprintf(stderr, "setting CPU affinity failed: %m");
 		}
 
-		lib->leak_detective = TRUE;
 		install_hooks();
 	}
 	return &this->public;
