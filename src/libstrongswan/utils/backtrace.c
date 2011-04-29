@@ -176,6 +176,44 @@ METHOD(backtrace_t, equals, bool,
 	return TRUE;
 }
 
+/**
+ * Frame enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** reference to backtrace */
+	private_backtrace_t *bt;
+	/** current position */
+	int i;
+} frame_enumerator_t;
+
+METHOD(enumerator_t, frame_enumerate, bool,
+	frame_enumerator_t *this, void **addr)
+{
+	if (this->i < this->bt->frame_count)
+	{
+		*addr = this->bt->frames[this->i++];
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(backtrace_t, create_frame_enumerator, enumerator_t*,
+	private_backtrace_t *this)
+{
+	frame_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_frame_enumerate,
+			.destroy = (void*)free,
+		},
+		.bt = this,
+	);
+	return &enumerator->public;
+}
+
 METHOD(backtrace_t, destroy, void,
 	private_backtrace_t *this)
 {
@@ -203,6 +241,7 @@ backtrace_t *backtrace_create(int skip)
 		.log = _log_,
 		.contains_function = _contains_function,
 		.equals = _equals,
+		.create_frame_enumerator = _create_frame_enumerator,
 		.destroy = _destroy,
 	};
 
