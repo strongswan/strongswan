@@ -50,10 +50,8 @@ struct private_backtrace_t {
 	void *frames[];
 };
 
-/**
- * Implementation of backtrace_t.log
- */
-static void log_(private_backtrace_t *this, FILE *file, bool detailed)
+METHOD(backtrace_t, log_, void,
+	private_backtrace_t *this, FILE *file, bool detailed)
 {
 #ifdef HAVE_BACKTRACE
 	size_t i;
@@ -129,11 +127,8 @@ static void log_(private_backtrace_t *this, FILE *file, bool detailed)
 #endif /* HAVE_BACKTRACE */
 }
 
-/**
- * Implementation of backtrace_t.contains_function
- */
-static bool contains_function(private_backtrace_t *this,
-							  char *function[], int count)
+METHOD(backtrace_t, contains_function, bool,
+	private_backtrace_t *this, char *function[], int count)
 {
 #ifdef HAVE_DLADDR
 	int i, j;
@@ -157,10 +152,8 @@ static bool contains_function(private_backtrace_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of backtrace_t.destroy.
- */
-static void destroy(private_backtrace_t *this)
+METHOD(backtrace_t, destroy, void,
+	private_backtrace_t *this)
 {
 	free(this);
 }
@@ -182,9 +175,11 @@ backtrace_t *backtrace_create(int skip)
 	memcpy(this->frames, frames + skip, frame_count * sizeof(void*));
 	this->frame_count = frame_count;
 
-	this->public.log = (void(*)(backtrace_t*,FILE*,bool))log_;
-	this->public.contains_function = (bool(*)(backtrace_t*, char *function[], int count))contains_function;
-	this->public.destroy = (void(*)(backtrace_t*))destroy;
+	this->public = (backtrace_t) {
+		.log = _log_,
+		.contains_function = _contains_function,
+		.destroy = _destroy,
+	};
 
 	return &this->public;
 }
