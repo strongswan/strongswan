@@ -152,6 +152,30 @@ METHOD(backtrace_t, contains_function, bool,
 	return FALSE;
 }
 
+METHOD(backtrace_t, equals, bool,
+	private_backtrace_t *this, backtrace_t *other_public)
+{
+	private_backtrace_t *other = (private_backtrace_t*)other_public;
+	int i;
+
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->frame_count != other->frame_count)
+	{
+		return FALSE;
+	}
+	for (i = 0; i < this->frame_count; i++)
+	{
+		if (this->frames[i] != other->frames[i])
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 METHOD(backtrace_t, destroy, void,
 	private_backtrace_t *this)
 {
@@ -178,6 +202,7 @@ backtrace_t *backtrace_create(int skip)
 	this->public = (backtrace_t) {
 		.log = _log_,
 		.contains_function = _contains_function,
+		.equals = _equals,
 		.destroy = _destroy,
 	};
 
