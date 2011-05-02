@@ -69,7 +69,7 @@ METHOD(job_t, execute, void,
 METHOD(job_t, get_priority, job_priority_t,
 	private_send_dpd_job_t *this)
 {
-	return JOB_PRIO_MEDIUM;
+	return JOB_PRIO_HIGH;
 }
 
 /*
