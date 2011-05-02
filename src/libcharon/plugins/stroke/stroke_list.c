@@ -407,7 +407,7 @@ METHOD(stroke_list_t, status, void,
 		host_t *host;
 		u_int32_t dpd;
 		time_t since, now;
-		u_int size, online, offline;
+		u_int size, online, offline, i;
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
@@ -424,9 +424,13 @@ METHOD(stroke_list_t, status, void,
 		fprintf(out, "  worker threads: %d idle of %d,",
 				lib->processor->get_idle_threads(lib->processor),
 				lib->processor->get_total_threads(lib->processor));
-		fprintf(out, " job queue load: %d,",
-				lib->processor->get_job_load(lib->processor));
-		fprintf(out, " scheduled events: %d\n",
+		fprintf(out, " job queue load: ");
+		for (i = 0; i < JOB_PRIO_MAX; i++)
+		{
+			fprintf(out, "%s%d", i == 0 ? "" : "/",
+					lib->processor->get_job_load(lib->processor, i));
+		}
+		fprintf(out, ", scheduled events: %d\n",
 				lib->scheduler->get_job_load(lib->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);

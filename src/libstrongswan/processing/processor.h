@@ -49,11 +49,12 @@ struct processor_t {
 	u_int (*get_idle_threads) (processor_t *this);
 
 	/**
-	 * Get the number of queued jobs.
+	 * Get the number of queued jobs for a specified priority.
 	 *
+	 * @param prio			priority class to get job load for
 	 * @return				number of items in queue
 	 */
-	u_int (*get_job_load) (processor_t *this);
+	u_int (*get_job_load) (processor_t *this, job_priority_t prio);
 
 	/**
 	 * Adds a job to the queue.
