@@ -36,6 +36,8 @@
 #define COOKIE_THRESHOLD_DEFAULT 10
 /** default value for private_receiver_t.block_threshold */
 #define BLOCK_THRESHOLD_DEFAULT 5
+/** default value for private_receiver_t.job_threshold */
+#define JOB_THRESHOLD_DEFAULT 0
 /** length of the secret to use for cookie calculation */
 #define SECRET_LENGTH 16
 
@@ -99,6 +101,11 @@ struct private_receiver_t {
 	 * how many half open IKE_SAs per peer before blocking
 	 */
 	u_int32_t block_threshold;
+
+	/**
+	 * Drop IKE_SA_INIT requests if processor job load exceeds this limit
+	 */
+	u_int32_t job_threshold;
 
 	/**
 	 * Delay for receiving incoming packets, to simulate larger RTT
@@ -350,6 +357,25 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
 		}
+
+		/* check if job load acceptable */
+		if (this->job_threshold)
+		{
+			u_int jobs = 0, i;
+
+			for (i = 0; i < JOB_PRIO_MAX; i++)
+			{
+				jobs += lib->processor->get_job_load(lib->processor, i);
+			}
+			if (jobs > this->job_threshold)
+			{
+				DBG1(DBG_NET, "ignoring IKE_SA setup from %H, job load of %d "
+					 "exceeds limit of %d", message->get_source(message),
+					 jobs, this->job_threshold);
+				message->destroy(message);
+				return JOB_REQUEUE_DIRECT;
+			}
+		}
 	}
 	if (this->receive_delay)
 	{
@@ -408,6 +434,8 @@ receiver_t *receiver_create()
 		this->block_threshold = lib->settings->get_int(lib->settings,
 						"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
 	}
+	this->job_threshold = lib->settings->get_int(lib->settings,
+						"charon.job_threshold", JOB_THRESHOLD_DEFAULT);
 	this->receive_delay = lib->settings->get_int(lib->settings,
 						"charon.receive_delay", 0);
 	this->receive_delay_type = lib->settings->get_int(lib->settings,
