@@ -1238,10 +1238,10 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 }
 
 /**
- * enumerator filter function
+ * enumerator filter function, waiting variant
  */
-static bool enumerator_filter(private_ike_sa_manager_t *this,
-							  entry_t **in, ike_sa_t **out, u_int *segment)
+static bool enumerator_filter_wait(private_ike_sa_manager_t *this,
+								   entry_t **in, ike_sa_t **out, u_int *segment)
 {
 	if (wait_for_entry(this, *in, *segment))
 	{
@@ -1251,11 +1251,28 @@ static bool enumerator_filter(private_ike_sa_manager_t *this,
 	return FALSE;
 }
 
+/**
+ * enumerator filter function, skipping variant
+ */
+static bool enumerator_filter_skip(private_ike_sa_manager_t *this,
+								   entry_t **in, ike_sa_t **out, u_int *segment)
+{
+	if (!(*in)->driveout_new_threads &&
+		!(*in)->driveout_waiting_threads &&
+		!(*in)->checked_out)
+	{
+		*out = (*in)->ike_sa;
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(ike_sa_manager_t, create_enumerator, enumerator_t*,
-	private_ike_sa_manager_t* this)
+	private_ike_sa_manager_t* this, bool wait)
 {
 	return enumerator_create_filter(create_table_enumerator(this),
-									(void*)enumerator_filter, this, NULL);
+			wait ? (void*)enumerator_filter_wait : (void*)enumerator_filter_skip,
+			this, NULL);
 }
 
 METHOD(ike_sa_manager_t, checkin, void,

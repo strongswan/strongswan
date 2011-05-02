@@ -206,9 +206,10 @@ static void recheckin(interface_job_t *job)
 /**
  * Implementation of controller_t.create_ike_sa_iterator.
  */
-static enumerator_t* create_ike_sa_enumerator(controller_t *this)
+static enumerator_t* create_ike_sa_enumerator(controller_t *this, bool wait)
 {
-	return charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
+	return charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager,
+													 wait);
 }
 
 /**
@@ -448,7 +449,7 @@ controller_t *controller_create(void)
 {
 	private_controller_t *this = malloc_thing(private_controller_t);
 
-	this->public.create_ike_sa_enumerator = (enumerator_t*(*)(controller_t*))create_ike_sa_enumerator;
+	this->public.create_ike_sa_enumerator = (enumerator_t*(*)(controller_t*, bool))create_ike_sa_enumerator;
 	this->public.initiate = (status_t(*)(controller_t*,peer_cfg_t*,child_cfg_t*,controller_cb_t,void*))initiate;
 	this->public.terminate_ike = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void*))terminate_ike;
 	this->public.terminate_child = (status_t(*)(controller_t*,u_int32_t,controller_cb_t, void *param))terminate_child;

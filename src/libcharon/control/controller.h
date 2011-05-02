@@ -67,9 +67,10 @@ struct controller_t {
 	 * The enumerator blocks the IKE_SA manager until it gets destroyed. Do
 	 * not call another interface/manager method while the iterator is alive.
 	 *
+	 * @param wait			TRUE to wait for checked out SAs, FALSE to skip
 	 * @return				enumerator, locks IKE_SA manager until destroyed
 	 */
-	enumerator_t* (*create_ike_sa_enumerator)(controller_t *this);
+	enumerator_t* (*create_ike_sa_enumerator)(controller_t *this, bool wait);
 
 	/**
 	 * Initiate a CHILD_SA, and if required, an IKE_SA.

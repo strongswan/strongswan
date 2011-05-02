@@ -162,9 +162,10 @@ struct ike_sa_manager_t {
 	 * While enumerating an IKE_SA, it is temporarily checked out and
 	 * automatically checked in after the current enumeration step.
 	 *
+	 * @param wait				TRUE to wait for checked out SAs, FALSE to skip
 	 * @return					enumerator over all IKE_SAs.
 	 */
-	enumerator_t *(*create_enumerator) (ike_sa_manager_t* this);
+	enumerator_t *(*create_enumerator) (ike_sa_manager_t* this, bool wait);
 
 	/**
 	 * Checkin the SA after usage.

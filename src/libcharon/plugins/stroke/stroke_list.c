@@ -530,7 +530,8 @@ METHOD(stroke_list_t, status, void,
 	enumerator->destroy(enumerator);
 
 	fprintf(out, "Security Associations:\n");
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;

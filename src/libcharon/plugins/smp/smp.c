@@ -208,7 +208,8 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 	/* <ikesalist> */
 	xmlTextWriterStartElement(writer, "ikesalist");
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		ike_sa_id_t *id;
@@ -394,7 +395,8 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 			enumerator_t *enumerator;
 			ike_sa_t *ike_sa;
 
-			enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+			enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 			while (enumerator->enumerate(enumerator, &ike_sa))
 			{
 				if (streq(str, ike_sa->get_name(ike_sa)))

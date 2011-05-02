@@ -92,7 +92,8 @@ static void status(private_uci_control_t *this, char *name)
 		{
 			continue;
 		}
-		sas = charon->controller->create_ike_sa_enumerator(charon->controller);
+		sas = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 		while (sas->enumerate(sas, &ike_sa))
 		{
 			if (!streq(ike_sa->get_name(ike_sa), peer_cfg->get_name(peer_cfg)))
@@ -174,7 +175,8 @@ static void terminate(private_uci_control_t *this, char *name)
 	ike_sa_t *ike_sa;
 	u_int id;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (streq(name, ike_sa->get_name(ike_sa)))

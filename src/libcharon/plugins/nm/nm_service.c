@@ -632,7 +632,8 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
 	u_int id;
 
 	/* our ike_sa pointer might be invalid, lookup sa */
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (priv->ike_sa == ike_sa)

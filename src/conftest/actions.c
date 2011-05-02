@@ -85,7 +85,8 @@ static job_requeue_t rekey_ike(char *config)
 	job_t *job = NULL;
 	ike_sa_t *ike_sa;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (strcaseeq(config, ike_sa->get_name(ike_sa)))
@@ -120,7 +121,8 @@ static job_requeue_t rekey_child(char *config)
 	u_int32_t reqid = 0, spi = 0;
 	protocol_id_t proto = PROTO_ESP;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		children = ike_sa->create_child_sa_iterator(ike_sa);
@@ -159,7 +161,8 @@ static job_requeue_t liveness(char *config)
 	job_t *job = NULL;
 	ike_sa_t *ike_sa;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (strcaseeq(config, ike_sa->get_name(ike_sa)))
@@ -191,7 +194,8 @@ static job_requeue_t close_ike(char *config)
 	ike_sa_t *ike_sa;
 	int id = 0;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (strcaseeq(config, ike_sa->get_name(ike_sa)))
@@ -224,7 +228,8 @@ static job_requeue_t close_child(char *config)
 	child_sa_t *child_sa;
 	int id = 0;
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 

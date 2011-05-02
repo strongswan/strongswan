@@ -166,7 +166,8 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 
 	if (changes)
 	{
-		enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
+		enumerator = charon->ike_sa_manager->create_enumerator(
+												charon->ike_sa_manager, TRUE);
 		while (enumerator->enumerate(enumerator, &ike_sa))
 		{
 			if (ike_sa->get_state(ike_sa) != old)

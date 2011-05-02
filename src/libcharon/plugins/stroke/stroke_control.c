@@ -287,7 +287,8 @@ METHOD(stroke_control_t, terminate, void,
 
 	ike_list = linked_list_create();
 	child_list = linked_list_create();
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
@@ -366,7 +367,8 @@ METHOD(stroke_control_t, rekey, void,
 		DBG1(DBG_CFG, "error parsing specifier string");
 		return;
 	}
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
@@ -442,7 +444,8 @@ METHOD(stroke_control_t, terminate_srcip, void,
 		chunk_end = end->get_address(end);
 	}
 
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
@@ -493,7 +496,8 @@ METHOD(stroke_control_t, purge_ike, void,
 	info.level = msg->output_verbosity;
 
 	list = linked_list_create();
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	enumerator = charon->controller->create_ike_sa_enumerator(
+													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		iterator = ike_sa->create_child_sa_iterator(ike_sa);

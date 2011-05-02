@@ -228,7 +228,7 @@ static void rekey_segment(private_ha_cache_t *this, u_int segment)
 	list = linked_list_create();
 
 	enumerator = charon->ike_sa_manager->create_enumerator(
-												charon->ike_sa_manager);
+												charon->ike_sa_manager, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&

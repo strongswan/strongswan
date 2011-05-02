@@ -55,7 +55,8 @@ METHOD(job_t, execute, void,
 	/* enumerator over all IKE_SAs gives us no way to checkin_and_destroy
 	 * after a DESTROY_ME, so we check out each available IKE_SA by hand. */
 	list = linked_list_create();
-	enumerator = charon->ike_sa_manager->create_enumerator(charon->ike_sa_manager);
+	enumerator = charon->ike_sa_manager->create_enumerator(
+												charon->ike_sa_manager, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		id = ike_sa->get_id(ike_sa);
