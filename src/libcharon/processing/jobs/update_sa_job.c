@@ -74,6 +74,12 @@ METHOD(job_t, execute, void,
 	destroy(this);
 }
 
+METHOD(job_t, get_priority, job_priority_t,
+	private_update_sa_job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
 /*
  * Described in header
  */
@@ -85,6 +91,7 @@ update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new)
 		.public = {
 			.job_interface = {
 				.execute = _execute,
+				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
 		},

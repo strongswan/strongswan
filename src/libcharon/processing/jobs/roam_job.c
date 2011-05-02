@@ -85,6 +85,12 @@ METHOD(job_t, execute, void,
 	destroy(this);
 }
 
+METHOD(job_t, get_priority, job_priority_t,
+	private_roam_job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
 /*
  * Described in header
  */
@@ -96,6 +102,7 @@ roam_job_t *roam_job_create(bool address)
 		.public = {
 			.job_interface = {
 				.execute = _execute,
+				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
 		},

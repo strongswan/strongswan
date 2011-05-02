@@ -227,6 +227,12 @@ METHOD(job_t, execute, void,
 	thread_cleanup_pop(cleanup);
 }
 
+METHOD(job_t, get_priority, job_priority_t,
+	private_callback_job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
 /*
  * Described in header.
  */
@@ -240,6 +246,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 		.public = {
 			.job = {
 				.execute = _execute,
+				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
 			.cancel = _cancel,

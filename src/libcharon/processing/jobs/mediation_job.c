@@ -138,6 +138,14 @@ static void execute(private_mediation_job_t *this)
 }
 
 /**
+ * Implementation of job_t.get_priority.
+ */
+static job_priority_t get_priority(private_mediation_job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
+/**
  * Creates an empty mediation job
  */
 static private_mediation_job_t *mediation_job_create_empty()
@@ -146,6 +154,7 @@ static private_mediation_job_t *mediation_job_create_empty()
 
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
+	this->public.job_interface.get_priority = (job_priority_t (*) (job_t *)) get_priority;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 
 	/* private variables */

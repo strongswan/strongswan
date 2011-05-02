@@ -127,6 +127,12 @@ METHOD(job_t, execute, void,
 	}
 }
 
+METHOD(job_t, get_priority, job_priority_t,
+	private_inactivity_job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
 /**
  * See header
  */
@@ -137,8 +143,9 @@ inactivity_job_t *inactivity_job_create(u_int32_t reqid, u_int32_t timeout,
 
 	INIT(this,
 		.public = {
-				.job_interface = {
+			.job_interface = {
 				.execute = _execute,
+				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
 		},
