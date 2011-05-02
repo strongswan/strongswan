@@ -147,12 +147,12 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	this->identifier = in->get_identifier(in);
 	data = in->get_data(in);
-	this->challenge = chunk_clone(chunk_skip(data, 6));
-	if (data.len < 6 || this->challenge.len < *(data.ptr + 5))
+	if (data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
+	this->challenge = chunk_clone(chunk_create(data.ptr + 6, data.ptr[5]));
 	if (hash_challenge(this, &response, this->peer, this->server) != SUCCESS)
 	{
 		return FAILED;
@@ -176,7 +176,9 @@ METHOD(eap_method_t, process_server, status_t,
 	chunk_t response, expected;
 	chunk_t data;
 
-	if (this->identifier != in->get_identifier(in))
+	data = in->get_data(in);
+	if (this->identifier != in->get_identifier(in) ||
+		data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
@@ -185,9 +187,7 @@ METHOD(eap_method_t, process_server, status_t,
 	{
 		return FAILED;
 	}
-	data = in->get_data(in);
-	response = chunk_skip(data, 6);
-
+	response = chunk_create(data.ptr + 6, data.ptr[5]);
 	if (response.len < expected.len ||
 		!memeq(response.ptr, expected.ptr, expected.len))
 	{
