@@ -41,6 +41,11 @@ enum job_priority_t {
 };
 
 /**
+ * Enum names for job priorities
+ */
+extern enum_name_t *job_priority_names;
+
+/**
  * Job interface as it is stored in the job queue.
  */
 struct job_t {
