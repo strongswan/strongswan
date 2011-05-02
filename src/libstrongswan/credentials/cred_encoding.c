@@ -180,8 +180,13 @@ static bool encode(private_cred_encoding_t *this, cred_encoding_type_t type,
 		chunk = malloc_thing(chunk_t);
 		*chunk = *encoding;
 		this->lock->write_lock(this->lock);
-		this->cache[type]->put(this->cache[type], cache, chunk);
+		chunk = this->cache[type]->put(this->cache[type], cache, chunk);
 		this->lock->unlock(this->lock);
+		if (chunk)
+		{
+			free(chunk->ptr);
+			free(chunk);
+		}
 	}
 	return success;
 }
