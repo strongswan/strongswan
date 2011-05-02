@@ -67,6 +67,11 @@ struct private_processor_t {
 	linked_list_t *jobs[JOB_PRIO_MAX];
 
 	/**
+	 * Threads reserved for each priority
+	 */
+	int prio_threads[JOB_PRIO_MAX];
+
+	/**
 	 * access to job lists is locked through this mutex
 	 */
 	mutex_t *mutex;
@@ -122,10 +127,18 @@ static void process_jobs(private_processor_t *this)
 	while (this->desired_threads >= this->total_threads)
 	{
 		job_t *job = NULL;
-		int i;
+		int i, prio_sum = 0;
 
 		for (i = 0; i < JOB_PRIO_MAX; i++)
 		{
+			if (prio_sum && prio_sum >= this->idle_threads)
+			{
+				DBG2(DBG_JOB, "delaying %N priority jobs: %d threads idle, "
+					 "but %d reserved for higher priorities",
+					 job_priority_names, i, this->idle_threads, prio_sum);
+				break;
+			}
+			prio_sum += this->prio_threads[i];
 			if (this->jobs[i]->remove_first(this->jobs[i],
 											(void**)&job) == SUCCESS)
 			{
@@ -293,6 +306,9 @@ processor_t *processor_create()
 	for (i = 0; i < JOB_PRIO_MAX; i++)
 	{
 		this->jobs[i] = linked_list_create();
+		this->prio_threads[i] = lib->settings->get_int(lib->settings,
+						"libstrongswan.processor.priority_threads.%N", 0,
+						job_priority_names, i);
 	}
 
 	return &this->public;
