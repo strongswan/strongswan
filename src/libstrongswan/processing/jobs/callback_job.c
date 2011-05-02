@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2007-2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -29,6 +30,7 @@ typedef struct private_callback_job_t private_callback_job_t;
  * Private data of an callback_job_t Object.
  */
 struct private_callback_job_t {
+
 	/**
 	 * Public callback_job_t interface.
 	 */
@@ -111,10 +113,8 @@ static void unregister(private_callback_job_t *this)
 	}
 }
 
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_callback_job_t *this)
+METHOD(job_t, destroy, void,
+	private_callback_job_t *this)
 {
 	this->mutex->lock(this->mutex);
 	unregister(this);
@@ -133,10 +133,8 @@ static void destroy(private_callback_job_t *this)
 	free(this);
 }
 
-/**
- * Implementation of callback_job_t.cancel.
- */
-static void cancel(private_callback_job_t *this)
+METHOD(callback_job_t, cancel, void,
+	private_callback_job_t *this)
 {
 	callback_job_t *child;
 	sem_t *terminated = NULL;
@@ -177,10 +175,8 @@ static void cancel(private_callback_job_t *this)
 	}
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_callback_job_t *this)
+METHOD(job_t, execute, void,
+	private_callback_job_t *this)
 {
 	bool cleanup = FALSE, requeue = FALSE;
 
@@ -226,8 +222,7 @@ static void execute(private_callback_job_t *this)
 	thread_cancellation_point();
 	if (requeue)
 	{
-		lib->processor->queue_job(lib->processor,
-								  &this->public.job_interface);
+		lib->processor->queue_job(lib->processor, &this->public.job);
 	}
 	thread_cleanup_pop(cleanup);
 }
@@ -239,24 +234,24 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
 									callback_job_t *parent)
 {
-	private_callback_job_t *this = malloc_thing(private_callback_job_t);
+	private_callback_job_t *this;
 
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	this->public.cancel = (void(*)(callback_job_t*))cancel;
-
-	/* private variables */
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->callback = cb;
-	this->data = data;
-	this->cleanup = cleanup;
-	this->thread = 0;
-	this->children = linked_list_create();
-	this->parent = (private_callback_job_t*)parent;
-	this->cancelled = FALSE;
-	this->destroyable = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->terminated = NULL;
+	INIT(this,
+		.public = {
+			.job = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+			.cancel = _cancel,
+		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.callback = cb,
+		.data = data,
+		.cleanup = cleanup,
+		.children = linked_list_create(),
+		.parent = (private_callback_job_t*)parent,
+		.destroyable = condvar_create(CONDVAR_TYPE_DEFAULT),
+	);
 
 	/* register us at parent */
 	if (parent)

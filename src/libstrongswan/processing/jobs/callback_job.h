@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2007-2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,7 +31,7 @@ typedef struct callback_job_t callback_job_t;
 typedef enum job_requeue_t job_requeue_t;
 
 /**
- * Job requeueing policy
+ * Job requeueing policy.
  *
  * The job requeueing policy defines how a job is handled when the callback
  * function returns.
@@ -84,15 +85,19 @@ typedef void (*callback_job_cleanup_t)(void *data);
  * of asynchronous methods, without to manage threads.
  */
 struct callback_job_t {
+
 	/**
 	 * The job_t interface.
 	 */
-	job_t job_interface;
+	job_t job;
 
 	/**
-	 * Cancel the job's thread and wait for its termination. This only works
-	 * reliably for jobs that always use JOB_REQUEUE_FAIR or JOB_REQUEUE_DIRECT,
-	 * otherwise the job may already be destroyed when cancel is called. */
+	 * Cancel the job's thread and wait for its termination.
+	 *
+	 * This only works reliably for jobs that always use JOB_REQUEUE_FAIR or
+	 * JOB_REQUEUE_DIRECT, otherwise the job may already be destroyed when
+	 * cancel is called.
+	 */
 	void (*cancel)(callback_job_t *this);
 };
 
