@@ -379,7 +379,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		chunk_increment(cur_addr);
 	}
 	commit_transaction();
-	printf("done.\n", count);
+	printf("done.\n");
 }
 
 static bool add_address(u_int pool_id, char *address_str, int *family)
