@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -141,46 +142,41 @@ static void process_jobs(private_processor_t *this)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of processor_t.get_total_threads.
- */
-static u_int get_total_threads(private_processor_t *this)
+METHOD(processor_t, get_total_threads, u_int,
+	private_processor_t *this)
 {
 	u_int count;
+
 	this->mutex->lock(this->mutex);
 	count = this->total_threads;
 	this->mutex->unlock(this->mutex);
 	return count;
 }
 
-/**
- * Implementation of processor_t.get_idle_threads.
- */
-static u_int get_idle_threads(private_processor_t *this)
+METHOD(processor_t, get_idle_threads, u_int,
+	private_processor_t *this)
 {
 	u_int count;
+
 	this->mutex->lock(this->mutex);
 	count = this->idle_threads;
 	this->mutex->unlock(this->mutex);
 	return count;
 }
 
-/**
- * implements processor_t.get_job_load
- */
-static u_int get_job_load(private_processor_t *this)
+METHOD(processor_t, get_job_load, u_int,
+	private_processor_t *this)
 {
 	u_int load;
+
 	this->mutex->lock(this->mutex);
 	load = this->list->get_count(this->list);
 	this->mutex->unlock(this->mutex);
 	return load;
 }
 
-/**
- * implements function processor_t.queue_job
- */
-static void queue_job(private_processor_t *this, job_t *job)
+METHOD(processor_t, queue_job, void,
+	private_processor_t *this, job_t *job)
 {
 	this->mutex->lock(this->mutex);
 	this->list->insert_last(this->list, job);
@@ -188,10 +184,8 @@ static void queue_job(private_processor_t *this, job_t *job)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of processor_t.set_threads.
- */
-static void set_threads(private_processor_t *this, u_int count)
+METHOD(processor_t, set_threads, void,
+	private_processor_t *this, u_int count)
 {
 	this->mutex->lock(this->mutex);
 	if (count > this->total_threads)
@@ -219,12 +213,11 @@ static void set_threads(private_processor_t *this, u_int count)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of processor_t.destroy.
- */
-static void destroy(private_processor_t *this)
+METHOD(processor_t, destroy, void,
+	private_processor_t *this)
 {
 	thread_t *current;
+
 	set_threads(this, 0);
 	this->mutex->lock(this->mutex);
 	while (this->total_threads > 0)
@@ -251,23 +244,23 @@ static void destroy(private_processor_t *this)
  */
 processor_t *processor_create()
 {
-	private_processor_t *this = malloc_thing(private_processor_t);
+	private_processor_t *this;
 
-	this->public.get_total_threads = (u_int(*)(processor_t*))get_total_threads;
-	this->public.get_idle_threads = (u_int(*)(processor_t*))get_idle_threads;
-	this->public.get_job_load = (u_int(*)(processor_t*))get_job_load;
-	this->public.queue_job = (void(*)(processor_t*, job_t*))queue_job;
-	this->public.set_threads = (void(*)(processor_t*, u_int))set_threads;
-	this->public.destroy = (void(*)(processor_t*))destroy;
-
-	this->list = linked_list_create();
-	this->threads = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->job_added = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->thread_terminated = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->total_threads = 0;
-	this->desired_threads = 0;
-	this->idle_threads = 0;
+	INIT(this,
+		.public = {
+			.get_total_threads = _get_total_threads,
+			.get_idle_threads = _get_idle_threads,
+			.get_job_load = _get_job_load,
+			.queue_job = _queue_job,
+			.set_threads = _set_threads,
+			.destroy = _destroy,
+		},
+		.list = linked_list_create(),
+		.threads = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.job_added = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.thread_terminated = condvar_create(CONDVAR_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }
