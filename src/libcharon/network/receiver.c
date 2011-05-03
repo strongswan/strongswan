@@ -36,8 +36,6 @@
 #define COOKIE_THRESHOLD_DEFAULT 10
 /** default value for private_receiver_t.block_threshold */
 #define BLOCK_THRESHOLD_DEFAULT 5
-/** default value for private_receiver_t.job_threshold */
-#define JOB_THRESHOLD_DEFAULT 0
 /** length of the secret to use for cookie calculation */
 #define SECRET_LENGTH 16
 
@@ -105,7 +103,12 @@ struct private_receiver_t {
 	/**
 	 * Drop IKE_SA_INIT requests if processor job load exceeds this limit
 	 */
-	u_int32_t job_threshold;
+	u_int init_limit_job_load;
+
+	/**
+	 * Drop IKE_SA_INIT requests if half open IKE_SA count exceeds this limit
+	 */
+	u_int init_limit_half_open;
 
 	/**
 	 * Delay for receiving incoming packets, to simulate larger RTT
@@ -222,54 +225,114 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 }
 
 /**
- * check if cookies are required, and if so, a valid cookie is included
+ * Check if a valid cookie found
  */
-static bool cookie_required(private_receiver_t *this, message_t *message)
+static bool check_cookie(private_receiver_t *this, message_t *message)
 {
-	bool failed = FALSE;
+	packet_t *packet;
+	chunk_t data;
 
-	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
-												NULL) >= this->cookie_threshold)
+	/* check for a cookie. We don't use our parser here and do it
+	 * quick and dirty for performance reasons.
+	 * we assume the cookie is the first payload (which is a MUST), and
+	 * the cookie's SPI length is zero. */
+	packet = message->get_packet(message);
+	data = packet->get_data(packet);
+	if (data.len <
+		 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
+		 sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher) ||
+		*(data.ptr + 16) != NOTIFY ||
+		*(u_int16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
 	{
-		/* check for a cookie. We don't use our parser here and do it
-		 * quick and dirty for performance reasons.
-		 * we assume the cookie is the first payload (which is a MUST), and
-		 * the cookie's SPI length is zero. */
-		packet_t *packet = message->get_packet(message);
-		chunk_t data = packet->get_data(packet);
-		if (data.len <
-			 IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH +
-			 sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher) ||
-			*(data.ptr + 16) != NOTIFY ||
-			*(u_int16_t*)(data.ptr + IKE_HEADER_LENGTH + 6) != htons(COOKIE))
-		{
-			/* no cookie found */
-			failed = TRUE;
-		}
-		else
-		{
-			data.ptr += IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH;
-			data.len = sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher);
-			if (!cookie_verify(this, message, data))
-			{
-				DBG2(DBG_NET, "found cookie, but content invalid");
-				failed = TRUE;
-			}
-		}
+		/* no cookie found */
 		packet->destroy(packet);
+		return FALSE;
 	}
-	return failed;
+	data.ptr += IKE_HEADER_LENGTH + NOTIFY_PAYLOAD_HEADER_LENGTH;
+	data.len = sizeof(u_int32_t) + this->hasher->get_hash_size(this->hasher);
+	if (!cookie_verify(this, message, data))
+	{
+		DBG2(DBG_NET, "found cookie, but content invalid");
+		packet->destroy(packet);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**
- * check if peer has to many half open IKE_SAs
+ * Check if we should drop IKE_SA_INIT because of cookie/overload checking
  */
-static bool peer_too_aggressive(private_receiver_t *this, message_t *message)
+static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 {
-	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
-						message->get_source(message)) >= this->block_threshold)
+	u_int half_open;
+
+	half_open = charon->ike_sa_manager->get_half_open_count(
+										charon->ike_sa_manager, NULL);
+
+	/* check for cookies */
+	if (this->cookie_threshold && half_open >= this->cookie_threshold &&
+		!check_cookie(this, message))
 	{
+		u_int32_t now = time_monotonic(NULL);
+		chunk_t cookie = cookie_build(this, message, now - this->secret_offset,
+									  chunk_from_thing(this->secret));
+
+		DBG2(DBG_NET, "received packet from: %#H to %#H",
+			 message->get_source(message),
+			 message->get_destination(message));
+		DBG2(DBG_NET, "sending COOKIE notify to %H",
+			 message->get_source(message));
+		send_notify(message, COOKIE, cookie);
+		chunk_free(&cookie);
+		if (++this->secret_used > COOKIE_REUSE)
+		{
+			/* create new cookie */
+			DBG1(DBG_NET, "generating new cookie secret after %d uses",
+				 this->secret_used);
+			memcpy(this->secret_old, this->secret, SECRET_LENGTH);
+			this->rng->get_bytes(this->rng,	SECRET_LENGTH, this->secret);
+			this->secret_switch = now;
+			this->secret_used = 0;
+		}
 		return TRUE;
+	}
+
+	/* check if peer has too many IKE_SAs half open */
+	if (this->block_threshold &&
+		charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
+				message->get_source(message)) >= this->block_threshold)
+	{
+		DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
+			 "peer too aggressive", message->get_source(message));
+		return TRUE;
+	}
+
+	/* check if global half open IKE_SA limit reached */
+	if (this->init_limit_half_open &&
+		half_open >= this->init_limit_half_open)
+	{
+		DBG1(DBG_NET, "ignoring IKE_SA setup from %H, half open IKE_SA "
+			 "count of %d exceeds limit of %d", message->get_source(message),
+			 half_open, this->init_limit_half_open);
+		return TRUE;
+	}
+
+	/* check if job load acceptable */
+	if (this->init_limit_job_load)
+	{
+		u_int jobs = 0, i;
+
+		for (i = 0; i < JOB_PRIO_MAX; i++)
+		{
+			jobs += lib->processor->get_job_load(lib->processor, i);
+		}
+		if (jobs > this->init_limit_job_load)
+		{
+			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, job load of %d "
+				 "exceeds limit of %d", message->get_source(message),
+				 jobs, this->init_limit_job_load);
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -321,60 +384,10 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/* check for cookies */
-		if (this->cookie_threshold && cookie_required(this, message))
+		if (drop_ike_sa_init(this, message))
 		{
-			u_int32_t now = time_monotonic(NULL);
-			chunk_t cookie = cookie_build(this, message, now - this->secret_offset,
-										  chunk_from_thing(this->secret));
-
-			DBG2(DBG_NET, "received packet from: %#H to %#H",
-				 message->get_source(message),
-				 message->get_destination(message));
-			DBG2(DBG_NET, "sending COOKIE notify to %H",
-				 message->get_source(message));
-			send_notify(message, COOKIE, cookie);
-			chunk_free(&cookie);
-			if (++this->secret_used > COOKIE_REUSE)
-			{
-				/* create new cookie */
-				DBG1(DBG_NET, "generating new cookie secret after %d uses",
-					 this->secret_used);
-				memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-				this->rng->get_bytes(this->rng,	SECRET_LENGTH, this->secret);
-				this->secret_switch = now;
-				this->secret_used = 0;
-			}
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
-		}
-
-		/* check if peer has not too many IKE_SAs half open */
-		if (this->block_threshold && peer_too_aggressive(this, message))
-		{
-			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
-				 "peer too aggressive", message->get_source(message));
-			message->destroy(message);
-			return JOB_REQUEUE_DIRECT;
-		}
-
-		/* check if job load acceptable */
-		if (this->job_threshold)
-		{
-			u_int jobs = 0, i;
-
-			for (i = 0; i < JOB_PRIO_MAX; i++)
-			{
-				jobs += lib->processor->get_job_load(lib->processor, i);
-			}
-			if (jobs > this->job_threshold)
-			{
-				DBG1(DBG_NET, "ignoring IKE_SA setup from %H, job load of %d "
-					 "exceeds limit of %d", message->get_source(message),
-					 jobs, this->job_threshold);
-				message->destroy(message);
-				return JOB_REQUEUE_DIRECT;
-			}
 		}
 	}
 	if (this->receive_delay)
@@ -434,8 +447,10 @@ receiver_t *receiver_create()
 		this->block_threshold = lib->settings->get_int(lib->settings,
 						"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
 	}
-	this->job_threshold = lib->settings->get_int(lib->settings,
-						"charon.job_threshold", JOB_THRESHOLD_DEFAULT);
+	this->init_limit_job_load = lib->settings->get_int(lib->settings,
+						"charon.init_limit_job_load", 0);
+	this->init_limit_half_open = lib->settings->get_int(lib->settings,
+						"charon.init_limit_half_open", 0);
 	this->receive_delay = lib->settings->get_int(lib->settings,
 						"charon.receive_delay", 0);
 	this->receive_delay_type = lib->settings->get_int(lib->settings,
