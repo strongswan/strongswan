@@ -54,11 +54,13 @@ METHOD(listener_t, log_, bool,
 {
 	if (level <= this->levels[group])
 	{
-		char buffer[8192], namestr[128] = "";
+		char buffer[8192], groupstr[4], namestr[128] = "";
 		char *current = buffer, *next;
 
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
+		/* cache group name */
+		snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
 
 		if (this->ike_name && ike_sa)
 		{
@@ -82,8 +84,8 @@ METHOD(listener_t, log_, bool,
 			{
 				*(next++) = '\0';
 			}
-			syslog(this->facility|LOG_INFO, "%.2d[%N]%s %s\n",
-				   thread, debug_names, group, namestr, current);
+			syslog(this->facility|LOG_INFO, "%.2d[%s]%s %s\n",
+				   thread, groupstr, namestr, current);
 			current = next;
 		}
 	}
