@@ -65,6 +65,16 @@ struct private_load_tester_config_t {
 	char *responder_auth;
 
 	/**
+	 * Initiator ID to enforce
+	 */
+	char *initiator_id;
+
+	/**
+	 * Responder ID to enforce
+	 */
+	char *responder_id;
+
+	/**
 	 * IKE_SA rekeying delay
 	 */
 	u_int ike_rekey;
@@ -102,24 +112,46 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 	enumerator = enumerator_create_token(str, "|", " ");
 	while (enumerator->enumerate(enumerator, &str))
 	{
+		id = NULL;
 		auth = auth_cfg_create();
 		rnd++;
+
+		if (this->initiator_id)
+		{
+			if ((local && num) || (!local && !num))
+			{
+				snprintf(buf, sizeof(buf), this->initiator_id, num, rnd);
+				id = identification_create_from_string(buf);
+			}
+		}
+		if (this->responder_id)
+		{
+			if ((local && !num) || (!local && num))
+			{
+				snprintf(buf, sizeof(buf), this->responder_id, num, rnd);
+				id = identification_create_from_string(buf);
+			}
+		}
 
 		if (streq(str, "psk"))
 		{	/* PSK authentication, use FQDNs */
 			class = AUTH_CLASS_PSK;
-			if ((local && !num) || (!local && num))
+			if (!id)
 			{
-				id = identification_create_from_string("srv.strongswan.org");
-			}
-			else if (local)
-			{
-				snprintf(buf, sizeof(buf), "c%d-r%d.strongswan.org", num, rnd);
-				id = identification_create_from_string(buf);
-			}
-			else
-			{
-				id = identification_create_from_string("*.strongswan.org");
+				if ((local && !num) || (!local && num))
+				{
+					id = identification_create_from_string("srv.strongswan.org");
+				}
+				else if (local)
+				{
+					snprintf(buf, sizeof(buf), "c%d-r%d.strongswan.org",
+							 num, rnd);
+					id = identification_create_from_string(buf);
+				}
+				else
+				{
+					id = identification_create_from_string("*.strongswan.org");
+				}
 			}
 		}
 		else if (strneq(str, "eap", strlen("eap")))
@@ -133,14 +165,18 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 					auth->add(auth, AUTH_RULE_EAP_TYPE, type);
 				}
 			}
-			if (local && num)
+			if (!id)
 			{
-				snprintf(buf, sizeof(buf), "1%.10d%.4d@strongswan.org", num, rnd);
-				id = identification_create_from_string(buf);
-			}
-			else
-			{
-				id = identification_create_from_encoding(ID_ANY, chunk_empty);
+				if (local && num)
+				{
+					snprintf(buf, sizeof(buf), "1%.10d%.4d@strongswan.org",
+							 num, rnd);
+					id = identification_create_from_string(buf);
+				}
+				else
+				{
+					id = identification_create_from_encoding(ID_ANY, chunk_empty);
+				}
 			}
 		}
 		else
@@ -152,21 +188,24 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 			}
 			/* certificate authentication, use distinguished names */
 			class = AUTH_CLASS_PUBKEY;
-			if ((local && !num) || (!local && num))
+			if (!id)
 			{
-				id = identification_create_from_string(
-							"CN=srv, OU=load-test, O=strongSwan");
-			}
-			else if (local)
-			{
-				snprintf(buf, sizeof(buf),
-						 "CN=c%d-r%d, OU=load-test, O=strongSwan", num, rnd);
-				id = identification_create_from_string(buf);
-			}
-			else
-			{
-				id = identification_create_from_string(
-								"CN=*, OU=load-test, O=strongSwan");
+				if ((local && !num) || (!local && num))
+				{
+					id = identification_create_from_string(
+								"CN=srv, OU=load-test, O=strongSwan");
+				}
+				else if (local)
+				{
+					snprintf(buf, sizeof(buf),
+							 "CN=c%d-r%d, OU=load-test, O=strongSwan", num, rnd);
+					id = identification_create_from_string(buf);
+				}
+				else
+				{
+					id = identification_create_from_string(
+									"CN=*, OU=load-test, O=strongSwan");
+				}
 			}
 		}
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
@@ -317,6 +356,10 @@ load_tester_config_t *load_tester_config_create()
 				"charon.plugins.load-tester.initiator_auth", "pubkey");
 	this->responder_auth = lib->settings->get_str(lib->settings,
 				"charon.plugins.load-tester.responder_auth", "pubkey");
+	this->initiator_id = lib->settings->get_str(lib->settings,
+				"charon.plugins.load-tester.initiator_id", NULL);
+	this->responder_id = lib->settings->get_str(lib->settings,
+				"charon.plugins.load-tester.responder_id", NULL);
 
 	this->port = lib->settings->get_int(lib->settings,
 				"charon.plugins.load-tester.dynamic_port", 0);
