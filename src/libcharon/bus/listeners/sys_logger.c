@@ -48,11 +48,9 @@ struct private_sys_logger_t {
 	bool ike_name;
 };
 
-/**
- * Implementation of listener_t.log.
- */
-static bool log_(private_sys_logger_t *this, debug_t group, level_t level,
-				 int thread, ike_sa_t* ike_sa, char *format, va_list args)
+METHOD(listener_t, log_, bool,
+	   private_sys_logger_t *this, debug_t group, level_t level, int thread,
+	   ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (level <= this->levels[group])
 	{
@@ -93,10 +91,8 @@ static bool log_(private_sys_logger_t *this, debug_t group, level_t level,
 	return TRUE;
 }
 
-/**
- * Implementation of sys_logger_t.set_level.
- */
-static void set_level(private_sys_logger_t *this, debug_t group, level_t level)
+METHOD(sys_logger_t, set_level, void,
+	   private_sys_logger_t *this, debug_t group, level_t level)
 {
 	if (group < DBG_ANY)
 	{
@@ -111,10 +107,8 @@ static void set_level(private_sys_logger_t *this, debug_t group, level_t level)
 	}
 }
 
-/**
- * Implementation of sys_logger_t.destroy.
- */
-static void destroy(private_sys_logger_t *this)
+METHOD(sys_logger_t, destroy, void,
+	   private_sys_logger_t *this)
 {
 	closelog();
 	free(this);
@@ -125,17 +119,20 @@ static void destroy(private_sys_logger_t *this)
  */
 sys_logger_t *sys_logger_create(int facility, bool ike_name)
 {
-	private_sys_logger_t *this = malloc_thing(private_sys_logger_t);
+	private_sys_logger_t *this;
 
-	/* public functions */
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
-	this->public.set_level = (void(*)(sys_logger_t*,debug_t,level_t))set_level;
-	this->public.destroy = (void(*)(sys_logger_t*))destroy;
+	INIT(this,
+		.public = {
+			.listener = {
+				.log = _log_,
+			},
+			.set_level = _set_level,
+			.destroy = _destroy,
+		},
+		.facility = facility,
+		.ike_name = ike_name,
+	);
 
-	/* private variables */
-	this->facility = facility;
-	this->ike_name = ike_name;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
 
 	return &this->public;
