@@ -72,7 +72,7 @@ struct aead_test_vector_t {
 
 struct signer_test_vector_t {
 	/** signer algorithm this test vector tests */
-	pseudo_random_function_t alg;
+	integrity_algorithm_t alg;
 	/** key to use, with a length the algorithm expects */
 	u_char *key;
 	/** size of the input data */
