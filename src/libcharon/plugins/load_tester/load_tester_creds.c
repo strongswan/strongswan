@@ -173,16 +173,14 @@ static char cert[] = {
 
 
 /**
- * A preshared key
+ * Default IKE preshared key
  */
-static char psk[] = {
-  0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08
-};
+static char *default_psk = "default-psk";
 
 /**
- * Password for EAP
+ * Default EAP password for EAP
  */
-static char pwd[] = "test#123";
+static char *default_pwd = "default-pwd";
 
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	private_load_tester_creds_t *this, key_type_t type, identification_t *id)
@@ -303,9 +301,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 		default:
 			return NULL;
 	}
-	return enumerator_create_filter(
-						enumerator_create_single(this->pwd, NULL),
-						(void*)shared_filter, NULL, NULL);
+	return enumerator_create_filter(enumerator_create_single(shared, NULL),
+									(void*)shared_filter, NULL, NULL);
 }
 
 METHOD(load_tester_creds_t, destroy, void,
@@ -321,6 +318,12 @@ METHOD(load_tester_creds_t, destroy, void,
 load_tester_creds_t *load_tester_creds_create()
 {
 	private_load_tester_creds_t *this;
+	char *pwd, *psk;
+
+	psk = lib->settings->get_str(lib->settings,
+					"charon.plugins.load-tester.preshared_key", default_psk);
+	pwd = lib->settings->get_str(lib->settings,
+					"charon.plugins.load-tester.eap_password", default_pwd);
 
 	INIT(this,
 		.public = {
@@ -341,7 +344,7 @@ load_tester_creds_t *load_tester_creds_create()
 					BUILD_X509_FLAG, X509_CA,
 					BUILD_END),
 		.psk = shared_key_create(SHARED_IKE,
-								 chunk_clone(chunk_create(psk, sizeof(psk)))),
+								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
 								 chunk_clone(chunk_create(pwd, strlen(pwd)))),
 	);
