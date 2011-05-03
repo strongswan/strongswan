@@ -236,21 +236,15 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	return peer_cfg;
 }
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_load_tester_config_t *this,
-												identification_t *me,
-												identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	private_load_tester_config_t *this,
+	identification_t *me, identification_t *other)
 {
 	return enumerator_create_single(this->peer_cfg, NULL);
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_load_tester_config_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_load_tester_config_t *this, host_t *me, host_t *other)
 {
 	ike_cfg_t *ike_cfg;
 
@@ -258,11 +252,8 @@ static enumerator_t* create_ike_cfg_enumerator(private_load_tester_config_t *thi
 	return enumerator_create_single(ike_cfg, NULL);
 }
 
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_load_tester_config_t *this,
-										char *name)
+METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
+	private_load_tester_config_t *this, char *name)
 {
 	if (streq(name, "load-test"))
 	{
@@ -271,10 +262,8 @@ static peer_cfg_t *get_peer_cfg_by_name(private_load_tester_config_t *this,
 	return NULL;
 }
 
-/**
- * Implementation of load_tester_config_t.destroy.
- */
-static void destroy(private_load_tester_config_t *this)
+METHOD(load_tester_config_t, destroy, void,
+	private_load_tester_config_t *this)
 {
 	this->peer_cfg->destroy(this->peer_cfg);
 	DESTROY_IF(this->proposal);
@@ -287,14 +276,20 @@ static void destroy(private_load_tester_config_t *this)
  */
 load_tester_config_t *load_tester_config_create()
 {
-	private_load_tester_config_t *this = malloc_thing(private_load_tester_config_t);
+	private_load_tester_config_t *this;
 
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(load_tester_config_t*))destroy;
+	INIT(this,
+		.public = {
+			.backend = {
+				.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+				.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+				.get_peer_cfg_by_name = _get_peer_cfg_by_name,
+			},
+			.destroy = _destroy,
+		},
+		.num = 1,
+	);
 
-	this->vip = NULL;
 	if (lib->settings->get_bool(lib->settings,
 				"charon.plugins.load-tester.request_virtual_ip", FALSE))
 	{
@@ -326,7 +321,6 @@ load_tester_config_t *load_tester_config_create()
 	this->port = lib->settings->get_int(lib->settings,
 				"charon.plugins.load-tester.dynamic_port", 0);
 
-	this->num = 1;
 	this->peer_cfg = generate_config(this, 0);
 
 	return &this->public;
