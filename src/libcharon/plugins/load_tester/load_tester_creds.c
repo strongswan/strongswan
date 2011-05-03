@@ -184,11 +184,8 @@ static char psk[] = {
  */
 static char pwd[] = "test#123";
 
-/**
- * Implements credential_set_t.create_private_enumerator
- */
-static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this,
-							key_type_t type, identification_t *id)
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	private_load_tester_creds_t *this, key_type_t type, identification_t *id)
 {
 	if (this->private == NULL)
 	{
@@ -208,12 +205,9 @@ static enumerator_t* create_private_enumerator(private_load_tester_creds_t *this
 	return enumerator_create_single(this->private, NULL);
 }
 
-/**
- * Implements credential_set_t.create_cert_enumerator
- */
-static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
-							certificate_type_t cert, key_type_t key,
-							identification_t *id, bool trusted)
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_load_tester_creds_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	certificate_t *peer_cert;
 	public_key_t *peer_key, *ca_key;
@@ -274,6 +268,9 @@ static enumerator_t* create_cert_enumerator(private_load_tester_creds_t *this,
 	return NULL;
 }
 
+/**
+ * Filter function for shared keys, returning ID matches
+ */
 static bool shared_filter(void *null, shared_key_t **in, shared_key_t **out,
 				void **un1, id_match_t *me, void **un2, id_match_t *other)
 {
@@ -289,12 +286,9 @@ static bool shared_filter(void *null, shared_key_t **in, shared_key_t **out,
 	return TRUE;
 }
 
-/**
- * Implements credential_set_t.create_shared_enumerator
- */
-static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
-							shared_key_type_t type, identification_t *me,
-							identification_t *other)
+METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+	private_load_tester_creds_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
 {
 	shared_key_t *shared;
 
@@ -314,10 +308,8 @@ static enumerator_t* create_shared_enumerator(private_load_tester_creds_t *this,
 						(void*)shared_filter, NULL, NULL);
 }
 
-/**
- * Implementation of load_tester_creds_t.destroy
- */
-static void destroy(private_load_tester_creds_t *this)
+METHOD(load_tester_creds_t, destroy, void,
+	private_load_tester_creds_t *this)
 {
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->ca);
@@ -328,29 +320,31 @@ static void destroy(private_load_tester_creds_t *this)
 
 load_tester_creds_t *load_tester_creds_create()
 {
-	private_load_tester_creds_t *this = malloc_thing(private_load_tester_creds_t);
+	private_load_tester_creds_t *this;
 
-	this->public.credential_set.create_shared_enumerator = (enumerator_t*(*)(credential_set_t*, shared_key_type_t, identification_t*, identification_t*))create_shared_enumerator;
-	this->public.credential_set.create_private_enumerator = (enumerator_t*(*) (credential_set_t*, key_type_t, identification_t*))create_private_enumerator;
-	this->public.credential_set.create_cert_enumerator = (enumerator_t*(*) (credential_set_t*,	certificate_type_t, key_type_t,identification_t *, bool))create_cert_enumerator;
-	this->public.credential_set.create_cdp_enumerator  = (enumerator_t*(*) (credential_set_t *,certificate_type_t, identification_t *))return_null;
-	this->public.credential_set.cache_cert = (void (*)(credential_set_t *, certificate_t *))nop;
-	this->public.destroy = (void(*) (load_tester_creds_t*))destroy;
-
-	this->private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-				BUILD_BLOB_ASN1_DER, chunk_create(private, sizeof(private)),
-				BUILD_END);
-
-	this->ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-				BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)),
-				BUILD_X509_FLAG, X509_CA,
-				BUILD_END);
-
-	this->psk = shared_key_create(SHARED_IKE,
-								  chunk_clone(chunk_create(psk, sizeof(psk))));
-	this->pwd = shared_key_create(SHARED_EAP,
-								  chunk_clone(chunk_create(pwd, strlen(pwd))));
-	this->serial = 0;
+	INIT(this,
+		.public = {
+			.credential_set = {
+				.create_shared_enumerator = _create_shared_enumerator,
+				.create_private_enumerator = _create_private_enumerator,
+				.create_cert_enumerator = _create_cert_enumerator,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+		.private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					BUILD_BLOB_ASN1_DER, chunk_create(private, sizeof(private)),
+					BUILD_END),
+		.ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+					BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)),
+					BUILD_X509_FLAG, X509_CA,
+					BUILD_END),
+		.psk = shared_key_create(SHARED_IKE,
+								 chunk_clone(chunk_create(psk, sizeof(psk)))),
+		.pwd = shared_key_create(SHARED_EAP,
+								 chunk_clone(chunk_create(pwd, strlen(pwd)))),
+	);
 	return &this->public;
 }
 
