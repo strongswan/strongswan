@@ -85,6 +85,11 @@ struct private_load_tester_config_t {
 	u_int child_rekey;
 
 	/**
+	 * DPD check delay
+	 */
+	u_int dpd_delay;
+
+	/**
 	 * incremental numbering of generated configs
 	 */
 	u_int num;
@@ -248,7 +253,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
 							   this->ike_rekey, 0, /* rekey, reauth */
 							   0, this->ike_rekey, /* jitter, overtime */
-							   FALSE, 0, /* mobike, dpddelay */
+							   FALSE, this->dpd_delay, /* mobike, dpddelay */
 							   this->vip ? this->vip->clone(this->vip) : NULL,
 							   this->pool, FALSE, NULL, NULL);
 	if (num)
@@ -351,6 +356,8 @@ load_tester_config_t *load_tester_config_create()
 				"charon.plugins.load-tester.ike_rekey", 0);
 	this->child_rekey = lib->settings->get_int(lib->settings,
 				"charon.plugins.load-tester.child_rekey", 600);
+	this->dpd_delay = lib->settings->get_int(lib->settings,
+				"charon.plugins.load-tester.dpd_delay", 0);
 
 	this->initiator_auth = lib->settings->get_str(lib->settings,
 				"charon.plugins.load-tester.initiator_auth", "pubkey");
