@@ -422,16 +422,21 @@ METHOD(stroke_list_t, status, void,
 				    mi.arena, mi.hblkhd, mi.uordblks, mi.fordblks);
 		}
 #endif /* HAVE_MALLINFO */
-		fprintf(out, "  worker threads: %d idle of %d,",
+		fprintf(out, "  worker threads: %d of %d idle, ",
 				lib->processor->get_idle_threads(lib->processor),
 				lib->processor->get_total_threads(lib->processor));
-		fprintf(out, " job queue load: ");
+		for (i = 0; i < JOB_PRIO_MAX; i++)
+		{
+			fprintf(out, "%s%d", i == 0 ? "" : "/",
+					lib->processor->get_working_threads(lib->processor, i));
+		}
+		fprintf(out, " working, job queue: ");
 		for (i = 0; i < JOB_PRIO_MAX; i++)
 		{
 			fprintf(out, "%s%d", i == 0 ? "" : "/",
 					lib->processor->get_job_load(lib->processor, i));
 		}
-		fprintf(out, ", scheduled events: %d\n",
+		fprintf(out, ", scheduled: %d\n",
 				lib->scheduler->get_job_load(lib->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
