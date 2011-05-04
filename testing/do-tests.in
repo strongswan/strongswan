@@ -456,7 +456,7 @@ do
   <title>Test $testname</title>
 </head>
 <body>
-<table border="0" width="600">
+<table border="0" cellpadding="0" cellspacing="0" width="600">
   <tr><td>
     <div><a href="../../index.html">strongSwan UML Tests</a> / <a href="../index.html">$SUBDIR</a> / $name</div>
     <h2>Test $testname</h2>
