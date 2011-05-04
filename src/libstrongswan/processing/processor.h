@@ -42,11 +42,19 @@ struct processor_t {
 	u_int (*get_total_threads) (processor_t *this);
 
 	/**
-	 * Get the number of threads currently waiting.
+	 * Get the number of threads currently waiting for work.
 	 *
 	 * @return				number of idle threads
 	 */
 	u_int (*get_idle_threads) (processor_t *this);
+
+	/**
+	 * Get the number of threads currently working, per priority class.
+	 *
+	 * @param				prioritiy to check
+	 * @return				number of threads in priority working
+	 */
+	u_int (*get_working_threads)(processor_t *this, job_priority_t prio);
 
 	/**
 	 * Get the number of queued jobs for a specified priority.
