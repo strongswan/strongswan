@@ -96,7 +96,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	   traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
 	   u_int32_t *use_time)
 {
-	*use_time = time_monotonic(NULL);
+	*use_time = 1;
 	return SUCCESS;
 }
 
