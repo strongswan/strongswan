@@ -213,6 +213,7 @@ do
   <title>strongSwan $SUBDIR Tests</title>
 </head>
 <body>
+  <div><a href="../index.html">strongSwan UML Tests</a> / $SUBDIR</div>
   <h2>strongSwan $SUBDIR Tests</h2>
   <table border="0" cellspacing="2">
     <tr valign="top">
@@ -457,6 +458,7 @@ do
 <body>
 <table border="0" width="600">
   <tr><td>
+    <div><a href="../../index.html">strongSwan UML Tests</a> / <a href="../index.html">$SUBDIR</a> / $name</div>
     <h2>Test $testname</h2>
     <h3>Description</h3>
 @EOF
@@ -575,9 +577,6 @@ do
 	done
 
 	cat >> $TESTRESULTDIR/index.html <<@EOF
-  </td></tr>
-  <tr><td align="right">
-    <b><a href="../index.html">Back</a></b>
   </td></tr>
 </table>
 </body>
