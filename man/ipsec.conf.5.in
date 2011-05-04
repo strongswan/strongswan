@@ -1043,8 +1043,11 @@ is not given, the
 of this connection will be used as peer ID.
 
 .SH "CA SECTIONS"
-This are optional sections that can be used to assign special
-parameters to a Certification Authority (CA).
+These are optional sections that can be used to assign special
+parameters to a Certification Authority (CA). Because the daemons
+automatically import CA certificates from \fI/etc/ipsec.d/cacerts\fP,
+there is no need to explicitly add them with a CA section, unless you
+want to assign special parameters (like a CRL) to a CA.
 .TP
 .BR also " = <name>"
 includes ca section
