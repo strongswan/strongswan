@@ -47,8 +47,10 @@ struct stroke_list_t {
 	 * @param msg		stroke message
 	 * @param out		stroke console stream
 	 * @param all		TRUE for "statusall"
+	 * @param wait		TRUE to wait for IKE_SA entries, FALSE to skip if locked
 	 */
-	void (*status)(stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all);
+	void (*status)(stroke_list_t *this, stroke_msg_t *msg, FILE *out,
+				   bool all, bool wait);
 
 	/**
 	 * Log pool leases to stroke console.

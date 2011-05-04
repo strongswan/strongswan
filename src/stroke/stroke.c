@@ -231,7 +231,18 @@ static int show_status(stroke_keyword_t kw, char *connection)
 {
 	stroke_msg_t msg;
 
-	msg.type = (kw == STROKE_STATUS)? STR_STATUS:STR_STATUS_ALL;
+	switch (kw)
+	{
+		case STROKE_STATUSALL:
+			msg.type = STR_STATUS_ALL;
+			break;
+		case STROKE_STATUSALL_NOBLK:
+			msg.type = STR_STATUS_ALL_NOBLK;
+			break;
+		default:
+			msg.type = STR_STATUS;
+			break;
+	}
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.status.name = push_string(&msg, connection);
 	return send_stroke_msg(&msg);
@@ -498,6 +509,7 @@ int main(int argc, char *argv[])
 			break;
 		case STROKE_STATUS:
 		case STROKE_STATUSALL:
+		case STROKE_STATUSALL_NOBLK:
 			res = show_status(token->kw, argc > 2 ? argv[2] : NULL);
 			break;
 		case STROKE_LIST_PUBKEYS:

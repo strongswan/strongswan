@@ -389,7 +389,8 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 }
 
 METHOD(stroke_list_t, status, void,
-	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out,
+	bool all, bool wait)
 {
 	enumerator_t *enumerator, *children;
 	ike_cfg_t *ike_cfg;
@@ -531,7 +532,7 @@ METHOD(stroke_list_t, status, void,
 
 	fprintf(out, "Security Associations:\n");
 	enumerator = charon->controller->create_ike_sa_enumerator(
-													charon->controller, TRUE);
+													charon->controller, wait);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;

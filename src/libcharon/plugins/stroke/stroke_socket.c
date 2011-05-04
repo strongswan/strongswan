@@ -322,11 +322,11 @@ static void stroke_del_ca(private_stroke_socket_t *this,
  * show status of daemon
  */
 static void stroke_status(private_stroke_socket_t *this,
-						  stroke_msg_t *msg, FILE *out, bool all)
+						  stroke_msg_t *msg, FILE *out, bool all, bool wait)
 {
 	pop_string(msg, &(msg->status.name));
 
-	this->list->status(this->list, msg, out, all);
+	this->list->status(this->list, msg, out, all, wait);
 }
 
 /**
@@ -546,10 +546,13 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			stroke_rekey(this, msg, out);
 			break;
 		case STR_STATUS:
-			stroke_status(this, msg, out, FALSE);
+			stroke_status(this, msg, out, FALSE, TRUE);
 			break;
 		case STR_STATUS_ALL:
-			stroke_status(this, msg, out, TRUE);
+			stroke_status(this, msg, out, TRUE, TRUE);
+			break;
+		case STR_STATUS_ALL_NOBLK:
+			stroke_status(this, msg, out, TRUE, FALSE);
 			break;
 		case STR_ADD_CONN:
 			stroke_add_conn(this, msg);

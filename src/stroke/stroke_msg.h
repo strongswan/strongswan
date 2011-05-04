@@ -194,6 +194,8 @@ struct stroke_msg_t {
 		STR_STATUS,
 		/* show verbose connection status */
 		STR_STATUS_ALL,
+		/* show verbose connection status, non-blocking variant */
+		STR_STATUS_ALL_NOBLK,
 		/* add a ca information record */
 		STR_ADD_CA,
 		/* delete ca information record */
