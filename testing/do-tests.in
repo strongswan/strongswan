@@ -117,13 +117,7 @@ done
 KERNEL_VERSION=`basename $KERNEL .tar.bz2`
 IPSEC_VERSION=`basename $STRONGSWAN .tar.bz2`
 
-cat > $INDEX <<@EOF
-<html>
-<head>
-  <title>strongSwan UML Tests</title>
-</head>
-<body>
-  <h2>strongSwan UML Tests</h2>
+ENVIRONMENT_HEADER=$(cat <<@EOF
   <table border="0" cellspacing="2">
     <tr valign="top">
       <td><b>Host:</b></td>
@@ -148,9 +142,27 @@ cat > $INDEX <<@EOF
       <td >&nbsp;</td>
     </tr>
 @EOF
+)
 
-cat $INDEX > $TESTRESULTSHTML
-cat >> $TESTRESULTSHTML <<@EOF
+cat > $INDEX <<@EOF
+<html>
+<head>
+  <title>strongSwan UML Tests</title>
+</head>
+<body>
+  <h2>strongSwan UML Tests</h2>
+  $ENVIRONMENT_HEADER
+@EOF
+
+cat > $TESTRESULTSHTML <<@EOF
+<html>
+<head>
+  <title>strongSwan UML Tests - All Tests</title>
+</head>
+<body>
+  <div><a href="index.html">strongSwan UML Tests</a> / All Tests</div>
+  <h2>All Tests</h2>
+  $ENVIRONMENT_HEADER
     <tr align="left">
       <th>Number</th>
       <th>Test</th>
