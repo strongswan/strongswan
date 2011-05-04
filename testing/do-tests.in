@@ -669,7 +669,7 @@ do
 	cat >> $TESTRESULTSHTML << @EOF
   <tr>
     <td>$testnumber</td>
-    <td><a href="$testname/">$testname</a></td>
+    <td><a href="$testname/index.html">$testname</a></td>
     <td><a href="$testname/console.log"><font color="$COLOR">$STATUS</font></a></td>
     <td>&nbsp;</td>
   </tr>
@@ -677,7 +677,7 @@ do
 	cat >> $SUBTESTSINDEX << @EOF
   <tr>
     <td>$testnumber</td>
-    <td><a href="$name/">$name</a></td>
+    <td><a href="$name/index.html">$name</a></td>
     <td><a href="$name/console.log"><font color="$COLOR">$STATUS</font></a></td>
     <td>&nbsp;</td>
   </tr>
