@@ -88,6 +88,11 @@ struct private_callback_job_t {
 	 * without risking that it gets freed too early during destruction.
 	 */
 	sem_t *terminated;
+
+	/**
+	 * Priority of this job
+	 */
+	job_priority_t prio;
 };
 
 /**
@@ -230,15 +235,15 @@ METHOD(job_t, execute, void,
 METHOD(job_t, get_priority, job_priority_t,
 	private_callback_job_t *this)
 {
-	return JOB_PRIO_MEDIUM;
+	return this->prio;
 }
 
 /*
  * Described in header.
  */
-callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
-									callback_job_cleanup_t cleanup,
-									callback_job_t *parent)
+callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
+					callback_job_cleanup_t cleanup, callback_job_t *parent,
+					job_priority_t prio)
 {
 	private_callback_job_t *this;
 
@@ -258,6 +263,7 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 		.children = linked_list_create(),
 		.parent = (private_callback_job_t*)parent,
 		.destroyable = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.prio = prio,
 	);
 
 	/* register us at parent */
@@ -271,3 +277,13 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
+callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
+									callback_job_cleanup_t cleanup,
+									callback_job_t *parent)
+{
+	return callback_job_create_with_prio(cb, data, cleanup, parent,
+										 JOB_PRIO_MEDIUM);
+}

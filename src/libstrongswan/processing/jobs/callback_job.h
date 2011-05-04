@@ -120,4 +120,20 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
 									callback_job_t *parent);
 
+/**
+ * Creates a callback job, with priority.
+ *
+ * Same as callback_job_create(), but with different priorities than default.
+ *
+ * @param cb				callback to call from the processor
+ * @param data				user data to supply to callback
+ * @param cleanup			destructor for data on destruction, or NULL
+ * @param parent			parent of this job
+ * @param prio				job priority
+ * @return					callback_job_t object
+ */
+callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
+					callback_job_cleanup_t cleanup, callback_job_t *parent,
+					job_priority_t prio);
+
 #endif /** CALLBACK_JOB_H_ @}*/
