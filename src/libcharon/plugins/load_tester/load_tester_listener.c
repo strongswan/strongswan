@@ -47,11 +47,8 @@ struct private_load_tester_listener_t {
 	u_int shutdown_on;
 };
 
-/**
- * Implementation of listener_t.ike_state_change
- */
-static bool ike_state_change(private_load_tester_listener_t *this,
-							 ike_sa_t *ike_sa, ike_sa_state_t state)
+METHOD(listener_t, ike_state_change, bool,
+	private_load_tester_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
 	if (state == IKE_ESTABLISHED)
 	{
@@ -75,27 +72,27 @@ static bool ike_state_change(private_load_tester_listener_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of load_tester_listener_t.destroy
- */
-static void destroy(private_load_tester_listener_t *this)
+METHOD(load_tester_listener_t, destroy, void,
+	private_load_tester_listener_t *this)
 {
 	free(this);
 }
 
 load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 {
-	private_load_tester_listener_t *this = malloc_thing(private_load_tester_listener_t);
+	private_load_tester_listener_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.ike_state_change = (void*)ike_state_change;
-	this->public.destroy = (void(*) (load_tester_listener_t*))destroy;
-
-	this->delete_after_established = lib->settings->get_bool(lib->settings,
-				"charon.plugins.load-tester.delete_after_established", FALSE);
-
-	this->shutdown_on = shutdown_on;
-	this->established = 0;
+	INIT(this,
+		.public = {
+			.listener = {
+				.ike_state_change = _ike_state_change,
+			},
+			.destroy = _destroy,
+		},
+		.delete_after_established = lib->settings->get_bool(lib->settings,
+				"charon.plugins.load-tester.delete_after_established", FALSE),
+		.shutdown_on = shutdown_on,
+	);
 
 	return &this->public;
 }
