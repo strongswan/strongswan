@@ -105,8 +105,8 @@ METHOD(ha_socket_t, push, void,
 				.fd = this->fd,
 			);
 
-			job = callback_job_create((callback_job_cb_t)send_message,
-									  data, (void*)job_data_destroy, NULL);
+			job = callback_job_create_with_prio((callback_job_cb_t)send_message,
+							data, (void*)job_data_destroy, NULL, JOB_PRIO_HIGH);
 			lib->processor->queue_job(lib->processor, (job_t*)job);
 			return;
 		}

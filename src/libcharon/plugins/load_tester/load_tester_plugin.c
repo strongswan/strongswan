@@ -235,9 +235,9 @@ plugin_t *load_tester_plugin_create()
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
-		lib->processor->queue_job(lib->processor,
-					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
-												this, NULL, NULL));
+		lib->processor->queue_job(lib->processor, (job_t*)
+				callback_job_create_with_prio((callback_job_cb_t)do_load_test,
+										this, NULL, NULL, JOB_PRIO_CRITICAL));
 	}
 	return &this->public.plugin;
 }

@@ -203,8 +203,8 @@ duplicheck_notify_t *duplicheck_notify_create()
 		destroy(this);
 		return NULL;
 	}
-	this->job = callback_job_create((callback_job_cb_t)receive,
-									this, NULL, NULL);
+	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
+									this, NULL, NULL, JOB_PRIO_CRITICAL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;

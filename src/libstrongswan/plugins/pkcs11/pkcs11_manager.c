@@ -392,8 +392,8 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		query_slots(entry);
-		entry->job = callback_job_create((void*)dispatch_slot_events,
-										 entry, (void*)end_dispatch, NULL);
+		entry->job = callback_job_create_with_prio((void*)dispatch_slot_events,
+						 entry, (void*)end_dispatch, NULL, JOB_PRIO_CRITICAL);
 		lib->processor->queue_job(lib->processor, (job_t*)entry->job);
 	}
 	enumerator->destroy(enumerator);

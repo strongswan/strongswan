@@ -355,8 +355,8 @@ ha_cache_t *ha_cache_create(ha_kernel_t *kernel, ha_socket_t *socket,
 	{
 		/* request a resync as soon as we are up */
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-						callback_job_create((callback_job_cb_t)request_resync,
-											this, NULL, NULL), 1);
+			callback_job_create_with_prio((callback_job_cb_t)request_resync,
+									this, NULL, NULL, JOB_PRIO_CRITICAL), 1);
 	}
 	return &this->public;
 }

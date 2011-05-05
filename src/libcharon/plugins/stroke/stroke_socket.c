@@ -625,8 +625,8 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	ctx = malloc_thing(stroke_job_context_t);
 	ctx->fd = strokefd;
 	ctx->this = this;
-	job = callback_job_create((callback_job_cb_t)process,
-							  ctx, (void*)stroke_job_context_destroy, this->job);
+	job = callback_job_create_with_prio((callback_job_cb_t)process,
+			ctx, (void*)stroke_job_context_destroy, this->job, JOB_PRIO_HIGH);
 	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_FAIR;
@@ -723,8 +723,8 @@ stroke_socket_t *stroke_socket_create()
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 
-	this->job = callback_job_create((callback_job_cb_t)receive,
-									this, NULL, NULL);
+	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
+										this, NULL, NULL, JOB_PRIO_CRITICAL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;

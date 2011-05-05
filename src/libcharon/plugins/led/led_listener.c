@@ -156,9 +156,9 @@ static void blink_activity(private_led_listener_t *this)
 		{
 			set_led(this->activity, this->activity_max);
 		}
-		lib->scheduler->schedule_job_ms(lib->scheduler,
-			(job_t*)callback_job_create((callback_job_cb_t)reset_activity_led,
-										this, NULL, NULL), this->blink_time);
+		lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
+			callback_job_create_with_prio((callback_job_cb_t)reset_activity_led,
+						this, NULL, NULL, JOB_PRIO_CRITICAL), this->blink_time);
 		this->mutex->unlock(this->mutex);
 	}
 }

@@ -760,8 +760,8 @@ dhcp_socket_t *dhcp_socket_create()
 		return NULL;
 	}
 
-	this->job = callback_job_create((callback_job_cb_t)receive_dhcp,
-									this, NULL, NULL);
+	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_dhcp,
+									this, NULL, NULL, JOB_PRIO_CRITICAL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;

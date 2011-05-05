@@ -710,8 +710,8 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		return NULL;
 	}
 
-	this->job = callback_job_create((callback_job_cb_t)receive_events,
-									this, NULL, NULL);
+	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
+										this, NULL, NULL, JOB_PRIO_CRITICAL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	if (init_address_list(this) != SUCCESS)

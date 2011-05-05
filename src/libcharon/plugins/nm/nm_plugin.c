@@ -134,7 +134,8 @@ plugin_t *nm_plugin_create()
 	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
 
 	lib->processor->queue_job(lib->processor,
-		 (job_t*)callback_job_create((callback_job_cb_t)run, this, NULL, NULL));
+				(job_t*)callback_job_create_with_prio((callback_job_cb_t)run,
+										this, NULL, NULL, JOB_PRIO_CRITICAL));
 
 	return &this->public.plugin;
 }

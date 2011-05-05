@@ -189,8 +189,8 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 		return NULL;
 	}
 
-	this->job = callback_job_create((callback_job_cb_t)receive_arp,
-									this, NULL, NULL);
+	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_arp,
+									this, NULL, NULL, JOB_PRIO_CRITICAL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
