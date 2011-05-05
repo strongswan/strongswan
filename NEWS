@@ -7,7 +7,7 @@ strongswan-4.5.2
   whitelist administration.
 
 - The duplicheck plugin provides a specialized form of duplicate checking,
-  doing a liveness check on the old SA an optionally notify a third party
+  doing a liveness check on the old SA and optionally notify a third party
   application about detected duplicates.
 
 - The coupling plugin permanently couples two or more devices by limiting
