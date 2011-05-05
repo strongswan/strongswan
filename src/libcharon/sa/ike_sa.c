@@ -1289,7 +1289,8 @@ METHOD(ike_sa_t, process_message, status_t,
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
 			lib->scheduler->schedule_job(lib->scheduler, job,
-										 HALF_OPEN_IKE_SA_TIMEOUT);
+					lib->settings->get_int(lib->settings,
+						"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
 		}
 		this->stats[STAT_INBOUND] = time_monotonic(NULL);
 		status = this->task_manager->process_message(this->task_manager,
