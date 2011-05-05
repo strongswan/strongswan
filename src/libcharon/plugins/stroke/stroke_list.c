@@ -399,6 +399,7 @@ METHOD(stroke_list_t, status, void,
 	ike_sa_t *ike_sa;
 	bool first, found = FALSE;
 	char *name = msg->status.name;
+	u_int half_open;
 
 	if (all)
 	{
@@ -535,7 +536,11 @@ METHOD(stroke_list_t, status, void,
 	}
 	enumerator->destroy(enumerator);
 
-	fprintf(out, "Security Associations:\n");
+	half_open = charon->ike_sa_manager->get_half_open_count(
+												charon->ike_sa_manager, NULL);
+	fprintf(out, "Security Associations (%u up, %u connecting):\n",
+		charon->ike_sa_manager->get_count(charon->ike_sa_manager) - half_open,
+		half_open);
 	enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, wait);
 	while (enumerator->enumerate(enumerator, &ike_sa))
