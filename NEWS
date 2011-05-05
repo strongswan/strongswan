@@ -6,6 +6,13 @@ strongswan-4.5.2
   The 'ipsec whitelist' utility provides a simple command line frontend for
   whitelist administration.
 
+- The duplicheck plugin provides a specialized form of duplicate checking,
+  doing a liveness check on the old SA an optionally notify a third party
+  application about detected duplicates.
+
+- The coupling plugin permanently couples two or more devices by limiting
+  authentication to previously used certificates.
+
 - In the case that the peer config and child config don't have the same name
   (usually in SQL database defined connections), ipsec up|route <peer config>
   starts|routes all associated child configs and ipsec up|route <child config>
