@@ -114,11 +114,22 @@ static void restart(private_processor_t *this)
 }
 
 /**
+ * Data needed to decrement the working thread count of a priority class
+ */
+typedef struct {
+	private_processor_t *this;
+	u_int priority;
+} decrement_data_t;
+
+/**
  * Decrement working thread count of a priority class
  */
-static void decrement_working_threads(u_int *working_threads)
+static void decrement_working_threads(decrement_data_t *dec)
 {
-	(*working_threads)--;
+	dec->this->mutex->lock(dec->this->mutex);
+	dec->this->working_threads[dec->priority]--;
+	dec->this->mutex->unlock(dec->this->mutex);
+	free(dec);
 }
 
 /**
@@ -170,16 +181,24 @@ static void process_jobs(private_processor_t *this)
 			if (this->jobs[i]->remove_first(this->jobs[i],
 											(void**)&job) == SUCCESS)
 			{
+				decrement_data_t *dec;
+
 				this->working_threads[i]++;
 				this->mutex->unlock(this->mutex);
+				INIT(dec,
+					.this = this,
+					.priority = i,
+				);
 				thread_cleanup_push((thread_cleanup_t)decrement_working_threads,
-									&this->working_threads[i]);
+									dec);
 				/* terminated threads are restarted to get a constant pool */
 				thread_cleanup_push((thread_cleanup_t)restart, this);
 				job->execute(job);
 				thread_cleanup_pop(FALSE);
+				thread_cleanup_pop(FALSE);
 				this->mutex->lock(this->mutex);
-				thread_cleanup_pop(TRUE);
+				this->working_threads[i]--;
+				free(dec);
 				break;
 			}
 		}
