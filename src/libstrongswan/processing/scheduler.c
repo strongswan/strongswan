@@ -232,10 +232,8 @@ static job_requeue_t schedule(private_scheduler_t * this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implements scheduler_t.get_job_load
- */
-static u_int get_job_load(private_scheduler_t *this)
+METHOD(scheduler_t, get_job_load, u_int,
+	private_scheduler_t *this)
 {
 	int count;
 	this->mutex->lock(this->mutex);
@@ -244,10 +242,8 @@ static u_int get_job_load(private_scheduler_t *this)
 	return count;
 }
 
-/**
- * Implements scheduler_t.schedule_job_tv.
- */
-static void schedule_job_tv(private_scheduler_t *this, job_t *job, timeval_t tv)
+METHOD(scheduler_t, schedule_job_tv, void,
+	private_scheduler_t *this, job_t *job, timeval_t tv)
 {
 	event_t *event;
 	u_int position;
@@ -283,10 +279,8 @@ static void schedule_job_tv(private_scheduler_t *this, job_t *job, timeval_t tv)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implements scheduler_t.schedule_job.
- */
-static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t s)
+METHOD(scheduler_t, schedule_job, void,
+	private_scheduler_t *this, job_t *job, u_int32_t s)
 {
 	timeval_t tv;
 
@@ -296,10 +290,8 @@ static void schedule_job(private_scheduler_t *this, job_t *job, u_int32_t s)
 	schedule_job_tv(this, job, tv);
 }
 
-/**
- * Implements scheduler_t.schedule_job_ms.
- */
-static void schedule_job_ms(private_scheduler_t *this, job_t *job, u_int32_t ms)
+METHOD(scheduler_t, schedule_job_ms, void,
+	private_scheduler_t *this, job_t *job, u_int32_t ms)
 {
 	timeval_t tv, add;
 
@@ -312,10 +304,8 @@ static void schedule_job_ms(private_scheduler_t *this, job_t *job, u_int32_t ms)
 	schedule_job_tv(this, job, tv);
 }
 
-/**
- * Implementation of scheduler_t.destroy.
- */
-static void destroy(private_scheduler_t *this)
+METHOD(scheduler_t, destroy, void,
+	private_scheduler_t *this)
 {
 	event_t *event;
 	this->job->cancel(this->job);
@@ -334,21 +324,22 @@ static void destroy(private_scheduler_t *this)
  */
 scheduler_t * scheduler_create()
 {
-	private_scheduler_t *this = malloc_thing(private_scheduler_t);
+	private_scheduler_t *this;
 
-	this->public.get_job_load = (u_int (*) (scheduler_t *this)) get_job_load;
-	this->public.schedule_job = (void (*) (scheduler_t *this, job_t *job, u_int32_t s)) schedule_job;
-	this->public.schedule_job_ms = (void (*) (scheduler_t *this, job_t *job, u_int32_t ms)) schedule_job_ms;
-	this->public.schedule_job_tv = (void (*) (scheduler_t *this, job_t *job, timeval_t tv)) schedule_job_tv;
-	this->public.destroy = (void(*)(scheduler_t*)) destroy;
+	INIT(this,
+		.public = {
+			.get_job_load = _get_job_load,
+			.schedule_job = _schedule_job,
+			.schedule_job_ms = _schedule_job_ms,
+			.schedule_job_tv = _schedule_job_tv,
+			.destroy = _destroy,
+		},
+		.heap_size = HEAP_SIZE_DEFAULT,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+	);
 
-	/* Note: the root of the heap is at index 1 */
-	this->event_count = 0;
-	this->heap_size = HEAP_SIZE_DEFAULT;
 	this->heap = (event_t**)calloc(this->heap_size + 1, sizeof(event_t*));
-
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 
 	this->job = callback_job_create((callback_job_cb_t)schedule, this, NULL, NULL);
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);
