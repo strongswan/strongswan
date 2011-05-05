@@ -36,6 +36,13 @@ struct load_tester_listener_t {
 	listener_t listener;
 
 	/**
+	 * Get the number of established IKE_SAs.
+	 *
+	 * @return			number of SAs currently established
+	 */
+	u_int (*get_established)(load_tester_listener_t *this);
+
+	/**
 	 * Destroy the backend.
 	 */
 	void (*destroy)(load_tester_listener_t *this);

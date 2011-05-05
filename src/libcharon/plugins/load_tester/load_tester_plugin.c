@@ -78,6 +78,11 @@ struct private_load_tester_plugin_t {
 	int delay;
 
 	/**
+	 * Throttle initiation if half-open IKE_SA count reached
+	 */
+	int init_limit;
+
+	/**
 	 * mutex to lock running field
 	 */
 	mutex_t *mutex;
@@ -112,6 +117,23 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 		peer_cfg_t *peer_cfg;
 		child_cfg_t *child_cfg = NULL;
 		enumerator_t *enumerator;
+
+		if (this->init_limit)
+		{
+			while ((charon->ike_sa_manager->get_count(charon->ike_sa_manager) -
+						this->listener->get_established(this->listener)) >
+					this->init_limit)
+			{
+				if (s)
+				{
+					sleep(s);
+				}
+				if (ms)
+				{
+					usleep(ms * 1000);
+				}
+			}
+		}
 
 		peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 														  "load-test");
@@ -206,6 +228,8 @@ plugin_t *load_tester_plugin_create()
 					"charon.plugins.load-tester.iterations", 1),
 		.initiators = lib->settings->get_int(lib->settings,
 					"charon.plugins.load-tester.initiators", 0),
+		.init_limit = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.init_limit", 0),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.config = load_tester_config_create(),

@@ -47,12 +47,15 @@ struct private_load_tester_listener_t {
 	u_int shutdown_on;
 };
 
-METHOD(listener_t, ike_state_change, bool,
-	private_load_tester_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
+METHOD(listener_t, ike_updown, bool,
+	private_load_tester_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
-	if (state == IKE_ESTABLISHED)
+	if (up)
 	{
-		ike_sa_id_t *id = ike_sa->get_id(ike_sa);
+		ike_sa_id_t *id;
+
+		this->established++;
+		id = ike_sa->get_id(ike_sa);
 
 		if (this->delete_after_established)
 		{
@@ -62,14 +65,24 @@ METHOD(listener_t, ike_state_change, bool,
 
 		if (id->is_initiator(id))
 		{
-			if (this->shutdown_on == ++this->established)
+			if (this->shutdown_on == this->established)
 			{
 				DBG1(DBG_CFG, "load-test complete, raising SIGTERM");
 				kill(0, SIGTERM);
 			}
 		}
 	}
+	else
+	{
+		this->established--;
+	}
 	return TRUE;
+}
+
+METHOD(load_tester_listener_t, get_established, u_int,
+	private_load_tester_listener_t *this)
+{
+	return this->established;
 }
 
 METHOD(load_tester_listener_t, destroy, void,
@@ -85,8 +98,9 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 	INIT(this,
 		.public = {
 			.listener = {
-				.ike_state_change = _ike_state_change,
+				.ike_updown = _ike_updown,
 			},
+			.get_established = _get_established,
 			.destroy = _destroy,
 		},
 		.delete_after_established = lib->settings->get_bool(lib->settings,
