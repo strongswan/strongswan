@@ -15,7 +15,8 @@
 
 #include "job.h"
 
-ENUM(job_priority_names, JOB_PRIO_HIGH, JOB_PRIO_LOW,
+ENUM(job_priority_names, JOB_PRIO_CRITICAL, JOB_PRIO_LOW,
+	"critical",
 	"high",
 	"medium",
 	"low",

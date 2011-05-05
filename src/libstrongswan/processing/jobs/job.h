@@ -31,8 +31,10 @@ typedef enum job_priority_t job_priority_t;
  * Priority classes of jobs
  */
 enum job_priority_t {
+	/** Critical infrastructure jobs that should always been served */
+	JOB_PRIO_CRITICAL = 0,
 	/** Short jobs executed with highest priority */
-	JOB_PRIO_HIGH = 0,
+	JOB_PRIO_HIGH,
 	/** Default job priority */
 	JOB_PRIO_MEDIUM,
 	/** Low priority jobs with thread blocking operations */
