@@ -307,72 +307,72 @@ struct private_ike_sa_manager_t {
 	/**
 	 * Public interface of ike_sa_manager_t.
 	 */
-	 ike_sa_manager_t public;
+	ike_sa_manager_t public;
 
-	 /**
-	  * Hash table with entries for the ike_sa_t objects.
-	  */
-	 linked_list_t **ike_sa_table;
+	/**
+	 * Hash table with entries for the ike_sa_t objects.
+	 */
+	linked_list_t **ike_sa_table;
 
-	 /**
-	  * The size of the hash table.
-	  */
-	 u_int table_size;
+	/**
+	 * The size of the hash table.
+	 */
+	u_int table_size;
 
-	 /**
-	  * Mask to map the hashes to table rows.
-	  */
-	 u_int table_mask;
+	/**
+	 * Mask to map the hashes to table rows.
+	 */
+	u_int table_mask;
 
-	 /**
-	  * Segments of the hash table.
-	  */
-	 segment_t *segments;
+	/**
+	 * Segments of the hash table.
+	 */
+	segment_t *segments;
 
-	 /**
-	  * The number of segments.
-	  */
-	 u_int segment_count;
+	/**
+	 * The number of segments.
+	 */
+	u_int segment_count;
 
-	 /**
-	  * Mask to map a table row to a segment.
-	  */
-	 u_int segment_mask;
+	/**
+	 * Mask to map a table row to a segment.
+	 */
+	u_int segment_mask;
 
-	 /**
-	  * Hash table with half_open_t objects.
-	  */
-	 linked_list_t **half_open_table;
+	/**
+	 * Hash table with half_open_t objects.
+	 */
+	linked_list_t **half_open_table;
 
-	 /**
+	/**
 	  * Segments of the "half-open" hash table.
-	  */
-	 shareable_segment_t *half_open_segments;
+	 */
+	shareable_segment_t *half_open_segments;
 
-	 /**
-	  * Hash table with connected_peers_t objects.
-	  */
-	 linked_list_t **connected_peers_table;
+	/**
+	 * Hash table with connected_peers_t objects.
+	 */
+	linked_list_t **connected_peers_table;
 
-	 /**
-	  * Segments of the "connected peers" hash table.
-	  */
-	 shareable_segment_t *connected_peers_segments;
+	/**
+	 * Segments of the "connected peers" hash table.
+	 */
+	shareable_segment_t *connected_peers_segments;
 
-	 /**
-	  * RNG to get random SPIs for our side
-	  */
-	 rng_t *rng;
+	/**
+	 * RNG to get random SPIs for our side
+	 */
+	rng_t *rng;
 
-	 /**
-	  * SHA1 hasher for IKE_SA_INIT retransmit detection
-	  */
-	 hasher_t *hasher;
+	/**
+	 * SHA1 hasher for IKE_SA_INIT retransmit detection
+	 */
+	hasher_t *hasher;
 
 	/**
 	 * reuse existing IKE_SAs in checkout_by_config
 	 */
-	 bool reuse_ikesa;
+	bool reuse_ikesa;
 };
 
 /**
