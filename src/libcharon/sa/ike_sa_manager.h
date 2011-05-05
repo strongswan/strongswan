@@ -192,6 +192,13 @@ struct ike_sa_manager_t {
 	void (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 
 	/**
+	 * Get the number of IKE_SAs currently registered.
+	 *
+	 * @return					number of registered IKE_SAs
+	 */
+	u_int (*get_count)(ike_sa_manager_t *this);
+
+	/**
 	 * Get the number of IKE_SAs which are in the connecting state.
 	 *
 	 * To prevent the server from resource exhaustion, cookies and other
@@ -204,7 +211,7 @@ struct ike_sa_manager_t {
 	 * @param ip				NULL for all, IP for half open IKE_SAs with IP
 	 * @return					number of half open IKE_SAs
 	 */
-	int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
+	u_int (*get_half_open_count) (ike_sa_manager_t *this, host_t *ip);
 
 	/**
 	 * Delete all existing IKE_SAs and destroy them immediately.

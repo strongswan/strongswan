@@ -1556,14 +1556,30 @@ METHOD(ike_sa_manager_t, has_contact, bool,
 	return found;
 }
 
-METHOD(ike_sa_manager_t, get_half_open_count, int,
+METHOD(ike_sa_manager_t, get_count, u_int,
+	private_ike_sa_manager_t *this)
+{
+	u_int segment, count = 0;
+	mutex_t *mutex;
+
+	for (segment = 0; segment < this->segment_count; segment++)
+	{
+		mutex = this->segments[segment & this->segment_mask].mutex;
+		mutex->lock(mutex);
+		count += this->segments[segment].count;
+		mutex->unlock(mutex);
+	}
+	return count;
+}
+
+METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 	private_ike_sa_manager_t *this, host_t *ip)
 {
 	linked_list_t *list;
 	u_int segment, row;
 	rwlock_t *lock;
 	chunk_t addr;
-	int count = 0;
+	u_int count = 0;
 
 	if (ip)
 	{
@@ -1745,6 +1761,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 			.create_enumerator = _create_enumerator,
 			.checkin = _checkin,
 			.checkin_and_destroy = _checkin_and_destroy,
+			.get_count = _get_count,
 			.get_half_open_count = _get_half_open_count,
 			.flush = _flush,
 			.destroy = _destroy,
