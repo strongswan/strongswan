@@ -82,8 +82,10 @@ struct tnccs_manager_t {
 	 * Remove a TNCCS connection using its connection ID.
 	 *
 	 * @param id				ID of the connection to be removed
+	 * @param is_server			TNC Server if TRUE, TNC Client if FALSE
 	 */
-	void (*remove_connection)(tnccs_manager_t *this, TNC_ConnectionID id);
+	void (*remove_connection)(tnccs_manager_t *this, TNC_ConnectionID id,
+							  bool is_server);
 
 	/**
 	 * Request a handshake retry

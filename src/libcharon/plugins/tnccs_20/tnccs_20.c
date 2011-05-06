@@ -625,17 +625,8 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
-	if (this->is_server)
-	{
-		charon->imvs->notify_connection_change(charon->imvs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	else
-	{
-		charon->imcs->notify_connection_change(charon->imcs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id,
+													this->is_server);
 	this->state_machine->destroy(this->state_machine);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);

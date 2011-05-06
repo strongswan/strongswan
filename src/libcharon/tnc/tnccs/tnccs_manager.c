@@ -215,10 +215,27 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 }
 
 METHOD(tnccs_manager_t, remove_connection, void,
-	private_tnccs_manager_t *this, TNC_ConnectionID id)
+	private_tnccs_manager_t *this, TNC_ConnectionID id, bool is_server)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
+
+	if (is_server)
+	{
+		if (charon->imvs)
+		{
+			charon->imvs->notify_connection_change(charon->imvs, id,
+										TNC_CONNECTION_STATE_DELETE);
+		}
+	}
+	else
+	{
+		if (charon->imcs)
+		{
+			charon->imcs->notify_connection_change(charon->imcs, id,
+										TNC_CONNECTION_STATE_DELETE);
+		}
+	}
 
 	this->connection_lock->write_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
