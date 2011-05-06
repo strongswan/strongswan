@@ -56,7 +56,7 @@ typedef struct controller_t controller_t;
  *
  * Passing NULL as callback to the managers function calls them asynchronously.
  * If a callback is specified, they are called synchronously. There is a default
- * callback "controller_cb_empty" if you wan't to call a function
+ * callback "controller_cb_empty" if you want to call a function
  * synchronously, but don't need a callback.
  */
 struct controller_t {
