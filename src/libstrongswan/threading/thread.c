@@ -205,6 +205,7 @@ static void *join(private_thread_t *this)
 {
 	pthread_t thread_id;
 	void *val;
+
 	this->mutex->lock(this->mutex);
 	if (pthread_equal(this->thread_id, pthread_self()))
 	{
@@ -231,6 +232,7 @@ static void *join(private_thread_t *this)
 		this->mutex->unlock(this->mutex);
 	}
 	pthread_join(thread_id, &val);
+
 	return val;
 }
 
@@ -240,6 +242,7 @@ static void *join(private_thread_t *this)
 static private_thread_t *thread_create_internal()
 {
 	private_thread_t *this = malloc_thing(private_thread_t);
+
 	this->public.cancel = (void(*)(thread_t*))cancel;
 	this->public.kill = (void(*)(thread_t*,int))_kill;
 	this->public.detach = (void(*)(thread_t*))detach;
@@ -281,11 +284,13 @@ static void thread_cleanup(private_thread_t *this)
 static void *thread_main(private_thread_t *this)
 {
 	void *res;
+
 	sem_wait(&this->created);
 	current_thread->set(current_thread, this);
 	pthread_cleanup_push((thread_cleanup_t)thread_cleanup, this);
 	res = this->main(this->arg);
 	pthread_cleanup_pop(TRUE);
+
 	return res;
 }
 
@@ -295,6 +300,7 @@ static void *thread_main(private_thread_t *this)
 thread_t *thread_create(thread_main_t main, void *arg)
 {
 	private_thread_t *this = thread_create_internal();
+
 	this->main = main;
 	this->arg = arg;
 	if (pthread_create(&this->thread_id, NULL, (void*)thread_main, this) != 0)
@@ -308,6 +314,7 @@ thread_t *thread_create(thread_main_t main, void *arg)
 	this->id = next_id++;
 	id_mutex->unlock(id_mutex);
 	sem_post(&this->created);
+
 	return &this->public;
 }
 
@@ -325,7 +332,8 @@ thread_t *thread_current()
 u_int thread_current_id()
 {
 	private_thread_t *this = (private_thread_t*)thread_current();
-	return this->id;
+
+	return this ? this->id : 0;
 }
 
 /**
@@ -335,6 +343,7 @@ void thread_cleanup_push(thread_cleanup_t cleanup, void *arg)
 {
 	private_thread_t *this = (private_thread_t*)thread_current();
 	cleanup_handler_t *handler;
+
 	this->mutex->lock(this->mutex);
 	handler = malloc_thing(cleanup_handler_t);
 	handler->cleanup = cleanup;
@@ -350,6 +359,7 @@ void thread_cleanup_pop(bool execute)
 {
 	private_thread_t *this = (private_thread_t*)thread_current();
 	cleanup_handler_t *handler;
+
 	this->mutex->lock(this->mutex);
 	if (this->cleanup_handlers->remove_last(this->cleanup_handlers,
 											(void**)&handler) != SUCCESS)
@@ -374,14 +384,18 @@ bool thread_cancelability(bool enable)
 {
 #ifdef HAVE_PTHREAD_CANCEL
 	int old;
+
 	pthread_setcancelstate(enable ? PTHREAD_CANCEL_ENABLE
 								  : PTHREAD_CANCEL_DISABLE, &old);
+
 	return old == PTHREAD_CANCEL_ENABLE;
 #else
 	sigset_t new, old;
+
 	sigemptyset(&new);
 	sigaddset(&new, SIG_CANCEL);
 	pthread_sigmask(enable ? SIG_UNBLOCK : SIG_BLOCK, &new, &old);
+
 	return sigismember(&old, SIG_CANCEL) == 0;
 #endif /* HAVE_PTHREAD_CANCEL */
 }
@@ -392,6 +406,7 @@ bool thread_cancelability(bool enable)
 void thread_cancellation_point()
 {
 	bool old = thread_cancelability(TRUE);
+
 #ifdef HAVE_PTHREAD_CANCEL
 	pthread_testcancel();
 #endif /* HAVE_PTHREAD_CANCEL */
@@ -412,6 +427,7 @@ void thread_exit(void *val)
 void threads_init()
 {
 	private_thread_t *main_thread = thread_create_internal();
+
 	main_thread->id = 0;
 	main_thread->thread_id = pthread_self();
 	current_thread = thread_value_create(NULL);
@@ -434,6 +450,7 @@ void threads_init()
 void threads_deinit()
 {
 	private_thread_t *main_thread = (private_thread_t*)thread_current();
+
 	main_thread->mutex->lock(main_thread->mutex);
 	thread_destroy(main_thread);
 	current_thread->destroy(current_thread);
