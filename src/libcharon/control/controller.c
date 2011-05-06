@@ -124,6 +124,12 @@ static bool listener_log(interface_listener_t *this, debug_t group,
 	return TRUE;
 }
 
+METHOD(job_t, get_priority_medium, job_priority_t,
+	job_t *this)
+{
+	return JOB_PRIO_MEDIUM;
+}
+
 /**
  * Implementation of listener_t.ike_state_change
  */
@@ -262,6 +268,7 @@ static status_t initiate(private_controller_t *this,
 		},
 		.public = {
 			.execute = (void*)initiate_execute,
+			.get_priority = _get_priority_medium,
 			.destroy = (void*)recheckin,
 		},
 	};
@@ -314,6 +321,7 @@ static status_t terminate_ike(controller_t *this, u_int32_t unique_id,
 		},
 		.public = {
 			.execute = (void*)terminate_ike_execute,
+			.get_priority = _get_priority_medium,
 			.destroy = (void*)recheckin,
 		},
 	};
@@ -380,6 +388,7 @@ static status_t terminate_child(controller_t *this, u_int32_t reqid,
 		},
 		.public = {
 			.execute = (void*)terminate_child_execute,
+			.get_priority = _get_priority_medium,
 			.destroy = (void*)recheckin,
 		},
 	};
