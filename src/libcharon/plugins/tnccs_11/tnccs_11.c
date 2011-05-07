@@ -454,7 +454,7 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
-	charon->tnccs->remove_connection(charon->tnccs, this->connection_id
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id,
 													this->is_server);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
