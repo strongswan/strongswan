@@ -19,11 +19,12 @@
 
 #include <debug.h>
 #include <library.h>
+#include <threading/mutex.h>
 
 typedef struct private_tnc_imc_t private_tnc_imc_t;
 
 /**
- * Private data of an imv_t object.
+ * Private data of an imc_t object.
  */
 struct private_tnc_imc_t {
 
@@ -61,6 +62,13 @@ struct private_tnc_imc_t {
 	 * Number of supported message types
 	 */
 	TNC_UInt32 type_count;
+
+	/**
+	 * mutex to lock the imc_t object
+	 */
+	mutex_t *mutex;
+
+
 };
 
 METHOD(imc_t, set_id, void,
@@ -90,6 +98,9 @@ METHOD(imc_t, set_message_types, void,
 	int len = sizeof(buf);
 	int written;
 
+	/* lock the imc instance */
+	this->mutex->lock(this->mutex);
+
 	/* Free an existing MessageType list */
 	free(this->supported_types);
 	this->supported_types = NULL;
@@ -117,6 +128,9 @@ METHOD(imc_t, set_message_types, void,
 	*pos = '\0';
 	DBG2(DBG_TNC, "IMC %u supports %u message types:%s",
 				  this->id, type_count, buf);
+
+	/* lock the imc instance */
+	this->mutex->unlock(this->mutex);
 }
 
 METHOD(imc_t, type_supported, bool,
@@ -150,6 +164,7 @@ METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
 	dlclose(this->handle);
+	this->mutex->destroy(this->mutex);
 	free(this->supported_types);
 	free(this->name);
 	free(this->path);
@@ -174,6 +189,7 @@ imc_t* tnc_imc_create(char *name, char *path)
         },
 		.name = name,
 		.path = path,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	this->handle = dlopen(path, RTLD_LAZY);
