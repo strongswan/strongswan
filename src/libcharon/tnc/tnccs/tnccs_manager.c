@@ -271,8 +271,8 @@ METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
 	}
 	else
 	{
-		DBG2(DBG_TNC, "%s %u requests handshake retry for connection ID %u "
-					  "(reason: %u)", is_imc ? "IMC":"IMV", id, reason);
+		DBG2(DBG_TNC, "%s %u requests handshake retry for Connection ID %u "
+					  "(reason: %u)", is_imc ? "IMC":"IMV", imcv_id, id, reason);
 	}
 	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
