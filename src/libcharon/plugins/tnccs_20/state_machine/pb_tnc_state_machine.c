@@ -107,7 +107,8 @@ METHOD(pb_tnc_state_machine_t, receive_batch, bool,
 			}
 			return FALSE;
 		case PB_STATE_SERVER_WORKING:
-			if (!this->is_server && type == PB_BATCH_SDATA)
+			if (!this->is_server && (type == PB_BATCH_SDATA ||
+									 type == PB_BATCH_SRETRY))
 			{
 				this->state = PB_STATE_CLIENT_WORKING;
 				break;
@@ -117,8 +118,7 @@ METHOD(pb_tnc_state_machine_t, receive_batch, bool,
 				this->state = PB_STATE_DECIDED;
 				break;
 			}
-			if ((this->is_server && type == PB_BATCH_CRETRY) ||
-			   (!this->is_server && type == PB_BATCH_SRETRY))
+			if (this->is_server && type == PB_BATCH_CRETRY)
 			{
 				break;
 			}
@@ -198,7 +198,8 @@ METHOD(pb_tnc_state_machine_t, send_batch, bool,
 			}
 			return FALSE;
 		case PB_STATE_SERVER_WORKING:
-			if (this->is_server && type == PB_BATCH_SDATA)
+			if (this->is_server && (type == PB_BATCH_SDATA ||
+									type == PB_BATCH_SRETRY))
 			{
 				this->state = PB_STATE_CLIENT_WORKING;
 				break;
@@ -208,7 +209,7 @@ METHOD(pb_tnc_state_machine_t, send_batch, bool,
 				this->state = PB_STATE_DECIDED;
 				break;
 			}
-			if (this->is_server && type == PB_BATCH_SRETRY)
+			if (!this->is_server && type == PB_BATCH_CRETRY)
 			{
 				break;
 			}
@@ -219,9 +220,14 @@ METHOD(pb_tnc_state_machine_t, send_batch, bool,
 			}
 			return FALSE;
 		case PB_STATE_CLIENT_WORKING:
-			if (!this->is_server && type == PB_BATCH_CDATA)
+			if (!this->is_server && (type == PB_BATCH_CDATA ||
+									 type == PB_BATCH_CRETRY))
 			{
 				this->state = PB_STATE_SERVER_WORKING;
+				break;
+			}
+			if (this->is_server && type == PB_BATCH_SRETRY)
+			{
 				break;
 			}
 			if (type == PB_BATCH_CLOSE)

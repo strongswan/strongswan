@@ -289,14 +289,21 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
  */
 static void build_retry_batch(private_tnccs_20_t *this)
 {
+	pb_tnc_batch_type_t batch_retry_type;
+
+	batch_retry_type = this->is_server ? PB_BATCH_SRETRY : PB_BATCH_CRETRY;
 	if (this->batch)
 	{
+		if (this->batch->get_type(this->batch) == batch_retry_type)
+		{
+			/* retry batch has already been created */
+			return;
+		}
 		DBG1(DBG_TNC, "cancelling PB-TNC %N batch",
 			pb_tnc_batch_type_names, this->batch->get_type(this->batch));
 		this->batch->destroy(this->batch);
 	 }
-	this->batch = pb_tnc_batch_create(this->is_server,
-						this->is_server ? PB_BATCH_SRETRY : PB_BATCH_CRETRY);
+	this->batch = pb_tnc_batch_create(this->is_server, batch_retry_type);
 }
 
 METHOD(tls_t, process, status_t,
@@ -465,6 +472,7 @@ METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
 	status_t status;
+	pb_tnc_state_t state;
 
 	/* Initialize the connection */
 	if (!this->is_server && !this->connection_id)
@@ -496,8 +504,9 @@ METHOD(tls_t, build, status_t,
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
 	}
 
-	if (this->is_server && this->fatal_error &&
-		this->state_machine->get_state(this->state_machine) == PB_STATE_END)
+	state = this->state_machine->get_state(this->state_machine);
+
+	if (this->is_server && this->fatal_error && state == PB_STATE_END)
 	{
 		DBG1(DBG_TNC, "a fatal PB-TNC error occurred, terminating connection");
 		return FAILED;
@@ -508,7 +517,10 @@ METHOD(tls_t, build, status_t,
 
 	if (this->request_handshake_retry)
 	{
-		build_retry_batch(this);
+		if (state != PB_STATE_INIT)
+		{
+			build_retry_batch(this);
+		}
 
 		/* Reset the flag for the next handshake retry request */
 		this->request_handshake_retry = FALSE;
@@ -516,9 +528,6 @@ METHOD(tls_t, build, status_t,
 
 	if (!this->batch)
 	{
-		pb_tnc_state_t state;
-
-		state = this->state_machine->get_state(this->state_machine);
 		if (this->is_server)
 		{
 			if (state == PB_STATE_SERVER_WORKING)
