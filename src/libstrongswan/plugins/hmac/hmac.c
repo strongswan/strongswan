@@ -147,8 +147,8 @@ METHOD(hmac_t, destroy, void,
 	private_hmac_t *this)
 {
 	this->h->destroy(this->h);
-	free(this->opaded_key.ptr);
-	free(this->ipaded_key.ptr);
+	chunk_clear(&this->opaded_key);
+	chunk_clear(&this->ipaded_key);
 	free(this);
 }
 

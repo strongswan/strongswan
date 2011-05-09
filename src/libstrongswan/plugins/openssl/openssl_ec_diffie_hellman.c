@@ -257,7 +257,7 @@ METHOD(diffie_hellman_t, destroy, void,
 {
 	EC_POINT_clear_free(this->pub_key);
 	EC_KEY_free(this->key);
-	chunk_free(&this->shared_secret);
+	chunk_clear(&this->shared_secret);
 	free(this);
 }
 

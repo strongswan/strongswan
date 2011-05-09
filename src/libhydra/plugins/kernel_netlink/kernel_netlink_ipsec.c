@@ -889,6 +889,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;
+	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
 	 * we are in the recursive call below */
@@ -983,7 +984,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 					 encryption_algorithm_names, enc_alg);
-				return FAILED;
+				goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
@@ -993,7 +994,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
@@ -1014,7 +1015,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 					 encryption_algorithm_names, enc_alg);
-				return FAILED;
+				goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
@@ -1024,7 +1025,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1043,7 +1044,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 integrity_algorithm_names, int_alg);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg, int_key.len * 8);
@@ -1060,7 +1061,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
@@ -1079,7 +1080,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1098,7 +1099,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 ipcomp_transform_names, ipcomp);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using compression algorithm %N",
 			 ipcomp_transform_names, ipcomp);
@@ -1107,7 +1108,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1127,7 +1128,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
@@ -1157,7 +1158,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
@@ -1176,7 +1177,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
@@ -1199,7 +1200,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			replay = (struct xfrm_replay_state_esn*)RTA_DATA(rthdr);
@@ -1230,9 +1231,14 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
 		}
-		return FAILED;
+		goto failed;
 	}
-	return SUCCESS;
+
+	status = SUCCESS;
+
+failed:
+	memwipe(request, sizeof(request));
+	return status;
 }
 
 /**
@@ -1333,6 +1339,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	struct nlmsghdr *out = NULL, *hdr;
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *sa = NULL;
+	status_t status = FAILED;
 	size_t len;
 
 	memset(&request, 0, sizeof(request));
@@ -1419,11 +1426,13 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	if (sa == NULL)
 	{
 		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
 	}
-	*bytes = sa->curlft.bytes;
-
+	else
+	{
+		*bytes = sa->curlft.bytes;
+		status = SUCCESS;
+	}
+	memwipe(out, len);
 	free(out);
 	return SUCCESS;
 }
@@ -1699,6 +1708,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 failed:
 	free(replay);
 	free(replay_esn);
+	memwipe(out, len);
 	free(out);
 
 	return status;

@@ -236,13 +236,17 @@ METHOD(xcbc_t, set_key, void,
 	memset(k1.ptr, 0x01, this->b);
 	this->k1->encrypt(this->k1, k1, iv, NULL);
 	this->k1->set_key(this->k1, k1);
+
+	memwipe(k1.ptr, k1.len);
 }
 
 METHOD(xcbc_t, destroy, void,
 	private_xcbc_t *this)
 {
 	this->k1->destroy(this->k1);
+	memwipe(this->k2, this->b);
 	free(this->k2);
+	memwipe(this->k3, this->b);
 	free(this->k3);
 	free(this->e);
 	free(this->remaining);

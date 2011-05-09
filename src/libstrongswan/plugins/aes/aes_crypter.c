@@ -1518,6 +1518,7 @@ METHOD(crypter_t, set_key, void,
 METHOD(crypter_t, destroy, void,
 	private_aes_crypter_t *this)
 {
+	memwipe(this, sizeof(*this));
 	free(this);
 }
 

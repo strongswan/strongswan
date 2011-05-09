@@ -105,6 +105,8 @@ static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 	*dst = chunk_alloc(src.len);
 	padlock_crypt(key_aligned, &cword, src.ptr, dst->ptr,
 				  src.len / AES_BLOCK_SIZE, iv_aligned);
+
+	memwipe(key_aligned, sizeof(key_aligned));
 }
 
 METHOD(crypter_t, decrypt, void,
@@ -146,7 +148,7 @@ METHOD(crypter_t, set_key, void,
 METHOD(crypter_t, destroy, void,
 	private_padlock_aes_crypter_t *this)
 {
-	free(this->key.ptr);
+	chunk_clear(&this->key);
 	free(this);
 }
 
