@@ -175,7 +175,7 @@ static inline void chunk_clear(chunk_t *chunk)
 {
 	if (chunk->ptr)
 	{
-		memset(chunk->ptr, 0, chunk->len);
+		memwipe(chunk->ptr, chunk->len);
 		chunk_free(chunk);
 	}
 }
