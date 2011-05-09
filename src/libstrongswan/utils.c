@@ -102,6 +102,14 @@ void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 /**
  * Described in header.
  */
+void memwipe_noinline(void *ptr, size_t n)
+{
+	memwipe_inline(ptr, n);
+}
+
+/**
+ * Described in header.
+ */
 void *memstr(const void *haystack, const char *needle, size_t n)
 {
 	unsigned const char *pos = haystack;

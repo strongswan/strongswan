@@ -337,6 +337,51 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.
+ */
+void memwipe_noinline(void *ptr, size_t n);
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, inlining variant.
+ */
+static inline void memwipe_inline(void *ptr, size_t n)
+{
+	volatile char *c = (volatile char*)ptr;
+	int m, i;
+
+	/* byte wise until long aligned */
+	for (i = 0; (uintptr_t)&c % sizeof(long) && i < n; i++)
+	{
+		c[i] = 0;
+	}
+	/* word wize */
+	for (m = n - sizeof(long); i <= m; i += sizeof(long))
+	{
+		*(volatile long*)&c[i] = 0;
+	}
+	/* byte wise of the rest */
+	for (; i < n; i++)
+	{
+		c[i] = 0;
+	}
+}
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, auto-inlining variant.
+ */
+static inline void memwipe(void *ptr, size_t n)
+{
+	if (__builtin_constant_p(n))
+	{
+		memwipe_inline(ptr, n);
+	}
+	else
+	{
+		memwipe_noinline(ptr, n);
+	}
+}
+
+/**
  * A variant of strstr with the characteristics of memchr, where haystack is not
  * a null-terminated string but simply a memory area of length n.
  */
