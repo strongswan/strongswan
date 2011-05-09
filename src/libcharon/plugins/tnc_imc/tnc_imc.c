@@ -67,8 +67,6 @@ struct private_tnc_imc_t {
 	 * mutex to lock the imc_t object
 	 */
 	mutex_t *mutex;
-
-
 };
 
 METHOD(imc_t, set_id, void,
@@ -98,7 +96,7 @@ METHOD(imc_t, set_message_types, void,
 	int len = sizeof(buf);
 	int written;
 
-	/* lock the imc instance */
+	/* lock the imc_t instance */
 	this->mutex->lock(this->mutex);
 
 	/* Free an existing MessageType list */
@@ -129,7 +127,7 @@ METHOD(imc_t, set_message_types, void,
 	DBG2(DBG_TNC, "IMC %u supports %u message types:%s",
 				  this->id, type_count, buf);
 
-	/* lock the imc instance */
+	/* lock the imc_t instance */
 	this->mutex->unlock(this->mutex);
 }
 
