@@ -130,6 +130,12 @@ static bool load_imvs(char *filename)
 		}
 		if (!charon->imvs->add(charon->imvs, imv))
 		{
+			if (imv->terminate &&
+				imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
+			{
+				DBG1(DBG_TNC, "IMV \"%s\" not terminated successfully",
+							   imv->get_name(imv));
+			}
 			imv->destroy(imv);
 			return FALSE;
 		}
