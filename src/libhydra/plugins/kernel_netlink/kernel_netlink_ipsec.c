@@ -1434,7 +1434,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	}
 	memwipe(out, len);
 	free(out);
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
