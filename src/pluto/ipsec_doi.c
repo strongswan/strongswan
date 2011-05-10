@@ -104,6 +104,14 @@
 #define RETURN_STF_FAILURE(f) \
 	{ int r = (f); if (r != ISAKMP_NOTHING_WRONG) return STF_FAIL + r; }
 
+/* The endpoint(s) for which an SA is getting installed, so keying material
+ * can be properly wiped.
+ */
+enum endpoint {
+	EP_LOCAL  = 1,
+	EP_REMOTE = 1 << 1,
+};
+
 /* create output HDR as replica of input HDR */
 void echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
 {
@@ -2741,13 +2749,59 @@ static bool has_preloaded_public_key(struct state *st)
 	return FALSE;
 }
 
+/* Compute keying material for an SA
+ */
+static void compute_keymat_internal(struct state *st, u_int8_t protoid,
+									ipsec_spi_t spi, size_t needed_len,
+									u_char **keymat_out)
+{
+	size_t i = 0, prf_block_size, needed_space;
+	chunk_t protoid_chunk = chunk_from_thing(protoid);
+	chunk_t spi_chunk = chunk_from_thing(spi);
+	pseudo_random_function_t prf_alg = oakley_to_prf(st->st_oakley.hash);
+	prf_t *prf = lib->crypto->create_prf(lib->crypto, prf_alg);
+
+	prf->set_key(prf, st->st_skeyid_d);
+	prf_block_size = prf->get_block_size(prf);
+
+	/* Although only needed_len bytes are desired, we must round up to a
+	 * multiple of prf_block_size so that the buffer isn't overrun */
+	needed_space = needed_len + pad_up(needed_len, prf_block_size);
+	replace(*keymat_out, malloc(needed_space));
+
+	for (;;)
+	{
+		char *keymat_i = (*keymat_out) + i;
+		chunk_t keymat = { keymat_i,  prf_block_size };
+
+		if (st->st_shared.ptr != NULL)
+		{	/* PFS: include the g^xy */
+			prf->get_bytes(prf, st->st_shared, NULL);
+		}
+		prf->get_bytes(prf, protoid_chunk, NULL);
+		prf->get_bytes(prf, spi_chunk, NULL);
+		prf->get_bytes(prf, st->st_ni, NULL);
+		prf->get_bytes(prf, st->st_nr, keymat_i);
+
+		i += prf_block_size;
+		if (i >= needed_space)
+		{
+			break;
+		}
+
+		/* more keying material needed: prepare to go around again */
+		prf->get_bytes(prf, keymat, NULL);
+	}
+	prf->destroy(prf);
+}
+
 /*
  * Produce the new key material of Quick Mode.
  * RFC 2409 "IKE" section 5.5
  * specifies how this is to be done.
  */
 static void compute_proto_keymat(struct state *st, u_int8_t protoid,
-								 struct ipsec_proto_info *pi)
+								 struct ipsec_proto_info *pi, enum endpoint ep)
 {
 	size_t needed_len = 0; /* bytes of keying material needed */
 
@@ -2833,82 +2887,57 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 
 	pi->keymat_len = needed_len;
 
-	/* Allocate space for the keying material. Although only needed_len bytes
-	 * are desired, we must round up to a multiple of hash_size
-	 * so that our buffer isn't overrun.
-	 */
+	if (ep & EP_LOCAL)
 	{
-		size_t needed_space; /* space needed for keying material (rounded up) */
-		size_t i, prf_block_size;
-		chunk_t protoid_chunk = chunk_from_thing(protoid);
-		chunk_t spi_our =  chunk_from_thing(pi->our_spi);
-		chunk_t spi_peer = chunk_from_thing(pi->attrs.spi);
-		pseudo_random_function_t prf_alg;
-		prf_t *prf_our, *prf_peer;
-
-		prf_alg  = oakley_to_prf(st->st_oakley.hash);
-		prf_our  = lib->crypto->create_prf(lib->crypto, prf_alg);
-		prf_peer = lib->crypto->create_prf(lib->crypto, prf_alg);
-		prf_our->set_key(prf_our, st->st_skeyid_d);
-		prf_peer->set_key(prf_peer, st->st_skeyid_d);
-		prf_block_size = prf_our->get_block_size(prf_our);
-
-		needed_space = needed_len + pad_up(needed_len, prf_block_size);
-		replace(pi->our_keymat, malloc(needed_space));
-		replace(pi->peer_keymat, malloc(needed_space));
-
-		for (i = 0;; )
-		{
-			char *keymat_i_our  = pi->our_keymat + i;
-			char *keymat_i_peer = pi->peer_keymat + i;
-			chunk_t keymat_our  = { keymat_i_our,  prf_block_size };
-			chunk_t keymat_peer = { keymat_i_peer, prf_block_size };
-
-			if (st->st_shared.ptr != NULL)
-			{
-				/* PFS: include the g^xy */
-				prf_our->get_bytes(prf_our,   st->st_shared, NULL);
-				prf_peer->get_bytes(prf_peer, st->st_shared, NULL);
-			}
-			prf_our->get_bytes(prf_our,   protoid_chunk, NULL);
-			prf_peer->get_bytes(prf_peer, protoid_chunk, NULL);
-
-			prf_our->get_bytes(prf_our,   spi_our,  NULL);
-			prf_peer->get_bytes(prf_peer, spi_peer, NULL);
-
-			prf_our->get_bytes(prf_our,   st->st_ni, NULL);
-			prf_peer->get_bytes(prf_peer, st->st_ni, NULL);
-
-			prf_our->get_bytes(prf_our,   st->st_nr, keymat_i_our);
-			prf_peer->get_bytes(prf_peer, st->st_nr, keymat_i_peer);
-
-			i += prf_block_size;
-			if (i >= needed_space)
-			{
-				break;
-			}
-
-			/* more keying material needed: prepare to go around again */
-			prf_our->get_bytes(prf_our,   keymat_our,  NULL);
-			prf_peer->get_bytes(prf_peer, keymat_peer, NULL);
-		}
-		prf_our->destroy(prf_our);
-		prf_peer->destroy(prf_peer);
+		compute_keymat_internal(st, protoid, pi->our_spi, needed_len,
+								&pi->our_keymat);
+		DBG(DBG_CRYPT,
+			DBG_dump("KEYMAT computed:\n", pi->our_keymat,
+					 pi->keymat_len));
 	}
-	DBG(DBG_CRYPT,
-		DBG_dump("KEYMAT computed:\n", pi->our_keymat, pi->keymat_len);
-		DBG_dump("Peer KEYMAT computed:\n", pi->peer_keymat, pi->keymat_len));
+	if (ep & EP_REMOTE)
+	{
+		compute_keymat_internal(st, protoid, pi->attrs.spi, needed_len,
+								&pi->peer_keymat);
+		DBG(DBG_CRYPT,
+			DBG_dump("Peer KEYMAT computed:\n", pi->peer_keymat,
+					 pi->keymat_len));
+	}
 }
 
-static void compute_keymats(struct state *st)
+static void compute_keymats(struct state *st, enum endpoint ep)
 {
 	if (st->st_ah.present)
 	{
-		compute_proto_keymat(st, PROTO_IPSEC_AH, &st->st_ah);
+		compute_proto_keymat(st, PROTO_IPSEC_AH, &st->st_ah, ep);
 	}
 	if (st->st_esp.present)
 	{
-		compute_proto_keymat(st, PROTO_IPSEC_ESP, &st->st_esp);
+		compute_proto_keymat(st, PROTO_IPSEC_ESP, &st->st_esp, ep);
+	}
+}
+
+static void wipe_proto_keymat(struct ipsec_proto_info *pi, enum endpoint ep)
+{
+	if (ep & EP_LOCAL)
+	{
+		memwipe(pi->our_keymat, pi->keymat_len);
+	}
+	if (ep & EP_REMOTE)
+	{
+		memwipe(pi->peer_keymat, pi->keymat_len);
+	}
+}
+
+static void wipe_keymats(struct state *st, enum endpoint ep)
+{
+	if (st->st_ah.present)
+	{
+		wipe_proto_keymat(&st->st_ah, ep);
+	}
+	if (st->st_esp.present)
+	{
+		wipe_proto_keymat(&st->st_esp, ep);
 	}
 }
 
@@ -4975,6 +5004,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 
 	/* now that we are sure of our connection, create our new state */
 	{
+		enum endpoint ep = EP_LOCAL;
 		struct state *const st = duplicate_state(p1st);
 
 		/* first: fill in missing bits of our new state object
@@ -5152,7 +5182,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			, st, &st->st_msgid, TRUE);
 
 		/* Derive new keying material */
-		compute_keymats(st);
+		compute_keymats(st, ep);
 
 		/* Tell the kernel to establish the new inbound SA
 		 * (unless the commit bit is set -- which we don't support).
@@ -5161,8 +5191,10 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		 */
 		if (!install_inbound_ipsec_sa(st))
 		{
+			wipe_keymats(st, ep);
 			return STF_INTERNAL_ERROR;  /* ??? we may be partly committed */
 		}
+		wipe_keymats(st, ep);
 
 		/* encrypt message, except for fixed part of header */
 
@@ -5206,6 +5238,7 @@ static void dpd_init(struct state *st)
  */
 stf_status quick_inR1_outI2(struct msg_digest *md)
 {
+	enum endpoint ep = EP_LOCAL | EP_REMOTE;
 	struct state *const st = md->st;
 	const connection_t *c = st->st_connection;
 
@@ -5325,7 +5358,7 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	}
 
 	/* Derive new keying material */
-	compute_keymats(st);
+	compute_keymats(st, ep);
 
 	/* Tell the kernel to establish the inbound, outbound, and routing part
 	 * of the new SA (unless the commit bit is set -- which we don't support).
@@ -5334,8 +5367,10 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	 */
 	if (!install_ipsec_sa(st, TRUE))
 	{
+		wipe_keymats(st, ep);
 		return STF_INTERNAL_ERROR;
 	}
+	wipe_keymats(st, ep);
 
 	/* encrypt message, except for fixed part of header */
 
@@ -5374,11 +5409,15 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
  */
 stf_status quick_inI2(struct msg_digest *md)
 {
+	enum endpoint ep = EP_REMOTE;
 	struct state *const st = md->st;
 
 	/* HASH(3) in */
 	CHECK_QUICK_HASH(md, quick_mode_hash3(hash_val, st)
 		, "HASH(3)", "Quick I2");
+
+	/* Derive keying material */
+	compute_keymats(st, ep);
 
 	/* Tell the kernel to establish the outbound and routing part of the new SA
 	 * (the previous state established inbound)
@@ -5388,8 +5427,11 @@ stf_status quick_inI2(struct msg_digest *md)
 	 */
 	if (!install_ipsec_sa(st, FALSE))
 	{
+		wipe_keymats(st, ep);
 		return STF_INTERNAL_ERROR;
 	}
+	wipe_keymats(st, ep);
+
 	DBG(DBG_CONTROLMORE,
 		DBG_log("inI2: instance %s[%ld], setting newest_ipsec_sa to #%ld (was #%ld) (spd.eroute=#%ld)"
 							   , st->st_connection->name
