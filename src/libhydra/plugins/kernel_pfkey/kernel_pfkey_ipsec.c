@@ -1618,8 +1618,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (this->policies->find_first(this->policies,
 			(linked_list_match_t)policy_entry_equals, (void**)&found, policy) == SUCCESS)
 	{
-		/* use existing policy */
+		/* use existing policy, but cache the most recent reqid */
 		found->refcount++;
+		found->reqid = policy->reqid;
 		DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
 					  "refcount", src_ts, dst_ts,
 					   policy_dir_names, direction);
