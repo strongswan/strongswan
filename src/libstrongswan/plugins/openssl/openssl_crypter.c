@@ -152,7 +152,7 @@ METHOD(crypter_t, set_key, void,
 METHOD(crypter_t, destroy, void,
 	private_openssl_crypter_t *this)
 {
-	clear_chunk(&this->key);
+	chunk_clear(&this->key);
 	free(this);
 }
 
