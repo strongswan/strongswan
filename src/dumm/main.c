@@ -101,8 +101,17 @@ static page_t* get_page(int num)
 static pid_t invoke(void *vte, guest_t *guest,
 					char *args[], int argc)
 {
-	return vte_terminal_fork_command(VTE_TERMINAL(vte), args[0], args, NULL,
-									 NULL, FALSE, FALSE, FALSE);
+	GPid pid;
+
+	if (vte_terminal_fork_command_full(VTE_TERMINAL(vte),
+						VTE_PTY_NO_LASTLOG | VTE_PTY_NO_UTMP | VTE_PTY_NO_WTMP,
+						NULL, args, NULL,
+						G_SPAWN_CHILD_INHERITS_STDIN | G_SPAWN_SEARCH_PATH,
+						NULL, NULL, &pid, NULL))
+	{
+		return pid;
+	}
+	return 0;
 }
 
 void idle(void)
