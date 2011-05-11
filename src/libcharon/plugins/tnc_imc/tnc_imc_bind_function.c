@@ -28,6 +28,12 @@ TNC_Result TNC_TNCC_ReportMessageTypes(TNC_IMCID imc_id,
 									   TNC_MessageTypeList supported_types,
 									   TNC_UInt32 type_count)
 {
+	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	{
+		DBG1(DBG_TNC, "ignoring ReportMessageTypes() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 	return charon->imcs->set_message_types(charon->imcs, imc_id,
 										   supported_types, type_count);
 }
@@ -39,6 +45,12 @@ TNC_Result TNC_TNCC_RequestHandshakeRetry(TNC_IMCID imc_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_RetryReason reason)
 {
+	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	{
+		DBG1(DBG_TNC, "ignoring RequestHandshakeRetry() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 	return charon->tnccs->request_handshake_retry(charon->tnccs, TRUE, imc_id,
 												  connection_id, reason);
 }
@@ -52,6 +64,12 @@ TNC_Result TNC_TNCC_SendMessage(TNC_IMCID imc_id,
 								TNC_UInt32 msg_len,
 								TNC_MessageType msg_type)
 {
+	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	{
+		DBG1(DBG_TNC, "ignoring SendMessage() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 	return charon->tnccs->send_message(charon->tnccs, imc_id, TNC_IMVID_ANY,
 									   connection_id, msg, msg_len, msg_type);
 }

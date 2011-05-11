@@ -84,7 +84,7 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	private_tnc_imv_manager_t *this, TNC_IMVID id)
 {
 	enumerator_t *enumerator;
-	imv_t *imv;
+	imv_t *imv, *removed_imv = NULL;
 
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
@@ -92,11 +92,34 @@ METHOD(imv_manager_t, remove_, imv_t*,
 		if (id == imv->get_id(imv))
 		{
 			this->imvs->remove_at(this->imvs, enumerator);
-			return imv;
+			removed_imv = imv;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return NULL;
+
+	return removed_imv;
+}
+
+METHOD(imv_manager_t, is_registered, bool,
+	private_tnc_imv_manager_t *this, TNC_IMVID id)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+	bool found = FALSE;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		if (id == imv->get_id(imv))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(imv_manager_t, get_recommendation_policy, recommendation_policy_t,
@@ -297,6 +320,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.is_registered = _is_registered,
 			.get_recommendation_policy = _get_recommendation_policy,
 			.create_recommendations = _create_recommendations,
 			.enforce_recommendation = _enforce_recommendation,

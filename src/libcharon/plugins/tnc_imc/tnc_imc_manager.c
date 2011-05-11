@@ -77,7 +77,7 @@ METHOD(imc_manager_t, remove_, imc_t*,
 	private_tnc_imc_manager_t *this, TNC_IMCID id)
 {
 	enumerator_t *enumerator;
-	imc_t *imc;
+	imc_t *imc, *removed_imc = NULL;
 
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
@@ -85,11 +85,34 @@ METHOD(imc_manager_t, remove_, imc_t*,
 		if (id == imc->get_id(imc))
 		{
 			this->imcs->remove_at(this->imcs, enumerator);
-			return imc;
+			removed_imc = imc;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return NULL;
+
+	return removed_imc;
+}
+
+METHOD(imc_manager_t, is_registered, bool,
+	private_tnc_imc_manager_t *this, TNC_IMCID id)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+	bool found = FALSE;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (id == imc->get_id(imc))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(imc_manager_t, get_preferred_language, char*,
@@ -228,6 +251,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.is_registered = _is_registered,
 			.get_preferred_language = _get_preferred_language,
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,

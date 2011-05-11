@@ -49,6 +49,14 @@ struct imc_manager_t {
 	imc_t* (*remove)(imc_manager_t *this, TNC_IMCID id);
 
 	/**
+	 * Check if an IMC with a given ID is registered with the IMC manager
+	 *
+	 * @param id				ID of IMC instance
+	 * @return					TRUE if registered
+	 */
+	bool (*is_registered)(imc_manager_t *this, TNC_IMCID id);
+
+	/**
 	 * Return the preferred language for recommendations
 	 *
 	 * @return					preferred language string

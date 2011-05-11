@@ -50,6 +50,15 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
+	 * Check if an IMV with a given ID is registered with the IMV manager
+	 *
+	 * @param id				ID of IMV instance
+	 * @return					TRUE if registered
+	 */
+	bool (*is_registered)(imv_manager_t *this, TNC_IMVID id);
+
+
+	/**
 	 * Get the configured recommendation policy
 	 *
 	 * @return					configured recommendation policy
