@@ -317,6 +317,11 @@ then
     echo -n " --enable-af-alg" >> $INSTALLSHELL
 fi
 
+if [ "$USE_WHITELIST" = "yes" ]
+then
+    echo -n " --enable-whitelist" >> $INSTALLSHELL
+fi
+
 if [ "$USE_CISCO_QUIRKS" = "yes" ]
 then
     echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
