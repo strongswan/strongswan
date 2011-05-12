@@ -22,6 +22,7 @@
 #define PLUGIN_H_
 
 #include "../utils.h"
+#include <library.h>
 
 typedef struct plugin_t plugin_t;
 

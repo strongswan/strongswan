@@ -34,6 +34,7 @@
 #include "daemon.h"
 
 #include <library.h>
+#include <plugins/plugin.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
 #include <processing/jobs/start_action_job.h>

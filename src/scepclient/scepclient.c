@@ -50,6 +50,7 @@
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/pkcs10.h>
+#include <plugins/plugin.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"

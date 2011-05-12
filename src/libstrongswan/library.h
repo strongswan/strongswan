@@ -72,7 +72,6 @@
 #include "chunk.h"
 #include "settings.h"
 #include "integrity_checker.h"
-#include "plugins/plugin_loader.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"
 #include "crypto/crypto_factory.h"
@@ -82,6 +81,7 @@
 #include "credentials/credential_manager.h"
 #include "credentials/cred_encoding.h"
 #include "utils/leak_detective.h"
+#include "plugins/plugin_loader.h"
 
 typedef struct library_t library_t;
 
