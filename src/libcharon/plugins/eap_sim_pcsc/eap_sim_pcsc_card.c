@@ -98,6 +98,8 @@ METHOD(sim_card_t, get_triplet, bool,
 	LPSTR mszReaders;
 	char *cur_reader;
 	char full_nai[128];
+	SCARDHANDLE hCard;
+	enum { DISCONNECTED, CONNECTED, TRANSACTION } hCard_status = DISCONNECTED;
 
 	snprintf(full_nai, sizeof(full_nai), "%Y", id);
 
@@ -131,7 +133,6 @@ METHOD(sim_card_t, get_triplet, bool,
 		 cur_reader += strlen(cur_reader) + 1)
 	{
 		DWORD dwActiveProtocol = -1;
-		SCARDHANDLE hCard;
 		SCARD_IO_REQUEST *pioSendPci;
 		SCARD_IO_REQUEST pioRecvPci;
 		BYTE pbRecvBuffer[64];
@@ -139,12 +140,26 @@ METHOD(sim_card_t, get_triplet, bool,
 		char imsi[SIM_IMSI_MAX_LEN + 1];
 
 		/* See GSM 11.11 for SIM APDUs */
-		BYTE pbSelectMF[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x3f, 0x00 };
-		BYTE pbSelectDFGSM[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x7f, 0x20 };
-		BYTE pbSelectIMSI[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x6f, 0x07 };
-		BYTE pbReadBinary[] = { 0xa0, 0xb0, 0x00, 0x00, 0x09 };
+		static const BYTE pbSelectMF[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x3f, 0x00 };
+		static const BYTE pbSelectDFGSM[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x7f, 0x20 };
+		static const BYTE pbSelectIMSI[] = { 0xa0, 0xa4, 0x00, 0x00, 0x02, 0x6f, 0x07 };
+		static const BYTE pbReadBinary[] = { 0xa0, 0xb0, 0x00, 0x00, 0x09 };
 		BYTE pbRunGSMAlgorithm[5 + SIM_RAND_LEN] = { 0xa0, 0x88, 0x00, 0x00, 0x10 };
-		BYTE pbGetResponse[] = { 0xa0, 0xc0, 0x00, 0x00, 0x0c };
+		static const BYTE pbGetResponse[] = { 0xa0, 0xc0, 0x00, 0x00, 0x0c };
+
+		/* If on 2nd or later reader, make sure we end the transaction
+		 * and disconnect card in the previous reader */
+		switch (hCard_status)
+		{
+			case TRANSACTION:
+				SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
+				/* FALLTHRU */
+			case CONNECTED:
+				SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+				/* FALLTHRU */
+			case DISCONNECTED:
+				hCard_status = DISCONNECTED;
+		}
 
 		/* Copy RAND into APDU */
 		memcpy(pbRunGSMAlgorithm + 5, rand, SIM_RAND_LEN);
@@ -156,6 +171,7 @@ METHOD(sim_card_t, get_triplet, bool,
 			DBG1(DBG_IKE, "SCardConnect: %s", pcsc_stringify_error(rv));
 			continue;
 		}
+		hCard_status = CONNECTED;
 
 		switch(dwActiveProtocol)
 		{
@@ -169,6 +185,15 @@ METHOD(sim_card_t, get_triplet, bool,
 				DBG1(DBG_IKE, "Unknown SCARD_PROTOCOL");
 				continue;
 		}
+
+		/* Start transaction */
+		rv = SCardBeginTransaction(hCard);
+		if (rv != SCARD_S_SUCCESS)
+		{
+			DBG1(DBG_IKE, "SCardBeginTransaction: %s", pcsc_stringify_error(rv));
+			continue;
+		}
+		hCard_status = TRANSACTION;
 
 		/* APDU: Select MF */
 		dwRecvLength = sizeof(pbRecvBuffer);
@@ -299,12 +324,21 @@ METHOD(sim_card_t, get_triplet, bool,
 			continue;
 		}
 
-		rv = SCardDisconnect(hCard, SCARD_LEAVE_CARD);
-		if (rv != SCARD_S_SUCCESS)
-		{
-			DBG1(DBG_IKE, "SCardDisconnect: %s", pcsc_stringify_error(rv));
-			continue;
-		}
+		/* Transaction will be ended and card disconnected at the
+		 * beginning of this loop or after this loop */
+	}
+
+	/* Make sure we end any previous transaction and disconnect card */
+	switch (hCard_status)
+	{
+		case TRANSACTION:
+			SCardEndTransaction(hCard, SCARD_LEAVE_CARD);
+			/* FALLTHRU */
+		case CONNECTED:
+			SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+			/* FALLTHRU */
+		case DISCONNECTED:
+			hCard_status = DISCONNECTED;
 	}
 
 	rv = SCardReleaseContext(hContext);
