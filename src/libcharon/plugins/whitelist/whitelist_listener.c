@@ -205,7 +205,7 @@ whitelist_listener_t *whitelist_listener_create()
 		.ids = hashtable_create((hashtable_hash_t)hash,
 								(hashtable_equals_t)equals, 32),
 		.enabled = lib->settings->get_bool(lib->settings,
-								"charon.plugins.whitelist.enabled", TRUE),
+								"charon.plugins.whitelist.enabled", FALSE),
 	);
 
 	return &this->public;
