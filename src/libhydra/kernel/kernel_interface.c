@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -157,15 +157,15 @@ METHOD(kernel_interface_t, query_policy, status_t,
 
 METHOD(kernel_interface_t, del_policy, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
-	bool unrouted)
+	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
+	mark_t mark, bool unrouted)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->del_policy(this->ipsec, src_ts, dst_ts,
-								   direction, mark, unrouted);
+								   direction, reqid, mark, unrouted);
 }
 
 METHOD(kernel_interface_t, get_source_addr, host_t*,

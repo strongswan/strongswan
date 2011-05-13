@@ -837,13 +837,16 @@ METHOD(child_sa_t, update, status_t,
 			{
 				/* remove old policies first */
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
-							my_ts, other_ts, POLICY_OUT, this->mark_out, FALSE);
+							my_ts, other_ts, POLICY_OUT, this->reqid,
+							this->mark_out, FALSE);
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
-							other_ts, my_ts,  POLICY_IN, this->mark_in, FALSE);
+							other_ts, my_ts,  POLICY_IN, this->reqid,
+							this->mark_in, FALSE);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->del_policy(hydra->kernel_interface,
-							other_ts, my_ts, POLICY_FWD, this->mark_in, FALSE);
+							other_ts, my_ts, POLICY_FWD, this->reqid,
+							this->mark_in, FALSE);
 				}
 
 				/* check whether we have to update a "dynamic" traffic selector */
@@ -943,13 +946,16 @@ METHOD(child_sa_t, destroy, void,
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						my_ts, other_ts, POLICY_OUT, this->mark_out, unrouted);
+						my_ts, other_ts, POLICY_OUT, this->reqid,
+						this->mark_out, unrouted);
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_IN, this->mark_in, unrouted);
+						other_ts, my_ts, POLICY_IN, this->reqid,
+						this->mark_in, unrouted);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_FWD, this->mark_in, unrouted);
+						other_ts, my_ts, POLICY_FWD, this->reqid,
+						this->mark_in, unrouted);
 			}
 		}
 		enumerator->destroy(enumerator);

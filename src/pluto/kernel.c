@@ -837,7 +837,7 @@ static bool raw_eroute(const ip_address *this_host,
 	if (deleting || replacing)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, mark, routed);
+						ts_src, ts_dst, dir, sa->reqid, mark, routed);
 	}
 
 	if (!deleting)
@@ -853,7 +853,7 @@ static bool raw_eroute(const ip_address *this_host,
 		if (deleting || replacing)
 		{
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, mark, routed);
+						ts_src, ts_dst, dir, sa->reqid, mark, routed);
 		}
 
 		if (!deleting && ok &&

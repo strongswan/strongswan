@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -346,6 +346,7 @@ struct kernel_ipsec_t {
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
+	 * @param reqid			unique ID of the associated SA
 	 * @param mark			optional mark
 	 * @param unrouted		TRUE, if this policy is unrouted from the kernel
 	 * @return				SUCCESS if operation completed
@@ -353,8 +354,8 @@ struct kernel_ipsec_t {
 	status_t (*del_policy) (kernel_ipsec_t *this,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
-							policy_dir_t direction, mark_t mark,
-							bool unrouted);
+							policy_dir_t direction, u_int32_t reqid,
+							mark_t mark, bool unrouted);
 
 	/**
 	 * Install a bypass policy for the given socket.
