@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008 Tobias Brunner
+ * Copyright (C) 2007-2011 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -98,6 +98,32 @@ struct linked_list_t {
 	 * @return			SUCCESS, or NOT_FOUND if list is empty
 	 */
 	status_t (*remove_first) (linked_list_t *this, void **item);
+
+	/**
+	 * Inserts a new item before the item the enumerator currently points to.
+	 *
+	 * @note The position of the enumerator is not changed.
+	 * @note If the enumerator's position is invalid, the item is inserted last.
+	 *
+	 * @param enumerator	enumerator with position
+	 * @param item			item value to insert in list
+	 */
+	void (*insert_before)(linked_list_t *this, enumerator_t *enumerator,
+						  void *item);
+
+	/**
+	 * Inserts a new item after the item the enumerator currently points to.
+	 *
+	 * @note The position of the enumerator is not changed (thus the next item
+	 * the enumerator returns will be the inserted item).
+	 *
+	 * @note If the enumerator's position is invalid, the item is inserted last.
+	 *
+	 * @param enumerator	enumerator with position
+	 * @param item			item value to insert in list
+	 */
+	void (*insert_after)(linked_list_t *this, enumerator_t *enumerator,
+						 void *item);
 
 	/**
 	 * Remove an item from the list where the enumerator points to.

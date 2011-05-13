@@ -145,19 +145,15 @@ METHOD(enumerator_t, enumerate, bool,
 {
 	if (!this->current)
 	{
-		if (!this->list->first)
-		{
-			return FALSE;
-		}
 		this->current = this->list->first;
 	}
 	else
 	{
-		if (!this->current->next)
-		{
-			return FALSE;
-		}
 		this->current = this->current->next;
+	}
+	if (!this->current)
+	{
+		return FALSE;
 	}
 	*item = this->current->value;
 	return TRUE;
@@ -270,30 +266,60 @@ METHOD(iterator_t, iterator_remove, status_t,
 	return SUCCESS;
 }
 
-METHOD(iterator_t, iterator_insert_before, void,
-	   private_iterator_t * iterator, void *item)
+static void insert_item_before(private_linked_list_t *this, element_t *current,
+							   void *item)
 {
-	if (iterator->current == NULL)
+	if (!current)
 	{
-		iterator->list->public.insert_first(&(iterator->list->public), item);
+		this->public.insert_last(&this->public, item);
 		return;
 	}
-
 	element_t *element = element_create(item);
-	if (iterator->current->previous == NULL)
+	if (current->previous)
 	{
-		iterator->current->previous = element;
-		element->next = iterator->current;
-		iterator->list->first = element;
+		current->previous->next = element;
+		element->previous = current->previous;
+		current->previous = element;
+		element->next = current;
 	}
 	else
 	{
-		iterator->current->previous->next = element;
-		element->previous = iterator->current->previous;
-		iterator->current->previous = element;
-		element->next = iterator->current;
+		current->previous = element;
+		element->next = current;
+		this->first = element;
 	}
-	iterator->list->count++;
+	this->count++;
+}
+
+static void insert_item_after(private_linked_list_t *this, element_t *current,
+							  void *item)
+{
+	if (!current)
+	{
+		this->public.insert_last(&this->public, item);
+		return;
+	}
+	element_t *element = element_create(item);
+	if (current->next)
+	{
+		current->next->previous = element;
+		element->next = current->next;
+		current->next = element;
+		element->previous = current;
+	}
+	else
+	{
+		current->next = element;
+		element->previous = current;
+		this->last = element;
+	}
+	this->count++;
+}
+
+METHOD(iterator_t, iterator_insert_before, void,
+	   private_iterator_t * iterator, void *item)
+{
+	insert_item_before(iterator->list, iterator->current, item);
 }
 
 METHOD(iterator_t, iterator_replace, status_t,
@@ -315,27 +341,7 @@ METHOD(iterator_t, iterator_replace, status_t,
 METHOD(iterator_t, iterator_insert_after, void,
 	   private_iterator_t *iterator, void *item)
 {
-	if (iterator->current == NULL)
-	{
-		iterator->list->public.insert_first(&(iterator->list->public),item);
-		return;
-	}
-
-	element_t *element = element_create(item);
-	if (iterator->current->next == NULL)
-	{
-		iterator->current->next = element;
-		element->previous = iterator->current;
-		iterator->list->last = element;
-	}
-	else
-	{
-		iterator->current->next->previous = element;
-		element->next = iterator->current->next;
-		iterator->current->next = element;
-		element->previous = iterator->current;
-	}
-	iterator->list->count++;
+	insert_item_after(iterator->list, iterator->current, item);
 }
 
 METHOD(iterator_t, iterator_destroy, void,
@@ -454,6 +460,20 @@ METHOD(linked_list_t, insert_last, void,
 		this->last = element;
 	}
 	this->count++;
+}
+
+METHOD(linked_list_t, insert_before, void,
+	   private_linked_list_t *this, private_enumerator_t *enumerator,
+	   void *item)
+{
+	insert_item_before(this, enumerator->current, item);
+}
+
+METHOD(linked_list_t, insert_after, void,
+	   private_linked_list_t *this, private_enumerator_t *enumerator,
+	   void *item)
+{
+	insert_item_after(this, enumerator->current, item);
 }
 
 METHOD(linked_list_t, get_last, status_t,
@@ -700,6 +720,8 @@ linked_list_t *linked_list_create()
 			.find_last = (void*)_find_last,
 			.insert_first = _insert_first,
 			.insert_last = _insert_last,
+			.insert_after = (void*)_insert_after,
+			.insert_before = (void*)_insert_before,
 			.remove_first = _remove_first,
 			.remove_last = _remove_last,
 			.remove = _remove_,
