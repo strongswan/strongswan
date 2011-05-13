@@ -455,6 +455,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 	return NULL;
 }
 
+#ifndef OPENSSL_NO_ENGINE
 /**
  * Login to engine with a PIN specified for a keyid
  */
@@ -496,6 +497,7 @@ static bool login(ENGINE *engine, chunk_t keyid)
 	}
 	return success;
 }
+#endif /* OPENSSL_NO_ENGINE */
 
 /**
  * See header.
