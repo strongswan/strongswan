@@ -126,6 +126,16 @@ struct linked_list_t {
 						 void *item);
 
 	/**
+	 * Replaces the item the enumerator currently points to with the given item.
+	 *
+	 * @param enumerator	enumerator with position
+	 * @param item			item value to replace current item with
+	 * @return				current item or NULL if the enumerator is at an
+	 *						invalid position
+	 */
+	void *(*replace)(linked_list_t *this, enumerator_t *enumerator, void *item);
+
+	/**
 	 * Remove an item from the list where the enumerator points to.
 	 *
 	 * @param enumerator enumerator with position
