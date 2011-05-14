@@ -396,7 +396,7 @@ METHOD(tls_t, build, status_t,
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	if (this->is_server && !this->delete_state &&
+	if (this->recs && !this->delete_state &&
 	   (!this->batch || this->fatal_error))
 	{
 		check_and_build_recommendation(this);
