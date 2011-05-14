@@ -72,8 +72,9 @@ typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
  * @param msg			message to be added
  * @param msg_len		message length
  * @param msg_type		message type
+ * @return			result code
  */
-typedef void (*tnccs_send_message_t)(tnccs_t* tncss, TNC_IMCID imc_id,
+typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tncss, TNC_IMCID imc_id,
 													 TNC_IMVID imv_id,
 									 				 TNC_BufferReference msg,
 													 TNC_UInt32 msg_len,

@@ -330,9 +330,8 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 
 	if (tnccs && send_message)
 	{
-		send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
-		return TNC_RESULT_SUCCESS;
-	 }
+		return send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
+	}
 	return TNC_RESULT_FATAL;
 }
 

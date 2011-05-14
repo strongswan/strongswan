@@ -81,12 +81,17 @@ struct private_tnccs_20_t {
 	bool request_handshake_retry;
 
 	/**
+	  * SendMessage() by IMC/IMV only allowed if flag is set
+	  */
+	bool send_msg;
+
+	/**
 	 * Set of IMV recommendations  (TNC Server only)
 	 */
 	recommendations_t *recs;
 };
 
-METHOD(tnccs_t, send_msg, void,
+METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
@@ -96,6 +101,14 @@ METHOD(tnccs_t, send_msg, void,
 	TNC_VendorID msg_vendor_id;
 	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
+
+	if (!this->send_msg)
+	{
+		DBG1(DBG_TNC, "%s %u not allowed to call SendMessage()",
+			this->is_server ? "IMV" : "IMC",
+			this->is_server ? imv_id : imc_id);
+		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
 
 	msg_sub_type =   msg_type       & TNC_SUBTYPE_ANY;
 	msg_vendor_id = (msg_type >> 8) & TNC_VENDORID_ANY;
@@ -119,6 +132,7 @@ METHOD(tnccs_t, send_msg, void,
 		pb_tnc_msg->destroy(pb_tnc_msg);
 	}
 	this->mutex->unlock(this->mutex);
+	return TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -145,6 +159,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 
 			DBG2(DBG_TNC, "handling PB-PA message type 0x%08x", msg_type);
 
+			this->send_msg = TRUE;
 			if (this->is_server)
 			{
 				charon->imvs->receive_message(charon->imvs,
@@ -155,6 +170,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 				charon->imcs->receive_message(charon->imcs,
 				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
 			}
+			this->send_msg = FALSE;
 			break;
 		}
 		case PB_MSG_ASSESSMENT_RESULT:
@@ -358,7 +374,9 @@ METHOD(tls_t, process, status_t,
 			/* Restart the measurements */
 			charon->imcs->notify_connection_change(charon->imcs,
 			this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+			this->send_msg = TRUE;
 			charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+			this->send_msg = FALSE;
 		}
 
 		enumerator = batch->create_msg_enumerator(batch);
@@ -385,6 +403,7 @@ METHOD(tls_t, process, status_t,
 			}
 		}
 
+		this->send_msg = TRUE;
 		if (this->is_server)
 		{
 			charon->imvs->batch_ending(charon->imvs, this->connection_id);
@@ -393,6 +412,7 @@ METHOD(tls_t, process, status_t,
 		{
 			charon->imcs->batch_ending(charon->imcs, this->connection_id);
 		}
+		this->send_msg = FALSE;
 	}
 
 	switch (status)
@@ -501,7 +521,9 @@ METHOD(tls_t, build, status_t,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+		this->send_msg = TRUE;
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+		this->send_msg = FALSE;
 	}
 
 	state = this->state_machine->get_state(this->state_machine);
