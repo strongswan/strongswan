@@ -1,4 +1,4 @@
-moon::cat /var/log/daemon.log::whitelist functionality enabled::YES
+moon::cat /var/log/daemon.log::whitelist functionality was already enabled::YES
 moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with RSA signature successful::YES
 moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with RSA signature successful::YES
 moon::cat /var/log/daemon.log::peer identity 'dave@strongswan.org' not whitelisted::YES
