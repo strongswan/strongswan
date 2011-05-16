@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,8 +26,8 @@
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
+#include <threading/thread_value.h>
 #include <utils/linked_list.h>
-
 
 typedef struct private_processor_t private_processor_t;
 
@@ -72,6 +73,11 @@ struct private_processor_t {
 	int prio_threads[JOB_PRIO_MAX];
 
 	/**
+	 * Priority of the job executed by a thread
+	 */
+	thread_value_t *priority;
+
+	/**
 	 * access to job lists is locked through this mutex
 	 */
 	mutex_t *mutex;
@@ -114,22 +120,13 @@ static void restart(private_processor_t *this)
 }
 
 /**
- * Data needed to decrement the working thread count of a priority class
- */
-typedef struct {
-	private_processor_t *this;
-	u_int priority;
-} decrement_data_t;
-
-/**
  * Decrement working thread count of a priority class
  */
-static void decrement_working_threads(decrement_data_t *dec)
+static void decrement_working_threads(private_processor_t *this)
 {
-	dec->this->mutex->lock(dec->this->mutex);
-	dec->this->working_threads[dec->priority]--;
-	dec->this->mutex->unlock(dec->this->mutex);
-	free(dec);
+	this->mutex->lock(this->mutex);
+	this->working_threads[(intptr_t)this->priority->get(this->priority)]--;
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -181,16 +178,11 @@ static void process_jobs(private_processor_t *this)
 			if (this->jobs[i]->remove_first(this->jobs[i],
 											(void**)&job) == SUCCESS)
 			{
-				decrement_data_t *dec;
-
 				this->working_threads[i]++;
 				this->mutex->unlock(this->mutex);
-				INIT(dec,
-					.this = this,
-					.priority = i,
-				);
+				this->priority->set(this->priority, (void*)(intptr_t)i);
 				thread_cleanup_push((thread_cleanup_t)decrement_working_threads,
-									dec);
+									this);
 				/* terminated threads are restarted to get a constant pool */
 				thread_cleanup_push((thread_cleanup_t)restart, this);
 				job->execute(job);
@@ -198,7 +190,6 @@ static void process_jobs(private_processor_t *this)
 				thread_cleanup_pop(FALSE);
 				this->mutex->lock(this->mutex);
 				this->working_threads[i]--;
-				free(dec);
 				break;
 			}
 		}
@@ -329,6 +320,7 @@ METHOD(processor_t, destroy, void,
 		current->join(current);
 	}
 	this->mutex->unlock(this->mutex);
+	this->priority->destroy(this->priority);
 	this->thread_terminated->destroy(this->thread_terminated);
 	this->job_added->destroy(this->job_added);
 	this->mutex->destroy(this->mutex);
@@ -359,6 +351,7 @@ processor_t *processor_create()
 			.destroy = _destroy,
 		},
 		.threads = linked_list_create(),
+		.priority = thread_value_create(NULL),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.job_added = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.thread_terminated = condvar_create(CONDVAR_TYPE_DEFAULT),
