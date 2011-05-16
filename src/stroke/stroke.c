@@ -393,6 +393,10 @@ static void exit_usage(char *error)
 	printf("           LEVEL is -1|0|1|2|3|4\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
+	printf("  Show extended status information:\n");
+	printf("    stroke statusall\n");
+	printf("  Show extended status information without blocking:\n");
+	printf("    stroke statusallnb\n");
 	printf("  Show list of authority and attribute certificates:\n");
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
@@ -413,6 +417,8 @@ static void exit_usage(char *error)
 	printf("    stroke purgeike\n");
 	printf("  Export credentials to the console:\n");
 	printf("    stroke exportx509 DN\n");
+	printf("  Show current memory usage:\n");
+	printf("    stroke memusage\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
