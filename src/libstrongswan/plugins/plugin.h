@@ -21,10 +21,10 @@
 #ifndef PLUGIN_H_
 #define PLUGIN_H_
 
-#include "../utils.h"
-#include <library.h>
-
 typedef struct plugin_t plugin_t;
+
+#include <library.h>
+#include <plugins/plugin_feature.h>
 
 /**
  * Interface definition of a plugin.
@@ -37,6 +37,17 @@ struct plugin_t {
 	 * @return		plugin name
 	 */
 	char* (*get_name)(plugin_t *this);
+
+	/**
+	 * Get plugin features with dependencies.
+	 *
+	 * The returned array contains features provided by the plugin and
+	 * dependencies for that feature. See plugin_feature_t for details.
+	 *
+	 * @param features	pointer receiving plugin features
+	 * @return			number of features
+	 */
+	int (*get_features)(plugin_t *this, plugin_feature_t *features[]);
 
 	/**
 	 * Try to reload plugin configuration.
