@@ -38,13 +38,50 @@ METHOD(plugin_t, get_name, char*,
 	return "hmac";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_hmac_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRF, hmac_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA1),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_MD5),
+				PLUGIN_DEPENDS(HASHER,  HASH_MD5),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_256),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA256),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_384),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA384),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_512),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA512),
+		PLUGIN_REGISTER(SIGNER, hmac_signer_create),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_96),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_128),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_160),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_MD5_96),
+				PLUGIN_DEPENDS(HASHER,  HASH_MD5),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_MD5_128),
+				PLUGIN_DEPENDS(HASHER,  HASH_MD5),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_256_128),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA256),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_256_256),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA256),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_192),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA384),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_384),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA384),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
+				PLUGIN_DEPENDS(HASHER,  HASH_SHA512),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_hmac_plugin_t *this)
 {
-	lib->crypto->remove_prf(lib->crypto,
-							(prf_constructor_t)hmac_prf_create);
-	lib->crypto->remove_signer(lib->crypto,
-							   (signer_constructor_t)hmac_signer_create);
 	free(this);
 }
 
@@ -54,74 +91,16 @@ METHOD(plugin_t, destroy, void,
 plugin_t *hmac_plugin_create()
 {
 	private_hmac_plugin_t *this;
-	hasher_t *hasher;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher)
-	{
-		hasher->destroy(hasher);
-		lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA1, get_name(this),
-						(prf_constructor_t)hmac_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_96, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_128, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA1_160, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA256);
-	if (hasher)
-	{
-		hasher->destroy(hasher);
-		lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256, get_name(this),
-						(prf_constructor_t)hmac_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-
-	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	if (hasher)
-	{
-		hasher->destroy(hasher);
-		lib->crypto->add_prf(lib->crypto, PRF_HMAC_MD5, get_name(this),
-						(prf_constructor_t)hmac_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA384);
-	if (hasher)
-	{
-		hasher->destroy(hasher);
-		lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_384, get_name(this),
-						(prf_constructor_t)hmac_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
-	if (hasher)
-	{
-		hasher->destroy(hasher);
-		lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_512, get_name(this),
-						(prf_constructor_t)hmac_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256, get_name(this),
-						(signer_constructor_t)hmac_signer_create);
-	}
 
 	return &this->public.plugin;
 }
