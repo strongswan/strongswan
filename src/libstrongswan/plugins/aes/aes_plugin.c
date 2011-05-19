@@ -37,11 +37,22 @@ METHOD(plugin_t, get_name, char*,
 	return "aes";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_aes_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CRYPTER, aes_crypter_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_aes_plugin_t *this)
 {
-	lib->crypto->remove_crypter(lib->crypto,
-								(crypter_constructor_t)aes_crypter_create);
 	free(this);
 }
 
@@ -56,14 +67,11 @@ plugin_t *aes_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
-							 (crypter_constructor_t)aes_crypter_create);
 
 	return &this->public.plugin;
 }
