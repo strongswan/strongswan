@@ -37,11 +37,23 @@ METHOD(plugin_t, get_name, char*,
 	return "sha2";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_sha2_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(HASHER, sha2_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA224),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA256),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_sha2_plugin_t *this)
 {
-	lib->crypto->remove_hasher(lib->crypto,
-							   (hasher_constructor_t)sha2_hasher_create);
 	free(this);
 }
 
@@ -56,20 +68,11 @@ plugin_t *sha2_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, get_name(this),
-							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
-							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
-							(hasher_constructor_t)sha2_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
-							(hasher_constructor_t)sha2_hasher_create);
 
 	return &this->public.plugin;
 }
