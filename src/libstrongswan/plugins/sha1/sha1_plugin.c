@@ -38,13 +38,22 @@ METHOD(plugin_t, get_name, char*,
 	return "sha1";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_sha1_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(HASHER, sha1_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
+		PLUGIN_REGISTER(PRF, sha1_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_KEYED_SHA1),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_sha1_plugin_t *this)
 {
-	lib->crypto->remove_hasher(lib->crypto,
-							   (hasher_constructor_t)sha1_hasher_create);
-	lib->crypto->remove_prf(lib->crypto,
-							   (prf_constructor_t)sha1_prf_create);
 	free(this);
 }
 
@@ -59,16 +68,11 @@ plugin_t *sha1_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
-							(hasher_constructor_t)sha1_hasher_create);
-	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1, get_name(this),
-							(prf_constructor_t)sha1_prf_create);
 
 	return &this->public.plugin;
 }
