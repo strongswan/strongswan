@@ -774,11 +774,25 @@ METHOD(ike_sa_t, add_additional_address, void,
 	this->additional_addresses->insert_last(this->additional_addresses, host);
 }
 
-METHOD(ike_sa_t, create_additional_address_iterator, iterator_t*,
+METHOD(ike_sa_t, create_additional_address_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	return this->additional_addresses->create_iterator(
-											this->additional_addresses, TRUE);
+	return this->additional_addresses->create_enumerator(
+												this->additional_addresses);
+}
+
+METHOD(ike_sa_t, remove_additional_addresses, void,
+	private_ike_sa_t *this)
+{
+	enumerator_t *enumerator = create_additional_address_enumerator(this);
+	host_t *host;
+	while (enumerator->enumerate(enumerator, (void**)&host))
+	{
+		this->additional_addresses->remove_at(this->additional_addresses,
+											  enumerator);
+		host->destroy(host);
+	}
+	enumerator->destroy(enumerator);
 }
 
 METHOD(ike_sa_t, has_mapping_changed, bool,
@@ -2114,8 +2128,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 			.has_condition = _has_condition,
 			.set_pending_updates = _set_pending_updates,
 			.get_pending_updates = _get_pending_updates,
-			.create_additional_address_iterator = _create_additional_address_iterator,
+			.create_additional_address_enumerator = _create_additional_address_enumerator,
 			.add_additional_address = _add_additional_address,
+			.remove_additional_addresses = _remove_additional_addresses,
 			.has_mapping_changed = _has_mapping_changed,
 			.retransmit = _retransmit,
 			.delete = _delete_,

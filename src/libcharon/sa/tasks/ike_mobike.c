@@ -79,24 +79,6 @@ struct private_ike_mobike_t {
 };
 
 /**
- * flush the IKE_SAs list of additional addresses
- */
-static void flush_additional_addresses(private_ike_mobike_t *this)
-{
-	iterator_t *iterator;
-	host_t *host;
-
-	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
-	while (iterator->iterate(iterator, (void**)&host))
-	{
-		iterator->remove(iterator);
-		host->destroy(host);
-	}
-	iterator->destroy(iterator);
-}
-
-
-/**
  * read notifys from message and evaluate them
  */
 static void process_payloads(private_ike_mobike_t *this, message_t *message)
@@ -152,7 +134,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			{
 				if (first)
 				{	/* an ADDITIONAL_*_ADDRESS means replace, so flush once */
-					flush_additional_addresses(this);
+					this->ike_sa->remove_additional_addresses(this->ike_sa);
 					first = FALSE;
 				}
 				data = notify->get_notification_data(notify);
@@ -169,7 +151,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			}
 			case NO_ADDITIONAL_ADDRESSES:
 			{
-				flush_additional_addresses(this);
+				this->ike_sa->remove_additional_addresses(this->ike_sa);
 				this->addresses_updated = TRUE;
 				break;
 			}
@@ -296,7 +278,7 @@ METHOD(ike_mobike_t, transmit, void,
 	   private_ike_mobike_t *this, packet_t *packet)
 {
 	host_t *me, *other, *me_old, *other_old;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	ike_cfg_t *ike_cfg;
 	packet_t *copy;
 
@@ -320,8 +302,8 @@ METHOD(ike_mobike_t, transmit, void,
 		charon->sender->send(charon->sender, copy);
 	}
 
-	iterator = this->ike_sa->create_additional_address_iterator(this->ike_sa);
-	while (iterator->iterate(iterator, (void**)&other))
+	enumerator = this->ike_sa->create_additional_address_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&other))
 	{
 		me = hydra->kernel_interface->get_source_addr(
 										hydra->kernel_interface, other, NULL);
@@ -343,7 +325,7 @@ METHOD(ike_mobike_t, transmit, void,
 			charon->sender->send(charon->sender, copy);
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 METHOD(task_t, build_i, status_t,

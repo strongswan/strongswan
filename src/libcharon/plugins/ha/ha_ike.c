@@ -143,7 +143,7 @@ METHOD(listener_t, ike_updown, bool,
 
 	if (up)
 	{
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		peer_cfg_t *peer_cfg;
 		u_int32_t extension, condition;
 		host_t *addr;
@@ -180,12 +180,12 @@ METHOD(listener_t, ike_updown, bool,
 		m->add_attribute(m, HA_CONDITIONS, condition);
 		m->add_attribute(m, HA_EXTENSIONS, extension);
 		m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
-		iterator = ike_sa->create_additional_address_iterator(ike_sa);
-		while (iterator->iterate(iterator, (void**)&addr))
+		enumerator = ike_sa->create_additional_address_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, (void**)&addr))
 		{
 			m->add_attribute(m, HA_ADDITIONAL_ADDR, addr);
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 	else
 	{

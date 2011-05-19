@@ -472,11 +472,16 @@ struct ike_sa_t {
 	void (*add_additional_address)(ike_sa_t *this, host_t *host);
 
 	/**
-	 * Create an iterator over all additional addresses of the peer.
+	 * Create an enumerator over all additional addresses of the peer.
 	 *
-	 * @return				iterator over addresses
+	 * @return				enumerator over addresses
 	 */
-	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
+	enumerator_t* (*create_additional_address_enumerator)(ike_sa_t *this);
+
+	/**
+	 * Remove all additional addresses of the peer.
+	 */
+	void (*remove_additional_addresses)(ike_sa_t *this);
 
 	/**
 	 * Check if mappings have changed on a NAT for our source address.
