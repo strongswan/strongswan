@@ -85,6 +85,13 @@ struct linked_list_t {
 	enumerator_t* (*create_enumerator)(linked_list_t *this);
 
 	/**
+	 * Resets the enumerator's current position to the beginning of the list.
+	 *
+	 * @param enumerator	enumerator to reset
+	 */
+	void (*reset_enumerator)(linked_list_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Inserts a new item at the beginning of the list.
 	 *
 	 * @param item		item value to insert in list

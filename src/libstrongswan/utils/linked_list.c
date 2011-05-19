@@ -175,6 +175,12 @@ METHOD(linked_list_t, create_enumerator, enumerator_t*,
 	return &enumerator->enumerator;
 }
 
+METHOD(linked_list_t, reset_enumerator, void,
+	   private_linked_list_t *this, private_enumerator_t *enumerator)
+{
+	enumerator->current = NULL;
+}
+
 METHOD(iterator_t, iterator_get_count, int,
 	   private_iterator_t *this)
 {
@@ -727,6 +733,7 @@ linked_list_t *linked_list_create()
 			.get_count = _get_count,
 			.create_iterator = _create_iterator,
 			.create_enumerator = _create_enumerator,
+			.reset_enumerator = (void*)_reset_enumerator,
 			.get_first = _get_first,
 			.get_last = _get_last,
 			.find_first = (void*)_find_first,
