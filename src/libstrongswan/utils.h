@@ -121,8 +121,9 @@
 /**
  * Object allocation/initialization macro, using designated initializer.
  */
-#define INIT(this, ...) { (this) = malloc(sizeof(*this)); \
-						  *(this) = (typeof(*this)){ __VA_ARGS__ }; }
+#define INIT(this, ...) ({ (this) = malloc(sizeof(*(this))); \
+						   *(this) = (typeof(*(this))){ __VA_ARGS__ }; \
+						   (this); })
 
 /**
  * Method declaration/definition macro, providing private and public interface.
