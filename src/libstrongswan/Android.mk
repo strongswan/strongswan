@@ -64,7 +64,6 @@ threading/lock_profiler.h \
 utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
-utils/iterator.h \
 utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \

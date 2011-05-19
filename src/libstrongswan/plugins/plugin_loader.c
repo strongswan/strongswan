@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include <debug.h>
+#include <library.h>
 #include <integrity_checker.h>
 #include <utils/linked_list.h>
 #include <plugins/plugin.h>

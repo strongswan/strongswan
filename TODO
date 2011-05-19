@@ -21,7 +21,6 @@ Stroke interface
 Misc
 ----
 - Address pool/backend for virtual IP assignement
-- replace iterator by enumerator
 
 libstrongswan stuff
 -------------------

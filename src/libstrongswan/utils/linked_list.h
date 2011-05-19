@@ -25,7 +25,6 @@
 
 typedef struct linked_list_t linked_list_t;
 
-#include <utils/iterator.h>
 #include <utils/enumerator.h>
 
 /**
@@ -60,19 +59,6 @@ struct linked_list_t {
 	 * @return			number of items in list
 	 */
 	int (*get_count) (linked_list_t *this);
-
-	/**
-	 * Creates a iterator for the given list.
-	 *
-	 * @warning Created iterator_t object has to get destroyed by the caller.
-	 *
-	 * @deprecated Iterator is obsolete and will disappear, it is too
-	 * complicated to implement. Use enumerator instead.
-	 *
-	 * @param forward	iterator direction (TRUE: front to end)
-	 * @return			new iterator_t object
-	 */
-	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
 
 	/**
 	 * Create an enumerator over the list.
