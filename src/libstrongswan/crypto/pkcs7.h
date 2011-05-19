@@ -30,7 +30,7 @@ typedef struct pkcs7_t pkcs7_t;
 #include <credentials/keys/private_key.h>
 #include <crypto/pkcs9.h>
 #include <crypto/crypters/crypter.h>
-#include <utils/iterator.h>
+#include <utils/enumerator.h>
 
 /**
  * PKCS#7 contentInfo object.
@@ -96,11 +96,11 @@ struct pkcs7_t {
 	chunk_t (*get_contentInfo) (pkcs7_t *this);
 
 	/**
-	 * Create an iterator for the certificates.
+	 * Create an enumerator for the certificates.
 	 *
-	 * @return				iterator for the certificates
+	 * @return				enumerator for the certificates
 	 */
-	iterator_t *(*create_certificate_iterator) (pkcs7_t *this);
+	enumerator_t *(*create_certificate_enumerator) (pkcs7_t *this);
 
 	/**
 	 * Add a certificate.

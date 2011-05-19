@@ -669,11 +669,11 @@ static chunk_t get_contentInfo(private_pkcs7_t *this)
 }
 
 /**
- * Implements pkcs7_t.create_certificate_iterator
+ * Implements pkcs7_t.create_certificate_enumerator
  */
-static iterator_t *create_certificate_iterator(const private_pkcs7_t *this)
+static enumerator_t *create_certificate_enumerator(const private_pkcs7_t *this)
 {
-	return this->certs->create_iterator(this->certs, TRUE);
+	return this->certs->create_enumerator(this->certs);
 }
 
 /**
@@ -1004,7 +1004,7 @@ static private_pkcs7_t *pkcs7_create_empty(void)
 	this->public.parse_envelopedData = (bool (*) (pkcs7_t*,chunk_t,rsa_private_key_t*))parse_envelopedData;
 	this->public.get_data = (chunk_t (*) (pkcs7_t*))get_data;
 	this->public.get_contentInfo = (chunk_t (*) (pkcs7_t*))get_contentInfo;
-	this->public.create_certificate_iterator = (iterator_t* (*) (pkcs7_t*))create_certificate_iterator;
+	this->public.create_certificate_enumerator = (enumerator_t* (*) (pkcs7_t*))create_certificate_enumerator;
 	this->public.set_certificate = (void (*) (pkcs7_t*,x509_t*))set_certificate;
 	this->public.set_attributes = (void (*) (pkcs7_t*,pkcs9_t*))set_attributes;
 	this->public.build_envelopedData = (bool (*) (pkcs7_t*,x509_t*,encryption_algorithm_t))build_envelopedData;
