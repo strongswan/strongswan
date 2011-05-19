@@ -197,8 +197,7 @@ struct certificate_t {
 /**
  * Generic check if a given certificate is newer than another.
  *
- * @param this			first certificate to check
- * @param other			second certificate
+ * @param other			certificate to compare to
  * @return				TRUE if this newer than other
  */
 bool certificate_is_newer(certificate_t *this, certificate_t *other);

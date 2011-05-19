@@ -133,8 +133,7 @@ struct private_key_t {
 /**
  * Generic private key equals() implementation, usable by implementors.
  *
- * @param this			first key to compare
- * @param other			second key to compare
+ * @param other			key to compare
  * @return				TRUE if this is equal to other
  */
 bool private_key_equals(private_key_t *this, private_key_t *other);
@@ -151,7 +150,6 @@ bool private_key_belongs_to(private_key_t *private, public_key_t *public);
 /**
  * Generic private key has_fingerprint() implementation, usable by implementors.
  *
- * @param this			key to check fingerprint
  * @param fingerprint	fingerprint to check
  * @return				TRUE if key has given fingerprint
  */

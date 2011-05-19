@@ -68,7 +68,6 @@ struct iterator_t {
 	 *
 	 * The iterator position is not changed after inserting.
 	 *
-	 * @param this 		calling iterator
 	 * @param item 		value to insert in list
 	 */
 	void (*insert_after) (iterator_t *this, void *item);
@@ -78,7 +77,6 @@ struct iterator_t {
 	 *
 	 * The iterator position is not changed after replacing.
 	 *
-	 * @param this 		calling iterator
 	 * @param old		old value will be written here(can be NULL)
 	 * @param new		new value
 	 * @return			SUCCESS, FAILED if iterator is on an invalid position

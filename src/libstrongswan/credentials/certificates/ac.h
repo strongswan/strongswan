@@ -79,7 +79,6 @@ struct ac_t {
 	/**
 	 * @brief Checks if two attribute certificates belong to the same holder
 	 *
-	 * @param this			calling attribute certificate
 	 * @param that			other attribute certificate
 	 * @return				TRUE if same holder
 	 */

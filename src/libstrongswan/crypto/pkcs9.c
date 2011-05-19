@@ -68,8 +68,6 @@ struct attribute_t {
 
 	/**
 	 * Destroys the attribute.
-	 *
-	 * @param this			attribute to destroy
 	 */
 	void (*destroy) (attribute_t *this);
 

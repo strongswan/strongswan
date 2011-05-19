@@ -62,8 +62,6 @@ struct session_t {
 
 	/**
 	 * Destroy the session_t.
-	 *
-	 * @param this 			calling object
 	 */
 	void (*destroy) (session_t *this);
 };
