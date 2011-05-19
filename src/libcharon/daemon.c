@@ -322,9 +322,7 @@ void libcharon_deinit()
  */
 bool libcharon_init()
 {
-	private_daemon_t *this;
-
-	this = daemon_create();
+	daemon_create();
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());

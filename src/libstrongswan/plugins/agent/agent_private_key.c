@@ -161,7 +161,7 @@ static int open_connection(char *path)
  */
 static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 {
-	int len, count;
+	int len;
 	char buf[2048];
 	chunk_t blob, key, type, n;
 
@@ -184,7 +184,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		DBG1(DBG_LIB, "received invalid ssh-agent identity response");
 		return FALSE;
 	}
-	count = read_uint32(&blob);
+	read_uint32(&blob);
 
 	while (blob.len)
 	{

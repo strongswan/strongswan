@@ -6,7 +6,6 @@
  */
 int main(int argc, char *argv[])
 {
-	int end = 0;
 	unsigned char byte;
 
 	printf("X'");
@@ -14,7 +13,6 @@ int main(int argc, char *argv[])
 	{
 		if (fread(&byte, 1, 1, stdin) != 1)
 		{
-			end = 1;
 			break;
 		}
 		printf("%02x", (unsigned int)byte);

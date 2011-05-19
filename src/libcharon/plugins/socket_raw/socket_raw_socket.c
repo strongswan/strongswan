@@ -435,7 +435,6 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 	int on = TRUE;
 	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
-	u_int sol;
 	int skt;
 
 	memset(&addr, 0, sizeof(addr));
@@ -448,7 +447,6 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 			sin->sin_family = AF_INET;
 			sin->sin_addr.s_addr = INADDR_ANY;
 			sin->sin_port = htons(port);
-			sol = SOL_IP;
 			break;
 		}
 		case AF_INET6:
@@ -457,7 +455,6 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 			sin6->sin6_family = AF_INET6;
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
 			sin6->sin6_port = htons(port);
-			sol = SOL_IPV6;
 			break;
 		}
 		default:
@@ -514,18 +511,16 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 {
 	int skt;
 	int on = TRUE;
-	u_int proto_offset, ip_len, sol, udp_header, ike_header;
+	u_int ip_len, sol, udp_header, ike_header;
 
 	/* precalculate constants depending on address family */
 	switch (family)
 	{
 		case AF_INET:
-			proto_offset = IP_PROTO_OFFSET;
 			ip_len = IP_LEN;
 			sol = SOL_IP;
 			break;
 		case AF_INET6:
-			proto_offset = IP6_PROTO_OFFSET;
 			ip_len = 0; /* IPv6 raw sockets contain no IP header */
 			sol = SOL_IPV6;
 			break;

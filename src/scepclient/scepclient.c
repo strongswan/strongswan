@@ -333,7 +333,6 @@ int main(int argc, char **argv)
 	char *file_out_pkcs7     = DEFAULT_FILENAME_PKCS7;
 	char *file_out_cert_self = DEFAULT_FILENAME_CERT_SELF;
 	char *file_out_cert      = DEFAULT_FILENAME_CERT;
-	char *file_out_prefix_cacert = DEFAULT_FILENAME_PREFIX_CACERT;
 
 	/* by default user certificate is requested */
 	bool request_ca_certificate = FALSE;
@@ -540,8 +539,6 @@ int main(int argc, char **argv)
 				else if (strcaseeq("cacert", optarg))
 				{
 					request_ca_certificate = TRUE;
-					if (filename)
-						file_out_prefix_cacert = filename;
 				}
 				else
 				{

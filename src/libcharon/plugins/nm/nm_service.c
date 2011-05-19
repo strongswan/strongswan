@@ -82,12 +82,11 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 {
 	GValue *val;
 	GHashTable *config;
-	host_t *me, *other;
+	host_t *me;
 	nm_handler_t *handler;
 
 	config = g_hash_table_new(g_str_hash, g_str_equal);
 	me = ike_sa->get_my_host(ike_sa);
-	other = ike_sa->get_other_host(ike_sa);
 	handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
 
 	/* NM requires a tundev, but netkey does not use one. Passing an invalid

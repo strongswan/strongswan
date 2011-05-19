@@ -90,7 +90,7 @@ void af_alg_prf_probe(char *plugin)
 /**
  * Get the kernel algorithm string and block size for our identifier
  */
-static size_t lookup_alg(integrity_algorithm_t algo, char **name, bool *xcbc)
+static size_t lookup_alg(pseudo_random_function_t algo, char **name, bool *xcbc)
 {
 	int i;
 

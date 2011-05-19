@@ -814,7 +814,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
 	char *message, *token, *msg = NULL;
-	int message_len, error = 0, retriable;
+	int message_len, error = 0;
 	chunk_t challenge = chunk_empty;
 
 	data = in->get_data(in);
@@ -842,8 +842,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		}
 		else if (strneq(token, "R=", 2))
 		{
-			token += 2;
-			retriable = atoi(token);
+			/* ignore retriable */
 		}
 		else if (strneq(token, "C=", 2))
 		{
@@ -860,9 +859,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		}
 		else if (strneq(token, "V=", 2))
 		{
-			int version;
-			token += 2;
-			version = atoi(token);
+			/* ignore version */
 		}
 		else if (strneq(token, "M=", 2))
 		{

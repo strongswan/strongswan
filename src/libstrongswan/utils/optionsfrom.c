@@ -67,7 +67,6 @@ METHOD(options_t, from, bool,
 	int newargc;
 	int next;			/* place for next argument */
 	char **newargv;
-	size_t bytes;
 	chunk_t src, line, token;
 	bool good = TRUE;
 	int linepos = 0;
@@ -99,7 +98,14 @@ METHOD(options_t, from, bool,
 	src.ptr = this->buffers[this->nuses] = malloc(src.len + 1);
 
 	/* read the whole file into a chunk */
-	bytes = fread(src.ptr, 1, src.len, fd);
+	if (fread(src.ptr, 1, src.len, fd) != src.len)
+	{
+		DBG1(DBG_LIB, "optionsfrom: unable to read file '%s': %s",
+			 filename, strerror(errno));
+		free(src.ptr);
+		fclose(fd);
+		return FALSE;
+	}
 	fclose(fd);
 
 	if (this->room)

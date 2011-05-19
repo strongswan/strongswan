@@ -233,7 +233,6 @@ int main (int argc, char **argv)
 
 	struct stat stb;
 
-	char *err = NULL;
 	int i;
 	int id = 1;
 	struct timeval tv;
@@ -495,7 +494,6 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_UPDATE)
 		{
-			err = NULL;
 			DBG(DBG_CONTROL,
 				DBG_log("Reloading config...")
 			   );
