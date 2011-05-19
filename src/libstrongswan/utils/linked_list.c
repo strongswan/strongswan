@@ -475,13 +475,6 @@ METHOD(linked_list_t, insert_before, void,
 	insert_item_before(this, enumerator->current, item);
 }
 
-METHOD(linked_list_t, insert_after, void,
-	   private_linked_list_t *this, private_enumerator_t *enumerator,
-	   void *item)
-{
-	insert_item_after(this, enumerator->current, item);
-}
-
 METHOD(linked_list_t, replace, void*,
 	   private_linked_list_t *this, private_enumerator_t *enumerator,
 	   void *item)
@@ -740,7 +733,6 @@ linked_list_t *linked_list_create()
 			.find_last = (void*)_find_last,
 			.insert_first = _insert_first,
 			.insert_last = _insert_last,
-			.insert_after = (void*)_insert_after,
 			.insert_before = (void*)_insert_before,
 			.replace = (void*)_replace,
 			.remove_first = _remove_first,

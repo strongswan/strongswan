@@ -77,8 +77,8 @@ struct linked_list_t {
 	/**
 	 * Create an enumerator over the list.
 	 *
-	 * The enumerator is a "lightweight" iterator. It only has two methods
-	 * and should therefore be much easier to implement.
+	 * @note The enumerator's position is invalid before the first call
+	 * to enumerate().
 	 *
 	 * @return			enumerator over list items
 	 */
@@ -109,28 +109,17 @@ struct linked_list_t {
 	/**
 	 * Inserts a new item before the item the enumerator currently points to.
 	 *
+	 * If the enumerator's position is invalid, e.g. at the end of the list,
+	 * the item is inserted last. This is helpful when inserting items into a
+	 * sorted list.
+	 *
 	 * @note The position of the enumerator is not changed.
-	 * @note If the enumerator's position is invalid, the item is inserted last.
 	 *
 	 * @param enumerator	enumerator with position
 	 * @param item			item value to insert in list
 	 */
 	void (*insert_before)(linked_list_t *this, enumerator_t *enumerator,
 						  void *item);
-
-	/**
-	 * Inserts a new item after the item the enumerator currently points to.
-	 *
-	 * @note The position of the enumerator is not changed (thus the next item
-	 * the enumerator returns will be the inserted item).
-	 *
-	 * @note If the enumerator's position is invalid, the item is inserted last.
-	 *
-	 * @param enumerator	enumerator with position
-	 * @param item			item value to insert in list
-	 */
-	void (*insert_after)(linked_list_t *this, enumerator_t *enumerator,
-						 void *item);
 
 	/**
 	 * Replaces the item the enumerator currently points to with the given item.
