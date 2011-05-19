@@ -37,6 +37,17 @@ METHOD(plugin_t, get_name, char*,
 	return "md5";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_md5_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(HASHER, md5_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_MD5),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_md5_plugin_t *this)
 {
@@ -56,14 +67,11 @@ plugin_t *md5_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_hasher(lib->crypto, HASH_MD5, get_name(this),
-							(hasher_constructor_t)md5_hasher_create);
 
 	return &this->public.plugin;
 }
