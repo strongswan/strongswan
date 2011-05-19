@@ -49,11 +49,18 @@ enum db_type_t {
  * Database implementation type.
  */
 enum db_driver_t {
+	/** matches to other databases */
+	DB_ANY = 0,
 	/** SQLite database */
 	DB_SQLITE,
 	/** MySQL database */
 	DB_MYSQL,
 };
+
+/**
+ * Names for db_driver_t
+ */
+extern enum_name_t *db_driver_names;
 
 /**
  * Interface for a database implementation.

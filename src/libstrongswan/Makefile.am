@@ -45,8 +45,8 @@ credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/sets/mem_cred.c credentials/sets/mem_cred.h \
 credentials/sets/callback_cred.c credentials/sets/callback_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
-credentials/cert_validator.h \
-database/database.h database/database_factory.h database/database_factory.c \
+credentials/cert_validator.h database/database.h database/database.c \
+database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
 pen/pen.h pen/pen.c \
