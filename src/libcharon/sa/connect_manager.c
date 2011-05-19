@@ -550,26 +550,15 @@ static status_t endpoints_contain(linked_list_t *endpoints, host_t *host,
  */
 static void insert_pair_by_priority(linked_list_t *pairs, endpoint_pair_t *pair)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator = pairs->create_enumerator(pairs);
 	endpoint_pair_t *current;
-	bool inserted = FALSE;
-
-	iterator = pairs->create_iterator(pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	while (enumerator->enumerate(enumerator, (void**)&current) &&
+		   current->priority >= pair->priority)
 	{
-		if (current->priority < pair->priority)
-		{
-			iterator->insert_before(iterator, pair);
-			inserted = TRUE;
-			break;
-		}
+		continue;
 	}
-	iterator->destroy(iterator);
-
-	if (!inserted)
-	{
-		pairs->insert_last(pairs, pair);
-	}
+	pairs->insert_before(pairs, enumerator, pair);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -679,17 +668,17 @@ static void print_checklist(check_list_t *checklist)
  */
 static void prune_pairs(linked_list_t *pairs)
 {
-	iterator_t *iterator, *search;
+	enumerator_t *enumerator, *search;
 	endpoint_pair_t *current, *other;
 	u_int32_t id = 0;
 
-	iterator = pairs->create_iterator(pairs, TRUE);
-	search = pairs->create_iterator(pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = pairs->create_enumerator(pairs);
+	search = pairs->create_enumerator(pairs);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		current->id = ++id;
 
-		while (search->iterate(search, (void**)&other))
+		while (search->enumerate(search, (void**)&other))
 		{
 			if (current == other)
 			{
@@ -705,14 +694,14 @@ static void prune_pairs(linked_list_t *pairs)
 				 * 'current', remove it */
 				DBG1(DBG_IKE, "pruning endpoint pair %#H - %#H with priority %d",
 					 other->local, other->remote, other->priority);
-				search->remove(search);
+				pairs->remove_at(pairs, search);
 				endpoint_pair_destroy(other);
 			}
 		}
-		search->reset(search);
+		pairs->reset_enumerator(pairs, search);
 	}
 	search->destroy(search);
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

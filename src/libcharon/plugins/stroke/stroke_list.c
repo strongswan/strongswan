@@ -628,35 +628,30 @@ static linked_list_t* create_unique_cert_list(certificate_type_t type)
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
-		iterator_t *iterator = list->create_iterator(list, TRUE);
+		enumerator_t *added = list->create_enumerator(list);
 		identification_t *issuer = cert->get_issuer(cert);
-		bool previous_same, same = FALSE, last = TRUE;
+		bool previous_same, same = FALSE, found = FALSE;
 		certificate_t *list_cert;
 
-		while (iterator->iterate(iterator, (void**)&list_cert))
+		while (added->enumerate(added, (void**)&list_cert))
 		{
-			/* exit if we have a duplicate? */
 			if (list_cert->equals(list_cert, cert))
-			{
-				last = FALSE;
+			{	/* stop if we found a duplicate*/
+				found = TRUE;
 				break;
 			}
-			/* group certificates with same issuer */
 			previous_same = same;
 			same = list_cert->has_issuer(list_cert, issuer);
 			if (previous_same && !same)
-			{
-				iterator->insert_before(iterator, (void *)cert->get_ref(cert));
-				last = FALSE;
+			{	/* group certificates with same issuer */
 				break;
 			}
 		}
-		iterator->destroy(iterator);
-
-		if (last)
+		if (!found)
 		{
-			list->insert_last(list, (void *)cert->get_ref(cert));
+			list->insert_before(list, added, cert->get_ref(cert));
 		}
+		added->destroy(added);
 	}
 	enumerator->destroy(enumerator);
 	return list;

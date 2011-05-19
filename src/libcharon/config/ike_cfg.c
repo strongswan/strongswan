@@ -138,26 +138,26 @@ METHOD(ike_cfg_t, get_proposals, linked_list_t*,
 METHOD(ike_cfg_t, select_proposal, proposal_t*,
 	private_ike_cfg_t *this, linked_list_t *proposals, bool private)
 {
-	iterator_t *stored_iter, *supplied_iter;
+	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected;
 
-	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
-	supplied_iter = proposals->create_iterator(proposals, TRUE);
+	stored_enum = this->proposals->create_enumerator(this->proposals);
+	supplied_enum = proposals->create_enumerator(proposals);
 
 
 	/* compare all stored proposals with all supplied. Stored ones are preferred.*/
-	while (stored_iter->iterate(stored_iter, (void**)&stored))
+	while (stored_enum->enumerate(stored_enum, (void**)&stored))
 	{
-		supplied_iter->reset(supplied_iter);
+		proposals->reset_enumerator(proposals, supplied_enum);
 
-		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
+		while (supplied_enum->enumerate(supplied_enum, (void**)&supplied))
 		{
 			selected = stored->select(stored, supplied, private);
 			if (selected)
 			{
 				/* they match, return */
-				stored_iter->destroy(stored_iter);
-				supplied_iter->destroy(supplied_iter);
+				stored_enum->destroy(stored_enum);
+				supplied_enum->destroy(supplied_enum);
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
 				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
 				DBG2(DBG_CFG, "selected proposal: %P", selected);
@@ -166,8 +166,8 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 		}
 	}
 	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
-	stored_iter->destroy(stored_iter);
-	supplied_iter->destroy(supplied_iter);
+	stored_enum->destroy(stored_enum);
+	supplied_enum->destroy(supplied_enum);
 	DBG1(DBG_CFG, "received proposals: %#P", proposals);
 	DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
 

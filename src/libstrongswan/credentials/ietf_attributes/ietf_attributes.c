@@ -410,34 +410,24 @@ static void ietf_attributes_add(private_ietf_attributes_t *this,
 								ietf_attr_t *attr)
 {
 	ietf_attr_t *current_attr;
-	bool found = FALSE;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
+	int cmp = -1;
 
-	iterator = this->list->create_iterator(this->list, TRUE);
-	while (iterator->iterate(iterator, (void **)&current_attr))
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, (void **)&current_attr) &&
+		  (cmp = attr->compare(attr, current_attr)) > 0)
 	{
-		int cmp = attr->compare(attr, current_attr);
-
-		if (cmp > 0)
-		{
-			 continue;
-		}
-		if (cmp == 0)
-		{
-			attr->destroy(attr);
-		}
-		else
-		{
-			iterator->insert_before(iterator, attr);
-		}
-		found = TRUE;
-		break;
+		continue;
 	}
-	iterator->destroy(iterator);
-	if (!found)
+	if (cmp == 0)
 	{
-		this->list->insert_last(this->list, attr);
+		attr->destroy(attr);
 	}
+	else
+	{	/* the enumerator either points to the end or to the attribute > attr */
+		this->list->insert_before(this->list, enumerator, attr);
+	}
+	enumerator->destroy(enumerator);
 }
 
 /*
