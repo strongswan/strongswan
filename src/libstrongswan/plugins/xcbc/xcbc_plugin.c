@@ -38,13 +38,28 @@ METHOD(plugin_t, get_name, char*,
 	return "xcbc";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_xcbc_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRF, xcbc_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_AES128_XCBC),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(PRF, PRF_CAMELLIA128_XCBC),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 16),
+		PLUGIN_REGISTER(SIGNER, xcbc_signer_create),
+			PLUGIN_PROVIDE(SIGNER, AUTH_CAMELLIA_XCBC_96),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 16),
+			PLUGIN_PROVIDE(SIGNER, AUTH_AES_XCBC_96),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_xcbc_plugin_t *this)
 {
-	lib->crypto->remove_prf(lib->crypto,
-					(prf_constructor_t)xcbc_prf_create);
-	lib->crypto->remove_signer(lib->crypto,
-					(signer_constructor_t)xcbc_signer_create);
 	free(this);
 }
 
@@ -54,36 +69,17 @@ METHOD(plugin_t, destroy, void,
 plugin_t *xcbc_plugin_create()
 {
 	private_xcbc_plugin_t *this;
-	crypter_t *crypter;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
-	if (crypter)
-	{
-		crypter->destroy(crypter);
-		lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC, get_name(this),
-						(prf_constructor_t)xcbc_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96, get_name(this),
-						(signer_constructor_t)xcbc_signer_create);
-	}
-	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 16);
-	if (crypter)
-	{
-		crypter->destroy(crypter);
-		lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC, get_name(this),
-						(prf_constructor_t)xcbc_prf_create);
-		lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96, get_name(this),
-						(signer_constructor_t)xcbc_signer_create);
-	}
 	return &this->public.plugin;
 }
 
