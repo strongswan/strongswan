@@ -62,7 +62,7 @@ struct private_traffic_selector_t {
 	bool dynamic;
 
 	/**
-	 * subnet size in CIDR notation, 255 means a non-subnet address range 
+	 * subnet size in CIDR notation, 255 means a non-subnet address range
 	 */
 	u_int8_t netbits;
 
@@ -130,12 +130,12 @@ static void calc_range(private_traffic_selector_t *this, u_int8_t netbits)
 static u_int8_t calc_netbits(private_traffic_selector_t *this)
 {
 	int byte, bit;
-	u_int8_t netbits; 
+	u_int8_t netbits;
 	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
 	bool prefix = TRUE;
-	
+
 	/* a perfect match results in a single address with a /32 or /128 netmask */
-	netbits = (size * 8); 
+	netbits = (size * 8);
 	this->netbits = netbits;
 
 	/* go through all bits of the addresses, beginning in the front.
@@ -153,7 +153,7 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 				{
 					/* store the common prefix which might be a true subnet */
 					netbits = (7 - bit) + (byte * 8);
-					this->netbits = netbits; 
+					this->netbits = netbits;
 					prefix = FALSE;
 				}
 			}
@@ -165,7 +165,7 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 					return netbits;  /* return a pseudo subnet */
 
 				}
-			}					
+			}
 		}
 	}
 	return netbits;  /* return a true subnet */
@@ -184,7 +184,7 @@ int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec
 {
 	private_traffic_selector_t *this = *((private_traffic_selector_t**)(args[0]));
 	linked_list_t *list = *((linked_list_t**)(args[0]));
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	char from_str[INET6_ADDRSTRLEN] = "";
 	char to_str[INET6_ADDRSTRLEN] = "";
 	char *serv_proto = NULL;
@@ -200,13 +200,13 @@ int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec
 
 	if (spec->hash)
 	{
-		iterator = list->create_iterator(list, TRUE);
-		while (iterator->iterate(iterator, (void**)&this))
+		enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, (void**)&this))
 		{
 			/* call recursivly */
 			written += print_in_hook(dst, len, "%R ", this);
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 		return written;
 	}
 

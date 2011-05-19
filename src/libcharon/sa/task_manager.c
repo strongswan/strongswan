@@ -175,23 +175,23 @@ static void flush(private_task_manager_t *this)
  */
 static bool activate_task(private_task_manager_t *this, task_type_t type)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	task_t *task;
 	bool found = FALSE;
 
-	iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
-	while (iterator->iterate(iterator, (void**)&task))
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, (void**)&task))
 	{
 		if (task->get_type(task) == type)
 		{
 			DBG2(DBG_IKE, "  activating %N task", task_type_names, type);
-			iterator->remove(iterator);
+			this->queued_tasks->remove_at(this->queued_tasks, enumerator);
 			this->active_tasks->insert_last(this->active_tasks, task);
 			found = TRUE;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return found;
 }
 
@@ -202,14 +202,14 @@ METHOD(task_manager_t, retransmit, status_t,
 	{
 		u_int32_t timeout;
 		job_t *job;
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		packet_t *packet;
 		task_t *task;
 		ike_mobike_t *mobike = NULL;
 
 		/* check if we are retransmitting a MOBIKE routability check */
-		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-		while (iterator->iterate(iterator, (void*)&task))
+		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, (void*)&task))
 		{
 			if (task->get_type(task) == IKE_MOBIKE)
 			{
@@ -221,7 +221,7 @@ METHOD(task_manager_t, retransmit, status_t,
 				break;
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 
 		if (mobike == NULL)
 		{
@@ -282,7 +282,7 @@ METHOD(task_manager_t, retransmit, status_t,
 METHOD(task_manager_t, initiate, status_t,
 	private_task_manager_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
@@ -387,8 +387,8 @@ METHOD(task_manager_t, initiate, status_t,
 	else
 	{
 		DBG2(DBG_IKE, "reinitiating already active tasks");
-		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-		while (iterator->iterate(iterator, (void**)&task))
+		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, (void**)&task))
 		{
 			DBG2(DBG_IKE, "  %N task", task_type_names, task->get_type(task));
 			switch (task->get_type(task))
@@ -411,7 +411,7 @@ METHOD(task_manager_t, initiate, status_t,
 			}
 			break;
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 
 	if (exchange == 0)
@@ -432,14 +432,14 @@ METHOD(task_manager_t, initiate, status_t,
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
 
-	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-	while (iterator->iterate(iterator, (void*)&task))
+	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->build(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				iterator->remove(iterator);
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -454,13 +454,13 @@ METHOD(task_manager_t, initiate, status_t,
 				/* FALL */
 			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				message->destroy(message);
 				flush(this);
 				return DESTROY_ME;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
@@ -487,7 +487,7 @@ METHOD(task_manager_t, initiate, status_t,
 static status_t process_response(private_task_manager_t *this,
 								 message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	task_t *task;
 
 	if (message->get_exchange_type(message) != this->initiating.type)
@@ -501,14 +501,14 @@ static status_t process_response(private_task_manager_t *this,
 
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
-	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-	while (iterator->iterate(iterator, (void*)&task))
+	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->process(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				iterator->remove(iterator);
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -520,19 +520,19 @@ static status_t process_response(private_task_manager_t *this,
 				/* FALL */
 			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
-				iterator->remove(iterator);
-				iterator->destroy(iterator);
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				enumerator->destroy(enumerator);
 				task->destroy(task);
 				return DESTROY_ME;
 		}
 		if (this->reset)
 		{	/* start all over again if we were reset */
 			this->reset = FALSE;
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return initiate(this);
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
@@ -547,7 +547,7 @@ static status_t process_response(private_task_manager_t *this,
  */
 static bool handle_collisions(private_task_manager_t *this, task_t *task)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	task_t *active;
 	task_type_t type;
 
@@ -558,8 +558,8 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
 	{
 		/* find an exchange collision, and notify these tasks */
-		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
-		while (iterator->iterate(iterator, (void**)&active))
+		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, (void**)&active))
 		{
 			switch (active->get_type(active))
 			{
@@ -583,10 +583,10 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 				default:
 					continue;
 			}
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return TRUE;
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 	return FALSE;
 }
@@ -596,7 +596,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
  */
 static status_t build_response(private_task_manager_t *this, message_t *request)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
@@ -614,14 +614,14 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
 
-	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
-	while (iterator->iterate(iterator, (void*)&task))
+	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->build(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				iterator->remove(iterator);
+				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				if (!handle_collisions(this, task))
 				{
 					task->destroy(task);
@@ -631,7 +631,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				/* processed, but task needs another exchange */
 				if (handle_collisions(this, task))
 				{
-					iterator->remove(iterator);
+					this->passive_tasks->remove_at(this->passive_tasks,
+												   enumerator);
 				}
 				break;
 			case FAILED:
@@ -648,7 +649,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	/* remove resonder SPI if IKE_SA_INIT failed */
 	if (delete && request->get_exchange_type(request) == IKE_SA_INIT)
@@ -685,7 +686,6 @@ static status_t process_request(private_task_manager_t *this,
 								message_t *message)
 {
 	enumerator_t *enumerator;
-	iterator_t *iterator;
 	task_t *task = NULL;
 	payload_t *payload;
 	notify_payload_t *notify;
@@ -854,14 +854,14 @@ static status_t process_request(private_task_manager_t *this,
 	}
 
 	/* let the tasks process the message */
-	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
-	while (iterator->iterate(iterator, (void*)&task))
+	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
 		switch (task->process(task, message))
 		{
 			case SUCCESS:
 				/* task completed, remove it */
-				iterator->remove(iterator);
+				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
 				break;
 			case NEED_MORE:
@@ -873,13 +873,13 @@ static status_t process_request(private_task_manager_t *this,
 				/* FALL */
 			case DESTROY_ME:
 				/* critical failure, destroy IKE_SA */
-				iterator->remove(iterator);
-				iterator->destroy(iterator);
+				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
+				enumerator->destroy(enumerator);
 				task->destroy(task);
 				return DESTROY_ME;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	return build_response(this, message);
 }
@@ -978,20 +978,20 @@ METHOD(task_manager_t, queue_task, void,
 {
 	if (task->get_type(task) == IKE_MOBIKE)
 	{	/*  there is no need to queue more than one mobike task */
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		task_t *current;
 
-		iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
-		while (iterator->iterate(iterator, (void**)&current))
+		enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+		while (enumerator->enumerate(enumerator, (void**)&current))
 		{
 			if (current->get_type(current) == IKE_MOBIKE)
 			{
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				task->destroy(task);
 				return;
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
 	this->queued_tasks->insert_last(this->queued_tasks, task);

@@ -111,15 +111,15 @@ struct private_ike_me_t {
  */
 static void add_endpoints_to_message(message_t *message, linked_list_t *endpoints)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	endpoint_notify_t *endpoint;
 
-	iterator = endpoints->create_iterator(endpoints, TRUE);
-	while (iterator->iterate(iterator, (void**)&endpoint))
+	enumerator = endpoints->create_enumerator(endpoints);
+	while (enumerator->enumerate(enumerator, (void**)&endpoint))
 	{
 		message->add_payload(message, (payload_t*)endpoint->build_notify(endpoint));
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

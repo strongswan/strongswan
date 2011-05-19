@@ -26,7 +26,7 @@ typedef struct enumerator_t enumerator_t;
 #include "../utils.h"
 
 /**
- * Enumerate is simpler, but more flexible than iterator.
+ * Enumerator interface, allows enumeration over collections.
  */
 struct enumerator_t {
 

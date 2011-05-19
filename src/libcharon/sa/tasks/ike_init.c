@@ -112,7 +112,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	linked_list_t *proposal_list;
 	ike_sa_id_t *id;
 	proposal_t *proposal;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 
 	id = this->ike_sa->get_id(this->ike_sa);
 
@@ -124,12 +124,12 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 		if (this->old_sa)
 		{
 			/* include SPI of new IKE_SA when we are rekeying */
-			iterator = proposal_list->create_iterator(proposal_list, TRUE);
-			while (iterator->iterate(iterator, (void**)&proposal))
+			enumerator = proposal_list->create_enumerator(proposal_list);
+			while (enumerator->enumerate(enumerator, (void**)&proposal))
 			{
 				proposal->set_spi(proposal, id->get_initiator_spi(id));
 			}
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 		}
 
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);

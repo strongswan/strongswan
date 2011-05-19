@@ -193,16 +193,16 @@ struct private_kernel_netlink_net_t {
  */
 static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 {
-	iterator_t *ifaces, *addrs;
+	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	int refcount = 0;
 
-	ifaces = this->ifaces->create_iterator(this->ifaces, TRUE);
-	while (ifaces->iterate(ifaces, (void**)&iface))
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, (void**)&iface))
 	{
-		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
-		while (addrs->iterate(addrs, (void**)&addr))
+		addrs = iface->addrs->create_enumerator(iface->addrs);
+		while (addrs->enumerate(addrs, (void**)&addr))
 		{
 			if (addr->virtual && (iface->flags & IFF_UP) &&
 				ip->ip_equals(ip, addr->ip))

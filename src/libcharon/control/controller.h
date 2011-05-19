@@ -65,7 +65,7 @@ struct controller_t {
 	 * Create an enumerator for all IKE_SAs.
 	 *
 	 * The enumerator blocks the IKE_SA manager until it gets destroyed. Do
-	 * not call another interface/manager method while the iterator is alive.
+	 * not call another interface/manager method while the enumerator is alive.
 	 *
 	 * @param wait			TRUE to wait for checked out SAs, FALSE to skip
 	 * @return				enumerator, locks IKE_SA manager until destroyed

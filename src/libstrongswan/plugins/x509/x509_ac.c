@@ -179,11 +179,11 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 
 	if (has_directoryName)
 	{
-		iterator_t *iterator = list->create_iterator(list, TRUE);
+		enumerator_t *enumerator = list->create_enumerator(list);
 		identification_t *directoryName;
 		bool first = TRUE;
 
-		while (iterator->iterate(iterator, (void**)&directoryName))
+		while (enumerator->enumerate(enumerator, (void**)&directoryName))
 		{
 			if (first)
 			{
@@ -196,7 +196,7 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 				directoryName->destroy(directoryName);
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 	else
 	{

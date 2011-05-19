@@ -869,11 +869,11 @@ METHOD(ike_sa_t, update_hosts, void,
 	/* update all associated CHILD_SAs, if required */
 	if (update)
 	{
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child_sa))
+		enumerator = this->child_sas->create_enumerator(this->child_sas);
+		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (child_sa->update(child_sa, this->my_host,
 						this->other_host, this->my_virtual_ip,
@@ -884,7 +884,7 @@ METHOD(ike_sa_t, update_hosts, void,
 						child_sa->get_spi(child_sa, TRUE));
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 }
 
@@ -1377,11 +1377,11 @@ METHOD(ike_sa_t, add_child_sa, void,
 METHOD(ike_sa_t, get_child_sa, child_sa_t*,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool inbound)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *current, *found = NULL;
 
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		if (current->get_spi(current, inbound) == spi &&
 			current->get_protocol(current) == protocol)
@@ -1389,7 +1389,7 @@ METHOD(ike_sa_t, get_child_sa, child_sa_t*,
 			found = current;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return found;
 }
 
@@ -1422,23 +1422,23 @@ METHOD(ike_sa_t, delete_child_sa, status_t,
 METHOD(ike_sa_t, destroy_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	status_t status = NOT_FOUND;
 
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_protocol(child_sa) == protocol &&
 			child_sa->get_spi(child_sa, TRUE) == spi)
 		{
+			this->child_sas->remove_at(this->child_sas, enumerator);
 			child_sa->destroy(child_sa);
-			iterator->remove(iterator);
 			status = SUCCESS;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
@@ -1521,15 +1521,15 @@ METHOD(ike_sa_t, reestablish, status_t,
 	ike_sa_t *new;
 	host_t *host;
 	action_t action;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	bool restart = FALSE;
 	status_t status = FAILED;
 
 	/* check if we have children to keep up at all */
-	iterator = create_child_sa_iterator(this);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (this->state == IKE_DELETING)
 		{
@@ -1552,7 +1552,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 #ifdef ME
 	/* mediation connections have no children, keep them up anyway */
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
@@ -1599,8 +1599,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 	else
 #endif /* ME */
 	{
-		iterator = create_child_sa_iterator(this);
-		while (iterator->iterate(iterator, (void**)&child_sa))
+		enumerator = this->child_sas->create_enumerator(this->child_sas);
+		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (this->state == IKE_DELETING)
 			{
@@ -1627,7 +1627,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 				break;
 			}
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 
 	if (status == DESTROY_ME)

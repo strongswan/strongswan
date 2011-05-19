@@ -73,11 +73,11 @@ struct private_child_delete_t {
 static void build_payloads(private_child_delete_t *this, message_t *message)
 {
 	delete_payload_t *ah = NULL, *esp = NULL;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		protocol_id_t protocol = child_sa->get_protocol(child_sa);
 		u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
@@ -109,7 +109,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 		}
 		child_sa->set_state(child_sa, CHILD_DELETING);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -186,7 +186,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
  */
 static status_t destroy_and_reestablish(private_child_delete_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
@@ -194,8 +194,8 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	action_t action;
 	status_t status = SUCCESS;
 
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		/* signal child down event if we are not rekeying */
 		if (!this->rekeyed)
@@ -231,7 +231,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 
@@ -240,12 +240,12 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
  */
 static void log_children(private_child_delete_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	u_int64_t bytes_in, bytes_out;
 
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->child_sas->create_enumerator(this->child_sas);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
 		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
@@ -258,7 +258,7 @@ static void log_children(private_child_delete_t *this)
 			 child_sa->get_traffic_selectors(child_sa, TRUE),
 			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

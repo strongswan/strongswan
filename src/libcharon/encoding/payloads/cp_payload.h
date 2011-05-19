@@ -63,7 +63,7 @@ struct cp_payload_t {
 	payload_t payload_interface;
 
 	/**
-	 * Creates an iterator of stored configuration_attribute_t objects.
+	 * Creates an enumerator of stored configuration_attribute_t objects.
 	 *
 	 * @return			enumerator over configration_attribute_T
 	 */

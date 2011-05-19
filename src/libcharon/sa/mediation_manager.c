@@ -90,19 +90,19 @@ struct private_mediation_manager_t {
  */
 static void register_peer(peer_t *peer, identification_t *peer_id)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	identification_t *current;
 
-	iterator = peer->requested_by->create_iterator(peer->requested_by, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = peer->requested_by->create_enumerator(peer->requested_by);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		if (peer_id->equals(peer_id, current))
 		{
-			iterator->destroy(iterator);
+			enumerator->destroy(enumerator);
 			return;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	peer->requested_by->insert_last(peer->requested_by,
 									peer_id->clone(peer_id));
@@ -114,12 +114,12 @@ static void register_peer(peer_t *peer, identification_t *peer_id)
 static status_t get_peer_by_id(private_mediation_manager_t *this,
 							   identification_t *id, peer_t **peer)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	peer_t *current;
 	status_t status = NOT_FOUND;
 
-	iterator = this->peers->create_iterator(this->peers, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = this->peers->create_enumerator(this->peers);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		if (id->equals(id, current->id))
 		{
@@ -131,7 +131,7 @@ static status_t get_peer_by_id(private_mediation_manager_t *this,
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	return status;
 }
@@ -144,34 +144,34 @@ static status_t get_peer_by_id(private_mediation_manager_t *this,
 static void unregister_peer(private_mediation_manager_t *this,
 							identification_t *peer_id)
 {
-	iterator_t *iterator, *iterator_r;
+	enumerator_t *enumerator, *enumerator_r;
 	peer_t *peer;
 	identification_t *registered;
 
-	iterator = this->peers->create_iterator(this->peers, TRUE);
-	while (iterator->iterate(iterator, (void**)&peer))
+	enumerator = this->peers->create_enumerator(this->peers);
+	while (enumerator->enumerate(enumerator, (void**)&peer))
 	{
-		iterator_r = peer->requested_by->create_iterator(peer->requested_by,
-														 TRUE);
-		while (iterator_r->iterate(iterator_r, (void**)&registered))
+		enumerator_r = peer->requested_by->create_enumerator(peer->requested_by);
+		while (enumerator_r->enumerate(enumerator_r, (void**)&registered))
 		{
 			if (peer_id->equals(peer_id, registered))
 			{
-				iterator_r->remove(iterator_r);
+				peer->requested_by->remove_at(peer->requested_by, enumerator_r);
 				registered->destroy(registered);
 				break;
 			}
 		}
-		iterator_r->destroy(iterator_r);
+		enumerator_r->destroy(enumerator_r);
 
-		if (!peer->ike_sa_id && !peer->requested_by->get_count(peer->requested_by))
+		if (!peer->ike_sa_id &&
+			!peer->requested_by->get_count(peer->requested_by))
 		{
-			iterator->remove(iterator);
+			this->peers->remove_at(this->peers, enumerator);
 			peer_destroy(peer);
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -179,17 +179,17 @@ static void unregister_peer(private_mediation_manager_t *this,
  */
 static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	peer_t *peer;
 
 	this->mutex->lock(this->mutex);
 
-	iterator = this->peers->create_iterator(this->peers, TRUE);
-	while (iterator->iterate(iterator, (void**)&peer))
+	enumerator = this->peers->create_enumerator(this->peers);
+	while (enumerator->enumerate(enumerator, (void**)&peer))
 	{
 		if (ike_sa_id->equals(ike_sa_id, peer->ike_sa_id))
 		{
-			iterator->remove(iterator);
+			this->peers->remove_at(this->peers, enumerator);
 
 			unregister_peer(this, peer->id);
 
@@ -197,7 +197,7 @@ static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	this->mutex->unlock(this->mutex);
 }
@@ -207,14 +207,14 @@ static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
  */
 static void update_sa_id(private_mediation_manager_t *this, identification_t *peer_id, ike_sa_id_t *ike_sa_id)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	peer_t *peer;
 	bool found = FALSE;
 
 	this->mutex->lock(this->mutex);
 
-	iterator = this->peers->create_iterator(this->peers, TRUE);
-	while (iterator->iterate(iterator, (void**)&peer))
+	enumerator = this->peers->create_enumerator(this->peers);
+	while (enumerator->enumerate(enumerator, (void**)&peer))
 	{
 		if (peer_id->equals(peer_id, peer->id))
 		{
@@ -223,7 +223,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	if (!found)
 	{

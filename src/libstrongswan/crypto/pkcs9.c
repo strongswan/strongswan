@@ -198,7 +198,7 @@ static attribute_t *attribute_create(int oid, chunk_t value)
  */
 static void build_encoding(private_pkcs9_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	attribute_t *attribute;
 	u_int attributes_len = 0;
 
@@ -212,26 +212,26 @@ static void build_encoding(private_pkcs9_t *this)
 	}
 
 	/* compute the total length of the encoded attributes */
-	iterator = this->attributes->create_iterator(this->attributes, TRUE);
+	enumerator = this->attributes->create_enumerator(this->attributes);
 
-	while (iterator->iterate(iterator, (void**)&attribute))
+	while (enumerator->enumerate(enumerator, (void**)&attribute))
 	{
 		attributes_len += attribute->encoding.len;
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	/* allocate memory for the attributes and build the encoding */
 	{
 		u_char *pos = asn1_build_object(&this->encoding, ASN1_SET, attributes_len);
 
-		iterator = this->attributes->create_iterator(this->attributes, TRUE);
+		enumerator = this->attributes->create_enumerator(this->attributes);
 
-		while (iterator->iterate(iterator, (void**)&attribute))
+		while (enumerator->enumerate(enumerator, (void**)&attribute))
 		{
 			memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
 			pos += attribute->encoding.len;
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 }
 
@@ -252,11 +252,12 @@ static chunk_t get_encoding(private_pkcs9_t *this)
  */
 static chunk_t get_attribute(private_pkcs9_t *this, int oid)
 {
-	iterator_t *iterator = this->attributes->create_iterator(this->attributes, TRUE);
+	enumerator_t *enumerator;
 	chunk_t value = chunk_empty;
 	attribute_t *attribute;
 
-	while (iterator->iterate(iterator, (void**)&attribute))
+	enumerator = this->attributes->create_enumerator(this->attributes);
+	while (enumerator->enumerate(enumerator, (void**)&attribute))
 	{
 		if (attribute->oid == oid)
 		{
@@ -264,7 +265,7 @@ static chunk_t get_attribute(private_pkcs9_t *this, int oid)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return value;
 }
 

@@ -213,13 +213,13 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 {
 	traffic_selector_t *ts;
 	bool is_host = TRUE;
-	iterator_t *iterator = list->create_iterator(list, TRUE);
+	enumerator_t *enumerator = list->create_enumerator(list);
 
-	while (is_host && iterator->iterate(iterator, (void**)&ts))
+	while (is_host && enumerator->enumerate(enumerator, (void**)&ts))
 	{
 		is_host = is_host && ts->is_host(ts, host);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return is_host;
 }
 
