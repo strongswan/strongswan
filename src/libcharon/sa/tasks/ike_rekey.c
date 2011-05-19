@@ -147,8 +147,8 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
+	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
-	iterator_t *iterator;
 	child_sa_t *child_sa;
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
@@ -157,8 +157,8 @@ METHOD(task_t, process_r, status_t,
 		return NEED_MORE;
 	}
 
-	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		switch (child_sa->get_state(child_sa))
 		{
@@ -167,13 +167,13 @@ METHOD(task_t, process_r, status_t,
 			case CHILD_DELETING:
 				/* we do not allow rekeying while we have children in-progress */
 				DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				return NEED_MORE;
 			default:
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 														FALSE);

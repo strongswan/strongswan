@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1393,10 +1393,22 @@ METHOD(ike_sa_t, get_child_sa, child_sa_t*,
 	return found;
 }
 
-METHOD(ike_sa_t, create_child_sa_iterator, iterator_t*,
+METHOD(ike_sa_t, get_child_count, int,
 	private_ike_sa_t *this)
 {
-	return this->child_sas->create_iterator(this->child_sas, TRUE);
+	return this->child_sas->get_count(this->child_sas);
+}
+
+METHOD(ike_sa_t, create_child_sa_enumerator, enumerator_t*,
+	private_ike_sa_t *this)
+{
+	return this->child_sas->create_enumerator(this->child_sas);
+}
+
+METHOD(ike_sa_t, remove_child_sa, void,
+	private_ike_sa_t *this, enumerator_t *enumerator)
+{
+	this->child_sas->remove_at(this->child_sas, enumerator);
 }
 
 METHOD(ike_sa_t, rekey_child_sa, status_t,
@@ -2113,7 +2125,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 			.get_keymat = _get_keymat,
 			.add_child_sa = _add_child_sa,
 			.get_child_sa = _get_child_sa,
-			.create_child_sa_iterator = _create_child_sa_iterator,
+			.get_child_count = _get_child_count,
+			.create_child_sa_enumerator = _create_child_sa_enumerator,
+			.remove_child_sa = _remove_child_sa,
 			.rekey_child_sa = _rekey_child_sa,
 			.delete_child_sa = _delete_child_sa,
 			.destroy_child_sa = _destroy_child_sa,

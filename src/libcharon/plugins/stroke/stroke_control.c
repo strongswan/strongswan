@@ -294,12 +294,12 @@ METHOD(stroke_control_t, terminate, void,
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
-		iterator_t *children;
+		enumerator_t *children;
 
 		if (child)
 		{
-			children = ike_sa->create_child_sa_iterator(ike_sa);
-			while (children->iterate(children, (void**)&child_sa))
+			children = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (children->enumerate(children, (void**)&child_sa))
 			{
 				if (streq(name, child_sa->get_name(child_sa)))
 				{
@@ -374,12 +374,12 @@ METHOD(stroke_control_t, rekey, void,
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		child_sa_t *child_sa;
-		iterator_t *children;
+		enumerator_t *children;
 
 		if (child)
 		{
-			children = ike_sa->create_child_sa_iterator(ike_sa);
-			while (children->iterate(children, (void**)&child_sa))
+			children = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (children->enumerate(children, (void**)&child_sa))
 			{
 				if ((name && streq(name, child_sa->get_name(child_sa))) ||
 					(id && id == child_sa->get_reqid(child_sa)))
@@ -486,8 +486,7 @@ METHOD(stroke_control_t, terminate_srcip, void,
 METHOD(stroke_control_t, purge_ike, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	enumerator_t *enumerator;
-	iterator_t *iterator;
+	enumerator_t *enumerator, *children;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	linked_list_t *list;
@@ -502,13 +501,13 @@ METHOD(stroke_control_t, purge_ike, void,
 													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
-		iterator = ike_sa->create_child_sa_iterator(ike_sa);
-		if (!iterator->iterate(iterator, (void**)&child_sa))
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		if (!children->enumerate(children, (void**)&child_sa))
 		{
 			list->insert_last(list,
 						(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
 		}
-		iterator->destroy(iterator);
+		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
 

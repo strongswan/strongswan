@@ -367,7 +367,7 @@ METHOD(controller_t, terminate_child, status_t,
 {
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	interface_job_t job = {
 		.listener = {
 			.public = {
@@ -397,8 +397,8 @@ METHOD(controller_t, terminate_child, status_t,
 	}
 	job.listener.ike_sa = ike_sa;
 
-	iterator = ike_sa->create_child_sa_iterator(ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
 			child_sa->get_reqid(child_sa) == reqid)
@@ -407,7 +407,7 @@ METHOD(controller_t, terminate_child, status_t,
 		}
 		child_sa = NULL;
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 
 	if (child_sa == NULL)
 	{

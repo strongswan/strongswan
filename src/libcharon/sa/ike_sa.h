@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -260,14 +260,14 @@ struct ike_sa_t {
 	 *
 	 * Returned ike_sa_id_t object is not getting cloned!
 	 *
-	 * @return 				ike_sa's ike_sa_id_t
+	 * @return				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
 	 * Get the numerical ID uniquely defining this IKE_SA.
 	 *
-	 * @return 				unique ID
+	 * @return				unique ID
 	 */
 	u_int32_t (*get_unique_id) (ike_sa_t *this);
 
@@ -474,7 +474,7 @@ struct ike_sa_t {
 	/**
 	 * Create an iterator over all additional addresses of the peer.
 	 *
-	 * @return 				iterator over addresses
+	 * @return				iterator over addresses
 	 */
 	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
 
@@ -567,8 +567,8 @@ struct ike_sa_t {
 	 *
 	 * @param mediated_cfg	peer_cfg of the mediated connection
 	 * @return
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
+	 *						- SUCCESS if initialization started
+	 *						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediation) (ike_sa_t *this, peer_cfg_t *mediated_cfg);
 
@@ -579,8 +579,8 @@ struct ike_sa_t {
 	 * @param other			remote endpoint (gets cloned)
 	 * @param connect_id	connect ID (gets cloned)
 	 * @return
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
+	 *						- SUCCESS if initialization started
+	 *						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate_mediated) (ike_sa_t *this, host_t *me, host_t *other,
 								   chunk_t connect_id);
@@ -597,8 +597,8 @@ struct ike_sa_t {
 	 * @param endpoints		endpoints
 	 * @param response		TRUE if this is a response
 	 * @return
-	 * 						- SUCCESS if relay started
-	 * 						- DESTROY_ME if relay failed
+	 *						- SUCCESS if relay started
+	 *						- DESTROY_ME if relay failed
 	 */
 	status_t (*relay) (ike_sa_t *this, identification_t *requester,
 					   chunk_t connect_id, chunk_t connect_key,
@@ -611,8 +611,8 @@ struct ike_sa_t {
 	 *
 	 * @param peer_id		ID of the other peer
 	 * @return
-	 * 						- SUCCESS if response started
-	 * 						- DESTROY_ME if response failed
+	 *						- SUCCESS if response started
+	 *						- DESTROY_ME if response failed
 	 */
 	status_t (*callback) (ike_sa_t *this, identification_t *peer_id);
 
@@ -624,8 +624,8 @@ struct ike_sa_t {
 	 * @param peer_id		ID of the other peer
 	 * @param connect_id	the connect ID supplied by the initiator
 	 * @return
-	 * 						- SUCCESS if response started
-	 * 						- DESTROY_ME if response failed
+	 *						- SUCCESS if response started
+	 *						- DESTROY_ME if response failed
 	 */
 	status_t (*respond) (ike_sa_t *this, identification_t *peer_id,
 						 chunk_t connect_id);
@@ -643,8 +643,8 @@ struct ike_sa_t {
 	 * @param tsi			source of triggering packet
 	 * @param tsr			destination of triggering packet.
 	 * @return
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
+	 *						- SUCCESS if initialization started
+	 *						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
 						  u_int32_t reqid, traffic_selector_t *tsi,
@@ -658,10 +658,10 @@ struct ike_sa_t {
 	 * the IKE SA gets deleted.
 	 *
 	 * @return
-	 * 						- SUCCESS if deletion is initialized
-	 * 						- DESTROY_ME, if the IKE_SA is not in
-	 * 						  an established state and can not be
-	 * 						  deleted (but destroyed).
+	 *						- SUCCESS if deletion is initialized
+	 *						- DESTROY_ME, if the IKE_SA is not in
+	 *						  an established state and can not be
+	 *						  deleted (but destroyed).
 	 */
 	status_t (*delete) (ike_sa_t *this);
 
@@ -686,11 +686,11 @@ struct ike_sa_t {
 	 * process_message() return DESTROY_ME. Then the caller must
 	 * destroy the IKE_SA immediatly, as it is unusable.
 	 *
-	 * @param message 		message to process
+	 * @param message		message to process
 	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED
-	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
+	 *						- SUCCESS
+	 *						- FAILED
+	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*process_message) (ike_sa_t *this, message_t *message);
 
@@ -700,12 +700,12 @@ struct ike_sa_t {
 	 * This method generates all payloads in the message and encrypts/signs
 	 * the packet.
 	 *
-	 * @param message 		message to generate
+	 * @param message		message to generate
 	 * @param packet		generated output packet
 	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED
-	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
+	 *						- SUCCESS
+	 *						- FAILED
+	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*generate_message) (ike_sa_t *this, message_t *message,
 								  packet_t **packet);
@@ -715,8 +715,8 @@ struct ike_sa_t {
 	 *
 	 * @param message_id	ID of the request to retransmit
 	 * @return
-	 * 						- SUCCESS
-	 * 						- NOT_FOUND if request doesn't have to be retransmited
+	 *						- SUCCESS
+	 *						- NOT_FOUND if request doesn't have to be retransmited
 	 */
 	status_t (*retransmit) (ike_sa_t *this, u_int32_t message_id);
 
@@ -728,8 +728,8 @@ struct ike_sa_t {
 	 * other traffic was received.
 	 *
 	 * @return
-	 * 						- SUCCESS
-	 * 						- DESTROY_ME, if peer did not respond
+	 *						- SUCCESS
+	 *						- DESTROY_ME, if peer did not respond
 	 */
 	status_t (*send_dpd) (ike_sa_t *this);
 
@@ -769,11 +769,25 @@ struct ike_sa_t {
 								 u_int32_t spi, bool inbound);
 
 	/**
-	 * Create an iterator over all CHILD_SAs.
+	 * Get the number of CHILD_SAs.
 	 *
-	 * @return				iterator
+	 * @return				number of CHILD_SAs
 	 */
-	iterator_t* (*create_child_sa_iterator) (ike_sa_t *this);
+	int (*get_child_count) (ike_sa_t *this);
+
+	/**
+	 * Create an enumerator over all CHILD_SAs.
+	 *
+	 * @return				enumerator
+	 */
+	enumerator_t* (*create_child_sa_enumerator) (ike_sa_t *this);
+
+	/**
+	 * Remove the CHILD_SA the given enumerator points to from this IKE_SA.
+	 *
+	 * @param enumerator	enumerator pointing to CHILD_SA
+	 */
+	void (*remove_child_sa) (ike_sa_t *this, enumerator_t *enumerator);
 
 	/**
 	 * Rekey the CHILD SA with the specified reqid.
@@ -783,8 +797,8 @@ struct ike_sa_t {
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
-	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
-	 * 						- SUCCESS, if rekeying initiated
+	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 *						- SUCCESS, if rekeying initiated
 	 */
 	status_t (*rekey_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
@@ -798,8 +812,8 @@ struct ike_sa_t {
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
-	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
-	 * 						- SUCCESS, if delete message sent
+	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 *						- SUCCESS, if delete message sent
 	 */
 	status_t (*delete_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
@@ -811,8 +825,8 @@ struct ike_sa_t {
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
 	 * @return
-	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
-	 * 						- SUCCESS
+	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 *						- SUCCESS
 	 */
 	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 
@@ -929,8 +943,8 @@ struct ike_sa_t {
 /**
  * Creates an ike_sa_t object with a specific ID.
  *
- * @param ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA
- * @return 				ike_sa_t object
+ * @param ike_sa_id		ike_sa_id_t object to associate with new IKE_SA
+ * @return				ike_sa_t object
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
 

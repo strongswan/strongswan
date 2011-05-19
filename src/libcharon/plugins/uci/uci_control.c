@@ -76,8 +76,7 @@ static void write_fifo(private_uci_control_t *this, char *format, ...)
  */
 static void status(private_uci_control_t *this, char *name)
 {
-	enumerator_t *configs, *sas;
-	iterator_t *children;
+	enumerator_t *configs, *sas, *children;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	peer_cfg_t *peer_cfg;
@@ -111,8 +110,8 @@ static void status(private_uci_control_t *this, char *name)
 			fprintf(out, "%-8s %-20D %-16H ", ike_sa->get_name(ike_sa),
 				ike_sa->get_other_id(ike_sa), ike_sa->get_other_host(ike_sa));
 
-			children = ike_sa->create_child_sa_iterator(ike_sa);
-			while (children->iterate(children, (void**)&child_sa))
+			children = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (children->enumerate(children, (void**)&child_sa))
 			{
 				fprintf(out, "%#R",
 						child_sa->get_traffic_selectors(child_sa, FALSE));

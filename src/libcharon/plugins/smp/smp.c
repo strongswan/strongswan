@@ -214,7 +214,7 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 	{
 		ike_sa_id_t *id;
 		host_t *local, *remote;
-		iterator_t *children;
+		enumerator_t *children;
 		child_sa_t *child_sa;
 
 		id = ike_sa->get_id(ike_sa);
@@ -264,8 +264,8 @@ static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer
 
 		/* <childsalist> */
 		xmlTextWriterStartElement(writer, "childsalist");
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, (void**)&child_sa))
 		{
 			write_child(writer, child_sa);
 		}

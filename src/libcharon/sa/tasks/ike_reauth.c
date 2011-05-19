@@ -57,7 +57,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 {
 	ike_sa_t *new;
 	host_t *host;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	peer_cfg_t *peer_cfg;
 
@@ -67,8 +67,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
 	/* reauthenticate only if we have children */
-	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
-	if (iterator->get_count(iterator) == 0
+	if (this->ike_sa->get_child_count(this->ike_sa) == 0
 #ifdef ME
 		/* we allow peers to reauth mediation connections (without children) */
 		&& !peer_cfg->is_mediation(peer_cfg)
@@ -76,7 +75,6 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		)
 	{
 		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA to recreate");
-		iterator->destroy(iterator);
 		return FAILED;
 	}
 
@@ -110,14 +108,15 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	}
 #endif /* ME */
 
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		switch (child_sa->get_state(child_sa))
 		{
 			case CHILD_ROUTED:
 			{
 				/* move routed child directly */
-				iterator->remove(iterator);
+				this->ike_sa->remove_child_sa(this->ike_sa, enumerator);
 				new->add_child_sa(new, child_sa);
 				break;
 			}
@@ -128,7 +127,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 				child_cfg->get_ref(child_cfg);
 				if (new->initiate(new, child_cfg, 0, NULL, NULL) == DESTROY_ME)
 				{
-					iterator->destroy(iterator);
+					enumerator->destroy(enumerator);
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, new);
 					/* set threads active IKE_SA after checkin */
@@ -140,7 +139,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 	/* set threads active IKE_SA after checkin */
 	charon->bus->set_sa(charon->bus, this->ike_sa);

@@ -576,7 +576,7 @@ METHOD(stroke_list_t, status, void,
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 		bool ike_printed = FALSE;
-		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
+		enumerator_t *children = ike_sa->create_child_sa_enumerator(ike_sa);
 
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
@@ -585,7 +585,7 @@ METHOD(stroke_list_t, status, void,
 			ike_printed = TRUE;
 		}
 
-		while (children->iterate(children, (void**)&child_sa))
+		while (children->enumerate(children, (void**)&child_sa))
 		{
 			if (name == NULL || streq(name, child_sa->get_name(child_sa)))
 			{

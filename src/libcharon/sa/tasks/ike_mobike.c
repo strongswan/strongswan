@@ -256,11 +256,11 @@ static void build_cookie(private_ike_mobike_t *this, message_t *message)
  */
 static void update_children(private_ike_mobike_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 
-	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->update(child_sa,
 				this->ike_sa->get_my_host(this->ike_sa),
@@ -273,7 +273,7 @@ static void update_children(private_ike_mobike_t *this)
 					child_sa->get_spi(child_sa, TRUE));
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**

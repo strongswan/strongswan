@@ -79,12 +79,12 @@ METHOD(job_t, execute, void,
 	}
 	if (ike_sa)
 	{
-		iterator_t *children;
+		enumerator_t *children;
 		child_sa_t *child_sa;
 		host_t *host;
 
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, (void**)&child_sa))
 		{
 			if (child_sa->get_reqid(child_sa) == this->reqid)
 			{

@@ -1134,8 +1134,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 	private_ike_sa_manager_t *this, u_int32_t id, bool child)
 {
-	enumerator_t *enumerator;
-	iterator_t *children;
+	enumerator_t *enumerator, *children;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
@@ -1151,8 +1150,8 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 			/* look for a child with such a reqid ... */
 			if (child)
 			{
-				children = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
-				while (children->iterate(children, (void**)&child_sa))
+				children = entry->ike_sa->create_child_sa_enumerator(entry->ike_sa);
+				while (children->enumerate(children, (void**)&child_sa))
 				{
 					if (child_sa->get_reqid(child_sa) == id)
 					{
@@ -1188,8 +1187,7 @@ METHOD(ike_sa_manager_t, checkout_by_id, ike_sa_t*,
 METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 	private_ike_sa_manager_t *this, char *name, bool child)
 {
-	enumerator_t *enumerator;
-	iterator_t *children;
+	enumerator_t *enumerator, *children;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	child_sa_t *child_sa;
@@ -1203,8 +1201,8 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 			/* look for a child with such a policy name ... */
 			if (child)
 			{
-				children = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
-				while (children->iterate(children, (void**)&child_sa))
+				children = entry->ike_sa->create_child_sa_enumerator(entry->ike_sa);
+				while (children->enumerate(children, (void**)&child_sa))
 				{
 					if (streq(child_sa->get_name(child_sa), name))
 					{

@@ -61,15 +61,15 @@ METHOD(job_t, execute, void,
 													this->reqid, TRUE);
 	if (ike_sa)
 	{
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 		u_int32_t delete = 0;
 		protocol_id_t proto = 0;
 		int children = 0;
 		status_t status = SUCCESS;
 
-		iterator = ike_sa->create_child_sa_iterator(ike_sa);
-		while (iterator->iterate(iterator, (void**)&child_sa))
+		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (child_sa->get_reqid(child_sa) == this->reqid)
 			{
@@ -94,7 +94,7 @@ METHOD(job_t, execute, void,
 			}
 			children++;
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 
 		if (delete)
 		{

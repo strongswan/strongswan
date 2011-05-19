@@ -114,8 +114,7 @@ static job_requeue_t rekey_ike(char *config)
  */
 static job_requeue_t rekey_child(char *config)
 {
-	enumerator_t *enumerator;
-	iterator_t *children;
+	enumerator_t *enumerator, *children;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	u_int32_t reqid = 0, spi = 0;
@@ -125,8 +124,8 @@ static job_requeue_t rekey_child(char *config)
 													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, (void**)&child_sa))
 		{
 			if (streq(config, child_sa->get_name(child_sa)))
 			{
@@ -222,8 +221,7 @@ static job_requeue_t close_ike(char *config)
  */
 static job_requeue_t close_child(char *config)
 {
-	enumerator_t *enumerator;
-	iterator_t *children;
+	enumerator_t *enumerator, *children;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	int id = 0;
@@ -233,8 +231,8 @@ static job_requeue_t close_child(char *config)
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
 
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		children = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (children->enumerate(children, (void**)&child_sa))
 		{
 			if (streq(config, child_sa->get_name(child_sa)))
 			{

@@ -196,12 +196,12 @@ METHOD(ha_cache_t, delete_, void,
  */
 static status_t rekey_children(ike_sa_t *ike_sa)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	status_t status = SUCCESS;
 
-	iterator = ike_sa->create_child_sa_iterator(ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		DBG1(DBG_CFG, "resyncing CHILD_SA");
 		status = ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
@@ -211,7 +211,7 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return status;
 }
 

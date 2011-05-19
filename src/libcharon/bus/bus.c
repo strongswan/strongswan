@@ -564,15 +564,15 @@ METHOD(bus_t, ike_updown, void,
 	/* a down event for IKE_SA implicitly downs all CHILD_SAs */
 	if (!up)
 	{
-		iterator_t *iterator;
+		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 
-		iterator = ike_sa->create_child_sa_iterator(ike_sa);
-		while (iterator->iterate(iterator, (void**)&child_sa))
+		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			child_updown(this, child_sa, FALSE);
 		}
-		iterator->destroy(iterator);
+		enumerator->destroy(enumerator);
 	}
 }
 
