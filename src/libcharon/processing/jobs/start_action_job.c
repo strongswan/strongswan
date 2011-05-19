@@ -112,7 +112,7 @@ start_action_job_t *start_action_job_create(void)
 				.destroy = _destroy,
 			},
 		},
-	)
+	);
 	return &this->public;
 }
 
