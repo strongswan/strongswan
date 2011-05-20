@@ -6,10 +6,10 @@ noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn fetch
 
 if USE_TLS
-	noinst_PROGRAMS += tls_test
-	tls_test_SOURCES = tls_test.c
-	tls_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
-			$(top_builddir)/src/libtls/libtls.la
+  noinst_PROGRAMS += tls_test
+  tls_test_SOURCES = tls_test.c
+  tls_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+					$(top_builddir)/src/libtls/libtls.la
 endif
 
 bin2array_SOURCES = bin2array.c
