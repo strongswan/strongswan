@@ -44,7 +44,8 @@ struct satype_tbl {
 	uint8_t proto;
 	uint8_t satype;
 	char* name;
-} static satype_tbl[] = {
+}
+static satype_tbl[] = {
 	{ SA_ESP,	SADB_SATYPE_ESP,	"ESP"  },
 	{ SA_AH,	SADB_SATYPE_AH,		"AH"   },
 	{ SA_IPIP,	SADB_X_SATYPE_IPIP,	"IPIP" },
