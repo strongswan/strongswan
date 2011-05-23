@@ -147,13 +147,13 @@ METHOD(event_queue_t, destroy, void,
 	free(this);
 }
 
-bool set_nonblock(int socket)
+static bool set_nonblock(int socket)
 {
 	int flags = fcntl(socket, F_GETFL);
 	return flags != -1 && fcntl(socket, F_SETFL, flags | O_NONBLOCK) != -1;
 }
 
-bool set_cloexec(int socket)
+static bool set_cloexec(int socket)
 {
 	int flags = fcntl(socket, F_GETFD);
 	return flags != -1 && fcntl(socket, F_SETFD, flags | FD_CLOEXEC) != -1;
