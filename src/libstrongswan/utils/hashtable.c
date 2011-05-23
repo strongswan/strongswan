@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,7 +13,6 @@
  * for more details.
  */
 
-#include <utils/linked_list.h>
 
 #include "hashtable.h"
 
@@ -40,12 +39,17 @@ struct pair_t {
 	 * Cached hash (used in case of a resize).
 	 */
 	u_int hash;
+
+	/**
+	 * Next pair in an overflow list.
+	 */
+	pair_t *next;
 };
 
 /**
  * Creates an empty pair object.
  */
-pair_t *pair_create(void *key, void *value, u_int hash)
+static inline pair_t *pair_create(void *key, void *value, u_int hash)
 {
 	pair_t *this;
 
@@ -93,7 +97,7 @@ struct private_hashtable_t {
 	/**
 	 * The actual table.
 	 */
-	linked_list_t **table;
+	pair_t **table;
 
 	/**
 	 * The hashing function.
@@ -131,21 +135,14 @@ struct private_enumerator_t {
 	/**
 	 * current pair
 	 */
-	pair_t *pair;
+	pair_t *current;
 
 	/**
-	 * enumerator for the current row
+	 * previous pair (used by remove_at)
 	 */
-	enumerator_t *current;
-};
+	pair_t *prev;
 
-/**
- * Compare a pair in a list with the given key.
- */
-static inline bool pair_equals(pair_t *pair, private_hashtable_t *this, void *key)
-{
-	return this->equals(key, pair->key);
-}
+};
 
 /**
  * This function returns the next-highest power of two for the given number.
@@ -175,7 +172,7 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
 	this->mask = this->capacity - 1;
 	this->load_factor = 0.75;
 
-	this->table = calloc(this->capacity, sizeof(linked_list_t*));
+	this->table = calloc(this->capacity, sizeof(pair_t*));
 }
 
 /**
@@ -183,7 +180,7 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
  */
 static void rehash(private_hashtable_t *this)
 {
-	linked_list_t **old_table;
+	pair_t **old_table;
 	u_int row, old_capacity;
 
 	if (this->capacity >= MAX_CAPACITY)
@@ -198,29 +195,17 @@ static void rehash(private_hashtable_t *this)
 
 	for (row = 0; row < old_capacity; row++)
 	{
-		enumerator_t *enumerator;
-		linked_list_t *list, *new_list;
-		pair_t *pair;
+		pair_t *pair, *next;
 		u_int new_row;
 
-		list = old_table[row];
-		if (list)
-		{
-			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &pair))
-			{
-				new_row = pair->hash & this->mask;
-
-				list->remove_at(list, enumerator);
-				new_list = this->table[new_row];
-				if (!new_list)
-				{
-					new_list = this->table[new_row] = linked_list_create();
-				}
-				new_list->insert_last(new_list, pair);
-			}
-			enumerator->destroy(enumerator);
-			list->destroy(list);
+		pair = old_table[row];
+		while (pair)
+		{	/* insert pair at the front of new bucket*/
+			next = pair->next;
+			new_row = pair->hash & this->mask;
+			pair->next = this->table[new_row];
+			this->table[new_row] = pair;
+			pair = next;
 		}
 	}
 	free(old_table);
@@ -230,38 +215,28 @@ METHOD(hashtable_t, put, void*,
 	   private_hashtable_t *this, void *key, void *value)
 {
 	void *old_value = NULL;
-	linked_list_t *list;
-	u_int hash;
-	u_int row;
+	pair_t *pair;
+	u_int hash, row;
 
 	hash = this->hash(key);
 	row = hash & this->mask;
-	list = this->table[row];
-	if (list)
-	{
-		enumerator_t *enumerator;
-		pair_t *pair;
-
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &pair))
+	pair = this->table[row];
+	while (pair)
+	{	/* search existing bucket for key */
+		if (this->equals(key, pair->key))
 		{
-			if (pair_equals(pair, this, key))
-			{
-				old_value = pair->value;
-				pair->value = value;
-				pair->key = key;
-				break;
-			}
+			old_value = pair->value;
+			pair->value = value;
+			pair->key = key;
+			break;
 		}
-		enumerator->destroy(enumerator);
+		pair = pair->next;
 	}
-	else
-	{
-		list = this->table[row] = linked_list_create();
-	}
-	if (!old_value)
-	{
-		list->insert_last(list, pair_create(key, value, hash));
+	if (!pair)
+	{	/* insert at the front of bucket */
+		pair = pair_create(key, value, hash);
+		pair->next = this->table[row];
+		this->table[row] = pair;
 		this->count++;
 	}
 	if (this->count >= this->capacity * this->load_factor)
@@ -275,17 +250,17 @@ METHOD(hashtable_t, get, void*,
 	   private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
-	linked_list_t *list;
 	pair_t *pair;
 
-	list = this->table[this->hash(key) & this->mask];
-	if (list)
+	pair = this->table[this->hash(key) & this->mask];
+	while (pair)
 	{
-		if (list->find_first(list, (linked_list_match_t)pair_equals,
-							 (void**)&pair, this, key) == SUCCESS)
+		if (this->equals(key, pair->key))
 		{
 			value = pair->value;
+			break;
 		}
+		pair = pair->next;
 	}
 	return value;
 }
@@ -294,27 +269,30 @@ METHOD(hashtable_t, remove_, void*,
 	   private_hashtable_t *this, void *key)
 {
 	void *value = NULL;
-	linked_list_t *list;
+	pair_t *pair, *prev = NULL;
+	u_int row;
 
-	list = this->table[this->hash(key) & this->mask];
-	if (list)
+	row = this->hash(key) & this->mask;
+	pair = this->table[row];
+	while (pair)
 	{
-		enumerator_t *enumerator;
-		pair_t *pair;
-
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &pair))
+		if (this->equals(key, pair->key))
 		{
-			if (pair_equals(pair, this, key))
+			if (prev)
 			{
-				list->remove_at(list, enumerator);
-				value = pair->value;
-				this->count--;
-				free(pair);
-				break;
+				prev->next = pair->next;
 			}
+			else
+			{
+				this->table[row] = pair->next;
+			}
+			value = pair->value;
+			this->count--;
+			free(pair);
+			break;
 		}
-		enumerator->destroy(enumerator);
+		prev = pair;
+		pair = pair->next;
 	}
 	return value;
 }
@@ -324,14 +302,18 @@ METHOD(hashtable_t, remove_at, void,
 {
 	if (enumerator->table == this && enumerator->current)
 	{
-		linked_list_t *list;
-		list = this->table[enumerator->row];
-		if (list)
+		pair_t *current = enumerator->current;
+		if (enumerator->prev)
 		{
-			list->remove_at(list, enumerator->current);
-			free(enumerator->pair);
-			this->count--;
+			enumerator->prev->next = current->next;
 		}
+		else
+		{
+			this->table[enumerator->row] = current->next;
+		}
+		enumerator->current = enumerator->prev;
+		free(current);
+		this->count--;
 	}
 }
 
@@ -346,46 +328,30 @@ METHOD(enumerator_t, enumerate, bool,
 {
 	while (this->row < this->table->capacity)
 	{
+		this->prev = this->current;
 		if (this->current)
 		{
-			if (this->current->enumerate(this->current, &this->pair))
-			{
-				if (key)
-				{
-					*key = this->pair->key;
-				}
-				if (value)
-				{
-					*value = this->pair->value;
-				}
-				return TRUE;
-			}
-			this->current->destroy(this->current);
-			this->current = NULL;
+			this->current = this->current->next;
 		}
 		else
 		{
-			linked_list_t *list;
-			list = this->table->table[this->row];
-			if (list)
+			this->current = this->table->table[this->row];
+		}
+		if (this->current)
+		{
+			if (key)
 			{
-				this->current = list->create_enumerator(list);
-				continue;
+				*key = this->current->key;
 			}
+			if (value)
+			{
+				*value = this->current->value;
+			}
+			return TRUE;
 		}
 		this->row++;
 	}
 	return FALSE;
-}
-
-METHOD(enumerator_t, enumerator_destroy, void,
-	   private_enumerator_t *this)
-{
-	if (this->current)
-	{
-		this->current->destroy(this->current);
-	}
-	free(this);
 }
 
 METHOD(hashtable_t, create_enumerator, enumerator_t*,
@@ -396,7 +362,7 @@ METHOD(hashtable_t, create_enumerator, enumerator_t*,
 	INIT(enumerator,
 		.enumerator = {
 			.enumerate = (void*)_enumerate,
-			.destroy = (void*)_enumerator_destroy,
+			.destroy = (void*)free,
 		},
 		.table = this,
 	);
@@ -407,15 +373,17 @@ METHOD(hashtable_t, create_enumerator, enumerator_t*,
 METHOD(hashtable_t, destroy, void,
 	   private_hashtable_t *this)
 {
-	linked_list_t *list;
+	pair_t *pair, *next;
 	u_int row;
 
 	for (row = 0; row < this->capacity; row++)
 	{
-		list = this->table[row];
-		if (list)
+		pair = this->table[row];
+		while (pair)
 		{
-			list->destroy_function(list, free);
+			next = pair->next;
+			free(pair);
+			pair = next;
 		}
 	}
 	free(this->table);
