@@ -133,6 +133,11 @@ struct private_enumerator_t {
 	u_int row;
 
 	/**
+	 * number of remaining items in hashtable
+	 */
+	u_int count;
+
+	/**
 	 * current pair
 	 */
 	pair_t *current;
@@ -326,7 +331,7 @@ METHOD(hashtable_t, get_count, u_int,
 METHOD(enumerator_t, enumerate, bool,
 	   private_enumerator_t *this, void **key, void **value)
 {
-	while (this->row < this->table->capacity)
+	while (this->count && this->row < this->table->capacity)
 	{
 		this->prev = this->current;
 		if (this->current)
@@ -347,6 +352,7 @@ METHOD(enumerator_t, enumerate, bool,
 			{
 				*value = this->current->value;
 			}
+			this->count--;
 			return TRUE;
 		}
 		this->row++;
@@ -365,6 +371,7 @@ METHOD(hashtable_t, create_enumerator, enumerator_t*,
 			.destroy = (void*)free,
 		},
 		.table = this,
+		.count = this->count,
 	);
 
 	return &enumerator->enumerator;
