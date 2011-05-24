@@ -187,7 +187,7 @@ dnl  set up compiler and flags
 dnl =========================
 
 if test -z "$CFLAGS"; then
-	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing"
+	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign"
 fi
 AC_PROG_CC
 AC_LIB_PREFIX
