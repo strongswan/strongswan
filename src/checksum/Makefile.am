@@ -13,7 +13,8 @@ checksum_builder_LDADD = \
 
 BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 AM_CFLAGS = -rdynamic \
 	-DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\""
 

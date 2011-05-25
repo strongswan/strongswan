@@ -19,6 +19,8 @@
 #include <dlfcn.h>
 
 #include <library.h>
+#include <hydra.h>
+#include <daemon.h>
 #include <utils/enumerator.h>
 
 /* we need to fake the pluto symbol to dlopen() the xauth plugin */
@@ -126,6 +128,10 @@ static void build_binary_checksum(char *path)
 int main(int argc, char* argv[])
 {
 	int i;
+
+	/* forces link against libhydra/libcharon */
+	hydra = NULL;
+	charon = NULL;
 
 	/* avoid confusing leak reports in build process */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 0);
