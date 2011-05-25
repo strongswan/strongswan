@@ -93,11 +93,6 @@ typedef struct memory_tail_t memory_tail_t;
 struct memory_header_t {
 
 	/**
-	 * Number of bytes following after the header
-	 */
-	u_int bytes;
-
-	/**
 	 * Pointer to previous entry in linked list
 	 */
 	memory_header_t *previous;
@@ -111,6 +106,11 @@ struct memory_header_t {
 	 * backtrace taken during (re-)allocation
 	 */
 	backtrace_t *backtrace;
+
+	/**
+	 * Number of bytes following after the header
+	 */
+	u_int32_t bytes;
 
 	/**
 	 * magic bytes to detect bad free or heap underflow, MEMORY_HEADER_MAGIC
