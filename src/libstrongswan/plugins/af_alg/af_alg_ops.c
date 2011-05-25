@@ -122,7 +122,7 @@ METHOD(af_alg_ops_t, crypt, void,
 	cmsg->cmsg_level = SOL_ALG;
 	cmsg->cmsg_type = ALG_SET_OP;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(type));
-	*(u_int32_t*)CMSG_DATA(cmsg) = type;
+	memcpy(CMSG_DATA(cmsg), &type, sizeof(type));
 
 	cmsg = CMSG_NXTHDR(&msg, cmsg);
 	cmsg->cmsg_level = SOL_ALG;
