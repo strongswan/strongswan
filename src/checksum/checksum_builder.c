@@ -149,9 +149,15 @@ int main(int argc, char* argv[])
 		build_binary_checksum(argv[i]);
 	}
 	build_plugin_checksums(S_PLUGINS, S_PATH);
+#ifdef H_PLUGINS
 	build_plugin_checksums(H_PLUGINS, H_PATH);
+#endif
+#ifdef P_PLUGINS
 	build_plugin_checksums(P_PLUGINS, P_PATH);
+#endif
+#ifdef C_PLUGINS
 	build_plugin_checksums(C_PLUGINS, C_PATH);
+#endif
 
 	printf("};\n");
 	printf("\n");

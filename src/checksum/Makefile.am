@@ -15,24 +15,24 @@ BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic \
-	-DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\"" \
-	-DH_PLUGINS=\""${h_plugins}\"" -DH_PATH=\""${top_builddir}/src/libhydra/plugins\"" \
-	-DP_PLUGINS=\""${p_plugins}\"" -DP_PATH=\""${top_builddir}/src/pluto/plugins\"" \
-	-DC_PLUGINS=\""${c_plugins}\"" -DC_PATH=\""${top_builddir}/src/libcharon/plugins\""
+	-DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\""
 
 libs = $(top_builddir)/src/libstrongswan/.libs/libstrongswan.so
 
 if USE_LIBHYDRA
   libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
+  AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\"" -DH_PATH=\""${top_builddir}/src/libhydra/plugins\""
 endif
 
 if USE_CHARON
   libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
   libs += $(top_builddir)/src/charon/.libs/charon
+  AM_CFLAGS += -DC_PLUGINS=\""${c_plugins}\"" -DC_PATH=\""${top_builddir}/src/libcharon/plugins\""
 endif
 
 if USE_PLUTO
   libs += $(top_builddir)/src/pluto/.libs/pluto
+  AM_CFLAGS += -DP_PLUGINS=\""${p_plugins}\"" -DP_PATH=\""${top_builddir}/src/pluto/plugins\""
 endif
 
 if USE_TOOLS
