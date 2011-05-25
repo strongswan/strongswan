@@ -149,6 +149,37 @@ static memory_header_t first_header = {
 static bool installed = FALSE;
 
 /**
+ * Installs the malloc hooks, enables leak detection
+ */
+static void install_hooks()
+{
+	if (!installed)
+	{
+		old_malloc_hook = __malloc_hook;
+		old_realloc_hook = __realloc_hook;
+		old_free_hook = __free_hook;
+		__malloc_hook = malloc_hook;
+		__realloc_hook = realloc_hook;
+		__free_hook = free_hook;
+		installed = TRUE;
+	}
+}
+
+/**
+ * Uninstalls the malloc hooks, disables leak detection
+ */
+static void uninstall_hooks()
+{
+	if (installed)
+	{
+		__malloc_hook = old_malloc_hook;
+		__free_hook = old_free_hook;
+		__realloc_hook = old_realloc_hook;
+		installed = FALSE;
+	}
+}
+
+/**
  * Leak report white list
  *
  * List of functions using static allocation buffers or should be suppressed
@@ -237,79 +268,6 @@ char *whitelist[] = {
 	"gnutls_global_init",
 };
 
-METHOD(leak_detective_t, report, void,
-	private_leak_detective_t *this, bool detailed)
-{
-	if (lib->leak_detective)
-	{
-		memory_header_t *hdr;
-		int leaks = 0, whitelisted = 0;
-
-		for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
-		{
-			if (hdr->backtrace->contains_function(hdr->backtrace,
-											whitelist, countof(whitelist)))
-			{
-				whitelisted++;
-			}
-			else
-			{
-				fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
-				/* skip the first frame, contains leak detective logic */
-				hdr->backtrace->log(hdr->backtrace, stderr, detailed);
-				leaks++;
-			}
-		}
-		switch (leaks)
-		{
-			case 0:
-				fprintf(stderr, "No leaks detected");
-				break;
-			case 1:
-				fprintf(stderr, "One leak detected");
-				break;
-			default:
-				fprintf(stderr, "%d leaks detected", leaks);
-				break;
-		}
-		fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
-	}
-	else
-	{
-		fprintf(stderr, "Leak detective disabled\n");
-	}
-}
-
-/**
- * Installs the malloc hooks, enables leak detection
- */
-static void install_hooks()
-{
-	if (!installed)
-	{
-		old_malloc_hook = __malloc_hook;
-		old_realloc_hook = __realloc_hook;
-		old_free_hook = __free_hook;
-		__malloc_hook = malloc_hook;
-		__realloc_hook = realloc_hook;
-		__free_hook = free_hook;
-		installed = TRUE;
-	}
-}
-
-/**
- * Uninstalls the malloc hooks, disables leak detection
- */
-static void uninstall_hooks()
-{
-	if (installed)
-	{
-		__malloc_hook = old_malloc_hook;
-		__free_hook = old_free_hook;
-		__realloc_hook = old_realloc_hook;
-		installed = FALSE;
-	}
-}
 
 /**
  * Hashtable hash function
@@ -338,12 +296,13 @@ static bool equals(backtrace_t *a, backtrace_t *b)
 	return a->equals(a, b);
 }
 
-METHOD(leak_detective_t, usage, void,
-	private_leak_detective_t *this, FILE *out)
+/**
+ * Summarize and print backtraces
+ */
+static int print_traces(private_leak_detective_t *this,
+						FILE *out, int thresh, bool detailed, int *whitelisted)
 {
-	int oldpolicy, thresh;
-	pthread_t thread_id = pthread_self();
-	struct sched_param oldparams, params;
+	int leaks = 0;
 	memory_header_t *hdr;
 	enumerator_t *enumerator;
 	hashtable_t *entries;
@@ -356,19 +315,19 @@ METHOD(leak_detective_t, usage, void,
 		u_int count;
 	} *entry;
 
-	thresh = lib->settings->get_int(lib->settings,
-					"libstrongswan.leak_detective.usage_threshold", 10240);
-
-	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
-	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
-	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
 	uninstall_hooks();
 
 	entries = hashtable_create((hashtable_hash_t)hash,
 							   (hashtable_equals_t)equals, 1024);
-
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
+		if (whitelisted &&
+			hdr->backtrace->contains_function(hdr->backtrace,
+											  whitelist, countof(whitelist)))
+		{
+			(*whitelisted)++;
+			continue;
+		}
 		entry = entries->get(entries, hdr->backtrace);
 		if (entry)
 		{
@@ -384,15 +343,16 @@ METHOD(leak_detective_t, usage, void,
 			);
 			entries->put(entries, hdr->backtrace, entry);
 		}
+		leaks++;
 	}
 	enumerator = entries->create_enumerator(entries);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (entry->bytes >= thresh)
+		if (!thresh || entry->bytes >= thresh)
 		{
-			fprintf(out, "%d bytes total, %d allocations,  %d bytes average:\n",
+			fprintf(out, "%d bytes total, %d allocations, %d bytes average:\n",
 					entry->bytes, entry->count, entry->bytes / entry->count);
-			entry->backtrace->log(entry->backtrace, out, TRUE);
+			entry->backtrace->log(entry->backtrace, out, detailed);
 		}
 		free(entry);
 	}
@@ -400,6 +360,56 @@ METHOD(leak_detective_t, usage, void,
 	entries->destroy(entries);
 
 	install_hooks();
+	return leaks;
+}
+
+METHOD(leak_detective_t, report, void,
+	private_leak_detective_t *this, bool detailed)
+{
+	if (lib->leak_detective)
+	{
+		int leaks = 0, whitelisted = 0;
+
+		leaks = print_traces(this, stderr, 0, detailed, &whitelisted);
+		switch (leaks)
+		{
+			case 0:
+				fprintf(stderr, "No leaks detected");
+				break;
+			case 1:
+				fprintf(stderr, "One leak detected");
+				break;
+			default:
+				fprintf(stderr, "%d leaks detected", leaks);
+				break;
+		}
+		fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
+	}
+	else
+	{
+		fprintf(stderr, "Leak detective disabled\n");
+	}
+}
+
+METHOD(leak_detective_t, usage, void,
+	private_leak_detective_t *this, FILE *out)
+{
+	int oldpolicy, thresh;
+	bool detailed;
+	pthread_t thread_id = pthread_self();
+	struct sched_param oldparams, params;
+
+	thresh = lib->settings->get_int(lib->settings,
+					"libstrongswan.leak_detective.usage_threshold", 10240);
+	detailed = lib->settings->get_bool(lib->settings,
+					"libstrongswan.leak_detective.detailed", TRUE);
+
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+
+	print_traces(this, out, thresh, detailed, NULL);
+
 	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 }
 
