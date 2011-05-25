@@ -135,7 +135,8 @@ int main(int argc, char* argv[])
 
 	/* avoid confusing leak reports in build process */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 0);
-	library_init(NULL);
+	/* don't use a strongswan.conf, forces integrity check to disabled */
+	library_init("");
 	atexit(library_deinit);
 
 	integrity = integrity_checker_create(NULL);
