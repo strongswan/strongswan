@@ -326,7 +326,7 @@ stop)
 		if [ -n "$spid" ]
 		then
 			kill $spid 2>/dev/null
-			loop=5
+			loop=11
 			while [ $loop -gt 0 ] ; do
 				kill -0 $spid 2>/dev/null || break
 				sleep 1
