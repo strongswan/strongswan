@@ -563,7 +563,6 @@ fi
 if test x$fast = xtrue; then
 	AC_HAVE_LIBRARY([neo_cgi],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_cgi not found!])])
 	AC_HAVE_LIBRARY([neo_utl],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])])
-	AC_HAVE_LIBRARY([z],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver dependency zlib not found!])])
 dnl autoconf does not like CamelCase!? How to fix this?
 dnl	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
 
