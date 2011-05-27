@@ -739,7 +739,7 @@ void pkcs11_library_trim(char *str, int len)
  */
 static CK_RV CreateMutex(CK_VOID_PTR_PTR data)
 {
-	*data = mutex_create(MUTEX_TYPE_DEFAULT);
+	*data = mutex_create(MUTEX_TYPE_RECURSIVE);
 	return CKR_OK;
 }
 
