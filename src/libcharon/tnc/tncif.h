@@ -59,6 +59,8 @@
 #ifndef TNCIF_H_
 #define TNCIF_H_
 
+#include <library.h>
+
 /* Basic Types */
 typedef unsigned long TNC_UInt32;
 typedef unsigned char *TNC_BufferReference;
@@ -89,6 +91,7 @@ typedef TNC_UInt32 TNC_Result;
 
 /* Network Connection ID Values */
 #define TNC_CONNECTIONID_ANY 0xFFFFFFFF
+
 /* Network Connection State Values */
 #define TNC_CONNECTION_STATE_CREATE 0
 #define TNC_CONNECTION_STATE_HANDSHAKE 1
@@ -96,6 +99,8 @@ typedef TNC_UInt32 TNC_Result;
 #define TNC_CONNECTION_STATE_ACCESS_ISOLATED 3
 #define TNC_CONNECTION_STATE_ACCESS_NONE 4
 #define TNC_CONNECTION_STATE_DELETE 5
+
+extern enum_name_t *TNC_Connection_State_names;
 
 /* Vendor ID Values */
 #define TNC_VENDORID_TCG 0
