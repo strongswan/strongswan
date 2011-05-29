@@ -124,8 +124,8 @@ METHOD(imc_t, set_message_types, void,
 		memcpy(this->supported_types, supported_types, size);
 	}
 	*pos = '\0';
-	DBG2(DBG_TNC, "IMC %u supports %u message types:%s",
-				  this->id, type_count, buf);
+	DBG2(DBG_TNC, "IMC %u supports %u message type%s:%s",
+				  this->id, type_count, (type_count == 1) ? "":"s", buf);
 
 	/* lock the imc_t instance */
 	this->mutex->unlock(this->mutex);
