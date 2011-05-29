@@ -52,6 +52,10 @@ enum debug_t {
 	DBG_ENC,
 	/** trusted network connect */
 	DBG_TNC,
+	/** integrity measurement client */
+	DBG_IMC,
+	/** integrity measurement verifier */
+	DBG_IMV,
 	/** libtls */
 	DBG_TLS,
 	/** libstrongswan */

@@ -498,6 +498,8 @@ int main(int argc, char *argv[])
 			{ "debug-net", required_argument, &group, DBG_NET },
 			{ "debug-enc", required_argument, &group, DBG_ENC },
 			{ "debug-tnc", required_argument, &group, DBG_TNC },
+			{ "debug-imc", required_argument, &group, DBG_IMC },
+			{ "debug-imv", required_argument, &group, DBG_IMV },
 			{ "debug-tls", required_argument, &group, DBG_TLS },
 			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }
