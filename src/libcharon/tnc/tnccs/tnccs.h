@@ -29,13 +29,6 @@
 #include <tnc/tncifimv.h>
 #include <library.h>
 
-#define IETF_VENDOR_ID			0x000000	/*        0 */
-#define MICROSOFT_VENDOR_ID 	0x000137	/*      311 */
-#define OSC_VENDOR_ID			0x002358	/*     9048 */
-#define FHH_VENDOR_ID			0x0080ab	/*    32939 */
-#define ITA_VENDOR_ID			0x00902a	/*    36906 */
-#define RESERVED_VENDOR_ID		0xffffff	/* 16777215 */
-
 typedef enum tnccs_type_t tnccs_type_t;
 
 /**
