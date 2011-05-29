@@ -206,6 +206,7 @@ static status_t process_application(private_tls_fragmentation_t *this,
 	while (reader->remaining(reader))
 	{
 		status_t status;
+		chunk_t data;
 
 		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
 		{
@@ -213,6 +214,8 @@ static status_t process_application(private_tls_fragmentation_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			return NEED_MORE;
 		}
+		data = reader->peek(reader);
+		DBG3(DBG_TLS, "%B", &data);
 		status = this->application->process(this->application, reader);
 		switch (status)
 		{
