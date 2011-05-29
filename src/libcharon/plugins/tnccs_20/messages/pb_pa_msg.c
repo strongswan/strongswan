@@ -20,6 +20,7 @@
 #include <tls_writer.h>
 #include <tls_reader.h>
 #include <tnc/tnccs/tnccs.h>
+#include <tnc/pen/pen.h>
 #include <debug.h>
 
 ENUM(pa_tnc_subtype_names, PA_SUBTYPE_TESTING, PA_SUBTYPE_NEA_CLIENT,
@@ -166,9 +167,9 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	}
 	reader->destroy(reader);
 
-	if (this->vendor_id == RESERVED_VENDOR_ID)
+	if (this->vendor_id == PEN_RESERVED)
 	{
-		DBG1(DBG_TNC, "Vendor ID 0x%06x is reserved", RESERVED_VENDOR_ID);
+		DBG1(DBG_TNC, "Vendor ID 0x%06x is reserved", PEN_RESERVED);
 		*offset = 1;
 		return FAILED;
 	}

@@ -19,6 +19,7 @@
 #include <tls_writer.h>
 #include <tls_reader.h>
 #include <tnc/tnccs/tnccs.h>
+#include <tnc/pen/pen.h>
 
 ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
 							  PB_ERROR_VERSION_NOT_SUPPORTED,
@@ -169,7 +170,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	reader->read_uint16(reader, &reserved);
 	this->fatal = (flags & ERROR_FLAG_FATAL) != ERROR_FLAG_NONE;
 
-	if (this->vendor_id == IETF_VENDOR_ID && reader->remaining(reader) == 4)
+	if (this->vendor_id == PEN_IETF && reader->remaining(reader) == 4)
 	{
 		if (this->error_code == PB_ERROR_VERSION_NOT_SUPPORTED)
 		{
