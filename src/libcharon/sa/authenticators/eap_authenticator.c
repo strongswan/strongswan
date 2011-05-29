@@ -160,7 +160,9 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 				{
 					if (this->method->initiate(this->method, &out) == NEED_MORE)
 					{
-						DBG1(DBG_IKE, "initiating EAP-Identity request");
+						DBG1(DBG_IKE, "initiating %N method (id 0x%02X)",
+							 eap_type_names, EAP_IDENTITY,
+							 this->method->get_identifier(this->method));
 						return out;
 					}
 					this->method->destroy(this->method);
@@ -349,8 +351,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		{
 			id = this->ike_sa->get_my_id(this->ike_sa);
 		}
-		DBG1(DBG_IKE, "server requested %N, sending '%Y'",
-			 eap_type_names, type, id);
+		DBG1(DBG_IKE, "server requested %N (id 0x%02X), sending '%Y'",
+			 eap_type_names, type, in->get_identifier(in), id);
 		this->eap_identity = id->clone(id);
 
 		this->method = load_method(this, type, vendor, EAP_PEER);
