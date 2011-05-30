@@ -6,6 +6,7 @@ carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 carol::cat /etc/tnc/dummyimc.file
 dave::cat /etc/tnc/dummyimc.file
+moon::cat /etc/tnc/dummyimv.policy
 moon::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
 carol::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start 
 dave::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start 
