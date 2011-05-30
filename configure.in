@@ -132,6 +132,8 @@ ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
+ARG_ENABL_SET([imc-test],       [enable IMC test module.])
+ARG_ENABL_SET([imv-test],       [enable IMV test module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -238,6 +240,10 @@ fi
 
 if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 	tls=true;
+fi
+
+if test x$imc_test = xtrue -o x$imv_test = xtrue; then
+	imcv=true;
 fi
 
 if test x$fips_prf = xtrue; then
@@ -802,6 +808,8 @@ ADD_PLUGIN([maemo],                [c libcharon])
 ADD_PLUGIN([uci],                  [c libcharon])
 ADD_PLUGIN([addrblock],            [c libcharon])
 ADD_PLUGIN([unit-tester],          [c libcharon])
+ADD_PLUGIN([imc-test],             [c])
+ADD_PLUGIN([imv-test],             [c])
 
 AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
@@ -902,6 +910,8 @@ AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
+AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
+AM_CONDITIONAL(USE_IMV_TEST, test x$imv_test = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
@@ -952,6 +962,7 @@ AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
+AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
@@ -1027,6 +1038,7 @@ AC_OUTPUT(
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
+	src/libimcv/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile
@@ -1054,6 +1066,8 @@ AC_OUTPUT(
 	src/libcharon/plugins/tnccs_11/Makefile
 	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/tnccs_dynamic/Makefile
+	src/libcharon/plugins/imc_test/Makefile
+	src/libcharon/plugins/imv_test/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile

@@ -16,6 +16,10 @@ if USE_TLS
   SUBDIRS += libtls
 endif
 
+if USE_IMCV
+  SUBDIRS += libimcv
+endif
+
 if USE_LIBCHARON
   SUBDIRS += libcharon
 endif

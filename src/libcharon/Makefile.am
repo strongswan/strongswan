@@ -90,10 +90,11 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+tnc/tncif.h tnc/tncif.c tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
 tnc/imc/imc.h tnc/imc/imc_manager.h \
 tnc/imv/imv.h tnc/imv/imv_manager.h \
 tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
+tnc/pen/pen.h tnc/pen/pen.c \
 tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
 tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 
@@ -368,6 +369,14 @@ if USE_TNCCS_DYNAMIC
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
 endif
+endif
+
+if USE_IMC_TEST
+  SUBDIRS += plugins/imc_test
+endif
+
+if USE_IMV_TEST
+  SUBDIRS += plugins/imv_test
 endif
 
 if USE_MEDSRV
