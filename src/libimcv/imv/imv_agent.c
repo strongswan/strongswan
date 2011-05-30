@@ -340,7 +340,7 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
-	DBG1(DBG_IMC, "IMV %u \"%s\" terminated", this->id, this->name);
+	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
 	this->connection_lock->destroy(this->connection_lock);
