@@ -217,6 +217,16 @@ then
     echo -n " --enable-tnccs-dynamic" >> $INSTALLSHELL
 fi
 
+if [ "$USE_IMC_TEST" = "yes" ]
+then
+    echo -n " --enable-imc-test" >> $INSTALLSHELL
+fi
+
+if [ "$USE_IMV_TEST" = "yes" ]
+then
+    echo -n " --enable-imv-test" >> $INSTALLSHELL
+fi
+
 if [ "$USE_SQL" = "yes" ]
 then
     echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL

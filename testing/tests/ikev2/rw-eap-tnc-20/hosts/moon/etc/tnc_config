@@ -1,4 +1,3 @@
 #IMV configuration file for strongSwan server 
 
-IMV "Dummy"		/usr/local/lib/libdummyimv.so
-#IMV "HostScanner"	/usr/local/lib/libhostscannerimv.so
+IMV "Test"	/usr/local/libexec/ipsec/plugins/libstrongswan-imv-test.so
