@@ -5,7 +5,7 @@ moon::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 moon::ipsec start
-carol:ipsec start 
+carol::ipsec start 
 dave::ipsec start 
 carol::sleep 1
 carol::ipsec up home
