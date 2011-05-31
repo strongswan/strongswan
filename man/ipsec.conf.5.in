@@ -468,11 +468,11 @@ whereas in older strongSwan releases
 .B ikev1
 was assumed.
 .TP
-.BR keyingtries " = " %forever " | <number>"
+.BR keyingtries " = " 3 " | <number> | %forever"
 how many attempts (a whole number or \fB%forever\fP) should be made to
 negotiate a connection, or a replacement for one, before giving up
 (default
-.BR %forever ).
+.BR 3 ).
 The value \fB%forever\fP
 means 'never give up'.
 Relevant only locally, other end need not agree on it.
