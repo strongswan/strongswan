@@ -89,7 +89,7 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
-METHOD(imv_state_t, another_round, bool,
+METHOD(imv_test_state_t, another_round, bool,
 	private_imv_test_state_t *this)
 {
 	return (this->rounds-- > 0);
