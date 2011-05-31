@@ -104,8 +104,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
-	TNC_Result result;
-
 	if (!imc_test)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
@@ -125,7 +123,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	status_t status;
-	TNC_Result result;
 
 	if (!imc_test)
 	{
