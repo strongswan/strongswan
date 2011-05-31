@@ -118,8 +118,8 @@ plugin_t *nm_plugin_create()
 		},
 		.creds = nm_creds_create(),
 		.handler = nm_handler_create(),
-		.plugin = nm_strongswan_plugin_new(this->creds, this->handler),
 	);
+	this->plugin = nm_strongswan_plugin_new(this->creds, this->handler);
 
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
