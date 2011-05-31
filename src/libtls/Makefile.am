@@ -9,8 +9,6 @@ libtls_la_SOURCES = \
 	tls_alert.h tls_alert.c \
 	tls_crypto.h tls_crypto.c \
 	tls_prf.h tls_prf.c \
-	tls_reader.h tls_reader.c \
-	tls_writer.h tls_writer.c \
 	tls_socket.h tls_socket.c \
 	tls_eap.h tls_eap.c \
 	tls_peer.h tls_peer.c \

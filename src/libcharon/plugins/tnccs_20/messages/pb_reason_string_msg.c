@@ -15,8 +15,8 @@
 
 #include "pb_reason_string_msg.h"
 
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <debug.h>
 
 typedef struct private_pb_reason_string_msg_t private_pb_reason_string_msg_t;
@@ -81,10 +81,10 @@ METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
 METHOD(pb_tnc_msg_t, build, void,
 	private_pb_reason_string_msg_t *this)
 {
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(64);
+	writer = bio_writer_create(64);
 	writer->write_data32(writer, this->reason_string);
 	writer->write_data8 (writer, this->language_code);
 
@@ -97,10 +97,10 @@ METHOD(pb_tnc_msg_t, build, void,
 METHOD(pb_tnc_msg_t, process, status_t,
 	private_pb_reason_string_msg_t *this, u_int32_t *offset)
 {
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 
 	/* process message */
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 	if (!reader->read_data32(reader, &this->reason_string))
 	{
 		DBG1(DBG_TNC, "could not parse reason string");

@@ -15,8 +15,8 @@
 
 #include "pb_language_preference_msg.h"
 
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <debug.h>
 
 typedef struct private_pb_language_preference_msg_t private_pb_language_preference_msg_t;

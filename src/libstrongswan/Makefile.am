@@ -10,6 +10,7 @@ printf_hook.c printf_hook.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/asn1_parser.c asn1/asn1_parser.h \
 asn1/oid.c asn1/oid.h \
+bio/bio_reader.h bio/bio_reader.c bio/bio_writer.h bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \

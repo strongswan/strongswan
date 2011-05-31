@@ -54,7 +54,7 @@ struct private_eap_ttls_avp_t {
 };
 
 METHOD(eap_ttls_avp_t, build, void,
-	private_eap_ttls_avp_t *this, tls_writer_t *writer, chunk_t data)
+	private_eap_ttls_avp_t *this, bio_writer_t *writer, chunk_t data)
 {
 	char zero_padding[] = { 0x00, 0x00, 0x00 };
 	chunk_t   avp_padding;
@@ -73,14 +73,14 @@ METHOD(eap_ttls_avp_t, build, void,
 }
 
 METHOD(eap_ttls_avp_t, process, status_t,
-	private_eap_ttls_avp_t* this, tls_reader_t *reader, chunk_t *data)
+	private_eap_ttls_avp_t* this, bio_reader_t *reader, chunk_t *data)
 {
 	size_t len;
 	chunk_t buf;
 
 	if (this->process_header)
 	{
-		tls_reader_t *header;
+		bio_reader_t *header;
 		u_int32_t avp_code;
 		u_int8_t  avp_flags;
 		u_int32_t avp_len;
@@ -110,7 +110,7 @@ METHOD(eap_ttls_avp_t, process, status_t,
 		}
 
 		/* parse AVP header */
-		header = tls_reader_create(this->input);
+		header = bio_reader_create(this->input);
 		success = header->read_uint32(header, &avp_code) &&
 				  header->read_uint8(header, &avp_flags) &&
 				  header->read_uint24(header, &avp_len);

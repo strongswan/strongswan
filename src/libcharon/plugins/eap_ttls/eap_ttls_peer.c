@@ -67,7 +67,7 @@ struct private_eap_ttls_peer_t {
 #define MAX_RADIUS_ATTRIBUTE_SIZE	253
 
 METHOD(tls_application_t, process, status_t,
-	private_eap_ttls_peer_t *this, tls_reader_t *reader)
+	private_eap_ttls_peer_t *this, bio_reader_t *reader)
 {
 	chunk_t avp_data = chunk_empty;
 	chunk_t eap_data = chunk_empty;
@@ -229,7 +229,7 @@ METHOD(tls_application_t, process, status_t,
 }
 
 METHOD(tls_application_t, build, status_t,
-	private_eap_ttls_peer_t *this, tls_writer_t *writer)
+	private_eap_ttls_peer_t *this, bio_writer_t *writer)
 {
 	chunk_t data;
 	eap_code_t code;

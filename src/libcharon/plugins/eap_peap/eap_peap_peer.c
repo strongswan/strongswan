@@ -63,7 +63,7 @@ struct private_eap_peap_peer_t {
 };
 
 METHOD(tls_application_t, process, status_t,
-	private_eap_peap_peer_t *this, tls_reader_t *reader)
+	private_eap_peap_peer_t *this, bio_reader_t *reader)
 {
 	chunk_t data = chunk_empty;
 	status_t status;
@@ -185,7 +185,7 @@ METHOD(tls_application_t, process, status_t,
 }
 
 METHOD(tls_application_t, build, status_t,
-	private_eap_peap_peer_t *this, tls_writer_t *writer)
+	private_eap_peap_peer_t *this, bio_writer_t *writer)
 {
 	chunk_t data;
 	eap_code_t code;

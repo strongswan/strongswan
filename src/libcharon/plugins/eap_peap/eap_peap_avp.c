@@ -45,7 +45,7 @@ struct private_eap_peap_avp_t {
 };
 
 METHOD(eap_peap_avp_t, build, void,
-	private_eap_peap_avp_t *this, tls_writer_t *writer, chunk_t data)
+	private_eap_peap_avp_t *this, bio_writer_t *writer, chunk_t data)
 {
 	u_int8_t code;
 	eap_packet_t *pkt;
@@ -70,7 +70,7 @@ METHOD(eap_peap_avp_t, build, void,
 }
 
 METHOD(eap_peap_avp_t, process, status_t,
-	private_eap_peap_avp_t* this, tls_reader_t *reader, chunk_t *data,
+	private_eap_peap_avp_t* this, bio_reader_t *reader, chunk_t *data,
 	u_int8_t identifier)
 {
 	u_int8_t code;

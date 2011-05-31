@@ -20,8 +20,8 @@
 
 #include <debug.h>
 #include <utils/linked_list.h>
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <tnc/tnccs/tnccs.h>
 #include <tnc/pen/pen.h>
 
@@ -143,7 +143,7 @@ METHOD(pb_tnc_batch_t, build, void,
 	enumerator_t *enumerator;
 	pb_tnc_msg_type_t msg_type;
 	pb_tnc_msg_t *msg;
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 
 	/* compute total PB-TNC batch size by summing over all messages */
 	batch_len = PB_TNC_BATCH_HEADER_SIZE;
@@ -157,7 +157,7 @@ METHOD(pb_tnc_batch_t, build, void,
 	enumerator->destroy(enumerator);
 
 	/* build PB-TNC batch header */
-	writer = tls_writer_create(batch_len);	
+	writer = bio_writer_create(batch_len);	
 	writer->write_uint8 (writer, PB_TNC_VERSION);
 	writer->write_uint8 (writer, this->is_server ?
 								 PB_TNC_BATCH_FLAG_D : PB_TNC_BATCH_FLAG_NONE);
@@ -193,7 +193,7 @@ METHOD(pb_tnc_batch_t, build, void,
 static status_t process_batch_header(private_pb_tnc_batch_t *this,
 									 pb_tnc_state_machine_t *state_machine)
 {
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 	pb_tnc_msg_t *msg;
 	pb_error_msg_t *err_msg;
 	u_int8_t version, flags, reserved, type;
@@ -209,7 +209,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 		goto fatal;
 	}
 
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 	reader->read_uint8 (reader, &version);
 	reader->read_uint8 (reader, &flags);
 	reader->read_uint8 (reader, &reserved);
@@ -278,7 +278,7 @@ fatal:
 
 static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 {
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 	pb_tnc_msg_t *pb_tnc_msg, *msg;
 	u_int8_t flags;
 	u_int32_t vendor_id, msg_type, msg_len, offset;
@@ -297,7 +297,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 		goto fatal;
 	}
 
-	reader = tls_reader_create(data);
+	reader = bio_reader_create(data);
 	reader->read_uint8 (reader, &flags);
 	reader->read_uint24(reader, &vendor_id);
 	reader->read_uint32(reader, &msg_type);

@@ -14,123 +14,123 @@
  */
 
 /**
- * @defgroup tls_writer tls_writer
- * @{ @ingroup libtls
+ * @defgroup bio_writer bio_writer
+ * @{ @ingroup bio
  */
 
-#ifndef TLS_WRITER_H_
-#define TLS_WRITER_H_
+#ifndef BIO_WRITER_H_
+#define BIO_WRITER_H_
 
-typedef struct tls_writer_t tls_writer_t;
+typedef struct bio_writer_t bio_writer_t;
 
 #include <library.h>
 
 /**
- * TLS record generator.
+ * Buffered output generator.
  */
-struct tls_writer_t {
+struct bio_writer_t {
 
 	/**
 	 * Append a 8-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint8)(tls_writer_t *this, u_int8_t value);
+	void (*write_uint8)(bio_writer_t *this, u_int8_t value);
 
 	/**
 	 * Append a 16-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint16)(tls_writer_t *this, u_int16_t value);
+	void (*write_uint16)(bio_writer_t *this, u_int16_t value);
 
 	/**
 	 * Append a 24-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint24)(tls_writer_t *this, u_int32_t value);
+	void (*write_uint24)(bio_writer_t *this, u_int32_t value);
 
 	/**
 	 * Append a 32-bit integer to the buffer.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_uint32)(tls_writer_t *this, u_int32_t value);
+	void (*write_uint32)(bio_writer_t *this, u_int32_t value);
 
 	/**
 	 * Append a chunk of data without a length header.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_data)(tls_writer_t *this, chunk_t value);
+	void (*write_data)(bio_writer_t *this, chunk_t value);
 
 	/**
 	 * Append a chunk of data with a 8-bit length header.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_data8)(tls_writer_t *this, chunk_t value);
+	void (*write_data8)(bio_writer_t *this, chunk_t value);
 
 	/**
 	 * Append a chunk of data with a 16-bit length header.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_data16)(tls_writer_t *this, chunk_t value);
+	void (*write_data16)(bio_writer_t *this, chunk_t value);
 
 	/**
 	 * Append a chunk of data with a 24-bit length header.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_data24)(tls_writer_t *this, chunk_t value);
+	void (*write_data24)(bio_writer_t *this, chunk_t value);
 
 	/**
 	 * Append a chunk of data with a 32-bit length header.
 	 *
 	 * @param value		value to append
 	 */
-	void (*write_data32)(tls_writer_t *this, chunk_t value);
+	void (*write_data32)(bio_writer_t *this, chunk_t value);
 
 	/**
 	 * Prepend a 8-bit length header to existing data.
 	 */
-	void (*wrap8)(tls_writer_t *this);
+	void (*wrap8)(bio_writer_t *this);
 
 	/**
 	 * Prepend a 16-bit length header to existing data.
 	 */
-	void (*wrap16)(tls_writer_t *this);
+	void (*wrap16)(bio_writer_t *this);
 
 	/**
 	 * Prepend a 24-bit length header to existing data.
 	 */
-	void (*wrap24)(tls_writer_t *this);
+	void (*wrap24)(bio_writer_t *this);
 
 	/**
 	 * Prepend a 32-bit length header to existing data.
 	 */
-	void (*wrap32)(tls_writer_t *this);
+	void (*wrap32)(bio_writer_t *this);
 
 	/**
 	 * Get the encoded data buffer.
 	 *
 	 * @return			chunk to internal buffer
 	 */
-	chunk_t (*get_buf)(tls_writer_t *this);
+	chunk_t (*get_buf)(bio_writer_t *this);
 
 	/**
-	 * Destroy a tls_writer_t.
+	 * Destroy a bio_writer_t.
 	 */
-	void (*destroy)(tls_writer_t *this);
+	void (*destroy)(bio_writer_t *this);
 };
 
 /**
- * Create a tls_writer instance.
+ * Create a bio_writer instance.
  *
  * @param bufsize		initially allocated buffer size
  */
-tls_writer_t *tls_writer_create(u_int32_t bufsize);
+bio_writer_t *bio_writer_create(u_int32_t bufsize);
 
-#endif /** TLS_WRITER_H_ @}*/
+#endif /** BIO_WRITER_H_ @}*/

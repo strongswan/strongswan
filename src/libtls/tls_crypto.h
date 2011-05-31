@@ -427,7 +427,7 @@ struct tls_crypto_t {
 	 *
 	 * @param writer		writer to write supported hash/sig algorithms
 	 */
-	void (*get_signature_algorithms)(tls_crypto_t *this, tls_writer_t *writer);
+	void (*get_signature_algorithms)(tls_crypto_t *this, bio_writer_t *writer);
 
 	/**
 	 * Create an enumerator over supported ECDH groups.
@@ -464,7 +464,7 @@ struct tls_crypto_t {
 	 * @return				TRUE if signature create successfully
 	 */
 	bool (*sign)(tls_crypto_t *this, private_key_t *key,
-				 tls_writer_t *writer, chunk_t data, chunk_t hashsig);
+				 bio_writer_t *writer, chunk_t data, chunk_t hashsig);
 
 	/**
 	 * Verify a blob of data, read signature from a reader.
@@ -475,7 +475,7 @@ struct tls_crypto_t {
 	 * @return				TRUE if signature valid
 	 */
 	bool (*verify)(tls_crypto_t *this, public_key_t *key,
-				   tls_reader_t *reader, chunk_t data);
+				   bio_reader_t *reader, chunk_t data);
 
 	/**
 	 * Create a signature of the handshake data using a given private key.
@@ -486,7 +486,7 @@ struct tls_crypto_t {
 	 * @return				TRUE if signature create successfully
 	 */
 	bool (*sign_handshake)(tls_crypto_t *this, private_key_t *key,
-						   tls_writer_t *writer, chunk_t hashsig);
+						   bio_writer_t *writer, chunk_t hashsig);
 
 	/**
 	 * Verify the signature over handshake data using a given public key.
@@ -496,7 +496,7 @@ struct tls_crypto_t {
 	 * @return				TRUE if signature valid
 	 */
 	bool (*verify_handshake)(tls_crypto_t *this, public_key_t *key,
-							 tls_reader_t *reader);
+							 bio_reader_t *reader);
 
 	/**
 	 * Calculate the data of a TLS finished message.

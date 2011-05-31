@@ -16,8 +16,8 @@
 
 #include "pa_tnc_msg.h"
 
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <utils/linked_list.h>
 #include <tnc/pen/pen.h>
 #include <debug.h>
@@ -103,7 +103,7 @@ METHOD(pa_tnc_msg_t, add_attribute, void,
 METHOD(pa_tnc_msg_t, build, void,
 	private_pa_tnc_msg_t *this)
 {
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_t vendor_id;
@@ -119,7 +119,7 @@ METHOD(pa_tnc_msg_t, build, void,
 	DBG2(DBG_TNC, "creating PA-TNC message with ID 0x%08x", this->identifier);
 
 	/* build message header */
-	writer = tls_writer_create(PA_TNC_HEADER_SIZE);
+	writer = bio_writer_create(PA_TNC_HEADER_SIZE);
 	writer->write_uint8 (writer, PA_TNC_VERSION);
 	writer->write_uint24(writer, PA_TNC_RESERVED);
 	writer->write_uint32(writer, this->identifier);
@@ -156,10 +156,10 @@ METHOD(pa_tnc_msg_t, process, status_t,
 {
 	u_int8_t version;
 	u_int32_t reserved;
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 	status_t status = FAILED;
 
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 
 	/* process message header */
 	if (reader->remaining(reader) < PA_TNC_HEADER_SIZE)

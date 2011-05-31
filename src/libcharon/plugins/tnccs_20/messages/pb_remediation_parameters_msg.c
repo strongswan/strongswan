@@ -15,8 +15,8 @@
 
 #include "pb_remediation_parameters_msg.h"
 
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <debug.h>
 
 ENUM(pb_tnc_remed_param_type_names, PB_REMEDIATION_URI, PB_REMEDIATION_STRING,
@@ -106,10 +106,10 @@ METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
 METHOD(pb_tnc_msg_t, build, void,
 	private_pb_remediation_parameters_msg_t *this)
 {
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(64);
+	writer = bio_writer_create(64);
 	writer->write_uint32(writer, this->vendor_id);
 	writer->write_uint32(writer, this->parameters_type);
 	writer->write_data32(writer, this->remediation_string);
@@ -124,10 +124,10 @@ METHOD(pb_tnc_msg_t, build, void,
 METHOD(pb_tnc_msg_t, process, status_t,
 	private_pb_remediation_parameters_msg_t *this, u_int32_t *offset)
 {
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 
 	/* process message */
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 	reader->read_uint32(reader, &this->vendor_id);
 	reader->read_uint32(reader, &this->parameters_type);
 

@@ -14,35 +14,35 @@
  */
 
 /**
- * @defgroup tls_reader tls_reader
- * @{ @ingroup libtls
+ * @defgroup bio_reader bio_reader
+ * @{ @ingroup bio
  */
 
-#ifndef TLS_READER_H_
-#define TLS_READER_H_
+#ifndef BIO_READER_H_
+#define BIO_READER_H_
 
-typedef struct tls_reader_t tls_reader_t;
+typedef struct bio_reader_t bio_reader_t;
 
 #include <library.h>
 
 /**
- * TLS record parser.
+ * Buffered input parser.
  */
-struct tls_reader_t {
+struct bio_reader_t {
 
 	/**
 	 * Get the number of remaining bytes.
 	 *
 	 * @return			number of remaining bytes in buffer
 	 */
-	u_int32_t (*remaining)(tls_reader_t *this);
+	u_int32_t (*remaining)(bio_reader_t *this);
 
 	/**
 	 * Peek the remaining data, not consuming any bytes.
 	 *
 	 * @return			remaining data
 	 */
-	chunk_t (*peek)(tls_reader_t *this);
+	chunk_t (*peek)(bio_reader_t *this);
 
 	/**
 	 * Read a 8-bit integer from the buffer, advance.
@@ -50,7 +50,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint8)(tls_reader_t *this, u_int8_t *res);
+	bool (*read_uint8)(bio_reader_t *this, u_int8_t *res);
 
 	/**
 	 * Read a 16-bit integer from the buffer, advance.
@@ -58,7 +58,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint16)(tls_reader_t *this, u_int16_t *res);
+	bool (*read_uint16)(bio_reader_t *this, u_int16_t *res);
 
 	/**
 	 * Read a 24-bit integer from the buffer, advance.
@@ -66,7 +66,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint24)(tls_reader_t *this, u_int32_t *res);
+	bool (*read_uint24)(bio_reader_t *this, u_int32_t *res);
 
 	/**
 	 * Read a 32-bit integer from the buffer, advance.
@@ -74,7 +74,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result
 	 * @return			TRUE if integer read successfully
 	 */
-	bool (*read_uint32)(tls_reader_t *this, u_int32_t *res);
+	bool (*read_uint32)(bio_reader_t *this, u_int32_t *res);
 
 	/**
 	 * Read a chunk of len bytes, advance.
@@ -83,7 +83,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data)(tls_reader_t *this, u_int32_t len, chunk_t *res);
+	bool (*read_data)(bio_reader_t *this, u_int32_t len, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 8-bit length header, advance.
@@ -91,7 +91,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data8)(tls_reader_t *this, chunk_t *res);
+	bool (*read_data8)(bio_reader_t *this, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 16-bit length header, advance.
@@ -99,7 +99,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data16)(tls_reader_t *this, chunk_t *res);
+	bool (*read_data16)(bio_reader_t *this, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 24-bit length header, advance.
@@ -107,7 +107,7 @@ struct tls_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data24)(tls_reader_t *this, chunk_t *res);
+	bool (*read_data24)(bio_reader_t *this, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 32-bit length header, advance.
@@ -115,17 +115,17 @@ struct tls_reader_t {
 	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
-	bool (*read_data32)(tls_reader_t *this, chunk_t *res);
+	bool (*read_data32)(bio_reader_t *this, chunk_t *res);
 
 	/**
-	 * Destroy a tls_reader_t.
+	 * Destroy a bio_reader_t.
 	 */
-	void (*destroy)(tls_reader_t *this);
+	void (*destroy)(bio_reader_t *this);
 };
 
 /**
- * Create a tls_reader instance.
+ * Create a bio_reader instance.
  */
-tls_reader_t *tls_reader_create(chunk_t data);
+bio_reader_t *bio_reader_create(chunk_t data);
 
-#endif /** tls_reader_H_ @}*/
+#endif /** bio_reader_H_ @}*/

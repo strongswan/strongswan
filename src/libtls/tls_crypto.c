@@ -1057,15 +1057,15 @@ METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
 }
 
 METHOD(tls_crypto_t, get_signature_algorithms, void,
-	private_tls_crypto_t *this, tls_writer_t *writer)
+	private_tls_crypto_t *this, bio_writer_t *writer)
 {
-	tls_writer_t *supported;
+	bio_writer_t *supported;
 	enumerator_t *enumerator;
 	hash_algorithm_t alg;
 	tls_hash_algorithm_t hash;
 	const char *plugin_name;
 
-	supported = tls_writer_create(32);
+	supported = bio_writer_create(32);
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &alg, &plugin_name))
 	{
@@ -1280,13 +1280,13 @@ static signature_scheme_t hashsig_to_scheme(key_type_t type,
 }
 
 METHOD(tls_crypto_t, sign, bool,
-	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer,
+	private_tls_crypto_t *this, private_key_t *key, bio_writer_t *writer,
 	chunk_t data, chunk_t hashsig)
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
 		signature_scheme_t scheme;
-		tls_reader_t *reader;
+		bio_reader_t *reader;
 		u_int8_t hash, alg;
 		chunk_t sig;
 		bool done = FALSE;
@@ -1296,7 +1296,7 @@ METHOD(tls_crypto_t, sign, bool,
 			hashsig = chunk_from_chars(
 				TLS_HASH_SHA1, TLS_SIG_RSA, TLS_HASH_SHA1, TLS_SIG_ECDSA);
 		}
-		reader = tls_reader_create(hashsig);
+		reader = bio_reader_create(hashsig);
 		while (reader->remaining(reader) >= 2)
 		{
 			if (reader->read_uint8(reader, &hash) &&
@@ -1361,7 +1361,7 @@ METHOD(tls_crypto_t, sign, bool,
 }
 
 METHOD(tls_crypto_t, verify, bool,
-	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader,
+	private_tls_crypto_t *this, public_key_t *key, bio_reader_t *reader,
 	chunk_t data)
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
@@ -1432,14 +1432,14 @@ METHOD(tls_crypto_t, verify, bool,
 }
 
 METHOD(tls_crypto_t, sign_handshake, bool,
-	private_tls_crypto_t *this, private_key_t *key, tls_writer_t *writer,
+	private_tls_crypto_t *this, private_key_t *key, bio_writer_t *writer,
 	chunk_t hashsig)
 {
 	return sign(this, key, writer, this->handshake, hashsig);
 }
 
 METHOD(tls_crypto_t, verify_handshake, bool,
-	private_tls_crypto_t *this, public_key_t *key, tls_reader_t *reader)
+	private_tls_crypto_t *this, public_key_t *key, bio_reader_t *reader)
 {
 	return verify(this, key, reader, this->handshake);
 }

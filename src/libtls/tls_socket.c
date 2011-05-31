@@ -67,7 +67,7 @@ struct private_tls_socket_t {
 };
 
 METHOD(tls_application_t, process, status_t,
-	private_tls_application_t *this, tls_reader_t *reader)
+	private_tls_application_t *this, bio_reader_t *reader)
 {
 	chunk_t data;
 
@@ -80,7 +80,7 @@ METHOD(tls_application_t, process, status_t,
 }
 
 METHOD(tls_application_t, build, status_t,
-	private_tls_application_t *this, tls_writer_t *writer)
+	private_tls_application_t *this, bio_writer_t *writer)
 {
 	if (this->out.len)
 	{

@@ -16,8 +16,8 @@
 #include "pb_error_msg.h"
 
 #include <debug.h>
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <tnc/tnccs/tnccs.h>
 #include <tnc/pen/pen.h>
 
@@ -117,10 +117,10 @@ METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
 METHOD(pb_tnc_msg_t, build, void,
 	private_pb_error_msg_t *this)
 {
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 
 	/* build message header */
-	writer = tls_writer_create(ERROR_HEADER_SIZE);
+	writer = bio_writer_create(ERROR_HEADER_SIZE);
 	writer->write_uint8 (writer, this->fatal ?
 						 ERROR_FLAG_FATAL : ERROR_FLAG_NONE);
 	writer->write_uint24(writer, this->vendor_id);
@@ -153,7 +153,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 {
 	u_int8_t flags, max_version, min_version;
 	u_int16_t reserved;
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 
 	if (this->encoding.len < ERROR_HEADER_SIZE)
 	{
@@ -163,7 +163,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	}
 
 	/* process message header */
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 	reader->read_uint8 (reader, &flags);
 	reader->read_uint24(reader, &this->vendor_id);
 	reader->read_uint16(reader, &this->error_code);

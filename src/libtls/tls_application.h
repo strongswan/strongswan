@@ -23,8 +23,8 @@
 
 typedef struct tls_application_t tls_application_t;
 
-#include "tls_reader.h"
-#include "tls_writer.h"
+#include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 
 /**
  * TLS application data interface.
@@ -40,7 +40,7 @@ struct tls_application_t {
 	 *					- FAILED if application data processing failed
 	 *					- NEED_MORE if another invocation of process/build needed
 	 */
-	status_t (*process)(tls_application_t *this, tls_reader_t *reader);
+	status_t (*process)(tls_application_t *this, bio_reader_t *reader);
 
 	/**
 	 * Build TLS application data to send out.
@@ -52,7 +52,7 @@ struct tls_application_t {
 	 *					- NEED_MORE if more data ready for delivery
 	 *					- INVALID_STATE if more input to process() required
 	 */
-	status_t (*build)(tls_application_t *this, tls_writer_t *writer);
+	status_t (*build)(tls_application_t *this, bio_writer_t *writer);
 
 	/**
 	 * Destroy a tls_application_t.

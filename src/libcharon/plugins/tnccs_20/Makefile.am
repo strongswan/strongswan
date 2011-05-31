@@ -8,7 +8,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnccs-20.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-20.la
-libstrongswan_tnccs_20_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
 libstrongswan_tnccs_20_la_SOURCES = \

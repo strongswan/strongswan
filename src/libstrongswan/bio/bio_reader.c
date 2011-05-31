@@ -13,21 +13,21 @@
  * for more details.
  */
 
-#include "tls_reader.h"
+#include "bio_reader.h"
 
 #include <debug.h>
 
-typedef struct private_tls_reader_t private_tls_reader_t;
+typedef struct private_bio_reader_t private_bio_reader_t;
 
 /**
- * Private data of an tls_reader_t object.
+ * Private data of an bio_reader_t object.
  */
-struct private_tls_reader_t {
+struct private_bio_reader_t {
 
 	/**
-	 * Public tls_reader_t interface.
+	 * Public bio_reader_t interface.
 	 */
-	tls_reader_t public;
+	bio_reader_t public;
 
 	/**
 	 * Remaining data to process
@@ -35,24 +35,24 @@ struct private_tls_reader_t {
 	chunk_t buf;
 };
 
-METHOD(tls_reader_t, remaining, u_int32_t,
-	private_tls_reader_t *this)
+METHOD(bio_reader_t, remaining, u_int32_t,
+	private_bio_reader_t *this)
 {
 	return this->buf.len;
 }
 
-METHOD(tls_reader_t, peek, chunk_t,
-	private_tls_reader_t *this)
+METHOD(bio_reader_t, peek, chunk_t,
+	private_bio_reader_t *this)
 {
 	return this->buf;
 }
 
-METHOD(tls_reader_t, read_uint8, bool,
-	private_tls_reader_t *this, u_int8_t *res)
+METHOD(bio_reader_t, read_uint8, bool,
+	private_bio_reader_t *this, u_int8_t *res)
 {
 	if (this->buf.len < 1)
 	{
-		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int8 data",
+		DBG1(DBG_LIB, "%d bytes insufficient to parse u_int8 data",
 			 this->buf.len);
 		return FALSE;
 	}
@@ -61,12 +61,12 @@ METHOD(tls_reader_t, read_uint8, bool,
 	return TRUE;
 }
 
-METHOD(tls_reader_t, read_uint16, bool,
-	private_tls_reader_t *this, u_int16_t *res)
+METHOD(bio_reader_t, read_uint16, bool,
+	private_bio_reader_t *this, u_int16_t *res)
 {
 	if (this->buf.len < 2)
 	{
-		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int16 data",
+		DBG1(DBG_LIB, "%d bytes insufficient to parse u_int16 data",
 			 this->buf.len);
 		return FALSE;
 	}
@@ -75,12 +75,12 @@ METHOD(tls_reader_t, read_uint16, bool,
 	return TRUE;
 }
 
-METHOD(tls_reader_t, read_uint24, bool,
-	private_tls_reader_t *this, u_int32_t *res)
+METHOD(bio_reader_t, read_uint24, bool,
+	private_bio_reader_t *this, u_int32_t *res)
 {
 	if (this->buf.len < 3)
 	{
-		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int24 data",
+		DBG1(DBG_LIB, "%d bytes insufficient to parse u_int24 data",
 			 this->buf.len);
 		return FALSE;
 	}
@@ -89,12 +89,12 @@ METHOD(tls_reader_t, read_uint24, bool,
 	return TRUE;
 }
 
-METHOD(tls_reader_t, read_uint32, bool,
-	private_tls_reader_t *this, u_int32_t *res)
+METHOD(bio_reader_t, read_uint32, bool,
+	private_bio_reader_t *this, u_int32_t *res)
 {
 	if (this->buf.len < 4)
 	{
-		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int32 data",
+		DBG1(DBG_LIB, "%d bytes insufficient to parse u_int32 data",
 			 this->buf.len);
 		return FALSE;
 	}
@@ -103,12 +103,12 @@ METHOD(tls_reader_t, read_uint32, bool,
 	return TRUE;
 }
 
-METHOD(tls_reader_t, read_data, bool,
-	private_tls_reader_t *this, u_int32_t len, chunk_t *res)
+METHOD(bio_reader_t, read_data, bool,
+	private_bio_reader_t *this, u_int32_t len, chunk_t *res)
 {
 	if (this->buf.len < len)
 	{
-		DBG1(DBG_TLS, "%d bytes insufficient to parse %d bytes of data",
+		DBG1(DBG_LIB, "%d bytes insufficient to parse %d bytes of data",
 			 this->buf.len, len);
 		return FALSE;
 	}
@@ -117,8 +117,8 @@ METHOD(tls_reader_t, read_data, bool,
 	return TRUE;
 }
 
-METHOD(tls_reader_t, read_data8, bool,
-	private_tls_reader_t *this, chunk_t *res)
+METHOD(bio_reader_t, read_data8, bool,
+	private_bio_reader_t *this, chunk_t *res)
 {
 	u_int8_t len;
 
@@ -129,8 +129,8 @@ METHOD(tls_reader_t, read_data8, bool,
 	return read_data(this, len, res);
 }
 
-METHOD(tls_reader_t, read_data16, bool,
-	private_tls_reader_t *this, chunk_t *res)
+METHOD(bio_reader_t, read_data16, bool,
+	private_bio_reader_t *this, chunk_t *res)
 {
 	u_int16_t len;
 
@@ -141,8 +141,8 @@ METHOD(tls_reader_t, read_data16, bool,
 	return read_data(this, len, res);
 }
 
-METHOD(tls_reader_t, read_data24, bool,
-	private_tls_reader_t *this, chunk_t *res)
+METHOD(bio_reader_t, read_data24, bool,
+	private_bio_reader_t *this, chunk_t *res)
 {
 	u_int32_t len;
 
@@ -153,8 +153,8 @@ METHOD(tls_reader_t, read_data24, bool,
 	return read_data(this, len, res);
 }
 
-METHOD(tls_reader_t, read_data32, bool,
-	private_tls_reader_t *this, chunk_t *res)
+METHOD(bio_reader_t, read_data32, bool,
+	private_bio_reader_t *this, chunk_t *res)
 {
 	u_int32_t len;
 
@@ -165,8 +165,8 @@ METHOD(tls_reader_t, read_data32, bool,
 	return read_data(this, len, res);
 }
 
-METHOD(tls_reader_t, destroy, void,
-	private_tls_reader_t *this)
+METHOD(bio_reader_t, destroy, void,
+	private_bio_reader_t *this)
 {
 	free(this);
 }
@@ -174,9 +174,9 @@ METHOD(tls_reader_t, destroy, void,
 /**
  * See header
  */
-tls_reader_t *tls_reader_create(chunk_t data)
+bio_reader_t *bio_reader_create(chunk_t data)
 {
-	private_tls_reader_t *this;
+	private_bio_reader_t *this;
 
 	INIT(this,
 		.public = {

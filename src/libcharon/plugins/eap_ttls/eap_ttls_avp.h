@@ -25,8 +25,8 @@ typedef struct eap_ttls_avp_t eap_ttls_avp_t;
 
 #include <library.h>
 
-#include <tls_reader.h>
-#include <tls_writer.h>
+#include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 
 /**
  * EAP-TTLS Attribute-Value Pair (AVP) handler.
@@ -43,7 +43,7 @@ struct eap_ttls_avp_t {
 	 *					- FAILED if AVP processing failed
 	 *					- NEED_MORE if another invocation of process/build needed
 	 */
-	status_t (*process)(eap_ttls_avp_t *this, tls_reader_t *reader,
+	status_t (*process)(eap_ttls_avp_t *this, bio_reader_t *reader,
 						chunk_t *data);
 
 	/**
@@ -52,7 +52,7 @@ struct eap_ttls_avp_t {
 	 * @param writer	TLS data buffer to write to
 	 * @param data		EAP Message to send
 	 */
-	void (*build)(eap_ttls_avp_t *this, tls_writer_t *writer, chunk_t data);
+	void (*build)(eap_ttls_avp_t *this, bio_writer_t *writer, chunk_t data);
 
 	/**
 	 * Destroy a eap_ttls_application_t.

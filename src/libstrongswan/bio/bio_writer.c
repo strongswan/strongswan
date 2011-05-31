@@ -13,19 +13,19 @@
  * for more details.
  */
 
-#include "tls_writer.h"
+#include "bio_writer.h"
 
-typedef struct private_tls_writer_t private_tls_writer_t;
+typedef struct private_bio_writer_t private_bio_writer_t;
 
 /**
- * Private data of an tls_writer_t object.
+ * Private data of an bio_writer_t object.
  */
-struct private_tls_writer_t {
+struct private_bio_writer_t {
 
 	/**
-	 * Public tls_writer_t interface.
+	 * Public bio_writer_t interface.
 	 */
-	tls_writer_t public;
+	bio_writer_t public;
 
 	/**
 	 * Allocated buffer
@@ -46,14 +46,14 @@ struct private_tls_writer_t {
 /**
  * Increase buffer size
  */
-static void increase(private_tls_writer_t *this)
+static void increase(private_bio_writer_t *this)
 {
 	this->buf.len += this->increase;
 	this->buf.ptr = realloc(this->buf.ptr, this->buf.len);
 }
 
-METHOD(tls_writer_t, write_uint8, void,
-	private_tls_writer_t *this, u_int8_t value)
+METHOD(bio_writer_t, write_uint8, void,
+	private_bio_writer_t *this, u_int8_t value)
 {
 	if (this->used + 1 > this->buf.len)
 	{
@@ -63,8 +63,8 @@ METHOD(tls_writer_t, write_uint8, void,
 	this->used += 1;
 }
 
-METHOD(tls_writer_t, write_uint16, void,
-	private_tls_writer_t *this, u_int16_t value)
+METHOD(bio_writer_t, write_uint16, void,
+	private_bio_writer_t *this, u_int16_t value)
 {
 	if (this->used + 2 > this->buf.len)
 	{
@@ -74,8 +74,8 @@ METHOD(tls_writer_t, write_uint16, void,
 	this->used += 2;
 }
 
-METHOD(tls_writer_t, write_uint24, void,
-	private_tls_writer_t *this, u_int32_t value)
+METHOD(bio_writer_t, write_uint24, void,
+	private_bio_writer_t *this, u_int32_t value)
 {
 	if (this->used + 3 > this->buf.len)
 	{
@@ -86,8 +86,8 @@ METHOD(tls_writer_t, write_uint24, void,
 	this->used += 3;
 }
 
-METHOD(tls_writer_t, write_uint32, void,
-	private_tls_writer_t *this, u_int32_t value)
+METHOD(bio_writer_t, write_uint32, void,
+	private_bio_writer_t *this, u_int32_t value)
 {
 	if (this->used + 4 > this->buf.len)
 	{
@@ -97,8 +97,8 @@ METHOD(tls_writer_t, write_uint32, void,
 	this->used += 4;
 }
 
-METHOD(tls_writer_t, write_data, void,
-	private_tls_writer_t *this, chunk_t value)
+METHOD(bio_writer_t, write_data, void,
+	private_bio_writer_t *this, chunk_t value)
 {
 	while (this->used + value.len > this->buf.len)
 	{
@@ -108,36 +108,36 @@ METHOD(tls_writer_t, write_data, void,
 	this->used += value.len;
 }
 
-METHOD(tls_writer_t, write_data8, void,
-	private_tls_writer_t *this, chunk_t value)
+METHOD(bio_writer_t, write_data8, void,
+	private_bio_writer_t *this, chunk_t value)
 {
 	write_uint8(this, value.len);
 	write_data(this, value);
 }
 
-METHOD(tls_writer_t, write_data16, void,
-	private_tls_writer_t *this, chunk_t value)
+METHOD(bio_writer_t, write_data16, void,
+	private_bio_writer_t *this, chunk_t value)
 {
 	write_uint16(this, value.len);
 	write_data(this, value);
 }
 
-METHOD(tls_writer_t, write_data24, void,
-	private_tls_writer_t *this, chunk_t value)
+METHOD(bio_writer_t, write_data24, void,
+	private_bio_writer_t *this, chunk_t value)
 {
 	write_uint24(this, value.len);
 	write_data(this, value);
 }
 
-METHOD(tls_writer_t, write_data32, void,
-	private_tls_writer_t *this, chunk_t value)
+METHOD(bio_writer_t, write_data32, void,
+	private_bio_writer_t *this, chunk_t value)
 {
 	write_uint32(this, value.len);
 	write_data(this, value);
 }
 
-METHOD(tls_writer_t, wrap8, void,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, wrap8, void,
+	private_bio_writer_t *this)
 {
 	if (this->used + 1 > this->buf.len)
 	{
@@ -148,8 +148,8 @@ METHOD(tls_writer_t, wrap8, void,
 	this->used += 1;
 }
 
-METHOD(tls_writer_t, wrap16, void,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, wrap16, void,
+	private_bio_writer_t *this)
 {
 	if (this->used + 2 > this->buf.len)
 	{
@@ -160,8 +160,8 @@ METHOD(tls_writer_t, wrap16, void,
 	this->used += 2;
 }
 
-METHOD(tls_writer_t, wrap24, void,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, wrap24, void,
+	private_bio_writer_t *this)
 {
 	u_int32_t len;
 
@@ -176,8 +176,8 @@ METHOD(tls_writer_t, wrap24, void,
 	this->used += 3;
 }
 
-METHOD(tls_writer_t, wrap32, void,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, wrap32, void,
+	private_bio_writer_t *this)
 {
 	if (this->used + 4 > this->buf.len)
 	{
@@ -188,14 +188,14 @@ METHOD(tls_writer_t, wrap32, void,
 	this->used += 4;
 }
 
-METHOD(tls_writer_t, get_buf, chunk_t,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, get_buf, chunk_t,
+	private_bio_writer_t *this)
 {
 	return chunk_create(this->buf.ptr, this->used);
 }
 
-METHOD(tls_writer_t, destroy, void,
-	private_tls_writer_t *this)
+METHOD(bio_writer_t, destroy, void,
+	private_bio_writer_t *this)
 {
 	free(this->buf.ptr);
 	free(this);
@@ -204,9 +204,9 @@ METHOD(tls_writer_t, destroy, void,
 /**
  * See header
  */
-tls_writer_t *tls_writer_create(u_int32_t bufsize)
+bio_writer_t *bio_writer_create(u_int32_t bufsize)
 {
-	private_tls_writer_t *this;
+	private_bio_writer_t *this;
 
 	INIT(this,
 		.public = {

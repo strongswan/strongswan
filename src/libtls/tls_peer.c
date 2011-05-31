@@ -124,7 +124,7 @@ struct private_tls_peer_t {
  * Process a server hello message
  */
 static status_t process_server_hello(private_tls_peer_t *this,
-									 tls_reader_t *reader)
+									 bio_reader_t *reader)
 {
 	u_int8_t compression;
 	u_int16_t version, cipher;
@@ -209,10 +209,10 @@ static bool check_certificate(private_tls_peer_t *this, certificate_t *cert)
  * Process a Certificate message
  */
 static status_t process_certificate(private_tls_peer_t *this,
-									tls_reader_t *reader)
+									bio_reader_t *reader)
 {
 	certificate_t *cert;
-	tls_reader_t *certs;
+	bio_reader_t *certs;
 	chunk_t data;
 	bool first = TRUE;
 
@@ -225,7 +225,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	certs = tls_reader_create(data);
+	certs = bio_reader_create(data);
 	while (certs->remaining(certs))
 	{
 		if (!certs->read_data24(certs, &data))
@@ -302,7 +302,7 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
  * Process a Key Exchange message using MODP Diffie Hellman
  */
 static status_t process_modp_key_exchange(private_tls_peer_t *this,
-										  tls_reader_t *reader)
+										  bio_reader_t *reader)
 {
 	chunk_t prime, generator, pub, chunk;
 	public_key_t *public;
@@ -379,7 +379,7 @@ static diffie_hellman_group_t curve_to_ec_group(private_tls_peer_t *this,
  * Process a Key Exchange message using EC Diffie Hellman
  */
 static status_t process_ec_key_exchange(private_tls_peer_t *this,
-										tls_reader_t *reader)
+										bio_reader_t *reader)
 {
 	diffie_hellman_group_t group;
 	public_key_t *public;
@@ -466,7 +466,7 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
  * Process a Server Key Exchange
  */
 static status_t process_key_exchange(private_tls_peer_t *this,
-									 tls_reader_t *reader)
+									 bio_reader_t *reader)
 {
 	diffie_hellman_group_t group;
 
@@ -491,10 +491,10 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 /**
  * Process a Certificate Request message
  */
-static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
+static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 {
 	chunk_t types, hashsig, data;
-	tls_reader_t *authorities;
+	bio_reader_t *authorities;
 	identification_t *id;
 	certificate_t *cert;
 
@@ -529,7 +529,7 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	authorities = tls_reader_create(data);
+	authorities = bio_reader_create(data);
 	while (authorities->remaining(authorities))
 	{
 		if (!authorities->read_data16(authorities, &data))
@@ -565,7 +565,7 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
  * Process Hello Done message
  */
 static status_t process_hello_done(private_tls_peer_t *this,
-								   tls_reader_t *reader)
+								   bio_reader_t *reader)
 {
 	this->crypto->append_handshake(this->crypto,
 								   TLS_SERVER_HELLO_DONE, reader->peek(reader));
@@ -576,7 +576,7 @@ static status_t process_hello_done(private_tls_peer_t *this,
 /**
  * Process finished message
  */
-static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
+static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 {
 	chunk_t received;
 	char buf[12];
@@ -607,7 +607,7 @@ static status_t process_finished(private_tls_peer_t *this, tls_reader_t *reader)
 }
 
 METHOD(tls_handshake_t, process, status_t,
-	private_tls_peer_t *this, tls_handshake_type_t type, tls_reader_t *reader)
+	private_tls_peer_t *this, tls_handshake_type_t type, bio_reader_t *reader)
 {
 	tls_handshake_type_t expected;
 
@@ -670,10 +670,10 @@ METHOD(tls_handshake_t, process, status_t,
  * Send a client hello
  */
 static status_t send_client_hello(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	tls_cipher_suite_t *suites;
-	tls_writer_t *extensions, *curves = NULL;
+	bio_writer_t *extensions, *curves = NULL;
 	tls_version_t version;
 	tls_named_curve_t curve;
 	enumerator_t *enumerator;
@@ -711,7 +711,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	writer->write_uint8(writer, 1);
 	writer->write_uint8(writer, 0);
 
-	extensions = tls_writer_create(32);
+	extensions = bio_writer_create(32);
 
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
 	this->crypto->get_signature_algorithms(this->crypto, extensions);
@@ -723,7 +723,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		if (!curves)
 		{
 			extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
-			curves = tls_writer_create(16);
+			curves = bio_writer_create(16);
 		}
 		curves->write_uint16(curves, curve);
 	}
@@ -741,11 +741,11 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	}
 	if (this->server->get_type(this->server) == ID_FQDN)
 	{
-		tls_writer_t *names;
+		bio_writer_t *names;
 
 		DBG2(DBG_TLS, "sending Server Name Indication for '%Y'", this->server);
 
-		names = tls_writer_create(8);
+		names = bio_writer_create(8);
 		names->write_uint8(names, TLS_NAME_TYPE_HOST_NAME);
 		names->write_data16(names, this->server->get_encoding(this->server));
 		names->wrap16(names);
@@ -769,7 +769,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 static private_key_t *find_private_key(private_tls_peer_t *this)
 {
 	private_key_t *key = NULL;
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 	key_type_t type;
 	u_int8_t cert;
 
@@ -777,7 +777,7 @@ static private_key_t *find_private_key(private_tls_peer_t *this)
 	{
 		return NULL;
 	}
-	reader = tls_reader_create(this->cert_types);
+	reader = bio_reader_create(this->cert_types);
 	while (reader->remaining(reader) && reader->read_uint8(reader, &cert))
 	{
 		switch (cert)
@@ -806,12 +806,12 @@ static private_key_t *find_private_key(private_tls_peer_t *this)
  * Send Certificate
  */
 static status_t send_certificate(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	auth_rule_t rule;
-	tls_writer_t *certs;
+	bio_writer_t *certs;
 	chunk_t data;
 
 	this->private = find_private_key(this);
@@ -823,7 +823,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 	}
 
 	/* generate certificate payload */
-	certs = tls_writer_create(256);
+	certs = bio_writer_create(256);
 	if (this->peer)
 	{
 		cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
@@ -867,7 +867,7 @@ static status_t send_certificate(private_tls_peer_t *this,
  * Send client key exchange, using premaster encryption
  */
 static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	public_key_t *public;
 	rng_t *rng;
@@ -919,7 +919,7 @@ static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
  * Send client key exchange, using DHE exchange
  */
 static status_t send_key_exchange_dhe(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	chunk_t premaster, pub;
 
@@ -957,7 +957,7 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
  * Send client key exchange, depending on suite
  */
 static status_t send_key_exchange(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	if (this->dh)
 	{
@@ -970,7 +970,7 @@ static status_t send_key_exchange(private_tls_peer_t *this,
  * Send certificate verify
  */
 static status_t send_certificate_verify(private_tls_peer_t *this,
-							tls_handshake_type_t *type, tls_writer_t *writer)
+							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	if (!this->private ||
 		!this->crypto->sign_handshake(this->crypto, this->private,
@@ -991,7 +991,7 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
  * Send Finished
  */
 static status_t send_finished(private_tls_peer_t *this,
-							  tls_handshake_type_t *type, tls_writer_t *writer)
+							  tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	char buf[12];
 
@@ -1011,7 +1011,7 @@ static status_t send_finished(private_tls_peer_t *this,
 }
 
 METHOD(tls_handshake_t, build, status_t,
-	private_tls_peer_t *this, tls_handshake_type_t *type, tls_writer_t *writer)
+	private_tls_peer_t *this, tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	switch (this->state)
 	{

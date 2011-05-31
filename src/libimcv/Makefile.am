@@ -1,10 +1,7 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon \
-	-I$(top_srcdir)/src/libtls
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
 
 noinst_LTLIBRARIES = libimcv.la
-
-libimcv_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 
 libimcv_la_SOURCES = \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \

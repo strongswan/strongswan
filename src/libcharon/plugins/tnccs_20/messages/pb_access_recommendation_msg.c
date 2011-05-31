@@ -15,8 +15,8 @@
 
 #include "pb_access_recommendation_msg.h"
 
-#include <tls_writer.h>
-#include <tls_reader.h>
+#include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <debug.h>
 
 ENUM(pb_access_recommendation_code_names, PB_REC_ACCESS_ALLOWED, PB_REC_QUARANTINED,
@@ -80,10 +80,10 @@ METHOD(pb_tnc_msg_t, get_encoding, chunk_t,
 METHOD(pb_tnc_msg_t, build, void,
 	private_pb_access_recommendation_msg_t *this)
 {
-	tls_writer_t *writer;
+	bio_writer_t *writer;
 
 	/* build message */
-	writer = tls_writer_create(ACCESS_RECOMMENDATION_MSG_SIZE);
+	writer = bio_writer_create(ACCESS_RECOMMENDATION_MSG_SIZE);
 	writer->write_uint16(writer, ACCESS_RECOMMENDATION_RESERVED);
 	writer->write_uint16(writer, this->recommendation);
 	free(this->encoding.ptr);
@@ -95,11 +95,11 @@ METHOD(pb_tnc_msg_t, build, void,
 METHOD(pb_tnc_msg_t, process, status_t,
 	private_pb_access_recommendation_msg_t *this, u_int32_t *offset)
 {
-	tls_reader_t *reader;
+	bio_reader_t *reader;
 	u_int16_t reserved;
 
 	/* process message */
-	reader = tls_reader_create(this->encoding);
+	reader = bio_reader_create(this->encoding);
 	reader->read_uint16(reader, &reserved);
 	reader->read_uint16(reader, &this->recommendation);
 	reader->destroy(reader);
