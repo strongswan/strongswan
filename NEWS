@@ -1,3 +1,10 @@
+strongswan-4.5.3
+----------------
+
+- IMC/IMV test pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
+  (--enable-imc-test/--enable-imv-test).
+
+
 strongswan-4.5.2
 ----------------
 
