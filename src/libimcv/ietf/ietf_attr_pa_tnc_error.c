@@ -14,6 +14,7 @@
 
 #include "ietf_attr_pa_tnc_error.h"
 
+#include <bio/bio_writer.h>
 #include <debug.h>
 
 ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
@@ -23,6 +24,8 @@ ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
 	"Version Not Supported",
 	"Attribute Type Not Supported"
 );
+
+typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t;
 
 /**
  * PA-TNC Error Attribute Type  (see section 4.2.8 of RFC 5792)
@@ -39,7 +42,8 @@ ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t;
+#define IETF_ATTR_PA_TNC_ERROR_HEADER_SIZE	12
+#define IETF_ATTR_PA_TNC_ERROR_RESERVED		0x00
 
 /**
  * Private data of an ietf_attr_pa_tnc_error_t object.
@@ -81,6 +85,10 @@ struct private_ietf_attr_pa_tnc_error_t {
 	 */
 	u_int32_t error_code;
 
+	/**
+	 * PA-TNC message header
+	 */
+	chunk_t header;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -116,7 +124,15 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 METHOD(pa_tnc_attr_t, build, void,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
+	bio_writer_t *writer;
 
+	writer = bio_writer_create(IETF_ATTR_PA_TNC_ERROR_HEADER_SIZE);
+	writer->write_uint8 (writer, IETF_ATTR_PA_TNC_ERROR_RESERVED);
+	writer->write_uint24(writer, this->error_vendor_id);
+	writer->write_uint32(writer, this->error_code);
+	writer->write_data  (writer, this->header);
+	this->value = chunk_clone(writer->get_buf(writer));
+	writer->destroy(writer);
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
@@ -128,6 +144,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
+	free(this->header.ptr);
 	free(this);
 }
 
@@ -147,9 +164,12 @@ METHOD(ietf_attr_pa_tnc_error_t, get_error_code, u_int32_t,
  * Described in header.
  */
 pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
-											 u_int32_t error_code)
+											 u_int32_t error_code,
+											 chunk_t header)
 {
 	private_ietf_attr_pa_tnc_error_t *this;
+
+	header.len = 8;
 
 	INIT(this,
 		.public = {
@@ -170,6 +190,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 		.type = IETF_ATTR_PA_TNC_ERROR,
 		.error_vendor_id = vendor_id,
 		.error_code = error_code,
+		.header = chunk_clone(header),
 	);
 
 	return &this->public.pa_tnc_attribute;

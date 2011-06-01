@@ -73,10 +73,12 @@ struct ietf_attr_pa_tnc_error_t {
  *
  * @param vendor_id			PA-TNC error code vendor ID
  * @param error_code		PA-TNC error code
+ * @param header			PA-TNC message header (first 8 bytes)
  * 
  */
 pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_t vendor_id,
-											 u_int32_t error_code);
+											 u_int32_t error_code,
+											 chunk_t header);
 
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from received data

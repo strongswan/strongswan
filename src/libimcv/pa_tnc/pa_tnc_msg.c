@@ -15,11 +15,12 @@
  */
 
 #include "pa_tnc_msg.h"
+#include "ietf/ietf_attr_pa_tnc_error.h"
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/linked_list.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 #include <debug.h>
 
 
@@ -76,6 +77,11 @@ struct private_pa_tnc_msg_t {
 	 * List of PA-TNC attributes
 	 */
 	linked_list_t *attributes;
+
+	/**
+	 * linked list of PA-TNC error messages
+	 */
+	linked_list_t *errors;
 
 	/**
 	 * Message identifier
@@ -154,20 +160,19 @@ METHOD(pa_tnc_msg_t, build, void,
 METHOD(pa_tnc_msg_t, process, status_t,
 	private_pa_tnc_msg_t *this)
 {
+	bio_reader_t *reader;
+	pa_tnc_attr_t *error;
 	u_int8_t version;
 	u_int32_t reserved;
-	bio_reader_t *reader;
-	status_t status = FAILED;
-
-	reader = bio_reader_create(this->encoding);
 
 	/* process message header */
-	if (reader->remaining(reader) < PA_TNC_HEADER_SIZE)
+	if (this->encoding.len < PA_TNC_HEADER_SIZE)
 	{
 		DBG1(DBG_TNC, "%u bytes insufficient to parse PA-TNC message header",
 					   this->encoding.len);
-		goto end;
+		return FAILED;
 	}
+	reader = bio_reader_create(this->encoding);
 	reader->read_uint8 (reader, &version);
 	reader->read_uint24(reader, &reserved);
 	reader->read_uint32(reader, &this->identifier);
@@ -175,7 +180,9 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	if (version != PA_TNC_VERSION)
 	{
 		DBG1(DBG_TNC, "PA-TNC version %u not supported", version);
-		goto end;
+		error = ietf_attr_pa_tnc_error_create(PEN_IETF,
+					PA_ERROR_VERSION_NOT_SUPPORTED, this->encoding);
+		goto err;
 	}
 	DBG2(DBG_TNC, "processing PA-TNC message with ID 0x%08x", this->identifier);
 	
@@ -199,14 +206,18 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		{
 			DBG1(DBG_TNC, "%u bytes too small for PA-TNC attribute length",
 						   length);
-			goto end;
+			error = ietf_attr_pa_tnc_error_create(PEN_IETF,
+						PA_ERROR_INVALID_PARAMETER, this->encoding);
+			goto err;
 		}
 		length -= PA_TNC_ATTR_HEADER_SIZE;
 
 		if (!reader->read_data(reader, length , &value))
 		{
 			DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
-			goto end; 
+			error = ietf_attr_pa_tnc_error_create(PEN_IETF,
+						PA_ERROR_INVALID_PARAMETER, this->encoding);
+			goto err; 
 		} 
 		DBG3(DBG_TNC, "%B", &value);
 
@@ -216,7 +227,9 @@ METHOD(pa_tnc_msg_t, process, status_t,
 			if (flags & PA_TNC_ATTR_FLAG_NOSKIP)
 			{
 				DBG1(DBG_TNC, "unsupported PA-TNC attribute with NOSKIP flag");
-				goto end;
+				error = ietf_attr_pa_tnc_error_create(PEN_IETF,
+							PA_ERROR_ATTR_TYPE_NOT_SUPPORTED, this->encoding);
+				goto err;
 			}
 			else
 			{
@@ -227,19 +240,23 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		if (attr->process(attr) != SUCCESS)
 		{
 			attr->destroy(attr);
-			goto end;
+			error = ietf_attr_pa_tnc_error_create(PEN_IETF,
+						PA_ERROR_INVALID_PARAMETER, this->encoding);
+			goto err;
 		}
 		add_attribute(this, attr);
 	}
 
 	if (reader->remaining(reader) == 0)
 	{
-		status = SUCCESS;
+		reader->destroy(reader);
+		return SUCCESS;
 	}
 
-end:
+err:
 	reader->destroy(reader);
-	return status;
+	this->errors->insert_last(this->errors, error);
+	return VERIFY_ERROR;
 }
 
 METHOD(pa_tnc_msg_t, create_attribute_enumerator, enumerator_t*,
@@ -248,15 +265,22 @@ METHOD(pa_tnc_msg_t, create_attribute_enumerator, enumerator_t*,
 	return this->attributes->create_enumerator(this->attributes);
 }
 
+METHOD(pa_tnc_msg_t, create_error_enumerator, enumerator_t*,
+	private_pa_tnc_msg_t *this)
+{
+	return this->errors->create_enumerator(this->attributes);
+}
+
 METHOD(pa_tnc_msg_t, destroy, void,
 	private_pa_tnc_msg_t *this)
 {
 	this->attributes->destroy_offset(this->attributes,
 									 offsetof(pa_tnc_attr_t, destroy)); 
+	this->errors->destroy_offset(this->errors,
+									 offsetof(pa_tnc_attr_t, destroy));
 	free(this->encoding.ptr);
 	free(this);
 }
-
 
 /**
  * See header
@@ -272,10 +296,12 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 			.build = _build,
 			.process = _process,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.create_error_enumerator = _create_error_enumerator,
 			.destroy = _destroy,
 		},
 		.encoding = chunk_clone(data),
 		.attributes = linked_list_create(),
+		.errors = linked_list_create(),
 	);
 
 	return &this->public;
@@ -288,5 +314,4 @@ pa_tnc_msg_t *pa_tnc_msg_create(void)
 {
 	return pa_tnc_msg_create_from_data(chunk_empty);
 }
-
 

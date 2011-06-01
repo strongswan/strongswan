@@ -67,6 +67,13 @@ struct pa_tnc_msg_t {
 	enumerator_t* (*create_attribute_enumerator)(pa_tnc_msg_t *this);
 
 	/**
+	 * Enumerates over all parsing errors
+	 *
+	 * @return				return error enumerator
+	 */
+	enumerator_t* (*create_error_enumerator)(pa_tnc_msg_t *this);
+
+	/**
 	 * Destroys a pa_tnc_msg_t object.
 	 */
 	void (*destroy)(pa_tnc_msg_t *this);
