@@ -25,8 +25,6 @@
 #include <daemon.h>
 #include <debug.h>
 #include <threading/mutex.h>
-#include <tnc/tncif.h>
-#include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;

@@ -16,7 +16,8 @@
 #include "tnc_imc_manager.h"
 
 #include <tnc/imc/imc_manager.h>
-#include <tnc/tncifimc.h>
+
+#include <tncifimc.h>
 
 #include <debug.h>
 #include <library.h>

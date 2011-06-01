@@ -25,7 +25,7 @@ typedef struct tnccs_preferred_language_msg_t tnccs_preferred_language_msg_t;
 
 #include "tnccs_msg.h"
 
-#include <tnc/tncif.h>
+#include <tncif.h>
 
 /**
  * Class representing the TNCCS-PreferredLanguage message type

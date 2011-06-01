@@ -17,7 +17,9 @@
 #include <imv/imv_agent.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ita/ita_attr_command.h>
-#include <tnc/pen/pen.h>
+
+#include <pen/pen.h>
+
 #include <debug.h>
 
 /* IMV definitions */

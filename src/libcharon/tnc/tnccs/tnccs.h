@@ -24,9 +24,10 @@
 #ifndef TNCCS_H_
 #define TNCCS_H_
 
-#include <tnc/tncif.h>
-#include <tnc/tncifimc.h>
-#include <tnc/tncifimv.h>
+#include <tncif.h>
+#include <tncifimc.h>
+#include <tncifimv.h>
+
 #include <library.h>
 
 typedef enum tnccs_type_t tnccs_type_t;

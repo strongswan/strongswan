@@ -49,6 +49,7 @@ credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
+pen/pen.h pen/pen.c \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
 processing/jobs/job.h processing/jobs/job.c \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \

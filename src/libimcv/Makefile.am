@@ -1,7 +1,9 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libcharon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif
 
 noinst_LTLIBRARIES = libimcv.la
+
+libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
 
 libimcv_la_SOURCES = \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \

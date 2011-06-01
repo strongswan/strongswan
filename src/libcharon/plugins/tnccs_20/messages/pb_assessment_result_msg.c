@@ -15,9 +15,10 @@
 
 #include "pb_assessment_result_msg.h"
 
+#include <tncifimv.h>
+
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <tnc/tncifimv.h>
 #include <debug.h>
 
 typedef struct private_pb_assessment_result_msg_t private_pb_assessment_result_msg_t;

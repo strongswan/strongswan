@@ -20,7 +20,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <tnc/tnccs/tnccs.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 #include <debug.h>
 
 ENUM(pa_tnc_subtype_names, PA_SUBTYPE_TESTING, PA_SUBTYPE_NEA_CLIENT,

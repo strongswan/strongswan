@@ -23,8 +23,9 @@
 
 #include "imc_state.h"
 
-#include <tnc/tncifimc.h>
-#include <tnc/pen/pen.h>
+#include <tncifimc.h>
+#include <pen/pen.h>
+
 #include <library.h>
 
 typedef struct imc_agent_t imc_agent_t;

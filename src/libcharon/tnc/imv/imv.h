@@ -24,7 +24,8 @@
 #ifndef IMV_H_
 #define IMV_H_
 
-#include <tnc/tncifimv.h>
+#include <tncifimv.h>
+
 #include <library.h>
 
 typedef struct imv_t imv_t;

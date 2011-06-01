@@ -14,7 +14,9 @@
 
 #include <debug.h>
 #include <daemon.h>
-#include <tnc/tncifimv.h>
+
+#include <tncifimv.h>
+
 #include <tnc/imv/imv.h>
 #include <tnc/imv/imv_recommendations.h>
 

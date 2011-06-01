@@ -19,7 +19,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <tnc/tnccs/tnccs.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 
 ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
 							  PB_ERROR_VERSION_NOT_SUPPORTED,

@@ -953,6 +953,7 @@ AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue)
+AM_CONDITIONAL(USE_LIBTNCIF, test x$charon = xtrue -o x$conftest = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$pluto = xtrue -o x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
@@ -1035,6 +1036,7 @@ AC_OUTPUT(
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
+	src/libtncif/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile

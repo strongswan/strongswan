@@ -1,6 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
+	-I$(top_srcdir)/src/libtncif
 
 AM_CFLAGS = -rdynamic
 
@@ -8,6 +9,7 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnccs-20.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-20.la
+libstrongswan_tnccs_20_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
 endif
 
 libstrongswan_tnccs_20_la_SOURCES = \

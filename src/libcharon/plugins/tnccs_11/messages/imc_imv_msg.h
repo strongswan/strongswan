@@ -25,7 +25,7 @@ typedef struct imc_imv_msg_t imc_imv_msg_t;
 
 #include "tnccs_msg.h"
 
-#include <tnc/tncif.h>
+#include <tncif.h>
 
 /**
  * Classs representing the PB-PA message type.

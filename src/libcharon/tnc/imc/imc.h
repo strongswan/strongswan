@@ -24,7 +24,8 @@
 #ifndef IMC_H_
 #define IMC_H_
 
-#include <tnc/tncifimc.h>
+#include <tncifimc.h>
+
 #include <library.h>
 
 typedef struct imc_t imc_t;

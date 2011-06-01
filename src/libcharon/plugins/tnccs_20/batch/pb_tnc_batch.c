@@ -23,7 +23,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <tnc/tnccs/tnccs.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 
 ENUM(pb_tnc_batch_type_names, PB_BATCH_CDATA, PB_BATCH_CLOSE,
 	"CDATA",

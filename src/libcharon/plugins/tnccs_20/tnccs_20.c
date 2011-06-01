@@ -29,10 +29,8 @@
 #include <debug.h>
 #include <daemon.h>
 #include <threading/mutex.h>
-#include <tnc/tncif.h>
-#include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;
 

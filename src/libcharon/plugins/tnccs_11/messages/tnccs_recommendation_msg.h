@@ -25,7 +25,7 @@ typedef struct tnccs_recommendation_msg_t tnccs_recommendation_msg_t;
 
 #include "tnccs_msg.h"
 
-#include <tnc/tncifimv.h>
+#include <tncifimv.h>
 
 /**
  * Class representing the TNCCS-Recommendation message type

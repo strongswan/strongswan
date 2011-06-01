@@ -23,8 +23,9 @@
 
 #include "imv_state.h"
 
-#include <tnc/tncifimv.h>
-#include <tnc/pen/pen.h>
+#include <tncifimv.h>
+#include <pen/pen.h>
+
 #include <library.h>
 
 typedef struct imv_agent_t imv_agent_t;

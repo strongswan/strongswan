@@ -16,6 +16,10 @@ if USE_TLS
   SUBDIRS += libtls
 endif
 
+if USE_LIBTNCIF
+  SUBDIRS += libtncif
+endif
+
 if USE_IMCV
   SUBDIRS += libimcv
 endif

@@ -24,7 +24,7 @@
 typedef struct pa_tnc_attr_t pa_tnc_attr_t;
 
 #include <library.h>
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
 
 /**
  * Interface for an RFC 5792 PA-TNC Posture Attribute.

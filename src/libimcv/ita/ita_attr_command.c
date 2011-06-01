@@ -14,7 +14,8 @@
 
 #include "ita_attr_command.h"
 
-#include <tnc/pen/pen.h>
+#include <pen/pen.h>
+
 #include <debug.h>
 
 typedef struct private_ita_attr_command_t private_ita_attr_command_t;

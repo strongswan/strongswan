@@ -21,7 +21,8 @@
 #ifndef IMC_STATE_H_
 #define IMC_STATE_H_
 
-#include <tnc/tncif.h>
+#include <tncif.h>
+
 #include <library.h>
 
 typedef struct imc_state_t imc_state_t;

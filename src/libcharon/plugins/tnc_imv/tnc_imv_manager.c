@@ -17,7 +17,8 @@
 #include "tnc_imv_recommendations.h"
 
 #include <tnc/imv/imv_manager.h>
-#include <tnc/tncifimv.h>
+
+#include <tncifimv.h>
 
 #include <debug.h>
 #include <daemon.h>

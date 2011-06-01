@@ -21,7 +21,7 @@
 #ifndef IMV_RECOMMENDATIONS_H_
 #define IMV_RECOMMENDATIONS_H_
 
-#include <tnc/tncifimv.h>
+#include <tncifimv.h>
 #include <library.h>
 
 typedef enum recommendation_policy_t recommendation_policy_t;
