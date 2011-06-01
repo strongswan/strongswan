@@ -11,3 +11,13 @@ libimcv_la_SOURCES = \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c
+
+SUBDIRS = .
+
+if USE_IMC_TEST
+  SUBDIRS += plugins/imc_test
+endif
+
+if USE_IMV_TEST
+  SUBDIRS += plugins/imv_test
+endif

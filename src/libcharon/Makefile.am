@@ -371,14 +371,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_IMC_TEST
-  SUBDIRS += plugins/imc_test
-endif
-
-if USE_IMV_TEST
-  SUBDIRS += plugins/imv_test
-endif
-
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 if MONOLITHIC
