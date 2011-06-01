@@ -44,13 +44,17 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
+	imv_test = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
+								imv_id, actual_version);
+	if (!imv_test)
+	{
+		return TNC_RESULT_FATAL;
+	}
 	if (min_version > TNC_IFIMV_VERSION_1 || max_version < TNC_IFIMV_VERSION_1)
 	{
 		DBG1(DBG_IMV, "no common IF-IMV version");
 		return TNC_RESULT_NO_COMMON_VERSION;
 	}
-	imv_test = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-								imv_id, actual_version);
 	return TNC_RESULT_SUCCESS;
 }
 

@@ -44,13 +44,17 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
+	imc_test = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
+								imc_id, actual_version);
+	if (!imc_test)
+	{
+		return TNC_RESULT_FATAL;
+	}
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
 		DBG1(DBG_IMC, "no common IF-IMC version");
 		return TNC_RESULT_NO_COMMON_VERSION;
 	}
-	imc_test = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-								imc_id, actual_version);
 	return TNC_RESULT_SUCCESS;
 }
 

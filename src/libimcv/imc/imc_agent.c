@@ -12,6 +12,7 @@
  * for more details.
  */
 
+#include "imcv.h"
 #include "imc_agent.h"
 
 #include <debug.h>
@@ -277,6 +278,9 @@ METHOD(imc_agent_t, destroy, void,
 	this->connections->destroy_function(this->connections, free);
 	this->connection_lock->destroy(this->connection_lock);
 	free(this);
+
+	/* decrease the reference count or terminate */
+	libimcv_deinit();
 }
 
 /**
@@ -287,6 +291,12 @@ imc_agent_t *imc_agent_create(const char *name,
 							  TNC_IMCID id, TNC_Version *actual_version)
 {
 	private_imc_agent_t *this;
+
+	/* initialize  or increase the reference count */
+	if (!libimcv_init())
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {

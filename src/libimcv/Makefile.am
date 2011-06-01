@@ -6,6 +6,7 @@ noinst_LTLIBRARIES = libimcv.la
 libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
 
 libimcv_la_SOURCES = \
+	imcv.h imcv.c \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \
 	imv/imv_agent.h imv/imv_agent.c imv/imv_state.h \
 	ietf/ietf_attr.h \

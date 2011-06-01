@@ -12,8 +12,8 @@
  * for more details.
  */
 
+#include "imcv.h"
 #include "imv_agent.h"
-#include "imv_state.h"
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -345,6 +345,9 @@ METHOD(imv_agent_t, destroy, void,
 									  offsetof(imv_state_t, destroy));
 	this->connection_lock->destroy(this->connection_lock);
 	free(this);
+
+	/* decrease the reference count or terminate */
+	libimcv_deinit();
 }
 
 /**
@@ -355,6 +358,12 @@ imv_agent_t *imv_agent_create(const char *name,
 							  TNC_IMVID id, TNC_Version *actual_version)
 {
 	private_imv_agent_t *this;
+
+	/* initialize  or increase the reference count */
+	if (!libimcv_init())
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -374,7 +383,7 @@ imv_agent_t *imv_agent_create(const char *name,
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-	
+
 	*actual_version = TNC_IFIMV_VERSION_1;
 	DBG1(DBG_IMV, "IMV %u \"%s\" initialized", this->id, this->name);
 
