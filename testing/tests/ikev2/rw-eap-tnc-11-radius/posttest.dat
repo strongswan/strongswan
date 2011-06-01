@@ -1,7 +1,7 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-alice::/etc/init.d/radiusd stop
+alice::killall radiusd
 alice::rm /etc/raddb/sites-enabled/inner-tunnel-second
 moon::/etc/init.d/iptables stop 2> /dev/null
 carol::/etc/init.d/iptables stop 2> /dev/null
