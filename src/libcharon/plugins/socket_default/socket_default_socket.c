@@ -461,15 +461,15 @@ static int open_socket(private_socket_default_socket_t *this,
 	int skt;
 
 	memset(&addr, 0, sizeof(addr));
+	addr.ss_family = family;
 	/* precalculate constants depending on address family */
 	switch (family)
 	{
 		case AF_INET:
 		{
 			struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
-			sin->sin_family = AF_INET;
-			sin->sin_addr.s_addr = INADDR_ANY;
-			sin->sin_port = htons(port);
+			htoun32(&sin->sin_addr.s_addr, INADDR_ANY);
+			htoun16(&sin->sin_port, port);
 			addrlen = sizeof(struct sockaddr_in);
 			sol = SOL_IP;
 #ifdef IP_PKTINFO
@@ -482,9 +482,8 @@ static int open_socket(private_socket_default_socket_t *this,
 		case AF_INET6:
 		{
 			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
-			sin6->sin6_family = AF_INET6;
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
-			sin6->sin6_port = htons(port);
+			htoun16(&sin6->sin6_port, port);
 			addrlen = sizeof(struct sockaddr_in6);
 			sol = SOL_IPV6;
 			pktinfo = IPV6_RECVPKTINFO;
