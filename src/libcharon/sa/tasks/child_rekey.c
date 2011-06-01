@@ -252,7 +252,10 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 			{
 				/* disable close action for the redundand child */
 				child_sa = other->child_create->get_child(other->child_create);
-				child_sa->set_close_action(child_sa, ACTION_NONE);
+				if (child_sa)
+				{
+					child_sa->set_close_action(child_sa, ACTION_NONE);
+				}
 			}
 		}
 		else
