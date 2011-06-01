@@ -1039,6 +1039,8 @@ AC_OUTPUT(
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libimcv/Makefile
+	src/libimcv/plugins/imc_test/Makefile
+	src/libimcv/plugins/imv_test/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile
@@ -1066,8 +1068,6 @@ AC_OUTPUT(
 	src/libcharon/plugins/tnccs_11/Makefile
 	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/tnccs_dynamic/Makefile
-	src/libcharon/plugins/imc_test/Makefile
-	src/libcharon/plugins/imv_test/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
