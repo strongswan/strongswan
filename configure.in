@@ -808,8 +808,6 @@ ADD_PLUGIN([maemo],                [c libcharon])
 ADD_PLUGIN([uci],                  [c libcharon])
 ADD_PLUGIN([addrblock],            [c libcharon])
 ADD_PLUGIN([unit-tester],          [c libcharon])
-ADD_PLUGIN([imc-test],             [c])
-ADD_PLUGIN([imv-test],             [c])
 
 AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
