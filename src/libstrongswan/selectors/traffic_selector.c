@@ -24,6 +24,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <debug.h>
 
 #define NON_SUBNET_ADDRESS_RANGE	255
 
@@ -599,7 +600,7 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 	 * be anything else but a subnet. We use from_addr as subnet
 	 * and try to calculate a usable subnet mask.
 	 */
-	int family, byte;
+	int family, non_zero_bytes;
 	u_int16_t port = 0;
 	chunk_t net_chunk;
 
@@ -622,12 +623,12 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 	}
 
 	net_chunk.ptr = malloc(net_chunk.len);
-	memcpy(net_chunk.ptr, this->from, net_chunk.len);
-
-	for (byte = net_chunk.len - 1; byte >= (*mask / 8); --byte)
+	memset(net_chunk.ptr, 0x00, net_chunk.len);
+	if (*mask)
 	{
-		int shift = (byte + 1) * 8 - *mask;
-		net_chunk.ptr[byte] = net_chunk.ptr[byte] & (0xFF << shift);
+		non_zero_bytes = (*mask + 7) / 8;
+		memcpy(net_chunk.ptr, this->from, non_zero_bytes);
+		net_chunk.ptr[non_zero_bytes-1] &= 0xFF << (8 * non_zero_bytes - *mask);
 	}
 
 	if (this->to_port == this->from_port)
