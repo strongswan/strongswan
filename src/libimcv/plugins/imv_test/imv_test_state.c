@@ -89,6 +89,12 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
+METHOD(imv_test_state_t, set_rounds, void,
+	private_imv_test_state_t *this, int rounds)
+{
+	this->rounds = rounds;
+}
+
 METHOD(imv_test_state_t, another_round, bool,
 	private_imv_test_state_t *this)
 {
@@ -98,7 +104,7 @@ METHOD(imv_test_state_t, another_round, bool,
 /**
  * Described in header.
  */
-imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id, int rounds)
+imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 {
 	private_imv_test_state_t *this;
 
@@ -111,13 +117,13 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id, int rounds)
 				.set_recommendation = _set_recommendation,
 				.destroy = _destroy,
 			},
+			.set_rounds = _set_rounds,
 			.another_round = _another_round,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
-		.rounds = rounds,
 	);
 	
 	return &this->public.interface;

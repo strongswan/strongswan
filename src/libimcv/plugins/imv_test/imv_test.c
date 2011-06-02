@@ -66,6 +66,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
+	imv_test_state_t *test_state;
 	int rounds;
 
 	if (!imv_test)
@@ -76,12 +77,21 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
-			rounds = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imv-test.rounds", 0);
-			state = imv_test_state_create(connection_id, rounds);
+			state = imv_test_state_create(connection_id);
 			return imv_test->create_state(imv_test, state);
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_test->delete_state(imv_test, connection_id);
+		case TNC_CONNECTION_STATE_HANDSHAKE:
+			if (!imv_test->get_state(imv_test, connection_id, &state))
+			{
+				return TNC_RESULT_FATAL;
+			}
+			state->change_state(state, new_state);
+			rounds = lib->settings->get_int(lib->settings,
+								"libimcv.plugins.imv-test.rounds", 0);
+			test_state = (imv_test_state_t*)state;
+			test_state->set_rounds(test_state, rounds);
+			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_test->change_state(imv_test, connection_id, new_state);
 	}
