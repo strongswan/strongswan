@@ -47,6 +47,7 @@ static void imcv_dbg(debug_t group, level_t level, char *fmt, ...)
 		if (!imcv_stderr_quiet)
 		{
 			va_start(args, fmt);
+			fprintf(stderr, "[HSR] ");
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 			va_end(args);
@@ -65,7 +66,7 @@ static void imcv_dbg(debug_t group, level_t level, char *fmt, ...)
 			{
 				*(next++) = '\0';
 			}
-			syslog(priority, "%s\n", current);
+			syslog(priority, "[HSR] %s\n", current);
 			current = next;
 		}
 	}
@@ -103,7 +104,7 @@ bool libimcv_init(void)
 		imcv_debug_level =  lib->settings->get_int(lib->settings,
 									"libimcv.debug_level", IMCV_DEBUG_LEVEL);
 		imcv_stderr_quiet = lib->settings->get_int(lib->settings,
-									"libimcv.debug_level", FALSE);
+									"libimcv.stderr_quiet", FALSE);
 		
 		/* activate the imcv debugging hook */
 		dbg = imcv_dbg;
