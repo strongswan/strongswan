@@ -1,3 +1,0 @@
-#IMV configuration file for TNC@FHH-TNC-Server
-
-IMV "Dummy" /usr/local/lib/libdummyimv.so.0.7.0
