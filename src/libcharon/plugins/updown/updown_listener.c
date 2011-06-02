@@ -260,8 +260,8 @@ METHOD(listener_t, child_updown, bool,
 				 udp_enc,
 				 config->get_hostaccess(config) ? "PLUTO_HOST_ACCESS='1' " : "",
 				 script);
-		free(my_client);
-		free(other_client);
+		my_client->destroy(my_client);
+		other_client->destroy(other_client);
 		free(virtual_ip);
 		free(mark_in);
 		free(mark_out);
