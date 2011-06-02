@@ -19,30 +19,32 @@
 
 #include <syslog.h>
 
+#define IMCV_DEBUG_LEVEL	1
+
 /**
  * Reference count for IMC/IMV instances
  */
 refcount_t ref = 0;
 
 /**
- * Global configuration of libimcv dbg function
+ * Global configuration of imcv dbg function
  */
-static int debug_level = 3;
-static bool stderr_quiet = FALSE;
+static int  imcv_debug_level;
+static bool imcv_stderr_quiet;
 
 /**
- * libimvc dbg function
+ * imvc dbg function
  */
-static void libimcv_dbg(debug_t group, level_t level, char *fmt, ...)
+static void imcv_dbg(debug_t group, level_t level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
 	char buffer[8192];
 	char *current = buffer, *next;
 	va_list args;
 
-	if (level <= debug_level)
+	if (level <= imcv_debug_level)
 	{
-		if (!stderr_quiet)
+		if (!imcv_stderr_quiet)
 		{
 			va_start(args, fmt);
 			vfprintf(stderr, fmt, args);
@@ -97,8 +99,14 @@ bool libimcv_init(void)
 			return FALSE;
 		}
 
-		/* enable libimcv debugging hook */
-		dbg = libimcv_dbg;
+		/* set the debug level and stderr output */
+		imcv_debug_level =  lib->settings->get_int(lib->settings,
+									"libimcv.debug_level", IMCV_DEBUG_LEVEL);
+		imcv_stderr_quiet = lib->settings->get_int(lib->settings,
+									"libimcv.debug_level", FALSE);
+		
+		/* activate the imcv debugging hook */
+		dbg = imcv_dbg;
 		openlog("imcv", 0, LOG_DAEMON);
 
 		DBG1(DBG_LIB, "libimcv initialized");
