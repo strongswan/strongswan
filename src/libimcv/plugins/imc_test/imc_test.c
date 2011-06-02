@@ -91,7 +91,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	char *command;
 	TNC_Result result;
 
-	command = lib->settings->get_str(lib->settings, "imc-test.command", "none");
+	command = lib->settings->get_str(lib->settings,
+						 "libimcv.plugins.imc-test.command", "none");
 	attr = ita_attr_command_create(command);
 	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();

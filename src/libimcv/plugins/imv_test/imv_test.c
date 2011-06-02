@@ -76,7 +76,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
-			rounds = lib->settings->get_int(lib->settings, "imv-test.rounds", 0);
+			rounds = lib->settings->get_int(lib->settings,
+								"libimcv.plugins.imv-test.rounds", 0);
 			state = imv_test_state_create(connection_id, rounds);
 			return imv_test->create_state(imv_test, state);
 		case TNC_CONNECTION_STATE_DELETE:
