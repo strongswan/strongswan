@@ -115,37 +115,15 @@ METHOD(listener_t, child_updown, bool,
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		char command[1024];
-		char *my_client, *other_client, *my_client_mask, *other_client_mask;
-		char *pos, *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc;
+		host_t *my_client, *other_client;
+		u_int8_t my_client_mask, other_client_mask;
+		char *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc;
 		mark_t mark;
 		bool is_host, is_ipv6;
 		FILE *shell;
 
-		/* get subnet/bits from string */
-		if (asprintf(&my_client, "%R", my_ts) < 0)
-		{
-			my_client = NULL;
-		}
-		pos = strchr(my_client, '/');
-		*pos = '\0';
-		my_client_mask = pos + 1;
-		pos = strchr(my_client_mask, '[');
-		if (pos)
-		{
-			*pos = '\0';
-		}
-		if (asprintf(&other_client, "%R", other_ts) < 0)
-		{
-			other_client = NULL;
-		}
-		pos = strchr(other_client, '/');
-		*pos = '\0';
-		other_client_mask = pos + 1;
-		pos = strchr(other_client_mask, '[');
-		if (pos)
-		{
-			*pos = '\0';
-		}
+		my_ts->to_subnet(my_ts, &my_client, &my_client_mask);
+		other_ts->to_subnet(other_ts, &other_client, &other_client_mask);
 
 		if (vip)
 		{
@@ -248,16 +226,12 @@ METHOD(listener_t, child_updown, bool,
 				"PLUTO_REQID='%u' "
 				"PLUTO_ME='%H' "
 				"PLUTO_MY_ID='%Y' "
-				"PLUTO_MY_CLIENT='%s/%s' "
-				"PLUTO_MY_CLIENT_NET='%s' "
-				"PLUTO_MY_CLIENT_MASK='%s' "
+				"PLUTO_MY_CLIENT='%H/%u' "
 				"PLUTO_MY_PORT='%u' "
 				"PLUTO_MY_PROTOCOL='%u' "
 				"PLUTO_PEER='%H' "
 				"PLUTO_PEER_ID='%Y' "
-				"PLUTO_PEER_CLIENT='%s/%s' "
-				"PLUTO_PEER_CLIENT_NET='%s' "
-				"PLUTO_PEER_CLIENT_MASK='%s' "
+				"PLUTO_PEER_CLIENT='%H/%u' "
 				"PLUTO_PEER_PORT='%u' "
 				"PLUTO_PEER_PROTOCOL='%u' "
 				"%s"
@@ -274,11 +248,9 @@ METHOD(listener_t, child_updown, bool,
 				 child_sa->get_reqid(child_sa),
 				 me, ike_sa->get_my_id(ike_sa),
 				 my_client, my_client_mask,
-				 my_client, my_client_mask,
 				 my_ts->get_from_port(my_ts),
 				 my_ts->get_protocol(my_ts),
 				 other, ike_sa->get_other_id(ike_sa),
-				 other_client, other_client_mask,
 				 other_client, other_client_mask,
 				 other_ts->get_from_port(other_ts),
 				 other_ts->get_protocol(other_ts),
