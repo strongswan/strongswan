@@ -89,6 +89,11 @@ struct private_ietf_attr_pa_tnc_error_t {
 	 * PA-TNC message header
 	 */
 	chunk_t header;
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -141,11 +146,21 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;	
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_ietf_attr_pa_tnc_error_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
-	free(this->header.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->header.ptr);
+		free(this);
+	}
 }
 
 METHOD(ietf_attr_pa_tnc_error_t, get_error_vendor_id, pen_t,
@@ -181,6 +196,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_vendor_id = _get_error_vendor_id,
@@ -191,6 +207,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 		.error_vendor_id = vendor_id,
 		.error_code = error_code,
 		.header = chunk_clone(header),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -211,6 +228,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 				.get_value = _get_value,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_vendor_id = _get_error_vendor_id,
@@ -219,6 +237,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PA_TNC_ERROR,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

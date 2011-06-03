@@ -80,6 +80,13 @@ struct pa_tnc_attr_t {
 	status_t (*process)(pa_tnc_attr_t *this);
 
 	/**
+	 * Get a new reference to the PA-TNC attribute
+	 *
+	 * @return			this, with an increased refcount
+	 */
+	pa_tnc_attr_t* (*get_ref)(pa_tnc_attr_t *this);
+
+	/**
 	 * Destroys a pa_tnc_attr_t object.
 	 */
 	void (*destroy)(pa_tnc_attr_t *this);

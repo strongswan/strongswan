@@ -54,6 +54,11 @@ struct private_ita_attr_command_t {
 	 * Command string
 	 */
 	char *command;
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -103,12 +108,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;	
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_ita_attr_command_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_ita_attr_command_t *this)
 {
-	free(this->value.ptr);
-	free(this->command);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this->command);
+		free(this);
+	}
 }
 
 METHOD(ita_attr_command_t, get_command, char*,
@@ -134,6 +149,7 @@ pa_tnc_attr_t *ita_attr_command_create(char *command)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_command = _get_command,
@@ -141,6 +157,7 @@ pa_tnc_attr_t *ita_attr_command_create(char *command)
 		.vendor_id = PEN_ITA,
 		.type = ITA_ATTR_COMMAND,
 		.command = strdup(command),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -161,6 +178,7 @@ pa_tnc_attr_t *ita_attr_command_create_from_data(chunk_t data)
 				.get_value = _get_value,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_command = _get_command,
@@ -168,6 +186,7 @@ pa_tnc_attr_t *ita_attr_command_create_from_data(chunk_t data)
 		.vendor_id = PEN_ITA,
 		.type = ITA_ATTR_COMMAND,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
