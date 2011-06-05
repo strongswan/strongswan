@@ -22,6 +22,7 @@
 #define IMV_AGENT_H_
 
 #include "imv_state.h"
+#include "pa_tnc/pa_tnc_msg.h"
 
 #include <tncifimv.h>
 #include <pen/pen.h>
@@ -131,7 +132,7 @@ struct imv_agent_t {
 					  TNC_ConnectionID connection_id, imv_state_t **state);
 
 	/**
-	 * Call when an IMV-IMC message is to be sent
+	 * Call when a PA-TNC message is to be sent
 	 *
 	 * @param connection_id		network connection ID assigned by TNCS
 	 * @param msg				message to send
@@ -139,6 +140,20 @@ struct imv_agent_t {
 	 */
 	TNC_Result (*send_message)(imv_agent_t *this,
 							   TNC_ConnectionID connection_id, chunk_t msg);
+
+	/**
+	 * Call when a PA-TNC message was received
+	 *
+	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param msg				received unparsed message
+	 * @param msg_type			message type of the received message
+	 * @param pa_tnc_message	parsed PA-TNC message or NULL if an error occurred
+	 * @return					TNC result code
+	 */
+	TNC_Result (*receive_message)(imv_agent_t *this,
+								  TNC_ConnectionID connection_id, chunk_t msg,
+								  TNC_MessageType msg_type,
+								  pa_tnc_msg_t **pa_tnc_msg);
 
 	/**
 	 * Set Action Recommendation and Evaluation Result in the IMV state

@@ -14,7 +14,9 @@
 
 #include "ietf_attr_pa_tnc_error.h"
 
+#include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
+#include <bio/bio_reader.h>
 #include <debug.h>
 
 ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
@@ -42,8 +44,48 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define IETF_ATTR_PA_TNC_ERROR_HEADER_SIZE	12
-#define IETF_ATTR_PA_TNC_ERROR_RESERVED		0x00
+#define PA_ERROR_HEADER_SIZE		8
+#define PA_ERROR_RESERVED			0x00
+
+/**
+ * All Error Types return the first 8 bytes of the erroneous PA-TNC message
+ *
+ *                        1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |    Version    |            Copy of Reserved                   |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                       Message Identifier                      |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+
+#define PA_ERROR_MSG_INFO_SIZE		8
+
+/**
+ * "Version Not Supported" Error Code
+ *
+ *                        1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |  Max Version  |  Min Version  |            Reserved           |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+	
+#define PA_ERROR_VERSION_RESERVED	0x0000
+
+/**
+ * "Attribute Type Not Supported" Error Code
+ *
+ *                        1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |     Flags     |          PA-TNC Attribute Vendor ID           |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                     PA-TNC Attribute Type                     |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+
+#define PA_ERROR_ATTR_INFO_SIZE		8
 
 /**
  * Private data of an ietf_attr_pa_tnc_error_t object.
@@ -86,9 +128,14 @@ struct private_ietf_attr_pa_tnc_error_t {
 	u_int32_t error_code;
 
 	/**
-	 * PA-TNC message header
+	 * First 8 bytes of erroneous PA-TNC message
 	 */
-	chunk_t header;
+	chunk_t msg_info;
+
+	/**
+	 * First 8 bytes of unsupported PA-TNC attribute
+	 */
+	chunk_t attr_info;
 
 	/**
 	 * Reference count
@@ -131,11 +178,28 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
-	writer = bio_writer_create(IETF_ATTR_PA_TNC_ERROR_HEADER_SIZE);
-	writer->write_uint8 (writer, IETF_ATTR_PA_TNC_ERROR_RESERVED);
+	writer = bio_writer_create(PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE);
+	writer->write_uint8 (writer, PA_ERROR_RESERVED);
 	writer->write_uint24(writer, this->error_vendor_id);
 	writer->write_uint32(writer, this->error_code);
-	writer->write_data  (writer, this->header);
+	writer->write_data  (writer, this->msg_info);
+	
+	switch (this->error_code)
+	{
+		case PA_ERROR_INVALID_PARAMETER:
+			break;
+		case PA_ERROR_VERSION_NOT_SUPPORTED:
+			writer->write_uint8 (writer, PA_TNC_VERSION);
+			writer->write_uint8 (writer, PA_TNC_VERSION);
+			writer->write_uint16(writer, PA_ERROR_VERSION_RESERVED);
+			break;
+		case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+			writer->write_data(writer, this->attr_info);
+			break;
+		default:
+			break;
+	}
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -143,6 +207,38 @@ METHOD(pa_tnc_attr_t, build, void,
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
+	bio_reader_t *reader;
+	u_int8_t reserved;
+
+	if (this->value.len < PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE)
+	{
+		return FAILED;
+	}
+	reader = bio_reader_create(this->value);
+	reader->read_uint8 (reader, &reserved);
+	reader->read_uint24(reader, &this->error_vendor_id);
+	reader->read_uint32(reader, &this->error_code);
+	reader->read_data  (reader, PA_ERROR_MSG_INFO_SIZE, &this->msg_info);
+	this->msg_info = chunk_clone(this->msg_info);
+
+	switch (this->error_code)
+	{
+		case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+			if (!reader->read_data(reader, PA_ERROR_ATTR_INFO_SIZE,
+										   &this->attr_info))
+			{
+				reader->destroy(reader);
+				DBG1(DBG_TNC, "insufficient data for unsupported attribute "
+							  "information");
+				return FAILED;
+			}
+			this->attr_info = chunk_clone(this->attr_info);
+			break;
+		default:
+			break;
+	}
+	reader->destroy(reader);
+
 	return SUCCESS;	
 }
 
@@ -158,7 +254,9 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		free(this->header.ptr);
+		free(this->value.ptr);
+		free(this->msg_info.ptr);
+		free(this->attr_info.ptr);
 		free(this);
 	}
 }
@@ -175,16 +273,35 @@ METHOD(ietf_attr_pa_tnc_error_t, get_error_code, u_int32_t,
 	return this->error_code;
 }
 
+METHOD(ietf_attr_pa_tnc_error_t, get_msg_info, chunk_t,
+	private_ietf_attr_pa_tnc_error_t *this)
+{
+	return this->msg_info;
+}
+
+METHOD(ietf_attr_pa_tnc_error_t, get_attr_info, chunk_t,
+	private_ietf_attr_pa_tnc_error_t *this)
+{
+	return this->attr_info;
+}
+
+METHOD(ietf_attr_pa_tnc_error_t, set_attr_info, void,
+	private_ietf_attr_pa_tnc_error_t *this, chunk_t attr_info)
+{
+	this->attr_info = chunk_clone(attr_info);
+}
+
 /**
  * Described in header.
  */
 pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 											 u_int32_t error_code,
-											 chunk_t header)
+											 chunk_t msg_info)
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
-	header.len = 8;
+	/* the first 8 bytes of the erroneous PA-TNC message are sent back */
+	msg_info.len = PA_ERROR_MSG_INFO_SIZE;
 
 	INIT(this,
 		.public = {
@@ -201,12 +318,15 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 			},
 			.get_vendor_id = _get_error_vendor_id,
 			.get_error_code = _get_error_code,
+			.get_msg_info = _get_msg_info,
+			.get_attr_info = _get_attr_info,
+			.set_attr_info = _set_attr_info,
 		},
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PA_TNC_ERROR,
 		.error_vendor_id = vendor_id,
 		.error_code = error_code,
-		.header = chunk_clone(header),
+		.msg_info = chunk_clone(msg_info),
 		.ref = 1,
 	);
 
@@ -233,6 +353,9 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 			},
 			.get_vendor_id = _get_error_vendor_id,
 			.get_error_code = _get_error_code,
+			.get_msg_info = _get_msg_info,
+			.get_attr_info = _get_attr_info,
+			.set_attr_info = _set_attr_info,
 		},
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PA_TNC_ERROR,

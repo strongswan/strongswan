@@ -22,6 +22,7 @@
 #define IETF_ATTR_PA_TNC_ERROR_H_
 
 typedef struct ietf_attr_pa_tnc_error_t ietf_attr_pa_tnc_error_t;
+typedef enum pa_tnc_error_code_t pa_tnc_error_code_t;
 
 #include "ietf_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
@@ -65,7 +66,28 @@ struct ietf_attr_pa_tnc_error_t {
 	 *
 	 * @return				error code
 	 */
-	pen_t (*get_error_code)(ietf_attr_pa_tnc_error_t *this);
+	pa_tnc_error_code_t (*get_error_code)(ietf_attr_pa_tnc_error_t *this);
+
+	/**
+	 * Get first 8 bytes of erroneous PA-TNC message
+	 *
+	 * @return				PA-TNC message info
+	 */
+	chunk_t (*get_msg_info)(ietf_attr_pa_tnc_error_t *this);
+
+	/**
+	 * Get first 8 bytes of unsupported PA-TNC attribute
+	 *
+	 * @return				PA-TNC attribute info
+	 */
+	chunk_t (*get_attr_info)(ietf_attr_pa_tnc_error_t *this);
+
+	/**
+	 * Set first 8 bytes of unsupported PA-TNC attribute
+	 *
+	 * @param attr_info		PA-TNC message info
+	 */
+	void (*set_attr_info)(ietf_attr_pa_tnc_error_t *this, chunk_t attr_info);
 };
 
 /**

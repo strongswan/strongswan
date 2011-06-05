@@ -271,6 +271,61 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 							  this->type);
 }
 
+METHOD(imc_agent_t, receive_message, TNC_Result,
+	private_imc_agent_t *this, TNC_ConnectionID connection_id, chunk_t msg,
+	TNC_MessageType msg_type, pa_tnc_msg_t **pa_tnc_msg)
+{
+	pa_tnc_msg_t *pa_msg, *error_msg;
+	pa_tnc_attr_t *error_attr;
+	enumerator_t *enumerator;
+	TNC_Result result;
+
+	DBG2(DBG_IMV, "IMC %u \"%s\" received message type 0x%08x for Connection ID %u",
+				   this->id, this->name, msg_type, connection_id);
+
+	*pa_tnc_msg = NULL;
+	pa_msg = pa_tnc_msg_create_from_data(msg);
+
+	switch (pa_msg->process(pa_msg))
+	{
+		case SUCCESS:
+			*pa_tnc_msg = pa_msg;
+			break;
+		case VERIFY_ERROR:
+			if (!this->send_message)
+			{
+				/* TNCC doen't have a SendMessage() function */
+				return TNC_RESULT_FATAL;
+			}
+
+			/* build error message */
+			error_msg = pa_tnc_msg_create();
+			enumerator = pa_msg->create_error_enumerator(pa_msg);
+			while (enumerator->enumerate(enumerator, &error_attr))
+			{
+				error_msg->add_attribute(error_msg,
+										 error_attr->get_ref(error_attr));
+			}
+			enumerator->destroy(enumerator);
+			error_msg->build(error_msg);
+
+			/* send error message */
+			msg = error_msg->get_encoding(error_msg);
+			result = this->send_message(this->id, connection_id,
+										msg.ptr, msg.len, msg_type);
+
+			/* clean up */
+			error_msg->destroy(error_msg);
+			pa_msg->destroy(pa_msg);
+			return result;
+		case FAILED:
+		default:
+			pa_msg->destroy(pa_msg);
+			return TNC_RESULT_FATAL;
+	}
+	return TNC_RESULT_SUCCESS;
+}
+
 METHOD(imc_agent_t, destroy, void,
 	private_imc_agent_t *this)
 {
@@ -306,6 +361,7 @@ imc_agent_t *imc_agent_create(const char *name,
 			.change_state = _change_state,
 			.get_state = _get_state,
 			.send_message = _send_message,
+			.receive_message = _receive_message,
 			.destroy = _destroy,
 		},
 		.name = name,

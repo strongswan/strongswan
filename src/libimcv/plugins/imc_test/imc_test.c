@@ -16,6 +16,8 @@
 
 #include <imc/imc_agent.h>
 #include <pa_tnc/pa_tnc_msg.h>
+#include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr_command.h>
 
 #include <pen/pen.h>
@@ -129,7 +131,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_MessageType msg_type)
 {
 	pa_tnc_msg_t *pa_tnc_msg;
-	status_t status;
+	pa_tnc_attr_t *attr;
+	enumerator_t *enumerator;
+	TNC_Result result;
+	bool fatal_error = FALSE;
 
 	if (!imc_test)
 	{
@@ -137,19 +142,60 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	/* process received message */
-	DBG2(DBG_IMC, "IMC %u \"%s\" received message type 0x%08x for Connection ID %u",
-				   imc_id, imc_name, msg_type, connection_id);
-	pa_tnc_msg = pa_tnc_msg_create_from_data(chunk_create(msg, msg_len));
-	status = pa_tnc_msg->process(pa_tnc_msg);
- 	pa_tnc_msg->destroy(pa_tnc_msg);
-	if (status != SUCCESS)
+	/* parse received PA-TNC message and automatically handle any errors */ 
+	result = imc_test->receive_message(imc_test, connection_id,
+									   chunk_create(msg, msg_len), msg_type,
+									   &pa_tnc_msg);
+
+	/* no parsed PA-TNC attributes available if an error occurred */
+	if (!pa_tnc_msg)
 	{
-		return TNC_RESULT_FATAL;
+		return result;
 	}
 
-	/* always return the same response */
-	return send_message(connection_id);
+	/* analyze PA-TNC attributes */
+	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		if (attr->get_vendor_id(attr) == PEN_IETF &&
+			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		{
+			ietf_attr_pa_tnc_error_t *error_attr;
+			pa_tnc_error_code_t error_code;
+			chunk_t msg_info, attr_info;
+
+			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+			error_code = error_attr->get_error_code(error_attr);
+			msg_info = error_attr->get_msg_info(error_attr);
+
+			DBG1(DBG_IMC, "received PA-TNC error '%N' concerning message %#B",
+				 pa_tnc_error_code_names, error_code, &msg_info);
+			switch (error_code)
+			{
+				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+					attr_info = error_attr->get_attr_info(error_attr);
+					DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);
+					break;
+				default:
+					break;
+			}
+			fatal_error = TRUE;
+		}
+		else if (attr->get_vendor_id(attr) == PEN_ITA &&
+				 attr->get_type(attr) == ITA_ATTR_COMMAND)
+		{
+			ita_attr_command_t *ita_attr;
+			char *command;
+	
+			ita_attr = (ita_attr_command_t*)attr;
+			command = ita_attr->get_command(ita_attr);
+		}
+	}
+	enumerator->destroy(enumerator);
+	pa_tnc_msg->destroy(pa_tnc_msg);
+
+	/* if no error occurred then always return the same response */
+	return fatal_error ? TNC_RESULT_FATAL : send_message(connection_id);
 }
 
 /**

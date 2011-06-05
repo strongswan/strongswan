@@ -39,7 +39,6 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
  */
 
 #define PA_TNC_HEADER_SIZE	8
-#define PA_TNC_VERSION		0x01
 #define PA_TNC_RESERVED		0x000000
 
 /**
@@ -61,6 +60,7 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
 #define PA_TNC_ATTR_FLAG_NONE			0x00
 #define PA_TNC_ATTR_FLAG_NOSKIP			(1<<7)
 #define PA_TNC_ATTR_HEADER_SIZE			12
+#define PA_TNC_ATTR_INFO_SIZE			8
 
 /**
  * Private data of a pa_tnc_msg_t object.
@@ -140,8 +140,18 @@ METHOD(pa_tnc_msg_t, build, void,
 		value = attr->get_value(attr);
 		flags = attr->get_noskip_flag(attr) ? PA_TNC_ATTR_FLAG_NOSKIP :
 											  PA_TNC_ATTR_FLAG_NONE;
-		DBG2(DBG_TNC, "creating PA-TNC attribute type 0x%06x(%N)/0x%08x",
-					   vendor_id, pen_names, vendor_id, type);
+		if (vendor_id == PEN_IETF)
+		{
+			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N/%N' "
+						  "0x%06x/0x%08x", pen_names, vendor_id,
+						  ietf_attr_names, type, vendor_id, type);
+		}
+		else
+		{
+			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N' "
+						  "0x%06x/0x%08x", pen_names, vendor_id,
+						   vendor_id, type);
+		}
 		DBG3(DBG_TNC, "%B", &value);
 
 		writer->write_uint8 (writer, flags);
@@ -176,6 +186,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	reader->read_uint8 (reader, &version);
 	reader->read_uint24(reader, &reserved);
 	reader->read_uint32(reader, &this->identifier);
+	DBG2(DBG_TNC, "processing PA-TNC message with ID 0x%08x", this->identifier);
 
 	if (version != PA_TNC_VERSION)
 	{
@@ -184,7 +195,6 @@ METHOD(pa_tnc_msg_t, process, status_t,
 					PA_ERROR_VERSION_NOT_SUPPORTED, this->encoding);
 		goto err;
 	}
-	DBG2(DBG_TNC, "processing PA-TNC message with ID 0x%08x", this->identifier);
 	
 	/* pre-process PA-TNC attributes */
 	while (reader->remaining(reader) >= PA_TNC_ATTR_HEADER_SIZE)
@@ -192,15 +202,28 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		pen_t vendor_id;
 		u_int8_t flags;
 		u_int32_t type, length;
-		chunk_t value;
+		chunk_t value, attr_info;
 		pa_tnc_attr_t *attr;
+		ietf_attr_pa_tnc_error_t *error_attr;
 
+		attr_info = reader->peek(reader);
+		attr_info.len = PA_TNC_ATTR_INFO_SIZE;
 		reader->read_uint8 (reader, &flags);
 		reader->read_uint24(reader, &vendor_id);
 		reader->read_uint32(reader, &type);
 		reader->read_uint32(reader, &length);
-		DBG2(DBG_TNC, "processing PA-TNC attribute type 0x%06x(%N)/0x%08x",
-					   vendor_id, pen_names, vendor_id, type);
+		if (vendor_id == PEN_IETF)
+		{
+			DBG2(DBG_TNC, "processing PA-TNC attribute type '%N/%N' "
+						  "0x%06x/0x%08x", pen_names, vendor_id,
+						  ietf_attr_names, type, vendor_id, type);
+		}
+		else
+		{
+			DBG2(DBG_TNC, "processing PA-TNC attribute type '%N' "
+						  "0x%06x/0x%08x", pen_names, vendor_id,
+						   vendor_id, type);
+		}
 
 		if (length < PA_TNC_ATTR_HEADER_SIZE)
 		{
@@ -229,6 +252,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 				DBG1(DBG_TNC, "unsupported PA-TNC attribute with NOSKIP flag");
 				error = ietf_attr_pa_tnc_error_create(PEN_IETF,
 							PA_ERROR_ATTR_TYPE_NOT_SUPPORTED, this->encoding);
+				error_attr = (ietf_attr_pa_tnc_error_t*)error;
+				error_attr->set_attr_info(error_attr, attr_info);
 				goto err;
 			}
 			else
@@ -268,7 +293,7 @@ METHOD(pa_tnc_msg_t, create_attribute_enumerator, enumerator_t*,
 METHOD(pa_tnc_msg_t, create_error_enumerator, enumerator_t*,
 	private_pa_tnc_msg_t *this)
 {
-	return this->errors->create_enumerator(this->attributes);
+	return this->errors->create_enumerator(this->errors);
 }
 
 METHOD(pa_tnc_msg_t, destroy, void,

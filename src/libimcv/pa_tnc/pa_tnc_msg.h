@@ -23,6 +23,8 @@
 
 typedef struct pa_tnc_msg_t pa_tnc_msg_t;
 
+#define PA_TNC_VERSION		0x01
+
 #include "pa_tnc_attr.h"
 
 #include <library.h>

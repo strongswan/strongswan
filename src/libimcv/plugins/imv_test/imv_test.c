@@ -16,6 +16,8 @@
 
 #include <imv/imv_agent.h>
 #include <pa_tnc/pa_tnc_msg.h>
+#include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr_command.h>
 
 #include <pen/pen.h>
@@ -127,8 +129,9 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	pa_tnc_attr_t *attr;
 	imv_state_t *state;
 	imv_test_state_t *imv_test_state;
-	TNC_Result result = TNC_RESULT_SUCCESS;
 	enumerator_t *enumerator;
+	TNC_Result result;
+	bool fatal_error = FALSE;
 
 	if (!imv_test)
 	{
@@ -136,29 +139,53 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	/* process received message */
-	DBG2(DBG_IMV, "IMV %u \"%s\" received message type 0x%08x for Connection ID %u",
-				   imv_id, imv_name, msg_type, connection_id);
-	pa_tnc_msg = pa_tnc_msg_create_from_data(chunk_create(msg, msg_len));
-
-	if (pa_tnc_msg->process(pa_tnc_msg) != SUCCESS)
-	{
- 		pa_tnc_msg->destroy(pa_tnc_msg);
-		return TNC_RESULT_FATAL;
-	}
-
 	/* get current IMV state */
 	if (!imv_test->get_state(imv_test, connection_id, &state))
 	{
-		pa_tnc_msg->destroy(pa_tnc_msg);
 		return TNC_RESULT_FATAL;
 	}
 
+	/* parse received PA-TNC message and automatically handle any errors */ 
+	result = imv_test->receive_message(imv_test, connection_id,
+									   chunk_create(msg, msg_len), msg_type,
+									   &pa_tnc_msg);
+
+	/* no parsed PA-TNC attributes available if an error occurred */
+	if (!pa_tnc_msg)
+	{
+		return result;
+	}
+
+	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_ITA &&
-			attr->get_type(attr) == ITA_ATTR_COMMAND)
+		if (attr->get_vendor_id(attr) == PEN_IETF &&
+			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		{
+			ietf_attr_pa_tnc_error_t *error_attr;
+			pa_tnc_error_code_t error_code;
+			chunk_t msg_info, attr_info;
+
+			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+			error_code = error_attr->get_error_code(error_attr);
+			msg_info = error_attr->get_msg_info(error_attr);
+
+			DBG1(DBG_IMV, "received PA-TNC error '%N' concerning message %#B",
+				 pa_tnc_error_code_names, error_code, &msg_info);
+			switch (error_code)
+			{
+				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+					attr_info = error_attr->get_attr_info(error_attr);
+					DBG1(DBG_IMV, "  unsupported attribute %#B", &attr_info);
+					break;
+				default:
+					break;
+			}
+			fatal_error = TRUE;
+		}
+		else if (attr->get_vendor_id(attr) == PEN_ITA &&
+				 attr->get_type(attr) == ITA_ATTR_COMMAND)
 		{
 			ita_attr_command_t *ita_attr;
 			char *command;
@@ -178,7 +205,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);			  
 			}
-			else if (streq(command, "none"))
+			else if (streq(command, "block") || streq(command, "none"))
 			{
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
@@ -186,17 +213,22 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			}
 			else
 			{
-				result = TNC_RESULT_FATAL;
+				DBG1(DBG_IMV, "unsupported ITA Command '%s'", command);
+				state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 			}
-			break;
 		}		
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
-	if (result != TNC_RESULT_SUCCESS)
+	if (fatal_error)
 	{
-		return result;
+		state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);			  
+		return imv_test->provide_recommendation(imv_test, connection_id);
 	}
 
 	/* repeat the measurement ? */
