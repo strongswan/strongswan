@@ -21,6 +21,8 @@
 #ifndef IETF_ATTR_H_
 #define IETF_ATTR_H_
 
+#include <library.h>
+
 typedef enum ietf_attr_t ietf_attr_t;
 
 /**
@@ -42,5 +44,10 @@ enum ietf_attr_t {
 	IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED =       12,
 	IETF_ATTR_RESERVED =                  0xffffffff,
 };
+
+/**
+ * enum name for ietf_attr_t.
+ */
+extern enum_name_t *ietf_attr_names;
 
 #endif /** IETF_ATTR_H_ @}*/
