@@ -114,8 +114,18 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 
 	pb_tnc_msg = pb_pa_msg_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
 									  chunk_create(msg, msg_len));
-	DBG2(DBG_TNC, "creating PB-PA message type 0x%06x(%N)/0x%02x",
-				   msg_vendor_id, pen_names, msg_vendor_id, msg_sub_type);
+
+	if (msg_vendor_id == PEN_IETF)
+	{
+		DBG2(DBG_TNC, "creating PB-PA message type '%N/%N' 0x%06x/0x%02x",
+			 pen_names, msg_vendor_id, pa_tnc_subtype_names, msg_sub_type,
+			 msg_vendor_id, msg_sub_type);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%02x",
+			 pen_names, msg_vendor_id, msg_vendor_id, msg_sub_type);
+	}
 
 	/* adding PA message to SDATA or CDATA batch only */
 	batch_type = this->is_server ? PB_BATCH_SDATA : PB_BATCH_CDATA;
@@ -158,8 +168,17 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			msg_type = (vendor_id << 8) | (subtype & 0xff);
 			msg_body = pa_msg->get_body(pa_msg);
 
-			DBG2(DBG_TNC, "handling PB-PA message type 0x%06x(%N)/0x%02x",
-						   vendor_id, pen_names, vendor_id, subtype);
+			if (vendor_id == PEN_IETF)
+			{
+				DBG2(DBG_TNC, "handling PB-PA message type '%N/%N' 0x%06x/0x%02x",
+					 pen_names, vendor_id, pa_tnc_subtype_names, subtype,
+			 		 vendor_id, subtype);
+			}
+			else
+			{
+				DBG2(DBG_TNC, "handling PB-PA message type '%N' 0x%06x/0x%02x",
+					 pen_names, vendor_id, vendor_id, subtype);
+			}
 
 			this->send_msg = TRUE;
 			if (this->is_server)
