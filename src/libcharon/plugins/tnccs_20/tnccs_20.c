@@ -461,6 +461,7 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 	chunk_t reason, language;
 	enumerator_t *enumerator;
 	pb_tnc_msg_t *msg;
+	pb_access_recommendation_code_t pb_rec;
 
 	if (!this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
@@ -474,10 +475,22 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 		this->batch->add_msg(this->batch, msg);
 
 		/**
-		 * IMV Action Recommendation and PB Access Recommendation codes
-		 * are shifted by one.
+		 * Map IMV Action Recommendation codes to PB Access Recommendation codes
 		 */
-		msg = pb_access_recommendation_msg_create(rec + 1);
+		switch (rec)
+		{
+			case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
+				pb_rec = PB_REC_ACCESS_ALLOWED;
+				break;
+			case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
+				pb_rec = PB_REC_QUARANTINED;
+				break;
+			case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
+			case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
+			default:
+				pb_rec = PB_REC_ACCESS_DENIED;
+		}
+		msg = pb_access_recommendation_msg_create(pb_rec);
 		this->batch->add_msg(this->batch, msg);
 
 		enumerator = this->recs->create_reason_enumerator(this->recs);
