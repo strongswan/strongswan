@@ -19,6 +19,7 @@
 #include <tnc/imv/imv_manager.h>
 
 #include <tncifimv.h>
+#include <tncif_names.h>
 
 #include <debug.h>
 #include <daemon.h>

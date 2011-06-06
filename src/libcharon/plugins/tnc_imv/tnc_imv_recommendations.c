@@ -16,6 +16,7 @@
 #include <daemon.h>
 
 #include <tncifimv.h>
+#include <tncif_names.h>
 
 #include <tnc/imv/imv.h>
 #include <tnc/imv/imv_recommendations.h>

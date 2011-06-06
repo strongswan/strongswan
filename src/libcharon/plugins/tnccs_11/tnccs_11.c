@@ -22,6 +22,8 @@
 #include "messages/tnccs_reason_strings_msg.h"
 #include "messages/tnccs_recommendation_msg.h"
 
+#include <tncif_names.h>
+
 #include <daemon.h>
 #include <debug.h>
 #include <threading/mutex.h>

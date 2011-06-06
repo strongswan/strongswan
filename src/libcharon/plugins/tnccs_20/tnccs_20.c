@@ -26,6 +26,8 @@
 #include "messages/pb_language_preference_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
+#include <tncif_names.h>
+
 #include <debug.h>
 #include <daemon.h>
 #include <threading/mutex.h>

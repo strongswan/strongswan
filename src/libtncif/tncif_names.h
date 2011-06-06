@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,15 +12,13 @@
  * for more details.
  */
 
-#include "tncif.h"
+#ifndef TNCIF_NAMES_H_
+#define TNCIF_NAMES_H_
 
-ENUM(TNC_Connection_State_names,
-	 TNC_CONNECTION_STATE_CREATE, TNC_CONNECTION_STATE_DELETE,
-	"Create",
-	"Handshake",
-	"Allowed",
-	"Isolated",
-	"None",
-	"Delete",
-);
+#include <library.h>
 
+extern enum_name_t *TNC_Connection_State_names;
+extern enum_name_t *TNC_IMV_Action_Recommendation_names;
+extern enum_name_t *TNC_IMV_Evaluation_Result_names;
+
+#endif /** TNCIF_NAME_H_ @}*/

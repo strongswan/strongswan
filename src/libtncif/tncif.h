@@ -48,18 +48,8 @@
  * Feb 12, 2007
  */
 
-/**
- * @defgroup tnc tnc
- * @ingroup libcharon
- *
- * @defgroup tncif tncif
- * @{ @ingroup tnc
- */
-
 #ifndef TNCIF_H_
 #define TNCIF_H_
-
-#include <library.h>
 
 /* Basic Types */
 typedef unsigned long TNC_UInt32;
@@ -99,8 +89,6 @@ typedef TNC_UInt32 TNC_Result;
 #define TNC_CONNECTION_STATE_ACCESS_ISOLATED 3
 #define TNC_CONNECTION_STATE_ACCESS_NONE 4
 #define TNC_CONNECTION_STATE_DELETE 5
-
-extern enum_name_t *TNC_Connection_State_names;
 
 /* Vendor ID Values */
 #define TNC_VENDORID_TCG 0

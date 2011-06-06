@@ -42,17 +42,10 @@
  * respective owners.
  */
 
-/**
- * @defgroup tncifimv tncifimv
- * @{ @ingroup tnc
- */
-
 #ifndef TNCIFIMV_H_
 #define TNCIFIMV_H_
 
 #include "tncif.h"
-
-#include <library.h>
 
 typedef TNC_UInt32 TNC_IMVID;
 typedef TNC_UInt32 TNC_IMV_Action_Recommendation;
@@ -147,8 +140,6 @@ typedef TNC_Result (*TNC_IMV_ProvideBindFunctionPointer)(
 #define TNC_IMV_ACTION_RECOMMENDATION_ISOLATE 2
 #define TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION 3
 
-extern enum_name_t *TNC_IMV_Action_Recommendation_names;
-
 /* IMV Evaluation Result Values */
 
 #define TNC_IMV_EVALUATION_RESULT_COMPLIANT 0
@@ -156,8 +147,6 @@ extern enum_name_t *TNC_IMV_Action_Recommendation_names;
 #define TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR 2
 #define TNC_IMV_EVALUATION_RESULT_ERROR 3
 #define TNC_IMV_EVALUATION_RESULT_DONT_KNOW 4
-
-extern enum_name_t *TNC_IMV_Evaluation_Result_names;
 
 /* Message Attribute ID Values */
 

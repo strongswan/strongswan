@@ -13,7 +13,19 @@
  * for more details.
  */
 
+#include "tncif.h"
 #include "tncifimv.h"
+#include "tncif_names.h"
+
+ENUM(TNC_Connection_State_names,
+	 TNC_CONNECTION_STATE_CREATE, TNC_CONNECTION_STATE_DELETE,
+	"Create",
+	"Handshake",
+	"Allowed",
+	"Isolated",
+	"None",
+	"Delete",
+);
 
 ENUM(TNC_IMV_Action_Recommendation_names,
 	TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
@@ -33,4 +45,3 @@ ENUM(TNC_IMV_Evaluation_Result_names,
 	"error",
 	"don't know"
 );
-

@@ -15,6 +15,8 @@
 #include "imcv.h"
 #include "imc_agent.h"
 
+#include <tncif_names.h>
+
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
