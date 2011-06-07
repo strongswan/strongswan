@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <limits.h>
 #include <dirent.h>
@@ -342,7 +343,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	char* unit = "second";
 	time_t *arg1 = *((time_t**)(args[0]));
 	time_t *arg2 = *((time_t**)(args[1]));
-	time_t delta = abs(*arg1 - *arg2);
+	u_int64_t delta = llabs(*arg1 - *arg2);
 
 	if (delta > 2 * 60 * 60 * 24)
 	{
@@ -359,7 +360,8 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		delta /= 60;
 		unit = "minute";
 	}
-	return print_in_hook(dst, len, "%d %s%s", delta, unit, (delta == 1)? "":"s");
+	return print_in_hook(dst, len, "%" PRIu64 " %s%s", delta, unit,
+						 (delta == 1) ? "" : "s");
 }
 
 /**

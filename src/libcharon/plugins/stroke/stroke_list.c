@@ -251,14 +251,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			fprintf(out, ", %" PRIu64 " bytes_i", bytes_in);
 			if (use_in)
 			{
-				fprintf(out, " (%ds ago)", now - use_in);
+				fprintf(out, " (%" PRIu64 "s ago)", (u_int64_t)(now - use_in));
 			}
 
 			child_sa->get_usestats(child_sa, FALSE, &use_out, &bytes_out);
 			fprintf(out, ", %" PRIu64 " bytes_o", bytes_out);
 			if (use_out)
 			{
-				fprintf(out, " (%ds ago)", now - use_out);
+				fprintf(out, " (%" PRIu64 "s ago)", (u_int64_t)(now - use_out));
 			}
 			fprintf(out, ", rekeying ");
 
