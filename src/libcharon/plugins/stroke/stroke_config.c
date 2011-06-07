@@ -775,13 +775,28 @@ static void add_ts(private_stroke_config_t *this,
 }
 
 /**
+ * map starter magic values to our action type
+ */
+static action_t map_action(int starter_action)
+{
+	switch (starter_action)
+	{
+		case 2: /* =hold */
+			return ACTION_ROUTE;
+		case 3: /* =restart */
+			return ACTION_RESTART;
+		default:
+			return ACTION_NONE;
+	}
+}
+
+/**
  * build a child config from the stroke message
  */
 static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 									stroke_msg_t *msg)
 {
 	child_cfg_t *child_cfg;
-	action_t dpd;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = msg->add_conn.rekey.ipsec_lifetime,
@@ -808,23 +823,11 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 		.mask = msg->add_conn.mark_out.mask
 	};
 
-	switch (msg->add_conn.dpd.action)
-	{	/* map startes magic values to our action type */
-		case 2: /* =hold */
-			dpd = ACTION_ROUTE;
-			break;
-		case 3: /* =restart */
-			dpd = ACTION_RESTART;
-			break;
-		default:
-			dpd = ACTION_NONE;
-			break;
-	}
-
 	child_cfg = child_cfg_create(
-				msg->add_conn.name, &lifetime,
-				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode, ACTION_NONE, dpd, dpd, msg->add_conn.ipcomp,
+				msg->add_conn.name, &lifetime, msg->add_conn.me.updown,
+				msg->add_conn.me.hostaccess, msg->add_conn.mode, ACTION_NONE,
+				map_action(msg->add_conn.dpd.action),
+				map_action(msg->add_conn.close_action), msg->add_conn.ipcomp,
 				msg->add_conn.inactivity, msg->add_conn.reqid,
 				&mark_in, &mark_out, msg->add_conn.tfc);
 	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,

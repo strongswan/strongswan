@@ -251,6 +251,7 @@ struct stroke_msg_t {
 			time_t inactivity;
 			int proxy_mode;
 			int install_policy;
+			int close_action;
 			u_int32_t reqid;
 			u_int32_t tfc;
 

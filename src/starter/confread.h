@@ -143,6 +143,8 @@ struct starter_conn {
 		dpd_action_t    dpd_action;
 		int             dpd_count;
 
+		dpd_action_t    close_action;
+
 		time_t          inactivity;
 
 		bool            me_mediation;
