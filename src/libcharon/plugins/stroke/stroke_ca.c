@@ -319,7 +319,7 @@ static void list_uris(linked_list_t *list, char *label, FILE *out)
 	{
 		if (first)
 		{
-			fprintf(out, label);
+			fprintf(out, "%s", label);
 			first = FALSE;
 		}
 		else
