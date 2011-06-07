@@ -15,6 +15,7 @@
 
 #include "stroke_list.h"
 
+#include <inttypes.h>
 #include <time.h>
 
 #ifdef HAVE_MALLINFO
@@ -116,7 +117,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 		ike_proposal = ike_sa->get_proposal(ike_sa);
 
-		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
+		fprintf(out, "%12s[%d]: IKE SPIs: %.16"PRIx64"_i%s %.16"PRIx64"_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
@@ -247,14 +248,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 
 			now = time_monotonic(NULL);
 			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
-			fprintf(out, ", %llu bytes_i", bytes_in);
+			fprintf(out, ", %" PRIu64 " bytes_i", bytes_in);
 			if (use_in)
 			{
 				fprintf(out, " (%ds ago)", now - use_in);
 			}
 
 			child_sa->get_usestats(child_sa, FALSE, &use_out, &bytes_out);
-			fprintf(out, ", %llu bytes_o", bytes_out);
+			fprintf(out, ", %" PRIu64 " bytes_o", bytes_out);
 			if (use_out)
 			{
 				fprintf(out, " (%ds ago)", now - use_out);
@@ -324,7 +325,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 			{
 				if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR))
 				{
-					fprintf(out, "EAP_%d-%d authentication",
+					fprintf(out, "EAP_%" PRIuPTR "-%" PRIuPTR " authentication",
 						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE),
 						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR));
 				}
