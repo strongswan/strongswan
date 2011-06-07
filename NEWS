@@ -4,6 +4,9 @@ strongswan-4.5.3
 - IMC/IMV test pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
   (--enable-imc-test/--enable-imv-test).
 
+- The IKEv2 close action does not use the same value as the ipsec.conf dpdaction
+  setting, but the value defined by its own closeaction keyword. The action
+  is triggered if the remote peer closes a CHILD_SA unexpectedly.
 
 strongswan-4.5.2
 ----------------

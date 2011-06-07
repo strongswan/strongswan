@@ -367,6 +367,12 @@ See
 .IR strongswan.conf (5)
 for a description of the IKEv2 retransmission timeout.
 .TP
+.BR closeaction " = " none " | clear | hold | restart"
+defines the action to take if the remote peer unexpectedly closes a CHILD_SA
+(IKEv2 only, see dpdaction for meaning of values). A closeaction should not be
+used if the peer uses reauthentication or uniquids checking, as these events
+might trigger a closeaction when not desired.
+.TP
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
 not send or receive any traffic. Currently supported in IKEv2 connections only.
