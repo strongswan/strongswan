@@ -21,12 +21,14 @@
 #ifndef IMV_MANAGER_H_
 #define IMV_MANAGER_H_
 
+typedef struct imv_manager_t imv_manager_t;
+
+#ifdef USE_TNC
+
 #include "imv.h"
 #include "imv_recommendations.h"
 
 #include <library.h>
-
-typedef struct imv_manager_t imv_manager_t;
 
 /**
  * The IMV manager controls all IMV instances.
@@ -141,5 +143,7 @@ struct imv_manager_t {
 	 */
 	void (*destroy)(imv_manager_t *this);
 };
+
+#endif /* USE_TNC */
 
 #endif /** IMV_MANAGER_H_ @}*/

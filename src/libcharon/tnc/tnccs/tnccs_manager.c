@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#define USE_TNC
+
 #include "tnccs_manager.h"
 
 #include <tnc/imv/imv_recommendations.h>
@@ -172,7 +174,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 }
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
-	private_tnccs_manager_t *this, tnccs_t *tnccs, 
+	private_tnccs_manager_t *this, tnccs_t *tnccs,
 	tnccs_send_message_t send_message, bool* request_handshake_retry,
 	recommendations_t **recs)
 {
@@ -187,7 +189,7 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 		/* we assume a TNC Server needing recommendations from IMVs */
 		if (!charon->imvs)
 		{
- 			DBG1(DBG_TNC, "no IMV manager available!");
+			DBG1(DBG_TNC, "no IMV manager available!");
 			free(entry);
 			return 0;
 		}

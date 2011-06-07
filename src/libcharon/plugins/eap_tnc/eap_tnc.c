@@ -16,9 +16,11 @@
 #include "eap_tnc.h"
 
 #include <tls_eap.h>
+#include <debug.h>
+
+#define USE_TNC
 
 #include <daemon.h>
-#include <debug.h>
 
 typedef struct private_eap_tnc_t private_eap_tnc_t;
 

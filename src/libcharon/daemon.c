@@ -29,6 +29,8 @@
 # endif /* CAPABILITIES_NATIVE */
 #endif /* CAPABILITIES */
 
+#define USE_TNC /* for tnccs_manager */
+
 #include "daemon.h"
 
 #include <library.h>

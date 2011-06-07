@@ -2,7 +2,7 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtncif
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -DUSE_TNC -rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnc-imc.la

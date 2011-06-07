@@ -21,11 +21,13 @@
 #ifndef TNCCS_MANAGER_H_
 #define TNCCS_MANAGER_H_
 
+typedef struct tnccs_manager_t tnccs_manager_t;
+
+#ifdef USE_TNC
+
 #include "tnccs.h"
 
 #include <tnc/imv/imv_recommendations.h>
-
-typedef struct tnccs_manager_t tnccs_manager_t;
 
 /**
  * The TNCCS manager manages all TNCCS implementations and creates instances.
@@ -76,7 +78,7 @@ struct tnccs_manager_t {
 	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message,
 										  bool *request_handshake_retry,
-						 				  recommendations_t **recs);
+										  recommendations_t **recs);
 
 	/**
 	 * Remove a TNCCS connection using its connection ID.
@@ -182,5 +184,7 @@ struct tnccs_manager_t {
  * Create a tnccs_manager instance.
  */
 tnccs_manager_t *tnccs_manager_create();
+
+#endif /* USE_TNC */
 
 #endif /** TNCCS_MANAGER_H_ @}*/

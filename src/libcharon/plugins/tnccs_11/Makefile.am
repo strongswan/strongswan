@@ -3,7 +3,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
 	-I$(top_srcdir)/src/libtncif ${xml_CFLAGS}
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -DUSE_TNC -rdynamic
 
 libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
 
