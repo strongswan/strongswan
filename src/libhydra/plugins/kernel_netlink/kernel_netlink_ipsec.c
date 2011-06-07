@@ -385,7 +385,7 @@ struct private_kernel_netlink_ipsec_t {
 	kernel_netlink_ipsec_t public;
 
 	/**
-	 * mutex to lock access to various lists
+	 * mutex to lock access to installed policies
 	 */
 	mutex_t *mutex;
 
@@ -1785,9 +1785,13 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_entry_t *policy, policy_sa_t *sa, bool update)
 {
 	netlink_buf_t request;
+	policy_entry_t clone;
 	struct xfrm_userpolicy_info *policy_info;
 	struct nlmsghdr *hdr;
 	int i;
+
+	/* clone the policy so we are able to check it out again later */
+	memcpy(&clone, policy, sizeof(policy_entry_t));
 
 	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
@@ -1894,7 +1898,15 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		return FAILED;
 	}
 
-	/* FIXME: accessing policy and sa here is not really thread safe */
+	/* find the policy again */
+	this->mutex->lock(this->mutex);
+	policy = this->policies->get(this->policies, &clone);
+	if (!policy ||
+		 policy->sas->find_first(policy->sas, NULL, (void**)&sa) != SUCCESS)
+	{	/* policy or sa is already gone, ignore */
+		this->mutex->unlock(this->mutex);
+		return SUCCESS;
+	}
 
 	/* install a route, if:
 	 * - this is a forward policy (to just get one for each child)
@@ -1921,6 +1933,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 
 			if (!route->if_name)
 			{
+				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);
 				return SUCCESS;
 			}
@@ -1930,6 +1943,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 				route_entry_t *old = policy->route;
 				if (route_entry_equals(old, route))
 				{	/* keep previously installed route */
+					this->mutex->unlock(this->mutex);
 					route_entry_destroy(route);
 					return SUCCESS;
 				}
@@ -1973,6 +1987,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			free(route);
 		}
 	}
+	this->mutex->unlock(this->mutex);
 	return SUCCESS;
 }
 
