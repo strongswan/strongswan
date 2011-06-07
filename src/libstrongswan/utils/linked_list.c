@@ -113,7 +113,7 @@ struct private_enumerator_t {
 };
 
 METHOD(enumerator_t, enumerate, bool,
-	   private_enumerator_t *this, void **item)
+	private_enumerator_t *this, void **item)
 {
 	if (!this->current)
 	{
@@ -132,7 +132,7 @@ METHOD(enumerator_t, enumerate, bool,
 }
 
 METHOD(linked_list_t, create_enumerator, enumerator_t*,
-	   private_linked_list_t *this)
+	private_linked_list_t *this)
 {
 	private_enumerator_t *enumerator;
 
@@ -148,19 +148,19 @@ METHOD(linked_list_t, create_enumerator, enumerator_t*,
 }
 
 METHOD(linked_list_t, reset_enumerator, void,
-	   private_linked_list_t *this, private_enumerator_t *enumerator)
+	private_linked_list_t *this, private_enumerator_t *enumerator)
 {
 	enumerator->current = NULL;
 }
 
 METHOD(linked_list_t, get_count, int,
-	   private_linked_list_t *this)
+	private_linked_list_t *this)
 {
 	return this->count;
 }
 
 METHOD(linked_list_t, insert_first, void,
-	   private_linked_list_t *this, void *item)
+	private_linked_list_t *this, void *item)
 {
 	element_t *element;
 
@@ -170,15 +170,11 @@ METHOD(linked_list_t, insert_first, void,
 		/* first entry in list */
 		this->first = element;
 		this->last = element;
-		element->previous = NULL;
-		element->next = NULL;
 	}
 	else
 	{
-		element_t *old_first_element = this->first;
-		element->next = old_first_element;
-		element->previous = NULL;
-		old_first_element->previous = element;
+		element->next = this->first;
+		this->first->previous = element;
 		this->first = element;
 	}
 	this->count++;
@@ -220,7 +216,7 @@ static element_t* remove_element(private_linked_list_t *this,
 }
 
 METHOD(linked_list_t, get_first, status_t,
-	   private_linked_list_t *this, void **item)
+	private_linked_list_t *this, void **item)
 {
 	if (this->count == 0)
 	{
@@ -231,7 +227,7 @@ METHOD(linked_list_t, get_first, status_t,
 }
 
 METHOD(linked_list_t, remove_first, status_t,
-	   private_linked_list_t *this, void **item)
+	private_linked_list_t *this, void **item)
 {
 	if (get_first(this, item) == SUCCESS)
 	{
@@ -242,40 +238,39 @@ METHOD(linked_list_t, remove_first, status_t,
 }
 
 METHOD(linked_list_t, insert_last, void,
-	   private_linked_list_t *this, void *item)
+	private_linked_list_t *this, void *item)
 {
-	element_t *element = element_create(item);
+	element_t *element;
 
+	element = element_create(item);
 	if (this->count == 0)
 	{
 		/* first entry in list */
 		this->first = element;
 		this->last = element;
-		element->previous = NULL;
-		element->next = NULL;
 	}
 	else
 	{
-		element_t *old_last_element = this->last;
-		element->previous = old_last_element;
-		element->next = NULL;
-		old_last_element->next = element;
+		element->previous = this->last;
+		this->last->next = element;
 		this->last = element;
 	}
 	this->count++;
 }
 
 METHOD(linked_list_t, insert_before, void,
-	   private_linked_list_t *this, private_enumerator_t *enumerator,
-	   void *item)
+	private_linked_list_t *this, private_enumerator_t *enumerator,
+	void *item)
 {
-	element_t *current = enumerator->current;
+	element_t *current, *element;
+
+	current = enumerator->current;
 	if (!current)
 	{
 		this->public.insert_last(&this->public, item);
 		return;
 	}
-	element_t *element = element_create(item);
+	element = element_create(item);
 	if (current->previous)
 	{
 		current->previous->next = element;
@@ -293,10 +288,11 @@ METHOD(linked_list_t, insert_before, void,
 }
 
 METHOD(linked_list_t, replace, void*,
-	   private_linked_list_t *this, private_enumerator_t *enumerator,
-	   void *item)
+	private_linked_list_t *this, private_enumerator_t *enumerator,
+	void *item)
 {
 	void *old = NULL;
+
 	if (enumerator->current)
 	{
 		old = enumerator->current->value;
@@ -306,7 +302,7 @@ METHOD(linked_list_t, replace, void*,
 }
 
 METHOD(linked_list_t, get_last, status_t,
-	   private_linked_list_t *this, void **item)
+	private_linked_list_t *this, void **item)
 {
 	if (this->count == 0)
 	{
@@ -317,7 +313,7 @@ METHOD(linked_list_t, get_last, status_t,
 }
 
 METHOD(linked_list_t, remove_last, status_t,
-	   private_linked_list_t *this, void **item)
+	private_linked_list_t *this, void **item)
 {
 	if (get_last(this, item) == SUCCESS)
 	{
@@ -328,7 +324,7 @@ METHOD(linked_list_t, remove_last, status_t,
 }
 
 METHOD(linked_list_t, remove_, int,
-	   private_linked_list_t *this, void *item, bool (*compare)(void*,void*))
+	private_linked_list_t *this, void *item, bool (*compare)(void*,void*))
 {
 	element_t *current = this->first;
 	int removed = 0;
@@ -363,8 +359,8 @@ METHOD(linked_list_t, remove_at, void,
 }
 
 METHOD(linked_list_t, find_first, status_t,
-	   private_linked_list_t *this, linked_list_match_t match,
-	   void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
+	private_linked_list_t *this, linked_list_match_t match,
+	void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
 
@@ -385,8 +381,8 @@ METHOD(linked_list_t, find_first, status_t,
 }
 
 METHOD(linked_list_t, find_last, status_t,
-	   private_linked_list_t *this, linked_list_match_t match,
-	   void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
+	private_linked_list_t *this, linked_list_match_t match,
+	void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->last;
 
@@ -407,22 +403,23 @@ METHOD(linked_list_t, find_last, status_t,
 }
 
 METHOD(linked_list_t, invoke_offset, void,
-	   private_linked_list_t *this, size_t offset,
-	   void *d1, void *d2, void *d3, void *d4, void *d5)
+	private_linked_list_t *this, size_t offset,
+	void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
+	linked_list_invoke_t *method;
 
 	while (current)
 	{
-		linked_list_invoke_t *method = current->value + offset;
+		method = current->value + offset;
 		(*method)(current->value, d1, d2, d3, d4, d5);
 		current = current->next;
 	}
 }
 
 METHOD(linked_list_t, invoke_function, void,
-	   private_linked_list_t *this, linked_list_invoke_t fn,
-	   void *d1, void *d2, void *d3, void *d4, void *d5)
+	private_linked_list_t *this, linked_list_invoke_t fn,
+	void *d1, void *d2, void *d3, void *d4, void *d5)
 {
 	element_t *current = this->first;
 
@@ -434,11 +431,12 @@ METHOD(linked_list_t, invoke_function, void,
 }
 
 METHOD(linked_list_t, clone_offset, linked_list_t*,
-	   private_linked_list_t *this, size_t offset)
+	private_linked_list_t *this, size_t offset)
 {
-	linked_list_t *clone = linked_list_create();
 	element_t *current = this->first;
+	linked_list_t *clone;
 
+	clone = linked_list_create();
 	while (current)
 	{
 		void* (**method)(void*) = current->value + offset;
@@ -450,24 +448,25 @@ METHOD(linked_list_t, clone_offset, linked_list_t*,
 }
 
 METHOD(linked_list_t, clone_function, linked_list_t*,
-	   private_linked_list_t *this, void* (*fn)(void*))
+	private_linked_list_t *this, void* (*fn)(void*))
 {
-	linked_list_t *clone = linked_list_create();
 	element_t *current = this->first;
+	linked_list_t *clone;
 
+	clone = linked_list_create();
 	while (current)
 	{
 		clone->insert_last(clone, fn(current->value));
 		current = current->next;
 	}
-
 	return clone;
 }
 
 METHOD(linked_list_t, destroy, void,
-	   private_linked_list_t *this)
+	private_linked_list_t *this)
 {
 	void *value;
+
 	/* Remove all list items before destroying list */
 	while (remove_first(this, &value) == SUCCESS)
 	{
@@ -478,7 +477,7 @@ METHOD(linked_list_t, destroy, void,
 }
 
 METHOD(linked_list_t, destroy_offset, void,
-	   private_linked_list_t *this, size_t offset)
+	private_linked_list_t *this, size_t offset)
 {
 	element_t *current = this->first, *next;
 
@@ -494,7 +493,7 @@ METHOD(linked_list_t, destroy_offset, void,
 }
 
 METHOD(linked_list_t, destroy_function, void,
-	   private_linked_list_t *this, void (*fn)(void*))
+	private_linked_list_t *this, void (*fn)(void*))
 {
 	element_t *current = this->first, *next;
 
