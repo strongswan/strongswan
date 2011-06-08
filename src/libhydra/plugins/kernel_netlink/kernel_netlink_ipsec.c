@@ -2074,6 +2074,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (!update)
 	{	/* we don't update the policy if the priority is lower than that of the
 		 * currently installed one */
+		this->mutex->unlock(this->mutex);
 		return SUCCESS;
 	}
 
