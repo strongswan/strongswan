@@ -15,20 +15,27 @@ BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
-AM_CFLAGS = -rdynamic \
-	-DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\""
+AM_CFLAGS = -rdynamic
 
 libs = $(top_builddir)/src/libstrongswan/.libs/libstrongswan.so
 
+if !MONOLITHIC
+  AM_CFLAGS += -DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\""
+endif
+
 if USE_LIBHYDRA
   libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
+if !MONOLITHIC
   AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\"" -DH_PATH=\""${top_builddir}/src/libhydra/plugins\""
+endif
 endif
 
 if USE_CHARON
   libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
   libs += $(top_builddir)/src/charon/.libs/charon
+if !MONOLITHIC
   AM_CFLAGS += -DC_PLUGINS=\""${c_plugins}\"" -DC_PATH=\""${top_builddir}/src/libcharon/plugins\""
+endif
 endif
 
 if USE_PLUTO
