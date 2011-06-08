@@ -2209,10 +2209,13 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
 	mark_t mark, bool unrouted)
 {
-	policy_entry_t *current, policy, *to_delete = NULL;
+	policy_entry_t *current, policy;
+	enumerator_t *enumerator;
+	policy_sa_t *sa;
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
+	bool is_installed = TRUE;
 
 	if (mark.value)
 	{
@@ -2235,64 +2238,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	/* find the policy */
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, &policy);
-	if (current)
-	{
-		enumerator_t *enumerator;
-		policy_sa_t *sa;
-		bool is_installed = TRUE;
-		/* remove cached SA */
-		enumerator = current->sas->create_enumerator(current->sas);
-		while (enumerator->enumerate(enumerator, (void**)&sa))
-		{
-			if (reqid == sa->cfg.reqid)
-			{
-				current->sas->remove_at(current->sas, enumerator);
-				break;
-			}
-			is_installed = FALSE;
-		}
-		enumerator->destroy(enumerator);
-
-		if (current->sas->get_count(current->sas) > 0)
-		{	/* policy is used by more SAs, keep in kernel */
-			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-			if (!is_installed)
-			{	/* no need to update the policy as it was not installed */
-				this->mutex->unlock(this->mutex);
-				policy_sa_destroy(sa);
-				return SUCCESS;
-			}
-			policy_sa_destroy(sa);
-
-			if (mark.value)
-			{
-				DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%8x)",
-							   src_ts, dst_ts, policy_dir_names, direction,
-							   mark.value, mark.mask);
-			}
-			else
-			{
-				DBG2(DBG_KNL, "updating policy %R === %R %N",
-							   src_ts, dst_ts, policy_dir_names, direction);
-			}
-
-			current->sas->get_first(current->sas, (void**)&sa);
-			if (add_policy_internal(this, current, sa, TRUE) != SUCCESS)
-			{
-				DBG1(DBG_KNL, "unable to update policy %R === %R %N",
-							   src_ts, dst_ts, policy_dir_names, direction);
-				return FAILED;
-			}
-			return SUCCESS;
-		}
-		/* remove if last reference */
-		policy_sa_destroy(sa);
-		this->policies->remove(this->policies, current);
-		to_delete = current;
-	}
-	this->mutex->unlock(this->mutex);
-
-	if (!to_delete)
+	if (!current)
 	{
 		if (mark.value)
 		{
@@ -2305,8 +2251,56 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found",
 						   src_ts, dst_ts, policy_dir_names, direction);
 		}
+		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
+
+	/* remove cached SA by reqid */
+	enumerator = current->sas->create_enumerator(current->sas);
+	while (enumerator->enumerate(enumerator, (void**)&sa))
+	{
+		if (reqid == sa->cfg.reqid)
+		{
+			current->sas->remove_at(current->sas, enumerator);
+			break;
+		}
+		is_installed = FALSE;
+	}
+	enumerator->destroy(enumerator);
+
+	if (current->sas->get_count(current->sas) > 0)
+	{	/* policy is used by more SAs, keep in kernel */
+		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
+		if (!is_installed)
+		{	/* no need to update as the policy was not installed for this SA */
+			this->mutex->unlock(this->mutex);
+			policy_sa_destroy(sa);
+			return SUCCESS;
+		}
+		policy_sa_destroy(sa);
+
+		if (mark.value)
+		{
+			DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%8x)",
+						   src_ts, dst_ts, policy_dir_names, direction,
+						   mark.value, mark.mask);
+		}
+		else
+		{
+			DBG2(DBG_KNL, "updating policy %R === %R %N",
+						   src_ts, dst_ts, policy_dir_names, direction);
+		}
+
+		current->sas->get_first(current->sas, (void**)&sa);
+		if (add_policy_internal(this, current, sa, TRUE) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to update policy %R === %R %N",
+						   src_ts, dst_ts, policy_dir_names, direction);
+			return FAILED;
+		}
+		return SUCCESS;
+	}
+	policy_sa_destroy(sa);
 
 	memset(&request, 0, sizeof(request));
 
@@ -2316,7 +2310,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
 	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
-	policy_id->sel = to_delete->sel;
+	policy_id->sel = current->sel;
 	policy_id->dir = direction;
 
 	if (mark.value)
@@ -2337,9 +2331,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		mrk->m = mark.mask;
 	}
 
-	if (to_delete->route)
+	if (current->route)
 	{
-		route_entry_t *route = to_delete->route;
+		route_entry_t *route = current->route;
 		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
 				route->dst_net, route->prefixlen, route->gateway,
 				route->src_ip, route->if_name) != SUCCESS)
@@ -2349,6 +2343,10 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 						   policy_dir_names, direction);
 		}
 	}
+
+	this->policies->remove(this->policies, current);
+	policy_entry_destroy(current);
+	this->mutex->unlock(this->mutex);
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
@@ -2363,10 +2361,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			DBG1(DBG_KNL, "unable to delete policy %R === %R %N",
 						   src_ts, dst_ts, policy_dir_names, direction);
 		}
-		policy_entry_destroy(to_delete);
 		return FAILED;
 	}
-	policy_entry_destroy(to_delete);
 	return SUCCESS;
 }
 
