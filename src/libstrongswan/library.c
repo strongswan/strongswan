@@ -27,7 +27,7 @@
 #include <utils/leak_detective.h>
 #endif
 
-#define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
+#define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
 
 typedef struct private_library_t private_library_t;
 

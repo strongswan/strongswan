@@ -1,4 +1,4 @@
-ipsec_LTLIBRARIES = libchecksum.la
+ipseclib_LTLIBRARIES = libchecksum.la
 noinst_PROGRAMS = checksum_builder
 
 nodist_libchecksum_la_SOURCES = checksum.c

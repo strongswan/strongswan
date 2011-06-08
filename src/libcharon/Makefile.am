@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libcharon.la
+ipseclib_LTLIBRARIES = libcharon.la
 
 libcharon_la_SOURCES = \
 bus/bus.c bus/bus.h \

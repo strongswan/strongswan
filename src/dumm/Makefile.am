@@ -1,7 +1,7 @@
 EXTRA_DIST = ext/dumm.c ext/README \
   ext/lib/dumm.rb ext/lib/dumm/guest.rb
 
-lib_LTLIBRARIES = libdumm.la
+ipseclib_LTLIBRARIES = libdumm.la
 ipsec_PROGRAMS = dumm irdumm
 
 libdumm_la_SOURCES = dumm.c dumm.h guest.c guest.h iface.c iface.h \

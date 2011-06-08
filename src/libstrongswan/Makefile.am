@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libstrongswan.la
+ipseclib_LTLIBRARIES = libstrongswan.la
 
 libstrongswan_la_SOURCES = \
 library.c library.h \
@@ -80,6 +80,7 @@ libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
+-DIPSEC_LIB_DIR=\"${ipseclibdir}\" \
 -DPLUGINDIR=\"${plugindir}\" \
 -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 

@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libhydra.la
+ipseclib_LTLIBRARIES = libhydra.la
 
 libhydra_la_SOURCES = \
 hydra.c hydra.h \

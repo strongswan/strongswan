@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libfast.la
+ipseclib_LTLIBRARIES = libfast.la
 
 libfast_la_SOURCES = context.h dispatcher.c request.h session.h \
   controller.h dispatcher.h request.c session.c filter.h smtp.c smtp.h
