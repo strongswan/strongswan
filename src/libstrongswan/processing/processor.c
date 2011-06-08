@@ -181,10 +181,10 @@ static void process_jobs(private_processor_t *this)
 				this->working_threads[i]++;
 				this->mutex->unlock(this->mutex);
 				this->priority->set(this->priority, (void*)(intptr_t)i);
-				thread_cleanup_push((thread_cleanup_t)decrement_working_threads,
-									this);
 				/* terminated threads are restarted to get a constant pool */
 				thread_cleanup_push((thread_cleanup_t)restart, this);
+				thread_cleanup_push((thread_cleanup_t)decrement_working_threads,
+									this);
 				job->execute(job);
 				thread_cleanup_pop(FALSE);
 				thread_cleanup_pop(FALSE);
