@@ -164,6 +164,16 @@ METHOD(linked_list_t, reset_enumerator, void,
 	enumerator->finished = FALSE;
 }
 
+METHOD(linked_list_t, has_more, bool,
+	private_linked_list_t *this, private_enumerator_t *enumerator)
+{
+	if (enumerator->current)
+	{
+		return enumerator->current->next != NULL;
+	}
+	return !enumerator->finished && this->first != NULL;
+}
+
 METHOD(linked_list_t, get_count, int,
 	private_linked_list_t *this)
 {
@@ -537,6 +547,7 @@ linked_list_t *linked_list_create()
 			.get_count = _get_count,
 			.create_enumerator = _create_enumerator,
 			.reset_enumerator = (void*)_reset_enumerator,
+			.has_more = (void*)_has_more,
 			.get_first = _get_first,
 			.get_last = _get_last,
 			.find_first = (void*)_find_first,
