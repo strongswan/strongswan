@@ -95,9 +95,10 @@ struct linked_list_t {
 	/**
 	 * Inserts a new item before the item the enumerator currently points to.
 	 *
-	 * If the enumerator's position is invalid, e.g. at the end of the list,
-	 * the item is inserted last. This is helpful when inserting items into a
-	 * sorted list.
+	 * If this method is called before starting the enumeration the item is
+	 * inserted first. If it is called after all items have been enumerated
+	 * the item is inserted last. This is helpful when inserting items into
+	 * a sorted list.
 	 *
 	 * @note The position of the enumerator is not changed.
 	 *

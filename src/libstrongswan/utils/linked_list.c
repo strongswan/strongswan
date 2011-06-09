@@ -110,11 +110,20 @@ struct private_enumerator_t {
 	 * current item
 	 */
 	element_t *current;
+
+	/**
+	 * enumerator has enumerated all items
+	 */
+	bool finished;
 };
 
 METHOD(enumerator_t, enumerate, bool,
 	private_enumerator_t *this, void **item)
 {
+	if (this->finished)
+	{
+		return FALSE;
+	}
 	if (!this->current)
 	{
 		this->current = this->list->first;
@@ -125,6 +134,7 @@ METHOD(enumerator_t, enumerate, bool,
 	}
 	if (!this->current)
 	{
+		this->finished = TRUE;
 		return FALSE;
 	}
 	*item = this->current->value;
@@ -151,6 +161,7 @@ METHOD(linked_list_t, reset_enumerator, void,
 	private_linked_list_t *this, private_enumerator_t *enumerator)
 {
 	enumerator->current = NULL;
+	enumerator->finished = FALSE;
 }
 
 METHOD(linked_list_t, get_count, int,
@@ -267,7 +278,14 @@ METHOD(linked_list_t, insert_before, void,
 	current = enumerator->current;
 	if (!current)
 	{
-		this->public.insert_last(&this->public, item);
+		if (enumerator->finished)
+		{
+			this->public.insert_last(&this->public, item);
+		}
+		else
+		{
+			this->public.insert_first(&this->public, item);
+		}
 		return;
 	}
 	element = element_create(item);
