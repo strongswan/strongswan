@@ -1312,7 +1312,7 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 
 			DBG2(DBG_ENC, "found an encryption payload");
 
-			if (enumerator->enumerate(enumerator, &payload))
+			if (this->payloads->has_more(this->payloads, enumerator))
 			{
 				DBG1(DBG_ENC, "encrypted payload is not last payload");
 				status = VERIFY_ERROR;
