@@ -409,7 +409,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			return TNC_RESULT_INVALID_PARAMETER;
 		}
 		*out_value_len = pref_lang.len;
-		if (buffer && buffer_len <= pref_lang.len)
+		if (buffer && buffer_len >= pref_lang.len)
 		{
 			memcpy(buffer, pref_lang.ptr, pref_lang.len);
 		}
