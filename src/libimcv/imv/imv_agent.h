@@ -49,42 +49,6 @@ struct imv_agent_t {
 										  TNC_RetryReason reason);
 
 	/**
-	 * Get the value of an attribute associated with a connection
-	 * or with the TNCS as a whole.
-	 *
-	 * @param imv_id			IMV ID assigned by TNCS
-	 * @param connection_id		network connection ID assigned by TNCS
-	 * @param attribute_id		attribute ID
-	 * @param buffer_len		length of buffer in bytes
-	 * @param buffer			buffer
-	 * @param out_value_len		size in bytes of attribute stored in buffer
-	 * @return					TNC result code
-	 */
-	TNC_Result (*get_attribute)(TNC_IMVID imv_id,
-								TNC_ConnectionID connection_id,
-								TNC_AttributeID attribute_id,
-								TNC_UInt32 buffer_len,
-								TNC_BufferReference buffer,
-								TNC_UInt32 *out_value_len);
-
-	/**
-	 * Set the value of an attribute associated with a connection
-	 * or with the TNCS as a whole.
-	 *
-	 * @param imv_id			IMV ID assigned by TNCS
-	 * @param connection_id		network connection ID assigned by TNCS
-	 * @param attribute_id		attribute ID
-	 * @param buffer_len		length of buffer in bytes
-	 * @param buffer			buffer
-	 * @return					TNC result code
-	 */
-	TNC_Result (*set_attribute)(TNC_IMVID imv_id,
-								TNC_ConnectionID connection_id,
-								TNC_AttributeID attribute_id,
-								TNC_UInt32 buffer_len,
-								TNC_BufferReference buffer);
-	
-	/**
 	 * Bind TNCS functions
 	 *
 	 * @param bind_function		function offered by the TNCS
@@ -158,7 +122,7 @@ struct imv_agent_t {
 	/**
 	 * Set Action Recommendation and Evaluation Result in the IMV state
 	 *
-	 # @param connection_id		network connection ID assigned by TNCS
+	 * @param connection_id		network connection ID assigned by TNCS
 	 * @param rec				IMV action recommendation
 	 * @param eval				IMV evaluation result
 	 * @return					TNC result code
@@ -171,7 +135,7 @@ struct imv_agent_t {
 	/**
 	 * Deliver IMV Action Recommendation and IMV Evaluation Result to the TNCS
 	 *
-	 # @param connection_id		network connection ID assigned by TNCS
+	 * @param connection_id		network connection ID assigned by TNCS
 	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_recommendation)(imv_agent_t *this,

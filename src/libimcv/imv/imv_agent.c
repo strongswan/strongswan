@@ -100,6 +100,41 @@ struct private_imv_agent_t {
 										 TNC_IMV_Action_Recommendation rec,
 										 TNC_IMV_Evaluation_Result eval);
 
+	/**
+	 * Get the value of an attribute associated with a connection
+	 * or with the TNCS as a whole.
+	 *
+	 * @param imv_id			IMV ID assigned by TNCS
+	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param attribute_id		attribute ID
+	 * @param buffer_len		length of buffer in bytes
+	 * @param buffer			buffer
+	 * @param out_value_len		size in bytes of attribute stored in buffer
+	 * @return					TNC result code
+	 */
+	TNC_Result (*get_attribute)(TNC_IMVID imv_id,
+								TNC_ConnectionID connection_id,
+								TNC_AttributeID attribute_id,
+								TNC_UInt32 buffer_len,
+								TNC_BufferReference buffer,
+								TNC_UInt32 *out_value_len);
+
+	/**
+	 * Set the value of an attribute associated with a connection
+	 * or with the TNCS as a whole.
+	 *
+	 * @param imv_id			IMV ID assigned by TNCS
+	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param attribute_id		attribute ID
+	 * @param buffer_len		length of buffer in bytes
+	 * @param buffer			buffer
+	 * @return					TNC result code
+	 */
+	TNC_Result (*set_attribute)(TNC_IMVID imv_id,
+								TNC_ConnectionID connection_id,
+								TNC_AttributeID attribute_id,
+								TNC_UInt32 buffer_len,
+								TNC_BufferReference buffer);
 };
 
 METHOD(imv_agent_t, bind_functions, TNC_Result,
@@ -131,14 +166,14 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 		this->provide_recommendation = NULL;
 	}
 	if (bind_function(this->id, "TNC_TNCS_GetAttribute",
-			(void**)&this->public.get_attribute) != TNC_RESULT_SUCCESS)
+			(void**)&this->get_attribute) != TNC_RESULT_SUCCESS)
 	{
-		this->public.get_attribute = NULL;
+		this->get_attribute = NULL;
 	}
 	if (bind_function(this->id, "TNC_TNCS_SetAttribute",
-			(void**)&this->public.set_attribute) != TNC_RESULT_SUCCESS)
+			(void**)&this->set_attribute) != TNC_RESULT_SUCCESS)
 	{
-		this->public.set_attribute = NULL;
+		this->set_attribute = NULL;
 	}
 	DBG2(DBG_IMV, "IMV %u \"%s\" provided with bind function",
 				  this->id, this->name);
@@ -317,6 +352,7 @@ METHOD(imv_agent_t, set_recommendation, TNC_Result,
 					  this->id, this->name, connection_id);
 		return TNC_RESULT_FATAL;
 	}
+
 	state->set_recommendation(state, rec, eval);
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
@@ -384,7 +420,10 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	imv_state_t *state;
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
-	
+	TNC_UInt32 lang_len;
+	char buf[BUF_LEN];
+	chunk_t pref_lang = { buf, 0 }, reason_string, reason_lang;
+
 	state = find_connection(this, connection_id);
 	if (!state)
 	{
@@ -392,6 +431,31 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 					  this->id, this->name, connection_id);
 		return TNC_RESULT_FATAL;
 	}
+
+	/* check if there a preferred language has been requested */
+	if (this->get_attribute  &&
+		this->get_attribute(this->id, connection_id,
+							TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
+							buf, &lang_len) == TNC_RESULT_SUCCESS &&
+		lang_len <= BUF_LEN)
+	{
+		pref_lang.len = lang_len;
+		DBG2(DBG_IMV, "preferred language is '%.*s'",
+					   pref_lang.len, pref_lang.ptr);
+	}
+
+	/* find a reason string for the preferred or default language and set it */
+	if (this->set_attribute &&
+		state->get_reason_string(state, pref_lang, &reason_string, &reason_lang))
+	{
+		this->set_attribute(this->id, connection_id,
+							TNC_ATTRIBUTEID_REASON_STRING,
+							reason_string.len, reason_string.ptr);
+		this->set_attribute(this->id, connection_id,
+							TNC_ATTRIBUTEID_REASON_LANGUAGE,
+							reason_lang.len, reason_lang.ptr);
+	}
+			
 	state->get_recommendation(state, &rec, &eval);
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }

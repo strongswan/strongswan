@@ -69,6 +69,17 @@ struct imv_state_t {
 							   TNC_IMV_Evaluation_Result eval);
 
 	/**
+	 * Get reason string based on the preferred language
+	 *
+	 * @param preferred_language	preferred language
+	 * @param reason_string			reason string
+	 * @param language code			language of the returned reason string
+	 * @return						TRUE if a reason string was found
+	 */
+	bool (*get_reason_string)(imv_state_t *this, chunk_t preferred_language,
+							  chunk_t *reason_string, chunk_t *language_code);
+
+	/**
 	 * Destroys an imv_state_t object
 	 */
 	void (*destroy)(imv_state_t *this);

@@ -55,6 +55,26 @@ struct private_imv_test_state_t {
 
 };
 
+typedef struct entry_t entry_t;
+
+/**
+ * Define an internal reason string entry
+ */
+struct entry_t {
+	char *lang;
+	char *string;
+};
+
+/**
+ * Table of multi-lingual reason string entries 
+ */
+static entry_t reasons[] = {
+	{ "en", "IMC Test was not configured with \"command = allow\"" },
+	{ "de", "IMC Test wurde nicht mit \"command = allow\" konfiguriert" },
+	{ "fr", "IMC Test n'etait pas configuré avec \"command = allow\"" },
+	{ "pl", "IMC Test nie zostało skonfigurowany z \"command = allow\"" }
+};
+
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
 	private_imv_test_state_t *this)
 {
@@ -81,6 +101,34 @@ METHOD(imv_state_t, set_recommendation, void,
 {
 	this->rec = rec;
 	this->eval = eval;
+}
+
+METHOD(imv_state_t, get_reason_string, bool,
+	private_imv_test_state_t *this, chunk_t preferred_language,
+	chunk_t *reason_string, chunk_t *reason_language)
+{
+	int i;
+
+	for (i = 0 ; i < countof(reasons); i++)
+	{
+		chunk_t lang;
+
+		lang = chunk_create(reasons[i].lang, strlen(reasons[i].lang));
+		if (chunk_equals(lang, preferred_language))
+		{
+			*reason_language = lang;
+			*reason_string = chunk_create(reasons[i].string, 
+									strlen(reasons[i].string));
+			return TRUE;
+		}
+	}
+
+	/* no preferred language match found - use the default language */
+	*reason_string =   chunk_create(reasons[0].string,
+									strlen(reasons[0].string));
+	*reason_language = chunk_create(reasons[0].lang, 
+									strlen(reasons[0].lang));
+	return TRUE;
 }
 
 METHOD(imv_state_t, destroy, void,
@@ -115,6 +163,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
+				.get_reason_string = _get_reason_string,
 				.destroy = _destroy,
 			},
 			.set_rounds = _set_rounds,
