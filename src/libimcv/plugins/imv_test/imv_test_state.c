@@ -14,6 +14,7 @@
 
 #include "imv_test_state.h"
 
+#include <utils/lexparser.h>
 #include <debug.h>
 
 typedef struct private_imv_test_state_t private_imv_test_state_t;
@@ -107,19 +108,27 @@ METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_test_state_t *this, chunk_t preferred_language,
 	chunk_t *reason_string, chunk_t *reason_language)
 {
+	chunk_t pref_lang, lang;
 	int i;
 
-	for (i = 0 ; i < countof(reasons); i++)
+	while (eat_whitespace(&preferred_language))
 	{
-		chunk_t lang;
-
-		lang = chunk_create(reasons[i].lang, strlen(reasons[i].lang));
-		if (chunk_equals(lang, preferred_language))
+		if (!extract_token(&pref_lang, ',', &preferred_language))
 		{
-			*reason_language = lang;
-			*reason_string = chunk_create(reasons[i].string, 
-									strlen(reasons[i].string));
-			return TRUE;
+			/* last entry in a comma-separated list or single entry */
+			pref_lang = preferred_language;
+		}
+
+		for (i = 0 ; i < countof(reasons); i++)
+		{
+			lang = chunk_create(reasons[i].lang, strlen(reasons[i].lang));
+			if (chunk_equals(lang, pref_lang))
+			{
+				*reason_language = lang;
+				*reason_string = chunk_create(reasons[i].string, 
+										strlen(reasons[i].string));
+				return TRUE;
+			}
 		}
 	}
 
