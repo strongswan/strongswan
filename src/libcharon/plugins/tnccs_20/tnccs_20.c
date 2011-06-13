@@ -312,10 +312,10 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			reason_msg = (pb_reason_string_msg_t*)msg;
 			reason_string = reason_msg->get_reason_string(reason_msg);
 			language_code = reason_msg->get_language_code(reason_msg);
-			DBG2(DBG_TNC, "reason string is '%.*s", reason_string.len,
-													reason_string.ptr);
-			DBG2(DBG_TNC, "language code is '%.*s", language_code.len,
-													language_code.ptr);
+			DBG2(DBG_TNC, "reason string is '%.*s'", reason_string.len,
+													 reason_string.ptr);
+			DBG2(DBG_TNC, "language code is '%.*s'", language_code.len,
+													 language_code.ptr);
 			break;
 		}
 		default:
