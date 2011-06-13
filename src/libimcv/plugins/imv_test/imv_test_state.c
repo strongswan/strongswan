@@ -109,6 +109,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	chunk_t *reason_string, chunk_t *reason_language)
 {
 	chunk_t pref_lang, lang;
+	u_char *pos;
 	int i;
 
 	while (eat_whitespace(&preferred_language))
@@ -117,6 +118,13 @@ METHOD(imv_state_t, get_reason_string, bool,
 		{
 			/* last entry in a comma-separated list or single entry */
 			pref_lang = preferred_language;
+		}
+
+		/* eat trailing whitespace */
+		pos = pref_lang.ptr + pref_lang.len - 1;
+		while (pref_lang.len && *pos-- == ' ')
+		{
+			pref_lang.len--;
 		}
 
 		for (i = 0 ; i < countof(reasons); i++)
