@@ -140,10 +140,12 @@ tnccs_msg_t *tnccs_reason_strings_msg_create(chunk_t reason, chunk_t language)
 	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
 
 	/* could add multiple reasons here, if we had them */
+
 	n3 = xmlNewNode(NULL, BAD_CAST "ReasonString");
 	xmlNewProp(n3, BAD_CAST "xml:lang", BAD_CAST this->language.ptr);
 	xmlNodeSetContent(n3, BAD_CAST this->reason.ptr);
 	xmlAddChild(n2, n3);
+    xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;
 }
