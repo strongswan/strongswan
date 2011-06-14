@@ -39,14 +39,14 @@ struct imv_test_state_t {
 	/**
 	 * Set the IMC-IMV round-trip count
 	 *
-	 * @param		number of re-measurement rounds
+	 * @param rounds	number of re-measurement rounds
 	 */
 	void (*set_rounds)(imv_test_state_t *this, int rounds);
 
 	/**
 	 * Check and decrease IMC-IMV round-trip count
 	 *
-	 * @return		new connection state
+	 * @return			new connection state
 	 */
 	bool (*another_round)(imv_test_state_t *this);
 };
@@ -54,7 +54,7 @@ struct imv_test_state_t {
 /**
  * Create an imv_test_state_t instance
  *
- * @param id		connection ID
+ * @param id			connection ID
  */
 imv_state_t* imv_test_state_create(TNC_ConnectionID id);
 
