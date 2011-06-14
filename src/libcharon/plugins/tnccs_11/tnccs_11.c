@@ -221,9 +221,9 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 
 			reason_msg = (tnccs_reason_strings_msg_t*)msg;
 			reason_string = reason_msg->get_reason(reason_msg, &reason_lang);
-			DBG2(DBG_TNC, "reason string is '%.*s",   reason_string.len,
+			DBG2(DBG_TNC, "reason string is '%.*s'",   reason_string.len,
 													  reason_string.ptr);
-			DBG2(DBG_TNC, "reason language is '%.*s", reason_lang.len,
+			DBG2(DBG_TNC, "reason language is '%.*s'", reason_lang.len,
 													  reason_lang.ptr);
 			break;
 		}
