@@ -431,32 +431,38 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 					  this->id, this->name, connection_id);
 		return TNC_RESULT_FATAL;
 	}
+	state->get_recommendation(state, &rec, &eval);
 
-	/* check if there a preferred language has been requested */
-	if (this->get_attribute  &&
-		this->get_attribute(this->id, connection_id,
-							TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
-							buf, &lang_len) == TNC_RESULT_SUCCESS &&
-		lang_len <= BUF_LEN)
-	{
-		pref_lang.len = lang_len;
-		DBG2(DBG_IMV, "preferred language is '%.*s'",
-					   pref_lang.len, pref_lang.ptr);
-	}
 
-	/* find a reason string for the preferred or default language and set it */
-	if (this->set_attribute &&
-		state->get_reason_string(state, pref_lang, &reason_string, &reason_lang))
+	/* send a reason string if action recommendation is not allow */
+	if (rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
 	{
-		this->set_attribute(this->id, connection_id,
-							TNC_ATTRIBUTEID_REASON_STRING,
-							reason_string.len, reason_string.ptr);
-		this->set_attribute(this->id, connection_id,
-							TNC_ATTRIBUTEID_REASON_LANGUAGE,
-							reason_lang.len, reason_lang.ptr);
+		/* check if there a preferred language has been requested */
+		if (this->get_attribute  &&
+			this->get_attribute(this->id, connection_id,
+								TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
+								buf, &lang_len) == TNC_RESULT_SUCCESS &&
+			lang_len <= BUF_LEN)
+		{
+			pref_lang.len = lang_len;
+			DBG2(DBG_IMV, "preferred language is '%.*s'",
+						   pref_lang.len, pref_lang.ptr);
+		}
+
+		/* find a reason string for the preferred or default language and set it */
+		if (this->set_attribute &&
+			state->get_reason_string(state, pref_lang, &reason_string,
+													   &reason_lang))
+		{
+			this->set_attribute(this->id, connection_id,
+								TNC_ATTRIBUTEID_REASON_STRING,
+								reason_string.len, reason_string.ptr);
+			this->set_attribute(this->id, connection_id,
+								TNC_ATTRIBUTEID_REASON_LANGUAGE,
+								reason_lang.len, reason_lang.ptr);
+		}
 	}
 			
-	state->get_recommendation(state, &rec, &eval);
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
