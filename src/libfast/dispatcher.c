@@ -180,14 +180,12 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 {
 	session_entry_t *entry;
 
-	entry = malloc_thing(session_entry_t);
-	entry->in_use = FALSE;
-	entry->closed = FALSE;
-	entry->cond = condvar_create(CONDVAR_TYPE_DEFAULT);
-	entry->session = load_session(this);
-	entry->used = time_monotonic(NULL);
-	entry->host = strdup(host);
-
+	INIT(entry,
+		.cond = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.session = load_session(this),
+		.used = time_monotonic(NULL),
+		.host = strdup(host),
+	);
 	return entry;
 }
 
@@ -202,29 +200,28 @@ static void session_entry_destroy(session_entry_t *entry)
 	free(entry);
 }
 
-/**
- * Implementation of dispatcher_t.add_controller.
- */
-static void add_controller(private_dispatcher_t *this,
-						   controller_constructor_t constructor, void *param)
+METHOD(dispatcher_t, add_controller, void,
+	private_dispatcher_t *this, controller_constructor_t constructor,
+	void *param)
 {
-	controller_entry_t *entry = malloc_thing(controller_entry_t);
+	controller_entry_t *entry;
 
-	entry->constructor = constructor;
-	entry->param = param;
+	INIT(entry,
+		.constructor = constructor,
+		.param = param,
+	);
 	this->controllers->insert_last(this->controllers, entry);
 }
 
-/**
- * Implementation of dispatcher_t.add_filter.
- */
-static void add_filter(private_dispatcher_t *this,
-					   filter_constructor_t constructor, void *param)
+METHOD(dispatcher_t, add_filter, void,
+	private_dispatcher_t *this, filter_constructor_t constructor, void *param)
 {
-	filter_entry_t *entry = malloc_thing(filter_entry_t);
+	filter_entry_t *entry;
 
-	entry->constructor = constructor;
-	entry->param = param;
+	INIT(entry,
+		.constructor = constructor,
+		.param = param,
+	);
 	this->filters->insert_last(this->filters, entry);
 }
 
@@ -349,10 +346,8 @@ static void dispatch(private_dispatcher_t *this)
 	}
 }
 
-/**
- * Implementation of dispatcher_t.run.
- */
-static void run(private_dispatcher_t *this, int threads)
+METHOD(dispatcher_t, run, void,
+	private_dispatcher_t *this, int threads)
 {
 	this->thread_count = threads;
 	this->threads = malloc(sizeof(thread_t*) * threads);
@@ -367,10 +362,8 @@ static void run(private_dispatcher_t *this, int threads)
 	}
 }
 
-/**
- * Implementation of dispatcher_t.waitsignal.
- */
-static void waitsignal(private_dispatcher_t *this)
+METHOD(dispatcher_t, waitsignal, void,
+	private_dispatcher_t *this)
 {
 	sigset_t set;
 	int sig;
@@ -383,10 +376,8 @@ static void waitsignal(private_dispatcher_t *this)
 	sigwait(&set, &sig);
 }
 
-/**
- * Implementation of dispatcher_t.destroy
- */
-static void destroy(private_dispatcher_t *this)
+METHOD(dispatcher_t, destroy, void,
+	private_dispatcher_t *this)
 {
 	char *sid;
 	session_entry_t *entry;
@@ -419,26 +410,27 @@ static void destroy(private_dispatcher_t *this)
 dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 								context_constructor_t constructor, void *param)
 {
-	private_dispatcher_t *this = malloc_thing(private_dispatcher_t);
+	private_dispatcher_t *this;
 
-	this->public.add_controller = (void(*)(dispatcher_t*, controller_constructor_t, void*))add_controller;
-	this->public.add_filter = (void(*)(dispatcher_t*,filter_constructor_t constructor, void *param))add_filter;
-	this->public.run = (void(*)(dispatcher_t*, int threads))run;
-	this->public.waitsignal = (void(*)(dispatcher_t*))waitsignal;
-	this->public.destroy = (void(*)(dispatcher_t*))destroy;
-
-	this->sessions = hashtable_create((void*)session_hash,
-									  (void*)session_equals, 4096);
-	this->controllers = linked_list_create();
-	this->filters = linked_list_create();
-	this->context_constructor = constructor;
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->param = param;
-	this->fd = 0;
-	this->timeout = timeout;
-	this->last_cleanup = time_monotonic(NULL);
-	this->debug = debug;
-	this->threads = NULL;
+	INIT(this,
+		.public = {
+			.add_controller = _add_controller,
+			.add_filter = _add_filter,
+			.run = _run,
+			.waitsignal = _waitsignal,
+			.destroy = _destroy,
+		},
+		.sessions = hashtable_create((void*)session_hash,
+									 (void*)session_equals, 4096),
+		.controllers = linked_list_create(),
+		.filters = linked_list_create(),
+		.context_constructor = constructor,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.param = param,
+		.timeout = timeout,
+		.last_cleanup = time_monotonic(NULL),
+		.debug = debug,
+	);
 
 	FCGX_Init();
 

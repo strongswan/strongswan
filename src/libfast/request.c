@@ -160,86 +160,66 @@ static int iterenv_cb(void *null, int num, char **key, char **value)
 	return 0;
 }
 
-/**
- * Implementation of request_t.get_cookie.
- */
-static char* get_cookie(private_request_t *this, char *name)
+METHOD(request_t, get_cookie, char*,
+	private_request_t *this, char *name)
 {
 	return hdf_get_valuef(this->hdf, "Cookie.%s", name);
 }
 
-/**
- * Implementation of request_t.get_path.
- */
-static char* get_path(private_request_t *this)
+METHOD(request_t, get_path, char*,
+	private_request_t *this)
 {
 	char * path = FCGX_GetParam("PATH_INFO", this->req.envp);
 	return path ? path : "";
 }
 
-/**
- * Implementation of request_t.get_host.
- */
-static char* get_host(private_request_t *this)
+METHOD(request_t, get_host, char*,
+	private_request_t *this)
 {
 	char *addr = FCGX_GetParam("REMOTE_ADDR", this->req.envp);
 	return addr ? addr : "";
 }
 
-/**
- * Implementation of request_t.get_user_agent.
- */
-static char* get_user_agent(private_request_t *this)
+METHOD(request_t, get_user_agent, char*,
+	private_request_t *this)
 {
 	char *agent = FCGX_GetParam("HTTP_USER_AGENT", this->req.envp);
 	return agent ? agent : "";
 }
 
-/**
- * Implementation of request_t.get_post_data.
- */
-static char* get_query_data(private_request_t *this, char *name)
+METHOD(request_t, get_query_data, char*,
+	private_request_t *this, char *name)
 {
 	return hdf_get_valuef(this->hdf, "Query.%s", name);
 }
 
-/**
- * Implementation of request_t.get_env_var.
- */
-static char* get_env_var(private_request_t *this, char *name)
+METHOD(request_t, get_env_var, char*,
+	private_request_t *this, char *name)
 {
 	return FCGX_GetParam(name, this->req.envp);
 }
 
-/**
- * Implementation of request_t.read_data.
- */
-static int read_data(private_request_t *this, char *buf, int len)
+METHOD(request_t, read_data, int,
+	private_request_t *this, char *buf, int len)
 {
 	return FCGX_GetStr(buf, len, this->req.in);
 }
 
-/**
- * Implementation of request_t.get_base.
- */
-static char* get_base(private_request_t *this)
+METHOD(request_t, get_base, char*,
+	private_request_t *this)
 {
 	return FCGX_GetParam("SCRIPT_NAME", this->req.envp);
 }
 
-/**
- * Implementation of request_t.add_cookie.
- */
-static void add_cookie(private_request_t *this, char *name, char *value)
+METHOD(request_t, add_cookie, void,
+	private_request_t *this, char *name, char *value)
 {
 	thread_this->set(thread_this, this);
 	cgi_cookie_set (this->cgi, name, value, get_base(this), NULL, NULL, 0, 0);
 }
 
-/**
- * Implementation of request_t.redirect.
- */
-static void redirect(private_request_t *this, char *fmt, ...)
+METHOD(request_t, redirect, void,
+	private_request_t *this, char *fmt, ...)
 {
 	va_list args;
 
@@ -252,18 +232,14 @@ static void redirect(private_request_t *this, char *fmt, ...)
 	FCGX_FPrintF(this->req.out, "\n\n");
 }
 
-/**
- * Implementation of request_t.get_referer.
- */
-static char* get_referer(private_request_t *this)
+METHOD(request_t, get_referer, char*,
+	private_request_t *this)
 {
 	return FCGX_GetParam("HTTP_REFERER", this->req.envp);
 }
 
-/**
- * Implementation of request_t.to_referer.
- */
-static void to_referer(private_request_t *this)
+METHOD(request_t, to_referer, void,
+	private_request_t *this)
 {
 	char *referer;
 
@@ -279,36 +255,28 @@ static void to_referer(private_request_t *this)
 	}
 }
 
-/**
- * Implementation of request_t.session_closed.
- */
-static bool session_closed(private_request_t *this)
+METHOD(request_t, session_closed, bool,
+	private_request_t *this)
 {
 	return this->closed;
 }
 
-/**
- * Implementation of request_t.close_session.
- */
-static void close_session(private_request_t *this)
+METHOD(request_t, close_session, void,
+	private_request_t *this)
 {
 	this->closed = TRUE;
 }
 
-/**
- * Implementation of request_t.serve.
- */
-static void serve(private_request_t *this, char *headers, chunk_t chunk)
+METHOD(request_t, serve, void,
+	private_request_t *this, char *headers, chunk_t chunk)
 {
 	FCGX_FPrintF(this->req.out, "%s\n\n", headers);
 
 	FCGX_PutStr(chunk.ptr, chunk.len, this->req.out);
 }
 
-/**
- * Implementation of request_t.render.
- */
-static void render(private_request_t *this, char *template)
+METHOD(request_t, render, void,
+	private_request_t *this, char *template)
 {
 	NEOERR* err;
 
@@ -319,13 +287,10 @@ static void render(private_request_t *this, char *template)
 		cgi_neo_error(this->cgi, err);
 		nerr_log_error(err);
 	}
-	return;
 }
 
-/**
- * Implementation of request_t.streamf.
- */
-static int streamf(private_request_t *this, char *format, ...)
+METHOD(request_t, streamf, int,
+	private_request_t *this, char *format, ...)
 {
 	va_list args;
 	int written;
@@ -341,18 +306,14 @@ static int streamf(private_request_t *this, char *format, ...)
 	return written;
 }
 
-/**
- * Implementation of request_t.set.
- */
-static void set(private_request_t *this, char *key, char *value)
+METHOD(request_t, set, void,
+	private_request_t *this, char *key, char *value)
 {
 	hdf_set_value(this->hdf, key, value);
 }
 
-/**
- * Implementation of request_t.setf.
- */
-static void setf(private_request_t *this, char *format, ...)
+METHOD(request_t, setf, void,
+	private_request_t *this, char *format, ...)
 {
 	va_list args;
 
@@ -361,19 +322,15 @@ static void setf(private_request_t *this, char *format, ...)
 	va_end(args);
 }
 
-/**
- * Implementation of request_t.get_ref.
- */
-static request_t* get_ref(private_request_t *this)
+METHOD(request_t, get_ref, request_t*,
+	private_request_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public;
 }
 
-/**
- * Implementation of request_t.destroy
- */
-static void destroy(private_request_t *this)
+METHOD(request_t, destroy, void,
+	private_request_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -401,8 +358,35 @@ static void init(void)
 request_t *request_create(int fd, bool debug)
 {
 	NEOERR* err;
-	private_request_t *this = malloc_thing(private_request_t);
+	private_request_t *this;
 	bool failed = FALSE;
+
+	INIT(this,
+		.public = {
+			.get_path = _get_path,
+			.get_base = _get_base,
+			.get_host = _get_host,
+			.get_user_agent = _get_user_agent,
+			.add_cookie = _add_cookie,
+			.get_cookie = _get_cookie,
+			.get_query_data = _get_query_data,
+			.get_env_var = _get_env_var,
+			.read_data = _read_data,
+			.session_closed = _session_closed,
+			.close_session = _close_session,
+			.redirect = _redirect,
+			.get_referer = _get_referer,
+			.to_referer = _to_referer,
+			.render = _render,
+			.streamf = _streamf,
+			.serve = _serve,
+			.set = _set,
+			.setf = _setf,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.ref = 1,
+	);
 
 	thread_cleanup_push(free, this);
 	if (FCGX_InitRequest(&this->req, fd, 0) != 0 ||
@@ -416,34 +400,9 @@ request_t *request_create(int fd, bool debug)
 		return NULL;
 	}
 
-	this->public.get_path = (char*(*)(request_t*))get_path;
-	this->public.get_base = (char*(*)(request_t*))get_base;
-	this->public.get_host = (char*(*)(request_t*))get_host;
-	this->public.get_user_agent = (char*(*)(request_t*))get_user_agent;
-	this->public.add_cookie = (void(*)(request_t*, char *name, char *value))add_cookie;
-	this->public.get_cookie = (char*(*)(request_t*,char*))get_cookie;
-	this->public.get_query_data = (char*(*)(request_t*, char *name))get_query_data;
-	this->public.get_env_var = (char*(*)(request_t*, char *name))get_env_var;
-	this->public.read_data = (int(*)(request_t*, char*, int))read_data;
-	this->public.session_closed = (bool(*)(request_t*))session_closed;
-	this->public.close_session = (void(*)(request_t*))close_session;
-	this->public.redirect = (void(*)(request_t*, char *fmt,...))redirect;
-	this->public.get_referer = (char*(*)(request_t*))get_referer;
-	this->public.to_referer = (void(*)(request_t*))to_referer;
-	this->public.render = (void(*)(request_t*,char*))render;
-	this->public.streamf = (int(*)(request_t*, char *format, ...))streamf;
-	this->public.serve = (void(*)(request_t*,char*,chunk_t))serve;
-	this->public.set = (void(*)(request_t*, char *, char*))set;
-	this->public.setf = (void(*)(request_t*, char *format, ...))setf;
-	this->public.get_ref = (request_t*(*)(request_t*))get_ref;
-	this->public.destroy = (void(*)(request_t*))destroy;
-
 	pthread_once(&once, init);
 	thread_this->set(thread_this, this);
 
-	this->ref = 1;
-	this->closed = FALSE;
-	this->req_env_len = 0;
 	while (this->req.envp[this->req_env_len] != NULL)
 	{
 		this->req_env_len++;

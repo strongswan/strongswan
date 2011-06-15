@@ -63,18 +63,14 @@ struct private_session_t {
 	context_t *context;
 };
 
-/**
- * Implementation of session_t.add_controller.
- */
-static void add_controller(private_session_t *this, controller_t *controller)
+METHOD(session_t, add_controller, void,
+	private_session_t *this, controller_t *controller)
 {
 	this->controllers->insert_last(this->controllers, controller);
 }
 
-/**
- * Implementation of session_t.add_filter.
- */
-static void add_filter(private_session_t *this, filter_t *filter)
+METHOD(session_t, add_filter, void,
+	private_session_t *this, filter_t *filter)
 {
 	this->filters->insert_last(this->filters, filter);
 }
@@ -120,10 +116,8 @@ static bool run_filter(private_session_t *this, request_t *request, char *p0,
 	return TRUE;
 }
 
-/**
- * Implementation of session_t.process.
- */
-static void process(private_session_t *this, request_t *request)
+METHOD(session_t, process, void,
+	private_session_t *this, request_t *request)
 {
 	char *pos, *start, *param[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
 	enumerator_t *enumerator;
@@ -184,18 +178,14 @@ static void process(private_session_t *this, request_t *request)
 	}
 }
 
-/**
- * Implementation of session_t.get_sid.
- */
-static char* get_sid(private_session_t *this)
+METHOD(session_t, get_sid, char*,
+	private_session_t *this)
 {
 	return this->sid;
 }
 
-/**
- * Implementation of session_t.destroy
- */
-static void destroy(private_session_t *this)
+METHOD(session_t, destroy, void,
+	private_session_t *this)
 {
 	this->controllers->destroy_offset(this->controllers, offsetof(controller_t, destroy));
 	this->filters->destroy_offset(this->filters, offsetof(filter_t, destroy));
@@ -208,19 +198,21 @@ static void destroy(private_session_t *this)
  */
 session_t *session_create(context_t *context)
 {
-	private_session_t *this = malloc_thing(private_session_t);
+	private_session_t *this;
 
-	this->public.add_controller = (void(*)(session_t*, controller_t*))add_controller;
-	this->public.add_filter = (void(*)(session_t*, filter_t*))add_filter;
-	this->public.process = (void(*)(session_t*,request_t*))process;
-	this->public.get_sid = (char*(*)(session_t*))get_sid;
-	this->public.destroy = (void(*)(session_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.add_controller = _add_controller,
+			.add_filter = _add_filter,
+			.process = _process,
+			.get_sid = _get_sid,
+			.destroy = _destroy,
+		},
+		.controllers = linked_list_create(),
+		.filters = linked_list_create(),
+		.context = context,
+	);
 	create_sid(this);
-	this->cookie_sent = FALSE;
-	this->controllers = linked_list_create();
-	this->filters = linked_list_create();
-	this->context = context;
 
 	return &this->public;
 }
