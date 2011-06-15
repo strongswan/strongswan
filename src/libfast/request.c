@@ -215,7 +215,7 @@ METHOD(request_t, add_cookie, void,
 	private_request_t *this, char *name, char *value)
 {
 	thread_this->set(thread_this, this);
-	cgi_cookie_set (this->cgi, name, value, get_base(this), NULL, NULL, 0, 0);
+	cgi_cookie_set(this->cgi, name, value, NULL, NULL, NULL, 0, 0);
 }
 
 METHOD(request_t, redirect, void,
