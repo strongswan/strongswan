@@ -38,6 +38,15 @@ struct private_imc_test_state_t {
 	 */
 	TNC_ConnectionState state;
 
+	/**
+	 * Command to transmit to IMV
+	 */
+	char *command;
+
+	/**
+	 * Do a handshake retry
+	 */
+	bool handshake_retry;
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -55,13 +64,43 @@ METHOD(imc_state_t, change_state, void,
 METHOD(imc_state_t, destroy, void,
 	private_imc_test_state_t *this)
 {
+	free(this->command);
 	free(this);
 }
+
+METHOD(imc_test_state_t, get_command, char*,
+	private_imc_test_state_t *this)
+{
+	return this->command;
+}
+
+METHOD(imc_test_state_t, set_command, void,
+	private_imc_test_state_t *this, char* command)
+{
+	char *old_command;
+
+	old_command = this->command;
+	this->command = strdup(command);
+	free(old_command);
+}
+
+METHOD(imc_test_state_t, do_handshake_retry, bool,
+	private_imc_test_state_t *this)
+{
+	bool retry;
+
+	/* test and reset handshake_retry flag */
+	retry = this->handshake_retry;
+	this->handshake_retry = FALSE;
+	return retry;
+}
+
 
 /**
  * Described in header.
  */
-imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id)
+imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
+								   char *command, bool retry)
 {
 	private_imc_test_state_t *this;
 
@@ -72,9 +111,14 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id)
 				.change_state = _change_state,
 				.destroy = _destroy,
 			},
+			.get_command = _get_command,
+			.set_command = _set_command,
+			.do_handshake_retry = _do_handshake_retry,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.connection_id = connection_id,
+		.command = strdup(command),
+		.handshake_retry = retry,
 	);
 	
 	return &this->public.interface;

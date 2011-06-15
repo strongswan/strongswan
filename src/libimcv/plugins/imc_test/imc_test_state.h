@@ -35,14 +35,37 @@ struct imc_test_state_t {
 	 * imc_state_t interface
 	 */
 	imc_state_t interface;
+
+	/**
+	 * get the command to send to IMV
+	 *
+	 * @return				commmand to send to IMV
+	 */
+	char* (*get_command)(imc_test_state_t *this);
+
+	/**
+	 * set the command to send to IMV
+	 *
+	 * @param command		commmand to send to IMV
+	 */
+	void (*set_command)(imc_test_state_t *this, char *command);
+
+	/**
+	 * Test and reset the retry handshake flag
+	 *
+	 * @return				TRUE if a handshake retry should be done
+	 */
+	bool (*do_handshake_retry)(imc_test_state_t *this);
 };
 
 /**
  * Create an imc_test_state_t instance
  *
  * @param id		connection ID
- * @param rounds	total number of IMC re-measurements
+ * @param command	command to send to IMV
+ * @param retry		TRUE if a handshake retry should be done
  */
-imc_state_t* imc_test_state_create(TNC_ConnectionID id);
+imc_state_t* imc_test_state_create(TNC_ConnectionID id, char* command,
+								   bool retry);
 
 #endif /** IMC_TEST_STATE_H_ @}*/

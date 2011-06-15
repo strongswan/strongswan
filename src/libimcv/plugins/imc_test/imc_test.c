@@ -68,6 +68,9 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 										  TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
+	imc_test_state_t *test_state;
+	char *command;
+	bool retry;
 
 	if (!imc_test)
 	{
@@ -77,10 +80,35 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
-			state = imc_test_state_create(connection_id);
+			command = lib->settings->get_str(lib->settings,
+						 "libimcv.plugins.imc-test.command", "none");
+			retry = lib->settings->get_bool(lib->settings,
+								"libimcv.plugins.imc-test.retry", FALSE);
+			state = imc_test_state_create(connection_id, command, retry);
 			return imc_test->create_state(imc_test, state);
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_test->delete_state(imc_test, connection_id);
+		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+		case TNC_CONNECTION_STATE_ACCESS_NONE:
+			/* get current IMC state and update it */
+			if (!imc_test->get_state(imc_test, connection_id, &state))
+			{
+				return TNC_RESULT_FATAL;
+			}
+			state->change_state(state, new_state);
+			test_state = (imc_test_state_t*)state;
+
+			/* do a handshake retry? */
+			if (test_state->do_handshake_retry(test_state))
+			{
+				command = lib->settings->get_str(lib->settings,
+								"libimcv.plugins.imc-test.retry_command",
+								test_state->get_command(test_state));
+				test_state->set_command(test_state, command);
+				return imc_test->request_handshake_retry(imc_id, connection_id,
+									TNC_RETRY_REASON_IMC_REMEDIATION_COMPLETE);
+			}
+			return TNC_RESULT_SUCCESS;
 		default:
 			return imc_test->change_state(imc_test, connection_id, new_state);
 	}
@@ -90,12 +118,16 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
 	pa_tnc_msg_t *msg;
 	pa_tnc_attr_t *attr;
-	char *command;
+	imc_state_t *state;
+	imc_test_state_t *test_state;
 	TNC_Result result;
 
-	command = lib->settings->get_str(lib->settings,
-						 "libimcv.plugins.imc-test.command", "none");
-	attr = ita_attr_command_create(command);
+	if (!imc_test->get_state(imc_test, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	test_state = (imc_test_state_t*)state;
+	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
