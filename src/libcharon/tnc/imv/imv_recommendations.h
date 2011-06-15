@@ -108,6 +108,12 @@ struct recommendations_t {
 	 * @return				enumerator
 	 */
 	enumerator_t* (*create_reason_enumerator)(recommendations_t *this);
+
+	/**
+	 * Clears all reason entries
+	 */
+	void (*clear_reasons)(recommendations_t *this);
+
 	/**
 	 * Destroys an imv_t object.
 	 */

@@ -360,6 +360,21 @@ METHOD(recommendations_t, create_reason_enumerator, enumerator_t*,
 					(void*)reason_filter, NULL, NULL);
 }
 
+METHOD(recommendations_t, clear_reasons, void,
+	private_tnc_imv_recommendations_t *this)
+{
+	enumerator_t *enumerator;
+	recommendation_entry_t *entry;
+
+	enumerator = this->recs->create_enumerator(this->recs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		chunk_clear(&entry->reason);
+		chunk_clear(&entry->reason_language);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(recommendations_t, destroy, void,
 	private_tnc_imv_recommendations_t *this)
 {
@@ -395,6 +410,7 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 			.set_reason_string = _set_reason_string,
 			.set_reason_language = _set_reason_language,
 			.create_reason_enumerator = _create_reason_enumerator,
+			.clear_reasons = _clear_reasons,
 			.destroy = _destroy,
 		},
 		.recs = linked_list_create(),

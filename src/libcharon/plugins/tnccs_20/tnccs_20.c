@@ -521,6 +521,7 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 			this->batch->add_msg(this->batch, msg);
 		}
 		enumerator->destroy(enumerator);
+		this->recs->clear_reasons(this->recs);
 	}
 }
 

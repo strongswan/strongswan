@@ -351,6 +351,7 @@ static void check_and_build_recommendation(private_tnccs_11_t *this)
 			this->batch->add_msg(this->batch, msg);
 		}
 		enumerator->destroy(enumerator);
+		this->recs->clear_reasons(this->recs);
 
 		/* we have reache the final state */
 		this->delete_state = TRUE;
