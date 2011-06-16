@@ -128,7 +128,7 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
 fatal:
 	msg = tnccs_error_msg_create(error_type, error_msg);
 	errors->insert_last(errors, msg);
-	_destroy(this);
+	destroy(this);
 	return NULL;
 }
 

@@ -106,7 +106,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 
 	if (xmlStrcmp(node->name, (const xmlChar*)"TNCCS-ReasonStrings"))
 	{
-		error_msg = "TNCCS-ReasonStrings tag in expected";
+		error_msg = "TNCCS-ReasonStrings tag expected";
 		goto fatal;
 	}
 
@@ -120,7 +120,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 		}
 		if (xmlStrcmp(child->name, (const xmlChar*)"ReasonString"))
 		{
-			error_msg = "ReasonString tag in expected";
+			error_msg = "ReasonString tag expected";
 			goto fatal;
 		}
 		break;
@@ -141,7 +141,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 fatal:
 	msg = tnccs_error_msg_create(error_type, error_msg);
 	errors->insert_last(errors, msg);
-	_destroy(this);
+	destroy(this);
 	return NULL;
 }
 
