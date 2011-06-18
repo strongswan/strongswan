@@ -519,8 +519,30 @@ Use faster random numbers in gcrypt; for testing only, produces weak keys!
 ENGINE ID to use in the OpenSSL plugin
 .TP
 .BR libstrongswan.plugins.pkcs11.modules
+List of available PKCS#11 modules
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
+Whether the PKCS#11 modules should be used to hash data
+.SS libimcv section
+.TP
+.BR libimcv.debug_level " [1]"
+Debug level for a stand-alone libimcv library
+.TP
+.BR libimcv.stderr_quiet " [no]"
+Disable output to stderr with a stand-alone libimcv library
+.SS libimcv plugins section
+.TP
+.BR libimcv.plugins.imc_test.command " [none]"
+Command to be sent to the Test IMV
+.TP
+.BR libimcv.plugins.imc_test.retry " [no]"
+Do a handshake retry
+.TP
+.BR libimcv.plugins.imc_test.retry_command 
+Command to be sent to the Test IMV in the handshake retry
+.TP
+.BR libimcv.plugins.imv_test.rounds " [0]"
+Number of IMC-IMV retry rounds
 .SS libtls section
 .TP
 .BR libtls.cipher
