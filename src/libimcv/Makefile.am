@@ -14,7 +14,8 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_port_filter.h ietf/ietf_attr_port_filter.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
-	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c
+	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c \
+	tcg/tcg_attr.h tcg/tcg_attr.c
 
 SUBDIRS = .
 
@@ -32,4 +33,11 @@ endif
 
 if USE_IMV_SCANNER
   SUBDIRS += plugins/imv_scanner
+
+if USE_IMC_ATTESTATION
+  SUBDIRS += plugins/imc_attestation
+endif
+
+if USE_IMV_ATTESTATION
+  SUBDIRS += plugins/imv_attestation
 endif
