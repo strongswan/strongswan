@@ -17,6 +17,7 @@
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
+#include "tcg/tcg_attr.h"
 #include "ita/ita_attr_command.h"
 
 /**
@@ -46,6 +47,42 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 				case IETF_ATTR_FORWARDING_ENABLED:
 				case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 				case IETF_ATTR_RESERVED:
+				default:
+					break;
+			}
+			break;
+		case PEN_TCG:
+			switch (type)
+			{
+				case TCG_PTS_REQ_PROTO_CAPS:
+				case TCG_PTS_PROTO_CAPS:
+				case TCG_PTS_DH_NONCE_PARAMS_REQ:
+				case TCG_PTS_DH_NONCE_PARAMS_RESP:
+				case TCG_PTS_DH_NONCE_FINISH:
+				case TCG_PTS_MEAS_ALGO:
+				case TCG_PTS_MEAS_ALGO_SELECTION:
+				case TCG_PTS_GET_TPM_VERSION_INFO:
+				case TCG_PTS_TPM_VERSION_INFO:
+				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
+				case TCG_PTS_TEMPL_REF_MANI_SET_META:
+				case TCG_PTS_UPDATE_TEMPL_REF_MANI:
+				case TCG_PTS_GET_AIK:
+				case TCG_PTS_AIK:
+				case TCG_PTS_REQ_FUNCT_COMP_EVID:
+				case TCG_PTS_GEN_ATTEST_EVID:
+				case TCG_PTS_SIMPLE_COMP_EVID:
+				case TCG_PTS_SIMPLE_EVID_FINAL:
+				case TCG_PTS_VERIFICATION_RESULT:
+				case TCG_PTS_INTEG_REPORT:
+				case TCG_PTS_REQ_FILE_META:
+				case TCG_PTS_WIN_FILE_META:
+				case TCG_PTS_UNIX_FILE_META:
+				case TCG_PTS_REQ_REGISTRY_VALUE:
+				case TCG_PTS_REGISTRY_VALUE:
+				case TCG_PTS_REQ_FILE_MEAS:
+				case TCG_PTS_FILE_MEAS:
+				case TCG_PTS_REQ_INTEG_MEAS_LOG:
+				case TCG_PTS_INTEG_MEAS_LOG:
 				default:
 					break;
 			}
