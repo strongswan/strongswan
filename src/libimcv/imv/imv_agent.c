@@ -274,7 +274,8 @@ METHOD(imv_agent_t, delete_state, TNC_Result,
 
 METHOD(imv_agent_t, change_state, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id,
-							   TNC_ConnectionState new_state)
+							   TNC_ConnectionState new_state,
+							   imv_state_t **state_p)
 {
 	imv_state_t *state;
 
@@ -295,6 +296,10 @@ METHOD(imv_agent_t, change_state, TNC_Result,
 			DBG2(DBG_IMV, "IMV %u \"%s\" changed state of Connection ID %u to '%N'",
 						  this->id, this->name, connection_id,
 						  TNC_Connection_State_names, new_state);
+			if (state_p)
+			{
+				*state_p = state;
+			}
 			break;
 		case TNC_CONNECTION_STATE_CREATE:
 			DBG1(DBG_IMV, "state '%N' should be handled by create_state()",

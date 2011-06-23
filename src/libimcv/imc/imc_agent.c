@@ -209,7 +209,8 @@ METHOD(imc_agent_t, delete_state, TNC_Result,
 
 METHOD(imc_agent_t, change_state, TNC_Result,
 	private_imc_agent_t *this, TNC_ConnectionID connection_id,
-							   TNC_ConnectionState new_state)
+							   TNC_ConnectionState new_state,
+							   imc_state_t **state_p)
 {
 	imc_state_t *state;
 
@@ -220,6 +221,7 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 			state = find_connection(this, connection_id);
+			
 			if (!state)
 			{
 				DBG1(DBG_IMC, "IMC %u \"%s\" has no state for Connection ID %u",
@@ -230,6 +232,10 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
 						  this->id, this->name, connection_id,
 						  TNC_Connection_State_names, new_state);
+			if (state_p)
+			{
+				*state_p = state;
+			}
 			break;
 		case TNC_CONNECTION_STATE_CREATE:
 			DBG1(DBG_IMC, "state '%N' should be handled by create_state()",

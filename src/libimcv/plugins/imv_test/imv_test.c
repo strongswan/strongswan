@@ -70,6 +70,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 {
 	imv_state_t *state;
 	imv_test_state_t *test_state;
+	TNC_Result result;
 	int rounds;
 
 	if (!imv_test)
@@ -85,14 +86,13 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_test->delete_state(imv_test, connection_id);
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (!imv_test->get_state(imv_test, connection_id, &state))
+			/* get updated IMV state */
+			result = imv_test->change_state(imv_test, connection_id,
+											new_state, &state);
+			if (result != TNC_RESULT_SUCCESS)
 			{
 				return TNC_RESULT_FATAL;
 			}
-			state->change_state(state, new_state);
-			DBG2(DBG_IMV, "IMV %u \"%s\" changed state of Connection ID %u to '%N'",
-						  imv_id, imv_name, connection_id,
-						  TNC_Connection_State_names, new_state);
 			test_state = (imv_test_state_t*)state;
 
 			/* set the number of measurement rounds */
@@ -101,7 +101,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			test_state->set_rounds(test_state, rounds);
 			return TNC_RESULT_SUCCESS;
 		default:
-			return imv_test->change_state(imv_test, connection_id, new_state);
+			return imv_test->change_state(imv_test, connection_id,
+										  new_state, NULL);
 	}
 }
 

@@ -79,11 +79,13 @@ struct imc_agent_t {
 	 *
 	 * @param connection_id		network connection ID assigned by TNCS
 	 * @param new_state			new state of TNCCS connection
+	 * @param state_p			internal IMC state instance [optional argument]
 	 * @return					TNC result code
 	 */
 	TNC_Result (*change_state)(imc_agent_t *this,
 							   TNC_ConnectionID connection_id,
-							   TNC_ConnectionState new_state);
+							   TNC_ConnectionState new_state,
+							   imc_state_t **state_p);
 
 	/**
 	 * Get the IMC state for a TNCCS connection instance

@@ -70,6 +70,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 {
 	imc_state_t *state;
 	imc_test_state_t *test_state;
+	TNC_Result result;
 	char *command;
 	bool retry;
 
@@ -89,15 +90,13 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			return imc_test->create_state(imc_test, state);
 
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			/* get current IMC state and update it */
-			if (!imc_test->get_state(imc_test, connection_id, &state))
+			/* get updated IMC state */
+			result = imc_test->change_state(imc_test, connection_id,
+											new_state, &state);
+			if (result != TNC_RESULT_SUCCESS)
 			{
 				return TNC_RESULT_FATAL;
 			}
-			state->change_state(state, new_state);
-			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
-						  imc_id, imc_name, connection_id,
-						  TNC_Connection_State_names, new_state);
 			test_state = (imc_test_state_t*)state;
 
 			/* is it the first handshake or a retry ? */
@@ -115,15 +114,13 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
-			/* get current IMC state and update it */
-			if (!imc_test->get_state(imc_test, connection_id, &state))
+			/* get updated IMC state */
+			result = imc_test->change_state(imc_test, connection_id,
+											new_state, &state);
+			if (result != TNC_RESULT_SUCCESS)
 			{
 				return TNC_RESULT_FATAL;
 			}
-			state->change_state(state, new_state);
-			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
-						  imc_id, imc_name, connection_id,
-						  TNC_Connection_State_names, new_state);
 			test_state = (imc_test_state_t*)state;
 
 			/* do a handshake retry? */
@@ -135,7 +132,8 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			return TNC_RESULT_SUCCESS;
 
 		default:
-			return imc_test->change_state(imc_test, connection_id, new_state);
+			return imc_test->change_state(imc_test, connection_id,
+										  new_state, NULL);
 	}
 }
 
