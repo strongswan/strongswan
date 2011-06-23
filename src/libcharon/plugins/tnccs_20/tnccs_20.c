@@ -342,6 +342,11 @@ static void build_retry_batch(private_tnccs_20_t *this)
 			pb_tnc_batch_type_names, this->batch->get_type(this->batch));
 		this->batch->destroy(this->batch);
 	 }
+	if (this->is_server)
+	{
+		charon->imvs->notify_connection_change(charon->imvs,
+							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+	}
 	this->batch = pb_tnc_batch_create(this->is_server, batch_retry_type);
 }
 
