@@ -20,8 +20,9 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr_command.h>
 
-#include <pen/pen.h>
+#include <tncif_names.h>
 
+#include <pen/pen.h>
 #include <debug.h>
 
 /* IMV definitions */
@@ -89,9 +90,14 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				return TNC_RESULT_FATAL;
 			}
 			state->change_state(state, new_state);
+			DBG2(DBG_IMV, "IMV %u \"%s\" changed state of Connection ID %u to '%N'",
+						  imv_id, imv_name, connection_id,
+						  TNC_Connection_State_names, new_state);
+			test_state = (imv_test_state_t*)state;
+
+			/* set the number of measurement rounds */
 			rounds = lib->settings->get_int(lib->settings,
 								"libimcv.plugins.imv-test.rounds", 0);
-			test_state = (imv_test_state_t*)state;
 			test_state->set_rounds(test_state, rounds);
 			return TNC_RESULT_SUCCESS;
 		default:
@@ -131,7 +137,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	imv_test_state_t *imv_test_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
-	bool fatal_error = FALSE;
+	bool fatal_error = FALSE, retry = FALSE;
 
 	if (!imv_test)
 	{
@@ -211,6 +217,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);			  
 			}
+			else if (streq(command, "retry"))
+			{
+				retry = TRUE;
+			}
 			else
 			{
 				DBG1(DBG_IMV, "unsupported ITA Command '%s'", command);
@@ -231,6 +241,13 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		return imv_test->provide_recommendation(imv_test, connection_id);
 	}
 
+	/* request a handshake retry ? */
+	if (retry)
+	{
+		return imv_test->request_handshake_retry(imv_id, connection_id,
+								TNC_RETRY_REASON_IMV_SERIOUS_EVENT);
+	}
+	
 	/* repeat the measurement ? */
 	imv_test_state = (imv_test_state_t*)state;
 	if (imv_test_state->another_round(imv_test_state))

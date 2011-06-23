@@ -51,6 +51,13 @@ struct imc_test_state_t {
 	void (*set_command)(imc_test_state_t *this, char *command);
 
 	/**
+	 * Test and reset the first handshake flag
+	 *
+	 * @return				TRUE if first handshake
+	 */
+	bool (*is_first_handshake)(imc_test_state_t *this);
+
+	/**
 	 * Test and reset the retry handshake flag
 	 *
 	 * @return				TRUE if a handshake retry should be done

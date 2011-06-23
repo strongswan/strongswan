@@ -20,8 +20,9 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr_command.h>
 
-#include <pen/pen.h>
+#include <tncif_names.h>
 
+#include <pen/pen.h>
 #include <debug.h>
 
 /* IMC definitions */
@@ -86,8 +87,32 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 								"libimcv.plugins.imc-test.retry", FALSE);
 			state = imc_test_state_create(connection_id, command, retry);
 			return imc_test->create_state(imc_test, state);
+
+		case TNC_CONNECTION_STATE_HANDSHAKE:
+			/* get current IMC state and update it */
+			if (!imc_test->get_state(imc_test, connection_id, &state))
+			{
+				return TNC_RESULT_FATAL;
+			}
+			state->change_state(state, new_state);
+			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
+						  imc_id, imc_name, connection_id,
+						  TNC_Connection_State_names, new_state);
+			test_state = (imc_test_state_t*)state;
+
+			/* is it the first handshake or a retry ? */
+			if (!test_state->is_first_handshake(test_state))
+			{
+				command = lib->settings->get_str(lib->settings,
+								"libimcv.plugins.imc-test.retry_command",
+								test_state->get_command(test_state));
+				test_state->set_command(test_state, command);
+			}
+			return TNC_RESULT_SUCCESS;
+
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_test->delete_state(imc_test, connection_id);
+
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 			/* get current IMC state and update it */
@@ -96,19 +121,19 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 				return TNC_RESULT_FATAL;
 			}
 			state->change_state(state, new_state);
+			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
+						  imc_id, imc_name, connection_id,
+						  TNC_Connection_State_names, new_state);
 			test_state = (imc_test_state_t*)state;
 
 			/* do a handshake retry? */
 			if (test_state->do_handshake_retry(test_state))
 			{
-				command = lib->settings->get_str(lib->settings,
-								"libimcv.plugins.imc-test.retry_command",
-								test_state->get_command(test_state));
-				test_state->set_command(test_state, command);
 				return imc_test->request_handshake_retry(imc_id, connection_id,
 									TNC_RETRY_REASON_IMC_REMEDIATION_COMPLETE);
 			}
 			return TNC_RESULT_SUCCESS;
+
 		default:
 			return imc_test->change_state(imc_test, connection_id, new_state);
 	}
