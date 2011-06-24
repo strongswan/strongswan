@@ -31,7 +31,7 @@
 static const char imv_name[] = "Attestation";
 
 #define IMV_VENDOR_ID	PEN_TCG
-#define IMV_SUBTYPE		PA_SUBTYPES_TCG_PTS
+#define IMV_SUBTYPE		PA_SUBTYPE_TCG_PTS
 
 static imv_agent_t *imv_attestation;
 
