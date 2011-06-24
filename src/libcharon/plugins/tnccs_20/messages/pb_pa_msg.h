@@ -21,30 +21,9 @@
 #ifndef PB_PA_MSG_H_
 #define PB_PA_MSG_H_
 
-typedef enum pa_tnc_subtype_t pa_tnc_subtype_t;
 typedef struct pb_pa_msg_t pb_pa_msg_t;
 
 #include "pb_tnc_msg.h"
-
-/**
- * PA-TNC Subtypes as defined in section 3.5 of RFC 5792
- */
- enum pa_tnc_subtype_t {
-	PA_SUBTYPE_TESTING =			0,
-	PA_SUBTYPE_OPERATING_SYSTEM =	1,
-	PA_SUBTYPE_ANTI_VIRUS =			2,
-	PA_SUBTYPE_ANTI_SPYWARE =		3,
-	PA_SUBTYPE_ANTI_MALWARE =		4,
-	PA_SUBTYPE_FIREWALL =			5,
-	PA_SUBTYPE_IDPS =				6,
-	PA_SUBTYPE_VPN =				7,
-	PA_SUBTYPE_NEA_CLIENT =			8
-};
-
-/**
- * enum name for pa_tnc_subtype_t.
- */
-extern enum_name_t *pa_tnc_subtype_names;
 
 /**
  * Class representing the PB-PA message type.

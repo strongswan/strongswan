@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Sansar Choinyanbuu
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #include "state_machine/pb_tnc_state_machine.h"
 
 #include <tncif_names.h>
+#include <tncif_pa_subtypes.h>
 
 #include <debug.h>
 #include <daemon.h>
@@ -102,6 +103,7 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 	TNC_VendorID msg_vendor_id;
 	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
+	enum_name_t *pa_subtype_names;
 
 	if (!this->send_msg)
 	{
@@ -117,10 +119,11 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 	pb_tnc_msg = pb_pa_msg_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
 									  chunk_create(msg, msg_len));
 
-	if (msg_vendor_id == PEN_IETF)
+	pa_subtype_names = get_pa_subtype_names(msg_vendor_id);
+	if (pa_subtype_names)
 	{
 		DBG2(DBG_TNC, "creating PB-PA message type '%N/%N' 0x%06x/0x%02x",
-			 pen_names, msg_vendor_id, pa_tnc_subtype_names, msg_sub_type,
+			 pen_names, msg_vendor_id, pa_subtype_names, msg_sub_type,
 			 msg_vendor_id, msg_sub_type);
 	}
 	else
@@ -164,16 +167,18 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			TNC_MessageType msg_type;
 			u_int32_t vendor_id, subtype;
 			chunk_t msg_body;
+			enum_name_t *pa_subtype_names;
 
 			pa_msg = (pb_pa_msg_t*)msg;
 			vendor_id = pa_msg->get_vendor_id(pa_msg, &subtype);
 			msg_type = (vendor_id << 8) | (subtype & 0xff);
 			msg_body = pa_msg->get_body(pa_msg);
 
-			if (vendor_id == PEN_IETF)
+			pa_subtype_names = get_pa_subtype_names(vendor_id);
+			if (pa_subtype_names)
 			{
 				DBG2(DBG_TNC, "handling PB-PA message type '%N/%N' 0x%06x/0x%02x",
-					 pen_names, vendor_id, pa_tnc_subtype_names, subtype,
+					 pen_names, vendor_id, pa_subtype_names, subtype,
 			 		 vendor_id, subtype);
 			}
 			else

@@ -21,6 +21,7 @@
 #include <ita/ita_attr_command.h>
 
 #include <tncif_names.h>
+#include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <debug.h>
@@ -30,7 +31,7 @@
 static const char imv_name[] = "Test";
 
 #define IMV_VENDOR_ID	PEN_ITA
-#define IMV_SUBTYPE		0x01
+#define IMV_SUBTYPE		PA_SUBTYPE_ITA_TEST
 
 static imv_agent_t *imv_test;
 

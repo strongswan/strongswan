@@ -23,6 +23,7 @@
 #include "messages/tnccs_recommendation_msg.h"
 
 #include <tncif_names.h>
+#include <tncif_pa_subtypes.h>
 
 #include <daemon.h>
 #include <debug.h>
@@ -99,6 +100,8 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 							  TNC_MessageType msg_type)
 {
 	tnccs_msg_t *tnccs_msg;
+	u_int32_t vendor_id, subtype;
+	enum_name_t *pa_subtype_names;
 
 	if (!this->send_msg)
 	{
@@ -106,6 +109,19 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 			this->is_server ? "IMV" : "IMC",
 			this->is_server ? imv_id : imc_id);
 		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
+	vendor_id = msg_type >> 8;
+	subtype = msg_type && 0xff;
+	pa_subtype_names = get_pa_subtype_names(vendor_id);
+	if (pa_subtype_names)
+	{
+		DBG2(DBG_TNC, "creating IMC-IMV message type '%N/%N' 0x%06x/0x%02x",
+			 pen_names, vendor_id, pa_subtype_names, subtype, vendor_id, subtype);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%02x",
+			 pen_names, vendor_id, vendor_id, subtype);
 	}
 	tnccs_msg = imc_imv_msg_create(msg_type, chunk_create(msg, msg_len));
 
@@ -132,12 +148,27 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			imc_imv_msg_t *imc_imv_msg;
 			TNC_MessageType msg_type;
 			chunk_t msg_body;
+			u_int32_t vendor_id, subtype;
+			enum_name_t *pa_subtype_names;
 
 			imc_imv_msg = (imc_imv_msg_t*)msg;
 			msg_type = imc_imv_msg->get_msg_type(imc_imv_msg);
 			msg_body = imc_imv_msg->get_msg_body(imc_imv_msg);
+			vendor_id = msg_type >> 8;
+			subtype = msg_type && 0xff;
 
-			DBG2(DBG_TNC, "handling IMC_IMV message type 0x%08x", msg_type);
+			pa_subtype_names = get_pa_subtype_names(vendor_id);
+			if (pa_subtype_names)
+			{
+				DBG2(DBG_TNC, "handling IMC-IMV message type '%N/%N' 0x%06x/0x%02x",
+					 pen_names, vendor_id, pa_subtype_names, subtype,
+			 		 vendor_id, subtype);
+			}
+			else
+			{
+				DBG2(DBG_TNC, "handling IMC-IMV message type '%N' 0x%06x/0x%02x",
+					 pen_names, vendor_id, vendor_id, subtype);
+			}
 
 			this->send_msg = TRUE;
 			if (this->is_server)

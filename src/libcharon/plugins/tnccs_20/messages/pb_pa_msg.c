@@ -23,18 +23,6 @@
 #include <pen/pen.h>
 #include <debug.h>
 
-ENUM(pa_tnc_subtype_names, PA_SUBTYPE_TESTING, PA_SUBTYPE_NEA_CLIENT,
-	"Testing",
-	"Operating System",
-	"Anti-Virus",
-	"Anti-Spyware",
-	"Anti-Malware",
-	"Firewall",
-	"IDPS",
-	"VPN",
-	"NEA Client"
-);
-
 typedef struct private_pb_pa_msg_t private_pb_pa_msg_t;
 
 /**

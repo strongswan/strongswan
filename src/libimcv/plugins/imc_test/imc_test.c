@@ -21,6 +21,7 @@
 #include <ita/ita_attr_command.h>
 
 #include <tncif_names.h>
+#include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <debug.h>
@@ -30,7 +31,7 @@
 static const char imc_name[] = "Test";
 
 #define IMC_VENDOR_ID	PEN_ITA
-#define IMC_SUBTYPE		0x01
+#define IMC_SUBTYPE		PA_SUBTYPE_ITA_TEST
 
 static imc_agent_t *imc_test;
  
