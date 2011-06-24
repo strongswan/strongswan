@@ -21,16 +21,17 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <tcg/tcg_attr.h>
 
-#include <pen/pen.h>
+#include <tncif_pa_subtypes.h>
 
+#include <pen/pen.h>
 #include <debug.h>
 
 /* IMC definitions */
 
 static const char imc_name[] = "Attestation";
 
-#define IMC_VENDOR_ID	PEN_ITA
-#define IMC_SUBTYPE		0x02
+#define IMC_VENDOR_ID	PEN_TCG
+#define IMC_SUBTYPE		PA_SUBTYPE_TCG_PTS
 
 static imc_agent_t *imc_attestation;
  

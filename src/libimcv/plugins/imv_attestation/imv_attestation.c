@@ -21,16 +21,17 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <tcg/tcg_attr.h>
 
-#include <pen/pen.h>
+#include <tncif_pa_subtypes.h>
 
+#include <pen/pen.h>
 #include <debug.h>
 
 /* IMV definitions */
 
 static const char imv_name[] = "Attestation";
 
-#define IMV_VENDOR_ID	PEN_ITA
-#define IMV_SUBTYPE		0x02
+#define IMV_VENDOR_ID	PEN_TCG
+#define IMV_SUBTYPE		PA_SUBTYPES_TCG_PTS
 
 static imv_agent_t *imv_attestation;
 
