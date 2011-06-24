@@ -87,7 +87,8 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 		default:
-			return imc_attestation->change_state(imc_attestation, connection_id, new_state);
+			return imc_attestation->change_state(imc_attestation, connection_id,
+												  new_state, NULL);
 	}
 }
 

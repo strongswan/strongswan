@@ -96,7 +96,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			 */
 			return TNC_RESULT_SUCCESS;
 		default:
-			return imv_attestation->change_state(imv_attestation, connection_id, new_state);
+			return imv_attestation->change_state(imv_attestation, connection_id,
+												 new_state, NULL);
 	}
 }
 
