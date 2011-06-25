@@ -120,7 +120,7 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 	}
 	else
 	{
-		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%02x",
+		DBG2(DBG_TNC, "creating IMC-IMV message type '%N' 0x%06x/0x%02x",
 			 pen_names, vendor_id, vendor_id, subtype);
 	}
 	tnccs_msg = imc_imv_msg_create(msg_type, chunk_create(msg, msg_len));
