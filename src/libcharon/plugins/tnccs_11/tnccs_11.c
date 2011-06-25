@@ -111,7 +111,7 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 		return TNC_RESULT_ILLEGAL_OPERATION;
 	}
 	vendor_id = msg_type >> 8;
-	subtype = msg_type && 0xff;
+	subtype = msg_type & 0xff;
 	pa_subtype_names = get_pa_subtype_names(vendor_id);
 	if (pa_subtype_names)
 	{
@@ -155,7 +155,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			msg_type = imc_imv_msg->get_msg_type(imc_imv_msg);
 			msg_body = imc_imv_msg->get_msg_body(imc_imv_msg);
 			vendor_id = msg_type >> 8;
-			subtype = msg_type && 0xff;
+			subtype = msg_type & 0xff;
 
 			pa_subtype_names = get_pa_subtype_names(vendor_id);
 			if (pa_subtype_names)
