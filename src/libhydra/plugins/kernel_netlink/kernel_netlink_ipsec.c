@@ -235,6 +235,63 @@ static char* lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 	return NULL;
 }
 
+typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
+
+/**
+ * Private variables and functions of kernel_netlink class.
+ */
+struct private_kernel_netlink_ipsec_t {
+	/**
+	 * Public part of the kernel_netlink_t object.
+	 */
+	kernel_netlink_ipsec_t public;
+
+	/**
+	 * mutex to lock access to installed policies
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Hash table of installed policies (policy_entry_t)
+	 */
+	hashtable_t *policies;
+
+	/**
+	 * Hash table of IPsec SAs using policies (ipsec_sa_t)
+	 */
+	hashtable_t *sas;
+
+	/**
+	 * job receiving netlink events
+	 */
+	callback_job_t *job;
+
+	/**
+	 * Netlink xfrm socket (IPsec)
+	 */
+	netlink_socket_t *socket_xfrm;
+
+	/**
+	 * netlink xfrm socket to receive acquire and expire events
+	 */
+	int socket_xfrm_events;
+
+	/**
+	 * whether to install routes along policies
+	 */
+	bool install_routes;
+
+	/**
+	 * Size of the replay window, in packets
+	 */
+	u_int32_t replay_window;
+
+	/**
+	 * Size of the replay window bitmap, in bytes
+	 */
+	u_int32_t replay_bmp;
+};
+
 typedef struct route_entry_t route_entry_t;
 
 /**
@@ -280,10 +337,100 @@ static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
 }
 
-typedef struct policy_sa_t policy_sa_t;
+typedef struct ipsec_sa_t ipsec_sa_t;
 
 /**
  * IPsec SA assigned to a policy.
+ */
+struct ipsec_sa_t {
+	/** source address of this SA */
+	host_t *src;
+
+	/** destination address of this SA */
+	host_t *dst;
+
+	/** optional mark */
+	mark_t mark;
+
+	/** description of this SA */
+	ipsec_sa_cfg_t cfg;
+
+	/** reference count for this SA */
+	refcount_t refcount;
+};
+
+/**
+ * Hash function for ipsec_sa_t objects
+ */
+static u_int ipsec_sa_hash(ipsec_sa_t *sa)
+{
+	return chunk_hash_inc(sa->src->get_address(sa->src),
+						  chunk_hash_inc(sa->dst->get_address(sa->dst),
+						  chunk_hash_inc(chunk_from_thing(sa->mark),
+						  chunk_hash(chunk_from_thing(sa->cfg)))));
+}
+
+/**
+ * Equality function for ipsec_sa_t objects
+ */
+static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
+{
+	return sa->src->ip_equals(sa->src, other_sa->src) &&
+		   sa->dst->ip_equals(sa->dst, other_sa->dst) &&
+		   memeq(&sa->mark, &other_sa->mark, sizeof(mark_t)) &&
+		   memeq(&sa->cfg, &other_sa->cfg, sizeof(ipsec_sa_cfg_t));
+}
+
+/**
+ * allocate or reference an IPsec SA object
+ */
+static ipsec_sa_t *ipsec_sa_create(private_kernel_netlink_ipsec_t *this,
+								   host_t *src, host_t *dst, mark_t mark,
+								   ipsec_sa_cfg_t *cfg)
+{
+	ipsec_sa_t *sa, *found;
+	INIT(sa,
+		.src = src,
+		.dst = dst,
+		.mark = mark,
+		.cfg = *cfg,
+	);
+	found = this->sas->get(this->sas, sa);
+	if (!found)
+	{
+		sa->src = src->clone(src);
+		sa->dst = dst->clone(dst);
+		this->sas->put(this->sas, sa, sa);
+	}
+	else
+	{
+		free(sa);
+		sa = found;
+	}
+	ref_get(&sa->refcount);
+	return sa;
+}
+
+/**
+ * release and destroy an IPsec SA object
+ */
+static void ipsec_sa_destroy(private_kernel_netlink_ipsec_t *this,
+							 ipsec_sa_t *sa)
+{
+	if (ref_put(&sa->refcount))
+	{
+		this->sas->remove(this->sas, sa);
+		DESTROY_IF(sa->src);
+		DESTROY_IF(sa->dst);
+		free(sa);
+	}
+}
+
+typedef struct policy_sa_t policy_sa_t;
+typedef struct policy_sa_fwd_t policy_sa_fwd_t;
+
+/**
+ * Mapping between a policy and an IPsec SA.
  */
 struct policy_sa_t {
 	/** priority assigned to the policy when installed with this SA */
@@ -292,32 +439,67 @@ struct policy_sa_t {
 	/** type of the policy */
 	policy_type_t type;
 
-	/** source address of this SA */
-	host_t *src;
-
-	/** destination address of this SA */
-	host_t *dst;
-
-	/** source traffic selector of this SA */
-	traffic_selector_t *src_ts;
-
-	/** destination traffic selector of this SA */
-	traffic_selector_t *dst_ts;
-
-	/** optional mark */
-	mark_t mark;
-
-	/** description of this SA */
-	ipsec_sa_cfg_t cfg;
+	/** assigned SA */
+	ipsec_sa_t *sa;
 };
 
-static void policy_sa_destroy(policy_sa_t *this)
+/**
+ * For forward policies we cache the traffic selectors in order to install
+ * the route.
+ */
+struct policy_sa_fwd_t {
+	/** generic interface */
+	policy_sa_t generic;
+
+	/** source traffic selector of this policy */
+	traffic_selector_t *src_ts;
+
+	/** destination traffic selector of this policy */
+	traffic_selector_t *dst_ts;
+};
+
+/**
+ * create a policy_sa(_fwd)_t object
+ */
+static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
+	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts, mark_t mark,
+	ipsec_sa_cfg_t *cfg)
 {
-	DESTROY_IF(this->src);
-	DESTROY_IF(this->dst);
-	DESTROY_IF(this->src_ts);
-	DESTROY_IF(this->dst_ts);
-	free(this);
+	policy_sa_t *policy;
+
+	if (dir == POLICY_FWD)
+	{
+		policy_sa_fwd_t *fwd;
+		INIT(fwd,
+			.src_ts = src_ts->clone(src_ts),
+			.dst_ts = dst_ts->clone(dst_ts),
+		);
+		policy = &fwd->generic;
+	}
+	else
+	{
+		INIT(policy);
+	}
+	policy->type = type;
+	policy->sa = ipsec_sa_create(this, src, dst, mark, cfg);
+	return policy;
+}
+
+/**
+ * destroy a policy_sa(_fwd)_t object
+ */
+static void policy_sa_destroy(private_kernel_netlink_ipsec_t *this,
+							  policy_dir_t dir, policy_sa_t *policy)
+{
+	if (dir == POLICY_FWD)
+	{
+		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)policy;
+		fwd->src_ts->destroy(fwd->src_ts);
+		fwd->dst_ts->destroy(fwd->dst_ts);
+	}
+	ipsec_sa_destroy(this, policy->sa);
+	free(policy);
 }
 
 typedef struct policy_entry_t policy_entry_t;
@@ -339,18 +521,30 @@ struct policy_entry_t {
 	/** associated route installed for this policy */
 	route_entry_t *route;
 
-	/** the SAs this policy is used by, ordered by priority */
-	linked_list_t *sas;
+	/** list of SAs this policy is used by, ordered by priority */
+	linked_list_t *used_by;
 };
 
-static void policy_entry_destroy(policy_entry_t *this)
+static void policy_entry_destroy(private_kernel_netlink_ipsec_t *this,
+								 policy_entry_t *policy)
 {
-	if (this->route)
+	if (policy->route)
 	{
-		route_entry_destroy(this->route);
+		route_entry_destroy(policy->route);
 	}
-	this->sas->destroy_function(this->sas, (void*)policy_sa_destroy);
-	free(this);
+	if (policy->used_by)
+	{
+		enumerator_t *enumerator;
+		policy_sa_t *sa;
+		enumerator = policy->used_by->create_enumerator(policy->used_by);
+		while (enumerator->enumerate(enumerator, (void**)&sa))
+		{
+			policy_sa_destroy(this, policy->direction, sa);
+		}
+		enumerator->destroy(enumerator);
+		policy->used_by->destroy(policy->used_by);
+	}
+	free(policy);
 }
 
 /**
@@ -372,58 +566,6 @@ static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 				 sizeof(struct xfrm_selector) + sizeof(u_int32_t)) &&
 		   key->direction == other_key->direction;
 }
-
-typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
-
-/**
- * Private variables and functions of kernel_netlink class.
- */
-struct private_kernel_netlink_ipsec_t {
-	/**
-	 * Public part of the kernel_netlink_t object.
-	 */
-	kernel_netlink_ipsec_t public;
-
-	/**
-	 * mutex to lock access to installed policies
-	 */
-	mutex_t *mutex;
-
-	/**
-	 * Hash table of installed policies (policy_entry_t)
-	 */
-	hashtable_t *policies;
-
-	/**
-	 * job receiving netlink events
-	 */
-	callback_job_t *job;
-
-	/**
-	 * Netlink xfrm socket (IPsec)
-	 */
-	netlink_socket_t *socket_xfrm;
-
-	/**
-	 * netlink xfrm socket to receive acquire and expire events
-	 */
-	int socket_xfrm_events;
-
-	/**
-	 * whether to install routes along policies
-	 */
-	bool install_routes;
-
-	/**
-	 * Size of the replay window, in packets
-	 */
-	u_int32_t replay_window;
-
-	/**
-	 * Size of the replay window bitmap, in bytes
-	 */
-	u_int32_t replay_bmp;
-};
 
 /**
  * convert the general ipsec mode to the one defined in xfrm.h
@@ -1782,10 +1924,11 @@ failed:
  * Note: The mutex has to be locked when entering this function.
  */
 static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
-	policy_entry_t *policy, policy_sa_t *sa, bool update)
+	policy_entry_t *policy, policy_sa_t *mapping, bool update)
 {
 	netlink_buf_t request;
 	policy_entry_t clone;
+	ipsec_sa_t *ipsec = mapping->sa;
 	struct xfrm_userpolicy_info *policy_info;
 	struct nlmsghdr *hdr;
 	int i;
@@ -1804,9 +1947,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_info->dir = policy->direction;
 
 	/* calculate priority based on selector size, small size = high prio */
-	policy_info->priority = sa->priority;
-	policy_info->action = sa->type != POLICY_DROP ? XFRM_POLICY_ALLOW
-												  : XFRM_POLICY_BLOCK;
+	policy_info->priority = mapping->priority;
+	policy_info->action = mapping->type != POLICY_DROP ? XFRM_POLICY_ALLOW
+													   : XFRM_POLICY_BLOCK;
 	policy_info->share = XFRM_SHARE_ANY;
 
 	/* policies don't expire */
@@ -1821,18 +1964,18 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
 
-	if (sa->type == POLICY_IPSEC)
+	if (mapping->type == POLICY_IPSEC)
 	{
 		struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
 		struct {
 			u_int8_t proto;
 			bool use;
 		} protos[] = {
-			{ IPPROTO_COMP, sa->cfg.ipcomp.transform != IPCOMP_NONE },
-			{ IPPROTO_ESP, sa->cfg.esp.use },
-			{ IPPROTO_AH, sa->cfg.ah.use },
+			{ IPPROTO_COMP, ipsec->cfg.ipcomp.transform != IPCOMP_NONE },
+			{ IPPROTO_ESP, ipsec->cfg.esp.use },
+			{ IPPROTO_AH, ipsec->cfg.ah.use },
 		};
-		ipsec_mode_t proto_mode = sa->cfg.mode;
+		ipsec_mode_t proto_mode = ipsec->cfg.mode;
 
 		rthdr->rta_type = XFRMA_TMPL;
 		rthdr->rta_len = 0; /* actual length is set below */
@@ -1851,18 +1994,18 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 
-			tmpl->reqid = sa->cfg.reqid;
+			tmpl->reqid = ipsec->cfg.reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
 			tmpl->optional = protos[i].proto == IPPROTO_COMP &&
 							 policy->direction != POLICY_OUT;
-			tmpl->family = sa->src->get_family(sa->src);
+			tmpl->family = ipsec->src->get_family(ipsec->src);
 
 			if (proto_mode == MODE_TUNNEL)
 			{	/* only for tunnel mode */
-				host2xfrm(sa->src, &tmpl->saddr);
-				host2xfrm(sa->dst, &tmpl->id.daddr);
+				host2xfrm(ipsec->src, &tmpl->saddr);
+				host2xfrm(ipsec->dst, &tmpl->id.daddr);
 			}
 
 			tmpl++;
@@ -1874,7 +2017,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
-	if (sa->mark.value)
+	if (ipsec->mark.value)
 	{
 		struct xfrm_mark *mrk;
 
@@ -1888,8 +2031,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		}
 
 		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = sa->mark.value;
-		mrk->m = sa->mark.mask;
+		mrk->v = ipsec->mark.value;
+		mrk->m = ipsec->mark.mask;
 	}
 	this->mutex->unlock(this->mutex);
 
@@ -1902,8 +2045,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	this->mutex->lock(this->mutex);
 	policy = this->policies->get(this->policies, &clone);
 	if (!policy ||
-		 policy->sas->find_first(policy->sas, NULL, (void**)&sa) != SUCCESS)
-	{	/* policy or sa is already gone, ignore */
+		 policy->used_by->find_first(policy->used_by,
+									 NULL, (void**)&mapping) != SUCCESS)
+	{	/* policy or mapping is already gone, ignore */
 		this->mutex->unlock(this->mutex);
 		return SUCCESS;
 	}
@@ -1914,19 +2058,20 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	 * - routing is not disabled via strongswan.conf
 	 */
 	if (policy->direction == POLICY_FWD &&
-		sa->cfg.mode != MODE_TRANSPORT && this->install_routes)
+		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);
+		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				sa->dst_ts, &route->src_ip) == SUCCESS)
+				fwd->dst_ts, &route->src_ip) == SUCCESS)
 		{
-			/* get the nexthop to src (src as we are in POLICY_FWD).*/
+			/* get the nexthop to src (src as we are in POLICY_FWD) */
 			route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, sa->src);
+										hydra->kernel_interface, ipsec->src);
 			/* install route via outgoing interface */
 			route->if_name = hydra->kernel_interface->get_interface(
-											hydra->kernel_interface, sa->dst);
+										hydra->kernel_interface, ipsec->dst);
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 			route->prefixlen = policy->sel.prefixlen_s;
@@ -1953,8 +2098,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 						old->src_ip, old->if_name) != SUCCESS)
 				{
 					DBG1(DBG_KNL, "error uninstalling route installed with "
-								  "policy %R === %R %N", sa->src_ts,
-								   sa->dst_ts, policy_dir_names,
+								  "policy %R === %R %N", fwd->src_ts,
+								   fwd->dst_ts, policy_dir_names,
 								   policy->direction);
 				}
 				route_entry_destroy(old);
@@ -1962,7 +2107,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			}
 
 			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
-				 sa->src_ts, route->gateway, route->src_ip, route->if_name);
+				 fwd->src_ts, route->gateway, route->src_ip, route->if_name);
 			switch (hydra->kernel_interface->add_route(
 								hydra->kernel_interface, route->dst_net,
 								route->prefixlen, route->gateway,
@@ -2007,7 +2152,6 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		.sel = ts2selector(src_ts, dst_ts),
 		.mark = mark.value & mark.mask,
 		.direction = direction,
-		.sas = linked_list_create(),
 	);
 
 	/* find the policy, which matches EXACTLY */
@@ -2029,25 +2173,19 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 						  "already exists, increasing refcount",
 						   src_ts, dst_ts, policy_dir_names, direction);
 		}
-		policy_entry_destroy(policy);
+		policy_entry_destroy(this, policy);
 		policy = current;
 		found = TRUE;
 	}
 	else
-	{	/* apply the new one, if we have no such policy */
+	{	/* use the new one, if we have no such policy */
+		policy->used_by = linked_list_create();
 		this->policies->put(this->policies, policy, policy);
 	}
 
 	/* cache the assigned IPsec SA */
-	INIT(assigned_sa,
-		.type = type,
-		.src = src->clone(src),
-		.dst = dst->clone(dst),
-		.src_ts = src_ts->clone(src_ts),
-		.dst_ts = dst_ts->clone(dst_ts),
-		.mark = mark,
-		.cfg = *sa,
-	);
+	assigned_sa = policy_sa_create(this, direction, type, src, dst, src_ts,
+								   dst_ts, mark, sa);
 
 	/* calculate priority based on selector size, small size = high prio */
 	assigned_sa->priority = routed ? PRIO_LOW : PRIO_HIGH;
@@ -2059,7 +2197,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	assigned_sa->priority += policy->sel.proto ? 0 : 1;
 
 	/* insert the SA according to its priority */
-	enumerator = policy->sas->create_enumerator(policy->sas);
+	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&current_sa))
 	{
 		if (current_sa->priority >= assigned_sa->priority)
@@ -2068,7 +2206,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		}
 		update = FALSE;
 	}
-	policy->sas->insert_before(policy->sas, enumerator, assigned_sa);
+	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
 	enumerator->destroy(enumerator);
 
 	if (!update)
@@ -2211,7 +2349,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 {
 	policy_entry_t *current, policy;
 	enumerator_t *enumerator;
-	policy_sa_t *sa;
+	policy_sa_t *mapping;
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
@@ -2255,29 +2393,28 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return NOT_FOUND;
 	}
 
-	/* remove cached SA by reqid */
-	enumerator = current->sas->create_enumerator(current->sas);
-	while (enumerator->enumerate(enumerator, (void**)&sa))
+	/* remove mapping to SA by reqid */
+	enumerator = current->used_by->create_enumerator(current->used_by);
+	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (reqid == sa->cfg.reqid)
+		if (reqid == mapping->sa->cfg.reqid)
 		{
-			current->sas->remove_at(current->sas, enumerator);
+			current->used_by->remove_at(current->used_by, enumerator);
+			policy_sa_destroy(this, direction, mapping);
 			break;
 		}
 		is_installed = FALSE;
 	}
 	enumerator->destroy(enumerator);
 
-	if (current->sas->get_count(current->sas) > 0)
+	if (current->used_by->get_count(current->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
 		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
 		if (!is_installed)
 		{	/* no need to update as the policy was not installed for this SA */
 			this->mutex->unlock(this->mutex);
-			policy_sa_destroy(sa);
 			return SUCCESS;
 		}
-		policy_sa_destroy(sa);
 
 		if (mark.value)
 		{
@@ -2291,8 +2428,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 						   src_ts, dst_ts, policy_dir_names, direction);
 		}
 
-		current->sas->get_first(current->sas, (void**)&sa);
-		if (add_policy_internal(this, current, sa, TRUE) != SUCCESS)
+		current->used_by->get_first(current->used_by, (void**)&mapping);
+		if (add_policy_internal(this, current, mapping, TRUE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "unable to update policy %R === %R %N",
 						   src_ts, dst_ts, policy_dir_names, direction);
@@ -2300,7 +2437,6 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		}
 		return SUCCESS;
 	}
-	policy_sa_destroy(sa);
 
 	memset(&request, 0, sizeof(request));
 
@@ -2345,7 +2481,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	}
 
 	this->policies->remove(this->policies, current);
-	policy_entry_destroy(current);
+	policy_entry_destroy(this, current);
 	this->mutex->unlock(this->mutex);
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -2425,10 +2561,11 @@ METHOD(kernel_ipsec_t, destroy, void,
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, &policy, &policy))
 	{
-		policy_entry_destroy(policy);
+		policy_entry_destroy(this, policy);
 	}
 	enumerator->destroy(enumerator);
 	this->policies->destroy(this->policies);
+	this->sas->destroy(this->sas);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -2460,6 +2597,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		},
 		.policies = hashtable_create((hashtable_hash_t)policy_hash,
 									 (hashtable_equals_t)policy_equals, 32),
+		.sas = hashtable_create((hashtable_hash_t)ipsec_sa_hash,
+								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
 					"%s.install_routes", TRUE, hydra->daemon),
