@@ -88,11 +88,8 @@ static void destroy_entry(entry_t *entry)
 	free(entry);
 }
 
-/**
- * Implementation of trap_manager_t.install
- */
-static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
-					 child_cfg_t *child)
+METHOD(trap_manager_t, install, u_int32_t,
+	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child)
 {
 	entry_t *entry;
 	ike_cfg_t *ike_cfg;
@@ -185,10 +182,8 @@ static u_int32_t install(private_trap_manager_t *this, peer_cfg_t *peer,
 	return reqid;
 }
 
-/**
- * Implementation of trap_manager_t.uninstall
- */
-static bool uninstall(private_trap_manager_t *this, u_int32_t reqid)
+METHOD(trap_manager_t, uninstall, bool,
+	private_trap_manager_t *this, u_int32_t reqid)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -234,10 +229,8 @@ static bool trap_filter(rwlock_t *lock, entry_t **entry, peer_cfg_t **peer_cfg,
 	return TRUE;
 }
 
-/**
- * Implementation of trap_manager_t.create_enumerator
- */
-static enumerator_t* create_enumerator(private_trap_manager_t *this)
+METHOD(trap_manager_t, create_enumerator, enumerator_t*,
+	private_trap_manager_t *this)
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->traps->create_enumerator(this->traps),
@@ -245,11 +238,9 @@ static enumerator_t* create_enumerator(private_trap_manager_t *this)
 									(void*)this->lock->unlock);
 }
 
-/**
- * Implementation of trap_manager_t.acquire
- */
-static void acquire(private_trap_manager_t *this, u_int32_t reqid,
-					traffic_selector_t *src, traffic_selector_t *dst)
+METHOD(trap_manager_t, acquire, void,
+	private_trap_manager_t *this, u_int32_t reqid,
+	traffic_selector_t *src, traffic_selector_t *dst)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -331,11 +322,8 @@ static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of listener_t.ike_state_change
- */
-static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
-							 ike_sa_state_t state)
+METHOD(listener_t, ike_state_change, bool,
+	trap_listener_t *listener, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
 	switch (state)
 	{
@@ -347,11 +335,9 @@ static bool ike_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 	}
 }
 
-/**
- * Implementation of listener_t.child_state_change
- */
-static bool child_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
+METHOD(listener_t, child_state_change, bool,
+	trap_listener_t *listener, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	child_sa_state_t state)
 {
 	switch (state)
 	{
@@ -364,10 +350,8 @@ static bool child_state_change(trap_listener_t *listener, ike_sa_t *ike_sa,
 	}
 }
 
-/**
- * Implementation of trap_manager_t.destroy.
- */
-static void destroy(private_trap_manager_t *this)
+METHOD(trap_manager_t, destroy, void,
+	private_trap_manager_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener.listener);
 	this->traps->invoke_function(this->traps, (void*)destroy_entry);
@@ -379,24 +363,27 @@ static void destroy(private_trap_manager_t *this)
 /**
  * See header
  */
-trap_manager_t *trap_manager_create()
+trap_manager_t *trap_manager_create(void)
 {
-	private_trap_manager_t *this = malloc_thing(private_trap_manager_t);
+	private_trap_manager_t *this;
 
-	this->public.install = (u_int(*)(trap_manager_t*, peer_cfg_t *peer, child_cfg_t *child))install;
-	this->public.uninstall = (bool(*)(trap_manager_t*, u_int32_t id))uninstall;
-	this->public.create_enumerator = (enumerator_t*(*)(trap_manager_t*))create_enumerator;
-	this->public.acquire = (void(*)(trap_manager_t*, u_int32_t reqid, traffic_selector_t *src, traffic_selector_t *dst))acquire;
-	this->public.destroy = (void(*)(trap_manager_t*))destroy;
-
-	this->traps = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.install = _install,
+			.uninstall = _uninstall,
+			.create_enumerator = _create_enumerator,
+			.acquire = _acquire,
+			.destroy = _destroy,
+		},
+		.traps = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	/* register listener for IKE state changes */
 	this->listener.traps = this;
 	memset(&this->listener.listener, 0, sizeof(listener_t));
-	this->listener.listener.ike_state_change = (void*)ike_state_change;
-	this->listener.listener.child_state_change = (void*)child_state_change;
+	this->listener.listener.ike_state_change = _ike_state_change;
+	this->listener.listener.child_state_change = _child_state_change;
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
 
 	return &this->public;
