@@ -57,7 +57,7 @@ static struct {
 	char *name;
 	size_t block_size;
 	bool xcbc;
-} algs[] = {
+} algs[AF_ALG_PRF] = {
 	{PRF_HMAC_SHA1,			"hmac(sha1)",		20,		FALSE,	},
 	{PRF_HMAC_SHA2_256,		"hmac(sha256)",		32,		FALSE,	},
 	{PRF_HMAC_MD5,			"hmac(md5)",		16,		FALSE,	},
@@ -70,7 +70,7 @@ static struct {
 /**
  * See header.
  */
-void af_alg_prf_probe(char *plugin)
+void af_alg_prf_probe(plugin_feature_t *features, int *pos)
 {
 	af_alg_ops_t *ops;
 	int i;
@@ -81,8 +81,7 @@ void af_alg_prf_probe(char *plugin)
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_prf(lib->crypto, algs[i].id, plugin,
-							(prf_constructor_t)af_alg_prf_create);
+			features[(*pos)++] = PLUGIN_PROVIDE(PRF, algs[i].id);
 		}
 	}
 }

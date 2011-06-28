@@ -23,7 +23,11 @@
 
 typedef struct af_alg_prf_t af_alg_prf_t;
 
+#include <plugins/plugin.h>
 #include <crypto/prfs/prf.h>
+
+/** Number of PRFs */
+#define AF_ALG_PRF 7
 
 /**
  * Implementation of PRFs using AF_ALG.
@@ -45,10 +49,11 @@ struct af_alg_prf_t {
 af_alg_prf_t *af_alg_prf_create(pseudo_random_function_t algo);
 
 /**
- * Probe algorithms and register af_alg_prf_create().
+ * Probe algorithms and return plugin features.
  *
- * @param plugin		plugin name to register algorithms for
+ * @param features		plugin features to create
+ * @param pos			current position in features
  */
-void af_alg_prf_probe(char *plugin);
+void af_alg_prf_probe(plugin_feature_t *features, int *pos);
 
 #endif /** AF_ALG_PRF_H_ @}*/

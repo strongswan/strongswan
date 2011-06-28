@@ -23,7 +23,11 @@
 
 typedef struct af_alg_hasher_t af_alg_hasher_t;
 
+#include <plugins/plugin.h>
 #include <crypto/hashers/hasher.h>
+
+/** Number of hashers */
+#define AF_ALG_HASHER 7
 
 /**
  * Implementation of hashers using AF_ALG.
@@ -45,10 +49,11 @@ struct af_alg_hasher_t {
 af_alg_hasher_t *af_alg_hasher_create(hash_algorithm_t algo);
 
 /**
- * Probe algorithms and register af_alg_hasher_create().
+ * Probe algorithms and return plugin features.
  *
- * @param plugin		plugin name to register algorithms for
+ * @param features		plugin features to create
+ * @param pos			current position in deps
  */
-void af_alg_hasher_probe(char *plugin);
+void af_alg_hasher_probe(plugin_feature_t *features, int *pos);
 
 #endif /** af_alg_HASHER_H_ @}*/

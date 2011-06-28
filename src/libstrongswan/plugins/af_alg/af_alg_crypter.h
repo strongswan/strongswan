@@ -23,7 +23,11 @@
 
 typedef struct af_alg_crypter_t af_alg_crypter_t;
 
+#include <plugins/plugin.h>
 #include <crypto/crypters/crypter.h>
+
+/** Number of crypters */
+#define AF_ALG_CRYPTER 25
 
 /**
  * Implementation of signers using AF_ALG.
@@ -47,10 +51,11 @@ af_alg_crypter_t *af_alg_crypter_create(encryption_algorithm_t algo,
 										size_t key_size);
 
 /**
- * Probe algorithms and register af_alg_crypter_create().
+ * Probe algorithms and return plugin features.
  *
- * @param plugin		plugin name to register algorithms for
+ * @param features		plugin features to create
+ * @param pos			current position in features
  */
-void af_alg_crypter_probe(char *plugin);
+void af_alg_crypter_probe(plugin_feature_t *features, int *pos);
 
 #endif /** AF_ALG_CRYPTER_H_ @}*/

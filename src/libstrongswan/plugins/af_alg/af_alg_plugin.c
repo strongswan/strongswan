@@ -41,18 +41,31 @@ METHOD(plugin_t, get_name, char*,
 	return "af-alg";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_af_alg_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[AF_ALG_HASHER + AF_ALG_SIGNER +
+							  AF_ALG_PRF + AF_ALG_CRYPTER + 4] = {};
+	static int count = 0;
+
+	if (!count)
+	{	/* initialize only once */
+		f[count++] = PLUGIN_REGISTER(HASHER, af_alg_hasher_create);
+		af_alg_hasher_probe(f, &count);
+		f[count++] = PLUGIN_REGISTER(SIGNER, af_alg_signer_create);
+		af_alg_signer_probe(f, &count);
+		f[count++] = PLUGIN_REGISTER(PRF, af_alg_prf_create);
+		af_alg_prf_probe(f, &count);
+		f[count++] = PLUGIN_REGISTER(CRYPTER, af_alg_crypter_create);
+		af_alg_crypter_probe(f, &count);
+	}
+	*features = f;
+	return count;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_af_alg_plugin_t *this)
 {
-	lib->crypto->remove_hasher(lib->crypto,
-					(hasher_constructor_t)af_alg_hasher_create);
-	lib->crypto->remove_signer(lib->crypto,
-					(signer_constructor_t)af_alg_signer_create);
-	lib->crypto->remove_prf(lib->crypto,
-					(prf_constructor_t)af_alg_prf_create);
-	lib->crypto->remove_crypter(lib->crypto,
-					(crypter_constructor_t)af_alg_crypter_create);
-
 	free(this);
 }
 
@@ -67,16 +80,11 @@ plugin_t *af_alg_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	af_alg_hasher_probe(get_name(this));
-	af_alg_signer_probe(get_name(this));
-	af_alg_prf_probe(get_name(this));
-	af_alg_crypter_probe(get_name(this));
 
 	return &this->public.plugin;
 }

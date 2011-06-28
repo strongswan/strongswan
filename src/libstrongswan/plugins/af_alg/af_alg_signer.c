@@ -52,7 +52,7 @@ static struct {
 	char *name;
 	size_t block_size;
 	size_t key_size;
-} algs[] = {
+} algs[AF_ALG_SIGNER] = {
 	{AUTH_HMAC_SHA1_96,			"hmac(sha1)",		12,		20,	},
 	{AUTH_HMAC_SHA1_128,		"hmac(sha1)",		16,		20,	},
 	{AUTH_HMAC_SHA1_160,		"hmac(sha1)",		20,		20,	},
@@ -71,7 +71,7 @@ static struct {
 /**
  * See header.
  */
-void af_alg_signer_probe(char *plugin)
+void af_alg_signer_probe(plugin_feature_t *features, int *pos)
 {
 	af_alg_ops_t *ops;
 	int i;
@@ -82,8 +82,7 @@ void af_alg_signer_probe(char *plugin)
 		if (ops)
 		{
 			ops->destroy(ops);
-			lib->crypto->add_signer(lib->crypto, algs[i].id, plugin,
-							(signer_constructor_t)af_alg_signer_create);
+			features[(*pos)++] = PLUGIN_PROVIDE(SIGNER, algs[i].id);
 		}
 	}
 }

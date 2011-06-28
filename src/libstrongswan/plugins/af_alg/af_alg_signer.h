@@ -23,7 +23,11 @@
 
 typedef struct af_alg_signer_t af_alg_signer_t;
 
+#include <plugins/plugin.h>
 #include <crypto/signers/signer.h>
+
+/** Number of signers */
+#define AF_ALG_SIGNER 13
 
 /**
  * Implementation of signers using AF_ALG.
@@ -45,10 +49,11 @@ struct af_alg_signer_t {
 af_alg_signer_t *af_alg_signer_create(integrity_algorithm_t algo);
 
 /**
- * Probe algorithms and register af_alg_signer_create().
+ * Probe algorithms and return plugin features.
  *
- * @param plugin		plugin name to register algorithms for
+ * @param features		plugin features to create
+ * @param pos			current position in features
  */
-void af_alg_signer_probe(char *plugin);
+void af_alg_signer_probe(plugin_feature_t *features, int *pos);
 
 #endif /** AF_ALG_SIGNER_H_ @}*/

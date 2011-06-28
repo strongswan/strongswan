@@ -61,7 +61,7 @@ static struct {
 	/* size of the keying material (key + nonce for ctr mode) */
 	size_t keymat_size;
 	size_t iv_size;
-} algs[] = {
+} algs[AF_ALG_CRYPTER] = {
 	{ENCR_DES,			"cbc(des)",					 8,	 8,	 8,	 8,	},
 	{ENCR_DES_ECB,		"ecb(des)",					 8,	 8,	 8,	 0,	},
 	{ENCR_3DES,			"cbc(des3_ede)",			 8,	24,	24,	 8,	},
@@ -92,25 +92,20 @@ static struct {
 /**
  * See header.
  */
-void af_alg_crypter_probe(char *plugin)
+void af_alg_crypter_probe(plugin_feature_t *features, int *pos)
 {
-	encryption_algorithm_t prev = -1;
 	af_alg_ops_t *ops;
 	int i;
 
 	for (i = 0; i < countof(algs); i++)
 	{
-		if (prev != algs[i].id)
+		ops = af_alg_ops_create("skcipher", algs[i].name);
+		if (ops)
 		{
-			ops = af_alg_ops_create("skcipher", algs[i].name);
-			if (ops)
-			{
-				ops->destroy(ops);
-				lib->crypto->add_crypter(lib->crypto, algs[i].id, plugin,
-								(crypter_constructor_t)af_alg_crypter_create);
-			}
+			ops->destroy(ops);
+			features[(*pos)++] = PLUGIN_PROVIDE(CRYPTER,
+												algs[i].id, algs[i].key_size);
 		}
-		prev = algs[i].id;
 	}
 }
 
