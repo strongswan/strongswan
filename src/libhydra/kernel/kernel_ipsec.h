@@ -47,6 +47,10 @@ enum ipsec_mode_t {
 	MODE_TUNNEL,
 	/** BEET mode, tunnel mode but fixed, bound inner addresses */
 	MODE_BEET,
+	/** passthrough policy for traffic without an IPsec SA */
+	MODE_PASS,
+	/** drop policy discarding traffic */
+	MODE_DROP
 };
 
 /**

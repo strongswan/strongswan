@@ -24,6 +24,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <credentials/auth_cfg.h>
+
 #include <freeswan.h>
 
 #include <constants.h>
@@ -38,15 +40,6 @@
 
 #define IPV4_LEN	 4
 #define IPV6_LEN	16
-
-/**
- * Authentication methods, must be the same as in charons authenticator.h
- */
-enum auth_method_t {
-	AUTH_PUBKEY =	1,
-	AUTH_PSK =		2,
-	AUTH_EAP =		3
-};
 
 static char* push_string(stroke_msg_t *msg, char *string)
 {
@@ -202,15 +195,19 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	/* PUBKEY is preferred to PSK and EAP */
 	if (conn->policy & POLICY_PUBKEY)
 	{
-		msg.add_conn.auth_method = AUTH_PUBKEY;
+		msg.add_conn.auth_method = AUTH_CLASS_PUBKEY;
 	}
 	else if (conn->policy & POLICY_PSK)
 	{
-		msg.add_conn.auth_method = AUTH_PSK;
+		msg.add_conn.auth_method = AUTH_CLASS_PSK;
+	}
+	else if (conn->policy & POLICY_XAUTH_PSK)
+	{
+		msg.add_conn.auth_method = AUTH_CLASS_EAP;
 	}
 	else
 	{
-		msg.add_conn.auth_method = AUTH_EAP;
+		msg.add_conn.auth_method = AUTH_CLASS_ANY;
 	}
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
@@ -229,6 +226,14 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	{
 		msg.add_conn.mode = MODE_TRANSPORT;
 		msg.add_conn.proxy_mode = TRUE;
+	}
+	else if (conn->policy & POLICY_SHUNT_PASS)
+	{
+		msg.add_conn.mode = MODE_PASS;
+	}
+	else if (conn->policy & (POLICY_SHUNT_DROP | POLICY_SHUNT_REJECT))
+	{
+		msg.add_conn.mode = MODE_DROP;
 	}
 	else
 	{

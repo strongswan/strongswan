@@ -1,0 +1,16 @@
+moon::ipsec statusall::net-net.*ESTABLISHED::YES
+sun::ipsec statusall::net-net.*ESTABLISHED::YES
+alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
+alice::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
+venus::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::NO
+venus::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
+moon::ping -c 1 -I PH_IP_MOON1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
+moon::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+moon::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::YES
+bob::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+bob::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
+bob::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
+sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
+sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES
+venus::ssh PH_IP_BOB hostname::bob::YES
+bob::ssh PH_IP_VENUS hostname::venus::YES

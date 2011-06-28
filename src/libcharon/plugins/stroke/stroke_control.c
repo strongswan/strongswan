@@ -15,7 +15,9 @@
 
 #include "stroke_control.h"
 
+#include <hydra.h>
 #include <daemon.h>
+
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
@@ -521,18 +523,37 @@ METHOD(stroke_control_t, purge_ike, void,
 }
 
 /**
- * call charon to install a trap
+ * call charon to install a shunt or trap
  */
 static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 						 char *name, FILE *out)
 {
-	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+	ipsec_mode_t mode;
+
+	mode = child_cfg->get_mode(child_cfg);
+	if (mode == MODE_PASS || mode == MODE_DROP)
 	{
-		fprintf(out, "'%s' routed\n", name);
+		if (charon->shunts->install(charon->shunts, child_cfg))
+		{
+			fprintf(out, "'%s' shunt %N policy installed\n",
+					name, ipsec_mode_names, mode);
+		}
+		else
+		{
+			fprintf(out, "'%s' shunt %N policy installation failed\n",
+					name, ipsec_mode_names, mode);
+		}
 	}
 	else
-	{
-		fprintf(out, "routing '%s' failed\n", name);
+	{	
+		if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+		{
+			fprintf(out, "'%s' routed\n", name);
+		}
+		else
+		{
+			fprintf(out, "routing '%s' failed\n", name);
+		}
 	}
 }
 
@@ -614,6 +635,13 @@ METHOD(stroke_control_t, unroute, void,
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
 	u_int32_t id;
+	bool found = FALSE;
+
+	if (charon->shunts->uninstall(charon->shunts, msg->unroute.name))
+	{
+		fprintf(out, "shunt policy '%s' uninstalled\n", msg->unroute.name);
+		return;
+	}
 
 	enumerator = charon->traps->create_enumerator(charon->traps);
 	while (enumerator->enumerate(enumerator, NULL, &child_sa))
@@ -624,11 +652,15 @@ METHOD(stroke_control_t, unroute, void,
 			enumerator->destroy(enumerator);
 			charon->traps->uninstall(charon->traps, id);
 			fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
-			return;
+			found = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
-	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
+
+	if (!found)
+	{
+		fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
+	}
 }
 
 METHOD(stroke_control_t, destroy, void,

@@ -609,7 +609,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		case KW_AUTHBY:
 			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
 
-			if (!(streq(kw->value, "never") || streq(kw->value, "eap")))
+			if (!streq(kw->value, "never"))
 			{
 				char *value = kw->value;
 				char *second = strchr(kw->value, '|');
@@ -636,7 +636,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 					{
 						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
 					}
-					else if (streq(value, "xauthpsk"))
+					else if (streq(value, "xauthpsk") || streq(value, "eap"))
 					{
 						conn->policy |= POLICY_XAUTH_PSK | POLICY_ENCRYPT;
 					}

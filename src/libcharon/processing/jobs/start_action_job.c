@@ -42,6 +42,7 @@ METHOD(job_t, execute, void,
 	enumerator_t *enumerator, *children;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
+	ipsec_mode_t mode;
 	char *name;
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
@@ -69,7 +70,16 @@ METHOD(job_t, execute, void,
 					break;
 				case ACTION_ROUTE:
 					DBG1(DBG_JOB, "start action: route '%s'", name);
-					charon->traps->install(charon->traps, peer_cfg, child_cfg);
+					mode = child_cfg->get_mode(child_cfg);
+					if (mode == MODE_PASS || mode == MODE_DROP)
+					{
+						charon->shunts->install(charon->shunts, child_cfg);
+					}
+					else
+					{
+						charon->traps->install(charon->traps, peer_cfg,
+															  child_cfg);
+					}
 					break;
 				case ACTION_NONE:
 					break;

@@ -115,6 +115,7 @@ static void destroy(private_daemon_t *this)
 #endif /* CAPABILITIES_LIBCAP */
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
+	DESTROY_IF(this->public.shunts);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
@@ -294,6 +295,7 @@ private_daemon_t *daemon_create()
 	this->public.backends = backend_manager_create();
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
+	this->public.shunts = shunt_manager_create();
 	this->kernel_handler = kernel_handler_create();
 
 #ifdef CAPABILITIES

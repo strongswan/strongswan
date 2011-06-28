@@ -328,6 +328,9 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 					case AUTH_CLASS_EAP:
 						auth = "eap";
 						break;
+					case AUTH_CLASS_ANY:
+						auth = "any";
+						break;
 				}
 			}
 			else

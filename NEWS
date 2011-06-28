@@ -1,6 +1,9 @@
 strongswan-4.5.3
 ----------------
 
+- IKEv2 charon daemon supports start PASS and DROP shunt policies
+  preventing traffic to go through IPsec connections.
+
 - IMC/IMV test pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
   (--enable-imc-test/--enable-imv-test).
 

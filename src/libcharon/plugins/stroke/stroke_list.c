@@ -398,6 +398,7 @@ METHOD(stroke_list_t, status, void,
 	child_cfg_t *child_cfg;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
+	linked_list_t *my_ts, *other_ts;
 	bool first, found = FALSE;
 	char *name = msg->status.name;
 	u_int half_open;
@@ -503,12 +504,11 @@ METHOD(stroke_list_t, status, void,
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
-				linked_list_t *my_ts, *other_ts;
-
 				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
-				fprintf(out, "%12s:   child:  %#R=== %#R", child_cfg->get_name(child_cfg),
-						my_ts, other_ts);
+				fprintf(out, "%12s:   child:  %#R=== %#R%N",
+						child_cfg->get_name(child_cfg),	my_ts, other_ts,
+						ipsec_mode_names, child_cfg->get_mode(child_cfg));
 				my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 				other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 
@@ -524,10 +524,39 @@ METHOD(stroke_list_t, status, void,
 		enumerator->destroy(enumerator);
 	}
 
+	/* Enumerate shunt policies */
+	first = TRUE;
+	enumerator = charon->shunts->create_enumerator(charon->shunts);
+	while (enumerator->enumerate(enumerator, &child_cfg))
+	{
+		if (name && !streq(name, child_cfg->get_name(child_cfg)))
+		{
+			continue;
+		}
+		if (first)
+		{
+			fprintf(out, "Shunted Connections:\n");
+			first = FALSE;
+		}
+		my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+		other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+		fprintf(out, "%12s:  %#R=== %#R%N\n",
+				child_cfg->get_name(child_cfg),	my_ts, other_ts,
+				ipsec_mode_names, child_cfg->get_mode(child_cfg));
+		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+	}
+	enumerator->destroy(enumerator);
+
+	/* Enumerate traps */
 	first = TRUE;
 	enumerator = charon->traps->create_enumerator(charon->traps);
 	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
+		if (name && !streq(name, child_sa->get_name(child_sa)))
+		{
+			continue;
+		}
 		if (first)
 		{
 			fprintf(out, "Routed Connections:\n");
