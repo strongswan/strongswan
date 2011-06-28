@@ -155,8 +155,8 @@ METHOD(trap_manager_t, install, u_int32_t,
 	other->destroy(other);
 
 	/* while we don't know the finally negotiated protocol (ESP|AH), we
-	 * could iterate all proposals for a best guest (TODO). But as we
-	 * support ESP only for now, we set here. */
+	 * could iterate all proposals for a best guess (TODO). But as we
+	 * support ESP only for now, we set it here. */
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_mode(child_sa, child->get_mode(child));
 	status = child_sa->add_policies(child_sa, my_ts, other_ts);
@@ -375,15 +375,16 @@ trap_manager_t *trap_manager_create(void)
 			.acquire = _acquire,
 			.destroy = _destroy,
 		},
+		.listener = {
+			.traps = this,
+			.listener = {
+				.ike_state_change = _ike_state_change,
+				.child_state_change = _child_state_change,
+			},
+		},
 		.traps = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-
-	/* register listener for IKE state changes */
-	this->listener.traps = this;
-	memset(&this->listener.listener, 0, sizeof(listener_t));
-	this->listener.listener.ike_state_change = _ike_state_change;
-	this->listener.listener.child_state_change = _child_state_change;
 	charon->bus->add_listener(charon->bus, &this->listener.listener);
 
 	return &this->public;
