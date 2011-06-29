@@ -135,7 +135,7 @@ INSERT INTO traffic_selectors (
 INSERT INTO traffic_selectors (
   type, start_addr, end_addr
 ) VALUES (
-  7, X'0a020000', X'0a02ffff'
+  7, X'00000000', X'ffffffff'
 );
 
 INSERT INTO child_config_traffic_selector (
