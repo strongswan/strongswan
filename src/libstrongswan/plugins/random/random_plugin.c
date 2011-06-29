@@ -37,11 +37,21 @@ METHOD(plugin_t, get_name, char*,
 	return "random";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_random_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(RNG, random_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_random_plugin_t *this)
 {
-	lib->crypto->remove_rng(lib->crypto,
-							(rng_constructor_t)random_rng_create);
 	free(this);
 }
 
@@ -56,16 +66,11 @@ plugin_t *random_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
-						 (rng_constructor_t)random_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
-						 (rng_constructor_t)random_rng_create);
 
 	return &this->public.plugin;
 }
