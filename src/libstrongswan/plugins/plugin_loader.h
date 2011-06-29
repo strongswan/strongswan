@@ -59,7 +59,11 @@ struct plugin_loader_t {
 	/**
 	 * Create an enumerator over all loaded plugins.
 	 *
-	 * @return				enumerator over plugin_t*
+	 * In addition to the plugin, a to read-only list is enumerated (if it is
+	 * not NULL). This list contains pointer to plugin features currently
+	 * loaded.
+	 *
+	 * @return				enumerator over plugin_t*, linked_list_t*
 	 */
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
 

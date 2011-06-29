@@ -214,7 +214,7 @@ static void print_plugins()
 
 	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
-	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
+	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin, NULL))
 	{
 		len += snprintf(&buf[len], sizeof(buf)-len, "%s ",
 						plugin->get_name(plugin));

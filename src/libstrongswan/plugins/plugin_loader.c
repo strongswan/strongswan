@@ -177,9 +177,14 @@ static bool load_plugin(private_plugin_loader_t *this, char *name, char *file)
 /**
  * Convert enumerated entries to plugin_t
  */
-static bool plugin_filter(void *null, plugin_entry_t **entry, plugin_t **plugin)
+static bool plugin_filter(void *null, plugin_entry_t **entry, plugin_t **plugin,
+						  void *in, linked_list_t **list)
 {
 	*plugin = (*entry)->plugin;
+	if (list)
+	{
+		*list = (*entry)->loaded;
+	}
 	return TRUE;
 }
 

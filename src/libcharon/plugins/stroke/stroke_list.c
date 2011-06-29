@@ -451,7 +451,7 @@ METHOD(stroke_list_t, status, void,
 				lib->scheduler->get_job_load(lib->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
-		while (enumerator->enumerate(enumerator, &plugin))
+		while (enumerator->enumerate(enumerator, &plugin, NULL))
 		{
 			fprintf(out, "%s ", plugin->get_name(plugin));
 		}
