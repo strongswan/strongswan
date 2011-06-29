@@ -34,6 +34,16 @@ struct private_kernel_interface_t {
 	kernel_interface_t public;
 
 	/**
+	 * Registered IPsec constructor
+	 */
+	kernel_ipsec_constructor_t ipsec_constructor;
+
+	/**
+	 * Registered net constructor
+	 */
+	kernel_net_constructor_t net_constructor;
+
+	/**
 	 * ipsec interface
 	 */
 	kernel_ipsec_t *ipsec;
@@ -324,6 +334,7 @@ METHOD(kernel_interface_t, add_ipsec_interface, void,
 {
 	if (!this->ipsec)
 	{
+		this->ipsec_constructor = constructor;
 		this->ipsec = constructor();
 	}
 }
@@ -331,7 +342,11 @@ METHOD(kernel_interface_t, add_ipsec_interface, void,
 METHOD(kernel_interface_t, remove_ipsec_interface, void,
 	private_kernel_interface_t *this, kernel_ipsec_constructor_t constructor)
 {
-	/* TODO: replace if interface currently in use */
+	if (constructor == this->ipsec_constructor)
+	{
+		this->ipsec->destroy(this->ipsec);
+		this->ipsec = NULL;
+	}
 }
 
 METHOD(kernel_interface_t, add_net_interface, void,
@@ -339,6 +354,7 @@ METHOD(kernel_interface_t, add_net_interface, void,
 {
 	if (!this->net)
 	{
+		this->net_constructor = constructor;
 		this->net = constructor();
 	}
 }
@@ -346,7 +362,11 @@ METHOD(kernel_interface_t, add_net_interface, void,
 METHOD(kernel_interface_t, remove_net_interface, void,
 	private_kernel_interface_t *this, kernel_net_constructor_t constructor)
 {
-	/* TODO: replace if interface currently in use */
+	if (constructor == this->net_constructor)
+	{
+		this->net->destroy(this->net);
+		this->net = NULL;
+	}
 }
 
 METHOD(kernel_interface_t, add_listener, void,
