@@ -350,6 +350,12 @@ METHOD(listener_t, child_state_change, bool,
 	}
 }
 
+METHOD(trap_manager_t, flush, void,
+	private_trap_manager_t *this)
+{
+	this->traps->invoke_function(this->traps, (void*)destroy_entry);
+}
+
 METHOD(trap_manager_t, destroy, void,
 	private_trap_manager_t *this)
 {
@@ -373,6 +379,7 @@ trap_manager_t *trap_manager_create(void)
 			.uninstall = _uninstall,
 			.create_enumerator = _create_enumerator,
 			.acquire = _acquire,
+			.flush = _flush,
 			.destroy = _destroy,
 		},
 		.listener = {

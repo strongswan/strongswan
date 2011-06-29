@@ -68,6 +68,11 @@ struct trap_manager_t {
 					traffic_selector_t *src, traffic_selector_t *dst);
 
 	/**
+	 * Clear any installed trap.
+	 */
+	void (*flush)(trap_manager_t *this);
+
+	/**
 	 * Destroy a trap_manager_t.
 	 */
 	void (*destroy)(trap_manager_t *this);

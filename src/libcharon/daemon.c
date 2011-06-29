@@ -106,6 +106,10 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
 	}
+	if (this->public.traps)
+	{
+		this->public.traps->flush(this->public.traps);
+	}
 	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.sender);
 	/* unload plugins to release threads */
