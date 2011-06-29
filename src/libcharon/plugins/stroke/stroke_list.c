@@ -1206,6 +1206,57 @@ static void list_algs(FILE *out)
 	fprintf(out, "\n");
 }
 
+/**
+ * List loaded plugin information
+ */
+static void list_plugins(FILE *out)
+{
+	plugin_feature_t *features, *fp;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	plugin_t *plugin;
+	int count, i;
+	bool loaded;
+	char *str;
+
+	fprintf(out, "\n");
+	fprintf(out, "List of loaded plugins:\n");
+
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (enumerator->enumerate(enumerator, &plugin, &list))
+	{
+		fprintf(out, "%s:\n", plugin->get_name(plugin));
+		if (plugin->get_features)
+		{
+			count = plugin->get_features(plugin, &features);
+			for (i = 0; i < count; i++)
+			{
+				str = plugin_feature_get_string(&features[i]);
+				switch (features[i].kind)
+				{
+					case FEATURE_PROVIDE:
+						fp = &features[i];
+						loaded = list->find_first(list, NULL,
+												  (void**)&fp) == SUCCESS;
+						fprintf(out, "    %s%s\n",
+								str, loaded ? "" : " (not loaded)");
+						break;
+					case FEATURE_DEPENDS:
+						fprintf(out, "        %s\n", str);
+						break;
+					case FEATURE_SDEPEND:
+						fprintf(out, "        %s(soft)\n", str);
+						break;
+					default:
+						break;
+				}
+				free(str);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(stroke_list_t, list, void,
 	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 {
@@ -1276,6 +1327,10 @@ METHOD(stroke_list_t, list, void,
 	if (msg->list.flags & LIST_ALGS)
 	{
 		list_algs(out);
+	}
+	if (msg->list.flags & LIST_PLUGINS)
+	{
+		list_plugins(out);
 	}
 }
 

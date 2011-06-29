@@ -263,6 +263,7 @@ static int list_flags[] = {
 	LIST_CRLS,
 	LIST_OCSP,
 	LIST_ALGS,
+	LIST_PLUGINS,
 	LIST_ALL
 };
 
@@ -531,6 +532,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALGS:
+		case STROKE_LIST_PLUGINS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;

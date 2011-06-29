@@ -65,8 +65,10 @@ enum list_flag_t {
 	LIST_OCSP =			0x0200,
 	/** list all supported algorithms */
 	LIST_ALGS =			0x0400,
+	/** list plugin information */
+	LIST_PLUGINS =		0x0800,
 	/** all list options */
-	LIST_ALL =			0x07FF,
+	LIST_ALL =			0x0FFF,
 };
 
 typedef enum reread_flag_t reread_flag_t;
