@@ -16,6 +16,7 @@
 #include "pa_tnc_attr.h"
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
+#include "ietf/ietf_attr_port_filter.h"
 #include "ita/ita_attr_command.h"
 
 /**
@@ -29,6 +30,8 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 		case PEN_IETF:
 			switch (type)
 			{
+				case IETF_ATTR_PORT_FILTER:
+					return ietf_attr_port_filter_create_from_data(value);
 				case IETF_ATTR_PA_TNC_ERROR:
 					return ietf_attr_pa_tnc_error_create_from_data(value);
 				case IETF_ATTR_TESTING:
@@ -37,7 +40,6 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 				case IETF_ATTR_NUMERIC_VERSION:
 				case IETF_ATTR_STRING_VERSION:
 				case IETF_ATTR_OPERATIONAL_STATUS:
-				case IETF_ATTR_PORT_FILTER:
 				case IETF_ATTR_INSTALLED_PACKAGES:
 				case IETF_ATTR_ASSESSMENT_RESULT:
 				case IETF_ATTR_REMEDIATION_INSTRUCTIONS:

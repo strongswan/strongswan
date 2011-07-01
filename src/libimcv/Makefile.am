@@ -11,6 +11,7 @@ libimcv_la_SOURCES = \
 	imv/imv_agent.h imv/imv_agent.c imv/imv_state.h \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_pa_tnc_error.h ietf/ietf_attr_pa_tnc_error.c \
+	ietf/ietf_attr_port_filter.h ietf/ietf_attr_port_filter.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c
@@ -24,3 +25,4 @@ endif
 if USE_IMV_TEST
   SUBDIRS += plugins/imv_test
 endif
+
