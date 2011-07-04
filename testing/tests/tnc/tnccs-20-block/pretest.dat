@@ -1,6 +1,7 @@
 moon::/etc/init.d/iptables start 2> /dev/null
 carol::/etc/init.d/iptables start 2> /dev/null
 dave::/etc/init.d/iptables start 2> /dev/null
+dave::/etc/init.d/apache2 start 2> /dev/null
 moon::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config

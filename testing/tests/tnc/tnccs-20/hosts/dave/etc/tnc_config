@@ -1,3 +1,4 @@
 #IMC configuration file for strongSwan client 
 
 IMC "Test"	/usr/local/libexec/ipsec/plugins/libstrongswan-imc-test.so
+IMC "Scanner"	/usr/local/libexec/ipsec/plugins/libstrongswan-imc-scanner.so
