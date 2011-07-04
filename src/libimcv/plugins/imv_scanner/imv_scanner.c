@@ -76,7 +76,7 @@ static linked_list_t* get_port_list(char *label)
 	value = lib->settings->get_str(lib->settings, key, NULL);
 	if (!value)
 	{
-		DBG1(DBG_IMV, "% not defined", key);
+		DBG1(DBG_IMV, "%s not defined", key);
 		return list;
 	}
 	port_list = chunk_create(value, strlen(value));
