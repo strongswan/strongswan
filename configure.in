@@ -134,6 +134,8 @@ ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
 ARG_ENABL_SET([imv-test],       [enable IMV test module.])
+ARG_ENABL_SET([imc-scanner],    [enable IMC port scanner module.])
+ARG_ENABL_SET([imv-scanner],    [enable IMV port scanner module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -242,7 +244,7 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 	tls=true;
 fi
 
-if test x$imc_test = xtrue -o x$imv_test = xtrue; then
+if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue; then
 	imcv=true;
 fi
 
@@ -910,6 +912,8 @@ AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
 AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
 AM_CONDITIONAL(USE_IMV_TEST, test x$imv_test = xtrue)
+AM_CONDITIONAL(USE_IMC_SCANNER, test x$imc_scanner = xtrue)
+AM_CONDITIONAL(USE_IMV_SCANNER, test x$imv_scanner = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
@@ -1041,6 +1045,8 @@ AC_OUTPUT(
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile
+	src/libimcv/plugins/imc_scanner/Makefile
+	src/libimcv/plugins/imv_scanner/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile

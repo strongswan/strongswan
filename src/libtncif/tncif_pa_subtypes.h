@@ -75,7 +75,8 @@ extern enum_name_t *pa_subtype_fhh_names;
  * PA-TNC ITA-HSR Subtypes
  */
  enum pa_subtype_ita_t {
-	PA_SUBTYPE_ITA_TEST =				1
+	PA_SUBTYPE_ITA_TEST =				1,
+	PA_SUBTYPE_ITA_SCANNER =			2
 };
 
 /**

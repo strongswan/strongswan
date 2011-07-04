@@ -26,3 +26,10 @@ if USE_IMV_TEST
   SUBDIRS += plugins/imv_test
 endif
 
+if USE_IMC_SCANNER
+  SUBDIRS += plugins/imc_scanner
+endif
+
+if USE_IMV_SCANNER
+  SUBDIRS += plugins/imv_scanner
+endif

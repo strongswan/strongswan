@@ -47,8 +47,9 @@ ENUM_NEXT(pa_subtype_fhh_names, PA_SUBTYPE_FHH_CLAMAV, PA_SUBTYPE_FHH_CLAMAV,
 );
 ENUM_END(pa_subtype_fhh_names, PA_SUBTYPE_FHH_CLAMAV);
 
-ENUM(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_TEST,
-	"Test"
+ENUM(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_SCANNER,
+	"Test",
+	"Scanner"
 );
 
 /**
