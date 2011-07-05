@@ -77,7 +77,7 @@ static entry_t reasons[] = {
 	{ "en", "The following ports are open:" },
 	{ "de", "Die folgenden Ports sind offen" },
 	{ "fr", "Les ports suivants sont ouverts:" },
-	{ "pl", "Nastepujace porty sa otwarte:" }
+	{ "pl", "Następujące porty sa otwarte:" }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
