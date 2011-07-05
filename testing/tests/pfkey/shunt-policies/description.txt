@@ -8,4 +8,4 @@ by adding <b>install_routes = no</b> to the charon section of <b>strongswan.conf
 In order to demonstrate the use of <b>type=drop</b> shunt policies, the
 <b>venus-icmp</b> connection prevents ICMP traffic to and from <b>venus</b>
 to use the IPsec tunnel by dropping such packets. Since this policy does not
-apply to the localnet, <b>venus</b> and <b>moon</b> can still ping each other.
+apply to the local net, <b>venus</b> and <b>moon</b> can still ping each other.
