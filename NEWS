@@ -1,6 +1,11 @@
 strongswan-4.5.3
 ----------------
 
+- Our private libraries (e.g. libstrongswan) are not installed directly in
+  prefix/lib anymore.  Instead a subdirectory is used (prefix/lib/ipsec by
+  default).  The plugins directory is also moved from libexec/ipsec to that
+  directory.
+
 - IKEv2 charon daemon supports start PASS and DROP shunt policies
   preventing traffic to go through IPsec connections.
 
