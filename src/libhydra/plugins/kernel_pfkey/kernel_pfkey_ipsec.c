@@ -1649,7 +1649,18 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	pol->sadb_x_policy_len = PFKEY_LEN(sizeof(struct sadb_x_policy));
 	pol->sadb_x_policy_id = 0;
 	pol->sadb_x_policy_dir = dir2kernel(direction);
-	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
+	switch (type)
+	{
+		case POLICY_IPSEC:
+			pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
+			break;
+		case POLICY_PASS:
+			pol->sadb_x_policy_type = IPSEC_POLICY_NONE;
+			break;
+		case POLICY_DROP:
+			pol->sadb_x_policy_type = IPSEC_POLICY_DISCARD;
+			break;
+	}
 #ifdef HAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY
 	/* calculate priority based on selector size, small size = high prio */
 	pol->sadb_x_policy_priority = routed ? PRIO_LOW : PRIO_HIGH;
