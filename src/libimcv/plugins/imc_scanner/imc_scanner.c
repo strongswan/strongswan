@@ -102,6 +102,8 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 	chunk_t line, token;
 	int n = 0;
 	bool success = FALSE;
+	const char loopback_v4[] = "127.0.0.1";
+	const char loopback_v6[] = "::1";
 
 	/* Open a pipe stream for reading the output of the netstat commmand */
 	file = popen("/bin/netstat -n -l -4 -6 --inet", "r");
@@ -172,6 +174,16 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		{
 			DBG1(DBG_IMC, "Local port field in netstat output not found");
 			goto end;
+		}
+		token.len--;
+
+		/* ignore ports of IPv4 and IPv6 loopback interfaces */
+		if ((token.len == strlen(loopback_v4) &&
+				memeq(loopback_v4, token.ptr, token.len)) ||
+			(token.len == strlen(loopback_v6) &&
+				memeq(loopback_v6, token.ptr, token.len)))
+		{
+			continue;
 		}
 
 		/* convert the port string to an integer */
