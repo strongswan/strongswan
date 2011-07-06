@@ -159,7 +159,7 @@ struct library_t {
 /**
  * Initialize library, creates "lib" instance.
  *
- * @param settings		file to read settings from, may be NULL for none
+ * @param settings		file to read settings from, may be NULL for default
  * @return				FALSE if integrity check failed
  */
 bool library_init(char *settings);
@@ -170,7 +170,7 @@ bool library_init(char *settings);
 void library_deinit();
 
 /**
- * Library instance, set after between library_init() and library_deinit() calls.
+ * Library instance, set after library_init() and before library_deinit() calls.
  */
 extern library_t *lib;
 
