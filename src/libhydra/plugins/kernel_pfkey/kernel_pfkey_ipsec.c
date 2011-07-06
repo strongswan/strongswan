@@ -58,6 +58,7 @@
 #include <debug.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
+#include <utils/hashtable.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
@@ -163,6 +164,11 @@ struct private_kernel_pfkey_ipsec_t
 	linked_list_t *policies;
 
 	/**
+	 * Hash table of IPsec SAs using policies (ipsec_sa_t)
+	 */
+	hashtable_t *sas;
+
+	/**
 	 * whether to install routes along policies
 	 */
 	bool install_routes;
@@ -227,48 +233,213 @@ static void route_entry_destroy(route_entry_t *this)
 	free(this);
 }
 
+/**
+ * compare two route_entry_t objects
+ */
+static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
+{
+	return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
+		   a->src_ip->equals(a->src_ip, b->src_ip) &&
+		   a->gateway->equals(a->gateway, b->gateway) &&
+		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
+}
+
+typedef struct ipsec_sa_t ipsec_sa_t;
+
+/**
+ * IPsec SA assigned to a policy.
+ */
+struct ipsec_sa_t {
+	/** Source address of this SA */
+	host_t *src;
+
+	/** Destination address of this SA */
+	host_t *dst;
+
+	/** Description of this SA */
+	ipsec_sa_cfg_t cfg;
+
+	/** Reference count for this SA */
+	refcount_t refcount;
+};
+
+/**
+ * Hash function for ipsec_sa_t objects
+ */
+static u_int ipsec_sa_hash(ipsec_sa_t *sa)
+{
+	return chunk_hash_inc(sa->src->get_address(sa->src),
+						  chunk_hash_inc(sa->dst->get_address(sa->dst),
+						  chunk_hash(chunk_from_thing(sa->cfg))));
+}
+
+/**
+ * Equality function for ipsec_sa_t objects
+ */
+static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
+{
+	return sa->src->ip_equals(sa->src, other_sa->src) &&
+		   sa->dst->ip_equals(sa->dst, other_sa->dst) &&
+		   memeq(&sa->cfg, &other_sa->cfg, sizeof(ipsec_sa_cfg_t));
+}
+
+/**
+ * Allocate or reference an IPsec SA object
+ */
+static ipsec_sa_t *ipsec_sa_create(private_kernel_pfkey_ipsec_t *this,
+								   host_t *src, host_t *dst,
+								   ipsec_sa_cfg_t *cfg)
+{
+	ipsec_sa_t *sa, *found;
+	INIT(sa,
+		.src = src,
+		.dst = dst,
+		.cfg = *cfg,
+	);
+	found = this->sas->get(this->sas, sa);
+	if (!found)
+	{
+		sa->src = src->clone(src);
+		sa->dst = dst->clone(dst);
+		this->sas->put(this->sas, sa, sa);
+	}
+	else
+	{
+		free(sa);
+		sa = found;
+	}
+	ref_get(&sa->refcount);
+	return sa;
+}
+
+/**
+ * Release and destroy an IPsec SA object
+ */
+static void ipsec_sa_destroy(private_kernel_pfkey_ipsec_t *this,
+							 ipsec_sa_t *sa)
+{
+	if (ref_put(&sa->refcount))
+	{
+		this->sas->remove(this->sas, sa);
+		DESTROY_IF(sa->src);
+		DESTROY_IF(sa->dst);
+		free(sa);
+	}
+}
+
+typedef struct policy_sa_t policy_sa_t;
+typedef struct policy_sa_fwd_t policy_sa_fwd_t;
+
+/**
+ * Mapping between a policy and an IPsec SA.
+ */
+struct policy_sa_t {
+	/** Priority assigned to the policy when installed with this SA */
+	u_int32_t priority;
+
+	/** Type of the policy */
+	policy_type_t type;
+
+	/** Assigned SA */
+	ipsec_sa_t *sa;
+};
+
+/**
+ * For forward policies we also cache the traffic selectors in order to install
+ * the route.
+ */
+struct policy_sa_fwd_t {
+	/** Generic interface */
+	policy_sa_t generic;
+
+	/** Source traffic selector of this policy */
+	traffic_selector_t *src_ts;
+
+	/** Destination traffic selector of this policy */
+	traffic_selector_t *dst_ts;
+};
+
+/**
+ * Create a policy_sa(_fwd)_t object
+ */
+static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
+	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts, ipsec_sa_cfg_t *cfg)
+{
+	policy_sa_t *policy;
+
+	if (dir == POLICY_FWD)
+	{
+		policy_sa_fwd_t *fwd;
+		INIT(fwd,
+			.src_ts = src_ts->clone(src_ts),
+			.dst_ts = dst_ts->clone(dst_ts),
+		);
+		policy = &fwd->generic;
+	}
+	else
+	{
+		INIT(policy);
+	}
+	policy->type = type;
+	policy->sa = ipsec_sa_create(this, src, dst, cfg);
+	return policy;
+}
+
+/**
+ * Destroy a policy_sa(_fwd)_t object
+ */
+static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
+							  private_kernel_pfkey_ipsec_t *this)
+{
+	if (*dir == POLICY_FWD)
+	{
+		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)policy;
+		fwd->src_ts->destroy(fwd->src_ts);
+		fwd->dst_ts->destroy(fwd->dst_ts);
+	}
+	ipsec_sa_destroy(this, policy->sa);
+	free(policy);
+}
+
 typedef struct policy_entry_t policy_entry_t;
 
 /**
  * installed kernel policy.
  */
 struct policy_entry_t {
-
-	/** reqid of this policy */
-	u_int32_t reqid;
-
-	/** index assigned by the kernel */
+	/** Index assigned by the kernel */
 	u_int32_t index;
 
-	/** direction of this policy: in, out, forward */
+	/** Direction of this policy: in, out, forward */
 	u_int8_t direction;
 
-	/** parameters of installed policy */
+	/** Parameters of installed policy */
 	struct {
-		/** subnet and port */
+		/** Subnet and port */
 		host_t *net;
-		/** subnet mask */
+		/** Subnet mask */
 		u_int8_t mask;
-		/** protocol */
+		/** Protocol */
 		u_int8_t proto;
 	} src, dst;
 
-	/** associated route installed for this policy */
+	/** Associated route installed for this policy */
 	route_entry_t *route;
 
-	/** by how many CHILD_SAs this policy is used */
-	u_int refcount;
+	/** List of SAs this policy is used by, ordered by priority */
+	linked_list_t *used_by;
 };
 
 /**
- * create a policy_entry_t object
+ * Create a policy_entry_t object
  */
 static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
-		traffic_selector_t *dst_ts, policy_dir_t dir, u_int32_t reqid)
+										   traffic_selector_t *dst_ts,
+										   policy_dir_t dir)
 {
 	policy_entry_t *policy;
 	INIT(policy,
-		.reqid = reqid,
 		.direction = dir,
 	);
 
@@ -285,17 +456,25 @@ static policy_entry_t *create_policy_entry(traffic_selector_t *src_ts,
 }
 
 /**
- * destroy a policy_entry_t object
+ * Destroy a policy_entry_t object
  */
-static void policy_entry_destroy(policy_entry_t *this)
+static void policy_entry_destroy(policy_entry_t *policy,
+								 private_kernel_pfkey_ipsec_t *this)
 {
-	DESTROY_IF(this->src.net);
-	DESTROY_IF(this->dst.net);
-	if (this->route)
+	if (policy->route)
 	{
-		route_entry_destroy(this->route);
+		route_entry_destroy(policy->route);
 	}
-	free(this);
+	if (policy->used_by)
+	{
+		policy->used_by->invoke_function(policy->used_by,
+										(linked_list_invoke_t)policy_sa_destroy,
+										 &policy->direction, this);
+		policy->used_by->destroy(policy->used_by);
+	}
+	DESTROY_IF(policy->src.net);
+	DESTROY_IF(policy->dst.net);
+	free(policy);
 }
 
 /**
@@ -470,6 +649,23 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 		default:
 			return IPSEC_DIR_INVALID;
 	}
+}
+
+/**
+ * convert the policy type to the one defined in ipsec.h
+ */
+static inline u_int16_t type2kernel(policy_type_t type)
+{
+	switch (type)
+	{
+		case POLICY_IPSEC:
+			return IPSEC_POLICY_IPSEC;
+		case POLICY_PASS:
+			return IPSEC_POLICY_NONE;
+		case POLICY_DROP:
+			return IPSEC_POLICY_DISCARD;
+	}
+	return type;
 }
 
 #ifdef SADB_X_MIGRATE
@@ -892,6 +1088,7 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 	u_int32_t index, reqid = 0;
 	traffic_selector_t *src_ts, *dst_ts;
 	policy_entry_t *policy;
+	policy_sa_t *sa;
 
 	switch (msg->sadb_msg_satype)
 	{
@@ -915,9 +1112,10 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 								(linked_list_match_t)policy_entry_match_byindex,
-								(void**)&policy, &index) == SUCCESS)
+								(void**)&policy, &index) == SUCCESS &&
+		policy->used_by->get_first(policy->used_by, (void**)&sa) == SUCCESS)
 	{
-		reqid = policy->reqid;
+		reqid = sa->sa->cfg.reqid;
 	}
 	else
 	{
@@ -1614,55 +1812,27 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	return SUCCESS;
 }
 
-METHOD(kernel_ipsec_t, add_policy, status_t,
-	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
-	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, bool routed)
+/**
+ * Add or update a policy in the kernel.
+ *
+ * Note: The mutex has to be locked when entering this function.
+ */
+static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
+	policy_entry_t *policy, policy_sa_t *mapping, bool update)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
 	struct sadb_x_ipsecrequest *req;
-	policy_entry_t *policy, *found = NULL;
+	ipsec_sa_t *ipsec = mapping->sa;
 	pfkey_msg_t response;
 	size_t len;
 
-	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
-	{	/* FWD policies are not supported on all platforms */
-		return SUCCESS;
-	}
-
-	/* create a policy */
-	policy = create_policy_entry(src_ts, dst_ts, direction, sa->reqid);
-
-	/* find a matching policy */
-	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) == SUCCESS)
-	{	/* use existing policy, but cache the most recent reqid */
-		found->refcount++;
-		found->reqid = policy->reqid;
-		DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
-					  "refcount", src_ts, dst_ts, policy_dir_names, direction);
-		policy_entry_destroy(policy);
-		policy = found;
-	}
-	else
-	{	/* use the new one, if we have no such policy */
-		this->policies->insert_last(this->policies, policy);
-		policy->refcount = 1;
-	}
-
 	memset(&request, 0, sizeof(request));
-
-	DBG2(DBG_KNL, "adding policy %R === %R %N", src_ts, dst_ts,
-				   policy_dir_names, direction);
 
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
-	msg->sadb_msg_type = found ? SADB_X_SPDUPDATE : SADB_X_SPDADD;
+	msg->sadb_msg_type = update ? SADB_X_SPDUPDATE : SADB_X_SPDADD;
 	msg->sadb_msg_satype = 0;
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 
@@ -1670,45 +1840,27 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	pol->sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	pol->sadb_x_policy_len = PFKEY_LEN(sizeof(struct sadb_x_policy));
 	pol->sadb_x_policy_id = 0;
-	pol->sadb_x_policy_dir = dir2kernel(direction);
-	switch (type)
-	{
-		case POLICY_IPSEC:
-			pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
-			break;
-		case POLICY_PASS:
-			pol->sadb_x_policy_type = IPSEC_POLICY_NONE;
-			break;
-		case POLICY_DROP:
-			pol->sadb_x_policy_type = IPSEC_POLICY_DISCARD;
-			break;
-	}
+	pol->sadb_x_policy_dir = dir2kernel(policy->direction);
+	pol->sadb_x_policy_type = type2kernel(mapping->type);
 #ifdef HAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY
-	/* calculate priority based on selector size, small size = high prio */
-	pol->sadb_x_policy_priority = routed ? PRIO_LOW : PRIO_HIGH;
-	pol->sadb_x_policy_priority -= policy->src.mask;
-	pol->sadb_x_policy_priority -= policy->dst.mask;
-	pol->sadb_x_policy_priority <<= 2; /* make some room for the flags */
-	pol->sadb_x_policy_priority += policy->src.net->get_port(policy->src.net) ||
-								   policy->dst.net->get_port(policy->dst.net) ?
-								   0 : 2;
-	pol->sadb_x_policy_priority += policy->src.proto != IPSEC_PROTO_ANY ? 0 : 1;
+	pol->sadb_x_policy_priority = mapping->priority;
 #endif
 
 	/* one or more sadb_x_ipsecrequest extensions are added to the
 	 * sadb_x_policy extension */
 	req = (struct sadb_x_ipsecrequest*)(pol + 1);
-	req->sadb_x_ipsecrequest_proto = sa->esp.use ? IPPROTO_ESP : IPPROTO_AH;
+	req->sadb_x_ipsecrequest_proto = ipsec->cfg.esp.use ? IPPROTO_ESP
+														: IPPROTO_AH;
 	/* !!! the length here MUST be in octets instead of 64 bit words */
 	req->sadb_x_ipsecrequest_len = sizeof(struct sadb_x_ipsecrequest);
-	req->sadb_x_ipsecrequest_mode = mode2kernel(sa->mode);
-	req->sadb_x_ipsecrequest_reqid = sa->reqid;
+	req->sadb_x_ipsecrequest_mode = mode2kernel(ipsec->cfg.mode);
+	req->sadb_x_ipsecrequest_reqid = ipsec->cfg.reqid;
 	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
-	if (sa->mode == MODE_TUNNEL)
+	if (ipsec->cfg.mode == MODE_TUNNEL)
 	{
-		len = hostcpy(req + 1, src);
+		len = hostcpy(req + 1, ipsec->src);
 		req->sadb_x_ipsecrequest_len += len;
-		len = hostcpy((char*)(req + 1) + len, dst);
+		len = hostcpy((char*)(req + 1) + len, ipsec->dst);
 		req->sadb_x_ipsecrequest_len += len;
 	}
 
@@ -1736,23 +1888,20 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to add policy %R === %R %N", src_ts, dst_ts,
-					   policy_dir_names, direction);
 		return FAILED;
 	}
 	else if (out->sadb_msg_errno)
 	{
-		DBG1(DBG_KNL, "unable to add policy %R === %R %N: %s (%d)",
-					   src_ts, dst_ts, policy_dir_names, direction,
-					   strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		DBG1(DBG_KNL, "unable to %s policy: %s (%d)",
+					   update ? "update" : "add", strerror(out->sadb_msg_errno),
+					   out->sadb_msg_errno);
 		free(out);
 		return FAILED;
 	}
 	else if (parse_pfkey_message(out, &response) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unable to add policy %R === %R %N: parsing response "
-					  "from kernel failed", src_ts, dst_ts, policy_dir_names,
-					   direction);
+		DBG1(DBG_KNL, "unable to %s policy: parsing response from kernel "
+					  "failed", update ? "update" : "add");
 		free(out);
 		return FAILED;
 	}
@@ -1762,9 +1911,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (this->policies->find_last(this->policies, NULL,
 								 (void**)&policy) != SUCCESS)
 	{
-		DBG2(DBG_KNL, "unable to update index, the policy %R === %R %N is "
-					  "already gone, ignoring", src_ts, dst_ts,
-					   policy_dir_names, direction);
+		DBG2(DBG_KNL, "unable to update index, the policy is already gone, "
+					  "ignoring");
 		this->mutex->unlock(this->mutex);
 		free(out);
 		return SUCCESS;
@@ -1773,54 +1921,78 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	free(out);
 
 	/* install a route, if:
-	 * - we are NOT updating a policy
 	 * - this is a forward policy (to just get one for each child)
 	 * - we are in tunnel mode
-	 * - we are not using IPv6 (does not work correctly yet!)
 	 * - routing is not disabled via strongswan.conf
 	 */
-	if (policy->route == NULL && direction == POLICY_FWD &&
-		sa->mode != MODE_TRANSPORT && src->get_family(src) != AF_INET6 &&
-		this->install_routes)
+	if (policy->direction == POLICY_FWD &&
+		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
 		route_entry_t *route = malloc_thing(route_entry_t);
+		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				dst_ts, &route->src_ip) == SUCCESS)
+				fwd->dst_ts, &route->src_ip) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD).*/
 			route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, src);
+										hydra->kernel_interface, ipsec->src);
+			/* install route via outgoing interface */
 			route->if_name = hydra->kernel_interface->get_interface(
-											hydra->kernel_interface, dst);
+										hydra->kernel_interface, ipsec->dst);
 			route->dst_net = chunk_clone(policy->src.net->get_address(
 											policy->src.net));
 			route->prefixlen = policy->src.mask;
 
-			if (route->if_name)
+			if (!route->if_name)
 			{
-				switch (hydra->kernel_interface->add_route(
-									hydra->kernel_interface, route->dst_net,
-									route->prefixlen, route->gateway,
-									route->src_ip, route->if_name))
-				{
-					default:
-						DBG1(DBG_KNL, "unable to install source route for %H",
-									   route->src_ip);
-						/* FALL */
-					case ALREADY_DONE:
-						/* route exists, do not uninstall */
-						route_entry_destroy(route);
-						break;
-					case SUCCESS:
-						/* cache the installed route */
-						policy->route = route;
-						break;
-				}
-			}
-			else
-			{
+				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);
+				return SUCCESS;
+			}
+
+			if (policy->route)
+			{
+				route_entry_t *old = policy->route;
+				if (route_entry_equals(old, route))
+				{	/* keep previously installed route */
+					this->mutex->unlock(this->mutex);
+					route_entry_destroy(route);
+					return SUCCESS;
+				}
+				/* uninstall previously installed route */
+				if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+						old->dst_net, old->prefixlen, old->gateway,
+						old->src_ip, old->if_name) != SUCCESS)
+				{
+					DBG1(DBG_KNL, "error uninstalling route installed with "
+								  "policy %R === %R %N", fwd->src_ts,
+								   fwd->dst_ts, policy_dir_names,
+								   policy->direction);
+				}
+				route_entry_destroy(old);
+				policy->route = NULL;
+			}
+
+			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
+				 fwd->src_ts, route->gateway, route->src_ip, route->if_name);
+			switch (hydra->kernel_interface->add_route(
+								hydra->kernel_interface, route->dst_net,
+								route->prefixlen, route->gateway,
+								route->src_ip, route->if_name))
+			{
+				default:
+					DBG1(DBG_KNL, "unable to install source route for %H",
+								   route->src_ip);
+					/* FALL */
+				case ALREADY_DONE:
+					/* route exists, do not uninstall */
+					route_entry_destroy(route);
+					break;
+				case SUCCESS:
+					/* cache the installed route */
+					policy->route = route;
+					break;
 			}
 		}
 		else
@@ -1829,6 +2001,91 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		}
 	}
 	this->mutex->unlock(this->mutex);
+	return SUCCESS;
+}
+
+METHOD(kernel_ipsec_t, add_policy, status_t,
+	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
+	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
+	mark_t mark, bool routed)
+{
+	policy_entry_t *policy, *found = NULL;
+	policy_sa_t *assigned_sa, *current_sa;
+	enumerator_t *enumerator;
+	bool update = TRUE;
+
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{	/* FWD policies are not supported on all platforms */
+		return SUCCESS;
+	}
+
+	/* create a policy */
+	policy = create_policy_entry(src_ts, dst_ts, direction);
+
+	/* find a matching policy */
+	this->mutex->lock(this->mutex);
+	if (this->policies->find_first(this->policies,
+								  (linked_list_match_t)policy_entry_equals,
+								  (void**)&found, policy) == SUCCESS)
+	{	/* use existing policy */
+		DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
+					  "refcount", src_ts, dst_ts, policy_dir_names, direction);
+		policy_entry_destroy(policy, this);
+		policy = found;
+	}
+	else
+	{	/* use the new one, if we have no such policy */
+		this->policies->insert_last(this->policies, policy);
+		policy->used_by = linked_list_create();
+	}
+
+	/* cache the assigned IPsec SA */
+	assigned_sa = policy_sa_create(this, direction, type, src, dst, src_ts,
+								   dst_ts, sa);
+
+
+	/* calculate priority based on selector size, small size = high prio */
+	assigned_sa->priority = routed ? PRIO_LOW : PRIO_HIGH;
+	assigned_sa->priority -= policy->src.mask;
+	assigned_sa->priority -= policy->dst.mask;
+	assigned_sa->priority <<= 2; /* make some room for the two flags */
+	assigned_sa->priority += policy->src.net->get_port(policy->src.net) ||
+							 policy->dst.net->get_port(policy->dst.net) ?
+							 0 : 2;
+	assigned_sa->priority += policy->src.proto != IPSEC_PROTO_ANY ? 0 : 1;
+
+	/* insert the SA according to its priority */
+	enumerator = policy->used_by->create_enumerator(policy->used_by);
+	while (enumerator->enumerate(enumerator, (void**)&current_sa))
+	{
+		if (current_sa->priority >= assigned_sa->priority)
+		{
+			break;
+		}
+		update = FALSE;
+	}
+	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
+	enumerator->destroy(enumerator);
+
+	if (!update)
+	{	/* we don't update the policy if the priority is lower than that of the
+		 * currently installed one */
+		this->mutex->unlock(this->mutex);
+		return SUCCESS;
+	}
+
+	DBG2(DBG_KNL, "%s policy %R === %R %N",
+				   found ? "updating" : "adding", src_ts, dst_ts,
+				   policy_dir_names, direction);
+
+	if (add_policy_internal(this, policy, assigned_sa, found) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to %s policy %R === %R %N",
+					   found ? "update" : "add", src_ts, dst_ts,
+					   policy_dir_names, direction);
+		return FAILED;
+	}
 	return SUCCESS;
 }
 
@@ -1853,7 +2110,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 				   policy_dir_names, direction);
 
 	/* create a policy */
-	policy = create_policy_entry(src_ts, dst_ts, direction, 0);
+	policy = create_policy_entry(src_ts, dst_ts, direction);
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
@@ -1863,11 +2120,11 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	{
 		DBG1(DBG_KNL, "querying policy %R === %R %N failed, not found", src_ts,
 					   dst_ts, policy_dir_names, direction);
-		policy_entry_destroy(policy);
+		policy_entry_destroy(policy, this);
 		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
-	policy_entry_destroy(policy);
+	policy_entry_destroy(policy, this);
 	policy = found;
 
 	memset(&request, 0, sizeof(request));
@@ -1946,7 +2203,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct sadb_msg *msg, *out;
 	struct sadb_x_policy *pol;
 	policy_entry_t *policy, *found = NULL;
-	route_entry_t *route;
+	policy_sa_t *mapping;
+	enumerator_t *enumerator;
+	bool is_installed = TRUE;
 	size_t len;
 
 	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
@@ -1958,35 +2217,58 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 				   policy_dir_names, direction);
 
 	/* create a policy */
-	policy = create_policy_entry(src_ts, dst_ts, direction, 0);
+	policy = create_policy_entry(src_ts, dst_ts, direction);
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
 	if (this->policies->find_first(this->policies,
 								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) == SUCCESS)
-	{
-		if (--found->refcount > 0)
-		{	/* is used by more SAs, keep in kernel */
-			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-			policy_entry_destroy(policy);
-			this->mutex->unlock(this->mutex);
-			return SUCCESS;
-		}
-		/* remove if last reference */
-		this->policies->remove(this->policies, found, NULL);
-		policy_entry_destroy(policy);
-		policy = found;
-	}
-	else
+								  (void**)&found, policy) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found", src_ts,
 					   dst_ts, policy_dir_names, direction);
-		policy_entry_destroy(policy);
+		policy_entry_destroy(policy, this);
 		this->mutex->unlock(this->mutex);
 		return NOT_FOUND;
 	}
-	this->mutex->unlock(this->mutex);
+	policy_entry_destroy(policy, this);
+	policy = found;
+
+	/* remove mapping to SA by reqid */
+	enumerator = policy->used_by->create_enumerator(policy->used_by);
+	while (enumerator->enumerate(enumerator, (void**)&mapping))
+	{
+		if (reqid == mapping->sa->cfg.reqid)
+		{
+			policy->used_by->remove_at(policy->used_by, enumerator);
+			break;
+		}
+		is_installed = FALSE;
+	}
+	enumerator->destroy(enumerator);
+
+	if (policy->used_by->get_count(policy->used_by) > 0)
+	{	/* policy is used by more SAs, keep in kernel */
+		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
+		policy_sa_destroy(mapping, &direction, this);
+
+		if (!is_installed)
+		{	/* no need to update as the policy was not installed for this SA */
+			this->mutex->unlock(this->mutex);
+			return SUCCESS;
+		}
+
+		DBG2(DBG_KNL, "updating policy %R === %R %N", src_ts, dst_ts,
+					   policy_dir_names, direction);
+		policy->used_by->get_first(policy->used_by, (void**)&mapping);
+		if (add_policy_internal(this, policy, mapping, TRUE) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to update policy %R === %R %N",
+						   src_ts, dst_ts, policy_dir_names, direction);
+			return FAILED;
+		}
+		return SUCCESS;
+	}
 
 	memset(&request, 0, sizeof(request));
 
@@ -2000,7 +2282,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	pol->sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	pol->sadb_x_policy_len = PFKEY_LEN(sizeof(struct sadb_x_policy));
 	pol->sadb_x_policy_dir = dir2kernel(direction);
-	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
+	pol->sadb_x_policy_type = type2kernel(mapping->type);
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
@@ -2008,9 +2290,23 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
 				 policy->dst.mask);
 
-	route = policy->route;
-	policy->route = NULL;
-	policy_entry_destroy(policy);
+	if (policy->route)
+	{
+		route_entry_t *route = policy->route;
+		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+				route->dst_net, route->prefixlen, route->gateway,
+				route->src_ip, route->if_name) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "error uninstalling route installed with "
+						  "policy %R === %R %N", src_ts, dst_ts,
+						   policy_dir_names, direction);
+		}
+	}
+
+	this->policies->remove(this->policies, found, NULL);
+	policy_sa_destroy(mapping, &direction, this);
+	policy_entry_destroy(policy, this);
+	this->mutex->unlock(this->mutex);
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -2027,19 +2323,6 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return FAILED;
 	}
 	free(out);
-
-	if (route)
-	{
-		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-				route->dst_net, route->prefixlen, route->gateway,
-				route->src_ip, route->if_name) != SUCCESS)
-		{
-			DBG1(DBG_KNL, "error uninstalling route installed with "
-						  "policy %R === %R %N", src_ts, dst_ts,
-						   policy_dir_names, direction);
-		}
-		route_entry_destroy(route);
-	}
 	return SUCCESS;
 }
 
@@ -2138,8 +2421,11 @@ METHOD(kernel_ipsec_t, destroy, void,
 	{
 		close(this->socket_events);
 	}
-	this->policies->destroy_function(this->policies,
-									(void*)policy_entry_destroy);
+	this->policies->invoke_function(this->policies,
+								   (linked_list_invoke_t)policy_entry_destroy,
+									this);
+	this->policies->destroy(this->policies);
+	this->sas->destroy(this->sas);
 	this->mutex->destroy(this->mutex);
 	this->mutex_pfkey->destroy(this->mutex_pfkey);
 	free(this);
@@ -2169,6 +2455,8 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 			},
 		},
 		.policies = linked_list_create(),
+		.sas = hashtable_create((hashtable_hash_t)ipsec_sa_hash,
+								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
