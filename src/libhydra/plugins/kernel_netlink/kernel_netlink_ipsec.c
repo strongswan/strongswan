@@ -491,10 +491,10 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 /**
  * Destroy a policy_sa(_fwd)_t object
  */
-static void policy_sa_destroy(private_kernel_netlink_ipsec_t *this,
-							  policy_dir_t dir, policy_sa_t *policy)
+static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
+							  private_kernel_netlink_ipsec_t *this)
 {
-	if (dir == POLICY_FWD)
+	if (*dir == POLICY_FWD)
 	{
 		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)policy;
 		fwd->src_ts->destroy(fwd->src_ts);
@@ -539,14 +539,9 @@ static void policy_entry_destroy(private_kernel_netlink_ipsec_t *this,
 	}
 	if (policy->used_by)
 	{
-		enumerator_t *enumerator;
-		policy_sa_t *sa;
-		enumerator = policy->used_by->create_enumerator(policy->used_by);
-		while (enumerator->enumerate(enumerator, (void**)&sa))
-		{
-			policy_sa_destroy(this, policy->direction, sa);
-		}
-		enumerator->destroy(enumerator);
+		policy->used_by->invoke_function(policy->used_by,
+										(linked_list_invoke_t)policy_sa_destroy,
+										 &policy->direction, this);
 		policy->used_by->destroy(policy->used_by);
 	}
 	free(policy);
@@ -2411,7 +2406,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		if (reqid == mapping->sa->cfg.reqid)
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
-			policy_sa_destroy(this, direction, mapping);
+			policy_sa_destroy(mapping, &direction, this);
 			break;
 		}
 		is_installed = FALSE;
