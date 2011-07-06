@@ -22,10 +22,8 @@
 #include <threading/thread.h>
 #include <utils/identification.h>
 #include <utils/host.h>
+#include <utils/hashtable.h>
 #include <selectors/traffic_selector.h>
-#ifdef LEAK_DETECTIVE
-#include <utils/leak_detective.h>
-#endif
 
 #define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
 
@@ -40,6 +38,11 @@ struct private_library_t {
 	 * public functions
 	 */
 	library_t public;
+
+	/**
+	 * Hashtable with registered objects (name => object)
+	 */
+	hashtable_t *objects;
 };
 
 /**
@@ -48,7 +51,7 @@ struct private_library_t {
 library_t *lib;
 
 /**
- * Implementation of library_t.destroy
+ * Deinitialize library
  */
 void library_deinit()
 {
@@ -58,6 +61,7 @@ void library_deinit()
 	detailed = lib->settings->get_bool(lib->settings,
 								"libstrongswan.leak_detective.detailed", TRUE);
 
+	this->objects->destroy(this->objects);
 	this->public.scheduler->destroy(this->public.scheduler);
 	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
@@ -86,18 +90,61 @@ void library_deinit()
 	lib = NULL;
 }
 
+METHOD(library_t, get, void*,
+	private_library_t *this, char *name)
+{
+	return this->objects->get(this->objects, name);
+}
+
+METHOD(library_t, set, bool,
+	private_library_t *this, char *name, void *object)
+{
+	if (object)
+	{
+		if (this->objects->get(this->objects, name))
+		{
+			return FALSE;
+		}
+		this->objects->put(this->objects, name, object);
+		return TRUE;
+	}
+	return this->objects->remove(this->objects, name) != NULL;
+}
+
+/**
+ * Hashtable hash function
+ */
+static u_int hash(char *key)
+{
+	return chunk_hash(chunk_create(key, strlen(key)));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals(char *a, char *b)
+{
+	return streq(a, b);
+}
+
 /*
  * see header file
  */
 bool library_init(char *settings)
 {
+	private_library_t *this;
 	printf_hook_t *pfh;
-	private_library_t *this = malloc_thing(private_library_t);
+
+	INIT(this,
+		.public = {
+			.get = _get,
+			.set = _set,
+		},
+	);
 	lib = &this->public;
 
 	threads_init();
 
-	lib->leak_detective = NULL;
 #ifdef LEAK_DETECTIVE
 	lib->leak_detective = leak_detective_create();
 #endif /* LEAK_DETECTIVE */
@@ -126,6 +173,8 @@ bool library_init(char *settings)
 	pfh->add_handler(pfh, 'R', traffic_selector_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 
+	this->objects = hashtable_create((hashtable_hash_t)hash,
+									 (hashtable_equals_t)equals, 4);
 	this->public.settings = settings_create(settings);
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
@@ -136,7 +185,6 @@ bool library_init(char *settings)
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
 	this->public.plugins = plugin_loader_create();
-	this->public.integrity = NULL;
 
 	if (lib->settings->get_bool(lib->settings,
 								"libstrongswan.integrity_test", FALSE))

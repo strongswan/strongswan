@@ -91,6 +91,23 @@ typedef struct library_t library_t;
 struct library_t {
 
 	/**
+	 * Get an arbitrary object registered by name.
+	 *
+	 * @param name		name of the object to get
+	 * @return			object, NULL if none found
+	 */
+	void* (*get)(library_t *this, char *name);
+
+	/**
+	 * (Un-)Register an arbitrary object using the given name.
+	 *
+	 * @param name		name to register object under
+	 * @param object	object to register, NULL to unregister
+	 * @return			TRUE if registered, FALSE if name already taken
+	 */
+	bool (*set)(library_t *this, char *name, void *object);
+
+	/**
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
