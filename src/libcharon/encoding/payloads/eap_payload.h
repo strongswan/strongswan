@@ -95,16 +95,25 @@ struct eap_payload_t {
 /**
  * Creates an empty eap_payload_t object.
  *
- * @return eap_payload_t object
+ * @return 			eap_payload_t object
  */
 eap_payload_t *eap_payload_create(void);
 
 /**
  * Creates an eap_payload_t object with data.
  *
- * @return eap_payload_t object
+ * @param data		data, gets cloned
+ * @return 			eap_payload_t object
  */
 eap_payload_t *eap_payload_create_data(chunk_t data);
+
+/**
+ * Creates an eap_payload_t object with data, owning the data.
+ *
+ * @param data		data on heap, gets owned and freed
+ * @return 			eap_payload_t object
+ */
+eap_payload_t *eap_payload_create_data_own(chunk_t data);
 
 /**
  * Creates an eap_payload_t object with a code.

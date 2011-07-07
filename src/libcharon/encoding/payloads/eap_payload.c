@@ -284,6 +284,18 @@ eap_payload_t *eap_payload_create_data(chunk_t data)
 /*
  * Described in header
  */
+eap_payload_t *eap_payload_create_data_own(chunk_t data)
+{
+	eap_payload_t *this = eap_payload_create();
+
+	this->set_data(this, data);
+	free(data.ptr);
+	return this;
+}
+
+/*
+ * Described in header
+ */
 eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
 {
 	chunk_t data;
