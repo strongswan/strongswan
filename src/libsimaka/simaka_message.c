@@ -198,34 +198,26 @@ struct private_simaka_message_t {
 	chunk_t iv;
 };
 
-/**
- * Implementation of simaka_message_t.is_request
- */
-static bool is_request(private_simaka_message_t *this)
+METHOD(simaka_message_t, is_request, bool,
+	private_simaka_message_t *this)
 {
 	return this->hdr->code == EAP_REQUEST;
 }
 
-/**
- * Implementation of simaka_message_t.get_identifier
- */
-static u_int8_t get_identifier(private_simaka_message_t *this)
+METHOD(simaka_message_t, get_identifier, u_int8_t,
+	private_simaka_message_t *this)
 {
 	return this->hdr->identifier;
 }
 
-/**
- * Implementation of simaka_message_t.get_subtype
- */
-static simaka_subtype_t get_subtype(private_simaka_message_t *this)
+METHOD(simaka_message_t, get_subtype, simaka_subtype_t,
+	private_simaka_message_t *this)
 {
 	return this->hdr->subtype;
 }
 
-/**
- * Implementation of simaka_message_t.get_type
- */
-static eap_type_t get_type(private_simaka_message_t *this)
+METHOD(simaka_message_t, get_type, eap_type_t,
+	private_simaka_message_t *this)
 {
 	return this->hdr->type;
 }
@@ -243,21 +235,16 @@ static bool attr_enum_filter(void *null, attr_t **in, simaka_attribute_t *type,
 	return TRUE;
 }
 
-/**
- * Implementation of simaka_message_t.create_attribute_enumerator
- */
-static enumerator_t* create_attribute_enumerator(private_simaka_message_t *this)
+METHOD(simaka_message_t, create_attribute_enumerator, enumerator_t*,
+	private_simaka_message_t *this)
 {
 	return enumerator_create_filter(
 						this->attributes->create_enumerator(this->attributes),
 						(void*)attr_enum_filter, NULL, NULL);
 }
 
-/**
- * Implementation of simaka_message_t.add_attribute
- */
-static void add_attribute(private_simaka_message_t *this,
-						  simaka_attribute_t type, chunk_t data)
+METHOD(simaka_message_t, add_attribute, void,
+	private_simaka_message_t *this, simaka_attribute_t type, chunk_t data)
 {
 	attr_t *attr;
 
@@ -522,10 +509,8 @@ static bool decrypt(private_simaka_message_t *this)
 	return success;
 }
 
-/**
- * Implementation of simaka_message_t.parse
- */
-static bool parse(private_simaka_message_t *this)
+METHOD(simaka_message_t, parse, bool,
+	private_simaka_message_t *this)
 {
 	chunk_t in;
 
@@ -543,10 +528,8 @@ static bool parse(private_simaka_message_t *this)
 	return decrypt(this);
 }
 
-/**
- * Implementation of simaka_message_t.verify
- */
-static bool verify(private_simaka_message_t *this, chunk_t sigdata)
+METHOD(simaka_message_t, verify, bool,
+	private_simaka_message_t *this, chunk_t sigdata)
 {
 	chunk_t data, backup;
 	signer_t *signer;
@@ -616,10 +599,8 @@ static bool verify(private_simaka_message_t *this, chunk_t sigdata)
 	return TRUE;
 }
 
-/**
- * Implementation of simaka_message_t.generate
- */
-static chunk_t generate(private_simaka_message_t *this, chunk_t sigdata)
+METHOD(simaka_message_t, generate, chunk_t,
+	private_simaka_message_t *this, chunk_t sigdata)
 {
 	/* buffers large enough for messages we generate */
 	char out_buf[1024], encr_buf[512];
@@ -849,10 +830,8 @@ static chunk_t generate(private_simaka_message_t *this, chunk_t sigdata)
 	return chunk_clone(out);
 }
 
-/**
- * Implementation of simaka_message_t.destroy.
- */
-static void destroy(private_simaka_message_t *this)
+METHOD(simaka_message_t, destroy, void,
+	private_simaka_message_t *this)
 {
 	this->attributes->destroy_function(this->attributes, free);
 	free(this->hdr);
@@ -886,27 +865,24 @@ static simaka_message_t *simaka_message_create_data(chunk_t data,
 		return NULL;
 	}
 
-	this = malloc_thing(private_simaka_message_t);
-
-	this->public.is_request = (bool(*)(simaka_message_t*))is_request;
-	this->public.get_identifier = (u_int8_t(*)(simaka_message_t*))get_identifier;
-	this->public.get_type = (eap_type_t(*)(simaka_message_t*))get_type;
-	this->public.get_subtype = (simaka_subtype_t(*)(simaka_message_t*))get_subtype;
-	this->public.create_attribute_enumerator = (enumerator_t*(*)(simaka_message_t*))create_attribute_enumerator;
-	this->public.add_attribute = (void(*)(simaka_message_t*, simaka_attribute_t type, chunk_t data))add_attribute;
-	this->public.parse = (bool(*)(simaka_message_t*))parse;
-	this->public.verify = (bool(*)(simaka_message_t*, chunk_t sigdata))verify;
-	this->public.generate = (chunk_t(*)(simaka_message_t*, chunk_t sigdata))generate;
-	this->public.destroy = (void(*)(simaka_message_t*))destroy;
-
-	this->attributes = linked_list_create();
-	this->encrypted = FALSE;
-	this->crypto = crypto;
-	this->p_bit = TRUE;
-	this->mac = chunk_empty;
-	this->encr = chunk_empty;
-	this->iv = chunk_empty;
-	this->hdr = malloc(data.len);
+	INIT(this,
+		.public = {
+			.is_request = _is_request,
+			.get_identifier = _get_identifier,
+			.get_type = _get_type,
+			.get_subtype = _get_subtype,
+			.create_attribute_enumerator = _create_attribute_enumerator,
+			.add_attribute = _add_attribute,
+			.parse = _parse,
+			.verify = _verify,
+			.generate = _generate,
+			.destroy = _destroy,
+		},
+		.attributes = linked_list_create(),
+		.crypto = crypto,
+		.p_bit = TRUE,
+		.hdr = malloc(data.len),
+	);
 	memcpy(this->hdr, hdr, data.len);
 
 	return &this->public;
