@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2008-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,14 +14,18 @@
  */
 
 /**
- * @defgroup sim_card sim_card
- * @{ @ingroup eap
+ * @defgroup simaka_card simaka_card
+ * @{ @ingroup libsimaka
  */
 
-#ifndef SIM_CARD_H_
-#define SIM_CARD_H_
+#ifndef SIMAKA_CARD_H_
+#define SIMAKA_CARD_H_
 
-typedef struct sim_card_t sim_card_t;
+typedef struct simaka_card_t simaka_card_t;
+
+#include "simaka_manager.h"
+
+#include <utils/identification.h>
 
 /**
  * Interface for a (U)SIM card (used as EAP client).
@@ -31,7 +35,7 @@ typedef struct sim_card_t sim_card_t;
  * An implementation supporting only one of SIM/AKA authentication may
  * implement the other methods with return_false()/return NOT_SUPPORTED/NULL.
  */
-struct sim_card_t {
+struct simaka_card_t {
 
 	/**
 	 * Calculate SRES/KC from a RAND for SIM authentication.
@@ -42,7 +46,7 @@ struct sim_card_t {
 	 * @param kc		KC output buffer, fixed size 8 bytes
 	 * @return			TRUE if SRES/KC calculated, FALSE on error/wrong identity
 	 */
-	bool (*get_triplet)(sim_card_t *this, identification_t *id,
+	bool (*get_triplet)(simaka_card_t *this, identification_t *id,
 						char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
 						char kc[SIM_KC_LEN]);
 
@@ -65,7 +69,7 @@ struct sim_card_t {
 	 * @param res_len	nubmer of bytes written to res buffer
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
-	status_t (*get_quintuplet)(sim_card_t *this, identification_t *id,
+	status_t (*get_quintuplet)(simaka_card_t *this, identification_t *id,
 							   char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
 							   char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 							   char res[AKA_RES_MAX], int *res_len);
@@ -78,7 +82,7 @@ struct sim_card_t {
 	 * @param auts		resynchronization parameter auts
 	 * @return			TRUE if parameter generated successfully
 	 */
-	bool (*resync)(sim_card_t *this, identification_t *id,
+	bool (*resync)(simaka_card_t *this, identification_t *id,
 				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 
 	/**
@@ -87,7 +91,7 @@ struct sim_card_t {
 	 * @param id		permanent identity of the peer
 	 * @param pseudonym	pseudonym identity received from the server
 	 */
-	void (*set_pseudonym)(sim_card_t *this, identification_t *id,
+	void (*set_pseudonym)(simaka_card_t *this, identification_t *id,
 						  identification_t *pseudonym);
 
 	/**
@@ -96,7 +100,7 @@ struct sim_card_t {
 	 * @param id		permanent identity of the peer
 	 * @return			associated pseudonym identity, NULL if none stored
 	 */
-	identification_t* (*get_pseudonym)(sim_card_t *this, identification_t *id);
+	identification_t* (*get_pseudonym)(simaka_card_t *this, identification_t *id);
 
 	/**
 	 * Store parameters to use for the next fast reauthentication.
@@ -106,7 +110,7 @@ struct sim_card_t {
 	 * @param mk		master key MK to store for reauthentication
 	 * @param counter	counter value to store, host order
 	 */
-	void (*set_reauth)(sim_card_t *this, identification_t *id,
+	void (*set_reauth)(simaka_card_t *this, identification_t *id,
 					   identification_t *next, char mk[HASH_SIZE_SHA1],
 					   u_int16_t counter);
 
@@ -118,8 +122,8 @@ struct sim_card_t {
 	 * @param counter	pointer receiving counter value, in host order
 	 * @return			fast reauthentication identity, NULL if not found
 	 */
-	identification_t* (*get_reauth)(sim_card_t *this, identification_t *id,
+	identification_t* (*get_reauth)(simaka_card_t *this, identification_t *id,
 									char mk[HASH_SIZE_SHA1], u_int16_t *counter);
 };
 
-#endif /** SIM_CARD_H_ @}*/
+#endif /** SIMAKA_CARD_H_ @}*/

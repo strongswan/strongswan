@@ -58,7 +58,7 @@ static bool equals(identification_t *key1, identification_t *key2)
 }
 
 /**
- * Implementation of sim_card_t.get_pseudonym
+ * Implementation of simaka_card_t.get_pseudonym
  */
 static identification_t *get_pseudonym(private_eap_simaka_pseudonym_card_t *this,
 									   identification_t *id)
@@ -74,7 +74,7 @@ static identification_t *get_pseudonym(private_eap_simaka_pseudonym_card_t *this
 }
 
 /**
- * Implementation of sim_card_t.set_pseudonym
+ * Implementation of simaka_card_t.set_pseudonym
  */
 static void set_pseudonym(private_eap_simaka_pseudonym_card_t *this,
 						  identification_t *id, identification_t *pseudonym)
@@ -93,7 +93,7 @@ static void set_pseudonym(private_eap_simaka_pseudonym_card_t *this,
 }
 
 /**
- * Implementation of sim_card_t.get_quintuplet
+ * Implementation of simaka_card_t.get_quintuplet
  */
 static status_t get_quintuplet()
 {
@@ -137,13 +137,13 @@ eap_simaka_pseudonym_card_t *eap_simaka_pseudonym_card_create()
 
 	this = malloc_thing(private_eap_simaka_pseudonym_card_t);
 
-	this->public.card.get_triplet = (bool(*)(sim_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
-	this->public.card.get_quintuplet = (status_t(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))get_quintuplet;
-	this->public.card.resync = (bool(*)(sim_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.card.get_pseudonym = (identification_t*(*)(sim_card_t*, identification_t *perm))get_pseudonym;
-	this->public.card.set_pseudonym = (void(*)(sim_card_t*, identification_t *id, identification_t *pseudonym))set_pseudonym;
-	this->public.card.get_reauth = (identification_t*(*)(sim_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
-	this->public.card.set_reauth = (void(*)(sim_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
+	this->public.card.get_triplet = (bool(*)(simaka_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
+	this->public.card.get_quintuplet = (status_t(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))get_quintuplet;
+	this->public.card.resync = (bool(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
+	this->public.card.get_pseudonym = (identification_t*(*)(simaka_card_t*, identification_t *perm))get_pseudonym;
+	this->public.card.set_pseudonym = (void(*)(simaka_card_t*, identification_t *id, identification_t *pseudonym))set_pseudonym;
+	this->public.card.get_reauth = (identification_t*(*)(simaka_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
+	this->public.card.set_reauth = (void(*)(simaka_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
 	this->public.destroy = (void(*)(eap_simaka_pseudonym_card_t*))destroy;
 
 	this->pseudonym = hashtable_create((void*)hash, (void*)equals, 0);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2008-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,22 +14,18 @@
  */
 
 /**
- * @defgroup sim_manager sim_manager
- * @{ @ingroup eap
+ * @defgroup simaka_manager simaka_manager
+ * @{ @ingroup libsimaka
  */
 
-#ifndef SIM_MANAGER_H_
-#define SIM_MANAGER_H_
+#ifndef SIMAKA_MANAGER_H_
+#define SIMAKA_MANAGER_H_
 
 #include <crypto/hashers/hasher.h>
 #include <utils/identification.h>
 #include <utils/enumerator.h>
-#include <sa/authenticators/eap/eap_method.h>
 
-typedef struct sim_manager_t sim_manager_t;
-
-/** implemented in libsimaka, but we need it for the message hook */
-typedef struct simaka_message_t simaka_message_t;
+typedef struct simaka_manager_t simaka_manager_t;
 
 #define SIM_RAND_LEN	16
 #define SIM_SRES_LEN	 4
@@ -42,28 +38,28 @@ typedef struct simaka_message_t simaka_message_t;
 #define AKA_AUTN_LEN	16
 #define AKA_AUTS_LEN	14
 
-#include <sa/authenticators/eap/sim_card.h>
-#include <sa/authenticators/eap/sim_provider.h>
-#include <sa/authenticators/eap/sim_hooks.h>
+#include "simaka_card.h"
+#include "simaka_provider.h"
+#include "simaka_hooks.h"
 
 /**
  * The SIM manager handles multiple (U)SIM cards/providers and hooks.
  */
-struct sim_manager_t {
+struct simaka_manager_t {
 
 	/**
 	 * Register a SIM card (client) at the manager.
 	 *
 	 * @param card		sim card to register
 	 */
-	void (*add_card)(sim_manager_t *this, sim_card_t *card);
+	void (*add_card)(simaka_manager_t *this, simaka_card_t *card);
 
 	/**
 	 * Unregister a previously registered card from the manager.
 	 *
 	 * @param card		sim card to unregister
 	 */
-	void (*remove_card)(sim_manager_t *this, sim_card_t *card);
+	void (*remove_card)(simaka_manager_t *this, simaka_card_t *card);
 
 	/**
 	 * Calculate SIM triplets on one of the registered SIM cards.
@@ -74,7 +70,7 @@ struct sim_manager_t {
 	 * @param kc		KC output buffer, fixed size 8 bytes
 	 * @return			TRUE if calculated, FALSE if no matching card found
 	 */
-	bool (*card_get_triplet)(sim_manager_t *this, identification_t *id,
+	bool (*card_get_triplet)(simaka_manager_t *this, identification_t *id,
 							 char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
 							 char kc[SIM_KC_LEN]);
 
@@ -90,7 +86,7 @@ struct sim_manager_t {
 	 * @param res_len	nubmer of bytes written to res buffer
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
-	status_t (*card_get_quintuplet)(sim_manager_t *this, identification_t *id,
+	status_t (*card_get_quintuplet)(simaka_manager_t *this, identification_t *id,
 								char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN],
 								char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 								char res[AKA_RES_MAX], int *res_len);
@@ -103,7 +99,7 @@ struct sim_manager_t {
 	 * @param auts		resynchronization parameter auts
 	 * @return			TRUE if calculated, FALSE if no matcing card found
 	 */
-	bool (*card_resync)(sim_manager_t *this, identification_t *id,
+	bool (*card_resync)(simaka_manager_t *this, identification_t *id,
 						char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 
 	/**
@@ -112,7 +108,7 @@ struct sim_manager_t {
 	 * @param id		permanent identity of the peer
 	 * @param pseudonym	pseudonym identity received from the server
 	 */
-	void (*card_set_pseudonym)(sim_manager_t *this, identification_t *id,
+	void (*card_set_pseudonym)(simaka_manager_t *this, identification_t *id,
 							   identification_t *pseudonym);
 
 	/**
@@ -121,7 +117,7 @@ struct sim_manager_t {
 	 * @param id		permanent identity of the peer
 	 * @return			associated pseudonym identity, NULL if none found
 	 */
-	identification_t* (*card_get_pseudonym)(sim_manager_t *this,
+	identification_t* (*card_get_pseudonym)(simaka_manager_t *this,
 											identification_t *id);
 
 	/**
@@ -132,7 +128,7 @@ struct sim_manager_t {
 	 * @param mk		master key MK to store for reauthentication
 	 * @param counter	counter value to store, host order
 	 */
-	void (*card_set_reauth)(sim_manager_t *this, identification_t *id,
+	void (*card_set_reauth)(simaka_manager_t *this, identification_t *id,
 							identification_t *next, char mk[HASH_SIZE_SHA1],
 							u_int16_t counter);
 
@@ -144,7 +140,7 @@ struct sim_manager_t {
 	 * @param counter	pointer receiving counter value, in host order
 	 * @return			fast reauthentication identity, NULL if none found
 	 */
-	identification_t* (*card_get_reauth)(sim_manager_t *this,
+	identification_t* (*card_get_reauth)(simaka_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1],
 								u_int16_t *counter);
 
@@ -153,14 +149,14 @@ struct sim_manager_t {
 	 *
 	 * @param card		sim card to register
 	 */
-	void (*add_provider)(sim_manager_t *this, sim_provider_t *provider);
+	void (*add_provider)(simaka_manager_t *this, simaka_provider_t *provider);
 
 	/**
 	 * Unregister a previously registered provider from the manager.
 	 *
 	 * @param card		sim card to unregister
 	 */
-	void (*remove_provider)(sim_manager_t *this, sim_provider_t *provider);
+	void (*remove_provider)(simaka_manager_t *this, simaka_provider_t *provider);
 
 	/**
 	 * Get a SIM triplet from one of the registered providers.
@@ -171,7 +167,7 @@ struct sim_manager_t {
 	 * @param kc		KC output buffer, fixed size 8 bytes
 	 * @return			TRUE if triplet received, FALSE if no match found
 	 */
-	bool (*provider_get_triplet)(sim_manager_t *this, identification_t *id,
+	bool (*provider_get_triplet)(simaka_manager_t *this, identification_t *id,
 							char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
 							char kc[SIM_KC_LEN]);
 
@@ -186,7 +182,7 @@ struct sim_manager_t {
 	 * @param autn		authentication token autn
 	 * @return			TRUE if quintuplet received, FALSE if no match found
 	 */
-	bool (*provider_get_quintuplet)(sim_manager_t *this, identification_t *id,
+	bool (*provider_get_quintuplet)(simaka_manager_t *this, identification_t *id,
 							char rand[AKA_RAND_LEN],
 							char xres[AKA_RES_MAX], int *xres_len,
 							char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
@@ -200,7 +196,7 @@ struct sim_manager_t {
 	 * @param auts		synchronization parameter auts
 	 * @return			TRUE if resynchronized, FALSE if not handled
 	 */
-	bool (*provider_resync)(sim_manager_t *this, identification_t *id,
+	bool (*provider_resync)(simaka_manager_t *this, identification_t *id,
 							char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);
 
 	/**
@@ -209,7 +205,7 @@ struct sim_manager_t {
 	 * @param id		pseudonym identity candidate
 	 * @return			permanent identity, NULL if id not a pseudonym
 	 */
-	identification_t* (*provider_is_pseudonym)(sim_manager_t *this,
+	identification_t* (*provider_is_pseudonym)(simaka_manager_t *this,
 											   identification_t *id);
 
 	/**
@@ -218,7 +214,7 @@ struct sim_manager_t {
 	 * @param id		permanent identity to generate a pseudonym for
 	 * @return			generated pseudonym, NULL to not use a pseudonym identity
 	 */
-	identification_t* (*provider_gen_pseudonym)(sim_manager_t *this,
+	identification_t* (*provider_gen_pseudonym)(simaka_manager_t *this,
 												identification_t *id);
 
 	/**
@@ -229,7 +225,7 @@ struct sim_manager_t {
 	 * @param counter	pointer receiving current counter value, host order
 	 * @return			permanent identity, NULL if not a known reauth identity
 	 */
-	identification_t* (*provider_is_reauth)(sim_manager_t *this,
+	identification_t* (*provider_is_reauth)(simaka_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1],
 								u_int16_t *counter);
 
@@ -240,7 +236,7 @@ struct sim_manager_t {
 	 * @param mk		master key to store along with generated identity
 	 * @return			fast reauthentication identity, NULL to not use reauth
 	 */
-	identification_t* (*provider_gen_reauth)(sim_manager_t *this,
+	identification_t* (*provider_gen_reauth)(simaka_manager_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1]);
 
 	/**
@@ -248,14 +244,14 @@ struct sim_manager_t {
 	 *
 	 * @param hooks		hook interface implementation to register
 	 */
-	void (*add_hooks)(sim_manager_t *this, sim_hooks_t *hooks);
+	void (*add_hooks)(simaka_manager_t *this, simaka_hooks_t *hooks);
 
 	/**
 	 * Unregister a set of hooks from the manager.
 	 *
 	 * @param hooks		hook interface implementation to unregister
 	 */
-	void (*remove_hooks)(sim_manager_t *this, sim_hooks_t *hooks);
+	void (*remove_hooks)(simaka_manager_t *this, simaka_hooks_t *hooks);
 
 	/**
 	 * Invoke SIM/AKA message hook.
@@ -264,7 +260,7 @@ struct sim_manager_t {
 	 * @param inbound	TRUE for incoming messages, FALSE for outgoing
 	 * @param decrypted	TRUE if AT_ENCR_DATA has been decrypted
 	 */
-	void (*message_hook)(sim_manager_t *this, simaka_message_t *message,
+	void (*message_hook)(simaka_manager_t *this, simaka_message_t *message,
 						 bool inbound, bool decrypted);
 
 	/**
@@ -273,19 +269,19 @@ struct sim_manager_t {
 	 * @param k_encr	SIM/AKA encryption key k_encr
 	 * @param k_auth	SIM/AKA authentication key k_auth
 	 */
-	void (*key_hook)(sim_manager_t *this, chunk_t k_encr, chunk_t k_auth);
+	void (*key_hook)(simaka_manager_t *this, chunk_t k_encr, chunk_t k_auth);
 
 	/**
 	 * Destroy a manager instance.
 	 */
-	void (*destroy)(sim_manager_t *this);
+	void (*destroy)(simaka_manager_t *this);
 };
 
 /**
- * Create an SIM manager to handle multiple (U)SIM cards/providers.
+ * Create an SIM/AKA manager to handle multiple (U)SIM cards/providers.
  *
- * @return			sim_t object
+ * @return			simaka_t object
  */
-sim_manager_t *sim_manager_create();
+simaka_manager_t *simaka_manager_create();
 
-#endif /** SIM_MANAGER_H_ @}*/
+#endif /** SIMAKA_MANAGER_H_ @}*/

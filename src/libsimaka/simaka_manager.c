@@ -13,23 +13,23 @@
  * for more details.
  */
 
-#include "sim_manager.h"
+#include "simaka_manager.h"
 
-#include <daemon.h>
+#include <debug.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
-typedef struct private_sim_manager_t private_sim_manager_t;
+typedef struct private_simaka_manager_t private_simaka_manager_t;
 
 /**
- * Private data of an sim_manager_t object.
+ * Private data of an simaka_manager_t object.
  */
-struct private_sim_manager_t {
+struct private_simaka_manager_t {
 
 	/**
-	 * Public sim_manager_t interface.
+	 * Public simaka_manager_t interface.
 	 */
-	sim_manager_t public;
+	simaka_manager_t public;
 
 	/**
 	 * list of added cards
@@ -52,28 +52,28 @@ struct private_sim_manager_t {
 	rwlock_t *lock;
 };
 
-METHOD(sim_manager_t, add_card, void,
-	private_sim_manager_t *this, sim_card_t *card)
+METHOD(simaka_manager_t, add_card, void,
+	private_simaka_manager_t *this, simaka_card_t *card)
 {
 	this->lock->write_lock(this->lock);
 	this->cards->insert_last(this->cards, card);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, remove_card, void,
-	private_sim_manager_t *this, sim_card_t *card)
+METHOD(simaka_manager_t, remove_card, void,
+	private_simaka_manager_t *this, simaka_card_t *card)
 {
 	this->lock->write_lock(this->lock);
 	this->cards->remove(this->cards, card, NULL);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, card_get_triplet, bool,
-	private_sim_manager_t *this, identification_t *id,
+METHOD(simaka_manager_t, card_get_triplet, bool,
+	private_simaka_manager_t *this, identification_t *id,
 	char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 	int tried = 0;
 
 	this->lock->read_lock(this->lock);
@@ -90,18 +90,18 @@ METHOD(sim_manager_t, card_get_triplet, bool,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	DBG1(DBG_IKE, "tried %d SIM cards, but none has triplets for '%Y'",
+	DBG1(DBG_LIB, "tried %d SIM cards, but none has triplets for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-METHOD(sim_manager_t, card_get_quintuplet, status_t,
-	private_sim_manager_t *this, identification_t *id, char rand[AKA_RAND_LEN],
+METHOD(simaka_manager_t, card_get_quintuplet, status_t,
+	private_simaka_manager_t *this, identification_t *id, char rand[AKA_RAND_LEN],
 	char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
 	char res[AKA_RES_MAX], int *res_len)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 	status_t status = NOT_FOUND;
 	int tried = 0;
 
@@ -126,17 +126,17 @@ METHOD(sim_manager_t, card_get_quintuplet, status_t,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	DBG1(DBG_IKE, "tried %d SIM cards, but none has quintuplets for '%Y'",
+	DBG1(DBG_LIB, "tried %d SIM cards, but none has quintuplets for '%Y'",
 		 tried, id);
 	return status;
 }
 
-METHOD(sim_manager_t, card_resync, bool,
-	private_sim_manager_t *this, identification_t *id,
+METHOD(simaka_manager_t, card_resync, bool,
+	private_simaka_manager_t *this, identification_t *id,
 	char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
@@ -154,14 +154,14 @@ METHOD(sim_manager_t, card_resync, bool,
 	return FALSE;
 }
 
-METHOD(sim_manager_t, card_set_pseudonym, void,
-	private_sim_manager_t *this, identification_t *id,
+METHOD(simaka_manager_t, card_set_pseudonym, void,
+	private_simaka_manager_t *this, identification_t *id,
 	identification_t *pseudonym)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 
-	DBG1(DBG_IKE, "storing pseudonym '%Y' for '%Y'", pseudonym, id);
+	DBG1(DBG_LIB, "storing pseudonym '%Y' for '%Y'", pseudonym, id);
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
@@ -173,11 +173,11 @@ METHOD(sim_manager_t, card_set_pseudonym, void,
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, card_get_pseudonym, identification_t*,
-	private_sim_manager_t *this, identification_t *id)
+METHOD(simaka_manager_t, card_get_pseudonym, identification_t*,
+	private_simaka_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 	identification_t *pseudonym = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -187,7 +187,7 @@ METHOD(sim_manager_t, card_get_pseudonym, identification_t*,
 		pseudonym = card->get_pseudonym(card, id);
 		if (pseudonym)
 		{
-			DBG1(DBG_IKE, "using stored pseudonym identity '%Y' "
+			DBG1(DBG_LIB, "using stored pseudonym identity '%Y' "
 				 "instead of '%Y'", pseudonym, id);
 			break;
 		}
@@ -197,14 +197,14 @@ METHOD(sim_manager_t, card_get_pseudonym, identification_t*,
 	return pseudonym;
 }
 
-METHOD(sim_manager_t, card_set_reauth, void,
-	private_sim_manager_t *this, identification_t *id, identification_t *next,
+METHOD(simaka_manager_t, card_set_reauth, void,
+	private_simaka_manager_t *this, identification_t *id, identification_t *next,
 	char mk[HASH_SIZE_SHA1], u_int16_t counter)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 
-	DBG1(DBG_IKE, "storing next reauthentication identity '%Y' for '%Y'",
+	DBG1(DBG_LIB, "storing next reauthentication identity '%Y' for '%Y'",
 		 next, id);
 
 	this->lock->read_lock(this->lock);
@@ -217,12 +217,12 @@ METHOD(sim_manager_t, card_set_reauth, void,
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, card_get_reauth, identification_t*,
-	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
+METHOD(simaka_manager_t, card_get_reauth, identification_t*,
+	private_simaka_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
 	u_int16_t *counter)
 {
 	enumerator_t *enumerator;
-	sim_card_t *card;
+	simaka_card_t *card;
 	identification_t *reauth = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -232,7 +232,7 @@ METHOD(sim_manager_t, card_get_reauth, identification_t*,
 		reauth = card->get_reauth(card, id, mk, counter);
 		if (reauth)
 		{
-			DBG1(DBG_IKE, "using stored reauthentication identity '%Y' "
+			DBG1(DBG_LIB, "using stored reauthentication identity '%Y' "
 				 "instead of '%Y'", reauth, id);
 			break;
 		}
@@ -242,28 +242,28 @@ METHOD(sim_manager_t, card_get_reauth, identification_t*,
 	return reauth;
 }
 
-METHOD(sim_manager_t, add_provider, void,
-	private_sim_manager_t *this, sim_provider_t *provider)
+METHOD(simaka_manager_t, add_provider, void,
+	private_simaka_manager_t *this, simaka_provider_t *provider)
 {
 	this->lock->write_lock(this->lock);
 	this->providers->insert_last(this->providers, provider);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, remove_provider, void,
-	private_sim_manager_t *this, sim_provider_t *provider)
+METHOD(simaka_manager_t, remove_provider, void,
+	private_simaka_manager_t *this, simaka_provider_t *provider)
 {
 	this->lock->write_lock(this->lock);
 	this->providers->remove(this->providers, provider, NULL);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, provider_get_triplet, bool,
-	private_sim_manager_t *this, identification_t *id, char rand[SIM_RAND_LEN],
-	char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
+METHOD(simaka_manager_t, provider_get_triplet, bool,
+	private_simaka_manager_t *this, identification_t *id,
+	char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	int tried = 0;
 
 	this->lock->read_lock(this->lock);
@@ -280,18 +280,18 @@ METHOD(sim_manager_t, provider_get_triplet, bool,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
+	DBG1(DBG_LIB, "tried %d SIM providers, but none had a triplet for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-METHOD(sim_manager_t, provider_get_quintuplet, bool,
-	private_sim_manager_t *this, identification_t *id, char rand[AKA_RAND_LEN],
-	char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN],
-	char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN])
+METHOD(simaka_manager_t, provider_get_quintuplet, bool,
+	private_simaka_manager_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len,
+	char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN])
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	int tried = 0;
 
 	this->lock->read_lock(this->lock);
@@ -308,17 +308,17 @@ METHOD(sim_manager_t, provider_get_quintuplet, bool,
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	DBG1(DBG_IKE, "tried %d SIM providers, but none had a quintuplet for '%Y'",
+	DBG1(DBG_LIB, "tried %d SIM providers, but none had a quintuplet for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-METHOD(sim_manager_t, provider_resync, bool,
-	private_sim_manager_t *this, identification_t *id,
+METHOD(simaka_manager_t, provider_resync, bool,
+	private_simaka_manager_t *this, identification_t *id,
 	char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
@@ -336,11 +336,11 @@ METHOD(sim_manager_t, provider_resync, bool,
 	return FALSE;
 }
 
-METHOD(sim_manager_t, provider_is_pseudonym, identification_t*,
-	private_sim_manager_t *this, identification_t *id)
+METHOD(simaka_manager_t, provider_is_pseudonym, identification_t*,
+	private_simaka_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	identification_t *permanent = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -350,7 +350,7 @@ METHOD(sim_manager_t, provider_is_pseudonym, identification_t*,
 		permanent = provider->is_pseudonym(provider, id);
 		if (permanent)
 		{
-			DBG1(DBG_IKE, "received pseudonym identity '%Y' "
+			DBG1(DBG_LIB, "received pseudonym identity '%Y' "
 				 "mapping to '%Y'", id, permanent);
 			break;
 		}
@@ -360,11 +360,11 @@ METHOD(sim_manager_t, provider_is_pseudonym, identification_t*,
 	return permanent;
 }
 
-METHOD(sim_manager_t, provider_gen_pseudonym, identification_t*,
-	private_sim_manager_t *this, identification_t *id)
+METHOD(simaka_manager_t, provider_gen_pseudonym, identification_t*,
+	private_simaka_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	identification_t *pseudonym = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -374,7 +374,7 @@ METHOD(sim_manager_t, provider_gen_pseudonym, identification_t*,
 		pseudonym = provider->gen_pseudonym(provider, id);
 		if (pseudonym)
 		{
-			DBG1(DBG_IKE, "proposing new pseudonym '%Y'", pseudonym);
+			DBG1(DBG_LIB, "proposing new pseudonym '%Y'", pseudonym);
 			break;
 		}
 	}
@@ -383,12 +383,12 @@ METHOD(sim_manager_t, provider_gen_pseudonym, identification_t*,
 	return pseudonym;
 }
 
-METHOD(sim_manager_t, provider_is_reauth, identification_t*,
-	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
+METHOD(simaka_manager_t, provider_is_reauth, identification_t*,
+	private_simaka_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
 	u_int16_t *counter)
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	identification_t *permanent = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -398,7 +398,7 @@ METHOD(sim_manager_t, provider_is_reauth, identification_t*,
 		permanent = provider->is_reauth(provider, id, mk, counter);
 		if (permanent)
 		{
-			DBG1(DBG_IKE, "received reauthentication identity '%Y' "
+			DBG1(DBG_LIB, "received reauthentication identity '%Y' "
 				 "mapping to '%Y'", id, permanent);
 			break;
 		}
@@ -408,11 +408,11 @@ METHOD(sim_manager_t, provider_is_reauth, identification_t*,
 	return permanent;
 }
 
-METHOD(sim_manager_t, provider_gen_reauth, identification_t*,
-	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1])
+METHOD(simaka_manager_t, provider_gen_reauth, identification_t*,
+	private_simaka_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1])
 {
 	enumerator_t *enumerator;
-	sim_provider_t *provider;
+	simaka_provider_t *provider;
 	identification_t *reauth = NULL;
 
 	this->lock->read_lock(this->lock);
@@ -422,7 +422,7 @@ METHOD(sim_manager_t, provider_gen_reauth, identification_t*,
 		reauth = provider->gen_reauth(provider, id, mk);
 		if (reauth)
 		{
-			DBG1(DBG_IKE, "proposing new reauthentication identity '%Y'", reauth);
+			DBG1(DBG_LIB, "proposing new reauthentication identity '%Y'", reauth);
 			break;
 		}
 	}
@@ -431,28 +431,28 @@ METHOD(sim_manager_t, provider_gen_reauth, identification_t*,
 	return reauth;
 }
 
-METHOD(sim_manager_t, add_hooks, void,
-	private_sim_manager_t *this, sim_hooks_t *hooks)
+METHOD(simaka_manager_t, add_hooks, void,
+	private_simaka_manager_t *this, simaka_hooks_t *hooks)
 {
 	this->lock->write_lock(this->lock);
 	this->hooks->insert_last(this->hooks, hooks);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, remove_hooks, void,
-	private_sim_manager_t *this, sim_hooks_t *hooks)
+METHOD(simaka_manager_t, remove_hooks, void,
+	private_simaka_manager_t *this, simaka_hooks_t *hooks)
 {
 	this->lock->write_lock(this->lock);
 	this->hooks->remove(this->hooks, hooks, NULL);
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, message_hook, void,
-	private_sim_manager_t *this, simaka_message_t *message,
+METHOD(simaka_manager_t, message_hook, void,
+	private_simaka_manager_t *this, simaka_message_t *message,
 	bool inbound, bool decrypted)
 {
 	enumerator_t *enumerator;
-	sim_hooks_t *hooks;
+	simaka_hooks_t *hooks;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
@@ -464,11 +464,11 @@ METHOD(sim_manager_t, message_hook, void,
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, key_hook, void,
-	private_sim_manager_t *this, chunk_t k_encr, chunk_t k_auth)
+METHOD(simaka_manager_t, key_hook, void,
+	private_simaka_manager_t *this, chunk_t k_encr, chunk_t k_auth)
 {
 	enumerator_t *enumerator;
-	sim_hooks_t *hooks;
+	simaka_hooks_t *hooks;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
@@ -480,8 +480,8 @@ METHOD(sim_manager_t, key_hook, void,
 	this->lock->unlock(this->lock);
 }
 
-METHOD(sim_manager_t, destroy, void,
-	private_sim_manager_t *this)
+METHOD(simaka_manager_t, destroy, void,
+	private_simaka_manager_t *this)
 {
 	this->cards->destroy(this->cards);
 	this->providers->destroy(this->providers);
@@ -493,9 +493,9 @@ METHOD(sim_manager_t, destroy, void,
 /**
  * See header
  */
-sim_manager_t *sim_manager_create()
+simaka_manager_t *simaka_manager_create()
 {
-	private_sim_manager_t *this;
+	private_simaka_manager_t *this;
 
 	INIT(this,
 		.public = {
@@ -531,4 +531,3 @@ sim_manager_t *sim_manager_create()
 
 	return &this->public;
 }
-

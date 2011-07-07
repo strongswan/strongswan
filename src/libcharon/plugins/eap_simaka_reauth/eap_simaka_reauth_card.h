@@ -21,7 +21,7 @@
 #ifndef EAP_SIMAKA_REAUTH_CARD_H_
 #define EAP_SIMAKA_REAUTH_CARD_H_
 
-#include <sa/authenticators/eap/sim_manager.h>
+#include <simaka_provider.h>
 
 typedef struct eap_simaka_reauth_card_t eap_simaka_reauth_card_t;
 
@@ -31,9 +31,9 @@ typedef struct eap_simaka_reauth_card_t eap_simaka_reauth_card_t;
 struct eap_simaka_reauth_card_t {
 
 	/**
-	 * Implements sim_card_t interface
+	 * Implements simaka_card_t interface
 	 */
-	sim_card_t card;
+	simaka_card_t card;
 
 	/**
 	 * Destroy a eap_simaka_reauth_card_t.

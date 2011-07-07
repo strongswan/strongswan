@@ -19,6 +19,7 @@
 
 #include <simaka_message.h>
 #include <simaka_crypto.h>
+#include <simaka_manager.h>
 
 /* number of triplets for one authentication */
 #define TRIPLET_COUNT 3
@@ -37,6 +38,11 @@ struct private_eap_sim_server_t {
 	 * Public authenticator_t interface.
 	 */
 	eap_sim_server_t public;
+
+	/**
+	 * SIM backend manager
+	 */
+	simaka_manager_t *mgr;
 
 	/**
 	 * permanent ID of peer
@@ -127,7 +133,7 @@ METHOD(eap_method_t, initiate, status_t,
 	{
 		message->add_attribute(message, AT_PERMANENT_ID_REQ, chunk_empty);
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	this->pending = SIM_START;
@@ -163,14 +169,14 @@ static status_t reauthenticate(private_eap_sim_server_t *this,
 									SIM_REAUTHENTICATION, this->crypto);
 	message->add_attribute(message, AT_COUNTER, this->counter);
 	message->add_attribute(message, AT_NONCE_S, this->nonce);
-	next = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk);
+	next = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk);
 	if (next)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
 							   next->get_encoding(next));
 		next->destroy(next);
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	this->pending = SIM_REAUTHENTICATION;
@@ -298,8 +304,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 			char mk[HASH_SIZE_SHA1];
 			u_int16_t counter;
 
-			permanent = charon->sim->provider_is_reauth(charon->sim, id,
-														mk, &counter);
+			permanent = this->mgr->provider_is_reauth(this->mgr, id,
+													  mk, &counter);
 			if (permanent)
 			{
 				this->permanent->destroy(this->permanent);
@@ -315,7 +321,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 		}
 		if (this->use_pseudonym)
 		{
-			permanent = charon->sim->provider_is_pseudonym(charon->sim, id);
+			permanent = this->mgr->provider_is_pseudonym(this->mgr, id);
 			if (permanent)
 			{
 				this->permanent->destroy(this->permanent);
@@ -348,8 +354,8 @@ static status_t process_start(private_eap_sim_server_t *this,
 	rands.len = kcs.len = sreses.len = 0;
 	for (i = 0; i < TRIPLET_COUNT; i++)
 	{
-		if (!charon->sim->provider_get_triplet(charon->sim, this->permanent,
-											   rand.ptr, sres.ptr, kc.ptr))
+		if (!this->mgr->provider_get_triplet(this->mgr, this->permanent,
+											 rand.ptr, sres.ptr, kc.ptr))
 		{
 			if (this->use_pseudonym)
 			{
@@ -386,7 +392,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
-	id = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk.ptr);
+	id = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk.ptr);
 	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -395,7 +401,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 	}
 	else
 	{
-		id = charon->sim->provider_gen_pseudonym(charon->sim, this->permanent);
+		id = this->mgr->provider_gen_pseudonym(this->mgr, this->permanent);
 		if (id)
 		{
 			message->add_attribute(message, AT_NEXT_PSEUDONYM,
@@ -403,7 +409,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 			id->destroy(id);
 		}
 	}
-	*out = message->generate(message, nonce);
+	*out = eap_payload_create_data_own(message->generate(message, nonce));
 	message->destroy(message);
 
 	free(mk.ptr);
@@ -483,7 +489,7 @@ METHOD(eap_method_t, process, status_t,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in, this->crypto);
+	message = simaka_message_create_from_payload(in->get_data(in), this->crypto);
 	if (!message)
 	{
 		return FAILED;
@@ -588,7 +594,8 @@ eap_sim_server_t *eap_sim_server_create(identification_t *server,
 				.destroy = _destroy,
 			},
 		},
-		.crypto = simaka_crypto_create(),
+		.crypto = simaka_crypto_create(EAP_SIM),
+		.mgr = lib->get(lib, "sim-manager"),
 	);
 
 	if (!this->crypto)

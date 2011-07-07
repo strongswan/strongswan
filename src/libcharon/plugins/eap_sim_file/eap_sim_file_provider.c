@@ -35,7 +35,7 @@ struct private_eap_sim_file_provider_t {
 	eap_sim_file_triplets_t *triplets;
 };
 
-METHOD(sim_provider_t, get_triplet, bool,
+METHOD(simaka_provider_t, get_triplet, bool,
 	 private_eap_sim_file_provider_t *this, identification_t *id,
 	 char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {

@@ -23,7 +23,7 @@
 
 #include "eap_aka_3gpp2_functions.h"
 
-#include <sa/authenticators/eap/sim_manager.h>
+#include <simaka_card.h>
 
 typedef struct eap_aka_3gpp2_card_t eap_aka_3gpp2_card_t;
 
@@ -33,9 +33,9 @@ typedef struct eap_aka_3gpp2_card_t eap_aka_3gpp2_card_t;
 struct eap_aka_3gpp2_card_t {
 
 	/**
-	 * Implements sim_card_t interface
+	 * Implements simaka_card_t interface
 	 */
-	sim_card_t card;
+	simaka_card_t card;
 
 	/**
 	 * Destroy a eap_aka_3gpp2_card_t.

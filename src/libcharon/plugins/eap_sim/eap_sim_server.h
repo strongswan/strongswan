@@ -27,9 +27,6 @@ typedef struct eap_sim_server_t eap_sim_server_t;
 
 /**
  * EAP-SIM server implementation.
- *
- * This EAP-SIM module uses sim_provider_t implementations for triplet
- * calculation, found via the eap_sim_manager_t.
  */
 struct eap_sim_server_t {
 

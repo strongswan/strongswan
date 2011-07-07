@@ -21,7 +21,7 @@
 #ifndef EAP_SIM_FILE_TRIPLETS_H_
 #define EAP_SIM_FILE_TRIPLETS_H_
 
-#include <sa/authenticators/eap/sim_manager.h>
+#include <utils/enumerator.h>
 
 typedef struct eap_sim_file_triplets_t eap_sim_file_triplets_t;
 

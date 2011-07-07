@@ -18,6 +18,7 @@
 #include <daemon.h>
 
 #include <simaka_message.h>
+#include <simaka_manager.h>
 
 /* number of tries we do authenticate */
 #define MAX_TRIES 3
@@ -39,6 +40,11 @@ struct private_eap_sim_peer_t {
 	 * Public authenticator_t interface.
 	 */
 	eap_sim_peer_t public;
+
+	/**
+	 * SIM backend manager
+	 */
+	simaka_manager_t *mgr;
 
 	/**
 	 * permanent ID of peer
@@ -116,7 +122,7 @@ static eap_payload_t* create_client_error(private_eap_sim_peer_t *this,
 	encoded = htons(code);
 	message->add_attribute(message, AT_CLIENT_ERROR_CODE,
 						   chunk_create((char*)&encoded, sizeof(encoded)));
-	out = message->generate(message, chunk_empty);
+	out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 	return out;
 }
@@ -188,7 +194,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	switch (id_req)
 	{
 		case AT_ANY_ID_REQ:
-			this->reauth = charon->sim->card_get_reauth(charon->sim,
+			this->reauth = this->mgr->card_get_reauth(this->mgr,
 									this->permanent, this->mk, &this->counter);
 			if (this->reauth)
 			{
@@ -197,8 +203,8 @@ static status_t process_start(private_eap_sim_peer_t *this,
 			}
 			/* FALL */
 		case AT_FULLAUTH_ID_REQ:
-			this->pseudonym = charon->sim->card_get_pseudonym(charon->sim,
-															  this->permanent);
+			this->pseudonym = this->mgr->card_get_pseudonym(this->mgr,
+															this->permanent);
 			if (this->pseudonym)
 			{
 				id = this->pseudonym->get_encoding(this->pseudonym);
@@ -228,7 +234,7 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	{
 		message->add_attribute(message, AT_IDENTITY, id);
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	return NEED_MORE;
@@ -287,8 +293,8 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	sreses = sres = chunk_alloca(rands.len / 4);
 	while (rands.len >= SIM_RAND_LEN)
 	{
-		if (!charon->sim->card_get_triplet(charon->sim, this->permanent,
-										   rands.ptr, sres.ptr, kc.ptr))
+		if (!this->mgr->card_get_triplet(this->mgr, this->permanent,
+										 rands.ptr, sres.ptr, kc.ptr))
 		{
 			DBG1(DBG_IKE, "unable to get EAP-SIM triplet");
 			*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
@@ -328,13 +334,13 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 			case AT_NEXT_REAUTH_ID:
 				this->counter = 0;
 				id = identification_create_from_data(data);
-				charon->sim->card_set_reauth(charon->sim, this->permanent, id,
-											 this->mk, this->counter);
+				this->mgr->card_set_reauth(this->mgr, this->permanent, id,
+										   this->mk, this->counter);
 				id->destroy(id);
 				break;
 			case AT_NEXT_PSEUDONYM:
 				id = identification_create_from_data(data);
-				charon->sim->card_set_pseudonym(charon->sim, this->permanent, id);
+				this->mgr->card_set_pseudonym(this->mgr, this->permanent, id);
 				id->destroy(id);
 				break;
 			default:
@@ -346,7 +352,7 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 	/* build response with AT_MAC, built over "EAP packet | n*SRES" */
 	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_CHALLENGE, this->crypto);
-	*out = message->generate(message, sreses);
+	*out = eap_payload_create_data_own(message->generate(message, sreses));
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -443,13 +449,13 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 			identification_t *reauth;
 
 			reauth = identification_create_from_data(data);
-			charon->sim->card_set_reauth(charon->sim, this->permanent, reauth,
-							 this->mk, this->counter);
+			this->mgr->card_set_reauth(this->mgr, this->permanent, reauth,
+									   this->mk, this->counter);
 			reauth->destroy(reauth);
 		}
 	}
 	message->add_attribute(message, AT_COUNTER, counter);
-	*out = message->generate(message, nonce);
+	*out = eap_payload_create_data_own(message->generate(message, nonce));
 	message->destroy(message);
 	return NEED_MORE;
 }
@@ -500,7 +506,8 @@ static status_t process_notification(private_eap_sim_peer_t *this,
 	{	/* empty notification reply */
 		message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 										SIM_NOTIFICATION, this->crypto);
-		*out = message->generate(message, chunk_empty);
+		*out = eap_payload_create_data_own(message->generate(message,
+										   chunk_empty));
 		message->destroy(message);
 	}
 	else
@@ -519,7 +526,7 @@ METHOD(eap_method_t, process, status_t,
 	/* store received EAP message identifier */
 	this->identifier = in->get_identifier(in);
 
-	message = simaka_message_create_from_payload(in, this->crypto);
+	message = simaka_message_create_from_payload(in->get_data(in), this->crypto);
 	if (!message)
 	{
 		*out = create_client_error(this, SIM_UNABLE_TO_PROCESS);
@@ -633,7 +640,8 @@ eap_sim_peer_t *eap_sim_peer_create(identification_t *server,
 				.destroy = _destroy,
 			},
 		},
-		.crypto = simaka_crypto_create(),
+		.crypto = simaka_crypto_create(EAP_SIM),
+		.mgr = lib->get(lib, "sim-manager"),
 	);
 
 	if (!this->crypto)

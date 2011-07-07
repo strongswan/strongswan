@@ -56,8 +56,20 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_eap_simaka_sql_t *this)
 {
-	charon->sim->remove_card(charon->sim, &this->card->card);
-	charon->sim->remove_provider(charon->sim, &this->provider->provider);
+	simaka_manager_t *mgr;
+
+	mgr = lib->get(lib, "sim-manager");
+	if (mgr)
+	{
+		mgr->remove_card(mgr, &this->card->card);
+		mgr->remove_provider(mgr, &this->provider->provider);
+	}
+	mgr = lib->get(lib, "aka-manager");
+	if (mgr)
+	{
+		mgr->remove_card(mgr, &this->card->card);
+		mgr->remove_provider(mgr, &this->provider->provider);
+	}
 	this->card->destroy(this->card);
 	this->provider->destroy(this->provider);
 	this->db->destroy(this->db);
@@ -70,6 +82,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_simaka_sql_plugin_create()
 {
 	private_eap_simaka_sql_t *this;
+	simaka_manager_t *mgr;
 	database_t *db;
 	bool remove_used;
 	char *uri;
@@ -103,8 +116,17 @@ plugin_t *eap_simaka_sql_plugin_create()
 		.card = eap_simaka_sql_card_create(db, remove_used),
 	);
 
-	charon->sim->add_card(charon->sim, &this->card->card);
-	charon->sim->add_provider(charon->sim, &this->provider->provider);
-
+	mgr = lib->get(lib, "sim-manager");
+	if (mgr)
+	{
+		mgr->add_card(mgr, &this->card->card);
+		mgr->add_provider(mgr, &this->provider->provider);
+	}
+	mgr = lib->get(lib, "aka-manager");
+	if (mgr)
+	{
+		mgr->add_card(mgr, &this->card->card);
+		mgr->add_provider(mgr, &this->provider->provider);
+	}
 	return &this->public.plugin;
 }

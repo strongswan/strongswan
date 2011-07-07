@@ -44,7 +44,13 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_pcsc_plugin_t *this)
 {
-	charon->sim->remove_card(charon->sim, &this->card->card);
+	simaka_manager_t *mgr;
+
+	mgr = lib->get(lib, "sim-manager");
+	if (mgr)
+	{
+		mgr->remove_card(mgr, &this->card->card);
+	}
 	this->card->destroy(this->card);
 	free(this);
 }
@@ -55,6 +61,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_sim_pcsc_plugin_create()
 {
 	private_eap_sim_pcsc_plugin_t *this;
+	simaka_manager_t *mgr;
 
 	INIT(this,
 		.public = {
@@ -66,8 +73,12 @@ plugin_t *eap_sim_pcsc_plugin_create()
 		},
 		.card = eap_sim_pcsc_card_create(),
 	);
-	charon->sim->add_card(charon->sim, &this->card->card);
 
+	mgr = lib->get(lib, "sim-manager");
+	if (mgr)
+	{
+		mgr->add_card(mgr, &this->card->card);
+	}
 	return &this->public.plugin;
 }
 

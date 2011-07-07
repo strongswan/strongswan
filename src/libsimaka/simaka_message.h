@@ -27,7 +27,7 @@
 #define SIMAKA_MESSAGE_H_
 
 #include <enum.h>
-#include <daemon.h>
+#include <eap/eap.h>
 
 #include "simaka_crypto.h"
 
@@ -35,6 +35,7 @@ typedef enum simaka_attribute_t simaka_attribute_t;
 typedef enum simaka_subtype_t simaka_subtype_t;
 typedef enum simaka_notification_t simaka_notification_t;
 typedef enum simaka_client_error_t simaka_client_error_t;
+typedef struct simaka_message_t simaka_message_t;
 
 /**
  * Subtypes of EAP-SIM/AKA messages
@@ -235,9 +236,9 @@ struct simaka_message_t {
 	 * Generate a message, optionally encrypt attributes and create a MAC.
 	 *
 	 * @param sigdata	additional data to include in signature, if any
-	 * @return			generated eap payload, NULL if failed
+	 * @return			allocated data of generated message
 	 */
-	eap_payload_t* (*generate)(simaka_message_t *this, chunk_t sigdata);
+	chunk_t (*generate)(simaka_message_t *this, chunk_t sigdata);
 
 	/**
 	 * Destroy a simaka_message_t.
@@ -262,11 +263,11 @@ simaka_message_t *simaka_message_create(bool request, u_int8_t identifier,
 /**
  * Create an simaka_message from a chunk of data.
  *
- * @param payload		payload to create message from
+ * @param data			message data to parse
  * @param crypto		EAP-SIM/AKA crypto helper
  * @return				EAP message, NULL on error
  */
-simaka_message_t *simaka_message_create_from_payload(eap_payload_t *payload,
+simaka_message_t *simaka_message_create_from_payload(chunk_t data,
 													 simaka_crypto_t *crypto);
 
 #endif /** SIMAKA_MESSAGE_H_ @}*/

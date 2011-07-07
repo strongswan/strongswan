@@ -27,9 +27,6 @@ typedef struct eap_sim_peer_t eap_sim_peer_t;
 
 /**
  * EAP-SIM peer implementation.
- *
- * This EAP-SIM module uses sim_card_t implementations for triplet calculation,
- * found via the eap_sim_manager_t.
  */
 struct eap_sim_peer_t {
 

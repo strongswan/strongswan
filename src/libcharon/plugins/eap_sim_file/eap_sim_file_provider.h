@@ -23,6 +23,8 @@
 
 #include "eap_sim_file_triplets.h"
 
+#include <simaka_provider.h>
+
 typedef struct eap_sim_file_provider_t eap_sim_file_provider_t;
 
 /**
@@ -31,9 +33,9 @@ typedef struct eap_sim_file_provider_t eap_sim_file_provider_t;
 struct eap_sim_file_provider_t {
 
 	/**
-	 * Implements sim_provider_t interface.
+	 * Implements simaka_provider_t interface.
 	 */
-	sim_provider_t provider;
+	simaka_provider_t provider;
 
 	/**
 	 * Destroy a eap_sim_file_provider_t.

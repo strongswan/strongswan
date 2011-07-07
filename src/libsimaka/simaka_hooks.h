@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2008-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,19 +14,21 @@
  */
 
 /**
- * @defgroup sim_hooks sim_hooks
- * @{ @ingroup eap
+ * @defgroup simaka_hooks simaka_hooks
+ * @{ @ingroup libsimaka
  */
 
-#ifndef SIM_HOOKS_H_
-#define SIM_HOOKS_H_
+#ifndef SIMAKA_HOOKS_H_
+#define SIMAKA_HOOKS_H_
 
-typedef struct sim_hooks_t sim_hooks_t;
+typedef struct simaka_hooks_t simaka_hooks_t;
+
+#include "simaka_message.h"
 
 /**
  * Additional hooks invoked during EAP-SIM/AKA message processing.
  */
-struct sim_hooks_t {
+struct simaka_hooks_t {
 
 	/**
 	 * SIM/AKA message parsing.
@@ -38,7 +40,7 @@ struct sim_hooks_t {
 	 * @param inbound	TRUE for incoming messages, FALSE for outgoing
 	 * @param decrypted	TRUE if AT_ENCR_DATA has been decrypted
 	 */
-	void (*message)(sim_hooks_t *this, simaka_message_t *message,
+	void (*message)(simaka_hooks_t *this, simaka_message_t *message,
 					bool inbound, bool decrypted);
 
 	/**
@@ -47,7 +49,7 @@ struct sim_hooks_t {
 	 * @param k_encr	derived SIM/AKA encryption key k_encr
 	 * @param k_auth	derived SIM/AKA authentication key k_auth
 	 */
-	void (*keys)(sim_hooks_t *this, chunk_t k_encr, chunk_t k_auth);
+	void (*keys)(simaka_hooks_t *this, chunk_t k_encr, chunk_t k_auth);
 };
 
-#endif /** SIM_HOOKS_H_ @}*/
+#endif /** SIMAKA_HOOKS_H_ @}*/

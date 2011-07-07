@@ -21,7 +21,7 @@
 #ifndef EAP_SIMAKA_PSEUDONYM_CARD_H_
 #define EAP_SIMAKA_PSEUDONYM_CARD_H_
 
-#include <sa/authenticators/eap/sim_manager.h>
+#include <simaka_card.h>
 
 typedef struct eap_simaka_pseudonym_card_t eap_simaka_pseudonym_card_t;
 
@@ -31,9 +31,9 @@ typedef struct eap_simaka_pseudonym_card_t eap_simaka_pseudonym_card_t;
 struct eap_simaka_pseudonym_card_t {
 
 	/**
-	 * Implements sim_card_t interface
+	 * Implements simaka_card_t interface
 	 */
-	sim_card_t card;
+	simaka_card_t card;
 
 	/**
 	 * Destroy a eap_simaka_pseudonym_card_t.

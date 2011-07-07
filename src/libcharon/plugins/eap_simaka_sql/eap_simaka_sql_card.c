@@ -42,7 +42,7 @@ struct private_eap_simaka_sql_card_t {
 	bool remove_used;
 };
 
-METHOD(sim_card_t, get_triplet, bool,
+METHOD(simaka_card_t, get_triplet, bool,
 	private_eap_simaka_sql_card_t *this, identification_t *id,
 	char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
@@ -90,7 +90,7 @@ METHOD(sim_card_t, get_triplet, bool,
 	return found;
 }
 
-METHOD(sim_card_t, get_quintuplet, status_t,
+METHOD(simaka_card_t, get_quintuplet, status_t,
 	private_eap_simaka_sql_card_t *this, identification_t *id,
 	char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
 	char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len)

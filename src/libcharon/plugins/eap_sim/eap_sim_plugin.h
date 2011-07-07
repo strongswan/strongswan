@@ -30,6 +30,11 @@ typedef struct eap_sim_plugin_t eap_sim_plugin_t;
 
 /**
  * EAP-SIM plugin.
+ *
+ * This plugin implements the protocol level of EAP-SIM and uses simaka_card_t
+ * and simaka_provider_t backends to provide triplets. It registers a
+ * simaka_manager_t on the library as "sim-manager", other plugins can use it
+ * to provide the required backends.
  */
 struct eap_sim_plugin_t {
 

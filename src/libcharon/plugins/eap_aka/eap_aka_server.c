@@ -20,6 +20,7 @@
 
 #include <simaka_message.h>
 #include <simaka_crypto.h>
+#include <simaka_manager.h>
 
 /** length of the AT_NONCE_S value */
 #define NONCE_LEN 16
@@ -35,6 +36,11 @@ struct private_eap_aka_server_t {
 	 * Public authenticator_t interface.
 	 */
 	eap_aka_server_t public;
+
+	/**
+	 * AKA backend manager
+	 */
+	simaka_manager_t *mgr;
 
 	/**
 	 * EAP-AKA crypto helper
@@ -133,7 +139,7 @@ static status_t identity(private_eap_aka_server_t *this, eap_payload_t **out)
 	{
 		message->add_attribute(message, AT_PERMANENT_ID_REQ, chunk_empty);
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	this->pending = AKA_IDENTITY;
@@ -152,7 +158,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 	chunk_t data, mk;
 	identification_t *id;
 
-	if (!charon->sim->provider_get_quintuplet(charon->sim, this->permanent,
+	if (!this->mgr->provider_get_quintuplet(this->mgr, this->permanent,
 										rand, xres, &xres_len, ck, ik, autn))
 	{
 		if (this->use_pseudonym)
@@ -183,7 +189,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 									AKA_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, this->rand);
 	message->add_attribute(message, AT_AUTN, chunk_create(autn, AKA_AUTN_LEN));
-	id = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk.ptr);
+	id = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk.ptr);
 	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -192,7 +198,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 	}
 	else
 	{
-		id = charon->sim->provider_gen_pseudonym(charon->sim, this->permanent);
+		id = this->mgr->provider_gen_pseudonym(this->mgr, this->permanent);
 		if (id)
 		{
 			message->add_attribute(message, AT_NEXT_PSEUDONYM,
@@ -200,7 +206,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 			id->destroy(id);
 		}
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	free(mk.ptr);
@@ -237,14 +243,14 @@ static status_t reauthenticate(private_eap_aka_server_t *this,
 									AKA_REAUTHENTICATION, this->crypto);
 	message->add_attribute(message, AT_COUNTER, this->counter);
 	message->add_attribute(message, AT_NONCE_S, this->nonce);
-	next = charon->sim->provider_gen_reauth(charon->sim, this->permanent, mk);
+	next = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk);
 	if (next)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
 							   next->get_encoding(next));
 		next->destroy(next);
 	}
-	*out = message->generate(message, chunk_empty);
+	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
 
 	this->pending = SIM_REAUTHENTICATION;
@@ -310,8 +316,7 @@ static status_t process_identity(private_eap_aka_server_t *this,
 		char mk[HASH_SIZE_SHA1];
 		u_int16_t counter;
 
-		permanent = charon->sim->provider_is_reauth(charon->sim, id,
-													mk, &counter);
+		permanent = this->mgr->provider_is_reauth(this->mgr, id, mk, &counter);
 		if (permanent)
 		{
 			this->permanent->destroy(this->permanent);
@@ -325,7 +330,7 @@ static status_t process_identity(private_eap_aka_server_t *this,
 	}
 	if (this->use_pseudonym)
 	{
-		permanent = charon->sim->provider_is_pseudonym(charon->sim, id);
+		permanent = this->mgr->provider_is_pseudonym(this->mgr, id);
 		if (permanent)
 		{
 			this->permanent->destroy(this->permanent);
@@ -506,8 +511,8 @@ static status_t process_synchronize(private_eap_aka_server_t *this,
 		return FAILED;
 	}
 
-	if (!charon->sim->provider_resync(charon->sim, this->permanent,
-									  this->rand.ptr, auts.ptr))
+	if (!this->mgr->provider_resync(this->mgr, this->permanent,
+									this->rand.ptr, auts.ptr))
 	{
 		DBG1(DBG_IKE, "no AKA provider found supporting "
 			 "resynchronization for '%Y'", this->permanent);
@@ -564,7 +569,7 @@ METHOD(eap_method_t, process, status_t,
 	simaka_message_t *message;
 	status_t status;
 
-	message = simaka_message_create_from_payload(in, this->crypto);
+	message = simaka_message_create_from_payload(in->get_data(in), this->crypto);
 	if (!message)
 	{
 		return FAILED;
@@ -676,7 +681,8 @@ eap_aka_server_t *eap_aka_server_create(identification_t *server,
 				.destroy = _destroy,
 			},
 		},
-		.crypto = simaka_crypto_create(),
+		.crypto = simaka_crypto_create(EAP_AKA),
+		.mgr = lib->get(lib, "aka-manager"),
 	);
 
 	if (!this->crypto)

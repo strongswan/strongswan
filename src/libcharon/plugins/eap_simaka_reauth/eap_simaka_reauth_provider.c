@@ -88,7 +88,7 @@ static identification_t *gen_identity(private_eap_simaka_reauth_provider_t *this
 }
 
 /**
- * Implementation of sim_provider_t.is_reauth
+ * Implementation of simaka_provider_t.is_reauth
  */
 static identification_t *is_reauth(private_eap_simaka_reauth_provider_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1],
@@ -115,7 +115,7 @@ static identification_t *is_reauth(private_eap_simaka_reauth_provider_t *this,
 }
 
 /**
- * Implementation of sim_provider_t.gen_reauth
+ * Implementation of simaka_provider_t.gen_reauth
  */
 static identification_t *gen_reauth(private_eap_simaka_reauth_provider_t *this,
 								identification_t *id, char mk[HASH_SIZE_SHA1])
@@ -186,13 +186,13 @@ eap_simaka_reauth_provider_t *eap_simaka_reauth_provider_create()
 {
 	private_eap_simaka_reauth_provider_t *this = malloc_thing(private_eap_simaka_reauth_provider_t);
 
-	this->public.provider.get_triplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
-	this->public.provider.get_quintuplet = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
-	this->public.provider.resync = (bool(*)(sim_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.provider.is_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
-	this->public.provider.gen_pseudonym = (identification_t*(*)(sim_provider_t*, identification_t *id))return_null;
-	this->public.provider.is_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))is_reauth;
-	this->public.provider.gen_reauth = (identification_t*(*)(sim_provider_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))gen_reauth;
+	this->public.provider.get_triplet = (bool(*)(simaka_provider_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
+	this->public.provider.get_quintuplet = (bool(*)(simaka_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))return_false;
+	this->public.provider.resync = (bool(*)(simaka_provider_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
+	this->public.provider.is_pseudonym = (identification_t*(*)(simaka_provider_t*, identification_t *id))return_null;
+	this->public.provider.gen_pseudonym = (identification_t*(*)(simaka_provider_t*, identification_t *id))return_null;
+	this->public.provider.is_reauth = (identification_t*(*)(simaka_provider_t*, identification_t *id, char [HASH_SIZE_SHA1], u_int16_t *counter))is_reauth;
+	this->public.provider.gen_reauth = (identification_t*(*)(simaka_provider_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))gen_reauth;
 	this->public.destroy = (void(*)(eap_simaka_reauth_provider_t*))destroy;
 
 	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);

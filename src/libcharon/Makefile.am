@@ -61,9 +61,6 @@ sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
-sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
-sa/authenticators/eap/sim_card.h sa/authenticators/eap/sim_provider.h \
-sa/authenticators/eap/sim_hooks.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -104,7 +101,7 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
-	-I$(top_srcdir)/src/libtncif 
+	-I$(top_srcdir)/src/libtncif
 
 AM_CFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \

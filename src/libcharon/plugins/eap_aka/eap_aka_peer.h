@@ -26,7 +26,7 @@ typedef struct eap_aka_peer_t eap_aka_peer_t;
 #include <sa/authenticators/eap/eap_method.h>
 
 /**
- * Implementation of the eap_method_t interface using EAP-AKA as a client.
+ * EAP-AKA peer implementation.
  */
 struct eap_aka_peer_t {
 

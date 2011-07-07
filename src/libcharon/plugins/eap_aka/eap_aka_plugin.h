@@ -33,6 +33,11 @@ typedef struct eap_aka_plugin_t eap_aka_plugin_t;
  *
  * EAP-AKA uses 3rd generation mobile phone standard authentication
  * mechanism for authentication, as defined RFC4187.
+ *
+ * This plugin implements the protocol level of EAP-AKA and uses simaka_card_t
+ * and simaka_provider_t backends to provide triplets. It registers a
+ * simaka_manager_t on the library as "aka-manager", other plugins can use it
+ * to provide the required backends.
  */
 struct eap_aka_plugin_t {
 

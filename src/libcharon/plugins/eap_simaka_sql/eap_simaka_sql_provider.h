@@ -22,7 +22,7 @@
 #define EAP_SIMAKA_SQL_PROVIDER_H_
 
 #include <database/database.h>
-#include <sa/authenticators/eap/sim_manager.h>
+#include <simaka_provider.h>
 
 typedef struct eap_simaka_sql_provider_t eap_simaka_sql_provider_t;
 
@@ -32,9 +32,9 @@ typedef struct eap_simaka_sql_provider_t eap_simaka_sql_provider_t;
 struct eap_simaka_sql_provider_t {
 
 	/**
-	 * Implements sim_provider_t interface
+	 * Implements simaka_provider_t interface
 	 */
-	sim_provider_t provider;
+	simaka_provider_t provider;
 
 	/**
 	 * Destroy a eap_simaka_sql_provider_t.
