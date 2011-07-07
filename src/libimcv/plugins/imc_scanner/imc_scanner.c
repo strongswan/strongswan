@@ -106,7 +106,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 	const char loopback_v6[] = "::1";
 
 	/* Open a pipe stream for reading the output of the netstat commmand */
-	file = popen("/bin/netstat -n -l -4 -6 --inet", "r");
+	file = popen("/bin/netstat -n -l -p -4 -6 --inet", "r");
 	if (!file)
 	{
 		DBG1(DBG_IMC, "Failed to run netstat command");
