@@ -163,34 +163,26 @@ struct private_peer_cfg_t {
 #endif /* ME */
 };
 
-/**
- * Implementation of peer_cfg_t.get_name
- */
-static char *get_name(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_name, char*,
+	private_peer_cfg_t *this)
 {
 	return this->name;
 }
 
-/**
- * Implementation of peer_cfg_t.get_ike_version
- */
-static u_int get_ike_version(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_ike_version, u_int,
+	private_peer_cfg_t *this)
 {
 	return this->ike_version;
 }
 
-/**
- * Implementation of peer_cfg_t.get_ike_cfg
- */
-static ike_cfg_t* get_ike_cfg(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_ike_cfg, ike_cfg_t*,
+	private_peer_cfg_t *this)
 {
 	return this->ike_cfg;
 }
 
-/**
- * Implementation of peer_cfg_t.add_child_cfg.
- */
-static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
+METHOD(peer_cfg_t, add_child_cfg, void,
+	private_peer_cfg_t *this, child_cfg_t *child_cfg)
 {
 	this->mutex->lock(this->mutex);
 	this->child_cfgs->insert_last(this->child_cfgs, child_cfg);
@@ -206,44 +198,39 @@ typedef struct {
 	mutex_t *mutex;
 } child_cfg_enumerator_t;
 
-/**
- * Implementation of peer_cfg_t.remove_child_cfg.
- */
-static void remove_child_cfg(private_peer_cfg_t *this,
-							 child_cfg_enumerator_t *enumerator)
+METHOD(peer_cfg_t, remove_child_cfg, void,
+	private_peer_cfg_t *this, child_cfg_enumerator_t *enumerator)
 {
 	this->child_cfgs->remove_at(this->child_cfgs, enumerator->wrapped);
 }
 
-/**
- * Implementation of child_cfg_enumerator_t.destroy
- */
-static void child_cfg_enumerator_destroy(child_cfg_enumerator_t *this)
+METHOD(enumerator_t, child_cfg_enumerator_destroy, void,
+	child_cfg_enumerator_t *this)
 {
 	this->mutex->unlock(this->mutex);
 	this->wrapped->destroy(this->wrapped);
 	free(this);
 }
 
-/**
- * Implementation of child_cfg_enumerator_t.enumerate
- */
-static bool child_cfg_enumerate(child_cfg_enumerator_t *this, child_cfg_t **chd)
+METHOD(enumerator_t, child_cfg_enumerate, bool,
+	child_cfg_enumerator_t *this, child_cfg_t **chd)
 {
 	return this->wrapped->enumerate(this->wrapped, chd);
 }
 
-/**
- * Implementation of peer_cfg_t.create_child_cfg_enumerator.
- */
-static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, create_child_cfg_enumerator, enumerator_t*,
+	private_peer_cfg_t *this)
 {
-	child_cfg_enumerator_t *enumerator = malloc_thing(child_cfg_enumerator_t);
+	child_cfg_enumerator_t *enumerator;
 
-	enumerator->public.enumerate = (void*)child_cfg_enumerate;
-	enumerator->public.destroy = (void*)child_cfg_enumerator_destroy;
-	enumerator->mutex = this->mutex;
-	enumerator->wrapped = this->child_cfgs->create_enumerator(this->child_cfgs);
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_child_cfg_enumerate,
+			.destroy = (void*)_child_cfg_enumerator_destroy,
+		},
+		.mutex = this->mutex,
+		.wrapped = this->child_cfgs->create_enumerator(this->child_cfgs),
+	);
 
 	this->mutex->lock(this->mutex);
 	return &enumerator->public;
@@ -292,13 +279,9 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 	return match;
 }
 
-/**
- * Implementation of peer_cfg_t.select_child_cfg
- */
-static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
-									 linked_list_t *my_ts,
-									 linked_list_t *other_ts,
-									 host_t *my_host, host_t *other_host)
+METHOD(peer_cfg_t, select_child_cfg, child_cfg_t*,
+	private_peer_cfg_t *this, linked_list_t *my_ts, linked_list_t *other_ts,
+	host_t *my_host, host_t *other_host)
 {
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -334,34 +317,26 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 	return found;
 }
 
-/**
- * Implementation of peer_cfg_t.get_cert_policy.
- */
-static cert_policy_t get_cert_policy(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_cert_policy, cert_policy_t,
+	private_peer_cfg_t *this)
 {
 	return this->cert_policy;
 }
 
-/**
- * Implementation of peer_cfg_t.get_unique_policy.
- */
-static unique_policy_t get_unique_policy(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_unique_policy, unique_policy_t,
+	private_peer_cfg_t *this)
 {
 	return this->unique;
 }
 
-/**
- * Implementation of peer_cfg_t.get_keyingtries.
- */
-static u_int32_t get_keyingtries(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_keyingtries, u_int32_t,
+	private_peer_cfg_t *this)
 {
 	return this->keyingtries;
 }
 
-/**
- * Implementation of peer_cfg_t.get_rekey_time.
- */
-static u_int32_t get_rekey_time(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_rekey_time, u_int32_t,
+	private_peer_cfg_t *this)
 {
 	if (this->rekey_time == 0)
 	{
@@ -374,10 +349,8 @@ static u_int32_t get_rekey_time(private_peer_cfg_t *this)
 	return this->rekey_time - (random() % this->jitter_time);
 }
 
-/**
- * Implementation of peer_cfg_t.get_reauth_time.
- */
-static u_int32_t get_reauth_time(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_reauth_time, u_int32_t,
+	private_peer_cfg_t *this)
 {
 	if (this->reauth_time == 0)
 	{
@@ -390,51 +363,38 @@ static u_int32_t get_reauth_time(private_peer_cfg_t *this)
 	return this->reauth_time - (random() % this->jitter_time);
 }
 
-/**
- * Implementation of peer_cfg_t.get_over_time.
- */
-static u_int32_t get_over_time(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_over_time, u_int32_t,
+	private_peer_cfg_t *this)
 {
 	return this->over_time;
 }
 
-/**
- * Implementation of peer_cfg_t.use_mobike.
- */
-static bool use_mobike(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, use_mobike, bool,
+	private_peer_cfg_t *this)
 {
 	return this->use_mobike;
 }
 
-/**
- * Implements peer_cfg_t.get_dpd
- */
-static u_int32_t get_dpd(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_dpd, u_int32_t,
+	private_peer_cfg_t *this)
 {
 	return this->dpd;
 }
 
-/**
- * Implementation of peer_cfg_t.get_virtual_ip.
- */
-static host_t* get_virtual_ip(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_virtual_ip, host_t*,
+	private_peer_cfg_t *this)
 {
 	return this->virtual_ip;
 }
 
-/**
- * Implementation of peer_cfg_t.get_pool.
- */
-static char* get_pool(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_pool, char*,
+	private_peer_cfg_t *this)
 {
 	return this->pool;
 }
 
-/**
- * Implementation of peer_cfg_t.add_auth_cfg
- */
-static void add_auth_cfg(private_peer_cfg_t *this,
-						 auth_cfg_t *cfg, bool local)
+METHOD(peer_cfg_t, add_auth_cfg, void,
+	private_peer_cfg_t *this, auth_cfg_t *cfg, bool local)
 {
 	if (local)
 	{
@@ -446,11 +406,8 @@ static void add_auth_cfg(private_peer_cfg_t *this,
 	}
 }
 
-/**
- * Implementation of peer_cfg_t.create_auth_cfg_enumerator
- */
-static enumerator_t* create_auth_cfg_enumerator(private_peer_cfg_t *this,
-												 bool local)
+METHOD(peer_cfg_t, create_auth_cfg_enumerator, enumerator_t*,
+	private_peer_cfg_t *this, bool local)
 {
 	if (local)
 	{
@@ -460,26 +417,20 @@ static enumerator_t* create_auth_cfg_enumerator(private_peer_cfg_t *this,
 }
 
 #ifdef ME
-/**
- * Implementation of peer_cfg_t.is_mediation.
- */
-static bool is_mediation(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, is_mediation, bool,
+	private_peer_cfg_t *this)
 {
 	return this->mediation;
 }
 
-/**
- * Implementation of peer_cfg_t.get_mediated_by.
- */
-static peer_cfg_t* get_mediated_by(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_mediated_by, peer_cfg_t*,
+	private_peer_cfg_t *this)
 {
 	return this->mediated_by;
 }
 
-/**
- * Implementation of peer_cfg_t.get_peer_id.
- */
-static identification_t* get_peer_id(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_peer_id, identification_t*,
+	private_peer_cfg_t *this)
 {
 	return this->peer_id;
 }
@@ -539,10 +490,8 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	return equal;
 }
 
-/**
- * Implementation of peer_cfg_t.equals.
- */
-static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
+METHOD(peer_cfg_t, equals, bool,
+	private_peer_cfg_t *this, private_peer_cfg_t *other)
 {
 	if (this == other)
 	{
@@ -580,19 +529,15 @@ static bool equals(private_peer_cfg_t *this, private_peer_cfg_t *other)
 		);
 }
 
-/**
- * Implements peer_cfg_t.get_ref.
- */
-static peer_cfg_t* get_ref(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, get_ref, peer_cfg_t*,
+	private_peer_cfg_t *this)
 {
 	ref_get(&this->refcount);
 	return &this->public;
 }
 
-/**
- * Implements peer_cfg_t.destroy.
- */
-static void destroy(private_peer_cfg_t *this)
+METHOD(peer_cfg_t, destroy, void,
+	private_peer_cfg_t *this)
 {
 	if (ref_put(&this->refcount))
 	{
@@ -627,48 +572,8 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
-	private_peer_cfg_t *this = malloc_thing(private_peer_cfg_t);
+	private_peer_cfg_t *this;
 
-	/* public functions */
-	this->public.get_name = (char* (*) (peer_cfg_t *))get_name;
-	this->public.get_ike_version = (u_int(*) (peer_cfg_t *))get_ike_version;
-	this->public.get_ike_cfg = (ike_cfg_t* (*) (peer_cfg_t *))get_ike_cfg;
-	this->public.add_child_cfg = (void (*) (peer_cfg_t *, child_cfg_t*))add_child_cfg;
-	this->public.remove_child_cfg = (void(*)(peer_cfg_t*, enumerator_t*))remove_child_cfg;
-	this->public.create_child_cfg_enumerator = (enumerator_t* (*) (peer_cfg_t *))create_child_cfg_enumerator;
-	this->public.select_child_cfg = (child_cfg_t* (*) (peer_cfg_t *,linked_list_t*,linked_list_t*,host_t*,host_t*))select_child_cfg;
-	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
-	this->public.get_unique_policy = (unique_policy_t (*) (peer_cfg_t *))get_unique_policy;
-	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
-	this->public.get_rekey_time = (u_int32_t(*)(peer_cfg_t*))get_rekey_time;
-	this->public.get_reauth_time = (u_int32_t(*)(peer_cfg_t*))get_reauth_time;
-	this->public.get_over_time = (u_int32_t(*)(peer_cfg_t*))get_over_time;
-	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
-	this->public.get_dpd = (u_int32_t (*) (peer_cfg_t *))get_dpd;
-	this->public.get_virtual_ip = (host_t* (*) (peer_cfg_t *))get_virtual_ip;
-	this->public.get_pool = (char*(*)(peer_cfg_t*))get_pool;
-	this->public.add_auth_cfg = (void(*)(peer_cfg_t*, auth_cfg_t *cfg, bool local))add_auth_cfg;
-	this->public.create_auth_cfg_enumerator = (enumerator_t*(*)(peer_cfg_t*, bool local))create_auth_cfg_enumerator;
-	this->public.equals = (bool(*)(peer_cfg_t*, peer_cfg_t *other))equals;
-	this->public.get_ref = (peer_cfg_t*(*)(peer_cfg_t *))get_ref;
-	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
-#ifdef ME
-	this->public.is_mediation = (bool (*) (peer_cfg_t *))is_mediation;
-	this->public.get_mediated_by = (peer_cfg_t* (*) (peer_cfg_t *))get_mediated_by;
-	this->public.get_peer_id = (identification_t* (*) (peer_cfg_t *))get_peer_id;
-#endif /* ME */
-
-	/* apply init values */
-	this->name = strdup(name);
-	this->ike_version = ike_version;
-	this->ike_cfg = ike_cfg;
-	this->child_cfgs = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->cert_policy = cert_policy;
-	this->unique = unique;
-	this->keyingtries = keyingtries;
-	this->rekey_time = rekey_time;
-	this->reauth_time = reauth_time;
 	if (rekey_time && jitter_time > rekey_time)
 	{
 		jitter_time = rekey_time;
@@ -677,15 +582,58 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	{
 		jitter_time = reauth_time;
 	}
-	this->jitter_time = jitter_time;
-	this->over_time = over_time;
-	this->use_mobike = mobike;
-	this->dpd = dpd;
-	this->virtual_ip = virtual_ip;
-	this->pool = strdupnull(pool);
-	this->local_auth = linked_list_create();
-	this->remote_auth = linked_list_create();
-	this->refcount = 1;
+
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.get_ike_version = _get_ike_version,
+			.get_ike_cfg = _get_ike_cfg,
+			.add_child_cfg = _add_child_cfg,
+			.remove_child_cfg = (void*)_remove_child_cfg,
+			.create_child_cfg_enumerator = _create_child_cfg_enumerator,
+			.select_child_cfg = _select_child_cfg,
+			.get_cert_policy = _get_cert_policy,
+			.get_unique_policy = _get_unique_policy,
+			.get_keyingtries = _get_keyingtries,
+			.get_rekey_time = _get_rekey_time,
+			.get_reauth_time = _get_reauth_time,
+			.get_over_time = _get_over_time,
+			.use_mobike = _use_mobike,
+			.get_dpd = _get_dpd,
+			.get_virtual_ip = _get_virtual_ip,
+			.get_pool = _get_pool,
+			.add_auth_cfg = _add_auth_cfg,
+			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.equals = (void*)_equals,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+#ifdef ME
+			.is_mediation = _is_mediation,
+			.get_mediated_by = _get_mediated_by,
+			.get_peer_id = _get_peer_id,
+#endif /* ME */
+		},
+		.name = strdup(name),
+		.ike_version = ike_version,
+		.ike_cfg = ike_cfg,
+		.child_cfgs = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.cert_policy = cert_policy,
+		.unique = unique,
+		.keyingtries = keyingtries,
+		.rekey_time = rekey_time,
+		.reauth_time = reauth_time,
+		.jitter_time = jitter_time,
+		.over_time = over_time,
+		.use_mobike = mobike,
+		.dpd = dpd,
+		.virtual_ip = virtual_ip,
+		.pool = strdupnull(pool),
+		.local_auth = linked_list_create(),
+		.remote_auth = linked_list_create(),
+		.refcount = 1,
+	);
+
 #ifdef ME
 	this->mediation = mediation;
 	this->mediated_by = mediated_by;

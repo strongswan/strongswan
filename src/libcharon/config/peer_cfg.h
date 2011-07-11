@@ -82,8 +82,9 @@ extern enum_name_t *unique_policy_names;
  * Configuration of a peer, specified by IDs.
  *
  * The peer config defines a connection between two given IDs. It contains
- * exactly one ike_cfg_t, which is use for initiation. Additionally, it contains
- * multiple child_cfg_t defining which CHILD_SAs are allowed for this peer.
+ * exactly one ike_cfg_t, which is used for initiation. Additionally, it
+ * contains multiple child_cfg_t defining which CHILD_SAs are allowed for this
+ * peer.
  * @verbatim
                           +-------------------+        +---------------+
    +---------------+      |     peer_cfg      |      +---------------+ |
@@ -127,7 +128,7 @@ struct peer_cfg_t {
 	/**
 	 * Get the IKE version to use for initiating.
 	 *
-	 * @return 				IKE major version
+	 * @return				IKE major version
 	 */
 	u_int (*get_ike_version)(peer_cfg_t *this);
 
@@ -344,7 +345,7 @@ struct peer_cfg_t {
  * @param mediation			TRUE if this is a mediation connection
  * @param mediated_by		peer_cfg_t of the mediation connection to mediate through
  * @param peer_id			ID that identifies our peer at the mediation server
- * @return 					peer_cfg_t object
+ * @return					peer_cfg_t object
  */
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							cert_policy_t cert_policy, unique_policy_t unique,
