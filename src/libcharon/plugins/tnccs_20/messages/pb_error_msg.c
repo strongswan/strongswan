@@ -159,6 +159,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	{
 		DBG1(DBG_TNC,"%N message is shorter than header size of %u bytes",
 			 pb_tnc_msg_type_names, PB_MSG_ERROR, ERROR_HEADER_SIZE);
+		*offset = 0;
 		return FAILED;
 	}
 
