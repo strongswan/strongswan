@@ -32,7 +32,7 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
 /**
  * PA-TNC Error Attribute Type  (see section 4.2.8 of RFC 5792)
  *
- *                        1                   2                   3
+ *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -50,7 +50,7 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
 /**
  * All Error Types return the first 8 bytes of the erroneous PA-TNC message
  *
- *                        1                   2                   3
+ *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |    Version    |            Copy of Reserved                   |
@@ -62,9 +62,18 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
 #define PA_ERROR_MSG_INFO_SIZE		8
 
 /**
+ * "Invalid Parameter" Error Code
+ *                       1                   2                   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                             Offset                            |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+
+/**
  * "Version Not Supported" Error Code
  *
- *                        1                   2                   3
+ *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |  Max Version  |  Min Version  |            Reserved           |
@@ -138,6 +147,11 @@ struct private_ietf_attr_pa_tnc_error_t {
 	chunk_t attr_info;
 
 	/**
+	 * PA-TNC error offset
+	 */
+	u_int32_t error_offset;
+
+	/**
 	 * Reference count
 	 */
 	refcount_t ref;
@@ -187,6 +201,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	switch (this->error_code)
 	{
 		case PA_ERROR_INVALID_PARAMETER:
+			writer->write_uint32(writer, this->error_offset);
 			break;
 		case PA_ERROR_VERSION_NOT_SUPPORTED:
 			writer->write_uint8 (writer, PA_TNC_VERSION);
@@ -205,13 +220,16 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_pa_tnc_error_t *this)
+	private_ietf_attr_pa_tnc_error_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	u_int8_t reserved;
 
 	if (this->value.len < PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE)
 	{
+		DBG1(DBG_TNC, "insufficient data for PA-TNC error header and "
+					  "error information");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -223,6 +241,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	switch (this->error_code)
 	{
+		case PA_ERROR_INVALID_PARAMETER:
+			if (!reader->read_uint32(reader, &this->error_offset))
+			{
+				reader->destroy(reader);
+				DBG1(DBG_TNC, "insufficient data for error offset field");
+				*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
+				return FAILED;
+			}
+			break;
 		case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
 			if (!reader->read_data(reader, PA_ERROR_ATTR_INFO_SIZE,
 										   &this->attr_info))
@@ -230,6 +257,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 				reader->destroy(reader);
 				DBG1(DBG_TNC, "insufficient data for unsupported attribute "
 							  "information");
+				*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
 				return FAILED;
 			}
 			this->attr_info = chunk_clone(this->attr_info);
@@ -291,6 +319,12 @@ METHOD(ietf_attr_pa_tnc_error_t, set_attr_info, void,
 	this->attr_info = chunk_clone(attr_info);
 }
 
+METHOD(ietf_attr_pa_tnc_error_t, get_offset, u_int32_t,
+	private_ietf_attr_pa_tnc_error_t *this)
+{
+	return this->error_offset;
+}
+
 /**
  * Described in header.
  */
@@ -321,12 +355,58 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 			.get_msg_info = _get_msg_info,
 			.get_attr_info = _get_attr_info,
 			.set_attr_info = _set_attr_info,
+			.get_offset = _get_offset,
 		},
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PA_TNC_ERROR,
 		.error_vendor_id = vendor_id,
 		.error_code = error_code,
 		.msg_info = chunk_clone(msg_info),
+		.ref = 1,
+	);
+
+	return &this->public.pa_tnc_attribute;
+}
+
+/**
+ * Described in header.
+ */
+pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
+														 u_int32_t error_code,
+														 chunk_t msg_info,
+														 u_int32_t error_offset)
+{
+	private_ietf_attr_pa_tnc_error_t *this;
+
+	/* the first 8 bytes of the erroneous PA-TNC message are sent back */
+	msg_info.len = PA_ERROR_MSG_INFO_SIZE;
+
+	INIT(this,
+		.public = {
+			.pa_tnc_attribute = {
+				.get_vendor_id = _get_vendor_id,
+				.get_type = _get_type,
+				.get_value = _get_value,
+				.get_noskip_flag = _get_noskip_flag,
+				.set_noskip_flag = _set_noskip_flag,
+				.build = _build,
+				.process = _process,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+			.get_vendor_id = _get_error_vendor_id,
+			.get_error_code = _get_error_code,
+			.get_msg_info = _get_msg_info,
+			.get_attr_info = _get_attr_info,
+			.set_attr_info = _set_attr_info,
+			.get_offset = _get_offset,
+		},
+		.vendor_id = PEN_IETF,
+		.type = IETF_ATTR_PA_TNC_ERROR,
+		.error_vendor_id = vendor_id,
+		.error_code = error_code,
+		.msg_info = chunk_clone(msg_info),
+		.error_offset = error_offset,
 		.ref = 1,
 	);
 
@@ -356,6 +436,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 			.get_msg_info = _get_msg_info,
 			.get_attr_info = _get_attr_info,
 			.set_attr_info = _set_attr_info,
+			.get_offset = _get_offset,
 		},
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PA_TNC_ERROR,

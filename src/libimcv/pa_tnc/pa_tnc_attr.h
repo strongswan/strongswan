@@ -75,9 +75,10 @@ struct pa_tnc_attr_t {
 	/**
 	 * Process the value of an PA-TNC attribute to extract its parameters
 	 *
+	 * @param					relative error offset within attribute body
 	 * @return					result status
 	 */
-	status_t (*process)(pa_tnc_attr_t *this);
+	status_t (*process)(pa_tnc_attr_t *this, u_int32_t *offset);
 
 	/**
 	 * Get a new reference to the PA-TNC attribute

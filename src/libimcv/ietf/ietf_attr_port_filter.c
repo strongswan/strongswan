@@ -137,7 +137,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_ietf_attr_port_filter_t *this)
+	private_ietf_attr_port_filter_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	port_entry_t *entry;
@@ -145,6 +145,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	if (this->value.len % PORT_FILTER_ENTRY_SIZE)
 	{
+		DBG1(DBG_TNC, "ietf port filter attribute value is not a multiple of %d",
+			 PORT_FILTER_ENTRY_SIZE);
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);

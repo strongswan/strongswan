@@ -297,6 +297,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		ietf_attr_pa_tnc_error_t *error_attr;
 		pa_tnc_error_code_t error_code;
 		chunk_t msg_info, attr_info;
+		u_int32_t offset;
 
 		if (attr->get_vendor_id(attr) != PEN_IETF &&
 			attr->get_type(attr) != IETF_ATTR_PA_TNC_ERROR)
@@ -312,6 +313,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 		switch (error_code)
 		{
+			case PA_ERROR_INVALID_PARAMETER:
+				offset = error_attr->get_offset(error_attr);
+				DBG1(DBG_IMC, "  occurred at offset of %u bytes", offset);
+				break;
 			case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
 				attr_info = error_attr->get_attr_info(error_attr);
 				DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);

@@ -88,6 +88,14 @@ struct ietf_attr_pa_tnc_error_t {
 	 * @param attr_info		PA-TNC message info
 	 */
 	void (*set_attr_info)(ietf_attr_pa_tnc_error_t *this, chunk_t attr_info);
+
+	/**
+	 * Get the PA-TNC error offset
+	 *
+	 * @return				PA-TNC error offset
+	 */
+	u_int32_t (*get_offset)(ietf_attr_pa_tnc_error_t *this);
+
 };
 
 /**
@@ -101,6 +109,20 @@ struct ietf_attr_pa_tnc_error_t {
 pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 											 u_int32_t error_code,
 											 chunk_t header);
+
+/**
+ * Creates an ietf_attr_pa_tnc_error_t object from an error code with offset
+ *
+ * @param vendor_id			PA-TNC error code vendor ID
+ * @param error_code		PA-TNC error code
+ * @param header			PA-TNC message header (first 8 bytes)
+ * @param error_offset		PA-TNC error offset in bytes
+ * 
+ */
+pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
+														 u_int32_t error_code,
+														 chunk_t header,
+														 u_int32_t error_offset);
 
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from received data
