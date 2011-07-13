@@ -417,7 +417,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	if (status == FAILED || status == VERIFY_ERROR)
 	{
 		msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
-							PB_ERROR_INVALID_PARAMETER, this->offset);
+							PB_ERROR_INVALID_PARAMETER, this->offset + offset);
 		this->errors->insert_last(this->errors, msg);
 	}
 	if (status == FAILED)
