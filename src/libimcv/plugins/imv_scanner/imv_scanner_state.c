@@ -116,6 +116,11 @@ METHOD(imv_state_t, get_reason_string, bool,
 	u_char *pos;
 	int i;
 
+	if (!this->violating_ports)
+	{
+		return FALSE;
+	}
+
 	while (eat_whitespace(&preferred_language))
 	{
 		if (!extract_token(&pref_lang, ',', &preferred_language))
