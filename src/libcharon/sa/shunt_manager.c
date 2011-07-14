@@ -47,6 +47,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 	enumerator_t *e_my_ts, *e_other_ts;
 	linked_list_t *my_ts_list, *other_ts_list;
 	traffic_selector_t *my_ts, *other_ts;
+	host_t *host_any;
 	policy_type_t policy_type;
 	status_t status = SUCCESS;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
@@ -55,6 +56,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 											 POLICY_PASS : POLICY_DROP;
 	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
+	host_any = host_create_any(AF_INET);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -65,19 +67,19 @@ static bool install_shunt_policy(child_cfg_t *child)
 		{
 			/* install out policy */
 			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, NULL, NULL,
+								hydra->kernel_interface, host_any, host_any,
 								my_ts, other_ts, POLICY_OUT, policy_type,
 								&sa, child->get_mark(child, FALSE), FALSE);
 
 			/* install in policy */
 			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, NULL, NULL,
+								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_IN, policy_type,
 								&sa, child->get_mark(child, TRUE), FALSE);
 
 			/* install forward policy */
 			status |= hydra->kernel_interface->add_policy(
-								hydra->kernel_interface, NULL, NULL,
+								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_FWD, policy_type,
 								&sa, child->get_mark(child, TRUE), FALSE);
 		}
@@ -89,6 +91,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 							   offsetof(traffic_selector_t, destroy));
 	other_ts_list->destroy_offset(other_ts_list,
 							   offsetof(traffic_selector_t, destroy));
+	host_any->destroy(host_any);
 
 	return status == SUCCESS;
 }
