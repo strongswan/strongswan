@@ -2,17 +2,27 @@ strongswan-4.5.3
 ----------------
 
 - Our private libraries (e.g. libstrongswan) are not installed directly in
-  prefix/lib anymore.  Instead a subdirectory is used (prefix/lib/ipsec by
-  default).  The plugins directory is also moved from libexec/ipsec to that
+  prefix/lib anymore.  Instead a subdirectory is used (prefix/lib/ipsec/ by
+  default).  The plugins directory is also moved from libexec/ipsec/ to that
   directory.
 
+- The dynamic IMC/IMV libraries were moved from the plugins directory to
+  a new imcvs directory in the prefix/lib/ipsec/ subdirectory.
+
 - IKEv2 charon daemon supports start PASS and DROP shunt policies
-  preventing traffic to go through IPsec connections.
+  preventing traffic to go through IPsec connections. Installation of the
+  shunt policies either via the XFRM netfilter or PFKEYv2 IPsec kernel interfaces.
 
 - The history of policies installed in the kernel is now tracked so that e.g.
   trap policies are correctly updated when reauthenticated SAs are terminated.
 
-- IMC/IMV test pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
+- IMC/IMV Scanner pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
+  Using "netstat -l" the IMC scans open listening ports on the TNC client
+  and sends a port list to the IMV which based on a port policy decides if
+  the client is admitted to the network.
+  (--enable-imc-scanner/--enable-imv-scanner).
+
+- IMC/IMV Test pair implementing the RFC 5792 PA-TNC (IF-M) protocol.
   (--enable-imc-test/--enable-imv-test).
 
 - The IKEv2 close action does not use the same value as the ipsec.conf dpdaction
