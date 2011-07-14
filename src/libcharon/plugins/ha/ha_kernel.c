@@ -123,7 +123,7 @@ static void enable_disable(private_ha_kernel_t *this, u_int segment,
 			 file, strerror(errno));
 		return;
 	}
-	if (write(fd, cmd, strlen(cmd) == -1))
+	if (write(fd, cmd, strlen(cmd)) == -1)
 	{
 		DBG1(DBG_CFG, "writing to CLUSTERIP file '%s' failed: %s",
 			 file, strerror(errno));
