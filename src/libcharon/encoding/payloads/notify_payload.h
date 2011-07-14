@@ -115,7 +115,15 @@ enum notify_type_t {
 	ROHC_SUPPORTED = 16416,
 	/* EAP-only authentication, RFC 5998 */
 	EAP_ONLY_AUTHENTICATION = 16417,
-
+	/* Childless initiation of IKEv2 SA, RFC 6023 */
+	CHILDLESS_IKEV2_SUPPORTED = 16418,
+	/* Quick crash detection for IKE, RFC 6290 */
+	QUICK_CRASH_DETECTION = 16419,
+	/* High availability of IKEv2/IPsec, RFC 6311 */
+	IKEV2_MESSAGE_ID_SYNC_SUPPORTED = 16420,
+	IKEV2_RFEPLAY_COUNTER_SYNC_SUPPORTED = 16421,
+	IKEV2_MESSAGE_ID_SYNC = 16422,
+	IPSEC_REPLAY_COUNTER_SYNC = 16423,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
 	/* IKE-ME, private use */
