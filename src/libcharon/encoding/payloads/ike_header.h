@@ -80,6 +80,11 @@ enum exchange_type_t{
 	 * INFORMATIONAL.
 	 */
 	INFORMATIONAL = 37,
+
+	/**
+	 * IKE_SESSION_RESUME (RFC 5723).
+	 */
+	IKE_SESSION_RESUME = 38,
 #ifdef ME
 	/**
 	 * ME_CONNECT
