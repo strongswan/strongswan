@@ -222,11 +222,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
 				u_int16_t encr_size = 0, int_size = 0;
+				bool esn = FALSE;
 
 				proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 										&encr_alg, &encr_size);
 				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
 										&int_alg, &int_size);
+				proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
+										&esn, NULL);
 
 				if (encr_alg != ENCR_UNDEFINED)
 				{
@@ -243,6 +246,10 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 					{
 						fprintf(out, "_%u", int_size);
 					}
+				}
+				if (esn)
+				{
+					fprintf(out, "/ESN");
 				}
 			}
 

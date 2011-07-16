@@ -254,7 +254,8 @@ struct private_kernel_netlink_ipsec_t {
 	mutex_t *mutex;
 
 	/**
-	 * Hash table of installed policies (policy_entry_t)
+	 * Hash table of installed policies (policy_entry_t)				DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
+
 	 */
 	hashtable_t *policies;
 
@@ -1414,10 +1415,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			/* bmp_len contains number uf __u32's */
 			replay->bmp_len = this->replay_bmp;
 			replay->replay_window = this->replay_window;
+			DBG2(DBG_KNL, "  using replay window of %u bytes",
+				 this->replay_window);
 
 			rthdr = XFRM_RTA_NEXT(rthdr);
 			if (esn)
 			{
+				DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
 				sa->flags |= XFRM_STATE_ESN;
 			}
 		}
