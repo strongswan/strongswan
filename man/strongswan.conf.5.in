@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2010-09-09" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2011-07-17" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -543,6 +543,15 @@ Command to be sent to the Test IMV in the handshake retry
 .TP
 .BR libimcv.plugins.imv_test.rounds " [0]"
 Number of IMC-IMV retry rounds
+.TP
+.BR libimcv.plugins.imv_scanner.closed_port_policy " [yes]"
+By default all ports must be closed (yes) or can be open (no)
+.TP
+.BR libimcv.plugins.imv_scanner.tcp_ports
+List of TCP ports that can be open or must be closed
+.TP
+.BR libimcv.plugins.imv_scanner.udp_ports
+List of UDP ports that can be open or must be closed
 .SS libtls section
 .TP
 .BR libtls.cipher
