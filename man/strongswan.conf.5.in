@@ -833,8 +833,14 @@ Delay between initiatons for each thread
 .BR charon.plugins.load-tester.delete_after_established " [no]"
 Delete an IKE_SA as soon as it has been established
 .TP
+.BR charon.plugins.load-tester.dpd_delay " [0]"
+DPD delay to use in load test
+.TP
 .BR charon.plugins.load-tester.dynamic_port " [0]"
 Base port to be used for requests (each client uses a different port)
+.TP
+.BR charon.plugins.load-tester.eap_password " [default-pwd]"
+EAP secret to use in load test
 .TP
 .BR charon.plugins.load-tester.enable " [no]"
 Enable the load testing plugin
@@ -845,17 +851,26 @@ Fake the kernel interface to allow load-testing against self
 .BR charon.plugins.load-tester.ike_rekey " [0]"
 Seconds to start IKE_SA rekeying after setup
 .TP
+.BR charon.plugins.load-tester.init_limit " [0]"
+Global limit of concurrently established SAs during load test
+.TP
 .BR charon.plugins.load-tester.initiators " [0]"
 Number of concurrent initiator threads to use in load test
 .TP
 .BR charon.plugins.load-tester.initiator_auth " [pubkey]"
 Authentication method(s) the intiator uses
 .TP
+.BR charon.plugins.load-tester.initiator_id
+Initiator ID used in load test
+.TP
 .BR charon.plugins.load-tester.iterations " [1]"
 Number of IKE_SAs to initate by each initiator in load test
 .TP
 .BR charon.plugins.load-tester.pool
 Provide INTERNAL_IPV4_ADDRs from a named pool
+.TP
+.BR charon.plugins.load-tester.preshared_key " [default-psk]"
+Preshared key to use in load test
 .TP
 .BR charon.plugins.load-tester.proposal " [aes128-sha1-modp768]"
 IKE proposal to use in load test
@@ -865,6 +880,9 @@ Address to initiation connections to
 .TP
 .BR charon.plugins.load-tester.responder_auth " [pubkey]"
 Authentication method(s) the responder uses
+.TP
+.BR charon.plugins.load-tester.responder_id
+Responder ID used in load test
 .TP
 .BR charon.plugins.load-tester.request_virtual_ip " [no]"
 Request an INTERNAL_IPV4_ADDR from the server
