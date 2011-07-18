@@ -42,6 +42,11 @@ struct private_load_tester_listener_t {
 	u_int established;
 
 	/**
+	 * Number of terminated SAs
+	 */
+	u_int terminated;
+
+	/**
 	 * Shutdown the daemon if we have established this SA count
 	 */
 	u_int shutdown_on;
@@ -52,10 +57,9 @@ METHOD(listener_t, ike_updown, bool,
 {
 	if (up)
 	{
-		ike_sa_id_t *id;
+		ike_sa_id_t *id = ike_sa->get_id(ike_sa);
 
 		this->established++;
-		id = ike_sa->get_id(ike_sa);
 
 		if (this->delete_after_established)
 		{
@@ -74,7 +78,7 @@ METHOD(listener_t, ike_updown, bool,
 	}
 	else
 	{
-		this->established--;
+		this->terminated++;
 	}
 	return TRUE;
 }
@@ -82,7 +86,7 @@ METHOD(listener_t, ike_updown, bool,
 METHOD(load_tester_listener_t, get_established, u_int,
 	private_load_tester_listener_t *this)
 {
-	return this->established;
+	return this->established - this->terminated;
 }
 
 METHOD(load_tester_listener_t, destroy, void,
