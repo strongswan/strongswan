@@ -101,10 +101,7 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	int i, s = 0, ms = 0;
 
 	this->mutex->lock(this->mutex);
-	if (!this->running)
-	{
-		this->running = this->initiators;
-	}
+	this->running++;
 	this->mutex->unlock(this->mutex);
 	if (this->delay)
 	{
@@ -163,8 +160,8 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	}
 	this->mutex->lock(this->mutex);
 	this->running--;
-	this->mutex->unlock(this->mutex);
 	this->condvar->signal(this->condvar);
+	this->mutex->unlock(this->mutex);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -255,7 +252,6 @@ plugin_t *load_tester_plugin_create()
 		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
-	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
 		lib->processor->queue_job(lib->processor, (job_t*)
