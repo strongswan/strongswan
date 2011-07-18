@@ -254,8 +254,7 @@ struct private_kernel_netlink_ipsec_t {
 	mutex_t *mutex;
 
 	/**
-	 * Hash table of installed policies (policy_entry_t)				DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
-
+	 * Hash table of installed policies (policy_entry_t)
 	 */
 	hashtable_t *policies;
 
