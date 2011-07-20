@@ -29,7 +29,7 @@ typedef struct hmac_t hmac_t;
 /**
  * Message authentication using hash functions.
  *
- * This class implements the message authenticaion algorithm
+ * This class implements the message authentication algorithm
  * described in RFC2104. It uses a hash function, which must
  * be implemented as a hasher_t class.
  */

@@ -30,7 +30,7 @@ typedef struct ike_sa_id_t ike_sa_id_t;
  * An object of type ike_sa_id_t is used to identify an IKE_SA.
  *
  * An IKE_SA is identified by its initiator and responder spi's.
- * Additionally it contains the role of the actual running IKEv2-Daemon
+ * Additionally it contains the role of the actual running IKEv2 daemon
  * for the specific IKE_SA (original initiator or responder).
  */
 struct ike_sa_id_t {
@@ -88,14 +88,14 @@ struct ike_sa_id_t {
 	/**
 	 * Get the initiator flag.
 	 *
-	 * @return					TRUE if we are the original initator
+	 * @return					TRUE if we are the original initiator
 	 */
 	bool (*is_initiator) (ike_sa_id_t *this);
 
 	/**
 	 * Switche the original initiator flag.
 	 *
-	 * @return					TRUE if we are the original initator after switch, FALSE otherwise
+	 * @return					TRUE if we are the original initiator after switch, FALSE otherwise
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);
 

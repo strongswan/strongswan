@@ -47,7 +47,7 @@ Since IKEv2 uses the same port as IKEv1, both daemons must listen to UDP port
 500. Under Linux, there is no clean way to set up two sockets at the same port.
 To reslove this problem, charon uses a RAW socket, as they are used in network
 sniffers. An installed Linux Socket Filter (LSF) filters out all none-IKEv2
-traffic. Pluto receives any IKE message, independent of charons behavior.
+traffic. Pluto receives any IKE message, independent of charon's behavior.
 Therefore plutos behavior is changed to discard any IKEv2 traffic silently.
 
 To gain some reusability of the code, generic crypto and utility functions are 
