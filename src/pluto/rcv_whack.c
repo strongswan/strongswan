@@ -282,7 +282,7 @@ void whack_handle(int whackctlfd)
 		{
 			if (msg.magic == WHACK_BASIC_MAGIC)
 			{
-				/* Only shutdown command.  Simpler inter-version compatability. */
+				/* Only shutdown command.  Simpler inter-version compatibility. */
 				if (msg.whack_shutdown)
 				{
 					plog("shutting down");

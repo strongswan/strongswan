@@ -2327,7 +2327,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 }
 
 /**
- * Register a socket for AQUIRE/EXPIRE messages
+ * Register a socket for ACQUIRE/EXPIRE messages
  */
 static status_t register_pfkey_socket(private_kernel_pfkey_ipsec_t *this,
 									  u_int8_t satype)

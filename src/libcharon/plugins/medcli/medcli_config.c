@@ -345,7 +345,7 @@ static job_requeue_t initiate_config(peer_cfg_t *peer_cfg)
 }
 
 /**
- * schedule initation of all "active" connections
+ * schedule initiation of all "active" connections
  */
 static void schedule_autoinit(private_medcli_config_t *this)
 {

@@ -111,7 +111,7 @@ struct aead_t {
  * Create a aead instance using traditional transforms.
  *
  * @param crypter		encryption transform for this aead
- * @param signer		integrity tranform for this aead
+ * @param signer		integrity transform for this aead
  * @return				aead transform
  */
 aead_t *aead_create(crypter_t *crypter, signer_t *signer);

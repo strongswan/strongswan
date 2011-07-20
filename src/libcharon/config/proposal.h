@@ -120,7 +120,7 @@ struct proposal_t {
 	 * compared. If they have at least one algorithm of each type
 	 * in common, a resulting proposal of this kind is created.
 	 *
-	 * @param other			proposal to compair agains
+	 * @param other			proposal to compare against
 	 * @param private		accepts algorithms allocated in a private range
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
@@ -180,7 +180,7 @@ struct proposal_t {
  *
  * @param protocol			protocol, such as PROTO_ESP
  * @param number			proposal number, as encoded in SA payload
- * @return 					proposal_t object
+ * @return					proposal_t object
  */
 proposal_t *proposal_create(protocol_id_t protocol, u_int number);
 
@@ -188,7 +188,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number);
  * Create a default proposal if nothing further specified.
  *
  * @param protocol			protocol, such as PROTO_ESP
- * @return 					proposal_t object
+ * @return					proposal_t object
  */
 proposal_t *proposal_create_default(protocol_id_t protocol);
 
@@ -203,7 +203,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol);
  *
  * @param protocol			protocol, such as PROTO_ESP
  * @param algs				algorithms as string
- * @return 					proposal_t object
+ * @return					proposal_t object
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs);
 

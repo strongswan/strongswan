@@ -495,7 +495,7 @@ typedef struct {
 	CK_SESSION_HANDLE session;
 	/* pkcs11 library */
 	pkcs11_library_t *lib;
-	/* attributes to retreive */
+	/* attributes to retrieve */
 	CK_ATTRIBUTE_PTR attr;
 	/* number of attributes */
 	CK_ULONG count;

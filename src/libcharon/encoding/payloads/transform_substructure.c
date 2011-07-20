@@ -84,7 +84,7 @@ encoding_rule_t transform_substructure_encodings[] = {
 	{ U_INT_8,				offsetof(private_transform_substructure_t, transform_type)	},
 	/* 1 Reserved Byte */
 	{ RESERVED_BYTE,		offsetof(private_transform_substructure_t, reserved[1])		},
-	/* tranform ID is a number of 8 bit */
+	/* transform ID is a number of 8 bit */
 	{ U_INT_16,				offsetof(private_transform_substructure_t, transform_id)	},
 	/* Attributes are stored in a transform attribute,
 	   offset points to a linked_list_t pointer */

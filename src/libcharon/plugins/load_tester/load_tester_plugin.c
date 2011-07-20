@@ -68,7 +68,7 @@ struct private_load_tester_plugin_t {
 	int initiators;
 
 	/**
-	 * currenly running initiators
+	 * currently running initiators
 	 */
 	int running;
 

@@ -110,7 +110,7 @@ extern enum_name_t *unique_policy_names;
  * peer. Each config is enforced using the multiple authentication extension
  * (RFC4739).
  * The remote authentication configs are handled as constraints. The peer has
- * to fullfill each of these rules (using multiple authentication, in any order)
+ * to fulfill each of these rules (using multiple authentication, in any order)
  * to gain access to the configuration.
  */
 struct peer_cfg_t {
@@ -328,14 +328,14 @@ struct peer_cfg_t {
  * (rekeylifetime - random(0, jitter)).
  *
  * @param name				name of the peer_cfg
- * @param ike_version		which IKE version we sould use for this peer
+ * @param ike_version		which IKE version we should use for this peer
  * @param ike_cfg			IKE config to use when acting as initiator
  * @param cert_policy		should we send a certificate payload?
  * @param unique			uniqueness of an IKE_SA
  * @param keyingtries		how many keying tries should be done before giving up
  * @param rekey_time		timeout before starting rekeying
  * @param reauth_time		timeout before starting reauthentication
- * @param jitter_time		timerange to randomly substract from rekey/reauth time
+ * @param jitter_time		timerange to randomly subtract from rekey/reauth time
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param dpd				DPD check interval, 0 to disable

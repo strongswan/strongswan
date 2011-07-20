@@ -31,7 +31,7 @@ typedef enum auth_class_t auth_class_t;
 /**
  * Class of authentication to use. This is different to auth_method_t in that
  * it does not specify a method, but a class of acceptable methods. The found
- * certificate finally dictates wich method is used.
+ * certificate finally dictates which method is used.
  */
 enum auth_class_t {
 	/** any class acceptable */
@@ -57,7 +57,7 @@ extern enum_name_t *auth_class_names;
  * - For configs specifying local authentication behavior, the rules define
  *   which authentication method in which way.
  * - For configs specifying remote peer authentication, the rules define
- *   constraints the peer has to fullfill.
+ *   constraints the peer has to fulfill.
  *
  * Additionally to the rules, there is a set of helper items. These are used
  * to transport credentials during the authentication process.

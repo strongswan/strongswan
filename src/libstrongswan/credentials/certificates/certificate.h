@@ -176,7 +176,7 @@ struct certificate_t {
 	/**
 	 * Check if two certificates are equal.
 	 *
-	 * @param other			certificate to compair against this
+	 * @param other			certificate to compare against this
 	 * @return				TRUE if certificates are equal
 	 */
 	bool (*equals)(certificate_t *this, certificate_t *other);

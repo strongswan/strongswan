@@ -68,7 +68,7 @@ chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name, gcry_sexp_t key)
 			if (key)
 			{
 				/* gcrypt might return more bytes than necessary. Truncate
-				 * to key lenght if key given, or prepend zeros if needed  */
+				 * to key length if key given, or prepend zeros if needed  */
 				len = gcry_pk_get_nbits(key);
 				len = len / 8 + (len % 8 ? 1 : 0);
 				if (len > data.len)

@@ -73,7 +73,7 @@ struct child_cfg_t {
 	 * Add a proposal to the list.
 	 *
 	 * The proposals are stored by priority, first added
-	 * is the most prefered.
+	 * is the most preferred.
 	 * After add, proposal is owned by child_cfg.
 	 *
 	 * @param proposal		proposal to add
@@ -95,7 +95,7 @@ struct child_cfg_t {
 	 *
 	 * Returned propsal is newly created and must be destroyed after usage.
 	 *
-	 * @param proposals		list from from wich proposals are selected
+	 * @param proposals		list from which proposals are selected
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @param private		accept algorithms from a private range
 	 * @return				selected proposal, or NULL if nothing matches

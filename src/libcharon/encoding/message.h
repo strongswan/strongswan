@@ -321,7 +321,7 @@ struct message_t {
 	/**
 	 * Find a payload of a specific type.
 	 *
-	 * Returns the first occurance.
+	 * Returns the first occurrence.
 	 *
 	 * @param type		type of the payload to find
 	 * @return			payload, or NULL if no such payload found

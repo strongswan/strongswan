@@ -84,7 +84,7 @@ struct kernel_listener_t {
 					policy_dir_t direction, host_t *local, host_t *remote);
 
 	/**
-	 * Hook called if changes in the networking layer occured (interfaces
+	 * Hook called if changes in the networking layer occurred (interfaces
 	 * up/down, routes added/deleted etc.).
 	 *
 	 * @param address		TRUE if address list, FALSE if routing changed

@@ -40,7 +40,7 @@ struct private_host_t {
 	host_t public;
 
 	/**
-	 * low-lewel structure, wich stores the address
+	 * low-lewel structure, which stores the address
 	 */
 	union {
 		/** generic type */

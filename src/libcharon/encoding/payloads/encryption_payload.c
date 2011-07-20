@@ -142,7 +142,7 @@ METHOD(payload_t, set_next_type, void,
 }
 
 /**
- * Compute the lenght of the whole payload
+ * Compute the length of the whole payload
  */
 static void compute_length(private_encryption_payload_t *this)
 {

@@ -52,7 +52,7 @@ struct plugin_t {
 
 
 /**
- * Plugin constructor function definiton.
+ * Plugin constructor function definition.
  *
  * Each plugin has a constructor function. This function is called on daemon
  * startup to initialize each plugin.

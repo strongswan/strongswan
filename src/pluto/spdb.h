@@ -100,7 +100,7 @@ extern notification_t parse_ipsec_sa_body(
 	pb_stream *sa_pbs,          /* body of input SA Payload */
 	const struct isakmp_sa *sa, /* header of input SA Payload */
 	pb_stream *r_sa_pbs,        /* if non-NULL, where to emit winning SA */
-	bool selection,             /* if this SA is a selection, only one tranform can appear */
+	bool selection,             /* if this SA is a selection, only one transform can appear */
 	struct state *st);          /* current state object */
 
 extern void backup_pbs(pb_stream *pbs);

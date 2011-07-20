@@ -1300,7 +1300,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
  * proposal is emitted into it.
  *
  * If "selection" is true, the SA is supposed to represent the
- * single tranform that the peer has accepted.
+ * single transform that the peer has accepted.
  * ??? We only check that it is acceptable, not that it is one that we offered!
  *
  * Only IPsec DOI is accepted (what is the ISAKMP DOI?).

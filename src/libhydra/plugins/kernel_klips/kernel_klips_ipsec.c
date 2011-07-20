@@ -2507,7 +2507,7 @@ static void init_ipsec_devices(private_kernel_klips_ipsec_t *this)
 }
 
 /**
- * Register a socket for AQUIRE/EXPIRE messages
+ * Register a socket for ACQUIRE/EXPIRE messages
  */
 static status_t register_pfkey_socket(private_kernel_klips_ipsec_t *this, u_int8_t satype)
 {

@@ -44,7 +44,7 @@ struct private_user_controller_t {
 	user_t *user;
 
 	/**
-	 * minimum required password lenght
+	 * minimum required password length
 	 */
 	u_int password_length;
 };

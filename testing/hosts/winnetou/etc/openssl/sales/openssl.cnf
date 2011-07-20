@@ -36,9 +36,9 @@ crlnumber       = $dir/crlnumber          # The current CRL serial number
 private_key     = $dir/salesKey.pem       # The private key
 RANDFILE        = $dir/.rand              # private random number file
 
-x509_extensions = host_ext		  # The extentions to add to the cert
+x509_extensions = host_ext		  # The extensions to add to the cert
 
-crl_extensions	= crl_ext  		  # The extentions to add to the CRL
+crl_extensions	= crl_ext  		  # The extensions to add to the CRL
 
 default_days    = 1825                    # how long to certify for
 default_crl_days= 30			  # how long before next CRL
@@ -78,7 +78,7 @@ default_bits		= 2048
 default_keyfile 	= privkey.pem
 distinguished_name	= req_distinguished_name
 attributes		= req_attributes
-x509_extensions		= ca_ext	# The extentions to add to the self signed cert
+x509_extensions		= ca_ext	# The extensions to add to the self signed cert
 # req_extensions 	= v3_req 	# The extensions to add to a certificate request
 
 

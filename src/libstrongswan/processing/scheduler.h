@@ -35,7 +35,7 @@ typedef struct scheduler_t scheduler_t;
  * based data structure that satisfies the following property: if B is a child
  * node of A, then key(A) >= (or <=) key(B). So either the element with the
  * greatest (max-heap) or the smallest (min-heap) key is the root of the heap.
- * We use a min-heap whith the key being the absolute unix time at which an
+ * We use a min-heap with the key being the absolute unix time at which an
  * event is scheduled. So the root is always the event that will fire next.
  *
  * An earlier implementation of the scheduler used a sorted linked list to store

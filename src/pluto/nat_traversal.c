@@ -232,7 +232,7 @@ void nat_traversal_natd_lookup(struct msg_digest *md)
 	if (i < 2)
 	{
 		loglog(RC_LOG_SERIOUS,
-			"NAT-Traversal: Only %d NAT-D - Aborting NAT-Traversal negociation", i);
+			"NAT-Traversal: Only %d NAT-D - Aborting NAT-Traversal negotiation", i);
 		st->nat_traversal = 0;
 		return;
 	}

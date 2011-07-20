@@ -110,7 +110,7 @@ u_int32_t settings_value_as_time(char *value, u_int32_t def);
  * already existing values are replaced.
  *
  * All settings included from files are added relative to the section the
- * include statment is in.
+ * include statement is in.
  *
  * The following files result in the same final config as above:
  *

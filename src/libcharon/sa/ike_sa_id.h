@@ -30,7 +30,7 @@ typedef struct ike_sa_id_t ike_sa_id_t;
  * An object of type ike_sa_id_t is used to identify an IKE_SA.
  *
  * An IKE_SA is identified by its initiator and responder spi's.
- * Additionaly it contains the role of the actual running IKEv2-Daemon
+ * Additionally it contains the role of the actual running IKEv2-Daemon
  * for the specific IKE_SA (original initiator or responder).
  */
 struct ike_sa_id_t {
@@ -40,28 +40,28 @@ struct ike_sa_id_t {
 	 *
 	 * This function is called when a request or reply of a IKE_SA_INIT is received.
 	 *
-	 * @param responder_spi 	SPI of responder to set
+	 * @param responder_spi		SPI of responder to set
 	 */
 	void (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
 
 	/**
 	 * Set the SPI of the initiator.
 	 *
-	 * @param initiator_spi 	SPI to set
+	 * @param initiator_spi		SPI to set
 	 */
 	void (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
 
 	/**
 	 * Get the initiator SPI.
 	 *
-	 * @return 					SPI of the initiator
+	 * @return					SPI of the initiator
 	 */
 	u_int64_t (*get_initiator_spi) (ike_sa_id_t *this);
 
 	/**
 	 * Get the responder SPI.
 	 *
-	 * @return 					SPI of the responder
+	 * @return					SPI of the responder
 	 */
 	u_int64_t (*get_responder_spi) (ike_sa_id_t *this);
 
@@ -70,8 +70,8 @@ struct ike_sa_id_t {
 	 *
 	 * Two ike_sa_id_t objects are equal if both SPI values and the role matches.
 	 *
-	 * @param other 			ike_sa_id_t object to check if equal
-	 * @return 					TRUE if given ike_sa_id_t are equal, FALSE otherwise
+	 * @param other				ike_sa_id_t object to check if equal
+	 * @return					TRUE if given ike_sa_id_t are equal, FALSE otherwise
 	 */
 	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
@@ -81,28 +81,28 @@ struct ike_sa_id_t {
 	 *
 	 * After calling this function, both objects are equal.
 	 *
-	 * @param other 			ike_sa_id_t object from which values will be taken
+	 * @param other			ike_sa_id_t object from which values will be taken
 	 */
 	void (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
 	 * Get the initiator flag.
 	 *
-	 * @return 					TRUE if we are the original initator
+	 * @return					TRUE if we are the original initator
 	 */
 	bool (*is_initiator) (ike_sa_id_t *this);
 
 	/**
 	 * Switche the original initiator flag.
 	 *
-	 * @return 					TRUE if we are the original initator after switch, FALSE otherwise
+	 * @return					TRUE if we are the original initator after switch, FALSE otherwise
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);
 
 	/**
 	 * Clones a given ike_sa_id_t object.
 	 *
-	 * @return 					cloned ike_sa_id_t object
+	 * @return					cloned ike_sa_id_t object
 	 */
 	ike_sa_id_t *(*clone) (ike_sa_id_t *this);
 

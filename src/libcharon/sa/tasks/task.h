@@ -89,7 +89,7 @@ extern enum_name_t *task_type_names;
  * A responder does the opposite; it calls process() first to handle an incoming
  * request and secondly calls build() to build an appropriate response.
  * Both methods return either SUCCESS, NEED_MORE or FAILED. A SUCCESS indicates
- * that the task completed, even when the task completed unsuccesfully. The
+ * that the task completed, even when the task completed unsuccessfully. The
  * manager then removes the task from the list. A NEED_MORE is returned when
  * the task needs further build()/process() calls to complete, the manager
  * leaves the taks in the queue. A returned FAILED indicates a critical failure.
@@ -102,7 +102,7 @@ struct task_t {
 	 *
 	 * @param message		message to add payloads to
 	 * @return
-	 *						- FAILED if a critical error occured
+	 *						- FAILED if a critical error occurred
 	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
 	 *						- SUCCESS if task completed
@@ -114,7 +114,7 @@ struct task_t {
 	 *
 	 * @param message		message to read payloads from
 	 * @return
-	 * 						- FAILED if a critical error occured
+	 * 						- FAILED if a critical error occurred
 	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
 	 *						- SUCCESS if task completed

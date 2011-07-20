@@ -118,7 +118,7 @@ transform_substructure_t *transform_substructure_create(void);
  *
  * @param type			type of transform to create
  * @param id			transform id specifc for the transform type
- * @param key_length	key length for key lenght attribute, 0 to omit
+ * @param key_length	key length for key length attribute, 0 to omit
  * @return				transform_substructure_t object
  */
 transform_substructure_t *transform_substructure_create_type(

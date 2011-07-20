@@ -689,7 +689,7 @@ struct ike_sa_t {
 	 *
 	 * Message processing may fail. If a critical failure occurs,
 	 * process_message() return DESTROY_ME. Then the caller must
-	 * destroy the IKE_SA immediatly, as it is unusable.
+	 * destroy the IKE_SA immediately, as it is unusable.
 	 *
 	 * @param message		message to process
 	 * @return

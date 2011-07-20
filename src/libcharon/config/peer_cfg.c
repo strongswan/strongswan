@@ -110,7 +110,7 @@ struct private_peer_cfg_t {
 	u_int32_t reauth_time;
 
 	/**
-	 * Time, which specifies the range of a random value substracted from above.
+	 * Time, which specifies the range of a random value subtracted from above.
 	 */
 	u_int32_t jitter_time;
 

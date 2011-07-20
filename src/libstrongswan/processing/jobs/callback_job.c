@@ -62,7 +62,7 @@ struct private_callback_job_t {
 	mutex_t *mutex;
 
 	/**
-	 * list of asociated child jobs
+	 * list of associated child jobs
 	 */
 	linked_list_t *children;
 

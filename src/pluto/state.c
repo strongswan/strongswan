@@ -216,7 +216,7 @@ struct state *state_with_serialno(so_serial_t sn)
 }
 
 /* Insert a state object in the hash table. The object is inserted
- * at the begining of list.
+ * at the beginning of list.
  * Needs cookies, connection, and msgid.
  */
 void insert_state(struct state *st)

@@ -52,7 +52,7 @@ METHOD(listener_t, log_, bool,
 		snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
 		vsnprintf(buffer, sizeof(buffer), format, args);
 		while (current)
-		{	/* log each line seperately */
+		{	/* log each line separately */
 			next = strchr(current, '\n');
 			if (next)
 			{

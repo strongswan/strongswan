@@ -603,7 +603,7 @@ static suite_algs_t suite_algs[] = {
 };
 
 /**
- * Look up algoritms by a suite
+ * Look up algorithms by a suite
  */
 static suite_algs_t *find_suite(tls_cipher_suite_t suite)
 {

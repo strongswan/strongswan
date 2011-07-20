@@ -36,7 +36,7 @@ struct enumerator_t {
 	 * The enumerate function takes a variable argument list containing
 	 * pointers where the enumerated values get written.
 	 *
-	 * @param ...	variable list of enumerated items, implementation dependant
+	 * @param ...	variable list of enumerated items, implementation dependent
 	 * @return		TRUE if pointers returned
 	 */
 	bool (*enumerate)(enumerator_t *this, ...);

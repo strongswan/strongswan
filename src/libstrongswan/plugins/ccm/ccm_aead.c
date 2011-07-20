@@ -67,7 +67,7 @@ typedef struct __attribute__((packed)) {
 		u_char salt[SALT_SIZE];
 		u_char iv[IV_SIZE];
 	} nonce;
-	/* lenght of plain text, q */
+	/* length of plain text, q */
 	u_char q[Q_SIZE];
 } b0_t;
 

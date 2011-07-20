@@ -138,7 +138,7 @@ interoperability with the Check Point VPN-1 NG gateway.
    
 In the following examples we assume for reasons of clarity that left designates
 the local host and that right is the remote host. Certificates for users, hosts
-and gateways are issued by a ficticious strongSwan CA. How to generate private keys
+and gateways are issued by a fictitious strongSwan CA. How to generate private keys
 and certificates using OpenSSL will be explained in section 3. The CA certificate
 "strongswanCert.pem" must be present on all VPN end points in order to be able to
 authenticate the peers.
@@ -1959,7 +1959,7 @@ and the returned result might be a decrypted 128 bit AES key
    000 8836362e030e6707c32ffaa0bdad5540
 
 The leading three characters represent the return code of the whack channel
-with 000 signifying that no error has occured. Here is another example showing
+with 000 signifying that no error has occurred. Here is another example showing
 the use of the inbase and outbase attributes
 
    ipsec scdecrypt m/ewDnTs0k...woE= --inbase base64 --outbase text
@@ -2195,7 +2195,7 @@ The command
     ipsec listpubkeys [--utc]
 
 lists all public keys currently installed in the chained list of public
-keys. These keys were statically loaded from ipsec.conf or aquired either
+keys. These keys were statically loaded from ipsec.conf or acquired either
 from received certificates or retrieved from secure DNS servers using
 opportunistic mode.
 

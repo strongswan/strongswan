@@ -334,7 +334,7 @@ METHOD(controller_t, terminate_ike, status_t,
 	else
 	{
 		charon->bus->listen(charon->bus, &job.listener.public, &job.public);
-		/* checkin of the ike_sa happend in the thread that executed the job */
+		/* checkin of the ike_sa happened in the thread that executed the job */
 		charon->bus->set_sa(charon->bus, NULL);
 	}
 	return job.listener.status;
@@ -425,7 +425,7 @@ METHOD(controller_t, terminate_child, status_t,
 	else
 	{
 		charon->bus->listen(charon->bus, &job.listener.public, &job.public);
-		/* checkin of the ike_sa happend in the thread that executed the job */
+		/* checkin of the ike_sa happened in the thread that executed the job */
 		charon->bus->set_sa(charon->bus, NULL);
 	}
 	return job.listener.status;

@@ -407,7 +407,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 
 	this = (private_proposal_substructure_t*)proposal_substructure_create();
 
-	/* encryption algorithm is only availble in ESP */
+	/* encryption algorithm is only available in ESP */
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{

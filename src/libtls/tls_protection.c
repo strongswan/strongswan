@@ -112,7 +112,7 @@ METHOD(tls_protection_t, process, status_t,
 	private_tls_protection_t *this, tls_content_type_t type, chunk_t data)
 {
 	if (this->alert->fatal(this->alert))
-	{	/* don't accept more input, fatal error ocurred */
+	{	/* don't accept more input, fatal error occurred */
 		return NEED_MORE;
 	}
 

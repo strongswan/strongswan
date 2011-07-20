@@ -177,7 +177,7 @@ struct bus_t {
 	/**
 	 * Send a log message to the bus.
 	 *
-	 * The signal specifies the type of the event occured. The format string
+	 * The signal specifies the type of the event occurred. The format string
 	 * specifies an additional informational or error message with a
 	 * printf() like variable argument list.
 	 * Use the DBG() macros.

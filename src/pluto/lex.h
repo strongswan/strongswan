@@ -22,7 +22,7 @@ struct file_lex_position
 	int lino;   /* line number in file */
 	char buffer[MAX_TOK_LEN + 1];    /* note: one extra char for our use (jamming '"') */
 	char *cur;  /* cursor */
-	char under; /* except in shift(): character orignally at *cur */
+	char under; /* except in shift(): character originally at *cur */
 	struct file_lex_position *previous;
 };
 

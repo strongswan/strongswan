@@ -23,7 +23,7 @@ Depends: strongswan-nm, strongswan-eap-gtc, strongswan-eap-md5, strongswan-eap-m
 Description: network management framework (strongSwan plugin)
  NetworkManager attempts to keep an active network connection available at
  all times.  It is intended primarily for laptops where it allows easy
- switching betwen local wireless networks, it's also useful on desktops
+ switching between local wireless networks, it's also useful on desktops
  with a selection of different interfaces to use.  It is not intended for
  usage on servers.
  .

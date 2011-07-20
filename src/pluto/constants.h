@@ -658,7 +658,7 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_COMPRESS      LELEM(4)   /* must be third */
 #define POLICY_TUNNEL        LELEM(5)
 #define POLICY_PFS           LELEM(6)
-#define POLICY_DISABLEARRIVALCHECK  LELEM(7)    /* supress tunnel egress address checking */
+#define POLICY_DISABLEARRIVALCHECK  LELEM(7)    /* suppress tunnel egress address checking */
 
 #define POLICY_IPSEC_SHIFT      2       /* log2(POLICY_ENCRYPT) */
 #define POLICY_IPSEC_MASK       LRANGES(POLICY_ENCRYPT, POLICY_DISABLEARRIVALCHECK)

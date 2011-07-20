@@ -293,7 +293,7 @@ struct identification_t {
  *
  * In favour of pluto, domainnames are prepended with an @, since
  * pluto resolves domainnames without an @ to IPv4 addresses. Since
- * we use a seperate host_t class for addresses, this doesn't
+ * we use a separate host_t class for addresses, this doesn't
  * make sense for us.
  *
  * A distinguished name may contain one or more of the following RDNs:

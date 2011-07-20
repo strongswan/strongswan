@@ -353,7 +353,7 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 	notify_payload_t *notify;
 	host_t *me, *other;
 
-	/* only add notifies on successfull responses. */
+	/* only add notifies on successful responses. */
 	if (message->get_exchange_type(message) == IKE_SA_INIT &&
 		message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{

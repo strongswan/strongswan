@@ -2110,7 +2110,7 @@ var jsc = (new Date).getTime();
 
 jQuery.extend({
 	get: function( url, data, callback, type ) {
-		// shift arguments if data argument was ommited
+		// shift arguments if data argument was omitted
 		if ( jQuery.isFunction( data ) ) {
 			callback = data;
 			data = null;

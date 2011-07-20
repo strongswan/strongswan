@@ -8,7 +8,7 @@ new keying daemon, which is called #charon.
 Daemon control is done over unix sockets. Pluto uses whack, as it did for years.
 Charon uses another socket interface, called stroke. Stroke uses another
 format as whack and therefore is not compatible to whack. The starter utility,
-wich does fast configuration parsing, speaks both the protocols, whack and
+which does fast configuration parsing, speaks both the protocols, whack and
 stroke. It also handles daemon startup and termination. 
 Pluto uses starter for some commands, for other it uses the whack utility. To be
 as close to pluto as possible, charon has the same split up of commands to
@@ -47,7 +47,7 @@ Since IKEv2 uses the same port as IKEv1, both daemons must listen to UDP port
 500. Under Linux, there is no clean way to set up two sockets at the same port.
 To reslove this problem, charon uses a RAW socket, as they are used in network
 sniffers. An installed Linux Socket Filter (LSF) filters out all none-IKEv2
-traffic. Pluto receives any IKE message, independant of charons behavior.
+traffic. Pluto receives any IKE message, independent of charons behavior.
 Therefore plutos behavior is changed to discard any IKEv2 traffic silently.
 
 To gain some reusability of the code, generic crypto and utility functions are 

@@ -520,7 +520,7 @@ strongswan-4.3.1
   CREATE_CHILD_SA request was sent. 2) Sending an IKE_AUTH request with either
   a missing TSi or TSr payload caused a null pointer derefence because the
   checks for TSi and TSr were interchanged. The IKEv2 fuzzer used was
-  developped by the Orange Labs vulnerability research team. The tool was
+  developed by the Orange Labs vulnerability research team. The tool was
   initially written by Gabriel Campana and is now maintained by Laurent Butti.
 
 - Added support for AES counter mode in ESP in IKEv2 using the proposal
@@ -560,7 +560,7 @@ strongswan-4.2.14
 -----------------
 
 - The new server-side EAP RADIUS plugin (--enable-eap-radius)
-  relays EAP messages to and from a RADIUS server. Succesfully
+  relays EAP messages to and from a RADIUS server. Successfully
   tested with with a freeradius server using EAP-MD5 and EAP-SIM.
 
 - A vulnerability in the Dead Peer Detection (RFC 3706) code was found by
@@ -588,7 +588,7 @@ strongswan-4.2.13
 - Fixed a use-after-free bug in the DPD timeout section of the
   IKEv1 pluto daemon which sporadically caused a segfault.
 
-- Fixed a crash in the IKEv2 charon daemon occuring with
+- Fixed a crash in the IKEv2 charon daemon occurring with
   mixed RAM-based and SQL-based virtual IP address pools.
 
 - Fixed ASN.1 parsing of algorithmIdentifier objects where the
@@ -678,7 +678,7 @@ strongswan-4.2.9
   The installpolicy=no option allows peaceful cooperation with a dominant
   mip6d daemon and the new type=transport_proxy implements the special MIPv6
   IPsec transport proxy mode where the IKEv2 daemon uses the Care-of-Address
-  but the IPsec SA is set up for the Home Adress.
+  but the IPsec SA is set up for the Home Address.
 
 - Implemented migration of Mobile IPv6 connections using the KMADDRESS
   field contained in XFRM_MSG_MIGRATE messages sent by the mip6d daemon
@@ -841,7 +841,7 @@ strongswan-4.2.1
   connection setups over new ones, where the value "replace" replaces existing
   connections.
 
-- The crypto factory in libstrongswan additionaly supports random number
+- The crypto factory in libstrongswan additionally supports random number
   generators, plugins may provide other sources of randomness. The default
   plugin reads raw random data from /dev/(u)random.
 
@@ -1115,7 +1115,7 @@ strongswan-4.1.3
   is provided and more advanced backends (using e.g. a database) are trivial
   to implement.
 
- - Fixed a compilation failure in libfreeswan occuring with Linux kernel
+ - Fixed a compilation failure in libfreeswan occurring with Linux kernel
    headers > 2.6.17.
 
 
@@ -1426,7 +1426,7 @@ strongswan-2.7.0
   the successful setup and teardown of an IPsec SA, respectively.
   left|rightfirwall can be used with KLIPS under any Linux 2.4
   kernel or with NETKEY under a Linux kernel version >= 2.6.16
-  in conjuction with iptables >= 1.3.5. For NETKEY under a Linux
+  in conjunction with iptables >= 1.3.5. For NETKEY under a Linux
   kernel version < 2.6.16 which does not support IPsec policy
   matching yet, please continue to use a copy of the _updown_espmark
   template loaded via the left|rightupdown keyword.
@@ -1932,7 +1932,7 @@ strongswan-2.2.2
   and reduces the well-known four tunnel case on VPN gateways to
   a single tunnel definition (see README section 2.4).
 
-- Fixed a bug occuring with NAT-Traversal enabled when the responder
+- Fixed a bug occurring with NAT-Traversal enabled when the responder
   suddenly turns initiator and the initiator cannot find a matching
   connection because of the floated IKE port 4500.
 
@@ -1948,11 +1948,11 @@ strongswan-2.2.1
 - Introduced the ipsec auto --listalgs monitoring command which lists
   all currently registered IKE and ESP algorithms.
 
-- Fixed a bug in the ESP algorithm selection occuring when the strict flag
+- Fixed a bug in the ESP algorithm selection occurring when the strict flag
   is set and the first proposed transform does not match.
 
 - Fixed another deadlock in the use of the lock_certs_and_keys() mutex,
-  occuring when a smartcard is present.
+  occurring when a smartcard is present.
 
 - Prevented that a superseded Phase1 state can trigger a DPD_TIMEOUT event.
 

@@ -9,7 +9,7 @@ For interested developers, we have a public repository. To check out and
 compile the code, you need the following tools:
 
     - Git
-    - a recent GNU C complier (>= 3.x)
+    - a recent GNU C compiler (>= 3.x)
     - automake
     - autoconf
     - libtool

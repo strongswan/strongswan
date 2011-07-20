@@ -30,7 +30,7 @@ typedef struct receiver_t receiver_t;
 /**
  * Receives packets from the socket and adds them to the job queue.
  *
- * The receiver starts a thread, wich reads on the blocking socket. A received
+ * The receiver starts a thread, which reads on the blocking socket. A received
  * packet is preparsed and a process_message_job is queued in the job queue.
  *
  * To endure DoS attacks, cookies are enabled when to many IKE_SAs are half
@@ -38,7 +38,7 @@ typedef struct receiver_t receiver_t;
  * method in RFC4306. We do not include a nonce, because we think the advantage
  * we gain does not justify the overhead to parse the whole message.
  * Instead of VersionIdOfSecret, we include a timestamp. This allows us to
- * find out wich key was used for cookie creation. Further, we can set a
+ * find out which key was used for cookie creation. Further, we can set a
  * lifetime for the cookie, which allows us to reuse the secret for a longer
  * time.
  *		 COOKIE = time | sha1( IPi | SPIi | time | secret )

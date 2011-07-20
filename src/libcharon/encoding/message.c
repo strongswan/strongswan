@@ -63,13 +63,13 @@
 typedef struct {
 	/* Payload type */
 	 payload_type_t type;
-	/* Minimal occurence of this payload. */
+	/* Minimal occurrence of this payload. */
 	size_t min_occurence;
-	/* Max occurence of this payload. */
+	/* Max occurrence of this payload. */
 	size_t max_occurence;
 	/* TRUE if payload must be encrypted */
 	bool encrypted;
-	/* If payload occurs, the message rule is fullfilled */
+	/* If payload occurs, the message rule is fulfilled */
 	bool sufficient;
 } payload_rule_t;
 
@@ -1405,7 +1405,7 @@ static status_t verify(private_message_t *this)
 				if (found > rule->max_occurence)
 				{
 					DBG1(DBG_ENC, "payload of type %N more than %d times (%d) "
-						 "occured in current message", payload_type_names,
+						 "occurred in current message", payload_type_names,
 						 type, rule->max_occurence, found);
 					enumerator->destroy(enumerator);
 					return VERIFY_ERROR;
@@ -1416,7 +1416,7 @@ static status_t verify(private_message_t *this)
 
 		if (!complete && found < rule->min_occurence)
 		{
-			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
+			DBG1(DBG_ENC, "payload of type %N not occurred %d times (%d)",
 				 payload_type_names, rule->type, rule->min_occurence, found);
 			return VERIFY_ERROR;
 		}

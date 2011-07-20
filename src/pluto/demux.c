@@ -544,7 +544,7 @@ init_demux(void)
  * - ip(7) describes IP_RECVERR
  * - recvmsg(2) describes MSG_ERRQUEUE
  * - readv(2) describes iovec
- * - cmsg(3) describes how to process auxilliary messages
+ * - cmsg(3) describes how to process auxiliary messages
  *
  * ??? we should link this message with one we've sent
  * so that the diagnostic can refer to that negotiation.
@@ -1580,7 +1580,7 @@ process_packet(struct msg_digest **mdp)
 
 			/*
 			 * okay, now we have to figure out if we are receiving a bogus
-			 * new message in an oustanding XAUTH server conversation
+			 * new message in an outstanding XAUTH server conversation
 			 * (i.e. a reply to our challenge)
 			 * (this occurs with some broken other implementations).
 			 *

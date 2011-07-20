@@ -84,7 +84,7 @@ struct listener_t {
 	/**
 	 * Hook called for received/sent messages of an IKE_SA.
 	 *
-	 * @param ike_sa	IKE_SA sending/receving a message
+	 * @param ike_sa	IKE_SA sending/receiving a message
 	 * @param message	message object
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
 	 * @return			TRUE to stay registered, FALSE to unregister

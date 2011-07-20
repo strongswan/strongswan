@@ -89,7 +89,7 @@ msgstr ""
 #: ../properties/nm-strongswan-dialog.glade.h:12
 msgid ""
 "IPComp compresses raw IP packets before they get encrypted. This saves some "
-"bandwith, but uses more processing power."
+"bandwidth, but uses more processing power."
 msgstr ""
 "IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
 "kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."

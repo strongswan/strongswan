@@ -242,7 +242,7 @@ METHOD(tls_fragmentation_t, process, status_t,
 	{
 		case ALERT_SENDING:
 		case ALERT_SENT:
-			/* don't accept more input, fatal error ocurred */
+			/* don't accept more input, fatal error occurred */
 			return NEED_MORE;
 		case ALERT_NONE:
 			break;

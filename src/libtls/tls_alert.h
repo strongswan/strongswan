@@ -98,7 +98,7 @@ struct tls_alert_t {
 	/**
 	 * Did a fatal alert occur?.
 	 *
-	 * @return				TRUE if a fatal alert has occured
+	 * @return				TRUE if a fatal alert has occurred
 	 */
 	bool (*fatal)(tls_alert_t *this);
 

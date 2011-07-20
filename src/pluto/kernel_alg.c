@@ -205,7 +205,7 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 
 	/*
 	 * key_len passed comes from esp_attrs read from peer
-	 * For many older algoritms (eg 3DES) this key_len is fixed
+	 * For many older algorithms (eg 3DES) this key_len is fixed
 	 * and get passed as 0.
 	 * ... then get default key_len
 	 */

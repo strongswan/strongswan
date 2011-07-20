@@ -317,7 +317,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
 		/* establishing new child failed, reuse old. but not when we
-		 * recieved a delete in the meantime */
+		 * received a delete in the meantime */
 		if (!(this->collision &&
 			  this->collision->get_type(this->collision) == CHILD_DELETE))
 		{

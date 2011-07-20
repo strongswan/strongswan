@@ -254,7 +254,7 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
  * Increment a chunk, as it would reprensent a network order integer.
  *
  * @param chunk			chunk to increment
- * @return				TRUE if an overflow occured
+ * @return				TRUE if an overflow occurred
  */
 bool chunk_increment(chunk_t chunk);
 
