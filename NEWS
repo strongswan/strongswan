@@ -9,9 +9,17 @@ strongswan-4.5.3
 - The dynamic IMC/IMV libraries were moved from the plugins directory to
   a new imcvs directory in the prefix/lib/ipsec/ subdirectory.
 
+- Job priorities were introduced to prevent thread starvation caused by too
+  many threads handling blocking operations (such as CRL fetching).  Refer to
+  strongswan.conf(5) for details.
+
+- Two new strongswan.conf options allow to fine-tune performance on IKEv2
+  gateways by dropping IKE_SA_INIT requests on high load.
+
 - IKEv2 charon daemon supports start PASS and DROP shunt policies
   preventing traffic to go through IPsec connections. Installation of the
-  shunt policies either via the XFRM netfilter or PFKEYv2 IPsec kernel interfaces.
+  shunt policies either via the XFRM netfilter or PFKEYv2 IPsec kernel
+  interfaces.
 
 - The history of policies installed in the kernel is now tracked so that e.g.
   trap policies are correctly updated when reauthenticated SAs are terminated.
