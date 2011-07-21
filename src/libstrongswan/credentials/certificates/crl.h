@@ -100,9 +100,10 @@ struct crl_t {
 /**
  * Generic check if a given CRL is newer than another.
  *
+ * @param crl			CRL
  * @param other			CRL to compare to
  * @return				TRUE if this newer than other
  */
-bool crl_is_newer(crl_t *this, crl_t *other);
+bool crl_is_newer(crl_t *crl, crl_t *other);
 
 #endif /** CRL_H_ @}*/

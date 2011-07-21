@@ -151,7 +151,7 @@ struct public_key_t {
 	 * @param scheme	encryption scheme to use
 	 * @param plain		chunk containing plaintext data
 	 * @param crypto	where to allocate encrypted data
-	 * @return 			TRUE if data successfully encrypted
+	 * @return			TRUE if data successfully encrypted
 	 */
 	bool (*encrypt)(public_key_t *this, encryption_scheme_t scheme,
 					chunk_t plain, chunk_t *crypto);
@@ -215,18 +215,20 @@ struct public_key_t {
 /**
  * Generic public key equals() implementation, usable by implementors.
  *
+ * @param public		public key to check
  * @param other			key to compare
  * @return				TRUE if this is equal to other
  */
-bool public_key_equals(public_key_t *this, public_key_t *other);
+bool public_key_equals(public_key_t *public, public_key_t *other);
 
 /**
  * Generic public key has_fingerprint() implementation, usable by implementors.
  *
+ * @param public		public key to check
  * @param fingerprint	fingerprint to check
  * @return				TRUE if key has given fingerprint
  */
-bool public_key_has_fingerprint(public_key_t *this, chunk_t fingerprint);
+bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
 
 /**
  * Conversion of ASN.1 signature or hash OID to signature scheme.

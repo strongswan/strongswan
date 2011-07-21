@@ -115,7 +115,7 @@ struct certificate_t {
 	 * not returned by get_subject (e.g. subjectAltNames)
 	 *
 	 * @param subject	subject identity
-	 * @return 			matching value of best match
+	 * @return			matching value of best match
 	 */
 	id_match_t (*has_subject)(certificate_t *this, identification_t *subject);
 
@@ -132,8 +132,8 @@ struct certificate_t {
 	 * A certificate may contain additional issuer identifiers, which are
 	 * not returned by get_issuer (e.g. issuerAltNames)
 	 *
-	 * @param subject	isser identity
-	 * @return 			matching value of best match
+	 * @param subject	issuer identity
+	 * @return			matching value of best match
 	 */
 	id_match_t (*has_issuer)(certificate_t *this, identification_t *issuer);
 
@@ -141,7 +141,7 @@ struct certificate_t {
 	 * Check if this certificate is issued and signed by a specific issuer.
 	 *
 	 * @param issuer	issuer's certificate
-	 * @return 			TRUE if certificate issued by issuer and trusted
+	 * @return			TRUE if certificate issued by issuer and trusted
 	 */
 	bool (*issued_by)(certificate_t *this, certificate_t *issuer);
 
@@ -197,9 +197,10 @@ struct certificate_t {
 /**
  * Generic check if a given certificate is newer than another.
  *
+ * @param cert			certificate
  * @param other			certificate to compare to
  * @return				TRUE if this newer than other
  */
-bool certificate_is_newer(certificate_t *this, certificate_t *other);
+bool certificate_is_newer(certificate_t *cert, certificate_t *other);
 
 #endif /** CERTIFICATE_H_ @}*/
