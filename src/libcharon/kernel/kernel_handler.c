@@ -125,6 +125,8 @@ METHOD(kernel_listener_t, roam, bool,
 	   private_kernel_handler_t *this, bool address)
 {
 	job_t *job;
+	DBG2(DBG_KNL, "creating roam job %s", address ? "due to address/link change"
+												  : "due to route change");
 	job = (job_t*)roam_job_create(address);
 	lib->processor->queue_job(lib->processor, job);
 	return TRUE;
