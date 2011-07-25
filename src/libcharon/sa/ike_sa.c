@@ -1929,6 +1929,8 @@ METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
 	child_sa_t *child_sa;
 	attribute_entry_t *entry;
+	enumerator_t *enumerator;
+	auth_cfg_t *cfg;
 
 	/* apply hosts and ids */
 	this->my_host->destroy(this->my_host);
@@ -1951,6 +1953,20 @@ METHOD(ike_sa_t, inherit, void,
 		this->other_virtual_ip = other->other_virtual_ip;
 		other->other_virtual_ip = NULL;
 	}
+
+	/* authentication information */
+	enumerator = other->my_auths->create_enumerator(other->my_auths);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		this->my_auths->insert_last(this->my_auths, cfg->clone(cfg));
+	}
+	enumerator->destroy(enumerator);
+	enumerator = other->other_auths->create_enumerator(other->other_auths);
+	while (enumerator->enumerate(enumerator, &cfg))
+	{
+		this->other_auths->insert_last(this->other_auths, cfg->clone(cfg));
+	}
+	enumerator->destroy(enumerator);
 
 	/* ... and configuration attributes */
 	while (other->attributes->remove_last(other->attributes,
