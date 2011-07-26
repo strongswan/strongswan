@@ -20,6 +20,7 @@
 #include "mysql_database.h"
 
 #include <debug.h>
+#include <chunk.h>
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
