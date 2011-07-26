@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2011-07-17" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2011-07-26" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -781,6 +781,15 @@ libtls library messages
 .TP
 .B lib
 libstrongwan library messages
+.TP
+.B tnc
+Trusted Network Connect
+.TP
+.B imc
+Integrity Measurement Collector
+.TP
+.B imv
+Integrity Measurement Verifier
 .SS Loglevels
 .TP
 .B -1
