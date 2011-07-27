@@ -575,6 +575,9 @@ static inline u_int32_t get_priority(policy_entry_t *policy,
 	u_int32_t priority = PRIO_BASE;
 	switch (prio)
 	{
+		case POLICY_PRIORITY_FALLBACK:
+			priority <<= 1;
+			/* fall-through */
 		case POLICY_PRIORITY_ROUTED:
 			priority <<= 1;
 			/* fall-through */

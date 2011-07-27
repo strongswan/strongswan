@@ -715,6 +715,17 @@ METHOD(child_sa_t, add_policies, status_t,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
+			/* install outbound drop policy to avoid packets leaving unencrypted
+			 * when updating policies */
+			if (priority == POLICY_PRIORITY_DEFAULT)
+			{
+				status |= hydra->kernel_interface->add_policy(
+							hydra->kernel_interface,
+							this->my_addr, this->other_addr, my_ts, other_ts,
+							POLICY_OUT, POLICY_DROP, &other_sa,
+							this->mark_out, POLICY_PRIORITY_FALLBACK);
+			}
+
 			/* install 3 policies: out, in and forward */
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
@@ -962,6 +973,12 @@ METHOD(child_sa_t, destroy, void,
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_FWD, this->reqid,
 						this->mark_in, priority);
+			}
+			if (priority == POLICY_PRIORITY_DEFAULT)
+			{
+				hydra->kernel_interface->del_policy(hydra->kernel_interface,
+						my_ts, other_ts, POLICY_OUT, this->reqid,
+						this->mark_out, POLICY_PRIORITY_FALLBACK);
 			}
 		}
 		enumerator->destroy(enumerator);

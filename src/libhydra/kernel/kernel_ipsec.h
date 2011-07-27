@@ -98,6 +98,8 @@ enum policy_priority_t {
 	POLICY_PRIORITY_DEFAULT,
 	/** Priority for trap policies */
 	POLICY_PRIORITY_ROUTED,
+	/** Priority for fallback drop policies */
+	POLICY_PRIORITY_FALLBACK,
 };
 
 /**
