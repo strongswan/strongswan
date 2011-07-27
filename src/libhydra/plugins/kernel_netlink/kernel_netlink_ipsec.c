@@ -59,8 +59,7 @@
 #endif /*IPV6_XFRM_POLICY*/
 
 /** Default priority of installed policies */
-#define PRIO_LOW 1024
-#define PRIO_HIGH 512
+#define PRIO_BASE 512
 
 /** Default replay window size, if not set using charon.replay_window */
 #define DEFAULT_REPLAY_WINDOW 32
@@ -565,6 +564,30 @@ static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 	return memeq(&key->sel, &other_key->sel,
 				 sizeof(struct xfrm_selector) + sizeof(u_int32_t)) &&
 		   key->direction == other_key->direction;
+}
+
+/**
+ * Calculate the priority of a policy
+ */
+static inline u_int32_t get_priority(policy_entry_t *policy,
+									 policy_priority_t prio)
+{
+	u_int32_t priority = PRIO_BASE;
+	switch (prio)
+	{
+		case POLICY_PRIORITY_ROUTED:
+			priority <<= 1;
+			/* fall-through */
+		case POLICY_PRIORITY_DEFAULT:
+			break;
+	}
+	/* calculate priority based on selector size, small size = high prio */
+	priority -= policy->sel.prefixlen_s;
+	priority -= policy->sel.prefixlen_d;
+	priority <<= 2; /* make some room for the two flags */
+	priority += policy->sel.sport_mask || policy->sel.dport_mask ? 0 : 2;
+	priority += policy->sel.proto ? 0 : 1;
+	return priority;
 }
 
 /**
@@ -2149,7 +2172,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, bool routed)
+	mark_t mark, policy_priority_t priority)
 {
 	policy_entry_t *policy, *current;
 	policy_sa_t *assigned_sa, *current_sa;
@@ -2195,15 +2218,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, direction, type, src, dst, src_ts,
 								   dst_ts, mark, sa);
-
-	/* calculate priority based on selector size, small size = high prio */
-	assigned_sa->priority = routed ? PRIO_LOW : PRIO_HIGH;
-	assigned_sa->priority -= policy->sel.prefixlen_s;
-	assigned_sa->priority -= policy->sel.prefixlen_d;
-	assigned_sa->priority <<= 2; /* make some room for the two flags */
-	assigned_sa->priority += policy->sel.sport_mask ||
-							 policy->sel.dport_mask ? 0 : 2;
-	assigned_sa->priority += policy->sel.proto ? 0 : 1;
+	assigned_sa->priority = get_priority(policy, priority);
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2354,7 +2369,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 METHOD(kernel_ipsec_t, del_policy, status_t,
 	private_kernel_netlink_ipsec_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
-	mark_t mark, bool unrouted)
+	mark_t mark, policy_priority_t prio)
 {
 	policy_entry_t *current, policy;
 	enumerator_t *enumerator;
@@ -2363,6 +2378,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
+	u_int32_t priority;
 
 	if (mark.value)
 	{
@@ -2402,11 +2418,12 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return NOT_FOUND;
 	}
 
-	/* remove mapping to SA by reqid */
+	/* remove mapping to SA by reqid and priority */
+	priority = get_priority(current, prio);
 	enumerator = current->used_by->create_enumerator(current->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (reqid == mapping->sa->cfg.reqid)
+		if (reqid == mapping->sa->cfg.reqid && priority == mapping->priority)
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
 			policy_sa_destroy(mapping, &direction, this);

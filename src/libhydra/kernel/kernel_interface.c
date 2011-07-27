@@ -132,14 +132,14 @@ METHOD(kernel_interface_t, add_policy, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, bool routed)
+	mark_t mark, policy_priority_t priority)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->add_policy(this->ipsec, src, dst, src_ts, dst_ts,
-								   direction, type, sa, mark, routed);
+								   direction, type, sa, mark, priority);
 }
 
 METHOD(kernel_interface_t, query_policy, status_t,
@@ -158,14 +158,14 @@ METHOD(kernel_interface_t, query_policy, status_t,
 METHOD(kernel_interface_t, del_policy, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
-	mark_t mark, bool unrouted)
+	mark_t mark, policy_priority_t priority)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->del_policy(this->ipsec, src_ts, dst_ts,
-								   direction, reqid, mark, unrouted);
+								   direction, reqid, mark, priority);
 }
 
 METHOD(kernel_interface_t, get_source_addr, host_t*,

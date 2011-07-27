@@ -69,19 +69,22 @@ static bool install_shunt_policy(child_cfg_t *child)
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
 								my_ts, other_ts, POLICY_OUT, policy_type,
-								&sa, child->get_mark(child, FALSE), FALSE);
+								&sa, child->get_mark(child, FALSE),
+								POLICY_PRIORITY_DEFAULT);
 
 			/* install in policy */
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_IN, policy_type,
-								&sa, child->get_mark(child, TRUE), FALSE);
+								&sa, child->get_mark(child, TRUE),
+								POLICY_PRIORITY_DEFAULT);
 
 			/* install forward policy */
 			status |= hydra->kernel_interface->add_policy(
 								hydra->kernel_interface, host_any, host_any,
 								other_ts, my_ts, POLICY_FWD, policy_type,
-								&sa, child->get_mark(child, TRUE), FALSE);
+								&sa, child->get_mark(child, TRUE),
+								POLICY_PRIORITY_DEFAULT);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
@@ -150,19 +153,19 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, my_ts, other_ts,
 							POLICY_OUT, 0, child->get_mark(child, FALSE),
-							FALSE);
+							POLICY_PRIORITY_DEFAULT);
 
 			/* uninstall in policy */
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, other_ts, my_ts,
 							POLICY_IN, 0, child->get_mark(child, TRUE),
-							FALSE);
+							POLICY_PRIORITY_DEFAULT);
 
 			/* uninstall forward policy */
 			status |= hydra->kernel_interface->del_policy(
 							hydra->kernel_interface, other_ts, my_ts,
 							POLICY_FWD, 0, child->get_mark(child, TRUE),
-							FALSE);
+							POLICY_PRIORITY_DEFAULT);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}

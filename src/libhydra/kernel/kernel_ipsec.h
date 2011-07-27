@@ -27,6 +27,7 @@
 typedef enum ipsec_mode_t ipsec_mode_t;
 typedef enum policy_dir_t policy_dir_t;
 typedef enum policy_type_t policy_type_t;
+typedef enum policy_priority_t policy_priority_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct kernel_ipsec_t kernel_ipsec_t;
 typedef struct ipsec_sa_cfg_t ipsec_sa_cfg_t;
@@ -87,6 +88,16 @@ enum policy_type_t {
 	POLICY_PASS,
 	/** Drop policy (traffic is discarded) */
 	POLICY_DROP,
+};
+
+/**
+ * High-level priority of a policy.
+ */
+enum policy_priority_t {
+	/** Default priority */
+	POLICY_PRIORITY_DEFAULT,
+	/** Priority for trap policies */
+	POLICY_PRIORITY_ROUTED,
 };
 
 /**
@@ -305,7 +316,7 @@ struct kernel_ipsec_t {
 	 * @param type			type of policy, POLICY_(IPSEC|PASS|DROP)
 	 * @param sa			details about the SA(s) tied to this policy
 	 * @param mark			mark for this policy
-	 * @param routed		TRUE, if this policy is routed in the kernel
+	 * @param priority		priority of this policy
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_policy) (kernel_ipsec_t *this,
@@ -313,7 +324,8 @@ struct kernel_ipsec_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, policy_type_t type,
-							ipsec_sa_cfg_t *sa, mark_t mark, bool routed);
+							ipsec_sa_cfg_t *sa, mark_t mark,
+							policy_priority_t priority);
 
 	/**
 	 * Query the use time of a policy.
@@ -348,14 +360,14 @@ struct kernel_ipsec_t {
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
 	 * @param reqid			unique ID of the associated SA
 	 * @param mark			optional mark
-	 * @param unrouted		TRUE, if this policy is unrouted from the kernel
+	 * @param priority		priority of the policy
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_ipsec_t *this,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, u_int32_t reqid,
-							mark_t mark, bool unrouted);
+							mark_t mark, policy_priority_t priority);
 
 	/**
 	 * Install a bypass policy for the given socket.

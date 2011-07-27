@@ -780,8 +780,9 @@ static bool raw_eroute(const ip_address *this_host,
 	host_t *host_src, *host_dst;
 	policy_type_t type = POLICY_IPSEC;
 	policy_dir_t dir = POLICY_OUT;
+	policy_priority_t priority = POLICY_PRIORITY_DEFAULT;
 	char text_said[SATOT_BUF];
-	bool ok = TRUE, routed = FALSE,
+	bool ok = TRUE,
 		 deleting = (op & ERO_MASK) == ERO_DELETE,
 		 replacing = op & (SADB_X_SAFLAGS_REPLACEFLOW << ERO_FLAG_SHIFT);
 
@@ -819,7 +820,7 @@ static bool raw_eroute(const ip_address *this_host,
 				{
 					return TRUE;
 				}
-				routed = TRUE;
+				priority = POLICY_PRIORITY_ROUTED;
 				break;
 		}
 	}
@@ -837,14 +838,14 @@ static bool raw_eroute(const ip_address *this_host,
 	if (deleting || replacing)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, sa->reqid, mark, routed);
+						ts_src, ts_dst, dir, sa->reqid, mark, priority);
 	}
 
 	if (!deleting)
 	{
 		ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
-						mark, routed) == SUCCESS;
+						mark, priority) == SUCCESS;
 	}
 
 	if (dir == POLICY_IN)
@@ -853,7 +854,7 @@ static bool raw_eroute(const ip_address *this_host,
 		if (deleting || replacing)
 		{
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						ts_src, ts_dst, dir, sa->reqid, mark, routed);
+						ts_src, ts_dst, dir, sa->reqid, mark, priority);
 		}
 
 		if (!deleting && ok &&
@@ -861,7 +862,7 @@ static bool raw_eroute(const ip_address *this_host,
 		{
 			ok = hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						host_src, host_dst, ts_src, ts_dst, dir, type, sa,
-						mark, routed) == SUCCESS;
+						mark, priority) == SUCCESS;
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -664,7 +664,6 @@ METHOD(child_sa_t, add_policies, status_t,
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status = SUCCESS;
-	bool routed = (this->state == CHILD_CREATED);
 
 	/* apply traffic selectors */
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
@@ -682,6 +681,7 @@ METHOD(child_sa_t, add_policies, status_t,
 
 	if (this->config->install_policy(this->config))
 	{
+		policy_priority_t priority;
 		ipsec_sa_cfg_t my_sa = {
 			.mode = this->mode,
 			.reqid = this->reqid,
@@ -708,6 +708,9 @@ METHOD(child_sa_t, add_policies, status_t,
 			other_sa.ah.spi = this->other_spi;
 		}
 
+		priority = this->state == CHILD_CREATED ? POLICY_PRIORITY_ROUTED
+												: POLICY_PRIORITY_DEFAULT;
+
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -717,20 +720,20 @@ METHOD(child_sa_t, add_policies, status_t,
 							hydra->kernel_interface,
 							this->my_addr, this->other_addr, my_ts, other_ts,
 							POLICY_OUT, POLICY_IPSEC, &other_sa,
-							this->mark_out, routed);
+							this->mark_out, priority);
 
 			status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
 							POLICY_IN, POLICY_IPSEC, &my_sa,
-							this->mark_in, routed);
+							this->mark_in, priority);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				status |= hydra->kernel_interface->add_policy(
 							hydra->kernel_interface,
 							this->other_addr, this->my_addr, other_ts, my_ts,
 							POLICY_FWD, POLICY_IPSEC, &my_sa,
-							this->mark_in, routed);
+							this->mark_in, priority);
 			}
 
 			if (status != SUCCESS)
@@ -838,15 +841,15 @@ METHOD(child_sa_t, update, status_t,
 				/* remove old policies first */
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							my_ts, other_ts, POLICY_OUT, this->reqid,
-							this->mark_out, FALSE);
+							this->mark_out, POLICY_PRIORITY_DEFAULT);
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							other_ts, my_ts,  POLICY_IN, this->reqid,
-							this->mark_in, FALSE);
+							this->mark_in, POLICY_PRIORITY_DEFAULT);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->del_policy(hydra->kernel_interface,
 							other_ts, my_ts, POLICY_FWD, this->reqid,
-							this->mark_in, FALSE);
+							this->mark_in, POLICY_PRIORITY_DEFAULT);
 				}
 
 				/* check whether we have to update a "dynamic" traffic selector */
@@ -872,15 +875,15 @@ METHOD(child_sa_t, update, status_t,
 				/* reinstall updated policies */
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						me, other, my_ts, other_ts, POLICY_OUT, POLICY_IPSEC,
-						&other_sa, this->mark_out, FALSE);
+						&other_sa, this->mark_out, POLICY_PRIORITY_DEFAULT);
 				hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_IN, POLICY_IPSEC,
-						&my_sa, this->mark_in, FALSE);
+						&my_sa, this->mark_in, POLICY_PRIORITY_DEFAULT);
 				if (this->mode != MODE_TRANSPORT)
 				{
 					hydra->kernel_interface->add_policy(hydra->kernel_interface,
 						other, me, other_ts, my_ts, POLICY_FWD, POLICY_IPSEC,
-						&my_sa, this->mark_in, FALSE);
+						&my_sa, this->mark_in, POLICY_PRIORITY_DEFAULT);
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -913,7 +916,10 @@ METHOD(child_sa_t, destroy, void,
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
-	bool unrouted = (this->state == CHILD_ROUTED);
+	policy_priority_t priority;
+
+	priority = this->state == CHILD_ROUTED ? POLICY_PRIORITY_ROUTED
+										   : POLICY_PRIORITY_DEFAULT;
 
 	set_state(this, CHILD_DESTROYING);
 
@@ -947,15 +953,15 @@ METHOD(child_sa_t, destroy, void,
 		{
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						my_ts, other_ts, POLICY_OUT, this->reqid,
-						this->mark_out, unrouted);
+						this->mark_out, priority);
 			hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_IN, this->reqid,
-						this->mark_in, unrouted);
+						this->mark_in, priority);
 			if (this->mode != MODE_TRANSPORT)
 			{
 				hydra->kernel_interface->del_policy(hydra->kernel_interface,
 						other_ts, my_ts, POLICY_FWD, this->reqid,
-						this->mark_in, unrouted);
+						this->mark_in, priority);
 			}
 		}
 		enumerator->destroy(enumerator);

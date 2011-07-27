@@ -100,8 +100,7 @@
 #endif
 
 /** default priority of installed policies */
-#define PRIO_LOW 1024
-#define PRIO_HIGH 512
+#define PRIO_BASE 512
 
 #ifdef __APPLE__
 /** from xnu/bsd/net/pfkeyv2.h */
@@ -499,6 +498,32 @@ static inline bool policy_entry_match_byindex(policy_entry_t *current,
 											  u_int32_t *index)
 {
 	return current->index == *index;
+}
+
+/**
+ * Calculate the priority of a policy
+ */
+static inline u_int32_t get_priority(policy_entry_t *policy,
+									 policy_priority_t prio)
+{
+	u_int32_t priority = PRIO_BASE;
+	switch (prio)
+	{
+		case POLICY_PRIORITY_ROUTED:
+			priority <<= 1;
+			/* fall-through */
+		case POLICY_PRIORITY_DEFAULT:
+			break;
+	}
+	/* calculate priority based on selector size, small size = high prio */
+	priority -= policy->src.mask;
+	priority -= policy->dst.mask;
+	priority <<= 2; /* make some room for the two flags */
+	priority += policy->src.net->get_port(policy->src.net) ||
+				policy->dst.net->get_port(policy->dst.net) ?
+				0 : 2;
+	priority += policy->src.proto != IPSEC_PROTO_ANY ? 0 : 1;
+	return priority;
 }
 
 typedef struct pfkey_msg_t pfkey_msg_t;
@@ -2008,7 +2033,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
-	mark_t mark, bool routed)
+	mark_t mark, policy_priority_t priority)
 {
 	policy_entry_t *policy, *found = NULL;
 	policy_sa_t *assigned_sa, *current_sa;
@@ -2043,17 +2068,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, direction, type, src, dst, src_ts,
 								   dst_ts, sa);
-
-
-	/* calculate priority based on selector size, small size = high prio */
-	assigned_sa->priority = routed ? PRIO_LOW : PRIO_HIGH;
-	assigned_sa->priority -= policy->src.mask;
-	assigned_sa->priority -= policy->dst.mask;
-	assigned_sa->priority <<= 2; /* make some room for the two flags */
-	assigned_sa->priority += policy->src.net->get_port(policy->src.net) ||
-							 policy->dst.net->get_port(policy->dst.net) ?
-							 0 : 2;
-	assigned_sa->priority += policy->src.proto != IPSEC_PROTO_ANY ? 0 : 1;
+	assigned_sa->priority = get_priority(policy, priority);
 
 	/* insert the SA according to its priority */
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
@@ -2197,7 +2212,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 METHOD(kernel_ipsec_t, del_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
-	mark_t mark, bool unrouted)
+	mark_t mark, policy_priority_t prio)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -2206,6 +2221,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_sa_t *mapping;
 	enumerator_t *enumerator;
 	bool is_installed = TRUE;
+	u_int32_t priority;
 	size_t len;
 
 	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
@@ -2234,11 +2250,12 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_entry_destroy(policy, this);
 	policy = found;
 
-	/* remove mapping to SA by reqid */
+	/* remove mapping to SA by reqid and priority */
+	priority = get_priority(policy, prio);
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&mapping))
 	{
-		if (reqid == mapping->sa->cfg.reqid)
+		if (reqid == mapping->sa->cfg.reqid && priority == mapping->priority)
 		{
 			policy->used_by->remove_at(policy->used_by, enumerator);
 			break;
