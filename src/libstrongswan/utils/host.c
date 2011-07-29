@@ -585,7 +585,7 @@ host_t *host_create_from_subnet(char *string, int *bits)
 		*bits = atoi(pos + 1);
 		return host_create_from_string(buf, 0);
 	}
-	net = host_create_from_string(buf, 0);
+	net = host_create_from_string(string, 0);
 	if (net)
 	{
 		if (net->get_family(net) == AF_INET)
