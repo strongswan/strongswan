@@ -881,6 +881,7 @@ METHOD(child_sa_t, update, status_t,
 			enumerator = create_policy_enumerator(this);
 			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 			{
+				traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
 				/* remove old policies first */
 				del_policies_internal(this, my_ts, other_ts,
 									  POLICY_PRIORITY_DEFAULT);
@@ -889,11 +890,13 @@ METHOD(child_sa_t, update, status_t,
 				if (!me->ip_equals(me, this->my_addr) &&
 					my_ts->is_host(my_ts, this->my_addr))
 				{
+					old_my_ts = my_ts->clone(my_ts);
 					my_ts->set_address(my_ts, me);
 				}
 				if (!other->ip_equals(other, this->other_addr) &&
 					other_ts->is_host(other_ts, this->other_addr))
 				{
+					old_other_ts = other_ts->clone(other_ts);
 					other_ts->set_address(other_ts, other);
 				}
 
@@ -901,14 +904,29 @@ METHOD(child_sa_t, update, status_t,
 				 * correctly */
 				if (vip)
 				{
-					hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
-					hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, me);
+					hydra->kernel_interface->del_ip(hydra->kernel_interface,
+													vip);
+					hydra->kernel_interface->add_ip(hydra->kernel_interface,
+													vip, me);
 				}
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
 								&my_sa, &other_sa, POLICY_IPSEC,
 								POLICY_PRIORITY_DEFAULT);
+
+				/* update fallback policies after the new policy is in place */
+				if (old_my_ts || old_other_ts)
+				{
+					del_policies_internal(this, old_my_ts ?: my_ts,
+										  old_other_ts ?: other_ts,
+										  POLICY_PRIORITY_FALLBACK);
+					install_policies_internal(this, me, other, my_ts, other_ts,
+								&my_sa, &other_sa, POLICY_DROP,
+								POLICY_PRIORITY_FALLBACK);
+					DESTROY_IF(old_my_ts);
+					DESTROY_IF(old_other_ts);
+				}
 			}
 			enumerator->destroy(enumerator);
 		}
