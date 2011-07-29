@@ -50,10 +50,11 @@ struct iface_t {
 	/**
 	 * Add an address to the interface.
 	 *
-	 * @param addr		address to add to interface
+	 * @param addr		address to add to the interface
+	 * @param bits		network prefix length in bits
 	 * @return			TRUE if address added
 	 */
-	bool (*add_address)(iface_t *this, host_t *addr);
+	bool (*add_address)(iface_t *this, host_t *addr, int bits);
 
 	/**
 	 * Create an enumerator over all installed addresses.
@@ -65,10 +66,13 @@ struct iface_t {
 	/**
 	 * Remove an address from an interface.
 	 *
+	 * @note The network prefix length has to be the same as used in add_address
+	 *
 	 * @param addr		address to remove
+	 * @param bits		network prefix length in bits
 	 * @return			TRUE if address removed
 	 */
-	bool (*delete_address)(iface_t *this, host_t *addr);
+	bool (*delete_address)(iface_t *this, host_t *addr, int bits);
 
 	/**
 	 * Set the bridge this interface is attached to.

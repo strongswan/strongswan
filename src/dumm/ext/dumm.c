@@ -594,21 +594,22 @@ static VALUE iface_add_addr(VALUE self, VALUE name)
 {
 	iface_t *iface;
 	host_t *addr;
+	int bits;
 
-	addr = host_create_from_string(StringValuePtr(name), 0);
+	addr = host_create_from_subnet(StringValuePtr(name), &bits);
 	if (!addr)
 	{
 		rb_raise(rb_eArgError, "invalid IP address");
 	}
 	Data_Get_Struct(self, iface_t, iface);
-	if (!iface->add_address(iface, addr))
+	if (!iface->add_address(iface, addr, bits))
 	{
 		addr->destroy(addr);
 		rb_raise(rb_eRuntimeError, "adding address failed");
 	}
 	if (rb_block_given_p()) {
 		rb_yield(self);
-		iface->delete_address(iface, addr);
+		iface->delete_address(iface, addr, bits);
 	}
 	addr->destroy(addr);
 	return self;
@@ -647,21 +648,22 @@ static VALUE iface_del_addr(VALUE self, VALUE vaddr)
 {
 	iface_t *iface;
 	host_t *addr;
+	int bits;
 
-	addr = host_create_from_string(StringValuePtr(vaddr), 0);
+	addr = host_create_from_subnet(StringValuePtr(vaddr), &bits);
 	if (!addr)
 	{
 		rb_raise(rb_eArgError, "invalid IP address");
 	}
 	Data_Get_Struct(self, iface_t, iface);
-	if (!iface->delete_address(iface, addr))
+	if (!iface->delete_address(iface, addr, bits))
 	{
 		addr->destroy(addr);
 		rb_raise(rb_eRuntimeError, "address not found");
 	}
 	if (rb_block_given_p()) {
 		rb_yield(self);
-		iface->add_address(iface, addr);
+		iface->add_address(iface, addr, bits);
 	}
 	addr->destroy(addr);
 	return self;

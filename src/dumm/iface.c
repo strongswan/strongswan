@@ -102,10 +102,10 @@ static char* get_hostif(private_iface_t *this)
 /**
  * Implementation of iface_t.add_address
  */
-static bool add_address(private_iface_t *this, host_t *addr)
+static bool add_address(private_iface_t *this, host_t *addr, int bits)
 {
 	return (this->guest->exec(this->guest, NULL, NULL,
-				  "exec ip addr add %H dev %s", addr, this->guestif) == 0);
+			"exec ip addr add %H/%d dev %s", addr, bits, this->guestif) == 0);
 }
 
 /**
@@ -146,10 +146,10 @@ static enumerator_t* create_address_enumerator(private_iface_t *this)
 /**
  * Implementation of iface_t.delete_address
  */
-static bool delete_address(private_iface_t *this, host_t *addr)
+static bool delete_address(private_iface_t *this, host_t *addr, int bits)
 {
 	return (this->guest->exec(this->guest, NULL, NULL,
-					"exec ip addr del %H dev %s", addr, this->guestif) == 0);
+			"exec ip addr del %H/%d dev %s", addr, bits, this->guestif) == 0);
 }
 
 /**
@@ -277,9 +277,9 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 
 	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
 	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
-	this->public.add_address = (bool(*)(iface_t*, host_t *addr))add_address;
+	this->public.add_address = (bool(*)(iface_t*,host_t*,int))add_address;
 	this->public.create_address_enumerator = (enumerator_t*(*)(iface_t*))create_address_enumerator;
-	this->public.delete_address = (bool(*)(iface_t*, host_t *addr))delete_address;
+	this->public.delete_address = (bool(*)(iface_t*,host_t*,int))delete_address;
 	this->public.set_bridge = (void(*)(iface_t*, bridge_t*))set_bridge;
 	this->public.get_bridge = (bridge_t*(*)(iface_t*))get_bridge;
 	this->public.get_guest = (guest_t*(*)(iface_t*))get_guest;
