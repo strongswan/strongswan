@@ -904,7 +904,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				struct rtattr *rta;
 				size_t rtasize;
 				chunk_t rta_gtw, rta_src, rta_dst;
-				u_int32_t rta_oif = 0;
+				u_int32_t rta_oif = 0, rta_table;
 				host_t *new_src, *new_gtw;
 				bool cont = FALSE;
 				uintptr_t table;
@@ -913,6 +913,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				msg = (struct rtmsg*)(NLMSG_DATA(current));
 				rta = RTM_RTA(msg);
 				rtasize = RTM_PAYLOAD(current);
+				rta_table = msg->rtm_table;
 				while (RTA_OK(rta, rtasize))
 				{
 					switch (rta->rta_type)
@@ -932,6 +933,12 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 								rta_oif = *(u_int32_t*)RTA_DATA(rta);
 							}
 							break;
+						case RTA_TABLE:
+							if (RTA_PAYLOAD(rta) == sizeof(rta_table))
+							{
+								rta_table = *(u_int32_t*)RTA_DATA(rta);
+							}
+							break;
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
@@ -942,7 +949,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				enumerator = this->rt_exclude->create_enumerator(this->rt_exclude);
 				while (enumerator->enumerate(enumerator, &table))
 				{
-					if (table == msg->rtm_table)
+					if (table == rta_table)
 					{
 						cont = TRUE;
 						break;
@@ -954,7 +961,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					continue;
 				}
 				if (this->routing_table != 0 &&
-					msg->rtm_table == this->routing_table)
+					rta_table == this->routing_table)
 				{	/* route is from our own ipsec routing table */
 					continue;
 				}
