@@ -74,6 +74,7 @@ sa/ike_sa_id.c sa/ike_sa_id.h \
 sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/task_manager.c sa/task_manager.h \
 sa/keymat.c sa/keymat.h \
+sa/shunt_manager.c sa/shunt_manager.h \
 sa/trap_manager.c sa/trap_manager.h \
 sa/tasks/child_create.c sa/tasks/child_create.h \
 sa/tasks/child_delete.c sa/tasks/child_delete.h \
@@ -92,7 +93,6 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
 tnc/imc/imc.h tnc/imc/imc_manager.h \
 tnc/imv/imv.h tnc/imv/imv_manager.h \
 tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \

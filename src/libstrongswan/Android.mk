@@ -12,6 +12,7 @@ printf_hook.c printf_hook.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/asn1_parser.c asn1/asn1_parser.h \
 asn1/oid.c asn1/oid.h \
+bio/bio_reader.h bio/bio_reader.c bio/bio_writer.h bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \
@@ -50,6 +51,7 @@ credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
+pen/pen.h pen/pen.c \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
 processing/jobs/job.h processing/jobs/job.c \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
