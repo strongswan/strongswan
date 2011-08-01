@@ -2202,13 +2202,13 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		.other_auth = auth_cfg_create(),
 		.my_auths = linked_list_create(),
 		.other_auths = linked_list_create(),
-		.task_manager = task_manager_create(&this->public),
 		.unique_id = ++unique_id,
 		.additional_addresses = linked_list_create(),
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL),
 	);
+	this->task_manager = task_manager_create(&this->public);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 
 	return &this->public;
