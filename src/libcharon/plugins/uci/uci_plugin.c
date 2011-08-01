@@ -92,10 +92,10 @@ plugin_t *uci_plugin_create()
 			},
 		},
 		.parser = uci_parser_create(UCI_PACKAGE),
-		.config = uci_config_create(this->parser),
-		.creds = uci_creds_create(this->parser),
 		.control = uci_control_create(),
 	);
+	this->config = uci_config_create(this->parser);
+	this->creds = uci_creds_create(this->parser);
 
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
