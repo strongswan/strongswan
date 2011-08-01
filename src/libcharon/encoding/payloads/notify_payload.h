@@ -71,6 +71,9 @@ enum notify_type_t {
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
 
+	/* Windows error code */
+	MS_NOTIFY_STATUS = 12345,
+
 	/* notify status messages */
 	INITIAL_CONTACT = 16384,
 	SET_WINDOW_SIZE = 16385,
