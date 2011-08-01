@@ -861,9 +861,23 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		len -= written;
 		if (payload->get_type(payload) == NOTIFY)
 		{
-			notify_payload_t *notify = (notify_payload_t*)payload;
-			written = snprintf(pos, len, "(%N)", notify_type_short_names,
-							   notify->get_notify_type(notify));
+			notify_payload_t *notify;
+			notify_type_t type;
+			chunk_t data;
+
+			notify = (notify_payload_t*)payload;
+			type = notify->get_notify_type(notify);
+			data = notify->get_notification_data(notify);
+			if (type == MS_NOTIFY_STATUS && data.len == 4)
+			{
+				written = snprintf(pos, len, "(%N(%d))", notify_type_short_names,
+								   type, untoh32(data.ptr));
+			}
+			else
+			{
+				written = snprintf(pos, len, "(%N)", notify_type_short_names,
+								   type);
+			}
 			if (written >= len || written < 0)
 			{
 				return buf;
