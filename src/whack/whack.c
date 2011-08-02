@@ -176,7 +176,7 @@ static void help(void)
 			" \\\n   "
 			" [--debug-control]"
 			" [--debug-lifecycle]"
-			" [--debug-klips]"
+			" [--debug-kernel]"
 			" [--debug-dns]"
 			" \\\n   "
 			" [--debug-natt]"

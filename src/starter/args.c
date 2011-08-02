@@ -130,6 +130,7 @@ static const char *LST_plutodebug[] = {
 	"control",
 	"lifecycle",
 	"klips",
+	"kernel",
 	"dns",
 	"natt",
 	"oppo",
