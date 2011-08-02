@@ -283,6 +283,11 @@ struct private_kernel_netlink_ipsec_t {
 	bool install_routes;
 
 	/**
+	 * Whether to track the history of a policy
+	 */
+	bool policy_history;
+
+	/**
 	 * Size of the replay window, in packets
 	 */
 	u_int32_t replay_window;
@@ -2223,22 +2228,30 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 								   dst_ts, mark, sa);
 	assigned_sa->priority = get_priority(policy, priority);
 
-	/* insert the SA according to its priority */
-	enumerator = policy->used_by->create_enumerator(policy->used_by);
-	while (enumerator->enumerate(enumerator, (void**)&current_sa))
-	{
-		if (current_sa->priority >= assigned_sa->priority)
+	if (this->policy_history)
+	{	/* insert the SA according to its priority */
+		enumerator = policy->used_by->create_enumerator(policy->used_by);
+		while (enumerator->enumerate(enumerator, (void**)&current_sa))
 		{
-			break;
+			if (current_sa->priority >= assigned_sa->priority)
+			{
+				break;
+			}
+			update = FALSE;
 		}
-		update = FALSE;
+		policy->used_by->insert_before(policy->used_by, enumerator,
+									   assigned_sa);
+		enumerator->destroy(enumerator);
 	}
-	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
-	enumerator->destroy(enumerator);
+	else
+	{	/* simply insert it last and only update if it is not installed yet */
+		policy->used_by->insert_last(policy->used_by, assigned_sa);
+		update = !found;
+	}
 
 	if (!update)
-	{	/* we don't update the policy if the priority is lower than that of the
-		 * currently installed one */
+	{	/* we don't update the policy if the priority is lower than that of
+		 * the currently installed one */
 		this->mutex->unlock(this->mutex);
 		return SUCCESS;
 	}
@@ -2421,20 +2434,29 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return NOT_FOUND;
 	}
 
-	/* remove mapping to SA by reqid and priority */
-	priority = get_priority(current, prio);
-	enumerator = current->used_by->create_enumerator(current->used_by);
-	while (enumerator->enumerate(enumerator, (void**)&mapping))
-	{
-		if (reqid == mapping->sa->cfg.reqid && priority == mapping->priority)
+	if (this->policy_history)
+	{	/* remove mapping to SA by reqid and priority */
+		priority = get_priority(current, prio);
+		enumerator = current->used_by->create_enumerator(current->used_by);
+		while (enumerator->enumerate(enumerator, (void**)&mapping))
 		{
-			current->used_by->remove_at(current->used_by, enumerator);
-			policy_sa_destroy(mapping, &direction, this);
-			break;
+			if (reqid == mapping->sa->cfg.reqid &&
+				priority == mapping->priority)
+			{
+				current->used_by->remove_at(current->used_by, enumerator);
+				policy_sa_destroy(mapping, &direction, this);
+				break;
+			}
+			is_installed = FALSE;
 		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{	/* remove one of the SAs but don't update the policy */
+		current->used_by->remove_last(current->used_by, (void**)&mapping);
+		policy_sa_destroy(mapping, &direction, this);
 		is_installed = FALSE;
 	}
-	enumerator->destroy(enumerator);
 
 	if (current->used_by->get_count(current->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
@@ -2629,6 +2651,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.sas = hashtable_create((hashtable_hash_t)ipsec_sa_hash,
 								(hashtable_equals_t)ipsec_sa_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.policy_history = TRUE,
 		.install_routes = lib->settings->get_bool(lib->settings,
 					"%s.install_routes", TRUE, hydra->daemon),
 		.replay_window = lib->settings->get_int(lib->settings,
@@ -2641,6 +2664,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	if (streq(hydra->daemon, "pluto"))
 	{	/* no routes for pluto, they are installed via updown script */
 		this->install_routes = FALSE;
+		/* no policy history for pluto */
+		this->policy_history = FALSE;
 	}
 
 	/* disable lifetimes for allocated SPIs in kernel */
