@@ -4,13 +4,13 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif \
 
 AM_CFLAGS = -rdynamic
 
-plugin_LTLIBRARIES = libstrongswan-imv-attestation.la
+imcv_LTLIBRARIES = imv-attestation.la
 
-libstrongswan_imv_attestation_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la \
+imv_attestation_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 
-libstrongswan_imv_attestation_la_SOURCES = imv_attestation.c \
+imv_attestation_la_SOURCES = imv_attestation.c \
 	imv_attestation_state.h imv_attestation_state.c
 
-libstrongswan_imv_attestation_la_LDFLAGS = -module -avoid-version
+imv_attestation_la_LDFLAGS = -module -avoid-version
 
