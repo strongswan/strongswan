@@ -183,6 +183,7 @@ ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
+ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
@@ -817,6 +818,7 @@ ADD_PLUGIN([dhcp],                 [c libcharon])
 ADD_PLUGIN([android],              [c libcharon])
 ADD_PLUGIN([ha],                   [c libcharon])
 ADD_PLUGIN([whitelist],            [c libcharon])
+ADD_PLUGIN([certexpire],           [c libcharon])
 ADD_PLUGIN([led],                  [c libcharon])
 ADD_PLUGIN([duplicheck],           [c libcharon])
 ADD_PLUGIN([coupling],             [c libcharon])
@@ -899,6 +901,7 @@ AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tester = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
+AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
 AM_CONDITIONAL(USE_LED, test x$led = xtrue)
 AM_CONDITIONAL(USE_DUPLICHECK, test x$duplicheck = xtrue)
 AM_CONDITIONAL(USE_COUPLING, test x$coupling = xtrue)
@@ -1103,6 +1106,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/whitelist/Makefile
+	src/libcharon/plugins/certexpire/Makefile
 	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/duplicheck/Makefile
 	src/libcharon/plugins/coupling/Makefile

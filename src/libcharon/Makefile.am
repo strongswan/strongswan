@@ -431,6 +431,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CERTEXPIRE
+  SUBDIRS += plugins/certexpire
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/certexpire/libstrongswan-certexpire.la
+endif
+endif
+
 if USE_LED
   SUBDIRS += plugins/led
 if MONOLITHIC
