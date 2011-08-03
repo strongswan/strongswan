@@ -181,11 +181,11 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			{
 				case PA_ERROR_INVALID_PARAMETER:
 					offset = error_attr->get_offset(error_attr);
-					DBG1(DBG_IMC, "  occurred at offset of %u bytes", offset);
+					DBG1(DBG_IMV, "  occurred at offset of %u bytes", offset);
 					break;
 				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
 					attr_info = error_attr->get_attr_info(error_attr);
-					DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);
+					DBG1(DBG_IMV, "  unsupported attribute %#B", &attr_info);
 					break;
 				default:
 					break;
