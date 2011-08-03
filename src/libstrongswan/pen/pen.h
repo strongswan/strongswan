@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pen pen
- * @ingroup tnc
+ * @ingroup libstrongswan
  *
  * @defgroup pent pen
  * @{ @ingroup pen
