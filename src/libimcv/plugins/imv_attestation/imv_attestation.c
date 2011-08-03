@@ -169,6 +169,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			ietf_attr_pa_tnc_error_t *error_attr;
 			pa_tnc_error_code_t error_code;
 			chunk_t msg_info, attr_info;
+			u_int32_t offset;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
 			error_code = error_attr->get_error_code(error_attr);
@@ -178,9 +179,13 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				 pa_tnc_error_code_names, error_code, &msg_info);
 			switch (error_code)
 			{
+				case PA_ERROR_INVALID_PARAMETER:
+					offset = error_attr->get_offset(error_attr);
+					DBG1(DBG_IMC, "  occurred at offset of %u bytes", offset);
+					break;
 				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
 					attr_info = error_attr->get_attr_info(error_attr);
-					DBG1(DBG_IMV, "  unsupported attribute %#B", &attr_info);
+					DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);
 					break;
 				default:
 					break;
