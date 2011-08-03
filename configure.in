@@ -137,13 +137,10 @@ ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
 ARG_ENABL_SET([imv-test],       [enable IMV test module.])
-<<<<<<< HEAD
 ARG_ENABL_SET([imc-scanner],    [enable IMC port scanner module.])
 ARG_ENABL_SET([imv-scanner],    [enable IMV port scanner module.])
-=======
 ARG_ENABL_SET([imc-attestation],[enable IMC attestation module.])
 ARG_ENABL_SET([imv-attestation],[enable IMV attestation module.])
->>>>>>> created empty imc_attestation and imv_attestation plugin hulls
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -950,13 +947,10 @@ AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
 AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
 AM_CONDITIONAL(USE_IMV_TEST, test x$imv_test = xtrue)
-<<<<<<< HEAD
 AM_CONDITIONAL(USE_IMC_SCANNER, test x$imc_scanner = xtrue)
 AM_CONDITIONAL(USE_IMV_SCANNER, test x$imv_scanner = xtrue)
-=======
 AM_CONDITIONAL(USE_IMC_ATTESTATION, test x$imc_attestation = xtrue)
 AM_CONDITIONAL(USE_IMV_ATTESTATION, test x$imv_attestation = xtrue)
->>>>>>> created empty imc_attestation and imv_attestation plugin hulls
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
