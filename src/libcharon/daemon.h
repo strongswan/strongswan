@@ -64,6 +64,9 @@
  * @defgroup tasks tasks
  * @ingroup sa
  *
+ * @defgroup tnc tnc
+ * @ingroup libcharon
+ *
  * @addtogroup libcharon
  * @{
  *
