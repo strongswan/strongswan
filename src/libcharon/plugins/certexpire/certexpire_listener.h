@@ -23,6 +23,8 @@
 
 #include <bus/listeners/listener.h>
 
+#include "certexpire_export.h"
+
 typedef struct certexpire_listener_t certexpire_listener_t;
 
 /**
@@ -43,7 +45,10 @@ struct certexpire_listener_t {
 
 /**
  * Create a certexpire_listener instance.
+ *
+ * @param export		facility exporting collected trustchains
+ * @return				listener instance
  */
-certexpire_listener_t *certexpire_listener_create();
+certexpire_listener_t *certexpire_listener_create(certexpire_export_t *export);
 
 #endif /** CERTEXPIRE_LISTENER_H_ @}*/

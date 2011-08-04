@@ -16,6 +16,7 @@
 #include "certexpire_plugin.h"
 
 #include "certexpire_listener.h"
+#include "certexpire_export.h"
 
 #include <daemon.h>
 
@@ -35,6 +36,11 @@ struct private_certexpire_plugin_t {
 	 * Listener collecting expire information
 	 */
 	certexpire_listener_t *listener;
+
+	/**
+	 * Cache and export trustchain expire information
+	 */
+	certexpire_export_t *export;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -48,6 +54,7 @@ METHOD(plugin_t, destroy, void,
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
+	this->export->destroy(this->export);
 	free(this);
 }
 
@@ -66,8 +73,9 @@ plugin_t *certexpire_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.listener = certexpire_listener_create(),
+		.export = certexpire_export_create(),
 	);
+	this->listener = certexpire_listener_create(this->export),
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;

@@ -28,6 +28,11 @@ struct private_certexpire_listener_t {
 	 * Public certexpire_listener_t interface.
 	 */
 	certexpire_listener_t public;
+
+	/**
+	 * Export facility
+	 */
+	certexpire_export_t *export;
 };
 
 METHOD(listener_t, authorize, bool,
@@ -80,7 +85,7 @@ METHOD(listener_t, authorize, bool,
 		}
 	}
 	rounds->destroy(rounds);
-	/* TODO: handle trustchain expiry information */
+	this->export->add(this->export, trustchain, TRUE);
 	trustchain->destroy(trustchain);
 
 	/* collect remote certificates */
@@ -111,7 +116,7 @@ METHOD(listener_t, authorize, bool,
 		}
 	}
 	rounds->destroy(rounds);
-	/* TODO: handle trustchain expiry information */
+	this->export->add(this->export, trustchain, FALSE);
 	trustchain->destroy(trustchain);
 	return TRUE;
 }
@@ -125,7 +130,7 @@ METHOD(certexpire_listener_t, destroy, void,
 /**
  * See header
  */
-certexpire_listener_t *certexpire_listener_create()
+certexpire_listener_t *certexpire_listener_create(certexpire_export_t *export)
 {
 	private_certexpire_listener_t *this;
 
@@ -136,6 +141,7 @@ certexpire_listener_t *certexpire_listener_create()
 			},
 			.destroy = _destroy,
 		},
+		.export = export,
 	);
 
 	return &this->public;

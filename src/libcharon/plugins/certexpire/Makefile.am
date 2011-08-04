@@ -12,6 +12,7 @@ plugin_LTLIBRARIES = libstrongswan-certexpire.la
 endif
 
 libstrongswan_certexpire_la_SOURCES = certexpire_plugin.h certexpire_plugin.c \
-	certexpire_listener.h certexpire_listener.c
+	certexpire_listener.h certexpire_listener.c \
+	certexpire_export.h certexpire_export.c
 
 libstrongswan_certexpire_la_LDFLAGS = -module -avoid-version
