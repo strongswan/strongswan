@@ -129,6 +129,7 @@ ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
 ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
+ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
@@ -258,6 +259,10 @@ fi
 
 if test x$smp = xtrue -o x$tnccs_11 = xtrue; then
 	xml=true
+fi
+
+if test x$tnc_ifmap = xtrue; then
+	axis2c=true
 fi
 
 if test x$manager = xtrue; then
@@ -534,6 +539,12 @@ if test x$xml = xtrue; then
 	AC_SUBST(xml_LIBS)
 fi
 
+if test x$axis2c = xtrue; then
+	PKG_CHECK_MODULES(axis2c, [axis2c])
+	AC_SUBST(axis2c_CFLAGS)
+	AC_SUBST(axis2c_LIBS)
+fi
+
 if test x$dumm = xtrue; then
 	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
 	AC_SUBST(gtk_CFLAGS)
@@ -796,6 +807,7 @@ ADD_PLUGIN([eap-tnc],              [c libcharon])
 ADD_PLUGIN([tnccs-20],             [c libcharon])
 ADD_PLUGIN([tnccs-11],             [c libcharon])
 ADD_PLUGIN([tnccs-dynamic],        [c libcharon])
+ADD_PLUGIN([tnc-ifmap],            [c libcharon])
 ADD_PLUGIN([tnc-imc],              [c libcharon])
 ADD_PLUGIN([tnc-imv],              [c libcharon])
 ADD_PLUGIN([medsrv],               [c libcharon])
@@ -907,6 +919,7 @@ AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
 AM_CONDITIONAL(USE_EAP_PEAP, test x$eap_peap = xtrue)
 AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
+AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
@@ -1071,6 +1084,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_peap/Makefile
 	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
+	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile
 	src/libcharon/plugins/tnc_imv/Makefile
 	src/libcharon/plugins/tnccs_11/Makefile
