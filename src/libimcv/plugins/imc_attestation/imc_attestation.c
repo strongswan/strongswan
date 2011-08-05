@@ -31,7 +31,7 @@
 static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID	PEN_TCG
-#define IMC_SUBTYPE		PA_SUBTYPE_TCG_PTS
+#define IMC_SUBTYPE	PA_SUBTYPE_TCG_PTS
 
 static imc_agent_t *imc_attestation;
  
@@ -201,6 +201,60 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 			/**
 			 * Handle TCG PTS attributes
 			 */
+			switch(attr->get_type(attr))
+			{
+				case TCG_PTS_REQ_PROTO_CAPS:
+					break;
+				case TCG_PTS_DH_NONCE_PARAMS_REQ:
+					break;
+				case TCG_PTS_DH_NONCE_FINISH:
+					break;
+				case TCG_PTS_MEAS_ALGO:
+					break;
+				case TCG_PTS_GET_TPM_VERSION_INFO:
+					break;
+				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
+					break;
+				case TCG_PTS_UPDATE_TEMPL_REF_MANI:
+					break;
+				case TCG_PTS_GET_AIK:
+					break;
+					
+				/* PTS-based Attestation Evidence */
+				case TCG_PTS_REQ_FUNCT_COMP_EVID:
+					break;
+				case TCG_PTS_GEN_ATTEST_EVID:
+					break;
+				case TCG_PTS_REQ_FILE_META:
+					break;
+				case TCG_PTS_REQ_FILE_MEAS:
+					break;
+				case TCG_PTS_REQ_INTEG_MEAS_LOG:
+					break;
+					
+				/* On Windows only*/
+				case TCG_PTS_REQ_REGISTRY_VALUE:
+				/* Received on IMV side only*/
+				case TCG_PTS_PROTO_CAPS:
+				case TCG_PTS_DH_NONCE_PARAMS_RESP:
+				case TCG_PTS_MEAS_ALGO_SELECTION:
+				case TCG_PTS_TPM_VERSION_INFO:
+				case TCG_PTS_TEMPL_REF_MANI_SET_META:
+				case TCG_PTS_AIK:				
+				case TCG_PTS_SIMPLE_COMP_EVID:
+				case TCG_PTS_SIMPLE_EVID_FINAL:
+				case TCG_PTS_VERIFICATION_RESULT:
+				case TCG_PTS_INTEG_REPORT:
+				case TCG_PTS_UNIX_FILE_META:
+				case TCG_PTS_FILE_MEAS:
+				case TCG_PTS_INTEG_MEAS_LOG:
+				default:
+					DBG1(DBG_IMC, "received unsupported attribute '%N'",
+						tcg_attr_names, attr->get_type(attr));
+					break;
+			}
+			
+			
 		}
 	}
 	enumerator->destroy(enumerator);

@@ -49,7 +49,7 @@ enum tcg_attr_t {
 	/* PTS-based Attestation Evidence */
 	TCG_PTS_REQ_FUNCT_COMP_EVID =         0x00100000,
 	TCG_PTS_GEN_ATTEST_EVID =             0x00200000,
-    TCG_PTS_SIMPLE_COMP_EVID =            0x00300000,
+	TCG_PTS_SIMPLE_COMP_EVID =            0x00300000,
 	TCG_PTS_SIMPLE_EVID_FINAL =           0x00400000,
 	TCG_PTS_VERIFICATION_RESULT =         0x00500000,
 	TCG_PTS_INTEG_REPORT =                0x00600000,
