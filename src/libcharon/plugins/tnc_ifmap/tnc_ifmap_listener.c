@@ -120,7 +120,7 @@ static bool endSession(private_tnc_ifmap_listener_t *this)
 		return FALSE;
 	}
 
- 	/* process newSessionResult */
+ 	/* process endSessionResult */
 	node = axiom_node_get_first_child(result, this->env);
 	axiom_node_free_tree(result, this->env);
 
