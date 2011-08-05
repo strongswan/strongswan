@@ -15,6 +15,12 @@
 
 #include "certexpire_export.h"
 
+#include "certexpire_cron.h"
+
+#include <time.h>
+#include <limits.h>
+#include <errno.h>
+
 #include <debug.h>
 #include <utils/hashtable.h>
 #include <threading/mutex.h>
@@ -46,6 +52,36 @@ struct private_certexpire_export_t {
 	 * Mutex to lock hashtables
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Cronjob for export
+	 */
+	certexpire_cron_t *cron;
+
+	/**
+	 * strftime() format to generate local CSV file
+	 */
+	char *local_path;
+
+	/**
+	 * strftime() format to generate remote CSV file
+	 */
+	char *remote_path;
+
+	/**
+	 * stftime() format of the exported expiration date
+	 */
+	char *format;
+
+	/**
+	 * CSV field separator
+	 */
+	char *separator;
+
+	/**
+	 * TRUE to use fixed field count, CA at end
+	 */
+	bool fixed_fields;
 };
 
 /**
@@ -79,12 +115,102 @@ static bool equals(entry_t *a, entry_t *b)
 	return streq(a->id, b->id);
 }
 
+/**
+ * Export a single trustchain to a path
+ */
+static void export_csv(private_certexpire_export_t *this, char *path,
+					   hashtable_t *chains)
+{
+	enumerator_t *enumerator;
+	char buf[PATH_MAX];
+	entry_t *entry;
+	FILE *file;
+	struct tm tm;
+	time_t t;
+	int i;
+
+	t = time(NULL);
+	localtime_r(&t, &tm);
+
+	strftime(buf, sizeof(buf), path, &tm);
+	file = fopen(buf, "a");
+	if (file)
+	{
+		DBG1(DBG_CFG, "exporting expiration dates of %d trustchain%s to '%s'",
+			 chains->get_count(chains),
+			 chains->get_count(chains) == 1 ? "" : "s", buf);
+		this->mutex->lock(this->mutex);
+		enumerator = chains->create_enumerator(chains);
+		while (enumerator->enumerate(enumerator, NULL, &entry))
+		{
+			fprintf(file, "%s%s", entry->id, this->separator);
+			for (i = 0; i < MAX_TRUSTCHAIN_LENGTH; i++)
+			{
+				if (entry->expire[i])
+				{
+					localtime_r(&entry->expire[i], &tm);
+					strftime(buf, sizeof(buf), this->format, &tm);
+					fprintf(file, "%s", buf);
+				}
+				if (i == MAX_TRUSTCHAIN_LENGTH - 1)
+				{
+					fprintf(file, "\n");
+				}
+				else if (this->fixed_fields || entry->expire[i])
+				{
+					fprintf(file, "%s", this->separator);
+				}
+			}
+			chains->remove_at(chains, enumerator);
+			free(entry);
+		}
+		enumerator->destroy(enumerator);
+		this->mutex->unlock(this->mutex);
+		fclose(file);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "opening CSV file '%s' failed: %s", buf, strerror(errno));
+	}
+}
+
+/**
+ * Export cached trustchain expiration dates to CSV files
+ */
+static void cron_export(private_certexpire_export_t *this)
+{
+	if (this->local_path)
+	{
+		export_csv(this, this->local_path, this->local);
+	}
+	if (this->remote_path)
+	{
+		export_csv(this, this->remote_path, this->remote);
+	}
+}
+
 METHOD(certexpire_export_t, add, void,
 	private_certexpire_export_t *this, linked_list_t *trustchain, bool local)
 {
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	int count;
+
+	/* don't store expiration dates if no path configured */
+	if (local)
+	{
+		if (!this->local_path)
+		{
+			return;
+		}
+	}
+	else
+	{
+		if (!this->remote_path)
+		{
+			return;
+		}
+	}
 
 	count = min(trustchain->get_count(trustchain), MAX_TRUSTCHAIN_LENGTH) - 1;
 
@@ -169,6 +295,17 @@ METHOD(certexpire_export_t, add, void,
 		{
 			free(entry);
 		}
+		if (!this->cron)
+		{	/* export directly if no cron job defined */
+			if (local)
+			{
+				export_csv(this, this->local_path, this->local);
+			}
+			else
+			{
+				export_csv(this, this->remote_path, this->remote);
+			}
+		}
 	}
 	enumerator->destroy(enumerator);
 }
@@ -194,6 +331,7 @@ METHOD(certexpire_export_t, destroy, void,
 
 	this->local->destroy(this->local);
 	this->remote->destroy(this->remote);
+	DESTROY_IF(this->cron);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -204,6 +342,7 @@ METHOD(certexpire_export_t, destroy, void,
 certexpire_export_t *certexpire_export_create()
 {
 	private_certexpire_export_t *this;
+	char *cron;
 
 	INIT(this,
 		.public = {
@@ -215,7 +354,24 @@ certexpire_export_t *certexpire_export_create()
 		.remote = hashtable_create((hashtable_hash_t)hash,
 								   (hashtable_equals_t)equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.local_path = lib->settings->get_str(lib->settings,
+							"charon.plugins.certexpire.csv.local", NULL),
+		.remote_path = lib->settings->get_str(lib->settings,
+							"charon.plugins.certexpire.csv.remote", NULL),
+		.separator = lib->settings->get_str(lib->settings,
+							"charon.plugins.certexpire.csv.separator", ","),
+		.format = lib->settings->get_str(lib->settings,
+							"charon.plugins.certexpire.csv.format", "%d:%m:%Y"),
+		.fixed_fields = lib->settings->get_bool(lib->settings,
+							"charon.plugins.certexpire.csv.fixed_fields", TRUE),
 	);
 
+	cron = lib->settings->get_str(lib->settings,
+								  "charon.plugins.certexpire.csv.cron", NULL);
+	if (cron)
+	{
+		this->cron = certexpire_cron_create(cron,
+									(certexpire_cron_job_t)cron_export, this);
+	}
 	return &this->public;
 }
