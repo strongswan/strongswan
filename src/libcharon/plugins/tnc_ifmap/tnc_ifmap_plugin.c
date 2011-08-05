@@ -45,8 +45,11 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_tnc_ifmap_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
-	this->listener->destroy(this->listener);
+	if (this->listener)
+	{
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+		this->listener->destroy(this->listener);
+	}
 	free(this);
 }
 
@@ -68,8 +71,10 @@ plugin_t *tnc_ifmap_plugin_create()
 		.listener = tnc_ifmap_listener_create(),
 	);
 
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
-
+	if (this->listener)
+	{
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+	}
 	return &this->public.plugin;
 }
 

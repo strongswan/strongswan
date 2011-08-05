@@ -39,18 +39,28 @@ struct private_tnc_ifmap_listener_t {
 	tnc_ifmap_listener_t public;
 
 	/**
-	 * Axis2c environment 
+	 * Axis2/C environment 
 	 */
 	axutil_env_t *env;
 
 	/**
-	 * Axis2c service client
+	 * Axis2 service client
 	 */
 	axis2_svc_client_t* svc_client;
 
+	/**
+	 * SOAP Session ID
+	 */
+	char *session_id;
+
+	/**
+	 * IF-MAP Publisher ID
+	 */
+	char *ifmap_publisher_id;
+
 };
 
-static axiom_node_t* build_request(private_tnc_ifmap_listener_t *this)
+static axiom_node_t* newSession(private_tnc_ifmap_listener_t *this)
 {
     axiom_node_t *node = NULL;
     axiom_element_t *el;
@@ -58,6 +68,49 @@ static axiom_node_t* build_request(private_tnc_ifmap_listener_t *this)
 
     ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
     el = axiom_element_create(this->env, NULL, "newSession", ns, &node);
+
+    return node;
+}
+
+static bool newSessionResult(private_tnc_ifmap_listener_t *this,
+							 axiom_node_t *result)
+{
+	axiom_node_t *node;
+    axiom_element_t *el;
+	axis2_char_t *attr;
+	bool success = FALSE;
+
+	node = axiom_node_get_first_child(result, this->env);
+	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
+	{
+		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
+		attr = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "session-id");
+		this->session_id = strdup(attr);
+		attr = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "ifmap-publisher-id");
+		this->ifmap_publisher_id = strdup(attr);
+
+		DBG1(DBG_TNC, "session-id: %s, ifmap-publisher-id: %s",
+			 this->session_id, this->ifmap_publisher_id);
+		success = this->session_id && this->ifmap_publisher_id;
+	}
+	axiom_node_free_tree(result, this->env);
+
+	return success;
+}
+
+static axiom_node_t* endSession(private_tnc_ifmap_listener_t *this)
+{
+    axiom_node_t *node = NULL;
+    axiom_element_t *el;
+	axiom_namespace_t *ns;
+	axiom_attribute_t *attr;
+
+    ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+    el = axiom_element_create(this->env, NULL, "endSession", ns, &node);
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node);
 
     return node;
 }
@@ -82,6 +135,21 @@ METHOD(listener_t, child_updown, bool,
 METHOD(tnc_ifmap_listener_t, destroy, void,
 	private_tnc_ifmap_listener_t *this)
 {
+	if (this->session_id)
+	{
+		axiom_node_t *request, *result;
+
+		DBG2(DBG_TNC, "sending endSession");
+		request = endSession(this);
+		result = axis2_svc_client_send_receive(this->svc_client, this->env,
+											   request);
+		if (!result)
+		{
+			DBG1(DBG_TNC, "endSession with MAP server failed");
+		}
+		free(this->session_id);
+		free(this->ifmap_publisher_id);	
+	}
 	if (this->svc_client)
 	{
 		axis2_svc_client_free(this->svc_client, this->env);
@@ -89,7 +157,7 @@ METHOD(tnc_ifmap_listener_t, destroy, void,
 	if (this->env)
 	{
 		axutil_env_free(this->env);
-	}	
+	}
 	free(this);
 }
 
@@ -102,8 +170,7 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 	axis2_char_t *server, *client_home, *username, *password, *auth_type;
 	axis2_endpoint_ref_t* endpoint_ref = NULL;
 	axis2_options_t *options = NULL;
-	axiom_node_t *request, *response, *node;
-	axiom_text_t *text;
+	axiom_node_t *request, *result;
 
 	client_home = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.client_home",
@@ -119,7 +186,7 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 
 	if (!username || !password)
 	{
-		DBG1(DBG_TNC, "IF-MAP client %s%s%s not defined",
+		DBG1(DBG_TNC, "MAP client %s%s%s not defined",
 			(!username) ? "username" : "",
 			(!username && ! password) ? " and " : "",
 			(!password) ? "password" : "");
@@ -158,26 +225,18 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 	axis2_svc_client_set_options(this->svc_client, this->env, options);
 	axis2_options_set_http_auth_info(options, this->env, username, password,
 									 auth_type);
+	DBG1(DBG_TNC, "connecting as MAP client '%s' to MAP server at '%s'",
+		 username, server);
 
-	request = build_request(this);
-	response = axis2_svc_client_send_receive(this->svc_client, this->env, request);
-	if (!response)
+	DBG2(DBG_TNC, "sending newSession");
+	request = newSession(this);
+	result = axis2_svc_client_send_receive(this->svc_client, this->env, request);
+	if (!result || !newSessionResult(this, result))
 	{
-		DBG1(DBG_TNC, "Session setup with IF-MAP server failed");
+		DBG1(DBG_TNC, "newSession with MAP server failed");
 		destroy(this);
 		return NULL;
 	}
-	node = axiom_node_get_first_child(response, this->env);
-	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_TEXT)
-	{
-		text = (axiom_text_t *)axiom_node_get_data_element(node, this->env);
-		if (text)
-		{
-			DBG1(DBG_TNC, "response = '%s'",
-				 axiom_text_get_value(text, this->env));
-		}
-	}
-	axiom_node_free_tree(response, this->env);
 
 	return &this->public;
 }
