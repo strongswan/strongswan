@@ -67,6 +67,8 @@ static bool newSession(private_tnc_ifmap_listener_t *this)
 	axiom_namespace_t *ns;
 	axiom_attribute_t *attr;
 	axis2_char_t *value;
+	axutil_qname_t *qname;
+
 	bool success = FALSE;
 
 	/* build newSession request */
@@ -87,22 +89,34 @@ static bool newSession(private_tnc_ifmap_listener_t *this)
 	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
 	{
 		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
-		value = axiom_element_get_attribute_value_by_name(el, this->env,
-								 "session-id");
-		this->session_id = strdup(value);
-		value = axiom_element_get_attribute_value_by_name(el, this->env,
-								 "ifmap-publisher-id");
-		this->ifmap_publisher_id = strdup(value);
-
-		DBG1(DBG_TNC, "session-id: %s, ifmap-publisher-id: %s",
-			 this->session_id, this->ifmap_publisher_id);
-		success = this->session_id && this->ifmap_publisher_id;
-
-		value = axiom_element_get_attribute_value_by_name(el, this->env,
-								 "max-poll-result-size");
-		if (value)
+		qname = axiom_element_get_qname(el, this->env, node);
+		success = streq("newSessionResult",
+						 axutil_qname_to_string(qname, this->env));
+			
+		/* process the attributes */
+		if (success)
 		{
-			DBG1(DBG_TNC, "max-poll-result-size: %s", value);
+			value = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "session-id");
+			this->session_id = strdup(value);
+			value = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "ifmap-publisher-id");
+			this->ifmap_publisher_id = strdup(value);
+
+			DBG1(DBG_TNC, "session-id: %s, ifmap-publisher-id: %s",
+				 this->session_id, this->ifmap_publisher_id);
+			success = this->session_id && this->ifmap_publisher_id;
+
+			value = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "max-poll-result-size");
+			if (value)
+			{
+				DBG1(DBG_TNC, "max-poll-result-size: %s", value);
+			}
+		}
+		else
+		{
+			DBG1(DBG_TNC, "%s", axiom_element_to_string(el, this->env, node));
 		}
 	}
 	axiom_node_free_tree(result, this->env);
@@ -116,6 +130,8 @@ static bool purgePublisher(private_tnc_ifmap_listener_t *this)
 	axiom_element_t *el;
 	axiom_namespace_t *ns;
 	axiom_attribute_t *attr;
+	axutil_qname_t *qname;
+	bool success = FALSE;
 
 	/* build purgePublisher request */
  	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
@@ -137,6 +153,44 @@ static bool purgePublisher(private_tnc_ifmap_listener_t *this)
 
  	/* process purgePublisherReceived */
 	node = axiom_node_get_first_child(result, this->env);
+	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
+	{
+		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
+		qname = axiom_element_get_qname(el, this->env, node);
+		success = streq("purgePublisherReceived",
+						 axutil_qname_to_string(qname, this->env));
+		if (!success)
+ 		{
+			DBG1(DBG_TNC, "%s", axiom_element_to_string(el, this->env, node));
+		}
+	}
+	axiom_node_free_tree(result, this->env);
+
+   return success;
+}
+
+static bool publish(private_tnc_ifmap_listener_t *this)
+{
+	axiom_node_t *request, *result, *node;
+	axiom_element_t *el;
+	axiom_namespace_t *ns;
+	axiom_attribute_t *attr;
+
+	/* build publish request */
+ 	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, request);
+
+	/* send publish request */
+	result = axis2_svc_client_send_receive(this->svc_client, this->env, request);
+	if (!result)
+	{
+		return FALSE;
+	}
+
+ 	/* process publishReceived */
+	node = axiom_node_get_first_child(result, this->env);
 	axiom_node_free_tree(result, this->env);
 
    return TRUE;
@@ -148,6 +202,8 @@ static bool endSession(private_tnc_ifmap_listener_t *this)
 	axiom_element_t *el;
 	axiom_namespace_t *ns;
 	axiom_attribute_t *attr;
+	axutil_qname_t *qname;
+	bool success = FALSE;
 
 	/* build endSession request */
  	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
@@ -164,7 +220,20 @@ static bool endSession(private_tnc_ifmap_listener_t *this)
 
  	/* process endSessionResult */
 	node = axiom_node_get_first_child(result, this->env);
+	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
+	{
+		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
+		qname = axiom_element_get_qname(el, this->env, node);
+		success = streq("endSessionResult",
+						 axutil_qname_to_string(qname, this->env));
+		if (!success)
+ 		{
+			DBG1(DBG_TNC, "%s", axiom_element_to_string(el, this->env, node));
+		}
+	}
 	axiom_node_free_tree(result, this->env);
+
+   return success;
 
    return TRUE;
 }
@@ -182,6 +251,12 @@ METHOD(listener_t, child_updown, bool,
 	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
 	me = ike_sa->get_my_host(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
+
+	DBG2(DBG_TNC, "sending publish");
+	if (!publish(this))
+	{
+		DBG1(DBG_TNC, "publish with MAP server failed");
+	}
 
 	return TRUE;
 }
