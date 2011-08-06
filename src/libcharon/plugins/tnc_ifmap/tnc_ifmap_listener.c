@@ -65,12 +65,15 @@ static bool newSession(private_tnc_ifmap_listener_t *this)
     axiom_node_t *request, *result, *node;
     axiom_element_t *el;
 	axiom_namespace_t *ns;
+	axiom_attribute_t *attr;
 	axis2_char_t *value;
 	bool success = FALSE;
 
 	/* build newSession request */
     ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
     el = axiom_element_create(this->env, NULL, "newSession", ns, &request);
+	attr = axiom_attribute_create(this->env, "max-poll-result-size", "1000000", NULL);	
+	axiom_element_add_attribute(el, this->env, attr, request);
 
 	/* send newSession request */
 	result = axis2_svc_client_send_receive(this->svc_client, this->env, request);
@@ -94,10 +97,49 @@ static bool newSession(private_tnc_ifmap_listener_t *this)
 		DBG1(DBG_TNC, "session-id: %s, ifmap-publisher-id: %s",
 			 this->session_id, this->ifmap_publisher_id);
 		success = this->session_id && this->ifmap_publisher_id;
+
+		value = axiom_element_get_attribute_value_by_name(el, this->env,
+								 "max-poll-result-size");
+		if (value)
+		{
+			DBG1(DBG_TNC, "max-poll-result-size: %s", value);
+		}
 	}
 	axiom_node_free_tree(result, this->env);
 
     return success;
+}
+
+static bool purgePublisher(private_tnc_ifmap_listener_t *this)
+{
+	axiom_node_t *request, *result, *node;
+	axiom_element_t *el;
+	axiom_namespace_t *ns;
+	axiom_attribute_t *attr;
+
+	/* build purgePublisher request */
+ 	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+	el = axiom_element_create(this->env, NULL, "purgePublisher", ns,
+							  &request);
+	attr = axiom_attribute_create(this->env, "session-id",
+								  this->session_id, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, request);
+	attr = axiom_attribute_create(this->env, "ifmap-publisher-id",
+								  this->ifmap_publisher_id, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, request);
+
+	/* send purgePublisher request */
+	result = axis2_svc_client_send_receive(this->svc_client, this->env, request);
+	if (!result)
+	{
+		return FALSE;
+	}
+
+ 	/* process purgePublisherReceived */
+	node = axiom_node_get_first_child(result, this->env);
+	axiom_node_free_tree(result, this->env);
+
+   return TRUE;
 }
 
 static bool endSession(private_tnc_ifmap_listener_t *this)
@@ -238,6 +280,13 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 	if (!newSession(this))
 	{
 		DBG1(DBG_TNC, "newSession with MAP server failed");
+		destroy(this);
+		return NULL;
+	}
+	DBG2(DBG_TNC, "sending purgePublisher");
+	if (!purgePublisher(this))
+	{
+		DBG1(DBG_TNC, "purgePublisher with MAP server failed");
 		destroy(this);
 		return NULL;
 	}
