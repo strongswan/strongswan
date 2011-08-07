@@ -466,7 +466,8 @@ METHOD(tnc_ifmap_listener_t, destroy, void,
 			DBG1(DBG_TNC, "endSession with MAP server failed");
 		}
 		free(this->session_id);
-		free(this->ifmap_publisher_id);	
+		free(this->ifmap_publisher_id);
+		free(this->device_name);	
 	}
 	if (this->svc_client)
 	{
