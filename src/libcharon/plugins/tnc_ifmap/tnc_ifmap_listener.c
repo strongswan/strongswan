@@ -173,10 +173,11 @@ static bool purgePublisher(private_tnc_ifmap_listener_t *this)
 static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 					identification_t *id, host_t *host, bool up)
 {
-	axiom_node_t *request, *result, *node, *node2, *node3;
+	axiom_node_t *request, *result, *node, *node2, *node3, *node4;
 	axiom_element_t *el;
 	axiom_namespace_t *ns, *ns_meta;
 	axiom_attribute_t *attr;
+	axiom_text_t *text;
 	char buf[BUF_LEN], *id_type;
 
 	/* build publish request */
@@ -186,7 +187,9 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 								  NULL);	
 	axiom_element_add_attribute(el, this->env, attr, request);
 
-	/* update or delete IKE_SA information */
+	/**
+	 * update or delete authenticated-as metadata
+	 */
  	if (up)
 	{
 		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
@@ -252,7 +255,9 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 		axiom_element_add_attribute(el, this->env, attr, node3);
 	}
 
-	/* update or delete IKE_SA information */
+	/**
+	 * update or delete access-request-ip metadata
+	 */
  	if (up)
 	{
 		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
@@ -265,9 +270,17 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 
 		/* add filter */		
 		attr = axiom_attribute_create(this->env, "filter",
-									  "acces-request-ip", NULL);	
+									  "access-request-ip", NULL);	
 		axiom_element_add_attribute(el, this->env, attr, node);
 	}
+
+	/* add access-request */
+	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
 
 	/* add ip-address */
 	el = axiom_element_create(this->env, NULL, "ip-address", NULL, &node2);
@@ -281,6 +294,39 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 				 host->get_family(host) == AF_INET ? "IPv4" : "IPv6", NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
+	if (up)
+	{
+		/* add metadata */
+		el = axiom_element_create(this->env, NULL, "metadata", NULL, &node2);
+		axiom_node_add_child(node, this->env, node2);
+		ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+		el = axiom_element_create(this->env, NULL, "access-request-ip", ns_meta,
+								  &node3);
+		axiom_node_add_child(node2, this->env, node3);
+		attr = axiom_attribute_create(this->env, "ifmap-cardinality",
+									  "singleValue", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node3);
+	}
+
+	/**
+	 * update or delete authenticated-by metadata
+	 */
+ 	if (up)
+	{
+		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+	}
+	else
+	{
+		el = axiom_element_create(this->env, NULL, "delete", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+
+		/* add filter */		
+		attr = axiom_attribute_create(this->env, "filter",
+									  "authenticated-by", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node);
+	}
+
 	/* add access-request */
 	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
 	axiom_node_add_child(node, this->env, node2);
@@ -289,13 +335,20 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
+	/* add device */
+	el = axiom_element_create(this->env, NULL, "device", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+	el = axiom_element_create(this->env, NULL, "name", NULL, &node3);
+	axiom_node_add_child(node2, this->env, node3);
+	text = axiom_text_create(this->env, node3, this->ifmap_publisher_id, &node4);
+
 	if (up)
 	{
 		/* add metadata */
 		el = axiom_element_create(this->env, NULL, "metadata", NULL, &node2);
 		axiom_node_add_child(node, this->env, node2);
 		ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
-		el = axiom_element_create(this->env, NULL, "access-request-ip", ns_meta,
+		el = axiom_element_create(this->env, NULL, "authenticated-by", ns_meta,
 								  &node3);
 		axiom_node_add_child(node2, this->env, node3);
 		attr = axiom_attribute_create(this->env, "ifmap-cardinality",
