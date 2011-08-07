@@ -185,6 +185,8 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	/* build publish request */
  	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
  	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
+	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+	axiom_element_declare_namespace(el, this->env, request, ns_meta);	
 	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
 								  NULL);	
 	axiom_element_add_attribute(el, this->env, attr, request);
@@ -202,9 +204,10 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 		el = axiom_element_create(this->env, NULL, "delete", NULL, &node);
 		axiom_node_add_child(request, this->env, node);
 
-		/* add filter */		
-		attr = axiom_attribute_create(this->env, "filter",
-									  "authenticated-as", NULL);	
+		/* add filter */
+		snprintf(buf, BUF_LEN, "meta:authenticated-as[@ifmap-publisher-id='%s']",
+				 this->ifmap_publisher_id);
+		attr = axiom_attribute_create(this->env, "filter", buf, NULL);	
 		axiom_element_add_attribute(el, this->env, attr, node);
 	}
 
@@ -270,9 +273,10 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 		el = axiom_element_create(this->env, NULL, "delete", NULL, &node);
 		axiom_node_add_child(request, this->env, node);
 
-		/* add filter */		
-		attr = axiom_attribute_create(this->env, "filter",
-									  "access-request-ip", NULL);	
+		/* add filter */
+		snprintf(buf, BUF_LEN, "meta:access-request-ip[@ifmap-publisher-id='%s']",
+				 this->ifmap_publisher_id);
+		attr = axiom_attribute_create(this->env, "filter", buf, NULL);
 		axiom_element_add_attribute(el, this->env, attr, node);
 	}
 
@@ -324,8 +328,9 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 		axiom_node_add_child(request, this->env, node);
 
 		/* add filter */		
-		attr = axiom_attribute_create(this->env, "filter",
-									  "authenticated-by", NULL);	
+		snprintf(buf, BUF_LEN, "meta:authenticated-by[@ifmap-publisher-id='%s']",
+				 this->ifmap_publisher_id);
+		attr = axiom_attribute_create(this->env, "filter", buf, NULL);
 		axiom_element_add_attribute(el, this->env, attr, node);
 	}
 
