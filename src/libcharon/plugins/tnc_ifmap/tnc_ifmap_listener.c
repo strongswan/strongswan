@@ -59,6 +59,11 @@ struct private_tnc_ifmap_listener_t {
 	 */
 	char *ifmap_publisher_id;
 
+	/**
+	 * PEP and PDP device name
+	 */
+	char *device_name;
+
 };
 
 static bool newSession(private_tnc_ifmap_listener_t *this)
@@ -215,7 +220,7 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
 	axiom_node_add_child(node, this->env, node2);
 
-	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	snprintf(buf, BUF_LEN, "%s:%d", this->device_name, ike_sa_id);
 	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
@@ -284,7 +289,7 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
 	axiom_node_add_child(node, this->env, node2);
 
-	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	snprintf(buf, BUF_LEN, "%s:%d", this->device_name, ike_sa_id);
 	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
@@ -338,7 +343,7 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
 	axiom_node_add_child(node, this->env, node2);
 
-	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	snprintf(buf, BUF_LEN, "%s:%d", this->device_name, ike_sa_id);
 	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
@@ -347,7 +352,7 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	axiom_node_add_child(node, this->env, node2);
 	el = axiom_element_create(this->env, NULL, "name", NULL, &node3);
 	axiom_node_add_child(node2, this->env, node3);
-	text = axiom_text_create(this->env, node3, this->ifmap_publisher_id, &node4);
+	text = axiom_text_create(this->env, node3, this->device_name, &node4);
 
 	if (up)
 	{
@@ -547,6 +552,12 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 		destroy(this);
 		return NULL;
 	}
+
+	/* set PEP and PDP device name (defaults to IF-MAP Publisher ID) */
+	this->device_name = lib->settings->get_str(lib->settings,
+		 "charon.plugins.tnc-ifmap.device_name", this->ifmap_publisher_id);
+	this->device_name = strdup(this->device_name);
+
 	DBG2(DBG_TNC, "sending purgePublisher");
 	if (!purgePublisher(this))
 	{
