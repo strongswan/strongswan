@@ -178,7 +178,9 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 	axiom_namespace_t *ns, *ns_meta;
 	axiom_attribute_t *attr;
 	axiom_text_t *text;
+	axutil_qname_t *qname;
 	char buf[BUF_LEN], *id_type;
+	bool success = FALSE;
 
 	/* build publish request */
  	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
@@ -365,6 +367,17 @@ static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
 
  	/* process publishReceived */
 	node = axiom_node_get_first_child(result, this->env);
+	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
+	{
+		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
+		qname = axiom_element_get_qname(el, this->env, node);
+		success = streq("publishReceived",
+						axutil_qname_to_string(qname, this->env));
+		if (!success)
+		{
+			DBG1(DBG_TNC, "%s", axiom_element_to_string(el, this->env, node));
+		}
+	}
 	axiom_node_free_tree(result, this->env);
 
    return TRUE;
