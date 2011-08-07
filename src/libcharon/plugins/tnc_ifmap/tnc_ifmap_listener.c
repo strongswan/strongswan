@@ -22,9 +22,10 @@
 #include <axis2_client.h>
 #include <axiom_soap.h>
 
-#define IFMAP_NAMESPACE	"http://www.trustedcomputinggroup.org/2010/IFMAP/2"
-#define IFMAP_LOGFILE	"strongswan_ifmap.log"
-#define IFMAP_SERVER	"https://localhost:8443/"
+#define IFMAP_NS	  "http://www.trustedcomputinggroup.org/2010/IFMAP/2"
+#define IFMAP_META_NS "http://www.trustedcomputinggroup.org/2010/IFMAP-METADATA/2"
+#define IFMAP_LOGFILE "strongswan_ifmap.log"
+#define IFMAP_SERVER  "https://localhost:8443/"
 	
 typedef struct private_tnc_ifmap_listener_t private_tnc_ifmap_listener_t;
 
@@ -72,7 +73,7 @@ static bool newSession(private_tnc_ifmap_listener_t *this)
 	bool success = FALSE;
 
 	/* build newSession request */
-    ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+    ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
     el = axiom_element_create(this->env, NULL, "newSession", ns, &request);
 	attr = axiom_attribute_create(this->env, "max-poll-result-size", "1000000", NULL);	
 	axiom_element_add_attribute(el, this->env, attr, request);
@@ -134,7 +135,7 @@ static bool purgePublisher(private_tnc_ifmap_listener_t *this)
 	bool success = FALSE;
 
 	/* build purgePublisher request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+ 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
 	el = axiom_element_create(this->env, NULL, "purgePublisher", ns,
 							  &request);
 	attr = axiom_attribute_create(this->env, "session-id",
@@ -169,18 +170,138 @@ static bool purgePublisher(private_tnc_ifmap_listener_t *this)
    return success;
 }
 
-static bool publish(private_tnc_ifmap_listener_t *this)
+static bool publish(private_tnc_ifmap_listener_t *this, u_int32_t ike_sa_id,
+					identification_t *id, host_t *host, bool up)
 {
-	axiom_node_t *request, *result, *node;
+	axiom_node_t *request, *result, *node, *node2, *node3;
 	axiom_element_t *el;
-	axiom_namespace_t *ns;
+	axiom_namespace_t *ns, *ns_meta;
 	axiom_attribute_t *attr;
+	char buf[BUF_LEN], *id_type;
 
 	/* build publish request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
-	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
-	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);	
+ 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
+ 	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
+								  NULL);	
 	axiom_element_add_attribute(el, this->env, attr, request);
+
+	/* update or delete IKE_SA information */
+ 	if (up)
+	{
+		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+	}
+	else
+	{
+		el = axiom_element_create(this->env, NULL, "delete", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+
+		/* add filter */		
+		attr = axiom_attribute_create(this->env, "filter",
+									  "authenticated-as", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node);
+	}
+
+	/* add access-request */
+	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	/* add identity */
+	el = axiom_element_create(this->env, NULL, "identity", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	snprintf(buf, BUF_LEN, "%Y", id);
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	switch (id->get_type(id))
+	{
+		case ID_FQDN:
+			id_type = "dns-name";
+			break;
+		case ID_RFC822_ADDR:
+			id_type = "email-address";
+			break;
+		case ID_DER_ASN1_DN:
+			id_type = "distinguished-name";
+			break;
+		default:
+			id_type = "other";
+	}
+	attr = axiom_attribute_create(this->env, "type", id_type, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	if (up)
+	{
+		/* add metadata */
+		el = axiom_element_create(this->env, NULL, "metadata", NULL, &node2);
+		axiom_node_add_child(node, this->env, node2);
+
+		ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+
+		el = axiom_element_create(this->env, NULL, "authenticated-as", ns_meta,
+								  &node3);
+		axiom_node_add_child(node2, this->env, node3);
+		attr = axiom_attribute_create(this->env, "ifmap-cardinality",
+									  "singleValue", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node3);
+	}
+
+	/* update or delete IKE_SA information */
+ 	if (up)
+	{
+		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+	}
+	else
+	{
+		el = axiom_element_create(this->env, NULL, "delete", NULL, &node);
+		axiom_node_add_child(request, this->env, node);
+
+		/* add filter */		
+		attr = axiom_attribute_create(this->env, "filter",
+									  "acces-request-ip", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node);
+	}
+
+	/* add ip-address */
+	el = axiom_element_create(this->env, NULL, "ip-address", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	snprintf(buf, BUF_LEN, "%H", host);
+	attr = axiom_attribute_create(this->env, "value", buf, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	attr = axiom_attribute_create(this->env, "type",
+				 host->get_family(host) == AF_INET ? "IPv4" : "IPv6", NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	/* add access-request */
+	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	snprintf(buf, BUF_LEN, "%s:%d", this->ifmap_publisher_id, ike_sa_id);
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node2);
+
+	if (up)
+	{
+		/* add metadata */
+		el = axiom_element_create(this->env, NULL, "metadata", NULL, &node2);
+		axiom_node_add_child(node, this->env, node2);
+		ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+		el = axiom_element_create(this->env, NULL, "access-request-ip", ns_meta,
+								  &node3);
+		axiom_node_add_child(node2, this->env, node3);
+		attr = axiom_attribute_create(this->env, "ifmap-cardinality",
+									  "singleValue", NULL);	
+		axiom_element_add_attribute(el, this->env, attr, node3);
+	}
 
 	/* send publish request */
 	result = axis2_svc_client_send_receive(this->svc_client, this->env, request);
@@ -206,7 +327,7 @@ static bool endSession(private_tnc_ifmap_listener_t *this)
 	bool success = FALSE;
 
 	/* build endSession request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NAMESPACE, "ifmap");
+ 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
 	el = axiom_element_create(this->env, NULL, "endSession", ns, &request);
 	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, request);
@@ -238,22 +359,19 @@ static bool endSession(private_tnc_ifmap_listener_t *this)
    return TRUE;
 }
 
-METHOD(listener_t, child_updown, bool,
-	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-	bool up)
+METHOD(listener_t, ike_updown, bool,
+	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
-	traffic_selector_t *my_ts, *other_ts;
-	enumerator_t *enumerator;
-	child_cfg_t *config;
-	host_t *vip, *me, *other;
+	u_int32_t ike_sa_id;
+	identification_t *id;
+	host_t *host;
 
-	config = child_sa->get_config(child_sa);
-	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
-	me = ike_sa->get_my_host(ike_sa);
-	other = ike_sa->get_other_host(ike_sa);
+	ike_sa_id = ike_sa->get_unique_id(ike_sa);
+	id = ike_sa->get_other_id(ike_sa);
+	host = ike_sa->get_other_host(ike_sa);
 
 	DBG2(DBG_TNC, "sending publish");
-	if (!publish(this))
+	if (!publish(this, ike_sa_id, id, host, up))
 	{
 		DBG1(DBG_TNC, "publish with MAP server failed");
 	}
@@ -318,7 +436,7 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
-				.child_updown = _child_updown,
+				.ike_updown = _ike_updown,
 			},
 			.destroy = _destroy,
 		},
