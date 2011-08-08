@@ -52,13 +52,7 @@ static bool publish_ike_sa(private_tnc_ifmap_listener_t *this,
 	id = ike_sa->get_other_id(ike_sa);
 	host = ike_sa->get_other_host(ike_sa);
 
-	DBG2(DBG_TNC, "sending ifmap->publish");
-	if (!this->ifmap->publish(this->ifmap, ike_sa_id, id, host, up))
-	{
-		DBG1(DBG_TNC, "ifmap->publish with MAP server failed");
-		return FALSE;
-	}
-	return TRUE;
+	return this->ifmap->publish(this->ifmap, ike_sa_id, id, host, up);
 }
 
 /**
@@ -126,23 +120,16 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 		destroy(this);
 		return NULL;
 	}
-
-	DBG2(DBG_TNC, "sending ifmap->newSession");
 	if (!this->ifmap->newSession(this->ifmap))
 	{
-		DBG1(DBG_TNC, "ifmap->newSession with MAP server failed");
 		destroy(this);
 		return NULL;
 	}
-
-	DBG2(DBG_TNC, "sending ifmap->purgePublisher");
 	if (!this->ifmap->purgePublisher(this->ifmap))
 	{
-		DBG1(DBG_TNC, "ifmap->purgePublisher with MAP server failed");
 		destroy(this);
 		return NULL;
 	}
-
 	if (reload)
 	{
 		if (!reload_metadata(this))
