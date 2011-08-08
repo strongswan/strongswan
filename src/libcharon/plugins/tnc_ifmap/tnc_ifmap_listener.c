@@ -45,14 +45,20 @@ static bool publish_ike_sa(private_tnc_ifmap_listener_t *this,
 						   ike_sa_t *ike_sa, bool up)
 {
 	u_int32_t ike_sa_id;
-	identification_t *id;
+	identification_t *id, *eap_id;
+	bool is_user;
 	host_t *host;
 
 	ike_sa_id = ike_sa->get_unique_id(ike_sa);
 	id = ike_sa->get_other_id(ike_sa);
+	eap_id = ike_sa->get_other_eap_id(ike_sa);
 	host = ike_sa->get_other_host(ike_sa);
 
-	return this->ifmap->publish(this->ifmap, ike_sa_id, id, host, up);
+	/* In the presence of an EAP Identity, treat it as a username */
+	is_user = !id->equals(id, eap_id);
+
+	return this->ifmap->publish_ike_sa(this->ifmap, ike_sa_id, eap_id, is_user,
+									   host, up);
 }
 
 /**

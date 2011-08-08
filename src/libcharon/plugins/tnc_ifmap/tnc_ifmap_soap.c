@@ -215,7 +215,7 @@ static axiom_node_t* create_access_request(private_tnc_ifmap_soap_t *this,
  * Create an identity
  */
 static axiom_node_t* create_identity(private_tnc_ifmap_soap_t *this,
-										   identification_t *id)
+									 identification_t *id, bool is_user)
 {
 	axiom_element_t *el;
 	axiom_node_t *node;
@@ -231,7 +231,7 @@ static axiom_node_t* create_identity(private_tnc_ifmap_soap_t *this,
 	switch (id->get_type(id))
 	{
 		case ID_FQDN:
-			id_type = "dns-name";
+			id_type = is_user ? "username" : "dns-name";
 			break;
 		case ID_RFC822_ADDR:
 			id_type = "email-address";
@@ -333,9 +333,9 @@ static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
 	return node;
 }
 
-METHOD(tnc_ifmap_soap_t, publish, bool,
+METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	private_tnc_ifmap_soap_t *this, u_int32_t ike_sa_id, identification_t *id,
-	host_t *host, bool up)
+	bool is_user, host_t *host, bool up)
 {
 	axiom_node_t *request, *node;
 	axiom_element_t *el;
@@ -368,7 +368,7 @@ METHOD(tnc_ifmap_soap_t, publish, bool,
 	axiom_node_add_child(node, this->env,
 						 	 create_access_request(this, ike_sa_id));
 	axiom_node_add_child(node, this->env,
-							 create_identity(this, id));
+							 create_identity(this, id, is_user));
 	if (up)
 	{
 		axiom_node_add_child(node, this->env,
@@ -501,7 +501,7 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 		.public = {
 			.newSession = _newSession,
 			.purgePublisher = _purgePublisher,
-			.publish = _publish,
+			.publish_ike_sa = _publish_ike_sa,
 			.endSession = _endSession,
 			.destroy = _destroy,
 		},

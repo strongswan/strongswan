@@ -50,13 +50,15 @@ struct tnc_ifmap_soap_t {
 	 *
 	 * @param ike_sa_id		unique IKE_SA id
 	 * @param id			id of remote endpoint
+	 * @param is_user		TRUE if id is an EAP username
 	 * @param host			IP address of remote endpoint
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
 	 * @return				TRUE if command was successful
 	 */
 
-	bool (*publish)(tnc_ifmap_soap_t *this,  u_int32_t ike_sa_id,
-					identification_t *id, host_t *host, bool up);
+	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this,  u_int32_t ike_sa_id,
+						   identification_t *id, bool is_user,
+						   host_t *host, bool up);
 
 	/**
 	 * Ends an IF-MAP session
