@@ -38,8 +38,11 @@ struct private_tnc_ifmap_listener_t {
 
 };
 
-METHOD(listener_t, ike_updown, bool,
-	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
+/**
+ * Publish metadata of a single IKE_SA
+ */
+static bool publish_ike_sa(private_tnc_ifmap_listener_t *this,
+						   ike_sa_t *ike_sa, bool up)
 {
 	u_int32_t ike_sa_id;
 	identification_t *id;
@@ -53,7 +56,43 @@ METHOD(listener_t, ike_updown, bool,
 	if (!this->ifmap->publish(this->ifmap, ike_sa_id, id, host, up))
 	{
 		DBG1(DBG_TNC, "ifmap->publish with MAP server failed");
+		return FALSE;
 	}
+	return TRUE;
+}
+
+/**
+ * Publish all IKE_SA metadata
+ */
+static bool reload_metadata(private_tnc_ifmap_listener_t *this)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	bool success = TRUE;
+
+	enumerator = charon->controller->create_ike_sa_enumerator(
+												charon->controller, FALSE);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
+		{
+			continue;
+		}
+		if (!publish_ike_sa(this, ike_sa, TRUE))
+		{
+			success = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	
+	return success;
+}
+
+METHOD(listener_t, ike_updown, bool,
+	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
+{
+	publish_ike_sa(this, ike_sa, up);
 
 	return TRUE;
 }
@@ -68,7 +107,7 @@ METHOD(tnc_ifmap_listener_t, destroy, void,
 /**
  * See header
  */
-tnc_ifmap_listener_t *tnc_ifmap_listener_create()
+tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 {
 	private_tnc_ifmap_listener_t *this;
 
@@ -102,6 +141,15 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create()
 		DBG1(DBG_TNC, "ifmap->purgePublisher with MAP server failed");
 		destroy(this);
 		return NULL;
+	}
+
+	if (reload)
+	{
+		if (!reload_metadata(this))
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	return &this->public;

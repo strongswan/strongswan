@@ -51,7 +51,7 @@ METHOD(plugin_t, reload, bool,
 		this->listener->destroy(this->listener);
 	}
 
-	this->listener = tnc_ifmap_listener_create();
+	this->listener = tnc_ifmap_listener_create(TRUE);
 	if (!this->listener)
 	{
 		return FALSE;
@@ -87,7 +87,7 @@ plugin_t *tnc_ifmap_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.listener = tnc_ifmap_listener_create(),
+		.listener = tnc_ifmap_listener_create(FALSE),
 	);
 
 	if (this->listener)

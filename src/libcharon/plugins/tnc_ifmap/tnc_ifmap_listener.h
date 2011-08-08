@@ -43,7 +43,9 @@ struct tnc_ifmap_listener_t {
 
 /**
  * Create a tnc_ifmap_listener instance.
+ *
+ * @param reload	reload all IKE_SA metadata
  */
-tnc_ifmap_listener_t *tnc_ifmap_listener_create();
+tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload);
 
 #endif /** TNC_IFMAP_LISTENER_H_ @}*/
