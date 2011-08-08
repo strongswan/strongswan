@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-noinst_LTLIBRARIES = libtls.la
+ipseclib_LTLIBRARIES = libtls.la
 libtls_la_SOURCES = \
 	tls_protection.h tls_protection.c \
 	tls_compression.h tls_compression.c \
