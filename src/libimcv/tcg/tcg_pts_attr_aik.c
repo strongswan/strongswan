@@ -39,12 +39,12 @@ typedef struct private_tcg_pts_attr_aik_t private_tcg_pts_attr_aik_t;
 #define PTS_AIK_SIZE			4
 
 /**
- * Private data of an private_tcg_pts_attr_aik_t object.
+ * Private data of an tcg_pts_attr_aik_t object.
  */
 struct private_tcg_pts_attr_aik_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_tpm_version_info_t
+	 * Public members of tcg_pts_attr_aik_t
 	 */
 	tcg_pts_attr_aik_t public;
 
@@ -126,7 +126,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_aik_t *this)
+	private_tcg_pts_attr_aik_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	u_int8_t flags;
@@ -134,6 +134,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_AIK_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Attestation Identity Key");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -141,7 +142,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint8(reader, &flags);
 	if(flags) this->naked_pub_aik = true;
 	
-	reader->read_data  (reader, sizeof(this->value - 1), &this->aik);
+	reader->read_data  (reader, sizeof(this->value) - 1, &this->aik);
 	this->aik = chunk_clone(this->aik);
 	reader->destroy(reader);
 
@@ -156,16 +157,16 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(pa_tnc_attr_t, get_naked_flag, bool,
+METHOD(tcg_pts_attr_aik_t, get_naked_flag, bool,
 	private_tcg_pts_attr_aik_t *this)
 {
 	return this->naked_pub_aik;
 }
 
-METHOD(pa_tnc_attr_t, set_naked_flag,void,
-	private_tcg_pts_attr_aik_t *this, bool naked)
+METHOD(tcg_pts_attr_aik_t, set_naked_flag, void,
+	private_tcg_pts_attr_aik_t *this, bool naked_pub_aik)
 {
-	this->naked_pub_aik = naked;
+	this->naked_pub_aik = naked_pub_aik;
 }
 
 METHOD(tcg_pts_attr_aik_t, get_aik, chunk_t,
@@ -178,13 +179,13 @@ METHOD(tcg_pts_attr_aik_t, set_aik, void,
 		private_tcg_pts_attr_aik_t *this,
 		chunk_t aik)
 {
-	return this->aik = aik;
+	this->aik = aik;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create(bool naked_pub_aik, chunk_t aik)
+pa_tnc_attr_t *tcg_pts_attr_aik_create(bool naked_pub_aik, chunk_t aik)
 {
 	private_tcg_pts_attr_aik_t *this;
 
@@ -200,14 +201,14 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create(bool naked_pub_aik, chunk_t 
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_naked_flag = get_naked_flag,
-			.set_naked_flag = set_naked_flag,
-			.get_aik = get_aik,
-			.set_aik = set_aik,
+			.get_naked_flag = _get_naked_flag,
+			.set_naked_flag = _set_naked_flag,
+			.get_aik = _get_aik,
+			.set_aik = _set_aik,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_AIK,
-		.naked_pub_aik = naked_pub_aik;
+		.naked_pub_aik = naked_pub_aik,
 		.aik = aik,
 	);
 
@@ -218,7 +219,7 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create(bool naked_pub_aik, chunk_t 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_aik_create_from_data(chunk_t data)
 {
 	private_tcg_pts_attr_aik_t *this;
 
@@ -234,10 +235,10 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_naked_flag = get_naked_flag,
-			.set_naked_flag = set_naked_flag,
-			.get_aik = get_aik,
-			.set_aik = set_aik,
+			.get_naked_flag = _get_naked_flag,
+			.set_naked_flag = _set_naked_flag,
+			.get_aik = _get_aik,
+			.set_aik = _set_aik,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_AIK,

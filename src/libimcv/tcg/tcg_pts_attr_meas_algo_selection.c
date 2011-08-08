@@ -50,12 +50,12 @@ typedef struct private_tcg_pts_attr_meas_algo_selection_t private_tcg_pts_attr_m
 #define PTS_MEAS_ALGO_SEL_RESERVED	0x00
 
 /**
- * Private data of an private_tcg_pts_attr_meas_algo_selection_t object.
+ * Private data of an tcg_pts_attr_meas_algo_selection_t object.
  */
 struct private_tcg_pts_attr_meas_algo_selection_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_meas_algo_t
+	 * Public members of tcg_pts_attr_meas_algo_selection_t
 	 */
 	tcg_pts_attr_meas_algo_selection_t public;
 
@@ -136,7 +136,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_meas_algo_selection_t *this)
+	private_tcg_pts_attr_meas_algo_selection_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	u_int16_t reserved;
@@ -145,6 +145,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_MEAS_ALGO_SEL_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS Measurement Algorithm Selection");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -167,23 +168,23 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(tcg_pts_attr_meas_algo_t, get_algorithm, pts_attr_meas_algorithms_t,
+METHOD(tcg_pts_attr_meas_algo_selection_t, get_algorithm, pts_attr_meas_algorithms_t,
 	private_tcg_pts_attr_meas_algo_selection_t *this)
 {
-	return this->algorithms;
+	return this->algorithm;
 }
 
-METHOD(tcg_pts_attr_meas_algo_t, set_algorithm, void,
+METHOD(tcg_pts_attr_meas_algo_selection_t, set_algorithm, void,
 	private_tcg_pts_attr_meas_algo_selection_t *this,
 	pts_attr_meas_algorithms_t algorithm)
 {
-	return this->algorithm = algorithm;
+	this->algorithm = algorithm;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorithm)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_selection_create(pts_attr_meas_algorithms_t algorithm)
 {
 	private_tcg_pts_attr_meas_algo_selection_t *this;
 
@@ -199,8 +200,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorith
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_algorithm = get_algorithm,
-			.set_algorithm = set_algorithm,
+			.get_algorithm = _get_algorithm,
+			.set_algorithm = _set_algorithm,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_MEAS_ALGO_SELECTION,
@@ -214,7 +215,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorith
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_selection_create_from_data(chunk_t data)
 {
 	private_tcg_pts_attr_meas_algo_selection_t *this;
 
@@ -230,8 +231,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_algorithm = get_algorithm,
-			.set_algorithm = set_algorithm,
+			.get_algorithm = _get_algorithm,
+			.set_algorithm = _set_algorithm,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_MEAS_ALGO_SELECTION,

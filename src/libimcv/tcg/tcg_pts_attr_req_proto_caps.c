@@ -38,12 +38,12 @@ typedef struct private_tcg_pts_attr_req_proto_caps_t private_tcg_pts_attr_req_pr
 #define PTS_PROTO_CAPS_RESERVED		0x00
 
 /**
- * Private data of an private_tcg_pts_attr_req_proto_caps_t object.
+ * Private data of an tcg_pts_attr_req_proto_caps_t object.
  */
 struct private_tcg_pts_attr_req_proto_caps_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_req_proto_caps_t
+	 * Public members of tcg_pts_attr_req_proto_caps_t
 	 */
 	tcg_pts_attr_req_proto_caps_t public;
 
@@ -126,15 +126,16 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_req_proto_caps_t *this)
+	private_tcg_pts_attr_req_proto_caps_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int24_t reserved;
+	u_int32_t reserved;
 	u_int8_t flags;
 
 	if (this->value.len < PTS_PROTO_CAPS_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Request PTS Protocol Capabilities");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -169,7 +170,7 @@ METHOD(tcg_pts_attr_req_proto_caps_t, set_flags, void,
 	private_tcg_pts_attr_req_proto_caps_t *this,
 	pts_attr_req_proto_caps_flag_t flags)
 {
-	return this->flags = flags;
+	this->flags = flags;
 }
 
 /**
@@ -191,8 +192,8 @@ pa_tnc_attr_t *tcg_pts_attr_req_proto_caps_create(pts_attr_req_proto_caps_flag_t
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_flags = get_flags,
-			.set_flags = set_flags,
+			.get_flags = _get_flags,
+			.set_flags = _set_flags,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_REQ_PROTO_CAPS,
@@ -222,8 +223,8 @@ pa_tnc_attr_t *tcg_pts_attr_req_proto_caps_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_flags = get_flags,
-			.set_flags = set_flags,
+			.get_flags = _get_flags,
+			.set_flags = _set_flags,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_REQ_PROTO_CAPS,

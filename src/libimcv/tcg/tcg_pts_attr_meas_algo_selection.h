@@ -63,7 +63,7 @@ struct tcg_pts_attr_meas_algo_selection_t {
 	 * @param flags				A Selected Measurement Algorithm
 	 */
 	void (*set_algorithm)(tcg_pts_attr_meas_algo_selection_t *this, 
-			  pts_attr_meas_algorithms_t algorithms);
+			  pts_attr_meas_algorithms_t algorithm);
 	
 };
 

@@ -50,12 +50,12 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
 #define PTS_MEAS_ALGO_RESERVED		0x00
 
 /**
- * Private data of an private_tcg_pts_attr_req_proto_caps_t object.
+ * Private data of an tcg_pts_attr_meas_algo_t object.
  */
 struct private_tcg_pts_attr_meas_algo_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_meas_algo_t
+	 * Public members of tcg_pts_attr_meas_algo_t
 	 */
 	tcg_pts_attr_meas_algo_t public;
 
@@ -136,7 +136,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_meas_algo_t *this)
+	private_tcg_pts_attr_meas_algo_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	u_int16_t reserved;
@@ -145,6 +145,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_MEAS_ALGO_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS Measurement Algorithm");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -177,7 +178,7 @@ METHOD(tcg_pts_attr_meas_algo_t, set_algorithms, void,
 	private_tcg_pts_attr_meas_algo_t *this,
 	pts_attr_meas_algorithms_t algorithms)
 {
-	return this->algorithms = algorithms;
+	this->algorithms = algorithms;
 }
 
 /**
@@ -199,8 +200,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorith
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_algorithms = get_algorithms,
-			.set_algorithms = set_algorithms,
+			.get_algorithms = _get_algorithms,
+			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_MEAS_ALGO,
@@ -230,8 +231,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_algorithms = get_algorithms,
-			.set_algorithms = set_algorithms,
+			.get_algorithms = _get_algorithms,
+			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_MEAS_ALGO,

@@ -38,12 +38,12 @@ typedef struct private_tcg_pts_attr_tpm_version_info_t private_tcg_pts_attr_tpm_
 #define PTS_TPM_VER_INFO_SIZE		4
 
 /**
- * Private data of an private_tcg_pts_attr_tpm_version_info_t object.
+ * Private data of an tcg_pts_attr_tpm_version_info_t object.
  */
 struct private_tcg_pts_attr_tpm_version_info_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_tpm_version_info_t
+	 * Public members of tcg_pts_attr_tpm_version_info_t
 	 */
 	tcg_pts_attr_tpm_version_info_t public;
 
@@ -116,13 +116,14 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_tpm_version_info_t *this)
+	private_tcg_pts_attr_tpm_version_info_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	
 	if (this->value.len < PTS_TPM_VER_INFO_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for TPM Version Information");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
@@ -151,7 +152,7 @@ METHOD(tcg_pts_attr_tpm_version_info_t, set_tpm_version_info, void,
 		private_tcg_pts_attr_tpm_version_info_t *this,
 		chunk_t tpm_version_info)
 {
-	return this->tpm_version_info = tpm_version_info;
+	this->tpm_version_info = tpm_version_info;
 }
 
 /**
@@ -173,8 +174,8 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create(chunk_t tpm_version_info)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_tpm_version_info = get_tpm_version_info,
-			.set_tpm_version_info = set_tpm_version_info,
+			.get_tpm_version_info = _get_tpm_version_info,
+			.set_tpm_version_info = _set_tpm_version_info,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_TPM_VERSION_INFO,
@@ -204,8 +205,8 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_tpm_version_info = get_tpm_version_info,
-			.set_tpm_version_info = set_tpm_version_info,
+			.get_tpm_version_info = _get_tpm_version_info,
+			.set_tpm_version_info = _set_tpm_version_info,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_TPM_VERSION_INFO,

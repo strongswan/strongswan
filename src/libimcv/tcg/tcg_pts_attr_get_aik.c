@@ -38,12 +38,12 @@ typedef struct private_tcg_pts_attr_get_aik_t private_tcg_pts_attr_get_aik_t;
 #define PTS_GET_AIK_RESERVED		0x00
 
 /**
- * Private data of an private_tcg_pts_attr_get_aik_t object.
+ * Private data of an tcg_pts_attr_get_aik_t object.
  */
 struct private_tcg_pts_attr_get_aik_t {
 
 	/**
-	 * Public members of private_tcg_pts_attr_get_aik_t
+	 * Public members of tcg_pts_attr_get_aik_t
 	 */
 	tcg_pts_attr_get_aik_t public;
 
@@ -111,7 +111,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_get_aik_t *this)
+	private_tcg_pts_attr_get_aik_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
 	u_int32_t reserved;
@@ -119,6 +119,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_GET_AIK_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Get AIK");
+		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);

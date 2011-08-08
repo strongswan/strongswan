@@ -50,7 +50,7 @@ struct tcg_pts_attr_aik_t {
 	 * @param naked				flag
 	 */
 	void (*set_naked_flag)(tcg_pts_attr_aik_t *this, 
-				bool naked);
+				bool naked_pub_aik);
 	
 	/**
 	 * Get AIK

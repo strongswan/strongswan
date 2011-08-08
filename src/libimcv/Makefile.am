@@ -24,6 +24,9 @@ libimcv_la_SOURCES = \
 	tcg/tcg_pts_attr_tpm_version_info.h tcg/tcg_pts_attr_tpm_version_info.c \
 	tcg/tcg_pts_attr_get_aik.h tcg/tcg_pts_attr_get_aik.c \
 	tcg/tcg_pts_attr_aik.h tcg/tcg_pts_attr_aik.c
+
+CFLAGS = -Wall -Werror
+
 SUBDIRS = .
 
 if USE_IMC_TEST
