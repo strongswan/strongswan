@@ -20,7 +20,7 @@ CREATE TABLE `child_configs` (
   `updown` varchar(128) collate utf8_unicode_ci default NULL,
   `hostaccess` tinyint(1) unsigned NOT NULL default '0',
   `mode` tinyint(4) unsigned NOT NULL default '2',
-  `start_action` tinyint(4) unsigned NOT NULL default '0'
+  `start_action` tinyint(4) unsigned NOT NULL default '0',
   `dpd_action` tinyint(4) unsigned NOT NULL default '0',
   `close_action` tinyint(4) unsigned NOT NULL default '0',
   `ipcomp` tinyint(4) unsigned NOT NULL default '0',
@@ -42,7 +42,8 @@ CREATE TABLE `child_config_traffic_selector` (
 DROP TABLE IF EXISTS `proposals`;
 CREATE TABLE `proposals` (
   `id` int(10) unsigned NOT NULL auto_increment,
-  `proposal` varchar(128) NOT NULL
+  `proposal` varchar(128) NOT NULL,
+  PRIMARY KEY (`id`)
 );
 
 
