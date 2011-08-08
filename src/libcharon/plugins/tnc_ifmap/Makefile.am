@@ -14,7 +14,8 @@ endif
 
 libstrongswan_tnc_ifmap_la_SOURCES = \
 	tnc_ifmap_plugin.h tnc_ifmap_plugin.c \
-	tnc_ifmap_listener.h tnc_ifmap_listener.c
+	tnc_ifmap_listener.h tnc_ifmap_listener.c \
+	tnc_ifmap_soap.h tnc_ifmap_soap.c
 
 libstrongswan_tnc_ifmap_la_LDFLAGS = -module -avoid-version
 

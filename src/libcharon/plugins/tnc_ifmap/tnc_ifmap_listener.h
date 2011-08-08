@@ -26,7 +26,7 @@
 typedef struct tnc_ifmap_listener_t tnc_ifmap_listener_t;
 
 /**
- * Listener which collects information on IKE_SAs and CHILD_SAs.
+ * Listener which collects information on IKE_SAs
  */
 struct tnc_ifmap_listener_t {
 
@@ -36,7 +36,7 @@ struct tnc_ifmap_listener_t {
 	listener_t listener;
 
 	/**
-	 * Destroy a updown_listener_t.
+	 * Destroy a tnc_ifmap_listener_t.
 	 */
 	void (*destroy)(tnc_ifmap_listener_t *this);
 };
