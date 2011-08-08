@@ -17,6 +17,7 @@
 #include "tnc_ifmap_soap.h"
 
 #include <daemon.h>
+#include <hydra.h>
 #include <debug.h>
 
 typedef struct private_tnc_ifmap_listener_t private_tnc_ifmap_listener_t;
@@ -59,6 +60,30 @@ static bool publish_ike_sa(private_tnc_ifmap_listener_t *this,
 
 	return this->ifmap->publish_ike_sa(this->ifmap, ike_sa_id, eap_id, is_user,
 									   host, up);
+}
+
+/**
+ * Publish PEP device-ip metadata
+ */
+static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+	bool success = TRUE;
+
+	enumerator = hydra->kernel_interface->create_address_enumerator(
+							hydra->kernel_interface, FALSE, FALSE);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		if (!this->ifmap->publish_device_ip(this->ifmap, host))
+		{
+			success = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return success;
 }
 
 /**
@@ -132,6 +157,11 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 		return NULL;
 	}
 	if (!this->ifmap->purgePublisher(this->ifmap))
+	{
+		destroy(this);
+		return NULL;
+	}
+	if (!publish_device_ip_addresses(this))
 	{
 		destroy(this);
 		return NULL;

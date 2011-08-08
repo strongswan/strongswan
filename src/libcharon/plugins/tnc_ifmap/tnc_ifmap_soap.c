@@ -261,7 +261,35 @@ static axiom_node_t* create_ip_address(private_tnc_ifmap_soap_t *this,
 
 	el = axiom_element_create(this->env, NULL, "ip-address", NULL, &node);
 
-	snprintf(buf, BUF_LEN, "%H", host);
+	if (host->get_family(host) == AF_INET6)
+	{
+		chunk_t address;
+		int len, written, i;
+		char *pos;
+		bool first = TRUE;
+
+		/* output IPv6 address in canonical IF-MAP 2.0 format */
+		address = host->get_address(host);
+		pos = buf;
+		len = sizeof(buf);
+
+		for (i = 0; i < address.len; i = i + 2)
+		{
+			written = snprintf(pos, len, "%s%x", first ? "" : ":",
+							   256*address.ptr[i] +  address.ptr[i+1]);
+			if (written < 0 || written > len)
+			{
+				break;
+			}
+			pos += written;
+			len -= written;
+			first = FALSE;
+		}
+	}
+	else
+	{
+		snprintf(buf, BUF_LEN, "%H", host);
+	}
 	attr = axiom_attribute_create(this->env, "value", buf, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node);
 
@@ -427,6 +455,37 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	return send_receive(this, "publish", request, "publishReceived", NULL);
 }
 
+METHOD(tnc_ifmap_soap_t, publish_device_ip, bool,
+	private_tnc_ifmap_soap_t *this, host_t *host)
+{
+	axiom_node_t *request, *node;
+	axiom_element_t *el;
+	axiom_namespace_t *ns, *ns_meta;
+	axiom_attribute_t *attr;
+
+	/* build publish request */
+ 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
+ 	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
+	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+	axiom_element_declare_namespace(el, this->env, request, ns_meta);	
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
+								  NULL);	
+	axiom_element_add_attribute(el, this->env, attr, request);
+	el = axiom_element_create(this->env, NULL, "update", NULL, &node);
+	axiom_node_add_child(request, this->env, node);
+
+	/* add device, ip-address and metadata */
+	axiom_node_add_child(node, this->env,
+							 create_device(this));
+	axiom_node_add_child(node, this->env,
+							 create_ip_address(this, host));
+	axiom_node_add_child(node, this->env,
+							 create_metadata(this, "device-ip"));
+
+	/* send publish request and receive publishReceived */
+	return send_receive(this, "publish", request, "publishReceived", NULL);
+}
+
 METHOD(tnc_ifmap_soap_t, endSession, bool,
 	private_tnc_ifmap_soap_t *this)
 {
@@ -502,6 +561,7 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			.newSession = _newSession,
 			.purgePublisher = _purgePublisher,
 			.publish_ike_sa = _publish_ike_sa,
+			.publish_device_ip = _publish_device_ip,
 			.endSession = _endSession,
 			.destroy = _destroy,
 		},

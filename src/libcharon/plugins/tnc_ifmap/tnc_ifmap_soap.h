@@ -61,6 +61,15 @@ struct tnc_ifmap_soap_t {
 						   host_t *host, bool up);
 
 	/**
+	 * Publish PEP device-ip metadata 
+	 *
+	 * @param host			IP address of local endpoint
+	 * @return				TRUE if command was successful
+	 */
+
+	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
+
+	/**
 	 * Ends an IF-MAP session
 	 *
 	 * @return				TRUE if command was successful
