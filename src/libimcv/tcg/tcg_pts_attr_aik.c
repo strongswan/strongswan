@@ -117,7 +117,7 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_AIK_SIZE);
 	
-	if(this->naked_pub_aik) flags += 128;
+	if(this->naked_pub_aik) flags += 1;
 	writer->write_uint8 (writer, flags);
 	writer->write_data(writer, this->aik);
 
