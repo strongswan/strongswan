@@ -4,7 +4,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 
 AM_CFLAGS = -rdynamic
 
-libstrongswan_tnc_ifmap_la_LIBADD = ${axis2c_LIBS} -laxutil -laxis2_engine
+libstrongswan_tnc_ifmap_la_LIBADD = ${axis2c_LIBS} -laxutil -laxis2_engine -laxis2_http_sender
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnc-ifmap.la

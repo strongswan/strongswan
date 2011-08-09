@@ -55,8 +55,7 @@ struct tnc_ifmap_soap_t {
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
 	 * @return				TRUE if command was successful
 	 */
-
-	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this,  u_int32_t ike_sa_id,
+	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this, u_int32_t ike_sa_id,
 						   identification_t *id, bool is_user,
 						   host_t *host, bool up);
 
@@ -66,7 +65,6 @@ struct tnc_ifmap_soap_t {
 	 * @param host			IP address of local endpoint
 	 * @return				TRUE if command was successful
 	 */
-
 	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
 
 	/**

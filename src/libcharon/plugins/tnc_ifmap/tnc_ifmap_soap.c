@@ -19,6 +19,8 @@
 
 #include <axis2_util.h>
 #include <axis2_client.h>
+#include <axis2_http_transport.h>
+#include <axis2_http_transport_sender.h>
 #include <axiom_soap.h>
 
 #define IFMAP_NS	  "http://www.trustedcomputinggroup.org/2010/IFMAP/2"
@@ -525,15 +527,15 @@ METHOD(tnc_ifmap_soap_t, destroy, void,
 	free(this);
 }
 
-/**
- * See header
- */
-tnc_ifmap_soap_t *tnc_ifmap_soap_create()
+static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 {
-	private_tnc_ifmap_soap_t *this;
 	axis2_char_t *server, *client_home, *username, *password, *auth_type;
 	axis2_endpoint_ref_t* endpoint_ref = NULL;
 	axis2_options_t *options = NULL;
+	axis2_transport_in_desc_t *transport_in;
+	axis2_transport_out_desc_t *transport_out;
+	axis2_transport_sender_t *transport_sender;
+	axutil_property_t* property;
 
 	client_home = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.client_home",
@@ -553,8 +555,61 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			(!username) ? "username" : "",
 			(!username && ! password) ? " and " : "",
 			(!password) ? "password" : "");
-		return NULL;
+		return FALSE;
 	}
+
+	/* Create Axis2/C environment and options */
+	this->env = axutil_env_create_all(IFMAP_LOGFILE, AXIS2_LOG_LEVEL_TRACE);
+	options = axis2_options_create(this->env);
+
+	/* Path to the MAP server certificate */
+	property =axutil_property_create_with_args(this->env,
+					 0, 0, 0, "/home/andi/axis2c/irond.pem");
+ 
+	/* Define the MAP server as the to endpoint reference */
+	endpoint_ref = axis2_endpoint_ref_create(this->env, server);
+
+	/* Set up https transport */
+	axis2_options_set_http_auth_info(options, this->env, username, password,
+									 auth_type);
+	transport_in = axis2_transport_in_desc_create(this->env,
+												  AXIS2_TRANSPORT_ENUM_HTTPS); 
+	transport_out = axis2_transport_out_desc_create(this->env,
+												  AXIS2_TRANSPORT_ENUM_HTTPS);
+	transport_sender = axis2_http_transport_sender_create(this->env);
+	axis2_transport_out_desc_set_sender(transport_out, this->env,
+										transport_sender);
+	axis2_options_set_transport_in(options, this->env, transport_in);
+	axis2_options_set_transport_out(options, this->env, transport_out); 
+	axis2_options_set_to(options, this->env, endpoint_ref);
+	axis2_options_set_property(options, this->env, AXIS2_SSL_SERVER_CERT, property);
+
+	/* Create the axis2 service client */
+	this->svc_client = axis2_svc_client_create(this->env, client_home);
+	if (!this->svc_client)
+	{
+		DBG1(DBG_TNC, "could not create axis2 service client");
+		AXIS2_LOG_ERROR(this->env->log, AXIS2_LOG_SI,
+					    "Stub invoke FAILED: Error code: %d :: %s",
+						this->env->error->error_number,
+						AXIS2_ERROR_GET_MESSAGE(this->env->error));
+		destroy(this);
+		return FALSE;
+	}
+
+	axis2_svc_client_set_options(this->svc_client, this->env, options);
+	DBG1(DBG_TNC, "connecting as MAP client '%s' to MAP server at '%s'",
+				   username, server);
+
+	return TRUE;
+}
+
+/**
+ * See header
+ */
+tnc_ifmap_soap_t *tnc_ifmap_soap_create()
+{
+	private_tnc_ifmap_soap_t *this;
 
 	INIT(this,
 		.public = {
@@ -567,32 +622,11 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 		},
 	);
 
-	/* Create Axis2/C environment and options */
-	this->env = axutil_env_create_all(IFMAP_LOGFILE, AXIS2_LOG_LEVEL_TRACE);
-    options = axis2_options_create(this->env);
- 
-	/* Define the IF-MAP server as the to endpoint reference */
-	endpoint_ref = axis2_endpoint_ref_create(this->env, server);
-	axis2_options_set_to(options, this->env, endpoint_ref);
-
-	/* Create the axis2 service client */
-	this->svc_client = axis2_svc_client_create(this->env, client_home);
-	if (!this->svc_client)
+	if (!axis2c_init(this))
 	{
-		DBG1(DBG_TNC, "could not create axis2 service client");
-		AXIS2_LOG_ERROR(this->env->log, AXIS2_LOG_SI,
-					    "Stub invoke FAILED: Error code: %d :: %s",
-						this->env->error->error_number,
-						AXIS2_ERROR_GET_MESSAGE(this->env->error));
 		destroy(this);
 		return NULL;
 	}
-
-	axis2_svc_client_set_options(this->svc_client, this->env, options);
-	axis2_options_set_http_auth_info(options, this->env, username, password,
-									 auth_type);
-	DBG1(DBG_TNC, "connecting as MAP client '%s' to MAP server at '%s'",
-		 username, server);
 
 	return &this->public;
 }
