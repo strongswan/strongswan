@@ -80,10 +80,12 @@ typedef struct bus_t bus_t;
  * Kind of alerts to raise.
  */
 enum alert_t {
-	/* a RADIUS server did not respond, no additional arguments */
+	/** a RADIUS server did not respond, no additional arguments */
 	ALERT_RADIUS_NOT_RESPONDING,
-	/* a shutdown signal has been received, argument is a int with the signal */
+	/** a shutdown signal has been received, argument is the signal (int) */
 	ALERT_SHUTDOWN_SIGNAL,
+	/** responder authentication failed, no arguments */
+	ALERT_RESPONDER_AUTH_FAILED,
 };
 
 /**

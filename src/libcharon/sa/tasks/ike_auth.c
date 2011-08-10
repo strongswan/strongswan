@@ -908,7 +908,7 @@ METHOD(task_t, process_i, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDr payload missing");
-				return FAILED;
+				goto remote_auth_failed;
 			}
 			id = id_payload->get_identification(id_payload);
 			get_reserved_id_bytes(this, id_payload);
@@ -926,7 +926,7 @@ METHOD(task_t, process_i, status_t,
 								this->reserved);
 				if (!this->other_auth)
 				{
-					return FAILED;
+					goto remote_auth_failed;
 				}
 			}
 			else
@@ -944,7 +944,7 @@ METHOD(task_t, process_i, status_t,
 				case NEED_MORE:
 					return NEED_MORE;
 				default:
-					return FAILED;
+					goto remote_auth_failed;
 			}
 			this->other_auth->destroy(this->other_auth);
 			this->other_auth = NULL;
@@ -953,7 +953,7 @@ METHOD(task_t, process_i, status_t,
 		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
 			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
-			return FAILED;
+			goto remote_auth_failed;
 		}
 
 		/* store authentication information, reset authenticator */
@@ -978,7 +978,7 @@ METHOD(task_t, process_i, status_t,
 			case NEED_MORE:
 				break;
 			default:
-				return FAILED;
+				goto remote_auth_failed;
 		}
 	}
 	if (mutual_eap)
@@ -986,7 +986,7 @@ METHOD(task_t, process_i, status_t,
 		if (!this->my_auth || !this->my_auth->is_mutual(this->my_auth))
 		{
 			DBG1(DBG_IKE, "do not allow non-mutual EAP-only authentication");
-			return FAILED;
+			goto remote_auth_failed;
 		}
 		DBG1(DBG_IKE, "allow mutual EAP-only authentication");
 	}
@@ -999,12 +999,13 @@ METHOD(task_t, process_i, status_t,
 	{
 		if (!update_cfg_candidates(this, TRUE))
 		{
-			return FAILED;
+			goto remote_auth_failed;
 		}
 		if (!charon->bus->authorize(charon->bus, TRUE))
 		{
-			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
-			return FAILED;
+			DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
+					      "cancelling");
+			goto remote_auth_failed;
 		}
 		DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 			 this->ike_sa->get_name(this->ike_sa),
@@ -1018,6 +1019,10 @@ METHOD(task_t, process_i, status_t,
 		return SUCCESS;
 	}
 	return NEED_MORE;
+
+remote_auth_failed:
+	charon->bus->alert(charon->bus, ALERT_RESPONDER_AUTH_FAILED);
+	return FAILED;
 }
 
 METHOD(task_t, get_type, task_type_t,
