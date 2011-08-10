@@ -174,6 +174,11 @@ static void process_attribute(private_ike_config_t *this,
 			}
 			break;
 		}
+		case INTERNAL_IP4_SERVER:
+		case INTERNAL_IP6_SERVER:
+			/* assume it's a Windows client if we see proprietary attributes */
+			this->ike_sa->enable_extension(this->ike_sa, EXT_MS_WINDOWS);
+			/* fall */
 		default:
 		{
 			if (this->initiator)

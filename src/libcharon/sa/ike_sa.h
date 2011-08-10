@@ -97,6 +97,11 @@ enum ike_extension_t {
 	 * peer supports EAP-only authentication, draft-eronen-ipsec-ikev2-eap-auth
 	 */
 	EXT_EAP_ONLY_AUTHENTICATION = (1<<5),
+
+	/**
+	 * peer is probably a Windows 7 RAS client
+	 */
+	EXT_MS_WINDOWS = (1<<6),
 };
 
 /**
