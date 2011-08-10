@@ -23,6 +23,16 @@
 typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_req_funct_comp_evid_t;
 
 /**
+ * Qualifier for Functional Component  (see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ *
+ *                 
+ *    0 1 2 3 4 5 
+ *  +-+-+-+-+-+-+
+ *  |K|S| Type  |
+ *  +-+-+-+-+-+-+
+ */
+
+/**
  * Request Functional Component Evidence (see section 3.14.1 of PTS Protocol: Binding to TNC IF-M Specification)
  *
  *                       1                   2                   3
@@ -51,7 +61,7 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  */
 
 #define PTS_REQ_FUNCT_COMP_EVID_SIZE		12
-#define PTS_REQ_FUNCT_COMP_EVID_RESERVED	0x00
+#define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM		0x00
 
 /**
  * Private data of an tcg_pts_attr_req_funct_comp_evid_t object.
@@ -106,7 +116,7 @@ struct private_tcg_pts_attr_req_funct_comp_evid_t {
 	/**
 	 * Functional Name Category Qualifier
 	 */
-	u_int8_t qualifier;
+	tcg_pts_qualifier_t qualifier;
 	
 	/**
 	 * Component Functional Name
@@ -149,30 +159,31 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	u_int8_t flags = 0;
-	u_int8_t family_and_qualifier = 0;
+	u_int8_t qualifier = 0;
 
 	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
 	
 	/* Determine the flags to set*/
-	if(this->flags & PTS_REQ_FUNC_COMP_TTC) flags += 1;
-	if(this->flags & PTS_REQ_FUNC_COMP_VER) flags += 2;
-	if(this->flags & PTS_REQ_FUNC_COMP_CURR) flags += 4;
-	if(this->flags & PTS_REQ_FUNC_COMP_PCR) flags += 8;
+	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_TTC) flags += 1;
+	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_VER) flags += 2;
+	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_CURR) flags += 4;
+	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_PCR) flags += 8;
 	writer->write_uint8(writer, flags);
 	
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
-	if(this->family)
+	if(this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
 	{
-		DBG1(DBG_TNC, "Functional Name Encoding Family must be set to 00");
+		DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	}
 	
-	writer->write_uint8 (writer, this->depth);
-	writer->write_uint24 (writer, this->depth);
-	writer->write_uint24 (writer, this->depth);
-	writer->write_uint24 (writer, this->depth);
+	qualifier += this->qualifier.type;
+	if(this->qualifier.kernel) qualifier += 16;
+	if(this->qualifier.sub_component) qualifier += 32;
 	
+	writer->write_uint8 (writer, qualifier);
+	writer->write_uint32 (writer, this->name);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -183,22 +194,43 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int8_t flags;
+	u_int8_t fam_and_qualifier;
 	
-	if (this->value.len < PTS_AIK_SIZE)
+	if (this->value.len < PTS_REQ_FUNCT_COMP_EVID_SIZE)
 	{
-		DBG1(DBG_TNC, "insufficient data for Attestation Identity Key");
+		DBG1(DBG_TNC, "insufficient data for Request Functional Component Evidence");
 		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	if(flags) this->naked_pub_aik = true;
-	
-	reader->read_data  (reader, sizeof(this->value) - 1, &this->aik);
-	this->aik = chunk_clone(this->aik);
-	reader->destroy(reader);
+	if((flags >> 0) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_TTC;
+	if((flags >> 1) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_VER;
+	if((flags >> 2) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_CURR;
+	if((flags >> 3) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_PCR;
 
+	reader->read_uint24(reader, &this->depth);
+	reader->read_uint24(reader, &this->comp_vendor_id);
+	reader->read_uint8(reader, &fam_and_qualifier);
+	
+	if(((fam_and_qualifier >> 6) & 1) ) this->family +=  64;
+	if(((fam_and_qualifier >> 7) & 1) ) this->family += 128;
+	
+	/* TODO: Generate an IF-M error attribute indicating */
+	/* TCG_PTS_INVALID_NAME_FAM */
+	//if(&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
+	//{
+	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
+	//}
+	
+	if(((fam_and_qualifier >> 5) & 1) ) this->qualifier.kernel = true;
+	if(((fam_and_qualifier >> 4) & 1) ) this->qualifier.sub_component = true;
+	this->qualifier.type = ( fam_and_qualifier & 0xF );
+	
+	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
+
+	reader->destroy(reader);
 	return SUCCESS;	
 }
 
@@ -239,17 +271,16 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_family, u_int8_t,
 	return this->family;
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_qualifier, u_int8_t,
+METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_qualifier, tcg_pts_qualifier_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	return this->qualifier;
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_fam_qual, void,
+METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_qualifier, void,
 		private_tcg_pts_attr_req_funct_comp_evid_t *this,
-		u_int8_t family, u_int8_t qualifier)
+		tcg_pts_qualifier_t qualifier)
 {
-	this->family = family;
 	this->qualifier = qualifier;
 }
 
@@ -272,8 +303,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 				       pts_attr_req_funct_comp_evid_flag_t flags,
 				       u_int32_t depth, 
 				       u_int32_t vendor_id,
-				       u_int8_t family,
-				       u_int8_t qualifier,
+				       tcg_pts_qualifier_t qualifier,
 				       u_int32_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
@@ -296,7 +326,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 			.get_comp_funct_name_vendor_id = _get_comp_funct_name_vendor_id,
 			.get_family = _get_family,
 			.get_qualifier = _get_qualifier,
-			.set_fam_qual = _set_fam_qual,
+			.set_qualifier = _set_qualifier,
 			.get_comp_funct_name = _get_comp_funct_name,
 			.set_comp_funct_name = _set_comp_funct_name,
 		},
@@ -305,7 +335,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 		.flags = flags,
 		.depth = depth,
 		.comp_vendor_id = vendor_id,
-		.family = family,
+		.family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM,
 		.qualifier = qualifier,
 		.name = name,
 	);
@@ -339,7 +369,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create_from_data(chunk_t data)
 			.get_comp_funct_name_vendor_id = _get_comp_funct_name_vendor_id,
 			.get_family = _get_family,
 			.get_qualifier = _get_qualifier,
-			.set_fam_qual = _set_fam_qual,
+			.set_qualifier = _set_qualifier,
 			.get_comp_funct_name = _get_comp_funct_name,
 			.set_comp_funct_name = _set_comp_funct_name,
 		},
