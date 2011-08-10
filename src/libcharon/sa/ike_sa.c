@@ -1118,6 +1118,7 @@ METHOD(ike_sa_t, initiate, status_t,
 		{
 			child_cfg->destroy(child_cfg);
 			DBG1(DBG_IKE, "unable to initiate to %%any");
+			charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
 			return DESTROY_ME;
 		}
 
