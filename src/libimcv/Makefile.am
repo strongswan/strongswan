@@ -25,7 +25,8 @@ libimcv_la_SOURCES = \
 	tcg/tcg_pts_attr_get_aik.h tcg/tcg_pts_attr_get_aik.c \
 	tcg/tcg_pts_attr_aik.h tcg/tcg_pts_attr_aik.c \
 	tcg/tcg_pts_attr_req_funct_comp_evid.h tcg/tcg_pts_attr_req_funct_comp_evid.c \
-	tcg/tcg_pts_attr_gen_attest_evid.h tcg/tcg_pts_attr_gen_attest_evid.c
+	tcg/tcg_pts_attr_gen_attest_evid.h tcg/tcg_pts_attr_gen_attest_evid.c \
+	tcg/tcg_pts_attr_simple_comp_evid.h tcg/tcg_pts_attr_simple_comp_evid.c
 
 # CFLAGS = -Wall -Werror
 
