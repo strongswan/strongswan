@@ -164,7 +164,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 *
 	 * @return				Component Functional Name
 	 */
-	u_int32_t (*get_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this);
+	pts_attr_req_funct_comp_name_bin_enum_t (*get_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this);
 	
 	
 	/**
@@ -173,7 +173,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 * @param name				Component Functional Name
 	 */
 	void (*set_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this,
-								u_int32_t name);
+				pts_attr_req_funct_comp_name_bin_enum_t name);
 	
 	
 };
@@ -191,7 +191,7 @@ pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(pts_attr_req_funct_comp_e
 				       u_int32_t depth, 
 				       u_int32_t vendor_id,
 				       tcg_pts_qualifier_t qualifier,
-				       u_int32_t name);
+				       pts_attr_req_funct_comp_name_bin_enum_t name);
 
 /**
  * Creates an tcg_pts_attr_req_funct_comp_evid_t object from received data
