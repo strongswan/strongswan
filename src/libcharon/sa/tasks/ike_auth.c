@@ -971,7 +971,7 @@ METHOD(task_t, process_i, status_t,
 			case NEED_MORE:
 				break;
 			default:
-				goto peer_auth_failed;
+				return FAILED;
 		}
 	}
 	if (mutual_eap)
