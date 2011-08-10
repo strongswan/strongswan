@@ -158,11 +158,16 @@ METHOD(listener_t, ike_updown, bool,
 				  | copy_condition(ike_sa, COND_NAT_FAKE)
 				  | copy_condition(ike_sa, COND_EAP_AUTHENTICATED)
 				  | copy_condition(ike_sa, COND_CERTREQ_SEEN)
-				  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR);
+				  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR)
+				  | copy_condition(ike_sa, COND_STALE);
 
 		extension = copy_extension(ike_sa, EXT_NATT)
 				  | copy_extension(ike_sa, EXT_MOBIKE)
-				  | copy_extension(ike_sa, EXT_HASH_AND_URL);
+				  | copy_extension(ike_sa, EXT_HASH_AND_URL)
+				  | copy_extension(ike_sa, EXT_MULTIPLE_AUTH)
+				  | copy_extension(ike_sa, EXT_STRONGSWAN)
+				  | copy_extension(ike_sa, EXT_EAP_ONLY_AUTHENTICATION)
+				  | copy_extension(ike_sa, EXT_MS_WINDOWS);
 
 		id = ike_sa->get_id(ike_sa);
 
