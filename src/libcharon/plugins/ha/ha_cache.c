@@ -203,9 +203,24 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
-		DBG1(DBG_CFG, "resyncing CHILD_SA");
-		status = ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-										child_sa->get_spi(child_sa, TRUE));
+		if (ike_sa->supports_extension(ike_sa, EXT_MS_WINDOWS) &&
+			ike_sa->has_condition(ike_sa, COND_NAT_THERE))
+		{
+			/* NATed Windows clients don't accept CHILD_SA rekeying, but fail
+			 * with an "invalid situation" error. We just close the CHILD_SA,
+			 * Windows will reestablish it immediately if required. */
+			DBG1(DBG_CFG, "resyncing CHILD_SA using a delete");
+			status = ike_sa->delete_child_sa(ike_sa,
+											 child_sa->get_protocol(child_sa),
+											 child_sa->get_spi(child_sa, TRUE));
+		}
+		else
+		{
+			DBG1(DBG_CFG, "resyncing CHILD_SA using a rekey");
+			status = ike_sa->rekey_child_sa(ike_sa,
+											child_sa->get_protocol(child_sa),
+											child_sa->get_spi(child_sa, TRUE));
+		}
 		if (status == DESTROY_ME)
 		{
 			break;
