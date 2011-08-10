@@ -466,6 +466,21 @@ Database URI for charons SQL plugin
 .BR charon.plugins.sql.loglevel " [-1]"
 Loglevel for logging to SQL database
 .TP
+.BR charon.plugins.tnc-ifmap.auth_type "[Basic]"
+Authentication method of strongSwan MAP client
+.TP
+.BR charon.plugins.tnc-ifmap.device_name
+Unique name of strongSwan as a PEP and/or PDP device
+.TP
+.BR charon.plugins.tnc-ifmap.password
+Authentication password of strongSwan MAP client
+.TP
+.BR charon.plugins.tnc-ifmap.server_cert
+Certificate of MAP server
+.TP
+.BR charon.plugins.tnc-ifmap.username
+Authentication username of strongSwan MAP client
+.TP
 .BR charon.plugins.tnc-imc.preferred_language " [en]"
 Preferred language for TNC recommendations
 .TP
