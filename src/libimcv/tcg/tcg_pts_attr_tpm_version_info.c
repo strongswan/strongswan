@@ -127,7 +127,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_data  (reader, sizeof(this->value), &this->tpm_version_info);
+	reader->read_data  (reader, this->value.len, &this->tpm_version_info);
 	this->tpm_version_info = chunk_clone(this->tpm_version_info);
 	reader->destroy(reader);
 

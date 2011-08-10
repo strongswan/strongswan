@@ -117,7 +117,7 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_AIK_SIZE);
 	
-	if(this->naked_pub_aik) flags += 1;
+	if(this->naked_pub_aik) flags += 128;
 	writer->write_uint8 (writer, flags);
 	writer->write_data(writer, this->aik);
 
@@ -140,9 +140,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	if(flags) this->naked_pub_aik = true;
+	if((flags >> 7 ) & 1) this->naked_pub_aik = true;
 	
-	reader->read_data  (reader, sizeof(this->value) - 1, &this->aik);
+	reader->read_data  (reader, this->value.len - 1, &this->aik);
 	this->aik = chunk_clone(this->aik);
 	reader->destroy(reader);
 
