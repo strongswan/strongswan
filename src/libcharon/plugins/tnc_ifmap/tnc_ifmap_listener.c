@@ -40,29 +40,6 @@ struct private_tnc_ifmap_listener_t {
 };
 
 /**
- * Publish metadata of a single IKE_SA
- */
-static bool publish_ike_sa(private_tnc_ifmap_listener_t *this,
-						   ike_sa_t *ike_sa, bool up)
-{
-	u_int32_t ike_sa_id;
-	identification_t *id, *eap_id;
-	bool is_user;
-	host_t *host;
-
-	ike_sa_id = ike_sa->get_unique_id(ike_sa);
-	id = ike_sa->get_other_id(ike_sa);
-	eap_id = ike_sa->get_other_eap_id(ike_sa);
-	host = ike_sa->get_other_host(ike_sa);
-
-	/* In the presence of an EAP Identity, treat it as a username */
-	is_user = !id->equals(id, eap_id);
-
-	return this->ifmap->publish_ike_sa(this->ifmap, ike_sa_id, eap_id, is_user,
-									   host, up);
-}
-
-/**
  * Publish PEP device-ip metadata
  */
 static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
@@ -103,7 +80,7 @@ static bool reload_metadata(private_tnc_ifmap_listener_t *this)
 		{
 			continue;
 		}
-		if (!publish_ike_sa(this, ike_sa, TRUE))
+		if (!this->ifmap->publish_ike_sa(this->ifmap, ike_sa, TRUE))
 		{
 			success = FALSE;
 			break;
@@ -117,7 +94,7 @@ static bool reload_metadata(private_tnc_ifmap_listener_t *this)
 METHOD(listener_t, ike_updown, bool,
 	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
-	publish_ike_sa(this, ike_sa, up);
+	this->ifmap->publish_ike_sa(this->ifmap, ike_sa, up);
 
 	return TRUE;
 }

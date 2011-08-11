@@ -343,6 +343,37 @@ static axiom_node_t* create_metadata(private_tnc_ifmap_soap_t *this,
 }
 
 /**
+ * Create capability metadata
+ */
+static axiom_node_t* create_capability(private_tnc_ifmap_soap_t *this,
+									   identification_t *name)
+{
+	axiom_element_t *el;
+	axiom_node_t *node, *node2, *node3;
+	axiom_namespace_t *ns_meta;
+	axiom_attribute_t *attr;
+	axiom_text_t *text;
+	char buf[BUF_LEN];
+
+	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+	el = axiom_element_create(this->env, NULL, "capability", ns_meta, &node);
+	attr = axiom_attribute_create(this->env, "ifmap-cardinality", "multiValue",
+								  NULL);	
+	axiom_element_add_attribute(el, this->env, attr, node);
+
+	el = axiom_element_create(this->env, NULL, "name", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+	snprintf(buf, BUF_LEN, "%Y", name);
+	text = axiom_text_create(this->env, node2, buf, &node3);
+
+	el = axiom_element_create(this->env, NULL, "administrative-domain", NULL, &node2);
+	axiom_node_add_child(node, this->env, node2);
+	text = axiom_text_create(this->env, node2, "strongswan", &node3);
+	
+	return node;
+}
+
+/**
  * Create delete filter
  */
 static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
@@ -364,13 +395,29 @@ static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
 }
 
 METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
-	private_tnc_ifmap_soap_t *this, u_int32_t ike_sa_id, identification_t *id,
-	bool is_user, host_t *host, bool up)
+	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up)
 {
-	axiom_node_t *request, *node;
+	axiom_node_t *request, *node, *node2;
 	axiom_element_t *el;
 	axiom_namespace_t *ns, *ns_meta;
 	axiom_attribute_t *attr;
+
+	enumerator_t *e1, *e2;
+	auth_rule_t type;
+	identification_t *id, *eap_id, *group;
+	host_t *host;
+	auth_cfg_t *auth;
+	u_int32_t ike_sa_id;
+	bool is_user, first = TRUE;
+
+	/* extract relevant data from IKE_SA*/
+	ike_sa_id = ike_sa->get_unique_id(ike_sa);
+	id = ike_sa->get_other_id(ike_sa);
+	eap_id = ike_sa->get_other_eap_id(ike_sa);
+	host = ike_sa->get_other_host(ike_sa);
+
+	/* in the presence of an EAP Identity, treat it as a username */
+	is_user = !id->equals(id, eap_id);
 
 	/* build publish request */
  	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
@@ -452,6 +499,56 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 		axiom_node_add_child(node, this->env,
 							 create_metadata(this, "authenticated-by"));
 	}
+
+	/**
+	 * update or delete capability metadata
+	 */
+	e1 = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
+	while (e1->enumerate(e1, &auth))
+	{
+		e2 = auth->create_enumerator(auth);
+		while (e2->enumerate(e2, &type, &group))
+		{
+			/* look for group memberships */
+			if (type == AUTH_RULE_GROUP)
+			{
+				if (first)
+				{
+					first = FALSE;
+
+					if (up)
+					{
+						el = axiom_element_create(this->env, NULL, "update",
+												  NULL, &node);
+					}
+					else
+					{
+						node = create_delete_filter(this, "capability");
+					}
+					axiom_node_add_child(request, this->env, node);
+ 
+					/* add access-request */
+					axiom_node_add_child(node, this->env,
+									 create_access_request(this, ike_sa_id));
+					if (!up)
+					{
+						break;
+					}
+					el = axiom_element_create(this->env, NULL, "metadata", NULL,
+											  &node2);
+					axiom_node_add_child(node, this->env, node2);
+				}
+				axiom_node_add_child(node2, this->env,
+									 create_capability(this, group));
+			}
+			if (!first && !up)
+			{
+				break;
+			}
+		}
+		e2->destroy(e2);
+	}
+	e1->destroy(e1);
 
 	/* send publish request and receive publishReceived */
 	return send_receive(this, "publish", request, "publishReceived", NULL);

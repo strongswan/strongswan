@@ -23,6 +23,7 @@
 
 #include <library.h>
 #include <utils/host.h>
+#include <sa/ike_sa.h>
 
 typedef struct tnc_ifmap_soap_t tnc_ifmap_soap_t;
 
@@ -48,16 +49,11 @@ struct tnc_ifmap_soap_t {
 	/**
 	 * Publish metadata about established/deleted IKE_SAs 
 	 *
-	 * @param ike_sa_id		unique IKE_SA id
-	 * @param id			id of remote endpoint
-	 * @param is_user		TRUE if id is an EAP username
-	 * @param host			IP address of remote endpoint
+	 * @param ike_sa		IKE_SA for which metadate is published
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
 	 * @return				TRUE if command was successful
 	 */
-	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this, u_int32_t ike_sa_id,
-						   identification_t *id, bool is_user,
-						   host_t *host, bool up);
+	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up);
 
 	/**
 	 * Publish PEP device-ip metadata 
