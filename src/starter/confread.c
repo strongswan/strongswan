@@ -12,6 +12,9 @@
  * for more details.
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +32,7 @@
 #include "parser.h"
 #include "confread.h"
 #include "args.h"
+#include "files.h"
 #include "interfaces.h"
 
 /* strings containing a colon are interpreted as an IPv6 address */
@@ -38,6 +42,17 @@ static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 static const char esp_defaults[] = "aes128-sha1,3des-sha1";
 
 static const char firewall_defaults[] = "ipsec _updown iptables";
+
+static bool daemon_exists(char *daemon, char *path)
+{
+	struct stat st;
+	if (stat(path, &st) != 0)
+	{
+		plog("Disabling %sstart option, '%s' not found", daemon, path);
+		return FALSE;
+	}
+	return TRUE;
+}
 
 static void default_values(starter_config_t *cfg)
 {
@@ -137,6 +152,21 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 			continue;
 		}
 	}
+
+	/* verify the executables are actually available (some distros split
+	 * packages but enabled both) */
+#ifdef START_CHARON
+	cfg->setup.charonstart = cfg->setup.charonstart &&
+							 daemon_exists("charon", CHARON_CMD);
+#else
+	cfg->setup.charonstart = FALSE;
+#endif
+#ifdef START_PLUTO
+	cfg->setup.plutostart = cfg->setup.plutostart &&
+							daemon_exists("pluto", PLUTO_CMD);
+#else
+	cfg->setup.plutostart = FALSE;
+#endif
 }
 
 static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
