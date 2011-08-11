@@ -1,4 +1,4 @@
-strongswan-4.5.6
+strongswan-4.6.0
 ----------------
 
 - The tnc-ifmap plugin implements a TNC IF-MAP 2.0 client that which
