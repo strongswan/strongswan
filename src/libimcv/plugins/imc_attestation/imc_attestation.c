@@ -205,17 +205,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 			{
 				case TCG_PTS_REQ_PROTO_CAPS:
 					break;
-				case TCG_PTS_DH_NONCE_PARAMS_REQ:
-					break;
-				case TCG_PTS_DH_NONCE_FINISH:
-					break;
 				case TCG_PTS_MEAS_ALGO:
 					break;
 				case TCG_PTS_GET_TPM_VERSION_INFO:
-					break;
-				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
-					break;
-				case TCG_PTS_UPDATE_TEMPL_REF_MANI:
 					break;
 				case TCG_PTS_GET_AIK:
 					break;
@@ -225,13 +217,17 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					break;
 				case TCG_PTS_GEN_ATTEST_EVID:
 					break;
-				case TCG_PTS_REQ_FILE_META:
-					break;
 				case TCG_PTS_REQ_FILE_MEAS:
 					break;
+				
+				/* TODO: Not implemented yet */
+				case TCG_PTS_DH_NONCE_PARAMS_REQ:
+				case TCG_PTS_DH_NONCE_FINISH:
+				case TCG_PTS_REQ_FILE_META:
 				case TCG_PTS_REQ_INTEG_MEAS_LOG:
-					break;
-					
+				/* Attributes using XML */
+				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
+				case TCG_PTS_UPDATE_TEMPL_REF_MANI:
 				/* On Windows only*/
 				case TCG_PTS_REQ_REGISTRY_VALUE:
 				/* Received on IMV side only*/

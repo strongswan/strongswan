@@ -201,13 +201,9 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			{
 				case TCG_PTS_PROTO_CAPS:
 					break;
-				case TCG_PTS_DH_NONCE_PARAMS_RESP:
-					break;
 				case TCG_PTS_MEAS_ALGO_SELECTION:
 					break;
 				case TCG_PTS_TPM_VERSION_INFO:
-					break;
-				case TCG_PTS_TEMPL_REF_MANI_SET_META:
 					break;
 				case TCG_PTS_AIK:
 					break;
@@ -217,17 +213,17 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					break;
 				case TCG_PTS_SIMPLE_EVID_FINAL:
 					break;
-				case TCG_PTS_VERIFICATION_RESULT:
-					break;
-				case TCG_PTS_INTEG_REPORT:
-					break;
-				case TCG_PTS_UNIX_FILE_META:
-					break;
 				case TCG_PTS_FILE_MEAS:
 					break;
+				
+				/* TODO: Not implemented yet */
+				case TCG_PTS_DH_NONCE_PARAMS_RESP:
+				case TCG_PTS_UNIX_FILE_META:
 				case TCG_PTS_INTEG_MEAS_LOG:
-					break;
-					
+				/* Attributes using XML */
+				case TCG_PTS_TEMPL_REF_MANI_SET_META:
+				case TCG_PTS_VERIFICATION_RESULT:
+				case TCG_PTS_INTEG_REPORT:
 				/* On Windows only*/
 				case TCG_PTS_WIN_FILE_META:
 				case TCG_PTS_REGISTRY_VALUE:
@@ -246,7 +242,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				case TCG_PTS_REQ_FILE_MEAS:
 				case TCG_PTS_REQ_INTEG_MEAS_LOG:
 				default:
-					DBG1(DBG_IMC, "received unsupported attribute '%N'",
+					DBG1(DBG_IMV, "received unsupported attribute '%N'",
 						tcg_attr_names, attr->get_type(attr));
 					break;
 			}
