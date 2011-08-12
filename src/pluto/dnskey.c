@@ -1427,7 +1427,7 @@ err_t start_adns_query(identification_t *id,     /* domain to query */
 	cr->sgw_specified = (sgw_id != NULL);
 	cr->sgw_id = cr->sgw_specified ?
 						sgw_id->clone(sgw_id) :
-				 		identification_create_from_string("%any");
+						identification_create_from_string("%any");
 	cr->gateways_from_dns = NULL;
 #ifdef USE_KEYRR
 	cr->keys_from_dns = NULL;

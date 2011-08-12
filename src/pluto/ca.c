@@ -87,7 +87,7 @@ bool trusted_ca(identification_t *a, identification_t *b, int *pathlen)
 			break;
 		}
 		certificate = cacert->cert;
-		
+
 		/* is the certificate self-signed? */
 		{
 			x509_t *x509 = (x509_t*)certificate;
@@ -248,7 +248,7 @@ cert_t* add_authcert(cert_t *cert, x509_flag_t auth_flags)
 
 	lock_authcert_list("add_authcert");
 
-	old_cert = get_authcert(certificate->get_subject(certificate), 
+	old_cert = get_authcert(certificate->get_subject(certificate),
 							x509->get_subjectKeyIdentifier(x509),
 							auth_flags);
 	if (old_cert)

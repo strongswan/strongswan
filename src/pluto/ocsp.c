@@ -624,7 +624,7 @@ void list_ocsp_locations(ocsp_location_t *location, bool requests,
 					whack_log(RC_COMMENT, "  serial:    %#B, %s, until %T %s",
 						&certinfo->serialNumber,
 						cert_status_names[certinfo->status],
- 						&certinfo->nextUpdate, utc,
+						&certinfo->nextUpdate, utc,
 						check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
 				}
 				certinfo = certinfo->next;
@@ -1144,9 +1144,9 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 
 				*cert = cert_empty;
 				cert->cert = lib->creds->create(lib->creds,
-								  		  CRED_CERTIFICATE, CERT_X509,
-								  		  BUILD_BLOB_ASN1_DER, object,
-								  		  BUILD_END);
+										  CRED_CERTIFICATE, CERT_X509,
+										  BUILD_BLOB_ASN1_DER, object,
+										  BUILD_END);
 				if (cert->cert == NULL)
 				{
 					DBG(DBG_CONTROL | DBG_PARSING,

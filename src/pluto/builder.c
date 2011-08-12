@@ -71,17 +71,17 @@ static cert_t *builder_load_cert(certificate_type_t type, va_list args)
 		if (pgp)
 		{
 			cert->cert = lib->creds->create(lib->creds,
-							  			   CRED_CERTIFICATE, CERT_GPG,
-							  			   BUILD_BLOB_PGP, blob,
-							  			   BUILD_END);
+										   CRED_CERTIFICATE, CERT_GPG,
+										   BUILD_BLOB_PGP, blob,
+										   BUILD_END);
 		}
 		else
 		{
 			cert->cert = lib->creds->create(lib->creds,
-							  			   CRED_CERTIFICATE, CERT_X509,
-							  			   BUILD_BLOB_ASN1_DER, blob,
+										   CRED_CERTIFICATE, CERT_X509,
+										   BUILD_BLOB_ASN1_DER, blob,
 										   BUILD_X509_FLAG, flags,
-							  			   BUILD_END);
+										   BUILD_END);
 		}
 		if (cert->cert)
 		{
@@ -121,9 +121,9 @@ static x509crl_t *builder_load_crl(certificate_type_t type, va_list args)
 		crl->next = NULL;
 		crl->distributionPoints = linked_list_create();
 		crl->crl = lib->creds->create(lib->creds,
-							  		  CRED_CERTIFICATE, CERT_X509_CRL,
-							  		  BUILD_BLOB_ASN1_DER, blob,
-							  		  BUILD_END);
+									  CRED_CERTIFICATE, CERT_X509_CRL,
+									  BUILD_BLOB_ASN1_DER, blob,
+									  BUILD_END);
 		if (crl->crl)
 		{
 			return crl;

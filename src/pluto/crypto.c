@@ -30,7 +30,7 @@ static struct encrypt_desc encrypt_desc_3des =
 	algo_id:          OAKLEY_3DES_CBC,
 	plugin_name:      NULL,
 	algo_next:        NULL,
-	
+
 	enc_blocksize:    DES_BLOCK_SIZE,
 	keydeflen:        DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 	keyminlen:        DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,

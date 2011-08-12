@@ -346,7 +346,7 @@ static void handle_known_vendorid (struct msg_digest *md, const char *vidstr,
 		case VID_STRONGSWAN:
 			vid_useful = TRUE;
 			break;
-		
+
 		/* Remote side supports OpenPGP certificates */
 		case VID_OPENPGP:
 			md->openpgp = TRUE;

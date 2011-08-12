@@ -72,7 +72,7 @@ void set_myid(enum myid_state s, char *idstr)
 	if (idstr)
 	{
 		myids[s]->destroy(myids[s]);
- 		myids[s] = identification_create_from_string(idstr);
+		myids[s] = identification_create_from_string(idstr);
 		if (s == MYID_SPECIFIED)
 		{
 				myid_state = MYID_SPECIFIED;
