@@ -126,7 +126,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	bool noskip_flag;
 	
 	/**
-	 * Set of flags for Request Functional Component
+	 * Set of flags for Simple Component Evidence
 	 */
 	pts_attr_simple_comp_evid_flag_t flags;
 
@@ -168,7 +168,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	/**
 	 * Hash Algorithm
 	 */
-	u_int16_t hash_algorithm;
+	pts_attr_meas_algorithms_t hash_algorithm;
 	
 	/**
 	 * Transformation type for PCR 
@@ -285,13 +285,14 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_data (writer, this->measurement_time);
 	
 	/* Optional fields */
-	if(this->policy_uri.ptr) 
+	if(this->policy_uri.ptr && this->policy_uri.len > 0) 
 	{
 		writer->write_uint16 (writer, this->policy_uri.len);
 		writer->write_data (writer, this->policy_uri);
 	}
 	if(this->pcr_before.ptr && this->pcr_after.ptr &&
-		this->pcr_before.len == this->pcr_after.len)
+		this->pcr_before.len == this->pcr_after.len &&
+		this->pcr_before.len > 0 && this->pcr_after.len > 0)
 	{
 		writer->write_uint16 (writer, this->pcr_before.len);
 		writer->write_data (writer, this->pcr_before);
@@ -493,14 +494,14 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_extended_pcr, void,
 	this->extended_pcr = extended_pcr;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, u_int16_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_attr_meas_algorithms_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->hash_algorithm;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_hash_algorithm, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, u_int16_t hash_algorithm)
+	private_tcg_pts_attr_simple_comp_evid_t *this, pts_attr_meas_algorithms_t hash_algorithm)
 {
 	this->hash_algorithm = hash_algorithm;
 }
@@ -569,7 +570,8 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_len, u_int16_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	if(this->pcr_before.ptr && this->pcr_after.ptr && 
-		this->pcr_before.len == this->pcr_after.len) 
+		this->pcr_before.len == this->pcr_after.len &&
+		this->pcr_before.len > 0 && this->pcr_after.len > 0) 
 			return this->pcr_before.len;
 	else return 0;
 }
@@ -596,7 +598,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 				       tcg_pts_qualifier_t qualifier,
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
-				       u_int16_t hash_algorithm,
+				       pts_attr_meas_algorithms_t hash_algorithm,
 				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,

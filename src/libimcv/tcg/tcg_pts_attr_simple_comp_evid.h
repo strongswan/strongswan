@@ -38,15 +38,15 @@ typedef enum pts_attr_simple_comp_evid_pcr_transform_t pts_attr_simple_comp_evid
  */
 enum pts_attr_simple_comp_evid_flag_t {
 	/** PCR information fields inlcuded */
-	PTS_SIMPLE_COMP_EVID_FLAG_PCR =					(1<<0),
+	PTS_SIMPLE_COMP_EVID_FLAG_PCR =					0,
 	/** No Validation was attempted */
-	PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID = 				(1<<1),
+	PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID = 				1,
 	/** Attempted validation, unable to verify */
-	PTS_SIMPLE_COMP_EVID_FLAG_NO_VER = 				(1<<2),
+	PTS_SIMPLE_COMP_EVID_FLAG_NO_VER = 				2,
 	/** Attempted validation, verification failed */
-	PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL = 				(1<<3),
+	PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL = 				3,
 	/** Attempted validation, verification passed */
-	PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS = 				(1<<4),
+	PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS = 				4,
 };
 
 /**
@@ -168,7 +168,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 *
 	 * @return				Hash Algorithm
 	 */
-	u_int16_t (*get_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this);
+	pts_attr_meas_algorithms_t (*get_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Set Hash Algorithm
@@ -176,7 +176,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @param hash_algorithm			Hash Algorithm
 	 */
 	void (*set_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this,
-						u_int16_t hash_algorithm);
+						pts_attr_meas_algorithms_t hash_algorithm);
 	
 	/**
 	 * Get PCR Transformation 
@@ -300,7 +300,7 @@ pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(pts_attr_simple_comp_evid_fl
 				       tcg_pts_qualifier_t qualifier,
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
-				       u_int16_t hash_algorithm,
+				       pts_attr_meas_algorithms_t hash_algorithm,
 				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,
