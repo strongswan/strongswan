@@ -94,8 +94,23 @@ static bool reload_metadata(private_tnc_ifmap_listener_t *this)
 METHOD(listener_t, ike_updown, bool,
 	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
-	this->ifmap->publish_ike_sa(this->ifmap, ike_sa, up);
+	if (ike_sa->get_state(ike_sa) != IKE_CONNECTING)
+	{
+		this->ifmap->publish_ike_sa(this->ifmap, ike_sa, up);
+	}
+	return TRUE;
+}
 
+METHOD(listener_t, alert, bool,
+	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, alert_t alert,
+	va_list args)
+{
+	if (alert == ALERT_PEER_AUTH_FAILED)
+	{
+		this->ifmap->publish_enforcement_report(this->ifmap,
+							ike_sa->get_other_host(ike_sa),
+							"block", "authentication failed");
+	}
 	return TRUE;
 }
 
@@ -117,6 +132,7 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
+				.alert = _alert,
 			},
 			.destroy = _destroy,
 		},

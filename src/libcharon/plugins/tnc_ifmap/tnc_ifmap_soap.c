@@ -395,6 +395,40 @@ static axiom_node_t* create_capability(private_tnc_ifmap_soap_t *this,
 }
 
 /**
+ * Create enforcement-report metadata
+ */
+static axiom_node_t* create_enforcement_report(private_tnc_ifmap_soap_t *this,
+											   char *action, char *reason)
+{
+	axiom_element_t *el;
+	axiom_node_t *node, *node2, *node3, *node4;
+	axiom_namespace_t *ns_meta;
+	axiom_attribute_t *attr;
+	axiom_text_t *text;
+
+	el = axiom_element_create(this->env, NULL, "metadata", NULL, &node);
+
+	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+	el = axiom_element_create(this->env, NULL, "enforcement-report", ns_meta,
+							  &node2);
+	attr = axiom_attribute_create(this->env, "ifmap-cardinality",
+								  "multiValue", NULL);
+	axiom_element_add_attribute(el, this->env, attr, node2);
+	axiom_node_add_child(node, this->env, node2);
+
+	el = axiom_element_create(this->env, NULL, "enforcement-action", NULL,
+							  &node3);
+	axiom_node_add_child(node2, this->env, node3);
+	text = axiom_text_create(this->env, node3, action, &node4);
+
+	el = axiom_element_create(this->env, NULL, "enforcement-reason", NULL,
+							  &node3);
+	axiom_node_add_child(node2, this->env, node3);
+	text = axiom_text_create(this->env, node3, reason, &node4);
+
+    return node;
+}
+/**
  * Create delete filter
  */
 static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
@@ -415,13 +449,31 @@ static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
 	return node;
 }
 
+/**
+ * Create a publish request
+ */
+static axiom_node_t* create_publish_request(private_tnc_ifmap_soap_t *this)
+{
+	axiom_element_t *el;
+	axiom_node_t *request;
+	axiom_namespace_t *ns, *ns_meta;
+	axiom_attribute_t *attr;
+
+	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
+	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
+	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
+	axiom_element_declare_namespace(el, this->env, request, ns_meta);
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
+								  NULL);
+	axiom_element_add_attribute(el, this->env, attr, request);
+
+	return request;
+}
 METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up)
 {
 	axiom_node_t *request, *node, *node2;
 	axiom_element_t *el;
-	axiom_namespace_t *ns, *ns_meta;
-	axiom_attribute_t *attr;
 
 	enumerator_t *e1, *e2;
 	auth_rule_t type;
@@ -445,14 +497,19 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	}
 
 	/* build publish request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
- 	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
-	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
-	axiom_element_declare_namespace(el, this->env, request, ns_meta);	
-	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
-								  NULL);	
-	axiom_element_add_attribute(el, this->env, attr, request);
+	request = create_publish_request(this);
 
+	/* delete any existing enforcement reports */
+	if (up)
+	{
+		node = create_delete_filter(this, "enforcement-report");
+		axiom_node_add_child(request, this->env, node);
+		axiom_node_add_child(node, this->env,
+							 create_ip_address(this, host));
+		axiom_node_add_child(node, this->env,
+							 create_device(this));
+	}
+	
 	/**
 	 * update or delete authenticated-as metadata
 	 */
@@ -468,7 +525,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 
 	/* add access-request, identity and [if up] metadata */
 	axiom_node_add_child(node, this->env,
-						 	 create_access_request(this, ike_sa_id));
+							 create_access_request(this, ike_sa_id));
 	axiom_node_add_child(node, this->env,
 							 create_identity(this, id, is_user));
 	if (up)
@@ -584,27 +641,42 @@ METHOD(tnc_ifmap_soap_t, publish_device_ip, bool,
 {
 	axiom_node_t *request, *node;
 	axiom_element_t *el;
-	axiom_namespace_t *ns, *ns_meta;
-	axiom_attribute_t *attr;
 
-	/* build publish request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
- 	el = axiom_element_create(this->env, NULL, "publish", ns, &request);
-	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
-	axiom_element_declare_namespace(el, this->env, request, ns_meta);	
-	attr = axiom_attribute_create(this->env, "session-id", this->session_id,
-								  NULL);	
-	axiom_element_add_attribute(el, this->env, attr, request);
+	/* build publish update request */
+	request = create_publish_request(this);
 	el = axiom_element_create(this->env, NULL, "update", NULL, &node);
 	axiom_node_add_child(request, this->env, node);
 
 	/* add device, ip-address and metadata */
 	axiom_node_add_child(node, this->env,
-							 create_device(this));
+						 create_device(this));
 	axiom_node_add_child(node, this->env,
-							 create_ip_address(this, host));
+						 create_ip_address(this, host));
 	axiom_node_add_child(node, this->env,
-							 create_metadata(this, "device-ip"));
+						 create_metadata(this, "device-ip"));
+
+	/* send publish request and receive publishReceived */
+	return send_receive(this, "publish", request, "publishReceived", NULL);
+}
+
+METHOD(tnc_ifmap_soap_t, publish_enforcement_report, bool,
+	private_tnc_ifmap_soap_t *this, host_t *host, char *action, char *reason)
+{
+	axiom_node_t *request, *node;
+	axiom_element_t *el;
+
+    /* build publish update request */
+	request = create_publish_request(this);
+	el = axiom_element_create(this->env, NULL, "update", NULL, &node);
+	axiom_node_add_child(request, this->env, node);
+
+	/* add ip-address and metadata */
+	axiom_node_add_child(node, this->env,
+						 create_ip_address(this, host));
+	axiom_node_add_child(node, this->env,
+						 create_device(this));
+	axiom_node_add_child(node, this->env,
+						 create_enforcement_report(this, action, reason));
 
 	/* send publish request and receive publishReceived */
 	return send_receive(this, "publish", request, "publishReceived", NULL);
@@ -749,6 +821,7 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			.purgePublisher = _purgePublisher,
 			.publish_ike_sa = _publish_ike_sa,
 			.publish_device_ip = _publish_device_ip,
+			.publish_enforcement_report = _publish_enforcement_report,
 			.endSession = _endSession,
 			.destroy = _destroy,
 		},

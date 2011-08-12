@@ -64,6 +64,17 @@ struct tnc_ifmap_soap_t {
 	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
 
 	/**
+	 * Publish enforcement-report metadata
+	 *
+	 * @param host			Host to be enforced
+	 * @param action		Enforcement action ("block" or "quarantine")
+	 * @param reason		Enforcement reason
+	 * @return				TRUE if command was successful
+	 */
+	bool (*publish_enforcement_report)(tnc_ifmap_soap_t *this, host_t *host,
+									   char *action, char *reason);
+
+	/**
 	 * Ends an IF-MAP session
 	 *
 	 * @return				TRUE if command was successful
