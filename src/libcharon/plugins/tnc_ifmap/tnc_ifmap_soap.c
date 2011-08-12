@@ -232,17 +232,38 @@ static axiom_node_t* create_identity(private_tnc_ifmap_soap_t *this,
 
 	switch (id->get_type(id))
 	{
+		case ID_IPV4_ADDR:
+			id_type = "other";
+			attr = axiom_attribute_create(this->env, "other-type-definition",
+										  "36906:ipv4-address", NULL);
+			axiom_element_add_attribute(el, this->env, attr, node);
+			break;
 		case ID_FQDN:
 			id_type = is_user ? "username" : "dns-name";
 			break;
 		case ID_RFC822_ADDR:
 			id_type = "email-address";
 			break;
+		case ID_IPV6_ADDR:
+			id_type = "other";
+			attr = axiom_attribute_create(this->env, "other-type-definition",
+										  "36906:ipv6-address", NULL);
+			axiom_element_add_attribute(el, this->env, attr, node);
+			break;
 		case ID_DER_ASN1_DN:
 			id_type = "distinguished-name";
 			break;
+		case ID_KEY_ID:
+			id_type = "other";
+			attr = axiom_attribute_create(this->env, "other-type-definition",
+										  "36906:key-id", NULL);
+			axiom_element_add_attribute(el, this->env, attr, node);
+			break;
 		default:
 			id_type = "other";
+			attr = axiom_attribute_create(this->env, "other-type-definition",
+										  "36906:other", NULL);
+			axiom_element_add_attribute(el, this->env, attr, node);
 	}
 	attr = axiom_attribute_create(this->env, "type", id_type, NULL);	
 	axiom_element_add_attribute(el, this->env, attr, node);
