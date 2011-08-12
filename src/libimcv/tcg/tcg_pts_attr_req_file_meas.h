@@ -65,7 +65,7 @@ struct tcg_pts_attr_req_file_meas_t {
 	 * @param request_id			Request ID
 	 */
 	void (*set_request_id)(tcg_pts_attr_req_file_meas_t *this,
-						u_int16_t hash_algorithm);
+						u_int16_t request_id);
 		
 	/**
 	 * Get Delimiter
