@@ -429,7 +429,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	host_t *host;
 	auth_cfg_t *auth;
 	u_int32_t ike_sa_id;
-	bool is_user, first = TRUE;
+	bool is_user = FALSE, first = TRUE;
 
 	/* extract relevant data from IKE_SA*/
 	ike_sa_id = ike_sa->get_unique_id(ike_sa);
@@ -438,7 +438,11 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	host = ike_sa->get_other_host(ike_sa);
 
 	/* in the presence of an EAP Identity, treat it as a username */
-	is_user = !id->equals(id, eap_id);
+	if (!id->equals(id, eap_id))
+	{
+		is_user = TRUE;
+		id = eap_id;
+	}
 
 	/* build publish request */
  	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
