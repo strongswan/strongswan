@@ -725,8 +725,8 @@ METHOD(tnc_ifmap_soap_t, destroy, void,
 
 static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 {
-	axis2_char_t *server, *server_cert, *client_home;
-	axis2_char_t *username, *password, *auth_type;
+	axis2_char_t *server, *server_cert, *key_file, *client_home;
+	axis2_char_t *username, *password;
 	axis2_endpoint_ref_t* endpoint_ref = NULL;
 	axis2_options_t *options = NULL;
 	axis2_transport_in_desc_t *transport_in;
@@ -742,8 +742,8 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 					"charon.plugins.tnc-ifmap.server", IFMAP_SERVER);
 	server_cert = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.server_cert", NULL);
-	auth_type = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.auth_type", "Basic");
+	key_file = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-ifmap.key_file", NULL);
 	username = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.username", NULL);
 	password = lib->settings->get_str(lib->settings,
@@ -754,9 +754,10 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 		DBG1(DBG_TNC, "MAP server certificate not defined");
 		return FALSE;
 	}
-	if (!username || !password)
+
+	if (!key_file && (!username || !password))
 	{
-		DBG1(DBG_TNC, "MAP client %s%s%s not defined",
+		DBG1(DBG_TNC, "MAP client keyfile or %s%s%s not defined",
 			(!username) ? "username" : "",
 			(!username && ! password) ? " and " : "",
 			(!password) ? "password" : "");
@@ -767,17 +768,30 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 	this->env = axutil_env_create_all(IFMAP_LOGFILE, AXIS2_LOG_LEVEL_TRACE);
 	options = axis2_options_create(this->env);
 
-	/* Path to the MAP server certificate */
-	property =axutil_property_create_with_args(this->env, 0, 0, 0, server_cert);
-	axis2_options_set_property(options, this->env, AXIS2_SSL_SERVER_CERT, property);
- 
+	/* Set path to the MAP server certificate */
+	property =axutil_property_create_with_args(this->env, 0, 0, 0,
+											   server_cert);
+	axis2_options_set_property(options, this->env,
+							   AXIS2_SSL_SERVER_CERT, property);
+
+	if (key_file)
+	{
+		/* Set path to the MAP client certificate */
+		property =axutil_property_create_with_args(this->env, 0, 0, 0,
+												   key_file);
+		axis2_options_set_property(options, this->env,
+								   AXIS2_SSL_KEY_FILE, property);
+	}
+	else 
+	{
+		/* Set up HTTP Basic MAP client authentication */
+		axis2_options_set_http_auth_info(options, this->env,
+										 username, password, "Basic");
+	}
+
 	/* Define the MAP server as the to endpoint reference */
 	endpoint_ref = axis2_endpoint_ref_create(this->env, server);
 	axis2_options_set_to(options, this->env, endpoint_ref);
-
-	/* Set up HTTP Basic or Digest MAP client authentication */
-	axis2_options_set_http_auth_info(options, this->env, username, password,
-									 auth_type);
 
 	/* Set up https transport */
 	transport_in = axis2_transport_in_desc_create(this->env,
