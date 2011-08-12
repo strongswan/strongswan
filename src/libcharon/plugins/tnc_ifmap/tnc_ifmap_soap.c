@@ -428,6 +428,7 @@ static axiom_node_t* create_enforcement_report(private_tnc_ifmap_soap_t *this,
 
     return node;
 }
+
 /**
  * Create delete filter
  */
@@ -469,6 +470,7 @@ static axiom_node_t* create_publish_request(private_tnc_ifmap_soap_t *this)
 
 	return request;
 }
+
 METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up)
 {
@@ -665,7 +667,7 @@ METHOD(tnc_ifmap_soap_t, publish_enforcement_report, bool,
 	axiom_node_t *request, *node;
 	axiom_element_t *el;
 
-    /* build publish update request */
+	/* build publish update request */
 	request = create_publish_request(this);
 	el = axiom_element_create(this->env, NULL, "update", NULL, &node);
 	axiom_node_add_child(request, this->env, node);
