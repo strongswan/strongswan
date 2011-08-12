@@ -792,8 +792,10 @@ METHOD(task_t, build_r, status_t,
 		if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
 													 this->ike_sa, FALSE))
 		{
-			DBG1(DBG_IKE, "cancelling IKE_SA setup due uniqueness policy");
-			goto peer_auth_failed;
+			DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
+			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
+								chunk_empty);
+			return FAILED;
 		}
 		if (!charon->bus->authorize(charon->bus, TRUE))
 		{
