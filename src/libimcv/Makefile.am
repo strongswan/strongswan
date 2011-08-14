@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif
 
-noinst_LTLIBRARIES = libimcv.la
+ipseclib_LTLIBRARIES = libimcv.la
 
 libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
 
