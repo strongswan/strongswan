@@ -49,7 +49,7 @@ struct ike_auth_t {
  * Create a new task of type IKE_AUTHENTICATE.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if thask is the initiator of an exchange
+ * @param initiator		TRUE if task is the initiator of an exchange
  * @return				ike_auth task to handle by the task_manager
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator);

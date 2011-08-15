@@ -45,7 +45,7 @@ struct ike_cert_pre_t {
  * of the certificate request.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if thask is the original initiator
+ * @param initiator		TRUE if task is the original initiator
  * @return				ike_cert_pre task to handle by the task_manager
  */
 ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator);

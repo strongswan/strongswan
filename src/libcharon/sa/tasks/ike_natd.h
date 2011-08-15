@@ -51,7 +51,7 @@ struct ike_natd_t {
  * Create a new ike_natd task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if thask is the original initiator
+ * @param initiator		TRUE if task is the original initiator
  * @return			  ike_natd task to handle by the task_manager
  */
 ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator);
