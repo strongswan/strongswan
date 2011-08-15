@@ -42,7 +42,7 @@ struct ike_vendor_t {
  * Create a ike_vendor instance.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if thask is the original initator
+ * @param initiator		TRUE if thask is the original initiator
  */
 ike_vendor_t *ike_vendor_create(ike_sa_t *ike_sa, bool initiator);
 

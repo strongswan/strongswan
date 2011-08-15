@@ -51,7 +51,7 @@ struct ike_init_t {
  * Create a new IKE_INIT task.
  *
  * @param ike_sa		IKE_SA this task works for (new one when rekeying)
- * @param initiator		TRUE if thask is the original initator
+ * @param initiator		TRUE if thask is the original initiator
  * @param old_sa		old IKE_SA when we are rekeying
  * @return				ike_init task to handle by the task_manager
  */

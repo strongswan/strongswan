@@ -79,7 +79,7 @@ enum payload_type_t{
 	AUTHENTICATION = 39,
 
 	/**
-	 * Nonces, for initator and responder (Ni, Nr, N)
+	 * Nonces, for initiator and responder (Ni, Nr, N)
 	 */
 	NONCE = 40,
 

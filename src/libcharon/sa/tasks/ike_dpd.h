@@ -43,7 +43,7 @@ struct ike_dpd_t {
 /**
  * Create a new ike_dpd task.
  *
- * @param initiator		TRUE if thask is the original initator
+ * @param initiator		TRUE if thask is the original initiator
  * @return				ike_dpd task to handle by the task_manager
  */
 ike_dpd_t *ike_dpd_create(bool initiator);

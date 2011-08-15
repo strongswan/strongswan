@@ -28,7 +28,7 @@ typedef struct xcbc_t xcbc_t;
 /**
  * Message authentication using CBC crypter.
  *
- * This class implements the message authenticaion algorithm
+ * This class implements the message authentication algorithm
  * described in RFC3566.
  */
 struct xcbc_t {

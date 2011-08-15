@@ -815,7 +815,7 @@ METHOD(child_sa_t, update, status_t,
 
 	if (!transport_proxy_mode)
 	{
-		/* update our (initator) SA */
+		/* update our (initiator) SA */
 		if (this->my_spi)
 		{
 			if (hydra->kernel_interface->update_sa(hydra->kernel_interface,

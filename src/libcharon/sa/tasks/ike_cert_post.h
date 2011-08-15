@@ -45,7 +45,7 @@ struct ike_cert_post_t {
  * of the certificate request.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if thask is the original initator
+ * @param initiator		TRUE if thask is the original initiator
  * @return				ike_cert_post task to handle by the task_manager
  */
 ike_cert_post_t *ike_cert_post_create(ike_sa_t *ike_sa, bool initiator);
