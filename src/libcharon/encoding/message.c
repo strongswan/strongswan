@@ -1079,7 +1079,7 @@ METHOD(message_t, generate, status_t,
 	encryption_payload_t *encryption = NULL;
 	enumerator_t *enumerator;
 	chunk_t chunk;
-	char str[256];
+	char str[BUF_LEN];
 	u_int32_t *lenpos;
 	bool *reserved;
 	int i;
@@ -1448,7 +1448,7 @@ METHOD(message_t, parse_body, status_t,
 	status_t status = SUCCESS;
 	payload_t *payload;
 	payload_type_t type;
-	char str[256];
+	char str[BUF_LEN];
 
 	type = this->first_payload;
 
