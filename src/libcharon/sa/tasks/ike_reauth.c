@@ -144,8 +144,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	/* set threads active IKE_SA after checkin */
 	charon->bus->set_sa(charon->bus, this->ike_sa);
 
-	/* we always return failed to delete the obsolete IKE_SA */
-	return FAILED;
+	/* we always destroy the obsolete IKE_SA */
+	return DESTROY_ME;
 }
 
 /**
