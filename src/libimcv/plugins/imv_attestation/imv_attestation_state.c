@@ -39,6 +39,11 @@ struct private_imv_attestation_state_t {
 	 * TNCCS connection state
 	 */
 	TNC_ConnectionState state;
+	
+	/**
+	 * IMV Attestation handshake state
+	 */
+	imv_attestation_handshake_state_t handshake_state;
 
 	/**
 	 * IMV action recommendation
@@ -148,6 +153,18 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
+METHOD(imv_attestation_state_t, get_handshake_state, imv_attestation_handshake_state_t,
+	private_imv_attestation_state_t *this)
+{
+	return this->handshake_state;
+}
+
+METHOD(imv_attestation_state_t, set_handshake_state, void,
+	private_imv_attestation_state_t *this, imv_attestation_handshake_state_t new_state)
+{
+	this->handshake_state = new_state;
+}
+
 /**
  * Described in header.
  */
@@ -165,13 +182,14 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.get_reason_string = _get_reason_string,
 				.destroy = _destroy,
 			},
+			.get_handshake_state = _get_handshake_state,
+			.set_handshake_state = _set_handshake_state,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
+		.handshake_state = IMC_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 	);
 	
 	return &this->public.interface;
 }
-
-

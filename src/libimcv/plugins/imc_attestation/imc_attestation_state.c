@@ -38,6 +38,11 @@ struct private_imc_attestation_state_t {
 	 * TNCCS connection state
 	 */
 	TNC_ConnectionState state;
+	
+	/**
+	 * IMC Attestation handshake state
+	 */
+	imc_attestation_handshake_state_t handshake_state;
 
 };
 
@@ -59,6 +64,18 @@ METHOD(imc_state_t, destroy, void,
 	free(this);
 }
 
+METHOD(imc_attestation_state_t, get_handshake_state, imc_attestation_handshake_state_t,
+	private_imc_attestation_state_t *this)
+{
+	return this->handshake_state;
+}
+
+METHOD(imc_attestation_state_t, set_handshake_state, void,
+	private_imc_attestation_state_t *this, imc_attestation_handshake_state_t new_state)
+{
+	this->handshake_state = new_state;
+}
+
 /**
  * Described in header.
  */
@@ -73,9 +90,12 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.change_state = _change_state,
 				.destroy = _destroy,
 			},
+			.get_handshake_state = _get_handshake_state,
+			.set_handshake_state = _set_handshake_state,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.connection_id = connection_id,
+		.handshake_state = IMC_ATTESTATION_STATE_INIT,
 	);
 	
 	return &this->public.interface;

@@ -26,6 +26,23 @@
 #include <library.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
+typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t;
+
+/**
+ * IMV Attestation Handshake States (state machine)
+ */
+enum imv_attestation_handshake_state_t {
+	IMV_ATTESTATION_STATE_INIT,
+	IMV_ATTESTATION_STATE_PROTO_CAP,
+	IMV_ATTESTATION_STATE_MEAS_ALGO,
+	IMV_ATTESTATION_STATE_TPM_INFO,
+	IMV_ATTESTATION_STATE_AIK,
+	IMV_ATTESTATION_STATE_SIMPLE_COMP_EVID,
+	IMV_ATTESTATION_STATE_SIMPLE_EVID_FINAL,
+	IMV_ATTESTATION_STATE_FILE_METADATA,
+	IMV_ATTESTATION_STATE_FILE_MEAS,
+	IMV_ATTESTATION_STATE_IML,
+};
 
 /**
  * Internal state of an imv_attestation_t connection instance
@@ -38,8 +55,18 @@ struct imv_attestation_state_t {
 	imv_state_t interface;
 
 	/**
-	 * Add any setters and getters here
+	 * get state of the handshake
+	 *
+	 * @return				the handshake state of IMV
 	 */
+	imv_attestation_handshake_state_t (*get_handshake_state)(imv_attestation_state_t *this);
+	
+	/**
+	 * get state of the handshake
+	 *
+	 * @param new_state			the handshake state of IMV
+	 */
+	void (*set_handshake_state)(imv_attestation_state_t *this, imv_attestation_handshake_state_t new_state);
 };
 
 /**
