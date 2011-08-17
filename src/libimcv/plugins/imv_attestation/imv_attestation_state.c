@@ -186,7 +186,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.set_handshake_state = _set_handshake_state,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
-		.handshake_state = IMC_ATTESTATION_STATE_INIT,
+		.handshake_state = IMV_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 	);

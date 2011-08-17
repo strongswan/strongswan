@@ -42,14 +42,14 @@
 
 static const char imv_name[] = "Attestation";
 
+#define IMV_VENDOR_ID			PEN_TCG
+#define IMV_SUBTYPE				PA_SUBTYPE_TCG_PTS
+
 /**
  * UTF-8 encoding of the character used to delimiter the filename
  */
-#define SOLIDUS_UTF = 0x002F
-#define REVERSE_SOLIDUS_UTF = 0x005C
-
-#define IMV_VENDOR_ID	PEN_TCG
-#define IMV_SUBTYPE	PA_SUBTYPE_TCG_PTS
+#define SOLIDUS_UTF				0x002F
+#define REVERSE_SOLIDUS_UTF		0x005C
 
 static imv_agent_t *imv_attestation;
 
@@ -248,8 +248,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			while (enumerator->enumerate(enumerator, &entry))
 			{
 				attr = tcg_pts_attr_req_file_meas_create(false, 
-					entry.request_id, delimiter, 
-					chunk_create(entry.path,strlen(entry.path)));
+							entry->request_id, delimiter, 
+							chunk_create(entry->path, strlen(entry->path)));
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
 			}
@@ -259,8 +259,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			while (enumerator->enumerate(enumerator, &entry))
 			{
 				attr = tcg_pts_attr_req_file_meas_create(true, 
-					entry.request_id, delimiter, 
-					chunk_create(entry.path,strlen(entry.path)));
+							entry->request_id, delimiter, 
+							chunk_create(entry->path, strlen(entry->path)));
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
 			}
