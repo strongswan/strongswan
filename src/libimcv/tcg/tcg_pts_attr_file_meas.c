@@ -273,7 +273,7 @@ METHOD(tcg_pts_attr_file_meas_t, add_file_meas, void,
 /**
  * Enumerate file measurement entries
  */
-static bool port_filter(void *null, file_meas_entry_t **entry, chunk_t *measurement, 
+static bool measurement_filter(void *null, file_meas_entry_t **entry, chunk_t *measurement, 
 						void *i2, u_int16_t *file_name_len,
 						void *i3, chunk_t *file_name)
 {
@@ -287,7 +287,7 @@ METHOD(tcg_pts_attr_file_meas_t, create_file_meas_enumerator, enumerator_t*,
 	private_tcg_pts_attr_file_meas_t *this)
 {
 	return enumerator_create_filter(this->measurements->create_enumerator(this->measurements),
-					(void*)port_filter, NULL, NULL);
+					(void*)measurement_filter, NULL, NULL);
 }
 
 /**
