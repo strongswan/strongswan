@@ -22,22 +22,10 @@
 #define TCG_PTS_ATTR_MEAS_ALGO_SELECTION_H_
 
 typedef struct tcg_pts_attr_meas_algo_selection_t tcg_pts_attr_meas_algo_selection_t;
-typedef enum pts_attr_meas_algorithms_t pts_attr_meas_algorithms_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-/**
- * PTS Measurement Algorithms
- */
-enum pts_attr_meas_algorithms_t {
-	/** SHA-384 */
-	PTS_MEAS_ALGO_SHA1 =				(1<<0),
-	/** SHA-256 */
-	PTS_MEAS_ALGO_SHA256 = 				(1<<1),
-	/** SHA-1 */
-	PTS_MEAS_ALGO_SHA384 = 				(1<<2),
-};
+#include "tcg_pts_attr_meas_algo.h"
 
 /**
  * Class implementing the TCG Measurement Algorithm Selection Attribute
@@ -53,9 +41,9 @@ struct tcg_pts_attr_meas_algo_selection_t {
 	/**
 	 * Get a selected PTS Measurement Algorithm
 	 *
-	 * @return				A Selected Measurement Algorithm
+	 * @return					A Selected Measurement Algorithm
 	 */
-	pts_attr_meas_algorithms_t (*get_algorithm)(tcg_pts_attr_meas_algo_selection_t *this);
+	pts_meas_algorithms_t (*get_algorithm)(tcg_pts_attr_meas_algo_selection_t *this);
 
 	/**
 	 * Set PTS Measurement Algorithm
@@ -63,7 +51,7 @@ struct tcg_pts_attr_meas_algo_selection_t {
 	 * @param flags				A Selected Measurement Algorithm
 	 */
 	void (*set_algorithm)(tcg_pts_attr_meas_algo_selection_t *this, 
-			  pts_attr_meas_algorithms_t algorithm);
+						  pts_meas_algorithms_t algorithm);
 	
 };
 
@@ -72,7 +60,7 @@ struct tcg_pts_attr_meas_algo_selection_t {
  *
  * @param algorithm				A Selected Measurement Algorithm
  */
-pa_tnc_attr_t* tcg_pts_attr_meas_algo_selection_create(pts_attr_meas_algorithms_t algorithm);
+pa_tnc_attr_t* tcg_pts_attr_meas_algo_selection_create(pts_meas_algorithms_t algorithm);
 
 /**
  * Creates an tcg_pts_attr_meas_algo_selection_t object from received data

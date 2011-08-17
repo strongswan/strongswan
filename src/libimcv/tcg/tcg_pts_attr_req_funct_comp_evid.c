@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_req_funct_comp_evid_t;
 
 /**
- * Request Functional Component Evidence (see section 3.14.1 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Request Functional Component Evidence
+ * see section 3.14.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -51,7 +52,8 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  */
 
 /**
- * Qualifier for Functional Component  (see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Qualifier for Functional Component
+ * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                 
  *    0 1 2 3 4 5 
@@ -164,11 +166,22 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
 	
 	/* Determine the flags to set*/
-	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_PCR) flags += 128;
-	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_CURR) flags += 64;
-	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_VER) flags += 32;
-	if(this->flags & PTS_REQ_FUNC_COMP_FLAG_TTC) flags += 16;
-		
+	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_PCR)
+	{
+		flags += 128;
+	}
+	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_CURR)
+	{
+		flags += 64;
+	}
+	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_VER)
+	{
+		flags += 32;
+	}
+	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
+	{
+		flags += 16;
+	}
 	writer->write_uint8(writer, flags);
 	
 	writer->write_uint24 (writer, this->depth);
@@ -180,9 +193,14 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 	
 	qualifier += this->qualifier.type;
-	if(this->qualifier.kernel) qualifier += 16;
-	if(this->qualifier.sub_component) qualifier += 32;
-	
+	if (this->qualifier.kernel)
+	{
+		qualifier += 16;
+	}
+	if (this->qualifier.sub_component)
+	{
+		qualifier += 32;
+	}
 	writer->write_uint8 (writer, qualifier);
 	writer->write_uint32 (writer, this->name);
 	
@@ -206,17 +224,35 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	if((flags >> 4) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_PCR;
-	if((flags >> 5) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_CURR;
-	if((flags >> 6) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_VER;
-	if((flags >> 7) & 1) this->flags |= PTS_REQ_FUNC_COMP_FLAG_TTC;
+	if ((flags >> 4) & 1)
+	{
+		this->flags |= PTS_REQ_FUNC_COMP_FLAG_PCR;
+	}
+	if ((flags >> 5) & 1)
+	{
+		this->flags |= PTS_REQ_FUNC_COMP_FLAG_CURR;
+	}
+	if ((flags >> 6) & 1)
+	{
+		this->flags |= PTS_REQ_FUNC_COMP_FLAG_VER;
+	}
+	if ((flags >> 7) & 1)
+	{
+		this->flags |= PTS_REQ_FUNC_COMP_FLAG_TTC;
+	}
 
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);
 	reader->read_uint8(reader, &fam_and_qualifier);
 	
-	if(((fam_and_qualifier >> 6) & 1) ) this->family += 1;
-	if(((fam_and_qualifier >> 7) & 1) ) this->family += 2;
+	if (((fam_and_qualifier >> 6) & 1) )
+	{
+		this->family += 1;
+	}
+	if (((fam_and_qualifier >> 7) & 1) )
+	{
+		this->family += 2;
+	}
 	
 	/* TODO: Generate an IF-M error attribute indicating */
 	/* TCG_PTS_INVALID_NAME_FAM */
@@ -225,8 +261,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	//}
 	
-	if(((fam_and_qualifier >> 5) & 1) ) this->qualifier.kernel = true;
-	if(((fam_and_qualifier >> 4) & 1) ) this->qualifier.sub_component = true;
+	if (((fam_and_qualifier >> 5) & 1) )
+	{
+		this->qualifier.kernel = true;
+	}
+	if (((fam_and_qualifier >> 4) & 1) )
+	{
+		this->qualifier.sub_component = true;
+	}
 	this->qualifier.type = ( fam_and_qualifier & 0xF );
 	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
 	

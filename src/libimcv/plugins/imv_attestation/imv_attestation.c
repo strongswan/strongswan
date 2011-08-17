@@ -204,7 +204,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		case IMV_ATTESTATION_STATE_INIT:
 		{
 			/* Send Request Protocol Capabilities attribute */
-			pts_attr_req_proto_caps_flag_t flags;
+			pts_proto_caps_flag_t flags;
 			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_VER | PTS_PROTO_CAPS_CURRENT;
 			attr = tcg_pts_attr_req_proto_caps_create(flags);
 			break;
@@ -212,7 +212,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		case IMV_ATTESTATION_STATE_PROTO_CAP:
 		{
 			/* Send Measurement Algorithms attribute */
-			pts_attr_meas_algorithms_t algorithms;
+			pts_meas_algorithms_t algorithms;
 			algorithms = PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256 | PTS_MEAS_ALGO_SHA384;
 			attr = tcg_pts_attr_meas_algo_create(algorithms);
 			break;
@@ -241,7 +241,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			
 			msg = pa_tnc_msg_create();
 			
-			/** Add files to measure to  PTS Request File Measurement attribute
+			/** 
+			 * Add files to measure to PTS Request File Measurement attribute
 			 */
 			enumerator = enumerator_create_single(file_list, NULL);
 			while (enumerator->enumerate(enumerator, &entry))

@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_get_aik_t private_tcg_pts_attr_get_aik_t;
 
 /**
- * Get Attestation Identity Key (see section 3.12 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Get Attestation Identity Key
+ * see section 3.12 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

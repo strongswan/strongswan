@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_gen_attest_evid_t private_tcg_pts_attr_gen_attest_evid_t;
 
 /**
- * Generate Attestation Evidence (see section 3.14.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Generate Attestation Evidence
+ * see section 3.14.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -35,7 +36,7 @@ typedef struct private_tcg_pts_attr_gen_attest_evid_t private_tcg_pts_attr_gen_a
  */
 
 #define PTS_GEN_ATTEST_EVID_SIZE		4
-#define PTS_GEN_ATTEST_EVID_RESERVED		0x00
+#define PTS_GEN_ATTEST_EVID_RESERVED	0x00
 
 /**
  * Private data of an tcg_pts_attr_gen_attest_evid_t object.

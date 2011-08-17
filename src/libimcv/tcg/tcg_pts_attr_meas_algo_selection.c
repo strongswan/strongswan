@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_meas_algo_selection_t private_tcg_pts_attr_meas_algo_selection_t;
 
 /**
- * PTS Measurement Algorithm Selection (see section 3.9.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * PTS Measurement Algorithm Selection
+ * see section 3.9.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -82,7 +83,7 @@ struct private_tcg_pts_attr_meas_algo_selection_t {
 	/**
 	 * A Selected Measurement Algorithm
 	 */
-	pts_attr_meas_algorithms_t algorithm;
+	pts_meas_algorithms_t algorithm;
 
 };
 
@@ -126,9 +127,18 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16 (writer, PTS_MEAS_ALGO_SEL_RESERVED);
 	
 	/* Determine the hash algorithm to set*/
-	if(this->algorithm & PTS_MEAS_ALGO_SHA384) algorithm = 8192;
-	else if(this->algorithm & PTS_MEAS_ALGO_SHA256) algorithm = 16384;
-	else if(this->algorithm & PTS_MEAS_ALGO_SHA1) algorithm = 32768;
+	if (this->algorithm & PTS_MEAS_ALGO_SHA384)
+	{
+		algorithm = 8192;
+	}
+	else if (this->algorithm & PTS_MEAS_ALGO_SHA256)
+	{
+		algorithm = 16384;
+	}
+	else if (this->algorithm & PTS_MEAS_ALGO_SHA1)
+	{
+		algorithm = 32768;
+	}
 	writer->write_uint16(writer, algorithm);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -152,9 +162,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint16 (reader, &reserved);
 	reader->read_uint16(reader, &algorithm);
 	
-	if((algorithm >> 13) & 1) this->algorithm = PTS_MEAS_ALGO_SHA384;
-	else if((algorithm >> 14) & 1) this->algorithm = PTS_MEAS_ALGO_SHA256;
-	else if((algorithm >> 15) & 1) this->algorithm = PTS_MEAS_ALGO_SHA1;
+	if ((algorithm >> 13) & 1)
+	{
+		this->algorithm = PTS_MEAS_ALGO_SHA384;
+	}
+	else if ((algorithm >> 14) & 1)
+	{
+		this->algorithm = PTS_MEAS_ALGO_SHA256;
+	}
+	else if ((algorithm >> 15) & 1)
+	{
+		this->algorithm = PTS_MEAS_ALGO_SHA1;
+	}
 	
 	reader->destroy(reader);
 
@@ -168,7 +187,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(tcg_pts_attr_meas_algo_selection_t, get_algorithm, pts_attr_meas_algorithms_t,
+METHOD(tcg_pts_attr_meas_algo_selection_t, get_algorithm, pts_meas_algorithms_t,
 	private_tcg_pts_attr_meas_algo_selection_t *this)
 {
 	return this->algorithm;
@@ -176,7 +195,7 @@ METHOD(tcg_pts_attr_meas_algo_selection_t, get_algorithm, pts_attr_meas_algorith
 
 METHOD(tcg_pts_attr_meas_algo_selection_t, set_algorithm, void,
 	private_tcg_pts_attr_meas_algo_selection_t *this,
-	pts_attr_meas_algorithms_t algorithm)
+	pts_meas_algorithms_t algorithm)
 {
 	this->algorithm = algorithm;
 }
@@ -184,7 +203,7 @@ METHOD(tcg_pts_attr_meas_algo_selection_t, set_algorithm, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_selection_create(pts_attr_meas_algorithms_t algorithm)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_selection_create(pts_meas_algorithms_t algorithm)
 {
 	private_tcg_pts_attr_meas_algo_selection_t *this;
 

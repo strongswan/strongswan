@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_req_file_meas_t private_tcg_pts_attr_req_file_meas_t;
 
 /**
- * Request File Measurement (see section 3.19.1 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Request File Measurement
+ * see section 3.19.1 of PTS Protocol: Binding to TNC IF-M Specification
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -130,7 +131,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	
 	writer = bio_writer_create(PTS_REQ_FILE_MEAS_SIZE);
 	
-	if(this->directory_flag) flags += 128;
+	if (this->directory_flag)
+	{
+		flags += 128;
+	}
 	writer->write_uint8(writer, flags);
 	writer->write_uint8(writer, PTS_REQ_FILE_MEAS_RESERVED);
 	writer->write_uint16(writer, this->request_id);

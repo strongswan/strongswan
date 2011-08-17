@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_proto_caps_t private_tcg_pts_attr_proto_caps_t;
 
 /**
- * PTS Protocol Capabilities (see section 3.7 of PTS Protocol: Binding to TNC IF-M Specification)
+ * PTS Protocol Capabilities
+ * see section 3.7 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -70,7 +71,7 @@ struct private_tcg_pts_attr_proto_caps_t {
 	/**
 	 * Set of flags
 	 */
-	pts_attr_proto_caps_flag_t flags;
+	pts_proto_caps_flag_t flags;
 
 };
 
@@ -114,11 +115,26 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint24 (writer, PTS_PROTO_CAPS_RESERVED);
 	
 	/* Determine the flags to set*/
-	if(this->flags & PTS_PROTO_CAPS_XML) flags += 1;
-	if(this->flags & PTS_PROTO_CAPS_T) flags += 2;
-	if(this->flags & PTS_PROTO_CAPS_DH) flags += 4;
-	if(this->flags & PTS_PROTO_CAPS_VER) flags += 8;
-	if(this->flags & PTS_PROTO_CAPS_CURRENT) flags += 16;
+	if (this->flags & PTS_PROTO_CAPS_XML)
+	{
+		flags += 1;
+	}
+	if (this->flags & PTS_PROTO_CAPS_T)
+	{
+		flags += 2;
+	}
+	if (this->flags & PTS_PROTO_CAPS_DH)
+	{
+		flags += 4;
+	}
+	if (this->flags & PTS_PROTO_CAPS_VER)
+	{
+		flags += 8;
+	}
+	if (this->flags & PTS_PROTO_CAPS_CURRENT)
+	{
+		flags += 16;
+	}
 	writer->write_uint8(writer, flags);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -142,12 +158,27 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint24 (reader, &reserved);
 	reader->read_uint8(reader, &flags);
 	
-	if((flags >> 0) & 1) this->flags |= PTS_PROTO_CAPS_XML;
-	if((flags >> 1) & 1) this->flags |= PTS_PROTO_CAPS_T;
-	if((flags >> 2) & 1) this->flags |= PTS_PROTO_CAPS_DH;
-	if((flags >> 3) & 1) this->flags |= PTS_PROTO_CAPS_VER;
-	if((flags >> 4) & 1) this->flags |= PTS_PROTO_CAPS_CURRENT;
-	
+	if ((flags >> 0) & 1)
+	{
+		this->flags |= PTS_PROTO_CAPS_XML;
+	}
+	if ((flags >> 1) & 1)
+	{
+		this->flags |= PTS_PROTO_CAPS_T;
+	}
+	if ((flags >> 2) & 1)
+	{
+		this->flags |= PTS_PROTO_CAPS_DH;
+	}
+	if ((flags >> 3) & 1)
+	{
+		this->flags |= PTS_PROTO_CAPS_VER;
+	}
+	if ((flags >> 4) & 1)
+	{
+		this->flags |= PTS_PROTO_CAPS_CURRENT;
+	}
+
 	reader->destroy(reader);
 
 	return SUCCESS;	
@@ -160,7 +191,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(tcg_pts_attr_proto_caps_t, get_flags, pts_attr_proto_caps_flag_t,
+METHOD(tcg_pts_attr_proto_caps_t, get_flags, pts_proto_caps_flag_t,
 	private_tcg_pts_attr_proto_caps_t *this)
 {
 	return this->flags;
@@ -168,7 +199,7 @@ METHOD(tcg_pts_attr_proto_caps_t, get_flags, pts_attr_proto_caps_flag_t,
 
 METHOD(tcg_pts_attr_proto_caps_t, set_flags, void,
 	private_tcg_pts_attr_proto_caps_t *this,
-	pts_attr_proto_caps_flag_t flags)
+	pts_proto_caps_flag_t flags)
 {
 	this->flags = flags;
 }
@@ -176,7 +207,7 @@ METHOD(tcg_pts_attr_proto_caps_t, set_flags, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_attr_proto_caps_flag_t flags)
+pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags)
 {
 	private_tcg_pts_attr_proto_caps_t *this;
 

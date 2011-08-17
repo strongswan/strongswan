@@ -168,7 +168,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 *
 	 * @return				Hash Algorithm
 	 */
-	pts_attr_meas_algorithms_t (*get_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this);
+	pts_meas_algorithms_t (*get_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Set Hash Algorithm
@@ -176,7 +176,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @param hash_algorithm			Hash Algorithm
 	 */
 	void (*set_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this,
-						pts_attr_meas_algorithms_t hash_algorithm);
+						pts_meas_algorithms_t hash_algorithm);
 	
 	/**
 	 * Get PCR Transformation 
@@ -300,7 +300,7 @@ pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(pts_attr_simple_comp_evid_fl
 				       tcg_pts_qualifier_t qualifier,
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
-				       pts_attr_meas_algorithms_t hash_algorithm,
+				       pts_meas_algorithms_t hash_algorithm,
 				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,

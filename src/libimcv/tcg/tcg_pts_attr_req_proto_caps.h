@@ -22,26 +22,10 @@
 #define TCG_PTS_ATTR_REQ_PROTO_CAPS_H_
 
 typedef struct tcg_pts_attr_req_proto_caps_t tcg_pts_attr_req_proto_caps_t;
-typedef enum pts_attr_req_proto_caps_flag_t pts_attr_req_proto_caps_flag_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-/**
- * PTS Request Protocol Capabilities Flags
- */
-enum pts_attr_req_proto_caps_flag_t {
-	/** XML based Evidence Support flag */
-	PTS_PROTO_CAPS_XML =				(1<<0),
-	/** Trusted Platform Evidence flag */
-	PTS_PROTO_CAPS_T = 				(1<<1),
-	/** DH Nonce Negotiation Support flag */
-	PTS_PROTO_CAPS_DH = 				(1<<2),
-	/** Verification Support flag */
-	PTS_PROTO_CAPS_VER = 				(1<<3),
-	/** Current (In-Memory) Evidence Support flag */
-	PTS_PROTO_CAPS_CURRENT = 			(1<<4),
-};
+#include "tcg_pts_attr_proto_caps.h"
 
 /**
  * Class implementing the TCG Request PTS Protocol Capabilities Attribute
@@ -59,7 +43,7 @@ struct tcg_pts_attr_req_proto_caps_t {
 	 *
 	 * @return				set of flags
 	 */
-	pts_attr_req_proto_caps_flag_t (*get_flags)(tcg_pts_attr_req_proto_caps_t *this);
+	pts_proto_caps_flag_t (*get_flags)(tcg_pts_attr_req_proto_caps_t *this);
 
 	/**
 	 * Set PTS procol capabilities flags
@@ -67,7 +51,7 @@ struct tcg_pts_attr_req_proto_caps_t {
 	 * @param flags				set of flags
 	 */
 	void (*set_flags)(tcg_pts_attr_req_proto_caps_t *this, 
-			  pts_attr_req_proto_caps_flag_t flags);
+					  pts_proto_caps_flag_t flags);
 	
 };
 
@@ -76,7 +60,7 @@ struct tcg_pts_attr_req_proto_caps_t {
  *
  * @param flags				set of flags
  */
-pa_tnc_attr_t* tcg_pts_attr_req_proto_caps_create(pts_attr_req_proto_caps_flag_t flags);
+pa_tnc_attr_t* tcg_pts_attr_req_proto_caps_create(pts_proto_caps_flag_t flags);
 
 /**
  * Creates an tcg_pts_attr_req_proto_caps_t object from received data

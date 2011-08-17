@@ -22,7 +22,7 @@
 #define TCG_PTS_ATTR_MEAS_ALGO_H_
 
 typedef struct tcg_pts_attr_meas_algo_t tcg_pts_attr_meas_algo_t;
-typedef enum pts_attr_meas_algorithms_t pts_attr_meas_algorithms_t;
+typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
@@ -30,7 +30,7 @@ typedef enum pts_attr_meas_algorithms_t pts_attr_meas_algorithms_t;
 /**
  * PTS Measurement Algorithms
  */
-enum pts_attr_meas_algorithms_t {
+enum pts_meas_algorithms_t {
 	/** SHA-384 */
 	PTS_MEAS_ALGO_SHA1 =				(1<<0),
 	/** SHA-256 */
@@ -55,7 +55,7 @@ struct tcg_pts_attr_meas_algo_t {
 	 *
 	 * @return				set of algorithms
 	 */
-	pts_attr_meas_algorithms_t (*get_algorithms)(tcg_pts_attr_meas_algo_t *this);
+	pts_meas_algorithms_t (*get_algorithms)(tcg_pts_attr_meas_algo_t *this);
 
 	/**
 	 * Set PTS Measurement Algorithm Set
@@ -63,7 +63,7 @@ struct tcg_pts_attr_meas_algo_t {
 	 * @param flags				set of algorithms
 	 */
 	void (*set_algorithms)(tcg_pts_attr_meas_algo_t *this, 
-			  pts_attr_meas_algorithms_t algorithms);
+						   pts_meas_algorithms_t algorithms);
 	
 };
 
@@ -72,7 +72,7 @@ struct tcg_pts_attr_meas_algo_t {
  *
  * @param algorithms				set of algorithms
  */
-pa_tnc_attr_t* tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorithms);
+pa_tnc_attr_t* tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms);
 
 /**
  * Creates an tcg_pts_attr_meas_algo_t object from received data

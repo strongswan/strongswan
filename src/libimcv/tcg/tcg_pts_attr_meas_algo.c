@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t;
 
 /**
- * PTS Measurement Algorithm (see section 3.9.1 of PTS Protocol: Binding to TNC IF-M Specification)
+ * PTS Measurement Algorithm 
+ * see section 3.9.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -35,7 +36,8 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  */
 
 /**
- * Diffie-Hellman Hash Algorithm Values (see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Diffie-Hellman Hash Algorithm Values
+ * see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1          
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
@@ -82,7 +84,7 @@ struct private_tcg_pts_attr_meas_algo_t {
 	/**
 	 * Set of algorithms
 	 */
-	pts_attr_meas_algorithms_t algorithms;
+	pts_meas_algorithms_t algorithms;
 
 };
 
@@ -126,9 +128,18 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16 (writer, PTS_MEAS_ALGO_RESERVED);
 	
 	/* Determine the hash algorithms to set*/
-	if(this->algorithms & PTS_MEAS_ALGO_SHA384) algorithms += 8192;
-	if(this->algorithms & PTS_MEAS_ALGO_SHA256) algorithms += 16384;
-	if(this->algorithms & PTS_MEAS_ALGO_SHA1) algorithms += 32768;
+	if (this->algorithms & PTS_MEAS_ALGO_SHA384)
+	{
+		algorithms += 8192;
+	}
+	if (this->algorithms & PTS_MEAS_ALGO_SHA256)
+	{
+		algorithms += 16384;
+	}
+	if (this->algorithms & PTS_MEAS_ALGO_SHA1)
+	{
+		algorithms += 32768;
+	}
 	writer->write_uint16(writer, algorithms);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -152,9 +163,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint16 (reader, &reserved);
 	reader->read_uint16(reader, &algorithms);
 	
-	if((algorithms >> 13) & 1) this->algorithms |= PTS_MEAS_ALGO_SHA384;
-	if((algorithms >> 14) & 1) this->algorithms |= PTS_MEAS_ALGO_SHA256;
-	if((algorithms >> 15) & 1) this->algorithms |= PTS_MEAS_ALGO_SHA1;
+	if ((algorithms >> 13) & 1)
+	{
+		this->algorithms |= PTS_MEAS_ALGO_SHA384;
+	}
+	if ((algorithms >> 14) & 1)
+	{
+		this->algorithms |= PTS_MEAS_ALGO_SHA256;
+	}
+	if ((algorithms >> 15) & 1)
+	{
+		this->algorithms |= PTS_MEAS_ALGO_SHA1;
+	}
 	
 	reader->destroy(reader);
 
@@ -168,7 +188,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(tcg_pts_attr_meas_algo_t, get_algorithms, pts_attr_meas_algorithms_t,
+METHOD(tcg_pts_attr_meas_algo_t, get_algorithms, pts_meas_algorithms_t,
 	private_tcg_pts_attr_meas_algo_t *this)
 {
 	return this->algorithms;
@@ -176,7 +196,7 @@ METHOD(tcg_pts_attr_meas_algo_t, get_algorithms, pts_attr_meas_algorithms_t,
 
 METHOD(tcg_pts_attr_meas_algo_t, set_algorithms, void,
 	private_tcg_pts_attr_meas_algo_t *this,
-	pts_attr_meas_algorithms_t algorithms)
+	pts_meas_algorithms_t algorithms)
 {
 	this->algorithms = algorithms;
 }
@@ -184,7 +204,7 @@ METHOD(tcg_pts_attr_meas_algo_t, set_algorithms, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_attr_meas_algorithms_t algorithms)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms)
 {
 	private_tcg_pts_attr_meas_algo_t *this;
 

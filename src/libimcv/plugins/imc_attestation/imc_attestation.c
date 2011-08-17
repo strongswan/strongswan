@@ -51,10 +51,11 @@ static imc_agent_t *imc_attestation;
 
 
 /**
- * Selected Measurement Algorithm, which is selected during the PTS Measurement Algorithm attributes exchange
+ * Selected Measurement Algorithm, which is selected during
+ * the PTS Measurement Algorithm attributes exchange
  * Default value is SHA256
  */
-static pts_attr_meas_algorithms_t selected_algorithm = PTS_MEAS_ALGO_SHA256;
+static pts_meas_algorithms_t selected_algorithm = PTS_MEAS_ALGO_SHA256;
 
 /**
  * List of files and directories to measure
@@ -254,14 +255,14 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	{
 		case IMC_ATTESTATION_STATE_REQ_PROTO_CAP:
 		{
-			pts_attr_proto_caps_flag_t flags;
+			pts_proto_caps_flag_t flags;
 			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_VER;
 			attr = tcg_pts_attr_proto_caps_create(flags);
 			break;
 		}
 		case IMC_ATTESTATION_STATE_REQ_MEAS_ALGO:
 		{
-			pts_attr_meas_algorithms_t algorithm;
+			pts_meas_algorithms_t algorithm;
 			algorithm = PTS_MEAS_ALGO_SHA1;
 			/* Save the selected algorithm for further attributes creation */
 			selected_algorithm = algorithm;

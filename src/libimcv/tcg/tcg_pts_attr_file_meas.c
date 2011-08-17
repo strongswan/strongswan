@@ -36,7 +36,8 @@ struct file_meas_entry_t {
 };
 
 /**
- * File Measurement (see section 3.19.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * File Measurement
+ * see section 3.19.2 of PTS Protocol: Binding to TNC IF-M Specification
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

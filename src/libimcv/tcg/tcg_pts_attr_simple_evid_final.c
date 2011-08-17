@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_simple_evid_final_t private_tcg_pts_attr_simple_evid_final_t;
 
 /**
- * Simple Evidence Final (see section 3.15.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Simple Evidence Final
+ * see section 3.15.2 of PTS Protocol: Binding to TNC IF-M Specification
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -79,12 +80,12 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	/**
 	 * Set of flags for Simple Evidence Final
 	 */
-	pts_attr_simple_evid_final_flag_t flags;
+	pts_simple_evid_final_flag_t flags;
 
 	/**
 	 * Optional Composite Hash Algorithm
 	 */
-	pts_attr_meas_algorithms_t comp_hash_algorithm;
+	pts_meas_algorithms_t comp_hash_algorithm;
 	
 	/**
 	 * Optional TPM PCR Composite
@@ -143,33 +144,52 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
 	
 	/* Determine the flags to set*/
-	if(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO) flags += 64;
-	else if(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) flags += 128;
-	else if(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER) flags += 192;
-	
-	if(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID) flags += 32;
-	
+	if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
+	{
+		flags += 64;
+	}
+	else if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2)
+	{
+		flags += 128;
+	}
+	else if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER)
+	{
+		flags += 192;
+	}
+	if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
+	{
+		flags += 32;
+	}
 	writer->write_uint8(writer, flags);
 	writer->write_uint8(writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
 	
 	/* Determine the hash algorithm to set*/
-	if(this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA384) algorithm = 8192;
-	else if(this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA256) algorithm = 16384;
-	else if(this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA1) algorithm = 32768;
+	if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA384)
+	{
+		algorithm = 8192;
+	}
+	else if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA256)
+	{
+		algorithm = 16384;
+	}
+	else if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA1)
+	{
+		 algorithm = 32768;
+	}
 	writer->write_uint16(writer, algorithm);
 
 	/* Optional fields */
-	if(this->pcr_comp.ptr && this->pcr_comp.len > 0) 
+	if (this->pcr_comp.ptr && this->pcr_comp.len > 0) 
 	{
 		writer->write_uint32 (writer, this->pcr_comp.len);
 		writer->write_data (writer, this->pcr_comp);
 	}
-	if(this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0)
+	if (this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0)
 	{
 		writer->write_uint32 (writer, this->tpm_quote_sign.len);
 		writer->write_data (writer, this->tpm_quote_sign);
 	}
-	if(this->evid_sign.ptr && this->evid_sign.len > 0)
+	if (this->evid_sign.ptr && this->evid_sign.len > 0)
 	{
 		writer->write_data (writer, this->evid_sign);
 	}
@@ -197,26 +217,45 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint8(reader, &flags);
 	
 	/* Determine the flags to set*/
-	if(!((flags >> 7) & 1) && !((flags >> 6) & 1)) 
+	if (!((flags >> 7) & 1) && !((flags >> 6) & 1))
+	{ 
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_NO;
-	else if(!((flags >> 7) & 1) && ((flags >> 6) & 1)) 
+	}
+	else if (!((flags >> 7) & 1) && ((flags >> 6) & 1))
+	{ 
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
-	else if(((flags >> 7) & 1) && !((flags >> 6) & 1)) 
+	}
+	else if (((flags >> 7) & 1) && !((flags >> 6) & 1))
+	{
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2;
-	else if(((flags >> 7) & 1) && ((flags >> 6) & 1)) 
+	}
+	else if (((flags >> 7) & 1) && ((flags >> 6) & 1))
+	{
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER;
-	
-	if((flags >> 5) & 1) this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_EVID;
+	}
+	if ((flags >> 5) & 1)
+	{
+		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_EVID;
+	}
 	
 	reader->read_uint8(reader, &reserved);
 	reader->read_uint16(reader, &algorithm);
 	
-	if((algorithm >> 13) & 1) this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA384;
-	else if((algorithm >> 14) & 1) this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA256;
-	else if((algorithm >> 15) & 1) this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA1;
+	if ((algorithm >> 13) & 1)
+	{
+		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA384;
+	}
+	else if ((algorithm >> 14) & 1)
+	{
+		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA256;
+	}
+	else if ((algorithm >> 15) & 1)
+	{
+		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA1;
+	}
 		
 	/*  Optional TPM PCR Composite field is included */
-	if(!(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_NO))
+	if (!(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_NO))
 	{
 		u_int32_t pcr_comp_len;
 		u_int32_t tpm_quote_sign_len;
@@ -227,7 +266,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	/*  Optional Evidence Signature field is included */
-	if(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
+	if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
 	{
 		u_int32_t evid_sign_len = reader->remaining(reader);
 		reader->read_data(reader, evid_sign_len, &this->evid_sign);
@@ -247,26 +286,26 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this);
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, get_flags, pts_attr_simple_evid_final_flag_t,
+METHOD(tcg_pts_attr_simple_evid_final_t, get_flags, pts_simple_evid_final_flag_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	return this->flags;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, set_flags, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, pts_attr_simple_evid_final_flag_t flags)
+	private_tcg_pts_attr_simple_evid_final_t *this, pts_simple_evid_final_flag_t flags)
 {
 	this->flags = flags;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_hash_algorithm, pts_attr_meas_algorithms_t,
+METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_hash_algorithm, pts_meas_algorithms_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	return this->comp_hash_algorithm;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, set_comp_hash_algorithm, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, pts_attr_meas_algorithms_t comp_hash_algorithm)
+	private_tcg_pts_attr_simple_evid_final_t *this, pts_meas_algorithms_t comp_hash_algorithm)
 {
 	this->comp_hash_algorithm = comp_hash_algorithm;
 }
@@ -274,9 +313,11 @@ METHOD(tcg_pts_attr_simple_evid_final_t, set_comp_hash_algorithm, void,
 METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_pcr_len, u_int32_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
-	if(this->pcr_comp.ptr && this->pcr_comp.len > 0) 
-			return this->pcr_comp.len;
-	else return 0;
+	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
+	{ 
+		return this->pcr_comp.len;
+	}
+	return 0;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, get_pcr_comp, chunk_t,
@@ -294,9 +335,11 @@ METHOD(tcg_pts_attr_simple_evid_final_t, set_pcr_comp, void,
 METHOD(tcg_pts_attr_simple_evid_final_t, get_tpm_quote_sign_len, u_int32_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
-	if(this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0) 
-			return this->tpm_quote_sign.len;
-	else return 0;
+	if (this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0)
+	{
+		return this->tpm_quote_sign.len;
+	}
+	return 0;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, get_tpm_quote_sign, chunk_t,
@@ -327,8 +370,8 @@ METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sign, void,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(
-				       pts_attr_simple_evid_final_flag_t flags,
-				       pts_attr_meas_algorithms_t comp_hash_algorithm,
+				       pts_simple_evid_final_flag_t flags,
+				       pts_meas_algorithms_t comp_hash_algorithm,
 				       chunk_t pcr_comp,
 				       chunk_t tpm_quote_sign,
 				       chunk_t evid_sign)

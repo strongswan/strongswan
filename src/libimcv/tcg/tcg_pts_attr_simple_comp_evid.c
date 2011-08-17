@@ -23,7 +23,8 @@
 typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simple_comp_evid_t;
 
 /**
- * Simple Component Evidence (see section 3.15.1 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Simple Component Evidence 
+ * see section 3.15.1 of PTS Protocol: Binding to TNC IF-M Specification
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -65,7 +66,7 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
 
 /**
  * Specific Functional Component -> Component Functional Name Structure 
- * (see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification)
+ * see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -79,7 +80,8 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  */
 
 /**
- * Qualifier for Functional Component  (see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Qualifier for Functional Component
+ * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                 
  *    0 1 2 3 4 5 
@@ -168,7 +170,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	/**
 	 * Hash Algorithm
 	 */
-	pts_attr_meas_algorithms_t hash_algorithm;
+	pts_meas_algorithms_t hash_algorithm;
 	
 	/**
 	 * Transformation type for PCR 
@@ -243,27 +245,45 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
 	
 	/* Determine the flags to set*/
-	if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR) flags += 128;
-	if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_NO_VER) flags += 32;
-	else if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL) flags += 64;
-	else if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS) flags += 96;
+	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
+	{
+		flags += 128;
+	}
+	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_NO_VER)
+	{
+		flags += 32;
+	}
+	else if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL)
+	{
+		flags += 64;
+	}
+	else if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
+	{
+		flags += 96;
+	}
 	
 	writer->write_uint8(writer, flags);
 	
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
-	if(this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
+	if (this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
 	{
 		DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	}
 	
 	qualifier += this->qualifier.type;
-	if(this->qualifier.kernel) qualifier += 16;
-	if(this->qualifier.sub_component) qualifier += 32;
+	if (this->qualifier.kernel)
+	{
+		qualifier += 16;
+	}
+	if (this->qualifier.sub_component)
+	{
+		qualifier += 32;
+	}
 	
 	/* Unknown or Wildcard should not be used for Qualification*/
-	if(!qualifier || qualifier == 63)
+	if (!qualifier || qualifier == 63)
 	{
 		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
 			      " Functional Name Qualifier");
@@ -276,21 +296,30 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint24 (writer, this->extended_pcr);
 	
 	/* Determine the hash algorithm to set*/
-	if(this->hash_algorithm & PTS_MEAS_ALGO_SHA384) algorithm = 8192;
-	else if(this->hash_algorithm & PTS_MEAS_ALGO_SHA256) algorithm = 16384;
-	else if(this->hash_algorithm & PTS_MEAS_ALGO_SHA1) algorithm = 32768;
+	if (this->hash_algorithm & PTS_MEAS_ALGO_SHA384)
+	{
+		algorithm = 8192;
+	}
+	else if (this->hash_algorithm & PTS_MEAS_ALGO_SHA256)
+	{
+		 algorithm = 16384;
+	}
+	else if (this->hash_algorithm & PTS_MEAS_ALGO_SHA1)
+	{
+		 algorithm = 32768;
+	}
 	writer->write_uint16(writer, algorithm);
 	
 	writer->write_uint8 (writer, this->transformation);
 	writer->write_data (writer, this->measurement_time);
 	
 	/* Optional fields */
-	if(this->policy_uri.ptr && this->policy_uri.len > 0) 
+	if (this->policy_uri.ptr && this->policy_uri.len > 0) 
 	{
 		writer->write_uint16 (writer, this->policy_uri.len);
 		writer->write_data (writer, this->policy_uri);
 	}
-	if(this->pcr_before.ptr && this->pcr_after.ptr &&
+	if (this->pcr_before.ptr && this->pcr_after.ptr &&
 		this->pcr_before.len == this->pcr_after.len &&
 		this->pcr_before.len > 0 && this->pcr_after.len > 0)
 	{
@@ -327,23 +356,39 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint8(reader, &flags);
 	
 	/* Determine the flags to set*/
-	if((flags >> 7) & 1) this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
-	
-	if(!((flags >> 6) & 1) && !((flags >> 5) & 1)) 
+	if ((flags >> 7) & 1)
+	{
+ 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
+	}
+	if (!((flags >> 6) & 1) && !((flags >> 5) & 1))
+	{
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
-	else if(!((flags >> 6) & 1) && ((flags >> 5) & 1)) 
+	}
+	else if (!((flags >> 6) & 1) && ((flags >> 5) & 1))
+	{ 
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VER;
-	else if(((flags >> 6) & 1) && !((flags >> 5) & 1)) 
+	}
+	else if (((flags >> 6) & 1) && !((flags >> 5) & 1))
+	{
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL;
-	else if(((flags >> 6) & 1) && ((flags >> 5) & 1)) 
+	}
+	else if (((flags >> 6) & 1) && ((flags >> 5) & 1))
+	{
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS;
+	}
 	
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);
 	reader->read_uint8(reader, &fam_and_qualifier);
 	
-	if(((fam_and_qualifier >> 6) & 1) ) this->family += 1;
-	if(((fam_and_qualifier >> 7) & 1) ) this->family += 2;
+	if (((fam_and_qualifier >> 6) & 1) )
+	{
+		this->family += 1;
+	}
+	if (((fam_and_qualifier >> 7) & 1) )
+	{
+		this->family += 2;
+	}
 	
 	/* TODO: Generate an IF-M error attribute indicating */
 	/* TCG_PTS_INVALID_NAME_FAM */
@@ -352,13 +397,19 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	//}
 	
-	if(((fam_and_qualifier >> 5) & 1) ) this->qualifier.kernel = true;
-	if(((fam_and_qualifier >> 4) & 1) ) this->qualifier.sub_component = true;
+	if (((fam_and_qualifier >> 5) & 1) )
+	{
+		this->qualifier.kernel = true;
+	}
+	if (((fam_and_qualifier >> 4) & 1) ) 
+	{
+		this->qualifier.sub_component = true;
+	}
 	this->qualifier.type = ( fam_and_qualifier & 0xF );
 	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
 
 	/* Unknown or Wildcard should not be used for Qualification*/
-	if(!(fam_and_qualifier & 0x3F) || (fam_and_qualifier & 0x3F) == 0x3F)
+	if (!(fam_and_qualifier & 0x3F) || (fam_and_qualifier & 0x3F) == 0x3F)
 	{
 		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
 			      " Functional Name Qualifier");
@@ -373,9 +424,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint24(reader, &this->extended_pcr);
 	reader->read_uint16(reader, &algorithm);
 	
-	if((algorithm >> 13) & 1) this->hash_algorithm = PTS_MEAS_ALGO_SHA384;
-	else if((algorithm >> 14) & 1) this->hash_algorithm = PTS_MEAS_ALGO_SHA256;
-	else if((algorithm >> 15) & 1) this->hash_algorithm = PTS_MEAS_ALGO_SHA1;
+	if ((algorithm >> 13) & 1)
+	{
+		this->hash_algorithm = PTS_MEAS_ALGO_SHA384;
+	}
+	else if ((algorithm >> 14) & 1)
+	{
+		this->hash_algorithm = PTS_MEAS_ALGO_SHA256;
+	}
+	else if ((algorithm >> 15) & 1)
+	{
+		this->hash_algorithm = PTS_MEAS_ALGO_SHA1;
+	}
 	
 	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
@@ -385,7 +445,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			  &this->measurement_time);
 	
 	/*  Optional Policy URI field is included */
-	if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL || 
+	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL || 
 		this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
 	{
 		u_int16_t policy_uri_len;
@@ -394,7 +454,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	/*  Optional PCR value fields are included */
-	if(this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
+	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
 	{
 		u_int16_t pcr_value_len;
 		reader->read_uint16(reader, &pcr_value_len);
@@ -494,14 +554,14 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_extended_pcr, void,
 	this->extended_pcr = extended_pcr;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_attr_meas_algorithms_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_meas_algorithms_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->hash_algorithm;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_hash_algorithm, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_attr_meas_algorithms_t hash_algorithm)
+	private_tcg_pts_attr_simple_comp_evid_t *this, pts_meas_algorithms_t hash_algorithm)
 {
 	this->hash_algorithm = hash_algorithm;
 }
@@ -598,7 +658,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 				       tcg_pts_qualifier_t qualifier,
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
-				       pts_attr_meas_algorithms_t hash_algorithm,
+				       pts_meas_algorithms_t hash_algorithm,
 				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,
