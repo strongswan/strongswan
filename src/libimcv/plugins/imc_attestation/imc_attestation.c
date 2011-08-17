@@ -19,21 +19,47 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
-#include <tcg/tcg_attr.h>
+
+#include <tcg/tcg_pts_attr_proto_caps.h>
+#include <tcg/tcg_pts_attr_meas_algo_selection.h>
+#include <tcg/tcg_pts_attr_tpm_version_info.h>
+#include <tcg/tcg_pts_attr_aik.h>
+#include <tcg/tcg_pts_attr_simple_comp_evid.h>
+#include <tcg/tcg_pts_attr_simple_evid_final.h>
+#include <tcg/tcg_pts_attr_file_meas.h>
 
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
 #include <debug.h>
+#include <utils/linked_list.h>
+
+#include <trousers/tss.h>
+#include <trousers/trousers.h>
+#include <openssl/sha.h>
+
 
 /* IMC definitions */
 
 static const char imc_name[] = "Attestation";
 
-#define IMC_VENDOR_ID	PEN_TCG
-#define IMC_SUBTYPE	PA_SUBTYPE_TCG_PTS
+#define IMC_VENDOR_ID				PEN_TCG
+#define IMC_SUBTYPE				PA_SUBTYPE_TCG_PTS
+#define IMC_ATTESTATION_MAX_FILE_SIZE		32768
 
 static imc_agent_t *imc_attestation;
+
+
+/**
+ * Selected Measurement Algorithm, which is selected during the PTS Measurement Algorithm attributes exchange
+ * Default value is SHA256
+ */
+static pts_attr_meas_algorithms_t selected_algorithm = PTS_MEAS_ALGO_SHA256;
+
+/**
+ * List of files and directories to measure
+ */
+static linked_list_t *files, *directories;
  
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
@@ -70,7 +96,8 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 										  TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
-	imc_attestation_state_t *test_state;
+	/* TODO: Not used so far */
+	//imc_attestation_state_t *attestation_state;
 
 	if (!imc_attestation)
 	{
@@ -84,6 +111,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			return imc_attestation->create_state(imc_attestation, state);
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_attestation->delete_state(imc_attestation, connection_id);
+		case TNC_CONNECTION_STATE_HANDSHAKE:
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 		default:
@@ -92,23 +120,214 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	}
 }
 
+/**
+ * Get the TPM Version Information
+ */
+static TSS_RESULT get_tpm_version_info(BYTE *tpm_version_info)
+{
+	TSS_HCONTEXT	hContext;
+	TSS_HTPM	hTPM;
+	TSS_RESULT uiResult;
+      	UINT32 uiResultLen;
+	/* TODO: Needed for parsing version info on IMV side */
+	//TPM_CAP_VERSION_INFO versionInfo;
+	//UINT64 offset = 0;
+
+	uiResult = Tspi_Context_Create(&hContext);
+	if (uiResult != TSS_SUCCESS) {
+		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_Create\n", uiResult);
+		return uiResult;
+	}
+	uiResult = Tspi_Context_Connect(hContext, NULL);
+	if (uiResult != TSS_SUCCESS) {
+		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_Connect\n", uiResult);
+		return uiResult;
+	}
+	uiResult = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (uiResult != TSS_SUCCESS) {
+		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_GetTpmObject\n", uiResult);
+		return uiResult;
+	}
+
+	uiResult = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL, &uiResultLen,
+					  &tpm_version_info);
+	if (uiResult != TSS_SUCCESS) {
+		DBG1(DBG_IMC,"Error 0x%x on Tspi_TPM_GetCapability\n", uiResult);
+		return uiResult;
+	}
+}
+
+/**
+ * Get Hash Measurement of a file
+ * Uses openssl's sha.h
+ */
+static TNC_Result hash_file(char *path, unsigned char *out)
+{
+	BYTE *buffer;
+	FILE *file;
+	int bytesRead = 0;
+	
+	file = fopen(path, "rb");
+	if (!file) {
+		DBG1(DBG_IMC,"File can not be opened %s\n", path);
+		return TNC_RESULT_FATAL;
+	}
+	
+	buffer = malloc(IMC_ATTESTATION_MAX_FILE_SIZE);
+	if(!buffer)
+	{
+		DBG1(DBG_IMC,"Buffer couldn't be allocated memory");
+		goto fatal;
+	}
+
+	switch(selected_algorithm)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+		{
+			SHA_CTX sha1;
+			SHA1_Init(&sha1);
+			
+			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
+			{
+				SHA1_Update(&sha1, buffer, bytesRead);
+			}
+			SHA1_Final(out, &sha1);
+			break;
+		}	
+		case PTS_MEAS_ALGO_SHA256:
+		{
+			SHA256_CTX sha256;
+			SHA256_Init(&sha256);
+			
+			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
+			{
+				SHA256_Update(&sha256, buffer, bytesRead);
+			}
+			SHA256_Final(out, &sha256);
+			break;
+		}
+		case PTS_MEAS_ALGO_SHA384:
+		/*{
+			SHA384_CTX sha384;
+			SHA384_Init(&sha384);
+			
+			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
+			{
+				SHA384_Update(&sha384, buffer, bytesRead);
+			}
+			SHA384_Final(out, &sha384);
+			break;
+		}
+		*/
+		default:
+			DBG1(DBG_IMC,"Unsupported Selected Hashing Algorithm \n");
+			return TNC_RESULT_FATAL;
+	}
+	
+	fclose(file);
+	free(buffer);
+	return TNC_RESULT_SUCCESS;
+	
+fatal:
+	fclose(file);
+	return TNC_RESULT_FATAL;
+}
+
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
 	pa_tnc_msg_t *msg;
 	pa_tnc_attr_t *attr;
 	imc_state_t *state;
-	imc_attestation_state_t *test_state;
+	imc_attestation_state_t *attestation_state;
+	imc_attestation_handshake_state_t handshake_state;
 	TNC_Result result;
 
 	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
-	test_state = (imc_attestation_state_t*)state;
+	attestation_state = (imc_attestation_state_t*)state;
+	handshake_state = attestation_state->get_handshake_state(attestation_state);
+	
+	/* Switch on the attribute type IMC has received */
+	switch (handshake_state)
+	{
+		case IMC_ATTESTATION_STATE_REQ_PROTO_CAP:
+		{
+			pts_attr_proto_caps_flag_t flags;
+			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_VER;
+			attr = tcg_pts_attr_proto_caps_create(flags);
+			break;
+		}
+		case IMC_ATTESTATION_STATE_REQ_MEAS_ALGO:
+		{
+			pts_attr_meas_algorithms_t algorithm;
+			algorithm = PTS_MEAS_ALGO_SHA1;
+			/* Save the selected algorithm for further attributes creation */
+			selected_algorithm = algorithm;
+			attr = tcg_pts_attr_meas_algo_selection_create(algorithm);
+			break;
+		}
+		case IMC_ATTESTATION_STATE_GET_TPM_INFO:
+		{
+			TSS_RESULT uiResult;
+			BYTE *tpm_version_info;
+
+			uiResult = get_tpm_version_info(tpm_version_info);
+			if (uiResult != TSS_SUCCESS) {
+				DBG1(DBG_IMC,"Error 0x%x on get_tpm_version_info\n", uiResult);
+				return uiResult;
+			}
+
+			attr = tcg_pts_attr_tpm_version_info_create(
+				chunk_create((char *)tpm_version_info,
+					     strlen(tpm_version_info)));
+			break;
+		}
+		/* TODO: working on */
+		/*case IMC_ATTESTATION_STATE_REQ_FILE_MEAS:
+		{
+			enumerator_t *enumerator;
+			measurement_req_entry_t *entry;
+			
+			enumerator = enumerator_create_single(file_list, NULL);
+			while (enumerator->enumerate(enumerator, &entry))
+			{
+				attr = tcg_pts_attr_req_file_meas_create(false, 
+					entry.request_id, delimiter, 
+					chunk_create(entry.path,strlen(entry.path)));
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+			}
+			
+			enumerator = enumerator_create_single(file_list, NULL);
+			while (enumerator->enumerate(enumerator, &entry))
+			{
+				attr = tcg_pts_attr_req_file_meas_create(false, 
+					entry.request_id, delimiter, 
+					chunk_create(entry.path,strlen(entry.path)));
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+			}
+			break;
+		}*/
+		case IMC_ATTESTATION_STATE_GET_AIK:
+		case IMC_ATTESTATION_STATE_REQ_FUNCT_COMP_EVID:
+		case IMC_ATTESTATION_STATE_GEN_ATTEST_EVID:
+		case IMC_ATTESTATION_STATE_REQ_FILE_METADATA:
+		case IMC_ATTESTATION_STATE_REQ_IML:
+		case IMC_ATTESTATION_STATE_INIT:
+			DBG1(DBG_IMC, "Attestation IMC has nothing to send: \"%s\"", handshake_state);
+			return TNC_RESULT_FATAL;
+		default:
+			DBG1(DBG_IMC, "Attestation IMC is in unknown state: \"%s\"", handshake_state);
+			return TNC_RESULT_FATAL;
+	}
+	
+	
+	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();
-	/**
-	 * add TCG PTS attributes
-	 */
+	msg->add_attribute(msg, attr);
 	msg->build(msg);
 	result = imc_attestation->send_message(imc_attestation, connection_id,
 									msg->get_encoding(msg));	
