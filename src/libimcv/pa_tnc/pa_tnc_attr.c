@@ -18,12 +18,26 @@
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "tcg/tcg_attr.h"
+#include "tcg/tcg_pts_attr_req_proto_caps.h"
+#include "tcg/tcg_pts_attr_proto_caps.h"
+#include "tcg/tcg_pts_attr_meas_algo.h"
+#include "tcg/tcg_pts_attr_meas_algo_selection.h"
+#include "tcg/tcg_pts_attr_get_tpm_version_info.h"
+#include "tcg/tcg_pts_attr_tpm_version_info.h"
+#include "tcg/tcg_pts_attr_get_aik.h"
+#include "tcg/tcg_pts_attr_aik.h"
+#include "tcg/tcg_pts_attr_req_funct_comp_evid.h"
+#include "tcg/tcg_pts_attr_gen_attest_evid.h"
+#include "tcg/tcg_pts_attr_simple_comp_evid.h"
+#include "tcg/tcg_pts_attr_simple_evid_final.h"
+#include "tcg/tcg_pts_attr_req_file_meas.h"
+#include "tcg/tcg_pts_attr_file_meas.h"
 #include "ita/ita_attr_command.h"
 
 /**
  * See header
  */
-pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
+pa_tnc_attr_t* pa_tnc_attr_create_create_from_data(pen_t vendor_id, u_int32_t type,
 											chunk_t value)
 {
 	switch (vendor_id)
@@ -55,23 +69,39 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 			switch (type)
 			{
 				case TCG_PTS_REQ_PROTO_CAPS:
+					return tcg_pts_attr_req_proto_caps_create_from_data(value);
 				case TCG_PTS_PROTO_CAPS:
+					return tcg_pts_attr_proto_caps_create_from_data(value);
+				case TCG_PTS_MEAS_ALGO:
+					return tcg_pts_attr_meas_algo_create_from_data(value);
+				case TCG_PTS_MEAS_ALGO_SELECTION:
+					return tcg_pts_attr_meas_algo_selection_create_from_data(value);
+				case TCG_PTS_GET_TPM_VERSION_INFO:
+					return tcg_pts_attr_get_tpm_version_info_create_from_data(value);
+				case TCG_PTS_TPM_VERSION_INFO:
+					return tcg_pts_attr_tpm_version_info_create_from_data(value);
+				case TCG_PTS_GET_AIK:
+					return tcg_pts_attr_get_aik_create_from_data(value);
+				case TCG_PTS_AIK:
+					return tcg_pts_attr_aik_create_from_data(value);
+				case TCG_PTS_REQ_FUNCT_COMP_EVID:
+					return tcg_pts_attr_req_funct_comp_evid_create_from_data(value);
+				case TCG_PTS_GEN_ATTEST_EVID:
+					return tcg_pts_attr_gen_attest_evid_create_from_data(value);
+				case TCG_PTS_SIMPLE_COMP_EVID:
+					return tcg_pts_attr_simple_comp_evid_create_from_data(value);
+				case TCG_PTS_SIMPLE_EVID_FINAL:
+					return tcg_pts_attr_simple_evid_final_create_from_data(value);
+				case TCG_PTS_REQ_FILE_MEAS:
+					return tcg_pts_attr_req_file_meas_create_from_data(value);
+				case TCG_PTS_FILE_MEAS:
+					return tcg_pts_attr_file_meas_create_from_data(value);
 				case TCG_PTS_DH_NONCE_PARAMS_REQ:
 				case TCG_PTS_DH_NONCE_PARAMS_RESP:
 				case TCG_PTS_DH_NONCE_FINISH:
-				case TCG_PTS_MEAS_ALGO:
-				case TCG_PTS_MEAS_ALGO_SELECTION:
-				case TCG_PTS_GET_TPM_VERSION_INFO:
-				case TCG_PTS_TPM_VERSION_INFO:
 				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 				case TCG_PTS_TEMPL_REF_MANI_SET_META:
 				case TCG_PTS_UPDATE_TEMPL_REF_MANI:
-				case TCG_PTS_GET_AIK:
-				case TCG_PTS_AIK:
-				case TCG_PTS_REQ_FUNCT_COMP_EVID:
-				case TCG_PTS_GEN_ATTEST_EVID:
-				case TCG_PTS_SIMPLE_COMP_EVID:
-				case TCG_PTS_SIMPLE_EVID_FINAL:
 				case TCG_PTS_VERIFICATION_RESULT:
 				case TCG_PTS_INTEG_REPORT:
 				case TCG_PTS_REQ_FILE_META:
@@ -79,8 +109,6 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 				case TCG_PTS_UNIX_FILE_META:
 				case TCG_PTS_REQ_REGISTRY_VALUE:
 				case TCG_PTS_REGISTRY_VALUE:
-				case TCG_PTS_REQ_FILE_MEAS:
-				case TCG_PTS_FILE_MEAS:
 				case TCG_PTS_REQ_INTEG_MEAS_LOG:
 				case TCG_PTS_INTEG_MEAS_LOG:
 				default:
