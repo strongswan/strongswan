@@ -118,12 +118,12 @@ struct private_tcg_pts_attr_req_funct_comp_evid_t {
 	/**
 	 * Functional Name Category Qualifier
 	 */
-	tcg_pts_qualifier_t qualifier;
+	pts_qualifier_t qualifier;
 	
 	/**
 	 * Component Functional Name
 	 */
-	pts_attr_req_funct_comp_name_bin_enum_t name;
+	pts_funct_comp_name_t name;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -273,7 +273,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
 	
 	reader->read_uint32(reader, &this->name);
-	/* TODO: Check the name is defined in pts_attr_req_funct_comp_name_bin_enum_t */
+	/* TODO: Check the name is defined in pts_funct_comp_name_t */
 
 	reader->destroy(reader);
 	return SUCCESS;	
@@ -316,27 +316,26 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_family, u_int8_t,
 	return this->family;
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_qualifier, tcg_pts_qualifier_t,
+METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_qualifier, pts_qualifier_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	return this->qualifier;
 }
 
 METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_qualifier, void,
-		private_tcg_pts_attr_req_funct_comp_evid_t *this,
-		tcg_pts_qualifier_t qualifier)
+	private_tcg_pts_attr_req_funct_comp_evid_t *this, pts_qualifier_t qualifier)
 {
 	this->qualifier = qualifier;
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_comp_funct_name, pts_attr_req_funct_comp_name_bin_enum_t,
+METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	return this->name;
 }
 
 METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_comp_funct_name, void,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this, pts_attr_req_funct_comp_name_bin_enum_t name)
+	private_tcg_pts_attr_req_funct_comp_evid_t *this, pts_funct_comp_name_t name)
 {
 	this->name = name;
 }
@@ -345,11 +344,10 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_comp_funct_name, void,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
-				       pts_attr_req_funct_comp_evid_flag_t flags,
-				       u_int32_t depth, 
-				       u_int32_t vendor_id,
-				       tcg_pts_qualifier_t qualifier,
-				       pts_attr_req_funct_comp_name_bin_enum_t name)
+									pts_attr_req_funct_comp_evid_flag_t flags,
+				       				u_int32_t depth, u_int32_t vendor_id,
+				      				pts_qualifier_t qualifier,
+				      				pts_funct_comp_name_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
 

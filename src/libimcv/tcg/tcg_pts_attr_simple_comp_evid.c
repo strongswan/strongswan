@@ -148,12 +148,12 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	/**
 	 * Functional Name Category Qualifier
 	 */
-	tcg_pts_qualifier_t qualifier;
+	pts_qualifier_t qualifier;
 	
 	/**
 	 * Component Functional Name
 	 */
-	pts_attr_req_funct_comp_name_bin_enum_t name;
+	pts_funct_comp_name_t name;
 	
 	/**
 	 * Measurement type
@@ -398,7 +398,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	reader->read_uint32(reader, &this->name);
-	/* TODO: Check the name is defined in pts_attr_req_funct_comp_name_bin_enum_t */
+	/* TODO: Check the name is defined in pts_funct_comp_name_t */
 	
 	reader->read_uint8(reader, &measurement_type);
 	this->measurement_type = (measurement_type >> 7 ) & 1;
@@ -481,7 +481,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_family, u_int8_t,
 	return this->family;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, tcg_pts_qualifier_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, pts_qualifier_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->qualifier;
@@ -489,19 +489,19 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, tcg_pts_qualifier_t,
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_qualifier, void,
 		private_tcg_pts_attr_simple_comp_evid_t *this,
-		tcg_pts_qualifier_t qualifier)
+		pts_qualifier_t qualifier)
 {
 	this->qualifier = qualifier;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_attr_req_funct_comp_name_bin_enum_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->name;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_comp_funct_name, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_attr_req_funct_comp_name_bin_enum_t name)
+	private_tcg_pts_attr_simple_comp_evid_t *this, pts_funct_comp_name_t name)
 {
 	this->name = name;
 }
@@ -600,11 +600,13 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_after_value, void,
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_len, u_int16_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
-	if(this->pcr_before.ptr && this->pcr_after.ptr && 
+	if (this->pcr_before.ptr && this->pcr_after.ptr && 
 		this->pcr_before.len == this->pcr_after.len &&
 		this->pcr_before.len > 0 && this->pcr_after.len > 0) 
-			return this->pcr_before.len;
-	else return 0;
+	{
+		return this->pcr_before.len;
+	}
+	return 0;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_measurement, chunk_t,
@@ -623,19 +625,17 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_comp_measurement, void,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
-				       pts_attr_simple_comp_evid_flag_t flags,
-				       u_int32_t depth, 
-				       u_int32_t vendor_id,
-				       tcg_pts_qualifier_t qualifier,
-				       pts_attr_req_funct_comp_name_bin_enum_t name,
-				       u_int32_t extended_pcr,
-				       pts_meas_algorithms_t hash_algorithm,
-				       pts_pcr_transform_t transformation,
-				       chunk_t measurement_time,
-				       chunk_t policy_uri,
-				       chunk_t pcr_before,
-				       chunk_t pcr_after,
-				       chunk_t measurement)
+									pts_attr_simple_comp_evid_flag_t flags,
+									u_int32_t depth, u_int32_t vendor_id,
+									pts_qualifier_t qualifier,
+									pts_funct_comp_name_t name,
+									u_int32_t extended_pcr,
+									pts_meas_algorithms_t hash_algorithm,
+									pts_pcr_transform_t transformation,
+									chunk_t measurement_time,
+									chunk_t policy_uri,
+									chunk_t pcr_before, chunk_t pcr_after,
+									chunk_t measurement)
 {
 	private_tcg_pts_attr_simple_comp_evid_t *this;
 
