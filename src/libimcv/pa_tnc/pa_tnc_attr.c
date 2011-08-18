@@ -18,7 +18,6 @@
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "tcg/tcg_attr.h"
-#include "tcg/tcg_pts_attr_req_proto_caps.h"
 #include "tcg/tcg_pts_attr_proto_caps.h"
 #include "tcg/tcg_pts_attr_meas_algo.h"
 #include "tcg/tcg_pts_attr_get_tpm_version_info.h"
@@ -68,9 +67,9 @@ pa_tnc_attr_t* pa_tnc_attr_create_create_from_data(pen_t vendor_id, u_int32_t ty
 			switch (type)
 			{
 				case TCG_PTS_REQ_PROTO_CAPS:
-					return tcg_pts_attr_req_proto_caps_create_from_data(value);
+					return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 				case TCG_PTS_PROTO_CAPS:
-					return tcg_pts_attr_proto_caps_create_from_data(value);
+					return tcg_pts_attr_proto_caps_create_from_data(value, FALSE);
 				case TCG_PTS_MEAS_ALGO:
 					return tcg_pts_attr_meas_algo_create_from_data(value, FALSE);
 				case TCG_PTS_MEAS_ALGO_SELECTION:

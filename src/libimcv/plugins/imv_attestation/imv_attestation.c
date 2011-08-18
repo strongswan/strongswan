@@ -21,7 +21,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <tcg/tcg_attr.h>
 
-#include <tcg/tcg_pts_attr_req_proto_caps.h>
+#include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_get_aik.h>
@@ -237,9 +237,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			pts_proto_caps_flag_t flags;
 
 			/* Send Request Protocol Capabilities attribute */
-			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_VER |
-					PTS_PROTO_CAPS_CURRENT;
-			attr = tcg_pts_attr_req_proto_caps_create(flags);
+			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_V | PTS_PROTO_CAPS_C;
+			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_PROTO_CAP:

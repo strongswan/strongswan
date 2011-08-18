@@ -28,15 +28,14 @@ typedef struct private_tcg_pts_attr_proto_caps_t private_tcg_pts_attr_proto_caps
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                        Reserved                     |C|V|D|T|X|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  
  */
 
-#define PTS_PROTO_CAPS_SIZE		4
-#define PTS_PROTO_CAPS_RESERVED		0x00
+#define PTS_PROTO_CAPS_SIZE			4
+#define PTS_PROTO_CAPS_RESERVED		0x0000
 
 /**
  * Private data of an tcg_pts_attr_proto_caps_t object.
@@ -109,33 +108,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_proto_caps_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
 
 	writer = bio_writer_create(PTS_PROTO_CAPS_SIZE);
-	writer->write_uint24 (writer, PTS_PROTO_CAPS_RESERVED);
-	
-	/* Determine the flags to set*/
-	if (this->flags & PTS_PROTO_CAPS_XML)
-	{
-		flags += 1;
-	}
-	if (this->flags & PTS_PROTO_CAPS_T)
-	{
-		flags += 2;
-	}
-	if (this->flags & PTS_PROTO_CAPS_DH)
-	{
-		flags += 4;
-	}
-	if (this->flags & PTS_PROTO_CAPS_VER)
-	{
-		flags += 8;
-	}
-	if (this->flags & PTS_PROTO_CAPS_CURRENT)
-	{
-		flags += 16;
-	}
-	writer->write_uint8(writer, flags);
+	writer->write_uint16(writer, PTS_PROTO_CAPS_RESERVED);
+	writer->write_uint16(writer, this->flags);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -145,8 +121,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_proto_caps_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int32_t reserved;
-	u_int8_t flags;
+	u_int16_t reserved, flags;
 
 	if (this->value.len < PTS_PROTO_CAPS_SIZE)
 	{
@@ -155,30 +130,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint24 (reader, &reserved);
-	reader->read_uint8(reader, &flags);
-	
-	if ((flags >> 0) & 1)
-	{
-		this->flags |= PTS_PROTO_CAPS_XML;
-	}
-	if ((flags >> 1) & 1)
-	{
-		this->flags |= PTS_PROTO_CAPS_T;
-	}
-	if ((flags >> 2) & 1)
-	{
-		this->flags |= PTS_PROTO_CAPS_DH;
-	}
-	if ((flags >> 3) & 1)
-	{
-		this->flags |= PTS_PROTO_CAPS_VER;
-	}
-	if ((flags >> 4) & 1)
-	{
-		this->flags |= PTS_PROTO_CAPS_CURRENT;
-	}
-
+	reader->read_uint16(reader, &reserved);
+	reader->read_uint16(reader, &flags);
+	this->flags = flags;
 	reader->destroy(reader);
 
 	return SUCCESS;	
@@ -197,17 +151,11 @@ METHOD(tcg_pts_attr_proto_caps_t, get_flags, pts_proto_caps_flag_t,
 	return this->flags;
 }
 
-METHOD(tcg_pts_attr_proto_caps_t, set_flags, void,
-	private_tcg_pts_attr_proto_caps_t *this,
-	pts_proto_caps_flag_t flags)
-{
-	this->flags = flags;
-}
-
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags)
+pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags,
+											  bool request)
 {
 	private_tcg_pts_attr_proto_caps_t *this;
 
@@ -224,21 +172,20 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags)
 				.destroy = _destroy,
 			},
 			.get_flags = _get_flags,
-			.set_flags = _set_flags,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_PROTO_CAPS,
+		.type = request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS,
 		.flags = flags,
 	);
 
 	return &this->public.pa_tnc_attribute;
 }
 
-
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(chunk_t data,
+														bool request)
 {
 	private_tcg_pts_attr_proto_caps_t *this;
 
@@ -255,10 +202,9 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(chunk_t data)
 				.destroy = _destroy,
 			},
 			.get_flags = _get_flags,
-			.set_flags = _set_flags,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_PROTO_CAPS,
+		.type = request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS,
 		.value = chunk_clone(data),
 	);
 

@@ -227,8 +227,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		case IMC_ATTESTATION_STATE_REQ_PROTO_CAP:
 		{
 			pts_proto_caps_flag_t flags;
-			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_VER;
-			attr = tcg_pts_attr_proto_caps_create(flags);
+			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_V;
+			attr = tcg_pts_attr_proto_caps_create(flags, FALSE);
 			break;
 		}
 		case IMC_ATTESTATION_STATE_REQ_MEAS_ALGO:
