@@ -86,6 +86,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
+	char *hash_alg;
+
 	if (imv_attestation)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
@@ -103,6 +105,21 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "no common IF-IMV version");
 		return TNC_RESULT_NO_COMMON_VERSION;
 	}
+
+	/* Specify supported PTS measurement algorithms */
+	hash_alg = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.hash_algorithm", "sha256");
+	if (!strcaseeq(hash_alg, "sha384") && !strcaseeq(hash_alg, "sha2_384"))
+	{
+		/* remove SHA384 algorithm */
+		supported_algorithms &= ~PTS_MEAS_ALGO_SHA384;
+	}
+	if (strcaseeq(hash_alg, "sha1"))
+	{
+		/* remove SHA256 algorithm */
+		supported_algorithms &= ~PTS_MEAS_ALGO_SHA256;
+	}
+
 	return TNC_RESULT_SUCCESS;
 }
 
@@ -219,12 +236,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		}
 		case IMV_ATTESTATION_STATE_PROTO_CAP:
 		{
-			pts_meas_algorithms_t algorithms;
-
 			/* Send Measurement Algorithms attribute */
-			algorithms = PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256 |
-						 PTS_MEAS_ALGO_SHA384;
-			attr = tcg_pts_attr_meas_algo_create(algorithms, FALSE);
+			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_MEAS_ALGO:
