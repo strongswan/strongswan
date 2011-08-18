@@ -45,14 +45,6 @@ struct tcg_pts_attr_meas_algo_t {
 	 */
 	pts_meas_algorithms_t (*get_algorithms)(tcg_pts_attr_meas_algo_t *this);
 
-	/**
-	 * Set PTS Measurement Algorithm Set
-	 *
-	 * @param flags			set of algorithms
-	 */
-	void (*set_algorithms)(tcg_pts_attr_meas_algo_t *this, 
-						   pts_meas_algorithms_t algorithms);
-	
 };
 
 /**

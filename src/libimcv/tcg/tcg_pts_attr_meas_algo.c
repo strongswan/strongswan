@@ -150,13 +150,6 @@ METHOD(tcg_pts_attr_meas_algo_t, get_algorithms, pts_meas_algorithms_t,
 	return this->algorithms;
 }
 
-METHOD(tcg_pts_attr_meas_algo_t, set_algorithms, void,
-	private_tcg_pts_attr_meas_algo_t *this,
-	pts_meas_algorithms_t algorithms)
-{
-	this->algorithms = algorithms;
-}
-
 /**
  * Described in header.
  */
@@ -178,7 +171,6 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 				.destroy = _destroy,
 			},
 			.get_algorithms = _get_algorithms,
-			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
 		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
@@ -210,7 +202,6 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
 				.destroy = _destroy,
 			},
 			.get_algorithms = _get_algorithms,
-			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
 		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
