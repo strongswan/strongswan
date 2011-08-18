@@ -23,7 +23,7 @@
 
 typedef struct tcg_pts_attr_simple_comp_evid_t tcg_pts_attr_simple_comp_evid_t;
 typedef enum pts_attr_simple_comp_evid_flag_t pts_attr_simple_comp_evid_flag_t;
-typedef enum pts_attr_simple_comp_evid_pcr_transform_t pts_attr_simple_comp_evid_pcr_transform_t;
+typedef enum pts_pcr_transform_t pts_pcr_transform_t;
 
 #include "tcg_attr.h"
 #include "tcg_pts_meas_algo.h"
@@ -38,29 +38,29 @@ typedef enum pts_attr_simple_comp_evid_pcr_transform_t pts_attr_simple_comp_evid
  */
 enum pts_attr_simple_comp_evid_flag_t {
 	/** PCR information fields inlcuded */
-	PTS_SIMPLE_COMP_EVID_FLAG_PCR =					0,
+	PTS_SIMPLE_COMP_EVID_FLAG_PCR =			0,
 	/** No Validation was attempted */
-	PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID = 				1,
+	PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID = 	1,
 	/** Attempted validation, unable to verify */
-	PTS_SIMPLE_COMP_EVID_FLAG_NO_VER = 				2,
+	PTS_SIMPLE_COMP_EVID_FLAG_NO_VER = 		2,
 	/** Attempted validation, verification failed */
-	PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL = 				3,
+	PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL = 	3,
 	/** Attempted validation, verification passed */
-	PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS = 				4,
+	PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS = 	4,
 };
 
 /**
- * PTS Simple Component Evidence PCR Transformations
+ * PTS PCR Transformations
  */
-enum pts_attr_simple_comp_evid_pcr_transform_t {
+enum pts_pcr_transform_t {
 	/** No Transformation */
-	PTS_SIMPLE_COMP_EVID_PCR_TRANS_NO =				0,
+	PTS_PCR_TRANSFORM_NO =		0,
 	/** Hash Value matched PCR size */
-	PTS_SIMPLE_COMP_EVID_PCR_TRANS_MATCH = 				1,
+	PTS_PCR_TRANSFORM_MATCH = 	1,
 	/** Hash value shorter than PCR size */
-	PTS_SIMPLE_COMP_EVID_PCR_TRANS_SHORT = 				2,
+	PTS_PCR_TRANSFORM_SHORT = 	2,
 	/** Hash value longer than PCR size */
-	PTS_SIMPLE_COMP_EVID_PCR_TRANS_LONG = 				3,
+	PTS_PCR_TRANSFORM_LONG = 	3,
 };
 
 /**
@@ -183,7 +183,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 *
 	 * @return				Transformation type of PCR
 	 */
-	pts_attr_simple_comp_evid_pcr_transform_t (*get_pcr_trans)(tcg_pts_attr_simple_comp_evid_t *this);
+	pts_pcr_transform_t (*get_pcr_trans)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Set PCR Transformation
@@ -191,7 +191,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @param transformation		Transformation type of PCR
 	 */
 	void (*set_pcr_trans)(tcg_pts_attr_simple_comp_evid_t *this,
-			pts_attr_simple_comp_evid_pcr_transform_t transformation);
+			pts_pcr_transform_t transformation);
 	
 	/**
 	 * Get Measurement Time
@@ -301,7 +301,7 @@ pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(pts_attr_simple_comp_evid_fl
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
 				       pts_meas_algorithms_t hash_algorithm,
-				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
+				       pts_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,
 				       chunk_t pcr_before,

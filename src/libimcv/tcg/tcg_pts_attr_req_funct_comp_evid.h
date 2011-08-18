@@ -49,9 +49,9 @@ enum pts_attr_req_funct_comp_evid_flag_t {
  */
 enum pts_attr_req_funct_comp_type_t {
 	/** Unknown */
-	PTS_FUNC_COMP_TYPE_UNKNOWN =				0x0,
+	PTS_FUNC_COMP_TYPE_UNKNOWN =			0x0,
 	/** Trusted Platform */
-	PTS_FUNC_COMP_TYPE_TRUSTED = 				0x1,
+	PTS_FUNC_COMP_TYPE_TRUSTED = 			0x1,
 	/** Operating System */
 	PTS_FUNC_COMP_TYPE_OS = 				0x2,
 	/** Graphical User Interface */
@@ -79,13 +79,13 @@ enum pts_attr_req_funct_comp_name_bin_enum_t {
 	/** BIOS */
 	PTS_FUNC_COMP_NAME_BIOS = 				0x0002,
 	/** Platform Extensions */
-	PTS_FUNC_COMP_NAME_PLAT_EXT = 				0x0003,
+	PTS_FUNC_COMP_NAME_PLAT_EXT = 			0x0003,
 	/** Motherboard firmware */
 	PTS_FUNC_COMP_NAME_BOARD =				0x0004,
 	/** Initial Program Loader */
-	PTS_FUNC_COMP_NAME_INIT_LOADER = 			0x0005,
+	PTS_FUNC_COMP_NAME_INIT_LOADER = 		0x0005,
 	/** Option ROMs */
-	PTS_FUNC_COMP_NAME_OPT_ROMS = 				0x0006,
+	PTS_FUNC_COMP_NAME_OPT_ROMS = 			0x0006,
 };
 
 /**
@@ -121,7 +121,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 * @param flags				Set of flags
 	 */
 	void (*set_flags)(tcg_pts_attr_req_funct_comp_evid_t *this, 
-				pts_attr_req_funct_comp_evid_flag_t flags);
+					  pts_attr_req_funct_comp_evid_flag_t flags);
 	
 	/**
 	 * Get Sub-component Depth
@@ -157,7 +157,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 * @param qualifier			Functional Name Category Qualifier
 	 */
 	void (*set_qualifier)(tcg_pts_attr_req_funct_comp_evid_t *this,
-						tcg_pts_qualifier_t qualifier);
+						  tcg_pts_qualifier_t qualifier);
 	
 	/**
 	 * Get Component Functional Name
@@ -188,10 +188,10 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
  * @param name				Component Functional Name
  */
 pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(pts_attr_req_funct_comp_evid_flag_t flags,
-				       u_int32_t depth, 
-				       u_int32_t vendor_id,
-				       tcg_pts_qualifier_t qualifier,
-				       pts_attr_req_funct_comp_name_bin_enum_t name);
+							u_int32_t depth, 
+							u_int32_t vendor_id,
+							tcg_pts_qualifier_t qualifier,
+							pts_attr_req_funct_comp_name_bin_enum_t name);
 
 /**
  * Creates an tcg_pts_attr_req_funct_comp_evid_t object from received data

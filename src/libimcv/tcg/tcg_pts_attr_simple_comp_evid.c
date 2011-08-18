@@ -173,7 +173,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	/**
 	 * Transformation type for PCR 
 	 */
-	pts_attr_simple_comp_evid_pcr_transform_t transformation;
+	pts_pcr_transform_t transformation;
 	
 	/**
 	 * Measurement time
@@ -287,27 +287,27 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 	
 	writer->write_uint8 (writer, qualifier);
-	writer->write_uint32 (writer, this->name);
+	writer->write_uint32(writer, this->name);
 	
 	writer->write_uint8 (writer, (this->measurement_type << 7));
-	writer->write_uint24 (writer, this->extended_pcr);
+	writer->write_uint24(writer, this->extended_pcr);
 	writer->write_uint16(writer, this->hash_algorithm);
 	writer->write_uint8 (writer, this->transformation);
-	writer->write_data (writer, this->measurement_time);
+	writer->write_data  (writer, this->measurement_time);
 	
 	/* Optional fields */
 	if (this->policy_uri.ptr && this->policy_uri.len > 0) 
 	{
-		writer->write_uint16 (writer, this->policy_uri.len);
-		writer->write_data (writer, this->policy_uri);
+		writer->write_uint16(writer, this->policy_uri.len);
+		writer->write_data  (writer, this->policy_uri);
 	}
 	if (this->pcr_before.ptr && this->pcr_after.ptr &&
 		this->pcr_before.len == this->pcr_after.len &&
 		this->pcr_before.len > 0 && this->pcr_after.len > 0)
 	{
-		writer->write_uint16 (writer, this->pcr_before.len);
-		writer->write_data (writer, this->pcr_before);
-		writer->write_data (writer, this->pcr_after);
+		writer->write_uint16(writer, this->pcr_before.len);
+		writer->write_data  (writer, this->pcr_before);
+		writer->write_data  (writer, this->pcr_after);
 	}
 	
 	writer->write_data (writer, this->measurement);
@@ -409,7 +409,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
-	/* TODO: Check the transformation is defined in pts_attr_simple_comp_evid_pcr_transform_t */
+	/* TODO: Check the transformation is defined in pts_pcr_transform_t */
 	
 	reader->read_data(reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
 			  &this->measurement_time);
@@ -537,14 +537,14 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_hash_algorithm, void,
 	this->hash_algorithm = hash_algorithm;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_trans, pts_attr_simple_comp_evid_pcr_transform_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_trans, pts_pcr_transform_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->transformation;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_trans, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_attr_simple_comp_evid_pcr_transform_t transformation)
+	private_tcg_pts_attr_simple_comp_evid_t *this, pts_pcr_transform_t transformation)
 {
 	this->transformation = transformation;
 }
@@ -630,7 +630,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 				       pts_attr_req_funct_comp_name_bin_enum_t name,
 				       u_int32_t extended_pcr,
 				       pts_meas_algorithms_t hash_algorithm,
-				       pts_attr_simple_comp_evid_pcr_transform_t transformation,
+				       pts_pcr_transform_t transformation,
 				       chunk_t measurement_time,
 				       chunk_t policy_uri,
 				       chunk_t pcr_before,
