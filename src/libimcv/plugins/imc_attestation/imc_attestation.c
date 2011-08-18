@@ -36,16 +36,14 @@
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
-#include <openssl/sha.h>
-
 
 /* IMC definitions */
 
 static const char imc_name[] = "Attestation";
 
-#define IMC_VENDOR_ID					PEN_TCG
-#define IMC_SUBTYPE						PA_SUBTYPE_TCG_PTS
-#define IMC_ATTESTATION_MAX_FILE_SIZE	32768
+#define IMC_VENDOR_ID				PEN_TCG
+#define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
+#define IMC_ATTESTATION_BUF_SIZE	32768
 
 static imc_agent_t *imc_attestation;
 
@@ -163,78 +161,48 @@ static TSS_RESULT get_tpm_version_info(BYTE *tpm_version_info)
 
 /**
  * Get Hash Measurement of a file
- * Uses openssl's sha.h
  */
 static TNC_Result hash_file(char *path, unsigned char *out)
 {
-	BYTE *buffer;
+	BYTE buffer[IMC_ATTESTATION_BUF_SIZE];
 	FILE *file;
-	int bytesRead = 0;
+	int bytes_read;
+	hasher_t *hasher;
+	hash_algorithm_t hash_alg;
 	
-	file = fopen(path, "rb");
-	if (!file) {
-		DBG1(DBG_IMC,"File can not be opened %s\n", path);
+	/* Create a hasher */
+	hash_alg = tcg_pts_meas_to_hash_algorithm(selected_algorithm);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
 		return TNC_RESULT_FATAL;
 	}
-	
-	buffer = malloc(IMC_ATTESTATION_MAX_FILE_SIZE);
-	if(!buffer)
-	{
-		DBG1(DBG_IMC,"Buffer couldn't be allocated memory");
-		goto fatal;
-	}
 
-	switch(selected_algorithm)
+	file = fopen(path, "rb");
+	if (!file)
 	{
-		case PTS_MEAS_ALGO_SHA1:
-		{
-			SHA_CTX sha1;
-			SHA1_Init(&sha1);
-			
-			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
-			{
-				SHA1_Update(&sha1, buffer, bytesRead);
-			}
-			SHA1_Final(out, &sha1);
-			break;
-		}	
-		case PTS_MEAS_ALGO_SHA256:
-		{
-			SHA256_CTX sha256;
-			SHA256_Init(&sha256);
-			
-			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
-			{
-				SHA256_Update(&sha256, buffer, bytesRead);
-			}
-			SHA256_Final(out, &sha256);
-			break;
-		}
-		case PTS_MEAS_ALGO_SHA384:
-		/*{
-			SHA384_CTX sha384;
-			SHA384_Init(&sha384);
-			
-			while((bytesRead = fread(buffer, 1, IMC_ATTESTATION_MAX_FILE_SIZE, file)))
-			{
-				SHA384_Update(&sha384, buffer, bytesRead);
-			}
-			SHA384_Final(out, &sha384);
-			break;
-		}
-		*/
-		default:
-			DBG1(DBG_IMC,"Unsupported Selected Hashing Algorithm \n");
-			return TNC_RESULT_FATAL;
+		DBG1(DBG_IMC,"file '%s' can not be opened", path);
+		hasher->destroy(hasher);
+		return TNC_RESULT_FATAL;
 	}
-	
+	while (TRUE)
+	{
+		bytes_read = fread(buffer, 1, sizeof(buffer), file);
+		if (bytes_read > 0)
+		{
+			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+		}
+		else
+		{
+			hasher->get_hash(hasher, chunk_empty, out);
+			break;
+		}
+	}
 	fclose(file);
-	free(buffer);
+	hasher->destroy(hasher);
+
 	return TNC_RESULT_SUCCESS;
-	
-fatal:
-	fclose(file);
-	return TNC_RESULT_FATAL;
 }
 
 static TNC_Result send_message(TNC_ConnectionID connection_id)
