@@ -26,8 +26,9 @@ typedef enum pts_simple_evid_final_flag_t pts_simple_evid_final_flag_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
+
 /* For Optional Composite Hash Algorithm field, pts_attr_meas_algorithms_t*/
-#include "tcg_pts_attr_meas_algo_selection.h" 
+#include "tcg_pts_attr_meas_algo.h" 
 
 /**
  * PTS Simple Evidence Final Flags
@@ -109,7 +110,7 @@ struct tcg_pts_attr_simple_evid_final_t {
 	 * @param pcr_comp			PCR Composite
 	 */
 	void (*set_pcr_comp)(tcg_pts_attr_simple_evid_final_t *this,
-						chunk_t pcr_comp);
+						 chunk_t pcr_comp);
 	
 	/**
 	 * Get Optional TPM Quote Signature Length
@@ -131,7 +132,7 @@ struct tcg_pts_attr_simple_evid_final_t {
 	 * @param tpm_quote_sign		TPM Quote Signature 
 	 */
 	void (*set_tpm_quote_sign)(tcg_pts_attr_simple_evid_final_t *this,
-						chunk_t tpm_quote_sign);
+							   chunk_t tpm_quote_sign);
 	
 	/**
 	 * Get Optional Evidence Signature
@@ -146,24 +147,24 @@ struct tcg_pts_attr_simple_evid_final_t {
 	 * @param signature			Optional Evidence Signature
 	 */
 	void (*set_evid_sign)(tcg_pts_attr_simple_evid_final_t *this,
-						chunk_t signature);
+						  chunk_t signature);
 	
 };
 
 /**
  * Creates an tcg_pts_attr_simple_evid_final_t object
  * 
- * @param flags				Set of flags
- * @param comp_hash_algorithm		Composite Hash Algorithm
- * @param pcr_comp			Optional TPM PCR Composite
+ * @param flags					Set of flags
+ * @param comp_hash_algorithm	Composite Hash Algorithm
+ * @param pcr_comp				Optional TPM PCR Composite
  * @param tpm_quote_sign		Optional TPM Quote Signature
- * @param evid_sign			Optional Evidence Signature
+ * @param evid_sign				Optional Evidence Signature
  */
 pa_tnc_attr_t* tcg_pts_attr_simple_evid_final_create(pts_simple_evid_final_flag_t flags,
-				       pts_meas_algorithms_t comp_hash_algorithm,
-				       chunk_t pcr_comp,
-				       chunk_t tpm_quote_sign,
-				       chunk_t evid_sign);
+							pts_meas_algorithms_t comp_hash_algorithm,
+							chunk_t pcr_comp,
+							chunk_t tpm_quote_sign,
+							chunk_t evid_sign);
 
 /**
  * Creates an tcg_pts_attr_simple_evid_final_t object from received data

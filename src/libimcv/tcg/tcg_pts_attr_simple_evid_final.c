@@ -28,24 +28,23 @@ typedef struct private_tcg_pts_attr_simple_evid_final_t private_tcg_pts_attr_sim
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   Flags     |	Reserved    |  Optional Composite Hash Alg  |
+ *  |     Flags     |    Reserved     | Optional Composite Hash Alg |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Optional TPM PCR Composite Length 	    |
+ *  |                Optional TPM PCR Composite Length              |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		Optional TPM PCR Composite (Variable Length)        ~
+ *  ~           Optional TPM PCR Composite (Variable Length)        ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  | 			Optional TPM Quote Signature Length         |
+ *  |                Optional TPM Quote Signature Length            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		Optional TPM Quote Signature (Variable Length)      ~
+ *  ~         Optional TPM Quote Signature (Variable Length)        ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		Optional Evidence Signature (Variable Length)       ~
+ *  ~         Optional Evidence Signature (Variable Length)         ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
 #define PTS_SIMPLE_EVID_FINAL_SIZE			4
-#define PTS_SIMPLE_EVID_FINAL_RESERVED			0x00
+#define PTS_SIMPLE_EVID_FINAL_RESERVED		0x00
 
 /**
  * Private data of an tcg_pts_attr_simple_evid_final_t object.
@@ -139,7 +138,6 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	u_int8_t flags = 0;
-	u_int16_t algorithm = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
 	
@@ -160,23 +158,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		flags += 32;
 	}
-	writer->write_uint8(writer, flags);
-	writer->write_uint8(writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
-	
-	/* Determine the hash algorithm to set*/
-	if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA384)
-	{
-		algorithm = 8192;
-	}
-	else if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA256)
-	{
-		algorithm = 16384;
-	}
-	else if (this->comp_hash_algorithm & PTS_MEAS_ALGO_SHA1)
-	{
-		 algorithm = 32768;
-	}
-	writer->write_uint16(writer, algorithm);
+	writer->write_uint8 (writer, flags);
+	writer->write_uint8 (writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
+	writer->write_uint16(writer, this->comp_hash_algorithm);
 
 	/* Optional fields */
 	if (this->pcr_comp.ptr && this->pcr_comp.len > 0) 
@@ -240,19 +224,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint8(reader, &reserved);
 	reader->read_uint16(reader, &algorithm);
-	
-	if ((algorithm >> 13) & 1)
-	{
-		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA384;
-	}
-	else if ((algorithm >> 14) & 1)
-	{
-		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA256;
-	}
-	else if ((algorithm >> 15) & 1)
-	{
-		this->comp_hash_algorithm = PTS_MEAS_ALGO_SHA1;
-	}
+	this->comp_hash_algorithm = algorithm;	
 		
 	/*  Optional TPM PCR Composite field is included */
 	if (!(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_NO))

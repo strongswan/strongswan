@@ -31,12 +31,9 @@ typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
  * PTS Measurement Algorithms
  */
 enum pts_meas_algorithms_t {
-	/** SHA-384 */
-	PTS_MEAS_ALGO_SHA1 =				(1<<0),
-	/** SHA-256 */
-	PTS_MEAS_ALGO_SHA256 = 				(1<<1),
-	/** SHA-1 */
-	PTS_MEAS_ALGO_SHA384 = 				(1<<2),
+	PTS_MEAS_ALGO_SHA1 =    (1<<15),
+	PTS_MEAS_ALGO_SHA256 = 	(1<<14),
+	PTS_MEAS_ALGO_SHA384 = 	(1<<13),
 };
 
 /**
@@ -60,7 +57,7 @@ struct tcg_pts_attr_meas_algo_t {
 	/**
 	 * Set PTS Measurement Algorithm Set
 	 *
-	 * @param flags				set of algorithms
+	 * @param flags			set of algorithms
 	 */
 	void (*set_algorithms)(tcg_pts_attr_meas_algo_t *this, 
 						   pts_meas_algorithms_t algorithms);
@@ -70,15 +67,19 @@ struct tcg_pts_attr_meas_algo_t {
 /**
  * Creates an tcg_pts_attr_meas_algo_t object
  *
- * @param algorithms				set of algorithms
+ * @param algorithms		set of algorithms
+ * @param selection			TRUE if a selection
  */
-pa_tnc_attr_t* tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms);
+pa_tnc_attr_t* tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
+											 bool selection);
 
 /**
  * Creates an tcg_pts_attr_meas_algo_t object from received data
  *
  * @param value				unparsed attribute value
+ * @param selection			TRUE if a selection
  */
-pa_tnc_attr_t* tcg_pts_attr_meas_algo_create_from_data(chunk_t value);
+pa_tnc_attr_t* tcg_pts_attr_meas_algo_create_from_data(chunk_t value,
+													   bool selection);
 
 #endif /** TCG_PTS_ATTR_MEAS_ALGO_H_ @}*/

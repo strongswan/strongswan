@@ -28,39 +28,38 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   Flags     |		Sub-Component Depth		    |
+ *  |     Flags     |                Sub-Component Depth            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Specific Functional Component		    |
+ *  |                 Specific Functional Component                 |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Specific Functional Component		    |
+ *  |                 Specific Functional Component                 |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  | Measure. Type |		Extended into PCR		    |
+ *  | Measure. Type |                Extended into PCR              |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		Hash Algorithm      | PCR Transform |	Reserved    |
+ *  |         Hash Algorithm        | PCR Transform |   Reserved    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Measurement Date/Time			    |
+ *  |                     Measurement Date/Time                     |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Measurement Date/Time			    |
+ *  |                     Measurement Date/Time                     |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Measurement Date/Time			    |
+ *  |                     Measurement Date/Time                     |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Measurement Date/Time			    |
+ *  |                     Measurement Date/Time                     |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |			Measurement Date/Time			    |
+ *  |                     Measurement Date/Time                     |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Optional Policy URI Length | Opt. Verification Policy URI ~
+ *  |  Optional Policy URI Length   |  Opt. Verification Policy URI ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Optional Verification Policy URI	    ~
+ *  ~                 Optional Verification Policy URI              ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	     Optional PCR Length     |   Optional PCR Before Value  ~
+ *  |     Optional PCR Length       |   Optional PCR Before Value   ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		Optional PCR Before Value (Variable Length)	    ~
+ *  ~            Optional PCR Before Value (Variable Length)        ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~           Optional PCR After Value (Variable Length)	    ~
+ *  ~            Optional PCR After Value (Variable Length)         ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		Component Measurement (Variable Length)		    ~
+ *  ~            Component Measurement (Variable Length)            ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -70,7 +69,6 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |     Component Functional Name Vendor ID	    |Fam| Qualifier |                 
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -84,7 +82,7 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                 
- *    0 1 2 3 4 5 
+ *   0 1 2 3 4 5 
  *  +-+-+-+-+-+-+
  *  |K|S| Type  |
  *  +-+-+-+-+-+-+
@@ -92,10 +90,10 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
 
 
 
-#define PTS_SIMPLE_COMP_EVID_SIZE			40
+#define PTS_SIMPLE_COMP_EVID_SIZE					40
 #define PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE	20
-#define PTS_SIMPLE_COMP_EVID_RESERVED			0x00
-#define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM			0x00
+#define PTS_SIMPLE_COMP_EVID_RESERVED				0x00
+#define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM				0x00
 
 /**
  * Private data of an tcg_pts_attr_simple_comp_evid_t object.
@@ -240,7 +238,6 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	u_int8_t flags = 0;
 	u_int8_t qualifier = 0;
-	u_int16_t algorithm = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
 	
@@ -294,22 +291,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	
 	writer->write_uint8 (writer, (this->measurement_type << 7));
 	writer->write_uint24 (writer, this->extended_pcr);
-	
-	/* Determine the hash algorithm to set*/
-	if (this->hash_algorithm & PTS_MEAS_ALGO_SHA384)
-	{
-		algorithm = 8192;
-	}
-	else if (this->hash_algorithm & PTS_MEAS_ALGO_SHA256)
-	{
-		 algorithm = 16384;
-	}
-	else if (this->hash_algorithm & PTS_MEAS_ALGO_SHA1)
-	{
-		 algorithm = 32768;
-	}
-	writer->write_uint16(writer, algorithm);
-	
+	writer->write_uint16(writer, this->hash_algorithm);
 	writer->write_uint8 (writer, this->transformation);
 	writer->write_data (writer, this->measurement_time);
 	
@@ -423,19 +405,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint24(reader, &this->extended_pcr);
 	reader->read_uint16(reader, &algorithm);
-	
-	if ((algorithm >> 13) & 1)
-	{
-		this->hash_algorithm = PTS_MEAS_ALGO_SHA384;
-	}
-	else if ((algorithm >> 14) & 1)
-	{
-		this->hash_algorithm = PTS_MEAS_ALGO_SHA256;
-	}
-	else if ((algorithm >> 15) & 1)
-	{
-		this->hash_algorithm = PTS_MEAS_ALGO_SHA1;
-	}
+	this->hash_algorithm = algorithm;	
 	
 	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
@@ -561,7 +531,8 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_meas_algorithms_
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, set_hash_algorithm, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_meas_algorithms_t hash_algorithm)
+	private_tcg_pts_attr_simple_comp_evid_t *this,
+	pts_meas_algorithms_t hash_algorithm)
 {
 	this->hash_algorithm = hash_algorithm;
 }

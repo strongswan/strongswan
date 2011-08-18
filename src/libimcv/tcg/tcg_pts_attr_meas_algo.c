@@ -28,7 +28,6 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |            Reserved           |       Hash Algorithm Set      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -41,7 +40,6 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  *
  *                       1          
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |1|2|3|R|R|R|R|R|R|R|R|R|R|R|R|R|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -49,7 +47,7 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  */
 
 #define PTS_MEAS_ALGO_SIZE		4
-#define PTS_MEAS_ALGO_RESERVED		0x00
+#define PTS_MEAS_ALGO_RESERVED	0x00
 
 /**
  * Private data of an tcg_pts_attr_meas_algo_t object.
@@ -122,26 +120,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_meas_algo_t *this)
 {
 	bio_writer_t *writer;
-	u_int16_t algorithms = 0;
 
 	writer = bio_writer_create(PTS_MEAS_ALGO_SIZE);
 	writer->write_uint16 (writer, PTS_MEAS_ALGO_RESERVED);
-	
-	/* Determine the hash algorithms to set*/
-	if (this->algorithms & PTS_MEAS_ALGO_SHA384)
-	{
-		algorithms += 8192;
-	}
-	if (this->algorithms & PTS_MEAS_ALGO_SHA256)
-	{
-		algorithms += 16384;
-	}
-	if (this->algorithms & PTS_MEAS_ALGO_SHA1)
-	{
-		algorithms += 32768;
-	}
-	writer->write_uint16(writer, algorithms);
-	
+	writer->write_uint16(writer, this->algorithms);
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -150,8 +132,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_meas_algo_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int16_t reserved;
-	u_int16_t algorithms;
+	u_int16_t reserved, algorithms;
 
 	if (this->value.len < PTS_MEAS_ALGO_SIZE)
 	{
@@ -162,20 +143,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	reader->read_uint16 (reader, &reserved);
 	reader->read_uint16(reader, &algorithms);
-	
-	if ((algorithms >> 13) & 1)
-	{
-		this->algorithms |= PTS_MEAS_ALGO_SHA384;
-	}
-	if ((algorithms >> 14) & 1)
-	{
-		this->algorithms |= PTS_MEAS_ALGO_SHA256;
-	}
-	if ((algorithms >> 15) & 1)
-	{
-		this->algorithms |= PTS_MEAS_ALGO_SHA1;
-	}
-	
+	this->algorithms = algorithms;
 	reader->destroy(reader);
 
 	return SUCCESS;	
@@ -204,7 +172,8 @@ METHOD(tcg_pts_attr_meas_algo_t, set_algorithms, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
+											 bool selection)
 {
 	private_tcg_pts_attr_meas_algo_t *this;
 
@@ -224,7 +193,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms)
 			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_MEAS_ALGO,
+		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
 		.algorithms = algorithms,
 	);
 
@@ -235,7 +204,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms)
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
+													   bool selection)
 {
 	private_tcg_pts_attr_meas_algo_t *this;
 
@@ -255,7 +225,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data)
 			.set_algorithms = _set_algorithms,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_MEAS_ALGO,
+		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
 		.value = chunk_clone(data),
 	);
 

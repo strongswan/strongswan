@@ -21,7 +21,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_meas_algo_selection.h>
+#include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_aik.h>
 #include <tcg/tcg_pts_attr_simple_comp_evid.h>
@@ -43,9 +43,9 @@
 
 static const char imc_name[] = "Attestation";
 
-#define IMC_VENDOR_ID				PEN_TCG
-#define IMC_SUBTYPE				PA_SUBTYPE_TCG_PTS
-#define IMC_ATTESTATION_MAX_FILE_SIZE		32768
+#define IMC_VENDOR_ID					PEN_TCG
+#define IMC_SUBTYPE						PA_SUBTYPE_TCG_PTS
+#define IMC_ATTESTATION_MAX_FILE_SIZE	32768
 
 static imc_agent_t *imc_attestation;
 
@@ -266,7 +266,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			algorithm = PTS_MEAS_ALGO_SHA1;
 			/* Save the selected algorithm for further attributes creation */
 			selected_algorithm = algorithm;
-			attr = tcg_pts_attr_meas_algo_selection_create(algorithm);
+			attr = tcg_pts_attr_meas_algo_create(algorithm, TRUE);
 			break;
 		}
 		case IMC_ATTESTATION_STATE_GET_TPM_INFO:

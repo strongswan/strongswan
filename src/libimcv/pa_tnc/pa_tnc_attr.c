@@ -21,7 +21,6 @@
 #include "tcg/tcg_pts_attr_req_proto_caps.h"
 #include "tcg/tcg_pts_attr_proto_caps.h"
 #include "tcg/tcg_pts_attr_meas_algo.h"
-#include "tcg/tcg_pts_attr_meas_algo_selection.h"
 #include "tcg/tcg_pts_attr_get_tpm_version_info.h"
 #include "tcg/tcg_pts_attr_tpm_version_info.h"
 #include "tcg/tcg_pts_attr_get_aik.h"
@@ -73,9 +72,9 @@ pa_tnc_attr_t* pa_tnc_attr_create_create_from_data(pen_t vendor_id, u_int32_t ty
 				case TCG_PTS_PROTO_CAPS:
 					return tcg_pts_attr_proto_caps_create_from_data(value);
 				case TCG_PTS_MEAS_ALGO:
-					return tcg_pts_attr_meas_algo_create_from_data(value);
+					return tcg_pts_attr_meas_algo_create_from_data(value, FALSE);
 				case TCG_PTS_MEAS_ALGO_SELECTION:
-					return tcg_pts_attr_meas_algo_selection_create_from_data(value);
+					return tcg_pts_attr_meas_algo_create_from_data(value, TRUE);
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 					return tcg_pts_attr_get_tpm_version_info_create_from_data(value);
 				case TCG_PTS_TPM_VERSION_INFO:

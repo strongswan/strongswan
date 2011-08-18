@@ -19,7 +19,6 @@ libimcv_la_SOURCES = \
 	tcg/tcg_pts_attr_req_proto_caps.h tcg/tcg_pts_attr_req_proto_caps.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_meas_algo.h tcg/tcg_pts_attr_meas_algo.c \
-	tcg/tcg_pts_attr_meas_algo_selection.h tcg/tcg_pts_attr_meas_algo_selection.c \
 	tcg/tcg_pts_attr_get_tpm_version_info.h tcg/tcg_pts_attr_get_tpm_version_info.c \
 	tcg/tcg_pts_attr_tpm_version_info.h tcg/tcg_pts_attr_tpm_version_info.c \
 	tcg/tcg_pts_attr_get_aik.h tcg/tcg_pts_attr_get_aik.c \
