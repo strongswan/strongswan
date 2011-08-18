@@ -35,7 +35,7 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  */
 
 #define PTS_MEAS_ALGO_SIZE		4
-#define PTS_MEAS_ALGO_RESERVED	0x00
+#define PTS_MEAS_ALGO_RESERVED	0x0000
 
 /**
  * Private data of an tcg_pts_attr_meas_algo_t object.
@@ -110,7 +110,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 
 	writer = bio_writer_create(PTS_MEAS_ALGO_SIZE);
-	writer->write_uint16 (writer, PTS_MEAS_ALGO_RESERVED);
+	writer->write_uint16(writer, PTS_MEAS_ALGO_RESERVED);
 	writer->write_uint16(writer, this->algorithms);
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -129,7 +129,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint16 (reader, &reserved);
+	reader->read_uint16(reader, &reserved);
 	reader->read_uint16(reader, &algorithms);
 	this->algorithms = algorithms;
 	reader->destroy(reader);
