@@ -28,15 +28,13 @@ typedef struct private_tcg_pts_attr_get_aik_t private_tcg_pts_attr_get_aik_t;
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                           Reserved                            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
  */
 
 #define PTS_GET_AIK_SIZE		4
-#define PTS_GET_AIK_RESERVED		0x00
+#define PTS_GET_AIK_RESERVED	0x00000000
 
 /**
  * Private data of an tcg_pts_attr_get_aik_t object.

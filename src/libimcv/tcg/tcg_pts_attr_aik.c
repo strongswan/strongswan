@@ -23,17 +23,16 @@
 typedef struct private_tcg_pts_attr_aik_t private_tcg_pts_attr_aik_t;
 
 /**
- * Attestation Identity Key (see section 3.13 of PTS Protocol: Binding to TNC IF-M Specification)
+ * Attestation Identity Key
+ * see section 3.13 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |    Attestation Identity Key (Variable Lenght) ~
+ *  |     Flags     |    Attestation Identity Key (Variable Length) ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |          Attestation Identity Key (Variable Lenght)           ~
+ *  |          Attestation Identity Key (Variable Length)           ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *
  */
 
 #define PTS_AIK_SIZE			4
