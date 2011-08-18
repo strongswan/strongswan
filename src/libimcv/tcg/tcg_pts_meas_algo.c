@@ -16,7 +16,6 @@
 #include "tcg_pts_meas_algo.h"
 
 #include <debug.h>
-#include <crypto/hashers/hasher.h>
 
 /**
  * Described in header.
@@ -75,3 +74,20 @@ bool tcg_pts_probe_meas_algorithms(pts_meas_algorithms_t *algorithms)
 	return FALSE;
 }
 
+/**
+ * Described in header.
+ */
+hash_algorithm_t tcg_pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm)
+{
+	switch (algorithm)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+			return HASH_SHA1;
+		case PTS_MEAS_ALGO_SHA256:
+			return HASH_SHA256;
+		case PTS_MEAS_ALGO_SHA384:
+			return HASH_SHA384;
+		default:
+			return HASH_UNKNOWN;
+	}
+}

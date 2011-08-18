@@ -22,6 +22,7 @@
 #define TCG_PTS_MEAS_ALGO_H_
 
 #include <library.h>
+#include <crypto/hashers/hasher.h>
 
 typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
 
@@ -53,5 +54,13 @@ enum pts_meas_algorithms_t {
  * @return				TRUE if mandatory algorithms are available
  */
 bool tcg_pts_probe_meas_algorithms(pts_meas_algorithms_t *algorithms);
+
+/**
+ * Convert pts_meas_algorithms_t to hash_algorithm_t
+ *
+ * @param algorithm		PTS measurement algorithm type
+ * @return				libstrongswan hash algorithm type
+ */
+hash_algorithm_t tcg_pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm);
 
 #endif /** TCG_PTS_MEAS_ALGO_H_ @}*/
