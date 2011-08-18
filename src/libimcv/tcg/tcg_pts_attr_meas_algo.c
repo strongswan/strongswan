@@ -34,18 +34,6 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  *  
  */
 
-/**
- * Diffie-Hellman Hash Algorithm Values
- * see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification
- *
- *                       1          
- *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |1|2|3|R|R|R|R|R|R|R|R|R|R|R|R|R|
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
- */
-
 #define PTS_MEAS_ALGO_SIZE		4
 #define PTS_MEAS_ALGO_RESERVED	0x00
 

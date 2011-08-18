@@ -16,6 +16,7 @@ libimcv_la_SOURCES = \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
+	tcg/tcg_pts_meas_algo.h tcg/tcg_pts_meas_algo.c \
 	tcg/tcg_pts_attr_req_proto_caps.h tcg/tcg_pts_attr_req_proto_caps.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_meas_algo.h tcg/tcg_pts_attr_meas_algo.c \

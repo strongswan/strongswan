@@ -26,14 +26,12 @@ typedef enum pts_attr_simple_comp_evid_flag_t pts_attr_simple_comp_evid_flag_t;
 typedef enum pts_attr_simple_comp_evid_pcr_transform_t pts_attr_simple_comp_evid_pcr_transform_t;
 
 #include "tcg_attr.h"
+#include "tcg_pts_meas_algo.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 /* For Qualifier and Component Name fields, tcg_pts_qualifier_t, 
  * pts_attr_req_funct_comp_name_bin_enum_t, pts_attr_req_funct_comp_type_t */
 #include "tcg_pts_attr_req_funct_comp_evid.h" 
-
-/* For Hash Algorithm field, pts_attr_meas_algorithms_t */
-#include "tcg_pts_attr_meas_algo.h" 
 
 /**
  * PTS Simple Component Evidence Flags

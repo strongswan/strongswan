@@ -49,11 +49,13 @@ static const char imc_name[] = "Attestation";
 
 static imc_agent_t *imc_attestation;
 
+/**
+ * Supported PTS measurement algorithms
+ */
+static pts_meas_algorithms_t supported_algorithms = 0;
 
 /**
- * Selected Measurement Algorithm, which is selected during
- * the PTS Measurement Algorithm attributes exchange
- * Default value is SHA256
+ * Selected PTS measurement algorithm after attribute exchange
  */
 static pts_meas_algorithms_t selected_algorithm = PTS_MEAS_ALGO_SHA256;
 
@@ -77,7 +79,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	}
 	imc_attestation = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
 								imc_id, actual_version);
-	if (!imc_attestation)
+	if (!imc_attestation ||
+		!tcg_pts_probe_meas_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}

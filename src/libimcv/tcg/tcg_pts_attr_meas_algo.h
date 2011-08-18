@@ -22,19 +22,10 @@
 #define TCG_PTS_ATTR_MEAS_ALGO_H_
 
 typedef struct tcg_pts_attr_meas_algo_t tcg_pts_attr_meas_algo_t;
-typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
 
 #include "tcg_attr.h"
+#include "tcg_pts_meas_algo.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-/**
- * PTS Measurement Algorithms
- */
-enum pts_meas_algorithms_t {
-	PTS_MEAS_ALGO_SHA1 =    (1<<15),
-	PTS_MEAS_ALGO_SHA256 = 	(1<<14),
-	PTS_MEAS_ALGO_SHA384 = 	(1<<13),
-};
 
 /**
  * Class implementing the TCG Measurement Algorithm Attribute

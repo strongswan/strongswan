@@ -54,6 +54,11 @@ static const char imv_name[] = "Attestation";
 static imv_agent_t *imv_attestation;
 
 /**
+ * Supported PTS measurement algorithms
+ */
+static pts_meas_algorithms_t supported_algorithms = 0;
+
+/**
  * List of files and directories to measure
  */
 static linked_list_t *file_list, *directory_list;
@@ -88,7 +93,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
 								imv_id, actual_version);
-	if (!imv_attestation)
+	if (!imv_attestation ||
+		!tcg_pts_probe_meas_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}
