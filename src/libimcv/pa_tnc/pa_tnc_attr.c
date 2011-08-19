@@ -35,7 +35,7 @@
 /**
  * See header
  */
-pa_tnc_attr_t* pa_tnc_attr_create_create_from_data(pen_t vendor_id, u_int32_t type,
+pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 											chunk_t value)
 {
 	switch (vendor_id)
