@@ -68,6 +68,7 @@ static linked_list_t *file_list, *directory_list;
  */
 static u_int16_t request_id_counter = 0;
 
+/* TODO: Move the struct to some header file? Duplicate with imc_attestation*/
 /**
  * Struct to hold file or directory name with the request ID for Request File Measurement attribute
  */
@@ -166,7 +167,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			state->change_state(state, new_state);
 			attestation_state = (imv_attestation_state_t*)state;
 			
-			/** Get the files to measure for
+			/** 
+			 * Get the files to measure for
 			 * PTS Request File Measurement attribute
 			 */
 			
@@ -187,7 +189,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				request_id_counter ++;
 			}
 			
-			/** Get the directories to measure for
+			/** 
+			 * Get the directories to measure for
 			 * PTS Request File Measurement attribute
 			 */
 			
@@ -309,8 +312,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			return TNC_RESULT_FATAL;
 	}
 	
-	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();
+	attr->set_noskip_flag(attr, TRUE);
 	msg->add_attribute(msg, attr);
 	
 end:
