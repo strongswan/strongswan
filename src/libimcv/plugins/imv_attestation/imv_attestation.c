@@ -24,10 +24,15 @@
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
+#include <tcg/tcg_pts_attr_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_get_aik.h>
+#include <tcg/tcg_pts_attr_aik.h>
 #include <tcg/tcg_pts_attr_req_funct_comp_evid.h>
 #include <tcg/tcg_pts_attr_gen_attest_evid.h>
+#include <tcg/tcg_pts_attr_simple_comp_evid.h>
+#include <tcg/tcg_pts_attr_simple_evid_final.h>
 #include <tcg/tcg_pts_attr_req_file_meas.h>
+#include <tcg/tcg_pts_attr_file_meas.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -337,7 +342,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
 	imv_state_t *state;
-	imv_attestation_state_t *imv_attestation_state;
+	imv_attestation_state_t *attestation_state;
+	imv_attestation_handshake_state_t handshake_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -403,16 +409,83 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			/**
 			 * Handle TCG PTS attributes
 			 */
+			
+			/* get current IMC state */
+			if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+			{
+				return TNC_RESULT_FATAL;
+			}
+			attestation_state = (imv_attestation_state_t*)state;
+			
 			switch(attr->get_type(attr))
 			{
 				case TCG_PTS_PROTO_CAPS:
+				{
+					tcg_pts_attr_proto_caps_t *attr_proto_caps;
+					pts_proto_caps_flag_t proto_caps;
+					
+					attr_proto_caps = (tcg_pts_attr_proto_caps_t*)attr;
+					proto_caps = attr_proto_caps->get_flags(attr_proto_caps);
+					/* TODO: What to do with the protocol capabilities from imc */
+					handshake_state = IMV_ATTESTATION_STATE_PROTO_CAP;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
+				{
+					tcg_pts_attr_meas_algo_t *attr_meas_algo_selection;
+					pts_meas_algorithms_t selected_algorithm;
+					
+					attr_meas_algo_selection = (tcg_pts_attr_meas_algo_t*)attr;
+					selected_algorithm = attr_meas_algo_selection->get_algorithms(attr_meas_algo_selection);
+					/* TODO: What to do with the selected algorithm from imc */
+					
+					handshake_state = IMV_ATTESTATION_STATE_MEAS_ALGO;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				case TCG_PTS_TPM_VERSION_INFO:
+				{
+					tcg_pts_attr_tpm_version_info_t *attr_tpm_version_info;
+					chunk_t tpm_version_info;
+					TSS_RESULT uiResult;
+					TPM_CAP_VERSION_INFO versionInfo;
+					UINT64 offset = 0;
+					
+					attr_tpm_version_info = (tcg_pts_attr_tpm_version_info_t*)attr;
+					tpm_version_info = attr_tpm_version_info->get_tpm_version_info(attr_tpm_version_info);
+					
+					uiResult = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset, tpm_version_info.ptr, &versionInfo);
+					if (uiResult != TSS_SUCCESS) {
+						DBG1(DBG_IMV, "Error 0x%x on Trspi_UnloadBlob_CAP_VERSION_INFO\n", uiResult);
+						return TNC_RESULT_FATAL;
+					}
+
+					DBG3(DBG_IMV, "  TPM 1.2 Version Info:\n");
+					DBG3(DBG_IMV, "  Chip Version:        %hhu.%hhu.%hhu.%hhu\n",
+							versionInfo.version.major, versionInfo.version.minor,
+							versionInfo.version.revMajor, versionInfo.version.revMinor);
+					DBG3(DBG_IMV, "  Spec Level:          %hu\n", versionInfo.specLevel);
+					DBG3(DBG_IMV, "  Errata Revision:     %hhu\n", versionInfo.errataRev);
+					DBG3(DBG_IMV, "  TPM Vendor ID:       %c%c%c%c\n",
+							versionInfo.tpmVendorID[0], versionInfo.tpmVendorID[1],
+							versionInfo.tpmVendorID[2], versionInfo.tpmVendorID[3]);
+					
+					handshake_state = IMV_ATTESTATION_STATE_TPM_INFO;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				case TCG_PTS_AIK:
+				{
+					/* TODO: Save the AIK key and certificate */
+					handshake_state = IMV_ATTESTATION_STATE_AIK;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_SIMPLE_COMP_EVID:
@@ -420,7 +493,24 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				case TCG_PTS_SIMPLE_EVID_FINAL:
 					break;
 				case TCG_PTS_FILE_MEAS:
+				{
+					tcg_pts_attr_file_meas_t *attr_file_meas;
+					u_int64_t num_of_files;
+					u_int16_t request_id;
+					u_int16_t meas_len;
+					
+					attr_file_meas = (tcg_pts_attr_file_meas_t*)attr;
+					num_of_files = attr_file_meas->get_number_of_files(attr_file_meas);
+					request_id = attr_file_meas->get_request_id(attr_file_meas);
+					meas_len = attr_file_meas->get_meas_len(attr_file_meas);
+					
+					/* TODO: Start working here */
+					
+					handshake_state = IMV_ATTESTATION_STATE_FILE_MEAS;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_RESP:

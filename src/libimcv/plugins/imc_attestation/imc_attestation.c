@@ -22,10 +22,15 @@
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
+#include <tcg/tcg_pts_attr_get_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_tpm_version_info.h>
+#include <tcg/tcg_pts_attr_get_aik.h>
 #include <tcg/tcg_pts_attr_aik.h>
+#include <tcg/tcg_pts_attr_req_funct_comp_evid.h>
+#include <tcg/tcg_pts_attr_gen_attest_evid.h>
 #include <tcg/tcg_pts_attr_simple_comp_evid.h>
 #include <tcg/tcg_pts_attr_simple_evid_final.h>
+#include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <tcg/tcg_pts_attr_file_meas.h>
 
 #include <tncif_pa_subtypes.h>
@@ -55,6 +60,11 @@ static imc_agent_t *imc_attestation;
  * Supported PTS measurement algorithms
  */
 static pts_meas_algorithms_t supported_algorithms = 0;
+
+/**
+ * PTS Protocol capabilities
+ */
+static pts_proto_caps_flag_t proto_caps;
 
 /**
  * Selected PTS measurement algorithm after attribute exchange
@@ -226,7 +236,7 @@ static TNC_Result hash_file(char *path, char *out)
 }
 
 /**
- * Get all the files in a directory
+ * Get hash of all the files in a directory
  */
 static TNC_Result hash_directory(char *path)
 {
@@ -287,7 +297,14 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		case IMC_ATTESTATION_STATE_REQ_PROTO_CAP:
 		{
 			pts_proto_caps_flag_t flags;
-			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_V;
+			if(proto_caps & PTS_PROTO_CAPS_T)
+			{
+				flags = PTS_PROTO_CAPS_T;
+			}
+			if(proto_caps & PTS_PROTO_CAPS_V)
+			{
+				flags |= PTS_PROTO_CAPS_V;
+			}
 			attr = tcg_pts_attr_proto_caps_create(flags, FALSE);
 			break;
 		}
@@ -445,6 +462,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	imc_state_t *state;
+	imc_attestation_state_t *attestation_state;
+	imc_attestation_handshake_state_t handshake_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -504,26 +524,98 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 			/**
 			 * Handle TCG PTS attributes
 			 */
+			
+			/* get current IMC state */
+			if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
+			{
+				return TNC_RESULT_FATAL;
+			}
+			attestation_state = (imc_attestation_state_t*)state;
+
 			switch(attr->get_type(attr))
 			{
 				case TCG_PTS_REQ_PROTO_CAPS:
-					break;
-				case TCG_PTS_MEAS_ALGO:
-					/* TODO: save the selected algorithm here */
-					//selected_algorithm = 
-					break;
-				case TCG_PTS_GET_TPM_VERSION_INFO:
-					break;
-				case TCG_PTS_GET_AIK:
-					break;
+				{
+					tcg_pts_attr_proto_caps_t *attr_req_proto_caps;
 					
+					attr_req_proto_caps = (tcg_pts_attr_proto_caps_t*)attr;
+					proto_caps = attr_req_proto_caps->get_flags(attr_req_proto_caps);
+					
+					handshake_state = IMC_ATTESTATION_STATE_REQ_PROTO_CAP;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
+					break;
+				}
+				case TCG_PTS_MEAS_ALGO:
+				{
+					tcg_pts_attr_meas_algo_t *attr_meas_algo;
+					
+					attr_meas_algo = (tcg_pts_attr_meas_algo_t*)attr;
+					selected_algorithm = attr_meas_algo->get_algorithms(attr_meas_algo);
+					if((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA384))
+					{
+						selected_algorithm = PTS_MEAS_ALGO_SHA384;
+					}
+					else if((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
+					{
+						selected_algorithm = PTS_MEAS_ALGO_SHA256;
+					}
+					else
+					{
+						selected_algorithm = PTS_MEAS_ALGO_SHA1;
+					}
+					
+					handshake_state = IMC_ATTESTATION_STATE_REQ_MEAS_ALGO;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
+					break;
+				}
+					
+				case TCG_PTS_GET_TPM_VERSION_INFO:
+				{
+					handshake_state = IMC_ATTESTATION_STATE_GET_TPM_INFO;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
+					break;
+				}
+				case TCG_PTS_GET_AIK:
+				{
+					handshake_state = IMC_ATTESTATION_STATE_GET_AIK;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
+					break;
+				}
+	
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_REQ_FUNCT_COMP_EVID:
 					break;
 				case TCG_PTS_GEN_ATTEST_EVID:
 					break;
 				case TCG_PTS_REQ_FILE_MEAS:
+				{
+					tcg_pts_attr_req_file_meas_t *attr_req_file_meas;
+					measurement_req_entry_t *entry;
+					u_int32_t delimiter;
+					
+					attr_req_file_meas = (tcg_pts_attr_req_file_meas_t*)attr;
+					file_list = linked_list_create();
+					directory_list = linked_list_create();
+					delimiter = attr_req_file_meas->get_delimiter(attr_req_file_meas);
+					entry = malloc_thing(measurement_req_entry_t);
+					entry->request_id = attr_req_file_meas->get_request_id(attr_req_file_meas);
+					entry->path = attr_req_file_meas->get_file_path(attr_req_file_meas).ptr;
+					
+					(attr_req_file_meas->get_directory_flag(attr_req_file_meas)) ? 
+						directory_list->insert_last(directory_list, entry) : 
+						file_list->insert_last(file_list, entry); 
+					
+					handshake_state = IMC_ATTESTATION_STATE_REQ_FILE_MEAS;
+					attestation_state->set_handshake_state(attestation_state,
+								handshake_state);
 					break;
+				}
 				
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_REQ:
