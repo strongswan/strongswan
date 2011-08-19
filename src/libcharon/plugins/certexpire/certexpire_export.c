@@ -82,6 +82,11 @@ struct private_certexpire_export_t {
 	 * TRUE to use fixed field count, CA at end
 	 */
 	bool fixed_fields;
+
+	/**
+	 * String to use in empty fields, if using fixed_fields
+	 */
+	char *empty_string;
 };
 
 /**
@@ -156,9 +161,13 @@ static void export_csv(private_certexpire_export_t *this, char *path,
 				{
 					fprintf(file, "\n");
 				}
-				else if (this->fixed_fields || entry->expire[i])
+				else if (entry->expire[i])
 				{
 					fprintf(file, "%s", this->separator);
+				}
+				else if (this->fixed_fields)
+				{
+					fprintf(file, "%s%s", this->empty_string, this->separator);
 				}
 			}
 			chains->remove_at(chains, enumerator);
@@ -364,6 +373,8 @@ certexpire_export_t *certexpire_export_create()
 							"charon.plugins.certexpire.csv.format", "%d:%m:%Y"),
 		.fixed_fields = lib->settings->get_bool(lib->settings,
 							"charon.plugins.certexpire.csv.fixed_fields", TRUE),
+		.empty_string = lib->settings->get_str(lib->settings,
+							"charon.plugins.certexpire.csv.empty_string", ""),
 	);
 
 	cron = lib->settings->get_str(lib->settings,
