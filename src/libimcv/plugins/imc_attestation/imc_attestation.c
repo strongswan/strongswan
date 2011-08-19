@@ -552,19 +552,23 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					attr_meas_algo = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_meas_algo->get_algorithms(attr_meas_algo);
-					if((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA384))
+
+					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
+						(selected_algorithm   & PTS_MEAS_ALGO_SHA384))
 					{
 						selected_algorithm = PTS_MEAS_ALGO_SHA384;
 					}
-					else if((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
+					else if (selected_algorithm & PTS_MEAS_ALGO_SHA256)
 					{
 						selected_algorithm = PTS_MEAS_ALGO_SHA256;
 					}
-					else
+					else if (selected_algorithm & PTS_MEAS_ALGO_SHA1)
 					{
 						selected_algorithm = PTS_MEAS_ALGO_SHA1;
+					}
+					else
+					{
+						/* TODO generate an error message */
 					}
 					
 					handshake_state = IMC_ATTESTATION_STATE_REQ_MEAS_ALGO;
