@@ -24,16 +24,6 @@
 #include <debug.h>
 
 typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t;
-typedef struct file_meas_entry_t file_meas_entry_t;
-
-/**
- * File Measurement entry
- */
-struct file_meas_entry_t {
-	chunk_t   measurement;
-	u_int16_t file_name_len;
-	chunk_t   file_name;
-};
 
 /**
  * File Measurement

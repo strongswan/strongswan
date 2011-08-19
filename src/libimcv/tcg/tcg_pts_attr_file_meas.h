@@ -26,6 +26,17 @@ typedef struct tcg_pts_attr_file_meas_t tcg_pts_attr_file_meas_t;
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
+typedef struct file_meas_entry_t file_meas_entry_t;
+
+/**
+ * File Measurement entry
+ */
+struct file_meas_entry_t {
+	chunk_t   measurement;
+	u_int16_t file_name_len;
+	chunk_t   file_name;
+};
+
 /**
  * Class implementing the TCG PTS File Measurement attribute
  *
