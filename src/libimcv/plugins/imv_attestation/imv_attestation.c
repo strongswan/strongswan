@@ -343,7 +343,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	pa_tnc_attr_t *attr;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
-	imv_attestation_handshake_state_t handshake_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -427,9 +426,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attr_proto_caps = (tcg_pts_attr_proto_caps_t*)attr;
 					proto_caps = attr_proto_caps->get_flags(attr_proto_caps);
 					/* TODO: What to do with the protocol capabilities from imc */
-					handshake_state = IMV_ATTESTATION_STATE_PROTO_CAP;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+											IMV_ATTESTATION_STATE_PROTO_CAP);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -441,9 +439,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					selected_algorithm = attr_meas_algo_selection->get_algorithms(attr_meas_algo_selection);
 					/* TODO: What to do with the selected algorithm from imc */
 					
-					handshake_state = IMV_ATTESTATION_STATE_MEAS_ALGO;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+											IMV_ATTESTATION_STATE_MEAS_ALGO);
 					break;
 				}
 				case TCG_PTS_TPM_VERSION_INFO:
@@ -473,17 +470,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 							versionInfo.tpmVendorID[0], versionInfo.tpmVendorID[1],
 							versionInfo.tpmVendorID[2], versionInfo.tpmVendorID[3]);
 					
-					handshake_state = IMV_ATTESTATION_STATE_TPM_INFO;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+											IMV_ATTESTATION_STATE_TPM_INFO);
 					break;
 				}
 				case TCG_PTS_AIK:
 				{
 					/* TODO: Save the AIK key and certificate */
-					handshake_state = IMV_ATTESTATION_STATE_AIK;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+											IMV_ATTESTATION_STATE_AIK);
 					break;
 				}
 				
@@ -506,9 +501,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					
 					/* TODO: Start working here */
 					
-					handshake_state = IMV_ATTESTATION_STATE_FILE_MEAS;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+											IMV_ATTESTATION_STATE_FILE_MEAS);
 					break;
 				}
 				

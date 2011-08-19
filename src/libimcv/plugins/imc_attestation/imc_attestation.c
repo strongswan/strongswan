@@ -464,7 +464,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	pa_tnc_attr_t *attr;
 	imc_state_t *state;
 	imc_attestation_state_t *attestation_state;
-	imc_attestation_handshake_state_t handshake_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -541,9 +540,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_req_proto_caps = (tcg_pts_attr_proto_caps_t*)attr;
 					proto_caps = attr_req_proto_caps->get_flags(attr_req_proto_caps);
 					
-					handshake_state = IMC_ATTESTATION_STATE_REQ_PROTO_CAP;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+										IMC_ATTESTATION_STATE_REQ_PROTO_CAP);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:
@@ -570,25 +568,21 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					{
 						/* TODO generate an error message */
 					}
-					
-					handshake_state = IMC_ATTESTATION_STATE_REQ_MEAS_ALGO;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+										IMC_ATTESTATION_STATE_REQ_MEAS_ALGO);
 					break;
 				}
 					
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 				{
-					handshake_state = IMC_ATTESTATION_STATE_GET_TPM_INFO;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+										IMC_ATTESTATION_STATE_GET_TPM_INFO);
 					break;
 				}
 				case TCG_PTS_GET_AIK:
 				{
-					handshake_state = IMC_ATTESTATION_STATE_GET_AIK;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+										IMC_ATTESTATION_STATE_GET_AIK);
 					break;
 				}
 	
@@ -615,9 +609,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						directory_list->insert_last(directory_list, entry) : 
 						file_list->insert_last(file_list, entry); 
 					
-					handshake_state = IMC_ATTESTATION_STATE_REQ_FILE_MEAS;
 					attestation_state->set_handshake_state(attestation_state,
-								handshake_state);
+										IMC_ATTESTATION_STATE_REQ_FILE_MEAS);
 					break;
 				}
 				
