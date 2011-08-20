@@ -433,11 +433,20 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
 				{
-					tcg_pts_attr_meas_algo_t *attr_meas_algo_selection;
+					tcg_pts_attr_meas_algo_t *attr_meas;
 					pts_meas_algorithms_t selected_algorithm;
+					hash_algorithm_t hash_alg;
 					
-					attr_meas_algo_selection = (tcg_pts_attr_meas_algo_t*)attr;
-					selected_algorithm = attr_meas_algo_selection->get_algorithms(attr_meas_algo_selection);
+					attr_meas = (tcg_pts_attr_meas_algo_t*)attr;
+					selected_algorithm = attr_meas->get_algorithms(attr_meas);
+					hash_alg = pts_meas_to_hash_algorithm(selected_algorithm);
+					if (hash_alg == HASH_UNKNOWN)
+					{
+						/* TODO generate an error message */
+						break;
+					}
+					DBG2(DBG_IMV, "selected PTS measurement algorithm is %N",
+						 		   hash_algorithm_names, hash_alg);
 					/* TODO: What to do with the selected algorithm from imc */
 					
 					attestation_state->set_handshake_state(attestation_state,
@@ -587,7 +596,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	}
 	attestation_state = (imv_attestation_state_t*)state;
 
-	/* Check if IMV has to initiate the IF-M exchange */
+	/* Check if IMV has to initiate the PA-TNC exchange */
 	if (attestation_state->get_handshake_state(attestation_state) ==
 		IMV_ATTESTATION_STATE_INIT)
 	{

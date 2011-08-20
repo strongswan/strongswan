@@ -566,7 +566,12 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					else
 					{
 						/* TODO generate an error message */
+						selected_algorithm = PTS_MEAS_ALGO_SHA256;
 					}
+					DBG2(DBG_IMC, "selected PTS measurement algorithm is %N",
+						 hash_algorithm_names, 
+						 pts_meas_to_hash_algorithm(selected_algorithm));
+
 					attestation_state->set_handshake_state(attestation_state,
 										IMC_ATTESTATION_STATE_REQ_MEAS_ALGO);
 					break;
