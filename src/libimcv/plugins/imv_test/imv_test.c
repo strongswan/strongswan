@@ -92,7 +92,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 											new_state, &state);
 			if (result != TNC_RESULT_SUCCESS)
 			{
-				return TNC_RESULT_FATAL;
+				return result;
 			}
 			test_state = (imv_test_state_t*)state;
 
