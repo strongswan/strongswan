@@ -25,8 +25,6 @@ typedef struct ita_attr_command_t ita_attr_command_t;
 
 #include "pa_tnc/pa_tnc_attr.h"
 
-#define ITA_ATTR_COMMAND	0x01
-
 /**
  * Class implementing the ITA Command PA-TNC attribute.
  *

@@ -27,6 +27,14 @@ typedef struct pa_tnc_attr_t pa_tnc_attr_t;
 #include <pen/pen.h>
 
 /**
+ * Return the PA-TNC attribute names for a given PEN
+ *
+ * @param pen		Private Enterprise Number (PEN)
+ * @return 			pa_attr_names if found, NULL else
+ */
+extern enum_name_t *get_pa_attr_names(pen_t pen);
+
+/**
  * Interface for an RFC 5792 PA-TNC Posture Attribute.
  *
  */

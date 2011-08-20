@@ -30,6 +30,7 @@
 #include "tcg/tcg_pts_attr_simple_evid_final.h"
 #include "tcg/tcg_pts_attr_req_file_meas.h"
 #include "tcg/tcg_pts_attr_file_meas.h"
+#include "ita/ita_attr.h"
 #include "ita/ita_attr_command.h"
 
 /**

@@ -12,6 +12,7 @@
  * for more details.
  */
 
+#include "ita_attr.h"
 #include "ita_attr_command.h"
 
 #include <pen/pen.h>

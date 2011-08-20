@@ -15,7 +15,10 @@
  */
 
 #include "pa_tnc_msg.h"
+#include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
+#include "tcg/tcg_attr.h"
+#include "ita/ita_attr.h"
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
@@ -112,6 +115,7 @@ METHOD(pa_tnc_msg_t, build, void,
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
+	enum_name_t *pa_attr_names;
 	pen_t vendor_id;
 	u_int32_t type;
 	u_int8_t flags;
@@ -140,11 +144,13 @@ METHOD(pa_tnc_msg_t, build, void,
 		value = attr->get_value(attr);
 		flags = attr->get_noskip_flag(attr) ? PA_TNC_ATTR_FLAG_NOSKIP :
 											  PA_TNC_ATTR_FLAG_NONE;
-		if (vendor_id == PEN_IETF)
+
+		pa_attr_names = get_pa_attr_names(vendor_id);
+		if (pa_attr_names)
 		{
 			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N/%N' "
 						  "0x%06x/0x%08x", pen_names, vendor_id,
-						  ietf_attr_names, type, vendor_id, type);
+						   pa_attr_names, type, vendor_id, type);
 		}
 		else
 		{
@@ -207,6 +213,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		u_int32_t type, length;
 		chunk_t value, attr_info;
 		pa_tnc_attr_t *attr;
+		enum_name_t *pa_attr_names;
 		ietf_attr_pa_tnc_error_t *error_attr;
 
 		attr_info = reader->peek(reader);
@@ -215,11 +222,13 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		reader->read_uint24(reader, &vendor_id);
 		reader->read_uint32(reader, &type);
 		reader->read_uint32(reader, &length);
-		if (vendor_id == PEN_IETF)
+
+		pa_attr_names = get_pa_attr_names(vendor_id);
+		if (pa_attr_names)
 		{
 			DBG2(DBG_TNC, "processing PA-TNC attribute type '%N/%N' "
 						  "0x%06x/0x%08x", pen_names, vendor_id,
-						  ietf_attr_names, type, vendor_id, type);
+						   pa_attr_names, type, vendor_id, type);
 		}
 		else
 		{
@@ -355,5 +364,23 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 pa_tnc_msg_t *pa_tnc_msg_create(void)
 {
 	return pa_tnc_msg_create_from_data(chunk_empty);
+}
+
+/**
+ * See header
+ */
+enum_name_t* get_pa_attr_names(pen_t pen)
+{
+	switch (pen)
+	{
+		case PEN_IETF:
+			return ietf_attr_names;
+		case PEN_TCG:
+			return tcg_attr_names;
+		case PEN_ITA:
+			return ita_attr_names;
+		default:
+			return NULL;
+	}
 }
 

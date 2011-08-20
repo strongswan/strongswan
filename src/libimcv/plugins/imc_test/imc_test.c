@@ -18,6 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
 
 #include <tncif_names.h>
