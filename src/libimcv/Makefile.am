@@ -17,8 +17,6 @@ libimcv_la_SOURCES = \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
-	tcg/tcg_pts_funct_comp_name.h \
-	tcg/tcg_pts_meas_algo.h tcg/tcg_pts_meas_algo.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_meas_algo.h tcg/tcg_pts_attr_meas_algo.c \
 	tcg/tcg_pts_attr_get_tpm_version_info.h tcg/tcg_pts_attr_get_tpm_version_info.c \
@@ -30,7 +28,9 @@ libimcv_la_SOURCES = \
 	tcg/tcg_pts_attr_simple_comp_evid.h tcg/tcg_pts_attr_simple_comp_evid.c \
 	tcg/tcg_pts_attr_simple_evid_final.h tcg/tcg_pts_attr_simple_evid_final.c \
 	tcg/tcg_pts_attr_req_file_meas.h tcg/tcg_pts_attr_req_file_meas.c \
-	tcg/tcg_pts_attr_file_meas.h tcg/tcg_pts_attr_file_meas.c
+	tcg/tcg_pts_attr_file_meas.h tcg/tcg_pts_attr_file_meas.c \
+	tcg/pts/pts_funct_comp_name.h \
+	tcg/pts/pts_meas_algo.h tcg/pts/pts_meas_algo.c
 
 # CFLAGS = -Wall -Werror
 

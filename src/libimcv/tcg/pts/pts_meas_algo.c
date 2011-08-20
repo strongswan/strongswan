@@ -13,14 +13,14 @@
  * for more details.
  */
 
-#include "tcg_pts_meas_algo.h"
+#include "pts_meas_algo.h"
 
 #include <debug.h>
 
 /**
  * Described in header.
  */
-bool tcg_pts_probe_meas_algorithms(pts_meas_algorithms_t *algorithms)
+bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 {
 	enumerator_t *enumerator;
     hash_algorithm_t hash_alg;
@@ -77,7 +77,7 @@ bool tcg_pts_probe_meas_algorithms(pts_meas_algorithms_t *algorithms)
 /**
  * Described in header.
  */
-hash_algorithm_t tcg_pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm)
+hash_algorithm_t pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm)
 {
 	switch (algorithm)
 	{

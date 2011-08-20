@@ -25,7 +25,7 @@ typedef struct tcg_pts_attr_req_funct_comp_evid_t tcg_pts_attr_req_funct_comp_ev
 typedef enum pts_attr_req_funct_comp_evid_flag_t pts_attr_req_funct_comp_evid_flag_t;
 
 #include "tcg_attr.h"
-#include "tcg_pts_funct_comp_name.h"
+#include "pts/pts_funct_comp_name.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**

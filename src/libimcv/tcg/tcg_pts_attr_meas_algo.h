@@ -24,7 +24,7 @@
 typedef struct tcg_pts_attr_meas_algo_t tcg_pts_attr_meas_algo_t;
 
 #include "tcg_attr.h"
-#include "tcg_pts_meas_algo.h"
+#include "pts/pts_meas_algo.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**

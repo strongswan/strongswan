@@ -18,8 +18,8 @@
  * @{ @ingroup tcg_pts_attr_req_funct_comp_evid
  */
 
-#ifndef TCG_PTS_FUNCT_COMP_NAME_H_
-#define TCG_PTS_FUNCT_COMP_NAME_H_
+#ifndef PTS_FUNCT_COMP_NAME_H_
+#define PTS_FUNCT_COMP_NAME_H_
 
 typedef enum pts_funct_comp_type_t pts_funct_comp_type_t;
 typedef enum pts_funct_comp_name_t pts_funct_comp_name_t;
@@ -78,4 +78,4 @@ struct pts_qualifier_t {
 	pts_funct_comp_type_t  type;
 };
 
-#endif /** TCG_PTS_FUNCT_COMP_NAME_H_ @}*/
+#endif /** PTS_FUNCT_COMP_NAME_H_ @}*/

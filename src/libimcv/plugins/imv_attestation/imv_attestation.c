@@ -101,8 +101,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
 								imv_id, actual_version);
-	if (!imv_attestation ||
-		!tcg_pts_probe_meas_algorithms(&supported_algorithms))
+	if (!imv_attestation || !pts_meas_probe_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}

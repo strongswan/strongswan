@@ -107,8 +107,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	}
 	imc_attestation = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
 								imc_id, actual_version);
-	if (!imc_attestation ||
-		!tcg_pts_probe_meas_algorithms(&supported_algorithms))
+	if (!imc_attestation || !pts_meas_probe_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -201,7 +200,7 @@ static TNC_Result hash_file(char *path, char *out)
 	hash_algorithm_t hash_alg;
 	
 	/* Create a hasher */
-	hash_alg = tcg_pts_meas_to_hash_algorithm(selected_algorithm);
+	hash_alg = pts_meas_to_hash_algorithm(selected_algorithm);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 	if (!hasher)
 	{
