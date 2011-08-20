@@ -151,6 +151,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	char *directories;
 	measurement_req_entry_t *entry;
 	char *token;
+	TNC_Result result;
 
 	if (!imv_attestation)
 	{
@@ -165,11 +166,12 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_attestation->delete_state(imv_attestation, connection_id);
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+			result = imv_attestation->change_state(imv_attestation, connection_id,
+												   new_state, &state);
+			if (result != TNC_RESULT_SUCCESS)
 			{
-				return TNC_RESULT_FATAL;
+				return result;
 			}
-			state->change_state(state, new_state);
 			attestation_state = (imv_attestation_state_t*)state;
 			
 			/** 
@@ -548,8 +550,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 		return imv_attestation->provide_recommendation(imv_attestation, connection_id);
 	}
-
-	return imv_attestation->provide_recommendation(imv_attestation, connection_id);
+	return send_message(connection_id);
 }
 
 /**
@@ -572,10 +573,26 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 							   TNC_ConnectionID connection_id)
 {
+	imv_state_t *state;
+	imv_attestation_state_t *attestation_state;
+
 	if (!imv_attestation)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	/* get current IMV state */
+	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	attestation_state = (imv_attestation_state_t*)state;
+
+	/* Check if IMV has to initiate the IF-M exchange */
+	if (attestation_state->get_handshake_state(attestation_state) ==
+		IMV_ATTESTATION_STATE_INIT)
+	{
+		return send_message(connection_id);
 	}
 	return TNC_RESULT_SUCCESS;
 }
