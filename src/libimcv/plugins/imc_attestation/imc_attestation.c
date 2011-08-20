@@ -154,38 +154,34 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 /**
  * Get the TPM Version Information
  */
-static TSS_RESULT get_tpm_version_info(BYTE *tpm_version_info)
+static TSS_RESULT get_tpm_version_info(chunk_t *info)
 {
-	TSS_HCONTEXT	hContext;
-	TSS_HTPM	hTPM;
-	TSS_RESULT uiResult;
-      	UINT32 uiResultLen;
+	TSS_HCONTEXT hContext;
+	TSS_HTPM hTPM;
+	TSS_RESULT result;
+
 	/* TODO: Needed for parsing version info on IMV side */
 	//TPM_CAP_VERSION_INFO versionInfo;
 	//UINT64 offset = 0;
 
-	uiResult = Tspi_Context_Create(&hContext);
-	if (uiResult != TSS_SUCCESS) {
-		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_Create\n", uiResult);
-		return uiResult;
+	result = Tspi_Context_Create(&hContext);
+	if (result != TSS_SUCCESS)
+	{
+		return result;
 	}
-	uiResult = Tspi_Context_Connect(hContext, NULL);
-	if (uiResult != TSS_SUCCESS) {
-		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_Connect\n", uiResult);
-		return uiResult;
+	result = Tspi_Context_Connect(hContext, NULL);
+	if (result != TSS_SUCCESS)
+	{
+		return result;
 	}
-	uiResult = Tspi_Context_GetTpmObject (hContext, &hTPM);
-	if (uiResult != TSS_SUCCESS) {
-		DBG1(DBG_IMC,"Error 0x%x on Tspi_Context_GetTpmObject\n", uiResult);
-		return uiResult;
+	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (result != TSS_SUCCESS)
+	{
+		return result;
 	}
-
-	uiResult = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL, &uiResultLen,
-					  &tpm_version_info);
-	if (uiResult != TSS_SUCCESS) {
-		DBG1(DBG_IMC,"Error 0x%x on Tspi_TPM_GetCapability\n", uiResult);
-		return uiResult;
-	}
+	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
+									&info->len, &info->ptr);
+	return result;
 }
 
 /**
@@ -314,18 +310,17 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		}
 		case IMC_ATTESTATION_STATE_GET_TPM_INFO:
 		{
-			TSS_RESULT uiResult;
-			BYTE *tpm_version_info;
+			TSS_RESULT result;
+			chunk_t tpm_version_info;
 
-			uiResult = get_tpm_version_info(tpm_version_info);
-			if (uiResult != TSS_SUCCESS) {
-				DBG1(DBG_IMC,"Error 0x%x on get_tpm_version_info\n", uiResult);
-				return uiResult;
+			result = get_tpm_version_info(&tpm_version_info);
+			if (result != TSS_SUCCESS)
+			{
+				DBG1(DBG_IMC,"Error 0x%x on get_tpm_version_info\n", result);
+				return TNC_RESULT_FATAL;
 			}
 
-			attr = tcg_pts_attr_tpm_version_info_create(
-				chunk_create((char *)tpm_version_info,
-					     strlen(tpm_version_info)));
+			attr = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
 			break;
 		}
 		case IMC_ATTESTATION_STATE_REQ_FILE_MEAS:
