@@ -16,7 +16,7 @@
 
 #include "tncif_pa_subtypes.h"
 
-ENUM(ietf_pa_subtype_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
+ENUM(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
 	"Testing",
 	"Operating System",
 	"Anti-Virus",
@@ -60,7 +60,7 @@ enum_name_t* get_pa_subtype_names(pen_t pen)
 	switch (pen)
 	{
 		case PEN_IETF:
-			return pa_subtype_ita_names;
+			return pa_subtype_ietf_names;
 		case PEN_TCG:
 			return pa_subtype_tcg_names;
 		case PEN_FHH:
