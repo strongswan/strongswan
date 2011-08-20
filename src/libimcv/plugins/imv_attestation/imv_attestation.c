@@ -455,18 +455,20 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				}
 				case TCG_PTS_TPM_VERSION_INFO:
 				{
-					tcg_pts_attr_tpm_version_info_t *attr_tpm_version_info;
+					tcg_pts_attr_tpm_version_info_t *attr_tpm;
 					chunk_t tpm_version_info;
-					TSS_RESULT uiResult;
+					TSS_RESULT result;
 					TPM_CAP_VERSION_INFO versionInfo;
 					UINT64 offset = 0;
 					
-					attr_tpm_version_info = (tcg_pts_attr_tpm_version_info_t*)attr;
-					tpm_version_info = attr_tpm_version_info->get_tpm_version_info(attr_tpm_version_info);
+					attr_tpm = (tcg_pts_attr_tpm_version_info_t*)attr;
+					tpm_version_info = attr_tpm->get_tpm_version_info(attr_tpm);
 					
-					uiResult = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset, tpm_version_info.ptr, &versionInfo);
-					if (uiResult != TSS_SUCCESS) {
-						DBG1(DBG_IMV, "Error 0x%x on Trspi_UnloadBlob_CAP_VERSION_INFO\n", uiResult);
+					result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset,
+											tpm_version_info.ptr, &versionInfo);
+					if (result != TSS_SUCCESS)
+					{
+						DBG1(DBG_IMV, "Error 0x%x on Trspi_UnloadBlob_CAP_VERSION_INFO\n", result);
 						return TNC_RESULT_FATAL;
 					}
 
