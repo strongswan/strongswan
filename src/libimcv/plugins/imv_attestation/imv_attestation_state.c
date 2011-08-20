@@ -54,6 +54,12 @@ struct private_imv_attestation_state_t {
 	 * IMV evaluation result
 	 */
 	TNC_IMV_Evaluation_Result eval;
+
+	/**
+	 * PTS object
+	 */
+	pts_t *pts;
+
 };
 
 typedef struct entry_t entry_t;
@@ -150,6 +156,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
+	this->pts->destroy(this->pts);
 	free(this);
 }
 
@@ -163,6 +170,12 @@ METHOD(imv_attestation_state_t, set_handshake_state, void,
 	private_imv_attestation_state_t *this, imv_attestation_handshake_state_t new_state)
 {
 	this->handshake_state = new_state;
+}
+
+METHOD(imv_attestation_state_t, get_pts, pts_t*,
+	private_imv_attestation_state_t *this)
+{
+	return this->pts;
 }
 
 /**
@@ -184,12 +197,14 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			},
 			.get_handshake_state = _get_handshake_state,
 			.set_handshake_state = _set_handshake_state,
+			.get_pts = _get_pts,
 		},
+		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.handshake_state = IMV_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
-		.connection_id = connection_id,
+		.pts = pts_create(),
 	);
 	
 	return &this->public.interface;

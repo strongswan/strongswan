@@ -20,6 +20,7 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
+#include <tcg/pts/pts.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
@@ -41,10 +42,6 @@
 #include <crypto/hashers/hasher.h>
 #include <dirent.h>
 #include <errno.h>
-
-#include <trousers/tss.h>
-#include <trousers/trousers.h>
-
 
 /* IMC definitions */
 
@@ -151,45 +148,13 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	}
 }
 
-/**
- * Get the TPM Version Information
- */
-static TSS_RESULT get_tpm_version_info(chunk_t *info)
-{
-	TSS_HCONTEXT hContext;
-	TSS_HTPM hTPM;
-	TSS_RESULT result;
-
-	/* TODO: Needed for parsing version info on IMV side */
-	//TPM_CAP_VERSION_INFO versionInfo;
-	//UINT64 offset = 0;
-
-	result = Tspi_Context_Create(&hContext);
-	if (result != TSS_SUCCESS)
-	{
-		return result;
-	}
-	result = Tspi_Context_Connect(hContext, NULL);
-	if (result != TSS_SUCCESS)
-	{
-		return result;
-	}
-	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
-	if (result != TSS_SUCCESS)
-	{
-		return result;
-	}
-	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
-									&info->len, &info->ptr);
-	return result;
-}
 
 /**
  * Get Hash Measurement of a file
  */
 static TNC_Result hash_file(char *path, char *out)
 {
-	BYTE buffer[IMC_ATTESTATION_BUF_SIZE];
+	char buffer[IMC_ATTESTATION_BUF_SIZE];
 	FILE *file;
 	int bytes_read;
 	hasher_t *hasher;
@@ -289,7 +254,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	/* Switch on the attribute type IMC has received */
 	switch (handshake_state)
 	{
-		case IMC_ATTESTATION_STATE_REQ_PROTO_CAP:
+		case IMC_ATTESTATION_STATE_REQ_PROTO_CAPS:
 		{
 			pts_proto_caps_flag_t flags;
 			if(proto_caps & PTS_PROTO_CAPS_T)
@@ -310,16 +275,14 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		}
 		case IMC_ATTESTATION_STATE_GET_TPM_INFO:
 		{
-			TSS_RESULT result;
 			chunk_t tpm_version_info;
+			pts_t *pts;
 
-			result = get_tpm_version_info(&tpm_version_info);
-			if (result != TSS_SUCCESS)
+			pts = attestation_state->get_pts(attestation_state);
+			if (!pts->get_tpm_version_info(pts, &tpm_version_info))
 			{
-				DBG1(DBG_IMC,"Error 0x%x on get_tpm_version_info\n", result);
-				return TNC_RESULT_FATAL;
+				/* TODO return TCG_PTS_TPM_VERS_NOT_SUPPORTED error attribute */
 			}
-
 			attr = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
 			break;
 		}
@@ -535,7 +498,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					proto_caps = attr_req_proto_caps->get_flags(attr_req_proto_caps);
 					
 					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_REQ_PROTO_CAP);
+										IMC_ATTESTATION_STATE_REQ_PROTO_CAPS);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:

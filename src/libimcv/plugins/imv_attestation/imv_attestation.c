@@ -19,8 +19,9 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
-#include <tcg/tcg_attr.h>
 
+#include <tcg/pts/pts.h>
+#include <tcg/tcg_attr.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
@@ -39,9 +40,6 @@
 #include <pen/pen.h>
 #include <debug.h>
 #include <utils/linked_list.h>
-
-#include <trousers/tss.h>
-#include <trousers/trousers.h>
 
 /* IMV definitions */
 
@@ -250,7 +248,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			break;
 		}
-		case IMV_ATTESTATION_STATE_PROTO_CAP:
+		case IMV_ATTESTATION_STATE_PROTO_CAPS:
 		{
 			/* Send Measurement Algorithms attribute */
 			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
@@ -428,7 +426,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					proto_caps = attr_proto_caps->get_flags(attr_proto_caps);
 					/* TODO: What to do with the protocol capabilities from imc */
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_PROTO_CAP);
+											IMV_ATTESTATION_STATE_PROTO_CAPS);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -457,27 +455,12 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_tpm_version_info_t *attr_tpm;
 					chunk_t tpm_version_info;
-					TSS_RESULT result;
-					TPM_CAP_VERSION_INFO versionInfo;
-					UINT64 offset = 0;
+					pts_t *pts;
 					
 					attr_tpm = (tcg_pts_attr_tpm_version_info_t*)attr;
 					tpm_version_info = attr_tpm->get_tpm_version_info(attr_tpm);
-					
-					result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset,
-											tpm_version_info.ptr, &versionInfo);
-					if (result != TSS_SUCCESS)
-					{
-						DBG1(DBG_IMV, "TSS Error 0x%x", result);
-						return TNC_RESULT_FATAL;
-					}
-					DBG2(DBG_IMV, "TPM 1.2 Version Info: "
-						"Chip Version: %hhu.%hhu.%hhu.%hhu, "
-						"Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
-						versionInfo.version.major, versionInfo.version.minor,
-						versionInfo.version.revMajor, versionInfo.version.revMinor,
-						versionInfo.specLevel, versionInfo.errataRev,
-						versionInfo.tpmVendorID);
+					pts = attestation_state->get_pts(attestation_state);					
+					pts->set_tpm_version_info(pts, tpm_version_info);
 
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_TPM_INFO);

@@ -44,6 +44,11 @@ struct private_imc_attestation_state_t {
 	 */
 	imc_attestation_handshake_state_t handshake_state;
 
+	/**
+	 * PTS object
+	 */
+	pts_t *pts;
+
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -61,6 +66,7 @@ METHOD(imc_state_t, change_state, void,
 METHOD(imc_state_t, destroy, void,
 	private_imc_attestation_state_t *this)
 {
+	this->pts->destroy(this->pts);
 	free(this);
 }
 
@@ -71,9 +77,16 @@ METHOD(imc_attestation_state_t, get_handshake_state, imc_attestation_handshake_s
 }
 
 METHOD(imc_attestation_state_t, set_handshake_state, void,
-	private_imc_attestation_state_t *this, imc_attestation_handshake_state_t new_state)
+	private_imc_attestation_state_t *this,
+	imc_attestation_handshake_state_t new_state)
 {
 	this->handshake_state = new_state;
+}
+
+METHOD(imc_attestation_state_t, get_pts, pts_t*,
+	private_imc_attestation_state_t *this)
+{
+	return this->pts;
 }
 
 /**
@@ -92,10 +105,12 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 			},
 			.get_handshake_state = _get_handshake_state,
 			.set_handshake_state = _set_handshake_state,
+			.get_pts = _get_pts,
 		},
-		.state = TNC_CONNECTION_STATE_CREATE,
 		.connection_id = connection_id,
+		.state = TNC_CONNECTION_STATE_CREATE,
 		.handshake_state = IMC_ATTESTATION_STATE_INIT,
+		.pts = pts_create(),
 	);
 	
 	return &this->public.interface;

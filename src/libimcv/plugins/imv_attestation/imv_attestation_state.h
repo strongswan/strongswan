@@ -23,6 +23,7 @@
 #define IMV_ATTESTATION_STATE_H_
 
 #include <imv/imv_state.h>
+#include <tcg/pts/pts.h>
 #include <library.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
@@ -33,7 +34,7 @@ typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t
  */
 enum imv_attestation_handshake_state_t {
 	IMV_ATTESTATION_STATE_INIT,
-	IMV_ATTESTATION_STATE_PROTO_CAP,
+	IMV_ATTESTATION_STATE_PROTO_CAPS,
 	IMV_ATTESTATION_STATE_MEAS_ALGO,
 	IMV_ATTESTATION_STATE_TPM_INFO,
 	IMV_ATTESTATION_STATE_AIK,
@@ -55,24 +56,33 @@ struct imv_attestation_state_t {
 	imv_state_t interface;
 
 	/**
-	 * get state of the handshake
+	 * Get state of the handshake
 	 *
-	 * @return				the handshake state of IMV
+	 * @return					the handshake state of IMV
 	 */
 	imv_attestation_handshake_state_t (*get_handshake_state)(imv_attestation_state_t *this);
 	
 	/**
-	 * get state of the handshake
+	 * Set state of the handshake
 	 *
 	 * @param new_state			the handshake state of IMV
 	 */
-	void (*set_handshake_state)(imv_attestation_state_t *this, imv_attestation_handshake_state_t new_state);
+	void (*set_handshake_state)(imv_attestation_state_t *this,
+								imv_attestation_handshake_state_t new_state);
+
+	/**
+	 * Get the PTS object
+	 *
+	 * @return					PTS object
+	 */
+	pts_t* (*get_pts)(imv_attestation_state_t *this);
+
 };
 
 /**
  * Create an imv_attestation_state_t instance
  *
- * @param id		connection ID
+ * @param id					connection ID
  */
 imv_state_t* imv_attestation_state_create(TNC_ConnectionID id);
 
