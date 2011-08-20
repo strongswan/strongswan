@@ -468,20 +468,17 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 											tpm_version_info.ptr, &versionInfo);
 					if (result != TSS_SUCCESS)
 					{
-						DBG1(DBG_IMV, "Error 0x%x on Trspi_UnloadBlob_CAP_VERSION_INFO\n", result);
+						DBG1(DBG_IMV, "TSS Error 0x%x", result);
 						return TNC_RESULT_FATAL;
 					}
+					DBG2(DBG_IMV, "TPM 1.2 Version Info: "
+						"Chip Version: %hhu.%hhu.%hhu.%hhu, "
+						"Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
+						versionInfo.version.major, versionInfo.version.minor,
+						versionInfo.version.revMajor, versionInfo.version.revMinor,
+						versionInfo.specLevel, versionInfo.errataRev,
+						versionInfo.tpmVendorID);
 
-					DBG3(DBG_IMV, "  TPM 1.2 Version Info:\n");
-					DBG3(DBG_IMV, "  Chip Version:        %hhu.%hhu.%hhu.%hhu\n",
-							versionInfo.version.major, versionInfo.version.minor,
-							versionInfo.version.revMajor, versionInfo.version.revMinor);
-					DBG3(DBG_IMV, "  Spec Level:          %hu\n", versionInfo.specLevel);
-					DBG3(DBG_IMV, "  Errata Revision:     %hhu\n", versionInfo.errataRev);
-					DBG3(DBG_IMV, "  TPM Vendor ID:       %c%c%c%c\n",
-							versionInfo.tpmVendorID[0], versionInfo.tpmVendorID[1],
-							versionInfo.tpmVendorID[2], versionInfo.tpmVendorID[3]);
-					
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_TPM_INFO);
 					break;
