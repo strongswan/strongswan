@@ -45,6 +45,11 @@ struct private_pts_t {
 	pts_meas_algorithms_t algorithm;
 
 	/**
+	 * Do we have an activated TPM
+	 */
+	bool has_tpm;
+
+	/**
 	 * Contains a TPM_CAP_VERSION_INFO struct
 	 */
 	chunk_t tpm_version_info;
@@ -118,43 +123,13 @@ static void print_tpm_version_info(private_pts_t *this)
 METHOD(pts_t, get_tpm_version_info, bool,
 	private_pts_t *this, chunk_t *info)
 {
-	TSS_HCONTEXT hContext;
-	TSS_HTPM hTPM;
-	TSS_RESULT result;
-
-	if (!this->tpm_version_info.ptr)
+	if (!this->has_tpm)
 	{
-		result = Tspi_Context_Create(&hContext);
-		if (result != TSS_SUCCESS)
-		{
-			goto err;
-		}
-		result = Tspi_Context_Connect(hContext, NULL);
-		if (result != TSS_SUCCESS)
-		{
-			goto err;
-		}
-		result = Tspi_Context_GetTpmObject (hContext, &hTPM);
-		if (result != TSS_SUCCESS)
-		{
-			goto err;
-		}
-		result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
-										&this->tpm_version_info.len,
-				 						&this->tpm_version_info.ptr);
-		if (result != TSS_SUCCESS)
-		{
-			goto err;
-		}
-		this->tpm_version_info = chunk_clone(this->tpm_version_info);
+		return FALSE;
 	}
 	*info = this->tpm_version_info;
 	print_tpm_version_info(this);
 	return TRUE;
-
-err:
-	DBG1(DBG_TNC, "could not get tpm version info: tss error 0x%x", result);
-	return FALSE;	
 }
 
 METHOD(pts_t, set_tpm_version_info, void,
@@ -169,6 +144,45 @@ METHOD(pts_t, destroy, void,
 {
 	free(this->tpm_version_info.ptr);
 	free(this);
+}
+
+/**
+ * Check for a TPM by querying for TPM Version Info
+ */
+static bool has_tpm(private_pts_t *this)
+{
+	TSS_HCONTEXT hContext;
+	TSS_HTPM hTPM;
+	TSS_RESULT result;
+
+	result = Tspi_Context_Create(&hContext);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_Context_Connect(hContext, NULL);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
+									&this->tpm_version_info.len,
+									&this->tpm_version_info.ptr);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	this->tpm_version_info = chunk_clone(this->tpm_version_info);
+	return TRUE;
+
+err:
+	DBG1(DBG_TNC, "TPM not available: tss error 0x%x", result);
+	return FALSE;
 }
 
 /**
@@ -188,13 +202,21 @@ pts_t *pts_create(bool is_imc)
 			.set_tpm_version_info = _set_tpm_version_info,
 			.destroy = _destroy,
 		},
-		.proto_caps = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_C,
+		.proto_caps = PTS_PROTO_CAPS_V,
 		.algorithm = PTS_MEAS_ALGO_SHA256,
 	);
 
-	if (!is_imc)
+	if (is_imc)
 	{
-		this->proto_caps |= PTS_PROTO_CAPS_V;
+		if (has_tpm(this))
+		{
+			this->has_tpm = TRUE;
+			this->proto_caps |= PTS_PROTO_CAPS_T;
+		}
+	}
+	else
+	{
+		this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_C;
 	}
 
 	return &this->public;
