@@ -22,26 +22,10 @@
 #define TCG_PTS_ATTR_PROTO_CAPS_H_
 
 typedef struct tcg_pts_attr_proto_caps_t tcg_pts_attr_proto_caps_t;
-typedef enum pts_proto_caps_flag_t pts_proto_caps_flag_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-/**
- * PTS Protocol Capabilities Flags
- */
-enum pts_proto_caps_flag_t {
-	/** XML based Evidence Support flag */
-	PTS_PROTO_CAPS_X =		(1<<0),
-	/** Trusted Platform Evidence flag */
-	PTS_PROTO_CAPS_T = 		(1<<1),
-	/** DH Nonce Negotiation Support flag */
-	PTS_PROTO_CAPS_D = 		(1<<2),
-	/** Verification Support flag */
-	PTS_PROTO_CAPS_V = 		(1<<3),
-	/** Current (In-Memory) Evidence Support flag */
-	PTS_PROTO_CAPS_C =		(1<<4),
-};
+#include "pts/pts_proto_caps.h"
 
 /**
  * Class implementing the TCG PTS Protocol Capabilities Attribute

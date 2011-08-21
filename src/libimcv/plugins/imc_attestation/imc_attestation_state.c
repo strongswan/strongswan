@@ -110,7 +110,7 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.handshake_state = IMC_ATTESTATION_STATE_INIT,
-		.pts = pts_create(),
+		.pts = pts_create(TRUE),
 	);
 	
 	return &this->public.interface;

@@ -20,7 +20,6 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
-#include <tcg/pts/pts.h>
 #include <tcg/tcg_attr.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
@@ -224,6 +223,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	pa_tnc_msg_t *msg;
 	pa_tnc_attr_t *attr;
 	TNC_Result result;
+	pts_t *pts;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
@@ -232,10 +232,10 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	{
 		return TNC_RESULT_FATAL;
 	}
-
 	attestation_state = (imv_attestation_state_t*)state;
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
-	
+	pts = attestation_state->get_pts(attestation_state);
+
 	/* Switch on the attribute type IMV has received */
 	switch (handshake_state)
 	{
@@ -244,7 +244,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			pts_proto_caps_flag_t flags;
 
 			/* Send Request Protocol Capabilities attribute */
-			flags = PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_V | PTS_PROTO_CAPS_C;
+			flags = pts->get_proto_caps(pts);
 			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			break;
 		}
@@ -342,6 +342,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	pa_tnc_attr_t *attr;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
+	pts_t *pts;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -357,6 +358,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
+	attestation_state = (imv_attestation_state_t*)state;
+	pts = attestation_state->get_pts(attestation_state);					
 
 	/* parse received PA-TNC message and automatically handle any errors */ 
 	result = imv_attestation->receive_message(imv_attestation, connection_id,
@@ -404,62 +407,41 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		}
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
 		{
-			/**
-			 * Handle TCG PTS attributes
-			 */
-			
-			/* get current IMC state */
-			if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
-			{
-				return TNC_RESULT_FATAL;
-			}
-			attestation_state = (imv_attestation_state_t*)state;
-			
 			switch(attr->get_type(attr))
 			{
 				case TCG_PTS_PROTO_CAPS:
 				{
-					tcg_pts_attr_proto_caps_t *attr_proto_caps;
-					pts_proto_caps_flag_t proto_caps;
+					tcg_pts_attr_proto_caps_t *attr_cast;
+					pts_proto_caps_flag_t flags;
 					
-					attr_proto_caps = (tcg_pts_attr_proto_caps_t*)attr;
-					proto_caps = attr_proto_caps->get_flags(attr_proto_caps);
-					/* TODO: What to do with the protocol capabilities from imc */
+					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
+					flags = attr_cast->get_flags(attr_cast);
+					pts->set_proto_caps(pts, flags);
+
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_PROTO_CAPS);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
 				{
-					tcg_pts_attr_meas_algo_t *attr_meas;
+					tcg_pts_attr_meas_algo_t *attr_cast;
 					pts_meas_algorithms_t selected_algorithm;
-					hash_algorithm_t hash_alg;
 					
-					attr_meas = (tcg_pts_attr_meas_algo_t*)attr;
-					selected_algorithm = attr_meas->get_algorithms(attr_meas);
-					hash_alg = pts_meas_to_hash_algorithm(selected_algorithm);
-					if (hash_alg == HASH_UNKNOWN)
-					{
-						/* TODO generate an error message */
-						break;
-					}
-					DBG2(DBG_IMV, "selected PTS measurement algorithm is %N",
-						 		   hash_algorithm_names, hash_alg);
-					/* TODO: What to do with the selected algorithm from imc */
-					
+					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
+					selected_algorithm = attr_cast->get_algorithms(attr_cast);
+					pts->set_meas_algorithm(pts, selected_algorithm);					
+
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_MEAS_ALGO);
 					break;
 				}
 				case TCG_PTS_TPM_VERSION_INFO:
 				{
-					tcg_pts_attr_tpm_version_info_t *attr_tpm;
+					tcg_pts_attr_tpm_version_info_t *attr_cast;
 					chunk_t tpm_version_info;
-					pts_t *pts;
 					
-					attr_tpm = (tcg_pts_attr_tpm_version_info_t*)attr;
-					tpm_version_info = attr_tpm->get_tpm_version_info(attr_tpm);
-					pts = attestation_state->get_pts(attestation_state);					
+					attr_cast = (tcg_pts_attr_tpm_version_info_t*)attr;
+					tpm_version_info = attr_cast->get_tpm_version_info(attr_cast);
 					pts->set_tpm_version_info(pts, tpm_version_info);
 
 					attestation_state->set_handshake_state(attestation_state,
@@ -481,15 +463,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					break;
 				case TCG_PTS_FILE_MEAS:
 				{
-					tcg_pts_attr_file_meas_t *attr_file_meas;
+					tcg_pts_attr_file_meas_t *attr_cast;
 					u_int64_t num_of_files;
 					u_int16_t request_id;
 					u_int16_t meas_len;
 					
-					attr_file_meas = (tcg_pts_attr_file_meas_t*)attr;
-					num_of_files = attr_file_meas->get_number_of_files(attr_file_meas);
-					request_id = attr_file_meas->get_request_id(attr_file_meas);
-					meas_len = attr_file_meas->get_meas_len(attr_file_meas);
+					attr_cast = (tcg_pts_attr_file_meas_t*)attr;
+					num_of_files = attr_cast->get_number_of_files(attr_cast);
+					request_id = attr_cast->get_request_id(attr_cast);
+					meas_len = attr_cast->get_meas_len(attr_cast);
 					
 					/* TODO: Start working here */
 					

@@ -23,6 +23,9 @@
 
 typedef struct pts_t pts_t;
 
+#include "pts_proto_caps.h"
+#include "pts_meas_algo.h"
+
 #include <library.h>
 
 /**
@@ -32,17 +35,45 @@ typedef struct pts_t pts_t;
 struct pts_t {
 
 	/**
-	 * get TPM 1.2 Version Info
+	 * Get PTS Protocol Capabilities
 	 *
-	 * @param info	chunk containing a TPM_CAP_VERSION_INFO struct
-	 * @return		TRUE if TPM Version Info available 
+	 * @return				protocol capabilities flags 
+	 */
+	pts_proto_caps_flag_t (*get_proto_caps)(pts_t *this);
+
+	/**
+	 * Set PTS Protocol Capabilities
+	 *
+	 * @param flags			protocol capabilities flags 
+	 */
+	void (*set_proto_caps)(pts_t *this, pts_proto_caps_flag_t flags);
+
+	/**
+	 * Get PTS Measurement Algorithm
+	 *
+	 * @return				measurement algorithm 
+	 */
+	pts_meas_algorithms_t (*get_meas_algorithm)(pts_t *this);
+
+	/**
+	 * Set PTS Measurement Algorithm
+	 *
+	 * @param algorithm		measurement algorithm 
+	 */
+	void (*set_meas_algorithm)(pts_t *this, pts_meas_algorithms_t algorithm);
+
+	/**
+	 * Get TPM 1.2 Version Info
+	 *
+	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
+	 * @return				TRUE if TPM Version Info available 
 	 */
 	bool (*get_tpm_version_info)(pts_t *this, chunk_t *info);
 
 	/**
-	 * set TPM 1.2 Version Info
+	 * Set TPM 1.2 Version Info
 	 *
-	 * @param info	chunk containing a TPM_CAP_VERSION_INFO struct 
+	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct 
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
 
@@ -55,7 +86,9 @@ struct pts_t {
 
 /**
  * Creates an pts_t object
+ *
+ * @param is_imc			TRUE if running on an IMC
  */
-pts_t* pts_create(void);
+pts_t* pts_create(bool is_imc);
 
 #endif /** PTS_H_ @}*/

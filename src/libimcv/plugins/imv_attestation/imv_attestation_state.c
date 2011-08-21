@@ -204,7 +204,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 		.handshake_state = IMV_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
-		.pts = pts_create(),
+		.pts = pts_create(FALSE),
 	);
 	
 	return &this->public.interface;
