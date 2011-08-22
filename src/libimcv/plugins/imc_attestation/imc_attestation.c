@@ -56,27 +56,6 @@ static imc_agent_t *imc_attestation;
  * Supported PTS measurement algorithms
  */
 static pts_meas_algorithms_t supported_algorithms = 0;
-
-/**
- * List of files and directories to measure
- */
-static linked_list_t *file_list, *directory_list;
-
-/**
- * List of file measurements
- */
-static linked_list_t *file_measurements;
-
-/* TODO: Move the struct to some header file? Duplicate with imv_attestation*/
-/**
- * Struct to hold file or directory name with the request ID for Request File Measurement attribute
- */
-typedef struct measurement_req_entry_t measurement_req_entry_t;
-
-struct measurement_req_entry_t {
-	char *path;
-	u_int16_t request_id;
-};
  
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
@@ -189,11 +168,10 @@ static TNC_Result hash_file(char *path, char *out)
 /**
  * Get hash of all the files in a directory
  */
-static TNC_Result hash_directory(char *path)
+static TNC_Result hash_directory(char *path, linked_list_t *file_measurements)
 {
 	DIR *dir;
 	struct dirent *ent;
-	linked_list_t *file_measurements;
 	file_meas_entry_t *entry;
 	
 	file_measurements = linked_list_create();
@@ -226,164 +204,6 @@ static TNC_Result hash_directory(char *path)
 	return TNC_RESULT_SUCCESS;
 }
 
-static TNC_Result send_message(TNC_ConnectionID connection_id)
-{
-	pa_tnc_msg_t *msg;
-	pa_tnc_attr_t *attr;
-	pts_t *pts;
-	imc_state_t *state;
-	imc_attestation_state_t *attestation_state;
-	imc_attestation_handshake_state_t handshake_state;
-	TNC_Result result;
-
-	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	attestation_state = (imc_attestation_state_t*)state;
-	handshake_state = attestation_state->get_handshake_state(attestation_state);
-	pts = attestation_state->get_pts(attestation_state);
-	
-	/* Switch on the attribute type IMC has received */
-	switch (handshake_state)
-	{
-		case IMC_ATTESTATION_STATE_REQ_PROTO_CAPS:
-		{
-			pts_proto_caps_flag_t flags;
-
-			flags = pts->get_proto_caps(pts);
-			attr = tcg_pts_attr_proto_caps_create(flags, FALSE);
-			break;
-		}
-		case IMC_ATTESTATION_STATE_REQ_MEAS_ALGO:
-		{
-			pts_meas_algorithms_t selected_algorithm;
-
-			selected_algorithm = pts->get_meas_algorithm(pts);
-			attr = tcg_pts_attr_meas_algo_create(selected_algorithm, TRUE);
-			break;
-		}
-		case IMC_ATTESTATION_STATE_GET_TPM_INFO:
-		{
-			chunk_t tpm_version_info;
-
-			if (!pts->get_tpm_version_info(pts, &tpm_version_info))
-			{
-				/* TODO return TCG_PTS_TPM_VERS_NOT_SUPPORTED error attribute */
-			}
-			attr = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
-			break;
-		}
-		case IMC_ATTESTATION_STATE_REQ_FILE_MEAS:
-		{
-			measurement_req_entry_t *entry;
-			enumerator_t *enumerator;
-			tcg_pts_attr_file_meas_t *attr_file_meas;
-			u_int16_t meas_len = HASH_SIZE_SHA1;
-			pts_meas_algorithms_t selected_algorithm;
-			
-			selected_algorithm = PTS_MEAS_ALGO_SHA256; /* temporary fix, move to pts */
-			if (selected_algorithm & PTS_MEAS_ALGO_SHA384)
-			{
-				meas_len = HASH_SIZE_SHA384;
-			}
-			else if(selected_algorithm & PTS_MEAS_ALGO_SHA256) 
-			{
-				meas_len = HASH_SIZE_SHA512;
-			}
-
-			msg = pa_tnc_msg_create();
-			
-			/** 
-			 * Hash the files and add them as attribute
-			 */
-			enumerator = enumerator_create_single(file_list, NULL);
-			while (enumerator->enumerate(enumerator, &entry))
-			{
-				char * file_hash;
-				
-				attr = tcg_pts_attr_file_meas_create(1, 
-						entry->request_id, meas_len);
-				attr->set_noskip_flag(attr, TRUE);
-				attr_file_meas = (tcg_pts_attr_file_meas_t*)attr;
-				
-				if(hash_file(entry->path,file_hash) != TNC_RESULT_SUCCESS)
-				{
-					DBG1(DBG_IMC, "Hashing the given file has failed");
-					return TNC_RESULT_FATAL;
-				}
-				attr_file_meas->add_file_meas(attr_file_meas, 
-						chunk_create(file_hash,strlen(file_hash)),
-						chunk_create(entry->path,strlen(entry->path)));
-				
-				msg->add_attribute(msg, attr);
-			}
-			
-			/** 
-			 * Hash the files in each directory and add them as attribute
-			 */
-			enumerator = enumerator_create_single(directory_list, NULL);
-			while (enumerator->enumerate(enumerator, &entry))
-			{
-				enumerator_t *meas_enumerator;
-				file_meas_entry_t *meas_entry;
-				u_int64_t num_of_files = 0 ;
-				
-				if(hash_directory(entry->path) != TNC_RESULT_SUCCESS)
-				{
-					DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
-					return TNC_RESULT_FATAL;
-				}
-				
-				attr = tcg_pts_attr_file_meas_create(0, 
-						entry->request_id, meas_len);
-				attr->set_noskip_flag(attr, TRUE);
-				attr_file_meas = (tcg_pts_attr_file_meas_t*)attr;
-				
-				meas_enumerator = enumerator_create_single(file_measurements, NULL);
-				while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
-				{
-					num_of_files++;
-					attr_file_meas->add_file_meas(attr_file_meas,
-								      meas_entry->measurement,
-								      meas_entry->file_name);
-				}
-				
-				attr_file_meas->set_number_of_files(attr_file_meas,
-								    num_of_files);
-				msg->add_attribute(msg, attr);
-			}
-			enumerator->destroy(enumerator);
-			goto end;
-		}
-		case IMC_ATTESTATION_STATE_GET_AIK:
-			/* TODO: Implement AIK retrieve */
-		case IMC_ATTESTATION_STATE_REQ_FUNCT_COMP_EVID:
-		case IMC_ATTESTATION_STATE_GEN_ATTEST_EVID:
-		case IMC_ATTESTATION_STATE_REQ_FILE_METADATA:
-		case IMC_ATTESTATION_STATE_REQ_IML:
-		case IMC_ATTESTATION_STATE_INIT:
-			DBG1(DBG_IMC, "Attestation IMC has nothing to send: \"%s\"", handshake_state);
-			return TNC_RESULT_FATAL;
-		default:
-			DBG1(DBG_IMC, "Attestation IMC is in unknown state: \"%s\"", handshake_state);
-			return TNC_RESULT_FATAL;
-	}
-	
-	
-	attr->set_noskip_flag(attr, TRUE);
-	msg = pa_tnc_msg_create();
-	msg->add_attribute(msg, attr);
-	
-end:
-	msg->build(msg);
-	result = imc_attestation->send_message(imc_attestation, connection_id,
-									msg->get_encoding(msg));	
-	msg->destroy(msg);
-
-	return result;
-}
-
 /**
  * see section 3.7.3 of TCG TNC IF-IMC Specification 1.2
  */
@@ -407,8 +227,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_UInt32 msg_len,
 								  TNC_MessageType msg_type)
 {
-	pa_tnc_msg_t *pa_tnc_msg;
-	pa_tnc_attr_t *attr;
+	pa_tnc_msg_t *pa_tnc_msg, *msg_to_send;
+	pa_tnc_attr_t *attr, *attr_to_send;
+	linked_list_t *attr_list;
 	imc_state_t *state;
 	imc_attestation_state_t *attestation_state;
 	enumerator_t *enumerator;
@@ -440,6 +261,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	{
 		return result;
 	}
+	
+	msg_to_send = pa_tnc_msg_create();
+	attr_list = linked_list_create();
 
 	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
@@ -486,10 +310,12 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
 					imv_flags = attr_cast->get_flags(attr_cast);
 					imc_flags = pts->get_proto_caps(pts);
-					pts->set_proto_caps(pts, imc_flags & imv_flags);				
-					
-					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_REQ_PROTO_CAPS);
+					pts->set_proto_caps(pts, imc_flags & imv_flags);
+
+					/* Send PTS Protocol Capabilities attribute */ 
+					attr_to_send = tcg_pts_attr_proto_caps_create(imc_flags & imv_flags, FALSE);
+					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
+					attr_list->insert_last(attr_list,attr_to_send);					
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:
@@ -500,43 +326,56 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
 
-					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
-						(selected_algorithm   & PTS_MEAS_ALGO_SHA384))
+					if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
 					{
-						selected_algorithm = PTS_MEAS_ALGO_SHA384;
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
 					}
-					else if (selected_algorithm & PTS_MEAS_ALGO_SHA256)
+					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA384))
 					{
-						selected_algorithm = PTS_MEAS_ALGO_SHA256;
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
 					}
-					else if (selected_algorithm & PTS_MEAS_ALGO_SHA1)
+
+					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA1))
 					{
-						selected_algorithm = PTS_MEAS_ALGO_SHA1;
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA1);
 					}
 					else
 					{
 						/* TODO send a TCG_PTS_HASH_ALG_NOT_SUPPORTED error */
 					}
-					pts->set_meas_algorithm(pts, selected_algorithm);
-
-					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_REQ_MEAS_ALGO);
+					/* Send Measurement Algorithm Selection attribute */ 
+					selected_algorithm = pts->get_meas_algorithm(pts);
+					attr_to_send = tcg_pts_attr_meas_algo_create(selected_algorithm, TRUE);
+					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
+					attr_list->insert_last(attr_list,attr_to_send);
 					break;
 				}
 					
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 				{
-					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_GET_TPM_INFO);
+					chunk_t tpm_version_info;
+
+					if (!pts->get_tpm_version_info(pts, &tpm_version_info))
+					{
+						/* TODO return TCG_PTS_TPM_VERS_NOT_SUPPORTED error attribute */
+					}
+					
+					/* Send TPM Version Info attribute */ 
+					attr_to_send = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
+					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
+					attr_list->insert_last(attr_list,attr_to_send);
 					break;
 				}
+				
 				case TCG_PTS_GET_AIK:
 				{
-					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_GET_AIK);
+					/* TODO: Implement AIK retrieve */
 					break;
 				}
-	
+				
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_REQ_FUNCT_COMP_EVID:
 					break;
@@ -545,26 +384,87 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				case TCG_PTS_REQ_FILE_MEAS:
 				{
 					tcg_pts_attr_req_file_meas_t *attr_cast;
-					measurement_req_entry_t *entry;
+					tcg_pts_attr_file_meas_t *attr_file_meas;
 					u_int32_t delimiter;
-					
+					chunk_t path;
+					u_int16_t request_id;
+					u_int16_t meas_len;
+					pts_meas_algorithms_t selected_algorithm;
+					char * file_hash;
+					bool directory_flag;
+					linked_list_t *file_measurements;
+
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
-					file_list = linked_list_create();
-					directory_list = linked_list_create();
+					directory_flag = attr_cast->get_directory_flag(attr_cast);
+					request_id = attr_cast->get_request_id(attr_cast);
 					delimiter = attr_cast->get_delimiter(attr_cast);
-					entry = malloc_thing(measurement_req_entry_t);
-					entry->request_id = attr_cast->get_request_id(attr_cast);
-					entry->path = attr_cast->get_file_path(attr_cast).ptr;
+					path = attr_cast->get_file_path(attr_cast);
+
+					/* Send File Measurement attribute */
+					selected_algorithm = pts->get_meas_algorithm(pts);
+					meas_len = HASH_SIZE_SHA1;
+					if (selected_algorithm & PTS_MEAS_ALGO_SHA384)
+					{
+						meas_len = HASH_SIZE_SHA384;
+					}
+					else if(selected_algorithm & PTS_MEAS_ALGO_SHA256) 
+					{
+						meas_len = HASH_SIZE_SHA512;
+					}
 					
-					attr_cast->get_directory_flag(attr_cast) ? 
-						directory_list->insert_last(directory_list, entry) : 
-						file_list->insert_last(file_list, entry); 
+					/** 
+					* Hash the file or directory and add them as attribute
+					*/
 					
-					attestation_state->set_handshake_state(attestation_state,
-										IMC_ATTESTATION_STATE_REQ_FILE_MEAS);
+					attr_to_send = directory_flag ? 
+						tcg_pts_attr_file_meas_create(0, request_id, meas_len) :
+						tcg_pts_attr_file_meas_create(1, request_id, meas_len);
+					attr_to_send->set_noskip_flag(attr_to_send, TRUE);
+					attr_file_meas = (tcg_pts_attr_file_meas_t*)attr_to_send;
+					
+					if(directory_flag)
+					{
+						if(hash_file(path.ptr,file_hash) != TNC_RESULT_SUCCESS)
+						{
+							DBG1(DBG_IMC, "Hashing the given file has failed");
+							return TNC_RESULT_FATAL;
+						}
+						attr_file_meas->add_file_meas(attr_file_meas, 
+								      chunk_create(file_hash,strlen(file_hash)),
+								      path);
+					}
+					else
+					{
+						enumerator_t *meas_enumerator;
+						file_meas_entry_t *meas_entry;
+						u_int64_t num_of_files = 0 ;
+						if(hash_directory(path.ptr, file_measurements) != TNC_RESULT_SUCCESS)
+						{
+							DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
+							return TNC_RESULT_FATAL;
+						}
+						
+						meas_enumerator = file_measurements->create_enumerator(file_measurements);
+						while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
+						{
+							num_of_files++;
+							attr_file_meas->add_file_meas(attr_file_meas,
+										meas_entry->measurement,
+										meas_entry->file_name);
+						}
+						
+						attr_file_meas->set_number_of_files(attr_file_meas,
+										num_of_files);
+						meas_enumerator->destroy(meas_enumerator);
+						file_measurements->destroy(file_measurements);
+						
+					}
+					
+					attr_to_send = (pa_tnc_attr_t*)attr_file_meas;
+					attr_list->insert_last(attr_list,attr_to_send);
+					
 					break;
 				}
-				
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_REQ:
 				case TCG_PTS_DH_NONCE_FINISH:
@@ -600,9 +500,25 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
+		
+	if(attr_list->get_count(attr_list))
+	{
+ 		enumerator_t *attr_enumerator = attr_list->create_enumerator(attr_list);
+		while (attr_enumerator->enumerate(attr_enumerator, &attr_to_send))
+		{
+			msg_to_send->add_attribute(msg_to_send, attr_to_send);
+		}
+		attr_enumerator->destroy(attr_enumerator);
+	}
 
-	/* if no error occurred then always return the same response */
-	return fatal_error ? TNC_RESULT_FATAL : send_message(connection_id);
+	msg_to_send->build(msg_to_send);
+	result = imc_attestation->send_message(imc_attestation, connection_id,
+					msg_to_send->get_encoding(msg_to_send));
+	
+	attr_list->destroy(attr_list);
+	msg_to_send->destroy(msg_to_send);
+
+	return TNC_RESULT_SUCCESS;
 }
 
 /**

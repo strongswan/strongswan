@@ -179,7 +179,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			directory_list = linked_list_create();
 			
 			files = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imc-attestation.files", "none");
+					"libimcv.plugins.imv-attestation.files", "none");
 			enumerator = enumerator_create_token(files, " ", " ");
 			while (enumerator->enumerate(enumerator, &token))
 			{
@@ -188,6 +188,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				entry->path = token;
 				entry->request_id = request_id_counter;
 				file_list->insert_last(file_list, entry);
+				DBG3(DBG_IMV, "File to measure:%s, with request id:%d",token, entry->request_id);
 				free(token);
 				request_id_counter ++;
 			}
@@ -198,7 +199,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			 */
 			
 			directories = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imc-attestation.directories", "none");
+					"libimcv.plugins.imv-attestation.directories", "none");
 			enumerator = enumerator_create_token(directories, " ", " ");
 			while (enumerator->enumerate(enumerator, &token))
 			{
@@ -207,6 +208,7 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				entry->path = token;
 				entry->request_id = request_id_counter;
 				directory_list->insert_last(directory_list, entry);
+				DBG3(DBG_IMV, "Directory to measure:%s, with request id:%d",token, entry->request_id);
 				free(token);
 				request_id_counter ++;
 			}
@@ -221,7 +223,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
 	pa_tnc_msg_t *msg;
-	pa_tnc_attr_t *attr;
 	TNC_Result result;
 	pts_t *pts;
 	imv_state_t *state;
@@ -235,79 +236,87 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	attestation_state = (imv_attestation_state_t*)state;
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
+	
+	msg = pa_tnc_msg_create();
+	
 
 	/* Switch on the attribute type IMV has received */
 	switch (handshake_state)
 	{
 		case IMV_ATTESTATION_STATE_INIT:
 		{
+			pa_tnc_attr_t *attr_req_proto_cap, *attr_meas_algo;
 			pts_proto_caps_flag_t flags;
 
 			/* Send Request Protocol Capabilities attribute */
 			flags = pts->get_proto_caps(pts);
-			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
-			break;
-		}
-		case IMV_ATTESTATION_STATE_PROTO_CAPS:
-		{
+			attr_req_proto_cap = tcg_pts_attr_proto_caps_create(flags, TRUE);
+			attr_req_proto_cap->set_noskip_flag(attr_req_proto_cap, TRUE);
+			msg->add_attribute(msg, attr_req_proto_cap);
+			
 			/* Send Measurement Algorithms attribute */
-			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
+			attr_meas_algo = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
+			attr_meas_algo->set_noskip_flag(attr_meas_algo, TRUE);
+			msg->add_attribute(msg, attr_meas_algo);
 			break;
 		}
-		case IMV_ATTESTATION_STATE_MEAS_ALGO:
+
+		case IMV_ATTESTATION_STATE_MEAS:
 		{
-			/* Send Get TPM Version Information attribute */
-			attr = tcg_pts_attr_get_tpm_version_info_create();
-			break;
-		}
-		case IMV_ATTESTATION_STATE_TPM_INFO:
-		{
-			/* Send Get AIK attribute */
-			/* TODO: Uncomment when the retrieving of AIK on IMC side is implemented */
-			//attr = tcg_pts_attr_get_aik_create();
-			//break;
-		}
-		case IMV_ATTESTATION_STATE_AIK:
-		{
-			/* Send Request File Measurement attribute */
+			pa_tnc_attr_t *attr_req_file_meas;
 			enumerator_t *enumerator;
 			measurement_req_entry_t *entry;
-			char *path;
-			u_int16_t request_id;
+			pts_meas_algorithms_t communicated_caps;
 			u_int32_t delimiter = SOLIDUS_UTF;
 			
-			msg = pa_tnc_msg_create();
-			
+			/* Send Get TPM Version Information attribute */
+			communicated_caps = pts->get_proto_caps(pts);
+			if(communicated_caps & PTS_PROTO_CAPS_T)
+			{
+				pa_tnc_attr_t *attr_get_tpm_version, *attr_get_aik;
+				
+				attr_get_tpm_version = tcg_pts_attr_get_tpm_version_info_create();
+				attr_get_tpm_version->set_noskip_flag(attr_get_tpm_version, TRUE);
+				msg->add_attribute(msg, attr_get_tpm_version);
+				
+				/* Send Get AIK attribute */
+				/* TODO: Uncomment when the retrieving of AIK on IMC side is implemented */
+				//attr_get_aik = tcg_pts_attr_get_aik_create();
+				//attr_get_aik->set_noskip_flag(attr_get_aik, TRUE);
+				//msg->add_attribute(msg, attr_get_aik);
+			}
+
+			/* Send Request File Measurement attribute */
 			/** 
 			 * Add files to measure to PTS Request File Measurement attribute
 			 */
-			enumerator = enumerator_create_single(file_list, NULL);
+			enumerator = file_list->create_enumerator(file_list);
 			while (enumerator->enumerate(enumerator, &entry))
 			{
-				attr = tcg_pts_attr_req_file_meas_create(false, 
+				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(false, 
 							entry->request_id, delimiter, 
 							chunk_create(entry->path, strlen(entry->path)));
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
+				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
+				msg->add_attribute(msg, attr_req_file_meas);
 			}
 			/** Add directories to measure to  PTS Request File Measurement attribute
 			 */
-			enumerator = enumerator_create_single(directory_list, NULL);
+			enumerator = file_list->create_enumerator(directory_list);
 			while (enumerator->enumerate(enumerator, &entry))
 			{
-				attr = tcg_pts_attr_req_file_meas_create(true, 
+				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(true, 
 							entry->request_id, delimiter, 
 							chunk_create(entry->path, strlen(entry->path)));
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
+				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
+				msg->add_attribute(msg, attr_req_file_meas);
 			}
+			
 			enumerator->destroy(enumerator);
-			goto end;
+			file_list->destroy(file_list);
+			directory_list->destroy(directory_list);
+			break;
 		}
-		case IMV_ATTESTATION_STATE_SIMPLE_COMP_EVID:
-		case IMV_ATTESTATION_STATE_SIMPLE_EVID_FINAL:
-		case IMV_ATTESTATION_STATE_FILE_METADATA:
-		case IMV_ATTESTATION_STATE_FILE_MEAS:
+		case IMV_ATTESTATION_STATE_COMP_EVID:
 		case IMV_ATTESTATION_STATE_IML:
 			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"", handshake_state);
 			return TNC_RESULT_FATAL;
@@ -316,16 +325,11 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			return TNC_RESULT_FATAL;
 	}
 	
-	msg = pa_tnc_msg_create();
-	attr->set_noskip_flag(attr, TRUE);
-	msg->add_attribute(msg, attr);
-	
-end:
 	msg->build(msg);
 	result = imv_attestation->send_message(imv_attestation, connection_id,
 							msg->get_encoding(msg));	
 	msg->destroy(msg);
-
+	
 	return result;
 }
 
@@ -419,7 +423,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					pts->set_proto_caps(pts, flags);
 
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_PROTO_CAPS);
+											IMV_ATTESTATION_STATE_MEAS);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -432,7 +436,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					pts->set_meas_algorithm(pts, selected_algorithm);					
 
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_MEAS_ALGO);
+											IMV_ATTESTATION_STATE_MEAS);
 					break;
 				}
 				case TCG_PTS_TPM_VERSION_INFO:
@@ -445,14 +449,14 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					pts->set_tpm_version_info(pts, tpm_version_info);
 
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_TPM_INFO);
+											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 				case TCG_PTS_AIK:
 				{
 					/* TODO: Save the AIK key and certificate */
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_AIK);
+											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 				
@@ -476,7 +480,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					/* TODO: Start working here */
 					
 					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_FILE_MEAS);
+											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 				
