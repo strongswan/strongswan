@@ -27,23 +27,6 @@
 #include <library.h>
 
 typedef struct imc_attestation_state_t imc_attestation_state_t;
-typedef enum imc_attestation_handshake_state_t imc_attestation_handshake_state_t;
-
-/**
- * IMC Attestation Handshake States (state machine)
- */
-enum imc_attestation_handshake_state_t {
-	IMC_ATTESTATION_STATE_INIT,
-	IMC_ATTESTATION_STATE_REQ_PROTO_CAPS,
-	IMC_ATTESTATION_STATE_REQ_MEAS_ALGO,
-	IMC_ATTESTATION_STATE_GET_TPM_INFO,
-	IMC_ATTESTATION_STATE_GET_AIK,
-	IMC_ATTESTATION_STATE_REQ_FUNCT_COMP_EVID,
-	IMC_ATTESTATION_STATE_GEN_ATTEST_EVID,
-	IMC_ATTESTATION_STATE_REQ_FILE_METADATA,
-	IMC_ATTESTATION_STATE_REQ_FILE_MEAS,
-	IMC_ATTESTATION_STATE_REQ_IML,
-};
 
 /**
  * Internal state of an imc_attestation_t connection instance
@@ -54,21 +37,6 @@ struct imc_attestation_state_t {
 	 * imc_state_t interface
 	 */
 	imc_state_t interface;
-	
-	/**
-	 * Get state of the handshake
-	 *
-	 * @return					the handshake state of IMC
-	 */
-	imc_attestation_handshake_state_t (*get_handshake_state)(imc_attestation_state_t *this);
-	
-	/**
-	 * Set state of the handshake
-	 *
-	 * @param new_state			the handshake state of IMC
-	 */
-	void (*set_handshake_state)(imc_attestation_state_t *this,
-								imc_attestation_handshake_state_t new_state);
 
 	/**
 	 * Get the PTS object
