@@ -20,6 +20,8 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
+#include <tcg/pts/pts_database.h>
+
 #include <tcg/tcg_attr.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
@@ -61,6 +63,11 @@ static imv_agent_t *imv_attestation;
 static pts_meas_algorithms_t supported_algorithms = 0;
 
 /**
+ * PTS file measurement database
+ */
+static pts_database_t *pts_db;
+
+/**
  * List of files and directories to measure
  */
 static linked_list_t *file_list, *directory_list;
@@ -89,7 +96,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	char *hash_alg;
+	char *hash_alg, *uri;
 
 	if (imv_attestation)
 	{
@@ -129,6 +136,11 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		/* remove SHA256 algorithm */
 		supported_algorithms &= ~PTS_MEAS_ALGO_SHA256;
 	}
+
+	/* attach file measurement database */
+	uri = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.database", NULL);
+	pts_db = pts_database_create(uri);
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -583,6 +595,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+	DESTROY_IF(pts_db);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 

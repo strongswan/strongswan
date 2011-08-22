@@ -32,6 +32,7 @@ libimcv_la_SOURCES = \
 	tcg/pts/pts.h tcg/pts/pts.c \
 	tcg/pts/pts_error.h tcg/pts/pts_error.c \
 	tcg/pts/pts_proto_caps.h tcg/pts/pts_funct_comp_name.h \
+	tcg/pts/pts_database.h tcg/pts/pts_database.c \
 	tcg/pts/pts_meas_algo.h tcg/pts/pts_meas_algo.c
 
 # CFLAGS = -Wall -Werror
