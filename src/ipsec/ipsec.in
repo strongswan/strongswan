@@ -19,6 +19,7 @@ PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
 export PATH
 
 # name and version of the ipsec implementation
+OS_NAME=`uname -s`
 IPSEC_NAME="@IPSEC_NAME@"
 IPSEC_VERSION="U@IPSEC_VERSION@/K`uname -r`"
 
@@ -378,7 +379,7 @@ update)
 	fi
 	;;
 version|--version)
-	printf "Linux $IPSEC_NAME $IPSEC_VERSION\n"
+	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"
 	printf "$IPSEC_DISTRO\n"
 	printf "See 'ipsec --copyright' for copyright information.\n"
 	exit 0
