@@ -87,6 +87,7 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	if (enumerator->enumerate(enumerator, &url))
 	{
 		payload = cert_payload_create_from_hash_and_url(hash, url);
+		DBG1(DBG_IKE, "sending hash-and-url \"%s\"", url);
 	}
 	else
 	{
