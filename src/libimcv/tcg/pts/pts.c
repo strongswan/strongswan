@@ -21,6 +21,11 @@
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
+#include <dirent.h>
+#include <errno.h>
+
+#define PTS_BUF_SIZE	32768
+
 typedef struct private_pts_t private_pts_t;
 
 /**
@@ -53,6 +58,7 @@ struct private_pts_t {
 	 * Contains a TPM_CAP_VERSION_INFO struct
 	 */
 	chunk_t tpm_version_info;
+	
 };
 
 METHOD(pts_t, get_proto_caps, pts_proto_caps_flag_t,
@@ -139,6 +145,96 @@ METHOD(pts_t, set_tpm_version_info, void,
 	print_tpm_version_info(this);
 }
 
+
+/**
+ * Get Hash Measurement of a file
+ */
+
+METHOD(pts_t, hash_file, bool,
+	private_pts_t *this, char *path, char *out)
+{
+	char buffer[PTS_BUF_SIZE];
+	FILE *file;
+	int bytes_read;
+	hasher_t *hasher;
+	hash_algorithm_t hash_alg;
+	
+	/* Create a hasher */
+	hash_alg = pts_meas_to_hash_algorithm(this->algorithm);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
+		return false;
+	}
+
+	file = fopen(path, "rb");
+	if (!file)
+	{
+		DBG1(DBG_IMC,"file '%s' can not be opened", path);
+		hasher->destroy(hasher);
+		return false;
+	}
+	while (TRUE)
+	{
+		bytes_read = fread(buffer, 1, sizeof(buffer), file);
+		if (bytes_read > 0)
+		{
+			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+		}
+		else
+		{
+			hasher->get_hash(hasher, chunk_empty, out);
+			break;
+		}
+	}
+	fclose(file);
+	hasher->destroy(hasher);
+
+	return true;
+}
+
+/**
+ * Get hash of all the files in a directory
+ */
+
+METHOD(pts_t, hash_directory, bool,
+	private_pts_t *this, char *path, linked_list_t *file_measurements)
+{
+	DIR *dir;
+	struct dirent *ent;
+	file_meas_entry_t *entry;
+	
+	file_measurements = linked_list_create();
+	entry = malloc_thing(file_meas_entry_t);
+	
+	dir = opendir(path);
+	if (dir == NULL)
+	{
+		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path, strerror(errno));
+		return false;
+	}
+	while ((ent = readdir(dir)))
+	{
+		char *file_hash;
+		
+		if(this->public.hash_file(&this->public,ent->d_name,file_hash) != true)
+		{
+			DBG1(DBG_IMC, "Hashing the given file has failed");
+			return false;
+		}
+		
+		entry->measurement = chunk_create(file_hash,strlen(file_hash));
+		entry->file_name_len = strlen(ent->d_name);
+		entry->file_name = chunk_create(ent->d_name,strlen(ent->d_name));
+		
+		file_measurements->insert_last(file_measurements,entry);
+	}
+	closedir(dir);
+	
+	return true;
+}
+
 METHOD(pts_t, destroy, void,
 	private_pts_t *this)
 {
@@ -200,6 +296,8 @@ pts_t *pts_create(bool is_imc)
 			.set_meas_algorithm = _set_meas_algorithm,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
+			.hash_file = _hash_file,
+			.hash_directory = _hash_directory,
 			.destroy = _destroy,
 		},
 		.proto_caps = PTS_PROTO_CAPS_V,

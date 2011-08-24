@@ -25,8 +25,29 @@ typedef struct pts_t pts_t;
 
 #include "pts_proto_caps.h"
 #include "pts_meas_algo.h"
+#include <utils/linked_list.h>
 
 #include <library.h>
+
+typedef struct measurement_req_entry_t measurement_req_entry_t;
+typedef struct file_meas_entry_t file_meas_entry_t;
+
+/**
+ * Struct to hold file or directory name with the request ID for Request File Measurement attribute
+ */
+struct measurement_req_entry_t {
+	char *path;
+	u_int16_t request_id;
+};
+
+/**
+ * File Measurement entry
+ */
+struct file_meas_entry_t {
+	chunk_t   measurement;
+	u_int16_t file_name_len;
+	chunk_t   file_name;
+};
 
 /**
  * Class implementing the TCG Platform Trust System (PTS)
@@ -76,6 +97,24 @@ struct pts_t {
 	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct 
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
+	
+	/**
+	 * Hash the given file
+	 *
+	 * @param path			absolute path to file to be hashed
+	 * @param out			hash output value of a given file
+	 * @return			TRUE if hashing file was successful 
+	 */
+	bool (*hash_file)(pts_t *this, char *path, char *out);
+	
+	/**
+	 * Hash the given directory
+	 *
+	 * @param path			absolute path to directory to be hashed
+	 * @param file_measurements	list of hash output values of files in a given folder
+	 * @return			TRUE if hashing directory was successful 
+	 */
+	bool (*hash_directory)(pts_t *this, char *path, linked_list_t *file_measurements);
 
 	/**
 	 * Destroys a pts_t object.

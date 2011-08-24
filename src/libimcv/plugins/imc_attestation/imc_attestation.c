@@ -39,8 +39,6 @@
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
-#include <dirent.h>
-#include <errno.h>
 
 /* IMC definitions */
 
@@ -48,7 +46,6 @@ static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID				PEN_TCG
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
-#define IMC_ATTESTATION_BUF_SIZE	32768
 
 static imc_agent_t *imc_attestation;
 
@@ -116,93 +113,6 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	}
 }
 
-
-/**
- * Get Hash Measurement of a file
- */
-static TNC_Result hash_file(char *path, char *out)
-{
-	char buffer[IMC_ATTESTATION_BUF_SIZE];
-	FILE *file;
-	int bytes_read;
-	pts_meas_algorithms_t selected_algorithm;
-	hasher_t *hasher;
-	hash_algorithm_t hash_alg;
-	
-	/* Create a hasher */
-	selected_algorithm = PTS_MEAS_ALGO_SHA256; /* temporary fix, move to pts */
-	hash_alg = pts_meas_to_hash_algorithm(selected_algorithm);
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-	if (!hasher)
-	{
-		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
-		return TNC_RESULT_FATAL;
-	}
-
-	file = fopen(path, "rb");
-	if (!file)
-	{
-		DBG1(DBG_IMC,"file '%s' can not be opened", path);
-		hasher->destroy(hasher);
-		return TNC_RESULT_FATAL;
-	}
-	while (TRUE)
-	{
-		bytes_read = fread(buffer, 1, sizeof(buffer), file);
-		if (bytes_read > 0)
-		{
-			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
-		}
-		else
-		{
-			hasher->get_hash(hasher, chunk_empty, out);
-			break;
-		}
-	}
-	fclose(file);
-	hasher->destroy(hasher);
-
-	return TNC_RESULT_SUCCESS;
-}
-
-/**
- * Get hash of all the files in a directory
- */
-static TNC_Result hash_directory(char *path, linked_list_t *file_measurements)
-{
-	DIR *dir;
-	struct dirent *ent;
-	file_meas_entry_t *entry;
-	
-	file_measurements = linked_list_create();
-	entry = malloc_thing(file_meas_entry_t);
-	
-	dir = opendir(path);
-	if (dir == NULL)
-	{
-		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path, strerror(errno));
-		return TNC_RESULT_FATAL;
-	}
-	while ((ent = readdir(dir)))
-	{
-		char *file_hash;
-		
-		if(hash_file(ent->d_name,file_hash) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_IMC, "Hashing the given file has failed");
-			return TNC_RESULT_FATAL;
-		}
-		
-		entry->measurement = chunk_create(file_hash,strlen(file_hash));
-		entry->file_name_len = strlen(ent->d_name);
-		entry->file_name = chunk_create(ent->d_name,strlen(ent->d_name));
-		
-		file_measurements->insert_last(file_measurements,entry);
-	}
-	closedir(dir);
-	
-	return TNC_RESULT_SUCCESS;
-}
 
 /**
  * see section 3.7.3 of TCG TNC IF-IMC Specification 1.2
@@ -344,7 +254,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					}
 					else
 					{
-						/* TODO send a TCG_PTS_HASH_ALG_NOT_SUPPORTED error */
+						/* TODO send a TCG_PTS_H_ALG_NOT_SUPPORTED error */
 					}
 					/* Send Measurement Algorithm Selection attribute */ 
 					selected_algorithm = pts->get_meas_algorithm(pts);
@@ -424,7 +334,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					if(directory_flag)
 					{
-						if(hash_file(path.ptr,file_hash) != TNC_RESULT_SUCCESS)
+						if(pts->hash_file(pts,path.ptr,file_hash) != true)
 						{
 							DBG1(DBG_IMC, "Hashing the given file has failed");
 							return TNC_RESULT_FATAL;
@@ -438,7 +348,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						enumerator_t *meas_enumerator;
 						file_meas_entry_t *meas_entry;
 						u_int64_t num_of_files = 0 ;
-						if(hash_directory(path.ptr, file_measurements) != TNC_RESULT_SUCCESS)
+						if(pts->hash_directory(pts, path.ptr, file_measurements) != true)
 						{
 							DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
 							return TNC_RESULT_FATAL;
