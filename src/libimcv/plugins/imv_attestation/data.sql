@@ -205,7 +205,7 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
-  4, 163842, 32768, X'1118805b490051637e93e592f4c71e0ee78a2422'
+  4, 2, 32768, X'1118805b490051637e93e592f4c71e0ee78a2422'
 );
 
 INSERT INTO file_hashes (
