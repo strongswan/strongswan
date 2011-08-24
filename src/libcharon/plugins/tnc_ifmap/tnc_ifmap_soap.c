@@ -726,7 +726,7 @@ METHOD(tnc_ifmap_soap_t, destroy, void,
 static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 {
 	axis2_char_t *server, *server_cert, *key_file, *client_home;
-	axis2_char_t *username, *password;
+	axis2_char_t *ssl_passphrase, *username, *password;
 	axis2_endpoint_ref_t* endpoint_ref = NULL;
 	axis2_options_t *options = NULL;
 	axis2_transport_in_desc_t *transport_in;
@@ -744,6 +744,8 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 					"charon.plugins.tnc-ifmap.server_cert", NULL);
 	key_file = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.key_file", NULL);
+	ssl_passphrase = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-ifmap.ssl_passphrase", NULL);
 	username = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-ifmap.username", NULL);
 	password = lib->settings->get_str(lib->settings,
@@ -781,6 +783,14 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 												   key_file);
 		axis2_options_set_property(options, this->env,
 								   AXIS2_SSL_KEY_FILE, property);
+		if (ssl_passphrase)
+		{
+			/* Provide SSL passphrase */
+			property =axutil_property_create_with_args(this->env, 0, 0, 0,
+                                                   ssl_passphrase);
+			axis2_options_set_property(options, this->env,
+									   AXIS2_SSL_PASSPHRASE, property);
+		} 
 	}
 	else 
 	{
