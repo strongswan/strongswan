@@ -296,7 +296,7 @@ static private_pkcs11_public_key_t* find_rsa_key(chunk_t n, chunk_t e)
 	pkcs11_library_t *p11;
 	CK_SLOT_ID slot;
 
-	manager = pkcs11_manager_get();
+	manager = lib->get(lib, "pkcs11-manager");
 	if (!manager)
 	{
 		return NULL;
@@ -350,7 +350,7 @@ static private_pkcs11_public_key_t* create_rsa_key(chunk_t n, chunk_t e)
 	pkcs11_library_t *p11;
 	CK_SLOT_ID slot;
 
-	manager = pkcs11_manager_get();
+	manager = lib->get(lib, "pkcs11-manager");
 	if (!manager)
 	{
 		return NULL;

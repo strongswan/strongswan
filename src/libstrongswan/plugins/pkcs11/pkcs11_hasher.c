@@ -260,7 +260,7 @@ static pkcs11_library_t* find_token(hash_algorithm_t algo,
 	{
 		return NULL;
 	}
-	manager = pkcs11_manager_get();
+	manager = lib->get(lib, "pkcs11-manager");
 	if (!manager)
 	{
 		return NULL;

@@ -311,7 +311,7 @@ static pkcs11_library_t* find_lib(char *module)
 	pkcs11_library_t *p11, *found = NULL;
 	CK_SLOT_ID slot;
 
-	manager = pkcs11_manager_get();
+	manager = lib->get(lib, "pkcs11-manager");
 	if (!manager)
 	{
 		return NULL;
@@ -339,7 +339,7 @@ static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot)
 	pkcs11_library_t *p11, *found = NULL;
 	CK_SLOT_ID current;
 
-	manager = pkcs11_manager_get();
+	manager = lib->get(lib, "pkcs11-manager");
 	if (!manager)
 	{
 		return NULL;

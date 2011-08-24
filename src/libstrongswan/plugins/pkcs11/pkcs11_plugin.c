@@ -122,6 +122,7 @@ METHOD(plugin_t, destroy, void,
 	lib->crypto->remove_hasher(lib->crypto,
 							(hasher_constructor_t)pkcs11_hasher_create);
 	this->creds->destroy(this->creds);
+	lib->set(lib, "pkcs11-manager", NULL);
 	this->manager->destroy(this->manager);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -150,6 +151,8 @@ plugin_t *pkcs11_plugin_create()
 	);
 
 	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
+
+	lib->set(lib, "pkcs11-manager", this->manager);
 
 	if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))

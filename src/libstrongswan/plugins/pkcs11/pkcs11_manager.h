@@ -67,12 +67,4 @@ struct pkcs11_manager_t {
 pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 										void *data);
 
-
-/**
- * Get the singleton instance of the manager
- *
- * @return			instance, NULL if none available
- */
-pkcs11_manager_t *pkcs11_manager_get();
-
 #endif /** PKCS11_MANAGER_H_ @}*/
