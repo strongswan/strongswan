@@ -29,7 +29,6 @@ typedef struct pts_t pts_t;
 
 #include <library.h>
 
-typedef struct measurement_req_entry_t measurement_req_entry_t;
 typedef struct file_meas_entry_t file_meas_entry_t;
 
 /**
@@ -97,7 +96,7 @@ struct pts_t {
 	 * @param out			hash output value of a given file
 	 * @return			TRUE if hashing file was successful 
 	 */
-	bool (*hash_file)(pts_t *this, char *path, char *out);
+	bool (*hash_file)(pts_t *this, chunk_t path, chunk_t *out);
 	
 	/**
 	 * Hash the given directory
@@ -106,7 +105,7 @@ struct pts_t {
 	 * @param file_measurements	list of hash output values of files in a given folder
 	 * @return			TRUE if hashing directory was successful 
 	 */
-	bool (*hash_directory)(pts_t *this, char *path, linked_list_t *file_measurements);
+	bool (*hash_directory)(pts_t *this, chunk_t path, linked_list_t **file_measurements);
 
 	/**
 	 * Destroys a pts_t object.

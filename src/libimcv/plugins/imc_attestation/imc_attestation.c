@@ -300,7 +300,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					u_int16_t request_id;
 					u_int16_t meas_len;
 					pts_meas_algorithms_t selected_algorithm;
-					char * file_hash;
+					chunk_t file_hash;
 					bool directory_flag;
 					linked_list_t *file_measurements;
 
@@ -310,8 +310,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					delimiter = attr_cast->get_delimiter(attr_cast);
 					path = attr_cast->get_file_path(attr_cast);
 					
-					DBG3(DBG_IMC,"The Requested File/Directory to be measured: %s", path.ptr);
-
+					DBG3(DBG_IMC,"requested %s to be measured: %s", 
+					     (directory_flag)? "directory":"file", path.ptr);
+					
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					meas_len = HASH_SIZE_SHA1;
@@ -334,23 +335,22 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_to_send->set_noskip_flag(attr_to_send, TRUE);
 					attr_file_meas = (tcg_pts_attr_file_meas_t*)attr_to_send;
 					
-					if(directory_flag)
+					if(!directory_flag)
 					{
-						if(pts->hash_file(pts,path.ptr,file_hash) != true)
+						if(pts->hash_file(pts,path,&file_hash) != true)
 						{
 							DBG1(DBG_IMC, "Hashing the given file has failed");
 							return TNC_RESULT_FATAL;
 						}
-						attr_file_meas->add_file_meas(attr_file_meas, 
-								      chunk_create(file_hash,strlen(file_hash)),
-								      path);
+						attr_file_meas->add_file_meas(attr_file_meas, file_hash, path);
+												
 					}
 					else
 					{
 						enumerator_t *meas_enumerator;
 						file_meas_entry_t *meas_entry;
 						u_int64_t num_of_files = 0 ;
-						if(pts->hash_directory(pts, path.ptr, file_measurements) != true)
+						if(pts->hash_directory(pts, path, &file_measurements) != true)
 						{
 							DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
 							return TNC_RESULT_FATAL;

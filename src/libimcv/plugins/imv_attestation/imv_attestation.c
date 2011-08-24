@@ -68,16 +68,6 @@ static pts_meas_algorithms_t supported_algorithms = 0;
 static pts_database_t *pts_db;
 
 /**
- * List of files and directories to measure
- */
-static linked_list_t *file_list, *directory_list;
-
-/**
- * Monotonic increasing number for Request File Measurement attribute
- */
-static u_int16_t request_id_counter = 0;
-
-/**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
  */
 TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
@@ -143,11 +133,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 {
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
-	enumerator_t *enumerator;
-	char *files;
-	char *directories;
-	measurement_req_entry_t *entry;
-	char *token;
 	TNC_Result result;
 
 	if (!imv_attestation)
@@ -171,49 +156,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			}
 			attestation_state = (imv_attestation_state_t*)state;
 			
-			/** 
-			 * Get the files to measure for
-			 * PTS Request File Measurement attribute
-			 */
+			/* TODO: Get some configurations */
 			
-			file_list = linked_list_create();
-			directory_list = linked_list_create();
-			
-			files = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imv-attestation.files", "none");
-			enumerator = enumerator_create_token(files, " ", " ");
-			while (enumerator->enumerate(enumerator, &token))
-			{
-				entry = malloc_thing(measurement_req_entry_t);
-				token = strdup(token);
-				entry->path = token;
-				entry->request_id = request_id_counter;
-				file_list->insert_last(file_list, entry);
-				DBG3(DBG_IMV, "File to measure:%s, with request id:%d",token, entry->request_id);
-				free(token);
-				request_id_counter ++;
-			}
-			
-			/** 
-			 * Get the directories to measure for
-			 * PTS Request File Measurement attribute
-			 */
-			
-			directories = lib->settings->get_str(lib->settings,
-					"libimcv.plugins.imv-attestation.directories", "none");
-			enumerator = enumerator_create_token(directories, " ", " ");
-			while (enumerator->enumerate(enumerator, &token))
-			{
-				entry = malloc_thing(measurement_req_entry_t);
-				token = strdup(token);
-				entry->path = token;
-				entry->request_id = request_id_counter;
-				directory_list->insert_last(directory_list, entry);
-				DBG3(DBG_IMV, "Directory to measure:%s, with request id:%d",token, entry->request_id);
-				free(token);
-				request_id_counter ++;
-			}
-			enumerator->destroy(enumerator);
 			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_attestation->change_state(imv_attestation, connection_id,
@@ -266,7 +210,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		{
 			pa_tnc_attr_t *attr_req_file_meas;
 			enumerator_t *enumerator;
-			measurement_req_entry_t *entry;
 			pts_meas_algorithms_t communicated_caps;
 			u_int32_t delimiter = SOLIDUS_UTF;
 			int id, type;
@@ -293,7 +236,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			/** 
 			 * Add files to measure to PTS Request File Measurement attribute
 			 */
-			product = "Ubuntu 11.4 i686";
+			product = "Ubuntu 10.10 x86_64";
 
 			if (!pts_db)
 			{
@@ -306,34 +249,22 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			}
 			while (enumerator->enumerate(enumerator, &id, &type, &path))
 			{
+				bool is_directory;
+				chunk_t path_chunk;
+				
 				DBG2(DBG_IMV, "id = %d, type = %d, path = '%s'", id, type, path);
+				
+				is_directory = (type != 0) ? true : false;
+				path_chunk = chunk_create(path, strlen(path));
+				path_chunk = chunk_clone(path_chunk);
+				
+				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(is_directory, 
+							(u_int16_t)id, delimiter, path_chunk);
+				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
+				msg->add_attribute(msg, attr_req_file_meas);
 			}
 			enumerator->destroy(enumerator);
 
-			enumerator = file_list->create_enumerator(file_list);
-			while (enumerator->enumerate(enumerator, &entry))
-			{
-				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(false, 
-							entry->request_id, delimiter, 
-							chunk_create(entry->path, strlen(entry->path)));
-				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
-				msg->add_attribute(msg, attr_req_file_meas);
-			}
-			/** Add directories to measure to  PTS Request File Measurement attribute
-			 */
-			enumerator = file_list->create_enumerator(directory_list);
-			while (enumerator->enumerate(enumerator, &entry))
-			{
-				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(true, 
-							entry->request_id, delimiter, 
-							chunk_create(entry->path, strlen(entry->path)));
-				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
-				msg->add_attribute(msg, attr_req_file_meas);
-			}
-			
-			enumerator->destroy(enumerator);
-			file_list->destroy(file_list);
-			directory_list->destroy(directory_list);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:

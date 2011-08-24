@@ -151,7 +151,7 @@ METHOD(pts_t, set_tpm_version_info, void,
  */
 
 METHOD(pts_t, hash_file, bool,
-	private_pts_t *this, char *path, char *out)
+	private_pts_t *this, chunk_t path, chunk_t *out)
 {
 	char buffer[PTS_BUF_SIZE];
 	FILE *file;
@@ -168,10 +168,10 @@ METHOD(pts_t, hash_file, bool,
 		return false;
 	}
 
-	file = fopen(path, "rb");
+	file = fopen(path.ptr, "rb");
 	if (!file)
 	{
-		DBG1(DBG_IMC,"file '%s' can not be opened", path);
+		DBG1(DBG_IMC,"file '%s' can not be opened, %s", path.ptr, strerror(errno));
 		hasher->destroy(hasher);
 		return false;
 	}
@@ -180,14 +180,15 @@ METHOD(pts_t, hash_file, bool,
 		bytes_read = fread(buffer, 1, sizeof(buffer), file);
 		if (bytes_read > 0)
 		{
-			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+			hasher->allocate_hash(hasher, chunk_create(buffer, bytes_read), NULL);
 		}
 		else
 		{
-			hasher->get_hash(hasher, chunk_empty, out);
+			hasher->allocate_hash(hasher, chunk_empty, out);
 			break;
 		}
 	}
+		
 	fclose(file);
 	hasher->destroy(hasher);
 
@@ -199,39 +200,45 @@ METHOD(pts_t, hash_file, bool,
  */
 
 METHOD(pts_t, hash_directory, bool,
-	private_pts_t *this, char *path, linked_list_t *file_measurements)
+	private_pts_t *this, chunk_t path, linked_list_t **file_measurements)
 {
 	DIR *dir;
 	struct dirent *ent;
 	file_meas_entry_t *entry;
+	linked_list_t *list = *file_measurements;
 	
-	file_measurements = linked_list_create();
+	list = linked_list_create();
 	entry = malloc_thing(file_meas_entry_t);
 	
-	dir = opendir(path);
+	dir = opendir(path.ptr);
 	if (dir == NULL)
 	{
-		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path, strerror(errno));
+		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path.ptr, strerror(errno));
 		return false;
 	}
 	while ((ent = readdir(dir)))
 	{
-		char *file_hash;
-		
-		if(this->public.hash_file(&this->public,ent->d_name,file_hash) != true)
+		if (*ent->d_name == '.')
+		{	/* skip ".", ".." and hidden files (such as ".svn") */
+			continue;
+		}
+				
+		if(this->public.hash_file(&this->public, chunk_cat("cc", path, chunk_create(ent->d_name, strlen(ent->d_name)))
+			, &entry->measurement) != true)
 		{
 			DBG1(DBG_IMC, "Hashing the given file has failed");
 			return false;
 		}
 		
-		entry->measurement = chunk_create(file_hash,strlen(file_hash));
 		entry->file_name_len = strlen(ent->d_name);
 		entry->file_name = chunk_create(ent->d_name,strlen(ent->d_name));
 		
-		file_measurements->insert_last(file_measurements,entry);
+		list->insert_last(list,entry);
 	}
+		
 	closedir(dir);
 	
+	*file_measurements = list;
 	return true;
 }
 
