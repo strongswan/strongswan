@@ -309,6 +309,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					request_id = attr_cast->get_request_id(attr_cast);
 					delimiter = attr_cast->get_delimiter(attr_cast);
 					path = attr_cast->get_file_path(attr_cast);
+					
+					DBG3(DBG_IMC,"The Requested File/Directory to be measured: %s", path.ptr);
 
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);

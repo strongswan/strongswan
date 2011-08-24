@@ -18,6 +18,12 @@ INSERT INTO products (
  'CentOS release 5.6 (Final) x86_64'
 );
 
+INSERT INTO products (
+  name
+) VALUES (
+ 'Ubuntu 10.10 x86_64'
+);
+
 /* Files */
 
 INSERT INTO files (
@@ -43,10 +49,17 @@ INSERT INTO files (
  ) VALUES (
   0, '/sbin/iptables'
 );
+
 INSERT INTO files (
   type, path
  ) VALUES (
   0, '/lib/libxtables.so.5'
+);
+
+INSERT INTO files (
+  type, path
+ ) VALUES (
+  0, '/lib/libxtables.so.2'
 );
 
 INSERT INTO product_file (
@@ -95,6 +108,24 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   3, 4
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  4, 3
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  4, 4
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  4, 5
 );
 
 /* File Hashes */
@@ -243,3 +274,56 @@ INSERT INTO file_hashes (
   5, 2, 8192, X'237f4691f9b780bec7aff217d64a9780ceed2973a41e86c92e0d6dab81cc5d13a9b99ba408302264f5665de1f42ef6e1'
 );
 
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 4, 32768, X'4350f082511c742cc05050d18a23d1da9fb09340'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 4, 16384, X'f9e12408828b5842c45503342dc2af78bc74d701a19c5fd5483df0e203315e0a'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 4, 8192, X'1a5ea36e4ab0cda550c0da2af6a62d9310981d2f170c9e75bff1770be2efb9ddccc451743ff4c3d76876364f19fdf8c1'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 4, 32768, X'86c4463293859874243d8374f7f3ef60f44f9309'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 4, 16384, X'348b711f16ee9810738857c8ffbc54f8e16a393df8635cb29b02fc62daeefc14'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 4, 8192, X'0cb6b7d91148b1bb1b9333bc71de01509cb6d12c646a6756e6942647046286fbbca92b25dc1999e8f81be1264061ee4d'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  6, 4, 32768, X'92e66ae282947f66544682039a33fd1dbd402244'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  6, 4, 16384, X'dc6bad544f72c4538fb92f777646fd734b49ce95f41b2c96b74a21addbc86ed8'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  6, 4, 8192, X'08fd91f9017763212d1491f178e4d7e41d34a21b0117ee3321d832f5b8e02d4c7152a6cdc53bb4ca7e8aad5b1f279d1f'
+);
