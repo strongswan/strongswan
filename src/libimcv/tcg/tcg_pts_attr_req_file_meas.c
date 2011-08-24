@@ -153,8 +153,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int8_t reserved;
 	u_int32_t file_path_len;
 	
-	char *temp;
-	
 	if (this->value.len < PTS_REQ_FILE_MEAS_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Request File Measurement");
@@ -174,7 +172,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_data(reader, file_path_len, &this->path);
 	this->path = chunk_clone(this->path);
 	
-	DBG1(DBG_TNC, " ****** Request ID: %d File path len: %d Path: %s", this->request_id, file_path_len, this->path.ptr);
 	reader->destroy(reader);
 	return SUCCESS;	
 }
