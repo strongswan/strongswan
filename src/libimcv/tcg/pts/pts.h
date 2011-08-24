@@ -33,14 +33,6 @@ typedef struct measurement_req_entry_t measurement_req_entry_t;
 typedef struct file_meas_entry_t file_meas_entry_t;
 
 /**
- * Struct to hold file or directory name with the request ID for Request File Measurement attribute
- */
-struct measurement_req_entry_t {
-	char *path;
-	u_int16_t request_id;
-};
-
-/**
  * File Measurement entry
  */
 struct file_meas_entry_t {
