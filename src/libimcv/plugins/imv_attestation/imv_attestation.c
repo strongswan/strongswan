@@ -77,17 +77,6 @@ static linked_list_t *file_list, *directory_list;
  */
 static u_int16_t request_id_counter = 0;
 
-/* TODO: Move the struct to some header file? Duplicate with imc_attestation*/
-/**
- * Struct to hold file or directory name with the request ID for Request File Measurement attribute
- */
-typedef struct measurement_req_entry_t measurement_req_entry_t;
-
-struct measurement_req_entry_t {
-	char *path;
-	u_int16_t request_id;
-};
-
 /**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
  */
