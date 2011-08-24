@@ -35,11 +35,9 @@ struct pts_database_t {
 	 * Get files to be measured by PTS
 	 *
 	 * @product				software product (os, vpn client, etc.)
-	 * @param version		release version
 	 * @return				enumerator over all files matching a given release 
 	 */
-	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product,
-										    char *version);
+	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product);
 
 	/**
 	 * Destroys a pts_database_t object.

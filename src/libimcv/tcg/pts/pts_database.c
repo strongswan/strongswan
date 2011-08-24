@@ -40,10 +40,17 @@ struct private_pts_database_t {
 };
 
 METHOD(pts_database_t, create_file_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product, char *version)
+	private_pts_database_t *this, char *product)
 {
-	enumerator_t *e = NULL;
+	enumerator_t *e;
 
+	/* look for all entries belonging to a product in the files table */
+	e = this->db->query(this->db,
+				"SELECT f.id, f.type, f.path FROM files AS f "
+				"JOIN product_file AS pf ON f.id = pf.file "
+				"JOIN products AS p ON p.id = pf.product "
+				"WHERE p.name = ?",
+				DB_TEXT, product, DB_INT, DB_INT, DB_TEXT);
 	return e;
 }
 
@@ -71,7 +78,8 @@ pts_database_t *pts_database_create(char *uri)
 
 	if (!this->db)
 	{
-		DBG1(DBG_TNC, "pts failed to connect to file database");
+		DBG1(DBG_TNC, "failed to connect to PTS file measurement database '%s'",
+			 uri);
 		free(this);
 		return NULL;
 	}

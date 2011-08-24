@@ -269,10 +269,12 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			measurement_req_entry_t *entry;
 			pts_meas_algorithms_t communicated_caps;
 			u_int32_t delimiter = SOLIDUS_UTF;
+			int id, type;
+			char *product, *path;
 			
 			/* Send Get TPM Version Information attribute */
 			communicated_caps = pts->get_proto_caps(pts);
-			if(communicated_caps & PTS_PROTO_CAPS_T)
+			if (communicated_caps & PTS_PROTO_CAPS_T)
 			{
 				pa_tnc_attr_t *attr_get_tpm_version, *attr_get_aik;
 				
@@ -291,6 +293,23 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			/** 
 			 * Add files to measure to PTS Request File Measurement attribute
 			 */
+			product = "Ubuntu 11.4 i686";
+
+			if (!pts_db)
+			{
+				break;
+			}
+			enumerator = pts_db->create_file_enumerator(pts_db, product);
+			if (!enumerator)
+			{
+				break;
+			}
+			while (enumerator->enumerate(enumerator, &id, &type, &path))
+			{
+				DBG2(DBG_IMV, "id = %d, type = %d, path = '%s'", id, type, path);
+			}
+			enumerator->destroy(enumerator);
+
 			enumerator = file_list->create_enumerator(file_list);
 			while (enumerator->enumerate(enumerator, &entry))
 			{
