@@ -125,7 +125,7 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
-  4, 5
+  4, 6
 );
 
 /* File Hashes */
