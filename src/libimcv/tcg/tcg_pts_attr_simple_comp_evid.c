@@ -413,6 +413,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_data(reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
 			  &this->measurement_time);
+	this->measurement_time = chunk_clone(this->measurement_time);
 	
 	/*  Optional Policy URI field is included */
 	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL || 
@@ -421,6 +422,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		u_int16_t policy_uri_len;
 		reader->read_uint16(reader, &policy_uri_len);
 		reader->read_data(reader, policy_uri_len, &this->policy_uri);
+		this->policy_uri = chunk_clone(this->policy_uri);
 	}
 	
 	/*  Optional PCR value fields are included */
@@ -429,11 +431,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		u_int16_t pcr_value_len;
 		reader->read_uint16(reader, &pcr_value_len);
 		reader->read_data(reader, pcr_value_len, &this->pcr_before);
+		this->pcr_before = chunk_clone(this->pcr_before);
 		reader->read_data(reader, pcr_value_len, &this->pcr_after);
+		this->pcr_after = chunk_clone(this->pcr_after);
 	}
 	
 	measurement_len = reader->remaining(reader);
 	reader->read_data(reader, measurement_len, &this->measurement);
+	this->measurement = chunk_clone(this->measurement);
 
 	reader->destroy(reader);
 	return SUCCESS;	

@@ -197,6 +197,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data (reader, this->meas_len, &entry->measurement);
 		reader->read_uint16 (reader, &entry->file_name_len);
 		reader->read_data(reader, entry->file_name_len, &entry->file_name);
+		entry->file_name = chunk_clone(entry->file_name);
 		this->measurements->insert_last(this->measurements, entry);
 	}
 

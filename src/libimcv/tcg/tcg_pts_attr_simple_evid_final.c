@@ -233,8 +233,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		u_int32_t tpm_quote_sign_len;
 		reader->read_uint32(reader, &pcr_comp_len);
 		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
+		this->pcr_comp = chunk_clone(this->pcr_comp);
 		reader->read_uint32(reader, &tpm_quote_sign_len);
 		reader->read_data(reader, tpm_quote_sign_len, &this->tpm_quote_sign);
+		this->tpm_quote_sign = chunk_clone(this->tpm_quote_sign);
 	}
 	
 	/*  Optional Evidence Signature field is included */
@@ -242,6 +244,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		u_int32_t evid_sign_len = reader->remaining(reader);
 		reader->read_data(reader, evid_sign_len, &this->evid_sign);
+		this->evid_sign = chunk_clone(this->evid_sign);
 	}
 	
 	reader->destroy(reader);
