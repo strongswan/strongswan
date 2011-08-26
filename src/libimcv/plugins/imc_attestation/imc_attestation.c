@@ -316,15 +316,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					meas_len = HASH_SIZE_SHA1;
-					if (selected_algorithm & PTS_MEAS_ALGO_SHA384)
+					if(selected_algorithm & PTS_MEAS_ALGO_SHA256) 
+					{
+						meas_len = HASH_SIZE_SHA256;
+					}
+					else if (selected_algorithm & PTS_MEAS_ALGO_SHA384)
 					{
 						meas_len = HASH_SIZE_SHA384;
 					}
-					else if(selected_algorithm & PTS_MEAS_ALGO_SHA256) 
-					{
-						meas_len = HASH_SIZE_SHA512;
-					}
-					
+
 					/** 
 					* Hash the file or directory and add them as attribute
 					*/
