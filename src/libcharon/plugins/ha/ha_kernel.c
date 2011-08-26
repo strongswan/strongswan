@@ -240,6 +240,7 @@ static segment_mask_t get_active(private_ha_kernel_t *this, char *file)
 		return 0;
 	}
 	len = read(fd, buf, sizeof(buf)-1);
+	close(fd);
 	if (len == -1)
 	{
 		DBG1(DBG_CFG, "reading from CLUSTERIP file '%s' failed: %s",
