@@ -301,6 +301,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
+	bool comparisons_succeeded = true;
 
 	if (!imv_attestation)
 	{
@@ -424,7 +425,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					u_int16_t meas_len;
 					enumerator_t *meas_enumerator;
 					file_meas_entry_t *meas_entry;
-					bool comparisons_succeeded = true;
 					
 					attr_cast = (tcg_pts_attr_file_meas_t*)attr;
 					num_of_files = attr_cast->get_number_of_files(attr_cast);
@@ -465,7 +465,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 							{
 								DBG1(DBG_IMV, "Measurement comparison failed for: %s", meas_entry->file_name.ptr);
 								comparisons_succeeded = false;
-							}							
+							}
 						}
 						hash_enumerator->destroy(hash_enumerator);
 						
@@ -475,14 +475,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					
-					(comparisons_succeeded) ? state->set_recommendation(state,
-								  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								  TNC_IMV_EVALUATION_RESULT_COMPLIANT) :
-						state->set_recommendation(state,
-								  TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								  TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
-		  
-					return imv_attestation->provide_recommendation(imv_attestation, connection_id);
+					break;
 				}
 				
 				/* TODO: Not implemented yet */
@@ -519,6 +512,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
+	
+
 
 	if (fatal_error)
 	{
@@ -527,6 +522,22 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 		return imv_attestation->provide_recommendation(imv_attestation, connection_id);
 	}
+	
+	
+	if(attestation_state->get_handshake_state(attestation_state) & IMV_ATTESTATION_STATE_END)
+	{
+		(comparisons_succeeded) ? 
+			state->set_recommendation(state,
+				TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+				TNC_IMV_EVALUATION_RESULT_COMPLIANT) :
+			state->set_recommendation(state,
+				 TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+				 TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
+								    
+		return imv_attestation->provide_recommendation(imv_attestation, connection_id);
+		
+	}
+	
 	return send_message(connection_id);
 }
 
