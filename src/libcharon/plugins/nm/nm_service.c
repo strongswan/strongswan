@@ -640,7 +640,7 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id,
-											  controller_cb_empty, NULL);
+											  controller_cb_empty, NULL, 0);
 			return TRUE;
 		}
 	}

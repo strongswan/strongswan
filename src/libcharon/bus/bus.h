@@ -152,8 +152,10 @@ struct bus_t {
 	 *
 	 * @param listener	listener to register
 	 * @param job		job to execute asynchronously when registered, or NULL
+	 * @param timeout	max timeout in ms to listen for events, 0 to disable
+	 * @return			TRUE if timed out
 	 */
-	void (*listen)(bus_t *this, listener_t *listener, job_t *job);
+	bool (*listen)(bus_t *this, listener_t *listener, job_t *job, u_int timeout);
 
 	/**
 	 * Set the IKE_SA the calling thread is using.

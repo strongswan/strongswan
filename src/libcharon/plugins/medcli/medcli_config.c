@@ -335,7 +335,7 @@ static job_requeue_t initiate_config(peer_cfg_t *peer_cfg)
 		peer_cfg->get_ref(peer_cfg);
 		enumerator->destroy(enumerator);
 		charon->controller->initiate(charon->controller,
-									 peer_cfg, child_cfg, NULL, NULL);
+									 peer_cfg, child_cfg, NULL, NULL, 0);
 	}
 	else
 	{

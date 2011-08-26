@@ -66,7 +66,7 @@ METHOD(job_t, execute, void,
 					charon->controller->initiate(charon->controller,
 												 peer_cfg->get_ref(peer_cfg),
 												 child_cfg->get_ref(child_cfg),
-												 NULL, NULL);
+												 NULL, NULL, 0);
 					break;
 				case ACTION_ROUTE:
 					DBG1(DBG_JOB, "start action: route '%s'", name);

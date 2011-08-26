@@ -421,14 +421,14 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 		if (ike)
 		{
 			status = charon->controller->terminate_ike(
-					charon->controller,	id,
-					(controller_cb_t)xml_callback, writer);
+					charon->controller, id,
+					(controller_cb_t)xml_callback, writer, 0);
 		}
 		else
 		{
 			status = charon->controller->terminate_child(
-					charon->controller,	id,
-					(controller_cb_t)xml_callback, writer);
+					charon->controller, id,
+					(controller_cb_t)xml_callback, writer, 0);
 		}
 		/* </log> */
 		xmlTextWriterEndElement(writer);
@@ -490,7 +490,7 @@ static void request_control_initiate(xmlTextReaderPtr reader,
 			{
 				status = charon->controller->initiate(charon->controller,
 							peer, child, (controller_cb_t)xml_callback,
-							writer);
+							writer, 0);
 			}
 			else
 			{

@@ -103,14 +103,14 @@ static void charon_initiate(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	if (msg->output_verbosity < 0)
 	{
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 NULL, NULL);
+									 NULL, NULL, 0);
 	}
 	else
 	{
 		stroke_log_info_t info = { msg->output_verbosity, out };
 
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 (controller_cb_t)stroke_log, &info);
+									 (controller_cb_t)stroke_log, &info, 0);
 	}
 }
 
@@ -277,12 +277,12 @@ METHOD(stroke_control_t, terminate, void,
 		if (child)
 		{
 			charon->controller->terminate_child(charon->controller, id,
-									(controller_cb_t)stroke_log, &info);
+									(controller_cb_t)stroke_log, &info, 0);
 		}
 		else
 		{
 			charon->controller->terminate_ike(charon->controller, id,
-									(controller_cb_t)stroke_log, &info);
+									(controller_cb_t)stroke_log, &info, 0);
 		}
 		return;
 	}
@@ -333,7 +333,7 @@ METHOD(stroke_control_t, terminate, void,
 	while (enumerator->enumerate(enumerator, &del))
 	{
 		charon->controller->terminate_child(charon->controller, del,
-									(controller_cb_t)stroke_log, &info);
+									(controller_cb_t)stroke_log, &info, 0);
 	}
 	enumerator->destroy(enumerator);
 
@@ -341,7 +341,7 @@ METHOD(stroke_control_t, terminate, void,
 	while (enumerator->enumerate(enumerator, &del))
 	{
 		charon->controller->terminate_ike(charon->controller, del,
-									(controller_cb_t)stroke_log, &info);
+									(controller_cb_t)stroke_log, &info, 0);
 	}
 	enumerator->destroy(enumerator);
 
@@ -515,7 +515,7 @@ METHOD(stroke_control_t, purge_ike, void,
 	while (enumerator->enumerate(enumerator, &del))
 	{
 		charon->controller->terminate_ike(charon->controller, del,
-									(controller_cb_t)stroke_log, &info);
+									(controller_cb_t)stroke_log, &info, 0);
 	}
 	enumerator->destroy(enumerator);
 	list->destroy(list);
@@ -544,7 +544,7 @@ static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 		}
 	}
 	else
-	{	
+	{
 		if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
 		{
 			fprintf(out, "'%s' routed\n", name);

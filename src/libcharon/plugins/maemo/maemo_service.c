@@ -217,7 +217,7 @@ static void disconnect(private_maemo_service_t *this)
 		id = ike_sa->get_unique_id(ike_sa);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		charon->controller->terminate_ike(charon->controller, id,
-										  NULL, NULL);
+										  NULL, NULL, 0);
 	}
 	this->current = (g_free(this->current), NULL);
 	this->status = VPN_STATUS_DISCONNECTED;

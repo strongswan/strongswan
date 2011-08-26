@@ -240,7 +240,7 @@ METHOD(job_t, initiate_execute, void,
 
 METHOD(controller_t, initiate, status_t,
 	private_controller_t *this, peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-	controller_cb_t callback, void *param)
+	controller_cb_t callback, void *param, u_int timeout)
 {
 	interface_job_t job = {
 		.listener = {
@@ -267,7 +267,11 @@ METHOD(controller_t, initiate, status_t,
 	}
 	else
 	{
-		charon->bus->listen(charon->bus, &job.listener.public, &job.public);
+		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
+								timeout))
+		{
+			job.listener.status = OUT_OF_RES;
+		}
 	}
 	return job.listener.status;
 }
@@ -296,7 +300,7 @@ METHOD(job_t, terminate_ike_execute, void,
 
 METHOD(controller_t, terminate_ike, status_t,
 	controller_t *this, u_int32_t unique_id,
-	controller_cb_t callback, void *param)
+	controller_cb_t callback, void *param, u_int timeout)
 {
 	ike_sa_t *ike_sa;
 	interface_job_t job = {
@@ -333,7 +337,11 @@ METHOD(controller_t, terminate_ike, status_t,
 	}
 	else
 	{
-		charon->bus->listen(charon->bus, &job.listener.public, &job.public);
+		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
+								timeout))
+		{
+			job.listener.status = OUT_OF_RES;
+		}
 		/* checkin of the ike_sa happened in the thread that executed the job */
 		charon->bus->set_sa(charon->bus, NULL);
 	}
@@ -363,7 +371,8 @@ METHOD(job_t, terminate_child_execute, void,
 }
 
 METHOD(controller_t, terminate_child, status_t,
-	controller_t *this, u_int32_t reqid, controller_cb_t callback, void *param)
+	controller_t *this, u_int32_t reqid,
+	controller_cb_t callback, void *param, u_int timeout)
 {
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
@@ -424,7 +433,11 @@ METHOD(controller_t, terminate_child, status_t,
 	}
 	else
 	{
-		charon->bus->listen(charon->bus, &job.listener.public, &job.public);
+		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
+								timeout))
+		{
+			job.listener.status = OUT_OF_RES;
+		}
 		/* checkin of the ike_sa happened in the thread that executed the job */
 		charon->bus->set_sa(charon->bus, NULL);
 	}

@@ -148,7 +148,7 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 
 		charon->controller->initiate(charon->controller,
 					peer_cfg, child_cfg->get_ref(child_cfg),
-					NULL, NULL);
+					NULL, NULL, 0);
 		if (s)
 		{
 			sleep(s);

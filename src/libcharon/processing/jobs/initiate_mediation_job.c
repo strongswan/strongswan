@@ -126,7 +126,7 @@ static void initiate(private_initiate_mediation_job_t *this)
 		mediation_cfg->get_ref(mediation_cfg);
 
 		if (charon->controller->initiate(charon->controller, mediation_cfg,
-					NULL, (controller_cb_t)initiate_callback, this) != SUCCESS)
+				NULL, (controller_cb_t)initiate_callback, this, 0) != SUCCESS)
 		{
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);

@@ -148,8 +148,8 @@ static void initiate(private_uci_control_t *this, char *name)
 		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 		if (enumerator->enumerate(enumerator, &child_cfg) &&
 			charon->controller->initiate(charon->controller, peer_cfg,
-										 child_cfg->get_ref(child_cfg),
-										 controller_cb_empty, NULL) == SUCCESS)
+								child_cfg->get_ref(child_cfg),
+								controller_cb_empty, NULL, 0) == SUCCESS)
 		{
 			write_fifo(this, "connection '%s' established\n", name);
 		}
@@ -183,7 +183,7 @@ static void terminate(private_uci_control_t *this, char *name)
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id,
-											  controller_cb_empty, NULL);
+											  controller_cb_empty, NULL, 0);
 			write_fifo(this, "connection '%s' terminated\n", name);
 			return;
 		}
