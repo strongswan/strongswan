@@ -76,9 +76,9 @@ struct entry_t {
  * Table of multi-lingual reason string entries 
  */
 static entry_t reasons[] = {
-	{ "en", "IMC Attestation ..." },
-	{ "mn", "IMC Attestation ..." },
-	{ "de", "IMC Attestation ..." },
+	{ "en", "IMC Attestation Measurement/s of requested file didn't match" },
+	{ "mn", "IMC Attestation Шалгахаар тохируулсан файлуудын хэмжилтүүд таарсангүй" },
+	{ "de", "IMC Attestation Messung/en von angefordeten Datein stimmt nicht überein" },
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
