@@ -342,7 +342,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							DBG1(DBG_IMC, "Hashing the given file has failed");
 							return TNC_RESULT_FATAL;
 						}
-						attr_file_meas->add_file_meas(attr_file_meas, file_hash, path);
+						attr_file_meas->add_file_meas(attr_file_meas, file_hash, chunk_clone(path));
 												
 					}
 					else
@@ -371,7 +371,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						file_measurements->destroy(file_measurements);
 						
 					}
-					
+										
 					attr_to_send = (pa_tnc_attr_t*)attr_file_meas;
 					attr_list->insert_last(attr_list,attr_to_send);
 					
