@@ -965,6 +965,7 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 	if (fread(text, 1, len, fd) != len)
 	{
 		free(text);
+		fclose(fd);
 		return FALSE;
 	}
 	fclose(fd);
