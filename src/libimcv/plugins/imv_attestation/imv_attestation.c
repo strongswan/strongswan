@@ -471,6 +471,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						
 					}
 					
+					meas_enumerator->destroy(meas_enumerator);
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					
