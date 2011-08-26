@@ -59,6 +59,16 @@ struct private_pts_t {
 	 */
 	chunk_t tpm_version_info;
 	
+	/**
+	 * Contains a Attestation Identity Key
+	 */
+	chunk_t aik;
+	
+	/**
+	 * True if AIK is naked public key, not a certificate
+	 */
+	bool is_naked_key;
+	
 };
 
 METHOD(pts_t, get_proto_caps, pts_proto_caps_flag_t,
@@ -145,10 +155,35 @@ METHOD(pts_t, set_tpm_version_info, void,
 	print_tpm_version_info(this);
 }
 
-
 /**
- * Get Hash Measurement of a file
+ * Obtain an AIK
  */
+static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
+{
+	/* TODO: Start working here */
+	return TRUE;
+}
+
+METHOD(pts_t, get_aik, bool,
+	private_pts_t *this, chunk_t *aik, bool *is_naked_key)
+{
+	if(obtain_aik(aik, is_naked_key) != TSS_SUCCESS )
+	{
+		return FALSE;
+	}
+	
+	*aik = this->aik;
+	*is_naked_key = this->is_naked_key;
+	
+	return TRUE;
+}
+
+METHOD(pts_t, set_aik, void,
+	private_pts_t *this, chunk_t aik, bool is_naked_key)
+{
+	this->aik = chunk_clone(aik);
+	this->is_naked_key = is_naked_key;
+}
 
 METHOD(pts_t, hash_file, bool,
 	private_pts_t *this, chunk_t path, chunk_t *out)
@@ -194,10 +229,6 @@ METHOD(pts_t, hash_file, bool,
 
 	return true;
 }
-
-/**
- * Get hash of all the files in a directory
- */
 
 METHOD(pts_t, hash_directory, bool,
 	private_pts_t *this, chunk_t path, linked_list_t **file_measurements)
@@ -303,6 +334,8 @@ pts_t *pts_create(bool is_imc)
 			.set_meas_algorithm = _set_meas_algorithm,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
+			.get_aik = _get_aik,
+			.set_aik = _set_aik,
 			.hash_file = _hash_file,
 			.hash_directory = _hash_directory,
 			.destroy = _destroy,
