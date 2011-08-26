@@ -422,17 +422,66 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					u_int64_t num_of_files;
 					u_int16_t request_id;
 					u_int16_t meas_len;
+					enumerator_t *meas_enumerator;
+					file_meas_entry_t *meas_entry;
+					bool comparisons_succeeded = true;
 					
 					attr_cast = (tcg_pts_attr_file_meas_t*)attr;
 					num_of_files = attr_cast->get_number_of_files(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
 					meas_len = attr_cast->get_meas_len(attr_cast);
 					
-					/* TODO: Start working here */
+					meas_enumerator = attr_cast->create_file_meas_enumerator(attr_cast);
+					while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
+					{
+						enumerator_t *hash_enumerator;
+						pts_meas_algorithms_t selected_algorithm;
+						char *product = "Ubuntu 10.10 x86_64";
+						chunk_t db_measurement;
+						
+						DBG3(DBG_IMV, "Received measurement: %B", &meas_entry->measurement);
+						
+						if (!pts_db)
+						{
+							break;
+						}
+						selected_algorithm = pts->get_meas_algorithm(pts);
+						
+						hash_enumerator = pts_db->create_meas_enumerator(pts_db, product, request_id, selected_algorithm);
+						if (!hash_enumerator)
+						{
+							break;
+						}
+						while (hash_enumerator->enumerate(hash_enumerator, &db_measurement))
+						{
+							DBG3(DBG_IMV, "Expected measurement: %B", &db_measurement);
+							
+							/* Compare the received hash measurement with one saved in db */
+							if(chunk_compare(db_measurement, meas_entry->measurement) == 0)
+							{
+								DBG1(DBG_IMV, "Measurement comparison succeeded for: %s", meas_entry->file_name.ptr);
+							}
+							else
+							{
+								DBG1(DBG_IMV, "Measurement comparison failed for: %s", meas_entry->file_name.ptr);
+								comparisons_succeeded = false;
+							}							
+						}
+						hash_enumerator->destroy(hash_enumerator);
+						
+					}
 					
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
-					break;
+					
+					(comparisons_succeeded) ? state->set_recommendation(state,
+								  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								  TNC_IMV_EVALUATION_RESULT_COMPLIANT) :
+						state->set_recommendation(state,
+								  TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								  TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
+		  
+					return imv_attestation->provide_recommendation(imv_attestation, connection_id);
 				}
 				
 				/* TODO: Not implemented yet */

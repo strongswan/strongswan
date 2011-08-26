@@ -54,6 +54,35 @@ METHOD(pts_database_t, create_file_enumerator, enumerator_t*,
 	return e;
 }
 
+METHOD(pts_database_t, create_meas_enumerator, enumerator_t*,
+	private_pts_database_t *this, char *product, int id, pts_meas_algorithms_t algorithm)
+{
+	enumerator_t *e;
+	int algo = 0;
+	
+	switch(algorithm)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+			algo = 32768;
+			break;
+		case PTS_MEAS_ALGO_SHA256:
+			algo = 16384;
+			break;
+		case PTS_MEAS_ALGO_SHA384:
+			algo = 8192;
+			break;
+	}
+	
+	/* look for all entries belonging to a product and file in file_hashes table */
+	e = this->db->query(this->db,
+				"SELECT fh.hash FROM file_hashes AS fh "
+				"JOIN files AS f ON fh.file = f.id "
+				"JOIN products AS p ON fh.product = p.id "
+				"WHERE p.name = ? AND f.id = ? AND fh.algo = ?",
+				DB_TEXT, product, DB_INT, id, DB_INT, algo, DB_BLOB);
+	return e;
+}
+
 METHOD(pts_database_t, destroy, void,
 	private_pts_database_t *this)
 {
@@ -71,6 +100,7 @@ pts_database_t *pts_database_create(char *uri)
 	INIT(this,
 		.public = {
 			.create_file_enumerator = _create_file_enumerator,
+			.create_meas_enumerator = _create_meas_enumerator,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),

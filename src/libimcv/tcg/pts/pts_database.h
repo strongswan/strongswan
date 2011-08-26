@@ -23,6 +23,7 @@
 
 typedef struct pts_database_t pts_database_t;
 
+#include "pts_meas_algo.h"
 #include <library.h>
 
 /**
@@ -38,6 +39,16 @@ struct pts_database_t {
 	 * @return				enumerator over all files matching a given release 
 	 */
 	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product);
+	
+	/**
+	 * Get Hash measurement of a file with given id and hashing algorithm type
+	 *
+	 * @product				software product (os, vpn client, etc.)
+	 * @id					primary key in files table
+	 * @algorithm				measurement algorithm type
+	 * @return				enumerator over all measurements matching a given release 
+	 */
+	enumerator_t* (*create_meas_enumerator)(pts_database_t *this, char *product, int id, pts_meas_algorithms_t algorithm);
 
 	/**
 	 * Destroys a pts_database_t object.
