@@ -193,11 +193,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	while (reader->remaining(reader))
 	{
-		entry = malloc_thing(file_meas_entry_t);	
+		entry = malloc_thing(file_meas_entry_t);
+		
 		reader->read_data (reader, this->meas_len, &entry->measurement);
+		entry->measurement = chunk_clone(entry->measurement);
 		reader->read_uint16 (reader, &entry->file_name_len);
 		reader->read_data(reader, entry->file_name_len, &entry->file_name);
 		entry->file_name = chunk_clone(entry->file_name);
+		
 		this->measurements->insert_last(this->measurements, entry);
 	}
 
@@ -259,27 +262,13 @@ METHOD(tcg_pts_attr_file_meas_t, add_file_meas, void,
 	entry->measurement = measurement;
 	entry->file_name_len = file_name.len;
 	entry->file_name = file_name;
-	this->measurements->insert_last(this->measurements, entry);	
-}
-
-/**
- * Enumerate file measurement entries
- */
-static bool measurement_filter(void *null, file_meas_entry_t **entry, chunk_t *measurement, 
-						void *i2, u_int16_t *file_name_len,
-						void *i3, chunk_t *file_name)
-{
-	*measurement = (*entry)->measurement;
-	*file_name_len = (*entry)->file_name_len;
-	*file_name = (*entry)->file_name;
-	return TRUE;
+	this->measurements->insert_last(this->measurements, entry);
 }
 
 METHOD(tcg_pts_attr_file_meas_t, create_file_meas_enumerator, enumerator_t*,
 	private_tcg_pts_attr_file_meas_t *this)
 {
-	return enumerator_create_filter(this->measurements->create_enumerator(this->measurements),
-					(void*)measurement_filter, NULL, NULL);
+	return this->measurements->create_enumerator(this->measurements);
 }
 
 /**
