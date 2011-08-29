@@ -256,7 +256,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
 
 	/* end keywords */
-	{ ARG_MISC, 0, NULL  /* KW_HOST */                                             },
+	{ ARG_STR,  offsetof(starter_end_t, host), NULL                                },
 	{ ARG_UINT, offsetof(starter_end_t, ikeport), NULL                             },
 	{ ARG_MISC, 0, NULL  /* KW_NEXTHOP */                                          },
 	{ ARG_STR, offsetof(starter_end_t, subnet), NULL                               },

@@ -66,6 +66,7 @@ struct starter_end {
 		char            *groups;
 		char            *cert_policy;
 		char            *iface;
+		char            *host;
 		ip_address      addr;
 		u_int           ikeport;
 		ip_address      nexthop;
