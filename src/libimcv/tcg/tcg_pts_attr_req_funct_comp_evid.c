@@ -160,29 +160,12 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
 	u_int8_t qualifier = 0;
 
 	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
 	
 	/* Determine the flags to set*/
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_PCR)
-	{
-		flags += 128;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_CURR)
-	{
-		flags += 64;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_VER)
-	{
-		flags += 32;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
-	{
-		flags += 16;
-	}
-	writer->write_uint8(writer, flags);
+	writer->write_uint8(writer, this->flags);
 	
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
@@ -212,7 +195,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
 	u_int8_t fam_and_qualifier;
 	
 	if (this->value.len < PTS_REQ_FUNCT_COMP_EVID_SIZE)
@@ -223,24 +205,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	
-	reader->read_uint8(reader, &flags);
-	if ((flags >> 4) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_PCR;
-	}
-	if ((flags >> 5) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_CURR;
-	}
-	if ((flags >> 6) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_VER;
-	}
-	if ((flags >> 7) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_TTC;
-	}
-
+	reader->read_uint8(reader, &this->flags);
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);
 	reader->read_uint8(reader, &fam_and_qualifier);

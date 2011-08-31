@@ -33,13 +33,13 @@ typedef enum pts_attr_req_funct_comp_evid_flag_t pts_attr_req_funct_comp_evid_fl
  */
 enum pts_attr_req_funct_comp_evid_flag_t {
 	/** Transitive Trust Chain flag */
-	PTS_REQ_FUNC_COMP_FLAG_TTC =				(1<<0),
+	PTS_REQ_FUNC_COMP_FLAG_TTC =				(1<<7),
 	/** Verify Component flag */
-	PTS_REQ_FUNC_COMP_FLAG_VER = 				(1<<1),
+	PTS_REQ_FUNC_COMP_FLAG_VER = 				(1<<6),
 	/** Current Evidence flag */
-	PTS_REQ_FUNC_COMP_FLAG_CURR = 				(1<<2),
+	PTS_REQ_FUNC_COMP_FLAG_CURR = 				(1<<5),
 	/** PCR Information flag */
-	PTS_REQ_FUNC_COMP_FLAG_PCR = 				(1<<3),
+	PTS_REQ_FUNC_COMP_FLAG_PCR = 				(1<<4),
 };
 
 /**
