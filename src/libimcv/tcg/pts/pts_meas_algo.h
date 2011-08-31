@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup tcg_pts_meas_algo tcg_pts_meas_algo
- * @{ @ingroup tcg_pts_meas_algo
+ * @defgroup pts_meas_algo pts_meas_algo
+ * @{ @ingroup pts
  */
 
 #ifndef PTS_MEAS_ALGO_H_

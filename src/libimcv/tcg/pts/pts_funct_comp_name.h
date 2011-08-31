@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup tcg_pts_attr_req_funct_comp_evid tcg_pts_attr_req_funct_comp_evid
- * @{ @ingroup tcg_pts_attr_req_funct_comp_evid
+ * @defgroup pts_funct_comp_name pts_funct_comp_name
+ * @{ @ingroup pts
  */
 
 #ifndef PTS_FUNCT_COMP_NAME_H_

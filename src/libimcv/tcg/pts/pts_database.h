@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pts_database pts_database
- * @{ @ingroup pts_database
+ * @{ @ingroup pts
  */
 
 #ifndef PTS_DATABASE_H_

@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup tcg_pts_attr_proto_caps tcg_pts_attr_proto_caps
- * @{ @ingroup tcg_pts_attr_proto_caps
+ * @defgroup pts_proto_caps pts_proto_caps
+ * @{ @ingroup pts
  */
 
 #ifndef PTS_PROTO_CAPS_H_
