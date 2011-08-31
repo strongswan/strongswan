@@ -3,7 +3,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif
 
 ipseclib_LTLIBRARIES = libimcv.la
 
-libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la -ltspi
+libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la -ltspi -lcurl
 
 libimcv_la_SOURCES = \
 	imcv.h imcv.c \
