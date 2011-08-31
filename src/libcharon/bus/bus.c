@@ -182,6 +182,7 @@ METHOD(bus_t, listen_, bool,
 			if (data.entry->condvar->timed_wait_abs(data.entry->condvar,
 												    this->mutex, tv))
 			{
+				this->listeners->remove(this->listeners, data.entry, NULL);
 				timed_out = TRUE;
 				break;
 			}
