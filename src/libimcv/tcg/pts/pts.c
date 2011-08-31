@@ -537,7 +537,7 @@ METHOD(pts_t, set_aik, void,
 }
 
 METHOD(pts_t, hash_file, bool,
-	private_pts_t *this, chunk_t path, chunk_t *out)
+	private_pts_t *this, char *pathname, chunk_t *out)
 {
 	char buffer[PTS_BUF_SIZE];
 	chunk_t path_chunk;
@@ -552,16 +552,15 @@ METHOD(pts_t, hash_file, bool,
 	if (!hasher)
 	{
 		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
-		return false;
+		return FALSE;
 	}
-	
-	path_chunk = chunk_create_clone(malloc(path.len), path);
-	file = fopen(path_chunk.ptr, "rb");
+
+	file = fopen(pathname, "rb");
 	if (!file)
 	{
-		DBG1(DBG_IMC,"file '%s' can not be opened, %s", path.ptr, strerror(errno));
+		DBG1(DBG_IMC,"file '%s' can not be opened, %s", pathname, strerror(errno));
 		hasher->destroy(hasher);
-		return false;
+		return FALSE;
 	}
 	while (TRUE)
 	{
@@ -580,27 +579,27 @@ METHOD(pts_t, hash_file, bool,
 	fclose(file);
 	hasher->destroy(hasher);
 
-	return true;
+	return TRUE;
 }
 
 METHOD(pts_t, hash_directory, bool,
-	private_pts_t *this, chunk_t path, linked_list_t **file_measurements)
+	private_pts_t *this, char *pathname, linked_list_t **file_measurements)
 {
 	DIR *dir;
 	struct dirent *ent;
 	chunk_t path_chunk;
 	file_meas_entry_t *entry;
 	linked_list_t *list = *file_measurements;
+	char filename[BUF_LEN];
 	
 	list = linked_list_create();
 	entry = malloc_thing(file_meas_entry_t);
 	
-	path_chunk = chunk_create_clone(malloc(path.len), path);
-	dir = opendir(path_chunk.ptr);
+	dir = opendir(pathname);
 	if (dir == NULL)
 	{
-		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path.ptr, strerror(errno));
-		return false;
+		DBG1(DBG_IMC, "opening directory '%s' failed: %s", pathname, strerror(errno));
+		return FALSE;
 	}
 	while ((ent = readdir(dir)))
 	{
@@ -608,24 +607,21 @@ METHOD(pts_t, hash_directory, bool,
 		{	/* skip ".", ".." and hidden files (such as ".svn") */
 			continue;
 		}
+		snprintf(filename, BUF_LEN, "%s/%s", pathname, ent->d_name);
+		entry->filename = strdup(filename);
 				
-		if(this->public.hash_file(&this->public, chunk_cat("cc", path, chunk_create(ent->d_name, strlen(ent->d_name)))
-			, &entry->measurement) != true)
+		if (!hash_file(this, filename, &entry->measurement))
 		{
 			DBG1(DBG_IMC, "Hashing the given file has failed");
-			return false;
+			return FALSE;
 		}
-		
-		entry->file_name_len = strlen(ent->d_name);
-		entry->file_name = chunk_create(ent->d_name,strlen(ent->d_name));
-		
-		list->insert_last(list,entry);
+		list->insert_last(list, entry);
 	}
 		
 	closedir(dir);
 	
 	*file_measurements = list;
-	return true;
+	return TRUE;
 }
 
 METHOD(pts_t, destroy, void,

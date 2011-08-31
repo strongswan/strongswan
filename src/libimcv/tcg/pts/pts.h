@@ -36,9 +36,8 @@ typedef struct file_meas_entry_t file_meas_entry_t;
  * File Measurement entry
  */
 struct file_meas_entry_t {
-	chunk_t   measurement;
-	u_int16_t file_name_len;
-	chunk_t   file_name;
+	char 	*filename;
+	chunk_t  measurement;
 };
 
 /**
@@ -94,8 +93,8 @@ struct pts_t {
 	 * Get Attestation Identity Key
 	 *
 	 * @param aik			chunk containing a AIK naked public key or certificate
-	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
-	 * @return			TRUE if AIK available
+	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
+	 * @return				TRUE if AIK available
 	 */
 	bool (*get_aik)(pts_t *this, chunk_t *aik, bool *is_naked_key);
 	
@@ -103,27 +102,27 @@ struct pts_t {
 	 * Set Attestation Identity Key
 	 *
 	 * @param aik			chunk containing a AIK naked public key or certificate 
-	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
+	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
 	 */
 	void (*set_aik)(pts_t *this, chunk_t aik, bool is_naked_key);
 	
 	/**
 	 * Hash the given file
 	 *
-	 * @param path			absolute path to file to be hashed
+	 * @param pathname		absolute path to file to be hashed
 	 * @param out			hash output value of a given file
-	 * @return			TRUE if hashing file was successful 
+	 * @return				TRUE if hashing file was successful 
 	 */
-	bool (*hash_file)(pts_t *this, chunk_t path, chunk_t *out);
+	bool (*hash_file)(pts_t *this, char *pathname, chunk_t *out);
 	
 	/**
 	 * Hash the given directory
 	 *
-	 * @param path			absolute path to directory to be hashed
+	 * @param pathname			absolute path to directory to be hashed
 	 * @param file_measurements	list of hash output values of files in a given folder
 	 * @return			TRUE if hashing directory was successful 
 	 */
-	bool (*hash_directory)(pts_t *this, chunk_t path, linked_list_t **file_measurements);
+	bool (*hash_directory)(pts_t *this, char *pathname, linked_list_t **file_measurements);
 
 	/**
 	 * Destroys a pts_t object.

@@ -236,7 +236,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			/** 
 			 * Add files to measure to PTS Request File Measurement attribute
 			 */
-			product = "Ubuntu 10.10 x86_64";
+			product = "Ubuntu 11.4 i686";
 
 			if (!pts_db)
 			{
@@ -250,17 +250,12 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			while (enumerator->enumerate(enumerator, &id, &type, &path))
 			{
 				bool is_directory;
-				chunk_t path_chunk;
 				
 				DBG2(DBG_IMV, "id = %d, type = %d, path = '%s'", id, type, path);
 				
-				is_directory = (type != 0) ? true : false;
-				path[strlen(path)] = '\0';
-				path_chunk = chunk_create(path, strlen(path));
-				path_chunk = chunk_clone(path_chunk);
-				
+				is_directory = (type != 0) ? TRUE : FALSE;
 				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(is_directory, 
-							(u_int16_t)id, delimiter, path_chunk);
+							id, delimiter, path);
 				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
 				msg->add_attribute(msg, attr_req_file_meas);
 			}
@@ -302,7 +297,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
-	bool comparisons_succeeded = true;
+	bool comparisons_succeeded = TRUE;
 
 	if (!imv_attestation)
 	{
@@ -445,7 +440,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					{
 						enumerator_t *hash_enumerator;
 						pts_meas_algorithms_t selected_algorithm;
-						char *product = "Ubuntu 10.10 x86_64";
+						char *product = "Ubuntu 11.4 i686";
 						chunk_t db_measurement;
 						
 						DBG3(DBG_IMV, "Received measurement: %B", &meas_entry->measurement);
@@ -468,12 +463,14 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 							/* Compare the received hash measurement with one saved in db */
 							if(chunk_equals(db_measurement, meas_entry->measurement))
 							{
-								DBG1(DBG_IMV, "Measurement comparison succeeded for: %s", meas_entry->file_name.ptr);
+								DBG1(DBG_IMV, "Measurement comparison succeeded for: %s",
+									 meas_entry->filename);
 							}
 							else
 							{
-								DBG1(DBG_IMV, "Measurement comparison failed for: %s", meas_entry->file_name.ptr);
-								comparisons_succeeded = false;
+								DBG1(DBG_IMV, "Measurement comparison failed for: %s",
+									 meas_entry->filename);
+								comparisons_succeeded = FALSE;
 							}
 						}
 						hash_enumerator->destroy(hash_enumerator);

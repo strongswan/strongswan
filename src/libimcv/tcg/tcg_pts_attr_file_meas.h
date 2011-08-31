@@ -42,7 +42,7 @@ struct tcg_pts_attr_file_meas_t {
 	/**
 	 * Get Number of Files included
 	 *
-	 * @return				Number of Files included
+	 * @return					Number of Files included
 	 */
 	u_int64_t (*get_number_of_files)(tcg_pts_attr_file_meas_t *this);
 	
@@ -57,14 +57,14 @@ struct tcg_pts_attr_file_meas_t {
 	/**
 	 * Get Request ID
 	 *
-	 * @return				Request ID
+	 * @return					Request ID
 	 */
 	u_int16_t (*get_request_id)(tcg_pts_attr_file_meas_t *this);
 	
 	/**
 	 * Set Request ID
 	 *
-	 * @param request_id			Request ID
+	 * @param request_id		Request ID
 	 */
 	void (*set_request_id)(tcg_pts_attr_file_meas_t *this,
 						u_int16_t request_id);
@@ -72,7 +72,7 @@ struct tcg_pts_attr_file_meas_t {
 	/**
 	 * Get Measurement Length
 	 *
-	 * @return				Measurement Length
+	 * @return					Measurement Length
 	 */
 	u_int16_t (*get_meas_len)(tcg_pts_attr_file_meas_t *this);
 	
@@ -88,16 +88,16 @@ struct tcg_pts_attr_file_meas_t {
 	 * Add a file measurement entry
 	 *
 	 * @param measurement		Measurement value
-	 * @param file_name		File Name
+	 * @param filename			Filename
 	 */
 	void (*add_file_meas)(tcg_pts_attr_file_meas_t *this, chunk_t measurement,
-						chunk_t file_name);
+						  char  *filename);
 
 	/**
 	 * Enumerates over all file measurements
 	 * Format:  chunk_t *measurement, chunk_t *file_name
 	 *
-	 * @return				enumerator
+	 * @return					enumerator
 	 */
 	enumerator_t* (*create_file_meas_enumerator)(tcg_pts_attr_file_meas_t *this);
 };
@@ -107,17 +107,17 @@ struct tcg_pts_attr_file_meas_t {
  * 
  * @param directory_flag		Directory Contents Flag
  * @param request_id			Request ID
- * @param delimiter			Delimiter Character
- * @param path				File Path
+ * @param delimiter				Delimiter Character
+ * @param path					File Path
  */
 pa_tnc_attr_t* tcg_pts_attr_file_meas_create(u_int64_t number_of_files,
-				       u_int16_t request_id,
-				       u_int16_t meas_len);
+											 u_int16_t request_id,
+											 u_int16_t meas_len);
 
 /**
  * Creates an tcg_pts_attr_file_meas_t object from received data
  *
- * @param value				unparsed attribute value
+ * @param value					unparsed attribute value
  */
 pa_tnc_attr_t* tcg_pts_attr_file_meas_create_from_data(chunk_t value);
 

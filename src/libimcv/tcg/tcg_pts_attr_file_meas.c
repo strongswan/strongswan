@@ -144,6 +144,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
 	file_meas_entry_t *entry;
+	chunk_t filename;
 	
 	writer = bio_writer_create(PTS_FILE_MEAS_SIZE);
 
@@ -156,9 +157,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->measurements->create_enumerator(this->measurements);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		writer->write_data (writer, entry->measurement);
-		writer->write_uint16 (writer, entry->file_name_len);
-		writer->write_data(writer, entry->file_name);
+		filename = chunk_create(entry->filename, strlen(entry->filename));
+		writer->write_data  (writer, entry->measurement);
+		writer->write_uint16(writer, strlen(entry->filename));
+		writer->write_data  (writer, filename);
 	}
 	enumerator->destroy(enumerator);
 
@@ -171,7 +173,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t number_of_files;
-	u_int64_t number_of_files_64;
+	u_int16_t filename_length;
+	chunk_t filename;
 	file_meas_entry_t *entry;
 	
 	if (this->value.len < PTS_FILE_MEAS_SIZE)
@@ -183,11 +186,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint32(reader, &number_of_files);
-	number_of_files_64 = number_of_files;
-	this->number_of_files = (number_of_files_64 << 32);
+	this->number_of_files = (u_int64_t)number_of_files << 32;
 	reader->read_uint32(reader, &number_of_files);
 	this->number_of_files += number_of_files;
-	
 	reader->read_uint16(reader, &this->request_id);
 	reader->read_uint16(reader, &this->meas_len);
 	
@@ -197,9 +198,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		
 		reader->read_data (reader, this->meas_len, &entry->measurement);
 		entry->measurement = chunk_clone(entry->measurement);
-		reader->read_uint16 (reader, &entry->file_name_len);
-		reader->read_data(reader, entry->file_name_len, &entry->file_name);
-		entry->file_name = chunk_clone(entry->file_name);
+		reader->read_uint16 (reader, &filename_length);
+		reader->read_data(reader, filename_length, &filename);
+		entry->filename = malloc(filename.len + 1);
+		memcpy(entry->filename, filename.ptr, filename.len);
+		entry->filename[filename.len] = '\0';
 		
 		this->measurements->insert_last(this->measurements, entry);
 	}
@@ -253,15 +256,13 @@ METHOD(tcg_pts_attr_file_meas_t, set_meas_len, void,
 }
 
 METHOD(tcg_pts_attr_file_meas_t, add_file_meas, void,
-	private_tcg_pts_attr_file_meas_t *this, chunk_t measurement,
-						chunk_t file_name)
+	private_tcg_pts_attr_file_meas_t *this, chunk_t measurement, char *filename)
 {
 	file_meas_entry_t *entry;
 
 	entry = malloc_thing(file_meas_entry_t);
 	entry->measurement = measurement;
-	entry->file_name_len = file_name.len;
-	entry->file_name = file_name;
+	entry->filename = strdup(filename);
 	this->measurements->insert_last(this->measurements, entry);
 }
 

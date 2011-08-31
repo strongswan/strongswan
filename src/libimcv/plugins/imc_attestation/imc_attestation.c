@@ -137,8 +137,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_UInt32 msg_len,
 								  TNC_MessageType msg_type)
 {
-	pa_tnc_msg_t *pa_tnc_msg, *msg_to_send;
-	pa_tnc_attr_t *attr, *attr_to_send;
+	pa_tnc_msg_t *pa_tnc_msg;
+	pa_tnc_attr_t *attr;
 	linked_list_t *attr_list;
 	imc_state_t *state;
 	imc_attestation_state_t *attestation_state;
@@ -172,7 +172,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		return result;
 	}
 	
-	msg_to_send = pa_tnc_msg_create();
 	attr_list = linked_list_create();
 
 	/* analyze PA-TNC attributes */
@@ -210,7 +209,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		}
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
 		{
-			switch(attr->get_type(attr))
+			switch (attr->get_type(attr))
 			{
 				case TCG_PTS_REQ_PROTO_CAPS:
 				{
@@ -223,9 +222,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					pts->set_proto_caps(pts, imc_flags & imv_flags);
 
 					/* Send PTS Protocol Capabilities attribute */ 
-					attr_to_send = tcg_pts_attr_proto_caps_create(imc_flags & imv_flags, FALSE);
-					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
-					attr_list->insert_last(attr_list,attr_to_send);					
+					attr = tcg_pts_attr_proto_caps_create(imc_flags & imv_flags,
+														  FALSE);
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:
@@ -256,11 +255,12 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					{
 						/* TODO send a TCG_PTS_H_ALG_NOT_SUPPORTED error */
 					}
+
 					/* Send Measurement Algorithm Selection attribute */ 
 					selected_algorithm = pts->get_meas_algorithm(pts);
-					attr_to_send = tcg_pts_attr_meas_algo_create(selected_algorithm, TRUE);
-					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
-					attr_list->insert_last(attr_list,attr_to_send);
+					attr = tcg_pts_attr_meas_algo_create(selected_algorithm,
+														 TRUE);
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 					
@@ -271,12 +271,12 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					if (!pts->get_tpm_version_info(pts, &tpm_version_info))
 					{
 						/* TODO return TCG_PTS_TPM_VERS_NOT_SUPPORTED error attribute */
+						break;
 					}
 					
 					/* Send TPM Version Info attribute */ 
-					attr_to_send = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
-					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
-					attr_list->insert_last(attr_list,attr_to_send);
+					attr = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				
@@ -306,11 +306,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				case TCG_PTS_REQ_FILE_MEAS:
 				{
 					tcg_pts_attr_req_file_meas_t *attr_cast;
-					tcg_pts_attr_file_meas_t *attr_file_meas;
-					u_int32_t delimiter;
-					chunk_t path;
-					u_int16_t request_id;
-					u_int16_t meas_len;
+					tcg_pts_attr_file_meas_t *attr_out;
+					char *pathname;
+					u_int16_t request_id, meas_len;
 					pts_meas_algorithms_t selected_algorithm;
 					chunk_t file_hash;
 					bool directory_flag;
@@ -319,12 +317,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
 					directory_flag = attr_cast->get_directory_flag(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
-					delimiter = attr_cast->get_delimiter(attr_cast);
-					path = attr_cast->get_file_path(attr_cast);
-					path = chunk_clone(path);
-
-					DBG3(DBG_IMC,"requested %s to be measured: %B", 
-					     (directory_flag)? "directory":"file", &path);
+					pathname = attr_cast->get_pathname(attr_cast);
+					
+					DBG2(DBG_IMC, "%s to be measured: '%s'", 
+					     directory_flag ? "directory" : "file", pathname);
 					
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
@@ -342,27 +338,28 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					* Hash the file or directory and add them as attribute
 					*/
 					
-					attr_to_send = directory_flag ? 
+					attr = directory_flag ? 
 						tcg_pts_attr_file_meas_create(0, request_id, meas_len) :
 						tcg_pts_attr_file_meas_create(1, request_id, meas_len);
-					attr_to_send->set_noskip_flag(attr_to_send, TRUE);
-					attr_file_meas = (tcg_pts_attr_file_meas_t*)attr_to_send;
+					attr->set_noskip_flag(attr, TRUE);
+					attr_out = (tcg_pts_attr_file_meas_t*)attr;
 					
-					if(!directory_flag)
+					if (!directory_flag)
 					{
-						if(pts->hash_file(pts,path,&file_hash) != true)
+						if (!pts->hash_file(pts, pathname, &file_hash))
 						{
 							DBG1(DBG_IMC, "Hashing the given file has failed");
 							return TNC_RESULT_FATAL;
 						}
-						attr_file_meas->add_file_meas(attr_file_meas, file_hash, path);
+						attr_out->add_file_meas(attr_out, file_hash, pathname);
 					}
 					else
 					{
 						enumerator_t *meas_enumerator;
 						file_meas_entry_t *meas_entry;
 						u_int64_t num_of_files = 0 ;
-						if(pts->hash_directory(pts, path, &file_measurements) != true)
+
+						if (!pts->hash_directory(pts, pathname, &file_measurements))
 						{
 							DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
 							return TNC_RESULT_FATAL;
@@ -372,21 +369,18 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
 						{
 							num_of_files++;
-							attr_file_meas->add_file_meas(attr_file_meas,
-										meas_entry->measurement,
-										meas_entry->file_name);
+							attr_out->add_file_meas(attr_out,
+													meas_entry->measurement,
+													meas_entry->filename);
 						}
 						
-						attr_file_meas->set_number_of_files(attr_file_meas,
-										num_of_files);
+						attr_out->set_number_of_files(attr_out, num_of_files);
 						meas_enumerator->destroy(meas_enumerator);
 						file_measurements->destroy(file_measurements);
 						
 					}
-										
-					attr_to_send = (pa_tnc_attr_t*)attr_file_meas;
-					attr_list->insert_last(attr_list,attr_to_send);
 					
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				/* TODO: Not implemented yet */
@@ -424,25 +418,29 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
+
+	result = TNC_RESULT_SUCCESS;
 		
-	if(attr_list->get_count(attr_list))
+	if (attr_list->get_count(attr_list))
 	{
- 		enumerator_t *attr_enumerator = attr_list->create_enumerator(attr_list);
-		while (attr_enumerator->enumerate(attr_enumerator, &attr_to_send))
+		pa_tnc_msg = pa_tnc_msg_create();
+
+		enumerator = attr_list->create_enumerator(attr_list);
+		while (enumerator->enumerate(enumerator, &attr))
 		{
-			msg_to_send->add_attribute(msg_to_send, attr_to_send);
+			pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
 		}
-		attr_enumerator->destroy(attr_enumerator);
+		enumerator->destroy(enumerator);
+
+		pa_tnc_msg->build(pa_tnc_msg);
+		result = imc_attestation->send_message(imc_attestation, connection_id,
+							pa_tnc_msg->get_encoding(pa_tnc_msg));
+	
+		attr_list->destroy(attr_list);
+		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
 
-	msg_to_send->build(msg_to_send);
-	result = imc_attestation->send_message(imc_attestation, connection_id,
-					msg_to_send->get_encoding(msg_to_send));
-	
-	attr_list->destroy(attr_list);
-	msg_to_send->destroy(msg_to_send);
-
-	return TNC_RESULT_SUCCESS;
+	return result;
 }
 
 /**

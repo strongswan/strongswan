@@ -45,28 +45,13 @@ struct tcg_pts_attr_req_file_meas_t {
 	bool (*get_directory_flag)(tcg_pts_attr_req_file_meas_t *this);
 
 	/**
-	 * Set flag for PTS Request File Measurement
-	 *
-	 * @param directory_flag		Directory Contents flag
-	 */
-	void (*set_directory_flag)(tcg_pts_attr_req_file_meas_t *this, 
-				bool directory_flag);
-	
-	/**
 	 * Get Request ID
 	 *
 	 * @return				Request ID
 	 */
 	u_int16_t (*get_request_id)(tcg_pts_attr_req_file_meas_t *this);
 	
-	/**
-	 * Set Request ID
-	 *
-	 * @param request_id			Request ID
-	 */
-	void (*set_request_id)(tcg_pts_attr_req_file_meas_t *this,
-						u_int16_t request_id);
-		
+
 	/**
 	 * Get Delimiter
 	 *
@@ -75,42 +60,26 @@ struct tcg_pts_attr_req_file_meas_t {
 	u_int32_t (*get_delimiter)(tcg_pts_attr_req_file_meas_t *this);
 	
 	/**
-	 * Set Delimiter 
+	 * Get Fully Qualified File Pathname
 	 *
-	 * @param delimiter			UTF-8 encoding of a Delimiter Character
+	 * @return				Pathname
 	 */
-	void (*set_delimiter)(tcg_pts_attr_req_file_meas_t *this,
-						u_int32_t delimiter);
-
-	/**
-	 * Get Fully Qualified File Path Name
-	 *
-	 * @return				File Path
-	 */
-	chunk_t (*get_file_path)(tcg_pts_attr_req_file_meas_t *this);
+	char* (*get_pathname)(tcg_pts_attr_req_file_meas_t *this);
 		
-	/**
-	 * Set Fully Qualified File Path Name
-	 *
-	 * @param path				File Path
-	 */
-	void (*set_file_path)(tcg_pts_attr_req_file_meas_t *this,
-						chunk_t path);
-	
 };
 
 /**
  * Creates an tcg_pts_attr_req_file_meas_t object
  * 
- * @param directory_flag		Directory Contents Flag
- * @param request_id			Request ID
+ * @param directory_flag	Directory Contents Flag
+ * @param request_id		Request ID
  * @param delimiter			Delimiter Character
- * @param path				File Path
+ * @param pathname			File Pathname
  */
 pa_tnc_attr_t* tcg_pts_attr_req_file_meas_create(bool directory_flag,
-				       u_int16_t request_id,
-				       u_int32_t delimiter,
-				       chunk_t path);
+												 u_int16_t request_id,
+												 u_int32_t delimiter,
+												 char *pathname);
 
 /**
  * Creates an tcg_pts_attr_req_file_meas_t object from received data
